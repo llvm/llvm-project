@@ -426,6 +426,10 @@ TEST(DependencyScanningWorkerFilesystem, ConcurrentSameFilenameDeduplicates) {
   }
 }
 
+// On Windows, llvm::sys::fs::UniqueID is computed from a hashed canonical
+// path, so two hard-linked filenames produce different UniqueIDs and the
+// premise of this test does not hold.
+#ifndef _WIN32
 TEST(DependencyScanningWorkerFilesystem,
      ConcurrentSameUIDDifferentFilenamesDeduplicatesOpen) {
   // Use a real on-disk file plus a hard link so the two filenames share a
@@ -462,6 +466,7 @@ TEST(DependencyScanningWorkerFilesystem,
     EXPECT_EQ(Results[I]->getStatus().getUniqueID(), FirstUID);
   }
 }
+#endif // !_WIN32
 
 TEST(DependencyScanningWorkerFilesystem, ConcurrentNegativeStatDeduplicates) {
   // Construct a path inside a temporary directory but never create the

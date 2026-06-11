@@ -471,7 +471,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::nxv16i1, &AArch64::PPRRegClass);
 
     // Add sve predicate as counter type
-    addRegisterClass(MVT::aarch64svcount, &AArch64::PPRRegClass);
+    addRegisterClass(MVT::aarch64svcount, &AArch64::PNRRegClass);
 
     // Add legal sve data types
     addRegisterClass(MVT::nxv16i8, &AArch64::ZPRRegClass);

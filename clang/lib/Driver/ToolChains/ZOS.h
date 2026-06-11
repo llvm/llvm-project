@@ -82,6 +82,7 @@ public:
 
   void addClangTargetOptions(
       const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+      llvm::StringRef BoundArch,
       Action::OffloadKind DeviceOffloadingKind) const override;
 
   const char *getDefaultLinker() const override { return "/bin/ld"; }

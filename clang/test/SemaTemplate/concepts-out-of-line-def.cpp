@@ -840,7 +840,7 @@ namespace PackIndexExpr1 {
 template <int... T>
 concept C = true;
 
-template <typename...> struct TplClass {
+template <typename...> struct TplClass { // #PackIndexExpr1-TplClassDef
   template <int... Ts>
   requires C<Ts...[0]>
   static auto buggy() -> void;
@@ -850,6 +850,9 @@ template <>
 template <int... Ts>
 requires C<Ts...[0]>
 auto TplClass<int>::buggy() -> void {}
+// FIXME: These shouldn't diagnose, but are a result of a revert: #193558
+// expected-error@-2{{does not match any declaration in}}
+// expected-note@#PackIndexExpr1-TplClassDef{{TplClass defined here}}
 } // namespace PackIndexExpr1
 
 namespace PackIndexExpr2 {
@@ -900,16 +903,18 @@ namespace FuncTemplateInClass {
   template <int T> concept C = true;
 
   namespace t1 {
-    template <int> struct TplClass {
+    template <int> struct TplClass { // expected-note {{defined here}}
       template <int Ts>
       requires C<Ts>
       static auto buggy() -> void;
     };
 
+    // FIXME: This should be accepted.
     template <>
     template <int Ts>
     requires C<Ts>
     auto TplClass<0>::buggy() -> void {}
+    // expected-error@-1 {{out-of-line definition of 'buggy' does not match any declaration}}
   } //namespace t1
   namespace t2 {
     template <int> struct TplClass { // expected-note {{defined here}}

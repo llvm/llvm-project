@@ -297,6 +297,7 @@ add_fp_unittest(
     libc.src.__support.math.iscanonicall
     libc.src.__support.math.isnan
     libc.src.__support.math.isnanf
+    libc.src.__support.math.isnanf128
     libc.src.__support.math.isnanf16
     libc.src.__support.math.isnanl
     libc.src.__support.math.issignaling
@@ -670,6 +671,7 @@ add_fp_unittest(
     libc.src.__support.math.iscanonicall
     libc.src.__support.math.isnan
     libc.src.__support.math.isnanf
+    libc.src.__support.math.isnanf128
     libc.src.__support.math.isnanf16
     libc.src.__support.math.isnanl
     libc.src.__support.math.issignaling
@@ -842,3 +844,15 @@ add_libc_test(
     libc.src.__support.arg_list
 )
 endif()
+
+add_fp_unittest(
+  shared_math_check_exp_test
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_math_check_exp_test.cpp
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+)

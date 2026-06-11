@@ -7,7 +7,9 @@ CHECK-NEXT: : !value 'x': 5
 CHECK-NEXT:   ? !where {file: lib.cpp, lines: !range [10, 20]}
 CHECK-NEXT:   : !value 'y': 10
 CHECK-NEXT: ? !where {lines: 5}
-CHECK-NEXT: : !value 'z': bees
+CHECK-NEXT: : ? !and {lines: 5}
+CHECK-NEXT:   : !value 'y': 7
+CHECK-NEXT:   !value 'z': bees
 
 
 ---
@@ -16,5 +18,7 @@ CHECK-NEXT: : !value 'z': bees
     !where {file: "lib.cpp", lines: !range [10, 20]}:
         !value y: 10
 !where {lines: 5}:
+    !and {lines: 5}:
+        !value y: 7
     !value z: bees
 ...

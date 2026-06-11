@@ -2135,6 +2135,16 @@ LValue CIRGenFunction::emitCallExprLValue(const CallExpr *e) {
   return makeNaturalAlignPointeeAddrLValue(rv.getValue(), e->getType());
 }
 
+LValue
+CIRGenFunction::emitCXXBindTemporaryLValue(const CXXBindTemporaryExpr *e) {
+  AggValueSlot slot =
+      createAggTemp(e->getType(), getLoc(e->getSourceRange()), "temp.lvalue");
+  slot.setExternallyDestructed();
+  emitAggExpr(e->getSubExpr(), slot);
+  emitCXXTemporary(e->getTemporary(), e->getType(), slot.getAddress());
+  return makeAddrLValue(slot.getAddress(), e->getType(), AlignmentSource::Decl);
+}
+
 LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
   // Comma expressions just emit their LHS then their RHS as an l-value.
   if (e->getOpcode() == BO_Comma) {
@@ -2705,8 +2715,8 @@ mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.restoreInsertionPoint(ip);
-    addr = builder.createAlloca(loc, /*addr type*/ localVarPtrTy,
-                                /*var type*/ ty, name, alignIntAttr, arraySize);
+    addr = builder.createAlloca(loc, /*addr type*/ localVarPtrTy, name,
+                                alignIntAttr, arraySize);
     assert(!cir::MissingFeatures::astVarDeclInterface());
   }
   return addr;

@@ -61,9 +61,9 @@ define i32 @trunc_lshr_v4i16_to_v4i8(i64 %a.coerce) {
 ; CHECK-RV64-NEXT:    psrli.h a0, a0, 4
 ; CHECK-RV64-NEXT:    srli a1, a0, 48
 ; CHECK-RV64-NEXT:    srli a2, a0, 32
+; CHECK-RV64-NEXT:    srli a3, a0, 16
 ; CHECK-RV64-NEXT:    ppaire.b a1, a2, a1
-; CHECK-RV64-NEXT:    srli a2, a0, 16
-; CHECK-RV64-NEXT:    ppaire.b a0, a0, a2
+; CHECK-RV64-NEXT:    ppaire.b a0, a0, a3
 ; CHECK-RV64-NEXT:    ppaire.h a0, a0, a1
 ; CHECK-RV64-NEXT:    ret
   %v = bitcast i64 %a.coerce to <4 x i16>

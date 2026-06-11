@@ -6365,7 +6365,7 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
   return false;
 }
 
-VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
+VPSingleDefRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
                                                       VFRange &Range) {
   auto *I = VPI->getUnderlyingInstr();
   bool IsUniform = LoopVectorizationPlanner::getDecisionAndClampRange(
@@ -6423,9 +6423,14 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
   assert((Range.Start.isScalar() || !IsUniform || !IsPredicated ||
           (Range.Start.isScalable() && isa<IntrinsicInst>(I))) &&
          "Should not predicate a uniform recipe");
-  auto *Recipe =
-      new VPReplicateRecipe(I, VPI->operandsWithoutMask(), IsUniform,
-                            BlockInMask, *VPI, *VPI, VPI->getDebugLoc());
+  if (IsUniform) {
+    return VPBuilder::createSingleScalarOp(
+        VPI->getOpcode(), VPI->operandsWithoutMask(), BlockInMask, *VPI, *VPI,
+        VPI->getDebugLoc(), I);
+  }
+  auto *Recipe = new VPReplicateRecipe(I, VPI->operandsWithoutMask(),
+                                       /*IsSingleScalar=*/false, BlockInMask,
+                                       *VPI, *VPI, VPI->getDebugLoc());
   return Recipe;
 }
 
@@ -6504,10 +6509,17 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
                                              Legal->getWidestInductionType(),
                                              PSE, LVer ? &*LVer : nullptr);
 
+  VPDominatorTree VPDT(*VPlan0);
+  if (const LoopAccessInfo *LAI = Legal->getLAI())
+    RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *VPlan0, PSE,
+                   LAI->getSymbolicStrides(), VPDT);
+  RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *VPlan0);
+  RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
+
   // Create recipes for header phis. For outer loops, reductions, recurrences
   // and in-loop reductions are empty since legality doesn't detect them.
   if (!RUN_VPLAN_PASS(VPlanTransforms::createHeaderPhiRecipes, *VPlan0, PSE,
-                      *OrigLoop, Legal->getInductionVars(),
+                      *OrigLoop, VPDT, Legal->getInductionVars(),
                       Legal->getReductionVars(),
                       Legal->getFixedOrderRecurrences(),
                       Config.getInLoopReductions(), Hints.allowReordering())) {
@@ -6516,9 +6528,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
 
   if (const LoopAccessInfo *LAI = Legal->getLAI())
     RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *VPlan0, PSE,
-                   LAI->getSymbolicStrides());
-  RUN_VPLAN_PASS(VPlanTransforms::simplifyRecipes, *VPlan0);
-  RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, *VPlan0);
+                   LAI->getSymbolicStrides(), VPDT);
 
   // Add surviving induction predicates to PSE and check constraints.
   bool ForceVectorization = Hints.getForce() == LoopVectorizeHints::FK_Enabled;
@@ -6728,7 +6738,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
       if (isa<VPWidenCanonicalIVRecipe, VPBlendRecipe, VPReductionRecipe,
               VPReplicateRecipe, VPWidenLoadRecipe, VPWidenStoreRecipe,
               VPWidenCallRecipe, VPWidenIntrinsicRecipe, VPVectorPointerRecipe,
-              VPVectorEndPointerRecipe, VPHistogramRecipe>(&R))
+              VPVectorEndPointerRecipe, VPHistogramRecipe>(&R) ||
+          (isa<VPInstructionWithType>(R) &&
+           Instruction::isCast(cast<VPInstructionWithType>(R).getOpcode()) &&
+           vputils::onlyFirstLaneUsed(R.getVPSingleValue())))
         continue;
       auto *VPI = cast<VPInstruction>(&R);
       if (!VPI->getUnderlyingValue())

@@ -1,6 +1,8 @@
 header: arpa/inet.h
 standards:
   - posix
+merge_yaml_files:
+  - ../htons-family.yaml
 macros:
   - macro_name: INET_ADDRSTRLEN
     macro_header: inet-address-macros.h
@@ -12,18 +14,6 @@ types:
 enums: []
 objects: []
 functions:
-  - name: htonl
-    standards:
-      - posix
-    return_type: uint32_t
-    arguments:
-      - type: uint32_t
-  - name: htons
-    standards:
-      - posix
-    return_type: uint16_t
-    arguments:
-      - type: uint16_t
   - name: inet_addr
     standards:
       - posix
@@ -37,15 +27,3 @@ functions:
     arguments:
       - type: const char *
       - type: struct in_addr *
-  - name: ntohl
-    standards:
-      - posix
-    return_type: uint32_t
-    arguments:
-      - type: uint32_t
-  - name: ntohs
-    standards:
-      - posix
-    return_type: uint16_t
-    arguments:
-      - type: uint16_t

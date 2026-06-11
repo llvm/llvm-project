@@ -269,3 +269,18 @@ body: |
     %avl:gprnox0 = ADDI $noreg, 1
     %z:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, $noreg, %x:vrnov0, %mask, %avl, 5
 ...
+---
+name: sink_past_avl_mask_false
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: sink_past_avl_mask_false
+    ; CHECK: %false:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 3 /* ta, ma */
+    ; CHECK-NEXT: %mask:vmv0 = COPY $v0
+    ; CHECK-NEXT: %avl:gprnox0 = ADDI $noreg, 1
+    ; CHECK-NEXT: %z:vrnov0 = PseudoVADD_VV_M1_MASK %false, $noreg, $noreg, %mask, %avl /* vl */, 5 /* e32 */, 1 /* ta, mu */
+    %x:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5, 3
+    %false:vrnov0 = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5, 3
+    %mask:vmv0 = COPY $v0
+    %avl:gprnox0 = ADDI $noreg, 1
+    %z:vrnov0 = PseudoVMERGE_VVM_M1 $noreg, %false:vrnov0, %x:vrnov0, %mask, %avl, 5
+...

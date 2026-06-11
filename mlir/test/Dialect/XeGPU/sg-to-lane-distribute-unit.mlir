@@ -1320,3 +1320,71 @@ gpu.func @xegpu_dpas_mx(%arg0: !xegpu.mem_desc<8x8xf16>, %arg1: !xegpu.mem_desc<
   gpu.return
 }
 }
+
+// -----
+gpu.module @xevm_module {
+// Partial subgroup lane distribution of a dpas_mx scale operand: a value with
+// lane_layout [16, 1] is converted to [8, 1] (half of the 16-lane subgroup) via
+// xegpu.convert_layout, then sliced by vector.extract_strided_slice into two
+// xegpu.dpas_mx scale_a operands.
+//
+// The convert_layout is lowered into a bitcast + gpu.shuffle up (by 8, i.e. half
+// the subgroup) + vector.shuffle sequence that materializes the cross-lane data,
+// doubling the distributed outer dimension (vector<1x4> -> vector<2x4>).
+//
+// The slices run against the distributed source: the subgroup-space outer
+// offsets [0] and [8] become lane-distributed offsets [0] and [1], reflecting
+// the effective subgroup size of 8 (instead of 16) along the distributed dim.
+//
+// CHECK-LABEL: gpu.func @convert_layout_partial_subgroup
+// CHECK: %[[SRC:.*]] = arith.constant dense<1.000000e+00> : vector<1x4xf8E8M0FNU>
+// CHECK: %[[ZERO:.*]] = arith.constant dense<0> : vector<1xi32>
+// CHECK: %[[FLAT:.*]] = vector.shape_cast %[[SRC]] : vector<1x4xf8E8M0FNU> to vector<4xf8E8M0FNU>
+// CHECK: %[[BUNDLE:.*]] = vector.bitcast %[[FLAT]] : vector<4xf8E8M0FNU> to vector<1xi32>
+// CHECK: %[[ELEM:.*]] = vector.extract %[[BUNDLE]][0] : i32 from vector<1xi32>
+// CHECK-DAG: %[[OFFSET:.*]] = arith.constant 0 : i32
+// CHECK-DAG: %[[WIDTH:.*]] = arith.constant 8 : i32
+// CHECK: %[[SHUF:.*]], %{{.*}} = gpu.shuffle up %[[ELEM]], %[[OFFSET]], %[[WIDTH]] : i32
+// CHECK: %[[INS:.*]] = vector.insert %[[SHUF]], %[[ZERO]] [0] : i32 into vector<1xi32>
+// CHECK: %[[TMPFLAT:.*]] = vector.bitcast %[[INS]] : vector<1xi32> to vector<4xf8E8M0FNU>
+// CHECK: %[[TMP:.*]] = vector.shape_cast %[[TMPFLAT]] : vector<4xf8E8M0FNU> to vector<1x4xf8E8M0FNU>
+// CHECK: %[[CVT:.*]] = vector.shuffle %[[SRC]], %[[TMP]] [0, 1] : vector<1x4xf8E8M0FNU>, vector<1x4xf8E8M0FNU>
+// CHECK: %[[S0:.*]] = vector.extract_strided_slice %[[CVT]] {offsets = [0, 0], sizes = [1, 2], strides = [1, 1]} : vector<2x4xf8E8M0FNU> to vector<1x2xf8E8M0FNU>
+// CHECK: %[[S1:.*]] = vector.extract_strided_slice %[[CVT]] {offsets = [1, 0], sizes = [1, 2], strides = [1, 1]} : vector<2x4xf8E8M0FNU> to vector<1x2xf8E8M0FNU>
+// CHECK: %[[A0:.*]] = vector.shape_cast %[[S0]] : vector<1x2xf8E8M0FNU> to vector<2xf8E8M0FNU>
+// CHECK: xegpu.dpas_mx %{{.*}}, %{{.*}} scale_a = %[[A0]] scale_b = %{{.*}} : (vector<32xf4E2M1FN>, vector<64xf4E2M1FN>, vector<2xf8E8M0FNU>, vector<2xf8E8M0FNU>) -> vector<8xf32>
+// CHECK: %[[A1:.*]] = vector.shape_cast %[[S1]] : vector<1x2xf8E8M0FNU> to vector<2xf8E8M0FNU>
+// CHECK: xegpu.dpas_mx %{{.*}}, %{{.*}} scale_a = %[[A1]] scale_b = %{{.*}} : (vector<32xf4E2M1FN>, vector<64xf4E2M1FN>, vector<2xf8E8M0FNU>, vector<2xf8E8M0FNU>) -> vector<8xf32>
+gpu.func @convert_layout_partial_subgroup() {
+  %a = arith.constant dense<1.0> : vector<8x64xf4E2M1FN>
+  %b = arith.constant dense<1.0> : vector<64x16xf4E2M1FN>
+  %scale_b = arith.constant dense<1.0> : vector<2x16xf8E8M0FNU>
+  %scale_a_src = arith.constant dense<1.0> : vector<16x4xf8E8M0FNU>
+  %cvt = xegpu.convert_layout %scale_a_src
+    <{
+      input_layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>,
+      target_layout = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>
+    }> : vector<16x4xf8E8M0FNU>
+  %scale_a0 = vector.extract_strided_slice %cvt
+    {offsets = [0, 0], sizes = [8, 2], strides = [1, 1]}
+    : vector<16x4xf8E8M0FNU> to vector<8x2xf8E8M0FNU>
+  %scale_a1 = vector.extract_strided_slice %cvt
+    {offsets = [8, 0], sizes = [8, 2], strides = [1, 1]}
+    : vector<16x4xf8E8M0FNU> to vector<8x2xf8E8M0FNU>
+  %res0 = xegpu.dpas_mx %a, %b scale_a = %scale_a0 scale_b = %scale_b {
+    layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+    layout_a_scale = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>,
+    layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [8, 1]>,
+    layout_b_scale = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+    layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+  } : (vector<8x64xf4E2M1FN>, vector<64x16xf4E2M1FN>, vector<8x2xf8E8M0FNU>, vector<2x16xf8E8M0FNU>) -> vector<8x16xf32>
+  %res1 = xegpu.dpas_mx %a, %b scale_a = %scale_a1 scale_b = %scale_b {
+    layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+    layout_a_scale = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>,
+    layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [8, 1]>,
+    layout_b_scale = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+    layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+  } : (vector<8x64xf4E2M1FN>, vector<64x16xf4E2M1FN>, vector<8x2xf8E8M0FNU>, vector<2x16xf8E8M0FNU>) -> vector<8x16xf32>
+  gpu.return
+}
+}

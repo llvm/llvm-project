@@ -3032,6 +3032,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  isnanf128
+  SRCS
+    isnanf128.cpp
+  HDRS
+    ../isnanf128.h
+  DEPENDS
+    libc.src.__support.math.isnanf128
+)
+
+add_entrypoint_object(
   isnanl
   SRCS
     isnanl.cpp

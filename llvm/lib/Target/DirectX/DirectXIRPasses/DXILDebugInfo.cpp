@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILDebugInfo.h"
-#include "DirectX.h"
+#include "DXILAttributes.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/DebugInfo.h"

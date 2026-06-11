@@ -97,64 +97,34 @@ define amdgpu_vs half @fptrunc_f32_to_f16(float inreg %val) {
 }
 
 define amdgpu_vs float @fceil_f32(float inreg %val) {
-; SDAG-LABEL: fceil_f32:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_ceil_f32 s0, s0
-; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; SDAG-NEXT:    ; return to shader part epilog
-;
-; GISEL-GFX11-LABEL: fceil_f32:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    v_ceil_f32_e32 v0, s0
-; GISEL-GFX11-NEXT:    ; return to shader part epilog
-;
-; GISEL-GFX12-LABEL: fceil_f32:
-; GISEL-GFX12:       ; %bb.0:
-; GISEL-GFX12-NEXT:    v_ceil_f32_e32 v0, s0
-; GISEL-GFX12-NEXT:    ; return to shader part epilog
+; CHECK-LABEL: fceil_f32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_ceil_f32 s0, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; CHECK-NEXT:    v_mov_b32_e32 v0, s0
+; CHECK-NEXT:    ; return to shader part epilog
   %res = call float @llvm.ceil.f32(float %val)
   ret float %res
 }
 
 define amdgpu_vs float @ffloor_f32(float inreg %val) {
-; SDAG-LABEL: ffloor_f32:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_floor_f32 s0, s0
-; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; SDAG-NEXT:    ; return to shader part epilog
-;
-; GISEL-GFX11-LABEL: ffloor_f32:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    v_floor_f32_e32 v0, s0
-; GISEL-GFX11-NEXT:    ; return to shader part epilog
-;
-; GISEL-GFX12-LABEL: ffloor_f32:
-; GISEL-GFX12:       ; %bb.0:
-; GISEL-GFX12-NEXT:    v_floor_f32_e32 v0, s0
-; GISEL-GFX12-NEXT:    ; return to shader part epilog
+; CHECK-LABEL: ffloor_f32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_floor_f32 s0, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; CHECK-NEXT:    v_mov_b32_e32 v0, s0
+; CHECK-NEXT:    ; return to shader part epilog
   %res = call float @llvm.floor.f32(float %val)
   ret float %res
 }
 
 define amdgpu_vs float @ftrunc_f32(float inreg %val) {
-; SDAG-LABEL: ftrunc_f32:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_trunc_f32 s0, s0
-; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; SDAG-NEXT:    ; return to shader part epilog
-;
-; GISEL-GFX11-LABEL: ftrunc_f32:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    v_trunc_f32_e32 v0, s0
-; GISEL-GFX11-NEXT:    ; return to shader part epilog
-;
-; GISEL-GFX12-LABEL: ftrunc_f32:
-; GISEL-GFX12:       ; %bb.0:
-; GISEL-GFX12-NEXT:    v_trunc_f32_e32 v0, s0
-; GISEL-GFX12-NEXT:    ; return to shader part epilog
+; CHECK-LABEL: ftrunc_f32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_trunc_f32 s0, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; CHECK-NEXT:    v_mov_b32_e32 v0, s0
+; CHECK-NEXT:    ; return to shader part epilog
   %res = call float @llvm.trunc.f32(float %val)
   ret float %res
 }
@@ -181,64 +151,34 @@ define amdgpu_vs float @frint_f32(float inreg %val) {
 }
 
 define amdgpu_vs half @fceil_f16(half inreg %val) {
-; SDAG-LABEL: fceil_f16:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_ceil_f16 s0, s0
-; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; SDAG-NEXT:    ; return to shader part epilog
-;
-; GISEL-GFX11-LABEL: fceil_f16:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    v_ceil_f16_e32 v0.l, s0
-; GISEL-GFX11-NEXT:    ; return to shader part epilog
-;
-; GISEL-GFX12-LABEL: fceil_f16:
-; GISEL-GFX12:       ; %bb.0:
-; GISEL-GFX12-NEXT:    v_ceil_f16_e32 v0.l, s0
-; GISEL-GFX12-NEXT:    ; return to shader part epilog
+; CHECK-LABEL: fceil_f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_ceil_f16 s0, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; CHECK-NEXT:    v_mov_b32_e32 v0, s0
+; CHECK-NEXT:    ; return to shader part epilog
   %res = call half @llvm.ceil.f16(half %val)
   ret half %res
 }
 
 define amdgpu_vs half @ffloor_f16(half inreg %val) {
-; SDAG-LABEL: ffloor_f16:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_floor_f16 s0, s0
-; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; SDAG-NEXT:    ; return to shader part epilog
-;
-; GISEL-GFX11-LABEL: ffloor_f16:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    v_floor_f16_e32 v0.l, s0
-; GISEL-GFX11-NEXT:    ; return to shader part epilog
-;
-; GISEL-GFX12-LABEL: ffloor_f16:
-; GISEL-GFX12:       ; %bb.0:
-; GISEL-GFX12-NEXT:    v_floor_f16_e32 v0.l, s0
-; GISEL-GFX12-NEXT:    ; return to shader part epilog
+; CHECK-LABEL: ffloor_f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_floor_f16 s0, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; CHECK-NEXT:    v_mov_b32_e32 v0, s0
+; CHECK-NEXT:    ; return to shader part epilog
   %res = call half @llvm.floor.f16(half %val)
   ret half %res
 }
 
 define amdgpu_vs half @ftrunc_f16(half inreg %val) {
-; SDAG-LABEL: ftrunc_f16:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    s_trunc_f16 s0, s0
-; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; SDAG-NEXT:    ; return to shader part epilog
-;
-; GISEL-GFX11-LABEL: ftrunc_f16:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    v_trunc_f16_e32 v0.l, s0
-; GISEL-GFX11-NEXT:    ; return to shader part epilog
-;
-; GISEL-GFX12-LABEL: ftrunc_f16:
-; GISEL-GFX12:       ; %bb.0:
-; GISEL-GFX12-NEXT:    v_trunc_f16_e32 v0.l, s0
-; GISEL-GFX12-NEXT:    ; return to shader part epilog
+; CHECK-LABEL: ftrunc_f16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_trunc_f16 s0, s0
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; CHECK-NEXT:    v_mov_b32_e32 v0, s0
+; CHECK-NEXT:    ; return to shader part epilog
   %res = call half @llvm.trunc.f16(half %val)
   ret half %res
 }

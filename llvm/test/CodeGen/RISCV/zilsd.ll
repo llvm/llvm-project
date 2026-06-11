@@ -84,25 +84,25 @@ define i64 @load_unaligned(ptr %p) {
 ; SLOW-LABEL: load_unaligned:
 ; SLOW:       # %bb.0:
 ; SLOW-NEXT:    lbu a1, 1(a0)
-; SLOW-NEXT:    lbu a2, 2(a0)
-; SLOW-NEXT:    lbu a3, 3(a0)
-; SLOW-NEXT:    lbu a4, 0(a0)
+; SLOW-NEXT:    lbu a2, 0(a0)
+; SLOW-NEXT:    lbu a3, 2(a0)
+; SLOW-NEXT:    lbu a4, 3(a0)
 ; SLOW-NEXT:    slli a1, a1, 8
-; SLOW-NEXT:    slli a2, a2, 16
-; SLOW-NEXT:    slli a3, a3, 24
-; SLOW-NEXT:    or a1, a1, a4
-; SLOW-NEXT:    or a2, a3, a2
-; SLOW-NEXT:    lbu a3, 5(a0)
-; SLOW-NEXT:    lbu a4, 4(a0)
-; SLOW-NEXT:    lbu a5, 6(a0)
-; SLOW-NEXT:    lbu a0, 7(a0)
-; SLOW-NEXT:    slli a3, a3, 8
-; SLOW-NEXT:    or a3, a3, a4
-; SLOW-NEXT:    slli a5, a5, 16
-; SLOW-NEXT:    slli a0, a0, 24
-; SLOW-NEXT:    or a5, a0, a5
-; SLOW-NEXT:    or a0, a2, a1
-; SLOW-NEXT:    or a1, a5, a3
+; SLOW-NEXT:    lbu a5, 5(a0)
+; SLOW-NEXT:    lbu a6, 6(a0)
+; SLOW-NEXT:    lbu a7, 7(a0)
+; SLOW-NEXT:    lbu a0, 4(a0)
+; SLOW-NEXT:    or a1, a1, a2
+; SLOW-NEXT:    slli a3, a3, 16
+; SLOW-NEXT:    slli a4, a4, 24
+; SLOW-NEXT:    or a3, a4, a3
+; SLOW-NEXT:    slli a5, a5, 8
+; SLOW-NEXT:    slli a6, a6, 16
+; SLOW-NEXT:    slli a7, a7, 24
+; SLOW-NEXT:    or a5, a5, a0
+; SLOW-NEXT:    or a2, a7, a6
+; SLOW-NEXT:    or a0, a3, a1
+; SLOW-NEXT:    or a1, a2, a5
 ; SLOW-NEXT:    ret
 ;
 ; FAST-LABEL: load_unaligned:
@@ -113,25 +113,25 @@ define i64 @load_unaligned(ptr %p) {
 ; 4BYTEALIGN-LABEL: load_unaligned:
 ; 4BYTEALIGN:       # %bb.0:
 ; 4BYTEALIGN-NEXT:    lbu a1, 1(a0)
-; 4BYTEALIGN-NEXT:    lbu a2, 2(a0)
-; 4BYTEALIGN-NEXT:    lbu a3, 3(a0)
-; 4BYTEALIGN-NEXT:    lbu a4, 0(a0)
+; 4BYTEALIGN-NEXT:    lbu a2, 0(a0)
+; 4BYTEALIGN-NEXT:    lbu a3, 2(a0)
+; 4BYTEALIGN-NEXT:    lbu a4, 3(a0)
 ; 4BYTEALIGN-NEXT:    slli a1, a1, 8
-; 4BYTEALIGN-NEXT:    slli a2, a2, 16
-; 4BYTEALIGN-NEXT:    slli a3, a3, 24
-; 4BYTEALIGN-NEXT:    or a1, a1, a4
-; 4BYTEALIGN-NEXT:    or a2, a3, a2
-; 4BYTEALIGN-NEXT:    lbu a3, 5(a0)
-; 4BYTEALIGN-NEXT:    lbu a4, 4(a0)
-; 4BYTEALIGN-NEXT:    lbu a5, 6(a0)
-; 4BYTEALIGN-NEXT:    lbu a0, 7(a0)
-; 4BYTEALIGN-NEXT:    slli a3, a3, 8
-; 4BYTEALIGN-NEXT:    or a3, a3, a4
-; 4BYTEALIGN-NEXT:    slli a5, a5, 16
-; 4BYTEALIGN-NEXT:    slli a0, a0, 24
-; 4BYTEALIGN-NEXT:    or a5, a0, a5
-; 4BYTEALIGN-NEXT:    or a0, a2, a1
-; 4BYTEALIGN-NEXT:    or a1, a5, a3
+; 4BYTEALIGN-NEXT:    lbu a5, 5(a0)
+; 4BYTEALIGN-NEXT:    lbu a6, 6(a0)
+; 4BYTEALIGN-NEXT:    lbu a7, 7(a0)
+; 4BYTEALIGN-NEXT:    lbu a0, 4(a0)
+; 4BYTEALIGN-NEXT:    or a1, a1, a2
+; 4BYTEALIGN-NEXT:    slli a3, a3, 16
+; 4BYTEALIGN-NEXT:    slli a4, a4, 24
+; 4BYTEALIGN-NEXT:    or a3, a4, a3
+; 4BYTEALIGN-NEXT:    slli a5, a5, 8
+; 4BYTEALIGN-NEXT:    slli a6, a6, 16
+; 4BYTEALIGN-NEXT:    slli a7, a7, 24
+; 4BYTEALIGN-NEXT:    or a5, a5, a0
+; 4BYTEALIGN-NEXT:    or a2, a7, a6
+; 4BYTEALIGN-NEXT:    or a0, a3, a1
+; 4BYTEALIGN-NEXT:    or a1, a2, a5
 ; 4BYTEALIGN-NEXT:    ret
   %res = load i64, ptr %p, align 1
   ret i64 %res
@@ -143,17 +143,17 @@ define void @store_unaligned(ptr %p, i64 %v) {
 ; SLOW-NEXT:    srli a3, a2, 24
 ; SLOW-NEXT:    srli a4, a2, 16
 ; SLOW-NEXT:    srli a5, a2, 8
-; SLOW-NEXT:    srli a6, a1, 24
-; SLOW-NEXT:    srli a7, a1, 16
 ; SLOW-NEXT:    sb a2, 4(a0)
 ; SLOW-NEXT:    sb a5, 5(a0)
 ; SLOW-NEXT:    sb a4, 6(a0)
 ; SLOW-NEXT:    sb a3, 7(a0)
-; SLOW-NEXT:    srli a2, a1, 8
+; SLOW-NEXT:    srli a2, a1, 24
+; SLOW-NEXT:    srli a3, a1, 16
+; SLOW-NEXT:    srli a4, a1, 8
 ; SLOW-NEXT:    sb a1, 0(a0)
-; SLOW-NEXT:    sb a2, 1(a0)
-; SLOW-NEXT:    sb a7, 2(a0)
-; SLOW-NEXT:    sb a6, 3(a0)
+; SLOW-NEXT:    sb a4, 1(a0)
+; SLOW-NEXT:    sb a3, 2(a0)
+; SLOW-NEXT:    sb a2, 3(a0)
 ; SLOW-NEXT:    ret
 ;
 ; FAST-LABEL: store_unaligned:
@@ -168,17 +168,17 @@ define void @store_unaligned(ptr %p, i64 %v) {
 ; 4BYTEALIGN-NEXT:    srli a3, a2, 24
 ; 4BYTEALIGN-NEXT:    srli a4, a2, 16
 ; 4BYTEALIGN-NEXT:    srli a5, a2, 8
-; 4BYTEALIGN-NEXT:    srli a6, a1, 24
-; 4BYTEALIGN-NEXT:    srli a7, a1, 16
 ; 4BYTEALIGN-NEXT:    sb a2, 4(a0)
 ; 4BYTEALIGN-NEXT:    sb a5, 5(a0)
 ; 4BYTEALIGN-NEXT:    sb a4, 6(a0)
 ; 4BYTEALIGN-NEXT:    sb a3, 7(a0)
-; 4BYTEALIGN-NEXT:    srli a2, a1, 8
+; 4BYTEALIGN-NEXT:    srli a2, a1, 24
+; 4BYTEALIGN-NEXT:    srli a3, a1, 16
+; 4BYTEALIGN-NEXT:    srli a4, a1, 8
 ; 4BYTEALIGN-NEXT:    sb a1, 0(a0)
-; 4BYTEALIGN-NEXT:    sb a2, 1(a0)
-; 4BYTEALIGN-NEXT:    sb a7, 2(a0)
-; 4BYTEALIGN-NEXT:    sb a6, 3(a0)
+; 4BYTEALIGN-NEXT:    sb a4, 1(a0)
+; 4BYTEALIGN-NEXT:    sb a3, 2(a0)
+; 4BYTEALIGN-NEXT:    sb a2, 3(a0)
 ; 4BYTEALIGN-NEXT:    ret
   store i64 %v, ptr %p, align 1
   ret void

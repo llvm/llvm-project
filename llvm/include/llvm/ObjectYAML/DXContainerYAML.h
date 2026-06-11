@@ -508,7 +508,7 @@ template <> struct MappingTraits<DXContainerYAML::SignatureElement> {
 };
 
 template <> struct MappingTraits<DXContainerYAML::StringTableEntry> {
-  static void mapping(IO &IO, DXContainerYAML::StringTableEntry &E);
+  LLVM_ABI static void mapping(IO &IO, DXContainerYAML::StringTableEntry &E);
 };
 
 template <> struct MappingTraits<DXContainerYAML::SignatureParameter> {

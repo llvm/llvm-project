@@ -37,7 +37,6 @@
 #include <__type_traits/is_trivially_destructible.h>
 #include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/is_void.h>
-#include <__type_traits/lazy.h>
 #include <__type_traits/negation.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>
@@ -685,12 +684,11 @@ public:
 private:
   template <class _OtherErrQual>
   static constexpr bool __can_assign_from_unexpected =
-      _And< is_constructible<_Err, _OtherErrQual>,
-            is_assignable<_Err&, _OtherErrQual>,
-            _Lazy<_Or,
-                  is_nothrow_constructible<_Err, _OtherErrQual>,
-                  is_nothrow_move_constructible<_Tp>,
-                  is_nothrow_move_constructible<_Err>> >::value;
+      _And<is_constructible<_Err, _OtherErrQual>,
+           is_assignable<_Err&, _OtherErrQual>,
+           _Or<is_nothrow_constructible<_Err, _OtherErrQual>,
+               is_nothrow_move_constructible<_Tp>,
+               is_nothrow_move_constructible<_Err>>>::value;
 
 public:
   template <class _OtherErr>

@@ -2133,6 +2133,18 @@ Example:
 
   !0 = !{ !"agent" }
 
+.. _amdgpu_unsupported_constructs:
+
+Unsupported IR Constructs
+-------------------------
+
+The following LLVM IR constructs are not supported by the AMDGPU backend:
+
+* atomic accesses with less than natural alignment or an access size of
+  more than 64 bits
+
+This list is not exhaustive.
+
 .. _amdgpu_metadata:
 
 LLVM IR Metadata

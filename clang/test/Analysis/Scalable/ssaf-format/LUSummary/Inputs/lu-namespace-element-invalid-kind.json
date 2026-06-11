@@ -1,0 +1,11 @@
+{
+  "lu_namespace": [
+    {
+      "kind": "invalid_kind",
+      "name": "test.cpp"
+    }
+  ],
+  "id_table": [],
+  "linkage_table": [],
+  "data": []
+}

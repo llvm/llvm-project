@@ -49,6 +49,14 @@ constexpr uint32_t MAX_BLOCK = 999999999;
 
 LIBC_INLINE RoundDirection get_round_direction(int last_digit, bool truncated,
                                                Sign sign) {
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  if (last_digit != 5) {
+    return last_digit > 5 ? RoundDirection::Up : RoundDirection::Down;
+  } else {
+    return !truncated ? RoundDirection::Even : RoundDirection::Up;
+  }
+#endif
+
   switch (fputil::quick_get_round()) {
   case FE_TONEAREST:
     // Round to nearest, if it's exactly halfway then round to even.

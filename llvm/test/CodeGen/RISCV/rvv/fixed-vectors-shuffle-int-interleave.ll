@@ -74,13 +74,14 @@ define <4 x i32> @interleave_v2i32(<2 x i32> %x, <2 x i32> %y) {
 define <4 x i64> @interleave_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; V128-LABEL: interleave_v2i64:
 ; V128:       # %bb.0:
-; V128-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
-; V128-NEXT:    vmv1r.v v10, v9
-; V128-NEXT:    vmv.v.i v0, 10
 ; V128-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; V128-NEXT:    vmv1r.v v10, v9
 ; V128-NEXT:    vslideup.vi v12, v10, 1
 ; V128-NEXT:    vslideup.vi v12, v10, 2
 ; V128-NEXT:    vmv2r.v v10, v8
+; V128-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; V128-NEXT:    vmv.v.i v0, 10
+; V128-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; V128-NEXT:    vslideup.vi v10, v8, 1
 ; V128-NEXT:    vmerge.vvm v8, v10, v12, v0
 ; V128-NEXT:    ret
@@ -88,10 +89,10 @@ define <4 x i64> @interleave_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; V512-LABEL: interleave_v2i64:
 ; V512:       # %bb.0:
 ; V512-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
+; V512-NEXT:    vmv.v.i v0, 10
 ; V512-NEXT:    vslideup.vi v10, v9, 1
 ; V512-NEXT:    vmv1r.v v11, v8
 ; V512-NEXT:    vslideup.vi v10, v9, 2
-; V512-NEXT:    vmv.v.i v0, 10
 ; V512-NEXT:    vslideup.vi v11, v8, 1
 ; V512-NEXT:    vmerge.vvm v8, v11, v10, v0
 ; V512-NEXT:    ret
@@ -547,19 +548,20 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ; V128-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; V128-NEXT:    addi a0, sp, 16
 ; V128-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; V128-NEXT:    li a0, 32
 ; V128-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; V128-NEXT:    vslidedown.vi v24, v16, 16
-; V128-NEXT:    li a0, 32
-; V128-NEXT:    lui a1, 699051
 ; V128-NEXT:    vslidedown.vi v0, v8, 16
+; V128-NEXT:    vmv4r.v v8, v24
 ; V128-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; V128-NEXT:    vzext.vf2 v8, v24
+; V128-NEXT:    vzext.vf2 v24, v8
+; V128-NEXT:    vsll.vx v24, v24, a0
+; V128-NEXT:    vzext.vf2 v8, v0
+; V128-NEXT:    lui a1, 699051
 ; V128-NEXT:    addi a1, a1, -1366
-; V128-NEXT:    vzext.vf2 v24, v0
 ; V128-NEXT:    vmv.s.x v0, a1
-; V128-NEXT:    vsll.vx v8, v8, a0
 ; V128-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; V128-NEXT:    vmerge.vvm v24, v24, v8, v0
+; V128-NEXT:    vmerge.vvm v24, v8, v24, v0
 ; V128-NEXT:    addi a0, sp, 16
 ; V128-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; V128-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
@@ -597,19 +599,20 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ; ZVZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; ZVZIP-NEXT:    addi a0, sp, 16
 ; ZVZIP-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    li a0, 32
 ; ZVZIP-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; ZVZIP-NEXT:    vslidedown.vi v24, v16, 16
-; ZVZIP-NEXT:    li a0, 32
-; ZVZIP-NEXT:    lui a1, 699051
 ; ZVZIP-NEXT:    vslidedown.vi v0, v8, 16
+; ZVZIP-NEXT:    vmv4r.v v8, v24
 ; ZVZIP-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; ZVZIP-NEXT:    vzext.vf2 v8, v24
+; ZVZIP-NEXT:    vzext.vf2 v24, v8
+; ZVZIP-NEXT:    vsll.vx v24, v24, a0
+; ZVZIP-NEXT:    vzext.vf2 v8, v0
+; ZVZIP-NEXT:    lui a1, 699051
 ; ZVZIP-NEXT:    addi a1, a1, -1366
-; ZVZIP-NEXT:    vzext.vf2 v24, v0
 ; ZVZIP-NEXT:    vmv.s.x v0, a1
-; ZVZIP-NEXT:    vsll.vx v8, v8, a0
 ; ZVZIP-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; ZVZIP-NEXT:    vmerge.vvm v24, v24, v8, v0
+; ZVZIP-NEXT:    vmerge.vvm v24, v8, v24, v0
 ; ZVZIP-NEXT:    addi a0, sp, 16
 ; ZVZIP-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; ZVZIP-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
@@ -625,6 +628,60 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ; ZVZIP-NEXT:    addi sp, sp, 16
 ; ZVZIP-NEXT:    .cfi_def_cfa_offset 0
 ; ZVZIP-NEXT:    ret
+; ZIP-LABEL: interleave_v32i32:
+; ZIP:       # %bb.0:
+; ZIP-NEXT:    addi sp, sp, -16
+; ZIP-NEXT:    .cfi_def_cfa_offset 16
+; ZIP-NEXT:    csrr a0, vlenb
+; ZIP-NEXT:    li a1, 24
+; ZIP-NEXT:    mul a0, a0, a1
+; ZIP-NEXT:    sub sp, sp, a0
+; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 24 * vlenb
+; ZIP-NEXT:    csrr a0, vlenb
+; ZIP-NEXT:    slli a0, a0, 4
+; ZIP-NEXT:    add a0, sp, a0
+; ZIP-NEXT:    addi a0, a0, 16
+; ZIP-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
+; ZIP-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; ZIP-NEXT:    vmv8r.v v24, v8
+; ZIP-NEXT:    addi a0, sp, 16
+; ZIP-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; ZIP-NEXT:    vslidedown.vi v8, v16, 16
+; ZIP-NEXT:    csrr a0, vlenb
+; ZIP-NEXT:    slli a0, a0, 3
+; ZIP-NEXT:    add a0, sp, a0
+; ZIP-NEXT:    addi a0, a0, 16
+; ZIP-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
+; ZIP-NEXT:    vslidedown.vi v8, v24, 16
+; ZIP-NEXT:    lui a0, 699051
+; ZIP-NEXT:    addi a0, a0, -1366
+; ZIP-NEXT:    vmv.s.x v0, a0
+; ZIP-NEXT:    li a0, 32
+; ZIP-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
+; ZIP-NEXT:    ri.vzip2a.vv v16, v8, v24
+; ZIP-NEXT:    csrr a0, vlenb
+; ZIP-NEXT:    slli a0, a0, 3
+; ZIP-NEXT:    add a0, sp, a0
+; ZIP-NEXT:    addi a0, a0, 16
+; ZIP-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; ZIP-NEXT:    ri.vzip2a.vv v16, v24, v8, v0.t
+; ZIP-NEXT:    csrr a0, vlenb
+; ZIP-NEXT:    slli a0, a0, 4
+; ZIP-NEXT:    add a0, sp, a0
+; ZIP-NEXT:    addi a0, a0, 16
+; ZIP-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; ZIP-NEXT:    addi a0, sp, 16
+; ZIP-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; ZIP-NEXT:    ri.vzip2a.vv v0, v8, v24
+; ZIP-NEXT:    vmv.v.v v8, v0
+; ZIP-NEXT:    csrr a0, vlenb
+; ZIP-NEXT:    li a1, 24
+; ZIP-NEXT:    mul a0, a0, a1
+; ZIP-NEXT:    add sp, sp, a0
+; ZIP-NEXT:    .cfi_def_cfa sp, 16
+; ZIP-NEXT:    addi sp, sp, 16
+; ZIP-NEXT:    .cfi_def_cfa_offset 0
+; ZIP-NEXT:    ret
   %a = shufflevector <32 x i32> %x, <32 x i32> %y, <64 x i32> <i32 0, i32 32, i32 1, i32 33, i32 2, i32 34, i32 3, i32 35, i32 4, i32 36, i32 5, i32 37, i32 6, i32 38, i32 7, i32 39, i32 8, i32 40, i32 9, i32 41, i32 10, i32 42, i32 11, i32 43, i32 12, i32 44, i32 13, i32 45, i32 14, i32 46, i32 15, i32 47, i32 16, i32 48, i32 17, i32 49, i32 18, i32 50, i32 19, i32 51, i32 20, i32 52, i32 21, i32 53, i32 22, i32 54, i32 23, i32 55, i32 24, i32 56, i32 25, i32 57, i32 26, i32 58, i32 27, i32 59, i32 28, i32 60, i32 29, i32 61, i32 30, i32 62, i32 31, i32 63>
   ret <64 x i32> %a
 }

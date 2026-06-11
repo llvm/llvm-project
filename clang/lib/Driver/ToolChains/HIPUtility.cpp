@@ -477,10 +477,10 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
 
   Objf << ObjBuffer;
 
-  ArgStringList ClangArgs{"-target", Args.MakeArgString(HostTriple.normalize()),
-                       "-o",      Output.getFilename(),
-                       "-x",      "assembler",
-                       ObjinFile, "-c"};
+  ArgStringList ClangArgs{"-target", Args.MakeArgStringRef(HostTriple.str()),
+                          "-o",      Output.getFilename(),
+                          "-x",      "assembler",
+                          ObjinFile, "-c"};
   C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
                                          D.getDriverProgramPath(), ClangArgs,
                                          Inputs, Output, D.getPrependArg()));

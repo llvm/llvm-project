@@ -598,6 +598,7 @@ public:
   Symbol &MakeSymbol(const SourceName &, Attrs = Attrs{});
   Symbol &MakeSymbol(const parser::Name &, Attrs = Attrs{});
   Symbol &MakeHostAssocSymbol(const parser::Name &, const Symbol &);
+  Symbol &MakeHostAssocSymbol(Scope &, const parser::Name &, const Symbol &);
 
   template <typename D>
   common::IfNoLvalue<Symbol &, D> MakeSymbol(
@@ -763,8 +764,6 @@ protected:
     std::vector<const std::list<parser::EquivalenceObject> *> equivalenceSets;
     // Names of all common block objects in the scope
     std::set<SourceName> commonBlockObjects;
-    // Names of all names that show in a declare target declaration
-    std::set<SourceName> declareTargetNames;
     // Info about SAVE statements and attributes in current scope
     struct {
       std::optional<SourceName> saveAll; // "SAVE" without entity list
@@ -1273,7 +1272,6 @@ private:
   const parser::Name *FindComponent(const parser::Name *, const parser::Name &);
   void Initialization(const parser::Name &, const parser::Initialization &,
       bool inComponentDecl);
-  bool FindAndMarkDeclareTargetSymbol(const parser::Name &);
   bool PassesLocalityChecks(
       const parser::Name &name, Symbol &symbol, Symbol::Flag flag);
   bool CheckForHostAssociatedImplicit(const parser::Name &);
@@ -1764,49 +1762,79 @@ public:
   bool Pre(const parser::OmpClause::To &);
   bool Pre(const parser::OmpClause::From &);
 
-  bool Pre(const parser::OmpDeclareTargetDirective &x) {
-    auto addObjectName{[&](const parser::OmpObject &object) {
-      common::visit(
-          common::visitors{
-              [&](const parser::Designator &designator) {
-                if (const auto *name{
-                        parser::GetDesignatorNameIfDataRef(designator)}) {
-                  specPartState_.declareTargetNames.insert(name->source);
-                }
-              },
-              [&](const parser::Name &name) {
-                specPartState_.declareTargetNames.insert(name.source);
-              },
-              [&](const parser::OmpObject::Invalid &invalid) {
-                switch (invalid.v) {
-                  SWITCH_COVERS_ALL_CASES
-                case parser::OmpObject::Invalid::Kind::BlankCommonBlock:
-                  context().Say(invalid.source,
-                      "Blank common blocks are not allowed as directive or clause arguments"_err_en_US);
-                  break;
-                }
-              },
-          },
-          object.u);
-    }};
+  // Make sure that the following code is properly handled:
+  //
+  // function baz(a)
+  //   !$omp declare target to(baz)
+  //   real, intent(in) :: a
+  //   baz = a
+  // end
+  //
+  // subroutine foo
+  //   !$omp declare target(baz)   ! 'baz' should resolve to the array
+  //   integer, save :: baz(10)
+  // end
+  //
+  // subroutine bar
+  //   real :: a
+  //   !$omp declare target(baz)   ! 'baz' should resolve to the external
+  //   !$omp target                ! function
+  //     a = baz(a)
+  //   !$omp end target
+  // end
+  //
+  // The problem is that "declare_target(baz)" despite being the same
+  // in both foo and bar, should lead to two different outcomes in symbol
+  // resolution.
 
+  // The approach is to treat declarations introduced by a DECLARE_TARGET
+  // as eligible for overriding with a potentially conflicting declaration
+  // stemming from the use of that name in a language construct or expression.
+  // Since a mere mention of a name alone declares an object, such conflict
+  // occurs when the name would have been otherwise resolved to a procedure.
+  // The overriding happens in HandleProcedureName.
+  //
+  // Here in Pre/Post we'll record the symbols that were created specifically
+  // for names appearing in a DECLARE_TARGET.
+  bool Pre(const parser::OmpDeclareTargetDirective &x) {
+    // Save names appearing in this DECLARE_TARGET.
+    declareTargetNames_.clear();
     for (const parser::OmpArgument &arg : x.v.Arguments().v) {
       if (auto *object{parser::omp::GetArgumentObject(arg)}) {
-        addObjectName(*object);
-      }
-    }
-
-    for (const parser::OmpClause &clause : x.v.Clauses().v) {
-      if (auto *objects{parser::omp::GetOmpObjectList(clause)}) {
-        for (const parser::OmpObject &object : objects->v) {
-          addObjectName(object);
+        if (auto *name = parser::Unwrap<parser::Name>(*object)) {
+          declareTargetNames_.insert(name);
         }
       }
     }
-
-    SkipImplicitTyping(true);
+    for (const parser::OmpClause &clause : x.v.Clauses().v) {
+      llvm::omp::Clause clauseId{clause.Id()};
+      // Only "enter" and "to" take an extended list item.
+      if (clauseId != llvm::omp::Clause::OMPC_enter &&
+          clauseId != llvm::omp::Clause::OMPC_to) {
+        continue;
+      }
+      if (auto *objects{parser::omp::GetOmpObjectList(clause)}) {
+        for (const parser::OmpObject &object : objects->v) {
+          if (auto *name = parser::Unwrap<parser::Name>(object)) {
+            declareTargetNames_.insert(name);
+          }
+        }
+      }
+    }
     return true;
   }
+
+  void Post(const parser::OmpDeclareTargetDirective &x) {
+    for (const parser::Name *name : declareTargetNames_) {
+      // The source location of the symbol's name() is the location of the
+      // declaration.
+      if (name->symbol &&
+          name->source.begin() == name->symbol->name().begin()) {
+        declaredByDeclareTarget_.insert(name->symbol);
+      }
+    }
+  }
+
   bool Pre(const parser::OmpClause &x) {
     if (NeedsScope(x)) {
       PushScopeWithSource(Scope::Kind::OtherClause, x.source);
@@ -1875,6 +1903,10 @@ public:
     messageHandler().set_currStmtSource(std::nullopt);
   }
 
+  bool WasDeclaredByOmpDeclareTarget(const Symbol *sym) {
+    return declaredByDeclareTarget_.erase(sym);
+  }
+
 private:
   void ResolveMapperModifier(const parser::OmpMapper &mapper);
   void ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
@@ -1885,6 +1917,8 @@ private:
   void ResolveCriticalName(const parser::OmpArgument &arg);
 
   std::vector<const parser::OpenMPDeclarativeConstruct *> declaratives_;
+  std::set<const parser::Name *> declareTargetNames_;
+  std::set<const Symbol *> declaredByDeclareTarget_;
 };
 
 bool OmpVisitor::NeedsScope(const parser::OmpClause &x) {
@@ -3246,9 +3280,12 @@ Symbol &ScopeHandler::MakeSymbol(const parser::Name &name, Attrs attrs) {
 }
 Symbol &ScopeHandler::MakeHostAssocSymbol(
     const parser::Name &name, const Symbol &hostSymbol) {
-  Symbol &symbol{*NonDerivedTypeScope()
-                      .try_emplace(name.source, HostAssocDetails{hostSymbol})
-                      .first->second};
+  return MakeHostAssocSymbol(NonDerivedTypeScope(), name, hostSymbol);
+}
+Symbol &ScopeHandler::MakeHostAssocSymbol(
+    Scope &scope, const parser::Name &name, const Symbol &hostSymbol) {
+  Symbol &symbol{*scope.try_emplace(name.source, HostAssocDetails{hostSymbol})
+          .first->second};
   name.symbol = &symbol;
   symbol.attrs() = hostSymbol.attrs(); // TODO: except PRIVATE, PUBLIC?
   // These attributes can be redundantly reapplied without error
@@ -9220,11 +9257,7 @@ const parser::Name *DeclarationVisitor::ResolveDataRef(
 // If implicit types are allowed, ensure name is in the symbol table.
 // Otherwise, report an error if it hasn't been declared.
 const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
-  if (!FindSymbol(name)) {
-    if (FindAndMarkDeclareTargetSymbol(name)) {
-      return &name;
-    }
-  }
+  FindSymbol(name);
   if (CheckForHostAssociatedImplicit(name)) {
     NotePossibleBadForwardRef(name);
     return &name;
@@ -9426,47 +9459,6 @@ const parser::Name *DeclarationVisitor::FindComponent(
         *base, symbol, "'%s' is not an object of derived type"_err_en_US);
   }
   return nullptr;
-}
-
-bool DeclarationVisitor::FindAndMarkDeclareTargetSymbol(
-    const parser::Name &name) {
-  if (!specPartState_.declareTargetNames.empty()) {
-    if (specPartState_.declareTargetNames.count(name.source)) {
-      if (!currScope().IsTopLevel()) {
-        // Search preceding scopes until we find a matching symbol or run out
-        // of scopes to search, we skip the current scope as it's already been
-        // designated as implicit here.
-        for (auto *scope = &currScope().parent();; scope = &scope->parent()) {
-          if (Symbol * symbol{scope->FindSymbol(name.source)}) {
-            if (symbol->test(Symbol::Flag::Subroutine) ||
-                symbol->test(Symbol::Flag::Function)) {
-              const auto [sym, success]{currScope().try_emplace(
-                  symbol->name(), Attrs{}, HostAssocDetails{*symbol})};
-              assert(success &&
-                  "FindAndMarkDeclareTargetSymbol could not emplace new "
-                  "subroutine/function symbol");
-              name.symbol = &*sym->second;
-              symbol->test(Symbol::Flag::Subroutine)
-                  ? name.symbol->set(Symbol::Flag::Subroutine)
-                  : name.symbol->set(Symbol::Flag::Function);
-              return true;
-            }
-            // if we find a symbol that is not a function or subroutine, we
-            // currently escape without doing anything.
-            break;
-          }
-
-          // This is our loop exit condition, as parent() has an inbuilt assert
-          // if you call it on a top level scope, rather than returning a null
-          // value.
-          if (scope->IsTopLevel()) {
-            return false;
-          }
-        }
-      }
-    }
-  }
-  return false;
 }
 
 void DeclarationVisitor::Initialization(const parser::Name &name,
@@ -9759,10 +9751,62 @@ void ResolveNamesVisitor::HandleCall(
   }
 }
 
+/// Assuming that 'symbol' was implicitly declared, check if it has not
+/// been encountered in any explicit declarative or executable statement
+/// that would alter its implicit declaration.
+static bool IsPristineImplicit(const Symbol &symbol) {
+  // The symbol should be implicit.
+  if (!symbol.test(Symbol::Flag::Implicit)) {
+    return false;
+  }
+  // That should be the only flag.
+  if (symbol.flags().count() != 1) {
+    return false;
+  }
+  // There should be no attributes.
+  if (symbol.attrs().count() != 0) {
+    return false;
+  }
+  // There should be no initializer, no shape or coshape.
+  if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (object->init()) {
+      return false;
+    }
+    if (object->shape().Rank() || object->coshape().Rank()) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void ResolveNamesVisitor::HandleProcedureName(
     Symbol::Flag flag, const parser::Name &name) {
   CHECK(flag == Symbol::Flag::Function || flag == Symbol::Flag::Subroutine);
   auto *symbol{FindSymbol(NonDerivedTypeScope(), name)};
+  // A symbol listed on OpenMP declare_target directive may be a variable
+  // or a procedure. If the directive is the first occurrence of the name,
+  // it will create an implicit declaration of an object (since the name
+  // is not used in a call at that location). If the name turns out to be
+  // that of a procedure, this is going to create a problem.
+  // If a symbol was created because of its appearance in a declare_target,
+  // a use in a call should override it with the procedure symbol.
+  Scope *ompDTScope{nullptr};
+  // A name implicitly declared by a DECLARE_TARGET may have been followed
+  // by an explcit declaration. Make sure the symbol is still implicit
+  // before doing anything.
+  if (WasDeclaredByOmpDeclareTarget(symbol)) {
+    bool inEquivalence{FindEquivalenceSet(*symbol) != nullptr};
+    if (IsPristineImplicit(*symbol) && !inEquivalence) {
+      // Implicit declaration of a symbol caused by being on a declare_target
+      // should only declare it as an object, not a procedure. This is because
+      // the 'x' in declare_target(x) looks like a use of a variable, not a
+      // procedure.
+      assert(!IsProcedure(*symbol) && "Should not be a procedure");
+      ompDTScope = const_cast<Scope *>(&symbol->owner());
+      ompDTScope->erase(symbol->name());
+      symbol = nullptr;
+    }
+  }
   if (!symbol) {
     if (IsIntrinsic(name.source, flag)) {
       symbol = &MakeSymbol(InclusiveScope(), name.source, Attrs{});
@@ -9785,6 +9829,14 @@ void ResolveNamesVisitor::HandleProcedureName(
         // Create a place-holder HostAssocDetails symbol to preclude later
         // use of this name as a local symbol; but don't actually use this new
         // HostAssocDetails symbol in expressions.
+        if (ompDTScope && &currScope() != ompDTScope &&
+            ompDTScope->Contains(currScope())) {
+          // If we're recreating a symbol previously declared due to an
+          // OpenMP declare_target, we need to create one in the scope
+          // where the declare_target was located. The use in a call that
+          // we're handling here may be in a nested scope.
+          MakeHostAssocSymbol(*ompDTScope, name, *symbol);
+        }
         MakeHostAssocSymbol(name, *symbol);
         name.symbol = symbol;
       }
@@ -10514,6 +10566,16 @@ bool ResolveNamesVisitor::Pre(const parser::PointerAssignmentStmt &x) {
   return false;
 }
 void ResolveNamesVisitor::Post(const parser::Designator &x) {
+  // If the name of this designator first appeared in OpenMP declare_target,
+  // it was implicitly declared as an object, but with the possibility of
+  // becoming a procedure. When the name is used in a designator, it cannot
+  // subsequently be turned into a procedure. Unmark the corresponding symbol
+  // as declared by a declare_target directive.
+  if (auto *name{parser::Unwrap<parser::Name>(x)}) {
+    if (auto *symbol{currScope().FindSymbol(name->source)}) {
+      WasDeclaredByOmpDeclareTarget(symbol);
+    }
+  }
   ResolveDesignator(x);
 }
 void ResolveNamesVisitor::Post(const parser::SubstringInquiry &x) {

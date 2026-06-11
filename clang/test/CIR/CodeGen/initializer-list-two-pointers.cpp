@@ -16,8 +16,8 @@ void initalizer_list_with_two_pointers_layout() {
   std::initializer_list<int> a = {10, 20, 30};
 }
 
-// CIR: %[[ARR_ADDR:.*]] = cir.alloca !cir.array<!s32i x 3>, !cir.ptr<!cir.array<!s32i x 3>>, ["ref.tmp0"]
-// CIR: %[[A_ADDR:.*]] = cir.alloca !rec_std3A3Ainitializer_list3Cint3E, !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E>, ["a", init]
+// CIR: %[[ARR_ADDR:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!cir.array<!s32i x 3>>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E>
 // CIR: %[[ARR_PTR:.*]] = cir.cast array_to_ptrdecay %[[ARR_ADDR]] : !cir.ptr<!cir.array<!s32i x 3>> -> !cir.ptr<!s32i>
 // CIR: %[[CONST_S32_10:.*]] = cir.const #cir.int<10> : !s32i
 // CIR: cir.store {{.*}} %[[CONST_S32_10]], %[[ARR_PTR]] : !s32i, !cir.ptr<!s32i>

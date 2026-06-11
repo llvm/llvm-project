@@ -187,10 +187,10 @@ Status DebuggerThread::StopDebugging(bool terminate) {
       // Initiate the termination before continuing the exception, so that the
       // next debug event we get is the exit process event, and not some other
       // event.
-      BOOL terminate_suceeded = TerminateProcess(handle, 0);
+      BOOL terminate_succeeded = TerminateProcess(handle, 0);
       LLDB_LOG(log,
                "calling TerminateProcess({0}, 0) (inferior={1}), success={2}",
-               handle, pid, terminate_suceeded);
+               handle, pid, terminate_succeeded);
     } else {
       LLDB_LOG(log,
                "NOT calling TerminateProcess because the inferior is not valid "
@@ -271,7 +271,7 @@ void DebuggerThread::DebugLoop() {
       bool shutting_down = m_is_shutting_down;
       switch (dbe.dwDebugEventCode) {
       default:
-        llvm_unreachable("Unhandle debug event code!");
+        llvm_unreachable("Unhandled debug event code!");
       case EXCEPTION_DEBUG_EVENT: {
         ExceptionResult status = HandleExceptionEvent(
             dbe.u.Exception, dbe.dwThreadId, shutting_down);
@@ -362,9 +362,8 @@ void DebuggerThread::DebugLoop() {
         }
       }
 
-      if (m_detached) {
+      if (m_detached)
         should_debug = false;
-      }
     } else {
       LLDB_LOG(log, "returned FALSE from WaitForDebugEventEx.  Error = {0}",
                ::GetLastError());
@@ -442,7 +441,8 @@ DebuggerThread::HandleCreateProcessEvent(const CREATE_PROCESS_DEBUG_INFO &info,
   // info.hProcess and info.hThread are closed automatically by Windows when
   // EXIT_PROCESS_DEBUG_EVENT is received.
   m_process = HostProcess(info.hProcess);
-  ((HostProcessWindows &)m_process.GetNativeProcess()).SetOwnsHandle(false);
+  static_cast<HostProcessWindows &>(m_process.GetNativeProcess())
+      .SetOwnsHandle(false);
   m_main_thread = HostThread(info.hThread);
   m_main_thread.GetNativeThread().SetOwnsHandle(false);
   m_image_file = info.hFile;

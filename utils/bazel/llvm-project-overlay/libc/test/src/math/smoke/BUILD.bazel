@@ -992,6 +992,11 @@ math_test(
 )
 
 math_test(
+    name = "isnanf128",
+    hdrs = ["IsNanTest.h"],
+)
+
+math_test(
     name = "llogbf16",
     hdrs = ["ILogbTest.h"],
 )

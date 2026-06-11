@@ -15,7 +15,6 @@
 define void @f1() {
 ; CHECK-LABEL: VPlan for loop in 'f1' after VPlanTransforms::simplifyRecipes
 ; CHECK-NEXT:  VPlan ' for UF>=1' {
-; CHECK-NEXT:  Live-in vp<[[VF:%[0-9]+]]> = VF
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<bb1>:
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
@@ -24,7 +23,7 @@ define void @f1() {
 ; CHECK-NEXT:  Successor(s): bb2
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  bb2:
-; CHECK-NEXT:    ir<%c.1.0> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:    EMIT-SCALAR ir<%c.1.0> = phi [ ir<0>, vector.ph ], [ ir<%_tmp9>, bb2 ]
 ; CHECK-NEXT:    EMIT-SCALAR ir<%_tmp1> = zext ir<0> to i64
 ; CHECK-NEXT:    EMIT ir<%_tmp2> = getelementptr ir<@a>, ir<0>, ir<0>
 ; CHECK-NEXT:    EMIT-SCALAR ir<%_tmp6> = sext ir<%c.1.0> to i64
@@ -60,7 +59,6 @@ bb3:
 define void @redundant_or_1(ptr %dst, i1 %c.0, i1 %c.1) {
 ; CHECK-LABEL: VPlan for loop in 'redundant_or_1' after VPlanTransforms::simplifyRecipes
 ; CHECK-NEXT:  VPlan ' for UF>=1' {
-; CHECK-NEXT:  Live-in vp<[[VF:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in ir<3> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
@@ -70,7 +68,7 @@ define void @redundant_or_1(ptr %dst, i1 %c.0, i1 %c.1) {
 ; CHECK-NEXT:  Successor(s): loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  loop.header:
-; CHECK-NEXT:    ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:    EMIT-SCALAR ir<%iv> = phi [ ir<0>, vector.ph ], [ ir<%iv.next>, loop.latch ]
 ; CHECK-NEXT:    EMIT branch-on-cond ir<%c.0>
 ; CHECK-NEXT:  Successor(s): loop.latch, then.1
 ; CHECK-EMPTY:
@@ -112,7 +110,6 @@ exit:
 define void @redundant_or_2(ptr %dst, i1 %c.0, i1 %c.1) {
 ; CHECK-LABEL: VPlan for loop in 'redundant_or_2' after VPlanTransforms::simplifyRecipes
 ; CHECK-NEXT:  VPlan ' for UF>=1' {
-; CHECK-NEXT:  Live-in vp<[[VF:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in ir<3> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
@@ -122,7 +119,7 @@ define void @redundant_or_2(ptr %dst, i1 %c.0, i1 %c.1) {
 ; CHECK-NEXT:  Successor(s): loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  loop.header:
-; CHECK-NEXT:    ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:    EMIT-SCALAR ir<%iv> = phi [ ir<0>, vector.ph ], [ ir<%iv.next>, loop.latch ]
 ; CHECK-NEXT:    EMIT branch-on-cond ir<%c.0>
 ; CHECK-NEXT:  Successor(s): loop.latch, then.1
 ; CHECK-EMPTY:
@@ -164,7 +161,6 @@ exit:
 define void @redundant_and_1(ptr %dst, i1 %c.0, i1 %c.1) {
 ; CHECK-LABEL: VPlan for loop in 'redundant_and_1' after VPlanTransforms::simplifyRecipes
 ; CHECK-NEXT:  VPlan ' for UF>=1' {
-; CHECK-NEXT:  Live-in vp<[[VF:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in ir<3> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
@@ -174,7 +170,7 @@ define void @redundant_and_1(ptr %dst, i1 %c.0, i1 %c.1) {
 ; CHECK-NEXT:  Successor(s): loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  loop.header:
-; CHECK-NEXT:    ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:    EMIT-SCALAR ir<%iv> = phi [ ir<0>, vector.ph ], [ ir<%iv.next>, loop.latch ]
 ; CHECK-NEXT:    EMIT branch-on-cond ir<%c.0>
 ; CHECK-NEXT:  Successor(s): loop.latch, then.1
 ; CHECK-EMPTY:
@@ -217,7 +213,6 @@ exit:
 define void @redundant_and_2(ptr %dst, i1 %c.0, i1 %c.1) {
 ; CHECK-LABEL: VPlan for loop in 'redundant_and_2' after VPlanTransforms::simplifyRecipes
 ; CHECK-NEXT:  VPlan ' for UF>=1' {
-; CHECK-NEXT:  Live-in vp<[[VF:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in ir<3> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
@@ -227,7 +222,7 @@ define void @redundant_and_2(ptr %dst, i1 %c.0, i1 %c.1) {
 ; CHECK-NEXT:  Successor(s): loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  loop.header:
-; CHECK-NEXT:    ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VF]]>
+; CHECK-NEXT:    EMIT-SCALAR ir<%iv> = phi [ ir<0>, vector.ph ], [ ir<%iv.next>, loop.latch ]
 ; CHECK-NEXT:    EMIT branch-on-cond ir<%c.0>
 ; CHECK-NEXT:  Successor(s): loop.latch, then.1
 ; CHECK-EMPTY:

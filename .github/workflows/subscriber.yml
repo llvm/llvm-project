@@ -24,19 +24,10 @@ jobs:
       deployment: false
     if: github.repository == 'llvm/llvm-project'
     runs-on: ubuntu-24.04
+    container:
+      image: "ghcr.io/llvm/amd64/ci-ubuntu-24.04-github-automation:latest@sha256:06164c484402046b0d624e5df8b3435a91ea7d204e2416201a9bac8d809b9aa6"
+
     steps:
-      - name: Checkout Scripts
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-          sparse-checkout: |
-            llvm/utils/git/
-
-      - name: Setup Automation Script
-        working-directory: ./llvm/utils/git/
-        run: |
-          pip install --require-hashes -r requirements.txt
-
       - id: app-token
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3  # v3.1.1
         with:
@@ -50,7 +41,6 @@ jobs:
           permission-pull-requests: ${{ case(github.event_name == 'pull_request_target', 'write', 'read') }}
 
       - name: Update subscribers
-        working-directory: ./llvm/utils/git/
         env:
           EVENT_TRIGGER: ${{ github.event_name }}
           ISSUE_SUBSCRIBER_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -67,7 +57,7 @@ jobs:
               exit 1
               ;;
           esac
-          python3 ./github-automation.py \
+          github-automation.py \
             --token "$ISSUE_SUBSCRIBER_TOKEN" \
             "$command" \
             --issue-number "$ISSUE_NUMBER" \

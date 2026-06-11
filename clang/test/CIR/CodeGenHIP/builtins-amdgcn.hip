@@ -1,5 +1,3 @@
-#include "../CodeGenCUDA/Inputs/cuda.h"
-
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 -fclangir \
 // RUN:            -target-cpu tahiti -fcuda-is-device -emit-cir %s -o %t.cir
@@ -12,6 +10,8 @@
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -std=c++11 \
 // RUN:            -target-cpu tahiti -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
+
+#define __device__ __attribute__((device))
 
 //===----------------------------------------------------------------------===//
 // Test AMDGPU builtins
@@ -70,6 +70,22 @@ __device__ void test_div_fmas_f64(double* out, double a, double b, double c, int
 // LLVM: call{{.*}} i32 @llvm.amdgcn.ds.swizzle(i32 %{{.*}}, i32 32)
 __device__ void test_ds_swizzle(int* out, int a) {
   *out = __builtin_amdgcn_ds_swizzle(a, 32);
+}
+
+// CIR-LABEL: @_Z18test_div_fixup_f32Pffff
+// CIR: cir.call_llvm_intrinsic "amdgcn.div.fixup" {{.*}} : (!cir.float, !cir.float, !cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z18test_div_fixup_f32Pffff
+// LLVM: call{{.*}} float @llvm.amdgcn.div.fixup.f32(float %{{.+}}, float %{{.+}}, float %{{.+}})
+__device__ void test_div_fixup_f32(float* out, float a, float b, float c) {
+  *out = __builtin_amdgcn_div_fixupf(a, b, c);
+}
+
+// CIR-LABEL: @_Z18test_div_fixup_f64Pdddd
+// CIR: cir.call_llvm_intrinsic "amdgcn.div.fixup" {{.*}} : (!cir.double, !cir.double, !cir.double) -> !cir.double
+// LLVM: define{{.*}} void @_Z18test_div_fixup_f64Pdddd
+// LLVM: call{{.*}} double @llvm.amdgcn.div.fixup.f64(double %{{.+}}, double %{{.+}}, double %{{.+}})
+__device__ void test_div_fixup_f64(double* out, double a, double b, double c) {
+  *out = __builtin_amdgcn_div_fixup(a, b, c);
 }
 
 // CIR-LABEL: @_Z13test_readlanePiii

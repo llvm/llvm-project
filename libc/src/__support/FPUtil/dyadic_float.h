@@ -17,6 +17,7 @@
 #include "rounding_mode.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/big_int.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/types.h"
@@ -41,11 +42,26 @@ namespace fputil {
 template <size_t Bits>
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT int
 rounding_direction(const LIBC_NAMESPACE::UInt<Bits> &value, size_t rshift,
-                   Sign logical_sign) {
+                   [[maybe_unused]] Sign logical_sign) {
+  // logical_sign only affects FE_DOWNWARD and FE_UPWARD rounding modes. In the
+  // case of LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY being enabled, this option
+  // is no-op
+
   if (rshift == 0 || (rshift < Bits && (value << (Bits - rshift)) == 0) ||
       (rshift >= Bits && value == 0))
     return 0; // exact
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  if (rshift > 0 && rshift <= Bits && value.get_bit(rshift - 1)) {
+    // We round up, unless the value is an exact halfway case and
+    // the bit that will end up in the units place is 0, in which
+    // case tie-break-to-even says round down.
+    bool round_bit = rshift < Bits ? value.get_bit(rshift) : 0;
+    return round_bit != 0 || (value << (Bits - rshift + 1)) != 0 ? +1 : -1;
+  } else {
+    return -1;
+  }
+#else  // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   switch (quick_get_round()) {
   case FE_TONEAREST:
     if (rshift > 0 && rshift <= Bits && value.get_bit(rshift - 1)) {
@@ -72,6 +88,7 @@ rounding_direction(const LIBC_NAMESPACE::UInt<Bits> &value, size_t rshift,
   default:
     __builtin_unreachable();
   }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 }
 
 // A generic class to perform computations of high precision floating points.
@@ -190,6 +207,9 @@ template <size_t Bits> struct DyadicFloat {
         raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
       }
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      return FPBits::inf(sign).get_val();
+#else  // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       switch (quick_get_round()) {
       case FE_TONEAREST:
         return FPBits::inf(sign).get_val();
@@ -206,6 +226,7 @@ template <size_t Bits> struct DyadicFloat {
       default:
         __builtin_unreachable();
       }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     }
 
     StorageType out_biased_exp = 0;
@@ -248,6 +269,10 @@ template <size_t Bits> struct DyadicFloat {
     StorageType result =
         FPBits::create_value(sign, out_biased_exp, out_mantissa).uintval();
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+    if (round && (lsb || sticky))
+      ++result;
+#else
     switch (quick_get_round()) {
     case FE_TONEAREST:
       if (round && (lsb || sticky))
@@ -264,6 +289,7 @@ template <size_t Bits> struct DyadicFloat {
     default:
       break;
     }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
     if (ShouldSignalExceptions && (round || sticky)) {
       int excepts = FE_INEXACT;
@@ -385,14 +411,14 @@ template <size_t Bits> struct DyadicFloat {
       output_bits_t r_bits = FPBits<T>(r).uintval() - clear_exp;
 
       if (!(r_bits & FPBits<T>::EXP_MASK)) {
-        // Output is denormal after rounding, clear the implicit bit for 80-bit
-        // long double.
+        // Output is denormal after rounding, clear the implicit bit for
+        // 80-bit long double.
         r_bits -= IMPLICIT_MASK;
 
-        // TODO: IEEE Std 754-2019 lets implementers choose whether to check for
-        // "tininess" before or after rounding for base-2 formats, as long as
-        // the same choice is made for all operations. Our choice to check after
-        // rounding might not be the same as the hardware's.
+        // TODO: IEEE Std 754-2019 lets implementers choose whether to check
+        // for "tininess" before or after rounding for base-2 formats, as long
+        // as the same choice is made for all operations. Our choice to check
+        // after rounding might not be the same as the hardware's.
         if (ShouldSignalExceptions && round_and_sticky) {
           set_errno_if_required(ERANGE);
           raise_except_if_required(FE_UNDERFLOW);
@@ -465,9 +491,9 @@ template <size_t Bits> struct DyadicFloat {
         new_mant <<= exponent;
       } else if (exponent < 0) {
         // Cast the exponent to size_t before negating it, rather than after,
-        // to avoid undefined behavior negating INT_MIN as an integer (although
-        // exponents coming in to this function _shouldn't_ be that large). The
-        // result should always end up as a positive size_t.
+        // to avoid undefined behavior negating INT_MIN as an integer
+        // (although exponents coming in to this function _shouldn't_ be that
+        // large). The result should always end up as a positive size_t.
         size_t shift = -static_cast<size_t>(exponent);
         if (shift >= Bits)
           new_mant = 0;
@@ -494,8 +520,8 @@ template <size_t Bits> struct DyadicFloat {
   }
 };
 
-// Quick add - Add 2 dyadic floats with rounding toward 0 and then normalize the
-// output:
+// Quick add - Add 2 dyadic floats with rounding toward 0 and then normalize
+// the output:
 //   - Align the exponents so that:
 //     new a.exponent = new b.exponent = max(a.exponent, b.exponent)
 //   - Add or subtract the mantissas depending on the signs.
@@ -503,9 +529,9 @@ template <size_t Bits> struct DyadicFloat {
 // The absolute errors compared to the mathematical sum is bounded by:
 //   | quick_add(a, b) - (a + b) | < MSB(a + b) * 2^(-Bits + 2),
 // i.e., errors are up to 2 ULPs.
-// Assume inputs are normalized (by constructors or other functions) so that we
-// don't need to normalize the inputs again in this function.  If the inputs are
-// not normalized, the results might lose precision significantly.
+// Assume inputs are normalized (by constructors or other functions) so that
+// we don't need to normalize the inputs again in this function.  If the
+// inputs are not normalized, the results might lose precision significantly.
 template <size_t Bits>
 LIBC_INLINE constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
                                                   DyadicFloat<Bits> b) {
@@ -564,9 +590,9 @@ LIBC_INLINE constexpr DyadicFloat<Bits> quick_sub(DyadicFloat<Bits> a,
 //                   ~ (full product a.mantissa * b.mantissa) >> Bits.
 // The errors compared to the mathematical product is bounded by:
 //   2 * errors of quick_mul_hi = 2 * (UInt<Bits>::WORD_COUNT - 1) in ULPs.
-// Assume inputs are normalized (by constructors or other functions) so that we
-// don't need to normalize the inputs again in this function.  If the inputs are
-// not normalized, the results might lose precision significantly.
+// Assume inputs are normalized (by constructors or other functions) so that
+// we don't need to normalize the inputs again in this function.  If the
+// inputs are not normalized, the results might lose precision significantly.
 template <size_t Bits>
 LIBC_INLINE constexpr DyadicFloat<Bits> quick_mul(const DyadicFloat<Bits> &a,
                                                   const DyadicFloat<Bits> &b) {
@@ -606,8 +632,8 @@ rounded_mul(const DyadicFloat<Bits> &a, const DyadicFloat<Bits> &b) {
   return DyadicFloat<Bits>::round(result_sign, result_exponent, product, Bits);
 }
 
-// Approximate reciprocal - given a nonzero a, make a good approximation to 1/a.
-// The method is Newton-Raphson iteration, based on quick_mul.
+// Approximate reciprocal - given a nonzero a, make a good approximation to
+// 1/a. The method is Newton-Raphson iteration, based on quick_mul.
 template <size_t Bits, typename = cpp::enable_if_t<(Bits >= 32)>>
 LIBC_INLINE constexpr DyadicFloat<Bits>
 approx_reciprocal(const DyadicFloat<Bits> &a) {
@@ -616,8 +642,8 @@ approx_reciprocal(const DyadicFloat<Bits> &a) {
   // You can derive this by using the Newton-Raphson formula with the function
   // f(x) = 1/x - a. But another way to see that it works is to say: suppose
   // that ax = 1-e for some small error e. Then ax' = ax(2-ax) = (1-e)(1+e) =
-  // 1-e^2. So the error in x' is the square of the error in x, i.e. the number
-  // of correct bits in x' is double the number in x.
+  // 1-e^2. So the error in x' is the square of the error in x, i.e. the
+  // number of correct bits in x' is double the number in x.
 
   // An initial approximation to the reciprocal
   DyadicFloat<Bits> x(Sign::POS, -32 - a.exponent - int(Bits),

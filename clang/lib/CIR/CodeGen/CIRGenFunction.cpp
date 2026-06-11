@@ -1224,9 +1224,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
                                "emitLValue: CXXConstructExpr");
     return LValue();
   case Expr::CXXBindTemporaryExprClass:
-    getCIRGenModule().errorNYI(e->getSourceRange(),
-                               "emitLValue: CXXBindTemporaryExpr");
-    return LValue();
+    return emitCXXBindTemporaryLValue(cast<CXXBindTemporaryExpr>(e));
   case Expr::CXXUuidofExprClass:
     getCIRGenModule().errorNYI(e->getSourceRange(),
                                "emitLValue: CXXUuidofExpr");

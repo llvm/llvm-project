@@ -58,6 +58,15 @@ constexpr auto Req = NativeDylibManager::RequiredSymbol;
 constexpr auto Weak = NativeDylibManager::WeaklyReferencedSymbol;
 } // namespace
 
+// Wrap a symbol-name string literal in the platform's linker-mangling.
+// NativeDylibManager::lookup takes linker-mangled names; on Darwin the
+// linker prefixes C names with '_'.
+#if defined(__APPLE__)
+#define MANGLED(name) "_" name
+#else
+#define MANGLED(name) name
+#endif
+
 #ifndef NDM_TEST_LIB_PATH
 #error                                                                         \
     "NDM_TEST_LIB_PATH must be defined to the path of the test shared library"
@@ -121,6 +130,23 @@ TEST_F(NativeDylibManagerSPSCITest, LoadNonExistent) {
   consumeError(Handle.takeError());
 }
 
+TEST_F(NativeDylibManagerSPSCITest, LoadEmptyPathReturnsGlobalHandle) {
+  // The global handle's value is implementation-defined, so verify by looking
+  // up through it.
+  std::future<Expected<Expected<void *>>> LoadResult;
+  spsLoad(waitFor(LoadResult), "");
+  void *Handle = cantFail(cantFail(LoadResult.get()));
+
+  std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
+      LookupResult;
+  spsLookup(waitFor(LookupResult), Handle, {{MANGLED("malloc"), Req}});
+  auto Addrs = cantFail(cantFail(LookupResult.get()));
+  ASSERT_EQ(Addrs.size(), 1U);
+  ASSERT_TRUE(Addrs[0].has_value())
+      << "malloc should be findable via the process's global lookup handle";
+  EXPECT_NE(*Addrs[0], nullptr);
+}
+
 TEST_F(NativeDylibManagerSPSCITest, LookupSingleSymbol) {
   std::future<Expected<Expected<void *>>> LoadResult;
   spsLoad(waitFor(LoadResult), NDM_TEST_LIB_PATH);
@@ -129,7 +155,7 @@ TEST_F(NativeDylibManagerSPSCITest, LookupSingleSymbol) {
   std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
       LookupResult;
   spsLookup(waitFor(LookupResult), Handle,
-            {{"NativeDylibManagerTestFunc", Req}});
+            {{MANGLED("NativeDylibManagerTestFunc"), Req}});
   auto Addrs = cantFail(cantFail(LookupResult.get()));
   ASSERT_EQ(Addrs.size(), 1U);
   ASSERT_TRUE(Addrs[0].has_value());
@@ -147,8 +173,8 @@ TEST_F(NativeDylibManagerSPSCITest, LookupMultipleSymbols) {
   std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
       LookupResult;
   spsLookup(waitFor(LookupResult), Handle,
-            {{"NativeDylibManagerTestFunc", Req},
-             {"NativeDylibManagerTestFunc2", Req}});
+            {{MANGLED("NativeDylibManagerTestFunc"), Req},
+             {MANGLED("NativeDylibManagerTestFunc2"), Req}});
   auto Addrs = cantFail(cantFail(LookupResult.get()));
   ASSERT_EQ(Addrs.size(), 2U);
   ASSERT_TRUE(Addrs[0].has_value());
@@ -169,7 +195,7 @@ TEST_F(NativeDylibManagerSPSCITest, LookupWeakMissingSymbol) {
 
   std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
       LookupResult;
-  spsLookup(waitFor(LookupResult), Handle, {{"no_such_symbol", Weak}});
+  spsLookup(waitFor(LookupResult), Handle, {{MANGLED("no_such_symbol"), Weak}});
   auto Addrs = cantFail(cantFail(LookupResult.get()));
   ASSERT_EQ(Addrs.size(), 1U);
   ASSERT_TRUE(Addrs[0].has_value())
@@ -184,7 +210,7 @@ TEST_F(NativeDylibManagerSPSCITest, LookupRequiredMissingSymbol) {
 
   std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
       LookupResult;
-  spsLookup(waitFor(LookupResult), Handle, {{"no_such_symbol", Req}});
+  spsLookup(waitFor(LookupResult), Handle, {{MANGLED("no_such_symbol"), Req}});
   auto Addrs = cantFail(cantFail(LookupResult.get()));
   ASSERT_EQ(Addrs.size(), 1U);
   EXPECT_FALSE(Addrs[0].has_value())
@@ -199,7 +225,8 @@ TEST_F(NativeDylibManagerSPSCITest, LookupMixedRequiredAndWeak) {
   std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
       LookupResult;
   spsLookup(waitFor(LookupResult), Handle,
-            {{"NativeDylibManagerTestFunc", Req}, {"no_such_symbol", Weak}});
+            {{MANGLED("NativeDylibManagerTestFunc"), Req},
+             {MANGLED("no_such_symbol"), Weak}});
   auto Addrs = cantFail(cantFail(LookupResult.get()));
   ASSERT_EQ(Addrs.size(), 2U);
   ASSERT_TRUE(Addrs[0].has_value());

@@ -257,9 +257,6 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   std::string FullFS = X86_MC::ParseX86Triple(TargetTriple);
   assert(!FullFS.empty() && "Failed to parse X86 triple");
 
-  if (TargetTriple.isOSWindows())
-    FullFS += ",-push2pop2,-ppx";
-
   if (!FS.empty())
     FullFS = (Twine(FullFS) + "," + FS).str();
 

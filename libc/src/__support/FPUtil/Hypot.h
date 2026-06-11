@@ -199,10 +199,14 @@ LIBC_INLINE T hypot(T x, T y) {
       sum >>= 2;
       ++out_exp;
       if (out_exp >= FPBits_t::MAX_BIASED_EXPONENT) {
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
         if (int round_mode = quick_get_round();
             round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
           return FPBits_t::inf().get_val();
         return FPBits_t::max_normal().get_val();
+#else
+        return FPBits_t::inf().get_val();
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       }
     } else {
       // For denormal result, we simply move the leading bit of the result to
@@ -241,6 +245,17 @@ LIBC_INLINE T hypot(T x, T y) {
 
   y_new >>= 1;
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  // Round to the nearest, tie to even.
+  if (round_bit && (lsb || sticky_bits || (r != 0)))
+    ++y_new;
+  if (y_new >= (ONE >> 1)) {
+    y_new -= ONE >> 1;
+    ++out_exp;
+    if (out_exp >= FPBits_t::MAX_BIASED_EXPONENT)
+      return FPBits_t::inf().get_val();
+  }
+#else
   // Round to the nearest, tie to even.
   int round_mode = quick_get_round();
   switch (round_mode) {
@@ -264,6 +279,7 @@ LIBC_INLINE T hypot(T x, T y) {
       return FPBits_t::max_normal().get_val();
     }
   }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
   y_new |= static_cast<StorageType>(out_exp) << FPBits_t::FRACTION_LEN;
 

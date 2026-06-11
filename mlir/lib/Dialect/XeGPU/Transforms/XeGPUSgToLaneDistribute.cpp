@@ -1224,6 +1224,12 @@ struct SgToLaneVectorExtractStridedSlice
         return rewriter.notifyMatchFailure(
             op, "source of extract_strided_slice lacks distribution layout");
       int sourceDistrDimSize = op.getSourceVectorType().getShape()[distDim];
+      auto laneLayout = sourceLayout.getEffectiveLaneLayoutAsInt();
+      // Effective subgroup size needs to be adjusted if laneLayout along
+      // the distributed dimension is smaller than subgroup size.
+      if (laneLayout[distDim] < subgroupSize &&
+          subgroupSize % laneLayout[distDim] == 0)
+        subgroupSize = laneLayout[distDim];
       if (sourceDistrDimSize % subgroupSize != 0)
         return rewriter.notifyMatchFailure(
             op, "source size along distributed dim is not a multiple of "
@@ -1507,6 +1513,75 @@ struct SgToLaneVectorInsert : public OpConversionPattern<vector::InsertOp> {
   }
 };
 
+/// Redistributes `src` for a `convert_layout` that changes only the
+/// `lane_layout` along the outer (distributed) dimension, shrinking it from
+/// `currentLaneNum` to `targetLaneNum` lanes (a partial-subgroup
+/// distribution). Because the data is no longer replicated across all lanes,
+/// each surviving lane must gather the values that previously lived in the
+/// lanes that are dropped. The values are gathered with `gpu.shuffle` and
+/// concatenated with the lane-local data using `vector.shuffle`, which doubles
+/// the distributed outer dimension when the lane count is halved.
+///
+/// Only halving the lane count (a factor of two) is currently supported.
+/// Returns the redistributed value on success, or failure if `src` cannot be
+/// shuffled (e.g. it is not a rank-2 vector or its bit width is not a multiple
+/// of 32).
+static FailureOr<Value>
+shuffleDataAsLaneLayoutChange(ConversionPatternRewriter &rewriter, Location loc,
+                              Value src, int64_t currentLaneNum,
+                              int64_t targetLaneNum) {
+  VectorType srcTy = dyn_cast<VectorType>(src.getType());
+  if (!srcTy || srcTy.getRank() != 2)
+    return failure();
+  // Only halving the lane count (factor of two) is supported for now.
+  if (targetLaneNum <= 0 || currentLaneNum != targetLaneNum * 2)
+    return failure();
+  // gpu.shuffle operates on i32, so the data must be a multiple of 32 bits.
+  int64_t vectorBitWidth =
+      srcTy.getNumElements() * srcTy.getElementTypeBitWidth();
+  if (vectorBitWidth % 32 != 0)
+    return failure();
+
+  // A vector cannot be shuffled across lanes directly:
+  // -- cast the source to a 1D vector of i32
+  // -- create a temp 1D vector of i32 initialized to zero
+  // -- for each i32 element:
+  // ---- extract it from the source bundle
+  // ---- gpu.shuffle to gather the value from the partner lane
+  // ---- insert it into the temp bundle
+  // -- cast the temp back to the source vector type
+  // -- vector.shuffle the source and temp to concatenate along the outer dim
+  Type shuffleElemTy = rewriter.getI32Type();
+  int64_t numShuffles = vectorBitWidth / 32;
+  VectorType shuffleBundleTy = VectorType::get({numShuffles}, shuffleElemTy);
+  // Initialize temp to zero.
+  Value temp = arith::ConstantOp::create(
+      rewriter, loc,
+      DenseElementsAttr::get(shuffleBundleTy,
+                             IntegerAttr::get(shuffleElemTy, 0)));
+  VectorType flatSrcTy =
+      VectorType::get({srcTy.getNumElements()}, srcTy.getElementType());
+  Value flatSrc = vector::ShapeCastOp::create(rewriter, loc, flatSrcTy, src);
+  Value shuffleBundle =
+      vector::BitCastOp::create(rewriter, loc, shuffleBundleTy, flatSrc);
+  for (int64_t i = 0; i < numShuffles; i++) {
+    Value shuffleElem =
+        vector::ExtractOp::create(rewriter, loc, shuffleBundle, i);
+    shuffleElem = gpu::ShuffleOp::create(rewriter, loc, shuffleElem, 0,
+                                         targetLaneNum, gpu::ShuffleMode::UP)
+                      .getResult(0);
+    temp = vector::InsertOp::create(rewriter, loc, shuffleElem, temp, i);
+  }
+  temp = vector::BitCastOp::create(rewriter, loc, flatSrcTy, temp);
+  temp = vector::ShapeCastOp::create(rewriter, loc, srcTy, temp);
+
+  // Concatenate the lane-local and gathered data along the outer dimension.
+  SmallVector<int64_t> indices(srcTy.getShape()[0] * 2);
+  std::iota(indices.begin(), indices.end(), 0);
+  Value res = vector::ShuffleOp::create(rewriter, loc, src, temp, indices);
+  return res;
+}
+
 /// Folds a subgroup-level ConvertLayout op with compatible lane layouts.
 struct SgToLaneConvertLayout
     : public OpConversionPattern<xegpu::ConvertLayoutOp> {
@@ -1526,14 +1601,45 @@ struct SgToLaneConvertLayout
 
     auto resShape = cast<VectorType>(valType).getShape();
     SmallVector<int64_t> resShapeVec(resShape.begin(), resShape.end());
-    if (!inputLayout.isCompatibleWith(targetLayout, resShapeVec,
-                                      xegpu::LayoutKind::Lane)) {
-      return rewriter.notifyMatchFailure(
-          op, "lowering incompatible convert_layout not yet supported");
+
+    // Equivalent layouts: the convert_layout is a no-op and folds to its
+    // source.
+    if (inputLayout.isCompatibleWith(targetLayout, resShapeVec,
+                                     xegpu::LayoutKind::Lane)) {
+      rewriter.replaceOp(op, adaptor.getSource());
+      return success();
     }
 
-    rewriter.replaceOp(op, adaptor.getSource());
-    return success();
+    // Handle the special case where the conversion redistributes a value
+    // across a fraction of the subgroup: the lane_layout shrinks along the
+    // outer (distributed) dimension while lane_data stays the same. Only a
+    // pure outer-dimension lane_layout change is supported, so the inner
+    // lane_layout must be unit (making the outer dim the only distributed one)
+    // and the outer lane_layout must be genuinely distributed (> 1), which
+    // also rules out the degenerate [1, 1] layout.
+    if (inputLayout.getEffectiveOrderAsInt() ==
+            targetLayout.getEffectiveOrderAsInt() &&
+        inputLayout.getRank() == 2 && targetLayout.getRank() == 2) {
+      auto laneLayout = inputLayout.getEffectiveLaneLayoutAsInt();
+      auto targetLaneLayout = targetLayout.getEffectiveLaneLayoutAsInt();
+      auto laneData = inputLayout.getEffectiveLaneDataAsInt();
+      auto targetLaneData = targetLayout.getEffectiveLaneDataAsInt();
+      if (laneLayout.size() == 2 && targetLaneLayout.size() == 2 &&
+          laneData == targetLaneData && laneLayout[1] == 1 &&
+          targetLaneLayout[1] == 1 && laneLayout[0] > 1 &&
+          laneLayout[0] != targetLaneLayout[0]) {
+        FailureOr<Value> res = shuffleDataAsLaneLayoutChange(
+            rewriter, op.getLoc(), adaptor.getSource(), laneLayout[0],
+            targetLaneLayout[0]);
+        if (succeeded(res)) {
+          rewriter.replaceOp(op, *res);
+          return success();
+        }
+      }
+    }
+
+    return rewriter.notifyMatchFailure(
+        op, "lowering incompatible convert_layout not yet supported");
   }
 };
 

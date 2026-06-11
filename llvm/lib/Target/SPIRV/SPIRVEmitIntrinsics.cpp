@@ -190,7 +190,6 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
-  SmallPtrSet<Instruction *, 8> DeletedInstrs;
   GlobalVariableUsers GVUsers;
   std::unordered_set<Value *> Named;
 
@@ -1577,29 +1576,14 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
           CI->setCalledFunction(NewF);
         }
       }
-    } else if (auto *Phi = dyn_cast<PHINode>(U)) {
-      if (Phi->getType() != New->getType()) {
-        Phi->mutateType(New->getType());
-        Phi->replaceUsesOfWith(Old, New);
-        // Convert extractvalue users of the mutated PHI to spv_extractv
-        SmallVector<ExtractValueInst *, 4> EVUsers;
-        for (User *PhiUser : Phi->users())
-          if (auto *EV = dyn_cast<ExtractValueInst>(PhiUser))
-            EVUsers.push_back(EV);
-        for (ExtractValueInst *EV : EVUsers) {
-          B.SetInsertPoint(EV);
-          SmallVector<Value *> Args(EV->operand_values());
-          for (unsigned Idx : EV->indices())
-            Args.push_back(B.getInt32(Idx));
-          auto *NewEV =
-              B.CreateIntrinsic(Intrinsic::spv_extractv, {EV->getType()}, Args);
-          EV->replaceAllUsesWith(NewEV);
-          DeletedInstrs.insert(EV);
-          EV->eraseFromParent();
-        }
-      } else {
-        Phi->replaceUsesOfWith(Old, New);
-      }
+    } else if (isa<PHINode>(U) || isa<SelectInst>(U)) {
+      // Aggregate-typed PHIs and selects have already been mutated to the
+      // i32 value-id type up front in runOnFunction, so only the operand
+      // needs replacing here; their extractvalue users are lowered to
+      // spv_extractv by visitExtractValueInst.
+      assert(U->getType() == New->getType() &&
+             "aggregate PHI/select should have been mutated to value-id type");
+      U->replaceUsesOfWith(Old, New);
     } else {
       llvm_unreachable("illegal aggregate intrinsic user");
     }
@@ -3475,7 +3459,6 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   AggrConsts.clear();
   AggrConstTypes.clear();
   AggrStores.clear();
-  DeletedInstrs.clear();
 
   processParamTypesByFunHeader(CurrF, B);
 
@@ -3531,12 +3514,21 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   simplifyNullAddrSpaceCasts();
   preprocessCompositeConstants(B);
 
-  for (BasicBlock &BB : Func)
-    for (PHINode &Phi : BB.phis())
-      if (Phi.getType()->isAggregateType()) {
-        AggrConstTypes[&Phi] = Phi.getType();
-        Phi.mutateType(B.getInt32Ty());
-      }
+  // A PHINode or SelectInst takes its result type from its operands. Aggregate
+  // arms are lowered to i32 value-ids (composite constants here, loads and
+  // other producers during the visitor pass below), so mutate an aggregate PHI
+  // or select to match. The original type is tracked in AggrConstTypes (used to
+  // assign the SPIR-V type) and its extractvalue users are lowered to
+  // spv_extractv.
+  Type *I32Ty = B.getInt32Ty();
+  for (Instruction &I : instructions(Func)) {
+    if (!isa<PHINode>(I) && !isa<SelectInst>(I))
+      continue;
+    if (!I.getType()->isAggregateType())
+      continue;
+    AggrConstTypes[&I] = I.getType();
+    I.mutateType(I32Ty);
+  }
 
   preprocessBoolVectorBitcasts(Func);
   SmallVector<Instruction *> Worklist(
@@ -3578,8 +3570,6 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
         deduceOperandElementType(&Phi, nullptr);
 
   for (auto *I : Worklist) {
-    if (DeletedInstrs.count(I))
-      continue;
     TrackConstants = true;
     if (!I->getType()->isVoidTy() || isa<StoreInst>(I))
       setInsertPointAfterDef(B, I);

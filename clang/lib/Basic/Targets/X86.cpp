@@ -164,11 +164,6 @@ bool X86TargetInfo::initFeatureMap(
   for (auto &F : CPUFeatures)
     setFeatureEnabled(Features, F, true);
 
-  if (Features.lookup("egpr") && getTriple().isOSWindows()) {
-    setFeatureEnabled(Features, "push2pop2", false);
-    setFeatureEnabled(Features, "ppx", false);
-  }
-
   std::vector<std::string> UpdatedFeaturesVec;
   for (const auto &Feature : FeaturesVec) {
     // Expand general-regs-only to -x86, -mmx and -sse
@@ -988,9 +983,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__ZU__");
   if (HasJMPABS)
     Builder.defineMacro("__JMPABS__");
-  if (HasEGPR && HasNDD && HasCCMP && HasNF && HasZU && HasJMPABS)
-    if (getTriple().isOSWindows() || (HasPush2Pop2 && HasPPX))
-      Builder.defineMacro("__APX_F__");
+  if (HasEGPR && HasPush2Pop2 && HasPPX && HasNDD && HasCCMP && HasNF &&
+      HasZU && HasJMPABS)
+    Builder.defineMacro("__APX_F__");
   if (HasEGPR && HasInlineAsmUseGPR32)
     Builder.defineMacro("__APX_INLINE_ASM_USE_GPR32__");
 

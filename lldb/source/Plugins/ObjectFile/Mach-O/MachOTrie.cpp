@@ -20,6 +20,14 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::MachO;
 
+/// Upper bound on the length of a symbol name assembled from export-trie edge
+/// labels.  A corrupt trie can encode an edge label whose terminator is far
+/// away in the trie data, so a single label is many megabytes long; appending
+/// it to the running name would otherwise request an unbounded allocation.  No
+/// legitimate symbol name comes close to this size.  Also 1 MiB is the
+/// symbol length limit in ld.
+static constexpr size_t kMaxTrieSymbolNameLength = 1 << 20; // 1 MiB
+
 void TrieEntry::Dump() const {
   printf("0x%16.16llx 0x%16.16llx 0x%16.16llx \"%s\"",
          static_cast<unsigned long long>(address),
@@ -37,14 +45,22 @@ void TrieEntryWithOffset::Dump(uint32_t idx) const {
   entry.Dump();
 }
 
-bool lldb_private::ParseTrieEntries(
-    DataExtractor &data, lldb::offset_t offset, const bool is_arm,
-    lldb::addr_t text_seg_base_addr, std::string &prefix,
-    std::set<lldb::addr_t> &resolver_addresses,
-    std::vector<TrieEntryWithOffset> &reexports,
-    std::vector<TrieEntryWithOffset> &ext_symbols) {
+namespace {
+
+bool ParseTrieEntriesImpl(DataExtractor &data, lldb::offset_t offset,
+                          const bool is_arm, addr_t text_seg_base_addr,
+                          std::string &prefix,
+                          std::set<lldb::addr_t> &resolver_addresses,
+                          std::vector<TrieEntryWithOffset> &reexports,
+                          std::vector<TrieEntryWithOffset> &ext_symbols,
+                          std::set<lldb::offset_t> &visited_nodes) {
   if (!data.ValidOffset(offset))
     return true;
+
+  // Every node in a well-formed trie is reached by exactly one path, so a node
+  // offset seen twice means the trie is corrupt.
+  if (!visited_nodes.insert(offset).second)
+    return false;
 
   // Terminal node -- end of a branch, possibly add this to
   // the symbol table or resolver table.
@@ -110,17 +126,33 @@ bool lldb_private::ParseTrieEntries(
     const char *cstr = data.GetCStr(&children_offset);
     if (!cstr)
       return false; // Corrupt data
+    if (prefix.size() + llvm::StringRef(cstr).size() > kMaxTrieSymbolNameLength)
+      return false; // Corrupt data: implausibly long symbol name.
     const size_t prevSize = prefix.size();
     prefix.append(cstr);
     lldb::offset_t childNodeOffset = data.GetULEB128(&children_offset);
-    if (childNodeOffset) {
-      if (!ParseTrieEntries(data, childNodeOffset, is_arm, text_seg_base_addr,
-                            prefix, resolver_addresses, reexports,
-                            ext_symbols)) {
-        return false;
-      }
-    }
+    // A child offset of 0 points back at the root; like any other repeated
+    // offset it is a cycle, which ParseTrieEntriesImpl rejects as corrupt.
+    if (!ParseTrieEntriesImpl(data, childNodeOffset, is_arm, text_seg_base_addr,
+                              prefix, resolver_addresses, reexports,
+                              ext_symbols, visited_nodes))
+      return false;
     prefix.resize(prevSize);
   }
   return true;
+}
+
+} // namespace
+
+bool lldb_private::ParseTrieEntries(
+    DataExtractor &data, const bool is_arm, lldb::addr_t text_seg_base_addr,
+    std::set<lldb::addr_t> &resolver_addresses,
+    std::vector<TrieEntryWithOffset> &reexports,
+    std::vector<TrieEntryWithOffset> &ext_symbols) {
+  lldb::offset_t offset = 0;
+  std::set<lldb::offset_t> visited_nodes;
+  std::string prefix;
+  return ParseTrieEntriesImpl(data, offset, is_arm, text_seg_base_addr, prefix,
+                              resolver_addresses, reexports, ext_symbols,
+                              visited_nodes);
 }

@@ -2,16 +2,8 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr="+wavefrontsize32" < %s | FileCheck -check-prefixes=GCN,GFX11,SDAG-GFX11 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr="+wavefrontsize32" < %s | FileCheck -check-prefixes=GCN,GFX10,SDAG-GFX10 %s
 
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1100 -mattr="+wavefrontsize32" < %s 2>%t | FileCheck -check-prefixes=GCN,GFX11,GISEL-GFX11 %s
-; RUN: FileCheck --check-prefix=ERR %s < %t
-; RUN: llc -global-isel -global-isel-abort=2 -mtriple=amdgcn -mcpu=gfx1010 -mattr="+wavefrontsize32" < %s 2>%t | FileCheck -check-prefixes=GCN,GFX10,GISEL-GFX10 %s
-; RUN: FileCheck --check-prefix=ERR %s < %t
-
-; Note: GlobalISel abort is disabled so we don't crash on i1 inputs.
-;  They are allowed in DAGISel but we (intentionally) don't support them
-;  in GlobalISel.
-
-; ERR: warning: Instruction selection used fallback path for v_icmp_i1_ne0
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr="+wavefrontsize32" < %s | FileCheck -check-prefixes=GCN,GFX11,GISEL-GFX11 %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1010 -mattr="+wavefrontsize32" < %s | FileCheck -check-prefixes=GCN,GFX10,GISEL-GFX10 %s
 
 declare i32 @llvm.amdgcn.icmp.i32(i32, i32, i32) #0
 declare i32 @llvm.amdgcn.icmp.i64(i64, i64, i32) #0
@@ -1617,39 +1609,83 @@ define amdgpu_kernel void @v_icmp_i16_sle(ptr addrspace(1) %out, i16 %src) {
 }
 
 define amdgpu_kernel void @v_icmp_i1_ne0(ptr addrspace(1) %out, i32 %a, i32 %b) {
-; GFX11-LABEL: v_icmp_i1_ne0:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_cmp_gt_u32 s2, 1
-; GFX11-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX11-NEXT:    s_cmp_gt_u32 s3, 2
-; GFX11-NEXT:    s_cselect_b32 s3, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_and_b32 s2, s2, s3
-; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
-; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
-; GFX11-NEXT:    s_endpgm
+; SDAG-GFX11-LABEL: v_icmp_i1_ne0:
+; SDAG-GFX11:       ; %bb.0:
+; SDAG-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; SDAG-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; SDAG-GFX11-NEXT:    s_cmp_gt_u32 s2, 1
+; SDAG-GFX11-NEXT:    s_cselect_b32 s2, -1, 0
+; SDAG-GFX11-NEXT:    s_cmp_gt_u32 s3, 2
+; SDAG-GFX11-NEXT:    s_cselect_b32 s3, -1, 0
+; SDAG-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; SDAG-GFX11-NEXT:    s_and_b32 s2, s2, s3
+; SDAG-GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; SDAG-GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; SDAG-GFX11-NEXT:    s_endpgm
 ;
-; GFX10-LABEL: v_icmp_i1_ne0:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_cmp_gt_u32 s2, 1
-; GFX10-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX10-NEXT:    s_cmp_gt_u32 s3, 2
-; GFX10-NEXT:    s_cselect_b32 s3, -1, 0
-; GFX10-NEXT:    s_and_b32 s2, s2, s3
-; GFX10-NEXT:    v_mov_b32_e32 v1, s2
-; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX10-NEXT:    s_endpgm
+; SDAG-GFX10-LABEL: v_icmp_i1_ne0:
+; SDAG-GFX10:       ; %bb.0:
+; SDAG-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; SDAG-GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; SDAG-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; SDAG-GFX10-NEXT:    s_cmp_gt_u32 s2, 1
+; SDAG-GFX10-NEXT:    s_cselect_b32 s2, -1, 0
+; SDAG-GFX10-NEXT:    s_cmp_gt_u32 s3, 2
+; SDAG-GFX10-NEXT:    s_cselect_b32 s3, -1, 0
+; SDAG-GFX10-NEXT:    s_and_b32 s2, s2, s3
+; SDAG-GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; SDAG-GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; SDAG-GFX10-NEXT:    s_endpgm
+;
+; GISEL-GFX11-LABEL: v_icmp_i1_ne0:
+; GISEL-GFX11:       ; %bb.0:
+; GISEL-GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
+; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-GFX11-NEXT:    s_cmp_gt_u32 s2, 1
+; GISEL-GFX11-NEXT:    s_cselect_b32 s2, 1, 0
+; GISEL-GFX11-NEXT:    s_cmp_gt_u32 s3, 2
+; GISEL-GFX11-NEXT:    s_cselect_b32 s3, 1, 0
+; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GISEL-GFX11-NEXT:    s_and_b32 s2, s2, s3
+; GISEL-GFX11-NEXT:    s_cmp_lg_u32 s2, 0
+; GISEL-GFX11-NEXT:    s_cselect_b32 s2, exec_lo, 0
+; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
+; GISEL-GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GISEL-GFX11-NEXT:    s_endpgm
+;
+; GISEL-GFX10-LABEL: v_icmp_i1_ne0:
+; GISEL-GFX10:       ; %bb.0:
+; GISEL-GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GISEL-GFX10-NEXT:    v_mov_b32_e32 v1, 0
+; GISEL-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-GFX10-NEXT:    s_cmp_gt_u32 s2, 1
+; GISEL-GFX10-NEXT:    s_cselect_b32 s2, 1, 0
+; GISEL-GFX10-NEXT:    s_cmp_gt_u32 s3, 2
+; GISEL-GFX10-NEXT:    s_cselect_b32 s3, 1, 0
+; GISEL-GFX10-NEXT:    s_and_b32 s2, s2, s3
+; GISEL-GFX10-NEXT:    s_cmp_lg_u32 s2, 0
+; GISEL-GFX10-NEXT:    s_cselect_b32 s2, exec_lo, 0
+; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s2
+; GISEL-GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
+; GISEL-GFX10-NEXT:    s_endpgm
   %c0 = icmp ugt i32 %a, 1
   %c1 = icmp ugt i32 %b, 2
   %src = and i1 %c0, %c1
   %result = call i32 @llvm.amdgcn.icmp.i1(i1 %src, i1 false, i32 33)
   store i32 %result, ptr addrspace(1) %out
   ret void
+}
+
+define amdgpu_ps i32 @v_icmp_i1_ne0_divergent(i32 %a) {
+; GCN-LABEL: v_icmp_i1_ne0_divergent:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_cmp_eq_u32_e64 s0, 0, v0
+; GCN-NEXT:    ; return to shader part epilog
+  %cond = icmp eq i32 %a, 0
+  %result = call i32 @llvm.amdgcn.icmp.i1(i1 %cond, i1 false, i32 33)
+  ret i32 %result
 }
 
 define amdgpu_ps void @test_intr_icmp_i32_invalid_cc(ptr addrspace(1) %out, i32 %src) {
@@ -1677,4 +1713,5 @@ define amdgpu_ps void @test_intr_icmp_i32_invalid_cc(ptr addrspace(1) %out, i32 
 
 attributes #0 = { nounwind readnone convergent }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GCN: {{.*}}
+; GFX10: {{.*}}
+; GFX11: {{.*}}

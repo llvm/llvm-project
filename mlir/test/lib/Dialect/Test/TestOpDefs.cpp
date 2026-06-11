@@ -1950,6 +1950,34 @@ Value TestPartialAlias::projectAliasValueToSlotValue(
       .getResult(0);
 }
 
+//===----------------------------------------------------------------------===//
+// TestSlotTracker
+//===----------------------------------------------------------------------===//
+
+bool TestSlotTracker::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  if (blockingUses.size() != 1)
+    return false;
+  return (*blockingUses.begin())->get() == getSource();
+}
+
+DeletionKind TestSlotTracker::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+bool TestSlotTracker::requiresReplacedValues() { return true; }
+
+void TestSlotTracker::visitReplacedValues(
+    ArrayRef<std::pair<Operation *, Value>> definitions, OpBuilder &builder) {
+  for (auto [op, value] : definitions) {
+    builder.setInsertionPointAfter(op);
+    TestTrackedValue::create(builder, getLoc(), value, getNameAttr());
+  }
+}
+
 ::mlir::LogicalResult test::TestDummyTensorOp::bufferize(
     ::mlir::RewriterBase &rewriter,
     const ::mlir::bufferization::BufferizationOptions &options,

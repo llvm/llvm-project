@@ -1018,3 +1018,11 @@ def MR : RISCVRegisterClass<[i8, v8i1], 8,
 }
 
 def MR0 : RISCVRegisterClass<[i8, v8i1], 8, (add M0)>;
+
+//===----------------------------------------------------------------------===//
+// Register categories.
+//
+
+def GeneralPurposeRegisters : RegisterCategory<[GPR]>;
+
+def FixedRegisters : RegisterCategory<[GPRX0]>;

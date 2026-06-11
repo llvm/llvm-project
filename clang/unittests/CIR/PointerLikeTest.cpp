@@ -76,7 +76,7 @@ protected:
     EXPECT_EQ(pltTy.getElementType(), ty);
 
     OwningOpRef<cir::AllocaOp> varPtrOp =
-        cir::AllocaOp::create(b, loc, ptrTy, ty, "", getAlignOne(&context));
+        cir::AllocaOp::create(b, loc, ptrTy, "", getAlignOne(&context));
 
     mlir::Value val = varPtrOp.get();
     mlir::acc::VariableTypeCategory typeCategory = pltTy.getPointeeTypeCategory(
@@ -110,7 +110,7 @@ protected:
 
     // Create an alloca for the array
     OwningOpRef<cir::AllocaOp> varPtrOp =
-        cir::AllocaOp::create(b, loc, ptrTy, arrTy, "", getAlignOne(&context));
+        cir::AllocaOp::create(b, loc, ptrTy, "", getAlignOne(&context));
 
     // Verify that the type category is array.
     mlir::Value val = varPtrOp.get();
@@ -178,8 +178,8 @@ protected:
     EXPECT_EQ(pltTy.getElementType(), structTy);
 
     // Create an alloca for the array
-    OwningOpRef<cir::AllocaOp> varPtrOp = cir::AllocaOp::create(
-        b, loc, ptrTy, structTy, "", getAlignOne(&context));
+    OwningOpRef<cir::AllocaOp> varPtrOp =
+        cir::AllocaOp::create(b, loc, ptrTy, "", getAlignOne(&context));
 
     // Verify that the type category is composite.
     mlir::Value val = varPtrOp.get();
@@ -255,8 +255,8 @@ protected:
     mlir::Type structPptrTy = cir::PointerType::get(structTy);
 
     // Create an alloca for the struct.
-    OwningOpRef<cir::AllocaOp> varPtrOp = cir::AllocaOp::create(
-        b, loc, structPptrTy, structTy, "S", getAlignOne(&context));
+    OwningOpRef<cir::AllocaOp> varPtrOp =
+        cir::AllocaOp::create(b, loc, structPptrTy, "S", getAlignOne(&context));
     mlir::Value val = varPtrOp.get();
 
     // Get a pointer to the second member.

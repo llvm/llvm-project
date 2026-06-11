@@ -49,11 +49,11 @@ void test_asuint_second_arg_const(double D) {
 void test_asuint_imidiate_value(double D) {
   uint B;
   asuint(D, B, 1);
- // expected-error@-1 {{cannot bind non-lvalue argument '1' to out paramemter}}
+ // expected-error@-1 {{cannot bind non-lvalue argument '1' to out parameter}}
 }
 
 void test_asuint_expr(double D) {
   uint B;
   asuint(D, B, B + 1);
- // expected-error@-1 {{cannot bind non-lvalue argument 'B + 1' to out paramemter}}
+ // expected-error@-1 {{cannot bind non-lvalue argument 'B + 1' to out parameter}}
 }

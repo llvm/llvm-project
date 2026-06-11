@@ -1149,22 +1149,21 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
 
       return llvm::GlobalVariable::ExternalLinkage;
 
-    case TSK_FriendDeclaration:
-    case TSK_ImplicitInstantiation:
-      return !Context.getLangOpts().AppleKext
-                 ? llvm::GlobalVariable::LinkOnceODRLinkage
-                 : llvm::Function::InternalLinkage;
+      case TSK_ImplicitInstantiation:
+        return !Context.getLangOpts().AppleKext ?
+                 llvm::GlobalVariable::LinkOnceODRLinkage :
+                 llvm::Function::InternalLinkage;
 
-    case TSK_ExplicitInstantiationDefinition:
-      return !Context.getLangOpts().AppleKext
-                 ? llvm::GlobalVariable::WeakODRLinkage
-                 : llvm::Function::InternalLinkage;
+      case TSK_ExplicitInstantiationDefinition:
+        return !Context.getLangOpts().AppleKext ?
+                 llvm::GlobalVariable::WeakODRLinkage :
+                 llvm::Function::InternalLinkage;
 
-    case TSK_ExplicitInstantiationDeclaration:
-      return IsExternalDefinition
-                 ? llvm::GlobalVariable::AvailableExternallyLinkage
-                 : llvm::GlobalVariable::ExternalLinkage;
-    }
+      case TSK_ExplicitInstantiationDeclaration:
+        return IsExternalDefinition
+                   ? llvm::GlobalVariable::AvailableExternallyLinkage
+                   : llvm::GlobalVariable::ExternalLinkage;
+      }
   }
 
   // -fapple-kext mode does not support weak linkage, so we must use
@@ -1189,7 +1188,6 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
     case TSK_Undeclared:
     case TSK_ExplicitSpecialization:
     case TSK_ImplicitInstantiation:
-    case TSK_FriendDeclaration:
       return DiscardableODRLinkage;
 
     case TSK_ExplicitInstantiationDeclaration:

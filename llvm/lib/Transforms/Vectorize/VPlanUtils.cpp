@@ -16,6 +16,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
@@ -909,12 +910,13 @@ VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
   VPlan &Plan = Builder.getPlan();
   BasicBlock *PH = cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock();
   for (Value *V : SE.getSCEVValues(S)) {
-    // Only reuse instructions in the plan's entry block, as instructions in
-    // sibling branches may not dominate the entry block.
+    // Only reuse instructions in the plan's entry block, or, when a
+    // DominatorTree is available, any instruction that dominates it.
+    // Instructions in sibling branches may not dominate the entry block.
     auto *I = dyn_cast<Instruction>(V);
     if (!I)
       return Plan.getOrAddLiveIn(V);
-    if (I->getParent() != PH)
+    if (!SE.DT.dominates(I->getParent(), PH))
       continue;
     SmallVector<Instruction *> DropPoisonGeneratingInsts;
     if (!SE.canReuseInstruction(S, I, DropPoisonGeneratingInsts))
@@ -937,21 +939,26 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
     return Builder.getPlan().getOrAddLiveIn(cast<SCEVUnknown>(S)->getValue());
   case scVScale:
     return Builder.createNaryOp(VPInstruction::VScale, {}, S->getType());
+  case scAddExpr:
   case scMulExpr: {
-    auto *Mul = cast<SCEVMulExpr>(S);
+    if (S->getType()->isPointerTy())
+      return nullptr;
+    auto *NAry = cast<SCEVNAryExpr>(S);
+    unsigned Opcode =
+        S->getSCEVType() == scAddExpr ? Instruction::Add : Instruction::Mul;
+    // Iterate in reverse so that constants are emitted last.
     SmallVector<VPValue *, 2> Ops;
-    for (const SCEVUse &Op : Mul->operands()) {
+    for (const SCEVUse &Op : reverse(NAry->operands())) {
       VPValue *OpV = tryToExpand(Op);
       if (!OpV)
         return nullptr;
       Ops.push_back(OpV);
     }
-    VPIRFlags::WrapFlagsTy WrapFlags(Mul->hasNoUnsignedWrap(),
-                                     Mul->hasNoSignedWrap());
+    VPIRFlags::WrapFlagsTy WrapFlags(NAry->hasNoUnsignedWrap(),
+                                     NAry->hasNoSignedWrap());
     VPValue *Result = Ops.front();
     for (VPValue *Op : drop_begin(Ops))
-      Result = Builder.createOverflowingOp(Instruction::Mul, {Result, Op},
-                                           WrapFlags, DL);
+      Result = Builder.createOverflowingOp(Opcode, {Result, Op}, WrapFlags, DL);
     return Result;
   }
   default:

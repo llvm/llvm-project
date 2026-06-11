@@ -56,17 +56,17 @@ entry:
 ; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i32
 ; CHECK-NEXT:    [[TMP29:%.*]] = zext i32 [[TMP14]] to i64
 ; CHECK-NEXT:    [[TMP30:%.*]] = zext i32 [[TMP25]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i64 12, i32 4, i32 14, i64 [[TMP29]], i64 [[TMP30]], i32 12) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 4, i32 14, i64 [[TMP29]], i64 [[TMP30]], i64 1, i32 12) #[[ATTR0]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP14]], [[TMP25]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = zext i32 [[ADD]] to i64
-; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @__instrumentor_post_numeric(i64 12, i32 4, i32 14, i64 [[TMP29]], i64 [[TMP30]], i64 [[TMP17]], i32 -12) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @__instrumentor_post_numeric(i32 12, i32 4, i32 14, i64 [[TMP29]], i64 [[TMP30]], i64 [[TMP17]], i64 1, i32 -12) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP18]] to i32
 ; CHECK-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP19]] to i64
 ; CHECK-NEXT:    [[TMP24:%.*]] = zext i32 [[TMP28]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i64 12, i32 4, i32 14, i64 [[TMP20]], i64 [[TMP24]], i32 13) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 4, i32 14, i64 [[TMP20]], i64 [[TMP24]], i64 1, i32 13) #[[ATTR0]]
 ; CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[TMP19]], [[TMP28]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = zext i32 [[ADD3]] to i64
-; CHECK-NEXT:    [[TMP23:%.*]] = call i64 @__instrumentor_post_numeric(i64 12, i32 4, i32 14, i64 [[TMP20]], i64 [[TMP24]], i64 [[TMP22]], i32 -13) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP23:%.*]] = call i64 @__instrumentor_post_numeric(i32 12, i32 4, i32 14, i64 [[TMP20]], i64 [[TMP24]], i64 [[TMP22]], i64 1, i32 -13) #[[ATTR0]]
 ; CHECK-NEXT:    [[ADD2:%.*]] = trunc i64 [[TMP23]] to i32
 ; CHECK-NEXT:    call void @__instrumentor_post_function(ptr @foo, ptr @__instrumentor_.str.5, i32 0, ptr null, i8 0, i32 -15) #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 [[ADD2]]

@@ -18971,18 +18971,43 @@ OMPClause *SemaOpenMP::ActOnOpenMPInitClause(
   if (!isValidInteropVariable(SemaRef, InteropVar, VarLoc, OMPC_init))
     return nullptr;
 
-  // Check prefer_type values.  These foreign-runtime-id values are either
-  // string literals or constant integral expressions.
-  for (const Expr *E : InteropInfo.PreferTypes) {
-    if (E->isValueDependent() || E->isTypeDependent() ||
-        E->isInstantiationDependent() || E->containsUnexpandedParameterPack())
-      continue;
-    if (E->isIntegerConstantExpr(getASTContext()))
-      continue;
-    if (isa<StringLiteral>(E))
-      continue;
-    Diag(E->getExprLoc(), diag::err_omp_interop_prefer_type);
-    return nullptr;
+  // Check prefer_type values. fr() arguments are either string literals or
+  // constant integral expressions; null Fr is only valid in OMP 6.0.
+  // attr() arguments must be ext-string-literals with the 'ompx_' prefix
+  // (OpenMP 6.0 spec, section 16.1.3).
+  for (const OMPInteropPref &P : InteropInfo.Prefs) {
+    const Expr *E = P.Fr;
+    if (!E) {
+      assert(InteropInfo.HasPreferAttrs && "null Fr requires OMP 6.0 syntax");
+    } else if (!E->isValueDependent() && !E->isTypeDependent() &&
+               !E->isInstantiationDependent() &&
+               !E->containsUnexpandedParameterPack()) {
+      if (!E->isIntegerConstantExpr(getASTContext()) &&
+          !isa<StringLiteral>(E)) {
+        Diag(E->getExprLoc(), diag::err_omp_interop_prefer_type);
+        return nullptr;
+      }
+    }
+    for (const Expr *A : P.Attrs) {
+      if (A->isValueDependent() || A->isTypeDependent() ||
+          A->isInstantiationDependent() || A->containsUnexpandedParameterPack())
+        continue;
+      const auto *SL = dyn_cast<StringLiteral>(A);
+      if (!SL) {
+        Diag(A->getExprLoc(), diag::err_omp_interop_attr_not_string);
+        return nullptr;
+      }
+      if (!SL->getString().starts_with("ompx_")) {
+        Diag(A->getExprLoc(), diag::err_omp_interop_attr_missing_ompx_prefix)
+            << SL->getString();
+        return nullptr;
+      }
+      if (SL->getString().contains(',')) {
+        Diag(A->getExprLoc(), diag::err_omp_interop_attr_contains_comma)
+            << SL->getString();
+        return nullptr;
+      }
+    }
   }
 
   return OMPInitClause::Create(getASTContext(), InteropVar, InteropInfo,
@@ -20911,9 +20936,37 @@ static bool actOnOMPReductionKindClause(
           Init = S.ActOnIntegerConstant(ELoc, /*Val=*/0).get();
         break;
       case BO_Mul:
+        // '*' reduction op - initializer is '1'.
+        // For C++ class types (e.g. std::complex) the OpenMP built-in
+        // reduction identifiers are an extension: the standard only defines
+        // identities for arithmetic (and, in Clang, _Complex) types. Without
+        // an explicit initializer the private copy would be value-initialized,
+        // which yields the *additive* identity (e.g. std::complex(0,0)) and is
+        // wrong for multiplication. Initialize from the integer literal '1'
+        // instead and let the converting constructor build the multiplicative
+        // identity (e.g. std::complex(1) == (1,0)).
+        if (Type->isScalarType() || Type->isAnyComplexType()) {
+          Init = S.ActOnIntegerConstant(ELoc, /*Val=*/1).get();
+        } else if (S.getLangOpts().CPlusPlus && Type->isRecordType()) {
+          // Only use '1' when the type is actually copy-initializable from it.
+          // Otherwise fall back to value-initialization (the previous behavior)
+          // rather than rejecting the reduction, so a class that used to
+          // compile keeps compiling. Such a class keeps its (possibly
+          // incorrect) value-initialized identity, matching the pre-existing
+          // behavior; BO_Add likewise relies on value-initialization for class
+          // types.
+          Expr *One = S.ActOnIntegerConstant(ELoc, /*Val=*/1).get();
+          InitializedEntity Entity =
+              InitializedEntity::InitializeTemporary(Type);
+          InitializationKind Kind = InitializationKind::CreateCopy(ELoc, ELoc);
+          InitializationSequence Seq(S, Entity, Kind, One);
+          if (Seq)
+            Init = One;
+        }
+        break;
       case BO_LAnd:
         if (Type->isScalarType() || Type->isAnyComplexType()) {
-          // '*' and '&&' reduction ops - initializer is '1'.
+          // '&&' reduction ops - initializer is '1'.
           Init = S.ActOnIntegerConstant(ELoc, /*Val=*/1).get();
         }
         break;

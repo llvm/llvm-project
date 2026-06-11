@@ -138,7 +138,7 @@ struct StableFunctionMap {
   /// map is lazily loaded, it will deserialize the entries if it is not already
   /// done, other requests to the same hash at the same time will be blocked
   /// until the entries are deserialized.
-  const StableFunctionEntries &
+  LLVM_ABI const StableFunctionEntries &
   at(HashFuncsMapType::key_type FunctionHash) const;
 
   enum SizeType {

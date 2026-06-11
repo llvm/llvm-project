@@ -1608,14 +1608,15 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   // Language options.
   Record.clear();
   const LangOptions &LangOpts = PP.getLangOpts();
-#define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
-  Record.push_back(LangOpts.Name);
+  const uint64_t LanguageOptionValues[] = {
+#define LANGOPT(Name, Bits, Default, Compatibility, Description) LangOpts.Name,
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
-  Record.push_back(static_cast<unsigned>(LangOpts.get##Name()));
+  static_cast<unsigned>(LangOpts.get##Name()),
 #include "clang/Basic/LangOptions.def"
-#define SANITIZER(NAME, ID)                                                    \
-  Record.push_back(LangOpts.Sanitize.has(SanitizerKind::ID));
+#define SANITIZER(NAME, ID) LangOpts.Sanitize.has(SanitizerKind::ID),
 #include "clang/Basic/Sanitizers.def"
+  };
+  llvm::append_range(Record, LanguageOptionValues);
 
   Record.push_back(LangOpts.ModuleFeatures.size());
   for (StringRef Feature : LangOpts.ModuleFeatures)
@@ -8259,11 +8260,22 @@ void OMPClauseWriter::VisitOMPSIMDClause(OMPSIMDClause *) {}
 void OMPClauseWriter::VisitOMPNogroupClause(OMPNogroupClause *) {}
 
 void OMPClauseWriter::VisitOMPInitClause(OMPInitClause *C) {
+  // Sizes for CreateEmpty on the read side: varlist_size = 1 + NumPrefs, then
+  // NumAttrs (total attrs across all pref-specs).
   Record.push_back(C->varlist_size());
+  Record.push_back(C->attrs().size());
+  // Varlist (interop var + Fr block).
   for (Expr *VE : C->varlist())
     Record.AddStmt(VE);
   Record.writeBool(C->getIsTarget());
   Record.writeBool(C->getIsTargetSync());
+  Record.writeBool(C->hasPreferAttrs());
+  // Per-pref-spec: attr count + that many attr exprs, in order.
+  for (OMPInitClause::PrefView P : C->prefs()) {
+    Record.push_back(P.Attrs.size());
+    for (Expr *A : P.Attrs)
+      Record.AddStmt(A);
+  }
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getVarLoc());
 }

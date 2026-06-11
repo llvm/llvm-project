@@ -506,3 +506,72 @@ gpu.module @test {
     gpu.return
   }
 }
+
+// -----
+// shape_cast collapse: all src dims fold into a single innermost dst dim.
+// srcShape=[8, 16, 32], resShape=[4096], consumer sg_layout=[8],
+// sg_data=[512]
+// sg_layout outer-to-inner: dim0 take=min(8, 8)=8 (rem=1) -> [8, 1, 1].
+// sg_data innermost-first, capped per dim by srcShape[d]/sgLayout[d]:
+//   dim2 cap=32/1=32, take=32 (rem=16); dim1 cap=16/1=16, take=16 (rem=1)
+//   -> [1, 16, 32].
+gpu.module @test {
+// CHECK-LABEL: gpu.func @shape_cast_collapse_innermost(
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [8, 1, 1], sg_data = [1, 16, 32]>} dense<0.000000e+00> : vector<8x16x32xf16>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[CST]] {layout_result_0 = #xegpu.layout<sg_layout = [8], sg_data = [512]>} : vector<8x16x32xf16> to vector<4096xf16>
+  gpu.func @shape_cast_collapse_innermost(%dst: memref<4096xf16>) kernel {
+    %cst = arith.constant dense<0.000000e+00> : vector<8x16x32xf16>
+    %0 = vector.shape_cast %cst : vector<8x16x32xf16> to vector<4096xf16>
+    %mask = arith.constant dense<true> : vector<4096xi1>
+    %offsets = vector.step : vector<4096xindex>
+    xegpu.store %0, %dst[%offsets], %mask <{layout = #xegpu.layout<sg_layout = [8], sg_data = [512]>}> : vector<4096xf16>, memref<4096xf16>, vector<4096xindex>, vector<4096xi1>
+    gpu.return
+  }
+}
+
+// -----
+// shape_cast collapse where sg_layout exceeds the size of the outermost src
+// dim, so it spills inward across multiple src dims.
+// srcShape=[2, 8, 32], resShape=[512], consumer sg_layout=[16], sg_data=[32]
+// sg_layout outer-to-inner: dim0 take=min(16, 2)=2 (rem=8);
+//   dim1 take=min(8, 8)=8 (rem=1) -> [2, 8, 1].
+// sg_data innermost-first, capped per dim by srcShape[d]/sgLayout[d]:
+//   dim2 cap=32/1=32, take=32 (rem=1) -> [1, 1, 32].
+gpu.module @test {
+// CHECK-LABEL: gpu.func @shape_cast_collapse_sg_layout_spill_inward(
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2, 8, 1], sg_data = [1, 1, 32]>} dense<0.000000e+00> : vector<2x8x32xf16>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[CST]] {layout_result_0 = #xegpu.layout<sg_layout = [16], sg_data = [32]>} : vector<2x8x32xf16> to vector<512xf16>
+  gpu.func @shape_cast_collapse_sg_layout_spill_inward(%dst: memref<512xf16>) kernel {
+    %cst = arith.constant dense<0.000000e+00> : vector<2x8x32xf16>
+    %0 = vector.shape_cast %cst : vector<2x8x32xf16> to vector<512xf16>
+    %mask = arith.constant dense<true> : vector<512xi1>
+    %offsets = vector.step : vector<512xindex>
+    xegpu.store %0, %dst[%offsets], %mask <{layout = #xegpu.layout<sg_layout = [16], sg_data = [32]>}> : vector<512xf16>, memref<512xf16>, vector<512xindex>, vector<512xi1>
+    gpu.return
+  }
+}
+
+// -----
+// shape_cast collapse with multiple non-trivial groups: every dst dim
+// collapses >=2 src dims, exercising the general matchDimCollapse path.
+// srcShape=[2, 4, 8, 16], resShape=[8, 128], consumer sg_layout=[2, 4],
+// sg_data=[4, 32]
+//  - dst[0]=8 collapses src[0, 1]: sg_layout outer-to-inner over [0, 1]:
+//      dim0 take=min(2, 2)=2 (rem=1) -> [2, 1, _, _]; sg_data innermost-first:
+//      dim1 cap=4/1=4, take=4 (rem=1) -> [1, 4, _, _].
+//  - dst[1]=128 collapses src[2, 3]: sg_layout outer-to-inner: dim2 take=
+//      min(4, 8)=4 (rem=1) -> [_, _, 4, 1]; sg_data innermost-first: dim3
+//      cap=16/1=16, take=16 (rem=2); dim2 cap=8/4=2, take=2 (rem=1)
+//      -> [_, _, 2, 16].
+gpu.module @test {
+// CHECK-LABEL: gpu.func @shape_cast_collapse_multi_groups(
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2, 1, 4, 1], sg_data = [1, 4, 2, 16]>} dense<0.000000e+00> : vector<2x4x8x16xf16>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[CST]] {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [4, 32]>} : vector<2x4x8x16xf16> to vector<8x128xf16>
+  gpu.func @shape_cast_collapse_multi_groups(%dst: memref<8x128xf16>) kernel {
+    %cst = arith.constant dense<0.000000e+00> : vector<2x4x8x16xf16>
+    %0 = vector.shape_cast %cst : vector<2x4x8x16xf16> to vector<8x128xf16>
+    %tdesc = xegpu.create_nd_tdesc %dst : memref<8x128xf16> -> !xegpu.tensor_desc<8x128xf16>
+    xegpu.store_nd %0, %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [4, 32]>}> : vector<8x128xf16>, !xegpu.tensor_desc<8x128xf16>
+    gpu.return
+  }
+}

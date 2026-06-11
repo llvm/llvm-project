@@ -51,6 +51,13 @@ def AArch64InstrInfo : InstrInfo;
 include "AArch64SystemOperands.td"
 
 //===----------------------------------------------------------------------===//
+// LFI rewriter metadata consumed by AArch64MCLFIRewriter. Must follow
+// AArch64SystemOperands.td due to use of SearchableTable.td.
+//===----------------------------------------------------------------------===//
+
+include "AArch64LFI.td"
+
+//===----------------------------------------------------------------------===//
 // AArch64 Processors supported.
 //
 

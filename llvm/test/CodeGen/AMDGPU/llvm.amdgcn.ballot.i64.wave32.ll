@@ -32,7 +32,7 @@ define amdgpu_cs i64 @constant_true() {
 ;
 ; GISEL-LABEL: constant_true:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_and_b32 s0, exec_lo, exec_lo
+; GISEL-NEXT:    s_mov_b32 s0, exec_lo
 ; GISEL-NEXT:    s_mov_b32 s1, 0
 ; GISEL-NEXT:    ; return to shader part epilog
   %ballot = call i64 @llvm.amdgcn.ballot.i64(i1 1)

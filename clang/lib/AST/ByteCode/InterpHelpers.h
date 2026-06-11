@@ -70,7 +70,7 @@ UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
                                          unsigned Kind, Pointer &Ptr);
 
 template <typename T>
-static bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
+bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
   const Expr *E = S.Current->getExpr(OpPC);
   S.CCEDiag(E, diag::note_constexpr_overflow) << SrcValue << E->getType();
   return S.noteUndefinedBehavior();

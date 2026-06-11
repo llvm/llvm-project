@@ -978,6 +978,10 @@ defm FlatAtomicFaddF32Inst : AMDGPUSubtargetFeature<"flat-atomic-fadd-f32-inst",
   [FeatureFlatAddressSpace]
 >;
 
+defm GFX1251GEMMInsts : AMDGPUSubtargetFeature<"gfx1251-gemm-insts",
+  "Has additional gfx1251 DGEMM instructions"
+>;
+
 defm FlatBufferGlobalAtomicFaddF64Inst : AMDGPUSubtargetFeature<"flat-buffer-global-fadd-f64-inst",
   "Has flat, buffer, and global instructions for f64 atomic fadd"
 >;
@@ -2214,6 +2218,7 @@ def FeatureISAVersion12_51 : FeatureSet<
   [FeatureAddressableLocalMemorySize327680,
    FeatureVOP3PX2IncrementsVaVdstTwice,
    FeatureDPALU_DPP,
+   FeatureGFX1251GEMMInsts,
    FeatureCubeInsts,
    FeatureLerpInst,
    FeatureSadInsts,

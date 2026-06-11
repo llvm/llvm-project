@@ -332,12 +332,10 @@ mlir::LogicalResult CIRAllocaOpABILowering::matchAndRewrite(
     cir::AllocaOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type allocaPtrTy = op.getType();
-  mlir::Type allocaTy = op.getAllocaType();
   mlir::Type loweredAllocaPtrTy = getTypeConverter()->convertType(allocaPtrTy);
-  mlir::Type loweredAllocaTy = getTypeConverter()->convertType(allocaTy);
 
   cir::AllocaOp loweredOp = cir::AllocaOp::create(
-      rewriter, op.getLoc(), loweredAllocaPtrTy, loweredAllocaTy, op.getName(),
+      rewriter, op.getLoc(), loweredAllocaPtrTy, op.getName(),
       op.getAlignmentAttr(), /*dynAllocSize=*/adaptor.getDynAllocSize());
   loweredOp.setInit(op.getInit());
   loweredOp.setConstant(op.getConstant());

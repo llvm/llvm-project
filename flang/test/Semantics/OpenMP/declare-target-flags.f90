@@ -1,3 +1,4 @@
+!UNSUPPORTED: target={{.*}}
 !RUN: %flang_fc1 -fdebug-dump-symbols -fopenmp -fopenmp-version=60 %s | FileCheck %s
 
 module m

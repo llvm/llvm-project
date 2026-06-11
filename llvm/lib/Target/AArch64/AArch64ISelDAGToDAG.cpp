@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
@@ -555,6 +556,10 @@ public:
 char AArch64DAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(AArch64DAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
+
+AArch64DAGToDAGISelPass::AArch64DAGToDAGISelPass(AArch64TargetMachine &TM)
+    : SelectionDAGISelPass(
+          std::make_unique<AArch64DAGToDAGISel>(TM, TM.getOptLevel())) {}
 
 /// addBitcastHints - This method adds bitcast hints to the operands of a node
 /// to help instruction selector determine which operands are in Neon registers.

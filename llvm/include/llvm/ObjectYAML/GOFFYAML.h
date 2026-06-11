@@ -37,7 +37,7 @@ struct FileHeader {
 
 struct Object {
   FileHeader Header;
-  Object();
+  LLVM_ABI Object();
 };
 } // end namespace GOFFYAML
 } // end namespace llvm

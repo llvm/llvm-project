@@ -237,6 +237,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  recvmmsg
+  SRCS
+    recvmmsg.cpp
+  HDRS
+    ../recvmmsg.h
+  DEPENDS
+    libc.hdr.types.struct_mmsghdr
+    libc.hdr.types.struct_timespec
+    libc.src.__support.common
+    libc.src.__support.OSUtil.linux.syscall_wrappers.recvmmsg
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   recvmsg
   SRCS
     recvmsg.cpp

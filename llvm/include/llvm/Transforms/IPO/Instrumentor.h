@@ -107,31 +107,33 @@ struct IRTArg {
 struct IRTCallDescription {
   /// Construct an instrumentation function description linked to the \p IO
   /// instrumentation opportunity and \p RetTy return type.
-  IRTCallDescription(InstrumentationOpportunity &IO, Type *RetTy = nullptr);
+  LLVM_ABI IRTCallDescription(InstrumentationOpportunity &IO,
+                              Type *RetTy = nullptr);
 
   /// Create the type of the instrumentation function.
-  FunctionType *createLLVMSignature(InstrumentationConfig &IConf,
-                                    InstrumentorIRBuilderTy &IIRB,
-                                    const DataLayout &DL,
-                                    bool ForceIndirection);
+  LLVM_ABI FunctionType *createLLVMSignature(InstrumentationConfig &IConf,
+                                             InstrumentorIRBuilderTy &IIRB,
+                                             const DataLayout &DL,
+                                             bool ForceIndirection);
 
   /// Create a call instruction that calls to the instrumentation function and
   /// passes the corresponding arguments.
-  CallInst *createLLVMCall(Value *&V, InstrumentationConfig &IConf,
-                           InstrumentorIRBuilderTy &IIRB, const DataLayout &DL,
-                           InstrumentationCaches &ICaches);
+  LLVM_ABI CallInst *createLLVMCall(Value *&V, InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB,
+                                    const DataLayout &DL,
+                                    InstrumentationCaches &ICaches);
 
   /// Create a string representation of the function declaration in C. Two
   /// strings are returned: the function definition with direct arguments and
   /// the function with any indirect argument.
-  std::pair<std::string, std::string>
+  LLVM_ABI std::pair<std::string, std::string>
   createCSignature(const InstrumentationConfig &IConf) const;
 
   /// Create a string representation of the function definition in C. The
   /// function body implements a stub and only prints the passed arguments. Two
   /// strings are returned: the function definition with direct arguments and
   /// the function with any indirect argument.
-  std::pair<std::string, std::string> createCBodies() const;
+  LLVM_ABI std::pair<std::string, std::string> createCBodies() const;
 
   /// Return whether the \p IRTA argument can be replaced.
   bool isReplacable(IRTArg &IRTA) const {
@@ -274,13 +276,13 @@ struct BaseConfigurationOption {
 
   /// Create a boolean option with \p Name name, \p Description description and
   /// \p DefaultValue as boolean default value.
-  static std::unique_ptr<BaseConfigurationOption>
+  LLVM_ABI static std::unique_ptr<BaseConfigurationOption>
   createBoolOption(InstrumentationConfig &IC, StringRef Name,
                    StringRef Description, bool DefaultValue);
 
   /// Create a string option with \p Name name, \p Description description and
   /// \p DefaultValue as string default value.
-  static std::unique_ptr<BaseConfigurationOption>
+  LLVM_ABI static std::unique_ptr<BaseConfigurationOption>
   createStringOption(InstrumentationConfig &IC, StringRef Name,
                      StringRef Description, StringRef DefaultValue);
 
@@ -331,7 +333,7 @@ struct BaseConfigurationOption {
 /// information for each instrumented opportunity, including the base
 /// configuration options. Another class may inherit from this one to modify the
 /// default behavior.
-struct InstrumentationConfig {
+struct LLVM_ABI InstrumentationConfig {
   virtual ~InstrumentationConfig() {}
 
   /// Construct an instrumentation configuration with the base options.
@@ -490,14 +492,15 @@ struct InstrumentationOpportunity {
   /// Helpers to cast values, pass them to the runtime, and replace them. To be
   /// used as part of the getter/setter of a InstrumentationOpportunity.
   ///{
-  static Value *forceCast(Value &V, Type &Ty, InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *forceCast(Value &V, Type &Ty,
+                                   InstrumentorIRBuilderTy &IIRB);
   static Value *getValue(Value &V, Type &Ty, InstrumentationConfig &IConf,
                          InstrumentorIRBuilderTy &IIRB) {
     return forceCast(V, Ty, IIRB);
   }
-  static Value *replaceValue(Value &V, Value &NewV,
-                             InstrumentationConfig &IConf,
-                             InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *replaceValue(Value &V, Value &NewV,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
   ///}
 
   /// Instrument the value \p V using the configuration \p IConf, and
@@ -557,10 +560,12 @@ struct InstrumentationOpportunity {
 
   /// Get the opportunity identifier for the pre and post positions.
   ///{
-  static Value *getIdPre(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                         InstrumentorIRBuilderTy &IIRB);
-  static Value *getIdPost(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                          InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getIdPre(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getIdPost(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB);
   ///}
 
   /// Compute the opportunity identifier for the current instrumentation epoch
@@ -641,23 +646,27 @@ struct FunctionIO final : public InstrumentationOpportunity {
 
   StringRef getName() const override { return "function"; }
 
-  void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
-            ConfigTy *UserConfig = nullptr);
+  LLVM_ABI void init(InstrumentationConfig &IConf,
+                     InstrumentorIRBuilderTy &IIRB,
+                     ConfigTy *UserConfig = nullptr);
 
-  static Value *getFunctionAddress(Value &V, Type &Ty,
-                                   InstrumentationConfig &IConf,
-                                   InstrumentorIRBuilderTy &IIRB);
-  static Value *getFunctionName(Value &V, Type &Ty,
-                                InstrumentationConfig &IConf,
-                                InstrumentorIRBuilderTy &IIRB);
-  Value *getNumArguments(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                         InstrumentorIRBuilderTy &IIRB);
-  Value *getArguments(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                      InstrumentorIRBuilderTy &IIRB);
-  Value *setArguments(Value &V, Value &NewV, InstrumentationConfig &IConf,
-                      InstrumentorIRBuilderTy &IIRB);
-  static Value *isMainFunction(Value &V, Type &Ty, InstrumentationConfig &IConf,
+  LLVM_ABI static Value *getFunctionAddress(Value &V, Type &Ty,
+                                            InstrumentationConfig &IConf,
+                                            InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getFunctionName(Value &V, Type &Ty,
+                                         InstrumentationConfig &IConf,
+                                         InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI Value *getNumArguments(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI Value *getArguments(Value &V, Type &Ty, InstrumentationConfig &IConf,
                                InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI Value *setArguments(Value &V, Value &NewV,
+                               InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *isMainFunction(Value &V, Type &Ty,
+                                        InstrumentationConfig &IConf,
+                                        InstrumentorIRBuilderTy &IIRB);
 
   static void populate(InstrumentationConfig &IConf,
                        InstrumentorIRBuilderTy &IIRB) {
@@ -687,15 +696,19 @@ struct AllocaIO final : public InstructionIO<Instruction::Alloca> {
   using ConfigTy = BaseConfigTy<ConfigKind>;
   ConfigTy Config;
 
-  void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
-            ConfigTy *UserConfig = nullptr);
+  LLVM_ABI void init(InstrumentationConfig &IConf,
+                     InstrumentorIRBuilderTy &IIRB,
+                     ConfigTy *UserConfig = nullptr);
 
-  static Value *getSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                        InstrumentorIRBuilderTy &IIRB);
-  static Value *setSize(Value &V, Value &NewV, InstrumentationConfig &IConf,
-                        InstrumentorIRBuilderTy &IIRB);
-  static Value *getAlignment(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                             InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getSize(Value &V, Type &Ty,
+                                 InstrumentationConfig &IConf,
+                                 InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *setSize(Value &V, Value &NewV,
+                                 InstrumentationConfig &IConf,
+                                 InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getAlignment(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
 
   static void populate(InstrumentationConfig &IConf,
                        InstrumentorIRBuilderTy &IIRB) {
@@ -721,8 +734,9 @@ struct UnreachableIO final : public InstructionIO<Instruction::Unreachable> {
   using ConfigTy = BaseConfigTy<ConfigKind>;
   ConfigTy Config;
 
-  void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
-            ConfigTy *UserConfig = nullptr);
+  LLVM_ABI void init(InstrumentationConfig &IConf,
+                     InstrumentorIRBuilderTy &IIRB,
+                     ConfigTy *UserConfig = nullptr);
 
   static void populate(InstrumentationConfig &IConf,
                        InstrumentorIRBuilderTy &IIRB) {
@@ -750,11 +764,13 @@ struct BasePointerIO final : public InstrumentationOpportunity {
 
   StringRef getName() const override { return "base_pointer_info"; }
 
-  void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
-            ConfigTy *UserConfig = nullptr);
+  LLVM_ABI void init(InstrumentationConfig &IConf,
+                     InstrumentorIRBuilderTy &IIRB,
+                     ConfigTy *UserConfig = nullptr);
 
-  static Value *getPointerKind(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                               InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getPointerKind(Value &V, Type &Ty,
+                                        InstrumentationConfig &IConf,
+                                        InstrumentorIRBuilderTy &IIRB);
 
   /// This is necessary to produce a return value that can be used by other IOs.
   /// No replacement is actually happening.
@@ -788,14 +804,16 @@ struct ModuleIO final : public InstrumentationOpportunity {
 
   StringRef getName() const override { return "module"; }
 
-  void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
-            ConfigTy *UserConfig = nullptr);
+  LLVM_ABI void init(InstrumentationConfig &IConf,
+                     InstrumentorIRBuilderTy &IIRB,
+                     ConfigTy *UserConfig = nullptr);
 
-  static Value *getModuleName(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                              InstrumentorIRBuilderTy &IIRB);
-  static Value *getTargetTriple(Value &V, Type &Ty,
-                                InstrumentationConfig &IConf,
-                                InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getModuleName(Value &V, Type &Ty,
+                                       InstrumentationConfig &IConf,
+                                       InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getTargetTriple(Value &V, Type &Ty,
+                                         InstrumentationConfig &IConf,
+                                         InstrumentorIRBuilderTy &IIRB);
 
   static void populate(InstrumentationConfig &IConf,
                        InstrumentorIRBuilderTy &IIRB) {
@@ -831,29 +849,36 @@ struct GlobalVarIO final : public InstrumentationOpportunity {
 
   StringRef getName() const override { return "global"; }
 
-  void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
-            ConfigTy *UserConfig = nullptr);
+  LLVM_ABI void init(InstrumentationConfig &IConf,
+                     InstrumentorIRBuilderTy &IIRB,
+                     ConfigTy *UserConfig = nullptr);
 
-  static Value *getAddress(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                           InstrumentorIRBuilderTy &IIRB);
-  static Value *setAddress(Value &V, Value &NewV, InstrumentationConfig &IConf,
-                           InstrumentorIRBuilderTy &IIRB);
-  static Value *getAS(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                      InstrumentorIRBuilderTy &IIRB);
-  static Value *getDeclaredSize(Value &V, Type &Ty,
-                                InstrumentationConfig &IConf,
-                                InstrumentorIRBuilderTy &IIRB);
-  static Value *getAlignment(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                             InstrumentorIRBuilderTy &IIRB);
-  static Value *getSymbolName(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                              InstrumentorIRBuilderTy &IIRB);
-  static Value *getInitialValue(Value &V, Type &Ty,
-                                InstrumentationConfig &IConf,
-                                InstrumentorIRBuilderTy &IIRB);
-  static Value *isConstant(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                           InstrumentorIRBuilderTy &IIRB);
-  static Value *isDefinition(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                             InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getAddress(Value &V, Type &Ty,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *setAddress(Value &V, Value &NewV,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getAS(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                               InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getDeclaredSize(Value &V, Type &Ty,
+                                         InstrumentationConfig &IConf,
+                                         InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getAlignment(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getSymbolName(Value &V, Type &Ty,
+                                       InstrumentationConfig &IConf,
+                                       InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getInitialValue(Value &V, Type &Ty,
+                                         InstrumentationConfig &IConf,
+                                         InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *isConstant(Value &V, Type &Ty,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *isDefinition(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
 
   static void populate(InstrumentationConfig &IConf,
                        InstrumentorIRBuilderTy &IIRB) {
@@ -902,36 +927,46 @@ struct StoreIO : public InstructionIO<Instruction::Store> {
 
   /// Initialize the store opportunity using the instrumentation config \p IConf
   /// and the user config \p UserConfig.
-  void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
-            ConfigTy *UserConfig = nullptr);
+  LLVM_ABI void init(InstrumentationConfig &IConf,
+                     InstrumentorIRBuilderTy &IIRB,
+                     ConfigTy *UserConfig = nullptr);
 
   /// Getters and setters for the arguments of the instrumentation function for
   /// the store opportunity.
   ///{
-  static Value *getPointer(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                           InstrumentorIRBuilderTy &IIRB);
-  static Value *setPointer(Value &V, Value &NewV, InstrumentationConfig &IConf,
-                           InstrumentorIRBuilderTy &IIRB);
-  static Value *getPointerAS(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                             InstrumentorIRBuilderTy &IIRB);
-  static Value *getBasePointerInfo(Value &V, Type &Ty,
-                                   InstrumentationConfig &IConf,
-                                   InstrumentorIRBuilderTy &IIRB);
-  static Value *getValue(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                         InstrumentorIRBuilderTy &IIRB);
-  static Value *getValueSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                             InstrumentorIRBuilderTy &IIRB);
-  static Value *getAlignment(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                             InstrumentorIRBuilderTy &IIRB);
-  static Value *getValueTypeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                               InstrumentorIRBuilderTy &IIRB);
-  static Value *getAtomicityOrdering(Value &V, Type &Ty,
-                                     InstrumentationConfig &IConf,
-                                     InstrumentorIRBuilderTy &IIRB);
-  static Value *getSyncScopeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                               InstrumentorIRBuilderTy &IIRB);
-  static Value *isVolatile(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                           InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getPointer(Value &V, Type &Ty,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *setPointer(Value &V, Value &NewV,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getPointerAS(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getBasePointerInfo(Value &V, Type &Ty,
+                                            InstrumentationConfig &IConf,
+                                            InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getValue(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getValueSize(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getAlignment(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getValueTypeId(Value &V, Type &Ty,
+                                        InstrumentationConfig &IConf,
+                                        InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getAtomicityOrdering(Value &V, Type &Ty,
+                                              InstrumentationConfig &IConf,
+                                              InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getSyncScopeId(Value &V, Type &Ty,
+                                        InstrumentationConfig &IConf,
+                                        InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *isVolatile(Value &V, Type &Ty,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB);
   ///}
 
   /// Create the store opportunities for pre and post positions. The
@@ -985,36 +1020,46 @@ struct LoadIO : public InstructionIO<Instruction::Load> {
 
   /// Initialize the load opportunity using the instrumentation config \p IConf
   /// and the user config \p UserConfig.
-  void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
-            ConfigTy *UserConfig = nullptr);
+  LLVM_ABI void init(InstrumentationConfig &IConf,
+                     InstrumentorIRBuilderTy &IIRB,
+                     ConfigTy *UserConfig = nullptr);
 
   /// Getters and setters for the arguments of the instrumentation function for
   /// the load opportunity.
   ///{
-  static Value *getPointer(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                           InstrumentorIRBuilderTy &IIRB);
-  static Value *setPointer(Value &V, Value &NewV, InstrumentationConfig &IConf,
-                           InstrumentorIRBuilderTy &IIRB);
-  static Value *getPointerAS(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                             InstrumentorIRBuilderTy &IIRB);
-  static Value *getBasePointerInfo(Value &V, Type &Ty,
-                                   InstrumentationConfig &IConf,
-                                   InstrumentorIRBuilderTy &IIRB);
-  static Value *getValue(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                         InstrumentorIRBuilderTy &IIRB);
-  static Value *getValueSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                             InstrumentorIRBuilderTy &IIRB);
-  static Value *getAlignment(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                             InstrumentorIRBuilderTy &IIRB);
-  static Value *getValueTypeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                               InstrumentorIRBuilderTy &IIRB);
-  static Value *getAtomicityOrdering(Value &V, Type &Ty,
-                                     InstrumentationConfig &IConf,
-                                     InstrumentorIRBuilderTy &IIRB);
-  static Value *getSyncScopeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                               InstrumentorIRBuilderTy &IIRB);
-  static Value *isVolatile(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                           InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getPointer(Value &V, Type &Ty,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *setPointer(Value &V, Value &NewV,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getPointerAS(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getBasePointerInfo(Value &V, Type &Ty,
+                                            InstrumentationConfig &IConf,
+                                            InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getValue(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getValueSize(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getAlignment(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getValueTypeId(Value &V, Type &Ty,
+                                        InstrumentationConfig &IConf,
+                                        InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getAtomicityOrdering(Value &V, Type &Ty,
+                                              InstrumentationConfig &IConf,
+                                              InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getSyncScopeId(Value &V, Type &Ty,
+                                        InstrumentationConfig &IConf,
+                                        InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *isVolatile(Value &V, Type &Ty,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB);
   ///}
 
   /// Create the load opportunities for PRE and POST positions.
@@ -1059,20 +1104,25 @@ struct CastIO final
 
   StringRef getName() const override { return "cast"; }
 
-  void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
-            ConfigTy *UserConfig = nullptr);
+  LLVM_ABI void init(InstrumentationConfig &IConf,
+                     InstrumentorIRBuilderTy &IIRB,
+                     ConfigTy *UserConfig = nullptr);
 
-  static Value *getInput(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                         InstrumentorIRBuilderTy &IIRB);
-  static Value *getInputTypeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                               InstrumentorIRBuilderTy &IIRB);
-  static Value *getInputSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                             InstrumentorIRBuilderTy &IIRB);
-  static Value *getResultTypeId(Value &V, Type &Ty,
-                                InstrumentationConfig &IConf,
-                                InstrumentorIRBuilderTy &IIRB);
-  static Value *getResultSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                              InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getInput(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getInputTypeId(Value &V, Type &Ty,
+                                        InstrumentationConfig &IConf,
+                                        InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getInputSize(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getResultTypeId(Value &V, Type &Ty,
+                                         InstrumentationConfig &IConf,
+                                         InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getResultSize(Value &V, Type &Ty,
+                                       InstrumentationConfig &IConf,
+                                       InstrumentorIRBuilderTy &IIRB);
 
   static void populate(InstrumentationConfig &IConf,
                        InstrumentorIRBuilderTy &IIRB) {
@@ -1088,14 +1138,15 @@ struct CastIO final
 /// Instrumentation opportunity for numeric operations. This includes Add, FAdd,
 /// Sub, FSub, Mul, FMul, UDiv, FDiv, SDiv, URem, SRem, FRem, Shl, LShr, AShr,
 /// And, Or, Xor, and FNeg.
-struct NumericIO : public InstructionIO<
-                       Instruction::Add, Instruction::FAdd, Instruction::Sub,
-                       Instruction::FSub, Instruction::Mul, Instruction::FMul,
-                       Instruction::UDiv, Instruction::FDiv, Instruction::SDiv,
-                       Instruction::URem, Instruction::SRem, Instruction::FRem,
-                       Instruction::Shl, Instruction::LShr, Instruction::AShr,
-                       Instruction::And, Instruction::Or, Instruction::Xor,
-                       Instruction::FNeg> {
+struct NumericIO final
+    : public InstructionIO<
+          Instruction::Add, Instruction::FAdd, Instruction::Sub,
+          Instruction::FSub, Instruction::Mul, Instruction::FMul,
+          Instruction::UDiv, Instruction::FDiv, Instruction::SDiv,
+          Instruction::URem, Instruction::SRem, Instruction::FRem,
+          Instruction::Shl, Instruction::LShr, Instruction::AShr,
+          Instruction::And, Instruction::Or, Instruction::Xor,
+          Instruction::FNeg> {
   NumericIO(InstrumentationLocation::KindTy Kind) : InstructionIO(Kind) {}
 
   enum ConfigKind {
@@ -1106,6 +1157,7 @@ struct NumericIO : public InstructionIO<
     ReplaceResult,
     PassLeft,
     PassRight,
+    PassFlags,
     PassId,
     NumConfig,
   };
@@ -1115,13 +1167,19 @@ struct NumericIO : public InstructionIO<
 
   StringRef getName() const override { return "numeric"; }
 
-  void init(InstrumentationConfig &IConf, InstrumentorIRBuilderTy &IIRB,
-            ConfigTy *UserConfig = nullptr);
+  LLVM_ABI void init(InstrumentationConfig &IConf,
+                     InstrumentorIRBuilderTy &IIRB,
+                     ConfigTy *UserConfig = nullptr);
 
-  static Value *getLeft(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                        InstrumentorIRBuilderTy &IIRB);
-  static Value *getRight(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                         InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getLeft(Value &V, Type &Ty,
+                                 InstrumentationConfig &IConf,
+                                 InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getRight(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getFlags(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB);
 
   static void populate(InstrumentationConfig &IConf,
                        InstrumentorIRBuilderTy &IIRB) {
@@ -1157,11 +1215,11 @@ public:
   /// provided, a default builder is used. When the configuration is not
   /// provided, it is read from the config file if available and otherwise a
   /// default configuration is used.
-  InstrumentorPass(IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr,
-                   InstrumentationConfig *IC = nullptr,
-                   InstrumentorIRBuilderTy *IIRB = nullptr);
+  LLVM_ABI InstrumentorPass(IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr,
+                            InstrumentationConfig *IC = nullptr,
+                            InstrumentorIRBuilderTy *IIRB = nullptr);
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 } // end namespace llvm

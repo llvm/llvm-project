@@ -113,3 +113,16 @@ RUN apt-get update && \
     universal-ctags && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+FROM base as ci-container-github-automation
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    python3-git \
+    python3-github && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+USER gha
+
+ADD github-automation.py /usr/local/bin/

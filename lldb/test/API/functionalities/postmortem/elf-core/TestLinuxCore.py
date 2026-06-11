@@ -224,6 +224,15 @@ class LinuxCoreTestCase(TestBase):
         self.dbg.DeleteTarget(target)
 
     @skipIfLLVMTargetMissing("X86")
+    def test_is_not_live_debug_session(self):
+        """Test that a process loaded from a core file is not a live session."""
+        target = self.dbg.CreateTarget("linux-x86_64.out")
+        process = target.LoadCore("linux-x86_64.core")
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertFalse(process.IsLiveDebugSession())
+        self.dbg.DeleteTarget(target)
+
+    @skipIfLLVMTargetMissing("X86")
     def test_write_register(self):
         """Test that writing to register results in an error and that error
         message is set."""

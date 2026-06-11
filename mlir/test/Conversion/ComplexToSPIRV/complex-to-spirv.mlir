@@ -132,6 +132,37 @@ func.func @complex_div(%lhs: complex<f32>, %rhs: complex<f32>) -> complex<f32> {
 
 // -----
 
+func.func @complex_neg(%arg: complex<f32>) -> complex<f32> {
+  %neg = complex.neg %arg : complex<f32>
+  return %neg : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_neg
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[NRE:.+]] = spirv.FNegate %[[RE]] : f32
+//       CHECK:   %[[NIM:.+]] = spirv.FNegate %[[IM]] : f32
+//       CHECK:   %[[CC:.+]] = spirv.CompositeConstruct %[[NRE]], %[[NIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
+func.func @complex_conj(%arg: complex<f32>) -> complex<f32> {
+  %conj = complex.conj %arg : complex<f32>
+  return %conj : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_conj
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[NIM:.+]] = spirv.FNegate %[[IM]] : f32
+//       CHECK:   %[[CC:.+]] = spirv.CompositeConstruct %[[RE]], %[[NIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
 func.func @complex_abs(%arg: complex<f32>) -> f32 {
   %abs = complex.abs %arg : complex<f32>
   return %abs : f32

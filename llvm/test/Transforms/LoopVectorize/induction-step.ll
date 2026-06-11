@@ -452,8 +452,8 @@ define void @test_expand_scev_order(i32 %x, i32 %iv.2.step, i64 %n, ptr %dst) {
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[IV_2_STEP:%.*]], i64 [[N:%.*]], ptr [[DST:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[X_EXT:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[IV_2_STEP]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

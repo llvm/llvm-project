@@ -2068,12 +2068,14 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:BinaryFormat",
         "//llvm:Support",
     ],
 )
