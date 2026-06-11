@@ -1,5 +1,6 @@
 // RUN: %clang_analyze_cc1 \
 // RUN:   -analyzer-checker=alpha.core.C11Lock \
+// RUN:   -analyzer-checker=alpha.unix.PthreadLock \
 // RUN:   -verify %s
 // RUN: %clang_analyze_cc1 \
 // RUN:   -analyzer-checker=alpha.core.C11Lock \
