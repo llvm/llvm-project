@@ -112,12 +112,12 @@ define <32 x i1> @whilewr_8_split(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mov z1.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    zip1 v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    zip1 v1.16b, v1.16b, v3.16b
-; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    addv h1, v1.8h
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
 ; CHECK-NEXT:    str h0, [x8]
 ; CHECK-NEXT:    str h1, [x8, #2]
 ; CHECK-NEXT:    ret
@@ -149,18 +149,18 @@ define <64 x i1> @whilewr_8_split2(i64 %a, i64 %b) {
 ; CHECK-NEXT:    and v2.16b, v2.16b, v1.16b
 ; CHECK-NEXT:    and v3.16b, v3.16b, v1.16b
 ; CHECK-NEXT:    and v1.16b, v4.16b, v1.16b
-; CHECK-NEXT:    ext v4.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v5.16b, v2.16b, v2.16b, #8
-; CHECK-NEXT:    ext v6.16b, v3.16b, v3.16b, #8
-; CHECK-NEXT:    ext v7.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    zip1 v0.16b, v0.16b, v4.16b
-; CHECK-NEXT:    zip1 v2.16b, v2.16b, v5.16b
-; CHECK-NEXT:    zip1 v3.16b, v3.16b, v6.16b
-; CHECK-NEXT:    zip1 v1.16b, v1.16b, v7.16b
-; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    addv h2, v2.8h
-; CHECK-NEXT:    addv h3, v3.8h
-; CHECK-NEXT:    addv h1, v1.8h
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v2.16b, v2.16b, v2.16b
+; CHECK-NEXT:    addp v3.16b, v3.16b, v3.16b
+; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v2.16b, v2.16b, v2.16b
+; CHECK-NEXT:    addp v3.16b, v3.16b, v3.16b
+; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v2.16b, v2.16b, v2.16b
+; CHECK-NEXT:    addp v3.16b, v3.16b, v3.16b
+; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
 ; CHECK-NEXT:    str h0, [x8]
 ; CHECK-NEXT:    str h2, [x8, #6]
 ; CHECK-NEXT:    str h3, [x8, #4]
@@ -205,12 +205,12 @@ define <32 x i1> @whilewr_16_expand2(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mov z2.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    and v1.16b, v2.16b, v1.16b
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    zip1 v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    zip1 v1.16b, v1.16b, v3.16b
-; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    addv h1, v1.8h
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
 ; CHECK-NEXT:    str h0, [x8, #2]
 ; CHECK-NEXT:    str h1, [x8]
 ; CHECK-NEXT:    ret
@@ -273,12 +273,12 @@ define <32 x i1> @whilewr_32_expand3(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mov z2.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    and v1.16b, v2.16b, v1.16b
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    zip1 v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    zip1 v1.16b, v1.16b, v3.16b
-; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    addv h1, v1.8h
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
 ; CHECK-NEXT:    str h0, [x8, #2]
 ; CHECK-NEXT:    str h1, [x8]
 ; CHECK-NEXT:    ret
@@ -359,12 +359,12 @@ define <32 x i1> @whilewr_64_expand4(i64 %a, i64 %b) {
 ; CHECK-NEXT:    mov z2.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    and v1.16b, v2.16b, v1.16b
-; CHECK-NEXT:    ext v2.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v3.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    zip1 v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    zip1 v1.16b, v1.16b, v3.16b
-; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    addv h1, v1.8h
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
 ; CHECK-NEXT:    str h0, [x8, #2]
 ; CHECK-NEXT:    str h1, [x8]
 ; CHECK-NEXT:    ret

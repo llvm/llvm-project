@@ -164,6 +164,8 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   case Intrinsic::smul_fix_sat:
   case Intrinsic::umul_fix:
   case Intrinsic::umul_fix_sat:
+  case Intrinsic::vector_splice_left:
+  case Intrinsic::vector_splice_right:
     return (ScalarOpdIdx == 2);
   case Intrinsic::experimental_vp_splice:
     return ScalarOpdIdx == 2 || ScalarOpdIdx == 4;
@@ -1254,58 +1256,6 @@ Value *llvm::concatenateVectors(IRBuilderBase &Builder,
   } while (NumVecs > 1);
 
   return ResList[0];
-}
-
-bool llvm::maskIsAllZeroOrUndef(Value *Mask) {
-  assert(isa<VectorType>(Mask->getType()) &&
-         isa<IntegerType>(Mask->getType()->getScalarType()) &&
-         cast<IntegerType>(Mask->getType()->getScalarType())->getBitWidth() ==
-             1 &&
-         "Mask must be a vector of i1");
-
-  auto *ConstMask = dyn_cast<Constant>(Mask);
-  if (!ConstMask)
-    return false;
-  if (ConstMask->isNullValue() || isa<UndefValue>(ConstMask))
-    return true;
-  if (isa<ScalableVectorType>(ConstMask->getType()))
-    return false;
-  for (unsigned
-           I = 0,
-           E = cast<FixedVectorType>(ConstMask->getType())->getNumElements();
-       I != E; ++I) {
-    if (auto *MaskElt = ConstMask->getAggregateElement(I))
-      if (MaskElt->isNullValue() || isa<UndefValue>(MaskElt))
-        continue;
-    return false;
-  }
-  return true;
-}
-
-bool llvm::maskIsAllOneOrUndef(Value *Mask) {
-  assert(isa<VectorType>(Mask->getType()) &&
-         isa<IntegerType>(Mask->getType()->getScalarType()) &&
-         cast<IntegerType>(Mask->getType()->getScalarType())->getBitWidth() ==
-             1 &&
-         "Mask must be a vector of i1");
-
-  auto *ConstMask = dyn_cast<Constant>(Mask);
-  if (!ConstMask)
-    return false;
-  if (ConstMask->isAllOnesValue() || isa<UndefValue>(ConstMask))
-    return true;
-  if (isa<ScalableVectorType>(ConstMask->getType()))
-    return false;
-  for (unsigned
-           I = 0,
-           E = cast<FixedVectorType>(ConstMask->getType())->getNumElements();
-       I != E; ++I) {
-    if (auto *MaskElt = ConstMask->getAggregateElement(I))
-      if (MaskElt->isAllOnesValue() || isa<UndefValue>(MaskElt))
-        continue;
-    return false;
-  }
-  return true;
 }
 
 bool llvm::maskContainsAllOneOrUndef(Value *Mask) {

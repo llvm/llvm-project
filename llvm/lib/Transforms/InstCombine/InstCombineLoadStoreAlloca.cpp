@@ -416,7 +416,7 @@ void PointerReplacer::replace(Instruction *I) {
                               LT->getAlign(), LT->getOrdering(),
                               LT->getSyncScopeID());
     NewI->takeName(LT);
-    copyMetadataForLoad(*NewI, *LT);
+    NewI->copyMetadata(*LT);
 
     IC.InsertNewInstWith(NewI, LT->getIterator());
     IC.replaceInstUsesWith(*LT, NewI);

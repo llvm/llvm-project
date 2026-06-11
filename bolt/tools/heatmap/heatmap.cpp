@@ -121,8 +121,9 @@ int main(int argc, char **argv) {
       report_error("RewriteInstance", std::move(E));
 
     RewriteInstance &RI = *RIOrErr.get();
-    if (Error E = RI.setProfile(opts::PerfData))
-      report_error(opts::PerfData, std::move(E));
+    for (StringRef Filename : opts::PerfData)
+      if (Error E = RI.setProfile(Filename))
+        report_error(Filename, std::move(E));
 
     if (Error E = RI.run())
       report_error(opts::InputFilename, std::move(E));

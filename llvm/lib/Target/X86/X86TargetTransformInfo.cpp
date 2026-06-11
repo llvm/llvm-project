@@ -6399,7 +6399,7 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
   // and that there's at most one variable index.
   auto getIndexSizeInBits = [](const Value *Ptr, const DataLayout &DL) {
     unsigned IndexSize = DL.getPointerSizeInBits();
-    const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr);
+    const GetElementPtrInst *GEP = dyn_cast_or_null<GetElementPtrInst>(Ptr);
     if (IndexSize < 64 || !GEP)
       return IndexSize;
 

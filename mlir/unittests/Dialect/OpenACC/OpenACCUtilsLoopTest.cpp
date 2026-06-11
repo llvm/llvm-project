@@ -271,6 +271,13 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForWithCollapse) {
   forOp.getBody()->walk([&](scf::ForOp) { hasNestedFor = true; });
   EXPECT_FALSE(hasNestedFor);
 
+  // Ensure the collapsed loop has an attribute indicating the number
+  // of collapsed loops
+  auto collapseAttr =
+      forOp->getAttrOfType<IntegerAttr>(getCollapseCountAttrName());
+  ASSERT_TRUE(collapseAttr);
+  EXPECT_EQ(collapseAttr.getInt(), 2);
+
   // The collapsed loop should iterate over the product of dimensions
   // lb=0, step=1 (after collapsing two 0..10 inclusive loops)
   auto lbConst = getConstantIndex(forOp.getLowerBound());
@@ -302,6 +309,9 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForNoCollapse) {
   bool hasNestedFor = false;
   forOp.getBody()->walk([&](scf::ForOp) { hasNestedFor = true; });
   EXPECT_TRUE(hasNestedFor);
+
+  // No collapse happened, so no collapse_count attribute is expected
+  EXPECT_FALSE(forOp->hasAttr(getCollapseCountAttrName()));
 }
 
 TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForWithCollapseAndDynamicBounds) {

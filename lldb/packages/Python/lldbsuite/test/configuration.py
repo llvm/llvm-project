@@ -154,6 +154,9 @@ mte_enabled = False
 # Whether debugserver is built with arm64e support.
 arm64e_debugserver = False
 
+# Whether to print the lldb version banner during test setup.
+print_lldb_version = False
+
 # the build type of lldb
 # Typical values include Debug, Release, RelWithDebInfo and MinSizeRel
 cmake_build_type = None
