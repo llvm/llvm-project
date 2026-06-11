@@ -23,6 +23,8 @@ extern "C" {
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+// windows.h needs to be included before tlhelp32.h.
+#include <tlhelp32.h>
 #else
 #include <dlfcn.h>
 #include <pthread.h>
@@ -113,6 +115,45 @@ static unsigned char *UsedDevices = nullptr;
 static int AnyDeviceUsed = 0;
 #endif
 
+#ifdef _WIN32
+static int strEndsWithNoCase(const char *S, const char *Suffix) {
+  size_t SLen = strlen(S);
+  size_t SuffixLen = strlen(Suffix);
+  return SLen >= SuffixLen && _stricmp(S + SLen - SuffixLen, Suffix) == 0;
+}
+
+static int isHipRuntimeModuleName(const char *Name) {
+  return _stricmp(Name, "amdhip64.dll") == 0 ||
+         (_strnicmp(Name, "amdhip64_", strlen("amdhip64_")) == 0 &&
+          strEndsWithNoCase(Name, ".dll"));
+}
+
+static void *findLoadedHipRuntime(void) {
+  HMODULE Handle = GetModuleHandleA("amdhip64.dll");
+  if (Handle)
+    return (void *)Handle;
+
+  HANDLE Snapshot = CreateToolhelp32Snapshot(
+      TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, GetCurrentProcessId());
+  if (Snapshot == INVALID_HANDLE_VALUE)
+    return nullptr;
+
+  MODULEENTRY32A Entry;
+  Entry.dwSize = sizeof(Entry);
+  if (Module32FirstA(Snapshot, &Entry)) {
+    do {
+      if (isHipRuntimeModuleName(Entry.szModule)) {
+        Handle = Entry.hModule;
+        break;
+      }
+    } while (Module32NextA(Snapshot, &Entry));
+  }
+
+  CloseHandle(Snapshot);
+  return (void *)Handle;
+}
+#endif
+
 /* -------------------------------------------------------------------------- */
 /*  Device-to-host copies                                                     */
 /*  Keep HIP-only to avoid an HSA dependency.                                 */
@@ -127,17 +168,11 @@ static void doEnsureHipLoaded(void) {
   }
 
 #ifdef _WIN32
-  const char *HipLibName = "amdhip64_7.dll";
+  /* Use the app's loaded HIP runtime to avoid binding another ROCm version. */
+  void *Handle = findLoadedHipRuntime();
 #else
   const char *HipLibName = "libamdhip64.so";
-#endif
-
   void *Handle = __interception::OpenLibrary(HipLibName);
-#ifdef _WIN32
-  if (!Handle) {
-    HipLibName = "amdhip64.dll";
-    Handle = __interception::OpenLibrary(HipLibName);
-  }
 #endif
   if (!Handle)
     return;
