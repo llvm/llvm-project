@@ -40,6 +40,8 @@ public:
                               bfloat16
 
                               ,
+                              // TODO: Replace as float128 once the alias is
+                              // fixed
                               fputil::Float128>();
 };
 template <typename T>
