@@ -178,11 +178,10 @@ static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic,
     BasicBlock *EntryBB = BasicBlock::Create(M->getContext(), "entry", F);
     IRBuilder<> IRB(EntryBB);
     IntrinsicLowering IL(M->getDataLayout());
-    IRB.CreateIntrinsic(Intrinsic::bswap, Intrinsic->getType(), F->getArg(0),
-                        {}, "", {}, [&](CallInst *BSwap) {
-                          IRB.CreateRet(BSwap);
-                          IL.LowerIntrinsicCall(BSwap);
-                        });
+    Value *BSwap = IRB.CreateIntrinsic(
+        Intrinsic::bswap, Intrinsic->getType(), F->getArg(0), {}, "", {},
+        [&](CallInst *BSwap) { IL.LowerIntrinsicCall(BSwap); });
+    IRB.CreateRet(BSwap);
     break;
   }
   default:

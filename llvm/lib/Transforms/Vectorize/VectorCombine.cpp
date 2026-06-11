@@ -5936,14 +5936,12 @@ bool VectorCombine::foldBitcastOfVPLoad(Instruction &I) {
   unsigned Factor = NewVecCnt.getKnownScalarFactor(OrigVecCnt);
   Value *NewEVL = Builder.CreateNUWMul(EVL, Builder.getInt32(Factor));
   Value *NewMask = Builder.CreateVectorSplat(NewVecCnt, Builder.getTrue());
-  Value *NewVP = Builder.CreateIntrinsic(
+  CallInst *NewVP = Builder.CreateIntrinsicWithoutFolding(
       NewVecTy, Intrinsic::vp_load,
-      {II->getMemoryPointerParam(), NewMask, NewEVL}, {}, "",
-      [&](CallInst *CI) {
-        // Preserve the original alignment.
-        CI->addParamAttrs(
-            0, AttrBuilder(II->getContext()).addAlignmentAttr(OrigAlign));
-      });
+      {II->getMemoryPointerParam(), NewMask, NewEVL});
+  // Preserve the original alignment.
+  NewVP->addParamAttrs(
+      0, AttrBuilder(II->getContext()).addAlignmentAttr(OrigAlign));
   replaceValue(*Cast, *NewVP);
   return true;
 }

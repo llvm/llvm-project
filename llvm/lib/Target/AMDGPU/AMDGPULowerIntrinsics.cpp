@@ -111,7 +111,7 @@ bool AMDGPULowerIntrinsicsImpl::visitBarrier(IntrinsicInst &I) {
     } else {
       Value *BarrierID_32 = B.getInt32(AMDGPU::Barrier::WORKGROUP);
       Value *BarrierID_16 = B.getInt16(AMDGPU::Barrier::WORKGROUP);
-      auto *IsFirst = B.CreateIntrinsicWithoutFolding(
+      CallInst *IsFirst = B.CreateIntrinsicWithoutFolding(
           B.getInt1Ty(), Intrinsic::amdgcn_s_barrier_signal_isfirst,
           {BarrierID_32});
       IsFirst->copyMetadata(I);
