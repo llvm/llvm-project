@@ -17,7 +17,7 @@ t1 PROC FRAME
   .beginepilog
   .freestack 32
   add rsp, 32
-  .pop2reg r12, r13
+  .pop2reg r13, r12
   pop2 r13, r12
   .endepilog
   ret
@@ -35,7 +35,7 @@ t1 ENDP
 ; CHECK: .seh_startepilogue
 ; CHECK: .seh_stackalloc 32
 ; CHECK: add rsp, 32
-; CHECK: .seh_push2regs r13, r12
+; CHECK: .seh_push2regs r12, r13
 ; CHECK: pop2 r13, r12
 ; CHECK: .seh_endepilogue
 ; CHECK: ret

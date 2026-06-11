@@ -51,15 +51,15 @@ class COFFMasmParser : public MCAsmParserExtension {
   bool parseSEHDirectiveAllocStack(StringRef, SMLoc);
   bool parseSEHDirectiveFreeStack(StringRef, SMLoc);
   bool parseSEHDirectiveEndProlog(StringRef, SMLoc);
-  bool ParseSEHDirectiveBeginEpilog(StringRef, SMLoc);
-  bool ParseSEHDirectiveEndEpilog(StringRef, SMLoc);
+  bool parseSEHDirectiveBeginEpilog(StringRef, SMLoc);
+  bool parseSEHDirectiveEndEpilog(StringRef, SMLoc);
 
   /// Check that we are inside a PROC FRAME.
-  bool ensureInsideFrame(SMLoc Loc, StringRef Directive);
+  bool ensureInsideFrame(SMLoc Loc);
   /// Check that we are in the prolog (before .endprolog).
-  bool ensureInProlog(SMLoc Loc, StringRef Directive);
+  bool ensureInProlog(SMLoc Loc);
   /// Check that we are inside a .beginepilog/.endepilog block.
-  bool ensureInEpilog(SMLoc Loc, StringRef Directive);
+  bool ensureInEpilog(SMLoc Loc);
 
   bool IgnoreDirective(StringRef, SMLoc) {
     while (!getLexer().is(AsmToken::EndOfStatement)) {
@@ -79,9 +79,9 @@ class COFFMasmParser : public MCAsmParserExtension {
         ".freestack");
     addDirectiveHandler<&COFFMasmParser::parseSEHDirectiveEndProlog>(
         ".endprolog");
-    addDirectiveHandler<&COFFMasmParser::ParseSEHDirectiveBeginEpilog>(
+    addDirectiveHandler<&COFFMasmParser::parseSEHDirectiveBeginEpilog>(
         ".beginepilog");
-    addDirectiveHandler<&COFFMasmParser::ParseSEHDirectiveEndEpilog>(
+    addDirectiveHandler<&COFFMasmParser::parseSEHDirectiveEndEpilog>(
         ".endepilog");
 
     // Code label directives
@@ -533,7 +533,7 @@ bool COFFMasmParser::parseDirectiveAlias(StringRef Directive, SMLoc Loc) {
   return false;
 }
 
-bool COFFMasmParser::ensureInsideFrame(SMLoc Loc, StringRef Directive) {
+bool COFFMasmParser::ensureInsideFrame(SMLoc Loc) {
   if (CurrentProceduresFramed.empty() || !CurrentProceduresFramed.back()) {
     return Error(Loc,
                  "Missing Frame in proc, no unwind code will be generated.");
@@ -541,8 +541,8 @@ bool COFFMasmParser::ensureInsideFrame(SMLoc Loc, StringRef Directive) {
   return false;
 }
 
-bool COFFMasmParser::ensureInProlog(SMLoc Loc, StringRef Directive) {
-  if (ensureInsideFrame(Loc, Directive))
+bool COFFMasmParser::ensureInProlog(SMLoc Loc) {
+  if (ensureInsideFrame(Loc))
     return true;
   if (getStreamer().isWinCFIPrologEnded()) {
     return Error(Loc, "prolog directive must be used inside a prolog");
@@ -550,8 +550,8 @@ bool COFFMasmParser::ensureInProlog(SMLoc Loc, StringRef Directive) {
   return false;
 }
 
-bool COFFMasmParser::ensureInEpilog(SMLoc Loc, StringRef Directive) {
-  if (ensureInsideFrame(Loc, Directive))
+bool COFFMasmParser::ensureInEpilog(SMLoc Loc) {
+  if (ensureInsideFrame(Loc))
     return true;
   if (!getStreamer().isInEpilogCFI()) {
     return Error(Loc, "epilog directive must be used inside an epilog");
@@ -559,9 +559,9 @@ bool COFFMasmParser::ensureInEpilog(SMLoc Loc, StringRef Directive) {
   return false;
 }
 
-bool COFFMasmParser::parseSEHDirectiveAllocStack(StringRef Directive,
+bool COFFMasmParser::parseSEHDirectiveAllocStack(StringRef /*Directive*/,
                                                  SMLoc Loc) {
-  if (ensureInProlog(Loc, Directive))
+  if (ensureInProlog(Loc))
     return true;
   int64_t Size;
   SMLoc SizeLoc = getTok().getLoc();
@@ -575,9 +575,9 @@ bool COFFMasmParser::parseSEHDirectiveAllocStack(StringRef Directive,
   return false;
 }
 
-bool COFFMasmParser::parseSEHDirectiveFreeStack(StringRef Directive,
+bool COFFMasmParser::parseSEHDirectiveFreeStack(StringRef /*Directive*/,
                                                 SMLoc Loc) {
-  if (ensureInEpilog(Loc, Directive))
+  if (ensureInEpilog(Loc))
     return true;
   int64_t Size;
   SMLoc SizeLoc = getTok().getLoc();
@@ -591,17 +591,17 @@ bool COFFMasmParser::parseSEHDirectiveFreeStack(StringRef Directive,
   return false;
 }
 
-bool COFFMasmParser::parseSEHDirectiveEndProlog(StringRef Directive,
+bool COFFMasmParser::parseSEHDirectiveEndProlog(StringRef /*Directive*/,
                                                 SMLoc Loc) {
-  if (ensureInsideFrame(Loc, Directive))
+  if (ensureInsideFrame(Loc))
     return true;
   getStreamer().emitWinCFIEndProlog(Loc);
   return false;
 }
 
-bool COFFMasmParser::ParseSEHDirectiveBeginEpilog(StringRef Directive,
+bool COFFMasmParser::parseSEHDirectiveBeginEpilog(StringRef /*Directive*/,
                                                   SMLoc Loc) {
-  if (ensureInsideFrame(Loc, Directive))
+  if (ensureInsideFrame(Loc))
     return true;
   if (getStreamer().isInEpilogCFI()) {
     return Error(Loc, ".beginepilog must come after .endprolog or .endepilog");
@@ -610,9 +610,9 @@ bool COFFMasmParser::ParseSEHDirectiveBeginEpilog(StringRef Directive,
   return false;
 }
 
-bool COFFMasmParser::ParseSEHDirectiveEndEpilog(StringRef Directive,
+bool COFFMasmParser::parseSEHDirectiveEndEpilog(StringRef /*Directive*/,
                                                 SMLoc Loc) {
-  if (ensureInsideFrame(Loc, Directive))
+  if (ensureInsideFrame(Loc))
     return true;
   getStreamer().emitWinCFIEndEpilogue(Loc);
   return false;

@@ -1238,8 +1238,8 @@ private:
   bool parseDirectiveSEHSaveXMM(SMLoc);
   bool parseDirectiveSEHPushFrame(SMLoc);
 
-  bool ensureMasmEpilogContext(SMLoc Loc, StringRef Directive);
-  bool ensureMasmPrologContext(SMLoc Loc, StringRef Directive);
+  bool ensureMasmEpilogContext(SMLoc Loc);
+  bool ensureMasmPrologContext(SMLoc Loc);
 
   unsigned checkTargetMatchPredicate(MCInst &Inst) override;
 
@@ -4855,42 +4855,42 @@ bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
   else if (Parser.isParsingMasm()) {
     // MASM prolog directives.
     if (IDVal.equals_insensitive(".pushreg")) {
-      return ensureMasmPrologContext(DirectiveID.getLoc(), IDVal) ||
+      return ensureMasmPrologContext(DirectiveID.getLoc()) ||
              parseDirectiveSEHPushReg(DirectiveID.getLoc());
     } else if (IDVal.equals_insensitive(".push2reg")) {
-      return ensureMasmPrologContext(DirectiveID.getLoc(), IDVal) ||
+      return ensureMasmPrologContext(DirectiveID.getLoc()) ||
              parseDirectiveSEHPush2Regs(DirectiveID.getLoc());
     } else if (IDVal.equals_insensitive(".setframe")) {
-      return ensureMasmPrologContext(DirectiveID.getLoc(), IDVal) ||
+      return ensureMasmPrologContext(DirectiveID.getLoc()) ||
              parseDirectiveSEHSetFrame(DirectiveID.getLoc());
     } else if (IDVal.equals_insensitive(".savereg")) {
-      return ensureMasmPrologContext(DirectiveID.getLoc(), IDVal) ||
+      return ensureMasmPrologContext(DirectiveID.getLoc()) ||
              parseDirectiveSEHSaveReg(DirectiveID.getLoc());
     } else if (IDVal.equals_insensitive(".savexmm128")) {
-      return ensureMasmPrologContext(DirectiveID.getLoc(), IDVal) ||
+      return ensureMasmPrologContext(DirectiveID.getLoc()) ||
              parseDirectiveSEHSaveXMM(DirectiveID.getLoc());
     } else if (IDVal.equals_insensitive(".pushframe")) {
-      return ensureMasmPrologContext(DirectiveID.getLoc(), IDVal) ||
+      return ensureMasmPrologContext(DirectiveID.getLoc()) ||
              parseDirectiveSEHPushFrame(DirectiveID.getLoc());
     }
     // MASM epilog directives
     if (IDVal.equals_insensitive(".popreg")) {
-      return ensureMasmEpilogContext(DirectiveID.getLoc(), IDVal) ||
+      return ensureMasmEpilogContext(DirectiveID.getLoc()) ||
              parseDirectiveSEHPushReg(DirectiveID.getLoc());
     } else if (IDVal.equals_insensitive(".pop2reg")) {
       // .pop2reg args are in the order they are popped, so reverse them to get
       // the order they were pushed.
-      return ensureMasmEpilogContext(DirectiveID.getLoc(), IDVal) ||
+      return ensureMasmEpilogContext(DirectiveID.getLoc()) ||
              parseDirectiveSEHPush2Regs(DirectiveID.getLoc(),
                                         /*SwapRegs=*/true);
     } else if (IDVal.equals_insensitive(".unsetframe")) {
-      return ensureMasmEpilogContext(DirectiveID.getLoc(), IDVal) ||
+      return ensureMasmEpilogContext(DirectiveID.getLoc()) ||
              parseDirectiveSEHSetFrame(DirectiveID.getLoc());
     } else if (IDVal.equals_insensitive(".restorereg")) {
-      return ensureMasmEpilogContext(DirectiveID.getLoc(), IDVal) ||
+      return ensureMasmEpilogContext(DirectiveID.getLoc()) ||
              parseDirectiveSEHSaveReg(DirectiveID.getLoc());
     } else if (IDVal.equals_insensitive(".restorexmm128")) {
-      return ensureMasmEpilogContext(DirectiveID.getLoc(), IDVal) ||
+      return ensureMasmEpilogContext(DirectiveID.getLoc()) ||
              parseDirectiveSEHSaveXMM(DirectiveID.getLoc());
     }
   }
@@ -5202,14 +5202,14 @@ bool X86AsmParser::parseDirectiveSEHSaveXMM(SMLoc Loc) {
   return false;
 }
 
-bool X86AsmParser::ensureMasmPrologContext(SMLoc Loc, StringRef Directive) {
+bool X86AsmParser::ensureMasmPrologContext(SMLoc Loc) {
   if (getStreamer().isWinCFIPrologEnded()) {
     return Error(Loc, "prolog directive must be used inside a prolog");
   }
   return false;
 }
 
-bool X86AsmParser::ensureMasmEpilogContext(SMLoc Loc, StringRef Directive) {
+bool X86AsmParser::ensureMasmEpilogContext(SMLoc Loc) {
   if (!getStreamer().isInEpilogCFI()) {
     return Error(Loc, "epilog directive must be used inside an epilog");
   }
