@@ -39,7 +39,7 @@ void RISCVSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
   case RISCVISD::VDOT4AU_VL:
   case RISCVISD::VDOT4ASU_VL: {
     EVT VT = N->getValueType(0);
-    assert(VT.isScalableVector() && VT.getVectorElementType() == MVT::i32 &&
+    assert(VT.isScalableVectorOf(MVT::i32) &&
            "Expected result to be an i32 scalable vector");
     assert(N->getOperand(0).getValueType() == VT &&
            N->getOperand(1).getValueType() == VT &&

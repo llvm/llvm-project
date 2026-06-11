@@ -38,6 +38,10 @@
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/WithColor.h"
 
+#if defined(LLDB_ENABLE_MOCK_ACCELERATOR_PLUGIN)
+#include "Plugins/Accelerator/Mock/LLDBServerMockAcceleratorPlugin.h"
+#endif
+
 #if defined(__linux__)
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #elif defined(__FreeBSD__)
@@ -449,6 +453,12 @@ int main_gdbserver(int argc, char *argv[]) {
 
   NativeProcessManager manager(mainloop);
   GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
+
+#if defined(LLDB_ENABLE_MOCK_ACCELERATOR_PLUGIN)
+  gdb_server.InstallPlugin(
+      std::make_unique<lldb_server::LLDBServerMockAcceleratorPlugin>(gdb_server,
+                                                                     mainloop));
+#endif
 
   llvm::StringRef host_and_port;
   if (!Inputs.empty() && connection_fd == SharedSocket::kInvalidFD) {

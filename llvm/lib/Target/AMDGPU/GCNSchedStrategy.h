@@ -458,16 +458,19 @@ private:
   /// in initHeuristics. Uses \p CopyForUse and \p CopyForDef to calculate copy
   /// costs, and \p RewriteCands to undo rewriting.
   int64_t getRewriteCost(
-      const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands,
+      ArrayRef<std::pair<MachineInstr *, unsigned>> RewriteCands,
       const DenseMap<MachineBasicBlock *, std::set<Register>> &CopyForUse,
       const SmallPtrSetImpl<MachineInstr *> &CopyForDef);
 
   /// Do the final rewrite on \p RewriteCands and insert any needed copies.
-  bool
-  rewrite(const std::vector<std::pair<MachineInstr *, unsigned>> &RewriteCands);
+  bool rewrite(ArrayRef<std::pair<MachineInstr *, unsigned>> RewriteCands);
 
   /// \returns true if this MI is a rewrite candidate.
   bool isRewriteCandidate(MachineInstr *MI) const;
+
+  /// Resets all candidates in \p RewriteCands back to VGPR form.
+  void resetRewriteCandsToVGPR(
+      ArrayRef<std::pair<MachineInstr *, unsigned>> RewriteCands);
 
   /// Finds all the reaching defs of \p UseMO and stores the SlotIndexes into \p
   /// DefIdxs

@@ -620,15 +620,11 @@ void IslNodeBuilder::createForParallel(__isl_take isl_ast_node *For) {
   // Update the ValueMap to use instructions in the subfunction. Note that
   // "GlobalMap" used in BlockGenerator/IslExprBuilder is a reference to this
   // ValueMap.
-  for (auto &[OldVal, NewVal] : ValueMap) {
-    NewVal = NewValues.lookup(NewVal);
-
-    // Clean-up any value that getReferencesInSubtree thinks we do not need.
-    // DenseMap::erase only writes a tombstone (and destroys OldVal/NewVal), so
-    // does not invalidate our iterator.
-    if (!NewVal)
-      ValueMap.erase(OldVal);
-  }
+  ValueMap.remove_if([&](auto &P) {
+    P.second = NewValues.lookup(P.second);
+    // Clean up any value that getReferencesInSubtree thinks we do not need.
+    return !P.second;
+  });
 
   // This is for NewVals that do not appear in ValueMap (such as SCoP-invariant
   // values whose original value can be reused as long as we are in the same
@@ -1089,11 +1085,6 @@ Value *IslNodeBuilder::preloadUnconditionally(isl::set AccessRange,
   PreloadVal = Builder.CreateLoad(Ty, Ptr, Name + ".load");
   if (LoadInst *PreloadInst = dyn_cast<LoadInst>(PreloadVal))
     PreloadInst->setAlignment(cast<LoadInst>(AccInst)->getAlign());
-
-  // TODO: This is only a hot fix for SCoP sequences that use the same load
-  //       instruction contained and hoisted by one of the SCoPs.
-  if (SE.isSCEVable(Ty))
-    SE.forgetValue(AccInst);
 
   return PreloadVal;
 }

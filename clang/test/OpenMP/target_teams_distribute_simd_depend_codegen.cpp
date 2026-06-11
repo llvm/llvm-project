@@ -61,9 +61,9 @@
 // OMP50-DAG: @{{.*}} = weak constant i8 0
 
 
-// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = constant [[ENTTY]]
 // TCHECK: @{{.+}} = {{.*}}constant [[ENTTY]]
-// TCHECK-NOT: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK-NOT: @{{.+}} = constant [[ENTTY]]
 
 template<typename tx, typename ty>
 struct TT{

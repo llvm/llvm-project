@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc-ibm-aix-xcoff \
 ; RUN:   -mattr=+use-ptrgl-helper < %s | FileCheck --check-prefixes=CHECK,CHECK32 %s
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc64-ibm-aix-xcoff \
+; RUN: llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc64-ibm-aix-xcoff --code-model=small \
 ; RUN:   -mattr=+use-ptrgl-helper < %s | FileCheck --check-prefixes=CHECK,CHECK64 %s
 
 ; RUN: llc -stop-after=finalize-isel  -verify-machineinstrs -mcpu=pwr8 \
@@ -9,7 +9,7 @@
 ; RUN:   FileCheck --check-prefix=MIR32 %s
 
 ; RUN: llc -stop-after=finalize-isel  -verify-machineinstrs -mcpu=pwr8 \
-; RUN:   -mtriple powerpc64-ibm-aix-xcoff -mattr=+use-ptrgl-helper < %s | \
+; RUN:   -mtriple powerpc64-ibm-aix-xcoff --code-model=small -mattr=+use-ptrgl-helper < %s | \
 ; RUN:   FileCheck --check-prefix=MIR64 %s
 
 ; RUN: not llc -verify-machineinstrs -mcpu=pwr8 -mtriple powerpc-unknown-linux \

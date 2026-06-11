@@ -12,9 +12,11 @@
 #include "Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/AsmParser/AsmParserContext.h"
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Module.h"
 #include <map>
+#include <optional>
 #include <random>
 
 namespace llvm::ubi {
@@ -27,6 +29,7 @@ enum class MemInitKind {
 
 enum class MemAllocKind {
   Global,
+  BlockAddress,
   Stack,
   Malloc,
   New,
@@ -106,10 +109,18 @@ class MemoryObject : public RefCountedBase<MemoryObject> {
   MemoryObjectState State;
   MemAllocKind AllocKind;
   bool IsConstant = false;
+  bool IsIRGlobalValue = false;
+
+  // Tagged provenances related to this memory object.
+  // It is used to erasing the tags after the memory object is freed.
+  SmallVector<APInt> AssociatedTags;
+
+  friend class Context;
 
 public:
   MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name, unsigned AS,
-               MemInitKind InitKind, MemAllocKind AllocKind);
+               MemInitKind InitKind, MemAllocKind AllocKind,
+               bool IsIRGlobalValue = false);
   MemoryObject(const MemoryObject &) = delete;
   MemoryObject(MemoryObject &&) = delete;
   MemoryObject &operator=(const MemoryObject &) = delete;
@@ -123,6 +134,7 @@ public:
   MemoryObjectState getState() const { return State; }
   void setState(MemoryObjectState S) { State = S; }
   MemAllocKind getAllocKind() const { return AllocKind; }
+  bool isIRGlobalValue() const { return IsIRGlobalValue; }
   bool isConstant() const { return IsConstant; }
   void setIsConstant(bool C) { IsConstant = C; }
 
@@ -136,8 +148,6 @@ public:
   }
   ArrayRef<Byte> getBytes() const { return Bytes; }
   MutableArrayRef<Byte> getBytes() { return Bytes; }
-
-  void markAsFreed();
 
   bool isGlobal() const;
   bool isStackAllocated() const;
@@ -197,6 +207,7 @@ class Context {
   // Module
   LLVMContext &Ctx;
   Module &M;
+  const AsmParserContext *ParserContext;
   const DataLayout &DL;
   const TargetLibraryInfoImpl TLIImpl;
 
@@ -211,6 +222,9 @@ class Context {
   bool FusedMultiplyAdd = false;
 
   std::mt19937_64 Rng;
+  /// Always returns a random APInt value. It is not controlled by
+  /// Deterministic.
+  APInt generateRandomAPInt(uint32_t BitWidth);
 
   // Memory
   uint64_t UsedMem = 0;
@@ -218,14 +232,16 @@ class Context {
   // For now we don't model the behavior of address reuse, which is common
   // with stack coloring.
   uint64_t AllocationBase = 8;
-  // Maintains a global list of 'exposed' provenances. This is used to form a
-  // pointer with an exposed provenance.
-  // FIXME: Currently all the allocations are considered exposed, regardless of
-  // their interaction with ptrtoint. That is, ptrtoint is allowed to recover
-  // the provenance of any allocation. We may track the exposed provenances more
-  // precisely after we make ptrtoint have the implicit side-effect of exposing
-  // the provenance.
-  std::map<uint64_t, IntrusiveRefCntPtr<MemoryObject>> MemoryObjects;
+  // All live memory objects.
+  DenseMap<uint64_t, IntrusiveRefCntPtr<MemoryObject>> MemoryObjects;
+  // Mapping from tags to provenances. Tags are lazily generated when a
+  // pointer is captured by memory.
+  DenseMap<APInt, IntrusiveRefCntPtr<Provenance>> TaggedProvenances;
+  // TODO: Maintains a global list of 'exposed' provenances. This is used to
+  // convert an address back to a pointer with a previously exposed provenance.
+
+  /// Get the tag for the given pointer provenance.
+  APInt getTag(uint32_t BitWidth, Provenance &Prov);
   AnyValue fromBytes(ConstBytesView Bytes, Type *Ty, uint32_t OffsetInBits,
                      bool CheckPaddingBits, bool *ContainsUndefinedBits);
   void toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
@@ -240,7 +256,8 @@ class Context {
       ValidFuncTargets;
   DenseMap<uint64_t, std::pair<BasicBlock *, IntrusiveRefCntPtr<MemoryObject>>>
       ValidBlockTargets;
-  AnyValue getConstantValueImpl(Constant *C);
+  DenseMap<GlobalVariable *, Pointer> GlobalAddrMap;
+  std::optional<AnyValue> getConstantValueImpl(Constant *C);
 
   // Floating-point environment
   RoundingMode CurrentRoundingMode = RoundingMode::NearestTiesToEven;
@@ -250,7 +267,7 @@ class Context {
   // TODO: errno
 
 public:
-  explicit Context(Module &M);
+  explicit Context(Module &M, const AsmParserContext *ParserContext);
   Context(const Context &) = delete;
   Context(Context &&) = delete;
   Context &operator=(const Context &) = delete;
@@ -279,6 +296,8 @@ public:
   void reseed(uint32_t Seed) { Rng.seed(Seed); }
 
   LLVMContext &getContext() const { return Ctx; }
+  Module &getModule() const { return M; }
+  const AsmParserContext *getParserContext() const { return ParserContext; }
   const DataLayout &getDataLayout() const { return DL; }
   const Triple &getTargetTriple() const { return M.getTargetTriple(); }
   const TargetLibraryInfoImpl &getTLIImpl() const { return TLIImpl; }
@@ -300,11 +319,12 @@ public:
   uint64_t getEffectiveTypeAllocSize(Type *Ty);
   uint64_t getEffectiveTypeStoreSize(Type *Ty);
 
-  const AnyValue &getConstantValue(Constant *C);
+  const AnyValue *getConstantValue(Constant *C);
   IntrusiveRefCntPtr<MemoryObject> allocate(uint64_t Size, uint64_t Align,
                                             StringRef Name, unsigned AS,
                                             MemInitKind InitKind,
-                                            MemAllocKind AllocKind);
+                                            MemAllocKind AllocKind,
+                                            bool IsIRGlobalValue = false);
   bool free(const MemoryObject &Obj);
   /// Derive a pointer from a memory object with offset 0.
   /// Please use Pointer's interface for further manipulations.

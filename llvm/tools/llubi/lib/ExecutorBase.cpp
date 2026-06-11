@@ -145,6 +145,11 @@ void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
         << "Invalid memory access via a pointer with nullary provenance.";
     return;
   }
+  if (MO->isConstant()) {
+    reportImmediateUB() << "Try to write to a constant memory object: "
+                        << PtrVal << ".";
+    return;
+  }
   // TODO: pointer capability check
   if (auto Offset =
           verifyMemAccess(*MO, PtrVal.address(),
@@ -177,11 +182,17 @@ void ExecutorBase::dumpStackTrace() const {
   errs() << "Stacktrace:\n";
   const Frame *TheFrame = CurrentFrame;
   unsigned Index = 0;
+  const AsmParserContext *ParserContext = Ctx.getParserContext();
+  StringRef ModuleFileName = Ctx.getModule().getModuleIdentifier();
   while (TheFrame != nullptr) {
     if (TheFrame->BB) {
       Instruction &Inst = *TheFrame->PC;
       errs() << "#" << Index++ << " " << Inst << " at ";
       Inst.getFunction()->printAsOperand(errs(), /*PrintType=*/false);
+      if (ParserContext) {
+        if (auto Loc = ParserContext->getInstructionOrArgumentLocation(&Inst))
+          errs() << ' ' << ModuleFileName << ':' << Loc->Start.Line + 1;
+      }
       errs() << "\n";
     }
     TheFrame = TheFrame->LastFrame;

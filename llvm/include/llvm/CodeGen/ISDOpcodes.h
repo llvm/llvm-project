@@ -746,6 +746,10 @@ enum NodeType {
   /// is performed.
   ABS,
 
+  /// ABS with a poison result for INT_MIN. This corresponds to
+  /// llvm.abs(x, true) where the "int min is poison" flag is set.
+  ABS_MIN_POISON,
+
   /// Shift and rotation operations.  After legalization, the type of the
   /// shift amount is known to be TLI.getShiftAmountTy().  Before legalization
   /// the shift amount can be any type, but care must be taken to ensure it is
@@ -1643,6 +1647,12 @@ enum NodeType {
 /// Whether this is bitwise logic opcode.
 inline bool isBitwiseLogicOp(unsigned Opcode) {
   return Opcode == ISD::AND || Opcode == ISD::OR || Opcode == ISD::XOR;
+}
+
+/// Whether this is an integer absolute-value opcode (ISD::ABS or
+/// ISD::ABS_MIN_POISON).
+inline bool isAbsOpcode(unsigned Opcode) {
+  return Opcode == ISD::ABS || Opcode == ISD::ABS_MIN_POISON;
 }
 
 /// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
