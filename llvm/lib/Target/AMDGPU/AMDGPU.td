@@ -978,6 +978,10 @@ defm FlatAtomicFaddF32Inst : AMDGPUSubtargetFeature<"flat-atomic-fadd-f32-inst",
   [FeatureFlatAddressSpace]
 >;
 
+defm GFX1251GEMMInsts : AMDGPUSubtargetFeature<"gfx1251-gemm-insts",
+  "Has additional gfx1251 DGEMM instructions"
+>;
+
 defm FlatBufferGlobalAtomicFaddF64Inst : AMDGPUSubtargetFeature<"flat-buffer-global-fadd-f64-inst",
   "Has flat, buffer, and global instructions for f64 atomic fadd"
 >;
@@ -1401,6 +1405,10 @@ def FeatureUseAddPC64Inst : SubtargetFeature<"use-add-pc64-inst",
   "UseAddPC64Inst",
   "true",
   "Use s_add_pc_i64 instruction."
+>;
+
+defm VOP3PX2IncrementsVaVdstTwice : AMDGPUSubtargetFeature<"vop3px2-increments-va-vdst-twice",
+  "VOP3PX2 encoded instructions increment the VaVdst counter twice", GenPredicate=false
 >;
 
 //===----------------------------------------------------------------------===//
@@ -2190,6 +2198,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
 def FeatureISAVersion12_50 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
   [FeatureAddressableLocalMemorySize327680,
+   FeatureVOP3PX2IncrementsVaVdstTwice,
    FeatureSetregVGPRMSBFixup,
    FeatureCubeInsts,
    FeatureLerpInst,
@@ -2207,7 +2216,9 @@ def FeatureISAVersion12_50 : FeatureSet<
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
   [FeatureAddressableLocalMemorySize327680,
+   FeatureVOP3PX2IncrementsVaVdstTwice,
    FeatureDPALU_DPP,
+   FeatureGFX1251GEMMInsts,
    FeatureCubeInsts,
    FeatureLerpInst,
    FeatureSadInsts,

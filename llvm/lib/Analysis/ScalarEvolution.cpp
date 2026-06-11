@@ -7729,14 +7729,15 @@ const SCEV *ScalarEvolution::createSCEVIter(Value *V) {
   using PointerTy = PointerIntPair<Value *, 1, bool>;
   SmallVector<PointerTy> Stack;
 
-  Stack.emplace_back(V, true);
   Stack.emplace_back(V, false);
   while (!Stack.empty()) {
-    auto E = Stack.pop_back_val();
+    auto E = Stack.back();
     Value *CurV = E.getPointer();
 
-    if (getExistingSCEV(CurV))
+    if (getExistingSCEV(CurV)) {
+      Stack.pop_back();
       continue;
+    }
 
     SmallVector<Value *> Ops;
     const SCEV *CreatedSCEV = nullptr;
@@ -7752,10 +7753,10 @@ const SCEV *ScalarEvolution::createSCEVIter(Value *V) {
 
     if (CreatedSCEV) {
       insertValueToMap(CurV, CreatedSCEV);
+      Stack.pop_back();
     } else {
-      // Queue CurV for SCEV creation, followed by its's operands which need to
-      // be constructed first.
-      Stack.emplace_back(CurV, true);
+      Stack.back().setInt(true);
+      // Queue its operands which need to be constructed.
       for (Value *Op : Ops)
         Stack.emplace_back(Op, false);
     }
@@ -8680,18 +8681,6 @@ bool ScalarEvolution::isBackedgeTakenCountMaxOrZero(const Loop *L) {
   return getBackedgeTakenInfo(L).isConstantMaxOrZero(this);
 }
 
-/// Push PHI nodes in the header of the given loop onto the given Worklist.
-static void PushLoopPHIs(const Loop *L,
-                         SmallVectorImpl<Instruction *> &Worklist,
-                         SmallPtrSetImpl<Instruction *> &Visited) {
-  BasicBlock *Header = L->getHeader();
-
-  // Push all Loop-header PHIs onto the Worklist stack.
-  for (PHINode &PN : Header->phis())
-    if (Visited.insert(&PN).second)
-      Worklist.push_back(&PN);
-}
-
 ScalarEvolution::BackedgeTakenInfo &
 ScalarEvolution::getPredicatedBackedgeTakenInfo(const Loop *L) {
   auto &BTI = getBackedgeTakenInfo(L);
@@ -8801,8 +8790,6 @@ void ScalarEvolution::visitAndClearUsers(
 
 void ScalarEvolution::forgetLoop(const Loop *L) {
   SmallVector<const Loop *, 16> LoopWorklist(1, L);
-  SmallVector<Instruction *, 32> Worklist;
-  SmallPtrSet<Instruction *, 16> Visited;
   SmallVector<SCEVUse, 16> ToForget;
 
   // Iterate over all the loops and sub-loops to drop SCEV information.
@@ -8822,8 +8809,12 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
       llvm::append_range(ToForget, LoopUsersItr->second);
 
     // Drop information about expressions based on loop-header PHIs.
-    PushLoopPHIs(CurrL, Worklist, Visited);
-    visitAndClearUsers(Worklist, Visited, ToForget);
+    for (PHINode &PN : CurrL->getHeader()->phis()) {
+      ConstantEvolutionLoopExitValue.erase(&PN);
+      auto VIt = ValueExprMap.find_as(static_cast<Value *>(&PN));
+      if (VIt != ValueExprMap.end())
+        ToForget.push_back(VIt->second);
+    }
 
     LoopPropertiesCache.erase(CurrL);
     // Forget all contained loops too, to avoid dangling entries in the
