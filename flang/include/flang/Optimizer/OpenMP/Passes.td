@@ -58,8 +58,9 @@ def FunctionFilteringPass : Pass<"omp-function-filtering"> {
 }
 
 def HostOpFilteringPass : Pass<"omp-host-op-filtering"> {
-  let summary = "Filters out host-only operations from any remaining host "
-                "functions after filtering when compiling for a target device.";
+  let summary =
+      "Removes host-only operations from host functions retained by the "
+      "function filtering pass when compiling for a target device.";
   let description = [{
     Removes operations from host functions that are not placed inside of an
     `omp.target` region when compiling for the target device.

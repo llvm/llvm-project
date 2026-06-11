@@ -167,7 +167,7 @@ module attributes {omp.is_target_device = true} {
     %0 = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
     %1 = fir.dummy_scope : !fir.dscope
     %2 = fir.declare %x dummy_scope %1 {fortran_attrs = #fir.var_attrs<contiguous, pointer>, uniq_name = "x"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-    %3 = fir.load %2#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+    %3 = fir.load %2 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
     fir.store %3 to %0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 
     // CHECK-NEXT: %[[PLACEHOLDER_Y:.*]] = fir.alloca i1
@@ -280,12 +280,12 @@ module attributes {omp.is_target_device = true} {
     %c9 = arith.constant 9 : index
     // CHECK-NEXT: %[[X_DECL:.*]] = fir.declare %[[X]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "x"} : ([[X_TYPE]]) -> [[X_TYPE]]
     %23 = fir.declare %x {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "x"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-    %63 = fir.load %23#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %63 = fir.load %23 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %64:3 = fir.box_dims %63, %c0 : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
     %65:3 = fir.box_dims %63, %c0 : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
     %66 = arith.subi %c1, %64#0 : index
     %67 = arith.subi %c9, %64#0 : index
-    %68 = fir.load %23#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+    %68 = fir.load %23 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
     %69:3 = fir.box_dims %68, %c0 : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
     %70 = omp.map.bounds lower_bound(%66 : index) upper_bound(%67 : index) extent(%69#1 : index) stride(%65#2 : index) start_idx(%64#0 : index) {stride_in_bytes = true}
     // CHECK-NEXT: %[[VAR_PTR_PTR:.*]] = fir.box_offset %[[X_DECL]] base_addr : ([[X_TYPE]]) -> [[VAR_PTR_PTR_TYPE:.*]]
@@ -309,7 +309,7 @@ module attributes {omp.is_target_device = true} {
     // CHECK-NEXT: %[[MAP1:.*]] = omp.map.info var_ptr(%[[X_DECL]] : [[X_TYPE]], i32) {{.*}} -> [[X_TYPE]]
     %x_decl = fir.declare %x {uniq_name = "x"} : (!fir.ref<i32>) -> !fir.ref<i32>
     %cond_decl = fir.declare %cond {uniq_name = "cond"} : (!fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>>
-    %0 = fir.load %cond_decl#0 : !fir.ref<!fir.logical<4>>
+    %0 = fir.load %cond_decl : !fir.ref<!fir.logical<4>>
     %1 = fir.convert %0 : (!fir.logical<4>) -> i1
     cf.cond_br %1, ^bb1, ^bb2
   ^bb1:  // pred: ^bb0
@@ -329,7 +329,7 @@ module attributes {omp.is_target_device = true} {
     %m1 = omp.map.info var_ptr(%x_decl : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32>
     omp.target_data map_entries(%m1 : !fir.ref<i32>) {
       fir.call @foo() : () -> ()
-      %8 = fir.load %cond_decl#0 : !fir.ref<!fir.logical<4>>
+      %8 = fir.load %cond_decl : !fir.ref<!fir.logical<4>>
       %9 = fir.convert %8 : (!fir.logical<4>) -> i1
       cf.cond_br %9, ^bb1, ^bb2
     ^bb1:  // pred: ^bb0
@@ -365,7 +365,7 @@ module attributes {omp.is_target_device = true} {
     // CHECK-NEXT: %[[MAP0:.*]] = omp.map.info var_ptr(%[[X_DECL0]] : [[X_TYPE]], i32) {{.*}} -> [[X_TYPE]]
     // CHECK-NEXT: %[[MAP1:.*]] = omp.map.info var_ptr(%[[X_DECL1]] : [[X_TYPE]], i32) {{.*}} -> [[X_TYPE]]
     %x_decl = fir.declare %x {uniq_name = "x"} : (!fir.ref<i32>) -> !fir.ref<i32>
-    omp.parallel private(@privatizer %x_decl#0 -> %arg0 : !fir.ref<i32>) {
+    omp.parallel private(@privatizer %x_decl -> %arg0 : !fir.ref<i32>) {
       %0 = fir.declare %arg0 {uniq_name = "x"} : (!fir.ref<i32>) -> !fir.ref<i32>
       %m0 = omp.map.info var_ptr(%0 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32>
       // CHECK-NEXT: omp.target kernel_type(generic) map_entries(%[[MAP0]] -> {{.*}} : [[X_TYPE]])
