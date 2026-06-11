@@ -67,6 +67,12 @@ public:
   // valid identifiers to declare.
   LLVM_ABI void EmitStringTableDef(raw_ostream &OS, const Twine &Name) const;
 
+  // Emit only the character storage used by a string table definition.
+  //
+  // This preserves the large-string handling of EmitStringTableDef without
+  // emitting an llvm::StringTable object.
+  void EmitStringTableStorageDef(raw_ostream &OS, const Twine &Name) const;
+
   // Emit the string as one single string.
   LLVM_ABI void EmitString(raw_ostream &O) const;
 };
