@@ -106,6 +106,8 @@ void FactsGenerator::run() {
   llvm::TimeTraceScope TimeProfile("FactGenerator");
   const CFG &Cfg = *AC.getCFG();
   llvm::SmallVector<Fact *> PlaceholderLoanFacts = issuePlaceholderLoans();
+  IsCMode = !AC.getASTContext().getLangOpts().CPlusPlus &&
+            !AC.getASTContext().getLangOpts().ObjC;
   // Iterate through the CFG blocks in reverse post-order to ensure that
   // initializations and destructions are processed in the correct sequence.
   for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
@@ -324,6 +326,10 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
       flow(Dest, Src, /*Kill=*/true);
     return;
   case CK_ArrayToPointerDecay:
+    // va_arg(ap, array_type) is UB and does not provide addressable array
+    // storage to model.
+    if (isa<VAArgExpr>(SubExpr))
+      return;
     assert(Src && "Array expression should have origins as it is GL value");
     CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
         Dest->getOuterOriginID(), Src->getOuterOriginID(), /*Kill=*/true));
@@ -347,6 +353,12 @@ void FactsGenerator::VisitUnaryOperator(const UnaryOperator *UO) {
   switch (UO->getOpcode()) {
   case UO_AddrOf: {
     const Expr *SubExpr = UO->getSubExpr();
+    // In C, function addresses do not need lifetime tracking. Also skip
+    // address-of on void expressions: GNU C permits them, but void itself has
+    // no origins to track.
+    if (IsCMode && (SubExpr->getType()->isFunctionType() ||
+                    SubExpr->getType()->isVoidType()))
+      return;
     // The origin of an address-of expression (e.g., &x) is the origin of
     // its sub-expression (x). This fact will cause the dataflow analysis
     // to propagate any loans held by the sub-expression's origin to the
@@ -392,6 +404,7 @@ void FactsGenerator::handleAssignment(const Expr *TargetExpr,
   }
   if (!LHSList)
     return;
+
   OriginList *RHSList = getOriginsList(*RHSExpr);
   // For operator= with reference parameters (e.g.,
   // `View& operator=(const View&)`), the RHS argument stays an lvalue,
@@ -435,7 +448,12 @@ void FactsGenerator::handleAssignment(const Expr *TargetExpr,
   // Kill the old loans of the destination origin and flow the new loans
   // from the source origin.
   flow(LHSList->peelOuterOrigin(), RHSList, /*Kill=*/true);
-  killAndFlowOrigin(*TargetExpr, *LHSExpr);
+
+  // In C, assignment expressions are not GLValues, so the assignment result has
+  // the assigned value origins, not the LHS storage origin.
+  if (IsCMode)
+    LHSList = getRValueOrigins(LHSExpr, LHSList);
+  flow(getOriginsList(*TargetExpr), LHSList, /*Kill=*/true);
 }
 
 void FactsGenerator::handlePointerArithmetic(const BinaryOperator *BO) {
@@ -622,6 +640,10 @@ void FactsGenerator::VisitLambdaExpr(const LambdaExpr *LE) {
 }
 
 void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
+  // Some C subscripts do not refer to addressable storage with origins, such as
+  // GNU void-pointer subscripts and vector element extraction from rvalues.
+  if (IsCMode && !ASE->isGLValue())
+    return;
   assert(ASE->isGLValue() && "Array subscript should be a GL value");
   OriginList *Dst = getOriginsList(*ASE);
   assert(Dst && "Array subscript should have origins as it is a GL value");

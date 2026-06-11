@@ -3164,7 +3164,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
 
   // TODO: Enable lifetime safety analysis for other languages once it is
   // stable.
-  if (EnableLifetimeSafetyAnalysis && S.getLangOpts().CPlusPlus) {
+  if (EnableLifetimeSafetyAnalysis &&
+      (S.getLangOpts().CPlusPlus || !S.getLangOpts().ObjC)) {
     if (AC.getCFG()) {
       lifetimes::LifetimeSafetySemaHelperImpl LifetimeSafetySemaHelper(S);
       lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetySemaHelper,
