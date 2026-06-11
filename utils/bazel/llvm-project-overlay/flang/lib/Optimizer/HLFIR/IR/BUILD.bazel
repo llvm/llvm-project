@@ -1,0 +1,43 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+cc_library(
+    name = "HLFIRDialect",
+    srcs = glob(
+        [
+            "*.cpp",
+            "*.h",
+        ],
+        allow_empty = True,
+    ),
+    deps = [
+        "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
+        "//flang/include/flang/Optimizer/Dialect:FIRDialectSupportHeaders",
+        "//flang/include/flang/Optimizer/Dialect/CUF/Attributes:CUFAttrsHeaders",
+        "//flang/include/flang/Optimizer/HLFIR:HLFIRHeaders",
+        "//flang/include/flang/Optimizer/HLFIR:HLFIROpBaseIncGen",
+        "//flang/include/flang/Optimizer/HLFIR:HLFIROpsIncGen",
+        "//flang/lib/Optimizer/Dialect:FIRDialect",
+        "//flang/lib/Optimizer/Dialect/CUF/Attributes:CUFAttrs",
+        "//llvm:AsmParser",
+        "//llvm:CodeGen",
+        "//llvm:Remarks",
+        "//llvm:Support",
+        "//mlir:ArithDialect",
+        "//mlir:IR",
+        "//mlir:RegisterAllDialects",
+        "//mlir:SideEffectInterfaces",
+    ],
+)

@@ -932,17 +932,15 @@ static void filterFunctions(T &ProfileMap) {
   std::string NegativeMD5Name =
       std::to_string(llvm::MD5Hash(FuncNameNegativeFilter));
 
-  for (auto I = ProfileMap.begin(); I != ProfileMap.end();) {
-    auto Tmp = I++;
-    const auto &FuncName = getFuncName(*Tmp);
+  ProfileMap.remove_if([&](const auto &Entry) {
+    const auto &FuncName = getFuncName(Entry);
     // Negative filter has higher precedence than positive filter.
-    if ((hasNegativeFilter &&
-         (NegativePattern.match(FuncName) ||
-          (FunctionSamples::UseMD5 && NegativeMD5Name == FuncName))) ||
-        (hasFilter && !(Pattern.match(FuncName) ||
-                        (FunctionSamples::UseMD5 && MD5Name == FuncName))))
-      ProfileMap.erase(Tmp);
-  }
+    return (hasNegativeFilter &&
+            (NegativePattern.match(FuncName) ||
+             (FunctionSamples::UseMD5 && NegativeMD5Name == FuncName))) ||
+           (hasFilter && !(Pattern.match(FuncName) ||
+                           (FunctionSamples::UseMD5 && MD5Name == FuncName)));
+  });
 
   llvm::dbgs() << Count - ProfileMap.size() << " of " << Count << " functions "
                << "in the original profile are filtered.\n";

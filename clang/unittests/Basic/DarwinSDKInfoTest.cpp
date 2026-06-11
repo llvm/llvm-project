@@ -107,8 +107,8 @@ TEST(DarwinSDKInfo, PlatformPrefix) {
   ASSERT_TRUE(SDKInfo);
   EXPECT_EQ(SDKInfo->getPlatformPrefix(Triple("arm64-apple-macos26.0")),
             "/System/macOSSupport");
-  // The triple's architecture matters.
-  EXPECT_NE(SDKInfo->getPlatformPrefix(Triple("ppc-apple-macos26.0")),
+  // The triple's architecture doesn't matter.
+  EXPECT_EQ(SDKInfo->getPlatformPrefix(Triple("ppc-apple-macos26.0")),
             "/System/macOSSupport");
   // OSes that aren't specified in the SDK never get a system prefix.
   EXPECT_EQ(SDKInfo->getPlatformPrefix(Triple("arm64-apple-ios26.0")), "");

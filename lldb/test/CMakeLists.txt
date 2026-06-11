@@ -128,6 +128,17 @@ if(TARGET liblldb)
   add_lldb_test_dependency(liblldb)
 endif()
 
+# When script interpreter plugins are built as separate shared libraries, they
+# are loaded by liblldb at runtime and aren't pulled in by the liblldb target.
+if(LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+  if(TARGET lldbPluginScriptInterpreterPython)
+    add_lldb_test_dependency(lldbPluginScriptInterpreterPython)
+  endif()
+  if(TARGET lldbPluginScriptInterpreterLua)
+    add_lldb_test_dependency(lldbPluginScriptInterpreterLua)
+  endif()
+endif()
+
 if(TARGET lldb-framework)
   add_lldb_test_dependency(lldb-framework)
 endif()

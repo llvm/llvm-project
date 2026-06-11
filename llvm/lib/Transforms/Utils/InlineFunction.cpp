@@ -2491,7 +2491,7 @@ llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   // Get some preliminary data about the callsite before it might get inlined.
   // Inlining shouldn't delete the callee, but it's cleaner (and low-cost) to
   // get this data upfront and rely less on InlineFunction's behavior.
-  const auto CalleeGUID = Callee.getGUID();
+  const auto CalleeGUID = AssignGUIDPass::getGUID(Callee);
   auto *CallsiteIDIns = CtxProfAnalysis::getCallsiteInstrumentation(CB);
   const auto CallsiteID =
       static_cast<uint32_t>(CallsiteIDIns->getIndex()->getZExtValue());
@@ -2516,7 +2516,7 @@ llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
   const uint32_t NewCountersSize = CtxProf.getNumCounters(Caller);
 
   auto Updater = [&](PGOCtxProfContext &Ctx) {
-    assert(Ctx.guid() == Caller.getGUID());
+    assert(Ctx.guid() == AssignGUIDPass::getGUID(Caller));
     const auto &[CalleeCounterMap, CalleeCallsiteMap] = IndicesMaps;
     assert(
         (Ctx.counters().size() +
@@ -3300,32 +3300,13 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   // musttail.  Therefore it's safe to return without merging control into the
   // phi below.
   if (InlinedMustTailCalls) {
-    // Check if we need to bitcast the result of any musttail calls.
-    Type *NewRetTy = Caller->getReturnType();
-    bool NeedBitCast = !CB.use_empty() && CB.getType() != NewRetTy;
-
     // Handle the returns preceded by musttail calls separately.
     SmallVector<ReturnInst *, 8> NormalReturns;
     for (ReturnInst *RI : Returns) {
       CallInst *ReturnedMustTail =
           RI->getParent()->getTerminatingMustTailCall();
-      if (!ReturnedMustTail) {
+      if (!ReturnedMustTail)
         NormalReturns.push_back(RI);
-        continue;
-      }
-      if (!NeedBitCast)
-        continue;
-
-      // Delete the old return and any preceding bitcast.
-      BasicBlock *CurBB = RI->getParent();
-      auto *OldCast = dyn_cast_or_null<BitCastInst>(RI->getReturnValue());
-      RI->eraseFromParent();
-      if (OldCast)
-        OldCast->eraseFromParent();
-
-      // Insert a new bitcast and return with the right type.
-      IRBuilder<> Builder(CurBB);
-      Builder.CreateRet(Builder.CreateBitCast(ReturnedMustTail, NewRetTy));
     }
 
     // Leave behind the normal returns so we can merge control flow.
@@ -3547,7 +3528,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   CB.eraseFromParent();
 
   // If we inlined any musttail calls and the original return is now
-  // unreachable, delete it.  It can only contain a bitcast and ret.
+  // unreachable, delete it.  It can only contain a ret.
   if (InlinedMustTailCalls && pred_empty(AfterCallBB))
     AfterCallBB->eraseFromParent();
 

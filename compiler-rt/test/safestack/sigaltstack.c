@@ -15,22 +15,24 @@
 // Test that safe stack works with sigaltstack.
 int puts(const char *);
 
-extern void *__get_unsafe_stack_ptr();
-extern void *__get_unsafe_stack_top();
-extern void *__get_unsafe_stack_bottom();
+#include <sanitizer/safestack_interface.h>
 
 __thread int signal_handlers_called = 0;
 
 void signal_handler(int signo) {
   signal_handlers_called += 1;
-  assert(__get_unsafe_stack_ptr() <= __get_unsafe_stack_top() &&
-         __get_unsafe_stack_ptr() >= __get_unsafe_stack_bottom());
+  assert(__safestack_get_unsafe_stack_ptr() <=
+             __safestack_get_unsafe_stack_top() &&
+         __safestack_get_unsafe_stack_ptr() >=
+             __safestack_get_unsafe_stack_bottom());
 }
 
 void signal_sigaction(int signo, siginfo_t *si, void *uc) {
   signal_handlers_called += 1;
-  assert(__get_unsafe_stack_ptr() <= __get_unsafe_stack_top() &&
-         __get_unsafe_stack_ptr() >= __get_unsafe_stack_bottom());
+  assert(__safestack_get_unsafe_stack_ptr() <=
+             __safestack_get_unsafe_stack_top() &&
+         __safestack_get_unsafe_stack_ptr() >=
+             __safestack_get_unsafe_stack_bottom());
 }
 
 void *t1_start(void *ptr) {
@@ -113,8 +115,10 @@ int main() {
   raise(SIGUSR2);
 
   // Check that unsafe stack is set to the normal unsafe stack.
-  assert(__get_unsafe_stack_ptr() <= __get_unsafe_stack_top() &&
-         __get_unsafe_stack_ptr() >= __get_unsafe_stack_bottom());
+  assert(__safestack_get_unsafe_stack_ptr() <=
+             __safestack_get_unsafe_stack_top() &&
+         __safestack_get_unsafe_stack_ptr() >=
+             __safestack_get_unsafe_stack_bottom());
 
   assert(signal_handlers_called == 4);
 

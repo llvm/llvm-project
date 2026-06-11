@@ -81,61 +81,6 @@ GlobalValue::getGUIDAssumingExternalLinkage(StringRef GlobalIdentifier) {
   return MD5Hash(GlobalIdentifier);
 }
 
-void GlobalValue::assignGUID() {
-  if (getGUIDMetadata() != nullptr)
-    return;
-
-  const GUID G =
-      GlobalValue::getGUIDAssumingExternalLinkage(getGlobalIdentifier());
-  setMetadata(
-      LLVMContext::MD_unique_id,
-      MDNode::get(getContext(), {ConstantAsMetadata::get(ConstantInt::get(
-                                    Type::getInt64Ty(getContext()), G))}));
-}
-
-GlobalValue::GUID GlobalValue::getGUID() const {
-  auto MaybeGUID = getGUIDIfAssigned();
-  assert(MaybeGUID.has_value() &&
-         "GUID was not assigned before calling GetGUID()");
-  return *MaybeGUID;
-}
-
-GlobalValue::GUID GlobalValue::getGUIDOrFallback() const {
-  if (auto MaybeGUID = getGUIDIfAssigned(); MaybeGUID)
-    return *MaybeGUID;
-  return getGUIDAssumingExternalLinkage(getGlobalIdentifier());
-}
-
-std::optional<GlobalValue::GUID> GlobalValue::getGUIDIfAssigned() const {
-  // First check the metadata.
-  auto *MD = getGUIDMetadata();
-  if (MD != nullptr)
-    return cast<ConstantInt>(cast<ConstantAsMetadata>(MD->getOperand(0))
-                                 ->getValue()
-                                 ->stripPointerCasts())
-        ->getZExtValue();
-
-  // Handle a few special cases where we just want to compute it based on the
-  // current properties.
-  // TODO: Maybe we should use a more robust check for intrinsics than just
-  // matching on the name?
-  if (isDeclaration() || isa<GlobalAlias>(this) ||
-      getName().starts_with("llvm.")) {
-    return GlobalValue::getGUIDAssumingExternalLinkage(getGlobalIdentifier());
-  }
-
-  // Otherwise we try to look it up in the module, for cases where we've read
-  // the GUID table but not the metadata. This happens when lazy-loading a
-  // module.
-  return getParent()->getGUID(this);
-}
-
-MDNode *GlobalValue::getGUIDMetadata() const {
-  if (auto *GO = dyn_cast<GlobalObject>(this))
-    return GO->getMetadata(LLVMContext::MD_unique_id);
-  return nullptr;
-}
-
 void GlobalValue::removeFromParent() {
   switch (getValueID()) {
 #define HANDLE_GLOBAL_VALUE(NAME)                                              \
@@ -452,11 +397,11 @@ bool GlobalObject::canIncreaseAlignment() const {
   return true;
 }
 
-bool GlobalObject::hasMetadataOtherThanDebugLocAndGuid() const {
+bool GlobalObject::hasMetadataOtherThanDebugLoc() const {
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   getAllMetadata(MDs);
   for (const auto &V : MDs)
-    if (V.first != LLVMContext::MD_dbg && V.first != LLVMContext::MD_unique_id)
+    if (V.first != LLVMContext::MD_dbg)
       return true;
   return false;
 }

@@ -1158,13 +1158,19 @@ mlir::LogicalResult CIRGenFunction::emitSwitchBody(const Stmt *s) {
   // that, the 'case' regions will take care of future ones.
   if (!body.empty() && !isa<SwitchCase>(body.front())) {
     builder.setInsertionPointToEnd(switchBlock);
-    while (!body.empty() && !isa<SwitchCase>(body.front())) {
+    {
+      // This is needed to handle cleanups in a compound statement before the
+      // first case statement.
+      RunCleanupsScope preCaseScope(*this);
+      while (!body.empty() && !isa<SwitchCase>(body.front())) {
 
-      auto *c = body.front();
-      if (mlir::failed(emitStmt(c, /*useCurrentScope=*/!isa<CompoundStmt>(c))))
-        return mlir::failure();
+        auto *c = body.front();
+        if (mlir::failed(
+                emitStmt(c, /*useCurrentScope=*/!isa<CompoundStmt>(c))))
+          return mlir::failure();
 
-      body = body.drop_front();
+        body = body.drop_front();
+      }
     }
 
     // Now that we've emitted ALL of the statements, we can create a new block

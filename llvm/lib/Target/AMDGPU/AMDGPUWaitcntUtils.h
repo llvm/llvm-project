@@ -30,6 +30,7 @@ enum InstCounterType {
   KM_CNT,                            // gfx12+ only.
   X_CNT,                             // gfx1250.
   ASYNC_CNT,                         // gfx1250.
+  TENSOR_CNT,                        // gfx1250.
   NUM_EXTENDED_INST_CNTS,
   VA_VDST = NUM_EXTENDED_INST_CNTS, // gfx12+ expert mode only.
   VM_VSRC,                          // gfx12+ expert mode only.
@@ -77,7 +78,8 @@ public:
   // gfx12+ constructor.
   Waitcnt(unsigned LoadCnt, unsigned ExpCnt, unsigned DsCnt, unsigned StoreCnt,
           unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned XCnt,
-          unsigned AsyncCnt, unsigned VaVdst, unsigned VmVsrc)
+          unsigned AsyncCnt, unsigned TensorCnt, unsigned VaVdst,
+          unsigned VmVsrc)
       : Waitcnt() {
     Cnt[LOAD_CNT] = LoadCnt;
     Cnt[DS_CNT] = DsCnt;
@@ -88,6 +90,7 @@ public:
     Cnt[KM_CNT] = KmCnt;
     Cnt[X_CNT] = XCnt;
     Cnt[ASYNC_CNT] = AsyncCnt;
+    Cnt[TENSOR_CNT] = TensorCnt;
     Cnt[VA_VDST] = VaVdst;
     Cnt[VM_VSRC] = VmVsrc;
   }
