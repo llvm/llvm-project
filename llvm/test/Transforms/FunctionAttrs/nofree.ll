@@ -103,7 +103,7 @@ define void @_Z4foo7Pi(ptr %a) local_unnamed_addr #1 {
 ; CHECK-NEXT:    [[ISNULL:%.*]] = icmp eq ptr [[A]], null
 ; CHECK-NEXT:    br i1 [[ISNULL]], label %[[DELETE_END:.*]], label %[[DELETE_NOTNULL:.*]]
 ; CHECK:       [[DELETE_NOTNULL]]:
-; CHECK-NEXT:    tail call void @_ZdlPv(ptr [[A]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    tail call void @_ZdlPv(ptr [[A]]) #[[ATTR8:[0-9]+]]
 ; CHECK-NEXT:    br label %[[DELETE_END]]
 ; CHECK:       [[DELETE_END]]:
 ; CHECK-NEXT:    ret void
@@ -130,7 +130,7 @@ define void @_Z4foo8Pi(ptr %a) local_unnamed_addr #1 {
 ; CHECK-NEXT:    [[ISNULL:%.*]] = icmp eq ptr [[A]], null
 ; CHECK-NEXT:    br i1 [[ISNULL]], label %[[DELETE_END:.*]], label %[[DELETE_NOTNULL:.*]]
 ; CHECK:       [[DELETE_NOTNULL]]:
-; CHECK-NEXT:    tail call void @_ZdaPv(ptr [[A]]) #[[ATTR6]]
+; CHECK-NEXT:    tail call void @_ZdaPv(ptr [[A]]) #[[ATTR8]]
 ; CHECK-NEXT:    br label %[[DELETE_END]]
 ; CHECK:       [[DELETE_END]]:
 ; CHECK-NEXT:    ret void
@@ -152,7 +152,7 @@ declare void @may_free()
 define void @nofree_callsite_attr(ptr %a) {
 ; CHECK: Function Attrs: nofree
 ; CHECK-LABEL: define void @nofree_callsite_attr(
-; CHECK-SAME: ptr readnone captures(none) [[A:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-SAME: ptr nofree readnone captures(none) [[A:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @may_free() #[[ATTR5]]
 ; CHECK-NEXT:    ret void
@@ -164,7 +164,7 @@ entry:
 
 define void @unknown_call(ptr %fn) {
 ; CHECK-LABEL: define void @unknown_call(
-; CHECK-SAME: ptr readonly captures(none) [[FN:%.*]]) {
+; CHECK-SAME: ptr nofree readonly captures(none) [[FN:%.*]]) {
 ; CHECK-NEXT:    call void [[FN]]()
 ; CHECK-NEXT:    ret void
 ;
@@ -175,13 +175,130 @@ define void @unknown_call(ptr %fn) {
 define void @unknown_nofree_call(ptr %fn) {
 ; CHECK: Function Attrs: nofree
 ; CHECK-LABEL: define void @unknown_nofree_call(
-; CHECK-SAME: ptr readonly captures(none) [[FN:%.*]]) #[[ATTR5]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[FN:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    call void [[FN]]() #[[ATTR5]]
 ; CHECK-NEXT:    ret void
 ;
   call void %fn() nofree
   ret void
 }
+
+define void @passed_to_nofree_nocapture_arg(ptr %p) {
+; CHECK-LABEL: define void @passed_to_nofree_nocapture_arg(
+; CHECK-SAME: ptr nofree captures(address) [[P:%.*]]) {
+; CHECK-NEXT:    call void @takes_ptr(ptr nofree captures(address) [[P]])
+; CHECK-NEXT:    call void @may_free()
+; CHECK-NEXT:    ret void
+;
+  call void @takes_ptr(ptr nofree captures(address) %p)
+  call void @may_free()
+  ret void
+}
+
+; While takes_ptr can't free %p itself, it may capture it, and then be
+; freed by the call to may_free.
+define void @passed_to_nofree_maybe_capture_arg(ptr %p) {
+; CHECK-LABEL: define void @passed_to_nofree_maybe_capture_arg(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call void @takes_ptr(ptr nofree [[P]])
+; CHECK-NEXT:    call void @may_free()
+; CHECK-NEXT:    ret void
+;
+  call void @takes_ptr(ptr nofree %p)
+  call void @may_free()
+  ret void
+}
+
+; readonly implies nofree
+define void @passed_to_readonly_nocapture_arg(ptr %p) {
+; CHECK-LABEL: define void @passed_to_readonly_nocapture_arg(
+; CHECK-SAME: ptr nofree readonly captures(address, read_provenance) [[P:%.*]]) {
+; CHECK-NEXT:    call void @takes_ptr(ptr readonly captures(address, read_provenance) [[P]])
+; CHECK-NEXT:    call void @may_free()
+; CHECK-NEXT:    ret void
+;
+  call void @takes_ptr(ptr readonly captures(address, read_provenance) %p)
+  call void @may_free()
+  ret void
+}
+
+define void @passed_to_nofree_fn_nocapture_arg(ptr %p) {
+; CHECK-LABEL: define void @passed_to_nofree_fn_nocapture_arg(
+; CHECK-SAME: ptr nofree captures(address) [[P:%.*]]) {
+; CHECK-NEXT:    call void @takes_ptr(ptr captures(address) [[P]]) #[[ATTR5]]
+; CHECK-NEXT:    call void @may_free()
+; CHECK-NEXT:    ret void
+;
+  call void @takes_ptr(ptr captures(address) %p) nofree
+  call void @may_free()
+  ret void
+}
+
+; While takes_ptr can't free %p itself, it may capture it, and then be
+; freed by the call to may_free.
+define void @passed_to_nofree_fn_maybe_capture_arg(ptr %p) {
+; CHECK-LABEL: define void @passed_to_nofree_fn_maybe_capture_arg(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call void @takes_ptr(ptr [[P]]) #[[ATTR5]]
+; CHECK-NEXT:    call void @may_free()
+; CHECK-NEXT:    ret void
+;
+  call void @takes_ptr(ptr %p) nofree
+  call void @may_free()
+  ret void
+}
+
+; memory(read) implies nofree
+define void @passed_to_readonly_fn_nocapture_arg(ptr %p) {
+; CHECK-LABEL: define void @passed_to_readonly_fn_nocapture_arg(
+; CHECK-SAME: ptr nofree readonly captures(address) [[P:%.*]]) {
+; CHECK-NEXT:    call void @takes_ptr(ptr captures(address, read_provenance) [[P]]) #[[ATTR9:[0-9]+]]
+; CHECK-NEXT:    call void @may_free()
+; CHECK-NEXT:    ret void
+;
+  call void @takes_ptr(ptr captures(address, read_provenance) %p) memory(read)
+  call void @may_free()
+  ret void
+}
+
+define void @passed_to_assume_bundle(ptr %p) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(inaccessiblemem: write)
+; CHECK-LABEL: define void @passed_to_assume_bundle(
+; CHECK-SAME: ptr nofree readnone captures(none) [[P:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P]]) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) ["nonnull"(ptr %p)]
+  ret void
+}
+
+; deopt bundle can't free or capture.
+define void @passed_to_deopt_bundle(ptr %p) {
+; CHECK-LABEL: define void @passed_to_deopt_bundle(
+; CHECK-SAME: ptr nofree readonly captures(none) [[P:%.*]]) {
+; CHECK-NEXT:    call void @may_free() [ "deopt"(ptr [[P]]) ]
+; CHECK-NEXT:    call void @may_free()
+; CHECK-NEXT:    ret void
+;
+  call void @may_free() ["deopt"(ptr %p)]
+  call void @may_free()
+  ret void
+}
+
+; Unknown bundle can't free, but may capture, resulting in a subsequent free.
+define void @passed_to_unknown_bundle(ptr %p) {
+; CHECK-LABEL: define void @passed_to_unknown_bundle(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call void @may_free() [ "unknown"(ptr [[P]]) ]
+; CHECK-NEXT:    call void @may_free()
+; CHECK-NEXT:    ret void
+;
+  call void @may_free() ["unknown"(ptr %p)]
+  call void @may_free()
+  ret void
+}
+
+declare void @takes_ptr(ptr)
 
 declare void @_ZdaPv(ptr) local_unnamed_addr #4
 

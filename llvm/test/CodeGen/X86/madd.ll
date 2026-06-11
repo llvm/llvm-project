@@ -1861,16 +1861,16 @@ define <16 x i32> @pmaddwd_32(<32 x i16> %A, <32 x i16> %B) {
 ;
 ; AVX1-LABEL: pmaddwd_32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
 ; AVX1-NEXT:    vpmaddwd %xmm4, %xmm5, %xmm4
-; AVX1-NEXT:    vpmaddwd %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
-; AVX1-NEXT:    vpmaddwd %xmm2, %xmm4, %xmm2
 ; AVX1-NEXT:    vpmaddwd %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
+; AVX1-NEXT:    vpmaddwd %xmm3, %xmm5, %xmm3
+; AVX1-NEXT:    vpmaddwd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: pmaddwd_32:
@@ -2067,16 +2067,16 @@ define <16 x i32> @jumbled_indices16(<32 x i16> %A, <32 x i16> %B) {
 ;
 ; AVX1-LABEL: jumbled_indices16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
 ; AVX1-NEXT:    vpmaddwd %xmm4, %xmm5, %xmm4
-; AVX1-NEXT:    vpmaddwd %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
-; AVX1-NEXT:    vpmaddwd %xmm2, %xmm4, %xmm2
 ; AVX1-NEXT:    vpmaddwd %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
+; AVX1-NEXT:    vpmaddwd %xmm3, %xmm5, %xmm3
+; AVX1-NEXT:    vpmaddwd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: jumbled_indices16:
@@ -2131,26 +2131,26 @@ define <32 x i32> @jumbled_indices32(<64 x i16> %A, <64 x i16> %B) {
 ;
 ; AVX1-LABEL: jumbled_indices32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm8
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm9
+; AVX1-NEXT:    vextractf128 $1, %ymm7, %xmm8
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm9
 ; AVX1-NEXT:    vpmaddwd %xmm8, %xmm9, %xmm8
-; AVX1-NEXT:    vpmaddwd %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm8, %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm5, %xmm4
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm8
-; AVX1-NEXT:    vpmaddwd %xmm4, %xmm8, %xmm4
-; AVX1-NEXT:    vpmaddwd %xmm5, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
-; AVX1-NEXT:    vextractf128 $1, %ymm6, %xmm4
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm5
-; AVX1-NEXT:    vpmaddwd %xmm4, %xmm5, %xmm4
-; AVX1-NEXT:    vpmaddwd %xmm6, %xmm2, %xmm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm2
-; AVX1-NEXT:    vextractf128 $1, %ymm7, %xmm4
-; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm5
-; AVX1-NEXT:    vpmaddwd %xmm4, %xmm5, %xmm4
 ; AVX1-NEXT:    vpmaddwd %xmm7, %xmm3, %xmm3
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm3
+; AVX1-NEXT:    vextractf128 $1, %ymm6, %xmm7
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm9
+; AVX1-NEXT:    vpmaddwd %xmm7, %xmm9, %xmm7
+; AVX1-NEXT:    vpmaddwd %xmm6, %xmm2, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm5, %xmm6
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm9
+; AVX1-NEXT:    vpmaddwd %xmm6, %xmm9, %xmm6
+; AVX1-NEXT:    vpmaddwd %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm5
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm9
+; AVX1-NEXT:    vpmaddwd %xmm5, %xmm9, %xmm5
+; AVX1-NEXT:    vpmaddwd %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm0, %ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm1, %ymm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm7, %ymm2, %ymm2
+; AVX1-NEXT:    vinsertf128 $1, %xmm8, %ymm3, %ymm3
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: jumbled_indices32:
@@ -2163,16 +2163,16 @@ define <32 x i32> @jumbled_indices32(<64 x i16> %A, <64 x i16> %B) {
 ;
 ; AVX512F-LABEL: jumbled_indices32:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm2, %ymm4
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm3, %ymm4
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
 ; AVX512F-NEXT:    vpmaddwd %ymm4, %ymm5, %ymm4
-; AVX512F-NEXT:    vpmaddwd %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm4, %zmm0, %zmm0
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm3, %ymm2
-; AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
-; AVX512F-NEXT:    vpmaddwd %ymm2, %ymm4, %ymm2
 ; AVX512F-NEXT:    vpmaddwd %ymm3, %ymm1, %ymm1
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm2, %ymm3
+; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm5
+; AVX512F-NEXT:    vpmaddwd %ymm3, %ymm5, %ymm3
+; AVX512F-NEXT:    vpmaddwd %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm3, %zmm0, %zmm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm4, %zmm1, %zmm1
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: jumbled_indices32:
@@ -2277,12 +2277,12 @@ define <16 x i32> @pmaddwd_512(ptr %Aptr, ptr %Bptr) {
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
 ; AVX1-NEXT:    vmovdqa 32(%rdi), %xmm2
 ; AVX1-NEXT:    vmovdqa 48(%rdi), %xmm3
+; AVX1-NEXT:    vpmaddwd 48(%rsi), %xmm3, %xmm3
+; AVX1-NEXT:    vpmaddwd 32(%rsi), %xmm2, %xmm2
 ; AVX1-NEXT:    vpmaddwd 16(%rsi), %xmm1, %xmm1
 ; AVX1-NEXT:    vpmaddwd (%rsi), %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vpmaddwd 48(%rsi), %xmm3, %xmm1
-; AVX1-NEXT:    vpmaddwd 32(%rsi), %xmm2, %xmm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: pmaddwd_512:
@@ -2355,25 +2355,25 @@ define <32 x i32> @pmaddwd_1024(ptr %Aptr, ptr %Bptr) {
 ;
 ; AVX1-LABEL: pmaddwd_1024:
 ; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovdqa 112(%rdi), %xmm0
+; AVX1-NEXT:    vpmaddwd 112(%rsi), %xmm0, %xmm3
+; AVX1-NEXT:    vmovdqa 96(%rdi), %xmm0
+; AVX1-NEXT:    vpmaddwd 96(%rsi), %xmm0, %xmm4
+; AVX1-NEXT:    vmovdqa 80(%rdi), %xmm0
+; AVX1-NEXT:    vpmaddwd 80(%rsi), %xmm0, %xmm2
+; AVX1-NEXT:    vmovdqa 64(%rdi), %xmm0
+; AVX1-NEXT:    vpmaddwd 64(%rsi), %xmm0, %xmm5
 ; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vmovdqa 32(%rdi), %xmm2
-; AVX1-NEXT:    vmovdqa 48(%rdi), %xmm3
+; AVX1-NEXT:    vmovdqa 32(%rdi), %xmm6
+; AVX1-NEXT:    vmovdqa 48(%rdi), %xmm7
+; AVX1-NEXT:    vpmaddwd 48(%rsi), %xmm7, %xmm7
+; AVX1-NEXT:    vpmaddwd 32(%rsi), %xmm6, %xmm6
 ; AVX1-NEXT:    vpmaddwd 16(%rsi), %xmm1, %xmm1
 ; AVX1-NEXT:    vpmaddwd (%rsi), %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vpmaddwd 48(%rsi), %xmm3, %xmm1
-; AVX1-NEXT:    vpmaddwd 32(%rsi), %xmm2, %xmm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
-; AVX1-NEXT:    vmovdqa 80(%rdi), %xmm2
-; AVX1-NEXT:    vpmaddwd 80(%rsi), %xmm2, %xmm2
-; AVX1-NEXT:    vmovdqa 64(%rdi), %xmm3
-; AVX1-NEXT:    vpmaddwd 64(%rsi), %xmm3, %xmm3
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
-; AVX1-NEXT:    vmovdqa 112(%rdi), %xmm3
-; AVX1-NEXT:    vpmaddwd 112(%rsi), %xmm3, %xmm3
-; AVX1-NEXT:    vmovdqa 96(%rdi), %xmm4
-; AVX1-NEXT:    vpmaddwd 96(%rsi), %xmm4, %xmm4
+; AVX1-NEXT:    vinsertf128 $1, %xmm7, %ymm6, %ymm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm5, %ymm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
 ; AVX1-NEXT:    retq
 ;
@@ -2395,12 +2395,12 @@ define <32 x i32> @pmaddwd_1024(ptr %Aptr, ptr %Bptr) {
 ; AVX512F-NEXT:    vmovdqa 32(%rdi), %ymm1
 ; AVX512F-NEXT:    vmovdqa 64(%rdi), %ymm2
 ; AVX512F-NEXT:    vmovdqa 96(%rdi), %ymm3
+; AVX512F-NEXT:    vpmaddwd 96(%rsi), %ymm3, %ymm3
+; AVX512F-NEXT:    vpmaddwd 64(%rsi), %ymm2, %ymm2
 ; AVX512F-NEXT:    vpmaddwd 32(%rsi), %ymm1, %ymm1
 ; AVX512F-NEXT:    vpmaddwd (%rsi), %ymm0, %ymm0
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512F-NEXT:    vpmaddwd 96(%rsi), %ymm3, %ymm1
-; AVX512F-NEXT:    vpmaddwd 64(%rsi), %ymm2, %ymm2
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm1
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm3, %zmm2, %zmm1
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: pmaddwd_1024:
@@ -3168,16 +3168,16 @@ define <16 x i32> @extract_concat_pmaddwd(<32 x i16> %a, <32 x i16> %b) {
 ;
 ; AVX1-LABEL: extract_concat_pmaddwd:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
 ; AVX1-NEXT:    vpmaddwd %xmm4, %xmm5, %xmm4
-; AVX1-NEXT:    vpmaddwd %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
-; AVX1-NEXT:    vpmaddwd %xmm2, %xmm4, %xmm2
 ; AVX1-NEXT:    vpmaddwd %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
+; AVX1-NEXT:    vpmaddwd %xmm3, %xmm5, %xmm3
+; AVX1-NEXT:    vpmaddwd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: extract_concat_pmaddwd:

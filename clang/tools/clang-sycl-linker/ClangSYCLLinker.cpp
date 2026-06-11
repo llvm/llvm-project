@@ -159,7 +159,7 @@ static Expected<std::string> findProgram(const ArgList &Args, StringRef Name,
     Path = sys::findProgramByName(Name);
   if (!Path)
     return createStringError(Path.getError(),
-                             "Unable to find '" + Name + "' in path");
+                             "unable to find '" + Name + "' in path");
   return *Path;
 }
 
@@ -192,18 +192,18 @@ static Expected<SmallVector<std::string>> getInput(const ArgList &Args) {
   SmallVector<std::string> BitcodeFiles;
   auto Inputs = Args.filtered(OPT_INPUT);
   if (Inputs.empty())
-    return createStringError("No input files provided");
+    return createStringError("no input files provided");
   for (const opt::Arg *Arg : Inputs) {
     StringRef Filename = Arg->getValue();
     if (!sys::fs::exists(Filename) || sys::fs::is_directory(Filename))
-      return createStringError("Input file '" + Filename + "' does not exist");
+      return createStringError("input file '" + Filename + "' does not exist");
     file_magic Magic;
     if (auto EC = identify_magic(Filename, Magic))
-      return createStringError("Failed to open file " + Filename);
+      return createStringError("failed to open file '" + Filename + "'");
     // TODO: Current use case involves LLVM IR bitcode files as input.
     // This will be extended to support SPIR-V IR files.
     if (Magic != file_magic::bitcode)
-      return createStringError("Unsupported file type for '" + Filename + "'");
+      return createStringError("unsupported file type for '" + Filename + "'");
     BitcodeFiles.push_back(std::string(Filename));
   }
   return BitcodeFiles;
@@ -332,12 +332,12 @@ static Expected<LinkResult> linkInputs(ArrayRef<std::string> InputFiles,
     }
 
     if (L.linkInModule(std::move(*ModOrErr)))
-      return createStringError("Could not link IR");
+      return createStringError("could not link IR");
   }
 
   if (TargetTriple.empty())
     return createStringError(
-        "Target triple must be specified or inferable from inputs");
+        "target triple must be specified or inferable from inputs");
 
   // Link in library files.
   for (auto &File : *BCLibFiles) {
@@ -347,7 +347,7 @@ static Expected<LinkResult> linkInputs(ArrayRef<std::string> InputFiles,
     if ((*LibMod)->getTargetTriple() == TargetTriple) {
       unsigned Flags = Linker::Flags::LinkOnlyNeeded;
       if (L.linkInModule(std::move(*LibMod), Flags))
-        return createStringError("Could not link IR");
+        return createStringError("could not link IR");
     }
   }
 
@@ -412,7 +412,7 @@ static Error runCodeGen(StringRef File, const llvm::Triple &TargetTriple,
       T->createTargetMachine(M->getTargetTriple(), /*CPU=*/"",
                              /*Features=*/"", Options, RM, CM));
   if (!TM)
-    return createStringError("Could not allocate target machine!");
+    return createStringError("could not allocate target machine");
 
   // Set data layout if needed.
   if (M->getDataLayout().isDefault())
@@ -429,7 +429,7 @@ static Error runCodeGen(StringRef File, const llvm::Triple &TargetTriple,
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
   if (TM->addPassesToEmitFile(CodeGenPasses, *OS, nullptr,
                               CodeGenFileType::ObjectFile))
-    return createStringError("Failed to execute LLVM backend");
+    return createStringError("failed to execute LLVM backend");
   CodeGenPasses.run(*M);
 
   return Error::success();
@@ -797,7 +797,7 @@ static Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
 
   llvm::SmallString<0> Buffer = OffloadBinary::write(Images);
   if (Buffer.size() % OffloadBinary::getAlignment() != 0)
-    return createStringError("Offload binary has invalid size alignment");
+    return createStringError("offload binary has invalid size alignment");
 
   if (DryRun)
     return Error::success();
@@ -846,7 +846,7 @@ int main(int argc, char **argv) {
   DryRun = Args.hasArg(OPT_dry_run);
 
   if (!Args.hasArg(OPT_o))
-    reportError(createStringError("Output file must be specified"));
+    reportError(createStringError("output file must be specified"));
   OutputFile = Args.getLastArgValue(OPT_o);
 
   // Get the input files to pass to the linking stage.

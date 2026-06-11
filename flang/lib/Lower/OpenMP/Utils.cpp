@@ -28,6 +28,7 @@
 #include <flang/Parser/openmp-utils.h>
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
+#include <flang/Semantics/openmp-utils.h>
 #include <flang/Semantics/tools.h>
 #include <flang/Semantics/type.h>
 #include <flang/Utils/OpenMP.h>
@@ -1017,6 +1018,159 @@ void defaultMangler(Fortran::lower::AbstractConverter &converter,
     mapperIdName = converter.mangleName(mapperIdName, memberSym->owner());
 }
 
+static const semantics::DerivedTypeSpec *
+getSymbolDerivedType(const semantics::Symbol &symbol) {
+  const semantics::Symbol &ultimate = symbol.GetUltimate();
+  if (const semantics::DeclTypeSpec *declType = ultimate.GetType())
+    if (const auto *derived = declType->AsDerived())
+      return derived;
+  return nullptr;
+}
+
+static std::string
+getDefaultMapperID(Fortran::lower::AbstractConverter &converter,
+                   fir::FirOpBuilder &firOpBuilder,
+                   const semantics::DerivedTypeSpec *typeSpec) {
+  if (mlir::isa<mlir::omp::DeclareMapperOp>(
+          firOpBuilder.getRegion().getParentOp()) ||
+      !typeSpec)
+    return {};
+
+  std::string mapperIdName =
+      typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
+  if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName)) {
+    mapperIdName =
+        converter.mangleName(mapperIdName, sym->GetUltimate().owner());
+  } else {
+    mapperIdName = converter.mangleName(mapperIdName, *typeSpec->GetScope());
+  }
+
+  // Make sure we don't return a mapper to self.
+  if (auto declMapOp = mlir::dyn_cast<mlir::omp::DeclareMapperOp>(
+          firOpBuilder.getRegion().getParentOp()))
+    if (mapperIdName == declMapOp.getSymName())
+      return {};
+  return mapperIdName;
+}
+
+static std::string
+findMapperIfTypeMatch(Fortran::lower::AbstractConverter &converter,
+                      const semantics::DerivedTypeSpec *objectTypeSpec,
+                      llvm::StringRef explicitMapperName) {
+  auto declMapperOp =
+      converter.getModuleOp().lookupSymbol<mlir::omp::DeclareMapperOp>(
+          explicitMapperName);
+  if (!declMapperOp)
+    return "__implicit_mapper";
+
+  // Verify if the explicit mapper provided matches the type being mapped.
+  // If it does return the mapper name, if it doesn't return null-ary.
+  mlir::Type mapperType = declMapperOp.getType();
+  mlir::Type objectType = converter.genType(*objectTypeSpec);
+  auto mapperRecordType = mlir::dyn_cast<fir::RecordType>(mapperType);
+  auto objectRecordType = mlir::dyn_cast<fir::RecordType>(objectType);
+  if (mapperRecordType && objectRecordType &&
+      mapperRecordType.getName() == objectRecordType.getName())
+    return explicitMapperName.str();
+
+  return "__implicit_mapper";
+}
+
+static mlir::FlatSymbolRefAttr
+addImplicitMapper(Fortran::lower::AbstractConverter &converter,
+                  mlir::Location loc, const omp::Object &object,
+                  std::string &mapperIdName, bool allowGenerate) {
+  if (!allowGenerate || mapperIdName.empty())
+    return mlir::FlatSymbolRefAttr();
+
+  const semantics::DerivedTypeSpec *typeSpec =
+      getSymbolDerivedType(*object.sym());
+  if (!typeSpec && object.sym()->owner().IsDerivedType())
+    typeSpec = object.sym()->owner().derivedTypeSpec();
+
+  if (!typeSpec)
+    return mlir::FlatSymbolRefAttr();
+
+  mlir::Type type = converter.genType(*typeSpec);
+  auto recordType = mlir::dyn_cast<fir::RecordType>(type);
+  if (!recordType)
+    return mlir::FlatSymbolRefAttr();
+
+  return utils::openmp::getOrGenImplicitDefaultDeclareMapper(
+      converter.getFirOpBuilder(), loc, recordType, mapperIdName,
+      [&](std::string &mapperIdName, llvm::StringRef memberName) {
+        defaultMangler(converter, mapperIdName, memberName);
+      });
+}
+
+mlir::FlatSymbolRefAttr
+resolveMapperId(Fortran::lower::AbstractConverter &converter,
+                mlir::Location loc, const omp::Object &object,
+                llvm::StringRef mapperIdNameRef,
+                mlir::omp::ClauseMapFlags mapTypeBits,
+                llvm::omp::Directive directive, bool hasParentObj) {
+  const semantics::DerivedTypeSpec *objectTypeSpec =
+      getSymbolDerivedType(*object.sym());
+  if (!objectTypeSpec)
+    return mlir::FlatSymbolRefAttr();
+
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::FlatSymbolRefAttr mapperId;
+  std::string mapperIdName = mapperIdNameRef.str();
+  // if we have an explicit mapper specified, we need to check it matches
+  // the type being mapped, if it doesn't we fallback to look for a user
+  // default mapper or generate an compiler defined default mapper if
+  // relevant. This function will return "__implicit_mapper" if we find that
+  // the map isn't relevant to the explicit declare mapper, which allows it
+  // to fallback.
+  if (!mapperIdName.empty() && mapperIdName != "__implicit_mapper")
+    mapperIdName =
+        findMapperIfTypeMatch(converter, objectTypeSpec, mapperIdName);
+
+  if (mapperIdName == "__implicit_mapper") {
+    mapperIdName = getDefaultMapperID(converter, firOpBuilder, objectTypeSpec);
+    // Currently we do not apply implicit compiler generated delcare mappers
+    // to enter, exit or update directives. However, we will syntheize one
+    // below if we're not a target enter/exit/update and no user defined
+    // implicit declare mapper has been defined and we meet the other
+    // conditions
+    // TODO/FIXME: Loosen this restriction to comply with the OpenMP
+    // specification.
+    auto *userDefinedDefault =
+        converter.getModuleOp().lookupSymbol(mapperIdName);
+    if (!userDefinedDefault && !hasParentObj &&
+        (directive != llvm::omp::Directive::OMPD_target_enter_data &&
+         directive != llvm::omp::Directive::OMPD_target_exit_data &&
+         directive != llvm::omp::Directive::OMPD_target_update)) {
+      bool isAllocOrPointer =
+          semantics::IsAllocatableOrObjectPointer(object.sym());
+      bool isPointer = semantics::IsPointer(*object.sym());
+      bool isImplicitMap =
+          (mapTypeBits & mlir::omp::ClauseMapFlags::implicit) ==
+          mlir::omp::ClauseMapFlags::implicit;
+      bool needsDefaultMapper =
+          isAllocOrPointer ||
+          requiresImplicitDefaultDeclareMapper(*objectTypeSpec);
+      // For implicit captures, avoid synthesizing default mappers for
+      // pointer entities (which can over-map pointer payloads) and for
+      // plain non-allocatable/non-pointer entities. Keep implicit mapper
+      // support for allocatables.
+      if (isImplicitMap && (isPointer || !isAllocOrPointer))
+        needsDefaultMapper = false;
+      mapperId = addImplicitMapper(converter, loc, object, mapperIdName,
+                                   /*allowGenerate=*/needsDefaultMapper);
+    }
+  }
+
+  // Make sure we've generated the symbol in one of our previous steps
+  // before assigning the symbol.
+  if (!mapperIdName.empty() &&
+      converter.getModuleOp().lookupSymbol(mapperIdName))
+    mapperId =
+        mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(), mapperIdName);
+  return mapperId;
+}
+
 // Build the array coordinate for an object that uses iterator variables.
 // If the object is a section, use the first element of that section
 // as the coordinate. Currently only support top-level ArrayRef designators.
@@ -1130,59 +1284,6 @@ mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
                                   /*typeparams=*/mlir::ValueRange{});
 }
 
-llvm::omp::TraitSet mapTraitSet(parser::OmpTraitSetSelectorName::Value name) {
-  switch (name) {
-  case parser::OmpTraitSetSelectorName::Value::Construct:
-    return llvm::omp::TraitSet::construct;
-  case parser::OmpTraitSetSelectorName::Value::Device:
-    return llvm::omp::TraitSet::device;
-  case parser::OmpTraitSetSelectorName::Value::Implementation:
-    return llvm::omp::TraitSet::implementation;
-  case parser::OmpTraitSetSelectorName::Value::User:
-    return llvm::omp::TraitSet::user;
-  case parser::OmpTraitSetSelectorName::Value::Target_Device:
-    return llvm::omp::TraitSet::target_device;
-  }
-  llvm_unreachable("unknown trait set");
-}
-
-llvm::omp::TraitSelector
-mapTraitSelector(const parser::OmpTraitSelectorName &name,
-                 llvm::omp::TraitSet set) {
-  if (const auto *val =
-          std::get_if<parser::OmpTraitSelectorName::Value>(&name.u)) {
-    switch (*val) {
-    case parser::OmpTraitSelectorName::Value::Kind:
-      if (set == llvm::omp::TraitSet::target_device)
-        return llvm::omp::TraitSelector::target_device_kind;
-      return llvm::omp::TraitSelector::device_kind;
-    case parser::OmpTraitSelectorName::Value::Arch:
-      if (set == llvm::omp::TraitSet::target_device)
-        return llvm::omp::TraitSelector::target_device_arch;
-      return llvm::omp::TraitSelector::device_arch;
-    case parser::OmpTraitSelectorName::Value::Isa:
-      if (set == llvm::omp::TraitSet::target_device)
-        return llvm::omp::TraitSelector::target_device_isa;
-      return llvm::omp::TraitSelector::device_isa;
-    case parser::OmpTraitSelectorName::Value::Vendor:
-      return llvm::omp::TraitSelector::implementation_vendor;
-    case parser::OmpTraitSelectorName::Value::Extension:
-      return llvm::omp::TraitSelector::implementation_extension;
-    case parser::OmpTraitSelectorName::Value::Condition:
-      return llvm::omp::TraitSelector::user_condition;
-    case parser::OmpTraitSelectorName::Value::Atomic_Default_Mem_Order:
-    case parser::OmpTraitSelectorName::Value::Requires:
-    case parser::OmpTraitSelectorName::Value::Simd:
-    case parser::OmpTraitSelectorName::Value::Device_Num:
-    case parser::OmpTraitSelectorName::Value::Uid:
-      break;
-    }
-  }
-  // Construct traits, extension strings, and remaining selectors use
-  // string-based lookup.
-  return llvm::omp::getOpenMPContextTraitSelectorKind(name.ToString(), set);
-}
-
 /// Collect trait property names (vendor, kind, arch, isa, etc.) into a VMI.
 static void processTraitProperties(
     llvm::omp::VariantMatchInfo &vmi, llvm::omp::TraitSet set,
@@ -1200,47 +1301,8 @@ static void processTraitProperties(
     // `implementation={my_trait(foo(bar))}` are not matched yet.
     if (!name)
       TODO(loc, "clause or extension trait matching in METADIRECTIVE");
-
-    llvm::omp::TraitProperty propKind =
-        llvm::omp::getOpenMPContextTraitPropertyKind(set, selector, name->v);
-    if (propKind != llvm::omp::TraitProperty::invalid) {
-      vmi.addTrait(set, propKind, name->v, scorePtr);
-      continue;
-    }
-
-    if (selector == llvm::omp::TraitSelector::device_isa) {
-      vmi.addTrait(set, llvm::omp::TraitProperty::device_isa___ANY, name->v,
-                   scorePtr);
-    } else if (selector == llvm::omp::TraitSelector::target_device_isa) {
-      vmi.addTrait(set, llvm::omp::TraitProperty::target_device_isa___ANY,
-                   name->v, scorePtr);
-    } else {
-      // For non-ISA selectors (arch, kind, vendor, etc.), unknown properties
-      // mean the variant cannot match. Add an invalid trait to ensure it is
-      // not selected.
-      vmi.addTrait(llvm::omp::TraitProperty::invalid, name->v, scorePtr);
-    }
   }
-}
-
-/// Try to constant-fold a user condition expression to a boolean.
-static std::optional<bool>
-evaluateUserCondition(semantics::SemanticsContext &semaCtx,
-                      const parser::ScalarExpr &scalarExpr) {
-  const auto *typedExpr = semantics::GetExpr(semaCtx, scalarExpr);
-  if (!typedExpr)
-    return std::nullopt;
-
-  auto foldedExpr = Fortran::evaluate::Fold(semaCtx.foldingContext(),
-                                            Fortran::common::Clone(*typedExpr));
-  if (auto constVal = Fortran::evaluate::ToInt64(foldedExpr))
-    return *constVal != 0;
-
-  if (auto logicalVal = Fortran::evaluate::GetScalarConstantValue<
-          Fortran::evaluate::LogicalResult>(foldedExpr))
-    return logicalVal->IsTrue();
-
-  return std::nullopt;
+  semantics::omp::ProcessTraitProperties(vmi, set, selector, props, scorePtr);
 }
 
 /// Process user={condition(...)} trait properties. Constant conditions are
@@ -1260,7 +1322,8 @@ static std::optional<DynamicUserCondition> processUserConditionTrait(
     if (!scalarExpr)
       continue;
 
-    if (auto constValue = evaluateUserCondition(semaCtx, *scalarExpr)) {
+    if (auto constValue =
+            semantics::omp::EvaluateUserCondition(semaCtx, *scalarExpr)) {
       vmi.addTrait(*constValue ? llvm::omp::TraitProperty::user_condition_true
                                : llvm::omp::TraitProperty::user_condition_false,
                    "<condition>", scorePtr);
@@ -1273,31 +1336,6 @@ static std::optional<DynamicUserCondition> processUserConditionTrait(
   }
 
   return dynamicCond;
-}
-
-/// Extract the optional score value from trait properties.
-static llvm::APInt *
-getTraitScore(const std::optional<parser::OmpTraitSelector::Properties> &props,
-              semantics::SemanticsContext &semaCtx,
-              std::optional<llvm::APInt> &scoreStorage) {
-  if (!props)
-    return nullptr;
-
-  const auto &optScore =
-      std::get<std::optional<parser::OmpTraitScore>>(props->t);
-  if (!optScore)
-    return nullptr;
-
-  const auto *typedExpr = semantics::GetExpr(semaCtx, optScore->v);
-  if (!typedExpr)
-    return nullptr;
-
-  auto constVal = Fortran::evaluate::ToInt64(*typedExpr);
-  if (!constVal)
-    return nullptr;
-
-  scoreStorage = llvm::APInt(64, *constVal);
-  return &*scoreStorage;
 }
 
 /// Populate a VariantMatchInfo from context selector.
@@ -1313,13 +1351,14 @@ makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
   for (const auto &traitSet : ctxSel.v) {
     using TSSName = parser::OmpTraitSetSelectorName;
     auto setName = std::get<TSSName>(traitSet.t).v;
-    llvm::omp::TraitSet set = mapTraitSet(setName);
+    llvm::omp::TraitSet set = semantics::omp::MapTraitSet(setName);
 
     for (const auto &trait :
          std::get<std::list<parser::OmpTraitSelector>>(traitSet.t)) {
       const auto &selectorName =
           std::get<parser::OmpTraitSelectorName>(trait.t);
-      llvm::omp::TraitSelector selector = mapTraitSelector(selectorName, set);
+      llvm::omp::TraitSelector selector =
+          semantics::omp::MapTraitSelector(selectorName, set);
       const auto &props =
           std::get<std::optional<parser::OmpTraitSelector::Properties>>(
               trait.t);
@@ -1330,7 +1369,8 @@ makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
         TODO(loc, "target_device selector in METADIRECTIVE");
 
       std::optional<llvm::APInt> score;
-      llvm::APInt *scorePtr = getTraitScore(props, semaCtx, score);
+      llvm::APInt *scorePtr =
+          semantics::omp::GetTraitScore(props, semaCtx, score);
 
       if (selector == llvm::omp::TraitSelector::user_condition) {
         if (std::optional<DynamicUserCondition> userCond =

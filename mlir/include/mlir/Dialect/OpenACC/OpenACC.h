@@ -206,6 +206,12 @@ static constexpr StringLiteral getFromDefaultClauseAttrName() {
   return StringLiteral("acc.from_default");
 }
 
+/// Name for an attribute attached to a loop indicating the number of loops
+/// collapsed to create that loop
+static constexpr StringLiteral getCollapseCountAttrName() {
+  return StringLiteral("acc.collapse_count");
+}
+
 static constexpr StringLiteral getVarNameAttrName() {
   return VarNameAttr::name;
 }

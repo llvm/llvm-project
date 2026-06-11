@@ -224,6 +224,15 @@ class LinuxCoreTestCase(TestBase):
         self.dbg.DeleteTarget(target)
 
     @skipIfLLVMTargetMissing("X86")
+    def test_is_not_live_debug_session(self):
+        """Test that a process loaded from a core file is not a live session."""
+        target = self.dbg.CreateTarget("linux-x86_64.out")
+        process = target.LoadCore("linux-x86_64.core")
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertFalse(process.IsLiveDebugSession())
+        self.dbg.DeleteTarget(target)
+
+    @skipIfLLVMTargetMissing("X86")
     def test_write_register(self):
         """Test that writing to register results in an error and that error
         message is set."""
@@ -350,11 +359,9 @@ class LinuxCoreTestCase(TestBase):
         lldbutil.mkdir_p(os.path.dirname(executable))
         shutil.copyfile("linux-i386.out", executable)
 
-        # Replace the original module path at /home/labath/test and load the core
+        # Replace the original module path at /tmp/core and load the core
         self.runCmd(
-            "settings set target.object-map /home/labath/test {}".format(
-                tmp_object_map_root
-            )
+            "settings set target.object-map /tmp/core {}".format(tmp_object_map_root)
         )
 
         target = self.dbg.CreateTarget(None)

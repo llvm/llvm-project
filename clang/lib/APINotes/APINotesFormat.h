@@ -361,11 +361,6 @@ namespace llvm {
 template <> struct DenseMapInfo<clang::api_notes::StoredObjCSelector> {
   typedef DenseMapInfo<unsigned> UnsignedInfo;
 
-  static inline clang::api_notes::StoredObjCSelector getEmptyKey() {
-    return clang::api_notes::StoredObjCSelector{UnsignedInfo::getEmptyKey(),
-                                                {}};
-  }
-
   static unsigned
   getHashValue(const clang::api_notes::StoredObjCSelector &Selector) {
     auto hash = llvm::hash_value(Selector.NumArgs);
@@ -384,10 +379,6 @@ template <> struct DenseMapInfo<clang::api_notes::StoredObjCSelector> {
 };
 
 template <> struct DenseMapInfo<clang::api_notes::ContextTableKey> {
-  static inline clang::api_notes::ContextTableKey getEmptyKey() {
-    return clang::api_notes::ContextTableKey();
-  }
-
   static unsigned getHashValue(const clang::api_notes::ContextTableKey &value) {
     return value.hashValue();
   }
@@ -399,10 +390,6 @@ template <> struct DenseMapInfo<clang::api_notes::ContextTableKey> {
 };
 
 template <> struct DenseMapInfo<clang::api_notes::SingleDeclTableKey> {
-  static inline clang::api_notes::SingleDeclTableKey getEmptyKey() {
-    return clang::api_notes::SingleDeclTableKey();
-  }
-
   static unsigned
   getHashValue(const clang::api_notes::SingleDeclTableKey &value) {
     return value.hashValue();

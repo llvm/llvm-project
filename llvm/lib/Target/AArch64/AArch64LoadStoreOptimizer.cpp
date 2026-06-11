@@ -2879,52 +2879,52 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
   LdStPairFlags Flags;
   MachineBasicBlock::iterator Paired =
       findMatchingInsn(MBBI, Flags, LdStLimit, /* FindNarrowMerge = */ false);
-  if (Paired != E) {
-    // Keeping the iterator straight is a pain, so we let the merge routine tell
-    // us what the next instruction is after it's done mucking about.
-    auto Prev = std::prev(MBBI);
 
-    // Fetch the memoperand of the load/store that is a candidate for
-    // combination.
-    MachineMemOperand *MemOp =
-        MI.memoperands_empty() ? nullptr : MI.memoperands().front();
+  if (Paired == E)
+    return false;
 
-    // If a load/store arrives and ldp/stp-aligned-only feature is opted, check
-    // that the alignment of the source pointer is at least double the alignment
-    // of the type.
-    if ((MI.mayLoad() && Subtarget->hasLdpAlignedOnly()) ||
-        (MI.mayStore() && Subtarget->hasStpAlignedOnly())) {
-      // If there is no size/align information, cancel the transformation.
-      if (!MemOp || !MemOp->getMemoryType().isValid()) {
-        NumFailedAlignmentCheck++;
-        return false;
-      }
+  // Keeping the iterator straight is a pain, so we let the merge routine tell
+  // us what the next instruction is after it's done mucking about.
+  auto Prev = std::prev(MBBI);
 
-      // Get the needed alignments to check them if
-      // ldp-aligned-only/stp-aligned-only features are opted.
-      uint64_t MemAlignment = MemOp->getAlign().value();
-      uint64_t TypeAlignment =
-          Align(MemOp->getSize().getValue().getKnownMinValue()).value();
+  // Fetch the memoperand of the load/store that is a candidate for combination.
+  MachineMemOperand *MemOp =
+      MI.memoperands_empty() ? nullptr : MI.memoperands().front();
 
-      if (MemAlignment < 2 * TypeAlignment) {
-        NumFailedAlignmentCheck++;
-        return false;
-      }
+  // If a load/store arrives and ldp/stp-aligned-only feature is opted, check
+  // that the alignment of the source pointer is at least double the alignment
+  // of the type.
+  if ((MI.mayLoad() && Subtarget->hasLdpAlignedOnly()) ||
+      (MI.mayStore() && Subtarget->hasStpAlignedOnly())) {
+    // If there is no size/align information, cancel the transformation.
+    if (!MemOp || !MemOp->getMemoryType().isValid()) {
+      NumFailedAlignmentCheck++;
+      return false;
     }
 
-    ++NumPairCreated;
-    if (TII->hasUnscaledLdStOffset(MI))
-      ++NumUnscaledPairCreated;
+    // Get the needed alignments to check them if
+    // ldp-aligned-only/stp-aligned-only features are opted.
+    uint64_t MemAlignment = MemOp->getAlign().value();
+    uint64_t TypeAlignment =
+        Align(MemOp->getSize().getValue().getKnownMinValue()).value();
 
-    MBBI = mergePairedInsns(MBBI, Paired, Flags);
-    // Collect liveness info for instructions between Prev and the new position
-    // MBBI.
-    for (auto I = std::next(Prev); I != MBBI; I++)
-      updateDefinedRegisters(*I, DefinedInBB, TRI);
-
-    return true;
+    if (MemAlignment < 2 * TypeAlignment) {
+      NumFailedAlignmentCheck++;
+      return false;
+    }
   }
-  return false;
+
+  ++NumPairCreated;
+  if (TII->hasUnscaledLdStOffset(MI))
+    ++NumUnscaledPairCreated;
+
+  MBBI = mergePairedInsns(MBBI, Paired, Flags);
+  // Collect liveness info for instructions between Prev and the new position
+  // MBBI.
+  for (auto I = std::next(Prev); I != MBBI; I++)
+    updateDefinedRegisters(*I, DefinedInBB, TRI);
+
+  return true;
 }
 
 bool AArch64LoadStoreOpt::tryToMergeLdStUpdate
@@ -3101,7 +3101,7 @@ bool AArch64LoadStoreOpt::tryToReplaceUMOVStore(
   if (!FPRStoreOpc)
     return false;
 
-  if (StoreMI.hasOrderedMemoryRef())
+  if (StoreMI.hasOrderedMemoryRef() || StoreMI.memoperands().size() != 1)
     return false;
 
   MachineBasicBlock *MBB = StoreMI.getParent();
@@ -3141,6 +3141,10 @@ bool AArch64LoadStoreOpt::tryToReplaceUMOVStore(
   if (!UMOVMI)
     return false;
   MCPhysReg VecReg = UMOVMI->getOperand(1).getReg();
+  MCPhysReg FPRReg = TRI->getSubReg(VecReg, SubRegIdx);
+  if ((*StoreMI.memoperands_begin())->getSizeInBits() !=
+      TRI->getRegSizeInBits(*TRI->getMinimalPhysRegClass(FPRReg)))
+    return false;
 
   // Check that no instruction between UMOV and store clobbers the vector
   // register.  Also track whether VecReg is killed anywhere from the UMOV
@@ -3163,7 +3167,6 @@ bool AArch64LoadStoreOpt::tryToReplaceUMOVStore(
   LLVM_DEBUG(dbgs() << "Folding UMOV + store: " << *UMOVMI << "  + "
                     << StoreMI);
 
-  MCPhysReg FPRReg = TRI->getSubReg(VecReg, SubRegIdx);
   auto MIB = BuildMI(*MBB, MBBI, StoreMI.getDebugLoc(), TII->get(FPRStoreOpc))
                  .addReg(FPRReg, getKillRegState(VecRegKilled));
   for (unsigned I = 1, E = StoreMI.getNumExplicitOperands(); I < E; ++I)

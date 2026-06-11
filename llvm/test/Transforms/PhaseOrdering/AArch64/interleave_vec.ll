@@ -6,7 +6,7 @@ target triple = "aarch64"
 
 define void @same_op2(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-LABEL: define void @same_op2(
-; CHECK-SAME: ptr noalias noundef captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], ptr noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noalias nofree noundef captures(none) [[A:%.*]], ptr nofree noundef readonly captures(none) [[B:%.*]], ptr nofree noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -114,7 +114,7 @@ for.end13:                                        ; preds = %for.cond
 
 define void @same_op2_splat(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-LABEL: define void @same_op2_splat(
-; CHECK-SAME: ptr noalias noundef captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], ptr noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias nofree noundef captures(none) [[A:%.*]], ptr nofree noundef readonly captures(none) [[B:%.*]], ptr nofree noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
@@ -218,7 +218,7 @@ for.end11:                                        ; preds = %for.cond
 
 define void @same_op3(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-LABEL: define void @same_op3(
-; CHECK-SAME: ptr noalias noundef captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], ptr noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias nofree noundef captures(none) [[A:%.*]], ptr nofree noundef readonly captures(none) [[B:%.*]], ptr nofree noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -316,7 +316,7 @@ for.end13:                                        ; preds = %for.cond
 
 define void @same_op3_splat(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-LABEL: define void @same_op3_splat(
-; CHECK-SAME: ptr noalias noundef captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], ptr noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias nofree noundef captures(none) [[A:%.*]], ptr nofree noundef readonly captures(none) [[B:%.*]], ptr nofree noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
@@ -411,7 +411,7 @@ for.end11:                                        ; preds = %for.cond
 
 define void @same_op4(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-LABEL: define void @same_op4(
-; CHECK-SAME: ptr noalias noundef captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], ptr noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias nofree noundef captures(none) [[A:%.*]], ptr nofree noundef readonly captures(none) [[B:%.*]], ptr nofree noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -539,7 +539,7 @@ for.end13:                                        ; preds = %for.cond
 
 define void @same_op4_splat(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-LABEL: define void @same_op4_splat(
-; CHECK-SAME: ptr noalias noundef captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], ptr noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias nofree noundef captures(none) [[A:%.*]], ptr nofree noundef readonly captures(none) [[B:%.*]], ptr nofree noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
@@ -658,7 +658,7 @@ for.end11:                                        ; preds = %for.cond
 
 define void @same_op6(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-LABEL: define void @same_op6(
-; CHECK-SAME: ptr noalias noundef captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], ptr noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias nofree noundef captures(none) [[A:%.*]], ptr nofree noundef readonly captures(none) [[B:%.*]], ptr nofree noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND1_PREHEADER:.*]]
 ; CHECK:       [[FOR_COND1_PREHEADER]]:
@@ -765,7 +765,7 @@ for.end13:                                        ; preds = %for.cond
 
 define void @same_op6_splat(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-LABEL: define void @same_op6_splat(
-; CHECK-SAME: ptr noalias noundef captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], ptr noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias nofree noundef captures(none) [[A:%.*]], ptr nofree noundef readonly captures(none) [[B:%.*]], ptr nofree noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
@@ -869,7 +869,7 @@ for.end11:                                        ; preds = %for.cond
 
 define void @same_op8(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-LABEL: define void @same_op8(
-; CHECK-SAME: ptr noalias noundef captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], ptr noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias nofree noundef captures(none) [[A:%.*]], ptr nofree noundef readonly captures(none) [[B:%.*]], ptr nofree noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND1_PREHEADER:.*]]
 ; CHECK:       [[FOR_COND1_PREHEADER]]:
@@ -976,7 +976,7 @@ for.end13:                                        ; preds = %for.cond
 
 define void @same_op8_splat(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-LABEL: define void @same_op8_splat(
-; CHECK-SAME: ptr noalias noundef captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], ptr noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr noalias nofree noundef captures(none) [[A:%.*]], ptr nofree noundef readonly captures(none) [[B:%.*]], ptr nofree noundef readonly captures(none) [[C:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i64 0
@@ -1082,7 +1082,7 @@ for.end11:                                        ; preds = %for.cond
 ;
 define void @saxpy_5(i64 %n, float %a, ptr readonly %x, ptr noalias %y) {
 ; CHECK-LABEL: define void @saxpy_5(
-; CHECK-SAME: i64 [[N:%.*]], float [[A:%.*]], ptr readonly captures(none) [[X:%.*]], ptr noalias captures(none) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: i64 [[N:%.*]], float [[A:%.*]], ptr readonly captures(none) [[X:%.*]], ptr noalias nofree captures(none) [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[LOOP_PREHEADER11:.*]], label %[[EXIT:.*]]
