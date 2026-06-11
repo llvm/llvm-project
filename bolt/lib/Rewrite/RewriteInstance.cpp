@@ -933,6 +933,38 @@ void RewriteInstance::discoverFileObjects() {
 
     return false;
   };
+
+  // read dynamic symbols name and version
+  DenseMap<uint64_t, std::string> DynSymNames;
+  Expected<std::vector<VersionEntry>> SymbolVersionOrErr =
+      InputFile->readDynsymVersions();
+  if (SymbolVersionOrErr && !SymbolVersionOrErr->empty()) {
+    ArrayRef<VersionEntry> SymbolVersions = *SymbolVersionOrErr;
+    for (const SymbolRef &Symbol : InputFile->getDynamicSymbolIterators()) {
+      const SymbolRef::Type SymbolType = cantFail(Symbol.getType());
+      if (SymbolType != SymbolRef::ST_Function)
+        continue;
+
+      const uint64_t SymAddress = cantFail(Symbol.getAddress());
+      if (!isSymbolInMemory(Symbol) || !SymAddress)
+        continue;
+      Expected<StringRef> NameOrError = Symbol.getName();
+      if (!NameOrError) {
+        consumeError(NameOrError.takeError());
+        continue;
+      }
+      StringRef SymbolName = *NameOrError;
+      if (SymbolName.empty())
+        continue;
+      const VersionEntry &Ver =
+          SymbolVersions[Symbol.getRawDataRefImpl().d.b - 1];
+      if (Ver.Name.empty())
+        continue;
+      DynSymNames[SymAddress] =
+          SymbolName.str() + (Ver.IsVerDef ? "@@" : "@") + Ver.Name;
+    }
+  }
+
   for (const SymbolRef &Symbol : InputFile->symbols())
     if (isSymbolInMemory(Symbol)) {
       SymbolInfo SymInfo{cantFail(Symbol.getAddress()), Symbol};
@@ -1034,7 +1066,10 @@ void RewriteInstance::discoverFileObjects() {
     if (SymbolType == SymbolRef::ST_File)
       continue;
 
-    StringRef SymName = cantFail(Symbol.getName(), "cannot get symbol name");
+    StringRef SymName =
+        DynSymNames.find(SymbolAddress) != DynSymNames.end()
+            ? DynSymNames[SymbolAddress]
+            : cantFail(Symbol.getName(), "cannot get symbol name");
     if (SymbolAddress == 0) {
       if (opts::Verbosity >= 1 && SymbolType == SymbolRef::ST_Function)
         BC->errs() << "BOLT-WARNING: function with 0 address seen\n";
