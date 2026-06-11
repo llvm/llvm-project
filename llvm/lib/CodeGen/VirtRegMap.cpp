@@ -712,7 +712,7 @@ void VirtRegRewriter::rewrite() {
                                                           PhysReg, MI);
                 const TargetRegisterClass *RC = MRI->getRegClass(VirtReg);
 
-                // FIXME: Incorrect sub-regsiters should never make it into
+                // FIXME: Incorrect sub-registers should never make it into
                 // LiveOutUndefLanes.
                 LaneBitmask NewLiveOutUndefLanes;
                 for (unsigned Idx = 1, E = TRI->getNumSubRegIndices(); Idx < E;
