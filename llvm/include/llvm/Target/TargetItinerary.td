@@ -89,9 +89,10 @@ def NoItinerary : InstrItinClass;
 // global IssueWidth property, which constrains the number of microops
 // that can issue per cycle.
 //
-// OperandCycles are optional "cycle counts". They specify the cycle after
-// instruction issue the values which correspond to specific operand indices
-// are defined or read. Bypasses are optional "pipeline forwarding paths", if
+// OperandCycles are optional "cycle counts" between 0 and 255. They specify
+// the cycle after instruction issue the values which correspond to specific
+// operand indices are defined or read. Bypasses are optional "pipeline
+// forwarding paths". ProcessorItineraries supports at most eight Bypasses. If
 // a def by an instruction is available on a specific bypass and the use can
 // read from the same bypass, then the operand use latency is reduced by one.
 //
@@ -159,4 +160,3 @@ class ComboFuncData<FuncUnit ComboFunc, list<FuncUnit> funclist> {
 class ComboFuncUnits<list<ComboFuncData> cfd> {
   list<ComboFuncData> CFD = cfd;
 }
-

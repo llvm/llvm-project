@@ -36,6 +36,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -93,7 +94,8 @@ class SubtargetEmitter : TargetFeaturesEmitter {
                                 unsigned &NStages);
   void formItineraryOperandCycleString(const Record *ItinData,
                                        std::string &ItinString,
-                                       unsigned &NOperandCycles);
+                                       unsigned &NOperandCycles,
+                                       int64_t &MaxOperandCycle);
   void formItineraryBypassString(const std::string &Names,
                                  const Record *ItinData,
                                  std::string &ItinString,
@@ -390,7 +392,8 @@ void SubtargetEmitter::formItineraryStageString(const std::string &Name,
 // number of operands that has cycles specified.
 //
 void SubtargetEmitter::formItineraryOperandCycleString(
-    const Record *ItinData, std::string &ItinString, unsigned &NOperandCycles) {
+    const Record *ItinData, std::string &ItinString, unsigned &NOperandCycles,
+    int64_t &MaxOperandCycle) {
   // Get operand cycle list
   std::vector<int64_t> OperandCycleList =
       ItinData->getValueAsListOfInts("OperandCycles");
@@ -398,7 +401,11 @@ void SubtargetEmitter::formItineraryOperandCycleString(
   // For each operand cycle
   NOperandCycles = OperandCycleList.size();
   ListSeparator LS;
-  for (int OCycle : OperandCycleList) {
+  for (int64_t OCycle : OperandCycleList) {
+    if (OCycle < 0 || OCycle > std::numeric_limits<uint8_t>::max())
+      PrintFatalError(ItinData->getLoc(),
+                      "operand cycle must fit in a uint8_t");
+    MaxOperandCycle = std::max(MaxOperandCycle, OCycle);
     // Next operand cycle
     ItinString += LS;
     ItinString += "  " + itostr(OCycle);
@@ -433,10 +440,18 @@ void SubtargetEmitter::emitStageAndOperandCycleData(
   // Multiple processor models may share an itinerary record. Emit it once.
   SmallPtrSet<const Record *, 8> ItinsDefSet;
 
+  unsigned MaxBypasses = 0;
+
   // Emit functional units for all the itineraries.
   for (const CodeGenProcModel &ProcModel : SchedModels.procModels()) {
     if (!ItinsDefSet.insert(ProcModel.ItinsDef).second)
       continue;
+
+    ConstRecVec BPs = ProcModel.ItinsDef->getValueAsListOfDefs("BP");
+    if (BPs.size() > 8)
+      PrintFatalError(ProcModel.ItinsDef->getLoc(),
+                      "at most eight itinerary bypasses are supported");
+    MaxBypasses = std::max(MaxBypasses, static_cast<unsigned>(BPs.size()));
 
     ConstRecVec FUs = ProcModel.ItinsDef->getValueAsListOfDefs("FU");
     if (FUs.empty())
@@ -452,15 +467,14 @@ void SubtargetEmitter::emitStageAndOperandCycleData(
            << Idx << ";\n";
     }
 
-    ConstRecVec BPs = ProcModel.ItinsDef->getValueAsListOfDefs("BP");
     if (BPs.empty())
       continue;
     OS << "\n// Pipeline forwarding paths for itineraries \"" << Name << "\"\n";
     NamespaceEmitter BypassNamespace(OS, (Name + Twine("Bypass")).str());
 
-    OS << "  const unsigned NoBypass = 0;\n";
+    OS << "  const uint8_t NoBypass = 0;\n";
     for (const auto &[Idx, BP] : enumerate(BPs))
-      OS << "  const unsigned " << BP->getName() << " = 1 << " << Idx << ";\n";
+      OS << "  const uint8_t " << BP->getName() << " = 1 << " << Idx << ";\n";
   }
 
   // Begin stages table
@@ -470,18 +484,19 @@ void SubtargetEmitter::emitStageAndOperandCycleData(
 
   // Begin operand cycle table
   std::string OperandCycleTable =
-      "extern const unsigned " + Target + "OperandCycles[] = {\n";
+      "extern const uint8_t " + Target + "OperandCycles[] = {\n";
   OperandCycleTable += "  0, // No itinerary\n";
 
   // Begin pipeline bypass table
   std::string BypassTable =
-      "extern const unsigned " + Target + "ForwardingPaths[] = {\n";
+      "extern const uint8_t " + Target + "ForwardingPaths[] = {\n";
   BypassTable += " 0, // No itinerary\n";
 
   // For each Itinerary across all processors, add a unique entry to the stages,
   // operand cycles, and pipeline bypass tables. Then add the new Itinerary
   // object with computed offsets to the ProcItinLists result.
   unsigned StageCount = 1, OperandCycleCount = 1;
+  int64_t MaxOperandCycle = 0;
   StringMap<unsigned> ItinStageMap, ItinOperandMap;
   for (const CodeGenProcModel &ProcModel : SchedModels.procModels()) {
     // Add process itinerary to the list.
@@ -516,7 +531,7 @@ void SubtargetEmitter::emitStageAndOperandCycleData(
       std::string ItinBypassString;
       if (ItinData) {
         formItineraryOperandCycleString(ItinData, ItinOperandCycleString,
-                                        NOperandCycles);
+                                        NOperandCycles, MaxOperandCycle);
 
         formItineraryBypassString(Name.str(), ItinData, ItinBypassString,
                                   NOperandCycles);
@@ -583,9 +598,22 @@ void SubtargetEmitter::emitStageAndOperandCycleData(
   // Closing operand cycles
   OperandCycleTable += "  0 // End operand cycles\n";
   OperandCycleTable += "};\n";
+  OperandCycleTable += "static_assert(sizeof(" + Target +
+                       "OperandCycles) == " + itostr(OperandCycleCount + 1) +
+                       ");\n";
+  OperandCycleTable += "static_assert(" + itostr(MaxOperandCycle) +
+                       " <= static_cast<uint8_t>(-1));\n";
 
   BypassTable += " 0 // End bypass tables\n";
   BypassTable += "};\n";
+  BypassTable += "static_assert(sizeof(" + Target +
+                 "ForwardingPaths) == " + itostr(OperandCycleCount + 1) +
+                 ");\n";
+  BypassTable += "static_assert(sizeof(" + Target +
+                 "ForwardingPaths) == sizeof(" + Target + "OperandCycles));\n";
+  if (MaxBypasses != 0)
+    BypassTable += "static_assert((1U << " + itostr(MaxBypasses - 1) +
+                   ") <= static_cast<uint8_t>(-1));\n";
 
   // Emit tables.
   OS << StageTable;
@@ -2010,7 +2038,7 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "    const MCWriteProcResEntry *WPR,\n"
      << "    const MCWriteLatencyEntry *WL,\n"
      << "    const MCReadAdvanceEntry *RA, const InstrStage *IS,\n"
-     << "    const unsigned *OC, const unsigned *FP) :\n"
+     << "    const uint8_t *OC, const uint8_t *FP) :\n"
      << "      MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD,\n"
      << "                      WPR, WL, RA, IS, OC, FP) { }\n\n"
      << "  unsigned resolveVariantSchedClass(unsigned SchedClass,\n"
@@ -2202,8 +2230,8 @@ void SubtargetEmitter::emitCtor(raw_ostream &OS, unsigned NumNames,
 
   if (SchedModels.hasItineraries()) {
     OS << "extern const llvm::InstrStage " << Target << "Stages[];\n";
-    OS << "extern const unsigned " << Target << "OperandCycles[];\n";
-    OS << "extern const unsigned " << Target << "ForwardingPaths[];\n";
+    OS << "extern const uint8_t " << Target << "OperandCycles[];\n";
+    OS << "extern const uint8_t " << Target << "ForwardingPaths[];\n";
   }
 
   std::string ClassName = Target + "GenSubtargetInfo";

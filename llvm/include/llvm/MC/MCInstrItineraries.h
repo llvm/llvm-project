@@ -17,6 +17,7 @@
 
 #include "llvm/MC/MCSchedule.h"
 #include <algorithm>
+#include <cstdint>
 #include <optional>
 
 namespace llvm {
@@ -112,16 +113,16 @@ public:
   MCSchedModel SchedModel =
       MCSchedModel::Default;               ///< Basic machine properties.
   const InstrStage *Stages = nullptr;      ///< Array of stages selected
-  const unsigned *OperandCycles = nullptr; ///< Array of operand cycles selected
-  const unsigned *Forwardings = nullptr; ///< Array of pipeline forwarding paths
+  const uint8_t *OperandCycles = nullptr;  ///< Array of operand cycles selected
+  const uint8_t *Forwardings = nullptr; ///< Array of pipeline forwarding paths
   const InstrItinerary *Itineraries =
       nullptr; ///< Array of itineraries selected
 
   InstrItineraryData() = default;
   InstrItineraryData(const MCSchedModel &SM, const InstrStage *S,
-                     const unsigned *OS, const unsigned *F)
-    : SchedModel(SM), Stages(S), OperandCycles(OS), Forwardings(F),
-      Itineraries(SchedModel.InstrItineraries) {}
+                     const uint8_t *OS, const uint8_t *F)
+      : SchedModel(SM), Stages(S), OperandCycles(OS), Forwardings(F),
+        Itineraries(SchedModel.InstrItineraries) {}
 
   /// Returns true if there are no itineraries.
   bool isEmpty() const { return Itineraries == nullptr; }

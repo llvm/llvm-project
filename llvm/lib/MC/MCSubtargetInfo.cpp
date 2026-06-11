@@ -259,7 +259,7 @@ MCSubtargetInfo::MCSubtargetInfo(
     ArrayRef<StringRef> PN, ArrayRef<SubtargetFeatureKV> PF,
     ArrayRef<SubtargetSubTypeKV> PD, const MCWriteProcResEntry *WPR,
     const MCWriteLatencyEntry *WL, const MCReadAdvanceEntry *RA,
-    const InstrStage *IS, const unsigned *OC, const unsigned *FP)
+    const InstrStage *IS, const uint8_t *OC, const uint8_t *FP)
     : TargetTriple(TT), CPU(std::string(C)), TuneCPU(std::string(TC)),
       ProcNames(PN), ProcFeatures(PF), ProcDesc(PD), WriteProcResTable(WPR),
       WriteLatencyTable(WL), ReadAdvanceTable(RA), Stages(IS),
