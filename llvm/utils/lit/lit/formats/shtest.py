@@ -23,7 +23,7 @@ class ShTest(FileBasedTest):
         preamble_commands=[],
         force_execute_external=False,
     ):
-        if not execute_external and not force_execute_external:
+        if execute_external and not force_execute_external:
             raise ValueError(
                 "execute_external=True is deprected as of LLVM-23 and the option will "
                 "be removed in LLVM-24. Please move to using the internal shell "
