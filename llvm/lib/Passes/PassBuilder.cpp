@@ -16,6 +16,7 @@
 
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/Analysis/AliasAnalysisEvaluator.h"
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -2850,157 +2851,159 @@ PassBuilder::parseRegAllocFilter(StringRef FilterName) {
   return std::nullopt;
 }
 
-namespace {
-struct PassNameWithParams {
-  StringLiteral Name;
-  StringLiteral Params;
-};
-} // namespace
-
-LLVM_ATTRIBUTE_NOINLINE static void
-printPassNameList(ArrayRef<StringLiteral> PassNames, raw_ostream &OS) {
-  for (StringRef PassName : PassNames)
+LLVM_ATTRIBUTE_NOINLINE static void printPassNameList(StringTable PassNames,
+                                                      raw_ostream &OS) {
+  for (StringRef PassName : drop_begin(PassNames))
     OS << "  " << PassName << '\n';
 }
 
 LLVM_ATTRIBUTE_NOINLINE static void
-printPassNameList(ArrayRef<PassNameWithParams> PassNames, raw_ostream &OS) {
-  for (const PassNameWithParams &PassName : PassNames)
-    OS << "  " << PassName.Name << "<" << PassName.Params << ">\n";
+printPassNameListWithParams(StringTable PassNames, raw_ostream &OS) {
+  auto I = PassNames.begin();
+  auto End = PassNames.end();
+  ++I;
+  while (I != End) {
+    StringRef Name = *I;
+    ++I;
+    assert(I != End);
+    StringRef Params = *I;
+    ++I;
+    OS << "  " << Name << '<' << Params << ">\n";
+  }
 }
 
 void PassBuilder::printPassNames(raw_ostream &OS) {
   // TODO: print pass descriptions when they are available
 
   OS << "Module passes:\n";
-  static constexpr StringLiteral ModulePassNames[] = {
-#define MODULE_PASS(NAME, CREATE_PASS) NAME,
+  static constexpr char ModulePassNames[] = {"\0"
+#define MODULE_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
   };
-  printPassNameList(ModulePassNames, OS);
+  printPassNameList(StringTable(ModulePassNames), OS);
 
   OS << "Module passes with params:\n";
-  static constexpr PassNameWithParams ModulePassNamesWithParams[] = {
+  static constexpr char ModulePassNamesWithParams[] = {"\0"
 #define MODULE_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)      \
-  {NAME, PARAMS},
+  NAME "\0" PARAMS "\0"
 #include "PassRegistry.def"
   };
-  printPassNameList(ModulePassNamesWithParams, OS);
+  printPassNameListWithParams(StringTable(ModulePassNamesWithParams), OS);
 
   OS << "Module analyses:\n";
-  static constexpr StringLiteral ModuleAnalysisNames[] = {
-#define MODULE_ANALYSIS(NAME, CREATE_PASS) NAME,
+  static constexpr char ModuleAnalysisNames[] = {"\0"
+#define MODULE_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
   };
-  printPassNameList(ModuleAnalysisNames, OS);
+  printPassNameList(StringTable(ModuleAnalysisNames), OS);
 
   OS << "Module alias analyses:\n";
-  static constexpr StringLiteral ModuleAliasAnalysisNames[] = {
-#define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS) NAME,
+  static constexpr char ModuleAliasAnalysisNames[] = {"\0"
+#define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
   };
-  printPassNameList(ModuleAliasAnalysisNames, OS);
+  printPassNameList(StringTable(ModuleAliasAnalysisNames), OS);
 
   OS << "CGSCC passes:\n";
-  static constexpr StringLiteral CGSCCPassNames[] = {
-#define CGSCC_PASS(NAME, CREATE_PASS) NAME,
+  static constexpr char CGSCCPassNames[] = {"\0"
+#define CGSCC_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
   };
-  printPassNameList(CGSCCPassNames, OS);
+  printPassNameList(StringTable(CGSCCPassNames), OS);
 
   OS << "CGSCC passes with params:\n";
-  static constexpr PassNameWithParams CGSCCPassNamesWithParams[] = {
+  static constexpr char CGSCCPassNamesWithParams[] = {"\0"
 #define CGSCC_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)       \
-  {NAME, PARAMS},
+  NAME "\0" PARAMS "\0"
 #include "PassRegistry.def"
   };
-  printPassNameList(CGSCCPassNamesWithParams, OS);
+  printPassNameListWithParams(StringTable(CGSCCPassNamesWithParams), OS);
 
   OS << "CGSCC analyses:\n";
-  static constexpr StringLiteral CGSCCAnalysisNames[] = {
-#define CGSCC_ANALYSIS(NAME, CREATE_PASS) NAME,
+  static constexpr char CGSCCAnalysisNames[] = {"\0"
+#define CGSCC_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
   };
-  printPassNameList(CGSCCAnalysisNames, OS);
+  printPassNameList(StringTable(CGSCCAnalysisNames), OS);
 
   OS << "Function passes:\n";
-  static constexpr StringLiteral FunctionPassNames[] = {
-#define FUNCTION_PASS(NAME, CREATE_PASS) NAME,
+  static constexpr char FunctionPassNames[] = {"\0"
+#define FUNCTION_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
   };
-  printPassNameList(FunctionPassNames, OS);
+  printPassNameList(StringTable(FunctionPassNames), OS);
 
   OS << "Function passes with params:\n";
-  static constexpr PassNameWithParams FunctionPassNamesWithParams[] = {
+  static constexpr char FunctionPassNamesWithParams[] = {"\0"
 #define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)    \
-  {NAME, PARAMS},
+  NAME "\0" PARAMS "\0"
 #include "PassRegistry.def"
   };
-  printPassNameList(FunctionPassNamesWithParams, OS);
+  printPassNameListWithParams(StringTable(FunctionPassNamesWithParams), OS);
 
   OS << "Function analyses:\n";
-  static constexpr StringLiteral FunctionAnalysisNames[] = {
-#define FUNCTION_ANALYSIS(NAME, CREATE_PASS) NAME,
+  static constexpr char FunctionAnalysisNames[] = {"\0"
+#define FUNCTION_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
   };
-  printPassNameList(FunctionAnalysisNames, OS);
+  printPassNameList(StringTable(FunctionAnalysisNames), OS);
 
   OS << "Function alias analyses:\n";
-  static constexpr StringLiteral FunctionAliasAnalysisNames[] = {
-#define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS) NAME,
+  static constexpr char FunctionAliasAnalysisNames[] = {"\0"
+#define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
   };
-  printPassNameList(FunctionAliasAnalysisNames, OS);
+  printPassNameList(StringTable(FunctionAliasAnalysisNames), OS);
 
   OS << "LoopNest passes:\n";
-  static constexpr StringLiteral LoopNestPassNames[] = {
-#define LOOPNEST_PASS(NAME, CREATE_PASS) NAME,
+  static constexpr char LoopNestPassNames[] = {"\0"
+#define LOOPNEST_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
   };
-  printPassNameList(LoopNestPassNames, OS);
+  printPassNameList(StringTable(LoopNestPassNames), OS);
 
   OS << "Loop passes:\n";
-  static constexpr StringLiteral LoopPassNames[] = {
-#define LOOP_PASS(NAME, CREATE_PASS) NAME,
+  static constexpr char LoopPassNames[] = {"\0"
+#define LOOP_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
   };
-  printPassNameList(LoopPassNames, OS);
+  printPassNameList(StringTable(LoopPassNames), OS);
 
   OS << "Loop passes with params:\n";
-  static constexpr PassNameWithParams LoopPassNamesWithParams[] = {
+  static constexpr char LoopPassNamesWithParams[] = {"\0"
 #define LOOP_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)        \
-  {NAME, PARAMS},
+  NAME "\0" PARAMS "\0"
 #include "PassRegistry.def"
   };
-  printPassNameList(LoopPassNamesWithParams, OS);
+  printPassNameListWithParams(StringTable(LoopPassNamesWithParams), OS);
 
   OS << "Loop analyses:\n";
-  static constexpr StringLiteral LoopAnalysisNames[] = {
-#define LOOP_ANALYSIS(NAME, CREATE_PASS) NAME,
+  static constexpr char LoopAnalysisNames[] = {"\0"
+#define LOOP_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "PassRegistry.def"
   };
-  printPassNameList(LoopAnalysisNames, OS);
+  printPassNameList(StringTable(LoopAnalysisNames), OS);
 
   OS << "Machine module passes (WIP):\n";
-  static constexpr StringLiteral MachineModulePassNames[] = {
-#define MACHINE_MODULE_PASS(NAME, CREATE_PASS) NAME,
+  static constexpr char MachineModulePassNames[] = {"\0"
+#define MACHINE_MODULE_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "llvm/Passes/MachinePassRegistry.def"
-      ""};
-  printPassNameList(ArrayRef(MachineModulePassNames).drop_back(), OS);
+  };
+  printPassNameList(StringTable(MachineModulePassNames), OS);
 
   OS << "Machine function passes (WIP):\n";
-  static constexpr StringLiteral MachineFunctionPassNames[] = {
-#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS) NAME,
+  static constexpr char MachineFunctionPassNames[] = {"\0"
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS) NAME "\0"
 #include "llvm/Passes/MachinePassRegistry.def"
   };
-  printPassNameList(MachineFunctionPassNames, OS);
+  printPassNameList(StringTable(MachineFunctionPassNames), OS);
 
   OS << "Machine function analyses (WIP):\n";
-  static constexpr StringLiteral MachineFunctionAnalysisNames[] = {
-#define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS) NAME,
+  static constexpr char MachineFunctionAnalysisNames[] = {"\0"
+#define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS) NAME "\0"
 #include "llvm/Passes/MachinePassRegistry.def"
   };
-  printPassNameList(MachineFunctionAnalysisNames, OS);
+  printPassNameList(StringTable(MachineFunctionAnalysisNames), OS);
 }
 
 void PassBuilder::registerParseTopLevelPipelineCallback(
