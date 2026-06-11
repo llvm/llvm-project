@@ -1865,6 +1865,14 @@ VPCostContext::getOperandInfo(VPValue *V) const {
   return {};
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+VPSlotTracker &VPCostContext::getSlotTracker() {
+  if (!SlotTracker)
+    SlotTracker = std::make_unique<VPSlotTracker>(&Plan);
+  return *SlotTracker;
+}
+#endif
+
 InstructionCost VPCostContext::getScalarizationOverhead(
     Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,
     TTI::VectorInstrContext VIC, bool AlwaysIncludeReplicatingR) {
