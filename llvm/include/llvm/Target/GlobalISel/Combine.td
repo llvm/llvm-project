@@ -2162,7 +2162,7 @@ def SubSmaxSub: GICombineRule<
                     MRI.hasOneNonDBGUse(${max}.getReg()); }]),
    (apply (G_SUB $sub1, 0, $A), 
           (G_SMIN $root, $A, $sub1))>;
-              
+
 // (sub 0, (max X, (sub 0, X))) --> (min X, (sub 0, X))
 def SubUmaxSub: GICombineRule<
    (defs root:$root),
