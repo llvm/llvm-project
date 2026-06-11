@@ -30,14 +30,14 @@ namespace LIBC_NAMESPACE_DECL {
 /// Configuration for TLSFFreeStore.
 template <size_t UNIT_SIZE_VAL, size_t STEP_SIZE_BITS_VAL,
           size_t NUM_STEP_BITS_VAL, size_t NUM_TABLE_ENTRIES_VAL,
-          bool USE_TRIE_FOR_LARGE_FREELIST_VAL = false>
+          bool USE_TRIE_FOR_OVERFLOW_BIN_VAL = false>
 struct TLSFFreeStoreConfig {
   static constexpr size_t UNIT_SIZE = UNIT_SIZE_VAL;
   static constexpr size_t STEP_SIZE_BITS = STEP_SIZE_BITS_VAL;
   static constexpr size_t NUM_STEP_BITS = NUM_STEP_BITS_VAL;
   static constexpr size_t NUM_TABLE_ENTRIES = NUM_TABLE_ENTRIES_VAL;
-  static constexpr bool USE_TRIE_FOR_LARGE_FREELIST =
-      USE_TRIE_FOR_LARGE_FREELIST_VAL;
+  static constexpr bool USE_TRIE_FOR_OVERFLOW_BIN =
+      USE_TRIE_FOR_OVERFLOW_BIN_VAL;
 };
 
 // A two-level segregated fit store for free blocks.
@@ -108,7 +108,9 @@ protected:
       cpp::numeric_limits<uintptr_t>::digits;
   static constexpr size_t TOTAL_BITS =
       CONFIG::NUM_TABLE_ENTRIES * BITS_PER_ENTRY;
-  static constexpr bool USE_TRIE = CONFIG::USE_TRIE_FOR_LARGE_FREELIST;
+  static constexpr bool USE_TRIE = CONFIG::USE_TRIE_FOR_OVERFLOW_BIN;
+  static constexpr size_t OVERFLOW_WIDTH =
+      size_t(1) << (cpp::numeric_limits<size_t>::digits - 2);
 
 public:
   static constexpr size_t MIN_OUTER_SIZE = align_up(
@@ -147,10 +149,9 @@ protected:
   LIBC_INLINE bool get_bit(size_t bit_index) const;
   LIBC_INLINE size_t find_first_bit_set_after(size_t bit_index) const;
   LIBC_INLINE BlockRef remove_first_fit_in_list(size_t index, size_t size);
-  LIBC_INLINE static constexpr FreeTrie::SizeRange index_to_range(size_t index);
-  LIBC_INLINE FreeTrie get_trie(size_t index);
-  LIBC_INLINE BlockRef find_and_remove_fit_in_trie(size_t index, size_t size);
-  LIBC_INLINE BlockRef pop_min_in_trie(size_t index);
+  LIBC_INLINE FreeTrie get_trie();
+  LIBC_INLINE BlockRef find_and_remove_fit_in_trie(size_t size);
+  LIBC_INLINE BlockRef pop_min_in_trie();
 };
 
 template <typename CONFIG>
@@ -213,56 +214,33 @@ TLSFFreeStoreImpl<CONFIG>::find_first_bit_set_after(size_t bit_index) const {
 }
 
 template <typename CONFIG>
-LIBC_INLINE constexpr FreeTrie::SizeRange
-TLSFFreeStoreImpl<CONFIG>::index_to_range(size_t index) {
-  LIBC_ASSERT(index >= EXP_BASE && "only call for large lists");
-  size_t local_index = index - EXP_BASE;
-  size_t exp_index = local_index >> CONFIG::NUM_STEP_BITS;
-  size_t linear_index = local_index & (NUM_STEPS - 1);
-
-  size_t row_base = (EXP_BASE << exp_index) << UNIT_SIZE_LOG2;
-  size_t step_size = (STEP_SIZE << exp_index) << UNIT_SIZE_LOG2;
-  size_t min_size = row_base + linear_index * step_size;
-
-  if (index == TOTAL_BITS - 1) {
-    constexpr size_t width = size_t(1)
-                             << (cpp::numeric_limits<size_t>::digits - 2);
-    LIBC_ASSERT(min_size < width &&
-                "min_size too large for overflow bin width");
-    return FreeTrie::SizeRange(min_size, width);
-  }
-
-  return FreeTrie::SizeRange(min_size, step_size);
+LIBC_INLINE FreeTrie TLSFFreeStoreImpl<CONFIG>::get_trie() {
+  return FreeTrie(free_lists[TOTAL_BITS - 1].trie_root,
+                  FreeTrie::SizeRange(0, OVERFLOW_WIDTH));
 }
 
 template <typename CONFIG>
-LIBC_INLINE FreeTrie TLSFFreeStoreImpl<CONFIG>::get_trie(size_t index) {
-  LIBC_ASSERT(index >= EXP_BASE && "only call for large lists");
-  return FreeTrie(free_lists[index].trie_root, index_to_range(index));
-}
-
-template <typename CONFIG>
-LIBC_INLINE BlockRef TLSFFreeStoreImpl<CONFIG>::find_and_remove_fit_in_trie(
-    size_t index, size_t size) {
-  FreeTrie trie = get_trie(index);
+LIBC_INLINE BlockRef
+TLSFFreeStoreImpl<CONFIG>::find_and_remove_fit_in_trie(size_t size) {
+  FreeTrie trie = get_trie();
   if (FreeTrie::Node *best_fit = trie.find_best_fit(size)) {
     BlockRef block = best_fit->block();
     trie.remove(best_fit);
     if (trie.empty())
-      clear_bit(index);
+      clear_bit(TOTAL_BITS - 1);
     return block;
   }
   return BlockRef();
 }
 
 template <typename CONFIG>
-LIBC_INLINE BlockRef TLSFFreeStoreImpl<CONFIG>::pop_min_in_trie(size_t index) {
-  FreeTrie trie = get_trie(index);
+LIBC_INLINE BlockRef TLSFFreeStoreImpl<CONFIG>::pop_min_in_trie() {
+  FreeTrie trie = get_trie();
   FreeTrie::Node *min_node = trie.pop_min();
   LIBC_ASSERT(min_node && "bit was set but trie is empty");
   BlockRef block = min_node->block();
   if (trie.empty())
-    clear_bit(index);
+    clear_bit(TOTAL_BITS - 1);
   return block;
 }
 
@@ -273,8 +251,8 @@ LIBC_INLINE void TLSFFreeStoreImpl<CONFIG>::insert(BlockRef block) {
   size_t bit_index = size_to_bit_index(block.inner_size());
 
   if constexpr (USE_TRIE)
-    if (bit_index > EXP_BASE) {
-      get_trie(bit_index).push(block);
+    if (bit_index == TOTAL_BITS - 1) {
+      get_trie().push(block);
       set_bit(bit_index);
       return;
     }
@@ -290,8 +268,8 @@ LIBC_INLINE void TLSFFreeStoreImpl<CONFIG>::remove(BlockRef block) {
   size_t bit_index = size_to_bit_index(block.inner_size());
 
   if constexpr (USE_TRIE)
-    if (bit_index > EXP_BASE) {
-      FreeTrie trie = get_trie(bit_index);
+    if (bit_index == TOTAL_BITS - 1) {
+      FreeTrie trie = get_trie();
       trie.remove(reinterpret_cast<FreeTrie::Node *>(block.usable_space()));
       if (trie.empty())
         clear_bit(bit_index);
@@ -332,7 +310,7 @@ TLSFFreeStoreImpl<CONFIG>::find_and_remove_fit(size_t size) {
 
   if (LIBC_UNLIKELY(bit_index >= TOTAL_BITS - 1)) {
     if constexpr (USE_TRIE)
-      return find_and_remove_fit_in_trie(TOTAL_BITS - 1, size);
+      return find_and_remove_fit_in_trie(size);
     else
       return remove_first_fit_in_list(TOTAL_BITS - 1, size);
   }
@@ -340,9 +318,10 @@ TLSFFreeStoreImpl<CONFIG>::find_and_remove_fit(size_t size) {
   // 1. Try oversized bins (guaranteed fit, but larger).
   size_t oversized_bit = find_first_bit_set_after(bit_index);
   if (LIBC_LIKELY(oversized_bit < TOTAL_BITS)) {
-    if constexpr (USE_TRIE)
-      if (oversized_bit > EXP_BASE)
-        return pop_min_in_trie(oversized_bit);
+    if constexpr (USE_TRIE) {
+      if (oversized_bit == TOTAL_BITS - 1)
+        return pop_min_in_trie();
+    }
 
     BlockRef block = free_lists[oversized_bit].list.front();
     free_lists[oversized_bit].list.pop();
@@ -353,12 +332,7 @@ TLSFFreeStoreImpl<CONFIG>::find_and_remove_fit(size_t size) {
 
   // 2. Try exact fit (fallback).
   if (get_bit(bit_index)) {
-    if constexpr (USE_TRIE) {
-      if (bit_index > EXP_BASE)
-        return find_and_remove_fit_in_trie(bit_index, size);
-      else if (BlockRef block = remove_first_fit_in_list(bit_index, size))
-        return block;
-    } else if (BlockRef block = remove_first_fit_in_list(bit_index, size))
+    if (BlockRef block = remove_first_fit_in_list(bit_index, size))
       return block;
   }
 
@@ -370,13 +344,13 @@ template <size_t UNIT_SIZE, size_t STEP_SIZE_BITS, size_t NUM_STEP_BITS,
 using TLSFFreeStore = TLSFFreeStoreImpl<TLSFFreeStoreConfig<
     UNIT_SIZE, STEP_SIZE_BITS, NUM_STEP_BITS, NUM_TABLE_ENTRIES, USE_TRIE>>;
 
-#ifndef LIBC_COPT_USE_TRIE_FOR_LARGE_FREELIST
-#define LIBC_COPT_USE_TRIE_FOR_LARGE_FREELIST false
+#ifndef LIBC_COPT_USE_TRIE_FOR_OVERFLOW_BIN
+#define LIBC_COPT_USE_TRIE_FOR_OVERFLOW_BIN false
 #endif
 
 using FreeStore =
     TLSFFreeStore<BlockRef::MIN_ALIGN, 3, 2, (sizeof(uintptr_t) == 8 ? 3 : 6),
-                  LIBC_COPT_USE_TRIE_FOR_LARGE_FREELIST>;
+                  LIBC_COPT_USE_TRIE_FOR_OVERFLOW_BIN>;
 
 } // namespace LIBC_NAMESPACE_DECL
 
