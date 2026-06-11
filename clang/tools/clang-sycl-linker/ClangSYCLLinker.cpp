@@ -537,7 +537,7 @@ struct LinkResult {
 /// Link all resolved input bitcode images into one module. All resolved inputs
 /// are guaranteed to have compatible target triples (incompatible archive
 /// members are filtered during archive resolution). Triple conflicts between
-/// regular (non-archive) inputs are hard errors caught during resolution.
+/// regular (non-archive) inputs are hard errors caught before running linkInModule.
 static Expected<LinkResult>
 linkInputs(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
            const llvm::Triple &TargetTriple, StringRef TripleSource,
