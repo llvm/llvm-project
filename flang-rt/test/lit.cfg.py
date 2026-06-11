@@ -117,3 +117,8 @@ if config.flang_rt_experimental_offload_support == "CUDA":
 
 if config.flang_rt_fortran_modules:
     config.available_features.add("fortran-modules")
+
+# Some tools are set to 32-bit mode by default on AIX. Set the environment variable
+# OBJECT_MODE to "any" to handle both 32-bit and 64-bit modes.
+if "system-aix" in config.available_features:
+    config.substitutions.append(("llvm-nm", "env OBJECT_MODE=any llvm-nm"))
