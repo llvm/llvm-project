@@ -647,7 +647,12 @@ void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
   Value *DynCGroupMemFallbackFlag =
       Builder.getInt64(static_cast<uint64_t>(KernelArgs.DynCGroupMemFallback));
   DynCGroupMemFallbackFlag = Builder.CreateShl(DynCGroupMemFallbackFlag, 2);
+
+  Value *StrictFlag = Builder.getInt64(KernelArgs.StrictBlocksAndThreads);
+  StrictFlag = Builder.CreateShl(StrictFlag, 6);
+
   Value *Flags = Builder.CreateOr(HasNoWaitFlag, DynCGroupMemFallbackFlag);
+  Flags = Builder.CreateOr(Flags, StrictFlag);
 
   assert(!KernelArgs.NumTeams.empty() && !KernelArgs.NumThreads.empty());
 
@@ -2387,9 +2392,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   Value *TaskDupFn = *TaskDupFnOrErr;
 
   OI->PostOutlineCB = [this, Ident, LBVal, UBVal, StepVal, Untied,
-                       TaskloopAllocaBB, CLI, Loc, TaskDupFn, ToBeDeleted,
-                       IfCond, GrainSize, NoGroup, Sched, FakeLB, FakeUB,
-                       FakeStep, FakeSharedsTy, Final, Mergeable, Priority,
+                       TaskloopAllocaBB, CLI, TaskDupFn, ToBeDeleted, IfCond,
+                       GrainSize, NoGroup, Sched, FakeLB, FakeUB, FakeStep,
+                       FakeSharedsTy, Final, Mergeable, Priority,
                        NumOfCollapseLoops](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.hasOneUse() &&
@@ -9783,7 +9788,7 @@ static void emitTargetCall(
 
     KArgs = OpenMPIRBuilder::TargetKernelArgs(
         NumTargetItems, RTArgs, TripCount, NumTeamsC, NumThreadsC, DynCGroupMem,
-        HasNoWait, DynCGroupMemFallback);
+        HasNoWait, /*StrictBlocksAndThreads=*/false, DynCGroupMemFallback);
 
     // Assume no error was returned because TaskBodyCB and
     // EmitTargetCallFallbackCB don't produce any.
@@ -10918,6 +10923,21 @@ Value *OpenMPIRBuilder::emitRMWOpAsInstruction(Value *Src1, Value *Src2,
   llvm_unreachable("Unsupported atomic update operation");
 }
 
+static AtomicOrdering TransformReleaseAcquireRelease(AtomicOrdering AO) {
+  // Loads cannot use Release or AcquireRelease ordering. This load is
+  // just the initial value for the cmpxchg loop; the cmpxchg itself
+  // retains the original ordering.
+  AtomicOrdering LoadAO = AO;
+
+  if (AO == AtomicOrdering::Release) {
+    LoadAO = AtomicOrdering::Monotonic;
+  } else if (AO == AtomicOrdering::AcquireRelease) {
+    LoadAO = AtomicOrdering::Acquire;
+  }
+
+  return LoadAO;
+}
+
 Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
     InsertPointTy AllocaIP, Value *X, Type *XElemTy, Value *Expr,
     AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
@@ -10968,7 +10988,8 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
   } else if (XElemTy->isStructTy()) {
     LoadInst *OldVal =
         Builder.CreateLoad(XElemTy, X, X->getName() + ".atomic.load");
-    OldVal->setAtomic(AO);
+    AtomicOrdering LoadAO = TransformReleaseAcquireRelease(AO);
+    OldVal->setAtomic(LoadAO);
     const DataLayout &LoadDL = OldVal->getModule()->getDataLayout();
     unsigned LoadSize = LoadDL.getTypeStoreSize(XElemTy);
 
@@ -11019,7 +11040,8 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
         IntegerType::get(M.getContext(), XElemTy->getScalarSizeInBits());
     LoadInst *OldVal =
         Builder.CreateLoad(IntCastTy, X, X->getName() + ".atomic.load");
-    OldVal->setAtomic(AO);
+    AtomicOrdering LoadAO = TransformReleaseAcquireRelease(AO);
+    OldVal->setAtomic(LoadAO);
     // CurBB
     // |     /---\
     // ContBB    |
@@ -11124,18 +11146,18 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
     AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
     omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-    bool IsFailOnly) {
+    bool IsFailOnly, bool IsWeak) {
 
   AtomicOrdering Failure = AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
   return createAtomicCompare(Loc, X, V, R, E, D, AO, Op, IsXBinopExpr,
-                             IsPostfixUpdate, IsFailOnly, Failure);
+                             IsPostfixUpdate, IsFailOnly, Failure, IsWeak);
 }
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
     AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
     omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-    bool IsFailOnly, AtomicOrdering Failure) {
+    bool IsFailOnly, AtomicOrdering Failure, bool IsWeak) {
 
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -11240,6 +11262,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
       Builder.SetInsertPoint(ZeroBB);
       AtomicCmpXchgInst *ResZero = Builder.CreateAtomicCmpXchg(
           X.Var, XCurr, DBCast, MaybeAlign(), AO, Failure);
+      ResZero->setWeak(IsWeak);
       Value *OldZero = Builder.CreateExtractValue(ResZero, /*Idxs=*/0);
       Value *OkZero = Builder.CreateExtractValue(ResZero, /*Idxs=*/1);
       Builder.CreateBr(ExitBB);
@@ -11248,6 +11271,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
       Builder.SetInsertPoint(NormalBB);
       AtomicCmpXchgInst *ResNormal = Builder.CreateAtomicCmpXchg(
           X.Var, EBCast, DBCast, MaybeAlign(), AO, Failure);
+      ResNormal->setWeak(IsWeak);
       Value *OldNormal = Builder.CreateExtractValue(ResNormal, /*Idxs=*/0);
       Value *OkNormal = Builder.CreateExtractValue(ResNormal, /*Idxs=*/1);
       Builder.CreateBr(ExitBB);
@@ -11288,6 +11312,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
         Result =
             Builder.CreateAtomicCmpXchg(X.Var, E, D, MaybeAlign(), AO, Failure);
       }
+      Result->setWeak(IsWeak);
 
       if (V.Var) {
         OldValue = Builder.CreateExtractValue(Result, /*Idxs=*/0);
@@ -11769,12 +11794,13 @@ std::unique_ptr<CodeExtractor> DeviceSharedMemOutlineInfo::createCodeExtractor(
 
 void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
                                          uint64_t Size, int32_t Flags,
-                                         GlobalValue::LinkageTypes,
+                                         GlobalValue::LinkageTypes Linkage,
                                          StringRef Name) {
   if (!Config.isGPU()) {
     llvm::offloading::emitOffloadingEntry(
         M, object::OffloadKind::OFK_OpenMP, ID,
-        Name.empty() ? Addr->getName() : Name, Size, Flags, /*Data=*/0);
+        Name.empty() ? Addr->getName() : Name, Size, Flags, /*Data=*/0,
+        /*AuxAddr=*/nullptr, Linkage);
     return;
   }
   // TODO: Add support for global variables on the device after declare target
@@ -11885,7 +11911,7 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
       }
       createOffloadEntry(CE->getID(), CE->getAddress(),
                          /*Size=*/0, CE->getFlags(),
-                         GlobalValue::WeakAnyLinkage);
+                         GlobalValue::ExternalLinkage);
     } else if (const auto *CE = dyn_cast<
                    OffloadEntriesInfoManager::OffloadEntryInfoDeviceGlobalVar>(
                    E.first)) {

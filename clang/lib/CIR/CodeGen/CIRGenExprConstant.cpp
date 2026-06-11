@@ -1439,10 +1439,48 @@ ConstantLValue ConstantLValueEmitter::VisitConstantExpr(const ConstantExpr *e) {
   return {};
 }
 
+static cir::GlobalViewAttr
+tryEmitGlobalCompoundLiteral(ConstantEmitter &emitter,
+                             const CompoundLiteralExpr *e) {
+  CIRGenModule &cgm = emitter.cgm;
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  CharUnits align = cgm.getASTContext().getTypeAlignInChars(e->getType());
+
+  if (cir::GlobalOp addr = cgm.getAddrOfConstantCompoundLiteralIfEmitted(e))
+    return builder.getGlobalViewAttr(addr);
+
+  assert(!cir::MissingFeatures::addressSpace());
+  mlir::Attribute c =
+      emitter.tryEmitForInitializer(e->getInitializer(), e->getType());
+  if (!c) {
+    assert(!e->isFileScope() &&
+           "file-scope compound literal did not have constant initializer!");
+    return {};
+  }
+
+  auto typedInit = mlir::cast<mlir::TypedAttr>(c);
+  bool isConstant = e->getType().isConstantStorage(cgm.getASTContext(),
+                                                   /*ExcludeCtor=*/true,
+                                                   /*ExcludeDtor=*/false);
+
+  std::string name = cgm.getUniqueGlobalName(".compoundliteral");
+  mlir::Location loc = cgm.getLoc(e->getSourceRange());
+  cir::GlobalOp gv =
+      cgm.createGlobalOp(loc, name, typedInit.getType(), isConstant);
+  gv.setLinkage(cir::GlobalLinkageKind::InternalLinkage);
+  gv.setAlignment(align.getAsAlign().value());
+  CIRGenModule::setInitializer(gv, c);
+
+  emitter.finalize(gv);
+  cgm.setAddrOfConstantCompoundLiteral(e, gv);
+  return builder.getGlobalViewAttr(gv);
+}
+
 ConstantLValue
 ConstantLValueEmitter::VisitCompoundLiteralExpr(const CompoundLiteralExpr *e) {
-  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: compound literal");
-  return {};
+  ConstantEmitter compoundLiteralEmitter(cgm, emitter.cgf);
+  compoundLiteralEmitter.setInConstantContext(emitter.isInConstantContext());
+  return tryEmitGlobalCompoundLiteral(compoundLiteralEmitter, e);
 }
 
 ConstantLValue
@@ -1516,6 +1554,12 @@ ConstantLValue ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
 mlir::Attribute ConstantEmitter::tryEmitForInitializer(const VarDecl &d) {
   initializeNonAbstract();
   return markIfFailed(tryEmitPrivateForVarInit(d));
+}
+
+mlir::Attribute ConstantEmitter::tryEmitForInitializer(const Expr *e,
+                                                       QualType destType) {
+  initializeNonAbstract();
+  return markIfFailed(tryEmitPrivateForMemory(e, destType));
 }
 
 mlir::Attribute ConstantEmitter::emitForInitializer(const APValue &value,

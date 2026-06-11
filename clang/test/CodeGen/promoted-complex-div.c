@@ -89,7 +89,7 @@ _Complex double divf(_Complex double a, _Complex double b) {
 typedef double a;
 _Complex double *b;
 // CHECK-LABEL: define dso_local void @DivideByComplexZero
-void DivideByComplexZero() {
+void DivideByComplexZero(_Complex double p) {
   // CHECK: fpext double {{.*}} to x86_fp80
   // CHECK: fpext double {{.*}} to x86_fp80
   // CHECK: fmul x86_fp80
@@ -108,6 +108,9 @@ void DivideByComplexZero() {
   // NOX87-NEXT: fcmp ugt double {{.*}}, {{.*}}
   // NOX87-NEXT: br i1 {{.*}}, label
   // NOX87: abs_rhsr_greater_or_equal_abs_rhsi:
+  // NOX87-NEXT: fdiv double
+  // NOX87-NEXT: fmul double
+  // NOX87-NEXT: fadd double
   // NOX87-NEXT: fmul double
   // NOX87-NEXT: fadd double
   // NOX87-NEXT: fdiv double
@@ -116,6 +119,9 @@ void DivideByComplexZero() {
   // NOX87-NEXT: fdiv double
   // NOX87-NEXT: br label {{.*}}
   // NOX87: abs_rhsr_less_than_abs_rhsi:
+  // NOX87-NEXT: fdiv double
+  // NOX87-NEXT: fmul double
+  // NOX87-NEXT: fadd double
   // NOX87-NEXT: fmul double
   // NOX87-NEXT: fadd double
   // NOX87-NEXT: fdiv double
@@ -131,5 +137,5 @@ void DivideByComplexZero() {
   // NOX87-NEXT: store double
   // NOX87-NEXT: store double
 
-  *b /= 1.0iF * (a)0;
+  *b /= p * (a)0;
 }

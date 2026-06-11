@@ -3900,6 +3900,11 @@ static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
     if (!ICmpDecompose.has_value())
       return std::nullopt;
 
+    // decomposeBitTest may provide a scalar bit test for a vector select.
+    // Ensure the types match.
+    if (ICmpDecompose->X->getType() != V->getType())
+      return std::nullopt;
+
     assert(ICmpInst::isEquality(ICmpDecompose->Pred) &&
            ICmpDecompose->C.isZero());
 
@@ -3909,8 +3914,7 @@ static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
     if (!EqZero->isZero() || NeZero->isZero())
       return std::nullopt;
 
-    if (!ICmpDecompose->Mask.isPowerOf2() || ICmpDecompose->Mask.isZero() ||
-        NeZero->getBitWidth() != ICmpDecompose->Mask.getBitWidth())
+    if (!ICmpDecompose->Mask.isPowerOf2() || ICmpDecompose->Mask.isZero())
       return std::nullopt;
 
     if (!NeZero->urem(ICmpDecompose->Mask).isZero())

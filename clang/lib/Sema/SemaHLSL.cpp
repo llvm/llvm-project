@@ -525,6 +525,17 @@ static const Type *createHostLayoutType(Sema &S, const Type *Ty) {
   return Ty;
 }
 
+// Returns the type to use for a host layout struct field. For most types this
+// is the unqualified desugared type. Matrix types, however, retain their sugar
+// so that the row_major/column_major orientation (carried as an AttributedType)
+// is preserved; the orientation determines the in-memory cbuffer layout.
+static const Type *getHostLayoutFieldType(QualType QT) {
+  const Type *Desugared = QT->getUnqualifiedDesugaredType();
+  if (Desugared->isConstantMatrixType())
+    return QT.getTypePtr();
+  return Desugared;
+}
+
 // Creates a field declaration of given name and type for HLSL buffer layout
 // struct. Returns nullptr if the type cannot be use in HLSL Buffer layout.
 static FieldDecl *createFieldForHostLayoutStruct(Sema &S, const Type *Ty,
@@ -597,7 +608,7 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S,
 
   // filter struct fields
   for (const FieldDecl *FD : StructDecl->fields()) {
-    const Type *Ty = FD->getType()->getUnqualifiedDesugaredType();
+    const Type *Ty = getHostLayoutFieldType(FD->getType());
     if (FieldDecl *NewFD =
             createFieldForHostLayoutStruct(S, Ty, FD->getIdentifier(), LS))
       LS->addDecl(NewFD);
@@ -635,7 +646,7 @@ static void createHostLayoutStructForBuffer(Sema &S, HLSLBufferDecl *BufDecl) {
     if (!VD || VD->getStorageClass() == SC_Static ||
         VD->getType().getAddressSpace() == LangAS::hlsl_groupshared)
       continue;
-    const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
+    const Type *Ty = getHostLayoutFieldType(VD->getType());
 
     FieldDecl *FD =
         createFieldForHostLayoutStruct(S, Ty, VD->getIdentifier(), LS);
@@ -2704,60 +2715,82 @@ static bool isMatrixOrArrayOfMatrix(const ASTContext &Ctx, QualType QT) {
   return Ty->isDependentType() || Ty->isConstantMatrixType();
 }
 
-static bool diagnoseMatrixLayoutOnNonMatrix(Sema &SemaRef, Decl *D,
-                                            SourceLocation Loc,
-                                            const IdentifierInfo *AttrName) {
-  QualType Ty;
-  if (auto *VD = dyn_cast<ValueDecl>(D))
-    Ty = VD->getType();
-  else if (auto *TD = dyn_cast<TypedefNameDecl>(D))
-    Ty = TD->getUnderlyingType();
-
-  if (Ty.isNull() || Ty->isDependentType())
-    return false;
-
-  // For functions, the qualifier can apply to the return type or any parameter.
-  if (const auto *FPT = Ty->getAs<FunctionProtoType>()) {
-    if (isMatrixOrArrayOfMatrix(SemaRef.getASTContext(), FPT->getReturnType()))
-      return false;
-    SemaRef.Diag(Loc, diag::err_hlsl_matrix_layout_non_matrix) << AttrName;
-    return true;
+/// Walks the existing AttributedType sugar of \p T looking for a previously
+/// applied HLSLRowMajor/HLSLColumnMajor marker. If one is found, populates
+/// \p ExistingKind with its attr::Kind and returns true.
+static bool findExistingMatrixLayoutMarker(QualType T,
+                                           attr::Kind &ExistingKind) {
+  QualType Cur = T;
+  while (const auto *AT = Cur->getAs<AttributedType>()) {
+    attr::Kind K = AT->getAttrKind();
+    if (K == attr::HLSLRowMajor || K == attr::HLSLColumnMajor) {
+      ExistingKind = K;
+      return true;
+    }
+    Cur = AT->getModifiedType();
   }
-
-  if (isMatrixOrArrayOfMatrix(SemaRef.getASTContext(), Ty))
-    return false;
-
-  SemaRef.Diag(Loc, diag::err_hlsl_matrix_layout_non_matrix) << AttrName;
-  return true;
+  return false;
 }
 
-void SemaHLSL::handleMatrixLayoutAttr(Decl *D, const ParsedAttr &AL) {
-  // row_major and column_major are only valid on matrix types.
-  if (diagnoseMatrixLayoutOnNonMatrix(SemaRef, D, AL.getLoc(),
-                                      AL.getAttrName()))
-    return;
+Attr *SemaHLSL::buildMatrixLayoutTypeAttr(QualType T, const ParsedAttr &AL) {
+  if (T.isNull())
+    return nullptr;
 
-  // Check for conflicting or duplicate matrix layout attributes.
-  if (const auto *Existing = D->getAttr<HLSLMatrixLayoutAttr>()) {
-    if (Existing->getSemanticSpelling() != AL.getSemanticSpelling()) {
-      Diag(AL.getLoc(), diag::err_hlsl_matrix_layout_conflict)
-          << AL.getAttrName() << Existing->getAttrName();
-      Diag(Existing->getLoc(), diag::note_conflicting_attribute);
-    } else {
+  ASTContext &Ctx = getASTContext();
+  attr::Kind AttrK = AL.getKind() == ParsedAttr::AT_HLSLRowMajor
+                         ? attr::HLSLRowMajor
+                         : attr::HLSLColumnMajor;
+
+  // For non-dependent types, the operand must be a matrix (or array of
+  // matrices).
+  if (!T->isDependentType() && !isMatrixOrArrayOfMatrix(Ctx, T)) {
+    Diag(AL.getLoc(), diag::err_hlsl_matrix_layout_non_matrix)
+        << AL.getAttrName();
+    AL.setInvalid();
+    return nullptr;
+  }
+
+  // Conflict / duplicate detection by walking existing sugar.
+  attr::Kind ExistingKind;
+  if (findExistingMatrixLayoutMarker(T, ExistingKind)) {
+    if (ExistingKind == AttrK) {
       Diag(AL.getLoc(), diag::warn_duplicate_attribute_exact)
           << AL.getAttrName();
-      Diag(Existing->getLoc(), diag::note_previous_attribute);
+      Diag(AL.getLoc(), diag::note_previous_attribute);
+      return nullptr;
     }
-    return;
+    IdentifierInfo *ExistingII = &Ctx.Idents.get(
+        ExistingKind == attr::HLSLRowMajor ? "row_major" : "column_major");
+    Diag(AL.getLoc(), diag::err_hlsl_matrix_layout_conflict)
+        << AL.getAttrName() << ExistingII;
+    Diag(AL.getLoc(), diag::note_conflicting_attribute);
+    AL.setInvalid();
+    return nullptr;
   }
 
-  D->addAttr(::new (getASTContext()) HLSLMatrixLayoutAttr(getASTContext(), AL));
+  if (AttrK == attr::HLSLRowMajor)
+    return ::new (Ctx) HLSLRowMajorAttr(Ctx, AL);
+  return ::new (Ctx) HLSLColumnMajorAttr(Ctx, AL);
 }
 
-bool SemaHLSL::diagnoseInstantiatedMatrixLayoutAttr(
-    Decl *D, const HLSLMatrixLayoutAttr *Attr) {
-  return diagnoseMatrixLayoutOnNonMatrix(SemaRef, D, Attr->getLoc(),
-                                         Attr->getAttrName());
+// Re-validates an HLSL `row_major` / `column_major` attribute after template
+// substitution. The parse-time check in `buildMatrixLayoutTypeAttr` is skipped
+// for dependent types; `TransformAttributedType` calls this once the type is
+// concrete. Returns `true` (and emits a diagnostic) if the substituted type is
+// not a matrix or array of matrices, signaling the caller to abort the
+// transform.
+bool SemaHLSL::diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
+                                                 SourceLocation Loc) {
+  if (K != attr::HLSLRowMajor && K != attr::HLSLColumnMajor)
+    return false;
+  if (T.isNull() || T->isDependentType())
+    return false;
+  if (isMatrixOrArrayOfMatrix(getASTContext(), T))
+    return false;
+  IdentifierInfo *II = &getASTContext().Idents.get(
+      K == attr::HLSLRowMajor ? "row_major" : "column_major");
+  Diag(Loc, diag::err_hlsl_matrix_layout_non_matrix) << II;
+  return true;
 }
 
 namespace {
@@ -3333,6 +3366,20 @@ static bool CheckModifiableLValue(Sema *S, CallExpr *TheCall,
       Expr::MLV_Valid)
     return false;
   S->Diag(OrigLoc, diag::error_hlsl_inout_lvalue) << Arg << 0;
+  return true;
+}
+
+// Verifies that the argument at `ArgIndex` of `TheCall` refers to memory in
+// one of `AllowedSpaces`. Intended for HLSL builtins (e.g. atomics).
+static bool CheckArgAddrSpaceOneOf(Sema *S, CallExpr *TheCall,
+                                   unsigned ArgIndex,
+                                   ArrayRef<LangAS> AllowedSpaces) {
+  Expr *Arg = TheCall->getArg(ArgIndex);
+  QualType LValueTy = Arg->IgnoreCasts()->getType();
+  if (llvm::is_contained(AllowedSpaces, LValueTy.getAddressSpace()))
+    return false;
+  S->Diag(Arg->getBeginLoc(), diag::err_hlsl_atomic_arg_addr_space)
+      << (ArgIndex + 1) << LValueTy;
   return true;
 }
 
@@ -4441,6 +4488,53 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
+  case Builtin::BI__builtin_hlsl_interlocked_add: {
+    // The builtin's prototype in Builtins.td is `void (...)`, so direct calls
+    // to `__builtin_hlsl_interlocked_add` bypass argument checking entirely.
+    // When reached via the synthesized `InterlockedAdd` overload set in
+    // HLSLExternalSemaSource, overload resolution has already enforced the
+    // argument count, integer-type matching, and the address-space requirement
+    // on `dest`. The checks below are a safety net for callers that invoke the
+    // builtin by its mangled name and would otherwise reach CodeGen unchecked.
+    if (TheCall->getNumArgs() < 2) {
+      SemaRef.Diag(TheCall->getEndLoc(),
+                   diag::err_typecheck_call_too_few_args_at_least)
+          << /*callee_type=*/0 << /*min_arg_count=*/2 << TheCall->getNumArgs()
+          << /*is_non_object=*/0 << TheCall->getSourceRange();
+      return true;
+    }
+    if (SemaRef.checkArgCountAtMost(TheCall, 3))
+      return true;
+
+    QualType DestTy = TheCall->getArg(0)->getType().getUnqualifiedType();
+    if (!DestTy->isIntegerType()) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << /*ordinal=*/1 << /*scalar*/ 1 << /*integer*/ 1 << /*no float*/ 0
+          << DestTy;
+      return true;
+    }
+
+    if (CheckModifiableLValue(&SemaRef, TheCall, 0))
+      return true;
+
+    if (CheckArgAddrSpaceOneOf(&SemaRef, TheCall, 0,
+                               {LangAS::hlsl_groupshared, LangAS::hlsl_device}))
+      return true;
+
+    if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), DestTy))
+      return true;
+
+    if (TheCall->getNumArgs() == 3) {
+      if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), DestTy))
+        return true;
+      if (CheckModifiableLValue(&SemaRef, TheCall, 2))
+        return true;
+    }
+
+    TheCall->setType(SemaRef.Context.VoidTy);
+    break;
+  }
   // Note these are llvm builtins that we want to catch invalid intrinsic
   // generation. Normal handling of these builtins will occur elsewhere.
   case Builtin::BI__builtin_elementwise_bitreverse: {
@@ -4534,11 +4628,12 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
 
-    if (CheckScalarOrVector(&SemaRef, TheCall, SemaRef.Context.DoubleTy, 0) ||
-        CheckScalarOrVector(&SemaRef, TheCall, SemaRef.Context.UnsignedIntTy,
-                            1) ||
-        CheckScalarOrVector(&SemaRef, TheCall, SemaRef.Context.UnsignedIntTy,
-                            2))
+    if (CheckScalarOrVectorOrMatrix(&SemaRef, TheCall, SemaRef.Context.DoubleTy,
+                                    0) ||
+        CheckScalarOrVectorOrMatrix(&SemaRef, TheCall,
+                                    SemaRef.Context.UnsignedIntTy, 1) ||
+        CheckScalarOrVectorOrMatrix(&SemaRef, TheCall,
+                                    SemaRef.Context.UnsignedIntTy, 2))
       return true;
 
     if (CheckModifiableLValue(&SemaRef, TheCall, 1) ||

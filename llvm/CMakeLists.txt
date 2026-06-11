@@ -700,6 +700,10 @@ endif()
 
 set(LLVM_ENABLE_Z3_SOLVER_DEFAULT "${Z3_FOUND}")
 
+include(FindLibcCommonUtils)
+if(NOT TARGET llvm-libc-common-utilities)
+  message(FATAL_ERROR "LLVM libc is not found at ${libc_path}.")
+endif()
 
 if( LLVM_TARGETS_TO_BUILD STREQUAL "all" )
   set( LLVM_TARGETS_TO_BUILD ${LLVM_ALL_TARGETS} )
@@ -923,6 +927,17 @@ option (LLVM_ENABLE_BINDINGS "Build bindings." ON)
 option (LLVM_ENABLE_TELEMETRY "Enable the telemetry library. If set to OFF, library cannot be enabled after build (eg., at runtime)" ON)
 
 include(HandleDoxygen)
+if (LLVM_ENABLE_DOXYGEN)
+  if (DOXYGEN_FOUND)
+    # If we find doxygen and we want to enable doxygen by default create a
+    # global aggregate doxygen target for generating llvm and any/all
+    # subprojects doxygen documentation.
+    if (LLVM_BUILD_DOCS)
+      add_custom_target(doxygen ALL)
+    endif()
+  endif()
+endif()
+
 
 set(LLVM_INSTALL_DOXYGEN_HTML_DIR "${CMAKE_INSTALL_DOCDIR}/llvm/doxygen-html"
     CACHE STRING "Doxygen-generated HTML documentation install directory")

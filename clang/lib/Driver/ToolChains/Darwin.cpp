@@ -250,16 +250,17 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
                    options::OPT_fno_application_extension, false))
     CmdArgs.push_back("-application_extension");
 
-  if (D.isUsingLTO() && (Version >= VersionTuple(116) || LinkerIsLLD) &&
+  if (auto LTO = getToolChain().getLTOMode(Args);
+      LTO != LTOK_None && (Version >= VersionTuple(116) || LinkerIsLLD) &&
       NeedsTempPath(Inputs)) {
     std::string TmpPathName;
-    if (D.getLTOMode() == LTOK_Full) {
+    if (LTO == LTOK_Full) {
       // If we are using full LTO, then automatically create a temporary file
       // path for the linker to use, so that it's lifetime will extend past a
       // possible dsymutil step.
       TmpPathName =
           D.GetTemporaryPath("cc", types::getTypeTempSuffix(types::TY_Object));
-    } else if (D.getLTOMode() == LTOK_Thin)
+    } else if (LTO == LTOK_Thin)
       // If we are using thin LTO, then create a directory instead.
       TmpPathName = D.GetTemporaryDirectory("thinlto");
 
@@ -1220,7 +1221,7 @@ AppleMachO::~AppleMachO() {}
 MachO::~MachO() {}
 
 void Darwin::VerifyTripleForSDK(const llvm::opt::ArgList &Args,
-                                const llvm::Triple &Triple) const {
+                                const llvm::Triple Triple) const {
   if (SDKInfo) {
     if (!SDKInfo->supportsTriple(Triple))
       getDriver().Diag(diag::warn_incompatible_sysroot)
@@ -1348,9 +1349,10 @@ void DarwinClang::addClangWarningOptions(ArgStringList &CC1Args) const {
 
 void DarwinClang::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadKind) const {
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
 
-  Darwin::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+  Darwin::addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+                                DeviceOffloadKind);
 }
 
 /// Take a path that speculatively points into Xcode and return the
@@ -1384,7 +1386,7 @@ void DarwinClang::AddLinkARCArgs(const ArgList &Args,
       runtime.hasSubscripting())
     return;
 
-  SmallString<128> P(getDriver().ClangExecutable);
+  SmallString<128> P(getDriver().DriverExecutable);
   llvm::sys::path::remove_filename(P); // 'clang'
   llvm::sys::path::remove_filename(P); // 'bin'
   llvm::sys::path::append(P, "lib", "arc");
@@ -2041,14 +2043,15 @@ struct DarwinPlatform {
   }
   static DarwinPlatform createFromSDKInfo(StringRef SDKRoot,
                                           const DarwinSDKInfo &SDKInfo) {
-    const llvm::Triple &PlatformTriple = SDKInfo.getCanonicalPlatformTriple();
-    const llvm::Triple::OSType OS = PlatformTriple.getOS();
+    const DarwinSDKInfo::SDKPlatformInfo PlatformInfo =
+        SDKInfo.getCanonicalPlatformInfo();
+    const llvm::Triple::OSType OS = PlatformInfo.getOS();
     VersionTuple Version = SDKInfo.getVersion();
     if (OS == llvm::Triple::MacOSX)
       Version = getVersionFromString(
           getSystemOrSDKMacOSVersion(Version.getAsString()));
     DarwinPlatform Result(InferredFromSDK, getPlatformFromOS(OS), Version);
-    Result.Environment = getEnvKindFromEnvType(PlatformTriple.getEnvironment());
+    Result.Environment = getEnvKindFromEnvType(PlatformInfo.getEnvironment());
     Result.InferSimulatorFromArch = false;
     Result.InferredSource = SDKRoot;
     return Result;
@@ -2081,10 +2084,15 @@ struct DarwinPlatform {
     llvm::Triple::OSType OS = getOSFromPlatform(Platform);
     llvm::Triple::EnvironmentType EnvironmentType =
         getEnvTypeFromEnvKind(Environment);
-    return DarwinSDKInfo(OS, EnvironmentType, getOSVersion(),
+    StringRef PlatformPrefix =
+        (Platform == DarwinPlatformKind::DriverKit) ? "/System/DriverKit" : "";
+    return DarwinSDKInfo("", OS, EnvironmentType, getOSVersion(),
                          getDisplayName(Platform, Environment, getOSVersion()),
                          /*MaximumDeploymentTarget=*/
-                         VersionTuple(getOSVersion().getMajor(), 0, 99));
+                         VersionTuple(getOSVersion().getMajor(), 0, 99),
+                         {DarwinSDKInfo::SDKPlatformInfo(
+                             llvm::Triple::Apple, OS, EnvironmentType,
+                             llvm::Triple::MachO, PlatformPrefix)});
   }
 
 private:
@@ -3432,9 +3440,11 @@ bool Darwin::isSizedDeallocationUnavailable() const {
 
 void MachO::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args,
+                                  llvm::StringRef BoundArch,
                                   Action::OffloadKind DeviceOffloadKind) const {
 
-  ToolChain::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+  ToolChain::addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+                                   DeviceOffloadKind);
 
   // On arm64e, we enable all the features required for the Darwin userspace
   // ABI
@@ -3481,9 +3491,10 @@ void MachO::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
 
 void Darwin::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadKind) const {
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
 
-  MachO::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+  MachO::addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+                               DeviceOffloadKind);
 
   // When compiling device code (e.g. SPIR-V for HIP), skip host-specific
   // flags like -faligned-alloc-unavailable and -fno-sized-deallocation

@@ -70,7 +70,7 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
 
   auto &TC = getToolChain();
   auto &D = TC.getDriver();
-  bool IsThinLTO = D.getOffloadLTOMode() == LTOK_Thin;
+  bool IsThinLTO = TC.getLTOMode(Args, Action::OFK_HIP) == LTOK_Thin;
   addLTOOptions(TC, Args, LldArgs, Output, Inputs, IsThinLTO);
 
   // Extract all the -m options
@@ -180,7 +180,7 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
                     Output.getFilename()});
 
     const Driver &Driver = getToolChain().getDriver();
-    const char *Exec = Driver.getClangProgramPath();
+    const char *Exec = Driver.getDriverProgramPath();
     C.addCommand(std::make_unique<Command>(
         JA, *this, ResponseFileSupport::None(), Exec, CmdArgs, LinkedBCFile,
         Output, Driver.getPrependArg()));
@@ -234,8 +234,9 @@ HIPAMDToolChain::HIPAMDToolChain(const Driver &D, const llvm::Triple &Triple,
 
 void HIPAMDToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
-  HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
+  HostTC.addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+                               DeviceOffloadingKind);
 
   assert(DeviceOffloadingKind == Action::OFK_HIP &&
          "Only HIP offloading kinds are supported for GPUs.");
@@ -261,7 +262,7 @@ void HIPAMDToolChain::addClangTargetOptions(
   // TODO: remove the SPIR-V bypass once it can encode (hidden) visibility.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
                          options::OPT_fvisibility_ms_compat) &&
-      !getEffectiveTriple().isSPIRV()) {
+      !getEffectiveTriple().isSPIRV() && !getDriver().IsFlangMode()) {
     CC1Args.append({"-fvisibility=hidden"});
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
@@ -281,7 +282,8 @@ void HIPAMDToolChain::addClangTargetOptions(
     return; // No DeviceLibs for SPIR-V.
   }
 
-  for (auto BCFile : getDeviceLibs(DriverArgs, DeviceOffloadingKind)) {
+  for (auto BCFile :
+       getDeviceLibs(DriverArgs, BoundArch, DeviceOffloadingKind)) {
     CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
                                                : "-mlink-bitcode-file");
     CC1Args.push_back(DriverArgs.MakeArgStringRef(BCFile.Path));
@@ -370,7 +372,10 @@ VersionTuple HIPAMDToolChain::computeMSVCVersion(const Driver *D,
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
+                               llvm::StringRef BoundArch,
                                Action::OffloadKind DeviceOffloadingKind) const {
+  assert(!BoundArch.empty() && "Must have an explicit GPU arch.");
+
   llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs;
   const llvm::Triple &TT = getEffectiveTriple();
 
@@ -379,8 +384,8 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
       TT.getEnvironment() == llvm::Triple::LLVM)
     return {};
 
-  AMDGPUToolChain::ParsedTargetIDType TargetID = getParsedTargetID(DriverArgs);
-  if (!TargetID.OptionalTargetID || TargetID.OptionalTargetID == "amdgcnspirv")
+  StringRef GpuArch = getProcessorFromTargetID(getTriple(), BoundArch);
+  if (GpuArch == "amdgcnspirv")
     return {};
 
   ArgStringList LibraryPaths;
@@ -417,9 +422,8 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
     }
 
     // Add common device libraries like ocml etc.
-    for (auto N : getCommonDeviceLibNames(
-             DriverArgs, *TargetID.OptionalTargetID, *TargetID.OptionalGPUArch,
-             DeviceOffloadingKind))
+    for (auto N : getCommonDeviceLibNames(DriverArgs, BoundArch, GpuArch,
+                                          DeviceOffloadingKind))
       BCLibs.emplace_back(N);
 
     // Add instrument lib.

@@ -103,21 +103,21 @@ define <16 x i8> @test_const_splat_on_const_matrix_multi_use(<16 x i8> %src, ptr
 }
 
 ;; Negative test: multi use would generate an additional AND
-define <16 x i8> @test_var_splat_on_const_matrix_multi_use(<16 x i8> %src, i8 %scalar) nounwind {
+define <16 x i8> @test_var_splat_on_const_matrix_multi_use(<16 x i8> %src, i8 %scalar, ptr %sink) nounwind {
 ; CHECK-LABEL: test_var_splat_on_const_matrix_multi_use:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovd %edi, %xmm1
 ; CHECK-NEXT:    vpbroadcastb %xmm1, %xmm1
-; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [64,32,16,8,4,2,1,128,64,32,16,8,4,2,1,128]
-; CHECK-NEXT:    vpxor %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm1
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0 # [64,32,16,8,4,2,1,128,64,32,16,8,4,2,1,128]
+; CHECK-NEXT:    vmovdqa %xmm1, (%rsi)
 ; CHECK-NEXT:    retq
   %inlo = insertelement <16 x i8> poison, i8 %scalar, i64 0
   %varsplat = shufflevector <16 x i8> %inlo, <16 x i8> poison, <16 x i32> zeroinitializer
   %and = and <16 x i8> %src, %varsplat
   %gfni = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %and, <16 x i8> <i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128>, i8 0)
-  %xor = xor <16 x i8> %gfni, %and
-  ret <16 x i8> %xor
+  store <16 x i8> %and, ptr %sink
+  ret <16 x i8> %gfni
 }
 
 ;; Negative test: don't fold as it may increase dependency chain

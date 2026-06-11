@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include <functional>
 
 using namespace llvm;
 
@@ -76,22 +77,40 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
                              ArrayRef<CCValAssign> VAs,
                              std::function<void()> *Thunk) override {
     const CCValAssign &VA = VAs[0];
-    if ((VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32) ||
-        (VA.getLocVT().isInteger() && VA.getValVT() == MVT::f16)) {
+    bool NarrowValWideLoc =
+        (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32) ||
+        (VA.getLocVT().isInteger() && VA.getValVT() == MVT::f16);
+    bool FixedLenVecInScalableVec =
+        VA.getValVT().isFixedLengthVector() && VA.getLocVT().isScalableVector();
+    if (NarrowValWideLoc || FixedLenVecInScalableVec) {
       Register PhysReg = VA.getLocReg();
 
-      auto assignFunc = [=]() {
-        auto Trunc = MIRBuilder.buildAnyExt(LLT(VA.getLocVT()), Arg.Regs[0]);
-        MIRBuilder.buildCopy(PhysReg, Trunc);
-        MIB.addUse(PhysReg, RegState::Implicit);
-      };
+      std::function<void()> AssignFunc;
+      if (NarrowValWideLoc) {
+        AssignFunc = [=]() {
+          auto Trunc = MIRBuilder.buildAnyExt(LLT(VA.getLocVT()), Arg.Regs[0]);
+          MIRBuilder.buildCopy(PhysReg, Trunc);
+          MIB.addUse(PhysReg, RegState::Implicit);
+        };
+      } else if (FixedLenVecInScalableVec) {
+        AssignFunc = [=]() {
+          auto SubVec = MIRBuilder.buildInsertSubvector(
+              LLT(VA.getLocVT()), MIRBuilder.buildUndef(LLT(VA.getLocVT())),
+              Arg.Regs[0], 0);
+          MIRBuilder.buildCopy(PhysReg, SubVec);
+          MIB.addUse(PhysReg, RegState::Implicit);
+        };
+      } else
+        llvm_unreachable(
+            "A narrower value must be passed in a wider register or a fixed "
+            "length vector in a scalable vector register.");
 
       if (Thunk) {
-        *Thunk = std::move(assignFunc);
+        *Thunk = std::move(AssignFunc);
         return 1;
       }
 
-      assignFunc();
+      AssignFunc();
       return 1;
     }
 
@@ -181,8 +200,12 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
                              ArrayRef<CCValAssign> VAs,
                              std::function<void()> *Thunk) override {
     const CCValAssign &VA = VAs[0];
-    if ((VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32) ||
-        (VA.getLocVT().isInteger() && VA.getValVT() == MVT::f16)) {
+    bool NarrowValWideLoc =
+        (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32) ||
+        (VA.getLocVT().isInteger() && VA.getValVT() == MVT::f16);
+    bool FixedLenVecInScalableVec =
+        VA.getValVT().isFixedLengthVector() && VA.getLocVT().isScalableVector();
+    if (NarrowValWideLoc || FixedLenVecInScalableVec) {
       Register PhysReg = VA.getLocReg();
 
       markPhysRegUsed(PhysReg);
@@ -190,7 +213,14 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
       LLT LocTy(VA.getLocVT());
       auto Copy = MIRBuilder.buildCopy(LocTy, PhysReg);
 
-      MIRBuilder.buildTrunc(Arg.Regs[0], Copy.getReg(0));
+      if (NarrowValWideLoc)
+        MIRBuilder.buildTrunc(Arg.Regs[0], Copy.getReg(0));
+      else if (FixedLenVecInScalableVec)
+        MIRBuilder.buildExtractSubvector(Arg.Regs[0], Copy.getReg(0), 0);
+      else
+        llvm_unreachable(
+            "A narrower value must be passed in a wider register or a fixed "
+            "length vector in a scalable vector register.");
       return 1;
     }
 
@@ -303,6 +333,9 @@ static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget,
       T->isScalableTy() &&
       isLegalElementTypeForRVV(T->getScalarType(), Subtarget))
     return true;
+  if (T->isVectorTy() && !T->isScalableTy())
+    return true;
+
   return false;
 }
 
@@ -328,6 +361,8 @@ static bool isSupportedReturnType(Type *T, const RISCVSubtarget &Subtarget,
   if (IsLowerRetVal && T->isVectorTy() && Subtarget.hasVInstructions() &&
       T->isScalableTy() &&
       isLegalElementTypeForRVV(T->getScalarType(), Subtarget))
+    return true;
+  if (T->isVectorTy() && !T->isScalableTy())
     return true;
 
   return false;

@@ -552,11 +552,13 @@ static void handlePAuthABI(const Driver &D, const ArgList &DriverArgs,
 
 void Linux::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args,
+                                  StringRef BoundArch,
                                   Action::OffloadKind DeviceOffloadKind) const {
   llvm::Triple Triple(ComputeEffectiveClangTriple(DriverArgs));
   if (Triple.isAArch64() && Triple.getEnvironment() == llvm::Triple::PAuthTest)
     handlePAuthABI(getDriver(), DriverArgs, CC1Args);
-  Generic_ELF::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+  Generic_ELF::addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+                                     DeviceOffloadKind);
 }
 
 std::string Linux::getDynamicLinker(const ArgList &Args) const {
@@ -880,7 +882,8 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
   llvm::SmallVector<std::pair<StringRef, StringRef>> Libraries;
   if (ActiveKinds & Action::OFK_HIP)
     Libraries.emplace_back(RocmInstallation->getLibPath(), "libamdhip64.so");
-  else if (ActiveKinds & Action::OFK_SYCL)
+  else if ((ActiveKinds & Action::OFK_SYCL) &&
+           !Args.hasArg(options::OPT_nolibsycl))
     Libraries.emplace_back(SYCLInstallation->getSYCLRTLibPath(),
                            "libLLVMSYCL.so");
 
@@ -901,6 +904,13 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
   if (ActiveKinds & Action::OFK_HIP)
     CmdArgs.push_back(
         Args.MakeArgString(StringRef("-L") + RocmInstallation->getLibPath()));
+
+  // For HIP device PGO, link clang_rt.profile_rocm when available. It is a
+  // self-contained superset of clang_rt.profile, emitted first so the base
+  // archive stays inert.
+  if ((ActiveKinds & Action::OFK_HIP) && needsProfileRT(Args) &&
+      getVFS().exists(getCompilerRT(Args, "profile_rocm", FT_Static)))
+    CmdArgs.push_back(getCompilerRTArgString(Args, "profile_rocm"));
 }
 
 void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,

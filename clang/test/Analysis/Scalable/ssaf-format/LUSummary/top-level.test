@@ -1,0 +1,84 @@
+// Top-level LUSummary structure tests: NestedBuildNamespace 'lu_namespace'
+// field parsing and missing top-level fields (lu_namespace, id_table,
+// linkage_table, data).
+
+// REQUIRES: plugins
+
+// ============================================================================
+// nestedBuildNamespaceFromJSON() errors (lu_namespace field) -- LU-SPECIFIC
+// ============================================================================
+
+// RUN: not clang-ssaf-format --type lu %S/Inputs/lu-namespace-not-array.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LU-NAMESPACE-NOT-ARRAY
+// RUN: not clang-ssaf-format --type lu --encoding %S/Inputs/lu-namespace-not-array.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LU-NAMESPACE-NOT-ARRAY
+// LU-NAMESPACE-NOT-ARRAY:      clang-ssaf-format: error: reading LUSummary from file '{{.*}}lu-namespace-not-array.json'
+// LU-NAMESPACE-NOT-ARRAY-NEXT: failed to read NestedBuildNamespace from field 'lu_namespace': expected JSON array
+
+// RUN: not clang-ssaf-format --type lu %S/Inputs/lu-namespace-element-not-object.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LU-NAMESPACE-ELEMENT-NOT-OBJECT
+// RUN: not clang-ssaf-format --type lu --encoding %S/Inputs/lu-namespace-element-not-object.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LU-NAMESPACE-ELEMENT-NOT-OBJECT
+// LU-NAMESPACE-ELEMENT-NOT-OBJECT:      clang-ssaf-format: error: reading LUSummary from file '{{.*}}lu-namespace-element-not-object.json'
+// LU-NAMESPACE-ELEMENT-NOT-OBJECT-NEXT: reading NestedBuildNamespace from field 'lu_namespace'
+// LU-NAMESPACE-ELEMENT-NOT-OBJECT-NEXT: failed to read BuildNamespace from index '0': expected JSON object
+
+// RUN: not clang-ssaf-format --type lu %S/Inputs/lu-namespace-element-missing-kind.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LU-NAMESPACE-ELEMENT-MISSING-KIND
+// RUN: not clang-ssaf-format --type lu --encoding %S/Inputs/lu-namespace-element-missing-kind.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LU-NAMESPACE-ELEMENT-MISSING-KIND
+// LU-NAMESPACE-ELEMENT-MISSING-KIND:      clang-ssaf-format: error: reading LUSummary from file '{{.*}}lu-namespace-element-missing-kind.json'
+// LU-NAMESPACE-ELEMENT-MISSING-KIND-NEXT: reading NestedBuildNamespace from field 'lu_namespace'
+// LU-NAMESPACE-ELEMENT-MISSING-KIND-NEXT: reading BuildNamespace from index '0'
+// LU-NAMESPACE-ELEMENT-MISSING-KIND-NEXT: failed to read BuildNamespaceKind from field 'kind': expected JSON string
+
+// RUN: not clang-ssaf-format --type lu %S/Inputs/lu-namespace-element-invalid-kind.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LU-NAMESPACE-ELEMENT-INVALID-KIND
+// RUN: not clang-ssaf-format --type lu --encoding %S/Inputs/lu-namespace-element-invalid-kind.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LU-NAMESPACE-ELEMENT-INVALID-KIND
+// LU-NAMESPACE-ELEMENT-INVALID-KIND:      clang-ssaf-format: error: reading LUSummary from file '{{.*}}lu-namespace-element-invalid-kind.json'
+// LU-NAMESPACE-ELEMENT-INVALID-KIND-NEXT: reading NestedBuildNamespace from field 'lu_namespace'
+// LU-NAMESPACE-ELEMENT-INVALID-KIND-NEXT: reading BuildNamespace from index '0'
+// LU-NAMESPACE-ELEMENT-INVALID-KIND-NEXT: reading BuildNamespaceKind from field 'kind'
+// LU-NAMESPACE-ELEMENT-INVALID-KIND-NEXT: invalid BuildNamespaceKind value 'invalid_kind' for field 'kind'
+
+// RUN: not clang-ssaf-format --type lu %S/Inputs/lu-namespace-element-missing-name.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LU-NAMESPACE-ELEMENT-MISSING-NAME
+// RUN: not clang-ssaf-format --type lu --encoding %S/Inputs/lu-namespace-element-missing-name.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=LU-NAMESPACE-ELEMENT-MISSING-NAME
+// LU-NAMESPACE-ELEMENT-MISSING-NAME:      clang-ssaf-format: error: reading LUSummary from file '{{.*}}lu-namespace-element-missing-name.json'
+// LU-NAMESPACE-ELEMENT-MISSING-NAME-NEXT: reading NestedBuildNamespace from field 'lu_namespace'
+// LU-NAMESPACE-ELEMENT-MISSING-NAME-NEXT: reading BuildNamespace from index '0'
+// LU-NAMESPACE-ELEMENT-MISSING-NAME-NEXT: failed to read BuildNamespaceName from field 'name': expected JSON string
+
+// ============================================================================
+// readLUSummary() / readLUSummaryEncoding() errors
+// ============================================================================
+
+// RUN: not clang-ssaf-format --type lu %S/Inputs/missing-lu-namespace.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-LU-NAMESPACE
+// RUN: not clang-ssaf-format --type lu --encoding %S/Inputs/missing-lu-namespace.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-LU-NAMESPACE
+// MISSING-LU-NAMESPACE:      clang-ssaf-format: error: reading LUSummary from file '{{.*}}missing-lu-namespace.json'
+// MISSING-LU-NAMESPACE-NEXT: failed to read NestedBuildNamespace from field 'lu_namespace': expected JSON array
+
+// RUN: not clang-ssaf-format --type lu %S/Inputs/missing-id-table.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-ID-TABLE
+// RUN: not clang-ssaf-format --type lu --encoding %S/Inputs/missing-id-table.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-ID-TABLE
+// MISSING-ID-TABLE:      clang-ssaf-format: error: reading LUSummary from file '{{.*}}missing-id-table.json'
+// MISSING-ID-TABLE-NEXT: failed to read IdTable from field 'id_table': expected JSON array
+
+// RUN: not clang-ssaf-format --type lu %S/Inputs/missing-linkage-table.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-LINKAGE-TABLE
+// RUN: not clang-ssaf-format --type lu --encoding %S/Inputs/missing-linkage-table.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-LINKAGE-TABLE
+// MISSING-LINKAGE-TABLE:      clang-ssaf-format: error: reading LUSummary from file '{{.*}}missing-linkage-table.json'
+// MISSING-LINKAGE-TABLE-NEXT: failed to read LinkageTable from field 'linkage_table': expected JSON array
+
+// RUN: not clang-ssaf-format --type lu %S/Inputs/missing-data.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-DATA
+// RUN: not clang-ssaf-format --type lu --encoding %S/Inputs/missing-data.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=MISSING-DATA
+// MISSING-DATA:      clang-ssaf-format: error: reading LUSummary from file '{{.*}}missing-data.json'
+// MISSING-DATA-NEXT: failed to read SummaryData entries from field 'data': expected JSON array
