@@ -7931,7 +7931,6 @@ bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
                        DAG.MaskedValueIsZero(RHS, HighMask);
   }
 
-
   if (!HasMULHU && !HasMULHS && !HasUMUL_LOHI && !HasSMUL_LOHI &&
       !BothZeroExtended)
     return false;
