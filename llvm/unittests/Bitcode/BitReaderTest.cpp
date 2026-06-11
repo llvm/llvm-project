@@ -486,13 +486,14 @@ static constexpr uint64_t CustomMDInt = 42;
 
 static bool isLegacyDbgIntrinsic(const Instruction &I) {
   const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
-  if (!II) return false;
+  if (!II)
+    return false;
   switch (II->getIntrinsicID()) {
-    case Intrinsic::dbg_value:
-    case Intrinsic::dbg_declare:
-    case Intrinsic::dbg_assign:
-    case Intrinsic::dbg_label:
-      return true;
+  case Intrinsic::dbg_value:
+  case Intrinsic::dbg_declare:
+  case Intrinsic::dbg_assign:
+  case Intrinsic::dbg_label:
+    return true;
   }
   return false;
 }
@@ -500,10 +501,9 @@ static bool isLegacyDbgIntrinsic(const Instruction &I) {
 // Attaches CustomMD (an MDString + an integer) to every dbg.* call in F.
 static void attachCustomMetadataToDbgInsts(Function &F) {
   LLVMContext &Ctx = F.getContext();
-  MDNode *Custom = MDNode::get(
-      Ctx, {MDString::get(Ctx, CustomMDString),
-            ConstantAsMetadata::get(
-                ConstantInt::get(Type::getInt32Ty(Ctx), CustomMDInt))});
+  MDNode *Custom = MDNode::get(Ctx, {MDString::get(Ctx, CustomMDString),
+                                     ConstantAsMetadata::get(ConstantInt::get(
+                                         Type::getInt32Ty(Ctx), CustomMDInt))});
   for (Instruction &I : instructions(F))
     if (isLegacyDbgIntrinsic(I))
       I.setMetadata(CustomMDKind, Custom);
@@ -634,14 +634,15 @@ TEST(BitReaderTest, SkipDebugIntrinsicUpgrade) {
     EXPECT_FALSE(BrokenDebugInfo);
   }
 
-  // When SkipDebugIntrinsicUpgrade is true, the intrinsic-form debug info is preserved
-  // for every kind and the caller is left responsible for upgrading it.
+  // When SkipDebugIntrinsicUpgrade is true, the intrinsic-form debug info is
+  // preserved for every kind and the caller is left responsible for upgrading
+  // it.
   {
     LLVMContext Context;
     ParserCallbacks Callbacks;
     Callbacks.SkipDebugIntrinsicUpgrade = true;
-    Expected<std::unique_ptr<Module>> ModuleOrErr =
-        parseBitcodeFile(MemoryBufferRef(Mem.str(), "test"), Context, Callbacks);
+    Expected<std::unique_ptr<Module>> ModuleOrErr = parseBitcodeFile(
+        MemoryBufferRef(Mem.str(), "test"), Context, Callbacks);
     if (!ModuleOrErr)
       report_fatal_error("Could not parse bitcode module");
     std::unique_ptr<Module> M = std::move(ModuleOrErr.get());
