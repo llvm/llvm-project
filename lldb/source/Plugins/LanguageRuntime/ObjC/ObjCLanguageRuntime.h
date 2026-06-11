@@ -40,7 +40,6 @@ class ObjCLanguageRuntime : public LanguageRuntime {
 public:
   enum class ObjCRuntimeVersions {
     eObjC_VersionUnknown = 0,
-    eAppleObjC_V1 = 1,
     eAppleObjC_V2 = 2,
     eGNUstep_libobjc2 = 3,
   };
@@ -51,7 +50,7 @@ public:
   typedef std::shared_ptr<ClassDescriptor> ClassDescriptorSP;
 
   // the information that we want to support retrieving from an ObjC class this
-  // needs to be pure virtual since there are at least 2 different
+  // needs to be pure virtual since there can be multiple
   // implementations of the runtime, and more might come
   class ClassDescriptor {
   public:
@@ -66,7 +65,7 @@ public:
     virtual std::unique_ptr<ClassDescriptor> GetMetaclass() const = 0;
 
     // virtual if any implementation has some other version-specific rules but
-    // for the known v1/v2 this is all that needs to be done
+    // for the known runtime versions this is all that needs to be done
     virtual bool IsKVO() {
       if (m_is_kvo == eLazyBoolCalculate) {
         const char *class_name = GetClassName().AsCString(nullptr);
@@ -78,7 +77,7 @@ public:
     }
 
     // virtual if any implementation has some other version-specific rules but
-    // for the known v1/v2 this is all that needs to be done
+    // for the known runtime versions this is all that needs to be done
     virtual bool IsCFType() {
       if (m_is_cf == eLazyBoolCalculate) {
         const char *class_name = GetClassName().AsCString(nullptr);
