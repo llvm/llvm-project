@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/time/ctime_r.h"
 #include "src/time/time_constants.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
@@ -15,17 +16,13 @@
 using LlvmLibcCtimeR = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcCtimeR, Nullptr) {
-  char *result;
-  result = LIBC_NAMESPACE::ctime_r(nullptr, nullptr);
-  ASSERT_STREQ(nullptr, result);
-
   char buffer[LIBC_NAMESPACE::time_constants::ASCTIME_BUFFER_SIZE];
-  result = LIBC_NAMESPACE::ctime_r(nullptr, buffer);
-  ASSERT_STREQ(nullptr, result);
-
   time_t t;
-  result = LIBC_NAMESPACE::ctime_r(&t, nullptr);
-  ASSERT_STREQ(nullptr, result);
+  EXPECT_DEATH([] { LIBC_NAMESPACE::ctime_r(nullptr, nullptr); },
+               WITH_SIGNAL(-1));
+  EXPECT_DEATH([&] { LIBC_NAMESPACE::ctime_r(nullptr, buffer); },
+               WITH_SIGNAL(-1));
+  EXPECT_DEATH([&] { LIBC_NAMESPACE::ctime_r(&t, nullptr); }, WITH_SIGNAL(-1));
 }
 
 TEST_F(LlvmLibcCtimeR, ValidUnixTimestamp0) {
@@ -48,11 +45,22 @@ TEST_F(LlvmLibcCtimeR, ValidUnixTimestamp32Int) {
   ASSERT_STREQ("Tue Jan 19 03:14:07 2038\n", result);
 }
 
+TEST_F(LlvmLibcCtimeR, ValidUnixTimestamp2039) {
+  char buffer[LIBC_NAMESPACE::time_constants::ASCTIME_BUFFER_SIZE];
+  time_t t;
+  char *result;
+  // 2039-01-01 00:00:00 UTC. Test with a valid buffer size.
+  t = 2177452800;
+  result = LIBC_NAMESPACE::ctime_r(&t, buffer);
+  ASSERT_STREQ("Sat Jan  1 00:00:00 2039\n", result);
+}
+
 TEST_F(LlvmLibcCtimeR, InvalidArgument) {
   char buffer[LIBC_NAMESPACE::time_constants::ASCTIME_BUFFER_SIZE];
   time_t t;
   char *result;
-  t = 2147483648;
+  t = 253402300800; // 10000-01-01 00:00:00 UTC (overflows 26-byte buffer)
   result = LIBC_NAMESPACE::ctime_r(&t, buffer);
+  ASSERT_ERRNO_EQ(EOVERFLOW);
   ASSERT_STREQ(nullptr, result);
 }

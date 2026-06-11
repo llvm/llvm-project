@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/time/ctime.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
@@ -14,9 +15,7 @@
 using LlvmLibcCtime = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcCtime, nullptr) {
-  char *result;
-  result = LIBC_NAMESPACE::ctime(nullptr);
-  ASSERT_STREQ(nullptr, result);
+  EXPECT_DEATH([] { LIBC_NAMESPACE::ctime(nullptr); }, WITH_SIGNAL(-1));
 }
 
 TEST_F(LlvmLibcCtime, ValidUnixTimestamp0) {
@@ -35,10 +34,19 @@ TEST_F(LlvmLibcCtime, ValidUnixTimestamp32Int) {
   ASSERT_STREQ("Tue Jan 19 03:14:07 2038\n", result);
 }
 
+TEST_F(LlvmLibcCtime, ValidUnixTimestamp2039) {
+  time_t t;
+  char *result;
+  t = 2177452800; // 2039-01-01 00:00:00 UTC
+  result = LIBC_NAMESPACE::ctime(&t);
+  ASSERT_STREQ("Sat Jan  1 00:00:00 2039\n", result);
+}
+
 TEST_F(LlvmLibcCtime, InvalidArgument) {
   time_t t;
   char *result;
-  t = 2147483648;
+  t = 253402300800; // 10000-01-01 00:00:00 UTC (overflows 26-byte buffer)
   result = LIBC_NAMESPACE::ctime(&t);
+  ASSERT_ERRNO_EQ(EOVERFLOW);
   ASSERT_STREQ(nullptr, result);
 }

@@ -22,7 +22,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace strftime_core {
 
-LIBC_INLINE IntFormatSection
+LIBC_INLINE ErrorOr<IntFormatSection>
 get_specific_int_format(const tm *timeptr, const FormatSection &base_to_conv,
                         char new_conv_name, int TRAILING_CONV_LEN = -1) {
   // a negative padding will be treated as the default
@@ -32,7 +32,10 @@ get_specific_int_format(const tm *timeptr, const FormatSection &base_to_conv,
   new_conv.conv_name = new_conv_name;
   new_conv.min_width = NEW_MIN_WIDTH;
 
-  IntFormatSection result = get_int_format(new_conv, timeptr);
+  auto result_or = get_int_format(new_conv, timeptr);
+  if (!result_or)
+    return cpp::unexpected(result_or.error());
+  IntFormatSection result = result_or.value();
 
   // If the user set the padding, but it's below the width of the trailing
   // conversions, then there should be no padding.
@@ -54,9 +57,21 @@ LIBC_INLINE int convert_date_us(printf_core::Writer<write_mode> *writer,
   IntFormatSection mon_conv;
   IntFormatSection mday_conv;
 
-  mon_conv = get_specific_int_format(timeptr, to_conv, 'm', TRAILING_CONV_LEN);
-  mday_conv = get_specific_int_format(timeptr, to_conv, 'd');
-  year_conv = get_specific_int_format(timeptr, to_conv, 'y');
+  auto mon_conv_or =
+      get_specific_int_format(timeptr, to_conv, 'm', TRAILING_CONV_LEN);
+  if (!mon_conv_or)
+    return -mon_conv_or.error();
+  mon_conv = mon_conv_or.value();
+
+  auto mday_conv_or = get_specific_int_format(timeptr, to_conv, 'd');
+  if (!mday_conv_or)
+    return -mday_conv_or.error();
+  mday_conv = mday_conv_or.value();
+
+  auto year_conv_or = get_specific_int_format(timeptr, to_conv, 'y');
+  if (!year_conv_or)
+    return -year_conv_or.error();
+  year_conv = year_conv_or.value();
 
   RET_IF_RESULT_NEGATIVE(write_padded_int(writer, mon_conv));
   RET_IF_RESULT_NEGATIVE(writer->write('/'));
@@ -79,9 +94,21 @@ LIBC_INLINE int convert_date_iso(printf_core::Writer<write_mode> *writer,
   IntFormatSection mon_conv;
   IntFormatSection mday_conv;
 
-  year_conv = get_specific_int_format(timeptr, to_conv, 'Y', TRAILING_CONV_LEN);
-  mon_conv = get_specific_int_format(timeptr, to_conv, 'm');
-  mday_conv = get_specific_int_format(timeptr, to_conv, 'd');
+  auto year_conv_or =
+      get_specific_int_format(timeptr, to_conv, 'Y', TRAILING_CONV_LEN);
+  if (!year_conv_or)
+    return -year_conv_or.error();
+  year_conv = year_conv_or.value();
+
+  auto mon_conv_or = get_specific_int_format(timeptr, to_conv, 'm');
+  if (!mon_conv_or)
+    return -mon_conv_or.error();
+  mon_conv = mon_conv_or.value();
+
+  auto mday_conv_or = get_specific_int_format(timeptr, to_conv, 'd');
+  if (!mday_conv_or)
+    return -mday_conv_or.error();
+  mday_conv = mday_conv_or.value();
 
   RET_IF_RESULT_NEGATIVE(write_padded_int(writer, year_conv));
   RET_IF_RESULT_NEGATIVE(writer->write('-'));
@@ -107,9 +134,21 @@ LIBC_INLINE int convert_time_am_pm(printf_core::Writer<write_mode> *writer,
 
   const time_utils::TMReader time_reader(timeptr);
 
-  hour_conv = get_specific_int_format(timeptr, to_conv, 'I', TRAILING_CONV_LEN);
-  min_conv = get_specific_int_format(timeptr, to_conv, 'M');
-  sec_conv = get_specific_int_format(timeptr, to_conv, 'S');
+  auto hour_conv_or =
+      get_specific_int_format(timeptr, to_conv, 'I', TRAILING_CONV_LEN);
+  if (!hour_conv_or)
+    return -hour_conv_or.error();
+  hour_conv = hour_conv_or.value();
+
+  auto min_conv_or = get_specific_int_format(timeptr, to_conv, 'M');
+  if (!min_conv_or)
+    return -min_conv_or.error();
+  min_conv = min_conv_or.value();
+
+  auto sec_conv_or = get_specific_int_format(timeptr, to_conv, 'S');
+  if (!sec_conv_or)
+    return -sec_conv_or.error();
+  sec_conv = sec_conv_or.value();
 
   RET_IF_RESULT_NEGATIVE(write_padded_int(writer, hour_conv));
   RET_IF_RESULT_NEGATIVE(writer->write(':'));
@@ -133,8 +172,16 @@ LIBC_INLINE int convert_time_minute(printf_core::Writer<write_mode> *writer,
   IntFormatSection hour_conv;
   IntFormatSection min_conv;
 
-  hour_conv = get_specific_int_format(timeptr, to_conv, 'H', TRAILING_CONV_LEN);
-  min_conv = get_specific_int_format(timeptr, to_conv, 'M');
+  auto hour_conv_or =
+      get_specific_int_format(timeptr, to_conv, 'H', TRAILING_CONV_LEN);
+  if (!hour_conv_or)
+    return -hour_conv_or.error();
+  hour_conv = hour_conv_or.value();
+
+  auto min_conv_or = get_specific_int_format(timeptr, to_conv, 'M');
+  if (!min_conv_or)
+    return -min_conv_or.error();
+  min_conv = min_conv_or.value();
 
   RET_IF_RESULT_NEGATIVE(write_padded_int(writer, hour_conv));
   RET_IF_RESULT_NEGATIVE(writer->write(':'));
@@ -155,9 +202,21 @@ LIBC_INLINE int convert_time_second(printf_core::Writer<write_mode> *writer,
   IntFormatSection min_conv;
   IntFormatSection sec_conv;
 
-  hour_conv = get_specific_int_format(timeptr, to_conv, 'H', TRAILING_CONV_LEN);
-  min_conv = get_specific_int_format(timeptr, to_conv, 'M');
-  sec_conv = get_specific_int_format(timeptr, to_conv, 'S');
+  auto hour_conv_or =
+      get_specific_int_format(timeptr, to_conv, 'H', TRAILING_CONV_LEN);
+  if (!hour_conv_or)
+    return -hour_conv_or.error();
+  hour_conv = hour_conv_or.value();
+
+  auto min_conv_or = get_specific_int_format(timeptr, to_conv, 'M');
+  if (!min_conv_or)
+    return -min_conv_or.error();
+  min_conv = min_conv_or.value();
+
+  auto sec_conv_or = get_specific_int_format(timeptr, to_conv, 'S');
+  if (!sec_conv_or)
+    return -sec_conv_or.error();
+  sec_conv = sec_conv_or.value();
 
   RET_IF_RESULT_NEGATIVE(write_padded_int(writer, hour_conv));
   RET_IF_RESULT_NEGATIVE(writer->write(':'));
@@ -188,8 +247,15 @@ LIBC_INLINE int convert_full_date_time(printf_core::Writer<write_mode> *writer,
   IntFormatSection mday_conv;
   IntFormatSection year_conv;
 
-  mday_conv = get_specific_int_format(timeptr, to_conv, 'e');
-  year_conv = get_specific_int_format(timeptr, to_conv, 'Y');
+  auto mday_conv_or = get_specific_int_format(timeptr, to_conv, 'e');
+  if (!mday_conv_or)
+    return -mday_conv_or.error();
+  mday_conv = mday_conv_or.value();
+
+  auto year_conv_or = get_specific_int_format(timeptr, to_conv, 'Y');
+  if (!year_conv_or)
+    return -year_conv_or.error();
+  year_conv = year_conv_or.value();
 
   FormatSection raw_time_conv = to_conv;
   raw_time_conv.conv_name = 'T';

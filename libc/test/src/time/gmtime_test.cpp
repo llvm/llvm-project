@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+#include "hdr/signal_macros.h"
 #include "hdr/types/struct_tm.h"
 #include "src/__support/CPP/limits.h" // INT_MAX, INT_MIN
 #include "src/time/gmtime.h"
@@ -35,6 +36,10 @@ TEST_F(LlvmLibcGmTime, OutOfRange) {
   tm_data = LIBC_NAMESPACE::gmtime(&seconds);
   EXPECT_TRUE(tm_data == nullptr);
   ASSERT_ERRNO_EQ(EOVERFLOW);
+}
+
+TEST_F(LlvmLibcGmTime, NullPtr) {
+  EXPECT_DEATH([] { LIBC_NAMESPACE::gmtime(nullptr); }, WITH_SIGNAL(-1));
 }
 
 TEST_F(LlvmLibcGmTime, InvalidSeconds) {

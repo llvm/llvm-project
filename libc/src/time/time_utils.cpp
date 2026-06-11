@@ -112,7 +112,7 @@ static int64_t computeRemainingYears(int64_t daysPerYears,
 //
 // Compute the number of months from the remaining days. Finally, adjust years
 // to be 1900 and months to be from January.
-int64_t update_from_seconds(time_t total_seconds, tm *tm) {
+ErrorOr<int> update_from_seconds(time_t total_seconds, tm *tm) {
   // Days in month starting from March in the year 2000.
   static const char daysInMonth[] = {31 /* Mar */, 30, 31, 30, 31, 31,
                                      30,           31, 30, 31, 31, 29};
@@ -125,7 +125,7 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
       static_cast<int64_t>(time_constants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
 
   if (total_seconds < time_min || total_seconds > time_max)
-    return time_utils::out_of_range();
+    return cpp::unexpected(EOVERFLOW);
 
   int64_t seconds =
       total_seconds - time_constants::SECONDS_UNTIL2000_MARCH_FIRST;
@@ -191,7 +191,7 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
   }
 
   if (years > INT_MAX || years < INT_MIN)
-    return time_utils::out_of_range();
+    return cpp::unexpected(EOVERFLOW);
 
   // All the data (years, month and remaining days) was calculated from
   // March, 2000. Thus adjust the data to be from January, 1900.
