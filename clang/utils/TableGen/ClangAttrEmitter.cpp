@@ -5602,7 +5602,7 @@ void EmitClangUndocumentedAttrlist(const llvm::RecordKeeper &Records,
   // attribute in the test file.
   OS << "Undocumented attributes:\n";
 
-  for (const auto* A : UndocumentedAttrs) {
+  for (const auto *A : UndocumentedAttrs) {
     OS << A->getName() << "\n";
   }
 
