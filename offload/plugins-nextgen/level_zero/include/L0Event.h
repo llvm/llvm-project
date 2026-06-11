@@ -26,16 +26,18 @@ class L0QueueTy;
 
 class L0EventTy {
   ze_event_handle_t ZeEvent = nullptr;
+  bool CounterBased = false;
   L0QueueTy *Queue = nullptr;
 
 public:
-  L0EventTy(ze_event_handle_t ZeEvent) : ZeEvent(ZeEvent) {}
+  L0EventTy(ze_event_handle_t ZeEvent, bool CounterBased)
+      : ZeEvent(ZeEvent), CounterBased(CounterBased) {}
   ze_event_handle_t getZeEvent() const { return ZeEvent; }
   L0QueueTy *getQueue() const { return Queue; }
 
-  Error reset(bool SkipEventReset) {
+  Error reset() {
     Queue = nullptr;
-    if (!SkipEventReset)
+    if (!CounterBased)
       CALL_ZE_RET_ERROR(zeEventHostReset, ZeEvent);
     return Plugin::success();
   }

@@ -26,7 +26,8 @@ Expected<ze_event_handle_t> EventPoolTy::getEventLocked() {
     Desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE | Flags;
     Desc.count = static_cast<uint32_t>(PoolSize);
 
-    ze_event_pool_counter_based_exp_desc_t counterBasedDesc = {ZE_STRUCTURE_TYPE_COUNTER_BASED_EVENT_POOL_EXP_DESC};
+    ze_event_pool_counter_based_exp_desc_t counterBasedDesc = {
+        ZE_STRUCTURE_TYPE_COUNTER_BASED_EVENT_POOL_EXP_DESC};
     counterBasedDesc.flags = ZE_EVENT_POOL_COUNTER_BASED_EXP_FLAG_IMMEDIATE;
 
     if (UseCounterBasedEvents)
@@ -83,12 +84,12 @@ Expected<L0EventTy *> EventPoolTy::getEventObject() {
     if (!EventOrErr)
       return EventOrErr.takeError();
     auto Event = *EventOrErr;
-    auto *EventObj = new L0EventTy(Event);
+    auto *EventObj = new L0EventTy(Event, UseCounterBasedEvents);
     return EventObj;
   }
 
   auto *Ret = EventObjects.back();
-  if (auto Err = Ret->reset(/* SkipEventReset */ UseCounterBasedEvents))
+  if (auto Err = Ret->reset())
     return std::move(Err);
 
   EventObjects.pop_back();
