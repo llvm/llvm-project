@@ -69,7 +69,6 @@ CHECK-NEXT:	ObjCPreciseLifetime
 CHECK-NEXT:	ObjCRequiresPropertyDefs
 CHECK-NEXT:	ObjCReturnsInnerPointer
 CHECK-NEXT:	ObjCRootClass
-CHECK-NEXT:	OverflowBehavior
 CHECK-NEXT:	Packed
 CHECK-NEXT:	Pascal
 CHECK-NEXT:	PointerFieldProtection
