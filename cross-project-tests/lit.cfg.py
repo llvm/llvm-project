@@ -43,7 +43,7 @@ python_exec_path = sys.executable
 tools = [
     ToolSubst(
         "%test_debuginfo",
-        command="PYTHON_EXEC_PATH="
+        command="env PYTHON_EXEC_PATH="
         + python_exec_path
         + " LLDB_PYTHON_PATH="
         + lldb_python_path
