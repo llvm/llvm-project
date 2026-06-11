@@ -12,6 +12,8 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
+#include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/MemoryMapper.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -111,8 +113,10 @@ Error SelfExecutorProcessControl::disconnect() {
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
 SelfExecutorProcessControl::createDefaultMemoryManager() {
-  return std::make_unique<jitlink::InProcessMemoryManager>(
+  auto Mapper = std::make_unique<InProcessMemoryMapper>(
       sys::Process::getPageSizeEstimate());
+  return std::make_unique<MapperJITLinkMemoryManager>(128 * 1024 * 1024,
+                                                      std::move(Mapper));
 }
 
 Expected<std::unique_ptr<DylibManager>>
