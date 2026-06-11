@@ -39,4 +39,3 @@ subroutine f05
 !ERROR: A type parameter inquiry cannot appear on the DESTROY clause
   !$omp depobj destroy(x%kind)
 end
-
