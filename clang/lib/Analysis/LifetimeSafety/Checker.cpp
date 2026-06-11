@@ -473,13 +473,16 @@ public:
     if (!FDef)
       return;
 
+    // If analyzed function is a template definition or an implicit
+    // instantiation, skip.
     if (FDef->getTemplatedKind() == FunctionDecl::TK_FunctionTemplate ||
         FDef->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
       return;
 
     for (const auto &PVD : FDef->parameters())
       if (PVD->hasAttr<LifetimeBoundAttr>() &&
-          !FactMgr.getOriginMgr().hasOrigins(PVD->getType()))
+          !FactMgr.getOriginMgr().hasOrigins(PVD->getType(),
+                                             /*IntrinsicOnly=*/true))
         SemaHelper->reportInapplicableLifetimebound(PVD);
   }
 

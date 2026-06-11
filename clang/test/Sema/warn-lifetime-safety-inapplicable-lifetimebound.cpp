@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-inapplicable-lifetimebound -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-annotation-placement -Wno-dangling -verify %s
+
+#include "Inputs/lifetime-analysis.h"
 
 struct [[gsl::Owner]] Owner {};
 
@@ -73,4 +75,18 @@ Owner *template_value(T t [[clang::lifetimebound]]) {
 void instantiate_template() {
   Owner o;
   (void)template_value(o);
+}
+
+struct S {
+  Owner* foo() [[clang::lifetimebound]] { return {}; }
+};
+
+std::vector<int *> lifetime_annotated_return(
+    const int &i [[clang::lifetimebound]]);
+
+int *context_sensitive_origin_type(
+    std::vector<int *> v [[clang::lifetimebound]]) { // expected-warning {{'lifetimebound' attribute has no effect on parameter of type 'std::vector<int *>'}}
+  int i = 0;
+  lifetime_annotated_return(i);
+  return v[0];
 }
