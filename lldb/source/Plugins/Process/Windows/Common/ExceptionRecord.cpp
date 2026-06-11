@@ -10,6 +10,7 @@
 #include "lldb/Host/windows/windows.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
+#include "llvm/ADT/ArrayRef.h"
 
 #include <dbghelp.h>
 #include <memory>
