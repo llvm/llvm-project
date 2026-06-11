@@ -2392,12 +2392,13 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (Subtarget.isPICStyleGOT()) {
     // ELF / PIC requires GOT in the EBX register before function calls via PLT
-    // GOT pointer (except regcall).
+    // GOT pointer.
     if (!isTailCall) {
-      // Indirect call with RegCall calling convertion may use up all the
-      // general registers, so it is not suitable to bind EBX reister for
-      // GOT address, just let register allocator handle it.
-      if (CallConv != CallingConv::X86_RegCall)
+      // Only PLT calls (GlobalAddress or ExternalSymbol) require the GOT in
+      // EBX. Indirect calls through a register or a constant address do not
+      // go through the PLT and do not need EBX to hold the GOT base.
+      if ((Callee->getOpcode() == ISD::GlobalAddress ||
+           Callee->getOpcode() == ISD::ExternalSymbol))
         RegsToPass.push_back(std::make_pair(
           Register(X86::EBX), DAG.getNode(X86ISD::GlobalBaseReg, SDLoc(),
                                           getPointerTy(DAG.getDataLayout()))));
