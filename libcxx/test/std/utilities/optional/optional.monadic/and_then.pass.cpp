@@ -339,7 +339,6 @@ constexpr bool test_ref() {
       assert(std::move(i).and_then(std::move(nl)) == std::nullopt);
     }
   }
-
   return true;
 }
 #endif

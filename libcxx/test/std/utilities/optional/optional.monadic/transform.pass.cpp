@@ -308,7 +308,6 @@ constexpr bool test_ref() {
     auto o6r               = o6.transform([](int) { return 42; });
     assert(!o6r);
   }
-
   return true;
 }
 #endif
