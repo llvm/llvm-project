@@ -35,9 +35,9 @@ using namespace AMDGPU;
 RegBankLegalizeHelper::RegBankLegalizeHelper(
     MachineIRBuilder &B, const MachineUniformityInfo &MUI,
     const RegisterBankInfo &RBI, const RegBankLegalizeRules &RBLRules)
-    : MF(B.getMF()), ST(MF.getSubtarget<GCNSubtarget>()), B(B),
-      MRI(*B.getMRI()), MUI(MUI), RBI(RBI), MORE(MF, nullptr),
-      RBLRules(RBLRules), IsWave32(ST.isWave32()),
+    : MF(B.getMF()), MFI(MF.getInfo<SIMachineFunctionInfo>()),
+      ST(MF.getSubtarget<GCNSubtarget>()), B(B), MRI(*B.getMRI()), MUI(MUI),
+      RBI(RBI), MORE(MF, nullptr), RBLRules(RBLRules), IsWave32(ST.isWave32()),
       SgprRB(&RBI.getRegBank(AMDGPU::SGPRRegBankID)),
       VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)),
       AgprRB(&RBI.getRegBank(AMDGPU::AGPRRegBankID)),
@@ -1900,6 +1900,18 @@ bool RegBankLegalizeHelper::applyMappingDst(
         B.buildCopy(Reg, NewAgprDst);
       break;
     }
+    case VgprOrAgprAnyTy: {
+      const unsigned NumRegs = Ty.getSizeInBits() / 32;
+      const RegisterBank *DstRB =
+          MFI->selectAGPRFormMFMA(NumRegs) ? AgprRB : VgprRB;
+      if (RB == DstRB)
+        break;
+      Register NewDst = MRI.createVirtualRegister({DstRB, Ty});
+      Op.setReg(NewDst);
+      if (!MRI.use_nodbg_empty(Reg))
+        B.buildCopy(Reg, NewDst);
+      break;
+    }
     // uniform in vcc/vgpr: scalars, vectors and B-types
     case UniInVcc: {
       assert(Ty == S1);
@@ -2115,6 +2127,14 @@ bool RegBankLegalizeHelper::applyMappingSrc(
         auto CopyToAgpr = B.buildCopy({AgprRB, Ty}, Reg);
         Op.setReg(CopyToAgpr.getReg(0));
       }
+      break;
+    }
+    case VgprOrAgprAnyTy: {
+      const unsigned NumRegs = Ty.getSizeInBits() / 32;
+      const RegisterBank *SrcRB =
+          MFI->selectAGPRFormMFMA(NumRegs) ? AgprRB : VgprRB;
+      if (RB != SrcRB)
+        Op.setReg(B.buildCopy({SrcRB, Ty}, Reg).getReg(0));
       break;
     }
     // sgpr waterfall, scalars, and vectors
