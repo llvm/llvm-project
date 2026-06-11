@@ -25,7 +25,7 @@
 #include <arm_neon.h>
 
 //===------------------------------------------------------===//
-// 2.6.3.1 Convearions
+// 2.6.3.1 Conversions
 // https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#conversions-2
 //===------------------------------------------------------===//
 
