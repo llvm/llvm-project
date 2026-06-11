@@ -696,9 +696,9 @@ define <vscale x 16 x i1> @active_lane_mask_scalable() {
 ; CHECK-NEXT:    [[RES:%.*]] = add <vscale x 16 x i1> [[MASK2]], [[MASK3]]
 ; CHECK-NEXT:    ret <vscale x 16 x i1> [[RES]]
 ;
-  %mask = call <vscale x 16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 26, i64 6)
-  %mask2 = call <vscale x 16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 26, i64 poison)
-  %mask3 = call <vscale x 16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 poison, i64 6)
+  %mask = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 26, i64 6)
+  %mask2 = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 26, i64 poison)
+  %mask3 = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 poison, i64 6)
   %add = add <vscale x 16 x i1> %mask, %mask2
   %res = add <vscale x 16 x i1> %add, %mask3
   ret <vscale x 16 x i1> %res
