@@ -6695,8 +6695,6 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     return true;
   }
   case Intrinsic::ptrauth_auth_with_pc_and_resign: {
-    // ptrauth.auth.with.pc.and.resign: authenticate with PC, then sign
-    // Operands: value, authKey, authDisc, authPC, signKey, signDisc
     Register DstReg = I.getOperand(0).getReg();
     Register ValReg = I.getOperand(2).getReg();
     uint64_t AUTKey = I.getOperand(3).getImm();
@@ -6705,52 +6703,37 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     uint64_t PACKey = I.getOperand(6).getImm();
     Register PACDisc = I.getOperand(7).getReg();
 
-    // Extract discriminators
-    Register AUTAddrDisc = AUTDisc;
+    assert((AUTKey == AArch64PACKey::IA || AUTKey == AArch64PACKey::IB) &&
+           "auth_with_pc_and_resign only supports IA and IB keys");
+
     uint16_t AUTConstDiscC = 0;
+    Register AUTAddrDisc;
     std::tie(AUTConstDiscC, AUTAddrDisc) =
         extractPtrauthBlendDiscriminators(AUTDisc, MRI);
 
-    Register PACAddrDisc = PACDisc;
     uint16_t PACConstDiscC = 0;
+    Register PACAddrDisc;
     std::tie(PACConstDiscC, PACAddrDisc) =
         extractPtrauthBlendDiscriminators(PACDisc, MRI);
 
-    // Set up autia171615/autib171615: x17=value, x16=disc, x15=pc
-    MIB.buildCopy({AArch64::X17}, {ValReg});
-
-    // Handle discriminator - if NoRegister, use XZR
     if (AUTAddrDisc == AArch64::NoRegister)
       AUTAddrDisc = AArch64::XZR;
-    MIB.buildCopy({AArch64::X16}, {AUTAddrDisc});
-
-    MIB.buildCopy({AArch64::X15}, {AUTPC});
-
-    // Use the appropriate autia/autib instruction based on the key
-    // Note: Only IA/IB keys supported for 171615 instructions, not DA/DB
-    assert((AUTKey == 0 || AUTKey == 1) &&
-           "auth_with_pc_and_resign only supports IA and IB keys");
-    unsigned AuthOpc =
-        (AUTKey == 0) ? AArch64::AUTIA171615 : AArch64::AUTIB171615;
-    MIB.buildInstr(AuthOpc).constrainAllUses(TII, TRI, RBI);
-
-    // Now sign the authenticated value (result is in X17)
-    // Use the PAC pseudo which handles the signing
-    Register AuthedReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-    MIB.buildCopy({AuthedReg}, Register(AArch64::X17));
-
-    // Handle sign discriminator - if NoRegister, use XZR
     if (PACAddrDisc == AArch64::NoRegister)
       PACAddrDisc = AArch64::XZR;
 
-    MIB.buildInstr(AArch64::PAC)
-        .addDef(DstReg)
-        .addUse(AuthedReg)
+    MIB.buildCopy({AArch64::X17}, {ValReg});
+    MIB.buildCopy({AArch64::X16}, {AUTAddrDisc});
+    MIB.buildCopy({AArch64::X15}, {AUTPC});
+
+    MIB.buildInstr(AArch64::AUTPCPAC)
+        .addImm(AUTKey)
+        .addImm(AUTConstDiscC)
         .addImm(PACKey)
         .addImm(PACConstDiscC)
         .addUse(PACAddrDisc)
         .constrainAllUses(TII, TRI, RBI);
 
+    MIB.buildCopy({DstReg}, Register(AArch64::X17));
     RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
     I.eraseFromParent();
     return true;

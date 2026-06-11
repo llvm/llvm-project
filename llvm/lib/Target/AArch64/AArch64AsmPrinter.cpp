@@ -190,13 +190,19 @@ public:
   void emitPtrauthTailCallHardening(const MachineInstr *TC);
 
   struct PtrAuthSchema {
+    // Standard schema: explicit address-discriminator operand, no PC blending.
     PtrAuthSchema(AArch64PACKey::ID Key, uint64_t IntDisc,
                   const MachineOperand &AddrDiscOp);
+
+    // PC-blending schema (for auti[ab]171615): x16 is the implicit address
+    // discriminator; PCDisc (typically x15) carries the PC half.
+    PtrAuthSchema(AArch64PACKey::ID Key, uint64_t IntDisc, Register PCDisc);
 
     AArch64PACKey::ID Key;
     uint64_t IntDisc;
     Register AddrDisc;
     bool AddrDiscIsKilled;
+    Register PCDisc;
   };
 
   // Helper for emitting AUTRELLOADPAC: increment Pointer by Addend and then by
@@ -209,7 +215,8 @@ public:
   void emitPtrauthApplyIndirectAddend(Register Pointer, Register Scratch,
                                       int64_t Addend);
 
-  // Emit the sequence for AUT or AUTPAC. Addend if AUTRELLOADPAC
+  // Emit the sequence for AUT or AUTPAC (or their PC-blending variants).
+  // Addend is only used for AUTRELLOADPAC.
   void emitPtrauthAuthResign(Register Pointer, Register Scratch,
                              PtrAuthSchema AuthSchema,
                              std::optional<PtrAuthSchema> SignSchema,
@@ -2240,7 +2247,13 @@ bool AArch64AsmPrinter::emitDeactivationSymbolRelocation(Value *DS) {
 AArch64AsmPrinter::PtrAuthSchema::PtrAuthSchema(
     AArch64PACKey::ID Key, uint64_t IntDisc, const MachineOperand &AddrDiscOp)
     : Key(Key), IntDisc(IntDisc), AddrDisc(AddrDiscOp.getReg()),
-      AddrDiscIsKilled(AddrDiscOp.isKill()) {}
+      AddrDiscIsKilled(AddrDiscOp.isKill()), PCDisc(AArch64::NoRegister) {}
+
+AArch64AsmPrinter::PtrAuthSchema::PtrAuthSchema(AArch64PACKey::ID Key,
+                                                uint64_t IntDisc,
+                                                Register PCDisc)
+    : Key(Key), IntDisc(IntDisc), AddrDisc(AArch64::X16),
+      AddrDiscIsKilled(false), PCDisc(PCDisc) {}
 
 void AArch64AsmPrinter::emitPtrauthApplyIndirectAddend(Register Pointer,
                                                        Register Scratch,
@@ -2300,12 +2313,14 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     std::optional<PtrAuthSchema> SignSchema, std::optional<int64_t> Addend,
     Value *DS) {
   const bool IsResign = SignSchema.has_value();
-  // We expand AUT/AUTPAC into a sequence of the form
+  const bool WithPC = AuthSchema.PCDisc != AArch64::NoRegister;
+
+  // We expand AUT/AUTPAC (and their PC-blending variants) into:
   //
-  //      ; authenticate x16
-  //      ; check pointer in x16
+  //      ; authenticate Pointer
+  //      ; check Pointer
   //    Lsuccess:
-  //      ; sign x16 (if AUTPAC)
+  //      ; sign Pointer (if resign)
   //    Lend:   ; if not trapping on failure
   //
   // with the checking sequence chosen depending on whether/how we should check
@@ -2337,13 +2352,34 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     break;
   }
 
-  // Compute aut discriminator
-  Register AUTDiscReg =
-      emitPtrauthDiscriminator(AuthSchema.IntDisc, AuthSchema.AddrDisc, Scratch,
-                               AuthSchema.AddrDiscIsKilled);
+  if (WithPC) {
+    // auti[ab]171615: pointer is in x17, address discriminator in x16,
+    // PC discriminator in x15.
+    assert(Pointer == AArch64::X17 && Scratch == AArch64::X16 &&
+           "AUTPCPAC must use x17/x16 as Pointer/Scratch");
 
-  if (!emitDeactivationSymbolRelocation(DS))
-    emitAUT(AuthSchema.Key, Pointer, AUTDiscReg);
+    // Blend the constant discriminator into x16 in-place.
+    Register AUTDiscReg =
+        emitPtrauthDiscriminator(AuthSchema.IntDisc, Scratch, Scratch,
+                                 /*MayClobberAddrDisc=*/true);
+    assert((AUTDiscReg == Scratch || AUTDiscReg == AArch64::XZR) &&
+           "AUT discriminator must be in x16 for auti[ab]171615");
+    (void)AUTDiscReg;
+
+    if (!emitDeactivationSymbolRelocation(DS)) {
+      unsigned AutOpc = (AuthSchema.Key == AArch64PACKey::IB)
+                            ? AArch64::AUTIB171615
+                            : AArch64::AUTIA171615;
+      EmitToStreamer(MCInstBuilder(AutOpc));
+    }
+  } else {
+    // Standard AUT: discriminator computed into Scratch, then auti[ab].
+    Register AUTDiscReg =
+        emitPtrauthDiscriminator(AuthSchema.IntDisc, AuthSchema.AddrDisc,
+                                 Scratch, AuthSchema.AddrDiscIsKilled);
+    if (!emitDeactivationSymbolRelocation(DS))
+      emitAUT(AuthSchema.Key, Pointer, AUTDiscReg);
+  }
 
   // Unchecked or checked-but-non-trapping AUT is just an "AUT": we're done.
   if (!IsResign && (!ShouldCheck || !ShouldTrap))
@@ -2361,7 +2397,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
   }
 
   // We already emitted unchecked and checked-but-non-trapping AUTs.
-  // That left us with trapping AUTs, and AUTPA/AUTRELLOADPACs.
+  // That left us with trapping AUTs, and AUTPAC/AUTRELLOADPACs.
   // Trapping AUTs don't need PAC: we're done.
   if (!IsResign)
     return;
@@ -2369,7 +2405,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
   if (Addend.has_value())
     emitPtrauthApplyIndirectAddend(Pointer, Scratch, *Addend);
 
-  // Compute pac discriminator into x17
+  // Compute PAC discriminator into Scratch, then re-sign Pointer.
   Register PACDiscReg = emitPtrauthDiscriminator(SignSchema->IntDisc,
                                                  SignSchema->AddrDisc, Scratch);
   emitPAC(SignSchema->Key, Pointer, PACDiscReg);
@@ -3331,6 +3367,21 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
     emitPtrauthAuthResign(Pointer, Scratch, AuthSchema, SignSchema,
                           std::nullopt, MI->getDeactivationSymbol());
+    return;
+  }
+
+  case AArch64::AUTPCPAC: {
+    // x17 = pointer, x16 = AUTAddrDisc, x15 = PC discriminator (all implicit).
+    PtrAuthSchema AuthSchema((AArch64PACKey::ID)MI->getOperand(0).getImm(),
+                             MI->getOperand(1).getImm(),
+                             /*PCDisc=*/AArch64::X15);
+
+    PtrAuthSchema SignSchema((AArch64PACKey::ID)MI->getOperand(2).getImm(),
+                             MI->getOperand(3).getImm(), MI->getOperand(4));
+
+    emitPtrauthAuthResign(/*Pointer=*/AArch64::X17, /*Scratch=*/AArch64::X16,
+                          AuthSchema, SignSchema, std::nullopt,
+                          MI->getDeactivationSymbol());
     return;
   }
 
