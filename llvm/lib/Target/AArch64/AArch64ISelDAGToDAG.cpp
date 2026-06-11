@@ -5122,7 +5122,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     // Materialize zero constants as copies from WZR/XZR.  This allows
     // the coalescer to propagate these into other instructions.
     ConstantSDNode *ConstNode = cast<ConstantSDNode>(Node);
-    if (ConstNode->isZero())
+    if (ConstNode->isZero() && (VT == MVT::i32 || VT == MVT::i64))
       return ReplaceNode(Node,
                          getZeroRegister(*CurDAG, SDLoc(Node), VT).getNode());
     break;
