@@ -548,10 +548,10 @@ define <2 x ptr> @addrspacecast_v2p5_to_v2p0(<2 x ptr addrspace(5)> %ptr) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s5
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; GFX9-NEXT:    v_cndmask_b32_e32 v4, 0, v3, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
@@ -1000,10 +1000,10 @@ define <2 x ptr> @addrspacecast_v2p3_to_v2p0(<2 x ptr addrspace(3)> %ptr) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b64 s[4:5], src_shared_base
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s5
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; GFX9-NEXT:    v_cndmask_b32_e32 v4, 0, v3, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v2, 0, v1, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc

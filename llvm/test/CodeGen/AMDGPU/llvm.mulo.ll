@@ -192,8 +192,8 @@ define { i64, i1 } @smulo_i64_v_v(i64 %x, i64 %y) {
 ; GFX9-NEXT:    v_cndmask_b32_e32 v4, v9, v10, vcc
 ; GFX9-NEXT:    v_sub_co_u32_e32 v5, vcc, v2, v5
 ; GFX9-NEXT:    v_subbrev_co_u32_e32 v7, vcc, 0, v4, vcc
-; GFX9-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v3
 ; GFX9-NEXT:    v_add3_u32 v1, v1, v6, v8
+; GFX9-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v3
 ; GFX9-NEXT:    v_cndmask_b32_e32 v3, v4, v7, vcc
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v4, 31, v1
 ; GFX9-NEXT:    v_cndmask_b32_e32 v2, v2, v5, vcc
@@ -222,15 +222,15 @@ define { i64, i1 } @smulo_i64_v_v(i64 %x, i64 %y) {
 ; GFX10-NEXT:    v_sub_co_u32 v2, vcc_lo, v7, v2
 ; GFX10-NEXT:    v_subrev_co_ci_u32_e32 v10, vcc_lo, 0, v9, vcc_lo
 ; GFX10-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0, v5
-; GFX10-NEXT:    v_ashrrev_i32_e32 v5, 31, v1
 ; GFX10-NEXT:    v_cndmask_b32_e32 v2, v7, v2, vcc_lo
+; GFX10-NEXT:    v_ashrrev_i32_e32 v5, 31, v1
 ; GFX10-NEXT:    v_cndmask_b32_e32 v8, v9, v10, vcc_lo
-; GFX10-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX10-NEXT:    v_sub_co_u32 v4, vcc_lo, v2, v4
 ; GFX10-NEXT:    v_subrev_co_ci_u32_e32 v7, vcc_lo, 0, v8, vcc_lo
+; GFX10-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX10-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 0, v3
-; GFX10-NEXT:    v_cndmask_b32_e32 v3, v8, v7, vcc_lo
 ; GFX10-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc_lo
+; GFX10-NEXT:    v_cndmask_b32_e32 v3, v8, v7, vcc_lo
 ; GFX10-NEXT:    v_cmp_ne_u64_e32 vcc_lo, v[2:3], v[5:6]
 ; GFX10-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]

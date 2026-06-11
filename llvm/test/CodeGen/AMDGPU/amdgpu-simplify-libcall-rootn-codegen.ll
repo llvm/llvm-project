@@ -62,27 +62,27 @@ define <2 x float> @test_rootn_afn_v2f32(<2 x float> %x, <2 x i32> %y) #0 {
 ; CHECK-LABEL: test_rootn_afn_v2f32:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cvt_f32_i32_e32 v5, v3
 ; CHECK-NEXT:    s_mov_b32 s4, 0x800000
 ; CHECK-NEXT:    v_cvt_f32_i32_e32 v4, v2
+; CHECK-NEXT:    v_cvt_f32_i32_e32 v5, v3
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0x42000000
 ; CHECK-NEXT:    v_cmp_lt_f32_e64 vcc, |v1|, s4
-; CHECK-NEXT:    v_cndmask_b32_e64 v8, 0, 32, vcc
 ; CHECK-NEXT:    v_cndmask_b32_e32 v7, 0, v6, vcc
-; CHECK-NEXT:    v_ldexp_f32 v8, |v1|, v8
+; CHECK-NEXT:    v_cndmask_b32_e64 v8, 0, 32, vcc
 ; CHECK-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
 ; CHECK-NEXT:    v_cndmask_b32_e64 v9, 0, 32, vcc
-; CHECK-NEXT:    v_log_f32_e32 v8, v8
+; CHECK-NEXT:    v_ldexp_f32 v8, |v1|, v8
 ; CHECK-NEXT:    v_ldexp_f32 v9, |v0|, v9
+; CHECK-NEXT:    v_log_f32_e32 v8, v8
 ; CHECK-NEXT:    v_log_f32_e32 v9, v9
-; CHECK-NEXT:    v_rcp_f32_e32 v5, v5
 ; CHECK-NEXT:    v_rcp_f32_e32 v4, v4
+; CHECK-NEXT:    v_rcp_f32_e32 v5, v5
 ; CHECK-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
 ; CHECK-NEXT:    v_sub_f32_e32 v7, v8, v7
 ; CHECK-NEXT:    v_sub_f32_e32 v6, v9, v6
+; CHECK-NEXT:    v_mul_f32_e32 v4, v4, v6
 ; CHECK-NEXT:    v_mul_f32_e32 v5, v5, v7
 ; CHECK-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; CHECK-NEXT:    v_mul_f32_e32 v4, v4, v6
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0x42800000
 ; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v5
 ; CHECK-NEXT:    v_cndmask_b32_e32 v7, 0, v6, vcc

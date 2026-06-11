@@ -5157,8 +5157,8 @@ define double @v_contract_mul_add_f64_select_64_1(i32 %arg, double %x, double %y
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v6, 0x3ff00000
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v7, 0x40500000
-; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v5, 0
+; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v6, v6, v7, vcc
 ; GFX9-SDAG-NEXT:    v_fma_f64 v[0:1], v[1:2], v[5:6], v[3:4]
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -5176,8 +5176,8 @@ define double @v_contract_mul_add_f64_select_64_1(i32 %arg, double %x, double %y
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v6, 0x40500000
-; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v5, 0
+; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e32 v6, 0x3ff00000, v6, vcc_lo
 ; GFX10-SDAG-NEXT:    v_fma_f64 v[0:1], v[1:2], v[5:6], v[3:4]
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -5221,8 +5221,8 @@ define double @v_contract_mul_add_f64_select_1_64(i32 %arg, double %x, double %y
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v6, 0x40500000
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v7, 0x3ff00000
-; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v5, 0
+; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v6, v6, v7, vcc
 ; GFX9-SDAG-NEXT:    v_fma_f64 v[0:1], v[1:2], v[5:6], v[3:4]
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -5240,8 +5240,8 @@ define double @v_contract_mul_add_f64_select_1_64(i32 %arg, double %x, double %y
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v6, 0x3ff00000
-; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v5, 0
+; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e32 v6, 0x40500000, v6, vcc_lo
 ; GFX10-SDAG-NEXT:    v_fma_f64 v[0:1], v[1:2], v[5:6], v[3:4]
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -5285,8 +5285,8 @@ define double @v_contract_mul_add_f64_select_n64_n1(i32 %arg, double %x, double 
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v6, 0xbff00000
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v7, 0xc0500000
-; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v5, 0
+; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v6, v6, v7, vcc
 ; GFX9-SDAG-NEXT:    v_fma_f64 v[0:1], v[1:2], v[5:6], v[3:4]
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -5304,8 +5304,8 @@ define double @v_contract_mul_add_f64_select_n64_n1(i32 %arg, double %x, double 
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v6, 0xc0500000
-; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v5, 0
+; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e32 v6, 0xbff00000, v6, vcc_lo
 ; GFX10-SDAG-NEXT:    v_fma_f64 v[0:1], v[1:2], v[5:6], v[3:4]
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -5349,8 +5349,8 @@ define double @v_contract_mul_add_f64_select_n1_n64(i32 %arg, double %x, double 
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v6, 0xc0500000
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v7, 0xbff00000
-; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v5, 0
+; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v6, v6, v7, vcc
 ; GFX9-SDAG-NEXT:    v_fma_f64 v[0:1], v[1:2], v[5:6], v[3:4]
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -5368,8 +5368,8 @@ define double @v_contract_mul_add_f64_select_n1_n64(i32 %arg, double %x, double 
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v6, 0xbff00000
-; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v5, 0
+; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e32 v6, 0xc0500000, v6, vcc_lo
 ; GFX10-SDAG-NEXT:    v_fma_f64 v[0:1], v[1:2], v[5:6], v[3:4]
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -5413,8 +5413,8 @@ define double @v_contract_mul_add_f64_select_128_64(i32 %arg, double %x, double 
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v6, 0x40500000
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v7, 0x40600000
-; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v5, 0
+; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v6, v6, v7, vcc
 ; GFX9-SDAG-NEXT:    v_fma_f64 v[0:1], v[1:2], v[5:6], v[3:4]
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -5433,8 +5433,8 @@ define double @v_contract_mul_add_f64_select_128_64(i32 %arg, double %x, double 
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v6, 0x40600000
-; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v5, 0
+; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e32 v6, 0x40500000, v6, vcc_lo
 ; GFX10-SDAG-NEXT:    v_fma_f64 v[0:1], v[1:2], v[5:6], v[3:4]
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -5480,8 +5480,8 @@ define double @v_contract_mul_add_f64_select_128_4(i32 %arg, double %x, double %
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v6, 0x40100000
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v7, 0x40600000
-; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v5, 0
+; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v6, v6, v7, vcc
 ; GFX9-SDAG-NEXT:    v_fma_f64 v[0:1], v[1:2], v[5:6], v[3:4]
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -5499,8 +5499,8 @@ define double @v_contract_mul_add_f64_select_128_4(i32 %arg, double %x, double %
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v6, 0x40600000
-; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v5, 0
+; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e32 v6, 0x40100000, v6, vcc_lo
 ; GFX10-SDAG-NEXT:    v_fma_f64 v[0:1], v[1:2], v[5:6], v[3:4]
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -5609,8 +5609,8 @@ define double @v_contract_mul_add_f64_select_4_128(i32 %arg, double %x, double %
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v6, 0x40600000
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v7, 0x40100000
-; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v5, 0
+; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v6, v6, v7, vcc
 ; GFX9-SDAG-NEXT:    v_fma_f64 v[0:1], v[1:2], v[5:6], v[3:4]
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -5628,8 +5628,8 @@ define double @v_contract_mul_add_f64_select_4_128(i32 %arg, double %x, double %
 ; GFX10-SDAG:       ; %bb.0:
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v6, 0x40100000
-; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-SDAG-NEXT:    v_mov_b32_e32 v5, 0
+; GFX10-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e32 v6, 0x40600000, v6, vcc_lo
 ; GFX10-SDAG-NEXT:    v_fma_f64 v[0:1], v[1:2], v[5:6], v[3:4]
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]

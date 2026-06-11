@@ -12495,8 +12495,8 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[0:1]
-; CHECK-NEXT:    s_mov_b32 s4, exec_lo
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, -1, v0, vcc_lo
+; CHECK-NEXT:    s_mov_b32 s4, exec_lo
 ; CHECK-NEXT:    v_cmpx_ge_u32_e64 v2, v3
 ; CHECK-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; CHECK-NEXT:    s_cbranch_execz .LBB9_3
@@ -15841,8 +15841,8 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; UNROLL3:       ; %bb.0: ; %entry
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; UNROLL3-NEXT:    v_cmp_ne_u64_e32 vcc_lo, 0, v[0:1]
-; UNROLL3-NEXT:    s_mov_b32 s4, exec_lo
 ; UNROLL3-NEXT:    v_cndmask_b32_e32 v3, -1, v0, vcc_lo
+; UNROLL3-NEXT:    s_mov_b32 s4, exec_lo
 ; UNROLL3-NEXT:    v_cmpx_ge_u32_e64 v2, v3
 ; UNROLL3-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB9_4

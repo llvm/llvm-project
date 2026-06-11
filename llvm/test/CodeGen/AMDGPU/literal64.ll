@@ -497,10 +497,10 @@ define amdgpu_ps <2 x float> @v_cndmask(double %a) {
 ; GFX1250-SDAG-LABEL: v_cndmask:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-SDAG-NEXT:    v_cmp_eq_f64_e32 vcc_lo, 0, v[0:1]
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v2, 0x40632000
+; GFX1250-SDAG-NEXT:    v_cmp_eq_f64_e32 vcc_lo, 0, v[0:1]
 ; GFX1250-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0x33333333, 0, vcc_lo
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX1250-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0x40690333, v2, vcc_lo
 ; GFX1250-SDAG-NEXT:    ; return to shader part epilog
 ;
@@ -516,10 +516,10 @@ define amdgpu_ps <2 x float> @v_cndmask(double %a) {
 ;
 ; GFX13-SDAG-LABEL: v_cndmask:
 ; GFX13-SDAG:       ; %bb.0:
-; GFX13-SDAG-NEXT:    v_cmp_eq_f64_e32 vcc_lo, 0, v[0:1]
 ; GFX13-SDAG-NEXT:    v_mov_b32_e32 v2, 0x40632000
+; GFX13-SDAG-NEXT:    v_cmp_eq_f64_e32 vcc_lo, 0, v[0:1]
 ; GFX13-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0x33333333, 0, vcc_lo
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX13-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0x40690333, v2, vcc_lo
 ; GFX13-SDAG-NEXT:    ; return to shader part epilog
 ;

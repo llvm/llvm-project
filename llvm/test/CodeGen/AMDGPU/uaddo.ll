@@ -1154,8 +1154,8 @@ define amdgpu_cs void @sv_uaddo_i128(ptr addrspace(1) %out, i128 inreg %a, i128 
 ; SI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; SI-NEXT:    v_cmp_gt_u64_e32 vcc, s[2:3], v[4:5]
 ; SI-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
-; SI-NEXT:    v_cmp_eq_u64_e32 vcc, s[2:3], v[4:5]
 ; SI-NEXT:    s_mov_b32 s6, 0
+; SI-NEXT:    v_cmp_eq_u64_e32 vcc, s[2:3], v[4:5]
 ; SI-NEXT:    v_cndmask_b32_e32 v2, v3, v2, vcc
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s4, s6

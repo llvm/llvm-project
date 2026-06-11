@@ -265,9 +265,9 @@ define i64 @test_signed_i64_f32(float %f) nounwind {
 ; GFX7-GI-NEXT:    v_subb_u32_e32 v2, vcc, v2, v3, vcc
 ; GFX7-GI-NEXT:    v_mov_b32_e32 v3, 0xdf000000
 ; GFX7-GI-NEXT:    v_cmp_nge_f32_e32 vcc, v0, v3
-; GFX7-GI-NEXT:    v_mov_b32_e32 v3, 0x5effffff
 ; GFX7-GI-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
 ; GFX7-GI-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
+; GFX7-GI-NEXT:    v_mov_b32_e32 v3, 0x5effffff
 ; GFX7-GI-NEXT:    v_bfrev_b32_e32 v4, -2
 ; GFX7-GI-NEXT:    v_cmp_gt_f32_e32 vcc, v0, v3
 ; GFX7-GI-NEXT:    v_cndmask_b32_e64 v1, v1, -1, vcc
@@ -1495,12 +1495,12 @@ define i64 @test_s_signed_i64_f64(double inreg %f) nounwind {
 ; GFX7-ISEL-NEXT:    s_mov_b32 s5, 0xc1f00000
 ; GFX7-ISEL-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX7-ISEL-NEXT:    v_mov_b32_e32 v5, 0xc3e00000
-; GFX7-ISEL-NEXT:    v_cmp_nge_f64_e32 vcc, s[16:17], v[4:5]
 ; GFX7-ISEL-NEXT:    v_bfrev_b32_e32 v8, 1
 ; GFX7-ISEL-NEXT:    v_mov_b32_e32 v6, -1
+; GFX7-ISEL-NEXT:    v_mov_b32_e32 v7, 0x43dfffff
 ; GFX7-ISEL-NEXT:    v_ldexp_f64 v[2:3], v[0:1], s4
 ; GFX7-ISEL-NEXT:    s_mov_b32 s4, 0
-; GFX7-ISEL-NEXT:    v_mov_b32_e32 v7, 0x43dfffff
+; GFX7-ISEL-NEXT:    v_cmp_nge_f64_e32 vcc, s[16:17], v[4:5]
 ; GFX7-ISEL-NEXT:    v_cmp_u_f64_e64 s[6:7], s[16:17], s[16:17]
 ; GFX7-ISEL-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]
 ; GFX7-ISEL-NEXT:    v_fma_f64 v[0:1], v[2:3], s[4:5], v[0:1]
@@ -1560,12 +1560,12 @@ define i64 @test_s_signed_i64_f64(double inreg %f) nounwind {
 ; GFX9-NEXT:    s_mov_b32 s5, 0xc1f00000
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v5, 0xc3e00000
-; GFX9-NEXT:    v_cmp_nge_f64_e32 vcc, s[16:17], v[4:5]
 ; GFX9-NEXT:    v_bfrev_b32_e32 v8, 1
 ; GFX9-NEXT:    v_mov_b32_e32 v6, -1
+; GFX9-NEXT:    v_mov_b32_e32 v7, 0x43dfffff
 ; GFX9-NEXT:    v_ldexp_f64 v[2:3], v[0:1], s4
 ; GFX9-NEXT:    s_mov_b32 s4, 0
-; GFX9-NEXT:    v_mov_b32_e32 v7, 0x43dfffff
+; GFX9-NEXT:    v_cmp_nge_f64_e32 vcc, s[16:17], v[4:5]
 ; GFX9-NEXT:    v_cmp_u_f64_e64 s[6:7], s[16:17], s[16:17]
 ; GFX9-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]
 ; GFX9-NEXT:    v_fma_f64 v[0:1], v[2:3], s[4:5], v[0:1]

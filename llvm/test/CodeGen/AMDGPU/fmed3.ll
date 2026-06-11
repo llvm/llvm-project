@@ -9058,8 +9058,8 @@ define <2 x half> @v_test_nnan_input_fmed3_r_i_i_v2f16_maximum_minimum(<2 x half
 ; VI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 2.0, v1
 ; VI-GISEL-NEXT:    v_cndmask_b32_e32 v1, v3, v2, vcc
 ; VI-GISEL-NEXT:    v_max_f32_e32 v2, 2.0, v0
-; VI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 2.0, v0
 ; VI-GISEL-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; VI-GISEL-NEXT:    v_cmp_o_f32_e32 vcc, 2.0, v0
 ; VI-GISEL-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
 ; VI-GISEL-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; VI-GISEL-NEXT:    v_cvt_f32_f16_e32 v1, v1

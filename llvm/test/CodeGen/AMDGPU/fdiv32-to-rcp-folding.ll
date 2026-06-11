@@ -442,9 +442,9 @@ define amdgpu_kernel void @div_v4_c_by_minus_x_25ulp(ptr addrspace(1) %arg) {
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-FLUSH-NEXT:    v_cmp_gt_f32_e64 vcc, |s0|, v0
 ; GCN-FLUSH-NEXT:    v_cndmask_b32_e32 v3, 1.0, v2, vcc
-; GCN-FLUSH-NEXT:    v_cmp_gt_f32_e64 vcc, |s3|, v0
 ; GCN-FLUSH-NEXT:    v_mul_f32_e32 v5, s0, v3
 ; GCN-FLUSH-NEXT:    v_mul_f32_e64 v6, -s0, v3
+; GCN-FLUSH-NEXT:    v_cmp_gt_f32_e64 vcc, |s3|, v0
 ; GCN-FLUSH-NEXT:    v_cndmask_b32_e32 v7, 1.0, v2, vcc
 ; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v5, v5
 ; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v6, v6

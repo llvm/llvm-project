@@ -500,9 +500,9 @@ define void @v16(<16 x double> %num, ptr addrspace(1) %p) {
 ; CHECK-NEXT:    v_bfe_u32 v1, v0, 16, 1
 ; CHECK-NEXT:    v_add3_u32 v1, v1, v0, s6
 ; CHECK-NEXT:    v_or_b32_e32 v0, 0x400000, v0
-; CHECK-NEXT:    v_cmp_u_f64_e32 vcc, v[28:29], v[28:29]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_cvt_f32_f64_e32 v3, v[30:31]
+; CHECK-NEXT:    v_cmp_u_f64_e32 vcc, v[28:29], v[28:29]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, v1, v0, vcc
 ; CHECK-NEXT:    v_cvt_f64_f32_e32 v[0:1], v3
 ; CHECK-NEXT:    v_and_b32_e32 v4, 1, v3
@@ -532,8 +532,8 @@ define void @v16(<16 x double> %num, ptr addrspace(1) %p) {
 ; CHECK-NEXT:    v_bfe_u32 v1, v0, 16, 1
 ; CHECK-NEXT:    v_add3_u32 v1, v1, v0, s6
 ; CHECK-NEXT:    v_or_b32_e32 v0, 0x400000, v0
-; CHECK-NEXT:    v_cmp_u_f64_e32 vcc, v[24:25], v[24:25]
 ; CHECK-NEXT:    v_cvt_f32_f64_e32 v4, v[26:27]
+; CHECK-NEXT:    v_cmp_u_f64_e32 vcc, v[24:25], v[24:25]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, v1, v0, vcc
 ; CHECK-NEXT:    v_cvt_f64_f32_e32 v[0:1], v4
 ; CHECK-NEXT:    v_and_b32_e32 v5, 1, v4
@@ -563,8 +563,8 @@ define void @v16(<16 x double> %num, ptr addrspace(1) %p) {
 ; CHECK-NEXT:    v_bfe_u32 v1, v0, 16, 1
 ; CHECK-NEXT:    v_add3_u32 v1, v1, v0, s6
 ; CHECK-NEXT:    v_or_b32_e32 v0, 0x400000, v0
-; CHECK-NEXT:    v_cmp_u_f64_e32 vcc, v[20:21], v[20:21]
 ; CHECK-NEXT:    v_cvt_f32_f64_e32 v5, v[22:23]
+; CHECK-NEXT:    v_cmp_u_f64_e32 vcc, v[20:21], v[20:21]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v4, v1, v0, vcc
 ; CHECK-NEXT:    v_cvt_f64_f32_e32 v[0:1], v5
 ; CHECK-NEXT:    v_and_b32_e32 v6, 1, v5
@@ -594,8 +594,8 @@ define void @v16(<16 x double> %num, ptr addrspace(1) %p) {
 ; CHECK-NEXT:    v_bfe_u32 v4, v0, 16, 1
 ; CHECK-NEXT:    v_add3_u32 v4, v4, v0, s6
 ; CHECK-NEXT:    v_or_b32_e32 v0, 0x400000, v0
-; CHECK-NEXT:    v_cmp_u_f64_e32 vcc, v[16:17], v[16:17]
 ; CHECK-NEXT:    v_cvt_f32_f64_e32 v6, v[18:19]
+; CHECK-NEXT:    v_cmp_u_f64_e32 vcc, v[16:17], v[16:17]
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; CHECK-NEXT:    v_cvt_f64_f32_e32 v[4:5], v6
 ; CHECK-NEXT:    v_and_b32_e32 v7, 1, v6

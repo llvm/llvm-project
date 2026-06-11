@@ -1277,8 +1277,8 @@ define <2 x i64> @v_sdiv_v2i64_oddk_denom(<2 x i64> %num) {
 ; GISEL-NEXT:    v_addc_u32_e32 v18, vcc, 0, v20, vcc
 ; GISEL-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v4
 ; GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc
-; GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; GISEL-NEXT:    v_cndmask_b32_e64 v15, -1, v14, s[4:5]
+; GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; GISEL-NEXT:    v_cndmask_b32_e32 v19, -1, v0, vcc
 ; GISEL-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v6, v8, v[5:6]
 ; GISEL-NEXT:    s_mov_b32 s4, 1
@@ -1510,8 +1510,8 @@ define <2 x i64> @v_sdiv_v2i64_oddk_denom(<2 x i64> %num) {
 ; CGP-NEXT:    v_addc_u32_e32 v19, vcc, 0, v15, vcc
 ; CGP-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v4
 ; CGP-NEXT:    v_cndmask_b32_e64 v0, 0, -1, vcc
-; CGP-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; CGP-NEXT:    v_cndmask_b32_e64 v16, -1, v13, s[4:5]
+; CGP-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; CGP-NEXT:    v_cndmask_b32_e32 v20, -1, v0, vcc
 ; CGP-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v6, v8, v[5:6]
 ; CGP-NEXT:    v_add_i32_e32 v5, vcc, 1, v18

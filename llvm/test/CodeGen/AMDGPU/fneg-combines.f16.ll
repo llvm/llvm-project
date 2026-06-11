@@ -2031,13 +2031,13 @@ define half @v_fneg_fma_f16(half %a, half %b, half %c) #0 {
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -2107,13 +2107,13 @@ define { half, half } @v_fneg_fma_store_use_fma_f16(half %a, half %b, half %c) #
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v1, v1, v0
@@ -2185,13 +2185,13 @@ define { half, half } @v_fneg_fma_multi_use_fma_f16(half %a, half %b, half %c) #
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -2269,13 +2269,13 @@ define { half, half } @v_fneg_fma_multi_use_fma_f16_nsz(half %a, half %b, half %
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -2350,13 +2350,13 @@ define half @v_fneg_fma_fneg_x_y_f16(half %a, half %b, half %c) #0 {
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -2427,13 +2427,13 @@ define half @v_fneg_fma_fneg_x_y_f16_nsz(half %a, half %b, half %c) #0 {
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -2500,13 +2500,13 @@ define half @v_fneg_fma_x_fneg_y_f16(half %a, half %b, half %c) #0 {
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -2577,13 +2577,13 @@ define half @v_fneg_fma_x_fneg_y_f16_nsz(half %a, half %b, half %c) #0 {
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -2650,13 +2650,13 @@ define half @v_fneg_fma_fneg_fneg_y_f16(half %a, half %b, half %c) #0 {
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -2728,13 +2728,13 @@ define half @v_fneg_fma_fneg_fneg_y_f16_nsz(half %a, half %b, half %c) #0 {
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -2802,13 +2802,13 @@ define half @v_fneg_fma_fneg_x_fneg_f16(half %a, half %b, half %c) #0 {
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -2880,13 +2880,13 @@ define half @v_fneg_fma_fneg_x_fneg_f16_nsz(half %a, half %b, half %c) #0 {
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -2954,13 +2954,13 @@ define half @v_fneg_fma_x_y_fneg_f16(half %a, half %b, half %c) #0 {
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -3031,13 +3031,13 @@ define half @v_fneg_fma_x_y_fneg_f16_nsz(half %a, half %b, half %c) #0 {
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -3105,13 +3105,13 @@ define { half, half } @v_fneg_fma_store_use_fneg_x_y_f16(half %a, half %b, half 
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v5
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v4
-; SI-NEXT:    v_cndmask_b32_e32 v2, v5, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v6, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v5, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v5, v6, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v4
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v4
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -3190,11 +3190,11 @@ define { half, half } @v_fneg_fma_store_use_fneg_x_y_f16_nsz(half %a, half %b, h
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v5
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v4
-; SI-NEXT:    v_cndmask_b32_e32 v2, v5, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v6, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v5, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v5, v6, vcc
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v4
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
@@ -3271,13 +3271,13 @@ define { half, half } @v_fneg_fma_multi_use_fneg_x_y_f16(half %a, half %b, half 
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v5
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v4
-; SI-NEXT:    v_cndmask_b32_e32 v2, v5, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v6, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v5, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v5, v6, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v4
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v4
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v2, 0x8000, v1
 ; SI-NEXT:    v_mul_f32_e32 v1, v8, v3
@@ -3359,13 +3359,13 @@ define { half, half } @v_fneg_fma_multi_use_fneg_x_y_f16_nsz(half %a, half %b, h
 ; SI-NEXT:    v_add_i32_e32 v4, vcc, v4, v6
 ; SI-NEXT:    v_mov_b32_e32 v6, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v5
-; SI-NEXT:    v_cndmask_b32_e32 v4, v6, v4, vcc
 ; SI-NEXT:    v_mov_b32_e32 v7, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v4, v6, v4, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v6, v7, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v5
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_mul_f32_e32 v0, v0, v3
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v5
 ; SI-NEXT:    v_cndmask_b32_e32 v4, v4, v1, vcc
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v0
 ; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
@@ -3954,13 +3954,13 @@ define half @v_fneg_fp_round_f64_to_f16(double %a) #0 {
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -4003,11 +4003,11 @@ define half @v_fneg_fp_round_f64_to_f16(double %a) #0 {
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, v2, v4
 ; VI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; VI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; VI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; VI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; VI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; VI-NEXT:    s_movk_i32 s4, 0x40f
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
+; VI-NEXT:    s_movk_i32 s4, 0x40f
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x8000
@@ -4105,13 +4105,13 @@ define half @v_fneg_fp_round_fneg_f64_to_f16(double %a) #0 {
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -4152,11 +4152,11 @@ define half @v_fneg_fp_round_fneg_f64_to_f16(double %a) #0 {
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, v2, v4
 ; VI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; VI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; VI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; VI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; VI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; VI-NEXT:    s_movk_i32 s4, 0x40f
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
+; VI-NEXT:    s_movk_i32 s4, 0x40f
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x8000
@@ -4256,14 +4256,14 @@ define { half, double } @v_fneg_fp_round_store_use_fneg_f64_to_f16(double %a) #0
 ; SI-NEXT:    v_add_i32_e32 v4, vcc, v4, v6
 ; SI-NEXT:    v_mov_b32_e32 v6, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v5
-; SI-NEXT:    v_cndmask_b32_e32 v4, v6, v4, vcc
 ; SI-NEXT:    v_mov_b32_e32 v7, 0x7e00
-; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_xor_b32_e32 v2, 0x80000000, v1
+; SI-NEXT:    v_cndmask_b32_e32 v4, v6, v4, vcc
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v6, v7, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v5
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v5
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -4307,11 +4307,11 @@ define { half, double } @v_fneg_fp_round_store_use_fneg_f64_to_f16(double %a) #0
 ; VI-NEXT:    v_add_u32_e32 v4, vcc, v4, v6
 ; VI-NEXT:    v_mov_b32_e32 v6, 0x7c00
 ; VI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v5
-; VI-NEXT:    v_cndmask_b32_e32 v4, v6, v4, vcc
 ; VI-NEXT:    v_mov_b32_e32 v7, 0x7e00
+; VI-NEXT:    v_cndmask_b32_e32 v4, v6, v4, vcc
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; VI-NEXT:    s_movk_i32 s4, 0x40f
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v6, v7, vcc
+; VI-NEXT:    s_movk_i32 s4, 0x40f
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v5
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc
 ; VI-NEXT:    v_mov_b32_e32 v4, 0x8000
@@ -4416,11 +4416,11 @@ define { half, double } @v_fneg_fp_round_multi_use_fneg_f64_to_f16(double %a, do
 ; SI-NEXT:    v_add_i32_e32 v5, vcc, v5, v7
 ; SI-NEXT:    v_mov_b32_e32 v7, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v6
-; SI-NEXT:    v_cndmask_b32_e32 v5, v7, v5, vcc
 ; SI-NEXT:    v_mov_b32_e32 v8, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v5, v7, v5, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v4, v7, v8, vcc
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v6
 ; SI-NEXT:    v_cndmask_b32_e32 v4, v5, v4, vcc
 ; SI-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
@@ -4458,20 +4458,20 @@ define { half, double } @v_fneg_fp_round_multi_use_fneg_f64_to_f16(double %a, do
 ; VI-NEXT:    v_cndmask_b32_e32 v5, v7, v5, vcc
 ; VI-NEXT:    v_and_b32_e32 v7, 7, v5
 ; VI-NEXT:    v_cmp_lt_i32_e32 vcc, 5, v7
+; VI-NEXT:    v_mul_f64 v[2:3], -v[0:1], v[2:3]
 ; VI-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v7
 ; VI-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc
-; VI-NEXT:    v_mul_f64 v[2:3], -v[0:1], v[2:3]
 ; VI-NEXT:    v_or_b32_e32 v7, v7, v8
 ; VI-NEXT:    v_lshrrev_b32_e32 v5, 2, v5
 ; VI-NEXT:    v_add_u32_e32 v5, vcc, v5, v7
 ; VI-NEXT:    v_mov_b32_e32 v7, 0x7c00
 ; VI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v6
-; VI-NEXT:    v_cndmask_b32_e32 v5, v7, v5, vcc
 ; VI-NEXT:    v_mov_b32_e32 v8, 0x7e00
+; VI-NEXT:    v_cndmask_b32_e32 v5, v7, v5, vcc
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v4
-; VI-NEXT:    s_movk_i32 s4, 0x40f
 ; VI-NEXT:    v_cndmask_b32_e32 v4, v7, v8, vcc
+; VI-NEXT:    s_movk_i32 s4, 0x40f
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v6
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v5, v4, vcc
 ; VI-NEXT:    v_mov_b32_e32 v4, 0x8000
@@ -4575,13 +4575,13 @@ define { half, half } @v_fneg_multi_use_fp_round_fneg_f64_to_f16(double %a) #0 {
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v1, v1, v0
@@ -4623,11 +4623,11 @@ define { half, half } @v_fneg_multi_use_fp_round_fneg_f64_to_f16(double %a) #0 {
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, v2, v4
 ; VI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; VI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; VI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; VI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; VI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; VI-NEXT:    s_movk_i32 s4, 0x40f
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
+; VI-NEXT:    s_movk_i32 s4, 0x40f
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x8000
@@ -5175,8 +5175,8 @@ define { half, half } @multiuse_fneg_2_vop3_users_f16(half %a, half %b, half %c)
 ; SI-NEXT:    v_add_i32_e32 v6, vcc, v6, v8
 ; SI-NEXT:    v_mov_b32_e32 v8, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v7
-; SI-NEXT:    v_cndmask_b32_e32 v6, v8, v6, vcc
 ; SI-NEXT:    v_mov_b32_e32 v9, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v6, v8, v6, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
 ; SI-NEXT:    v_cndmask_b32_e32 v2, v8, v9, vcc
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v7
@@ -5218,8 +5218,8 @@ define { half, half } @multiuse_fneg_2_vop3_users_f16(half %a, half %b, half %c)
 ; SI-NEXT:    v_cndmask_b32_e32 v3, v8, v3, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v8, v9, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v4
 ; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v4
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; SI-NEXT:    v_and_b32_e32 v2, 0x8000, v2
 ; SI-NEXT:    v_or_b32_e32 v1, v2, v1
@@ -5332,11 +5332,11 @@ define { half, half } @multiuse_fneg_vop2_vop3_users_f16(ptr addrspace(1) %out, 
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v6
 ; SI-NEXT:    v_mov_b32_e32 v6, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v6, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v7, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v6, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v6, v7, vcc
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
@@ -5416,13 +5416,13 @@ define { half, half } @free_fold_src_code_size_cost_use_f16(ptr addrspace(1) %ou
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v6
 ; SI-NEXT:    v_mov_b32_e32 v6, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v6, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v7, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v6, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v6, v7, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -5507,13 +5507,13 @@ define { half, half } @free_fold_src_code_size_cost_use_f16_nsz(ptr addrspace(1)
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v6
 ; SI-NEXT:    v_mov_b32_e32 v6, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v6, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v7, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v6, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v6, v7, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -5605,13 +5605,13 @@ define half @one_use_cost_to_fold_into_src_f16(ptr addrspace(1) %out, half %a, h
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v5, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v5, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
+; SI-NEXT:    s_movk_i32 s4, 0x40f
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; SI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
 ; SI-NEXT:    v_or_b32_e32 v0, v1, v0
@@ -5688,8 +5688,8 @@ define { half, half } @multi_use_cost_to_fold_into_src(ptr addrspace(1) %out, ha
 ; SI-NEXT:    v_add_i32_e32 v2, vcc, v2, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v3
-; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_mov_b32_e32 v6, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v4, v6, vcc
 ; SI-NEXT:    v_cvt_f32_f16_e32 v4, v5
@@ -5785,11 +5785,11 @@ define <2 x half> @fneg_fma_fneg_dagcombine_loop(<2 x half> %arg, <2 x half> %ar
 ; SI-NEXT:    v_add_i32_e32 v5, vcc, v5, v10
 ; SI-NEXT:    v_mov_b32_e32 v10, 0x7c00
 ; SI-NEXT:    v_cmp_gt_i32_e32 vcc, 31, v6
-; SI-NEXT:    v_cndmask_b32_e32 v5, v10, v5, vcc
 ; SI-NEXT:    v_mov_b32_e32 v11, 0x7e00
+; SI-NEXT:    v_cndmask_b32_e32 v5, v10, v5, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v3
-; SI-NEXT:    s_movk_i32 s8, 0x40f
 ; SI-NEXT:    v_cndmask_b32_e32 v3, v10, v11, vcc
+; SI-NEXT:    s_movk_i32 s8, 0x40f
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s8, v6
 ; SI-NEXT:    v_cndmask_b32_e32 v12, v5, v3, vcc
 ; SI-NEXT:    v_lshrrev_b32_e32 v13, 16, v4
@@ -5833,8 +5833,8 @@ define <2 x half> @fneg_fma_fneg_dagcombine_loop(<2 x half> %arg, <2 x half> %ar
 ; SI-NEXT:    v_cndmask_b32_e32 v6, v10, v6, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v3, v10, v11, vcc
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s8, v7
 ; SI-NEXT:    v_lshrrev_b32_e32 v4, 16, v4
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s8, v7
 ; SI-NEXT:    v_cndmask_b32_e32 v3, v6, v3, vcc
 ; SI-NEXT:    v_and_b32_e32 v4, 0x8000, v4
 ; SI-NEXT:    v_lshrrev_b32_e32 v8, 16, v2

@@ -145,8 +145,8 @@ define amdgpu_cs void @loop_with_1break(ptr addrspace(1) %x, ptr addrspace(1) %a
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, v1, v5, vcc_lo
 ; GFX10-NEXT:    s_andn2_b32 s3, s5, exec_lo
 ; GFX10-NEXT:    s_and_b32 s0, exec_lo, s0
-; GFX10-NEXT:    s_or_b32 s5, s3, s0
 ; GFX10-NEXT:    global_load_dword v6, v[4:5], off
+; GFX10-NEXT:    s_or_b32 s5, s3, s0
 ; GFX10-NEXT:    s_mov_b32 s0, s2
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_add_nc_u32_e32 v6, 1, v6
@@ -237,8 +237,8 @@ define amdgpu_cs void @loop_with_2breaks(ptr addrspace(1) %x, ptr addrspace(1) %
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, v1, v7, vcc_lo
 ; GFX10-NEXT:    s_andn2_b32 s3, s6, exec_lo
 ; GFX10-NEXT:    s_and_b32 s0, exec_lo, s0
-; GFX10-NEXT:    s_or_b32 s6, s3, s0
 ; GFX10-NEXT:    global_load_dword v8, v[6:7], off
+; GFX10-NEXT:    s_or_b32 s6, s3, s0
 ; GFX10-NEXT:    s_mov_b32 s0, s2
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_add_nc_u32_e32 v8, 1, v8
@@ -353,8 +353,8 @@ define amdgpu_cs void @loop_with_3breaks(ptr addrspace(1) %x, ptr addrspace(1) %
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v9, vcc_lo, v1, v9, vcc_lo
 ; GFX10-NEXT:    s_andn2_b32 s3, s8, exec_lo
 ; GFX10-NEXT:    s_and_b32 s0, exec_lo, s0
-; GFX10-NEXT:    s_or_b32 s8, s3, s0
 ; GFX10-NEXT:    global_load_dword v10, v[8:9], off
+; GFX10-NEXT:    s_or_b32 s8, s3, s0
 ; GFX10-NEXT:    s_mov_b32 s0, s2
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_add_nc_u32_e32 v10, 1, v10

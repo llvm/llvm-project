@@ -142,8 +142,8 @@ define float @copysign_known_signmask_f32_known_positive_mag__nnan_exp2(float %x
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v3, 0x42800000
+; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GFX9-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
 ; GFX9-NEXT:    v_add_f32_e32 v0, v0, v3
 ; GFX9-NEXT:    v_exp_f32_e32 v0, v0
@@ -164,8 +164,8 @@ define float @copysign_known_signmask_f32_known_positive_mag__nnan_exp10(float %
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GFX9-NEXT:    v_mov_b32_e32 v3, 0x42800000
+; GFX9-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
 ; GFX9-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
 ; GFX9-NEXT:    v_add_f32_e32 v0, v0, v3
 ; GFX9-NEXT:    v_exp_f32_e32 v0, v0

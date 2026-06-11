@@ -595,8 +595,8 @@ define amdgpu_ps double @fneg_fadd_0_f64(double inreg %tmp2, double inreg %tmp6,
 ; GCN-NEXT:    v_div_fixup_f64 v[0:1], v[0:1], s[2:3], 1.0
 ; GCN-NEXT:    v_mul_f64 v[0:1], v[0:1], 0
 ; GCN-NEXT:    v_add_f64 v[0:1], v[0:1], 0
-; GCN-NEXT:    v_cmp_ngt_f64_e32 vcc, s[0:1], v[0:1]
 ; GCN-NEXT:    v_xor_b32_e32 v4, 0x80000000, v1
+; GCN-NEXT:    v_cmp_ngt_f64_e32 vcc, s[0:1], v[0:1]
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; GCN-NEXT:    v_cmp_nlt_f64_e32 vcc, 0, v[0:1]
@@ -699,8 +699,8 @@ define amdgpu_ps double @fneg_fadd_0_nsz_f64(double inreg %tmp2, double inreg %t
 ; SI-NEXT:    s_brev_b32 s3, 1
 ; SI-NEXT:    v_mul_f64 v[0:1], v[0:1], s[2:3]
 ; SI-NEXT:    v_mov_b32_e32 v2, s1
-; SI-NEXT:    v_cmp_nlt_f64_e64 vcc, -v[0:1], s[0:1]
 ; SI-NEXT:    v_mov_b32_e32 v3, s0
+; SI-NEXT:    v_cmp_nlt_f64_e64 vcc, -v[0:1], s[0:1]
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; SI-NEXT:    v_cmp_nlt_f64_e32 vcc, 0, v[0:1]
@@ -1661,8 +1661,8 @@ define double @v_fneg_neg_inv2pi_minimum_f64(double %a) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_max_f64 v[2:3], -v[0:1], 0.15915494309189532
-; VI-NEXT:    v_cmp_u_f64_e64 vcc, -v[0:1], -v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v4, 0x7ff80000
+; VI-NEXT:    v_cmp_u_f64_e64 vcc, -v[0:1], -v[0:1]
 ; VI-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v3, v4, vcc
 ; VI-NEXT:    s_setpc_b64 s[30:31]

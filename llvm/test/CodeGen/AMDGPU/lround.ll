@@ -376,13 +376,13 @@ define i64 @intrinsic_lround_i64_f64(double %arg) {
 ; GFX9-GISEL-NEXT:    v_add_f64 v[4:5], v[0:1], -v[2:3]
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GISEL-NEXT:    v_cmp_ge_f64_e64 vcc, |v[4:5]|, 0.5
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v5, 0xc1f00000
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v4, 0, v6, vcc
 ; GFX9-GISEL-NEXT:    v_and_or_b32 v1, v1, v7, v4
 ; GFX9-GISEL-NEXT:    v_add_f64 v[0:1], v[2:3], v[0:1]
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v3, 0x3df00000
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v5, 0xc1f00000
 ; GFX9-GISEL-NEXT:    v_trunc_f64_e32 v[0:1], v[0:1]
 ; GFX9-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], v[2:3]
 ; GFX9-GISEL-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]
@@ -667,13 +667,13 @@ define i64 @intrinsic_llround_i64_f64(double %arg) {
 ; GFX9-GISEL-NEXT:    v_add_f64 v[4:5], v[0:1], -v[2:3]
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-GISEL-NEXT:    v_cmp_ge_f64_e64 vcc, |v[4:5]|, 0.5
-; GFX9-GISEL-NEXT:    v_mov_b32_e32 v5, 0xc1f00000
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v4, 0, v6, vcc
 ; GFX9-GISEL-NEXT:    v_and_or_b32 v1, v1, v7, v4
 ; GFX9-GISEL-NEXT:    v_add_f64 v[0:1], v[2:3], v[0:1]
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v3, 0x3df00000
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GFX9-GISEL-NEXT:    v_mov_b32_e32 v5, 0xc1f00000
 ; GFX9-GISEL-NEXT:    v_trunc_f64_e32 v[0:1], v[0:1]
 ; GFX9-GISEL-NEXT:    v_mul_f64 v[2:3], v[0:1], v[2:3]
 ; GFX9-GISEL-NEXT:    v_floor_f64_e32 v[2:3], v[2:3]

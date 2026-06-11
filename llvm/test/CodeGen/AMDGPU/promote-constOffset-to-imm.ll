@@ -1215,11 +1215,11 @@ define amdgpu_kernel void @Address32(ptr addrspace(1) %buffer) {
 ; GFX10-NEXT:    v_add_co_u32 v2, vcc_lo, 0x1800, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v8, vcc_lo, v0, 0x2000
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v9, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    s_clause 0x2
 ; GFX10-NEXT:    global_load_dword v15, v[4:5], off
 ; GFX10-NEXT:    global_load_dword v16, v[6:7], off offset:1024
 ; GFX10-NEXT:    global_load_dword v17, v[2:3], off offset:1024
+; GFX10-NEXT:    v_add_co_ci_u32_e32 v9, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, 0x2000, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    s_clause 0x2

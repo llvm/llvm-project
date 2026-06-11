@@ -548,8 +548,8 @@ define float @fmul_fly_pow_mul_min_pow2(i64 %cnt) nounwind {
 ; VI-NEXT:    v_lshlrev_b64 v[0:1], v0, 8
 ; VI-NEXT:    s_mov_b64 s[4:5], 0x2000
 ; VI-NEXT:    v_cmp_gt_u64_e32 vcc, s[4:5], v[0:1]
-; VI-NEXT:    v_mov_b32_e32 v2, 0x2000
 ; VI-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; VI-NEXT:    v_mov_b32_e32 v2, 0x2000
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; VI-NEXT:    v_ffbh_u32_e32 v2, v1
 ; VI-NEXT:    v_min_u32_e32 v2, 32, v2

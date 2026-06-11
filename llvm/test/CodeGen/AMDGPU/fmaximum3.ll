@@ -3170,9 +3170,10 @@ define <3 x half> @v_fmaximum3_v3f16__inlineimm1(<3 x half> %a, <3 x half> %c) {
 ; GFX942-NEXT:    v_pk_max_f16 v7, v1, 2.0
 ; GFX942-NEXT:    v_cndmask_b32_e32 v0, v5, v4, vcc
 ; GFX942-NEXT:    v_perm_b32 v4, v6, v0, s1
-; GFX942-NEXT:    v_cmp_o_f16_e32 vcc, v1, v1
 ; GFX942-NEXT:    s_movk_i32 s0, 0x7e00
+; GFX942-NEXT:    v_cmp_o_f16_e32 vcc, v1, v1
 ; GFX942-NEXT:    v_pk_max_f16 v4, v4, v2
+; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_cndmask_b32_e32 v1, v5, v7, vcc
 ; GFX942-NEXT:    v_pack_b32_f16 v7, v1, s0
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v8, 16, v4

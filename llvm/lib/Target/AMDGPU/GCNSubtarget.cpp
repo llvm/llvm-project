@@ -834,17 +834,37 @@ void GCNSubtarget::adjustSchedDependency(
   // Handle "fast-forward" cases for VALU dependencies via a lanemask-like SGPR:
   //   V_CMP* -> V_CNDMASK_B32
   //   V_ADD/SUB with carryout -> V_ADD/SUB with carryin (on GFX10+)
-  switch (UseI->getOpcode()) {
-  case AMDGPU::V_ADDC_U32_e64:
-  case AMDGPU::V_SUBB_U32_e64:
-  case AMDGPU::V_SUBBREV_U32_e64:
-    if (!hasCarryOutCarryInFastForward())
-      break;
-    [[fallthrough]];
-  case AMDGPU::V_CNDMASK_B32_e64:
-    if (SIInstrInfo::isVALU(*DefI) &&
-        UseOpIdx == AMDGPU::getNamedOperandIdx(UseI->getOpcode(), AMDGPU::OpName::src2))
-      Dep.setLatency(0);
+  if (UseOpIdx >= 0) {
+    switch (UseI->getOpcode()) {
+    case AMDGPU::V_ADDC_U32_e32:
+    case AMDGPU::V_ADDC_U32_e64:
+    case AMDGPU::V_SUBB_U32_e32:
+    case AMDGPU::V_SUBB_U32_e64:
+    case AMDGPU::V_SUBBREV_U32_e32:
+    case AMDGPU::V_SUBBREV_U32_e64:
+      if (!hasCarryOutCarryInFastForward())
+        break;
+      [[fallthrough]];
+    case AMDGPU::V_CNDMASK_B32_e32:
+    case AMDGPU::V_CNDMASK_B32_e64:
+      if (SIInstrInfo::isVALU(*DefI)) {
+        bool UseIsMask;
+        int Src2Idx =
+            AMDGPU::getNamedOperandIdx(UseI->getOpcode(), AMDGPU::OpName::src2);
+        if (Src2Idx >= 0) {
+          // VOP3 form with explicit mask input.
+          UseIsMask = UseOpIdx == Src2Idx;
+        } else {
+          // VOP2 form with implicit VCC input.
+          const MachineOperand &UseOp = UseI->getOperand(UseOpIdx);
+          Register Reg = UseI->getOperand(UseOpIdx).getReg();
+          UseIsMask = UseOp.isImplicit() &&
+                      (Reg == AMDGPU::VCC || Reg == AMDGPU::VCC_LO);
+        }
+        if (UseIsMask)
+          Dep.setLatency(0);
+      }
+    }
   }
 }
 

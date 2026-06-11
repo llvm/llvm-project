@@ -345,8 +345,8 @@ define i64 @icmp_select_no_fold_i64_different(i64 %arg, i64 %other) {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_mov_b32 s4, 0xc6d1a9b2
 ; GFX900-NEXT:    s_movk_i32 s5, 0x62
-; GFX900-NEXT:    v_cmp_ne_u64_e32 vcc, s[4:5], v[0:1]
 ; GFX900-NEXT:    v_mov_b32_e32 v4, 0x719c60f8
+; GFX900-NEXT:    v_cmp_ne_u64_e32 vcc, s[4:5], v[0:1]
 ; GFX900-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
 ; GFX900-NEXT:    v_cndmask_b32_e32 v1, 56, v3, vcc
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -373,8 +373,8 @@ define i64 @icmp_select_no_fold_i64_other_pos(i64 %arg, i64 %other) {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_mov_b32 s4, 0xc6d1a9b2
 ; GFX900-NEXT:    s_movk_i32 s5, 0x62
-; GFX900-NEXT:    v_cmp_eq_u64_e32 vcc, s[4:5], v[0:1]
 ; GFX900-NEXT:    v_mov_b32_e32 v4, 0xc6d1a9b2
+; GFX900-NEXT:    v_cmp_eq_u64_e32 vcc, s[4:5], v[0:1]
 ; GFX900-NEXT:    v_mov_b32_e32 v1, 0x62
 ; GFX900-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
 ; GFX900-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
@@ -402,8 +402,8 @@ define i64 @icmp_select_no_fold_i64_unsupported_cmp(i64 %arg, i64 %other) {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_mov_b32 s4, 0xc6d1a9b3
 ; GFX900-NEXT:    s_movk_i32 s5, 0x62
-; GFX900-NEXT:    v_cmp_gt_u64_e32 vcc, s[4:5], v[0:1]
 ; GFX900-NEXT:    v_mov_b32_e32 v4, 0xc6d1a9b2
+; GFX900-NEXT:    v_cmp_gt_u64_e32 vcc, s[4:5], v[0:1]
 ; GFX900-NEXT:    v_mov_b32_e32 v1, 0x62
 ; GFX900-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
 ; GFX900-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
@@ -1047,8 +1047,8 @@ define i128 @icmp_select_no_fold_i128_other_pos(i128 %arg, i128 %other) {
 ; GFX900-NEXT:    v_xor_b32_e32 v0, 0xd0d0d0d0, v0
 ; GFX900-NEXT:    v_or_b32_e32 v1, v1, v3
 ; GFX900-NEXT:    v_or_b32_e32 v0, v0, v2
-; GFX900-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
 ; GFX900-NEXT:    v_mov_b32_e32 v2, 0xd0d0d0d0
+; GFX900-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
 ; GFX900-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc
 ; GFX900-NEXT:    v_mov_b32_e32 v1, 0xc0c0c0c0
 ; GFX900-NEXT:    v_mov_b32_e32 v2, 0xb0b0b0b0

@@ -750,13 +750,13 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(ptr %p_node_ptr,
 ; GFX1013-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, 0, v1, vcc_lo
 ; GFX1013-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v6
 ; GFX1013-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
-; GFX1013-NEXT:    v_mov_b32_e32 v6, 4.0
 ; GFX1013-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX1013-NEXT:    flat_load_dword v1, v[2:3]
 ; GFX1013-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1013-NEXT:    v_mov_b32_e32 v3, 1.0
 ; GFX1013-NEXT:    v_mov_b32_e32 v4, 2.0
 ; GFX1013-NEXT:    v_mov_b32_e32 v5, 0x40400000
+; GFX1013-NEXT:    v_mov_b32_e32 v6, 4.0
 ; GFX1013-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX1013-NEXT:    image_bvh_intersect_ray v[0:3], v[0:10], s[12:15]
 ; GFX1013-NEXT:    s_waitcnt vmcnt(0)
@@ -859,13 +859,13 @@ define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(ptr %p_node_
 ; GFX1013-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, 0, v1, vcc_lo
 ; GFX1013-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v6
 ; GFX1013-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
-; GFX1013-NEXT:    v_mov_b32_e32 v6, 0x46004500
 ; GFX1013-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX1013-NEXT:    flat_load_dword v1, v[2:3]
 ; GFX1013-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1013-NEXT:    v_mov_b32_e32 v3, 1.0
 ; GFX1013-NEXT:    v_mov_b32_e32 v4, 2.0
 ; GFX1013-NEXT:    v_mov_b32_e32 v5, 0x44004200
+; GFX1013-NEXT:    v_mov_b32_e32 v6, 0x46004500
 ; GFX1013-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX1013-NEXT:    image_bvh_intersect_ray v[0:3], v[0:7], s[12:15] a16
 ; GFX1013-NEXT:    s_waitcnt vmcnt(0)

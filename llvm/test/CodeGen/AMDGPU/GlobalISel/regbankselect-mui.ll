@@ -601,8 +601,8 @@ define amdgpu_cs void @loop_with_2breaks(ptr addrspace(1) %x, ptr addrspace(1) %
 ; NEW_RBS-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, v1, v7, vcc_lo
 ; NEW_RBS-NEXT:    s_andn2_b32 s3, s6, exec_lo
 ; NEW_RBS-NEXT:    s_and_b32 s0, exec_lo, s0
-; NEW_RBS-NEXT:    s_or_b32 s6, s3, s0
 ; NEW_RBS-NEXT:    global_load_dword v8, v[6:7], off
+; NEW_RBS-NEXT:    s_or_b32 s6, s3, s0
 ; NEW_RBS-NEXT:    s_mov_b32 s0, s2
 ; NEW_RBS-NEXT:    s_waitcnt vmcnt(0)
 ; NEW_RBS-NEXT:    v_add_nc_u32_e32 v8, 1, v8
