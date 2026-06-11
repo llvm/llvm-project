@@ -5,16 +5,16 @@
 define i32 @xori64i32(i64 %a) {
 ; RV32-LABEL: xori64i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srai a1, a1, 31
 ; RV32-NEXT:    lui a0, 524288
+; RV32-NEXT:    srai a1, a1, 31
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    xor a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: xori64i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    lui a1, 524288
+; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    addiw a1, a1, -1
 ; RV64-NEXT:    xor a0, a0, a1
 ; RV64-NEXT:    ret
@@ -27,16 +27,16 @@ define i32 @xori64i32(i64 %a) {
 define i64 @selecti64i64(i64 %a) {
 ; RV32-LABEL: selecti64i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srai a1, a1, 31
 ; RV32-NEXT:    lui a0, 524288
+; RV32-NEXT:    srai a1, a1, 31
 ; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    xor a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: selecti64i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    lui a1, 524288
+; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    addiw a1, a1, -1
 ; RV64-NEXT:    xor a0, a0, a1
 ; RV64-NEXT:    ret
@@ -48,16 +48,16 @@ define i64 @selecti64i64(i64 %a) {
 define i32 @selecti64i32(i64 %a) {
 ; RV32-LABEL: selecti64i32:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    lui a0, 524288
 ; RV32-NEXT:    srli a1, a1, 31
-; RV32-NEXT:    xori a0, a1, 1
-; RV32-NEXT:    lui a1, 524288
-; RV32-NEXT:    sub a0, a1, a0
+; RV32-NEXT:    xori a1, a1, 1
+; RV32-NEXT:    sub a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: selecti64i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    lui a1, 524288
+; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    addiw a1, a1, -1
 ; RV64-NEXT:    xor a0, a0, a1
 ; RV64-NEXT:    ret
@@ -69,16 +69,16 @@ define i32 @selecti64i32(i64 %a) {
 define i64 @selecti32i64(i32 %a) {
 ; RV32-LABEL: selecti32i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    lui a2, 524288
 ; RV32-NEXT:    srai a1, a0, 31
-; RV32-NEXT:    lui a0, 524288
-; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    addi a0, a2, -1
 ; RV32-NEXT:    xor a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: selecti32i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sraiw a0, a0, 31
 ; RV64-NEXT:    lui a1, 524288
+; RV64-NEXT:    sraiw a0, a0, 31
 ; RV64-NEXT:    addiw a1, a1, -1
 ; RV64-NEXT:    xor a0, a0, a1
 ; RV64-NEXT:    ret
@@ -163,11 +163,12 @@ define i32 @selecti8i32(i8 %a) {
 define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 ; RV32-LABEL: icmpasreq:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    bltz a0, .LBB8_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a1, a2
-; RV32-NEXT:  .LBB8_2:
+; RV32-NEXT:    mv a3, a0
 ; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    bltz a3, .LBB8_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:  .LBB8_2:
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: icmpasreq:
@@ -188,11 +189,12 @@ define i32 @icmpasreq(i32 %input, i32 %a, i32 %b) {
 define i32 @icmpasrne(i32 %input, i32 %a, i32 %b) {
 ; RV32-LABEL: icmpasrne:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    bgez a0, .LBB9_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    mv a1, a2
-; RV32-NEXT:  .LBB9_2:
+; RV32-NEXT:    mv a3, a0
 ; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    bgez a3, .LBB9_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:  .LBB9_2:
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: icmpasrne:

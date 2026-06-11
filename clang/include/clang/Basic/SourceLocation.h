@@ -494,10 +494,6 @@ namespace llvm {
   /// DenseSets.
   template <>
   struct DenseMapInfo<clang::FileID, void> {
-    static clang::FileID getEmptyKey() {
-      return {};
-    }
-
     static unsigned getHashValue(clang::FileID S) {
       return S.getHashValue();
     }
@@ -511,11 +507,6 @@ namespace llvm {
   /// DenseMap and DenseSet. This trait class is eqivalent to
   /// DenseMapInfo<unsigned> which uses SourceLocation::ID is used as a key.
   template <> struct DenseMapInfo<clang::SourceLocation, void> {
-    static clang::SourceLocation getEmptyKey() {
-      constexpr clang::SourceLocation::UIntTy Zero = 0;
-      return clang::SourceLocation::getFromRawEncoding(~Zero);
-    }
-
     static unsigned getHashValue(clang::SourceLocation Loc) {
       return Loc.getHashValue();
     }
@@ -531,10 +522,6 @@ namespace llvm {
   };
 
   template <> struct DenseMapInfo<clang::SourceRange> {
-    static clang::SourceRange getEmptyKey() {
-      return DenseMapInfo<clang::SourceLocation>::getEmptyKey();
-    }
-
     static unsigned getHashValue(clang::SourceRange Range) {
       return detail::combineHashValue(Range.getBegin().getHashValue(),
                                       Range.getEnd().getHashValue());

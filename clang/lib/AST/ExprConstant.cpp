@@ -733,9 +733,6 @@ namespace {
 namespace llvm {
 template<> struct DenseMapInfo<ObjectUnderConstruction> {
   using Base = DenseMapInfo<APValue::LValueBase>;
-  static ObjectUnderConstruction getEmptyKey() {
-    return {Base::getEmptyKey(), {}};
-  }
   static unsigned getHashValue(const ObjectUnderConstruction &Object) {
     return hash_value(Object);
   }
@@ -1035,7 +1032,7 @@ namespace {
     };
 
     StdAllocatorCaller getStdAllocatorCaller(StringRef FnName) const {
-      for (const CallStackFrame *Call = CurrentCall; Call != &BottomFrame;
+      for (const CallStackFrame *Call = CurrentCall; Call->Caller != nullptr;
            Call = Call->Caller) {
         const auto *MD = dyn_cast_or_null<CXXMethodDecl>(Call->Callee);
         if (!MD)
@@ -1083,7 +1080,6 @@ namespace {
 
   private:
     const interp::Frame *getCurrentFrame() override { return CurrentCall; }
-    const interp::Frame *getBottomFrame() const override { return &BottomFrame; }
 
     unsigned getCallStackDepth() override { return CallStackDepth; }
     bool stepsLeft() const override { return StepsLeft > 0; }
@@ -16294,8 +16290,14 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
 ///
 /// If @p WasError is non-null, this will report whether the failure to evaluate
 /// is to be treated as an Error in IntExprEvaluator.
+///
+/// If @p IsDynamic is true (i.e. we're evaluating
+/// __builtin_dynamic_object_size) and the operand designates a flexible array
+/// member annotated with 'counted_by', we refuse to fold so that IR generation
+/// can emit the count-based runtime size computation.
 static std::optional<uint64_t>
-tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type, EvalInfo &Info) {
+tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type, EvalInfo &Info,
+                             bool IsDynamic = false) {
   // Determine the denoted object.
   LValue LVal;
   {
@@ -16321,6 +16323,23 @@ tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type, EvalInfo &Info) {
   // bytes.
   if (LVal.getLValueOffset().isNegative())
     return 0;
+
+  // For __builtin_dynamic_object_size on a counted_by-annotated flexible
+  // array member, defer to IR generation (emitCountedBySize in CGBuiltin):
+  // its runtime computation uses the live 'count' field and is more accurate
+  // than the layout/initializer-derived size we'd produce here. Use the same
+  // findStructFieldAccess form-recognition CGBuiltin does, so we refuse to
+  // fold on exactly the shapes that path handles (and, importantly, *not*
+  // on '&af.fam' which designates the array-as-a-whole and stays on the
+  // layout-derived path to match GCC). Checked after the negative-offset
+  // early return above so that obviously out-of-bounds operands still fold
+  // to 0, preserving existing behavior.
+  if (IsDynamic) {
+    const auto *ME = dyn_cast_or_null<MemberExpr>(findStructFieldAccess(E));
+    const auto *FD = ME ? dyn_cast<FieldDecl>(ME->getMemberDecl()) : nullptr;
+    if (FD && FD->getType()->isCountAttributedType())
+      return std::nullopt;
+  }
 
   CharUnits EndOffset;
   if (!determineEndOffset(Info, E->getExprLoc(), Type, LVal, EndOffset))
@@ -16461,8 +16480,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         E->getArg(1)->EvaluateKnownConstInt(Info.Ctx).getZExtValue();
     assert(Type <= 3 && "unexpected type");
 
+    bool IsDynamic = BuiltinOp == Builtin::BI__builtin_dynamic_object_size;
     if (std::optional<uint64_t> Size =
-            tryEvaluateBuiltinObjectSize(E->getArg(0), Type, Info))
+            tryEvaluateBuiltinObjectSize(E->getArg(0), Type, Info, IsDynamic))
       return Success(*Size, E);
 
     if (E->getArg(0)->HasSideEffects(Info.Ctx))
@@ -16565,7 +16585,11 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_bswapg:
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
-  case Builtin::BI__builtin_bswap64: {
+  case Builtin::BI__builtin_bswap64:
+  case Builtin::BIstdc_memreverse8u8:
+  case Builtin::BIstdc_memreverse8u16:
+  case Builtin::BIstdc_memreverse8u32:
+  case Builtin::BIstdc_memreverse8u64: {
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;

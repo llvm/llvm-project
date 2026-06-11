@@ -309,23 +309,23 @@ def : GCNPat <(f16 (fptrunc_round (f32 (VOP3OpSelMods f32:$src0, i32:$src0_modif
      (FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 $src0_modifiers, $src0, (as_hw_round_mode $round))>;
 
 let True16Predicate = NotUseRealTrue16Insts in
-def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 0))),
+def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
      (V_CVT_PKRTZ_F16_F32_e32 $src0, (IMPLICIT_DEF))>;
 
 let True16Predicate = UseRealTrue16Insts in
-def : GCNPat <(f16 (fptrunc_round (f32 (VOP3OpSelMods f32:$src0, i32:$src0_modifiers)), (i32 0))),
+def : GCNPat <(f16 (fptrunc_round (f32 (VOP3OpSelMods f32:$src0, i32:$src0_modifiers)), (i32 RtzRoundMode))),
      (EXTRACT_SUBREG (V_CVT_PKRTZ_F16_F32_e64 $src0_modifiers, $src0, 0, (IMPLICIT_DEF)), lo16)>;
 
-def : GCNPat <(v2f16 (build_vector (f16 (fptrunc_round f32:$src0, (i32 0))),
-                                 (f16 (fptrunc_round f32:$src1, (i32 0))))),
+def : GCNPat <(v2f16 (build_vector (f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
+                                 (f16 (fptrunc_round f32:$src1, (i32 RtzRoundMode))))),
      (V_CVT_PKRTZ_F16_F32_e32 $src0, $src1)>;
 
 let True16Predicate = NotUseRealTrue16Insts in
-def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 0))),
+def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
      (V_CVT_PKRTZ_F16_F32_e32 $src0, (IMPLICIT_DEF))>;
 
 let True16Predicate = UseRealTrue16Insts in
-def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 0))),
+def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
      (EXTRACT_SUBREG (V_CVT_PKRTZ_F16_F32_e32 $src0, (IMPLICIT_DEF)), lo16)>;
 
 def : GCNPat <(f32 (fptrunc_round f64:$src0, (i32 SupportedRoundMode:$round))),
@@ -4715,6 +4715,54 @@ def G_AMDGPU_UMED3 : AMDGPUGenericInstruction {
 }
 
 def G_AMDGPU_FMED3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_SMIN3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_UMIN3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_FMIN3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_SMAX3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_UMAX3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_FMAX3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_FMAXIMUM3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_FMINIMUM3 : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
   let hasSideEffects = 0;

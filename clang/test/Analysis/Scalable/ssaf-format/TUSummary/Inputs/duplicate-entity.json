@@ -1,0 +1,33 @@
+{
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "test.cpp"
+  },
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "usr": "c:@F@foo",
+        "suffix": ""
+      }
+    },
+    {
+      "id": 1,
+      "name": {
+        "usr": "c:@F@foo",
+        "suffix": ""
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": { "type": "Internal" }
+    },
+    {
+      "id": 1,
+      "linkage": { "type": "External" }
+    }
+  ],
+  "data": []
+}

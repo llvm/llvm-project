@@ -229,9 +229,6 @@ struct Config {
 namespace llvm {
 template <> struct DenseMapInfo<clang::clangd::Config::ExternalIndexSpec> {
   using ExternalIndexSpec = clang::clangd::Config::ExternalIndexSpec;
-  static inline ExternalIndexSpec getEmptyKey() {
-    return {ExternalIndexSpec::File, "", ""};
-  }
   static unsigned getHashValue(const ExternalIndexSpec &Val) {
     return llvm::hash_combine(Val.Kind, Val.Location, Val.MountPoint);
   }
