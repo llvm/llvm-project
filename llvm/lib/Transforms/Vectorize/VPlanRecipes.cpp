@@ -47,9 +47,10 @@ using VectorParts = SmallVector<Value *, 2>;
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
 
-#if !defined(NDEBUG)
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 // It is sometimes necessary to disable printing of metadata in tests in order
-// to avoid non-deterministic behaviour.
+// to avoid non-deterministic behaviour due to metadata introduced by VPlan
+// that wasn't present in the original scalar IR.
 static cl::opt<bool> VPlanPrintMetadata(
     "vplan-print-metadata", cl::init(true), cl::Hidden,
     cl::desc("Controls the printing of recipe metadata when debugging."));
