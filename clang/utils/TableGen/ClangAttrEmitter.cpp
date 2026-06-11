@@ -5611,7 +5611,6 @@ void EmitClangUndocumentedAttrlist(const llvm::RecordKeeper &Records,
   OS << "Total: " << UndocumentedAttrs.size() << "\n";
 }
 
-
 void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
   // Get the documentation introduction paragraph.
   const Record *Documentation = Records.getDef("GlobalDocumentation");
