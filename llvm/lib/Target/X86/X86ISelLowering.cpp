@@ -54521,8 +54521,6 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     SDLoc DLN(Ld);
     EVT PtrVT = Ptr.getValueType();
 
-    markX86RepeatedConstReplaced(GVar);
-
     SDValue NewPtr = DAG.getGlobalAddress(NewGV, DLN, PtrVT, NewByteOffset);
 
     MachinePointerInfo MPI(NewGV, NewByteOffset);

@@ -514,29 +514,31 @@ void X86AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
   SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
 }
 
-static bool isX86RepeatedConstReplacedGlobal(const GlobalVariable *GV) {
-  const Module *M = GV->getParent();
-  const NamedMDNode *NMD = M->getNamedMetadata("x86.repeated_const_replaced");
-  if (!NMD)
+
+static bool shouldSkipX86OrigGlobal(const GlobalVariable *GV) {
+  if (!GV->hasPrivateLinkage() || !GV->isConstant() || !GV->hasInitializer())
     return false;
 
-  for (const MDNode *Node : NMD->operands()) {
-    if (Node->getNumOperands() != 1)
-      continue;
+  auto Name = GV->getName();
+  if (!Name.ends_with(".x86.orig"))
+    return false;
 
-    auto *VAM = dyn_cast<ValueAsMetadata>(Node->getOperand(0).get());
-    if (!VAM)
-      continue;
+  std::string BaseName =
+      Name.drop_back(StringRef(".x86.orig").size()).str();
 
-    if (VAM->getValue() == GV)
-      return true;
-  }
+  const Module *M = GV->getParent();
+  const GlobalVariable *NewGV = M->getGlobalVariable(BaseName, true);
+  if (!NewGV || NewGV == GV)
+    return false;
 
-  return false;
+  if (!NewGV->hasInitializer() || !NewGV->isConstant())
+    return false;
+
+  return true;
 }
 
 void X86AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
-  if (isX86RepeatedConstReplacedGlobal(GV))
+  if (shouldSkipX86OrigGlobal(GV))
     return;
 
   AsmPrinter::emitGlobalVariable(GV);
