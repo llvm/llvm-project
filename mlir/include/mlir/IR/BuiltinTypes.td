@@ -680,7 +680,13 @@ def Builtin_Integer : Builtin_Type<"Integer", "integer",
 
     /// Get the storage type as a string.
     std::string getStorageTypeName(bool isSigned) const {
-      return (isSigned ? "i" : "u") + std::to_string(getWidth());
+      if (isSignless()) {
+        return (isSigned ? "i" : "u") + std::to_string(getWidth());
+      } else {
+        std::string s;
+        llvm::raw_string_ostream(s) << *this;
+        return s;
+      }
     }
 
     /// Check if this integer type uses packed representation.
@@ -1229,6 +1235,28 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "tensor", [
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// TokenType
+//===----------------------------------------------------------------------===//
+
+def Builtin_Token : Builtin_Type<"Token", "token"> {
+  let summary = "Token type";
+  let description = [{
+    Syntax:
+
+    ```
+    token-type ::= `token`
+    ```
+
+    A use of a token SSA value is a pointer to an operation (in case of an
+    OpResult) or a pointer to a region (in case of an entry block argument).
+    A token carries no runtime data and cannot be forwarded. Tokens are
+    excluded from the `AnyType` type constraint. Operations must define
+    `TokenProducerTrait` to produce token results or token region entry block
+    arguments, and must define `TokenConsumerTrait` to consume token operands.
+  }];
 }
 
 //===----------------------------------------------------------------------===//

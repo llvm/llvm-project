@@ -90,10 +90,16 @@ td_library(
 
 gentbl_filegroup(
     name = "AffineOpsPyGen",
-    tbl_outs = {"mlir/dialects/_affine_ops_gen.py": [
-        "-gen-python-op-bindings",
-        "-bind-dialect=affine",
-    ]},
+    tbl_outs = {
+        "mlir/dialects/_affine_enum_gen.py": [
+            "-gen-python-enum-bindings",
+            "-bind-dialect=affine",
+        ],
+        "mlir/dialects/_affine_ops_gen.py": [
+            "-gen-python-op-bindings",
+            "-bind-dialect=affine",
+        ],
+    },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/AffineOps.td",
     deps = [

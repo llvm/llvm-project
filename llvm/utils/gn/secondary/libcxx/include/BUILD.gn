@@ -25,6 +25,7 @@ if (current_toolchain == default_toolchain) {
       "_LIBCPP_HAS_THREADS=1",
       "_LIBCPP_HAS_MONOTONIC_CLOCK=1",
       "_LIBCPP_HAS_MUSL_LIBC=",
+      "_LIBCPP_HAS_THREAD_API_C11=",
       "_LIBCPP_HAS_THREAD_API_PTHREAD=",
       "_LIBCPP_HAS_THREAD_API_EXTERNAL=",
       "_LIBCPP_HAS_THREAD_API_WIN32=",
@@ -36,7 +37,6 @@ if (current_toolchain == default_toolchain) {
       "_LIBCPP_HAS_LOCALIZATION=1",
       "_LIBCPP_HAS_UNICODE=1",
       "_LIBCPP_HAS_WIDE_CHARACTERS=1",
-      "_LIBCPP_HAS_TERMINAL=1",
       "_LIBCPP_INSTRUMENTED_WITH_ASAN=",
       "_LIBCPP_ABI_DEFINES=",
       "_LIBCPP_HARDENING_MODE_DEFAULT=_LIBCPP_HARDENING_MODE_NONE",
@@ -75,20 +75,9 @@ if (current_toolchain == default_toolchain) {
         [ "LIBCXX_CONFIG_SITE_MODULE_ENTRY=textual header \"__config_site\"" ]
   }
 
-  # FIXME: Remove this after a while.
-  action("remove_float_h") {
-    stamp = "$target_gen_dir/remove_float_h.stamp"
-    outputs = [ stamp ]
-    script = "//llvm/utils/gn/build/remove_if_exists.py"
-    args = [
-      "--stamp",
-      rebase_path(stamp, root_build_dir),
-      rebase_path("$root_build_dir/include/c++/v1/float.h", root_build_dir),
-    ]
-  }
-
-  copy("copy_headers") {
-    sources = [
+  action("copy_headers") {
+    script = "//llvm/utils/gn/build/sync_dir.py"
+    inputs = [
       "__algorithm/adjacent_find.h",
       "__algorithm/all_of.h",
       "__algorithm/any_of.h",
@@ -412,7 +401,9 @@ if (current_toolchain == default_toolchain) {
       "__concepts/equality_comparable.h",
       "__concepts/invocable.h",
       "__concepts/movable.h",
+      "__concepts/primary_template.h",
       "__concepts/predicate.h",
+      "__concepts/referenceable.h",
       "__concepts/regular.h",
       "__concepts/relation.h",
       "__concepts/same_as.h",
@@ -425,10 +416,13 @@ if (current_toolchain == default_toolchain) {
       "__configuration/attributes.h",
       "__configuration/availability.h",
       "__configuration/compiler.h",
+      "__configuration/diagnostic_suppression.h",
       "__configuration/experimental.h",
       "__configuration/hardening.h",
       "__configuration/language.h",
+      "__configuration/namespace.h",
       "__configuration/platform.h",
+      "__configuration/utility.h",
       "__coroutine/coroutine_handle.h",
       "__coroutine/coroutine_traits.h",
       "__coroutine/noop_coroutine_handle.h",
@@ -1066,6 +1060,7 @@ if (current_toolchain == default_toolchain) {
       "__format/format_to_n_result.h",
       "__format/formatter.h",
       "__format/formatter_bool.h",
+      "__format/formatter_bool_impl.h",
       "__format/formatter_char.h",
       "__format/formatter_floating_point.h",
       "__format/formatter_integer.h",
@@ -1190,7 +1185,6 @@ if (current_toolchain == default_toolchain) {
       "__locale_dir/locale_base_api.h",
       "__locale_dir/locale_base_api/bsd_locale_fallbacks.h",
       "__locale_dir/locale_base_api/ibm.h",
-      "__locale_dir/locale_base_api/openbsd.h",
       "__locale_dir/messages.h",
       "__locale_dir/money.h",
       "__locale_dir/num.h",
@@ -1202,9 +1196,13 @@ if (current_toolchain == default_toolchain) {
       "__locale_dir/support/freebsd.h",
       "__locale_dir/support/fuchsia.h",
       "__locale_dir/support/linux.h",
+      "__locale_dir/support/llvm_libc.h",
+      "__locale_dir/support/openbsd.h",
       "__locale_dir/support/netbsd.h",
       "__locale_dir/support/newlib.h",
       "__locale_dir/support/no_locale/characters.h",
+      "__locale_dir/support/no_locale/conversions.h",
+      "__locale_dir/support/no_locale/formatting.h",
       "__locale_dir/support/no_locale/strtonum.h",
       "__locale_dir/support/windows.h",
       "__locale_dir/time.h",
@@ -1377,6 +1375,7 @@ if (current_toolchain == default_toolchain) {
       "__ranges/as_rvalue_view.h",
       "__ranges/chunk_by_view.h",
       "__ranges/common_view.h",
+      "__ranges/concat_view.h",
       "__ranges/concepts.h",
       "__ranges/container_compatible_range.h",
       "__ranges/counted.h",
@@ -1390,6 +1389,7 @@ if (current_toolchain == default_toolchain) {
       "__ranges/empty_view.h",
       "__ranges/enable_borrowed_range.h",
       "__ranges/enable_view.h",
+      "__ranges/enumerate_view.h",
       "__ranges/filter_view.h",
       "__ranges/from_range.h",
       "__ranges/iota_view.h",
@@ -1409,6 +1409,7 @@ if (current_toolchain == default_toolchain) {
       "__ranges/single_view.h",
       "__ranges/size.h",
       "__ranges/split_view.h",
+      "__ranges/stride_view.h",
       "__ranges/subrange.h",
       "__ranges/take_view.h",
       "__ranges/take_while_view.h",
@@ -1433,9 +1434,7 @@ if (current_toolchain == default_toolchain) {
       "__support/ibm/gettod_zos.h",
       "__support/ibm/locale_mgmt_zos.h",
       "__support/ibm/nanosleep.h",
-      "__support/xlocale/__nop_locale_mgmt.h",
       "__support/xlocale/__posix_l_fallback.h",
-      "__support/xlocale/__strtonum_fallback.h",
       "__system_error/errc.h",
       "__system_error/error_category.h",
       "__system_error/error_code.h",
@@ -1478,7 +1477,7 @@ if (current_toolchain == default_toolchain) {
       "__type_traits/copy_cvref.h",
       "__type_traits/datasizeof.h",
       "__type_traits/decay.h",
-      "__type_traits/dependent_type.h",
+
       "__type_traits/desugars_to.h",
       "__type_traits/detected_or.h",
       "__type_traits/disjunction.h",
@@ -1529,10 +1528,8 @@ if (current_toolchain == default_toolchain) {
       "__type_traits/is_pod.h",
       "__type_traits/is_pointer.h",
       "__type_traits/is_polymorphic.h",
-      "__type_traits/is_primary_template.h",
       "__type_traits/is_reference.h",
       "__type_traits/is_reference_wrapper.h",
-      "__type_traits/is_referenceable.h",
       "__type_traits/is_same.h",
       "__type_traits/is_scalar.h",
       "__type_traits/is_signed.h",
@@ -1549,7 +1546,6 @@ if (current_toolchain == default_toolchain) {
       "__type_traits/is_union.h",
       "__type_traits/is_unqualified.h",
       "__type_traits/is_unsigned.h",
-      "__type_traits/is_valid_expansion.h",
       "__type_traits/is_void.h",
       "__type_traits/is_volatile.h",
       "__type_traits/is_within_lifetime.h",
@@ -1587,6 +1583,7 @@ if (current_toolchain == default_toolchain) {
       "__utility/as_lvalue.h",
       "__utility/auto_cast.h",
       "__utility/cmp.h",
+      "__utility/constant_wrapper.h",
       "__utility/convert_to_integral.h",
       "__utility/declval.h",
       "__utility/default_three_way_comparator.h",
@@ -1663,7 +1660,6 @@ if (current_toolchain == default_toolchain) {
       "cstring",
       "ctgmath",
       "ctime",
-      "ctype.h",
       "cuchar",
       "cwchar",
       "cwctype",
@@ -1690,7 +1686,6 @@ if (current_toolchain == default_toolchain) {
       "ext/__hash",
       "ext/hash_map",
       "ext/hash_set",
-      "fenv.h",
       "filesystem",
       "flat_map",
       "flat_set",
@@ -1700,7 +1695,6 @@ if (current_toolchain == default_toolchain) {
       "functional",
       "future",
       "initializer_list",
-      "inttypes.h",
       "iomanip",
       "ios",
       "iosfwd",
@@ -1766,8 +1760,24 @@ if (current_toolchain == default_toolchain) {
       "wchar.h",
       "wctype.h",
     ]
+    response_file_contents = inputs
+    outputs = [ "$target_gen_dir/copy_headers.stamp" ]
+    args = [
+      "--stamp",
+      rebase_path(outputs[0], root_build_dir),
+      "--source-dir",
+      rebase_path("//libcxx/include", root_build_dir),
+      "--output-dir",
+      rebase_path(libcxx_generated_include_dir, root_build_dir),
+      "--except",
+      "__assertion_handler",
+      "--except",
+      "__config_site",
+      "--except",
+      "module.modulemap",
+      "{{response_file_name}}",
+    ]
     deps = [
-      ":remove_float_h",
       ":write_assertion_handler",
       ":write_config_site",
       ":write_modulemap",
@@ -1775,15 +1785,14 @@ if (current_toolchain == default_toolchain) {
     if (target_os != "mac" && target_os != "win") {
       # libcxx/cmake/Modules/HandleLibCXXABI.cmake sets
       # LIBCXX_CXX_ABI_HEADER_TARGET if the libcxx abi library either of
-      # "libstdc++", "libsupc++", "libcxxabi", "libcxxrt", but not if it's "none",
-      # "default", or "vcruntime". So on Windows, these don't get copied due to
-      # LIBCXX_CXX_ABI_HEADER_TARGET not being set.
-      # On macOS, libcxx/CMakeLists.txt sets LIBCXX_CXX_ABI_SYSTEM to 1, which
-      # causes an empty header list to be passed to setup_abi_lib, so these
-      # don't get copied on macOS due to that.
+      # "libstdc++", "libsupc++", "libcxxabi", "libcxxrt", but not if it's
+      # "none", "default", or "vcruntime". So on Windows, these don't get copied
+      # due to LIBCXX_CXX_ABI_HEADER_TARGET not being set. On macOS,
+      # libcxx/CMakeLists.txt sets LIBCXX_CXX_ABI_SYSTEM to 1, which causes an
+      # empty header list to be passed to setup_abi_lib, so these don't get
+      # copied on macOS due to that.
       deps += [ "//libcxxabi/include" ]
     }
-    outputs = [ "$root_build_dir/include/c++/v1/{{source_target_relative}}" ]
   }
 }
 

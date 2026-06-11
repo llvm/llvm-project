@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Program.h"
+#include "Char.h"
 #include "Context.h"
 #include "Function.h"
 #include "Integral.h"
@@ -44,11 +45,13 @@ unsigned Program::createGlobalString(const StringLiteral *S, const Expr *Base) {
     Base = S;
 
   // Create a descriptor for the string.
-  Descriptor *Desc = allocateDescriptor(Base, *CharType, Descriptor::GlobalMD,
-                                        StringLength + 1,
-                                        /*IsConst=*/true,
-                                        /*isTemporary=*/false,
-                                        /*isMutable=*/false);
+  Descriptor *Desc =
+      allocateDescriptor(Base, S->getType().getTypePtr(), *CharType,
+                         Descriptor::GlobalMD, StringLength + 1,
+                         /*IsConst=*/true,
+                         /*isTemporary=*/false,
+                         /*isMutable=*/false,
+                         /*IsVolatile=*/false);
 
   // Allocate storage for the string.
   // The byte length does not include the null terminator.
@@ -121,7 +124,7 @@ UnsignedOrNone Program::getOrCreateGlobal(const ValueDecl *VD,
   return std::nullopt;
 }
 
-unsigned Program::getOrCreateDummy(const DeclTy &D) {
+unsigned Program::getOrCreateDummy(const DeclTy &D, bool IsConstexprUnknown) {
   assert(D);
   // Dedup blocks since they are immutable and pointers cannot be compared.
   if (auto It = DummyVariables.find(D.getOpaqueValue());
@@ -151,6 +154,8 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
   if (!Desc)
     Desc = allocateDescriptor(D);
 
+  Desc->IsConstexprUnknown = IsConstexprUnknown;
+
   assert(Desc);
 
   // Allocate a block for storage.
@@ -167,7 +172,8 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
   return I;
 }
 
-UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init) {
+UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init,
+                                     bool IsConstexprUnknown) {
   bool IsStatic, IsExtern;
   bool IsWeak = VD->isWeak();
   if (const auto *Var = dyn_cast<VarDecl>(VD)) {
@@ -184,8 +190,8 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init) {
 
   // Register all previous declarations as well. For extern blocks, just replace
   // the index with the new variable.
-  UnsignedOrNone Idx =
-      createGlobal(VD, VD->getType(), IsStatic, IsExtern, IsWeak, Init);
+  UnsignedOrNone Idx = createGlobal(VD, VD->getType(), IsStatic, IsExtern,
+                                    IsWeak, IsConstexprUnknown, Init);
   if (!Idx)
     return std::nullopt;
 
@@ -213,18 +219,15 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init) {
     }
 
     if (Redecl != VD) {
-      if (Block *RedeclBlock = Globals[Iter->second]->block();
-          RedeclBlock->isExtern()) {
+      Block *RedeclBlock = Globals[Iter->second]->block();
+      // All pointers pointing to the previous extern decl now point to the
+      // new decl.
+      // A previous iteration might've already fixed up the pointers for this
+      // global.
+      if (RedeclBlock != NewGlobal->block())
+        RedeclBlock->movePointersTo(NewGlobal->block());
 
-        // All pointers pointing to the previous extern decl now point to the
-        // new decl.
-        // A previous iteration might've already fixed up the pointers for this
-        // global.
-        if (RedeclBlock != NewGlobal->block())
-          RedeclBlock->movePointersTo(NewGlobal->block());
-
-        Globals[Iter->second] = NewGlobal;
-      }
+      Globals[Iter->second] = NewGlobal;
     }
     Iter->second = *Idx;
   }
@@ -232,11 +235,12 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init) {
   return *Idx;
 }
 
-UnsignedOrNone Program::createGlobal(const Expr *E) {
+UnsignedOrNone Program::createGlobal(const Expr *E, QualType ExprType) {
   if (auto Idx = getGlobal(E))
     return Idx;
-  if (auto Idx = createGlobal(E, E->getType(), /*IsStatic=*/true,
-                              /*IsExtern=*/false, /*IsWeak=*/false)) {
+  if (auto Idx = createGlobal(E, ExprType, /*IsStatic=*/true,
+                              /*IsExtern=*/false, /*IsWeak=*/false,
+                              /*IsConstexprUnknown=*/false)) {
     GlobalIndices[E] = *Idx;
     return *Idx;
   }
@@ -245,7 +249,14 @@ UnsignedOrNone Program::createGlobal(const Expr *E) {
 
 UnsignedOrNone Program::createGlobal(const DeclTy &D, QualType Ty,
                                      bool IsStatic, bool IsExtern, bool IsWeak,
+                                     bool IsConstexprUnknown,
                                      const Expr *Init) {
+  // Since this global variable is constexpr-unknown and a reference, register
+  // the pointee type instead. When referencing the variable, the pointer will
+  // then be of the pointee type instead of just PT_Ptr.
+  if (Ty->isReferenceType() && IsConstexprUnknown)
+    Ty = Ty->getPointeeType();
+
   // Create a descriptor for the global.
   Descriptor *Desc;
   const bool IsConst = Ty.isConstQualified();
@@ -260,6 +271,7 @@ UnsignedOrNone Program::createGlobal(const DeclTy &D, QualType Ty,
 
   if (!Desc)
     return std::nullopt;
+  Desc->IsConstexprUnknown = IsConstexprUnknown;
 
   // Allocate a block for storage.
   unsigned I = Globals.size();
@@ -384,7 +396,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
           (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) ||
           (Desc->ElemRecord && Desc->ElemRecord->hasPtrField());
     } else {
-      return nullptr;
+      Desc = allocateDescriptor(FD);
     }
     Fields.emplace_back(FD, Desc, BaseSize);
     BaseSize += align(Desc->getAllocSize());
@@ -402,7 +414,6 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
                                       bool IsConst, bool IsTemporary,
                                       bool IsMutable, bool IsVolatile,
                                       const Expr *Init) {
-
   // Classes and structures.
   if (const auto *RD = Ty->getAsRecordDecl()) {
     if (const auto *Record = getOrCreateRecord(RD))
@@ -423,8 +434,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         if ((Descriptor::MaxArrayElemBytes / ElemSize) < NumElems) {
           return nullptr;
         }
-        return allocateDescriptor(D, *T, MDSize, NumElems, IsConst, IsTemporary,
-                                  IsMutable);
+        return allocateDescriptor(D, CAT, *T, MDSize, NumElems, IsConst,
+                                  IsTemporary, IsMutable, IsVolatile);
       }
         // Arrays of composites. In this case, the array is a list of pointers,
         // followed by the actual elements.
@@ -469,8 +480,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     if (!ElemTy)
       return nullptr;
 
-    return allocateDescriptor(D, *ElemTy, MDSize, 2, IsConst, IsTemporary,
-                              IsMutable);
+    return allocateDescriptor(D, CT, *ElemTy, MDSize, 2, IsConst, IsTemporary,
+                              IsMutable, IsVolatile);
   }
 
   // Same with vector types.
@@ -479,8 +490,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     if (!ElemTy)
       return nullptr;
 
-    return allocateDescriptor(D, *ElemTy, MDSize, VT->getNumElements(), IsConst,
-                              IsTemporary, IsMutable);
+    return allocateDescriptor(D, VT, *ElemTy, MDSize, VT->getNumElements(),
+                              IsConst, IsTemporary, IsMutable, IsVolatile);
   }
 
   // Same with constant matrix types.
@@ -489,8 +500,9 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     if (!ElemTy)
       return nullptr;
 
-    return allocateDescriptor(D, *ElemTy, MDSize, MT->getNumElementsFlattened(),
-                              IsConst, IsTemporary, IsMutable);
+    return allocateDescriptor(D, MT, *ElemTy, MDSize,
+                              MT->getNumElementsFlattened(), IsConst,
+                              IsTemporary, IsMutable, IsVolatile);
   }
 
   return nullptr;

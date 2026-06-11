@@ -17,6 +17,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sched_getcpu
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sched_getcpu
+)
+
+add_entrypoint_object(
   sched_setaffinity
   ALIAS
   DEPENDS

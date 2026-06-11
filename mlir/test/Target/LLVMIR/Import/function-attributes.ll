@@ -53,7 +53,10 @@ attributes #0 = { readnone }
 ; CHECK-SAME:  !llvm.ptr {llvm.preallocated = f64}
 ; CHECK-SAME:  !llvm.ptr {llvm.returned}
 ; CHECK-SAME:  !llvm.ptr {llvm.alignstack = 32 : i64}
-; CHECK-SAME:  !llvm.ptr {llvm.writeonly}
+; CHECK-SAME:  !llvm.ptr {llvm.writable, llvm.writeonly}
+; CHECK-SAME:  !llvm.ptr {llvm.dead_on_unwind}
+; CHECK-SAME:  !llvm.ptr {llvm.dead_on_return = 8 : i64}
+; CHECK-SAME:  f32 {llvm.nofpclass = 519 : i64}
 ; CHECK-SAME:  i64 {llvm.range = #llvm.constant_range<i64, 0, 4097>}
 define ptr @func_arg_attrs(
     ptr byval(i64) %arg0,
@@ -73,8 +76,11 @@ define ptr @func_arg_attrs(
     ptr preallocated(double) %arg16,
     ptr returned %arg17,
     ptr alignstack(32) %arg18,
-    ptr writeonly %arg19,
-    i64 range(i64 0, 4097) %arg20) {
+    ptr writable writeonly %arg19,
+    ptr dead_on_unwind %arg20,
+    ptr dead_on_return(8) %arg21,
+    float nofpclass(nan inf) %arg22,
+    i64 range(i64 0, 4097) %arg23) {
   ret ptr %arg17
 }
 
@@ -131,6 +137,12 @@ declare align(16) ptr @func_res_attr_align()
 ; CHECK-LABEL: @func_res_attr_noundef
 ; CHECK-SAME:  !llvm.ptr {llvm.noundef}
 declare noundef ptr @func_res_attr_noundef()
+
+; // -----
+
+; CHECK-LABEL: @func_res_attr_nofpclass
+; CHECK-SAME:  (f32 {llvm.nofpclass = 519 : i64})
+declare nofpclass(nan inf) float @func_res_attr_nofpclass()
 
 ; // -----
 
@@ -300,18 +312,6 @@ define void @align_func() align 2 {
 ; CHECK-LABEL: @align_decl
 ; CHECK-SAME: attributes {alignment = 64 : i64}
 declare void @align_decl() align 64
-
-; // -----
-
-; CHECK-LABEL: @func_attr_no_nans_fp_math_true
-; CHECK-SAME: attributes {no_nans_fp_math = true}
-declare void @func_attr_no_nans_fp_math_true() "no-nans-fp-math"="true"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_no_nans_fp_math_false
-; CHECK-SAME: attributes {no_nans_fp_math = false}
-declare void @func_attr_no_nans_fp_math_false() "no-nans-fp-math"="false"
 
 ; // -----
 

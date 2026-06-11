@@ -27,8 +27,7 @@ define void @multiple_exits_unique_exit_block(ptr %A, ptr %B, i32 %N) #0 {
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw i32 [[TMP7]], 2
+; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw i32 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw i32 [[TMP11]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
@@ -95,8 +94,7 @@ define i32 @multiple_exits_multiple_exit_blocks(ptr %A, ptr %B, i32 %N) #0 {
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw i32 [[TMP7]], 2
+; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw i32 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw i32 [[TMP11]], 1
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[N_MOD_VF]], 0

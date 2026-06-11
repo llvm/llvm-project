@@ -849,7 +849,7 @@ template<typename T, typename U> concept C = true;
 template<typename T> auto L = []<C<T> U>() {};
 
 struct Q {
-  template<C<int> U> friend constexpr auto decltype(L<int>)::operator()() const;
+  template<C<int> U> friend constexpr auto decltype(L<int>)::operator()() const; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
 };
 
 template <class T>
@@ -1241,12 +1241,28 @@ struct SVGPropertyOwnerRegistry {
   }
 };
 
-class SVGCircleElement {
+struct SVGCircleElement {
   friend SVGPropertyOwnerRegistry<SVGCircleElement>;
   void propertyForAttribute(int);
 };
 
 int i = SVGPropertyOwnerRegistry<SVGCircleElement>::fastAnimatedPropertyLookup();
+
+}
+
+namespace GH173086 {
+
+template <typename, unsigned, typename> struct GeneralTensor {};
+template <typename T, unsigned Rank> using Tensor = GeneralTensor<T, Rank, int>;
+template <typename T, unsigned OtherRank, typename Alloc, typename... Dims>
+GeneralTensor(GeneralTensor<T, OtherRank, Alloc>, Dims... dims)
+    -> GeneralTensor<T, sizeof...(dims), Alloc>;
+template <typename... MultiIndex>
+Tensor<double, sizeof...(MultiIndex)> create_incremented_tensor() {
+  return Tensor<double, sizeof...(MultiIndex)>();
+}
+
+auto x = Tensor{create_incremented_tensor<>()};
 
 }
 
@@ -1554,7 +1570,6 @@ void x() {}
 void foo() {
   x<vector<int>>();
 }
-
 }
 
 namespace GH162770 {
@@ -1659,6 +1674,25 @@ void foo() { call(""); }
 
 }
 
+namespace GH186624 {
+
+template <class T>
+concept C = __is_unsigned(T);
+
+template <C T>
+struct encoder_interface {};
+
+template <template <C> class CodecInterface, C T>
+CodecInterface<T>* create_codec() {
+  return nullptr;
+}
+
+encoder_interface<unsigned>* create_encoder() {
+  return create_codec<encoder_interface, unsigned>();
+}
+
+}
+
 namespace GH170856 {
 
 template <unsigned N, unsigned M> struct symbol_text {
@@ -1753,13 +1787,36 @@ void f() = delete;
 
 struct Bar {};
 
-template <typename T> using Foo = Bar;
+template <typename> using Foo = Bar;
 
-template <typename T> void use() {
+template <int T>
+  requires true
+void f2() {}
+
+template <int T>
+  requires false
+void f2() = delete;
+
+template <int> constexpr auto Value = 1;
+
+template <template <typename> class> using FooTemp = Bar;
+
+template <typename T, int N, template <typename> class C> void use() {
   f<Foo<T>>();
+  f2<Value<N>>();
+  f<FooTemp<C>>();
 }
 
 }
+
+namespace instantiation_dependent {
+  template <class T> concept C = sizeof(T) >= 1;
+  template <class U> using X = int;
+  template <class V> requires C<X<V&>> struct Y {};
+  Y<void> y;
+  // expected-error@-1 {{constraints not satisfied for class template 'Y' [with V = void]}}
+  // expected-note@-3  {{because substituted constraint expression is ill-formed: cannot form a reference to 'void'}}
+} // namespace instantiation_dependent
 
 namespace GH174667 {
 
@@ -1782,3 +1839,166 @@ namespace GH176402 {
     recursiveLambda(recursiveLambda, 5);
   }
 }
+namespace GH191016 {
+  template <typename T = int>
+  struct S {
+    template <typename Args = int>
+    constexpr static bool P = true;
+    template <typename... Args>
+    constexpr static bool Q = true;
+    S() requires P<> && Q<> {}
+  };
+  void test(){ S<int> s; }
+}
+
+
+namespace GH188640 {
+
+namespace Ex1 {
+template <typename T> constexpr bool CC = true;
+
+template <typename V, typename U = V>
+concept C = CC<U>;
+
+template <typename T>
+constexpr int f()
+    requires C<T> && C<T *>
+{
+    return 21;
+}
+
+template <typename T>
+void f()
+    requires C<T>;
+
+void g() { static_assert(f<void>() == 21); }
+
+} // namespace Ex1
+
+namespace VAR {
+template <auto N> constexpr bool CC = true;
+template <auto V, auto U = V>
+concept C = CC<U>;
+
+template <auto V>
+constexpr int f()
+    requires C<V> && C<V + 1>
+{
+    return 42;
+}
+
+template <auto N>
+int f()
+    requires C<N>;
+
+void g() { static_assert(f<1>() == 42); }
+} // namespace VAR
+
+} // namespace GH188640
+
+namespace GH194803 {
+
+struct B {
+    void f();
+};
+template <typename Base>
+concept C = requires() { Base::f(); }; // expected-note {{because 'Base::f()' would be invalid: call to non-static member function without an object argument}}
+
+template <typename> struct S : B {
+    void g()
+        requires C<B>; // expected-note {{because 'B' does not satisfy 'C'}}
+    void h()
+        requires requires() { B::f(); }; // #2
+};
+void f() {
+    S<int>{}.g(); // expected-error {{invalid reference to function 'g': constraints not satisfied}}
+    S<int>{}.h();
+}
+
+}
+
+namespace GH115838 {
+
+template <typename T>
+concept has_x = requires(T t) {
+    { t.x };
+};
+
+class Publ {
+  public:
+    int x = 0;
+};
+class Priv {
+  private:
+    int x = 0;
+};
+class Prot {
+  protected:
+    int x = 0;
+};
+class Same {
+  protected:
+    int x = 0;
+};
+
+template <typename T> class D;
+template <typename T>
+requires(has_x<T>)
+class D<T> : public T {
+  public:
+    static constexpr bool has = 1;
+};
+template <typename T>
+requires(!has_x<T>)
+class D<T> : public T {
+  public:
+    static constexpr bool has = 0;
+};
+
+static_assert(!has_x<Same>, "Protected should be invisible.");
+static_assert(!D<Same>::has, "Protected should be invisible.");
+
+static_assert(D<Publ>::has, "Public should be visible.");
+static_assert(!D<Priv>::has, "Private should be invisible.");
+static_assert(!D<Prot>::has, "Protected should be invisible.");
+}
+
+
+namespace GH197067 {
+typedef int uint32_t;
+class basic_string;
+using string = basic_string;
+using __self_view = int;
+struct basic_string {
+  basic_string(const char *);
+  operator __self_view();
+};
+int GetVmo(int);
+template <typename> struct StorageTraits;
+template <class Traits, typename Storage>
+concept StorageTraitsBufferedReadApi =
+    requires(Storage storage_ref, uint32_t length) {
+      Traits::Read(storage_ref, length, length, [] {});
+    };
+template <class Traits, typename Storage>
+concept StorageTraitsApi = StorageTraitsBufferedReadApi<Traits, Storage>;
+template <typename T>
+concept StorageApi = StorageTraitsApi<StorageTraits<T>, T>;
+template <StorageApi Storage> struct View {
+  using storage_type = Storage;
+  storage_type storage_;
+};
+template <> struct StorageTraits<int> {
+  template <typename Callback>
+  static auto Read(int, long, uint32_t, Callback) {}
+};
+View zbi(GetVmo(string("")));
+}
+
+namespace GH196375 {
+  template <class T, T V> concept Small = V <= 2; // expected-note {{because '4 <= 2' (4 <= 2) evaluated to false}}
+  template <int V> consteval bool f() // expected-note {{candidate template ignored: constraints not satisfied}}
+    requires(Small<int, V>) { return true; } // expected-note {{because 'Small<int, 4>' evaluated to false}}
+  static_assert(f<4>());
+  // expected-error@-1 {{no matching function for call to 'f'}}
+} // namespace GHGH196375

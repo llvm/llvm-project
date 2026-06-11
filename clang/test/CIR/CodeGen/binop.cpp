@@ -127,65 +127,75 @@ void b0(int a, int b) {
 // OGCG:         ret void
 
 void testFloatingPointBinOps(float a, float b) {
-  a * b;
-  a / b;
-  a + b;
-  a - b;
+  float x = a * b;
+  x = x / b;
+  x = x + b;
+  x = x - b;
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z23testFloatingPointBinOpsff(
-// CIR: cir.mul %{{.+}}, %{{.+}} : !cir.float
-// CIR: cir.div %{{.+}}, %{{.+}} : !cir.float
-// CIR: cir.add %{{.+}}, %{{.+}} : !cir.float
-// CIR: cir.sub %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.fmul %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.fdiv %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.fadd %{{.+}}, %{{.+}} : !cir.float
+// CIR: cir.fsub %{{.+}}, %{{.+}} : !cir.float
 // CIR: cir.return
 
 // LLVM-LABEL: define{{.*}} void @_Z23testFloatingPointBinOpsff(
 // LLVM-SAME: float {{.*}} %[[A:.*]], float {{.*}} %[[B:.*]])
 // LLVM:         %[[A_ADDR:.*]] = alloca float, i64 1
 // LLVM:         %[[B_ADDR:.*]] = alloca float, i64 1
+// LLVM:         %[[X_ADDR:.*]] = alloca float, i64 1
 // LLVM:         store float %[[A]], ptr %[[A_ADDR]]
 // LLVM:         store float %[[B]], ptr %[[B_ADDR]]
 
 // LLVM:         %[[A1:.*]] = load float, ptr %[[A_ADDR]]
 // LLVM:         %[[B1:.*]] = load float, ptr %[[B_ADDR]]
-// LLVM:         fmul float %[[A1]], %[[B1]]
+// LLVM:         %[[MUL:.*]] = fmul float %[[A1]], %[[B1]]
+// LLVM:         store float %[[MUL]], ptr %[[X_ADDR]]
 
-// LLVM:         %[[A2:.*]] = load float, ptr %[[A_ADDR]]
+// LLVM:         %[[X1:.*]] = load float, ptr %[[X_ADDR]]
 // LLVM:         %[[B2:.*]] = load float, ptr %[[B_ADDR]]
-// LLVM:         fdiv float %[[A2]], %[[B2]]
+// LLVM:         %[[DIV:.*]] = fdiv float %[[X1]], %[[B2]]
+// LLVM:         store float %[[DIV]], ptr %[[X_ADDR]]
 
-// LLVM:         %[[A3:.*]] = load float, ptr %[[A_ADDR]]
+// LLVM:         %[[X2:.*]] = load float, ptr %[[X_ADDR]]
 // LLVM:         %[[B3:.*]] = load float, ptr %[[B_ADDR]]
-// LLVM:         fadd float %[[A3]], %[[B3]]
+// LLVM:         %[[ADD:.*]] = fadd float %[[X2]], %[[B3]]
+// LLVM:         store float %[[ADD]], ptr %[[X_ADDR]]
 
-// LLVM:         %[[A4:.*]] = load float, ptr %[[A_ADDR]]
+// LLVM:         %[[X3:.*]] = load float, ptr %[[X_ADDR]]
 // LLVM:         %[[B4:.*]] = load float, ptr %[[B_ADDR]]
-// LLVM:         fsub float %[[A4]], %[[B4]]
+// LLVM:         %[[SUB:.*]] = fsub float %[[X3]], %[[B4]]
+// LLVM:         store float %[[SUB]], ptr %[[X_ADDR]]
 
 // LLVM:         ret void
 
 // OGCG-LABEL: define{{.*}} void @_Z23testFloatingPointBinOpsff(float {{.*}} %a, float {{.*}} %b)
 // OGCG:         %a.addr = alloca float
 // OGCG:         %b.addr = alloca float
+// OGCG:         %x = alloca float
 // OGCG:         store float %a, ptr %a.addr
 // OGCG:         store float %b, ptr %b.addr
 
 // OGCG:         %[[A1:.*]] = load float, ptr %a.addr
 // OGCG:         %[[B1:.*]] = load float, ptr %b.addr
-// OGCG:         fmul float %[[A1]], %[[B1]]
+// OGCG:         %[[MUL:.*]] = fmul float %[[A1]], %[[B1]]
+// OGCG:         store float %[[MUL]], ptr %x
 
-// OGCG:         %[[A2:.*]] = load float, ptr %a.addr
+// OGCG:         %[[X1:.*]] = load float, ptr %x
 // OGCG:         %[[B2:.*]] = load float, ptr %b.addr
-// OGCG:         fdiv float %[[A2]], %[[B2]]
+// OGCG:         %[[DIV:.*]] = fdiv float %[[X1]], %[[B2]]
+// OGCG:         store float %[[DIV]], ptr %x
 
-// OGCG:         %[[A3:.*]] = load float, ptr %a.addr
+// OGCG:         %[[X2:.*]] = load float, ptr %x
 // OGCG:         %[[B3:.*]] = load float, ptr %b.addr
-// OGCG:         fadd float %[[A3]], %[[B3]]
+// OGCG:         %[[ADD:.*]] = fadd float %[[X2]], %[[B3]]
+// OGCG:         store float %[[ADD]], ptr %x
 
-// OGCG:         %[[A4:.*]] = load float, ptr %a.addr
+// OGCG:         %[[X3:.*]] = load float, ptr %x
 // OGCG:         %[[B4:.*]] = load float, ptr %b.addr
-// OGCG:         fsub float %[[A4]], %[[B4]]
+// OGCG:         %[[SUB:.*]] = fsub float %[[X3]], %[[B4]]
+// OGCG:         store float %[[SUB]], ptr %x
 
 // OGCG:         ret void
 
@@ -196,9 +206,9 @@ void signed_shift(int a, int b) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z12signed_shiftii(
 // CIR-SAME: %[[ARG0:.*]]: !s32i{{.*}}, %[[ARG1:.*]]: !s32i{{.*}})
-// CIR: %[[A_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CIR: %[[B_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
-// CIR: %[[X_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
+// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[X_PTR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
 
 // CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !s32i, !cir.ptr<!s32i>
@@ -262,9 +272,9 @@ void unsigned_shift(unsigned a, unsigned b) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z14unsigned_shiftjj(
 // CIR-SAME: %[[ARG0:.*]]: !u32i{{.*}}, %[[ARG1:.*]]: !u32i{{.*}})
-// CIR: %[[A_PTR:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init]
-// CIR: %[[B_PTR:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["b", init]
-// CIR: %[[X_PTR:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init]
+// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!u32i>
+// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!u32i>
+// CIR: %[[X_PTR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!u32i>
 
 // CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !u32i, !cir.ptr<!u32i>
 // CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !u32i, !cir.ptr<!u32i>
@@ -328,9 +338,9 @@ void zext_shift_example(int a, unsigned char b) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z18zext_shift_exampleih(
 // CIR-SAME: %[[ARG0:.*]]: !s32i{{.*}}, %[[ARG1:.*]]: !u8i{{.*}})
-// CIR: %[[A_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CIR: %[[B_PTR:.*]] = cir.alloca !u8i, !cir.ptr<!u8i>, ["b", init]
-// CIR: %[[X_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
+// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!u8i>
+// CIR: %[[X_PTR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
 
 // CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !u8i, !cir.ptr<!u8i>
@@ -400,9 +410,9 @@ void sext_shift_example(int a, signed char b) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z18sext_shift_exampleia(
 // CIR-SAME: %[[ARG0:.*]]: !s32i{{.*}}, %[[ARG1:.*]]: !s8i{{.*}})
-// CIR: %[[A_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CIR: %[[B_PTR:.*]] = cir.alloca !s8i, !cir.ptr<!s8i>, ["b", init]
-// CIR: %[[X_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
+// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s8i>
+// CIR: %[[X_PTR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
 
 // CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !s8i, !cir.ptr<!s8i>
@@ -472,9 +482,9 @@ void long_shift_example(long long a, short b) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z18long_shift_examplexs(
 // CIR-SAME: %[[ARG0:.*]]: !s64i{{.*}}, %[[ARG1:.*]]: !s16i{{.*}})
-// CIR: %[[A_PTR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["a", init]
-// CIR: %[[B_PTR:.*]] = cir.alloca !s16i, !cir.ptr<!s16i>, ["b", init]
-// CIR: %[[X_PTR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["x", init]
+// CIR: %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s64i>
+// CIR: %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s16i>
+// CIR: %[[X_PTR:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s64i>
 
 // CIR: cir.store{{.*}} %[[ARG0]], %[[A_PTR]] : !s64i, !cir.ptr<!s64i>
 // CIR: cir.store{{.*}} %[[ARG1]], %[[B_PTR]] : !s16i, !cir.ptr<!s16i>
@@ -548,9 +558,9 @@ void b1(bool a, bool b) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z2b1bb(
 // CIR-SAME: %[[ARG0:.*]]: !cir.bool {{.*}}, %[[ARG1:.*]]: !cir.bool {{.*}})
-// CIR: [[A:%[0-9]+]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a", init]
-// CIR: [[B:%[0-9]+]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init]
-// CIR: [[X:%[0-9]+]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["x", init]
+// CIR: [[A:%[0-9]+]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR: [[B:%[0-9]+]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR: [[X:%[0-9]+]] = cir.alloca "x" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR: cir.store %[[ARG0]], [[A]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR: cir.store %[[ARG1]], [[B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR: [[AVAL:%[0-9]+]] = cir.load align(1) [[A]] : !cir.ptr<!cir.bool>, !cir.bool
@@ -622,22 +632,22 @@ void b1(bool a, bool b) {
 // OGCG: %[[ZEXT1:.*]] = zext i1 %[[ARG1]] to i8
 // OGCG: store i8 %[[ZEXT1]], ptr %[[B_ADDR]]
 // OGCG: %[[A_VAL:.*]] = load i8, ptr %[[A_ADDR]]
-// OGCG: %[[A_BOOL:.*]] = trunc i8 %[[A_VAL]] to i1
+// OGCG: %[[A_BOOL:.*]] = icmp ne i8 %[[A_VAL]], 0
 // OGCG: br i1 %[[A_BOOL]], label %[[AND_TRUE:.+]], label %[[AND_MERGE:.+]]
 // OGCG: [[AND_TRUE]]:
 // OGCG: %[[B_VAL:.*]] = load i8, ptr %[[B_ADDR]]
-// OGCG: %[[B_BOOL:.*]] = trunc i8 %[[B_VAL]] to i1
+// OGCG: %[[B_BOOL:.*]] = icmp ne i8 %[[B_VAL]], 0
 // OGCG: br label %[[AND_MERGE:.+]]
 // OGCG: [[AND_MERGE]]:
 // OGCG: %[[AND_PHI:.*]] = phi i1 [ false, %[[ENTRY]] ], [ %[[B_BOOL]], %[[AND_TRUE]] ]
 // OGCG: %[[ZEXT_AND:.*]] = zext i1 %[[AND_PHI]] to i8
 // OGCG: store i8 %[[ZEXT_AND]], ptr %[[X]]
 // OGCG: %[[X_VAL:.*]] = load i8, ptr %[[X]]
-// OGCG: %[[X_BOOL:.*]] = trunc i8 %[[X_VAL]] to i1
+// OGCG: %[[X_BOOL:.*]] = icmp ne i8 %[[X_VAL]], 0
 // OGCG: br i1 %[[X_BOOL]], label %[[OR_MERGE:.+]], label %[[OR_FALSE:.+]]
 // OGCG: [[OR_FALSE]]:
 // OGCG: %[[B_VAL2:.*]] = load i8, ptr %[[B_ADDR]]
-// OGCG: %[[B_BOOL2:.*]] = trunc i8 %[[B_VAL2]] to i1
+// OGCG: %[[B_BOOL2:.*]] = icmp ne i8 %[[B_VAL2]], 0
 // OGCG: br label %[[OR_MERGE]]
 // OGCG: [[OR_MERGE]]:
 // OGCG: %[[OR_PHI:.*]] = phi i1 [ true, %[[AND_MERGE]] ], [ %[[B_BOOL2]], %[[OR_FALSE]] ]
@@ -652,11 +662,11 @@ void b3(int a, int b, int c, int d) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z2b3iiii(
 // CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}, %[[ARG2:.*]]: !s32i {{.*}}, %[[ARG3:.*]]: !s32i {{.*}})
-// CIR: [[A:%[0-9]+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CIR: [[B:%[0-9]+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
-// CIR: [[C:%[0-9]+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["c", init]
-// CIR: [[D:%[0-9]+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["d", init]
-// CIR: [[X:%[0-9]+]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["x", init]
+// CIR: [[A:%[0-9]+]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR: [[B:%[0-9]+]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
+// CIR: [[C:%[0-9]+]] = cir.alloca "c" {{.*}} init : !cir.ptr<!s32i>
+// CIR: [[D:%[0-9]+]] = cir.alloca "d" {{.*}} init : !cir.ptr<!s32i>
+// CIR: [[X:%[0-9]+]] = cir.alloca "x" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR: cir.store %[[ARG0]], [[A]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG1]], [[B]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG2]], [[C]] : !s32i, !cir.ptr<!s32i>

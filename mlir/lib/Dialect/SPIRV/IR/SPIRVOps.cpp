@@ -555,7 +555,7 @@ ParseResult spirv::ConstantOp::parse(OpAsmParser &parser,
 
 void spirv::ConstantOp::print(OpAsmPrinter &printer) {
   printer << ' ' << getValue();
-  if (isa<spirv::ArrayType>(getType()))
+  if (isa<spirv::ArrayType, spirv::StructType>(getType()))
     printer << " : " << getType();
 }
 
@@ -575,7 +575,7 @@ static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
              << opType << ") does not match value type (" << valueType << ")";
     return success();
   }
-  if (isa<DenseIntOrFPElementsAttr, SparseElementsAttr>(value)) {
+  if (isa<DenseTypedElementsAttr, SparseElementsAttr>(value)) {
     auto valueType = cast<TypedAttr>(value).getType();
     if (valueType == opType)
       return success();
@@ -610,10 +610,27 @@ static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
     return success();
   }
   if (auto arrayAttr = dyn_cast<ArrayAttr>(value)) {
+    if (auto structType = dyn_cast<spirv::StructType>(opType)) {
+      // Identified (possibly recursive) structs are not supported as constants.
+      if (structType.isIdentified())
+        return op.emitOpError(
+            "cannot have an identified struct as a constant type");
+      if (arrayAttr.size() != structType.getNumElements())
+        return op.emitOpError("number of constituents (")
+               << arrayAttr.size()
+               << ") does not match number of struct members ("
+               << structType.getNumElements() << ")";
+      for (auto [idx, element] : llvm::enumerate(arrayAttr.getValue())) {
+        if (failed(verifyConstantType(op, element,
+                                      structType.getElementType(idx))))
+          return failure();
+      }
+      return success();
+    }
     auto arrayType = dyn_cast<spirv::ArrayType>(opType);
     if (!arrayType)
       return op.emitOpError(
-          "must have spirv.array result type for array value");
+          "must have spirv.array or spirv.struct result type for array value");
     Type elemType = arrayType.getElementType();
     for (Attribute element : arrayAttr.getValue()) {
       // Verify array elements recursively.
@@ -638,7 +655,8 @@ bool spirv::ConstantOp::isBuildableWith(Type type) {
     return false;
 
   if (isa<SPIRVDialect>(type.getDialect())) {
-    // TODO: support constant struct
+    if (auto structType = dyn_cast<spirv::StructType>(type))
+      return !structType.isIdentified();
     return isa<spirv::ArrayType>(type);
   }
 
@@ -917,6 +935,76 @@ void spirv::ExecutionModeOp::print(OpAsmPrinter &printer) {
   ArrayAttr values = this->getValues();
   if (!values.empty())
     printer << ", " << llvm::interleaved(values.getAsValueRange<IntegerAttr>());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.ExecutionModeId
+//===----------------------------------------------------------------------===//
+
+ParseResult spirv::ExecutionModeIdOp::parse(OpAsmParser &parser,
+                                            OperationState &result) {
+  ExecutionMode execMode;
+  if (Attribute fn;
+      parser.parseAttribute(fn, kFnNameAttrName, result.attributes) ||
+      parseEnumStrAttr<ExecutionModeAttr>(execMode, parser, result)) {
+    return failure();
+  }
+
+  SmallVector<Attribute, 4> values;
+  if (parser.parseCommaSeparatedList([&]() -> ParseResult {
+        FlatSymbolRefAttr attr;
+        if (parser.parseAttribute(attr))
+          return failure();
+        values.push_back(attr);
+        return success();
+      })) {
+    return failure();
+  }
+
+  StringRef valuesAttrName = getValuesAttrName(result.name);
+  ArrayAttr valuesAttr = parser.getBuilder().getArrayAttr(values);
+  result.addAttribute(valuesAttrName, valuesAttr);
+  return success();
+}
+
+void spirv::ExecutionModeIdOp::print(OpAsmPrinter &printer) {
+  printer << " ";
+  printer.printSymbolName(getFn());
+  printer << " \"" << stringifyExecutionMode(getExecutionMode()) << "\" ";
+
+  llvm::interleaveComma(
+      getValues().getAsValueRange<FlatSymbolRefAttr>(), printer,
+      [&](StringRef value) { printer.printSymbolName(value); });
+}
+
+LogicalResult spirv::ExecutionModeIdOp::verify() {
+  // Valid as of SPIRV 1.6
+  switch (getExecutionMode()) {
+  case ExecutionMode::SubgroupsPerWorkgroupId:
+  case ExecutionMode::LocalSizeId:
+  case ExecutionMode::LocalSizeHintId:
+    break;
+  default:
+    return emitOpError("expected ExecutionMode that takes extra operands that "
+                       "are <id> operands, got: ")
+           << stringifyExecutionMode(getExecutionMode());
+  }
+
+  if (getValues().empty())
+    return emitOpError("expected at least one value operand");
+
+  for (Attribute value : getValues()) {
+    auto valueSymbol = dyn_cast<FlatSymbolRefAttr>(value);
+    if (!valueSymbol)
+      return emitOpError("expected value operands to be symbol reference");
+    Operation *valueOp = SymbolTable::lookupNearestSymbolFrom(
+        (*this)->getParentOp(), valueSymbol);
+    if (!valueOp)
+      return emitOpError("cannot find symbol referenced by value operand: ")
+             << valueSymbol.getValue();
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1269,6 +1357,17 @@ LogicalResult spirv::GlobalVariableOp::verify() {
            << stringifyStorageClass(storageClass) << "'";
   }
 
+  // SPIR-V spec: "A module-scope OpVariable with an Initializer operand must
+  // not be decorated with the Import Linkage Type."
+  if (std::optional<spirv::LinkageAttributesAttr> linkage =
+          getLinkageAttributes()) {
+    if (linkage->getLinkageType().getValue() == spirv::LinkageType::Import &&
+        getInitializer()) {
+      return emitOpError(
+          "with Import linkage type must not have an initializer");
+    }
+  }
+
   if (auto init = (*this)->getAttrOfType<FlatSymbolRefAttr>(
           this->getInitializerAttrName())) {
     Operation *initOp = SymbolTable::lookupNearestSymbolFrom(
@@ -1418,6 +1517,14 @@ void spirv::UMulExtendedOp::print(OpAsmPrinter &printer) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult spirv::MemoryBarrierOp::verify() {
+  return verifyMemorySemantics(getOperation(), getMemorySemantics());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.MemoryNamedBarrierOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::MemoryNamedBarrierOp::verify() {
   return verifyMemorySemantics(getOperation(), getMemorySemantics());
 }
 
@@ -1698,137 +1805,6 @@ LogicalResult spirv::VectorShuffleOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// spirv.MatrixTimesScalar
-//===----------------------------------------------------------------------===//
-
-LogicalResult spirv::MatrixTimesScalarOp::verify() {
-  Type elementType =
-      llvm::TypeSwitch<Type, Type>(getMatrix().getType())
-          .Case<spirv::CooperativeMatrixType, spirv::MatrixType>(
-              [](auto matrixType) { return matrixType.getElementType(); })
-          .Default(nullptr);
-
-  assert(elementType && "Unhandled type");
-
-  // Check that the scalar type is the same as the matrix element type.
-  if (getScalar().getType() != elementType)
-    return emitOpError("input matrix components' type and scaling value must "
-                       "have the same type");
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.Transpose
-//===----------------------------------------------------------------------===//
-
-LogicalResult spirv::TransposeOp::verify() {
-  auto inputMatrix = cast<spirv::MatrixType>(getMatrix().getType());
-  auto resultMatrix = cast<spirv::MatrixType>(getResult().getType());
-
-  // Verify that the input and output matrices have correct shapes.
-  if (inputMatrix.getNumRows() != resultMatrix.getNumColumns())
-    return emitError("input matrix rows count must be equal to "
-                     "output matrix columns count");
-
-  if (inputMatrix.getNumColumns() != resultMatrix.getNumRows())
-    return emitError("input matrix columns count must be equal to "
-                     "output matrix rows count");
-
-  // Verify that the input and output matrices have the same component type
-  if (inputMatrix.getElementType() != resultMatrix.getElementType())
-    return emitError("input and output matrices must have the same "
-                     "component type");
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.MatrixTimesVector
-//===----------------------------------------------------------------------===//
-
-LogicalResult spirv::MatrixTimesVectorOp::verify() {
-  auto matrixType = cast<spirv::MatrixType>(getMatrix().getType());
-  auto vectorType = cast<VectorType>(getVector().getType());
-  auto resultType = cast<VectorType>(getType());
-
-  if (matrixType.getNumColumns() != vectorType.getNumElements())
-    return emitOpError("matrix columns (")
-           << matrixType.getNumColumns() << ") must match vector operand size ("
-           << vectorType.getNumElements() << ")";
-
-  if (resultType.getNumElements() != matrixType.getNumRows())
-    return emitOpError("result size (")
-           << resultType.getNumElements() << ") must match the matrix rows ("
-           << matrixType.getNumRows() << ")";
-
-  if (matrixType.getElementType() != resultType.getElementType())
-    return emitOpError("matrix and result element types must match");
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.VectorTimesMatrix
-//===----------------------------------------------------------------------===//
-
-LogicalResult spirv::VectorTimesMatrixOp::verify() {
-  auto vectorType = cast<VectorType>(getVector().getType());
-  auto matrixType = cast<spirv::MatrixType>(getMatrix().getType());
-  auto resultType = cast<VectorType>(getType());
-
-  if (matrixType.getNumRows() != vectorType.getNumElements())
-    return emitOpError("number of components in vector must equal the number "
-                       "of components in each column in matrix");
-
-  if (resultType.getNumElements() != matrixType.getNumColumns())
-    return emitOpError("number of columns in matrix must equal the number of "
-                       "components in result");
-
-  if (matrixType.getElementType() != resultType.getElementType())
-    return emitOpError("matrix must be a matrix with the same component type "
-                       "as the component type in result");
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// spirv.MatrixTimesMatrix
-//===----------------------------------------------------------------------===//
-
-LogicalResult spirv::MatrixTimesMatrixOp::verify() {
-  auto leftMatrix = cast<spirv::MatrixType>(getLeftmatrix().getType());
-  auto rightMatrix = cast<spirv::MatrixType>(getRightmatrix().getType());
-  auto resultMatrix = cast<spirv::MatrixType>(getResult().getType());
-
-  // left matrix columns' count and right matrix rows' count must be equal
-  if (leftMatrix.getNumColumns() != rightMatrix.getNumRows())
-    return emitError("left matrix columns' count must be equal to "
-                     "the right matrix rows' count");
-
-  // right and result matrices columns' count must be the same
-  if (rightMatrix.getNumColumns() != resultMatrix.getNumColumns())
-    return emitError(
-        "right and result matrices must have equal columns' count");
-
-  // right and result matrices component type must be the same
-  if (rightMatrix.getElementType() != resultMatrix.getElementType())
-    return emitError("right and result matrices' component type must"
-                     " be the same");
-
-  // left and result matrices component type must be the same
-  if (leftMatrix.getElementType() != resultMatrix.getElementType())
-    return emitError("left and result matrices' component type"
-                     " must be the same");
-
-  // left and result matrices rows count must be the same
-  if (leftMatrix.getNumRows() != resultMatrix.getNumRows())
-    return emitError("left and result matrices must have equal rows' count");
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // spirv.SpecConstantComposite
 //===----------------------------------------------------------------------===//
 
@@ -1901,15 +1877,29 @@ LogicalResult spirv::SpecConstantCompositeOp::verify() {
   for (auto index : llvm::seq<uint32_t>(0, constituents.size())) {
     auto constituent = cast<FlatSymbolRefAttr>(constituents[index]);
 
-    auto constituentSpecConstOp =
-        dyn_cast<spirv::SpecConstantOp>(SymbolTable::lookupNearestSymbolFrom(
-            (*this)->getParentOp(), constituent.getAttr()));
+    Operation *constituentOp = SymbolTable::lookupNearestSymbolFrom(
+        (*this)->getParentOp(), constituent.getAttr());
 
-    if (constituentSpecConstOp.getDefaultValue().getType() !=
-        cType.getElementType(index))
+    if (!constituentOp)
+      return emitError("unknown constituent symbol ") << constituent.getAttr();
+
+    Type constituentType;
+    if (auto specConstOp = dyn_cast<spirv::SpecConstantOp>(constituentOp)) {
+      constituentType = specConstOp.getDefaultValue().getType();
+    } else if (auto specConstCompositeOp =
+                   dyn_cast<spirv::SpecConstantCompositeOp>(constituentOp)) {
+      constituentType = specConstCompositeOp.getType();
+    } else {
+      return emitError("unsupported constituent ")
+             << constituent.getAttr()
+             << ": must reference a spirv.SpecConstant or "
+                "spirv.SpecConstantComposite";
+    }
+
+    if (constituentType != cType.getElementType(index))
       return emitError("has incorrect types of operands: expected ")
              << cType.getElementType(index) << ", but provided "
-             << constituentSpecConstOp.getDefaultValue().getType();
+             << constituentType;
   }
 
   return success();
@@ -2085,12 +2075,10 @@ LogicalResult spirv::GLFrexpStructOp::verify() {
 // spirv.GL.Ldexp
 //===----------------------------------------------------------------------===//
 
-LogicalResult spirv::GLLdexpOp::verify() {
-  Type significandType = getX().getType();
-  Type exponentType = getExp().getType();
-
-  if (isa<FloatType>(significandType) != isa<IntegerType>(exponentType))
-    return emitOpError("operands must both be scalars or vectors");
+static LogicalResult verifyFloatIntegerBuiltin(Operation *op, Type floatType,
+                                               Type integerType) {
+  if (isa<FloatType>(floatType) != isa<IntegerType>(integerType))
+    return op->emitOpError("operands must both be scalars or vectors");
 
   auto getNumElements = [](Type type) -> unsigned {
     if (auto vectorType = dyn_cast<VectorType>(type))
@@ -2098,10 +2086,42 @@ LogicalResult spirv::GLLdexpOp::verify() {
     return 1;
   };
 
-  if (getNumElements(significandType) != getNumElements(exponentType))
-    return emitOpError("operands must have the same number of elements");
+  if (getNumElements(floatType) != getNumElements(integerType))
+    return op->emitOpError("operands must have the same number of elements");
 
   return success();
+}
+
+LogicalResult spirv::GLLdexpOp::verify() {
+  return verifyFloatIntegerBuiltin(getOperation(), getX().getType(),
+                                   getExp().getType());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.ldexp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::CLLdexpOp::verify() {
+  return verifyFloatIntegerBuiltin(getOperation(), getX().getType(),
+                                   getExp().getType());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.pown
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::CLPownOp::verify() {
+  return verifyFloatIntegerBuiltin(getOperation(), getX().getType(),
+                                   getY().getType());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.rootn
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::CLRootnOp::verify() {
+  return verifyFloatIntegerBuiltin(getOperation(), getX().getType(),
+                                   getN().getType());
 }
 
 //===----------------------------------------------------------------------===//

@@ -1647,6 +1647,11 @@ InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             TTI::TargetCostKind CostKind,
                                             TTI::OperandValueInfo OpInfo,
                                             const Instruction *I) const {
+  // FIXME: Load latency isn't handled here
+  if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
+    return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                  CostKind, OpInfo, I);
+
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return 1;
@@ -2562,8 +2567,8 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
   int ICmpCount = 0;
 
   for (BasicBlock *BB : L->blocks()) {
-    for (Instruction &I : BB->instructionsWithoutDebug()) {
-      if (isa<PHINode>(&I))
+    for (Instruction &I : *BB) {
+      if (isa<PHINode>(I) || isa<PseudoProbeInst>(I))
         continue;
       if (!canTailPredicateInstruction(I, ICmpCount)) {
         LLVM_DEBUG(dbgs() << "Instruction not allowed: "; I.dump());
@@ -2616,14 +2621,14 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
   return true;
 }
 
-bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
+bool ARMTTIImpl::preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const {
   if (!EnableTailPredication) {
-    LLVM_DEBUG(dbgs() << "Tail-predication not enabled.\n");
+    LLVM_DEBUG(dbgs() << "Tail-folding not enabled.\n");
     return false;
   }
 
-  // Creating a predicated vector loop is the first step for generating a
-  // tail-predicated hardware loop, for which we need the MVE masked
+  // Creating a tail-folded vector loop is the first step for generating a
+  // tail-folded hardware loop, for which we need the MVE masked
   // load/stores instructions:
   if (!ST->hasMVEIntegerOps())
     return false;
@@ -2633,17 +2638,18 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
 
   // For now, restrict this to single block loops.
   if (L->getNumBlocks() > 1) {
-    LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: not a single block "
+    LLVM_DEBUG(dbgs() << "preferTailFoldingOverEpilogue: not a single block "
                          "loop.\n");
     return false;
   }
 
-  assert(L->isInnermost() && "preferPredicateOverEpilogue: inner-loop expected");
+  assert(L->isInnermost() &&
+         "preferTailFoldingOverEpilogue: inner-loop expected");
 
   LoopInfo *LI = LVL->getLoopInfo();
   HardwareLoopInfo HWLoopInfo(L);
   if (!HWLoopInfo.canAnalyze(*LI)) {
-    LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: hardware-loop is not "
+    LLVM_DEBUG(dbgs() << "preferTailFoldingOverEpilogue: hardware-loop is not "
                          "analyzable.\n");
     return false;
   }
@@ -2654,14 +2660,14 @@ bool ARMTTIImpl::preferPredicateOverEpilogue(TailFoldingInfo *TFI) const {
   // This checks if we have the low-overhead branch architecture
   // extension, and if we will create a hardware-loop:
   if (!isHardwareLoopProfitable(L, *SE, *AC, TFI->TLI, HWLoopInfo)) {
-    LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: hardware-loop is not "
+    LLVM_DEBUG(dbgs() << "preferTailFoldingOverEpilogue: hardware-loop is not "
                          "profitable.\n");
     return false;
   }
 
   DominatorTree *DT = LVL->getDominatorTree();
   if (!HWLoopInfo.isHardwareLoopCandidate(*SE, *LI, *DT)) {
-    LLVM_DEBUG(dbgs() << "preferPredicateOverEpilogue: hardware-loop is not "
+    LLVM_DEBUG(dbgs() << "preferTailFoldingOverEpilogue: hardware-loop is not "
                          "a candidate.\n");
     return false;
   }
@@ -2785,7 +2791,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   bool Runtime = true;
   if (ST->hasLOB()) {
     if (SE.hasLoopInvariantBackedgeTakenCount(L)) {
-      const auto *BETC = SE.getBackedgeTakenCount(L);
+      const SCEV *BETC = SE.getBackedgeTakenCount(L);
       auto *Outer = L->getOutermostLoop();
       if ((L != Outer && Outer != L->getParentLoop()) ||
           (L != Outer && BETC && !SE.isLoopInvariant(BETC, Outer))) {
@@ -2850,6 +2856,13 @@ InstructionCost ARMTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     return 0;
   }
   return InstructionCost::getInvalid();
+}
+
+bool ARMTTIImpl::shouldConsiderVectorizationRegPressure() const {
+  // MVE only has 8 vector registers, so we should consider register pressure to
+  // avoid vectorizing when the cost of spills exceeds the gains from
+  // vectorization.
+  return ST->hasMVEIntegerOps();
 }
 
 bool ARMTTIImpl::hasArmWideBranch(bool Thumb) const {

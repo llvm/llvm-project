@@ -31,6 +31,8 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     %11 = spirv.GL.Pow %arg0, %arg1 : f32
     // CHECK: {{%.*}} = spirv.GL.Round {{%.*}} : f32
     %12 = spirv.GL.Round %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Trunc {{%.*}} : f32
+    %trunc = spirv.GL.Trunc %arg0 : f32
     // CHECK: {{%.*}} = spirv.GL.FrexpStruct {{%.*}} : f32 -> !spirv.struct<(f32, i32)>
     %13 = spirv.GL.FrexpStruct %arg0 : f32 -> !spirv.struct<(f32, i32)>
     // CHECK: {{%.*}} = spirv.GL.Ldexp {{%.*}} : f32, {{%.*}} : i32 -> f32

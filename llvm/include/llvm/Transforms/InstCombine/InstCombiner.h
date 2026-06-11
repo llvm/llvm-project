@@ -25,6 +25,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include <cassert>
@@ -46,6 +47,19 @@ class TargetTransformInfo;
 /// This class provides both the logic to recursively visit instructions and
 /// combine them.
 class LLVM_LIBRARY_VISIBILITY InstCombiner {
+  /// IRBuilder inserter that adds new instructions to the worklist and new
+  /// assumptions to the AssumptionCache.
+  class IRBuilderInstCombineInserter final : public IRBuilderDefaultInserter {
+    InstCombiner &IC;
+
+  public:
+    ~IRBuilderInstCombineInserter() override;
+    IRBuilderInstCombineInserter(InstCombiner &IC) : IC(IC) {}
+
+    void InsertHelper(Instruction *I, const Twine &Name,
+                      BasicBlock::iterator InsertPt) const override;
+  };
+
   /// Only used to call target specific intrinsic combining.
   /// It must **NOT** be used for any other purpose, as InstCombine is a
   /// target-independent canonicalization transform.
@@ -57,8 +71,8 @@ public:
 
   /// An IRBuilder that automatically inserts new instructions into the
   /// worklist.
-  using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
-  BuilderTy &Builder;
+  using BuilderTy = IRBuilder<TargetFolder, IRBuilderInstCombineInserter>;
+  BuilderTy Builder;
 
 protected:
   /// A worklist of the instructions that need to be simplified.
@@ -99,18 +113,24 @@ protected:
   SmallDenseSet<std::pair<const BasicBlock *, const BasicBlock *>, 8> BackEdges;
   bool ComputedBackEdges = false;
 
+  /// Source for annotation metadata, used by the IRBuilder inserter.
+  Instruction *AnnotationMetadataSource = nullptr;
+
 public:
-  InstCombiner(InstructionWorklist &Worklist, BuilderTy &Builder, Function &F,
-               AAResults *AA, AssumptionCache &AC, TargetLibraryInfo &TLI,
+  InstCombiner(InstructionWorklist &Worklist, Function &F, AAResults *AA,
+               AssumptionCache &AC, TargetLibraryInfo &TLI,
                TargetTransformInfo &TTI, DominatorTree &DT,
                OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
                BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
                const DataLayout &DL,
                ReversePostOrderTraversal<BasicBlock *> &RPOT)
-      : TTIForTargetIntrinsicsOnly(TTI), Builder(Builder), Worklist(Worklist),
-        F(F), MinimizeSize(F.hasMinSize()), AA(AA), AC(AC), TLI(TLI), DT(DT),
-        DL(DL), SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
-                   /*CanUseUndef*/ true, &DC),
+      : TTIForTargetIntrinsicsOnly(TTI),
+        Builder(F.getContext(), TargetFolder(DL),
+                IRBuilderInstCombineInserter(*this)),
+        Worklist(Worklist), F(F), MinimizeSize(F.hasMinSize()), AA(AA), AC(AC),
+        TLI(TLI), DT(DT), DL(DL),
+        SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
+           /*CanUseUndef*/ true, &DC),
         ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), RPOT(RPOT) {}
 
   virtual ~InstCombiner() = default;
@@ -146,9 +166,9 @@ public:
     if (isa<Constant>(V))
       return isa<UndefValue>(V) ? 0 : 1;
 
-    if (isa<CastInst>(V) || match(V, m_Neg(PatternMatch::m_Value())) ||
-        match(V, m_Not(PatternMatch::m_Value())) ||
-        match(V, m_FNeg(PatternMatch::m_Value())))
+    using namespace llvm::PatternMatch;
+    if (isa<CastInst>(V) || match(V, m_Neg(m_Value())) ||
+        match(V, m_Not(m_Value())) || match(V, m_FNeg(m_Value())))
       return 2;
 
     return 3;
@@ -204,9 +224,9 @@ public:
   /// dereferenceable).
   /// If the inversion will consume instructions, `DoesConsume` will be set to
   /// true. Otherwise it will be false.
-  Value *getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
-                                      BuilderTy *Builder, bool &DoesConsume,
-                                      unsigned Depth);
+  LLVM_ABI Value *getFreelyInvertedImpl(Value *V, bool WillInvertAllUses,
+                                        BuilderTy *Builder, bool &DoesConsume,
+                                        unsigned Depth);
 
   Value *getFreelyInverted(Value *V, bool WillInvertAllUses,
                                   BuilderTy *Builder, bool &DoesConsume) {
@@ -257,12 +277,12 @@ public:
         if (shouldAvoidAbsorbingNotIntoSelect(*cast<SelectInst>(I)))
           return false;
         break;
-      case Instruction::Br:
+      case Instruction::CondBr:
         assert(U.getOperandNo() == 0 && "Must be branching on that value.");
         break; // Free to invert by swapping true/false values/destinations.
       case Instruction::Xor: // Can invert 'xor' if it's a 'not', by ignoring
                              // it.
-        if (!match(I, m_Not(PatternMatch::m_Value())))
+        if (!match(I, PatternMatch::m_Not(PatternMatch::m_Value())))
           return false; // Not a 'not'.
         break;
       default:
@@ -356,18 +376,19 @@ public:
   ProfileSummaryInfo *getProfileSummaryInfo() const { return PSI; }
 
   // Call target specific combiners
-  std::optional<Instruction *> targetInstCombineIntrinsic(IntrinsicInst &II);
-  std::optional<Value *>
+  LLVM_ABI std::optional<Instruction *>
+  targetInstCombineIntrinsic(IntrinsicInst &II);
+  LLVM_ABI std::optional<Value *>
   targetSimplifyDemandedUseBitsIntrinsic(IntrinsicInst &II, APInt DemandedMask,
                                          KnownBits &Known,
                                          bool &KnownBitsComputed);
-  std::optional<Value *> targetSimplifyDemandedVectorEltsIntrinsic(
+  LLVM_ABI std::optional<Value *> targetSimplifyDemandedVectorEltsIntrinsic(
       IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
       APInt &UndefElts2, APInt &UndefElts3,
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp);
 
-  void computeBackEdges();
+  LLVM_ABI void computeBackEdges();
   bool isBackEdge(const BasicBlock *From, const BasicBlock *To) {
     if (!ComputedBackEdges)
       computeBackEdges();
@@ -478,6 +499,13 @@ public:
     return llvm::ComputeMaxSignificantBits(Op, DL, &AC, CxtI, &DT, Depth);
   }
 
+  /// Return true if the cast from integer to FP can be proven to be exact
+  /// for all possible inputs (the conversion does not lose any precision).
+  LLVM_ABI bool isKnownExactCastIntToFP(CastInst &I) const;
+  LLVM_ABI bool
+  canBeCastedExactlyIntToFP(Value *V, Type *FPTy, bool IsSigned,
+                            const Instruction *CxtI = nullptr) const;
+
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
                                                const Value *RHS,
                                                const Instruction *CxtI,
@@ -537,7 +565,7 @@ public:
                              unsigned Depth = 0,
                              bool AllowMultipleUsers = false) = 0;
 
-  bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
+  LLVM_ABI bool isValidAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
 };
 
 } // namespace llvm

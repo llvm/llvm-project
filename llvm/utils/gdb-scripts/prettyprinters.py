@@ -146,46 +146,34 @@ class DenseMapPrinter:
     "Print a DenseMap"
 
     class _iterator:
-        def __init__(self, key_info_t, begin, end):
-            self.key_info_t = key_info_t
-            self.cur = begin
-            self.end = end
+        def __init__(self, buckets, used, num_buckets):
+            self.buckets = buckets
+            self.used = used
+            self.num_buckets = num_buckets
+            self.index = 0
             self.advancePastEmptyBuckets()
             self.first = True
 
         def __iter__(self):
             return self
 
+        def isUsed(self, index):
+            # Occupancy is tracked in a packed 1-bit-per-bucket "used" array of
+            # uint32_t words, so a bucket is occupied iff its bit is set.
+            word = self.used[index >> 5]
+            return (int(word) >> (index & 31)) & 1
+
         def advancePastEmptyBuckets(self):
-            # disabled until the comments below can be addressed
-            # keeping as notes/posterity/hints for future contributors
-            return
-            n = self.key_info_t.name
-            is_equal = gdb.parse_and_eval(n + "::isEqual")
-            empty = gdb.parse_and_eval(n + "::getEmptyKey()")
-            tombstone = gdb.parse_and_eval(n + "::getTombstoneKey()")
-            # the following is invalid, GDB fails with:
-            #   Python Exception <class 'gdb.error'> Attempt to take address of value
-            #   not located in memory.
-            # because isEqual took parameter (for the unsigned long key I was testing)
-            # by const ref, and GDB
-            # It's also not entirely general - we should be accessing the "getFirst()"
-            # member function, not the 'first' member variable, but I've yet to figure
-            # out how to find/call member functions (especially (const) overloaded
-            # ones) on a gdb.Value.
-            while self.cur != self.end and (
-                is_equal(self.cur.dereference()["first"], empty)
-                or is_equal(self.cur.dereference()["first"], tombstone)
-            ):
-                self.cur = self.cur + 1
+            while self.index < self.num_buckets and not self.isUsed(self.index):
+                self.index += 1
 
         def __next__(self):
-            if self.cur == self.end:
+            if self.index >= self.num_buckets:
                 raise StopIteration
-            cur = self.cur
-            v = cur.dereference()["first" if self.first else "second"]
+            bucket = (self.buckets + self.index).dereference()
+            v = bucket["first" if self.first else "second"]
             if not self.first:
-                self.cur = self.cur + 1
+                self.index += 1
                 self.advancePastEmptyBuckets()
                 self.first = True
             else:
@@ -200,9 +188,8 @@ class DenseMapPrinter:
 
     def children(self):
         t = self.val.type.template_argument(3).pointer()
-        begin = self.val["Buckets"].cast(t)
-        end = (begin + self.val["NumBuckets"]).cast(t)
-        return self._iterator(self.val.type.template_argument(2), begin, end)
+        buckets = self.val["Buckets"].cast(t)
+        return self._iterator(buckets, self.val["Used"], int(self.val["NumBuckets"]))
 
     def to_string(self):
         return "llvm::DenseMap with %d elements" % (self.val["NumEntries"])
@@ -443,14 +430,66 @@ class PointerUnionPrinter:
         return "Containing %s" % self.pointer.type
 
 
+def _make_pointer_union_raw_fallback(raw_value, min_low_bits):
+    """Strip tag bits and return as void* when active type is unknown."""
+    pointer = raw_value & ~((1 << min_low_bits) - 1)
+    void_ptr = gdb.lookup_type("void").pointer()
+    return PointerUnionPrinter(gdb.Value(pointer).cast(void_ptr))
+
+
 def make_pointer_union_printer(val):
     """Factory for an llvm::PointerUnion printer."""
     try:
-        pointer, value = get_pointer_int_pair(val["Val"])
-    except gdb.error:
-        return None  # If PointerIntPair cannot be analyzed, print as raw value.
-    pointer_type = val.type.template_argument(int(value))
-    return PointerUnionPrinter(pointer.cast(pointer_type))
+        raw_value = int(
+            val["Val"]["Data"]
+            .address.cast(gdb.lookup_type("uintptr_t").pointer())
+            .dereference()
+        )
+
+        # Collect template argument types.
+        # Distinguish truncation (RuntimeError — type resolution failure) from
+        # normal end-of-args (gdb.error — index out of range).
+        arg_types = []
+        truncated = False
+        while True:
+            try:
+                arg_types.append(val.type.template_argument(len(arg_types)))
+            except RuntimeError:
+                truncated = True
+                break
+            except gdb.error:
+                break
+        if not arg_types:
+            return None
+
+        # Compute tag from type alignments (fixed-width encoding).
+        num_args = len(arg_types)
+        min_low_bits = min(
+            (a.bit_length() - 1 if a > 0 else 0)
+            for a in (t.target().alignof for t in arg_types)
+        )
+
+        # If template args are truncated, we can't reliably decode the tag.
+        # Fall back to showing the raw pointer with tag bits stripped.
+        if truncated:
+            return _make_pointer_union_raw_fallback(raw_value, min_low_bits)
+
+        tag_bits = (num_args - 1).bit_length()
+        if tag_bits > min_low_bits:
+            return _make_pointer_union_raw_fallback(raw_value, min_low_bits)
+        tag_shift = min_low_bits - tag_bits
+        tag_mask = (1 << tag_bits) - 1
+        active_tag = (raw_value >> tag_shift) & tag_mask
+        if active_tag >= num_args:
+            return _make_pointer_union_raw_fallback(raw_value, min_low_bits)
+
+        pointer_type = arg_types[active_tag]
+        align = pointer_type.target().alignof
+        low_bits = align.bit_length() - 1 if align > 0 else 0
+        pointer = raw_value & ~((1 << low_bits) - 1)
+    except (gdb.error, RuntimeError, IndexError):
+        return None
+    return PointerUnionPrinter(gdb.Value(pointer).cast(pointer_type))
 
 
 class IlistNodePrinter:

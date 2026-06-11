@@ -118,7 +118,7 @@ public:
 
   void testSubnormalRange(RoundToIntegerFunc func) {
     // Arbitrary, trades off completeness with testing time (esp. on failure)
-    constexpr int COUNT = 1'000;
+    constexpr int COUNT = 1'231;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>((MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT),
         StorageType(1));

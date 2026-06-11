@@ -163,6 +163,36 @@ static std::optional<spirv::Scope> getAtomicOpScope(MemRefType type) {
   return {};
 }
 
+/// Returns the MemorySemantics storage-class bit corresponding to `sc`.
+/// Per SPIR-V spec section 3.32 (Memory Semantics) this bit must be OR'd
+/// with the ordering bits (Acquire/Release/...) on atomic operations.
+static spirv::MemorySemantics
+getMemorySemanticsForStorageClass(spirv::StorageClass sc) {
+  switch (sc) {
+  case spirv::StorageClass::StorageBuffer:
+  case spirv::StorageClass::Uniform:
+    return spirv::MemorySemantics::UniformMemory;
+  case spirv::StorageClass::Workgroup:
+    return spirv::MemorySemantics::WorkgroupMemory;
+  case spirv::StorageClass::CrossWorkgroup:
+    return spirv::MemorySemantics::CrossWorkgroupMemory;
+  case spirv::StorageClass::AtomicCounter:
+    return spirv::MemorySemantics::AtomicCounterMemory;
+  case spirv::StorageClass::Image:
+    return spirv::MemorySemantics::ImageMemory;
+  default:
+    return spirv::MemorySemantics::None;
+  }
+}
+
+/// Returns the AcquireRelease memory semantics OR'd with the storage-class
+/// bit derived from the memory space of `type`.
+static spirv::MemorySemantics getAtomicAcqRelMemorySemantics(MemRefType type) {
+  auto sc = cast<spirv::StorageClassAttr>(type.getMemorySpace()).getValue();
+  return spirv::MemorySemantics::AcquireRelease |
+         getMemorySemanticsForStorageClass(sc);
+}
+
 /// Extracts the element type from a SPIR-V pointer type pointing to storage.
 ///
 /// For Kernel capability, the pointer points directly to the element type
@@ -424,10 +454,6 @@ LogicalResult
 AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
                                     OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
-  if (isa<FloatType>(atomicOp.getType()))
-    return rewriter.notifyMatchFailure(atomicOp,
-                                       "unimplemented floating-point case");
-
   auto memrefType = cast<MemRefType>(atomicOp.getMemref().getType());
   std::optional<spirv::Scope> scope = getAtomicOpScope(memrefType);
   if (!scope)
@@ -458,14 +484,16 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
                                        "failed to convert memref type");
 
   Type pointeeType = pointerType.getPointeeType();
-  auto dstType = dyn_cast<IntegerType>(
-      getElementTypeForStoragePointer(pointeeType, typeConverter));
-  if (!dstType)
+  Type storageElemType =
+      getElementTypeForStoragePointer(pointeeType, typeConverter);
+  if (!storageElemType || !storageElemType.isIntOrFloat())
     return rewriter.notifyMatchFailure(
         atomicOp, "failed to determine destination element type");
 
-  int dstBits = static_cast<int>(dstType.getWidth());
+  int dstBits = static_cast<int>(storageElemType.getIntOrFloatBitWidth());
   assert(dstBits % srcBits == 0);
+
+  spirv::MemorySemantics memSem = getAtomicAcqRelMemorySemantics(memrefType);
 
   // When the source and destination bitwidths match, emit the atomic operation
   // directly.
@@ -473,11 +501,11 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
 #define ATOMIC_CASE(kind, spirvOp)                                             \
   case arith::AtomicRMWKind::kind:                                             \
     rewriter.replaceOpWithNewOp<spirv::spirvOp>(                               \
-        atomicOp, resultType, ptr, *scope,                                     \
-        spirv::MemorySemantics::AcquireRelease, adaptor.getValue());           \
+        atomicOp, resultType, ptr, *scope, memSem, adaptor.getValue());        \
     break
 
     switch (atomicOp.getKind()) {
+      ATOMIC_CASE(addf, EXTAtomicFAddOp);
       ATOMIC_CASE(addi, AtomicIAddOp);
       ATOMIC_CASE(maxs, AtomicSMaxOp);
       ATOMIC_CASE(maxu, AtomicUMaxOp);
@@ -515,6 +543,8 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
         atomicOp,
         "sub-element-width atomic ops unsupported with Kernel capability");
 
+  auto dstType = cast<IntegerType>(storageElemType);
+
   auto accessChainOp = ptr.getDefiningOp<spirv::AccessChainOp>();
   if (!accessChainOp)
     return failure();
@@ -535,9 +565,8 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
         loc, dstType, rewriter.getIntegerAttr(dstType, (1uLL << srcBits) - 1));
     Value storeVal =
         shiftValue(loc, adaptor.getValue(), offset, elemMask, rewriter);
-    result = spirv::AtomicOrOp::create(
-        rewriter, loc, dstType, adjustedPtr, *scope,
-        spirv::MemorySemantics::AcquireRelease, storeVal);
+    result = spirv::AtomicOrOp::create(rewriter, loc, dstType, adjustedPtr,
+                                       *scope, memSem, storeVal);
     break;
   }
   case arith::AtomicRMWKind::andi: {
@@ -554,9 +583,8 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
         rewriter.createOrFold<spirv::NotOp>(loc, dstType, shiftedElemMask);
     Value mask = rewriter.createOrFold<spirv::BitwiseOrOp>(loc, storeVal,
                                                            invertedElemMask);
-    result = spirv::AtomicAndOp::create(
-        rewriter, loc, dstType, adjustedPtr, *scope,
-        spirv::MemorySemantics::AcquireRelease, mask);
+    result = spirv::AtomicAndOp::create(rewriter, loc, dstType, adjustedPtr,
+                                        *scope, memSem, mask);
     break;
   }
   default:
@@ -630,12 +658,21 @@ calculateMemoryRequirements(Value accessedPtr, bool isNontemporal,
 
   // PhysicalStorageBuffers require the `Aligned` attribute.
   // Other storage types may show an `Aligned` attribute.
-  auto pointeeType = dyn_cast<spirv::ScalarType>(ptrType.getPointeeType());
-  if (!pointeeType)
-    return failure();
+  std::optional<int64_t> sizeInBytes;
+  Type rawPointeeType = ptrType.getPointeeType();
+  if (auto scalarType = dyn_cast<spirv::ScalarType>(rawPointeeType)) {
+    // For scalar types, the alignment is determined by their size.
+    sizeInBytes = scalarType.getSizeInBytes();
+  } else if (auto vecType = dyn_cast<VectorType>(rawPointeeType)) {
+    // For vector element types, the alignment should equal the total size of
+    // the vector.
+    if (auto scalarElem =
+            dyn_cast<spirv::ScalarType>(vecType.getElementType())) {
+      if (auto elemSize = scalarElem.getSizeInBytes())
+        sizeInBytes = *elemSize * vecType.getNumElements();
+    }
+  }
 
-  // For scalar types, the alignment is determined by their size.
-  std::optional<int64_t> sizeInBytes = pointeeType.getSizeInBytes();
   if (!sizeInBytes.has_value())
     return failure();
 
@@ -1020,12 +1057,11 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   if (!scope)
     return rewriter.notifyMatchFailure(storeOp, "atomic scope not available");
 
-  Value result = spirv::AtomicAndOp::create(
-      rewriter, loc, dstType, adjustedPtr, *scope,
-      spirv::MemorySemantics::AcquireRelease, clearBitsMask);
-  result = spirv::AtomicOrOp::create(
-      rewriter, loc, dstType, adjustedPtr, *scope,
-      spirv::MemorySemantics::AcquireRelease, storeVal);
+  spirv::MemorySemantics memSem = getAtomicAcqRelMemorySemantics(memrefType);
+  Value result = spirv::AtomicAndOp::create(rewriter, loc, dstType, adjustedPtr,
+                                            *scope, memSem, clearBitsMask);
+  result = spirv::AtomicOrOp::create(rewriter, loc, dstType, adjustedPtr,
+                                     *scope, memSem, storeVal);
 
   // The AtomicOrOp has no side effect. Since it is already inserted, we can
   // just remove the original StoreOp. Note that rewriter.replaceOp()

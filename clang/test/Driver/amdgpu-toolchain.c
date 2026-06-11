@@ -4,9 +4,13 @@
 // RUN: %clang -### -g --target=amdgcn-amd-amdpal -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
 // RUN: %clang -### --target=amdgcn-mesa-mesa3d -x assembler -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=AS_LINK %s
 // RUN: %clang -### -g --target=amdgcn-mesa-mesa3d -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
+// RUN: %clang -### --target=amdgcn-- -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=BARE %s
+// RUN: %clang -### -g --target=amdgcn-- -mcpu=kaveri %s 2>&1 | FileCheck -check-prefix=DWARF_VER %s
 
 // AS_LINK: "-cc1as"
 // AS_LINK: ld.lld{{.*}} "--no-undefined" "-shared"
+
+// BARE: ld.lld{{.*}} "--no-undefined" "-shared"
 
 // DWARF_VER: "-dwarf-version=5"
 
@@ -46,3 +50,16 @@
 // RUN:  --rocm-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode 2>&1 \
 // RUN: | FileCheck -check-prefix=DEVICE-LIBS %s
 // DEVICE-LIBS: "-mlink-builtin-bitcode" "[[ROCM_PATH:.+]]ockl.bc"
+
+// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
+// RUN:   -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:   -fprofile-generate %s 2>&1 | FileCheck -check-prefixes=PROFILE %s
+//      PROFILE: ld.lld
+// PROFILE-SAME: "[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}amdgcn-amd-amdhsa{{/|\\\\}}libclang_rt.profile.a"
+
+// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx906 -nogpulib \
+// RUN:   -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:   -fsanitize=undefined -fsanitize-minimal-runtime %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=UBSAN %s
+//      UBSAN: ld.lld
+// UBSAN-SAME: "[[RESOURCE_DIR:.+]]{{/|\\\\}}lib{{/|\\\\}}amdgcn-amd-amdhsa{{/|\\\\}}libclang_rt.ubsan_minimal.a"

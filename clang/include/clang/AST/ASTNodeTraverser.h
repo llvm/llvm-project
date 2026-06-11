@@ -159,7 +159,8 @@ public:
 
       // Some statements have custom mechanisms for dumping their children.
       if (isa<DeclStmt, GenericSelectionExpr, RequiresExpr,
-              OpenACCWaitConstruct, SYCLKernelCallStmt>(S))
+              OpenACCWaitConstruct, SYCLKernelCallStmt,
+              UnresolvedSYCLKernelCallStmt>(S))
         return;
 
       if (Traversal == TK_IgnoreUnlessSpelledInSource &&
@@ -682,6 +683,17 @@ public:
     Visit(D->getMessage());
   }
 
+  void VisitExplicitInstantiationDecl(const ExplicitInstantiationDecl *D) {
+    if (TypeSourceInfo *TSI = D->getTypeAsWritten())
+      Visit(TSI->getTypeLoc());
+    if (auto NumArgs = D->getNumTemplateArgs()) {
+      for (unsigned I = 0; I != *NumArgs; ++I) {
+        TemplateArgumentLoc Loc = D->getTemplateArg(I);
+        Visit(Loc.getArgument(), Loc.getSourceRange());
+      }
+    }
+  }
+
   void VisitFunctionTemplateDecl(const FunctionTemplateDecl *D) {
     dumpTemplateDecl(D);
   }
@@ -843,6 +855,13 @@ public:
       Visit(Node->getKernelLaunchStmt());
       Visit(Node->getOutlinedFunctionDecl());
     }
+  }
+
+  void
+  VisitUnresolvedSYCLKernelCallStmt(const UnresolvedSYCLKernelCallStmt *Node) {
+    Visit(Node->getOriginalStmt());
+    if (Traversal != TK_IgnoreUnlessSpelledInSource)
+      Visit(Node->getKernelLaunchIdExpr());
   }
 
   void VisitOMPExecutableDirective(const OMPExecutableDirective *Node) {

@@ -15,11 +15,11 @@ void cxx_rewritten_binary_operator_scalar_expr() {
   bool neq = a != b;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !rec_HasOpEq, !cir.ptr<!rec_HasOpEq>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !rec_HasOpEq, !cir.ptr<!rec_HasOpEq>, ["b"]
-// CIR: %[[NEQ_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["neq", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_HasOpEq>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_HasOpEq>
+// CIR: %[[NEQ_ADDR:.*]] = cir.alloca "neq" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR: %[[EQ:.*]] = cir.call @_ZNK7HasOpEqeqERKS_(%[[A_ADDR]], %[[B_ADDR]]) : (!cir.ptr<!rec_HasOpEq> {{.*}}, !cir.ptr<!rec_HasOpEq> {{.*}}) -> (!cir.bool{{.*}})
-// CIR: %[[NEQ:.*]] = cir.unary(not, %[[EQ]]) : !cir.bool, !cir.bool
+// CIR: %[[NEQ:.*]] = cir.not %[[EQ]] : !cir.bool
 // CIR: cir.store{{.*}} %[[NEQ]], %[[NEQ_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
 // LLVM: %[[A_ADDR:.*]] = alloca %struct.HasOpEq, i64 1, align 1

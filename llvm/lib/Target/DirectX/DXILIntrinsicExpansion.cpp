@@ -227,10 +227,12 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::dx_sign:
   case Intrinsic::dx_step:
   case Intrinsic::dx_radians:
+  case Intrinsic::dx_interlocked_add:
   case Intrinsic::usub_sat:
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
   case Intrinsic::matrix_multiply:
+  case Intrinsic::matrix_transpose:
     return true;
   case Intrinsic::dx_resource_load_rawbuffer:
     return resourceAccessNeeds64BitExpansion(
@@ -769,6 +771,18 @@ static Value *expandRadiansIntrinsic(CallInst *Orig) {
   return Builder.CreateFMul(X, PiOver180);
 }
 
+static Value *expandInterlockedAddIntrinsic(CallInst *Orig) {
+  // Lower @llvm.dx.interlocked.add(ptr, val) to `atomicrmw add ptr, val
+  // monotonic`. HLSL Interlocked operations imply no fence/barrier, which maps
+  // to monotonic ordering. The instruction's result is the old value, matching
+  // the intrinsic's return value.
+  Value *Ptr = Orig->getArgOperand(0);
+  Value *Val = Orig->getArgOperand(1);
+  IRBuilder<> Builder(Orig);
+  return Builder.CreateAtomicRMW(AtomicRMWInst::Add, Ptr, Val, MaybeAlign(),
+                                 AtomicOrdering::Monotonic);
+}
+
 static bool expandBufferLoadIntrinsic(CallInst *Orig, bool IsRaw) {
   IRBuilder<> Builder(Orig);
 
@@ -1135,6 +1149,23 @@ static Value *expandMatrixMultiply(CallInst *Orig) {
   return Result;
 }
 
+// Expand llvm.matrix.transpose as a shufflevector that permutes elements
+// from column-major source to column-major transposed layout.
+// Element (r,c) at index c*Rows + r moves to index r*Cols + c.
+static Value *expandMatrixTranspose(CallInst *Orig) {
+  Value *Mat = Orig->getArgOperand(0);
+  unsigned Rows = cast<ConstantInt>(Orig->getArgOperand(1))->getZExtValue();
+  unsigned Cols = cast<ConstantInt>(Orig->getArgOperand(2))->getZExtValue();
+
+  unsigned NumElts = Rows * Cols;
+  SmallVector<int, 16> Mask(NumElts);
+  for (unsigned I = 0; I < NumElts; ++I)
+    Mask[I] = (I % Cols) * Rows + (I / Cols);
+
+  IRBuilder<> Builder(Orig);
+  return Builder.CreateShuffleVector(Mat, Mask);
+}
+
 static bool expandIntrinsic(Function &F, CallInst *Orig) {
   Value *Result = nullptr;
   Intrinsic::ID IntrinsicId = F.getIntrinsicID();
@@ -1213,6 +1244,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::dx_radians:
     Result = expandRadiansIntrinsic(Orig);
     break;
+  case Intrinsic::dx_interlocked_add:
+    Result = expandInterlockedAddIntrinsic(Orig);
+    break;
   case Intrinsic::dx_resource_load_rawbuffer:
     if (expandBufferLoadIntrinsic(Orig, /*IsRaw*/ true))
       return true;
@@ -1238,6 +1272,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::matrix_multiply:
     Result = expandMatrixMultiply(Orig);
+    break;
+  case Intrinsic::matrix_transpose:
+    Result = expandMatrixTranspose(Orig);
     break;
   }
   if (Result) {

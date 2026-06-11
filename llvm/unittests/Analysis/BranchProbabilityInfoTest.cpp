@@ -107,7 +107,7 @@ TEST_F(BranchProbabilityInfoTest, SwapProbabilities) {
   Function *F = M->getFunction("f");
   auto *LoopHeaderBB = F->front().getSingleSuccessor();
   ASSERT_TRUE(LoopHeaderBB != nullptr);
-  BranchInst *Branch = dyn_cast<BranchInst>(LoopHeaderBB->getTerminator());
+  CondBrInst *Branch = dyn_cast<CondBrInst>(LoopHeaderBB->getTerminator());
   ASSERT_TRUE(Branch != nullptr);
   // Save the probabilities before successors swapping
   BranchProbabilityInfo *BPI = &buildBPI(*F);

@@ -10,7 +10,7 @@ SSAF is designed to be extensible with new **summary extractors** and **serializ
 Extensions can be added in three ways:
 
 #. **Statically, in-tree** — built as part of the upstream LLVM/Clang tree.
-#. **Statically, out-of-tree (downstream)** — built in a downstream fork or project that links ``clangAnalysisScalable`` as a static library.
+#. **Statically, out-of-tree (downstream)** — built in a downstream fork or project that links ``clangScalableStaticAnalysisFrameworkCore`` as a static library.
 #. **Dynamically, via plugins** — loaded at runtime as shared objects.
 
 All three approaches use the same ``llvm::Registry``-based registration mechanism.
@@ -28,7 +28,7 @@ Step 1: Implement the extractor
 .. code-block:: c++
 
   //--- MyExtractor.h
-  #include "clang/Analysis/Scalable/TUSummary/TUSummaryExtractor.h"
+  #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 
   namespace clang::ssaf {
 
@@ -49,12 +49,14 @@ Step 2: Register the extractor
 
   //--- MyExtractor.cpp
   #include "MyExtractor.h"
-  #include "clang/Analysis/Scalable/TUSummary/ExtractorRegistry.h"
+  #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
 
   using namespace clang::ssaf;
 
+  namespace clang::ssaf {
   // NOLINTNEXTLINE(misc-use-internal-linkage)
-  volatile int SSAFMyExtractorAnchorSource = 0;
+  volatile int MyExtractorAnchorSource = 0;
+  } // namespace clang::ssaf
 
   static TUSummaryExtractorRegistry::Add<MyExtractor>
       RegisterExtractor("MyExtractor", "My awesome summary extractor");
@@ -65,16 +67,17 @@ Step 3: Add the force-linker anchor
 ===================================
 
 See :doc:`ForceLinkerHeaders` for a full explanation of why this is needed.
-Add the following to the appropriate force-linker header:
+
+For **in-tree** additions, add one line to
+``clang/include/clang/ScalableStaticAnalysisFramework/BuiltinAnchorSources.def``
+(in alphabetical order):
 
 .. code-block:: c++
 
-  extern volatile int SSAFMyExtractorAnchorSource;
-  [[maybe_unused]] static int SSAFMyExtractorAnchorDestination =
-      SSAFMyExtractorAnchorSource;
+  ANCHOR(MyExtractorAnchorSource)
 
-For **in-tree** additions, add this to
-``clang/include/clang/Analysis/Scalable/SSAFBuiltinForceLinker.h``.
+``SSAFBuiltinForceLinker.h`` includes this ``.def`` file automatically — no
+need to edit it directly.
 
 For **downstream** additions, see `Out-of-tree (downstream) extensions`_ below.
 
@@ -93,7 +96,7 @@ Your format class must inherit from ``SerializationFormat`` and define a ``Forma
 .. code-block:: c++
 
   //--- MyFormat.h
-  #include "clang/Analysis/Scalable/Serialization/SerializationFormat.h"
+  #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormat.h"
   #include "clang/Support/Compiler.h"
   #include "llvm/Support/Registry.h"
 
@@ -109,10 +112,7 @@ Your format class must inherit from ``SerializationFormat`` and define a ``Forma
 
   } // namespace clang::ssaf
 
-  namespace llvm {
-  extern template class CLANG_TEMPLATE_ABI
-      Registry<clang::ssaf::MyFormat::FormatInfo>;
-  } // namespace llvm
+  LLVM_DECLARE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
 
 Step 2: Register the format
 ===========================
@@ -121,17 +121,19 @@ Step 2: Register the format
 
   //--- MyFormat.cpp
   #include "MyFormat.h"
-  #include "clang/Analysis/Scalable/Serialization/SerializationFormatRegistry.h"
+  #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
 
   using namespace clang::ssaf;
 
+  namespace clang::ssaf {
   // NOLINTNEXTLINE(misc-use-internal-linkage)
-  volatile int SSAFMyFormatAnchorSource = 0;
+  volatile int MyFormatAnchorSource = 0;
+  } // namespace clang::ssaf
 
   static SerializationFormatRegistry::Add<MyFormat>
       RegisterFormat("myformat", "My awesome serialization format");
 
-  LLVM_INSTANTIATE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
+  LLVM_DEFINE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
 
 The format name (``"myformat"``) is matched against the file extension in ``--ssaf-tu-summary-file=output.myformat``.
 
@@ -161,7 +163,9 @@ For each analysis that should be serializable in your format, register a ``Forma
 Step 4: Add the force-linker anchor
 ===================================
 
-Same pattern as for extractors — see `Adding a summary extractor`_ Step 3, and :doc:`ForceLinkerHeaders`.
+Same pattern as for extractors — add the anchor to ``BuiltinAnchorSources.def``
+(in alphabetical order). See `Adding a summary extractor`_ Step 3,
+and :doc:`ForceLinkerHeaders`.
 
 
 Static extensibility
@@ -172,8 +176,8 @@ In-tree extensions
 
 For extensions that are part of the upstream LLVM/Clang tree:
 
-#. Add the anchor to ``clang/include/clang/Analysis/Scalable/SSAFBuiltinForceLinker.h``.
-#. Add the source files to the ``clangAnalysisScalable`` CMake library target.
+#. Add the anchor to ``clang/include/clang/ScalableStaticAnalysisFramework/BuiltinAnchorSources.def`` (in alphabetical order).
+#. Add the source files to the ``clangScalableStaticAnalysisFrameworkCore`` CMake library target.
 #. That's it — the ``SSAFForceLinker.h`` umbrella includes ``SSAFBuiltinForceLinker.h``
    transitively, so any binary that includes the umbrella will pull in the registration.
 

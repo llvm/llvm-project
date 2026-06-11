@@ -295,10 +295,25 @@ LLVM_ABI PhysRegInfo AnalyzePhysRegInBundle(const MachineInstr &MI,
                                             Register Reg,
                                             const TargetRegisterInfo *TRI);
 
-class FinalizeBundleTestPass : public PassInfoMixin<FinalizeBundleTestPass> {
+class FinalizeBundleTestPass
+    : public RequiredPassInfoMixin<FinalizeBundleTestPass> {
 public:
-  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class UnpackMachineBundlesPass
+    : public RequiredPassInfoMixin<UnpackMachineBundlesPass> {
+
+public:
+  UnpackMachineBundlesPass(
+      std::function<bool(const MachineFunction &)> Ftor = nullptr)
+      : PredicateFtor(std::move(Ftor)) {}
+  PreservedAnalyses LLVM_ABI run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
+
+private:
+  std::function<bool(const MachineFunction &)> PredicateFtor;
 };
 
 } // End llvm namespace

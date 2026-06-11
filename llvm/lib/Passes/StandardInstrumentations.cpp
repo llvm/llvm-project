@@ -337,7 +337,8 @@ bool isIgnored(StringRef PassID) {
                        {"PassManager", "PassAdaptor", "AnalysisManagerProxy",
                         "DevirtSCCRepeatedPass", "ModuleInlinerWrapperPass",
                         "VerifierPass", "PrintModulePass", "PrintMIRPass",
-                        "PrintMIRPreparePass"});
+                        "PrintMIRPreparePass", "RequireAnalysisPass",
+                        "InvalidateAnalysisPass"});
 }
 
 std::string makeHTMLReady(StringRef SR) {
@@ -2192,14 +2193,10 @@ namespace llvm {
 DCData::DCData(const BasicBlock &B) {
   // Build up transition labels.
   const Instruction *Term = B.getTerminator();
-  if (const BranchInst *Br = dyn_cast<const BranchInst>(Term))
-    if (Br->isUnconditional())
-      addSuccessorLabel(Br->getSuccessor(0)->getName().str(), "");
-    else {
-      addSuccessorLabel(Br->getSuccessor(0)->getName().str(), "true");
-      addSuccessorLabel(Br->getSuccessor(1)->getName().str(), "false");
-    }
-  else if (const SwitchInst *Sw = dyn_cast<const SwitchInst>(Term)) {
+  if (const CondBrInst *Br = dyn_cast<const CondBrInst>(Term)) {
+    addSuccessorLabel(Br->getSuccessor(0)->getName().str(), "true");
+    addSuccessorLabel(Br->getSuccessor(1)->getName().str(), "false");
+  } else if (const SwitchInst *Sw = dyn_cast<const SwitchInst>(Term)) {
     addSuccessorLabel(Sw->case_default()->getCaseSuccessor()->getName().str(),
                       "default");
     for (auto &C : Sw->cases()) {
