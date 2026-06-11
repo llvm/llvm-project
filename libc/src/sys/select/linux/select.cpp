@@ -50,7 +50,7 @@ LLVM_LIBC_FUNCTION(int, select,
       ts.tv_nsec = 999999999;
     } else {
       ts.tv_sec = timeout->tv_sec + timeout->tv_usec / 1000000;
-      ts.tv_nsec = timeout->tv_usec * 1000;
+      ts.tv_nsec = (timeout->tv_usec % 1000000) * 1000;
     }
   }
   pselect6_sigset_t pss{nullptr, sizeof(sigset_t)};
