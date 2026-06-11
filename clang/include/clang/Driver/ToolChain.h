@@ -868,7 +868,7 @@ public:
 
   /// Get paths for device libraries.
   virtual llvm::SmallVector<BitCodeLibraryInfo, 12>
-  getDeviceLibs(const llvm::opt::ArgList &Args,
+  getDeviceLibs(const llvm::opt::ArgList &Args, llvm::StringRef BoundArch,
                 const Action::OffloadKind DeviceOffloadingKind) const;
 
   /// Add the system specific libraries for the active offload kinds.

@@ -1821,6 +1821,17 @@ void VPInstructionWithType::execute(VPTransformState &State) {
   }
 }
 
+InstructionCost VPInstructionWithType::computeCost(ElementCount VF,
+                                                   VPCostContext &Ctx) const {
+  // TODO: Compute cost for VPInstructions without underlying values.
+  if (!getUnderlyingValue())
+    return 0;
+  assert(Instruction::isCast(getOpcode()) &&
+         "only casts have underlying values currently");
+  return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
+                                    Ctx);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
                                         VPSlotTracker &SlotTracker) const {
@@ -3928,6 +3939,18 @@ void VPPredInstPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printOperands(O, SlotTracker);
 }
 #endif
+
+VPRecipeBase *VPWidenLoadRecipe::getAsRecipe() { return this; }
+const VPRecipeBase *VPWidenLoadRecipe::getAsRecipe() const { return this; }
+
+VPRecipeBase *VPWidenLoadEVLRecipe::getAsRecipe() { return this; }
+const VPRecipeBase *VPWidenLoadEVLRecipe::getAsRecipe() const { return this; }
+
+VPRecipeBase *VPWidenStoreRecipe::getAsRecipe() { return this; }
+const VPRecipeBase *VPWidenStoreRecipe::getAsRecipe() const { return this; }
+
+VPRecipeBase *VPWidenStoreEVLRecipe::getAsRecipe() { return this; }
+const VPRecipeBase *VPWidenStoreEVLRecipe::getAsRecipe() const { return this; }
 
 InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
                                                  VPCostContext &Ctx) const {
