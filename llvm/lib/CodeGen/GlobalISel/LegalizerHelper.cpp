@@ -10736,8 +10736,7 @@ static Register getMemsetValue(Register Val, LLT Ty, MachineIRBuilder &MIB) {
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerMemset(MachineInstr &MI, Register Dst, Register Val,
                              uint64_t KnownLen, Align Alignment,
-                             bool IsVolatile, bool DstAlignCanChange,
-                             ArrayRef<LLT> MemOps) {
+                             bool DstAlignCanChange, ArrayRef<LLT> MemOps) {
   auto &MF = *MI.getParent()->getParent();
   const auto &TLI = *MF.getSubtarget().getTargetLowering();
   auto &DL = MF.getDataLayout();
@@ -10828,9 +10827,8 @@ LegalizerHelper::lowerMemset(MachineInstr &MI, Register Dst, Register Val,
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
-                             uint64_t KnownLen, Align DstAlign, Align SrcAlign,
-                             bool IsVolatile, bool DstAlignCanChange,
-                             ArrayRef<LLT> MemOps) {
+                             uint64_t KnownLen, Align Alignment,
+                             bool DstAlignCanChange, ArrayRef<LLT> MemOps) {
   auto &MF = *MI.getParent()->getParent();
   auto &DL = MF.getDataLayout();
   LLVMContext &C = MF.getFunction().getContext();
@@ -10839,7 +10837,6 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
   assert(!MemOps.empty() && "Expected at least one memory op");
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  Align Alignment = std::min(DstAlign, SrcAlign);
   MachineInstr *FIDef = getOpcodeDef(TargetOpcode::G_FRAME_INDEX, Dst, MRI);
 
   // FIXME: infer better src pointer alignment like SelectionDAG does here.
@@ -10921,9 +10918,8 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
-                              uint64_t KnownLen, Align DstAlign, Align SrcAlign,
-                              bool IsVolatile, bool DstAlignCanChange,
-                              ArrayRef<LLT> MemOps) {
+                              uint64_t KnownLen, Align Alignment,
+                              bool DstAlignCanChange, ArrayRef<LLT> MemOps) {
   auto &MF = *MI.getParent()->getParent();
   auto &DL = MF.getDataLayout();
   LLVMContext &C = MF.getFunction().getContext();
@@ -10932,7 +10928,6 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
   assert(!MemOps.empty() && "Expected at least one memory op");
 
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  Align Alignment = std::min(DstAlign, SrcAlign);
   MachineInstr *FIDef = getOpcodeDef(TargetOpcode::G_FRAME_INDEX, Dst, MRI);
   const auto &DstMMO = **MI.memoperands_begin();
   const auto &SrcMMO = **std::next(MI.memoperands_begin());
@@ -11006,8 +11001,7 @@ LegalizerHelper::lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
 
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerMemCpyFamily(
     MachineInstr &MI, Register Dst, Register Src, uint64_t KnownLen,
-    Align DstAlign, Align SrcAlign, bool IsVolatile, bool DstAlignCanChange,
-    ArrayRef<LLT> MemOps) {
+    Align Alignment, bool DstAlignCanChange, ArrayRef<LLT> MemOps) {
   const unsigned Opc = MI.getOpcode();
   assert((Opc == TargetOpcode::G_MEMCPY ||
           Opc == TargetOpcode::G_MEMCPY_INLINE ||
@@ -11020,15 +11014,15 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerMemCpyFamily(
   }
 
   if (Opc == TargetOpcode::G_MEMCPY || Opc == TargetOpcode::G_MEMCPY_INLINE) {
-    return lowerMemcpy(MI, Dst, Src, KnownLen, DstAlign, SrcAlign, IsVolatile,
-                       DstAlignCanChange, MemOps);
+    return lowerMemcpy(MI, Dst, Src, KnownLen, Alignment, DstAlignCanChange,
+                       MemOps);
   }
   if (Opc == TargetOpcode::G_MEMMOVE)
-    return lowerMemmove(MI, Dst, Src, KnownLen, DstAlign, SrcAlign, IsVolatile,
-                        DstAlignCanChange, MemOps);
+    return lowerMemmove(MI, Dst, Src, KnownLen, Alignment, DstAlignCanChange,
+                        MemOps);
   if (Opc == TargetOpcode::G_MEMSET)
-    return lowerMemset(MI, Dst, Src, KnownLen, DstAlign, IsVolatile,
-                       DstAlignCanChange, MemOps);
+    return lowerMemset(MI, Dst, Src, KnownLen, Alignment, DstAlignCanChange,
+                       MemOps);
   return UnableToLegalize;
 }
 
@@ -11036,12 +11030,12 @@ LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   Register Dst, Src;
   uint64_t KnownLen;
-  Align DstAlign, SrcAlign;
-  bool IsVolatile, DstAlignCanChange;
+  Align Alignment;
+  bool DstAlignCanChange;
   std::vector<LLT> MemOps;
-  if (!canLowerMemCpyFamily(MI, MRI, MaxLen, Dst, Src, KnownLen, DstAlign,
-                            SrcAlign, IsVolatile, DstAlignCanChange, MemOps))
+  if (!canLowerMemCpyFamily(MI, MRI, MaxLen, Dst, Src, KnownLen, Alignment,
+                            DstAlignCanChange, MemOps))
     return UnableToLegalize;
-  return lowerMemCpyFamily(MI, Dst, Src, KnownLen, DstAlign, SrcAlign,
-                           IsVolatile, DstAlignCanChange, MemOps);
+  return lowerMemCpyFamily(MI, Dst, Src, KnownLen, Alignment, DstAlignCanChange,
+                           MemOps);
 }

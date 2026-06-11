@@ -205,8 +205,7 @@ LLVM_ABI std::optional<ValueAndVReg> getAnyConstantVRegValWithLookThrough(
     bool LookThroughInstrs = true, bool LookThroughAnyExt = false);
 
 using MemCpyFamilyLoweringInfo =
-    std::tuple<Register, Register, uint64_t, Align, Align, bool, bool,
-               std::vector<LLT>>;
+    std::tuple<Register, Register, uint64_t, Align, bool, std::vector<LLT>>;
 
 /// Matcher for memcpy-like instructions. For non-zero lengths, \p MemOps
 /// contains the load/store types to emit.
@@ -214,8 +213,7 @@ LLVM_ABI bool canLowerMemCpyFamily(const MachineInstr &MI,
                                    const MachineRegisterInfo &MRI,
                                    unsigned MaxLen, Register &Dst,
                                    Register &Src, uint64_t &KnownLen,
-                                   Align &DstAlign, Align &SrcAlign,
-                                   bool &IsVolatile, bool &DstAlignCanChange,
+                                   Align &Alignment, bool &DstAlignCanChange,
                                    std::vector<LLT> &MemOps);
 
 struct FPValueAndVReg {
