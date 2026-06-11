@@ -41,6 +41,10 @@ private:
   lldb::ChildCacheState UpdateVectorWithLayoutSubobject(ValueObject *layout);
 
   ValueObject *m_start = nullptr;
+
+  // m_finish may point to a pointer (`__end_`) or an integer (`__size_`)
+  // depending on how libc++'s vector is implemented. Interpreting what is
+  // pointed to is done using `m_layout`.
   ValueObject *m_finish = nullptr;
   enum class VectorLayout : bool { Pointer, Size };
   VectorLayout m_layout;
