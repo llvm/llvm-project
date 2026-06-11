@@ -22,6 +22,7 @@ StringRef llvm::getNameFromBundleAttr(BundleAttr BA) {
   case BundleAttr::None:
     return "none";
   }
+  llvm_unreachable("unknonwn bundle attribute");
 }
 
 BundleAttr llvm::getBundleAttrFromString(StringRef Str) {
@@ -44,6 +45,11 @@ AssumeAlignInfo llvm::getAssumeAlignInfo(OperandBundleUse OBU) {
     Ret.OffsetVal = 0;
   }
   return Ret;
+}
+
+AssumeNoUndefInfo llvm::getAssumeNoUndefInfo(OperandBundleUse OBU) {
+  assert(OBU.getTagName() == "noundef" && OBU.Inputs.size() == 1);
+  return {OBU.Inputs[0]};
 }
 
 AssumeSeparateStorageInfo
