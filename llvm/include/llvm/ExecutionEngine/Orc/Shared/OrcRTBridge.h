@@ -77,7 +77,7 @@ struct SimpleExecutorMemoryManagerSymbolNames {
 
 /// Default symbol names for the ORC runtime's SimpleNativeMemoryMap SPS
 /// interface.
-extern const SimpleExecutorMemoryManagerSymbolNames
+extern const LLVM_ABI SimpleExecutorMemoryManagerSymbolNames
     orc_rt_SimpleNativeMemoryMapSPSSymbols;
 
 /// Symbol names for dylib management implementation.
