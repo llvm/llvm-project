@@ -62,7 +62,9 @@ class MatchResult(IntEnum):
 class DebuggerExpectMatch:
     """Class that represents the match between a particular expected value for an Expect node and the actual debugger
     output corresponding to the watched value for that node.
-    `actual_result` is None if `actual` or `expect.get_variable_result(actual)` is None,
+    The value of `expected` may be either a string-convertible scalar (non-collection) value, representing a
+    non-aggregate expected value, or it may be a dict of strings to other expected values.
+    `actual_result` is None if either `actual` or `expect.get_variable_result(actual)` is None,
     Otherwise, if `expected` is a dict, then `actual_result` is a dict[str, DebuggerExpectMatch],
     Otherwise, `actual_result` is a str.
     """
@@ -80,6 +82,10 @@ class DebuggerExpectMatch:
         if isinstance(self.expected, dict):
             sub_expect_results: Dict[str, DebuggerExpectMatch] = OrderedDict()
             for sub_expect, sub_expected in self.expected.items():
+                # If the value of `actual` is None, we still want this match to reflect the structure of the expected
+                # value, so if we have an expected value: `!value foo: {a: 0, b: 1}`, and `actual == None`, then we
+                # should produce a match `foo: {'a': None, 'b': None}`, rather than `foo: None`, so we unconditionally
+                # traverse the expected value here tree even if we have a None result.
                 value = (
                     None
                     if self.actual is None
@@ -185,8 +191,11 @@ class DebuggerExpectMatch:
 
 
 def get_expect_match(expect: Expect, expected_values, actual: ValueIR):
-    """Given one or more expected values for an Expect node and an actual ValueIR, returns a match for the first
-    matching expected values, or for None if there are no matching expected values."""
+    """Given one or more expected values for an Expect node and an actual ValueIR, returns a match for the best
+    matching expected value, which is either the first exact match, or the match with the lowest distance (see
+    `DebuggerExpectMatch._get_match_distance` above), or returns a match for None if there are no expected values with
+    a match distance less than 1.0 (i.e. all expected values have no overlap with the actual value).
+    """
     if not isinstance(expected_values, list):
         expected_values = [expected_values]
     best_partial_match = DebuggerExpectMatch(expect, None, actual)

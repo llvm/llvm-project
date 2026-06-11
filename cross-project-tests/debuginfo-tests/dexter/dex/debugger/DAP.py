@@ -1056,7 +1056,11 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
                 )
                 variable_ir.sub_values.append(new_ir)
                 new_ref = var.get("variablesReference", 0)
-                if new_ir.could_evaluate and not new_ir.is_irretrievable and new_ref != 0:
+                if (
+                    new_ir.could_evaluate
+                    and not new_ir.is_irretrievable
+                    and new_ref != 0
+                ):
                     variables_irs[new_ref] = new_ir
                     search_vars.append(new_ref)
 
