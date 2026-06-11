@@ -5601,7 +5601,8 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
     const OMPInformationCache::RuntimeFunctionInfo::UseVector *SharedAllocUses =
         OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared].getUseVector(
             const_cast<Function &>(F));
-    FunctionUsesSharedAlloc = SharedAllocUses != nullptr && !SharedAllocUses->empty();
+    FunctionUsesSharedAlloc =
+        SharedAllocUses != nullptr && !SharedAllocUses->empty();
   }
   bool HasHeapToStackCandidate = false;
   const TargetLibraryInfo *TLI = nullptr;
