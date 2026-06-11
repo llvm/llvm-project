@@ -1587,6 +1587,8 @@ Currently, only the following parameter attributes are defined:
     :ref:`bitcast instruction <i_bitcast>`. This is not a valid attribute for
     return values and can only be applied to one parameter.
 
+.. _attr_nonnull:
+
 ``nonnull``
     This indicates that the parameter or return pointer is not null. This
     attribute may only be applied to pointer-typed parameters. This is not
@@ -1597,6 +1599,8 @@ Currently, only the following parameter attributes are defined:
     if the pointer has non-zero non-address bits or non-zero external state.
     The ``nonnull`` attribute should be combined with the ``noundef`` attribute
     to ensure a pointer is not null or otherwise the behavior is undefined.
+
+.. _attr_dereferenceable:
 
 ``dereferenceable(<n>)``
     This indicates that the parameter or return pointer is dereferenceable. This
@@ -1610,9 +1614,9 @@ Currently, only the following parameter attributes are defined:
     ``null_pointer_is_valid`` function attribute is present.
     ``n`` should be a positive number. The pointer should be well defined,
     otherwise it is undefined behavior. This means ``dereferenceable(<n>)``
-    implies ``noundef``. When used in an assume operand bundle, more restricted
-    semantics apply. See  :ref:`assume operand bundles <assume_opbundles>` for
-    more details.
+    implies ``noundef``.
+
+.. _attr_dereferenceable_or_null:
 
 ``dereferenceable_or_null(<n>)``
     This indicates that the parameter or return value isn't both
@@ -1666,6 +1670,8 @@ Currently, only the following parameter attributes are defined:
     constant. Undef or constant expressions are not valid. This is
     only valid on intrinsic declarations and cannot be applied to a
     call site or arbitrary function.
+
+.. _attr_noundef:
 
 ``noundef``
     This attribute applies to parameters and return values. If the value
@@ -2149,6 +2155,9 @@ For example:
     uses the ``nobuiltin`` attribute. This is only valid at call sites for
     direct calls to functions that are declared with the ``nobuiltin``
     attribute.
+
+.. _attr_cold:
+
 ``cold``
     This attribute indicates that this function is rarely called. When
     computing edge weights, basic blocks post-dominated by a cold
@@ -3127,33 +3136,57 @@ Assume Operand Bundles
 ^^^^^^^^^^^^^^^^^^^^^^
 
 Operand bundles on an :ref:`llvm.assume <int_assume>` allow representing
-assumptions, such as that a :ref:`parameter attribute <paramattrs>` or a
-:ref:`function attribute <fnattrs>` holds for a certain value at a certain
-location. Operand bundles enable assumptions that are either hard or impossible
-to represent as a boolean argument of an :ref:`llvm.assume <int_assume>`.
+assumptions that hold at the location of the assume. Operand bundles enable
+assumptions that are either hard or impossible to represent as a boolean
+argument of an :ref:`llvm.assume <int_assume>`.
 
 Assumes with operand bundles must have ``i1 true`` as the condition operand.
 
-An assume operand bundle has the form:
+Just like for the argument of :ref:`llvm.assume <int_assume>`, if any of the
+provided guarantees are violated at runtime the behavior is undefined.
 
-::
+While attributes expect constant arguments, assume operand bundles may be
+provided a dynamic value, for example:
 
-      "<tag>"([ <arguments>] ])
+.. code-block:: llvm
 
-In the case of function or parameter attributes, the operand bundle has the
-restricted form:
+      call void @llvm.assume(i1 true) ["align"(ptr %val, i32 %align)]
 
-::
+The following attributes are currently accepted:
 
-      "<tag>"([ <holds for value> [, <attribute argument>] ])
+``"align"(ptr %p, i64 %align)``, ``"align"(ptr %p, i64 %align, i64 %offset)``
+  Equivalent to :ref:`align(%align) <attr_align>` on ``%p``, or ``%p - %offset``
+  if the ``%offset`` argument exists, except that ``%align`` may be a
+  non-power-of-two alignment (including a zero alignment). If ``%align`` is not
+  a power of two the pointer value must be all-zero. Otherwise the behavior is
+  undefined.
 
-* The tag of the operand bundle is usually the name of the attribute that can be
-  assumed to hold. It can also be `ignore`; this tag doesn't contain any
-  information and should be ignored.
-* The first argument, if present, is the value for which the attribute holds.
-* The second argument, if present, is an argument of the attribute.
+``"cold"()``
+  Equivalent to :ref:`cold <attr_cold>`.
 
-If there are no arguments the attribute is a property of the call location.
+``"dereferenceable"(ptr %p, i64 %size)``
+  Equivalent to :ref:`dereferenceable(%size) <attr_dereferenceable>` on ``%p``,
+  except that ``%size`` may also be zero, in which case the bundle doesn't
+  imply ``nonnull``.
+
+``"dereferenceable_or_null"(ptr %p, i64 %size)``
+  Equivalent to :ref:`dereferenceable_or_null(%size)
+  <attr_dereferenceable_or_null>` on ``%p``, except that ``%size`` may also be
+  zero.
+
+``"ignore"(...)``
+  Doesn't imply anything and is ignored. This is used to drop an assume where
+  the ``llvm.assume`` call cannot be replaced or dropped.
+
+``"nonnull"(ptr %p)``
+  Equivalent to :ref:`nonnull <attr_nonnull>` on ``%p``.
+
+``"noundef"(any_type %v)``
+  Equivalent to :ref:`noundef <attr_noundef>` on ``%v``.
+
+``"separate_storage"(ptr %p1, ptr %p2)``
+  This indicates that no pointer :ref:`based <pointeraliasing>` on one of its
+  arguments can alias any pointer based on the other.
 
 For example:
 
@@ -3170,39 +3203,6 @@ allows the optimizer to assume that at location of call to
 
 allows the optimizer to assume that the :ref:`llvm.assume <int_assume>`
 call location is cold and that ``%val`` may not be null.
-
-Just like for the argument of :ref:`llvm.assume <int_assume>`, if any of the
-provided guarantees are violated at runtime the behavior is undefined.
-
-While attributes expect constant arguments, assume operand bundles may be
-provided a dynamic value, for example:
-
-.. code-block:: llvm
-
-      call void @llvm.assume(i1 true) ["align"(ptr %val, i32 %align)]
-
-If the operand bundle value violates any requirements on the attribute value,
-the behavior is undefined, unless one of the following exceptions applies:
-
-* ``"align"`` operand bundles may specify a non-power-of-two alignment
-  (including a zero alignment). If this is the case, then the pointer value
-  must be an all-zero pointer, otherwise the behavior is undefined.
-
-* ``dereferenceable(<n>)`` operand bundles only guarantee the pointer is
-  dereferenceable at the point of the assumption. The pointer may not be
-  dereferenceable at later pointers, e.g., because it could have been freed.
-  Only ``n > 0`` implies that the pointer is dereferenceable.
-
-In addition to allowing operand bundles encoding function and parameter
-attributes, an assume operand bundle may also encode a ``separate_storage``
-operand bundle. This has the form:
-
-.. code-block:: llvm
-
-    separate_storage(<val1>, <val2>)``
-
-This indicates that no pointer :ref:`based <pointeraliasing>` on one of its
-arguments can alias any pointer based on the other.
 
 Even if the assumed property can be encoded as a boolean value, like
 ``nonnull``, using operand bundles to express the property can still have
@@ -8143,7 +8143,7 @@ Together these two attributes provide a four-way classification:
 
 - ``body`` only: main vectorized loop body
 - ``epilogue`` only: scalar epilogue loop after vectorization
-- Both ``body`` and ``epilogue``: vectorized epilogue 
+- Both ``body`` and ``epilogue``: vectorized epilogue
   (a remainder loop that was itself vectorized during epilogue
   vectorization)
 - Neither: a plain loop not produced by the vectorizer
@@ -8635,6 +8635,10 @@ value (but see the ``llvm.launder.invariant.group`` intrinsic which affects
 when two pointers are considered the same). Pointers returned by bitcast or
 getelementptr with only zero indices are considered the same.
 
+Note that the metadata value in invariant.group carries no semantic value.
+Because it must have no entries, all invariant.group annotations in a module
+reference the same uniqued empty node.
+
 Examples:
 
 .. code-block:: llvm
@@ -8772,7 +8776,7 @@ is executed, followed by ``uint64_t`` value and execution count pairs.
 The value profiling kind is 0 for indirect call targets and 1 for memory
 operations. For indirect call targets, each profile value is a hash
 of the callee function name, and for memory operations each value is the
-byte length. It is illegal to have duplicate profile values (e.g., 
+byte length. It is illegal to have duplicate profile values (e.g.,
 duplicate function hashes for indirect calls or byte lengths for memory
 operations).
 
