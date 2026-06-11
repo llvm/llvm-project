@@ -918,8 +918,8 @@ private:
 
   /// Conservatively evaluate call by invalidating regions and binding
   /// a conjured return value.
-  void conservativeEvalCall(const CallEvent &Call, NodeBuilder &Bldr,
-                            ExplodedNode *Pred, ProgramStateRef State);
+  ExplodedNode *conservativeEvalCall(const CallEvent &Call, ExplodedNode *Pred,
+                                     ProgramStateRef State);
 
   /// Either inline or process the call conservatively (or both), based
   /// on DynamicDispatchBifurcation data.

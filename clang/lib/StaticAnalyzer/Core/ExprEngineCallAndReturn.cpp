@@ -513,9 +513,10 @@ void ExprEngine::ctuBifurcate(const CallEvent &Call, const Decl *D,
       inlineCall(Engine.getCTUWorkList(), Call, D, Pred, State);
       // Conservatively evaluate in the first phase.
       ConservativeEvalState = State->set<CTUDispatchBifurcation>(true);
-      conservativeEvalCall(Call, Bldr, Pred, ConservativeEvalState);
+      Bldr.addNodes(conservativeEvalCall(Call, Pred, ConservativeEvalState));
     } else {
-      conservativeEvalCall(Call, Bldr, Pred, State);
+      Bldr.takeNodes(Pred);
+      Bldr.addNodes(conservativeEvalCall(Call, Pred, State));
     }
     return;
   }
@@ -836,14 +837,15 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
 
 // Conservatively evaluate call by invalidating regions and binding
 // a conjured return value.
-void ExprEngine::conservativeEvalCall(const CallEvent &Call, NodeBuilder &Bldr,
-                                      ExplodedNode *Pred, ProgramStateRef State) {
+ExplodedNode *ExprEngine::conservativeEvalCall(const CallEvent &Call,
+                                               ExplodedNode *Pred,
+                                               ProgramStateRef State) {
   State = Call.invalidateRegions(getNumVisitedCurrent(), State);
   State = bindReturnValue(Call, Pred->getStackFrame(), State);
 
   // And make the result node.
   static SimpleProgramPointTag PT("ExprEngine", "Conservative eval call");
-  Bldr.generateNode(Call.getProgramPoint(false, &PT), State, Pred);
+  return Engine.makeNode(Call.getProgramPoint(false, &PT), State, Pred);
 }
 
 ExprEngine::CallInlinePolicy
@@ -1252,7 +1254,8 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
 
         // Don't inline if we're not in any dynamic dispatch mode.
         if (Options.getIPAMode() != IPAK_DynamicDispatch) {
-          conservativeEvalCall(Call, Bldr, Pred, State);
+          Bldr.takeNodes(Pred);
+          Bldr.addNodes(conservativeEvalCall(Call, Pred, State));
           return;
         }
       }
@@ -1267,7 +1270,8 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
       State, dyn_cast_or_null<CXXConstructExpr>(E), Call.getStackFrame());
 
   // Also handle the return value and invalidate the regions.
-  conservativeEvalCall(Call, Bldr, Pred, State);
+  Bldr.takeNodes(Pred);
+  Bldr.addNodes(conservativeEvalCall(Call, Pred, State));
 }
 
 void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
@@ -1288,7 +1292,8 @@ void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
     // If inline failed, or we are on the path where we assume we
     // don't have enough info about the receiver to inline, conjure the
     // return value and invalidate the regions.
-    conservativeEvalCall(Call, Bldr, Pred, State);
+    Bldr.takeNodes(Pred);
+    Bldr.addNodes(conservativeEvalCall(Call, Pred, State));
     return;
   }
 
@@ -1302,7 +1307,8 @@ void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
   ProgramStateRef NoIState =
       State->set<DynamicDispatchBifurcationMap>(BifurReg,
                                                DynamicDispatchModeConservative);
-  conservativeEvalCall(Call, Bldr, Pred, NoIState);
+  Bldr.takeNodes(Pred);
+  Bldr.addNodes(conservativeEvalCall(Call, Pred, NoIState));
 
   NumOfDynamicDispatchPathSplits++;
 }
