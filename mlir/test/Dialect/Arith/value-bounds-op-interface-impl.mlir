@@ -168,3 +168,82 @@ func.func @arith_select_elementwise(%a: tensor<?xf32>, %b: tensor<?xf32>, %c: te
   // CHECK: return %[[dim]]
   return %0 : index
 }
+
+// -----
+
+// CHECK-LABEL: func @arith_minui(
+//  CHECK-SAME:     %[[a:.*]]: index
+//       CHECK:   %[[lb:.*]] = arith.constant 0 : index
+//       CHECK:   %[[ub:.*]] = arith.constant 5 : index
+//       CHECK:   return %[[lb]], %[[ub]]
+func.func @arith_minui(%a: index) -> (index, index) {
+  %c4 = arith.constant 4 : index
+  %0 = arith.minui %a, %c4 : index
+  %1 = "test.reify_bound"(%0) {type = "LB"} : (index) -> (index)
+  %2 = "test.reify_bound"(%0) {type = "UB"} : (index) -> (index)
+  return %1, %2 : index, index
+}
+
+// -----
+
+// CHECK-LABEL: func @arith_minsi(
+//  CHECK-SAME:     %[[a:.*]]: index
+//       CHECK:   %[[ub:.*]] = arith.constant 5 : index
+//       CHECK:   return %[[ub]]
+func.func @arith_minsi(%a: index) -> index {
+  %c4 = arith.constant 4 : index
+  %0 = arith.minsi %a, %c4 : index
+  %1 = "test.reify_bound"(%0) {type = "UB"} : (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+func.func @arith_minsi_lb(%a: index) -> index {
+  %c4 = arith.constant 4 : index
+  %0 = arith.minsi %a, %c4 : index
+  // Signed min has no lower bound.
+  // expected-error @below{{could not reify bound}}
+  %1 = "test.reify_bound"(%0) {type = "LB"} : (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// CHECK: #[[$map:.*]] = affine_map<()[s0, s1] -> (s0 + s1 + 1)>
+// CHECK-LABEL: func @arith_maxui(
+//  CHECK-SAME:     %[[a:.*]]: index, %[[b:.*]]: index
+//       CHECK:   %[[lb:.*]] = arith.constant 0 : index
+//       CHECK:   %[[ub:.*]] = affine.apply #[[$map]]()[%[[a]], %[[b]]]
+//       CHECK:   return %[[lb]], %[[ub]]
+func.func @arith_maxui(%a: index, %b: index) -> (index, index) {
+  %0 = arith.maxui %a, %b : index
+  %1 = "test.reify_bound"(%0) {type = "LB"} : (index) -> (index)
+  %2 = "test.reify_bound"(%0) {type = "UB"} : (index) -> (index)
+  return %1, %2 : index, index
+}
+
+// -----
+
+// CHECK-LABEL: func @arith_maxsi(
+//  CHECK-SAME:     %[[a:.*]]: index
+//       CHECK:   arith.constant 4 : index
+//       CHECK:   %[[lb:.*]] = arith.constant 4 : index
+//       CHECK:   return %[[lb]]
+func.func @arith_maxsi(%a: index) -> index {
+  %c4 = arith.constant 4 : index
+  %0 = arith.maxsi %a, %c4 : index
+  %1 = "test.reify_bound"(%0) {type = "LB"} : (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+func.func @arith_maxsi_ub(%a: index) -> index {
+  %c4 = arith.constant 4 : index
+  %0 = arith.maxsi %a, %c4 : index
+  // Signed max has no upper bound.
+  // expected-error @below{{could not reify bound}}
+  %1 = "test.reify_bound"(%0) {type = "UB"} : (index) -> (index)
+  return %1 : index
+}
