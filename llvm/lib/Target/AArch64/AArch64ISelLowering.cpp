@@ -2439,11 +2439,6 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   }
 }
 
-bool AArch64TargetLowering::preferWideActiveLaneMask() const {
-  return Subtarget->isSVEorStreamingSVEAvailable() &&
-         (Subtarget->hasSVE2p1() || Subtarget->hasSME2());
-}
-
 bool AArch64TargetLowering::shouldExpandGetActiveLaneMask(EVT ResVT,
                                                           EVT OpVT) const {
   // Only SVE has a 1:1 mapping from intrinsic -> instruction (whilelo).
@@ -20127,11 +20122,6 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                                 /*IsEqual=*/false))
     return While;
 
-  if (!N->getValueType(0).isScalableVector() ||
-      !ST->isSVEorStreamingSVEAvailable() ||
-      !(ST->hasSVE2p1() || ST->hasSME2()))
-    return SDValue();
-
   // Count the number of users which are extract_vectors.
   unsigned NumExts = count_if(N->users(), [](SDNode *Use) {
     return Use->getOpcode() == ISD::EXTRACT_SUBVECTOR;
@@ -20166,18 +20156,40 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   SelectionDAG &DAG = DCI.DAG;
   SDLoc DL(N);
+  SDValue Idx = N->getOperand(0);
+  SDValue TC = N->getOperand(1);
+  EVT ExtVT = Extracts[0]->getValueType(0);
+
+  if (!N->getValueType(0).isScalableVector() ||
+      !ST->isSVEorStreamingSVEAvailable() ||
+      !(ST->hasSVE2p1() || ST->hasSME2())) {
+
+    // If the whilelo_x2 instruction is not available, prefer to use multiple
+    // smaller whilelo instructions
+    SmallVector<SDValue> Masks;
+    for (unsigned I = 0; I < NumExts; ++I) {
+      if (I > 0)
+        Idx =
+            DAG.getNode(ISD::UADDSAT, DL, Idx.getValueType(), Idx,
+                        DAG.getElementCount(DL, Idx.getValueType(), ExtMinEC));
+      auto ALMForPart =
+          DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, ExtVT, Idx, TC);
+      Masks.push_back(ALMForPart);
+      DCI.CombineTo(Extracts[I], ALMForPart);
+    }
+
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, N->getValueType(0), Masks);
+  }
+
   SDValue ID =
       DAG.getTargetConstant(Intrinsic::aarch64_sve_whilelo_x2, DL, MVT::i64);
 
-  SDValue Idx = N->getOperand(0);
-  SDValue TC = N->getOperand(1);
   if (Idx.getValueType() != MVT::i64) {
     Idx = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, Idx);
     TC = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, TC);
   }
 
   // Create the whilelo_x2 intrinsics from each pair of extracts
-  EVT ExtVT = Extracts[0]->getValueType(0);
   EVT DoubleExtVT = ExtVT.getDoubleNumVectorElementsVT(*DAG.getContext());
   auto R =
       DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, {ExtVT, ExtVT}, {ID, Idx, TC});
