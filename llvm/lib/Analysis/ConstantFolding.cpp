@@ -3901,8 +3901,6 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
 
       return ConstantInt::get(Ty, C0->abs());
     case Intrinsic::clmul:
-      if (!C0 && !C1)
-        return UndefValue::get(Ty);
       if (!C0 || !C1)
         return Constant::getNullValue(Ty);
       return ConstantInt::get(Ty, APIntOps::clmul(*C0, *C1));
