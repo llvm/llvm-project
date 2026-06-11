@@ -81,6 +81,13 @@ std::string doSystemDiff(StringRef Before, StringRef After,
                          StringRef OldLineFormat, StringRef NewLineFormat,
                          StringRef UnchangedLineFormat);
 
+// Report a -print-changed diff for one pass over one IR unit (function or
+// module). IsInteresting is isPassInPrintList(PassID); ShouldReport is whether
+// the unit passed all filters (Before/After are only set then).
+void reportChangedIR(StringRef Before, StringRef After, StringRef PassName,
+                     StringRef PassID, StringRef IRName, bool IsInteresting,
+                     bool ShouldReport);
+
 } // namespace llvm
 
 #endif // LLVM_IR_PRINTPASSES_H
