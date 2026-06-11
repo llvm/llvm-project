@@ -36,15 +36,15 @@ static HWEventSet getExpertSchedulingEventType(const MachineInstr &Inst,
     // has its own event.
 
     if (TII.isXDL(Inst))
-      return {HWEvent::VGPR_XDL_WRITE};
+      return HWEvent::VGPR_XDL_WRITE;
 
     if (TII.isTRANS(Inst))
-      return {HWEvent::VGPR_TRANS_WRITE};
+      return HWEvent::VGPR_TRANS_WRITE;
 
     if (AMDGPU::isDPMACCInstruction(Inst.getOpcode()))
-      return {HWEvent::VGPR_DPMACC_WRITE};
+      return HWEvent::VGPR_DPMACC_WRITE;
 
-    return {HWEvent::VGPR_CSMACC_WRITE};
+    return HWEvent::VGPR_CSMACC_WRITE;
   }
 
   // FLAT and LDS instructions may read their VGPR sources out-of-order
@@ -52,13 +52,13 @@ static HWEventSet getExpertSchedulingEventType(const MachineInstr &Inst,
   // each of these also has a separate event.
 
   if (TII.isFLAT(Inst))
-    return {HWEvent::VGPR_FLAT_READ};
+    return HWEvent::VGPR_FLAT_READ;
 
   if (TII.isDS(Inst))
-    return {HWEvent::VGPR_LDS_READ};
+    return HWEvent::VGPR_LDS_READ;
 
   if (TII.isVMEM(Inst) || TII.isVIMAGE(Inst) || TII.isVSAMPLE(Inst))
-    return {HWEvent::VGPR_VMEM_READ};
+    return HWEvent::VGPR_VMEM_READ;
 
   // Otherwise, no hazard.
   return {};
@@ -118,12 +118,12 @@ static HWEventSet getEventsForImpl(const MachineInstr &Inst,
         TII.hasModifiersSet(Inst, AMDGPU::OpName::gds))
       return {HWEvent::GDS_ACCESS, HWEvent::GDS_GPR_LOCK};
 
-    return {HWEvent::LDS_ACCESS};
+    return HWEvent::LDS_ACCESS;
   }
 
   if (TII.isFLAT(Inst)) {
     if (SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode()))
-      return {getVmemHWEvent(Inst, ST, TII)};
+      return getVmemHWEvent(Inst, ST, TII);
 
     assert(Inst.mayLoadOrStore());
     HWEventSet S;
@@ -157,24 +157,24 @@ static HWEventSet getEventsForImpl(const MachineInstr &Inst,
   if (TII.isSMRD(Inst)) {
     if (ST.hasWaitXcnt())
       return {HWEvent::SMEM_GROUP, HWEvent::SMEM_ACCESS};
-    return {HWEvent::SMEM_ACCESS};
+    return HWEvent::SMEM_ACCESS;
   }
 
   if (SIInstrInfo::isLDSDIR(Inst)) {
-    return {HWEvent::EXP_LDS_ACCESS};
+    return HWEvent::EXP_LDS_ACCESS;
   }
 
   if (SIInstrInfo::isEXP(Inst)) {
     unsigned Imm = TII.getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
     if (Imm >= AMDGPU::Exp::ET_PARAM0 && Imm <= AMDGPU::Exp::ET_PARAM31)
-      return {HWEvent::EXP_PARAM_ACCESS};
+      return HWEvent::EXP_PARAM_ACCESS;
     if (Imm >= AMDGPU::Exp::ET_POS0 && Imm <= AMDGPU::Exp::ET_POS_LAST)
-      return {HWEvent::EXP_POS_ACCESS};
-    return {HWEvent::EXP_GPR_LOCK};
+      return HWEvent::EXP_POS_ACCESS;
+    return HWEvent::EXP_GPR_LOCK;
   }
 
   if (SIInstrInfo::isSBarrierSCCWrite(Inst.getOpcode())) {
-    return {HWEvent::SCC_WRITE};
+    return HWEvent::SCC_WRITE;
   }
 
   switch (Inst.getOpcode()) {
@@ -182,12 +182,12 @@ static HWEventSet getEventsForImpl(const MachineInstr &Inst,
   case AMDGPU::S_SENDMSG_RTN_B32:
   case AMDGPU::S_SENDMSG_RTN_B64:
   case AMDGPU::S_SENDMSGHALT:
-    return {HWEvent::SQ_MESSAGE};
+    return HWEvent::SQ_MESSAGE;
   case AMDGPU::S_MEMTIME:
   case AMDGPU::S_MEMREALTIME:
   case AMDGPU::S_GET_BARRIER_STATE_M0:
   case AMDGPU::S_GET_BARRIER_STATE_IMM:
-    return {HWEvent::SMEM_ACCESS};
+    return HWEvent::SMEM_ACCESS;
   }
 
   return {};

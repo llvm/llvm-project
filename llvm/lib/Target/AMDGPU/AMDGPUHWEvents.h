@@ -61,7 +61,7 @@ class HWEventSet {
 
 public:
   HWEventSet() = default;
-  explicit constexpr HWEventSet(HWEvent Event) {
+  constexpr HWEventSet(HWEvent Event) {
     static_assert(static_cast<unsigned>(HWEvent::NUM_WAIT_EVENTS) <=
                       sizeof(Mask) * 8,
                   "Not enough bits in Mask for all the events");
