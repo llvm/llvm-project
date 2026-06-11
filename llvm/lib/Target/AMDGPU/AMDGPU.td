@@ -2220,6 +2220,7 @@ def FeatureISAVersion12_50 : FeatureSet<
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
   [FeatureAddressableLocalMemorySize327680,
+   FeatureFullRate64Ops,
    FeatureVOP3PX2IncrementsVaVdstTwice,
    FeatureDPALU_DPP,
    FeatureGFX1251GEMMInsts,
