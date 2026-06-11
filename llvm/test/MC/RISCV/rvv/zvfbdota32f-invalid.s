@@ -2,7 +2,7 @@
 # RUN:   | FileCheck %s --check-prefix=CHECK-ERROR
 
 # Invalid vsetvli
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 vsetvli a0, zero, e888, m1, ta, ma
 
 # Invalid ci

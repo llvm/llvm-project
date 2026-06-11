@@ -9,9 +9,9 @@
 //   { [2 x { <2 x float>, pad(8) }], <2 x float> }
 // CHECK: %__cblayout_CB_CM = type <{ <{ [2 x <{ <2 x float>, target("dx.Padding", 8) }>], <2 x float> }> }>
 
-// CHECK: @CB_RM.cb = internal global target("dx.CBuffer", %__cblayout_CB_RM)
+// CHECK: @CB_RM.cb = global target("dx.CBuffer", %__cblayout_CB_RM)
 // CHECK: @rm = external hidden addrspace(2) global <{ [1 x <{ <3 x float>, target("dx.Padding", 4) }>], <3 x float> }>, align 4
-// CHECK: @CB_CM.cb = internal global target("dx.CBuffer", %__cblayout_CB_CM)
+// CHECK: @CB_CM.cb = global target("dx.CBuffer", %__cblayout_CB_CM)
 // CHECK: @cm = external hidden addrspace(2) global <{ [2 x <{ <2 x float>, target("dx.Padding", 8) }>], <2 x float> }>, align 4
 
 cbuffer CB_RM {

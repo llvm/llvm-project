@@ -213,7 +213,7 @@ Value emitCoercion(OpBuilder &rewriter, Location loc, Type dstTy, Value src,
     OpBuilder::InsertionGuard guard(rewriter);
     Block &entry = funcOp->getRegion(0).front();
     rewriter.setInsertionPointToStart(&entry);
-    alloca = cir::AllocaOp::create(rewriter, loc, slotPtrTy, slotTy,
+    alloca = cir::AllocaOp::create(rewriter, loc, slotPtrTy,
                                    rewriter.getStringAttr("coerce"),
                                    rewriter.getI64IntegerAttr(allocaAlign));
   }

@@ -562,7 +562,7 @@ NetBSD::getSupportedSanitizers(StringRef BoundArch,
 }
 
 void NetBSD::addClangTargetOptions(const ArgList &DriverArgs,
-                                   ArgStringList &CC1Args,
+                                   ArgStringList &CC1Args, StringRef BoundArch,
                                    Action::OffloadKind) const {
   const SanitizerArgs &SanArgs = getSanitizerArgs(DriverArgs);
   if (SanArgs.hasAnySanitizer())

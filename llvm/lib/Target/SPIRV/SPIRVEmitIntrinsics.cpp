@@ -767,11 +767,10 @@ bool SPIRVEmitIntrinsics::walkLogicalAccessChainDynamic(
   // of the struct if the current type is a struct.
   // Try to find the first array type that is at offset 0 in the struct.
   while (auto *ST = dyn_cast<StructType>(CurType)) {
-    if (ST->getNumElements() > 0) {
-      CurType = ST->getElementType(0);
-      OnLiteralIndexing(CurType, 0);
-      continue;
-    }
+    if (ST->getNumElements() == 0)
+      break;
+    CurType = ST->getElementType(0);
+    OnLiteralIndexing(CurType, 0);
   }
 
   assert(CurType);

@@ -53,7 +53,6 @@ public:
   iterator begin() { return Mappings.begin(); }
   iterator end() { return Mappings.end(); }
 
-  void removeCBufferGlobalsFromUseList(Module &M);
   void eraseFromModule();
 };
 

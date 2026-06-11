@@ -42,19 +42,19 @@ int4x4 n;
 void main() {
 }
 
-// CHECK-NOT: @CB.cb = internal global target("dx.CBuffer", %__cblayout_CB)
+// CHECK-NOT: @CB.cb = global target("dx.CBuffer", %__cblayout_CB)
 // CHECK-NOT: @a = external hidden addrspace(2) global
 // CHECK-NOT: @b = external hidden addrspace(2) global
 // CHECK-NOT: @c = external hidden addrspace(2) global
-// CHECK-NOT: @"$Globals.cb" = internal global target("dx.CBuffer",
+// CHECK-NOT: @"$Globals.cb" = global target("dx.CBuffer",
 
-// CHECK2: @CB.cb = internal global target("dx.CBuffer", %__cblayout_CB)
+// CHECK2: @CB.cb = global target("dx.CBuffer", %__cblayout_CB)
 // CHECK-NOT: @a = external hidden addrspace(2) global
 // CHECK-NOT: @c = external hidden addrspace(2) global
 // CHECK2: @i = external hidden addrspace(2) global i32
 // CHECK2: @v = external hidden addrspace(2) global <2 x float>, align 4
 // CHECK2: @m = external hidden addrspace(2) global [4 x <4 x i32>], align 4
-// CHECK2: @"$Globals.cb" = internal global target("dx.CBuffer",
+// CHECK2: @"$Globals.cb" = global target("dx.CBuffer",
 // CHECK-NOT: @b = external hidden addrspace(2) global
 // CHECK2: @j = external hidden addrspace(2) global i32
 // CHECK2: @w = external hidden addrspace(2) global <2 x float>, align 4

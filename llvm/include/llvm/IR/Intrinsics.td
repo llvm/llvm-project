@@ -59,6 +59,7 @@ class IntrinsicMemoryLocation;
 
 // TODO: Populate with all IRMemLocation enum values and update
 // getValueAsIRMemLocation accordingly.
+def ArgMem : IntrinsicMemoryLocation;
 def InaccessibleMem : IntrinsicMemoryLocation;
 def TargetMem0 : IntrinsicMemoryLocation;
 def TargetMem1 : IntrinsicMemoryLocation;

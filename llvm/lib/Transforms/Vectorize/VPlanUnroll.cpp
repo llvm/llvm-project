@@ -645,9 +645,9 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     // TODO: have cloning of replicate recipes also provide the desired result
     // coupled with setting its operands to NewOps (deriving IsSingleScalar and
     // Mask from the operands?)
-    New = new VPReplicateRecipe(RepR->getUnderlyingInstr(), NewOps,
-                                /*IsSingleScalar=*/true, /*Mask=*/nullptr,
-                                *RepR, *RepR, RepR->getDebugLoc());
+    New = VPBuilder::createSingleScalarOp(
+        RepR->getOpcode(), NewOps, /*Mask=*/nullptr, *RepR, *RepR,
+        RepR->getDebugLoc(), RepR->getUnderlyingInstr());
   } else {
     New = DefR->clone();
     for (const auto &[Idx, Op] : enumerate(NewOps)) {
@@ -706,9 +706,9 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
       }
 
       if (auto *RepR = dyn_cast<VPReplicateRecipe>(&OldR)) {
-        auto *NewR = new VPReplicateRecipe(
-            RepR->getUnderlyingInstr(), RepR->operands(),
-            /* IsSingleScalar=*/true, /*Mask=*/nullptr, *RepR, *RepR, OldDL);
+        auto *NewR = VPBuilder::createSingleScalarOp(
+            RepR->getOpcode(), to_vector(RepR->operands()), /*Mask=*/nullptr,
+            *RepR, *RepR, OldDL, RepR->getUnderlyingInstr());
         NewR->insertBefore(RepR);
         RepR->replaceAllUsesWith(NewR);
         RepR->eraseFromParent();
