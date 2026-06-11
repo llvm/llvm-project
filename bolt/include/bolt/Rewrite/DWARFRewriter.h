@@ -143,16 +143,20 @@ private:
   CUOffsetMap finalizeTypeSections(DIEBuilder &DIEBlder, DIEStreamer &Streamer,
                                    GDBIndex &GDBIndexSection);
 
-  /// Finalize str section in the dwo
-  void finalizeSkeletonAndStrSection(
-      DIEBuilder &PartDIEBlder, DWARFUnit &CU,
+  /// Finalize str section in the dwo.
+  void finalizeMainCUStrOffsets(
+      DIEBuilder &PartDIEBlder, ArrayRef<DWARFUnit *> SortedCUs,
       const std::unordered_map<uint64_t, std::string> &DWOToNameMap);
 
-  /// Merge Bucket locs section and ranges section result
-  void mergePerBucketLocsAndRanges(
-      DIEBuilder &PartDIEBlder, BucketLocalWriter &LocalWriters,
-      const std::unordered_map<uint64_t, std::string> &DWOToNameMap,
-      BucketLocAccumOffset &Accum);
+  /// Merge Bucket locs section and ranges section result.
+  void mergePerBucketLocs(DIEBuilder &PartDIEBlder,
+                          ArrayRef<DWARFUnit *> SortedCUs,
+                          BucketLocAccumOffset &Accum);
+
+  /// Merge Bucket ranges section result.
+  void mergePerBucketRanges(DIEBuilder &PartDIEBlder,
+                            BucketLocalWriter &LocalWriters,
+                            ArrayRef<DWARFUnit *> SortedCUs);
 
   /// Process and write out CUs that are passed in.
   void finalizeCompileUnits(DIEBuilder &DIEBlder, DIEBuilder &MainDIEBlder,
