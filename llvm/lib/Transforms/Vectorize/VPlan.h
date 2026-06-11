@@ -2206,14 +2206,6 @@ protected:
 class LLVM_ABI_FOR_TEST VPWidenGEPRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
 
-  bool isPointerLoopInvariant() const {
-    return getOperand(0)->isDefinedOutsideLoopRegions();
-  }
-
-  bool isIndexLoopInvariant(unsigned I) const {
-    return getOperand(I + 1)->isDefinedOutsideLoopRegions();
-  }
-
 public:
   VPWidenGEPRecipe(Type *SourceElementTy, ArrayRef<VPValue *> Operands,
                    const VPIRFlags &Flags = {},
@@ -3850,8 +3842,8 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPSingleDefRecipe,
   }
 
 protected:
-  VPRecipeBase *getAsRecipe() override { return this; }
-  const VPRecipeBase *getAsRecipe() const override { return this; }
+  VPRecipeBase *getAsRecipe() override;
+  const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3901,8 +3893,8 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadEVLRecipe final
   }
 
 protected:
-  VPRecipeBase *getAsRecipe() override { return this; }
-  const VPRecipeBase *getAsRecipe() const override { return this; }
+  LLVM_ABI_FOR_TEST VPRecipeBase *getAsRecipe() override;
+  LLVM_ABI_FOR_TEST const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3953,8 +3945,8 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPRecipeBase,
   }
 
 protected:
-  VPRecipeBase *getAsRecipe() override { return this; }
-  const VPRecipeBase *getAsRecipe() const override { return this; }
+  VPRecipeBase *getAsRecipe() override;
+  const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -4011,8 +4003,8 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreEVLRecipe final
   }
 
 protected:
-  VPRecipeBase *getAsRecipe() override { return this; }
-  const VPRecipeBase *getAsRecipe() const override { return this; }
+  LLVM_ABI_FOR_TEST VPRecipeBase *getAsRecipe() override;
+  LLVM_ABI_FOR_TEST const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.

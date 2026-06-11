@@ -1876,7 +1876,9 @@ cc_library(
     name = "FrontendHLSL",
     srcs = glob([
         "lib/Frontend/HLSL/*.cpp",
-    ]),
+    ]) + [
+        "include/llvm/Transforms/Utils/ModuleUtils.h",
+    ],
     hdrs = glob([
         "include/llvm/Frontend/HLSL/*.h",
     ]),

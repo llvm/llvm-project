@@ -511,26 +511,24 @@ define <16 x i16> @vwsll_vx_i64_v16i16(<16 x i8> %a, i64 %b) {
 ; RV32-NEXT:    vmv.v.x v16, a0
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vrgather.vi v24, v16, 0
-; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV32-NEXT:    vzext.vf2 v12, v8
 ; RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV32-NEXT:    vnsrl.wi v8, v24, 0
+; RV32-NEXT:    vnsrl.wi v12, v24, 0
 ; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV32-NEXT:    vnsrl.wi v14, v8, 0
-; RV32-NEXT:    vsll.vv v8, v12, v14
+; RV32-NEXT:    vnsrl.wi v10, v12, 0
+; RV32-NEXT:    vzext.vf2 v12, v8
+; RV32-NEXT:    vsll.vv v8, v12, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vwsll_vx_i64_v16i16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vmv.v.x v16, a0
-; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV64-NEXT:    vzext.vf2 v12, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; RV64-NEXT:    vnsrl.wi v8, v16, 0
+; RV64-NEXT:    vnsrl.wi v12, v16, 0
 ; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV64-NEXT:    vnsrl.wi v14, v8, 0
-; RV64-NEXT:    vsll.vv v8, v12, v14
+; RV64-NEXT:    vnsrl.wi v10, v12, 0
+; RV64-NEXT:    vzext.vf2 v12, v8
+; RV64-NEXT:    vsll.vv v8, v12, v10
 ; RV64-NEXT:    ret
 ;
 ; CHECK-ZVBB-RV32-LABEL: vwsll_vx_i64_v16i16:
@@ -539,13 +537,12 @@ define <16 x i16> @vwsll_vx_i64_v16i16(<16 x i8> %a, i64 %b) {
 ; CHECK-ZVBB-RV32-NEXT:    vmv.v.x v16, a0
 ; CHECK-ZVBB-RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-ZVBB-RV32-NEXT:    vrgather.vi v24, v16, 0
-; CHECK-ZVBB-RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-ZVBB-RV32-NEXT:    vzext.vf2 v12, v8
 ; CHECK-ZVBB-RV32-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
-; CHECK-ZVBB-RV32-NEXT:    vnsrl.wi v8, v24, 0
+; CHECK-ZVBB-RV32-NEXT:    vnsrl.wi v12, v24, 0
 ; CHECK-ZVBB-RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-ZVBB-RV32-NEXT:    vnsrl.wi v14, v8, 0
-; CHECK-ZVBB-RV32-NEXT:    vsll.vv v8, v12, v14
+; CHECK-ZVBB-RV32-NEXT:    vnsrl.wi v10, v12, 0
+; CHECK-ZVBB-RV32-NEXT:    vzext.vf2 v12, v8
+; CHECK-ZVBB-RV32-NEXT:    vsll.vv v8, v12, v10
 ; CHECK-ZVBB-RV32-NEXT:    ret
 ;
 ; CHECK-ZVBB-RV64-LABEL: vwsll_vx_i64_v16i16:
@@ -568,9 +565,9 @@ define <16 x i16> @vwsll_vx_i32_v16i16(<16 x i8> %a, i32 %b) {
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vzext.vf2 v10, v8
-; CHECK-NEXT:    vnsrl.wi v8, v12, 0
-; CHECK-NEXT:    vsll.vv v8, v10, v8
+; CHECK-NEXT:    vnsrl.wi v10, v12, 0
+; CHECK-NEXT:    vzext.vf2 v12, v8
+; CHECK-NEXT:    vsll.vv v8, v12, v10
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vx_i32_v16i16:
