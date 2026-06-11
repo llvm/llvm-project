@@ -434,10 +434,19 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
           rewriter.eraseOp(op);
         } else {
           VectorType dstVecTy = cast<VectorType>(op.getValue().getType());
-          const bool vnni = op.getPacked().value_or(false);
+          bool vnni = op.getPacked().value_or(false);
           auto transposeValue = op.getTranspose();
           bool transpose =
               transposeValue.has_value() && transposeValue.value()[0] == 1;
+          // Handle special case of 32x16 and 8bit element load
+          // with no vnni, no transpose, no vblocks.
+          // For this special case, vnni and non vnni yields the same output
+          // and only the vnni variant is supported by HW.
+          // Check and set vnni of the special case.
+          if (elemBitSize == 8 && tileW == 16 && tileH == 32 && !vnni &&
+              !transpose) {
+            vnni = true;
+          }
           // Handle tranpose request on small element size
           // Transpose needs to be requested on 32bit element type.
           // offsetW and tileW needs to be adjusted to account for element type
