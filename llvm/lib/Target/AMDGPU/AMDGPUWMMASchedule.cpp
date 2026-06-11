@@ -34,6 +34,8 @@ struct LoadInfo {
   SUnit *SU;
   unsigned MinPos = UINT_MAX;  // earliest consumer (UINT_MAX means none in this region)
   unsigned MaxPos = 0;         // latest consumer
+  long LatestCycle = 0;        // Latest cycle this load can be scheduled for
+  bool BandwidthBound = false; // If bandwidth bound, it'll be placest at LatestCycle or earlier. Else, MaxPos.
 };
 
 class WMMASchedule : public ScheduleDAGMutation {
@@ -59,6 +61,7 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
   MapVector<SUnit *, unsigned> Wmmas; // WMMA SUnit and its program position relative to one another
   SmallVector<LoadInfo> Loads;
   std::optional<unsigned> LoadLatency, WmmaLatency; 
+  std::optional<double> LDSBandwidth;
 
   for (SUnit &SU : DAG->SUnits) {
     MachineInstr *MI = SU.getInstr();
@@ -75,20 +78,17 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
 
     // Gather DS_LOADs
     if (TII->isDS(*MI) && MI->mayLoad()) {
-      if (!LoadLatency)
-        LoadLatency = SM->computeInstrLatency(MI);
+      if (!LoadLatency) {
+        LoadLatency = SM->computeInstrLatency(MI); // TODO: Hardcode this.
+        LDSBandwidth = std::ceil(SM->computeReciprocalThroughput(MI)); // TODO: Possibly hardcode this?
+      }
       Loads.push_back({&SU});
     }
   }
 
   // The following means the DAG Mutation cannot do anything useful.
-  if (!LoadLatency || !WmmaLatency || Wmmas.empty())
+  if (!LoadLatency || !LDSBandwidth || !WmmaLatency || Wmmas.empty())
     return;
-
-  // The number of WMMAs that elapse during one load's latency
-  unsigned Dist = std::ceil(static_cast<double>(*LoadLatency) / *WmmaLatency);
-  if (Dist < 1)
-    Dist = 1;
 
   // Ensure ordering of WMMAs.
   auto [PrevSU, _] = *Wmmas.begin();
@@ -114,6 +114,11 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
     }
   }
 
+  // Order the Loads
+  llvm::stable_sort(Loads, [](const LoadInfo &A, const LoadInfo &B) {
+    return A.MinPos < B.MinPos;
+  });
+
   // MaxPos in order
   std::vector<bool> Present(Wmmas.size(), false);
   for (const LoadInfo &LI : Loads)
@@ -131,17 +136,43 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
     DeadBy[Pos] = Latest;
   }
 
+  // For each load, determine if it needs to be bandwidth bound to prevent
+  // being too close to other loads.
+  for (LoadInfo& LI : Loads) {
+    if (LI.MinPos != UINT_MAX)
+      // Same thing as MinPos, but in cycles
+      LI.LatestCycle = (long)(LI.MinPos) * (*WmmaLatency) - (long)(*LoadLatency);
+  }
+  long PrevLatest = LONG_MAX;
+  for(int Pos = static_cast<int>(Loads.size()) - 1; Pos >= 0; --Pos) {
+    LoadInfo& LI = Loads[Pos];
+    if (LI.MinPos == UINT_MAX)
+      continue;
+    long Spaced = PrevLatest - (long)(*LDSBandwidth);
+    // Clamp to Spaced if the LatestCycle encroaches too close to another load
+    if (Spaced < LI.LatestCycle) { 
+      LI.LatestCycle = Spaced;
+      LI.BandwidthBound = true;
+    }
+    PrevLatest = LI.LatestCycle;
+  }
+
   // Create the edges that constrain where the ds_loads can be placed
   // minimum distance of a load is LI.MinPos - Dist
   // maximum distance of a load is DeadBy[LI.MinPos - Dist]
   for (const LoadInfo &LI : Loads) {
-    if (LI.MinPos == UINT_MAX || LI.MinPos < Dist)
+    if (LI.MinPos == UINT_MAX)
       continue;
     
     // Minimum distance edge
     // Load scheduled before this point
-    unsigned MinDist = LI.MinPos - Dist; 
+    long MinDist = LI.LatestCycle / (long)(*WmmaLatency); // Go from cycle back to WMMA position (floor division)
+    if (MinDist < 0)
+      continue;
     bool MinSuccess = DAG->addEdge(Wmmas.begin()[MinDist].first, SDep(LI.SU, SDep::Artificial));
+    LLVM_DEBUG(dbgs() << (LI.BandwidthBound ? "[bw] " : "[lat] ")
+                      << "load SU" << LI.SU->NodeNum << " before W[" << MinDist
+                      << "] (MinPos=" << LI.MinPos << " LatestCycle=" << LI.LatestCycle << ")\n");
 
     // Maximum distance edge
     // Load scheduled after this point
