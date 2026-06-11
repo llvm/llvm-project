@@ -252,7 +252,7 @@ typedef struct {
 
 **`ejit_activate` vs `ejit_activate_array`**: 同一时间窗名称可关联多个 `ejit_period_arr` 数组。`ejit_activate` 按 name + index 激活该名称下所有数组的对应实例；`ejit_activate_array` 通过额外传入数组指针，仅激活指定数组。
 
-**数组越界行为**: `ejit_activate(period_name, cell_idx)` 激活该名称下所有数组的第 `cell_idx` 个实例。若不同数组大小不同（如 `g_cellCfg[16]` 和 `g_cellCfg2[8]`），`cell_idx` 对较小数组越界时，该数组实例被**静默跳过**（不报错，不激活），仅激活大小足够的数组实例。`cell_idx` 为负数时返回 `EJIT_ERR_INVALID_PARAM`。
+**数组越界行为**: `ejit_activate(period_name, cell_idx)` 激活该名称下所有数组的第 `cell_idx` 个实例。若不同数组大小不同（如 `g_cellCfg[16]` 和 `g_cellCfg2[8]`），`cell_idx` 对较小数组越界时，该数组实例被**静默跳过**（不报错，不激活），仅激活大小足够的数组实例。`cellIdx` 类型为 `uint8_t`，由类型系统保证非负；`cellIdx >= 数组大小` 时对超出数组进行静默跳过。
 
 **状态流**:
 
