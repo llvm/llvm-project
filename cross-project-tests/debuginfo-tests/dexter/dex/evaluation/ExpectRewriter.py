@@ -10,7 +10,7 @@ from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from dex.dextIR import DextIR, StepIR, ValueIR
-from dex.evaluation.StateMatch import get_active_where_matches
+from dex.evaluation.StateMatch import StateMatchContext, get_active_where_matches
 from dex.test_script.Nodes import DexRange, Expect, Line, Then, Value, ValueAll, Where
 from dex.test_script.Script import DexterScript, Scope
 from dex.tools.Main import Context
@@ -160,10 +160,12 @@ class StepExpectRewriter:
     """Processes all active, unknown expects at a given debugger step and produces ExpectedValueRewriter results for
     each."""
 
-    def __init__(self, step: StepIR, script: DexterScript):
+    def __init__(
+        self, step: StepIR, script: DexterScript, state_match_context: StateMatchContext
+    ):
         self.step = step
         self.script = script
-        self.state_match = get_active_where_matches(script, step)
+        self.state_match = get_active_where_matches(script, step, state_match_context)
         active_expects = {
             expect
             for where_match in self.state_match.values()
@@ -234,10 +236,13 @@ class ScriptExpectRewriter:
         if not self.unknown_expect_rewrites and not self.scope_expect_rewrites:
             return
 
+        state_match_context = StateMatchContext()
+
         # Populate the `unknown_expect_rewrites` dict, mapping each expect with an unknown value to its list of observed
         # during this run, along with the corresponding step indices.
         self.step_rewriters = [
-            StepExpectRewriter(step, script) for step in dext_ir.steps
+            StepExpectRewriter(step, script, state_match_context)
+            for step in dext_ir.steps
         ]
         for step_rewriter in self.step_rewriters:
             step_idx = step_rewriter.step.step_index
