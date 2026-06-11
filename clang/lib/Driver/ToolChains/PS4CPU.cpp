@@ -580,7 +580,7 @@ SanitizerMask toolchains::PS5CPU::getSupportedSanitizers(
 }
 
 void toolchains::PS4PS5Base::addClangTargetOptions(
-    const ArgList &DriverArgs, ArgStringList &CC1Args,
+    const ArgList &DriverArgs, ArgStringList &CC1Args, StringRef BoundArch,
     Action::OffloadKind DeviceOffloadingKind) const {
   // PS4/PS5 do not use init arrays.
   if (DriverArgs.hasArg(options::OPT_fuse_init_array)) {

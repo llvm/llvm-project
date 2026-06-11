@@ -16,6 +16,7 @@
 #include "AArch64PointerAuth.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "MCTargetDesc/AArch64MCLFIRewriter.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -129,14 +130,43 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
     if (MI.getOperand(0).getReg() != AArch64::LR)
       return 8;
     return 4;
+  case AArch64::SYSxt:
+    // VA-based DC/IC ops (op1=3, Cn=7, op2=1) expand to 2 instructions.
+    if (MI.getOperand(0).getImm() == 3 && MI.getOperand(1).getImm() == 7 &&
+        MI.getOperand(3).getImm() == 1)
+      return 8;
+    return std::nullopt;
   default:
     break;
   }
 
-  // Instructions that explicitly modify LR expand to 2 instructions.
-  for (const MachineOperand &MO : MI.explicit_operands())
-    if (MO.isReg() && MO.isDef() && MO.getReg() == AArch64::LR)
-      return 8;
+  // Detect instructions that explicitly define SP or LR.
+  bool ModifiesLR = false;
+  bool ModifiesSP = false;
+  for (const MachineOperand &MO : MI.defs()) {
+    if (!MO.isReg())
+      continue;
+    if (MO.getReg() == AArch64::LR)
+      ModifiesLR = true;
+    else if (MO.getReg() == AArch64::SP)
+      ModifiesSP = true;
+  }
+
+  // Memory accesses expand to a base-register guard plus the rewritten access
+  // (8 bytes), with an extra base-register update for pre/post-index forms (12
+  // bytes total). If the access also defines LR, an LR mask is appended (+4
+  // bytes). Depending on additional optimizations that the rewriter performs,
+  // this may be an overestimate.
+  if (MI.mayLoadOrStore()) {
+    unsigned Size = isLFIPrePostMemAccess(MI.getOpcode()) ? 12 : 8;
+    if (ModifiesLR)
+      Size += 4;
+    return Size;
+  }
+
+  // Non memory operations that modify LR or SP expand to 2 instructions.
+  if (ModifiesSP || ModifiesLR)
+    return 8;
 
   // Default case: instructions that don't cause expansion.
   // - TP accesses in LFI are a single load/store, so no expansion.
