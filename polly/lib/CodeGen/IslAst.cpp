@@ -86,6 +86,11 @@ static cl::opt<bool>
                   cl::desc("Print the ISL abstract syntax tree"),
                   cl::cat(PollyCategory));
 
+static cl::opt<unsigned long>
+    AstGenComputeout("polly-astgen-computeout",
+                     cl::desc("Bound the AST generation by a maximal number of "
+                              "ISL operations [0 means un-bounded]"),
+                     cl::Hidden, cl::init(3000000), cl::cat(PollyCategory));
 STATISTIC(ScopsProcessed, "Number of SCoPs processed");
 STATISTIC(ScopsBeneficial, "Number of beneficial SCoPs");
 STATISTIC(BeneficialAffineLoops, "Number of beneficial affine loops");
@@ -204,18 +209,23 @@ static isl_printer *cbPrintFor(__isl_take isl_printer *Printer,
 static bool astScheduleDimIsParallel(const isl::ast_build &Build,
                                      const Dependences *D,
                                      IslAstUserPayload *NodeInfo) {
-  if (!D->hasValidDependences())
+  if (!D || !D->hasValidDependences())
     return false;
 
   isl::union_map Schedule = Build.get_schedule();
+  if (Schedule.is_null())
+    return false;
   isl::union_map Dep = D->getDependences(
       Dependences::TYPE_RAW | Dependences::TYPE_WAW | Dependences::TYPE_WAR);
-
+  if (Dep.is_null())
+    return false;
   if (!D->isParallel(Schedule.get(), Dep.release())) {
     isl::union_map DepsAll =
         D->getDependences(Dependences::TYPE_RAW | Dependences::TYPE_WAW |
                           Dependences::TYPE_WAR | Dependences::TYPE_TC_RED);
     // TODO: We will need to change isParallel to stop the unwrapping
+    if (DepsAll.is_null())
+      return false;
     isl_pw_aff *MinimalDependenceDistanceIsl = nullptr;
     D->isParallel(Schedule.get(), DepsAll.release(),
                   &MinimalDependenceDistanceIsl);
@@ -315,7 +325,12 @@ astBuildAfterMark(__isl_take isl_ast_node *Node,
   assert(isl_ast_node_get_type(Node) == isl_ast_node_mark);
   AstBuildUserInfo *BuildInfo = (AstBuildUserInfo *)User;
   auto *Id = isl_ast_node_mark_get_id(Node);
-  if (strcmp(isl_id_get_name(Id), "SIMD") == 0)
+
+  // since Node being null is not checked
+  // thus name returned could be null or in bad state
+  // this saves the potential err thrown by strcmp
+  const char *name = isl_id_get_name(Id);
+  if (name && strcmp(name, "SIMD") == 0)
     BuildInfo->InSIMD = false;
   isl_id_free(Id);
   return Node;
@@ -545,10 +560,23 @@ void IslAst::init(const Dependences &D) {
   }
 
   RunCondition = buildRunCondition(S, isl::manage_copy(Build));
+  // Apply IslMaxOperationsGuard on the api which starts the process of ASt gen
+  // from schedule tree. This is to avoid the timeout when the schedule tree is
+  // too big and complex.
 
-  Root = isl::manage(
-      isl_ast_build_node_from_schedule(Build, S.getScheduleTree().release()));
-  walkAstForStatistics(Root);
+  {
+    IslMaxOperationsGuard MaxOpGuard(Ctx.get(), AstGenComputeout);
+    Root = isl::manage(
+        isl_ast_build_node_from_schedule(Build, S.getScheduleTree().release()));
+    if (MaxOpGuard.hasQuotaExceeded()) {
+      POLLY_DEBUG(
+          dbgs() << "AST generation for SCoP in function '"
+                 << S.getFunction().getName()
+                 << "' exceeded operation limit (operations). Skipping.\n");
+    }
+  }
+  if (!Root.is_null())
+    walkAstForStatistics(Root);
 
   isl_ast_build_free(Build);
 }

@@ -717,34 +717,44 @@ bool Dependences::isParallel(__isl_keep isl_union_map *Schedule,
                              __isl_give isl_pw_aff **MinDistancePtr) const {
   isl_set *Deltas, *Distance;
   isl_map *ScheduleDeps;
-  unsigned Dimension;
+  int Dimension;
   bool IsParallel;
 
   Deps = isl_union_map_apply_range(Deps, isl_union_map_copy(Schedule));
   Deps = isl_union_map_apply_domain(Deps, isl_union_map_copy(Schedule));
+  isl_bool UnionMapIsEmpty = isl_union_map_is_empty(Deps);
 
-  if (isl_union_map_is_empty(Deps)) {
+  if (UnionMapIsEmpty != isl_bool_false) {
     isl_union_map_free(Deps);
-    return true;
+    return UnionMapIsEmpty == isl_bool_true;
   }
 
   ScheduleDeps = isl_map_from_union_map(Deps);
+  // In the event isl_map_dim() returns isl_size_error which is -1
+  // then Dimension being an unsigned variable would store a very large
+  // wrap-around value. This could result in compilation issues like indefinite
+  // hang. Thus changed Dimension into an signed integer storage
   Dimension = isl_map_dim(ScheduleDeps, isl_dim_out) - 1;
 
-  for (unsigned i = 0; i < Dimension; i++)
+  if (Dimension < 0) {
+    isl_map_free(ScheduleDeps);
+    return false;
+  }
+
+  for (unsigned i = 0; i < (unsigned)Dimension; i++)
     ScheduleDeps = isl_map_equate(ScheduleDeps, isl_dim_out, i, isl_dim_in, i);
 
   Deltas = isl_map_deltas(ScheduleDeps);
   Distance = isl_set_universe(isl_set_get_space(Deltas));
 
   // [0, ..., 0, +] - All zeros and last dimension larger than zero
-  for (unsigned i = 0; i < Dimension; i++)
+  for (unsigned i = 0; i < (unsigned)Dimension; i++)
     Distance = isl_set_fix_si(Distance, isl_dim_set, i, 0);
 
   Distance = isl_set_lower_bound_si(Distance, isl_dim_set, Dimension, 1);
   Distance = isl_set_intersect(Distance, Deltas);
 
-  IsParallel = isl_set_is_empty(Distance);
+  IsParallel = (isl_set_is_empty(Distance) == isl_bool_true);
   if (IsParallel || !MinDistancePtr) {
     isl_set_free(Distance);
     return IsParallel;
