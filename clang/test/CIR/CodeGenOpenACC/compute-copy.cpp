@@ -11,7 +11,7 @@ struct StructTy {
 
 void InlineFunc() {
   // CHECK: cir.func {{.*}}InlineFunc{{.*}}
-  // CHECK-NEXT: %[[THIS:.*]] = cir.alloca !cir.ptr<!rec_StructTy>, !cir.ptr<!cir.ptr<!rec_StructTy>>, ["this", init]
+  // CHECK-NEXT: %[[THIS:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_StructTy>>
   // CHECK-NEXT: cir.store %[[THIS_ARG:.*]], %[[THIS]] : !cir.ptr<!rec_StructTy>, !cir.ptr<!cir.ptr<!rec_StructTy>>
   // CHECK-NEXT: %[[THIS_LOAD:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<!rec_StructTy>>, !cir.ptr<!rec_StructTy>
 
@@ -185,7 +185,7 @@ void InlineUse() {
 
 void StructTy::OutlineFunc() {
   // CHECK: cir.func {{.*}}OutlineFunc{{.*}}
-  // CHECK-NEXT: %[[THIS:.*]] = cir.alloca !cir.ptr<!rec_StructTy>, !cir.ptr<!cir.ptr<!rec_StructTy>>, ["this", init]
+  // CHECK-NEXT: %[[THIS:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_StructTy>>
   // CHECK-NEXT: cir.store %[[THIS_ARG:.*]], %[[THIS]] : !cir.ptr<!rec_StructTy>, !cir.ptr<!cir.ptr<!rec_StructTy>>
   // CHECK-NEXT: %[[THIS_LOAD:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<!rec_StructTy>>, !cir.ptr<!rec_StructTy>
 #pragma acc parallel copy(scalarMember)

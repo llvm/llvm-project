@@ -79,14 +79,14 @@ struct OneShotBufferizePass
 
       if (mustInferMemorySpace) {
         opt.defaultMemorySpaceFn =
-            [](TensorType t) -> std::optional<Attribute> {
+            [](TensorLikeType t) -> std::optional<Attribute> {
           return std::nullopt;
         };
       }
 
       if (useEncodingForMemorySpace) {
         opt.defaultMemorySpaceFn =
-            [](TensorType t) -> std::optional<Attribute> {
+            [](TensorLikeType t) -> std::optional<Attribute> {
           if (auto rtt = dyn_cast<RankedTensorType>(t))
             return rtt.getEncoding();
           return std::nullopt;
@@ -108,17 +108,20 @@ struct OneShotBufferizePass
                   "'unknown-type-conversion'");
         return signalPassFailure();
       }
-      opt.unknownTypeConverterFn = [=](TensorType tensorType,
+      opt.unknownTypeConverterFn = [=](TensorLikeType type,
                                        Attribute memorySpace,
                                        const BufferizationOptions &options) {
+        const auto tensorType = cast<TensorType>(type);
         if (unknownTypeConversionOption == LayoutMapOption::IdentityLayoutMap)
-          return bufferization::getMemRefTypeWithStaticIdentityLayout(
-              tensorType, memorySpace);
+          return cast<bufferization::BufferLikeType>(
+              bufferization::getMemRefTypeWithStaticIdentityLayout(
+                  tensorType, memorySpace));
         assert(unknownTypeConversionOption ==
                    LayoutMapOption::FullyDynamicLayoutMap &&
                "invalid layout map option");
-        return bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType,
-                                                                  memorySpace);
+        return cast<bufferization::BufferLikeType>(
+            bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType,
+                                                               memorySpace));
       };
 
       // Configure op filter.
