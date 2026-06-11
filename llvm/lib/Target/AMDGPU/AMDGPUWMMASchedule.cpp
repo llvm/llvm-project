@@ -90,6 +90,16 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
   if (Dist < 1)
     Dist = 1;
 
+  // Ensure ordering of WMMAs.
+  auto [PrevSU, _] = *Wmmas.begin();
+  for (auto *It = std::next(Wmmas.begin()); It != Wmmas.end(); ++It) {
+    auto [SU, _] = *It;
+    bool Success = DAG->addEdge(SU, SDep(PrevSU, SDep::Artificial));
+    LLVM_DEBUG(dbgs() << "wmma SU" << SU->NodeNum << " <- after wmma SU"
+                      << PrevSU->NodeNum << (Success ? "\n" : " FAIL (cycle)\n"));
+    PrevSU = SU;
+  }
+
   // For each load, find the earliest and latest consuming WMMA positions.
   for (LoadInfo& LI : Loads) {
     for (const SDep &D : LI.SU->Succs) {
