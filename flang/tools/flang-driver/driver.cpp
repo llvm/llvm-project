@@ -190,8 +190,9 @@ int main(int argc, const char **argv) {
   bool first = true;
   for (const llvm::opt::Arg *arg : argList) {
     if (!arg->getOption().matches(clang::options::OPT_INPUT)) {
-      if (!first)
+      if (!first) {
         os << ' ';
+      }
       os << arg->getAsString(argList);
       first = false;
     }
