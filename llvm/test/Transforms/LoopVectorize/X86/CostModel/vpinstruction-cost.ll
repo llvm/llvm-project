@@ -206,14 +206,10 @@ define void @test_vpinstruction_switch_cost(ptr %start, ptr %end) {
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP12:%[0-9]+]]> = or vp<[[VP9]]>, vp<[[VP10]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP13:%[0-9]+]]> = or vp<[[VP12]]>, vp<[[VP11]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP14:%[0-9]+]]> = not vp<[[VP13]]>
-; CHECK:  Cost of 0 for VF 2: vp<[[VP15:%[0-9]+]]> = vector-pointer vp<%next.gep>, ir<1>
-; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP15]]>, ir<1>, vp<[[VP11]]>
-; CHECK:  Cost of 0 for VF 2: vp<[[VP16:%[0-9]+]]> = vector-pointer vp<%next.gep>, ir<1>
-; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP16]]>, ir<0>, vp<[[VP10]]>
-; CHECK:  Cost of 0 for VF 2: vp<[[VP17:%[0-9]+]]> = vector-pointer vp<%next.gep>, ir<1>
-; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP17]]>, ir<42>, vp<[[VP9]]>
-; CHECK:  Cost of 0 for VF 2: vp<[[VP18:%[0-9]+]]> = vector-pointer vp<%next.gep>, ir<1>
-; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP18]]>, ir<2>, vp<[[VP14]]>
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP8]]>, ir<1>, vp<[[VP11]]>
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP8]]>, ir<0>, vp<[[VP10]]>
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP8]]>, ir<42>, vp<[[VP9]]>
+; CHECK:  Cost of 1 for VF 2: WIDEN store vp<[[VP8]]>, ir<2>, vp<[[VP14]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: vector loop backedge
@@ -237,14 +233,10 @@ define void @test_vpinstruction_switch_cost(ptr %start, ptr %end) {
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP12]]> = or vp<[[VP9]]>, vp<[[VP10]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP13]]> = or vp<[[VP12]]>, vp<[[VP11]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<[[VP14]]> = not vp<[[VP13]]>
-; CHECK:  Cost of 0 for VF 4: vp<[[VP15]]> = vector-pointer vp<%next.gep>, ir<1>
-; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP15]]>, ir<1>, vp<[[VP11]]>
-; CHECK:  Cost of 0 for VF 4: vp<[[VP16]]> = vector-pointer vp<%next.gep>, ir<1>
-; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP16]]>, ir<0>, vp<[[VP10]]>
-; CHECK:  Cost of 0 for VF 4: vp<[[VP17]]> = vector-pointer vp<%next.gep>, ir<1>
-; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP17]]>, ir<42>, vp<[[VP9]]>
-; CHECK:  Cost of 0 for VF 4: vp<[[VP18]]> = vector-pointer vp<%next.gep>, ir<1>
-; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP18]]>, ir<2>, vp<[[VP14]]>
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP8]]>, ir<1>, vp<[[VP11]]>
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP8]]>, ir<0>, vp<[[VP10]]>
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP8]]>, ir<42>, vp<[[VP9]]>
+; CHECK:  Cost of 1 for VF 4: WIDEN store vp<[[VP8]]>, ir<2>, vp<[[VP14]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 4: vector loop backedge
