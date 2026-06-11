@@ -25,6 +25,13 @@ Expected<ze_event_handle_t> EventPoolTy::getEventLocked() {
                               /* count */ 0};
     Desc.flags = ZE_EVENT_POOL_FLAG_HOST_VISIBLE | Flags;
     Desc.count = static_cast<uint32_t>(PoolSize);
+
+    ze_event_pool_counter_based_exp_desc_t counterBasedDesc = {ZE_STRUCTURE_TYPE_COUNTER_BASED_EVENT_POOL_EXP_DESC};
+    counterBasedDesc.flags = ZE_EVENT_POOL_COUNTER_BASED_EXP_FLAG_IMMEDIATE;
+
+    if (UseCounterBasedEvents)
+      Desc.pNext = &counterBasedDesc;
+
     ze_event_pool_handle_t Pool;
     CALL_ZE_RET_ERROR(zeEventPoolCreate, Context, &Desc, 0, nullptr, &Pool);
     Pools.push_back(Pool);

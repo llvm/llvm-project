@@ -98,8 +98,6 @@ public:
     Context = ContextIn;
     Flags = FlagsIn;
     UseCounterBasedEvents = UseCounterBased;
-    if (UseCounterBasedEvents)
-      Flags |= ZE_EVENT_POOL_FLAG_KERNEL_TIMESTAMP;
     Mtx.reset(new std::mutex);
     return Plugin::success();
   }
