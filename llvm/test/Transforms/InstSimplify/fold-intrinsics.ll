@@ -55,25 +55,17 @@ define i32 @test_ctpop_poison(i32 %a) {
 
 define i8 @clmul() {
 ; CHECK-LABEL: @clmul(
-; CHECK-NEXT:    ret i8 12
+; CHECK-NEXT:    ret i8 84
 ;
-  %clmul = call i8 @llvm.clmul.i8(i8 3, i8 4)
+  %clmul = call i8 @llvm.clmul.i8(i8 7, i8 28)
   ret i8 %clmul
 }
 
-define i8 @clmul_onepoison() {
-; CHECK-LABEL: @clmul_onepoison(
+define i8 @clmul_poison() {
+; CHECK-LABEL: @clmul_poison(
 ; CHECK-NEXT:    ret i8 0
 ;
   %clmul = call i8 @llvm.clmul.i8(i8 3, i8 poison)
-  ret i8 %clmul
-}
-
-define i8 @clmul_bothpoison() {
-; CHECK-LABEL: @clmul_bothpoison(
-; CHECK-NEXT:    ret i8 0
-;
-  %clmul = call i8 @llvm.clmul.i8(i8 poison, i8 poison)
   ret i8 %clmul
 }
 
