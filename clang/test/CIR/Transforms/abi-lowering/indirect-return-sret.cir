@@ -46,7 +46,7 @@ module attributes {
 
   cir.func @returns_big() -> !rec_Big
       attributes { test_classify = #indirect_return } {
-    %0 = cir.alloca !rec_Big, !cir.ptr<!rec_Big>, ["__retval"] {alignment = 8 : i64}
+    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
     cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
     %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
@@ -73,7 +73,7 @@ module attributes {
   // original store-from-result is dropped (no byte-copy, no load-back).
   cir.func @caller() -> !s32i
       attributes { test_classify = #caller_cls } {
-    %1 = cir.alloca !rec_Big, !cir.ptr<!rec_Big>, ["s"] {alignment = 8 : i64}
+    %1 = cir.alloca "s" align(8) : !cir.ptr<!rec_Big>
     %0 = cir.call @returns_big() : () -> !rec_Big
     cir.store %0, %1 : !rec_Big, !cir.ptr<!rec_Big>
     %z = cir.const #cir.int<0> : !s32i
@@ -81,7 +81,7 @@ module attributes {
   }
 
   // CHECK:      cir.func{{.*}} @caller() -> !s32i
-  // CHECK:        %[[DEST:.*]] = cir.alloca !rec_Big, {{.*}} ["s"]
+  // CHECK:        %[[DEST:.*]] = cir.alloca "s" {{.*}}: !cir.ptr<!rec_Big>
   // CHECK:        cir.call @returns_big(%[[DEST]]) : (!cir.ptr<!rec_Big>
   // CHECK-SAME:     llvm.sret = !rec_Big
   // CHECK-SAME:     -> ()
@@ -93,8 +93,8 @@ module attributes {
   // fresh sret slot is allocated and the result is loaded back out of it.
   cir.func @caller_multi() -> !s32i
       attributes { test_classify = #caller_cls } {
-    %a = cir.alloca !rec_Big, !cir.ptr<!rec_Big>, ["a"] {alignment = 8 : i64}
-    %b = cir.alloca !rec_Big, !cir.ptr<!rec_Big>, ["b"] {alignment = 8 : i64}
+    %a = cir.alloca "a" align(8) : !cir.ptr<!rec_Big>
+    %b = cir.alloca "b" align(8) : !cir.ptr<!rec_Big>
     %0 = cir.call @returns_big() : () -> !rec_Big
     cir.store %0, %a : !rec_Big, !cir.ptr<!rec_Big>
     cir.store %0, %b : !rec_Big, !cir.ptr<!rec_Big>
@@ -103,9 +103,9 @@ module attributes {
   }
 
   // CHECK:      cir.func{{.*}} @caller_multi() -> !s32i
-  // CHECK:        %[[A:.*]] = cir.alloca !rec_Big, {{.*}} ["a"]
-  // CHECK:        %[[B:.*]] = cir.alloca !rec_Big, {{.*}} ["b"]
-  // CHECK:        %[[SLOT:.*]] = cir.alloca !rec_Big, {{.*}} ["sret"]
+  // CHECK:        %[[A:.*]] = cir.alloca "a" {{.*}}: !cir.ptr<!rec_Big>
+  // CHECK:        %[[B:.*]] = cir.alloca "b" {{.*}}: !cir.ptr<!rec_Big>
+  // CHECK:        %[[SLOT:.*]] = cir.alloca "sret" {{.*}}: !cir.ptr<!rec_Big>
   // CHECK:        cir.call @returns_big(%[[SLOT]]) : (!cir.ptr<!rec_Big>
   // CHECK-SAME:     llvm.sret = !rec_Big
   // CHECK-SAME:     -> ()
@@ -118,7 +118,7 @@ module attributes {
   // signature and the call site.
   cir.func @returns_big_ext(%arg0: !s8i) -> !rec_Big
       attributes { test_classify = #indirect_return_ext } {
-    %0 = cir.alloca !rec_Big, !cir.ptr<!rec_Big>, ["__retval"] {alignment = 8 : i64}
+    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
     cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
     %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
@@ -134,7 +134,7 @@ module attributes {
 
   cir.func @caller_ext(%arg0: !s8i) -> !s32i
       attributes { test_classify = #caller_cls } {
-    %1 = cir.alloca !rec_Big, !cir.ptr<!rec_Big>, ["s"] {alignment = 8 : i64}
+    %1 = cir.alloca "s" align(8) : !cir.ptr<!rec_Big>
     %0 = cir.call @returns_big_ext(%arg0) : (!s8i) -> !rec_Big
     cir.store %0, %1 : !rec_Big, !cir.ptr<!rec_Big>
     %z = cir.const #cir.int<0> : !s32i
@@ -142,7 +142,7 @@ module attributes {
   }
 
   // CHECK:      cir.func{{.*}} @caller_ext(%[[ARG:.*]]: !s8i) -> !s32i
-  // CHECK:        %[[DEST2:.*]] = cir.alloca !rec_Big, {{.*}} ["s"]
+  // CHECK:        %[[DEST2:.*]] = cir.alloca "s" {{.*}}: !cir.ptr<!rec_Big>
   // CHECK:        cir.call @returns_big_ext(%[[DEST2]], %[[ARG]]) : (!cir.ptr<!rec_Big>
   // CHECK-SAME:     llvm.sret = !rec_Big
   // CHECK-SAME:   !s8i {llvm.signext}
@@ -153,7 +153,7 @@ module attributes {
   // through the sret pointer and the shared alloca rewired exactly once.
   cir.func @returns_big_cond(%cond: !cir.bool) -> !rec_Big
       attributes { test_classify = #indirect_return_bool } {
-    %0 = cir.alloca !rec_Big, !cir.ptr<!rec_Big>, ["__retval"] {alignment = 8 : i64}
+    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
     cir.if %cond {
       cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
@@ -184,7 +184,7 @@ module attributes {
 
   cir.func @returns_big_ctor(%cond: !cir.bool) -> !rec_Big
       attributes { test_classify = #indirect_return_bool } {
-    %0 = cir.alloca !rec_Big, !cir.ptr<!rec_Big>, ["__retval"] {alignment = 8 : i64}
+    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
     cir.if %cond {
       cir.call @make_big(%0) : (!cir.ptr<!rec_Big>) -> ()
       %r1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
@@ -208,7 +208,7 @@ module attributes {
   // signature and the sretOffset shift keeps the remaining block args aligned.
   cir.func @returns_big_ignore(%ignored: !s32i) -> !rec_Big
       attributes { test_classify = #indirect_return_ignore } {
-    %0 = cir.alloca !rec_Big, !cir.ptr<!rec_Big>, ["__retval"] {alignment = 8 : i64}
+    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
     cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
     %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big

@@ -13,6 +13,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 using namespace cir;
+using namespace mlir;
 using namespace mlir::abi;
 
 // This rewrite context supports the Direct (with or without coercion),
@@ -46,10 +47,10 @@ bool needsRewrite(const FunctionClassification &fc) {
 /// pointer, when present, is prepended by rewriteFunctionDefinition rather
 /// than here.
 mlir::LogicalResult
-buildNewArgTypes(llvm::ArrayRef<mlir::Type> oldArgTypes,
+buildNewArgTypes(ArrayRef<mlir::Type> oldArgTypes,
                  const FunctionClassification &fc,
-                 llvm::SmallVectorImpl<mlir::Type> &newArgTypes,
-                 llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
+                 SmallVectorImpl<mlir::Type> &newArgTypes,
+                 function_ref<mlir::InFlightDiagnostic()> emitError) {
   assert(newArgTypes.empty() && "expected an empty output vector");
   newArgTypes.reserve(oldArgTypes.size());
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
@@ -93,7 +94,7 @@ buildNewArgTypes(llvm::ArrayRef<mlir::Type> oldArgTypes,
 mlir::Type
 computeNewReturnType(mlir::Type origRetTy, const ArgClassification &retInfo,
                      mlir::MLIRContext *ctx,
-                     llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
+                     function_ref<mlir::InFlightDiagnostic()> emitError) {
   switch (retInfo.kind) {
   case ArgKind::Direct:
     // Direct return with a coerced type uses the coerced type on the wire;
@@ -136,7 +137,7 @@ mlir::Value createIgnoredValue(mlir::OpBuilder &builder, mlir::Location loc,
 mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
                                mlir::ArrayAttr existingArgAttrs,
                                const FunctionClassification &fc) {
-  llvm::SmallVector<mlir::Attribute> newArgAttrs;
+  SmallVector<mlir::Attribute> newArgAttrs;
   newArgAttrs.reserve(fc.argInfos.size());
   for (auto [oldIdx, ac] : llvm::enumerate(fc.argInfos)) {
     if (ac.kind == ArgKind::Ignore)
@@ -145,15 +146,14 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
     if (existingArgAttrs && oldIdx < existingArgAttrs.size())
       existing = mlir::cast<mlir::DictionaryAttr>(existingArgAttrs[oldIdx]);
     if (ac.kind == ArgKind::Extend) {
-      llvm::StringRef attrName =
-          ac.signExtend ? "llvm.signext" : "llvm.zeroext";
+      StringRef attrName = ac.signExtend ? "llvm.signext" : "llvm.zeroext";
       mlir::NamedAttribute extAttr(mlir::StringAttr::get(ctx, attrName),
                                    mlir::UnitAttr::get(ctx));
       if (existing.empty()) {
         newArgAttrs.push_back(mlir::DictionaryAttr::get(ctx, {extAttr}));
       } else {
-        llvm::SmallVector<mlir::NamedAttribute> attrs(existing.begin(),
-                                                      existing.end());
+        SmallVector<mlir::NamedAttribute> attrs(existing.begin(),
+                                                existing.end());
         attrs.push_back(extAttr);
         newArgAttrs.push_back(mlir::DictionaryAttr::get(ctx, attrs));
       }
@@ -173,13 +173,12 @@ mlir::ArrayAttr updateResAttrs(mlir::MLIRContext *ctx,
   if (retInfo.kind != ArgKind::Extend)
     return existingResAttrs;
 
-  llvm::SmallVector<mlir::NamedAttribute> attrs;
+  SmallVector<mlir::NamedAttribute> attrs;
   if (existingResAttrs && !existingResAttrs.empty())
     for (mlir::NamedAttribute na :
          mlir::cast<mlir::DictionaryAttr>(existingResAttrs[0]))
       attrs.push_back(na);
-  llvm::StringRef attrName =
-      retInfo.signExtend ? "llvm.signext" : "llvm.zeroext";
+  StringRef attrName = retInfo.signExtend ? "llvm.signext" : "llvm.zeroext";
   attrs.push_back(mlir::NamedAttribute(mlir::StringAttr::get(ctx, attrName),
                                        mlir::UnitAttr::get(ctx)));
   return mlir::ArrayAttr::get(ctx, {mlir::DictionaryAttr::get(ctx, attrs)});
@@ -209,7 +208,7 @@ mlir::Value emitCoercion(mlir::OpBuilder &builder, mlir::Location loc,
                          mlir::Type dstTy, mlir::Value src,
                          mlir::FunctionOpInterface funcOp,
                          const mlir::DataLayout &dl,
-                         llvm::SmallPtrSetImpl<mlir::Operation *> &createdOps) {
+                         SmallPtrSetImpl<mlir::Operation *> &createdOps) {
   mlir::Type srcTy = src.getType();
   assert(srcTy != dstTy &&
          "emitCoercion callers must pre-check that the types differ");
@@ -265,7 +264,7 @@ mlir::Value emitCoercion(mlir::OpBuilder &builder, mlir::Location loc,
                          mlir::Type dstTy, mlir::Value src,
                          mlir::FunctionOpInterface funcOp,
                          const mlir::DataLayout &dl) {
-  llvm::SmallPtrSet<mlir::Operation *, 4> ignored;
+  SmallPtrSet<mlir::Operation *, 4> ignored;
   return emitCoercion(builder, loc, dstTy, src, funcOp, dl, ignored);
 }
 
@@ -275,7 +274,7 @@ void insertReturnCoercion(mlir::FunctionOpInterface funcOp,
                           mlir::Type origRetTy, mlir::Type coercedRetTy,
                           mlir::OpBuilder &builder,
                           const mlir::DataLayout &dl) {
-  llvm::SmallVector<cir::ReturnOp> returns;
+  SmallVector<cir::ReturnOp> returns;
   funcOp.walk([&](cir::ReturnOp r) { returns.push_back(r); });
   for (cir::ReturnOp r : returns) {
     if (r.getInput().empty())
@@ -324,7 +323,7 @@ void insertArgCoercion(mlir::FunctionOpInterface funcOp,
     blockArg.setType(newArgTy);
 
     builder.setInsertionPointToStart(&entry);
-    llvm::SmallPtrSet<mlir::Operation *, 4> coercionOps;
+    SmallPtrSet<mlir::Operation *, 4> coercionOps;
     mlir::Value adapted = emitCoercion(builder, funcOp.getLoc(), oldArgTy,
                                        blockArg, funcOp, dl, coercionOps);
 
@@ -368,7 +367,7 @@ void insertSRetStores(mlir::FunctionOpInterface funcOp, mlir::Type origRetTy,
                       mlir::OpBuilder &builder) {
   mlir::Value sretPtr = funcOp.getArguments()[0];
 
-  llvm::SmallVector<cir::ReturnOp> returnOps;
+  SmallVector<cir::ReturnOp> returnOps;
   funcOp->walk([&](cir::ReturnOp retOp) { returnOps.push_back(retOp); });
 
   cir::AllocaOp retAlloca = nullptr;
@@ -407,10 +406,11 @@ void insertSRetStores(mlir::FunctionOpInterface funcOp, mlir::Type origRetTy,
 /// `sret(T) align A [noalias] writable dead_on_unwind`.  noalias is only
 /// valid on the callee's parameter, not at the call site, so it is gated by
 /// \p withNoalias.  Key order is irrelevant: DictionaryAttr sorts by name.
-llvm::SmallVector<mlir::NamedAttribute>
-buildSretSlotAttrs(mlir::OpBuilder &builder, mlir::Type retTy, uint64_t align,
-                   bool withNoalias) {
-  llvm::SmallVector<mlir::NamedAttribute> attrs;
+SmallVector<mlir::NamedAttribute> buildSretSlotAttrs(mlir::OpBuilder &builder,
+                                                     mlir::Type retTy,
+                                                     uint64_t align,
+                                                     bool withNoalias) {
+  SmallVector<mlir::NamedAttribute> attrs;
   // The sret type must be carried explicitly: LLVM's sret attribute requires
   // it, and once the CIR `!cir.ptr<retTy>` lowers to an opaque LLVM `ptr` the
   // pointee type can no longer be recovered from the pointer.
@@ -437,10 +437,10 @@ void applySretSlotAttrs(cir::CallOp newCall, mlir::ArrayAttr argAttrs,
                         mlir::Type retTy, uint64_t align,
                         mlir::OpBuilder &builder) {
   mlir::MLIRContext *ctx = newCall->getContext();
-  llvm::SmallVector<mlir::NamedAttribute> sretAttrs =
+  SmallVector<mlir::NamedAttribute> sretAttrs =
       buildSretSlotAttrs(builder, retTy, align, /*withNoalias=*/false);
 
-  llvm::SmallVector<mlir::Attribute> newArgAttrs;
+  SmallVector<mlir::Attribute> newArgAttrs;
   newArgAttrs.reserve(newCall.getArgOperands().size());
   newArgAttrs.push_back(mlir::DictionaryAttr::get(ctx, sretAttrs));
   if (argAttrs)
@@ -461,7 +461,7 @@ void applySretSlotAttrs(cir::CallOp newCall, mlir::ArrayAttr argAttrs,
 /// call has a result and an indirect-return classification.
 void rewriteIndirectReturnCall(cir::CallOp call,
                                const FunctionClassification &fc,
-                               llvm::ArrayRef<mlir::Value> newArgs,
+                               ArrayRef<mlir::Value> newArgs,
                                mlir::Type origRetTy, mlir::OpBuilder &builder) {
   mlir::MLIRContext *ctx = call->getContext();
   auto ptrTy = cir::PointerType::get(origRetTy);
@@ -493,13 +493,13 @@ void rewriteIndirectReturnCall(cir::CallOp call,
   }
   if (!sretSlot) {
     auto alloca = cir::AllocaOp::create(
-        builder, call.getLoc(), ptrTy, origRetTy,
+        builder, call.getLoc(), ptrTy,
         /*name=*/builder.getStringAttr("sret"),
         /*alignment=*/builder.getI64IntegerAttr(sretAlign));
     sretSlot = alloca;
   }
 
-  llvm::SmallVector<mlir::Value> sretArgs;
+  SmallVector<mlir::Value> sretArgs;
   sretArgs.push_back(sretSlot);
   sretArgs.append(newArgs.begin(), newArgs.end());
 
@@ -555,8 +555,8 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
   if (!needsRewrite(fc))
     return mlir::success();
 
-  llvm::ArrayRef<mlir::Type> oldArgTypes = funcOp.getArgumentTypes();
-  llvm::ArrayRef<mlir::Type> oldResultTypes = funcOp.getResultTypes();
+  ArrayRef<mlir::Type> oldArgTypes = funcOp.getArgumentTypes();
+  ArrayRef<mlir::Type> oldResultTypes = funcOp.getResultTypes();
   mlir::MLIRContext *ctx = funcOp->getContext();
 
   // CIR follows LLVM IR's single-result rule: a function returns either
@@ -565,7 +565,7 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
   assert(oldResultTypes.size() <= 1 &&
          "CIR functions return zero or one value");
 
-  llvm::SmallVector<mlir::Type> newArgTypes;
+  SmallVector<mlir::Type> newArgTypes;
   if (mlir::failed(buildNewArgTypes(oldArgTypes, fc, newArgTypes,
                                     [&]() { return funcOp.emitOpError(); })))
     return mlir::failure();
@@ -576,7 +576,7 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
       origRetTy, fc.returnInfo, ctx, [&]() { return funcOp.emitOpError(); });
   if (!newRetTy)
     return mlir::failure();
-  llvm::SmallVector<mlir::Type> newResultTypes = {newRetTy};
+  SmallVector<mlir::Type> newResultTypes = {newRetTy};
 
   // sret return: the value is returned through a pointer the ABI inserts as
   // argument 0.  This pointer is not part of the function's source-level
@@ -653,7 +653,7 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
     if (fc.returnInfo.kind == ArgKind::Ignore && !oldResultTypes.empty()) {
       assert(mlir::isa<cir::VoidType>(newRetTy) &&
              "Ignore-return path requires the new return type to be void");
-      llvm::SmallVector<cir::ReturnOp> returns;
+      SmallVector<cir::ReturnOp> returns;
       funcOp.walk([&](cir::ReturnOp r) { returns.push_back(r); });
       for (cir::ReturnOp r : returns) {
         if (r.getNumOperands() == 0)
@@ -682,10 +682,10 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
       // Prepend the sret slot's attribute dict (slot 0); the per-argument
       // dicts shift to slots 1..N.  noalias is valid only on the callee's
       // parameter, so it is added only for definitions.
-      llvm::SmallVector<mlir::NamedAttribute> sretAttrs = buildSretSlotAttrs(
+      SmallVector<mlir::NamedAttribute> sretAttrs = buildSretSlotAttrs(
           builder, origRetTy, fc.returnInfo.indirectAlign.value(),
           /*withNoalias=*/funcOp.isDefinition());
-      llvm::SmallVector<mlir::Attribute> withSret;
+      SmallVector<mlir::Attribute> withSret;
       withSret.push_back(mlir::DictionaryAttr::get(ctx, sretAttrs));
       llvm::append_range(withSret, updated);
       funcOp->setAttr("arg_attrs", mlir::ArrayAttr::get(ctx, withSret));
@@ -743,7 +743,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
 
   builder.setInsertionPoint(call);
 
-  llvm::SmallVector<mlir::Value> newArgs;
+  SmallVector<mlir::Value> newArgs;
   mlir::ValueRange argOperands = call.getArgOperands();
   newArgs.reserve(argOperands.size());
   if (argOperands.size() > fc.argInfos.size())
