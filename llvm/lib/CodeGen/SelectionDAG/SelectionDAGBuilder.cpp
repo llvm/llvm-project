@@ -10504,8 +10504,10 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
                "Operand must be indirect to be a mem!");
         unsigned AddrSpace = 0;
         const Value *Ptr = OpInfo.CallOperandVal;
-        if (Ptr && Ptr->getType()->getTypeID() == Type::PointerTyID)
-          AddrSpace = cast<PointerType>(Ptr->getType())->getAddressSpace();
+        if (Ptr) {
+          if (auto *Pt = dyn_cast<PointerType>(Ptr->getType()))
+            AddrSpace = Pt->getAddressSpace();
+        }
 
         assert(InOperandVal.getValueType() ==
                    TLI.getPointerTy(DAG.getDataLayout(), AddrSpace) &&
