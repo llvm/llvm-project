@@ -25491,8 +25491,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                   .try_emplace(std::make_pair(SD->getInst(), U.get()), 0)
                   .first->getSecond();
           ++NumOps;
-          if (auto *Op = dyn_cast<Instruction>(U.get());
-              Op && areAllOperandsReplacedByCopyableData(SD->getInst(), Op,
+          auto *Op = dyn_cast<Instruction>(U.get());
+          if (Op && areAllOperandsReplacedByCopyableData(SD->getInst(), Op,
                                                          *SLP, NumOps)) {
             if (ScheduleData *OpSD = getScheduleData(Op);
                 OpSD && OpSD->hasValidDependencies()) {
@@ -25523,6 +25523,24 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
               ControlDependentMembers.push_back(OpSD);
               continue;
             }
+          }
+          // areAllOperandsReplacedByCopyableData() can be false while Op is
+          // still modeled as a copyable element in one or more already built
+          // nodes (e.g. when another node that shares an instruction with this
+          // one uses Op directly). This newly built node, not registered in the
+          // tree yet, also uses Op directly, so Op's real ScheduleData
+          // dependency count - which mixes direct def-use edges with copyable
+          // uses - does not yet account for this direct use. Defer its
+          // recomputation to the next bundle scheduling, when this node is part
+          // of the tree, so the direct use is counted; otherwise the scheduler
+          // decrements Op more times than its dependency count and trips the
+          // unscheduled-deps assertion. Op's current dependencies are kept (not
+          // cleared) so it stays schedulable for this bundle's dependency
+          // calculation.
+          if (Op) {
+            if (ScheduleData *OpSD = getScheduleData(Op);
+                OpSD && !getScheduleCopyableData(Op).empty())
+              RecalcCopyableOperandDeps.insert(OpSD);
           }
         }
       }
