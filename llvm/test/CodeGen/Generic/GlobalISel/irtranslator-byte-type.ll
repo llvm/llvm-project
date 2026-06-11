@@ -646,15 +646,17 @@ define ptr @bitcast_b64_to_p0(b64 %b) {
   ret ptr %r
 }
 
-; FIXME: Illegal bitcast from <2 x b32> to ptr.
+; <2 x b32> is not an LLVM integer type, so lowering uses G_BITCAST to s64 then
+; G_INTTOPTR.
 define ptr @bitcast_v2b32_to_ptr(<2 x b32> %v) {
   ; AARCH64-LABEL: name: bitcast_v2b32_to_ptr
   ; AARCH64: bb.1 (%ir-block.0):
   ; AARCH64-NEXT:   liveins: $d0
   ; AARCH64-NEXT: {{  $}}
   ; AARCH64-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
-  ; AARCH64-NEXT:   [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[COPY]](<2 x i32>)
-  ; AARCH64-NEXT:   $x0 = COPY [[BITCAST]](p0)
+  ; AARCH64-NEXT:   [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY]](<2 x i32>)
+  ; AARCH64-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[BITCAST]](i64)
+  ; AARCH64-NEXT:   $x0 = COPY [[INTTOPTR]](p0)
   ; AARCH64-NEXT:   RET_ReallyLR implicit $x0
   ;
   ; AMDGPU-LABEL: name: bitcast_v2b32_to_ptr
@@ -664,8 +666,9 @@ define ptr @bitcast_v2b32_to_ptr(<2 x b32> %v) {
   ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; AMDGPU-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; AMDGPU-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
-  ; AMDGPU-NEXT:   [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[BUILD_VECTOR]](<2 x s32>)
-  ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](p0)
+  ; AMDGPU-NEXT:   [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[BUILD_VECTOR]](<2 x s32>)
+  ; AMDGPU-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[BITCAST]](s64)
+  ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[INTTOPTR]](p0)
   ; AMDGPU-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; AMDGPU-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
@@ -676,21 +679,24 @@ define ptr @bitcast_v2b32_to_ptr(<2 x b32> %v) {
   ; X86-NEXT: {{  $}}
   ; X86-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
   ; X86-NEXT:   [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
-  ; X86-NEXT:   [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[UV]](<2 x s32>)
-  ; X86-NEXT:   $rax = COPY [[BITCAST]](p0)
+  ; X86-NEXT:   [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[UV]](<2 x s32>)
+  ; X86-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[BITCAST]](s64)
+  ; X86-NEXT:   $rax = COPY [[INTTOPTR]](p0)
   ; X86-NEXT:   RET 0, implicit $rax
   %p = bitcast <2 x b32> %v to ptr
   ret ptr %p
 }
 
-; FIXME: Illegal bitcast from ptr to <2 x b32>.
+; Destination is a vector of bytes, not an LLVM integer type: G_PTRTOINT to
+; s64 then G_BITCAST.
 define <2 x b32> @bitcast_ptr_to_v2b32(ptr %p) {
   ; AARCH64-LABEL: name: bitcast_ptr_to_v2b32
   ; AARCH64: bb.1 (%ir-block.0):
   ; AARCH64-NEXT:   liveins: $x0
   ; AARCH64-NEXT: {{  $}}
   ; AARCH64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
-  ; AARCH64-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY]](p0)
+  ; AARCH64-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i64) = G_PTRTOINT [[COPY]](p0)
+  ; AARCH64-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[PTRTOINT]](i64)
   ; AARCH64-NEXT:   $d0 = COPY [[BITCAST]](<2 x i32>)
   ; AARCH64-NEXT:   RET_ReallyLR implicit $d0
   ;
@@ -701,7 +707,8 @@ define <2 x b32> @bitcast_ptr_to_v2b32(ptr %p) {
   ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; AMDGPU-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; AMDGPU-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; AMDGPU-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[MV]](p0)
+  ; AMDGPU-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[MV]](p0)
+  ; AMDGPU-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[PTRTOINT]](s64)
   ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](<2 x s32>)
   ; AMDGPU-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; AMDGPU-NEXT:   $vgpr1 = COPY [[UV1]](s32)
@@ -712,7 +719,8 @@ define <2 x b32> @bitcast_ptr_to_v2b32(ptr %p) {
   ; X86-NEXT:   liveins: $rdi
   ; X86-NEXT: {{  $}}
   ; X86-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
-  ; X86-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[COPY]](p0)
+  ; X86-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY]](p0)
+  ; X86-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[PTRTOINT]](s64)
   ; X86-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](<2 x s32>)
   ; X86-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; X86-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[DEF]](s32), [[DEF]](s32)
@@ -1079,8 +1087,8 @@ define b64 @bitcast_v1ptr_to_b64(<1 x ptr> %p) {
   ; AARCH64-NEXT:   liveins: $d0
   ; AARCH64-NEXT: {{  $}}
   ; AARCH64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $d0
-  ; AARCH64-NEXT:   [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY]](p0)
-  ; AARCH64-NEXT:   $x0 = COPY [[BITCAST]](i64)
+  ; AARCH64-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i64) = G_PTRTOINT [[COPY]](p0)
+  ; AARCH64-NEXT:   $x0 = COPY [[PTRTOINT]](i64)
   ; AARCH64-NEXT:   RET_ReallyLR implicit $x0
   ;
   ; AMDGPU-LABEL: name: bitcast_v1ptr_to_b64
@@ -1090,8 +1098,8 @@ define b64 @bitcast_v1ptr_to_b64(<1 x ptr> %p) {
   ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; AMDGPU-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; AMDGPU-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; AMDGPU-NEXT:   [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[MV]](p0)
-  ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](s64)
+  ; AMDGPU-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[MV]](p0)
+  ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[PTRTOINT]](s64)
   ; AMDGPU-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; AMDGPU-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
@@ -1101,8 +1109,8 @@ define b64 @bitcast_v1ptr_to_b64(<1 x ptr> %p) {
   ; X86-NEXT:   liveins: $rdi
   ; X86-NEXT: {{  $}}
   ; X86-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
-  ; X86-NEXT:   [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[COPY]](p0)
-  ; X86-NEXT:   $rax = COPY [[BITCAST]](s64)
+  ; X86-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s64) = G_PTRTOINT [[COPY]](p0)
+  ; X86-NEXT:   $rax = COPY [[PTRTOINT]](s64)
   ; X86-NEXT:   RET 0, implicit $rax
   %r = bitcast <1 x ptr> %p to b64
   ret b64 %r
@@ -1114,8 +1122,8 @@ define <1 x ptr> @bitcast_b64_to_v1ptr(b64 %b) {
   ; AARCH64-NEXT:   liveins: $x0
   ; AARCH64-NEXT: {{  $}}
   ; AARCH64-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
-  ; AARCH64-NEXT:   [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[COPY]](i64)
-  ; AARCH64-NEXT:   $d0 = COPY [[BITCAST]](p0)
+  ; AARCH64-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[COPY]](i64)
+  ; AARCH64-NEXT:   $d0 = COPY [[INTTOPTR]](p0)
   ; AARCH64-NEXT:   RET_ReallyLR implicit $d0
   ;
   ; AMDGPU-LABEL: name: bitcast_b64_to_v1ptr
@@ -1125,8 +1133,8 @@ define <1 x ptr> @bitcast_b64_to_v1ptr(b64 %b) {
   ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; AMDGPU-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; AMDGPU-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; AMDGPU-NEXT:   [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[MV]](s64)
-  ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](p0)
+  ; AMDGPU-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[MV]](s64)
+  ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[INTTOPTR]](p0)
   ; AMDGPU-NEXT:   $vgpr0 = COPY [[UV]](s32)
   ; AMDGPU-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
@@ -1136,8 +1144,8 @@ define <1 x ptr> @bitcast_b64_to_v1ptr(b64 %b) {
   ; X86-NEXT:   liveins: $rdi
   ; X86-NEXT: {{  $}}
   ; X86-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $rdi
-  ; X86-NEXT:   [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[COPY]](s64)
-  ; X86-NEXT:   $rax = COPY [[BITCAST]](p0)
+  ; X86-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p0) = G_INTTOPTR [[COPY]](s64)
+  ; X86-NEXT:   $rax = COPY [[INTTOPTR]](p0)
   ; X86-NEXT:   RET 0, implicit $rax
   %r = bitcast b64 %b to <1 x ptr>
   ret <1 x ptr> %r

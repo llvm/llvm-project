@@ -323,9 +323,11 @@ private:
   bool translateLandingPad(const User &U, MachineIRBuilder &MIRBuilder);
 
   /// Translate one of LLVM's cast instructions into MachineInstrs, with the
-  /// given generic Opcode.
+  /// given generic Opcode. If \p SrcReg is valid, it is used as the source
+  /// operand instead of translating \p U's IR operand 0.
   bool translateCast(unsigned Opcode, const User &U,
-                     MachineIRBuilder &MIRBuilder);
+                     MachineIRBuilder &MIRBuilder,
+                     Register SrcReg = Register());
 
   /// Translate a phi instruction.
   bool translatePHI(const User &U, MachineIRBuilder &MIRBuilder);

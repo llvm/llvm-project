@@ -1585,9 +1585,11 @@ bool IRTranslator::translateBitCast(const User &U,
                                     MachineIRBuilder &MIRBuilder) {
   Type *SrcTy = U.getOperand(0)->getType();
   Type *DstTy = U.getType();
+  LLT SrcLLT = getLLTForType(*SrcTy, *DL);
+  LLT DstLLT = getLLTForType(*DstTy, *DL);
 
   // If we're bitcasting to the source type, we can reuse the source vreg.
-  if (getLLTForType(*SrcTy, *DL) == getLLTForType(*DstTy, *DL)) {
+  if (SrcLLT == DstLLT) {
     // If the source is a ConstantInt then it was probably created by
     // ConstantHoisting and we should leave it alone.
     if (isa<ConstantInt>(U.getOperand(0)))
@@ -1596,22 +1598,36 @@ bool IRTranslator::translateBitCast(const User &U,
     return translateCopy(U, *U.getOperand(0), MIRBuilder);
   }
 
-  // Only the scalar byte<->ptr crossing is redirected to G_INTTOPTR/G_PTRTOINT,
-  // which is the well-typed MIR shape for that boundary. Vector byte<->ptr
-  // (e.g. <N x b32> -> ptr produced by mixed-type load coalescing) and other
-  // legacy ptr/non-ptr IR bitcasts (AMDGPU iN<->p3 kernarg packing, etc.)
-  // keep their historical G_BITCAST lowering — G_INTTOPTR has no vector-src
-  // -> scalar-ptr form, and downstream passes already handle G_BITCAST.
-  if (DstTy->isPointerTy() && SrcTy->isByteTy())
-    return translateCast(TargetOpcode::G_INTTOPTR, U, MIRBuilder);
-  if (SrcTy->isPointerTy() && DstTy->isByteTy())
-    return translateCast(TargetOpcode::G_PTRTOINT, U, MIRBuilder);
+  // Flatten vector sources to a scalar when the destination is scalar.
+  Register SrcReg = getOrCreateVReg(*U.getOperand(0));
+  bool SrcIsPtr = SrcLLT.isPointer();
+  bool DstIsPtr = DstLLT.isPointer();
 
-  return translateCast(TargetOpcode::G_BITCAST, U, MIRBuilder);
+  if (!SrcIsPtr && DstIsPtr) {
+    // The integer operand of G_INTTOPTR must be a scalar; flatten a vector
+    // source through a bitcast first.
+    if (SrcLLT.isVector()) {
+      LLT FlatTy = LLT::integer(DL->getTypeSizeInBits(SrcTy));
+      SrcReg = MIRBuilder.buildBitcast(FlatTy, SrcReg).getReg(0);
+    }
+    return translateCast(TargetOpcode::G_INTTOPTR, U, MIRBuilder, SrcReg);
+  }
+  if (SrcIsPtr && !DstIsPtr) {
+    // G_PTRTOINT produces a scalar; bitcast it to the vector destination.
+    if (DstLLT.isVector()) {
+      LLT FlatTy = LLT::integer(DL->getTypeSizeInBits(DstTy));
+      Register IntVal = MIRBuilder.buildPtrToInt(FlatTy, SrcReg).getReg(0);
+      MIRBuilder.buildBitcast(getOrCreateVReg(U), IntVal);
+      return true;
+    }
+    return translateCast(TargetOpcode::G_PTRTOINT, U, MIRBuilder, SrcReg);
+  }
+  return translateCast(TargetOpcode::G_BITCAST, U, MIRBuilder, SrcReg);
 }
 
 bool IRTranslator::translateCast(unsigned Opcode, const User &U,
-                                 MachineIRBuilder &MIRBuilder) {
+                                 MachineIRBuilder &MIRBuilder,
+                                 Register SrcReg) {
   if (!mayTranslateUserTypes(U))
     return false;
 
@@ -1619,7 +1635,7 @@ bool IRTranslator::translateCast(unsigned Opcode, const User &U,
   if (const Instruction *I = dyn_cast<Instruction>(&U))
     Flags = MachineInstr::copyFlagsFromInstruction(*I);
 
-  Register Op = getOrCreateVReg(*U.getOperand(0));
+  Register Op = SrcReg.isValid() ? SrcReg : getOrCreateVReg(*U.getOperand(0));
   Register Res = getOrCreateVReg(U);
   MIRBuilder.buildInstr(Opcode, {Res}, {Op}, Flags);
   return true;
