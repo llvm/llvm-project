@@ -25,7 +25,8 @@ void L0OptionsTy::processEnvironmentVars() {
       std::string(" ") +
       StringEnvar("LIBOMPTARGET_LEVEL_ZERO_COMPILATION_OPTIONS", "").get();
 
-  Flags.UseCopyOffloadHint = BoolEnvar("LIBOFFLOAD_LEVEL_ZERO_USE_COPY_OFFLOAD_HINT", true);
+  Flags.UseCopyOffloadHint =
+      BoolEnvar("LIBOFFLOAD_LEVEL_ZERO_USE_COPY_OFFLOAD_HINT", true);
 
   // Memory pool syntax:
   // LIBOMPTARGET_LEVEL_ZERO_MEMORY_POOL=<Option>
