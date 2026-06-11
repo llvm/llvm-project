@@ -14,6 +14,7 @@ auto test1() {
   for (int i = 0; i < dim; ++i) {
     // expected-error@+1{{loop iteration variable 'i' cannot be reused in a nested loop of a collapsed loop nest}}
     for (i = 0; i < 10; i++) {
+      int dummy;
     }
   }
 }
@@ -22,6 +23,7 @@ auto test2() {
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < dim; ++i) {
     for (int i = 0; i < 10; i++) {
+      int dummy;
     }
   }
 }
@@ -32,6 +34,7 @@ auto test3() {
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < dim; ++i) {
     for (int j = 0; j < 10; j++) {
+      int dummy;
     }
   }
 }

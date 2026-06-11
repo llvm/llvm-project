@@ -8481,7 +8481,8 @@ bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
         // in an outer collapsed loop.
         ValueDecl *LoopVar = DRE->getDecl();
         if (!CollapsedLoopInductionVars.empty() &&
-            CollapsedLoopInductionVars.count(LoopVar) && EmitDiags) {
+            CollapsedLoopInductionVars.count(LoopVar->getCanonicalDecl()) &&
+            EmitDiags) {
           SemaRef.Diag(DRE->getLocation(),
                        diag::err_omp_loop_var_reused_in_collapsed_loop)
               << LoopVar;
