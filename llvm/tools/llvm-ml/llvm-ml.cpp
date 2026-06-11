@@ -288,7 +288,7 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
   bool UnwindV3 = InputArgs.hasArg(OPT_unwindv3);
   if (UnwindV3 && !TheTriple.isArch64Bit()) {
     WithColor::warning()
-        << "/unwindv3 applies only to 64-bit X86 platforms; ignoring.\n";
+        << "/unwindv3 applies only to 64-bit X86 platforms; ignoring\n";
     UnwindV3 = false;
   }
 

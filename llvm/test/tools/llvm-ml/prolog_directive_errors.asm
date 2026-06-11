@@ -12,25 +12,25 @@ t1 PROC FRAME
 
   mov rax, 0
 
-; CHECK: prolog directive must be used inside a prolog
+; CHECK: :[[#@LINE+1]]:3: error: prolog directive must be used inside a prolog
   .pushreg r13
 
-; CHECK: prolog directive must be used inside a prolog
+; CHECK: :[[#@LINE+1]]:3: error: prolog directive must be used inside a prolog
   .push2reg r14, r15
 
-; CHECK: prolog directive must be used inside a prolog
+; CHECK: :[[#@LINE+1]]:3: error: prolog directive must be used inside a prolog
   .pushframe
 
-; CHECK: prolog directive must be used inside a prolog
+; CHECK: :[[#@LINE+1]]:3: error: prolog directive must be used inside a prolog
   .setframe rbp, 0
 
-; CHECK: prolog directive must be used inside a prolog
+; CHECK: :[[#@LINE+1]]:3: error: prolog directive must be used inside a prolog
   .allocstack 16
 
-; CHECK: prolog directive must be used inside a prolog
+; CHECK: :[[#@LINE+1]]:3: error: prolog directive must be used inside a prolog
   .savereg rbx, 0
 
-; CHECK: prolog directive must be used inside a prolog
+; CHECK: :[[#@LINE+1]]:3: error: prolog directive must be used inside a prolog
   .savexmm128 xmm6, 0
 
   .beginepilog

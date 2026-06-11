@@ -55,7 +55,7 @@ push2_trailing_junk:
 pushreg_egpr_v1:
     .seh_proc pushreg_egpr_v1
     .seh_pushreg %r16
-// CHECK: error: .seh_pushreg with an extended register requires unwind v3
+// CHECK: :[[#@LINE-1]]:5: error: .seh_pushreg with an extended register requires unwind v3
     .seh_endprologue
     retq
     .seh_endproc
@@ -63,7 +63,7 @@ pushreg_egpr_v1:
 savereg_egpr_v1:
     .seh_proc savereg_egpr_v1
     .seh_savereg %r16, 0
-// CHECK: error: .seh_savereg with an extended register requires unwind v3
+// CHECK: :[[#@LINE-1]]:5: error: .seh_savereg with an extended register requires unwind v3
     .seh_endprologue
     retq
     .seh_endproc
@@ -71,7 +71,7 @@ savereg_egpr_v1:
 savexmm_egpr_v1:
     .seh_proc savexmm_egpr_v1
     .seh_savexmm %xmm16, 0
-// CHECK: error: .seh_savexmm with an extended register requires unwind v3
+// CHECK: :[[#@LINE-1]]:5: error: .seh_savexmm with an extended register requires unwind v3
     .seh_endprologue
     retq
     .seh_endproc
@@ -79,7 +79,7 @@ savexmm_egpr_v1:
 setframe_egpr_v1:
     .seh_proc setframe_egpr_v1
     .seh_setframe %r16, 0
-// CHECK: error: .seh_setframe with an extended register requires unwind v3
+// CHECK: :[[#@LINE-1]]:5: error: .seh_setframe with an extended register requires unwind v3
     .seh_endprologue
     retq
     .seh_endproc

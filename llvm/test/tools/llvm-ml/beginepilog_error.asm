@@ -10,7 +10,7 @@ t1 PROC FRAME
   .beginepilog
   .popreg r10
   pop r10
-; CHECK: .beginepilog must come after .endprolog or .endepilog
+; CHECK: :[[#@LINE+1]]:3: error: .beginepilog must come after .endprolog or .endepilog
   .beginepilog
   .endepilog
   ret
@@ -20,7 +20,7 @@ t1 ENDP
 t2 PROC FRAME
   push r10
   .pushreg r10
-; CHECK: .beginepilog must come after .endprolog or .endepilog
+; CHECK: :[[#@LINE+1]]:3: error: .beginepilog must come after .endprolog or .endepilog
   .beginepilog
   .popreg r10
   pop r10
@@ -34,7 +34,7 @@ t3 PROC FRAME
   .pushreg r10
   .endprolog
   pop r10
-; CHECK: epilog directive must be used inside an epilog
+; CHECK: :[[#@LINE+1]]:3: error: epilog directive must be used inside an epilog
   .endepilog
   ret
 t3 ENDP

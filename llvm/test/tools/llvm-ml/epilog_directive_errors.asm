@@ -18,22 +18,22 @@ t1 PROC FRAME
 
   mov rax, 0
 
-; CHECK: epilog directive must be used inside an epilog
+; CHECK: :[[#@LINE+1]]:3: error: epilog directive must be used inside an epilog
   .popreg r12
 
-; CHECK: epilog directive must be used inside an epilog
+; CHECK: :[[#@LINE+1]]:3: error: epilog directive must be used inside an epilog
   .pop2reg r12, r13
 
-; CHECK: epilog directive must be used inside an epilog
+; CHECK: :[[#@LINE+1]]:3: error: epilog directive must be used inside an epilog
   .freestack 64
 
-; CHECK: epilog directive must be used inside an epilog
+; CHECK: :[[#@LINE+1]]:3: error: epilog directive must be used inside an epilog
   .restorereg rbx, 32
 
-; CHECK: epilog directive must be used inside an epilog
+; CHECK: :[[#@LINE+1]]:3: error: epilog directive must be used inside an epilog
   .restorexmm128 xmm6, 16
 
-; CHECK: epilog directive must be used inside an epilog
+; CHECK: :[[#@LINE+1]]:3: error: epilog directive must be used inside an epilog
   .unsetframe rbp, 0
 
   ret
