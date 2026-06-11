@@ -24,135 +24,135 @@
 # NONSTREAMING-NEXT:  1      2     0.17                        fclamp	z0.s, z1.s, z2.s
 # NONSTREAMING-NEXT:  1      4     0.17                        fdot	z0.s, z1.h, z2.h
 # NONSTREAMING-NEXT:  1      2     0.17                        revd	z0.q, p0/m, z0.q
-# NONSTREAMING-NEXT:  1      0     0.10                  U     rprfm	pldkeep, x0, [x0]
+# NONSTREAMING-NEXT:  1      1     0.10                  U     rprfm	pldkeep, x0, [x0]
 # NONSTREAMING-NEXT:  1      2     0.17                        sclamp	z0.s, z1.s, z2.s
 # NONSTREAMING-NEXT:  1      2     0.17                        uclamp	z0.s, z1.s, z2.s
 # NONSTREAMING-NEXT:  1      3     0.50                        sdot	z0.s, z0.h, z0.h
 # NONSTREAMING-NEXT:  1      3     0.50                        udot	z0.s, z0.h, z0.h
 # NONSTREAMING-NEXT:  1      2     0.17                        sqcvtn	z0.h, { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     sqcvtun	z0.b, { z0.s - z3.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     sqcvtun	z0.b, { z0.s - z3.s }
 # NONSTREAMING-NEXT:  1      2     0.17                        uqcvtn	z0.h, { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     sqrshrn	z0.b, { z0.s - z3.s }, #32
-# NONSTREAMING-NEXT:  1      0     0.10                  U     sqrshrun	z0.b, { z0.s - z3.s }, #32
-# NONSTREAMING-NEXT:  1      0     0.10                  U     uqrshrn	z0.b, { z0.s - z3.s }, #32
-# NONSTREAMING-NEXT:  1      0     0.10                  U     add	za.s[w8, 0, vgx2], { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     sub	za.s[w8, 0, vgx2], { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     add	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     addha	za0.s, p0/m, p0/m, z0.s
-# NONSTREAMING-NEXT:  1      0     0.10                  U     addva	za0.s, p0/m, p0/m, z0.s
-# NONSTREAMING-NEXT:  1      0     0.10    *                   bf1cvt	z0.h, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10    *                   bf1cvtlt	z0.h, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10    *                   bf2cvt	z0.h, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10    *                   bf2cvtlt	z0.h, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10                  U     bfadd	za.h[w8, 0, vgx2], { z0.h, z1.h }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     bfcvt	z0.h, { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     bfcvtn	z0.h, { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     bfclamp	{ z0.h, z1.h }, z0.h, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     bfdot	za.s[w8, 0, vgx2], { z0.h, z1.h }, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     bfmax	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     bfmaxnm	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     bfmin	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     bfminnm	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     bfmla	za.h[w8, 0, vgx2], { z0.h, z1.h }, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     bfmlal	za.s[w8, 0:1, vgx2], { z0.h, z1.h }, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     bfmls	za.h[w8, 0, vgx2], { z0.h, z1.h }, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     bfmlsl	za.s[w8, 0:1, vgx2], { z0.h, z1.h }, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     bfmopa	za0.s, p0/m, p0/m, z0.h, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     bfmops	za0.s, p0/m, p0/m, z0.h, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     bfvdot	za.s[w8, 0, vgx2], { z0.h, z1.h }, z0.h[0]
-# NONSTREAMING-NEXT:  1      0     0.10                  U     bmopa	za0.s, p0/m, p0/m, z0.s, z0.s
-# NONSTREAMING-NEXT:  1      0     0.10                  U     bmops	za0.s, p0/m, p0/m, z0.s, z0.s
-# NONSTREAMING-NEXT:  1      0     0.10    *                   f1cvt	z0.h, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10    *                   f1cvtlt	z0.h, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10    *                   f2cvt	z0.h, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10    *                   f2cvtlt	z0.h, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fadd	za.s[w8, 0, vgx2], { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     famax	{ z0.s, z1.s }, { z0.s, z1.s }, { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     famin	{ z0.s, z1.s }, { z0.s, z1.s }, { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fclamp	{ z0.h, z1.h }, z0.h, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fcvt	z0.h, { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fcvtn	z0.h, { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fcvtzs	{ z0.s, z1.s }, { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fcvtzu	{ z0.s, z1.s }, { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fmopa	za0.s, p0/m, p0/m, z0.h, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fmops	za0.s, p0/m, p0/m, z0.h, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fmax	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fmaxnm	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fmin	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fminnm	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fmla	za.s[w8, 0, vgx2], { z0.s, z1.s }, z0.s
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fmlal	za.s[w8, 0:1, vgx2], { z0.h, z1.h }, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fmlall	za.s[w8, 0:3], z0.b, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fmls	za.s[w8, 0, vgx2], { z0.s, z1.s }, z0.s
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fmlsl	za.s[w8, 0:1, vgx2], { z0.h, z1.h }, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     frinta	{ z0.s, z1.s }, { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     frintm	{ z0.s, z1.s }, { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     frintn	{ z0.s, z1.s }, { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     frintp	{ z0.s, z1.s }, { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fvdot	za.s[w8, 0, vgx2], { z0.h, z1.h }, z0.h[0]
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fvdotb	za.s[w8, 0, vgx4], { z0.b, z1.b }, z0.b[0]
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fvdott	za.s[w8, 0, vgx4], { z0.b, z1.b }, z0.b[0]
-# NONSTREAMING-NEXT:  1      0     0.10                  U     fscale	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
-# NONSTREAMING-NEXT:  1      0     0.10                  U     luti2	{ z0.h, z1.h }, zt0, z0[0]
-# NONSTREAMING-NEXT:  1      0     0.10                  U     luti4	{ z0.h, z1.h }, zt0, z0[0]
-# NONSTREAMING-NEXT:  1      0     0.10    *             U     mov	{ z0.s, z1.s }, za0h.s[w12, 0:1]
-# NONSTREAMING-NEXT:  1      0     0.10                  U     movt	zt0[0], x0
-# NONSTREAMING-NEXT:  1      0     0.10                  U     movt	x0, zt0[0]
-# NONSTREAMING-NEXT:  1      0     0.10                  U     sclamp	{ z0.h, z1.h }, z0.h, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     smax	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
-# NONSTREAMING-NEXT:  1      0     0.10                  U     smin	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
-# NONSTREAMING-NEXT:  1      0     0.10                  U     uclamp	{ z0.h, z1.h }, z0.h, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     umax	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
-# NONSTREAMING-NEXT:  1      0     0.10                  U     umin	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
-# NONSTREAMING-NEXT:  1      0     0.10                  U     scvtf	{ z0.s, z1.s }, { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     ucvtf	{ z0.s, z1.s }, { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     sel	{ z0.h, z1.h }, pn8, { z0.h, z1.h }, { z0.h, z1.h }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     sel	{ z0.h - z3.h }, pn8, { z0.h - z3.h }, { z0.h - z3.h }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     smlal	za.s[w8, 0:1], z0.h, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     smlall	za.s[w8, 0:3], z0.b, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10                  U     smlsl	za.s[w8, 0:1], z0.h, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     smlsll	za.s[w8, 0:3], z0.b, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10                  U     umlal	za.s[w8, 0:1], z0.h, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     umlall	za.s[w8, 0:3], z0.b, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10                  U     umlsl	za.s[w8, 0:1], z0.h, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     umlsll	za.s[w8, 0:3], z0.b, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10                  U     smopa	za0.s, p0/m, p0/m, z0.h, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     smops	za0.s, p0/m, p0/m, z0.h, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     umopa	za0.s, p0/m, p0/m, z0.h, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     umops	za0.s, p0/m, p0/m, z0.h, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     sqrshrn	z0.b, { z0.s - z3.s }, #32
+# NONSTREAMING-NEXT:  1      1     0.10                  U     sqrshrun	z0.b, { z0.s - z3.s }, #32
+# NONSTREAMING-NEXT:  1      1     0.10                  U     uqrshrn	z0.b, { z0.s - z3.s }, #32
+# NONSTREAMING-NEXT:  1      1     0.10                  U     add	za.s[w8, 0, vgx2], { z0.s, z1.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     sub	za.s[w8, 0, vgx2], { z0.s, z1.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     add	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     addha	za0.s, p0/m, p0/m, z0.s
+# NONSTREAMING-NEXT:  1      1     0.10                  U     addva	za0.s, p0/m, p0/m, z0.s
+# NONSTREAMING-NEXT:  1      1     0.10    *                   bf1cvt	z0.h, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10    *                   bf1cvtlt	z0.h, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10    *                   bf2cvt	z0.h, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10    *                   bf2cvtlt	z0.h, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10                  U     bfadd	za.h[w8, 0, vgx2], { z0.h, z1.h }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     bfcvt	z0.h, { z0.s, z1.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     bfcvtn	z0.h, { z0.s, z1.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     bfclamp	{ z0.h, z1.h }, z0.h, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     bfdot	za.s[w8, 0, vgx2], { z0.h, z1.h }, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     bfmax	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     bfmaxnm	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     bfmin	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     bfminnm	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     bfmla	za.h[w8, 0, vgx2], { z0.h, z1.h }, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     bfmlal	za.s[w8, 0:1, vgx2], { z0.h, z1.h }, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     bfmls	za.h[w8, 0, vgx2], { z0.h, z1.h }, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     bfmlsl	za.s[w8, 0:1, vgx2], { z0.h, z1.h }, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     bfmopa	za0.s, p0/m, p0/m, z0.h, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     bfmops	za0.s, p0/m, p0/m, z0.h, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     bfvdot	za.s[w8, 0, vgx2], { z0.h, z1.h }, z0.h[0]
+# NONSTREAMING-NEXT:  1      1     0.10                  U     bmopa	za0.s, p0/m, p0/m, z0.s, z0.s
+# NONSTREAMING-NEXT:  1      1     0.10                  U     bmops	za0.s, p0/m, p0/m, z0.s, z0.s
+# NONSTREAMING-NEXT:  1      1     0.10    *                   f1cvt	z0.h, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10    *                   f1cvtlt	z0.h, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10    *                   f2cvt	z0.h, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10    *                   f2cvtlt	z0.h, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fadd	za.s[w8, 0, vgx2], { z0.s, z1.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     famax	{ z0.s, z1.s }, { z0.s, z1.s }, { z0.s, z1.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     famin	{ z0.s, z1.s }, { z0.s, z1.s }, { z0.s, z1.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fclamp	{ z0.h, z1.h }, z0.h, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fcvt	z0.h, { z0.s, z1.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fcvtn	z0.h, { z0.s, z1.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fcvtzs	{ z0.s, z1.s }, { z0.s, z1.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fcvtzu	{ z0.s, z1.s }, { z0.s, z1.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fmopa	za0.s, p0/m, p0/m, z0.h, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fmops	za0.s, p0/m, p0/m, z0.h, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fmax	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fmaxnm	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fmin	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fminnm	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fmla	za.s[w8, 0, vgx2], { z0.s, z1.s }, z0.s
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fmlal	za.s[w8, 0:1, vgx2], { z0.h, z1.h }, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fmlall	za.s[w8, 0:3], z0.b, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fmls	za.s[w8, 0, vgx2], { z0.s, z1.s }, z0.s
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fmlsl	za.s[w8, 0:1, vgx2], { z0.h, z1.h }, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     frinta	{ z0.s, z1.s }, { z0.s, z1.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     frintm	{ z0.s, z1.s }, { z0.s, z1.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     frintn	{ z0.s, z1.s }, { z0.s, z1.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     frintp	{ z0.s, z1.s }, { z0.s, z1.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fvdot	za.s[w8, 0, vgx2], { z0.h, z1.h }, z0.h[0]
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fvdotb	za.s[w8, 0, vgx4], { z0.b, z1.b }, z0.b[0]
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fvdott	za.s[w8, 0, vgx4], { z0.b, z1.b }, z0.b[0]
+# NONSTREAMING-NEXT:  1      1     0.10                  U     fscale	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
+# NONSTREAMING-NEXT:  1      1     0.10                  U     luti2	{ z0.h, z1.h }, zt0, z0[0]
+# NONSTREAMING-NEXT:  1      1     0.10                  U     luti4	{ z0.h, z1.h }, zt0, z0[0]
+# NONSTREAMING-NEXT:  1      1     0.10    *             U     mov	{ z0.s, z1.s }, za0h.s[w12, 0:1]
+# NONSTREAMING-NEXT:  1      1     0.10                  U     movt	zt0[0], x0
+# NONSTREAMING-NEXT:  1      1     0.10                  U     movt	x0, zt0[0]
+# NONSTREAMING-NEXT:  1      1     0.10                  U     sclamp	{ z0.h, z1.h }, z0.h, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     smax	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
+# NONSTREAMING-NEXT:  1      1     0.10                  U     smin	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
+# NONSTREAMING-NEXT:  1      1     0.10                  U     uclamp	{ z0.h, z1.h }, z0.h, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     umax	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
+# NONSTREAMING-NEXT:  1      1     0.10                  U     umin	{ z0.s, z1.s }, { z0.s, z1.s }, z0.s
+# NONSTREAMING-NEXT:  1      1     0.10                  U     scvtf	{ z0.s, z1.s }, { z0.s, z1.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     ucvtf	{ z0.s, z1.s }, { z0.s, z1.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     sel	{ z0.h, z1.h }, pn8, { z0.h, z1.h }, { z0.h, z1.h }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     sel	{ z0.h - z3.h }, pn8, { z0.h - z3.h }, { z0.h - z3.h }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     smlal	za.s[w8, 0:1], z0.h, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     smlall	za.s[w8, 0:3], z0.b, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10                  U     smlsl	za.s[w8, 0:1], z0.h, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     smlsll	za.s[w8, 0:3], z0.b, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10                  U     umlal	za.s[w8, 0:1], z0.h, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     umlall	za.s[w8, 0:3], z0.b, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10                  U     umlsl	za.s[w8, 0:1], z0.h, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     umlsll	za.s[w8, 0:3], z0.b, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10                  U     smopa	za0.s, p0/m, p0/m, z0.h, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     smops	za0.s, p0/m, p0/m, z0.h, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     umopa	za0.s, p0/m, p0/m, z0.h, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     umops	za0.s, p0/m, p0/m, z0.h, z0.h
 # NONSTREAMING-NEXT:  1      2     0.17                        sqcvtn	z0.h, { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     sqcvtun	z0.b, { z0.s - z3.s }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     sqcvtun	z0.b, { z0.s - z3.s }
 # NONSTREAMING-NEXT:  1      2     0.17                        uqcvtn	z0.h, { z0.s, z1.s }
-# NONSTREAMING-NEXT:  1      0     0.10                  U     sqdmulh	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     sqrshr	z0.h, { z0.s, z1.s }, #16
-# NONSTREAMING-NEXT:  1      0     0.10                  U     sqrshrn	z0.b, { z0.s - z3.s }, #32
-# NONSTREAMING-NEXT:  1      0     0.10                  U     sqrshru	z0.h, { z0.s, z1.s }, #16
-# NONSTREAMING-NEXT:  1      0     0.10                  U     sqrshrun	z0.b, { z0.s - z3.s }, #32
-# NONSTREAMING-NEXT:  1      0     0.10                  U     uqrshr	z0.h, { z0.s, z1.s }, #16
-# NONSTREAMING-NEXT:  1      0     0.10                  U     uqrshrn	z0.b, { z0.s - z3.s }, #32
-# NONSTREAMING-NEXT:  1      0     0.10                  U     srshl	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     urshl	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
-# NONSTREAMING-NEXT:  1      0     0.10                  U     sudot	za.s[w8, 0, vgx2], { z0.b, z1.b }, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10                  U     usdot	za.s[w8, 0, vgx2], { z0.b, z1.b }, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10                  U     usmlall	za.s[w8, 0:3], z0.b, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10                  U     sumopa	za0.s, p0/m, p0/m, z0.b, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10                  U     sumops	za0.s, p0/m, p0/m, z0.b, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10                  U     usmopa	za0.s, p0/m, p0/m, z0.b, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10                  U     usmops	za0.s, p0/m, p0/m, z0.b, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10                  U     sunpk	{ z0.h, z1.h }, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10                  U     uunpk	{ z0.h, z1.h }, z0.b
-# NONSTREAMING-NEXT:  1      0     0.10                  U     suvdot	za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
-# NONSTREAMING-NEXT:  1      0     0.10                  U     uvdot	za.s[w8, 0, vgx2], { z0.h, z1.h }, z0.h[0]
-# NONSTREAMING-NEXT:  1      0     0.10                  U     svdot	za.s[w8, 0, vgx2], { z0.h, z1.h }, z0.h[0]
-# NONSTREAMING-NEXT:  1      0     0.10                  U     usvdot	za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
+# NONSTREAMING-NEXT:  1      1     0.10                  U     sqdmulh	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     sqrshr	z0.h, { z0.s, z1.s }, #16
+# NONSTREAMING-NEXT:  1      1     0.10                  U     sqrshrn	z0.b, { z0.s - z3.s }, #32
+# NONSTREAMING-NEXT:  1      1     0.10                  U     sqrshru	z0.h, { z0.s, z1.s }, #16
+# NONSTREAMING-NEXT:  1      1     0.10                  U     sqrshrun	z0.b, { z0.s - z3.s }, #32
+# NONSTREAMING-NEXT:  1      1     0.10                  U     uqrshr	z0.h, { z0.s, z1.s }, #16
+# NONSTREAMING-NEXT:  1      1     0.10                  U     uqrshrn	z0.b, { z0.s - z3.s }, #32
+# NONSTREAMING-NEXT:  1      1     0.10                  U     srshl	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     urshl	{ z0.h, z1.h }, { z0.h, z1.h }, z0.h
+# NONSTREAMING-NEXT:  1      1     0.10                  U     sudot	za.s[w8, 0, vgx2], { z0.b, z1.b }, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10                  U     usdot	za.s[w8, 0, vgx2], { z0.b, z1.b }, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10                  U     usmlall	za.s[w8, 0:3], z0.b, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10                  U     sumopa	za0.s, p0/m, p0/m, z0.b, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10                  U     sumops	za0.s, p0/m, p0/m, z0.b, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10                  U     usmopa	za0.s, p0/m, p0/m, z0.b, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10                  U     usmops	za0.s, p0/m, p0/m, z0.b, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10                  U     sunpk	{ z0.h, z1.h }, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10                  U     uunpk	{ z0.h, z1.h }, z0.b
+# NONSTREAMING-NEXT:  1      1     0.10                  U     suvdot	za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
+# NONSTREAMING-NEXT:  1      1     0.10                  U     uvdot	za.s[w8, 0, vgx2], { z0.h, z1.h }, z0.h[0]
+# NONSTREAMING-NEXT:  1      1     0.10                  U     svdot	za.s[w8, 0, vgx2], { z0.h, z1.h }, z0.h[0]
+# NONSTREAMING-NEXT:  1      1     0.10                  U     usvdot	za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b[0]
 # NONSTREAMING-NEXT:  1      2     0.17                        uzp1	z31.s, z31.s, z31.s
 # NONSTREAMING-NEXT:  1      2     0.17                        uzp2	z31.s, z31.s, z31.s
-# NONSTREAMING-NEXT:  1      0     0.10                  U     zero	za.d[w8, 0, vgx2]
-# NONSTREAMING-NEXT:  1      0     0.10                  U     zero	{ zt0 }
+# NONSTREAMING-NEXT:  1      1     0.10                  U     zero	za.d[w8, 0, vgx2]
+# NONSTREAMING-NEXT:  1      1     0.10                  U     zero	{ zt0 }
 # NONSTREAMING-NEXT:  1      2     0.17                        zip1	z0.s, z0.s, z0.s
 # NONSTREAMING-NEXT:  1      2     0.17                        zip2	z0.s, z0.s, z0.s
-# NONSTREAMING-NEXT:  1      0     0.10    *             U     ldr	za[w12, 0], [x0]
-# NONSTREAMING-NEXT:  1      0     0.10           *      U     str	za[w12, 0], [x0]
+# NONSTREAMING-NEXT:  1      1     0.10    *             U     ldr	za[w12, 0], [x0]
+# NONSTREAMING-NEXT:  1      1     0.10           *      U     str	za[w12, 0], [x0]
 
 # STREAMING:         [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # STREAMING-NEXT:     1      4     1.00                        bfmlslb	z0.s, z1.h, z2.h

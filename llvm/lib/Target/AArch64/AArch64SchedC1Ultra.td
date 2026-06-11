@@ -155,8 +155,9 @@ def : WriteRes<WriteLDHi,    []> { let Latency = 4; }
 // scheduled on the CME coprocessor is useful for analysis.
 
 // SME2 related read write types
-// Define generic 0 micro-op types.
+// Define generic 0 and 1 micro-op types
 def C1UWrite_0c : SchedWriteRes<[]> { let Latency = 0; }
+def C1UWrite_1c : SchedWriteRes<[]> { let Latency = 1; }
 
 class C1UCMEWrite<int LatencyCycles, list<ProcResourceKind> Resources>
     : SchedWriteRes<Resources> {
@@ -170,9 +171,23 @@ class C1UCMEWriteRC<int LatencyCycles, list<ProcResourceKind> Resources,
   let ReleaseAtCycles = ReleaseCycles;
 }
 
-class C1UStreamingOnlySchedWrite<SchedWrite StreamingWrite>
+class C1UStreamingSchedWrite<SchedWrite StreamingWrite, SchedWrite BaseWrite>
     : SchedWriteVariant<[
         SchedVar<SMEMCStreamingSchedPred, [StreamingWrite]>,
+        SchedVar<NoSchedPred,            [BaseWrite]>
+      ]>;
+
+
+// Instructions added by SME and only available in streaming SVE mode
+class C1UStreamingOnlySchedWrite<SchedWrite StreamingWrite> : C1UStreamingSchedWrite<StreamingWrite, C1UWrite_1c>;
+
+// Instructions added by SME, available in non-streaming SVE mode or sent to CME
+// when in streaming SVE mode.
+class C1USMEStreamingSchedWrite<SchedWrite StreamingWrite,
+                                SchedWrite SMEWrite>
+    : SchedWriteVariant<[
+        SchedVar<SMEMCStreamingSchedPred, [StreamingWrite]>,
+        SchedVar<SMESchedPred,            [SMEWrite]>,
         SchedVar<NoSchedPred,             [C1UWrite_0c]>
       ]>;
 
@@ -751,20 +766,6 @@ def C1URd_ZBFMAL  : SchedReadAdvance<3, [C1UWr_ZBFMAL]>;
 
 def C1UWr_Pred    : SchedWriteRes<[C1UUnitM, C1UUnitM]> { let Latency     = 2; }
 def C1URd_Pred    : SchedReadAdvance<1, [C1UWr_Pred]>;
-
-class C1UStreamingSchedWrite<SchedWrite StreamingWrite, SchedWrite BaseWrite>
-    : SchedWriteVariant<[
-        SchedVar<SMEMCStreamingSchedPred, [StreamingWrite]>,
-        SchedVar<NoSchedPred,            [BaseWrite]>
-      ]>;
-
-class C1USMEStreamingSchedWrite<SchedWrite StreamingWrite,
-                                SchedWrite SMEWrite>
-    : SchedWriteVariant<[
-        SchedVar<SMEMCStreamingSchedPred, [StreamingWrite]>,
-        SchedVar<SMESchedPred,            [SMEWrite]>,
-        SchedVar<NoSchedPred,             [C1UWrite_0c]>
-      ]>;
 
 // Predicate controlled types
 def C1UWrite_ArithI : SchedWriteVariant<[
