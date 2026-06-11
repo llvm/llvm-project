@@ -48,13 +48,17 @@ define void @zext_nxv8i16_to_nxv8i64_deinterleave_in_loop(ptr %src, ptr %dst, <v
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 2048
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    store <vscale x 2 x i64> [[ADD_B_I64]], ptr [[DST]], align 16
+; CHECK-NEXT:    [[ADD_B_I64_LCSSA:%.*]] = phi <vscale x 2 x i64> [ [[ADD_B_I64]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ADD_G_I64_LCSSA:%.*]] = phi <vscale x 2 x i64> [ [[ADD_G_I64]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ADD_R_I64_LCSSA:%.*]] = phi <vscale x 2 x i64> [ [[ADD_R_I64]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ADD_A_I64_LCSSA:%.*]] = phi <vscale x 2 x i64> [ [[ADD_A_I64]], %[[LOOP]] ]
+; CHECK-NEXT:    store <vscale x 2 x i64> [[ADD_B_I64_LCSSA]], ptr [[DST]], align 16
 ; CHECK-NEXT:    [[G_I64_GEP:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[DST]], i64 1
-; CHECK-NEXT:    store <vscale x 2 x i64> [[ADD_G_I64]], ptr [[G_I64_GEP]], align 16
+; CHECK-NEXT:    store <vscale x 2 x i64> [[ADD_G_I64_LCSSA]], ptr [[G_I64_GEP]], align 16
 ; CHECK-NEXT:    [[R_I64_GEP:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[DST]], i64 2
-; CHECK-NEXT:    store <vscale x 2 x i64> [[ADD_R_I64]], ptr [[R_I64_GEP]], align 16
+; CHECK-NEXT:    store <vscale x 2 x i64> [[ADD_R_I64_LCSSA]], ptr [[R_I64_GEP]], align 16
 ; CHECK-NEXT:    [[A_I64_GEP:%.*]] = getelementptr <vscale x 2 x i64>, ptr [[DST]], i64 3
-; CHECK-NEXT:    store <vscale x 2 x i64> [[ADD_A_I64]], ptr [[A_I64_GEP]], align 16
+; CHECK-NEXT:    store <vscale x 2 x i64> [[ADD_A_I64_LCSSA]], ptr [[A_I64_GEP]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:

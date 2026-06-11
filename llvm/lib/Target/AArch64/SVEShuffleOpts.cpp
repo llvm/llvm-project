@@ -68,6 +68,7 @@
 #include "AArch64TargetMachine.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -88,43 +89,6 @@ using namespace llvm;
 using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "aarch64-sve-shuffle-opts"
-
-namespace {
-
-class SVEShuffleImpl {
-  const AArch64TargetMachine *TM = nullptr;
-  const AArch64Subtarget *ST = nullptr;
-  const LoopInfo *LI = nullptr;
-
-public:
-  SVEShuffleImpl() {};
-  SVEShuffleImpl(const AArch64TargetMachine *TM) : TM(TM) {};
-
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
-  bool runOnFunction(Function &F, Pass &P);
-
-private:
-  bool processLoop(Loop &L);
-};
-
-struct SVEShuffleOpts : public FunctionPass {
-  SVEShuffleImpl Impl;
-  static char ID; // Pass identification, replacement for typeid
-  SVEShuffleOpts() : FunctionPass(ID) {}
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-
-    return Impl.runOnFunction(F, *this);
-  }
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  StringRef getPassName() const override { return "SVE Tbl Folding Opts"; }
-
-private:
-};
-} // end anonymous namespace
 
 /// A mapping between a vector_deinterleaveN intrinsic and extending cast
 /// instructions used on the resulting subvectors.
@@ -178,13 +142,9 @@ static void evaluateDeinterleave(IntrinsicInst *I, DeinterleaveMap &Candidates,
 
     Opcode = Extend->getOpcode();
     DestTy = Extend->getDestTy();
-    Type *SrcTy = Extend->getSrcTy();
 
-    unsigned SrcBits = SrcTy->getScalarSizeInBits();
-    unsigned DestBits = DestTy->getScalarSizeInBits();
-
-    // Looking to match the deinterleave factor.
-    if (DestBits / SrcBits != 4)
+    // Make sure DestTy matches the input size.
+    if (DestTy->getPrimitiveSizeInBits() != InputVT.getSizeInBits())
       return;
 
     Extends[Extract->getIndices().front()] = Extend;
@@ -262,7 +222,8 @@ static void optimizeSVEDeinterleavedExtends(DeinterleaveMap Deinterleaves) {
   }
 }
 
-bool SVEShuffleImpl::processLoop(Loop &L) {
+static bool processLoop(Loop &L, const AArch64TargetLowering &TL,
+                        DataLayout DL) {
   // TODO: Pull other shuffles into the tbl where possible.
   // TODO: Add more advanced cases, such as introducing shuffles so that
   //       the SVE odd/even BT narrowing instructions can be used.
@@ -271,8 +232,7 @@ bool SVEShuffleImpl::processLoop(Loop &L) {
   for (auto *BB : L.blocks())
     for (auto &I : *BB)
       if (match(&I, m_Intrinsic<Intrinsic::vector_deinterleave4>(m_Value())))
-        evaluateDeinterleave(cast<IntrinsicInst>(&I), Candidates, L,
-                             *ST->getTargetLowering(), TM->createDataLayout());
+        evaluateDeinterleave(cast<IntrinsicInst>(&I), Candidates, L, TL, DL);
 
   if (Candidates.empty())
     return false;
@@ -281,70 +241,64 @@ bool SVEShuffleImpl::processLoop(Loop &L) {
   return true;
 }
 
-void SVEShuffleOpts::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<LoopInfoWrapperPass>();
-  AU.addRequired<TargetPassConfig>();
-  AU.setPreservesCFG();
-}
+namespace {
+struct SVEShuffleOpts : public LoopPass {
+  static char ID; // Pass identification, replacement for typeid
+  SVEShuffleOpts() : LoopPass(ID) {}
+
+  bool runOnLoop(Loop *L, LPPassManager &PM) override {
+    TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
+    const AArch64TargetMachine &TM = TPC.getTM<AArch64TargetMachine>();
+    const AArch64Subtarget &ST =
+        *TM.getSubtargetImpl(*L->getHeader()->getParent());
+
+    // If we don't have SVE, or if we're compiling for big endian (potentially
+    // requiring different shuffle masks), skip it.
+    if (skipLoop(L) || !L->isInnermost() ||
+        !ST.isSVEorStreamingSVEAvailable() ||
+        TM.createDataLayout().isBigEndian())
+      return false;
+
+    return processLoop(*L, *ST.getTargetLowering(), TM.createDataLayout());
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetPassConfig>();
+    AU.setPreservesCFG();
+  }
+
+  StringRef getPassName() const override { return "SVE Shuffle Optimizations"; }
+};
+} // end anonymous namespace
 
 char SVEShuffleOpts::ID = 0;
-static const char *name = "SVE VLA shuffle optimizations";
+static const char *name = "SVE Shuffle Optimizations";
 INITIALIZE_PASS_BEGIN(SVEShuffleOpts, DEBUG_TYPE, name, false, false)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(SVEShuffleOpts, DEBUG_TYPE, name, false, false)
 
-FunctionPass *llvm::createSVEShuffleOptsPass() { return new SVEShuffleOpts(); }
+Pass *llvm::createSVEShuffleOptsPass() { return new SVEShuffleOpts(); }
 
-PreservedAnalyses SVEShuffleOptsPass::run(Function &F,
-                                          FunctionAnalysisManager &FAM) {
-  SVEShuffleImpl Impl(&TM);
-  return Impl.run(F, FAM);
-}
+PreservedAnalyses SVEShuffleOptsPass::run(Loop &L, LoopAnalysisManager &AM,
+                                          LoopStandardAnalysisResults &AR,
+                                          LPMUpdater &U) {
+  const AArch64Subtarget &ST =
+      *TM.getSubtargetImpl(*L.getHeader()->getParent());
 
-bool SVEShuffleImpl::runOnFunction(Function &F, Pass &P) {
-  // Make sure we can use SVE
-  TargetPassConfig &TPC = P.getAnalysis<TargetPassConfig>();
-  TM = &TPC.getTM<AArch64TargetMachine>();
-  ST = TM->getSubtargetImpl(F);
-  if (!ST->isSVEorStreamingSVEAvailable() ||
-      TM->createDataLayout().isBigEndian())
-    return false;
-
-  LI = &P.getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-
-  bool Changed = false;
-  // Only looking to tranform innermost loops, given the increase in
-  // register usage.
-  for (Loop *L : LI->getLoopsInPreorder()) {
-    if (L->isInnermost())
-      Changed |= processLoop(*L);
-  }
-
-  return Changed;
-}
-
-PreservedAnalyses SVEShuffleImpl::run(Function &F,
-                                      FunctionAnalysisManager &FAM) {
-  ST = TM->getSubtargetImpl(F);
-  if (!ST->isSVEorStreamingSVEAvailable() ||
-      TM->createDataLayout().isBigEndian())
+  // If we don't have SVE, or if we're compiling for big endian (potentially
+  // requiring different shuffle masks), skip it.
+  if (!L.isInnermost() || !ST.isSVEorStreamingSVEAvailable() ||
+      TM.createDataLayout().isBigEndian())
     return PreservedAnalyses::all();
 
-  LI = &FAM.getResult<LoopAnalysis>(F);
+  if (processLoop(L, *ST.getTargetLowering(), TM.createDataLayout())) {
+    PreservedAnalyses PA;
+    PA.preserveSet<CFGAnalyses>();
+    PA.preserve<TargetIRAnalysis>();
+    PA.preserve<AssumptionAnalysis>();
+    PA.preserve<MemorySSAAnalysis>();
+    return PA;
+  }
 
-  bool Changed = false;
-  // Only looking to tranform innermost loops, given the increase in
-  // register usage.
-  for (Loop *L : LI->getLoopsInPreorder())
-    if (L->isInnermost())
-      Changed |= processLoop(*L);
-
-  PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
-  PA.preserve<TargetIRAnalysis>();
-  PA.preserve<AssumptionAnalysis>();
-  PA.preserve<MemorySSAAnalysis>();
-
-  return Changed ? PA : PreservedAnalyses::all();
+  return PreservedAnalyses::all();
 }

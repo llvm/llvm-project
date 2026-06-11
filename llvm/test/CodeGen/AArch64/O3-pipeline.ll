@@ -85,7 +85,8 @@
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       AArch64 Stack Tagging
 ; CHECK-NEXT:       Natural Loop Information
-; CHECK-NEXT:       SVE Tbl Folding Opts
+; CHECK-NEXT:       Loop Pass Manager
+; CHECK-NEXT:         SVE Shuffle Optimizations
 ; CHECK-NEXT:       Complex Deinterleaving Pass
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       Memory SSA
