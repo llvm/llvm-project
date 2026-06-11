@@ -170,6 +170,7 @@ enum RegBankLLTMappingApplyID {
   // any LLT, bank-only apply IDs
   VgprAnyTy,
   AgprAnyTy,
+  VgprOrAgprAnyTy,
 
   // sgpr scalars, pointers, vectors and B-types
   Sgpr16,
@@ -339,7 +340,8 @@ enum LoweringMethodID {
   InsVecEltToSel,
   InsVecEltTo32,
   AbsToNegMax,
-  AbsToS32
+  AbsToS32,
+  DynStackAlloc
 };
 
 enum FastRulesTypes {
