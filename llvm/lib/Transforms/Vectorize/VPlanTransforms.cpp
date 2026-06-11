@@ -1149,7 +1149,9 @@ static VPValue *optimizeLatchExitInductionUser(
                                                m_SpecificLoop(L))))
     return nullptr;
 
-  auto *StartIRV = vputils::getVPIRValueForSCEVExpr(Plan, Start);
+  // TODO: Start value can be defined be a VPExpandSCEVRecipe after
+  // VPDerivedIVRecipe supports a general VPValue as the start value.
+  VPIRValue *StartIRV = vputils::getVPIRValueForSCEVExpr(Plan, Start);
   if (!StartIRV)
     return nullptr;
 
