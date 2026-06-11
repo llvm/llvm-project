@@ -236,6 +236,9 @@ class LLVM_ABI MCStreamer {
   WinEH::FrameInfo *CurrentWinFrameInfo;
   size_t CurrentProcWinFrameInfoStartIndex;
 
+  /// Default unwind version for new WinCFI frames.
+  uint8_t DefaultWinCFIUnwindVersion = 1;
+
   /// This is stack of current and previous section values saved by
   /// pushSection.
   SmallVector<std::pair<MCSectionSubPair, MCSectionSubPair>, 4> SectionStack;
@@ -1065,6 +1068,8 @@ public:
   virtual void emitWinCFIFuncletOrFuncEnd(SMLoc Loc = SMLoc());
   virtual void emitWinCFISplitChained(SMLoc Loc = SMLoc());
   virtual void emitWinCFIPushReg(MCRegister Register, SMLoc Loc = SMLoc());
+  virtual void emitWinCFIPush2Regs(MCRegister Reg1, MCRegister Reg2,
+                                   SMLoc Loc = SMLoc());
   virtual void emitWinCFISetFrame(MCRegister Register, unsigned Offset,
                                   SMLoc Loc = SMLoc());
   virtual void emitWinCFIAllocStack(unsigned Size, SMLoc Loc = SMLoc());
@@ -1078,6 +1083,11 @@ public:
   virtual void emitWinCFIEndEpilogue(SMLoc Loc = SMLoc());
   virtual void emitWinCFIUnwindV2Start(SMLoc Loc = SMLoc());
   virtual void emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc = SMLoc());
+
+  /// Set the default unwind version for new WinCFI frames.
+  void setDefaultWinCFIUnwindVersion(uint8_t V) {
+    DefaultWinCFIUnwindVersion = V;
+  }
   virtual void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                                 SMLoc Loc = SMLoc());
   virtual void emitWinEHHandlerData(SMLoc Loc = SMLoc());
