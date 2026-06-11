@@ -249,7 +249,7 @@ Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
 /// `useInBoundsInsteadOfMasking` to `true` to use the "in_bounds" attribute
 /// instead of explicit masks.
 /// `writeIndices` specifies the offsets to use. If empty, all indices are set
-/// to 0. When \p permutationMap is provided, the in_bounds attribute is
+/// to 0. When `permutationMap` is provided, the in_bounds attribute is
 /// inferred from the map instead of the destination shape.
 Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
                                     Value vecToStore, Value dest,
