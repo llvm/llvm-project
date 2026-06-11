@@ -188,10 +188,7 @@ enum : uint64_t {
 //
 // getTSFlags extracts the TSFlags value from different argument types.
 // SIInstrInfo.h adds a MachineInstr overload in namespace llvm (found via ADL
-// when predicates are instantiated with MachineInstr). Later commits in this
-// series add (MCInstrInfo, unsigned Opcode) and (MCInstrInfo, MCInst) overloads
-// so that MC-layer callers can write e.g. isFLAT(MII, Inst) without extracting
-// a descriptor first.
+// when predicates are instantiated with MachineInstr).
 
 constexpr uint64_t getTSFlags(const MCInstrDesc &Desc) { return Desc.TSFlags; }
 
