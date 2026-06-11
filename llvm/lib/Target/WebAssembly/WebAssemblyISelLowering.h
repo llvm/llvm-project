@@ -143,6 +143,10 @@ namespace WebAssembly {
 FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
                          const TargetLibraryInfo *libInfo,
                          const LibcallLoweringInfo *libcallLowering);
+
+APInt encodeFunctionSignature(SelectionDAG *DAG, SDLoc &DL,
+                              ArrayRef<MVT> Returns, ArrayRef<MVT> Params);
+
 } // end namespace WebAssembly
 
 } // end namespace llvm

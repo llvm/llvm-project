@@ -230,7 +230,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
       break;
     }
     case llvm::MachineOperand::MO_CImmediate: {
-      // Lower type index placeholder for ref.test
+      // Lower type index placeholder for ref.test and ref.cast
       // Currently this is the only way that CImmediates show up so panic if we
       // get confused.
       unsigned DescIndex = I - NumVariadicDefs;
@@ -266,14 +266,16 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
               Params.push_back(WebAssembly::regClassToValType(
                   MRI.getRegClass(MO.getReg())->getID()));
 
-          // call_indirect instructions have a callee operand at the end which
-          // doesn't count as a param.
-          if (WebAssembly::isCallIndirect(MI->getOpcode()))
+          // call_indirect and call_ref instructions have a callee operand at
+          // the end which doesn't count as a param.
+          if (WebAssembly::isCallIndirect(MI->getOpcode()) ||
+              WebAssembly::isCallRef(MI->getOpcode()))
             Params.pop_back();
 
-          // return_call_indirect instructions have the return type of the
-          // caller
-          if (MI->getOpcode() == WebAssembly::RET_CALL_INDIRECT)
+          // return_call_indirect and return_call_ref instructions have the
+          // return type of the caller
+          if (MI->getOpcode() == WebAssembly::RET_CALL_INDIRECT ||
+              MI->getOpcode() == WebAssembly::RET_CALL_REF)
             getFunctionReturns(MI, Returns);
 
           MCOp = lowerTypeIndexOperand(std::move(Returns), std::move(Params));
