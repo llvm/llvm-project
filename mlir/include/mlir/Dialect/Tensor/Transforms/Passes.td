@@ -26,9 +26,9 @@ def FoldTensorSubsetOpsPass : Pass<"fold-tensor-subset-ops"> {
   ];
 }
 
-def MLGOScalarizeSingleElementTensorReturnPass
-    : Pass<"mlgo-scalarize-single-element-tensor-return", "ModuleOp"> {
-  let summary = "Scalarize private tensor-returning functions for EmitC lowering of MLGO models";
+def ScalarizeSingleElementTensorReturnPass
+    : Pass<"scalarize-single-element-tensor-return", "ModuleOp"> {
+  let summary = "Scalarize private functions that return single-element tensor";
   let description = [{
     Rewrites private functions returning exactly one statically shaped ranked
     tensor of exactly one element into functions returning the tensor element

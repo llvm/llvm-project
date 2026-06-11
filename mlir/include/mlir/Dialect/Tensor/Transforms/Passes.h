@@ -19,7 +19,7 @@ namespace tensor {
 //===----------------------------------------------------------------------===//
 
 /// Create instances of `tensor` transformation passes.
-#define GEN_PASS_DECL_MLGOSCALARIZESINGLEELEMENTTENSORRETURNPASS
+#define GEN_PASS_DECL_SCALARIZESINGLEELEMENTTENSORRETURNPASS
 #define GEN_PASS_DECL_FOLDTENSORSUBSETOPSPASS
 #include "mlir/Dialect/Tensor/Transforms/Passes.h.inc"
 

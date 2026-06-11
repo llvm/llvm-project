@@ -1,4 +1,4 @@
-// RUN: mlir-opt -mlgo-scalarize-single-element-tensor-return -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -scalarize-single-element-tensor-return -split-input-file %s | FileCheck %s
 
 /// Positive tests: functions with no users updated.
 

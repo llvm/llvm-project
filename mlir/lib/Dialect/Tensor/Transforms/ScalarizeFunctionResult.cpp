@@ -1,4 +1,4 @@
-//===- MLGOScalarizeFunctionResult.cpp - Scalarize tensor returns ---------===//
+//===- ScalarizeFunctionResult.cpp - Scalarize tensor returns ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@
 
 namespace mlir {
 namespace tensor {
-#define GEN_PASS_DEF_MLGOSCALARIZESINGLEELEMENTTENSORRETURNPASS
+#define GEN_PASS_DEF_SCALARIZESINGLEELEMENTTENSORRETURNPASS
 #include "mlir/Dialect/Tensor/Transforms/Passes.h.inc"
 } // namespace tensor
 } // namespace mlir
@@ -278,8 +278,7 @@ static void rewriteScalarizableFunction(func::FuncOp func,
 ///     return r
 ///   }
 static LogicalResult
-MLGOScalarizeSingleElementTensorReturns(ModuleOp module,
-                                        RewriterBase &rewriter) {
+ScalarizeSingleElementTensorReturns(ModuleOp module, RewriterBase &rewriter) {
   // The transform depends on module-scoped `SymbolUserMap` state and on a
   // precomputed DFS result, so it runs as a direct module analysis + rewrite
   // instead of exposing a pattern-testing / transform-dialect pattern path.
@@ -302,15 +301,14 @@ MLGOScalarizeSingleElementTensorReturns(ModuleOp module,
   return success();
 }
 
-struct MLGOScalarizeSingleElementTensorReturnPass
-    : public tensor::impl::MLGOScalarizeSingleElementTensorReturnPassBase<
-          MLGOScalarizeSingleElementTensorReturnPass> {
+struct ScalarizeSingleElementTensorReturnPass
+    : public tensor::impl::ScalarizeSingleElementTensorReturnPassBase<
+          ScalarizeSingleElementTensorReturnPass> {
   using Base::Base;
 
   void runOnOperation() override {
     IRRewriter rewriter(&getContext());
-    if (failed(
-            MLGOScalarizeSingleElementTensorReturns(getOperation(), rewriter)))
+    if (failed(ScalarizeSingleElementTensorReturns(getOperation(), rewriter)))
       signalPassFailure();
   }
 };
