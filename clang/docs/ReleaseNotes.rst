@@ -1009,6 +1009,14 @@ Sanitizers
 ----------
 - UndefinedBehaviorSanitizer now supports ``__ubsan_default_suppressions``.
 
+- Sanitizer Special Case Lists (``-fsanitize-ignorelist``) now support
+  Version 4 of the Special Case List format, which introduces a transition
+  period for leading dot-slash (``./``) canonicalization in path matching.
+  Version 4 matches both canonicalized and non-canonicalized paths but emits a
+  warning for deprecated matches. Version 5 drops backward compatibility and
+  requires rules to match canonicalized paths (without leading ``./``).
+
+
 Python Binding Changes
 ----------------------
 - Add deprecation warnings to ``CompletionChunk.isKind...`` methods.
