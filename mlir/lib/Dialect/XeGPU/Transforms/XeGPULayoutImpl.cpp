@@ -718,21 +718,6 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   // Use case 2: Dim split from source to result, for multi-stage reduction
   SmallVector<SmallVector<int64_t>> splitDimGroups;
   if (xegpu::matchSplitDimExpansion(srcShape, resShape, splitDimGroups)) {
-    llvm::dbgs() << "[DEBUG inferShapeCastSourceLayout] case2 split. resLayout="
-                 << resLayout << " srcShape=[";
-    for (auto s : srcShape)
-      llvm::dbgs() << s << ",";
-    llvm::dbgs() << "] resShape=[";
-    for (auto s : resShape)
-      llvm::dbgs() << s << ",";
-    llvm::dbgs() << "] groups=";
-    for (auto &g : splitDimGroups) {
-      llvm::dbgs() << "{";
-      for (auto d : g)
-        llvm::dbgs() << d << ",";
-      llvm::dbgs() << "} ";
-    }
-    llvm::dbgs() << "\n";
     auto srcLayout = resLayout;
     for (const auto &dimGroup : splitDimGroups)
       srcLayout = srcLayout.collapseDims(dimGroup);
@@ -811,12 +796,10 @@ static bool leadingDimsAreUnit(ArrayRef<int64_t> shape, int numInnerDims) {
 /// result layout can later be distributed without re-deriving the lane
 /// layout. `instData`, `laneLayout`, and `laneData` may have different
 /// element types; they are normalized to int32 entries.
-static xegpu::LayoutAttr
-buildInstDataLayoutWithLane(mlir::MLIRContext *context,
-                            ArrayRef<int64_t> instData,
-                            ArrayRef<int64_t> laneLayout,
-                            ArrayRef<int64_t> laneData,
-                            DenseI32ArrayAttr orderAttr = nullptr) {
+static xegpu::LayoutAttr buildInstDataLayoutWithLane(
+    mlir::MLIRContext *context, ArrayRef<int64_t> instData,
+    ArrayRef<int64_t> laneLayout, ArrayRef<int64_t> laneData,
+    DenseI32ArrayAttr orderAttr = nullptr) {
   auto toI32Attr = [&](auto range) {
     SmallVector<int32_t> v(range.begin(), range.end());
     return DenseI32ArrayAttr::get(context, v);
@@ -1284,33 +1267,26 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
   return requiredResLayout;
 }
 
-// /// Computes lane_layout and lane_data for scatter-style load anchor layouts
-// /// (load gather, load matrix). Lanes and the per-lane vector both live on
-// the
-// /// innermost dim; the per-lane vector width is hinted by the consumer's
-// /// lane_data[innermost]:
-// ///   - laneData[innermost]   = min(consumerLaneData[innermost],
-// maxChunkSize)
-// ///   - laneLayout[innermost] = min(subgroupSize,
-// ///                                 resShape[innermost] /
-// laneData[innermost])
-// /// All other entries are 1.
-// static std::pair<SmallVector<int64_t>, SmallVector<int64_t>>
-// computeScatterLoadLaneLayoutAndData(ArrayRef<int64_t> resShape,
-//                                     ArrayRef<int64_t> consumerLaneData,
-//                                     int subgroupSize, int64_t maxChunkSize) {
-//   int rank = resShape.size();
-//   SmallVector<int64_t> laneLayout(rank, 1), laneData(rank, 1);
-//   int innermost = rank - 1;
-//   laneData[innermost] = std::min(consumerLaneData.back(), maxChunkSize);
-//   laneLayout[innermost] = consumerLaneLayout.back();
-//   return {laneLayout, laneData};
-// }
-
-// Forward declaration: defined later in this file.
+/// Computes lane_layout and lane_data for scatter-style store anchor layouts
+/// (store scatter, store matrix). Lanes and the per-lane vector both live on
+/// the innermost dim:
+///   - laneLayout[innermost] = min(subgroupSize, srcShape[innermost])
+///   - laneData[innermost]   = min(srcShape[innermost] / laneLayout[innermost],
+///                                 maxChunkSize)
+/// All other entries are 1.
 static std::pair<SmallVector<int>, SmallVector<int>>
 computeScatterStoreLaneLayoutAndData(ArrayRef<int64_t> srcShape,
-                                     int subgroupSize, int64_t maxChunkSize);
+                                     int subgroupSize, int64_t maxChunkSize) {
+  int rank = srcShape.size();
+  SmallVector<int> laneLayout(rank, 1), laneData(rank, 1);
+  int innermost = rank - 1;
+  laneLayout[innermost] = std::min(static_cast<int>(subgroupSize),
+                                   static_cast<int>(srcShape[innermost]));
+  laneData[innermost] =
+      std::min(static_cast<int>(srcShape[innermost] / laneLayout[innermost]),
+               static_cast<int>(maxChunkSize));
+  return {laneLayout, laneData};
+}
 
 /// Sets up the anchor layout for load gather and load matrix operation.
 /// load matrix lowers to load gather and 1d block load. All of them share the
@@ -1375,7 +1351,7 @@ static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
 
 /// Sets up the anchor layout for a load gather operation.
 xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
-    xegpu::LayoutKind layoutKind, VectorType resVecTy, int chunkSize,
+    xegpu::LayoutKind layoutKind, VectorType resVecTy, int contigChunkSize,
     xegpu::DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch) {
 
   const int subgroupSize = uArch->getSubgroupSize();
@@ -1386,7 +1362,8 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
-  int maxChunkSize = uArchInstruction->getMaxLaneLoadSize(elemBitWidth);
+  int maxChunkSize = std::min(
+      uArchInstruction->getMaxLaneLoadSize(elemBitWidth), contigChunkSize);
 
   return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
                                       maxChunkSize, resShape, subgroupSize);
@@ -1396,7 +1373,7 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
 /// TODO: enhance load matrix to indicate lowering to chunked load or not.
 xegpu::DistributeLayoutAttr
 xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
-                                   VectorType resVecTy, int chunkSize,
+                                   VectorType resVecTy, int contigChunkSize,
                                    xegpu::DistributeLayoutAttr consumerLayout,
                                    const xegpu::uArch::uArch *uArch) {
 
@@ -1408,31 +1385,10 @@ xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
-  int maxChunkSize =
-      std::min(uArchInstruction->getMaxLaneLoadSize(elemBitWidth), chunkSize);
+  int maxChunkSize = std::min(
+      uArchInstruction->getMaxLaneLoadSize(elemBitWidth), contigChunkSize);
   return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
                                       maxChunkSize, resShape, subgroupSize);
-}
-
-/// Computes lane_layout and lane_data for scatter-style store anchor layouts
-/// (store scatter, store matrix). Lanes and the per-lane vector both live on
-/// the innermost dim:
-///   - laneLayout[innermost] = min(subgroupSize, srcShape[innermost])
-///   - laneData[innermost]   = min(srcShape[innermost] / laneLayout[innermost],
-///                                 maxChunkSize)
-/// All other entries are 1.
-static std::pair<SmallVector<int>, SmallVector<int>>
-computeScatterStoreLaneLayoutAndData(ArrayRef<int64_t> srcShape,
-                                     int subgroupSize, int64_t maxChunkSize) {
-  int rank = srcShape.size();
-  SmallVector<int> laneLayout(rank, 1), laneData(rank, 1);
-  int innermost = rank - 1;
-  laneLayout[innermost] = std::min(static_cast<int>(subgroupSize),
-                                   static_cast<int>(srcShape[innermost]));
-  laneData[innermost] =
-      std::min(static_cast<int>(srcShape[innermost] / laneLayout[innermost]),
-               static_cast<int>(maxChunkSize));
-  return {laneLayout, laneData};
 }
 
 /// Sets up the anchor layout for store scatter and store matrix operation.
@@ -1477,7 +1433,7 @@ setupGenericStoreAnchorLayout(xegpu::LayoutKind layoutKind,
 /// Sets up the anchor layout for a store scatter operation.
 xegpu::DistributeLayoutAttr
 xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
-                                     VectorType srcVecTy, int chunkSize,
+                                     VectorType srcVecTy, int contigChunkSize,
                                      const uArch::uArch *uArch) {
 
   const int subgroupSize = uArch->getSubgroupSize();
@@ -1488,8 +1444,8 @@ xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
-  int maxChunkSize =
-      std::min(uArchInstruction->getMaxLaneStoreSize(elemBitWidth), chunkSize);
+  int maxChunkSize = std::min(
+      uArchInstruction->getMaxLaneStoreSize(elemBitWidth), contigChunkSize);
   return setupGenericStoreAnchorLayout(layoutKind, context, maxChunkSize,
                                        srcShape, subgroupSize);
 }
@@ -1497,7 +1453,7 @@ xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
 /// Sets up the anchor layout for a store matrix operation.
 xegpu::DistributeLayoutAttr
 xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
-                                    VectorType srcVecTy, int chunkSize,
+                                    VectorType srcVecTy, int contigChunkSize,
                                     const xegpu::uArch::uArch *uArch) {
 
   const int subgroupSize = uArch->getSubgroupSize();
@@ -1508,8 +1464,8 @@ xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
-  int maxChunkSize =
-      std::min(uArchInstruction->getMaxLaneStoreSize(elemBitWidth), chunkSize);
+  int maxChunkSize = std::min(
+      uArchInstruction->getMaxLaneStoreSize(elemBitWidth), contigChunkSize);
 
   return setupGenericStoreAnchorLayout(layoutKind, context, maxChunkSize,
                                        srcShape, subgroupSize);
@@ -1680,8 +1636,8 @@ static xegpu::DistributeLayoutAttr setupGenericNdAnchorLayout(
       std::min<int64_t>(uArch->getSubgroupSize(), innermostShape);
   laneLayout.back() = lanesOnInnermost;
   if (lanesOnInnermost > 0)
-    laneData.back() = std::min<int64_t>(packingFactor,
-                                        innermostShape / lanesOnInnermost);
+    laneData.back() =
+        std::min<int64_t>(packingFactor, innermostShape / lanesOnInnermost);
   else
     laneData.back() = 1;
 
@@ -1731,8 +1687,8 @@ static xegpu::DistributeLayoutAttr setupGenericNdAnchorLayout(
   // (e.g. sub-byte floats with no uArch entry), fall back to
   // lane_layout * lane_data (k = 1).
   SmallVector<int64_t> instData(rank, 1);
-  int instWidth = xegpu::getLargestDivisor(
-      static_cast<int>(dataShape.back()), bWidths);
+  int instWidth =
+      xegpu::getLargestDivisor(static_cast<int>(dataShape.back()), bWidths);
   if (instWidth == -1)
     instData.back() = laneLayout.back() * laneData.back();
   else
@@ -1780,9 +1736,8 @@ static xegpu::DistributeLayoutAttr setupGenericNdAnchorLayout(
       return nullptr;
     SmallVector<int> sgLayout = {static_cast<int>(sgLayouts[0].first),
                                  static_cast<int>(sgLayouts[0].second)};
-    SmallVector<int> sgData = {
-        static_cast<int>(dataShape[0]) / sgLayout[0],
-        static_cast<int>(dataShape[1]) / sgLayout[1]};
+    SmallVector<int> sgData = {static_cast<int>(dataShape[0]) / sgLayout[0],
+                               static_cast<int>(dataShape[1]) / sgLayout[1]};
     return xegpu::LayoutAttr::get(
         context, DenseI32ArrayAttr::get(context, sgLayout),
         DenseI32ArrayAttr::get(context, sgData),
@@ -1852,10 +1807,11 @@ xegpu::setupPrefetchNdAnchorLayout(xegpu::LayoutKind layoutKind,
 /// against uArch constraints; if valid, the consumer's `inst_data` /
 /// `sg_layout` are honored. Otherwise the helper falls back to defaults
 /// derived from uArch block parameters.
-xegpu::DistributeLayoutAttr xegpu::setupLoadNdAnchorLayout(
-    xegpu::LayoutKind layoutKind, VectorType resVecTy,
-    xegpu::DistributeLayoutAttr consumerLayout, int numSg,
-    const xegpu::uArch::uArch *uArch) {
+xegpu::DistributeLayoutAttr
+xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
+                               VectorType resVecTy,
+                               xegpu::DistributeLayoutAttr consumerLayout,
+                               int numSg, const xegpu::uArch::uArch *uArch) {
   auto context = resVecTy.getContext();
   Type elemTy = resVecTy.getElementType();
 

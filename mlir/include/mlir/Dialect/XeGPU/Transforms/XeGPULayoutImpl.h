@@ -208,27 +208,25 @@ DistributeLayoutAttr setupInsertStridedSliceResultLayout(
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a load gather operation.
-DistributeLayoutAttr
-setupLoadGatherAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
-                            int chunkSize, DistributeLayoutAttr consumerLayout,
-                            const uArch::uArch *uArch);
+DistributeLayoutAttr setupLoadGatherAnchorLayout(
+    LayoutKind layoutKind, VectorType vectorTy, int contigChunkSize,
+    DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for load matrix operation.
-DistributeLayoutAttr
-setupLoadMatrixAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
-                            int chunkSize, DistributeLayoutAttr consumerLayout,
-                            const uArch::uArch *uArch);
+DistributeLayoutAttr setupLoadMatrixAnchorLayout(
+    LayoutKind layoutKind, VectorType vectorTy, int contigChunkSize,
+    DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a store scatter operation.
 DistributeLayoutAttr setupStoreScatterAnchorLayout(LayoutKind layoutKind,
                                                    VectorType vectorTy,
-                                                   int chunkSize,
+                                                   int contigChunkSize,
                                                    const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a store matrix operation.
 DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
                                                   VectorType vectorTy,
-                                                  int chunkSize,
+                                                  int contigChunkSize,
                                                   const uArch::uArch *uArch);
 
 /// If the consumer layout has only inst_data (no lane_layout/lane_data),
@@ -245,8 +243,7 @@ completeLoadGatherLayoutFromInstData(DistributeLayoutAttr consumerLayout,
 
 DistributeLayoutAttr
 completeStoreScatterLayoutFromInstData(DistributeLayoutAttr consumerLayout,
-                                       Type elemTy,
-                                       const uArch::uArch *uArch);
+                                       Type elemTy, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a store_nd operation. StoreNd does not
 /// consider a consumer layout (it is a data sink), and picks its layout from
@@ -269,11 +266,10 @@ DistributeLayoutAttr setupPrefetchNdAnchorLayout(LayoutKind layoutKind,
 /// Otherwise defaults derived from uArch block parameters are used.
 /// `consumerLayout` may be null. `numSg` is only used for Subgroup-kind
 /// layouts when the consumer does not already provide an sg_layout.
-DistributeLayoutAttr setupLoadNdAnchorLayout(LayoutKind layoutKind,
-                                             VectorType vectorTy,
-                                             DistributeLayoutAttr consumerLayout,
-                                             int numSg,
-                                             const uArch::uArch *uArch);
+DistributeLayoutAttr
+setupLoadNdAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
+                        DistributeLayoutAttr consumerLayout, int numSg,
+                        const uArch::uArch *uArch);
 
 /// Sets up the anchor layouts for a dpas operands (A, B, and C/D).
 /// The numSg and consumerLayout (optional) are only used by sg layout creation.
