@@ -3142,6 +3142,20 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_sutmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
   def int_aarch64_sme_ustmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
 
+  class SME_FP8_OuterProduct_TMOP_Intrinsic
+     : DefaultAttrsIntrinsic<[],
+         [llvm_i32_ty,
+          llvm_nxv16i8_ty,
+          llvm_nxv16i8_ty,
+          llvm_nxv16i8_ty,
+          llvm_nxv16i8_ty,
+          llvm_i32_ty],
+         [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<5>>,
+          IntrInaccessibleMemOnly]>;
+
+  def int_aarch64_sme_fp8_ftmopa_za16 : SME_FP8_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_fp8_ftmopa_za32 : SME_FP8_OuterProduct_TMOP_Intrinsic;
+
   // 16 and 32 bit multi-vector floating point 8 Quarter Tile Quarter Product
   foreach za = ["za16", "za32"] in {
     def int_aarch64_sme_fp8_fmop4a_ # za # "_1x1" : SME_OuterProduct_QuarterTile_Single_Single;
