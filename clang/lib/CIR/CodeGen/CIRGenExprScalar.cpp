@@ -539,6 +539,11 @@ public:
         castKind = cir::CastKind::integral;
       else if (mlir::isa<cir::FPTypeInterface>(dstTy))
         castKind = cir::CastKind::int_to_float;
+      else if (mlir::isa<cir::BoolType>(dstTy))
+        // Reached for vector-to-vector conversions whose element type is
+        // bool (e.g. __builtin_convertvector to an ext_vector of bool);
+        // the scalar bool case is handled in emitScalarConversion.
+        castKind = cir::CastKind::int_to_bool;
       else
         llvm_unreachable("Internal error: Cast to unexpected type");
     } else if (mlir::isa<cir::FPTypeInterface>(srcTy)) {
@@ -553,6 +558,10 @@ public:
       } else if (mlir::isa<cir::FPTypeInterface>(dstTy)) {
         // TODO: split this to createFPExt/createFPTrunc
         return builder.createFloatingCast(src, fullDstTy);
+      } else if (mlir::isa<cir::BoolType>(dstTy)) {
+        // Vector-to-vector conversion with bool element type (the scalar
+        // bool case is handled in emitScalarConversion).
+        castKind = cir::CastKind::float_to_bool;
       } else {
         llvm_unreachable("Internal error: Cast to unexpected type");
       }
