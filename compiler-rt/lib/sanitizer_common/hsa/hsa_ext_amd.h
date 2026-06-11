@@ -1,4 +1,4 @@
-//===-- sanitizer_hsa/hsa_ext_amd.h ----------------------------- C++ -*-===//
+//===-- hsa/hsa_ext_amd.h ----------------------------- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SANITIZER_HSA_HSA_EXT_AMD_H_
-#define SANITIZER_HSA_HSA_EXT_AMD_H_
+#ifndef HSA_EXT_AMD_H_
+#define HSA_EXT_AMD_H_
 
 #include "hsa.h"
 
@@ -138,4 +138,4 @@ hsa_status_t hsa_amd_register_system_event_handler(
 }
 #endif
 
-#endif  // SANITIZER_HSA_HSA_EXT_AMD_H_
+#endif  // HSA_EXT_AMD_H_

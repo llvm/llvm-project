@@ -1,4 +1,4 @@
-//===-- sanitizer_hsa/hsa.h ------------------------------------- C++ -*-===//
+//===-- hsa/hsa.h ------------------------------------- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SANITIZER_HSA_HSA_H_
-#define SANITIZER_HSA_HSA_H_
+#ifndef HSA_H_
+#define HSA_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -46,4 +46,4 @@ hsa_status_t hsa_memory_copy(void* dst, const void* src, size_t size);
 }
 #endif
 
-#endif  // SANITIZER_HSA_HSA_H_
+#endif  // HSA_H_
