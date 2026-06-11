@@ -61,11 +61,19 @@ define i8 @clmul() {
   ret i8 %clmul
 }
 
-define i8 @clmul_poison() {
-; CHECK-LABEL: @clmul_poison(
-; CHECK-NEXT:    ret i8 poison
+define i8 @clmul_onepoison() {
+; CHECK-LABEL: @clmul_onepoison(
+; CHECK-NEXT:    ret i8 0
 ;
   %clmul = call i8 @llvm.clmul.i8(i8 3, i8 poison)
+  ret i8 %clmul
+}
+
+define i8 @clmul_bothpoison() {
+; CHECK-LABEL: @clmul_bothpoison(
+; CHECK-NEXT:    ret i8 undef
+;
+  %clmul = call i8 @llvm.clmul.i8(i8 poison, i8 poison)
   ret i8 %clmul
 }
 
