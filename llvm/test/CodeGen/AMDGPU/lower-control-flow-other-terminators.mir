@@ -270,3 +270,39 @@ body:             |
     S_BRANCH %bb.2
 
 ...
+
+# combineMasks must keep a nested operand, not the exec leaf, when the nested
+# S_AND is the first operand and has identical operands (S_AND %0, %0). The
+# result must be S_AND exec, %0, not S_AND exec, exec.
+
+---
+name: combine_masks_nested_first_operand
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: combine_masks_nested_first_operand
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $sgpr0_sgpr1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+  ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, [[COPY]], implicit-def $scc
+  ; CHECK-NEXT:   $exec = S_ANDN2_B64_term $exec, [[S_AND_B64_]], implicit-def $scc
+  ; CHECK-NEXT:   S_CBRANCH_EXECNZ %bb.0, implicit $exec
+  ; CHECK-NEXT:   S_BRANCH %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   S_ENDPGM 0
+  bb.0:
+    successors: %bb.0, %bb.1
+    liveins: $sgpr0_sgpr1
+
+    %0:sreg_64 = COPY $sgpr0_sgpr1
+    %1:sreg_64 = S_AND_B64 %0, %0, implicit-def dead $scc
+    %2:sreg_64 = S_AND_B64 %1, $exec, implicit-def $scc
+    SI_LOOP %2, %bb.0, implicit-def $exec, implicit-def $scc, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    S_ENDPGM 0
+
+...

@@ -607,15 +607,24 @@ void SILowerControlFlow::combineMasks(MachineInstr &MI) {
   findMaskOperands(MI, 2, Ops);
   if (Ops.size() != 3) return;
 
-  unsigned UniqueOpndIdx;
-  if (Ops[0].isIdenticalTo(Ops[1])) UniqueOpndIdx = 2;
-  else if (Ops[0].isIdenticalTo(Ops[2])) UniqueOpndIdx = 1;
-  else if (Ops[1].isIdenticalTo(Ops[2])) UniqueOpndIdx = 1;
-  else return;
+  // Ops holds the exec operand and the two operands of the nested op.
+  // Always keep a nested operand, never the exec operand.
+  unsigned ExecIdx = OpToReplace == 1 ? 2 : 0;
+  unsigned NestedLHS = OpToReplace == 1 ? 0 : 1;
+  unsigned NestedRHS = NestedLHS + 1;
+
+  unsigned KeepIdx;
+  if (Ops[ExecIdx].isIdenticalTo(Ops[NestedLHS]))
+    KeepIdx = NestedRHS;
+  else if (Ops[ExecIdx].isIdenticalTo(Ops[NestedRHS]) ||
+           Ops[NestedLHS].isIdenticalTo(Ops[NestedRHS]))
+    KeepIdx = NestedLHS;
+  else
+    return;
 
   Register Reg = MI.getOperand(OpToReplace).getReg();
   MI.removeOperand(OpToReplace);
-  MI.addOperand(Ops[UniqueOpndIdx]);
+  MI.addOperand(Ops[KeepIdx]);
   if (MRI->use_empty(Reg))
     MRI->getUniqueVRegDef(Reg)->eraseFromParent();
 }
