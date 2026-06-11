@@ -1,3 +1,17 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// libc++ has changed how `std::vector` is represented over time. This file
+// provides approximations of these representations for testing the vector
+// pretty-printer. This lets us test that LLDB is able to handle all iterations
+// of libc++'s `std::vector`.
+
 #include <stddef.h>
 
 namespace std {
@@ -11,11 +25,25 @@ public:
 private:
   pointer __begin_;
   pointer __end_;
-  // __cap_ and __alloc_ aren't used, so they've been removed for simplicity.
+
+  // libc++ changed how the capacity member and allocator were stored in
+  // 27c8338. LLDB only relies on `__begin_` and `__end_`. Adding the capacity
+  // and allocator members in their different formats doesn't add test coverage,
+  // but may convince the reader that it does. As such, we don't provide two
+  // legacy layouts.
+  //
+  // Before 27c83382d83dce0f33ae67abb3bc94977cb3031f:
+  //   __compressed_pair<size_type, __storage_allocator> __cap_alloc_;
+  //
+  // Since 27c83382d83dce0f33ae67abb3bc94977cb3031f:
+  //   _LIBCPP_COMPRESSED_PAIR(pointer, __cap_ = nullptr, allocator_type,
+  //   __alloc_);
 };
 } // namespace __LegacyLayout
 
 inline namespace __PointerBasedLayout {
+// `__PointerBasedLayout::__vector_layout` is structurally equal to
+// `__LegacyLayout::vector`.
 template <typename T> struct __vector_layout {
   T *__begin_;
   T *__end_;
