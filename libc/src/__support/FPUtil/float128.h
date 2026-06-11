@@ -89,11 +89,12 @@ struct Float128 {
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
 
+// <--To be removed------------------------------------>
 static_assert(
     LIBC_NAMESPACE::cpp::is_trivially_constructible<
         LIBC_NAMESPACE::fputil::Float128>::value);
 static_assert(
     LIBC_NAMESPACE::cpp::is_trivially_copyable<
         LIBC_NAMESPACE::fputil::Float128>::value);
-
+// ----------------------------------------------------
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_FLOAT128_H
