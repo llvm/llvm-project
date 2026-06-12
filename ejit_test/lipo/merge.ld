@@ -15,6 +15,8 @@ SECTIONS
     *(.rela.debug*)           /*  debug relocations (not needed)     */
     *(.rela.llvm_addrsig*)    /*  address-significance relocs        */
     *(*.llvm_addrsig*)        /*  any leftover addrsig sections      */
+    *(.comment .comment.*)    /*  compiler name and version string   */
+    *(.note .note.*)          /*  build environment info             */
   }
 
   /* ── code ─────────────────────────────────────────────────────────── */
@@ -44,8 +46,6 @@ SECTIONS
 
   /* ── misc known sections ──────────────────────────────────────────── */
   .interp         : { *(.interp) }
-  .note           : { *(.note .note.*) }
-  .comment        : { *(.comment .comment.*) }
   .llvm_addrsig   : { *(.llvm_addrsig) }
   .llvm.call_graph_profile : { *(.llvm.call_graph_profile) }
   .cg_profile      : { *(.cg_profile) }
