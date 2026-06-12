@@ -5,6 +5,8 @@
 --- |
   define amdgpu_ps void @dynvgpr_roundtrip_no_fn_attr() { ret void }
   define amdgpu_ps void @dynvgpr_roundtrip_with_fn_attr() #0 { ret void }
+  define amdgpu_ps void @dynvgpr_roundtrip_with_fn_attr_no_mfi() #0 { ret void }
+  define amdgpu_ps void @dynvgpr_roundtrip_with_fn_attr_mfi_zero() #0  { ret void }
   attributes #0 = { "amdgpu-dynamic-vgpr-block-size" = "16" }
 ...
 
@@ -21,14 +23,40 @@ body: |
 ...
 
 # In this test the function attribute is 16 but MFI is set to 32.
-# The attribute takes precedence over MFI, so check for 16.
+# MFI takes precedence over MFI, so check for 32.
 
 # CHECK-LABEL: name: dynvgpr_roundtrip_with_fn_attr
-# CHECK: dynamicVGPRBlockSize: 16
+# CHECK: dynamicVGPRBlockSize: 32
 ---
 name: dynvgpr_roundtrip_with_fn_attr
 machineFunctionInfo:
   dynamicVGPRBlockSize: 32
+body: |
+  bb.0:
+    S_ENDPGM 0
+...
+
+# In this test the function attribute is 16 but MFI is not set.
+# Make sure the MFI dump shows 16.
+
+# CHECK-LABEL: name: dynvgpr_roundtrip_with_fn_attr_no_mfi
+# CHECK: dynamicVGPRBlockSize: 16
+---
+name: dynvgpr_roundtrip_with_fn_attr_no_mfi
+body: |
+  bb.0:
+    S_ENDPGM 0
+...
+
+# In this test the function attribute is 16 but MFI is set to 0.
+# Check that this works and the MFI dump shows 0.
+
+# CHECK-LABEL: name: dynvgpr_roundtrip_with_fn_attr_mfi_zero
+# CHECK: dynamicVGPRBlockSize: 0
+---
+name: dynvgpr_roundtrip_with_fn_attr_mfi_zero
+machineFunctionInfo:
+  dynamicVGPRBlockSize: 0
 body: |
   bb.0:
     S_ENDPGM 0
