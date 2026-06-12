@@ -675,7 +675,7 @@ public:
 
   unsigned getPendingGDSWait() const {
     return std::min(getScoreUB(AMDGPU::DS_CNT) - LastGDS,
-                    Context->getLimits().get(AMDGPU::DS_CNT) - 1);
+                    getLimit(AMDGPU::DS_CNT) - 1);
   }
 
   void setPendingGDS() { LastGDS = ScoreUBs[AMDGPU::DS_CNT]; }
@@ -703,8 +703,7 @@ public:
 
   void setStateOnFunctionEntryOrReturn() {
     setScoreUB(AMDGPU::STORE_CNT,
-               getScoreUB(AMDGPU::STORE_CNT) +
-                   Context->getLimits().get(AMDGPU::STORE_CNT));
+               getScoreUB(AMDGPU::STORE_CNT) + getLimit(AMDGPU::STORE_CNT));
     PendingEvents |= Context->getWaitEvents(AMDGPU::STORE_CNT);
   }
 
@@ -724,6 +723,10 @@ public:
   void purgeEmptyTrackingData();
 
 private:
+  unsigned getLimit(AMDGPU::InstCounterType T) const {
+    return Context->getLimits().get(T);
+  }
+
   struct MergeInfo {
     unsigned OldLB;
     unsigned OtherLB;
@@ -760,10 +763,9 @@ private:
     if (T != AMDGPU::EXP_CNT)
       return;
 
-    if (getScoreRange(AMDGPU::EXP_CNT) >
-        Context->getLimits().get(AMDGPU::EXP_CNT))
+    if (getScoreRange(AMDGPU::EXP_CNT) > getLimit(AMDGPU::EXP_CNT))
       ScoreLBs[AMDGPU::EXP_CNT] =
-          ScoreUBs[AMDGPU::EXP_CNT] - Context->getLimits().get(AMDGPU::EXP_CNT);
+          ScoreUBs[AMDGPU::EXP_CNT] - getLimit(AMDGPU::EXP_CNT);
   }
 
   void setRegScore(MCPhysReg Reg, AMDGPU::InstCounterType T, unsigned Val) {
@@ -1405,8 +1407,7 @@ void WaitcntBrackets::determineWaitForScore(AMDGPU::InstCounterType T,
     } else {
       // If a counter has been maxed out avoid overflow by waiting for
       // MAX(CounterType) - 1 instead.
-      unsigned NeededWait =
-          std::min(UB - ScoreToWait, Context->getLimits().get(T) - 1);
+      unsigned NeededWait = std::min(UB - ScoreToWait, getLimit(T) - 1);
       Wait.add(T, NeededWait);
     }
   }
