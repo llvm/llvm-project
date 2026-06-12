@@ -486,7 +486,7 @@ private:
   std::string getDiagSubjectDescription(const Expr *E) {
     E = E->IgnoreImpCasts();
     if (isa<MaterializeTemporaryExpr>(E))
-      return "local temporary object";
+      return "temporary object";
 
     if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
       return getDiagSubjectDescription(DRE->getDecl());
