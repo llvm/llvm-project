@@ -13,9 +13,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Frontend/ASTUnit.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
@@ -1193,4 +1191,66 @@ TEST_F(PointerFlowTest, CXXConstructExprArrayInit) {
   ASSERT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"q", 1U}, {"arr", 1U}}}));
 }
+
+//////////////////////////////////////////////////////////////
+//          Reference-to-pointer Tests                      //
+//////////////////////////////////////////////////////////////
+
+TEST_F(PointerFlowTest, ArgToRefParam) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void callee(int *&rp);
+    void caller(int *p) {
+      callee(p);
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("caller");
+
+  ASSERT_TRUE(Sum);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"rp", 1U}, {"p", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, ArgToRefParamLevel2) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void callee(int **&rp);
+    void caller(int **pp) {
+      callee(pp);
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("caller");
+
+  ASSERT_TRUE(Sum);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"rp", 1U}, {"pp", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, InitRefPtr) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo(int *p) {
+      int *&rp = p;
+      int * const & crp = p;
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_TRUE(Sum);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"rp", 1U}, {"p", 1U}},
+                                       {{"crp", 1U}, {"p", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, ReturnRefPtr) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int *& f();
+    int *& foo() {
+      return f();
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_TRUE(Sum);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"foo", 1U, true}, {"f", 1U, true}}}));
+}
+
 } // namespace
