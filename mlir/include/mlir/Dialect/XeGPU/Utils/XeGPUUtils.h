@@ -219,10 +219,11 @@ void setTemporaryLayout(const T &operandOrResult,
 /// Helper function to check if the layout is packed. Layout is packed if it is
 /// 2D and lane_data[0] != 1 (data packed from col dimension).
 /// TODO: Move to target info.
-bool requirePacked(const LayoutAttr layout);
+bool requirePacked(const DistributeLayoutAttr layout);
 
 /// Helper function to check if the layout requires a transpose effect.
-bool requireTranspose(const LayoutAttr layout, const uArch::uArch *uArch);
+bool requireTranspose(const DistributeLayoutAttr layout,
+                      const uArch::uArch *uArch);
 
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.
 bool matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
@@ -232,6 +233,15 @@ bool matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
 // is split into one or more consecutive dimensions in dst
 bool matchSplitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
                             SmallVector<SmallVector<int64_t>> &splitDimGroups);
+
+// Checks if dst shape is a collapse of src shape where each dimension in dst is
+// produced by one or more consecutive dimensions in src whose product equals
+// the dst dimension. Populates collapseDims with groups of src indices that are
+// collapsed into each dst dimension. Leading or trailing unit dst dimensions
+// (with no backing src dim) result in empty groups. Example: src=[8,16,32],
+// dst=[1,4096] -> true, collapseDims=[[],[0,1,2]].
+bool matchDimCollapse(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+                      SmallVector<SmallVector<int64_t>> &collapseDims);
 
 } // namespace xegpu
 

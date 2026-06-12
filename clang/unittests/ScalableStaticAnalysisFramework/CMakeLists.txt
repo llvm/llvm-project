@@ -1,5 +1,9 @@
 add_distinct_clang_unittest(ClangScalableAnalysisTests
+  Analyses/PointerFlow/PointerFlowTest.cpp
+  Analyses/PointerFlow/PointerFlowWPATest.cpp
+  Analyses/CallGraph/CallGraphExtractorTest.cpp
   Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.cpp
+  Analyses/UnsafeBufferUsage/UnsafeBufferUsageWPATest.cpp
   ASTEntityMappingTest.cpp
   BuildNamespaceTest.cpp
   EntityIdTableTest.cpp
@@ -9,6 +13,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   EntityNameTest.cpp
   ErrorBuilderTest.cpp
   Frontend/TUSummaryExtractorFrontendActionTest.cpp
+  LUSummaryTest.cpp
   ModelStringConversionsTest.cpp
   Registries/FancyAnalysisData.cpp
   Registries/MockSerializationFormat.cpp
@@ -24,6 +29,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   TestFixture.cpp
   TUSummaryBuilderTest.cpp
   WholeProgramAnalysis/AnalysisDriverTest.cpp
+  WholeProgramAnalysis/UnsafeBufferReachableAnalysisTest.cpp
 
   CLANG_LIBS
   clangAST

@@ -35,6 +35,7 @@ endif ()
 set(OPENMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
 
 # When building in tree we install the runtime according to the LLVM settings.
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(OPENMP_TARGET_SUBDIR "${LLVM_DEFAULT_TARGET_TRIPLE}")
   if(OPENMP_LIBDIR_SUBDIR)
@@ -105,8 +106,14 @@ math(EXPR LIBOMP_VERSION_BUILD_MONTH_DAY "${LIBOMP_VERSION_BUILD}%10000")
 set(LIBOMP_BUILD_DATE "No_Timestamp")
 
 
-set(LIBOMP_FORTRAN_MODULES FALSE CACHE BOOL
+set(LIBOMP_FORTRAN_MODULES "${RUNTIMES_FORTRAN_MODULES}" CACHE BOOL
   "Create Fortran module files? (requires fortran compiler)")
+
+option(LIBOMP_FORTRAN_MODULES_ONLY
+  "Build only Fortran modules without libomp runtime library" OFF)
+if(LIBOMP_FORTRAN_MODULES_ONLY)
+  set(LIBOMP_FORTRAN_MODULES TRUE)
+endif()
 
 # Set up testing infrastructure.
 include(OpenMPTesting)
@@ -115,6 +122,8 @@ set(OPENMP_TEST_FLAGS "" CACHE STRING
   "Extra compiler flags to send to the test compiler.")
 set(OPENMP_TEST_OPENMP_FLAGS ${OPENMP_TEST_COMPILER_OPENMP_FLAGS} CACHE STRING
   "OpenMP compiler flag to use for testing OpenMP runtime libraries.")
+set(OPENMP_TEST_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}" CACHE STRING
+  "Additional compiler flags to use for testing Fortran programs (e.g. additional module search paths via -fintrinsic-modules-path )")
 
 set(ENABLE_LIBOMPTARGET ON)
 # Currently libomptarget cannot be compiled on Windows or MacOS X.
@@ -138,16 +147,33 @@ else()
   get_clang_resource_dir(LIBOMP_HEADERS_INSTALL_PATH SUBDIR include)
 endif()
 
+# Meta-target for building OpenMP runtime artifacts (libraries, device RTL, tools).
+# Subdirectories call openmp_register_meta_dep() for each target they add.
+add_custom_target(openmp ALL
+  COMMENT "OpenMP meta-target. Use 'ninja openmp' to build all OpenMP runtime targets."
+)
+
+add_custom_target(install-openmp
+  COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component openmp)
+add_custom_target(install-openmp-stripped
+  COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component openmp --strip)
+add_dependencies(install-openmp openmp)
+add_dependencies(install-openmp-stripped openmp)
+
+if(LIBOMP_FORTRAN_MODULES)
+  add_subdirectory(module)
+endif()
+
 # Use the current compiler target to determine the appropriate runtime to build.
 if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx|^spirv64" OR
    "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn|^nvptx|^spirv64")
   add_subdirectory(device)
 else()
-  add_subdirectory(module)
-
   # Build host runtime library, after LIBOMPTARGET variables are set since they
   # are needed to enable time profiling support in the OpenMP runtime.
-  add_subdirectory(runtime)
+  if(NOT LIBOMP_FORTRAN_MODULES_ONLY)
+    add_subdirectory(runtime)
+  endif()	
 
   set(ENABLE_OMPT_TOOLS ON)
   # Currently tools are not tested well on Windows or MacOS X.
@@ -172,7 +198,7 @@ else()
 
   # Build documentation
   add_subdirectory(docs)
-
-  # Now that we have seen all testsuites, create the check-openmp target.
-  construct_check_openmp_target()
 endif()
+
+# Now that we have seen all testsuites, create the check-openmp target.
+construct_check_openmp_target()

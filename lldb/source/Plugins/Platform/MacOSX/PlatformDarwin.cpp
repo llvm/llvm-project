@@ -21,6 +21,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
@@ -50,6 +51,7 @@
 #include "llvm/Support/VersionTuple.h"
 
 #if defined(__APPLE__)
+#include "lldb/Host/macosx/HostInfoMacOSX.h"
 #include <TargetConditionals.h>
 #endif
 
@@ -196,7 +198,8 @@ PlatformDarwin::PutFile(const lldb_private::FileSpec &source,
   return PlatformPOSIX::PutFile(source, destination, uid, gid);
 }
 
-FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     Stream &feedback_stream, FileSpec module_spec, const Target &target,
     const FileSpec &symfile_spec) {
 
@@ -204,7 +207,8 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
          "Trying to locate scripting resources but no ScriptInterpreter is "
          "available.");
 
-  FileSpecList file_list;
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> file_specs;
+  const FileSpec original_module_spec = module_spec;
   while (module_spec.GetFilename()) {
     ScriptInterpreter::SanitizedScriptingModuleName sanitized_name =
         target.GetDebugger()
@@ -234,7 +238,9 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
                                          orig_script_fspec, script_fspec);
 
     if (FileSystem::Instance().Exists(script_fspec)) {
-      file_list.Append(script_fspec);
+      LoadScriptFromSymFile load_style =
+          Platform::GetScriptLoadStyleForModule(original_module_spec, target);
+      file_specs.try_emplace(std::move(script_fspec), load_style);
       break;
     }
 
@@ -248,17 +254,19 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesFromDSYM(
     module_spec.SetFilename(filename_no_extension);
   }
 
-  return file_list;
+  return file_specs;
 }
 
-FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesForPlatform(
+llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+PlatformDarwin::LocateExecutableScriptingResourcesForPlatform(
     Target *target, Module &module, Stream &feedback_stream) {
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile> empty;
   if (!target)
-    return {};
+    return empty;
 
   // For now only Python scripts supported for auto-loading.
   if (target->GetDebugger().GetScriptLanguage() != eScriptLanguagePython)
-    return {};
+    return empty;
 
   // NB some extensions might be meaningful and should not be stripped -
   // "this.binary.file"
@@ -270,15 +278,15 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesForPlatform(
   const FileSpec &module_spec = module.GetFileSpec();
 
   if (!module_spec)
-    return {};
+    return empty;
 
   SymbolFile *symfile = module.GetSymbolFile();
   if (!symfile)
-    return {};
+    return empty;
 
   ObjectFile *objfile = symfile->GetObjectFile();
   if (!objfile)
-    return {};
+    return empty;
 
   const FileSpec &symfile_spec = objfile->GetFileSpec();
   if (symfile_spec &&
@@ -288,7 +296,41 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResourcesForPlatform(
     return LocateExecutableScriptingResourcesFromDSYM(
         feedback_stream, module_spec, *target, symfile_spec);
 
-  return {};
+  return empty;
+}
+
+bool PlatformDarwin::IsSymbolFileTrusted(Module &module) {
+#if defined(__APPLE__)
+  SymbolFile *symfile = module.GetSymbolFile();
+  if (!symfile)
+    return false;
+
+  ObjectFile *objfile = symfile->GetObjectFile();
+  if (!objfile)
+    return false;
+
+  std::string symfile_path = objfile->GetFileSpec().GetPath();
+  llvm::StringRef path_ref(symfile_path);
+
+  // Find the .dSYM bundle root from the symfile path, which is typically
+  // .dSYM/Contents/Resources/DWARF/<name>.
+  auto pos = path_ref.find(".dSYM/");
+  if (pos == llvm::StringRef::npos)
+    return false;
+
+  FileSpec bundle_spec(path_ref.substr(0, pos + 5));
+
+  if (HostInfoMacOSX::IsBundleCodeSignTrusted(bundle_spec)) {
+    LLDB_LOG(GetLog(LLDBLog::Modules),
+             "dSYM bundle '{0}' has valid trusted code signature",
+             bundle_spec.GetPath());
+    return true;
+  }
+
+  return false;
+#else
+  return false;
+#endif
 }
 
 Status PlatformDarwin::ResolveSymbolFile(Target &target,
@@ -862,18 +904,30 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(XcodeSDK::Type sdk_type) {
   return FindSDKInXcodeForModules(sdk_type, sdks_spec);
 }
 
+// Discovering the correct version and build can help us
+// identify the most likely SDK directory when looking for
+// files.
+//
+// The directory name can be one of many formats, such as
+//     10.0 (21R329) universal
+//     17.0 (23A200) arm64e
+//     17.0 (20A352)
+//     Watch4,2 10.0 (21R329)
 std::tuple<llvm::VersionTuple, llvm::StringRef>
 PlatformDarwin::ParseVersionBuildDir(llvm::StringRef dir) {
   llvm::StringRef build;
-  llvm::StringRef version_str;
-  llvm::StringRef build_str;
-  std::tie(version_str, build_str) = dir.split(' ');
   llvm::VersionTuple version;
-  if (!version.tryParse(version_str) ||
-      build_str.empty()) {
-    if (build_str.consume_front("(")) {
-      size_t pos = build_str.find(')');
-      build = build_str.slice(0, pos);
+
+  llvm::SmallVector<llvm::StringRef> parts;
+  dir.split(parts, ' ');
+  for (llvm::StringRef part : parts) {
+    // Look for an OS version number, eg "17.0"
+    if (isdigit(part[0]))
+      version.tryParse(part);
+    // Look for a build number, eg "(20A352)"
+    if (part.consume_front("(")) {
+      size_t pos = part.find(')');
+      build = part.slice(0, pos);
     }
   }
 
@@ -1056,38 +1110,25 @@ ResolveSDKPathFromDebugInfo(lldb_private::Target *target) {
 
   ModuleSP exe_module_sp = target->GetExecutableModule();
   if (!exe_module_sp)
-    return llvm::createStringError("Failed to get module from target");
+    return llvm::createStringError("could not get module from target");
 
   SymbolFile *sym_file = exe_module_sp->GetSymbolFile();
   if (!sym_file)
-    return llvm::createStringError("Failed to get symbol file from executable");
+    return llvm::createStringError("could not get symbol file from executable");
 
   if (sym_file->GetNumCompileUnits() == 0)
     return llvm::createStringError(
-        "Failed to resolve SDK for target: executable's symbol file has no "
+        "could not resolve SDK for target: executable's symbol file has no "
         "compile units");
 
   XcodeSDK merged_sdk;
-  for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i) {
-    if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i)) {
-      auto cu_sdk = sym_file->ParseXcodeSDK(*cu_sp);
-      merged_sdk.Merge(cu_sdk);
-    }
-  }
+  for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i)
+    if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i))
+      merged_sdk.Merge(sym_file->ParseXcodeSDK(*cu_sp));
 
   // TODO: The result of this loop is almost equivalent to deriving the SDK
   // from the target triple, which would be a lot cheaper.
-  FileSpec sdk_path = merged_sdk.GetSysroot();
-  if (FileSystem::Instance().Exists(sdk_path)) {
-    return sdk_path;
-  }
-  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{merged_sdk});
-  if (!path_or_err)
-    return llvm::createStringError(
-        llvm::formatv("Failed to resolve SDK path: {0}",
-                      llvm::toString(path_or_err.takeError())));
-
-  return FileSpec(*path_or_err);
+  return PlatformDarwin::ResolveXcodeSDK(std::move(merged_sdk));
 }
 
 void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
@@ -1451,29 +1492,32 @@ PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
   return std::pair{std::move(merged_sdk), found_mismatch};
 }
 
+llvm::Expected<FileSpec> PlatformDarwin::ResolveXcodeSDK(XcodeSDK sdk) {
+  if (FileSpec sysroot = sdk.GetSysroot();
+      FileSystem::Instance().Exists(sysroot))
+    return sysroot;
+
+  Progress progress("Looking for Xcode SDK", sdk.GetString().str());
+  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
+  if (!path_or_err)
+    return llvm::joinErrors(llvm::createStringError(llvm::formatv(
+                                "could not find SDK '{0}'", sdk.GetString())),
+                            path_or_err.takeError());
+  return FileSpec(*path_or_err);
+}
+
 llvm::Expected<std::string>
 PlatformDarwin::ResolveSDKPathFromDebugInfo(Module &module) {
   auto sdk_or_err = GetSDKPathFromDebugInfo(module);
   if (!sdk_or_err)
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        llvm::formatv("Failed to parse SDK path from debug-info: {0}",
-                      llvm::toString(sdk_or_err.takeError())));
+    return llvm::joinErrors(
+        llvm::createStringError("could not parse SDK path from debug-info"),
+        sdk_or_err.takeError());
 
-  auto [sdk, _] = std::move(*sdk_or_err);
-
-  if (FileSystem::Instance().Exists(sdk.GetSysroot()))
-    return sdk.GetSysroot().GetPath();
-
-  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
+  auto path_or_err = ResolveXcodeSDK(std::move(sdk_or_err->first));
   if (!path_or_err)
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        llvm::formatv("Error while searching for SDK (XcodeSDK '{0}'): {1}",
-                      sdk.GetString(),
-                      llvm::toString(path_or_err.takeError())));
-
-  return path_or_err->str();
+    return path_or_err.takeError();
+  return path_or_err->GetPath();
 }
 
 llvm::Expected<XcodeSDK>
@@ -1494,20 +1538,47 @@ llvm::Expected<std::string>
 PlatformDarwin::ResolveSDKPathFromDebugInfo(CompileUnit &unit) {
   auto sdk_or_err = GetSDKPathFromDebugInfo(unit);
   if (!sdk_or_err)
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        llvm::formatv("Failed to parse SDK path from debug-info: {0}",
-                      llvm::toString(sdk_or_err.takeError())));
+    return llvm::joinErrors(
+        llvm::createStringError("could not parse SDK path from debug-info"),
+        sdk_or_err.takeError());
 
-  auto sdk = std::move(*sdk_or_err);
-
-  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
+  auto path_or_err = ResolveXcodeSDK(std::move(*sdk_or_err));
   if (!path_or_err)
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        llvm::formatv("Error while searching for SDK (XcodeSDK '{0}'): {1}",
-                      sdk.GetString(),
-                      llvm::toString(path_or_err.takeError())));
+    return path_or_err.takeError();
+  return path_or_err->GetPath();
+}
 
-  return path_or_err->str();
+llvm::Expected<FileSpecList>
+PlatformDarwin::GetSafeAutoLoadPaths(const Target &target) const {
+  Log *log = GetLog(LLDBLog::Modules | LLDBLog::Platform);
+
+  XcodeSDK::Type sdk_type =
+      XcodeSDK::GetSDKTypeForTriple(target.GetArchitecture().GetTriple());
+  XcodeSDK::Info info;
+  info.type = sdk_type;
+  XcodeSDK sdk(info);
+
+  auto sdk_root_or_err = ResolveXcodeSDK(sdk);
+  if (!sdk_root_or_err) {
+    LLDB_LOG_ERROR(log, sdk_root_or_err.takeError(),
+                   "Failed to resolve SDK root for triple '{1}': {0}",
+                   target.GetArchitecture().GetTriple().str());
+
+    // Fall back to any macOS SDK.
+    sdk = XcodeSDK::GetAnyMacOS();
+    LLDB_LOG(log, "Falling back to SDK '{0}'", sdk.GetString());
+    sdk_root_or_err = ResolveXcodeSDK(sdk);
+  }
+
+  if (!sdk_root_or_err)
+    return sdk_root_or_err.takeError();
+
+  // $SDKROOT/usr/share/lldb is an auto-loadable path.
+  llvm::SmallString<256> resolved(sdk_root_or_err->GetPath());
+  llvm::sys::path::append(resolved, "usr", "share", "lldb");
+
+  FileSpecList fspecs;
+  fspecs.Append(FileSpec(resolved));
+
+  return fspecs;
 }

@@ -1,5 +1,5 @@
 // RUN: mlir-opt -allow-unregistered-dialect -gpu-launch-sink-index-computations -gpu-kernel-outlining -split-input-file -verify-diagnostics %s | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect -gpu-launch-sink-index-computations -gpu-kernel-outlining=data-layout-str='#dlti.dl_spec<#dlti.dl_entry<index,32:i32>>' -split-input-file %s | FileCheck --check-prefix CHECK-DL %s
+// RUN: mlir-opt -allow-unregistered-dialect -gpu-launch-sink-index-computations -gpu-kernel-outlining=data-layout-str='#dlti.dl_spec<#dlti.dl_entry<index,32:i32>>' -split-input-file -verify-diagnostics %s | FileCheck --check-prefix CHECK-DL %s
 
 // CHECK: module attributes {gpu.container_module}
 
@@ -662,25 +662,59 @@ module attributes {gpu.container_module} {
 
 // -----
 
-// This test tests nested `gpu.launch`.
+// Nested gpu.launch ops are not supported: the inner gpu.launch is outlined
+// first, producing a gpu.launch_func with a nested symbol reference inside the
+// outer launch body. That nested reference cannot be resolved in the outlined
+// outer kernel module.
 
-// CHECK-LABEL: func.func @nested_launch(
-//  CHECK-SAME:                          %[[ARG0:.*]]: index) {
-//       CHECK:   gpu.launch_func  @nested_launch_kernel_0::@nested_launch_kernel blocks in (%[[ARG0]], %[[ARG0]], %[[ARG0]]) threads in (%[[ARG0]], %[[ARG0]], %[[ARG0]])  args(%[[ARG0]] : index)
-//       CHECK: gpu.module @nested_launch_kernel
-//       CHECK:   gpu.func @nested_launch_kernel() kernel
-//       CHECK:     "some_op"
-//       CHECK: gpu.module @nested_launch_kernel_0
-//       CHECK:   gpu.func @nested_launch_kernel(%[[VAL_0:.*]]: index) kernel
-//       CHECK:     gpu.launch_func  @nested_launch_kernel::@nested_launch_kernel blocks in (%[[VAL_0]], %[[VAL_0]], %[[VAL_0]]) threads in (%[[VAL_0]], %[[VAL_0]], %[[VAL_0]])
 func.func @nested_launch(%sz : index) {
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %sz, %grid_y = %sz, %grid_z = %sz)
              threads(%tx, %ty, %tz) in (%block_x = %sz, %block_y = %sz, %block_z = %sz) {
+    // expected-error @below {{nested symbol reference '@nested_launch_kernel::@nested_launch_kernel' cannot be resolved inside the outlined kernel module}}
     gpu.launch blocks(%bx1, %by1, %bz1) in (%grid_x1 = %sz, %grid_y1 = %sz, %grid_z1 = %sz)
                threads(%tx1, %ty1, %tz1) in (%block_x1 = %sz, %block_y1 = %sz, %block_z1 = %sz) {
       "some_op"(%bx1, %tx1) : (index, index) -> ()
       gpu.terminator
     }
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+// Nested cross-module symbol references inside gpu.launch bodies are rejected.
+// (https://github.com/llvm/llvm-project/issues/187942)
+
+module attributes {gpu.container_module} {
+  gpu.module @km {
+    gpu.func @k() kernel {
+      gpu.return
+    }
+  }
+
+  func.func @cross_module_nested_ref(%sz: index) {
+    gpu.launch blocks(%bx, %by, %bz) in (%gx = %sz, %gy = %sz, %gz = %sz)
+               threads(%tx, %ty, %tz) in (%bxs = %sz, %bys = %sz, %bzs = %sz) {
+      // expected-error @below {{nested symbol reference '@km::@k' cannot be resolved inside the outlined kernel module}}
+      gpu.launch_func @km::@k
+        blocks in (%sz, %sz, %sz)
+        threads in (%sz, %sz, %sz)
+      gpu.terminator
+    }
+    return
+  }
+}
+
+// -----
+
+// CHECK-LABEL: func @launch_cooperative
+func.func @launch_cooperative() {
+  %cst = arith.constant 8 : index
+  // CHECK: gpu.launch_func @launch_cooperative_kernel::@launch_cooperative_kernel blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) cooperative
+  gpu.launch blocks(%bx, %by, %bz) in (%gx = %cst, %gy = %cst, %gz = %cst)
+             threads(%tx, %ty, %tz) in (%bxs = %cst, %bys = %cst, %bzs = %cst)
+             cooperative {
     gpu.terminator
   }
   return

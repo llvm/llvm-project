@@ -454,6 +454,9 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_PCREL20_S2:
   case R_LARCH_PCADD_HI20:
     return R_PC;
+  case R_LARCH_TLS_DTPREL32:
+  case R_LARCH_TLS_DTPREL64:
+    return R_DTPREL;
   default:
     Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
@@ -980,12 +983,19 @@ bool LoongArch::synthesizeAlignForInput(uint64_t &dot, InputSection *sec,
       }
     }
   } else if (sec->addralign > 4) {
-    // If the alignment is > 4 and the section does not start with an ALIGN
-    // relocation, synthesize one.
-    bool hasAlignRel = llvm::any_of(rels, [](const RelTy &rel) {
-      return rel.r_offset == 0 && rel.getType(false) == R_LARCH_ALIGN;
+    // If the alignment is > 4, synthesize an ALIGN unless an ALIGN relocation
+    // at offset 0 already guarantees `addralign`. Note: A weaker ALIGN at
+    // offset 0 from older assemblers do not suppress synthesis (e.g.
+    // `.p2align 2; .option norelax; nop; .p2align 3` does not suppress
+    // synthesized `.p2align 3`).
+    bool covered = llvm::any_of(rels, [&](const RelTy &rel) {
+      if (rel.r_offset != 0 || rel.getType(false) != R_LARCH_ALIGN)
+        return false;
+      if constexpr (RelTy::HasAddend)
+        return uint64_t(rel.r_addend) >= sec->addralign - 4;
+      return false;
     });
-    if (!hasAlignRel) {
+    if (!covered) {
       synthesizedAligns.emplace_back(dot - baseSec->getVA(),
                                      sec->addralign - 4);
       dot += sec->addralign - 4;

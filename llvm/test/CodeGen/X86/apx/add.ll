@@ -69,14 +69,16 @@ entry:
 define i8 @add8rm(i8 noundef %a, ptr %ptr) {
 ; NDD-LABEL: add8rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movzbl (%rsi), %eax # encoding: [0x0f,0xb6,0x06]
-; NDD-NEXT:    addb %dil, %al # EVEX TO LEGACY Compression encoding: [0x40,0x00,0xf8]
+; NDD-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; NDD-NEXT:    addb (%rsi), %al # encoding: [0x02,0x06]
+; NDD-NEXT:    # kill: def $al killed $al killed $eax
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: add8rm:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movzbl (%rsi), %eax # encoding: [0x0f,0xb6,0x06]
-; IMMONLY-NEXT:    addb %dil, %al # EVEX TO LEGACY Compression encoding: [0x40,0x00,0xf8]
+; IMMONLY-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; IMMONLY-NEXT:    addb (%rsi), %al # encoding: [0x02,0x06]
+; IMMONLY-NEXT:    # kill: def $al killed $al killed $eax
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: add8rm:
@@ -86,8 +88,9 @@ define i8 @add8rm(i8 noundef %a, ptr %ptr) {
 ;
 ; NF-LABEL: add8rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzbl (%rsi), %eax # encoding: [0x0f,0xb6,0x06]
-; NF-NEXT:    addb %dil, %al # EVEX TO LEGACY Compression encoding: [0x40,0x00,0xf8]
+; NF-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; NF-NEXT:    addb (%rsi), %al # encoding: [0x02,0x06]
+; NF-NEXT:    # kill: def $al killed $al killed $eax
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %b = load i8, ptr %ptr
@@ -98,14 +101,16 @@ entry:
 define i16 @add16rm(i16 noundef %a, ptr %ptr) {
 ; NDD-LABEL: add16rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movzwl (%rsi), %eax # encoding: [0x0f,0xb7,0x06]
-; NDD-NEXT:    addw %di, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x01,0xf8]
+; NDD-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; NDD-NEXT:    addw (%rsi), %ax # encoding: [0x66,0x03,0x06]
+; NDD-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: add16rm:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movzwl (%rsi), %eax # encoding: [0x0f,0xb7,0x06]
-; IMMONLY-NEXT:    addw %di, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x01,0xf8]
+; IMMONLY-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; IMMONLY-NEXT:    addw (%rsi), %ax # encoding: [0x66,0x03,0x06]
+; IMMONLY-NEXT:    # kill: def $ax killed $ax killed $eax
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: add16rm:
@@ -115,8 +120,9 @@ define i16 @add16rm(i16 noundef %a, ptr %ptr) {
 ;
 ; NF-LABEL: add16rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl (%rsi), %eax # encoding: [0x0f,0xb7,0x06]
-; NF-NEXT:    addw %di, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x01,0xf8]
+; NF-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; NF-NEXT:    addw (%rsi), %ax # encoding: [0x66,0x03,0x06]
+; NF-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %b = load i16, ptr %ptr
@@ -127,14 +133,14 @@ entry:
 define i32 @add32rm(i32 noundef %a, ptr %ptr) {
 ; NDD-LABEL: add32rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movl (%rsi), %eax # encoding: [0x8b,0x06]
-; NDD-NEXT:    addl %edi, %eax # EVEX TO LEGACY Compression encoding: [0x01,0xf8]
+; NDD-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; NDD-NEXT:    addl (%rsi), %eax # encoding: [0x03,0x06]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: add32rm:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movl (%rsi), %eax # encoding: [0x8b,0x06]
-; IMMONLY-NEXT:    addl %edi, %eax # EVEX TO LEGACY Compression encoding: [0x01,0xf8]
+; IMMONLY-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; IMMONLY-NEXT:    addl (%rsi), %eax # encoding: [0x03,0x06]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: add32rm:
@@ -144,8 +150,8 @@ define i32 @add32rm(i32 noundef %a, ptr %ptr) {
 ;
 ; NF-LABEL: add32rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movl (%rsi), %eax # encoding: [0x8b,0x06]
-; NF-NEXT:    addl %edi, %eax # EVEX TO LEGACY Compression encoding: [0x01,0xf8]
+; NF-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; NF-NEXT:    addl (%rsi), %eax # encoding: [0x03,0x06]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %b = load i32, ptr %ptr
@@ -156,14 +162,14 @@ entry:
 define i64 @add64rm(i64 noundef %a, ptr %ptr) {
 ; NDD-LABEL: add64rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movq (%rsi), %rax # encoding: [0x48,0x8b,0x06]
-; NDD-NEXT:    addq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xf8]
+; NDD-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
+; NDD-NEXT:    addq (%rsi), %rax # encoding: [0x48,0x03,0x06]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: add64rm:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movq (%rsi), %rax # encoding: [0x48,0x8b,0x06]
-; IMMONLY-NEXT:    addq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xf8]
+; IMMONLY-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
+; IMMONLY-NEXT:    addq (%rsi), %rax # encoding: [0x48,0x03,0x06]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: add64rm:
@@ -173,8 +179,8 @@ define i64 @add64rm(i64 noundef %a, ptr %ptr) {
 ;
 ; NF-LABEL: add64rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movq (%rsi), %rax # encoding: [0x48,0x8b,0x06]
-; NF-NEXT:    addq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xf8]
+; NF-NEXT:    movq %rdi, %rax # encoding: [0x48,0x89,0xf8]
+; NF-NEXT:    addq (%rsi), %rax # encoding: [0x48,0x03,0x06]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %b = load i64, ptr %ptr
@@ -292,14 +298,16 @@ entry:
 define i8 @add8mr(ptr %a, i8 noundef %b) {
 ; NDD-LABEL: add8mr:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movzbl (%rdi), %eax # encoding: [0x0f,0xb6,0x07]
-; NDD-NEXT:    addb %sil, %al # EVEX TO LEGACY Compression encoding: [0x40,0x00,0xf0]
+; NDD-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; NDD-NEXT:    addb (%rdi), %al # encoding: [0x02,0x07]
+; NDD-NEXT:    # kill: def $al killed $al killed $eax
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: add8mr:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movzbl (%rdi), %eax # encoding: [0x0f,0xb6,0x07]
-; IMMONLY-NEXT:    addb %sil, %al # EVEX TO LEGACY Compression encoding: [0x40,0x00,0xf0]
+; IMMONLY-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; IMMONLY-NEXT:    addb (%rdi), %al # encoding: [0x02,0x07]
+; IMMONLY-NEXT:    # kill: def $al killed $al killed $eax
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: add8mr:
@@ -309,8 +317,9 @@ define i8 @add8mr(ptr %a, i8 noundef %b) {
 ;
 ; NF-LABEL: add8mr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzbl (%rdi), %eax # encoding: [0x0f,0xb6,0x07]
-; NF-NEXT:    addb %sil, %al # EVEX TO LEGACY Compression encoding: [0x40,0x00,0xf0]
+; NF-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; NF-NEXT:    addb (%rdi), %al # encoding: [0x02,0x07]
+; NF-NEXT:    # kill: def $al killed $al killed $eax
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i8, ptr %a
@@ -321,14 +330,16 @@ entry:
 define i16 @add16mr(ptr %a, i16 noundef %b) {
 ; NDD-LABEL: add16mr:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; NDD-NEXT:    addw %si, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x01,0xf0]
+; NDD-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; NDD-NEXT:    addw (%rdi), %ax # encoding: [0x66,0x03,0x07]
+; NDD-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: add16mr:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; IMMONLY-NEXT:    addw %si, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x01,0xf0]
+; IMMONLY-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; IMMONLY-NEXT:    addw (%rdi), %ax # encoding: [0x66,0x03,0x07]
+; IMMONLY-NEXT:    # kill: def $ax killed $ax killed $eax
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: add16mr:
@@ -338,8 +349,9 @@ define i16 @add16mr(ptr %a, i16 noundef %b) {
 ;
 ; NF-LABEL: add16mr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl (%rdi), %eax # encoding: [0x0f,0xb7,0x07]
-; NF-NEXT:    addw %si, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x01,0xf0]
+; NF-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; NF-NEXT:    addw (%rdi), %ax # encoding: [0x66,0x03,0x07]
+; NF-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i16, ptr %a
@@ -350,14 +362,14 @@ entry:
 define i32 @add32mr(ptr %a, i32 noundef %b) {
 ; NDD-LABEL: add32mr:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
-; NDD-NEXT:    addl %esi, %eax # EVEX TO LEGACY Compression encoding: [0x01,0xf0]
+; NDD-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; NDD-NEXT:    addl (%rdi), %eax # encoding: [0x03,0x07]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: add32mr:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
-; IMMONLY-NEXT:    addl %esi, %eax # EVEX TO LEGACY Compression encoding: [0x01,0xf0]
+; IMMONLY-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; IMMONLY-NEXT:    addl (%rdi), %eax # encoding: [0x03,0x07]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: add32mr:
@@ -367,8 +379,8 @@ define i32 @add32mr(ptr %a, i32 noundef %b) {
 ;
 ; NF-LABEL: add32mr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
-; NF-NEXT:    addl %esi, %eax # EVEX TO LEGACY Compression encoding: [0x01,0xf0]
+; NF-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; NF-NEXT:    addl (%rdi), %eax # encoding: [0x03,0x07]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i32, ptr %a
@@ -379,14 +391,14 @@ entry:
 define i64 @add64mr(ptr %a, i64 noundef %b) {
 ; NDD-LABEL: add64mr:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
-; NDD-NEXT:    addq %rsi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xf0]
+; NDD-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
+; NDD-NEXT:    addq (%rdi), %rax # encoding: [0x48,0x03,0x07]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: add64mr:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
-; IMMONLY-NEXT:    addq %rsi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xf0]
+; IMMONLY-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
+; IMMONLY-NEXT:    addq (%rdi), %rax # encoding: [0x48,0x03,0x07]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: add64mr:
@@ -396,8 +408,8 @@ define i64 @add64mr(ptr %a, i64 noundef %b) {
 ;
 ; NF-LABEL: add64mr:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movq (%rdi), %rax # encoding: [0x48,0x8b,0x07]
-; NF-NEXT:    addq %rsi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xf0]
+; NF-NEXT:    movq %rsi, %rax # encoding: [0x48,0x89,0xf0]
+; NF-NEXT:    addq (%rdi), %rax # encoding: [0x48,0x03,0x07]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
   %t= load i64, ptr %a
@@ -718,9 +730,8 @@ entry:
 define i8 @addflag8rm(i8 noundef %a, ptr %b) {
 ; NDD-LABEL: addflag8rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movzbl (%rsi), %eax # encoding: [0x0f,0xb6,0x06]
-; NDD-NEXT:    addb %dil, %al # EVEX TO LEGACY Compression encoding: [0x40,0x00,0xf8]
-; NDD-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; NDD-NEXT:    addb (%rsi), %dil # encoding: [0x40,0x02,0x3e]
+; NDD-NEXT:    movzbl %dil, %eax # encoding: [0x40,0x0f,0xb6,0xc7]
 ; NDD-NEXT:    movl $255, %ecx # encoding: [0xb9,0xff,0x00,0x00,0x00]
 ; NDD-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; NDD-NEXT:    # kill: def $al killed $al killed $eax
@@ -728,9 +739,8 @@ define i8 @addflag8rm(i8 noundef %a, ptr %b) {
 ;
 ; IMMONLY-LABEL: addflag8rm:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movzbl (%rsi), %eax # encoding: [0x0f,0xb6,0x06]
-; IMMONLY-NEXT:    addb %dil, %al # EVEX TO LEGACY Compression encoding: [0x40,0x00,0xf8]
-; IMMONLY-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; IMMONLY-NEXT:    addb (%rsi), %dil # encoding: [0x40,0x02,0x3e]
+; IMMONLY-NEXT:    movzbl %dil, %eax # encoding: [0x40,0x0f,0xb6,0xc7]
 ; IMMONLY-NEXT:    movl $255, %ecx # encoding: [0xb9,0xff,0x00,0x00,0x00]
 ; IMMONLY-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; IMMONLY-NEXT:    # kill: def $al killed $al killed $eax
@@ -747,9 +757,8 @@ define i8 @addflag8rm(i8 noundef %a, ptr %b) {
 ;
 ; NF-LABEL: addflag8rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzbl (%rsi), %eax # encoding: [0x0f,0xb6,0x06]
-; NF-NEXT:    addb %dil, %al # EVEX TO LEGACY Compression encoding: [0x40,0x00,0xf8]
-; NF-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; NF-NEXT:    addb (%rsi), %dil # encoding: [0x40,0x02,0x3e]
+; NF-NEXT:    movzbl %dil, %eax # encoding: [0x40,0x0f,0xb6,0xc7]
 ; NF-NEXT:    movl $255, %ecx # encoding: [0xb9,0xff,0x00,0x00,0x00]
 ; NF-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; NF-NEXT:    # kill: def $al killed $al killed $eax
@@ -763,21 +772,19 @@ entry:
 define i16 @addflag16rm(i16 noundef %a, ptr %b) {
 ; NDD-LABEL: addflag16rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movzwl (%rsi), %eax # encoding: [0x0f,0xb7,0x06]
-; NDD-NEXT:    addw %di, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x01,0xf8]
-; NDD-NEXT:    movl $65535, %ecx # encoding: [0xb9,0xff,0xff,0x00,0x00]
+; NDD-NEXT:    addw (%rsi), %di # encoding: [0x66,0x03,0x3e]
+; NDD-NEXT:    movl $65535, %eax # encoding: [0xb8,0xff,0xff,0x00,0x00]
 ; NDD-NEXT:    # imm = 0xFFFF
-; NDD-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
+; NDD-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
 ; NDD-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: addflag16rm:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movzwl (%rsi), %eax # encoding: [0x0f,0xb7,0x06]
-; IMMONLY-NEXT:    addw %di, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x01,0xf8]
-; IMMONLY-NEXT:    movl $65535, %ecx # encoding: [0xb9,0xff,0xff,0x00,0x00]
+; IMMONLY-NEXT:    addw (%rsi), %di # encoding: [0x66,0x03,0x3e]
+; IMMONLY-NEXT:    movl $65535, %eax # encoding: [0xb8,0xff,0xff,0x00,0x00]
 ; IMMONLY-NEXT:    # imm = 0xFFFF
-; IMMONLY-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
+; IMMONLY-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
 ; IMMONLY-NEXT:    # kill: def $ax killed $ax killed $eax
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
@@ -792,11 +799,10 @@ define i16 @addflag16rm(i16 noundef %a, ptr %b) {
 ;
 ; NF-LABEL: addflag16rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movzwl (%rsi), %eax # encoding: [0x0f,0xb7,0x06]
-; NF-NEXT:    addw %di, %ax # EVEX TO LEGACY Compression encoding: [0x66,0x01,0xf8]
-; NF-NEXT:    movl $65535, %ecx # encoding: [0xb9,0xff,0xff,0x00,0x00]
+; NF-NEXT:    addw (%rsi), %di # encoding: [0x66,0x03,0x3e]
+; NF-NEXT:    movl $65535, %eax # encoding: [0xb8,0xff,0xff,0x00,0x00]
 ; NF-NEXT:    # imm = 0xFFFF
-; NF-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
+; NF-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
 ; NF-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -808,18 +814,16 @@ entry:
 define i32 @addflag32rm(i32 noundef %a, ptr %b) {
 ; NDD-LABEL: addflag32rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movl (%rsi), %eax # encoding: [0x8b,0x06]
-; NDD-NEXT:    addl %edi, %eax # EVEX TO LEGACY Compression encoding: [0x01,0xf8]
-; NDD-NEXT:    movl $-1, %ecx # encoding: [0xb9,0xff,0xff,0xff,0xff]
-; NDD-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
+; NDD-NEXT:    addl (%rsi), %edi # encoding: [0x03,0x3e]
+; NDD-NEXT:    movl $-1, %eax # encoding: [0xb8,0xff,0xff,0xff,0xff]
+; NDD-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: addflag32rm:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movl (%rsi), %eax # encoding: [0x8b,0x06]
-; IMMONLY-NEXT:    addl %edi, %eax # EVEX TO LEGACY Compression encoding: [0x01,0xf8]
-; IMMONLY-NEXT:    movl $-1, %ecx # encoding: [0xb9,0xff,0xff,0xff,0xff]
-; IMMONLY-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
+; IMMONLY-NEXT:    addl (%rsi), %edi # encoding: [0x03,0x3e]
+; IMMONLY-NEXT:    movl $-1, %eax # encoding: [0xb8,0xff,0xff,0xff,0xff]
+; IMMONLY-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: addflag32rm:
@@ -831,10 +835,9 @@ define i32 @addflag32rm(i32 noundef %a, ptr %b) {
 ;
 ; NF-LABEL: addflag32rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movl (%rsi), %eax # encoding: [0x8b,0x06]
-; NF-NEXT:    addl %edi, %eax # EVEX TO LEGACY Compression encoding: [0x01,0xf8]
-; NF-NEXT:    movl $-1, %ecx # encoding: [0xb9,0xff,0xff,0xff,0xff]
-; NF-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
+; NF-NEXT:    addl (%rsi), %edi # encoding: [0x03,0x3e]
+; NF-NEXT:    movl $-1, %eax # encoding: [0xb8,0xff,0xff,0xff,0xff]
+; NF-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %t = load i32, ptr %b
@@ -845,18 +848,16 @@ entry:
 define i64 @addflag64rm(i64 noundef %a, ptr %b) {
 ; NDD-LABEL: addflag64rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    movq (%rsi), %rax # encoding: [0x48,0x8b,0x06]
-; NDD-NEXT:    addq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xf8]
-; NDD-NEXT:    movq $-1, %rcx # encoding: [0x48,0xc7,0xc1,0xff,0xff,0xff,0xff]
-; NDD-NEXT:    cmovbq %rcx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x42,0xc1]
+; NDD-NEXT:    addq (%rsi), %rdi # encoding: [0x48,0x03,0x3e]
+; NDD-NEXT:    movq $-1, %rax # encoding: [0x48,0xc7,0xc0,0xff,0xff,0xff,0xff]
+; NDD-NEXT:    cmovaeq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x43,0xc7]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; IMMONLY-LABEL: addflag64rm:
 ; IMMONLY:       # %bb.0: # %entry
-; IMMONLY-NEXT:    movq (%rsi), %rax # encoding: [0x48,0x8b,0x06]
-; IMMONLY-NEXT:    addq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xf8]
-; IMMONLY-NEXT:    movq $-1, %rcx # encoding: [0x48,0xc7,0xc1,0xff,0xff,0xff,0xff]
-; IMMONLY-NEXT:    cmovbq %rcx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x42,0xc1]
+; IMMONLY-NEXT:    addq (%rsi), %rdi # encoding: [0x48,0x03,0x3e]
+; IMMONLY-NEXT:    movq $-1, %rax # encoding: [0x48,0xc7,0xc0,0xff,0xff,0xff,0xff]
+; IMMONLY-NEXT:    cmovaeq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x43,0xc7]
 ; IMMONLY-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: addflag64rm:
@@ -868,10 +869,9 @@ define i64 @addflag64rm(i64 noundef %a, ptr %b) {
 ;
 ; NF-LABEL: addflag64rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    movq (%rsi), %rax # encoding: [0x48,0x8b,0x06]
-; NF-NEXT:    addq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x01,0xf8]
-; NF-NEXT:    movq $-1, %rcx # encoding: [0x48,0xc7,0xc1,0xff,0xff,0xff,0xff]
-; NF-NEXT:    cmovbq %rcx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x42,0xc1]
+; NF-NEXT:    addq (%rsi), %rdi # encoding: [0x48,0x03,0x3e]
+; NF-NEXT:    movq $-1, %rax # encoding: [0x48,0xc7,0xc0,0xff,0xff,0xff,0xff]
+; NF-NEXT:    cmovaeq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x43,0xc7]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
     %t = load i64, ptr %b
@@ -1247,4 +1247,291 @@ entry:
   %add = add nsw i64 %t, 123456
   store i64 %add, ptr %a
   ret void
+}
+
+define i32 @two_address_no_subreg(i32 %arg0, ptr %arg1, i1 %arg2) nounwind {
+; NDD-LABEL: two_address_no_subreg:
+; NDD:       # %bb.0: # %entry
+; NDD-NEXT:    pushq %rbp # encoding: [0x55]
+; NDD-NEXT:    pushq %r15 # encoding: [0x41,0x57]
+; NDD-NEXT:    pushq %r14 # encoding: [0x41,0x56]
+; NDD-NEXT:    pushq %r13 # encoding: [0x41,0x55]
+; NDD-NEXT:    pushq %r12 # encoding: [0x41,0x54]
+; NDD-NEXT:    pushq %rbx # encoding: [0x53]
+; NDD-NEXT:    pushq %rax # encoding: [0x50]
+; NDD-NEXT:    movl %edx, %ebp # encoding: [0x89,0xd5]
+; NDD-NEXT:    movq %rsi, %r14 # encoding: [0x49,0x89,0xf6]
+; NDD-NEXT:    movl %edi, %ebx # encoding: [0x89,0xfb]
+; NDD-NEXT:    movslq %edi, %rax # encoding: [0x48,0x63,0xc7]
+; NDD-NEXT:    imulq $715827883, %rax, %r13 # encoding: [0x4c,0x69,0xe8,0xab,0xaa,0xaa,0x2a]
+; NDD-NEXT:    # imm = 0x2AAAAAAB
+; NDD-NEXT:    shrq $63, %r13, %rax # encoding: [0x62,0xd4,0xfc,0x18,0xc1,0xed,0x3f]
+; NDD-NEXT:    movq %rax, (%rsp) # 8-byte Spill
+; NDD-NEXT:    # encoding: [0x48,0x89,0x04,0x24]
+; NDD-NEXT:    shrq $32, %r13 # EVEX TO LEGACY Compression encoding: [0x49,0xc1,0xed,0x20]
+; NDD-NEXT:    xorl %r15d, %r15d # encoding: [0x45,0x31,0xff]
+; NDD-NEXT:    movq %rsi, %rdi # encoding: [0x48,0x89,0xf7]
+; NDD-NEXT:    callq *%r15 # encoding: [0x41,0xff,0xd7]
+; NDD-NEXT:    movq %r14, %rdi # encoding: [0x4c,0x89,0xf7]
+; NDD-NEXT:    callq *%r15 # encoding: [0x41,0xff,0xd7]
+; NDD-NEXT:    movl $1, %r12d # encoding: [0x41,0xbc,0x01,0x00,0x00,0x00]
+; NDD-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
+; NDD-NEXT:    jne .LBB50_2 # encoding: [0x75,A]
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB50_2, kind: FK_PCRel_1
+; NDD-NEXT:  # %bb.1: # %bb2
+; NDD-NEXT:    xorl %r12d, %r12d # encoding: [0x45,0x31,0xe4]
+; NDD-NEXT:  .LBB50_2: # %bb1
+; NDD-NEXT:    movl %r13d, %esi # encoding: [0x44,0x89,0xee]
+; NDD-NEXT:    addl (%rsp), %esi # 4-byte Folded Reload
+; NDD-NEXT:    # encoding: [0x03,0x34,0x24]
+; NDD-NEXT:    imull %ebx, %ebx, %r13d # encoding: [0x62,0xf4,0x14,0x18,0xaf,0xdb]
+; NDD-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
+; NDD-NEXT:    jne .LBB50_4 # encoding: [0x75,A]
+; NDD-NEXT:    # fixup A - offset: 1, value: .LBB50_4, kind: FK_PCRel_1
+; NDD-NEXT:  # %bb.3: # %bb4
+; NDD-NEXT:    xorl %ebp, %ebp # encoding: [0x31,0xed]
+; NDD-NEXT:    movq %r14, %rdi # encoding: [0x4c,0x89,0xf7]
+; NDD-NEXT:    movl %esi, %r14d # encoding: [0x41,0x89,0xf6]
+; NDD-NEXT:    callq *%rbp # encoding: [0xff,0xd5]
+; NDD-NEXT:    incl %r12d, %r15d # encoding: [0x62,0xd4,0x04,0x18,0xff,0xc4]
+; NDD-NEXT:    xorl %edi, %edi # encoding: [0x31,0xff]
+; NDD-NEXT:    callq *%rbp # encoding: [0xff,0xd5]
+; NDD-NEXT:    movl %r14d, %esi # encoding: [0x44,0x89,0xf6]
+; NDD-NEXT:  .LBB50_4: # %bb3
+; NDD-NEXT:    orl %r13d, %esi # EVEX TO LEGACY Compression encoding: [0x44,0x09,0xee]
+; NDD-NEXT:    orl %r15d, %esi # EVEX TO LEGACY Compression encoding: [0x44,0x09,0xfe]
+; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NDD-NEXT:    movl %ebx, %edi # encoding: [0x89,0xdf]
+; NDD-NEXT:    xorl %edx, %edx # encoding: [0x31,0xd2]
+; NDD-NEXT:    xorl %ecx, %ecx # encoding: [0x31,0xc9]
+; NDD-NEXT:    callq *%rax # encoding: [0xff,0xd0]
+; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NDD-NEXT:    addq $8, %rsp # encoding: [0x48,0x83,0xc4,0x08]
+; NDD-NEXT:    popq %rbx # encoding: [0x5b]
+; NDD-NEXT:    popq %r12 # encoding: [0x41,0x5c]
+; NDD-NEXT:    popq %r13 # encoding: [0x41,0x5d]
+; NDD-NEXT:    popq %r14 # encoding: [0x41,0x5e]
+; NDD-NEXT:    popq %r15 # encoding: [0x41,0x5f]
+; NDD-NEXT:    popq %rbp # encoding: [0x5d]
+; NDD-NEXT:    retq # encoding: [0xc3]
+;
+; IMMONLY-LABEL: two_address_no_subreg:
+; IMMONLY:       # %bb.0: # %entry
+; IMMONLY-NEXT:    pushq %rbp # encoding: [0x55]
+; IMMONLY-NEXT:    pushq %r15 # encoding: [0x41,0x57]
+; IMMONLY-NEXT:    pushq %r14 # encoding: [0x41,0x56]
+; IMMONLY-NEXT:    pushq %r13 # encoding: [0x41,0x55]
+; IMMONLY-NEXT:    pushq %r12 # encoding: [0x41,0x54]
+; IMMONLY-NEXT:    pushq %rbx # encoding: [0x53]
+; IMMONLY-NEXT:    pushq %rax # encoding: [0x50]
+; IMMONLY-NEXT:    movl %edx, %ebp # encoding: [0x89,0xd5]
+; IMMONLY-NEXT:    movq %rsi, %r14 # encoding: [0x49,0x89,0xf6]
+; IMMONLY-NEXT:    movl %edi, %ebx # encoding: [0x89,0xfb]
+; IMMONLY-NEXT:    movslq %edi, %rax # encoding: [0x48,0x63,0xc7]
+; IMMONLY-NEXT:    imulq $715827883, %rax, %r13 # encoding: [0x4c,0x69,0xe8,0xab,0xaa,0xaa,0x2a]
+; IMMONLY-NEXT:    # imm = 0x2AAAAAAB
+; IMMONLY-NEXT:    shrq $63, %r13, %rax # encoding: [0x62,0xd4,0xfc,0x18,0xc1,0xed,0x3f]
+; IMMONLY-NEXT:    movq %rax, (%rsp) # 8-byte Spill
+; IMMONLY-NEXT:    # encoding: [0x48,0x89,0x04,0x24]
+; IMMONLY-NEXT:    shrq $32, %r13 # EVEX TO LEGACY Compression encoding: [0x49,0xc1,0xed,0x20]
+; IMMONLY-NEXT:    xorl %r15d, %r15d # encoding: [0x45,0x31,0xff]
+; IMMONLY-NEXT:    movq %rsi, %rdi # encoding: [0x48,0x89,0xf7]
+; IMMONLY-NEXT:    callq *%r15 # encoding: [0x41,0xff,0xd7]
+; IMMONLY-NEXT:    movq %r14, %rdi # encoding: [0x4c,0x89,0xf7]
+; IMMONLY-NEXT:    callq *%r15 # encoding: [0x41,0xff,0xd7]
+; IMMONLY-NEXT:    movl $1, %r12d # encoding: [0x41,0xbc,0x01,0x00,0x00,0x00]
+; IMMONLY-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
+; IMMONLY-NEXT:    jne .LBB50_2 # encoding: [0x75,A]
+; IMMONLY-NEXT:    # fixup A - offset: 1, value: .LBB50_2, kind: FK_PCRel_1
+; IMMONLY-NEXT:  # %bb.1: # %bb2
+; IMMONLY-NEXT:    xorl %r12d, %r12d # encoding: [0x45,0x31,0xe4]
+; IMMONLY-NEXT:  .LBB50_2: # %bb1
+; IMMONLY-NEXT:    movl %r13d, %esi # encoding: [0x44,0x89,0xee]
+; IMMONLY-NEXT:    addl (%rsp), %esi # 4-byte Folded Reload
+; IMMONLY-NEXT:    # encoding: [0x03,0x34,0x24]
+; IMMONLY-NEXT:    imull %ebx, %ebx, %r13d # encoding: [0x62,0xf4,0x14,0x18,0xaf,0xdb]
+; IMMONLY-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
+; IMMONLY-NEXT:    jne .LBB50_4 # encoding: [0x75,A]
+; IMMONLY-NEXT:    # fixup A - offset: 1, value: .LBB50_4, kind: FK_PCRel_1
+; IMMONLY-NEXT:  # %bb.3: # %bb4
+; IMMONLY-NEXT:    xorl %ebp, %ebp # encoding: [0x31,0xed]
+; IMMONLY-NEXT:    movq %r14, %rdi # encoding: [0x4c,0x89,0xf7]
+; IMMONLY-NEXT:    movl %esi, %r14d # encoding: [0x41,0x89,0xf6]
+; IMMONLY-NEXT:    callq *%rbp # encoding: [0xff,0xd5]
+; IMMONLY-NEXT:    incl %r12d, %r15d # encoding: [0x62,0xd4,0x04,0x18,0xff,0xc4]
+; IMMONLY-NEXT:    xorl %edi, %edi # encoding: [0x31,0xff]
+; IMMONLY-NEXT:    callq *%rbp # encoding: [0xff,0xd5]
+; IMMONLY-NEXT:    movl %r14d, %esi # encoding: [0x44,0x89,0xf6]
+; IMMONLY-NEXT:  .LBB50_4: # %bb3
+; IMMONLY-NEXT:    orl %r13d, %esi # EVEX TO LEGACY Compression encoding: [0x44,0x09,0xee]
+; IMMONLY-NEXT:    orl %r15d, %esi # EVEX TO LEGACY Compression encoding: [0x44,0x09,0xfe]
+; IMMONLY-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; IMMONLY-NEXT:    movl %ebx, %edi # encoding: [0x89,0xdf]
+; IMMONLY-NEXT:    xorl %edx, %edx # encoding: [0x31,0xd2]
+; IMMONLY-NEXT:    xorl %ecx, %ecx # encoding: [0x31,0xc9]
+; IMMONLY-NEXT:    callq *%rax # encoding: [0xff,0xd0]
+; IMMONLY-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; IMMONLY-NEXT:    addq $8, %rsp # encoding: [0x48,0x83,0xc4,0x08]
+; IMMONLY-NEXT:    popq %rbx # encoding: [0x5b]
+; IMMONLY-NEXT:    popq %r12 # encoding: [0x41,0x5c]
+; IMMONLY-NEXT:    popq %r13 # encoding: [0x41,0x5d]
+; IMMONLY-NEXT:    popq %r14 # encoding: [0x41,0x5e]
+; IMMONLY-NEXT:    popq %r15 # encoding: [0x41,0x5f]
+; IMMONLY-NEXT:    popq %rbp # encoding: [0x5d]
+; IMMONLY-NEXT:    retq # encoding: [0xc3]
+;
+; MEM-LABEL: two_address_no_subreg:
+; MEM:       # %bb.0: # %entry
+; MEM-NEXT:    pushq %rbp # encoding: [0x55]
+; MEM-NEXT:    pushq %r15 # encoding: [0x41,0x57]
+; MEM-NEXT:    pushq %r14 # encoding: [0x41,0x56]
+; MEM-NEXT:    pushq %r13 # encoding: [0x41,0x55]
+; MEM-NEXT:    pushq %r12 # encoding: [0x41,0x54]
+; MEM-NEXT:    pushq %rbx # encoding: [0x53]
+; MEM-NEXT:    pushq %rax # encoding: [0x50]
+; MEM-NEXT:    movl %edx, %ebp # encoding: [0x89,0xd5]
+; MEM-NEXT:    movq %rsi, %r14 # encoding: [0x49,0x89,0xf6]
+; MEM-NEXT:    movl %edi, %ebx # encoding: [0x89,0xfb]
+; MEM-NEXT:    movslq %edi, %rax # encoding: [0x48,0x63,0xc7]
+; MEM-NEXT:    imulq $715827883, %rax, %r13 # encoding: [0x4c,0x69,0xe8,0xab,0xaa,0xaa,0x2a]
+; MEM-NEXT:    # imm = 0x2AAAAAAB
+; MEM-NEXT:    shrq $63, %r13, %rax # encoding: [0x62,0xd4,0xfc,0x18,0xc1,0xed,0x3f]
+; MEM-NEXT:    movq %rax, (%rsp) # 8-byte Spill
+; MEM-NEXT:    # encoding: [0x48,0x89,0x04,0x24]
+; MEM-NEXT:    shrq $32, %r13 # EVEX TO LEGACY Compression encoding: [0x49,0xc1,0xed,0x20]
+; MEM-NEXT:    xorl %r15d, %r15d # encoding: [0x45,0x31,0xff]
+; MEM-NEXT:    movq %rsi, %rdi # encoding: [0x48,0x89,0xf7]
+; MEM-NEXT:    callq *%r15 # encoding: [0x41,0xff,0xd7]
+; MEM-NEXT:    movq %r14, %rdi # encoding: [0x4c,0x89,0xf7]
+; MEM-NEXT:    callq *%r15 # encoding: [0x41,0xff,0xd7]
+; MEM-NEXT:    movl $1, %r12d # encoding: [0x41,0xbc,0x01,0x00,0x00,0x00]
+; MEM-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
+; MEM-NEXT:    jne .LBB50_2 # encoding: [0x75,A]
+; MEM-NEXT:    # fixup A - offset: 1, value: .LBB50_2, kind: FK_PCRel_1
+; MEM-NEXT:  # %bb.1: # %bb2
+; MEM-NEXT:    xorl %r12d, %r12d # encoding: [0x45,0x31,0xe4]
+; MEM-NEXT:  .LBB50_2: # %bb1
+; MEM-NEXT:    addl (%rsp), %r13d, %esi # 4-byte Folded Reload
+; MEM-NEXT:    # encoding: [0x62,0x74,0x4c,0x18,0x03,0x2c,0x24]
+; MEM-NEXT:    imull %ebx, %ebx, %r13d # encoding: [0x62,0xf4,0x14,0x18,0xaf,0xdb]
+; MEM-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
+; MEM-NEXT:    jne .LBB50_4 # encoding: [0x75,A]
+; MEM-NEXT:    # fixup A - offset: 1, value: .LBB50_4, kind: FK_PCRel_1
+; MEM-NEXT:  # %bb.3: # %bb4
+; MEM-NEXT:    xorl %ebp, %ebp # encoding: [0x31,0xed]
+; MEM-NEXT:    movq %r14, %rdi # encoding: [0x4c,0x89,0xf7]
+; MEM-NEXT:    movl %esi, %r14d # encoding: [0x41,0x89,0xf6]
+; MEM-NEXT:    callq *%rbp # encoding: [0xff,0xd5]
+; MEM-NEXT:    incl %r12d, %r15d # encoding: [0x62,0xd4,0x04,0x18,0xff,0xc4]
+; MEM-NEXT:    xorl %edi, %edi # encoding: [0x31,0xff]
+; MEM-NEXT:    callq *%rbp # encoding: [0xff,0xd5]
+; MEM-NEXT:    movl %r14d, %esi # encoding: [0x44,0x89,0xf6]
+; MEM-NEXT:  .LBB50_4: # %bb3
+; MEM-NEXT:    orl %r13d, %esi # EVEX TO LEGACY Compression encoding: [0x44,0x09,0xee]
+; MEM-NEXT:    orl %r15d, %esi # EVEX TO LEGACY Compression encoding: [0x44,0x09,0xfe]
+; MEM-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; MEM-NEXT:    movl %ebx, %edi # encoding: [0x89,0xdf]
+; MEM-NEXT:    xorl %edx, %edx # encoding: [0x31,0xd2]
+; MEM-NEXT:    xorl %ecx, %ecx # encoding: [0x31,0xc9]
+; MEM-NEXT:    callq *%rax # encoding: [0xff,0xd0]
+; MEM-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; MEM-NEXT:    addq $8, %rsp # encoding: [0x48,0x83,0xc4,0x08]
+; MEM-NEXT:    popq %rbx # encoding: [0x5b]
+; MEM-NEXT:    popq %r12 # encoding: [0x41,0x5c]
+; MEM-NEXT:    popq %r13 # encoding: [0x41,0x5d]
+; MEM-NEXT:    popq %r14 # encoding: [0x41,0x5e]
+; MEM-NEXT:    popq %r15 # encoding: [0x41,0x5f]
+; MEM-NEXT:    popq %rbp # encoding: [0x5d]
+; MEM-NEXT:    retq # encoding: [0xc3]
+;
+; NF-LABEL: two_address_no_subreg:
+; NF:       # %bb.0: # %entry
+; NF-NEXT:    pushq %rbp # encoding: [0x55]
+; NF-NEXT:    pushq %r15 # encoding: [0x41,0x57]
+; NF-NEXT:    pushq %r14 # encoding: [0x41,0x56]
+; NF-NEXT:    pushq %r13 # encoding: [0x41,0x55]
+; NF-NEXT:    pushq %r12 # encoding: [0x41,0x54]
+; NF-NEXT:    pushq %rbx # encoding: [0x53]
+; NF-NEXT:    pushq %rax # encoding: [0x50]
+; NF-NEXT:    movl %edx, %ebp # encoding: [0x89,0xd5]
+; NF-NEXT:    movq %rsi, %r14 # encoding: [0x49,0x89,0xf6]
+; NF-NEXT:    movl %edi, %ebx # encoding: [0x89,0xfb]
+; NF-NEXT:    movslq %edi, %rax # encoding: [0x48,0x63,0xc7]
+; NF-NEXT:    imulq $715827883, %rax, %r13 # encoding: [0x4c,0x69,0xe8,0xab,0xaa,0xaa,0x2a]
+; NF-NEXT:    # imm = 0x2AAAAAAB
+; NF-NEXT:    {nf} shrq $63, %r13, %rax # EVEX TO EVEX Compression encoding: [0x62,0xd4,0xfc,0x1c,0xc1,0xed,0x3f]
+; NF-NEXT:    movq %rax, (%rsp) # 8-byte Spill
+; NF-NEXT:    # encoding: [0x48,0x89,0x04,0x24]
+; NF-NEXT:    shrq $32, %r13 # EVEX TO LEGACY Compression encoding: [0x49,0xc1,0xed,0x20]
+; NF-NEXT:    xorl %r15d, %r15d # encoding: [0x45,0x31,0xff]
+; NF-NEXT:    movq %rsi, %rdi # encoding: [0x48,0x89,0xf7]
+; NF-NEXT:    callq *%r15 # encoding: [0x41,0xff,0xd7]
+; NF-NEXT:    movq %r14, %rdi # encoding: [0x4c,0x89,0xf7]
+; NF-NEXT:    callq *%r15 # encoding: [0x41,0xff,0xd7]
+; NF-NEXT:    movl $1, %r12d # encoding: [0x41,0xbc,0x01,0x00,0x00,0x00]
+; NF-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
+; NF-NEXT:    jne .LBB50_2 # encoding: [0x75,A]
+; NF-NEXT:    # fixup A - offset: 1, value: .LBB50_2, kind: FK_PCRel_1
+; NF-NEXT:  # %bb.1: # %bb2
+; NF-NEXT:    xorl %r12d, %r12d # encoding: [0x45,0x31,0xe4]
+; NF-NEXT:  .LBB50_2: # %bb1
+; NF-NEXT:    movl %r13d, %esi # encoding: [0x44,0x89,0xee]
+; NF-NEXT:    addl (%rsp), %esi # 4-byte Folded Reload
+; NF-NEXT:    # encoding: [0x03,0x34,0x24]
+; NF-NEXT:    {nf} imull %ebx, %ebx, %r13d # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x14,0x1c,0xaf,0xdb]
+; NF-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
+; NF-NEXT:    jne .LBB50_4 # encoding: [0x75,A]
+; NF-NEXT:    # fixup A - offset: 1, value: .LBB50_4, kind: FK_PCRel_1
+; NF-NEXT:  # %bb.3: # %bb4
+; NF-NEXT:    xorl %ebp, %ebp # encoding: [0x31,0xed]
+; NF-NEXT:    movq %r14, %rdi # encoding: [0x4c,0x89,0xf7]
+; NF-NEXT:    movl %esi, %r14d # encoding: [0x41,0x89,0xf6]
+; NF-NEXT:    callq *%rbp # encoding: [0xff,0xd5]
+; NF-NEXT:    {nf} incl %r12d, %r15d # EVEX TO EVEX Compression encoding: [0x62,0xd4,0x04,0x1c,0xff,0xc4]
+; NF-NEXT:    xorl %edi, %edi # encoding: [0x31,0xff]
+; NF-NEXT:    callq *%rbp # encoding: [0xff,0xd5]
+; NF-NEXT:    movl %r14d, %esi # encoding: [0x44,0x89,0xf6]
+; NF-NEXT:  .LBB50_4: # %bb3
+; NF-NEXT:    orl %r13d, %esi # EVEX TO LEGACY Compression encoding: [0x44,0x09,0xee]
+; NF-NEXT:    orl %r15d, %esi # EVEX TO LEGACY Compression encoding: [0x44,0x09,0xfe]
+; NF-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NF-NEXT:    movl %ebx, %edi # encoding: [0x89,0xdf]
+; NF-NEXT:    xorl %edx, %edx # encoding: [0x31,0xd2]
+; NF-NEXT:    xorl %ecx, %ecx # encoding: [0x31,0xc9]
+; NF-NEXT:    callq *%rax # encoding: [0xff,0xd0]
+; NF-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; NF-NEXT:    addq $8, %rsp # encoding: [0x48,0x83,0xc4,0x08]
+; NF-NEXT:    popq %rbx # encoding: [0x5b]
+; NF-NEXT:    popq %r12 # encoding: [0x41,0x5c]
+; NF-NEXT:    popq %r13 # encoding: [0x41,0x5d]
+; NF-NEXT:    popq %r14 # encoding: [0x41,0x5e]
+; NF-NEXT:    popq %r15 # encoding: [0x41,0x5f]
+; NF-NEXT:    popq %rbp # encoding: [0x5d]
+; NF-NEXT:    retq # encoding: [0xc3]
+entry:
+  %v0 = sdiv i32 %arg0, 6
+  %v1 = tail call i32 null(ptr %arg1)
+  %v2 = tail call i32 null(ptr %arg1)
+  br i1 %arg2, label %bb1, label %bb2
+
+bb2:                                              ; preds = %entry
+  br label %bb1
+
+bb1:                                              ; preds = %bb2, %entry
+  %v3 = phi i32 [ 0, %bb2 ], [ 1, %entry ]
+  %v4 = mul i32 %arg0, %arg0
+  br i1 %arg2, label %bb3, label %bb4
+
+bb4:                                              ; preds = %bb1
+  %v5 = tail call i32 null(ptr %arg1)
+  %v6 = add i32 %v3, 1
+  %v7 = tail call i32 null(ptr null)
+  br label %bb3
+
+bb3:                                              ; preds = %bb4, %bb1
+  %v8 = phi i32 [ %v6, %bb4 ], [ 0, %bb1 ]
+  %v9 = or i32 %v0, %v4
+  %v10 = or i32 %v9, %v8
+  tail call void null(i32 %arg0, i32 %v10, i32 0, i32 0)
+  ret i32 0
 }

@@ -48,8 +48,6 @@ public:
 };
 } // namespace
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int SSAFNoOpExtractorAnchorSource = 0;
 static TUSummaryExtractorRegistry::Add<NoOpExtractor>
     RegisterNoOp("NoOpExtractor", "No-op extractor for frontend action tests");
 
@@ -99,14 +97,21 @@ public:
     return failing("writeLUSummaryEncoding");
   }
 
+  llvm::Expected<WPASuite> readWPASuite(llvm::StringRef Path) override {
+    return failing("readWPASuite");
+  }
+
+  llvm::Error writeWPASuite(const WPASuite &Suite,
+                            llvm::StringRef Path) override {
+    return failing("writeWPASuite");
+  }
+
   void forEachRegisteredAnalysis(
       llvm::function_ref<void(llvm::StringRef Name, llvm::StringRef Desc)>
           Callback) const override {}
 };
 } // namespace
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int SSAFFailingSerializationFormatAnchorSource = 0;
 static SerializationFormatRegistry::Add<FailingSerializationFormat>
     RegisterFormat(
         "FailingSerializationFormat",

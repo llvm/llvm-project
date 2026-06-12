@@ -12,14 +12,13 @@ target triple = "x86_64-unknown-linux-gnu"
 @.str.1 = private unnamed_addr constant [44 x i8] c" FAIL.....Y3 1/1 (BUBBLE SORT), X(25) = %d\0A\00", align 1
 @str = private unnamed_addr constant [45 x i8] c" PASS.....Y3 1/1 (BUBBLE SORT), X(25) = 5085\00"
 
-; Function Attrs: noinline nounwind uwtable
 declare i32 @y3inner() #0
 
 define i32 @main() #0 {
 entry:
   br label %do.body
 
-do.body:                                          ; preds = %do.body, %entry
+do.body:
   %j.0 = phi i128 [ 99999, %entry ], [ %add10, %do.body ]
   %i.0 = phi i128 [ 1, %entry ], [ %add11, %do.body ]
   %and = and i128 %j.0, 32767
@@ -43,7 +42,7 @@ do.body:                                          ; preds = %do.body, %entry
   %cmp = icmp slt i128 %add11, 149
   br i1 %cmp, label %do.body, label %do.end
 
-do.end:                                           ; preds = %do.body
+do.end:
   store i128 1766649, ptr getelementptr inbounds ([151 x i128], ptr @x, i64 0, i64 149), align 16
   store i128 1766649, ptr getelementptr inbounds ([151 x i128], ptr @x, i64 0, i64 150), align 16
   %call = tail call i32 @y3inner()
@@ -51,26 +50,22 @@ do.end:                                           ; preds = %do.body
   %cmp12 = icmp eq i128 %0, 5085
   br i1 %cmp12, label %if.then, label %if.else
 
-if.then:                                          ; preds = %do.end
+if.then:
   %puts = tail call i32 @puts(ptr @str)
   br label %if.end
 
-if.else:                                          ; preds = %do.end
+if.else:
   %coerce.sroa.0.0.extract.trunc = trunc i128 %0 to i64
   %coerce.sroa.2.0.extract.shift = lshr i128 %0, 64
   %coerce.sroa.2.0.extract.trunc = trunc i128 %coerce.sroa.2.0.extract.shift to i64
   %call14 = tail call i32 (ptr, ...) @printf(ptr @.str.1, i64 %coerce.sroa.0.0.extract.trunc, i64 %coerce.sroa.2.0.extract.trunc)
   br label %if.end
 
-if.end:                                           ; preds = %if.else, %if.then
+if.end:
   ret i32 0
 }
 
-; Function Attrs: nounwind
-declare i32 @printf(ptr, ...) #1
-; Function Attrs: nounwind
-declare i32 @puts(ptr nocapture readonly) #2
+declare i32 @printf(ptr, ...)
+declare i32 @puts(ptr nocapture readonly)
 
-attributes #0 = { noinline nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="skylake-avx512" "target-features"="+adx,+aes,+avx,+avx2,+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl,+bmi,+bmi2,+clflushopt,+clwb,+cx16,+f16c,+fma,+fsgsbase,+fxsr,+lzcnt,+mmx,+movbe,+mpx,+pclmul,+pku,+popcnt,+rdrnd,+rdseed,+rtm,+sgx,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsavec,+xsaveopt,+xsaves" "use-soft-float"="false" }
-attributes #1 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="skylake-avx512" "target-features"="+adx,+aes,+avx,+avx2,+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl,+bmi,+bmi2,+clflushopt,+clwb,+cx16,+f16c,+fma,+fsgsbase,+fxsr,+lzcnt,+mmx,+movbe,+mpx,+pclmul,+pku,+popcnt,+rdrnd,+rdseed,+rtm,+sgx,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsavec,+xsaveopt,+xsaves" "use-soft-float"="false" }
-attributes #2 = { nounwind }
+attributes #0 = { noinline "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="skylake-avx512" "target-features"="+adx,+aes,+avx,+avx2,+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512vl,+bmi,+bmi2,+clflushopt,+clwb,+cx16,+f16c,+fma,+fsgsbase,+fxsr,+lzcnt,+mmx,+movbe,+mpx,+pclmul,+pku,+popcnt,+rdrnd,+rdseed,+rtm,+sgx,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsavec,+xsaveopt,+xsaves" "use-soft-float"="false" }

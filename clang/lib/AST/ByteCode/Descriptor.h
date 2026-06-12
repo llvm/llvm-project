@@ -54,6 +54,8 @@ static_assert(sizeof(GlobalInlineDescriptor) == sizeof(void *), "");
 
 enum class Lifetime : uint8_t {
   Started,
+  NotStarted,
+  Destroyed,
   Ended,
 };
 
@@ -177,8 +179,9 @@ public:
              bool IsVolatile);
 
   /// Allocates a descriptor for an array of primitives.
-  Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD, size_t NumElems,
-             bool IsConst, bool IsTemporary, bool IsMutable);
+  Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
+             MetadataSize MD, size_t NumElems, bool IsConst, bool IsTemporary,
+             bool IsMutable, bool IsVolatile);
 
   /// Allocates a descriptor for an array of primitives of unknown size.
   Descriptor(const DeclTy &D, PrimType Type, MetadataSize MDSize, bool IsConst,
@@ -203,7 +206,6 @@ public:
   QualType getType() const;
   QualType getElemQualType() const;
   QualType getDataType(const ASTContext &Ctx) const;
-  QualType getDataElemType() const;
   SourceLocation getLocation() const;
   SourceInfo getLoc() const;
 
@@ -246,6 +248,11 @@ public:
   unsigned getAllocSize() const { return AllocSize; }
   /// returns the size of an element when the structure is viewed as an array.
   unsigned getElemSize() const { return ElemSize; }
+  /// Returns the element data size, i.e. not what the size of
+  /// our primitive data type is, but what the data size of that is.
+  /// E.g., for PT_SInt32, that's 4 bytes.
+  unsigned getElemDataSize() const;
+
   /// Returns the size of the metadata.
   unsigned getMetadataSize() const { return MDSize; }
 

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the __floatdisf and __floatunsdisf functions (64-bit
+// This file implements the __floatdisf and __floatundisf functions (64-bit
 // signed and unsigned integer to single precision floating point conversion),
 // with the IEEE-754 default rounding (to nearest, ties to even), for the Arm
 // and Thumb2 ISAs.
@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../assembly.h"
-#include "endian.h"
+#include "crt_endian.h"
 
   .syntax unified
   .text
@@ -37,12 +37,12 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_l2f)
   ands    r2, xh, #0x80000000
   bpl     0f                    // if positive, skip the negation
   rsbs    xl, xl, #0
-#if !__thumb__
-  rsc     xh, xh, #0
-#else
+#if __thumb__
   // Thumb has no RSC, so simulate it by bitwise inversion and then ADC
   mvn     xh, xh
   adc     xh, xh, #0
+#else
+  rsc     xh, xh, #0
 #endif
 0:
 
@@ -70,7 +70,7 @@ LOCAL_LABEL(normalise):
   // answer is because 0x4e800000 can't be represented in the immediate field
   // of an AArch32 data-processing instruction, so we can't avoid using two
   // instructions.
-  add     r2, r2, #30 << 23
+  add     r2, r2, #(30 << 23)
 
   // Start setting up r3 to be the exponent adjustment, and set xh to be the
   // highest _nonzero_ word of the input. If xh = 0, set r3 = 0 and copy xl
@@ -109,13 +109,13 @@ LOCAL_LABEL(normalise):
   // < 0 then the AArch32 shift instruction semantics will treat it as a shift
   // of more than 32 bits, shifting xl right off the bottom of the word, and
   // again not modify xh.
-#if !__thumb__
-  orr     xh, xh, xl, lsr r3   // if shift negative then xh unaltered
-#else
+#if __thumb__
   // Thumb can't fold a register-controlled shift into an ORR, so we must use
   // two separate instructions.
   lsr     r12, xl, r3
   orr     xh, xh, r12
+#else
+  orr     xh, xh, xl, lsr r3   // if shift negative then xh unaltered
 #endif
 
   // Combine the exponent adjustment in r3 with the starting exponent and sign
@@ -180,13 +180,13 @@ LOCAL_LABEL(normalise):
 END_COMPILERRT_FUNCTION(__aeabi_l2f)
 
 #if __ARM_PCS_VFP
-DEFINE_COMPILERRT_FUNCTION(__floatunsdisf)
+DEFINE_COMPILERRT_FUNCTION(__floatundisf)
   push {r4, lr}
   bl __aeabi_ul2f
   vmov s0, r0
   pop {r4, pc}
 #else
-DEFINE_COMPILERRT_FUNCTION_ALIAS(__floatunsdisf, __aeabi_ul2f)
+DEFINE_COMPILERRT_FUNCTION_ALIAS(__floatundisf, __aeabi_ul2f)
 #endif
 
 DEFINE_COMPILERRT_FUNCTION(__aeabi_ul2f)
@@ -196,5 +196,10 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_ul2f)
   b       LOCAL_LABEL(normalise)
 
 END_COMPILERRT_FUNCTION(__aeabi_ul2f)
+
+#if defined(__MINGW32__)
+DEFINE_COMPILERRT_FUNCTION_ALIAS(__i64tos, __floatdisf)
+DEFINE_COMPILERRT_FUNCTION_ALIAS(__u64tos, __floatundisf)
+#endif
 
 NO_EXEC_STACK_DIRECTIVE

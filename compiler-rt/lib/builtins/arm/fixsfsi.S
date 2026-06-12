@@ -53,7 +53,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_f2iz)
   // original r0 and doesn't touch the top bit. So if we make it set the flags
   // too, it also tests the sign of the input, leaving the result in the N
   // flag, saving us a separate sign test instruction.
-  orrs    r2, r0, #1 << 23      // put on the leading 1 and test sign
+  orrs    r2, r0, #(1 << 23)    // put on the leading 1 and test sign
   lsl     r2, r2, #8            // shift mantissa up to top of word
 
   // Now shift the mantissa down to its output position, and negate the result

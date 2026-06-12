@@ -1024,7 +1024,7 @@ void StructurizeCFG::simplifyAffectedPhis() {
 
 /// Remove phi values from all successors and then remove the terminator.
 DebugLoc StructurizeCFG::killTerminator(BasicBlock *BB) {
-  Instruction *Term = BB->getTerminator();
+  Instruction *Term = BB->getTerminatorOrNull();
   if (!Term)
     return DebugLoc();
 
@@ -1302,7 +1302,7 @@ static bool hasOnlyUniformBranches(Region *R, unsigned UniformMDKindID,
       if (!Br)
         continue;
 
-      if (!UA.isUniform(Br))
+      if (UA.isDivergentAtDef(Br))
         return false;
 
       // One of our direct children is conditional.

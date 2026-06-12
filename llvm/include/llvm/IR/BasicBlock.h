@@ -228,16 +228,28 @@ public:
   /// Requires the basic block to have a parent module.
   LLVM_ABI const DataLayout &getDataLayout() const;
 
-  /// Returns the terminator instruction if the block is well formed or
-  /// null if the block is not well formed.
+  /// Returns whether the block has a terminator.
+  bool hasTerminator() const LLVM_READONLY {
+    return !InstList.empty() && InstList.back().isTerminator();
+  }
+
+  /// Returns the terminator instruction; assumes that the block is well-formed.
   const Instruction *getTerminator() const LLVM_READONLY {
-    if (InstList.empty() || !InstList.back().isTerminator())
-      return nullptr;
+    assert(hasTerminator() && "cannot get terminator of non-well-formed block");
     return &InstList.back();
   }
   Instruction *getTerminator() {
     return const_cast<Instruction *>(
         static_cast<const BasicBlock *>(this)->getTerminator());
+  }
+
+  /// Returns the terminator instruction if the block is well formed or
+  /// null if the block is not well formed.
+  const Instruction *getTerminatorOrNull() const LLVM_READONLY {
+    return hasTerminator() ? getTerminator() : nullptr;
+  }
+  Instruction *getTerminatorOrNull() {
+    return hasTerminator() ? getTerminator() : nullptr;
   }
 
   /// Returns the call instruction calling \@llvm.experimental.deoptimize
@@ -755,16 +767,6 @@ inline void BasicBlock::validateInstrOrdering() const {}
 // maps and sets. The iterator is made up of its node pointer, and the
 // debug-info "head" bit.
 template <> struct DenseMapInfo<BasicBlock::iterator> {
-  static inline BasicBlock::iterator getEmptyKey() {
-    return BasicBlock::iterator(nullptr);
-  }
-
-  static inline BasicBlock::iterator getTombstoneKey() {
-    BasicBlock::iterator It(nullptr);
-    It.setHeadBit(true);
-    return It;
-  }
-
   static unsigned getHashValue(const BasicBlock::iterator &It) {
     return DenseMapInfo<void *>::getHashValue(
                reinterpret_cast<void *>(It.getNodePtr())) ^

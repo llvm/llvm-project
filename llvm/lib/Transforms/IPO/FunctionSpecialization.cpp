@@ -632,12 +632,7 @@ void FunctionSpecializer::cleanUpSSA() {
     removeSSACopy(*F);
 }
 
-
 template <> struct llvm::DenseMapInfo<SpecSig> {
-  static inline SpecSig getEmptyKey() { return {~0U, {}}; }
-
-  static inline SpecSig getTombstoneKey() { return {~1U, {}}; }
-
   static unsigned getHashValue(const SpecSig &S) {
     return static_cast<unsigned>(hash_value(S));
   }
@@ -1042,6 +1037,9 @@ bool FunctionSpecializer::isCandidateFunction(Function *F) {
     return false;
 
   if (F->hasFnAttribute(Attribute::NoDuplicate))
+    return false;
+
+  if (F->hasOptSize())
     return false;
 
   // Do not specialize the cloned function again.

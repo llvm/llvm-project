@@ -20,14 +20,24 @@
 #ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_SSAFBUILTINFORCELINKER_H
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_SSAFBUILTINFORCELINKER_H
 
-// This anchor is used to force the linker to link the JSONFormat registration.
-extern volatile int SSAFJSONFormatAnchorSource;
-[[maybe_unused]] static int SSAFJSONFormatAnchorDestination =
-    SSAFJSONFormatAnchorSource;
+namespace clang::ssaf {
 
-// This anchor is used to force the linker to link the AnalysisRegistry.
-extern volatile int SSAFAnalysisRegistryAnchorSource;
-[[maybe_unused]] static int SSAFAnalysisRegistryAnchorDestination =
-    SSAFAnalysisRegistryAnchorSource;
+#define ANCHOR(NAME) extern volatile int NAME;
+#include "BuiltinAnchorSources.def"
+
+// Force the linker to link in the built-in SSAF registrations.
+[[maybe_unused]] static const int BuiltinAnchorDestination = [] {
+  int AnchorSources[]{
+#define ANCHOR(NAME) NAME,
+#include "BuiltinAnchorSources.def"
+  };
+
+  int SomeUse = 0;
+  for (int V : AnchorSources)
+    SomeUse |= V;
+  return SomeUse;
+}();
+
+} // namespace clang::ssaf
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_SSAFBUILTINFORCELINKER_H

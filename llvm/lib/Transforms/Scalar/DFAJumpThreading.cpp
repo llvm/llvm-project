@@ -539,9 +539,9 @@ private:
     if (!SI->hasOneUse())
       return false;
 
-    Instruction *SIUse = dyn_cast<Instruction>(SI->user_back());
+    Instruction *SIUse = SI->user_back();
     // The use of the select inst should be either a phi or another select.
-    if (!SIUse || !(isa<PHINode>(SIUse) || isa<SelectInst>(SIUse)))
+    if (!isa<PHINode, SelectInst>(SIUse))
       return false;
 
     BasicBlock *SIBB = SI->getParent();
@@ -1228,6 +1228,12 @@ private:
         BB->getParent());
     NewBB->moveAfter(BB);
     NumCloned++;
+
+    // Give the clone fresh noalias scopes; otherwise it shares BB's scopes and
+    // AA can treat aliasing accesses on different threaded paths as noalias.
+    SmallVector<MDNode *> NoAliasScopes;
+    identifyNoAliasScopesToClone({NewBB}, NoAliasScopes);
+    cloneAndAdaptNoAliasScopes(NoAliasScopes, {NewBB}, BB->getContext(), "dfa");
 
     for (Instruction &I : *NewBB) {
       // Do not remap operands of PHINode in case a definition in BB is an

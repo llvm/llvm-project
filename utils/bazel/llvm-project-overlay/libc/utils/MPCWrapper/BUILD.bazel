@@ -21,8 +21,8 @@ cc_library(
     deps = select(
         {
             "//conditions:default": [],
-            "//libc:mpc_external": ["@mpc//:mpc_external"],
-            "//libc:mpc_system": ["@mpc//:mpc_system"],
+            "//libc:mpc_external": ["@mpc"],
+            "//libc:mpc_system": ["//libc:libmpc_system"],
         },
     ),
 )

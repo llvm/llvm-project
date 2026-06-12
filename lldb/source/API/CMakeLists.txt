@@ -142,12 +142,14 @@ add_lldb_library(liblldb SHARED ${option_framework}
   ${option_install_prefix}
 )
 
-if (LLDB_ENABLE_PYTHON)
-  add_python_wrapper(liblldb)
-endif()
+if (NOT LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+  if (LLDB_ENABLE_PYTHON)
+    add_python_wrapper(liblldb)
+  endif()
 
-if(LLDB_ENABLE_LUA)
-  add_lua_wrapper(liblldb)
+  if(LLDB_ENABLE_LUA)
+    add_lua_wrapper(liblldb)
+  endif()
 endif()
 
 set_target_properties(liblldb
@@ -157,7 +159,34 @@ set_target_properties(liblldb
 
 target_compile_definitions(liblldb PRIVATE LLDB_IN_LIBLLDB)
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
-  if (NOT LLDB_EXPORT_ALL_SYMBOLS)
+  if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS AND NOT LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE)
+    # Each script interpreter plugin contributes a list of its undefined
+    # LLDB symbols. Concatenating those with liblldb.exports yields the
+    # smallest export set that satisfies dynamically loaded plugins.
+    get_property(plugin_symbol_files GLOBAL
+      PROPERTY LLDB_DYNAMIC_SCRIPTINTERPRETER_SYMBOL_FILES)
+    set(generated_exports_file
+      ${CMAKE_CURRENT_BINARY_DIR}/liblldb-script-interpreter.exports)
+    add_custom_command(
+      OUTPUT ${generated_exports_file}
+      COMMAND ${CMAKE_COMMAND} -P
+        ${LLDB_SOURCE_DIR}/cmake/modules/LLDBConcatFiles.cmake
+        ${generated_exports_file}
+        ${CMAKE_CURRENT_SOURCE_DIR}/liblldb.exports
+        ${plugin_symbol_files}
+      DEPENDS
+        ${LLDB_SOURCE_DIR}/cmake/modules/LLDBConcatFiles.cmake
+        ${CMAKE_CURRENT_SOURCE_DIR}/liblldb.exports
+        ${plugin_symbol_files}
+      VERBATIM
+      COMMENT "Merging script interpreter export lists for liblldb"
+    )
+    add_custom_target(liblldb-script-interpreter-exports
+      DEPENDS ${generated_exports_file})
+    message(STATUS "Symbols (liblldb): exporting the lldb namespace plus "
+                   "script interpreter dependencies")
+    lldb_apply_exports_file(liblldb ${generated_exports_file})
+  elseif (NOT LLDB_EXPORT_ALL_SYMBOLS)
     # If we're not exporting all symbols, we'll want to explicitly set
     # the exported symbols here.  This prevents 'log enable --stack ...'
     # from working on some systems but limits the liblldb size.

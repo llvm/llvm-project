@@ -401,6 +401,9 @@ namespace clang {
     bool isOverloadFirstandLast() const {
       return Flags & IsOverloadFirstandLast;
     }
+    bool isOverloadDefaultAndOp0() const {
+      return Flags & IsOverloadDefaultAndOp0;
+    }
     bool isPrefetch() const { return Flags & IsPrefetch; }
     bool isReverseCompare() const { return Flags & ReverseCompare; }
     bool isAppendSVALL() const { return Flags & IsAppendSVALL; }
@@ -456,8 +459,9 @@ namespace clang {
   namespace SystemZ {
     enum {
         LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,
-#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
-#include "clang/Basic/BuiltinsSystemZ.def"
+#define GET_BUILTIN_ENUMERATORS
+#include "clang/Basic/BuiltinsSystemZ.inc"
+#undef GET_BUILTIN_ENUMERATORS
         LastTSBuiltin
     };
   }

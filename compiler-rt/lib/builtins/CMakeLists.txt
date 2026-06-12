@@ -491,9 +491,9 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
       arm/floatdisf.S
       arm/floatsidf.S
       arm/floatsisf.S
-      arm/floatunsdidf.S
-      arm/floatunssidf.S
-      arm/floatunssisf.S
+      arm/floatundidf.S
+      arm/floatunsidf.S
+      arm/floatunsisf.S
       arm/truncdfsf2.S
       )
     set_source_files_properties(${assembly_files}
@@ -507,7 +507,6 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
       arm/dnorm2.c
       arm/dunder.c
       )
-    set_property(SOURCE arm/floatdisf.S DIRECTORY ${COMPILER_RT_SOURCE_DIR} PROPERTY crt_provides floatunsdisf)
   endif()
 endif()
 
@@ -541,9 +540,11 @@ set(thumb1_base_SOURCES
   arm/udivsi3.S
   ${GENERIC_SOURCES}
 )
-# arm/addsf3.S implements both addition and subtraction via cross-branching
 set_special_properties(arm/addsf3.S SUPERSEDES subsf3.c PROVIDES subsf3)
 set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c PROVIDES subdf3)
+set_special_properties(arm/cmpdf2.S SUPERSEDES comparedf2.c PROVIDES comparedf2)
+set_special_properties(arm/cmpsf2.S SUPERSEDES arm/comparesf2.S PROVIDES comparesf2)
+set_special_properties(arm/floatdisf.S SUPERSEDES floatundisf.c PROVIDES floatundisf)
 
 if(COMPILER_RT_ARM_OPTIMIZED_FP)
   set(thumb1_base_SOURCES
@@ -949,6 +950,8 @@ set(riscv64_SOURCES
 set(sparc_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 set(sparcv9_SOURCES ${GENERIC_SOURCES} ${GENERIC_TF_SOURCES})
 
+set(spirv64_SOURCES ${GENERIC_SOURCES})
+
 set(s390x_SOURCES
   ${GENERIC_SOURCES}
   ${GENERIC_TF_SOURCES}
@@ -1017,13 +1020,13 @@ else ()
   endif()
 
   # Directly targeting the GPU requires a few extra flags.
-  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
+  if(COMPILER_RT_GPU_BUILD)
     append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto BUILTIN_CFLAGS)
 
     # AMDGPU targets want to use a generic ABI.
-    if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+    if(COMPILER_RT_TARGET_AMDGPU)
       append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
                      "SHELL:-Xclang -mcode-object-version=none" BUILTIN_CFLAGS)
     endif()
@@ -1040,7 +1043,7 @@ else ()
   elseif(COMPILER_RT_BAREMETAL_BUILD)
     foreach (arch ${BUILTIN_SUPPORTED_ARCH})
       if("${arch}" MATCHES "arm64|aarch64")
-        list(APPEND BUILTIN_DEFS ENABLE_BAREMETAL_AARCH64_FMV)
+        list(APPEND BUILTIN_DEFS TARGET_BAREMETAL_AARCH64)
       endif()
     endforeach ()
   endif()
@@ -1159,10 +1162,10 @@ if(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
     endif()
   endforeach()
   # FIXME: On AIX, we have to archive built shared libraries into a static
-  # archive, i.e., libatomic.a. Once cmake adds support of such usage for AIX,
+  # archive, i.e., libcompiler_rt.a. Once cmake adds support of such usage for AIX,
   # this ad-hoc part can be removed.
   if(OS_NAME MATCHES "AIX")
-    archive_aix_libatomic(clang_rt.atomic libatomic
+    archive_aix_libatomic(clang_rt.atomic libcompiler_rt
                           ARCHS ${BUILTIN_SUPPORTED_ARCH}
                           PARENT_TARGET builtins-standalone-atomic)
   endif()

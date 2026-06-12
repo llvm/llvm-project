@@ -42,13 +42,15 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
              << "first" << FirstArgType << Arg0->getSourceRange();
     TheCall->setArg(0, FirstArg.get());
 
-    ExprResult SecArg = SemaRef.DefaultLvalueConversion(Arg1);
+    InitializedEntity Entity = InitializedEntity::InitializeParameter(
+        Context, Context.getIntTypeForBitwidth(64, /*Signed=*/false),
+        /*Consumed=*/false);
+    ExprResult SecArg =
+        SemaRef.PerformCopyInitialization(Entity,
+                                          /*EqualLoc=*/SourceLocation(), Arg1);
     if (SecArg.isInvalid())
       return true;
-    QualType SecArgType = SecArg.get()->getType();
-    if (!SecArgType->isIntegerType())
-      return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_integer)
-             << "second" << SecArgType << Arg1->getSourceRange();
+    TheCall->setArg(1, SecArg.get());
 
     // Derive the return type from the pointer argument.
     TheCall->setType(FirstArgType);
@@ -89,12 +91,18 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
     if (!FirstArgType->isAnyPointerType())
       return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_pointer)
              << "first" << FirstArgType << Arg0->getSourceRange();
+    TheCall->setArg(0, FirstArg.get());
 
-    QualType SecArgType = Arg1->getType();
-    if (!SecArgType->isIntegerType())
-      return Diag(TheCall->getBeginLoc(), diag::err_memtag_arg_must_be_integer)
-             << "second" << SecArgType << Arg1->getSourceRange();
-    TheCall->setType(Context.IntTy);
+    InitializedEntity Entity = InitializedEntity::InitializeParameter(
+        Context, Context.getIntTypeForBitwidth(64, /*Signed=*/false),
+        /*Consumed=*/false);
+    ExprResult SecArg =
+        SemaRef.PerformCopyInitialization(Entity,
+                                          /*EqualLoc=*/SourceLocation(), Arg1);
+    if (SecArg.isInvalid())
+      return true;
+    TheCall->setArg(1, SecArg.get());
+
     return false;
   }
 
@@ -176,7 +184,6 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
 
     TheCall->setArg(0, ArgExprA.get());
     TheCall->setArg(1, ArgExprB.get());
-    TheCall->setType(Context.LongLongTy);
     return false;
   }
   assert(false && "Unhandled ARM MTE intrinsic");
@@ -1107,103 +1114,6 @@ bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI,
   }
 }
 
-static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
-                                                 CallExpr *TheCall) {
-  Sema &SemaRef = S.SemaRef;
-  ASTContext &Context = S.getASTContext();
-  // Ensure we have the proper number of arguments.
-  if (SemaRef.checkArgCount(TheCall, 4))
-    return true;
-
-  // Normalize arg0/arg1 into value form, and check valid
-  ExprResult PtrRes =
-      SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
-  ExprResult ValRes =
-      SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(1));
-
-  if (PtrRes.isInvalid() || ValRes.isInvalid())
-    return true;
-
-  Expr *OrderArg = TheCall->getArg(2);
-  TheCall->setArg(0, PtrRes.get());
-  TheCall->setArg(1, ValRes.get());
-
-  // Defer validation for dependent memory_order arguments.
-  if (OrderArg->isValueDependent())
-    return false;
-
-  Expr *PointerArg = PtrRes.get();
-  QualType PtrType = PointerArg->getType();
-
-  // Check arg 0 is a pointer type, err out if not
-  const PointerType *PointerTy = PtrType->getAs<PointerType>();
-  if (!PointerTy) {
-    SemaRef.Diag(PointerArg->getBeginLoc(),
-                 diag::err_atomic_builtin_must_be_pointer)
-        << PtrType << 0 << PointerArg->getSourceRange();
-    return true;
-  }
-
-  // Reject const-qualified pointee types
-  QualType ValType = PointerTy->getPointeeType();
-  if (ValType.isConstQualified()) {
-    SemaRef.Diag(PointerArg->getBeginLoc(),
-                 diag::err_atomic_builtin_cannot_be_const)
-        << PtrType << PointerArg->getSourceRange();
-    return true;
-  }
-
-  ValType = ValType.getUnqualifiedType();
-  unsigned Bits = ValType->isIntegerType() ? Context.getTypeSize(ValType) : 0;
-  if (Bits != 8 && Bits != 16 && Bits != 32 && Bits != 64) {
-    SemaRef.Diag(PointerArg->getBeginLoc(),
-                 diag::err_arm_atomic_store_with_stshh_bad_type)
-        << PtrType << PointerArg->getSourceRange();
-    return true;
-  }
-
-  Expr *ValArg = TheCall->getArg(1);
-  QualType ValArgType = ValArg->getType().getUnqualifiedType();
-
-  // Check value type and width
-  if (!Context.hasSameType(ValArgType, ValType)) {
-    SemaRef.Diag(ValArg->getBeginLoc(),
-                 diag::err_arm_atomic_store_with_stshh_bad_value_type)
-        << ValType << ValArg->getType() << ValArg->getSourceRange();
-    return true;
-  }
-
-  // Require an order value.
-  std::optional<llvm::APSInt> OrderValOpt =
-      OrderArg->getIntegerConstantExpr(Context);
-  if (!OrderValOpt) {
-    SemaRef.Diag(OrderArg->getBeginLoc(),
-                 diag::err_arm_atomic_store_with_stshh_bad_order)
-        << OrderArg->getSourceRange();
-    return true;
-  }
-
-  // __ATOMIC_RELAXED=0, __ATOMIC_RELEASE=3, __ATOMIC_SEQ_CST=5.
-  int64_t Order = OrderValOpt->getSExtValue();
-  if (Order != 0 && Order != 3 && Order != 5) {
-    SemaRef.Diag(OrderArg->getBeginLoc(),
-                 diag::err_arm_atomic_store_with_stshh_bad_order)
-        << OrderArg->getSourceRange();
-    return true;
-  }
-
-  // Value type already matches ValType above; apply a no-op cast for
-  // consistency with other builtin argument rewriting paths.
-  ExprResult ValArgRes = SemaRef.ImpCastExprToType(ValArg, ValType, CK_NoOp);
-  if (ValArgRes.isInvalid())
-    return true;
-
-  TheCall->setArg(1, ValArgRes.get());
-
-  // Arg 3 (retention policy) must be between KEEP(0) and STRM(1).
-  return SemaRef.BuiltinConstantArgRange(TheCall, 3, 0, 1);
-}
-
 bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
                                               unsigned BuiltinID,
                                               CallExpr *TheCall) {
@@ -1213,9 +1123,6 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
       BuiltinID == AArch64::BI__builtin_arm_stlex) {
     return CheckARMBuiltinExclusiveCall(TI, BuiltinID, TheCall);
   }
-
-  if (BuiltinID == AArch64::BI__builtin_arm_atomic_store_with_stshh)
-    return CheckAArch64AtomicStoreWithStshhCall(*this, TheCall);
 
   if (BuiltinID == AArch64::BI__builtin_arm_prefetch) {
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1) ||
@@ -1269,8 +1176,12 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   if (BuiltinID == AArch64::BI__sys)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0x3fff);
 
-  if (BuiltinID == AArch64::BI__getReg)
+  if (BuiltinID == AArch64::BI__getReg || BuiltinID == AArch64::BI__setReg ||
+      BuiltinID == AArch64::BI__getRegFp || BuiltinID == AArch64::BI__setRegFp)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 31);
+
+  if (BuiltinID == AArch64::BI__prefetch2)
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31);
 
   if (BuiltinID == AArch64::BI__break)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0xffff);
@@ -1846,10 +1757,8 @@ bool SemaARM::checkTargetClonesAttr(
     NewParams.push_back(NewParam);
     HasNonDefault = true;
   }
-  if (!HasNonDefault)
-    return true;
 
-  return false;
+  return !HasNonDefault;
 }
 
 bool SemaARM::checkSVETypeSupport(QualType Ty, SourceLocation Loc,

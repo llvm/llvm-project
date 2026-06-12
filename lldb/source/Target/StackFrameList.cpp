@@ -26,6 +26,7 @@
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -70,9 +71,19 @@ SyntheticStackFrameList::SyntheticStackFrameList(
 bool SyntheticStackFrameList::FetchFramesUpTo(
     uint32_t end_idx, InterruptionControl allow_interrupt) {
 
-  size_t num_synthetic_frames = 0;
   // Use the provider to generate frames lazily.
   if (m_provider) {
+    // Count how many synthetic frames already exist so we assign unique CFAs
+    // to new ones. This must not be a local initialized to zero — when
+    // FetchFramesUpTo is called incrementally (first for a small range, then
+    // for the full stack), a zero-initialized counter would hand out duplicate
+    // CFA values, creating StackID collisions for PC-less synthetic frames.
+    size_t num_synthetic_frames = 0;
+    for (const auto &f : m_frames) {
+      if (f && f->IsSynthetic())
+        num_synthetic_frames++;
+    }
+
     // Keep fetching until we reach end_idx or the provider returns an error.
     for (uint32_t idx = m_frames.size(); idx <= end_idx; idx++) {
       if (allow_interrupt &&
@@ -193,7 +204,7 @@ void StackFrameList::SetCurrentInlinedDepth(uint32_t new_depth) {
 }
 
 bool StackFrameList::WereAllFramesFetched() const {
-  std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+  llvm::sys::ScopedReader guard(m_list_mutex);
   return GetAllFramesFetched();
 }
 
@@ -398,11 +409,44 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
     next_frame.SetFrameIndex(m_frames.size());
 }
 
+uint32_t StackFrameList::SynthesizeInlineFrames(StackFrameSP frame_sp,
+                                                addr_t cfa) {
+  SymbolContext unwind_sc =
+      frame_sp->GetSymbolContext(eSymbolContextBlock | eSymbolContextFunction);
+  if (!unwind_sc.block)
+    return 0;
+
+  TargetSP target_sp = m_thread.CalculateTarget();
+  uint32_t concrete_frame_idx = frame_sp->GetConcreteFrameIndex();
+  Address curr_frame_address(frame_sp->GetFrameCodeAddressForSymbolication());
+
+  SymbolContext next_frame_sc;
+  Address next_frame_address;
+  uint32_t num_inlined_frames = 0;
+
+  while (unwind_sc.GetParentOfInlinedScope(curr_frame_address, next_frame_sc,
+                                           next_frame_address)) {
+    next_frame_sc.line_entry.ApplyFileMappings(target_sp);
+    StackFrameSP inline_frame_sp = std::make_shared<StackFrame>(
+        m_thread.shared_from_this(), m_frames.size(), concrete_frame_idx,
+        frame_sp->GetRegisterContextSP(), cfa, next_frame_address,
+        /*behaves_like_zeroth_frame=*/false, &next_frame_sc);
+
+    inline_frame_sp->m_frame_list_id = GetIdentifier();
+    m_frames.push_back(inline_frame_sp);
+    unwind_sc = next_frame_sc;
+    curr_frame_address = next_frame_address;
+    ++num_inlined_frames;
+  }
+
+  return num_inlined_frames;
+}
+
 bool StackFrameList::GetFramesUpTo(uint32_t end_idx,
                                    InterruptionControl allow_interrupt) {
   // GetFramesUpTo is always called with the intent to add frames, so get the
   // writer lock:
-  std::unique_lock<std::shared_mutex> guard(m_list_mutex);
+  llvm::sys::ScopedWriter guard(m_list_mutex);
   // Now that we have the lock, check to make sure someone didn't get there
   // ahead of us:
   if (m_frames.size() > end_idx || GetAllFramesFetched())
@@ -544,32 +588,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
     }
 
     assert(unwind_frame_sp);
-    SymbolContext unwind_sc = unwind_frame_sp->GetSymbolContext(
-        eSymbolContextBlock | eSymbolContextFunction);
-    Block *unwind_block = unwind_sc.block;
-    TargetSP target_sp = m_thread.CalculateTarget();
-    if (unwind_block) {
-      Address curr_frame_address(
-          unwind_frame_sp->GetFrameCodeAddressForSymbolication());
-
-      SymbolContext next_frame_sc;
-      Address next_frame_address;
-
-      while (unwind_sc.GetParentOfInlinedScope(
-          curr_frame_address, next_frame_sc, next_frame_address)) {
-        next_frame_sc.line_entry.ApplyFileMappings(target_sp);
-        behaves_like_zeroth_frame = false;
-        StackFrameSP frame_sp(new StackFrame(
-            m_thread.shared_from_this(), m_frames.size(), idx,
-            unwind_frame_sp->GetRegisterContextSP(), cfa, next_frame_address,
-            behaves_like_zeroth_frame, &next_frame_sc));
-
-        frame_sp->m_frame_list_id = GetIdentifier();
-        m_frames.push_back(frame_sp);
-        unwind_sc = next_frame_sc;
-        curr_frame_address = next_frame_address;
-      }
-    }
+    SynthesizeInlineFrames(unwind_frame_sp, cfa);
   } while (m_frames.size() - 1 < end_idx);
 
   // Don't try to merge till you've calculated all the frames in this stack.
@@ -644,7 +663,7 @@ uint32_t StackFrameList::GetNumFrames(bool can_create) {
   }
   uint32_t frame_idx;
   {
-    std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+    llvm::sys::ScopedReader guard(m_list_mutex);
     frame_idx = GetVisibleStackFrameIndex(m_frames.size());
   }
   return frame_idx;
@@ -654,7 +673,7 @@ void StackFrameList::Dump(Stream *s) {
   if (s == nullptr)
     return;
 
-  std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+  llvm::sys::ScopedReader guard(m_list_mutex);
 
   const_iterator pos, begin = m_frames.begin(), end = m_frames.end();
   for (pos = begin; pos != end; ++pos) {
@@ -678,7 +697,7 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
   // enough frames for our request we don't want to block other readers, so
   // first acquire the shared lock:
   { // Scope for shared lock:
-    std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+    llvm::sys::ScopedReader guard(m_list_mutex);
 
     uint32_t inlined_depth = GetCurrentInlinedDepth();
     if (inlined_depth != UINT32_MAX)
@@ -701,7 +720,7 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
   }
 
   { // Now we're accessing m_frames as a reader, so acquire the reader lock.
-    std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+    llvm::sys::ScopedReader guard(m_list_mutex);
     if (idx < m_frames.size()) {
       frame_sp = m_frames[idx];
     } else if (original_idx == 0) {
@@ -754,7 +773,7 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
     {
       // First see if the frame is already realized.  This is the scope for
       // the shared mutex:
-      std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+      llvm::sys::ScopedReader guard(m_list_mutex);
       // Do a binary search in case the stack frame is already in our cache
       collection::const_iterator pos =
           llvm::lower_bound(m_frames, stack_id, CompareStackID);
@@ -773,7 +792,7 @@ StackFrameSP StackFrameList::GetFrameWithStackID(const StackID &stack_id) {
 }
 
 bool StackFrameList::SetFrameAtIndex(uint32_t idx, StackFrameSP &frame_sp) {
-  std::unique_lock<std::shared_mutex> guard(m_list_mutex);
+  llvm::sys::ScopedWriter guard(m_list_mutex);
   if (idx >= m_frames.size())
     m_frames.resize(idx + 1);
   // Make sure allocation succeeded by checking bounds again
@@ -788,6 +807,10 @@ void StackFrameList::SelectMostRelevantFrame() {
   // Don't call into the frame recognizers on the private state thread as
   // they can cause code to run in the target, and that can cause deadlocks
   // when fetching stop events for the expression.
+  Policy policy = PolicyStack::Get().Current();
+  if (policy.view == Policy::View::Private)
+    return;
+
   if (m_thread.GetProcess()->CurrentThreadPosesAsPrivateStateThread())
     return;
 
@@ -864,7 +887,7 @@ StackFrameList::GetSelectedFrameIndex(SelectMostRelevant select_most_relevant) {
 }
 
 uint32_t StackFrameList::SetSelectedFrame(lldb_private::StackFrame *frame) {
-  std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+  llvm::sys::ScopedReader guard(m_list_mutex);
   std::lock_guard<std::recursive_mutex> selected_frame_guard(
       m_selected_frame_mutex);
 
@@ -917,7 +940,7 @@ void StackFrameList::SetDefaultFileAndLineToSelectedFrame() {
 // does not describe how StackFrameLists are currently used.
 // Clear is currently only used to clear the list in the destructor.
 void StackFrameList::Clear() {
-  std::unique_lock<std::shared_mutex> guard(m_list_mutex);
+  llvm::sys::ScopedWriter guard(m_list_mutex);
   m_frames.clear();
   m_concrete_frames_fetched = 0;
   std::lock_guard<std::recursive_mutex> selected_frame_guard(
@@ -927,7 +950,7 @@ void StackFrameList::Clear() {
 
 lldb::StackFrameSP
 StackFrameList::GetStackFrameSPForStackFramePtr(StackFrame *stack_frame_ptr) {
-  std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+  llvm::sys::ScopedReader guard(m_list_mutex);
   const_iterator pos;
   const_iterator begin = m_frames.begin();
   const_iterator end = m_frames.end();
