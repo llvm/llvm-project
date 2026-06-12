@@ -10,19 +10,18 @@
 Introduction
 ============
 
-Asynchronous operations are memory transfers (usually between the global memory
-and LDS) that are completed independently at an unspecified scope. A thread that
-requests one or more asynchronous transfers can use *asyncmarks* to track
-their completion.
+Asynchronous operations are operations that are completed independently at an
+unspecified scope. A thread that requests one or more async operations can use
+*asyncmarks* to track their completion.
 
 Operations
 ==========
 
-Memory Accesses
----------------
+Async Instructions
+------------------
 
-The following instructions request asynchronous transfer of data between global
-memory and LDS memory.
+The following instructions request async operations that transfer data between
+global memory and LDS memory.
 
 .. note::
 
@@ -58,13 +57,12 @@ memory and LDS memory.
 Asyncmarks
 ----------
 
-An *asyncmark* in the abstract machine tracks all the async operations that
-are *program-ordered* before that asyncmark.
-
-The abstract machine maintains a sequence of asyncmarks during the
-execution of a function body, which excludes any asyncmarks produced by calls to
-other functions encountered in the currently executing function.
-This sequence is called the *current sequence* of that function body.
+An *asyncmark* created by a thread can be used to track async operations
+initiated by that thread. The abstract machine maintains a sequence of
+asyncmarks during the execution of a function body, which excludes any
+asyncmarks produced by calls to other functions encountered in the currently
+executing function. The state of this sequence at each program point in the
+function is called the *current sequence*.
 
 ``@llvm.amdgcn.asyncmark()``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -88,27 +86,16 @@ if:
 - ``M`` is not in the current sequence at any operation ``Z`` that immediately
   follows ``Y`` in *program-order*.
 
-An async operation ``A`` is *completed-at* a ``wait.asyncmark()`` operation
-``Y`` if there exists an ``asyncmark()`` operation ``X`` such that:
+When a thread executes an async *instruction* ``I``, it initiates a
+corresponding async *operation* ``A``, and ``I`` is said to *happen-before*
+``A``.
 
-- ``A`` is *program-ordered* before ``X``, and
+An async operation ``A`` initiated by an instruction ``I`` *happens-before* a
+``wait.asyncmark()`` operation ``Y`` if there exists an ``asyncmark()``
+operation ``X`` such that:
+
+- ``I`` is *program-ordered* before ``X``, and
 - ``X`` is *completed-at* ``Y``.
-
-An asynchronous operation ``A`` *happens-before* an overlapping memory operation
-``B`` only if there exists a ``wait.asyncmark()`` operation ``Y`` such that:
-
-- ``A`` is *program-ordered* before ``Y``, and
-- ``Y`` is *program-ordered* before ``B``, and
-- ``A`` is *completed-at* ``Y``.
-
-A memory operation ``B`` *happens-before* an overlapping asynchronous
-operation ``A`` if ``B`` is *program-ordered* before ``A``.
-
-.. note::
-
-   The *only if* in the above wording implies that unlike the default LLVM
-   memory model, certain program order edges are not automatically included in
-   ``happens-before``.
 
 Examples
 ========
@@ -238,7 +225,9 @@ being *completed-at* ``D``.
    void bar() {
      asyncmark();       // B
      asyncmark();       // C
+     ...
      asyncmark();       // X
+     ...                // no wait.asyncmark()
      wait.asyncmark(1); // D
    }
 
@@ -273,7 +262,9 @@ examined at ``Y``.
    void bar() {
      asyncmark();       // B
      asyncmark();       // C
+     ...                // no asyncmark()
      wait.asyncmark(0); // Y
+     ...
      wait.asyncmark(1); // D
    }
 
