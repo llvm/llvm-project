@@ -1039,6 +1039,82 @@ static void printDynGroupprivateClause(OpAsmPrinter &printer, Operation *op,
 }
 
 //===----------------------------------------------------------------------===//
+// Parser and printer for in_reduction Clause
+//===----------------------------------------------------------------------===//
+
+/// Parses an `in_reduction` clause for an operation that does not give its
+/// list items entry block arguments (e.g. `omp.target`). The expected format is
+/// a comma-separated list of `[byref] @sym %var` followed by `: types`.
+static ParseResult parseInReductionClause(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &inReductionVars,
+    SmallVectorImpl<Type> &inReductionTypes,
+    DenseBoolArrayAttr &inReductionByref, ArrayAttr &inReductionSyms) {
+  SmallVector<SymbolRefAttr> symbolVec;
+  SmallVector<bool> isByRefVec;
+
+  if (parser.parseCommaSeparatedList([&]() {
+        isByRefVec.push_back(parser.parseOptionalKeyword("byref").succeeded());
+        if (parser.parseAttribute(symbolVec.emplace_back()) ||
+            parser.parseOperand(inReductionVars.emplace_back()))
+          return failure();
+        return success();
+      }))
+    return failure();
+
+  if (parser.parseColon())
+    return failure();
+
+  if (parser.parseCommaSeparatedList(
+          [&]() { return parser.parseType(inReductionTypes.emplace_back()); }))
+    return failure();
+
+  if (inReductionVars.size() != inReductionTypes.size())
+    return failure();
+
+  inReductionByref = makeDenseBoolArrayAttr(parser.getContext(), isByRefVec);
+  SmallVector<Attribute> symbolAttrs(symbolVec.begin(), symbolVec.end());
+  inReductionSyms = ArrayAttr::get(parser.getContext(), symbolAttrs);
+  return success();
+}
+
+/// Prints an `in_reduction` clause for an operation that does not give its list
+/// items entry block arguments (e.g. `omp.target`). Mirrors
+/// `parseInReductionClause`.
+static void printInReductionClause(OpAsmPrinter &p, Operation *op,
+                                   ValueRange inReductionVars,
+                                   TypeRange inReductionTypes,
+                                   DenseBoolArrayAttr inReductionByref,
+                                   ArrayAttr inReductionSyms) {
+  MLIRContext *ctx = op->getContext();
+
+  ArrayAttr syms = inReductionSyms;
+  if (!syms) {
+    SmallVector<Attribute> values(inReductionVars.size(), nullptr);
+    syms = ArrayAttr::get(ctx, values);
+  }
+
+  DenseBoolArrayAttr byref = inReductionByref;
+  if (!byref) {
+    SmallVector<bool> values(inReductionVars.size(), false);
+    byref = DenseBoolArrayAttr::get(ctx, values);
+  }
+
+  llvm::interleaveComma(
+      llvm::zip_equal(inReductionVars, syms.getValue(), byref.asArrayRef()), p,
+      [&p](auto t) {
+        auto [var, sym, isByRef] = t;
+        if (isByRef)
+          p << "byref ";
+        if (sym)
+          p << sym << " ";
+        p << var;
+      });
+  p << " : ";
+  llvm::interleaveComma(inReductionTypes, p);
+}
+
+//===----------------------------------------------------------------------===//
 // Parsers for operations including clauses that define entry block arguments.
 //===----------------------------------------------------------------------===//
 
@@ -1305,9 +1381,6 @@ static ParseResult parseTargetOpRegion(
     SmallVectorImpl<Type> &hasDeviceAddrTypes,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &hostEvalVars,
     SmallVectorImpl<Type> &hostEvalTypes,
-    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &inReductionVars,
-    SmallVectorImpl<Type> &inReductionTypes,
-    DenseBoolArrayAttr &inReductionByref, ArrayAttr &inReductionSyms,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &mapVars,
     SmallVectorImpl<Type> &mapTypes,
     llvm::SmallVectorImpl<OpAsmParser::UnresolvedOperand> &privateVars,
@@ -1316,8 +1389,6 @@ static ParseResult parseTargetOpRegion(
   AllRegionParseArgs args;
   args.hasDeviceAddrArgs.emplace(hasDeviceAddrVars, hasDeviceAddrTypes);
   args.hostEvalArgs.emplace(hostEvalVars, hostEvalTypes);
-  args.inReductionArgs.emplace(inReductionVars, inReductionTypes,
-                               inReductionByref, inReductionSyms);
   args.mapArgs.emplace(mapVars, mapTypes);
   args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
                            privateNeedsBarrier, &privateMaps);
@@ -1568,20 +1639,18 @@ static void printBlockArgRegion(OpAsmPrinter &p, Operation *op, Region &region,
 
 // These parseXyz functions correspond to the custom<Xyz> definitions
 // in the .td file(s).
-static void printTargetOpRegion(
-    OpAsmPrinter &p, Operation *op, Region &region,
-    ValueRange hasDeviceAddrVars, TypeRange hasDeviceAddrTypes,
-    ValueRange hostEvalVars, TypeRange hostEvalTypes,
-    ValueRange inReductionVars, TypeRange inReductionTypes,
-    DenseBoolArrayAttr inReductionByref, ArrayAttr inReductionSyms,
-    ValueRange mapVars, TypeRange mapTypes, ValueRange privateVars,
-    TypeRange privateTypes, ArrayAttr privateSyms, UnitAttr privateNeedsBarrier,
-    DenseI64ArrayAttr privateMaps) {
+static void printTargetOpRegion(OpAsmPrinter &p, Operation *op, Region &region,
+                                ValueRange hasDeviceAddrVars,
+                                TypeRange hasDeviceAddrTypes,
+                                ValueRange hostEvalVars,
+                                TypeRange hostEvalTypes, ValueRange mapVars,
+                                TypeRange mapTypes, ValueRange privateVars,
+                                TypeRange privateTypes, ArrayAttr privateSyms,
+                                UnitAttr privateNeedsBarrier,
+                                DenseI64ArrayAttr privateMaps) {
   AllRegionPrintArgs args;
   args.hasDeviceAddrArgs.emplace(hasDeviceAddrVars, hasDeviceAddrTypes);
   args.hostEvalArgs.emplace(hostEvalVars, hostEvalTypes);
-  args.inReductionArgs.emplace(inReductionVars, inReductionTypes,
-                               inReductionByref, inReductionSyms);
   args.mapArgs.emplace(mapVars, mapTypes);
   args.privateArgs.emplace(privateVars, privateTypes, privateSyms,
                            privateNeedsBarrier, privateMaps);
@@ -2579,8 +2648,7 @@ LogicalResult TargetUpdateOp::verify() {
 void TargetOp::build(OpBuilder &builder, OperationState &state,
                      const TargetExtOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  // TODO Store clauses in op: allocateVars, allocatorVars, inReductionVars,
-  // inReductionByref, inReductionSyms.
+  // TODO Store clauses in op: allocateVars, allocatorVars.
   TargetOp::build(
       builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{},
       makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
@@ -2588,9 +2656,10 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
       clauses.device, clauses.dynGroupprivateAccessGroup,
       clauses.dynGroupprivateFallback, clauses.dynGroupprivateSize,
       clauses.hasDeviceAddrVars, clauses.hostEvalVars, clauses.ifExpr,
-      /*in_reduction_vars=*/{}, /*in_reduction_byref=*/nullptr,
-      /*in_reduction_syms=*/nullptr, clauses.isDevicePtrVars, clauses.mapVars,
-      clauses.mapIterated, clauses.nowait, clauses.privateVars,
+      clauses.inReductionVars,
+      makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
+      makeArrayAttr(ctx, clauses.inReductionSyms), clauses.isDevicePtrVars,
+      clauses.mapVars, clauses.mapIterated, clauses.nowait, clauses.privateVars,
       makeArrayAttr(ctx, clauses.privateSyms), clauses.privateNeedsBarrier,
       clauses.threadLimitVars, /*private_maps=*/nullptr, clauses.kernelType);
 }
@@ -2653,6 +2722,11 @@ LogicalResult TargetOp::verify() {
     return failure();
 
   if (failed(verifyPrivateVarList(*this)))
+    return failure();
+
+  if (failed(verifyReductionVarList(*this, getInReductionSyms(),
+                                    getInReductionVars(),
+                                    getInReductionByref())))
     return failure();
 
   return verifyPrivateVarsMapping(*this);

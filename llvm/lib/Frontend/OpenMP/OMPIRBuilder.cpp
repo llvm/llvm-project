@@ -1218,6 +1218,37 @@ Value *OpenMPIRBuilder::getOrCreateThreadID(Value *Ident) {
       "omp_global_thread_num");
 }
 
+Value *OpenMPIRBuilder::createTargetInReductionLookup(IRBuilderBase &Builder,
+                                                      Value *Gtid,
+                                                      Value *OrigPtr,
+                                                      Type *ResultPtrTy) {
+  // The runtime entry point takes (and returns) a generic, default-address-
+  // space `ptr`, so normalize a non-default-address-space original pointer to
+  // the generic address space before the call.
+  Type *PtrTy = PointerType::getUnqual(M.getContext());
+  if (auto *OrigPtrTy = dyn_cast<PointerType>(OrigPtr->getType());
+      OrigPtrTy && OrigPtrTy->getAddressSpace() != 0)
+    OrigPtr = Builder.CreateAddrSpaceCast(OrigPtr, PtrTy);
+
+  // A NULL descriptor makes the runtime walk the enclosing taskgroups to find
+  // the matching task_reduction registration for `OrigPtr`. \p Gtid is computed
+  // once for the whole target body and passed in, so emitting one lookup per
+  // in_reduction item does not produce a redundant __kmpc_global_thread_num
+  // call per item.
+  Value *NullDesc = ConstantPointerNull::get(PtrTy);
+  FunctionCallee GetThData =
+      getOrCreateRuntimeFunction(M, OMPRTL___kmpc_task_reduction_get_th_data);
+  Value *Priv = Builder.CreateCall(GetThData, {Gtid, NullDesc, OrigPtr},
+                                   "omp.inred.priv");
+
+  // Cast the returned private pointer back to the requested address space when
+  // it differs.
+  if (auto *ResPtrTy = dyn_cast<PointerType>(ResultPtrTy);
+      ResPtrTy && ResPtrTy->getAddressSpace() != 0)
+    Priv = Builder.CreateAddrSpaceCast(Priv, ResPtrTy);
+  return Priv;
+}
+
 OpenMPIRBuilder::InsertPointOrErrorTy
 OpenMPIRBuilder::createBarrier(const LocationDescription &Loc, Directive Kind,
                                bool ForceSimpleCall, bool CheckCancelFlag) {

@@ -2440,6 +2440,33 @@ public:
 
   ///}
 
+  /// Emit the host runtime lookup that redirects a target `in_reduction` list
+  /// item to its per-task reduction-private storage.
+  ///
+  /// At \p Builder's current insertion point this emits a
+  /// `__kmpc_task_reduction_get_th_data(Gtid, /*descriptor=*/null, OrigPtr)`
+  /// call, which walks the enclosing taskgroups to find the matching
+  /// `task_reduction` registration for \p OrigPtr. It must be emitted inside
+  /// the target task body. \p Gtid is computed once for the whole target body
+  /// by the caller and reused for every list item, so a target with several
+  /// in_reduction items does not emit a redundant `__kmpc_global_thread_num`
+  /// per item.
+  ///
+  /// \param Builder      The IRBuilder to emit the lookup into.
+  /// \param Gtid         The executing thread's gtid for the target body,
+  ///                     computed once and shared by all list items.
+  /// \param OrigPtr      The mapped original pointer used as the runtime `orig`
+  ///                     argument. If it is in a non-default address space it
+  ///                     is cast to the generic address space first, as
+  ///                     required by the runtime entry point.
+  /// \param ResultPtrTy  The desired type of the returned private pointer. If
+  ///                     it is a pointer in a non-default address space, the
+  ///                     returned value is cast back to it.
+  /// \returns The per-task reduction-private pointer.
+  LLVM_ABI Value *createTargetInReductionLookup(IRBuilderBase &Builder,
+                                                Value *Gtid, Value *OrigPtr,
+                                                Type *ResultPtrTy);
+
   /// Return the insertion point used by the underlying IRBuilder.
   InsertPointTy getInsertionPoint() { return Builder.saveIP(); }
 
