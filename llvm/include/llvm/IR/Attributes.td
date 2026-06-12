@@ -279,6 +279,10 @@ def Preallocated : TypeAttr<"preallocated", IntersectPreserve, [FnAttr, ParamAtt
 /// Parameter or return value is within the specified range.
 def Range : ConstantRangeAttr<"range", IntersectCustom, [ParamAttr, RetAttr]>;
 
+/// Parameter or return value is within one of the specified ranges.
+def RangeSet : ConstantRangeListAttr<"rangeset", IntersectCustom,
+                                     [ParamAttr, RetAttr]>;
+
 /// Function does not access memory.
 def ReadNone : EnumAttr<"readnone", IntersectAnd, [ParamAttr]>;
 

@@ -21,6 +21,7 @@
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
 #include <cassert>
+#include <limits>
 using namespace llvm;
 
 // As the type of more than one return values is represented as an anonymous
@@ -29,6 +30,44 @@ using namespace llvm;
 // (encoded as 255). So, the maximum number of values that an intrinsic can
 // return is 257.
 static constexpr unsigned MaxNumReturn = 257;
+
+static std::pair<int64_t, int64_t>
+getHalfOpenRange(const Record *R, const ListInit *Range, StringRef AttrName) {
+  if (!Range || Range->size() != 2)
+    PrintFatalError(R->getLoc(),
+                    Twine(AttrName) + " range must have exactly two bounds");
+
+  auto GetBound = [&](const Init *Bound) -> int64_t {
+    if (const auto *II = dyn_cast<IntInit>(Bound))
+      return II->getValue();
+    PrintFatalError(R->getLoc(),
+                    Twine(AttrName) +
+                        " bound is not an integer: " + Bound->getAsString());
+  };
+
+  int64_t Lower = GetBound(Range->getElement(0));
+  int64_t Upper = GetBound(Range->getElement(1));
+  if (Upper == std::numeric_limits<int64_t>::max())
+    PrintFatalError(R->getLoc(),
+                    Twine(AttrName) + " closed upper bound is too large");
+  return std::pair<int64_t, int64_t>(Lower, Upper + 1);
+}
+
+static void
+appendHalfOpenRange(const Record *R,
+                    SmallVectorImpl<std::pair<int64_t, int64_t>> &Ranges,
+                    std::pair<int64_t, int64_t> Range) {
+  if (!Ranges.empty()) {
+    if (Range.first < Ranges.back().second)
+      PrintFatalError(R->getLoc(),
+                      "RangeSet ranges must be ordered and non-overlapping");
+    if (Range.first == Ranges.back().second) {
+      Ranges.back().second = Range.second;
+      return;
+    }
+  }
+  Ranges.push_back(Range);
+}
 
 //===----------------------------------------------------------------------===//
 // CodeGenIntrinsic Implementation
@@ -502,6 +541,25 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     int64_t Lower = R->getValueAsInt("Lower");
     int64_t Upper = R->getValueAsInt("Upper");
     addArgAttribute(ArgNo, Range, Lower, Upper);
+  } else if (R->isSubClassOf("RangeSet")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    const ListInit *RangeList = R->getValueAsListInit("Ranges");
+    SmallVector<std::pair<int64_t, int64_t>, 4> Ranges;
+
+    if (ArgNo < ArgumentAttributes.size()) {
+      for (const auto &Entry : ArgumentAttributes[ArgNo]) {
+        if (Entry.Kind != RangeSet)
+          continue;
+        PrintFatalError(R->getLoc(),
+                        "duplicate RangeSet for the same argument index");
+      }
+    }
+
+    for (const Init *Range : RangeList->getElements())
+      appendHalfOpenRange(
+          R, Ranges,
+          getHalfOpenRange(R, dyn_cast<ListInit>(Range), "RangeSet"));
+    addRangeSetAttribute(ArgNo, std::move(Ranges));
   } else if (R->isSubClassOf("ArgInfo")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     if (ArgNo < 1)
@@ -568,6 +626,15 @@ void CodeGenIntrinsic::addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V,
   if (Idx >= ArgumentAttributes.size())
     ArgumentAttributes.resize(Idx + 1);
   ArgumentAttributes[Idx].emplace_back(AK, V, V2);
+}
+
+void CodeGenIntrinsic::addRangeSetAttribute(
+    unsigned Idx, SmallVector<std::pair<int64_t, int64_t>, 4> Ranges) {
+  if (Idx >= ArgumentAttributes.size())
+    ArgumentAttributes.resize(Idx + 1);
+  ArgAttribute Attr(RangeSet, 0, 0);
+  Attr.Ranges = std::move(Ranges);
+  ArgumentAttributes[Idx].push_back(std::move(Attr));
 }
 
 void CodeGenIntrinsic::addPrettyPrintFunction(unsigned ArgIdx,

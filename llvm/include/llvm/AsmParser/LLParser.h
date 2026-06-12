@@ -309,6 +309,7 @@ namespace llvm {
       Loc = Lex.getLoc();
       return parseUInt64(Val);
     }
+    bool parseAPInt(unsigned BitWidth, APInt &Val);
     bool parseFlag(unsigned &Val);
 
     bool parseStringAttribute(AttrBuilder &B);
@@ -412,6 +413,7 @@ namespace llvm {
                                     std::vector<unsigned> &FwdRefAttrGrps,
                                     bool inAttrGrp, LocTy &BuiltinLoc);
     bool parseRangeAttr(AttrBuilder &B);
+    bool parseRangeSetAttr(AttrBuilder &B);
     bool parseInitializesAttr(AttrBuilder &B);
     bool parseCapturesAttr(AttrBuilder &B);
     bool parseRequiredTypeAttr(AttrBuilder &B, lltok::Kind AttrToken,

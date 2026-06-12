@@ -2224,11 +2224,12 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
           V);
 
   if (Attrs.hasAttribute(Attribute::ImmArg)) {
-    unsigned AttrCount =
-        Attrs.getNumAttributes() - Attrs.hasAttribute(Attribute::Range);
+    unsigned AttrCount = Attrs.getNumAttributes() -
+                         Attrs.hasAttribute(Attribute::Range) -
+                         Attrs.hasAttribute(Attribute::RangeSet);
     Check(AttrCount == 1,
           "Attribute 'immarg' is incompatible with other attributes except the "
-          "'range' attribute",
+          "'range' and 'rangeset' attributes",
           V);
   }
 
@@ -2372,6 +2373,16 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
         Attrs.getAttribute(Attribute::Range).getValueAsConstantRange();
     Check(Ty->isIntOrIntVectorTy(CR.getBitWidth()),
           "Range bit width must match type bit width!", V);
+  }
+  if (Attrs.hasAttribute(Attribute::RangeSet)) {
+    ArrayRef<ConstantRange> Ranges =
+        Attrs.getAttribute(Attribute::RangeSet).getRangeSet();
+    Check(!Ranges.empty(), "Attribute 'rangeset' does not support empty list",
+          V);
+    Check(AttributeFuncs::isOrderedRangeSet(Ranges),
+          "Attribute 'rangeset' does not support unordered ranges", V);
+    Check(Ty->isIntOrIntVectorTy(Ranges.front().getBitWidth()),
+          "RangeSet bit width must match type bit width!", V);
   }
 }
 
@@ -4063,6 +4074,19 @@ void Verifier::visitCallBase(CallBase &Call) {
                 "immarg value " + Twine(CI->getValue().getSExtValue()) +
                     " out of range [" + Twine(CR.getLower().getSExtValue()) +
                     ", " + Twine(CR.getUpper().getSExtValue()) + ")",
+                Call);
+        }
+      }
+      if (Call.paramHasAttr(i, Attribute::RangeSet)) {
+        if (auto *CI = dyn_cast<ConstantInt>(ArgVal)) {
+          ArrayRef<ConstantRange> Ranges =
+              Call.getParamAttr(i, Attribute::RangeSet).getRangeSet();
+          bool IsContained = llvm::any_of(Ranges, [&](const ConstantRange &CR) {
+            return CR.contains(CI->getValue());
+          });
+          Check(IsContained,
+                "immarg value " + Twine(CI->getValue().getSExtValue()) +
+                    " out of rangeset",
                 Call);
         }
       }

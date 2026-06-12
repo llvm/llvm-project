@@ -994,6 +994,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_DEAD_ON_UNWIND;
   case Attribute::Range:
     return bitc::ATTR_KIND_RANGE;
+  case Attribute::RangeSet:
+    return bitc::ATTR_KIND_RANGE_SET;
   case Attribute::Initializes:
     return bitc::ATTR_KIND_INITIALIZES;
   case Attribute::NoExt:

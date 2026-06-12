@@ -154,10 +154,29 @@ class ReadNone<ArgIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
+// The return value or argument is in the union of the specified closed ranges.
+// Range entries must be ordered and non-overlapping.
+class RangeSet<AttrIndex idx, list<list<int>> ranges> : IntrinsicProperty {
+  list<list<int>> ValidRanges = !filter(r, ranges, !eq(!size(r), 2));
+
+  assert !not(!empty(ranges)), "RangeSet requires at least one range";
+  assert !eq(!size(ValidRanges), !size(ranges)),
+         "RangeSet requires each range to have exactly two bounds";
+  assert !empty(!filter(r, ValidRanges, !lt(r[1], r[0]))),
+         "RangeSet requires lower <= upper for each range";
+  assert !empty(!filter(i, !range(1, !size(ValidRanges)),
+                        !le(ValidRanges[i][0],
+                            ValidRanges[!sub(i, 1)][1]))),
+         "RangeSet requires ordered and non-overlapping ranges";
+
+  int ArgNo = idx.Value;
+  list<list<int>> Ranges = ranges;
+}
+
 // The return value or argument is in the range [lower, upper),
 // where lower and upper are interpreted as signed integers.
-class Range<AttrIndex idx, int lower, int upper> : IntrinsicProperty {
-  int ArgNo = idx.Value;
+class Range<AttrIndex idx, int lower, int upper>
+    : RangeSet<idx, [[lower, !sub(upper, 1)]]> {
   int Lower = lower;
   int Upper = upper;
 }

@@ -355,6 +355,9 @@ public:
   /// Returns the value of the range attribute.
   LLVM_ABI const ConstantRange &getRange() const;
 
+  /// Returns the value of the rangeset attribute.
+  LLVM_ABI ArrayRef<ConstantRange> getRangeSet() const;
+
   /// Returns the value of the initializes attribute.
   LLVM_ABI ArrayRef<ConstantRange> getInitializes() const;
 
@@ -1337,6 +1340,9 @@ public:
   /// Add range attribute.
   LLVM_ABI AttrBuilder &addRangeAttr(const ConstantRange &CR);
 
+  /// Add rangeset attribute.
+  LLVM_ABI AttrBuilder &addRangeSetAttr(ArrayRef<ConstantRange> CRs);
+
   /// Add a ConstantRangeList attribute with the given ranges.
   LLVM_ABI AttrBuilder &addConstantRangeListAttr(Attribute::AttrKind Kind,
                                                  ArrayRef<ConstantRange> Val);
@@ -1366,6 +1372,10 @@ enum AttributeSafetyKind : uint8_t {
 /// Returns true if this is a type legal for the 'nofpclass' attribute. This
 /// follows the same type rules as FPMathOperator.
 LLVM_ABI bool isNoFPClassCompatibleType(Type *Ty);
+
+/// Returns true if the ranges are ordered, non-overlapping, and canonical for
+/// the 'rangeset' attribute.
+LLVM_ABI bool isOrderedRangeSet(ArrayRef<ConstantRange> Ranges);
 
 /// Which attributes cannot be applied to a type. The argument \p AS
 /// is used as a hint for the attributes whose compatibility is being

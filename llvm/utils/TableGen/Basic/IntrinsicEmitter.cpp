@@ -524,6 +524,8 @@ static StringRef getArgAttrEnumName(CodeGenIntrinsic::ArgAttrKind Kind) {
     return "Dereferenceable";
   case CodeGenIntrinsic::Range:
     return "Range";
+  case CodeGenIntrinsic::RangeSet:
+    return "RangeSet";
   }
   llvm_unreachable("Unknown CodeGenIntrinsic::ArgAttrKind enum");
 }
@@ -579,7 +581,19 @@ static AttributeSet getIntrinsicArgAttributeSet(LLVMContext &C, unsigned ID,
                         "/*implicitTrunc=*/true), APInt(BitWidth, {}, "
                         "/*isSigned=*/true, /*implicitTrunc=*/true))),\n",
                         AttrName, (int64_t)Attr.Value, (int64_t)Attr.Value2);
-        else
+        else if (Attr.Kind == CodeGenIntrinsic::RangeSet) {
+          OS << formatv("      Attribute::get(C, Attribute::{}, "
+                        "ArrayRef<ConstantRange>{{",
+                        AttrName);
+          interleaveComma(Attr.Ranges, OS, [&](auto Range) {
+            OS << formatv("ConstantRange(APInt(BitWidth, {}, "
+                          "/*isSigned=*/true, /*implicitTrunc=*/true), "
+                          "APInt(BitWidth, {}, /*isSigned=*/true, "
+                          "/*implicitTrunc=*/true))",
+                          Range.first, Range.second);
+          });
+          OS << "}),\n";
+        } else
           OS << formatv("      Attribute::get(C, Attribute::{}),\n", AttrName);
       }
       OS << "    });";
