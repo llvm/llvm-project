@@ -1473,9 +1473,11 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo &STI,
   if (Features.test(FeatureGFX90AInsts))
     return 512;
 
-  if (DynamicVGPRBlockSize != 0)
-    // On GFX12 we can allocate at most 8 blocks of VGPRs.
-    return 8 * getVGPRAllocGranule(STI, DynamicVGPRBlockSize);
+  if (DynamicVGPRBlockSize != 0) {
+    // On GFX12 we can allocate at most MaxDynamicVGPRBlocks blocks of VGPRs.
+    return MaxDynamicVGPRBlocks *
+           getVGPRAllocGranule(STI, DynamicVGPRBlockSize);
+  }
   return getAddressableNumArchVGPRs(STI);
 }
 
@@ -2889,6 +2891,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
   case AMDGPU::OPERAND_REG_IMM_V2FP32:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+  case AMDGPU::OPERAND_REG_IMM_V2FP64:
     return true;
   default:
     return false;
@@ -3342,6 +3345,7 @@ int64_t encode32BitLiteral(int64_t Imm, OperandType Type, bool IsLit) {
   case OPERAND_REG_INLINE_C_INT32:
     return Lo_32(Imm);
   case OPERAND_REG_IMM_FP64:
+  case AMDGPU::OPERAND_REG_IMM_V2FP64:
     return IsLit ? Imm : Hi_32(Imm);
   }
   return Imm;
@@ -3804,6 +3808,20 @@ bool isPackedFP32Inst(unsigned Opc) {
   default:
     return false;
   }
+}
+
+bool isPacked64BitInst(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::V_PK_ADD_F64:
+  case AMDGPU::V_PK_ADD_F64_gfx1250:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool isPackedFP32or64BitInst(unsigned Opc) {
+  return isPackedFP32Inst(Opc) || isPacked64BitInst(Opc);
 }
 
 const std::array<unsigned, 3> &ClusterDimsAttr::getDims() const {

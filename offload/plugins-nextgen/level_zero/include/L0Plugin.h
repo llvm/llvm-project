@@ -34,8 +34,6 @@ private:
   /// Context (and Driver) specific data.
   std::list<L0ContextTy> ContextList;
 
-  // Table containing per-thread information for each device using TLS.
-  L0DeviceTLSTableTy DeviceTLSTable;
   // Table containing per-thread information for each Context using TLS.
   L0ContextTLSTableTy ContextTLSTable;
 
@@ -50,9 +48,6 @@ public:
   LevelZeroPluginTy() : GenericPluginTy(getTripleArch()) {}
   virtual ~LevelZeroPluginTy() = default;
 
-  L0DeviceTLSTy &getDeviceTLS(int32_t DeviceId) {
-    return DeviceTLSTable.get(DeviceId);
-  }
   L0ContextTLSTy &getContextTLS(ze_context_handle_t Context) {
     return ContextTLSTable.get(Context);
   }

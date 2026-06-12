@@ -697,9 +697,6 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
 
   std::optional<ValueTypeCallbackTy> ValueTypeCallback;
 
-  /// A list of GUIDs defined by this module. Indexed by ValueID.
-  std::vector<GlobalValue::GUID> GUIDList;
-
 public:
   BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
                 StringRef ProducerIdentification, LLVMContext &Context);
@@ -978,12 +975,9 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
 
   /// Callback to ask whether a symbol is the prevailing copy when invoked
   /// during combined index building.
-  std::function<bool(StringRef)> IsPrevailing = nullptr;
+  std::function<bool(GlobalValue::GUID)> IsPrevailing;
 
-  /// Callback invoked whenever a new ValueInfo is generated.
-  std::function<void(ValueInfo)> OnValueInfo = nullptr;
-
-  /// Saves the stack ids from the STACK_IDS record to consult when adding
+  /// Saves the stack ids from the STACK_IDS record to consult when adding stack
   /// ids from the lists in the callsite and alloc entries to the index.
   std::vector<uint64_t> StackIds;
 
@@ -996,15 +990,11 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   /// list and used to avoid repeated hash lookups.
   std::vector<unsigned> StackIdToIndex;
 
-  /// A list of GUIDs defined by this module. Indexed by ValueID.
-  std::vector<uint64_t> DefinedGUIDs;
-
 public:
   ModuleSummaryIndexBitcodeReader(
       BitstreamCursor Stream, StringRef Strtab, ModuleSummaryIndex &TheIndex,
       StringRef ModulePath,
-      std::function<bool(StringRef)> IsPrevailing = nullptr,
-      std::function<void(ValueInfo)> OnValueInfo = nullptr);
+      std::function<bool(GlobalValue::GUID)> IsPrevailing = nullptr);
 
   Error parseModule();
 
@@ -3989,6 +3979,8 @@ Error BitcodeReader::materializeMetadata() {
     }
   }
 
+  UpgradeCFIFunctionsMetadata(*TheModule);
+
   DeferredMetadataInfo.clear();
   return Error::success();
 }
@@ -4044,15 +4036,6 @@ Error BitcodeReader::globalCleanup() {
   for (auto &Pair : UpgradedVariables) {
     Pair.first->eraseFromParent();
     TheModule->insertGlobalVariable(Pair.second);
-  }
-
-  for (size_t ValueID = 0; ValueID < GUIDList.size(); ValueID++) {
-    const auto GUID = GUIDList[ValueID];
-    if (GUID == 0)
-      continue;
-
-    const auto *Value = ValueList[ValueID];
-    TheModule->insertGUID(Value, GUID);
   }
 
   // Force deallocation of memory for these vectors to favor the client that
@@ -4858,13 +4841,6 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       // historically always the start of the regular bitcode header.
       VSTOffset = Record[0] - 1;
       break;
-    // MODULE_CODE_GUIDLIST: [i64 x N]
-    case bitc::MODULE_CODE_GUIDLIST:
-      assert(Record.size() % 2 == 0);
-      GUIDList.reserve(GUIDList.size() + Record.size() / 2);
-      for (size_t i = 0; i < Record.size(); i += 2)
-        GUIDList.push_back(Record[i] << 32 | Record[i + 1]);
-      break;
     /// MODULE_CODE_SOURCE_FILENAME: [namechar x N]
     case bitc::MODULE_CODE_SOURCE_FILENAME:
       SmallString<128> ValueName;
@@ -4875,7 +4851,6 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
     }
     Record.clear();
   }
-
   this->ValueTypeCallback = std::nullopt;
   return Error::success();
 }
@@ -5308,7 +5283,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
             cast<TruncInst>(I)->setHasNoSignedWrap(true);
         }
         if (isa<FPMathOperator>(I)) {
-          FastMathFlags FMF = getDecodedFastMathFlags(Record[OpNum]);
+          uint64_t Flags = Record[OpNum];
+          if (isa<UIToFPInst>(I))
+            Flags >>= 1;
+          FastMathFlags FMF = getDecodedFastMathFlags(Flags);
           if (FMF.any())
             I->setFastMathFlags(FMF);
         }
@@ -7175,6 +7153,17 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         if (It != UpgradedIntrinsics.end())
           UpgradeIntrinsicCall(CI, It->second);
       }
+    } else if (auto *BC = dyn_cast<BitCastInst>(&I);
+               BC && BC->getSrcTy() == BC->getDestTy() &&
+               isa_and_nonnull<ReturnInst>(BC->getNextNode())) {
+      // Old bitcode allowed an optional bitcast between a musttail call and its
+      // return. Under opaque pointers that cast is always a no-op, and the
+      // verifier no longer accepts it, so drop it.
+      if (auto *CI = dyn_cast<CallInst>(BC->getOperand(0));
+          CI && CI->isMustTailCall() && CI->getNextNode() == BC) {
+        BC->replaceAllUsesWith(CI);
+        BC->eraseFromParent();
+      }
     }
   }
 
@@ -7249,11 +7238,9 @@ std::vector<StructType *> BitcodeReader::getIdentifiedStructTypes() const {
 
 ModuleSummaryIndexBitcodeReader::ModuleSummaryIndexBitcodeReader(
     BitstreamCursor Cursor, StringRef Strtab, ModuleSummaryIndex &TheIndex,
-    StringRef ModulePath, std::function<bool(StringRef)> IsPrevailing,
-    std::function<void(ValueInfo)> OnValueInfo)
+    StringRef ModulePath, std::function<bool(GlobalValue::GUID)> IsPrevailing)
     : BitcodeReaderBase(std::move(Cursor), Strtab), TheIndex(TheIndex),
-      ModulePath(ModulePath), IsPrevailing(IsPrevailing),
-      OnValueInfo(OnValueInfo) {}
+      ModulePath(ModulePath), IsPrevailing(IsPrevailing) {}
 
 void ModuleSummaryIndexBitcodeReader::addThisModule() {
   TheIndex.addModule(ModulePath);
@@ -7281,15 +7268,9 @@ ModuleSummaryIndexBitcodeReader::getValueInfoFromValueId(unsigned ValueId) {
 void ModuleSummaryIndexBitcodeReader::setValueGUID(
     uint64_t ValueID, StringRef ValueName, GlobalValue::LinkageTypes Linkage,
     StringRef SourceFileName) {
-  GlobalValue::GUID ValueGUID = 0;
-  if (ValueID < DefinedGUIDs.size())
-    ValueGUID = DefinedGUIDs[ValueID];
-  if (ValueGUID == 0)
-    // DefinedGUIDs is a sparse array and can contain zero entries, so this
-    // can't just be an `else`.
-    ValueGUID = GlobalValue::getGUIDAssumingExternalLinkage(
-        GlobalValue::getGlobalIdentifier(ValueName, Linkage, SourceFileName));
-
+  std::string GlobalId =
+      GlobalValue::getGlobalIdentifier(ValueName, Linkage, SourceFileName);
+  auto ValueGUID = GlobalValue::getGUIDAssumingExternalLinkage(GlobalId);
   auto OriginalNameID = ValueGUID;
   if (GlobalValue::isLocalLinkage(Linkage))
     OriginalNameID = GlobalValue::getGUIDAssumingExternalLinkage(ValueName);
@@ -7300,11 +7281,10 @@ void ModuleSummaryIndexBitcodeReader::setValueGUID(
   // UseStrtab is false for legacy summary formats and value names are
   // created on stack. In that case we save the name in a string saver in
   // the index so that the value name can be recorded.
-  auto VI = TheIndex.getOrInsertValueInfo(
-      ValueGUID, UseStrtab ? ValueName : TheIndex.saveString(ValueName));
-  ValueIdToValueInfoMap[ValueID] = std::make_pair(VI, OriginalNameID);
-  if (OnValueInfo)
-    OnValueInfo(VI);
+  ValueIdToValueInfoMap[ValueID] = std::make_pair(
+      TheIndex.getOrInsertValueInfo(
+          ValueGUID, UseStrtab ? ValueName : TheIndex.saveString(ValueName)),
+      OriginalNameID);
 }
 
 // Specialized value symbol table parser used when reading module index
@@ -7512,13 +7492,6 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
           // word before the start of the identification or module block, which
           // was historically always the start of the regular bitcode header.
           VSTOffset = Record[0] - 1;
-          break;
-        // MODULE_CODE_GUIDLIST: [i64 x N]
-        case bitc::MODULE_CODE_GUIDLIST:
-          assert(Record.size() % 2 == 0);
-          DefinedGUIDs.reserve(DefinedGUIDs.size() + Record.size() / 2);
-          for (size_t i = 0; i < Record.size(); i += 2)
-            DefinedGUIDs.push_back(Record[i] << 32 | Record[i + 1]);
           break;
         // v1 GLOBALVAR: [pointer type, isconst,     initid,       linkage, ...]
         // v1 FUNCTION:  [type,         callingconv, isproto,      linkage, ...]
@@ -7916,7 +7889,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       // and kept).
       auto LT = (GlobalValue::LinkageTypes)Flags.Linkage;
       bool IsPrevailingSym = !IsPrevailing || GlobalValue::isLocalLinkage(LT) ||
-                             IsPrevailing(VI.name());
+                             IsPrevailing(VI.getGUID());
 
       // If this is not the prevailing copy, and the records are in the "old"
       // order (preceding), clear them now. They should already be empty in
@@ -8189,17 +8162,43 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
 
     case bitc::FS_CFI_FUNCTION_DEFS: {
       auto &CfiFunctionDefs = TheIndex.cfiFunctionDefs();
-      for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDefs.emplace(Strtab.data() + Record[I],
-                                static_cast<size_t>(Record[I + 1]));
+      if (Version < 14) {
+        for (unsigned I = 0; I != Record.size(); I += 2) {
+          StringRef Name(Strtab.data() + Record[I],
+                         static_cast<size_t>(Record[I + 1]));
+          GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+              GlobalValue::dropLLVMManglingEscape(Name));
+          CfiFunctionDefs.addSymbolWithThinLTOGUID(Name, GUID);
+        }
+      } else {
+        for (unsigned I = 0; I != Record.size(); I += 3) {
+          GlobalValue::GUID ThinLTOGUID = Record[I];
+          StringRef Name(Strtab.data() + Record[I + 1],
+                         static_cast<size_t>(Record[I + 2]));
+          CfiFunctionDefs.addSymbolWithThinLTOGUID(Name, ThinLTOGUID);
+        }
+      }
       break;
     }
 
     case bitc::FS_CFI_FUNCTION_DECLS: {
       auto &CfiFunctionDecls = TheIndex.cfiFunctionDecls();
-      for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDecls.emplace(Strtab.data() + Record[I],
-                                 static_cast<size_t>(Record[I + 1]));
+      if (Version < 14) {
+        for (unsigned I = 0; I != Record.size(); I += 2) {
+          StringRef Name(Strtab.data() + Record[I],
+                         static_cast<size_t>(Record[I + 1]));
+          GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+              GlobalValue::dropLLVMManglingEscape(Name));
+          CfiFunctionDecls.addSymbolWithThinLTOGUID(Name, GUID);
+        }
+      } else {
+        for (unsigned I = 0; I != Record.size(); I += 3) {
+          GlobalValue::GUID ThinLTOGUID = Record[I];
+          StringRef Name(Strtab.data() + Record[I + 1],
+                         static_cast<size_t>(Record[I + 2]));
+          CfiFunctionDecls.addSymbolWithThinLTOGUID(Name, ThinLTOGUID);
+        }
+      }
       break;
     }
 
@@ -8730,16 +8729,15 @@ BitcodeModule::getLazyModule(LLVMContext &Context, bool ShouldLazyLoadMetadata,
 // We don't use ModuleIdentifier here because the client may need to control the
 // module path used in the combined summary (e.g. when reading summaries for
 // regular LTO modules).
-Error BitcodeModule::readSummary(ModuleSummaryIndex &CombinedIndex,
-                                 StringRef ModulePath,
-                                 std::function<bool(StringRef)> IsPrevailing,
-                                 std::function<void(ValueInfo)> OnValueInfo) {
+Error BitcodeModule::readSummary(
+    ModuleSummaryIndex &CombinedIndex, StringRef ModulePath,
+    std::function<bool(GlobalValue::GUID)> IsPrevailing) {
   BitstreamCursor Stream(Buffer);
   if (Error JumpFailed = Stream.JumpToBit(ModuleBit))
     return JumpFailed;
 
   ModuleSummaryIndexBitcodeReader R(std::move(Stream), Strtab, CombinedIndex,
-                                    ModulePath, IsPrevailing, OnValueInfo);
+                                    ModulePath, IsPrevailing);
   return R.parseModule();
 }
 

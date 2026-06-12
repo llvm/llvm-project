@@ -48,8 +48,8 @@ protected:
     DataAggregator DA("<pseudo input>");
     DA.BC = BC.get();
     DA.setParsingBuffer(Input);
-    Error E = DA.parsePreAggregatedLBRSamples();
-    ASSERT_FALSE(E) << toString(std::move(E));
+    std::error_code EC = DA.parsePreAggregatedLBRSamples();
+    ASSERT_FALSE(EC);
     Result = std::move(DA.Traces);
   }
 
@@ -237,6 +237,33 @@ TEST_F(PreAggregatedX86TestHelper, ReturnEntry) {
   EXPECT_EQ(Traces[0].first.From, 0x4b19e0ULL);
   EXPECT_EQ(Traces[0].first.To, 0x4b19efULL);
   EXPECT_EQ(Traces[0].second.TakenCount, 4u);
+}
+
+TEST_F(PreAggregatedX86TestHelper, OptionalMispredField) {
+  std::vector<std::pair<Trace, TakenBranchInfo>> Traces;
+  parseAndCollectTraces("B 100 200 1\n"
+                        "T 300 400 500 3 4\n"
+                        "R 600 700 800 5 6\n",
+                        Traces);
+  ASSERT_EQ(Traces.size(), 3u);
+
+  EXPECT_EQ(Traces[0].first.Branch, 0x100ULL);
+  EXPECT_EQ(Traces[0].first.From, 0x200ULL);
+  EXPECT_EQ(Traces[0].first.To, Trace::BR_ONLY);
+  EXPECT_EQ(Traces[0].second.TakenCount, 1u);
+  EXPECT_EQ(Traces[0].second.MispredCount, 0u);
+
+  EXPECT_EQ(Traces[1].first.Branch, 0x300ULL);
+  EXPECT_EQ(Traces[1].first.From, 0x400ULL);
+  EXPECT_EQ(Traces[1].first.To, 0x500ULL);
+  EXPECT_EQ(Traces[1].second.TakenCount, 3u);
+  EXPECT_EQ(Traces[1].second.MispredCount, 4u);
+
+  EXPECT_EQ(Traces[2].first.Branch, 0x600ULL);
+  EXPECT_EQ(Traces[2].first.From, 0x700ULL);
+  EXPECT_EQ(Traces[2].first.To, 0x800ULL);
+  EXPECT_EQ(Traces[2].second.TakenCount, 5u);
+  EXPECT_EQ(Traces[2].second.MispredCount, 6u);
 }
 
 TEST_F(PreAggregatedX86TestHelper, TraceWithNeg1AsBROnly) {

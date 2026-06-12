@@ -30,11 +30,21 @@ class AnyValue;
 /// stores the concrete bit value. The tag mask bit indicates whether it is a
 /// pointer bit, and the tag value bit is used for provenance tracking of
 /// pointers.
+///
+/// Note that the idealized interpreter would store a full pointer tag for every
+/// single pointer bit, as well as the position of that bit in the pointer. The
+/// provenance is preserved as the bit is copied around, and when a sequence of
+/// bytes is eventually converted back to a pointer, all bits must be in the
+/// original order and have the same provenance. However, that would be
+/// prohibitively expensive. So instead, we rely on randomized ptr-sized tags.
+/// This means that if bits get reordered, or if bits from different pointers
+/// get mixed, then the result is unlikely to be a valid tag.
 struct Byte {
   uint8_t ConcreteMask;
   uint8_t Value;
   uint8_t TagMask;  // A mask to indicate which bits are pointer bits.
-  uint8_t TagValue; // Part of the tag for provenance tracking of pointers.
+  uint8_t TagValue; // For each pointer bit, the corresponding bit of the tag
+                    // for provenance tracking.
 
   static Byte poison() { return Byte{0, 0, 0, 0}; }
   static Byte undef() { return Byte{0, 255, 0, 0}; }
@@ -270,6 +280,11 @@ public:
 
 inline raw_ostream &operator<<(raw_ostream &OS, const AnyValue &V) {
   V.print(OS);
+  return OS;
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS, const Pointer &P) {
+  P.print(OS);
   return OS;
 }
 

@@ -444,7 +444,7 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
       DWARFContext::create(*File, DWARFContext::ProcessDebugRelocations::Ignore,
                            nullptr, opts::DWPPathName,
                            WithColor::defaultErrorHandler,
-                           WithColor::defaultWarningHandler),
+                           WithColor::defaultWarningHandler, true),
       JournalingStreams{Stdout, Stderr});
   if (Error E = BCOrErr.takeError()) {
     Err = std::move(E);
@@ -469,6 +469,9 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
 RewriteInstance::~RewriteInstance() {}
 
 Error RewriteInstance::setProfile(StringRef Filename) {
+  if (!sys::fs::exists(Filename))
+    return errorCodeToError(make_error_code(errc::no_such_file_or_directory));
+
   if (ProfileReader) {
     if (DataAggregator::checkPerfDataMagic(Filename) &&
         // Poor man's RTTI
@@ -483,9 +486,6 @@ Error RewriteInstance::setProfile(StringRef Filename) {
                                        Filename,
                                    inconvertibleErrorCode());
   }
-
-  if (!sys::fs::exists(Filename))
-    return errorCodeToError(make_error_code(errc::no_such_file_or_directory));
 
   // Spawn a profile reader based on file contents.
   if (DataAggregator::checkPerfDataMagic(Filename))
