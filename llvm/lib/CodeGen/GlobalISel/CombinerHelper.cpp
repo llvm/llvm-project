@@ -38,6 +38,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DivisionByConstantInfo.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cmath>
@@ -2858,10 +2859,9 @@ void CombinerHelper::applyCombineTruncOfShift(
   // low NewShiftTy bits of ShiftSrc. If this use can see through a redundant
   // mask/disjoint-or, simplify the shift operand before truncating so we don't
   // synthesise dead high-bit work that DCE has to clean up later.
-  APInt LowMask =
-      APInt::getLowBitsSet(MRI.getType(ShiftSrc).getScalarSizeInBits(),
-                           NewShiftTy.getScalarSizeInBits());
-  KnownBits Known(MRI.getType(ShiftSrc).getScalarSizeInBits());
+  unsigned SrcBW = MRI.getType(ShiftSrc).getScalarSizeInBits();
+  APInt LowMask = APInt::getLowBitsSet(SrcBW, NewShiftTy.getScalarSizeInBits());
+  KnownBits Known(SrcBW);
   simplifyDemandedBits(*ShiftMI, /*OpNo=*/1, LowMask, Known);
   // Re-read the operand: the demanded-bits simplifier may have rerouted it.
   ShiftSrc = ShiftMI->getOperand(1).getReg();
@@ -8831,16 +8831,36 @@ bool CombinerHelper::matchAVG(MachineInstr &MI, MachineRegisterInfo &MRI,
   return XTy == MRI.getType(Y) && isLegal({TargetOpc, {XTy}});
 }
 
+/// True if \p OpNo is an in-range register use (not a def) of \p MI.
 static bool isRegUseOperand(const MachineInstr &MI, unsigned OpNo) {
   return OpNo < MI.getNumOperands() && MI.getOperand(OpNo).isReg() &&
          !MI.getOperand(OpNo).isDef();
 }
 
+/// Demand on the LHS of a G_AND/G_OR, given the demand on the result and the
+/// known bits of the RHS (RHS-known-zero bits of an AND and RHS-known-one
+/// bits of an OR fix the result regardless of the LHS).
+static APInt getDemandedLHSForLogicalOp(unsigned Opcode, const APInt &Demanded,
+                                        const KnownBits &RHSKnown) {
+  assert((Opcode == TargetOpcode::G_AND || Opcode == TargetOpcode::G_OR) &&
+         "Expected G_AND or G_OR");
+  return Demanded &
+         ~(Opcode == TargetOpcode::G_AND ? RHSKnown.Zero : RHSKnown.One);
+}
+
+/// A shift amount usable for demand transfer: constant, in range, non-zero.
+static std::optional<unsigned>
+getValidConstShiftAmt(const std::optional<APInt> &Amt, unsigned BW) {
+  if (!Amt || Amt->uge(BW) || Amt->isZero())
+    return std::nullopt;
+  return Amt->getZExtValue();
+}
+
 APInt CombinerHelper::getDemandedSrcBitsForShiftConst(unsigned Opcode,
                                                       const APInt &DemandedBits,
                                                       unsigned ShAmt) {
-  unsigned BW = DemandedBits.getBitWidth();
-  assert(ShAmt < BW && "shift amount must be in range");
+  assert(ShAmt < DemandedBits.getBitWidth() &&
+         "shift amount must be less than the bit width");
   switch (Opcode) {
   case TargetOpcode::G_SHL:
     return DemandedBits.lshr(ShAmt);
@@ -8849,7 +8869,7 @@ APInt CombinerHelper::getDemandedSrcBitsForShiftConst(unsigned Opcode,
   case TargetOpcode::G_ASHR: {
     APInt Src = DemandedBits.shl(ShAmt);
     // The top ShAmt result bits are copies of the source sign bit.
-    if (DemandedBits.intersects(APInt::getHighBitsSet(BW, ShAmt)))
+    if (DemandedBits.countLeadingZeros() < ShAmt)
       Src.setSignBit();
     return Src;
   }
@@ -8871,16 +8891,13 @@ Register CombinerHelper::simplifyMultipleUseDemandedBits(
          "DemandedBits width must match the register scalar type");
 
   MachineInstr *DefMI = MRI.getVRegDef(R);
-  if (!DefMI || DefMI->getNumExplicitDefs() != 1 ||
-      !isRegUseOperand(*DefMI, 1) || !isRegUseOperand(*DefMI, 2))
+  if (!DefMI || (!isa<GAnd>(DefMI) && !isa<GOr>(DefMI)))
     return Register();
 
   unsigned Opcode = DefMI->getOpcode();
-  if (Opcode != TargetOpcode::G_AND && Opcode != TargetOpcode::G_OR)
-    return Register();
-
-  Register LHS = DefMI->getOperand(1).getReg();
-  Register RHS = DefMI->getOperand(2).getReg();
+  auto *Logic = cast<GLogicalBinOp>(DefMI);
+  Register LHS = Logic->getLHSReg();
+  Register RHS = Logic->getRHSReg();
   if (MRI.getType(LHS) != Ty || MRI.getType(RHS) != Ty)
     return Register();
 
@@ -8978,18 +8995,12 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
   switch (Opcode) {
   case TargetOpcode::G_AND:
   case TargetOpcode::G_OR: {
-    if (!isRegUseOperand(*DefMI, 1) || !isRegUseOperand(*DefMI, 2))
-      return GiveUp();
-    Register Dst = DefMI->getOperand(0).getReg();
-    LLT DstTy = MRI.getType(Dst);
-    if (!DstTy.isValid() || BW != DstTy.getScalarSizeInBits())
-      return GiveUp();
-
-    Register LHS = DefMI->getOperand(1).getReg();
-    Register RHS = DefMI->getOperand(2).getReg();
+    auto *Logic = cast<GLogicalBinOp>(DefMI);
+    Register LHS = Logic->getLHSReg();
+    Register RHS = Logic->getRHSReg();
     auto SimplifyWithConst = [&](Register X,
                                  Register CReg) -> std::optional<Register> {
-      if (MRI.getType(X) != DstTy || MRI.getType(CReg) != DstTy)
+      if (MRI.getType(X) != OpTy || MRI.getType(CReg) != OpTy)
         return std::nullopt;
       std::optional<APInt> C = getConstantOrConstantSplatVector(CReg);
       if (!C || C->getBitWidth() != BW)
@@ -9025,11 +9036,7 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
     KnownBits RHSKnown(BW);
     bool Changed = simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/2, Demanded,
                                             RHSKnown, Depth + 1, DoRewrite);
-    APInt LHSDemand = Demanded;
-    if (Opcode == TargetOpcode::G_AND)
-      LHSDemand &= ~RHSKnown.Zero;
-    else
-      LHSDemand &= ~RHSKnown.One;
+    APInt LHSDemand = getDemandedLHSForLogicalOp(Opcode, Demanded, RHSKnown);
     KnownBits LHSKnown(BW);
     Changed |= simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/1, LHSDemand, LHSKnown,
                                         Depth + 1, DoRewrite);
@@ -9040,19 +9047,11 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
   case TargetOpcode::G_SHL:
   case TargetOpcode::G_LSHR:
   case TargetOpcode::G_ASHR: {
-    if (!isRegUseOperand(*DefMI, 1) || !isRegUseOperand(*DefMI, 2))
-      return GiveUp();
-    Register Dst = DefMI->getOperand(0).getReg();
-    LLT DstTy = MRI.getType(Dst);
-    if (!DstTy.isValid() || BW != DstTy.getScalarSizeInBits())
-      return GiveUp();
-    std::optional<APInt> Amt =
-        getConstantOrConstantSplatVector(DefMI->getOperand(2).getReg());
-    if (!Amt || Amt->uge(BW))
-      return GiveUp(); // Variable or out-of-range amount: SDAG-style bail.
-    unsigned ShAmt = Amt->getZExtValue();
-    if (ShAmt == 0)
-      return GiveUp();
+    std::optional<unsigned> ShAmtOpt = getValidConstShiftAmt(
+        getConstantOrConstantSplatVector(DefMI->getOperand(2).getReg()), BW);
+    if (!ShAmtOpt)
+      return GiveUp(); // Variable, zero, or out-of-range amount: SDAG bail.
+    unsigned ShAmt = *ShAmtOpt;
 
     APInt SrcDemand = getDemandedSrcBitsForShiftConst(Opcode, Demanded, ShAmt);
     KnownBits SrcKnown(BW);
@@ -9073,13 +9072,13 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
       if (Demanded.countLeadingZeros() >= ShAmt || SrcKnown.isNonNegative()) {
         if (DoRewrite) {
           Builder.setInstrAndDebugLoc(*DefMI);
-          auto Lshr = Builder.buildLShr(DstTy, DefMI->getOperand(1).getReg(),
+          auto Lshr = Builder.buildLShr(OpTy, DefMI->getOperand(1).getReg(),
                                         DefMI->getOperand(2).getReg());
           Rewrite(Lshr.getReg(0));
           Known = KnownBits::lshr(SrcKnown, AmtKnown);
-          return true;
         }
-        return true; // Dry run: a rewrite would happen.
+        // In a dry run the rewrite would have happened; report it either way.
+        return true;
       }
       Known = KnownBits::ashr(SrcKnown, AmtKnown);
       break;
@@ -9128,12 +9127,13 @@ bool CombinerHelper::matchSimplifyDemandedBits(MachineInstr &MI,
   // with demand transferred through the constant shift.
   if (Opcode == TargetOpcode::G_SHL || Opcode == TargetOpcode::G_LSHR ||
       Opcode == TargetOpcode::G_ASHR) {
-    std::optional<APInt> Amt =
-        getConstantOrConstantSplatVector(MI.getOperand(2).getReg());
-    if (!Amt || Amt->uge(RootDemand.getBitWidth()) || Amt->isZero())
+    std::optional<unsigned> ShAmt = getValidConstShiftAmt(
+        getConstantOrConstantSplatVector(MI.getOperand(2).getReg()),
+        RootDemand.getBitWidth());
+    if (!ShAmt)
       return false;
-    APInt SrcDemand = getDemandedSrcBitsForShiftConst(Opcode, RootDemand,
-                                                      Amt->getZExtValue());
+    APInt SrcDemand =
+        getDemandedSrcBitsForShiftConst(Opcode, RootDemand, *ShAmt);
     KnownBits SrcKnown(RootDemand.getBitWidth());
     return Probe(/*OpNo=*/1, SrcDemand, SrcKnown);
   }
@@ -9142,13 +9142,9 @@ bool CombinerHelper::matchSimplifyDemandedBits(MachineInstr &MI,
   if (Probe(/*OpNo=*/2, RootDemand, RHSKnown))
     return true;
 
-  APInt LHSDemand = RootDemand;
-  if (Opcode == TargetOpcode::G_AND)
-    LHSDemand &= ~RHSKnown.Zero;
-  else if (Opcode == TargetOpcode::G_OR)
-    LHSDemand &= ~RHSKnown.One;
-  else
+  if (Opcode != TargetOpcode::G_AND && Opcode != TargetOpcode::G_OR)
     return false;
+  APInt LHSDemand = getDemandedLHSForLogicalOp(Opcode, RootDemand, RHSKnown);
 
   KnownBits LHSKnown(RootDemand.getBitWidth());
   return Probe(/*OpNo=*/1, LHSDemand, LHSKnown);
@@ -9190,6 +9186,9 @@ bool CombinerHelper::matchNarrowTruncShrConst(MachineInstr &MI,
   std::optional<APInt> K = getConstantOrConstantSplatVector(AmtReg);
   if (!K)
     return false;
+  // K < DstBW is the termination firewall against trunc_shift: allowing
+  // K >= DstBW recreates a pattern trunc_shift re-widens, deadlooping the
+  // combiner (see the narrow_trunc_shr_const comment in Combine.td).
   if (K->uge(DstBW))
     return false;
   unsigned KVal = K->getZExtValue();
@@ -9199,20 +9198,19 @@ bool CombinerHelper::matchNarrowTruncShrConst(MachineInstr &MI,
   if (!VT)
     return false;
 
+  LLT AmtTy = getTargetLowering().getPreferredShiftAmountTy(DstTy);
+  if (!isLegalOrBeforeLegalizer({ShrOpc, {DstTy, AmtTy}}))
+    return false;
+
   if (ShrOpc == TargetOpcode::G_LSHR) {
-    KnownBits Known = VT->getKnownBits(X);
-    APInt HiZeroes = Known.Zero.extractBits(KVal, DstBW);
-    if (!HiZeroes.isAllOnes())
+    if (!VT->maskedValueIsZero(X,
+                               APInt::getBitsSet(SrcBW, DstBW, DstBW + KVal)))
       return false;
   } else {
     unsigned SignBits = VT->computeNumSignBits(X);
     if (SignBits < SrcBW - DstBW + 1)
       return false;
   }
-
-  LLT AmtTy = getTargetLowering().getPreferredShiftAmountTy(DstTy);
-  if (!isLegalOrBeforeLegalizer({ShrOpc, {DstTy, AmtTy}}))
-    return false;
 
   MatchInfo = [=](MachineIRBuilder &B) {
     Register NarrowX = B.buildTrunc(DstTy, X).getReg(0);
