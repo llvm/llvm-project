@@ -733,6 +733,75 @@ struct Foo access_Foo_const_array_size(struct Foo ptr[5], int idx) {
   return ptr[idx];
 }
 
+// No checks
+// NEW-LABEL: define dso_local i64 @access_Foo_unsafe_indexable(
+// NEW-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
+// NEW-NEXT:  [[ENTRY:.*:]]
+// NEW-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+// NEW-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// NEW-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
+// NEW-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
+// NEW-NEXT:    store i32 [[IDX]], ptr [[IDX_ADDR]], align 4
+// NEW-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
+// NEW-NEXT:    [[TMP1:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
+// NEW-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP1]] to i64
+// NEW-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr [[TMP0]], i64 [[IDXPROM]]
+// NEW-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[RETVAL]], ptr align 4 [[ARRAYIDX]], i64 8, i1 false)
+// NEW-NEXT:    [[TMP2:%.*]] = load i64, ptr [[RETVAL]], align 4
+// NEW-NEXT:    ret i64 [[TMP2]]
+//
+// LEGACY-LABEL: define dso_local i64 @access_Foo_unsafe_indexable(
+// LEGACY-SAME: ptr noundef [[PTR:%.*]], i32 noundef [[IDX:%.*]]) #[[ATTR0]] {
+// LEGACY-NEXT:  [[ENTRY:.*:]]
+// LEGACY-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+// LEGACY-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// LEGACY-NEXT:    [[IDX_ADDR:%.*]] = alloca i32, align 4
+// LEGACY-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
+// LEGACY-NEXT:    store i32 [[IDX]], ptr [[IDX_ADDR]], align 4
+// LEGACY-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
+// LEGACY-NEXT:    [[TMP1:%.*]] = load i32, ptr [[IDX_ADDR]], align 4
+// LEGACY-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP1]] to i64
+// LEGACY-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr [[TMP0]], i64 [[IDXPROM]]
+// LEGACY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[RETVAL]], ptr align 4 [[ARRAYIDX]], i64 8, i1 false)
+// LEGACY-NEXT:    [[TMP2:%.*]] = load i64, ptr [[RETVAL]], align 4
+// LEGACY-NEXT:    ret i64 [[TMP2]]
+//
+struct Foo access_Foo_unsafe_indexable(struct Foo* __unsafe_indexable ptr, int idx) {
+  return ptr[idx];
+}
+
+// No checks
+// NEW-LABEL: define dso_local i64 @access_Foo_single(
+// NEW-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// NEW-NEXT:  [[ENTRY:.*:]]
+// NEW-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+// NEW-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// NEW-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
+// NEW-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
+// NEW-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr [[TMP0]], i64 0
+// NEW-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[RETVAL]], ptr align 4 [[ARRAYIDX]], i64 8, i1 false)
+// NEW-NEXT:    [[TMP1:%.*]] = load i64, ptr [[RETVAL]], align 4
+// NEW-NEXT:    ret i64 [[TMP1]]
+//
+// LEGACY-LABEL: define dso_local i64 @access_Foo_single(
+// LEGACY-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// LEGACY-NEXT:  [[ENTRY:.*:]]
+// LEGACY-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+// LEGACY-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
+// LEGACY-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8
+// LEGACY-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
+// LEGACY-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_FOO]], ptr [[TMP0]], i64 0
+// LEGACY-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[RETVAL]], ptr align 4 [[ARRAYIDX]], i64 8, i1 false)
+// LEGACY-NEXT:    [[TMP1:%.*]] = load i64, ptr [[RETVAL]], align 4
+// LEGACY-NEXT:    ret i64 [[TMP1]]
+//
+struct Foo access_Foo_single(struct Foo* __single ptr) {
+  return ptr[0];
+}
+
+// We don't try `struct Foo *__null_terminated because that isn't allowed by Sema
+
+
 struct NestedArrayOfStructs {
   struct Foo arr[5];
 };

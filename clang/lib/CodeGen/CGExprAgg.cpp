@@ -80,9 +80,7 @@ public:
   /// EmitAggLoadOfLValue - Given an expression with aggregate type that
   /// represents a value lvalue, this method emits the address of the lvalue,
   /// then loads the result into DestPtr.
-  /* TO_UPSTREAM(BoundsSafety) ON */
-  void EmitAggLoadOfLValue(const Expr *E, bool Checked = false);
-  /* TO_UPSTREAM(BoundsSafety) OFF */
+  void EmitAggLoadOfLValue(const Expr *E);
 
   /// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
   /// SrcIsRValue is true if source comes from an RValue.
@@ -170,9 +168,7 @@ public:
   void VisitStringLiteral(StringLiteral *E) { EmitAggLoadOfLValue(E); }
   void VisitCompoundLiteralExpr(CompoundLiteralExpr *E);
   void VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
-    /* TO_UPSTREAM(BoundsSafety) ON */
-    EmitAggLoadOfLValue(E, E->getBase()->getType()->isPointerTypeWithBounds());
-    /* TO_UPSTREAM(BoundsSafety) OFF */
+    EmitAggLoadOfLValue(E);
   }
   void VisitPredefinedExpr(const PredefinedExpr *E) { EmitAggLoadOfLValue(E); }
 
@@ -369,28 +365,35 @@ AggExprEmitter::WidePointerElemCallback AggExprEmitter::DefaultElemCallback =
 /// EmitAggLoadOfLValue - Given an expression with aggregate type that
 /// represents a value lvalue, this method emits the address of the lvalue,
 /// then loads the result into DestPtr.
-void AggExprEmitter::EmitAggLoadOfLValue(const Expr *E, bool Checked) {
+void AggExprEmitter::EmitAggLoadOfLValue(const Expr *E) {
   /*TO_UPSTREAM(BoundsSafety) ON*/
-  if (CGF.getLangOpts().hasNewBoundsSafetyCheck(
+  bool Checked = true;
+  // This divergence from upstream here is a little complicated. Historically
+  // -fbounds-safety had a bug here because this function called `EmitLValue`
+  // instead of `EmitCheckedLValue` and it was later fixed to conditionally call
+  // `EmitCheckedLValue` for wide pointers to arrays of aggregates (but guarded
+  // by BS_CHK_ArraySubscriptAgg so we could gradually role out the new bounds
+  // check). However, since then upstream
+  // (https://github.com/llvm/llvm-project/pull/190739) made calling
+  // `EmitCheckedLValue` unconditional. If we didn't need to support compiling
+  // legacy bounds checks we could just call `EmitCheckedLValue` unconditionally
+  // like upstream does. However, we currently need to support legacy bounds
+  // checks so we have to support the different cases below.
+  if (CGF.getLangOpts().hasBoundsSafety() &&
+      !CGF.getLangOpts().hasNewBoundsSafetyCheck(
           clang::LangOptionsBase::BS_CHK_ArraySubscriptAgg)) {
-    // TODO(dliew): Modifying `Checked` should probably be removed.
-    // Calling `EmitCheckedLValue` does two things:
-    //
-    // 1. If `E` is an ArraySubscriptExpr then emits bound checks if UBSan is
-    //    on or if the base pointer has bounds information
-    // 2. Calls `CodeGenFunction::EmitTypeCheck()` in some cases.
-    //
-    // (1.) is already handled by `AggExprEmitter::VisitArraySubscriptExpr()` so
-    // modifying `Checked` isn't need for that. However, (2.) adds UBSan type
-    // checks.
-    //
-    // We should audit this interaction with UBSan to see if its safe to remove
-    // setting `Checked`. (rdar://145257962).
-    Checked |= E->getType()->isPointerTypeWithBounds();
-  } else {
-    // Preserve old buggy behavior
-    Checked = E->getType()->isPointerTypeWithBounds();
+    if (isa<ArraySubscriptExpr>(E)) {
+      // Legacy -fbounds-safety check path. Preserve the old buggy behavior. On
+      // this path unfortunately UBSan checks will be missing because allowing
+      // these checks would also enable `BS_CHK_ArraySubscriptAgg` which is
+      // exact opposite of what is needed here.
+      Checked = E->getType()->isPointerTypeWithBounds();
+    } else {
+      // For all other cases we can do what upstream now does.
+      Checked = true;
+    }
   }
+
   LValue LV = Checked ? CGF.EmitCheckedLValue(E, CodeGenFunction::TCK_Load)
                       : CGF.EmitLValue(E);
   /*TO_UPSTREAM(BoundsSafety) OFF*/
