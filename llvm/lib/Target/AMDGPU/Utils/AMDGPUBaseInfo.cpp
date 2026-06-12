@@ -3849,6 +3849,10 @@ bool isPacked64BitInst(unsigned Opc) {
   case AMDGPU::V_PK_MUL_F64_gfx1250:
   case AMDGPU::V_PK_FMA_F64:
   case AMDGPU::V_PK_FMA_F64_gfx1250:
+  case AMDGPU::V_PK_MAX_NUM_F64:
+  case AMDGPU::V_PK_MAX_NUM_F64_gfx1250:
+  case AMDGPU::V_PK_MIN_NUM_F64:
+  case AMDGPU::V_PK_MIN_NUM_F64_gfx1250:
     return true;
   default:
     return false;
