@@ -389,6 +389,8 @@ define amdgpu_kernel void @test_clmul_i32(ptr addrspace(1) %out, ptr addrspace(1
 ;
 ; GFX1250-LABEL: test_clmul_i32:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_mov_b32 s6, -1
@@ -1761,6 +1763,8 @@ define amdgpu_kernel void @test_clmulr_i32(ptr addrspace(1) %out, ptr addrspace(
 ;
 ; GFX1250-LABEL: test_clmulr_i32:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_mov_b32 s6, -1
@@ -3233,6 +3237,8 @@ define amdgpu_kernel void @test_clmulh_i32(ptr addrspace(1) %out, ptr addrspace(
 ;
 ; GFX1250-LABEL: test_clmulh_i32:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    global_wb
+; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX1250-NEXT:    s_mov_b32 s6, -1
