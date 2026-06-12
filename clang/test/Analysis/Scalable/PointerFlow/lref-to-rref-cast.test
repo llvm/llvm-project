@@ -7,7 +7,8 @@
 // Extract per-TU PointerFlow + UnsafeBufferUsage summaries.
 // RUN: %clang_cc1 -fsyntax-only %t/tu.cpp \
 // RUN:   --ssaf-extract-summaries=PointerFlow,UnsafeBufferUsage \
-// RUN:   --ssaf-tu-summary-file=%t/tu.summary.json
+// RUN:   --ssaf-tu-summary-file=%t/tu.summary.json \
+// RUN:   --ssaf-compilation-unit-id="tu-1"
 
 // Link into a single LU summary.
 // RUN: clang-ssaf-linker %t/tu.summary.json -o %t/lu.json
