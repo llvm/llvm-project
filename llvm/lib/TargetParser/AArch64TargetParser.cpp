@@ -340,14 +340,21 @@ void AArch64::ExtensionSet::disable(ArchExtKind E) {
       disable(Dep.Later);
 }
 
+static void setEnableIfMandatory(AArch64::ExtensionSet &Exts, AArch64::ExtensionInfo E) {
+    if (Exts.BaseArch->DefaultExts.test(E.ID))
+      Exts.Enabled.set(E.ID);
+}
+
 void AArch64::ExtensionSet::addCPUDefaults(const CpuInfo &CPU) {
   LLVM_DEBUG(llvm::dbgs() << "addCPUDefaults(" << CPU.Name << ")\n");
   BaseArch = &CPU.Arch;
 
   AArch64::ExtensionBitset CPUExtensions = CPU.getImpliedExtensions();
-  for (const auto &E : Extensions)
+  for (const auto &E : Extensions) {
     if (CPUExtensions.test(E.ID))
       enable(E.ID);
+    setEnableIfMandatory(*this, E);
+  }
 }
 
 void AArch64::ExtensionSet::addArchDefaults(const ArchInfo &Arch) {
