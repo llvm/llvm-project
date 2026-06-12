@@ -14,7 +14,9 @@
 #include "mlir/Transforms/CSE.h"
 
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Region.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/ScopedHashTable.h"
@@ -102,8 +104,9 @@ private:
   void simplifyBlock(ScopedMapTy &knownValues, Block *bb, bool hasSSADominance);
   void simplifyRegion(ScopedMapTy &knownValues, Region &region);
 
-  /// Erase all operations queued for deletion by the simplification routines.
-  void eraseDeadOps(bool *changed);
+  /// Erase opertion that were marked as dead during simplification, and remove
+  /// their associated dominator trees.
+  void eraseDeadOp(Operation *op);
 
   void replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
                             Operation *existing, bool hasSSADominance);
@@ -115,8 +118,6 @@ private:
   /// A rewriter for modifying the IR.
   RewriterBase &rewriter;
 
-  /// Operations marked as dead and to be erased.
-  std::vector<Operation *> opsToErase;
   DominanceInfo *domInfo = nullptr;
   MemEffectsCache memEffectsCache;
 
@@ -137,7 +138,7 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
     // visited any use of the current operation.
     // Replace all uses, but do not remove the operation yet.
     rewriter.replaceAllOpUsesWith(op, existing->getResults());
-    opsToErase.push_back(op);
+    eraseDeadOp(op);
   } else {
     // When the region does not have SSA dominance, we need to check if we
     // have visited a use before replacing any use.
@@ -157,7 +158,7 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
 
     // There may be some remaining uses of the operation.
     if (op->use_empty())
-      opsToErase.push_back(op);
+      eraseDeadOp(op);
   }
 
   // If the existing operation has an unknown location and the current
@@ -241,7 +242,11 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
     }
     nextOp = nextOp->getNextNode();
   }
-  result.first->second = std::make_pair(toOp, nullptr);
+  // Record the previous op of `toOp` as the insertion point, since `toOp`
+  // will be erased immediately after this. Using `toOp` itself would leave
+  // a dangling pointer, so its predecessor is sufficient to reconstruct
+  // the position.
+  result.first->second = std::make_pair(toOp->getPrevNode(), nullptr);
   return false;
 }
 
@@ -301,7 +306,7 @@ void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
     // This also avoids calling `simplifyRegion` on dead region ops
     // unnecessarily.
     if (isOpTriviallyDead(&op)) {
-      opsToErase.push_back(&op);
+      eraseDeadOp(&op);
       ++numDCE;
       continue;
     }
@@ -385,20 +390,10 @@ void CSEDriver::simplifyRegion(ScopedMapTy &knownValues, Region &region) {
   }
 }
 
-void CSEDriver::eraseDeadOps(bool *changed) {
-  // Erase any operations that were marked as dead during simplification, and
-  // remove their associated dominator trees.
-  for (auto *op : opsToErase) {
-    for (Region &region : op->getRegions())
-      domInfo->invalidate(&region);
-    rewriter.eraseOp(op);
-  }
-  if (changed)
-    *changed = !opsToErase.empty();
-  opsToErase.clear();
-
-  // Note: CSE does currently not remove ops with regions, so DominanceInfo
-  // does not have to be invalidated.
+void CSEDriver::eraseDeadOp(Operation *op) {
+  for (Region &region : op->getRegions())
+    domInfo->invalidate(&region);
+  rewriter.eraseOp(op);
 }
 
 void CSEDriver::simplify(Operation *op, bool *changed) {
@@ -406,13 +401,15 @@ void CSEDriver::simplify(Operation *op, bool *changed) {
   ScopedMapTy knownValues;
   for (auto &region : op->getRegions())
     simplifyRegion(knownValues, region);
-  eraseDeadOps(changed);
+  if (changed)
+    *changed = numCSE || numDCE;
 }
 
 void CSEDriver::simplify(Region &region, bool *changed) {
   ScopedMapTy knownValues;
   simplifyRegion(knownValues, region);
-  eraseDeadOps(changed);
+  if (changed)
+    *changed = numCSE || numDCE;
 }
 
 void mlir::eliminateCommonSubExpressions(RewriterBase &rewriter,
