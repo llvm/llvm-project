@@ -4,7 +4,7 @@
 # RUN:     FileCheck %s --check-prefix=OUTPUT
 # RUN: FileCheck %s --check-prefix=DEBUG < %t
 #
-# DEBUG: Estimated function size for f = 4 bytes
+# DEBUG: Estimated function size for f = 94 bytes
 #
 # OUTPUT:  mov r0, r1
 # OUTPUT:  bx lr

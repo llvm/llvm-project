@@ -2486,6 +2486,8 @@ static unsigned EstimateFunctionSizeInBytes(const MachineFunction &MF,
       FnSize += TableSizeBytes;
     }
   }
+  LLVM_DEBUG(dbgs() << "Estimated function size for " << MF.getName() << " = "
+                    << FnSize << " bytes\n");
   return FnSize;
 }
 
