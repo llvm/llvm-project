@@ -294,12 +294,13 @@ bool TargetTransformInfo::hasBranchDivergence(const Function *F) const {
 
 ValueUniformity
 llvm::TargetTransformInfo::getValueUniformity(const Value *V) const {
-  // Calls with the NoDivergenceSource attribute are always uniform.
+  ValueUniformity VU = TTIImpl->getValueUniformity(V);
   if (const auto *Call = dyn_cast<CallBase>(V)) {
-    if (Call->hasFnAttr(Attribute::NoDivergenceSource))
-      return ValueUniformity::AlwaysUniform;
+    if (VU == ValueUniformity::NeverUniform &&
+        Call->hasFnAttr(Attribute::NoDivergenceSource))
+      return ValueUniformity::Default;
   }
-  return TTIImpl->getValueUniformity(V);
+  return VU;
 }
 
 bool llvm::TargetTransformInfo::isValidAddrSpaceCast(unsigned FromAS,
@@ -1470,6 +1471,10 @@ bool TargetTransformInfo::preferInLoopReduction(RecurKind Kind,
 
 bool TargetTransformInfo::preferAlternateOpcodeVectorization() const {
   return TTIImpl->preferAlternateOpcodeVectorization();
+}
+
+bool TargetTransformInfo::preferSLPInstCountCheck() const {
+  return TTIImpl->preferSLPInstCountCheck();
 }
 
 bool TargetTransformInfo::preferPredicatedReductionSelect() const {

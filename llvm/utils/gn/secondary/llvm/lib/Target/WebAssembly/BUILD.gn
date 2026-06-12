@@ -14,7 +14,10 @@ tablegen("WebAssemblyGenFastISel") {
 
 tablegen("WebAssemblyGenGlobalISel") {
   visibility = [ ":LLVMWebAssemblyCodeGen" ]
-  args = [ "-gen-global-isel" ]
+  args = [
+    "-gen-global-isel",
+    "-gisel-extended-llt",
+  ]
   td_file = "WebAssemblyGISel.td"
 }
 

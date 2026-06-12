@@ -515,7 +515,8 @@ static T mergeForwardValue(T KeyPath, U Value) {
   return static_cast<T>(Value);
 }
 
-template <typename T, typename U> static T mergeMaskValue(T KeyPath, U Value) {
+template <typename T, typename U>
+[[maybe_unused]] static T mergeMaskValue(T KeyPath, U Value) {
   return KeyPath | Value;
 }
 
@@ -524,7 +525,7 @@ template <typename T> static T extractForwardValue(T KeyPath) {
 }
 
 template <typename T, typename U, U Value>
-static T extractMaskValue(T KeyPath) {
+[[maybe_unused]] static T extractMaskValue(T KeyPath) {
   return ((KeyPath & Value) == Value) ? static_cast<T>(Value) : T();
 }
 
@@ -634,6 +635,11 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   if (LangOpts.SYCLIsDevice && LangOpts.SYCLIsHost)
     Diags.Report(diag::err_drv_argument_not_allowed_with) << "-fsycl-is-device"
                                                           << "-fsycl-is-host";
+
+  // SYCL requires C++; reject C inputs on both device and host.
+  if ((LangOpts.SYCLIsDevice || LangOpts.SYCLIsHost) && !LangOpts.CPlusPlus)
+    Diags.Report(diag::err_drv_argument_not_allowed_with)
+        << GetInputKindName(IK) << "-fsycl";
 
   if (Args.hasArg(OPT_fgnu89_inline) && LangOpts.CPlusPlus)
     Diags.Report(diag::err_drv_argument_not_allowed_with)
@@ -3797,7 +3803,10 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_ftrapv);
     GenerateArg(Consumer, OPT_ftrapv_handler, Opts.OverflowHandler);
   } else if (Opts.SignedOverflowBehavior == LangOptions::SOB_Defined) {
-    GenerateArg(Consumer, OPT_fwrapv);
+    if (!Opts.MSVCCompat)
+      GenerateArg(Consumer, OPT_fwrapv);
+  } else if (Opts.MSVCCompat) {
+    GenerateArg(Consumer, OPT_fno_wrapv);
   }
   if (Opts.PointerOverflowDefined)
     GenerateArg(Consumer, OPT_fwrapv_pointer);
@@ -4212,9 +4221,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     // Set the handler, if one is specified.
     Opts.OverflowHandler =
         std::string(Args.getLastArgValue(OPT_ftrapv_handler));
-  }
-  else if (Args.hasArg(OPT_fwrapv))
+  } else if (Args.hasFlag(OPT_fwrapv, OPT_fno_wrapv, Opts.MSVCCompat)) {
     Opts.setSignedOverflowBehavior(LangOptions::SOB_Defined);
+  }
   if (Args.hasArg(OPT_fwrapv_pointer))
     Opts.PointerOverflowDefined = true;
 
@@ -5116,6 +5125,13 @@ bool CompilerInvocation::CreateFromArgsImpl(
   // Set the triple of the host for OpenMP device compile.
   if (LangOpts.OpenMPIsTargetDevice)
     Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
+
+  // Set the default and host triples for SYCL device compilation.
+  if (LangOpts.SYCLIsDevice) {
+    if (!Args.hasArg(options::OPT_triple))
+      Res.getTargetOpts().Triple = "spirv64-unknown-unknown";
+    Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
+  }
 
   ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags, T,
                    Res.getFrontendOpts().OutputFile, LangOpts);

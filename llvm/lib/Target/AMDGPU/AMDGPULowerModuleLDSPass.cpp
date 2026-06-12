@@ -1057,8 +1057,6 @@ public:
       }
     }
 
-    M.addModuleFlag(Module::Error, "amdgpu-link-time-lds", 1);
-
     DenseSet<GlobalVariable *> AllLDSVarsForCleanup = AllReplacedVars;
     AllLDSVarsForCleanup.insert(GlobalScopeVars.begin(), GlobalScopeVars.end());
     removeLocalVarsFromUsedLists(M, AllLDSVarsForCleanup);

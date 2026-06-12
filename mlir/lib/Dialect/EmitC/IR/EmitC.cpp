@@ -340,42 +340,55 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 // CallOpaqueOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult emitc::CallOpaqueOp::verify() {
+static LogicalResult
+verifyOpaqueCallCommon(Operation *op, StringRef callee,
+                       std::optional<ArrayAttr> args,
+                       std::optional<ArrayAttr> templateArgs,
+                       TypeRange resultTypes, size_t numArgsOperands) {
   // Callee must not be empty.
-  if (getCallee().empty())
-    return emitOpError("callee must not be empty");
+  if (callee.empty())
+    return op->emitOpError("callee must not be empty");
 
-  if (std::optional<ArrayAttr> argsAttr = getArgs()) {
-    for (Attribute arg : *argsAttr) {
+  if (args) {
+    for (Attribute arg : *args) {
       auto intAttr = llvm::dyn_cast<IntegerAttr>(arg);
       if (intAttr && llvm::isa<IndexType>(intAttr.getType())) {
         int64_t index = intAttr.getInt();
         // Args with elements of type index must be in range
-        // [0..operands.size).
-        if ((index < 0) || (index >= static_cast<int64_t>(getNumOperands())))
-          return emitOpError("index argument is out of range");
+        // [0..numArgsOperands).
+        if ((index < 0) || (index >= static_cast<int64_t>(numArgsOperands)))
+          return op->emitOpError("index argument is out of range");
 
-        // Args with elements of type ArrayAttr must have a type.
-      } else if (llvm::isa<ArrayAttr>(
-                     arg) /*&& llvm::isa<NoneType>(arg.getType())*/) {
-        // FIXME: Array attributes never have types
-        return emitOpError("array argument has no type");
+      } else if (llvm::isa<ArrayAttr>(arg)) {
+        return op->emitOpError("array argument has no type");
       }
     }
   }
 
-  if (std::optional<ArrayAttr> templateArgsAttr = getTemplateArgs()) {
-    for (Attribute tArg : *templateArgsAttr) {
+  if (templateArgs) {
+    for (Attribute tArg : *templateArgs) {
       if (!llvm::isa<TypeAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>(tArg))
-        return emitOpError("template argument has invalid type");
+        return op->emitOpError("template argument has invalid type");
     }
   }
 
-  if (llvm::any_of(getResultTypes(), llvm::IsaPred<ArrayType>)) {
-    return emitOpError() << "cannot return array type";
+  if (llvm::any_of(resultTypes, llvm::IsaPred<ArrayType>)) {
+    return op->emitOpError() << "cannot return array type";
   }
 
   return success();
+}
+
+LogicalResult emitc::CallOpaqueOp::verify() {
+  return verifyOpaqueCallCommon(getOperation(), getCallee(), getArgs(),
+                                getTemplateArgs(), getResultTypes(),
+                                getNumOperands());
+}
+
+LogicalResult emitc::MemberCallOpaqueOp::verify() {
+  return verifyOpaqueCallCommon(getOperation(), getCallee(), getArgs(),
+                                getTemplateArgs(), getResultTypes(),
+                                getArgOperands().size());
 }
 
 //===----------------------------------------------------------------------===//
@@ -606,7 +619,8 @@ LogicalResult ExpressionOp::verify() {
     Operation *op = worklist.back();
     worklist.pop_back();
     if (visited.contains(op)) {
-      if (cast<CExpressionInterface>(op).hasSideEffects())
+      auto cExpr = cast<CExpressionInterface>(op);
+      if (!cExpr.alwaysInline() && cExpr.hasSideEffects())
         return emitOpError(
             "requires exactly one use for operations with side effects");
     }
@@ -615,6 +629,14 @@ LogicalResult ExpressionOp::verify() {
       if (Operation *def = operand.getDefiningOp()) {
         worklist.push_back(def);
       }
+  }
+
+  // It is illegal to forbid inlining of expressions whose root operation must
+  // be inlined.
+  if (getDoNotInline() &&
+      cast<emitc::CExpressionInterface>(rootOp).alwaysInline()) {
+    return emitOpError("root operation must be inlined but expression is marked"
+                       " do-not-inline");
   }
 
   return success();
@@ -1111,6 +1133,10 @@ LogicalResult emitc::YieldOp::verify() {
 
   if (!isa<DoOp>(containingOp) && !result && containingOp->getNumResults() != 0)
     return emitOpError() << "does not yield a value to be returned by parent";
+
+  if (result && isa<emitc::LValueType>(result.getType()) &&
+      !isa<ExpressionOp>(containingOp))
+    return emitOpError() << "yielding lvalues is not supported for this op";
 
   return success();
 }

@@ -14,8 +14,7 @@ define void @foo() {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
@@ -36,7 +35,7 @@ define void @foo() {
 ; CHECK-NEXT:    [[TMP9]] = fmul <vscale x 4 x float> [[TMP7]], [[WIDE_MASKED_GATHER2]]
 ; CHECK-NEXT:    [[TMP10]] = add nuw nsw <vscale x 4 x i64> [[TMP6]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <vscale x 4 x i64> [[TMP10]], splat (i64 512)
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 4 x i1> [[TMP11]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 4 x i1> [[TMP11]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[VECTOR_LATCH]], label %[[INNER_LOOP1]]
 ; CHECK:       [[VECTOR_LATCH]]:
 ; CHECK-NEXT:    call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[TMP9]], <vscale x 4 x ptr> align 4 [[TMP5]], <vscale x 4 x i1> splat (i1 true))

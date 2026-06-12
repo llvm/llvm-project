@@ -24,9 +24,22 @@ const ModuleCacheDirectory *ModuleCache::getDirectoryPtr(StringRef Path) {
   if (!ByNameIt->second) {
     // This is a compiler-internal input/output, let's bypass the sandbox.
     auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
+    // If we cannot get status of the module cache directory, try if trying to
+    // create it helps.
     llvm::sys::fs::file_status Status;
-    if (llvm::sys::fs::status(Path, Status))
-      return nullptr;
+    if (std::error_code EC = llvm::sys::fs::status(Path, Status)) {
+      // Unless the status failed because the directory does not exist yet.
+      if (EC != std::errc::no_such_file_or_directory)
+        return nullptr;
+      // If we're unable to create the directory.
+      if (llvm::sys::fs::create_directories(Path))
+        return nullptr;
+      // If we're unable to stat the newly created directory.
+      if (llvm::sys::fs::status(Path, Status))
+        return nullptr;
+    }
+
     llvm::sys::fs::UniqueID UID = Status.getUniqueID();
     auto [ByUIDIt, ByUIDInserted] = ByUID.insert({UID, nullptr});
     if (!ByUIDIt->second)
@@ -43,14 +56,18 @@ static void writeTimestampFile(StringRef TimestampFile) {
 }
 
 void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
-                           time_t PruneAfter, bool PruneTopLevel) {
+                           time_t PruneAfter, bool PruneTopLevel,
+                           llvm::function_ref<void(StringRef)> OnPrune) {
   if (PruneInterval <= 0 || PruneAfter <= 0)
     return;
 
   // This is a compiler-internal input/output, let's bypass the sandbox.
   auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
 
-  llvm::SmallString<128> TimestampFile(Path);
+  llvm::SmallString<256> RootPath(Path);
+  (void)llvm::sys::fs::make_absolute(RootPath);
+
+  llvm::SmallString<128> TimestampFile(RootPath);
   llvm::sys::path::append(TimestampFile, "modules.timestamp");
 
   // Try to stat() the timestamp file.
@@ -74,6 +91,11 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
   // There is a benign race condition here, if two Clang instances happen to
   // notice at the same time that the timestamp is out-of-date.
   writeTimestampFile(TimestampFile);
+
+  auto NotifyPruned = [&](StringRef RemovedPath) {
+    if (OnPrune)
+      OnPrune(RemovedPath);
+  };
 
   // Walk the entire module cache, looking for unused module files and module
   // indices.
@@ -101,14 +123,16 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
       return;
 
     // Remove the file.
-    llvm::sys::fs::remove(FilePath);
+    if (!llvm::sys::fs::remove(FilePath))
+      NotifyPruned(FilePath);
 
     // Remove the timestamp file created by implicit module builds.
     std::string TimestampFilename = FilePath.str() + ".timestamp";
-    llvm::sys::fs::remove(TimestampFilename);
+    if (!llvm::sys::fs::remove(TimestampFilename))
+      NotifyPruned(TimestampFilename);
   };
 
-  for (llvm::sys::fs::directory_iterator Dir(Path, EC), DirEnd;
+  for (llvm::sys::fs::directory_iterator Dir(RootPath, EC), DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {
     // If we don't have a directory, try to prune it as a file in the root.
     if (!llvm::sys::fs::is_directory(Dir->path())) {
@@ -126,8 +150,10 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
     // itself.
     if (llvm::sys::fs::directory_iterator(Dir->path(), EC) ==
             llvm::sys::fs::directory_iterator() &&
-        !EC)
-      llvm::sys::fs::remove(Dir->path());
+        !EC) {
+      if (!llvm::sys::fs::remove(Dir->path()))
+        NotifyPruned(Dir->path());
+    }
   }
 }
 

@@ -14,7 +14,7 @@
 #ifndef ORC_RT_C_EXTERNC_H
 #define ORC_RT_C_EXTERNC_H
 
-/* Helper to suppress strict prototype warnings. */
+/* Helper to promote strict prototype warnings to errors */
 #ifdef __clang__
 #define ORC_RT_C_STRICT_PROTOTYPES_BEGIN                                       \
   _Pragma("clang diagnostic push")                                             \

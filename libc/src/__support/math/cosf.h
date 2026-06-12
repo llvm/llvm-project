@@ -26,7 +26,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr float cosf(float x) {
+LIBC_INLINE float cosf(float x) {
   return sincosf_float_eval::sincosf_eval</*IS_SIN*/ false>(x);
 }
 
@@ -41,7 +41,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE constexpr float cosf(float x) {
+LIBC_INLINE float cosf(float x) {
   using namespace sincosf_utils_internal;
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
@@ -170,6 +170,6 @@ LIBC_INLINE constexpr float cosf(float x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_COSF_H
-
 #endif // LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT
+
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_COSF_H

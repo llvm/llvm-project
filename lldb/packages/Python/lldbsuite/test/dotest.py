@@ -276,8 +276,6 @@ def parseOptionsAndInitTestdirs():
         configuration.dsymutil = seven.get_command_output(
             "xcrun -find -toolchain default dsymutil"
         )
-    if args.resource_dir:
-        configuration.resource_dir = args.resource_dir
     if args.llvm_tools_dir:
         configuration.llvm_tools_dir = args.llvm_tools_dir
         configuration.filecheck = shutil.which("FileCheck", path=args.llvm_tools_dir)
@@ -474,6 +472,9 @@ def parseOptionsAndInitTestdirs():
     if args.arm64e_debugserver:
         configuration.arm64e_debugserver = True
 
+    if args.print_lldb_version:
+        configuration.print_lldb_version = True
+
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
         configuration.testdirs = [
@@ -570,7 +571,8 @@ def setupSysPath():
         )
         sys.exit(-1)
 
-    os.system("%s -v" % lldbtest_config.lldbExec)
+    if configuration.print_lldb_version:
+        os.system("%s -v" % lldbtest_config.lldbExec)
 
     lldbDir = os.path.dirname(lldbtest_config.lldbExec)
 
@@ -804,8 +806,13 @@ def canRunLibcxxTests():
 
     platform = lldbplatformutil.getPlatform()
 
-    if lldbplatformutil.target_is_android() or lldbplatformutil.platformIsDarwin():
+    if lldbplatformutil.target_is_android():
         return True, "libc++ always present"
+
+    if lldbplatformutil.platformIsDarwin():
+        if not configuration.libcxx_include_dir or not configuration.libcxx_library_dir:
+            return False, "libc++ tests require a locally built libc++"
+        return True, "libc++ present"
 
     if platform == "linux":
         if not configuration.libcxx_include_dir or not configuration.libcxx_library_dir:
@@ -1091,8 +1098,8 @@ def run_suite():
             % (configuration.lldb_platform_working_dir)
         )
         error = lldb.remote_platform.MakeDirectory(
-            configuration.lldb_platform_working_dir, 448
-        )  # 448 = 0o700
+            configuration.lldb_platform_working_dir, 0o700
+        )
         if error.Fail():
             raise Exception(
                 "making remote directory '%s': %s"

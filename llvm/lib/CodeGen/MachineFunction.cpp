@@ -39,7 +39,6 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
@@ -247,11 +246,6 @@ void MachineFunction::init() {
     WinEHInfo = new (Allocator) WinEHFuncInfo();
   }
 
-  if (isScopedEHPersonality(classifyEHPersonality(
-          F.hasPersonalityFn() ? F.getPersonalityFn() : nullptr))) {
-    WasmEHInfo = new (Allocator) WasmEHFuncInfo();
-  }
-
   if (!Target.isCompatibleDataLayout(getDataLayout())) {
     report_fatal_error(
         formatv("Can't create a MachineFunction using a Module with a "
@@ -317,11 +311,6 @@ void MachineFunction::clear() {
     WinEHInfo->~WinEHFuncInfo();
     Allocator.Deallocate(WinEHInfo);
   }
-
-  if (WasmEHInfo) {
-    WasmEHInfo->~WasmEHFuncInfo();
-    Allocator.Deallocate(WasmEHInfo);
-  }
 }
 
 const DataLayout &MachineFunction::getDataLayout() const {
@@ -365,6 +354,16 @@ Align MachineFunction::getPreferredAlignment() const {
 MachineFunction::addFrameInst(const MCCFIInstruction &Inst) {
   FrameInstructions.push_back(Inst);
   return FrameInstructions.size() - 1;
+}
+
+void MachineFunction::replaceFrameInstRegister(MCRegister FromReg,
+                                               MCRegister ToReg) {
+  const MCRegisterInfo *MCRI = Ctx.getRegisterInfo();
+  unsigned DwarfFromReg = MCRI->getDwarfRegNum(FromReg, false);
+  unsigned DwarfToReg = MCRI->getDwarfRegNum(ToReg, false);
+
+  for (MCCFIInstruction &Inst : FrameInstructions)
+    Inst.replaceRegister(DwarfFromReg, DwarfToReg);
 }
 
 /// This discards all of the MachineBasicBlock numbers and recomputes them.

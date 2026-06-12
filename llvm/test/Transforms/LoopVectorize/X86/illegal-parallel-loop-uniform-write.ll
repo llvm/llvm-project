@@ -75,8 +75,8 @@ define void @foo(ptr nocapture %a, ptr nocapture %b, i32 %k, i32 %m) #0 {
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP15]], align 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], splat (i32 1)
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i32> [[TMP17]], i32 3
-; CHECK-NEXT:    store i32 [[TMP18]], ptr [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access [[META0]]
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i32> [[TMP17]], i64 3
+; CHECK-NEXT:    store i32 [[TMP16]], ptr [[ARRAYIDX7_US]], align 4, !llvm.mem.parallel_loop_access [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]

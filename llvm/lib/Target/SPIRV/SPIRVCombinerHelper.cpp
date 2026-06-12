@@ -227,7 +227,8 @@ void SPIRVCombinerHelper::applyMatrixTranspose(MachineInstr &MI) const {
 
   Builder.setInstrAndDebugLoc(MI);
 
-  if (Rows == 1 && Cols == 1) {
+  // A 1xN or Nx1 transpose is a pure reshape.
+  if (Rows == 1 || Cols == 1) {
     Builder.buildCopy(ResReg, InReg);
     MI.eraseFromParent();
     return;
@@ -397,6 +398,9 @@ void SPIRVCombinerHelper::applyMatrixMultiply(MachineInstr &MI) const {
   SmallVector<Register, 16> ResultScalars =
       computeDotProducts(RowsA, ColsB, SpvVecType, GR);
 
-  Builder.buildBuildVector(ResReg, ResultScalars);
+  if (ResultScalars.size() == 1)
+    Builder.buildCopy(ResReg, ResultScalars[0]);
+  else
+    Builder.buildBuildVector(ResReg, ResultScalars);
   MI.eraseFromParent();
 }

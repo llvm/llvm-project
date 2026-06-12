@@ -160,7 +160,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $w9, $x0, $x10, $x11, $x12
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $w8 = LDURWi renamable $x11, -4
-  ; CHECK-NEXT:   STRWui killed renamable $w8, renamable $x11, 0
+  ; CHECK-NEXT:   STRWui killed renamable $w8, renamable $x11, 0 :: (store (s32))
   ; CHECK-NEXT:   renamable $x8 = nuw nsw ADDXri renamable $x12, 2, 0
   ; CHECK-NEXT:   renamable $w9 = nuw nsw ADDWri killed renamable $w9, 1, 0
   ; CHECK-NEXT:   early-clobber renamable $x10, renamable $w13 = LDRBBpost killed renamable $x10, 4
@@ -195,7 +195,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $w10 = SUBWri renamable $w8, 1, 0
   ; CHECK-NEXT:   renamable $w10 = LDRWroW renamable $x0, killed renamable $w10, 0, 1
-  ; CHECK-NEXT:   early-clobber renamable $x8 = STRWpost killed renamable $w10, renamable $x8, 2
+  ; CHECK-NEXT:   early-clobber renamable $x8 = STRWpost killed renamable $w10, renamable $x8, 2 :: (store (s32))
   ; CHECK-NEXT:   renamable $w10 = LDRBBroX renamable $x0, renamable $x9, 0, 0
   ; CHECK-NEXT:   TBZW killed renamable $w10, 3, %bb.12
   ; CHECK-NEXT: {{  $}}
@@ -223,7 +223,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $w11 = SUBWri renamable $w8, 1, 0
   ; CHECK-NEXT:   renamable $w11 = LDRWroW renamable $x0, killed renamable $w11, 0, 1
-  ; CHECK-NEXT:   early-clobber renamable $x8 = STRWpost renamable $w11, renamable $x8, 2
+  ; CHECK-NEXT:   early-clobber renamable $x8 = STRWpost renamable $w11, renamable $x8, 2 :: (store (s32))
   ; CHECK-NEXT:   TBZW killed renamable $w11, 2, %bb.13
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.15.if.then:
@@ -296,7 +296,7 @@ body:             |
     liveins: $w9, $x0, $x10, $x11, $x12
 
     renamable $w8 = LDURWi renamable $x11, -4
-    STRWui killed renamable $w8, renamable $x11, 0
+    STRWui killed renamable $w8, renamable $x11, 0 :: (store (s32))
     renamable $x8 = nuw nsw ADDXri renamable $x12, 2, 0
     renamable $w9 = nuw nsw ADDWri killed renamable $w9, 1, 0
     early-clobber renamable $x10, renamable $w13 = LDRBBpost killed renamable $x10, 4
@@ -331,7 +331,7 @@ body:             |
 
     renamable $w10 = SUBWri renamable $w8, 1, 0
     renamable $w10 = LDRWroW renamable $x0, killed renamable $w10, 0, 1
-    STRWui killed renamable $w10, renamable $x8, 0
+    STRWui killed renamable $w10, renamable $x8, 0 :: (store (s32))
     renamable $w10 = LDRBBroX renamable $x0, renamable $x9, 0, 0
     TBZW killed renamable $w10, 3, %bb.12
 
@@ -361,7 +361,7 @@ body:             |
 
     renamable $w11 = SUBWri renamable $w8, 1, 0
     renamable $w11 = LDRWroW renamable $x0, killed renamable $w11, 0, 1
-    STRWui renamable $w11, renamable $x8, 0
+    STRWui renamable $w11, renamable $x8, 0 :: (store (s32))
     TBZW killed renamable $w11, 2, %bb.13
 
   bb.15.if.then:
