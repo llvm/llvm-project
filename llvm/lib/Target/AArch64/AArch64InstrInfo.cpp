@@ -7287,13 +7287,12 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
     // low 12 bits leaves a legal add immediate, we can realise the offset
     // calculation with a single add instruction. Whenever this is possible,
     // prefer this split.
-    const TargetLowering *TLI = MI.getMF()->getSubtarget().getTargetLowering();
     int64_t HighPart = Offset & ~0xFFF;
     int64_t LowPart = Offset & 0xFFF;
     int64_t LowScaled = LowPart / Scale;
     if (!IsMulVL && NewOffset >= 0 && LowPart % Scale == 0 &&
         MinOff <= LowScaled && LowScaled <= MaxOff &&
-        TLI->isLegalAddImmediate(HighPart)) {
+        AArch64_AM::isLegalArithImmed(HighPart)) {
       NewOffset = LowScaled;
       Offset = HighPart;
     } else {
