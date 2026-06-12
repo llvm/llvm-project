@@ -108,13 +108,13 @@ LOCAL_LABEL(add_doadd):
   // x 2^(variable exponent) as a multiplication would want.
 
   // Actually shift the smaller mantissa downwards and add them together.
-#if !__thumb__
-  adds    r12, r0, r1, lsr r3  // CS if x >= 2.0
-#else
+#if __thumb__
   // Thumb can't fold a register-controlled shift into an add, so we must use
   // two separate instructions.
   lsr     r12, r1, r3
   adds    r12, r0, r12
+#else
+  adds    r12, r0, r1, lsr r3  // CS if x >= 2.0
 #endif
 
   // If that addition carried off the top of r12, then the number has increased
@@ -383,15 +383,12 @@ LOCAL_LABEL(sub_magnitude):
   // order, so that x >= y. However, if they are swapped, we must also negate
   // both of them, since x - y = (-y) - (-x).
   subs    r2, r0, r1            // LO if we must swap the operands
-#if !__thumb__
+#if __thumb__
   // Conditional on LO, swap the operands, by adding/subtracting the difference
   // between them that we just wrote into r2. Negate them both in the process
   // by flipping the high bit of r2 first.
-  eorlo   r2, r2, #1 << 31
-  sublo   r0, r0, r2
-  addlo   r1, r1, r2
-#else
-  // In Thumb, conditionally branch round these three instructions, instead of
+  //
+  // In Thumb, the conditionalisation is done with a branch, instead of
   // conditionally executing them with an ITTT LO. Rationale: on the simpler
   // Thumb-only cores such as Cortex-M3, a branch only takes two cycles and an
   // IT costs one, so this saves two cycles in the untaken case and doesn't
@@ -401,6 +398,11 @@ LOCAL_LABEL(sub_magnitude):
   sub     r0, r0, r2
   add     r1, r1, r2
 0:
+#else
+  // In Arm state, adding the LO condition to each instruction is cheaper.
+  eorlo   r2, r2, #1 << 31
+  sublo   r0, r0, r2
+  addlo   r1, r1, r2
 #endif
 
   // Save the sign and exponent of the larger operand to use for the result (up
@@ -430,13 +432,13 @@ LOCAL_LABEL(sub_dosub):
   // subtracting. This may leave the mantissa too large by one, if the bits
   // shifted out of y are nonzero. We correct this during rounding if
   // necessary.
-#if !__thumb__
-  subs    r12, r0, r1, lsr r3    // MI if high bit set
-#else
+#if __thumb__
   // Thumb can't fold a register-controlled shift into a sub, so we must use
   // two separate instructions.
   lsr     r12, r1, r3
   subs    r12, r0, r12
+#else
+  subs    r12, r0, r1, lsr r3    // MI if high bit set
 #endif
 
   // This may have cleared the high bit of the output mantissa, in which case
@@ -458,15 +460,15 @@ LOCAL_LABEL(sub_dosub):
   // the shift is only one bit _and_ the exponent is > 1, we know we can
   // renormalise by one bit and not worry about underflow.
   tst     r2, #254  // test all but low bit of exponent; also clears N
-#if !__thumb__
-  movsne  r0, r12, lsl #1  // set N if non-underflowing _and_ top bit now set
-#else
+#if __thumb__
   // In Thumb, there's no advantage in combining the two tests, since the IT
   // between them costs a cycle. Do the explicit branch now to fsub_underflow
   // (because now we _know_ we have underflow).
   beq     LOCAL_LABEL(sub_underflow)
   // And then unconditionally do the shift.
   movs    r0, r12, lsl #1  // check whether 2nd bit is cleared (PL)
+#else
+  movsne  r0, r12, lsl #1  // set N if non-underflowing _and_ top bit now set
 #endif
   // After all that, N is clear if we still haven't set the top mantissa bit,
   // either because we shifted up by a bit and it didn't help, or (in Arm state
