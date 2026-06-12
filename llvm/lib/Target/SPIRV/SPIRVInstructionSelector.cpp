@@ -5671,6 +5671,7 @@ bool SPIRVInstructionSelector::generateSampleImage(
     else {
       Pos.emitGenericError(
           "Non-constant offsets are not supported in sample instructions.");
+      return false;
     }
   }
   if (ImOps.MinLod)
