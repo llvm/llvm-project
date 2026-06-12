@@ -96,16 +96,13 @@ struct QueryOptions {
   bool UseGlobs = true;
   bool RemoveDotSlash = false;
   bool WarnDotSlashMatch = false;
+  bool SlashAgnostic = false;
 };
 
 /// Represents a set of patterns and their line numbers
 class Matcher {
 public:
-<<<<<<< HEAD
-  Matcher(bool UseGlobs, bool RemoveDotSlash, bool SlashAgnostic);
-=======
   explicit Matcher(QueryOptions QOpts);
->>>>>>> origin/main
 
   Error insert(StringRef Pattern, unsigned LineNumber);
   unsigned match(StringRef Query) const;
@@ -117,13 +114,8 @@ private:
   StringRef findRule(unsigned LineNo) const;
 
   std::variant<RegexMatcher, GlobMatcher> M;
-<<<<<<< HEAD
-  bool RemoveDotSlash;
-  bool SlashAgnostic;
-=======
   QueryOptions Options;
   mutable std::once_flag Warned;
->>>>>>> origin/main
 };
 
 Error RegexMatcher::insert(StringRef Pattern, unsigned LineNumber,
@@ -158,10 +150,6 @@ unsigned RegexMatcher::match(StringRef Query) const {
   return 0;
 }
 
-<<<<<<< HEAD
-Error GlobMatcher::insert(StringRef Pattern, unsigned LineNumber,
-                          bool SlashAgnostic) {
-=======
 StringRef RegexMatcher::findRule(unsigned LineNo) const {
   for (const auto &R : RegExes)
     if (R.LineNo == LineNo)
@@ -170,8 +158,8 @@ StringRef RegexMatcher::findRule(unsigned LineNo) const {
   return {};
 }
 
-Error GlobMatcher::insert(StringRef Pattern, unsigned LineNumber) {
->>>>>>> origin/main
+Error GlobMatcher::insert(StringRef Pattern, unsigned LineNumber,
+                          bool SlashAgnostic) {
   if (Pattern.empty())
     return createStringError(errc::invalid_argument, "Supplied glob was blank");
 
@@ -258,11 +246,6 @@ unsigned GlobMatcher::match(StringRef Query) const {
   return Best < 0 ? 0 : Globs[Best].LineNo;
 }
 
-<<<<<<< HEAD
-Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash, bool SlashAgnostic)
-    : RemoveDotSlash(RemoveDotSlash), SlashAgnostic(SlashAgnostic) {
-  if (UseGlobs)
-=======
 StringRef GlobMatcher::findRule(unsigned LineNo) const {
   for (const auto &G : Globs)
     if (G.LineNo == LineNo)
@@ -273,7 +256,6 @@ StringRef GlobMatcher::findRule(unsigned LineNo) const {
 
 Matcher::Matcher(QueryOptions QOpts) : Options(QOpts) {
   if (Options.UseGlobs)
->>>>>>> origin/main
     M.emplace<GlobMatcher>();
   else
     M.emplace<RegexMatcher>();
@@ -281,7 +263,10 @@ Matcher::Matcher(QueryOptions QOpts) : Options(QOpts) {
 
 Error Matcher::insert(StringRef Pattern, unsigned LineNumber) {
   return std::visit(
-      [&](auto &V) { return V.insert(Pattern, LineNumber, SlashAgnostic); }, M);
+      [&](auto &V) {
+        return V.insert(Pattern, LineNumber, Options.SlashAgnostic);
+      },
+      M);
 }
 
 /// Matches Query against the patterns. The behavior is controlled by
@@ -336,13 +321,7 @@ public:
 
   using SectionEntries = StringMap<StringMap<Matcher>>;
 
-<<<<<<< HEAD
-  explicit SectionImpl(bool UseGlobs)
-      : SectionMatcher(UseGlobs, /*RemoveDotSlash=*/false,
-                       /*SlashAgnostic=*/false) {}
-=======
   explicit SectionImpl(QueryOptions QOpts) : SectionMatcher(QOpts) {}
->>>>>>> origin/main
 
   Matcher SectionMatcher;
   SectionEntries Entries;
@@ -490,16 +469,11 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     if (llvm::is_contained(PathPrefixes, Prefix)) {
       QOpts.RemoveDotSlash = RemoveDotSlash;
       QOpts.WarnDotSlashMatch = WarnDotSlash;
+      QOpts.SlashAgnostic = SlashAgnostic;
     }
 
     auto [Pattern, Category] = Postfix.split("=");
-<<<<<<< HEAD
-    bool IsPath = llvm::is_contained(PathPrefixes, Prefix);
-    auto [It, _] = CurrentImpl->Entries[Prefix].try_emplace(
-        Category, UseGlobs, RemoveDotSlash && IsPath, SlashAgnostic && IsPath);
-=======
     auto [It, _] = CurrentImpl->Entries[Prefix].try_emplace(Category, QOpts);
->>>>>>> origin/main
     Pattern = Pattern.copy(StrAlloc);
     if (auto Err = It->second.insert(Pattern, LineNo)) {
       Error =
