@@ -244,11 +244,6 @@ struct InstructionMapper {
     if (LegalInstrNumber >= IllegalInstrNumber)
       report_fatal_error("Instruction mapping overflow!");
 
-    assert(LegalInstrNumber != DenseMapInfo<unsigned>::getEmptyKey() &&
-           "Tried to assign DenseMap tombstone or empty key to instruction.");
-    assert(LegalInstrNumber != DenseMapInfo<unsigned>::getTombstoneKey() &&
-           "Tried to assign DenseMap tombstone or empty key to instruction.");
-
     // Statistics.
     ++NumLegalInUnsignedVec;
     return MINumber;
@@ -283,12 +278,6 @@ struct InstructionMapper {
 
     assert(LegalInstrNumber < IllegalInstrNumber &&
            "Instruction mapping overflow!");
-
-    assert(IllegalInstrNumber != DenseMapInfo<unsigned>::getEmptyKey() &&
-           "IllegalInstrNumber cannot be DenseMap tombstone or empty key!");
-
-    assert(IllegalInstrNumber != DenseMapInfo<unsigned>::getTombstoneKey() &&
-           "IllegalInstrNumber cannot be DenseMap tombstone or empty key!");
 
     return MINumber;
   }
@@ -418,14 +407,7 @@ struct InstructionMapper {
     }
   }
 
-  InstructionMapper(const MachineModuleInfo &MMI_) : MMI(MMI_) {
-    // Make sure that the implementation of DenseMapInfo<unsigned> hasn't
-    // changed.
-    static_assert(DenseMapInfo<unsigned>::getEmptyKey() ==
-                  static_cast<unsigned>(-1));
-    static_assert(DenseMapInfo<unsigned>::getTombstoneKey() ==
-                  static_cast<unsigned>(-2));
-  }
+  InstructionMapper(const MachineModuleInfo &MMI_) : MMI(MMI_) {}
 };
 
 /// An interprocedural pass which finds repeated sequences of

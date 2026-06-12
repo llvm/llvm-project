@@ -569,8 +569,8 @@ struct XeGPUPeepHoleOptimizerPass final
     RewritePatternSet patterns(&context);
     ConversionTarget target(context);
 
-    // This pass is only meant for PVC and BMG targets. If unsupported target
-    // is found, exit early.
+    // This pass is only meant for PVC, BMG or CRI targets. If unsupported
+    // target is found, exit early.
     bool isTargetSupported = false;
     getOperation()->walk([&](gpu::GPUFuncOp funcOp) {
       auto chipStr = xegpu::getChipStr(funcOp);
@@ -580,8 +580,7 @@ struct XeGPUPeepHoleOptimizerPass final
     });
 
     if (!isTargetSupported) {
-      DBGS() << "XeGPUPeepHoleOptimizerPass only supports PVC, BMG and CRI "
-                "targets."
+      DBGS() << "XeGPUPeepHoleOptimizerPass only supports PVC, BMG targets."
              << "\n";
       return;
     }

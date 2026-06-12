@@ -271,12 +271,6 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
 
   for (MachineInstr &CurMI : llvm::make_range(
            std::next(MachineBasicBlock::iterator(MI)), MBB.end())) {
-    if (CurMI.modifiesRegister(MaskReg, TRI)) {
-      if (!KMovMI)
-        return false; // Mask clobbered before use
-      break;
-    }
-
     if (CurMI.readsRegister(MaskReg, TRI)) {
       if (KMovMI)
         return false; // Fail: Mask has MULTIPLE uses
@@ -293,6 +287,12 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
       } else {
         return false;
       }
+    }
+
+    if (CurMI.modifiesRegister(MaskReg, TRI)) {
+      if (!KMovMI)
+        return false; // Mask clobbered before use
+      break;
     }
 
     if (!KMovMI && CurMI.modifiesRegister(SrcVecReg, TRI)) {

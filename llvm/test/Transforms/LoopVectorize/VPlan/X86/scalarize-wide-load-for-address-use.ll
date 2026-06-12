@@ -33,6 +33,7 @@ define void @reverse_unmasked_load_feeds_address(ptr noalias %src, i64 %n) {
 ; CHECK-NEXT:      EMIT ir<%cmp> = fcmp oeq ir<%val>, ir<0.000000e+00>
 ; CHECK-NEXT:      EMIT ir<%ptr.sel> = select ir<%cmp>, ir<@tbl.a>, ir<@tbl.b>
 ; CHECK-NEXT:      REPLICATE store ir<1.000000e+00>, ir<%ptr.sel>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<-1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv>, ir<0>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -89,7 +90,7 @@ define void @mixed_address_and_vector_uses(ptr noalias %src, ptr noalias %dst, i
 ; CHECK-NEXT:      REPLICATE store ir<1.000000e+00>, ir<%ptr.sel>
 ; CHECK-NEXT:      EMIT ir<%doubled> = fmul ir<%val>, ir<2.000000e+00>
 ; CHECK-NEXT:      EMIT ir<%gep.dst> = getelementptr ir<%dst>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer ir<%gep.dst>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer ir<%gep.dst>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP4]]>, ir<%doubled>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
@@ -196,13 +197,12 @@ define void @symbolic_stride_versioned_to_one(ptr noalias %src, ptr noalias %dst
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
-; CHECK-NEXT:      EMIT ir<%gep.src> = getelementptr ir<%src>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer ir<%gep.src>
+; CHECK-NEXT:      EMIT ir<%gep.src> = getelementptr ir<%src>, ir<%iv>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer ir<%gep.src>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%val> = load vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT ir<%doubled> = fmul ir<%val>, ir<2.000000e+00>
 ; CHECK-NEXT:      EMIT ir<%gep.dst> = getelementptr ir<%dst>, ir<%iv>
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer ir<%gep.dst>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer ir<%gep.dst>, ir<1>
 ; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%doubled>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<%n>

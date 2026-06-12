@@ -20,6 +20,9 @@
 
 namespace Fortran::evaluate {
 
+// Forward declaration for static helper function
+static std::string FormatVectorType(const semantics::DerivedTypeSpec &);
+
 // Constant arrays can have non-default lower bounds, but this can't be
 // expressed in Fortran syntax directly, only implied through the use of
 // named constant (PARAMETER) definitions.  For debugging, setting this flag
@@ -676,6 +679,9 @@ llvm::raw_ostream &StructureConstructor::AsFortran(llvm::raw_ostream &o) const {
 std::string DynamicType::AsFortran() const {
   if (derived_) {
     CHECK(category_ == TypeCategory::Derived);
+    if (derived_->IsVectorType()) {
+      return FormatVectorType(*derived_);
+    }
     std::string result{DerivedTypeSpecAsFortran(*derived_)};
     if (IsPolymorphic()) {
       result = "CLASS("s + result + ')';
@@ -882,6 +888,25 @@ llvm::raw_ostream &Assignment::AsFortran(llvm::raw_ostream &o) const {
       },
       u);
   return o;
+}
+
+static std::string FormatVectorType(const semantics::DerivedTypeSpec &derived) {
+  int64_t vecElemKind{0};
+  int64_t vecElemCategory{-1};
+
+  if (derived.category() ==
+      semantics::DerivedTypeSpec::Category::IntrinsicVector) {
+    for (const auto &pair : derived.parameters()) {
+      if (pair.first == "element_category") {
+        vecElemCategory = ToInt64(pair.second.GetExplicit()).value_or(-1);
+      } else if (pair.first == "element_kind") {
+        vecElemKind = ToInt64(pair.second.GetExplicit()).value_or(0);
+      }
+    }
+  }
+
+  return common::FormatVectorTypeAsFortran(
+      static_cast<int>(derived.category()), vecElemCategory, vecElemKind);
 }
 
 #ifdef _MSC_VER // disable bogus warning about missing definitions

@@ -23,6 +23,7 @@
 #include "interception/interception.h"
 #include "safestack_platform.h"
 #include "safestack_util.h"
+#include "sanitizer/safestack_interface.h"
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 
@@ -526,47 +527,54 @@ __attribute__((section(".preinit_array"),
 }
 #endif
 
-extern "C"
-    __attribute__((visibility("default"))) void *__get_unsafe_stack_bottom() {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE const void*
+__safestack_get_unsafe_stack_bottom() {
   return unsafe_stack_start;
 }
 
-extern "C"
-    __attribute__((visibility("default"))) void *__get_unsafe_stack_top() {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE const void*
+__safestack_get_unsafe_stack_top() {
   return (char*)unsafe_stack_start + unsafe_stack_size;
 }
 
-extern "C"
-    __attribute__((visibility("default"))) void *__get_unsafe_stack_start() {
-  return unsafe_stack_start;
-}
-
-extern "C"
-    __attribute__((visibility("default"))) void *__get_unsafe_stack_ptr() {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE const void*
+__safestack_get_unsafe_stack_ptr() {
   return __safestack_unsafe_stack_ptr;
 }
 
-extern "C" __attribute__((visibility("default"))) void*
-__get_unsafe_sigalt_stack_ptr() {
-  return unsafe_sigalt_stack_ptr;
-}
-
-extern "C" __attribute__((visibility("default"))) void*
-__get_unsafe_sigalt_stack_bottom() {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE const void*
+__safestack_get_unsafe_sigalt_stack_bottom() {
   return unsafe_sigalt_stack_start;
 }
 
-extern "C" __attribute__((visibility("default"))) void*
-__get_unsafe_sigalt_stack_top() {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE const void*
+__safestack_get_unsafe_sigalt_stack_top() {
   return (char*)unsafe_sigalt_stack_start + unsafe_sigalt_stack_size;
 }
 
-extern "C" __attribute__((visibility("default"))) void*
-__get_unsafe_sigalt_stack_start() {
-  return unsafe_sigalt_stack_start;
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE const void*
+__safestack_get_unsafe_sigalt_stack_ptr() {
+  return unsafe_sigalt_stack_ptr;
 }
 
-extern "C" __attribute__((visibility("default"))) int unsafe_sigaltstack(
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __safestack_unsafe_sigaltstack(
     size_t ss_size) {
   return setup_unsafe_sigaltstack(ss_size);
+}
+
+// Compatibility aliases
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void* __get_unsafe_stack_bottom() {
+  return const_cast<void*>(__safestack_get_unsafe_stack_bottom());
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void* __get_unsafe_stack_top() {
+  return const_cast<void*>(__safestack_get_unsafe_stack_top());
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void* __get_unsafe_stack_start() {
+  return const_cast<void*>(__safestack_get_unsafe_stack_bottom());
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void* __get_unsafe_stack_ptr() {
+  return const_cast<void*>(__safestack_get_unsafe_stack_ptr());
 }

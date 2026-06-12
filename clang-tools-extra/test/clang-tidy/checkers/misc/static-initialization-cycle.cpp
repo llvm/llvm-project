@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s misc-static-initialization-cycle %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s misc-static-initialization-cycle %t -- -- -fno-delayed-template-parsing -fexceptions
 
 namespace simple_cycle {
 struct S { static int A; };

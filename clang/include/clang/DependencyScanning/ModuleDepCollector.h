@@ -76,37 +76,6 @@ private:
   std::set<StringRef> ModuleFileDependents;
 };
 
-class ModuleDepCollector;
-
-/// Callback that records textual includes and direct modular includes/imports
-/// during preprocessing. At the end of the main file, it also collects
-/// transitive modular dependencies and passes everything to the
-/// \c DependencyConsumer of the parent \c ModuleDepCollector.
-class ModuleDepCollectorPP final : public PPCallbacks {
-public:
-  ModuleDepCollectorPP(ModuleDepCollector &MDC) : MDC(MDC) {}
-
-  void LexedFileChanged(FileID FID, LexedFileChangeReason Reason,
-                        SrcMgr::CharacteristicKind FileType, FileID PrevFID,
-                        SourceLocation Loc) override;
-  void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
-                  OptionalFileEntryRef File,
-                  SrcMgr::CharacteristicKind FileType) override;
-  void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
-                          StringRef FileName, bool IsAngled,
-                          CharSourceRange FilenameRange,
-                          OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *SuggestedModule,
-                          bool ModuleImported,
-                          SrcMgr::CharacteristicKind FileType) override;
-  void moduleImport(SourceLocation ImportLoc, ModuleIdPath Path,
-                    const Module *Imported) override;
-
-private:
-  /// The parent dependency collector.
-  ModuleDepCollector &MDC;
-};
-
 /// Collects modular and non-modular dependencies of the main file by attaching
 /// \c ModuleDepCollectorPP to the preprocessor.
 class ModuleDepCollector final : public DependencyCollector {
@@ -133,7 +102,7 @@ public:
   void applyDiscoveredDependencies(CompilerInvocation &CI);
 
 private:
-  friend ModuleDepCollectorPP;
+  class ModuleDepCollectorPP;
 
   /// The parent dependency scanning service.
   DependencyScanningService &Service;
@@ -182,7 +151,7 @@ private:
   /// A pointer to the preprocessor callback so we can invoke it directly
   /// if needed. The callback is created and added to a Preprocessor instance by
   /// attachToPreprocessor and the Preprocessor instance owns it.
-  ModuleDepCollectorPP *CollectorPPPtr = nullptr;
+  PPCallbacks *CollectorPPPtr = nullptr;
 
   void handleImport(const Module *Imported);
 

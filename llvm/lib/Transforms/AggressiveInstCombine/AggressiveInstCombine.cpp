@@ -487,13 +487,76 @@ static bool foldAnyOrAllBitsSet(Instruction &I) {
 }
 
 /// Helper function to replace an instruction with a popcount intrinsic.
-/// This creates the ctpop intrinsic and replaces all uses of the instruction.
+/// This creates the ctpop intrinsic with an optional truncation appended at the
+/// end, and replaces all uses of the instruction.
 static void replaceWithPopCount(Instruction &I, Value *Root) {
   LLVM_DEBUG(dbgs() << "Recognized popcount intrinsic\n");
+  Type *RootTy = Root->getType();
+  Type *OrigTy = I.getType();
+
   IRBuilder<> Builder(&I);
-  I.replaceAllUsesWith(
-      Builder.CreateIntrinsic(Intrinsic::ctpop, I.getType(), {Root}));
+  Value *NewVal = Builder.CreateIntrinsic(Intrinsic::ctpop, RootTy, {Root});
+  if (OrigTy != RootTy) {
+    assert(RootTy->getScalarSizeInBits() > OrigTy->getScalarSizeInBits() &&
+           "Only truncation is supported for now");
+    NewVal = Builder.CreateTrunc(NewVal, OrigTy);
+  }
+  I.replaceAllUsesWith(NewVal);
   ++NumPopCountRecognized;
+}
+
+// Matches the common innermost steps of the Hacker's Delight popcount idiom:
+//   V = ((x + (x >> 4)) & 0x0F...)
+//   x = (y & 0x33...) + ((y >> 2) & 0x33...)  [or y - 3*((y>>2)&0x33...)]
+//   y = Root - ((Root >> 1) & 0x55...)
+// This computes the popcount for each byte.
+// Returns Root on success, nullptr on failure.
+static Value *matchPopCountBytes(Value *V, unsigned Len, const DataLayout &DL) {
+  APInt Mask55 = APInt::getSplat(Len, APInt(8, 0x55));
+  APInt Mask33 = APInt::getSplat(Len, APInt(8, 0x33));
+  APInt Mask0F = APInt::getSplat(Len, APInt(8, 0x0F));
+
+  Value *Add2;
+  // Matching "((x + (x >> 4)) & 0x0F...)".
+  if (!match(V, m_And(m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(4)),
+                              m_Deferred(Add2)),
+                      m_SpecificInt(Mask0F))))
+    return nullptr;
+
+  Value *Sub1;
+  APInt NegThree(Len, -3, /*isSigned=*/true);
+  // Match
+  //   x = (x & 0x33333333) + ((x >> 2) & 0x33333333)"
+  // Or
+  //   x = x - 3*((x >> 2) & 0x33333333)
+  if (!match(Add2, m_c_Add(m_And(m_LShr(m_Value(Sub1), m_SpecificInt(2)),
+                                 m_SpecificInt(Mask33)),
+                           m_And(m_Deferred(Sub1), m_SpecificInt(Mask33)))) &&
+      !match(Add2, m_Add(m_Mul(m_And(m_LShr(m_Value(Sub1), m_SpecificInt(2)),
+                                     m_SpecificInt(Mask33)),
+                               m_SpecificInt(NegThree)),
+                         m_Deferred(Sub1))))
+    return nullptr;
+
+  Value *Root, *LShr;
+  const APInt *AndMask;
+  // Matching "x - ((x >> 1) & 0x55...)".
+  if (!match(Sub1,
+             m_Sub(m_Value(Root), m_And(m_Value(LShr, m_LShr(m_Deferred(Root),
+                                                             m_SpecificInt(1))),
+                                        m_APInt(AndMask)))))
+    return nullptr;
+
+  if (*AndMask != Mask55) {
+    // Accept a narrowed mask if missing bits are known zero in Root>>1.
+    if (!AndMask->isSubsetOf(Mask55))
+      return nullptr;
+    APInt NeededMask = Mask55 & ~*AndMask;
+    if (!MaskedValueIsZero(LShr, NeededMask, SimplifyQuery(DL)))
+      return nullptr;
+  }
+
+  return Root;
 }
 
 // Try to recognize below function as popcount intrinsic.
@@ -516,64 +579,27 @@ static bool tryToRecognizePopCount(Instruction &I) {
     return false;
 
   unsigned Len = Ty->getScalarSizeInBits();
-  // FIXME: fix Len == 8 and other irregular type lengths.
-  if (!(Len <= 128 && Len > 8 && Len % 8 == 0))
+  // Len==8 is handled by tryToRecognizePopCount2n3.
+  // FIXME: other irregular type lengths.
+  if (Len > 128 || Len <= 8 || Len % 8 != 0)
     return false;
 
-  APInt Mask55 = APInt::getSplat(Len, APInt(8, 0x55));
-  APInt Mask33 = APInt::getSplat(Len, APInt(8, 0x33));
-  APInt Mask0F = APInt::getSplat(Len, APInt(8, 0x0F));
   APInt Mask01 = APInt::getSplat(Len, APInt(8, 0x01));
-  APInt MaskShift = APInt(Len, Len - 8);
 
   Value *Op0 = I.getOperand(0);
   Value *Op1 = I.getOperand(1);
   Value *MulOp0;
   // Matching "(i * 0x01010101...) >> 24".
-  if ((match(Op0, m_Mul(m_Value(MulOp0), m_SpecificInt(Mask01)))) &&
-      match(Op1, m_SpecificInt(MaskShift))) {
-    Value *ShiftOp0;
-    // Matching "((i + (i >> 4)) & 0x0F0F0F0F...)".
-    if (match(MulOp0, m_And(m_c_Add(m_LShr(m_Value(ShiftOp0), m_SpecificInt(4)),
-                                    m_Deferred(ShiftOp0)),
-                            m_SpecificInt(Mask0F)))) {
-      Value *AndOp0;
-      // Matching "(i & 0x33333333...) + ((i >> 2) & 0x33333333...)".
-      if (match(ShiftOp0,
-                m_c_Add(m_And(m_Value(AndOp0), m_SpecificInt(Mask33)),
-                        m_And(m_LShr(m_Deferred(AndOp0), m_SpecificInt(2)),
-                              m_SpecificInt(Mask33))))) {
-        Value *Root, *SubOp1;
-        // Matching "i - ((i >> 1) & 0x55555555...)".
-        const APInt *AndMask;
-        if (match(AndOp0, m_Sub(m_Value(Root), m_Value(SubOp1))) &&
-            match(SubOp1, m_And(m_LShr(m_Specific(Root), m_SpecificInt(1)),
-                                m_APInt(AndMask)))) {
-          auto CheckAndMask = [&]() {
-            if (*AndMask == Mask55)
-              return true;
+  if (!match(Op0, m_Mul(m_Value(MulOp0), m_SpecificInt(Mask01))) ||
+      !match(Op1, m_SpecificInt(Len - 8)))
+    return false;
 
-            // Exact match failed, see if any bits are known to be 0 where we
-            // expect a 1 in the mask.
-            if (!AndMask->isSubsetOf(Mask55))
-              return false;
+  Value *Root = matchPopCountBytes(MulOp0, Len, I.getDataLayout());
+  if (!Root)
+    return false;
 
-            APInt NeededMask = Mask55 & ~*AndMask;
-            return MaskedValueIsZero(cast<Instruction>(SubOp1)->getOperand(0),
-                                     NeededMask,
-                                     SimplifyQuery(I.getDataLayout()));
-          };
-
-          if (CheckAndMask()) {
-            replaceWithPopCount(I, Root);
-            return true;
-          }
-        }
-      }
-    }
-  }
-
-  return false;
+  replaceWithPopCount(I, Root);
+  return true;
 }
 
 // Try to recognize below function as popcount intrinsic.
@@ -718,7 +744,6 @@ static bool tryToRecognizePopCount1(Instruction &I) {
 // x = x + (x >> 16);
 // return x & 0x0000003F;
 // }
-
 static bool tryToRecognizePopCount2n3(Instruction &I) {
   if (I.getOpcode() != Instruction::And)
     return false;
@@ -728,68 +753,58 @@ static bool tryToRecognizePopCount2n3(Instruction &I) {
     return false;
 
   unsigned Len = Ty->getScalarSizeInBits();
-
-  if (Len > 64 || Len <= 8 || Len % 8 != 0)
-    return false;
-
-  // Len should be a power of 2 for the loop to work correctly
-  if (!isPowerOf2_32(Len))
-    return false;
-
-  APInt Mask55 = APInt::getSplat(Len, APInt(8, 0x55));
-  APInt Mask33 = APInt::getSplat(Len, APInt(8, 0x33));
-  APInt Mask0F = APInt::getSplat(Len, APInt(8, 0x0F));
-
   Value *Add1;
-  const APInt *MaskRes;
-  if (!match(&I, m_And(m_Value(Add1), m_APInt(MaskRes))))
-    return false;
-  // Number of bits needed to represent Len.
-  unsigned NumLenBits = Log2_32(Len) + 1;
-  // The "mask" here really only needs to fulfill two conditions:
-  // (1) All ones for the lower NumLenBits-bits
-  // (2) Zeros from bit 8 and onward.
-  // Condition (1) is straightforward. The reason behind condition
-  // (2) is that we don't care any 8-bit chunks but the first one
-  // in the original divide-and-conquer algorithm.
-  if (MaskRes->countTrailingOnes() < NumLenBits || MaskRes->getActiveBits() > 8)
-    return false;
-
-  Value *Add2;
-  for (unsigned I = Len; I >= 16; I = I / 2) {
-    // Matching "x = x + (x >> I/2)" for I-bit.
-    if (!match(Add1, m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(I / 2)),
-                             m_Deferred(Add2))))
+  if (Len == 8) {
+    // Special case for Len == 8, we only need to match the And at the end of
+    // matchPopCountBytes.
+    Add1 = &I;
+  } else {
+    const APInt *MaskRes;
+    if (!match(&I, m_And(m_Value(Add1), m_APInt(MaskRes))))
       return false;
-    Add1 = Add2;
+
+    // Since `(trunc (and x, C))` might be canonicalized into `(and (trunc x),
+    // C)` we might loose the opportunity to recognize `(trunc (popcount y))`.
+    // The following block tries to capture such truncation, update `Len`, and
+    // append the truncation at the end of the emitting popcount, if there is
+    // any.
+    Value *TruncSrc;
+    if (match(Add1, m_OneUse(m_Trunc(m_Value(TruncSrc))))) {
+      Add1 = TruncSrc;
+      Len = Add1->getType()->getScalarSizeInBits();
+    }
+
+    if (Len > 64 || Len <= 8 || Len % 8 != 0)
+      return false;
+
+    // Len should be a power of 2 for the loop to work correctly
+    if (!isPowerOf2_32(Len))
+      return false;
+
+    // Number of bits needed to represent Len.
+    unsigned NumLenBits = Log2_32(Len) + 1;
+    // The "mask" here really only needs to fulfill two conditions:
+    // (1) All ones for the lower NumLenBits-bits
+    // (2) Zeros from bit 8 and onward.
+    // Condition (1) is straightforward. The reason behind condition
+    // (2) is that we don't care any 8-bit chunks but the first one
+    // in the original divide-and-conquer algorithm.
+    if (MaskRes->countTrailingOnes() < NumLenBits ||
+        MaskRes->getActiveBits() > 8)
+      return false;
+
+    for (unsigned I = Len; I >= 16; I = I / 2) {
+      Value *Add2;
+      // Matching "x = x + (x >> I/2)" for I-bit.
+      if (!match(Add1, m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(I / 2)),
+                               m_Deferred(Add2))))
+        return false;
+      Add1 = Add2;
+    }
   }
 
-  Value *And1 = Add1;
-  // Matching "x = (x + (x >> 4)) & 0x0F0F0F0F".
-  if (!match(And1, m_And(m_c_Add(m_LShr(m_Value(Add2), m_SpecificInt(4)),
-                                 m_Deferred(Add2)),
-                         m_SpecificInt(Mask0F))))
-    return false;
-
-  Value *Sub1;
-  llvm::APInt NegThree(/*BitWidth=*/Len, /*Value=*/-3,
-                       /*isSigned=*/true);
-  // x = (x & 0x33333333) + ((x >> 2) & 0x33333333)".
-  if (!match(Add2, m_c_Add(m_And(m_LShr(m_Value(Sub1), m_SpecificInt(2)),
-                                 m_SpecificInt(Mask33)),
-                           m_And(m_Deferred(Sub1), m_SpecificInt(Mask33)))) &&
-      // Matching "x = x - 3*((x >> 2) & 0x33333333)".
-      !match(Add2, m_Add(m_Mul(m_And(m_LShr(m_Value(Sub1), m_SpecificInt(2)),
-                                     m_SpecificInt(Mask33)),
-                               m_SpecificInt(NegThree)),
-                         m_Deferred(Sub1))))
-    return false;
-
-  Value *Root;
-  // x = x - ((x >> 1) & 0x55555555);
-  if (!match(Sub1, m_Sub(m_Value(Root),
-                         m_And(m_LShr(m_Deferred(Root), m_SpecificInt(1)),
-                               m_SpecificInt(Mask55)))))
+  Value *Root = matchPopCountBytes(Add1, Len, I.getDataLayout());
+  if (!Root)
     return false;
 
   replaceWithPopCount(I, Root);

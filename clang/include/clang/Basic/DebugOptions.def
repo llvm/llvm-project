@@ -125,6 +125,9 @@ DEBUGOPT(CodeViewCommandLine, 1, 0, Compatible)
 /// Whether emit extra debug info for sample pgo profile collection.
 DEBUGOPT(DebugInfoForProfiling, 1, 0, Compatible)
 
+/// Whether to record the sysroot path or scrub it from debug info.
+DEBUGOPT(DebugRecordSysroot, 1, 1, Compatible)
+
 /// Whether to emit DW_TAG_template_alias for template aliases.
 DEBUGOPT(DebugTemplateAlias, 1, 0, Compatible)
 

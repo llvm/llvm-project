@@ -2388,6 +2388,8 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
     ImplicitClauseAllowed = false;
     Actions.OpenMP().StartOpenMPClause(CKind);
     HasImplicitClause = false;
+    SourceLocation ClauseLoc = Tok.getLocation();
+
     OMPClause *Clause =
         ParseOpenMPClause(DKind, CKind, !SeenClauses[unsigned(CKind)]);
     SeenClauses[unsigned(CKind)] = true;
@@ -2398,6 +2400,13 @@ StmtResult Parser::ParseOpenMPExecutableDirective(
     if (Tok.is(tok::comma))
       ConsumeToken();
     Actions.OpenMP().EndOpenMPClause();
+
+    // If ParseOpenMPClause returned without consuming any tokens, skip
+    // to end to avoid an infinite loop.
+    if (Tok.getLocation() == ClauseLoc) {
+      skipUntilPragmaOpenMPEnd(DKind);
+      break;
+    }
   }
   // End location of the directive.
   EndLoc = Tok.getLocation();
@@ -3681,6 +3690,61 @@ bool Parser::ParseOpenMPIndirectClause(
   return false;
 }
 
+ExprResult Parser::ParseOMPInteropFrSelector() {
+  ConsumeToken(); // 'fr'
+  BalancedDelimiterTracker FT(*this, tok::l_paren,
+                              tok::annot_pragma_openmp_end);
+  if (FT.expectAndConsume(diag::err_expected_lparen_after, "fr")) {
+    SkipUntil(
+        {tok::comma, tok::r_brace, tok::r_paren, tok::annot_pragma_openmp_end},
+        StopBeforeMatch);
+    return ExprError();
+  }
+  SourceLocation Loc = Tok.getLocation();
+  ExprResult LHS = ParseCastExpression(CastParseKind::AnyCastExpr);
+  ExprResult Arg = ParseRHSOfBinaryExpression(LHS, prec::Conditional);
+  Arg = Actions.ActOnFinishFullExpr(Arg.get(), Loc, /*DiscardedValue=*/false);
+  FT.consumeClose();
+  return Arg;
+}
+
+bool Parser::ParseOMPInteropAttrSelector(SmallVectorImpl<Expr *> &Attrs) {
+  ConsumeToken(); // 'attr'
+  BalancedDelimiterTracker AT(*this, tok::l_paren,
+                              tok::annot_pragma_openmp_end);
+  if (AT.expectAndConsume(diag::err_expected_lparen_after, "attr")) {
+    SkipUntil(
+        {tok::comma, tok::r_brace, tok::r_paren, tok::annot_pragma_openmp_end},
+        StopBeforeMatch);
+    return true;
+  }
+  bool HasError = false;
+  // attr() requires at least one ext-string-literal argument; an empty list is
+  // not permitted by the prefer_type grammar.
+  if (Tok.is(tok::r_paren)) {
+    Diag(Tok, diag::err_omp_interop_attr_not_string);
+    HasError = true;
+  }
+  while (Tok.isNot(tok::r_paren) && Tok.isNot(tok::r_brace) &&
+         Tok.isNot(tok::annot_pragma_openmp_end)) {
+    if (Tok.is(tok::string_literal)) {
+      ExprResult S = ParseStringLiteralExpression();
+      if (S.isUsable())
+        Attrs.push_back(S.get());
+      else
+        HasError = true;
+    } else {
+      HasError = true;
+      Diag(Tok, diag::err_omp_interop_attr_not_string);
+      ConsumeToken();
+    }
+    if (Tok.is(tok::comma))
+      ConsumeToken();
+  }
+  AT.consumeClose();
+  return HasError;
+}
+
 bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
                                  OpenMPClauseKind Kind) {
   const Token &Tok = getCurToken();
@@ -3690,9 +3754,8 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
 
   while (Tok.is(tok::identifier)) {
     // Currently prefer_type is only allowed with 'init' and it must be first.
-    bool PreferTypeAllowed = Kind == OMPC_init &&
-                             InteropInfo.PreferTypes.empty() && !IsTarget &&
-                             !IsTargetSync;
+    bool PreferTypeAllowed = Kind == OMPC_init && InteropInfo.Prefs.empty() &&
+                             !IsTarget && !IsTargetSync;
     if (Tok.getIdentifierInfo()->isStr("target")) {
       // OpenMP 5.1 [2.15.1, interop Construct, Restrictions]
       // Each interop-type may be specified on an action-clause at most
@@ -3714,18 +3777,91 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
       if (PT.expectAndConsume(diag::err_expected_lparen_after, "prefer_type"))
         HasError = true;
 
-      while (Tok.isNot(tok::r_paren)) {
-        SourceLocation Loc = Tok.getLocation();
-        ExprResult LHS = ParseCastExpression(CastParseKind::AnyCastExpr);
-        ExprResult PTExpr = ParseRHSOfBinaryExpression(LHS, prec::Conditional);
-        PTExpr = Actions.ActOnFinishFullExpr(PTExpr.get(), Loc,
-                                             /*DiscardedValue=*/false);
-        if (PTExpr.isUsable()) {
-          InteropInfo.PreferTypes.push_back(PTExpr.get());
-        } else {
-          HasError = true;
-          SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
+      // prefer_type requires at least one preference-specification.
+      if (Tok.is(tok::r_paren)) {
+        Diag(Tok, diag::err_omp_expected_pref_spec);
+        HasError = true;
+      }
+
+      while (Tok.isNot(tok::r_paren) &&
+             Tok.isNot(tok::annot_pragma_openmp_end)) {
+        // OMP 6.0: { fr(...), attr(...) } brace-grouped pref-spec
+        if (Tok.is(tok::l_brace)) {
+          // The brace-grouped form was introduced in OpenMP 6.0; earlier
+          // versions only allow the flat foreign-runtime-id list.
+          if (getLangOpts().OpenMP < 60) {
+            Diag(Tok, diag::err_omp_prefer_type_brace_60);
+            HasError = true;
+          }
+          BalancedDelimiterTracker BT(*this, tok::l_brace,
+                                      tok::annot_pragma_openmp_end);
+          BT.consumeOpen();
+          Expr *FrExpr = nullptr;
+          SmallVector<Expr *, 2> AttrExprs;
+          bool SeenFr = false;
+
+          // A pref-spec requires at least one 'fr'/'attr' selector; {} is not
+          // permitted by the grammar.
+          if (Tok.is(tok::r_brace)) {
+            Diag(Tok, diag::err_omp_expected_fr_or_attr_selector);
+            HasError = true;
+          }
+
+          while (Tok.isNot(tok::r_brace) &&
+                 Tok.isNot(tok::annot_pragma_openmp_end)) {
+            if (Tok.is(tok::identifier) &&
+                Tok.getIdentifierInfo()->isStr("fr")) {
+              if (SeenFr) {
+                Diag(Tok, diag::err_omp_interop_multiple_fr);
+                HasError = true;
+                ConsumeToken(); // 'fr'
+                SkipUntil(
+                    {tok::comma, tok::r_brace, tok::annot_pragma_openmp_end},
                     StopBeforeMatch);
+                continue;
+              }
+              SeenFr = true;
+              ExprResult Fr = ParseOMPInteropFrSelector();
+              if (Fr.isUsable())
+                FrExpr = Fr.get();
+              else
+                HasError = true;
+            } else if (Tok.is(tok::identifier) &&
+                       Tok.getIdentifierInfo()->isStr("attr")) {
+              if (ParseOMPInteropAttrSelector(AttrExprs))
+                HasError = true;
+            } else {
+              // Neither 'fr' nor 'attr' (a non-identifier or some other word).
+              HasError = true;
+              Diag(Tok, diag::err_omp_expected_fr_or_attr_selector);
+              ConsumeToken();
+            }
+            if (Tok.is(tok::comma))
+              ConsumeToken();
+          }
+          if (BT.consumeClose())
+            HasError = true;
+
+          if (FrExpr || !AttrExprs.empty())
+            InteropInfo.Prefs.emplace_back(FrExpr, AttrExprs);
+          InteropInfo.HasPreferAttrs = true;
+        } else {
+          // OMP 5.1: flat foreign-runtime-id (string or int). Stored as a
+          // pref-spec with Fr=expr and no attr() entries.
+          SourceLocation Loc = Tok.getLocation();
+          ExprResult LHS = ParseCastExpression(CastParseKind::AnyCastExpr);
+          ExprResult PTExpr =
+              ParseRHSOfBinaryExpression(LHS, prec::Conditional);
+          PTExpr = Actions.ActOnFinishFullExpr(PTExpr.get(), Loc,
+                                               /*DiscardedValue=*/false);
+          if (PTExpr.isUsable()) {
+            InteropInfo.Prefs.emplace_back(PTExpr.get(),
+                                           llvm::SmallVector<Expr *, 2>{});
+          } else {
+            HasError = true;
+            SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
+                      StopBeforeMatch);
+          }
         }
 
         if (Tok.is(tok::comma))
