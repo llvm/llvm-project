@@ -14677,9 +14677,9 @@ available in C. In a target-dependent way, it copies the source
 intrinsic is necessary because the ``llvm.va_start`` intrinsic may be
 arbitrarily complex and require, for example, memory allocation.
 
-On targets where ``va_list`` is trivially copyable, ``memcpy`` can be
-used instead to duplicate a ``va_list``. The ``va_list`` type is
-trivially copyable on all currently supported targets.
+On targets where ``llvm.va_copy`` is equivalent to ``memcpy``, ``memcpy``
+can be used instead to duplicate a ``va_list``. ``llvm.va_copy`` is
+equivalent to ``memcpy`` on all currently supported targets implement
 
 Accurate Garbage Collection Intrinsics
 --------------------------------------
