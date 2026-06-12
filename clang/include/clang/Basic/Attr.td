@@ -2129,7 +2129,7 @@ def ExplicitInit : InheritableAttr {
 }
 
 def LifetimeBound : DeclOrTypeAttr {
-  let Spellings = [Clang<"lifetimebound", 0>];
+  let Spellings = [Clang<"lifetimebound", 1>];
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
   let Documentation = [LifetimeBoundDocs];
   let SimpleHandler = 1;

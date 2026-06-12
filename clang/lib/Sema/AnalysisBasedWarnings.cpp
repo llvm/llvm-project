@@ -2999,7 +2999,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     }
   }
 
-  if (S.getLangOpts().EnableLifetimeSafetyTUAnalysis && !S.getLangOpts().ObjC)
+  if (lifetimes::IsLifetimeSafetyEnabled(S, TU))
     LifetimeSafetyTUAnalysis(S, TU, LSStats);
 }
 

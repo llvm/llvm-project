@@ -151,6 +151,13 @@ void va_arg_array_regression(int n, ...) {
   (void)p;
 }
 
+void va_arg_function_regression(int n, ...) {
+  __builtin_va_list ap;
+  __builtin_va_start(ap, n);
+  int (*p)(void) = __builtin_va_arg(ap, int(void)); // expected-error {{second argument to 'va_arg' is of non-POD type 'int (void)'}}
+  (void)p;
+}
+
 // FIXME: We miss the origins of void* after dereference, so we miss to warn here.
 void *void_pointer_dereference(void) {
   int value;
