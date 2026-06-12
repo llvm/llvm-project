@@ -5,7 +5,7 @@ define amdgpu_kernel void @aliasinfo_2i32(ptr addrspace(1) %out, ptr addrspace(1
 ; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_2i32(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ALIASINFO_2I32_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[ALIASINFO_2I32_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_2I32_KERNARG_SEGMENT]], i64 36
 ; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_2I32_KERNARG_SEGMENT]], i64 44
@@ -30,7 +30,7 @@ define amdgpu_kernel void @aliasinfo_2i32_NA(ptr addrspace(1) noalias %out, ptr 
 ; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_2i32_NA(
 ; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) noalias [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ALIASINFO_2I32_NA_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[ALIASINFO_2I32_NA_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_2I32_NA_KERNARG_SEGMENT]], i64 36
 ; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_2I32_NA_KERNARG_SEGMENT]], i64 44
@@ -55,7 +55,7 @@ define amdgpu_kernel void @aliasinfo_2i32_AS(ptr addrspace(1) %out, ptr addrspac
 ; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_2i32_AS(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ALIASINFO_2I32_AS_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[ALIASINFO_2I32_AS_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_2I32_AS_KERNARG_SEGMENT]], i64 36
 ; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_2I32_AS_KERNARG_SEGMENT]], i64 44
@@ -80,7 +80,7 @@ define amdgpu_kernel void @aliasinfo_2i32_NA_AS(ptr addrspace(1) noalias %out, p
 ; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_2i32_NA_AS(
 ; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) noalias [[IN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ALIASINFO_2I32_NA_AS_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[ALIASINFO_2I32_NA_AS_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(272) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_2I32_NA_AS_KERNARG_SEGMENT]], i64 36
 ; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_2I32_NA_AS_KERNARG_SEGMENT]], i64 44
@@ -105,7 +105,7 @@ define amdgpu_kernel void @aliasinfo_v4f32_3v4i8(ptr addrspace(1) %out, ptr addr
 ; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_v4f32_3v4i8(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[OUT1:%.*]], ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[IN1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ALIASINFO_V4F32_3V4I8_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(288) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[ALIASINFO_V4F32_3V4I8_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(288) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_V4F32_3V4I8_KERNARG_SEGMENT]], i64 36
 ; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_V4F32_3V4I8_KERNARG_SEGMENT]], i64 44
@@ -142,7 +142,7 @@ define amdgpu_kernel void @aliasinfo_v4f32_3v4i8_NA(ptr addrspace(1) noalias %ou
 ; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_v4f32_3v4i8_NA(
 ; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) noalias [[OUT1:%.*]], ptr addrspace(1) noalias [[IN:%.*]], ptr addrspace(1) noalias [[IN1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ALIASINFO_V4F32_3V4I8_NA_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(288) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[ALIASINFO_V4F32_3V4I8_NA_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(288) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_V4F32_3V4I8_NA_KERNARG_SEGMENT]], i64 36
 ; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_V4F32_3V4I8_NA_KERNARG_SEGMENT]], i64 44
@@ -179,7 +179,7 @@ define amdgpu_kernel void @aliasinfo_v4f32_3v4i8_AS(ptr addrspace(1) %out, ptr a
 ; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_v4f32_3v4i8_AS(
 ; CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[OUT1:%.*]], ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[IN1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ALIASINFO_V4F32_3V4I8_AS_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(288) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[ALIASINFO_V4F32_3V4I8_AS_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(288) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_V4F32_3V4I8_AS_KERNARG_SEGMENT]], i64 36
 ; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_V4F32_3V4I8_AS_KERNARG_SEGMENT]], i64 44
@@ -216,7 +216,7 @@ define amdgpu_kernel void @aliasinfo_v4f32_3v4i8_NA_AS(ptr addrspace(1) noalias 
 ; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_v4f32_3v4i8_NA_AS(
 ; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) noalias [[OUT1:%.*]], ptr addrspace(1) noalias [[IN:%.*]], ptr addrspace(1) noalias [[IN1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ALIASINFO_V4F32_3V4I8_NA_AS_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(288) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[ALIASINFO_V4F32_3V4I8_NA_AS_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(288) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[OUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_V4F32_3V4I8_NA_AS_KERNARG_SEGMENT]], i64 36
 ; CHECK-NEXT:    [[OUT_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[OUT_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[OUT1_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_V4F32_3V4I8_NA_AS_KERNARG_SEGMENT]], i64 44
@@ -253,7 +253,7 @@ define amdgpu_kernel void @aliasinfo_mixed_intrinsics(ptr addrspace(1) %in, ptr 
 ; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_mixed_intrinsics(
 ; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[INOUT:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ALIASINFO_MIXED_INTRINSICS_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(280) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[ALIASINFO_MIXED_INTRINSICS_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(280) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_MIXED_INTRINSICS_KERNARG_SEGMENT]], i64 36
 ; CHECK-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[INOUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_MIXED_INTRINSICS_KERNARG_SEGMENT]], i64 44
@@ -280,7 +280,7 @@ define amdgpu_kernel void @aliasinfo_mixed_intrinsics_NA(ptr addrspace(1) noalia
 ; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_mixed_intrinsics_NA(
 ; CHECK-SAME: ptr addrspace(1) noalias [[IN:%.*]], ptr addrspace(1) noalias [[INOUT:%.*]], ptr addrspace(1) noalias [[OUT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ALIASINFO_MIXED_INTRINSICS_NA_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(280) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[ALIASINFO_MIXED_INTRINSICS_NA_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(280) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_MIXED_INTRINSICS_NA_KERNARG_SEGMENT]], i64 36
 ; CHECK-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[INOUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_MIXED_INTRINSICS_NA_KERNARG_SEGMENT]], i64 44
@@ -307,7 +307,7 @@ define amdgpu_kernel void @aliasinfo_mixed_intrinsics_AS(ptr addrspace(1) %in, p
 ; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_mixed_intrinsics_AS(
 ; CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[INOUT:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ALIASINFO_MIXED_INTRINSICS_AS_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(280) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[ALIASINFO_MIXED_INTRINSICS_AS_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(280) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_MIXED_INTRINSICS_AS_KERNARG_SEGMENT]], i64 36
 ; CHECK-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[INOUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_MIXED_INTRINSICS_AS_KERNARG_SEGMENT]], i64 44
@@ -334,7 +334,7 @@ define amdgpu_kernel void @aliasinfo_mixed_intrinsics_NA_AS(ptr addrspace(1) noa
 ; CHECK-LABEL: define amdgpu_kernel void @aliasinfo_mixed_intrinsics_NA_AS(
 ; CHECK-SAME: ptr addrspace(1) noalias [[IN:%.*]], ptr addrspace(1) noalias [[INOUT:%.*]], ptr addrspace(1) noalias [[OUT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ALIASINFO_MIXED_INTRINSICS_NA_AS_KERNARG_SEGMENT:%.*]] = call nonnull align 16 dereferenceable(280) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+; CHECK-NEXT:    [[ALIASINFO_MIXED_INTRINSICS_NA_AS_KERNARG_SEGMENT:%.*]] = call nofree nonnull align 16 dereferenceable(280) ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; CHECK-NEXT:    [[IN_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_MIXED_INTRINSICS_NA_AS_KERNARG_SEGMENT]], i64 36
 ; CHECK-NEXT:    [[IN_LOAD:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[IN_KERNARG_OFFSET]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[INOUT_KERNARG_OFFSET:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ALIASINFO_MIXED_INTRINSICS_NA_AS_KERNARG_SEGMENT]], i64 44

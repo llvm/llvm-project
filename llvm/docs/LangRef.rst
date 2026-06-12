@@ -1555,8 +1555,8 @@ Currently, only the following parameter attributes are defined:
       is null is captured in some other way.
 
 ``nofree``
-    This indicates that a pointer based on this argument cannot be freed during
-    the execution of the function.
+    For arguments, this indicates that a pointer based on this argument cannot
+    be freed during the execution of the function.
 
     More formally, a ``nofree`` argument provides the callee with a new pointer
     with the same address and a derived provenance, where the derived
@@ -1568,7 +1568,10 @@ Currently, only the following parameter attributes are defined:
     Notably, it is still possible to free the underlying object through a
     pointer that is not based on the argument.
 
-    This is not a valid attribute for return values.
+    For return values, this indicates that the underlying object cannot be freed
+    after this point (matching the semantics of the ``!nofree`` metadata). This
+    means that ``nofree`` on return values encodes a much stronger property than
+    on arguments.
 
 .. _nest:
 
