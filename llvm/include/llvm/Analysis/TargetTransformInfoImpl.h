@@ -475,6 +475,8 @@ public:
     return true;
   }
 
+  virtual unsigned getMinimumLookupTableEntryBitWidth() const { return 8; }
+
   virtual bool shouldBuildRelLookupTables() const { return false; }
 
   virtual bool useColdCCForColdCall(Function &F) const { return false; }

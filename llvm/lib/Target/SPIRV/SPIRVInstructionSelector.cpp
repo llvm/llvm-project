@@ -177,6 +177,9 @@ private:
   bool selectAtomicRMW(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
                        unsigned NewOpcode, unsigned NegateOpcode = 0) const;
 
+  bool selectInterlockedAdd(Register ResVReg, SPIRVTypeInst ResType,
+                            MachineInstr &I) const;
+
   bool selectAtomicCmpXchg(Register ResVReg, SPIRVTypeInst ResType,
                            MachineInstr &I) const;
 
@@ -2388,6 +2391,35 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
   return true;
 }
 
+bool SPIRVInstructionSelector::selectInterlockedAdd(Register ResVReg,
+                                                    SPIRVTypeInst ResType,
+                                                    MachineInstr &I) const {
+  Register Ptr = I.getOperand(2).getReg();
+  Register Value = I.getOperand(3).getReg();
+
+  SPIRV::StorageClass::StorageClass SC = GR.getPointerStorageClass(Ptr);
+  assert((SC == SPIRV::StorageClass::Workgroup ||
+          SC == SPIRV::StorageClass::StorageBuffer) &&
+         "InterlockedAdd requires Workgroup or StorageBuffer storage class");
+  uint32_t Scope = static_cast<uint32_t>(SC == SPIRV::StorageClass::Workgroup
+                                             ? SPIRV::Scope::Workgroup
+                                             : SPIRV::Scope::Device);
+  Register ScopeReg = buildI32Constant(Scope, I);
+
+  uint32_t MemSem = static_cast<uint32_t>(getMemSemanticsForStorageClass(SC));
+  Register MemSemReg = buildI32Constant(MemSem, I);
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpAtomicIAdd))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(Ptr)
+      .addUse(ScopeReg)
+      .addUse(MemSemReg)
+      .addUse(Value)
+      .constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
 bool SPIRVInstructionSelector::selectUnmergeValues(MachineInstr &I) const {
   unsigned ArgI = I.getNumOperands() - 1;
   Register SrcReg =
@@ -4037,6 +4069,22 @@ bool SPIRVInstructionSelector::selectBuildVector(Register ResVReg,
         I, "There must be at least two constituent operands in a vector");
 
   MRI->setRegClass(ResVReg, GR.getRegClass(ResType));
+
+  bool IsNullVector = IsConst && !STI.isShader();
+  for (unsigned i = I.getNumExplicitDefs();
+       i < I.getNumExplicitOperands() && IsNullVector; ++i) {
+    MachineInstr *Def = getDef(I.getOperand(i), MRI);
+    IsNullVector = Def && isNullOrNullSplat(*Def, *MRI);
+  }
+
+  if (IsNullVector) {
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .constrainAllUses(TII, TRI, RBI);
+    return true;
+  }
+
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                      TII.get(IsConst ? SPIRV::OpConstantComposite
                                      : SPIRV::OpCompositeConstruct))
@@ -5259,6 +5307,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_reduce_and:
     return selectWaveReduceOp(ResVReg, ResType, I,
                               SPIRV::OpGroupNonUniformBitwiseAnd);
+  case Intrinsic::spv_interlocked_add:
+    return selectInterlockedAdd(ResVReg, ResType, I);
   case Intrinsic::spv_wave_reduce_umax:
     return selectWaveReduceMax(ResVReg, ResType, I, /*IsUnsigned*/ true);
   case Intrinsic::spv_wave_reduce_max:

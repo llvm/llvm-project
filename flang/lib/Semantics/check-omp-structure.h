@@ -333,10 +333,10 @@ private:
   void CheckDoacross(const parser::OmpDoacross &doa);
   void CheckDimsModifier(parser::CharBlock source, size_t numValues,
       const parser::OmpDimsModifier &x);
-  void CheckTypeParamInquiry(
-      const parser::CharBlock &source, const parser::OmpObject &object);
-  void CheckTypeParamInquiry(
-      const parser::CharBlock &source, const parser::OmpObjectList &objects);
+  void CheckTypeParamInquiry(const parser::CharBlock &source,
+      const parser::OmpObject &object, llvm::omp::Directive dirId);
+  void CheckTypeParamInquiry(const parser::CharBlock &source,
+      const parser::OmpObject &object, llvm::omp::Clause clauseId);
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
       const parser::OmpObject &object, llvm::StringRef clause = "");
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
@@ -345,10 +345,6 @@ private:
   void CheckThreadprivateOrDeclareTargetVar(const parser::Name &);
   void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObject &);
   void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObjectList &);
-  void CheckSymbolName(
-      const parser::CharBlock &source, const parser::OmpObject &object);
-  void CheckSymbolNames(
-      const parser::CharBlock &source, const parser::OmpObjectList &objList);
   void CheckIntentInPointer(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckProcedurePointer(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckCrayPointee(const parser::OmpObjectList &objectList,

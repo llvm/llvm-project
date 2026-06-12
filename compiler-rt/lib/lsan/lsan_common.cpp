@@ -897,6 +897,9 @@ static bool CheckForLeaksOnce() {
       Report(
           "HINT: LeakSanitizer does not work under ptrace (strace, gdb, "
           "etc)\n");
+      Report(
+          "HINT: LeakSanitizer requires ptrace_scope to be disabled (e.g. echo "
+          "0 > /proc/sys/kernel/yama/ptrace_scope)\n");
       Die();
     }
     LeakReport leak_report;

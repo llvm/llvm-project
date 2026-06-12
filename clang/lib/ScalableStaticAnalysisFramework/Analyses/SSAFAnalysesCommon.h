@@ -15,7 +15,10 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace clang::ssaf {
 ///\return a short descriptions of a json::Value
@@ -56,6 +59,12 @@ inline bool hasPtrOrArrType(const ValueDecl *D) {
 
 llvm::Error makeEntityNameErr(clang::ASTContext &Ctx,
                               const clang::NamedDecl *D);
+
+/// Log a warning from an llvm::Error
+inline void logWarningFromError(llvm::Error Err) {
+  DEBUG_WITH_TYPE("ssaf-analyses", llvm::errs() << Err);
+  llvm::consumeError(std::move(Err));
+}
 
 /// Find all contributors in an AST.
 void findContributors(ASTContext &Ctx,
