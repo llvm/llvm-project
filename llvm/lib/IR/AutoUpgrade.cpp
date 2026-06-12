@@ -6240,7 +6240,7 @@ static bool upgradePtrauthInitFiniArrays(Module &M) {
     for (const MDNode *Flag : ModFlags->operands()) {
       std::optional<StringRef> Name = getModuleFlagNameSafely(*Flag);
       if (Name && (*Name == "ptrauth-init-fini" ||
-                   *Name == "ptrauth-init-fini-address-discriminator"))
+                   *Name == "ptrauth-init-fini-address-discrimination"))
         return false;
     }
   }
@@ -6315,7 +6315,7 @@ static bool upgradePtrauthInitFiniArrays(Module &M) {
 
   M.addModuleFlag(Module::Error, "ptrauth-init-fini", 1);
   if (UseAddressDisc.value())
-    M.addModuleFlag(Module::Error, "ptrauth-init-fini-address-discriminator",
+    M.addModuleFlag(Module::Error, "ptrauth-init-fini-address-discrimination",
                     1);
 
   return true;
