@@ -1049,6 +1049,7 @@ def llvm_nxv4i1_ty  : LLVMType<nxv4i1>;
 def llvm_nxv8i1_ty  : LLVMType<nxv8i1>;
 def llvm_nxv16i1_ty : LLVMType<nxv16i1>;
 def llvm_nxv16i8_ty : LLVMType<nxv16i8>;
+def llvm_nxv8i16_ty : LLVMType<nxv8i16>;
 def llvm_nxv4i32_ty : LLVMType<nxv4i32>;
 def llvm_nxv2i64_ty : LLVMType<nxv2i64>;
 def llvm_nxv8f16_ty : LLVMType<nxv8f16>;
