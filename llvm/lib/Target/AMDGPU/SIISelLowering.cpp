@@ -15795,11 +15795,15 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     // Could be anything.
     return false;
 
-  case ISD::BITCAST:
-    // TODO: This is incorrect as it loses track of the operand's type. We may
-    // end up effectively bitcasting from f32 to v2f16 or vice versa, and the
-    // same bits that are canonicalized in one type need not be in the other.
+  case ISD::BITCAST: {
+    // Canonicality isn't preserved across a bitcast that changes the FP type.
+    EVT SrcVT = Op.getOperand(0).getValueType();
+    EVT DstVT = Op.getValueType();
+    if (SrcVT.isFloatingPoint() && DstVT.isFloatingPoint() &&
+        SrcVT.getScalarType() != DstVT.getScalarType())
+      return false;
     return isCanonicalized(DAG, Op.getOperand(0), MaxDepth - 1);
+  }
   case ISD::TRUNCATE: {
     // Hack round the mess we make when legalizing extract_vector_elt
     if (Op.getValueType() == MVT::i16) {
