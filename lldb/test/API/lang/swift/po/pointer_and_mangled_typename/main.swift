@@ -47,6 +47,12 @@ enum DescribedEnum: CustomStringConvertible {
     var description: String { "DescribedEnum" }
 }
 
+protocol ClassOnlyProtocol: AnyObject {}
+
+class DescribedConformance: ClassOnlyProtocol, CustomStringConvertible {
+    var description: String { "DescribedConformance" }
+}
+
 @main struct Entry {
     static func main() {
         do {
@@ -92,6 +98,10 @@ enum DescribedEnum: CustomStringConvertible {
         do {
             let value = DescribedEnum.pair("Po", 50)
             print("break described enum")
+        }
+        do {
+            let value: ClassOnlyProtocol = DescribedConformance()
+            print("break class-only protocol")
         }
     }
 }

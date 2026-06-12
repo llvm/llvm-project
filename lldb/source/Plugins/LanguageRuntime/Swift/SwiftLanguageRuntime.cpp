@@ -1013,6 +1013,17 @@ static bool IsSwiftReferenceType(ValueObject &object) {
   return false;
 }
 
+static bool ContainsPrivateDeclName(swift::Demangle::NodePointer node) {
+  if (!node)
+    return false;
+  if (node->getKind() == swift::Demangle::Node::Kind::PrivateDeclName)
+    return true;
+  for (auto *child : *node)
+    if (ContainsPrivateDeclName(child))
+      return true;
+  return false;
+}
+
 llvm::Error
 SwiftLanguageRuntime::PrintObjectViaPointer(Stream &strm, ValueObject &object,
                                             Process &process) const {
@@ -1053,7 +1064,21 @@ SwiftLanguageRuntime::PrintObjectViaPointer(Stream &strm, ValueObject &object,
         return llvm::createStringError("no Objective-C runtime");
       return objc_runtime->GetObjectDescription(strm, *static_object);
     }
-    mangled_type_name = static_object->GetMangledTypeName();
+
+    // Use the static type only if the dynamic type contains a private
+    // discriminator, and only if the static type is not an existential.
+    swift::Demangle::Context ctx;
+    auto *node = ctx.demangleSymbolAsNode(object.GetMangledTypeName());
+    if (ContainsPrivateDeclName(node)) {
+      Flags static_flags(static_object->GetTypeInfo());
+      if (static_flags.Test(eTypeIsProtocol))
+        return llvm::createStringError("existential types are unsupported");
+      // Use non-private static type, because the dynamic type is private.
+      mangled_type_name = static_object->GetMangledTypeName();
+    } else {
+      // Use non-private dynamic type.
+      mangled_type_name = object.GetMangledTypeName();
+    }
   } else {
     mangled_type_name = object.GetMangledTypeName();
   }

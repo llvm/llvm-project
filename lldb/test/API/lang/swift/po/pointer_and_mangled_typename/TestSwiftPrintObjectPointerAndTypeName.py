@@ -135,3 +135,14 @@ class TestCase(TestBase):
         self.expect("po value", substrs=["DescribedEnum"])
         self._filecheck("DESC-ENUM")
         # CHECK-DESC-ENUM: stringForPrintObject(UnsafeRawPointer(bitPattern: {{.*}}), mangledTypeName: "1a13DescribedEnumOD")
+
+    @swiftTest
+    @skipEmbeddedSwift
+    def test_class_only_protocol(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, "break class-only protocol", lldb.SBFileSpec("main.swift")
+        )
+        self.expect("po value", substrs=["DescribedConformance"])
+        self._filecheck("CLASS-ONLY-PROTOCOL")
+        # CHECK-CLASS-ONLY-PROTOCOL: stringForPrintObject(UnsafeRawPointer(bitPattern: {{[0-9]+}}), mangledTypeName: "1a20DescribedConformanceCD")
