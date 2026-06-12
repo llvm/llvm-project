@@ -135,6 +135,22 @@ bool Builtin::Context::isBuiltinFunc(llvm::StringRef FuncName) {
   return false;
 }
 
+bool Builtin::Context::isConstWithoutErrnoAndExceptions(
+    llvm::StringRef Name) const {
+  bool InStdNamespace = Name.consume_front("std-");
+  for (const auto &Shard : {InfosShard{&BuiltinStrings, BuiltinInfos}})
+    if (llvm::StringRef NameSuffix = Name;
+        NameSuffix.consume_front(Shard.NamePrefix))
+      for (const auto &I : Shard.Infos)
+        if (NameSuffix == (*Shard.Strings)[I.Offsets.Name] &&
+            (bool)strchr((*Shard.Strings)[I.Offsets.Attributes].data(), 'z') ==
+                InStdNamespace)
+          return strchr((*Shard.Strings)[I.Offsets.Attributes].data(), 'e') !=
+                 nullptr;
+
+  return false;
+}
+
 /// Is this builtin supported according to the given language options?
 static bool builtinIsSupported(const llvm::StringTable &Strings,
                                const Builtin::Info &BuiltinInfo,

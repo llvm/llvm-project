@@ -5232,6 +5232,52 @@ static unsigned getMaxVectorWidth(const llvm::Type *Ty) {
   return MaxVectorWidth;
 }
 
+// Returns true if a call to \p TargetDecl emitted inside the body of an OpenMP
+// SIMD (parallel) loop may have its memory effects tightened to memory(none).
+//
+// This applies to standard libm math functions that carry a #pragma omp declare
+// simd: their only side effects are on the floating-point environment (rounding
+// mode, exceptions) and any implementation-defined errno reporting. Inside an
+// OpenMP SIMD loop the user has asserted the iterations are independent and that
+// these per-iteration FP-environment/errno side effects need not be preserved,
+// so the call can be modelled as accessing no memory. This lets the loop
+// vectorizer replace it with the function's VFABI vector variant instead of
+// treating it as a dependence-blocking memory access.
+//
+// The classification is done by name so it still fires under -fno-builtin (which
+// clears the identifier builtin ID, making FunctionDecl::getBuiltinID() == 0).
+// Functions that write results back through pointer parameters (sincos, modf,
+// frexp, remquo, ...) are excluded so their effect on user memory is preserved.
+static bool isDeclareSimdConstMathCall(const Decl *TargetDecl,
+                                       CodeGenModule &CGM) {
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
+  if (!FD || !FD->getIdentifier())
+    return false;
+
+  bool HasDeclareSimd = false;
+  for (const FunctionDecl *Redecl : FD->redecls())
+    if (Redecl->hasAttr<OMPDeclareSimdDeclAttr>()) {
+      HasDeclareSimd = true;
+      break;
+    }
+  if (!HasDeclareSimd)
+    return false;
+
+  if (!CGM.getContext().BuiltinInfo.isConstWithoutErrnoAndExceptions(
+          FD->getName()))
+    return false;
+
+  // sincos-style functions take output pointers; their effects on user-visible
+  // memory must not be dropped.
+  if (!FD->getReturnType()->isFloatingType())
+    return false;
+  for (const ParmVarDecl *P : FD->parameters())
+    if (P->getType()->isAnyPointerType())
+      return false;
+
+  return true;
+}
+
 RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                                  const CGCallee &Callee,
                                  ReturnValueSlot ReturnValue,
@@ -5972,6 +6018,15 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // Apply the attributes and calling convention.
   CI->setAttributes(Attrs);
   CI->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
+
+  // Inside an OpenMP SIMD loop, model a declare-simd libm math call as not
+  // accessing memory so the loop vectorizer can replace it with its VFABI
+  // vector variant. See isDeclareSimdConstMathCall for the rationale and the
+  // safety conditions; the loop being parallel is the user's assertion that the
+  // per-iteration FP-environment/errno side effects need not be preserved.
+  if (LoopStack.getCurLoopParallel() &&
+      isDeclareSimdConstMathCall(TargetDecl, CGM))
+    CI->setMemoryEffects(llvm::MemoryEffects::none());
 
   // Apply various metadata.
 

@@ -402,6 +402,16 @@ public:
     return strchr(getAttributesString(ID), 'e') != nullptr;
   }
 
+  /// Return true if the target-independent builtin named \p Name has no side
+  /// effects and doesn't read memory, except for possibly errno or raising FP
+  /// exceptions.
+  ///
+  /// Unlike the ID-based overload, this looks the function up by name directly
+  /// in the builtin table and therefore still classifies standard libm
+  /// functions even under -fno-builtin (which clears their identifier builtin
+  /// IDs, so FunctionDecl::getBuiltinID() would return 0).
+  bool isConstWithoutErrnoAndExceptions(llvm::StringRef Name) const;
+
   bool isConstWithoutExceptions(unsigned ID) const {
     return strchr(getAttributesString(ID), 'g') != nullptr;
   }
