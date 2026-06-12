@@ -256,7 +256,7 @@ def AnyKindElementConstraint {
 // Placeholder to encode the overload index of the current type. We encode a
 // value > 255 to indicate that this entry needs to be patched up with the
 // overload index (to prevent conflict with any valid not-to-be-patched IIT
-// enccoding byte, whose value will be <= 255). Note that this is just a
+// encoding byte, whose value will be <= 255). Note that this is just a
 // transient representation till it gets processed by `PatchOverloadIndex`
 // below, so this is *not* the encoding of the final type signature.
 defvar OverloadIndexPlaceholder = 0x100;
