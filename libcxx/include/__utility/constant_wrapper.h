@@ -28,14 +28,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 26
 
-template <auto _Xp,
-#  ifdef _LIBCPP_COMPILER_GCC
-          // gcc bug: https://gcc.gnu.org/PR117392
-          class = remove_cvref_t<decltype(_Xp)>
-#  else
-          class = decltype(_Xp)
-#  endif
-          >
+template <auto _Xp, class = remove_cvref_t<decltype(_Xp)>>
 struct constant_wrapper;
 
 template <class _Tp>
@@ -275,12 +268,7 @@ concept __constexpr_indexable = (__constexpr_param<remove_cvref_t<_Args>> && ...
 
 template <auto _Xp, class _Tp>
 struct constant_wrapper : __cw_operators {
-#  ifdef _LIBCPP_COMPILER_GCC
-  // gcc bug: https://gcc.gnu.org/PR125188
   static constexpr decltype((_Xp)) value = (_Xp);
-#  else
-  static constexpr decltype(auto) value = (_Xp);
-#  endif
 
   using type       = constant_wrapper;
   using value_type = decltype(_Xp);
