@@ -851,6 +851,59 @@ Error DataAggregator::parseInput() {
   return errorCodeToError(parsePreAggregated());
 }
 
+Error DataAggregator::parseAllInputs(BinaryContext &BC) {
+  if (InputFilenames.size() == 1)
+    return parseInput();
+
+  // Multiple inputs
+
+  // Struct keeping DataAggregator and its diagnostics buffer/stream.
+  struct AggregatorJob {
+    DataAggregator *DA{nullptr};
+    std::string DiagBuffer{};
+    raw_string_ostream DiagStream{DiagBuffer};
+  };
+
+  // Create a job for each input file.
+  SmallVector<AggregatorJob *, 1> Jobs;
+  for (StringRef InputFilename : InputFilenames) {
+    auto *Job = Jobs.emplace_back(new AggregatorJob());
+    Job->DA = new DataAggregator(InputFilename, Job->DiagStream);
+    Job->DA->BAT = BAT;
+    Job->DA->BC = &BC;
+    Job->DA->PerfPath = PerfPath;
+  }
+
+  ThreadPoolStrategy SavedStrategy = parallel::strategy;
+  parallel::strategy = hardware_concurrency(opts::PerfDataJobs);
+  Error ParseErrors =
+      parallelForEachError(Jobs, [](AggregatorJob *Job) -> Error {
+        if (Error E = Job->DA->parseInput()) {
+          Job->DiagStream.flush();
+          return createStringError(
+              inconvertibleErrorCode(), "%s: %s%s", Job->DA->Filename.c_str(),
+              Job->DiagBuffer.c_str(), toString(std::move(E)).c_str());
+        }
+        Job->DA->Parsed = true;
+        return Error::success();
+      });
+  parallel::strategy = SavedStrategy;
+
+  for (AggregatorJob *Job : Jobs) {
+    if (Job->DA->Parsed)
+      mergeFrom(*Job->DA);
+    delete Job->DA;
+    delete Job;
+  }
+
+  if (!Parsed)
+    return ParseErrors;
+  handleAllErrors(std::move(ParseErrors), [](const ErrorInfoBase &EI) {
+    errs() << "PERF2BOLT-WARNING: " << EI.message() << "\n";
+  });
+  return Error::success();
+}
+
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
   // Turn on heatmap building if requested by --heatmap flag.
   if (!opts::HeatmapMode && opts::HeatmapOutput.getNumOccurrences())
@@ -869,37 +922,8 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
     exit(0);
   }
 
-  SmallVector<DataAggregator *, 1> Aggregators(1, this);
-  for (StringRef InputFilename : InputFilenames) {
-    auto *DA = Aggregators.emplace_back(new DataAggregator(InputFilename));
-    DA->BC = &BC;
-    DA->PerfPath = PerfPath;
-  }
-
-  ThreadPoolStrategy SavedStrategy = parallel::strategy;
-  parallel::strategy = hardware_concurrency(opts::PerfDataJobs);
-  Error ParseErrors =
-      parallelForEachError(Aggregators, [](DataAggregator *DA) -> Error {
-        if (Error E = DA->parseInput())
-          return createStringError(inconvertibleErrorCode(), "%s: %s",
-                                   DA->Filename.c_str(),
-                                   toString(std::move(E)).c_str());
-        DA->Parsed = true;
-        return Error::success();
-      });
-  parallel::strategy = SavedStrategy;
-
-  for (DataAggregator *DA : llvm::drop_begin(Aggregators)) {
-    if (DA->Parsed)
-      mergeFrom(*DA);
-    delete DA;
-  }
-
-  if (!Parsed)
-    return ParseErrors;
-  handleAllErrors(std::move(ParseErrors), [](const ErrorInfoBase &EI) {
-    errs() << "PERF2BOLT-WARNING: " << EI.message() << "\n";
-  });
+  if (Error E = parseAllInputs(BC))
+    return E;
 
   markFunctionsWithProfile();
 

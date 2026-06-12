@@ -51,7 +51,12 @@ class BoltAddressTranslation;
 /// specified by the user.
 class DataAggregator : public DataReader {
 public:
-  explicit DataAggregator(StringRef Filename) : DataReader(Filename) {}
+  explicit DataAggregator(StringRef Filename) : DataReader(Filename) {
+    InputFilenames.emplace_back(Filename);
+  }
+
+  DataAggregator(StringRef Filename, raw_ostream &Diag)
+      : DataReader(Filename, Diag) {}
 
   ~DataAggregator();
 
@@ -156,8 +161,8 @@ private:
   std::vector<PerfMemSample> MemSamples;
 
   /// Perf.data or pre-aggregated inputs to aggregate and merge into this
-  /// reader.
-  std::vector<std::string> InputFilenames;
+  /// reader. The first entry is the primary profile input.
+  SmallVector<std::string, 1> InputFilenames;
 
   bool Parsed{false};
 
@@ -414,6 +419,9 @@ private:
 
   /// Parse this aggregator's input file.
   Error parseInput();
+
+  /// Parse all input files and merge successfully parsed profiles.
+  Error parseAllInputs(BinaryContext &BC);
 
   /// Merge parsed profile data from another aggregation job.
   void mergeFrom(const DataAggregator &Other);
