@@ -491,11 +491,17 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::SALU;
   }
 
-  static bool isVALU(const MachineInstr &MI) {
+  static bool isVALU(const MachineInstr &MI, bool AllowLDSDMA) {
+    if (!AllowLDSDMA && isLDSDMA(MI))
+      return false;
+
     return MI.getDesc().TSFlags & SIInstrFlags::VALU;
   }
 
-  bool isVALU(uint32_t Opcode) const {
+  bool isVALU(uint32_t Opcode, bool AllowLDSDMA) const {
+    if (!AllowLDSDMA && isLDSDMA(Opcode))
+      return false;
+
     return get(Opcode).TSFlags & SIInstrFlags::VALU;
   }
 
@@ -646,12 +652,12 @@ public:
   }
 
   static bool isLDSDMA(const MachineInstr &MI) {
-    return (isVALU(MI) && (isMUBUF(MI) || isFLAT(MI))) ||
+    return (isVALU(MI, /*AllowLDSDMA=*/true) && (isMUBUF(MI) || isFLAT(MI))) ||
            (MI.getDesc().TSFlags & SIInstrFlags::TENSOR_CNT);
   }
 
-  bool isLDSDMA(uint32_t Opcode) {
-    return (isVALU(Opcode) && (isMUBUF(Opcode) || isFLAT(Opcode))) ||
+  bool isLDSDMA(uint32_t Opcode) const {
+    return (isVALU(Opcode, /*AllowLDSDMA=*/true) && (isMUBUF(Opcode) || isFLAT(Opcode))) ||
            (get(Opcode).TSFlags & SIInstrFlags::TENSOR_CNT);
   }
 
@@ -893,13 +899,13 @@ public:
   static bool isVGPRSpill(const MachineInstr &MI) {
     return MI.getOpcode() != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            MI.getOpcode() != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           (isSpill(MI) && isVALU(MI));
+           (isSpill(MI) && isVALU(MI, /*AllowLDSDMA=*/true));
   }
 
   bool isVGPRSpill(uint32_t Opcode) const {
     return Opcode != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            Opcode != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           (isSpill(Opcode) && isVALU(Opcode));
+           (isSpill(Opcode) && isVALU(Opcode, /*AllowLDSDMA=*/true));
   }
 
   static bool isSGPRSpill(const MachineInstr &MI) {
