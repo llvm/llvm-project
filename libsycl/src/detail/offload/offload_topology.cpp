@@ -104,7 +104,7 @@ void discoverOffloadDevices() {
       },
       &Mapping);
   // Now register all platforms and devices into the topologies
-  auto &OffloadTopologies = getOffloadTopologies();
+  auto &OffloadTopologies = GlobalHandler::getOffloadTopologies();
   for (size_t I = 0; I < OL_PLATFORM_BACKEND_LAST; ++I) {
     OffloadTopology &Topo = OffloadTopologies[I];
     Topo.setBackend(static_cast<ol_platform_backend_t>(I));

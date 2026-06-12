@@ -9,10 +9,10 @@
 #include <mock/helpers.hpp>
 
 #include <common/device_images.hpp>
-
-#include <detail/program_manager.hpp>
+#include <common/unittests_helper.hpp>
 
 #include <detail/device_impl.hpp>
+#include <detail/program_manager.hpp>
 
 #include <sycl/__impl/detail/obj_utils.hpp>
 #include <sycl/__impl/device_selector.hpp>
@@ -69,9 +69,17 @@ protected:
           *static_cast<ol_platform_handle_t *>(PropValue) = Platform;
           return OL_SUCCESS;
         });
+
+    // Each test case here uses its own device iteration expectations. So it is
+    // necessary to clear internal platform & device caches before each test to
+    // avoid using cached data that doesn't correspond to current expectations.
+    // In real life this is done in shutdown method that is called at the end of
+    // program.
+    sycl::detail::UnittestsHelper::initPlatforms();
   }
 
   void TearDown() override {
+    sycl::detail::UnittestsHelper::resetGlobalObjects();
     mock::releaseDummyHandles(Platform, Device1, Device2);
   }
 

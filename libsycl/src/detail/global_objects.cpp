@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <detail/global_objects.hpp>
+#include <detail/offload/offload_utils.hpp>
 #include <detail/platform_impl.hpp>
 #include <detail/program_manager.hpp>
 
@@ -18,37 +19,43 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
-// libsycl follows SYCL 2020 specification that doesn't declare any
-// init/shutdown methods that can help to avoid usage of static variables.
-// liboffload uses static variables too. In the first call of get_platforms
-// we call liboffload's iterateDevices that leads to liboffload static
-// storage initialization. Then we initialize our own local static var of
-// StaticVarShutdownHandler type to be able to call our shutdown methods
-// earlier and before the liboffload objects are destructed at the end of
-// program. See documentation of std::exit for local objects with static
-// storage duration.
-struct StaticVarShutdownHandler {
-  StaticVarShutdownHandler(const StaticVarShutdownHandler &) = delete;
-  StaticVarShutdownHandler &
-  operator=(const StaticVarShutdownHandler &) = delete;
-  ~StaticVarShutdownHandler() {
-    ProgramAndKernelManager::getInstance().releaseResources();
-    // No error reporting in shutdown
-    std::ignore = olShutDown();
-  }
-};
 
-void registerStaticVarShutdownHandler() {
-  static StaticVarShutdownHandler handler{};
+GlobalHandler::StaticVarShutdownHandler::~StaticVarShutdownHandler() {
+  ProgramAndKernelManager::getInstance().releaseResources();
+  GlobalHandler::resetGlobalObjects();
 }
 
-std::vector<detail::OffloadTopology> &getOffloadTopologies() {
-  static std::vector<detail::OffloadTopology> Topologies(
-      OL_PLATFORM_BACKEND_LAST);
+void GlobalHandler::resetGlobalObjects() {
+  getPlatformCache().clear();
+  getOffloadTopologies() = {};
+
+  // No error reporting in shutdown
+  std::ignore = olShutDown();
+}
+
+void GlobalHandler::initPlatforms() {
+  discoverOffloadDevices();
+
+  registerStaticVarShutdownHandler();
+
+  auto &PlatformCache = getPlatformCache();
+  for (const auto &Topo : getOffloadTopologies()) {
+    size_t PlatformIndex = 0;
+    for (const auto &OffloadPlatform : Topo.getPlatforms()) {
+      PlatformCache.emplace_back(std::make_unique<PlatformImpl>(
+          OffloadPlatform, PlatformIndex++, PlatformImpl::PrivateTag{}));
+    }
+  }
+}
+
+std::array<detail::OffloadTopology, OL_PLATFORM_BACKEND_LAST> &
+GlobalHandler::getOffloadTopologies() {
+  static std::array<detail::OffloadTopology, OL_PLATFORM_BACKEND_LAST>
+      Topologies{};
   return Topologies;
 }
 
-std::vector<PlatformImplUPtr> &getPlatformCache() {
+std::vector<PlatformImplUPtr> &GlobalHandler::getPlatformCache() {
   static std::vector<PlatformImplUPtr> PlatformCache{};
   return PlatformCache;
 }

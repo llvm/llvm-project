@@ -20,7 +20,6 @@
 #include <sycl/__impl/platform.hpp>
 
 #include <detail/device_impl.hpp>
-#include <detail/offload/offload_utils.hpp>
 
 #include <OffloadAPI.h>
 
@@ -36,14 +35,15 @@ namespace detail {
 
 class DeviceImpl;
 class ContextImpl;
+class GlobalHandler;
 
 using PlatformImplUPtr = std::unique_ptr<PlatformImpl>;
 using DeviceImplUPtr = std::unique_ptr<DeviceImpl>;
 
 class PlatformImpl {
-  // Helper to limit PlatformImpl creation. It must be created in getPlatforms
-  // only. Using tag instead of private ctor + friend class to allow make_unique
-  // usage and to align with classes which impl is shared_ptr<>.
+  // Helper to limit PlatformImpl creation. It must be created in GlobalHandler
+  // only. Using tag instead of private ctor + friend declaration to allow
+  // make_unique usage and to align with classes whose impl is shared_ptr<>.
   struct PrivateTag {
     explicit PrivateTag() = default;
   };
@@ -147,6 +147,8 @@ private:
   std::vector<DeviceImplUPtr> MRootDevices;
 
   std::shared_ptr<ContextImpl> MDefaultContext;
+
+  friend class GlobalHandler;
 };
 
 } // namespace detail

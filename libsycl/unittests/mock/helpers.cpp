@@ -41,20 +41,18 @@ void mock::MockLiboffload::initDefault() {
         if (InitArgs && (*InitArgs != DefaultArgs))
           return makeEmptyStrError(OL_ERRC_UNIMPLEMENTED);
 
-        assert(!DefaultDevice);
-        DefaultPlatform = mock::createDummyHandle<ol_platform_handle_t>();
-        DefaultDevice = mock::createDummyHandleWithData<ol_device_handle_t>(
-            reinterpret_cast<unsigned char *>(&DefaultPlatform),
-            sizeof(DefaultPlatform));
-
         return OL_SUCCESS;
       });
 
   ON_CALL(*this, olShutDown).WillByDefault([this]() -> ol_result_t {
-    assert(DefaultDevice);
-
-    mock::releaseDummyHandle(DefaultPlatform);
-    mock::releaseDummyHandle(DefaultDevice);
+    if (DefaultDevice) {
+      mock::releaseDummyHandle(DefaultDevice);
+      DefaultDevice = nullptr;
+    }
+    if (DefaultPlatform) {
+      mock::releaseDummyHandle(DefaultPlatform);
+      DefaultPlatform = nullptr;
+    }
 
     return OL_SUCCESS;
   });
@@ -157,7 +155,12 @@ void mock::MockLiboffload::initDefault() {
         if (!Callback)
           return makeEmptyStrError(OL_ERRC_INVALID_NULL_POINTER);
 
-        assert(DefaultDevice);
+        if (!DefaultDevice) {
+          DefaultPlatform = mock::createDummyHandle<ol_platform_handle_t>();
+          DefaultDevice = mock::createDummyHandleWithData<ol_device_handle_t>(
+              reinterpret_cast<unsigned char *>(&DefaultPlatform),
+              sizeof(DefaultPlatform));
+        }
         std::ignore = Callback(DefaultDevice, UserData);
 
         return OL_SUCCESS;

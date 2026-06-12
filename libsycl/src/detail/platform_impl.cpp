@@ -12,6 +12,7 @@
 #include <detail/context_impl.hpp>
 #include <detail/device_impl.hpp>
 #include <detail/global_objects.hpp>
+#include <detail/offload/offload_utils.hpp>
 #include <detail/platform_impl.hpp>
 
 #include <algorithm>
@@ -22,7 +23,7 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
 PlatformImpl &PlatformImpl::getPlatformImpl(ol_platform_handle_t Platform) {
-  auto &PlatformCache = getPlatformCache();
+  auto &PlatformCache = GlobalHandler::getPlatformCache();
   for (auto &PlatImpl : PlatformCache) {
     assert(PlatImpl && "Platform impl can not be nullptr");
     if (PlatImpl->getOLHandleRef() == Platform)
@@ -36,22 +37,11 @@ PlatformImpl &PlatformImpl::getPlatformImpl(ol_platform_handle_t Platform) {
 }
 
 const std::vector<PlatformImplUPtr> &PlatformImpl::getPlatforms() {
-  [[maybe_unused]] static auto InitPlatformsOnce = []() {
-    discoverOffloadDevices();
-
-    registerStaticVarShutdownHandler();
-
-    auto &PlatformCache = getPlatformCache();
-    for (const auto &Topo : getOffloadTopologies()) {
-      size_t PlatformIndex = 0;
-      for (const auto &OffloadPlatform : Topo.getPlatforms()) {
-        PlatformCache.emplace_back(std::make_unique<PlatformImpl>(
-            OffloadPlatform, PlatformIndex++, PrivateTag{}));
-      }
-    }
+  [[maybe_unused]] static auto InitPlatformsOnce = [] {
+    GlobalHandler::initPlatforms();
     return true;
   }();
-  return getPlatformCache();
+  return GlobalHandler::getPlatformCache();
 }
 
 PlatformImpl::PlatformImpl(ol_platform_handle_t Platform, size_t PlatformIndex,
@@ -63,7 +53,7 @@ PlatformImpl::PlatformImpl(ol_platform_handle_t Platform, size_t PlatformIndex,
   MBackend = convertBackend(Backend);
   MOffloadBackend = Backend;
 
-  const auto &Topologies = getOffloadTopologies();
+  const auto &Topologies = GlobalHandler::getOffloadTopologies();
   auto RootTopologyIt = std::find_if(
       Topologies.begin(), Topologies.end(), [&](const OffloadTopology &Topo) {
         return Topo.getBackend() == MOffloadBackend;
