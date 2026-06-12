@@ -639,7 +639,13 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     uint64_t valueSize = astContext.getTypeSize(valueType);
     uint64_t atomicSize = astContext.getTypeSize(ty);
     if (valueSize != atomicSize) {
-      cgm.errorNYI("convertType: atomic type value size != atomic size");
+      assert(valueSize < atomicSize);
+      auto paddingArray =
+          cir::ArrayType::get(cgm.sInt8Ty, (atomicSize - valueSize) / 8);
+      mlir::Type elements[] = {resultType, paddingArray};
+      resultType = cir::StructType::get(&getMLIRContext(), /*members=*/elements,
+                                        /*packed=*/false, /*padded=*/false,
+                                        /*is_class=*/false);
     }
 
     break;

@@ -3349,6 +3349,9 @@ static mlir::omp::DistributeOp genStandaloneDistribute(
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
                            enableDelayedPrivatization, symTable);
+  // Dynamic private arrays cannot safely be allocated in GPU scratch when the
+  // descriptor is captured through the distribute callback.
+  dsp.setForceHeapAllocationForPrivateDynamicArrays();
   dsp.processStep1(&distributeClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
@@ -3543,6 +3546,7 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
   DataSharingProcessor dsp(converter, semaCtx, doItem->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
                            /*useDelayedPrivatization=*/true, symTable);
+  dsp.setForceHeapAllocationForPrivateDynamicArrays();
   dsp.processStep1(&parallelClauseOps);
 
   ObjectEntryBlockArgs parallelArgs;
@@ -4585,7 +4589,7 @@ genOpenMPDeclareMapperImpl(lower::AbstractConverter &converter,
   List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processMap(loc, stmtCtx, clauseOps);
-  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps.mapVars);
+  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps);
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

@@ -226,19 +226,34 @@ mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
                                   llvm::ArrayRef<mlir::Value> ivs,
                                   mlir::Location loc);
 
+/// Resolve the declare mapper symbol to attach to a mapped object.
+///
+/// The default mapper path first looks for a user-defined mapper. If none
+/// exists, it may synthesize a compiler-generated mapper, except for mapped
+/// members whose parent object is also mapped and for target enter data,
+/// target exit data, and target update directives.
+///
+/// \param converter The converter used to query and generate mapper symbols.
+/// \param loc The location to use when generating an implicit mapper.
+/// \param object The mapped object whose type controls mapper resolution.
+/// \param mapperIdName An explicit mapper name, `__implicit_mapper`, or an
+///        empty name.
+/// \param mapTypeBits The map flags used when deciding whether an implicit
+///        mapper should be generated.
+/// \param directive The enclosing OpenMP directive.
+/// \param hasParentObj True if a mapped parent object already owns this object.
+/// \return A symbol reference to the resolved mapper, or a null attribute when
+///         no mapper applies.
+mlir::FlatSymbolRefAttr
+resolveMapperId(Fortran::lower::AbstractConverter &converter,
+                mlir::Location loc, const omp::Object &object,
+                llvm::StringRef mapperIdName,
+                mlir::omp::ClauseMapFlags mapTypeBits,
+                llvm::omp::Directive directive, bool hasParentObj);
+
 std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
     Fortran::lower::AbstractConverter &converter, const omp::Object &object,
     Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
-
-/// Map a parsed OpenMP context trait-set selector to its OMPContext kind.
-llvm::omp::TraitSet
-mapTraitSet(parser::OmpTraitSetSelectorName::Value flangSet);
-
-/// Map a parsed OpenMP context trait selector within \p set to its OMPContext
-/// kind.
-llvm::omp::TraitSelector
-mapTraitSelector(const parser::OmpTraitSelectorName &name,
-                 llvm::omp::TraitSet set);
 
 /// Non-constant user condition expression and source for runtime lowering.
 struct DynamicUserCondition {

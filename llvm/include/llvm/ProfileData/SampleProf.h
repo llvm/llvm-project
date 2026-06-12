@@ -1704,8 +1704,6 @@ private:
 using namespace sampleprof;
 // Provide DenseMapInfo for SampleContext.
 template <> struct DenseMapInfo<SampleContext> {
-  static inline SampleContext getEmptyKey() { return SampleContext(); }
-
   static unsigned getHashValue(const SampleContext &Val) {
     return Val.getHashCode();
   }

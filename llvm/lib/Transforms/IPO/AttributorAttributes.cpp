@@ -745,18 +745,12 @@ struct State;
 template <>
 struct DenseMapInfo<AAPointerInfo::Access> : DenseMapInfo<Instruction *> {
   using Access = AAPointerInfo::Access;
-  static inline Access getEmptyKey();
   static unsigned getHashValue(const Access &A);
   static bool isEqual(const Access &LHS, const Access &RHS);
 };
 
 /// Helper that allows RangeTy as a key in a DenseMap.
 template <> struct DenseMapInfo<AA::RangeTy> {
-  static inline AA::RangeTy getEmptyKey() {
-    auto EmptyKey = DenseMapInfo<int64_t>::getEmptyKey();
-    return AA::RangeTy{EmptyKey, EmptyKey};
-  }
-
   static unsigned getHashValue(const AA::RangeTy &Range) {
     return detail::combineHashValue(
         DenseMapInfo<int64_t>::getHashValue(Range.Offset),
@@ -773,7 +767,6 @@ template <> struct DenseMapInfo<AA::RangeTy> {
 struct AccessAsInstructionInfo : DenseMapInfo<Instruction *> {
   using Base = DenseMapInfo<Instruction *>;
   using Access = AAPointerInfo::Access;
-  static inline Access getEmptyKey();
   static unsigned getHashValue(const Access &A);
   static bool isEqual(const Access &LHS, const Access &RHS);
 };
@@ -3469,9 +3462,6 @@ template <typename ToTy> struct DenseMapInfo<ReachabilityQueryInfo<ToTy> *> {
   using InstSetDMI = DenseMapInfo<const AA::InstExclusionSetTy *>;
   using PairDMI = DenseMapInfo<std::pair<const Instruction *, const ToTy *>>;
 
-  static ReachabilityQueryInfo<ToTy> EmptyKey;
-
-  static inline ReachabilityQueryInfo<ToTy> *getEmptyKey() { return &EmptyKey; }
   static unsigned getHashValue(const ReachabilityQueryInfo<ToTy> *RQI) {
     return RQI->Hash ? RQI->Hash : RQI->computeHashValue();
   }
@@ -3482,17 +3472,6 @@ template <typename ToTy> struct DenseMapInfo<ReachabilityQueryInfo<ToTy> *> {
     return InstSetDMI::isEqual(LHS->ExclusionSet, RHS->ExclusionSet);
   }
 };
-
-#define DefineKeys(ToTy)                                                       \
-  template <>                                                                  \
-  ReachabilityQueryInfo<ToTy>                                                  \
-      DenseMapInfo<ReachabilityQueryInfo<ToTy> *>::EmptyKey =                  \
-          ReachabilityQueryInfo<ToTy>(                                         \
-              DenseMapInfo<const Instruction *>::getEmptyKey(),                \
-              DenseMapInfo<const ToTy *>::getEmptyKey());
-
-DefineKeys(Instruction) DefineKeys(Function)
-#undef DefineKeys
 
 } // namespace llvm
 

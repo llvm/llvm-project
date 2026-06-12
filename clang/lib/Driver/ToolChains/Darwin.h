@@ -148,6 +148,7 @@ protected:
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
 private:
@@ -389,7 +390,7 @@ private:
   void AddDeploymentTarget(llvm::opt::DerivedArgList &Args) const;
 
   void VerifyTripleForSDK(const llvm::opt::ArgList &Args,
-                          const llvm::Triple &Triple) const;
+                          const llvm::Triple Triple) const;
 
 protected:
   /// Lazily initialize the target platform from the triple when
@@ -593,9 +594,11 @@ protected:
   /// the c++ standard library of the deployment target we are targeting.
   bool isSizedDeallocationUnavailable() const;
 
-  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args,
-                             Action::OffloadKind DeviceOffloadKind) const override;
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
+                        Action::OffloadKind DeviceOffloadKind) const override;
 
   void addClangCC1ASTargetOptions(
       const llvm::opt::ArgList &Args,
@@ -684,6 +687,7 @@ public:
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
   void AddLinkARCArgs(const llvm::opt::ArgList &Args,
