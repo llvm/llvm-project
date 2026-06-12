@@ -443,6 +443,10 @@ private:
   const SIInstrInfo *TII;
   const SIRegisterInfo *SRI;
 
+  /// Per-candidate cache of the src2 "needs VGPR" decision, computed once
+  /// and reused on-demand.
+  DenseMap<const MachineInstr *, bool> Src2NeedsVGPRCache;
+
   /// Do a speculative rewrite and collect copy locations. The speculative
   /// rewrite allows us to calculate the RP of the code after the rewrite, and
   /// the copy locations allow us to calculate the total cost of copies required

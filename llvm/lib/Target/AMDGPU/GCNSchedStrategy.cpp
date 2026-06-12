@@ -2362,6 +2362,7 @@ bool RewriteMFMAFormStage::initHeuristics(
         // If src2 has a use that must remain VGPR, it cannot be reclassified to
         // AGPR.
         bool Src2NeedsVGPR = hasUseRequiringVGPR(Src2ReachingDefs, RewriteSet);
+        Src2NeedsVGPRCache[&MI] = Src2NeedsVGPR;
 
         for (SlotIndex RDIdx : Src2ReachingDefs) {
           MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
@@ -2626,8 +2627,7 @@ bool RewriteMFMAFormStage::rewrite(
 
       // If src2 has a use that must remain VGPR, it cannot be reclassified to
       // AGPR.
-      bool Src2NeedsVGPR =
-          hasUseRequiringVGPR(Src2ReachingDefs, RewriteCandsSet);
+      bool Src2NeedsVGPR = Src2NeedsVGPRCache.lookup(MI);
 
       for (SlotIndex RDIndex : Src2ReachingDefs) {
         MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
