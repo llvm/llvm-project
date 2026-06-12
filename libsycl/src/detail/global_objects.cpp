@@ -42,15 +42,21 @@ void registerStaticVarShutdownHandler() {
   static StaticVarShutdownHandler handler{};
 }
 
-std::vector<detail::OffloadTopology> &getOffloadTopologies() {
-  static std::vector<detail::OffloadTopology> Topologies(
-      OL_PLATFORM_BACKEND_LAST);
+std::array<detail::OffloadTopology, OL_PLATFORM_BACKEND_LAST> &
+getOffloadTopologies() {
+  static std::array<detail::OffloadTopology, OL_PLATFORM_BACKEND_LAST>
+      Topologies{};
   return Topologies;
 }
 
 std::vector<PlatformImplUPtr> &getPlatformCache() {
   static std::vector<PlatformImplUPtr> PlatformCache{};
   return PlatformCache;
+}
+
+void releaseOffloadObjects() {
+  getPlatformCache().clear();
+  getOffloadTopologies() = {};
 }
 
 } // namespace detail

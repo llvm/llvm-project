@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <mock/helpers.hpp>
-
 #include <common/device_images.hpp>
-
-#include <detail/program_manager.hpp>
+#include <common/unittests_helper.hpp>
 
 #include <detail/device_impl.hpp>
+#include <detail/program_manager.hpp>
 
 #include <sycl/__impl/detail/obj_utils.hpp>
 #include <sycl/__impl/device_selector.hpp>
@@ -54,7 +52,7 @@ protected:
     Device2 = mock::createDummyHandleWithData<ol_device_handle_t>(
         reinterpret_cast<unsigned char *>(&Platform), sizeof(Platform));
 
-    EXPECT_CALL(Mock.get(), olIterateDevices(_, _))
+    EXPECT_CALL(Helper.Mock.get(), olIterateDevices(_, _))
         .WillRepeatedly([this](ol_device_iterate_cb_t Callback,
                                void *UserData) -> ol_result_t {
           std::ignore = Callback(Device1, UserData);
@@ -62,7 +60,8 @@ protected:
           return OL_SUCCESS;
         });
 
-    EXPECT_CALL(Mock.get(), olGetDeviceInfo(_, OL_DEVICE_INFO_PLATFORM, _, _))
+    EXPECT_CALL(Helper.Mock.get(),
+                olGetDeviceInfo(_, OL_DEVICE_INFO_PLATFORM, _, _))
         .WillRepeatedly([this](ol_device_handle_t Device,
                                ol_device_info_t /*PropName*/, size_t PropSize,
                                void *PropValue) -> ol_result_t {
@@ -75,14 +74,14 @@ protected:
     mock::releaseDummyHandles(Platform, Device1, Device2);
   }
 
-  mock::MockWrapper Mock;
+  unittests::UnittestsHelper Helper;
   ol_platform_handle_t Platform{};
   ol_device_handle_t Device1{};
   ol_device_handle_t Device2{};
 };
 
 TEST_F(DeviceSelectorScoreTest, CPUAndGPU) {
-  EXPECT_CALL(Mock.get(), olGetDeviceInfo(_, OL_DEVICE_INFO_TYPE, _, _))
+  EXPECT_CALL(Helper.Mock.get(), olGetDeviceInfo(_, OL_DEVICE_INFO_TYPE, _, _))
       .WillRepeatedly([this](ol_device_handle_t Device,
                              ol_device_info_t /*PropName*/, size_t PropSize,
                              void *PropValue) -> ol_result_t {
@@ -117,7 +116,7 @@ TEST_F(DeviceSelectorScoreTest, CPUAndGPU) {
 }
 
 TEST_F(DeviceSelectorScoreTest, TwoGpusOneCompatibleImage) {
-  EXPECT_CALL(Mock.get(), olGetDeviceInfo(_, OL_DEVICE_INFO_TYPE, _, _))
+  EXPECT_CALL(Helper.Mock.get(), olGetDeviceInfo(_, OL_DEVICE_INFO_TYPE, _, _))
       .WillRepeatedly([](ol_device_handle_t Device,
                          ol_device_info_t /*PropName*/, size_t PropSize,
                          void *PropValue) -> ol_result_t {
@@ -125,7 +124,7 @@ TEST_F(DeviceSelectorScoreTest, TwoGpusOneCompatibleImage) {
         return OL_SUCCESS;
       });
 
-  EXPECT_CALL(Mock.get(), olIsValidBinary(_, _, _, _))
+  EXPECT_CALL(Helper.Mock.get(), olIsValidBinary(_, _, _, _))
       .WillRepeatedly([this](ol_device_handle_t Device,
                              const void * /*ProgData*/, size_t /*ProgDataSize*/,
                              bool *Valid) -> ol_result_t {

@@ -30,8 +30,9 @@ class PlatformImpl;
 ///
 /// This vector is populated only once at the first call of get_platforms().
 ///
-/// \returns std::vector of all offload topologies.
-std::vector<detail::OffloadTopology> &getOffloadTopologies();
+/// \returns std::array of all offload topologies.
+std::array<detail::OffloadTopology, OL_PLATFORM_BACKEND_LAST> &
+getOffloadTopologies();
 
 /// Returns implementation class objects for all platforms discovered from
 /// liboffload.
@@ -44,6 +45,10 @@ std::vector<std::unique_ptr<PlatformImpl>> &getPlatformCache();
 // This initializes a function-local variable whose destructor is invoked as
 // the SYCL shared library is first being unloaded.
 void registerStaticVarShutdownHandler();
+
+// Releases all global objects related to liboffload. Used for unittests
+// purposes.
+void releaseOffloadObjects();
 
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL
