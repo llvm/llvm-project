@@ -643,7 +643,7 @@ Error DataAggregator::filterBinaryMMapInfo() {
       if (errs().has_colors())
         errs().resetColor();
 
-      return createStringError(inconvertibleErrorCode(),
+      return createStringError(std::errc::not_supported,
                                "could not find a profile matching PID");
     }
   }
@@ -766,7 +766,7 @@ Error DataAggregator::parsePerfData() {
       Regex NoData("Samples for '.*' event do not have ADDR attribute set. "
                    "Cannot print 'addr' field.");
       if (!NoData.match(ErrMsg))
-        return createStringError(inconvertibleErrorCode(), ErrMsg);
+        return E;
     }
     if (std::error_code EC = parseMemEvents())
       return errorCodeToError(EC);
