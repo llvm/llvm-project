@@ -400,6 +400,24 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarizeIf(scalarOrEltWiderThan(0, 32), 0)
       .scalarSameSizeAs(0, 1);
 
+  getActionDefinitionsBuilder(G_INSERT_SUBVECTOR)
+      .legalFor({{v16i8, v16i8},
+		 {v16i8, v8i8},
+                 {v8i16, v8i16},
+		 {v8i16, v4i16},
+                 {v4i32, v4i32},
+		 {v4i32, v2i32}})
+      .immIdx(0); // Inform verifier imm idx 0 is handled.
+      //.widenScalarToNextPow2(1, /*Min=*/32)
+      //.clampScalar(1, s32, s64)
+      //.widenScalarOrEltToNextPow2OrMinSize(1, /*Min=*/8)
+      //.clampNumElements(0, v8s8, v16s8)
+      //.clampNumElements(0, v4s16, v8s16)
+      //.clampNumElements(0, v2s32, v4s32)
+      //.moreElementsToNextPow2(0)
+      //.scalarizeIf(scalarOrEltWiderThan(0, 32), 0)
+      //.scalarSameSizeAs(0, 1);
+
   getActionDefinitionsBuilder(G_CTLZ_ZERO_POISON).lower();
 
   getActionDefinitionsBuilder(G_CTTZ)
