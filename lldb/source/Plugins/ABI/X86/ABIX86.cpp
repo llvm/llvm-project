@@ -207,6 +207,20 @@ void ABIX86::AugmentRegisterInfo(
 
   uint32_t gpr_base_size =
       process_sp->GetTarget().GetArchitecture().GetAddressByteSize();
+  // Determine the GPR base size. Prefer the target architecture, but fall
+  // back to the register list itself when the target arch isn't set yet
+  if (gpr_base_size == 0) {
+    for (const auto &reg : regs) {
+      if (reg.name == "rax" || reg.name == "rsp" || reg.name == "rip") {
+        gpr_base_size = 8;
+        break;
+      }
+      if (reg.name == "eax" || reg.name == "esp" || reg.name == "eip") {
+        gpr_base_size = 4;
+        break;
+      }
+    }
+  }
 
   // primary map from a base register to its subregisters
   BaseRegToRegsMap base_reg_map = makeBaseRegMap(gpr_base_size == 8);
