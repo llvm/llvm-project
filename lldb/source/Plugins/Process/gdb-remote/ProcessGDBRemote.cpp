@@ -2671,7 +2671,8 @@ void ProcessGDBRemote::RefreshStateAfterStop() {
   if (m_initial_tid != LLDB_INVALID_THREAD_ID) {
     m_thread_list.SetSelectedThreadByID(m_initial_tid);
     m_initial_tid = LLDB_INVALID_THREAD_ID;
-  } else if (m_last_stop_primary_tid != LLDB_INVALID_THREAD_ID) {
+  } else if (m_last_stop_primary_tid != LLDB_INVALID_THREAD_ID &&
+             StateIsRunningState(m_last_broadcast_state)) {
     if (ThreadSP primary_thread_sp =
             m_thread_list.FindThreadByProtocolID(m_last_stop_primary_tid,
                                                  /*can_update=*/false))
