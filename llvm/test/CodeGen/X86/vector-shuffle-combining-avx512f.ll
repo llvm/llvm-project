@@ -1112,6 +1112,40 @@ define <16 x i32> @combine_vcompressd_splat(i16 %m) {
   ret <16 x i32> %res
 }
 
+define <8 x i32> @concat_vrotli_v4i32(<4 x i32> %a0, <4 x i32> %a1) {
+; CHECK-LABEL: concat_vrotli_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vprold $3, %zmm0, %zmm0
+; CHECK-NEXT:    vprold $3, %zmm1, %zmm1
+; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %r0 = tail call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a0, <4 x i32> %a0, <4 x i32> splat (i32 3))
+  %r1 = tail call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a1, <4 x i32> %a1, <4 x i32> splat (i32 3))
+  %shuffle = shufflevector <4 x i32> %r0, <4 x i32> %r1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i32> %shuffle
+}
+
+define <8 x i32> @concat_vrotlv_v4i32(<4 x i32> %a0, <4 x i32> %a1, <8 x i32> %a2) {
+; CHECK-LABEL: concat_vrotlv_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; CHECK-NEXT:    vextracti128 $1, %ymm2, %xmm3
+; CHECK-NEXT:    vprolvd %zmm2, %zmm0, %zmm0
+; CHECK-NEXT:    vprolvd %zmm3, %zmm1, %zmm1
+; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %lo = shufflevector <8 x i32> %a2, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %hi = shufflevector <8 x i32> %a2, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %r0 = tail call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a0, <4 x i32> %a0, <4 x i32> %lo)
+  %r1 = tail call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a1, <4 x i32> %a1, <4 x i32> %hi)
+  %shuffle = shufflevector <4 x i32> %r0, <4 x i32> %r1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i32> %shuffle
+}
+
 define <8 x i64> @concat_nonuniform_permq_v4i64_v8i64(<4 x i64> %a0, <4 x i64> %a1, <2 x i64> %a2) nounwind {
 ; CHECK-LABEL: concat_nonuniform_permq_v4i64_v8i64:
 ; CHECK:       # %bb.0:
