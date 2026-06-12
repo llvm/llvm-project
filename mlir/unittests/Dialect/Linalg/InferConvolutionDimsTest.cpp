@@ -294,7 +294,8 @@ TEST_F(InferConvolutionDimsTest, MapsOverloadRejectsInvalidInput) {
     EXPECT_TRUE(failed(inferConvolutionDims(SmallVector<AffineMap>{m, m})));
   }
 
-  // Output map is not a projected permutation: iterator types are unknowable.
+  // Output map is not a projected permutation: iterator types are
+  // unidentifiable.
   {
     SmallVector<AffineMap> maps = {AffineMap::get(4, 0, {d0 + d2, d1 + d3}, c),
                                    AffineMap::get(4, 0, {d2, d3}, c),

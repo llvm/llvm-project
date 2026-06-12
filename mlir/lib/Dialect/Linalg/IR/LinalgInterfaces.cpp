@@ -748,7 +748,7 @@ getConstantsFromExprList(const SmallVector<AffineExpr, 2> &exprs) {
   return vals;
 }
 
-/// Classifies dimensions in the `linalgOp` used by a convolution
+/// Classifies dimensions in the `indexingMaps` used by a convolution
 /// subcomputation, as captured by `inputExprWalker`. If
 /// `allowEmptyConvolvedDims` is not set this will fail if there is not
 /// at least one convolved dimension pair (output image + filter loop).
