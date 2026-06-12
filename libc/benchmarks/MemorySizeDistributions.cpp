@@ -191,7 +191,7 @@ MemorySizeDistribution
 getDistributionOrDie(ArrayRef<MemorySizeDistribution> Distributions,
                      StringRef Name) {
   for (const auto &MSD : Distributions)
-    if (MSD.Name == Name)
+    if (MSD.name == Name)
       return MSD;
 
 #ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
@@ -200,14 +200,14 @@ getDistributionOrDie(ArrayRef<MemorySizeDistribution> Distributions,
   Stream << "Unknown MemorySizeDistribution '" << Name
          << "', available distributions:\n";
   for (const auto &MSD : Distributions)
-    Stream << "'" << MSD.Name << "'\n";
+    Stream << "'" << MSD.name << "'\n";
   report_fatal_error(Message);
 #else
   std::stringstream Stream;
   Stream << "Unknown MemorySizeDistribution '" << std::string(Name)
          << "', available distributions:\n";
   for (const auto &MSD : Distributions)
-    Stream << "'" << MSD.Name.str() << "'\n";
+    Stream << "'" << MSD.name.str() << "'\n";
   report_fatal_error(Stream.str());
 #endif
 }

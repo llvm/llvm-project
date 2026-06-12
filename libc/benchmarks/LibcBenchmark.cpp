@@ -24,23 +24,23 @@ void checkRequirements() {
 }
 
 HostState HostState::get() {
-  const auto &CpuInfo = benchmark::CPUInfo::Get();
-  HostState H;
-  H.CpuFrequency = CpuInfo.cycles_per_second;
+  const auto &cpu_info = benchmark::CPUInfo::Get();
+  HostState h;
+  h.cpu_frequency = cpu_info.cycles_per_second;
 #ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
-  H.CpuName = llvm::sys::getHostCPUName().str();
+  h.cpu_name = llvm::sys::getHostCPUName().str();
 #else
-  H.CpuName = "";
+  h.cpu_name = "";
 #endif
-  for (const auto &BenchmarkCacheInfo : CpuInfo.caches) {
-    CacheInfo CI;
-    CI.Type = BenchmarkCacheInfo.type;
-    CI.Level = BenchmarkCacheInfo.level;
-    CI.Size = BenchmarkCacheInfo.size;
-    CI.NumSharing = BenchmarkCacheInfo.num_sharing;
-    H.Caches.push_back(std::move(CI));
+  for (const auto &benchmark_cache_info : cpu_info.caches) {
+    CacheInfo ci;
+    ci.type = benchmark_cache_info.type;
+    ci.level = benchmark_cache_info.level;
+    ci.size = benchmark_cache_info.size;
+    ci.num_sharing = benchmark_cache_info.num_sharing;
+    h.caches.push_back(std::move(ci));
   }
-  return H;
+  return h;
 }
 
 } // namespace libc_benchmarks
@@ -69,9 +69,7 @@ namespace llvm {
 #endif
   std::abort();
 }
-[[noreturn]] void report_fatal_error(const char *reason, bool gen_crash_diag) {
-  report_fatal_error(std::string_view(reason), gen_crash_diag);
-}
+
 [[noreturn]] void report_fatal_error(StringRef reason, bool gen_crash_diag) {
   report_fatal_error(std::string_view(reason.data(), reason.size()),
                      gen_crash_diag);
