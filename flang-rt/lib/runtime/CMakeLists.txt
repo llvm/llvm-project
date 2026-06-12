@@ -298,12 +298,16 @@ if (FLANG_RT_FORTRAN_MODULES)
   flang_module_target(flang_rt.mod.intrinsics PUBLIC)
   add_module_barrier(flang_rt.mod.intrinsics.barrier flang_rt.mod.intrinsics)
 
-  set(intrinsic_module_files
-    "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/__fortran_builtins.mod"
-    "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/__cuda_builtins.mod"
+  set(intrinsic_module_stamp
+    "${CMAKE_CURRENT_BINARY_DIR}/flang_rt.mod.intrinsics.stamp"
+  )
+  add_custom_command(OUTPUT "${intrinsic_module_stamp}"
+    COMMAND "${CMAKE_COMMAND}" -E touch "${intrinsic_module_stamp}"
+    DEPENDS "$<TARGET_OBJECTS:flang_rt.mod.intrinsics>"
+    VERBATIM
   )
   set_property(SOURCE ${module_sources}
-    APPEND PROPERTY OBJECT_DEPENDS "${intrinsic_module_files}"
+    APPEND PROPERTY OBJECT_DEPENDS "${intrinsic_module_stamp}"
   )
 
   # The modules themselves

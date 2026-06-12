@@ -11,10 +11,19 @@
 configure_file(omp_lib.F90.var "${CMAKE_CURRENT_BINARY_DIR}/omp_lib.F90" @ONLY)
 configure_file(omp_lib.h.var "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/omp_lib.h" @ONLY)
 
-set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/omp_lib.F90"
-  APPEND PROPERTY OBJECT_DEPENDS
-    "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/iso_c_binding.mod"
-)
+if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+  set(flang_rt_module_stamp
+    "${CMAKE_CURRENT_BINARY_DIR}/flang_rt.mod.stamp"
+  )
+  add_custom_command(OUTPUT "${flang_rt_module_stamp}"
+    COMMAND "${CMAKE_COMMAND}" -E touch "${flang_rt_module_stamp}"
+    DEPENDS ${RUNTIMES_FORTRAN_BUILD_DEPS}
+    VERBATIM
+  )
+  set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/omp_lib.F90"
+    APPEND PROPERTY OBJECT_DEPENDS "${flang_rt_module_stamp}"
+  )
+endif ()
 
 # One compilation step creates both, omp_lib.mod and omp_lib_kinds.mod. Only
 # these files are used, the object file itself can be discarded.
