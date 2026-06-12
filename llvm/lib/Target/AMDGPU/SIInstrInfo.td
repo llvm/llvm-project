@@ -3186,6 +3186,7 @@ def VOP_V32F32_V4I16_V4I16_V32F32 : VOPProfile <[v32f32, v4i16, v4i16, v32f32]>;
 def VOP_V2F64_V2F64_V2F64         : VOPProfile <[v2f64,  v2f64, v2f64, untyped]>;
 def VOP_V2F64_V2F64_V2F64_V2F64   : VOPProfile <[v2f64,  v2f64, v2f64, v2f64]>;
 def VOP_V2I64_V2I64_V2I64         : VOPProfile <[v2i64,  v2i64, v2i64, untyped]>;
+def VOP_V2I64_V2I64_V2I32_V2I64   : VOPProfile <[v2i64,  v2i64, v2i32, v2i64]>;
 
 def VOP_V4I32_I64_I64_V4I32       : VOPProfile <[v4i32,  i64,   i64,   v4i32]>;
 def VOP_V16I32_I64_I64_V16I32     : VOPProfile <[v16i32, i64,   i64,   v16i32]>;
