@@ -1920,12 +1920,16 @@ void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
     if (clauseId == llvm::omp::Clause::OMPC_init) {
       CheckInitOnDepobj(x, clause);
     } else if (clauseId == llvm::omp::Clause::OMPC_destroy) {
+      if (arguments.v.empty()) {
+        continue;
+      }
       // [5.2:73:27-28]
       // If the destroy clause appears on a depobj construct, destroy-var must
       // refer to the same depend object as the depobj argument of the
       // construct.
       auto &wrapper{std::get<parser::OmpClause::Destroy>(clause.u)};
       if (const std::optional<parser::OmpDestroyClause> &destroy{wrapper.v}) {
+        assert(!arguments.v.empty() && "Expecting argument");
         const Symbol *constrSym{GetArgumentSymbol(arguments.v.front())};
         const Symbol *clauseSym{GetObjectSymbol(destroy->v)};
         if (constrSym && clauseSym && constrSym != clauseSym) {
