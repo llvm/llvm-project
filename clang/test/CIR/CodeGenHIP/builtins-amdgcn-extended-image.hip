@@ -21,12 +21,36 @@ typedef int int4 __attribute__((ext_vector_type(4)));
 typedef _Float16 half;
 typedef half half4 __attribute__((ext_vector_type(4)));
 
-// CIR-LABEL: @_Z24test_gather4_lz_2d_v4f32
+// CIR-LABEL: @_Z26test_gather4_lz_2d_v4f32_r
 // CIR: cir.call_llvm_intrinsic "amdgcn.image.gather4.lz.2d" {{.*}} : (!s32i, !cir.float, !cir.float, !cir.vector<8 x !s32i>, !cir.vector<4 x !s32i>, !cir.bool, !s32i, !s32i) -> !cir.vector<4 x !cir.float>
-// LLVM: define{{.*}} <4 x float> @_Z24test_gather4_lz_2d_v4f32ffu18__amdgpu_texture_tDv4_i(
-// LLVM: call {{.*}}<4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32.v8i32.v4i32(i32 {{.*}}, float {{.*}}, float {{.*}}, <8 x i32> {{.*}}, <4 x i32> {{.*}}, i1 {{.*}}, i32 {{.*}}, i32 {{.*}})
-__device__ float4 test_gather4_lz_2d_v4f32(float s, float t, __amdgpu_texture_t tex, int4 samp) {
+// LLVM: define{{.*}} <4 x float> @_Z26test_gather4_lz_2d_v4f32_rffu18__amdgpu_texture_tDv4_i(
+// LLVM: call {{.*}}<4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32.v8i32.v4i32(i32 1, float {{.*}}, float {{.*}}, <8 x i32> {{.*}}, <4 x i32> {{.*}}, i1 {{.*}}, i32 {{.*}}, i32 {{.*}})
+__device__ float4 test_gather4_lz_2d_v4f32_r(float s, float t, __amdgpu_texture_t tex, int4 samp) {
   return __builtin_amdgcn_image_gather4_lz_2d_v4f32_f32(1, s, t, tex, samp, 0, 120, 110);
+}
+
+// CIR-LABEL: @_Z26test_gather4_lz_2d_v4f32_g
+// CIR: cir.call_llvm_intrinsic "amdgcn.image.gather4.lz.2d" {{.*}} : (!s32i, !cir.float, !cir.float, !cir.vector<8 x !s32i>, !cir.vector<4 x !s32i>, !cir.bool, !s32i, !s32i) -> !cir.vector<4 x !cir.float>
+// LLVM: define{{.*}} <4 x float> @_Z26test_gather4_lz_2d_v4f32_gffu18__amdgpu_texture_tDv4_i(
+// LLVM: call {{.*}}<4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32.v8i32.v4i32(i32 2, float {{.*}}, float {{.*}}, <8 x i32> {{.*}}, <4 x i32> {{.*}}, i1 {{.*}}, i32 {{.*}}, i32 {{.*}})
+__device__ float4 test_gather4_lz_2d_v4f32_g(float s, float t, __amdgpu_texture_t tex, int4 samp) {
+  return __builtin_amdgcn_image_gather4_lz_2d_v4f32_f32(2, s, t, tex, samp, 0, 120, 110);
+}
+
+// CIR-LABEL: @_Z26test_gather4_lz_2d_v4f32_b
+// CIR: cir.call_llvm_intrinsic "amdgcn.image.gather4.lz.2d" {{.*}} : (!s32i, !cir.float, !cir.float, !cir.vector<8 x !s32i>, !cir.vector<4 x !s32i>, !cir.bool, !s32i, !s32i) -> !cir.vector<4 x !cir.float>
+// LLVM: define{{.*}} <4 x float> @_Z26test_gather4_lz_2d_v4f32_bffu18__amdgpu_texture_tDv4_i(
+// LLVM: call {{.*}}<4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32.v8i32.v4i32(i32 4, float {{.*}}, float {{.*}}, <8 x i32> {{.*}}, <4 x i32> {{.*}}, i1 {{.*}}, i32 {{.*}}, i32 {{.*}})
+__device__ float4 test_gather4_lz_2d_v4f32_b(float s, float t, __amdgpu_texture_t tex, int4 samp) {
+  return __builtin_amdgcn_image_gather4_lz_2d_v4f32_f32(4, s, t, tex, samp, 0, 120, 110);
+}
+
+// CIR-LABEL: @_Z26test_gather4_lz_2d_v4f32_a
+// CIR: cir.call_llvm_intrinsic "amdgcn.image.gather4.lz.2d" {{.*}} : (!s32i, !cir.float, !cir.float, !cir.vector<8 x !s32i>, !cir.vector<4 x !s32i>, !cir.bool, !s32i, !s32i) -> !cir.vector<4 x !cir.float>
+// LLVM: define{{.*}} <4 x float> @_Z26test_gather4_lz_2d_v4f32_affu18__amdgpu_texture_tDv4_i(
+// LLVM: call {{.*}}<4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32.v8i32.v4i32(i32 8, float {{.*}}, float {{.*}}, <8 x i32> {{.*}}, <4 x i32> {{.*}}, i1 {{.*}}, i32 {{.*}}, i32 {{.*}})
+__device__ float4 test_gather4_lz_2d_v4f32_a(float s, float t, __amdgpu_texture_t tex, int4 samp) {
+  return __builtin_amdgcn_image_gather4_lz_2d_v4f32_f32(8, s, t, tex, samp, 0, 120, 110);
 }
 
 // CIR-LABEL: @_Z23test_sample_lz_1d_v4f32
