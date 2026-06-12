@@ -62,7 +62,6 @@ ProgramStateRef LifetimeAnnotations::bindValues(ProgramStateRef State, SymbolRef
 
 void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
                                         CheckerContext &C) const {
-  llvm::errs() << "checkPostCall called" << "\n";
   ProgramStateRef State = C.getState();
 
   const auto *FC = dyn_cast<AnyFunctionCall>(&Call);
@@ -108,6 +107,9 @@ bool LifetimeAnnotations::isSourceDangle(const MemRegion *Source, ProgramStateRe
 }
 
 void LifetimeAnnotations::checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const {
+  if (!RS)
+    return;
+
   ProgramStateRef State = C.getState();
   auto LBMap = State->get<LifetimeBoundMap>();
   auto LBMapVal = State->get<LifetimeBoundMapVal>();
@@ -118,9 +120,6 @@ void LifetimeAnnotations::checkEndFunction(const ReturnStmt *RS, CheckerContext 
 
   RetExpr = RetExpr->IgnoreParens();
   SVal RetVal = C.getSVal(RetExpr);
-  const MemRegion *RetValRegion = RetVal.getAsRegion();
-  if (!RetValRegion)
-    return;
 
   llvm::SmallString<128> Str;
   llvm::raw_svector_ostream OS(Str);
@@ -128,33 +127,42 @@ void LifetimeAnnotations::checkEndFunction(const ReturnStmt *RS, CheckerContext 
   if (LBMap.isEmpty() && LBMapVal.isEmpty())
     return; 
 
-  for (auto&& [OriginSym, SourceSet] : LBMap) {
-    ExplodedNode *N = C.generateNonFatalErrorNode();
-    if (!N)
-      return;
+  SymbolRef RetValSym = RetVal.getAsSymbol(/*IncludeBaseRegions=*/true);
+  const MemRegion *RetValRegion = RetVal.getAsRegion();
+  if (!RetValSym && !RetValRegion)
+    return;
 
-    for (const auto *Region : SourceSet) {
-      if (isSourceDangle(Region, State, C)) {
-        OS << " Returning value bound to a local " << Region << " that will go out of scope.";
-        auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
-        C.emitReport(std::move(BR));
-        Str.clear();
+  if (RetValSym) {
+    for (auto&& [OriginSym, SourceSet] : LBMap) {
+      for (const auto *Region : SourceSet) {
+        if (OriginSym == RetValSym) {
+          if (isSourceDangle(Region, State, C)) {
+            ExplodedNode *N = C.generateNonFatalErrorNode();
+            if (!N)
+              return;
+            OS << " Returning value bound to a local " << Region << " that will go out of scope.";
+            auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
+            C.emitReport(std::move(BR));
+            Str.clear();
+          }
+        }
       }
     }
   }
 
-  for (auto&& [OriginRegion, SourceSet] : LBMapVal) {
-    ExplodedNode *N = C.generateNonFatalErrorNode();
-    if (!N)
-      return;
-
-    for (const auto *Region : SourceSet) {
-      if (OriginRegion == RetValRegion) {
-        if (isSourceDangle(Region, State, C)) {
-          OS << " Returning value bound to a local " << Region << " that will go out of scope.";
-          auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
-          C.emitReport(std::move(BR));
-          Str.clear();
+  if (RetValRegion) {
+    for (auto&& [OriginRegion, SourceSet] : LBMapVal) {
+      for (const auto *Region : SourceSet) {
+        if (OriginRegion == RetValRegion) {
+          if (isSourceDangle(Region, State, C)) {
+            ExplodedNode *N = C.generateNonFatalErrorNode();
+            if (!N)
+              return;
+            OS << " Returning value bound to a local " << Region << " that will go out of scope.";
+            auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
+              C.emitReport(std::move(BR));
+              Str.clear();
+          }
         }
       }
     }
