@@ -66,6 +66,11 @@ public:
       if (ret == -EINTR)
         continue;
 
+      // EAGAIN and EWOULDBLOCK will be treated as a normal finish, as the value
+      // has changed.
+      if (ret == -EAGAIN || ret == -EWOULDBLOCK)
+        return 0;
+
       if (ret < 0)
         return cpp::unexpected(-ret);
       return ret;
