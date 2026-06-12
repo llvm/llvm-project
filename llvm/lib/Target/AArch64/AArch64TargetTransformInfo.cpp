@@ -648,6 +648,10 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         return 4;
     }
 
+    if (LT.second.SimpleTy == MVT::nxv2i64)
+      if (ST->hasSVEAES() && (ST->isSVEAvailable() || ST->hasSSVE_AES()))
+        return LT.first * 3;
+
     if (ST->hasSVE2() || ST->hasSME()) {
       switch (LT.second.SimpleTy) {
       case MVT::nxv16i8:
@@ -657,13 +661,15 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       case MVT::nxv4i32:
         return LT.first * 3;
       case MVT::nxv2i64:
-        if (ST->hasSVEAES() && (ST->isSVEAvailable() || ST->hasSSVE_AES()))
-          return LT.first * 3;
         return LT.first * 8;
       default:
         break;
       }
     }
+
+    // Avoid +sve giving this cost 2 due to custom lowering: It's very slow
+    if (LT.second.SimpleTy == MVT::nxv2i64)
+      return 192;
 
     if (ST->hasAES()) {
       switch (LT.second.SimpleTy) {
