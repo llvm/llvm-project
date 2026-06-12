@@ -856,8 +856,8 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
       continue;
 
     if (AssumeVH.Index != AssumptionCache::ExprResultIdx) {
-      if (assumeBundleImpliesNonNullOn(Val, BBI,
-                                       I->getOperandBundleAt(AssumeVH.Index)))
+      if (assumeBundleImpliesNonNull(Val, BBI->getFunction(),
+                                     I->getOperandBundleAt(AssumeVH.Index)))
         BBLV = BBLV.intersect(ValueLatticeElement::getNot(
             Constant::getNullValue(Val->getType())));
     } else {

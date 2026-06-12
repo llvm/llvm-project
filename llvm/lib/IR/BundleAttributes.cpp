@@ -73,14 +73,13 @@ llvm::getAssumeDereferenceableInfo(OperandBundleUse OBU) {
   return Ret;
 }
 
-bool llvm::assumeBundleImpliesNonNullOn(const Value *Val,
-                                        const Instruction *Context,
-                                        OperandBundleUse OBU) {
+bool llvm::assumeBundleImpliesNonNull(const Value *Val, const Function *Context,
+                                      OperandBundleUse OBU) {
   switch (getBundleAttrFromOBU(OBU)) {
   case BundleAttr::Dereferenceable: {
     auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
     return Ptr == Val && Count && *Count != 0 &&
-           !NullPointerIsDefined(Context->getFunction(),
+           !NullPointerIsDefined(Context,
                                  Val->getType()->getPointerAddressSpace());
   }
 

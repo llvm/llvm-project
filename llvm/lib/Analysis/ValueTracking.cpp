@@ -834,8 +834,8 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
            "Got assumption for the wrong function!");
 
     if (Elem.Index != AssumptionCache::ExprResultIdx) {
-      if (assumeBundleImpliesNonNullOn(V, Q.CxtI,
-                                       I->getOperandBundleAt(Elem.Index)) &&
+      if (assumeBundleImpliesNonNull(V, Q.CxtI->getFunction(),
+                                     I->getOperandBundleAt(Elem.Index)) &&
           isValidAssumeForContext(I, Q))
         return true;
       continue;
