@@ -1483,6 +1483,19 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
         C = VRegAndVal->Value.getSExtValue();
       break;
     }
+    case TargetOpcode::G_UBFX: {
+      // For G_UBFX, only walk through when the tested bit lies within the
+      // extracted field; bits at or above the width are known zero, which we
+      // don't handle here.
+      TestReg = MI->getOperand(1).getReg();
+      auto Lsb =
+          getIConstantVRegValWithLookThrough(MI->getOperand(2).getReg(), MRI);
+      auto Width =
+          getIConstantVRegValWithLookThrough(MI->getOperand(3).getReg(), MRI);
+      if (Lsb && Width && Width->Value.ugt(Bit))
+        C = Lsb->Value.getZExtValue();
+      break;
+    }
     }
 
     // Didn't find a constant or viable register. Bail out of the loop.
@@ -1519,6 +1532,15 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
       break;
     case TargetOpcode::G_LSHR:
       // (tbz (lshr x, c), b) -> (tbz x, b+c) when b + c is < # bits in x
+      if ((Bit + *C) < TestRegSize) {
+        NextReg = TestReg;
+        Bit = Bit + *C;
+      }
+      break;
+    case TargetOpcode::G_UBFX:
+      // (tbz (ubfx x, lsb, width), b) -> (tbz x, b+lsb) when b < width, since
+      // bit b of the extract is bit b+lsb of x. (b >= width was rejected when
+      // matching the constant above.)
       if ((Bit + *C) < TestRegSize) {
         NextReg = TestReg;
         Bit = Bit + *C;
