@@ -3814,6 +3814,53 @@ void CIRGenModule::emitOpenCLKernelArgMetadata(cir::FuncOp func,
                 metadata);
 }
 
+void CIRGenModule::emitOpenCLKernelExecutionMetadata(
+    cir::FuncOp func, const clang::FunctionDecl *fd) {
+  assert(fd && "expected a function declaration");
+
+  if (const auto *attr = fd->getAttr<OpenCLIntelReqdSubGroupSizeAttr>()) {
+    errorNYI(attr->getRange(), "intel_reqd_sub_group_size");
+    return;
+  }
+
+  auto evalDim = [&](Expr *expr) {
+    return static_cast<int32_t>(
+        expr->EvaluateKnownConstInt(getASTContext()).getExtValue());
+  };
+
+  mlir::DenseI32ArrayAttr reqdWorkGroupSize;
+  if (const auto *attr = fd->getAttr<ReqdWorkGroupSizeAttr>()) {
+    reqdWorkGroupSize = builder.getDenseI32ArrayAttr(
+        {evalDim(attr->getXDim()), evalDim(attr->getYDim()),
+         evalDim(attr->getZDim())});
+  }
+
+  mlir::DenseI32ArrayAttr workGroupSizeHint;
+  if (const auto *attr = fd->getAttr<WorkGroupSizeHintAttr>()) {
+    workGroupSizeHint = builder.getDenseI32ArrayAttr(
+        {evalDim(attr->getXDim()), evalDim(attr->getYDim()),
+         evalDim(attr->getZDim())});
+  }
+
+  mlir::TypeAttr vecTypeHint;
+  if (const auto *attr = fd->getAttr<VecTypeHintAttr>()) {
+    QualType hint = attr->getTypeHint();
+    if (hint->isExtVectorBoolType()) {
+      errorNYI(attr->getRange(), "vec_type_hint with a boolean vector type");
+      return;
+    }
+    vecTypeHint = mlir::TypeAttr::get(convertType(hint));
+  }
+
+  if (!reqdWorkGroupSize && !workGroupSizeHint && !vecTypeHint)
+    return;
+
+  mlir::Attribute metadata = cir::OpenCLKernelExecutionMetadataAttr::get(
+      func.getContext(), reqdWorkGroupSize, workGroupSizeHint, vecTypeHint);
+  func->setAttr(cir::CIRDialect::getOpenCLKernelExecutionMetadataAttrName(),
+                metadata);
+}
+
 cir::FuncOp CIRGenModule::getOrCreateCIRFunction(
     StringRef mangledName, mlir::Type funcType, GlobalDecl gd, bool forVTable,
     bool dontDefer, bool isThunk, ForDefinition_t isForDefinition,

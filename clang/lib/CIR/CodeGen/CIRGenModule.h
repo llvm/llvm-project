@@ -729,6 +729,10 @@ public:
   void emitOpenCLKernelArgMetadata(cir::FuncOp func,
                                    const clang::FunctionDecl *fd);
 
+  /// Preserve kernel execution attributes validated by Sema.
+  void emitOpenCLKernelExecutionMetadata(cir::FuncOp func,
+                                         const clang::FunctionDecl *fd);
+
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
