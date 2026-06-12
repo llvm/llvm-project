@@ -94,6 +94,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Fast math flags are now permitted on `uitofp` and `sitofp`.
 
+* The ``modular-format`` attribute now supports the ``fixed`` aspect for C
+  ISO 18037 fixed-point ``printf`` specifiers.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
@@ -150,6 +153,9 @@ Makes programs 10x faster by doing Special New Thing.
 * ``TargetRegisterInfo::getMinimalPhysRegClass`` and related APIs have been
   refactored and no longer take a type. This API is also now precomputed in
   TableGen to improve compile-time.
+
+* ``APInt::sqrt`` (square root rounded to nearest integer) has been replaced
+  with ``APInt::sqrtFloor`` (floor of square root).
 
 ### Changes to building LLVM
 

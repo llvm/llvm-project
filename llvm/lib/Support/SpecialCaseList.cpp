@@ -26,8 +26,10 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/WithColor.h"
+#include <assert.h>
 #include <memory>
+#include <mutex>
 #include <stdio.h>
 #include <string>
 #include <system_error>
@@ -92,6 +94,7 @@ private:
 struct QueryOptions {
   bool UseGlobs = true;
   bool RemoveDotSlash = false;
+  bool WarnDotSlashMatch = false;
 };
 
 /// Represents a set of patterns and their line numbers
@@ -110,6 +113,7 @@ private:
 
   std::variant<RegexMatcher, GlobMatcher> M;
   QueryOptions Options;
+  mutable std::once_flag Warned;
 };
 
 Error RegexMatcher::insert(StringRef Pattern, unsigned LineNumber) {
@@ -256,10 +260,40 @@ Error Matcher::insert(StringRef Pattern, unsigned LineNumber) {
   return std::visit([&](auto &V) { return V.insert(Pattern, LineNumber); }, M);
 }
 
+/// Matches Query against the patterns. The behavior is controlled by
+/// `#!special-case-list` version.
+//
+// - Version 1 and 2: Path is matched as-is, regardless of presence of "./".
+// - Version 3, 5 and higher: Paths with leading dot-slash are canonicalized
+//   to paths without dot-slash before matching. This means that a rule
+//   like `src=./foo` will never match, and `src=foo` will match both
+//   `foo` and `./foo`. (Version 3 never became default but has this behavior).
+// - Version 4: Transitionary version. Paths are matched both ways
+//   (canonicalized and non-canonicalized) to maintain backward compatibility.
+//   If a match only works with the old behavior (non-canonicalized), a warning
+//   is emitted.
 unsigned Matcher::match(StringRef Query) const {
-  if (Options.RemoveDotSlash)
-    Query = llvm::sys::path::remove_leading_dotslash(Query);
-  return matchInternal(Query);
+  if (!Options.RemoveDotSlash)
+    return matchInternal(Query);
+
+  if (!Options.WarnDotSlashMatch)
+    return matchInternal(llvm::sys::path::remove_leading_dotslash(Query));
+
+  StringRef FixedQuery = llvm::sys::path::remove_leading_dotslash(Query);
+  unsigned FixedMatched = matchInternal(FixedQuery);
+  if (FixedQuery == Query)
+    return FixedMatched;
+
+  unsigned OriginalMatch = matchInternal(Query);
+  if (OriginalMatch > FixedMatched) {
+    std::call_once(Warned, [&]() {
+      WithColor::warning() << "Deprecated behaviour: pattern '"
+                           << findRule(OriginalMatch) << "' matches '" << Query
+                           << "', update it to match '" << FixedQuery
+                           << "' instead (further warnings suppressed).\n";
+    });
+  }
+  return std::max(OriginalMatch, FixedMatched);
 }
 
 unsigned Matcher::matchInternal(StringRef Query) const {
@@ -370,8 +404,8 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   // first line of the file. For more details, see
   // https://discourse.llvm.org/t/use-glob-instead-of-regex-for-specialcaselists/71666
   bool UseGlobs = MinVersion(2);
-
   bool RemoveDotSlash = MinVersion(3);
+  bool WarnDotSlash = MinVersion(4) && !MinVersion(5);
 
   auto ErrOrSection = addSection("*", FileIdx, 1, true);
   if (auto Err = ErrOrSection.takeError()) {
@@ -420,8 +454,10 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
 
     QueryOptions QOpts;
     QOpts.UseGlobs = UseGlobs;
-    if (llvm::is_contained(PathPrefixes, Prefix))
+    if (llvm::is_contained(PathPrefixes, Prefix)) {
       QOpts.RemoveDotSlash = RemoveDotSlash;
+      QOpts.WarnDotSlashMatch = WarnDotSlash;
+    }
 
     auto [Pattern, Category] = Postfix.split("=");
     auto [It, _] = CurrentImpl->Entries[Prefix].try_emplace(Category, QOpts);
