@@ -1245,6 +1245,16 @@ ParseResult spirv::GLSClampOp::parse(OpAsmParser &parser,
 void spirv::GLSClampOp::print(OpAsmPrinter &p) { printOneResultOp(*this, p); }
 
 //===----------------------------------------------------------------------===//
+// spirv.GLNClampOp
+//===----------------------------------------------------------------------===//
+
+ParseResult spirv::GLNClampOp::parse(OpAsmParser &parser,
+                                     OperationState &result) {
+  return parseOneResultSameOperandTypeOp(parser, result);
+}
+void spirv::GLNClampOp::print(OpAsmPrinter &p) { printOneResultOp(*this, p); }
+
+//===----------------------------------------------------------------------===//
 // spirv.GLFmaOp
 //===----------------------------------------------------------------------===//
 
