@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-linux -Wunused -verify %s
+// RUN: %clang_cc1 -verify %s
 
 struct Convert {
   operator unsigned() const;
