@@ -7,8 +7,51 @@
 
 declare i8 @llvm.uadd.sat.i8(i8, i8)
 declare i8 @llvm.sadd.sat.i8(i8, i8)
+declare i32 @llvm.sadd.sat.i32(i32, i32)
 declare <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8>, <2 x i8>)
 declare <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8>, <2 x i8>)
+
+; C >=s 0:
+; select(y >=s C, sadd.sat(x, y) >=s x, true) -> true
+
+define i1 @sadd_sat_operand_bound(i32 %x, i32 %y) {
+; CHECK-LABEL: @sadd_sat_operand_bound(
+; CHECK-NEXT:    ret i1 true
+;
+  %ynonneg = icmp sge i32 %y, 0
+  %s = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %y)
+  %ok = icmp sge i32 %s, %x
+  %ret = select i1 %ynonneg, i1 %ok, i1 true
+  ret i1 %ret
+}
+
+define i1 @sadd_sat_operand_bound_nonnegative_threshold(i32 %x, i32 %y) {
+; CHECK-LABEL: @sadd_sat_operand_bound_nonnegative_threshold(
+; CHECK-NEXT:    ret i1 true
+;
+  %ybound = icmp sge i32 %y, 42
+  %s = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %y)
+  %ok = icmp sge i32 %s, %x
+  %ret = select i1 %ybound, i1 %ok, i1 true
+  ret i1 %ret
+}
+
+; Negative test: C is negative.
+
+define i1 @sadd_sat_operand_bound_negative_threshold(i32 %x, i32 %y) {
+; CHECK-LABEL: @sadd_sat_operand_bound_negative_threshold(
+; CHECK-NEXT:    [[YBOUND:%.*]] = icmp slt i32 [[Y:%.*]], -1
+; CHECK-NEXT:    [[S:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[X:%.*]], i32 [[Y]])
+; CHECK-NEXT:    [[OK:%.*]] = icmp sge i32 [[S]], [[X]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[YBOUND]], i1 true, i1 [[OK]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %ybound = icmp sge i32 %y, -1
+  %s = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %y)
+  %ok = icmp sge i32 %s, %x
+  %ret = select i1 %ybound, i1 %ok, i1 true
+  ret i1 %ret
+}
 
 ; Constant uadd argument is canonicalized to the right.
 define i8 @test_scalar_uadd_canonical(i8 %a) {

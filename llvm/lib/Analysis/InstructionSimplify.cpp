@@ -4781,6 +4781,47 @@ static Value *simplifySelectWithEquivalence(
   return nullptr;
 }
 
+/// C >=s 0:
+/// select(Y >=s C, sadd.sat(X, Y) >=s X, true) --> true.
+static Value *simplifySelectWithSAddSat(CmpPredicate Pred, Value *CmpLHS,
+                                        Value *CmpRHS, Value *TrueVal,
+                                        Value *FalseVal) {
+  // Canonicalize the constant operand as CmpRHS.
+  const APInt *C;
+  if (match(CmpLHS, m_APInt(C))) {
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+    std::swap(CmpLHS, CmpRHS);
+  }
+  if (!match(CmpRHS, m_APInt(C)) || !ICmpInst::isSigned(Pred) ||
+      !CmpLHS->getType()->isIntegerTy())
+    return nullptr;
+
+  // Canonicalize the true constant as FalseVal.
+  if (match(TrueVal, m_One())) {
+    std::swap(TrueVal, FalseVal);
+    Pred = ICmpInst::getInversePredicate(Pred);
+  }
+  if (!match(FalseVal, m_One()))
+    return nullptr;
+
+  if (!ConstantRange::makeAllowedICmpRegion(Pred, *C).isAllNonNegative())
+    return nullptr;
+
+  CmpPredicate BoundPred;
+  Value *X, *Y, *BoundRHS;
+  if (!match(TrueVal,
+             m_c_ICmp(BoundPred,
+                      m_Intrinsic<Intrinsic::sadd_sat>(m_Value(X), m_Value(Y)),
+                      m_Value(BoundRHS))))
+    return nullptr;
+
+  if (BoundPred == ICmpInst::ICMP_SGE &&
+      ((BoundRHS == X && CmpLHS == Y) || (BoundRHS == Y && CmpLHS == X)))
+    return FalseVal;
+
+  return nullptr;
+}
+
 /// Try to simplify a select instruction when its condition operand is an
 /// integer comparison.
 static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
@@ -4791,6 +4832,10 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
   Value *CmpLHS, *CmpRHS;
   if (!match(CondVal, m_ICmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS))))
     return nullptr;
+
+  if (Value *V =
+          simplifySelectWithSAddSat(Pred, CmpLHS, CmpRHS, TrueVal, FalseVal))
+    return V;
 
   if (Value *V = simplifyCmpSelOfMaxMin(CmpLHS, CmpRHS, Pred, TrueVal, FalseVal))
     return V;
