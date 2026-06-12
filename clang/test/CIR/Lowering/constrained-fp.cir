@@ -1,0 +1,38 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s
+
+module {
+  // CHECK-LABEL: llvm.func @constrained_binops
+  cir.func @constrained_binops(%a: !cir.float, %b: !cir.float) -> !cir.float {
+    // CHECK: llvm.intr.experimental.constrained.fadd %{{.+}}, %{{.+}} dynamic strict : f32
+    %0 = cir.constrained_fadd %a, %b rounding(dynamic) except(strict) : !cir.float
+    // CHECK: llvm.intr.experimental.constrained.fsub %{{.+}}, %{{.+}} tonearest maytrap : f32
+    %1 = cir.constrained_fsub %0, %b rounding(tonearest) except(maytrap) : !cir.float
+    // CHECK: llvm.intr.experimental.constrained.fmul %{{.+}}, %{{.+}} towardzero ignore : f32
+    %2 = cir.constrained_fmul %1, %a rounding(towardzero) except(ignore) : !cir.float
+    // CHECK: llvm.intr.experimental.constrained.fdiv %{{.+}}, %{{.+}} upward strict : f32
+    %3 = cir.constrained_fdiv %2, %b rounding(upward) except(strict) : !cir.float
+    // CHECK: llvm.intr.experimental.constrained.frem %{{.+}}, %{{.+}} downward strict : f32
+    %4 = cir.constrained_frem %3, %a rounding(downward) except(strict) : !cir.float
+    cir.return %4 : !cir.float
+  }
+
+  // A constrained op on a vector-of-float operates element-wise.
+  // CHECK-LABEL: llvm.func @constrained_vec
+  cir.func @constrained_vec(%a: !cir.vector<4 x !cir.float>,
+                            %b: !cir.vector<4 x !cir.float>)
+      -> !cir.vector<4 x !cir.float> {
+    // CHECK: llvm.intr.experimental.constrained.fadd %{{.+}}, %{{.+}} dynamic strict : vector<4xf32>
+    %0 = cir.constrained_fadd %a, %b rounding(dynamic) except(strict)
+        : !cir.vector<4 x !cir.float>
+    cir.return %0 : !cir.vector<4 x !cir.float>
+  }
+
+  // Covers the tonearestaway rounding mode and a wider (double) element type.
+  // CHECK-LABEL: llvm.func @constrained_double
+  cir.func @constrained_double(%a: !cir.double, %b: !cir.double) -> !cir.double {
+    // CHECK: llvm.intr.experimental.constrained.fadd %{{.+}}, %{{.+}} tonearestaway strict : f64
+    %0 = cir.constrained_fadd %a, %b rounding(tonearestaway) except(strict) : !cir.double
+    cir.return %0 : !cir.double
+  }
+}

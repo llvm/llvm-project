@@ -1,0 +1,39 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+// RUN: cir-opt %s --cse | FileCheck %s --check-prefix=CSE
+
+module {
+  // CHECK-LABEL: cir.func @constrained_binops
+  cir.func @constrained_binops(%a: !cir.float, %b: !cir.float) -> !cir.float {
+    // CHECK: cir.constrained_fadd %{{.+}}, %{{.+}} rounding(dynamic) except(strict) : !cir.float
+    %0 = cir.constrained_fadd %a, %b rounding(dynamic) except(strict) : !cir.float
+    // CHECK: cir.constrained_fsub %{{.+}}, %{{.+}} rounding(tonearest) except(maytrap) : !cir.float
+    %1 = cir.constrained_fsub %0, %b rounding(tonearest) except(maytrap) : !cir.float
+    // CHECK: cir.constrained_fmul %{{.+}}, %{{.+}} rounding(towardzero) except(ignore) : !cir.float
+    %2 = cir.constrained_fmul %1, %a rounding(towardzero) except(ignore) : !cir.float
+    // CHECK: cir.constrained_fdiv %{{.+}}, %{{.+}} rounding(upward) except(strict) : !cir.float
+    %3 = cir.constrained_fdiv %2, %b rounding(upward) except(strict) : !cir.float
+    // CHECK: cir.constrained_frem %{{.+}}, %{{.+}} rounding(downward) except(strict) : !cir.float
+    %4 = cir.constrained_frem %3, %a rounding(downward) except(strict) : !cir.float
+    cir.return %4 : !cir.float
+  }
+
+  // Constrained FP ops read/write the floating-point environment, so they are
+  // not Pure: two identical ops must NOT be merged by CSE.
+  // CSE-LABEL: cir.func @no_cse
+  cir.func @no_cse(%a: !cir.float, %b: !cir.float) -> !cir.float {
+    // CSE: cir.constrained_fadd
+    %0 = cir.constrained_fadd %a, %b rounding(dynamic) except(strict) : !cir.float
+    // CSE: cir.constrained_fadd
+    %1 = cir.constrained_fadd %a, %b rounding(dynamic) except(strict) : !cir.float
+    %2 = cir.fadd %0, %1 : !cir.float
+    cir.return %2 : !cir.float
+  }
+
+  // Covers the tonearestaway rounding mode and a wider (double) element type.
+  // CHECK-LABEL: cir.func @constrained_double
+  cir.func @constrained_double(%a: !cir.double, %b: !cir.double) -> !cir.double {
+    // CHECK: cir.constrained_fadd %{{.+}}, %{{.+}} rounding(tonearestaway) except(strict) : !cir.double
+    %0 = cir.constrained_fadd %a, %b rounding(tonearestaway) except(strict) : !cir.double
+    cir.return %0 : !cir.double
+  }
+}

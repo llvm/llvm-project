@@ -2706,6 +2706,130 @@ def CIR_FRemOp : CIR_FPBinaryOp<"frem"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Constrained floating-point binary operations
+//===----------------------------------------------------------------------===//
+
+def CIR_RoundingMode : CIR_I32EnumAttr<"RoundingMode",
+    "floating-point rounding mode for constrained operations", [
+  I32EnumAttrCase<"NearestTiesToEven", 0, "tonearest">,
+  I32EnumAttrCase<"Downward", 1, "downward">,
+  I32EnumAttrCase<"Upward", 2, "upward">,
+  I32EnumAttrCase<"TowardZero", 3, "towardzero">,
+  I32EnumAttrCase<"Dynamic", 4, "dynamic">,
+  I32EnumAttrCase<"NearestTiesToAway", 5, "tonearestaway">
+]>;
+
+def CIR_FPExceptionBehavior : CIR_I32EnumAttr<"FPExceptionBehavior",
+    "floating-point exception behavior for constrained operations", [
+  I32EnumAttrCase<"Ignore", 0, "ignore">,
+  I32EnumAttrCase<"MayTrap", 1, "maytrap">,
+  I32EnumAttrCase<"Strict", 2, "strict">
+]>;
+
+// Base class for constrained floating-point binary arithmetic operations.
+// These model the LLVM `llvm.experimental.constrained.*` intrinsics: they
+// read and write the floating-point environment (per their rounding mode and
+// exception behavior), so they are deliberately NOT `Pure` -- they must not be
+// speculated, CSE'd, hoisted, or constant-folded across an `fesetround` /
+// `feclearexcept`.
+class CIR_ConstrainedFPBinaryOp<string mnemonic, list<Trait> traits = []>
+    : CIR_Op<mnemonic, !listconcat([SameOperandsAndResultType], traits)> {
+  let arguments = (ins
+    CIR_AnyFloatOrVecOfFloatType:$lhs,
+    CIR_AnyFloatOrVecOfFloatType:$rhs,
+    CIR_RoundingMode:$rounding,
+    CIR_FPExceptionBehavior:$exception_behavior
+  );
+  let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
+  let assemblyFormat = [{
+    $lhs `,` $rhs `rounding` `(` $rounding `)` `except`
+    `(` $exception_behavior `)` `:` type($result) attr-dict
+  }];
+}
+
+def CIR_ConstrainedFAddOp : CIR_ConstrainedFPBinaryOp<"constrained_fadd"> {
+  let summary = "Constrained floating-point addition";
+  let description = [{
+    The `cir.constrained_fadd` operation performs floating-point addition under
+    an explicit rounding mode and exception behavior, modeling
+    `llvm.experimental.constrained.fadd`.  Emitted for code compiled with
+    `#pragma STDC FENV_ACCESS ON`, `-frounding-math`, or
+    `-ffp-exception-behavior=strict`.
+
+    Example:
+
+    ```
+    %0 = cir.constrained_fadd %a, %b rounding(dynamic) except(strict)
+        : !cir.float
+    ```
+  }];
+}
+
+def CIR_ConstrainedFSubOp : CIR_ConstrainedFPBinaryOp<"constrained_fsub"> {
+  let summary = "Constrained floating-point subtraction";
+  let description = [{
+    The `cir.constrained_fsub` operation performs floating-point subtraction
+    under an explicit rounding mode and exception behavior, modeling
+    `llvm.experimental.constrained.fsub`.
+
+    Example:
+
+    ```
+    %0 = cir.constrained_fsub %a, %b rounding(dynamic) except(strict)
+        : !cir.float
+    ```
+  }];
+}
+
+def CIR_ConstrainedFMulOp : CIR_ConstrainedFPBinaryOp<"constrained_fmul"> {
+  let summary = "Constrained floating-point multiplication";
+  let description = [{
+    The `cir.constrained_fmul` operation performs floating-point multiplication
+    under an explicit rounding mode and exception behavior, modeling
+    `llvm.experimental.constrained.fmul`.
+
+    Example:
+
+    ```
+    %0 = cir.constrained_fmul %a, %b rounding(dynamic) except(strict)
+        : !cir.float
+    ```
+  }];
+}
+
+def CIR_ConstrainedFDivOp : CIR_ConstrainedFPBinaryOp<"constrained_fdiv"> {
+  let summary = "Constrained floating-point division";
+  let description = [{
+    The `cir.constrained_fdiv` operation performs floating-point division under
+    an explicit rounding mode and exception behavior, modeling
+    `llvm.experimental.constrained.fdiv`.
+
+    Example:
+
+    ```
+    %0 = cir.constrained_fdiv %a, %b rounding(dynamic) except(strict)
+        : !cir.float
+    ```
+  }];
+}
+
+def CIR_ConstrainedFRemOp : CIR_ConstrainedFPBinaryOp<"constrained_frem"> {
+  let summary = "Constrained floating-point remainder";
+  let description = [{
+    The `cir.constrained_frem` operation computes the floating-point remainder
+    under an explicit rounding mode and exception behavior, modeling
+    `llvm.experimental.constrained.frem`.
+
+    Example:
+
+    ```
+    %0 = cir.constrained_frem %a, %b rounding(dynamic) except(strict)
+        : !cir.float
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // AndOp
 //===----------------------------------------------------------------------===//
 

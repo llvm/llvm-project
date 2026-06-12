@@ -2834,6 +2834,99 @@ convertCmpKindToFCmpPredicate(cir::CmpOpKind kind) {
   llvm_unreachable("Unknown CmpOpKind");
 }
 
+static mlir::LLVM::RoundingMode convertCIRRoundingMode(cir::RoundingMode mode) {
+  switch (mode) {
+  case cir::RoundingMode::NearestTiesToEven:
+    return mlir::LLVM::RoundingMode::NearestTiesToEven;
+  case cir::RoundingMode::Downward:
+    return mlir::LLVM::RoundingMode::TowardNegative;
+  case cir::RoundingMode::Upward:
+    return mlir::LLVM::RoundingMode::TowardPositive;
+  case cir::RoundingMode::TowardZero:
+    return mlir::LLVM::RoundingMode::TowardZero;
+  case cir::RoundingMode::Dynamic:
+    return mlir::LLVM::RoundingMode::Dynamic;
+  case cir::RoundingMode::NearestTiesToAway:
+    return mlir::LLVM::RoundingMode::NearestTiesToAway;
+  }
+  llvm_unreachable("unknown CIR rounding mode");
+}
+
+static mlir::LLVM::FPExceptionBehavior
+convertCIRFPExceptionBehavior(cir::FPExceptionBehavior eb) {
+  switch (eb) {
+  case cir::FPExceptionBehavior::Ignore:
+    return mlir::LLVM::FPExceptionBehavior::Ignore;
+  case cir::FPExceptionBehavior::MayTrap:
+    return mlir::LLVM::FPExceptionBehavior::MayTrap;
+  case cir::FPExceptionBehavior::Strict:
+    return mlir::LLVM::FPExceptionBehavior::Strict;
+  }
+  llvm_unreachable("unknown CIR FP exception behavior");
+}
+
+// Lower a constrained FP binary op (cir.constrained_f{add,sub,mul,div,rem})
+// to its LLVM `llvm.experimental.constrained.*` intrinsic counterpart,
+// threading the rounding mode and exception behavior through.
+template <typename CIROpTy, typename LLVMOpTy, typename AdaptorTy>
+static mlir::LogicalResult
+lowerConstrainedFPBinOp(CIROpTy op, AdaptorTy adaptor,
+                        mlir::ConversionPatternRewriter &rewriter,
+                        const mlir::TypeConverter *typeConverter) {
+  mlir::Type llvmResTy = typeConverter->convertType(op.getType());
+  if (!llvmResTy)
+    return op.emitError() << "unsupported result type for constrained FP op";
+  auto roundingAttr = mlir::LLVM::RoundingModeAttr::get(
+      op.getContext(), convertCIRRoundingMode(op.getRounding()));
+  auto exceptAttr = mlir::LLVM::FPExceptionBehaviorAttr::get(
+      op.getContext(),
+      convertCIRFPExceptionBehavior(op.getExceptionBehavior()));
+  rewriter.replaceOpWithNewOp<LLVMOpTy>(op, llvmResTy, adaptor.getLhs(),
+                                        adaptor.getRhs(), roundingAttr,
+                                        exceptAttr);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMConstrainedFAddOpLowering::matchAndRewrite(
+    cir::ConstrainedFAddOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return lowerConstrainedFPBinOp<cir::ConstrainedFAddOp,
+                                 mlir::LLVM::ConstrainedFAddIntr>(
+      op, adaptor, rewriter, getTypeConverter());
+}
+
+mlir::LogicalResult CIRToLLVMConstrainedFSubOpLowering::matchAndRewrite(
+    cir::ConstrainedFSubOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return lowerConstrainedFPBinOp<cir::ConstrainedFSubOp,
+                                 mlir::LLVM::ConstrainedFSubIntr>(
+      op, adaptor, rewriter, getTypeConverter());
+}
+
+mlir::LogicalResult CIRToLLVMConstrainedFMulOpLowering::matchAndRewrite(
+    cir::ConstrainedFMulOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return lowerConstrainedFPBinOp<cir::ConstrainedFMulOp,
+                                 mlir::LLVM::ConstrainedFMulIntr>(
+      op, adaptor, rewriter, getTypeConverter());
+}
+
+mlir::LogicalResult CIRToLLVMConstrainedFDivOpLowering::matchAndRewrite(
+    cir::ConstrainedFDivOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return lowerConstrainedFPBinOp<cir::ConstrainedFDivOp,
+                                 mlir::LLVM::ConstrainedFDivIntr>(
+      op, adaptor, rewriter, getTypeConverter());
+}
+
+mlir::LogicalResult CIRToLLVMConstrainedFRemOpLowering::matchAndRewrite(
+    cir::ConstrainedFRemOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return lowerConstrainedFPBinOp<cir::ConstrainedFRemOp,
+                                 mlir::LLVM::ConstrainedFRemIntr>(
+      op, adaptor, rewriter, getTypeConverter());
+}
+
 mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
     cir::CmpOp cmpOp, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {

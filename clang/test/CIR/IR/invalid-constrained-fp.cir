@@ -1,0 +1,9 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+
+cir.func @nonfp_operand(%a: !s32i, %b: !s32i) -> !s32i {
+  // expected-error@+1 {{operand #0 must be floating point or vector of floating point type}}
+  %0 = cir.constrained_fadd %a, %b rounding(dynamic) except(strict) : !s32i
+  cir.return %0 : !s32i
+}
