@@ -1585,7 +1585,7 @@ FailureOr<llvm::Metadata *> ModuleTranslation::convertMetadataAttr(
                                   intAttr.getType().getIntOrFloatBitWidth()),
             intAttr.getValue()));
       })
-      .Case<MDFuncAttr>([&](auto a) -> FailureOr<llvm::Metadata *> {
+      .Case<MDValueAttr>([&](auto a) -> FailureOr<llvm::Metadata *> {
         if (llvm::Function *fn = lookupFunction(a.getName().getValue()))
           return llvm::ValueAsMetadata::get(fn);
         if (llvm::GlobalValue *global = lookupGlobal(a.getName().getValue()))

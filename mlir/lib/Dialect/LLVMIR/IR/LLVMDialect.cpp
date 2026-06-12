@@ -4710,7 +4710,7 @@ Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
     return LLVM::PoisonOp::create(builder, loc, type);
   if (isa<LLVM::ZeroAttr>(value))
     return LLVM::ZeroOp::create(builder, loc, type);
-  if (isa<LLVM::MDStringAttr, LLVM::MDConstantAttr, LLVM::MDFuncAttr,
+  if (isa<LLVM::MDStringAttr, LLVM::MDConstantAttr, LLVM::MDValueAttr,
           LLVM::MDNodeAttr>(value))
     if (isa<LLVM::LLVMMetadataType>(type))
       return LLVM::MetadataAsValueOp::create(builder, loc, type, value);

@@ -2521,8 +2521,8 @@ def LLVM_MetadataAsValueOp
 
     * `#llvm.md_string<"...">` -> `llvm::MDString`.
     * `#llvm.md_const<...>` -> `llvm::ConstantAsMetadata`.
-    * `#llvm.md_func<@symbol>` -> `llvm::ValueAsMetadata` of a function or
-      global value.
+    * `#llvm.md_value<@symbol>` -> `llvm::ValueAsMetadata` of a
+      symbol-backed value.
     * `#llvm.md_node<...>` -> `llvm::MDNode` over any of the above.
 
     These can be nested arbitrarily to form metadata trees. Lowering to LLVM
@@ -2697,7 +2697,7 @@ def LLVM_NamedMetadataOp
     ]
     llvm.named_metadata "foo.kernel" [
       #llvm.md_node<
-        #llvm.md_func<@my_kernel>,
+        #llvm.md_value<@my_kernel>,
         #llvm.md_node<>,
         #llvm.md_node<
           #llvm.md_node<#llvm.md_const<0 : i32>,

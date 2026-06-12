@@ -1147,8 +1147,8 @@ llvm.func @metadata_as_value_shapes() {
   %0 = llvm.mlir.metadata_as_value #llvm.md_string<"sp">
   // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_const<42 : i32>
   %1 = llvm.mlir.metadata_as_value #llvm.md_const<42 : i32>
-  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_func<@md_kernel>
-  %2 = llvm.mlir.metadata_as_value #llvm.md_func<@md_kernel>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_value<@md_kernel>
+  %2 = llvm.mlir.metadata_as_value #llvm.md_value<@md_kernel>
   // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
   %3 = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
   llvm.return
@@ -1219,10 +1219,10 @@ llvm.named_metadata "foo.language" [
   >
 ]
 
-// CHECK: llvm.named_metadata "foo.kernel" [#llvm.md_node<#llvm.md_func<@md_kernel>, #llvm.md_node<>, #llvm.md_node<#llvm.md_const<0 : i32>, #llvm.md_string<"foo.buffer">>>]
+// CHECK: llvm.named_metadata "foo.kernel" [#llvm.md_node<#llvm.md_value<@md_kernel>, #llvm.md_node<>, #llvm.md_node<#llvm.md_const<0 : i32>, #llvm.md_string<"foo.buffer">>>]
 llvm.named_metadata "foo.kernel" [
   #llvm.md_node<
-    #llvm.md_func<@md_kernel>,
+    #llvm.md_value<@md_kernel>,
     #llvm.md_node<>,
     #llvm.md_node<
       #llvm.md_const<0 : i32>,

@@ -232,11 +232,11 @@ def testMetadataAttrs():
     # CHECK: #llvm.md_const<42 : i32>
     print(md_const)
 
-    # MDFuncAttr
-    md_func = llvm.MDFuncAttr.get("my_kernel")
-    # CHECK: #llvm.md_func<@my_kernel>
-    print(md_func)
-    assert md_func.name == "my_kernel"
+    # MDValueAttr
+    md_value = llvm.MDValueAttr.get("my_kernel")
+    # CHECK: #llvm.md_value<@my_kernel>
+    print(md_value)
+    assert md_value.name == "my_kernel"
 
     # MDNodeAttr - empty
     md_empty = llvm.MDNodeAttr.get([])
@@ -326,7 +326,7 @@ def testNamedMetadata():
             [
                 llvm.MDNodeAttr.get(
                     [
-                        llvm.MDFuncAttr.get("my_kernel"),
+                        llvm.MDValueAttr.get("my_kernel"),
                         llvm.MDNodeAttr.get([]),
                         buf0,
                     ]
@@ -336,7 +336,7 @@ def testNamedMetadata():
     )
     # CHECK:       llvm.named_metadata "foo.kernel" [
     # CHECK-SAME:  #llvm.md_node<
-    # CHECK-SAME:      #llvm.md_func<@my_kernel>,
+    # CHECK-SAME:      #llvm.md_value<@my_kernel>,
     # CHECK-SAME:      #llvm.md_node<>,
     # CHECK-SAME:      #llvm.md_node<
     # CHECK-SAME:          #llvm.md_const<0 : i32>,
