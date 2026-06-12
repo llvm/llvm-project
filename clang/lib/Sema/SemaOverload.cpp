@@ -7036,7 +7036,6 @@ ExprResult Sema::PerformContextualImplicitConversion(
   if (Converter.match(T))
     return Converted;
 
-
   // FIXME: Check for missing '()' if T is a function type?
 
   // We can only perform contextual implicit conversions on objects of class
