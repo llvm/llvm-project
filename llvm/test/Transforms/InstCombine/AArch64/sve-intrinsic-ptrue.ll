@@ -5,8 +5,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define <vscale x 16 x i1> @ptrue_pow2(<vscale x 16 x i1> %a) #0 {
 ; CHECK-LABEL: @ptrue_pow2(
-; CHECK-NEXT:    [[MASK:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 0)
-; CHECK-NEXT:    ret <vscale x 16 x i1> [[MASK]]
+; CHECK-NEXT:    ret <vscale x 16 x i1> splat (i1 true)
 ;
   %mask = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue(i32 0)
   ret <vscale x 16 x i1> %mask

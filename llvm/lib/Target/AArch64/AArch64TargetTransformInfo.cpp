@@ -2967,8 +2967,11 @@ static std::optional<Instruction *> instCombineWhilelo(InstCombiner &IC,
 
 static std::optional<Instruction *> instCombinePTrue(InstCombiner &IC,
                                                      IntrinsicInst &II) {
-  if (match(II.getOperand(0), m_ConstantInt<AArch64SVEPredPattern::all>()))
-    return IC.replaceInstUsesWith(II, Constant::getAllOnesValue(II.getType()));
+  unsigned PredPattern = cast<ConstantInt>(II.getOperand(0))->getZExtValue();
+  // SVE vector length is a power-of-two, thus pow2 is synonymous with all.
+  if (PredPattern == AArch64SVEPredPattern::all ||
+      PredPattern == AArch64SVEPredPattern::pow2)
+    return IC.replaceInstUsesWith(II, ConstantInt::getTrue(II.getType()));
   return std::nullopt;
 }
 
