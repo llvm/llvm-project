@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMAIRWriter
   BitcodeEmitter.cpp
   ConstantsWriter.cpp
   FunctionWriter.cpp
+  LowerVectorSelect.cpp
   MetadataWriter.cpp
   AIREmbedderPass.cpp
   AIRLibWriter.cpp

@@ -14,6 +14,7 @@
 
 #include "BitcodeEmitter.h"
 #include "BitcodeEncoding.h"
+#include "LowerVectorSelect.h"
 #include "MetadataWriter.h"
 #include "AIRConstraints.h"
 #include "AIRVersion.h"
@@ -182,7 +183,6 @@ void lowerConstantExprs(Module &M) {
 // record"); wrap such incomings in an identity bitcast typed to the phi's
 // pointee. The bitcast lands in the incoming block before its terminator.
 static void fixPhiIncomingTypes(Module &M, PointeeTypeMap &PTM) {
-  Type *FloatTy = Type::getFloatTy(M.getContext());
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
@@ -677,7 +677,7 @@ static void lowerVectorPointerToInt(Module &M) {
 // the SelectInst emission in FunctionWriter). The mid-end vectorizers produce
 // vector-condition selects on `where`/`clamp`; scalarize each into a per-lane
 // extract/select/insert chain that re-vectorizes the result.
-static void scalarizeVectorSelects(Module &M) {
+[[maybe_unused]] static void scalarizeVectorSelects(Module &M) {
   auto Sels = collectInsts<SelectInst>(M, [](SelectInst *Sel) {
     return Sel->getCondition()->getType()->isVectorTy();
   });
@@ -1432,7 +1432,8 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
     scalarizeBoolVectorCasts(M);
     lowerCmpIntrinsics(M);
     lowerVectorPointerToInt(M);
-    scalarizeVectorSelects(M);
+    // scalarizeVectorSelects(M); // disabled for now
+    lowerVectorSelects(M);
     removeRedundantBitcasts(M, PTM);
     // --- Stage B: GEP source-type normalization ---
     // Shapes 1-3 (see normalizeGEPs). Runs after the Stage-A passes that
