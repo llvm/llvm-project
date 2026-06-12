@@ -1832,7 +1832,8 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     TakenBranchInfo &Info = TraceMap[Trace{LBR.From, LBR.To, TraceTo}];
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
-    Returns.emplace(LBR.From, LBR.IsReturn);
+    if (LBR.IsReturn)
+      Returns.emplace(LBR.From, true);
   }
   // Record LBR addresses not covered by fallthroughs (bottom-of-stack source
   // and top-of-stack target) as basic samples for heatmap.
