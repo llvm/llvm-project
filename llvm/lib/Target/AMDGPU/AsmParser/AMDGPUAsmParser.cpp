@@ -617,6 +617,11 @@ public:
 
   bool isVSrc_b64() const { return isVCSrc_f64() || isLiteralImm(MVT::i64); }
 
+  bool isVSrc_v2f64() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_128RegClassID, MVT::f64) ||
+           isLiteralImm(MVT::f64);
+  }
+
   bool isVSrcT_b16() const { return isVCSrcT_b16() || isLiteralImm(MVT::i16); }
 
   bool isVSrcT_b16_Lo128() const {
@@ -2080,6 +2085,7 @@ static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+  case AMDGPU::OPERAND_REG_IMM_V2FP64:
   case AMDGPU::OPERAND_KIMM64:
     return &APFloat::IEEEdouble();
   case AMDGPU::OPERAND_REG_IMM_FP16:
@@ -2400,6 +2406,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
     case AMDGPU::OPERAND_REG_INLINE_C_INT64:
     case AMDGPU::OPERAND_REG_INLINE_C_FP64:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+    case AMDGPU::OPERAND_REG_IMM_V2FP64:
       if (Lit == LitModifier::None &&
           AMDGPU::isInlinableLiteral64(Literal.getZExtValue(),
                                        AsmParser->hasInv2PiInlineImm())) {
@@ -2550,6 +2557,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+  case AMDGPU::OPERAND_REG_IMM_V2FP64:
     if (Lit == LitModifier::None &&
         AMDGPU::isInlinableLiteral64(Val, AsmParser->hasInv2PiInlineImm())) {
       Inst.addOperand(MCOperand::createImm(Val));
@@ -5613,11 +5621,14 @@ bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
   const MCRegisterInfo *TRI = getContext().getRegisterInfo();
   const MCInstrDesc &Desc = MII.get(Opc);
 
-  auto validateFmt = [&](AMDGPU::OpName FmtOp, AMDGPU::OpName SrcOp) -> bool {
-    int FmtIdx = AMDGPU::getNamedOperandIdx(Opc, FmtOp);
-    if (FmtIdx == -1)
-      return true;
-    unsigned Fmt = Inst.getOperand(FmtIdx).getImm();
+  int AFmtIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_a_fmt);
+  if (AFmtIdx == -1)
+    return true;
+  unsigned AFmt = Inst.getOperand(AFmtIdx).getImm();
+  int BFmtIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_b_fmt);
+  unsigned BFmt = Inst.getOperand(BFmtIdx).getImm();
+
+  auto validateFmt = [&](unsigned Fmt, AMDGPU::OpName SrcOp) -> bool {
     int SrcIdx = AMDGPU::getNamedOperandIdx(Opc, SrcOp);
     unsigned RegSize =
         TRI->getRegClass(MII.getOpRegClassID(Desc.operands()[SrcIdx], HwMode))
@@ -5632,8 +5643,25 @@ bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
     return false;
   };
 
-  return validateFmt(AMDGPU::OpName::matrix_a_fmt, AMDGPU::OpName::src0) &&
-         validateFmt(AMDGPU::OpName::matrix_b_fmt, AMDGPU::OpName::src1);
+  if (!validateFmt(AFmt, AMDGPU::OpName::src0) ||
+      !validateFmt(BFmt, AMDGPU::OpName::src1))
+    return false;
+
+  int AScaleIdx =
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_a_scale_fmt);
+  if (AScaleIdx == -1)
+    return true;
+  unsigned AScale = Inst.getOperand(AScaleIdx).getImm();
+  int BScaleIdx =
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::matrix_b_scale_fmt);
+  unsigned BScale = Inst.getOperand(BScaleIdx).getImm();
+  if (!isValidWMMAScaleFmtCombination(AFmt, AScale, BFmt, BScale)) {
+    Error(getImmLoc(AMDGPUOperand::ImmTyMatrixAFMT, Operands),
+          "invalid matrix and scale format combination");
+    return false;
+  }
+
+  return true;
 }
 
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst, SMLoc IDLoc,

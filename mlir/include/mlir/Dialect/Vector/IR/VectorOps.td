@@ -1457,6 +1457,7 @@ def Vector_TransferReadOp :
   let builders = [
     /// 1. Builder that sets padding to `padding` or poison if not provided and
     /// an empty mask (variant with attrs).
+    /// If `padding` is null, a poison value is used.
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
                    "ValueRange":$indices,
@@ -1464,7 +1465,10 @@ def Vector_TransferReadOp :
                    "AffineMapAttr":$permutationMapAttr,
                    "ArrayAttr":$inBoundsAttr)>,
     /// 2. Builder that sets padding to `padding` or poison if not provided and
-    /// an empty mask (variant without attrs).
+    /// an empty mask (variant without attrs). 
+    /// If `padding` is null, a poison value is used.
+    /// If `permutationMap` is null, a minor identity map is used.
+    /// If `inBounds` is null, an empty mask is used.
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
                    "ValueRange":$indices,
@@ -1473,6 +1477,8 @@ def Vector_TransferReadOp :
                    CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
     /// 3. Builder that sets padding to `padding` or poison if not provided and
     /// permutation map to 'getMinorIdentityMap'.
+    /// If `padding` is null, a poison value is used.
+    /// If `inBounds` is null, an empty mask is used.
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
                    "ValueRange":$indices,
@@ -1631,7 +1637,8 @@ def Vector_TransferWriteOp :
                    "ValueRange":$indices,
                    "AffineMapAttr":$permutationMapAttr,
                    "ArrayAttr":$inBoundsAttr)>,
-    /// 3. Builder with type inference that sets an empty mask (variant without attrs).
+    /// 3. Builder with type inference that sets an empty mask (variant without
+    /// attrs). If `permutationMap` is null, a minor identity map is used.
     OpBuilder<(ins "Value":$vector,
                    "Value":$dest,
                    "ValueRange":$indices,

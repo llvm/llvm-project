@@ -127,7 +127,7 @@ static bool isDereferenceableAndAlignedPointer(
   auto IsKnownDeref = [&]() {
     bool CheckForNonNull, CheckForFreed;
     if (!Size.ule(V->getPointerDereferenceableBytes(SQ.DL, CheckForNonNull,
-                                                    CheckForFreed)))
+                                                    &CheckForFreed)))
       return false;
     if (CheckForNonNull && !isKnownNonZero(V, SQ))
       return false;

@@ -320,7 +320,8 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
     return getLit64Encoding(Desc, static_cast<uint64_t>(Imm), STI, true);
 
-  case AMDGPU::OPERAND_REG_IMM_FP64: {
+  case AMDGPU::OPERAND_REG_IMM_FP64:
+  case AMDGPU::OPERAND_REG_IMM_V2FP64: {
     auto Enc = getLit64Encoding(Desc, static_cast<uint64_t>(Imm), STI, true);
     return (HasMandatoryLiteral && Enc == 255) ? 254 : Enc;
   }

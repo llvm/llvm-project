@@ -314,9 +314,14 @@ struct UModSimplification final : OpRewritePattern<spirv::UModOp> {
     bool isApplicable = false;
     if (auto prevInt = dyn_cast<IntegerAttr>(prevValue)) {
       auto currInt = cast<IntegerAttr>(currValue);
+      if (currInt.getValue().isZero())
+        return failure();
       isApplicable = prevInt.getValue().urem(currInt.getValue()) == 0;
     } else if (auto prevVec = dyn_cast<DenseElementsAttr>(prevValue)) {
       auto currVec = cast<DenseElementsAttr>(currValue);
+      if (llvm::any_of(currVec.getValues<APInt>(),
+                       [](const APInt &curr) { return curr.isZero(); }))
+        return failure();
       isApplicable = llvm::all_of(llvm::zip_equal(prevVec.getValues<APInt>(),
                                                   currVec.getValues<APInt>()),
                                   [](const auto &pair) {

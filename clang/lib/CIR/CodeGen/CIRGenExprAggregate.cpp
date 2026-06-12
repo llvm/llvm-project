@@ -627,9 +627,7 @@ public:
     emitFinalDestCopy(e->getType(), tmpLValue);
   }
 
-  void VisitCXXThrowExpr(const CXXThrowExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCXXThrowExpr");
-  }
+  void VisitCXXThrowExpr(const CXXThrowExpr *e) { cgf.emitCXXThrowExpr(e); }
   void VisitAtomicExpr(AtomicExpr *e) {
     RValue result = cgf.emitAtomicExpr(e);
     emitFinalDestCopy(e->getType(), result);

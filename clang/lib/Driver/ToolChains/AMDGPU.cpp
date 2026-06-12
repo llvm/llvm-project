@@ -714,23 +714,24 @@ Tool *AMDGPUToolChain::buildLinker() const {
 DerivedArgList *
 AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
                                Action::OffloadKind DeviceOffloadKind) const {
-
   DerivedArgList *DAL =
       Generic_ELF::TranslateArgs(Args, BoundArch, DeviceOffloadKind);
+  if (!DAL) {
+    DAL = new DerivedArgList(Args.getBaseArgs());
+    for (Arg *A : Args)
+      DAL->append(A);
+  }
 
   const OptTable &Opts = getDriver().getOpts();
 
-  if (!DAL)
-    DAL = new DerivedArgList(Args.getBaseArgs());
-
-  for (Arg *A : Args)
-    DAL->append(A);
-
-  // AMDGPU is intended to use `-mcpu` but we accept `-march` for legacy.
-  if (Arg *A = DAL->getLastArg(options::OPT_march_EQ)) {
-    DAL->eraseArg(options::OPT_march_EQ);
-    if (!DAL->hasArg(options::OPT_mcpu_EQ))
-      DAL->AddJoinedArg(A, Opts.getOption(options::OPT_mcpu_EQ), A->getValue());
+  if (DeviceOffloadKind == Action::OFK_None) {
+    // AMDGPU is intended to use `-mcpu` but we accept `-march` for legacy.
+    if (Arg *A = DAL->getLastArg(options::OPT_march_EQ)) {
+      DAL->eraseArg(options::OPT_march_EQ);
+      if (!DAL->hasArg(options::OPT_mcpu_EQ))
+        DAL->AddJoinedArg(A, Opts.getOption(options::OPT_mcpu_EQ),
+                          A->getValue());
+    }
   }
 
   // Replace -mcpu=native with detected GPU.
@@ -751,7 +752,13 @@ AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
     }
   }
 
-  checkTargetID(*DAL);
+  if (!BoundArch.empty()) {
+    DAL->eraseArg(options::OPT_mcpu_EQ);
+    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mcpu_EQ), BoundArch);
+    checkTargetID(*DAL);
+  } else if (DeviceOffloadKind == Action::OFK_None) {
+    checkTargetID(*DAL);
+  }
 
   if (Args.getLastArgValue(options::OPT_x) != "cl")
     return DAL;
@@ -836,6 +843,29 @@ ROCMToolChain::ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
     : AMDGPUToolChain(D, Triple, Args) {
   if (Triple.getEnvironment() != llvm::Triple::LLVM)
     RocmInstallation->detectDeviceLibrary();
+}
+
+DerivedArgList *
+ROCMToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
+                             Action::OffloadKind DeviceOffloadKind) const {
+  DerivedArgList *DAL =
+      AMDGPUToolChain::TranslateArgs(Args, BoundArch, DeviceOffloadKind);
+
+  // Filter out sanitizer coverage options that are not supported for AMDGPU.
+  for (Arg *A : Args) {
+    // Sanitizer coverage is currently not supported for AMDGPU.
+    if (A->getOption().matches(options::OPT_fsan_cov_Group)) {
+      // Upgrade to error if the option was explicitly specified for device
+      bool IsExplicitDevice =
+          A->getBaseArg().getOption().matches(options::OPT_Xarch_device);
+      getDriver().Diag(IsExplicitDevice
+                           ? diag::err_drv_unsupported_option_for_target
+                           : diag::warn_drv_unsupported_option_for_target)
+          << A->getAsString(Args) << getTriple().str();
+    }
+  }
+
+  return DAL;
 }
 
 void AMDGPUToolChain::addClangTargetOptions(

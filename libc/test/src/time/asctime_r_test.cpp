@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+#include "hdr/signal_macros.h"
 #include "src/time/asctime_r.h"
 #include "src/time/time_constants.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
@@ -26,20 +27,14 @@ static inline char *call_asctime_r(struct tm *tm_data, int year, int month,
 // asctime and asctime_r share the same code and thus didn't repeat all the
 // tests from asctime. Added couple of validation tests.
 TEST_F(LlvmLibcAsctimeR, Nullptr) {
-  char *result;
-  result = LIBC_NAMESPACE::asctime_r(nullptr, nullptr);
-  ASSERT_ERRNO_EQ(EINVAL);
-  ASSERT_STREQ(nullptr, result);
-
   char buffer[LIBC_NAMESPACE::time_constants::ASCTIME_BUFFER_SIZE];
-  result = LIBC_NAMESPACE::asctime_r(nullptr, buffer);
-  ASSERT_ERRNO_EQ(EINVAL);
-  ASSERT_STREQ(nullptr, result);
-
   struct tm tm_data;
-  result = LIBC_NAMESPACE::asctime_r(&tm_data, nullptr);
-  ASSERT_ERRNO_EQ(EINVAL);
-  ASSERT_STREQ(nullptr, result);
+  EXPECT_DEATH([] { LIBC_NAMESPACE::asctime_r(nullptr, nullptr); },
+               WITH_SIGNAL(-1));
+  EXPECT_DEATH([&] { LIBC_NAMESPACE::asctime_r(nullptr, buffer); },
+               WITH_SIGNAL(-1));
+  EXPECT_DEATH([&] { LIBC_NAMESPACE::asctime_r(&tm_data, nullptr); },
+               WITH_SIGNAL(-1));
 }
 
 TEST_F(LlvmLibcAsctimeR, ValidDate) {

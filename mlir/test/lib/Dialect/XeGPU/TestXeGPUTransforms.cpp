@@ -282,7 +282,7 @@ struct TestXeGPUSgToLaneDistribute
     ConversionTarget target(*ctx);
     RewritePatternSet patterns(ctx);
     xegpu::populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
-        typeConverter, patterns, target);
+        typeConverter, patterns, target, op);
     (void)applyPartialConversion(op, target, std::move(patterns));
   }
 };

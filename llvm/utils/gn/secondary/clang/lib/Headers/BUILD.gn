@@ -341,6 +341,7 @@ copy("Headers") {
     "riscv_mips.h",
     "riscv_nds.h",
     "riscv_ntlh.h",
+    "riscv_packed_simd.h",
     "rtmintrin.h",
     "s390intrin.h",
     "serializeintrin.h",

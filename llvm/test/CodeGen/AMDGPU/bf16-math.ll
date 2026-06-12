@@ -492,10 +492,7 @@ define amdgpu_ps bfloat @test_clamp_bf16_folding(bfloat %src) {
 ; FAKE16-LABEL: test_clamp_bf16_folding:
 ; FAKE16:       ; %bb.0:
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; FAKE16-NEXT:    v_exp_bf16_e32 v0, v0
-; FAKE16-NEXT:    v_nop
-; FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
-; FAKE16-NEXT:    v_pk_max_num_bf16 v0, v0, v0 clamp
+; FAKE16-NEXT:    v_exp_bf16_e64 v0, v0 clamp
 ; FAKE16-NEXT:    ; return to shader part epilog
   %exp = call bfloat @llvm.exp2.bf16(bfloat %src)
   %max = call bfloat @llvm.maxnum.bf16(bfloat %exp, bfloat 0.0)

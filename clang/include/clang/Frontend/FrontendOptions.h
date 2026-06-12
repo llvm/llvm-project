@@ -550,6 +550,12 @@ public:
   /// format.
   std::string SSAFTUSummaryFile;
 
+  /// Stable identifier for this translation unit, used as the name of the
+  /// `CompilationUnit` `BuildNamespace` of every produced TU summary. The
+  /// caller (typically the build system) supplies a value that is constant
+  /// across stages of the SSAF pipeline.
+  std::string SSAFCompilationUnitId;
+
   /// Show available SSAF summary extractors.
   LLVM_PREFERRED_TYPE(bool)
   unsigned SSAFShowExtractors : 1;

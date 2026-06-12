@@ -104,6 +104,7 @@ public:
     reportNoescapeViolations();
     reportLifetimeboundViolations();
     reportMisplacedLifetimebound();
+    reportInapplicableLifetimebound();
     //  Annotation inference is currently guarded by a frontend flag. In the
     //  future, this might be replaced by a design that differentiates between
     //  explicit and inferred findings with separate warning groups.
@@ -265,8 +266,10 @@ public:
 
         } else
           // Scope-based expiry (use-after-scope).
-          SemaHelper->reportUseAfterScope(IssueExpr, UF->getUseExpr(),
-                                          MovedExpr, ExpiryLoc);
+          SemaHelper->reportUseAfterScope(
+              IssueExpr, UF->getUseExpr(), MovedExpr, ExpiryLoc,
+              getExprChain(LoanPropagation.buildOriginFlowChain(UF, LID)));
+
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
         if (Warning.InvalidatedByExpr) {
@@ -470,6 +473,24 @@ public:
     }
   }
 
+  void reportInapplicableLifetimebound() {
+    const auto *FDef = dyn_cast<FunctionDecl>(FD);
+    if (!FDef)
+      return;
+
+    // If analyzed function is a template definition or an implicit
+    // instantiation, skip.
+    if (FDef->getTemplatedKind() == FunctionDecl::TK_FunctionTemplate ||
+        FDef->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return;
+
+    for (const auto &PVD : FDef->parameters())
+      if (PVD->hasAttr<LifetimeBoundAttr>() &&
+          !FactMgr.getOriginMgr().hasOrigins(PVD->getType(),
+                                             /*IntrinsicOnly=*/true))
+        SemaHelper->reportInapplicableLifetimebound(PVD);
+  }
+
   void inferAnnotations() {
     for (auto [Target, EscapeTarget] : AnnotationWarningsMap) {
       if (const auto *MD = Target.dyn_cast<const CXXMethodDecl *>()) {
@@ -489,6 +510,21 @@ public:
               LifetimeBoundAttr::CreateImplicit(AST, PVD->getLocation()));
       }
     }
+  }
+
+  /// Extract expressions from the origin flow chain for diagnostic purposes.
+  ///
+  /// Given a chain of origins that shows how a loan propagates, this function
+  /// extracts the corresponding expressions for each origin. Origins that refer
+  /// to declarations (rather than expressions) are skipped.
+  llvm::SmallVector<const Expr *>
+  getExprChain(llvm::ArrayRef<OriginID> OriginFlowChain) {
+    llvm::SmallVector<const Expr *> rs;
+    for (const OriginID CurrOID : OriginFlowChain)
+      if (const Expr *CurrExpr =
+              FactMgr.getOriginMgr().getOrigin(CurrOID).getExpr())
+        rs.push_back(CurrExpr);
+    return rs;
   }
 };
 } // namespace

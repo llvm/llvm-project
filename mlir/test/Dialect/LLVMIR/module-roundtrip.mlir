@@ -46,3 +46,14 @@ module {
 // CHECK-SAME:        <cut_off = 10000, min_count = 86427, num_counts = 1>,
 // CHECK-SAME:        <cut_off = 100000, min_count = 86427, num_counts = 1>
 // CHECK-SAME: >>]
+
+// -----
+
+module {
+  llvm.module_flags [#llvm.mlir.module_flag<require, "shared-require", 0 : i32>,
+                     #llvm.mlir.module_flag<require, "shared-require", 1 : i32>]
+}
+
+// CHECK: llvm.module_flags [
+// CHECK-SAME: #llvm.mlir.module_flag<require, "shared-require", 0 : i32>,
+// CHECK-SAME: #llvm.mlir.module_flag<require, "shared-require", 1 : i32>]

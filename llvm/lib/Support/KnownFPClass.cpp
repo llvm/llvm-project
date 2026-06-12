@@ -228,8 +228,14 @@ KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
 
   if (DenormMode.Input == DenormalMode::PositiveZero ||
       (DenormMode.Output == DenormalMode::PositiveZero &&
-       DenormMode.Input == DenormalMode::IEEE))
-    Known.knownNot(fcNegZero);
+       DenormMode.Input == DenormalMode::IEEE)) {
+    // -0.0 is not a subnormal and should not be flushed.
+    if (KnownSrc.isKnownNever(fcNegZero))
+      Known.knownNot(fcNegZero);
+
+    if (KnownSrc.isKnownNever(fcPosZero | fcSubnormal))
+      Known.knownNot(fcPosZero);
+  }
 
   return Known;
 }

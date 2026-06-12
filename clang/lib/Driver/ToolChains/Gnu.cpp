@@ -3457,8 +3457,8 @@ llvm::opt::DerivedArgList *
 Generic_GCC::TranslateArgs(const llvm::opt::DerivedArgList &Args,
                            StringRef BoundArch,
                            Action::OffloadKind DeviceOffloadKind) const {
-  if (DeviceOffloadKind != Action::OFK_SYCL &&
-      DeviceOffloadKind != Action::OFK_OpenMP)
+  if (DeviceOffloadKind == Action::OFK_None ||
+      DeviceOffloadKind == Action::OFK_Host)
     return nullptr;
 
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
@@ -3484,13 +3484,14 @@ Generic_GCC::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 
   // Add the bound architecture to the arguments list if present.
   if (!BoundArch.empty()) {
-    options::ID Opt =
-        getTriple().isARM() || getTriple().isPPC() || getTriple().isAArch64()
-            ? options::OPT_mcpu_EQ
-            : options::OPT_march_EQ;
+    options::ID Opt = getTriple().isARM() || getTriple().isPPC() ||
+                              getTriple().isAArch64() || getTriple().isAMDGPU()
+                          ? options::OPT_mcpu_EQ
+                          : options::OPT_march_EQ;
     DAL->eraseArg(Opt);
     DAL->AddJoinedArg(nullptr, Opts.getOption(Opt), BoundArch);
   }
+
   return DAL;
 }
 

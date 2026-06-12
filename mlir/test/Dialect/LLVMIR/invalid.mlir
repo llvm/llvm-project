@@ -1850,8 +1850,17 @@ llvm.mlir.alias external @y5 : i32 {
 module {
   llvm.func @foo()
 
-  // expected-error@below {{only integer, string, and string-array values are currently supported for unknown key '"yolo"'}}
+  // expected-error@below {{only integer, integer-like dialect attributes, string, and string-array values are currently supported for unknown key '"yolo"'}}
   llvm.module_flags [#llvm.mlir.module_flag<error, "yolo", @foo>]
+}
+
+// -----
+
+module {
+  // expected-error@below {{expected module flag key 'amdgpu.buffer.oob.mode' to be unique for non-require flags}}
+  llvm.module_flags [#rocdl.buffer_oob_mode_flag<any>,
+                     #llvm.mlir.module_flag<max, "amdgpu.buffer.oob.mode",
+                                            #rocdl.buffer_oob_mode<strict>>]
 }
 
 // -----

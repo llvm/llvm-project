@@ -1,10 +1,7 @@
 name: "Check LLVM ABI annotations"
 
-# TODO(https://github.com/llvm/llvm-project/issues/109483): Re-enable on pull
-# requests once the workflow is less diruptive.
 on:
-  # pull_request:
-  workflow_dispatch:
+  pull_request:
 
 permissions:
   contents: read

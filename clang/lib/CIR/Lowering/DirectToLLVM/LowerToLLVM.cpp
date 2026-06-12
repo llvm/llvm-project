@@ -1216,13 +1216,6 @@ mlir::LogicalResult CIRToLLVMBitPopcountOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
-mlir::LogicalResult CIRToLLVMBitReverseOpLowering::matchAndRewrite(
-    cir::BitReverseOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::BitReverseOp>(op, adaptor.getInput());
-  return mlir::success();
-}
-
 mlir::LogicalResult CIRToLLVMBrCondOpLowering::matchAndRewrite(
     cir::BrCondOp brOp, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1237,13 +1230,6 @@ mlir::LogicalResult CIRToLLVMBrCondOpLowering::matchAndRewrite(
       brOp.getDestFalse(), adaptor.getDestOperandsFalse());
 
   return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMByteSwapOpLowering::matchAndRewrite(
-    cir::ByteSwapOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::ByteSwapOp>(op, adaptor.getInput());
-  return mlir::LogicalResult::success();
 }
 
 mlir::Type CIRToLLVMCastOpLowering::convertTy(mlir::Type ty) const {
@@ -1657,13 +1643,6 @@ mlir::LogicalResult CIRToLLVMAllocaOpLowering::matchAndRewrite(
                                                     size, op.getAlignment());
 
   return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMReturnOpLowering::matchAndRewrite(
-    cir::ReturnOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::ReturnOp>(op, adaptor.getOperands());
-  return mlir::LogicalResult::success();
 }
 
 mlir::LogicalResult CIRToLLVMRotateOpLowering::matchAndRewrite(
@@ -2776,30 +2755,6 @@ mlir::LogicalResult CIRToLLVMRemOpLowering::matchAndRewrite(
       op, adaptor.getLhs(), adaptor.getRhs(), rewriter);
 }
 
-mlir::LogicalResult CIRToLLVMAndOpLowering::matchAndRewrite(
-    cir::AndOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(op, adaptor.getLhs(),
-                                                 adaptor.getRhs());
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMOrOpLowering::matchAndRewrite(
-    cir::OrOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::OrOp>(op, adaptor.getLhs(),
-                                                adaptor.getRhs());
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMXorOpLowering::matchAndRewrite(
-    cir::XorOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(op, adaptor.getLhs(),
-                                                 adaptor.getRhs());
-  return mlir::success();
-}
-
 template <typename CIROp, typename UIntOp, typename SIntOp>
 static mlir::LogicalResult
 lowerMinMaxOp(CIROp op, typename CIROp::Adaptor adaptor,
@@ -3822,13 +3777,6 @@ mlir::LogicalResult CIRToLLVMInsertMemberOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMUnreachableOpLowering::matchAndRewrite(
-    cir::UnreachableOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::UnreachableOp>(op);
-  return mlir::success();
-}
-
 void createLLVMFuncOpIfNotExist(mlir::ConversionPatternRewriter &rewriter,
                                 mlir::Operation *srcOp, llvm::StringRef fnName,
                                 mlir::Type fnTy,
@@ -4156,21 +4104,6 @@ mlir::LogicalResult CIRToLLVMVTTAddrPointOpLowering::matchAndRewrite(
   rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
       op, resultType, eltType, llvmAddr, offsets,
       mlir::LLVM::GEPNoWrapFlags::inbounds);
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMStackSaveOpLowering::matchAndRewrite(
-    cir::StackSaveOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  const mlir::Type ptrTy = getTypeConverter()->convertType(op.getType());
-  rewriter.replaceOpWithNewOp<mlir::LLVM::StackSaveOp>(op, ptrTy);
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMStackRestoreOpLowering::matchAndRewrite(
-    cir::StackRestoreOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::StackRestoreOp>(op, adaptor.getPtr());
   return mlir::success();
 }
 
@@ -4688,13 +4621,6 @@ mlir::LogicalResult CIRToLLVMGetBitfieldOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMIsConstantOpLowering::matchAndRewrite(
-    cir::IsConstantOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::IsConstantOp>(op, adaptor.getVal());
-  return mlir::success();
-}
-
 mlir::LogicalResult CIRToLLVMInlineAsmOpLowering::matchAndRewrite(
     cir::InlineAsmOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -4984,14 +4910,6 @@ mlir::LogicalResult CIRToLLVMMemChrOpLowering::matchAndRewrite(
       mlir::ValueRange{adaptor.getSrc(), adaptor.getPattern(),
                        adaptor.getLen()});
   newCall.setArgAttrsAttr(argAttrs);
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMLaunderOpLowering::matchAndRewrite(
-    cir::LaunderOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::LaunderInvariantGroupOp>(
-      op, adaptor.getArg());
   return mlir::success();
 }
 

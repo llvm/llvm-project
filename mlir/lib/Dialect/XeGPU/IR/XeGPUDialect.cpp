@@ -661,7 +661,8 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
 //     min(remaining, targetShape[i]); leftover spills into the next inner
 //     dim.
 //   - sg_data: fill innermost-first, capped per dim by
-//     targetShape[i] / sgLayout[i] (the per-sg share of the extent).
+//     targetShape[i] / sgLayout[i] (the per-sg share of the extent),
+//     or targetShape[i] (if sg_data is replicated across all subgroups).
 //   - lane_data: fill innermost-first, capped per dim by
 //     (targetShape[i] / sgLayout[i]) / laneLayout[i] (the per-lane share of
 //     the per-sg extent).
@@ -751,9 +752,11 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
     expSgLayout = spread(origSgLayoutDim, targetShape, /*outerToInner=*/true);
     splice(sgLayout, expSgLayout);
   }
+  bool sgDataReplicated =
+      hasSgData && origSgDataDim == computeProduct(targetShape);
   if (hasSgData) {
     SmallVector<int64_t> dimSizeCap(targetShape.begin(), targetShape.end());
-    if (hasSgLayout)
+    if (hasSgLayout && !sgDataReplicated)
       for (int64_t i = 0; i < expCount; ++i)
         dimSizeCap[i] /= expSgLayout[i];
     SmallVector<int64_t> expSgData =
@@ -765,7 +768,7 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
   // targetShape[i] / sg_layout[i] when sg_layout is present, else
   // targetShape itself.
   SmallVector<int64_t> perSgShape(targetShape.begin(), targetShape.end());
-  if (hasSgLayout)
+  if (hasSgLayout && !sgDataReplicated)
     for (int64_t i = 0; i < expCount; ++i)
       perSgShape[i] /= expSgLayout[i];
 

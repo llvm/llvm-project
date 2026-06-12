@@ -1866,8 +1866,9 @@ bool StrNCmpInliner::optimizeStrNCmp() {
 
   // Cases where StrP has two or more dereferenceable bytes might be better
   // optimized elsewhere.
-  bool CanBeNull = false, CanBeFreed = false;
-  if (StrP->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed) > 1)
+  bool CanBeNull = false;
+  if (StrP->getPointerDereferenceableBytes(DL, CanBeNull,
+                                           /*CanBeFreed=*/nullptr) > 1)
     return false;
   inlineCompare(StrP, Str, N, HasStr1);
   return true;

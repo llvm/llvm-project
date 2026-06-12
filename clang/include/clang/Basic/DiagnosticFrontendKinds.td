@@ -429,6 +429,11 @@ def warn_ssaf_write_tu_summary_failed :
   Warning<"failed to write TU summary to '%0': %1">,
   InGroup<ScalableStaticAnalysisFramework>, DefaultError;
 
+def warn_ssaf_tu_summary_requires_compilation_unit_id :
+  Warning<"option '--ssaf-tu-summary-file=' requires "
+          "'--ssaf-compilation-unit-id=' to be set">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
 def err_extract_api_ignores_file_not_found :
   Error<"file '%0' specified by '--extract-api-ignores=' not found">, DefaultFatal;
 

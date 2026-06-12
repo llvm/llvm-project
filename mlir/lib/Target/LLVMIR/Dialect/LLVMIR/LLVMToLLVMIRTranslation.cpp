@@ -382,34 +382,40 @@ static llvm::Metadata *convertModuleFlagProfileSummaryAttr(
 static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
                                  LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
-  for (auto flagAttr : flags.getAsRange<ModuleFlagAttr>()) {
+  auto convertIntegerAttr = [&](IntegerAttr intAttr) -> llvm::Metadata * {
+    return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+        llvm::Type::getInt32Ty(builder.getContext()), intAttr.getInt()));
+  };
+  for (auto flagAttr : flags.getAsRange<ModuleFlagAttrInterface>()) {
     llvm::Metadata *valueMetadata =
-        llvm::TypeSwitch<Attribute, llvm::Metadata *>(flagAttr.getValue())
+        llvm::TypeSwitch<Attribute, llvm::Metadata *>(
+            flagAttr.getModuleFlagValue())
             .Case([&](StringAttr strAttr) {
               return llvm::MDString::get(builder.getContext(),
                                          strAttr.getValue());
             })
             .Case([&](IntegerAttr intAttr) {
-              return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-                  llvm::Type::getInt32Ty(builder.getContext()),
-                  intAttr.getInt()));
+              return convertIntegerAttr(intAttr);
+            })
+            .Case([&](IntrinsicIntegerAttrInterface intAttr) {
+              return convertIntegerAttr(intAttr.getIntegerAttr());
             })
             .Case([&](ArrayAttr arrayAttr) {
-              return convertModuleFlagValue(flagAttr.getKey().getValue(),
-                                            arrayAttr, builder,
-                                            moduleTranslation);
+              return convertModuleFlagValue(
+                  flagAttr.getModuleFlagKey().getValue(), arrayAttr, builder,
+                  moduleTranslation);
             })
             .Case([&](ModuleFlagProfileSummaryAttr summaryAttr) {
               return convertModuleFlagProfileSummaryAttr(
-                  flagAttr.getKey().getValue(), summaryAttr, builder,
+                  flagAttr.getModuleFlagKey().getValue(), summaryAttr, builder,
                   moduleTranslation);
             })
             .Default([](auto) { return nullptr; });
 
     assert(valueMetadata && "expected valid metadata");
     llvmModule->addModuleFlag(
-        convertModFlagBehaviorToLLVM(flagAttr.getBehavior()),
-        flagAttr.getKey().getValue(), valueMetadata);
+        convertModFlagBehaviorToLLVM(flagAttr.getModuleFlagBehavior()),
+        flagAttr.getModuleFlagKey().getValue(), valueMetadata);
   }
 }
 

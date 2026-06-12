@@ -168,3 +168,52 @@ func.func @arith_select_elementwise(%a: tensor<?xf32>, %b: tensor<?xf32>, %c: te
   // CHECK: return %[[dim]]
   return %0 : index
 }
+
+// -----
+
+// CHECK-LABEL: func @arith_minsi(
+//  CHECK-SAME:     %[[a:.*]]: index
+//       CHECK:   %[[ub:.*]] = arith.constant 5 : index
+//       CHECK:   return %[[ub]]
+func.func @arith_minsi(%a: index) -> index {
+  %c4 = arith.constant 4 : index
+  %0 = arith.minsi %a, %c4 : index
+  %1 = "test.reify_bound"(%0) {type = "UB"} : (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+func.func @arith_minsi_lb(%a: index) -> index {
+  %c4 = arith.constant 4 : index
+  %0 = arith.minsi %a, %c4 : index
+  // Signed min has no lower bound.
+  // expected-error @below{{could not reify bound}}
+  %1 = "test.reify_bound"(%0) {type = "LB"} : (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @arith_maxsi(
+//  CHECK-SAME:     %[[a:.*]]: index
+//       CHECK:   arith.constant 4 : index
+//       CHECK:   %[[lb:.*]] = arith.constant 4 : index
+//       CHECK:   return %[[lb]]
+func.func @arith_maxsi(%a: index) -> index {
+  %c4 = arith.constant 4 : index
+  %0 = arith.maxsi %a, %c4 : index
+  %1 = "test.reify_bound"(%0) {type = "LB"} : (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+func.func @arith_maxsi_ub(%a: index) -> index {
+  %c4 = arith.constant 4 : index
+  %0 = arith.maxsi %a, %c4 : index
+  // Signed max has no upper bound.
+  // expected-error @below{{could not reify bound}}
+  %1 = "test.reify_bound"(%0) {type = "UB"} : (index) -> (index)
+  return %1 : index
+}

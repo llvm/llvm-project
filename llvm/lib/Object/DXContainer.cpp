@@ -361,6 +361,7 @@ parseContentsEntries(StringRef Entries,
     return Contents.Parameters.EntriesSizeInBytes;
   }
   }
+  llvm_unreachable("unhandled compression type");
 }
 
 static Expected<size_t>

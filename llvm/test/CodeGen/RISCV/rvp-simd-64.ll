@@ -4720,3 +4720,171 @@ define <2 x i32> @test_sext_v2i16_to_v2i32(<2 x i16> %a) {
   %res = sext <2 x i16> %a to <2 x i32>
   ret <2 x i32> %res
 }
+
+define <8 x i8> @test_paadd_v8i8(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_paadd_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    paadd.db a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_paadd_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    paadd.b a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <8 x i8> @llvm.riscv.paadd.v8i8(<8 x i8> %a, <8 x i8> %b)
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_paaddu_v8i8(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_paaddu_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    paaddu.db a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_paaddu_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    paaddu.b a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <8 x i8> @llvm.riscv.paaddu.v8i8(<8 x i8> %a, <8 x i8> %b)
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_pasub_v8i8(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_pasub_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pasub.db a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pasub_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pasub.b a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <8 x i8> @llvm.riscv.pasub.v8i8(<8 x i8> %a, <8 x i8> %b)
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_pasubu_v8i8(<8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: test_pasubu_v8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pasubu.db a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pasubu_v8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pasubu.b a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <8 x i8> @llvm.riscv.pasubu.v8i8(<8 x i8> %a, <8 x i8> %b)
+  ret <8 x i8> %res
+}
+
+define <4 x i16> @test_paadd_v4i16(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_paadd_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    paadd.dh a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_paadd_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    paadd.h a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.paadd.v4i16(<4 x i16> %a, <4 x i16> %b)
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_paaddu_v4i16(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_paaddu_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    paaddu.dh a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_paaddu_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    paaddu.h a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.paaddu.v4i16(<4 x i16> %a, <4 x i16> %b)
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_pasub_v4i16(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_pasub_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pasub.dh a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pasub_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pasub.h a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.pasub.v4i16(<4 x i16> %a, <4 x i16> %b)
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_pasubu_v4i16(<4 x i16> %a, <4 x i16> %b) {
+; RV32-LABEL: test_pasubu_v4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pasubu.dh a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pasubu_v4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pasubu.h a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <4 x i16> @llvm.riscv.pasubu.v4i16(<4 x i16> %a, <4 x i16> %b)
+  ret <4 x i16> %res
+}
+
+define <2 x i32> @test_paadd_v2i32(<2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_paadd_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    paadd.dw a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_paadd_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    paadd.w a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.paadd.v2i32(<2 x i32> %a, <2 x i32> %b)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_paaddu_v2i32(<2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_paaddu_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    paaddu.dw a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_paaddu_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    paaddu.w a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.paaddu.v2i32(<2 x i32> %a, <2 x i32> %b)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_pasub_v2i32(<2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_pasub_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pasub.dw a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pasub_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pasub.w a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pasub.v2i32(<2 x i32> %a, <2 x i32> %b)
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_pasubu_v2i32(<2 x i32> %a, <2 x i32> %b) {
+; RV32-LABEL: test_pasubu_v2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pasubu.dw a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_pasubu_v2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pasubu.w a0, a0, a1
+; RV64-NEXT:    ret
+  %res = call <2 x i32> @llvm.riscv.pasubu.v2i32(<2 x i32> %a, <2 x i32> %b)
+  ret <2 x i32> %res
+}

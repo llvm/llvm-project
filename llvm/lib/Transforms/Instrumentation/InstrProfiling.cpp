@@ -1984,6 +1984,50 @@ void InstrLowerer::emitVNodes() {
   UsedVars.push_back(VNodesVar);
 }
 
+// Build the per-TU device-PGO sections struct: section start/stop bounds for
+// names/counters/data plus the raw version. Returns null if it already exists.
+static GlobalVariable *emitGPUOffloadSectionsStruct(Module &M,
+                                                    StringRef CUIDPostfix) {
+  std::string Name = ("__llvm_profile_sections" + CUIDPostfix).str();
+  if (M.getNamedValue(Name))
+    return nullptr;
+
+  LLVMContext &Ctx = M.getContext();
+  unsigned AS = M.getDataLayout().getDefaultGlobalsAddressSpace();
+  auto Extern = [&](StringRef Sym, Type *Ty, bool IsConst,
+                    GlobalValue::VisibilityTypes Vis) {
+    GlobalVariable *GV = M.getNamedGlobal(Sym);
+    if (!GV) {
+      GV = new GlobalVariable(M, Ty, IsConst, GlobalValue::ExternalLinkage,
+                              nullptr, Sym, nullptr,
+                              GlobalValue::NotThreadLocal, AS);
+      GV->setVisibility(Vis);
+    }
+    return GV;
+  };
+  // Section bounds are hidden i8 markers; raw_version is an i64 constant.
+  auto *I8 = Type::getInt8Ty(Ctx);
+  auto Hidden = GlobalValue::HiddenVisibility;
+  Constant *Fields[] = {Extern("__start___llvm_prf_names", I8, false, Hidden),
+                        Extern("__stop___llvm_prf_names", I8, false, Hidden),
+                        Extern("__start___llvm_prf_cnts", I8, false, Hidden),
+                        Extern("__stop___llvm_prf_cnts", I8, false, Hidden),
+                        Extern("__start___llvm_prf_data", I8, false, Hidden),
+                        Extern("__stop___llvm_prf_data", I8, false, Hidden),
+                        Extern("__llvm_profile_raw_version",
+                               Type::getInt64Ty(Ctx), true,
+                               GlobalValue::DefaultVisibility)};
+  auto *PtrTy = PointerType::get(Ctx, AS);
+  auto *STy =
+      StructType::get(Ctx, {PtrTy, PtrTy, PtrTy, PtrTy, PtrTy, PtrTy, PtrTy});
+  auto *GV = new GlobalVariable(M, STy, /*isConstant=*/true,
+                                GlobalValue::ExternalLinkage,
+                                ConstantStruct::get(STy, Fields), Name, nullptr,
+                                GlobalValue::NotThreadLocal, AS);
+  GV->setVisibility(GlobalValue::ProtectedVisibility);
+  return GV;
+}
+
 void InstrLowerer::emitNameData() {
   if (ReferencedNames.empty())
     return;
@@ -1998,9 +2042,28 @@ void InstrLowerer::emitNameData() {
   auto *NamesVal =
       ConstantDataArray::getString(Ctx, StringRef(CompressedNameStr), false);
   std::string NamesVarName = std::string(getInstrProfNamesVarName());
-  NamesVar =
-      new GlobalVariable(M, NamesVal->getType(), true,
-                         GlobalValue::PrivateLinkage, NamesVal, NamesVarName);
+  GlobalValue::LinkageTypes NamesLinkage = GlobalValue::PrivateLinkage;
+  GlobalValue::VisibilityTypes NamesVisibility = GlobalValue::DefaultVisibility;
+  std::string GPUCUIDPostfix;
+  if (isGPUProfTarget(M)) {
+    if (auto *GV = M.getNamedGlobal(getInstrProfNamesVarPostfixVarName())) {
+      if (auto *Init =
+              dyn_cast_or_null<ConstantDataArray>(GV->getInitializer())) {
+        if (Init->isCString()) {
+          GPUCUIDPostfix = Init->getAsCString().str();
+          NamesVarName += GPUCUIDPostfix;
+          NamesLinkage = GlobalValue::ExternalLinkage;
+          NamesVisibility = GlobalValue::ProtectedVisibility;
+          removeFromUsedLists(
+              M, [GV](Constant *C) { return C->stripPointerCasts() == GV; });
+          GV->eraseFromParent();
+        }
+      }
+    }
+  }
+  NamesVar = new GlobalVariable(M, NamesVal->getType(), true, NamesLinkage,
+                                NamesVal, NamesVarName);
+  NamesVar->setVisibility(NamesVisibility);
 
   NamesSize = CompressedNameStr.size();
   setGlobalVariableLargeSection(TT, *NamesVar);
@@ -2019,6 +2082,14 @@ void InstrLowerer::emitNameData() {
 
   for (auto *NamePtr : ReferencedNames)
     NamePtr->eraseFromParent();
+
+  // Emit the device sections struct only when this TU produced profile data, so
+  // its section start/stop references are backed by a real section.
+  bool HasData = llvm::any_of(ProfileDataMap,
+                              [](const auto &KV) { return KV.second.DataVar; });
+  if (!GPUCUIDPostfix.empty() && HasData)
+    if (GlobalVariable *GV = emitGPUOffloadSectionsStruct(M, GPUCUIDPostfix))
+      CompilerUsedVars.push_back(GV);
 }
 
 void InstrLowerer::emitVTableNames() {

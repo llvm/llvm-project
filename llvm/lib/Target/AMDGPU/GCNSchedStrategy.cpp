@@ -1318,7 +1318,7 @@ void RewriteMFMAFormStage::findReachingDefs(
 }
 
 void RewriteMFMAFormStage::findReachingUses(
-    MachineInstr *DefMI, LiveIntervals *LIS,
+    const MachineInstr *DefMI, LiveIntervals *LIS,
     SmallVectorImpl<MachineOperand *> &ReachingUses) {
   SlotIndex DefIdx = LIS->getInstructionIndex(*DefMI);
   for (MachineOperand &UseMO :
@@ -2248,18 +2248,39 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
   DAG.Regions[RegionIdx].first = MIOrder.front();
 }
 
-/// Returns true when \p RD will already be in AGPR-form after the rewrite, so
-/// no bridge copy is needed at this reaching definition.
-static bool isReachingDefAGPRForm(MachineInstr *RD,
-                                  const DenseSet<Register> &CandSrc2Regs,
-                                  const SIInstrInfo &TII) {
+/// Returns true if reaching def \p RD will be in AGPR form after the rewrite
+/// and so needs no bridge copy: a candidate MFMA in \p RewriteSet, an
+/// AV_MOV_*_IMM_PSEUDO, or a copy from a candidate src2 reg in \p CandSrc2Regs.
+/// A non-candidate MFMA stays in VGPR form and still needs a bridge.
+static bool isReachingDefAGPRForm(
+    MachineInstr *RD, const SmallPtrSetImpl<MachineInstr *> &RewriteSet,
+    const DenseSet<Register> &CandSrc2Regs, const SIInstrInfo &TII) {
   if (TII.isMAI(*RD))
-    return true;
+    return RewriteSet.contains(RD);
   if (RD->getOpcode() == AMDGPU::AV_MOV_B32_IMM_PSEUDO ||
       RD->getOpcode() == AMDGPU::AV_MOV_B64_IMM_PSEUDO)
     return true;
   if (RD->isCopy() && CandSrc2Regs.contains(RD->getOperand(1).getReg()))
     return true;
+  return false;
+}
+
+bool RewriteMFMAFormStage::hasUseRequiringVGPR(
+    ArrayRef<SlotIndex> Src2ReachingDefs,
+    const SmallPtrSetImpl<MachineInstr *> &RewriteSet) {
+  for (SlotIndex RDIdx : Src2ReachingDefs) {
+    const MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
+    SmallVector<MachineOperand *, 8> ReachingUses;
+    findReachingUses(RD, DAG.LIS, ReachingUses);
+    for (const MachineOperand *UseMO : ReachingUses) {
+      const MachineInstr *UseMI = UseMO->getParent();
+      if (UseMI->isCopy())
+        continue;
+      if (TII->isMAI(*UseMI) && RewriteSet.contains(UseMI))
+        continue;
+      return true;
+    }
+  }
   return false;
 }
 
@@ -2338,9 +2359,15 @@ bool RewriteMFMAFormStage::initHeuristics(
         SmallVector<SlotIndex, 8> Src2ReachingDefs;
         findReachingDefs(*Src2, DAG.LIS, Src2ReachingDefs);
 
+        // If src2 has a use that must remain VGPR, it cannot be reclassified to
+        // AGPR.
+        bool Src2NeedsVGPR = hasUseRequiringVGPR(Src2ReachingDefs, RewriteSet);
+        Src2NeedsVGPRCache[&MI] = Src2NeedsVGPR;
+
         for (SlotIndex RDIdx : Src2ReachingDefs) {
           MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
-          if (isReachingDefAGPRForm(RD, CandSrc2Regs, *TII))
+          if (!Src2NeedsVGPR &&
+              isReachingDefAGPRForm(RD, RewriteSet, CandSrc2Regs, *TII))
             continue;
           CopyForDef.insert(RD);
         }
@@ -2598,9 +2625,14 @@ bool RewriteMFMAFormStage::rewrite(
       findReachingDefs(*Src2, DAG.LIS, Src2ReachingDefs);
       SmallSetVector<MachineInstr *, 8> Src2DefsReplace;
 
+      // If src2 has a use that must remain VGPR, it cannot be reclassified to
+      // AGPR.
+      bool Src2NeedsVGPR = Src2NeedsVGPRCache.lookup(MI);
+
       for (SlotIndex RDIndex : Src2ReachingDefs) {
         MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
-        if (isReachingDefAGPRForm(RD, RewriteSrc2Regs, *TII))
+        if (!Src2NeedsVGPR &&
+            isReachingDefAGPRForm(RD, RewriteCandsSet, RewriteSrc2Regs, *TII))
           continue;
 
         Src2DefsReplace.insert(RD);

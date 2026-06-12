@@ -4937,9 +4937,9 @@ struct AADereferenceableImpl : AADereferenceable {
     AA::hasAssumedIRAttr<Attribute::NonNull>(
         A, this, getIRPosition(), DepClassTy::OPTIONAL, IsKnownNonNull);
 
-    bool CanBeNull, CanBeFreed;
+    bool CanBeNull;
     takeKnownDerefBytesMaximum(V.getPointerDereferenceableBytes(
-        A.getDataLayout(), CanBeNull, CanBeFreed));
+        A.getDataLayout(), CanBeNull, /*CanBeFreed=*/nullptr));
 
     if (Instruction *CtxI = getCtxI())
       followUsesInMBEC(*this, A, getState(), *CtxI);
@@ -5066,9 +5066,9 @@ struct AADereferenceableFloating : AADereferenceableImpl {
       if (!AA || (!Stripped && this == AA)) {
         // Use IR information if we did not strip anything.
         // TODO: track globally.
-        bool CanBeNull, CanBeFreed;
-        DerefBytes =
-            Base->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
+        bool CanBeNull;
+        DerefBytes = Base->getPointerDereferenceableBytes(
+            DL, CanBeNull, /*CanBeFreed=*/nullptr);
         T.GlobalState.indicatePessimisticFixpoint();
       } else {
         const DerefState &DS = AA->getState();

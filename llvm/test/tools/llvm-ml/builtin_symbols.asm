@@ -56,4 +56,10 @@ ECHO t6:
 ; CHECK-FIXEDTIME: Time = 00:00:00
 ; CHECK-NOT: {{[[:digit:]]}}
 
+ECHO t7:
+unwind_val TEXTEQU %@UnwindVersion
+%ECHO @UnwindVersion = unwind_val
+; CHECK-LABEL: t7:
+; CHECK-NEXT: @UnwindVersion = 1
+
 end

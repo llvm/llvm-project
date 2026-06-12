@@ -2155,15 +2155,12 @@ static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
     if ((PredicateBits & (1 << I)) == 0)
       return std::nullopt;
 
-  auto *PTruePat =
-      ConstantInt::get(Type::getInt32Ty(Ctx), AArch64SVEPredPattern::all);
-  auto *PTrue = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_ptrue,
-                                           {PredType}, {PTruePat});
-  auto *ConvertToSVBool = IC.Builder.CreateIntrinsic(
-      Intrinsic::aarch64_sve_convert_to_svbool, {PredType}, {PTrue});
+  auto *ConvertToSVBool =
+      IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool,
+                                 PredType, ConstantInt::getTrue(PredType));
   auto *ConvertFromSVBool =
       IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool,
-                                 {II.getType()}, {ConvertToSVBool});
+                                 II.getType(), ConvertToSVBool);
 
   ConvertFromSVBool->takeName(&II);
   return IC.replaceInstUsesWith(II, ConvertFromSVBool);
@@ -2287,15 +2284,10 @@ static std::optional<Instruction *> instCombineSVECondLast(InstCombiner &IC,
 
 static std::optional<Instruction *> instCombineRDFFR(InstCombiner &IC,
                                                      IntrinsicInst &II) {
-  LLVMContext &Ctx = II.getContext();
   // Replace rdffr with predicated rdffr.z intrinsic, so that optimizePTestInstr
   // can work with RDFFR_PP for ptest elimination.
-  auto *AllPat =
-      ConstantInt::get(Type::getInt32Ty(Ctx), AArch64SVEPredPattern::all);
-  auto *PTrue = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_ptrue,
-                                           {II.getType()}, {AllPat});
-  auto *RDFFR =
-      IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_rdffr_z, {PTrue});
+  auto *RDFFR = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_rdffr_z,
+                                           ConstantInt::getTrue(II.getType()));
   RDFFR->takeName(&II);
   return IC.replaceInstUsesWith(II, RDFFR);
 }
@@ -4378,7 +4370,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   // Increase the cost for half and bfloat types if not architecturally
   // supported.
   if (ISD == ISD::FADD || ISD == ISD::FSUB || ISD == ISD::FMUL ||
-      ISD == ISD::FDIV || ISD == ISD::FREM)
+      ISD == ISD::FDIV || ISD == ISD::FREM) {
     if (auto PromotedCost = getFP16BF16PromoteCost(
             Ty, CostKind, Op1Info, Op2Info, /*IncludeTrunc=*/true,
             // There is not native support for fdiv/frem even with +sve-b16b16.
@@ -4388,6 +4380,11 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
                                             Op1Info, Op2Info);
             }))
       return *PromotedCost;
+
+    // fp128 all go via libcalls
+    if (Ty->getScalarType()->isFP128Ty())
+      return (CostKind == TTI::TCK_CodeSize ? 1 : 10) * LT.first;
+  }
 
   // If the operation is a widening instruction (smull or umull) and both
   // operands are extends the cost can be cheaper by considering that the

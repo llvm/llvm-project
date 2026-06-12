@@ -94,6 +94,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Fast math flags are now permitted on `uitofp` and `sitofp`.
 
+* The ``modular-format`` attribute now supports the ``fixed`` aspect for C
+  ISO 18037 fixed-point ``printf`` specifiers.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
@@ -320,6 +323,24 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the Debug Info
 
 ### Changes to the LLVM tools
+
+* llvm-ml now supports the `/unwindv3` flag to enable V3 unwind information
+  format for x64 exception handling.
+* llvm-ml now supports the `@UnwindVersion` built-in symbol, which returns the
+  current unwind version (1 by default, 3 when `/unwindv3` is specified).
+* llvm-ml now supports the `.push2reg`, `.pop2reg`, `.beginepilog`, and
+  `.endepilog` MASM directives for V3 unwind information.
+* llvm-ml now supports the `.popreg`, `.freestack`, `.restorereg`,
+  `.restorexmm128`, and `.unsetframe` MASM epilog directives. These are the
+  epilog counterparts of `.pushreg`, `.allocstack`, `.savereg`,
+  `.savexmm128`, and `.setframe` respectively, and are valid only inside
+  `.beginepilog`/`.endepilog` blocks and only for V3 unwind information.
+* llvm-ml now supports `.pushframe code` syntax (without the `@` prefix)
+  for interrupt handlers with error codes.
+* llvm-ml now diagnoses:
+  - Prolog directives (including `.allocstack`) used outside of prologs (after `.endprolog`).
+  - Epilog directives used outside of epilogs (outside of `.beginepilog` + `.endepilog` blocks).
+  - Beginning an epilog (`.beginepilog`) inside another epilog.
 
 * `llvm-profgen` now supports ETM trace decoding using the OpenCSD library for Cortex-M targets. OpenCSD version 1.5.4 or higher is required.
 
