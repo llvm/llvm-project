@@ -96,6 +96,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/InstructionCost.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -2219,6 +2220,34 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     MVT PtrValueVT = TLI.getPointerTy(DL, DL.getAllocaAddrSpace());
     SDValue RetPtr =
         DAG.getCopyFromReg(Chain, getCurSDLoc(), DemoteReg, PtrValueVT);
+
+    // The CopyToReg/CopyFromReg pair used to pass the hidden sret pointer to
+    // the return is opaque to value tracking, so re-materialize any known-bits
+    // assertion recorded for DemoteReg (e.g. a target AssertZext on the high
+    // address bits). This mirrors RegsForValue::getCopyFromRegs and lets the
+    // return stores fold the pointer into a base+offset addressing mode.
+    if (PtrValueVT.isInteger()) {
+      if (const FunctionLoweringInfo::LiveOutInfo *LOI =
+              FuncInfo.GetLiveOutRegInfo(DemoteReg)) {
+        unsigned RegSize = PtrValueVT.getScalarSizeInBits();
+        unsigned NumSignBits = LOI->NumSignBits;
+        unsigned NumZeroBits = LOI->Known.countMinLeadingZeros();
+        EVT FromVT(MVT::Other);
+        bool IsSExt = false;
+        if (NumZeroBits && NumZeroBits != RegSize) {
+          FromVT = EVT::getIntegerVT(*DAG.getContext(), RegSize - NumZeroBits);
+        } else if (NumSignBits > 1) {
+          FromVT =
+              EVT::getIntegerVT(*DAG.getContext(), RegSize - NumSignBits + 1);
+          IsSExt = true;
+        }
+        if (FromVT != MVT::Other)
+          RetPtr = DAG.getNode(IsSExt ? ISD::AssertSext : ISD::AssertZext,
+                               getCurSDLoc(), PtrValueVT, RetPtr,
+                               DAG.getValueType(FromVT));
+      }
+    }
+
     SDValue RetOp = getValue(I.getOperand(0));
 
     SmallVector<EVT, 4> ValueVTs, MemVTs;
@@ -12155,6 +12184,22 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
     NewRoot =
         SDB->DAG.getCopyToReg(NewRoot, SDB->getCurSDLoc(), SRetReg, ArgValue);
     DAG.setRoot(NewRoot);
+
+    // The hidden sret pointer is shuttled to the return through SRetReg via a
+    // CopyToReg/CopyFromReg pair, which is opaque to value tracking. That would
+    // discard any known-bits assertion the target attached to the incoming
+    // sret argument (e.g. AMDGPU's AssertZext marking the high address bits
+    // zero so the return stores can fold into a base+offset addressing mode).
+    // Record the argument's known bits for SRetReg so visitRet can
+    // re-materialize the assertion after reading the register back. This
+    // mirrors ComputeLiveOutVRegInfo, which only runs at -O>0, so gate on the
+    // opt level to keep -O0 codegen unchanged.
+    if (TM.getOptLevel() != CodeGenOptLevel::None &&
+        ArgValue.getValueType().isInteger()) {
+      unsigned NumSignBits = DAG.ComputeNumSignBits(ArgValue);
+      KnownBits Known = DAG.computeKnownBits(ArgValue);
+      FuncInfo->AddLiveOutRegInfo(SRetReg, NumSignBits, Known);
+    }
 
     // i indexes lowered arguments.  Bump it past the hidden sret argument.
     ++i;
