@@ -1085,7 +1085,7 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
   // Thus, we conservatively restrict expandDivRemToFloatImpl to
   // [-0x40000,0x3FFFFF] for IsSigned
   // [0x000000,0x3FFFFF] for !IsSigned.
-  assert(DivBits <= (IsSigned ? 23 : 22) &&
+  assert(0 < DivBits && DivBits <= (IsSigned ? 23 : 22) &&
          "abs(Num) must be <= than 0x40000 for expandDivRemToFloatImpl to work "
          "correctly");
 
@@ -1166,20 +1166,6 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
     // Rem needs compensation, it's easier to recompute it
     Value *Rem = Builder.CreateMul(Div, Den);
     Res = Builder.CreateSub(Num, Rem);
-  }
-
-  if (DivBits != 0 && DivBits < 32) {
-    // Extend in register from the number of bits this divide really is.
-    if (IsSigned) {
-      int InRegBits = 32 - DivBits;
-
-      Res = Builder.CreateShl(Res, InRegBits);
-      Res = Builder.CreateAShr(Res, InRegBits);
-    } else {
-      ConstantInt *TruncMask
-        = Builder.getInt32((UINT64_C(1) << DivBits) - 1);
-      Res = Builder.CreateAnd(Res, TruncMask);
-    }
   }
 
   return Res;
