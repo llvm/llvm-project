@@ -16,10 +16,12 @@
 #include "src/string/memcmp.h"
 #include "test/UnitTest/Test.h"
 
+#include "hdr/netinet_in_macros.h"
 #include "hdr/types/struct_in6_addr.h"
+#include "hdr/types/struct_sockaddr_in6.h"
 
 TEST(LlvmLibcNetinetInTest, In6AddrLayout) {
-  EXPECT_EQ(sizeof(struct in6_addr), size_t(16));
+  EXPECT_EQ(sizeof(struct in6_addr), static_cast<size_t>(16));
 
   struct in6_addr addr = {};
 
@@ -51,4 +53,28 @@ TEST(LlvmLibcNetinetInTest, In6AddrLayout) {
           "\x12\x34\x56\x78\x9a\xbc\xde\xf0\x12\x34\x56\x78\x9a\xbc\xde\xf0",
           16),
       0);
+}
+
+TEST(LlvmLibcNetinetInTest, IN6AddrInitMacros) {
+  struct in6_addr any = IN6ADDR_ANY_INIT;
+  const uint8_t ANY_CONTENT[16] = {0};
+  EXPECT_EQ(LIBC_NAMESPACE::memcmp(&any, ANY_CONTENT, 16), 0);
+  EXPECT_TRUE(IN6_IS_ADDR_UNSPECIFIED(&any));
+
+  struct in6_addr loopback = IN6ADDR_LOOPBACK_INIT;
+  const uint8_t LOOPBACK_CONTENT[16] = {0, 0, 0, 0, 0, 0, 0, 0,
+                                        0, 0, 0, 0, 0, 0, 0, 1};
+  EXPECT_EQ(LIBC_NAMESPACE::memcmp(&loopback, LOOPBACK_CONTENT, 16), 0);
+  EXPECT_TRUE(IN6_IS_ADDR_LOOPBACK(&loopback));
+}
+
+TEST(LlvmLibcNetinetInTest, SockaddrIn6Layout) {
+  EXPECT_EQ(offsetof(struct sockaddr_in6, sin6_family), static_cast<size_t>(0));
+  EXPECT_EQ(offsetof(struct sockaddr_in6, sin6_port), static_cast<size_t>(2));
+  EXPECT_EQ(offsetof(struct sockaddr_in6, sin6_flowinfo),
+            static_cast<size_t>(4));
+  EXPECT_EQ(offsetof(struct sockaddr_in6, sin6_addr), static_cast<size_t>(8));
+  EXPECT_EQ(offsetof(struct sockaddr_in6, sin6_scope_id),
+            static_cast<size_t>(24));
+  EXPECT_EQ(sizeof(struct sockaddr_in6), static_cast<size_t>(28));
 }

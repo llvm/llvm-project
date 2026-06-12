@@ -289,3 +289,190 @@ entry:
   call { i32, i1, i1 } @llvm.nvvm.elect.sync(i32 0)
   ret void
 }
+
+;--- test22.ll
+; RUN: not opt -S -passes=verify 2>&1 < %t/test22.ll | FileCheck %t/test22.ll
+; CHECK: intrinsic argument 0 type (extended overload type 0) expected i64 (overload type 0 is i32), but got i32
+; CHECK-NEXT: ptr @llvm.aarch64.neon.sqxtn.i32
+
+; Type signature = [llvm_anyint_ty], [LLVMExtendedType<0>]
+declare i32 @llvm.aarch64.neon.sqxtn.i32(i32)
+
+define void @test1() {
+entry:
+  call i32 @llvm.aarch64.neon.sqxtn.i32(i32 0)
+  ret void
+}
+
+;--- test23.ll
+; RUN: not opt -S -passes=verify 2>&1 < %t/test23.ll | FileCheck %t/test23.ll
+; CHECK: intrinsic argument 0 type (extended overload type 0) expected <4 x i64> (overload type 0 is <4 x i32>), but got i64
+; CHECK-NEXT: ptr @llvm.aarch64.neon.sqxtn.v4i32
+
+; Type signature = [llvm_anyint_ty], [LLVMExtendedType<0>]
+declare <4 x i32> @llvm.aarch64.neon.sqxtn.v4i32(i64)
+
+define void @test1() {
+entry:
+  call <4 x i32> @llvm.aarch64.neon.sqxtn.v4i32(i64 0)
+  ret void
+}
+
+;--- test24.ll
+; RUN: not opt -S -passes=verify 2>&1 < %t/test24.ll | FileCheck %t/test24.ll
+; CHECK: intrinsic argument 0 is truncated overload type 0, so overload type 0 expected int or vector of int, but got <4 x float>
+; CHECK-NEXT: ptr @llvm.aarch64.neon.smull.v4f32
+
+; Type signature = [llvm_anyvector_ty], [LLVMTruncatedType<0>, LLVMTruncatedType<0>]
+declare <4 x float> @llvm.aarch64.neon.smull.v4f32(i64, i64)
+
+define void @test1() {
+entry:
+  call <4 x float> @llvm.aarch64.neon.smull.v4f32(i64 0, i64 0)
+  ret void
+}
+
+;--- test25.ll
+; RUN: not opt -S -passes=verify 2>&1 < %t/test25.ll | FileCheck %t/test25.ll
+; CHECK: intrinsic argument 1 type (truncated overload type 0) expected <4 x i32> (overload type 0 is <4 x i64>), but got i64
+; CHECK-NEXT: ptr @llvm.aarch64.neon.smull.v4i64
+
+; Type signature = [llvm_anyvector_ty], [LLVMTruncatedType<0>, LLVMTruncatedType<0>]
+declare <4 x i64> @llvm.aarch64.neon.smull.v4i64(<4 x i32>, i64)
+
+define void @test1() {
+entry:
+  call <4 x i64> @llvm.aarch64.neon.smull.v4i64(<4 x i32> poison, i64 0)
+  ret void
+}
+
+;--- test26.ll
+; RUN: not opt -S -passes=verify 2>&1 < %t/test26.ll | FileCheck %t/test26.ll
+; CHECK: intrinsic argument 0 is 1/nth (n=3) elements vector of overload type 0, so overload type 0 expected vector with multiple of 3 elements, but got <4 x i64>
+; CHECK-NEXT: ptr @llvm.vector.interleave3.v4i64
+
+; Type signature = [llvm_anyvector_ty], !listsplat(LLVMOneNthElementsVectorType<0, n>, n)
+declare <4 x i64> @llvm.vector.interleave3.v4i64(i32, i32, i32)
+
+define void @test1() {
+entry:
+  call <4 x i64> @llvm.vector.interleave3.v4i64(i32 0, i32 0, i32 0)
+  ret void
+}
+
+;--- test27.ll
+; RUN: not opt -S -passes=verify 2>&1 < %t/test27.ll | FileCheck %t/test27.ll
+; CHECK: intrinsic argument 0 type (1/nth (n=3) elements vector of overload type 0) expected <4 x i64> (overload type 0 is <12 x i64>), but got <4 x i32>
+; CHECK-NEXT: ptr @llvm.vector.interleave3.v12i64
+
+; Type signature = [llvm_anyvector_ty], !listsplat(LLVMOneNthElementsVectorType<0, n>, n)
+declare <12 x i64> @llvm.vector.interleave3.v12i64(<4 x i32>, <4 x i32>, i32)
+
+define void @test1() {
+entry:
+  call <12 x i64> @llvm.vector.interleave3.v12i64(<4 x i32> poison, <4 x i32> poison, i32 0)
+  ret void
+}
+
+;--- test28.ll
+; RUN: not opt -S -passes=verify 2>&1 < %t/test28.ll | FileCheck %t/test28.ll
+; CHECK: intrinsic argument 1 type (same vector width of overload type 0) expected vector with vscale x 4 elements (overload type 0 is <vscale x 4 x i32>), but got <4 x i1>
+; CHECK-NEXT: ptr @llvm.masked.load.nxv4i32.p0
+
+declare <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr, <4 x i1>, <vscale x 4 x i32>)
+
+define void @test1() {
+  call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr null, <4 x i1> poison, <vscale x 4 x i32> poison)
+  ret void
+}
+
+;--- test29.ll
+; RUN: not opt -S -passes=verify 2>&1 < %t/test29.ll | FileCheck %t/test29.ll
+; CHECK: intrinsic return type (same vector width of overload type 0) expected vector (overload type 0 is <2 x float>), but got i1
+; CHECK-NEXT: ptr @llvm.is.fpclass.v2f32
+
+; type signature = [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>], [llvm_anyfloat_ty, llvm_i32_ty],
+declare i1 @llvm.is.fpclass.v2f32(<2 x float>, i32)
+
+define void @test1() {
+  call i1  @llvm.is.fpclass.v2f32(<2 x float> poison, i32 0)
+  ret void
+}
+
+;--- test30.ll
+; RUN: not opt -S -passes=verify 2>&1 < %t/test30.ll | FileCheck %t/test30.ll
+; CHECK: intrinsic return type (same vector width of overload type 0) expected scalar (overload type 0 is float), but got <2 x i1>
+; CHECK-NEXT: ptr @llvm.is.fpclass.f32
+
+; type signature = [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>], [llvm_anyfloat_ty, llvm_i32_ty],
+declare <2 x i1> @llvm.is.fpclass.f32(float, i32)
+
+define void @test1() {
+  call <2 x i1>  @llvm.is.fpclass.f32(float 0.0, i32 0)
+  ret void
+}
+
+;--- test31.ll
+; RUN: not opt -S -passes=verify 2>&1 < %t/test31.ll | FileCheck %t/test31.ll
+; CHECK: intrinsic return type (same vector width of overload type 0) expected vector with 4 elements (overload type 0 is <4 x float>), but got <2 x i1>
+; CHECK-NEXT: ptr @llvm.is.fpclass.v4f32
+
+; type signature = [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>], [llvm_anyfloat_ty, llvm_i32_ty],
+declare <2 x i1> @llvm.is.fpclass.v4f32(<4 x float>, i32)
+
+define void @test1() {
+  call <2 x i1> @llvm.is.fpclass.v4f32(<4 x float> poison, i32 0)
+  ret void
+}
+
+;--- test32.ll
+; RUN: not opt -S -passes=verify 2>&1 < %t/test32.ll | FileCheck %t/test32.ll
+; CHECK: intrinsic argument 0 type (subdivided by 2 vector of overload type 0) expected <8 x i16> (overload type 0 is <4 x i32>), but got <4 x i32>
+; CHECK-NEXT: ptr @llvm.aarch64.sve.sunpkhi
+
+; type signature = [llvm_anyvector_ty], [LLVMSubdivide2VectorType<0>]
+declare <4 x i32> @llvm.aarch64.sve.sunpkhi(<4 x i32>)
+
+define void @test1() {
+  call <4 x i32> @llvm.aarch64.sve.sunpkhi(<4 x i32> poison)
+  ret void
+}
+
+;--- test33.ll
+; RUN: not opt -S -passes=verify 2>&1 < %t/test33.ll | FileCheck %t/test33.ll
+; CHECK: intrinsic argument 2 type (subdivided by 4 vector of overload type 0) expected <16 x i8> (overload type 0 is <4 x i32>), but got <16 x i4>
+; CHECK-NEXT: ptr @llvm.aarch64.sve.sdot.v4i32
+
+; type signature = [llvm_anyvector_ty], [LLVMMatchType<0>, LLVMSubdivide4VectorType<0>, LLVMSubdivide4VectorType<0>],
+declare <4 x i32> @llvm.aarch64.sve.sdot.v4i32(<4 x i32>, <16 x i8>, <16 x i4>)
+
+define void @test1() {
+  call <4 x i32> @llvm.aarch64.sve.sdot.v4i32(<4 x i32> poison, <16 x i8> poison, <16 x i4> poison)
+  ret void
+}
+
+;--- test34.ll
+; RUN: not opt -S -passes=verify 2>&1 < %t/test34.ll | FileCheck %t/test34.ll
+; CHECK: intrinsic argument 2 type (subdivided by 4 vector of overload type 0) expected <16 x half> (overload type 0 is <4 x double>), but got float
+; CHECK-NEXT: ptr @llvm.aarch64.sve.sdot.v4f64
+
+; type signature = [llvm_anyvector_ty], [LLVMMatchType<0>, LLVMSubdivide4VectorType<0>, LLVMSubdivide4VectorType<0>],
+declare <4 x double> @llvm.aarch64.sve.sdot.v4f64(<4 x double>, <16 x half>, float)
+
+define void @test1() {
+  call <4 x double> @llvm.aarch64.sve.sdot.v4f64(<4 x double> poison, <16 x half> poison, float 0.0)
+  ret void
+}
+
+;--- test35.ll
+; RUN: not opt -S -passes=verify 2>&1 < %t/test35.ll | FileCheck %t/test35.ll
+; CHECK: intrinsic argument 2 type (vector of bitcasts to int of overload type 0) expected <4 x i32> (overload type 0 is <4 x float>), but got i32
+; CHECK-NEXT: ptr @llvm.riscv.vrgather.vv.v4f32.i32
+
+; type signature = [llvm_anyvector_ty], [LLVMMatchType<0>, LLVMMatchType<0>, LLVMVectorOfBitcastsToInt<0>, llvm_anyint_ty]
+declare <4 x float> @llvm.riscv.vrgather.vv.v4f32.i32(<4 x float>, <4 x float>, i32, i32)
+
+define void @test1() {
+  call <4 x float> @llvm.riscv.vrgather.vv.v4f32.i32(<4 x float> poison, <4 x float> poison, i32 0, i32 0)
+  ret void
+}

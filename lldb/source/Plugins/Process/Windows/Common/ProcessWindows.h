@@ -113,6 +113,8 @@ protected:
   /// buffered in the ConPTY/pipe to the process's STDOUT cache.
   void DrainProcessStdout();
 
+  size_t PutSTDIN(const char *src, size_t src_len, Status &error) override;
+
   ProcessWindows(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
 
   Status DoGetMemoryRegionInfo(lldb::addr_t vm_addr,

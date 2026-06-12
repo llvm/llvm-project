@@ -43,6 +43,8 @@ static_library("Host") {
     "common/ProcessLaunchInfo.cpp",
     "common/ProcessRunLock.cpp",
     "common/PseudoTerminal.cpp",
+    "common/PythonRuntimeLoader.cpp",
+    "common/ScriptInterpreterRuntimeLoader.cpp",
     "common/Socket.cpp",
     "common/SocketAddress.cpp",
     "common/StreamFile.cpp",
@@ -80,6 +82,7 @@ static_library("Host") {
       "windows/ProcessLauncherWindows.cpp",
       "windows/ProcessRunLock.cpp",
       "windows/PseudoConsole.cpp",
+      "windows/PythonRuntimeLoaderWindows.cpp",
       "windows/WindowsFileAction.cpp",
     ]
   } else {
@@ -108,6 +111,7 @@ static_library("Host") {
 
   if (current_os == "mac") {
     sources += [
+      "macosx/PythonRuntimeLoaderDarwin.cpp",
       "macosx/cfcpp/CFCBundle.cpp",
       "macosx/cfcpp/CFCData.cpp",
       "macosx/cfcpp/CFCMutableArray.cpp",
@@ -126,6 +130,7 @@ static_library("Host") {
       "linux/Host.cpp",
       "linux/HostInfoLinux.cpp",
       "linux/LibcGlue.cpp",
+      "linux/PythonRuntimeLoaderLinux.cpp",
       "linux/Support.cpp",
     ]
   }

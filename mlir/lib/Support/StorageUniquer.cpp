@@ -48,10 +48,6 @@ private:
 
   /// Storage info for derived TypeStorage objects.
   struct StorageKeyInfo {
-    static inline HashedStorage getEmptyKey() {
-      return HashedStorage(0, DenseMapInfo<BaseStorage *>::getEmptyKey());
-    }
-
     static inline unsigned getHashValue(const HashedStorage &key) {
       return key.hashValue;
     }
@@ -64,8 +60,6 @@ private:
       return lhs.storage == rhs.storage;
     }
     static inline bool isEqual(const LookupKey &lhs, const HashedStorage &rhs) {
-      if (isEqual(rhs, getEmptyKey()))
-        return false;
       // Invoke the equality function on the lookup key.
       return lhs.isEqual(rhs.storage);
     }

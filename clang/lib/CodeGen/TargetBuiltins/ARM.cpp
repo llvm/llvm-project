@@ -2382,7 +2382,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
                                                        : Intrinsic::arm_strexd);
     llvm::Type *STy = llvm::StructType::get(Int32Ty, Int32Ty);
 
-    Address Tmp = CreateMemTemp(E->getArg(0)->getType());
+    Address Tmp = CreateMemTempWithoutCast(E->getArg(0)->getType());
     Value *Val = EmitScalarExpr(E->getArg(0));
     Builder.CreateStore(Val, Tmp);
 
@@ -3390,13 +3390,6 @@ CodeGenFunction::getSVEType(const SVETypeFlags &TypeFlags) {
   }
 }
 
-llvm::Value *
-CodeGenFunction::EmitSVEAllTruePred(const SVETypeFlags &TypeFlags) {
-  Function *Ptrue =
-      CGM.getIntrinsic(Intrinsic::aarch64_sve_ptrue, getSVEPredType(TypeFlags));
-  return Builder.CreateCall(Ptrue, {Builder.getInt32(/*SV_ALL*/ 31)});
-}
-
 constexpr unsigned SVEBitsPerBlock = 128;
 
 static llvm::ScalableVectorType *getSVEVectorForElementType(llvm::Type *EltTy) {
@@ -4277,7 +4270,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
       return DupQLane;
 
     SVETypeFlags TypeFlags(Builtin->TypeModifier);
-    Value *Pred = EmitSVEAllTruePred(TypeFlags);
+    Constant *Pred = ConstantInt::getTrue(getSVEPredType(TypeFlags));
 
     // For svdupq_n_b* we need to add an additional 'cmpne' with '0'.
     F = CGM.getIntrinsic(NumOpnds == 2 ? Intrinsic::aarch64_sve_cmpne
@@ -4770,7 +4763,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                              : Intrinsic::aarch64_stxp);
     llvm::Type *STy = llvm::StructType::get(Int64Ty, Int64Ty);
 
-    Address Tmp = CreateMemTemp(E->getArg(0)->getType());
+    Address Tmp = CreateMemTempWithoutCast(E->getArg(0)->getType());
     EmitAnyExprToMem(E->getArg(0), Tmp, Qualifiers(), /*init*/ true);
 
     Tmp = Tmp.withElementType(STy);

@@ -35,8 +35,8 @@ Memory Accesses
   accesses*. Typical examples are ``load``, ``store`` and atomic instructions,
   as well as many intrinsics.
 
-Synchronization Operations
-  Synchronization operations control how the side-effects of memory accesses are
+Synchronizing Operations
+  Synchronizing operations control how the side-effects of memory accesses are
   propagated in the system. Typical examples are atomic operations (including
   fences) with at least ``release`` or ``acquire`` ordering.
 
@@ -46,10 +46,10 @@ Scopes
 ======
 
 A *scope* is an abstract description of sets of memory accesses and
-synchronization operations in a multi-threaded execution environment. Each such
+synchronizing operations in a multi-threaded execution environment. Each such
 set is called an *instance* of that scope, or a *scope instance* for short.
 
-- Each memory access or synchronization operation belongs to at most one
+- Each memory access or synchronizing operation belongs to at most one
   instance of every scope defined by the target.
 - When an operation ``X`` specifies a scope ``S``, it indicates the instance of
   ``S`` that contains ``X``. This scope instance is also termed as *X's instance
@@ -65,11 +65,11 @@ The LLVM Language Reference defines the following :ref:`scopes<syncscope>`:
 
 *system scope* (empty string "")
   There exists a single instance of this scope that contains the memory accesses
-  and synchronization operations performed by all threads.
+  and synchronizing operations performed by all threads.
 
 "singlethread" scope
   Each thread corresponds to a "singlethread" scope instance that contains the
-  memory accesses and synchronization operations performed by that thread.
+  memory accesses and synchronizing operations performed by that thread.
 
 AMDGPU scopes
 -------------
@@ -184,6 +184,24 @@ operation with scope ``syncscope``.
    scope. A corresponding *load-visible* that does not access the same near
    cache will fail to observe this store.
 
+.. _amdgpu-av-metadata:
+
+AV Metadata
+-----------
+
+.. code-block:: llvm
+
+   !mmra !{!"amdgcn-av", !"none"}
+
+The presence of this metadata removes the ability of synchronizing operations to
+establish availability and visibility, and essentially creates *non-av* synchronizing
+operations.
+
+For a synchronizing operation which itself accesses memory (e.g., ``store atomic
+release`` or ``load atomic acquire``), the metadata does not affect the
+availability or the visibility of the access performed by the operation itself.
+It only affects the synchronization of other memory accesses.
+
 MakeAvailable and MakeVisible
 -----------------------------
 
@@ -195,23 +213,13 @@ MakeAvailable and MakeVisible
    cmpxchg      [syncscope("<target-scope>")] <ordering> [, !mmra !{!"amdgcn-av", !"none"}]
    fence        [syncscope("<target-scope>")] <ordering> [, !mmra !{!"amdgcn-av", !"none"}]
 
-A synchronization operation with at least ``release`` ordering is a
+A synchronizing operation with at least ``release`` ordering is a
 ``MakeAvailable`` operation with scope ``syncscope``, if it is not marked as
 ``!{!"amdgcn-av", !"none"}``.
 
-A synchronization operation with at least ``acquire`` ordering is a
+A synchronizing operation with at least ``acquire`` ordering is a
 ``MakeVisible`` operation with scope ``syncscope``, if it is not marked as
 ``!{!"amdgcn-av", !"none"}``.
-
-These operations include ``MakeVisible`` and ``MakeAvailable`` operations by
-default. The presence of this metadata removes this ability and essentially
-creates *non-av* ordering operations, i.e., ordering operations that do not
-establish availability or visibility.
-
-For an atomic operation which itself accesses memory (e.g., ``store atomic``
-or ``load atomic``), the metadata does not affect the availability or the
-visibility of the access performed by the operation itself. It only affects
-the ordering of other memory accesses.
 
 .. code-block:: llvm
 
@@ -224,7 +232,7 @@ the ordering of other memory accesses.
    ; This includes the following operations:
    ; - The atomic store at "agent" scope,
    ; - A store-available operation at "agent" scope on `ptr`.
-   ; Noteably, it does not include a `MakeAvailable` operation on other memory accesses.
+   ; Notably, it does not include a `MakeAvailable` operation on other memory accesses.
    store atomic syncscope("agent") release ptr, !mmra !{!"amdgcn-av", !"none"}
 
 Ordering
