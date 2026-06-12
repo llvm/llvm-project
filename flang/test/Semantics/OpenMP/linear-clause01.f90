@@ -46,6 +46,6 @@ subroutine linear_clause_03(arg)
     !ERROR: The list item `i` must be a dummy argument
     !$omp declare simd linear(i)
 
-    !ERROR: 'cc' is a common block name and must not appear in a LINEAR clause
+    !ERROR: The list item `i` must be a dummy argument
     !$omp declare simd linear(/cc/)
 end subroutine linear_clause_03

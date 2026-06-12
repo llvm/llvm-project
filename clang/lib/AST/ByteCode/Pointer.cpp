@@ -337,9 +337,7 @@ void Pointer::print(llvm::raw_ostream &OS) const {
     OS << "}";
   } break;
   case Storage::Int:
-    OS << "(Int) {";
-    OS << Int.Value << " + " << Offset << ", " << Int.Desc;
-    OS << "}";
+    OS << "(Int) {" << Int.Value << " + " << Offset << ", " << Int.Ty << "}";
     break;
   case Storage::Fn:
     OS << "(Fn) { " << Fn.Func << " + " << Offset << " }";
@@ -789,8 +787,13 @@ Pointer::computeSplitPoint(const Pointer &A, const Pointer &B) {
       IterB = getBase(IterB);
     }
 
-    if (IterA == IterB)
+    if (IterA == IterB) {
+      // If the Iter is an array, CurA and CurB are both elements of the same
+      // array. That is fine, so return nullopt.
+      if (IterA.getFieldDesc()->isArray())
+        return std::nullopt;
       return std::make_pair(CurA, CurB);
+    }
 
     if (IterA.isRoot() && IterB.isRoot())
       return std::nullopt;
@@ -994,11 +997,19 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
   return Result;
 }
 
-std::optional<IntPointer> IntPointer::atOffset(const ASTContext &ASTCtx,
+const VarDecl *Pointer::getRootVarDecl() const {
+  if (isBlockPointer())
+    return getDeclDesc()->asVarDecl();
+  return nullptr;
+}
+
+std::optional<IntPointer> IntPointer::atOffset(const interp::Context &Ctx,
                                                unsigned Offset) const {
-  if (!this->Desc)
-    return *this;
-  const Record *R = this->Desc->ElemRecord;
+  QualType CurType = getPointeeType();
+  if (CurType.isNull() || !CurType->isRecordType())
+    return std::nullopt;
+
+  const Record *R = Ctx.getRecord(CurType->getAsRecordDecl());
   if (!R)
     return *this;
 
@@ -1016,21 +1027,26 @@ std::optional<IntPointer> IntPointer::atOffset(const ASTContext &ASTCtx,
   if (FD->getParent()->isInvalidDecl())
     return std::nullopt;
 
+  const ASTContext &ASTCtx = Ctx.getASTContext();
   const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(FD->getParent());
   unsigned FieldIndex = FD->getFieldIndex();
   uint64_t FieldOffset =
       ASTCtx.toCharUnitsFromBits(Layout.getFieldOffset(FieldIndex))
           .getQuantity();
-  return IntPointer{F->Desc, this->Value + FieldOffset};
+
+  return IntPointer{FD->getType().getTypePtr(), this->Value + FieldOffset};
 }
 
-IntPointer IntPointer::baseCast(const ASTContext &ASTCtx,
+IntPointer IntPointer::baseCast(const interp::Context &Ctx,
                                 unsigned BaseOffset) const {
-  if (!Desc) {
-    assert(Value == 0);
+  if (!Ty)
     return *this;
-  }
-  const Record *R = Desc->ElemRecord;
+
+  QualType CurType = getPointeeType();
+  if (CurType.isNull() || !CurType->isRecordType())
+    return *this;
+
+  const Record *R = Ctx.getRecord(CurType->getAsRecordDecl());
   const Descriptor *BaseDesc = nullptr;
 
   // This iterates over bases and checks for the proper offset. That's
@@ -1044,9 +1060,13 @@ IntPointer IntPointer::baseCast(const ASTContext &ASTCtx,
   assert(BaseDesc);
 
   // Adjust the offset value based on the information from the record layout.
+  const ASTContext &ASTCtx = Ctx.getASTContext();
   const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(R->getDecl());
   CharUnits BaseLayoutOffset =
       Layout.getBaseClassOffset(cast<CXXRecordDecl>(BaseDesc->asDecl()));
 
-  return {BaseDesc, Value + BaseLayoutOffset.getQuantity()};
+  const RecordDecl *RD = BaseDesc->ElemRecord->getDecl();
+  QualType T = RD->getASTContext().getTagType(ElaboratedTypeKeyword::None,
+                                              std::nullopt, RD, false);
+  return {T.getTypePtr(), Value + BaseLayoutOffset.getQuantity()};
 }

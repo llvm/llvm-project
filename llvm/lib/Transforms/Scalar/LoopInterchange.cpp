@@ -179,8 +179,6 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   for (BasicBlock *BB : L->blocks()) {
     // Scan the BB and collect legal loads and stores.
     for (Instruction &I : *BB) {
-      if (!isa<Instruction>(I))
-        return false;
       NumInsts++;
       if (auto *Ld = dyn_cast<LoadInst>(&I)) {
         if (!Ld->isSimple())
@@ -463,10 +461,6 @@ public:
   bool canInterchangeLoops(unsigned InnerLoopId, unsigned OuterLoopId,
                            CharMatrix &DepMatrix);
 
-  /// Discover induction PHIs in the header of \p L. Induction
-  /// PHIs are added to \p Inductions.
-  bool findInductions(Loop *L, SmallVectorImpl<PHINode *> &Inductions);
-
   /// Check if the loop structure is understood. We do not handle triangular
   /// loops for now.
   bool isLoopStructureUnderstood();
@@ -513,13 +507,17 @@ private:
   bool tightlyNested(Loop *Outer, Loop *Inner);
   bool containsUnsafeInstructions(BasicBlock *BB, Instruction *Skip);
 
-  /// Discover induction and reduction PHIs in the header of \p L. Induction
-  /// PHIs are added to \p Inductions, reductions are added to
-  /// OuterInnerReductions. When the outer loop is passed, the inner loop needs
-  /// to be passed as \p InnerLoop.
-  bool findInductionAndReductions(Loop *L,
-                                  SmallVector<PHINode *, 8> &Inductions,
-                                  Loop *InnerLoop);
+  /// Traverse all PHI nodes in the header of each loop in the loop nest
+  /// starting from \p OuterLoop, and perform the following checks:
+  ///
+  /// - Identify induction variables in the child loop of \p OuterLoop.
+  /// - Check for reductions across the inner loop and \p OuterLoop.
+  /// - Detect unsupported PHI nodes.
+  ///
+  /// Return false if any unsupported PHI node is found or if no induction
+  /// variable is found in the child loop of \p OuterLoop. Otherwise return
+  /// true.
+  bool checkInductionsAndReductions(Loop *OuterLoop);
 
   /// Detect and record the reduction of the inner loop. Add them to
   /// InnerReductions.
@@ -925,59 +923,61 @@ bool LoopInterchangeLegality::isLoopStructureUnderstood() {
       dyn_cast<CondBrInst>(InnerLoopLatch->getTerminator());
   if (!InnerLoopLatchBI)
     return false;
-  if (CmpInst *InnerLoopCmp =
-          dyn_cast<CmpInst>(InnerLoopLatchBI->getCondition())) {
-    Value *Op0 = InnerLoopCmp->getOperand(0);
-    Value *Op1 = InnerLoopCmp->getOperand(1);
 
-    // LHS and RHS of the inner loop exit condition, e.g.,
-    // in "for(int j=0;j<i;j++)", LHS is j and RHS is i.
-    Value *Left = nullptr;
-    Value *Right = nullptr;
+  CmpInst *InnerLoopCmp = dyn_cast<CmpInst>(InnerLoopLatchBI->getCondition());
+  if (!InnerLoopCmp)
+    return false;
 
-    // Check if V only involves inner loop induction variable.
-    // Return true if V is InnerInduction, or a cast from
-    // InnerInduction, or a binary operator that involves
-    // InnerInduction and a constant.
-    std::function<bool(Value *)> IsPathToInnerIndVar;
-    IsPathToInnerIndVar = [this, &IsPathToInnerIndVar](const Value *V) -> bool {
-      if (llvm::is_contained(InnerLoopInductions, V))
-        return true;
-      if (isa<Constant>(V))
-        return true;
-      const Instruction *I = dyn_cast<Instruction>(V);
-      if (!I)
-        return false;
-      if (isa<CastInst>(I))
-        return IsPathToInnerIndVar(I->getOperand(0));
-      if (isa<BinaryOperator>(I))
-        return IsPathToInnerIndVar(I->getOperand(0)) &&
-               IsPathToInnerIndVar(I->getOperand(1));
-      return false;
-    };
+  Value *Op0 = InnerLoopCmp->getOperand(0);
+  Value *Op1 = InnerLoopCmp->getOperand(1);
 
-    // In case of multiple inner loop indvars, it is okay if LHS and RHS
-    // are both inner indvar related variables.
-    if (IsPathToInnerIndVar(Op0) && IsPathToInnerIndVar(Op1))
+  // LHS and RHS of the inner loop exit condition, e.g.,
+  // in "for(int j=0;j<i;j++)", LHS is j and RHS is i.
+  Value *Left = nullptr;
+  Value *Right = nullptr;
+
+  // Check if V only involves inner loop induction variable.
+  // Return true if V is InnerInduction, or a cast from
+  // InnerInduction, or a binary operator that involves
+  // InnerInduction and a constant.
+  std::function<bool(Value *)> IsPathToInnerIndVar;
+  IsPathToInnerIndVar = [this, &IsPathToInnerIndVar](const Value *V) -> bool {
+    if (llvm::is_contained(InnerLoopInductions, V))
       return true;
-
-    // Otherwise we check if the cmp instruction compares an inner indvar
-    // related variable (Left) with a outer loop invariant (Right).
-    if (IsPathToInnerIndVar(Op0) && !isa<Constant>(Op0)) {
-      Left = Op0;
-      Right = Op1;
-    } else if (IsPathToInnerIndVar(Op1) && !isa<Constant>(Op1)) {
-      Left = Op1;
-      Right = Op0;
-    }
-
-    if (Left == nullptr)
+    if (isa<Constant>(V))
+      return true;
+    const Instruction *I = dyn_cast<Instruction>(V);
+    if (!I)
       return false;
+    if (isa<CastInst>(I))
+      return IsPathToInnerIndVar(I->getOperand(0));
+    if (isa<BinaryOperator>(I))
+      return IsPathToInnerIndVar(I->getOperand(0)) &&
+             IsPathToInnerIndVar(I->getOperand(1));
+    return false;
+  };
 
-    const SCEV *S = SE->getSCEV(Right);
-    if (!SE->isLoopInvariant(S, OuterLoop))
-      return false;
+  // In case of multiple inner loop indvars, it is okay if LHS and RHS
+  // are both inner indvar related variables.
+  if (IsPathToInnerIndVar(Op0) && IsPathToInnerIndVar(Op1))
+    return true;
+
+  // Otherwise we check if the cmp instruction compares an inner indvar
+  // related variable (Left) with a outer loop invariant (Right).
+  if (IsPathToInnerIndVar(Op0) && !isa<Constant>(Op0)) {
+    Left = Op0;
+    Right = Op1;
+  } else if (IsPathToInnerIndVar(Op1) && !isa<Constant>(Op1)) {
+    Left = Op1;
+    Right = Op0;
   }
+
+  if (Left == nullptr)
+    return false;
+
+  const SCEV *S = SE->getSCEV(Right);
+  if (!SE->isLoopInvariant(S, OuterLoop))
+    return false;
 
   return true;
 }
@@ -1012,8 +1012,23 @@ static bool checkReductionKind(Loop *L, PHINode *PHI,
     case RecurKind::SMax:
     case RecurKind::UMin:
     case RecurKind::UMax:
-    case RecurKind::AnyOf:
       return true;
+
+    // Interchanging the loops that contain AnyOf reduction is not always legal.
+    // Especially, when the result value of the AnyOf is not loop-invariant with
+    // respect to the outer loop, interchanging may change the semantics. The
+    // following is an example of such case:
+    //   int A = {{ 1, 0 }, { 0, 1 }};
+    //   int red = 0;
+    //   for (int i = 0; i < 2; i++)
+    //     for (int j = 0; j < 2; j++)
+    //       red = (A[j][i] == 0) ? i + 1 : red;
+    //
+    // TODO: We may be able to support interchanging loops with AnyOf reduction
+    // by checking the operand of the reduction is loop-invariant with respect
+    // to the outer loop as well.
+    case RecurKind::AnyOf:
+      return false;
 
     // Changing the order of floating-point operations may alter the results. If
     // a certain instruction has the ninf flag, it means that reordering can
@@ -1224,59 +1239,106 @@ bool LoopInterchangeLegality::isInnerReduction(
   return true;
 }
 
-bool LoopInterchangeLegality::findInductionAndReductions(
-    Loop *L, SmallVector<PHINode *, 8> &Inductions, Loop *InnerLoop) {
-  if (!L->getLoopLatch() || !L->getLoopPredecessor())
-    return false;
-  for (PHINode &PHI : L->getHeader()->phis()) {
-    InductionDescriptor ID;
-    if (InductionDescriptor::isInductionPHI(&PHI, L, SE, ID))
-      Inductions.push_back(&PHI);
-    else {
-      // PHIs in inner loops need to be part of a reduction in the outer loop,
-      // discovered when checking the PHIs of the outer loop earlier.
-      if (!InnerLoop) {
-        if (OuterInnerReductions.count(&PHI)) {
-          LLVM_DEBUG(dbgs() << "Found a reduction across the outer loop.\n");
-        } else if (EnableReduction2Memory &&
-                   isInnerReduction(L, &PHI, HasNoWrapReductions)) {
-          LLVM_DEBUG(dbgs() << "Found a reduction in the inner loop: \n"
-                            << PHI << '\n');
-        } else
-          return false;
-      } else {
+bool LoopInterchangeLegality::checkInductionsAndReductions(Loop *OuterLoop) {
+  auto ChildLoop = [](Loop *L) {
+    assert(L->getSubLoops().size() <= 1 &&
+           "Expect at most one child loop for now.");
+    return L->getSubLoops().empty() ? nullptr : L->getSubLoops().front();
+  };
+
+  Loop *InnerLoop = ChildLoop(OuterLoop);
+  for (Loop *CurLoop = OuterLoop; CurLoop; CurLoop = ChildLoop(CurLoop)) {
+    for (PHINode &PHI : CurLoop->getHeader()->phis()) {
+      InductionDescriptor ID;
+      if (InductionDescriptor::isInductionPHI(&PHI, CurLoop, SE, ID)) {
+        if (CurLoop == InnerLoop) {
+          const SCEV *Step = ID.getStep();
+          if (!SE->isLoopInvariant(Step, OuterLoop))
+            return false;
+          InnerLoopInductions.push_back(&PHI);
+        }
+        continue;
+      }
+
+      if (CurLoop == OuterLoop) {
+        // PHIs in inner loops need to be part of a reduction in the outer loop,
         assert(PHI.getNumIncomingValues() == 2 &&
                "Phis in loop header should have exactly 2 incoming values");
         // Check if we have a PHI node in the outer loop that has a reduction
         // result from the inner loop as an incoming value.
-        Value *V = followLCSSA(PHI.getIncomingValueForBlock(L->getLoopLatch()));
+        Value *V = followLCSSA(
+            PHI.getIncomingValueForBlock(OuterLoop->getLoopLatch()));
         PHINode *InnerRedPhi = findInnerReductionPhi(
             InnerLoop, V, HasNoWrapReductions, HasNoInfInsts);
+
+        // Reject if PHI has users other than InnerRedPhi. The typical case is
+        // as follows:
+        //
+        //   o.header:
+        //     %red.o = phi [ 0, ... ], [ %red.next, %o.latch ]
+        //     br label %i.header
+        //
+        //   i.header:
+        //     %red.i = phi [ %red.o, %o.header ], [ %red.next, %i.latch ]
+        //     br label %i.body
+        //
+        //   i.body:
+        //     store %red.o to %mem
+        //     ...
+        //
         if (!InnerRedPhi ||
-            !llvm::is_contained(InnerRedPhi->incoming_values(), &PHI)) {
+            !llvm::is_contained(InnerRedPhi->incoming_values(), &PHI) ||
+            !all_of(PHI.users(),
+                    [InnerRedPhi](User *U) { return U == InnerRedPhi; })) {
           LLVM_DEBUG(
               dbgs()
               << "Failed to recognize PHI as an induction or reduction.\n");
+          ORE->emit([&]() {
+            return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedPHIOuter",
+                                            OuterLoop->getStartLoc(),
+                                            OuterLoop->getHeader())
+                   << "Only outer loops with induction or reduction PHI nodes "
+                      "can be interchanged currently.";
+          });
           return false;
         }
+
         OuterInnerReductions.insert(&PHI);
         OuterInnerReductions.insert(InnerRedPhi);
+      } else {
+        if (OuterInnerReductions.count(&PHI)) {
+          LLVM_DEBUG(dbgs() << "Found a reduction across the outer loop.\n");
+        } else if (EnableReduction2Memory &&
+                   isInnerReduction(CurLoop, &PHI, HasNoWrapReductions)) {
+          LLVM_DEBUG(dbgs() << "Found a reduction in the inner loop: \n"
+                            << PHI << '\n');
+        } else {
+          ORE->emit([&]() {
+            return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedPHIInner",
+                                            CurLoop->getStartLoc(),
+                                            CurLoop->getHeader())
+                   << "Only inner loops with induction or reduction PHI nodes "
+                      "can be interchanged currently.";
+          });
+          return false;
+        }
       }
+    }
+
+    // For now we only support at most one reduction.
+    if (InnerReductions.size() > 1) {
+      LLVM_DEBUG(dbgs() << "Only supports at most one reduction.\n");
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedInnerReduction",
+                                        CurLoop->getStartLoc(),
+                                        CurLoop->getHeader())
+               << "Only supports at most one reduction.";
+      });
+      return false;
     }
   }
 
-  // For now we only support at most one reduction.
-  if (InnerReductions.size() > 1) {
-    LLVM_DEBUG(dbgs() << "Only supports at most one reduction.\n");
-    ORE->emit([&]() {
-      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedInnerReduction",
-                                      L->getStartLoc(), L->getHeader())
-             << "Only supports at most one reduction.";
-    });
-    return false;
-  }
-
-  return true;
+  return !InnerLoopInductions.empty();
 }
 
 // This function indicates the current limitations in the transform as a result
@@ -1303,44 +1365,6 @@ bool LoopInterchangeLegality::currentLimitations() {
     return true;
   }
 
-  SmallVector<PHINode *, 8> Inductions;
-  if (!findInductionAndReductions(OuterLoop, Inductions, InnerLoop)) {
-    LLVM_DEBUG(
-        dbgs() << "Only outer loops with induction or reduction PHI nodes "
-               << "are supported currently.\n");
-    ORE->emit([&]() {
-      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedPHIOuter",
-                                      OuterLoop->getStartLoc(),
-                                      OuterLoop->getHeader())
-             << "Only outer loops with induction or reduction PHI nodes can be"
-                " interchanged currently.";
-    });
-    return true;
-  }
-
-  Inductions.clear();
-  // For multi-level loop nests, make sure that all phi nodes for inner loops
-  // at all levels can be recognized as a induction or reduction phi. Bail out
-  // if a phi node at a certain nesting level cannot be properly recognized.
-  Loop *CurLevelLoop = OuterLoop;
-  while (!CurLevelLoop->getSubLoops().empty()) {
-    // We already made sure that the loop nest is tightly nested.
-    CurLevelLoop = CurLevelLoop->getSubLoops().front();
-    if (!findInductionAndReductions(CurLevelLoop, Inductions, nullptr)) {
-      LLVM_DEBUG(
-          dbgs() << "Only inner loops with induction or reduction PHI nodes "
-                << "are supported currently.\n");
-      ORE->emit([&]() {
-        return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedPHIInner",
-                                        CurLevelLoop->getStartLoc(),
-                                        CurLevelLoop->getHeader())
-              << "Only inner loops with induction or reduction PHI nodes can be"
-                  " interchange currently.";
-      });
-      return true;
-    }
-  }
-
   // TODO: Triangular loops are not handled for now.
   if (!isLoopStructureUnderstood()) {
     LLVM_DEBUG(dbgs() << "Loop structure not understood by pass\n");
@@ -1354,16 +1378,6 @@ bool LoopInterchangeLegality::currentLimitations() {
   }
 
   return false;
-}
-
-bool LoopInterchangeLegality::findInductions(
-    Loop *L, SmallVectorImpl<PHINode *> &Inductions) {
-  for (PHINode &PHI : L->getHeader()->phis()) {
-    InductionDescriptor ID;
-    if (InductionDescriptor::isInductionPHI(&PHI, L, SE, ID))
-      Inductions.push_back(&PHI);
-  }
-  return !Inductions.empty();
 }
 
 /// We currently only support LCSSA PHI nodes in the inner loop exit if their
@@ -1511,8 +1525,9 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
       return false;
     }
 
-  if (!findInductions(InnerLoop, InnerLoopInductions)) {
-    LLVM_DEBUG(dbgs() << "Could not find inner loop induction variables.\n");
+  if (!checkInductionsAndReductions(OuterLoop)) {
+    LLVM_DEBUG(dbgs() << "Failed to find inner loop inductions or found "
+                         "unsupported reductions.\n");
     return false;
   }
 
@@ -1592,6 +1607,26 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     });
     return false;
   }
+
+  // Regarding def-use chains that begin at an LCSSA PHI in the inner loop exit
+  // and end at any instruction in the outer loop latch, we currently support
+  // only the case where the chain contains only PHI nodes. Since we already
+  // call `tightlyNested()`, we know that if there is a def-use chain that we
+  // don't support (i.e., a chain that contains a non-PHI user), then the
+  // non-PHI user must be in the outer loop latch.
+  if (InnerLoop->getExitBlock() != OuterLoop->getLoopLatch())
+    for (PHINode &PHI : OuterLoop->getLoopLatch()->phis())
+      if (any_of(PHI.users(), [](const User *U) { return !isa<PHINode>(U); })) {
+        LLVM_DEBUG(dbgs() << "Outer loop latch PHI has a non-PHI user.\n");
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLatchPHI",
+                                          OuterLoop->getStartLoc(),
+                                          OuterLoop->getHeader())
+                 << "Cannot interchange loops because an outer loop latch PHI "
+                    "node has a non-PHI user.";
+        });
+        return false;
+      }
 
   return true;
 }
@@ -2245,14 +2280,12 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
 
     assert(all_of(P.users(),
                   [OuterHeader, OuterExit, IncI, InnerHeader](User *U) {
-                    if (!isa<PHINode>(U))
-                      return true;
                     return (cast<PHINode>(U)->getParent() == OuterHeader &&
                             IncI->getParent() == InnerHeader) ||
                            cast<PHINode>(U)->getParent() == OuterExit;
                   }) &&
-           "Can only replace phis iff the phi-uses are in the loop nest exit "
-           "or the incoming value is defined in the inner header (it will "
+           "Can only replace phis iff the uses are in the loop nest exit or "
+           "the incoming value is defined in the inner header (it will "
            "dominate all loop blocks after interchanging)");
     P.replaceAllUsesWith(IncI);
     P.eraseFromParent();
