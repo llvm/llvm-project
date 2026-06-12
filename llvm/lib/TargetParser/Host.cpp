@@ -1752,6 +1752,10 @@ StringRef sys::getHostCPUName() {
 #define CPUFAMILY_ARM_BRAVA 0x17d5b93a
 #define CPUFAMILY_ARM_TAHITI 0x75d4acb9
 #define CPUFAMILY_ARM_TUPAI 0x204526d0
+#define CPUFAMILY_ARM_HIDRA 0x1d5a87e8
+#define CPUFAMILY_ARM_SOTRA 0xf76c5b1a
+#define CPUFAMILY_ARM_THERA 0xab345f09
+#define CPUFAMILY_ARM_TILOS 0x01d7a72b
 
 StringRef sys::getHostCPUName() {
   uint32_t Family;
@@ -1812,13 +1816,18 @@ StringRef sys::getHostCPUName() {
   case CPUFAMILY_ARM_COLL: // A17 Pro
     return "apple-a17";
   case CPUFAMILY_ARM_DONAN:  // M4
-  case CPUFAMILY_ARM_BRAVA:  // M4 Max
+  case CPUFAMILY_ARM_BRAVA:  // M4 Pro/Max
   case CPUFAMILY_ARM_TAHITI: // A18 Pro
   case CPUFAMILY_ARM_TUPAI:  // A18
     return "apple-m4";
+  case CPUFAMILY_ARM_HIDRA: // M5
+  case CPUFAMILY_ARM_SOTRA: // M5 Pro/Max
+  case CPUFAMILY_ARM_THERA: // A19 Pro
+  case CPUFAMILY_ARM_TILOS: // A19
+    return "apple-m5";
   default:
     // Default to the newest CPU we know about.
-    return "apple-m4";
+    return "apple-m5";
   }
 }
 #elif defined(_AIX)
