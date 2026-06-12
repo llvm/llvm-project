@@ -1880,15 +1880,31 @@ def Feature32Bit
     : SubtargetFeature<"32bit", "IsRV32", "true", "Implements RV32">;
 def Feature64Bit
     : SubtargetFeature<"64bit", "IsRV64", "true", "Implements RV64">;
+// By default enabling RVY uses capability pointers, to use RVI/RVE compatible
+// integral addresses the internal +xllvmrvyipm extension can be used.
+// NOTE: the final user-visible extension is still TBD, this extension only
+// exists for testing of the internals.
+def FeatureVendorXLLVMRVYIPM
+    : RISCVExtension<1, 0, "Using RVY Base ISA with Integral Pointer "
+                     "(Compatibility) Mode", [FeatureStdExtY], "IsRVYIntMode">;
 def IsRV64 : Predicate<"Subtarget->is64Bit()">,
              AssemblerPredicate<(all_of Feature64Bit),
                                 "RV64I Base Instruction Set">;
 def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
              AssemblerPredicate<(all_of (not Feature64Bit)),
                                 "RV32I Base Instruction Set">;
-
-defvar RV32 = DefaultMode;
-def RV64 : HwMode<[IsRV64]>;
+def IsStdExtYCapMode
+    : Predicate<"Subtarget->hasStdExtY() && !Subtarget->isRVYIntMode()">,
+      AssemblerPredicate<(all_of FeatureStdExtY, (not FeatureVendorXLLVMRVYIPM)),
+                         "Using RVY Capability pointer mode">;
+def NotStdExtYCapMode
+    : Predicate<"!Subtarget->hasStdExtY() || Subtarget->isRVYIntMode()">,
+      AssemblerPredicate<(any_of (not FeatureStdExtY), FeatureVendorXLLVMRVYIPM),
+                         "Not using RVY Capability Pointer Mode">;
+defvar RV32I = DefaultMode;
+def RV64I : HwMode<[IsRV64, NotStdExtYCapMode]>;
+def RV32Y : HwMode<[IsRV32, IsStdExtYCapMode]>;
+def RV64Y : HwMode<[IsRV64, IsStdExtYCapMode]>;
 
 def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",

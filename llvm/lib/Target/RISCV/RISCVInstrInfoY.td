@@ -18,6 +18,11 @@
 // Operand definitions.
 //===----------------------------------------------------------------------===//
 
+// A 9-bit unsigned immediate where the least significant four bits are zero.
+def uimm9_lsb0000 : RISCVUImmLsbZeroOp<9, 4>;
+// A 10-bit unsigned immediate where the least significant four bits are zero.
+def uimm10_lsb0000 : RISCVUImmLsbZeroOp<10, 4>;
+
 def YBNDSWImmOperand : AsmOperandClass {
   let Name = "YBNDSWImm";
   let RenderMethod = "addImmOperands";
@@ -51,9 +56,10 @@ def uimm7_eq_xlen : RISCVUImmOp<7>, ImmLeaf<XLenVT, [{
 // Instruction Formats and class templates
 //===----------------------------------------------------------------------===//
 
+defvar OPC_RVY_A = OPC_CUSTOM_3;
+
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 // All regular 3-operand RVY instructions use opc=CUSTOM-3/RVY-A with funct3=0
-defvar OPC_RVY_A = OPC_CUSTOM_3;
 class RVY_rr<bits<7> funct7, string opcodestr, DAGOperand rdOp,
              DAGOperand rs1Op, DAGOperand rs2Op>
     : RVInstR<funct7, 0b000, OPC_RVY_A, (outs rdOp:$rd),
@@ -165,4 +171,86 @@ def : InstAlias<"yhir $rd, $rs1", (SRLIY GPR:$rd, YGPR:$rs1, 32)>;
 def YEQ : RVY_rr<0b0000110, "yeq", GPR, YGPR, YGPR>;
 def YSS : RVY_rr<0b0001110, "yss", GPR, YGPR, YGPR>;
 def YAMASK : RVY_r_xx<0b00000, "yamask">;
+
+//
+// Instructions to Load and Store Capability Data
+//
+def LY : Load_ri<0b001, "ly", YGPR, opcode=OPC_RVY_A>,
+         Sched<[/* TODO: WriteLDY, */ ReadMemBase]>;
+def SY : Store_rri<0b010, "sy", YGPR, opcode=OPC_RVY_A>,
+         Sched<[/* TODO: WriteSTY, */ ReadStoreData, ReadMemBase]>;
 } // Predicates = [HasStdExtY]
+
+//
+// Compressed capability loads/stores using Zcf/Zcd encodings.
+// These only exist RVY mode, not in RVI compatibility mode.
+//
+let Predicates = [HasStdExtZca, IsStdExtYCapMode, IsRV32] in {
+// DecoderNamespace needed since RVY32 reuses Zcf/Zclsd encodings
+let DecoderNamespace = "RVY32Only" in {
+def C_LY_RV32 : CLoad_ri<0b011, "c.ly", YGPRC, uimm8_lsb000>,
+              Sched<[/*TODO: WriteLDY,*/ ReadMemBase]> {
+  bits<8> imm;
+  let Inst{12-10} = imm{5-3};
+  let Inst{6-5} = imm{7-6};
+}
+def C_SY_RV32 : CStore_rri<0b111, "c.sy", YGPRC, uimm8_lsb000>,
+                Sched<[/*TODO: WriteSTY,*/ ReadStoreData, ReadMemBase]> {
+  bits<8> imm;
+  let Inst{12-10} = imm{5-3};
+  let Inst{6-5} = imm{7-6};
+}
+def C_LYSP_RV32 : CStackLoad<0b011, "c.lysp", YGPRNoX0, uimm9_lsb000>,
+                  Sched<[/*TODO: WriteLDY,*/ ReadMemBase]> {
+  let Inst{4-2} = imm{8-6};
+}
+def C_SYSP_RV32 : CStackStore<0b111, "c.sysp", YGPR, uimm9_lsb000>,
+                  Sched<[/*TODO: WriteSTY,*/ ReadStoreData, ReadMemBase]> {
+  let Inst{9-7} = imm{8-6};
+}
+} // let DecoderNamespace = "RVY32Only"
+def : CompressPat<(LY YGPRC:$rd, GPRCMem:$rs1, uimm8_lsb000:$imm),
+                  (C_LY_RV32 YGPRC:$rd, GPRCMem:$rs1, uimm8_lsb000:$imm)>;
+def : CompressPat<(SY YGPRC:$rs2, GPRCMem:$rs1, uimm8_lsb000:$imm),
+                  (C_SY_RV32 YGPRC:$rs2, GPRCMem:$rs1, uimm8_lsb000:$imm)>;
+def : CompressPat<(LY YGPRNoX0:$rd, SPMem:$rs1,  uimm9_lsb000:$imm),
+                  (C_LYSP_RV32 YGPRNoX0:$rd, SPMem:$rs1, uimm9_lsb000:$imm)>;
+def : CompressPat<(SY YGPR:$rs2, SPMem:$rs1, uimm9_lsb000:$imm),
+                  (C_SYSP_RV32 YGPR:$rs2, SPMem:$rs1, uimm9_lsb000:$imm)>;
+} // Predicates = [HasStdExtZca, IsStdExtYCapMode, IsRV32]
+
+let Predicates = [HasStdExtZca, IsStdExtYCapMode, IsRV64] in {
+// DecoderNamespace needed since RVY64 reuses Zcd/Zcm* encodings
+let DecoderNamespace = "RVY64Only" in {
+def C_LY_RV64 : CLoad_ri<0b001, "c.ly", YGPRC, uimm9_lsb0000>,
+                Sched<[/* TODO: WriteLDY, */ ReadMemBase]> {
+  bits<9> imm;
+  let Inst{12-11} = imm{5-4};
+  let Inst{10} = imm{8};
+  let Inst{6-5} = imm{7-6};
+}
+def C_SY_RV64 : CStore_rri<0b101, "c.sy", YGPRC, uimm9_lsb0000>,
+                Sched<[/*TODO: WriteSTY,*/ ReadStoreData, ReadMemBase]> {
+  bits<9> imm;
+  let Inst{12-11} = imm{5-4};
+  let Inst{10} = imm{8};
+  let Inst{6-5} = imm{7-6};
+}
+def C_LYSP_RV64 : CStackLoad<0b001, "c.lysp", YGPRNoX0, uimm10_lsb0000>,
+                  Sched<[/*TODO: WriteLDY,*/ ReadMemBase]> {
+  let Inst{4-2} = imm{8-6};
+}
+def C_SYSP_RV64 : CStackStore<0b101, "c.sysp", YGPR, uimm10_lsb0000>,
+                  Sched<[/*TODO: WriteSTY,*/ ReadStoreData, ReadMemBase]> {
+  let Inst{10-7} = imm{9-6};
+}
+} // let DecoderNamespace = "RVY64Only"
+def : CompressPat<(LY YGPRC:$rd, GPRCMem:$rs1, uimm9_lsb0000:$imm),
+                  (C_LY_RV64 YGPRC:$rd, GPRCMem:$rs1, uimm9_lsb0000:$imm)>;
+def : CompressPat<(SY YGPRC:$rs2, GPRCMem:$rs1, uimm9_lsb0000:$imm),
+                  (C_SY_RV64 YGPRC:$rs2, GPRCMem:$rs1, uimm9_lsb0000:$imm)>;
+def : CompressPat<(LY YGPRNoX0:$rd, SPMem:$rs1,  uimm10_lsb0000:$imm),
+                  (C_LYSP_RV64 YGPRNoX0:$rd, SPMem:$rs1, uimm10_lsb0000:$imm)>;
+def : CompressPat<(SY YGPR:$rs2, SPMem:$rs1, uimm10_lsb0000:$imm),
+                  (C_SYSP_RV64 YGPR:$rs2, SPMem:$rs1, uimm10_lsb0000:$imm)>;
+} // Predicates = [HasStdExtZca, IsStdExtYCapMode, IsRV64]
