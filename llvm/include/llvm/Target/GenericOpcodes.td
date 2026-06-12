@@ -584,6 +584,15 @@ def G_ABS : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Generic carry-less multiplication
+def G_CLMUL : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+  let isCommutable = true;
+}
+
+
 //------------------------------------------------------------------------------
 // Overflow ops
 //------------------------------------------------------------------------------

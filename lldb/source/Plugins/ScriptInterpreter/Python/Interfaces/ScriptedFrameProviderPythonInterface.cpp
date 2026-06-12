@@ -44,14 +44,13 @@ bool ScriptedFrameProviderPythonInterface::AppliesToThread(
 
 llvm::Expected<StructuredData::GenericSP>
 ScriptedFrameProviderPythonInterface::CreatePluginObject(
-    const llvm::StringRef class_name, lldb::StackFrameListSP input_frames,
-    StructuredData::DictionarySP args_sp) {
+    const ScriptedMetadata &scripted_metadata,
+    lldb::StackFrameListSP input_frames) {
   if (!input_frames)
     return llvm::createStringError("invalid frame list");
 
-  StructuredDataImpl sd_impl(args_sp);
-  return ScriptedPythonInterface::CreatePluginObject(class_name, nullptr,
-                                                     input_frames, sd_impl);
+  return ScriptedPythonInterface::CreatePluginObject(
+      scripted_metadata, nullptr, input_frames, scripted_metadata.GetArgsSP());
 }
 
 std::string ScriptedFrameProviderPythonInterface::GetDescription(

@@ -177,9 +177,8 @@ static bool InsertRootInitializers(Function &F, ArrayRef<AllocaInst *> Roots) {
 
   for (AllocaInst *Root : Roots)
     if (!InitedRoots.count(Root)) {
-      new StoreInst(
-          ConstantPointerNull::get(cast<PointerType>(Root->getAllocatedType())),
-          Root, std::next(Root->getIterator()));
+      new StoreInst(Constant::getNullValue(Root->getAllocatedType()), Root,
+                    std::next(Root->getIterator()));
       MadeChange = true;
     }
 

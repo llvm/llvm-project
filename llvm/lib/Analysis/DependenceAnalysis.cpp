@@ -1588,12 +1588,14 @@ bool DependenceInfo::exactTestImpl(const SCEVAddRecExpr *Src,
 
   APInt TU(APInt::getSignedMaxValue(Bits));
   APInt TL(APInt::getSignedMinValue(Bits));
-  APInt TC = CM.sdiv(G);
-  APInt TX = X * TC;
-  APInt TY = Y * TC;
-  LLVM_DEBUG(dbgs() << "\t    TC = " << TC << "\n");
-  LLVM_DEBUG(dbgs() << "\t    TX = " << TX << "\n");
-  LLVM_DEBUG(dbgs() << "\t    TY = " << TY << "\n");
+  OverflowSafeSignedAPInt TC = CM.sdiv(G);
+  OverflowSafeSignedAPInt TX = OverflowSafeSignedAPInt(X) * TC;
+  OverflowSafeSignedAPInt TY = OverflowSafeSignedAPInt(Y) * TC;
+  if (!TC || !TX || !TY)
+    return false;
+  LLVM_DEBUG(dbgs() << "\t    TC = " << *TC << "\n");
+  LLVM_DEBUG(dbgs() << "\t    TX = " << *TX << "\n");
+  LLVM_DEBUG(dbgs() << "\t    TY = " << *TY << "\n");
 
   APInt TB = BM.sdiv(G);
   APInt TA = AM.sdiv(G);
@@ -1770,15 +1772,15 @@ static std::optional<APInt> getConstantCoefficient(const SCEV *Expr) {
   return std::nullopt;
 }
 
-bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
-                                               const Loop *CurLoop,
-                                               const SCEV *&CurLoopCoeff,
-                                               APInt &RunningGCD) const {
+const SCEV *DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
+                                                      const Loop *CurLoop,
+                                                      const SCEV *&CurLoopCoeff,
+                                                      APInt &RunningGCD) const {
   const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Expr);
   if (!AddRec) {
     assert(isLoopInvariant(Expr, CurLoop) &&
            "Expected loop invariant expression");
-    return true;
+    return Expr;
   }
 
   assert(AddRec->isAffine() && "Unexpected Expr");
@@ -1792,7 +1794,7 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
     // If the coefficient is the product of a constant and other stuff, we can
     // use the constant in the GCD computation.
     if (!ConstCoeff)
-      return false;
+      return nullptr;
 
     // TODO: What happens if ConstCoeff is the "most negative" signed number
     // (e.g. -128 for 8 bit wide APInt)?
@@ -1800,26 +1802,6 @@ bool DependenceInfo::accumulateCoefficientsGCD(const SCEV *Expr,
   }
 
   return accumulateCoefficientsGCD(Start, CurLoop, CurLoopCoeff, RunningGCD);
-}
-
-/// Compute \p RunningGCD and return the start value of the innermost
-/// \p SCEVAddRecExpr. In order to calculate the return value we do not
-/// return immediately if it is proved that \p RunningGCD = 1.
-static const SCEV *analyzeCoefficientsForGCD(const SCEV *Coefficients,
-                                             APInt &RunningGCD,
-                                             ScalarEvolution *SE) {
-  while (const SCEVAddRecExpr *AddRec =
-             dyn_cast<SCEVAddRecExpr>(Coefficients)) {
-    const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
-    // If the coefficient is the product of a constant and other stuff,
-    // we can use the constant in the GCD computation.
-    std::optional<APInt> ConstCoeff = getConstantCoefficient(Coeff);
-    if (!ConstCoeff)
-      return nullptr;
-    RunningGCD = APIntOps::GreatestCommonDivisor(RunningGCD, ConstCoeff->abs());
-    Coefficients = AddRec->getStart();
-  }
-  return Coefficients;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1849,11 +1831,13 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   unsigned BitWidth = SE->getTypeSizeInBits(Src->getType());
   APInt RunningGCD = APInt::getZero(BitWidth);
 
-  // Examine Src and dst coefficients.
-  const SCEV *SrcConst = analyzeCoefficientsForGCD(Src, RunningGCD, SE);
+  const SCEV *Dummy = nullptr;
+  const SCEV *SrcConst =
+      accumulateCoefficientsGCD(Src, nullptr, Dummy, RunningGCD);
   if (!SrcConst)
     return false;
-  const SCEV *DstConst = analyzeCoefficientsForGCD(Dst, RunningGCD, SE);
+  const SCEV *DstConst =
+      accumulateCoefficientsGCD(Dst, nullptr, Dummy, RunningGCD);
   if (!DstConst)
     return false;
 

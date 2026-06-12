@@ -86,6 +86,9 @@ void genOpenACCRoutineConstruct(
     AbstractConverter &, mlir::ModuleOp, mlir::func::FuncOp,
     const std::vector<Fortran::semantics::OpenACCRoutineInfo> &);
 
+void declareExternalAccModuleDeclareActionRecipes(
+    AbstractConverter &, fir::FirOpBuilder &,
+    const Fortran::semantics::Symbol &);
 void attachDeclarePostAllocAction(AbstractConverter &, fir::FirOpBuilder &,
                                   const Fortran::semantics::Symbol &);
 void attachDeclarePreDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
@@ -123,6 +126,14 @@ void clearCollapsedDoConstructs();
 /// Checks whether the current insertion point is inside OpenACC compute
 /// construct.
 bool isInsideOpenACCComputeConstruct(fir::FirOpBuilder &);
+
+/// Checks whether the current insertion point is inside an explicit
+/// `!$acc routine` function.
+bool isInsideOpenACCRoutine(fir::FirOpBuilder &);
+
+/// True when Fortran DO loops should be lowered as `acc.loop` for IV
+/// privatization.
+bool shouldLowerDoConstructAsAccLoop(fir::FirOpBuilder &);
 
 void setInsertionPointAfterOpenACCLoopIfInside(fir::FirOpBuilder &);
 

@@ -247,7 +247,8 @@ ModuleDependencyScanner::scan(PathRef FilePath,
     auto [Iter, Inserted] = ModuleNameToSource.try_emplace(
         ScanningResult->Provides->ModuleName, FilePath);
 
-    if (!Inserted && Iter->second != FilePath) {
+    if (!Inserted &&
+        !pathEqual(normalizePath(Iter->second), normalizePath(FilePath))) {
       elog("Detected multiple source files ({0}, {1}) declaring the same "
            "module: '{2}'. "
            "Now clangd may find the wrong source in such case.",

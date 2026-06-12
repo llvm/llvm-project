@@ -20,7 +20,7 @@ class LibCallsShrinkWrapPass
 public:
   static StringRef name() { return "LibCallsShrinkWrapPass"; }
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 } // end namespace llvm
 
