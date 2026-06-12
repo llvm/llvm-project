@@ -176,6 +176,8 @@ public:
   bool GETTER() const { return ATTRIBUTE; }
 #include "RISCVGenSubtargetInfo.inc"
 
+  bool isStdExtYCapMode() const { return hasStdExtY() && !isRVYIntMode(); }
+
   LLVM_DEPRECATED("Now Equivalent to hasStdExtZcd", "hasStdExtZcd")
   bool hasStdExtCOrZcd() const { return HasStdExtZcd; }
   LLVM_DEPRECATED("Now Equivalent to hasStdExtZcf", "hasStdExtZcf")

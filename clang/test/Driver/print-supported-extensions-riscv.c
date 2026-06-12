@@ -179,6 +179,7 @@
 // CHECK-NEXT:     xcvmac               1.0       'XCVmac' (CORE-V Multiply-Accumulate)
 // CHECK-NEXT:     xcvmem               1.0       'XCVmem' (CORE-V Post-incrementing Load & Store)
 // CHECK-NEXT:     xcvsimd              1.0       'XCVsimd' (CORE-V SIMD ALU)
+// CHECK-NEXT:     xllvmrvyipm          1.0       'XLLVMRVYIPM' (Using RVY Base ISA with Integral Pointer (Compatibility) Mode)
 // CHECK-NEXT:     xmipscbop            1.0       'XMIPSCBOP' (MIPS Software Prefetch)
 // CHECK-NEXT:     xmipscmov            1.0       'XMIPSCMov' (MIPS conditional move instruction (mips.ccmov))
 // CHECK-NEXT:     xmipsexectl          1.0       'XMIPSEXECTL' (MIPS execution control)
