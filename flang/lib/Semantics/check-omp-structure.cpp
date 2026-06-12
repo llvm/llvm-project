@@ -671,10 +671,14 @@ void OmpStructureChecker::CheckArgumentObjectKind(const parser::OmpClause &x) {
   // clauses. Assumed-size arrays are allowed on "map", "shared", and
   // "use_device_addr". The check for this happens a few lines below.
   bool AssumedSizeArrayAllowed{false};
+  bool CommonBlockAllowed{true};
   bool NamedConstantAllowed{false};
   switch (clauseId) {
   case llvm::omp::Clause::OMPC_firstprivate:
     NamedConstantAllowed = true;
+    break;
+  case llvm::omp::Clause::OMPC_linear:
+    CommonBlockAllowed = false;
     break;
   case llvm::omp::Clause::OMPC_map:
     AssumedSizeArrayAllowed = true;
@@ -706,6 +710,12 @@ void OmpStructureChecker::CheckArgumentObjectKind(const parser::OmpClause &x) {
       context_.Say(source,
           "A whole assumed-size array is not allowed as a list item on %s clause"_err_en_US,
           parser::omp::GetUpperName(clauseId, version));
+      continue;
+    }
+    if (!CommonBlockAllowed && IsCommonBlock(*symbol)) {
+      context_.Say(source,
+          "'%s' is a common block name and must not appear in a %s clause"_err_en_US,
+          symbol->name(), parser::omp::GetUpperName(clauseId, version));
       continue;
     }
     // Emit a more user-friendly diagnostic than "'kind' must be a variable
