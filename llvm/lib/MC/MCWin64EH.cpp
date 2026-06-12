@@ -714,7 +714,7 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
 
   // --- Emit epilog descriptors ---
   const MCSymbol *PrevEpilogStart = nullptr;
-  uint8_t BaseEpiFlags = 0;
+  [[maybe_unused]] uint8_t BaseEpiFlags = 0;
   for (const auto &EI : EpilogInfos) {
     const auto &Epilog = *EI.Epilog;
 
