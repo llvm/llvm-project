@@ -41,6 +41,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.open
     libc.src.fcntl.openat
 
+    # netinet/in.h entrypoints
+    libc.src.netinet.in6addr_any
+    libc.src.netinet.in6addr_loopback
+
     # poll.h entrypoints
     libc.src.poll.poll
 
