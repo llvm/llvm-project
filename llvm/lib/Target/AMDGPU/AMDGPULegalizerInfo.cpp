@@ -732,6 +732,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     S32, S64, S16, V2S16
   };
 
+  const std::initializer_list<LLT> FPTypesPK16_64 = {S32, S64, S16, V2S16,
+                                                     V2S64};
+
   const LLT MinScalarFPTy = ST.has16BitInsts() ? S16 : S32;
 
   getActionDefinitionsBuilder(G_BR).alwaysLegal();
@@ -986,12 +989,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     FPOpActions.clampMaxNumElementsStrict(0, S64, 2);
   }
 
-  auto &MinNumMaxNumIeee =
-      getActionDefinitionsBuilder({G_FMINNUM_IEEE, G_FMAXNUM_IEEE});
-  auto &MinNumMaxNum = getActionDefinitionsBuilder(
-      {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM});
+  if (ST.hasPackedFP64Ops()) {
+    FPOpActions.legalFor({V2S64});
+    FPOpActions.clampMaxNumElementsStrict(0, S64, 2);
+  }
+
   bool HasMinnumMaxnum =
       ST.hasIEEEMinimumMaximumInsts() || ST.hasSALUMinimumMaximumInsts();
+
+  auto &MinNumMaxNumIeee =
+      getActionDefinitionsBuilder({G_FMINNUM_IEEE, G_FMAXNUM_IEEE});
 
   if (ST.hasVOP3PInsts()) {
     MinNumMaxNumIeee.legalFor(!HasMinnumMaxnum, FPTypesPK16)
@@ -999,29 +1006,38 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .clampMaxNumElements(0, S16, 2)
         .clampScalar(0, S16, S64)
         .scalarize(0);
-
-    MinNumMaxNum.legalFor(HasMinnumMaxnum, FPTypesPK16)
-        .customFor(!HasMinnumMaxnum, FPTypesPK16)
-        .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
-        .clampMaxNumElements(0, S16, 2)
-        .clampScalar(0, S16, S64)
-        .scalarize(0);
   } else if (ST.has16BitInsts()) {
-    MinNumMaxNumIeee.legalFor(!HasMinnumMaxnum, FPTypes16)
-        .clampScalar(0, S16, S64)
-        .scalarize(0);
-    MinNumMaxNum.legalFor(HasMinnumMaxnum, FPTypes16)
-        .customFor(!HasMinnumMaxnum, FPTypes16)
-        .clampScalar(0, S16, S64)
-        .scalarize(0);
+    MinNumMaxNumIeee.legalFor(!HasMinnumMaxnum, FPTypes16).clampScalar(0, S16, S64).scalarize(0);
   } else {
     MinNumMaxNumIeee.legalFor(!HasMinnumMaxnum, FPTypesBase)
         .clampScalar(0, S32, S64)
         .scalarize(0);
-    MinNumMaxNum.legalFor(HasMinnumMaxnum, FPTypesBase)
-        .customFor(!HasMinnumMaxnum, FPTypesBase)
-        .clampScalar(0, S32, S64)
+  }
+
+  auto &MinNumMaxNum = getActionDefinitionsBuilder(
+      {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM});
+
+  if (ST.hasPackedFP64Ops()) {
+    MinNumMaxNum.legalFor(HasMinnumMaxnum, FPTypesPK16_64)
+        .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
+        .clampMaxNumElements(0, S16, 2)
+        .clampMaxNumElements(0, S64, 2)
+        .clampScalar(0, S16, S64)
         .scalarize(0);
+  } else if (ST.hasVOP3PInsts()) {
+    MinNumMaxNum.legalFor(HasMinnumMaxnum, FPTypesPK16)
+      .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
+      .clampMaxNumElements(0, S16, 2)
+      .clampScalar(0, S16, S64)
+      .scalarize(0);
+  } else if (ST.has16BitInsts()) {
+    MinNumMaxNum.legalFor(HasMinnumMaxnum, FPTypes16)
+      .clampScalar(0, S16, S64)
+      .scalarize(0);
+  } else {
+    MinNumMaxNum.legalFor(HasMinnumMaxnum, FPTypesBase)
+      .clampScalar(0, S32, S64)
+      .scalarize(0);
   }
 
   if (ST.hasVOP3PInsts())
