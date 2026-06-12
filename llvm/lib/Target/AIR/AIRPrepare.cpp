@@ -306,6 +306,7 @@ static bool insertIdentityBitcastsAtNonByteAccesses(Value *Root) {
 }
 
 static bool scalarizeVec1Users(Value *V, Type *I32Ty) {
+  return false;
   bool Changed = false;
   SmallVector<Instruction *, 8> Vec1Users;
   std::function<void(Value *)> FindVec1 = [&](Value *V) {
@@ -1749,6 +1750,7 @@ static bool fixMismatchedTGGEPs(Module &M) {
 // stores on such mixed-width globals to a sequence of element stores fixes the
 // materialization while leaving the audited same-width vec4/vec2 path intact.
 static bool scalarizeMixedWidthTGVecStores(Module &M) {
+  return false;
   bool Changed = false;
   Type *I32 = Type::getInt32Ty(M.getContext());
   const DataLayout &DL = M.getDataLayout();

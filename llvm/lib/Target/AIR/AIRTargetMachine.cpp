@@ -155,7 +155,7 @@ public:
     // so scalarize the vector chains entangled with shuffle operands back to
     // scalars before AIR emission. GEMM's pure load/store vectors are
     // untouched.
-    addPass(createAIRScalarizeShuffleOperandsLegacyPass());
+    // addPass(createAIRScalarizeShuffleOperandsLegacyPass());
     addPass(createAIRInlineNonKernelLegacyPass());
     addPass(createAIRDemoteF64LegacyPass());
     addPass(createAIRLowerFNegLegacyPass());

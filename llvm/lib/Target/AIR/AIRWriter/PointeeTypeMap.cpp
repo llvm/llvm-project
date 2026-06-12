@@ -70,8 +70,14 @@ Type *PointeeTypeMap::inferFromUsage(Value *Ptr,
     if (auto *BC = dyn_cast<BitCastInst>(U)) {
       if (BC->getType()->isPointerTy() &&
           BC->getType()->getPointerAddressSpace() == AS::Device)
-        if (Type *T = inferFromUsage(BC, Visited))
+        if (Type *T = inferFromUsage(BC, Visited)) {
+          auto *GEPPtr = dyn_cast<GetElementPtrInst>(Ptr);
+          auto *VT = dyn_cast<VectorType>(T);
+          if (GEPPtr && VT &&
+              VT->getElementType() == GEPPtr->getResultElementType())
+            return GEPPtr->getResultElementType();
           return T;
+        }
     }
     if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
       if (Type *T = inferFromUsage(GEP, Visited))
