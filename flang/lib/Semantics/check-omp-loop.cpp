@@ -724,15 +724,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
   auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
   CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, objects, "LINEAR");
   CheckCrayPointee(objects, "LINEAR", false);
-  for (const auto &ompObject : objects.v) {
-    if (const auto *name{std::get_if<parser::Name>(&ompObject.u)}) {
-      if (name->symbol && name->symbol->has<CommonBlockDetails>()) {
-        context_.Say(name->source,
-            "'%s' is a common block name and must not appear in a LINEAR clause"_err_en_US,
-            name->symbol->name());
-      }
-    }
-  }
   GetSymbolsInObjectList(objects, symbols);
 
   auto CheckIntegerNoRef{[&](const Symbol *symbol, parser::CharBlock source) {
