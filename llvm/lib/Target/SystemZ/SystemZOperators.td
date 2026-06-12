@@ -1367,9 +1367,3 @@ class z_vse_by_parts<SDPatternOperator operator, int index1, int index2>
 def z_vsei8_by_parts  : z_vse_by_parts<sext8dbl, 7, 15>;
 def z_vsei16_by_parts : z_vse_by_parts<sext16dbl, 3, 7>;
 def z_vsei32_by_parts : z_vse_by_parts<sext32, 1, 3>;
-
-// Matches any integer constant where only the last byte is set (0x00...XX).
-// Safe for OR/XOR because x | 0 == x.
-def immLSB8 : PatLeaf<(imm), [{
-  return N->getAPIntValue().getActiveBits() <= 8;
-}]>;

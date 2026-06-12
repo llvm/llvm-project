@@ -368,6 +368,19 @@ defm imm32zx8 : Immediate<i32, [{
 
 defm imm32zx8trunc : Immediate<i32, [{}], UIMM8, "U8Imm">;
 
+// Immediates for the 8-bit LSB chunk of an i32, with the other bits being one.
+defm imm32ll8c : Immediate<i32, [{
+  return Imm.isIntN(32) &&
+         (uint32_t(~Imm.getZExtValue()) & ~0xffULL) == 0;
+}], UIMM8, "U8Imm">;
+
+// Immediates for the 8-bit LSB chunk of an i16 (evaluated as i32),
+// with the other bits being one.
+defm imm16ll8c : Immediate<i32, [{
+  return Imm.isIntN(16) &&
+         (uint16_t(~Imm.getZExtValue()) & ~0xffULL) == 0;
+}], UIMM8, "U8Imm">;
+
 defm imm32zx12 : Immediate<i32, [{
   return Imm.isIntN(12);
 }], UIMM12, "U12Imm">;
@@ -444,27 +457,6 @@ defm imm64hh16c : Immediate<i64, [{
          SystemZ::isImmHH(uint64_t(~Imm.getZExtValue()));
 }], HH16, "U16Imm">;
 
-// Immediates for the 8-bit LSB chunk of an i32, with the other bits being one.
-defm imm32ll8c : Immediate<i32, [{
-  if (!Imm.isIntN(32)) return false;
-  uint64_t Val = Imm.getZExtValue();
-  return (Val & 0xffffff00ULL) == 0xffffff00ULL;
-}], UIMM8, "U8Imm">;
-
-// Immediates for the second 8-bit LSB chunk of an i32, with the other bits
-// being one.
-defm imm16ll8c : Immediate<i32, [{
-  if (!Imm.isIntN(32)) return false;
-  uint64_t Val = Imm.getZExtValue();
-  return (Val & 0xff00ULL) == 0xff00ULL;
-}], UIMM8, "U8Imm">;
-
-// Immediates for the 8-bit LSB chunk of an i64, with the other bits being one.
-defm imm64ll8c : Immediate<i64, [{
-  return Imm.isIntN(64) &&
-         (uint64_t(~Imm.getZExtValue()) & 0xffffffffffffff00ULL) == 0;
-}], UIMM8, "U8Imm">;
-
 // Immediates for the lower and upper 32 bits of an i64, with the other
 // bits of the i32 being zero.
 defm imm64lf32 : Immediate<i64, [{
@@ -505,6 +497,12 @@ defm imm64sx8 : Immediate<i64, [{
 
 defm imm64zx8 : Immediate<i64, [{
   return Imm.isIntN(8);;
+}], UIMM8, "U8Imm">;
+
+// Immediates for the 8-bit LSB chunk of an i64, with the other bits being one.
+defm imm64ll8c : Immediate<i64, [{
+  return Imm.isIntN(64) &&
+         (uint64_t(~Imm.getZExtValue()) & ~0xffULL) == 0;
 }], UIMM8, "U8Imm">;
 
 defm imm64sx16 : Immediate<i64, [{
@@ -701,6 +699,10 @@ def bdladdr12onlylen4 : BDLMode<"BDLAddr",  "64", "12", "Only", "4">;
 def bdladdr12onlylen8 : BDLMode<"BDLAddr",  "64", "12", "Only", "8">;
 def bdraddr12only     : BDRMode<"BDRAddr",  "64", "12", "Only">;
 def bdvaddr12only     : BDVMode<            "64", "12">;
+
+// Complex patterns for base register-displacement pairs.
+def bdaddr12pairCmplx : ComplexPattern<i64, 2, "selectBDAddr12Pair">;
+def bdaddr20pairCmplx : ComplexPattern<i64, 2, "selectBDAddr20Pair">;
 
 // 12-bit unsigned displacement variants (for NI, OI, XI)
 def bdaddr12off1 : ComplexPattern<i64, 2, "selectBDAddr12off1">;
