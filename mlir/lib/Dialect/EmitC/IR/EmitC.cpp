@@ -336,8 +336,6 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
        emitc::isSupportedFloatType(output) || isa<emitc::PointerType>(output)));
 }
 
-bool CastOp::isPure() { return static_cast<bool>(getPureAttr()); }
-
 Speculation::Speculatability emitc::CastOp::getSpeculatability() {
   return getPure() ? Speculation::Speculatable : Speculation::NotSpeculatable;
 }
