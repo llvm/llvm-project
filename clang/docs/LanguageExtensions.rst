@@ -5866,22 +5866,22 @@ z/OS builtins
 ^^^^^^^^^^^^^
 
 z/OS supports builtins for compare-and-swap operations that generate the
-corresponding z/OS assembly instructions (CS, CSG, CDSG). These builtins
-compare the value pointed to by oldptr to the value pointed to by curptr.
-If they are equal, the newword value is copied into the location pointed to by
-curptr. If they are unequal, the value pointed to by curptr is copied into the
-location pointed to by oldptr. The builtins return 0 if the values are equal,
-or 1 if they are unequal.
+corresponding z/OS assembly instructions (CS, CSG, CDSG). These builtins compare
+the value pointed to by oldptr to the value pointed to by curptr. If they are
+equal, the value pointed to by newword (or newword itself for ``__cs``) is
+copied into the location pointed to by curptr. If they are unequal, the value
+pointed to by curptr is copied into the location pointed to by oldptr.
+The builtins return 0 if the values are equal, or 1 if they are unequal.
 
 * ``int __cs(unsigned int *oldptr, unsigned int *curptr, unsigned int newword)``
 
   Generates a 4-byte compare-and-swap using the CS instruction.
+  Use ``__cs`` instead of ``__cs1`` when the newword arg is an r-value instead
+  of an l-value.
 
 * ``int __cs1(void *oldptr, void *curptr, void *newword)``
 
   Generates a 4-byte compare-and-swap using the CS instruction.
-  Accepts void pointers unlike ``__cs`` which requires unsigned int pointers.
-  Semantically identical except for argument typing.
 
 * ``int __csg(void *oldptr, void *curptr, void *newword)``
 
