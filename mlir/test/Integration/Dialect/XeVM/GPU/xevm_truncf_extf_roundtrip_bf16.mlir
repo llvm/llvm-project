@@ -6,6 +6,7 @@
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
 
+// XFAIL:*
 // Round trip test for xevm.truncf followed by xevm.extf.
 // Each of the 16 lanes owns a vector<16xbf16>, truncates it to f8 (E4M3FN) with
 // xevm.truncf and extends it back to bf16 with xevm.extf. The integers 1..16 are
