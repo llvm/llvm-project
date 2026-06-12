@@ -238,6 +238,9 @@ extern char &SILowerControlFlowLegacyID;
 void initializeSIPreEmitPeepholeLegacyPass(PassRegistry &);
 extern char &SIPreEmitPeepholeID;
 
+void initializeAMDGPUAlignVALURunsLegacyPass(PassRegistry &);
+extern char &AMDGPUAlignVALURunsLegacyID;
+
 void initializeSILateBranchLoweringLegacyPass(PassRegistry &);
 extern char &SILateBranchLoweringPassID;
 
@@ -462,6 +465,13 @@ public:
 
 class SIPreEmitPeepholePass
     : public RequiredPassInfoMixin<SIPreEmitPeepholePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class AMDGPUAlignVALURunsPass
+    : public OptionalPassInfoMixin<AMDGPUAlignVALURunsPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

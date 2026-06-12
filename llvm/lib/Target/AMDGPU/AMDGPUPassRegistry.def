@@ -150,6 +150,7 @@ MACHINE_FUNCTION_PASS("si-optimize-exec-masking-pre-ra", SIOptimizeExecMaskingPr
 MACHINE_FUNCTION_PASS("si-peephole-sdwa", SIPeepholeSDWAPass())
 MACHINE_FUNCTION_PASS("si-post-ra-bundler", SIPostRABundlerPass())
 MACHINE_FUNCTION_PASS("si-pre-allocate-wwm-regs", SIPreAllocateWWMRegsPass())
+MACHINE_FUNCTION_PASS("amdgpu-align-valu-runs", AMDGPUAlignVALURunsPass())
 MACHINE_FUNCTION_PASS("si-pre-emit-peephole", SIPreEmitPeepholePass())
 MACHINE_FUNCTION_PASS("si-shrink-instructions", SIShrinkInstructionsPass())
 MACHINE_FUNCTION_PASS("si-wqm", SIWholeQuadModePass())
