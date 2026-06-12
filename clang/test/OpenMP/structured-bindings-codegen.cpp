@@ -2546,6 +2546,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store i32 99, ptr [[DOTOMP_UB:%.*]], align 4
 // CHECK:    store i32 1, ptr [[DOTOMP_STRIDE:%.*]], align 4
 // CHECK:    store i32 0, ptr [[DOTOMP_IS_LAST:%.*]], align 4
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    store i32 0, ptr [[A:%.*]], align 4
 // CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
@@ -2598,15 +2599,15 @@ void test_lambda_implicit_capture() {
 // CHECK:      i32 2, [[DOTOMP_REDUCTION_CASE2:label %.*]]
 // CHECK:    ]
 // CHECK:       [[_OMP_REDUCTION_CASE1:.*:]]
-// CHECK:    [[TMP15:%.*]] = load i32, ptr [[A]], align 4
+// CHECK:    [[TMP15:%.*]] = load i32, ptr [[X]], align 4
 // CHECK:    [[TMP16:%.*]] = load i32, ptr [[A]], align 4
 // CHECK:    [[ADD4:%.*]] = add nsw i32 [[TMP15]], [[TMP16]]
-// CHECK:    store i32 [[ADD4]], ptr [[A]], align 4
+// CHECK:    store i32 [[ADD4]], ptr [[X]], align 4
 // CHECK:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP3]], ptr @.gomp_critical_user_.reduction.var)
 // CHECK:    br [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK:       [[_OMP_REDUCTION_CASE2:.*:]]
 // CHECK:    [[TMP17:%.*]] = load i32, ptr [[A]], align 4
-// CHECK:    [[TMP18:%.*]] = atomicrmw add ptr [[A]], i32 [[TMP17]] monotonic, align 4
+// CHECK:    [[TMP18:%.*]] = atomicrmw add ptr [[X]], i32 [[TMP17]] monotonic, align 4
 // CHECK:    br [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK:       [[_OMP_REDUCTION_DEFAULT:.*:]]
 // CHECK:    ret void
@@ -2656,7 +2657,9 @@ void test_lambda_implicit_capture() {
 // CHECK:    store i32 9, ptr [[DOTOMP_UB:%.*]], align 4
 // CHECK:    store i32 1, ptr [[DOTOMP_STRIDE:%.*]], align 4
 // CHECK:    store i32 0, ptr [[DOTOMP_IS_LAST:%.*]], align 4
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    store i32 1, ptr [[A:%.*]], align 4
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP1]], i32 0, i32 1
 // CHECK:    store i32 2147483647, ptr [[B:%.*]], align 4
 // CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
@@ -2719,28 +2722,28 @@ void test_lambda_implicit_capture() {
 // CHECK:      i32 2, label %[[DOTOMP_REDUCTION_CASE2:.*]]
 // CHECK:    ]
 // CHECK:       [[_OMP_REDUCTION_CASE1:.*:]]
-// CHECK:    [[TMP18:%.*]] = load i32, ptr [[A]], align 4
+// CHECK:    [[TMP18:%.*]] = load i32, ptr [[X]], align 4
 // CHECK:    [[TMP19:%.*]] = load i32, ptr [[A]], align 4
 // CHECK:    [[MUL5:%.*]] = mul nsw i32 [[TMP18]], [[TMP19]]
-// CHECK:    store i32 [[MUL5]], ptr [[A]], align 4
-// CHECK:    [[TMP20:%.*]] = load i32, ptr [[B]], align 4
+// CHECK:    store i32 [[MUL5]], ptr [[X]], align 4
+// CHECK:    [[TMP20:%.*]] = load i32, ptr [[Y]], align 4
 // CHECK:    [[TMP21:%.*]] = load i32, ptr [[B]], align 4
 // CHECK:    [[CMP6:%.*]] = icmp slt i32 [[TMP20]], [[TMP21]]
 // CHECK:    br i1 [[CMP6]], label %[[COND_TRUE7:.*]], label %[[COND_FALSE8:.*]]
 // CHECK:       [[COND_TRUE7]]:
-// CHECK:    [[TMP22:%.*]] = load i32, ptr [[B]], align 4
+// CHECK:    [[TMP22:%.*]] = load i32, ptr [[Y]], align 4
 // CHECK:    br label %[[COND_END9:.*]]
 // CHECK:       [[COND_FALSE8]]:
 // CHECK:    [[TMP23:%.*]] = load i32, ptr [[B]], align 4
 // CHECK:    br label %[[COND_END9]]
 // CHECK:       [[COND_END9]]:
 // CHECK:    [[COND10:%.*]] = phi i32 [ [[TMP22]], %[[COND_TRUE7]] ], [ [[TMP23]], %[[COND_FALSE8]] ]
-// CHECK:    store i32 [[COND10]], ptr [[B]], align 4
+// CHECK:    store i32 [[COND10]], ptr [[Y]], align 4
 // CHECK:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP3]], ptr @.gomp_critical_user_.reduction.var)
 // CHECK:    br [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK:       [[_OMP_REDUCTION_CASE2:.*:]]
 // CHECK:    [[TMP24:%.*]] = load i32, ptr [[A]], align 4
-// CHECK:    [[ATOMIC_LOAD:%.*]] = load atomic i32, ptr [[A]] monotonic, align 4
+// CHECK:    [[ATOMIC_LOAD:%.*]] = load atomic i32, ptr [[X]] monotonic, align 4
 // CHECK:    br label %[[ATOMIC_CONT:.*]]
 // CHECK:       [[ATOMIC_CONT]]:
 // CHECK:    [[TMP25:%.*]] = phi i32 [ [[ATOMIC_LOAD]], %[[DOTOMP_REDUCTION_CASE2]] ], [ [[TMP30:%.*]], %[[ATOMIC_CONT]] ]
@@ -2750,13 +2753,13 @@ void test_lambda_implicit_capture() {
 // CHECK:    [[MUL12:%.*]] = mul nsw i32 [[TMP26]], [[TMP27]]
 // CHECK:    store i32 [[MUL12]], ptr [[ATOMIC_TEMP:%.*]], align 4
 // CHECK:    [[TMP28:%.*]] = load i32, ptr [[ATOMIC_TEMP]], align 4
-// CHECK:    [[TMP29:%.*]] = cmpxchg ptr [[A]], i32 [[TMP25]], i32 [[TMP28]] monotonic monotonic, align 4
+// CHECK:    [[TMP29:%.*]] = cmpxchg ptr [[X]], i32 [[TMP25]], i32 [[TMP28]] monotonic monotonic, align 4
 // CHECK:    [[TMP30]] = extractvalue { i32, i1 } [[TMP29]], 0
 // CHECK:    [[TMP31:%.*]] = extractvalue { i32, i1 } [[TMP29]], 1
 // CHECK:    br i1 [[TMP31]], label %[[ATOMIC_EXIT:.*]], label %[[ATOMIC_CONT]]
 // CHECK:       [[ATOMIC_EXIT]]:
 // CHECK:    [[TMP32:%.*]] = load i32, ptr [[B]], align 4
-// CHECK:    [[TMP33:%.*]] = atomicrmw min ptr [[B]], i32 [[TMP32]] monotonic, align 4
+// CHECK:    [[TMP33:%.*]] = atomicrmw min ptr [[Y]], i32 [[TMP32]] monotonic, align 4
 // CHECK:    br [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK:       [[_OMP_REDUCTION_DEFAULT:.*:]]
 // CHECK:    ret void
@@ -3047,7 +3050,9 @@ void test_lambda_implicit_capture() {
 // CHECK:    store i32 99, ptr [[DOTOMP_UB:%.*]], align 4
 // CHECK:    store i32 1, ptr [[DOTOMP_STRIDE:%.*]], align 4
 // CHECK:    store i32 0, ptr [[DOTOMP_IS_LAST:%.*]], align 4
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    store i32 -2147483648, ptr [[A:%.*]], align 4
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP1]], i32 0, i32 1
 // CHECK:    store i32 -2147483648, ptr [[B:%.*]], align 4
 // CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
@@ -3116,39 +3121,39 @@ void test_lambda_implicit_capture() {
 // CHECK:      i32 2, [[DOTOMP_REDUCTION_CASE2:label %.*]]
 // CHECK:    ]
 // CHECK:       [[_OMP_REDUCTION_CASE1:.*:]]
-// CHECK:    [[TMP20:%.*]] = load i32, ptr [[A]], align 4
+// CHECK:    [[TMP20:%.*]] = load i32, ptr [[X]], align 4
 // CHECK:    [[TMP21:%.*]] = load i32, ptr [[A]], align 4
 // CHECK:    [[CMP7:%.*]] = icmp sgt i32 [[TMP20]], [[TMP21]]
 // CHECK:    br i1 [[CMP7]], label %[[COND_TRUE8:.*]], label %[[COND_FALSE9:.*]]
 // CHECK:       [[COND_TRUE8]]:
-// CHECK:    [[TMP22:%.*]] = load i32, ptr [[A]], align 4
+// CHECK:    [[TMP22:%.*]] = load i32, ptr [[X]], align 4
 // CHECK:    br label %[[COND_END10:.*]]
 // CHECK:       [[COND_FALSE9]]:
 // CHECK:    [[TMP23:%.*]] = load i32, ptr [[A]], align 4
 // CHECK:    br label %[[COND_END10]]
 // CHECK:       [[COND_END10]]:
 // CHECK:    [[COND11:%.*]] = phi i32 [ [[TMP22]], %[[COND_TRUE8]] ], [ [[TMP23]], %[[COND_FALSE9]] ]
-// CHECK:    store i32 [[COND11]], ptr [[A]], align 4
-// CHECK:    [[TMP24:%.*]] = load i32, ptr [[B]], align 4
+// CHECK:    store i32 [[COND11]], ptr [[X]], align 4
+// CHECK:    [[TMP24:%.*]] = load i32, ptr [[Y]], align 4
 // CHECK:    [[TMP25:%.*]] = load i32, ptr [[B]], align 4
 // CHECK:    [[CMP12:%.*]] = icmp sgt i32 [[TMP24]], [[TMP25]]
 // CHECK:    br i1 [[CMP12]], label %[[COND_TRUE13:.*]], label %[[COND_FALSE14:.*]]
 // CHECK:       [[COND_TRUE13]]:
-// CHECK:    [[TMP26:%.*]] = load i32, ptr [[B]], align 4
+// CHECK:    [[TMP26:%.*]] = load i32, ptr [[Y]], align 4
 // CHECK:    br label %[[COND_END15:.*]]
 // CHECK:       [[COND_FALSE14]]:
 // CHECK:    [[TMP27:%.*]] = load i32, ptr [[B]], align 4
 // CHECK:    br label %[[COND_END15]]
 // CHECK:       [[COND_END15]]:
 // CHECK:    [[COND16:%.*]] = phi i32 [ [[TMP26]], %[[COND_TRUE13]] ], [ [[TMP27]], %[[COND_FALSE14]] ]
-// CHECK:    store i32 [[COND16]], ptr [[B]], align 4
+// CHECK:    store i32 [[COND16]], ptr [[Y]], align 4
 // CHECK:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP3]], ptr @.gomp_critical_user_.reduction.var)
 // CHECK:    br [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK:       [[_OMP_REDUCTION_CASE2:.*:]]
 // CHECK:    [[TMP28:%.*]] = load i32, ptr [[A]], align 4
-// CHECK:    [[TMP29:%.*]] = atomicrmw max ptr [[A]], i32 [[TMP28]] monotonic, align 4
+// CHECK:    [[TMP29:%.*]] = atomicrmw max ptr [[X]], i32 [[TMP28]] monotonic, align 4
 // CHECK:    [[TMP30:%.*]] = load i32, ptr [[B]], align 4
-// CHECK:    [[TMP31:%.*]] = atomicrmw max ptr [[B]], i32 [[TMP30]] monotonic, align 4
+// CHECK:    [[TMP31:%.*]] = atomicrmw max ptr [[Y]], i32 [[TMP30]] monotonic, align 4
 // CHECK:    br [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK:       [[_OMP_REDUCTION_DEFAULT:.*:]]
 // CHECK:    ret void
@@ -3214,15 +3219,16 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP2]], i32 0, i32 0
 // CHECK:    store i32 0, ptr [[A:%.*]], align 4
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P2:%.*]], ptr align 4 @"__const.<captured>.p2", i64 8, i1 false)
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP1:%.*]], ptr align 4 [[P2]], i64 8, i1 false)
-// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
-// CHECK:    [[TMP3:%.*]] = load i32, ptr [[X]], align 4
-// CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP3]], 1
-// CHECK:    store i32 [[ADD]], ptr [[X]], align 4
 // CHECK:    [[X1:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP1]], i32 0, i32 0
-// CHECK:    [[TMP4:%.*]] = load i32, ptr [[X1]], align 4
+// CHECK:    [[TMP3:%.*]] = load i32, ptr [[X1]], align 4
+// CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP3]], 1
+// CHECK:    store i32 [[ADD]], ptr [[X1]], align 4
+// CHECK:    [[X2:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP1]], i32 0, i32 0
+// CHECK:    [[TMP4:%.*]] = load i32, ptr [[X2]], align 4
 // CHECK:    call void @_Z3usei(i32 noundef [[TMP4]])
 // CHECK:    [[TMP5:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST:%.*]], i64 0, i64 0
 // CHECK:    store ptr [[A]], ptr [[TMP5]], align 8
@@ -3234,15 +3240,15 @@ void test_lambda_implicit_capture() {
 // CHECK:      i32 2, [[DOTOMP_REDUCTION_CASE2:label %.*]]
 // CHECK:    ]
 // CHECK:       [[_OMP_REDUCTION_CASE1:.*:]]
-// CHECK:    [[TMP9:%.*]] = load i32, ptr [[A]], align 4
+// CHECK:    [[TMP9:%.*]] = load i32, ptr [[X]], align 4
 // CHECK:    [[TMP10:%.*]] = load i32, ptr [[A]], align 4
-// CHECK:    [[ADD2:%.*]] = add nsw i32 [[TMP9]], [[TMP10]]
-// CHECK:    store i32 [[ADD2]], ptr [[A]], align 4
+// CHECK:    [[ADD3:%.*]] = add nsw i32 [[TMP9]], [[TMP10]]
+// CHECK:    store i32 [[ADD3]], ptr [[X]], align 4
 // CHECK:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP7]], ptr @.gomp_critical_user_.reduction.var)
 // CHECK:    br [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK:       [[_OMP_REDUCTION_CASE2:.*:]]
 // CHECK:    [[TMP11:%.*]] = load i32, ptr [[A]], align 4
-// CHECK:    [[TMP12:%.*]] = atomicrmw add ptr [[A]], i32 [[TMP11]] monotonic, align 4
+// CHECK:    [[TMP12:%.*]] = atomicrmw add ptr [[X]], i32 [[TMP11]] monotonic, align 4
 // CHECK:    br [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK:       [[_OMP_REDUCTION_DEFAULT:.*:]]
 // CHECK:    ret void
