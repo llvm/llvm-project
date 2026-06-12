@@ -141,6 +141,9 @@ private:
                             const DemandedFields &Used,
                             MachineInstr *&AVLDefToMove) const;
   void coalesceVSETVLIs(MachineBasicBlock &MBB) const;
+  bool canMutatePriorConfigWithTWiden(const MachineInstr &PrevMI,
+                                      const MachineInstr &MI) const;
+  void coalesceVSETVLIsForTWiden(MachineBasicBlock &MBB) const;
   bool insertVSETMTK(MachineBasicBlock &MBB, TKTMMode Mode) const;
 };
 
@@ -933,6 +936,98 @@ void RISCVInsertVSETVLI::coalesceVSETVLIs(MachineBasicBlock &MBB) const {
   }
 }
 
+// When twiden != 0, LMUL, tail policy, and mask policy from the user are
+// ignored. The tail policy and mask policy are always treated as agnostic. The
+// normal RVV instruction will ignore the twiden parameter. This observation
+// could allow the RVV instruction and xsfmm instruction to share the same
+// configuration instruction.
+//
+// We need to make sure the AVL, SEW, and AltFmt is same between VSETVL and
+// VSETVLTN.
+//
+// For example:
+//
+// %avl = SETTM or SETTK
+// ...
+// VSETVL %avl, type1
+// VSETVLTNT %avl, type2
+//
+// ->
+//
+// %avl = SETTM or SETTK
+// ...
+// VSETVLTNT %avl, type2
+//
+bool RISCVInsertVSETVLI::canMutatePriorConfigWithTWiden(
+    const MachineInstr &PrevMI, const MachineInstr &MI) const {
+
+  if (PrevMI.getOpcode() != RISCV::PseudoVSETVLI)
+    return false;
+
+  if (MI.getOpcode() != RISCV::PseudoSF_VSETTNT)
+    return false;
+
+  auto PrevInfo = VIA.getInfoForVSETVLI(PrevMI);
+  auto CurrInfo = VIA.getInfoForVSETVLI(MI);
+
+  auto AVLReg = CurrInfo.getAVLReg();
+
+  auto *AVLRegDefMI = MRI->getUniqueVRegDef(AVLReg);
+
+  if (!AVLRegDefMI)
+    return false;
+
+  if (!RISCVInstrInfo::isXSfmmVectorConfigTMTKInstr(*AVLRegDefMI))
+    return false;
+
+  auto AVLRegDefMIInfo = VIA.computeInfoForInstr(*AVLRegDefMI);
+  if (AVLRegDefMIInfo.getTWiden() != CurrInfo.getTWiden())
+    return false;
+
+  if (AVLRegDefMIInfo.getSEW() != PrevInfo.getSEW())
+    return false;
+
+  // CurrInfo twiden != 0, so TailAgnostic and MaskAgnostic bit default to 1
+  if (!PrevInfo.getTailAgnostic() || !PrevInfo.getMaskAgnostic())
+    return false;
+
+  if (!PrevInfo.hasSameAVL(CurrInfo))
+    return false;
+
+  if (PrevInfo.getSEW() != CurrInfo.getSEW())
+    return false;
+
+  if (PrevInfo.getAltFmt() != CurrInfo.getAltFmt())
+    return false;
+
+  return true;
+}
+
+void RISCVInsertVSETVLI::coalesceVSETVLIsForTWiden(
+    MachineBasicBlock &MBB) const {
+  MachineInstr *NextMI = nullptr;
+
+  for (MachineInstr &MI : make_early_inc_range(reverse(MBB))) {
+
+    if (!RISCVInstrInfo::isVectorConfigInstr(MI))
+      continue;
+
+    if (NextMI) {
+      // If only TWiden different. Update the MI and drop the NextMI.
+      if (canMutatePriorConfigWithTWiden(MI, *NextMI)) {
+
+        auto NextInfo = VIA.getInfoForVSETVLI(*NextMI);
+        MI.getOperand(2).setImm(NextInfo.encodeVTYPE());
+
+        if (LIS)
+          LIS->RemoveMachineInstrFromMaps(*NextMI);
+        NextMI->eraseFromParent();
+      }
+    }
+    NextMI = &MI;
+  }
+}
+
 void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
   for (auto I = MBB.begin(), E = MBB.end(); I != E;) {
     MachineInstr &MI = *I++;
@@ -1088,6 +1183,9 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   // optimized away.
   for (MachineBasicBlock *MBB : post_order(&MF))
     coalesceVSETVLIs(*MBB);
+
+  for (MachineBasicBlock &MBB : MF)
+    coalesceVSETVLIsForTWiden(MBB);
 
   // Insert PseudoReadVL after VLEFF/VLSEGFF and replace it with the vl output
   // of VLEFF/VLSEGFF.

@@ -246,9 +246,8 @@ define void @matmulf16(i64 noundef %ATM, i64 noundef %ATN, i64 noundef %ATK, ptr
 ; X280-NEXT:    beqz a2, .LBB0_10
 ; X280-NEXT:  # %bb.9: # %if.then18
 ; X280-NEXT:    # in Loop: Header=BB0_6 Depth=2
-; X280-NEXT:    vsetvli zero, s2, e16, m8, ta, ma
-; X280-NEXT:    vle16.v v8, (s6)
 ; X280-NEXT:    sf.vsettnt zero, s2, e16, w2
+; X280-NEXT:    vle16.v v8, (s6)
 ; X280-NEXT:    sf.vsettk s6, t6
 ; X280-NEXT:    vsetvli zero, s4, e16, m8, ta, ma
 ; X280-NEXT:    sub a2, t6, s6
@@ -576,13 +575,12 @@ define void @matmul32(i64 noundef %ATM, i64 noundef %ATN, i64 noundef %ATK, ptr 
 ; X280-NEXT:    # Parent Loop BB1_4 Depth=1
 ; X280-NEXT:    # Parent Loop BB1_6 Depth=2
 ; X280-NEXT:    # => This Inner Loop Header: Depth=3
-; X280-NEXT:    vsetvli zero, t5, e32, m8, ta, ma
-; X280-NEXT:    vle32.v v8, (s3)
-; X280-NEXT:    sub s4, a2, s1
-; X280-NEXT:    add s3, s3, a4
 ; X280-NEXT:    sf.vsettnt zero, t5, e32, w1
+; X280-NEXT:    sub s4, a2, s1
+; X280-NEXT:    vle32.v v8, (s3)
 ; X280-NEXT:    sf.vsettk s4, s4
 ; X280-NEXT:    vsetvli zero, s0, e32, m8, ta, ma
+; X280-NEXT:    add s3, s3, a4
 ; X280-NEXT:    add s1, s1, s4
 ; X280-NEXT:    vle32.v v16, (s2)
 ; X280-NEXT:    add s2, s2, a6
