@@ -151,6 +151,7 @@ static bool airSystemValues(Module &M) {
     auto *NewF =
         Function::Create(NewFTy, F.getLinkage(), F.getAddressSpace(), "", &M);
     NewF->copyAttributesFrom(&F);
+    NewF->copyMetadata(&F, 0);
     NewF->splice(NewF->begin(), &F);
 
     auto NewArgIt = NewF->arg_begin();
@@ -248,11 +249,76 @@ static bool airSystemValues(Module &M) {
       unsigned TGIdx = 0;   // threadgroup buffers have their own index space
       auto *FTy = F.getFunctionType();
 
+      bool HasArgBuf = false;
+      if (auto *MAS = F.getMetadata("air.argbuf.member_as")) {
+        HasArgBuf = true;
+        unsigned PtrSize = M.getDataLayout().getPointerSize(/*AS=*/1);
+        unsigned PtrAlign = PtrSize;
+        SmallVector<Metadata *, 32> StructInfo;
+        for (unsigned Fld = 0; Fld < MAS->getNumOperands(); ++Fld) {
+          unsigned MemAS =
+              mdconst::extract<ConstantInt>(MAS->getOperand(Fld))->getZExtValue();
+          unsigned Offset = Fld * PtrSize;
+          char NameBuf[16];
+          std::snprintf(NameBuf, sizeof(NameBuf), "%u", Fld);
+          StringRef MemName(NameBuf);
+          StringRef AccessMode = (MemAS == 2) ? kMDRead : kMDReadWrite;
+          MDNode *Detail = MDNode::get(
+              Ctx,
+              {ConstantAsMetadata::get(ConstantInt::get(I32, Fld)),
+               MDString::get(Ctx, kMDBuffer),
+               MDString::get(Ctx, kMDLocationIndex),
+               ConstantAsMetadata::get(ConstantInt::get(I32, Fld)),
+               ConstantAsMetadata::get(ConstantInt::get(I32, 1)),
+               MDString::get(Ctx, AccessMode),
+               MDString::get(Ctx, kMDAddressSpace),
+               ConstantAsMetadata::get(ConstantInt::get(I32, MemAS)),
+               MDString::get(Ctx, kMDArgTypeSize),
+               ConstantAsMetadata::get(ConstantInt::get(I32, 4)),
+               MDString::get(Ctx, kMDArgTypeAlignSize),
+               ConstantAsMetadata::get(ConstantInt::get(I32, 4)),
+               MDString::get(Ctx, kMDArgTypeName), MDString::get(Ctx, "float"),
+               MDString::get(Ctx, kMDArgName), MDString::get(Ctx, MemName)});
+          StructInfo.push_back(
+              ConstantAsMetadata::get(ConstantInt::get(I32, Offset)));
+          StructInfo.push_back(
+              ConstantAsMetadata::get(ConstantInt::get(I32, PtrSize)));
+          StructInfo.push_back(ConstantAsMetadata::get(ConstantInt::get(I32, 0)));
+          StructInfo.push_back(MDString::get(Ctx, "float"));
+          StructInfo.push_back(MDString::get(Ctx, MemName));
+          StructInfo.push_back(MDString::get(Ctx, "air.indirect_argument"));
+          StructInfo.push_back(Detail);
+        }
+        MDNode *StructTypeInfo = MDNode::get(Ctx, StructInfo);
+        unsigned BufSize = MAS->getNumOperands() * PtrSize;
+        ParamNodes.push_back(MDNode::get(
+            Ctx,
+            {ConstantAsMetadata::get(ConstantInt::get(I32, 0)),
+             MDString::get(Ctx, "air.indirect_buffer"),
+             MDString::get(Ctx, "air.buffer_size"),
+             ConstantAsMetadata::get(ConstantInt::get(I32, BufSize)),
+             MDString::get(Ctx, kMDLocationIndex),
+             ConstantAsMetadata::get(ConstantInt::get(I32, 0)),
+             ConstantAsMetadata::get(ConstantInt::get(I32, 1)),
+             MDString::get(Ctx, kMDRead),
+             MDString::get(Ctx, kMDAddressSpace),
+             ConstantAsMetadata::get(ConstantInt::get(I32, 2)),
+             MDString::get(Ctx, "air.struct_type_info"), StructTypeInfo,
+             MDString::get(Ctx, kMDArgTypeSize),
+             ConstantAsMetadata::get(ConstantInt::get(I32, BufSize)),
+             MDString::get(Ctx, kMDArgTypeAlignSize),
+             ConstantAsMetadata::get(ConstantInt::get(I32, PtrAlign)),
+             MDString::get(Ctx, kMDArgTypeName), MDString::get(Ctx, "argbuf"),
+             MDString::get(Ctx, kMDArgName), MDString::get(Ctx, "argbuf")}));
+      }
+
       // Buffer params: device AS=1, constant AS=2, threadgroup AS=3. Apple
       // tags all three as "air.buffer" but threadgroup args carry
       // air.address_space=3 and live in a separate location_index counter
       // (xcrun's reduce gives the 3rd buffer, a threadgroup arg, index 0).
       for (unsigned I = 0; I < FTy->getNumParams(); ++I) {
+        if (HasArgBuf && I == 0)
+          continue;
         Type *ParamTy = FTy->getParamType(I);
         if (!ParamTy->isPointerTy())
           continue;

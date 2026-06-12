@@ -173,6 +173,18 @@ static constexpr const char *kMMAStore = mma_intrinsics::kStore;
 static constexpr const char *kMMALoadDev = mma_intrinsics::kLoadDev;
 static constexpr const char *kMMAStoreDev = mma_intrinsics::kStoreDev;
 
+static StructType *argBufferStructType(const Argument *Arg) {
+  const Function *F = Arg->getParent();
+  if (Arg->getArgNo() != 0 || !F->getMetadata("air.argbuf.member_as"))
+    return nullptr;
+  for (const BasicBlock &BB : *F)
+    for (const Instruction &I : BB)
+      if (const auto *GEP = dyn_cast<GetElementPtrInst>(&I))
+        if (GEP->getPointerOperand() == Arg)
+          return dyn_cast<StructType>(GEP->getSourceElementType());
+  return nullptr;
+}
+
 static bool functionUsesMMA(const Function &F) {
   for (const auto &BB : F)
     for (const auto &I : BB)
@@ -219,9 +231,14 @@ PointeeTypeMap buildPointeeTypeMap(Module &M) {
   // Phase 1: Function parameters - infer from usage
   for (auto &F : M)
     for (auto &Arg : F.args())
-      if (Arg.getType()->isPointerTy())
+      if (Arg.getType()->isPointerTy()) {
+        if (auto *ST = argBufferStructType(&Arg)) {
+          PTM.set(&Arg, ST);
+          continue;
+        }
         if (auto *Ty = PointeeTypeMap::inferFromUsage(&Arg))
           PTM.set(&Arg, Ty);
+      }
 
   // Phase 2: Instructions that produce pointers
   for (auto &F : M)
@@ -282,7 +299,7 @@ PointeeTypeMap buildPointeeTypeMap(Module &M) {
       for (auto &Arg : F.args())
         if (Arg.getType()->isPointerTy() &&
             Arg.getType()->getPointerAddressSpace() == AS::Device &&
-            !isIntegerDevicePointer(&Arg))
+            !argBufferStructType(&Arg) && !isIntegerDevicePointer(&Arg))
           PTM.set(&Arg, F32);
 
       for (auto &BB : F)
@@ -295,7 +312,8 @@ PointeeTypeMap buildPointeeTypeMap(Module &M) {
       for (auto &Arg : F.args())
         if (Arg.getType()->isPointerTy() &&
             Arg.getType()->getPointerAddressSpace() == AS::Device &&
-            !PTM.has(&Arg) && !isIntegerDevicePointer(&Arg))
+            !PTM.has(&Arg) && !argBufferStructType(&Arg) &&
+            !isIntegerDevicePointer(&Arg))
           PTM.set(&Arg, F32);
     }
 
@@ -333,7 +351,7 @@ PointeeTypeMap buildPointeeTypeMap(Module &M) {
         for (auto &Arg : F.args())
           if (Arg.getType()->isPointerTy() &&
               Arg.getType()->getPointerAddressSpace() == AS::Device &&
-              !isIntegerDevicePointer(&Arg))
+              !argBufferStructType(&Arg) && !isIntegerDevicePointer(&Arg))
             PTM.set(&Arg, F32);
 
     // MMA call site pointer operands → typed pointer

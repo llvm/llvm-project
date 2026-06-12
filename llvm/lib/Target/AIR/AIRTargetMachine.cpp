@@ -15,6 +15,7 @@
 #include "AIRWriter/AIREmbedderPass.h"
 #include "AIRWriter/AIRWriterPass.h"
 #include "AIR.h"
+#include "AIRArgumentBuffer.h"
 #include "AIRSystemValues.h"
 #include "AIRAsyncEventToAlloca.h"
 #include "AIRBFloat16CastDecompose.h"
@@ -93,6 +94,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAIRTarget() {
   initializeAIRNormalizeAllocasLegacyPass(*PR);
   initializeAIRBFloat16CastDecomposeLegacyPass(*PR);
   initializeAIRScalarBufferPackingLegacyPass(*PR);
+  initializeAIRArgumentBufferLegacyPass(*PR);
   initializeAIRSystemValuesLegacyPass(*PR);
   initializeAIRAliasAnnotateLegacyPass(*PR);
   initializeAIRPrepareLegacyPass(*PR);
@@ -169,6 +171,11 @@ public:
     addPass(createAIRAsyncEventToAllocaLegacyPass());
     addPass(createAIRNormalizeAllocasLegacyPass());
     addPass(createAIRBFloat16CastDecomposeLegacyPass());
+    // Pack device/constant buffers into a Metal argument buffer (for the
+    // gpu-dialect/IREE path that lacks pre-baked !air.kernel metadata). Must run
+    // BEFORE AIRSystemValues so the indirect-buffer metadata is emitted against
+    // the packed signature.
+    addPass(createAIRArgumentBufferLegacyPass());
     // Must run BEFORE AIRSystemValues so that !air.kernel metadata is
     // emitted against the post-packing signature.
     addPass(createAIRScalarBufferPackingLegacyPass());

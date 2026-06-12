@@ -287,8 +287,10 @@ unsigned ValueEnumerator::ptrTypeIdx(Type *PtrTy, Type *Pointee) {
   auto It = typeMap.find(E);
   if (It != typeMap.end())
     return It->second;
-  // Ensure pointee is in table first
+  if (!ptrInProgress.insert(E).second)
+    return addEntry(E);
   addType(Pointee);
+  ptrInProgress.erase(E);
   return addEntry(E);
 }
 

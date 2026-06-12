@@ -201,6 +201,18 @@ private:
   std::pair<Type *, uint64_t> inferThreadgroupAlloc(Argument *Arg) {
     Type *ElemTy = nullptr;
     uint64_t Count = 1;
+    bool HaveAuthoritativeCount = false;
+    {
+      Attribute A = Arg->getParent()->getAttributes().getParamAttr(
+          Arg->getArgNo(), "air.wg.num_elems");
+      if (A.isValid()) {
+        uint64_t N = 0;
+        if (!A.getValueAsString().getAsInteger(10, N) && N > 0) {
+          Count = N;
+          HaveAuthoritativeCount = true;
+        }
+      }
+    }
     SmallVector<Value *, 8> IdxValues;
     for (User *U : Arg->users()) {
       if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
@@ -219,13 +231,27 @@ private:
     if (!ElemTy)
       ElemTy = Type::getFloatTy(Arg->getContext());
 
+    if (HaveAuthoritativeCount)
+      return {ElemTy, Count};
+
     // Largest constant any index is icmp-compared against bounds the range.
+    bool SawBound = false;
     for (Value *Idx : IdxValues)
       for (User *IU : Idx->users())
         if (auto *Cmp = dyn_cast<ICmpInst>(IU))
           for (Value *Op : Cmp->operands())
-            if (auto *CI = dyn_cast<ConstantInt>(Op))
+            if (auto *CI = dyn_cast<ConstantInt>(Op)) {
               Count = std::max(Count, CI->getZExtValue());
+              SawBound = true;
+            }
+    if (!SawBound)
+      report_fatal_error(
+          Twine("AIRFromGenericGPU: cannot determine threadgroup allocation "
+                "size for addrspace(3) parameter '") +
+          Arg->getName() +
+          "' (no air.wg.num_elems attribute and no bounding icmp). The "
+          "threadgroup attribution size was lost; emit it via the AIR "
+          "serializer or use an addrspace(3) global.");
     return {ElemTy, Count};
   }
 
@@ -261,24 +287,36 @@ private:
     F = NewF;
   }
 
-  // Mark SPIR_KERNEL / kernel-attributed functions as AIR kernels and normalize
-  // their calling convention to C (the AIR writer keys on "air-kernel").
+  static bool isUncalledRoot(const Function &F) {
+    for (const User *U : F.users())
+      if (const auto *CB = dyn_cast<CallBase>(U))
+        if (CB->getCalledFunction() == &F)
+          return false;
+    return true;
+  }
+
+  static bool usesGenericGPUBuiltins(const Function &F) {
+    for (const BasicBlock &BB : F)
+      for (const Instruction &I : BB)
+        if (const auto *CI = dyn_cast<CallInst>(&I))
+          if (const Function *Callee = CI->getCalledFunction())
+            if (isHandledBuiltin(Callee->getName()))
+              return true;
+    return false;
+  }
+
   bool markKernels(Module &M) {
     bool Changed = false;
     for (Function &F : M) {
       if (F.isDeclaration())
         continue;
-      // Only the canonical generic-GPU kernel markers: the SPIR_KERNEL calling
-      // convention (clang OpenCL / SYCL / SPIR-V) and the gpu dialect's
-      // "gpu.kernel" attribute. We deliberately do NOT key on a bare "kernel"
-      // attribute -- it is not an ecosystem-standard marker. Functions already
-      // carrying "air-kernel" (Triton arrives pre-marked) are skipped, so this
-      // is a no-op on AIR-native IR.
       bool IsKernel = F.getCallingConv() == CallingConv::SPIR_KERNEL ||
-                      F.hasFnAttribute("gpu.kernel");
+                      F.hasFnAttribute("gpu.kernel") ||
+                      (isUncalledRoot(F) && usesGenericGPUBuiltins(F));
       if (!IsKernel || F.hasFnAttribute("air-kernel"))
         continue;
       F.addFnAttr("air-kernel");
+      F.addFnAttr("air-from-generic-gpu");
       if (F.getCallingConv() == CallingConv::SPIR_KERNEL)
         F.setCallingConv(CallingConv::C);
       Changed = true;

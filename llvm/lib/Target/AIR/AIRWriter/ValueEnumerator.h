@@ -11,6 +11,7 @@
 
 #include "PointeeTypeMap.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
 #include <vector>
@@ -58,6 +59,7 @@ public:
   // emission
   std::vector<TypeEntry> types;
   llvm::DenseMap<TypeEntry, unsigned> typeMap;
+  llvm::DenseSet<TypeEntry> ptrInProgress;
 
   std::vector<const llvm::Value *> globalValues;
   llvm::DenseMap<const llvm::Value *, unsigned> globalValueMap;

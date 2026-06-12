@@ -82,6 +82,9 @@ static bool scalarBufferPacking(Module &M) {
   for (Function *FPtr : Funcs) {
     Function &F = *FPtr;
 
+    if (F.getMetadata("air.argbuf.member_as"))
+      continue;
+
     // Collect system value param indices from pre-baked metadata
     SmallDenseSet<unsigned, 4> SysValParams;
     if (auto *KMD = M.getNamedMetadata("air.kernel")) {
@@ -250,6 +253,7 @@ static bool scalarBufferPacking(Module &M) {
     auto *NewF =
         Function::Create(NewFTy, F.getLinkage(), F.getAddressSpace(), "", &M);
     NewF->copyAttributesFrom(&F);
+    NewF->copyMetadata(&F, 0);
     NewF->splice(NewF->begin(), &F);
 
     for (unsigned i = 0; i < F.arg_size(); i++) {

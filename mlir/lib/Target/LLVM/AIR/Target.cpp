@@ -16,6 +16,7 @@
 #include "mlir/Dialect/AIR/IR/AIRDialect.h"
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Target/LLVM/AIR/Utils.h"
 #include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
@@ -103,11 +104,34 @@ public:
 };
 } // namespace
 
+static void
+propagateWorkgroupAttributionSizes(Operation *gpuModule,
+                                   llvm::Module &llvmModule) {
+  gpuModule->walk([&](LLVM::LLVMFuncOp funcOp) {
+    llvm::Function *llvmFn = llvmModule.getFunction(funcOp.getName());
+    if (!llvmFn || llvmFn->isDeclaration())
+      return;
+    unsigned n = std::min<unsigned>(funcOp.getNumArguments(), llvmFn->arg_size());
+    for (unsigned i = 0; i < n; ++i) {
+      auto wg = funcOp.getArgAttrOfType<LLVM::WorkgroupAttributionAttr>(
+          i, "llvm.workgroup_attribution");
+      if (!wg)
+        continue;
+      uint64_t numElems = wg.getNumElements().getValue().getZExtValue();
+      llvmFn->getArg(i)->addAttr(llvm::Attribute::get(
+          llvmModule.getContext(), "air.wg.num_elems",
+          llvm::utostr(numElems)));
+    }
+  });
+}
+
 FailureOr<SmallVector<char, 0>>
 AIRSerializer::moduleToObject(llvm::Module &llvmModule) {
   // Return LLVM IR if the compilation target is `offload`.
   if (targetOptions.getCompilationTarget() == gpu::CompilationTarget::Offload)
     return SerializeGPUModuleBase::moduleToObject(llvmModule);
+
+  propagateWorkgroupAttributionSizes(&getOperation(), llvmModule);
 
   FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
   if (failed(targetMachine))
