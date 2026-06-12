@@ -60,7 +60,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_fadd)
   // Now we have two normalised numbers. If their signs are opposite, we should
   // be subtracting their magnitudes rather than adding, so cross-jump to fsub.
   teq     r0, r1                     // set N if signs are unequal
-  eormi   r1, r1, #1 << 31           // if so, flip the sign of y
+  eormi   r1, r1, #(1 << 31)         // if so, flip the sign of y
   bmi     LOCAL_LABEL(sub_magnitude) // and go to magnitude subtraction
 LOCAL_LABEL(add_magnitude):
   // If we get here, we're adding operands with equal signs (i.e. a magnitude
@@ -87,7 +87,7 @@ LOCAL_LABEL(add_magnitude):
 
   // Extract both mantissas, moved up to the top of the word, with the leading
   // 1 made explicit.
-  mov     r12, #1 << 31        // the leading 1 by itself
+  mov     r12, #(1 << 31)      // the leading 1 by itself
   orr     r0, r12, r0, lsl #8
   orr     r1, r12, r1, lsl #8
 
@@ -243,7 +243,7 @@ LOCAL_LABEL(add_uncommon):
   // So it's safe to do the same sign check and cross-jump as we did on the
   // fast path.
   teq     r0, r1             // opposite signs?
-  eormi   r1, r1, #1 << 31   // if so, negate the second operand
+  eormi   r1, r1, #(1 << 31) // if so, negate the second operand
   bmi     LOCAL_LABEL(sub_zerodenorm) // and cross-jump to the fsub version
 LOCAL_LABEL(add_zerodenorm):
   // Now we know x and y have the same sign, and at least one of them is zero
@@ -272,7 +272,7 @@ LOCAL_LABEL(add_zerodenorm):
   // its top mantissa bit.
   mov     r0, r0, lsl #8         // shift mantissa of x to the top of r0
   tst     r2, #255               // is x's exponent 0? If so, it's denormal
-  orrne   r0, r0, #1 << 31       // if not, set leading bit of x,
+  orrne   r0, r0, #(1 << 31)     // if not, set leading bit of x,
   subne   r3, r3, #1             //   adjust exponent difference,
   bne     LOCAL_LABEL(add_doadd) //   and go back to mainstream
 
@@ -331,10 +331,10 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_frsub)
   // reversal of the operand order by flipping signs. (Preserving the sign of
   // an input NaN was the only case where that wasn't right.)
 
-  eor     r0, r0, #1 << 31           // flip sign of operand we're subtracting
+  eor     r0, r0, #(1 << 31)         // flip sign of operand we're subtracting
   teq     r0, r1                     // are the signs now the same?
   bpl     LOCAL_LABEL(add_magnitude) // if so, we're doing magnitude addition
-  eor     r1, r1, #1 << 31           // otherwise, flip the other sign too
+  eor     r1, r1, #(1 << 31)         // otherwise, flip the other sign too
   b       LOCAL_LABEL(sub_magnitude) // and we're doing magnitude subtraction
 
 LOCAL_LABEL(rsb_uncommon):
@@ -374,7 +374,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_fsub)
   // magnitude addition. (Now we've excluded NaNs, it's safe to flip the sign
   // of y.)
   teq     r0, r1
-  eormi   r1, r1, #1 << 31
+  eormi   r1, r1, #(1 << 31)
   bmi     LOCAL_LABEL(add_magnitude)
 
 LOCAL_LABEL(sub_magnitude):
@@ -394,13 +394,13 @@ LOCAL_LABEL(sub_magnitude):
   // IT costs one, so this saves two cycles in the untaken case and doesn't
   // impact the taken case at all.
   bhs     0f
-  eor     r2, r2, #1 << 31
+  eor     r2, r2, #(1 << 31)
   sub     r0, r0, r2
   add     r1, r1, r2
 0:
 #else
   // In Arm state, adding the LO condition to each instruction is cheaper.
-  eorlo   r2, r2, #1 << 31
+  eorlo   r2, r2, #(1 << 31)
   sublo   r0, r0, r2
   addlo   r1, r1, r2
 #endif
@@ -413,7 +413,7 @@ LOCAL_LABEL(sub_magnitude):
 
   // Shift the mantissas up to the top of the words, and OR in the leading 1
   // for each.
-  mov     r12, #1 << 31
+  mov     r12, #(1 << 31)
   orr     r0, r12, r0, lsl #8
   orr     r1, r12, r1, lsl #8
 
@@ -659,7 +659,7 @@ LOCAL_LABEL(sub_uncommon):
   // So it's safe to do the same sign check and cross-jump as we did on the
   // fast path.
   teq     r0, r1                      // opposite signs?
-  eormi   r1, r1, #1 << 31            // if so, negate the second operand
+  eormi   r1, r1, #(1 << 31)          // if so, negate the second operand
   bmi     LOCAL_LABEL(add_zerodenorm) // and cross-jump to the fadd version
 
 LOCAL_LABEL(sub_zerodenorm):
@@ -671,7 +671,7 @@ LOCAL_LABEL(sub_zerodenorm):
   // Start by exactly repeating the initial fast-path setup code: sort into
   // magnitude order, get the output sign+exponent and the exponent shift.
   subs    r2, r0, r1           // compare inputs, also keeping x-y
-  eorlo   r2, r2, #1 << 31     // if misordered, flip high bit of difference
+  eorlo   r2, r2, #(1 << 31)   // if misordered, flip high bit of difference
   sublo   r0, r0, r2           // and use that to swap and sign-flip
   addlo   r1, r1, r2           //   the two inputs
   mov     r2, r0, lsr #23      // r2 = sign<<8 + exponent
@@ -689,7 +689,7 @@ LOCAL_LABEL(sub_zerodenorm):
   // its top mantissa bit.
   mov     r0, r0, lsl #8       // shift mantissa of x to the top of r0
   tst     r2, #255             // is x's exponent 0? If so, it's denormal
-  orrne   r0, r0, #1 << 31     // if not, set leading bit of x,
+  orrne   r0, r0, #(1 << 31)   // if not, set leading bit of x,
   subne   r3, r3, #1           //   adjust exponent difference,
 
   b       LOCAL_LABEL(sub_dosub)
