@@ -920,8 +920,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     }
 
     if (Subtarget->hasPackedU64Ops()) {
-      setOperationAction({ISD::ADD, ISD::SUB}, MVT::v2i64, Legal);
-      setOperationAction({ISD::ADD, ISD::SUB},
+      setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL}, MVT::v2i64, Legal);
+      setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL},
                          {MVT::v4i64, MVT::v8i64, MVT::v16i64, MVT::v32i64},
                          Custom);
     }

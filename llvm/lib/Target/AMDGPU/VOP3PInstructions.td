@@ -148,6 +148,18 @@ def V_PK_VOP2_I64_Profile : VOP3P_Profile<VOP_V2I64_V2I64_V2I64, VOP3_PACKED> {
   let Src1RC64 = VSrc_v2b64;
 }
 
+def V_PK_LSHL_ADD_U64_Profile : VOP3P_Profile<VOP_V2I64_V2I64_V2I32_V2I64, VOP3_PACKED> {
+  let HasModifiers = 0;
+  let HasOpSel = 0;
+  let HasClamp = 0;
+  let Src0RC64 = VSrc_v2b64;
+  let Src1RC64 = VSrc_v2b32;
+  let Src2RC64 = VSrc_v2b64;
+  let InsVOP3P = getIns64<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
+                          HasClamp, HasModifiers, HasSrc2Mods,
+                          HasOMod, Src0Mod, Src1Mod, Src2Mod>.ret;
+}
+
 let isReMaterializable = 1 in {
 let isCommutable = 1 in {
 defm V_PK_MAD_I16 : VOP3PInst<"v_pk_mad_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16>>;
@@ -193,6 +205,7 @@ defm V_PK_LSHRREV_B16 : VOP3PInst<"v_pk_lshrrev_b16", VOP3P_Profile<VOP_V2I16_V2
 
 let SubtargetPredicate = HasPackedU64Ops, SchedRW = [Write64Bit] in {
 defm V_PK_SUB_NC_U64 : VOP3PInst<"v_pk_sub_nc_u64", V_PK_VOP2_I64_Profile, sub>;
+defm V_PK_LSHL_ADD_U64 : VOP3PInst<"v_pk_lshl_add_u64", V_PK_LSHL_ADD_U64_Profile>;
 } // End SubtargetPredicate = HasPackedU64Ops, , SchedRW = [Write64Bit]
 } // End isReMaterializable = 1
 
@@ -555,6 +568,38 @@ def : ThreeOp_OpSelClampPats<umax, umax, V_PK_MAX3_U16>;
 def : ThreeOp_OpSelClampPats<smin, smin, V_PK_MIN3_I16>;
 def : ThreeOp_OpSelClampPats<umin, umin, V_PK_MIN3_U16>;
 }
+
+let SubtargetPredicate = HasPackedU64Ops in {
+let AddedComplexity = 5 in
+def : GCNPat<
+  (v2i64 (DivergentBinFrag<shl_0_to_4> v2i64:$src0, v2i64:$src1)),
+  (v2i64 (V_PK_LSHL_ADD_U64 $src0,
+    (v2i32 (REG_SEQUENCE VReg_64,
+      (i32 (EXTRACT_SUBREG $src1, sub0)), sub0,
+      (i32 (EXTRACT_SUBREG $src1, sub2)), sub1)),
+    (v2i64 (as_i64imm (i32 0)))))
+>;
+
+def : GCNPat<
+  (v2i64 (DivergentBinFrag<cshl_64> v2i64:$src0, v2i64:$src1)),
+  (v2i64 (REG_SEQUENCE VReg_128,
+                       (V_LSHLREV_B64_pseudo_e64 (i32 (EXTRACT_SUBREG $src1, sub0)),
+                                                 (EXTRACT_SUBREG $src0, sub0_sub1)),
+                       sub0_sub1,
+                       (V_LSHLREV_B64_pseudo_e64 (i32 (EXTRACT_SUBREG $src1, sub2)),
+                                                 (EXTRACT_SUBREG $src0, sub2_sub3)),
+                       sub2_sub3))
+>;
+
+def : GCNPat<
+  (ThreeOpFrag<shl_0_to_4, add> v2i64:$src0, v2i64:$src1, v2i64:$src2),
+  (V_PK_LSHL_ADD_U64 VSrc_v2b64:$src0,
+    (v2i32 (REG_SEQUENCE VReg_64,
+      (i32 (EXTRACT_SUBREG $src1, sub0)), sub0,
+      (i32 (EXTRACT_SUBREG $src1, sub2)), sub1)),
+    VSrc_v2b64:$src2)
+>;
+} // End SubtargetPredicate = HasPackedU64Ops
 
 // Defines patterns that extract signed 4bit from each Idx[0].
 foreach Idx = [[0,28],[4,24],[8,20],[12,16],[16,12],[20,8],[24,4]] in
@@ -2727,6 +2772,7 @@ defm V_PK_ADD_NC_U64   : VOP3P_Real_gfx1250<0x4c>;
 defm V_PK_SUB_NC_U64   : VOP3P_Real_gfx1250<0x4d>;
 defm V_PK_MAX_NUM_F64  : VOP3P_Real_gfx1250<0x4e>;
 defm V_PK_MIN_NUM_F64  : VOP3P_Real_gfx1250<0x4f>;
+defm V_PK_LSHL_ADD_U64 : VOP3P_Real_gfx1250<0x7e>;
 
 let AssemblerPredicate = isGFX1250Plus in
 def : AMDGPUMnemonicAlias<"v_fma_mix_f32_f16",  "v_fma_mix_f32">;
