@@ -1415,7 +1415,7 @@ class ExtfToOCLPattern : public OpConversionPattern<ExtfOp> {
             ->getResult(0);
     // Step 3: Truncate F32 to BF16.
     // Use short16 __builtin_IB_ftobf_16(float16)
-    std::string ftobfFnName = "__builtin_IB_ftobf_16";
+    constexpr StringRef ftobfFnName = "__builtin_IB_ftobf_16";
     SmallVector<Type> ftobfArgTypes{result.getType()};
     SmallVector<Value> ftobfArgs{result};
     Type i16Ty = VectorType::get(vecSrcTy.getShape(), rewriter.getI16Type());
