@@ -2277,13 +2277,12 @@ let Predicates = [HasPAuth] in {
     let Uses = [X16];
   }
 
-  // AUT and re-PAC a value using different keys/data, with a PC value blended
-  // into the AUT'd discriminator.
-  // This directly manupulates x15,x16,x17, which are the only registers that
-  // certain OSs guarantee are safe to use for sensitive operations.
-  def AUTPCPAC
+  // AUT (using x15=PC, x16=addr disc, x17=pointer) and re-PAC a value using
+  // different keys/data. This directly manipulates x15/x16/x17, which are the
+  // only registers certain OSs guarantee are safe to use for sensitive ops.
+  def AUTx15x16x17PAC
       : Pseudo<(outs),
-               (ins i32imm:$AUTKey, i64imm:$AUTDisc,
+               (ins i32imm:$AUTKey,
                     i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc),
                []>, Sched<[WriteI, ReadI]> {
     let isCodeGenOnly = 1;

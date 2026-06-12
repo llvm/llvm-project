@@ -6706,28 +6706,20 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     assert((AUTKey == AArch64PACKey::IA || AUTKey == AArch64PACKey::IB) &&
            "auth_with_pc_and_resign only supports IA and IB keys");
 
-    uint16_t AUTConstDiscC = 0;
-    Register AUTAddrDisc;
-    std::tie(AUTConstDiscC, AUTAddrDisc) =
-        extractPtrauthBlendDiscriminators(AUTDisc, MRI);
-
     uint16_t PACConstDiscC = 0;
     Register PACAddrDisc;
     std::tie(PACConstDiscC, PACAddrDisc) =
         extractPtrauthBlendDiscriminators(PACDisc, MRI);
 
-    if (AUTAddrDisc == AArch64::NoRegister)
-      AUTAddrDisc = AArch64::XZR;
     if (PACAddrDisc == AArch64::NoRegister)
       PACAddrDisc = AArch64::XZR;
 
     MIB.buildCopy({AArch64::X17}, {ValReg});
-    MIB.buildCopy({AArch64::X16}, {AUTAddrDisc});
+    MIB.buildCopy({AArch64::X16}, {AUTDisc});
     MIB.buildCopy({AArch64::X15}, {AUTPC});
 
-    MIB.buildInstr(AArch64::AUTPCPAC)
+    MIB.buildInstr(AArch64::AUTx15x16x17PAC)
         .addImm(AUTKey)
-        .addImm(AUTConstDiscC)
         .addImm(PACKey)
         .addImm(PACConstDiscC)
         .addUse(PACAddrDisc)

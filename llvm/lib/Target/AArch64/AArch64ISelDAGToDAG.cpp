@@ -1777,27 +1777,22 @@ void AArch64DAGToDAGISel::SelectPtrauthResignWithPC(SDNode *N) {
   AUTKey = CurDAG->getTargetConstant(AUTKeyC, DL, MVT::i64);
   PACKey = CurDAG->getTargetConstant(PACKeyC, DL, MVT::i64);
 
-  SDValue AUTAddrDisc, AUTConstDisc;
-  std::tie(AUTConstDisc, AUTAddrDisc) =
-      extractPtrauthBlendDiscriminators(AUTDisc, CurDAG);
-
   SDValue PACAddrDisc, PACConstDisc;
   std::tie(PACConstDisc, PACAddrDisc) =
       extractPtrauthBlendDiscriminators(PACDisc, CurDAG);
 
   SDValue X17Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
                                          AArch64::X17, Val, SDValue());
-  SDValue X16Copy =
-      CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL, AArch64::X16,
-                           AUTAddrDisc, X17Copy.getValue(1));
+  SDValue X16Copy = CurDAG->getCopyToReg(
+      CurDAG->getEntryNode(), DL, AArch64::X16, AUTDisc, X17Copy.getValue(1));
   SDValue X15Copy = CurDAG->getCopyToReg(
       CurDAG->getEntryNode(), DL, AArch64::X15, AUTPC, X16Copy.getValue(1));
 
-  SDValue Ops[] = {AUTKey,       AUTConstDisc, PACKey,
-                   PACConstDisc, PACAddrDisc,  X15Copy.getValue(1)};
-  SDNode *AUTPCPAC =
-      CurDAG->getMachineNode(AArch64::AUTPCPAC, DL, MVT::i64, Ops);
-  ReplaceNode(N, AUTPCPAC);
+  SDValue Ops[] = {AUTKey, PACKey, PACConstDisc, PACAddrDisc,
+                   X15Copy.getValue(1)};
+  SDNode *AUTx15x16x17PAC =
+      CurDAG->getMachineNode(AArch64::AUTx15x16x17PAC, DL, MVT::i64, Ops);
+  ReplaceNode(N, AUTx15x16x17PAC);
 }
 
 bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
