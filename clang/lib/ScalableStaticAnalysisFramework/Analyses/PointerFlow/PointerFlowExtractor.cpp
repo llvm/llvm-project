@@ -25,7 +25,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include <memory>
 #include <optional>
@@ -108,10 +107,9 @@ PointerFlowMatcher::addEdges(Expected<EntityPointerLevelSet> &&LHS,
     return LHS.takeError();
   if (!RHS)
     return RHS.takeError();
-  if (RHS->empty())
-    return llvm::Error::success();
-  for (auto L : *LHS)
-    Results[L].insert(RHS->begin(), RHS->end());
+  if (!RHS->empty())
+    for (auto L : *LHS)
+      Results[L].insert(RHS->begin(), RHS->end());
   return llvm::Error::success();
 }
 
@@ -314,8 +312,7 @@ public:
   PointerFlowTUSummaryExtractor(TUSummaryBuilder &Builder)
       : TUSummaryExtractor(Builder) {}
 
-  /// \return a non-null unique pointer to a PointerFlowEntitySummary
-  std::unique_ptr<PointerFlowEntitySummary>
+  Expected<std::unique_ptr<PointerFlowEntitySummary>>
   extractEntitySummary(const NamedDecl *Contributor, ASTContext &Ctx,
                        TUSummaryExtractor &Extractor) {
     PointerFlowMatcher Matcher(Ctx, Extractor);
@@ -323,7 +320,7 @@ public:
       auto Err = Matcher.matches(Node, Contributor);
 
       if (Err)
-        logWarningFromError(std::move(Err));
+        llvm::report_fatal_error(std::move(Err));
     };
 
     findMatchesIn(Contributor, MatchAction);
@@ -338,18 +335,18 @@ public:
     for (auto *CD : Contributors) {
       auto EntitySummary = extractEntitySummary(CD, Ctx, *this);
 
-      assert(EntitySummary);
-      if (EntitySummary->empty())
+      if (!EntitySummary)
+        llvm::reportFatalInternalError(EntitySummary.takeError());
+      assert(*EntitySummary);
+      if ((*EntitySummary)->empty())
         continue;
 
       std::optional<EntityId> ContributorId = addEntity(CD);
-      if (!ContributorId) {
-        logWarningFromError(makeEntityNameErr(Ctx, CD));
-        continue;
-      }
+      if (!ContributorId)
+        llvm::reportFatalInternalError(makeEntityNameErr(Ctx, CD));
 
       [[maybe_unused]] auto [_, InsertionSucceeded] =
-          SummaryBuilder.addSummary(*ContributorId, std::move(EntitySummary));
+          SummaryBuilder.addSummary(*ContributorId, std::move(*EntitySummary));
 
       assert(InsertionSucceeded && "duplicated contributor extraction");
     }

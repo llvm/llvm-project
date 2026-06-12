@@ -732,6 +732,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     S32, S64, S16, V2S16
   };
 
+  const std::initializer_list<LLT> FPTypesPK16_64 = {S32, S64, S16, V2S16,
+                                                     V2S64};
+
   const LLT MinScalarFPTy = ST.has16BitInsts() ? S16 : S32;
 
   getActionDefinitionsBuilder(G_BR).alwaysLegal();
@@ -986,6 +989,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     FPOpActions.clampMaxNumElementsStrict(0, S64, 2);
   }
 
+  if (ST.hasPackedFP64Ops()) {
+    FPOpActions.legalFor({V2S64});
+    FPOpActions.clampMaxNumElementsStrict(0, S64, 2);
+  }
+
   auto &MinNumMaxNumIeee =
       getActionDefinitionsBuilder({G_FMINNUM_IEEE, G_FMAXNUM_IEEE});
 
@@ -1006,7 +1014,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &MinNumMaxNum = getActionDefinitionsBuilder(
       {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM});
 
-  if (ST.hasVOP3PInsts()) {
+  if (ST.hasPackedFP64Ops()) {
+    MinNumMaxNum.customFor(FPTypesPK16_64)
+        .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
+        .clampMaxNumElements(0, S16, 2)
+        .clampMaxNumElements(0, S64, 2)
+        .clampScalar(0, S16, S64)
+        .scalarize(0);
+  } else if (ST.hasVOP3PInsts()) {
     MinNumMaxNum.customFor(FPTypesPK16)
       .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
       .clampMaxNumElements(0, S16, 2)
