@@ -1250,6 +1250,22 @@ int i = SVGPropertyOwnerRegistry<SVGCircleElement>::fastAnimatedPropertyLookup()
 
 }
 
+namespace GH173086 {
+
+template <typename, unsigned, typename> struct GeneralTensor {};
+template <typename T, unsigned Rank> using Tensor = GeneralTensor<T, Rank, int>;
+template <typename T, unsigned OtherRank, typename Alloc, typename... Dims>
+GeneralTensor(GeneralTensor<T, OtherRank, Alloc>, Dims... dims)
+    -> GeneralTensor<T, sizeof...(dims), Alloc>;
+template <typename... MultiIndex>
+Tensor<double, sizeof...(MultiIndex)> create_incremented_tensor() {
+  return Tensor<double, sizeof...(MultiIndex)>();
+}
+
+auto x = Tensor{create_incremented_tensor<>()};
+
+}
+
 namespace GH61824 {
 
 template<typename T, typename U = typename T::type> // #T_Type
@@ -1554,7 +1570,6 @@ void x() {}
 void foo() {
   x<vector<int>>();
 }
-
 }
 
 namespace GH162770 {
@@ -1947,3 +1962,43 @@ static_assert(D<Publ>::has, "Public should be visible.");
 static_assert(!D<Priv>::has, "Private should be invisible.");
 static_assert(!D<Prot>::has, "Protected should be invisible.");
 }
+
+
+namespace GH197067 {
+typedef int uint32_t;
+class basic_string;
+using string = basic_string;
+using __self_view = int;
+struct basic_string {
+  basic_string(const char *);
+  operator __self_view();
+};
+int GetVmo(int);
+template <typename> struct StorageTraits;
+template <class Traits, typename Storage>
+concept StorageTraitsBufferedReadApi =
+    requires(Storage storage_ref, uint32_t length) {
+      Traits::Read(storage_ref, length, length, [] {});
+    };
+template <class Traits, typename Storage>
+concept StorageTraitsApi = StorageTraitsBufferedReadApi<Traits, Storage>;
+template <typename T>
+concept StorageApi = StorageTraitsApi<StorageTraits<T>, T>;
+template <StorageApi Storage> struct View {
+  using storage_type = Storage;
+  storage_type storage_;
+};
+template <> struct StorageTraits<int> {
+  template <typename Callback>
+  static auto Read(int, long, uint32_t, Callback) {}
+};
+View zbi(GetVmo(string("")));
+}
+
+namespace GH196375 {
+  template <class T, T V> concept Small = V <= 2; // expected-note {{because '4 <= 2' (4 <= 2) evaluated to false}}
+  template <int V> consteval bool f() // expected-note {{candidate template ignored: constraints not satisfied}}
+    requires(Small<int, V>) { return true; } // expected-note {{because 'Small<int, 4>' evaluated to false}}
+  static_assert(f<4>());
+  // expected-error@-1 {{no matching function for call to 'f'}}
+} // namespace GHGH196375

@@ -9,6 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXPXF16_UTILS_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXPXF16_UTILS_H
 
+#include "include/llvm-libc-macros/float16-macros.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
@@ -122,7 +126,7 @@ LIBC_INLINE_VAR constexpr cpp::array<uint32_t, 32> EXP2_MID_5_BITS = {
 // the polynomials approximating lower parts of e^x and e^(-x) is shared and
 // only done once.
 template <bool IsSinh>
-LIBC_INLINE LIBC_CONSTEXPR float16 eval_sinh_or_cosh(float16 x) {
+LIBC_INLINE constexpr float16 eval_sinh_or_cosh(float16 x) {
   float xf = x;
   float kf = fputil::nearest_integer(xf * (LOG2F_E * 0x1.0p+5f));
   int x_hi_mid_p = static_cast<int>(kf);
@@ -237,5 +241,7 @@ LIBC_INLINE_VAR constexpr cpp::array<float, 32> ONE_OVER_F_F = {
 } // namespace math
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_EXPXF16_UTILS_H

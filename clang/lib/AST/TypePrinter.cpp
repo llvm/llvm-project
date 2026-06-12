@@ -1990,6 +1990,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::HLSLContainedType:
   case attr::HLSLIsCounter:
   case attr::HLSLResourceDimension:
+  case attr::HLSLIsArray:
     llvm_unreachable("HLSL resource type attributes handled separately");
 
   case attr::OpenCLPrivateAddressSpace:
@@ -2047,6 +2048,13 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
 
   case attr::NSReturnsRetained:
     OS << "ns_returns_retained";
+    break;
+
+  case attr::HLSLRowMajor:
+    OS << "row_major";
+    break;
+  case attr::HLSLColumnMajor:
+    OS << "column_major";
     break;
 
   // FIXME: When Sema learns to form this AttributedType, avoid printing the
@@ -2162,6 +2170,8 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     OS << " [[hlsl::raw_buffer]]";
   if (Attrs.IsCounter)
     OS << " [[hlsl::is_counter]]";
+  if (Attrs.IsArray)
+    OS << " [[hlsl::is_array]]";
 
   QualType ContainedTy = T->getContainedType();
   if (!ContainedTy.isNull()) {

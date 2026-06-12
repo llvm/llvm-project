@@ -62,6 +62,7 @@ public:
   void Post(parser::IfConstruct &);
   void Post(parser::ReadStmt &);
   void Post(parser::WriteStmt &);
+  void Post(parser::AccObjectList &);
 
   // Name resolution yet implemented:
   // TODO: Can some/all of these now be enabled?
@@ -222,8 +223,7 @@ void RewriteMutator::OpenMPSimdOnly(
               std::get<std::list<parser::OpenMPConstruct>>(ompCon->t);
           auto insertPos = std::next(it);
           for (auto &sectionCon : sections) {
-            auto &section =
-                std::get<parser::OpenMPSectionConstruct>(sectionCon.u);
+            auto &section = std::get<parser::OmpSectionDirective>(sectionCon.u);
             auto &innerBlock = std::get<parser::Block>(section.t);
             block.splice(insertPos, innerBlock);
           }
@@ -494,6 +494,15 @@ void RewriteMutator::Post(parser::ReadStmt &x) {
 
 void RewriteMutator::Post(parser::WriteStmt &x) {
   FixMisparsedUntaggedNamelistName(x);
+}
+
+// Erase AccObjects recorded in the context by resolve-directives as same-kind
+// data-sharing duplicates. Cross-kind duplicates remain hard errors and never
+// reach this pass.
+void RewriteMutator::Post(parser::AccObjectList &x) {
+  x.v.remove_if([this](const parser::AccObject &o) {
+    return context_.IsAccObjectDuplicate(&o);
+  });
 }
 
 bool RewriteParseTree(SemanticsContext &context, parser::Program &program) {

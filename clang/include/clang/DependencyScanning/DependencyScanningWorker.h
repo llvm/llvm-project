@@ -33,98 +33,8 @@ class CompilerInstanceWithContext;
 
 namespace dependencies {
 
+class DependencyConsumer;
 class DependencyScanningWorkerFilesystem;
-
-/// A command-line tool invocation that is part of building a TU.
-///
-/// \see TranslationUnitDeps::Commands.
-struct Command {
-  std::string Executable;
-  std::vector<std::string> Arguments;
-};
-
-class DependencyConsumer {
-public:
-  virtual ~DependencyConsumer() {}
-
-  virtual void handleProvidedAndRequiredStdCXXModules(
-      std::optional<P1689ModuleInfo> Provided,
-      std::vector<P1689ModuleInfo> Requires) {}
-
-  virtual void handleBuildCommand(Command Cmd) {}
-
-  virtual void
-  handleDependencyOutputOpts(const DependencyOutputOptions &Opts) = 0;
-
-  virtual void handleFileDependency(StringRef Filename) = 0;
-
-  virtual void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) = 0;
-
-  virtual void handleModuleDependency(ModuleDeps MD) = 0;
-
-  virtual void handleDirectModuleDependency(ModuleID MD) = 0;
-
-  virtual void handleVisibleModule(std::string ModuleName) = 0;
-
-  virtual void handleContextHash(std::string Hash) = 0;
-};
-
-/// Dependency scanner callbacks that are used during scanning to influence the
-/// behaviour of the scan - for example, to customize the scanned invocations.
-class DependencyActionController {
-public:
-  virtual ~DependencyActionController();
-
-  /// Creates a copy of the controller. The result must be both thread-safe.
-  virtual std::unique_ptr<DependencyActionController> clone() const = 0;
-
-  /// Provides output path for a given module dependency. Must be thread-safe.
-  virtual std::string lookupModuleOutput(const ModuleDeps &MD,
-                                         ModuleOutputKind Kind) = 0;
-
-  /// Initializes the scan invocation.
-  virtual void initializeScanInvocation(CompilerInvocation &ScanInvocation) {}
-
-  /// Initializes the scan instance and modifies the resulting TU invocation.
-  /// Returns true on success, false on failure.
-  virtual bool initialize(CompilerInstance &ScanInstance,
-                          CompilerInvocation &NewInvocation) {
-    return true;
-  }
-
-  /// Finalizes the scan instance and modifies the resulting TU invocation.
-  /// Returns true on success, false on failure.
-  virtual bool finalize(CompilerInstance &ScanInstance,
-                        CompilerInvocation &NewInvocation) {
-    return true;
-  }
-
-  /// Returns the cache key for the resulting invocation, or nullopt.
-  virtual std::optional<std::string>
-  getCacheKey(const CompilerInvocation &NewInvocation) {
-    return std::nullopt;
-  }
-
-  /// Initializes the module scan instance.
-  /// Returns true on success, false on failure.
-  virtual bool initializeModuleBuild(CompilerInstance &ModuleScanInstance) {
-    return true;
-  }
-
-  /// Finalizes the module scan instance.
-  /// Returns true on success, false on failure.
-  virtual bool finalizeModuleBuild(CompilerInstance &ModuleScanInstance) {
-    return true;
-  }
-
-  /// Modifies the resulting module invocation and the associated structure.
-  /// Returns true on success, false on failure.
-  virtual bool finalizeModuleInvocation(CompilerInstance &ScanInstance,
-                                        CowCompilerInvocation &CI,
-                                        const ModuleDeps &MD) {
-    return true;
-  }
-};
 
 /// An individual dependency scanning worker that is able to run on its own
 /// thread.
@@ -142,12 +52,8 @@ public:
   ~DependencyScanningWorker();
 
   /// Run the dependency scanning tool for all given frontend command-lines,
-  /// and report the discovered dependencies to the provided consumer.
-  ///
-  /// OverlayFS should be based on the Worker's dependency scanning file-system
-  /// and can be used to provide any input specified on the command-line as
-  /// in-memory file. If no overlay file-system is provided, the Worker's
-  /// dependency scanning file-system is used instead.
+  /// and report the discovered dependencies to the provided consumer. The
+  /// \c OverlayFS will be used to call \c makeEffectiveVFS().
   ///
   /// \returns false if any errors occurred (with diagnostics reported to
   /// \c DiagConsumer), true otherwise.
@@ -155,17 +61,32 @@ public:
       StringRef WorkingDirectory, ArrayRef<ArrayRef<std::string>> CommandLines,
       DependencyConsumer &DepConsumer, DependencyActionController &Controller,
       DiagnosticConsumer &DiagConsumer,
-      IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS = nullptr);
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
 
-  llvm::vfs::FileSystem &getVFS() const { return *DepFS; }
+  /// Creates the effective VFS that will be used for the scan.
+  ///
+  /// If provided, OverlayFS will be overlaid on top of the Worker's dependency
+  /// scanning file-system and can be used to provide any input specified on the
+  /// command-line as in-memory file. If no overlay file-system is provided, the
+  /// Worker's dependency scanning file-system is used directly.
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> makeEffectiveVFS(
+      StringRef WorkingDirectory,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr) const;
+
+  /// Returns the worker tracing VFS, if it was requested via the service.
+  llvm::vfs::TracingFileSystem *getTracingVFS() const {
+    return TracingFS.get();
+  }
 
 private:
   /// The parent dependency scanning service.
   DependencyScanningService &Service;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
   /// This is the caching (and optionally dependency-directives-providing) VFS
-  /// overlaid on top of the base VFS passed in the constructor.
+  /// overlaid on top of the base VFS.
   IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
+  /// The tracing VFS overlaid on top of the base VFS.
+  IntrusiveRefCntPtr<llvm::vfs::TracingFileSystem> TracingFS;
 
   friend tooling::CompilerInstanceWithContext;
 };

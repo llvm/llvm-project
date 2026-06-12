@@ -1,4 +1,4 @@
-; RUN: llc %s -mtriple=dxil-pc-shadermodel6.3-library --filetype=asm -o - | FileCheck %s
+; RUN: llc %s -mtriple=dxil-pc-shadermodel6.3-library -o - | FileCheck %s
 
 ; CHECK: target triple = "dxilv1.3-pc-shadermodel6.3-library"
 ; CHECK-LABEL: cos_sin_float_test

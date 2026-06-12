@@ -282,6 +282,7 @@ module @TestBasicTypes attributes {
   // CHECK-DAG: bytecode.ui64 = ui64
   // CHECK-DAG: bytecode.index = index
   // CHECK-DAG: bytecode.none = none
+  // CHECK-DAG: bytecode.token = token
   bytecode.i1 = i1,
   bytecode.i8 = i8,
   bytecode.i32 = i32,
@@ -289,7 +290,8 @@ module @TestBasicTypes attributes {
   bytecode.si32 = si32,
   bytecode.ui64 = ui64,
   bytecode.index = index,
-  bytecode.none = none
+  bytecode.none = none,
+  bytecode.token = token
 } {} loc(unknown)
 
 //===----------------------------------------------------------------------===//

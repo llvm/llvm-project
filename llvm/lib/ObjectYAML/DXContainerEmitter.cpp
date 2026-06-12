@@ -11,10 +11,12 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/Sequence.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/MC/DXContainerInfo.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/MC/DXContainerRootSignature.h"
-#include "llvm/ObjectYAML/ObjectYAML.h"
+#include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -107,6 +109,21 @@ void DXContainerWriter::writeHeader(raw_ostream &OS) {
            Offsets.size() * sizeof(uint32_t));
 }
 
+// TODO use it for VERS too
+template <typename T>
+static void assign_if(T &Dst, const std::optional<T> &Src) {
+  if (Src)
+    Dst = *Src;
+}
+
+static void
+assignSectionHeader(dxbc::SourceInfo::SectionHeader &Dst,
+                    const DXContainerYAML::SourceInfo::Section &Src) {
+  assign_if(Dst.AlignedSizeInBytes, Src.GenericHeader.AlignedSizeInBytes);
+  assign_if(Dst.Flags, Src.GenericHeader.Flags);
+  assign_if(Dst.Type, Src.GenericHeader.Type);
+}
+
 Error DXContainerWriter::writeParts(raw_ostream &OS) {
   uint32_t RollingOffset =
       sizeof(dxbc::Header) + (ObjectFile.Header.PartCount * sizeof(uint32_t));
@@ -171,6 +188,21 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
         OS.write(reinterpret_cast<char *>(P.Program->DXIL->data()),
                  P.Program->DXIL->size());
       }
+      break;
+    }
+    case dxbc::PartType::ILDN: {
+      if (!P.DebugName)
+        continue;
+
+      mcdxbc::DebugName DebugName;
+      DebugName.setFilename(P.DebugName->Filename);
+      // Override default flags with value from YAML.
+      if (P.DebugName->Flags)
+        DebugName.Parameters.Flags = *P.DebugName->Flags;
+      // Override computed filename length with value from YAML.
+      if (P.DebugName->NameLength)
+        DebugName.Parameters.NameLength = *P.DebugName->NameLength;
+      DebugName.write(OS);
       break;
     }
     case dxbc::PartType::SFI0: {
@@ -264,7 +296,7 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
     }
     case dxbc::PartType::Unknown:
       break; // Skip any handling for unrecognized parts.
-    case dxbc::PartType::RTS0:
+    case dxbc::PartType::RTS0: {
       if (!P.RootSignature.has_value())
         continue;
 
@@ -374,6 +406,139 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
 
       RS.write(OS);
       break;
+    }
+    case dxbc::PartType::SRCI: {
+      if (!P.SourceInfo.has_value())
+        continue;
+      mcdxbc::SourceInfoBuilder SourceInfo;
+      auto &ContentsYAML = P.SourceInfo->Contents;
+      SourceInfo.setCompressionType(ContentsYAML.Parameters.Type);
+
+      if (ContentsYAML.Entries.size() != P.SourceInfo->Names.Entries.size())
+        return createStringError(
+            errc::invalid_argument,
+            "number of entries in Names section must match number of entries "
+            "in Contents section in SRCI part");
+
+      for (size_t I : llvm::seq(ContentsYAML.Entries.size()))
+        SourceInfo.addFile(P.SourceInfo->Names.Entries[I].FileName,
+                           ContentsYAML.Entries[I].FileContent);
+      for (auto &ArgEntry : P.SourceInfo->Args.Args)
+        SourceInfo.addArg(ArgEntry.first, ArgEntry.second);
+
+      SourceInfo.computeEntries();
+
+      // If entries field values are provided in YAML, override them in
+      // SourceInfo.
+      for (size_t I : llvm::seq(ContentsYAML.Entries.size())) {
+        auto &ContentEntryYAML = ContentsYAML.Entries[I];
+        auto &ContentEntry = SourceInfo.BaseData.Contents.Entries[I];
+        assign_if(ContentEntry.Parameters.AlignedSizeInBytes,
+                  ContentEntryYAML.AlignedSizeInBytes);
+        assign_if(ContentEntry.Parameters.Flags, ContentEntryYAML.Flags);
+        assign_if(ContentEntry.Parameters.ContentSizeInBytes,
+                  ContentEntryYAML.ContentSizeInBytes);
+
+        auto &NameEntryYAML = P.SourceInfo->Names.Entries[I];
+        auto &NameEntry = SourceInfo.BaseData.Names.Entries[I];
+        assign_if(NameEntry.Parameters.AlignedSizeInBytes,
+                  NameEntryYAML.AlignedSizeInBytes);
+        assign_if(NameEntry.Parameters.Flags, NameEntryYAML.Flags);
+        assign_if(NameEntry.Parameters.NameSizeInBytes,
+                  NameEntryYAML.NameSizeInBytes);
+        assign_if(NameEntry.Parameters.ContentSizeInBytes,
+                  NameEntryYAML.ContentSizeInBytes);
+      }
+
+      SourceInfo.finalize();
+
+      // If section header field values are provided in YAML, override them in
+      // SourceInfo.
+      auto &Contents = SourceInfo.BaseData.Contents;
+      assignSectionHeader(Contents.GenericHeader, ContentsYAML);
+      assign_if(Contents.Parameters.AlignedSizeInBytes,
+                ContentsYAML.Parameters.AlignedSizeInBytes);
+      assign_if(Contents.Parameters.Flags, ContentsYAML.Parameters.Flags);
+      assign_if(Contents.Parameters.EntriesSizeInBytes,
+                ContentsYAML.Parameters.EntriesSizeInBytes);
+      assign_if(Contents.Parameters.UncompressedEntriesSizeInBytes,
+                ContentsYAML.Parameters.UncompressedEntriesSizeInBytes);
+      if (ContentsYAML.Parameters.Count &&
+          ContentsYAML.Parameters.Count != Contents.Parameters.Count)
+        return createStringError(
+            errc::invalid_argument,
+            "the value of Count field in Contents header must match the number "
+            "of entries in Contents section");
+
+      auto &NamesYAML = P.SourceInfo->Names;
+      auto &Names = SourceInfo.BaseData.Names;
+      assignSectionHeader(Names.GenericHeader, NamesYAML);
+      assign_if(Names.Parameters.Flags, NamesYAML.Parameters.Flags);
+      assign_if(Names.Parameters.EntriesSizeInBytes,
+                NamesYAML.Parameters.EntriesSizeInBytes);
+      if (NamesYAML.Parameters.Count &&
+          NamesYAML.Parameters.Count != Names.Parameters.Count)
+        return createStringError(
+            errc::invalid_argument,
+            "the value of Count field in Names header must match the number of "
+            "entries in Names section");
+
+      auto &ArgsYAML = P.SourceInfo->Args;
+      auto &Args = SourceInfo.BaseData.Args;
+      assignSectionHeader(Args.GenericHeader, ArgsYAML);
+      assign_if(Args.Parameters.Flags, ArgsYAML.Parameters.Flags);
+      assign_if(Args.Parameters.SizeInBytes, ArgsYAML.Parameters.SizeInBytes);
+      if (ArgsYAML.Parameters.Count &&
+          ArgsYAML.Parameters.Count != Args.Parameters.Count)
+        return createStringError(errc::invalid_argument,
+                                 "the value of Count field in Args header must "
+                                 "match the number of entries in Args section");
+
+      assign_if(SourceInfo.BaseData.Parameters.AlignedSizeInBytes,
+                P.SourceInfo->Parameters.AlignedSizeInBytes);
+      assign_if(SourceInfo.BaseData.Parameters.Flags,
+                P.SourceInfo->Parameters.Flags);
+      assign_if(SourceInfo.BaseData.Parameters.SectionCount,
+                P.SourceInfo->Parameters.SectionCount);
+
+      SourceInfo.write(OS);
+      break;
+    }
+    case dxbc::PartType::VERS: {
+      if (!P.CompilerVersion)
+        continue;
+
+      mcdxbc::CompilerVersion CompilerVersion;
+      CompilerVersion.Parameters.Major =
+          P.CompilerVersion->Major.value_or(CompilerVersion.Parameters.Major);
+      CompilerVersion.Parameters.Minor =
+          P.CompilerVersion->Minor.value_or(CompilerVersion.Parameters.Minor);
+
+      if (P.CompilerVersion->IsDebugBuild || P.CompilerVersion->IsValidated)
+        CompilerVersion.Parameters.Flags = dxbc::CompilerVersionFlags::Default;
+      if (P.CompilerVersion->IsDebugBuild.value_or(false))
+        CompilerVersion.Parameters.Flags |= dxbc::CompilerVersionFlags::Debug;
+      if (P.CompilerVersion->IsValidated.value_or(false))
+        CompilerVersion.Parameters.Flags |=
+            dxbc::CompilerVersionFlags::Internal;
+
+      CompilerVersion.Parameters.CommitCount =
+          P.CompilerVersion->CommitCount.value_or(
+              CompilerVersion.Parameters.CommitCount);
+
+      if (P.CompilerVersion->CommitSha)
+        CompilerVersion.setCommitSha(*P.CompilerVersion->CommitSha);
+      if (P.CompilerVersion->CustomVersionString)
+        CompilerVersion.setVersionString(
+            *P.CompilerVersion->CustomVersionString);
+
+      CompilerVersion.Parameters.ContentSizeInBytes =
+          P.CompilerVersion->ContentSizeInBytes.value_or(
+              CompilerVersion.Parameters.ContentSizeInBytes);
+
+      CompilerVersion.write(OS);
+      break;
+    }
     }
     uint64_t BytesWritten = OS.tell() - DataStart;
     RollingOffset += BytesWritten;

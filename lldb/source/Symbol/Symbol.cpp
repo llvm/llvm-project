@@ -85,7 +85,7 @@ const Symbol &Symbol::operator=(const Symbol &rhs) {
     m_is_debug = rhs.m_is_debug;
     m_is_external = rhs.m_is_external;
     m_size_is_sibling = rhs.m_size_is_sibling;
-    m_size_is_synthesized = rhs.m_size_is_sibling;
+    m_size_is_synthesized = rhs.m_size_is_synthesized;
     m_size_is_valid = rhs.m_size_is_valid;
     m_demangled_is_synthesized = rhs.m_demangled_is_synthesized;
     m_contains_linker_annotations = rhs.m_contains_linker_annotations;
@@ -208,7 +208,7 @@ bool Symbol::SetReExportedSymbolSharedLibrary(const FileSpec &fspec) {
     // For eSymbolTypeReExported, the "const char *" from a ConstString is used
     // as the offset in the address range base address.
     m_addr_range.SetByteSize(
-        (uintptr_t)ConstString(fspec.GetPath().c_str()).GetCString());
+        (uintptr_t)ConstString(fspec.GetPath()).GetCString());
     return true;
   }
   return false;

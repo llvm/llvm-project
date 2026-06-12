@@ -53,7 +53,7 @@ public:
 
   IPSCCPPass(IPSCCPOptions Options) : Options(Options) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
   bool isFuncSpecEnabled() const { return Options.AllowFuncSpec; }
 };

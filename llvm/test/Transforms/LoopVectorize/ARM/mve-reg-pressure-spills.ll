@@ -11,13 +11,13 @@ target triple = "thumbv8.1m.main-unknown-none-eabihf"
 define void @spills_not_profitable(ptr %in1, ptr %in2, ptr %out, i32 %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'spills_not_profitable'
 ; CHECK: LV: Scalar loop costs: 86
-; CHECK-NOPRESSURE: Cost for VF 2: 394 (Estimated cost per lane: 197.0)
-; CHECK-NOPRESSURE: Cost for VF 4: 338 (Estimated cost per lane: 84.5)
+; CHECK-NOPRESSURE: Cost for VF 2: 394 (Estimated cost per lane: 197.
+; CHECK-NOPRESSURE: Cost for VF 4: 338 (Estimated cost per lane: 84.
 ; CHECK-NOPRESSURE: LV: Selecting VF: 4
 ; CHECK-PRESSURE: LV(REG): Cost of 50 from 25 spills of Generic::VectorRC
-; CHECK-PRESSURE-NEXT: Cost for VF 2: 444 (Estimated cost per lane: 222.0)
+; CHECK-PRESSURE-NEXT: Cost for VF 2: 444 (Estimated cost per lane: 222.
 ; CHECK-PRESSURE: LV(REG): Cost of 50 from 25 spills of Generic::VectorRC
-; CHECK-PRESSURE-NEXT: Cost for VF 4: 388 (Estimated cost per lane: 97.0)
+; CHECK-PRESSURE-NEXT: Cost for VF 4: 388 (Estimated cost per lane: 97.
 ; CHECK-PRESSURE: LV: Selecting VF: 1
 entry:
   %cmp = icmp eq i32 %n, 0
@@ -172,12 +172,12 @@ exit:
 define void @spills_profitable(ptr %in1, ptr %in2, ptr %out, i32 %n, i32 %m) {
 ; CHECK-LABEL: LV: Checking a loop in 'spills_profitable'
 ; CHECK: LV: Scalar loop costs: 54
-; CHECK-NOPRESSURE: Cost for VF 2: 1530 (Estimated cost per lane: 765.0)
-; CHECK-NOPRESSURE: Cost for VF 4: 38 (Estimated cost per lane: 9.5)
+; CHECK-NOPRESSURE: Cost for VF 2: 1535 (Estimated cost per lane: 767.
+; CHECK-NOPRESSURE: Cost for VF 4: 43 (Estimated cost per lane: 10.
 ; CHECK-PRESSURE: LV(REG): Cost of 4 from 2 spills of Generic::ScalarRC
-; CHECK-PRESSURE-NEXT: Cost for VF 2: 1534 (Estimated cost per lane: 767.0)
+; CHECK-PRESSURE-NEXT: Cost for VF 2: 1539 (Estimated cost per lane: 769.
 ; CHECK-PRESSURE: LV(REG): Cost of 6 from 3 spills of Generic::VectorRC
-; CHECK-PRESSURE-NEXT: Cost for VF 4: 44 (Estimated cost per lane: 11.0)
+; CHECK-PRESSURE-NEXT: Cost for VF 4: 49 (Estimated cost per lane: 12.
 ; CHECK: LV: Selecting VF: 4
 entry:
   %cmp = icmp eq i32 %n, 0

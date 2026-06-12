@@ -12,10 +12,14 @@
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/macros/config.h"
 
+// issignaling macro from <math.h> header might leak here.
+// That macro shouldn't be defined in C++.
+#undef issignaling
+
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR int issignaling(double x) {
+LIBC_INLINE constexpr int issignaling(double x) {
   return fputil::issignaling_impl(x);
 }
 
