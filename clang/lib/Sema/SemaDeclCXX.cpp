@@ -19814,14 +19814,15 @@ bool Sema::BuildDefaultArgsForCtorClosure(SourceLocation Loc, CXXConstructorDecl
     return false;
   unsigned FirstParam = IsCopy ? 1 : 0;
 
-  Expr **Args = new (getASTContext()) Expr*[NumParams - FirstParam];
+  Expr **Args = new (getASTContext()) Expr*[NumParams];
+  Args[0] = nullptr;
 
   for (unsigned I = FirstParam; I != NumParams; ++I) {
     ExprResult R = BuildCXXDefaultArgExpr(Loc, Ctor, Ctor->getParamDecl(I));
     CleanupVarDeclMarking();
     if (R.isInvalid())
       return true;
-    Args[I - FirstParam] = R.get();
+    Args[I] = R.get();
   }
   Ctor->setCtorClosureArgs(Args);
 

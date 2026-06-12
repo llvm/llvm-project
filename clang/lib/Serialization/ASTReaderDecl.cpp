@@ -2333,6 +2333,12 @@ void ASTDeclReader::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
     *D->getTrailingObjects<InheritedConstructor>() =
         InheritedConstructor(Shadow, Ctor);
   }
+  if (int NumCtorClosureArgs = Record.readInt()) {
+    Expr **Args = new (Reader.getContext()) Expr*[NumCtorClosureArgs];
+    for (int I = 0; I != NumCtorClosureArgs; I++)
+      Args[I] = cast<Expr>(Record.readStmt());
+    D->setCtorClosureArgs(Args);
+  }
 
   VisitCXXMethodDecl(D);
 }

@@ -1774,6 +1774,14 @@ void ASTDeclWriter::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
     Record.AddDeclRef(Inherited.getConstructor());
   }
 
+  if (Expr **CtorClosureArgs = D->ctorClosureArgs()) {
+    Record.push_back(D->getNumParams());
+    for (unsigned I = 0, N = D->getNumParams(); I != N; ++I)
+      Record.AddStmt(CtorClosureArgs[I]);
+  } else {
+    Record.push_back(0);
+  }
+
   VisitCXXMethodDecl(D);
   Code = serialization::DECL_CXX_CONSTRUCTOR;
 }
