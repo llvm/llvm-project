@@ -155,9 +155,7 @@ void SPIRVModuleAnalysis::setBaseInfo(const Module &M) {
     MAI.Mem =
         static_cast<SPIRV::MemoryModel::MemoryModel>(getMetadataUInt(MemMD, 1));
   } else {
-    // Default; a Shader module may be upgraded to VulkanKHR later if a
-    // capability mandates it (see runOnModule).
-    // TODO: Add general support for VulkanMemoryModel.
+    // TODO: Add support for VulkanMemoryModel.
     MAI.Mem = ST->isShader() ? SPIRV::MemoryModel::GLSL450
                              : SPIRV::MemoryModel::OpenCL;
     if (MAI.Mem == SPIRV::MemoryModel::OpenCL) {
@@ -3043,18 +3041,6 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
   // Process type/const/global var/func decl instructions, number their
   // destination registers from 0 to N, collect Extensions and Capabilities.
   collectDeclarations(M);
-
-  // CooperativeMatrixKHR in a Shader module mandates the Vulkan memory model,
-  // so derive the model from the capability unless one was set explicitly via
-  // spirv.MemoryModel metadata.
-  if (ST->isShader() && MAI.Mem == SPIRV::MemoryModel::GLSL450 &&
-      !M.getNamedMetadata("spirv.MemoryModel") &&
-      MAI.Reqs.isCapabilityRequired(SPIRV::Capability::CooperativeMatrixKHR)) {
-    MAI.Mem = SPIRV::MemoryModel::VulkanKHR;
-    MAI.Reqs.getAndAddRequirements(SPIRV::OperandCategory::MemoryModelOperand,
-                                   MAI.Mem, *ST);
-    MAI.Reqs.addExtension(SPIRV::Extension::SPV_KHR_vulkan_memory_model);
-  }
 
   // Number rest of registers from N+1 onwards.
   numberRegistersGlobally(M);

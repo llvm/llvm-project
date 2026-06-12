@@ -11,10 +11,8 @@
 
 ; CHECK-DAG: OpCapability CooperativeMatrixKHR
 ; CHECK-DAG: OpExtension "SPV_KHR_cooperative_matrix"
-; Requiring CooperativeMatrixKHR under the Shader flavor upgrades the default
-; GLSL450 memory model to VulkanKHR (spirv-val rejects Shader + CooperativeMatrixKHR
-; under GLSL450). This is the SPIRVModuleAnalysis derivation: once collectReqs sees
-; the CooperativeMatrixKHR capability, it pulls in the Vulkan memory model.
+; The module sets the Vulkan memory model explicitly via spirv.MemoryModel
+; metadata (spirv-val rejects Shader + CooperativeMatrixKHR under GLSL450).
 ; CHECK-DAG: OpCapability VulkanMemoryModelKHR
 ; CHECK-DAG: OpExtension "SPV_KHR_vulkan_memory_model"
 ; CHECK-DAG: OpMemoryModel Logical VulkanKHR
@@ -49,3 +47,7 @@ entry:
          i32 0, i32 16)
   ret void
 }
+
+; AddressingModel=Logical (0), MemoryModel=VulkanKHR (3)
+!spirv.MemoryModel = !{!0}
+!0 = !{i32 0, i32 3}

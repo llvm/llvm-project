@@ -72,3 +72,7 @@ entry:
 }
 
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
+
+; AddressingModel=Logical (0), MemoryModel=VulkanKHR (3)
+!spirv.MemoryModel = !{!0}
+!0 = !{i32 0, i32 3}
