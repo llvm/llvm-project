@@ -61,7 +61,8 @@ void lifetimebound_call(void) {
   int *p;
   {
     int i;
-    p = identity(&i); // expected-warning {{local variable 'i' does not live long enough}}
+    p = identity(&i); // expected-warning {{local variable 'i' does not live long enough}} \
+                      // expected-note {{expression aliases the storage of local variable 'i'}}
   }                   // expected-note {{destroyed here}}
   (void)*p;           // expected-note {{later used here}}
 }
