@@ -1245,6 +1245,7 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
 
         // Explore with and without inlining the call.
         if (Options.getIPAMode() == IPAK_DynamicDispatchBifurcate) {
+          Bldr.takeNodes(Pred);
           BifurcateCall(RD.getDispatchRegion(), Call, D, Bldr, Pred);
           return;
         }
@@ -1285,14 +1286,11 @@ void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
                         State->get<DynamicDispatchBifurcationMap>(BifurReg);
   if (BState) {
     // If we are on "inline path", keep inlining if possible.
-    if (*BState == DynamicDispatchModeInlined) {
-      Bldr.takeNodes(Pred);
+    if (*BState == DynamicDispatchModeInlined)
       ctuBifurcate(Call, D, Bldr, Pred, State);
-    }
     // If inline failed, or we are on the path where we assume we
     // don't have enough info about the receiver to inline, conjure the
     // return value and invalidate the regions.
-    Bldr.takeNodes(Pred);
     Bldr.addNodes(conservativeEvalCall(Call, Pred, State));
     return;
   }
@@ -1302,13 +1300,11 @@ void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
   ProgramStateRef IState =
       State->set<DynamicDispatchBifurcationMap>(BifurReg,
                                                DynamicDispatchModeInlined);
-  Bldr.takeNodes(Pred);
   ctuBifurcate(Call, D, Bldr, Pred, IState);
 
   ProgramStateRef NoIState =
       State->set<DynamicDispatchBifurcationMap>(BifurReg,
                                                DynamicDispatchModeConservative);
-  Bldr.takeNodes(Pred);
   Bldr.addNodes(conservativeEvalCall(Call, Pred, NoIState));
 
   NumOfDynamicDispatchPathSplits++;
