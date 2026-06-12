@@ -2670,8 +2670,8 @@ public:
 
   // FIXME: Just hacking it in here for now.
   Expr **CtorClosureArgs = nullptr;
-  Expr **ctorClosureArgs() const { return CtorClosureArgs; }
-  void setCtorClosureArgs(Expr **Args) { CtorClosureArgs = Args; }
+  Expr **ctorClosureArgs() const { return getCanonicalDecl()->CtorClosureArgs; }
+  void setCtorClosureArgs(Expr **Args) { getCanonicalDecl()->CtorClosureArgs = Args; }
 
   static CXXConstructorDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                                 uint64_t AllocKind);
