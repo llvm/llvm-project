@@ -298,6 +298,14 @@ if (FLANG_RT_FORTRAN_MODULES)
   flang_module_target(flang_rt.mod.intrinsics PUBLIC)
   add_module_barrier(flang_rt.mod.intrinsics.barrier flang_rt.mod.intrinsics)
 
+  set(intrinsic_module_files
+    "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/__fortran_builtins.mod"
+    "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/__cuda_builtins.mod"
+  )
+  set_property(SOURCE ${module_sources}
+    APPEND PROPERTY OBJECT_DEPENDS "${intrinsic_module_files}"
+  )
+
   # The modules themselves
   add_flangrt_library(flang_rt.mod OBJECT
     ${module_sources}
