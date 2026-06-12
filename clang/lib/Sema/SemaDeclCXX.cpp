@@ -6339,7 +6339,7 @@ static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
       if (S.Context.getTargetInfo().getCXXABI().isMicrosoft()) {
         auto *CD = dyn_cast<CXXConstructorDecl>(MD);
         if (CD && CD->isDefaultConstructor() && TSK == TSK_Undeclared) {
-          S.InstantiateDefaultCtorDefaultArgs(CD);
+          S.BuildDefaultArgsForCtorClosure(CD);
         }
       }
 
@@ -19803,4 +19803,21 @@ void Sema::ActOnFinishFunctionDeclarationDeclarator(Declarator &Declarator) {
     }
   }
   InventedParameterInfos.pop_back();
+}
+
+void Sema::BuildDefaultArgsForCtorClosure(CXXConstructorDecl *Ctor) {
+  assert(Context.getTargetInfo().getCXXABI().isMicrosoft() &&
+         Ctor->isDefaultConstructor());
+  unsigned NumParams = Ctor->getNumParams();
+  if (NumParams == 0)
+    return;
+  DLLExportAttr *Attr = Ctor->getAttr<DLLExportAttr>();
+  if (!Attr)
+    return;
+  for (unsigned I = 0; I != NumParams; ++I) {
+    (void)CheckCXXDefaultArgExpr(Attr->getLocation(), Ctor,
+                                   Ctor->getParamDecl(I));
+    CleanupVarDeclMarking();
+  }
+
 }
