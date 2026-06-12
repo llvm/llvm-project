@@ -40,14 +40,16 @@ public:
 
   void visit(QualType QT) {
     assert(!QT->isDependentType());
+    QT = QT.getDesugaredType(Ctx);
+
+    if (auto *ResAtomicType = QT->getAs<AtomicType>())
+      QT = ResAtomicType->getValueType();
 
     // If the type is an array, visit its element type. Separate traversal of
     // arrays is not needed because the array will be encountered as a
     // FieldDecl.
-
     if (QT->isArrayType()) {
-      QualType ElTy =
-          cast<ConstantArrayType>(Ctx.getAsArrayType(QT))->getElementType();
+      QualType ElTy = Ctx.getAsArrayType(QT)->getElementType();
       getDerived().visit(ElTy);
       return;
     }
