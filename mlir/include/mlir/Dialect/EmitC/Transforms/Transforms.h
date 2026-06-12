@@ -32,7 +32,8 @@ void populateExpressionPatterns(RewritePatternSet &patterns);
 // The WrapFuncInClass pass.
 //===----------------------------------------------------------------------===//
 
-void populateWrapFuncInClass(RewritePatternSet &patterns, StringRef fName);
+void populateWrapFuncInClass(RewritePatternSet &patterns, StringRef funcName,
+                             llvm::SmallVector<emitc::GlobalOp> &globalsToMove);
 
 } // namespace emitc
 } // namespace mlir

@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s -wrap-emitc-func-in-class -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -wrap-emitc-func-in-class=func-name=execute -split-input-file | FileCheck %s --check-prefixes=EXECUTE
+// RUN: mlir-opt %s -wrap-emitc-func-in-class -split-input-file | FileCheck %s
 
 emitc.func @foo(%arg0 : !emitc.array<1xf32>) {
   emitc.call_opaque "bar" (%arg0) : (!emitc.array<1xf32>) -> ()
@@ -52,6 +53,27 @@ module attributes { } {
 // CHECK:       add {{.*}}, {{.*}} : (f32, f32) -> f32
 // CHECK:       subscript {{.*}}[{{.*}}] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
 // CHECK:       assign {{.*}} : f32 to {{.*}} : <f32>
+// CHECK:       return
+// CHECK:     }
+// CHECK:   }
+
+// EXECUTE-NOT: operator
+// EXECUTE: execute()
+
+// -----
+
+module attributes { } {
+  emitc.global static const @global_arr : !emitc.array<1xi8> = dense<0>
+  emitc.func @foo() {
+    %0 = emitc.get_global @global_arr : !emitc.array<1xi8>
+    emitc.return
+  }
+}
+
+// CHECK:   emitc.class @fooClass {
+// CHECK:     emitc.field @global_arr : !emitc.array<1xi8> = dense<0>
+// CHECK:     emitc.func @"operator()"() {
+// CHECK:       %0 = get_field @global_arr : !emitc.array<1xi8>
 // CHECK:       return
 // CHECK:     }
 // CHECK:   }

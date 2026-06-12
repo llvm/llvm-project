@@ -28,12 +28,21 @@ struct WrapFuncInClassPass
     : public impl::WrapFuncInClassPassBase<WrapFuncInClassPass> {
   using WrapFuncInClassPassBase::WrapFuncInClassPassBase;
   void runOnOperation() override {
-    Operation *rootOp = getOperation();
+    mlir::ModuleOp moduleOp = getOperation();
+
+    llvm::SmallVector<emitc::GlobalOp> globalsToMove;
+    moduleOp.walk(
+        [&](mlir::emitc::GlobalOp op) { globalsToMove.push_back(op); });
 
     RewritePatternSet patterns(&getContext());
-    populateWrapFuncInClass(patterns, funcName);
+    populateWrapFuncInClass(patterns, funcName, globalsToMove);
 
-    walkAndApplyPatterns(rootOp, std::move(patterns));
+    walkAndApplyPatterns(moduleOp, std::move(patterns));
+
+    for (GlobalOp globalOp : globalsToMove) {
+      if (globalOp)
+        globalOp.erase();
+    }
   }
 };
 
@@ -43,8 +52,10 @@ struct WrapFuncInClassPass
 
 class WrapFuncInClass : public OpRewritePattern<emitc::FuncOp> {
 public:
-  WrapFuncInClass(MLIRContext *context, StringRef funcName)
-      : OpRewritePattern<emitc::FuncOp>(context), funcName(funcName) {}
+  WrapFuncInClass(MLIRContext *context, StringRef funcName,
+                  llvm::SmallVector<emitc::GlobalOp> &globalsToMove)
+      : OpRewritePattern<emitc::FuncOp>(context), funcName(funcName),
+        globalsToMove(globalsToMove) {}
 
   LogicalResult matchAndRewrite(emitc::FuncOp funcOp,
                                 PatternRewriter &rewriter) const override {
@@ -70,6 +81,12 @@ public:
       if (argAttrs && idx < argAttrs->size()) {
         fieldop->setDiscardableAttrs(funcOp.getArgAttrDict(idx));
       }
+    }
+
+    for (GlobalOp globalOp : globalsToMove) {
+      emitc::FieldOp::create(rewriter, funcOp->getLoc(),
+                             globalOp.getSymNameAttr(), globalOp.getTypeAttr(),
+                             globalOp.getInitialValueAttr());
     }
 
     rewriter.setInsertionPointToEnd(&newClassOp.getBody().front());
@@ -99,6 +116,14 @@ public:
     if (failed(newFuncOp.eraseArguments(argsToErase)))
       newFuncOp->emitOpError("failed to erase all arguments using BitVector");
 
+    newFuncOp.walk([&](emitc::GetGlobalOp getGlobalOp) {
+      rewriter.setInsertionPoint(getGlobalOp);
+      emitc::GetFieldOp getFieldOp = emitc::GetFieldOp::create(
+          rewriter, getGlobalOp.getLoc(), getGlobalOp.getType(),
+          getGlobalOp.getNameAttr());
+      rewriter.replaceOp(getGlobalOp, getFieldOp);
+    });
+
     rewriter.replaceOp(funcOp, newClassOp);
     return success();
   }
@@ -107,9 +132,11 @@ private:
   /// Name of the newly generated member function with body matching the input
   /// function.
   std::string funcName;
+  llvm::SmallVector<emitc::GlobalOp> globalsToMove;
 };
 
-void mlir::emitc::populateWrapFuncInClass(RewritePatternSet &patterns,
-                                          StringRef funcName) {
-  patterns.add<WrapFuncInClass>(patterns.getContext(), funcName);
+void mlir::emitc::populateWrapFuncInClass(
+    RewritePatternSet &patterns, StringRef funcName,
+    llvm::SmallVector<emitc::GlobalOp> &globalsToMove) {
+  patterns.add<WrapFuncInClass>(patterns.getContext(), funcName, globalsToMove);
 }
