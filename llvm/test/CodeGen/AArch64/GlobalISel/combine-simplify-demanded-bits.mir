@@ -332,3 +332,72 @@ body:             |
     $x1 = COPY %hi(s64)
     RET_ReallyLR implicit $w0, implicit $x1
 ...
+---
+# Chain of multi-use masks: %a and %b each have an extra user, but the pure
+# look-through may walk through both (bit 0 passes unchanged), so each user's
+# AND operand is rerouted straight to the copy while the shared ANDs survive.
+name:            multiuse_chain_look_through
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: name: multiuse_chain_look_through
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: %c1:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: %a:_(s32) = G_AND [[COPY]], %c1
+    ; CHECK-NEXT: %c2:_(s32) = G_CONSTANT i32 15
+    ; CHECK-NEXT: %b:_(s32) = G_AND [[COPY]], %c2
+    ; CHECK-NEXT: %one:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %root:_(s32) = G_AND [[COPY]], %one
+    ; CHECK-NEXT: $w0 = COPY %root(s32)
+    ; CHECK-NEXT: $w1 = COPY %a(s32)
+    ; CHECK-NEXT: $w2 = COPY %b(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0, implicit $w1, implicit $w2
+    %0:_(s32) = COPY $w0
+    %c1:_(s32) = G_CONSTANT i32 255
+    %a:_(s32) = G_AND %0, %c1
+    %c2:_(s32) = G_CONSTANT i32 15
+    %b:_(s32) = G_AND %a, %c2
+    %one:_(s32) = G_CONSTANT i32 1
+    %root:_(s32) = G_AND %b, %one
+    $w0 = COPY %root(s32)
+    $w1 = COPY %a(s32)
+    $w2 = COPY %b(s32)
+    RET_ReallyLR implicit $w0, implicit $w1, implicit $w2
+...
+---
+# %s is multi-use (the masking G_AND plus a direct copy out). Instead of
+# giving up, the walk relaxes the demand to all bits at %s's frame; through
+# shl-by-4 that demands src bits [0,28), exactly what %mask keeps, so the
+# inner G_AND is redundant for every user of %s and is erased.
+name:            relax_through_multiuse_shl
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: name: relax_through_multiuse_shl
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+    ; CHECK-NEXT: %amt:_(s32) = G_CONSTANT i32 4
+    ; CHECK-NEXT: %s:_(s32) = G_SHL [[COPY]], %amt(s32)
+    ; CHECK-NEXT: %lowmask:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: %root:_(s32) = G_AND %s, %lowmask
+    ; CHECK-NEXT: $w0 = COPY %root(s32)
+    ; CHECK-NEXT: $w1 = COPY %s(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0, implicit $w1
+    %0:_(s32) = COPY $w0
+    %mask:_(s32) = G_CONSTANT i32 268435455
+    %y:_(s32) = G_AND %0, %mask
+    %amt:_(s32) = G_CONSTANT i32 4
+    %s:_(s32) = G_SHL %y, %amt
+    %lowmask:_(s32) = G_CONSTANT i32 255
+    %root:_(s32) = G_AND %s, %lowmask
+    $w0 = COPY %root(s32)
+    $w1 = COPY %s(s32)
+    RET_ReallyLR implicit $w0, implicit $w1
+...
