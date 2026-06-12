@@ -1,7 +1,7 @@
 // Test RISCV64 lp64/lp64d ABI rewrite of struct returned by value (BIND(C), VALUE derived types).
 
-// RUN: fir-opt --target-rewrite="target=riscv64" %s | FileCheck --check-prefixes=CHECK-INT %s
-// RUN: fir-opt --target-rewrite="target=riscv64 target-features=+d" %s | FileCheck --check-prefixes=CHECK-FLOAT %s
+// RUN: fir-opt --target-rewrite="target=riscv64 target-abi=lp64" %s | FileCheck --check-prefixes=CHECK-INT %s
+// RUN: fir-opt --target-rewrite="target=riscv64 target-abi=lp64d" %s | FileCheck --check-prefixes=CHECK-FLOAT %s
 
 !single_struct = !fir.type<t1{i:i32,j:i16}>
 !double_struct = !fir.type<t2{i:i8,j:i32,k:i16}>
@@ -134,7 +134,7 @@ func.func @test_complex_type(%arg0 : !fir.ref<!complex_double>) {
 
 
 // CHECK-FLOAT-LABEL:   func.func @test_complex_type(
-// CHECK-FLOAT-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.type<t4{i:complex<f64>}>>) attributes {llvm.target_features = #llvm.target_features<["+d"]>} {
+// CHECK-FLOAT-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.type<t4{i:complex<f64>}>>) {
 // CHECK-FLOAT:           %[[CALL_0:.*]] = fir.call @complex_type() : () -> tuple<f64, f64>
 // CHECK-FLOAT:           %[[INTR_0:.*]] = llvm.intr.stacksave : !llvm.ptr
 // CHECK-FLOAT:           %[[ALLOCA_0:.*]] = fir.alloca tuple<f64, f64>
@@ -168,7 +168,7 @@ func.func @test_mixed_float_type(%arg0 : !fir.ref<!mixed_float>) {
 }
 
 // CHECK-FLOAT-LABEL:   func.func @test_mixed_float_type(
-// CHECK-FLOAT-SAME:     %[[ARG0:.*]]: !fir.ref<!fir.type<t5{i:f32,j:i32}>>) attributes {llvm.target_features = #llvm.target_features<["+d"]>} {
+// CHECK-FLOAT-SAME:     %[[ARG0:.*]]: !fir.ref<!fir.type<t5{i:f32,j:i32}>>) {
 // CHECK-FLOAT:          %[[CALL_0:.*]] = fir.call @mixed_float_type() : () -> tuple<f32, i32>
 // CHECK-FLOAT:          %[[INTR_0:.*]] = llvm.intr.stacksave : !llvm.ptr
 // CHECK-FLOAT:          %[[ALLOCA_0:.*]] = fir.alloca tuple<f32, i32>

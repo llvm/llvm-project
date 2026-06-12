@@ -1,7 +1,7 @@
 // Test RISCV64 lp64/lp64d ABI rewrite of struct passed by value (BIND(C), VALUE derived types).
 
-// RUN: fir-opt --target-rewrite="target=riscv64" %s | FileCheck %s --check-prefixes=CHECK-INT
-// RUN: fir-opt --target-rewrite="target=riscv64 target-features=+d" %s | FileCheck %s --check-prefixes=CHECK-FLOAT
+// RUN: fir-opt --target-rewrite="target=riscv64 target-abi=lp64" %s | FileCheck %s --check-prefixes=CHECK-INT
+// RUN: fir-opt --target-rewrite="target=riscv64 target-abi=lp64d" %s | FileCheck %s --check-prefixes=CHECK-FLOAT
 
 module attributes {llvm.data_layout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128", llvm.target_triple = "riscv64-unknown-linux-gnu"} {
 

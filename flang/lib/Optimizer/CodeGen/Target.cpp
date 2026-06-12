@@ -1429,16 +1429,14 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
     return marshal;
   }
 
-  // NOTE: Currently only supports lp64/lp64d.
-  // TODO: Can't query target-abi from inside TargetRewrite so try to get it
-  // from target-features for now. Detailed logic from clang is explained in:
-  // riscv::getRISCVABI() in clang/lib/Driver/ToolChains/Arch/RISCV.cpp
-  bool hasHardFloatABI() const {
-    if (!targetFeatures.nullOrEmpty())
-      return targetFeatures.contains("+d");
+  bool hasHardFloatABI(mlir::Location loc) const {
+    auto abi = getTargetABI();
 
-    // Fallback to get ABI from target-triple.
-    return triple.getOS() != llvm::Triple::UnknownOS;
+    if (abi == "lp64d")
+      return true;
+    if (abi == "lp64")
+      return false;
+    TODO(loc, "RISCV64 BIND(C) support for " + abi);
   }
 
   CodeGenSpecifics::Marshalling
@@ -1727,7 +1725,7 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
   structArgumentType(mlir::Location loc, fir::RecordType recTy,
                      const Marshalling &previousArguments) const override {
     int gprArgs = 8;
-    int fprArgs = hasHardFloatABI() ? 8 : 0;
+    int fprArgs = hasHardFloatABI(loc) ? 8 : 0;
 
     return classifyStruct(loc, recTy, gprArgs, fprArgs, /*isResult=*/false,
                           previousArguments);
@@ -1736,7 +1734,7 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
   CodeGenSpecifics::Marshalling
   structReturnType(mlir::Location loc, fir::RecordType recTy) const override {
     int gprArgs = 2;
-    int fprArgs = hasHardFloatABI() ? 2 : 0;
+    int fprArgs = hasHardFloatABI(loc) ? 2 : 0;
 
     return classifyStruct(loc, recTy, gprArgs, fprArgs, /*isResult=*/true, {});
   }
