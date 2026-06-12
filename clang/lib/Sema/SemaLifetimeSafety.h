@@ -62,8 +62,8 @@ public:
   LifetimeSafetySemaHelperImpl(Sema &S) : S(S) {}
 
   void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
-                           const Expr *MovedExpr,
-                           SourceLocation FreeLoc) override {
+                           const Expr *MovedExpr, SourceLocation FreeLoc,
+                           llvm::ArrayRef<const Expr *> ExprChain) override {
     unsigned DiagID = MovedExpr
                           ? diag::warn_lifetime_safety_use_after_scope_moved
                           : diag::warn_lifetime_safety_use_after_scope;
@@ -74,6 +74,9 @@ public:
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
     S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
+
+    reportAliasingChain(ExprChain);
+
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }
@@ -481,13 +484,44 @@ private:
   }
 
   std::string getDiagSubjectDescription(const Expr *E) {
+    E = E->IgnoreImpCasts();
     if (isa<MaterializeTemporaryExpr>(E))
       return "local temporary object";
 
     if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
       return getDiagSubjectDescription(DRE->getDecl());
     // TODO: Handle other expression types.
-    return "";
+    return "expression";
+  }
+
+  bool shouldShowInAliasChain(const Expr *CurrExpr, const Expr *LastExpr) {
+    CurrExpr = CurrExpr->IgnoreImpCasts();
+    LastExpr = LastExpr->IgnoreImpCasts();
+
+    if (!isa<CallExpr, DeclRefExpr>(CurrExpr))
+      return false;
+    // Source ranges can be used to filter out many implicit expressions,
+    // because operations between class objects often involve numerous implicit
+    // conversions, yet they share the same source range.
+    return CurrExpr->getSourceRange() != LastExpr->getSourceRange();
+  }
+
+  void reportAliasingChain(llvm::ArrayRef<const Expr *> OriginExprChain) {
+    if (OriginExprChain.empty())
+      return;
+
+    const Expr *LastExpr = OriginExprChain.back();
+    std::string IssueStr = getDiagSubjectDescription(LastExpr);
+
+    for (const Expr *CurrExpr : reverse(OriginExprChain.drop_back())) {
+      if (!shouldShowInAliasChain(CurrExpr, LastExpr))
+        continue;
+      S.Diag(CurrExpr->getBeginLoc(),
+             diag::note_lifetime_safety_aliases_storage)
+          << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)
+          << IssueStr;
+      LastExpr = CurrExpr;
+    }
   }
 
   Sema &S;
