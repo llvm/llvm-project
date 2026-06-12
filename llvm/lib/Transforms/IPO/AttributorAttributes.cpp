@@ -5068,7 +5068,7 @@ struct AADereferenceableFloating : AADereferenceableImpl {
         // TODO: track globally.
         bool CanBeNull;
         DerefBytes = Base->getPointerDereferenceableBytes(
-            DL, CanBeNull, /*=CanBeFreed=*/nullptr);
+            DL, CanBeNull, /*CanBeFreed=*/nullptr);
         T.GlobalState.indicatePessimisticFixpoint();
       } else {
         const DerefState &DS = AA->getState();
