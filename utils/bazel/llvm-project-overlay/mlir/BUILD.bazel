@@ -1072,6 +1072,7 @@ cc_library(
 PYTHON_BINDINGS_COPTS = [
     "-fexceptions",
     "-frtti",
+    "-g0",
 ]
 
 PYTHON_BINDINGS_FEATURES = [
