@@ -553,7 +553,7 @@ static void setZosTargetVersion(const Driver &D, llvm::Triple &Target,
 
   static bool BeSilent = false;
   auto IsTooOldToBeSupported = [](int v, int r) -> bool {
-    return ((v < 3) || ((v == 3) && (r < 1)));
+    return v < 3;
   };
 
   /* expect CURRENT, zOSVnRn, or 0xnnnnnnnn */
