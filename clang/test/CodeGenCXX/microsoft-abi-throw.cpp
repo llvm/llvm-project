@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm -o - -triple=i386-pc-win32 -std=c++11 %s -fcxx-exceptions -fms-extensions | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -o - -triple=i386-pc-win32 -std=c++20 %s -fcxx-exceptions -fms-extensions | FileCheck %s
 
 // CHECK-DAG: @"??_R0?AUY@@@8" = linkonce_odr global %rtti.TypeDescriptor7 { ptr @"??_7type_info@@6B@", ptr null, [8 x i8] c".?AUY@@\00" }, comdat
 // CHECK-DAG: @"_CT??_R0?AUY@@@8??0Y@@QAE@ABU0@@Z8" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 4, ptr @"??_R0?AUY@@@8", i32 0, i32 -1, i32 0, i32 8, ptr @"??0Y@@QAE@ABU0@@Z" }, section ".xdata", comdat
@@ -68,6 +68,17 @@ struct Default {
 // CHECK: ret void
 
 void h(Default &d) {
+  throw d;
+}
+
+consteval int constEvalFunc() { return 123; }
+struct DefaultConstEval {
+  DefaultConstEval(DefaultConstEval&, int = constEvalFunc());
+};
+// CHECK-LABEL: @"??_ODefaultConstEval@@QAEXAAU0@@Z"
+// CHECK: call x86_thiscallcc {{.*}} @"??0DefaultConstEval@@QAE@AAU0@H@Z"({{.*}} %[[this]], {{.*}} %[[src]], i32 noundef 123)
+
+void h2(DefaultConstEval &d) {
   throw d;
 }
 
