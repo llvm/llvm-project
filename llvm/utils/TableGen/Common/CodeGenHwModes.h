@@ -11,10 +11,12 @@
 #ifndef LLVM_UTILS_TABLEGEN_COMMON_CODEGENHWMODES_H
 #define LLVM_UTILS_TABLEGEN_COMMON_CODEGENHWMODES_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
 #include <map>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -25,6 +27,8 @@ class Record;
 class RecordKeeper;
 
 struct CodeGenHwModes;
+
+struct HwModePredicates;
 
 struct HwMode {
   HwMode(const Record *R);
@@ -45,6 +49,9 @@ struct CodeGenHwModes {
   static StringRef DefaultModeName;
 
   CodeGenHwModes(const RecordKeeper &R);
+  CodeGenHwModes(const CodeGenHwModes &) = delete;
+  CodeGenHwModes &operator=(const CodeGenHwModes &) = delete;
+  ~CodeGenHwModes();
   unsigned getHwModeId(const Record *R) const;
   const HwMode &getMode(unsigned Id) const {
     assert(Id != 0 && "Mode id of 0 is reserved for the default mode");
@@ -56,6 +63,8 @@ struct CodeGenHwModes {
     return getMode(Id).Name;
   }
   const HwModeSelect &getHwModeSelect(const Record *R) const;
+  const Record *resolveModeSelect(const Record *SelectRec,
+                                  ArrayRef<const Record *> PatPreds) const;
   const std::map<const Record *, HwModeSelect> &getHwModeSelects() const {
     return ModeSelects;
   }
@@ -67,6 +76,7 @@ private:
   DenseMap<const Record *, unsigned> ModeIds; // HwMode Record -> HwModeId
   std::vector<HwMode> Modes;
   std::map<const Record *, HwModeSelect> ModeSelects;
+  std::vector<HwModePredicates> PredicatesByMode;
 };
 } // namespace llvm
 

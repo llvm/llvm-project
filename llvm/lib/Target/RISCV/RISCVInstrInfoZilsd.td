@@ -64,6 +64,6 @@ def PseudoSD_RV32_OPT :
   let mayStore = 1;
 }
 
-def : InstAlias<"ld $rd, (${rs1})", (LD_RV32 GPRPairRV32:$rd, GPR:$rs1, 0), 0>;
-def : InstAlias<"sd $rs2, (${rs1})", (SD_RV32 GPRPairRV32:$rs2, GPR:$rs1, 0), 0>;
+def : InstAlias<"ld $rd, (${rs1})", (LD_RV32 GPRPairRV32:$rd, BasePtr:$rs1, 0), 0>;
+def : InstAlias<"sd $rs2, (${rs1})", (SD_RV32 GPRPairRV32:$rs2, BasePtr:$rs1, 0), 0>;
 }

@@ -224,7 +224,7 @@ class CLoad_ri<bits<3> funct3, string OpcodeStr,
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class CStore_rri<bits<3> funct3, string OpcodeStr,
                  DAGOperand cls, DAGOperand opnd>
-    : RVInst16CS<funct3, OPC_C0, (outs), (ins cls:$rs2,GPRCMem:$rs1, opnd:$imm),
+    : RVInst16CS<funct3, OPC_C0, (outs), (ins cls:$rs2, GPRCMem:$rs1, opnd:$imm),
                  OpcodeStr, "$rs2, ${imm}(${rs1})">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
@@ -267,7 +267,7 @@ class CA_ALU<bits<6> funct6, bits<2> funct2, string OpcodeStr>
 let Predicates = [HasStdExtZca] in {
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def C_ADDI4SPN : RVInst16CIW<0b000, OPC_C0, (outs GPRC:$rd),
+def C_ADDI4SPN : RVInst16CIW<0b000, OPC_C0, (outs BasePtrCRegClass:$rd),
                              (ins SP:$rs1, uimm10_lsb00nonzero:$imm),
                              "c.addi4spn", "$rd, $rs1, $imm">,
                              Sched<[WriteIALU, ReadIALU]> {
@@ -745,8 +745,9 @@ def : InstAlias<".insn_cj $opcode, $funct3, $imm11",
 
 // Quadrant 0
 let Predicates = [HasStdExtZca] in {
-def : CompressPat<(ADDI GPRC:$rd, SP:$rs1, uimm10_lsb00nonzero:$imm),
-                  (C_ADDI4SPN GPRC:$rd, SP:$rs1, uimm10_lsb00nonzero:$imm)>;
+let append Predicates = [NotStdExtYCapMode] in
+def : CompressPat<(ADDI GPRC:$rd, SP_X:$rs1, uimm10_lsb00nonzero:$imm),
+                  (C_ADDI4SPN GPRC:$rd, SP_X:$rs1, uimm10_lsb00nonzero:$imm)>;
 
 def : CompressPat<(LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm),
                   (C_LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
@@ -791,6 +792,7 @@ def : CompressPat<(ADDIW GPRNoX0:$rs1, GPRNoX0:$rs1, simm6:$imm),
 
 def : CompressPat<(ADDI GPRNoX0:$rd, X0, simm6:$imm),
                   (C_LI GPRNoX0:$rd, simm6:$imm)>;
+let append Predicates = [NotStdExtYCapMode] in
 def : CompressPat<(ADDI X2, X2, simm10_lsb0000nonzero:$imm),
                   (C_ADDI16SP X2, simm10_lsb0000nonzero:$imm)>;
 def : CompressPat<(LUI GPRNoX0X2:$rd, c_lui_imm:$imm),
