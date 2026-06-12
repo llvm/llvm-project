@@ -2088,6 +2088,27 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MBB.findDebugLoc(MI);
   const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
+
+  // Materialize the two halves of a 64-bit global address using absolute
+  // hi/lo relocations. Used to lower V_MOV_B64_PSEUDO / S_MOV_B64_IMM_PSEUDO
+  // when the source operand is a GlobalValue.
+  auto LowerMovB64GlobalAddress = [&](unsigned MovOpc) {
+    Register Dst = MI.getOperand(0).getReg();
+    Register DstLo = RI.getSubReg(Dst, AMDGPU::sub0);
+    Register DstHi = RI.getSubReg(Dst, AMDGPU::sub1);
+    const MachineOperand &SrcOp = MI.getOperand(1);
+    const GlobalValue *GV = SrcOp.getGlobal();
+    int64_t Offset = SrcOp.getOffset();
+    unsigned BaseFlags = SrcOp.getTargetFlags() &
+      ~(SIInstrInfo::MO_ABS32_LO | SIInstrInfo::MO_ABS32_HI);
+    BuildMI(MBB, MI, DL, get(MovOpc), DstLo)
+      .addGlobalAddress(GV, Offset, BaseFlags | SIInstrInfo::MO_ABS32_LO)
+      .addReg(Dst, RegState::Implicit | RegState::Define);
+    BuildMI(MBB, MI, DL, get(MovOpc), DstHi)
+      .addGlobalAddress(GV, Offset, BaseFlags | SIInstrInfo::MO_ABS32_HI)
+      .addReg(Dst, RegState::Implicit | RegState::Define);
+  };
+
   switch (MI.getOpcode()) {
   default: return TargetInstrInfo::expandPostRAPseudo(MI);
   case AMDGPU::S_MOV_B64_term:
@@ -2204,11 +2225,17 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     assert(!SrcOp.isFPImm());
     if (ST.hasVMovB64Inst() && Mov64RC->contains(Dst)) {
       MI.setDesc(Mov64Desc);
-      if (SrcOp.isReg() || isInlineConstant(MI, 1) ||
-          isUInt<32>(SrcOp.getImm()) || ST.has64BitLiterals())
+      if (SrcOp.isReg() ||
+          isInlineConstant(MI, 1) ||
+          (SrcOp.isImm() && (isUInt<32>(SrcOp.getImm()) || ST.has64BitLiterals())) ||
+          (SrcOp.isGlobal() && ST.has64BitLiterals()))
         break;
     }
-    if (SrcOp.isImm()) {
+    if (SrcOp.isGlobal()) {
+      // The address is unknown until link time, so the PK_MOV inline-constant
+      // shortcut cannot apply.
+      LowerMovB64GlobalAddress(AMDGPU::V_MOV_B32_e32);
+    } else if (SrcOp.isImm()) {
       APInt Imm(64, SrcOp.getImm());
       APInt Lo(32, Imm.getLoBits(32).getZExtValue());
       APInt Hi(32, Imm.getHiBits(32).getZExtValue());
@@ -2270,6 +2297,13 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       break;
     }
 
+    if (SrcOp.isGlobal()) {
+      LowerMovB64GlobalAddress(AMDGPU::S_MOV_B32);
+      MI.eraseFromParent();
+      break;
+    }
+
+    // SrcOp is immediate
     APInt Imm(64, SrcOp.getImm());
     if (Imm.isIntN(32) || isInlineConstant(Imm)) {
       MI.setDesc(get(AMDGPU::S_MOV_B64));
