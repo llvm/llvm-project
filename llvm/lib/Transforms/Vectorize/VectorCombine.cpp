@@ -5917,17 +5917,6 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
   if (!II)
     return false;
 
-  Intrinsic::ID IntrID = II->getIntrinsicID();
-  if (IntrID != Intrinsic::bitreverse && IntrID != Intrinsic::bswap)
-    return false;
-
-  // No fold on scalable vectors
-  Type *Ty = II->getType();
-  if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
-    if (VecTy->getElementCount().isScalable())
-      return false;
-  }
-
   Value *X;
   if (!match(II, m_Intrinsic<Intrinsic::bitreverse>(
                      m_Intrinsic<Intrinsic::bswap>(m_Value(X)))) &&
@@ -5935,9 +5924,19 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
                      m_Intrinsic<Intrinsic::bitreverse>(m_Value(X)))))
     return false;
 
-  unsigned TotalBits = Ty->getPrimitiveSizeInBits();
+  Type *Ty = II->getType();
   Type *I8Ty = Builder.getInt8Ty();
-  Type *NewVecTy = VectorType::get(I8Ty, ElementCount::getFixed(TotalBits / 8));
+  Type *NewVecTy;
+
+  if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
+    unsigned ElementSize =
+        VecTy->getElementType()->getPrimitiveSizeInBits() / 8;
+    ElementCount NewVecCnt = VecTy->getElementCount() * ElementSize;
+    NewVecTy = VectorType::get(I8Ty, NewVecCnt);
+  } else {
+    unsigned TotalBits = Ty->getPrimitiveSizeInBits();
+    NewVecTy = VectorType::get(I8Ty, ElementCount::getFixed(TotalBits / 8));
+  }
 
   auto InnerII = cast<IntrinsicInst>(II->getArgOperand(0));
   // OldCost = cost of bitreverse/bswap + cost of bswap/bitreverse
