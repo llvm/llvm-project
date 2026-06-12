@@ -130,12 +130,7 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
 
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   if (HasHWShadowStack) {
-    if (STI.hasStdExtZcmop()) {
-      static_assert(RAReg == RISCV::X1, "C.SSPUSH only accepts X1");
-      BuildMI(MBB, MI, DL, TII->get(RISCV::C_SSPUSH)).addReg(RAReg);
-    } else {
-      BuildMI(MBB, MI, DL, TII->get(RISCV::SSPUSH)).addReg(RAReg);
-    }
+    BuildMI(MBB, MI, DL, TII->get(RISCV::SSPUSH)).addReg(RAReg);
     return;
   }
 
