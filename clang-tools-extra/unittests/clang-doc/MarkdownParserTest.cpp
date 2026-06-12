@@ -204,4 +204,101 @@ TEST_F(MarkdownParserTest, ClosingFenceLengthTODO) {
   ASSERT_EQ(N->Lines.size(), 1u);
 }
 
+TEST_F(MarkdownParserTest, EmphasisAsterisk) {
+  auto Nodes = parseMarkdown("an *important* word", Arena);
+  ASSERT_EQ(Nodes.size(), 3u);
+  EXPECT_EQ(cast<TextNode>(Nodes[0])->Text, "an ");
+  auto *Em = cast<EmphasisNode>(Nodes[1]);
+  ASSERT_EQ(Em->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(Em->Children[0])->Text, "important");
+  EXPECT_EQ(cast<TextNode>(Nodes[2])->Text, " word");
+}
+
+TEST_F(MarkdownParserTest, EmphasisUnderscore) {
+  auto Nodes = parseMarkdown("_em_", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *Em = cast<EmphasisNode>(Nodes[0]);
+  ASSERT_EQ(Em->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(Em->Children[0])->Text, "em");
+}
+
+TEST_F(MarkdownParserTest, StrongAsterisk) {
+  auto Nodes = parseMarkdown("**bold**", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *St = cast<StrongNode>(Nodes[0]);
+  ASSERT_EQ(St->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(St->Children[0])->Text, "bold");
+}
+
+TEST_F(MarkdownParserTest, StrongUnderscore) {
+  auto Nodes = parseMarkdown("__bold__", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *St = cast<StrongNode>(Nodes[0]);
+  ASSERT_EQ(St->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(St->Children[0])->Text, "bold");
+}
+
+// Two delimiters must be parsed as strong, not as nested emphasis.
+TEST_F(MarkdownParserTest, StrongBindsBeforeEmphasis) {
+  auto Nodes = parseMarkdown("**strong**", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  EXPECT_TRUE(isa<StrongNode>(Nodes[0]));
+}
+
+TEST_F(MarkdownParserTest, InlineCode) {
+  auto Nodes = parseMarkdown("call `foo()` here", Arena);
+  ASSERT_EQ(Nodes.size(), 3u);
+  EXPECT_EQ(cast<TextNode>(Nodes[0])->Text, "call ");
+  EXPECT_EQ(cast<InlineCodeNode>(Nodes[1])->Code, "foo()");
+  EXPECT_EQ(cast<TextNode>(Nodes[2])->Text, " here");
+}
+
+// CommonMark §6.1: a doubled backtick fence lets the span contain a single
+// backtick.
+TEST_F(MarkdownParserTest, InlineCodeDoubleBacktick) {
+  auto Nodes = parseMarkdown("``a`b``", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  EXPECT_EQ(cast<InlineCodeNode>(Nodes[0])->Code, "a`b");
+}
+
+// Emphasis and strong recurse, so a code span inside emphasis is parsed.
+TEST_F(MarkdownParserTest, CodeSpanInsideEmphasis) {
+  auto Nodes = parseMarkdown("*see `x`*", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *Em = cast<EmphasisNode>(Nodes[0]);
+  ASSERT_EQ(Em->Children.size(), 2u);
+  EXPECT_EQ(cast<TextNode>(Em->Children[0])->Text, "see ");
+  EXPECT_EQ(cast<InlineCodeNode>(Em->Children[1])->Code, "x");
+}
+
+TEST_F(MarkdownParserTest, CodeSpanInsideStrong) {
+  auto Nodes = parseMarkdown("**a `b`**", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *St = cast<StrongNode>(Nodes[0]);
+  ASSERT_EQ(St->Children.size(), 2u);
+  EXPECT_EQ(cast<TextNode>(St->Children[0])->Text, "a ");
+  EXPECT_EQ(cast<InlineCodeNode>(St->Children[1])->Code, "b");
+}
+
+// A delimiter with whitespace on the inside does not open emphasis.
+TEST_F(MarkdownParserTest, UnmatchedDelimiterIsText) {
+  auto Nodes = parseMarkdown("a * b", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(Nodes[0])->Text, "a * b");
+}
+
+// An unterminated code span leaves the backtick as literal text.
+TEST_F(MarkdownParserTest, UnterminatedCodeSpanIsText) {
+  auto Nodes = parseMarkdown("a `b c", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(Nodes[0])->Text, "a `b c");
+}
+
+// Inline parsing must not disturb plain text with no markers.
+TEST_F(MarkdownParserTest, PlainTextHasNoInlineNodes) {
+  auto Nodes = parseMarkdown("just words", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(Nodes[0])->Text, "just words");
+}
+
 } // namespace

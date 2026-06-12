@@ -8,6 +8,7 @@
 
 #include "Markdown.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/DebugLog.h"
@@ -89,6 +90,121 @@ private:
   size_t Pos = 0;
 };
 
+// Returns the number of consecutive copies of C starting at S[Start].
+static size_t countRun(StringRef S, size_t Start, char C) {
+  size_t I = Start;
+  while (I < S.size() && S[I] == C)
+    ++I;
+  return I - Start;
+}
+
+// Strips one leading and one trailing space from a code span's content when
+// both are present and the content is not all spaces, per CommonMark §6.1.
+static StringRef trimCodeSpan(StringRef Code) {
+  if (Code.size() >= 2 && Code.front() == ' ' && Code.back() == ' ' &&
+      Code.find_first_not_of(' ') != StringRef::npos)
+    return Code.drop_front().drop_back();
+  return Code;
+}
+
+// Finds the start index of a closing emphasis run of exactly Count copies of C,
+// searching forward from From. Requires non-whitespace immediately inside both
+// the opening and closing delimiters and non-empty content, a simplified take
+// on the CommonMark §6.2 flanking rules. Returns StringRef::npos if no valid
+// closing run exists.
+static size_t findClosingDelim(StringRef S, size_t From, char C, size_t Count) {
+  size_t E = S.size();
+  // Opening delimiter is not left-flanking if whitespace follows it.
+  if (From >= E || isSpace(S[From]))
+    return StringRef::npos;
+  for (size_t J = From; J + Count <= E; ++J) {
+    if (S[J] != C)
+      continue;
+    size_t Run = countRun(S, J, C);
+    if (Run != Count) {
+      J += Run - 1; // Skip the whole run; the loop's ++J lands past it.
+      continue;
+    }
+    // Reject empty content and closing runs that are not right-flanking.
+    if (J == From || isSpace(S[J - 1]))
+      continue;
+    return J;
+  }
+  return StringRef::npos;
+}
+
+// Parses the inline content of a single line into a sequence of inline nodes:
+// inline code (`code`), strong (**text** or __text__), and emphasis (*text* or
+// _text_). Runs that match no construct become TextNodes. Emphasis and strong
+// recurse so their content may itself contain inline constructs. Text with no
+// markers yields a single TextNode.
+//
+// TODO: This covers the common cases but not the full CommonMark §6 inline
+// model (delimiter stacks, intraword underscore rules, links, autolinks).
+static ArrayRef<MDNode *> parseInline(StringRef S, BumpPtrAllocator &Arena) {
+  SmallVector<MDNode *> Nodes;
+  size_t TextStart = 0, I = 0, E = S.size();
+
+  auto flushText = [&](size_t End) {
+    if (End > TextStart)
+      Nodes.push_back(new (Arena) TextNode(
+          internString(S.substr(TextStart, End - TextStart), Arena)));
+  };
+
+  while (I < E) {
+    char C = S[I];
+
+    // Inline code span: a run of N backticks closed by a run of N backticks.
+    if (C == '`') {
+      size_t N = countRun(S, I, '`');
+      size_t J = I + N;
+      while (J < E && countRun(S, J, '`') != N)
+        J += S[J] == '`' ? countRun(S, J, '`') : 1;
+      if (J < E) {
+        flushText(I);
+        StringRef Code = trimCodeSpan(S.substr(I + N, J - (I + N)));
+        Nodes.push_back(new (Arena) InlineCodeNode(internString(Code, Arena)));
+        I = J + N;
+        TextStart = I;
+        continue;
+      }
+      // No closing run; leave the backticks as literal text.
+      I += N;
+      continue;
+    }
+
+    // Emphasis (*text*, _text_) and strong (**text**, __text__).
+    if (C == '*' || C == '_') {
+      // Strong binds the two-delimiter form before single-delimiter emphasis.
+      if (I + 1 < E && S[I + 1] == C) {
+        size_t Close = findClosingDelim(S, I + 2, C, 2);
+        if (Close != StringRef::npos) {
+          flushText(I);
+          StringRef Inner = S.substr(I + 2, Close - (I + 2));
+          Nodes.push_back(new (Arena) StrongNode(parseInline(Inner, Arena)));
+          I = Close + 2;
+          TextStart = I;
+          continue;
+        }
+      }
+      size_t Close = findClosingDelim(S, I + 1, C, 1);
+      if (Close != StringRef::npos) {
+        flushText(I);
+        StringRef Inner = S.substr(I + 1, Close - (I + 1));
+        Nodes.push_back(new (Arena) EmphasisNode(parseInline(Inner, Arena)));
+        I = Close + 1;
+        TextStart = I;
+        continue;
+      }
+    }
+
+    ++I;
+  }
+
+  flushText(E);
+  return allocateArray(Nodes, Arena);
+}
+
 ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
                                  BumpPtrAllocator &Arena) {
   if (ParagraphText.trim().empty())
@@ -168,8 +284,9 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
       continue;
     }
 
-    // Plain text fallback.
-    Nodes.push_back(new (Arena) TextNode(internString(Line, Arena)));
+    // Plain text, scanned for inline constructs (emphasis, strong, code).
+    for (MDNode *Inline : parseInline(Line, Arena))
+      Nodes.push_back(Inline);
     Reader.advance();
   }
 
