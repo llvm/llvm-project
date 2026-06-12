@@ -12,7 +12,7 @@
 ; CHECK-DAG: {{%[0-9]+}} = OpTypeRayQueryKHR
 
 ; A by-value parameter of the opaque type forces OpTypeRayQueryKHR into the module
-; (referenced by OpTypeFunction — cannot be eliminated like an unused local).
+; (referenced by OpTypeFunction, so it is not eliminated like an unused local).
 define spir_func void @use_ray_query(target("spirv.RayQueryKHR") %rq) {
 entry:
   ret void
