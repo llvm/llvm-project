@@ -401,13 +401,14 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .scalarSameSizeAs(0, 1);
 
   getActionDefinitionsBuilder(G_INSERT_SUBVECTOR)
-      .legalFor({{v16i8, v16i8},
-		 {v16i8, v8i8},
-                 {v8i16, v8i16},
-		 {v8i16, v4i16},
-                 {v4i32, v4i32},
-		 {v4i32, v2i32}})
-      .immIdx(0); // Inform verifier imm idx 0 is handled.
+      .lower(); // go to legalizerhelper.cpp
+      //.legalFor({{v16i8, v16i8},
+      //  	 {v16i8, v8i8},
+      //           {v8i16, v8i16},
+      //  	 {v8i16, v4i16},
+      //           {v4i32, v4i32},
+      //  	 {v4i32, v2i32}})
+      //.immIdx(0); // Inform verifier imm idx 0 is handled.
       //.widenScalarToNextPow2(1, /*Min=*/32)
       //.clampScalar(1, s32, s64)
       //.widenScalarOrEltToNextPow2OrMinSize(1, /*Min=*/8)

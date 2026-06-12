@@ -4572,7 +4572,6 @@ void LegalizerHelper::changeOpcode(MachineInstr &MI, unsigned NewOpcode) {
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   using namespace TargetOpcode;
-
   switch(MI.getOpcode()) {
   default:
     return UnableToLegalize;
@@ -4877,6 +4876,45 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerVECTOR_COMPRESS(MI);
   case G_DYN_STACKALLOC:
     return lowerDynStackAlloc(MI);
+  case G_INSERT_SUBVECTOR: {
+    if (MRI.getType(MI.getOperand(1).getReg()).isScalable()
+        || MRI.getType(MI.getOperand(2).getReg()).isScalable())
+      return UnableToLegalize;
+
+    // Check that subvector is half size of main vector
+    Register Vector = MI.getOperand(1).getReg();
+    Register Subvector = MI.getOperand(2).getReg();
+    auto insertionPointImm = MI.getOperand(3).getImm();
+
+    LLT VectorTy = MRI.getType(Vector);
+    LLT SubvectorTy = MRI.getType(Subvector);
+    // If so, -> concat(subvector, extract(half of vector))
+    // (Operands can be either way round depending on insertion point
+    if (VectorTy.getSizeInBits() == SubvectorTy.getSizeInBits() * 2)
+    {
+      bool insertInLowHalf = insertionPointImm == 0;
+      auto extract = MIRBuilder.buildInstr(TargetOpcode::G_EXTRACT_SUBVECTOR,
+		      {SubvectorTy},
+		      {Vector, (uint64_t)(insertInLowHalf ? VectorTy.getElementCount().getKnownMinValue() / 2 : 0)});
+      
+      auto LowHalf = insertInLowHalf ? Subvector : extract.getReg(0);
+      auto HighHalf = insertInLowHalf ? extract.getReg(0) : Subvector;
+
+      MIRBuilder.buildInstr(TargetOpcode::G_CONCAT_VECTORS,
+			{MI.getOperand(0)},
+			{LowHalf, HighHalf});
+      MI.eraseFromParent();
+      return Legalized;
+    }
+    // Else -> shuffle
+    else
+    {
+	    return UnableToLegalize;
+    }
+    // Look up what sdag does**
+    // The g opcodes should all be supported by gi
+    // Make sdag tests works for GI
+  }
   case G_STACKSAVE:
     return lowerStackSave(MI);
   case G_STACKRESTORE:
