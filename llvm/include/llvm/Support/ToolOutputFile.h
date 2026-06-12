@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_TOOLOUTPUTFILE_H
 #define LLVM_SUPPORT_TOOLOUTPUTFILE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -27,8 +28,8 @@ public:
   bool Keep;
 
   StringRef getFilename() { return Filename; }
-  explicit CleanupInstaller(StringRef Filename);
-  ~CleanupInstaller();
+  LLVM_ABI explicit CleanupInstaller(StringRef Filename);
+  LLVM_ABI ~CleanupInstaller();
 };
 
 /// This class contains a raw_fd_ostream and adds a few extra features commonly
@@ -53,10 +54,10 @@ class ToolOutputFile {
 public:
   /// This constructor's arguments are passed to raw_fd_ostream's
   /// constructor.
-  ToolOutputFile(StringRef Filename, std::error_code &EC,
-                 sys::fs::OpenFlags Flags);
+  LLVM_ABI ToolOutputFile(StringRef Filename, std::error_code &EC,
+                          sys::fs::OpenFlags Flags);
 
-  ToolOutputFile(StringRef Filename, int FD);
+  LLVM_ABI ToolOutputFile(StringRef Filename, int FD);
 
   /// Return the contained raw_fd_ostream.
   raw_fd_ostream &os() { return *OS; }

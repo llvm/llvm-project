@@ -6,9 +6,9 @@ subroutine test_constant_scalar()
   print *, (10., 20.)
   ! CHECK-DAG:  %[[VAL_0:.*]] = arith.constant 2.000000e+01 : f32
   ! CHECK-DAG:  %[[VAL_1:.*]] = arith.constant 1.000000e+01 : f32
-  ! CHECK:  %[[VAL_7:.*]] = fir.undefined !fir.complex<4>
-  ! CHECK:  %[[VAL_8:.*]] = fir.insert_value %[[VAL_7]], %[[VAL_1]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-  ! CHECK:  %[[VAL_9:.*]] = fir.insert_value %[[VAL_8]], %[[VAL_0]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+  ! CHECK:  %[[VAL_7:.*]] = fir.undefined complex<f32>
+  ! CHECK:  %[[VAL_8:.*]] = fir.insert_value %[[VAL_7]], %[[VAL_1]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+  ! CHECK:  %[[VAL_9:.*]] = fir.insert_value %[[VAL_8]], %[[VAL_0]], [1 : index] : (complex<f32>, f32) -> complex<f32>
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_constant_scalar_char()

@@ -12,8 +12,12 @@
 
 // test op*()
 
-#include <memory>
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <cassert>
+#include <memory>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 #include "test_macros.h"
@@ -30,11 +34,17 @@ struct Deleter {
 };
 #endif
 
+template <class, class = void>
+struct can_dereference : std::false_type {};
+template <class T>
+struct can_dereference<T, decltype((void)*std::declval<T>())> : std::true_type {};
+
+static_assert(can_dereference<std::unique_ptr<int> >::value, "");
+static_assert(can_dereference<const std::unique_ptr<int>&>::value, "");
+static_assert(!can_dereference<std::unique_ptr<void> >::value, "");
+static_assert(!can_dereference<const std::unique_ptr<void>&>::value, "");
+
 TEST_CONSTEXPR_CXX23 bool test() {
-  ASSERT_NOEXCEPT(*(std::unique_ptr<void>{}));
-#if TEST_STD_VER >= 11
-  static_assert(noexcept(*std::declval<std::unique_ptr<void>>()), "");
-#endif
   {
     std::unique_ptr<int> p(new int(3));
     assert(*p == 3);

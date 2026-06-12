@@ -8,6 +8,7 @@
 
 #include "SystemInitializerFull.h"
 #include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBDebugger.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
@@ -17,8 +18,14 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/ProcessTrace.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/Version/Version.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"
+
+#if LLDB_ENABLE_PYTHON
+#include "lldb/Host/ScriptInterpreterRuntimeLoader.h"
+#include "lldb/lldb-enumerations.h"
+#endif
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wglobal-constructors"
@@ -30,28 +37,30 @@
 #define LLDB_PLUGIN(p) LLDB_PLUGIN_DECLARE(p)
 #include "Plugins/Plugins.def"
 
-#if LLDB_ENABLE_PYTHON
-#include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.h"
-
-constexpr lldb_private::HostInfo::SharedLibraryDirectoryHelper
-    *g_shlib_dir_helper =
-        lldb_private::ScriptInterpreterPython::SharedLibraryDirectoryHelper;
-
-#else
-constexpr lldb_private::HostInfo::SharedLibraryDirectoryHelper
-    *g_shlib_dir_helper = nullptr;
-#endif
-
 using namespace lldb_private;
 
-SystemInitializerFull::SystemInitializerFull()
-    : SystemInitializerCommon(g_shlib_dir_helper) {}
+SystemInitializerFull::SystemInitializerFull() : SystemInitializerCommon() {}
 SystemInitializerFull::~SystemInitializerFull() = default;
 
 llvm::Error SystemInitializerFull::Initialize() {
   llvm::Error error = SystemInitializerCommon::Initialize();
   if (error)
     return error;
+
+#if LLDB_ENABLE_PYTHON
+  // Map libpython into the process before any code that might reference it
+  // runs. This is required by both the static script interpreter (whose
+  // Initialize() invokes Python via the LLDB_PLUGIN_INITIALIZE loop below)
+  // and the dynamic plugin (whose dlopen needs Python's symbols visible in
+  // the process). The loader is once_flag-cached and a no-op when libpython
+  // is already in the process (e.g. `import lldb` from Python).
+  llvm::Expected<ScriptInterpreterRuntimeLoader &> python_loader =
+      ScriptInterpreterRuntimeLoader::Get(lldb::eScriptLanguagePython);
+  if (!python_loader)
+    return python_loader.takeError();
+  if (llvm::Error err = python_loader->Load())
+    return err;
+#endif
 
   // Initialize LLVM and Clang
   llvm::InitializeAllTargets();
@@ -67,9 +76,6 @@ llvm::Error SystemInitializerFull::Initialize() {
   const char *arg0 = "lldb";
   llvm::cl::ParseCommandLineOptions(1, &arg0);
 
-  // Initialize the progress manager.
-  ProgressManager::Initialize();
-
 #define LLDB_PLUGIN(p) LLDB_PLUGIN_INITIALIZE(p);
 #include "Plugins/Plugins.def"
 
@@ -83,10 +89,58 @@ llvm::Error SystemInitializerFull::Initialize() {
   // Use the Debugger's LLDBAssert callback.
   SetLLDBAssertCallback(Debugger::AssertCallback);
 
+  // Use the system log to report errors that would otherwise get dropped.
+  SetLLDBErrorLog(GetLog(SystemLog::System));
+
+  LLDB_LOG(GetLog(SystemLog::System), "{0}", GetVersion());
+
+  auto LoadPlugin = [](const lldb::DebuggerSP &debugger_sp,
+                       const FileSpec &spec,
+                       Status &error) -> llvm::sys::DynamicLibrary {
+    llvm::sys::DynamicLibrary dynlib =
+        llvm::sys::DynamicLibrary::getPermanentLibrary(spec.GetPath().c_str());
+    if (dynlib.isValid()) {
+      typedef bool (*LLDBCommandPluginInit)(lldb::SBDebugger debugger);
+
+      lldb::SBDebugger debugger_sb(debugger_sp);
+      // This calls the bool lldb::PluginInitialize(lldb::SBDebugger debugger)
+      // function.
+      // TODO: mangle this differently for your system - on OSX, the first
+      // underscore needs to be removed and the second one stays
+      LLDBCommandPluginInit init_func =
+          (LLDBCommandPluginInit)(uintptr_t)dynlib.getAddressOfSymbol(
+              "_ZN4lldb16PluginInitializeENS_10SBDebuggerE");
+      if (init_func) {
+        if (init_func(debugger_sb))
+          return dynlib;
+        else
+          error = Status::FromErrorString(
+              "plug-in refused to load "
+              "(lldb::PluginInitialize(lldb::SBDebugger) "
+              "returned false)");
+      } else {
+        error = Status::FromErrorString(
+            "plug-in is missing the required initialization: "
+            "lldb::PluginInitialize(lldb::SBDebugger)");
+      }
+    } else {
+      if (FileSystem::Instance().Exists(spec))
+        error = Status::FromErrorString(
+            "this file does not represent a loadable dylib");
+      else
+        error = Status::FromErrorString("no such file");
+    }
+    return llvm::sys::DynamicLibrary();
+  };
+
+  Debugger::Initialize(LoadPlugin);
+
   return llvm::Error::success();
 }
 
 void SystemInitializerFull::Terminate() {
+  Debugger::Terminate();
+
   Debugger::SettingsTerminate();
 
   // Terminate plug-ins in core LLDB.
@@ -97,9 +151,6 @@ void SystemInitializerFull::Terminate() {
 
 #define LLDB_PLUGIN(p) LLDB_PLUGIN_TERMINATE(p);
 #include "Plugins/Plugins.def"
-
-  // Terminate the progress manager.
-  ProgressManager::Terminate();
 
   // Now shutdown the common parts, in reverse order.
   SystemInitializerCommon::Terminate();

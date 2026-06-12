@@ -17,6 +17,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
@@ -168,7 +169,8 @@ void CSKYELFStreamer::EmitMappingSymbol(StringRef Name) {
 
   State = (Name == "$t" ? EMS_Text : EMS_Data);
 
-  auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
+  auto *Symbol =
+      static_cast<MCSymbolELF *>(getContext().createLocalSymbol(Name));
   emitLabel(Symbol);
 
   Symbol->setType(ELF::STT_NOTYPE);

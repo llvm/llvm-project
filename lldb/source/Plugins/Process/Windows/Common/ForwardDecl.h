@@ -32,10 +32,10 @@ class IDebugDelegate;
 class DebuggerThread;
 class ExceptionRecord;
 
-typedef std::shared_ptr<IDebugDelegate> DebugDelegateSP;
-typedef std::shared_ptr<DebuggerThread> DebuggerThreadSP;
-typedef std::shared_ptr<ExceptionRecord> ExceptionRecordSP;
-typedef std::unique_ptr<ExceptionRecord> ExceptionRecordUP;
+using DebugDelegateSP = std::shared_ptr<IDebugDelegate>;
+using DebuggerThreadSP = std::shared_ptr<DebuggerThread>;
+using ExceptionRecordSP = std::shared_ptr<ExceptionRecord>;
+using ExceptionRecordUP = std::unique_ptr<ExceptionRecord>;
 }
 
 #endif

@@ -18,52 +18,63 @@
 namespace llvm {
 bool CC_AArch64_AAPCS(unsigned ValNo, MVT ValVT, MVT LocVT,
                       CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                      CCState &State);
+                      Type *OrigTy, CCState &State);
 bool CC_AArch64_Arm64EC_VarArg(unsigned ValNo, MVT ValVT, MVT LocVT,
                                CCValAssign::LocInfo LocInfo,
-                               ISD::ArgFlagsTy ArgFlags, CCState &State);
+                               ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                               CCState &State);
 bool CC_AArch64_Arm64EC_Thunk(unsigned ValNo, MVT ValVT, MVT LocVT,
                               CCValAssign::LocInfo LocInfo,
-                              ISD::ArgFlagsTy ArgFlags, CCState &State);
+                              ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                              CCState &State);
 bool CC_AArch64_Arm64EC_Thunk_Native(unsigned ValNo, MVT ValVT, MVT LocVT,
                                      CCValAssign::LocInfo LocInfo,
-                                     ISD::ArgFlagsTy ArgFlags, CCState &State);
+                                     ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                                     CCState &State);
 bool CC_AArch64_DarwinPCS_VarArg(unsigned ValNo, MVT ValVT, MVT LocVT,
                                  CCValAssign::LocInfo LocInfo,
-                                 ISD::ArgFlagsTy ArgFlags, CCState &State);
+                                 ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                                 CCState &State);
 bool CC_AArch64_DarwinPCS(unsigned ValNo, MVT ValVT, MVT LocVT,
                           CCValAssign::LocInfo LocInfo,
-                          ISD::ArgFlagsTy ArgFlags, CCState &State);
+                          ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                          CCState &State);
 bool CC_AArch64_DarwinPCS_ILP32_VarArg(unsigned ValNo, MVT ValVT, MVT LocVT,
-                          CCValAssign::LocInfo LocInfo,
-                          ISD::ArgFlagsTy ArgFlags, CCState &State);
+                                       CCValAssign::LocInfo LocInfo,
+                                       ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                                       CCState &State);
 bool CC_AArch64_Win64PCS(unsigned ValNo, MVT ValVT, MVT LocVT,
                          CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                         CCState &State);
+                         Type *OrigTy, CCState &State);
 bool CC_AArch64_Win64_VarArg(unsigned ValNo, MVT ValVT, MVT LocVT,
                              CCValAssign::LocInfo LocInfo,
-                             ISD::ArgFlagsTy ArgFlags, CCState &State);
+                             ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                             CCState &State);
 bool CC_AArch64_Win64_CFGuard_Check(unsigned ValNo, MVT ValVT, MVT LocVT,
                                     CCValAssign::LocInfo LocInfo,
-                                    ISD::ArgFlagsTy ArgFlags, CCState &State);
+                                    ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                                    CCState &State);
 bool CC_AArch64_Arm64EC_CFGuard_Check(unsigned ValNo, MVT ValVT, MVT LocVT,
                                       CCValAssign::LocInfo LocInfo,
-                                      ISD::ArgFlagsTy ArgFlags, CCState &State);
+                                      ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                                      CCState &State);
 bool CC_AArch64_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
                     CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                    CCState &State);
+                    Type *OrigTy, CCState &State);
 bool CC_AArch64_Preserve_None(unsigned ValNo, MVT ValVT, MVT LocVT,
                               CCValAssign::LocInfo LocInfo,
-                              ISD::ArgFlagsTy ArgFlags, CCState &State);
+                              ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                              CCState &State);
 bool RetCC_AArch64_AAPCS(unsigned ValNo, MVT ValVT, MVT LocVT,
                          CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                         CCState &State);
+                         Type *OrigTy, CCState &State);
 bool RetCC_AArch64_Arm64EC_Thunk(unsigned ValNo, MVT ValVT, MVT LocVT,
                                  CCValAssign::LocInfo LocInfo,
-                                 ISD::ArgFlagsTy ArgFlags, CCState &State);
+                                 ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                                 CCState &State);
 bool RetCC_AArch64_Arm64EC_CFGuard_Check(unsigned ValNo, MVT ValVT, MVT LocVT,
                                          CCValAssign::LocInfo LocInfo,
-                                         ISD::ArgFlagsTy ArgFlags,
+                                         ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
                                          CCState &State);
 } // namespace llvm
 

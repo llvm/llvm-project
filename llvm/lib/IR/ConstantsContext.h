@@ -44,15 +44,17 @@ namespace llvm {
 /// CastConstantExpr - This class is private to Constants.cpp, and is used
 /// behind the scenes to implement cast constant exprs.
 class CastConstantExpr final : public ConstantExpr {
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{1};
+
 public:
   CastConstantExpr(unsigned Opcode, Constant *C, Type *Ty)
-    : ConstantExpr(Ty, Opcode, &Op<0>(), 1) {
+      : ConstantExpr(Ty, Opcode, AllocMarker) {
     Op<0>() = C;
   }
 
   // allocate space for exactly one operand
-  void *operator new(size_t S) { return User::operator new(S, 1); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
@@ -67,18 +69,21 @@ public:
 /// BinaryConstantExpr - This class is private to Constants.cpp, and is used
 /// behind the scenes to implement binary constant exprs.
 class BinaryConstantExpr final : public ConstantExpr {
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{2};
+
 public:
   BinaryConstantExpr(unsigned Opcode, Constant *C1, Constant *C2,
                      unsigned Flags)
-    : ConstantExpr(C1->getType(), Opcode, &Op<0>(), 2) {
+      : ConstantExpr(C1->getType(), Opcode, AllocMarker) {
     Op<0>() = C1;
     Op<1>() = C2;
+    assert((Flags & ConstantSubclassBits) == 0 && "invalid flags");
     SubclassOptionalData = Flags;
   }
 
   // allocate space for exactly two operands
-  void *operator new(size_t S) { return User::operator new(S, 2); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -95,17 +100,19 @@ public:
 /// Constants.cpp, and is used behind the scenes to implement
 /// extractelement constant exprs.
 class ExtractElementConstantExpr final : public ConstantExpr {
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{2};
+
 public:
   ExtractElementConstantExpr(Constant *C1, Constant *C2)
-    : ConstantExpr(cast<VectorType>(C1->getType())->getElementType(),
-                   Instruction::ExtractElement, &Op<0>(), 2) {
+      : ConstantExpr(cast<VectorType>(C1->getType())->getElementType(),
+                     Instruction::ExtractElement, AllocMarker) {
     Op<0>() = C1;
     Op<1>() = C2;
   }
 
   // allocate space for exactly two operands
-  void *operator new(size_t S) { return User::operator new(S, 2); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -122,18 +129,19 @@ public:
 /// Constants.cpp, and is used behind the scenes to implement
 /// insertelement constant exprs.
 class InsertElementConstantExpr final : public ConstantExpr {
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{3};
+
 public:
   InsertElementConstantExpr(Constant *C1, Constant *C2, Constant *C3)
-    : ConstantExpr(C1->getType(), Instruction::InsertElement,
-                   &Op<0>(), 3) {
+      : ConstantExpr(C1->getType(), Instruction::InsertElement, AllocMarker) {
     Op<0>() = C1;
     Op<1>() = C2;
     Op<2>() = C3;
   }
 
   // allocate space for exactly three operands
-  void *operator new(size_t S) { return User::operator new(S, 3); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -150,12 +158,14 @@ public:
 /// Constants.cpp, and is used behind the scenes to implement
 /// shufflevector constant exprs.
 class ShuffleVectorConstantExpr final : public ConstantExpr {
+  constexpr static IntrusiveOperandsAllocMarker AllocMarker{2};
+
 public:
   ShuffleVectorConstantExpr(Constant *C1, Constant *C2, ArrayRef<int> Mask)
       : ConstantExpr(VectorType::get(
                          cast<VectorType>(C1->getType())->getElementType(),
                          Mask.size(), isa<ScalableVectorType>(C1->getType())),
-                     Instruction::ShuffleVector, &Op<0>(), 2) {
+                     Instruction::ShuffleVector, AllocMarker) {
     assert(ShuffleVectorInst::isValidOperands(C1, C2, Mask) &&
            "Invalid shuffle vector instruction operands!");
     Op<0>() = C1;
@@ -168,8 +178,10 @@ public:
   SmallVector<int, 4> ShuffleMask;
   Constant *ShuffleMaskForBitcode;
 
-  void *operator new(size_t S) { return User::operator new(S, 2); }
-  void operator delete(void *Ptr) { return User::operator delete(Ptr); }
+  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
+  void operator delete(void *Ptr) {
+    return User::operator delete(Ptr, AllocMarker);
+  }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -191,15 +203,18 @@ class GetElementPtrConstantExpr : public ConstantExpr {
 
   GetElementPtrConstantExpr(Type *SrcElementTy, Constant *C,
                             ArrayRef<Constant *> IdxList, Type *DestTy,
-                            std::optional<ConstantRange> InRange);
+                            std::optional<ConstantRange> InRange,
+                            AllocInfo AllocInfo);
 
 public:
   static GetElementPtrConstantExpr *
   Create(Type *SrcElementTy, Constant *C, ArrayRef<Constant *> IdxList,
          Type *DestTy, unsigned Flags, std::optional<ConstantRange> InRange) {
-    GetElementPtrConstantExpr *Result = new (IdxList.size() + 1)
+    IntrusiveOperandsAllocMarker AllocMarker{unsigned(IdxList.size() + 1)};
+    GetElementPtrConstantExpr *Result = new (AllocMarker)
         GetElementPtrConstantExpr(SrcElementTy, C, IdxList, DestTy,
-                                  std::move(InRange));
+                                  std::move(InRange), AllocMarker);
+    assert((Flags & ConstantSubclassBits) == 0 && "invalid flags");
     Result->SubclassOptionalData = Flags;
     return Result;
   }
@@ -246,7 +261,7 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ShuffleVectorConstantExpr, Value)
 
 template <>
 struct OperandTraits<GetElementPtrConstantExpr>
-    : public VariadicOperandTraits<GetElementPtrConstantExpr, 1> {};
+    : public VariadicOperandTraits<GetElementPtrConstantExpr> {};
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(GetElementPtrConstantExpr, Value)
 
@@ -292,6 +307,7 @@ template <class ConstantClass> struct ConstantAggrKeyType {
   ConstantAggrKeyType(const ConstantClass *C,
                       SmallVectorImpl<Constant *> &Storage) {
     assert(Storage.empty() && "Expected empty storage");
+    Storage.reserve(C->getNumOperands());
     for (unsigned I = 0, E = C->getNumOperands(); I != E; ++I)
       Storage.push_back(C->getOperand(I));
     Operands = Storage;
@@ -310,14 +326,13 @@ template <class ConstantClass> struct ConstantAggrKeyType {
     return true;
   }
 
-  unsigned getHash() const {
-    return hash_combine_range(Operands.begin(), Operands.end());
-  }
+  unsigned getHash() const { return hash_combine_range(Operands); }
 
   using TypeClass = typename ConstantInfo<ConstantClass>::TypeClass;
 
   ConstantClass *create(TypeClass *Ty) const {
-    return new (Operands.size()) ConstantClass(Ty, Operands);
+    User::IntrusiveOperandsAllocMarker AllocMarker{unsigned(Operands.size())};
+    return new (AllocMarker) ConstantClass(Ty, Operands, AllocMarker);
   }
 };
 
@@ -367,7 +382,7 @@ struct InlineAsmKeyType {
   using TypeClass = ConstantInfo<InlineAsm>::TypeClass;
 
   InlineAsm *create(TypeClass *Ty) const {
-    assert(PointerType::getUnqual(FTy) == Ty);
+    assert(PointerType::getUnqual(FTy->getContext()) == Ty);
     return new InlineAsm(FTy, std::string(AsmString), std::string(Constraints),
                          HasSideEffects, IsAlignStack, AsmDialect, CanThrow);
   }
@@ -385,7 +400,7 @@ private:
   static ArrayRef<int> getShuffleMaskIfValid(const ConstantExpr *CE) {
     if (CE->getOpcode() == Instruction::ShuffleVector)
       return CE->getShuffleMask();
-    return std::nullopt;
+    return {};
   }
 
   static Type *getSourceElementTypeIfValid(const ConstantExpr *CE) {
@@ -404,7 +419,7 @@ private:
 public:
   ConstantExprKeyType(unsigned Opcode, ArrayRef<Constant *> Ops,
                       unsigned short SubclassOptionalData = 0,
-                      ArrayRef<int> ShuffleMask = std::nullopt,
+                      ArrayRef<int> ShuffleMask = {},
                       Type *ExplicitTy = nullptr,
                       std::optional<ConstantRange> InRange = std::nullopt)
       : Opcode(Opcode), SubclassOptionalData(SubclassOptionalData), Ops(Ops),
@@ -465,10 +480,8 @@ public:
   }
 
   unsigned getHash() const {
-    return hash_combine(
-        Opcode, SubclassOptionalData,
-        hash_combine_range(Ops.begin(), Ops.end()),
-        hash_combine_range(ShuffleMask.begin(), ShuffleMask.end()), ExplicitTy);
+    return hash_combine(Opcode, SubclassOptionalData, hash_combine_range(Ops),
+                        hash_combine_range(ShuffleMask), ExplicitTy);
   }
 
   using TypeClass = ConstantInfo<ConstantExpr>::TypeClass;
@@ -478,8 +491,7 @@ public:
     default:
       if (Instruction::isCast(Opcode))
         return new CastConstantExpr(Opcode, Ops[0], Ty);
-      if ((Opcode >= Instruction::BinaryOpsBegin &&
-           Opcode < Instruction::BinaryOpsEnd))
+      if (Instruction::isBinaryOp(Opcode))
         return new BinaryConstantExpr(Opcode, Ops[0], Ops[1],
                                       SubclassOptionalData);
       llvm_unreachable("Invalid ConstantExpr!");
@@ -525,15 +537,14 @@ struct ConstantPtrAuthKeyType {
     return true;
   }
 
-  unsigned getHash() const {
-    return hash_combine_range(Operands.begin(), Operands.end());
-  }
+  unsigned getHash() const { return hash_combine_range(Operands); }
 
-  using TypeClass = typename ConstantInfo<ConstantPtrAuth>::TypeClass;
+  using TypeClass = ConstantInfo<ConstantPtrAuth>::TypeClass;
 
   ConstantPtrAuth *create(TypeClass *Ty) const {
     return new ConstantPtrAuth(Operands[0], cast<ConstantInt>(Operands[1]),
-                               cast<ConstantInt>(Operands[2]), Operands[3]);
+                               cast<ConstantInt>(Operands[2]), Operands[3],
+                               Operands[4]);
   }
 };
 
@@ -554,14 +565,6 @@ private:
   struct MapInfo {
     using ConstantClassInfo = DenseMapInfo<ConstantClass *>;
 
-    static inline ConstantClass *getEmptyKey() {
-      return ConstantClassInfo::getEmptyKey();
-    }
-
-    static inline ConstantClass *getTombstoneKey() {
-      return ConstantClassInfo::getTombstoneKey();
-    }
-
     static unsigned getHashValue(const ConstantClass *CP) {
       SmallVector<Constant *, 32> Storage;
       return getHashValue(LookupKey(CP->getType(), ValType(CP, Storage)));
@@ -580,8 +583,6 @@ private:
     }
 
     static bool isEqual(const LookupKey &LHS, const ConstantClass *RHS) {
-      if (RHS == getEmptyKey() || RHS == getTombstoneKey())
-        return false;
       if (LHS.first != RHS->getType())
         return false;
       return LHS.second == RHS;

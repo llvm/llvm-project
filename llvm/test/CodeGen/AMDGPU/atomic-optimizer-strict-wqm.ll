@@ -15,7 +15,7 @@ define amdgpu_ps void @main(i32 %arg) {
 ; GFX10-NEXT:    s_mov_b32 s2, 0
 ; GFX10-NEXT:    s_branch .LBB0_2
 ; GFX10-NEXT:  .LBB0_1: ; in Loop: Header=BB0_2 Depth=1
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GFX10-NEXT:    s_and_b32 s0, exec_lo, vcc_lo
 ; GFX10-NEXT:    s_or_b32 s2, s0, s2
@@ -41,7 +41,7 @@ define amdgpu_ps void @main(i32 %arg) {
 ; GFX10-NEXT:    s_mov_b32 s0, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-NEXT:    exp mrt0 off, off, off, off
+; GFX10-NEXT:    exp mrt0, off, off, off, off
 ; GFX10-NEXT:    s_endpgm
 bb:
   br label %bb4

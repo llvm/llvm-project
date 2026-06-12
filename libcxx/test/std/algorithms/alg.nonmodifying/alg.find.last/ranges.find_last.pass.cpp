@@ -25,11 +25,13 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <memory>
 #include <ranges>
 #include <vector>
 
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 struct NotEqualityComparable {};
 
@@ -61,7 +63,8 @@ template <class It, class Sent = It>
 constexpr void test_iterators() {
   using ValueT    = std::iter_value_t<It>;
   auto make_range = [](auto& a) {
-    return std::ranges::subrange(It(std::ranges::begin(a)), Sent(It(std::ranges::end(a))));
+    return std::ranges::subrange(
+        It(std::to_address(std::ranges::begin(a))), Sent(It(std::to_address(std::ranges::end(a)))));
   };
   { // simple test
     {
@@ -91,7 +94,7 @@ constexpr void test_iterators() {
       std::array<ValueT, 0> a = {};
 
       auto ret = std::ranges::find_last(make_range(a), 1).begin();
-      assert(ret == It(a.begin()));
+      assert(ret == It(a.data()));
     }
   }
 

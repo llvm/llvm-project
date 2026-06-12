@@ -1,0 +1,26 @@
+# RUN: llvm-mc -triple=xtensa -mattr=+interrupt -disassemble %s | FileCheck -check-prefixes=CHECK-EXCEPTION %s
+# RUN: not llvm-mc -triple=xtensa -disassemble %s 2>&1 | FileCheck --implicit-check-not=warning: -check-prefixes=CHECK-CORE %s
+
+## Verify that binary code is correctly disassembled with
+## Xtensa interrupt option enabled. Also verify that dissasembling without
+## Xtensa interrupt option generates warnings.
+
+[0x20,0x61,0x00]
+# CHECK-EXCEPTION: rsil a2, 1
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x00,0x71,0x00]
+# CHECK-EXCEPTION: waiti 1
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20, 0xe4, 0x61]
+#CHECK-INST: xsr a2, intenable
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20, 0xe2, 0x03]
+#CHECK-INST: rsr a2, interrupt
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20, 0xe3, 0x13]
+#CHECK-INST: wsr a2, intclear
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding

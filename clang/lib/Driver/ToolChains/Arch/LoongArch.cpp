@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArch.h"
-#include "ToolChains/CommonArgs.h"
+#include "../Clang.h"
 #include "clang/Basic/DiagnosticDriver.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/LoongArchTargetParser.h"
 
@@ -103,8 +103,10 @@ StringRef loongarch::getLoongArchABI(const Driver &D, const ArgList &Args,
   // present, falling back to {ILP32,LP64}D otherwise.
   switch (Triple.getEnvironment()) {
   case llvm::Triple::GNUSF:
+  case llvm::Triple::MuslSF:
     return IsLA32 ? "ilp32s" : "lp64s";
   case llvm::Triple::GNUF32:
+  case llvm::Triple::MuslF32:
     return IsLA32 ? "ilp32f" : "lp64f";
   case llvm::Triple::GNUF64:
     // This was originally permitted (and indeed the canonical way) to
@@ -128,15 +130,27 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
                                            const ArgList &Args,
                                            std::vector<StringRef> &Features) {
   // Enable the `lsx` feature on 64-bit LoongArch by default.
-  if (Triple.isLoongArch64() &&
-      (!Args.hasArgNoClaim(clang::driver::options::OPT_march_EQ)))
+  if (Triple.isLoongArch64() && (!Args.hasArgNoClaim(options::OPT_march_EQ)))
     Features.push_back("+lsx");
 
+  // -mrelax is default, unless -mno-relax is specified.
+  // FIXME: Only for loongarch64, loongarch32 has not been fully verified.
+  if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax,
+                   Triple.isLoongArch64() ? true : false))
+    Features.push_back("+relax");
+  else if (Args.getLastArg(options::OPT_mno_relax))
+    Features.push_back("-relax");
+
   std::string ArchName;
-  if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
-    ArchName = A->getValue();
+  const Arg *MArch = Args.getLastArg(options::OPT_march_EQ);
+  if (MArch)
+    ArchName = MArch->getValue();
   ArchName = postProcessTargetCPUString(ArchName, Triple);
   llvm::LoongArch::getArchFeatures(ArchName, Features);
+  if (MArch && StringRef(MArch->getValue()) == "native")
+    for (auto &F : llvm::sys::getHostCPUFeatures())
+      Features.push_back(
+          Args.MakeArgString((F.second ? "+" : "-") + F.first()));
 
   // Select floating-point features determined by -mdouble-float,
   // -msingle-float, -msoft-float and -mfpu.
@@ -174,10 +188,6 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     }
   }
 
-  // Select the `ual` feature determined by -m[no-]strict-align.
-  AddTargetFeature(Args, Features, options::OPT_mno_strict_align,
-                   options::OPT_mstrict_align, "ual");
-
   // Accept but warn about these TargetSpecific options.
   if (Arg *A = Args.getLastArgNoClaim(options::OPT_mabi_EQ))
     A->ignoreTargetSpecific();
@@ -193,16 +203,16 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     if (MSIMD == "lsx") {
       // Option -msimd=lsx depends on 64-bit FPU.
       // -m*-float and -mfpu=none/0/32 conflict with -msimd=lsx.
-      if (llvm::find(Features, "-d") != Features.end())
+      if (llvm::is_contained(Features, "-d"))
         D.Diag(diag::err_drv_loongarch_wrong_fpu_width) << /*LSX*/ 0;
       else
         Features.push_back("+lsx");
     } else if (MSIMD == "lasx") {
       // Option -msimd=lasx depends on 64-bit FPU and LSX.
       // -m*-float, -mfpu=none/0/32 and -mno-lsx conflict with -msimd=lasx.
-      if (llvm::find(Features, "-d") != Features.end())
+      if (llvm::is_contained(Features, "-d"))
         D.Diag(diag::err_drv_loongarch_wrong_fpu_width) << /*LASX*/ 1;
-      else if (llvm::find(Features, "-lsx") != Features.end())
+      else if (llvm::is_contained(Features, "-lsx"))
         D.Diag(diag::err_drv_loongarch_invalid_simd_option_combination);
 
       // The command options do not contain -mno-lasx.
@@ -211,9 +221,9 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
         Features.push_back("+lasx");
       }
     } else if (MSIMD == "none") {
-      if (llvm::find(Features, "+lsx") != Features.end())
+      if (llvm::is_contained(Features, "+lsx"))
         Features.push_back("-lsx");
-      if (llvm::find(Features, "+lasx") != Features.end())
+      if (llvm::is_contained(Features, "+lasx"))
         Features.push_back("-lasx");
     } else {
       D.Diag(diag::err_drv_loongarch_invalid_msimd_EQ) << MSIMD;
@@ -231,6 +241,7 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
         Features.push_back("+lsx");
     } else /*-mno-lsx*/ {
       Features.push_back("-lsx");
+      Features.push_back("-lasx");
     }
   }
 
@@ -249,6 +260,23 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
     } else /*-mno-lasx*/
       Features.push_back("-lasx");
   }
+
+  AddTargetFeature(Args, Features, options::OPT_mno_strict_align,
+                   options::OPT_mstrict_align, "ual");
+  AddTargetFeature(Args, Features, options::OPT_mno_strict_align,
+                   options::OPT_mstrict_align, "ual");
+  AddTargetFeature(Args, Features, options::OPT_mfrecipe,
+                   options::OPT_mno_frecipe, "frecipe");
+  AddTargetFeature(Args, Features, options::OPT_mlam_bh,
+                   options::OPT_mno_lam_bh, "lam-bh");
+  AddTargetFeature(Args, Features, options::OPT_mlamcas,
+                   options::OPT_mno_lamcas, "lamcas");
+  AddTargetFeature(Args, Features, options::OPT_mld_seq_sa,
+                   options::OPT_mno_ld_seq_sa, "ld-seq-sa");
+  AddTargetFeature(Args, Features, options::OPT_mdiv32,
+                   options::OPT_mno_div32, "div32");
+  AddTargetFeature(Args, Features, options::OPT_mscq, options::OPT_mno_scq,
+                   "scq");
 }
 
 std::string loongarch::postProcessTargetCPUString(const std::string &CPU,
@@ -271,7 +299,8 @@ std::string loongarch::getLoongArchTargetCPU(const llvm::opt::ArgList &Args,
   // If we have -march, use that.
   if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
     Arch = A->getValue();
-    if (Arch == "la64v1.0" || Arch == "la64v1.1")
+    if (Arch == "la64v1.0" || Arch == "la64v1.1" || Arch == "la32v1.0" ||
+        Arch == "la32rv1.0")
       CPU = llvm::LoongArch::getDefaultArch(Triple.isLoongArch64());
     else
       CPU = Arch;

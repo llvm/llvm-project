@@ -10,10 +10,15 @@
 #define LLVM_LIBC_SRC_UNISTD_GETOPT_H
 
 #include "hdr/types/FILE.h"
+#include "hdr/unistd_macros.h"
 #include "src/__support/macros/config.h"
-#include <unistd.h>
 
 namespace LIBC_NAMESPACE_DECL {
+
+extern char *optarg;
+extern int optind;
+extern int optopt;
+extern int opterr;
 
 namespace impl {
 void set_getopt_state(char **, int *, int *, unsigned *, int *, FILE *);

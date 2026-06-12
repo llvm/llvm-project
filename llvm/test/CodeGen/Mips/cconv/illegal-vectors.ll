@@ -73,6 +73,121 @@ define void @call_v1i32(ptr %p) nounwind {
   ret void
 }
 
+define void @arg_v1i80(<1 x i80> %vec, ptr %p) {
+; MIPS64-LABEL: arg_v1i80:
+; MIPS64:       # %bb.0:
+; MIPS64-NEXT:    sh $5, 8($6)
+; MIPS64-NEXT:    dsrl $1, $5, 16
+; MIPS64-NEXT:    dsll $2, $4, 48
+; MIPS64-NEXT:    or $1, $2, $1
+; MIPS64-NEXT:    jr $ra
+; MIPS64-NEXT:    sd $1, 0($6)
+;
+; MIPS32-LABEL: arg_v1i80:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    sll $1, $5, 16
+; MIPS32-NEXT:    srl $2, $6, 16
+; MIPS32-NEXT:    sh $6, 8($7)
+; MIPS32-NEXT:    or $1, $2, $1
+; MIPS32-NEXT:    sw $1, 4($7)
+; MIPS32-NEXT:    srl $1, $5, 16
+; MIPS32-NEXT:    sll $2, $4, 16
+; MIPS32-NEXT:    or $1, $2, $1
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    sw $1, 0($7)
+  store <1 x i80> %vec, ptr %p
+  ret void
+}
+
+define <1 x i80> @ret_v1i80(ptr %p) {
+; MIPS64-LABEL: ret_v1i80:
+; MIPS64:       # %bb.0:
+; MIPS64-NEXT:    lhu $1, 8($4)
+; MIPS64-NEXT:    ld $2, 0($4)
+; MIPS64-NEXT:    dsll $3, $2, 16
+; MIPS64-NEXT:    or $3, $1, $3
+; MIPS64-NEXT:    jr $ra
+; MIPS64-NEXT:    dsrl $2, $2, 48
+;
+; MIPS32-LABEL: ret_v1i80:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    lw $1, 4($4)
+; MIPS32-NEXT:    srl $2, $1, 16
+; MIPS32-NEXT:    lw $5, 0($4)
+; MIPS32-NEXT:    sll $3, $5, 16
+; MIPS32-NEXT:    or $3, $3, $2
+; MIPS32-NEXT:    lhu $2, 8($4)
+; MIPS32-NEXT:    sll $1, $1, 16
+; MIPS32-NEXT:    or $4, $2, $1
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    srl $2, $5, 16
+  %v = load <1 x i80>, ptr %p
+  ret <1 x i80> %v
+}
+
+define void @call_v1i80(ptr %p) nounwind {
+; MIPS64-LABEL: call_v1i80:
+; MIPS64:       # %bb.0:
+; MIPS64-NEXT:    daddiu $sp, $sp, -16
+; MIPS64-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
+; MIPS64-NEXT:    sd $16, 0($sp) # 8-byte Folded Spill
+; MIPS64-NEXT:    move $16, $4
+; MIPS64-NEXT:    lhu $1, 8($4)
+; MIPS64-NEXT:    ld $2, 0($4)
+; MIPS64-NEXT:    dsll $3, $2, 16
+; MIPS64-NEXT:    or $5, $1, $3
+; MIPS64-NEXT:    jal arg_v1i80
+; MIPS64-NEXT:    dsrl $4, $2, 48
+; MIPS64-NEXT:    jal ret_v1i80
+; MIPS64-NEXT:    nop
+; MIPS64-NEXT:    sh $3, 8($16)
+; MIPS64-NEXT:    dsrl $1, $3, 16
+; MIPS64-NEXT:    dsll $2, $2, 48
+; MIPS64-NEXT:    or $1, $2, $1
+; MIPS64-NEXT:    sd $1, 0($16)
+; MIPS64-NEXT:    ld $16, 0($sp) # 8-byte Folded Reload
+; MIPS64-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
+; MIPS64-NEXT:    jr $ra
+; MIPS64-NEXT:    daddiu $sp, $sp, 16
+;
+; MIPS32-LABEL: call_v1i80:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    addiu	$sp, $sp, -24
+; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $16, 16($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    move $16, $4
+; MIPS32-NEXT:    lw $1, 4($4)
+; MIPS32-NEXT:    srl $2, $1, 16
+; MIPS32-NEXT:    lw $3, 0($4)
+; MIPS32-NEXT:    sll $4, $3, 16
+; MIPS32-NEXT:    or $5, $4, $2
+; MIPS32-NEXT:    lhu $2, 8($16)
+; MIPS32-NEXT:    sll $1, $1, 16
+; MIPS32-NEXT:    or $6, $2, $1
+; MIPS32-NEXT:    jal arg_v1i80
+; MIPS32-NEXT:    srl $4, $3, 16
+; MIPS32-NEXT:    jal ret_v1i80
+; MIPS32-NEXT:    nop
+; MIPS32-NEXT:    sh $4, 8($16)
+; MIPS32-NEXT:    sll $1, $3, 16
+; MIPS32-NEXT:    srl $4, $4, 16
+; MIPS32-NEXT:    or $1, $4, $1
+; MIPS32-NEXT:    sw $1, 4($16)
+; MIPS32-NEXT:    srl $1, $3, 16
+; MIPS32-NEXT:    sll $2, $2, 16
+; MIPS32-NEXT:    or $1, $2, $1
+; MIPS32-NEXT:    sw $1, 0($16)
+; MIPS32-NEXT:    lw $16, 16($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    addiu	$sp, $sp, 24
+  %v1 = load <1 x i80>, ptr %p
+  call void @arg_v1i80(<1 x i80> %v1)
+  %v2 = call <1 x i80> @ret_v1i80()
+  store <1 x i80> %v2, ptr %p
+  ret void
+}
+
 define void @arg_v2i32(<2 x i32> %vec, ptr %p) {
 ; MIPS64-LABEL: arg_v2i32:
 ; MIPS64:       # %bb.0:

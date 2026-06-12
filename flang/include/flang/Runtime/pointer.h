@@ -12,8 +12,9 @@
 #ifndef FORTRAN_RUNTIME_POINTER_H_
 #define FORTRAN_RUNTIME_POINTER_H_
 
-#include "flang/Runtime/descriptor.h"
+#include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
+#include "flang/Runtime/freestanding-tools.h"
 
 namespace Fortran::runtime {
 extern "C" {
@@ -59,9 +60,14 @@ void RTDECL(PointerAssociateLowerBounds)(
 // Associates a pointer with a target with bounds remapping.  The target must be
 // simply contiguous &/or of rank 1.  The bounds constitute a [2,newRank]
 // integer array whose columns are [lower bound, upper bound] on each dimension.
+// Use the Monomorphic form if the pointer's type shouldn't change and
+// the target is polymorphic.
 void RTDECL(PointerAssociateRemapping)(Descriptor &, const Descriptor &target,
     const Descriptor &bounds, const char *sourceFile = nullptr,
     int sourceLine = 0);
+void RTDECL(PointerAssociateRemappingMonomorphic)(Descriptor &,
+    const Descriptor &target, const Descriptor &bounds,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 
 // Data pointer allocation and deallocation
 
@@ -83,9 +89,15 @@ int RTDECL(PointerCheckLengthParameter)(Descriptor &,
 // Successfully allocated memory is initialized if the pointer has a
 // derived type, and is always initialized by PointerAllocateSource().
 // Performs all necessary coarray synchronization and validation actions.
+#ifdef RT_DEVICE_COMPILATION
 int RTDECL(PointerAllocate)(Descriptor &, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
-    int sourceLine = 0);
+    int sourceLine = 0, MemcpyFct memcpyFct = &MemcpyWrapper);
+#else
+int RTDECL(PointerAllocate)(Descriptor &, bool hasStat = false,
+    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
+    int sourceLine = 0, MemcpyFct memcpyFct = &Fortran::runtime::memcpy);
+#endif
 int RTDECL(PointerAllocateSource)(Descriptor &, const Descriptor &source,
     bool hasStat = false, const Descriptor *errMsg = nullptr,
     const char *sourceFile = nullptr, int sourceLine = 0);
@@ -117,7 +129,8 @@ bool RTDECL(PointerIsAssociatedWith)(
 
 // Fortran POINTERs are allocated with an extra validation word after their
 // payloads in order to detect erroneous deallocations later.
-RT_API_ATTRS void *AllocateValidatedPointerPayload(std::size_t);
+RT_API_ATTRS void *AllocateValidatedPointerPayload(
+    std::size_t, int allocatorIdx = 0);
 RT_API_ATTRS bool ValidatePointerPayload(const ISO::CFI_cdesc_t &);
 
 } // extern "C"

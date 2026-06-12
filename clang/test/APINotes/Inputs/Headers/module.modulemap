@@ -1,3 +1,7 @@
+module BoundsUnsafe {
+  header "BoundsUnsafe.h"
+}
+
 module ExternCtx {
   header "ExternCtx.h"
 }
@@ -9,6 +13,16 @@ module ExportAsCore {
 
 module ExportAs {
   header "ExportAs.h"
+  export *
+}
+
+module Fields {
+  header "Fields.h"
+  export *
+}
+
+module Lifetimebound {
+  header "Lifetimebound.h"
   export *
 }
 
@@ -46,4 +60,13 @@ module Templates {
 
 module SwiftImportAs {
   header "SwiftImportAs.h"
+}
+
+module SwiftReturnOwnershipForObjC {
+  header "SwiftReturnOwnershipForObjC.h"
+}
+
+module UnsafeBufferUsage {
+  header "UnsafeBufferUsage.h"
+  export *
 }

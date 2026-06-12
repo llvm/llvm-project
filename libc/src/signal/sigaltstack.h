@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SIGNAL_SIGALTSTACK_H
 #define LLVM_LIBC_SRC_SIGNAL_SIGALTSTACK_H
 
+#include "hdr/types/stack_t.h"
 #include "src/__support/macros/config.h"
-#include <signal.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

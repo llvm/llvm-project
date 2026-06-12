@@ -19,14 +19,16 @@
 
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCDisassembler/MCDisassembler.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
+#include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "m68k-disassembler"
 
@@ -105,10 +107,16 @@ static DecodeStatus DecodeFPCSCRegisterClass(MCInst &Inst, uint64_t RegNo,
 }
 #define DecodeFPICRegisterClass DecodeFPCSCRegisterClass
 
-static DecodeStatus DecodeCCRCRegisterClass(MCInst &Inst, APInt &Insn,
-                                            uint64_t Address,
-                                            const void *Decoder) {
-  llvm_unreachable("unimplemented");
+static DecodeStatus DecodeCCRCRegisterClass(MCInst &Inst,
+                                            const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(M68k::CCR));
+  return DecodeStatus::Success;
+}
+
+static DecodeStatus DecodeSRCRegisterClass(MCInst &Inst,
+                                           const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(M68k::SR));
+  return DecodeStatus::Success;
 }
 
 static DecodeStatus DecodeImm32(MCInst &Inst, uint64_t Imm, uint64_t Address,
@@ -117,7 +125,27 @@ static DecodeStatus DecodeImm32(MCInst &Inst, uint64_t Imm, uint64_t Address,
   return DecodeStatus::Success;
 }
 
-#include "M68kGenDisassemblerTable.inc"
+static DecodeStatus DecodeScale(MCInst &Inst, uint64_t Imm, uint64_t Address,
+                                const void *Decoder) {
+  assert(isUInt<2>(Imm));
+  Inst.addOperand(MCOperand::createImm(1 << Imm));
+  return DecodeStatus::Success;
+}
+
+static DecodeStatus DecodeIndexRegister(MCInst &Inst, uint64_t IndexReg,
+                                        uint64_t Address, const void *Decoder) {
+  // 4 bits actual RegNo + 1 bit index suppress
+  assert(isUInt<5>(IndexReg));
+  if (IndexReg & 0b10000) {
+    // Index suppress, fill in with NoReg
+    Inst.addOperand(MCOperand::createReg(M68k::NoRegister));
+    return DecodeStatus::Success;
+  }
+
+  return DecodeXR32RegisterClass(Inst, IndexReg & 0b1111, Address, Decoder);
+}
+
+#include "M68kGenDisassemblerTables.inc"
 
 #undef DecodeFPDR32RegisterClass
 #undef DecodeFPDR64RegisterClass

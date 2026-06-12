@@ -40,7 +40,7 @@ void MachineModuleInfo::finalize() {
 MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
     : TM(std::move(MMI.TM)),
       Context(TM.getTargetTriple(), TM.getMCAsmInfo(), TM.getMCRegisterInfo(),
-              TM.getMCSubtargetInfo(), nullptr, &TM.Options.MCOptions, false),
+              TM.getMCSubtargetInfo(), nullptr, false),
       MachineFunctions(std::move(MMI.MachineFunctions)) {
   Context.setObjectFileInfo(TM.getObjFileLowering());
   ObjFileMMI = MMI.ObjFileMMI;
@@ -48,19 +48,19 @@ MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
   TheModule = MMI.TheModule;
 }
 
-MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM)
+MachineModuleInfo::MachineModuleInfo(const TargetMachine *TM)
     : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
                        TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
-                       nullptr, &TM->Options.MCOptions, false) {
+                       nullptr, false) {
   Context.setObjectFileInfo(TM->getObjFileLowering());
   initialize();
 }
 
-MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM,
+MachineModuleInfo::MachineModuleInfo(const TargetMachine *TM,
                                      MCContext *ExtContext)
     : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
                        TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
-                       nullptr, &TM->Options.MCOptions, false),
+                       nullptr, false),
       ExternalContext(ExtContext) {
   Context.setObjectFileInfo(TM->getObjFileLowering());
   initialize();
@@ -151,16 +151,12 @@ FunctionPass *llvm::createFreeMachineFunctionPass() {
 }
 
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
-    const LLVMTargetMachine *TM)
-    : ImmutablePass(ID), MMI(TM) {
-  initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    const TargetMachine *TM)
+    : ImmutablePass(ID), MMI(TM) {}
 
 MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
-    const LLVMTargetMachine *TM, MCContext *ExtContext)
-    : ImmutablePass(ID), MMI(TM, ExtContext) {
-  initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    const TargetMachine *TM, MCContext *ExtContext)
+    : ImmutablePass(ID), MMI(TM, ExtContext) {}
 
 // Handle the Pass registration stuff necessary to use DataLayout's.
 INITIALIZE_PASS(MachineModuleInfoWrapperPass, "machinemoduleinfo",

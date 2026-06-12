@@ -2,8 +2,8 @@
 ; REQUIRES: asserts
 %struct.job_pool.6.7 = type { i32 }
 
-; CHECK-LABEL: @f()
-define dso_local void @f() {
+; CHECK-LABEL: @f(i1 %arg)
+define dso_local void @f(i1 %arg) {
 entry:
   br label %for.cond
 
@@ -26,7 +26,7 @@ for.body12:                                       ; preds = %if.end40, %for.body
   br label %if.then23
 
 if.then23:                                        ; preds = %for.body12
-  br i1 undef, label %if.then24, label %if.else
+  br i1 %arg, label %if.then24, label %if.else
 
 if.then24:                                        ; preds = %if.then23
   %0 = load ptr, ptr undef, align 8

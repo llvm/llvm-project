@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
@@ -48,13 +49,14 @@ void arith::ArithDialect::initialize() {
 #include "mlir/Dialect/Arith/IR/ArithOpsAttributes.cpp.inc"
       >();
   addInterfaces<ArithInlinerInterface>();
+  declarePromisedInterface<ConvertToEmitCPatternInterface, ArithDialect>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, ArithDialect>();
   declarePromisedInterface<bufferization::BufferDeallocationOpInterface,
                            SelectOp>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface, ConstantOp,
                             IndexCastOp, SelectOp>();
   declarePromisedInterfaces<ValueBoundsOpInterface, AddIOp, ConstantOp, SubIOp,
-                            MulIOp>();
+                            MulIOp, SelectOp, FloorDivSIOp, MinSIOp, MaxSIOp>();
 }
 
 /// Materialize an integer or floating point constant.
@@ -62,7 +64,7 @@ Operation *arith::ArithDialect::materializeConstant(OpBuilder &builder,
                                                     Attribute value, Type type,
                                                     Location loc) {
   if (auto poison = dyn_cast<ub::PoisonAttr>(value))
-    return builder.create<ub::PoisonOp>(loc, type, poison);
+    return ub::PoisonOp::create(builder, loc, type, poison);
 
   return ConstantOp::materialize(builder, value, type, loc);
 }

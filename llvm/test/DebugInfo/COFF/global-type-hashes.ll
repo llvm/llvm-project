@@ -300,7 +300,7 @@ attributes #3 = { mustprogress noinline nounwind optnone "frame-pointer"="none" 
 ; YAML:           String:          ''
 ; YAML:       - Kind:            LF_BUILDINFO
 ; YAML:         BuildInfo:
-; YAML:           ArgIndices:      [ 4113, 0, 4114, 4115, 0 ]
+; YAML:           ArgIndices:      [ 4113, 4115, 4114, 4115, 4115 ]
 ; YAML:   - Name:            '.debug$H'
 ; YAML:     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
 ; YAML:     Alignment:       4
@@ -328,7 +328,7 @@ attributes #3 = { mustprogress noinline nounwind optnone "frame-pointer"="none" 
 ; YAML:         - 174CF4A3F5448049
 ; YAML:         - 5349856AF14E2246
 ; YAML:         - 55A48E0466FDCDA6
-; YAML:         - 886A1B73D31E9877
+; YAML:         - EE6329A02D9F4959
 
 ; ASM:      .section        .debug$H,"dr"
 ; ASM-NEXT: .p2align        2

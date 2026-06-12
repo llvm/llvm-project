@@ -13,6 +13,8 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+
 template <typename T>
 class FDimTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
@@ -62,7 +64,7 @@ public:
   void test_in_range(FuncPtr func) {
     constexpr StorageType STORAGE_MAX =
         LIBC_NAMESPACE::cpp::numeric_limits<StorageType>::max();
-    constexpr StorageType COUNT = 100'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
          ++i, v += STEP, w -= STEP) {

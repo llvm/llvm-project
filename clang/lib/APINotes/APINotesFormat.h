@@ -1,4 +1,4 @@
-//===-- APINotesWriter.h - API Notes Writer ---------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,10 +24,11 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 28; // nested tags
+const uint16_t VERSION_MINOR = 40; // 39 for BoundsSafety;
+                                   // 40 for UnsafeBufferUsageAttr
 
-const uint8_t kSwiftCopyable = 1;
-const uint8_t kSwiftNonCopyable = 2;
+const uint8_t kSwiftConforms = 1;
+const uint8_t kSwiftDoesNotConform = 2;
 
 using IdentifierID = llvm::PointerEmbeddedInt<unsigned, 31>;
 using IdentifierIDField = llvm::BCVBR<16>;
@@ -71,6 +72,10 @@ enum BlockID {
   /// selector names (# of pieces, identifier IDs) to the selector ID
   /// used in other tables.
   OBJC_SELECTOR_BLOCK_ID,
+
+  /// The fields data block, which maps names fields of C records to
+  /// information about the field.
+  FIELD_BLOCK_ID,
 
   /// The global variables data block, which maps global variable names to
   /// information about the global variable.
@@ -198,6 +203,20 @@ using CXXMethodDataLayout =
                                           // tuples to C++ method information
                          >;
 } // namespace cxx_method_block
+
+namespace field_block {
+enum {
+  FIELD_DATA = 1,
+};
+
+using FieldDataLayout =
+    llvm::BCRecordLayout<FIELD_DATA,      // record ID
+                         llvm::BCVBR<16>, // table offset within the blob (see
+                                          // below)
+                         llvm::BCBlob     // map from C (context id, name)
+                                          // tuples to C field information
+                         >;
+} // namespace field_block
 
 namespace objc_selector_block {
 enum {
@@ -342,16 +361,6 @@ namespace llvm {
 template <> struct DenseMapInfo<clang::api_notes::StoredObjCSelector> {
   typedef DenseMapInfo<unsigned> UnsignedInfo;
 
-  static inline clang::api_notes::StoredObjCSelector getEmptyKey() {
-    return clang::api_notes::StoredObjCSelector{UnsignedInfo::getEmptyKey(),
-                                                {}};
-  }
-
-  static inline clang::api_notes::StoredObjCSelector getTombstoneKey() {
-    return clang::api_notes::StoredObjCSelector{UnsignedInfo::getTombstoneKey(),
-                                                {}};
-  }
-
   static unsigned
   getHashValue(const clang::api_notes::StoredObjCSelector &Selector) {
     auto hash = llvm::hash_value(Selector.NumArgs);
@@ -370,17 +379,6 @@ template <> struct DenseMapInfo<clang::api_notes::StoredObjCSelector> {
 };
 
 template <> struct DenseMapInfo<clang::api_notes::ContextTableKey> {
-  static inline clang::api_notes::ContextTableKey getEmptyKey() {
-    return clang::api_notes::ContextTableKey();
-  }
-
-  static inline clang::api_notes::ContextTableKey getTombstoneKey() {
-    return clang::api_notes::ContextTableKey{
-        DenseMapInfo<uint32_t>::getTombstoneKey(),
-        DenseMapInfo<uint8_t>::getTombstoneKey(),
-        DenseMapInfo<uint32_t>::getTombstoneKey()};
-  }
-
   static unsigned getHashValue(const clang::api_notes::ContextTableKey &value) {
     return value.hashValue();
   }
@@ -392,16 +390,6 @@ template <> struct DenseMapInfo<clang::api_notes::ContextTableKey> {
 };
 
 template <> struct DenseMapInfo<clang::api_notes::SingleDeclTableKey> {
-  static inline clang::api_notes::SingleDeclTableKey getEmptyKey() {
-    return clang::api_notes::SingleDeclTableKey();
-  }
-
-  static inline clang::api_notes::SingleDeclTableKey getTombstoneKey() {
-    return clang::api_notes::SingleDeclTableKey{
-        DenseMapInfo<uint32_t>::getTombstoneKey(),
-        DenseMapInfo<uint32_t>::getTombstoneKey()};
-  }
-
   static unsigned
   getHashValue(const clang::api_notes::SingleDeclTableKey &value) {
     return value.hashValue();

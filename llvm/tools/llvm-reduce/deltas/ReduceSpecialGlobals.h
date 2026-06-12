@@ -20,7 +20,7 @@
 #include "Delta.h"
 
 namespace llvm {
-void reduceSpecialGlobalsDeltaPass(TestRunner &Test);
+void reduceSpecialGlobalsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
 } // namespace llvm
 
 #endif

@@ -1,4 +1,4 @@
-// REQUIRES: crash-recovery, shell, system-darwin
+// REQUIRES: crash-recovery, system-darwin
 //
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/m %t/out
@@ -10,7 +10,7 @@
 
 // RUN: env FORCE_CLANG_DIAGNOSTICS_CRASH= TMPDIR=%t TEMP=%t TMP=%t \
 // RUN: not %clang %s -E -include-pch %t/out/pch-used.h.pch -fmodules -nostdlibinc \
-// RUN:     -fimplicit-module-maps -fbuiltin-headers-in-system-modules \
+// RUN:     -fimplicit-module-maps -Xclang -fbuiltin-headers-in-system-modules \
 // RUN:     -fmodules-cache-path=%t/cache -O0 -Xclang -fno-validate-pch \
 // RUN:     -isystem %S/Inputs/System/usr/include -o %t/output.E 2>&1 | FileCheck %s
 
@@ -21,7 +21,7 @@
 void f() { SPXTrace(); }
 void g() { double x = DBL_MAX; }
 
-// CHECK: Preprocessed source(s) and associated run script(s) are located at:
+// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.m
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.cache
 

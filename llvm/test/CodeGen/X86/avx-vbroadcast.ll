@@ -923,7 +923,7 @@ define void @fmul_by_v2f32_broadcast() nounwind {
 ; X86-NEXT:    vmovddup {{.*#+}} xmm0 = [3.1E+1,0.0E+0,3.1E+1,0.0E+0]
 ; X86-NEXT:    ## xmm0 = mem[0,0]
 ; X86-NEXT:    ## implicit-def: $xmm1
-; X86-NEXT:    .p2align 4, 0x90
+; X86-NEXT:    .p2align 4
 ; X86-NEXT:  LBB42_1: ## =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; X86-NEXT:    vmulps %xmm0, %xmm2, %xmm2
@@ -937,7 +937,7 @@ define void @fmul_by_v2f32_broadcast() nounwind {
 ; X64-NEXT:    vmovddup {{.*#+}} xmm0 = [3.1E+1,0.0E+0,3.1E+1,0.0E+0]
 ; X64-NEXT:    ## xmm0 = mem[0,0]
 ; X64-NEXT:    ## implicit-def: $xmm1
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  LBB42_1: ## =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
 ; X64-NEXT:    vmulps %xmm0, %xmm2, %xmm2

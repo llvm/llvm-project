@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -spill-func-threshold-Os=0 -spill-func-threshold=0  < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -spill-func-threshold-Os=0 -spill-func-threshold=0 < %s | FileCheck %s
 
 ; Check that the long-calls feature handles save and restore.
 ; This is a test commit.

@@ -1,7 +1,7 @@
 This file is a list of the people responsible for ensuring that targets and
 environments get tested and validated during the release process.
 
-They will also, in conjunction with the release manager and the code owners,
+They will also, in conjunction with the release manager and the maintainers,
 accept patches into stable release branches, tag critical bugs and release
 stoppers as well as make sure that no regressions were observed on their
 targets since the last release.

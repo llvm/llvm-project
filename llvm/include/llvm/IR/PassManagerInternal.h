@@ -22,6 +22,7 @@
 #include "llvm/IR/Analysis.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -56,8 +57,10 @@ struct PassConcept {
 
   /// Polymorphic method to let a pass optionally exempted from skipping by
   /// PassInstrumentation.
-  /// To opt-in, pass should implement `static bool isRequired()`. It's no-op
-  /// to have `isRequired` always return false since that is the default.
+  /// To opt-in, pass should implement `static bool isRequired()`, or inherit
+  /// from `RequiredPassInfoMixin` or `OptionalPassInfoMixin`.
+  /// It's no-op to have `isRequired` always return false since that is the
+  /// default.
   virtual bool isRequired() const = 0;
 };
 
@@ -98,21 +101,7 @@ struct PassModel : PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...> {
 
   StringRef name() const override { return PassT::name(); }
 
-  template <typename T>
-  using has_required_t = decltype(std::declval<T &>().isRequired());
-
-  template <typename T>
-  static std::enable_if_t<is_detected<has_required_t, T>::value, bool>
-  passIsRequiredImpl() {
-    return T::isRequired();
-  }
-  template <typename T>
-  static std::enable_if_t<!is_detected<has_required_t, T>::value, bool>
-  passIsRequiredImpl() {
-    return false;
-  }
-
-  bool isRequired() const override { return passIsRequiredImpl<PassT>(); }
+  bool isRequired() const override { return PassT::isRequired(); }
 
   PassT Pass;
 };
@@ -167,7 +156,7 @@ template <typename IRUnitT, typename ResultT> class ResultHasInvalidateMethod {
   // ambiguous if there were an invalidate member in the result type.
   template <typename T, typename U> static DisabledType NonceFunction(T U::*);
   struct CheckerBase { int invalidate; };
-  template <typename T> struct Checker : CheckerBase, T {};
+  template <typename T> struct Checker : CheckerBase, std::remove_cv_t<T> {};
   template <typename T>
   static decltype(NonceFunction(&Checker<T>::invalidate)) check(rank<1>);
 

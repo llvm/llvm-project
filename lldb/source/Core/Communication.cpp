@@ -48,7 +48,7 @@ ConnectionStatus Communication::Connect(const char *url, Status *error_ptr) {
   if (connection_sp)
     return connection_sp->Connect(url, error_ptr);
   if (error_ptr)
-    error_ptr->SetErrorString("Invalid connection.");
+    *error_ptr = Status::FromErrorString("Invalid connection.");
   return eConnectionStatusNoConnection;
 }
 
@@ -109,7 +109,7 @@ size_t Communication::Write(const void *src, size_t src_len,
     return connection_sp->Write(src, src_len, status, error_ptr);
 
   if (error_ptr)
-    error_ptr->SetErrorString("Invalid connection.");
+    *error_ptr = Status::FromErrorString("Invalid connection.");
   status = eConnectionStatusNoConnection;
   return 0;
 }
@@ -133,7 +133,7 @@ size_t Communication::ReadFromConnection(void *dst, size_t dst_len,
     return connection_sp->Read(dst, dst_len, timeout, status, error_ptr);
 
   if (error_ptr)
-    error_ptr->SetErrorString("Invalid connection.");
+    *error_ptr = Status::FromErrorString("Invalid connection.");
   status = eConnectionStatusNoConnection;
   return 0;
 }

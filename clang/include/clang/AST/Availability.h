@@ -56,6 +56,11 @@ public:
 
   /// Returns true when this represents the '*' case.
   bool isOtherPlatformSpec() const { return Version.empty(); }
+
+  /// Returns true if the anyAppleOS version is valid (empty or >= 26.0).
+  static bool validateAnyAppleOSVersion(const llvm::VersionTuple &Version) {
+    return Version.empty() || Version >= llvm::VersionTuple(26, 0);
+  }
 };
 
 class Decl;
@@ -96,6 +101,10 @@ struct AvailabilityInfo {
   bool isUnconditionallyUnavailable() const {
     return UnconditionallyUnavailable;
   }
+
+  /// Augments the existing information with additional constraints provided by
+  /// \c Other.
+  void mergeWith(AvailabilityInfo Other);
 
   AvailabilityInfo(StringRef Domain, VersionTuple I, VersionTuple D,
                    VersionTuple O, bool U, bool UD, bool UU)

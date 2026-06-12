@@ -56,7 +56,7 @@ func.func @_QPtest1() {
     hlfir.yield %4#0 : !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>> cleanup {
       %5 = fir.embox %0 : (!fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) -> !fir.box<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
       %6 = fir.convert %5 : (!fir.box<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) -> !fir.box<none>
-      %7 = fir.call @_FortranADestroy(%6) fastmath<contract> : (!fir.box<none>) -> none
+      fir.call @_FortranADestroy(%6) fastmath<contract> : (!fir.box<none>) -> ()
     }
   } to {
     hlfir.yield %2#0 : !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
@@ -86,7 +86,7 @@ func.func @_QPtest1() {
 // CHECK:           hlfir.end_associate %[[VAL_6]]#1, %[[VAL_6]]#2 : !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>, i1
 // CHECK:           %[[VAL_11:.*]] = fir.embox %[[VAL_0]] : (!fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) -> !fir.box<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
 // CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.box<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) -> !fir.box<none>
-// CHECK:           %[[VAL_13:.*]] = fir.call @_FortranADestroy(%[[VAL_12]]) fastmath<contract> : (!fir.box<none>) -> none
+// CHECK:           fir.call @_FortranADestroy(%[[VAL_12]]) fastmath<contract> : (!fir.box<none>) -> ()
 // CHECK:           return
 // CHECK:         }
 
@@ -115,7 +115,7 @@ func.func @_QPtest2() {
     hlfir.yield %6#0 : !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>> cleanup {
       %7 = fir.embox %0(%2) : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>
       %8 = fir.convert %7 : (!fir.box<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>) -> !fir.box<none>
-      %9 = fir.call @_FortranADestroy(%8) fastmath<contract> : (!fir.box<none>) -> none
+      fir.call @_FortranADestroy(%8) fastmath<contract> : (!fir.box<none>) -> ()
       fir.call @llvm.stackrestore.p0(%4) fastmath<contract> : (!fir.ref<i8>) -> ()
     }
   } to {
@@ -154,7 +154,7 @@ func.func @_QPtest2() {
 // CHECK:           hlfir.end_associate %[[VAL_9]]#1, %[[VAL_9]]#2 : !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, i1
 // CHECK:           %[[VAL_18:.*]] = fir.embox %[[VAL_1]](%[[VAL_3]]) : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>
 // CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (!fir.box<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>) -> !fir.box<none>
-// CHECK:           %[[VAL_20:.*]] = fir.call @_FortranADestroy(%[[VAL_19]]) fastmath<contract> : (!fir.box<none>) -> none
+// CHECK:           fir.call @_FortranADestroy(%[[VAL_19]]) fastmath<contract> : (!fir.box<none>) -> ()
 // CHECK:           fir.call @llvm.stackrestore.p0(%[[VAL_5]]) fastmath<contract> : (!fir.ref<i8>) -> ()
 // CHECK:           return
 // CHECK:         }
@@ -201,7 +201,7 @@ func.func @_QPtest3(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "y"}) {
         hlfir.yield %9#0 : !fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>> cleanup {
           %10 = fir.embox %0(%2) : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>
           %11 = fir.convert %10 : (!fir.box<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>) -> !fir.box<none>
-          %12 = fir.call @_FortranADestroy(%11) fastmath<contract> : (!fir.box<none>) -> none
+          fir.call @_FortranADestroy(%11) fastmath<contract> : (!fir.box<none>) -> ()
           fir.call @llvm.stackrestore.p0(%7) fastmath<contract> : (!fir.ref<i8>) -> ()
         }
       }
@@ -254,7 +254,7 @@ func.func @_QPtest3(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "y"}) {
 // CHECK:               %[[VAL_32:.*]] = hlfir.designate %[[VAL_20B]]#0 (%[[VAL_28]])  : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, index) -> !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
 // CHECK:               %[[VAL_33:.*]] = fir.embox %[[VAL_32]] : (!fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) -> !fir.box<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
 // CHECK:               %[[VAL_34:.*]] = fir.convert %[[VAL_33]] : (!fir.box<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>) -> !fir.box<none>
-// CHECK:               %[[VAL_35:.*]] = fir.call @_FortranAPushValue(%[[VAL_27]], %[[VAL_34]]) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> none
+// CHECK:               fir.call @_FortranAPushValue(%[[VAL_27]], %[[VAL_34]]) : (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
 // CHECK:             }
 // CHECK:           }
 // CHECK:           fir.do_loop %[[VAL_37:.*]] = %{{.*}} to %[[VAL_4]] step %{{.*}} {
@@ -266,7 +266,7 @@ func.func @_QPtest3(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "y"}) {
 // CHECK:               %[[VAL_42:.*]] = arith.addi %[[VAL_41]], %{{.*}} : i64
 // CHECK:               fir.store %[[VAL_42]] to %[[VAL_2]] : !fir.ref<i64>
 // CHECK:               %[[VAL_43:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>>) -> !fir.ref<!fir.box<none>>
-// CHECK:               %[[VAL_44:.*]] = fir.call @_FortranAValueAt(%[[VAL_27]], %[[VAL_41]], %[[VAL_43]]) : (!fir.llvm_ptr<i8>, i64, !fir.ref<!fir.box<none>>) -> none
+// CHECK:               fir.call @_FortranAValueAt(%[[VAL_27]], %[[VAL_41]], %[[VAL_43]]) : (!fir.llvm_ptr<i8>, i64, !fir.ref<!fir.box<none>>) -> ()
 // CHECK:               %[[VAL_45:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>>
 // CHECK:               %[[VAL_46:.*]] = fir.box_addr %[[VAL_45]] : (!fir.box<!fir.heap<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>) -> !fir.heap<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
 // CHECK:               %[[VAL_47:.*]] = hlfir.designate %[[VAL_8]]#0 (%[[VAL_37]])  : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, index) -> !fir.ref<!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>
@@ -279,10 +279,10 @@ func.func @_QPtest3(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "y"}) {
 // CHECK:             }
 // CHECK:           }
 // CHECK:           hlfir.end_associate %[[VAL_16]]#1, %[[VAL_16]]#2 : !fir.ref<!fir.array<2x!fir.logical<4>>>, i1
-// CHECK:           %[[VAL_53:.*]] = fir.call @_FortranADestroyValueStack(%[[VAL_27]]) : (!fir.llvm_ptr<i8>) -> none
+// CHECK:           fir.call @_FortranADestroyValueStack(%[[VAL_27]]) : (!fir.llvm_ptr<i8>) -> ()
 // CHECK:           %[[VAL_54:.*]] = fir.embox %[[VAL_5]](%[[VAL_7]]) : (!fir.ref<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>, !fir.shape<1>) -> !fir.box<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>
 // CHECK:           %[[VAL_55:.*]] = fir.convert %[[VAL_54]] : (!fir.box<!fir.array<2x!fir.type<_QMtypesTud_assign{x:!fir.box<!fir.ptr<i32>>}>>>) -> !fir.box<none>
-// CHECK:           %[[VAL_56:.*]] = fir.call @_FortranADestroy(%[[VAL_55]]) fastmath<contract> : (!fir.box<none>) -> none
+// CHECK:           fir.call @_FortranADestroy(%[[VAL_55]]) fastmath<contract> : (!fir.box<none>) -> ()
 // CHECK:           fir.call @llvm.stackrestore.p0(%[[VAL_18]]) fastmath<contract> : (!fir.ref<i8>) -> ()
 // CHECK:           return
 // CHECK:         }

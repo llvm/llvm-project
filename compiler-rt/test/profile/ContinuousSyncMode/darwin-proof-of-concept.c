@@ -4,12 +4,12 @@
 // mode to a new platform, but is not in and of itself a test of the profiling
 // runtime.
 
-// REQUIRES: darwin
+// REQUIRES: darwin, target={{arm64.*}}
 
 // Align counters and data to the maximum expected page size (16K).
 // RUN: %clang -g -o %t %s \
-// RUN:   -Wl,-sectalign,__DATA,__pcnts,0x1000 \
-// RUN:   -Wl,-sectalign,__DATA,__pdata,0x1000
+// RUN:   -Wl,-sectalign,__DATA,__pcnts,0x4000 \
+// RUN:   -Wl,-sectalign,__DATA,__pdata,0x4000
 
 // Create a 'profile' using mmap() and validate it.
 // RUN: %run %t create %t.tmpfile
@@ -24,7 +24,7 @@
 
 __attribute__((section("__DATA,__pcnts"))) int counters[] = {0xbad};
 extern int cnts_start __asm("section$start$__DATA$__pcnts");
-const size_t cnts_len = 0x1000;
+const size_t cnts_len = 0x4000;
 
 __attribute__((section("__DATA,__pdata"))) int data[] = {1, 2, 3};
 extern int data_start __asm("section$start$__DATA$__pdata");
@@ -131,12 +131,12 @@ int main(int argc, char **argv) {
     fprintf(stderr, "__pcnts is not page-aligned: 0x%lx.\n", cnts_start_int);
     return EXIT_FAILURE;
   }
-  if (data_start_int % 0x1000 != 0) {
+  if (data_start_int % 0x4000 != 0) {
     fprintf(stderr, "__pdata is not correctly aligned: 0x%lx.\n",
             data_start_int);
     return EXIT_FAILURE;
   }
-  if (cnts_start_int + 0x1000 != data_start_int) {
+  if (cnts_start_int + 0x4000 != data_start_int) {
     fprintf(stderr, "__pdata not ordered after __pcnts.\n");
     return EXIT_FAILURE;
   }

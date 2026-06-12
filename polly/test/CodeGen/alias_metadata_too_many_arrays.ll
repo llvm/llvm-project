@@ -1,5 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen -polly-ignore-aliasing -S < %s \
-; RUN:   | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -polly-ignore-aliasing -S < %s | FileCheck %s
 ;
 ;    void manyarrays(float A1[], float A2[], float A3[], float A4[], float A5[],
 ;                    float A6[], float A7[], float A8[], float A9[]) {

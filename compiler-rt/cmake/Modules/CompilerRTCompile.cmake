@@ -73,9 +73,9 @@ function(clang_compile object_file source)
   endif()
   string(REGEX MATCH "[.](cc|cpp)$" is_cxx ${source_rpath})
   if (is_cxx)
-    set(compiler ${COMPILER_RT_TEST_COMPILER})
-  else()
     set(compiler ${COMPILER_RT_TEST_CXX_COMPILER})
+  else()
+    set(compiler ${COMPILER_RT_TEST_COMPILER})
   endif()
   if(COMPILER_RT_STANDALONE_BUILD)
     # Only add global flags in standalone build.
@@ -99,6 +99,17 @@ function(clang_compile object_file source)
     set(compile_flags ${global_flags} ${SOURCE_CFLAGS})
   else()
     set(compile_flags ${SOURCE_CFLAGS})
+  endif()
+
+  # CMAKE_CXX_STANDARD is not propagated to these custom compile commands
+  # (add_custom_command). Add it explicitly for C++ files so that C++17
+  # features used in headers (e.g. if constexpr) don't trigger warnings.
+  if(is_cxx)
+    if(CMAKE_CXX_STANDARD)
+      list(APPEND compile_flags "-std=c++${CMAKE_CXX_STANDARD}")
+    else()
+      list(APPEND compile_flags "-std=c++17")
+    endif()
   endif()
 
   string(REGEX MATCH "[.](m|mm)$" is_objc ${source_rpath})

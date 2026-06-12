@@ -31,29 +31,31 @@ HostThreadWindows::~HostThreadWindows() { Reset(); }
 void HostThreadWindows::SetOwnsHandle(bool owns) { m_owns_handle = owns; }
 
 Status HostThreadWindows::Join(lldb::thread_result_t *result) {
+  if (!IsJoinable())
+    return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32);
+
   Status error;
-  if (IsJoinable()) {
-    DWORD wait_result = ::WaitForSingleObject(m_thread, INFINITE);
-    if (WAIT_OBJECT_0 == wait_result && result) {
+  DWORD wait_result = ::WaitForSingleObject(m_thread, INFINITE);
+  if (wait_result == WAIT_OBJECT_0) {
+    if (result) {
       DWORD exit_code = 0;
-      if (!::GetExitCodeThread(m_thread, &exit_code))
+      if (::GetExitCodeThread(m_thread, &exit_code))
+        *result = exit_code;
+      else
         *result = 0;
-      *result = exit_code;
-    } else if (WAIT_OBJECT_0 != wait_result)
-      error.SetError(::GetLastError(), eErrorTypeWin32);
-  } else
-    error.SetError(ERROR_INVALID_HANDLE, eErrorTypeWin32);
+    }
+  } else {
+    error = Status(::GetLastError(), eErrorTypeWin32);
+  }
 
   Reset();
   return error;
 }
 
 Status HostThreadWindows::Cancel() {
-  Status error;
-
-  DWORD result = ::QueueUserAPC(::ExitThreadProxy, m_thread, 0);
-  error.SetError(result, eErrorTypeWin32);
-  return error;
+  if (!::QueueUserAPC(&ExitThreadProxy, m_thread, 0))
+    return Status(::GetLastError(), eErrorTypeWin32);
+  return Status();
 }
 
 lldb::tid_t HostThreadWindows::GetThreadId() const {

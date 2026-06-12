@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=mips64 -mcpu=mips3 | FileCheck %s
+; RUN: llc < %s -mtriple=mips64 -mcpu=mips3 | FileCheck %s
 
 ; Currently, the following IR assembly generates a KILL instruction between
 ; the bitwise-and instruction and the return instruction. We verify that the

@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 // Forward declarations.
@@ -55,25 +56,26 @@ public:
 };
 
 /// Returns a BaseIndexOffset which describes the pointer in \p Ptr.
-BaseIndexOffset getPointerInfo(Register Ptr, MachineRegisterInfo &MRI);
+LLVM_ABI BaseIndexOffset getPointerInfo(Register Ptr, MachineRegisterInfo &MRI);
 
 /// Compute whether or not a memory access at \p MI1 aliases with an access at
 /// \p MI2 \returns true if either alias/no-alias is known. Sets \p IsAlias
 /// accordingly.
-bool aliasIsKnownForLoadStore(const MachineInstr &MI1, const MachineInstr &MI2,
-                              bool &IsAlias, MachineRegisterInfo &MRI);
+LLVM_ABI bool aliasIsKnownForLoadStore(const MachineInstr &MI1,
+                                       const MachineInstr &MI2, bool &IsAlias,
+                                       MachineRegisterInfo &MRI);
 
 /// Returns true if the instruction \p MI may alias \p Other.
 /// This function uses multiple strategies to detect aliasing, whereas
 /// aliasIsKnownForLoadStore just looks at the addresses of load/stores and is
 /// tries to reason about base/index/offsets.
-bool instMayAlias(const MachineInstr &MI, const MachineInstr &Other,
-                  MachineRegisterInfo &MRI, AliasAnalysis *AA);
+LLVM_ABI bool instMayAlias(const MachineInstr &MI, const MachineInstr &Other,
+                           MachineRegisterInfo &MRI, AliasAnalysis *AA);
 } // namespace GISelAddressing
 
 using namespace GISelAddressing;
 
-class LoadStoreOpt : public MachineFunctionPass {
+class LLVM_ABI LoadStoreOpt : public MachineFunctionPass {
 public:
   static char ID;
 
@@ -112,7 +114,7 @@ private:
     // after the potential alias is recorded.
     SmallVector<std::pair<MachineInstr *, unsigned>> PotentialAliases;
 
-    void addPotentialAlias(MachineInstr &MI);
+    LLVM_ABI void addPotentialAlias(MachineInstr &MI);
 
     /// Reset this candidate back to an empty one.
     void reset() {
@@ -160,7 +162,7 @@ private:
   DenseMap<unsigned, BitVector> LegalStoreSizes;
   bool IsPreLegalizer = false;
   /// Contains instructions to be erased at the end of a block scan.
-  SmallSet<MachineInstr *, 16> InstsToErase;
+  SmallPtrSet<MachineInstr *, 16> InstsToErase;
 
 public:
   LoadStoreOpt();
@@ -169,8 +171,7 @@ public:
   StringRef getPassName() const override { return "LoadStoreOpt"; }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties()
-        .set(MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;

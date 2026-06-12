@@ -13,11 +13,10 @@ include "mlir/Dialect/OpenMP/OpenMPOpBase.td"
 
 
 def OpenMP_SimpleClause : OpenMP_Clause<
-    /*isRequired=*/true, /*traits=*/false, /*arguments=*/false,
-    /*assemblyFormat=*/false, /*description=*/false,
-    /*extraClassDeclaration=*/false> {
+    /*traits=*/false, /*arguments=*/false, /*assemblyFormat=*/false,
+    /*description=*/false, /*extraClassDeclaration=*/false> {
   let arguments = (ins I32:$val1);
-  let assemblyFormat = "`val1` `(` $val1 `)`";
+  let reqAssemblyFormat = "`val1` `(` $val1 `)`";
   let description = "Simple clause description.";
   let extraClassDeclaration = "void simpleClauseExtraClassDecl();";
 }
@@ -39,8 +38,8 @@ def 2OverrideAssemblyFormatOp : OpenMP_Op<"op", clauses=[OpenMP_SimpleClause]> {
   let description = "Description of operation." # clausesDescription;
   string assemblyFormat = "`alt_repr` `(` $val1 `)`";
 }
-// CHECK: warning: 'Simple' clause-defined `assemblyFormat` not present in operation.
-// CHECK-SAME: Consider concatenating `clausesAssemblyFormat` or explicitly skipping this field.
+// CHECK: warning: 'Simple' clause-defined `reqAssemblyFormat` not present in operation.
+// CHECK-SAME: Consider concatenating `clauses[{Req,Opt}]AssemblyFormat` or explicitly skipping this field.
 // CHECK-NEXT: def 2OverrideAssemblyFormatOp
 
 def 3OverrideDescriptionOp : OpenMP_Op<"op", clauses=[OpenMP_SimpleClause]> {
@@ -66,10 +65,10 @@ def 4OverrideExtraClassDeclarationOp : OpenMP_Op<"op", clauses=[OpenMP_SimpleCla
 class OpenMP_IndirectClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
     bit description = false, bit extraClassDeclaration = false
-  > : OpenMP_Clause</*isRequired=*/true, traits, arguments, assemblyFormat,
-                    description, extraClassDeclaration> {
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
   let arguments = (ins I32:$val2);
-  let assemblyFormat = "`val2` `(` $val2 `)`";
+  let reqAssemblyFormat = "`val2` `(` $val2 `)`";
   let description = "Indirectly-inherited clause description.";
   let extraClassDeclaration = "void indirectClauseExtraClassDecl();";
 }
@@ -93,7 +92,7 @@ def 6MultiClauseOp : OpenMP_Op<"op", clauses=[OpenMP_SimpleClause, IndirectClaus
   let arguments = (ins I32:$val1);
   let assemblyFormat = "`val2` `(` $val2 `)`";
 }
-// CHECK: warning: 'Simple' clause-defined `assemblyFormat` not present in operation.
+// CHECK: warning: 'Simple' clause-defined `reqAssemblyFormat` not present in operation.
 // CHECK-NEXT: def 6MultiClauseOp
 // CHECK: warning: 'Indirect' clause-defined argument 'I32:$val2' not present in operation.
 // CHECK-NEXT: def 6MultiClauseOp

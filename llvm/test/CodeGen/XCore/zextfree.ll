@@ -1,4 +1,4 @@
-; RUN: llc -march=xcore < %s | FileCheck %s
+; RUN: llc -mtriple=xcore < %s | FileCheck %s
 
 ; CHECK-LABEL: test:
 ; CHECK-NOT: zext

@@ -28,6 +28,7 @@ using namespace mlir;
 namespace {
 struct ConvertFuncToEmitC
     : public impl::ConvertFuncToEmitCBase<ConvertFuncToEmitC> {
+  using Base::Base;
   void runOnOperation() override;
 };
 } // namespace
@@ -39,7 +40,16 @@ void ConvertFuncToEmitC::runOnOperation() {
   target.addIllegalOp<func::CallOp, func::FuncOp, func::ReturnOp>();
 
   RewritePatternSet patterns(&getContext());
-  populateFuncToEmitCPatterns(patterns);
+
+  TypeConverter typeConverter;
+  // Fallback for other types.
+  typeConverter.addConversion([](Type type) -> std::optional<Type> {
+    if (!emitc::isSupportedEmitCType(type))
+      return {};
+    return type;
+  });
+
+  populateFuncToEmitCPatterns(typeConverter, patterns, this->lowerToCpp);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))

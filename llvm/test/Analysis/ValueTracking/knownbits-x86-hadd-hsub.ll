@@ -125,7 +125,7 @@ define <8 x i1> @hsub_and_eq_v8i16_sat(<8 x i16> %x, <8 x i16> %y) {
 ; CHECK-LABEL: define <8 x i1> @hsub_and_eq_v8i16_sat(
 ; CHECK-SAME: <8 x i16> [[X:%.*]], <8 x i16> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <8 x i1> splat (i1 true)
 ;
 entry:
   %or1 = or <8 x i16> %x, <i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0>
@@ -171,7 +171,7 @@ define <16 x i1> @hsub_and_eq_v16i16_sat(<16 x i16> %x, <16 x i16> %y) {
 ; CHECK-LABEL: define <16 x i1> @hsub_and_eq_v16i16_sat(
 ; CHECK-SAME: <16 x i16> [[X:%.*]], <16 x i16> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <16 x i1> splat (i1 true)
 ;
 entry:
   %or1 = or <16 x i16> %x, <i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0, i16 3, i16 0>
@@ -187,7 +187,7 @@ define <4 x i1> @hadd_shuffle_2st_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define <4 x i1> @hadd_shuffle_2st_v4i32(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <4 x i1> splat (i1 true)
 ;
 entry:
   %and1 = and <4 x i32> %x, <i32 -1, i32 -1, i32 3, i32 3>
@@ -202,7 +202,7 @@ define <4 x i1> @hadd_shuffle_4th_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define <4 x i1> @hadd_shuffle_4th_v4i32(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <4 x i1> splat (i1 true)
 ;
 entry:
   %and1 = and <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -218,10 +218,10 @@ define <4 x i1> @hadd_shuffle_2st_negative_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and <4 x i32> [[X]], <i32 3, i32 3, i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[Y]], <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[Y]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.x86.ssse3.phadd.d.128(<4 x i32> [[TMP0]], <4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, <4 x i32> <i32 4, i32 1, i32 5, i32 6>
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne <4 x i32> [[TMP3]], <i32 8, i32 8, i32 8, i32 8>
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne <4 x i32> [[TMP3]], splat (i32 8)
 ; CHECK-NEXT:    ret <4 x i1> [[RET]]
 ;
 entry:
@@ -237,11 +237,11 @@ define <4 x i1> @hadd_shuffle_4th_negative_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define <4 x i1> @hadd_shuffle_4th_negative_v4i32(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = and <4 x i32> [[X]], <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[TMP0:%.*]] = and <4 x i32> [[X]], splat (i32 3)
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[Y]], <i32 3, i32 3, i32 -1, i32 -1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.x86.ssse3.phadd.d.128(<4 x i32> [[TMP0]], <4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
-; CHECK-NEXT:    [[RET:%.*]] = icmp ne <4 x i32> [[TMP3]], <i32 8, i32 8, i32 8, i32 8>
+; CHECK-NEXT:    [[RET:%.*]] = icmp ne <4 x i32> [[TMP3]], splat (i32 8)
 ; CHECK-NEXT:    ret <4 x i1> [[RET]]
 ;
 entry:

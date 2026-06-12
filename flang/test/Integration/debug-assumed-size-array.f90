@@ -12,7 +12,7 @@ end module helper
 
 ! CHECK-DAG: ![[TY1:[0-9]+]] = !DICompositeType(tag: DW_TAG_array_type{{.*}}elements: ![[ELEMS1:[0-9]+]]{{.*}})
 ! CHECK-DAG: ![[ELEMS1]] = !{![[ELM1:[0-9]+]], ![[EMPTY:[0-9]+]]}
-! CHECK-DAG: ![[ELM1]] = !DISubrange(count: 5, lowerBound: 1)
+! CHECK-DAG: ![[ELM1]] = !DISubrange(count: 5)
 ! CHECK-DAG: ![[EMPTY]] = !DISubrange()
 ! CHECK-DAG: ![[TY2:[0-9]+]] = !DICompositeType(tag: DW_TAG_array_type{{.*}}elements: ![[ELEMS2:[0-9]+]]{{.*}})
 ! CHECK-DAG: ![[ELEMS2]] = !{![[EMPTY:[0-9]+]]}

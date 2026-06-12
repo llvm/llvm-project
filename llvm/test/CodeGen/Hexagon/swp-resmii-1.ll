@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -debug-only=pipeliner < %s -o - 2>&1 > /dev/null -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner -debug-only=pipeliner < %s -o - 2>&1 > /dev/null -pipeliner-experimental-cg=true | FileCheck %s
 ; REQUIRES: asserts
 
 ; Test that checks that we compute the correct ResMII for haar.

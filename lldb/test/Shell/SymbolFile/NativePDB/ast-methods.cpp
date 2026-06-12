@@ -3,10 +3,10 @@
 
 // RUN: %clang_cl --target=x86_64-windows-msvc -Od -Z7 -GR- -c /Fo%t.obj -- %s
 // RUN: lld-link -debug:full -nodefaultlib -entry:main %t.obj -out:%t.exe -pdb:%t.pdb
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
+// RUN: %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/ast-methods.lldbinit 2>&1 | FileCheck %s --check-prefix=AST
 
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols --dump-ast %t.exe | FileCheck %s --check-prefix=SYMBOL
+// RUN: lldb-test symbols --dump-ast %t.exe | FileCheck %s --check-prefix=SYMBOL
 
 struct Struct {
   void simple_method() {}
@@ -18,6 +18,12 @@ struct Struct {
   int overloaded_method() {}
   int overloaded_method(char c) {}
   int overloaded_method(char c, int i, ...) {}
+
+  void const_method() const {}
+  void volatile_method() volatile {}
+  void const_volatile_method() const volatile {}
+
+  virtual void virtual_const_method() const {}
 };
 
 Struct s;
@@ -29,6 +35,10 @@ int main(int argc, char **argv) {
   s.overloaded_method();
   s.overloaded_method('a');
   s.overloaded_method('a', 1);
+  s.const_method();
+  s.volatile_method();
+  s.const_volatile_method();
+  s.virtual_const_method();
   return 0;
 }
 
@@ -40,16 +50,25 @@ int main(int argc, char **argv) {
 // AST: | |-CXXMethodDecl {{.*}} overloaded_method 'int (){{.*}}'
 // AST: | |-CXXMethodDecl {{.*}} overloaded_method 'int (char){{.*}}'
 // AST: | | `-ParmVarDecl {{.*}} 'char'
-// AST: | `-CXXMethodDecl {{.*}} overloaded_method 'int (char, int, ...)'
-// AST: |   |-ParmVarDecl {{.*}} 'char'
-// AST: |   `-ParmVarDecl {{.*}} 'int'
+// AST: | |-CXXMethodDecl {{.*}} overloaded_method 'int (char, int, ...)'
+// AST: | | |-ParmVarDecl {{.*}} 'char'
+// AST: | | `-ParmVarDecl {{.*}} 'int'
+// AST: | |-CXXMethodDecl {{.*}} const_method 'void () const'
+// AST: | |-CXXMethodDecl {{.*}} volatile_method 'void () volatile'
+// AST: | |-CXXMethodDecl {{.*}} const_volatile_method 'void () const volatile'
+// AST: | `-CXXMethodDecl {{.*}} virtual_const_method 'void () const' virtual
 
-// SYMBOL:      int main(int argc, char **argv);
-// SYMBOL-NEXT: struct Struct {
+// SYMBOL:      struct Struct {
 // SYMBOL-NEXT:     void simple_method();
 // SYMBOL-NEXT:     static void static_method();
 // SYMBOL-NEXT:     virtual void virtual_method();
 // SYMBOL-NEXT:     int overloaded_method();
 // SYMBOL-NEXT:     int overloaded_method(char);
 // SYMBOL-NEXT:     int overloaded_method(char, int, ...);
+// SYMBOL-NEXT:     void const_method() const; 
+// SYMBOL-NEXT:     void volatile_method() volatile; 
+// SYMBOL-NEXT:     void const_volatile_method() const volatile; 
+// SYMBOL-NEXT:     virtual void virtual_const_method() const; 
 // SYMBOL-NEXT: };
+// SYMBOL-NEXT: Struct s;
+// SYMBOL-NEXT: int main(int argc, char **argv);

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 
 ; Checks that `sin` and `cos` nodes are expanded into calls to
 ; the `sin` and `cos` runtime library functions.

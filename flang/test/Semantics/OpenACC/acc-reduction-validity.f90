@@ -3,6 +3,7 @@
 ! Check OpenACC reduction validity.
 
 program openacc_reduction_validity
+  implicit none
 
   integer :: i
   real :: r
@@ -10,6 +11,10 @@ program openacc_reduction_validity
   logical :: l
 
   !$acc parallel reduction(+:i)
+  !$acc end parallel
+
+  !WARNING: The minus '-' reduction operator is non-standard and is treated as '+' [-Wopenacc-usage]
+  !$acc parallel reduction(-:i)
   !$acc end parallel
 
   !$acc parallel reduction(*:i)
@@ -47,6 +52,10 @@ program openacc_reduction_validity
   !$acc end parallel
 
   !$acc parallel reduction(+:r)
+  !$acc end parallel
+
+  !WARNING: The minus '-' reduction operator is non-standard and is treated as '+' [-Wopenacc-usage]
+  !$acc parallel reduction(-:r)
   !$acc end parallel
 
   !$acc parallel reduction(*:r)
@@ -87,6 +96,10 @@ program openacc_reduction_validity
   !$acc end parallel
 
   !$acc parallel reduction(+:c)
+  !$acc end parallel
+
+  !WARNING: The minus '-' reduction operator is non-standard and is treated as '+' [-Wopenacc-usage]
+  !$acc parallel reduction(-:c)
   !$acc end parallel
 
   !$acc parallel reduction(*:c)
@@ -144,6 +157,11 @@ program openacc_reduction_validity
   !$acc parallel reduction(+:l)
   !$acc end parallel
 
+  !WARNING: The minus '-' reduction operator is non-standard and is treated as '+' [-Wopenacc-usage]
+  !ERROR: reduction operator not supported for logical type
+  !$acc parallel reduction(-:l)
+  !$acc end parallel
+
   !ERROR: reduction operator not supported for logical type
   !$acc parallel reduction(*:l)
   !$acc end parallel
@@ -168,5 +186,31 @@ program openacc_reduction_validity
   !$acc parallel reduction(ieor:l)
   !$acc end parallel
 
+  !ERROR: No explicit type declared for 'xyz'
+  !$acc parallel reduction(+:xyz)
+  !$acc end parallel
+
 
 end program
+
+subroutine sum()
+  !ERROR: 'sum' is already declared in this scoping unit
+  integer :: i,sum
+  sum = 0
+  !$acc parallel
+  !ERROR: Only variables are allowed in data clauses on the LOOP directive
+  !$acc loop independent gang reduction(+:sum)
+  do i=1,10
+     sum = sum + i
+  enddo
+  !$acc end parallel
+end subroutine
+
+subroutine reduce()
+  integer :: red = 0, ii
+  !$acc parallel loop default(none) reduction(+:red)
+  do ii = 1, 10
+    red = red + ii
+  end do
+  !$acc end parallel
+end subroutine

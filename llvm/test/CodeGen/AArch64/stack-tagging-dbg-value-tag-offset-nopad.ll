@@ -1,7 +1,7 @@
 ; RUN: opt -aarch64-stack-tagging -stack-tagging-record-stack-history=instr  -S -o - %s | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64-unknown-linux-android10000"
+target triple = "aarch64-unknown-linux-android35"
 
 define dso_local void @f() sanitize_memtag !dbg !14 {
   %a1 = alloca i128, align 4

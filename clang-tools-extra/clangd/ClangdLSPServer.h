@@ -73,6 +73,9 @@ public:
   /// The destructor blocks on any outstanding background tasks.
   ~ClangdLSPServer();
 
+  ClangdLSPServer(const ClangdLSPServer &other) = delete;
+  ClangdLSPServer &operator=(const ClangdLSPServer &other) = delete;
+
   /// Run LSP server loop, communicating with the Transport provided in the
   /// constructor. This method must not be executed more than once.
   ///
@@ -107,6 +110,8 @@ private:
                                   Callback<std::vector<TextEdit>>);
   void onDocumentRangeFormatting(const DocumentRangeFormattingParams &,
                                  Callback<std::vector<TextEdit>>);
+  void onDocumentRangesFormatting(const DocumentRangesFormattingParams &,
+                                  Callback<std::vector<TextEdit>>);
   void onDocumentFormatting(const DocumentFormattingParams &,
                             Callback<std::vector<TextEdit>>);
   // The results are serialized 'vector<DocumentSymbol>' if
@@ -156,6 +161,9 @@ private:
   void onCallHierarchyIncomingCalls(
       const CallHierarchyIncomingCallsParams &,
       Callback<std::vector<CallHierarchyIncomingCall>>);
+  void onCallHierarchyOutgoingCalls(
+      const CallHierarchyOutgoingCallsParams &,
+      Callback<std::vector<CallHierarchyOutgoingCall>>);
   void onClangdInlayHints(const InlayHintsParams &,
                           Callback<llvm::json::Value>);
   void onInlayHint(const InlayHintsParams &, Callback<std::vector<InlayHint>>);

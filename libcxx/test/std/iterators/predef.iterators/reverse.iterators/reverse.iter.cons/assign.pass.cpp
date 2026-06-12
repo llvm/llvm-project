@@ -59,6 +59,9 @@ TEST_CONSTEXPR_CXX17 bool tests() {
     Derived d;
     test<bidirectional_iterator<Base*> >(bidirectional_iterator<Derived*>(&d));
     test<random_access_iterator<const Base*> >(random_access_iterator<Derived*>(&d));
+#if TEST_STD_VER >= 20
+    test<cpp20_random_access_iterator<const Base*> >(cpp20_random_access_iterator<Derived*>(&d));
+#endif
     test<Base*>(&d);
 
     char c = '\0';

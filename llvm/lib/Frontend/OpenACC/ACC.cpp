@@ -8,9 +8,7 @@
 
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 using namespace acc;

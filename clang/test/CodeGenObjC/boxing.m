@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
 
 typedef long NSInteger;
 typedef unsigned long NSUInteger;

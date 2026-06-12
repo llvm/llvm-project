@@ -11,12 +11,12 @@
 
 #include <__algorithm/equal.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__random/is_seed_sequence.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_convertible.h>
 #include <__utility/move.h>
-#include <cstddef>
 #include <cstdint>
 #include <iosfwd>
 
@@ -52,7 +52,7 @@ public:
 };
 
 template <class _Engine, size_t __k>
-class _LIBCPP_TEMPLATE_VIS shuffle_order_engine {
+class shuffle_order_engine {
   static_assert(0 < __k, "shuffle_order_engine invalid parameters");
 
 public:
@@ -66,7 +66,7 @@ private:
 
 public:
   // engine characteristics
-  static _LIBCPP_CONSTEXPR const size_t table_size = __k;
+  static inline _LIBCPP_CONSTEXPR const size_t table_size = __k;
 
 #ifdef _LIBCPP_CXX03_LANG
   static const result_type _Min = _Engine::_Min;
@@ -88,10 +88,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit shuffle_order_engine(_Engine&& __e) : __e_(std::move(__e)) { __init(); }
 #endif // _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI explicit shuffle_order_engine(result_type __sd) : __e_(__sd) { __init(); }
-  template <
-      class _Sseq,
-      __enable_if_t<__is_seed_sequence<_Sseq, shuffle_order_engine>::value && !is_convertible<_Sseq, _Engine>::value,
-                    int> = 0>
+  template <class _Sseq,
+            __enable_if_t<__is_seed_sequence_v<_Sseq, shuffle_order_engine> && !is_convertible<_Sseq, _Engine>::value,
+                          int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit shuffle_order_engine(_Sseq& __q) : __e_(__q) {
     __init();
   }
@@ -103,14 +102,28 @@ public:
     __e_.seed(__sd);
     __init();
   }
-  template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, shuffle_order_engine>::value, int> = 0>
+  template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, shuffle_order_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void seed(_Sseq& __q) {
     __e_.seed(__q);
     __init();
   }
 
   // generating functions
-  _LIBCPP_HIDE_FROM_ABI result_type operator()() { return __eval(integral_constant<bool, _Rp != 0>()); }
+  _LIBCPP_HIDE_FROM_ABI result_type operator()() {
+    if _LIBCPP_CONSTEXPR (_Rp != 0 || !(__k & 1)) {
+      using _Ratio = __uratio<__k, _Rp != 0 ? _Rp : 0x8000000000000000ull>;
+      if _LIBCPP_CONSTEXPR (_Ratio::num > 0xFFFFFFFFFFFFFFFFull / (_Max - _Min)) {
+        return __evalf<_Ratio::num, _Ratio::den>();
+      } else {
+        const size_t __j = static_cast<size_t>(_Ratio::num * (__y_ - _Min) / _Ratio::den);
+        __y_             = __v_[__j];
+        __v_[__j]        = __e_();
+        return __y_;
+      }
+    } else
+      return __evalf<__k, 0>();
+  }
+
   _LIBCPP_HIDE_FROM_ABI void discard(unsigned long long __z) {
     for (; __z; --__z)
       operator()();
@@ -140,29 +153,6 @@ private:
     __y_ = __e_();
   }
 
-  _LIBCPP_HIDE_FROM_ABI result_type __eval(false_type) { return __eval2(integral_constant<bool, __k & 1>()); }
-  _LIBCPP_HIDE_FROM_ABI result_type __eval(true_type) { return __eval(__uratio<__k, _Rp>()); }
-
-  _LIBCPP_HIDE_FROM_ABI result_type __eval2(false_type) { return __eval(__uratio<__k / 2, 0x8000000000000000ull>()); }
-  _LIBCPP_HIDE_FROM_ABI result_type __eval2(true_type) { return __evalf<__k, 0>(); }
-
-  template <uint64_t _Np,
-            uint64_t _Dp,
-            __enable_if_t<(__uratio<_Np, _Dp>::num > 0xFFFFFFFFFFFFFFFFull / (_Max - _Min)), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI result_type __eval(__uratio<_Np, _Dp>) {
-    return __evalf<__uratio<_Np, _Dp>::num, __uratio<_Np, _Dp>::den>();
-  }
-
-  template <uint64_t _Np,
-            uint64_t _Dp,
-            __enable_if_t<__uratio<_Np, _Dp>::num <= 0xFFFFFFFFFFFFFFFFull / (_Max - _Min), int> = 0>
-  _LIBCPP_HIDE_FROM_ABI result_type __eval(__uratio<_Np, _Dp>) {
-    const size_t __j = static_cast<size_t>(__uratio<_Np, _Dp>::num * (__y_ - _Min) / __uratio<_Np, _Dp>::den);
-    __y_             = __v_[__j];
-    __v_[__j]        = __e_();
-    return __y_;
-  }
-
   template <uint64_t __n, uint64_t __d>
   _LIBCPP_HIDE_FROM_ABI result_type __evalf() {
     const double __fp = __d == 0 ? __n / (2. * 0x8000000000000000ull) : __n / (double)__d;
@@ -172,9 +162,6 @@ private:
     return __y_;
   }
 };
-
-template <class _Engine, size_t __k>
-_LIBCPP_CONSTEXPR const size_t shuffle_order_engine<_Engine, __k>::table_size;
 
 template <class _Eng, size_t _Kp>
 _LIBCPP_HIDE_FROM_ABI bool

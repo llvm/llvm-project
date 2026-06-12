@@ -1,23 +1,23 @@
 // This file contains references to sections of the Coroutines TS, which can be
 // found at http://wg21.link/coroutines.
 
-// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fcxx-exceptions -fexceptions -Wunused-result
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s -fcxx-exceptions -fexceptions -Wunused-result
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected,cxx20_23,cxx23    %s -fcxx-exceptions -fexceptions -Wunused-result -Wno-coroutines-unsupported-target
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx14_20,cxx20_23 %s -fcxx-exceptions -fexceptions -Wunused-result -Wno-coroutines-unsupported-target
+
+// Run without -verify to check the order of errors we show.
+// RUN: not %clang_cc1 -std=c++20 -fsyntax-only %s -fcxx-exceptions -fexceptions -Wunused-result 2>&1 | FileCheck %s
 
 void no_coroutine_traits_bad_arg_await() {
-  co_await a; // expected-error {{include <coroutine>}}
-  // expected-error@-1 {{use of undeclared identifier 'a'}}
+  co_await a; // expected-error {{use of undeclared identifier 'a'}}
 }
 
 void no_coroutine_traits_bad_arg_yield() {
-  co_yield a; // expected-error {{include <coroutine>}}
-  // expected-error@-1 {{use of undeclared identifier 'a'}}
+  co_yield a; // expected-error {{use of undeclared identifier 'a'}}
 }
 
 
 void no_coroutine_traits_bad_arg_return() {
-  co_return a; // expected-error {{include <coroutine>}}
-  // expected-error@-1 {{use of undeclared identifier 'a'}}
+  co_return a; // expected-error {{use of undeclared identifier 'a'}}
 }
 
 void no_coroutine_traits() {
@@ -154,12 +154,15 @@ namespace std {
 template <class PromiseType = void>
 struct coroutine_handle {
   static coroutine_handle from_address(void *) noexcept;
+  static coroutine_handle from_promise(PromiseType &promise);
 };
 template <>
 struct coroutine_handle<void> {
   template <class PromiseType>
   coroutine_handle(coroutine_handle<PromiseType>) noexcept;
   static coroutine_handle from_address(void *) noexcept;
+  template <class PromiseType>
+  static coroutine_handle from_promise(PromiseType &promise);
 };
 } // namespace std
 
@@ -202,15 +205,29 @@ void mixed_yield() {
 
 void mixed_yield_invalid() {
   co_yield blah; // expected-error {{use of undeclared identifier}}
-  // expected-note@-1 {{function is a coroutine due to use of 'co_yield'}}
-  return; // expected-error {{return statement not allowed in coroutine}}
+  return;
+}
+
+void mixed_yield_return_first(bool b) {
+  if (b) {
+    return; // expected-error {{return statement not allowed in coroutine}}
+  }
+  co_yield 0; // expected-note {{function is a coroutine due to use of 'co_yield'}}
+}
+
+template<typename T>
+void mixed_return_for_range(bool b, T t) {
+  if (b) {
+    return; // expected-error {{return statement not allowed in coroutine}}
+  }
+  for co_await (auto i : t){}; // expected-warning {{'for co_await' belongs to CoroutineTS instead of C++20, which is deprecated}}
+  // expected-note@-1 {{function is a coroutine due to use of 'co_await'}}
 }
 
 template <class T>
 void mixed_yield_template(T) {
   co_yield blah; // expected-error {{use of undeclared identifier}}
-  // expected-note@-1 {{function is a coroutine due to use of 'co_yield'}}
-  return; // expected-error {{return statement not allowed in coroutine}}
+  return;
 }
 
 template <class T>
@@ -264,6 +281,13 @@ void mixed_coreturn(void_tag, bool b) {
     return; // expected-error {{not allowed in coroutine}}
 }
 
+void mixed_coreturn_return_first(void_tag, bool b) {
+  if (b)
+    return; // expected-error {{not allowed in coroutine}}
+  else
+    co_return; // expected-note {{use of 'co_return'}}
+}
+
 void mixed_coreturn_invalid(bool b) {
   if (b)
     co_return; // expected-note {{use of 'co_return'}}
@@ -285,10 +309,56 @@ template void mixed_coreturn_template(void_tag, bool, int); // expected-note {{r
 template <class T>
 void mixed_coreturn_template2(bool b, T) {
   if (b)
-    co_return v; // expected-note {{use of 'co_return'}}
-    // expected-error@-1 {{use of undeclared identifier 'v'}}
+    co_return v; // expected-error {{use of undeclared identifier 'v'}}
   else
-    return; // expected-error {{not allowed in coroutine}}
+    return;
+}
+
+struct promise_handle;
+
+struct Handle : std::coroutine_handle<promise_handle> { // expected-note 4{{not viable}}
+    // expected-note@-1 4{{not viable}}
+    using promise_type = promise_handle;
+};
+
+struct promise_handle {
+    Handle get_return_object() noexcept {
+      { return Handle(std::coroutine_handle<Handle::promise_type>::from_promise(*this)); }
+    }
+    suspend_never initial_suspend() const noexcept { return {}; }
+    suspend_never final_suspend() const noexcept { return {}; }
+    void return_void() const noexcept {}
+    void unhandled_exception() const noexcept {}
+};
+
+Handle mixed_return_value() {
+  co_await a; // expected-note {{function is a coroutine due to use of 'co_await' here}}
+  return 0; // expected-error {{return statement not allowed in coroutine}}
+  // expected-error@-1 {{no viable conversion from returned value of type}}
+  // Check that we first show that return is not allowed in coroutine.
+  // The error about bad conversion is most likely spurious so we prefer to have it afterwards.
+  // CHECK-NOT: error: no viable conversion from returned value of type
+  // CHECK: error: return statement not allowed in coroutine
+  // CHECK: error: no viable conversion from returned value of type
+}
+
+Handle mixed_return_value_return_first(bool b) {
+  if (b) {
+    return 0; // expected-error {{no viable conversion from returned value of type}}
+    // expected-error@-1 {{return statement not allowed in coroutine}}
+  }
+  co_await a; // expected-note {{function is a coroutine due to use of 'co_await' here}}
+  co_return 0; // expected-error {{no member named 'return_value' in 'promise_handle'}}
+}
+
+Handle mixed_multiple_returns(bool b) {
+  if (b) {
+    return 0; // expected-error {{no viable conversion from returned value of type}}
+    // expected-error@-1 {{return statement not allowed in coroutine}}
+  }
+  co_await a; // expected-note {{function is a coroutine due to use of 'co_await' here}}
+  // The error 'return statement not allowed in coroutine' should appear only once.
+  return 0; // expected-error {{no viable conversion from returned value of type}}
 }
 
 struct CtorDtor {
@@ -1326,7 +1396,7 @@ struct bad_promise_deleted_constructor {
 
 coro<bad_promise_deleted_constructor>
 bad_coroutine_calls_deleted_promise_constructor() {
-  // expected-error@-1 {{call to deleted constructor of 'std::coroutine_traits<coro<CoroHandleMemberFunctionTest::bad_promise_deleted_constructor>>::promise_type' (aka 'CoroHandleMemberFunctionTest::bad_promise_deleted_constructor')}}
+  // expected-error@-1 {{call to deleted constructor of 'std::coroutine_traits<coro<bad_promise_deleted_constructor>>::promise_type' (aka 'CoroHandleMemberFunctionTest::bad_promise_deleted_constructor')}}
   co_return;
 }
 
@@ -1393,7 +1463,7 @@ struct bad_promise_no_matching_constructor {
 
 coro<bad_promise_no_matching_constructor>
 bad_coroutine_calls_with_no_matching_constructor(int, int) {
-  // expected-error@-1 {{call to deleted constructor of 'std::coroutine_traits<coro<CoroHandleMemberFunctionTest::bad_promise_no_matching_constructor>, int, int>::promise_type' (aka 'CoroHandleMemberFunctionTest::bad_promise_no_matching_constructor')}}
+  // expected-error@-1 {{call to deleted constructor of 'std::coroutine_traits<coro<bad_promise_no_matching_constructor>, int, int>::promise_type' (aka 'CoroHandleMemberFunctionTest::bad_promise_no_matching_constructor')}}
   co_return;
 }
 
@@ -1474,4 +1544,25 @@ void warn_always_inline() { // expected-warning {{this coroutine may be split in
 [[gnu::always_inline]]
 void warn_gnu_always_inline() { // expected-warning {{this coroutine may be split into pieces; not every piece is guaranteed to be inlined}}
   co_await suspend_always{};
+}
+
+namespace GH98923 {
+struct Awaiter : suspend_never {
+  int await_resume() { return 0; }
+};
+
+void f(int x = co_await Awaiter{});
+// expected-error@-1 {{'co_await' cannot be used outside a function}}
+
+void g() {
+    void g1(int x = co_await Awaiter{});
+    // expected-error@-1 {{'co_await' cannot be used outside a function}}
+    void g2(int x = ((co_yield 0), 1));
+    // expected-error@-1 {{'co_yield' cannot be used outside a function}}
+    auto g3 = [&](int x = co_await Awaiter{}) -> void{
+    // expected-error@-1 {{'co_await' cannot be used outside a function}}
+        co_return 0;
+    };
+}
+
 }

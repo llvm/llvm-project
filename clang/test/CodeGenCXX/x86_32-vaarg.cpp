@@ -18,3 +18,25 @@ empty empty_record_test(int z, ...) {
   __builtin_va_start(list, z);
   return __builtin_va_arg(list, empty);
 }
+
+typedef struct {
+  struct {
+    int a[0];
+  } b;
+} SortOfEmpty;
+
+// CHECK-LABEL: @_Z18test_sort_of_emptyiz(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[Z_ADDR:%.*]] = alloca i32, align 4
+// CHECK-NEXT:    [[LIST:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    store ptr [[AGG_RESULT:%.*]], ptr [[RESULT_PTR]], align 4
+// CHECK-NEXT:    store i32 [[Z:%.*]], ptr [[Z_ADDR]], align 4
+// CHECK-NEXT:    call void @llvm.va_start.p0(ptr [[LIST]])
+// CHECK-NEXT:    ret void
+//
+SortOfEmpty test_sort_of_empty(int z, ...) {
+  __builtin_va_list list;
+  __builtin_va_start(list, z);
+  return __builtin_va_arg(list, SortOfEmpty);
+}

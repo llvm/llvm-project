@@ -1,0 +1,117 @@
+; RUN: mlir-translate -import-llvm %s -split-input-file | FileCheck %s
+
+declare i64 @llvm.aarch64.ldxr.p0(ptr)
+
+define dso_local void @t0(ptr %a) {
+  %x = call i64 @llvm.aarch64.ldxr.p0(ptr elementtype(i8) %a)
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @llvm.aarch64.ldxr.p0(!llvm.ptr)
+; CHECK-LABEL: llvm.func @t0
+; CHECK:   llvm.call_intrinsic "llvm.aarch64.ldxr.p0"({{.*}}) : (!llvm.ptr {llvm.elementtype = i8}) -> i64
+; CHECK:   llvm.return
+; CHECK: }
+
+; // -----
+
+declare <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8>, <8 x i8>)
+
+define dso_local <8 x i8> @t1(<8 x i8> %lhs, <8 x i8> %rhs) {
+  %r = call <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8> %lhs, <8 x i8> %rhs)
+  ret <8 x i8> %r
+}
+
+; CHECK: llvm.func @t1(%[[A0:.*]]: vector<8xi8>, %[[A1:.*]]: vector<8xi8>) -> vector<8xi8> {{.*}} {
+; CHECK:   %[[R:.*]] = llvm.call_intrinsic "llvm.aarch64.neon.uabd.v8i8"(%[[A0]], %[[A1]]) : (vector<8xi8>, vector<8xi8>) -> vector<8xi8>
+; CHECK:   llvm.return %[[R]] : vector<8xi8>
+; CHECK: }
+
+; // -----
+
+declare void @llvm.aarch64.neon.st2.v8i8.p0(<8 x i8>, <8 x i8>, ptr)
+
+define dso_local void @t2(<8 x i8> %lhs, <8 x i8> %rhs, ptr %a) {
+  call void @llvm.aarch64.neon.st2.v8i8.p0(<8 x i8> %lhs, <8 x i8> %rhs, ptr %a)
+  ret void
+}
+
+; CHECK: llvm.func @t2(%[[A0:.*]]: vector<8xi8>, %[[A1:.*]]: vector<8xi8>, %[[A2:.*]]: !llvm.ptr) {{.*}} {
+; CHECK:   llvm.call_intrinsic "llvm.aarch64.neon.st2.v8i8.p0"(%[[A0]], %[[A1]], %[[A2]]) : (vector<8xi8>, vector<8xi8>, !llvm.ptr) -> ()
+; CHECK:   llvm.return
+; CHECK: }
+
+; // -----
+
+declare void @llvm.gcroot(ptr %arg1, ptr %arg2)
+define void @gctest() gc "example" {
+  %arg1 = alloca ptr
+  call void @llvm.gcroot(ptr %arg1, ptr null)
+  ret void
+}
+
+; CHECK-LABEL: @gctest
+; CHECK: llvm.call_intrinsic "llvm.gcroot"({{.*}}, {{.*}}) : (!llvm.ptr, !llvm.ptr) -> ()
+
+; // -----
+
+; Test we get the supported version, not the unregistered one.
+
+declare i32 @llvm.lround.i32.f32(float)
+
+; CHECK-LABEL: llvm.func @lround_test
+define void @lround_test(float %0, double %1) {
+  ; CHECK-NOT: llvm.call_intrinsic "llvm.lround
+  ; CHECK: llvm.intr.lround(%{{.*}}) : (f32) -> i32
+  %3 = call i32 @llvm.lround.i32.f32(float %0)
+  ret void
+}
+
+; // -----
+
+declare i32 @llvm.riscv.sha256sig0(i32)
+
+; CHECK-LABEL: test_intrin_arg_attr
+define signext i32 @test_intrin_arg_attr(i32 signext %a) nounwind {
+    ; CHECK: llvm.call_intrinsic "llvm.riscv.sha256sig0"({{.*}}) : (i32 {llvm.signext}) -> i32
+    %val = call i32 @llvm.riscv.sha256sig0(i32 signext %a)
+    ret i32 %val
+}
+
+; // -----
+
+; Constrained FP intrinsics with no dedicated MLIR op should fall back to
+; `llvm.call_intrinsic`, and their `metadata !"..."` operands should be
+; imported as `llvm.mlir.metadata_as_value` ops wrapping the corresponding
+; `#llvm.md_string` attribute.
+
+declare float @llvm.experimental.constrained.sqrt.f32(float, metadata, metadata)
+
+; CHECK-LABEL: llvm.func @constrained_sqrt
+define float @constrained_sqrt(float %a) {
+  ; CHECK: %[[RM:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+  ; CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+  ; CHECK: %{{.*}} = llvm.call_intrinsic "llvm.experimental.constrained.sqrt.f32"(%{{.*}}, %[[RM]], %[[EB]]) : (f32, !llvm.metadata, !llvm.metadata) -> f32
+  %r = call float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  ret float %r
+}
+
+; // -----
+
+; Importer should also handle MDNode metadata operands such as the
+; `!{!"register_name"}` form used by `llvm.read_register`.
+
+declare i32 @llvm.read_register.i32(metadata)
+
+; CHECK-LABEL: llvm.func @read_named_register
+define i32 @read_named_register() {
+  ; CHECK: %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  ; CHECK: %[[R0:.*]] = llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]]) : (!llvm.metadata) -> i32
+  %r0 = call i32 @llvm.read_register.i32(metadata !0)
+  ; CHECK-NOT: llvm.mlir.metadata_as_value
+  ; CHECK: %[[R1:.*]] = llvm.call_intrinsic "llvm.read_register.i32"(%[[MD]]) : (!llvm.metadata) -> i32
+  %r1 = call i32 @llvm.read_register.i32(metadata !0)
+  ret i32 %r1
+}
+
+!0 = !{!"sp"}

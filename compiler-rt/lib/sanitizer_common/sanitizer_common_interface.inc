@@ -22,6 +22,7 @@ INTERFACE_FUNCTION(__sanitizer_verify_double_ended_contiguous_container)
 INTERFACE_WEAK_FUNCTION(__sanitizer_on_print)
 INTERFACE_WEAK_FUNCTION(__sanitizer_report_error_summary)
 INTERFACE_WEAK_FUNCTION(__sanitizer_sandbox_on_notify)
+INTERFACE_WEAK_FUNCTION(__sanitizer_get_dtls_size)
 // Sanitizer weak hooks
 INTERFACE_WEAK_FUNCTION(__sanitizer_weak_hook_memcmp)
 INTERFACE_WEAK_FUNCTION(__sanitizer_weak_hook_strcmp)
@@ -51,3 +52,9 @@ INTERFACE_WEAK_FUNCTION(__sanitizer_ignore_free_hook)
 INTERFACE_FUNCTION(__sanitizer_internal_memcpy)
 INTERFACE_FUNCTION(__sanitizer_internal_memmove)
 INTERFACE_FUNCTION(__sanitizer_internal_memset)
+
+#if SANITIZER_WINDOWS
+INTERFACE_FUNCTION(__sanitizer_override_function)
+INTERFACE_FUNCTION(__sanitizer_override_function_by_addr)
+INTERFACE_FUNCTION(__sanitizer_register_weak_function)
+#endif

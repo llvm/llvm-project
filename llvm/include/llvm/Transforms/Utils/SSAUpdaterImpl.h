@@ -18,12 +18,15 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "ssaupdater"
 
 namespace llvm {
+
+extern LLVM_ABI cl::opt<unsigned> SSAUpdaterPhiSearchLimit;
 
 template<typename T> class SSAUpdaterTraits;
 
@@ -139,17 +142,16 @@ public:
       for (unsigned p = 0; p != Info->NumPreds; ++p) {
         BlkT *Pred = Preds[p];
         // Check if BBMap already has a BBInfo for the predecessor block.
-        typename BBMapTy::value_type &BBMapBucket =
-          BBMap.FindAndConstruct(Pred);
-        if (BBMapBucket.second) {
-          Info->Preds[p] = BBMapBucket.second;
+        BBInfo *&BBMapBucket = BBMap[Pred];
+        if (BBMapBucket) {
+          Info->Preds[p] = BBMapBucket;
           continue;
         }
 
         // Create a new BBInfo for the predecessor.
         ValT PredVal = AvailableVals->lookup(Pred);
         BBInfo *PredInfo = new (Allocator) BBInfo(Pred, PredVal);
-        BBMapBucket.second = PredInfo;
+        BBMapBucket = PredInfo;
         Info->Preds[p] = PredInfo;
 
         if (PredInfo->AvailableVal) {
@@ -367,7 +369,7 @@ public:
         continue;
 
       // Look for an existing PHI.
-      FindExistingPHI(Info->BB, BlockList);
+      FindExistingPHI(Info->BB);
       if (Info->AvailableVal)
         continue;
 
@@ -413,11 +415,21 @@ public:
 
   /// FindExistingPHI - Look through the PHI nodes in a block to see if any of
   /// them match what is needed.
-  void FindExistingPHI(BlkT *BB, BlockListTy *BlockList) {
+  void FindExistingPHI(BlkT *BB) {
     SmallVector<BBInfo *, 20> TaggedBlocks;
+    // SSAUpdaterPhiSearchLimit is needed to guard against pathological cases
+    // (e.g. AMDGPU/large-phi-search.ll) where a large number of searches are
+    // done which all fail.  Each search adds another PHI node to be searched.
+    // In a 3-stage build of LLVM the maximum search length was 53.
+    unsigned Count = 0;
+
     for (auto &SomePHI : BB->phis()) {
+      // Abandon search for match.  FindAvailableVals will create a new
+      // phi-node.
+      if (++Count > SSAUpdaterPhiSearchLimit)
+        break;
       if (CheckIfPHIMatches(&SomePHI, TaggedBlocks)) {
-        RecordMatchingPHIs(BlockList);
+        RecordMatchingPHIs(TaggedBlocks);
         break;
       }
     }
@@ -425,10 +437,10 @@ public:
 
   /// CheckIfPHIMatches - Check if a PHI node matches the placement and values
   /// in the BBMap.
-  bool CheckIfPHIMatches(PhiT *PHI, SmallVectorImpl<BBInfo *> &TaggedBlocks) {
+  bool CheckIfPHIMatches(PhiT *PHI, BlockListTy &TaggedBlocks) {
     // Match failed: clear all the PHITag values. Only need to clear visited
     // blocks.
-    auto Cleanup = make_scope_exit([&]() {
+    scope_exit Cleanup([&]() {
       for (BBInfo *TaggedBlock : TaggedBlocks)
         TaggedBlock->PHITag = nullptr;
       TaggedBlocks.clear();
@@ -485,15 +497,15 @@ public:
 
   /// RecordMatchingPHIs - For each PHI node that matches, record it in both
   /// the BBMap and the AvailableVals mapping.
-  void RecordMatchingPHIs(BlockListTy *BlockList) {
-    for (typename BlockListTy::iterator I = BlockList->begin(),
-           E = BlockList->end(); I != E; ++I)
-      if (PhiT *PHI = (*I)->PHITag) {
-        BlkT *BB = PHI->getParent();
-        ValT PHIVal = Traits::GetPHIValue(PHI);
-        (*AvailableVals)[BB] = PHIVal;
-        BBMap[BB]->AvailableVal = PHIVal;
-      }
+  void RecordMatchingPHIs(BlockListTy &TaggedBlocks) {
+    for (BBInfo *Block : TaggedBlocks) {
+      PhiT *PHI = Block->PHITag;
+      assert(PHI && "PHITag didn't set?");
+      BlkT *BB = PHI->getParent();
+      ValT PHIVal = Traits::GetPHIValue(PHI);
+      (*AvailableVals)[BB] = PHIVal;
+      BBMap[BB]->AvailableVal = PHIVal;
+    }
   }
 };
 

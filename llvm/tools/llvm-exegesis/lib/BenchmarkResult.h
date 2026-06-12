@@ -53,7 +53,7 @@ struct MemoryValue {
 
 struct MemoryMapping {
   // The address to place the mapping at.
-  intptr_t Address;
+  uintptr_t Address;
   // The name of the value that should be mapped.
   std::string MemoryValueName;
 };
@@ -73,9 +73,9 @@ struct BenchmarkKey {
   std::string Config;
   // The address that the snippet should be loaded in at if the execution mode
   // being used supports it.
-  intptr_t SnippetAddress = 0;
+  uintptr_t SnippetAddress = 0;
   // The register that should be used to hold the loop counter.
-  unsigned LoopRegister;
+  MCRegister LoopRegister;
 };
 
 struct BenchmarkMeasure {
@@ -136,6 +136,9 @@ struct Benchmark {
   static Expected<Benchmark> readYaml(const LLVMState &State,
                                                  MemoryBufferRef Buffer);
 
+  // Deserializes benchmarks from the given Buffer. Entries that fail to parse
+  // (e.g. referencing an unknown opcode from a bitrotted sample) are warned
+  // about and skipped instead of aborting the read of the whole file.
   static Expected<std::vector<Benchmark>>
   readYamls(const LLVMState &State, MemoryBufferRef Buffer);
 

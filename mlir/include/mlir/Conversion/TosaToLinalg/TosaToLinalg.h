@@ -1,5 +1,4 @@
-//===-- TosaToLinalg.h - TOSA optimization pass declarations ----------*- C++
-//-*-===//
+//===- TosaToLinalg.h - TOSA optimization pass declarations ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,7 +28,7 @@ std::unique_ptr<Pass> createTosaToLinalg();
 std::unique_ptr<Pass> createTosaToLinalgNamed(
     const TosaToLinalgNamedOptions &options = TosaToLinalgNamedOptions());
 
-/// Populates passes to convert from TOSA to Linalg on buffers. At the end of
+/// Populates passes to convert from TOSA to Linalg. At the end of
 /// the pass, the function will only contain linalg ops or standard ops if the
 /// pipeline succeeds.  The option to disable decompositions is available for
 /// benchmarking performance improvements from the canonicalizations.
@@ -39,20 +38,21 @@ void addTosaToLinalgPasses(
         TosaToLinalgNamedOptions(),
     // Note: Default to 'none' level unless otherwise specified.
     std::optional<tosa::TosaValidationOptions> validationOptions =
-        tosa::TosaValidationOptions{tosa::TosaProfileEnum::Undefined, false,
-                                    tosa::TosaLevelEnum::None});
+        tosa::TosaValidationOptions{false, false},
+    std::optional<TosaAttachTargetOptions> attachTargetOptions = std::nullopt);
 
 /// Populates TOSA to linalg pipelines
 /// Currently, this includes only the "tosa-to-linalg-pipeline".
 void registerTosaToLinalgPipelines();
 
 /// Populates conversion passes from TOSA dialect to Linalg dialect.
-void populateTosaToLinalgConversionPatterns(TypeConverter &converter,
+void populateTosaToLinalgConversionPatterns(const TypeConverter &converter,
                                             RewritePatternSet *patterns);
 
 /// Populates conversion passes from TOSA dialect to Linalg named operations.
 void populateTosaToLinalgNamedConversionPatterns(
-    RewritePatternSet *patterns, const TosaToLinalgNamedOptions &options);
+    const TypeConverter &converter, RewritePatternSet *patterns,
+    const TosaToLinalgNamedOptions &options);
 
 } // namespace tosa
 } // namespace mlir

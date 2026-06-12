@@ -29,6 +29,16 @@ void FixedPointSemantics::print(llvm::raw_ostream &OS) const {
   OS << "IsSaturated=" << IsSaturated;
 }
 
+uint32_t FixedPointSemantics::toOpaqueInt() const {
+  return llvm::bit_cast<uint32_t>(*this);
+}
+
+FixedPointSemantics FixedPointSemantics::getFromOpaqueInt(uint32_t I) {
+  FixedPointSemantics F(0, 0, false, false, false);
+  std::memcpy(&F, &I, sizeof(F));
+  return F;
+}
+
 APFixedPoint APFixedPoint::convert(const FixedPointSemantics &DstSema,
                                    bool *Overflow) const {
   APSInt NewVal = Val;
@@ -276,11 +286,12 @@ APFixedPoint APFixedPoint::mul(const APFixedPoint &Other,
                                                  .extOrTrunc(Wide);
   if (CommonFXSema.isSaturated()) {
     if (Result < Min)
-      Result = Min;
+      Result = std::move(Min);
     else if (Result > Max)
-      Result = Max;
-  } else
+      Result = std::move(Max);
+  } else {
     Overflowed = Result < Min || Result > Max;
+  }
 
   if (Overflow)
     *Overflow = Overflowed;
@@ -325,8 +336,9 @@ APFixedPoint APFixedPoint::div(const APFixedPoint &Other,
     // towards negative infinity by subtracting epsilon from the result.
     if (ThisVal.isNegative() != OtherVal.isNegative() && !Rem.isZero())
       Result = Result - 1;
-  } else
+  } else {
     Result = ThisVal.udiv(OtherVal);
+  }
   Result.setIsSigned(CommonFXSema.isSigned());
 
   // If our result lies outside of the representative range of the common
@@ -337,11 +349,12 @@ APFixedPoint APFixedPoint::div(const APFixedPoint &Other,
                                                  .extOrTrunc(Wide);
   if (CommonFXSema.isSaturated()) {
     if (Result < Min)
-      Result = Min;
+      Result = std::move(Min);
     else if (Result > Max)
-      Result = Max;
-  } else
+      Result = std::move(Max);
+  } else {
     Overflowed = Result < Min || Result > Max;
+  }
 
   if (Overflow)
     *Overflow = Overflowed;
@@ -372,11 +385,12 @@ APFixedPoint APFixedPoint::shl(unsigned Amt, bool *Overflow) const {
   APSInt Min = APFixedPoint::getMin(Sema).getValue().extOrTrunc(Wide);
   if (Sema.isSaturated()) {
     if (Result < Min)
-      Result = Min;
+      Result = std::move(Min);
     else if (Result > Max)
-      Result = Max;
-  } else
+      Result = std::move(Max);
+  } else {
     Overflowed = Result < Min || Result > Max;
+  }
 
   if (Overflow)
     *Overflow = Overflowed;
@@ -429,7 +443,10 @@ void APFixedPoint::print(raw_ostream &OS) const {
   Sema.print(OS);
   OS << "})";
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void APFixedPoint::dump() const { print(llvm::errs()); }
+#endif
 
 APFixedPoint APFixedPoint::negate(bool *Overflow) const {
   if (!isSaturated()) {
@@ -599,8 +616,9 @@ APFixedPoint::getFromFloatValue(const APFloat &Value,
       Res = getMax(DstFXSema).getValue();
     else if (Val < FloatMin)
       Res = getMin(DstFXSema).getValue();
-  } else
+  } else {
     Overflowed = Val > FloatMax || Val < FloatMin;
+  }
 
   if (Overflow)
     *Overflow = Overflowed;

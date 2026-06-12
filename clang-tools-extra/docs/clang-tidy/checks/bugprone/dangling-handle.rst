@@ -4,8 +4,9 @@ bugprone-dangling-handle
 ========================
 
 Detect dangling references in value handles like ``std::string_view``.
-These dangling references can be a result of constructing handles from temporary
-values, where the temporary is destroyed soon after the handle is created.
+These dangling references can be a result of constructing handles from
+temporary values, where the temporary is destroyed soon after the handle
+is created.
 
 Examples:
 
@@ -28,11 +29,18 @@ Examples:
     return Array;
   }
 
+  span<int> g() {
+    array<int, 1> V;
+    return {V};
+    int Array[10]{};
+    return {Array};
+  }
+
 Options
 -------
 
 .. option:: HandleClasses
 
    A semicolon-separated list of class names that should be treated as handles.
-   By default only ``std::basic_string_view`` and
-   ``std::experimental::basic_string_view`` are considered.
+   By default only ``std::basic_string_view``,
+   ``std::experimental::basic_string_view`` and ``std::span`` are considered.

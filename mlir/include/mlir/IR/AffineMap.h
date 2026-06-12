@@ -352,7 +352,25 @@ public:
 
   /// Applies composition by the dims of `this` to the integer `values` and
   /// returns the resulting values. `this` must be symbol-less.
-  SmallVector<int64_t, 4> compose(ArrayRef<int64_t> values) const;
+  SmallVector<int64_t, 8> compose(ArrayRef<int64_t> values) const;
+
+  /// Returns the number of "zero" results (constant values == 0) in this map.
+  ///
+  /// Example:
+  ///   * For `(d0, d1) -> (d0, d1, 0)` returns 1
+  ///   * For `(d0, d1, d2) -> (d0, d1)` returns 0
+  ///   * For `(d0, d1, d2) -> (d0, 0, d1, 0, d2)` returns 2
+  size_t getNumOfZeroResults() const;
+
+  /// Returns the AffineMap resulting from removing "zero" results (constant
+  /// values == 0) from this map.
+  ///
+  /// Example:
+  ///   * For `(d0, d1) -> (d0, d1, 0)` returns `(d0, d1) -> (d0, d1)`
+  ///   * For `(d0, d1, d2) -> (d0, d1)` returns `(d0, d1, d2) -> (d0, d1)`
+  ///   * For `(d0, d1, d2) -> (d0, 0, d1, 0, d2)` returns
+  ///     `(d0, d1, d2) -> (d0, d1, d2)`
+  AffineMap dropZeroResults();
 
   /// Returns true if the AffineMap represents a subset (i.e. a projection) of a
   /// symbol-less permutation map. `allowZeroInResults` allows projected
@@ -595,7 +613,7 @@ AffineMap inverseAndBroadcastProjectedPermutation(AffineMap map);
 /// ```mlir
 ///     (i, j, k) -> (i, k, k, j, i, j)
 /// ```
-AffineMap concatAffineMaps(ArrayRef<AffineMap> maps);
+AffineMap concatAffineMaps(ArrayRef<AffineMap> maps, MLIRContext *context);
 
 /// Returns the map that results from projecting out the dimensions specified in
 /// `projectedDimensions`. The projected dimensions are set to 0.
@@ -697,14 +715,6 @@ namespace llvm {
 // AffineExpr hash just like pointers
 template <>
 struct DenseMapInfo<mlir::AffineMap> {
-  static mlir::AffineMap getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::AffineMap(static_cast<mlir::AffineMap::ImplType *>(pointer));
-  }
-  static mlir::AffineMap getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::AffineMap(static_cast<mlir::AffineMap::ImplType *>(pointer));
-  }
   static unsigned getHashValue(mlir::AffineMap val) {
     return mlir::hash_value(val);
   }

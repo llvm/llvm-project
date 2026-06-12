@@ -29,12 +29,14 @@ public:
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
   std::optional<std::string> findAVRLibcInstallation() const;
   StringRef getGCCInstallPath() const { return GCCInstallPath; }
   std::string getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
-                            FileType Type) const override;
+                            FileType Type,
+                            bool IsFortran = false) const override;
 
   bool HasNativeLLVMSupport() const override { return true; }
 

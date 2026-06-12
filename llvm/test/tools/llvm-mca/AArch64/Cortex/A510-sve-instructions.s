@@ -3966,18 +3966,18 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      4     0.50                        fabs	z31.d, p7/m, z31.d
 # CHECK-NEXT:  1      4     0.50                        fabs	z31.h, p7/m, z31.h
 # CHECK-NEXT:  1      4     0.50                        fabs	z31.s, p7/m, z31.s
-# CHECK-NEXT:  1      4     0.50                        facge	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  1      4     0.50                        facge	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  1      4     0.50                        facge	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  1      4     0.50                        facge	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  1      4     0.50                        facge	p0.s, p0/z, z0.s, z1.s
-# CHECK-NEXT:  1      4     0.50                        facge	p0.s, p0/z, z1.s, z0.s
-# CHECK-NEXT:  1      4     0.50                        facgt	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  1      4     0.50                        facgt	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  1      4     0.50                        facgt	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  1      4     0.50                        facgt	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  1      4     0.50                        facgt	p0.s, p0/z, z0.s, z1.s
-# CHECK-NEXT:  1      4     0.50                        facgt	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  1      4     1.00                        facge	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  1      4     1.00                        facge	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  1      4     1.00                        facge	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  1      4     1.00                        facge	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  1      4     1.00                        facge	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  1      4     1.00                        facge	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  1      4     1.00                        facgt	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  1      4     1.00                        facgt	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  1      4     1.00                        facgt	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  1      4     1.00                        facgt	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  1      4     1.00                        facgt	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  1      4     1.00                        facgt	p0.s, p0/z, z1.s, z0.s
 # CHECK-NEXT:  1      4     0.50                        fadd	z0.d, p0/m, z0.d, #0.5
 # CHECK-NEXT:  1      4     0.50                        fadd	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  1      4     0.50                        fadd	z0.d, z1.d, z31.d
@@ -4005,30 +4005,30 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      4     0.50                        fcadd	z31.d, p7/m, z31.d, z31.d, #270
 # CHECK-NEXT:  1      4     0.50                        fcadd	z31.h, p7/m, z31.h, z31.h, #270
 # CHECK-NEXT:  1      4     0.50                        fcadd	z31.s, p7/m, z31.s, z31.s, #270
-# CHECK-NEXT:  1      4     0.50                        fcmeq	p0.d, p0/z, z0.d, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcmeq	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  1      4     0.50                        fcmeq	p0.h, p0/z, z0.h, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcmeq	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  1      4     0.50                        fcmeq	p0.s, p0/z, z0.s, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcmeq	p0.s, p0/z, z0.s, z1.s
-# CHECK-NEXT:  1      4     0.50                        fcmge	p0.d, p0/z, z0.d, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcmge	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  1      4     0.50                        fcmge	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  1      4     0.50                        fcmge	p0.h, p0/z, z0.h, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcmge	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  1      4     0.50                        fcmge	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  1      4     0.50                        fcmge	p0.s, p0/z, z0.s, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcmge	p0.s, p0/z, z0.s, z1.s
-# CHECK-NEXT:  1      4     0.50                        fcmge	p0.s, p0/z, z1.s, z0.s
-# CHECK-NEXT:  1      4     0.50                        fcmgt	p0.d, p0/z, z0.d, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcmgt	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  1      4     0.50                        fcmgt	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  1      4     0.50                        fcmgt	p0.h, p0/z, z0.h, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcmgt	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  1      4     0.50                        fcmgt	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  1      4     0.50                        fcmgt	p0.s, p0/z, z0.s, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcmgt	p0.s, p0/z, z0.s, z1.s
-# CHECK-NEXT:  1      4     0.50                        fcmgt	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  1      4     1.00                        fcmeq	p0.d, p0/z, z0.d, #0.0
+# CHECK-NEXT:  1      4     1.00                        fcmeq	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  1      4     1.00                        fcmeq	p0.h, p0/z, z0.h, #0.0
+# CHECK-NEXT:  1      4     1.00                        fcmeq	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  1      4     1.00                        fcmeq	p0.s, p0/z, z0.s, #0.0
+# CHECK-NEXT:  1      4     1.00                        fcmeq	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  1      4     1.00                        fcmge	p0.d, p0/z, z0.d, #0.0
+# CHECK-NEXT:  1      4     1.00                        fcmge	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  1      4     1.00                        fcmge	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  1      4     1.00                        fcmge	p0.h, p0/z, z0.h, #0.0
+# CHECK-NEXT:  1      4     1.00                        fcmge	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  1      4     1.00                        fcmge	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  1      4     1.00                        fcmge	p0.s, p0/z, z0.s, #0.0
+# CHECK-NEXT:  1      4     1.00                        fcmge	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  1      4     1.00                        fcmge	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  1      4     1.00                        fcmgt	p0.d, p0/z, z0.d, #0.0
+# CHECK-NEXT:  1      4     1.00                        fcmgt	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  1      4     1.00                        fcmgt	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  1      4     1.00                        fcmgt	p0.h, p0/z, z0.h, #0.0
+# CHECK-NEXT:  1      4     1.00                        fcmgt	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  1      4     1.00                        fcmgt	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  1      4     1.00                        fcmgt	p0.s, p0/z, z0.s, #0.0
+# CHECK-NEXT:  1      4     1.00                        fcmgt	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  1      4     1.00                        fcmgt	p0.s, p0/z, z1.s, z0.s
 # CHECK-NEXT:  1      4     0.50                        fcmla	z0.d, p0/m, z0.d, z0.d, #0
 # CHECK-NEXT:  1      4     0.50                        fcmla	z0.d, p0/m, z1.d, z2.d, #90
 # CHECK-NEXT:  1      4     0.50                        fcmla	z0.h, p0/m, z0.h, z0.h, #0
@@ -4045,21 +4045,21 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  1      4     0.50                        fcmla	z31.h, p7/m, z31.h, z31.h, #270
 # CHECK-NEXT:  1      4     0.50                        fcmla	z31.h, z31.h, z7.h[3], #270
 # CHECK-NEXT:  1      4     0.50                        fcmla	z31.s, p7/m, z31.s, z31.s, #270
-# CHECK-NEXT:  1      4     0.50                        fcmle	p0.d, p0/z, z0.d, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcmle	p0.h, p0/z, z0.h, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcmle	p0.s, p0/z, z0.s, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcmlt	p0.d, p0/z, z0.d, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcmlt	p0.h, p0/z, z0.h, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcmlt	p0.s, p0/z, z0.s, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcmne	p0.d, p0/z, z0.d, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcmne	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  1      4     0.50                        fcmne	p0.h, p0/z, z0.h, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcmne	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  1      4     0.50                        fcmne	p0.s, p0/z, z0.s, #0.0
-# CHECK-NEXT:  1      4     0.50                        fcmne	p0.s, p0/z, z0.s, z1.s
-# CHECK-NEXT:  1      4     0.50                        fcmuo	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  1      4     0.50                        fcmuo	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  1      4     0.50                        fcmuo	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  1      4     1.00                        fcmle	p0.d, p0/z, z0.d, #0.0
+# CHECK-NEXT:  1      4     1.00                        fcmle	p0.h, p0/z, z0.h, #0.0
+# CHECK-NEXT:  1      4     1.00                        fcmle	p0.s, p0/z, z0.s, #0.0
+# CHECK-NEXT:  1      4     1.00                        fcmlt	p0.d, p0/z, z0.d, #0.0
+# CHECK-NEXT:  1      4     1.00                        fcmlt	p0.h, p0/z, z0.h, #0.0
+# CHECK-NEXT:  1      4     1.00                        fcmlt	p0.s, p0/z, z0.s, #0.0
+# CHECK-NEXT:  1      4     1.00                        fcmne	p0.d, p0/z, z0.d, #0.0
+# CHECK-NEXT:  1      4     1.00                        fcmne	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  1      4     1.00                        fcmne	p0.h, p0/z, z0.h, #0.0
+# CHECK-NEXT:  1      4     1.00                        fcmne	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  1      4     1.00                        fcmne	p0.s, p0/z, z0.s, #0.0
+# CHECK-NEXT:  1      4     1.00                        fcmne	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  1      4     1.00                        fcmuo	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  1      4     1.00                        fcmuo	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  1      4     1.00                        fcmuo	p0.s, p0/z, z0.s, z1.s
 # CHECK-NEXT:  1      4     0.50                        fcvt	z0.d, p0/m, z0.h
 # CHECK-NEXT:  1      4     0.50                        fcvt	z0.d, p0/m, z0.s
 # CHECK-NEXT:  1      4     0.50                        fcvt	z0.h, p0/m, z0.d
@@ -6848,7 +6848,7 @@ zip2	z31.s, z31.s, z31.s
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10.0] [10.1] [11]
-# CHECK-NEXT: 79.00  75.00  75.00  9.00    -     209.00 3667.00  -     -     1290.00 924.00 199.50 199.50 670.00
+# CHECK-NEXT: 79.00  75.00  75.00  9.00    -     209.00 3667.00  -     -     1315.50 949.50 199.50 199.50 670.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1.0]  [1.1]  [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10.0] [10.1] [11]   Instructions:
@@ -7398,18 +7398,18 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fabs	z31.d, p7/m, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fabs	z31.h, p7/m, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fabs	z31.s, p7/m, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     facge	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     facge	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     facge	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     facge	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     facge	p0.s, p0/z, z0.s, z1.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     facge	p0.s, p0/z, z1.s, z0.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     facgt	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     facgt	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     facgt	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     facgt	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     facgt	p0.s, p0/z, z0.s, z1.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     facgt	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facge	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facge	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facge	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facge	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facge	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facge	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     facgt	p0.s, p0/z, z1.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fadd	z0.d, p0/m, z0.d, #0.5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fadd	z0.d, p7/m, z0.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fadd	z0.d, z1.d, z31.d
@@ -7437,30 +7437,30 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcadd	z31.d, p7/m, z31.d, z31.d, #270
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcadd	z31.h, p7/m, z31.h, z31.h, #270
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcadd	z31.s, p7/m, z31.s, z31.s, #270
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmeq	p0.d, p0/z, z0.d, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmeq	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmeq	p0.h, p0/z, z0.h, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmeq	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmeq	p0.s, p0/z, z0.s, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmeq	p0.s, p0/z, z0.s, z1.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmge	p0.d, p0/z, z0.d, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmge	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmge	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmge	p0.h, p0/z, z0.h, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmge	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmge	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmge	p0.s, p0/z, z0.s, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmge	p0.s, p0/z, z0.s, z1.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmge	p0.s, p0/z, z1.s, z0.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmgt	p0.d, p0/z, z0.d, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmgt	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmgt	p0.d, p0/z, z1.d, z0.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmgt	p0.h, p0/z, z0.h, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmgt	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmgt	p0.h, p0/z, z1.h, z0.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmgt	p0.s, p0/z, z0.s, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmgt	p0.s, p0/z, z0.s, z1.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmgt	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmeq	p0.d, p0/z, z0.d, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmeq	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmeq	p0.h, p0/z, z0.h, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmeq	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmeq	p0.s, p0/z, z0.s, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmeq	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmge	p0.d, p0/z, z0.d, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmge	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmge	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmge	p0.h, p0/z, z0.h, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmge	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmge	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmge	p0.s, p0/z, z0.s, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmge	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmge	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmgt	p0.d, p0/z, z0.d, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmgt	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmgt	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmgt	p0.h, p0/z, z0.h, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmgt	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmgt	p0.h, p0/z, z1.h, z0.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmgt	p0.s, p0/z, z0.s, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmgt	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmgt	p0.s, p0/z, z1.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcmla	z0.d, p0/m, z0.d, z0.d, #0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcmla	z0.d, p0/m, z1.d, z2.d, #90
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcmla	z0.h, p0/m, z0.h, z0.h, #0
@@ -7477,21 +7477,21 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcmla	z31.h, p7/m, z31.h, z31.h, #270
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcmla	z31.h, z31.h, z7.h[3], #270
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -     fcmla	z31.s, p7/m, z31.s, z31.s, #270
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmle	p0.d, p0/z, z0.d, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmle	p0.h, p0/z, z0.h, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmle	p0.s, p0/z, z0.s, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmlt	p0.d, p0/z, z0.d, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmlt	p0.h, p0/z, z0.h, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmlt	p0.s, p0/z, z0.s, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmne	p0.d, p0/z, z0.d, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmne	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmne	p0.h, p0/z, z0.h, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmne	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmne	p0.s, p0/z, z0.s, #0.0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmne	p0.s, p0/z, z0.s, z1.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmuo	p0.d, p0/z, z0.d, z1.d
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmuo	p0.h, p0/z, z0.h, z1.h
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcmuo	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmle	p0.d, p0/z, z0.d, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmle	p0.h, p0/z, z0.h, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmle	p0.s, p0/z, z0.s, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmlt	p0.d, p0/z, z0.d, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmlt	p0.h, p0/z, z0.h, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmlt	p0.s, p0/z, z0.s, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmne	p0.d, p0/z, z0.d, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmne	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmne	p0.h, p0/z, z0.h, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmne	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmne	p0.s, p0/z, z0.s, #0.0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmne	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmuo	p0.d, p0/z, z0.d, z1.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmuo	p0.h, p0/z, z0.h, z1.h
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -     fcmuo	p0.s, p0/z, z0.s, z1.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcvt	z0.d, p0/m, z0.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcvt	z0.d, p0/m, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     fcvt	z0.h, p0/m, z0.d

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=msp430 | FileCheck %s
+; RUN: llc < %s -mtriple=msp430 | FileCheck %s
 ; PR32769
 
 target triple = "msp430"

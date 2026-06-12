@@ -11,12 +11,15 @@
 #include <climits>
 #include <cstdlib>
 #include <sys/types.h>
+
 #ifndef _WIN32
 #include <dlfcn.h>
 #include <grp.h>
 #include <netdb.h>
 #include <pwd.h>
+#include <spawn.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #endif
 
@@ -24,16 +27,6 @@
 #include <mach-o/dyld.h>
 #include <mach/mach_init.h>
 #include <mach/mach_port.h>
-#endif
-
-#if defined(__linux__) || defined(__FreeBSD__) ||                              \
-    defined(__FreeBSD_kernel__) || defined(__APPLE__) ||                       \
-    defined(__NetBSD__) || defined(__OpenBSD__) || defined(__EMSCRIPTEN__)
-#if !defined(__ANDROID__)
-#include <spawn.h>
-#endif
-#include <sys/syscall.h>
-#include <sys/wait.h>
 #endif
 
 #if defined(__FreeBSD__)
@@ -63,6 +56,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-forward.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 
@@ -88,43 +82,36 @@ int __pthread_fchdir(int fildes);
 using namespace lldb;
 using namespace lldb_private;
 
-#if !defined(__APPLE__)
-#if !defined(_WIN32)
-#include <syslog.h>
-void Host::SystemLog(Severity severity, llvm::StringRef message) {
-  static llvm::once_flag g_openlog_once;
-  llvm::call_once(g_openlog_once,
-                  [] { openlog("lldb", LOG_PID | LOG_NDELAY, LOG_USER); });
-  int level = LOG_DEBUG;
-  switch (severity) {
-  case lldb::eSeverityInfo:
-    level = LOG_INFO;
-    break;
-  case lldb::eSeverityWarning:
-    level = LOG_WARNING;
-    break;
-  case lldb::eSeverityError:
-    level = LOG_ERR;
-    break;
-  }
-  syslog(level, "%s", message.data());
-}
-#else
-void Host::SystemLog(Severity severity, llvm::StringRef message) {
-  switch (severity) {
-  case lldb::eSeverityInfo:
-  case lldb::eSeverityWarning:
-    llvm::outs() << message;
-    break;
-  case lldb::eSeverityError:
-    llvm::errs() << message;
-    break;
-  }
-}
-#endif
+#if !defined(__APPLE__) && !defined(_WIN32)
+// The system log is currently only meaningful on Darwin and Windows.
+// On Darwin, this means os_log. On Windows this means Events Viewer.
+// The meaning of a "system log" isn't as clear on other platforms, and
+// therefore we don't providate a default implementation. Vendors are free
+// to implement this function if they have a use for it.
+void Host::SystemLog(Severity severity, llvm::StringRef message) {}
 #endif
 
+static constexpr Log::Category g_categories[] = {
+    {{"system"}, {"system log"}, SystemLog::System}};
+
+static Log::Channel g_system_channel(g_categories, SystemLog::System);
+static Log g_system_log(g_system_channel);
+
+template <> Log::Channel &lldb_private::LogChannelFor<SystemLog>() {
+  return g_system_channel;
+}
+
+void LogChannelSystem::Initialize() {
+  g_system_log.Enable(std::make_shared<SystemLogHandler>());
+}
+
+void LogChannelSystem::Terminate() { g_system_log.Disable(); }
+
 #if !defined(__APPLE__) && !defined(_WIN32)
+extern "C" char **environ;
+
+Environment Host::GetEnvironment() { return Environment(environ); }
+
 static thread_result_t
 MonitorChildProcessThreadFunction(::pid_t pid,
                                   Host::MonitorChildProcessCallback callback);
@@ -207,8 +194,8 @@ MonitorChildProcessThreadFunction(::pid_t pid,
 
     const ::pid_t wait_pid = ::waitpid(pid, &status, 0);
 
-    LLDB_LOG(log, "::waitpid({0}, &status, 0) => pid = {1}, status = {2:x}", pid,
-             wait_pid, status);
+    LLDB_LOG(log, "::waitpid({0}, &status, 0) => pid = {1}, status = {2:x}",
+             pid, wait_pid, status);
 
     if (CheckForMonitorCancellation())
       return nullptr;
@@ -359,7 +346,6 @@ bool Host::ResolveExecutableInBundle(FileSpec &file) { return false; }
 
 FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   FileSpec module_filespec;
-#if !defined(__ANDROID__)
   Dl_info info;
   if (::dladdr(host_addr, &info)) {
     if (info.dli_fname) {
@@ -367,7 +353,6 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
       FileSystem::Instance().Resolve(module_filespec);
     }
   }
-#endif
   return module_filespec;
 }
 
@@ -404,39 +389,43 @@ MonitorShellCommand(std::shared_ptr<ShellInfo> shell_info, lldb::pid_t pid,
 Status Host::RunShellCommand(llvm::StringRef command,
                              const FileSpec &working_dir, int *status_ptr,
                              int *signo_ptr, std::string *command_output_ptr,
+                             std::string *separated_error_output,
                              const Timeout<std::micro> &timeout,
-                             bool run_in_shell, bool hide_stderr) {
+                             bool run_in_shell) {
   return RunShellCommand(llvm::StringRef(), Args(command), working_dir,
-                         status_ptr, signo_ptr, command_output_ptr, timeout,
-                         run_in_shell, hide_stderr);
+                         status_ptr, signo_ptr, command_output_ptr,
+                         separated_error_output, timeout, run_in_shell);
 }
 
 Status Host::RunShellCommand(llvm::StringRef shell_path,
                              llvm::StringRef command,
                              const FileSpec &working_dir, int *status_ptr,
                              int *signo_ptr, std::string *command_output_ptr,
+                             std::string *separated_error_output,
                              const Timeout<std::micro> &timeout,
-                             bool run_in_shell, bool hide_stderr) {
+                             bool run_in_shell) {
   return RunShellCommand(shell_path, Args(command), working_dir, status_ptr,
-                         signo_ptr, command_output_ptr, timeout, run_in_shell,
-                         hide_stderr);
+                         signo_ptr, command_output_ptr, separated_error_output,
+                         timeout, run_in_shell);
 }
 
 Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
                              int *status_ptr, int *signo_ptr,
                              std::string *command_output_ptr,
+                             std::string *separated_error_output,
                              const Timeout<std::micro> &timeout,
-                             bool run_in_shell, bool hide_stderr) {
+                             bool run_in_shell) {
   return RunShellCommand(llvm::StringRef(), args, working_dir, status_ptr,
-                         signo_ptr, command_output_ptr, timeout, run_in_shell,
-                         hide_stderr);
+                         signo_ptr, command_output_ptr, separated_error_output,
+                         timeout, run_in_shell);
 }
 
 Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
                              const FileSpec &working_dir, int *status_ptr,
                              int *signo_ptr, std::string *command_output_ptr,
+                             std::string *separated_error_output,
                              const Timeout<std::micro> &timeout,
-                             bool run_in_shell, bool hide_stderr) {
+                             bool run_in_shell) {
   Status error;
   ProcessLaunchInfo launch_info;
   launch_info.SetArchitecture(HostInfo::GetArchitecture());
@@ -463,9 +452,10 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
   if (working_dir)
     launch_info.SetWorkingDirectory(working_dir);
   llvm::SmallString<64> output_file_path;
+  llvm::SmallString<64> error_file_path;
 
   if (command_output_ptr) {
-    // Create a temporary file to get the stdout/stderr and redirect the output
+    // Create a temporary file to get the stdout and redirect the output
     // of the command into this file. We will later read this file if all goes
     // well and fill the data into "command_output_ptr"
     if (FileSpec tmpdir_file_spec = HostInfo::GetProcessTempDir()) {
@@ -478,7 +468,22 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
     }
   }
 
+  if (separated_error_output) {
+    // Create a temporary file to get the stderr and redirect the output
+    // of the command into this file. We will later read this file if all goes
+    // well and fill the data into "separated_error_output".
+    if (FileSpec tmpdir_file_spec = HostInfo::GetProcessTempDir()) {
+      tmpdir_file_spec.AppendPathComponent("lldb-shell-error.%%%%%%");
+      llvm::sys::fs::createUniqueFile(tmpdir_file_spec.GetPath(),
+                                      error_file_path);
+    } else {
+      llvm::sys::fs::createTemporaryFile("lldb-shell-error.%%%%%%", "",
+                                         error_file_path);
+    }
+  }
+
   FileSpec output_file_spec(output_file_path.str());
+  FileSpec error_file_spec(error_file_path.str());
   // Set up file descriptors.
   launch_info.AppendSuppressFileAction(STDIN_FILENO, true, false);
   if (output_file_spec)
@@ -487,10 +492,11 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
   else
     launch_info.AppendSuppressFileAction(STDOUT_FILENO, false, true);
 
-  if (output_file_spec && !hide_stderr)
-    launch_info.AppendDuplicateFileAction(STDOUT_FILENO, STDERR_FILENO);
+  if (error_file_spec)
+    launch_info.AppendOpenFileAction(STDERR_FILENO, error_file_spec, false,
+                                     true);
   else
-    launch_info.AppendSuppressFileAction(STDERR_FILENO, false, true);
+    launch_info.AppendDuplicateFileAction(STDOUT_FILENO, STDERR_FILENO);
 
   std::shared_ptr<ShellInfo> shell_info_sp(new ShellInfo());
   launch_info.SetMonitorProcessCallback(
@@ -501,11 +507,12 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
   const lldb::pid_t pid = launch_info.GetProcessID();
 
   if (error.Success() && pid == LLDB_INVALID_PROCESS_ID)
-    error.SetErrorString("failed to get process ID");
+    error = Status::FromErrorString("failed to get process ID");
 
   if (error.Success()) {
     if (!shell_info_sp->process_reaped.WaitForValueEqualTo(true, timeout)) {
-      error.SetErrorString("timed out waiting for shell command to complete");
+      error = Status::FromErrorString(
+          "timed out waiting for shell command to complete");
 
       // Kill the process since it didn't complete within the timeout specified
       Kill(pid, SIGKILL);
@@ -525,7 +532,7 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
             FileSystem::Instance().GetByteSize(output_file_spec);
         if (file_size > 0) {
           if (file_size > command_output_ptr->max_size()) {
-            error.SetErrorStringWithFormat(
+            error = Status::FromErrorStringWithFormat(
                 "shell command output is too large to fit into a std::string");
           } else {
             WritableDataBufferSP Buffer =
@@ -538,10 +545,33 @@ Status Host::RunShellCommand(llvm::StringRef shell_path, const Args &args,
           }
         }
       }
+      if (separated_error_output) {
+        separated_error_output->clear();
+        uint64_t file_size =
+            FileSystem::Instance().GetByteSize(error_file_spec);
+        if (file_size > 0) {
+          if (file_size > separated_error_output->max_size()) {
+            error = Status::FromErrorStringWithFormat(
+                "shell command error output is too large to fit into a "
+                "std::string");
+          } else {
+            WritableDataBufferSP Buffer =
+                FileSystem::Instance().CreateWritableDataBuffer(
+                    error_file_spec);
+            if (error.Success())
+              separated_error_output->assign(
+                  reinterpret_cast<char *>(Buffer->GetBytes()),
+                  Buffer->GetByteSize());
+          }
+        }
+      }
     }
   }
 
-  llvm::sys::fs::remove(output_file_spec.GetPath());
+  if (output_file_spec)
+    llvm::sys::fs::remove(output_file_spec.GetPath());
+  if (error_file_spec)
+    llvm::sys::fs::remove(error_file_spec.GetPath());
   return error;
 }
 
@@ -626,7 +656,7 @@ void llvm::format_provider<WaitStatus>::format(const WaitStatus &WS,
 
   assert(Options.empty());
   const char *desc;
-  switch(WS.type) {
+  switch (WS.type) {
   case WaitStatus::Exit:
     desc = "Exited with status";
     break;

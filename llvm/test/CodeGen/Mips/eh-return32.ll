@@ -1,6 +1,6 @@
-; RUN: llc -march=mipsel -mcpu=mips32   -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
-; RUN: llc -march=mipsel -mcpu=mips32r2 -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
-; RUN: llc -march=mipsel -mcpu=mips32r6 -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,R6
+; RUN: llc -mtriple=mipsel-elf -mcpu=mips32   -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
+; RUN: llc -mtriple=mipsel-elf -mcpu=mips32r2 -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
+; RUN: llc -mtriple=mipsel-elf -mcpu=mips32r6 -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,R6
 
 declare void @llvm.eh.return.i32(i32, ptr)
 declare void @foo(...)

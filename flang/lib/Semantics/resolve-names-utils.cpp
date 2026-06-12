@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "resolve-names-utils.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/fold.h"
@@ -20,6 +18,8 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/Fortran.h"
 #include <initializer_list>
 #include <variant>
 
@@ -30,8 +30,6 @@ using common::LogicalOperator;
 using common::NumericOperator;
 using common::RelationalOperator;
 using IntrinsicOperator = parser::DefinedOperator::IntrinsicOperator;
-
-static constexpr const char *operatorPrefix{"operator("};
 
 static GenericKind MapIntrinsicOperator(IntrinsicOperator);
 
@@ -67,37 +65,6 @@ bool IsIntrinsicOperator(
     }
   }
   return false;
-}
-
-template <typename E>
-std::forward_list<std::string> GetOperatorNames(
-    const SemanticsContext &context, E opr) {
-  std::forward_list<std::string> result;
-  for (const char *name : context.languageFeatures().GetNames(opr)) {
-    result.emplace_front(std::string{operatorPrefix} + name + ')');
-  }
-  return result;
-}
-
-std::forward_list<std::string> GetAllNames(
-    const SemanticsContext &context, const SourceName &name) {
-  std::string str{name.ToString()};
-  if (!name.empty() && name.end()[-1] == ')' &&
-      name.ToString().rfind(std::string{operatorPrefix}, 0) == 0) {
-    for (int i{0}; i != common::LogicalOperator_enumSize; ++i) {
-      auto names{GetOperatorNames(context, LogicalOperator{i})};
-      if (llvm::is_contained(names, str)) {
-        return names;
-      }
-    }
-    for (int i{0}; i != common::RelationalOperator_enumSize; ++i) {
-      auto names{GetOperatorNames(context, RelationalOperator{i})};
-      if (llvm::is_contained(names, str)) {
-        return names;
-      }
-    }
-  }
-  return {str};
 }
 
 bool IsLogicalConstant(
@@ -236,6 +203,7 @@ private:
   }
   void Analyze(const parser::AssumedShapeSpec &);
   void Analyze(const parser::ExplicitShapeSpec &);
+  void Analyze(const parser::ExplicitShapeBoundsSpec &);
   void Analyze(const parser::AssumedImpliedSpec &);
   void Analyze(const parser::DeferredShapeSpecList &);
   void Analyze(const parser::AssumedRankSpec &);
@@ -270,7 +238,69 @@ ArraySpec ArraySpecAnalyzer::Analyze(const parser::ComponentArraySpec &x) {
   CHECK(!arraySpec_.empty());
   return arraySpec_;
 }
+
+static bool shouldRewriteShapeSpecListToExplicitBounds(
+    SemanticsContext &context, const parser::ArraySpec &x) {
+  auto &explicitShapeSpecList{
+      std::get<std::list<parser::ExplicitShapeSpec>>(x.u)};
+
+  if (explicitShapeSpecList.size() != 1) {
+    return false;
+  }
+
+  auto &explicitShapeSpec{explicitShapeSpecList.front()};
+  const auto &upperBound{std::get<1>(explicitShapeSpec.t)};
+  const auto &lowerBoundOpt{std::get<0>(explicitShapeSpec.t)};
+
+  bool foundArray{false};
+
+  if (MaybeExpr analyzedExpr =
+          AnalyzeExpr(context, parser::UnwrapRef<parser::Expr>(upperBound));
+      analyzedExpr && (analyzedExpr->Rank() > 0)) {
+    foundArray = true;
+  }
+
+  if (lowerBoundOpt) {
+    const auto &lowerBound{*lowerBoundOpt};
+    if (MaybeExpr analyzedExpr =
+            AnalyzeExpr(context, parser::UnwrapRef<parser::Expr>(lowerBound));
+        analyzedExpr && (analyzedExpr->Rank() > 0)) {
+      foundArray = true;
+    }
+  }
+
+  return foundArray;
+}
+
+static void rewriteShapeSpecListToExplicitBounds(const parser::ArraySpec &x) {
+  auto &explicitShapeSpecList{std::get<std::list<parser::ExplicitShapeSpec>>(
+      const_cast<parser::ArraySpec &>(x).u)};
+  auto &mutableArraySpec{const_cast<parser::ArraySpec &>(x)};
+  auto &mutableExplicitShapeSpec{explicitShapeSpecList.front()};
+
+  auto &mutableUpperBound{std::get<1>(mutableExplicitShapeSpec.t)};
+  parser::IntExpr upperIntExpr{std::move(mutableUpperBound.v.thing)};
+
+  auto &mutableLowerBound{std::get<0>(mutableExplicitShapeSpec.t)};
+  std::optional<parser::IntExpr> lowerIntExpr;
+  if (mutableLowerBound) {
+    lowerIntExpr = std::move(mutableLowerBound->v.thing);
+  }
+
+  parser::ExplicitShapeBoundsSpec boundsSpec{
+      std::move(lowerIntExpr), std::move(upperIntExpr)};
+  mutableArraySpec.u = std::move(boundsSpec);
+}
+
 ArraySpec ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x) {
+  // This node is rewritten manually here, as opposed to using RewriteParseTree,
+  // because RewriteParseTree is called after ResolveNames in
+  // PerformStatementSemantics, at which point we would have already
+  // aborted due to semantic errors before getting a chance to rewrite.
+  if (std::get_if<std::list<parser::ExplicitShapeSpec>>(&x.u) &&
+      shouldRewriteShapeSpecListToExplicitBounds(context_, x)) {
+    rewriteShapeSpecListToExplicitBounds(x);
+  }
   common::visit(common::visitors{
                     [&](const parser::AssumedSizeSpec &y) {
                       Analyze(
@@ -312,6 +342,14 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeSpec &x) {
   MakeExplicit(std::get<std::optional<parser::SpecificationExpr>>(x.t),
       std::get<parser::SpecificationExpr>(x.t));
 }
+
+void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
+  context_.Say("TODO: Analyze overload for ExplicitShapeBoundsSpec"_todo_en_US);
+  // prevent CHECK abort in Analyze(ArraySpec), otherwise it'll abort before
+  // printing error message
+  arraySpec_.push_back(ShapeSpec::MakeExplicit(Bound{1}));
+}
+
 void ArraySpecAnalyzer::Analyze(const parser::AssumedImpliedSpec &x) {
   MakeImplied(x.v);
 }
@@ -435,6 +473,7 @@ void EquivalenceSets::FinishSet(const parser::CharBlock &source) {
 // set.
 bool EquivalenceSets::CheckCanEquivalence(
     const parser::CharBlock &source, const Symbol &sym1, const Symbol &sym2) {
+  std::optional<common::LanguageFeature> feature;
   std::optional<parser::MessageFixedText> msg;
   const DeclTypeSpec *type1{sym1.GetType()};
   const DeclTypeSpec *type2{sym2.GetType()};
@@ -453,24 +492,19 @@ bool EquivalenceSets::CheckCanEquivalence(
   } else if (!(isAnyNum1 || isChar1) &&
       !(isAnyNum2 || isChar2)) { // C8110 - C8113
     if (AreTkCompatibleTypes(type1, type2)) {
-      if (context_.ShouldWarn(LanguageFeature::EquivalenceSameNonSequence)) {
-        msg =
-            "nonstandard: Equivalence set contains '%s' and '%s' with same "
-            "type that is neither numeric nor character sequence type"_port_en_US;
-      }
+      msg =
+          "nonstandard: Equivalence set contains '%s' and '%s' with same type that is neither numeric nor character sequence type"_port_en_US;
+      feature = LanguageFeature::EquivalenceSameNonSequence;
     } else {
       msg = "Equivalence set cannot contain '%s' and '%s' with distinct types "
             "that are not both numeric or character sequence types"_err_en_US;
     }
   } else if (isAnyNum1) {
     if (isChar2) {
-      if (context_.ShouldWarn(
-              LanguageFeature::EquivalenceNumericWithCharacter)) {
-        msg = "nonstandard: Equivalence set contains '%s' that is numeric "
-              "sequence type and '%s' that is character"_port_en_US;
-      }
-    } else if (isAnyNum2 &&
-        context_.ShouldWarn(LanguageFeature::EquivalenceNonDefaultNumeric)) {
+      msg =
+          "nonstandard: Equivalence set contains '%s' that is numeric sequence type and '%s' that is character"_port_en_US;
+      feature = LanguageFeature::EquivalenceNumericWithCharacter;
+    } else if (isAnyNum2) {
       if (isDefaultNum1) {
         msg =
             "nonstandard: Equivalence set contains '%s' that is a default "
@@ -479,12 +513,16 @@ bool EquivalenceSets::CheckCanEquivalence(
         msg = "nonstandard: Equivalence set contains '%s' and '%s' that are "
               "numeric sequence types with non-default kinds"_port_en_US;
       }
+      feature = LanguageFeature::EquivalenceNonDefaultNumeric;
     }
   }
-  if (msg &&
-      (!context_.IsInModuleFile(source) ||
-          msg->severity() == parser::Severity::Error)) {
-    context_.Say(source, std::move(*msg), sym1.name(), sym2.name());
+  if (msg) {
+    if (feature) {
+      context_.Warn(
+          *feature, source, std::move(*msg), sym1.name(), sym2.name());
+    } else {
+      context_.Say(source, std::move(*msg), sym1.name(), sym2.name());
+    }
     return false;
   }
   return true;
@@ -525,12 +563,14 @@ bool EquivalenceSets::CheckDesignator(const parser::Designator &designator) {
             const auto &range{std::get<parser::SubstringRange>(x.t)};
             bool ok{CheckDataRef(designator.source, dataRef)};
             if (const auto &lb{std::get<0>(range.t)}) {
-              ok &= CheckSubstringBound(lb->thing.thing.value(), true);
+              ok &= CheckSubstringBound(
+                  parser::UnwrapRef<parser::Expr>(lb), true);
             } else {
               currObject_.substringStart = 1;
             }
             if (const auto &ub{std::get<1>(range.t)}) {
-              ok &= CheckSubstringBound(ub->thing.thing.value(), false);
+              ok &= CheckSubstringBound(
+                  parser::UnwrapRef<parser::Expr>(ub), false);
             }
             return ok;
           },
@@ -550,8 +590,8 @@ bool EquivalenceSets::CheckDataRef(
             return false;
           },
           [&](const common::Indirection<parser::ArrayElement> &elem) {
-            bool ok{CheckDataRef(source, elem.value().base)};
-            for (const auto &subscript : elem.value().subscripts) {
+            bool ok{CheckDataRef(source, elem.value().Base())};
+            for (const auto &subscript : elem.value().Subscripts()) {
               ok &= common::visit(
                   common::visitors{
                       [&](const parser::SubscriptTriplet &) {
@@ -561,7 +601,8 @@ bool EquivalenceSets::CheckDataRef(
                         return false;
                       },
                       [&](const parser::IntExpr &y) {
-                        return CheckArrayBound(y.thing.value());
+                        return CheckArrayBound(
+                            parser::UnwrapRef<parser::Expr>(y));
                       },
                   },
                   subscript.u);
@@ -795,7 +836,11 @@ void SymbolMapper::MapSymbolExprs(Symbol &symbol) {
               proc.set_procInterfaces(
                   *mappedSymbol, BypassGeneric(mappedSymbol->GetUltimate()));
             } else if (const DeclTypeSpec * mappedType{MapType(proc.type())}) {
-              proc.set_type(*mappedType);
+              if (proc.type()) {
+                CHECK(*proc.type() == *mappedType);
+              } else {
+                proc.set_type(*mappedType);
+              }
             }
             if (proc.init()) {
               if (const Symbol * mapped{MapSymbol(*proc.init())}) {

@@ -201,13 +201,8 @@ protected:
 
 LanguageRuntime *LanguageRuntime::FindPlugin(Process *process,
                                              lldb::LanguageType language) {
-  LanguageRuntimeCreateInstance create_callback;
-  for (uint32_t idx = 0;
-       (create_callback =
-            PluginManager::GetLanguageRuntimeCreateCallbackAtIndex(idx)) !=
-       nullptr;
-       ++idx) {
-    if (LanguageRuntime *runtime = create_callback(process, language))
+  for (auto &cbs : PluginManager::GetLanguageRuntimeCallbacks()) {
+    if (LanguageRuntime *runtime = cbs.create_callback(process, language))
       return runtime;
   }
   return nullptr;
@@ -218,17 +213,10 @@ LanguageRuntime::LanguageRuntime(Process *process) : Runtime(process) {}
 BreakpointPreconditionSP
 LanguageRuntime::GetExceptionPrecondition(LanguageType language,
                                           bool throw_bp) {
-  LanguageRuntimeCreateInstance create_callback;
-  for (uint32_t idx = 0;
-       (create_callback =
-            PluginManager::GetLanguageRuntimeCreateCallbackAtIndex(idx)) !=
-       nullptr;
-       idx++) {
-    if (auto precondition_callback =
-            PluginManager::GetLanguageRuntimeGetExceptionPreconditionAtIndex(
-                idx)) {
+  for (auto &cbs : PluginManager::GetLanguageRuntimeCallbacks()) {
+    if (cbs.precondition_callback) {
       if (BreakpointPreconditionSP precond =
-              precondition_callback(language, throw_bp))
+              cbs.precondition_callback(language, throw_bp))
         return precond;
     }
   }
@@ -277,6 +265,11 @@ LanguageRuntime::GetRuntimeUnwindPlan(Thread &thread, RegisterContext *regctx,
   return UnwindPlanSP();
 }
 
+StructuredData::ObjectSP
+LanguageRuntime::GetLanguageSpecificData(SymbolContext sc) {
+  return {};
+}
+
 void LanguageRuntime::InitializeCommands(CommandObject *parent) {
   if (!parent)
     return;
@@ -284,17 +277,10 @@ void LanguageRuntime::InitializeCommands(CommandObject *parent) {
   if (!parent->IsMultiwordObject())
     return;
 
-  LanguageRuntimeCreateInstance create_callback;
-
-  for (uint32_t idx = 0;
-       (create_callback =
-            PluginManager::GetLanguageRuntimeCreateCallbackAtIndex(idx)) !=
-       nullptr;
-       ++idx) {
-    if (LanguageRuntimeGetCommandObject command_callback =
-            PluginManager::GetLanguageRuntimeGetCommandObjectAtIndex(idx)) {
+  for (auto &cbs : PluginManager::GetLanguageRuntimeCallbacks()) {
+    if (cbs.command_callback) {
       CommandObjectSP command =
-          command_callback(parent->GetCommandInterpreter());
+          cbs.command_callback(parent->GetCommandInterpreter());
       if (command) {
         // the CommandObject vended by a Language plugin cannot be created once
         // and cached because we may create multiple debuggers and need one

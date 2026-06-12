@@ -23,10 +23,10 @@ on the ARMv6 and ARMv7 architectures and may be inapplicable to older chips.
    choices when using CMake. Autoconf usage is deprecated as of 3.8.
 
    Building LLVM/Clang in ``Release`` mode is preferred since it consumes
-   a lot less memory. Otherwise, the building process will very likely
+   a lot less memory. Otherwise, the build process will very likely
    fail due to insufficient memory. It's also a lot quicker to only build
    the relevant back-ends (ARM and AArch64), since it's very unlikely that
-   you'll use an ARM board to cross-compile to other arches. If you're
+   you'll use an ARM board to cross-compile to other architectures. If you're
    running Compiler-RT tests, also include the x86 back-end, or some tests
    will fail.
 
@@ -48,15 +48,15 @@ on the ARMv6 and ARMv7 architectures and may be inapplicable to older chips.
    ``make -jN check-all`` or ``ninja check-all`` will run all compiler tests. For
    running the test suite, please refer to :doc:`TestingGuide`.
 
-#. If you are building LLVM/Clang on an ARM board with 1G of memory or less,
-   please use ``gold`` rather then GNU ``ld``. In any case it is probably a good
+#. If you are building LLVM/Clang on an ARM board with 1 GB of memory or less,
+   please use ``gold`` rather than GNU ``ld``. In any case, it is probably a good
    idea to set up a swap partition, too.
 
    .. code-block:: bash
 
      $ sudo ln -sf /usr/bin/ld /usr/bin/ld.gold
 
-#. ARM development boards can be unstable and you may experience that cores
+#. ARM development boards can be unstable, and you may experience that cores
    are disappearing, caches being flushed on every big.LITTLE switch, and
    other similar issues.  To help ease the effect of this, set the Linux
    scheduler to "performance" on **all** cores using this little script:
@@ -73,12 +73,12 @@ on the ARMv6 and ARMv7 architectures and may be inapplicable to older chips.
    problems.
 
 #. Running the build on SD cards is ok, but they are more prone to failures
-   than good quality USB sticks, and those are more prone to failures than
-   external hard-drives (those are also a lot faster). So, at least, you
+   than good-quality USB sticks, and those are more prone to failures than
+   external hard drives (those are also a lot faster). So, at least, you
    should consider to buy a fast USB stick.  On systems with a fast eMMC,
    that's a good option too.
 
 #. Make sure you have a decent power supply (dozens of dollars worth) that can
-   provide *at least* 4 amperes, this is especially important if you use USB
-   devices with your board. Externally powered USB/SATA harddrives are even
+   provide *at least* 4 amperes. This is especially important if you use USB
+   devices with your board. Externally powered USB/SATA hard drives are even
    better than having a good power supply.

@@ -29,16 +29,21 @@ using testing::Not;
 // %i in the Symbolizer Markup Format spec
 #define I_REGEX "(0x[0-9a-fA-F]+|0[0-7]+|[0-9]+)"
 
-#if defined(HAVE_BACKTRACE) && ENABLE_BACKTRACES && HAVE_LINK_H &&             \
+#if defined(HAVE_BACKTRACE) && ENABLE_BACKTRACES &&                            \
     (defined(__linux__) || defined(__FreeBSD__) ||                             \
      defined(__FreeBSD_kernel__) || defined(__NetBSD__))
+// Test relies on the binary this test is linked into having a GNU build ID
+// note, which is not universally enabled by default (even when using Clang).
+// Disable until we can reliably detect whether this is the case and skip it if
+// not. See https://github.com/llvm/llvm-project/issues/168891.
 TEST(SignalsTest, PrintsSymbolizerMarkup) {
-  auto Exit =
-      make_scope_exit([]() { unsetenv("LLVM_ENABLE_SYMBOLIZER_MARKUP"); });
+  scope_exit Exit([]() { unsetenv("LLVM_ENABLE_SYMBOLIZER_MARKUP"); });
   setenv("LLVM_ENABLE_SYMBOLIZER_MARKUP", "1", 1);
   std::string Res;
   raw_string_ostream RawStream(Res);
   PrintStackTrace(RawStream);
+  if (!StringRef(Res).contains("SupportTests"))
+    GTEST_SKIP() << "build ID could not be found for the main binary";
   EXPECT_THAT(Res, MatchesRegex(TAG_BEGIN "reset" TAG_END ".*"));
   // Module line for main binary
   EXPECT_THAT(Res,
@@ -53,7 +58,7 @@ TEST(SignalsTest, PrintsSymbolizerMarkup) {
 }
 
 TEST(SignalsTest, SymbolizerMarkupDisabled) {
-  auto Exit = make_scope_exit([]() { unsetenv("LLVM_DISABLE_SYMBOLIZATION"); });
+  scope_exit Exit([]() { unsetenv("LLVM_DISABLE_SYMBOLIZATION"); });
   setenv("LLVM_DISABLE_SYMBOLIZATION", "1", 1);
   std::string Res;
   raw_string_ostream RawStream(Res);

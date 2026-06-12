@@ -18,9 +18,11 @@ using namespace presburger;
 bool Identifier::isEqual(const Identifier &other) const {
   if (value == nullptr || other.value == nullptr)
     return false;
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   assert(value != other.value ||
          (value == other.value && idType == other.idType &&
           "Values of Identifiers are equal but their types do not match."));
+#endif
   return value == other.value;
 }
 

@@ -20,5 +20,7 @@
 
 @property(nullable) __SVBfloat16_t bf16; // expected-error {{cannot be applied to non-pointer type}}
 
+@property(nullable) __SVMfloat8_t mf8; // expected-error {{cannot be applied to non-pointer type}}
+
 @property(nullable) __SVBool_t b8; // expected-error {{cannot be applied to non-pointer type}}
 @end

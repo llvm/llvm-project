@@ -12,6 +12,12 @@ if(NOT MSVC)
     SOURCE c-index-test.c
     PROPERTY COMPILE_FLAGS "-std=gnu89"
     )
+  if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+    set_property(
+      SOURCE c-index-test.c
+      APPEND_STRING PROPERTY COMPILE_FLAGS " -Wno-c11-extensions"
+      )
+  endif()
 endif()
 
 if (LLVM_BUILD_STATIC)
@@ -27,9 +33,11 @@ else()
     libclang
     clangAST
     clangBasic
+    clangDriver
     clangFrontend
     clangIndex
     clangSerialization
+    clangUnifiedSymbolResolution
   )
 endif()
 

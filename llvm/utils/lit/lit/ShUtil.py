@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 import itertools
 
 import lit.util
@@ -51,9 +50,9 @@ class ShLexer:
 
     def lex_arg_slow(self, c):
         if c in "'\"":
-            str = self.lex_arg_quoted(c)
+            parts = [self.lex_arg_quoted(c)]
         else:
-            str = c
+            parts = [c]
         unquoted_glob_char = False
         quoted_glob_char = False
         while self.pos != self.end:
@@ -65,12 +64,13 @@ class ShLexer:
                 # we don't have to track whitespace tokens.
 
                 # If the parse string isn't an integer, do the usual thing.
-                if not str.isdigit():
+                fd_cand = "".join(parts)
+                if not fd_cand.isdigit():
                     break
 
                 # Otherwise, lex the operator and convert to a redirection
                 # token.
-                num = int(str)
+                num = int(fd_cand)
                 tok = self.lex_one_token()
                 assert isinstance(tok, tuple) and len(tok) == 1
                 return (tok[0], num)
@@ -79,7 +79,7 @@ class ShLexer:
                 quoted_arg = self.lex_arg_quoted(c)
                 if "*" in quoted_arg or "?" in quoted_arg:
                     quoted_glob_char = True
-                str += quoted_arg
+                parts.append(quoted_arg)
             elif not self.win32Escapes and c == "\\":
                 # Outside of a string, '\\' escapes everything.
                 self.eat()
@@ -87,13 +87,13 @@ class ShLexer:
                     lit.util.warning(
                         "escape at end of quoted argument in: %r" % self.data
                     )
-                    return str
-                str += self.eat()
+                    return "".join(parts)
+                parts.append(self.eat())
             elif c in "*?":
                 unquoted_glob_char = True
-                str += self.eat()
+                parts.append(self.eat())
             else:
-                str += self.eat()
+                parts.append(self.eat())
         # If a quote character is present, lex_arg_quoted will remove the quotes
         # and append the argument directly.  This causes a problem when the
         # quoted portion contains a glob character, as the character will no
@@ -107,14 +107,20 @@ class ShLexer:
         # and flag the user of a non-portable test (which could almost certainly
         # be re-written to work correctly without triggering this).
         assert not (quoted_glob_char and unquoted_glob_char)
-        return GlobItem(str) if unquoted_glob_char else str
+        token = "".join(parts)
+        return GlobItem(token) if unquoted_glob_char else token
 
     def lex_arg_quoted(self, delim):
-        str = ""
+        parts = []
         while self.pos != self.end:
             c = self.eat()
             if c == delim:
-                return str
+                return "".join(parts)
+            # LLDB uses "$" at the start of global variable names; it should
+            # not be escaped nor dropped.
+            elif c == "\\" and self.look() == "$" and delim == '"':
+                c = self.eat()
+                parts.append(c)
             elif c == "\\" and delim == '"':
                 # Inside a '"' quoted string, '\\' only escapes the quote
                 # character and backslash, otherwise it is preserved.
@@ -122,18 +128,18 @@ class ShLexer:
                     lit.util.warning(
                         "escape at end of quoted argument in: %r" % self.data
                     )
-                    return str
+                    return "".join(parts)
                 c = self.eat()
-                if c == '"':  #
-                    str += '"'
+                if c == '"':
+                    parts.append('"')
                 elif c == "\\":
-                    str += "\\"
+                    parts.append("\\")
                 else:
-                    str += "\\" + c
+                    parts.extend(["\\", c])
             else:
-                str += c
+                parts.append(c)
         lit.util.warning("missing quote character in %r" % self.data)
-        return str
+        return "".join(parts)
 
     def lex_arg_checked(self, c):
         pos = self.pos

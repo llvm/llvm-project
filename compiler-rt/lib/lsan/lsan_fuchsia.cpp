@@ -21,6 +21,11 @@
 
 using namespace __lsan;
 
+namespace __sanitizer {
+// LSan doesn't need to do anything else special in the startup hook.
+void EarlySanitizerInit() {}
+}  // namespace __sanitizer
+
 namespace __lsan {
 
 void LsanOnDeadlySignal(int signo, void *siginfo, void *context) {}

@@ -1,13 +1,13 @@
 // REQUIRES: arm
 
 // RUN: llvm-mc -filetype=obj -triple=armv7-pc-linux %s -o %t.o
-// RUN: ld.lld %t.o -o %t.so -shared
+// RUN: ld.lld --xosegment %t.o -o %t.so -shared
 // RUN: llvm-readelf -l %t.so | FileCheck --implicit-check-not=LOAD %s
 
 // RUN: echo ".section .foo,\"ax\"; \
 // RUN:       bx lr" > %t.s
 // RUN: llvm-mc -filetype=obj -triple=armv7-pc-linux %t.s -o %t2.o
-// RUN: ld.lld %t.o %t2.o -o %t.so -shared
+// RUN: ld.lld --xosegment %t.o %t2.o -o %t.so -shared
 // RUN: llvm-readelf -l %t.so | FileCheck --check-prefix=DIFF --implicit-check-not=LOAD %s
 
 // CHECK:      LOAD           0x000000 0x00000000 0x00000000 0x0016d 0x0016d  R 0x10000

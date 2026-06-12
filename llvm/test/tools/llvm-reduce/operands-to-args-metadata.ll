@@ -1,4 +1,4 @@
-; RUN: llvm-reduce %s -o %t --delta-passes=operands-to-args --test FileCheck --test-arg %s --test-arg --input-file
+; RUN: llvm-reduce -abort-on-invalid-reduction %s -o %t --delta-passes=operands-to-args --test FileCheck --test-arg %s --test-arg --input-file
 
 ; CHECK: @foo
 

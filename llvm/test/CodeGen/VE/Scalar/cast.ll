@@ -568,6 +568,44 @@ define float @ull2f(i64 %x) {
   ret float %r
 }
 
+define float @ull2f_nneg(i64 %x) {
+; CHECK-LABEL: ull2f_nneg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cvt.d.l %s0, %s0
+; CHECK-NEXT:    cvt.s.d %s0, %s0
+; CHECK-NEXT:    b.l.t (, %s10)
+  %r = uitofp nneg i64 %x to float
+  ret float %r
+}
+
+define float @ull2f_strict(i32 %x) {
+; CHECK-LABEL: ull2f_strict:
+; CHECK:     # %bb.0:
+; CHECK-NEXT:	adds.l %s11, -16, %s11
+; CHECK-NEXT:		brge.l.t %s11, %s8, .LBB58_2
+; CHECK-NEXT:	# %bb.1:
+; CHECK-NEXT:		ld %s61, 24(, %s14)
+; CHECK-NEXT:		or %s62, 0, %s0
+; CHECK-NEXT:		lea %s63, 315
+; CHECK-NEXT:		shm.l %s63, (%s61)
+; CHECK-NEXT:		shm.l %s8, 8(%s61)
+; CHECK-NEXT:		shm.l %s11, 16(%s61)
+; CHECK-NEXT:		monc
+; CHECK-NEXT:		or %s0, 0, %s62
+; CHECK-NEXT:	.LBB58_2:
+; CHECK-NEXT:		lea %s1, 1127219200
+; CHECK-NEXT:		stl %s1, 12(, %s11)
+; CHECK-NEXT:		stl %s0, 8(, %s11)
+; CHECK-NEXT:		ld %s0, 8(, %s11)
+; CHECK-NEXT:		lea.sl %s1, 1127219200
+; CHECK-NEXT:		fsub.d %s0, %s0, %s1
+; CHECK-NEXT:		cvt.s.d %s0, %s0
+; CHECK-NEXT:		adds.l %s11, 16, %s11
+; CHECK-NEXT:		b.l.t (, %s10)
+  %val = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %x, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  ret float %val
+}
+
 define double @ull2d(i64 %x) {
 ; CHECK-LABEL: ull2d:
 ; CHECK:       # %bb.0:

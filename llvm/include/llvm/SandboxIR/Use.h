@@ -14,6 +14,7 @@
 #define LLVM_SANDBOXIR_USE_H
 
 #include "llvm/IR/Use.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm::sandboxir {
@@ -21,7 +22,19 @@ namespace llvm::sandboxir {
 class Context;
 class Value;
 class User;
+class OperandUseIterator;
+class UserUseIterator;
 class CallBase;
+class CallBrInst;
+class PHINode;
+
+// Forward declare instruction wrapper classes so qualified friend
+// declarations below refer to SandboxIR classes instead of introducing new
+// unqualified declarations.
+#define DEF_INSTR(ID, OPC, CLASS) class CLASS;
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef DEF_INSTR
 
 /// Represents a Def-use/Use-def edge in SandboxIR.
 /// NOTE: Unlike llvm::Use, this is not an integral part of the use-def chains.
@@ -37,19 +50,25 @@ class Use {
       : LLVMUse(LLVMUse), Usr(Usr), Ctx(&Ctx) {}
   Use() : LLVMUse(nullptr), Ctx(nullptr) {}
 
-  friend class Value;              // For constructor
-  friend class User;               // For constructor
-  friend class OperandUseIterator; // For constructor
-  friend class UserUseIterator;    // For accessing members
-  friend class CallBase;           // For LLVMUse
+  friend ::llvm::sandboxir::Value;              // For constructor
+  friend ::llvm::sandboxir::User;               // For constructor
+  friend ::llvm::sandboxir::OperandUseIterator; // For constructor
+  friend ::llvm::sandboxir::UserUseIterator;    // For accessing members
+  friend ::llvm::sandboxir::CallBase;           // For LLVMUse
+  friend ::llvm::sandboxir::PHINode;            // For LLVMUse
+  // Friend instructions so that they can call the constructor if needed.
+#define DEF_INSTR(ID, OPC, CLASS) friend ::llvm::sandboxir::CLASS;
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef DEF_INSTR
 
 public:
   operator Value *() const { return get(); }
-  Value *get() const;
-  void set(Value *V);
+  LLVM_ABI Value *get() const;
+  LLVM_ABI void set(Value *V);
   class User *getUser() const { return Usr; }
-  unsigned getOperandNo() const;
-  void swap(Use &OtherUse);
+  LLVM_ABI unsigned getOperandNo() const;
+  LLVM_ABI void swap(Use &OtherUse);
   Context *getContext() const { return Ctx; }
   bool operator==(const Use &Other) const {
     assert(Ctx == Other.Ctx && "Contexts differ!");
@@ -57,7 +76,7 @@ public:
   }
   bool operator!=(const Use &Other) const { return !(*this == Other); }
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const;
+  LLVM_ABI_FOR_TEST void dumpOS(raw_ostream &OS) const;
   void dump() const;
 #endif // NDEBUG
 };

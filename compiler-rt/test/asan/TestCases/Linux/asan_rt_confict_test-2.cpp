@@ -5,6 +5,7 @@
 // RUN: %clangxx_asan_static %s %ld_flags_rpath_exe -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
+// UNSUPPORTED: target={{.*}}
 // REQUIRES: asan-dynamic-runtime
 // XFAIL: android
 

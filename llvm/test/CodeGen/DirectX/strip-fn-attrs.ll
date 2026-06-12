@@ -1,4 +1,4 @@
-; RUN: llc %s --filetype=asm -o - | FileCheck %s
+; RUN: llc %s -o - | FileCheck %s
 target triple = "dxil-unknown-shadermodel6.7-library"
 
 ; CHECK: Function Attrs: nounwind memory(none)
@@ -12,4 +12,4 @@ define dso_local float @fma(float %0, float %1, float %2) local_unnamed_addr #0 
 ; CHECK: attributes #0 = { nounwind memory(none) }
 ; CHECK-NOT: attributes #
 
-attributes #0 = { norecurse nounwind readnone willreturn }
+attributes #0 = { norecurse nounwind readnone willreturn "hlsl.export"}

@@ -20,29 +20,29 @@ def OpWithAttr : NS_Op<"op_with_attr">{
 // Test required and optional properties
 // ---
 
-def DefaultI64Array : IntArrayProperty<"int64_t"> {
+def DefaultI64Array : IntArrayProp<I64Prop> {
   let defaultValue = "::llvm::ArrayRef<int64_t>{}";
   let storageTypeValueOverride = "::llvm::SmallVector<int64_t>{}";
 }
 
 def OpWithProps : NS_Op<"op_with_props"> {
   let arguments = (ins
-    BoolProperty:$flag,
-    StringProperty:$string,
-    ArrayProperty<StringProperty>:$strings,
-    DefaultValuedProperty<I32Property, "0">:$default_int,
-    OptionalProperty<I64Property>:$optional,
-    DefaultI64Array:$intArray
+    BoolProp:$flag,
+    StringProp:$string,
+    ArrayProp<StringProp>:$strings,
+    DefaultValuedProp<I32Prop, "0">:$default_int,
+    OptionalProp<I64Prop>:$optional,
+    DefaultI64Array:$value
   );
 }
 
 /// Check that optional arguments to builders only go at the end.
 def OpWithSomeOptionalProperties : NS_Op<"op_with_some_optional_props"> {
   let arguments = (ins
-    OptionalProperty<I64Property>:$mustSpecify,
-    I64Property:$required,
-    OptionalProperty<StringProperty>:$canOmit,
-    DefaultValuedProperty<I64Property, "-1">:$canOmit2
+    OptionalProp<I64Prop>:$mustSpecify,
+    I64Prop:$required,
+    OptionalProp<StringProp>:$canOmit,
+    DefaultValuedProp<I64Prop, "-1">:$canOmit2
   );
 }
 
@@ -51,10 +51,10 @@ def OpWithSomeOptionalProperties : NS_Op<"op_with_some_optional_props"> {
 def OpWithOptionalPropsAndAttrs :
     NS_Op<"with_some_optional_props_and_atts"> {
   let arguments = (ins
-    OptionalProperty<BoolProperty>:$mustSpecify,
+    OptionalProp<BoolProp>:$mustSpecify,
     OptionalAttr<BoolAttr>:$ambiguous,
     OptionalAttr<I32Attr>:$canOmit,
-    OptionalProperty<I32Property>:$canOmitProp
+    OptionalProp<I32Prop>:$canOmitProp
   );
 }
 
@@ -94,10 +94,10 @@ def OpWithOptionalPropsAndAttrs :
 // DECL: ::llvm::ArrayRef<std::string> getStrings()
 // DECL: using default_intTy = int32_t;
 // DECL: default_intTy default_int = 0;
-// DECL: intArrayTy intArray = ::llvm::SmallVector<int64_t>{};
-// DECL: ::llvm::ArrayRef<int64_t> getIntArray()
+// DECL: valueTy value = ::llvm::SmallVector<int64_t>{};
+// DECL: ::llvm::ArrayRef<int64_t> getValue()
 // DECL: return ::llvm::ArrayRef<int64_t>{propStorage}
-// DECL: void setIntArray(::llvm::ArrayRef<int64_t> propValue)
+// DECL: void setValue(::llvm::ArrayRef<int64_t> propValue)
 // DECL: propStorage.assign
 // DECL-LABEL: class OpWithProps :
 // DECL: setString(::llvm::StringRef newString)
@@ -111,13 +111,14 @@ def OpWithOptionalPropsAndAttrs :
 // DECL-SAME: ::llvm::ArrayRef<std::string> strings,
 // DECL-SAME: /*optional*/int32_t default_int = 0,
 // DECL-SAME: /*optional*/std::optional<int64_t> optional = std::nullopt,
-// DECL-SAME: /*optional*/::llvm::ArrayRef<int64_t> intArray = ::llvm::ArrayRef<int64_t>{});
+// DECL-SAME: /*optional*/::llvm::ArrayRef<int64_t> value = ::llvm::ArrayRef<int64_t>{});
 
 // DEFS-LABEL: OpWithProps::computePropertiesHash
-// DEFS: hash_intArray
-// DEFS-NEXT: return ::llvm::hash_value(::llvm::ArrayRef<int64_t>{propStorage})
-// DEFS: ::llvm::hash_value(prop.optional)
-// DEFS: hash_intArray(prop.intArray)
+// DEFS: hash_value_
+// DEFS: using ::llvm::hash_value;
+// DEFS-NEXT: return hash_value(::llvm::ArrayRef<int64_t>{propStorage})
+// DEFS: hash_value(prop.optional)
+// DEFS: hash_value_(prop.value)
 
 // -----
 

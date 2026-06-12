@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=ve -mattr=+vpu | FileCheck %s
+; RUN: llc < %s -mtriple=ve -mattr=+vpu | FileCheck %s
 
 declare <256 x i32> @llvm.vp.and.v256i32(<256 x i32>, <256 x i32>, <256 x i1>, i32)
 

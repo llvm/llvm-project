@@ -1,8 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-pc-linux -mrelocation-model static -O1 -disable-llvm-passes -emit-llvm %s -o - | FileCheck --check-prefix=STATIC %s
 // RUN: %clang_cc1 -triple x86_64-pc-linux -mrelocation-model static -fno-plt -O1 -disable-llvm-passes -emit-llvm %s -o - | FileCheck --check-prefix=NOPLT %s
 // RUN: %clang_cc1 -triple x86_64-w64-mingw32 -O1 -disable-llvm-passes -emit-llvm %s -o - | FileCheck --check-prefix=MINGW %s
+// RUN: %clang_cc1 -triple x86_64-pc-cygwin   -O1 -disable-llvm-passes -emit-llvm %s -o - | FileCheck --check-prefix=MINGW %s
 
-// STATIC-DAG: @_ZTV1C = linkonce_odr dso_local unnamed_addr constant
+// STATIC-DAG: @_ZTV1C = linkonce_odr dso_local constant
 // STATIC-DAG: @_ZTS1C = linkonce_odr dso_local constant
 // STATIC-DAG: @_ZTI1C = linkonce_odr dso_local constant
 // STATIC-DAG: @_ZZ14useStaticLocalvE3obj = linkonce_odr dso_local global
@@ -11,7 +12,7 @@
 // STATIC-DAG: define dso_local void @_ZN1CC1Ev(
 // STATIC-DAG: define linkonce_odr dso_local void @_ZN1C3fooEv(
 
-// NOPLT-DAG: @_ZTV1C = linkonce_odr dso_local unnamed_addr constant
+// NOPLT-DAG: @_ZTV1C = linkonce_odr dso_local constant
 // NOPLT-DAG: @_ZTS1C = linkonce_odr dso_local constant
 // NOPLT-DAG: @_ZTI1C = linkonce_odr dso_local constant
 // NOPLT-DAG: @_ZZ14useStaticLocalvE3obj = linkonce_odr dso_local global
@@ -20,7 +21,7 @@
 // NOPLT-DAG: define dso_local void @_ZN1CC1Ev(
 // NOPLT-DAG: define linkonce_odr dso_local void @_ZN1C3fooEv(
 
-// MINGW-DAG: @_ZTV1C = linkonce_odr dso_local unnamed_addr constant
+// MINGW-DAG: @_ZTV1C = linkonce_odr dso_local constant
 // MINGW-DAG: @_ZTS1C = linkonce_odr dso_local constant
 // MINGW-DAG: @_ZTI1C = linkonce_odr dso_local constant
 // MINGW-DAG: @_ZZ14useStaticLocalvE3obj = linkonce_odr dso_local global

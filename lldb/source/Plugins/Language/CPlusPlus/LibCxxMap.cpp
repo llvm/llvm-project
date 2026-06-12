@@ -8,17 +8,17 @@
 
 #include "LibCxx.h"
 
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
+#include "llvm/Support/ErrorExtras.h"
 #include <cstdint>
 #include <locale>
 #include <optional>
@@ -197,11 +197,10 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
-
 private:
+  llvm::Expected<uint32_t>
+  CalculateNumChildrenForOldCompressedPairLayout(ValueObject &pair);
+
   /// Returns the ValueObject for the __tree_node type that
   /// holds the key/value pair of the node at index \ref idx.
   ///
@@ -235,9 +234,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
   ~LibCxxMapIteratorSyntheticFrontEnd() override = default;
 
@@ -254,6 +251,19 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
     Update();
 }
 
+llvm::Expected<uint32_t>
+lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
+    CalculateNumChildrenForOldCompressedPairLayout(ValueObject &pair) {
+  auto node_sp = GetFirstValueOfLibCXXCompressedPair(pair);
+
+  if (!node_sp)
+    return 0;
+
+  m_count = node_sp->GetValueAsUnsigned(0);
+
+  return m_count;
+}
+
 llvm::Expected<uint32_t> lldb_private::formatters::
     LibcxxStdMapSyntheticFrontEnd::CalculateNumChildren() {
   if (m_count != UINT32_MAX)
@@ -262,16 +272,15 @@ llvm::Expected<uint32_t> lldb_private::formatters::
   if (m_tree == nullptr)
     return 0;
 
-  ValueObjectSP size_node(m_tree->GetChildMemberWithName("__pair3_"));
-  if (!size_node)
-    return 0;
+  auto [size_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(*m_tree, "__size_", "__pair3_");
+  if (!size_sp)
+    return llvm::createStringError("unexpected std::map layout");
 
-  size_node = GetFirstValueOfLibCXXCompressedPair(*size_node);
+  if (is_compressed_pair)
+    return CalculateNumChildrenForOldCompressedPairLayout(*size_sp);
 
-  if (!size_node)
-    return 0;
-
-  m_count = size_node->GetValueAsUnsigned(0);
+  m_count = size_sp->GetValueAsUnsigned(0);
   return m_count;
 }
 
@@ -339,14 +348,14 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
   // all items named __value_
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  auto potential_child_sp = key_val_sp->Clone(ConstString(name.GetString()));
+  auto potential_child_sp = key_val_sp->Clone(name.GetString());
   if (potential_child_sp) {
     switch (potential_child_sp->GetNumChildrenIgnoringErrors()) {
     case 1: {
       auto child0_sp = potential_child_sp->GetChildAtIndex(0);
       if (child0_sp &&
           (child0_sp->GetName() == g_cc_ || child0_sp->GetName() == g_cc))
-        potential_child_sp = child0_sp->Clone(ConstString(name.GetString()));
+        potential_child_sp = child0_sp->Clone(name.GetString());
       break;
     }
     case 2: {
@@ -355,7 +364,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
       if (child0_sp &&
           (child0_sp->GetName() == g_cc_ || child0_sp->GetName() == g_cc) &&
           child1_sp && child1_sp->GetName() == g_nc)
-        potential_child_sp = child0_sp->Clone(ConstString(name.GetString()));
+        potential_child_sp = child0_sp->Clone(name.GetString());
       break;
     }
     }
@@ -371,21 +380,12 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update() {
   m_tree = m_backend.GetChildMemberWithName("__tree_").get();
   if (!m_tree)
     return lldb::ChildCacheState::eRefetch;
+
   m_root_node = m_tree->GetChildMemberWithName("__begin_node_").get();
   m_node_ptr_type =
       m_tree->GetCompilerType().GetDirectNestedTypeWithName("__node_pointer");
 
   return lldb::ChildCacheState::eRefetch;
-}
-
-bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
-size_t lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
-  return ExtractIndexFromString(name.GetCString());
 }
 
 SyntheticChildrenFrontEnd *
@@ -451,12 +451,12 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
   //
   // std::map stores the actual key/value pair in value_type::__cc_ (or
   // previously __cc).
-  key_value_sp = key_value_sp->Clone(ConstString("pair"));
+  key_value_sp = key_value_sp->Clone("pair");
   if (key_value_sp->GetNumChildrenIgnoringErrors() == 1) {
     auto child0_sp = key_value_sp->GetChildAtIndex(0);
     if (child0_sp &&
         (child0_sp->GetName() == "__cc_" || child0_sp->GetName() == "__cc"))
-      key_value_sp = child0_sp->Clone(ConstString("pair"));
+      key_value_sp = child0_sp->Clone("pair");
   }
 
   m_pair_sp = key_value_sp;
@@ -478,15 +478,11 @@ lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::GetChildAtIndex(
   return m_pair_sp->GetChildAtIndex(idx);
 }
 
-bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
-size_t lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
+llvm::Expected<size_t>
+lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   if (!m_pair_sp)
-    return UINT32_MAX;
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
 
   return m_pair_sp->GetIndexOfChildWithName(name);
 }

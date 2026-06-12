@@ -12,6 +12,7 @@
 
 #include "clang/StaticAnalyzer/Checkers/Taint.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include <optional>
 
@@ -42,10 +43,9 @@ void taint::dumpTaint(ProgramStateRef State) {
   printTaint(State, llvm::errs());
 }
 
-ProgramStateRef taint::addTaint(ProgramStateRef State, const Stmt *S,
-                                const LocationContext *LCtx,
-                                TaintTagType Kind) {
-  return addTaint(State, State->getSVal(S, LCtx), Kind);
+ProgramStateRef taint::addTaint(ProgramStateRef State, const Expr *E,
+                                const StackFrame *SF, TaintTagType Kind) {
+  return addTaint(State, State->getSVal(E, SF), Kind);
 }
 
 ProgramStateRef taint::addTaint(ProgramStateRef State, SVal V,
@@ -144,9 +144,9 @@ ProgramStateRef taint::addPartialTaint(ProgramStateRef State,
   return NewState;
 }
 
-bool taint::isTainted(ProgramStateRef State, const Stmt *S,
-                      const LocationContext *LCtx, TaintTagType Kind) {
-  return !getTaintedSymbolsImpl(State, S, LCtx, Kind, /*ReturnFirstOnly=*/true)
+bool taint::isTainted(ProgramStateRef State, const Expr *E,
+                      const StackFrame *SF, TaintTagType Kind) {
+  return !getTaintedSymbolsImpl(State, E, SF, Kind, /*ReturnFirstOnly=*/true)
               .empty();
 }
 
@@ -167,10 +167,11 @@ bool taint::isTainted(ProgramStateRef State, SymbolRef Sym, TaintTagType Kind) {
 }
 
 std::vector<SymbolRef> taint::getTaintedSymbols(ProgramStateRef State,
-                                                const Stmt *S,
-                                                const LocationContext *LCtx,
+                                                const Expr *E,
+                                                const StackFrame *SF,
                                                 TaintTagType Kind) {
-  return getTaintedSymbolsImpl(State, S, LCtx, Kind, /*ReturnFirstOnly=*/false);
+  return getTaintedSymbolsImpl(State, E, SF, Kind,
+                               /*ReturnFirstOnly=*/false);
 }
 
 std::vector<SymbolRef> taint::getTaintedSymbols(ProgramStateRef State, SVal V,
@@ -191,11 +192,11 @@ std::vector<SymbolRef> taint::getTaintedSymbols(ProgramStateRef State,
 }
 
 std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
-                                                    const Stmt *S,
-                                                    const LocationContext *LCtx,
+                                                    const Expr *E,
+                                                    const StackFrame *SF,
                                                     TaintTagType Kind,
                                                     bool returnFirstOnly) {
-  SVal val = State->getSVal(S, LCtx);
+  SVal val = State->getSVal(E, SF);
   return getTaintedSymbolsImpl(State, val, Kind, returnFirstOnly);
 }
 
@@ -206,6 +207,14 @@ std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
     return getTaintedSymbolsImpl(State, Sym, Kind, returnFirstOnly);
   if (const MemRegion *Reg = V.getAsRegion())
     return getTaintedSymbolsImpl(State, Reg, Kind, returnFirstOnly);
+
+  if (auto LCV = V.getAs<nonloc::LazyCompoundVal>()) {
+    StoreManager &StoreMgr = State->getStateManager().getStoreManager();
+    if (auto DefaultVal = StoreMgr.getDefaultBinding(*LCV)) {
+      return getTaintedSymbolsImpl(State, *DefaultVal, Kind, returnFirstOnly);
+    }
+  }
+
   return {};
 }
 
@@ -255,6 +264,12 @@ std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
   std::vector<SymbolRef> TaintedSymbols;
   if (!Sym)
     return TaintedSymbols;
+
+  // HACK:https://discourse.llvm.org/t/rfc-make-istainted-and-complex-symbols-friends/79570
+  if (const auto &Opts = State->getAnalysisManager().getAnalyzerOptions();
+      Sym->computeComplexity() > Opts.MaxTaintedSymbolComplexity) {
+    return {};
+  }
 
   // Traverse all the symbols this symbol depends on to see if any are tainted.
   for (SymbolRef SubSym : Sym->symbols()) {

@@ -11,29 +11,29 @@ define <4 x float> @bar(ptr %a1p, ptr %a2p, <4 x float> %a3, <4 x float> %a4, <1
 ; CHECK-NEXT:    subq $136, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 144
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm13
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm5 = [3,20,1,17]
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm5 = [3,20,1,17]
 ; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm5
 ; CHECK-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm2[0],ymm3[0],ymm2[1],ymm3[1],ymm2[4],ymm3[4],ymm2[5],ymm3[5]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[2,1,2,3]
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm0 = [4,21,1,17,4,21,5,21]
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [4,21,1,17,4,21,5,21]
 ; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm0
 ; CHECK-NEXT:    vmovaps %zmm0, %zmm6
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm4 = [4,20,1,27]
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm4 = [4,20,1,27]
 ; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm4
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm7 = [5,20,1,19,5,20,5,23]
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} ymm7 = [5,20,1,19,5,20,5,23]
 ; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm7
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm0 = [4,20,1,19,4,20,5,23]
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [4,20,1,19,4,20,5,23]
 ; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm0
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm12 = [4,28,1,17]
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm12 = [4,28,1,17]
 ; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm12
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm8 = [5,20,1,17,5,20,5,21]
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} ymm8 = [5,20,1,17,5,20,5,21]
 ; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm8
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm9 = [4,30,1,22]
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm9 = [4,30,1,22]
 ; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm9
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm10 = [4,22,1,17,4,22,5,21]
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} ymm10 = [4,22,1,17,4,22,5,21]
 ; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm10
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm11 = [4,20,3,18,4,20,7,22]
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} ymm11 = [4,20,3,18,4,20,7,22]
 ; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm11
 ; CHECK-NEXT:    vaddps %xmm10, %xmm11, %xmm2
 ; CHECK-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill

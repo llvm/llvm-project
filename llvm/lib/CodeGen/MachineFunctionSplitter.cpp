@@ -24,11 +24,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/EHUtils.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
+#include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -72,9 +72,7 @@ namespace {
 class MachineFunctionSplitter : public MachineFunctionPass {
 public:
   static char ID;
-  MachineFunctionSplitter() : MachineFunctionPass(ID) {
-    initializeMachineFunctionSplitterPass(*PassRegistry::getPassRegistry());
-  }
+  MachineFunctionSplitter() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Machine Function Splitter Transformation";
@@ -129,6 +127,12 @@ static bool isColdBlock(const MachineBasicBlock &MBB,
 }
 
 bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  // Do not split functions when -basic-block-sections=all is specified.
+  if (MF.getTarget().getBBSectionsType() == llvm::BasicBlockSection::All)
+    return false;
   // We target functions with profile data. Static information in the form
   // of exception handling code may be split to cold if user passes the
   // mfs-split-ehcode flag.
@@ -138,6 +142,14 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
 
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   if (!TII.isFunctionSafeToSplit(MF))
+    return false;
+
+  // Do not split functions with BasicBlockSections profiles as they will
+  // be split by the BasicBlockSections pass.
+  auto BBSectionsProfile =
+      getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
+  if (BBSectionsProfile != nullptr &&
+      BBSectionsProfile->getBBSPR().isFunctionHot(MF.getName()))
     return false;
 
   // Renumbering blocks here preserves the order of the blocks as
@@ -202,6 +214,7 @@ void MachineFunctionSplitter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineModuleInfoWrapperPass>();
   AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
+  AU.addUsedIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
 }
 
 char MachineFunctionSplitter::ID = 0;

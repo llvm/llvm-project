@@ -12,9 +12,9 @@ SECTIONS {
 }
 
 # RUN: not ld.lld -shared 0.o -T 1.lds 2>&1 | FileCheck %s --check-prefix=CHECK1 --match-full-lines --strict-whitespace
-#      CHECK1:{{.*}}:2: malformed number: +
+#      CHECK1:{{.*}}:2: malformed number: {
 # CHECK1-NEXT:>>>   .text + { *(.text) }
-# CHECK1-NEXT:>>>         ^
+# CHECK1-NEXT:>>>           ^
 
 #--- 2.lds
 

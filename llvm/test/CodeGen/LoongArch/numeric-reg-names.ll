@@ -15,9 +15,10 @@ define i32 @main() {
 ; LA32-NEXT:    .cfi_def_cfa_offset 16
 ; LA32-NEXT:    st.w $r1, $r3, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
-; LA32-NEXT:    pcalau12i $r4, %pc_hi20(.str_1)
-; LA32-NEXT:    addi.w $r4, $r4, %pc_lo12(.str_1)
-; LA32-NEXT:    bl %plt(printf)
+; LA32-NEXT:  .Lpcadd_hi0:
+; LA32-NEXT:    pcaddu12i $r4, %pcadd_hi20(.str_1)
+; LA32-NEXT:    addi.w $r4, $r4, %pcadd_lo12(.Lpcadd_hi0)
+; LA32-NEXT:    bl printf
 ; LA32-NEXT:    move $r4, $r0
 ; LA32-NEXT:    ld.w $r1, $r3, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $r3, $r3, 16
@@ -31,7 +32,8 @@ define i32 @main() {
 ; LA64-NEXT:    .cfi_offset 1, -8
 ; LA64-NEXT:    pcalau12i $r4, %pc_hi20(.str_1)
 ; LA64-NEXT:    addi.d $r4, $r4, %pc_lo12(.str_1)
-; LA64-NEXT:    bl %plt(printf)
+; LA64-NEXT:    pcaddu18i $r1, %call36(printf)
+; LA64-NEXT:    jirl $r1, $r1, 0
 ; LA64-NEXT:    move $r4, $r0
 ; LA64-NEXT:    ld.d $r1, $r3, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $r3, $r3, 16

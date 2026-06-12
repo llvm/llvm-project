@@ -106,11 +106,16 @@ public:
     return llvm::DebuggerKind::SCE;
   }
 
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 
   void addClangTargetOptions(
       const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+      llvm::StringRef BoundArch,
       Action::OffloadKind DeviceOffloadingKind) const override;
+
+  void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
 
   llvm::DenormalMode getDefaultDenormalModeForType(
       const llvm::opt::ArgList &DriverArgs, const JobAction &JA,
@@ -128,9 +133,12 @@ public:
                                 const char *Suffix) const = 0;
   virtual const char *getProfileRTLibName() const = 0;
 
+  StringRef getSDKLibraryRootDir() const { return SDKLibraryRootDir; }
+
 private:
-  // We compute the SDK root dir in the ctor, and use it later.
-  std::string SDKRootDir;
+  // We compute the SDK locations in the ctor, and use them later.
+  std::string SDKHeaderRootDir;
+  std::string SDKLibraryRootDir;
 };
 
 // PS4-specific Toolchain class.
@@ -169,7 +177,9 @@ public:
 
   unsigned GetDefaultDwarfVersion() const override { return 5; }
 
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 
   const char *getLinkerBaseName() const override { return "lld"; }
   std::string qualifyPSCmdName(StringRef CmdName) const override {

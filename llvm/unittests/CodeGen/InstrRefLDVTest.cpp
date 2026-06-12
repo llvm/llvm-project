@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -21,7 +22,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
 #include "../lib/CodeGen/LiveDebugValues/InstrRefBasedImpl.h"
@@ -69,7 +69,7 @@ public:
 
   InstrRefLDVTest() : Ctx(), Mod(std::make_unique<Module>("beehives", Ctx)) {}
 
-  void SetUp() {
+  void SetUp() override {
     // Boilerplate that creates a MachineFunction and associated blocks.
 
     Mod->setDataLayout("e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
@@ -81,29 +81,28 @@ public:
       GTEST_SKIP();
 
     TargetOptions Options;
-    Machine = std::unique_ptr<TargetMachine>(T->createTargetMachine(
-        Triple::normalize("x86_64--"), "", "", Options, std::nullopt,
-        std::nullopt, CodeGenOptLevel::Aggressive));
+    Machine = std::unique_ptr<TargetMachine>(
+        T->createTargetMachine(TargetTriple, "", "", Options, std::nullopt,
+                               std::nullopt, CodeGenOptLevel::Aggressive));
 
     auto Type = FunctionType::get(Type::getVoidTy(Ctx), false);
     auto F =
         Function::Create(Type, GlobalValue::ExternalLinkage, "Test", &*Mod);
 
     unsigned FunctionNum = 42;
-    MMI = std::make_unique<MachineModuleInfo>((LLVMTargetMachine *)&*Machine);
+    MMI = std::make_unique<MachineModuleInfo>(Machine.get());
     const TargetSubtargetInfo &STI = *Machine->getSubtargetImpl(*F);
 
-    MF = std::make_unique<MachineFunction>(*F, (LLVMTargetMachine &)*Machine,
-                                           STI, MMI->getContext(), FunctionNum);
+    MF = std::make_unique<MachineFunction>(*F, *Machine, STI, MMI->getContext(),
+                                           FunctionNum);
 
     // Create metadata: CU, subprogram, some blocks and an inline function
     // scope.
     DIBuilder DIB(*Mod);
     OurFile = DIB.createFile("xyzzy.c", "/cave");
-    OurCU =
-        DIB.createCompileUnit(dwarf::DW_LANG_C99, OurFile, "nou", false, "", 0);
-    auto OurSubT =
-        DIB.createSubroutineType(DIB.getOrCreateTypeArray(std::nullopt));
+    OurCU = DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C99),
+                                  OurFile, "nou", false, "", 0);
+    auto OurSubT = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
     OurFunc =
         DIB.createFunction(OurCU, "bees", "", OurFile, 1, OurSubT, 1,
                            DINode::FlagZero, DISubprogram::SPFlagDefinition);
@@ -160,7 +159,7 @@ public:
     // Setup things like the artifical block map, and BlockNo <=> RPO Order
     // mappings.
     LDV->initialSetup(*MF);
-    LDV->LS.initialize(*MF);
+    LDV->LS.scanFunction(*MF);
     addMTracker(MF);
     return &*LDV;
   }
@@ -956,7 +955,7 @@ TEST_F(InstrRefLDVTest, MLocSingleBlock) {
   // Add a new register to be tracked, and insert it into the transfer function
   // as a copy. The output of $rax should be the live-in value of $rsp.
   Register RAX = getRegByName("RAX");
-  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
+  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(MTracker->getLocID(RAX));
   TransferFunc[0].insert({RspLoc, ValueIDNum(0, 1, RspLoc)});
   TransferFunc[0].insert({RaxLoc, ValueIDNum(0, 0, RspLoc)});
   initValueArray(MInLocs, 1, 2);
@@ -981,7 +980,7 @@ TEST_F(InstrRefLDVTest, MLocDiamondBlocks) {
   ASSERT_TRUE(MTracker->getNumLocs() == 1);
   LocIdx RspLoc(0);
   Register RAX = getRegByName("RAX");
-  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
+  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(MTracker->getLocID(RAX));
 
   auto [MInLocs, MOutLocs] = allocValueTables(4, 2);
 
@@ -1136,7 +1135,7 @@ TEST_F(InstrRefLDVTest, MLocDiamondSpills) {
   // There are other locations, for things like xmm0, which we're going to
   // ignore here.
 
-  auto [MInLocs, MOutLocs] = allocValueTables(4, 11);
+  auto [MInLocs, MOutLocs] = allocValueTables(4, 13);
 
   // Transfer function: start with nothing.
   SmallVector<MLocTransferMap, 1> TransferFunc;
@@ -1171,7 +1170,7 @@ TEST_F(InstrRefLDVTest, MLocDiamondSpills) {
   // function.
   TransferFunc[1].insert({ALStackLoc, ALDefInBlk1});
   TransferFunc[1].insert({HAXStackLoc, HAXDefInBlk1});
-  initValueArray(MInLocs, 4, 11);
+  initValueArray(MInLocs, 4, 13);
   placeMLocPHIs(*MF, AllBlocks, MInLocs, TransferFunc);
   EXPECT_EQ(MInLocs[3][ALStackLoc.asU64()], ALPHI);
   EXPECT_EQ(MInLocs[3][AXStackLoc.asU64()], AXPHI);
@@ -1195,7 +1194,7 @@ TEST_F(InstrRefLDVTest, MLocSimpleLoop) {
   ASSERT_TRUE(MTracker->getNumLocs() == 1);
   LocIdx RspLoc(0);
   Register RAX = getRegByName("RAX");
-  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
+  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(MTracker->getLocID(RAX));
 
   auto [MInLocs, MOutLocs] = allocValueTables(3, 2);
 
@@ -1293,7 +1292,7 @@ TEST_F(InstrRefLDVTest, MLocNestedLoop) {
   ASSERT_TRUE(MTracker->getNumLocs() == 1);
   LocIdx RspLoc(0);
   Register RAX = getRegByName("RAX");
-  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
+  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(MTracker->getLocID(RAX));
 
   auto [MInLocs, MOutLocs] = allocValueTables(5, 2);
 
@@ -1494,7 +1493,7 @@ TEST_F(InstrRefLDVTest, MLocNoDominatingLoop) {
   ASSERT_TRUE(MTracker->getNumLocs() == 1);
   LocIdx RspLoc(0);
   Register RAX = getRegByName("RAX");
-  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
+  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(MTracker->getLocID(RAX));
 
   auto [MInLocs, MOutLocs] = allocValueTables(5, 2);
 
@@ -1649,7 +1648,7 @@ TEST_F(InstrRefLDVTest, MLocBadlyNestedLoops) {
   ASSERT_TRUE(MTracker->getNumLocs() == 1);
   LocIdx RspLoc(0);
   Register RAX = getRegByName("RAX");
-  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
+  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(MTracker->getLocID(RAX));
 
   auto [MInLocs, MOutLocs] = allocValueTables(5, 2);
 
@@ -1781,7 +1780,7 @@ TEST_F(InstrRefLDVTest, pickVPHILocDiamond) {
   ASSERT_TRUE(MTracker->getNumLocs() == 1);
   LocIdx RspLoc(0);
   Register RAX = getRegByName("RAX");
-  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
+  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(MTracker->getLocID(RAX));
 
   auto [MInLocs, MOutLocs] = allocValueTables(4, 2);
 
@@ -1977,7 +1976,7 @@ TEST_F(InstrRefLDVTest, pickVPHILocLoops) {
   ASSERT_TRUE(MTracker->getNumLocs() == 1);
   LocIdx RspLoc(0);
   Register RAX = getRegByName("RAX");
-  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
+  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(MTracker->getLocID(RAX));
 
   auto [MInLocs, MOutLocs] = allocValueTables(3, 2);
 
@@ -2105,9 +2104,9 @@ TEST_F(InstrRefLDVTest, pickVPHILocBadlyNestedLoops) {
   ASSERT_TRUE(MTracker->getNumLocs() == 1);
   LocIdx RspLoc(0);
   Register RAX = getRegByName("RAX");
-  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
+  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(MTracker->getLocID(RAX));
   Register RBX = getRegByName("RBX");
-  LocIdx RbxLoc = MTracker->lookupOrTrackRegister(RBX);
+  LocIdx RbxLoc = MTracker->lookupOrTrackRegister(MTracker->getLocID(RBX));
 
   auto [MInLocs, MOutLocs] = allocValueTables(5, 3);
 
@@ -2257,7 +2256,7 @@ TEST_F(InstrRefLDVTest, vlocJoinDiamond) {
   ASSERT_TRUE(MTracker->getNumLocs() == 1);
   LocIdx RspLoc(0);
   Register RAX = getRegByName("RAX");
-  MTracker->lookupOrTrackRegister(RAX);
+  MTracker->lookupOrTrackRegister(MTracker->getLocID(RAX));
 
   DbgOpID LiveInRspID = DbgOpID(false, 0);
   DbgOpID LiveInRaxID = DbgOpID(false, 1);
@@ -2441,7 +2440,7 @@ TEST_F(InstrRefLDVTest, vlocJoinLoops) {
   ASSERT_TRUE(MTracker->getNumLocs() == 1);
   LocIdx RspLoc(0);
   Register RAX = getRegByName("RAX");
-  MTracker->lookupOrTrackRegister(RAX);
+  MTracker->lookupOrTrackRegister(MTracker->getLocID(RAX));
 
   DbgOpID LiveInRspID = DbgOpID(false, 0);
   DbgOpID LiveInRaxID = DbgOpID(false, 1);
@@ -2539,9 +2538,9 @@ TEST_F(InstrRefLDVTest, vlocJoinBadlyNestedLoops) {
   ASSERT_TRUE(MTracker->getNumLocs() == 1);
   LocIdx RspLoc(0);
   Register RAX = getRegByName("RAX");
-  MTracker->lookupOrTrackRegister(RAX);
+  MTracker->lookupOrTrackRegister(MTracker->getLocID(RAX));
   Register RBX = getRegByName("RBX");
-  MTracker->lookupOrTrackRegister(RBX);
+  MTracker->lookupOrTrackRegister(MTracker->getLocID(RBX));
 
   DbgOpID LiveInRspID = DbgOpID(false, 0);
   DbgOpID LiveInRaxID = DbgOpID(false, 1);
@@ -2679,7 +2678,7 @@ TEST_F(InstrRefLDVTest, VLocDiamondBlocks) {
   ASSERT_TRUE(MTracker->getNumLocs() == 1);
   LocIdx RspLoc(0);
   Register RAX = getRegByName("RAX");
-  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
+  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(MTracker->getLocID(RAX));
 
   unsigned EntryBlk = 0, RetBlk = 3;
 
@@ -2897,7 +2896,7 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
   ASSERT_TRUE(MTracker->getNumLocs() == 1);
   LocIdx RspLoc(0);
   Register RAX = getRegByName("RAX");
-  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
+  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(MTracker->getLocID(RAX));
 
   unsigned EntryBlk = 0, LoopBlk = 1;
 
@@ -3176,7 +3175,7 @@ TEST_F(InstrRefLDVTest, VLocNestedLoop) {
   ASSERT_TRUE(MTracker->getNumLocs() == 1);
   LocIdx RspLoc(0);
   Register RAX = getRegByName("RAX");
-  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(RAX);
+  LocIdx RaxLoc = MTracker->lookupOrTrackRegister(MTracker->getLocID(RAX));
 
   unsigned EntryBlk = 0, Loop1Blk = 1, Loop2Blk = 2;
 

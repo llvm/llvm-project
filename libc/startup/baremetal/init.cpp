@@ -6,18 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "startup/baremetal/init.h"
+
 #include "src/__support/macros/config.h"
 #include <stddef.h>
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
-
-extern "C" {
-extern uintptr_t __preinit_array_start[];
-extern uintptr_t __preinit_array_end[];
-extern uintptr_t __init_array_start[];
-extern uintptr_t __init_array_end[];
-}
 
 using InitCallback = void(void);
 

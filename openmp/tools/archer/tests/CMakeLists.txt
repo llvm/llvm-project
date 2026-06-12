@@ -28,7 +28,7 @@ macro(pythonize_bool var)
 endmacro()
 
 pythonize_bool(LIBARCHER_HAVE_LIBATOMIC)
-pythonize_bool(OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS)
+pythonize_bool(OPENMP_TEST_ENABLE_TSAN)
 
 set(ARCHER_TSAN_TEST_DEPENDENCE "")
 if(TARGET tsan)

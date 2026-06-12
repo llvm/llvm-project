@@ -93,7 +93,7 @@ define i16 @load16(i1 %i, ptr %p) {
   ; CHECK-LABEL: @load16.dfsan
 
   ; COMBINE_LOAD_PTR-NEXT: %[[#PO:]] = load i32, ptr getelementptr inbounds ([200 x i32], ptr @__dfsan_arg_origin_tls, i64 0, i64 1), align 4
-  ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__dfsan_arg_tls to i64), i64 2) to ptr), align [[ALIGN]]
+  ; COMBINE_LOAD_PTR-NEXT: %[[#PS:]] = load i8, ptr getelementptr (i8, ptr @__dfsan_arg_tls, i64 2), align [[ALIGN]]
 
   ; CHECK-NEXT:            %[[#INTP:]] = ptrtoint ptr %p to i64
   ; CHECK-NEXT:            %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#MASK]]

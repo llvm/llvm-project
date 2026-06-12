@@ -24,6 +24,9 @@
   entry:
     unreachable
   }
+  define i32 @vbsl_kill_flags(i32 %x) {
+    unreachable
+  }
 ...
 ---
 name:            test1
@@ -139,5 +142,23 @@ body:             |
     ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $r0
     $r0 = MOV_ga_pcrel_ldr @var, implicit-def $r0_r1
     BX_RET 14, $noreg, implicit $r0
+
+...
+---
+name:            vbsl_kill_flags
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $d1
+
+    ; CHECK-LABEL: name: vbsl_kill_flags
+    ; CHECK: liveins: $d1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $d0 = VORRd renamable $d1, renamable $d1, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: renamable $d0 = VBSLd killed renamable $d0, renamable $d1, renamable $d1, 14 /* CC::al */, $noreg
+    ; CHECK-NEXT: BX_RET 14 /* CC::al */, $noreg, implicit $d0
+    renamable $d0 = VBSPd killed renamable $d1, renamable $d1, renamable $d1, 14 /* CC::al */, $noreg
+    BX_RET 14 /* CC::al */, $noreg, implicit $d0
 
 ...

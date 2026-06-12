@@ -7,7 +7,7 @@ STRING_EXTENSION_OUTSIDE(SBValue)
             return self.GetDynamicValue (eDynamicCanRunTarget)
 
         class children_access(object):
-            '''A helper object that will lazily hand out thread for a process when supplied an index.'''
+            '''A helper object that will lazily hand out child values when supplied an index.'''
 
             def __init__(self, sbvalue):
                 self.sbvalue = sbvalue
@@ -28,6 +28,19 @@ STRING_EXTENSION_OUTSIDE(SBValue)
         def get_child_access_object(self):
             '''An accessor function that returns a children_access() object which allows lazy member variable access from a lldb.SBValue object.'''
             return self.children_access (self)
+
+        def get_member_access_object(self):
+            '''An accessor function that returns an interface which provides subscript based lookup of child members.'''
+            class member_access:
+                def __init__(self, valobj):
+                    self.valobj = valobj
+
+                def __getitem__(self, key):
+                    if isinstance(key, str):
+                        return self.valobj.GetChildMemberWithName(key)
+                    raise TypeError("member key must be a string")
+
+            return member_access(self)
 
         def get_value_child_list(self):
             '''An accessor function that returns a list() that contains all children in a lldb.SBValue object.'''
@@ -50,6 +63,7 @@ STRING_EXTENSION_OUTSIDE(SBValue)
 
         children = property(get_value_child_list, None, doc='''A read only property that returns a list() of lldb.SBValue objects for the children of the value.''')
         child = property(get_child_access_object, None, doc='''A read only property that returns an object that can access children of a variable by index (child_value = value.children[12]).''')
+        member = property(get_member_access_object, None, doc='''A read only property that returns an object that can access child members by name.''')
         name = property(GetName, None, doc='''A read only property that returns the name of this value as a string.''')
         type = property(GetType, None, doc='''A read only property that returns a lldb.SBType object that represents the type for this value.''')
         size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes of this value.''')
@@ -72,6 +86,7 @@ STRING_EXTENSION_OUTSIDE(SBValue)
         process = property(GetProcess, None, doc='''A read only property that returns the lldb.SBProcess that this value is associated with, the returned value might be invalid and should be tested.''')
         thread = property(GetThread, None, doc='''A read only property that returns the lldb.SBThread that this value is associated with, the returned value might be invalid and should be tested.''')
         frame = property(GetFrame, None, doc='''A read only property that returns the lldb.SBFrame that this value is associated with, the returned value might be invalid and should be tested.''')
+        parent = property(GetParent, None, doc='''A read only property that returns the lldb.SBValue that is the parent of this value.''')
         num_children = property(GetNumChildren, None, doc='''A read only property that returns the number of child lldb.SBValues that this value has.''')
         unsigned = property(GetValueAsUnsigned, None, doc='''A read only property that returns the value of this SBValue as an usigned integer.''')
         signed = property(GetValueAsSigned, None, doc='''A read only property that returns the value of this SBValue as a signed integer.''')

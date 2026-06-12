@@ -28,122 +28,84 @@
 //   operator+(const basic_string<charT,traits,Allocator>&& lhs,
 //             const basic_string<charT,traits,Allocator>&& rhs); // constexpr since C++20
 
+#include <cassert>
 #include <string>
 #include <utility>
-#include <cassert>
 
-#include "test_macros.h"
-#include "min_allocator.h"
 #include "asan_testing.h"
-
-template <class S>
-TEST_CONSTEXPR_CXX20 void test0(const S& lhs, const S& rhs, const S& x) {
-  assert(lhs + rhs == x);
-  LIBCPP_ASSERT(is_string_asan_correct(lhs + rhs));
-}
-
-#if TEST_STD_VER >= 11
-template <class S>
-TEST_CONSTEXPR_CXX20 void test1(S&& lhs, const S& rhs, const S& x) {
-  assert(std::move(lhs) + rhs == x);
-}
-
-template <class S>
-TEST_CONSTEXPR_CXX20 void test2(const S& lhs, S&& rhs, const S& x) {
-  assert(lhs + std::move(rhs) == x);
-}
-
-template <class S>
-TEST_CONSTEXPR_CXX20 void test3(S&& lhs, S&& rhs, const S& x) {
-  assert(std::move(lhs) + std::move(rhs) == x);
-}
-#endif
+#include "min_allocator.h"
+#include "test_macros.h"
 
 template <class S>
 TEST_CONSTEXPR_CXX20 void test_string() {
-  test0(S(""), S(""), S(""));
-  test0(S(""), S("12345"), S("12345"));
-  test0(S(""), S("1234567890"), S("1234567890"));
-  test0(S(""), S("12345678901234567890"), S("12345678901234567890"));
-  test0(S("abcde"), S(""), S("abcde"));
-  test0(S("abcde"), S("12345"), S("abcde12345"));
-  test0(S("abcde"), S("1234567890"), S("abcde1234567890"));
-  test0(S("abcde"), S("12345678901234567890"), S("abcde12345678901234567890"));
-  test0(S("abcdefghij"), S(""), S("abcdefghij"));
-  test0(S("abcdefghij"), S("12345"), S("abcdefghij12345"));
-  test0(S("abcdefghij"), S("1234567890"), S("abcdefghij1234567890"));
-  test0(S("abcdefghij"), S("12345678901234567890"), S("abcdefghij12345678901234567890"));
-  test0(S("abcdefghijklmnopqrst"), S(""), S("abcdefghijklmnopqrst"));
-  test0(S("abcdefghijklmnopqrst"), S("12345"), S("abcdefghijklmnopqrst12345"));
-  test0(S("abcdefghijklmnopqrst"), S("1234567890"), S("abcdefghijklmnopqrst1234567890"));
-  test0(S("abcdefghijklmnopqrst"), S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
+  const char* test_data[2][4] = {
+      {"", "abcde", "abcdefghij", "abcdefghijklmnopqrst"}, {"", "12345", "1234567890", "12345678901234567890"}};
+
+  const char* results[4][4] = {
+      {"", "12345", "1234567890", "12345678901234567890"},
+      {"abcde", "abcde12345", "abcde1234567890", "abcde12345678901234567890"},
+      {"abcdefghij", "abcdefghij12345", "abcdefghij1234567890", "abcdefghij12345678901234567890"},
+      {"abcdefghijklmnopqrst",
+       "abcdefghijklmnopqrst12345",
+       "abcdefghijklmnopqrst1234567890",
+       "abcdefghijklmnopqrst12345678901234567890"}};
+
+  for (size_t i = 0; i != 4; ++i) {
+    for (size_t k = 0; k != 4; ++k) {
+      { // operator+(const string&, const string&);
+        const S lhs(test_data[0][i]);
+        const S rhs(test_data[1][k]);
+        assert(lhs + rhs == results[i][k]);
+        LIBCPP_ASSERT(is_string_asan_correct(lhs + rhs));
+      }
 #if TEST_STD_VER >= 11
-  test1(S(""), S(""), S(""));
-  test1(S(""), S("12345"), S("12345"));
-  test1(S(""), S("1234567890"), S("1234567890"));
-  test1(S(""), S("12345678901234567890"), S("12345678901234567890"));
-  test1(S("abcde"), S(""), S("abcde"));
-  test1(S("abcde"), S("12345"), S("abcde12345"));
-  test1(S("abcde"), S("1234567890"), S("abcde1234567890"));
-  test1(S("abcde"), S("12345678901234567890"), S("abcde12345678901234567890"));
-  test1(S("abcdefghij"), S(""), S("abcdefghij"));
-  test1(S("abcdefghij"), S("12345"), S("abcdefghij12345"));
-  test1(S("abcdefghij"), S("1234567890"), S("abcdefghij1234567890"));
-  test1(S("abcdefghij"), S("12345678901234567890"), S("abcdefghij12345678901234567890"));
-  test1(S("abcdefghijklmnopqrst"), S(""), S("abcdefghijklmnopqrst"));
-  test1(S("abcdefghijklmnopqrst"), S("12345"), S("abcdefghijklmnopqrst12345"));
-  test1(S("abcdefghijklmnopqrst"), S("1234567890"), S("abcdefghijklmnopqrst1234567890"));
-  test1(S("abcdefghijklmnopqrst"), S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
-
-  test2(S(""), S(""), S(""));
-  test2(S(""), S("12345"), S("12345"));
-  test2(S(""), S("1234567890"), S("1234567890"));
-  test2(S(""), S("12345678901234567890"), S("12345678901234567890"));
-  test2(S("abcde"), S(""), S("abcde"));
-  test2(S("abcde"), S("12345"), S("abcde12345"));
-  test2(S("abcde"), S("1234567890"), S("abcde1234567890"));
-  test2(S("abcde"), S("12345678901234567890"), S("abcde12345678901234567890"));
-  test2(S("abcdefghij"), S(""), S("abcdefghij"));
-  test2(S("abcdefghij"), S("12345"), S("abcdefghij12345"));
-  test2(S("abcdefghij"), S("1234567890"), S("abcdefghij1234567890"));
-  test2(S("abcdefghij"), S("12345678901234567890"), S("abcdefghij12345678901234567890"));
-  test2(S("abcdefghijklmnopqrst"), S(""), S("abcdefghijklmnopqrst"));
-  test2(S("abcdefghijklmnopqrst"), S("12345"), S("abcdefghijklmnopqrst12345"));
-  test2(S("abcdefghijklmnopqrst"), S("1234567890"), S("abcdefghijklmnopqrst1234567890"));
-  test2(S("abcdefghijklmnopqrst"), S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
-
-  test3(S(""), S(""), S(""));
-  test3(S(""), S("12345"), S("12345"));
-  test3(S(""), S("1234567890"), S("1234567890"));
-  test3(S(""), S("12345678901234567890"), S("12345678901234567890"));
-  test3(S("abcde"), S(""), S("abcde"));
-  test3(S("abcde"), S("12345"), S("abcde12345"));
-  test3(S("abcde"), S("1234567890"), S("abcde1234567890"));
-  test3(S("abcde"), S("12345678901234567890"), S("abcde12345678901234567890"));
-  test3(S("abcdefghij"), S(""), S("abcdefghij"));
-  test3(S("abcdefghij"), S("12345"), S("abcdefghij12345"));
-  test3(S("abcdefghij"), S("1234567890"), S("abcdefghij1234567890"));
-  test3(S("abcdefghij"), S("12345678901234567890"), S("abcdefghij12345678901234567890"));
-  test3(S("abcdefghijklmnopqrst"), S(""), S("abcdefghijklmnopqrst"));
-  test3(S("abcdefghijklmnopqrst"), S("12345"), S("abcdefghijklmnopqrst12345"));
-  test3(S("abcdefghijklmnopqrst"), S("1234567890"), S("abcdefghijklmnopqrst1234567890"));
-  test3(S("abcdefghijklmnopqrst"), S("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
+      { // operator+(string&&, const string&);
+        S lhs(test_data[0][i]);
+        const S rhs(test_data[1][k]);
+        assert(std::move(lhs) + rhs == results[i][k]);
+      }
+      { // operator+(const string&, string&&);
+        const S lhs(test_data[0][i]);
+        S rhs(test_data[1][k]);
+        assert(lhs + std::move(rhs) == results[i][k]);
+      }
+      { // operator+(string&&, string&&);
+        S lhs(test_data[0][i]);
+        S rhs(test_data[1][k]);
+        assert(std::move(lhs) + std::move(rhs) == results[i][k]);
+      }
 #endif
+    }
+  }
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::string>();
 #if TEST_STD_VER >= 11
-  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
-  test_string<std::basic_string<char, std::char_traits<char>, safe_allocator<char> > >();
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+  test_string<std::basic_string<char, std::char_traits<char>, safe_allocator<char>>>();
 #endif
+
+  { // check that growing to max_size() works
+    using string_type = std::basic_string<char, std::char_traits<char>, tiny_size_allocator<29, char> >;
+    string_type lhs;
+    lhs.resize(lhs.max_size() - 1);
+
+    string_type rhs = "a";
+
+    string_type result = lhs + rhs;
+
+    assert(result.size() == result.max_size());
+    assert(result.back() == 'a');
+    assert(result.capacity() <= result.get_allocator().max_size());
+  }
 
   return true;
 }
 
 int main(int, char**) {
   test();
-#if TEST_STD_VER > 17
+#if TEST_STD_VER >= 20
   static_assert(test());
 #endif
 

@@ -18,7 +18,7 @@ void Test() {
 #pragma acc parallel wait(Ambiguous)
   while (true);
 
-  // expected-error@+2{{OpenACC integer expression type 'struct ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+2{{OpenACC integer expression requires explicit conversion from 'struct ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
 #pragma acc parallel wait(4, Explicit, 5)
   while (true);
@@ -29,12 +29,12 @@ void Test() {
 #pragma acc parallel wait(queues: Ambiguous, 5)
   while (true);
 
-  // expected-error@+2{{OpenACC integer expression type 'struct ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+2{{OpenACC integer expression requires explicit conversion from 'struct ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
 #pragma acc parallel wait(devnum: Explicit: 5)
   while (true);
 
-  // expected-error@+2{{OpenACC integer expression type 'struct ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+2{{OpenACC integer expression requires explicit conversion from 'struct ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
 #pragma acc parallel wait(devnum: Explicit:queues:  5)
   while (true);
@@ -70,7 +70,7 @@ void TestInst() {
 #pragma acc parallel wait(devnum:T::value :queues:T::ACValue)
   while (true);
 
-  // expected-error@+5{{OpenACC integer expression type 'const ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+5{{OpenACC integer expression requires explicit conversion from 'const ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
   // expected-error@+3{{multiple conversions from expression type 'const AmbiguousConvert' to an integral type}}
   // expected-note@#AMBIG_INT{{conversion to integral type 'int'}}
@@ -78,7 +78,7 @@ void TestInst() {
 #pragma acc parallel wait(devnum:T::EXValue :queues:T::ACValue)
   while (true);
 
-  // expected-error@+5{{OpenACC integer expression type 'const ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+5{{OpenACC integer expression requires explicit conversion from 'const ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
   // expected-error@+3{{multiple conversions from expression type 'const AmbiguousConvert' to an integral type}}
   // expected-note@#AMBIG_INT{{conversion to integral type 'int'}}
@@ -86,7 +86,7 @@ void TestInst() {
 #pragma acc parallel wait(T::EXValue, T::ACValue)
   while (true);
 
-  // expected-error@+5{{OpenACC integer expression type 'const ExplicitConvertOnly' requires explicit conversion to 'int'}}
+  // expected-error@+5{{OpenACC integer expression requires explicit conversion from 'const ExplicitConvertOnly' to 'int'}}
   // expected-note@#EXPL_CONV{{conversion to integral type 'int'}}
   // expected-error@+3{{multiple conversions from expression type 'const AmbiguousConvert' to an integral type}}
   // expected-note@#AMBIG_INT{{conversion to integral type 'int'}}

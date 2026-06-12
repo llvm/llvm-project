@@ -8,6 +8,8 @@ from lldbsuite.test import lldbutil
 
 
 class ObjCSingleEntryDictionaryTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -28,12 +30,12 @@ class ObjCSingleEntryDictionaryTestCase(TestBase):
     )  # bug in NSDictionary formatting on watchos
     def test_single_entry_dict_no_const(self):
         disable_constant_classes = {
-            "CC": "xcrun clang",  # FIXME: Remove when flags are available upstream.
             "CFLAGS_EXTRAS": "-fno-constant-nsnumber-literals "
             + "-fno-constant-nsarray-literals "
             + "-fno-constant-nsdictionary-literals",
         }
-        self.build(dictionary=disable_constant_classes)
+        # FIXME: Remove compiler when flags are available upstream.
+        self.build(dictionary=disable_constant_classes, compiler="xcrun clang")
         self.run_tests()
 
     def run_tests(self):

@@ -30,8 +30,11 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/IR/Module.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
@@ -58,9 +61,10 @@ static uint64_t allOnes(unsigned int Count) {
 // Pin the vtable to this file.
 void SystemZInstrInfo::anchor() {}
 
-SystemZInstrInfo::SystemZInstrInfo(SystemZSubtarget &sti)
-    : SystemZGenInstrInfo(-1, -1),
-      RI(sti.getSpecialRegisters()->getReturnFunctionAddressRegister()),
+SystemZInstrInfo::SystemZInstrInfo(const SystemZSubtarget &sti)
+    : SystemZGenInstrInfo(sti, RI, -1, -1),
+      RI(sti.getSpecialRegisters()->getReturnFunctionAddressRegister(),
+         sti.getHwMode()),
       STI(sti) {}
 
 // MI is a 128-bit load or store.  Split it into two 64-bit loads or stores,
@@ -80,8 +84,8 @@ void SystemZInstrInfo::splitMove(MachineBasicBlock::iterator MI,
   MachineOperand &HighRegOp = HighPartMI->getOperand(0);
   MachineOperand &LowRegOp = LowPartMI->getOperand(0);
   Register Reg128 = LowRegOp.getReg();
-  unsigned Reg128Killed = getKillRegState(LowRegOp.isKill());
-  unsigned Reg128Undef  = getUndefRegState(LowRegOp.isUndef());
+  RegState Reg128Killed = getKillRegState(LowRegOp.isKill());
+  RegState Reg128Undef = getUndefRegState(LowRegOp.isUndef());
   HighRegOp.setReg(RI.getSubReg(HighRegOp.getReg(), SystemZ::subreg_h64));
   LowRegOp.setReg(RI.getSubReg(LowRegOp.getReg(), SystemZ::subreg_l64));
 
@@ -105,7 +109,7 @@ void SystemZInstrInfo::splitMove(MachineBasicBlock::iterator MI,
     // undefined. We could track liveness and skip storing an undefined
     // subreg, but this is hopefully rare (discovered with llvm-stress).
     // If Reg128 was killed, set kill flag on MI.
-    unsigned Reg128UndefImpl = (Reg128Undef | RegState::Implicit);
+    RegState Reg128UndefImpl = (Reg128Undef | RegState::Implicit);
     MachineInstrBuilder(MF, HighPartMI).addReg(Reg128, Reg128UndefImpl);
     MachineInstrBuilder(MF, LowPartMI).addReg(Reg128, (Reg128UndefImpl | Reg128Killed));
   } else {
@@ -226,35 +230,6 @@ void SystemZInstrInfo::expandZExtPseudo(MachineInstr &MI, unsigned LowOpcode,
   MI.eraseFromParent();
 }
 
-void SystemZInstrInfo::expandLoadStackGuard(MachineInstr *MI) const {
-  MachineBasicBlock *MBB = MI->getParent();
-  MachineFunction &MF = *MBB->getParent();
-  const Register Reg64 = MI->getOperand(0).getReg();
-  const Register Reg32 = RI.getSubReg(Reg64, SystemZ::subreg_l32);
-
-  // EAR can only load the low subregister so us a shift for %a0 to produce
-  // the GR containing %a0 and %a1.
-
-  // ear <reg>, %a0
-  BuildMI(*MBB, MI, MI->getDebugLoc(), get(SystemZ::EAR), Reg32)
-    .addReg(SystemZ::A0)
-    .addReg(Reg64, RegState::ImplicitDefine);
-
-  // sllg <reg>, <reg>, 32
-  BuildMI(*MBB, MI, MI->getDebugLoc(), get(SystemZ::SLLG), Reg64)
-    .addReg(Reg64)
-    .addReg(0)
-    .addImm(32);
-
-  // ear <reg>, %a1
-  BuildMI(*MBB, MI, MI->getDebugLoc(), get(SystemZ::EAR), Reg32)
-    .addReg(SystemZ::A1);
-
-  // lg <reg>, 40(<reg>)
-  MI->setDesc(get(SystemZ::LG));
-  MachineInstrBuilder(MF, MI).addReg(Reg64).addImm(40).addReg(0);
-}
-
 // Emit a zero-extending move from 32-bit GPR SrcReg to 32-bit GPR
 // DestReg before MBBI in MBB.  Use LowLowOpcode when both DestReg and SrcReg
 // are low registers, otherwise use RISB[LH]G.  Size is the number of bits
@@ -343,6 +318,52 @@ Register SystemZInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 Register SystemZInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                               int &FrameIndex) const {
   return isSimpleMove(MI, FrameIndex, SystemZII::SimpleBDXStore);
+}
+
+Register SystemZInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
+                                                     int &FrameIndex) const {
+  // if this is not a simple load from memory, it's not a load from stack slot
+  // either.
+  const MCInstrDesc &MCID = MI.getDesc();
+  if (!(MCID.TSFlags & SystemZII::SimpleBDXLoad))
+    return 0;
+
+  // This version of isLoadFromStackSlot should only be used post frame-index
+  // elimination.
+  assert(!MI.getOperand(1).isFI());
+
+  // Now attempt to derive frame index from MachineMemOperands.
+  SmallVector<const MachineMemOperand *, 1> Accesses;
+  if (hasLoadFromStackSlot(MI, Accesses)) {
+    FrameIndex =
+        cast<FixedStackPseudoSourceValue>(Accesses.front()->getPseudoValue())
+            ->getFrameIndex();
+    return MI.getOperand(0).getReg();
+  }
+  return 0;
+}
+
+Register SystemZInstrInfo::isStoreToStackSlotPostFE(const MachineInstr &MI,
+                                                    int &FrameIndex) const {
+  // if this is not a simple store to memory, it's not a store to stack slot
+  // either.
+  const MCInstrDesc &MCID = MI.getDesc();
+  if (!(MCID.TSFlags & SystemZII::SimpleBDXStore))
+    return 0;
+
+  // This version of isStoreToStackSlot should only be used post frame-index
+  // elimination.
+  assert(!MI.getOperand(1).isFI());
+
+  // Now attempt to derive frame index from MachineMemOperands.
+  SmallVector<const MachineMemOperand *, 1> Accesses;
+  if (hasStoreToStackSlot(MI, Accesses)) {
+    FrameIndex =
+        cast<FixedStackPseudoSourceValue>(Accesses.front()->getPseudoValue())
+            ->getFrameIndex();
+    return MI.getOperand(0).getReg();
+  }
+  return 0;
 }
 
 bool SystemZInstrInfo::isStackSlotCopy(const MachineInstr &MI,
@@ -623,31 +644,6 @@ void SystemZInstrInfo::insertSelect(MachineBasicBlock &MBB,
     .addImm(CCValid).addImm(CCMask);
 }
 
-MachineInstr *SystemZInstrInfo::optimizeLoadInstr(MachineInstr &MI,
-                                                  const MachineRegisterInfo *MRI,
-                                                  Register &FoldAsLoadDefReg,
-                                                  MachineInstr *&DefMI) const {
-  // Check whether we can move the DefMI load, and that it only has one use.
-  DefMI = MRI->getVRegDef(FoldAsLoadDefReg);
-  assert(DefMI);
-  bool SawStore = false;
-  if (!DefMI->isSafeToMove(SawStore) || !MRI->hasOneNonDBGUse(FoldAsLoadDefReg))
-    return nullptr;
-
-  int UseOpIdx =
-      MI.findRegisterUseOperandIdx(FoldAsLoadDefReg, /*TRI=*/nullptr);
-  assert(UseOpIdx != -1 && "Expected FoldAsLoadDefReg to be used by MI.");
-
-  // Check whether we can fold the load.
-  if (MachineInstr *FoldMI =
-          foldMemoryOperand(MI, {((unsigned)UseOpIdx)}, *DefMI)) {
-    FoldAsLoadDefReg = 0;
-    return FoldMI;
-  }
-
-  return nullptr;
-}
-
 bool SystemZInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
                                      Register Reg,
                                      MachineRegisterInfo *MRI) const {
@@ -856,8 +852,10 @@ bool SystemZInstrInfo::PredicateInstruction(
 
 void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI,
-                                   const DebugLoc &DL, MCRegister DestReg,
-                                   MCRegister SrcReg, bool KillSrc) const {
+                                   const DebugLoc &DL, Register DestReg,
+                                   Register SrcReg, bool KillSrc,
+                                   bool RenamableDest,
+                                   bool RenamableSrc) const {
   // Split 128-bit GPR moves into two 64-bit moves. Add implicit uses of the
   // super register in case one of the subregs is undefined.
   // This handles ADDR128 too.
@@ -903,7 +901,7 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         RI.getMatchingSuperReg(RI.getSubReg(DestReg, SystemZ::subreg_l64),
                                SystemZ::subreg_h64, &SystemZ::VR128BitRegClass);
 
-    if (DestRegHi != SrcReg)
+    if (DestRegHi != SrcReg.asMCReg())
       copyPhysReg(MBB, MBBI, DL, DestRegHi, SrcReg, false);
     BuildMI(MBB, MBBI, DL, get(SystemZ::VREPG), DestRegLo)
       .addReg(SrcReg, getKillRegState(KillSrc)).addImm(1);
@@ -965,6 +963,8 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   unsigned Opcode;
   if (SystemZ::GR64BitRegClass.contains(DestReg, SrcReg))
     Opcode = SystemZ::LGR;
+  else if (SystemZ::FP16BitRegClass.contains(DestReg, SrcReg))
+    Opcode = STI.hasVector() ? SystemZ::LDR16 : SystemZ::LER16;
   else if (SystemZ::FP32BitRegClass.contains(DestReg, SrcReg))
     // For z13 we prefer LDR over LER to avoid partial register dependencies.
     Opcode = STI.hasVector() ? SystemZ::LDR32 : SystemZ::LER;
@@ -972,6 +972,8 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Opcode = SystemZ::LDR;
   else if (SystemZ::FP128BitRegClass.contains(DestReg, SrcReg))
     Opcode = SystemZ::LXR;
+  else if (SystemZ::VR16BitRegClass.contains(DestReg, SrcReg))
+    Opcode = SystemZ::VLR16;
   else if (SystemZ::VR32BitRegClass.contains(DestReg, SrcReg))
     Opcode = SystemZ::VLR32;
   else if (SystemZ::VR64BitRegClass.contains(DestReg, SrcReg))
@@ -980,6 +982,12 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Opcode = SystemZ::VLR;
   else if (SystemZ::AR32BitRegClass.contains(DestReg, SrcReg))
     Opcode = SystemZ::CPYA;
+  else if (SystemZ::GR64BitRegClass.contains(DestReg) &&
+           SystemZ::FP64BitRegClass.contains(SrcReg))
+    Opcode = SystemZ::LGDR;
+  else if (SystemZ::FP64BitRegClass.contains(DestReg) &&
+           SystemZ::GR64BitRegClass.contains(SrcReg))
+    Opcode = SystemZ::LDGR;
   else
     llvm_unreachable("Impossible reg-to-reg copy");
 
@@ -990,7 +998,8 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void SystemZInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
     bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+
+    Register VReg, MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Callers may expect a single instruction, so keep 128-bit moves
@@ -1006,8 +1015,8 @@ void SystemZInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                             MachineBasicBlock::iterator MBBI,
                                             Register DestReg, int FrameIdx,
                                             const TargetRegisterClass *RC,
-                                            const TargetRegisterInfo *TRI,
-                                            Register VReg) const {
+                                            Register VReg, unsigned SubReg,
+                                            MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Callers may expect a single instruction, so keep 128-bit moves
@@ -1188,8 +1197,9 @@ SystemZInstrInfo::getInverseOpcode(unsigned Opcode) const {
 
 MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex,
-    LiveIntervals *LIS, VirtRegMap *VRM) const {
+    int FrameIndex, MachineInstr *&CopyMI, LiveIntervals *LIS,
+    VirtRegMap *VRM) const {
+  MachineBasicBlock::iterator InsertPt = MI;
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1230,10 +1240,12 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     return nullptr;
 
   unsigned OpNum = Ops[0];
-  assert(Size * 8 ==
-           TRI->getRegSizeInBits(*MF.getRegInfo()
-                               .getRegClass(MI.getOperand(OpNum).getReg())) &&
+  const TargetRegisterClass *RC =
+      MF.getRegInfo().getRegClass(MI.getOperand(OpNum).getReg());
+  assert((Size * 8 == TRI->getRegSizeInBits(*RC) ||
+          (RC == &SystemZ::FP16BitRegClass && Size == 4 && !STI.hasVector())) &&
          "Invalid size combination");
+  (void)RC;
 
   if ((Opcode == SystemZ::AHI || Opcode == SystemZ::AGHI) && OpNum == 0 &&
       isInt<8>(MI.getOperand(2).getImm())) {
@@ -1252,7 +1264,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   if ((Opcode == SystemZ::ALFI && OpNum == 0 &&
        isInt<8>((int32_t)MI.getOperand(2).getImm())) ||
       (Opcode == SystemZ::ALGFI && OpNum == 0 &&
-       isInt<8>((int64_t)MI.getOperand(2).getImm()))) {
+       isInt<8>(MI.getOperand(2).getImm()))) {
     // AL(G)FI %reg, CONST -> AL(G)SI %mem, CONST
     Opcode = (Opcode == SystemZ::ALFI ? SystemZ::ALSI : SystemZ::ALGSI);
     MachineInstr *BuiltMI =
@@ -1267,7 +1279,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   if ((Opcode == SystemZ::SLFI && OpNum == 0 &&
        isInt<8>((int32_t)-MI.getOperand(2).getImm())) ||
       (Opcode == SystemZ::SLGFI && OpNum == 0 &&
-       isInt<8>((int64_t)-MI.getOperand(2).getImm()))) {
+       isInt<8>((-MI.getOperand(2).getImm())))) {
     // SL(G)FI %reg, CONST -> AL(G)SI %mem, -CONST
     Opcode = (Opcode == SystemZ::SLFI ? SystemZ::ALSI : SystemZ::ALGSI);
     MachineInstr *BuiltMI =
@@ -1518,8 +1530,9 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
 
 MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-    LiveIntervals *LIS) const {
+    MachineInstr &LoadMI, MachineInstr *&CopyMI, LiveIntervals *LIS,
+    VirtRegMap *VRM) const {
+  MachineBasicBlock::iterator InsertPt = MI;
   MachineRegisterInfo *MRI = &MF.getRegInfo();
   MachineBasicBlock *MBB = MI.getParent();
 
@@ -1554,17 +1567,15 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
 
   // If RegMemOpcode clobbers CC, first make sure CC is not live at this point.
   if (get(RegMemOpcode).hasImplicitDefOfPhysReg(SystemZ::CC)) {
-    assert(LoadMI.getParent() == MI.getParent() && "Assuming a local fold.");
-    assert(LoadMI != InsertPt && "Assuming InsertPt not to be first in MBB.");
-    for (MachineBasicBlock::iterator MII = std::prev(InsertPt);;
-         --MII) {
-      if (MII->definesRegister(SystemZ::CC, /*TRI=*/nullptr)) {
-        if (!MII->registerDefIsDead(SystemZ::CC, /*TRI=*/nullptr))
+    for (MachineBasicBlock::iterator MII = InsertPt;;) {
+      if (MII == MBB->begin()) {
+        if (MBB->isLiveIn(SystemZ::CC))
           return nullptr;
         break;
       }
-      if (MII == MBB->begin()) {
-        if (MBB->isLiveIn(SystemZ::CC))
+      --MII;
+      if (MII->definesRegister(SystemZ::CC, /*TRI=*/nullptr)) {
+        if (!MII->registerDefIsDead(SystemZ::CC, /*TRI=*/nullptr))
           return nullptr;
         break;
       }
@@ -1580,6 +1591,8 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   MachineOperand &RegMO = RHS.getReg() == FoldAsLoadDefReg ? LHS : RHS;
   if ((RegMemOpcode == SystemZ::SDB || RegMemOpcode == SystemZ::SEB) &&
       FoldAsLoadDefReg != RHS.getReg())
+    return nullptr;
+  if (!MRI->isSSA() && DstReg != RegMO.getReg())
     return nullptr;
 
   MachineOperand &Base = LoadMI.getOperand(1);
@@ -1769,8 +1782,12 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     splitAdjDynAlloc(MI);
     return true;
 
-  case TargetOpcode::LOAD_STACK_GUARD:
-    expandLoadStackGuard(&MI);
+  case SystemZ::MOV_STACKGUARD:
+    expandStackGuardPseudo(MI, SystemZ::MVC);
+    return true;
+
+  case SystemZ::CMP_STACKGUARD:
+    expandStackGuardPseudo(MI, SystemZ::CLC);
     return true;
 
   default:
@@ -1778,17 +1795,73 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   }
 }
 
+void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
+                                              unsigned Opcode) const {
+  MachineBasicBlock &MBB = *(MI.getParent());
+  const MachineFunction &MF = *(MBB.getParent());
+  const auto DL = MI.getDebugLoc();
+  const Module *M = MF.getFunction().getParent();
+  StringRef GuardType = M->getStackProtectorGuard();
+  unsigned int Offset = 0;
+
+  Register AddrReg = MI.getOperand(0).getReg();
+
+  assert(
+      AddrReg != MI.getOperand(1).getReg() &&
+      "Scratch register for stack guard address blocked by operand register.");
+
+  // Emit an appropriate pseudo for the guard type, which loads the address of
+  // said guard into the scratch register AddrReg.
+  if (GuardType.empty() || (GuardType == "tls")) {
+    // Emit a load of the TLS block's address
+    BuildMI(MBB, MI, DL, get(SystemZ::LOAD_TLS_BLOCK_ADDR), AddrReg);
+    // Record the appropriate stack guard offset (40 in the tls case).
+    Offset = 40;
+  } else if (GuardType == "global") {
+    // Emit a load of the global stack guard's address
+    BuildMI(MBB, MI, DL, get(SystemZ::LOAD_GLOBAL_STACKGUARD_ADDR), AddrReg);
+  } else {
+    report_fatal_error(
+        (Twine("unknown stack protector type \"") + GuardType + "\".")
+            .str()
+            .c_str());
+  }
+
+  // Construct the appropriate move or compare instruction using the
+  // scratch register.
+  BuildMI(*(MI.getParent()), MI, MI.getDebugLoc(), get(Opcode))
+      .addReg(MI.getOperand(1).getReg())
+      .addImm(MI.getOperand(2).getImm())
+      .addImm(8)
+      .addReg(AddrReg)
+      .addImm(Offset);
+
+  MI.removeFromParent();
+}
+
 unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   if (MI.isInlineAsm()) {
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
-    return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
+    return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo());
   }
   else if (MI.getOpcode() == SystemZ::PATCHPOINT)
     return PatchPointOpers(&MI).getNumPatchBytes();
   else if (MI.getOpcode() == SystemZ::STACKMAP)
     return MI.getOperand(1).getImm();
   else if (MI.getOpcode() == SystemZ::FENTRY_CALL)
+    return 6;
+  if (MI.getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_ENTER)
+    return 18;
+  if (MI.getOpcode() == TargetOpcode::PATCHABLE_RET)
+    return 18 + (MI.getOperand(0).getImm() == SystemZ::CondReturn ? 4 : 0);
+  if (MI.getOpcode() == TargetOpcode::BUNDLE)
+    return getInstBundleSize(MI);
+  if (MI.getOpcode() == SystemZ::LOAD_TLS_BLOCK_ADDR)
+    // ear (4), sllg (6), ear (4) = 14 bytes
+    return 14;
+  if (MI.getOpcode() == SystemZ::LOAD_GLOBAL_STACKGUARD_ADDR)
+    // Both larl and lgrl are 6 bytes long.
     return 6;
 
   return MI.getDesc().getSize();
@@ -1867,6 +1940,9 @@ void SystemZInstrInfo::getLoadStoreOpcodes(const TargetRegisterClass *RC,
              RC == &SystemZ::ADDR128BitRegClass) {
     LoadOpcode = SystemZ::L128;
     StoreOpcode = SystemZ::ST128;
+  } else if (RC == &SystemZ::FP16BitRegClass && !STI.hasVector()) {
+    LoadOpcode = SystemZ::LE16;
+    StoreOpcode = SystemZ::STE16;
   } else if (RC == &SystemZ::FP32BitRegClass) {
     LoadOpcode = SystemZ::LE;
     StoreOpcode = SystemZ::STE;
@@ -1876,6 +1952,10 @@ void SystemZInstrInfo::getLoadStoreOpcodes(const TargetRegisterClass *RC,
   } else if (RC == &SystemZ::FP128BitRegClass) {
     LoadOpcode = SystemZ::LX;
     StoreOpcode = SystemZ::STX;
+  } else if (RC == &SystemZ::FP16BitRegClass ||
+             RC == &SystemZ::VR16BitRegClass) {
+    LoadOpcode = SystemZ::VL16;
+    StoreOpcode = SystemZ::VST16;
   } else if (RC == &SystemZ::VR32BitRegClass) {
     LoadOpcode = SystemZ::VL32;
     StoreOpcode = SystemZ::VST32;
@@ -2111,6 +2191,28 @@ unsigned SystemZInstrInfo::getFusedCompare(unsigned Opcode,
   return 0;
 }
 
+bool SystemZInstrInfo::isLoadAndTestAsCmp(const MachineInstr &MI) const {
+  // If we during isel used a load-and-test as a compare with 0, the
+  // def operand is dead.
+  return (MI.getOpcode() == SystemZ::LTEBR ||
+          MI.getOpcode() == SystemZ::LTDBR ||
+          MI.getOpcode() == SystemZ::LTXBR) &&
+         MI.getOperand(0).isDead();
+}
+
+bool SystemZInstrInfo::isCompareZero(const MachineInstr &Compare) const {
+  if (isLoadAndTestAsCmp(Compare))
+    return true;
+  return Compare.isCompare() && Compare.getNumExplicitOperands() == 2 &&
+         Compare.getOperand(1).isImm() && Compare.getOperand(1).getImm() == 0;
+}
+
+Register
+SystemZInstrInfo::getCompareSourceReg(const MachineInstr &Compare) const {
+  assert(isCompareZero(Compare) && "Expected a compare with 0.");
+  return Compare.getOperand(isLoadAndTestAsCmp(Compare) ? 1 : 0).getReg();
+}
+
 bool SystemZInstrInfo::
 prepareCompareSwapOperands(MachineBasicBlock::iterator const MBBI) const {
   assert(MBBI->isCompare() && MBBI->getOperand(0).isReg() &&
@@ -2303,4 +2405,33 @@ bool SystemZInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
   }
 
   return false;
+}
+
+std::optional<DestSourcePair>
+SystemZInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
+  // if MI is a simple single-register copy operation, return operand pair
+  if (MI.isMoveReg())
+    return DestSourcePair(MI.getOperand(0), MI.getOperand(1));
+
+  return std::nullopt;
+}
+
+std::pair<unsigned, unsigned>
+SystemZInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
+  return std::make_pair(TF, 0u);
+}
+
+ArrayRef<std::pair<unsigned, const char *>>
+SystemZInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
+  using namespace SystemZII;
+
+  static const std::pair<unsigned, const char *> TargetFlags[] = {
+      {MO_ADA_DATA_SYMBOL_ADDR, "systemz-ada-datasymboladdr"},
+      {MO_ADA_INDIRECT_FUNC_DESC, "systemz-ada-indirectfuncdesc"},
+      {MO_ADA_DIRECT_FUNC_DESC, "systemz-ada-directfuncdesc"}};
+  return ArrayRef(TargetFlags);
+}
+
+MCInst SystemZInstrInfo::getNop() const {
+  return MCInstBuilder(SystemZ::NOPR).addReg(0);
 }

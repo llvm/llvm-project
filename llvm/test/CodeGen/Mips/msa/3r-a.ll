@@ -1,11 +1,11 @@
 ; Test the MSA intrinsics that are encoded with the 3R instruction format.
 ; There are lots of these so this covers those beginning with 'a'
 
-; RUN: llc -march=mips -mattr=+msa,+fp64,+mips32r2 -relocation-model=pic < %s | FileCheck %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64,+mips32r2 -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=mips-elf -mattr=+msa,+fp64,+mips32r2 -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -mtriple=mipsel-elf -mattr=+msa,+fp64,+mips32r2 -relocation-model=pic < %s | FileCheck %s
 
 ; It should fail to compile without fp64.
-; RUN: not llc -march=mips -mattr=+msa < %s 2>&1 | \
+; RUN: not llc -mtriple=mips-elf -mattr=+msa < %s 2>&1 | \
 ; RUN:    FileCheck -check-prefix=FP32ERROR %s
 ; FP32ERROR: LLVM ERROR: MSA requires a 64-bit FPU register file (FR=1 mode).
 

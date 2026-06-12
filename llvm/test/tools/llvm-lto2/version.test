@@ -1,0 +1,7 @@
+## Show that you can run version as a main command for llvm-lto2 
+## or a subcommand of llvm-lto2 run.
+
+RUN: llvm-lto2 --version | FileCheck %s
+RUN: llvm-lto2 run --version | FileCheck %s 
+
+CHECK: version

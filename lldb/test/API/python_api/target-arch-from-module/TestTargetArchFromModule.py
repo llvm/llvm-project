@@ -12,6 +12,8 @@ from lldbsuite.test import lldbutil
 
 
 class TargetArchFromModule(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @skipIf(
         debug_info=no_match(["dsym"]),
         bugnumber="This test is looking explicitly for a dSYM",
@@ -34,7 +36,7 @@ class TargetArchFromModule(TestBase):
             lambda: os.environ.pop("LLDB_APPLE_DSYMFORUUID_EXECUTABLE", None)
         )
 
-        dwarfdump_uuid_regex = re.compile("UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
+        dwarfdump_uuid_regex = re.compile(r"UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
         dwarfdump_cmd_output = subprocess.check_output(
             ('/usr/bin/dwarfdump --uuid "%s"' % aout_exe), shell=True
         ).decode("utf-8")

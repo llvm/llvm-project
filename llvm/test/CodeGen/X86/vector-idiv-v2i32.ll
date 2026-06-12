@@ -6,7 +6,7 @@ define void @test_udiv7_v2i32(ptr %x, ptr %y) nounwind {
 ; X64-LABEL: test_udiv7_v2i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = [613566757,613566757,613566757,613566757]
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [613566757,613566757,u,u]
 ; X64-NEXT:    movdqa %xmm0, %xmm2
 ; X64-NEXT:    pmuludq %xmm1, %xmm2
 ; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
@@ -26,7 +26,7 @@ define void @test_udiv7_v2i32(ptr %x, ptr %y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [613566757,613566757,613566757,613566757]
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [613566757,613566757,u,u]
 ; X86-NEXT:    movdqa %xmm0, %xmm2
 ; X86-NEXT:    pmuludq %xmm1, %xmm2
 ; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
@@ -51,7 +51,7 @@ define void @test_urem7_v2i32(ptr %x, ptr %y) nounwind {
 ; X64-LABEL: test_urem7_v2i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = [613566757,613566757,613566757,613566757]
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [613566757,613566757,u,u]
 ; X64-NEXT:    movdqa %xmm0, %xmm2
 ; X64-NEXT:    pmuludq %xmm1, %xmm2
 ; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
@@ -76,7 +76,7 @@ define void @test_urem7_v2i32(ptr %x, ptr %y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movdqa {{.*#+}} xmm1 = [613566757,613566757,613566757,613566757]
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [613566757,613566757,u,u]
 ; X86-NEXT:    movdqa %xmm0, %xmm2
 ; X86-NEXT:    pmuludq %xmm1, %xmm2
 ; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
@@ -106,7 +106,7 @@ define void @test_sdiv7_v2i32(ptr %x, ptr %y) nounwind {
 ; X64-LABEL: test_sdiv7_v2i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = [2454267027,2454267027,2454267027,2454267027]
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [2454267027,2454267027,u,u]
 ; X64-NEXT:    movdqa %xmm0, %xmm2
 ; X64-NEXT:    pmuludq %xmm1, %xmm2
 ; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
@@ -132,7 +132,7 @@ define void @test_sdiv7_v2i32(ptr %x, ptr %y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X86-NEXT:    movdqa {{.*#+}} xmm2 = [2454267027,2454267027,2454267027,2454267027]
+; X86-NEXT:    movdqa {{.*#+}} xmm2 = [2454267027,2454267027,u,u]
 ; X86-NEXT:    movdqa %xmm1, %xmm0
 ; X86-NEXT:    pmuludq %xmm2, %xmm0
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
@@ -163,7 +163,7 @@ define void @test_srem7_v2i32(ptr %x, ptr %y) nounwind {
 ; X64-LABEL: test_srem7_v2i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    movdqa {{.*#+}} xmm1 = [2454267027,2454267027,2454267027,2454267027]
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [2454267027,2454267027,u,u]
 ; X64-NEXT:    movdqa %xmm0, %xmm2
 ; X64-NEXT:    pmuludq %xmm1, %xmm2
 ; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
@@ -193,7 +193,7 @@ define void @test_srem7_v2i32(ptr %x, ptr %y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    movdqa {{.*#+}} xmm2 = [2454267027,2454267027,2454267027,2454267027]
+; X86-NEXT:    movdqa {{.*#+}} xmm2 = [2454267027,2454267027,u,u]
 ; X86-NEXT:    movdqa %xmm0, %xmm1
 ; X86-NEXT:    pmuludq %xmm2, %xmm1
 ; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]

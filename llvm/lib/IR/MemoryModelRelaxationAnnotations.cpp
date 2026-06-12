@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Debug.h"
@@ -97,6 +96,21 @@ MDNode *MMRAMetadata::combine(LLVMContext &Ctx, const MMRAMetadata &A,
   }
 
   return MDTuple::get(Ctx, Result);
+}
+
+void MMRAMetadata::appendTags(Instruction &I, ArrayRef<TagT> Tags) {
+  if (Tags.empty())
+    return;
+  SmallVector<MMRAMetadata::TagT> MMRAs(Tags);
+  LLVMContext &Ctx = I.getContext();
+  if (MDNode *Existing = I.getMetadata(LLVMContext::MD_mmra)) {
+    // Merge with existing MMRA tags.
+    MMRAMetadata Parsed(Existing);
+    MMRAs.append(Parsed.begin(), Parsed.end());
+  }
+  llvm::sort(MMRAs);
+  MMRAs.erase(llvm::unique(MMRAs), MMRAs.end());
+  I.setMetadata(LLVMContext::MD_mmra, MMRAMetadata::getMD(Ctx, MMRAs));
 }
 
 bool MMRAMetadata::hasTag(StringRef Prefix, StringRef Suffix) const {

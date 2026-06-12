@@ -33,7 +33,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
@@ -1307,9 +1306,7 @@ namespace {
 struct InterleavedLoadCombine : public FunctionPass {
   static char ID;
 
-  InterleavedLoadCombine() : FunctionPass(ID) {
-    initializeInterleavedLoadCombinePass(*PassRegistry::getPassRegistry());
-  }
+  InterleavedLoadCombine() : FunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Interleaved Load Combine Pass";

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; This used to crash with "cannot select (v4i8 vselect ...)"
 ; CHECK: vtrunehb
 

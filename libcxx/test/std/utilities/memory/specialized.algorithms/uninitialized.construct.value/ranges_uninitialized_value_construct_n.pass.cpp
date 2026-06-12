@@ -18,6 +18,7 @@
 #include <cassert>
 #include <memory>
 #include <ranges>
+#include <type_traits>
 
 #include "../buffer.h"
 #include "../counted.h"
@@ -34,6 +35,41 @@ struct NotDefaultCtrable {
   NotDefaultCtrable() = delete;
 };
 static_assert(!std::is_invocable_v<decltype(std::ranges::uninitialized_value_construct_n), NotDefaultCtrable*, int>);
+
+TEST_CONSTEXPR_CXX26 bool test() {
+  {
+    constexpr int n = 3;
+    std::allocator<int> alloc;
+    int* out = alloc.allocate(n);
+
+    auto result = std::ranges::uninitialized_value_construct_n(out, n);
+    assert(result == out + n);
+    for (int i = 0; i != n; ++i)
+      assert(out[i] == 0);
+
+    std::destroy(out, out + n);
+    alloc.deallocate(out, n);
+  }
+
+  // Any existing values should be overwritten by value constructors.
+  {
+    constexpr int N = 5;
+    int buffer[N]   = {42, 42, 42, 42, 42};
+
+    std::ranges::uninitialized_value_construct_n(buffer, 1);
+    assert(buffer[0] == 0);
+    assert(buffer[1] == 42);
+
+    std::ranges::uninitialized_value_construct_n(buffer, N);
+    assert(buffer[0] == 0);
+    assert(buffer[1] == 0);
+    assert(buffer[2] == 0);
+    assert(buffer[3] == 0);
+    assert(buffer[4] == 0);
+  }
+
+  return true;
+}
 
 int main(int, char**) {
   // An empty range -- no default constructors should be invoked.
@@ -58,23 +94,6 @@ int main(int, char**) {
     Counted::reset();
   }
 
-  // Any existing values should be overwritten by value constructors.
-  {
-    constexpr int N = 5;
-    int buffer[N] = {42, 42, 42, 42, 42};
-
-    std::ranges::uninitialized_value_construct_n(buffer, 1);
-    assert(buffer[0] == 0);
-    assert(buffer[1] == 42);
-
-    std::ranges::uninitialized_value_construct_n(buffer, N);
-    assert(buffer[0] == 0);
-    assert(buffer[1] == 0);
-    assert(buffer[2] == 0);
-    assert(buffer[3] == 0);
-    assert(buffer[4] == 0);
-  }
-
   // An exception is thrown while objects are being created -- the existing objects should stay
   // valid.
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -94,17 +113,10 @@ int main(int, char**) {
   }
 #endif // TEST_HAS_NO_EXCEPTIONS
 
-  // Works with const iterators.
-  {
-    constexpr int N = 5;
-    Buffer<Counted, N> buf;
-
-    std::ranges::uninitialized_value_construct_n(buf.cbegin(), N);
-    assert(Counted::current_objects == N);
-    assert(Counted::total_objects == N);
-    std::destroy(buf.begin(), buf.end());
-    Counted::reset();
-  }
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

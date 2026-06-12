@@ -17,7 +17,7 @@
 #include "llvm/IR/Function.h"
 
 namespace llvm {
-class DirectXTTIImpl : public BasicTTIImplBase<DirectXTTIImpl> {
+class DirectXTTIImpl final : public BasicTTIImplBase<DirectXTTIImpl> {
   using BaseT = BasicTTIImplBase<DirectXTTIImpl>;
   using TTI = TargetTransformInfo;
 
@@ -33,7 +33,20 @@ public:
   explicit DirectXTTIImpl(const DirectXTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
-  unsigned getMinVectorRegisterBitWidth() const { return 32; }
+  unsigned getMinVectorRegisterBitWidth() const override { return 32; }
+  bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
+                                          unsigned ScalarOpdIdx) const override;
+  bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
+                                              int OpdIdx) const override;
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
 };
 } // namespace llvm
 

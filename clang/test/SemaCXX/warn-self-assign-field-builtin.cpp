@@ -52,7 +52,7 @@ struct C {
     a = (int &)a;
   }
 
-  // Do not diagnose self-assigment in an unevaluated context
+  // Do not diagnose self-assignment in an unevaluated context
   void false_positives_unevaluated_ctx() noexcept(noexcept(a = a)) // expected-warning {{expression with side effects has no effect in an unevaluated context}}
   {
     decltype(a = a) b = a;              // expected-warning {{expression with side effects has no effect in an unevaluated context}}

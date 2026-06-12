@@ -32,6 +32,7 @@ enum MachineCombinerPattern : unsigned {
   REASSOC_AX_YB,
   REASSOC_XA_BY,
   REASSOC_XA_YB,
+  ACC_CHAIN,
 
   TARGET_PATTERN_START
 };

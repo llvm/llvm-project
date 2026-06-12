@@ -1,6 +1,6 @@
-; RUN: llc < %s -march=sparc -disable-sparc-delay-filler -disable-sparc-leaf-proc | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=CHECK-BE
-; RUN: llc < %s -march=sparcel -disable-sparc-delay-filler -disable-sparc-leaf-proc | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=CHECK-LE
-; RUN: llc < %s -march=sparc -disable-sparc-delay-filler -disable-sparc-leaf-proc -mattr=soft-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=CHECK-BE
+; RUN: llc < %s -mtriple=sparc -disable-sparc-delay-filler -disable-sparc-leaf-proc | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=CHECK-BE
+; RUN: llc < %s -mtriple=sparcel -disable-sparc-delay-filler -disable-sparc-leaf-proc | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=CHECK-LE
+; RUN: llc < %s -mtriple=sparc -disable-sparc-delay-filler -disable-sparc-leaf-proc -mattr=soft-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=CHECK-BE
 
 ; CHECK-LABEL: intarg:
 ; The save/restore frame is not strictly necessary here, but we would need to
@@ -143,28 +143,28 @@ define double @floatarg(double %a0,   ; %i0,%i1
 ; CHECK-LABEL: call_floatarg:
 ; HARD: save %sp, -112, %sp
 ; HARD: mov %i2, %o1
+; HARD-NEXT: mov %i0, %o2
 ; HARD-NEXT: mov %i1, %o0
 ; HARD-NEXT: st %i0, [%sp+104]
 ; HARD-NEXT: std %o0, [%sp+96]
 ; HARD-NEXT: st %o1, [%sp+92]
-; HARD-NEXT: mov %i0, %o2
 ; HARD-NEXT: mov %i1, %o3
 ; HARD-NEXT: mov %o1, %o4
 ; HARD-NEXT: mov %i1, %o5
 ; HARD-NEXT: call floatarg
 ; HARD: std %f0, [%i4]
-; SOFT: st %i0, [%sp+104]
-; SOFT-NEXT:  st %i2, [%sp+100]
-; SOFT-NEXT:  st %i1, [%sp+96]
-; SOFT-NEXT:  st %i2, [%sp+92]
-; SOFT-NEXT:  mov  %i1, %o0
-; SOFT-NEXT:  mov  %i2, %o1
-; SOFT-NEXT:  mov  %i0, %o2
-; SOFT-NEXT:  mov  %i1, %o3
-; SOFT-NEXT:  mov  %i2, %o4
-; SOFT-NEXT:  mov  %i1, %o5
-; SOFT-NEXT:  call floatarg
-; SOFT:  std %o0, [%i4]
+; SOFT: mov %i2, %o1
+; SOFT-NEXT: mov %i1, %o0
+; SOFT-NEXT: mov %i0, %o2
+; SOFT-NEXT: st %i0, [%sp+104]
+; SOFT-NEXT: st %i2, [%sp+100]
+; SOFT-NEXT: st %i1, [%sp+96]
+; SOFT-NEXT: st %i2, [%sp+92]
+; SOFT-NEXT: mov %i1, %o3
+; SOFT-NEXT: mov %i2, %o4
+; SOFT-NEXT: mov %i1, %o5
+; SOFT-NEXT: call floatarg
+; SOFT: std %o0, [%i4]
 ; CHECK: restore
 define void @call_floatarg(float %f1, double %d2, float %f5, ptr %p) {
   %r = call double @floatarg(double %d2, float %f1, double %d2, double %d2,
@@ -228,16 +228,16 @@ define i64 @i64arg(i64 %a0,    ; %i0,%i1
 
 ; CHECK-LABEL: call_i64arg:
 ; CHECK: save %sp, -112, %sp
-; CHECK: st %i0, [%sp+104]
+; CHECK: mov %i2, %o1
+; CHECK-NEXT: mov %i1, %o0
+; CHECK-NEXT: mov %i0, %o2
+; CHECK-NEXT: st %i0, [%sp+104]
 ; CHECK-NEXT: st %i2, [%sp+100]
 ; CHECK-NEXT: st %i1, [%sp+96]
 ; CHECK-NEXT: st %i2, [%sp+92]
-; CHECK-NEXT: mov      %i1, %o0
-; CHECK-NEXT: mov      %i2, %o1
-; CHECK-NEXT: mov      %i0, %o2
-; CHECK-NEXT: mov      %i1, %o3
-; CHECK-NEXT: mov      %i2, %o4
-; CHECK-NEXT: mov      %i1, %o5
+; CHECK-NEXT: mov %i1, %o3
+; CHECK-NEXT: mov %i2, %o4
+; CHECK-NEXT: mov %i1, %o5
 ; CHECK-NEXT: call i64arg
 ; CHECK: std %o0, [%i3]
 ; CHECK-NEXT: restore

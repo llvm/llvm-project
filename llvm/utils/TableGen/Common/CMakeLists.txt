@@ -10,11 +10,13 @@ set(LLVM_LINK_COMPONENTS
   TableGen
   )
 
-add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
+add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL DISABLE_LLVM_LINK_LLVM_DYLIB
+  GlobalISel/MatchTable/MatchTable.cpp
+  GlobalISel/MatchTable/Matchers.cpp
+  GlobalISel/MatchTable/Types.cpp
   GlobalISel/CodeExpander.cpp
   GlobalISel/CombinerUtils.cpp
   GlobalISel/CXXPredicates.cpp
-  GlobalISel/GlobalISelMatchTable.cpp
   GlobalISel/GlobalISelMatchTableExecutorEmitter.cpp
   GlobalISel/PatternParser.cpp
   GlobalISel/Patterns.cpp
@@ -27,12 +29,13 @@ add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
   CodeGenRegisters.cpp
   CodeGenSchedule.cpp
   CodeGenTarget.cpp
-  DAGISelMatcher.cpp
   InfoByHwMode.cpp
+  InstructionEncoding.cpp
   OptEmitter.cpp
   PredicateExpander.cpp
   SubtargetFeatureInfo.cpp
   Types.cpp
+  Utils.cpp
   VarLenCodeEmitterGen.cpp
 
   LINK_LIBS
@@ -41,6 +44,9 @@ add_llvm_library(LLVMTableGenCommon STATIC OBJECT EXCLUDE_FROM_ALL
   DEPENDS
   vt_gen
   intrinsics_gen
+
+  LINK_COMPONENTS
+  CodeGenTypes
   )
 
 # Users may include its headers as "Common/*.h"

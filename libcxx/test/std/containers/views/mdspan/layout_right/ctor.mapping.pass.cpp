@@ -18,10 +18,11 @@
 //
 // Preconditions: other.required_span_size() is representable as a value of type index_type
 
+#include <cassert>
+#include <cstddef>
+#include <limits>
 #include <mdspan>
 #include <type_traits>
-#include <cassert>
-#include <limits>
 
 #include "test_macros.h"
 

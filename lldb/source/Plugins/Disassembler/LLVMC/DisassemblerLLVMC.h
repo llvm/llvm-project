@@ -22,8 +22,8 @@ class InstructionLLVMC;
 
 class DisassemblerLLVMC : public lldb_private::Disassembler {
 public:
-  DisassemblerLLVMC(const lldb_private::ArchSpec &arch,
-                    const char *flavor /* = NULL */);
+  DisassemblerLLVMC(const lldb_private::ArchSpec &arch, const char *flavor,
+                    const char *cpu, const char *features);
 
   ~DisassemblerLLVMC() override;
 
@@ -35,7 +35,9 @@ public:
   static llvm::StringRef GetPluginNameStatic() { return "llvm-mc"; }
 
   static lldb::DisassemblerSP CreateInstance(const lldb_private::ArchSpec &arch,
-                                             const char *flavor);
+                                             const char *flavor,
+                                             const char *cpu,
+                                             const char *features);
 
   size_t DecodeInstructions(const lldb_private::Address &base_addr,
                             const lldb_private::DataExtractor &data,
@@ -44,6 +46,13 @@ public:
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
+
+  /// This function merges the user overwrite features (provided via -Y option)
+  /// with the subtarget features retrieved from the ELF. It also validates the
+  /// user overwrite feature string and only valid flags are included in the
+  /// final feature string.
+  static void UpdateSubtargetFeatures(llvm::StringRef subtarget_features,
+                                      std::string &user_feature_overrides);
 
 protected:
   friend class InstructionLLVMC;

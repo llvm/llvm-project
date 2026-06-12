@@ -1,4 +1,4 @@
-; RUN: llc -march=xcore < %s | FileCheck %s
+; RUN: llc -mtriple=xcore < %s | FileCheck %s
 
 ; Only needs one ladd
 define i64 @f1(i32 %x, i32 %y) nounwind {

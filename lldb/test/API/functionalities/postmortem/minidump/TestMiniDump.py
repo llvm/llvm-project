@@ -32,7 +32,7 @@ class MiniDumpTestCase(TestBase):
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
         self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonException)
-        stop_description = thread.GetStopDescription(256)
+        stop_description = thread.stop_description
         self.assertIn("0xc0000005", stop_description)
 
     def test_modules_in_mini_dump(self):

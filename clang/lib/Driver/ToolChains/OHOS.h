@@ -56,9 +56,9 @@ public:
   std::string computeSysRoot() const override;
   std::string getDynamicLinker(const llvm::opt::ArgList &Args) const override;
 
-  std::string
-  getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
-                FileType Type = ToolChain::FT_Static) const override;
+  std::string getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
+                            FileType Type = ToolChain::FT_Static,
+                            bool IsFortran = false) const override;
 
   const char *getDefaultLinker() const override {
     return "ld.lld";
@@ -79,7 +79,9 @@ protected:
                                  const llvm::Triple &TargetTriple,
                                  StringRef SysRoot) const override;
   void addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const override;
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
   void addProfileRTLibs(const llvm::opt::ArgList &Args,
                              llvm::opt::ArgStringList &CmdArgs) const override;
   path_list getArchSpecificLibPaths() const override;

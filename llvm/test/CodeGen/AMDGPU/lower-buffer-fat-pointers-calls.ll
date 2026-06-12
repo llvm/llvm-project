@@ -2,7 +2,6 @@
 ; RUN: opt -S -mcpu=gfx900 -amdgpu-lower-buffer-fat-pointers < %s | FileCheck %s
 ; RUN: opt -S -mcpu=gfx900 -passes=amdgpu-lower-buffer-fat-pointers < %s | FileCheck %s
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
 target triple = "amdgcn--"
 
 define ptr addrspace(7) @recur.inner.1(ptr addrspace(7) %x, i32 %v) {
@@ -48,9 +47,8 @@ define ptr addrspace(7) @recur.inner.2(i32 %v, ptr addrspace(7) %x) {
 ; CHECK-NEXT:    [[X_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[X]], 0
 ; CHECK-NEXT:    [[X_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[X]], 1
 ; CHECK-NEXT:    [[INC:%.*]] = add i32 [[X_OFF]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[X_RSRC]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 [[INC]], 1
-; CHECK-NEXT:    [[RET:%.*]] = call { ptr addrspace(8), i32 } @recur.inner.1({ ptr addrspace(8), i32 } [[TMP2]], i32 [[V]])
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } [[X]], i32 [[INC]], 1
+; CHECK-NEXT:    [[RET:%.*]] = call { ptr addrspace(8), i32 } @recur.inner.1({ ptr addrspace(8), i32 } [[TMP1]], i32 [[V]])
 ; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[RET]]
 ;
   %inc = getelementptr i32, ptr addrspace(7) %x, i32 1
@@ -91,7 +89,12 @@ define void @caller(ptr addrspace(7) noundef nonnull %arg) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i160 [[V_INT_RSRC]], 32
 ; CHECK-NEXT:    [[V_INT_OFF:%.*]] = zext i32 [[V_OFF]] to i160
 ; CHECK-NEXT:    [[V_INT:%.*]] = or i160 [[TMP1]], [[V_INT_OFF]]
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i160(i160 [[V_INT]], ptr addrspace(8) align 32 [[ARG_RSRC]], i32 [[ARG_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    [[V_INT_LEGAL:%.*]] = bitcast i160 [[V_INT]] to <5 x i32>
+; CHECK-NEXT:    [[V_INT_SLICE_0:%.*]] = shufflevector <5 x i32> [[V_INT_LEGAL]], <5 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.v4i32(<4 x i32> [[V_INT_SLICE_0]], ptr addrspace(8) align 32 [[ARG_RSRC]], i32 [[ARG_OFF]], i32 0, i32 0)
+; CHECK-NEXT:    [[ARG_PART_4:%.*]] = add nuw i32 [[ARG_OFF]], 16
+; CHECK-NEXT:    [[V_INT_SLICE_4:%.*]] = extractelement <5 x i32> [[V_INT_LEGAL]], i64 4
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 [[V_INT_SLICE_4]], ptr addrspace(8) align 16 [[ARG_RSRC]], i32 [[ARG_PART_4]], i32 0, i32 0)
 ; CHECK-NEXT:    ret void
 ;
   %v = call ptr addrspace(7) @extern(ptr addrspace(7) %arg)
@@ -105,9 +108,8 @@ define internal noalias noundef nonnull ptr addrspace(7) @foo(ptr addrspace(7) n
 ; CHECK-NEXT:    [[ARG_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[ARG]], 0
 ; CHECK-NEXT:    [[ARG_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[ARG]], 1
 ; CHECK-NEXT:    [[RET:%.*]] = add nuw i32 [[ARG_OFF]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[ARG_RSRC]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 [[RET]], 1
-; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } [[ARG]], i32 [[RET]], 1
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP1]]
 ;
   %ret = getelementptr inbounds i32, ptr addrspace(7) %arg, i32 1
   ret ptr addrspace(7) %ret

@@ -44,9 +44,13 @@ private:
                                  const object::coff_section *Section,
                                  uint64_t SectionOffset,
                                  const RuntimeFunction &RF);
-  void printUnwindCode(const UnwindInfo& UI, ArrayRef<UnwindCode> UC);
+  void printUnwindCode(const UnwindInfo &UI, ArrayRef<UnwindCode> UC,
+                       bool &SeenFirstEpilog);
   void printUnwindInfo(const Context &Ctx, const object::coff_section *Section,
                        off_t Offset, const UnwindInfo &UI);
+  void printUnwindInfoV3(const Context &Ctx,
+                         const object::coff_section *Section, off_t Offset,
+                         ArrayRef<uint8_t> Data);
   void printRuntimeFunction(const Context &Ctx,
                             const object::coff_section *Section,
                             uint64_t SectionOffset, const RuntimeFunction &RF);

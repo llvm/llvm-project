@@ -1,6 +1,6 @@
-; RUN: llc -no-integrated-as -march=mipsel < %s | \
+; RUN: llc -no-integrated-as -mtriple=mipsel < %s | \
 ; RUN:     FileCheck %s -check-prefixes=ALL,GAS
-; RUN: llc -march=mipsel < %s | FileCheck %s -check-prefixes=ALL,IAS
+; RUN: llc -mtriple=mipsel < %s | FileCheck %s -check-prefixes=ALL,IAS
 
 define void @constraint_I() nounwind {
 ; First I with short

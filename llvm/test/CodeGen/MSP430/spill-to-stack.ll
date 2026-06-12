@@ -1,4 +1,4 @@
-; RUN: llc -march=msp430 < %s
+; RUN: llc -mtriple=msp430 < %s
 %VeryLarge = type { i8, i32, i32, i32, i32, i32, i32, i32, i32, i32 }
 
 ; intentionally cause a spill

@@ -1137,3 +1137,16 @@ define i32 @n290_or_with_wrong_magic(i32 %data, i32 %nbits) {
   %signextended = or i32 %high_bits_extracted, %magic
   ret i32 %signextended
 }
+
+define i32 @bitwidth_does_not_fit(i3 %arg) {
+; CHECK-LABEL: @bitwidth_does_not_fit(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i3 [[ARG:%.*]], 0
+; CHECK-NEXT:    [[INC:%.*]] = select i1 [[TMP1]], i32 2, i32 1
+; CHECK-NEXT:    ret i32 [[INC]]
+;
+  %neg = sub i3 0, %arg
+  %neg.ext = zext i3 %neg to i32
+  %shr = lshr i32 1, %neg.ext
+  %inc = add i32 %shr, 1
+  ret i32 %inc
+}

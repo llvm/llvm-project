@@ -211,7 +211,7 @@ define dso_local void @PR37100(i8 %arg1, i16 %arg2, i64 %arg3, i8 %arg4, ptr %pt
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %ch
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    jmp .LBB3_1
-; X32-NEXT:    .p2align 4, 0x90
+; X32-NEXT:    .p2align 4
 ; X32-NEXT:  .LBB3_5: # %bb1
 ; X32-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; X32-NEXT:    movl %esi, %eax
@@ -250,7 +250,7 @@ define dso_local void @PR37100(i8 %arg1, i16 %arg2, i64 %arg3, i8 %arg4, ptr %pt
 ; X64-NEXT:    movq %rdx, %r10
 ; X64-NEXT:    movl {{[0-9]+}}(%rsp), %esi
 ; X64-NEXT:    movzbl %cl, %ecx
-; X64-NEXT:    .p2align 4, 0x90
+; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB3_1: # %bb1
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X64-NEXT:    movsbq %dil, %rax

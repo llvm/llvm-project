@@ -73,3 +73,32 @@ int test() {
 }
 
 }
+
+namespace GH142835 {
+struct MoveMe {
+  MoveMe& operator=(this MoveMe&, const MoveMe&) = default;
+  constexpr MoveMe& operator=(this MoveMe& self, MoveMe&& other) {
+    self.value = other.value;
+    other.value = 0;
+    return self;
+  }
+  int value = 4242;
+};
+
+struct S {
+  constexpr S& operator=(this S&, const S&) = default;
+  S& operator=(this S&, S&&) = default;
+
+  MoveMe move_me;
+};
+
+constexpr bool f() {
+  S s1{};
+  S s2{};
+  s2 = s1;
+  return true;
+}
+
+static_assert(f());
+
+}

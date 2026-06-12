@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=nvptx64 | FileCheck %s
+; RUN: llc < %s -mtriple=nvptx64 | FileCheck %s
 
 %st = type { i8, i8, i16 }
 
@@ -9,11 +9,11 @@
 ; Verify that loads with different memory types are not subject to CSE
 ; once they are promoted to the same type.
 ;
-; CHECK: ld.global.v2.u8  {%[[B1:rs[0-9]+]], %[[B2:rs[0-9]+]]}, [a];
-; CHECK: st.global.v2.u8  [b], {%[[B1]], %[[B2]]};
+; CHECK: ld.global.v2.b8  {%[[B1:rs[0-9]+]], %[[B2:rs[0-9]+]]}, [a];
+; CHECK: st.global.v2.b8  [b], {%[[B1]], %[[B2]]};
 ;
-; CHECK: ld.global.u32 %[[C:r[0-9]+]], [a];
-; CHECK: st.global.u32 [c], %[[C]];
+; CHECK: ld.global.b32 %[[C:r[0-9]+]], [a];
+; CHECK: st.global.b32 [c], %[[C]];
 
 define void @test1() #0 {
   %1 = load <2 x i8>, ptr addrspace(1) @a, align 8

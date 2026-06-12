@@ -127,6 +127,11 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
       (!IsPointer(ultimate) || (isWholeSymbol && isPointerDefinition))) {
     return BlameSymbol(
         at, "'%s' is an INTENT(IN) dummy argument"_en_US, original);
+  } else if (acceptAllocatable && IsAllocatable(ultimate) &&
+      !flags.test(DefinabilityFlag::SourcedAllocation)) {
+    // allocating an allocatable doesn't count as a def'n unless there's SOURCE=
+  } else if (!flags.test(DefinabilityFlag::DoNotNoteDefinition)) {
+    scope.context().NoteDefinedSymbol(ultimate);
   }
   if (const Scope * pure{FindPureProcedureContaining(scope)}) {
     // Additional checking for pure subprograms.
@@ -166,7 +171,9 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
             "'%s' is not device or managed or shared data and is not definable in a device subprogram"_err_en_US,
             original);
       }
-    } else if (!isOwnedByDeviceCode) {
+    } else if (!isOwnedByDeviceCode &&
+        !scope.context().languageFeatures().IsEnabled(
+            common::LanguageFeature::CudaUnified)) {
       return BlameSymbol(at,
           "'%s' is a host variable and is not definable in a device subprogram"_err_en_US,
           original);
@@ -187,6 +194,15 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
       return WhyNotDefinableLast(at, scope, flags, dataRef->GetLastSymbol());
     }
   }
+  auto dyType{evaluate::DynamicType::From(ultimate)};
+  const auto *inPure{FindPureProcedureContaining(scope)};
+  if (inPure && !flags.test(DefinabilityFlag::PolymorphicOkInPure) &&
+      flags.test(DefinabilityFlag::PotentialDeallocation) && dyType &&
+      dyType->IsPolymorphic()) {
+    return BlameSymbol(at,
+        "'%s' is a whole polymorphic object in a pure subprogram"_en_US,
+        original);
+  }
   if (flags.test(DefinabilityFlag::PointerDefinition)) {
     if (flags.test(DefinabilityFlag::AcceptAllocatable)) {
       if (!IsAllocatableOrObjectPointer(&ultimate)) {
@@ -198,30 +214,34 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
     }
     return std::nullopt; // pointer assignment - skip following checks
   }
-  if (IsOrContainsEventOrLockComponent(ultimate)) {
+  if (!flags.test(DefinabilityFlag::AllowEventLockOrNotifyType) &&
+      IsOrContainsEventOrLockComponent(ultimate)) {
     return BlameSymbol(at,
         "'%s' is an entity with either an EVENT_TYPE or LOCK_TYPE"_en_US,
         original);
   }
-  if (FindPureProcedureContaining(scope)) {
-    if (auto dyType{evaluate::DynamicType::From(ultimate)}) {
-      if (!flags.test(DefinabilityFlag::PolymorphicOkInPure)) {
-        if (dyType->IsPolymorphic()) { // C1596
-          return BlameSymbol(
-              at, "'%s' is polymorphic in a pure subprogram"_en_US, original);
+  if (dyType && inPure) {
+    if (const Symbol * impure{HasImpureFinal(ultimate)}) {
+      if (flags.test(DefinabilityFlag::OnlyWarnOnImpureFinalInPureContext)) {
+        if (scope.context().ShouldWarn(
+                common::UsageWarning::ImpureFinalInPure)) {
+          parser::Message message{at,
+              "'%s' has impure FINAL procedure '%s' and must be definable in this pure context"_warn_en_US,
+              original.name(), impure->name()};
+          evaluate::AttachDeclaration(message, original);
+          return message;
         }
-      }
-      if (const Symbol * impure{HasImpureFinal(ultimate)}) {
+      } else {
         return BlameSymbol(at, "'%s' has an impure FINAL procedure '%s'"_en_US,
             original, impure->name());
       }
+    }
+    if (!flags.test(DefinabilityFlag::PolymorphicOkInPure)) {
       if (const DerivedTypeSpec * derived{GetDerivedTypeSpec(dyType)}) {
-        if (!flags.test(DefinabilityFlag::PolymorphicOkInPure)) {
-          if (auto bad{FindPolymorphicAllocatableUltimateComponent(*derived)}) {
-            return BlameSymbol(at,
-                "'%s' has polymorphic component '%s' in a pure subprogram"_en_US,
-                original, bad.BuildResultDesignatorName());
-          }
+        if (auto bad{FindPolymorphicAllocatablePotentialComponent(*derived)}) {
+          return BlameSymbol(at,
+              "'%s' has polymorphic component '%s' in a pure subprogram"_en_US,
+              original, bad.BuildResultDesignatorName());
         }
       }
     }
@@ -235,7 +255,7 @@ static std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const evaluate::DataRef &dataRef) {
   auto whyNotBase{
       WhyNotDefinableBase(at, scope, flags, dataRef.GetFirstSymbol(),
-          std::holds_alternative<evaluate::SymbolRef>(dataRef.u),
+          evaluate::UnwrapWholeSymbolDataRef(dataRef) != nullptr,
           DefinesComponentPointerTarget(dataRef, flags))};
   if (!whyNotBase || !whyNotBase->IsFatal()) {
     if (auto whyNotLast{
@@ -298,6 +318,10 @@ public:
     }
     return anyVector ? false : (*this)(aRef.base());
   }
+  template <typename T> bool operator()(const evaluate::ConditionalExpr<T> &) {
+    // A conditional expression is not a variable and cannot be definable.
+    return false;
+  }
 
 private:
   evaluate::FoldingContext &foldingContext_;
@@ -342,7 +366,8 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
                 if (!portabilityWarning &&
                     scope.context().languageFeatures().ShouldWarn(
                         common::UsageWarning::VectorSubscriptFinalization)) {
-                  portabilityWarning = parser::Message{at,
+                  portabilityWarning = parser::Message{
+                      common::UsageWarning::VectorSubscriptFinalization, at,
                       "Variable '%s' has a vector subscript and will be finalized by non-elemental subroutine '%s'"_port_en_US,
                       expr.AsFortran(), anyRankMatch->name()};
                 }
@@ -372,7 +397,7 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     if (auto whyNotDataRef{WhyNotDefinable(at, scope, flags, *dataRef)}) {
       return whyNotDataRef;
     }
-  } else if (evaluate::IsNullPointer(expr)) {
+  } else if (evaluate::IsNullPointerOrAllocatable(&expr)) {
     return parser::Message{
         at, "'%s' is a null pointer"_err_en_US, expr.AsFortran()};
   } else if (flags.test(DefinabilityFlag::PointerDefinition)) {

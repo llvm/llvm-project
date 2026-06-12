@@ -159,6 +159,7 @@ public:
   lldb::SBError Destroy();
 
   lldb::SBError Continue();
+  lldb::SBError ContinueInDirection(lldb::RunDirection direction);
 
   lldb::SBError Stop();
 
@@ -423,6 +424,15 @@ public:
   ///     the process isn't loaded from a core file.
   lldb::SBFileSpec GetCoreFile();
 
+  /// Check whether this process is a live debug session, as opposed to a
+  /// post-mortem session such as a core file or minidump.
+  ///
+  /// \return
+  ///     \b true if the process represents a live debug session, \b false if it
+  ///     is a post-mortem session (e.g. a core file) or there is no underlying
+  ///     process.
+  bool IsLiveDebugSession() const;
+
   /// \{
   /// \group Mask Address Methods
   ///
@@ -586,6 +596,7 @@ protected:
   friend class SBBreakpointCallbackBaton;
   friend class SBBreakpointLocation;
   friend class SBCommandInterpreter;
+  friend class SBSaveCoreOptions;
   friend class SBDebugger;
   friend class SBExecutionContext;
   friend class SBFunction;

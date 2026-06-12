@@ -15,6 +15,8 @@
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+
 template <typename OutType, typename InType>
 class LlvmLibcILogbTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<InType>;
@@ -76,7 +78,7 @@ public:
   void test_subnormal_range(Func func) {
     constexpr StorageType MIN_SUBNORMAL = FPBits::min_subnormal().uintval();
     constexpr StorageType MAX_SUBNORMAL = FPBits::max_subnormal().uintval();
-    constexpr int COUNT = 10'001;
+    constexpr int COUNT = 1'231;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>((MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT),
         StorageType(1));
@@ -96,7 +98,7 @@ public:
   void test_normal_range(Func func) {
     constexpr StorageType MIN_NORMAL = FPBits::min_normal().uintval();
     constexpr StorageType MAX_NORMAL = FPBits::max_normal().uintval();
-    constexpr int COUNT = 10'001;
+    constexpr int COUNT = 1'231;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>((MAX_NORMAL - MIN_NORMAL) / COUNT),
         StorageType(1));

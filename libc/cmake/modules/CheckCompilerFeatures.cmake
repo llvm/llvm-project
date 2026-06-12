@@ -7,11 +7,17 @@ set(
     "builtin_ceil_floor_rint_trunc"
     "builtin_fmax_fmin"
     "builtin_fmaxf16_fminf16"
+    "builtin_isnan"
     "builtin_round"
     "builtin_roundeven"
     "float16"
+    "float16_conversion"
     "float128"
     "fixed_point"
+    "cfloat16"
+    "cfloat128"
+    "ext_vector_type"
+    "stdc_fenv_access"
 )
 
 # Making sure ALL_COMPILER_FEATURES is sorted.
@@ -61,15 +67,27 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
   set(link_options "")
   if(${feature} STREQUAL "fixed_point")
     list(APPEND compile_options "-ffixed-point")
-  elseif(${feature} MATCHES "^builtin_")
+  elseif(${feature} STREQUAL "stdc_fenv_access")
+    if (MSVC)
+      list(APPEND compile_options "/WX")
+    else()
+      list(APPEND compile_options "-Wall -Werror")
+    endif()
+  elseif(${feature} MATCHES "^builtin_" OR
+         ${feature} STREQUAL "float16_conversion")
     set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
     set(link_options -nostdlib)
-    # The compiler might handle calls to rounding builtins by generating calls
-    # to the respective libc math functions, in which case we cannot use these
+    # The compiler might handle calls to math builtins by generating calls to
+    # the respective libc math functions, in which case we cannot use these
     # builtins in our implementations of these functions. We check that this is
     # not the case by trying to link an executable, since linking would fail due
     # to unresolved references with -nostdlib if calls to libc functions were
     # generated.
+    #
+    # We also had issues with soft-float float16 conversion functions using both
+    # compiler-rt and libgcc, so we also check whether we can convert from and
+    # to float16 without calls to compiler runtime functions by trying to link
+    # an executable with -nostdlib.
     set(CMAKE_TRY_COMPILE_TARGET_TYPE EXECUTABLE)
   endif()
 
@@ -97,23 +115,39 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
     list(APPEND AVAILABLE_COMPILER_FEATURES ${feature})
     if(${feature} STREQUAL "float16")
       set(LIBC_TYPES_HAS_FLOAT16 TRUE)
+    elseif(${feature} STREQUAL "float16_conversion")
+      add_compile_definitions(__LIBC_USE_FLOAT16_CONVERSION)
     elseif(${feature} STREQUAL "float128")
       set(LIBC_TYPES_HAS_FLOAT128 TRUE)
     elseif(${feature} STREQUAL "fixed_point")
       set(LIBC_COMPILER_HAS_FIXED_POINT TRUE)
+    elseif(${feature} STREQUAL "cfloat16")
+      set(LIBC_TYPES_HAS_CFLOAT16 TRUE)
+    elseif(${feature} STREQUAL "cfloat128")
+      set(LIBC_TYPES_HAS_CFLOAT128 TRUE)
     elseif(${feature} STREQUAL "builtin_ceil_floor_rint_trunc")
       set(LIBC_COMPILER_HAS_BUILTIN_CEIL_FLOOR_RINT_TRUNC TRUE)
     elseif(${feature} STREQUAL "builtin_fmax_fmin")
       set(LIBC_COMPILER_HAS_BUILTIN_FMAX_FMIN TRUE)
     elseif(${feature} STREQUAL "builtin_fmaxf16_fminf16")
       set(LIBC_COMPILER_HAS_BUILTIN_FMAXF16_FMINF16 TRUE)
+    elseif(${feature} STREQUAL "builtin_isnan")
+      set(LIBC_COMPILER_HAS_BUILTIN_ISNAN TRUE)
     elseif(${feature} STREQUAL "builtin_round")
       set(LIBC_COMPILER_HAS_BUILTIN_ROUND TRUE)
     elseif(${feature} STREQUAL "builtin_roundeven")
       set(LIBC_COMPILER_HAS_BUILTIN_ROUNDEVEN TRUE)
+    elseif(${feature} STREQUAL "ext_vector_type")
+      set(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE TRUE)
+    elseif(${feature} STREQUAL "stdc_fenv_access")
+      set(LIBC_COMPILER_HAS_STDC_FENV_ACCESS TRUE)
     endif()
   endif()
 endforeach()
+
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT})
+set(link_options "")
 
 message(STATUS "Compiler features available: ${AVAILABLE_COMPILER_FEATURES}")
 
@@ -127,3 +161,7 @@ check_cxx_compiler_flag("-nostdlib++" LIBC_CC_SUPPORTS_NOSTDLIBPP)
 
 # clang-3.0+
 check_cxx_compiler_flag("-nostdlibinc" LIBC_CC_SUPPORTS_NOSTDLIBINC)
+
+# clang-all, gcc-8+
+check_cxx_compiler_flag("-Wextra-semi" LIBC_CC_SUPPORTS_EXTRA_SEMI)
+

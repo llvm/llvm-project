@@ -8,6 +8,7 @@
 
 #include "LibCxx.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -20,12 +21,12 @@ public:
     Update();
   }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
-    return m_container_sp ? m_container_sp->GetIndexOfChildWithName(name)
-                          : UINT32_MAX;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+    if (m_container_sp)
+      return m_container_sp->GetIndexOfChildWithName(name);
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
-  bool MightHaveChildren() override { return true; }
   lldb::ChildCacheState Update() override;
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {

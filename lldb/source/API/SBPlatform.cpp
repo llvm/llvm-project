@@ -13,7 +13,6 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/API/SBModuleSpec.h"
-#include "lldb/API/SBPlatform.h"
 #include "lldb/API/SBProcessInfoList.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBUnixSignals.h"
@@ -104,7 +103,7 @@ const char *SBPlatformConnectOptions::GetURL() {
 
   if (m_opaque_ptr->m_url.empty())
     return nullptr;
-  return ConstString(m_opaque_ptr->m_url.c_str()).GetCString();
+  return ConstString(m_opaque_ptr->m_url).GetCString();
 }
 
 void SBPlatformConnectOptions::SetURL(const char *url) {
@@ -207,7 +206,7 @@ const char *SBPlatformShellCommand::GetShell() {
 
   if (m_opaque_ptr->m_shell.empty())
     return nullptr;
-  return ConstString(m_opaque_ptr->m_shell.c_str()).GetCString();
+  return ConstString(m_opaque_ptr->m_shell).GetCString();
 }
 
 void SBPlatformShellCommand::SetShell(const char *shell_interpreter) {
@@ -224,7 +223,7 @@ const char *SBPlatformShellCommand::GetCommand() {
 
   if (m_opaque_ptr->m_command.empty())
     return nullptr;
-  return ConstString(m_opaque_ptr->m_command.c_str()).GetCString();
+  return ConstString(m_opaque_ptr->m_command).GetCString();
 }
 
 void SBPlatformShellCommand::SetCommand(const char *shell_command) {
@@ -241,7 +240,7 @@ const char *SBPlatformShellCommand::GetWorkingDirectory() {
 
   if (m_opaque_ptr->m_working_dir.empty())
     return nullptr;
-  return ConstString(m_opaque_ptr->m_working_dir.c_str()).GetCString();
+  return ConstString(m_opaque_ptr->m_working_dir).GetCString();
 }
 
 void SBPlatformShellCommand::SetWorkingDirectory(const char *path) {
@@ -287,7 +286,7 @@ const char *SBPlatformShellCommand::GetOutput() {
 
   if (m_opaque_ptr->m_output.empty())
     return nullptr;
-  return ConstString(m_opaque_ptr->m_output.c_str()).GetCString();
+  return ConstString(m_opaque_ptr->m_output).GetCString();
 }
 
 // SBPlatform
@@ -332,6 +331,11 @@ SBPlatform::operator bool() const {
   return m_opaque_sp.get() != nullptr;
 }
 
+bool SBPlatform::IsHost() const {
+  LLDB_INSTRUMENT_VA(this);
+  return m_opaque_sp.get() != nullptr && m_opaque_sp->IsHost();
+}
+
 void SBPlatform::Clear() {
   LLDB_INSTRUMENT_VA(this);
 
@@ -343,7 +347,7 @@ const char *SBPlatform::GetName() {
 
   PlatformSP platform_sp(GetSP());
   if (platform_sp)
-    return ConstString(platform_sp->GetName()).AsCString();
+    return ConstString(platform_sp->GetName()).AsCString(nullptr);
   return nullptr;
 }
 
@@ -358,7 +362,8 @@ const char *SBPlatform::GetWorkingDirectory() {
 
   PlatformSP platform_sp(GetSP());
   if (platform_sp)
-    return platform_sp->GetWorkingDirectory().GetPathAsConstString().AsCString();
+    return platform_sp->GetWorkingDirectory().GetPathAsConstString().AsCString(
+        nullptr);
   return nullptr;
 }
 
@@ -386,7 +391,7 @@ SBError SBPlatform::ConnectRemote(SBPlatformConnectOptions &connect_options) {
     args.AppendArgument(connect_options.GetURL());
     sb_error.ref() = platform_sp->ConnectRemote(args);
   } else {
-    sb_error.SetErrorString("invalid platform");
+    sb_error = Status::FromErrorString("invalid platform");
   }
   return sb_error;
 }
@@ -417,7 +422,7 @@ const char *SBPlatform::GetTriple() {
     if (arch.IsValid()) {
       // Const-ify the string so we don't need to worry about the lifetime of
       // the string
-      return ConstString(arch.GetTriple().getTriple().c_str()).GetCString();
+      return ConstString(arch.GetTriple().getTriple()).GetCString();
     }
   }
   return nullptr;
@@ -447,7 +452,7 @@ const char *SBPlatform::GetOSDescription() {
     if (!s.empty()) {
       // Const-ify the string so we don't need to worry about the lifetime of
       // the string
-      return ConstString(s.c_str()).GetCString();
+      return ConstString(s).GetCString();
     }
   }
   return nullptr;
@@ -503,7 +508,7 @@ SBError SBPlatform::Get(SBFileSpec &src, SBFileSpec &dst) {
   if (platform_sp) {
     sb_error.ref() = platform_sp->GetFile(src.ref(), dst.ref());
   } else {
-    sb_error.SetErrorString("invalid platform");
+    sb_error = Status::FromErrorString("invalid platform");
   }
   return sb_error;
 }
@@ -523,10 +528,8 @@ SBError SBPlatform::Put(SBFileSpec &src, SBFileSpec &dst) {
       return platform_sp->PutFile(src.ref(), dst.ref(), permissions);
     }
 
-    Status error;
-    error.SetErrorStringWithFormat("'src' argument doesn't exist: '%s'",
-                                   src.ref().GetPath().c_str());
-    return error;
+    return Status::FromErrorStringWithFormat(
+        "'src' argument doesn't exist: '%s'", src.ref().GetPath().c_str());
   });
 }
 
@@ -537,8 +540,8 @@ SBError SBPlatform::Install(SBFileSpec &src, SBFileSpec &dst) {
       return platform_sp->Install(src.ref(), dst.ref());
 
     Status error;
-    error.SetErrorStringWithFormat("'src' argument doesn't exist: '%s'",
-                                   src.ref().GetPath().c_str());
+    error = Status::FromErrorStringWithFormat(
+        "'src' argument doesn't exist: '%s'", src.ref().GetPath().c_str());
     return error;
   });
 }
@@ -549,7 +552,7 @@ SBError SBPlatform::Run(SBPlatformShellCommand &shell_command) {
       [&](const lldb::PlatformSP &platform_sp) {
         const char *command = shell_command.GetCommand();
         if (!command)
-          return Status("invalid shell command (empty)");
+          return Status::FromErrorString("invalid shell command (empty)");
 
         if (shell_command.GetWorkingDirectory() == nullptr) {
           std::string platform_working_dir =
@@ -562,7 +565,7 @@ SBError SBPlatform::Run(SBPlatformShellCommand &shell_command) {
             FileSpec(shell_command.GetWorkingDirectory()),
             &shell_command.m_opaque_ptr->m_status,
             &shell_command.m_opaque_ptr->m_signo,
-            &shell_command.m_opaque_ptr->m_output,
+            &shell_command.m_opaque_ptr->m_output, nullptr,
             shell_command.m_opaque_ptr->m_timeout);
       });
 }
@@ -588,15 +591,15 @@ SBProcess SBPlatform::Attach(SBAttachInfo &attach_info,
       Status status;
       ProcessSP process_sp = platform_sp->Attach(info, debugger.ref(),
                                                  target.GetSP().get(), status);
-      error.SetError(status);
+      error.SetError(std::move(status));
       return SBProcess(process_sp);
     }
 
-    error.SetErrorString("not connected");
+    error = Status::FromErrorString("not connected");
     return {};
   }
 
-  error.SetErrorString("invalid platform");
+  error = Status::FromErrorString("invalid platform");
   return {};
 }
 
@@ -606,11 +609,11 @@ SBProcessInfoList SBPlatform::GetAllProcesses(SBError &error) {
       ProcessInstanceInfoList list = platform_sp->GetAllProcesses();
       return SBProcessInfoList(list);
     }
-    error.SetErrorString("not connected");
+    error = Status::FromErrorString("not connected");
     return {};
   }
 
-  error.SetErrorString("invalid platform");
+  error = Status::FromErrorString("invalid platform");
   return {};
 }
 
@@ -629,9 +632,9 @@ SBError SBPlatform::ExecuteConnected(
     if (platform_sp->IsConnected())
       sb_error.ref() = func(platform_sp);
     else
-      sb_error.SetErrorString("not connected");
+      sb_error = Status::FromErrorString("not connected");
   } else
-    sb_error.SetErrorString("invalid platform");
+    sb_error = Status::FromErrorString("invalid platform");
 
   return sb_error;
 }
@@ -645,7 +648,7 @@ SBError SBPlatform::MakeDirectory(const char *path, uint32_t file_permissions) {
     sb_error.ref() =
         platform_sp->MakeDirectory(FileSpec(path), file_permissions);
   } else {
-    sb_error.SetErrorString("invalid platform");
+    sb_error = Status::FromErrorString("invalid platform");
   }
   return sb_error;
 }
@@ -672,7 +675,7 @@ SBError SBPlatform::SetFilePermissions(const char *path,
     sb_error.ref() =
         platform_sp->SetFilePermissions(FileSpec(path), file_permissions);
   } else {
-    sb_error.SetErrorString("invalid platform");
+    sb_error = Status::FromErrorString("invalid platform");
   }
   return sb_error;
 }
@@ -730,7 +733,7 @@ SBError SBPlatform::SetLocateModuleCallback(
           symbol_file_spec = symbol_file_spec_sb.ref();
         }
 
-        return error.ref();
+        return error.ref().Clone();
       });
   return SBError();
 }

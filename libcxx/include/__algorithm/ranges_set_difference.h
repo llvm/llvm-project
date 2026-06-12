@@ -10,21 +10,17 @@
 #define _LIBCPP___ALGORITHM_RANGES_SET_DIFFERENCE_H
 
 #include <__algorithm/in_out_result.h>
-#include <__algorithm/iterator_operations.h>
 #include <__algorithm/make_projected.h>
 #include <__algorithm/set_difference.h>
 #include <__config>
 #include <__functional/identity.h>
-#include <__functional/invoke.h>
 #include <__functional/ranges_operations.h>
 #include <__iterator/concepts.h>
 #include <__iterator/mergeable.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
-#include <__type_traits/decay.h>
 #include <__utility/move.h>
-#include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -42,9 +38,7 @@ namespace ranges {
 template <class _InIter, class _OutIter>
 using set_difference_result = in_out_result<_InIter, _OutIter>;
 
-namespace __set_difference {
-
-struct __fn {
+struct __set_difference {
   template <input_iterator _InIter1,
             sentinel_for<_InIter1> _Sent1,
             input_iterator _InIter2,
@@ -63,9 +57,8 @@ struct __fn {
       _Comp __comp   = {},
       _Proj1 __proj1 = {},
       _Proj2 __proj2 = {}) const {
-    auto __ret = std::__set_difference<_RangeAlgPolicy>(
+    return std::__set_difference(
         __first1, __last1, __first2, __last2, __result, ranges::__make_projected_comp(__comp, __proj1, __proj2));
-    return {std::move(__ret.first), std::move(__ret.second)};
   }
 
   template <input_range _Range1,
@@ -82,21 +75,18 @@ struct __fn {
              _Comp __comp   = {},
              _Proj1 __proj1 = {},
              _Proj2 __proj2 = {}) const {
-    auto __ret = std::__set_difference<_RangeAlgPolicy>(
+    return std::__set_difference(
         ranges::begin(__range1),
         ranges::end(__range1),
         ranges::begin(__range2),
         ranges::end(__range2),
         __result,
         ranges::__make_projected_comp(__comp, __proj1, __proj2));
-    return {std::move(__ret.first), std::move(__ret.second)};
   }
 };
 
-} // namespace __set_difference
-
 inline namespace __cpo {
-inline constexpr auto set_difference = __set_difference::__fn{};
+inline constexpr auto set_difference = __set_difference{};
 } // namespace __cpo
 } // namespace ranges
 

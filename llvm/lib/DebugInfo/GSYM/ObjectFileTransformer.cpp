@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <unordered_set>
-
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
@@ -49,7 +47,7 @@ static std::vector<uint8_t> getUUID(const object::ObjectFile &Obj) {
         consumeError(E.takeError());
         continue;
       }
-      DataExtractor Decoder(BuildIDData, Obj.makeTriple().isLittleEndian(), 8);
+      DataExtractor Decoder(BuildIDData, Obj.makeTriple().isLittleEndian());
       uint64_t Offset = 0;
       const uint32_t NameSize = Decoder.getU32(&Offset);
       const uint32_t PayloadSize = Decoder.getU32(&Offset);

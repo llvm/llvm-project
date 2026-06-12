@@ -56,7 +56,7 @@ public:
   // Format: Source.cpp:123 (/path/to/Source.cpp:123)
   std::string getSourceLocation(uint64_t off) const;
   // Return the relocation at \p off, if it exists. This does a linear search.
-  const Reloc *getRelocAt(uint32_t off) const;
+  const Relocation *getRelocAt(uint32_t off) const;
   // Whether the data at \p off in this InputSection is live.
   virtual bool isLive(uint64_t off) const = 0;
   virtual void markLive(uint64_t off) = 0;
@@ -66,12 +66,13 @@ public:
 protected:
   InputSection(Kind kind, const Section &section, ArrayRef<uint8_t> data,
                uint32_t align)
-      : sectionKind(kind), keepUnique(false), hasAltEntry(false), align(align),
-        data(data), section(section) {}
+      : sectionKind(kind), keepUnique(false), hasAltEntry(false), isCold(false),
+        align(align), data(data), section(section) {}
 
   InputSection(const InputSection &rhs)
       : sectionKind(rhs.sectionKind), keepUnique(false), hasAltEntry(false),
-        align(rhs.align), data(rhs.data), section(rhs.section) {}
+        isCold(rhs.isCold), align(rhs.align), data(rhs.data),
+        section(rhs.section) {}
 
   Kind sectionKind;
 
@@ -84,11 +85,19 @@ public:
   // Does this section have symbols at offsets other than zero? (NOTE: only
   // applies to ConcatInputSections.)
   bool hasAltEntry : 1;
+  // Is this considered cold? Computed before ICF. Currently reflects whether
+  // any symbol in the section has the N_COLD_FUNC nlist flag set. Cold
+  // sections are placed at the end of their containing output section to
+  // improve locality of non-cold input sections. When a section is given an
+  // explicit priority (via order file, --bp-startup-sort, or
+  // --bp-compression-sort), this flag is unset so that the priority-based
+  // ordering takes precedence over cold partitioning.
+  bool isCold : 1;
   uint32_t align = 1;
 
   OutputSection *parent = nullptr;
   ArrayRef<uint8_t> data;
-  std::vector<Reloc> relocs;
+  std::vector<Relocation> relocs;
   // The symbols that belong to this InputSection, sorted by value. With
   // .subsections_via_symbols, there is typically only one element here.
   llvm::TinyPtrVector<Defined *> symbols;
@@ -117,7 +126,8 @@ public:
   bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
   void writeTo(uint8_t *buf);
 
-  void foldIdentical(ConcatInputSection *redundant);
+  void foldIdentical(ConcatInputSection *redundant,
+                     Symbol::ICFFoldKind foldKind = Symbol::ICFFoldKind::Body);
   ConcatInputSection *canonical() override {
     return replacement ? replacement : this;
   }
@@ -141,7 +151,6 @@ public:
   // first and not copied to the output.
   bool wasCoalesced = false;
   bool live = !config->deadStrip;
-  bool hasCallSites = false;
   // This variable has two usages. Initially, it represents the input order.
   // After assignAddresses is called, it represents the offset from the
   // beginning of the output section this section was assigned to.
@@ -338,6 +347,7 @@ constexpr const char const_[] = "__const";
 constexpr const char lazySymbolPtr[] = "__la_symbol_ptr";
 constexpr const char lazyBinding[] = "__lazy_binding";
 constexpr const char literals[] = "__literals";
+constexpr const char functionMap[] = "__llvm_merge";
 constexpr const char moduleInitFunc[] = "__mod_init_func";
 constexpr const char moduleTermFunc[] = "__mod_term_func";
 constexpr const char nonLazySymbolPtr[] = "__nl_symbol_ptr";
@@ -353,6 +363,7 @@ constexpr const char objcMethname[] = "__objc_methname";
 constexpr const char objcNonLazyCatList[] = "__objc_nlcatlist";
 constexpr const char objcNonLazyClassList[] = "__objc_nlclslist";
 constexpr const char objcProtoList[] = "__objc_protolist";
+constexpr const char outlinedHashTree[] = "__llvm_outline";
 constexpr const char pageZero[] = "__pagezero";
 constexpr const char pointers[] = "__pointers";
 constexpr const char rebase[] = "__rebase";
@@ -374,6 +385,8 @@ constexpr const char addrSig[] = "__llvm_addrsig";
 } // namespace section_names
 
 void addInputSection(InputSection *inputSection);
+
+uint64_t resolveSymbolOffsetVA(const Symbol *sym, uint8_t type, int64_t offset);
 } // namespace macho
 
 std::string toString(const macho::InputSection *);
