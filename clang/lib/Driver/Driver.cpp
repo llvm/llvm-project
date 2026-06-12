@@ -552,9 +552,7 @@ static void setZosTargetVersion(const Driver &D, llvm::Triple &Target,
                                 StringRef ArgTarget) {
 
   static bool BeSilent = false;
-  auto IsTooOldToBeSupported = [](int v, int r) -> bool {
-    return v < 3;
-  };
+  auto IsTooOldToBeSupported = [](int v, int r) -> bool { return v < 3; };
 
   /* expect CURRENT, zOSVnRn, or 0xnnnnnnnn */
   if (ArgTarget.equals_insensitive("CURRENT")) {
