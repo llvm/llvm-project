@@ -67,7 +67,7 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
   const StackFrame *SF = Pred->getStackFrame();
   const Expr *CallExpr = Call.getOriginExpr();
 
-  ExplodedNodeSet Dst;
+  ExplodedNodeSet DstEval;
   Bldr.takeNodes(Pred);
 
   assert(ThisRD);
@@ -87,17 +87,17 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
     evalLocation(Tmp, CallExpr, VExpr, Pred, Pred->getState(), V,
                  /*isLoad=*/true);
     for (ExplodedNode *N : Tmp)
-      evalBind(Dst, CallExpr, N, ThisVal, V, !AlwaysReturnsLValue);
+      evalBind(DstEval, CallExpr, N, ThisVal, V, !AlwaysReturnsLValue);
   } else {
     // We can't copy empty classes because of empty base class optimization.
     // In that case, copying the empty base class subobject would overwrite the
     // object that it overlaps with - so let's not do that.
     // See issue-157467.cpp for an example.
-    Dst.insert(Pred);
+    DstEval.insert(Pred);
   }
 
   PostStmt PS(CallExpr, SF);
-  for (ExplodedNode *N : Dst) {
+  for (ExplodedNode *N : DstEval) {
     ProgramStateRef State = N->getState();
     if (AlwaysReturnsLValue)
       State = State->BindExpr(CallExpr, SF, ThisVal);
