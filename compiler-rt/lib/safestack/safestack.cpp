@@ -175,6 +175,12 @@ const int kMaxSignals = 1024;
 static atomic_uintptr_t* sigactions = nullptr;
 static StaticSpinMutex sigactions_mu;
 
+// When switching the __safestack_unsafe_stack_ptr to use the
+// unsafe_sigalt_stack_ptr, we need a way to store the current unsafe stack
+// position to restore it after returning from signal handling to normal
+// execution.
+__thread void* unsafe_backup_stack_ptr = nullptr;
+
 inline void *unsafe_stack_alloc(size_t size, size_t guard) {
   SFS_CHECK(size + guard >= size);
   void *addr = Mmap(nullptr, size + guard, PROT_READ | PROT_WRITE,
@@ -205,6 +211,35 @@ inline void unsafe_sigalt_stack_setup(void* start, size_t size) {
   unsafe_sigalt_stack_start = start;
   unsafe_sigalt_stack_size = size;
 }
+
+inline void swap_unsafe_stack_to_sigaltstack() {
+  unsafe_backup_stack_ptr = __safestack_unsafe_stack_ptr;
+  __safestack_unsafe_stack_ptr = unsafe_sigalt_stack_ptr;
+}
+
+inline void restore_unsafe_stack_from_sigaltstack() {
+  unsafe_sigalt_stack_ptr = __safestack_unsafe_stack_ptr;
+  __safestack_unsafe_stack_ptr = unsafe_backup_stack_ptr;
+}
+
+__thread unsigned in_signal_handler_;
+
+class SignalHandlerScope {
+ public:
+  SignalHandlerScope() {
+    if (in_signal_handler_ == 0 && unsafe_sigalt_stack_ptr != nullptr) {
+      swap_unsafe_stack_to_sigaltstack();
+    }
+
+    in_signal_handler_++;
+  }
+  ~SignalHandlerScope() {
+    in_signal_handler_--;
+    if (in_signal_handler_ == 0 && unsafe_sigalt_stack_ptr != nullptr) {
+      restore_unsafe_stack_from_sigaltstack();
+    }
+  }
+};
 
 /// Thread data for the cleanup handler
 pthread_key_t thread_cleanup_key;
@@ -314,6 +349,8 @@ void thread_cleanup_handler(void *_iter) {
 // Currently, this commit does not yet switch the unsafe stack and just ensures
 // the interceptors work correctly.
 static void signal_handler_interceptor(int signo) {
+  SignalHandlerScope signal_handler_scope;
+
   typedef void (*signal_cb)(int x);
   signal_cb cb =
       (signal_cb)atomic_load(&sigactions[signo], memory_order_relaxed);
@@ -321,6 +358,8 @@ static void signal_handler_interceptor(int signo) {
 }
 
 static void signal_action_interceptor(int signo, siginfo_t* si, void* uc) {
+  SignalHandlerScope signal_handler_scope;
+
   typedef void (*sigaction_cb)(int, void*, void*);
   sigaction_cb cb =
       (sigaction_cb)atomic_load(&sigactions[signo], memory_order_relaxed);
