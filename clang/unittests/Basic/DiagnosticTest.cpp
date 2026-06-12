@@ -440,10 +440,11 @@ TEST_F(SuppressionMappingTest, CanonicalizesSlashesOnWindows) {
   EXPECT_FALSE(Diags.isSuppressedViaMapping(
       diag::warn_unused_function, locForFile(R"(clang/lib/Sema\baz.h)")));
 
-  // The backslash gets canonicalized so we never match the third pattern
-  EXPECT_FALSE(Diags.isSuppressedViaMapping(
+  // Under slash-agnostic matching, backslashes and forward slashes match each
+  // other, so we match the third pattern.
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
       diag::warn_unused_function, locForFile(R"(clang\lib\Sema/foo.h)")));
-  EXPECT_FALSE(Diags.isSuppressedViaMapping(
+  EXPECT_TRUE(Diags.isSuppressedViaMapping(
       diag::warn_unused_function, locForFile(R"(clang/lib/Sema/foo.h)")));
 }
 #endif
