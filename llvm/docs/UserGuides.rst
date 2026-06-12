@@ -48,7 +48,6 @@ intermediate LLVM representation.
    WritingAnLLVMBackend
    CodeGenerator
    TableGen/index
-   GlobalISel/MIRPatterns
    MCJITDesignAndImplementation
    ORCv2
    JITLink
@@ -64,8 +63,6 @@ intermediate LLVM representation.
    NVPTXUsage
    AMDGPUUsage
    AMDGPUAsyncOperations
-   AMDGPUDwarfExtensionsForHeterogeneousDebugging
-   AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack
    AMDGPUExecutionSynchronization
    AMDGPUMemoryModel
    SPIRVUsage

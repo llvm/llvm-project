@@ -17,7 +17,6 @@ LLVM welcomes contributions of all kinds. To get started, please review the foll
    HowToSubmitABug
    BugLifeCycle
    CodingStandards
-   GitHub
    GitBisecting
    GitRepositoryPolicy
 
