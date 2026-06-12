@@ -537,7 +537,7 @@ Value *CodeGenFunction::EmitNeonRShiftImm(Value *Vec, Value *Shift,
 }
 
 // clang-format off
-static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
+static const ARMNeonVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP1(__a32_vcvt_bf16_f32, arm_neon_vcvtfp2bf, 0),
   NEONMAP0(splat_lane_v),
   NEONMAP0(splat_laneq_v),
@@ -1014,7 +1014,7 @@ static const std::pair<unsigned, unsigned> NEONEquivalentIntrinsicMap[] = {
 
 #define SVEMAP2(NameBase, TypeModifier)                                        \
   {SVE::BI__builtin_sve_##NameBase, 0, TypeModifier}
-static const ARMScalableVectorIntrinsicInfo AArch64SVEIntrinsicMap[] = {
+static const AArch64SVEAndSMEVectorIntrinsicInfo AArch64SVEIntrinsicMap[] = {
 #define GET_SVE_LLVM_INTRINSIC_MAP
 #include "clang/Basic/arm_sve_builtin_cg.inc"
 #include "clang/Basic/BuiltinsAArch64NeonSVEBridge_cg.def"
@@ -1029,7 +1029,7 @@ static const ARMScalableVectorIntrinsicInfo AArch64SVEIntrinsicMap[] = {
 
 #define SMEMAP2(NameBase, TypeModifier)                                        \
   {SME::BI__builtin_sme_##NameBase, 0, TypeModifier}
-static const ARMScalableVectorIntrinsicInfo AArch64SMEIntrinsicMap[] = {
+static const AArch64SVEAndSMEVectorIntrinsicInfo AArch64SMEIntrinsicMap[] = {
 #define GET_SME_LLVM_INTRINSIC_MAP
 #include "clang/Basic/arm_sme_builtin_cg.inc"
 #undef GET_SME_LLVM_INTRINSIC_MAP
@@ -1110,7 +1110,7 @@ Function *CodeGenFunction::LookupNeonLLVMIntrinsic(unsigned IntrinsicID,
 //  Emit-helpers
 //===----------------------------------------------------------------------===//
 static Value *EmitCommonNeonSISDBuiltinExpr(
-    CodeGenFunction &CGF, const ARMVectorIntrinsicInfo &SISDInfo,
+    CodeGenFunction &CGF, const ARMNeonVectorIntrinsicInfo &SISDInfo,
     SmallVectorImpl<Value *> &Ops, const CallExpr *E) {
   assert(SISDInfo.LLVMIntrinsic && "Generic code assumes a valid intrinsic");
 
@@ -2714,7 +2714,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   // Many NEON builtins have identical semantics and uses in ARM and
   // AArch64. Emit these in a single function.
   auto IntrinsicMap = ArrayRef(ARMSIMDIntrinsicMap);
-  const ARMVectorIntrinsicInfo *Builtin = findARMVectorIntrinsicInMap(
+  const ARMNeonVectorIntrinsicInfo *Builtin = findARMVectorIntrinsicInMap(
       IntrinsicMap, BuiltinID, NEONSIMDIntrinsicsProvenSorted);
   if (Builtin)
     return EmitCommonNeonBuiltinExpr(
@@ -5344,7 +5344,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
 
   // Check whether this is an SISD builtin.
   auto SISDMap = ArrayRef(AArch64SISDIntrinsicMap);
-  const ARMVectorIntrinsicInfo *Builtin = findARMVectorIntrinsicInMap(
+  const ARMNeonVectorIntrinsicInfo *Builtin = findARMVectorIntrinsicInMap(
       SISDMap, BuiltinID, AArch64SISDIntrinsicsProvenSorted);
   bool IsSISD = (Builtin != nullptr);
 

@@ -49,7 +49,7 @@ static mlir::Value genVscaleTimesFactor(mlir::Location loc,
 
 #define SVEMAP2(NameBase, TypeModifier)                                        \
   {SVE::BI__builtin_sve_##NameBase, 0, TypeModifier}
-static const ARMScalableVectorIntrinsicInfo aarch64SVEIntrinsicMap[] = {
+static const AArch64SVEAndSMEVectorIntrinsicInfo aarch64SVEIntrinsicMap[] = {
 #define GET_SVE_LLVM_INTRINSIC_MAP
 #include "clang/Basic/arm_sve_builtin_cg.inc"
 #undef GET_SVE_LLVM_INTRINSIC_MAP
@@ -259,7 +259,7 @@ static cir::VectorType getNeonPairwiseWidenInputType(cir::VectorType resType,
 // Derive the LLVM intrinsic's per-operand argument types and its result
 // type for use when emitting the intrinsic call.
 //
-// `modifier` is the TypeModifier bitmask from `ARMVectorIntrinsicInfo`
+// `modifier` is the TypeModifier bitmask from `ARMNeonVectorIntrinsicInfo`
 // (callers pass `info.TypeModifier`; see AArch64CodeGenUtils.h). It encodes
 // how the intrinsic's argument and return types relate to the builtin's
 // scalar types. For SISD builtins the key flags are:
@@ -319,7 +319,7 @@ deriveNeonSISDIntrinsicOperandTypes(CIRGenFunction &cgf, unsigned modifier,
 }
 
 static mlir::Value emitCommonNeonSISDBuiltinExpr(
-    CIRGenFunction &cgf, const ARMVectorIntrinsicInfo &info,
+    CIRGenFunction &cgf, const ARMNeonVectorIntrinsicInfo &info,
     llvm::SmallVectorImpl<mlir::Value> &ops, const CallExpr *expr) {
   assert(info.LLVMIntrinsic && "Generic code assumes a valid intrinsic");
 
@@ -2312,7 +2312,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
         emitScalarOrConstFoldImmArg(iceArguments, i, expr->getArg(i)));
   }
 
-  const ARMVectorIntrinsicInfo *builtin =
+  const ARMNeonVectorIntrinsicInfo *builtin =
       findARMVectorIntrinsicInMap(ArrayRef(AArch64SISDIntrinsicMap), builtinID,
                                   aarch64SISDIntrinsicsProvenSorted);
   if (builtin)
