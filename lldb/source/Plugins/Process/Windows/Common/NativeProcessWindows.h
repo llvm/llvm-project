@@ -107,9 +107,6 @@ public:
 
   bool HasPendingLibraryEvents() override;
 
-  /// Records whether the gdb-remote client advertised
-  /// `qXfer:libraries:read+` (or `qXfer:libraries-svr4:read+`) in its
-  /// qSupported reply.
   void SetClientSupportsLibrariesRead(bool v) {
     m_client_supports_libraries_read = v;
   }

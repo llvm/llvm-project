@@ -744,12 +744,9 @@ void NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
 
 void NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
   Log *log = GetLog(WindowsLog::Process);
-  for (auto it = m_loaded_modules.begin(); it != m_loaded_modules.end();) {
-    if (it->second == module_addr)
-      it = m_loaded_modules.erase(it);
-    else
-      ++it;
-  }
+  llvm::erase_if(m_loaded_modules, [module_addr](const auto &entry) {
+    return entry.second == module_addr;
+  });
   m_pending_library_events = true;
 
   if (!m_initial_stop_seen || m_client_supports_libraries_read)
