@@ -778,11 +778,41 @@ inline auto m_GetElementPtr(const Op0_t &Op0, const Op1_t &Op1) {
       VPInstruction_match<VPInstruction::WidePtrAdd, Op0_t, Op1_t>(Op0, Op1));
 }
 
+/// Match a VPBlendRecipe with 2 incoming values ([I0, I1, M1] ==
+/// normalized([I0, M0, I1, M1])) as select(M1, I1, I0), mirroring how it is
+/// lowered.
+template <typename Op0_t, typename Op1_t, typename Op2_t> struct Blend2_match {
+  Op0_t MaskOp;
+  Op1_t TrueOp;
+  Op2_t FalseOp;
+
+  Blend2_match(const Op0_t &MaskOp, const Op1_t &TrueOp, const Op2_t &FalseOp)
+      : MaskOp(MaskOp), TrueOp(TrueOp), FalseOp(FalseOp) {}
+
+  template <typename T> bool match(const T *Val) const {
+    auto *Blend = dyn_cast<VPBlendRecipe>(Val);
+    if (!Blend || Blend->getNumIncomingValues() != 2)
+      return false;
+    return MaskOp.match(Blend->getMask(1)) &&
+           TrueOp.match(Blend->getIncomingValue(1)) &&
+           FalseOp.match(Blend->getIncomingValue(0));
+  }
+};
+
+/// Match recipe recipe with Select opcode, i.e. excluding VPBlendRecipe.
 template <typename Op0_t, typename Op1_t, typename Op2_t>
 inline AllRecipe_match<Instruction::Select, Op0_t, Op1_t, Op2_t>
 m_Select(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
   return AllRecipe_match<Instruction::Select, Op0_t, Op1_t, Op2_t>(
       {Op0, Op1, Op2});
+}
+
+/// Match recipe with Select opcode or an equivalent VPBlendRecipe with 2
+/// incoming values.
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+inline auto m_SelectLike(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return m_CombineOr(m_Select(Op0, Op1, Op2),
+                     Blend2_match<Op0_t, Op1_t, Op2_t>(Op0, Op1, Op2));
 }
 
 template <typename Op0_t> inline auto m_Not(const Op0_t &Op0) {
