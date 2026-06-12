@@ -104,6 +104,7 @@ public:
     reportNoescapeViolations();
     reportLifetimeboundViolations();
     reportMisplacedLifetimebound();
+    reportInapplicableLifetimebound();
     //  Annotation inference is currently guarded by a frontend flag. In the
     //  future, this might be replaced by a design that differentiates between
     //  explicit and inferred findings with separate warning groups.
@@ -468,6 +469,24 @@ public:
           SemaHelper->reportMisplacedLifetimebound(Scope, PDef, PDecl);
       }
     }
+  }
+
+  void reportInapplicableLifetimebound() {
+    const auto *FDef = dyn_cast<FunctionDecl>(FD);
+    if (!FDef)
+      return;
+
+    // If analyzed function is a template definition or an implicit
+    // instantiation, skip.
+    if (FDef->getTemplatedKind() == FunctionDecl::TK_FunctionTemplate ||
+        FDef->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return;
+
+    for (const auto &PVD : FDef->parameters())
+      if (PVD->hasAttr<LifetimeBoundAttr>() &&
+          !FactMgr.getOriginMgr().hasOrigins(PVD->getType(),
+                                             /*IntrinsicOnly=*/true))
+        SemaHelper->reportInapplicableLifetimebound(PVD);
   }
 
   void inferAnnotations() {

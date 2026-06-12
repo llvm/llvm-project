@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wdangling -Wdangling-field -Wreturn-stack-address -verify %s
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=cfg %s
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=cfg,tu %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-inapplicable-lifetimebound -Wno-dangling -verify=cfg %s
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wlifetime-safety-inapplicable-lifetimebound -Wno-dangling -verify=cfg,tu %s
 
 #include "Inputs/lifetime-analysis.h"
 

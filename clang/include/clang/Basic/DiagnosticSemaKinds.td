@@ -11043,6 +11043,11 @@ def warn_lifetime_safety_cross_tu_misplaced_lifetimebound
       InGroup<LifetimeSafetyCrossTUMisplacedLifetimebound>,
       DefaultIgnore;
 
+def warn_lifetime_safety_inapplicable_lifetimebound
+    : Warning<"'lifetimebound' attribute has no effect on parameter of type %0. The attribute only applies to reference types, pointer types, and non-owner record types">,
+      InGroup<LifetimeSafetyInapplicableLifetimebound>,
+      DefaultIgnore;
+
 def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_invalidated_here : Note<"invalidated here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
