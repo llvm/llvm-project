@@ -1224,7 +1224,6 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
 
   // Special-case trivial assignment operators.
   if (isTrivialObjectAssignment(Call)) {
-    Bldr.takeNodes(Pred);
     performTrivialCopy(Bldr, Pred, Call);
     return;
   }
@@ -1245,19 +1244,16 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
 
         // Explore with and without inlining the call.
         if (Options.getIPAMode() == IPAK_DynamicDispatchBifurcate) {
-          Bldr.takeNodes(Pred);
           BifurcateCall(RD.getDispatchRegion(), Call, D, Bldr, Pred);
           return;
         }
 
         // Don't inline if we're not in any dynamic dispatch mode.
         if (Options.getIPAMode() != IPAK_DynamicDispatch) {
-          Bldr.takeNodes(Pred);
           Bldr.addNodes(conservativeEvalCall(Call, Pred, State));
           return;
         }
       }
-      Bldr.takeNodes(Pred);
       ctuBifurcate(Call, D, Bldr, Pred, State);
       return;
     }
@@ -1269,7 +1265,6 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
       State, dyn_cast_or_null<CXXConstructExpr>(E), Call.getStackFrame());
 
   // Also handle the return value and invalidate the regions.
-  Bldr.takeNodes(Pred);
   Bldr.addNodes(conservativeEvalCall(Call, Pred, State));
 }
 

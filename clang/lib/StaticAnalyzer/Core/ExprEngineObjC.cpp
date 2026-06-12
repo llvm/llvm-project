@@ -285,6 +285,7 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
       }
     }
 
+    Bldr.takeNodes(Pred);
     defaultEvalCall(Bldr, Pred, *UpdatedMsg);
   }
 

@@ -861,7 +861,7 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
                                             *Call, *this);
 
   ExplodedNodeSet DstInvalidated;
-  NodeBuilder Bldr(DstPreCall, DstInvalidated, *currBldrCtx);
+  NodeBuilder Bldr(DstInvalidated, *currBldrCtx);
   for (ExplodedNode *N : DstPreCall)
     defaultEvalCall(Bldr, N, *Call, CallOpts);
 
@@ -886,7 +886,7 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
                                             *Call, *this);
 
   ExplodedNodeSet DstPostCall;
-  NodeBuilder CallBldr(DstPreCall, DstPostCall, *currBldrCtx);
+  NodeBuilder CallBldr(DstPostCall, *currBldrCtx);
   for (ExplodedNode *I : DstPreCall) {
     // Operator new calls (CXXNewExpr) are intentionally not eval-called,
     // because it does not make sense to eval-call user-provided functions.
@@ -1094,7 +1094,7 @@ void ExprEngine::VisitCXXDeleteExpr(const CXXDeleteExpr *CDE,
   ExplodedNodeSet DstPostCall;
 
   if (AMgr.getAnalyzerOptions().MayInlineCXXAllocator) {
-    NodeBuilder Bldr(DstPreCall, DstPostCall, *currBldrCtx);
+    NodeBuilder Bldr(DstPostCall, *currBldrCtx);
     for (ExplodedNode *I : DstPreCall) {
       // Intentionally either inline or conservative eval-call the operator
       // delete, but avoid triggering an eval-call event for checkers.
