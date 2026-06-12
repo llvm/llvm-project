@@ -358,6 +358,8 @@ void FactsGenerator::VisitUnaryOperator(const UnaryOperator *UO) {
     // has no origins to track.
     if (IsCMode && SubExpr->getType()->isVoidType())
       return;
+    assert(!SubExpr->getType()->isVoidType() &&
+           "Taking address of void is not valid in C++");
     // The origin of an address-of expression (e.g., &x) is the origin of
     // its sub-expression (x). This fact will cause the dataflow analysis
     // to propagate any loans held by the sub-expression's origin to the
