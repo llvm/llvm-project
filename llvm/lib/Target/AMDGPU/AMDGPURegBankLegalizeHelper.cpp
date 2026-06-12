@@ -36,8 +36,9 @@ RegBankLegalizeHelper::RegBankLegalizeHelper(
     MachineIRBuilder &B, const MachineUniformityInfo &MUI,
     const RegisterBankInfo &RBI, const RegBankLegalizeRules &RBLRules)
     : MF(B.getMF()), MFI(MF.getInfo<SIMachineFunctionInfo>()),
-      ST(MF.getSubtarget<GCNSubtarget>()), B(B), MRI(*B.getMRI()), MUI(MUI),
-      RBI(RBI), MORE(MF, nullptr), RBLRules(RBLRules), IsWave32(ST.isWave32()),
+      ST(MF.getSubtarget<GCNSubtarget>()), TII(*ST.getInstrInfo()), B(B),
+      MRI(*B.getMRI()), MUI(MUI), RBI(RBI), MORE(MF, nullptr),
+      RBLRules(RBLRules), IsWave32(ST.isWave32()),
       SgprRB(&RBI.getRegBank(AMDGPU::SGPRRegBankID)),
       VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)),
       AgprRB(&RBI.getRegBank(AMDGPU::AGPRRegBankID)),
@@ -299,6 +300,72 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   return true;
 }
 
+// Analyze a combined offset from an llvm.amdgcn.s.buffer intrinsic and store
+// the three offsets (voffset, soffset and instoffset)
+unsigned RegBankLegalizeHelper::setBufferOffsets(
+    MachineIRBuilder &B, Register CombinedOffset, Register &VOffsetReg,
+    Register &SOffsetReg, int64_t &InstOffsetVal, Align Alignment) {
+  if (std::optional<int64_t> Imm =
+          getIConstantVRegSExtVal(CombinedOffset, MRI)) {
+    uint32_t SOffset, ImmOffset;
+    if (TII.splitMUBUFOffset(*Imm, SOffset, ImmOffset, Alignment)) {
+      VOffsetReg = B.buildConstant({VgprRB, S32}, 0).getReg(0);
+      SOffsetReg = B.buildConstant({SgprRB, S32}, SOffset).getReg(0);
+      InstOffsetVal = ImmOffset;
+      return SOffset + ImmOffset;
+    }
+  }
+  const bool CheckNUW = ST.hasGFX1250Insts();
+  auto [Base, Offset] = AMDGPU::getBaseWithConstantOffset(
+      MRI, CombinedOffset, /*KnownBits=*/nullptr,
+      /*CheckNUW=*/CheckNUW);
+  uint32_t SOffset, ImmOffset;
+  if (static_cast<int32_t>(Offset) > 0 &&
+      TII.splitMUBUFOffset(Offset, SOffset, ImmOffset, Alignment)) {
+    if (Base.isValid() && MRI.getRegBank(Base) == VgprRB) {
+      VOffsetReg = Base;
+      SOffsetReg = B.buildConstant({SgprRB, S32}, SOffset).getReg(0);
+      InstOffsetVal = ImmOffset;
+      return 0;
+    }
+    // If we have SGPR base, we can use it for soffset.
+    if (SOffset == 0) {
+      VOffsetReg = B.buildConstant({VgprRB, S32}, 0).getReg(0);
+      SOffsetReg = Base;
+      InstOffsetVal = ImmOffset;
+      return 0;
+    }
+  }
+  // Handle the variable sgpr + vgpr case.
+  MachineInstr *Add = getOpcodeDef(AMDGPU::G_ADD, CombinedOffset, MRI);
+  if (Add && static_cast<int32_t>(Offset) >= 0 &&
+      (!CheckNUW || Add->getFlag(MachineInstr::NoUWrap))) {
+    Register Src0 = getSrcRegIgnoringCopies(Add->getOperand(1).getReg(), MRI);
+    Register Src1 = getSrcRegIgnoringCopies(Add->getOperand(2).getReg(), MRI);
+    const RegisterBank *Src0Bank = MRI.getRegBank(Src0);
+    const RegisterBank *Src1Bank = MRI.getRegBank(Src1);
+    if (Src0Bank == VgprRB && Src1Bank == SgprRB) {
+      VOffsetReg = Src0;
+      SOffsetReg = Src1;
+      return 0;
+    }
+    if (Src0Bank == SgprRB && Src1Bank == VgprRB) {
+      VOffsetReg = Src1;
+      SOffsetReg = Src0;
+      return 0;
+    }
+  }
+  // Ensure we have a VGPR for the combined offset. This could be an issue if we
+  // have an SGPR offset and a VGPR resource.
+  if (MRI.getRegBank(CombinedOffset) == VgprRB) {
+    VOffsetReg = CombinedOffset;
+  } else {
+    VOffsetReg = B.buildCopy({VgprRB, S32}, CombinedOffset).getReg(0);
+  }
+  SOffsetReg = B.buildConstant({SgprRB, S32}, 0).getReg(0);
+  return 0;
+}
+
 bool RegBankLegalizeHelper::splitLoad(MachineInstr &MI,
                                       ArrayRef<LLT> LLTBreakdown, LLT MergeTy) {
   MachineFunction &MF = B.getMF();
@@ -558,6 +625,82 @@ bool RegBankLegalizeHelper::lowerUnpackAExt(MachineInstr &MI) {
   auto ResHi = B.buildInstr(MI.getOpcode(), {SgprRB_S32}, {Op1Hi, Op2Hi});
   B.buildBuildVectorTrunc(MI.getOperand(0).getReg(),
                           {ResLo.getReg(0), ResHi.getReg(0)});
+  MI.eraseFromParent();
+  return true;
+}
+
+bool RegBankLegalizeHelper::lowerSBufToBuf(MachineInstr &MI,
+                                           WaterfallInfo &WFI) {
+  Register Dst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(Dst);
+  const RegisterBank *RSrcBank = MRI.getRegBank(MI.getOperand(1).getReg());
+  unsigned LoadSize = Ty.getSizeInBits();
+  int NumLoads = 1;
+  SmallVector<Register, 4> LoadParts;
+  if (LoadSize == 256 || LoadSize == 512) {
+    NumLoads = LoadSize / 128;
+    Ty = Ty.divide(NumLoads);
+  }
+  for (int i = 0; i < NumLoads; ++i)
+    LoadParts.emplace_back(MRI.createVirtualRegister({VgprRB, Ty}));
+  MachineMemOperand *OrigMMO = *MI.memoperands_begin();
+  const Align Alignment = OrigMMO->getAlign();
+  MachineFunction &MF = B.getMF();
+  Register SOffset;
+  Register VOffset;
+  int64_t ImmOffset = 0;
+  unsigned MMOOffset = setBufferOffsets(B, MI.getOperand(2).getReg(), VOffset,
+                                        SOffset, ImmOffset, Alignment);
+  // Use the MMO size from the original instruction rather than the (possibly
+  // widened) register type. E.g. 96-bit loads are widened to 128-bit during
+  // legalization but the MMO still reflects the original 96-bit access size.
+  const unsigned MemSize = divideCeil(OrigMMO->getSize().getValue(), NumLoads);
+  MachineMemOperand *BaseMMO = MF.getMachineMemOperand(OrigMMO, 0, MemSize);
+  if (MMOOffset != 0)
+    BaseMMO = MF.getMachineMemOperand(BaseMMO, MMOOffset, MemSize);
+  // If only the offset is divergent, emit a MUBUF buffer load
+  // instead. We can assume that the buffer is unswizzled.
+  Register RSrc = MI.getOperand(1).getReg();
+  Register VIndex = B.buildConstant(VgprRB_S32, 0).getReg(0);
+  unsigned Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD;
+  switch (MI.getOpcode()) {
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SBYTE:
+    Opc = G_AMDGPU_BUFFER_LOAD_SBYTE;
+    break;
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_UBYTE:
+    Opc = G_AMDGPU_BUFFER_LOAD_UBYTE;
+    break;
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SSHORT:
+    Opc = G_AMDGPU_BUFFER_LOAD_SSHORT;
+    break;
+  case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_USHORT:
+    Opc = G_AMDGPU_BUFFER_LOAD_USHORT;
+    break;
+  default:
+    break;
+  }
+  for (int i = 0; i < NumLoads; ++i) {
+    B.buildInstr(Opc)
+        .addDef(LoadParts[i])       // vdata
+        .addUse(RSrc)               // rsrc
+        .addUse(VIndex)             // vindex
+        .addUse(VOffset)            // voffset
+        .addUse(SOffset)            // soffset
+        .addImm(ImmOffset + 16 * i) // offset(imm)
+        .addImm(0)                  // cachepolicy, swizzled buffer(imm)
+        .addImm(0)                  // idxen(imm)
+        .addMemOperand(MF.getMachineMemOperand(BaseMMO, 16 * i, MemSize));
+  }
+  if (NumLoads == 1)
+    B.buildCopy(Dst, LoadParts[0]);
+  else
+    B.buildMergeLikeInstr(Dst, LoadParts);
+  B.setInstr(*MRI.getVRegDef(LoadParts[0]));
+  if (RSrcBank != SgprRB) {
+    WFI.SgprWaterfallOperandRegs.insert(RSrc);
+    WFI.Start = MRI.getVRegDef(LoadParts.front());
+    WFI.End = std::next(MRI.getVRegDef(LoadParts.back())->getIterator());
+  }
   MI.eraseFromParent();
   return true;
 }
@@ -1267,6 +1410,8 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     MI.eraseFromParent();
     break;
   }
+  case S_BUF_to_BUF:
+    return lowerSBufToBuf(MI, WFI);
   case SplitLoad: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     unsigned Size = DstTy.getSizeInBits();
@@ -1505,6 +1650,9 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerAbsToNegMax(MI);
   case AbsToS32:
     return lowerAbsToS32(MI);
+  case DeletePrefetch:
+    MI.eraseFromParent();
+    return true;
   }
 
   return true;
@@ -1561,6 +1709,8 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case SgprP5:
   case VgprP5:
     return LLT::pointer(5, 32);
+  case SgprP6:
+    return LLT::pointer(6, 32);
   case SgprP8:
     return LLT::pointer(8, 128);
   case SgprV2S16:
@@ -1650,9 +1800,7 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
   case SgprB128:
   case VgprB128:
   case UniInVgprB128:
-    if (Ty == LLT::scalar(128) || Ty == LLT::fixed_vector(4, 32) ||
-        Ty == LLT::fixed_vector(2, 64) || Ty == LLT::fixed_vector(8, 16) ||
-        isAnyPtr(Ty, 128))
+    if (Ty.getSizeInBits() == 128)
       return Ty;
     return LLT();
   case VgprB160:
@@ -1663,15 +1811,13 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
   case SgprB256:
   case VgprB256:
   case UniInVgprB256:
-    if (Ty == LLT::scalar(256) || Ty == LLT::fixed_vector(8, 32) ||
-        Ty == LLT::fixed_vector(4, 64) || Ty == LLT::fixed_vector(16, 16))
+    if (Ty.getSizeInBits() == 256)
       return Ty;
     return LLT();
   case SgprB512:
   case VgprB512:
   case UniInVgprB512:
-    if (Ty == LLT::scalar(512) || Ty == LLT::fixed_vector(16, 32) ||
-        Ty == LLT::fixed_vector(8, 64))
+    if (Ty.getSizeInBits() == 512)
       return Ty;
     return LLT();
   case SgprBRC: {
@@ -1712,6 +1858,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case SgprP4:
   case SgprP4Call_WF:
   case SgprP5:
+  case SgprP6:
   case SgprP8:
   case SgprPtr32:
   case SgprPtr64:
@@ -1830,6 +1977,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case SgprP3:
     case SgprP4:
     case SgprP5:
+    case SgprP6:
     case SgprP8:
     case SgprV2S16:
     case SgprV2S32:
@@ -2042,6 +2190,7 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case SgprP3:
     case SgprP4:
     case SgprP5:
+    case SgprP6:
     case SgprP8:
     case SgprV2S16:
     case SgprV2S32:
