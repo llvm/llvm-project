@@ -294,4 +294,93 @@ TEST(BitsetTest, BitwiseOperators) {
                 TestXor128.test(127));
 }
 
+TEST(BitsetTest, ShiftOperators) {
+  // Test left shift.
+  static_assert((Bitset<64>({0}) << 10).test(10));
+  static_assert(!(Bitset<64>({0}) << 10).test(0));
+  static_assert((Bitset<64>({63}) << 1).none());
+  static_assert((Bitset<128>({0}) << 64).test(64));
+  static_assert((Bitset<128>({63}) << 1).test(64));
+  static_assert((Bitset<128>({127}) << 1).none());
+
+  // Test right shift.
+  static_assert((Bitset<64>({10}) >> 10).test(0));
+  static_assert(!(Bitset<64>({10}) >> 10).test(10));
+  static_assert((Bitset<64>({0}) >> 1).none());
+  static_assert((Bitset<128>({64}) >> 64).test(0));
+  static_assert((Bitset<128>({64}) >> 1).test(63));
+  static_assert((Bitset<128>({0}) >> 1).none());
+
+  // Test shift by 0.
+  static_assert((Bitset<64>({10, 20}) << 0) == Bitset<64>({10, 20}));
+  static_assert((Bitset<64>({10, 20}) >> 0) == Bitset<64>({10, 20}));
+
+  // Test shift by NumBits (clears all).
+  static_assert((Bitset<64>({0, 63}) << 64).none());
+  static_assert((Bitset<64>({0, 63}) >> 64).none());
+  static_assert((Bitset<128>({0, 127}) << 128).none());
+  static_assert((Bitset<128>({0, 127}) >> 128).none());
+}
+
+TEST(BitsetTest, GetNumWords64) {
+  static_assert(Bitset<1>::getNumWords64() == 1);
+  static_assert(Bitset<32>::getNumWords64() == 1);
+  static_assert(Bitset<64>::getNumWords64() == 1);
+  static_assert(Bitset<65>::getNumWords64() == 2);
+  static_assert(Bitset<96>::getNumWords64() == 2);
+  static_assert(Bitset<128>::getNumWords64() == 2);
+  static_assert(Bitset<129>::getNumWords64() == 3);
+}
+
+TEST(BitsetTest, GetWord) {
+  // Single-word bitset.
+  constexpr auto B64 = Bitset<64>(std::array<uint64_t, 1>{0xdeadbeefcafe1234});
+  static_assert(B64.getWord(0) == 0xdeadbeefcafe1234);
+
+  // Multi-word bitset.
+  constexpr auto B128 = Bitset<128>(
+      std::array<uint64_t, 2>{0x1111222233334444, 0xaaaabbbbccccdddd});
+  static_assert(B128.getWord(0) == 0x1111222233334444);
+  static_assert(B128.getWord(1) == 0xaaaabbbbccccdddd);
+
+  // Partial last word — high bits should be masked off.
+  constexpr auto B96 = Bitset<96>(
+      std::array<uint64_t, 2>{0xffffffffffffffff, 0xffffffffffffffff});
+  static_assert(B96.getWord(0) == 0xffffffffffffffff);
+  static_assert(B96.getWord(1) == 0x00000000ffffffff); // Only lower 32 bits.
+
+  // Empty bitset.
+  static_assert(Bitset<64>().getWord(0) == 0);
+  static_assert(Bitset<128>().getWord(0) == 0);
+  static_assert(Bitset<128>().getWord(1) == 0);
+}
+
+TEST(BitsetTest, FindLastSet) {
+  // Empty bitset returns -1.
+  static_assert(Bitset<64>().findLastSet() == -1);
+  static_assert(Bitset<128>().findLastSet() == -1);
+
+  // Single bit set.
+  static_assert(Bitset<64>({0}).findLastSet() == 0);
+  static_assert(Bitset<64>({63}).findLastSet() == 63);
+  static_assert(Bitset<64>({31}).findLastSet() == 31);
+  static_assert(Bitset<128>({0}).findLastSet() == 0);
+  static_assert(Bitset<128>({64}).findLastSet() == 64);
+  static_assert(Bitset<128>({127}).findLastSet() == 127);
+
+  // Multiple bits — returns highest.
+  static_assert(Bitset<64>({0, 10, 50}).findLastSet() == 50);
+  static_assert(Bitset<128>({0, 63, 64, 100}).findLastSet() == 100);
+
+  // All bits set.
+  static_assert(Bitset<64>().set().findLastSet() == 63);
+  static_assert(Bitset<128>().set().findLastSet() == 127);
+  static_assert(Bitset<96>().set().findLastSet() == 95);
+
+  // Non-power-of-2 sizes.
+  static_assert(Bitset<33>({32}).findLastSet() == 32);
+  static_assert(Bitset<33>({0, 32}).findLastSet() == 32);
+  static_assert(Bitset<65>({64}).findLastSet() == 64);
+}
+
 } // namespace

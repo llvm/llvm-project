@@ -166,8 +166,12 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
                                stable_hash_name(SymbolName));
   }
   case MachineOperand::MO_LaneMask: {
+    // Use the deterministic printed representation for stable hashing.
+    std::string Str;
+    raw_string_ostream OS(Str);
+    OS << PrintLaneMask(MO.getLaneMask());
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
-                               MO.getLaneMask().getAsInteger());
+                               stable_hash_name(OS.str()));
   }
   case MachineOperand::MO_CFIIndex:
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),

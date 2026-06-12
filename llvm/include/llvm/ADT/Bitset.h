@@ -52,7 +52,15 @@ template <unsigned NumBits> class Bitset {
   constexpr void maskLastWord() { Bits[getLastWordIndex()] &= RemainderMask; }
 
 protected:
-  constexpr Bitset(const std::array<uint64_t, (NumBits + 63) / 64> &B) {
+  constexpr const StorageType &getData() const { return Bits; }
+
+public:
+  constexpr Bitset() = default;
+
+  /// Construct from an array of 64-bit words. On 32-bit platforms, each 64-bit
+  /// element is split into two 32-bit storage words.
+  explicit constexpr Bitset(
+      const std::array<uint64_t, (NumBits + 63) / 64> &B) {
     if constexpr (sizeof(BitWord) == sizeof(uint64_t)) {
       for (size_t I = 0; I != B.size(); ++I)
         Bits[I] = B[I];
@@ -70,9 +78,6 @@ protected:
     }
     maskLastWord();
   }
-
-public:
-  constexpr Bitset() = default;
   constexpr Bitset(std::initializer_list<unsigned> Init) {
     for (auto I : Init)
       set(I);
@@ -193,6 +198,98 @@ public:
         return LHS < RHS;
     }
     return false;
+  }
+
+  constexpr Bitset &operator<<=(unsigned N) {
+    if (N == 0)
+      return *this;
+    if (N >= NumBits) {
+      return *this = Bitset();
+    }
+    const unsigned WordShift = N / BitwordBits;
+    const unsigned BitShift = N % BitwordBits;
+    if (BitShift == 0) {
+      for (int I = NumWords - 1; I >= static_cast<int>(WordShift); --I)
+        Bits[I] = Bits[I - WordShift];
+    } else {
+      const unsigned CarryShift = BitwordBits - BitShift;
+      for (int I = NumWords - 1; I > static_cast<int>(WordShift); --I) {
+        Bits[I] = (Bits[I - WordShift] << BitShift) |
+                  (Bits[I - WordShift - 1] >> CarryShift);
+      }
+      Bits[WordShift] = Bits[0] << BitShift;
+    }
+    for (unsigned I = 0; I < WordShift; ++I)
+      Bits[I] = 0;
+    maskLastWord();
+    return *this;
+  }
+
+  constexpr Bitset operator<<(unsigned N) const {
+    Bitset Result(*this);
+    Result <<= N;
+    return Result;
+  }
+
+  constexpr Bitset &operator>>=(unsigned N) {
+    if (N == 0)
+      return *this;
+    if (N >= NumBits) {
+      return *this = Bitset();
+    }
+    const unsigned WordShift = N / BitwordBits;
+    const unsigned BitShift = N % BitwordBits;
+    if (BitShift == 0) {
+      for (unsigned I = 0; I < NumWords - WordShift; ++I)
+        Bits[I] = Bits[I + WordShift];
+    } else {
+      const unsigned CarryShift = BitwordBits - BitShift;
+      for (unsigned I = 0; I < NumWords - WordShift - 1; ++I) {
+        Bits[I] = (Bits[I + WordShift] >> BitShift) |
+                  (Bits[I + WordShift + 1] << CarryShift);
+      }
+      Bits[NumWords - WordShift - 1] = Bits[NumWords - 1] >> BitShift;
+    }
+    for (unsigned I = NumWords - WordShift; I < NumWords; ++I)
+      Bits[I] = 0;
+    maskLastWord();
+    return *this;
+  }
+
+  constexpr Bitset operator>>(unsigned N) const {
+    Bitset Result(*this);
+    Result >>= N;
+    return Result;
+  }
+
+  /// Return the number of 64-bit words needed to hold all bits.
+  static constexpr unsigned getNumWords64() { return (NumBits + 63) / 64; }
+
+  /// Return the I-th 64-bit word of the bitset, where word 0 contains bits
+  /// [0..63], word 1 contains bits [64..127], etc. On 32-bit platforms this
+  /// assembles two underlying storage words into one 64-bit value.
+  constexpr uint64_t getWord(unsigned I) const {
+    if constexpr (BitwordBits == 64) {
+      return Bits[I];
+    } else {
+      static_assert(BitwordBits == 32, "Unsupported word size");
+      uint64_t Lo = (2 * I < NumWords) ? Bits[2 * I] : 0;
+      uint64_t Hi = (2 * I + 1 < NumWords) ? Bits[2 * I + 1] : 0;
+      return Lo | (Hi << 32);
+    }
+  }
+
+  /// Return the index of the highest set bit, or -1 if no bits are set.
+  /// The return type is signed to allow the -1 sentinel.
+  constexpr int findLastSet() const {
+    for (int I = NumWords - 1; I >= 0; --I) {
+      if (Bits[I] != 0) {
+        unsigned LeadingZeros =
+            countl_zero_constexpr(static_cast<BitWord>(Bits[I]));
+        return I * BitwordBits + (BitwordBits - 1 - LeadingZeros);
+      }
+    }
+    return -1;
   }
 };
 

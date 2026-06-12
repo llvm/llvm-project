@@ -30,8 +30,9 @@ add_llvm_unittest(CodeGenTests
   DwarfStringPoolEntryRefTest.cpp
   GCMetadata.cpp
   InstrRefLDVTest.cpp
-  LowLevelTypeTest.cpp
+  LaneBitmaskTest.cpp
   LexicalScopesTest.cpp
+  LowLevelTypeTest.cpp
   MachineBasicBlockTest.cpp
   MachineDomTreeUpdaterTest.cpp
   MachineInstrBundleIteratorTest.cpp

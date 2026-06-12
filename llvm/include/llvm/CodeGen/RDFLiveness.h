@@ -44,7 +44,7 @@ namespace std {
 template <> struct hash<llvm::rdf::detail::NodeRef> {
   std::size_t operator()(llvm::rdf::detail::NodeRef R) const {
     return std::hash<llvm::rdf::NodeId>{}(R.first) ^
-           std::hash<llvm::LaneBitmask::Type>{}(R.second.getAsInteger());
+           std::hash<llvm::LaneBitmask>{}(R.second);
   }
 };
 
