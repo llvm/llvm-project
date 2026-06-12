@@ -600,7 +600,7 @@ Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
           if (!SeenSegments.insert(Index).second)
             return make_error<GenericBinaryError>(
                 "segment named more than once", object_error::parse_failed);
-          if (Index > DataSegments.size())
+          if (Index >= DataSegments.size())
             return make_error<GenericBinaryError>("invalid data segment name entry",
                                                   object_error::parse_failed);
           nameType = wasm::NameType::DATA_SEGMENT;
@@ -833,7 +833,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
         auto Offset = readVaruint64(Ctx);
         auto Size = readVaruint64(Ctx);
         if (!(Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)) {
-          if (static_cast<size_t>(Index) >= DataSegments.size())
+          if (Index >= DataSegments.size())
             return make_error<GenericBinaryError>(
                 "invalid data segment index: " + Twine(Index),
                 object_error::parse_failed);
@@ -1475,6 +1475,15 @@ Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
   uint32_t Count = readVaruint32(Ctx);
   Exports.reserve(Count);
   Symbols.reserve(Count);
+
+  // Build hash map of export flags for faster cross-referencing
+  llvm::DenseMap<StringRef, uint32_t> ExportFlags;
+  if (HasDylinkSection) {
+    for (const auto &ExportInfo : DylinkInfo.ExportInfo) {
+      ExportFlags[ExportInfo.Name] = ExportInfo.Flags;
+    }
+  }
+
   for (uint32_t I = 0; I < Count; I++) {
     wasm::WasmExport Ex;
     Ex.Name = readString(Ctx);
@@ -1486,6 +1495,14 @@ Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
     wasm::WasmSymbolInfo Info;
     Info.Name = Ex.Name;
     Info.Flags = 0;
+    // For shared objects, symbol flags may be specified in the dylink section
+    // instead of the export section
+    if (HasDylinkSection) {
+      auto It = ExportFlags.find(Ex.Name);
+      if (It != ExportFlags.end()) {
+        Info.Flags = It->second;
+      }
+    }
     switch (Ex.Kind) {
     case wasm::WASM_EXTERNAL_FUNCTION: {
       if (!isValidFunctionIndex(Ex.Index))
@@ -1530,6 +1547,10 @@ Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
                                               object_error::parse_failed);
       Info.Kind = wasm::WASM_SYMBOL_TYPE_TAG;
       Info.ElementIndex = Ex.Index;
+      if (isDefinedTagIndex(Ex.Index)) {
+        unsigned TagIndex = Ex.Index - NumImportedTags;
+        Signature = &Signatures[Tags[TagIndex].SigIndex];
+      }
       break;
     case wasm::WASM_EXTERNAL_MEMORY:
       break;

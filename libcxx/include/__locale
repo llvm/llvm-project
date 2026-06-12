@@ -42,6 +42,7 @@
 #  endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_EXPORTED_FROM_ABI locale;
 
@@ -88,7 +89,7 @@ public:
   const locale& operator=(const locale&) _NOEXCEPT;
 
   template <class _Facet>
-  _LIBCPP_HIDE_FROM_ABI locale combine(const locale& __other) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI locale combine(const locale& __other) const {
     if (!std::has_facet<_Facet>(__other))
       __throw_runtime_error("locale::combine: locale missing facet");
 
@@ -96,12 +97,13 @@ public:
   }
 
   // locale operations:
-  string name() const;
+  [[__nodiscard__]] string name() const;
   bool operator==(const locale&) const;
 #  if _LIBCPP_STD_VER <= 17
   _LIBCPP_HIDE_FROM_ABI bool operator!=(const locale& __y) const { return !(*this == __y); }
 #  endif
   template <class _CharT, class _Traits, class _Allocator>
+  [[__nodiscard__]]
   _LIBCPP_HIDE_FROM_ABI bool operator()(const basic_string<_CharT, _Traits, _Allocator>& __x,
                                         const basic_string<_CharT, _Traits, _Allocator>& __y) const {
     return std::use_facet<std::collate<_CharT> >(*this).compare(
@@ -110,7 +112,7 @@ public:
 
   // global locale objects:
   static locale global(const locale&);
-  static const locale& classic();
+  [[__nodiscard__]] static const locale& classic();
 
 private:
   class __imp;
@@ -118,6 +120,9 @@ private:
 
   template <class>
   friend struct __no_destroy;
+
+  friend ios_base;
+
   _LIBCPP_HIDE_FROM_ABI explicit locale(__private_constructor_tag, __imp* __loc) : __locale_(__loc) {}
 
   void __install_ctor(const locale&, facet*, long);
@@ -168,12 +173,12 @@ inline _LIBCPP_HIDE_FROM_ABI locale::locale(const locale& __other, _Facet* __f) 
 }
 
 template <class _Facet>
-inline _LIBCPP_HIDE_FROM_ABI bool has_facet(const locale& __l) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool has_facet(const locale& __l) _NOEXCEPT {
   return __l.has_facet(_Facet::id);
 }
 
 template <class _Facet>
-inline _LIBCPP_HIDE_FROM_ABI const _Facet& use_facet(const locale& __l) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI const _Facet& use_facet(const locale& __l) {
   return static_cast<const _Facet&>(*__l.use_facet(_Facet::id));
 }
 
@@ -187,19 +192,21 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit collate(size_t __refs = 0) : locale::facet(__refs) {}
 
-  _LIBCPP_HIDE_FROM_ABI int
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int
   compare(const char_type* __lo1, const char_type* __hi1, const char_type* __lo2, const char_type* __hi2) const {
     return do_compare(__lo1, __hi1, __lo2, __hi2);
   }
 
   // FIXME(EricWF): The _LIBCPP_ALWAYS_INLINE is needed on Windows to work
   // around a dllimport bug that expects an external instantiation.
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE string_type
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE string_type
   transform(const char_type* __lo, const char_type* __hi) const {
     return do_transform(__lo, __hi);
   }
 
-  _LIBCPP_HIDE_FROM_ABI long hash(const char_type* __lo, const char_type* __hi) const { return do_hash(__lo, __hi); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI long hash(const char_type* __lo, const char_type* __hi) const {
+    return do_hash(__lo, __hi);
+  }
 
   static locale::id id;
 
@@ -459,39 +466,43 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit ctype(size_t __refs = 0) : locale::facet(__refs) {}
 
-  _LIBCPP_HIDE_FROM_ABI bool is(mask __m, char_type __c) const { return do_is(__m, __c); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool is(mask __m, char_type __c) const { return do_is(__m, __c); }
 
   _LIBCPP_HIDE_FROM_ABI const char_type* is(const char_type* __low, const char_type* __high, mask* __vec) const {
     return do_is(__low, __high, __vec);
   }
 
-  _LIBCPP_HIDE_FROM_ABI const char_type* scan_is(mask __m, const char_type* __low, const char_type* __high) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const char_type*
+  scan_is(mask __m, const char_type* __low, const char_type* __high) const {
     return do_scan_is(__m, __low, __high);
   }
 
-  _LIBCPP_HIDE_FROM_ABI const char_type* scan_not(mask __m, const char_type* __low, const char_type* __high) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const char_type*
+  scan_not(mask __m, const char_type* __low, const char_type* __high) const {
     return do_scan_not(__m, __low, __high);
   }
 
-  _LIBCPP_HIDE_FROM_ABI char_type toupper(char_type __c) const { return do_toupper(__c); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type toupper(char_type __c) const { return do_toupper(__c); }
 
   _LIBCPP_HIDE_FROM_ABI const char_type* toupper(char_type* __low, const char_type* __high) const {
     return do_toupper(__low, __high);
   }
 
-  _LIBCPP_HIDE_FROM_ABI char_type tolower(char_type __c) const { return do_tolower(__c); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type tolower(char_type __c) const { return do_tolower(__c); }
 
   _LIBCPP_HIDE_FROM_ABI const char_type* tolower(char_type* __low, const char_type* __high) const {
     return do_tolower(__low, __high);
   }
 
-  _LIBCPP_HIDE_FROM_ABI char_type widen(char __c) const { return do_widen(__c); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type widen(char __c) const { return do_widen(__c); }
 
   _LIBCPP_HIDE_FROM_ABI const char* widen(const char* __low, const char* __high, char_type* __to) const {
     return do_widen(__low, __high, __to);
   }
 
-  _LIBCPP_HIDE_FROM_ABI char narrow(char_type __c, char __dfault) const { return do_narrow(__c, __dfault); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char narrow(char_type __c, char __dfault) const {
+    return do_narrow(__c, __dfault);
+  }
 
   _LIBCPP_HIDE_FROM_ABI const char_type*
   narrow(const char_type* __low, const char_type* __high, char __dfault, char* __to) const {
@@ -530,7 +541,7 @@ public:
 
   explicit ctype(const mask* __tab = nullptr, bool __del = false, size_t __refs = 0);
 
-  _LIBCPP_HIDE_FROM_ABI bool is(mask __m, char_type __c) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool is(mask __m, char_type __c) const {
     return std::__libcpp_isascii(__c) ? (__tab_[static_cast<int>(__c)] & __m) != 0 : false;
   }
 
@@ -540,39 +551,43 @@ public:
     return __low;
   }
 
-  _LIBCPP_HIDE_FROM_ABI const char_type* scan_is(mask __m, const char_type* __low, const char_type* __high) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const char_type*
+  scan_is(mask __m, const char_type* __low, const char_type* __high) const {
     for (; __low != __high; ++__low)
       if (std::__libcpp_isascii(*__low) && (__tab_[static_cast<int>(*__low)] & __m))
         break;
     return __low;
   }
 
-  _LIBCPP_HIDE_FROM_ABI const char_type* scan_not(mask __m, const char_type* __low, const char_type* __high) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const char_type*
+  scan_not(mask __m, const char_type* __low, const char_type* __high) const {
     for (; __low != __high; ++__low)
       if (!std::__libcpp_isascii(*__low) || !(__tab_[static_cast<int>(*__low)] & __m))
         break;
     return __low;
   }
 
-  _LIBCPP_HIDE_FROM_ABI char_type toupper(char_type __c) const { return do_toupper(__c); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type toupper(char_type __c) const { return do_toupper(__c); }
 
   _LIBCPP_HIDE_FROM_ABI const char_type* toupper(char_type* __low, const char_type* __high) const {
     return do_toupper(__low, __high);
   }
 
-  _LIBCPP_HIDE_FROM_ABI char_type tolower(char_type __c) const { return do_tolower(__c); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type tolower(char_type __c) const { return do_tolower(__c); }
 
   _LIBCPP_HIDE_FROM_ABI const char_type* tolower(char_type* __low, const char_type* __high) const {
     return do_tolower(__low, __high);
   }
 
-  _LIBCPP_HIDE_FROM_ABI char_type widen(char __c) const { return do_widen(__c); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type widen(char __c) const { return do_widen(__c); }
 
   _LIBCPP_HIDE_FROM_ABI const char* widen(const char* __low, const char* __high, char_type* __to) const {
     return do_widen(__low, __high, __to);
   }
 
-  _LIBCPP_HIDE_FROM_ABI char narrow(char_type __c, char __dfault) const { return do_narrow(__c, __dfault); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char narrow(char_type __c, char __dfault) const {
+    return do_narrow(__c, __dfault);
+  }
 
   _LIBCPP_HIDE_FROM_ABI const char*
   narrow(const char_type* __low, const char_type* __high, char __dfault, char* __to) const {
@@ -586,8 +601,8 @@ public:
 #  else
   static const size_t table_size = 256;
 #  endif
-  _LIBCPP_HIDE_FROM_ABI const mask* table() const _NOEXCEPT { return __tab_; }
-  static const mask* classic_table() _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const mask* table() const _NOEXCEPT { return __tab_; }
+  [[__nodiscard__]] static const mask* classic_table() _NOEXCEPT;
 
 protected:
   ~ctype() override;
@@ -650,72 +665,72 @@ protected:
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 template <class _CharT>
-inline _LIBCPP_HIDE_FROM_ABI bool isspace(_CharT __c, const locale& __loc) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool isspace(_CharT __c, const locale& __loc) {
   return std::use_facet<ctype<_CharT> >(__loc).is(ctype_base::space, __c);
 }
 
 template <class _CharT>
-inline _LIBCPP_HIDE_FROM_ABI bool isprint(_CharT __c, const locale& __loc) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool isprint(_CharT __c, const locale& __loc) {
   return std::use_facet<ctype<_CharT> >(__loc).is(ctype_base::print, __c);
 }
 
 template <class _CharT>
-inline _LIBCPP_HIDE_FROM_ABI bool iscntrl(_CharT __c, const locale& __loc) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool iscntrl(_CharT __c, const locale& __loc) {
   return std::use_facet<ctype<_CharT> >(__loc).is(ctype_base::cntrl, __c);
 }
 
 template <class _CharT>
-inline _LIBCPP_HIDE_FROM_ABI bool isupper(_CharT __c, const locale& __loc) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool isupper(_CharT __c, const locale& __loc) {
   return std::use_facet<ctype<_CharT> >(__loc).is(ctype_base::upper, __c);
 }
 
 template <class _CharT>
-inline _LIBCPP_HIDE_FROM_ABI bool islower(_CharT __c, const locale& __loc) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool islower(_CharT __c, const locale& __loc) {
   return std::use_facet<ctype<_CharT> >(__loc).is(ctype_base::lower, __c);
 }
 
 template <class _CharT>
-inline _LIBCPP_HIDE_FROM_ABI bool isalpha(_CharT __c, const locale& __loc) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool isalpha(_CharT __c, const locale& __loc) {
   return std::use_facet<ctype<_CharT> >(__loc).is(ctype_base::alpha, __c);
 }
 
 template <class _CharT>
-inline _LIBCPP_HIDE_FROM_ABI bool isdigit(_CharT __c, const locale& __loc) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool isdigit(_CharT __c, const locale& __loc) {
   return std::use_facet<ctype<_CharT> >(__loc).is(ctype_base::digit, __c);
 }
 
 template <class _CharT>
-inline _LIBCPP_HIDE_FROM_ABI bool ispunct(_CharT __c, const locale& __loc) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool ispunct(_CharT __c, const locale& __loc) {
   return std::use_facet<ctype<_CharT> >(__loc).is(ctype_base::punct, __c);
 }
 
 template <class _CharT>
-inline _LIBCPP_HIDE_FROM_ABI bool isxdigit(_CharT __c, const locale& __loc) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool isxdigit(_CharT __c, const locale& __loc) {
   return std::use_facet<ctype<_CharT> >(__loc).is(ctype_base::xdigit, __c);
 }
 
 template <class _CharT>
-inline _LIBCPP_HIDE_FROM_ABI bool isalnum(_CharT __c, const locale& __loc) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool isalnum(_CharT __c, const locale& __loc) {
   return std::use_facet<ctype<_CharT> >(__loc).is(ctype_base::alnum, __c);
 }
 
 template <class _CharT>
-inline _LIBCPP_HIDE_FROM_ABI bool isgraph(_CharT __c, const locale& __loc) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool isgraph(_CharT __c, const locale& __loc) {
   return std::use_facet<ctype<_CharT> >(__loc).is(ctype_base::graph, __c);
 }
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI bool isblank(_CharT __c, const locale& __loc) {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool isblank(_CharT __c, const locale& __loc) {
   return std::use_facet<ctype<_CharT> >(__loc).is(ctype_base::blank, __c);
 }
 
 template <class _CharT>
-inline _LIBCPP_HIDE_FROM_ABI _CharT toupper(_CharT __c, const locale& __loc) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _CharT toupper(_CharT __c, const locale& __loc) {
   return std::use_facet<ctype<_CharT> >(__loc).toupper(__c);
 }
 
 template <class _CharT>
-inline _LIBCPP_HIDE_FROM_ABI _CharT tolower(_CharT __c, const locale& __loc) {
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _CharT tolower(_CharT __c, const locale& __loc) {
   return std::use_facet<ctype<_CharT> >(__loc).tolower(__c);
 }
 
@@ -770,16 +785,16 @@ public:
     return do_in(__st, __frm, __frm_end, __frm_nxt, __to, __to_end, __to_nxt);
   }
 
-  _LIBCPP_HIDE_FROM_ABI int encoding() const _NOEXCEPT { return do_encoding(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int encoding() const _NOEXCEPT { return do_encoding(); }
 
-  _LIBCPP_HIDE_FROM_ABI bool always_noconv() const _NOEXCEPT { return do_always_noconv(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool always_noconv() const _NOEXCEPT { return do_always_noconv(); }
 
   _LIBCPP_HIDE_FROM_ABI int
   length(state_type& __st, const extern_type* __frm, const extern_type* __end, size_t __mx) const {
     return do_length(__st, __frm, __end, __mx);
   }
 
-  _LIBCPP_HIDE_FROM_ABI int max_length() const _NOEXCEPT { return do_max_length(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int max_length() const _NOEXCEPT { return do_max_length(); }
 
   static locale::id id;
 
@@ -852,16 +867,16 @@ public:
     return do_in(__st, __frm, __frm_end, __frm_nxt, __to, __to_end, __to_nxt);
   }
 
-  _LIBCPP_HIDE_FROM_ABI int encoding() const _NOEXCEPT { return do_encoding(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int encoding() const _NOEXCEPT { return do_encoding(); }
 
-  _LIBCPP_HIDE_FROM_ABI bool always_noconv() const _NOEXCEPT { return do_always_noconv(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool always_noconv() const _NOEXCEPT { return do_always_noconv(); }
 
   _LIBCPP_HIDE_FROM_ABI int
   length(state_type& __st, const extern_type* __frm, const extern_type* __end, size_t __mx) const {
     return do_length(__st, __frm, __end, __mx);
   }
 
-  _LIBCPP_HIDE_FROM_ABI int max_length() const _NOEXCEPT { return do_max_length(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int max_length() const _NOEXCEPT { return do_max_length(); }
 
   static locale::id id;
 
@@ -933,16 +948,16 @@ public:
     return do_in(__st, __frm, __frm_end, __frm_nxt, __to, __to_end, __to_nxt);
   }
 
-  _LIBCPP_HIDE_FROM_ABI int encoding() const _NOEXCEPT { return do_encoding(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int encoding() const _NOEXCEPT { return do_encoding(); }
 
-  _LIBCPP_HIDE_FROM_ABI bool always_noconv() const _NOEXCEPT { return do_always_noconv(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool always_noconv() const _NOEXCEPT { return do_always_noconv(); }
 
   _LIBCPP_HIDE_FROM_ABI int
   length(state_type& __st, const extern_type* __frm, const extern_type* __end, size_t __mx) const {
     return do_length(__st, __frm, __end, __mx);
   }
 
-  _LIBCPP_HIDE_FROM_ABI int max_length() const _NOEXCEPT { return do_max_length(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int max_length() const _NOEXCEPT { return do_max_length(); }
 
   static locale::id id;
 
@@ -1014,16 +1029,16 @@ public:
     return do_in(__st, __frm, __frm_end, __frm_nxt, __to, __to_end, __to_nxt);
   }
 
-  _LIBCPP_HIDE_FROM_ABI int encoding() const _NOEXCEPT { return do_encoding(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI int encoding() const _NOEXCEPT { return do_encoding(); }
 
-  _LIBCPP_HIDE_FROM_ABI bool always_noconv() const _NOEXCEPT { return do_always_noconv(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool always_noconv() const _NOEXCEPT { return do_always_noconv(); }
 
   _LIBCPP_HIDE_FROM_ABI int
   length(state_type& __st, const extern_type* __frm, const extern_type* __end, size_t __mx) const {
     return do_length(__st, __frm, __end, __mx);
   }
 
-  _LIBCPP_HIDE_FROM_ABI int max_length() const _NOEXCEPT { return do_max_length(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI int max_length() const _NOEXCEPT { return do_max_length(); }
 
   static locale::id id;
 
@@ -1096,16 +1111,16 @@ public:
     return do_in(__st, __frm, __frm_end, __frm_nxt, __to, __to_end, __to_nxt);
   }
 
-  _LIBCPP_HIDE_FROM_ABI int encoding() const _NOEXCEPT { return do_encoding(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int encoding() const _NOEXCEPT { return do_encoding(); }
 
-  _LIBCPP_HIDE_FROM_ABI bool always_noconv() const _NOEXCEPT { return do_always_noconv(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool always_noconv() const _NOEXCEPT { return do_always_noconv(); }
 
   _LIBCPP_HIDE_FROM_ABI int
   length(state_type& __st, const extern_type* __frm, const extern_type* __end, size_t __mx) const {
     return do_length(__st, __frm, __end, __mx);
   }
 
-  _LIBCPP_HIDE_FROM_ABI int max_length() const _NOEXCEPT { return do_max_length(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int max_length() const _NOEXCEPT { return do_max_length(); }
 
   static locale::id id;
 
@@ -1177,16 +1192,16 @@ public:
     return do_in(__st, __frm, __frm_end, __frm_nxt, __to, __to_end, __to_nxt);
   }
 
-  _LIBCPP_HIDE_FROM_ABI int encoding() const _NOEXCEPT { return do_encoding(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI int encoding() const _NOEXCEPT { return do_encoding(); }
 
-  _LIBCPP_HIDE_FROM_ABI bool always_noconv() const _NOEXCEPT { return do_always_noconv(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool always_noconv() const _NOEXCEPT { return do_always_noconv(); }
 
   _LIBCPP_HIDE_FROM_ABI int
   length(state_type& __st, const extern_type* __frm, const extern_type* __end, size_t __mx) const {
     return do_length(__st, __frm, __end, __mx);
   }
 
-  _LIBCPP_HIDE_FROM_ABI int max_length() const _NOEXCEPT { return do_max_length(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI int max_length() const _NOEXCEPT { return do_max_length(); }
 
   static locale::id id;
 
@@ -1409,11 +1424,11 @@ public:
 
   explicit numpunct(size_t __refs = 0);
 
-  _LIBCPP_HIDE_FROM_ABI char_type decimal_point() const { return do_decimal_point(); }
-  _LIBCPP_HIDE_FROM_ABI char_type thousands_sep() const { return do_thousands_sep(); }
-  _LIBCPP_HIDE_FROM_ABI string grouping() const { return do_grouping(); }
-  _LIBCPP_HIDE_FROM_ABI string_type truename() const { return do_truename(); }
-  _LIBCPP_HIDE_FROM_ABI string_type falsename() const { return do_falsename(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type decimal_point() const { return do_decimal_point(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type thousands_sep() const { return do_thousands_sep(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string grouping() const { return do_grouping(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type truename() const { return do_truename(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type falsename() const { return do_falsename(); }
 
   static locale::id id;
 
@@ -1439,11 +1454,11 @@ public:
 
   explicit numpunct(size_t __refs = 0);
 
-  _LIBCPP_HIDE_FROM_ABI char_type decimal_point() const { return do_decimal_point(); }
-  _LIBCPP_HIDE_FROM_ABI char_type thousands_sep() const { return do_thousands_sep(); }
-  _LIBCPP_HIDE_FROM_ABI string grouping() const { return do_grouping(); }
-  _LIBCPP_HIDE_FROM_ABI string_type truename() const { return do_truename(); }
-  _LIBCPP_HIDE_FROM_ABI string_type falsename() const { return do_falsename(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type decimal_point() const { return do_decimal_point(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type thousands_sep() const { return do_thousands_sep(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string grouping() const { return do_grouping(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type truename() const { return do_truename(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type falsename() const { return do_falsename(); }
 
   static locale::id id;
 
@@ -1494,6 +1509,7 @@ protected:
 };
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_LOCALIZATION

@@ -18,6 +18,18 @@ using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
 
+static lldb::SBValue EvaluateExpression(lldb::SBTarget &target,
+                                        lldb::SBFrame &frame,
+                                        const std::string &expression) {
+  const char *expression_cstr = expression.c_str();
+
+  if (frame)
+    return frame.EvaluateExpression(expression_cstr);
+
+  // Evaluate expression in global scope.
+  return target.EvaluateExpression(expression_cstr);
+}
+
 /// Set the variable with the given name in the variable container to a new
 /// value. Clients should only call this request if the corresponding capability
 /// `supportsSetVariable` is true.
@@ -49,13 +61,19 @@ SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
   if (!variable.IsValid())
     return llvm::make_error<DAPError>("could not find variable in scope");
 
+  lldb::SBFrame frame = variable.GetFrame();
+  std::string expression = llvm::StringRef(args.value).trim().str();
+  lldb::SBValue result = EvaluateExpression(dap.target, frame, expression);
+  const char *value = result.IsValid() ? result.GetValue() : expression.c_str();
+
   lldb::SBError error;
-  const bool success = variable.SetValueFromCString(args.value.c_str(), error);
+  const bool success = variable.SetValueFromCString(value, error);
   if (!success)
     return llvm::make_error<DAPError>(error.GetCString());
 
+  const bool hex = args.format ? args.format->hex : false;
   VariableDescription desc(variable,
-                           dap.configuration.enableAutoVariableSummaries);
+                           dap.configuration.enableAutoVariableSummaries, hex);
 
   SetVariableResponseBody body;
   body.value = desc.display_value;
@@ -65,8 +83,8 @@ SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
   // so always insert a new one to get its variablesReference.
   // is_permanent is false because debug console does not support
   // setVariable request.
-  const var_ref_t new_var_ref =
-      dap.reference_storage.InsertVariable(variable, /*is_permanent=*/false);
+  const var_ref_t new_var_ref = dap.reference_storage.Insert(
+      variable, /*is_permanent=*/false, /*is_internal=*/false);
   if (variable.MightHaveChildren()) {
     body.variablesReference = new_var_ref;
     if (desc.type_obj.IsArrayType())
@@ -80,7 +98,7 @@ SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
     body.memoryReference = addr;
 
   if (ValuePointsToCode(variable))
-    body.valueLocationReference = new_var_ref.AsUInt32();
+    body.valueLocationReference = PackLocation(new_var_ref.AsUInt32(), true);
 
   // Also send invalidated event to signal client that some variables
   // (e.g. references) can be changed.

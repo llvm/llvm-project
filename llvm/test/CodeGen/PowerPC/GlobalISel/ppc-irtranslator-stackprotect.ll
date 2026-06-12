@@ -39,7 +39,7 @@ define void @test_stack_guard_linux() {
 
 ; OPENBSD: [[GUARD_LOCAL:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @__guard_local
 ; OPENBSD: [[GUARD_SLOT:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.StackGuardSlot
-; OPENBSD: [[GUARD:%[0-9]+]]:_(p0) = G_LOAD [[GUARD_LOCAL]](p0) :: (dereferenceable load (p0) from @__guard_local)
+; OPENBSD: [[GUARD:%[0-9]+]]:_(p0) = G_LOAD [[GUARD_LOCAL]](p0) :: (load (p0) from @__guard_local)
 ; OPENBSD: G_STORE [[GUARD]](p0), [[GUARD_SLOT]](p0) :: (volatile store (p0) into %stack.0.StackGuardSlot)
 define void @test_stack_guard_openbsd() {
   %StackGuardSlot = alloca ptr

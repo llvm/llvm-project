@@ -19,6 +19,7 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "mlir/Conversion/LLVMCommon/LowerFunctionDiscardablesToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
@@ -35,6 +36,7 @@
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <optional>
 
@@ -47,6 +49,7 @@ namespace mlir {
 using namespace mlir;
 
 #define PASS_NAME "convert-func-to-llvm"
+#define DEBUG_TYPE PASS_NAME
 
 static constexpr StringRef varargsAttrName = "func.varargs";
 static constexpr StringRef linkageAttrName = "llvm.linkage";
@@ -59,14 +62,17 @@ static bool shouldUseBarePtrCallConv(Operation *op,
          typeConverter->getOptions().useBarePtrCallConv;
 }
 
+static bool isDiscardableAttr(StringRef name) {
+  return name == linkageAttrName || name == varargsAttrName ||
+         name == LLVM::LLVMDialect::getReadnoneAttrName();
+}
+
 /// Only retain those attributes that are not constructed by
 /// `LLVMFuncOp::build`.
 static void filterFuncAttributes(FunctionOpInterface func,
                                  SmallVectorImpl<NamedAttribute> &result) {
   for (const NamedAttribute &attr : func->getDiscardableAttrs()) {
-    if (attr.getName() == linkageAttrName ||
-        attr.getName() == varargsAttrName ||
-        attr.getName() == LLVM::LLVMDialect::getReadnoneAttrName())
+    if (isDiscardableAttr(attr.getName().strref()))
       continue;
     result.push_back(attr);
   }
@@ -288,79 +294,35 @@ static void restoreByValRefArgumentType(
   }
 }
 
-FailureOr<LLVM::LLVMFuncOp> mlir::convertFuncOpToLLVMFuncOp(
-    FunctionOpInterface funcOp, ConversionPatternRewriter &rewriter,
-    const LLVMTypeConverter &converter, SymbolTableCollection *symbolTables) {
-  // Check the funcOp has `FunctionType`.
-  auto funcTy = dyn_cast<FunctionType>(funcOp.getFunctionType());
-  if (!funcTy)
-    return rewriter.notifyMatchFailure(
-        funcOp, "Only support FunctionOpInterface with FunctionType");
-
-  // Convert the original function arguments. They are converted using the
-  // LLVMTypeConverter provided to this legalization pattern.
+static FailureOr<LLVM::LLVMFunctionType> convertFuncSignature(
+    FunctionOpInterface funcOp, const LLVMTypeConverter &converter,
+    bool useBarePtrCallConv, TypeConverter::SignatureConversion &result,
+    SmallVectorImpl<std::optional<NamedAttribute>> &byValRefNonPtrAttrs) {
   auto varargsAttr = funcOp->getAttrOfType<BoolAttr>(varargsAttrName);
-  // Gather `llvm.byval` and `llvm.byref` arguments whose type convertion was
-  // overriden with an LLVM pointer type for later processing.
-  SmallVector<std::optional<NamedAttribute>> byValRefNonPtrAttrs;
-  TypeConverter::SignatureConversion result(funcOp.getNumArguments());
   auto llvmType = dyn_cast_or_null<LLVM::LLVMFunctionType>(
       converter.convertFunctionSignature(
-          funcOp, varargsAttr && varargsAttr.getValue(),
-          shouldUseBarePtrCallConv(funcOp, &converter), result,
-          byValRefNonPtrAttrs));
+          funcOp, varargsAttr && varargsAttr.getValue(), useBarePtrCallConv,
+          result, byValRefNonPtrAttrs));
   if (!llvmType)
-    return rewriter.notifyMatchFailure(funcOp, "signature conversion failed");
+    return failure();
+  return llvmType;
+}
 
-  // Check for unsupported variadic functions.
-  if (!shouldUseBarePtrCallConv(funcOp, &converter))
-    if (funcOp->getAttrOfType<UnitAttr>(
-            LLVM::LLVMDialect::getEmitCWrapperAttrName()))
-      if (llvmType.isVarArg())
-        return funcOp.emitError("C interface for variadic functions is not "
-                                "supported yet.");
-
-  // Create an LLVM function, use external linkage by default until MLIR
-  // functions have linkage.
-  LLVM::Linkage linkage = LLVM::Linkage::External;
-  if (funcOp->hasAttr(linkageAttrName)) {
-    auto attr =
-        dyn_cast<mlir::LLVM::LinkageAttr>(funcOp->getAttr(linkageAttrName));
-    if (!attr) {
-      funcOp->emitError() << "Contains " << linkageAttrName
-                          << " attribute not of type LLVM::LinkageAttr";
-      return rewriter.notifyMatchFailure(
-          funcOp, "Contains linkage attribute not of type LLVM::LinkageAttr");
-    }
-    linkage = attr.getLinkage();
-  }
-
-  // Check for invalid attributes.
-  StringRef readnoneAttrName = LLVM::LLVMDialect::getReadnoneAttrName();
-  if (funcOp->hasAttr(readnoneAttrName)) {
-    auto attr = funcOp->getAttrOfType<UnitAttr>(readnoneAttrName);
-    if (!attr) {
-      funcOp->emitError() << "Contains " << readnoneAttrName
-                          << " attribute not of type UnitAttr";
-      return rewriter.notifyMatchFailure(
-          funcOp, "Contains readnone attribute not of type UnitAttr");
-    }
-  }
-
-  SmallVector<NamedAttribute, 4> attributes;
-  filterFuncAttributes(funcOp, attributes);
-
+static LLVM::LLVMFuncOp createLLVMFuncOp(FunctionOpInterface funcOp,
+                                         ConversionPatternRewriter &rewriter,
+                                         LLVM::LLVMFunctionType llvmType,
+                                         LoweredLLVMFuncAttrs &loweredAttrs,
+                                         SymbolTableCollection *symbolTables) {
   Operation *symbolTableOp = funcOp->getParentWithTrait<OpTrait::SymbolTable>();
-
   if (symbolTables && symbolTableOp) {
     SymbolTable &symbolTable = symbolTables->getSymbolTable(symbolTableOp);
     symbolTable.remove(funcOp);
   }
-
-  auto newFuncOp = LLVM::LLVMFuncOp::create(
-      rewriter, funcOp.getLoc(), funcOp.getName(), llvmType, linkage,
-      /*dsoLocal=*/false, /*cconv=*/LLVM::CConv::C, /*comdat=*/nullptr,
-      attributes);
+  loweredAttrs.properties.setCConv(
+      LLVM::CConvAttr::get(rewriter.getContext(), LLVM::CConv::C));
+  auto newFuncOp = LLVM::LLVMFuncOp::create(rewriter, funcOp.getLoc(),
+                                            loweredAttrs.properties,
+                                            loweredAttrs.discardableAttrs);
 
   if (symbolTables && symbolTableOp) {
     auto ip = rewriter.getInsertionPoint();
@@ -371,8 +333,8 @@ FailureOr<LLVM::LLVMFuncOp> mlir::convertFuncOpToLLVMFuncOp(
   cast<FunctionOpInterface>(newFuncOp.getOperation())
       .setVisibility(funcOp.getVisibility());
 
-  // Create a memory effect attribute corresponding to readnone.
-  if (funcOp->hasAttr(readnoneAttrName)) {
+  // Set readnone memory effects
+  if (funcOp->hasAttr(LLVM::LLVMDialect::getReadnoneAttrName())) {
     auto memoryAttr = LLVM::MemoryEffectsAttr::get(
         rewriter.getContext(), {/*other=*/LLVM::ModRefInfo::NoModRef,
                                 /*argMem=*/LLVM::ModRefInfo::NoModRef,
@@ -383,6 +345,46 @@ FailureOr<LLVM::LLVMFuncOp> mlir::convertFuncOpToLLVMFuncOp(
     newFuncOp.setMemoryEffectsAttr(memoryAttr);
   }
 
+  return newFuncOp;
+}
+
+static SmallVector<NamedAttribute>
+convertArgumentAttributes(DictionaryAttr attrsDict,
+                          ConversionPatternRewriter &rewriter,
+                          const LLVMTypeConverter &converter) {
+  SmallVector<NamedAttribute> convertedAttrs;
+  convertedAttrs.reserve(attrsDict.size());
+  for (const NamedAttribute &attr : attrsDict) {
+    const auto convert = [&](const NamedAttribute &attr) {
+      return TypeAttr::get(
+          converter.convertType(cast<TypeAttr>(attr.getValue()).getValue()));
+    };
+    if (attr.getName().getValue() == LLVM::LLVMDialect::getByValAttrName()) {
+      convertedAttrs.push_back(rewriter.getNamedAttr(
+          LLVM::LLVMDialect::getByValAttrName(), convert(attr)));
+    } else if (attr.getName().getValue() ==
+               LLVM::LLVMDialect::getByRefAttrName()) {
+      convertedAttrs.push_back(rewriter.getNamedAttr(
+          LLVM::LLVMDialect::getByRefAttrName(), convert(attr)));
+    } else if (attr.getName().getValue() ==
+               LLVM::LLVMDialect::getStructRetAttrName()) {
+      convertedAttrs.push_back(rewriter.getNamedAttr(
+          LLVM::LLVMDialect::getStructRetAttrName(), convert(attr)));
+    } else if (attr.getName().getValue() ==
+               LLVM::LLVMDialect::getInAllocaAttrName()) {
+      convertedAttrs.push_back(rewriter.getNamedAttr(
+          LLVM::LLVMDialect::getInAllocaAttrName(), convert(attr)));
+    } else {
+      convertedAttrs.push_back(attr);
+    }
+  }
+  return convertedAttrs;
+}
+
+static void propagateFunctionArgResAttrs(
+    FunctionOpInterface funcOp, ConversionPatternRewriter &rewriter,
+    const LLVMTypeConverter &converter, TypeConverter::SignatureConversion &sig,
+    LLVM::LLVMFunctionType llvmType, LLVM::LLVMFuncOp newFuncOp) {
   // Propagate argument/result attributes to all converted arguments/result
   // obtained after converting a given original argument/result.
   if (ArrayAttr resAttrDicts = funcOp.getAllResultAttrs()) {
@@ -391,41 +393,15 @@ FailureOr<LLVM::LLVMFuncOp> mlir::convertFuncOpToLLVMFuncOp(
       newFuncOp.setAllResultAttrs(resAttrDicts);
   }
   if (ArrayAttr argAttrDicts = funcOp.getAllArgAttrs()) {
-    SmallVector<Attribute> newArgAttrs(
-        cast<LLVM::LLVMFunctionType>(llvmType).getNumParams());
+    SmallVector<Attribute> newArgAttrs(llvmType.getNumParams());
     for (unsigned i = 0, e = funcOp.getNumArguments(); i < e; ++i) {
       // Some LLVM IR attribute have a type attached to them. During FuncOp ->
       // LLVMFuncOp conversion these types may have changed. Account for that
       // change by converting attributes' types as well.
-      SmallVector<NamedAttribute, 4> convertedAttrs;
       auto attrsDict = cast<DictionaryAttr>(argAttrDicts[i]);
-      convertedAttrs.reserve(attrsDict.size());
-      for (const NamedAttribute &attr : attrsDict) {
-        const auto convert = [&](const NamedAttribute &attr) {
-          return TypeAttr::get(converter.convertType(
-              cast<TypeAttr>(attr.getValue()).getValue()));
-        };
-        if (attr.getName().getValue() ==
-            LLVM::LLVMDialect::getByValAttrName()) {
-          convertedAttrs.push_back(rewriter.getNamedAttr(
-              LLVM::LLVMDialect::getByValAttrName(), convert(attr)));
-        } else if (attr.getName().getValue() ==
-                   LLVM::LLVMDialect::getByRefAttrName()) {
-          convertedAttrs.push_back(rewriter.getNamedAttr(
-              LLVM::LLVMDialect::getByRefAttrName(), convert(attr)));
-        } else if (attr.getName().getValue() ==
-                   LLVM::LLVMDialect::getStructRetAttrName()) {
-          convertedAttrs.push_back(rewriter.getNamedAttr(
-              LLVM::LLVMDialect::getStructRetAttrName(), convert(attr)));
-        } else if (attr.getName().getValue() ==
-                   LLVM::LLVMDialect::getInAllocaAttrName()) {
-          convertedAttrs.push_back(rewriter.getNamedAttr(
-              LLVM::LLVMDialect::getInAllocaAttrName(), convert(attr)));
-        } else {
-          convertedAttrs.push_back(attr);
-        }
-      }
-      auto mapping = result.getInputMapping(i);
+      SmallVector<NamedAttribute, 4> convertedAttrs =
+          convertArgumentAttributes(attrsDict, rewriter, converter);
+      auto mapping = sig.getInputMapping(i);
       assert(mapping && "unexpected deletion of function argument");
       // Only attach the new argument attributes if there is a one-to-one
       // mapping from old to new types. Otherwise, attributes might be
@@ -444,7 +420,74 @@ FailureOr<LLVM::LLVMFuncOp> mlir::convertFuncOpToLLVMFuncOp(
     if (!newArgAttrs.empty())
       newFuncOp.setAllArgAttrs(rewriter.getArrayAttr(newArgAttrs));
   }
+}
 
+static void wrapWithCInterface(FunctionOpInterface funcOp,
+                               ConversionPatternRewriter &rewriter,
+                               const LLVMTypeConverter &converter,
+                               LLVM::LLVMFuncOp newFuncOp) {
+  if (newFuncOp.isExternal())
+    wrapExternalFunction(rewriter, funcOp->getLoc(), converter, funcOp,
+                         newFuncOp);
+  else
+    wrapForExternalCallers(rewriter, funcOp->getLoc(), converter, funcOp,
+                           newFuncOp);
+}
+
+/// Conversion steps
+/// - Validate function type
+/// - Convert signature
+/// - Validate C wrapper varargs constraint
+/// - Lower function attrs
+/// - Create llvm.func
+/// - Propagate arg/result attrs
+/// - Inline body + signature conversion
+/// - Restore byval/byref pointee types
+/// - C-wrapper handling
+FailureOr<LLVM::LLVMFuncOp> mlir::convertFuncOpToLLVMFuncOp(
+    FunctionOpInterface funcOp, ConversionPatternRewriter &rewriter,
+    const LLVMTypeConverter &converter, SymbolTableCollection *symbolTables) {
+  // Check the funcOp has `FunctionType`.
+  auto funcTy = dyn_cast<FunctionType>(funcOp.getFunctionType());
+  if (!funcTy)
+    return rewriter.notifyMatchFailure(
+        funcOp, "Only support FunctionOpInterface with FunctionType");
+
+  bool useBarePtrCallConv = shouldUseBarePtrCallConv(funcOp, &converter);
+  // Convert the original function arguments. They are converted using the
+  // LLVMTypeConverter provided to this legalization pattern.
+  // Gather `llvm.byval` and `llvm.byref` arguments whose type convertion was
+  // overriden with an LLVM pointer type for later processing.
+  SmallVector<std::optional<NamedAttribute>> byValRefNonPtrAttrs;
+  TypeConverter::SignatureConversion result(funcOp.getNumArguments());
+  FailureOr<LLVM::LLVMFunctionType> llvmType = convertFuncSignature(
+      funcOp, converter, useBarePtrCallConv, result, byValRefNonPtrAttrs);
+  if (failed(llvmType))
+    return rewriter.notifyMatchFailure(funcOp, "signature conversion failed");
+
+  // Validate C wrapper varargs constraint
+  bool emitCWrapper = funcOp->hasAttrOfType<UnitAttr>(
+      LLVM::LLVMDialect::getEmitCWrapperAttrName());
+  if (!useBarePtrCallConv && emitCWrapper && llvmType->isVarArg())
+    return funcOp.emitError("C interface for variadic functions is not "
+                            "supported yet.");
+
+  // Lower function attrs
+  FailureOr<LoweredLLVMFuncAttrs> loweredAttrs =
+      lowerDiscardableAttrsForLLVMFunc(funcOp, *llvmType);
+  if (failed(loweredAttrs))
+    return rewriter.notifyMatchFailure(funcOp,
+                                       "failed to lower func attributes");
+
+  // Create llvm.func
+  auto newFuncOp = createLLVMFuncOp(funcOp, rewriter, *llvmType, *loweredAttrs,
+                                    symbolTables);
+
+  // Propagate arg/result attrs
+  propagateFunctionArgResAttrs(funcOp, rewriter, converter, result, *llvmType,
+                               newFuncOp);
+
+  // Inline body + signature conversion
   rewriter.inlineRegionBefore(funcOp.getFunctionBody(), newFuncOp.getBody(),
                               newFuncOp.end());
   // Convert just the entry block. The remaining unstructured control flow is
@@ -453,23 +496,16 @@ FailureOr<LLVM::LLVMFuncOp> mlir::convertFuncOpToLLVMFuncOp(
     rewriter.applySignatureConversion(&newFuncOp.getBody().front(), result,
                                       &converter);
 
+  // Restore byval/byref pointee types
   // Fix the type mismatch between the materialized `llvm.ptr` and the expected
   // pointee type in the function body when converting `llvm.byval`/`llvm.byref`
   // function arguments.
   restoreByValRefArgumentType(rewriter, converter, byValRefNonPtrAttrs,
                               newFuncOp);
 
-  if (!shouldUseBarePtrCallConv(funcOp, &converter)) {
-    if (funcOp->getAttrOfType<UnitAttr>(
-            LLVM::LLVMDialect::getEmitCWrapperAttrName())) {
-      if (newFuncOp.isExternal())
-        wrapExternalFunction(rewriter, funcOp->getLoc(), converter, funcOp,
-                             newFuncOp);
-      else
-        wrapForExternalCallers(rewriter, funcOp->getLoc(), converter, funcOp,
-                               newFuncOp);
-    }
-  }
+  // C-wrapper handling
+  if (!useBarePtrCallConv && emitCWrapper)
+    wrapWithCInterface(funcOp, rewriter, converter, newFuncOp);
 
   return newFuncOp;
 }
@@ -873,7 +909,8 @@ struct SetLLVMModuleDataLayoutPass
 namespace {
 /// Implement the interface to convert Func to LLVM.
 struct FuncToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  FuncToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
   /// Hook for derived dialect interface to provide conversion patterns
   /// and mark dialect legal for the conversion target.
   void populateConvertToLLVMConversionPatterns(

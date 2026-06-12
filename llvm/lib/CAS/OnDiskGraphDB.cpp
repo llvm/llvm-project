@@ -916,6 +916,9 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
     if (auto E = UpstreamDB->validate(Deep, Hasher))
       return E;
   }
+  if (!isAligned(Align(8), DataPool.size()))
+    return createStringError(llvm::errc::illegal_byte_sequence,
+                             "data pool bump pointer is not aligned");
   return Index.validate([&](FileOffset Offset,
                             OnDiskTrieRawHashMap::ConstValueProxy Record)
                             -> Error {
@@ -953,13 +956,28 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
       // the record. It can be reused by later insertion so just skip this entry
       // for now.
       return Error::success();
-    case TrieRecord::StorageKind::DataPool:
+    case TrieRecord::StorageKind::DataPool: {
       // Check offset is a postive value, and large enough to hold the
       // header for the data record.
       if (D.Offset.get() <= 0 ||
           D.Offset.get() + sizeof(DataRecordHandle::Header) >= DataPool.size())
         return formatError("datapool record out of bound");
+
+      // DataRecord start needs to be aligned.
+      if (!isAligned(Align(8), D.Offset.get()))
+        return formatError("data record offset is not aligned");
+
+      // Validate the layout flags before getFromDataPool calls getTotalSize().
+      auto HeaderData =
+          DataPool.get(D.Offset, sizeof(DataRecordHandle::Header));
+      if (!HeaderData)
+        return formatError(toString(HeaderData.takeError()));
+      auto LF = DataRecordHandle::get(HeaderData->data()).getLayoutFlags();
+      if (LF.NumRefs > DataRecordHandle::NumRefsFlags::Max ||
+          LF.DataSize > DataRecordHandle::DataSizeFlags::Max)
+        return formatError("data record has invalid layout flags");
       break;
+    }
     case TrieRecord::StorageKind::Standalone:
     case TrieRecord::StorageKind::StandaloneLeaf:
     case TrieRecord::StorageKind::StandaloneLeaf0:
@@ -999,6 +1017,8 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
         return dataError(toString(DataRecord.takeError()));
 
       for (auto InternRef : DataRecord->getRefs()) {
+        if (InternRef.getFileOffset().get() <= 0)
+          return dataError("invalid ref offset");
         auto Index = getIndexProxyFromRef(InternRef);
         if (!Index)
           return Index.takeError();
@@ -1015,6 +1035,8 @@ Error OnDiskGraphDB::validate(bool Deep, HashingFuncT Hasher) const {
         return dataError(
             "data record span passed the end of the standalone file");
       for (auto InternRef : DataRecord.getRefs()) {
+        if (InternRef.getFileOffset().get() <= 0)
+          return dataError("invalid ref offset");
         auto Index = getIndexProxyFromRef(InternRef);
         if (!Index)
           return Index.takeError();
@@ -1482,8 +1504,6 @@ Error OnDiskGraphDB::createStandaloneLeaf(IndexProxy &I, ArrayRef<char> Data) {
   int64_t FileSize = Data.size() + Leaf0;
   getStandalonePath(TrieRecord::getStandaloneFilePrefix(SK), I.Offset, Path);
 
-  auto BypassSandbox = sys::sandbox::scopedDisable();
-
   // Write the file. Don't reuse this mapped_file_region, which is read/write.
   // Let load() pull up one that's read-only.
   Expected<MappedTempFile> File = createTempFile(Path, FileSize, Logger.get());
@@ -1526,6 +1546,8 @@ Error OnDiskGraphDB::store(ObjectID ID, ArrayRef<ObjectID> Refs,
     if (Existing.SK != TrieRecord::StorageKind::Unknown)
       return Error::success();
   }
+
+  auto BypassSandbox = sys::sandbox::scopedDisable();
 
   // Big leaf nodes.
   if (Refs.empty() && Data.size() > TrieRecord::MaxEmbeddedSize)

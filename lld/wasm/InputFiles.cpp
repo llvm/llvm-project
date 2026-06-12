@@ -91,7 +91,7 @@ InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName,
     auto *obj = cast<WasmObjectFile>(bin.get());
     if (obj->hasUnmodeledTypes())
       fatal(toString(mb.getBufferIdentifier()) +
-            "file has unmodeled reference or GC types");
+            " file has unmodeled reference or GC types");
     if (obj->isSharedObject())
       return make<SharedFile>(mb);
     return make<ObjFile>(mb, archiveName, lazy);
@@ -452,6 +452,9 @@ void SharedFile::parse() {
         break;
       case WASM_SYMBOL_TYPE_DATA:
         s = symtab->addSharedData(name, flags, this);
+        break;
+      case WASM_SYMBOL_TYPE_TAG:
+        s = symtab->addSharedTag(name, flags, this, wasmSym.Signature);
         break;
       default:
         continue;

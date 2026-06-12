@@ -49,10 +49,8 @@ class ExprEngine;
 /// It traverses the CFG and generates the ExplodedGraph.
 class CoreEngine {
   friend class ExprEngine;
-  friend class IndirectGotoNodeBuilder;
   friend class NodeBuilder;
   friend class NodeBuilderContext;
-  friend class SwitchNodeBuilder;
 
 public:
   using BlocksExhausted =
@@ -97,10 +95,6 @@ private:
 
   void setBlockCounter(BlockCounter C);
 
-  void generateNode(const ProgramPoint &Loc,
-                    ProgramStateRef State,
-                    ExplodedNode *Pred);
-
   void HandleBlockEdge(const BlockEdge &E, ExplodedNode *Pred);
   void HandleBlockEntrance(const BlockEntrance &E, ExplodedNode *Pred);
   void HandleBlockExit(const CFGBlock *B, ExplodedNode *Pred);
@@ -121,9 +115,6 @@ private:
   void HandleVirtualBaseBranch(const CFGBlock *B, ExplodedNode *Pred);
 
 private:
-  ExplodedNode *generateCallExitBeginNode(ExplodedNode *N,
-                                          const ReturnStmt *RS);
-
   /// Helper function called by `HandleBranch()`. If the currently handled
   /// branch corresponds to a loop, this returns the number of already
   /// completed iterations in that loop, otherwise the return value is
@@ -146,7 +137,7 @@ public:
 
   /// ExecuteWorkList - Run the worklist algorithm for a maximum number of
   ///  steps.  Returns true if there is still simulation state on the worklist.
-  bool ExecuteWorkList(const LocationContext *L, unsigned Steps,
+  bool ExecuteWorkList(const StackFrame *SF, unsigned Steps,
                        ProgramStateRef InitState);
 
   /// Dispatch the work list item based on the given location information.
@@ -176,12 +167,39 @@ public:
 
   auto aborted_blocks() const { return llvm::iterator_range(blocksAborted); }
 
+  ExplodedNode *makeNode(const ProgramPoint &Loc, ProgramStateRef State,
+                         ExplodedNode *Pred, bool MarkAsSink = false) const;
+
+  ExplodedNode *makePostStmtNode(const Stmt *S, ProgramStateRef State,
+                                 ExplodedNode *Pred,
+                                 bool MarkAsSink = false) const {
+    PostStmt Loc(S, Pred->getStackFrame(), /*tag=*/nullptr);
+    return makeNode(Loc, State, Pred, MarkAsSink);
+  }
+
+  ExplodedNode *
+  makeNodeWithBinding(ExplodedNode *Pred, const Expr *E, SVal V,
+                      ProgramStateRef State,
+                      ProgramPoint::Kind K = ProgramPoint::PostStmtKind) const {
+    const StackFrame *SF = Pred->getStackFrame();
+    State = State->BindExpr(E, SF, V);
+    const auto &L = ProgramPoint::getProgramPoint(E, K, SF, /*tag=*/nullptr);
+    return makeNode(L, State, Pred);
+  }
+
+  ExplodedNode *
+  makeNodeWithBinding(ExplodedNode *Pred, const Expr *E, SVal V,
+                      ProgramPoint::Kind K = ProgramPoint::PostStmtKind) const {
+    return makeNodeWithBinding(Pred, E, V, Pred->getState(), K);
+  }
+
   /// Enqueue the given set of nodes onto the work list.
   void enqueue(ExplodedNodeSet &Set);
 
   /// Enqueue nodes that were created as a result of processing
   /// a statement onto the work list.
-  void enqueue(ExplodedNodeSet &Set, const CFGBlock *Block, unsigned Idx);
+  void enqueueStmtNodes(ExplodedNodeSet &Set, const CFGBlock *Block,
+                        unsigned Idx);
 
   /// enqueue the nodes corresponding to the end of function onto the
   /// end of path / work list.
@@ -196,17 +214,17 @@ public:
 class NodeBuilderContext {
   const CoreEngine &Eng;
   const CFGBlock *Block;
-  const LocationContext *LC;
+  const StackFrame *SF;
 
 public:
   NodeBuilderContext(const CoreEngine &E, const CFGBlock *B,
-                     const LocationContext *L)
-      : Eng(E), Block(B), LC(L) {
+                     const StackFrame *S)
+      : Eng(E), Block(B), SF(S) {
     assert(B);
   }
 
   NodeBuilderContext(const CoreEngine &E, const CFGBlock *B, ExplodedNode *N)
-      : NodeBuilderContext(E, B, N->getLocationContext()) {}
+      : NodeBuilderContext(E, B, N->getStackFrame()) {}
 
   /// Return the CoreEngine associated with this builder.
   const CoreEngine &getEngine() const { return Eng; }
@@ -214,15 +232,13 @@ public:
   /// Return the CFGBlock associated with this builder.
   const CFGBlock *getBlock() const { return Block; }
 
-  /// Return the location context associated with this builder.
-  const LocationContext *getLocationContext() const { return LC; }
+  /// Return the stack frame associated with this builder.
+  const StackFrame *getStackFrame() const { return SF; }
 
   /// Returns the number of times the current basic block has been
   /// visited on the exploded graph path.
   unsigned blockCount() const {
-    return Eng.WList->getBlockCounter().getNumVisited(
-                    LC->getStackFrame(),
-                    Block->getBlockID());
+    return Eng.WList->getBlockCounter().getNumVisited(SF, Block->getBlockID());
   }
 };
 
@@ -235,6 +251,17 @@ public:
 /// be propagated to the next step / builder. They are the nodes which have been
 /// added to the builder (either as the input node set or as the newly
 /// constructed nodes) but did not have any outgoing transitions added.
+///
+/// TODO: This "main benefit" is often useless, in fact the only significant
+/// use is within `CheckerManager::ExpandGraphWithCheckers`. There this logic
+/// ensures that if a checker performs multiple transitions on the same path,
+/// then only the last of them is "built upon" by other checkers or the engine.
+///
+/// However, there are also many short-lived temporary `NodeBuilder` instances
+/// where the `generateNode` is called in a very predictable manner (once, or
+/// once for each source node) and the frontier management is overkill.
+/// These locations should be gradually simplified by using the method
+/// `CoreEngine::makeNode()` instead of the temporary `NodeBuilder`s.
 class NodeBuilder {
 protected:
   const NodeBuilderContext &C;
@@ -245,40 +272,25 @@ protected:
   /// the builder dies.
   ExplodedNodeSet &Frontier;
 
-  bool hasNoSinksInFrontier() {
-    for (const auto  I : Frontier)
-      if (I->isSink())
-        return false;
-    return true;
-  }
-
-  ExplodedNode *generateNodeImpl(const ProgramPoint &PP,
-                                 ProgramStateRef State,
-                                 ExplodedNode *Pred,
-                                 bool MarkAsSink = false);
-
 public:
+  NodeBuilder(ExplodedNodeSet &DstSet, const NodeBuilderContext &Ctx)
+      : C(Ctx), Frontier(DstSet) {}
+
   NodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
               const NodeBuilderContext &Ctx)
-      : C(Ctx), Frontier(DstSet) {
-    Frontier.Add(SrcNode);
+      : NodeBuilder(DstSet, Ctx) {
+    Frontier.insert(SrcNode);
   }
 
   NodeBuilder(const ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
               const NodeBuilderContext &Ctx)
-      : C(Ctx), Frontier(DstSet) {
+      : NodeBuilder(DstSet, Ctx) {
     Frontier.insert(SrcSet);
-    assert(hasNoSinksInFrontier());
   }
 
   /// Generates a node in the ExplodedGraph.
-  ExplodedNode *generateNode(const ProgramPoint &PP,
-                             ProgramStateRef State,
-                             ExplodedNode *Pred) {
-    return generateNodeImpl(
-        PP, State, Pred,
-        /*MarkAsSink=*/State->isPosteriorlyOverconstrained());
-  }
+  ExplodedNode *generateNode(const ProgramPoint &PP, ProgramStateRef State,
+                             ExplodedNode *Pred, bool MarkAsSink = false);
 
   /// Generates a sink in the ExplodedGraph.
   ///
@@ -288,7 +300,7 @@ public:
   ExplodedNode *generateSink(const ProgramPoint &PP,
                              ProgramStateRef State,
                              ExplodedNode *Pred) {
-    return generateNodeImpl(PP, State, Pred, true);
+    return generateNode(PP, State, Pred, true);
   }
 
   ExplodedNode *generateNode(const Stmt *S,
@@ -296,8 +308,8 @@ public:
                              ProgramStateRef St,
                              const ProgramPointTag *tag = nullptr,
                              ProgramPoint::Kind K = ProgramPoint::PostStmtKind){
-    const ProgramPoint &L = ProgramPoint::getProgramPoint(S, K,
-                                  Pred->getLocationContext(), tag);
+    const ProgramPoint &L =
+        ProgramPoint::getProgramPoint(S, K, Pred->getStackFrame(), tag);
     return generateNode(L, St, Pred);
   }
 
@@ -306,14 +318,13 @@ public:
                              ProgramStateRef St,
                              const ProgramPointTag *tag = nullptr,
                              ProgramPoint::Kind K = ProgramPoint::PostStmtKind){
-    const ProgramPoint &L = ProgramPoint::getProgramPoint(S, K,
-                                  Pred->getLocationContext(), tag);
+    const ProgramPoint &L =
+        ProgramPoint::getProgramPoint(S, K, Pred->getStackFrame(), tag);
     return generateSink(L, St, Pred);
   }
 
   const ExplodedNodeSet &getResults() const { return Frontier; }
 
-  const NodeBuilderContext &getContext() const { return C; }
   bool hasGeneratedNodes() const { return HasGeneratedNodes; }
 
   void takeNodes(const ExplodedNodeSet &S) {
@@ -323,86 +334,7 @@ public:
 
   void takeNodes(ExplodedNode *N) { Frontier.erase(N); }
   void addNodes(const ExplodedNodeSet &S) { Frontier.insert(S); }
-  void addNodes(ExplodedNode *N) { Frontier.Add(N); }
-};
-
-/// BranchNodeBuilder is responsible for constructing the nodes
-/// corresponding to the two branches of the if statement - true and false.
-class BranchNodeBuilder : public NodeBuilder {
-  const CFGBlock *DstT;
-  const CFGBlock *DstF;
-
-public:
-  BranchNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
-                    const NodeBuilderContext &C, const CFGBlock *DT,
-                    const CFGBlock *DF)
-      : NodeBuilder(SrcNode, DstSet, C), DstT(DT), DstF(DF) {
-    // The branch node builder does not generate autotransitions.
-    // If there are no successors it means that both branches are infeasible.
-    takeNodes(SrcNode);
-  }
-
-  BranchNodeBuilder(const ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
-                    const NodeBuilderContext &C, const CFGBlock *DT,
-                    const CFGBlock *DF)
-      : NodeBuilder(SrcSet, DstSet, C), DstT(DT), DstF(DF) {
-    takeNodes(SrcSet);
-  }
-
-  ExplodedNode *generateNode(ProgramStateRef State, bool branch,
-                             ExplodedNode *Pred);
-};
-
-class IndirectGotoNodeBuilder : public NodeBuilder {
-  const CFGBlock &DispatchBlock;
-  const Expr *Target;
-
-public:
-  IndirectGotoNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
-                          NodeBuilderContext &Ctx, const Expr *Tgt,
-                          const CFGBlock *Dispatch)
-      : NodeBuilder(SrcNode, DstSet, Ctx), DispatchBlock(*Dispatch),
-        Target(Tgt) {
-    // The indirect goto node builder does not generate autotransitions.
-    takeNodes(SrcNode);
-  }
-
-  using iterator = CFGBlock::const_succ_iterator;
-
-  iterator begin() { return DispatchBlock.succ_begin(); }
-  iterator end() { return DispatchBlock.succ_end(); }
-
-  using NodeBuilder::generateNode;
-
-  ExplodedNode *generateNode(const CFGBlock *Block, ProgramStateRef State,
-                             ExplodedNode *Pred);
-
-  const Expr *getTarget() const { return Target; }
-
-  const LocationContext *getLocationContext() const {
-    return C.getLocationContext();
-  }
-};
-
-class SwitchNodeBuilder : public NodeBuilder {
-public:
-  SwitchNodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
-                    const NodeBuilderContext &Ctx)
-      : NodeBuilder(SrcNode, DstSet, Ctx) {
-    // The switch node builder does not generate autotransitions.
-    takeNodes(SrcNode);
-  }
-
-  using iterator = CFGBlock::const_succ_reverse_iterator;
-
-  iterator begin() { return C.getBlock()->succ_rbegin() + 1; }
-  iterator end() { return C.getBlock()->succ_rend(); }
-
-  ExplodedNode *generateCaseStmtNode(const CFGBlock *Block,
-                                     ProgramStateRef State, ExplodedNode *Pred);
-
-  ExplodedNode *generateDefaultCaseNode(ProgramStateRef State,
-                                        ExplodedNode *Pred);
+  void addNodes(ExplodedNode *N) { Frontier.insert(N); }
 };
 
 } // namespace ento

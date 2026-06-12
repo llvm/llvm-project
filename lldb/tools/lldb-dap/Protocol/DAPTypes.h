@@ -16,20 +16,19 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_PROTOCOL_DAP_TYPES_H
 #define LLDB_TOOLS_LLDB_DAP_PROTOCOL_DAP_TYPES_H
 
+#include "Protocol/ProtocolBase.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/JSON.h"
 #include <cstdint>
 #include <optional>
-#include <string>
 
 namespace lldb_dap::protocol {
 
 enum ReferenceKind : uint8_t {
   eReferenceKindTemporary = 0,
   eReferenceKindPermanent = 1,
-  eReferenceKindScope = 1 << 1,
-  eReferenceKindInvalid = 0xFF
+  eReferenceKindInvalid = 0xFF,
 };
 
 /// The var_ref_t hold two values, the `ReferenceKind` and the
@@ -63,7 +62,6 @@ public:
     switch (current_kind) {
     case eReferenceKindTemporary:
     case eReferenceKindPermanent:
-    case eReferenceKindScope:
       return current_kind;
     default:
       return eReferenceKindInvalid;
@@ -99,10 +97,10 @@ inline llvm::json::Value toJSON(const var_ref_t &var_ref) {
 /// breakpoints the path and line are the same For each session.
 struct PersistenceData {
   /// The source module path.
-  std::string module_path;
+  String module_path;
 
   /// The symbol name of the Source.
-  std::string symbol_name;
+  String symbol_name;
 };
 bool fromJSON(const llvm::json::Value &, PersistenceData &, llvm::json::Path);
 llvm::json::Value toJSON(const PersistenceData &);
@@ -145,7 +143,7 @@ struct Symbol {
   lldb::addr_t size = 0;
 
   /// The symbol name.
-  std::string name;
+  String name;
 };
 bool fromJSON(const llvm::json::Value &, Symbol &, llvm::json::Path);
 llvm::json::Value toJSON(const Symbol &);

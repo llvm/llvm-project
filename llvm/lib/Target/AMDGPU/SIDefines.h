@@ -11,6 +11,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 
 namespace llvm {
 
@@ -44,9 +45,10 @@ enum {
   GFX90A = 8,
   GFX940 = 9,
   GFX11 = 10,
-  GFX12 = 11,
-  GFX1250 = 12,
-  GFX13 = 13,
+  GFX1170 = 11,
+  GFX12 = 12,
+  GFX1250 = 13,
+  GFX13 = 14,
 };
 }
 
@@ -197,6 +199,7 @@ enum ClassFlags : unsigned {
 }
 
 namespace AMDGPU {
+
 enum OperandType : unsigned {
   /// Operands with register, 32-bit, or 64-bit immediate
   OPERAND_REG_IMM_INT32 = MCOI::OPERAND_FIRST_TARGET,
@@ -210,9 +213,11 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_V2FP16,
   OPERAND_REG_IMM_V2FP16_SPLAT,
   OPERAND_REG_IMM_V2INT16,
+  OPERAND_REG_IMM_V2INT64,
   OPERAND_REG_IMM_NOINLINE_V2FP16,
   OPERAND_REG_IMM_V2INT32,
   OPERAND_REG_IMM_V2FP32,
+  OPERAND_REG_IMM_V2FP64,
 
   /// Operands with register or inline constant
   OPERAND_REG_INLINE_C_INT16,
@@ -250,7 +255,7 @@ enum OperandType : unsigned {
   OPERAND_SDWA_VOPC_DST,
 
   OPERAND_REG_IMM_FIRST = OPERAND_REG_IMM_INT32,
-  OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2FP32,
+  OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2FP64,
 
   OPERAND_REG_INLINE_C_FIRST = OPERAND_REG_INLINE_C_INT16,
   OPERAND_REG_INLINE_C_LAST = OPERAND_REG_INLINE_AC_FP64,
@@ -1209,6 +1214,10 @@ enum {
 #define   S_00B84C_EXCP_EN(x)                                         (((x) & 0x7F) << 24)
 #define   G_00B84C_EXCP_EN(x)                                         (((x) >> 24) & 0x7F)
 #define   C_00B84C_EXCP_EN                                            0x80FFFFFF
+
+#define   S_00B84C_USER_SGPR_GFX1250(x)                               (((x) & 0x3F) << 1)
+#define   G_00B84C_USER_SGPR_GFX1250(x)                               (((x) >> 1) & 0x3F)
+#define   C_00B84C_USER_SGPR_GFX1250                                  0xFFFFFF81
 
 #define R_0286CC_SPI_PS_INPUT_ENA                                       0x0286CC
 #define R_0286D0_SPI_PS_INPUT_ADDR                                      0x0286D0

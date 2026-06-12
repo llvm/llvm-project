@@ -54,8 +54,6 @@ public:
   unsigned getCallStackDepth() override {
     return Current ? (Current->getDepth() + 1) : 1;
   }
-  const Frame *getBottomFrame() const override { return &BottomFrame; }
-
   bool stepsLeft() const override { return true; }
   bool inConstantContext() const;
 
@@ -159,10 +157,15 @@ public:
   /// Whether infinite evaluation steps have been requested. If this is false,
   /// we use the StepsLeft value above.
   const bool InfiniteSteps = false;
+  /// ID identifying this evaluation.
+  const unsigned EvalID;
 
   /// Things needed to do speculative execution.
   SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;
+#ifndef NDEBUG
   unsigned SpeculationDepth = 0;
+#endif
+  unsigned DiagIgnoreDepth = 0;
   std::optional<bool> ConstantContextOverride;
 
   llvm::SmallVector<

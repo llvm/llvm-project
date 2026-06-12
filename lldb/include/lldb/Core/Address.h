@@ -160,7 +160,7 @@ public:
   ///     A list of sections, one of which may contain the \a file_addr.
   Address(lldb::addr_t file_addr, const SectionList *section_list);
 
-  Address(lldb::addr_t abs_addr);
+  explicit Address(lldb::addr_t abs_addr);
 
 /// Assignment operator.
 ///
@@ -457,18 +457,6 @@ public:
     return false;
   }
 
-  /// Set accessor for the section.
-  ///
-  /// \param[in] section_sp
-  ///     A new lldb::Section pointer to use as the section base. Can
-  ///     be NULL for absolute addresses that are not relative to
-  ///     any section.
-  void SetSection(const lldb::SectionSP &section_sp) {
-    m_section_wp = section_sp;
-  }
-
-  void ClearSection() { m_section_wp.reset(); }
-
   /// Reconstruct a symbol context from an address.
   ///
   /// This class doesn't inherit from SymbolContextScope because many address
@@ -513,6 +501,8 @@ protected:
   // know if this address used to have a valid section.
   bool SectionWasDeletedPrivate() const;
 };
+static_assert(sizeof(Address) <= sizeof(lldb::addr_t) + sizeof(lldb::SectionWP),
+              "High-volume object, size of object must be increased with care");
 
 // NOTE: Be careful using this operator. It can correctly compare two
 // addresses from the same Module correctly. It can't compare two addresses

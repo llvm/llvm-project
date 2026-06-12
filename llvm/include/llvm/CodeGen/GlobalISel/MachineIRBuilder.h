@@ -1083,6 +1083,19 @@ public:
   MachineInstrBuilder buildStore(const SrcOp &Val, const SrcOp &Addr,
                                  MachineMemOperand &MMO);
 
+  /// Build and insert `<opcode> Val, Addr, MMO`.
+  ///
+  /// Stores the value \p Val to \p Addr.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre \p Val must be a generic virtual register.
+  /// \pre \p Addr must be a generic virtual register with pointer type.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildStoreInstr(unsigned Opcode, const SrcOp &Val,
+                                      const SrcOp &Addr,
+                                      MachineMemOperand &MMO);
+
   /// Build and insert a G_STORE instruction, while constructing the
   /// MachineMemOperand.
   MachineInstrBuilder
@@ -2048,9 +2061,10 @@ public:
     return buildInstr(TargetOpcode::G_CTLZ, {Dst}, {Src0});
   }
 
-  /// Build and insert \p Res = G_CTLZ_ZERO_UNDEF \p Op0, \p Src0
-  MachineInstrBuilder buildCTLZ_ZERO_UNDEF(const DstOp &Dst, const SrcOp &Src0) {
-    return buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, {Dst}, {Src0});
+  /// Build and insert \p Res = G_CTLZ_ZERO_POISON \p Op0, \p Src0
+  MachineInstrBuilder buildCTLZ_ZERO_POISON(const DstOp &Dst,
+                                            const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTLZ_ZERO_POISON, {Dst}, {Src0});
   }
 
   /// Build and insert \p Res = G_CTTZ \p Op0, \p Src0
@@ -2058,9 +2072,10 @@ public:
     return buildInstr(TargetOpcode::G_CTTZ, {Dst}, {Src0});
   }
 
-  /// Build and insert \p Res = G_CTTZ_ZERO_UNDEF \p Op0, \p Src0
-  MachineInstrBuilder buildCTTZ_ZERO_UNDEF(const DstOp &Dst, const SrcOp &Src0) {
-    return buildInstr(TargetOpcode::G_CTTZ_ZERO_UNDEF, {Dst}, {Src0});
+  /// Build and insert \p Res = G_CTTZ_ZERO_POISON \p Op0, \p Src0
+  MachineInstrBuilder buildCTTZ_ZERO_POISON(const DstOp &Dst,
+                                            const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTTZ_ZERO_POISON, {Dst}, {Src0});
   }
 
   /// Build and insert \p Res = G_CTLS \p Op0, \p Src0
@@ -2236,6 +2251,12 @@ public:
   /// Build and insert \p Res = G_FPTOSI_SAT \p Src0
   MachineInstrBuilder buildFPTOSI_SAT(const DstOp &Dst, const SrcOp &Src0) {
     return buildInstr(TargetOpcode::G_FPTOSI_SAT, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Dst = G_FRINT \p Src0
+  MachineInstrBuilder buildFRint(const DstOp &Dst, const SrcOp &Src0,
+                                 std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_FRINT, {Dst}, {Src0}, Flags);
   }
 
   /// Build and insert \p Dst = G_INTRINSIC_ROUNDEVEN \p Src0, \p Src1

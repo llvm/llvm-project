@@ -27,7 +27,7 @@ define void @importer() {
 
 ; If somehow the caller doesn't get the attributes, we
 ; shouldn't propagate from the internal callee.
-; CHECK: define void @importer_noattr() {
+; CHECK: define void @importer_noattr() #0 {
 define void @importer_noattr() {
   call void @caller_noattr()
   ret void
