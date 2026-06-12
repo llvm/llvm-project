@@ -223,7 +223,7 @@ llvm::Error matchInitializerListForRecordDecl(PointerFlowMatcher &Matcher,
   if (RecordTy->isUnion()) {
     auto *InitField = ILE->getInitializedFieldInUnion();
 
-    if (!InitField || ILE->getNumInits() == 0)
+    if (!InitField || ILE->inits().empty())
       return llvm::Error::success();
     return Matcher.matchesInitializerList(InitField, ILE->getInit(0));
   }
@@ -300,10 +300,11 @@ PointerFlowMatcher::matchesInitializerList(const ValueDecl *Base,
     return matchInitializerListForArray(*this, Base, ILE,
                                         ArrayElementIndirectLevel);
 
-  // Must be the case of using an initializer-list for a scalar:
-  if (ILE->getNumInits() > 0)
-    return matchesInitializerList(Base, ILE->getInit(0));
-  return llvm::Error::success();
+  // Must be the case of using a initializer-list for a scalar.
+  // The initializer-list can be either singleton or empty:
+  if (ILE->getNumInits() == 0)
+    return llvm::Error::success();
+  return matchesInitializerList(Base, ILE->getInit(0));
 }
 
 class PointerFlowTUSummaryExtractor : public TUSummaryExtractor {
