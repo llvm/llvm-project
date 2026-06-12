@@ -24,41 +24,41 @@
 define i1 @shifts_eqcmp_i16_i8(i16 %x) nounwind {
 ; RV32I-LABEL: shifts_eqcmp_i16_i8:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a1, a0, 16
-; RV32I-NEXT:    slli a0, a0, 24
-; RV32I-NEXT:    srli a1, a1, 16
-; RV32I-NEXT:    srai a0, a0, 8
+; RV32I-NEXT:    slli a1, a0, 24
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srai a1, a1, 8
 ; RV32I-NEXT:    srli a0, a0, 16
-; RV32I-NEXT:    xor a0, a0, a1
+; RV32I-NEXT:    srli a1, a1, 16
+; RV32I-NEXT:    xor a0, a1, a0
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: shifts_eqcmp_i16_i8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a0, 48
-; RV64I-NEXT:    slli a0, a0, 56
-; RV64I-NEXT:    srli a1, a1, 48
-; RV64I-NEXT:    srai a0, a0, 8
+; RV64I-NEXT:    slli a1, a0, 56
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srai a1, a1, 8
 ; RV64I-NEXT:    srli a0, a0, 48
-; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    srli a1, a1, 48
+; RV64I-NEXT:    xor a0, a1, a0
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: shifts_eqcmp_i16_i8:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    zext.h a1, a0
-; RV32ZBB-NEXT:    sext.b a0, a0
+; RV32ZBB-NEXT:    sext.b a1, a0
 ; RV32ZBB-NEXT:    zext.h a0, a0
-; RV32ZBB-NEXT:    xor a0, a0, a1
+; RV32ZBB-NEXT:    zext.h a1, a1
+; RV32ZBB-NEXT:    xor a0, a1, a0
 ; RV32ZBB-NEXT:    seqz a0, a0
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: shifts_eqcmp_i16_i8:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    zext.h a1, a0
-; RV64ZBB-NEXT:    sext.b a0, a0
+; RV64ZBB-NEXT:    sext.b a1, a0
 ; RV64ZBB-NEXT:    zext.h a0, a0
-; RV64ZBB-NEXT:    xor a0, a0, a1
+; RV64ZBB-NEXT:    zext.h a1, a1
+; RV64ZBB-NEXT:    xor a0, a1, a0
 ; RV64ZBB-NEXT:    seqz a0, a0
 ; RV64ZBB-NEXT:    ret
   %tmp0 = shl i16 %x, 8 ; 16-8
@@ -78,10 +78,10 @@ define i1 @shifts_eqcmp_i32_i16(i32 %x) nounwind {
 ;
 ; RV64I-LABEL: shifts_eqcmp_i32_i16:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a1, a0
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srai a0, a0, 48
-; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 48
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    srai a1, a1, 48
+; RV64I-NEXT:    xor a0, a1, a0
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
 ;
@@ -116,10 +116,10 @@ define i1 @shifts_eqcmp_i32_i8(i32 %x) nounwind {
 ;
 ; RV64I-LABEL: shifts_eqcmp_i32_i8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a1, a0
-; RV64I-NEXT:    slli a0, a0, 56
-; RV64I-NEXT:    srai a0, a0, 56
-; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    slli a1, a0, 56
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    srai a1, a1, 56
+; RV64I-NEXT:    xor a0, a1, a0
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
 ;
@@ -338,19 +338,19 @@ define i1 @add_ugecmp_i32_i16(i32 %x) nounwind {
 ; RV32I-LABEL: add_ugecmp_i32_i16:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a1, 1048568
+; RV32I-NEXT:    lui a2, 1048560
 ; RV32I-NEXT:    add a0, a0, a1
-; RV32I-NEXT:    lui a1, 1048560
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    sltu a0, a1, a0
+; RV32I-NEXT:    addi a2, a2, -1
+; RV32I-NEXT:    sltu a0, a2, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: add_ugecmp_i32_i16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 1048568
+; RV64I-NEXT:    lui a2, 1048560
 ; RV64I-NEXT:    addw a0, a0, a1
-; RV64I-NEXT:    lui a1, 1048560
-; RV64I-NEXT:    addi a1, a1, -1
-; RV64I-NEXT:    sltu a0, a1, a0
+; RV64I-NEXT:    addi a2, a2, -1
+; RV64I-NEXT:    sltu a0, a2, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: add_ugecmp_i32_i16:
@@ -416,10 +416,10 @@ define i1 @add_ugecmp_i64_i16(i64 %x) nounwind {
 ; RV32I-NEXT:    lui a2, 1048568
 ; RV32I-NEXT:    add a2, a0, a2
 ; RV32I-NEXT:    sltu a0, a2, a0
+; RV32I-NEXT:    lui a3, 1048560
 ; RV32I-NEXT:    add a0, a1, a0
-; RV32I-NEXT:    lui a1, 1048560
-; RV32I-NEXT:    addi a1, a1, -1
-; RV32I-NEXT:    sltu a1, a1, a2
+; RV32I-NEXT:    addi a3, a3, -1
+; RV32I-NEXT:    sltu a1, a3, a2
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    ret
@@ -427,18 +427,18 @@ define i1 @add_ugecmp_i64_i16(i64 %x) nounwind {
 ; RV64I-LABEL: add_ugecmp_i64_i16:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a1, 1048568
+; RV64I-NEXT:    lui a2, 1048560
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    lui a1, 1048560
-; RV64I-NEXT:    addi a1, a1, -1
-; RV64I-NEXT:    sltu a0, a1, a0
+; RV64I-NEXT:    addi a2, a2, -1
+; RV64I-NEXT:    sltu a0, a2, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: add_ugecmp_i64_i16:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    sext.h a2, a0
+; RV32ZBB-NEXT:    srai a3, a2, 31
 ; RV32ZBB-NEXT:    xor a0, a2, a0
-; RV32ZBB-NEXT:    srai a2, a2, 31
-; RV32ZBB-NEXT:    xor a1, a2, a1
+; RV32ZBB-NEXT:    xor a1, a3, a1
 ; RV32ZBB-NEXT:    or a0, a0, a1
 ; RV32ZBB-NEXT:    seqz a0, a0
 ; RV32ZBB-NEXT:    ret
@@ -459,10 +459,10 @@ define i1 @add_ugecmp_i64_i8(i64 %x) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a2, a0, -128
 ; RV32I-NEXT:    sltu a0, a2, a0
-; RV32I-NEXT:    sltiu a2, a2, -256
 ; RV32I-NEXT:    add a0, a1, a0
+; RV32I-NEXT:    sltiu a1, a2, -256
 ; RV32I-NEXT:    seqz a0, a0
-; RV32I-NEXT:    xori a1, a2, 1
+; RV32I-NEXT:    xori a1, a1, 1
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
@@ -476,9 +476,9 @@ define i1 @add_ugecmp_i64_i8(i64 %x) nounwind {
 ; RV32ZBB-LABEL: add_ugecmp_i64_i8:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    sext.b a2, a0
+; RV32ZBB-NEXT:    srai a3, a2, 31
 ; RV32ZBB-NEXT:    xor a0, a2, a0
-; RV32ZBB-NEXT:    srai a2, a2, 31
-; RV32ZBB-NEXT:    xor a1, a2, a1
+; RV32ZBB-NEXT:    xor a1, a3, a1
 ; RV32ZBB-NEXT:    or a0, a0, a1
 ; RV32ZBB-NEXT:    seqz a0, a0
 ; RV32ZBB-NEXT:    ret
@@ -665,9 +665,9 @@ define i1 @add_ultcmp_i64_i16(i64 %x) nounwind {
 ; RV32ZBB-LABEL: add_ultcmp_i64_i16:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    sext.h a2, a0
+; RV32ZBB-NEXT:    srai a3, a2, 31
 ; RV32ZBB-NEXT:    xor a0, a2, a0
-; RV32ZBB-NEXT:    srai a2, a2, 31
-; RV32ZBB-NEXT:    xor a1, a2, a1
+; RV32ZBB-NEXT:    xor a1, a3, a1
 ; RV32ZBB-NEXT:    or a0, a0, a1
 ; RV32ZBB-NEXT:    seqz a0, a0
 ; RV32ZBB-NEXT:    ret
@@ -703,9 +703,9 @@ define i1 @add_ultcmp_i64_i8(i64 %x) nounwind {
 ; RV32ZBB-LABEL: add_ultcmp_i64_i8:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    sext.b a2, a0
+; RV32ZBB-NEXT:    srai a3, a2, 31
 ; RV32ZBB-NEXT:    xor a0, a2, a0
-; RV32ZBB-NEXT:    srai a2, a2, 31
-; RV32ZBB-NEXT:    xor a1, a2, a1
+; RV32ZBB-NEXT:    xor a1, a3, a1
 ; RV32ZBB-NEXT:    or a0, a0, a1
 ; RV32ZBB-NEXT:    seqz a0, a0
 ; RV32ZBB-NEXT:    ret
@@ -794,8 +794,8 @@ define i1 @add_ultcmp_bad_i16_i8_cmp(i16 %x, i16 %y) nounwind {
 ; RV32I-LABEL: add_ultcmp_bad_i16_i8_cmp:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    lui a2, 16
-; RV32I-NEXT:    addi a0, a0, 128
 ; RV32I-NEXT:    addi a2, a2, -1
+; RV32I-NEXT:    addi a0, a0, 128
 ; RV32I-NEXT:    and a1, a1, a2
 ; RV32I-NEXT:    and a0, a0, a2
 ; RV32I-NEXT:    sltu a0, a0, a1
@@ -804,8 +804,8 @@ define i1 @add_ultcmp_bad_i16_i8_cmp(i16 %x, i16 %y) nounwind {
 ; RV64I-LABEL: add_ultcmp_bad_i16_i8_cmp:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a2, 16
-; RV64I-NEXT:    addi a0, a0, 128
 ; RV64I-NEXT:    addi a2, a2, -1
+; RV64I-NEXT:    addi a0, a0, 128
 ; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    and a0, a0, a2
 ; RV64I-NEXT:    sltu a0, a0, a1
@@ -813,16 +813,16 @@ define i1 @add_ultcmp_bad_i16_i8_cmp(i16 %x, i16 %y) nounwind {
 ;
 ; RV32ZBB-LABEL: add_ultcmp_bad_i16_i8_cmp:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    zext.h a1, a1
 ; RV32ZBB-NEXT:    addi a0, a0, 128
+; RV32ZBB-NEXT:    zext.h a1, a1
 ; RV32ZBB-NEXT:    zext.h a0, a0
 ; RV32ZBB-NEXT:    sltu a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: add_ultcmp_bad_i16_i8_cmp:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    zext.h a1, a1
 ; RV64ZBB-NEXT:    addi a0, a0, 128
+; RV64ZBB-NEXT:    zext.h a1, a1
 ; RV64ZBB-NEXT:    zext.h a0, a0
 ; RV64ZBB-NEXT:    sltu a0, a0, a1
 ; RV64ZBB-NEXT:    ret

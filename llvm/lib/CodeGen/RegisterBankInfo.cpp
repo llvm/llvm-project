@@ -104,7 +104,7 @@ RegisterBankInfo::getMinimalPhysRegClass(MCRegister Reg,
                                          const TargetRegisterInfo &TRI) const {
   const auto [RegRCIt, Inserted] = PhysRegMinimalRCs.try_emplace(Reg);
   if (Inserted)
-    RegRCIt->second = TRI.getMinimalPhysRegClassLLT(Reg, LLT());
+    RegRCIt->second = TRI.getMinimalPhysRegClass(Reg);
   return RegRCIt->second;
 }
 

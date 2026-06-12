@@ -476,6 +476,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
     llvm::UpgradeDebugInfo(*M);
 
   UpgradeModuleFlags(*M);
+  UpgradeCFIFunctionsMetadata(*M);
   UpgradeNVVMAnnotations(*M);
   UpgradeSectionAttributes(*M);
   copyModuleAttrToFunctions(*M);
@@ -632,10 +633,6 @@ bool LLParser::parseTopLevelEntities() {
       break;
     case lltok::kw_uselistorder:
       if (parseUseListOrder())
-        return true;
-      break;
-    case lltok::kw_uselistorder_bb:
-      if (parseUseListOrderBB())
         return true;
       break;
     }
@@ -7706,7 +7703,17 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   }
 
   // Casts.
-  case lltok::kw_uitofp:
+  case lltok::kw_uitofp: {
+    FastMathFlags FMF = EatFastMathFlagsIfPresent();
+    bool NonNeg = EatIfPresent(lltok::kw_nneg);
+    bool Res = parseCast(Inst, PFS, KeywordVal);
+    if (Res != 0)
+      return Res;
+    if (NonNeg)
+      Inst->setNonNeg();
+    Inst->setFastMathFlags(FMF);
+    return 0;
+  }
   case lltok::kw_zext: {
     bool NonNeg = EatIfPresent(lltok::kw_nneg);
     bool Res = parseCast(Inst, PFS, KeywordVal);
@@ -7732,7 +7739,6 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_sext:
   case lltok::kw_bitcast:
   case lltok::kw_addrspacecast:
-  case lltok::kw_sitofp:
   case lltok::kw_fptoui:
   case lltok::kw_fptosi:
   case lltok::kw_inttoptr:
@@ -7740,7 +7746,8 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_ptrtoint:
     return parseCast(Inst, PFS, KeywordVal);
   case lltok::kw_fptrunc:
-  case lltok::kw_fpext: {
+  case lltok::kw_fpext:
+  case lltok::kw_sitofp: {
     FastMathFlags FMF = EatFastMathFlagsIfPresent();
     if (parseCast(Inst, PFS, KeywordVal))
       return true;
@@ -7756,9 +7763,11 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
     if (Res != 0)
       return Res;
     if (FMF.any()) {
-      if (!isa<FPMathOperator>(Inst))
+      if (!isa<FPMathOperator>(Inst)) {
+        Inst->deleteValue();
         return error(Loc, "fast-math-flags specified for select without "
                           "floating-point scalar or vector return type");
+      }
       Inst->setFastMathFlags(FMF);
     }
     return 0;
@@ -7777,9 +7786,11 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
     if (Res != 0)
       return Res;
     if (FMF.any()) {
-      if (!isa<FPMathOperator>(Inst))
+      if (!isa<FPMathOperator>(Inst)) {
+        Inst->deleteValue();
         return error(Loc, "fast-math-flags specified for phi without "
                           "floating-point scalar or vector return type");
+      }
       Inst->setFastMathFlags(FMF);
     }
     return 0;
@@ -9472,53 +9483,6 @@ bool LLParser::parseUseListOrder(PerFunctionState *PFS) {
   return sortUseListOrder(V, Indexes, Loc);
 }
 
-/// parseUseListOrderBB
-///   ::= 'uselistorder_bb' @foo ',' %bar ',' UseListOrderIndexes
-bool LLParser::parseUseListOrderBB() {
-  assert(Lex.getKind() == lltok::kw_uselistorder_bb);
-  SMLoc Loc = Lex.getLoc();
-  Lex.Lex();
-
-  ValID Fn, Label;
-  SmallVector<unsigned, 16> Indexes;
-  if (parseValID(Fn, /*PFS=*/nullptr) ||
-      parseToken(lltok::comma, "expected comma in uselistorder_bb directive") ||
-      parseValID(Label, /*PFS=*/nullptr) ||
-      parseToken(lltok::comma, "expected comma in uselistorder_bb directive") ||
-      parseUseListOrderIndexes(Indexes))
-    return true;
-
-  // Check the function.
-  GlobalValue *GV;
-  if (Fn.Kind == ValID::t_GlobalName)
-    GV = M->getNamedValue(Fn.StrVal);
-  else if (Fn.Kind == ValID::t_GlobalID)
-    GV = NumberedVals.get(Fn.UIntVal);
-  else
-    return error(Fn.Loc, "expected function name in uselistorder_bb");
-  if (!GV)
-    return error(Fn.Loc,
-                 "invalid function forward reference in uselistorder_bb");
-  auto *F = dyn_cast<Function>(GV);
-  if (!F)
-    return error(Fn.Loc, "expected function name in uselistorder_bb");
-  if (F->isDeclaration())
-    return error(Fn.Loc, "invalid declaration in uselistorder_bb");
-
-  // Check the basic block.
-  if (Label.Kind == ValID::t_LocalID)
-    return error(Label.Loc, "invalid numeric label in uselistorder_bb");
-  if (Label.Kind != ValID::t_LocalName)
-    return error(Label.Loc, "expected basic block name in uselistorder_bb");
-  Value *V = F->getValueSymbolTable()->lookup(Label.StrVal);
-  if (!V)
-    return error(Label.Loc, "invalid basic block in uselistorder_bb");
-  if (!isa<BasicBlock>(V))
-    return error(Label.Loc, "expected basic block in uselistorder_bb");
-
-  return sortUseListOrder(V, Indexes, Loc);
-}
-
 /// ModuleEntry
 ///   ::= 'module' ':' '(' 'path' ':' STRINGCONSTANT ',' 'hash' ':' Hash ')'
 /// Hash ::= '(' UInt32 ',' UInt32 ',' UInt32 ',' UInt32 ',' UInt32 ')'
@@ -9998,11 +9962,7 @@ bool LLParser::addGlobalValueToIndex(
       if (!GV)
         return error(Loc, "Reference to undefined global \"" + Name + "\"");
 
-      // Be a little lenient here, to accomodate older files without GUIDs
-      // already computed and assigned as metadata.
-      GUID = GV->getGUIDOrFallback();
-
-      VI = Index->getOrInsertValueInfo(GV, GUID);
+      VI = Index->getOrInsertValueInfo(GV);
     } else {
       assert(
           (!GlobalValue::isLocalLinkage(Linkage) || !SourceFileName.empty()) &&

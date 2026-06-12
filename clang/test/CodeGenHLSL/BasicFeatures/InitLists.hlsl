@@ -97,7 +97,7 @@ TwoFloats case2() {
 // CHECK-NEXT:    store i32 [[VAL]], ptr [[VAL_ADDR]], align 4
 // CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[VAL_ADDR]], align 4
-// CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP0]] to float
+// CHECK-NEXT:    [[CONV:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[TMP0]] to float
 // CHECK-NEXT:    store float [[CONV]], ptr [[X]], align 1
 // CHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 1
 // CHECK-NEXT:    store float 2.000000e+00, ptr [[Y]], align 1
@@ -119,12 +119,12 @@ TwoFloats case3(int Val) {
 // CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[TWOVALS_ADDR]], align 4
 // CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x i32> [[TMP0]], i64 0
-// CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[VECEXT]] to float
+// CHECK-NEXT:    [[CONV:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[VECEXT]] to float
 // CHECK-NEXT:    store float [[CONV]], ptr [[X]], align 1
 // CHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[TWOVALS_ADDR]], align 4
 // CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <2 x i32> [[TMP1]], i64 1
-// CHECK-NEXT:    [[CONV2:%.*]] = sitofp i32 [[VECEXT1]] to float
+// CHECK-NEXT:    [[CONV2:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[VECEXT1]] to float
 // CHECK-NEXT:    store float [[CONV2]], ptr [[Y]], align 1
 // CHECK-NEXT:    ret void
 //
@@ -205,7 +205,7 @@ TwoInts case6(TwoFloats TF4) {
 // CHECK-NEXT:    store i32 [[TMP4]], ptr [[TAILSTATE]], align 1
 // CHECK-NEXT:    [[HAIRCOUNT:%.*]] = getelementptr inbounds nuw [[STRUCT_DOGGO]], ptr [[AGG_RESULT]], i32 0, i32 2
 // CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[VAL_ADDR]], align 4
-// CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP5]] to float
+// CHECK-NEXT:    [[CONV:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[TMP5]] to float
 // CHECK-NEXT:    store float [[CONV]], ptr [[HAIRCOUNT]], align 1
 // CHECK-NEXT:    [[EARDIRECTION:%.*]] = getelementptr inbounds nuw [[STRUCT_DOGGO]], ptr [[AGG_RESULT]], i32 0, i32 3
 // CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[TF1]], i32 0, i32 0
@@ -433,7 +433,7 @@ AnimalBits case8(Doggo D1) {
 // CHECK-NEXT:    [[HAIRCOUNT58:%.*]] = getelementptr inbounds nuw [[STRUCT_DOGGO]], ptr [[ARRAYINIT_ELEMENT44]], i32 0, i32 2
 // CHECK-NEXT:    [[COUNTER:%.*]] = getelementptr inbounds nuw [[STRUCT_ANIMALBITS]], ptr [[A1]], i32 0, i32 2
 // CHECK-NEXT:    [[TMP19:%.*]] = load i64, ptr [[COUNTER]], align 1
-// CHECK-NEXT:    [[CONV:%.*]] = sitofp i64 [[TMP19]] to float
+// CHECK-NEXT:    [[CONV:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i64 [[TMP19]] to float
 // CHECK-NEXT:    store float [[CONV]], ptr [[HAIRCOUNT58]], align 1
 // CHECK-NEXT:    [[EARDIRECTION59:%.*]] = getelementptr inbounds nuw [[STRUCT_DOGGO]], ptr [[ARRAYINIT_ELEMENT44]], i32 0, i32 3
 // CHECK-NEXT:    [[LEFTDIR:%.*]] = getelementptr inbounds nuw [[STRUCT_ANIMALBITS]], ptr [[A1]], i32 0, i32 3
@@ -568,7 +568,7 @@ AnimalBits case8(Doggo D1) {
 // CHECK-NEXT:    [[HAIRCOUNT149:%.*]] = getelementptr inbounds nuw [[STRUCT_KITTEH]], ptr [[ARRAYINIT_ELEMENT133]], i32 0, i32 2
 // CHECK-NEXT:    [[COUNTER150:%.*]] = getelementptr inbounds nuw [[STRUCT_ANIMALBITS]], ptr [[A1]], i32 0, i32 2
 // CHECK-NEXT:    [[TMP47:%.*]] = load i64, ptr [[COUNTER150]], align 1
-// CHECK-NEXT:    [[CONV151:%.*]] = sitofp i64 [[TMP47]] to float
+// CHECK-NEXT:    [[CONV151:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i64 [[TMP47]] to float
 // CHECK-NEXT:    store float [[CONV151]], ptr [[HAIRCOUNT149]], align 1
 // CHECK-NEXT:    [[CLAWS152:%.*]] = getelementptr inbounds nuw [[STRUCT_KITTEH]], ptr [[ARRAYINIT_ELEMENT133]], i32 0, i32 3
 // CHECK-NEXT:    [[LEFTDIR153:%.*]] = getelementptr inbounds nuw [[STRUCT_ANIMALBITS]], ptr [[A1]], i32 0, i32 3
@@ -703,7 +703,7 @@ AnimalBits case8(Doggo D1) {
 // CHECK-NEXT:    [[HAIRCOUNT246:%.*]] = getelementptr inbounds nuw [[STRUCT_KITTEH]], ptr [[ARRAYINIT_ELEMENT230]], i32 0, i32 2
 // CHECK-NEXT:    [[COUNTER247:%.*]] = getelementptr inbounds nuw [[STRUCT_ANIMALBITS]], ptr [[A1]], i32 0, i32 2
 // CHECK-NEXT:    [[TMP75:%.*]] = load i64, ptr [[COUNTER247]], align 1
-// CHECK-NEXT:    [[CONV248:%.*]] = sitofp i64 [[TMP75]] to float
+// CHECK-NEXT:    [[CONV248:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i64 [[TMP75]] to float
 // CHECK-NEXT:    store float [[CONV248]], ptr [[HAIRCOUNT246]], align 1
 // CHECK-NEXT:    [[CLAWS249:%.*]] = getelementptr inbounds nuw [[STRUCT_KITTEH]], ptr [[ARRAYINIT_ELEMENT230]], i32 0, i32 3
 // CHECK-NEXT:    [[LEFTDIR250:%.*]] = getelementptr inbounds nuw [[STRUCT_ANIMALBITS]], ptr [[A1]], i32 0, i32 3
@@ -899,13 +899,13 @@ TwoInts case14(SlicyBits SB) {
 // CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 0
 // CHECK-NEXT:    [[BF_LOAD:%.*]] = load i8, ptr [[SB]], align 1
 // CHECK-NEXT:    [[BF_CAST:%.*]] = sext i8 [[BF_LOAD]] to i32
-// CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[BF_CAST]] to float
+// CHECK-NEXT:    [[CONV:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[BF_CAST]] to float
 // CHECK-NEXT:    store float [[CONV]], ptr [[X]], align 1
 // CHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOFLOATS]], ptr [[AGG_RESULT]], i32 0, i32 1
 // CHECK-NEXT:    [[W:%.*]] = getelementptr inbounds nuw [[STRUCT_SLICYBITS]], ptr [[SB]], i32 0, i32 1
 // CHECK-NEXT:    [[BF_LOAD1:%.*]] = load i8, ptr [[W]], align 1
 // CHECK-NEXT:    [[BF_CAST2:%.*]] = sext i8 [[BF_LOAD1]] to i32
-// CHECK-NEXT:    [[CONV3:%.*]] = sitofp i32 [[BF_CAST2]] to float
+// CHECK-NEXT:    [[CONV3:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[BF_CAST2]] to float
 // CHECK-NEXT:    store float [[CONV3]], ptr [[Y]], align 1
 // CHECK-NEXT:    ret void
 //
@@ -1130,22 +1130,22 @@ void case25(EmptyDerived ED, UnnamedDerived UD) {
 // CHECK-NEXT:    [[F2:%.*]] = alloca <3 x float>, align 4
 // CHECK-NEXT:    [[Z:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[Z]], align 1
-// CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[TMP0]] to float
+// CHECK-NEXT:    [[CONV:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[TMP0]] to float
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x float> poison, float [[CONV]], i32 0
 // CHECK-NEXT:    [[W:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[W]], align 1
-// CHECK-NEXT:    [[CONV1:%.*]] = sitofp i32 [[TMP1]] to float
+// CHECK-NEXT:    [[CONV1:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[TMP1]] to float
 // CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x float> [[VECINIT]], float [[CONV1]], i32 1
 // CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <4 x float> [[VECINIT2]], float 1.000000e+00, i32 2
 // CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <4 x float> [[VECINIT3]], float 2.000000e+00, i32 3
 // CHECK-NEXT:    store <4 x float> [[VECINIT4]], ptr [[F]], align 4
 // CHECK-NEXT:    [[Z5:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[Z5]], align 1
-// CHECK-NEXT:    [[CONV6:%.*]] = sitofp i32 [[TMP2]] to float
+// CHECK-NEXT:    [[CONV6:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[TMP2]] to float
 // CHECK-NEXT:    [[VECINIT7:%.*]] = insertelement <3 x float> <float 3.000000e+00, float poison, float poison>, float [[CONV6]], i32 1
 // CHECK-NEXT:    [[W8:%.*]] = getelementptr inbounds nuw [[STRUCT_TWOINTS]], ptr [[TI]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[W8]], align 1
-// CHECK-NEXT:    [[CONV9:%.*]] = sitofp i32 [[TMP3]] to float
+// CHECK-NEXT:    [[CONV9:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[TMP3]] to float
 // CHECK-NEXT:    [[VECINIT10:%.*]] = insertelement <3 x float> [[VECINIT7]], float [[CONV9]], i32 2
 // CHECK-NEXT:    store <3 x float> [[VECINIT10]], ptr [[F2]], align 4
 // CHECK-NEXT:    ret void
