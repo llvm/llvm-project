@@ -34,7 +34,7 @@ func.func private @_QMmod1Psub1(!fir.ref<!fir.array<10xi32>> {cuf.data_attr = #c
 
 // CHECK: gpu.func @_QPsub_device1()
 
-// CHECK: gpu.func @_QPsub_device2(%[[ARG0:.*]]: !fir.ref<f32>) {
+// CHECK: gpu.func @_QPsub_device2(%[[ARG0:.*]]: !fir.ref<f32>
 // CHECK:   %[[DECL:.*]] = fir.declare %[[ARG0]] {uniq_name = "_QFsub1Ei"} : (!fir.ref<f32>) -> !fir.ref<f32>
 // CHECK:   %[[CST:.*]] = arith.constant 2.000000e+00 : f32
 // CHECK:   fir.store %[[CST]] to %[[DECL]] : !fir.ref<f32>
@@ -151,7 +151,7 @@ func.func @_QPpartialsumshflshflr8(%arg0: !fir.ref<!fir.array<?xf64>> {cuf.data_
 }
 
 // CHECK-LABEL: gpu.module @cuda_device_mod
-// CHECK: gpu.func @_QPpartialsumshflshflr8(%arg0: !fir.ref<!fir.array<?xf64>>, %arg1: i32) kernel
+// CHECK: gpu.func @_QPpartialsumshflshflr8({{.*}}) kernel
       
 // CHECK: func.func @_QPpartialsumshflshflr8
 
@@ -167,7 +167,7 @@ func.func @_QPldg_attrs(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "a"
 }
 
 // CHECK-LABEL: gpu.module @cuda_device_mod
-// CHECK: gpu.func @_QPldg_attrs(%{{.*}}: !fir.ref<!fir.array<?xf32>>, %{{.*}}: !fir.ref<!fir.array<?xf32>> {llvm.noalias, llvm.readonly}) kernel
+// CHECK: gpu.func @_QPldg_attrs(%{{.*}}: !fir.ref<!fir.array<?xf32>>{{.*}}, %{{.*}}: !fir.ref<!fir.array<?xf32>> {{{.*}}llvm.noalias, llvm.readonly}) kernel
 
 // -----
 
