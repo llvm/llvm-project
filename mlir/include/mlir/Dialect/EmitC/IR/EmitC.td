@@ -418,6 +418,14 @@ def EmitC_CastOp : EmitC_Op<"cast",
   }];
 
   let arguments = (ins EmitCType:$source,
+    // In general, C++ cast expressions cannot always be assumed to be pure: they
+    // may invoke user-defined conversions or be affected by floating-point
+    // environment settings. However, in many practical cases, such as integer casts
+    // without operator overloading, the cast is pure and can be treated as
+    // speculatable and side-effect free.
+    //
+    // When this attribute is set, `getSpeculatability()` returns `Speculatable`
+    // and `getEffects()` reports no effects.
     UnitAttr:$pure
   );
 
