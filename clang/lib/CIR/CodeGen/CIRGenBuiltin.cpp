@@ -1277,6 +1277,21 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(cir::ByteSwapOp::create(builder, loc, arg));
   }
 
+  case Builtin::BI__builtin_bswapg: {
+    mlir::Value arg = emitScalarExpr(e->getArg(0));
+    // A bool or any single-byte integer byte-swaps to itself; cir.byte_swap
+    // only accepts an unsigned integer whose width is a multiple of 16 bits.
+    auto argTy = mlir::dyn_cast<cir::IntType>(arg.getType());
+    if (!argTy || argTy.getWidth() <= 8)
+      return RValue::get(arg);
+    // cir.byte_swap requires an unsigned operand.  Reinterpret a signed
+    // argument as unsigned of the same width; createBuiltinBitOp casts the
+    // swapped result back to the builtin's (possibly signed) return type.
+    if (argTy.isSigned())
+      arg = builder.createIntCast(arg, builder.getUIntNTy(argTy.getWidth()));
+    return RValue::get(createBuiltinBitOp<cir::ByteSwapOp>(*this, e, arg));
+  }
+
   case Builtin::BI__builtin_bitreverse8:
   case Builtin::BI__builtin_bitreverse16:
   case Builtin::BI__builtin_bitreverse32:
