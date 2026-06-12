@@ -70,7 +70,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/Path.h"
@@ -2844,11 +2843,8 @@ GlobalVariable *ModuleAddressSanitizer::getOrCreateModuleName() {
       SmallString<256> Path(ModuleNameStr);
       if (sys::path::is_absolute(Path)) {
         SmallString<256> CompDir(CompilationDir);
-        if (!sys::path::is_absolute(CompDir))
-          sys::fs::make_absolute(CompDir);
-        sys::path::remove_dots(CompDir, /*remove_dot_dot=*/true);
         // Ensure trailing separator so "/foo" doesn't match "/foobar/x.c".
-        if (!CompDir.empty() && !sys::path::is_separator(CompDir.back()))
+        if (!sys::path::is_separator(CompDir.back()))
           CompDir += sys::path::get_separator();
         if (sys::path::replace_path_prefix(Path, CompDir, ""))
           ModuleNameStr = std::string(Path);

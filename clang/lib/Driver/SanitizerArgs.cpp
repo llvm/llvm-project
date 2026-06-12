@@ -1701,8 +1701,13 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   // Add sanitize compilation dir.
   if (Arg *A = Args.getLastArg(options::OPT_ffile_compilation_dir_EQ,
                                options::OPT_fsanitize_compilation_dir_EQ)) {
-    CmdArgs.push_back(Args.MakeArgString("-fsanitize-compilation-dir=" +
-                                         Twine(A->getValue())));
+    SmallString<256> Dir(A->getValue());
+    if (!llvm::sys::path::is_absolute(Dir))
+      if (auto CWD = TC.getDriver().getVFS().getCurrentWorkingDirectory())
+        llvm::sys::path::make_absolute(*CWD, Dir);
+    llvm::sys::path::remove_dots(Dir, /*remove_dot_dot=*/true);
+    CmdArgs.push_back(
+        Args.MakeArgString("-fsanitize-compilation-dir=" + Twine(Dir)));
   }
 }
 

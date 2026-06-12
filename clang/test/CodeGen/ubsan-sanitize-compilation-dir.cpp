@@ -11,8 +11,6 @@
 // RUN: %clang_cc1 -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable %t.dir/sub/test.c -o - | FileCheck -check-prefix=CHECK-DEFAULT %s
 // RUN: %clang_cc1 -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable -fsanitize-compilation-dir=%t.dir/ %t.dir/sub/test.c -o - | FileCheck -check-prefix=CHECK-STRIPPED %s
 // RUN: %clang_cc1 -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable -fsanitize-compilation-dir=%t.dir %t.dir/sub/test.c -o - | FileCheck -check-prefix=CHECK-STRIPPED %s
-// RUN: cd %t.dir && %clang_cc1 -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable -fsanitize-compilation-dir=. %t.dir/sub/test.c -o - | FileCheck -check-prefix=CHECK-STRIPPED %s
-// RUN: cd %t.dir/sub && %clang_cc1 -triple=x86_64-linux-gnu -emit-llvm -fsanitize=unreachable -fsanitize-compilation-dir=.. %t.dir/sub/test.c -o - | FileCheck -check-prefix=CHECK-STRIPPED %s
 
 // Verify that a partial prefix match does not strip.
 // RUN: mkdir -p %t.directory
