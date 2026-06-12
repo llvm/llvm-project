@@ -64,6 +64,9 @@ FunctionClassification classify(ArrayRef<Type> argTypes, Type returnType,
 ///   coerced_type:  TypeAttr.  ABI-coerced type, if different from the
 ///                  original.
 ///   can_flatten:   BoolAttr.  Defaults to true.
+///   direct_offset: IntegerAttr.  Byte offset within the original aggregate
+///                  at which the coerced value lives.  Requires coerced_type.
+///                  Defaults to 0.
 ///
 /// For kind = "extend" (coerced_type required, sign_extend optional):
 ///   coerced_type:  TypeAttr.  Required; the extended integer type.
@@ -78,8 +81,8 @@ FunctionClassification classify(ArrayRef<Type> argTypes, Type returnType,
 ///
 /// Future schema additions tracked in projects/daily_log.md (Step 0c
 /// field-mapping table).  When we add new fields to ArgClassification
-/// (e.g. direct_offset, extend_kind tristate, indirect_addr_space,
-/// indirect_realign), the corresponding optional keys go here.
+/// (e.g. extend_kind tristate, indirect_addr_space, indirect_realign),
+/// the corresponding optional keys go here.
 ///
 /// Unknown keys cause a parse error (no silent ignore — keeps schema
 /// honest as it grows).
