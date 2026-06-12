@@ -2668,6 +2668,11 @@ public:
   friend class ASTDeclWriter;
   friend TrailingObjects;
 
+  // FIXME: Just hacking it in here for now.
+  Expr **CtorClosureArgs = nullptr;
+  Expr **ctorClosureArgs() const { return CtorClosureArgs; }
+  void setCtorClosureArgs(Expr **Args) { CtorClosureArgs = Args; }
+
   static CXXConstructorDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                                 uint64_t AllocKind);
   static CXXConstructorDecl *

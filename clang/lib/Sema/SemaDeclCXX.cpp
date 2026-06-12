@@ -19806,18 +19806,24 @@ void Sema::ActOnFinishFunctionDeclarationDeclarator(Declarator &Declarator) {
 bool Sema::BuildDefaultArgsForCtorClosure(SourceLocation Loc, CXXConstructorDecl *Ctor, bool IsCopy) {
   assert(Context.getTargetInfo().getCXXABI().isMicrosoft());
 
+  if (Ctor->ctorClosureArgs())
+    return false;
+
   unsigned NumParams = Ctor->getNumParams();
   if (NumParams == 0)
     return false;
-
   unsigned FirstParam = IsCopy ? 1 : 0;
+
+  Expr **Args = new (getASTContext()) Expr*[NumParams - FirstParam];
+
   for (unsigned I = FirstParam; I != NumParams; ++I) {
     ExprResult R = BuildCXXDefaultArgExpr(Loc, Ctor, Ctor->getParamDecl(I));
+    CleanupVarDeclMarking();
     if (R.isInvalid())
       return true;
-
-    CleanupVarDeclMarking();
+    Args[I - FirstParam] = R.get();
   }
+  Ctor->setCtorClosureArgs(Args);
 
   return false;
 }
