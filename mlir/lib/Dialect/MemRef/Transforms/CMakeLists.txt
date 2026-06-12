@@ -38,6 +38,7 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   MLIRMemRefUtils
   MLIRNVGPUDialect
   MLIRPass
+  MLIRSCFDialect
   MLIRTensorDialect
   MLIRTransforms
   MLIRValueBoundsOpInterface
