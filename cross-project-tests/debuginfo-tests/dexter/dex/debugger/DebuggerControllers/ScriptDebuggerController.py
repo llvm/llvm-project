@@ -86,8 +86,16 @@ class ScriptDebuggerController(DebuggerControllerBase):
 
         self.step_collection.clear_steps()
 
+        def check_condition(step: StepIR, frame_idx: int, condition: str):
+            """Evaluates the given condition at the given frame index. Requires the debugger session to be alive and the
+            debuggee must be stopped."""
+            cond_value = self.debugger.evaluate_expression(condition, frame_idx)
+            step.frames[frame_idx].watches[condition] = cond_value
+            # FIXME: This is a language-specific test (albeit it covers all languages Dexter is currently used with).
+            return cond_value.could_evaluate and cond_value.value.lower() == "true"
+
         script: DexterScript = self.script
-        state_match_context = StateMatchContext()
+        state_match_context = StateMatchContext(check_condition=check_condition)
         self._init_bps()
 
         self.debugger.launch(cmdline)
