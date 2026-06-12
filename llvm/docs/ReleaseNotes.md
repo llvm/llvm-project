@@ -94,6 +94,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Fast math flags are now permitted on `uitofp` and `sitofp`.
 
+* The ``modular-format`` attribute now supports the ``fixed`` aspect for C
+  ISO 18037 fixed-point ``printf`` specifiers.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
@@ -150,6 +153,9 @@ Makes programs 10x faster by doing Special New Thing.
 * ``TargetRegisterInfo::getMinimalPhysRegClass`` and related APIs have been
   refactored and no longer take a type. This API is also now precomputed in
   TableGen to improve compile-time.
+
+* ``APInt::sqrt`` (square root rounded to nearest integer) has been replaced
+  with ``APInt::sqrtFloor`` (floor of square root).
 
 ### Changes to building LLVM
 
@@ -248,6 +254,7 @@ Makes programs 10x faster by doing Special New Thing.
 * `-mcpu=sifive-870` has been renamed `-mcpu=sifive-p870-d`.
 * Adds experimental assembler support for batched dot-product extensions(Zvqwbdota8i, Zvqwbdota16i, Zvfwbdota16bf, Zvfqwbdota8f and Zvfbdota32f).
 * Adds experimental assembler support for dot-product extensions(Zvqwdota8i, Zvqwdota16i, Zvfwdota16bf and Zvfqwdota8f).
+* `-mtune=generic` now uses the scheduling model from SpacemiT X60 instead of an empty scheduling model.
 
 ### Changes to the WebAssembly Backend
 

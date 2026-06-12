@@ -1,0 +1,78 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+# Generate config.h from flang-rt/cmake/config.h.cmake.in. Values match what
+# CMake autodetects on a typical Linux glibc host.
+expand_template(
+    name = "config_h_gen",
+    out = "config.h",
+    substitutions = {
+        "#cmakedefine HAVE_BACKTRACE ${HAVE_BACKTRACE}": "#define HAVE_BACKTRACE 1",
+        "#cmakedefine01 HAVE_DECL_STRERROR_S": "#define HAVE_DECL_STRERROR_S 0",
+        "#cmakedefine01 HAVE_STRERROR_R": "#define HAVE_STRERROR_R 1",
+        "#define BACKTRACE_HEADER <${BACKTRACE_HEADER}>": "#define BACKTRACE_HEADER <execinfo.h>",
+    },
+    template = "//flang-rt:cmake/config.h.cmake.in",
+)
+
+# The Fortran runtime archive.  Mirrors the non-GPU, non-CUDA, non-Windows
+# `flang_rt.runtime` target from flang-rt/lib/runtime/CMakeLists.txt.
+#
+# Sources include all .cpp/.c files in this directory except:
+#   - io-api-gpu.cpp     (only built when targeting AMD GPU / NVPTX)
+#   - io-stmt-minimal.cpp (only built for the experimental CUDA offload path)
+#
+# The two Decimal sources are pulled in directly (instead of depending on the
+# FortranDecimal compiler-side library) so they can be compiled with the runtime
+# flags (-fno-exceptions, -fno-rtti).
+# Generated config.h, exposed as a textual_hdr with an include path so that the
+# unqualified `#include "config.h"` in the runtime .cpp files resolves to it.
+cc_library(
+    name = "runtime_config",
+    includes = ["."],
+    textual_hdrs = ["config.h"],
+)
+
+cc_library(
+    name = "flang_rt.runtime",
+    srcs = glob(
+        [
+            "*.cpp",
+            "*.c",
+            "*.h",
+        ],
+        exclude = [
+            "io-api-gpu.cpp",
+            "io-stmt-minimal.cpp",
+        ],
+    ) + [
+        "//flang/lib/Decimal:big-radix-floating-point.h",
+        "//flang/lib/Decimal:binary-to-decimal.cpp",
+        "//flang/lib/Decimal:decimal-to-binary.cpp",
+    ],
+    copts = [
+        "-fno-exceptions",
+        "-fno-rtti",
+    ],
+    deps = [
+        ":runtime_config",
+        "//flang:CommonHeaders",
+        "//flang:DecimalHeaders",
+        "//flang:RuntimeHeaders",
+        "//flang-rt:LibcSharedHeaders",
+        "//flang-rt:RuntimeHeaders",
+    ],
+)
