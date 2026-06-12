@@ -279,7 +279,7 @@ void EHScopeStack::popNullFixups() {
 RawAddress CodeGenFunction::createCleanupActiveFlag() {
   // Create a variable to decide whether the cleanup needs to be run.
   RawAddress active = CreateTempAllocaWithoutCast(
-      Builder.getInt1Ty(), CharUnits::One(), "cleanup.cond");
+      Builder.getInt1Ty(), LangAS::Default, CharUnits::One(), "cleanup.cond");
 
   // Initialize it to false at a site that's guaranteed to be run
   // before each evaluation.

@@ -1546,13 +1546,15 @@ RawAddress CGHLSLRuntime::createBufferMatrixTempAddress(const LValue &LV,
 
   QualType MatQualTy = LV.getType();
   llvm::Type *LayoutTy = HLSLBufferLayoutBuilder(CGF.CGM).layOutType(MatQualTy);
+  llvm::Type *DestTy = CGF.ConvertTypeForMem(MatQualTy);
   Address SrcAddr = LV.getAddress();
 
-  if (LayoutTy == CGF.ConvertTypeForMem(MatQualTy))
+  if (LayoutTy == DestTy)
     return SrcAddr;
 
-  RawAddress DestAlloca =
-      CGF.CreateMemTempWithoutCast(MatQualTy, "matrix.buf.copy");
+  RawAddress DestAlloca = CGF.CreateTempAllocaWithoutCast(
+      DestTy, LangAS::Default, CGF.getContext().getTypeAlignInChars(MatQualTy),
+      "matrix.buf.copy");
   emitBufferCopy(CGF, DestAlloca, SrcAddr, MatQualTy);
   return DestAlloca;
 }

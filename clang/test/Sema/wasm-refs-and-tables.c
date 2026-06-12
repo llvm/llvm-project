@@ -63,7 +63,7 @@ __externref_t func(__externref_t ref) {
   int foo = 40;
   (__externref_t *)(&foo);     // expected-error {{pointer to WebAssembly reference type is not allowed}}
   (__externref_t ****)(&foo);  // expected-error {{pointer to WebAssembly reference type is not allowed}}
-  sizeof(ref);                 // expected-error {{invalid application of 'sizeof' to sizeless type '__externref_t'}}
+  sizeof(ref);                 // expected-error {{invalid application of 'sizeof' to sizeless type '__wasm_var __externref_t'}}
   sizeof(__externref_t);       // expected-error {{invalid application of 'sizeof' to sizeless type '__externref_t'}}
   sizeof(__externref_t[0]);    // expected-error {{invalid application of 'sizeof' to WebAssembly table}}
   sizeof(table);               // expected-error {{invalid application of 'sizeof' to WebAssembly table}}
@@ -71,7 +71,7 @@ __externref_t func(__externref_t ref) {
   sizeof(__externref_t *);     // expected-error {{pointer to WebAssembly reference type is not allowed}}
   sizeof(__externref_t ***);   // expected-error {{pointer to WebAssembly reference type is not allowed}};
   // expected-warning@+1 {{'_Alignof' applied to an expression is a GNU extension}}
-  _Alignof(ref);                 // expected-error {{invalid application of 'alignof' to sizeless type '__externref_t'}}
+  _Alignof(ref);                 // expected-error {{invalid application of 'alignof' to sizeless type '__wasm_var __externref_t'}}
   _Alignof(__externref_t);       // expected-error {{invalid application of 'alignof' to sizeless type '__externref_t'}}
   _Alignof(__externref_t[]);     // expected-error {{invalid application of 'alignof' to sizeless type '__externref_t'}}
   _Alignof(__externref_t[0]);    // expected-error {{invalid application of 'alignof' to sizeless type '__externref_t'}}
@@ -89,13 +89,13 @@ __externref_t func(__externref_t ref) {
   // cpp-error@+1 {{no matching function for call to 'illegal_argument_1'}}
   illegal_argument_1(table);
   varargs(1, table);              // expected-error {{cannot use WebAssembly table as a function parameter}}
-  table == 1;                     // expected-error {{invalid operands to binary expression ('__attribute__((address_space(1))) __externref_t[0]' and 'int')}}
-  1 >= table;                     // expected-error {{invalid operands to binary expression ('int' and '__attribute__((address_space(1))) __externref_t[0]')}}
-  table == other_table;           // expected-error {{invalid operands to binary expression ('__attribute__((address_space(1))) __externref_t[0]' and '__attribute__((address_space(1))) __externref_t[0]')}}
-  table !=- table;                // expected-error {{invalid argument type '__attribute__((address_space(1))) __externref_t *' to unary expression}}
-  !table;                         // expected-error {{invalid argument type '__attribute__((address_space(1))) __externref_t *' to unary expression}}
-  1 && table;                     // expected-error {{invalid operands to binary expression ('int' and '__attribute__((address_space(1))) __externref_t[0]')}}
-  table || 1;                     // expected-error {{invalid operands to binary expression ('__attribute__((address_space(1))) __externref_t[0]' and 'int')}}
+  table == 1;                     // expected-error {{invalid operands to binary expression ('__wasm_var __externref_t[0]' and 'int')}}
+  1 >= table;                     // expected-error {{invalid operands to binary expression ('int' and '__wasm_var __externref_t[0]')}}
+  table == other_table;           // expected-error {{invalid operands to binary expression ('__wasm_var __externref_t[0]' and '__wasm_var __externref_t[0]')}}
+  table !=- table;                // expected-error {{invalid argument type '__wasm_var __externref_t *' to unary expression}}
+  !table;                         // expected-error {{invalid argument type '__wasm_var __externref_t *' to unary expression}}
+  1 && table;                     // expected-error {{invalid operands to binary expression ('int' and '__wasm_var __externref_t[0]')}}
+  table || 1;                     // expected-error {{invalid operands to binary expression ('__wasm_var __externref_t[0]' and 'int')}}
   1 ? table : table;              // expected-error {{cannot use a WebAssembly table within a branch of a conditional expression}}
   table ? : other_table;          // expected-error {{cannot use a WebAssembly table within a branch of a conditional expression}}
   (void *)table;                  // expected-error {{cannot cast from a WebAssembly table}}

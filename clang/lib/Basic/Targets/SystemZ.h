@@ -48,7 +48,8 @@ static const unsigned ZOSAddressMap[] = {
     0, // hlsl_input
     0, // hlsl_output
     0, // hlsl_push_constant
-    0  // wasm_funcref
+    0, // wasm_funcref
+    0  // wasm_var
 };
 
 class LLVM_LIBRARY_VISIBILITY SystemZTargetInfo : public TargetInfo {

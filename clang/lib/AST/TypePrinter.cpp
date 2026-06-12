@@ -2723,6 +2723,8 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "hlsl_push_constant";
   case LangAS::wasm_funcref:
     return "__funcref";
+  case LangAS::wasm_var:
+    return "__wasm_var";
   default:
     return std::to_string(toTargetAddressSpace(AS));
   }

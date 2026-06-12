@@ -29,6 +29,7 @@
 #include "clang/AST/Randstruct.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticComment.h"
 #include "clang/Basic/HLSLRuntime.h"
@@ -7108,6 +7109,11 @@ void Sema::deduceOpenCLAddressSpace(VarDecl *Var) {
   Var->assignAddressSpace(Context, ImplAS);
 }
 
+void Sema::deduceWasmAddressSpace(VarDecl *Var) {
+  if (Context.getTargetInfo().getTriple().isWasm())
+    Var->deduceParmAddressSpace(Context);
+}
+
 static void checkWeakAttr(Sema &S, NamedDecl &ND) {
   // 'weak' only applies to declarations with external linkage.
   if (WeakAttr *Attr = ND.getAttr<WeakAttr>()) {
@@ -8226,17 +8232,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     }
   }
 
-  // WebAssembly tables are always in address space 1 (wasm_var). Don't apply
-  // address space if the table has local storage (semantic checks elsewhere
-  // will produce an error anyway).
-  if (const auto *ATy = dyn_cast<ArrayType>(NewVD->getType())) {
-    if (ATy && ATy->getElementType().isWebAssemblyReferenceType() &&
-        !NewVD->hasLocalStorage()) {
-      QualType Type = Context.getAddrSpaceQualType(
-          NewVD->getType(), Context.getLangASForBuiltinAddressSpace(1));
-      NewVD->setType(Type);
-    }
-  }
+  deduceWasmAddressSpace(NewVD);
 
   LoadExternalExtnameUndeclaredIdentifiers();
 
@@ -8926,12 +8922,44 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     NewVD->setType(T);
   }
 
+  // WebAssembly tables must be static with a zero length and can't be
+  // declared within functions.
+  if (T->isWebAssemblyTableType()) {
+    if (getCurScope()->getParent()) { // Parent is null at top-level
+      Diag(NewVD->getLocation(), diag::err_wasm_table_in_function);
+      NewVD->setInvalidDecl();
+      return;
+    }
+    if (NewVD->getStorageClass() != SC_Static) {
+      Diag(NewVD->getLocation(), diag::err_wasm_table_must_be_static);
+      NewVD->setInvalidDecl();
+      return;
+    }
+    const auto *ATy = dyn_cast<ConstantArrayType>(T.getTypePtr());
+    if (!ATy || ATy->getZExtSize() != 0) {
+      Diag(NewVD->getLocation(),
+           diag::err_typecheck_wasm_table_must_have_zero_length);
+      NewVD->setInvalidDecl();
+      return;
+    }
+  }
+
   // Emit an error if an address space was applied to decl with local storage.
   // This includes arrays of objects with address space qualifiers, but not
   // automatic variables that point to other address spaces.
   // ISO/IEC TR 18037 S5.1.2
-  if (!getLangOpts().OpenCL && NewVD->hasLocalStorage() &&
-      T.getAddressSpace() != LangAS::Default) {
+  if (T.isWebAssemblyReferenceType() && !T->isArrayType()) {
+    // WebAssembly: reference types must be in
+    // wasm_var address space (AS 1) so they can be stored in WebAssembly
+    // locals. Arrays of reference types (WebAssembly tables) are handled
+    // separately below.
+    if (T.getAddressSpace() != LangAS::wasm_var) {
+      Diag(NewVD->getLocation(), diag::err_as_qualified_auto_decl) << 1;
+      NewVD->setInvalidDecl();
+      return;
+    }
+  } else if (!getLangOpts().OpenCL && NewVD->hasLocalStorage() &&
+             T.getAddressSpace() != LangAS::Default) {
     Diag(NewVD->getLocation(), diag::err_as_qualified_auto_decl) << 0;
     NewVD->setInvalidDecl();
     return;
@@ -9056,28 +9084,6 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     else {
       assert(!getLangOpts().ObjCAutoRefCount);
       Diag(NewVD->getLocation(), diag::warn_attribute_weak_on_local);
-    }
-  }
-
-  // WebAssembly tables must be static with a zero length and can't be
-  // declared within functions.
-  if (T->isWebAssemblyTableType()) {
-    if (getCurScope()->getParent()) { // Parent is null at top-level
-      Diag(NewVD->getLocation(), diag::err_wasm_table_in_function);
-      NewVD->setInvalidDecl();
-      return;
-    }
-    if (NewVD->getStorageClass() != SC_Static) {
-      Diag(NewVD->getLocation(), diag::err_wasm_table_must_be_static);
-      NewVD->setInvalidDecl();
-      return;
-    }
-    const auto *ATy = dyn_cast<ConstantArrayType>(T.getTypePtr());
-    if (!ATy || ATy->getZExtSize() != 0) {
-      Diag(NewVD->getLocation(),
-           diag::err_typecheck_wasm_table_must_have_zero_length);
-      NewVD->setInvalidDecl();
-      return;
     }
   }
 
@@ -13476,6 +13482,8 @@ bool Sema::DeduceVariableDeclarationType(VarDecl *VDecl, bool DirectInit,
   if (getLangOpts().HLSL)
     HLSL().deduceAddressSpace(VDecl);
 
+  deduceWasmAddressSpace(VDecl);
+
   // If this is a redeclaration, check that the type we just deduced matches
   // the previously declared type.
   if (VarDecl *Old = VDecl->getPreviousDecl()) {
@@ -15955,10 +15963,9 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
       // to be qualified with an address space.
       !(getLangOpts().OpenCL &&
         (T->isArrayType() || T.getAddressSpace() == LangAS::opencl_private)) &&
-      // WebAssembly allows reference types as parameters. Funcref in particular
-      // lives in a different address space.
-      !(T->isFunctionPointerType() &&
-        T.getAddressSpace() == LangAS::wasm_funcref) &&
+      // WebAssembly reference types like __externref_t must be in wasm_var.
+      !(T.isWebAssemblyReferenceType() &&
+        T.getAddressSpace() == LangAS::wasm_var) &&
       // HLSL allows function arguments to be qualified with an address space
       // if the groupshared annotation is used.
       !(getLangOpts().HLSL &&

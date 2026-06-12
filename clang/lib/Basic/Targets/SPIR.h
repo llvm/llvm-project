@@ -58,7 +58,8 @@ static const unsigned SPIRDefIsPrivMap[] = {
     13, // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
-    20, // wasm_funcref
+    0, // wasm_funcref
+    0, // wasm_var
 };
 
 // Used by both the SPIR and SPIR-V targets.
@@ -96,7 +97,8 @@ static const unsigned SPIRDefIsGenMap[] = {
     13, // hlsl_push_constant
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
-    20, // wasm_funcref
+    0, // wasm_funcref
+    0, // wasm_var
 };
 
 // Base class for SPIR and SPIR-V target info.
@@ -213,7 +215,10 @@ public:
   }
 
   void setAddressSpaceMap(bool DefaultIsGeneric) {
-    AddrSpaceMap = DefaultIsGeneric ? &SPIRDefIsGenMap : &SPIRDefIsPrivMap;
+    if (DefaultIsGeneric)
+      AddrSpaceMap = &SPIRDefIsGenMap;
+    else
+      AddrSpaceMap = &SPIRDefIsPrivMap;
   }
 
   void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,

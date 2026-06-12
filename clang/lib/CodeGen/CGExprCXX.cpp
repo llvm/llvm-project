@@ -1815,7 +1815,8 @@ void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
     assert(!TagAlloca);
     llvm::Type *Ty = getTypes().ConvertType(TagType);
     CharUnits Align = CGM.getNaturalTypeAlignment(TagType);
-    llvm::AllocaInst *TagAllocation = CreateTempAlloca(Ty, TagName);
+    llvm::AllocaInst *TagAllocation =
+        CreateTempAlloca(Ty, TagType.getAddressSpace(), TagName);
     TagAllocation->setAlignment(Align.getAsAlign());
     DeleteArgs.add(RValue::getAggregate(Address(TagAllocation, Ty, Align)),
                    TagType);

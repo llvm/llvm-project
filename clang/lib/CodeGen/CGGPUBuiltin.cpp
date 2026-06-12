@@ -90,7 +90,7 @@ packArgsIntoNVPTXFormatBuffer(CodeGenFunction *CGF, const CallArgList &Args) {
     // that the alignment of the llvm type was the same as the alignment of the
     // clang type.
     llvm::Type *AllocaTy = llvm::StructType::create(ArgTypes, "printf_args");
-    llvm::Value *Alloca = CGF->CreateTempAlloca(AllocaTy);
+    llvm::Value *Alloca = CGF->CreateTempAlloca(AllocaTy, LangAS::Default);
 
     for (unsigned I = 1, NumArgs = Args.size(); I < NumArgs; ++I) {
       llvm::Value *P = Builder.CreateStructGEP(AllocaTy, Alloca, I - 1);
