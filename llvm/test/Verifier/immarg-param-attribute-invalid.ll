@@ -1,4 +1,5 @@
 ; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as -use-constant-int-for-fixed-length-splat < %s -o /dev/null 2>&1 | FileCheck %s
 
 declare void @llvm.test.immarg.intrinsic.i32(i32 immarg)
 declare void @llvm.test.immarg.intrinsic.v2i32(<2 x i32> immarg)
@@ -46,6 +47,11 @@ define void @call_llvm.test.immarg.intrinsic.v2i32() {
   call void @llvm.test.immarg.intrinsic.v2i32(<2 x i32> <i32 1, i32 2>)
 
 ; CHECK: immarg operand has non-immediate parameter
+; CHECK-NEXT: <2 x i32> splat (i32 1)
+; CHECK-NEXT: call void @llvm.test.immarg.intrinsic.v2i32(<2 x i32> splat (i32 1))
+  call void @llvm.test.immarg.intrinsic.v2i32(<2 x i32> splat (i32 1))
+
+; CHECK: immarg operand has non-immediate parameter
 ; CHECK-NEXT: <2 x i32> undef
 ; CHECK-NEXT: call void @llvm.test.immarg.intrinsic.v2i32(<2 x i32> undef)
   call void @llvm.test.immarg.intrinsic.v2i32(<2 x i32> undef)
@@ -62,6 +68,11 @@ define void @call_llvm.test.immarg.intrinsic.v2f32() {
 ; CHECK-NEXT: <2 x float> <float 1.000000e+00, float 2.000000e+00>
 ; CHECK-NEXT: call void @llvm.test.immarg.intrinsic.v2f32(<2 x float> <float 1.000000e+00, float 2.000000e+00>)
   call void @llvm.test.immarg.intrinsic.v2f32(<2 x float> <float 1.0, float 2.0>)
+
+; CHECK: immarg operand has non-immediate parameter
+; CHECK-NEXT: <2 x float> splat (float 1.000000e+00)
+; CHECK-NEXT: call void @llvm.test.immarg.intrinsic.v2f32(<2 x float> splat (float 1.000000e+00))
+  call void @llvm.test.immarg.intrinsic.v2f32(<2 x float> splat (float 1.0))
   ret void
 }
 

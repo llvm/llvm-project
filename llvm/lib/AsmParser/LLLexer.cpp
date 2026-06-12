@@ -801,7 +801,6 @@ lltok::Kind LLLexer::LexIdentifier() {
 
   // Use-list order directives.
   KEYWORD(uselistorder);
-  KEYWORD(uselistorder_bb);
 
   KEYWORD(personality);
   KEYWORD(cleanup);

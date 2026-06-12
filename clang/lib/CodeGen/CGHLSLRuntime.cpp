@@ -45,6 +45,7 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <cstdint>
 #include <optional>
 
@@ -308,8 +309,7 @@ static std::optional<llvm::Value *> initializeResourceArrayFromGlobal(
     CodeGenFunction &CGF, CXXRecordDecl *ResourceDecl,
     const ConstantArrayType *ArrayTy, AggValueSlot &ValueSlot,
     llvm::Value *Range, llvm::Value *StartIndex, StringRef ResourceName,
-    ResourceBindingAttrs &Binding, ArrayRef<llvm::Value *> PrevGEPIndices,
-    SourceLocation ArraySubsExprLoc) {
+    ResourceBindingAttrs &Binding, ArrayRef<llvm::Value *> PrevGEPIndices) {
 
   ASTContext &AST = CGF.getContext();
   llvm::IntegerType *IntTy = CGF.CGM.IntTy;
@@ -333,9 +333,9 @@ static std::optional<llvm::Value *> initializeResourceArrayFromGlobal(
         GEPIndices.back() = llvm::ConstantInt::get(IntTy, I);
       }
       std::optional<llvm::Value *> MaybeIndex =
-          initializeResourceArrayFromGlobal(
-              CGF, ResourceDecl, SubArrayTy, ValueSlot, Range, Index,
-              ResourceName, Binding, GEPIndices, ArraySubsExprLoc);
+          initializeResourceArrayFromGlobal(CGF, ResourceDecl, SubArrayTy,
+                                            ValueSlot, Range, Index,
+                                            ResourceName, Binding, GEPIndices);
       if (!MaybeIndex)
         return std::nullopt;
       Index = *MaybeIndex;
@@ -531,11 +531,18 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   llvm::Type *LayoutTy = convertHLSLSpecificType(ResHandleTy, OffsetInfo);
   llvm::GlobalVariable *BufGV = new GlobalVariable(
       LayoutTy, /*isConstant*/ false,
-      GlobalValue::LinkageTypes::ExternalLinkage, PoisonValue::get(LayoutTy),
+      GlobalValue::LinkageTypes::InternalLinkage, PoisonValue::get(LayoutTy),
       llvm::formatv("{0}{1}", BufDecl->getName(),
                     BufDecl->isCBuffer() ? ".cb" : ".tb"),
       GlobalValue::NotThreadLocal);
-  CGM.getModule().insertGlobalVariable(BufGV);
+
+  llvm::Module &M = CGM.getModule();
+  M.insertGlobalVariable(BufGV);
+
+  // Add the global variable to the compiler used list so it does not
+  // get optimized away by GlobalOptPass before it reaches
+  // {DXIL|SPIRV}CBufferAccess pass.
+  llvm::appendToCompilerUsed(M, {BufGV});
 
   // Add globals for constant buffer elements and create metadata nodes
   emitBufferGlobalsAndMetadata(BufDecl, BufGV, OffsetInfo);
@@ -1408,7 +1415,7 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
   // Create a temporary variable for the result, which is either going
   // to be a single resource instance or a local array of resources (we need to
   // return an LValue).
-  RawAddress TmpVar = CGF.CreateMemTemp(ResultTy);
+  RawAddress TmpVar = CGF.CreateMemTempWithoutCast(ResultTy);
   if (CGF.EmitLifetimeStart(TmpVar.getPointer()))
     CGF.pushFullExprCleanup<CodeGenFunction::CallLifetimeEnd>(
         NormalEHLifetimeMarker, TmpVar);
@@ -1449,8 +1456,7 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
         cast<ConstantArrayType>(ResultTy.getTypePtr());
     std::optional<llvm::Value *> EndIndex = initializeResourceArrayFromGlobal(
         CGF, ResourceTy->getAsCXXRecordDecl(), ArrayTy, ValueSlot, Range, Index,
-        ArrayDecl->getName(), Binding, {llvm::ConstantInt::get(CGM.IntTy, 0)},
-        ArraySubsExpr->getExprLoc());
+        ArrayDecl->getName(), Binding, {llvm::ConstantInt::get(CGM.IntTy, 0)});
     if (!EndIndex)
       return std::nullopt;
   }
@@ -1460,7 +1466,6 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
 // Initialize all resources of a global resource array into provided slot.
 bool CGHLSLRuntime::initializeGlobalResourceArray(CodeGenFunction &CGF,
                                                   const VarDecl *ArrayDecl,
-                                                  SourceLocation Loc,
                                                   AggValueSlot &DestSlot) {
   assert(ArrayDecl->getType()->isHLSLResourceRecordArray() &&
          ArrayDecl->hasGlobalStorage() &&
@@ -1487,7 +1492,7 @@ bool CGHLSLRuntime::initializeGlobalResourceArray(CodeGenFunction &CGF,
   // Initialize individual resources in the array into DestSlot.
   std::optional<llvm::Value *> EndIndex = initializeResourceArrayFromGlobal(
       CGF, ResTy->getAsCXXRecordDecl(), ResArrayTy, DestSlot, Range, Zero,
-      ArrayDecl->getName(), Binding, {Zero}, Loc);
+      ArrayDecl->getName(), Binding, {Zero});
   return EndIndex.has_value();
 }
 
@@ -1507,16 +1512,16 @@ bool CGHLSLRuntime::emitGlobalResourceArray(CodeGenFunction &CGF, const Expr *E,
       ArrayDecl->getStorageClass() == SC_Static)
     return false;
 
-  return initializeGlobalResourceArray(CGF, ArrayDecl, E->getExprLoc(),
-                                       DestSlot);
+  return initializeGlobalResourceArray(CGF, ArrayDecl, DestSlot);
 }
 
 // If the expression is a global resource array, create a temporary and
 // initialize all of its resources, and return it as an LValue. Returns nullopt
 // if no initialization has been performed and the handling should follow the
 // default path.
-std::optional<LValue> CGHLSLRuntime::emitGlobalResourceArrayAsLValue(
-    CodeGenFunction &CGF, const VarDecl *ArrayDecl, SourceLocation Loc) {
+std::optional<LValue>
+CGHLSLRuntime::emitGlobalResourceArrayAsLValue(CodeGenFunction &CGF,
+                                               const VarDecl *ArrayDecl) {
   assert(ArrayDecl->getType()->isHLSLResourceRecordArray() &&
          "expected resource array declaration");
 
@@ -1526,14 +1531,13 @@ std::optional<LValue> CGHLSLRuntime::emitGlobalResourceArrayAsLValue(
 
   AggValueSlot TmpArraySlot =
       CGF.CreateAggTemp(ArrayDecl->getType(), "tmpResArray");
-  if (initializeGlobalResourceArray(CGF, ArrayDecl, Loc, TmpArraySlot))
+  if (initializeGlobalResourceArray(CGF, ArrayDecl, TmpArraySlot))
     return CGF.MakeAddrLValue(TmpArraySlot.getAddress(), ArrayDecl->getType(),
                               AlignmentSource::Decl);
   return std::nullopt;
 }
 
 RawAddress CGHLSLRuntime::createBufferMatrixTempAddress(const LValue &LV,
-                                                        SourceLocation Loc,
                                                         CodeGenFunction &CGF) {
 
   assert(LV.getType()->isConstantMatrixType() && "expected matrix type");
@@ -1541,19 +1545,14 @@ RawAddress CGHLSLRuntime::createBufferMatrixTempAddress(const LValue &LV,
          "expected cbuffer matrix");
 
   QualType MatQualTy = LV.getType();
-  llvm::Type *MemTy = CGF.ConvertTypeForMem(MatQualTy);
   llvm::Type *LayoutTy = HLSLBufferLayoutBuilder(CGF.CGM).layOutType(MatQualTy);
-
-  if (LayoutTy == MemTy)
-    return LV.getAddress();
-
   Address SrcAddr = LV.getAddress();
-  // NOTE: B\C CreateMemTemp flattens MatrixTypes which causes
-  // overlapping GEPs in emitBufferCopy. Use CreateTempAlloca with
-  // the non-padded layout.
-  CharUnits Align =
-      CharUnits::fromQuantity(CGF.CGM.getDataLayout().getABITypeAlign(MemTy));
-  RawAddress DestAlloca = CGF.CreateTempAlloca(MemTy, Align, "matrix.buf.copy");
+
+  if (LayoutTy == CGF.ConvertTypeForMem(MatQualTy))
+    return SrcAddr;
+
+  RawAddress DestAlloca =
+      CGF.CreateMemTempWithoutCast(MatQualTy, "matrix.buf.copy");
   emitBufferCopy(CGF, DestAlloca, SrcAddr, MatQualTy);
   return DestAlloca;
 }
@@ -1635,9 +1634,8 @@ CGHLSLRuntime::emitResourceMemberExpr(CodeGenFunction &CGF,
 
   // Handle member of resource array type.
   if (ResourceVD->getType()->isHLSLResourceRecordArray())
-    return emitGlobalResourceArrayAsLValue(CGF, ResourceVD, ME->getExprLoc());
+    return emitGlobalResourceArrayAsLValue(CGF, ResourceVD);
 
-  // Handle member that is an individual resource.
   GlobalVariable *ResGV =
       cast<GlobalVariable>(CGM.GetAddrOfGlobalVar(ResourceVD));
   const DataLayout &DL = CGM.getDataLayout();

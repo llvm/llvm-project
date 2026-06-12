@@ -20,7 +20,7 @@ const S g = { &B::y, "abc" };
 
 const S *get() { return &g; }
 
-// CIR: !rec_S = !cir.record<struct "S" {!s64i, !cir.array<!s8i x 32>}>
+// CIR: !rec_S = !cir.struct<"S" {!s64i, !cir.array<!s8i x 32>}>
 // CIR: cir.global {{.*}} @_ZL1g = #cir.const_record<{
 // CIR-SAME: #cir.int<4> : !s64i,
 // CIR-SAME: #cir.const_array<"abc" : !cir.array<!s8i x 3>, trailing_zeros> : !cir.array<!s8i x 32>

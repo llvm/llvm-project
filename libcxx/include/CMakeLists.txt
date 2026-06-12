@@ -724,6 +724,7 @@ set(files
   __ranges/as_rvalue_view.h
   __ranges/chunk_by_view.h
   __ranges/common_view.h
+  __ranges/concat_view.h
   __ranges/concepts.h
   __ranges/container_compatible_range.h
   __ranges/counted.h
@@ -825,7 +826,6 @@ set(files
   __type_traits/copy_cvref.h
   __type_traits/datasizeof.h
   __type_traits/decay.h
-  __type_traits/dependent_type.h
   __type_traits/desugars_to.h
   __type_traits/detected_or.h
   __type_traits/disjunction.h
@@ -897,7 +897,6 @@ set(files
   __type_traits/is_void.h
   __type_traits/is_volatile.h
   __type_traits/is_within_lifetime.h
-  __type_traits/lazy.h
   __type_traits/make_32_64_or_128_bit.h
   __type_traits/make_const_lvalue_ref.h
   __type_traits/make_signed.h
