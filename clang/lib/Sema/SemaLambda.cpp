@@ -1981,7 +1981,7 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
       //   auto [a, b] = p;
       //   auto lambda = [a]() { return a; };  // In OpenMP context.
       // This is reached during lambda capture for OpenMP mappings.
-      Var = cast<BindingDecl>(Var)->getDecomposedDecl();
+      Var = BD->getDecomposedDecl();
     Name = Var->getIdentifier();
     Init = BuildDeclarationNameExpr(
         CXXScopeSpec(), DeclarationNameInfo(Var->getDeclName(), Loc), Var);

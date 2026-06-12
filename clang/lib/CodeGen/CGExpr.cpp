@@ -3612,6 +3612,10 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
 
   auto *DD = cast<VarDecl>(BD->getDecomposedDecl());
   Expr *BindingExpr = BD->getBinding()->IgnoreImplicit();
+  // Use getNonReferenceType() because we need the actual object type, not the
+  // reference type. For example, with "struct Point { int x, y; }; auto& [a, b]
+  // = p;", DD is a reference to Point, but we need the Point type itself to
+  // compute field offsets.
   QualType DREType = DD->getType().getNonReferenceType();
   DeclarationNameInfo NameInfo(DD->getDeclName(), SourceLocation());
   DeclRefExpr *DRE = DeclRefExpr::Create(

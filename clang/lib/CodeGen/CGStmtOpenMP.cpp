@@ -1610,6 +1610,24 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
     if (const auto *DRE = dyn_cast<DeclRefExpr>(IRef->IgnoreParenImpCasts()))
       BD = dyn_cast<BindingDecl>(DRE->getDecl());
     if (BD) {
+      // BindingDecls cannot use ReductionCodeGen infrastructure because:
+      // 1. RedCG.emitSharedOrigLValue() crashes when emitting BindingDecl refs
+      // (DecompositionDecl context issues in the outlined region)
+      // 2. All RedCG methods (emitAggregateType, emitInitialization, etc.)
+      // depend on emitSharedOrigLValue() being called first.
+      // However, writeback still works correctly through LHSVD/RHSVD
+      // registration:
+      // - LHSVD is registered with the original BindingDecl address
+      // - RHSVD is registered with the private copy address
+      // - The reduction operation writes from RHSVD back to LHSVD
+      // - This achieves the same writeback that RedCG provides for VarDecls
+      // Get the original BindingDecl address.
+      DeclRefExpr BindingDRE(getContext(), const_cast<BindingDecl *>(BD),
+                             /*RefersToEnclosingVariableOrCapture=*/true,
+                             BD->getType(), VK_LValue, IRef->getExprLoc());
+      LValue OriginalLVal = EmitLValue(&BindingDRE);
+      Address OriginalAddr = OriginalLVal.getAddress();
+
       // Emit the private VarDecl with reduction initialization.
       EmitDecl(*PrivateVD);
       Address PrivateAddr = GetAddrOfLocalVar(PrivateVD);
@@ -1618,13 +1636,6 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
       bool IsRegistered = PrivateScope.addPrivate(BD, PrivateAddr);
       assert(IsRegistered && "private binding already registered as private");
       (void)IsRegistered;
-
-      // Get the original BindingDecl address for LHSVD registration.
-      DeclRefExpr BindingDRE(getContext(), const_cast<BindingDecl *>(BD),
-                             /*RefersToEnclosingVariableOrCapture=*/true,
-                             BD->getType(), VK_LValue, IRef->getExprLoc());
-      LValue OriginalLVal = EmitLValue(&BindingDRE);
-      Address OriginalAddr = OriginalLVal.getAddress();
 
       // Register LHSVD/RHSVD for reduction operation.
       const auto *LHSVD = cast<VarDecl>(cast<DeclRefExpr>(*ILHS)->getDecl());
