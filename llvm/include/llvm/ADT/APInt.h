@@ -1809,8 +1809,8 @@ public:
     return logBase2();
   }
 
-  /// Compute the square root.
-  LLVM_ABI APInt sqrt() const;
+  /// Compute the floor of the square root of the unsigned value.
+  LLVM_ABI APInt sqrtFloor() const;
 
   /// Get the absolute value.  If *this is < 0 then return -(*this), otherwise
   /// *this.  Note that the "most negative" signed number (e.g. -128 for 8 bit

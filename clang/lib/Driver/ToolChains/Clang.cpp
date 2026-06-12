@@ -410,7 +410,7 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
   if (TC.getTriple().isOSAIX()) {
     if (Arg *ProfileSampleUseArg = getLastProfileSampleUseArg(Args))
       D.Diag(diag::err_drv_unsupported_opt_for_target)
-          << ProfileSampleUseArg->getSpelling() << TC.getTriple().str();
+          << ProfileSampleUseArg->getSpelling() << TC.getTripleString();
   }
 
   if (ProfileGenerateArg) {
@@ -1312,7 +1312,7 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
           !JA.isDeviceOffloading(Action::OFK_Host)) {
         llvm::sys::path::replace_extension(F, "");
         F += Action::GetOffloadingFileNamePrefix(JA.getOffloadingDeviceKind(),
-                                                 Triple.normalize());
+                                                 Triple.str());
         F += "-";
         F += JA.getOffloadingArch();
       }
@@ -4527,7 +4527,7 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
     if (TC.getTriple().isOSAIX() && Args.hasArg(options::OPT_gsplit_dwarf)) {
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << Args.getLastArg(options::OPT_gsplit_dwarf)->getSpelling()
-          << TC.getTriple().str();
+          << TC.getTripleString();
       return;
     }
     Arg *SplitDWARFArg;
@@ -5196,12 +5196,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (IsOpenMPDevice) {
     // We have to pass the triple of the host if compiling for an OpenMP device.
-    std::string NormalizedTriple =
-        C.getSingleOffloadToolChain<Action::OFK_Host>()
-            ->getTriple()
-            .normalize();
+    const llvm::Triple &HostTriple =
+        C.getSingleOffloadToolChain<Action::OFK_Host>()->getTriple();
     CmdArgs.push_back("-aux-triple");
-    CmdArgs.push_back(Args.MakeArgString(NormalizedTriple));
+    CmdArgs.push_back(HostTriple.str().c_str());
   }
 
   if (Triple.isOSWindows() && (Triple.getArch() == llvm::Triple::arm ||
@@ -5387,22 +5385,20 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-emit-llvm-uselists");
 
     if (IsUsingLTO) {
+      const Arg *LTOArg = Args.getLastArg(options::OPT_foffload_lto,
+                                          options::OPT_foffload_lto_EQ);
       if (IsDeviceOffloadAction && !JA.isDeviceOffloading(Action::OFK_OpenMP) &&
           !Args.hasFlag(options::OPT_offload_new_driver,
                         options::OPT_no_offload_new_driver,
                         C.getActiveOffloadKinds() != Action::OFK_None) &&
-          !Triple.isAMDGPU()) {
+          !Triple.isAMDGPU() && !Triple.isSPIRV()) {
         D.Diag(diag::err_drv_unsupported_opt_for_target)
-            << Args.getLastArg(options::OPT_foffload_lto,
-                               options::OPT_foffload_lto_EQ)
-                   ->getAsString(Args)
+            << (LTOArg ? LTOArg->getAsString(Args) : "-foffload-lto")
             << Triple.getTriple();
       } else if (Triple.isNVPTX() && !IsRDCMode &&
                  JA.isDeviceOffloading(Action::OFK_Cuda)) {
         D.Diag(diag::err_drv_unsupported_opt_for_language_mode)
-            << Args.getLastArg(options::OPT_foffload_lto,
-                               options::OPT_foffload_lto_EQ)
-                   ->getAsString(Args)
+            << (LTOArg ? LTOArg->getAsString(Args) : "-foffload-lto")
             << "-fno-gpu-rdc";
       } else {
         assert(LTOMode == LTOK_Full || LTOMode == LTOK_Thin);
@@ -6881,10 +6877,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_check_new);
 
   if (Arg *A = Args.getLastArg(options::OPT_fzero_call_used_regs_EQ)) {
-    // FIXME: There's no reason for this to be restricted to X86. The backend
-    // code needs to be changed to include the appropriate function calls
-    // automatically.
-    if (!Triple.isX86() && !Triple.isAArch64())
+    // FIXME: There's no reason for this to be restricted to some backend.
+    // The backend code needs to be changed to include the appropriate function
+    // calls automatically.
+    StringRef Value = A->getValue();
+    if (!Triple.isX86() && !Triple.isAArch64() &&
+        !(Triple.isRISCV() && (Value == "skip" || Value.contains("gpr"))))
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
   }
@@ -7913,6 +7911,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_extract_summaries);
   Args.AddLastArg(CmdArgs, options::OPT__ssaf_tu_summary_file);
+  Args.AddLastArg(CmdArgs, options::OPT__ssaf_compilation_unit_id);
 
   // Handle serialized diagnostics.
   if (Arg *A = Args.getLastArg(options::OPT__serialize_diags)) {
@@ -9576,6 +9575,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_flto_EQ,
       OPT_hipspv_pass_plugin_EQ,
       OPT_use_spirv_backend,
+      OPT_no_use_spirv_backend,
       OPT_fmultilib_flag,
       OPT_fprofile_generate,
       OPT_fprofile_generate_EQ,
@@ -9639,10 +9639,13 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       for (Arg *A : ToolChainArgs) {
         if (A->getOption().matches(OPT_Zlinker_input))
           LinkerArgs.emplace_back(A->getValue());
-        else if (ShouldForward(CompilerOptions, A, *TC))
+        else if (ShouldForward(CompilerOptions, A, *TC)) {
+          A->claim();
           A->render(Args, CompilerArgs);
-        else if (ShouldForward(LinkerOptions, A, *TC))
+        } else if (ShouldForward(LinkerOptions, A, *TC)) {
+          A->claim();
           A->render(Args, LinkerArgs);
+        }
       }
 
       // If the user explicitly requested it via `--offload-arch` we should
@@ -9713,7 +9716,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
             options::OPT_fprofile_instr_generate_EQ);
         if (!Args.hasArg(options::OPT_foffload_lto_EQ,
                          options::OPT_fno_offload_lto) &&
-            !UsesProfileGenerate)
+            !UsesProfileGenerate && !TC->getTriple().isSPIRV())
           CmdArgs.push_back("--no-lto");
       }
     }

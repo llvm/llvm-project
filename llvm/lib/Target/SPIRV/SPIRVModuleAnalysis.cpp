@@ -1957,6 +1957,7 @@ void addInstrRequirements(const MachineInstr &MI,
     }
     break;
   case SPIRV::OpConstantFunctionPointerINTEL:
+  case SPIRV::OpFunctionPointerCallINTEL:
     if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
       Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
@@ -2030,12 +2031,6 @@ void addInstrRequirements(const MachineInstr &MI,
                          false);
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_poison_freeze);
     Reqs.addCapability(SPIRV::Capability::PoisonFreezeKHR);
-    break;
-  case SPIRV::OpFunctionPointerCallINTEL:
-    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
-      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
-      Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
-    }
     break;
   case SPIRV::OpAtomicFAddEXT:
   case SPIRV::OpAtomicFMinEXT:
@@ -2325,6 +2320,7 @@ void addInstrRequirements(const MachineInstr &MI,
     AddDotProductRequirements(MI, Reqs, ST);
     break;
   case SPIRV::OpImageSampleImplicitLod:
+  case SPIRV::OpImageFetch:
     Reqs.addCapability(SPIRV::Capability::Shader);
     addImageOperandReqs(MI, Reqs, ST, 4);
     break;
@@ -2332,17 +2328,7 @@ void addInstrRequirements(const MachineInstr &MI,
     addImageOperandReqs(MI, Reqs, ST, 4);
     break;
   case SPIRV::OpImageSampleDrefImplicitLod:
-    Reqs.addCapability(SPIRV::Capability::Shader);
-    addImageOperandReqs(MI, Reqs, ST, 5);
-    break;
   case SPIRV::OpImageSampleDrefExplicitLod:
-    Reqs.addCapability(SPIRV::Capability::Shader);
-    addImageOperandReqs(MI, Reqs, ST, 5);
-    break;
-  case SPIRV::OpImageFetch:
-    Reqs.addCapability(SPIRV::Capability::Shader);
-    addImageOperandReqs(MI, Reqs, ST, 4);
-    break;
   case SPIRV::OpImageDrefGather:
   case SPIRV::OpImageGather:
     Reqs.addCapability(SPIRV::Capability::Shader);
