@@ -673,10 +673,10 @@ void Writer::populateTargetFeatures() {
   }
 
   if (tlsUsed) {
-    for (auto feature : {"atomics", "bulk-memory"})
-      if (!allowed.contains(feature))
-        error(StringRef("'") + feature +
-              "' feature must be used in order to use thread-local storage");
+    if (!allowed.contains("bulk-memory"))
+      error("'bulk-memory' feature must be used in order to use thread-local storage");
+    if (!allowed.contains("atomics") && !ctx.arg.cooperativeThreading)
+      error("'atomics' feature must be used in order to use thread-local storage");
   }
 
   // Validate that used features are allowed in output

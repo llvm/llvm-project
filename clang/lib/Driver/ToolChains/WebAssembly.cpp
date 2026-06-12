@@ -85,6 +85,10 @@ static bool WantsPthread(const llvm::Triple &Triple, const ArgList &Args) {
   if (Triple.isOSWASI() && Triple.getEnvironmentName() == "threads")
     WantsPthread = true;
 
+  // WASIp3 also implies pthreads support
+  if (Triple.getOS() == llvm::Triple::WASIp3)
+    WantsPthread = true;
+
   return WantsPthread;
 }
 
@@ -337,9 +341,11 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
                           options::OPT_fno_use_init_array, true))
     CC1Args.push_back("-fno-use-init-array");
 
-  // '-pthread' implies atomics, bulk-memory, mutable-globals, and sign-ext
+  // '-pthread' implies bulk-memory, mutable-globals, and sign-ext.
+  // It also implies atomics, so long as we're not targeting a cooperative threading environment.
   if (WantsPthread(getTriple(), DriverArgs)) {
-    if (DriverArgs.hasFlag(options::OPT_mno_atomics, options::OPT_matomics,
+    if (!WantsCooperativeMultithreading(getTriple(), DriverArgs) &&
+      DriverArgs.hasFlag(options::OPT_mno_atomics, options::OPT_matomics,
                            false))
       getDriver().Diag(diag::err_drv_argument_not_allowed_with)
           << "-pthread"
@@ -359,8 +365,10 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
       getDriver().Diag(diag::err_drv_argument_not_allowed_with)
           << "-pthread"
           << "-mno-sign-ext";
-    CC1Args.push_back("-target-feature");
-    CC1Args.push_back("+atomics");
+    if (!WantsCooperativeMultithreading(getTriple(), DriverArgs)) {
+      CC1Args.push_back("-target-feature");
+      CC1Args.push_back("+atomics");
+    }
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+bulk-memory");
     CC1Args.push_back("-target-feature");
