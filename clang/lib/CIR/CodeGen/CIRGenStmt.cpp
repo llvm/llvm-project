@@ -745,8 +745,8 @@ mlir::LogicalResult CIRGenFunction::emitLabel(const clang::LabelDecl &d) {
   builder.setInsertionPointToEnd(labelBlock);
   auto func = cast<cir::FuncOp>(curFn);
   cgm.mapBlockAddress(cir::BlockAddrInfoAttr::get(builder.getContext(),
-                                                  func.getSymNameAttr(),
-                                                  label.getLabelAttr()),
+                                                  func.getSymName(),
+                                                  label.getLabel()),
                       label);
   //  FIXME: emit debug info for labels, incrementProfileCounter
   assert(!cir::MissingFeatures::incrementProfileCounter());

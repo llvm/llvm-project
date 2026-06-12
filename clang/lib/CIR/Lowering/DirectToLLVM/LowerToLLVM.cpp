@@ -2439,16 +2439,37 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
     cir::GlobalOp op, mlir::Attribute init,
     mlir::ConversionPatternRewriter &rewriter) const {
   // TODO: Generalize this handling when more types are needed here.
-  assert((isa<cir::ConstArrayAttr, cir::ConstRecordAttr, cir::ConstVectorAttr,
-              cir::ConstPtrAttr, cir::ConstComplexAttr, cir::GlobalViewAttr,
-              cir::TypeInfoAttr, cir::UndefAttr, cir::PoisonAttr,
-              cir::VTableAttr, cir::ZeroAttr>(init)));
+  assert((isa<cir::BlockAddrInfoAttr, cir::ConstArrayAttr, cir::ConstRecordAttr,
+              cir::ConstVectorAttr, cir::ConstPtrAttr, cir::ConstComplexAttr,
+              cir::GlobalViewAttr, cir::TypeInfoAttr, cir::UndefAttr,
+              cir::PoisonAttr, cir::VTableAttr, cir::ZeroAttr>(init)));
 
   // TODO(cir): once LLVM's dialect has proper equivalent attributes this
   // should be updated. For now, we use a custom op to initialize globals
   // to the appropriate value.
   const mlir::Location loc = op.getLoc();
   setupRegionInitializedLLVMGlobalOp(op, rewriter);
+
+  // A block address initializer is lowered to an llvm.blockaddress op that
+  // references a block tag inside the target function. The matching block tag
+  // may not have been emitted yet, in which case the address is recorded as
+  // unresolved and patched up later in resolveBlockAddressOp.
+  if (auto blockAddrInfo = mlir::dyn_cast<cir::BlockAddrInfoAttr>(init)) {
+    mlir::LLVM::BlockTagOp matchLabel =
+        blockInfoAddr.lookupBlockTag(blockAddrInfo);
+    mlir::LLVM::BlockTagAttr tagAttr =
+        matchLabel ? matchLabel.getTag() : mlir::LLVM::BlockTagAttr{};
+    auto blkAddr = mlir::LLVM::BlockAddressAttr::get(
+        rewriter.getContext(), blockAddrInfo.getFunc(), tagAttr);
+    auto blockAddressOp = mlir::LLVM::BlockAddressOp::create(
+        rewriter, loc, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
+        blkAddr);
+    if (!matchLabel)
+      blockInfoAddr.addUnresolvedBlockAddress(blockAddressOp, blockAddrInfo);
+    mlir::LLVM::ReturnOp::create(rewriter, loc, blockAddressOp);
+    return mlir::success();
+  }
+
   CIRAttrToValue valueConverter(op, rewriter, typeConverter);
   mlir::Value value = valueConverter.visit(init);
   mlir::LLVM::ReturnOp::create(rewriter, loc, value);
@@ -2555,7 +2576,8 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
         return mlir::success();
       }
       return matchAndRewriteRegionInitializedGlobal(op, init.value(), rewriter);
-    } else if (mlir::isa<cir::ConstVectorAttr, cir::ConstPtrAttr,
+    } else if (mlir::isa<cir::BlockAddrInfoAttr, cir::ConstVectorAttr,
+                         cir::ConstRecordAttr, cir::ConstPtrAttr,
                          cir::ConstComplexAttr, cir::GlobalViewAttr,
                          cir::TypeInfoAttr, cir::UndefAttr, cir::PoisonAttr,
                          cir::VTableAttr, cir::ZeroAttr>(init.value())) {
@@ -3721,8 +3743,9 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   /// repeated O(M) module-wide symbol scans for every call site.
   mlir::SymbolTableCollection symbolTables;
   mlir::RewritePatternSet patterns(&getContext());
-  patterns.add<CIRToLLVMBlockAddressOpLowering, CIRToLLVMLabelOpLowering>(
-      converter, patterns.getContext(), dl, blockInfoAddr);
+  patterns.add<CIRToLLVMBlockAddressOpLowering, CIRToLLVMGlobalOpLowering,
+               CIRToLLVMLabelOpLowering>(converter, patterns.getContext(), dl,
+                                         blockInfoAddr);
   patterns.add<CIRToLLVMCallOpLowering, CIRToLLVMTryCallOpLowering>(
       converter, patterns.getContext(), dl, symbolTables);
 
