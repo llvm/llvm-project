@@ -351,6 +351,30 @@ __packed_unary_op(pnot_u16x4, uint16x4_t, ~)
 __packed_unary_op(pnot_i32x2, int32x2_t, ~)
 __packed_unary_op(pnot_u32x2, uint32x2_t, ~)
 
+/* Packed Averaging Addition and Subtraction (32-bit) */
+__packed_binary_builtin(paadd_i8x4, int8x4_t, __builtin_riscv_paadd_i8x4)
+__packed_binary_builtin(paadd_i16x2, int16x2_t, __builtin_riscv_paadd_i16x2)
+__packed_binary_builtin(paaddu_u8x4, uint8x4_t, __builtin_riscv_paaddu_u8x4)
+__packed_binary_builtin(paaddu_u16x2, uint16x2_t, __builtin_riscv_paaddu_u16x2)
+__packed_binary_builtin(pasub_i8x4, int8x4_t, __builtin_riscv_pasub_i8x4)
+__packed_binary_builtin(pasub_i16x2, int16x2_t, __builtin_riscv_pasub_i16x2)
+__packed_binary_builtin(pasubu_u8x4, uint8x4_t, __builtin_riscv_pasubu_u8x4)
+__packed_binary_builtin(pasubu_u16x2, uint16x2_t, __builtin_riscv_pasubu_u16x2)
+
+/* Packed Averaging Addition and Subtraction (64-bit) */
+__packed_binary_builtin(paadd_i8x8, int8x8_t, __builtin_riscv_paadd_i8x8)
+__packed_binary_builtin(paadd_i16x4, int16x4_t, __builtin_riscv_paadd_i16x4)
+__packed_binary_builtin(paadd_i32x2, int32x2_t, __builtin_riscv_paadd_i32x2)
+__packed_binary_builtin(paaddu_u8x8, uint8x8_t, __builtin_riscv_paaddu_u8x8)
+__packed_binary_builtin(paaddu_u16x4, uint16x4_t, __builtin_riscv_paaddu_u16x4)
+__packed_binary_builtin(paaddu_u32x2, uint32x2_t, __builtin_riscv_paaddu_u32x2)
+__packed_binary_builtin(pasub_i8x8, int8x8_t, __builtin_riscv_pasub_i8x8)
+__packed_binary_builtin(pasub_i16x4, int16x4_t, __builtin_riscv_pasub_i16x4)
+__packed_binary_builtin(pasub_i32x2, int32x2_t, __builtin_riscv_pasub_i32x2)
+__packed_binary_builtin(pasubu_u8x8, uint8x8_t, __builtin_riscv_pasubu_u8x8)
+__packed_binary_builtin(pasubu_u16x4, uint16x4_t, __builtin_riscv_pasubu_u16x4)
+__packed_binary_builtin(pasubu_u32x2, uint32x2_t, __builtin_riscv_pasubu_u32x2)
+
 // clang-format on
 
 #undef __packed_splat2
