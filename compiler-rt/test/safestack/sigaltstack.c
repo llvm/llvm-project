@@ -15,49 +15,54 @@
 // Test that safe stack works with sigaltstack.
 int puts(const char *);
 
-extern void *__get_unsafe_stack_ptr();
-extern void *__get_unsafe_stack_top();
-extern void *__get_unsafe_stack_bottom();
-
-extern int unsafe_sigaltstack(size_t ss_size);
-extern void *__get_unsafe_sigalt_stack_ptr();
-extern void *__get_unsafe_sigalt_stack_top();
-extern void *__get_unsafe_sigalt_stack_bottom();
+#include <sanitizer/safestack_interface.h>
 
 __thread int signal_handlers_called = 0;
 __thread int sigaltstack_called = 0;
 
 void signal_handler(int signo) {
   signal_handlers_called += 1;
-  assert(__get_unsafe_stack_ptr() <= __get_unsafe_stack_top() &&
-         __get_unsafe_stack_ptr() >= __get_unsafe_stack_bottom());
+  assert(__safestack_get_unsafe_stack_ptr() <=
+             __safestack_get_unsafe_stack_top() &&
+         __safestack_get_unsafe_stack_ptr() >=
+             __safestack_get_unsafe_stack_bottom());
 }
 
 void signal_sigalt_handler(int signo) {
   signal_handlers_called += 1;
   if (sigaltstack_called) {
-    assert(__get_unsafe_stack_ptr() <= __get_unsafe_sigalt_stack_top() &&
-           __get_unsafe_stack_ptr() >= __get_unsafe_sigalt_stack_bottom());
+    assert(__sigaltstack_get_unsafe_stack_ptr() <=
+               __sigaltstack_get_unsafe_sigalt_stack_top() &&
+           __sigaltstack_get_unsafe_stack_ptr() >=
+               __sigaltstack_get_unsafe_sigalt_stack_bottom());
   } else {
-    assert(__get_unsafe_stack_ptr() <= __get_unsafe_stack_top() &&
-           __get_unsafe_stack_ptr() >= __get_unsafe_stack_bottom());
+    assert(__sigaltstack_get_unsafe_stack_ptr() <=
+               __sigaltstack_get_unsafe_stack_top() &&
+           __sigaltstack_get_unsafe_stack_ptr() >=
+               __sigaltstack_get_unsafe_stack_bottom());
   }
 }
 
 void signal_sigaction(int signo, siginfo_t *si, void *uc) {
   signal_handlers_called += 1;
-  assert(__get_unsafe_stack_ptr() <= __get_unsafe_stack_top() &&
-         __get_unsafe_stack_ptr() >= __get_unsafe_stack_bottom());
+  assert(__safestack_get_unsafe_stack_ptr() <=
+             __safestack_get_unsafe_stack_top() &&
+         __safestack_get_unsafe_stack_ptr() >=
+             __safestack_get_unsafe_stack_bottom());
 }
 
 void signal_sigalt_sigaction(int signo, siginfo_t *si, void *uc) {
   signal_handlers_called += 1;
   if (sigaltstack_called) {
-    assert(__get_unsafe_stack_ptr() <= __get_unsafe_sigalt_stack_top() &&
-           __get_unsafe_stack_ptr() >= __get_unsafe_sigalt_stack_bottom());
+    assert(__sigaltstack_get_unsafe_stack_ptr() <=
+               __sigaltstack_get_unsafe_sigalt_stack_top() &&
+           __sigaltstack_get_unsafe_stack_ptr() >=
+               __sigaltstack_get_unsafe_sigalt_stack_bottom());
   } else {
-    assert(__get_unsafe_stack_ptr() <= __get_unsafe_stack_top() &&
-           __get_unsafe_stack_ptr() >= __get_unsafe_stack_bottom());
+    assert(__sigaltstack_get_unsafe_stack_ptr() <=
+               __sigaltstack_get_unsafe_stack_top() &&
+           __sigaltstack_get_unsafe_stack_ptr() >=
+               __sigaltstack_get_unsafe_stack_bottom());
   }
 }
 
@@ -75,7 +80,7 @@ void *t1_start(void *ptr) {
   sigstk.ss_size = ss_size;
   sigstk.ss_sp = ss_sp;
 
-  unsafe_sigaltstack(sigstk.ss_size);
+  __safestack_unsafe_sigaltstack(sigstk.ss_size);
   sigaltstack(&sigstk, NULL);
   sigaltstack_called = 1;
 
@@ -93,7 +98,7 @@ int main() {
   puts(c);
 
   // Make sure no sigaltstack is allocated by default.
-  assert(!__get_unsafe_sigalt_stack_ptr());
+  assert(!__safestack_get_unsafe_sigalt_stack_ptr());
 
   stack_t sigstk = {};
   size_t ss_size = 4096 * 4;
@@ -102,16 +107,17 @@ int main() {
   sigstk.ss_size = ss_size;
   sigstk.ss_sp = ss_sp;
 
-  unsafe_sigaltstack(sigstk.ss_size);
+  __safestack_unsafe_sigaltstack(sigstk.ss_size);
   sigaltstack(&sigstk, NULL);
   sigaltstack_called = 1;
 
-  // Make sure unsafe_sigaltstack allocated the unsafe sigaltstack with the
+  // Make sure __safestack_unsafe_sigaltstack allocated the unsafe sigaltstack with the
   // correct size.
-  assert(__get_unsafe_sigalt_stack_ptr());
-  assert(__get_unsafe_sigalt_stack_ptr() == __get_unsafe_sigalt_stack_top());
-  assert((__get_unsafe_sigalt_stack_top() -
-          __get_unsafe_sigalt_stack_bottom()) == sigstk.ss_size);
+  assert(__safestack_get_unsafe_sigalt_stack_ptr());
+  assert(__safestack_get_unsafe_sigalt_stack_ptr() ==
+         __safestack_get_unsafe_sigalt_stack_top());
+  assert((__safestack_get_unsafe_sigalt_stack_top() -
+          __safestack_get_unsafe_sigalt_stack_bottom()) == sigstk.ss_size);
 
   // Make sure retrieving the sigaltstack works without problems.
   sigaltstack(NULL, &sigstk);
@@ -122,15 +128,15 @@ int main() {
   new_sigstk.ss_sp = mmap(NULL, new_sigstk.ss_size, PROT_READ | PROT_WRITE,
                           MAP_PRIVATE | MAP_ANONYMOUS | MAP_STACK, -1, 0);
 
-  unsafe_sigaltstack(new_sigstk.ss_size);
+  __safestack_unsafe_sigaltstack(new_sigstk.ss_size);
   sigaltstack(&new_sigstk, NULL);
   munmap(ss_sp, ss_size);
 
   // Make sure updating the size of the unsafe sigaltstack also updates when
   // setting a new sigaltstack.
-  assert(__get_unsafe_sigalt_stack_ptr());
-  assert((__get_unsafe_sigalt_stack_top() -
-          __get_unsafe_sigalt_stack_bottom()) == new_sigstk.ss_size);
+  assert(__safestack_get_unsafe_sigalt_stack_ptr());
+  assert((__safestack_get_unsafe_sigalt_stack_top() -
+          __safestack_get_unsafe_sigalt_stack_bottom()) == new_sigstk.ss_size);
 
   struct sigaction sa;
   sa.sa_handler = signal_handler;
@@ -161,8 +167,10 @@ int main() {
   raise(SIGUSR2);
 
   // Check that unsafe stack is set to the normal unsafe stack.
-  assert(__get_unsafe_stack_ptr() <= __get_unsafe_stack_top() &&
-         __get_unsafe_stack_ptr() >= __get_unsafe_stack_bottom());
+  assert(__safestack_get_unsafe_stack_ptr() <=
+             __safestack_get_unsafe_stack_top() &&
+         __safestack_get_unsafe_stack_ptr() >=
+             __safestack_get_unsafe_stack_bottom());
 
   assert(signal_handlers_called == 4);
 

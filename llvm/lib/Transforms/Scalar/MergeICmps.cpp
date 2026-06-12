@@ -153,7 +153,15 @@ static BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId) {
     LLVM_DEBUG(dbgs() << "from non-zero AddressSpace\n");
     return {};
   }
+
+  // This pass only works correctly when all of the compared elements have
+  // byte-multiple sizes.
   const auto &DL = LoadI->getDataLayout();
+  if (!DL.typeSizeEqualsStoreSize(LoadI->getType())) {
+    LLVM_DEBUG(dbgs() << "type size is not a byte multiple\n");
+    return {};
+  }
+
   if (!isDereferenceablePointer(Addr, LoadI->getType(), DL)) {
     LLVM_DEBUG(dbgs() << "not dereferenceable\n");
     // We need to make sure that we can do comparison in any order, so we
@@ -329,6 +337,7 @@ visitICmp(const ICmpInst *const CmpI,
   auto Rhs = visitICmpLoadOperand(CmpI->getOperand(1), BaseId);
   if (!Rhs.BaseId)
     return std::nullopt;
+
   const auto &DL = CmpI->getDataLayout();
   return BCECmp(std::move(Lhs), std::move(Rhs),
                 DL.getTypeSizeInBits(CmpI->getOperand(0)->getType()), CmpI);

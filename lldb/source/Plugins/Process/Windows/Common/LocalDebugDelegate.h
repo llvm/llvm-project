@@ -18,7 +18,7 @@
 namespace lldb_private {
 
 class ProcessWindows;
-typedef std::shared_ptr<ProcessWindows> ProcessWindowsSP;
+using ProcessWindowsSP = std::shared_ptr<ProcessWindows>;
 
 // LocalDebugDelegate
 //
@@ -51,7 +51,8 @@ public:
   void OnLoadDll(const lldb_private::ModuleSpec &module_spec,
                  lldb::addr_t module_addr) override;
   void OnUnloadDll(lldb::addr_t module_addr) override;
-  void OnDebugString(const std::string &message) override;
+  void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
+                     uint16_t length_lower_word) override;
   void OnDebuggerError(const Status &error, uint32_t type) override;
 
 private:

@@ -107,7 +107,7 @@ private:
   ///
   /// \see https://dlang.org/spec/abi.html#back_ref .
   /// \see https://dlang.org/spec/abi.html#TypeBackRef .
-  void parseTypeBackref(std::string_view &Mangled);
+  void parseTypeBackref(OutputBuffer *Demangled, std::string_view &Mangled);
 
   /// Check whether it is the beginning of a symbol name.
   ///
@@ -156,7 +156,7 @@ private:
   /// \return true on success, false on error.
   ///
   /// \see https://dlang.org/spec/abi.html#Type .
-  bool parseType(std::string_view &Mangled);
+  bool parseType(OutputBuffer *Demangled, std::string_view &Mangled);
 
   /// An immutable view of the string we are demangling.
   const std::string_view Str;
@@ -297,7 +297,8 @@ void Demangler::parseSymbolBackref(OutputBuffer *Demangled,
     Mangled = {};
 }
 
-void Demangler::parseTypeBackref(std::string_view &Mangled) {
+void Demangler::parseTypeBackref(OutputBuffer *Demangled,
+                                 std::string_view &Mangled) {
   // A type back reference always points to a letter.
   //    TypeBackRef:
   //        Q NumberBackRef
@@ -327,7 +328,7 @@ void Demangler::parseTypeBackref(std::string_view &Mangled) {
   }
 
   // TODO: Add support for function type back references.
-  if (!parseType(Backref))
+  if (!parseType(Demangled, Backref))
     Mangled = {};
 
   LastBackref = SaveRefPos;
@@ -379,8 +380,20 @@ void Demangler::parseMangle(OutputBuffer *Demangled,
   // Artificial symbols end with 'Z' and have no type.
   if (Mangled.front() == 'Z') {
     Mangled.remove_prefix(1);
-  } else if (!parseType(Mangled))
-    Mangled = {};
+  } else {
+    OutputBuffer TypeBuf;
+    if (!parseType(&TypeBuf, Mangled))
+      Mangled = {};
+    else {
+      // Insert type before the symbol name that was already appended.
+      size_t TypeLen = TypeBuf.getCurrentPosition();
+      if (TypeLen > 0) {
+        Demangled->insert(0, TypeBuf.getBuffer(), TypeLen);
+        Demangled->insert(TypeLen, " ", 1);
+      }
+    }
+    std::free(TypeBuf.getBuffer());
+  }
 }
 
 void Demangler::parseQualified(OutputBuffer *Demangled,
@@ -465,7 +478,7 @@ void Demangler::parseIdentifier(OutputBuffer *Demangled,
   parseLName(Demangled, Mangled, Len);
 }
 
-bool Demangler::parseType(std::string_view &Mangled) {
+bool Demangler::parseType(OutputBuffer *Demangled, std::string_view &Mangled) {
   if (Mangled.empty()) {
     Mangled = {};
     return false;
@@ -481,14 +494,130 @@ bool Demangler::parseType(std::string_view &Mangled) {
   // Basic types.
   case 'i':
     Mangled.remove_prefix(1);
-    // TODO: Add type name dumping
+    *Demangled << "int";
     return true;
 
-    // TODO: Add support for the rest of the basic types.
+  case 'v':
+    Mangled.remove_prefix(1);
+    *Demangled << "void";
+    return true;
+
+  case 'a':
+    Mangled.remove_prefix(1);
+    *Demangled << "char";
+    return true;
+  case 'b':
+    Mangled.remove_prefix(1);
+    *Demangled << "bool";
+    return true;
+  case 'c':
+    Mangled.remove_prefix(1);
+    *Demangled << "creal";
+    return true;
+  case 'd':
+    Mangled.remove_prefix(1);
+    *Demangled << "double";
+    return true;
+  case 'e':
+    Mangled.remove_prefix(1);
+    *Demangled << "real";
+    return true;
+  case 'f':
+    Mangled.remove_prefix(1);
+    *Demangled << "float";
+    return true;
+  case 'g':
+    Mangled.remove_prefix(1);
+    *Demangled << "byte";
+    return true;
+  case 'h':
+    Mangled.remove_prefix(1);
+    *Demangled << "ubyte";
+    return true;
+  case 'j':
+    Mangled.remove_prefix(1);
+    *Demangled << "ireal";
+    return true;
+  case 'k':
+    Mangled.remove_prefix(1);
+    *Demangled << "uint";
+    return true;
+  case 'l':
+    Mangled.remove_prefix(1);
+    *Demangled << "long";
+    return true;
+  case 'm':
+    Mangled.remove_prefix(1);
+    *Demangled << "ulong";
+    return true;
+  case 'n':
+    Mangled.remove_prefix(1);
+    return true; // typeof(null), no output
+  case 'o':
+    Mangled.remove_prefix(1);
+    *Demangled << "ifloat";
+    return true;
+  case 'p':
+    Mangled.remove_prefix(1);
+    *Demangled << "idouble";
+    return true;
+  case 'q':
+    Mangled.remove_prefix(1);
+    *Demangled << "cfloat";
+    return true;
+  case 'r':
+    Mangled.remove_prefix(1);
+    *Demangled << "cdouble";
+    return true;
+  case 's':
+    Mangled.remove_prefix(1);
+    *Demangled << "short";
+    return true;
+  case 't':
+    Mangled.remove_prefix(1);
+    *Demangled << "ushort";
+    return true;
+  case 'u':
+    Mangled.remove_prefix(1);
+    *Demangled << "wchar";
+    return true;
+  case 'w':
+    Mangled.remove_prefix(1);
+    *Demangled << "dchar";
+    return true;
+  case 'z': // two-char: zi=cent, zk=ucent
+    if (Mangled.size() < 2) {
+      Mangled = {};
+      return false;
+    }
+    if (Mangled[1] == 'i') {
+      Mangled.remove_prefix(2);
+      *Demangled << "cent";
+      return true;
+    }
+    if (Mangled[1] == 'k') {
+      Mangled.remove_prefix(2);
+      *Demangled << "ucent";
+      return true;
+    }
+    Mangled = {};
+    return false;
+  case 'N':
+    if (Mangled.size() < 2) {
+      Mangled = {};
+      return false;
+    }
+    if (Mangled[1] == 'n') {
+      Mangled.remove_prefix(2);
+      *Demangled << "noreturn";
+      return true;
+    }
+    Mangled = {};
+    return false;
 
   // Back referenced type.
   case 'Q': {
-    parseTypeBackref(Mangled);
+    parseTypeBackref(Demangled, Mangled);
     return true;
   }
 

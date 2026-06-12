@@ -311,7 +311,7 @@ def ZeroIntAPS : Opcode {
 // [] -> [Pointer]
 def Null : Opcode {
   let Types = [PtrTypeClass];
-  let Args = [ArgUint64, ArgDesc];
+  let Args = [ArgUint64, ArgTypePtr];
   let HasGroup = 1;
 }
 
@@ -329,6 +329,7 @@ def GetPtrLocal : OffsetOpcode {
 def GetRefLocal : OffsetOpcode {
   bit HasCustomEval = 1;
 }
+def GetRefGlobal : OffsetOpcode;
 
 def CheckRefInit : Opcode {}
 
@@ -595,7 +596,7 @@ def GetFnPtr : Opcode {
 
 def GetIntPtr : Opcode {
   let Types = [AluTypeClass];
-  let Args = [ArgDesc];
+  let Args = [ArgTypePtr];
   let HasGroup = 1;
 }
 
@@ -848,6 +849,8 @@ def SideEffect : Opcode {}
 def InvalidCast : Opcode {
   let Args = [ArgCastKind, ArgBool];
 }
+def CheckDynamicCast : Opcode {}
+
 def InvalidStore : Opcode { let Args = [ArgTypePtr]; }
 def CheckPseudoDtor : Opcode {}
 

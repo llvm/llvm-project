@@ -12,7 +12,6 @@ define void @load_store(ptr %p) {
 ; LMUL1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP0]]
 ; LMUL1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; LMUL1:       vector.ph:
-; LMUL1-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; LMUL1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL1:       vector.body:
 ; LMUL1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -20,7 +19,7 @@ define void @load_store(ptr %p) {
 ; LMUL1-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 1 x i64>, ptr [[TMP3]], align 8
 ; LMUL1-NEXT:    [[TMP5:%.*]] = add <vscale x 1 x i64> [[WIDE_LOAD]], splat (i64 1)
 ; LMUL1-NEXT:    store <vscale x 1 x i64> [[TMP5]], ptr [[TMP3]], align 8
-; LMUL1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; LMUL1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP0]]
 ; LMUL1-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; LMUL1-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL1:       middle.block:

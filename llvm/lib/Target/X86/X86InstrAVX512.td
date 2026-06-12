@@ -3869,8 +3869,8 @@ def VMOVPDI2DIZrr  : AVX512BI<0x7E, MRMDestReg, (outs GR32:$dst), (ins VR128X:$s
 def VMOVPDI2DIZmr  : AVX512BI<0x7E, MRMDestMem, (outs),
                        (ins i32mem:$dst, VR128X:$src),
                        "vmovd\t{$src, $dst|$dst, $src}",
-                       [(store (i32 (extractelt (v4i32 VR128X:$src),
-                                     (iPTR 0))), addr:$dst)]>,
+                       [(any_store_32 (i32 (extractelt (v4i32 VR128X:$src),
+                                        (iPTR 0))), addr:$dst)]>,
                        EVEX, EVEX_CD8<32, CD8VT1>, Sched<[WriteVecStore]>;
 } // ExeDomain = SSEPackedInt
 
@@ -3893,8 +3893,8 @@ def VMOVPQIto64Zmr : I<0x7E, MRMDestMem, (outs), (ins i64mem:$dst, VR128X:$src),
 def VMOVPQI2QIZmr : I<0xD6, MRMDestMem, (outs),
                       (ins i64mem:$dst, VR128X:$src),
                       "vmovq\t{$src, $dst|$dst, $src}",
-                      [(store (extractelt (v2i64 VR128X:$src), (iPTR 0)),
-                              addr:$dst)]>,
+                      [(any_store_64 (extractelt (v2i64 VR128X:$src), (iPTR 0)),
+                                 addr:$dst)]>,
                       EVEX, TB, PD, REX_W, EVEX_CD8<64, CD8VT1>,
                       Sched<[WriteVecStore]>, Requires<[HasAVX512]>;
 
@@ -7228,6 +7228,35 @@ defm VPMADD52LUQ : avx512_pmadd52_common<0xb4, "vpmadd52luq", x86vpmadd52l,
 defm VPMADD52HUQ : avx512_pmadd52_common<0xb5, "vpmadd52huq", x86vpmadd52h,
                                          SchedWriteVecIMul, avx512vl_i64_info>,
                                          REX_W;
+
+// Use 512bit VPMADD52LUQ/VPMADD52HUQ version to implement 128/256 bit in case NoVLX.
+let Predicates = [HasIFMA, NoVLX] in {
+  def : Pat<(v2i64 (x86vpmadd52l VR128X:$x, VR128X:$y, VR128X:$z)),
+            (EXTRACT_SUBREG
+             (VPMADD52LUQZr
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$x, sub_xmm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$y, sub_xmm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$z, sub_xmm)), sub_xmm)>;
+  def : Pat<(v2i64 (x86vpmadd52l VR128X:$x, VR128X:$y, VR128X:$z)),
+            (EXTRACT_SUBREG
+             (VPMADD52HUQZr
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$x, sub_xmm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$y, sub_xmm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR128X:$z, sub_xmm)), sub_xmm)>;
+
+  def : Pat<(v4i64 (x86vpmadd52l VR256X:$x, VR256X:$y, VR256X:$z)),
+            (EXTRACT_SUBREG
+             (VPMADD52LUQZr
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$x, sub_ymm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$y, sub_ymm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$z, sub_ymm)), sub_ymm)>;
+  def : Pat<(v4i64 (x86vpmadd52l VR256X:$x, VR256X:$y, VR256X:$z)),
+            (EXTRACT_SUBREG
+             (VPMADD52HUQZr
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$x, sub_ymm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$y, sub_ymm),
+              (INSERT_SUBREG (v8i64 (IMPLICIT_DEF)), VR256X:$z, sub_ymm)), sub_ymm)>;
+}
 
 //===----------------------------------------------------------------------===//
 // AVX-512  Scalar convert from sign integer to float/double
@@ -11476,8 +11505,8 @@ multiclass avx512_extract_elt_bw_m<bits<8> opc, string OpcodeStr, SDNode OpNode,
   def mri : AVX512Ii8<opc, MRMDestMem, (outs),
               (ins _.ScalarMemOp:$dst, _.RC:$src1, u8imm:$src2),
               OpcodeStr#"\t{$src2, $src1, $dst|$dst, $src1, $src2}",
-              [(store (_.EltVT (trunc (OpNode (_.VT _.RC:$src1), timm:$src2))),
-                       addr:$dst)]>,
+              [(any_store (_.EltVT (trunc (OpNode (_.VT _.RC:$src1), timm:$src2))),
+                          addr:$dst)]>,
               EVEX, EVEX_CD8<_.EltSize, CD8VT1>, Sched<[WriteVecExtractSt]>;
 }
 

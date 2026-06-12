@@ -18,6 +18,23 @@
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
+_LIBSYCL_EXPORT DeviceKernelInfo &
+getDeviceKernelInfo(std::string_view KernelName) {
+  return ProgramAndKernelManager::getInstance().getDeviceKernelInfo(KernelName);
+}
+
+DeviceKernelInfo &
+ProgramAndKernelManager::getDeviceKernelInfo(std::string_view KernelName) {
+  auto It = MDeviceKernelInfoMap.find(KernelName);
+  assert(It != MDeviceKernelInfoMap.end());
+  return It->second;
+}
+
+void ProgramAndKernelManager::releaseResources() {
+  MDeviceKernelInfoMap.clear();
+  MDeviceImageManagers.clear();
+}
+
 static inline bool
 checkDeviceImageValidity(const llvm::object::OffloadBinary &OB) {
   return (OB.getOffloadKind() == llvm::object::OFK_SYCL) &&
@@ -32,9 +49,12 @@ void ProgramAndKernelManager::registerFatBin(const void *BinaryStart,
       llvm::StringRef(static_cast<const char *>(BinaryStart), Size),
       /*Identifier=*/"");
   auto BinOrErr = llvm::object::OffloadBinary::create(MBR);
-  if (!BinOrErr || BinOrErr->empty())
+  if (!BinOrErr) {
+    llvm::consumeError(BinOrErr.takeError());
     throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
                           "Failed to parse OffloadBinary");
+  }
+  assert(!BinOrErr->empty() && "OffloadBinary must contain at least one entry");
 
   DeviceImageManagerVec Images;
   Images.reserve(BinOrErr->size());

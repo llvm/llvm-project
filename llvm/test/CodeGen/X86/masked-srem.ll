@@ -1204,32 +1204,23 @@ define <3 x i10> @srem_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ;
 ; AVX512-LABEL: srem_v3i10:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    kmovb {{[0-9]+}}(%rsp), %k0
-; AVX512-NEXT:    kshiftlb $7, %k0, %k0
-; AVX512-NEXT:    kshiftrb $6, %k0, %k0
-; AVX512-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
-; AVX512-NEXT:    kshiftlb $7, %k1, %k1
-; AVX512-NEXT:    kshiftrb $7, %k1, %k1
-; AVX512-NEXT:    korw %k0, %k1, %k0
-; AVX512-NEXT:    movb $-5, %al
-; AVX512-NEXT:    kmovd %eax, %k1
-; AVX512-NEXT:    kandw %k1, %k0, %k0
-; AVX512-NEXT:    kmovb {{[0-9]+}}(%rsp), %k1
-; AVX512-NEXT:    kshiftlb $2, %k1, %k1
-; AVX512-NEXT:    korw %k1, %k0, %k0
-; AVX512-NEXT:    movb $7, %al
-; AVX512-NEXT:    kmovd %eax, %k1
-; AVX512-NEXT:    kandw %k1, %k0, %k1
 ; AVX512-NEXT:    vmovd %edi, %xmm0
 ; AVX512-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
 ; AVX512-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
 ; AVX512-NEXT:    vpslld $22, %xmm0, %xmm0
+; AVX512-NEXT:    vpsrad $22, %xmm0, %xmm0
+; AVX512-NEXT:    movb $7, %al
+; AVX512-NEXT:    kmovd %eax, %k1
+; AVX512-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; AVX512-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm1, %xmm1
+; AVX512-NEXT:    vpmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1,1,1,1]
+; AVX512-NEXT:    vptestmd %xmm2, %xmm1, %k1 {%k1}
 ; AVX512-NEXT:    vmovd %ecx, %xmm1
 ; AVX512-NEXT:    vpinsrd $1, %r8d, %xmm1, %xmm1
-; AVX512-NEXT:    vpsrad $22, %xmm0, %xmm0
 ; AVX512-NEXT:    vpinsrd $2, %r9d, %xmm1, %xmm1
 ; AVX512-NEXT:    vpslld $22, %xmm1, %xmm1
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1,1,1,1]
 ; AVX512-NEXT:    vpsrad $22, %xmm1, %xmm2 {%k1}
 ; AVX512-NEXT:    vpextrd $1, %xmm2, %ecx
 ; AVX512-NEXT:    vpextrd $1, %xmm0, %eax
