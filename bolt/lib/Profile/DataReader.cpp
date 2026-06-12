@@ -1090,56 +1090,12 @@ bool DataReader::hasMemData() {
   return false;
 }
 
-std::error_code DataReader::parseInNoLBRMode() {
-  auto GetOrCreateFuncEntry = [&](StringRef Name) {
+std::error_code DataReader::parse() {
+  auto GetOrCreateFuncBasicEntry = [&](StringRef Name) {
     return NamesToBasicSamples.try_emplace(Name, Name).first;
   };
 
-  auto GetOrCreateFuncMemEntry = [&](StringRef Name) {
-    return NamesToMemEvents.try_emplace(Name, Name).first;
-  };
-
-  while (hasBranchData()) {
-    ErrorOr<BasicSampleInfo> Res = parseSampleInfo();
-    if (std::error_code EC = Res.getError())
-      return EC;
-
-    BasicSampleInfo SI = Res.get();
-
-    // Ignore samples not involving known locations
-    if (!SI.Loc.IsSymbol)
-      continue;
-
-    auto I = GetOrCreateFuncEntry(SI.Loc.Name);
-    I->second.Data.emplace_back(std::move(SI));
-  }
-
-  while (hasMemData()) {
-    ErrorOr<MemInfo> Res = parseMemInfo();
-    if (std::error_code EC = Res.getError())
-      return EC;
-
-    MemInfo MI = Res.get();
-
-    // Ignore memory events not involving known pc.
-    if (!MI.Offset.IsSymbol)
-      continue;
-
-    auto I = GetOrCreateFuncMemEntry(MI.Offset.Name);
-    I->second.Data.emplace_back(std::move(MI));
-  }
-
-  for (auto &FuncBasicSamples : NamesToBasicSamples)
-    llvm::stable_sort(FuncBasicSamples.second.Data);
-
-  for (auto &MemEvents : NamesToMemEvents)
-    llvm::stable_sort(MemEvents.second.Data);
-
-  return std::error_code();
-}
-
-std::error_code DataReader::parse() {
-  auto GetOrCreateFuncEntry = [&](StringRef Name) {
+  auto GetOrCreateFuncBranchEntry = [&](StringRef Name) {
     return NamesToBranches.try_emplace(Name, Name).first;
   };
 
@@ -1164,28 +1120,40 @@ std::error_code DataReader::parse() {
     return make_error_code(llvm::errc::io_error);
   }
 
-  if (NoLBRMode)
-    return parseInNoLBRMode();
-
   while (hasBranchData()) {
-    ErrorOr<BranchInfo> Res = parseBranchInfo();
-    if (std::error_code EC = Res.getError())
-      return EC;
+    if (NoLBRMode) {
+      ErrorOr<BasicSampleInfo> Res = parseSampleInfo();
+      if (std::error_code EC = Res.getError())
+        return EC;
 
-    BranchInfo BI = Res.get();
+      BasicSampleInfo SI = Res.get();
 
-    // Ignore branches not involving known location.
-    if (!BI.From.IsSymbol && !BI.To.IsSymbol)
-      continue;
+      // Ignore samples not involving known locations
+      if (!SI.Loc.IsSymbol)
+        continue;
 
-    auto I = GetOrCreateFuncEntry(BI.From.Name);
-    I->second.Data.emplace_back(std::move(BI));
+      auto I = GetOrCreateFuncBasicEntry(SI.Loc.Name);
+      I->second.Data.emplace_back(std::move(SI));
+    } else {
+      ErrorOr<BranchInfo> Res = parseBranchInfo();
+      if (std::error_code EC = Res.getError())
+        return EC;
 
-    // Add entry data for branches to another function or branches
-    // to entry points (including recursive calls)
-    if (BI.To.IsSymbol && (BI.From.Name != BI.To.Name || BI.To.Offset == 0)) {
-      I = GetOrCreateFuncEntry(BI.To.Name);
-      I->second.EntryData.emplace_back(std::move(BI));
+      BranchInfo BI = Res.get();
+
+      // Ignore branches not involving known location.
+      if (!BI.From.IsSymbol && !BI.To.IsSymbol)
+        continue;
+
+      auto I = GetOrCreateFuncBranchEntry(BI.From.Name);
+      I->second.Data.emplace_back(std::move(BI));
+
+      // Add entry data for branches to another function or branches
+      // to entry points (including recursive calls)
+      if (BI.To.IsSymbol && (BI.From.Name != BI.To.Name || BI.To.Offset == 0)) {
+        I = GetOrCreateFuncBranchEntry(BI.To.Name);
+        I->second.EntryData.emplace_back(std::move(BI));
+      }
     }
   }
 
@@ -1203,6 +1171,9 @@ std::error_code DataReader::parse() {
     auto I = GetOrCreateFuncMemEntry(MI.Offset.Name);
     I->second.Data.emplace_back(std::move(MI));
   }
+
+  for (auto &FuncBasicSamples : NamesToBasicSamples)
+    llvm::stable_sort(FuncBasicSamples.second.Data);
 
   for (auto &FuncBranches : NamesToBranches)
     llvm::stable_sort(FuncBranches.second.Data);
