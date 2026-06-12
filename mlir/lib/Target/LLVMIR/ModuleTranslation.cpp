@@ -2045,6 +2045,9 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     llvmFunc->setLinkage(convertLinkageToLLVM(function.getLinkage()));
     llvmFunc->setCallingConv(convertCConvToLLVM(function.getCConv()));
     mapFunction(function.getName(), llvmFunc);
+    if (function.getFunctionMetadataAttr())
+      return function.emitError()
+             << "not yet implemented: translating function_metadata to LLVM IR";
     addRuntimePreemptionSpecifier(function.getDsoLocal(), llvmFunc);
 
     // Convert function attributes.
