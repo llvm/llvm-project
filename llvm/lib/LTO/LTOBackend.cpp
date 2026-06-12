@@ -609,7 +609,6 @@ static bool splitOptAndCodeGenThin(unsigned task, const Config &C,
                                    const std::vector<uint8_t> &CmdArgs,
                                    bool DoOpt, AddStreamFn IRAddStream,
                                    ArrayRef<StringRef> &BitcodeLibFuncs) {
-  unsigned ThreadCount = 0;
   const Target *T = &TM->getTarget();
 
   static std::mutex PrintMutex;

@@ -299,7 +299,7 @@ void SplitModuleCG::SplitModule(ModuleCreationCallback ModuleCallback,
 SplitModuleCG::SplitModuleCG(Module &M,
                              const ModuleSummaryIndex &CombinedIndex,
                              unsigned LimitPartition)
-    : M(M), CG(M), N(LimitPartition) {
+    : N(LimitPartition), M(M), CG(M) {
   // Track existing non-local symbols. This ensures that when we promote
   // internal symbols to external for partitioning, we can handle renaming
   // and avoid conflicts.
