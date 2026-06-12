@@ -620,25 +620,20 @@ void ExprEngine::VisitDeclStmt(const DeclStmt *DS, ExplodedNode *Pred,
     return;
   }
 
-  // Bypass a nop initialization that assign to itself at variable declaration.
-  // I.e., int x = x;
-  // This is an idiom in C code, and GCC will not generate any assemblies for
-  // this self initialization, even under -O0, although Clang will.
-  // We therefore ignore all types for C code.
-  // For C++ code, Sema will not report for fundamental types and pointers.
-  // We hence also ignore them as in C, but leave the uninitialized variable
-  // report of references to the checker. For record types, as their AST
-  // structures are different in C++, they will not hit the filter here and
-  // will be checked by the checker.
-  if (const Expr *EI = VD->getInit())
+  // Self-assignment initialization in variable declaration,
+  // i.e., `int x = x;`,
+  // is a C idiom to suppress warnings of unused variables.
+  // This filter will not match variables of C++ record types, but will match
+  // C++ references. Allow references continuing here to make the undefined
+  // value checker report self-assignments of C++ references.
+  if (const Expr *EI = VD->getInit()) {
     if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(EI->IgnoreImpCasts()))
       if (VD == DR->getDecl())
-        if (getContext().getLangOpts().getCLangStd() ||
-            (getContext().getLangOpts().getCPlusPlusLangStd() &&
-             !VD->getType()->isReferenceType())) {
+        if (!VD->getType()->isReferenceType()) {
           Dst.insert(Pred);
           return;
         }
+  }
 
   // FIXME: all pre/post visits should eventually be handled by ::Visit().
   ExplodedNodeSet dstPreVisit;

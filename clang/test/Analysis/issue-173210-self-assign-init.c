@@ -6,30 +6,57 @@
 // RUN:   -verify -w
 
 // Self assignment initialization in C code will be treated as nop.
-// We will not report the VarDecl, but the following DeclRefExpr if it has not
-// yet been initialized then.
+// We will report the VarDecl only if it was left uninitialized by the time of
+// a subsequent DeclRefExpr.
+
+// NOTE: No warnings from the deadcode.DeadStores checker.
 
 void clang_analyzer_warnIfReached();
 
 struct S { int x; };
 union U { int x; };
+enum T { TT };
 
-void nowarn() {
-  int x = x; // no-warnings for C/C++
-  int *p = p; // no-warnings for C/C++
-  struct S s = s; // no-warning for C, but C++ will not report
-  union U u = u; // no-warning for C, but C++ will not report
-  // Ensure the analysis is not terminated sliently.
-  clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}}
-}
+// No need to test VarDecl of multiple variables, as they will be split into
+// single ones when constructing the CFG.
 
-int warn() {
-  int x = x; // no-warnings for C/C++
+int warnvar() {
+  int x = x; // no-warnings for C/C++, binding is skipped via the
+             // self-assignment filter.
   return x; // expected-warning{{Undefined or garbage value returned to caller}}
 }
 
+int *warnptr() {
+  int *p = p; // Same as warnvar.
+  return p; // expected-warning{{Undefined or garbage value returned to caller}}
+}
+
+enum T warnenum() {
+  enum T t = t; // Same as warnvar.
+  return t; // expected-warning{{Undefined or garbage value returned to caller}}
+}
+
+int warnstruct() {
+  struct S s = s; // no-warnings for C/C++
+                  // In C, same as warnvar.
+                  // In C++, binding is handled in the ctor call and s.x is
+                  // bound to an Undefined.
+  return s.x; // expected-warning{{Undefined or garbage value returned to caller}}
+}
+
+#ifndef __cplusplus
+int warnunion() {
+  union U u = u; // no-warnings for C/C++
+                 // In C, same as warnvar.
+                 // In C++, binding is handled in the ctor call and u is bound
+                 // to a lazyCompoundVal, which will not trigger an undefined
+                 // usage warning.
+  return u.x; // expected-warning{{Undefined or garbage value returned to caller}}
+}
+#endif // not __cplusplus
+
 // NOTE: The self assignment of reference type is also tested in stack-addr-ps.cpp.
-// E.g., `int& i = i;` in function f5
+// I.e., `int& i = i;` in function f5
 // We only keep a simple regression confirmation here.
 #ifdef __cplusplus
 void warnref() {
