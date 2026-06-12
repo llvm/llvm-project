@@ -177,6 +177,13 @@ void DataAggregator::addInputFile(StringRef Filename) {
   InputFilenames.emplace_back(Filename);
 }
 
+void DataAggregator::setParsingBuf(std::unique_ptr<MemoryBuffer> MB) {
+  FileBuf = std::move(MB);
+  ParsingBuf = FileBuf->getBuffer();
+  Col = 0;
+  Line = 1;
+}
+
 void DataAggregator::mergeFrom(const DataAggregator &Other) {
   Traces.insert(Traces.end(), Other.Traces.begin(), Other.Traces.end());
 
@@ -436,10 +443,7 @@ std::error_code DataAggregator::parsePreAggregated() {
   if (std::error_code EC = MB.getError())
     return EC;
 
-  FileBuf = std::move(*MB);
-  ParsingBuf = FileBuf->getBuffer();
-  Col = 0;
-  Line = 1;
+  setParsingBuf(std::move(*MB));
 
   // When processing a shared object, filter pre-aggregated entries by buildid.
   file_magic Magic;
@@ -553,9 +557,8 @@ Error DataAggregator::parsePerfScript() {
       return errorCodeToError(EC);
     }
 
-    ParsingBuf = (*MB)->getBuffer();
-    Col = 0;
-    Line = 1;
+    setParsingBuf(std::move(*MB));
+
     if (std::error_code EC = parsePerfScriptFileHeader())
       return errorCodeToError(EC);
   }
@@ -706,10 +709,7 @@ Error DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process) {
   if (std::error_code EC = MB.getError())
     return errorCodeToError(EC);
 
-  FileBuf = std::move(*MB);
-  ParsingBuf = FileBuf->getBuffer();
-  Col = 0;
-  Line = 1;
+  setParsingBuf(std::move(*MB));
   return Error::success();
 }
 

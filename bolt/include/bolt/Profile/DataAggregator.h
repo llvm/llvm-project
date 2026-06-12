@@ -359,6 +359,9 @@ private:
   /// consume it (peek only).
   bool checkNewLine();
 
+  /// Set input buffer for parser helpers.
+  void setParsingBuf(std::unique_ptr<MemoryBuffer> MB);
+
   /// Prepare to parse data from a given perf script invocation.
   /// Returns an error if the perf invocation fails.
   Error prepareToParse(StringRef Name, PerfProcessInfo &Process);
