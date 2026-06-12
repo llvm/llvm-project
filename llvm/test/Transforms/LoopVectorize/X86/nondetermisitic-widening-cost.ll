@@ -6,8 +6,8 @@
 
 target triple = "x86_64-unknown-linux"
 
-define void @fun(i64 %0, float %1, ptr noalias  %a, ptr noalias %b, i64 %len) #0 {
-; CHECK-LABEL: define void @fun(
+define float @fun(i64 %0, float %1, ptr noalias  %a, ptr noalias %b, i64 %len) #0 {
+; CHECK-LABEL: define float @fun(
 ; CHECK-SAME: i64 [[TMP0:%.*]], float [[TMP1:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[LEN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VLA:%.*]] = alloca float, i64 [[LEN]], align 16
@@ -113,7 +113,8 @@ define void @fun(i64 %0, float %1, ptr noalias  %a, ptr noalias %b, i64 %len) #0
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV]], 128
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_END_LOOPEXIT:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[FOR_END_LOOPEXIT]]:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[R:%.*]] = load float, ptr [[VLA]], align 4
+; CHECK-NEXT:    ret float [[R]]
 ;
 entry:
   %vla = alloca float, i64 %len, align 16
@@ -139,7 +140,8 @@ loop:
   br i1 %exitcond.not, label %for.end.loopexit, label %loop
 
 for.end.loopexit:
-  ret void
+  %r = load float, ptr %vla
+  ret float %r
 }
 
 attributes #0 = { "target-features"="+avx2" }
