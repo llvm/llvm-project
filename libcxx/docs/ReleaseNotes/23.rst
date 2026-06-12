@@ -51,6 +51,7 @@ Implemented Papers
 - P2542R8: ``views::concat`` (`Github <https://llvm.org/PR105419>`__)
 - P3383R3: ``mdspan.at()`` (`Github <https://llvm.org/PR175213>`__)
 - P3508R0: Wording for "constexpr for specialized memory algorithms" (`Github <https://llvm.org/PR118379>`__)
+- P4206R0: Revert string support in ``std::constant_wrapper`` (`Github <https://llvm.org/PR203338>`__)
 
 Improvements and New Features
 -----------------------------
@@ -84,6 +85,11 @@ Potentially breaking changes
   causes programs which rely on these includes to not compile anymore. Any errors caused by this should be fixable by
   including the correct header. To ease the transition ``_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23`` can be defined, which
   includes the removed headers again. This macro will be removed in LLVM 24.
+- P4206R0 (Revert string support in ``std::constant_wrapper``). This fixes C++26's ``std::constant_wrapper`` by removing 
+  support for a special case (string constants). Doing that simplifies the class, makes it easier to use as a function
+  parameter, and reduce symbol sizes significantly. The change will affect existing compilers retroactively(It's a DR).
+  Also this is a breaking change to C++26, but the class' relative newness and the difficulty of back-poting it means
+  that it currently has few users.
 
 Announcements About Future Releases
 -----------------------------------

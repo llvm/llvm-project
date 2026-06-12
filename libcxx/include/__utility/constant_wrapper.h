@@ -282,7 +282,7 @@ struct constant_wrapper : __cw_operators {
 
   template <__constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator=(_Rp) const noexcept
-      -> constant_wrapper<(value = _Rp::value)> {
+      -> constant_wrapper<auto(value = _Rp::value)> {
     return {};
   }
 
