@@ -37,7 +37,6 @@ static const MachineMemOperand::Flags MOAtomicHintBit1 =
     MachineMemOperand::MOTargetFlag4;
 
 #define FALKOR_STRIDED_ACCESS_MD "falkor.strided.access"
-#define AARCH64_ATOMIC_STORE_HINT_MD "aarch64.atomic.hint"
 
 // AArch64 MachineCombiner patterns
 enum AArch64MachineCombinerPattern : unsigned {
