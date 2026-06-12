@@ -4,7 +4,7 @@
 # RUN:     FileCheck %s --check-prefix=OUTPUT
 # RUN: FileCheck %s --check-prefix=DEBUG < %t
 #
-# DEBUG: Estimated function size for f = 4 bytes
+# DEBUG: 0x{{[0-9a-f]+}} +4: renamable $r0 = COPY $r1
 #
 # OUTPUT:  mov r0, r1
 # OUTPUT:  bx lr
