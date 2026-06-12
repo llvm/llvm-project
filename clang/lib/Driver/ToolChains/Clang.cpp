@@ -5385,22 +5385,20 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-emit-llvm-uselists");
 
     if (IsUsingLTO) {
+      const Arg *LTOArg = Args.getLastArg(options::OPT_foffload_lto,
+                                          options::OPT_foffload_lto_EQ);
       if (IsDeviceOffloadAction && !JA.isDeviceOffloading(Action::OFK_OpenMP) &&
           !Args.hasFlag(options::OPT_offload_new_driver,
                         options::OPT_no_offload_new_driver,
                         C.getActiveOffloadKinds() != Action::OFK_None) &&
-          !Triple.isAMDGPU()) {
+          !Triple.isAMDGPU() && !Triple.isSPIRV()) {
         D.Diag(diag::err_drv_unsupported_opt_for_target)
-            << Args.getLastArg(options::OPT_foffload_lto,
-                               options::OPT_foffload_lto_EQ)
-                   ->getAsString(Args)
+            << (LTOArg ? LTOArg->getAsString(Args) : "-foffload-lto")
             << Triple.getTriple();
       } else if (Triple.isNVPTX() && !IsRDCMode &&
                  JA.isDeviceOffloading(Action::OFK_Cuda)) {
         D.Diag(diag::err_drv_unsupported_opt_for_language_mode)
-            << Args.getLastArg(options::OPT_foffload_lto,
-                               options::OPT_foffload_lto_EQ)
-                   ->getAsString(Args)
+            << (LTOArg ? LTOArg->getAsString(Args) : "-foffload-lto")
             << "-fno-gpu-rdc";
       } else {
         assert(LTOMode == LTOK_Full || LTOMode == LTOK_Thin);
@@ -9576,6 +9574,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_flto_EQ,
       OPT_hipspv_pass_plugin_EQ,
       OPT_use_spirv_backend,
+      OPT_no_use_spirv_backend,
       OPT_fmultilib_flag,
       OPT_fprofile_generate,
       OPT_fprofile_generate_EQ,
@@ -9639,10 +9638,13 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       for (Arg *A : ToolChainArgs) {
         if (A->getOption().matches(OPT_Zlinker_input))
           LinkerArgs.emplace_back(A->getValue());
-        else if (ShouldForward(CompilerOptions, A, *TC))
+        else if (ShouldForward(CompilerOptions, A, *TC)) {
+          A->claim();
           A->render(Args, CompilerArgs);
-        else if (ShouldForward(LinkerOptions, A, *TC))
+        } else if (ShouldForward(LinkerOptions, A, *TC)) {
+          A->claim();
           A->render(Args, LinkerArgs);
+        }
       }
 
       // If the user explicitly requested it via `--offload-arch` we should
@@ -9713,7 +9715,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
             options::OPT_fprofile_instr_generate_EQ);
         if (!Args.hasArg(options::OPT_foffload_lto_EQ,
                          options::OPT_fno_offload_lto) &&
-            !UsesProfileGenerate)
+            !UsesProfileGenerate && !TC->getTriple().isSPIRV())
           CmdArgs.push_back("--no-lto");
       }
     }

@@ -804,6 +804,46 @@ bool MIRParserImpl::parseRegisterInfo(PerFunctionMIParsingState &PFS,
     RegInfo.setCalleeSavedRegs(CalleeSavedRegisters);
   }
 
+  // Stash any VirtRegMap state on MRI.
+  // VirtRegMap::init() will use that information to get pre-populated
+  // on the first analysis run.
+  for (const auto &VReg : YamlMF.VirtualRegisters) {
+    if (VReg.SplitFrom.Value.empty() && VReg.AssignedPhys.Value.empty())
+      continue;
+
+    auto It = PFS.VRegInfos.find(VReg.ID.Value);
+    if (It == PFS.VRegInfos.end())
+      continue;
+    Register ChildReg = It->second->VReg;
+
+    MachineRegisterInfo::PendingVirtRegMapEntry Pending;
+    Pending.VReg = ChildReg;
+
+    if (!VReg.SplitFrom.Value.empty()) {
+      VRegInfo *Parent = nullptr;
+      if (parseVirtualRegisterReference(PFS, Parent, VReg.SplitFrom.Value,
+                                        Error))
+        return error(Error, VReg.SplitFrom.SourceRange);
+      if (Parent->VReg == ChildReg)
+        return error(VReg.SplitFrom.SourceRange.Start,
+                     Twine("'split-from' references the same vreg as 'id' (%") +
+                         Twine(VReg.ID.Value) + ")");
+      Pending.SplitFrom = Parent->VReg;
+    }
+    if (!VReg.AssignedPhys.Value.empty()) {
+      Register Phys;
+      if (parseRegisterReference(PFS, Phys, VReg.AssignedPhys.Value, Error))
+        return error(Error, VReg.AssignedPhys.SourceRange);
+      if (!Phys.isPhysical())
+        return error(
+            VReg.AssignedPhys.SourceRange.Start,
+            Twine("'assigned-phys' must be a physical register, got '") +
+                VReg.AssignedPhys.Value + "'");
+      Pending.AssignedPhys = Phys.asMCReg();
+    }
+    RegInfo.addPendingVirtRegMapEntry(Pending);
+  }
+
   return false;
 }
 

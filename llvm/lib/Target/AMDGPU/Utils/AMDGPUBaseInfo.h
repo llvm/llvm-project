@@ -661,6 +661,11 @@ const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
                                                       unsigned FmtB,
                                                       unsigned F8F8Opcode);
 
+/// \return true if this combination is listed as valid.
+LLVM_READONLY
+bool isValidWMMAScaleFmtCombination(unsigned AFmt, unsigned AScale,
+                                    unsigned BFmt, unsigned BScale);
+
 LLVM_READONLY
 const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t BitsPerComp,
                                                   uint8_t NumComponents,
@@ -1681,6 +1686,7 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+  case AMDGPU::OPERAND_REG_IMM_V2FP64:
   case AMDGPU::OPERAND_KIMM64:
     return 8;
 
@@ -1772,6 +1778,10 @@ bool isArgPassedInSGPR(const Argument *Arg);
 bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);
 
 LLVM_READONLY bool isPackedFP32Inst(unsigned Opc);
+
+LLVM_READONLY bool isPacked64BitInst(unsigned Opc);
+
+LLVM_READONLY bool isPackedFP32or64BitInst(unsigned Opc);
 
 LLVM_READONLY
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,

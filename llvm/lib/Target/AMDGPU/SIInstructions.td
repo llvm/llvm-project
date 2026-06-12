@@ -2216,6 +2216,19 @@ def : GCNPat <
                                  SReg_32)), sub1))
 >;
 
+def : GCNPat <
+  (UniformUnaryFrag<fneg> (v2f64 SGPR_128:$src)),
+  (v2f64 (REG_SEQUENCE SGPR_128,
+         (i32 (EXTRACT_SUBREG $src, sub0)), sub0,
+         (i32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG $src, sub1)),
+                                           (i32 (S_MOV_B32 (i32 0x80000000)))),
+                                 SReg_32)), sub1,
+         (i32 (EXTRACT_SUBREG $src, sub2)), sub2,
+         (i32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG $src, sub3)),
+                                           (i32 (S_MOV_B32 (i32 0x80000000)))),
+                                 SReg_32)), sub3))
+>;
+
 // FIXME: Use S_BITSET0_B32/B64?
 def : GCNPat <
   (UniformUnaryFrag<fabs> (f64 SReg_64:$src)),
@@ -2355,6 +2368,14 @@ def : GCNPat <
                      (i32 (S_MOV_B32 (i32 0x80000000)))), sub1)
 > {
   let SubtargetPredicate = HasPackedFP32Ops;
+}
+
+def : GCNPat <
+  (DivergentUnaryFrag<fneg> (v2f64 VReg_128:$src)),
+  (V_PK_ADD_F64 !or(SRCMODS.NEG, SRCMODS.NEG_HI), VReg_128:$src,
+                !or(SRCMODS.NEG, SRCMODS.NEG_HI), (v2i64 (as_i64imm (i32 0))))
+> {
+  let SubtargetPredicate = HasPackedFP64Ops;
 }
 
 foreach fp16vt = [f16, bf16] in {
