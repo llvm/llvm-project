@@ -164,6 +164,11 @@ defm V_PK_MIN_U16 : VOP3PInst<"v_pk_min_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I1
 defm V_PK_MAX_I16 : VOP3PInst<"v_pk_max_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, smax>;
 defm V_PK_MAX_U16 : VOP3PInst<"v_pk_max_u16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16>, umax>;
 
+let SubtargetPredicate = HasPackedFP64Ops, SchedRW = [WriteDouble] in {
+defm V_PK_MAX_NUM_F64 : VOP3PInst<"v_pk_max_num_f64", V_PK_VOP2_F64_Profile, fmaxnum_like>;
+defm V_PK_MIN_NUM_F64 : VOP3PInst<"v_pk_min_num_f64", V_PK_VOP2_F64_Profile, fminnum_like>;
+}
+
 let SubtargetPredicate = HasIEEEMinimumMaximumInsts, ReadsModeReg = 0 in {
 defm V_PK_MAXIMUM_F16 : VOP3PInst<"v_pk_maximum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>, fmaximum>;
 defm V_PK_MINIMUM_F16 : VOP3PInst<"v_pk_minimum_f16", VOP3P_Profile<VOP_V2F16_V2F16_V2F16, VOP3_PACKED>, fminimum>;
@@ -2705,6 +2710,8 @@ let PostEncoderMethod = "postEncodeVOP3<true, true, false>" in {
 defm V_PK_FMA_F64      : VOP3P_Real_gfx1250<0x3b>;
 defm V_PK_MUL_F64      : VOP3P_Real_gfx1250<0x3c>;
 defm V_PK_ADD_F64      : VOP3P_Real_gfx1250<0x4b>;
+defm V_PK_MAX_NUM_F64  : VOP3P_Real_gfx1250<0x4e>;
+defm V_PK_MIN_NUM_F64  : VOP3P_Real_gfx1250<0x4f>;
 
 let AssemblerPredicate = isGFX1250Plus in
 def : AMDGPUMnemonicAlias<"v_fma_mix_f32_f16",  "v_fma_mix_f32">;
