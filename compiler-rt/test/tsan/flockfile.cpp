@@ -1,4 +1,4 @@
-// RUN: %clangxx_tsan -O1 %s -o %t %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 // UNSUPPORTED: darwin
 
 #include <stdio.h>
@@ -18,5 +18,5 @@ int main() {
   t2.join();
 }
 
-// CHECK-NOT: TheadSanitizer: data race
+// CHECK-NOT: ThreadSanitizer: data race
 // CHECK: ThreadSanitizer: no issues found
