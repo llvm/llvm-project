@@ -1141,7 +1141,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         else if (Mode.Output == DenormalMode::PositiveZero)
           Val = APFloat::getZero(Sem, /*Negative=*/false);
         else if (Mode.Output != DenormalMode::IEEE)
-          break; // Dynamic: hardware behavior is unknown, leave the call in place.
+          break; // Dynamic: hardware behavior is unknown, leave the call in
+                 // place.
       }
 
       return IC.replaceInstUsesWith(II, ConstantFP::get(II.getContext(), Val));
