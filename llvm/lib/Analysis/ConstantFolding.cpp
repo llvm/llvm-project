@@ -1277,7 +1277,7 @@ Constant *llvm::ConstantFoldInstruction(const Instruction *I,
       // skip the value if it is equal to the phi node itself we choose not to
       // because that would break the rule that constant folding only applies if
       // all operands are constants.
-      if (isa<UndefValue>(Incoming))
+      if (isa<PoisonValue>(Incoming))
         continue;
       // If the incoming value is not a constant, then give up.
       auto *C = dyn_cast<Constant>(Incoming);
@@ -1293,7 +1293,7 @@ Constant *llvm::ConstantFoldInstruction(const Instruction *I,
     }
 
     // If we reach here, all incoming values are the same constant or undef.
-    return CommonValue ? CommonValue : UndefValue::get(PN->getType());
+    return CommonValue ? CommonValue : PoisonValue::get(PN->getType());
   }
 
   // Scan the operand list, checking to see if they are all constants, if so,
@@ -3786,8 +3786,6 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     case Intrinsic::smin:
     case Intrinsic::umax:
     case Intrinsic::umin:
-      if (!C0 && !C1)
-        return UndefValue::get(Ty);
       if (!C0 || !C1)
         return MinMaxIntrinsic::getSaturationPoint(IntrinsicID, Ty);
       return ConstantInt::get(
@@ -3864,8 +3862,6 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     }
     case Intrinsic::uadd_sat:
     case Intrinsic::sadd_sat:
-      if (!C0 && !C1)
-        return UndefValue::get(Ty);
       if (!C0 || !C1)
         return Constant::getAllOnesValue(Ty);
       if (IntrinsicID == Intrinsic::uadd_sat)
@@ -3874,8 +3870,6 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         return ConstantInt::get(Ty, C0->sadd_sat(*C1));
     case Intrinsic::usub_sat:
     case Intrinsic::ssub_sat:
-      if (!C0 && !C1)
-        return UndefValue::get(Ty);
       if (!C0 || !C1)
         return Constant::getNullValue(Ty);
       if (IntrinsicID == Intrinsic::usub_sat)
@@ -3990,7 +3984,7 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       Constant *Elt = Operands[0]->getAggregateElement(I);
       if (!Elt)
         return nullptr;
-      if (isa<UndefValue>(Elt) || Elt->isNullValue())
+      if (isa<PoisonValue>(Elt) || Elt->isNullValue())
         continue;
       return ConstantInt::get(Ty, I);
     }
@@ -4311,7 +4305,7 @@ static Constant *ConstantFoldFixedVectorCall(
         break;
       auto *PassthruElt = Passthru->getAggregateElement(I);
       auto *VecElt = VecData ? VecData->getAggregateElement(I) : nullptr;
-      if (isa<UndefValue>(MaskElt)) {
+      if (isa<PoisonValue>(MaskElt)) {
         if (PassthruElt)
           NewElements.push_back(PassthruElt);
         else if (VecElt)
@@ -4570,9 +4564,6 @@ static Constant *ConstantFoldScalableVectorCall(
 
 static std::pair<Constant *, Constant *>
 ConstantFoldScalarFrexpCall(Constant *Op, Type *IntTy) {
-  if (isa<PoisonValue>(Op))
-    return {Op, PoisonValue::get(IntTy)};
-
   auto *ConstFP = dyn_cast<ConstantFP>(Op);
   if (!ConstFP)
     return {};
