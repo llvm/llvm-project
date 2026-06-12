@@ -585,10 +585,10 @@ llvm.func @masked_gather_scatter_intrinsics(%M: vector<7 x !llvm.ptr>, %mask: ve
 
 // CHECK-LABEL: @masked_expand_compress_intrinsics
 llvm.func @masked_expand_compress_intrinsics(%ptr: !llvm.ptr, %mask: vector<7xi1>, %passthru: vector<7xf32>) {
-  // CHECK: call <7 x float> @llvm.masked.expandload.v7f32(ptr %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
+  // CHECK: call <7 x float> @llvm.masked.expandload.v7f32.p0(ptr %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
   %0 = "llvm.intr.masked.expandload"(%ptr, %mask, %passthru)
     : (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> (vector<7xf32>)
-  // CHECK: call void @llvm.masked.compressstore.v7f32(<7 x float> %{{.*}}, ptr %{{.*}}, <7 x i1> %{{.*}})
+  // CHECK: call void @llvm.masked.compressstore.v7f32.p0(<7 x float> %{{.*}}, ptr %{{.*}}, <7 x i1> %{{.*}})
   "llvm.intr.masked.compressstore"(%0, %ptr, %mask)
     : (vector<7xf32>, !llvm.ptr, vector<7xi1>) -> ()
   llvm.return
@@ -596,10 +596,10 @@ llvm.func @masked_expand_compress_intrinsics(%ptr: !llvm.ptr, %mask: vector<7xi1
 
 // CHECK-LABEL: @masked_expand_compress_intrinsics_with_alignment
 llvm.func @masked_expand_compress_intrinsics_with_alignment(%ptr: !llvm.ptr, %mask: vector<7xi1>, %passthru: vector<7xf32>) {
-  // CHECK: call <7 x float> @llvm.masked.expandload.v7f32(ptr align 8 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
+  // CHECK: call <7 x float> @llvm.masked.expandload.v7f32.p0(ptr align 8 %{{.*}}, <7 x i1> %{{.*}}, <7 x float> %{{.*}})
   %0 = "llvm.intr.masked.expandload"(%ptr, %mask, %passthru) {arg_attrs = [{llvm.align = 8 : i32}, {}, {}]}
     : (!llvm.ptr, vector<7xi1>, vector<7xf32>) -> (vector<7xf32>)
-  // CHECK: call void @llvm.masked.compressstore.v7f32(<7 x float> %{{.*}}, ptr align 8 %{{.*}}, <7 x i1> %{{.*}})
+  // CHECK: call void @llvm.masked.compressstore.v7f32.p0(<7 x float> %{{.*}}, ptr align 8 %{{.*}}, <7 x i1> %{{.*}})
   "llvm.intr.masked.compressstore"(%0, %ptr, %mask) {arg_attrs = [{}, {llvm.align = 8 : i32}, {}]}
     : (vector<7xf32>, !llvm.ptr, vector<7xi1>) -> ()
   llvm.return
@@ -816,7 +816,7 @@ llvm.func @coro_id() {
   %a = llvm.alloca %c x i8 : (i64) -> !llvm.ptr
   // CHECK: call token @llvm.coro.id
   %null = llvm.mlir.zero : !llvm.ptr
-  llvm.intr.coro.id %zero, %a, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
+  llvm.intr.coro.id %zero, %a, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
   llvm.return
 }
 
@@ -824,9 +824,9 @@ llvm.func @coro_id() {
 llvm.func @coro_begin(%arg0: !llvm.ptr) {
   %zero = llvm.mlir.constant(0 : i32) : i32
   %null = llvm.mlir.zero : !llvm.ptr
-  %token = llvm.intr.coro.id %zero, %null, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
+  %token = llvm.intr.coro.id %zero, %null, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
   // CHECK: call ptr @llvm.coro.begin
-  llvm.intr.coro.begin %token, %arg0 : (!llvm.token, !llvm.ptr) -> !llvm.ptr
+  llvm.intr.coro.begin %token, %arg0 : (token, !llvm.ptr) -> !llvm.ptr
   llvm.return
 }
 
@@ -851,7 +851,7 @@ llvm.func @coro_align() {
 // CHECK-LABEL: @coro_save
 llvm.func @coro_save(%arg0: !llvm.ptr) {
   // CHECK: call token @llvm.coro.save
-  %0 = llvm.intr.coro.save %arg0 : (!llvm.ptr) -> !llvm.token
+  %0 = llvm.intr.coro.save %arg0 : (!llvm.ptr) -> token
   llvm.return
 }
 
@@ -859,7 +859,7 @@ llvm.func @coro_save(%arg0: !llvm.ptr) {
 llvm.func @coro_suspend(%arg0 : i1) {
   %zero = llvm.mlir.constant(0 : i32) : i32
   %null = llvm.mlir.zero : !llvm.ptr
-  %token = llvm.intr.coro.id %zero, %null, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
+  %token = llvm.intr.coro.id %zero, %null, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
   // CHECK: call i8 @llvm.coro.suspend
   %0 = llvm.intr.coro.suspend %token, %arg0 : i8
   llvm.return
@@ -867,9 +867,9 @@ llvm.func @coro_suspend(%arg0 : i1) {
 
 // CHECK-LABEL: @coro_end
 llvm.func @coro_end(%arg0: !llvm.ptr, %arg1 : i1) {
-  %none = llvm.mlir.none : !llvm.token
+  %none = llvm.mlir.none : token
   // CHECK: call void @llvm.coro.end
-  llvm.intr.coro.end %arg0, %arg1, %none : (!llvm.ptr, i1, !llvm.token) -> !llvm.void
+  llvm.intr.coro.end %arg0, %arg1, %none : (!llvm.ptr, i1, token) -> !llvm.void
   llvm.return
 }
 
@@ -877,9 +877,9 @@ llvm.func @coro_end(%arg0: !llvm.ptr, %arg1 : i1) {
 llvm.func @coro_free(%arg0 : !llvm.ptr) {
   %zero = llvm.mlir.constant(0 : i32) : i32
   %null = llvm.mlir.zero : !llvm.ptr
-  %token = llvm.intr.coro.id %zero, %null, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
+  %token = llvm.intr.coro.id %zero, %null, %null, %null : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
   // CHECK: call ptr @llvm.coro.free
-  %0 = llvm.intr.coro.free %token, %arg0 : (!llvm.token, !llvm.ptr) -> !llvm.ptr
+  %0 = llvm.intr.coro.free %token, %arg0 : (token, !llvm.ptr) -> !llvm.ptr
   llvm.return
 }
 
@@ -1475,8 +1475,8 @@ llvm.func @vector_scmp(%a: vector<4 x i32>, %b: vector<4 x i32>) -> vector<4 x i
 // CHECK-DAG: declare void @llvm.masked.store.v7f32.p0(<7 x float>, ptr captures(none), <7 x i1>)
 // CHECK-DAG: declare <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr>, <7 x i1>, <7 x float>)
 // CHECK-DAG: declare void @llvm.masked.scatter.v7f32.v7p0(<7 x float>, <7 x ptr>, <7 x i1>)
-// CHECK-DAG: declare <7 x float> @llvm.masked.expandload.v7f32(ptr captures(none), <7 x i1>, <7 x float>)
-// CHECK-DAG: declare void @llvm.masked.compressstore.v7f32(<7 x float>, ptr captures(none), <7 x i1>)
+// CHECK-DAG: declare <7 x float> @llvm.masked.expandload.v7f32.p0(ptr captures(none), <7 x i1>, <7 x float>)
+// CHECK-DAG: declare void @llvm.masked.compressstore.v7f32.p0(<7 x float>, ptr captures(none), <7 x i1>)
 // CHECK-DAG: declare void @llvm.var.annotation.p0.p0(ptr, ptr, ptr, i32, ptr)
 // CHECK-DAG: declare ptr @llvm.ptr.annotation.p0.p0(ptr, ptr, ptr, i32, ptr)
 // CHECK-DAG: declare i16 @llvm.annotation.i16.p0(i16, ptr, ptr, i32)

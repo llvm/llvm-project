@@ -12,11 +12,11 @@
 
 // Helper class to convert vector element types to integers.
 class ChangeElementTypeToInteger<ValueType InVT> {
-  ValueType VT = !cond(
-    !eq(InVT, v2f32): v2i32,
-    !eq(InVT, v4f32): v4i32,
+  ValueType VT = !switch(InVT,
+    v2f32: v2i32,
+    v4f32: v4i32,
     // TODO: Other types.
-    true : untyped);
+    untyped);
 }
 
 class VTPair<ValueType A, ValueType B> {
@@ -2024,9 +2024,8 @@ def TIndexhint_op : Operand<i32> {
 
 class MRSI : RtSystemI<1, (outs GPR64:$Rt), (ins mrs_sysreg_op:$systemreg),
                        "mrs", "\t$Rt, $systemreg"> {
-  bits<15> systemreg;
-  let Inst{20}= 0b1;
-  let Inst{19-5} = systemreg;
+  bits<16> systemreg;
+  let Inst{20-5} = systemreg;
   let DecoderNamespace = "Fallback";
   // The MRS is set as a NZCV setting instruction. Not all MRS instructions
   // require doing this. The alternative was to explicitly model each one, but
@@ -2040,9 +2039,8 @@ class MRSI : RtSystemI<1, (outs GPR64:$Rt), (ins mrs_sysreg_op:$systemreg),
 // would do it, but feels like overkill at this point.
 class MSRI : RtSystemI<0, (outs), (ins msr_sysreg_op:$systemreg, GPR64:$Rt),
                        "msr", "\t$systemreg, $Rt"> {
-  bits<15> systemreg;
-  let Inst{20} = 0b1;
-  let Inst{19-5} = systemreg;
+  bits<16> systemreg;
+  let Inst{20-5} = systemreg;
   let DecoderNamespace = "Fallback";
 }
 
@@ -6710,6 +6708,13 @@ multiclass SIMDThreeSameVectorFDot<string asm, SDPatternOperator OpNode = null_f
                                          v2f32, v4f16, OpNode>;
   def v8f16_v4f32 : BaseSIMDThreeSameVectorDot<1, 0, 0b10, 0b1111, asm, ".4s", ".8h", V128,
                                          v4f32, v8f16, OpNode>;
+
+  def : Pat<(v2f32 (int_aarch64_neon_fdot (v2f32 V64:$Rd),
+                    (v4f16 V64:$Rn), (v4f16 V64:$Rm))),
+            (!cast<Instruction>(NAME # "v4f16_v2f32") $Rd, $Rn, $Rm)>;
+  def : Pat<(v4f32 (int_aarch64_neon_fdot (v4f32 V128:$Rd),
+                    (v8f16 V128:$Rn), (v8f16 V128:$Rm))),
+            (!cast<Instruction>(NAME # "v8f16_v4f32") $Rd, $Rn, $Rm)>;
 }
 
 // FP8 assembly/disassembly classes
@@ -9384,6 +9389,18 @@ multiclass SIMDThreeSameVectorFDOTIndex<string asm> {
                                            V64, v2f32, v4f16, VectorIndexS, null_frag>;
   def v8f16_v4f32 : BaseSIMDThreeSameVectorIndexS<0b1, 0b0, 0b01, 0b1001, asm, ".4s", ".8h",".2h",
                                             V128, v4f32, v8f16, VectorIndexS, null_frag>;
+
+  def : Pat<(v2f32 (int_aarch64_neon_fdot
+              (v2f32 V64:$Rd), (v4f16 V64:$Rn),
+              (v4f16 (AArch64duplane16 (v8f16 V128:$Rm), VectorIndexS:$Idx)))),
+            (!cast<Instruction>(NAME # "v4f16_v2f32") $Rd, $Rn, $Rm,
+              VectorIndexS:$Idx)>;
+
+  def : Pat<(v4f32 (int_aarch64_neon_fdot
+              (v4f32 V128:$Rd), (v8f16 V128:$Rn),
+              (v8f16 (AArch64duplane16 (v8f16 V128:$Rm), VectorIndexS:$Idx)))),
+            (!cast<Instruction>(NAME # "v8f16_v4f32") $Rd, $Rn, $Rm,
+              VectorIndexS:$Idx)>;
 }
 
 //----------------------------------------------------------------------------

@@ -720,3 +720,17 @@ add_libc_test(
     libc.src.wchar.putwchar
     libc.test.UnitTest.ErrnoCheckingTest
 )
+
+add_libc_test(
+  swprintf_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    swprintf_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.wchar.swprintf
+    libc.test.UnitTest.ErrnoCheckingTest
+)

@@ -535,10 +535,21 @@ namespace call_on_member {
 
     void work();
 
+    RefCountable& constObj() const { return *m_constObj; }
+
   private:
     RefPtr<RefCountable> m_obj;
     const RefPtr<RefCountable> m_constObj;
   };
+
+  SomeObj* provide();
+
+  void foo() {
+    provide()->constObj().method();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    Ref { provide()->constObj() }->method();
+    RefPtr { provide() }->constObj().method();
+  }
 
 }
 
@@ -557,4 +568,21 @@ namespace call_with_weak_ptr {
     weakPtr->method();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
+
+  struct Provider {
+    RefCountableWithWeakPtr* provide();
+  };
+  int intValue();
+
+  struct Container {
+    Container(Provider& provider)
+      : m_weakPtr(provider.provide())
+      , m_value(intValue())
+    { }
+
+  private:
+    WeakPtr<RefCountableWithWeakPtr> m_weakPtr;
+    int m_value;
+  };
+
 }

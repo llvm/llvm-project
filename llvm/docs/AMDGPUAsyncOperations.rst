@@ -50,6 +50,13 @@ memory and LDS memory.
   void @llvm.amdgcn.global.store.async.from.lds.type(ptr %dst, ptr %src)
   void @llvm.amdgcn.cluster.load.async.to.lds.type(ptr %dst, ptr %src)
 
+**GFX1250 Tensor DMA Instructions**
+
+.. code-block:: llvm
+
+  void @llvm.amdgcn.tensor.load.to.lds(...)
+  void @llvm.amdgcn.tensor.store.from.lds(...)
+
 Asyncmark Operations
 ---------------------
 

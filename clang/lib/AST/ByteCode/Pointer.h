@@ -45,12 +45,24 @@ struct BlockPointer {
 };
 
 struct IntPointer {
-  const Descriptor *Desc;
+  const Type *Ty;
   uint64_t Value;
 
-  std::optional<IntPointer> atOffset(const ASTContext &ASTCtx,
-                                     unsigned Offset) const;
-  IntPointer baseCast(const ASTContext &ASTCtx, unsigned BaseOffset) const;
+  std::optional<IntPointer> atOffset(const Context &Ctx, unsigned Offset) const;
+  IntPointer baseCast(const Context &Ctx, unsigned BaseOffset) const;
+
+  QualType getPointeeType() const {
+    if (!Ty)
+      return QualType();
+
+    QualType QT(Ty, 0);
+    if (QT->isPointerOrReferenceType())
+      QT = QT->getPointeeType();
+    else if (QT->isArrayType())
+      QT = QT->getAsArrayTypeUnsafe()->getElementType();
+
+    return QT.IgnoreParens();
+  }
 };
 
 struct FunctionPointer {
@@ -107,8 +119,8 @@ public:
   Pointer(Block *B, uint64_t BaseAndOffset);
   Pointer(const Pointer &P);
   Pointer(Pointer &&P);
-  Pointer(uint64_t Address, const Descriptor *Desc, uint64_t Offset = 0)
-      : Offset(Offset), StorageKind(Storage::Int), Int{Desc, Address} {}
+  Pointer(uint64_t Address, const Type *Ty, uint64_t Offset = 0)
+      : Offset(Offset), StorageKind(Storage::Int), Int{Ty, Address} {}
   Pointer(const Function *F, uint64_t Offset = 0)
       : Offset(Offset), StorageKind(Storage::Fn), Fn{F} {}
   Pointer(const Type *TypePtr, const Type *TypeInfoType, uint64_t Offset = 0)
@@ -127,7 +139,7 @@ public:
     if (P.StorageKind != StorageKind)
       return false;
     if (isIntegralPointer())
-      return P.Int.Value == Int.Value && P.Int.Desc == Int.Desc &&
+      return P.Int.Value == Int.Value && P.Int.Ty == Int.Ty &&
              P.Offset == Offset;
 
     if (isFunctionPointer())
@@ -161,7 +173,7 @@ public:
   /// Offsets a pointer inside an array.
   [[nodiscard]] Pointer atIndex(uint64_t Idx) const {
     if (isIntegralPointer())
-      return Pointer(Int.Value, Int.Desc, Idx);
+      return Pointer(Int.Value, Int.Ty, Idx);
     if (isFunctionPointer())
       return Pointer(Fn.Func, Idx);
 
@@ -290,9 +302,7 @@ public:
 
   /// Accessor for information about the declaration site.
   const Descriptor *getDeclDesc() const {
-    if (isIntegralPointer())
-      return Int.Desc;
-    if (isFunctionPointer() || isTypeidPointer())
+    if (!isBlockPointer())
       return nullptr;
 
     assert(isBlockPointer());
@@ -309,8 +319,8 @@ public:
       const Function *F = Fn.Func;
       return F ? F->getDecl() : DeclTy();
     }
-    assert(isIntegralPointer());
-    return Int.Desc ? Int.Desc->getSource() : DeclTy();
+    llvm_unreachable("Unsupported pointer type in getSource()");
+    return DeclTy();
   }
 
   /// Returns a pointer to the object of which this pointer is a field.
@@ -335,7 +345,7 @@ public:
   /// Accessors for information about the innermost field.
   const Descriptor *getFieldDesc() const {
     if (isIntegralPointer())
-      return Int.Desc;
+      return nullptr;
 
     if (isRoot())
       return getDeclDesc();
@@ -348,6 +358,17 @@ public:
       return QualType(Typeid.TypeInfoType, 0);
     if (isFunctionPointer())
       return Fn.Func->getDecl()->getType();
+    if (isIntegralPointer())
+      return Int.getPointeeType();
+
+    if (isRoot() && BS.Base == Offset) {
+      // If this pointer points to the root of a declaration, try to consult
+      // the ValueDecl directly, since that has a type with more information,
+      // e.g. the correct ElaboratedTypeKeyword.
+      if (const ValueDecl *VD = getDeclDesc()->asValueDecl())
+        return VD->getType();
+      return getDeclDesc()->getType();
+    }
 
     if (inPrimitiveArray() && Offset != BS.Base) {
       // Unfortunately, complex and vector types are not array types in clang,
@@ -360,17 +381,18 @@ public:
         return CT->getElementType();
     }
 
-    return getFieldDesc()->getDataElemType();
+    return getFieldDesc()->getType();
   }
+
+  const VarDecl *getRootVarDecl() const;
 
   [[nodiscard]] Pointer getDeclPtr() const { return Pointer(BS.Pointee); }
 
   /// Returns the element size of the innermost field.
   size_t elemSize() const {
     if (isIntegralPointer()) {
-      if (!Int.Desc)
-        return 1;
-      return Int.Desc->getElemDataSize();
+      // FIXME: Remove this and handle int ptrs specially?
+      return 1;
     }
 
     if (BS.Base == RootPtrMark)
@@ -903,8 +925,18 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
   if (P.isArrayElement()) {
     if (P.isOnePastEnd())
       OS << " one-past-the-end";
-    else
-      OS << " index " << P.getIndex();
+    else {
+      OS << ' ';
+      std::string Indices;
+      llvm::raw_string_ostream SS(Indices);
+      Pointer K = P;
+      while (K.isArrayElement()) {
+        SS << ']' << K.expand().getIndex() << '[';
+        K = K.expand().getArray();
+      }
+      std::reverse(Indices.begin(), Indices.end());
+      OS << Indices;
+    }
   } else if (P.isArrayRoot())
     OS << " arrayroot";
 
@@ -912,6 +944,8 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
     OS << " dummy";
   if (!P.isLive())
     OS << " dead";
+  if (P.isBaseClass())
+    OS << " base-class";
   return OS;
 }
 

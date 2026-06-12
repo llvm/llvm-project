@@ -632,12 +632,7 @@ void FunctionSpecializer::cleanUpSSA() {
     removeSSACopy(*F);
 }
 
-
 template <> struct llvm::DenseMapInfo<SpecSig> {
-  static inline SpecSig getEmptyKey() { return {~0U, {}}; }
-
-  static inline SpecSig getTombstoneKey() { return {~1U, {}}; }
-
   static unsigned getHashValue(const SpecSig &S) {
     return static_cast<unsigned>(hash_value(S));
   }

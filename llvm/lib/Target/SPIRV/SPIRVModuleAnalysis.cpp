@@ -1195,7 +1195,10 @@ static void AddAtomicVectorFloatRequirements(const MachineInstr &MI,
         "The element type for the result type of an atomic vector float "
         "instruction must be a 16-bit floating-point scalar");
 
-  if (isBFloat16Type(EltTypeDef))
+  // The extension is defined for fp16, but the AMD target lets a bf16 vector
+  // use the same instruction so it can lower to a packed bf16 atomic.
+  if (isBFloat16Type(EltTypeDef) &&
+      ST.getTargetTriple().getVendor() != Triple::AMD)
     reportFatalUsageError(
         "The element type for the result type of an atomic vector float "
         "instruction cannot be a bfloat16 scalar");
@@ -1478,7 +1481,8 @@ void addPrintfRequirements(const MachineInstr &MI,
                            SPIRV::RequirementHandler &Reqs,
                            const SPIRVSubtarget &ST) {
   SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
-  SPIRVTypeInst PtrType = GR->getSPIRVTypeForVReg(MI.getOperand(4).getReg());
+  SPIRVTypeInst PtrType =
+      GR->getSPIRVTypeForVReg(MI.getOperand(4).getReg(), MI.getMF());
   if (PtrType) {
     MachineOperand ASOp = PtrType->getOperand(1);
     if (ASOp.isImm()) {
@@ -1953,6 +1957,7 @@ void addInstrRequirements(const MachineInstr &MI,
     }
     break;
   case SPIRV::OpConstantFunctionPointerINTEL:
+  case SPIRV::OpFunctionPointerCallINTEL:
     if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
       Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
@@ -2026,12 +2031,6 @@ void addInstrRequirements(const MachineInstr &MI,
                          false);
     Reqs.addExtension(SPIRV::Extension::SPV_KHR_poison_freeze);
     Reqs.addCapability(SPIRV::Capability::PoisonFreezeKHR);
-    break;
-  case SPIRV::OpFunctionPointerCallINTEL:
-    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
-      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
-      Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
-    }
     break;
   case SPIRV::OpAtomicFAddEXT:
   case SPIRV::OpAtomicFMinEXT:
@@ -2321,6 +2320,7 @@ void addInstrRequirements(const MachineInstr &MI,
     AddDotProductRequirements(MI, Reqs, ST);
     break;
   case SPIRV::OpImageSampleImplicitLod:
+  case SPIRV::OpImageFetch:
     Reqs.addCapability(SPIRV::Capability::Shader);
     addImageOperandReqs(MI, Reqs, ST, 4);
     break;
@@ -2328,17 +2328,7 @@ void addInstrRequirements(const MachineInstr &MI,
     addImageOperandReqs(MI, Reqs, ST, 4);
     break;
   case SPIRV::OpImageSampleDrefImplicitLod:
-    Reqs.addCapability(SPIRV::Capability::Shader);
-    addImageOperandReqs(MI, Reqs, ST, 5);
-    break;
   case SPIRV::OpImageSampleDrefExplicitLod:
-    Reqs.addCapability(SPIRV::Capability::Shader);
-    addImageOperandReqs(MI, Reqs, ST, 5);
-    break;
-  case SPIRV::OpImageFetch:
-    Reqs.addCapability(SPIRV::Capability::Shader);
-    addImageOperandReqs(MI, Reqs, ST, 4);
-    break;
   case SPIRV::OpImageDrefGather:
   case SPIRV::OpImageGather:
     Reqs.addCapability(SPIRV::Capability::Shader);

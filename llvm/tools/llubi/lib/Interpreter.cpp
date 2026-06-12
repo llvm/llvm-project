@@ -150,17 +150,26 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   const DataLayout &DL;
   std::list<Frame> CallStack;
   AnyValue None;
+  std::list<AnyValue> UnsupportedConstantValues;
   Library Lib;
 
   const AnyValue &getValue(Value *V) {
-    if (auto *C = dyn_cast<Constant>(V))
-      return Ctx.getConstantValue(C);
+    if (auto *C = dyn_cast<Constant>(V)) {
+      if (const AnyValue *Val = Ctx.getConstantValue(C))
+        return *Val;
+      reportError() << "Unsupported constant: " << *C << ".";
+      UnsupportedConstantValues.push_back(
+          AnyValue::getPoisonValue(Ctx, C->getType()));
+      return UnsupportedConstantValues.back();
+    }
     return CurrentFrame->ValueMap.at(V);
   }
 
   void setResult(Instruction &I, AnyValue V) {
     if (!hasProgramExited() && !Handler.onInstructionExecuted(I, V))
       setFailed();
+    if (hasProgramExited())
+      return;
     assert(V.isCompatibleWith(I.getType()) && "Unexpected value storage kind.");
     if (!V.isNone())
       CurrentFrame->ValueMap.insert_or_assign(&I, std::move(V));

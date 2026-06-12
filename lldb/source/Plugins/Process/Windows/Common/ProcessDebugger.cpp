@@ -511,13 +511,13 @@ ProcessDebugger::OnDebugException(bool first_chance,
     LLDB_LOG(log,
              "Debugger thread reported exception {0:x} at address {1:x}, but "
              "there is no session.",
-             record.GetExceptionCode(), record.GetExceptionAddress());
+             record.GetExceptionValue(), record.GetExceptionAddress());
     return ExceptionResult::SendToApplication;
   }
 
   ExceptionResult result = ExceptionResult::SendToApplication;
-  if ((record.GetExceptionCode() == EXCEPTION_BREAKPOINT ||
-       record.GetExceptionCode() ==
+  if ((record.GetExceptionValue() == EXCEPTION_BREAKPOINT ||
+       record.GetExceptionValue() ==
            0x4000001FL /*WOW64 STATUS_WX86_BREAKPOINT*/) &&
       !m_session_data->m_initial_stop_received) {
     // Handle breakpoints at the first chance.
@@ -549,7 +549,11 @@ void ProcessDebugger::OnUnloadDll(lldb::addr_t module_addr) {
   // Do nothing by default
 }
 
-void ProcessDebugger::OnDebugString(const std::string &string) {}
+void ProcessDebugger::OnDebugString(lldb::addr_t debug_string_addr,
+                                    bool is_unicode,
+                                    uint16_t length_lower_word) {
+  // Do nothing by default
+}
 
 void ProcessDebugger::OnDebuggerError(const Status &error, uint32_t type) {
   llvm::sys::ScopedLock lock(m_mutex);

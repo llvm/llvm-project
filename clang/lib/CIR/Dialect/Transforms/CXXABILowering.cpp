@@ -332,12 +332,10 @@ mlir::LogicalResult CIRAllocaOpABILowering::matchAndRewrite(
     cir::AllocaOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type allocaPtrTy = op.getType();
-  mlir::Type allocaTy = op.getAllocaType();
   mlir::Type loweredAllocaPtrTy = getTypeConverter()->convertType(allocaPtrTy);
-  mlir::Type loweredAllocaTy = getTypeConverter()->convertType(allocaTy);
 
   cir::AllocaOp loweredOp = cir::AllocaOp::create(
-      rewriter, op.getLoc(), loweredAllocaPtrTy, loweredAllocaTy, op.getName(),
+      rewriter, op.getLoc(), loweredAllocaPtrTy, op.getName(),
       op.getAlignmentAttr(), /*dynAllocSize=*/adaptor.getDynAllocSize());
   loweredOp.setInit(op.getInit());
   loweredOp.setConstant(op.getConstant());
@@ -441,7 +439,10 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
   }
 
   if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty)) {
-    auto convertedTy = mlir::cast<cir::RecordType>(tc.convertType(recordTy));
+    auto convertedTy =
+        mlir::dyn_cast<cir::RecordType>(tc.convertType(recordTy));
+    if (!convertedTy)
+      return {};
 
     if (auto recVal = mlir::dyn_cast_if_present<cir::ZeroAttr>(initVal))
       return cir::ZeroAttr::get(convertedTy);
@@ -837,10 +838,20 @@ class CIRABITypeConverter : public mlir::TypeConverter {
     // Unnamed record types can't be referred to recursively, so we can just
     // convert this one. It also doesn't have uniqueness problems, so we can
     // just do a conversion on it.
-    if (!type.getName())
-      return cir::RecordType::get(
-          type.getContext(), convertRecordMemberTypes(type), type.getPacked(),
-          type.getPadded(), type.getKind());
+    if (!type.getName()) {
+      llvm::SmallVector<mlir::Type> converted = convertRecordMemberTypes(type);
+      if (auto u = mlir::dyn_cast<cir::UnionType>(type)) {
+        mlir::Type loweredPadding;
+        if (mlir::Type pad = u.getPadding())
+          loweredPadding = convertType(pad);
+        return cir::UnionType::get(type.getContext(), converted,
+                                   type.getPacked(), loweredPadding);
+      }
+      auto s = mlir::cast<cir::StructType>(type);
+      return cir::StructType::get(type.getContext(), converted,
+                                  type.getPacked(), type.getPadded(),
+                                  s.getIsClass());
+    }
 
     assert(!type.isIncomplete() || type.getMembers().empty());
 
@@ -853,8 +864,14 @@ class CIRABITypeConverter : public mlir::TypeConverter {
     SmallVectorImpl<cir::RecordType> &recursiveStack =
         getCurrentThreadRecursiveStack();
 
-    auto convertedType = cir::RecordType::get(
-        type.getContext(), type.getABIConvertedName(), type.getKind());
+    cir::RecordType convertedType;
+    if (mlir::isa<cir::UnionType>(type))
+      convertedType =
+          cir::UnionType::get(type.getContext(), type.getABIConvertedName());
+    else
+      convertedType =
+          cir::StructType::get(type.getContext(), type.getABIConvertedName(),
+                               mlir::cast<cir::StructType>(type).getIsClass());
 
     // This type has already been converted, just return it.
     if (convertedType.isComplete())
@@ -873,8 +890,12 @@ class CIRABITypeConverter : public mlir::TypeConverter {
 
     SmallVector<mlir::Type> convertedMembers = convertRecordMemberTypes(type);
 
-    convertedType.complete(convertedMembers, type.getPacked(),
-                           type.getPadded());
+    mlir::Type loweredPadding;
+    if (auto u = mlir::dyn_cast<cir::UnionType>(type))
+      if (mlir::Type pad = u.getPadding())
+        loweredPadding = convertType(pad);
+    convertedType.complete(convertedMembers, type.getPacked(), type.getPadded(),
+                           loweredPadding);
     addConvertedRecordType(convertedType);
     return convertedType;
   }
@@ -925,7 +946,10 @@ public:
       return cir::FuncType::get(loweredInputTypes, loweredReturnType,
                                 /*isVarArg=*/type.getVarArg());
     });
-    addConversion([&](cir::RecordType type) -> mlir::Type {
+    addConversion([&](cir::StructType type) -> mlir::Type {
+      return convertRecordType(type);
+    });
+    addConversion([&](cir::UnionType type) -> mlir::Type {
       return convertRecordType(type);
     });
   }

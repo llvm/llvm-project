@@ -592,7 +592,10 @@ SomeObj* provide();
 
 - (void)storeSomeObj {
   auto *obj = [self getSomeObj];
+  // expected-warning@-1{{Local variable 'obj' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
   [obj doWork];
+  auto *obj2 = [SomeObj sharedInstance];
+  [obj2 doWork];
 }
 
 - (void)assignToGuardianArg:(RetainPtr<SomeObj>&)obj {
