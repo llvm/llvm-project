@@ -552,8 +552,8 @@ static bool tracesToPointerAlloca(Value *V) {
   V = V->stripPointerCasts();
   if (auto *AI = dyn_cast<AllocaInst>(V))
     return isUntypedPointerTy(AI->getAllocatedType());
-  return match(V, m_Intrinsic<Intrinsic::spv_alloca>()) ||
-         match(V, m_Intrinsic<Intrinsic::spv_alloca_array>());
+  return match(V, m_AnyIntrinsic<Intrinsic::spv_alloca,
+                                 Intrinsic::spv_alloca_array>());
 }
 
 // Maybe restore original function return type.
