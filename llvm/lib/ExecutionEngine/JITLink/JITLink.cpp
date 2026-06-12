@@ -8,6 +8,12 @@
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 
+// On AArch64-only EJIT builds, restrict JITLink dispatch to AArch64/ELF.
+// On X86 builds with EJIT_TRIM_LLVM_BACKEND, full dispatch must remain.
+#if defined(EJIT_TRIM_JITLINK_AARCH64_ONLY) && !defined(EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
+#define EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
+#endif
+
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Magic.h"
 #ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL

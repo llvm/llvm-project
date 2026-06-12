@@ -1,4 +1,5 @@
-if(NOT EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
+# COFFOptions tablegen is needed unless this is an AArch64-only EJIT build.
+if(NOT (EJIT_TRIM_LLVM_BACKEND AND LLVM_TARGETS_TO_BUILD STREQUAL "AArch64"))
   set(LLVM_TARGET_DEFINITIONS COFFOptions.td)
   tablegen(LLVM COFFOptions.inc -gen-opt-parser-defs)
   add_public_tablegen_target(JITLinkTableGen)
@@ -27,13 +28,15 @@ set(JITLINK_MACHO_COFF
   COFF.cpp  COFFDirectiveParser.cpp  COFFLinkGraphBuilder.cpp  COFF_x86_64.cpp
   )
 
-# ELF arches not needed by EJIT (keep only current target's arch)
+# ELF backends for non-AArch64/non-x86 arches — excluded in AArch64 EJIT builds,
+# included in normal and X86 EJIT builds.
 set(JITLINK_ELF_OTHER
   ELF_aarch32.cpp  ELF_loongarch.cpp  ELF_ppc64.cpp
   ELF_riscv.cpp
   )
 
-# Bloat — not needed by any EJIT arch
+# XCOFF format and non-AArch64/non-x86 arch helpers — excluded in AArch64 EJIT
+# builds, included in normal and X86 EJIT builds.
 set(JITLINK_BLOAT
   XCOFF.cpp  XCOFF_ppc64.cpp  XCOFFLinkGraphBuilder.cpp
   # Arch support (non-AArch64, non-x86)
@@ -47,21 +50,17 @@ set(JITLINK_ARCH_X86
 
 set(JITLINK_DEPENDS intrinsics_gen)
 
-if(NOT EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
-  # Normal build: include everything
+if(EJIT_TRIM_LLVM_BACKEND AND LLVM_TARGETS_TO_BUILD STREQUAL "AArch64")
+  # AArch64 with EJIT_TRIM_LLVM_BACKEND: ELF only, AArch64 only.  aarch32.cpp
+  # needed by LinkGraphLinkingLayer.cpp (hasTargetFlags).
+  list(APPEND JITLINK_SOURCES aarch32.cpp)
+else()
+  # Normal build, X86 EJIT, or EXPERIMENTAL: include all format/arch backends.
   list(APPEND JITLINK_SOURCES ${JITLINK_MACHO_COFF})
   list(APPEND JITLINK_SOURCES ${JITLINK_ELF_OTHER})
   list(APPEND JITLINK_SOURCES ${JITLINK_BLOAT})
   list(APPEND JITLINK_SOURCES ${JITLINK_ARCH_X86})
   list(APPEND JITLINK_DEPENDS JITLinkTableGen)
-elseif(LLVM_TARGETS_TO_BUILD STREQUAL "AArch64")
-  # AArch64 bare-metal: ELF only, AArch64 only.  Include aarch32 to
-  # satisfy extern declarations transitively included via ELF_aarch32.h.
-  list(APPEND JITLINK_SOURCES aarch32.cpp)
-else()
-  # x86 bare-metal: ELF + MachO + COFF, x86 arch support
-  list(APPEND JITLINK_SOURCES ${JITLINK_MACHO_COFF})
-  list(APPEND JITLINK_SOURCES ${JITLINK_ARCH_X86})
 endif()
 
 add_llvm_component_library(LLVMJITLink

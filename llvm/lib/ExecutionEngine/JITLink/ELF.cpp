@@ -12,6 +12,12 @@
 
 #include "llvm/ExecutionEngine/JITLink/ELF.h"
 
+// On AArch64-only EJIT builds, restrict ELF dispatch to AArch64.
+// On X86 builds with EJIT_TRIM_LLVM_BACKEND, X86 ELF dispatch must remain.
+#if defined(EJIT_TRIM_JITLINK_AARCH64_ONLY) && !defined(EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
+#define EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
+#endif
+
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_aarch32.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_aarch64.h"
@@ -78,7 +84,9 @@ createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer,
   if (memcmp(Buffer.data(), ELF::ElfMagic, strlen(ELF::ElfMagic)) != 0)
     return make_error<JITLinkError>("ELF magic not valid");
 
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   uint8_t DataEncoding = Buffer.data()[ELF::EI_DATA];
+#endif
   Expected<uint16_t> TargetMachineArch = readTargetMachineArch(Buffer);
   if (!TargetMachineArch)
     return TargetMachineArch.takeError();

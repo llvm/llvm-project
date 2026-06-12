@@ -6,11 +6,9 @@ if( CMAKE_HOST_UNIX AND HAVE_LIBRT )
   set(rt_lib rt)
 endif()
 
-add_llvm_component_library(LLVMOrcJIT
+# OrcJIT sources always included
+set(ORCJIT_SOURCES
   AbsoluteSymbols.cpp
-  COFF.cpp
-  COFFVCRuntimeSupport.cpp
-  COFFPlatform.cpp
   CompileOnDemandLayer.cpp
   CompileUtils.cpp
   Core.cpp
@@ -41,8 +39,6 @@ add_llvm_component_library(LLVMOrcJIT
   LoadLinkableFile.cpp
   LookupAndRecordAddrs.cpp
   LLJIT.cpp
-  MachO.cpp
-  MachOPlatform.cpp
   MapperJITLinkMemoryManager.cpp
   MemoryMapper.cpp
   ELFNixPlatform.cpp
@@ -64,6 +60,25 @@ add_llvm_component_library(LLVMOrcJIT
   RedirectionManager.cpp
   JITLinkRedirectableSymbolManager.cpp
   ReOptimizeLayer.cpp
+)
+
+# COFF/MachO platform support — not needed for Linux/ELF targets.
+# Excluded under EJIT_TRIM_LLVM_BACKEND (AArch64 ELF only) and EXPERIMENTAL.
+if(NOT EJIT_TRIM_LLVM_BACKEND AND NOT EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
+  list(APPEND ORCJIT_SOURCES
+    COFF.cpp
+    COFFVCRuntimeSupport.cpp
+    COFFPlatform.cpp
+    MachO.cpp
+    MachOPlatform.cpp
+  )
+endif()
+
+add_llvm_component_library(LLVMOrcJIT
+  ${ORCJIT_SOURCES}
+
+  PARTIAL_SOURCES_INTENDED
+
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ExecutionEngine/Orc
 

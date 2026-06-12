@@ -8,6 +8,12 @@
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
+// EJIT_TRIM_LLVM_BACKEND: exclude COFF/MachO platform support (Linux ELF only).
+// Use the same code paths as EXPERIMENTAL for this file.
+#if defined(EJIT_TRIM_LLVM_BACKEND) && !defined(EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
+#define EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
+#endif
+
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
