@@ -423,18 +423,18 @@ public:
   visitOperation(Operation *op, ArrayRef<LayoutInfoLattice *> operands,
                  ArrayRef<const LayoutInfoLattice *> results) override;
 
-  void visitBranchOperand(OpOperand &operand) override {};
+  void visitBranchOperand(OpOperand &operand) override{};
 
-  void visitCallOperand(OpOperand &operand) override {};
+  void visitCallOperand(OpOperand &operand) override{};
 
   void
   visitNonControlFlowArguments(RegionSuccessor &successor,
-                               ArrayRef<BlockArgument> arguments) override {};
+                               ArrayRef<BlockArgument> arguments) override{};
 
-  void visitExternalCall(CallOpInterface call,
-                         ArrayRef<LayoutInfoLattice *> operands,
-                         ArrayRef<const LayoutInfoLattice *> results) override {
-  };
+  void
+  visitExternalCall(CallOpInterface call,
+                    ArrayRef<LayoutInfoLattice *> operands,
+                    ArrayRef<const LayoutInfoLattice *> results) override{};
 
   void setToExitState(LayoutInfoLattice *lattice) override {
     (void)lattice->meet(LayoutInfo());
@@ -549,9 +549,9 @@ bool LayoutInfoPropagation::hasParamsOfLayoutKind(
 //   wgShape = [128, 64], instData = [8, 16], sgCount = 32
 // Returns layouts:
 //   [(8,4), (16,2)], which correspond to sgData [16,16] and [8,32].
-SmallVector<std::pair<int, int>> getValidLayouts(ArrayRef<int64_t> wgShape,
-                                                 ArrayRef<int> instData,
-                                                 int64_t sgCount) {
+SmallVector<std::pair<int, int>>
+computeCandidateSgLayouts(ArrayRef<int64_t> wgShape, ArrayRef<int> instData,
+                          int64_t sgCount) {
   SmallVector<std::pair<int, int>> candidates;
   for (int sgLayout0 = 1; sgLayout0 <= sgCount; ++sgLayout0) {
     if (sgCount % sgLayout0)
@@ -1211,12 +1211,12 @@ void LayoutInfoPropagation::visitLoadGatherOp(
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
 
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
-    // The user-provided anchor may carry only inst_data; complete it with
-    // a lane factorization derived from the load-side Lane setup so
-    // downstream paths see a fully-populated layout.
-    requiredAnchorLayoutAttr = xegpu::completeLoadGatherLayoutFromInstData(
-        anchorLayoutAttr, resVecTy.getElementType(), uArch);
-    load.setLayoutAttr(requiredAnchorLayoutAttr);
+    requiredAnchorLayoutAttr = anchorLayoutAttr;
+    if (layoutKind == xegpu::LayoutKind::InstData) {
+      requiredAnchorLayoutAttr = xegpu::completeScatterIOLaneLayoutFromInstData(
+          anchorLayoutAttr, resVecTy.getElementType(), uArch);
+      load.setLayoutAttr(requiredAnchorLayoutAttr);
+    }
   } else {
     if (!resVecTy) {
       load.emitWarning("Not propagating, non-vector payload supplied.");
@@ -1256,12 +1256,12 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   int chunkSize = storeScatter.getChunkSize().value_or(1);
 
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
-    // The user-provided anchor may carry only inst_data; complete it with
-    // a lane factorization derived from the store-side Lane setup so
-    // downstream paths see a fully-populated layout.
-    requiredAnchorLayoutAttr = xegpu::completeStoreScatterLayoutFromInstData(
-        anchorLayoutAttr, srcVecTy.getElementType(), uArch);
-    storeScatter.setLayoutAttr(requiredAnchorLayoutAttr);
+    requiredAnchorLayoutAttr = anchorLayoutAttr;
+    if (layoutKind == xegpu::LayoutKind::InstData) {
+      requiredAnchorLayoutAttr = xegpu::completeScatterIOLaneLayoutFromInstData(
+          anchorLayoutAttr, srcVecTy.getElementType(), uArch);
+      storeScatter.setLayoutAttr(requiredAnchorLayoutAttr);
+    }
   } else {
     if (!srcVecTy) {
       storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
@@ -1320,29 +1320,28 @@ void LayoutInfoPropagation::visitLoadMatrixOp(
 void LayoutInfoPropagation::visitStoreMatrixOp(
     xegpu::StoreMatrixOp storeMatrix, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
-  xegpu::DistributeLayoutAttr anchorLayout = storeMatrix.getLayoutAttr();
+  xegpu::DistributeLayoutAttr requiredAnchorLayoutAttr;
+  xegpu::DistributeLayoutAttr anchorLayoutAttr = storeMatrix.getLayoutAttr();
   LayoutInfo layout;
-  VectorType srcVecTy =
-      llvm::cast<VectorType>(storeMatrix.getData().getType());
+  VectorType srcVecTy = llvm::cast<VectorType>(storeMatrix.getData().getType());
   const uArch *uArch = getUArch(getChipStr(storeMatrix).value_or(""));
   if (!uArch)
     return;
-  if (hasParamsOfLayoutKind(anchorLayout)) {
-    // The user-provided anchor may carry only inst_data; complete it with
-    // a lane factorization derived from the store-side Lane setup.
-    auto completed = xegpu::completeStoreScatterLayoutFromInstData(
-        anchorLayout, srcVecTy.getElementType(), uArch);
-    storeMatrix.setLayoutAttr(completed);
-    layout = LayoutInfo(completed);
+  if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
+    requiredAnchorLayoutAttr = anchorLayoutAttr;
+    if (layoutKind == xegpu::LayoutKind::InstData) {
+      requiredAnchorLayoutAttr = xegpu::completeScatterIOLaneLayoutFromInstData(
+          anchorLayoutAttr, srcVecTy.getElementType(), uArch);
+      storeMatrix.setLayoutAttr(requiredAnchorLayoutAttr);
+    }
   } else {
     int chunkSize =
         1; // placeHolder for future use when StoreMatrix supports coalescing
-    auto requiredAnchorLayoutAttr = xegpu::setupStoreMatrixAnchorLayout(
+    requiredAnchorLayoutAttr = xegpu::setupStoreMatrixAnchorLayout(
         layoutKind, srcVecTy, chunkSize, uArch);
     storeMatrix.setLayoutAttr(requiredAnchorLayoutAttr);
-    layout = LayoutInfo(requiredAnchorLayoutAttr);
   }
-
+  layout = LayoutInfo(requiredAnchorLayoutAttr);
   propagateIfChanged(operands[0], operands[0]->meet(layout));
 }
 

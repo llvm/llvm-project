@@ -751,9 +751,16 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
     expSgLayout = spread(origSgLayoutDim, targetShape, /*outerToInner=*/true);
     splice(sgLayout, expSgLayout);
   }
+  // When sg_data equals the full new-dim extent, the data is replicated across
+  // subgroups along this dim — each subgroup holds the whole extent rather
+  // than a partition. In that case sg_data spreads against the full extent and
+  // the per-sg view is the full extent too; otherwise both are divided by
+  // sg_layout.
+  bool sgDataReplicated =
+      hasSgData && origSgDataDim == computeProduct(targetShape);
   if (hasSgData) {
     SmallVector<int64_t> dimSizeCap(targetShape.begin(), targetShape.end());
-    if (hasSgLayout)
+    if (hasSgLayout && !sgDataReplicated)
       for (int64_t i = 0; i < expCount; ++i)
         dimSizeCap[i] /= expSgLayout[i];
     SmallVector<int64_t> expSgData =
@@ -762,10 +769,10 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
   }
 
   // Per-sg view used as the base for lane_layout / lane_data / inst_data:
-  // targetShape[i] / sg_layout[i] when sg_layout is present, else
-  // targetShape itself.
+  // targetShape[i] / sg_layout[i] when sg_layout is present (and not
+  // replicated), else targetShape itself.
   SmallVector<int64_t> perSgShape(targetShape.begin(), targetShape.end());
-  if (hasSgLayout)
+  if (hasSgLayout && !sgDataReplicated)
     for (int64_t i = 0; i < expCount; ++i)
       perSgShape[i] /= expSgLayout[i];
 
