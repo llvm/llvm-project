@@ -14,6 +14,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -115,9 +116,7 @@ struct SubtargetFeatureLiteral {
   bool IsNot;
 
   bool operator<(const SubtargetFeatureLiteral &Other) const {
-    if (Feature != Other.Feature)
-      return Feature < Other.Feature;
-    return IsNot < Other.IsNot;
+    return std::tie(Feature, IsNot) < std::tie(Other.Feature, Other.IsNot);
   }
   bool operator==(const SubtargetFeatureLiteral &Other) const {
     return Feature == Other.Feature && IsNot == Other.IsNot;

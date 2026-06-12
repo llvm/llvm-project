@@ -623,7 +623,7 @@ class QCIMVCCI<bits<3> funct3, string opcodestr, DAGOperand immType>
                opcodestr, "$rd, $rs1, $imm, $rs3">,
       Sched<[WriteIALU, ReadIALU, ReadIALU, ReadIALU]> {
   bits<5> imm;
-
+  
   let Constraints = "$rd = $rd_wb";
   let rs2 = imm;
 }
@@ -2068,7 +2068,7 @@ def : CompressPat<(QC_E_BLTUI GPRNoX0:$rs1, uimm5nonzero:$imm5, bare_simm13_lsb0
 // How the bug happens is:
 // - QC.E.LI is parsed with a bare symbol, which is valid + expected, and can
 //   be handled by fixups/relocations.
-// - Compression turns this into a `C.LI` because the `simm6`
+// - Compression turns this into a `C.LI` because the `simm6` 
 //   MCOperandPredicate accepts bare symbols.
 // - Binary Code emission didn't know how to create a fixup for a CI-type
 //   instruction containing a bare symbol.
@@ -2079,7 +2079,7 @@ def : CompressPat<(QC_E_BLTUI GPRNoX0:$rs1, uimm5nonzero:$imm5, bare_simm13_lsb0
 //
 // This is good enough for emitting objects, but doesn't work for emitting
 // assembly. Emitting assembly is why we need the following Hacks.
-//
+// 
 // Emitting an instruction to assembly proceeds as:
 // - Compression (in emitInstruction)
 // - Decompression (in RISCVInstPrinter::printInst)
@@ -2088,7 +2088,7 @@ def : CompressPat<(QC_E_BLTUI GPRNoX0:$rs1, uimm5nonzero:$imm5, bare_simm13_lsb0
 // So in the case of `QC.E.LI` with a bare symbol, first it is compressed to
 // `C.LI` with a bare symbol, and then it is decompressed to `ADDI` with a bare
 // symbol for printing, which is printed via an alias as `li <reg>, <symbol>`.
-// Both the decompression and the alias use the MCOperandPredicate from
+// Both the decompression and the alias use the MCOperandPredicate from 
 // `simm12`, which accepts bare symbols.
 //
 // The problem here is that `li <reg>, <symbol>` fails to parse, because the
