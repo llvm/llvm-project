@@ -167,3 +167,56 @@ body:             |
     $x0 = COPY %trunc(s64)
     RET_ReallyLR implicit $x0
 ...
+---
+name:            zext_i128_i256
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: zext_i128_i256
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD %ptr(p0) :: (load (s128))
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[LOAD]](s128)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: $x0 = COPY [[UV]](i64)
+    ; CHECK-NEXT: $x1 = COPY [[UV1]](i64)
+    ; CHECK-NEXT: $x2 = COPY [[C]](s64)
+    ; CHECK-NEXT: $x3 = COPY [[C]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0, implicit $x1, implicit $x2, implicit $x3
+    %ptr:_(p0) = COPY $x0
+    %load:_(s256) = G_ZEXTLOAD %ptr(p0) :: (load (s128))
+    %v0:_(s64), %v1:_(s64), %v2:_(s64), %v3:_(s64) = G_UNMERGE_VALUES %load(s256)
+    $x0 = COPY %v0(s64)
+    $x1 = COPY %v1(s64)
+    $x2 = COPY %v2(s64)
+    $x3 = COPY %v3(s64)
+    RET_ReallyLR implicit $x0, implicit $x1, implicit $x2, implicit $x3
+...
+---
+name:            sext_i128_i256
+body:             |
+  bb.1:
+    liveins: $x0
+    ; CHECK-LABEL: name: sext_i128_i256
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD %ptr(p0) :: (load (s128))
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[LOAD]](s128)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 63
+    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i64) = G_ASHR [[UV1]], [[C]](i64)
+    ; CHECK-NEXT: $x0 = COPY [[UV]](i64)
+    ; CHECK-NEXT: $x1 = COPY [[UV1]](i64)
+    ; CHECK-NEXT: $x2 = COPY [[ASHR]](i64)
+    ; CHECK-NEXT: $x3 = COPY [[ASHR]](i64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0, implicit $x1, implicit $x2, implicit $x3
+    %ptr:_(p0) = COPY $x0
+    %load:_(s256) = G_SEXTLOAD %ptr(p0) :: (load (s128))
+    %v0:_(s64), %v1:_(s64), %v2:_(s64), %v3:_(s64) = G_UNMERGE_VALUES %load(s256)
+    $x0 = COPY %v0(s64)
+    $x1 = COPY %v1(s64)
+    $x2 = COPY %v2(s64)
+    $x3 = COPY %v3(s64)
+    RET_ReallyLR implicit $x0, implicit $x1, implicit $x2, implicit $x3
+...

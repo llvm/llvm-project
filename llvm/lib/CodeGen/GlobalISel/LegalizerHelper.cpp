@@ -1701,8 +1701,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     } else if (MemSize < NarrowSize) {
       MIRBuilder.buildLoadInstr(LoadMI.getOpcode(), TmpReg, PtrReg, MMO);
     } else if (MemSize > NarrowSize) {
-      // FIXME: Need to split the load.
-      return UnableToLegalize;
+      // Decompose into a memory-width load + extension, narrowed separately.
+      return lowerLoad(LoadMI);
     }
 
     if (isa<GZExtLoad>(LoadMI))
@@ -4259,16 +4259,37 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
     LargeSplitSize = llvm::bit_floor(MemSizeInBits);
     SmallSplitSize = MemSizeInBits - LargeSplitSize;
   } else {
-    // This is already a power of 2, but we still need to split this in half.
-    //
-    // Assume we're being asked to decompose an unaligned load.
-    // TODO: If this requires multiple splits, handle them all at once.
     auto &Ctx = MF.getFunction().getContext();
-    if (TLI.allowsMemoryAccess(Ctx, MIRBuilder.getDataLayout(), MemTy, MMO))
-      return UnableToLegalize;
+    if (TLI.allowsMemoryAccess(Ctx, MIRBuilder.getDataLayout(), MemTy, MMO)) {
+      // Only an extending scalar load has anything to lower here: a
+      // memory-width load plus a separate extension. Non-extending loads
+      // have nothing to lower and vector extloads aren't handled, so
+      // decline both.
+      if (MemTy.isVector() || DstTy.getSizeInBits() <= MemSizeInBits)
+        return UnableToLegalize;
 
+      auto NewLoad = MIRBuilder.buildLoad(MemTy, PtrReg, MMO);
+      if (isa<GSExtLoad>(LoadMI))
+        MIRBuilder.buildSExt(DstReg, NewLoad);
+      else if (isa<GZExtLoad>(LoadMI))
+        MIRBuilder.buildZExt(DstReg, NewLoad);
+      else if (isa<GFPExtLoad>(LoadMI))
+        MIRBuilder.buildFPExt(DstReg, NewLoad);
+      else
+        MIRBuilder.buildAnyExt(DstReg, NewLoad);
+      LoadMI.eraseFromParent();
+      return Legalized;
+    }
+
+    // The access isn't allowed as-is (presumably underaligned). The size is
+    // already a power of 2, so split it into two half-width accesses.
+    // TODO: If this requires multiple splits, handle them all at once.
     SmallSplitSize = LargeSplitSize = MemSizeInBits / 2;
   }
+
+  // The integer split logic below cannot reassemble an FP extension.
+  if (isa<GFPExtLoad>(LoadMI))
+    return UnableToLegalize;
 
   if (MemTy.isVector()) {
     // TODO: Handle vector extloads
