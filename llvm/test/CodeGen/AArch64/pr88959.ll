@@ -6,12 +6,11 @@ define i8 @f(<16 x i8> %vec, i32 %idx) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    eor w9, w0, #0x1
 ; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    sub w8, w8, w0
-; CHECK-NEXT:    bfxil x9, x8, #0, #4
-; CHECK-NEXT:    ldrb w0, [x9]
+; CHECK-NEXT:    bfxil x8, x9, #0, #4
+; CHECK-NEXT:    ldrb w0, [x8]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %sub = sub nuw i32 1, %idx
