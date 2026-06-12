@@ -31,15 +31,15 @@ void signal_handler(int signo) {
 void signal_sigalt_handler(int signo) {
   signal_handlers_called += 1;
   if (sigaltstack_called) {
-    assert(__sigaltstack_get_unsafe_stack_ptr() <=
-               __sigaltstack_get_unsafe_sigalt_stack_top() &&
-           __sigaltstack_get_unsafe_stack_ptr() >=
-               __sigaltstack_get_unsafe_sigalt_stack_bottom());
+    assert(__safestack_get_unsafe_stack_ptr() <=
+               __safestack_get_unsafe_sigalt_stack_top() &&
+           __safestack_get_unsafe_stack_ptr() >=
+               __safestack_get_unsafe_sigalt_stack_bottom());
   } else {
-    assert(__sigaltstack_get_unsafe_stack_ptr() <=
-               __sigaltstack_get_unsafe_stack_top() &&
-           __sigaltstack_get_unsafe_stack_ptr() >=
-               __sigaltstack_get_unsafe_stack_bottom());
+    assert(__safestack_get_unsafe_stack_ptr() <=
+               __safestack_get_unsafe_stack_top() &&
+           __safestack_get_unsafe_stack_ptr() >=
+               __safestack_get_unsafe_stack_bottom());
   }
 }
 
@@ -54,15 +54,15 @@ void signal_sigaction(int signo, siginfo_t *si, void *uc) {
 void signal_sigalt_sigaction(int signo, siginfo_t *si, void *uc) {
   signal_handlers_called += 1;
   if (sigaltstack_called) {
-    assert(__sigaltstack_get_unsafe_stack_ptr() <=
-               __sigaltstack_get_unsafe_sigalt_stack_top() &&
-           __sigaltstack_get_unsafe_stack_ptr() >=
-               __sigaltstack_get_unsafe_sigalt_stack_bottom());
+    assert(__safestack_get_unsafe_stack_ptr() <=
+               __safestack_get_unsafe_sigalt_stack_top() &&
+           __safestack_get_unsafe_stack_ptr() >=
+               __safestack_get_unsafe_sigalt_stack_bottom());
   } else {
-    assert(__sigaltstack_get_unsafe_stack_ptr() <=
-               __sigaltstack_get_unsafe_stack_top() &&
-           __sigaltstack_get_unsafe_stack_ptr() >=
-               __sigaltstack_get_unsafe_stack_bottom());
+    assert(__safestack_get_unsafe_stack_ptr() <=
+               __safestack_get_unsafe_stack_top() &&
+           __safestack_get_unsafe_stack_ptr() >=
+               __safestack_get_unsafe_stack_bottom());
   }
 }
 
