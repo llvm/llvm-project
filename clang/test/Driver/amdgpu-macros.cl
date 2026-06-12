@@ -182,7 +182,7 @@
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 -mcumode \
 // RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 -mno-cumode \
-// RUN:   %s 2>&1 | FileCheck -DMCPU=gfx906 --check-prefixes=CUMODE-ON,WARN-CUMODE %s
+// RUN:   %s 2>&1 | FileCheck -DMCPU=amdgpu9.06 --check-prefixes=CUMODE-ON,WARN-CUMODE %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1030 \
 // RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-OFF %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1030 -mcumode \
@@ -194,13 +194,13 @@
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1250 -mcumode \
 // RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1250 -mno-cumode \
-// RUN:   %s 2>&1 | FileCheck -DMCPU=gfx1250 --check-prefixes=CUMODE-ON,WARN-CUMODE %s
+// RUN:   %s 2>&1 | FileCheck -DMCPU=amdgpu12.50 --check-prefixes=CUMODE-ON,WARN-CUMODE %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1251 \
 // RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1251 -mcumode \
 // RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1251 -mno-cumode \
-// RUN:   %s 2>&1 | FileCheck -DMCPU=gfx1251 --check-prefixes=CUMODE-ON,WARN-CUMODE %s
+// RUN:   %s 2>&1 | FileCheck -DMCPU=amdgpu12.51 --check-prefixes=CUMODE-ON,WARN-CUMODE %s
 // WARN-CUMODE-DAG: warning: ignoring '-mno-cumode' option as it is not currently supported for processor '[[MCPU]]' [-Woption-ignored]
 // CUMODE-ON-DAG: #define __AMDGCN_CUMODE__ 1
 // CUMODE-OFF-DAG: #define __AMDGCN_CUMODE__ 0

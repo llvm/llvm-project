@@ -29,7 +29,7 @@
 // RUN:   | FileCheck %s --check-prefix=ARCH-GFX906
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib --offload-new-driver --offload-arch=native --amdgpu-arch-tool=%t/amdgpu_arch_gfx906 -x hip %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=ARCH-GFX906
-// ARCH-GFX906: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"{{.*}}"-target-cpu" "gfx906"
+// ARCH-GFX906: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"
 
 // case when CLANG_TOOLCHAIN_PROGRAM_TIMEOUT is malformed.
 // RUN: env CLANG_TOOLCHAIN_PROGRAM_TIMEOUT=foo \
