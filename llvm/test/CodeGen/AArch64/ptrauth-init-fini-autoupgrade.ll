@@ -47,7 +47,7 @@ define void @bar2() {
 ; DISC: @llvm.global_dtors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @bar1, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @bar2, ptr null }]
 ; DISC: !llvm.module.flags = !{!0, !1}
 ; DISC: !0 = !{i32 1, !"ptrauth-init-fini", i32 1}
-; DISC: !1 = !{i32 1, !"ptrauth-init-fini-address-discriminator", i32 1}
+; DISC: !1 = !{i32 1, !"ptrauth-init-fini-address-discrimination", i32 1}
 
 ;--- err1.ll
 
