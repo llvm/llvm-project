@@ -1007,6 +1007,7 @@ Improvements
 - The lock-order-reversal check in ``alpha.unix.PthreadLock`` is now disabled by default.
   It can be re-enabled with the
   :ref:`WarnOnLockOrderReversal <alpha-unix-PthreadLock>` option.
+
 - ``alpha.unix.PthreadLock`` now emits path notes on lock, unlock, destroy,
   and init operations.
 
