@@ -946,7 +946,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
 
       auto *DefR = cast<VPSingleDefRecipe>(&R);
       VPBuilder Builder(DefR);
-      if (DefR->getNumUsers() == 0) {
+      if (DefR->hasNoUsers()) {
         // Create single-scalar version of DefR for all lanes.
         for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
           cloneForLane(Plan, Builder, IdxTy, DefR, VPLane(I), Def2LaneDefs);

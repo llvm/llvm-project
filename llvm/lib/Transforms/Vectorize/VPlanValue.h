@@ -161,7 +161,7 @@ public:
 
   /// Returns true if the value has more than one unique user.
   bool hasMoreThanOneUniqueUser() const {
-    if (getNumUsers() == 0)
+    if (hasNoUsers())
       return false;
 
     // Check if all users match the first user.
@@ -171,6 +171,8 @@ public:
     return Current != user_end();
   }
 
+  bool hasNoUsers() const { return Users.empty(); }
+  bool hasUsers() const { return !hasNoUsers(); }
   bool hasOneUse() const { return getNumUsers() == 1; }
 
   /// Return the single user of this value, or nullptr if there is not exactly
@@ -523,7 +525,7 @@ public:
     for (VPRecipeValue *D : to_vector(DefinedValues)) {
       assert(D->isDefinedBy(this) &&
              "all defined VPValues should point to the containing VPDef");
-      assert(D->getNumUsers() == 0 &&
+      assert(D->hasNoUsers() &&
              "all defined VPValues should have no more users");
       delete D;
     }
