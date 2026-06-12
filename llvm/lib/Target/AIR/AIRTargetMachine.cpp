@@ -75,6 +75,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAIRTarget() {
   initializeConstantHoistingLegacyPassPass(*PR);
   initializeScalarizeMaskedMemIntrinLegacyPassPass(*PR);
   initializePostInlineEntryExitInstrumenterPass(*PR);
+  initializeAIRFromGenericGPUPass(*PR);
   initializeAIRInlineNonKernelLegacyPass(*PR);
   initializeAIRDemoteF64LegacyPass(*PR);
   initializeAIRLowerFNegLegacyPass(*PR);
@@ -133,6 +134,9 @@ public:
     // IR-to-AIR conformance passes, in order.
     // AIR bitcode has no switch encoding; lower to branch chains first.
     addPass(createLowerSwitchPass());
+    // Remap generic GPU (OpenCL/SPIR-V) builtins -> AIR intrinsics so non-Triton
+    // frontends (MLIR gpu dialect, SYCL) target AIR. No-op on Triton IR.
+    addPass(createAIRFromGenericGPULegacyPass());
     // AGX-1 (cross-buffer same-offset device-store warp-0 miscompile).
     // Run EARLY, while the in-bounds predicate icmp (and its assume) are still
     // intact, so the separation guard can use the REAL mask. Sinks the run of

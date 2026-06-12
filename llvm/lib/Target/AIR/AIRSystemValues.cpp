@@ -32,6 +32,12 @@ static constexpr StringLiteral kCallTid("air.thread_position_in_grid");
 static constexpr StringLiteral kCallTidTG("air.thread_position_in_threadgroup");
 static constexpr StringLiteral kCallSimdlane("air.thread_index_in_simdgroup");
 static constexpr StringLiteral kCallNumProg("air.threadgroups_per_grid");
+static constexpr StringLiteral kCallTGSize("air.threads_per_threadgroup");
+static constexpr StringLiteral kCallSimdSize("air.threads_per_simdgroup");
+static constexpr StringLiteral
+    kCallNumSimd("air.simdgroups_per_threadgroup");
+static constexpr StringLiteral
+    kCallSimdId("air.simdgroup_index_in_threadgroup");
 
 // AIR metadata-tag strings.
 static constexpr StringLiteral
@@ -44,6 +50,14 @@ static constexpr StringLiteral
     kMDThreadIndexInSimdgroup("air.thread_index_in_simdgroup");
 static constexpr StringLiteral
     kMDThreadgroupsPerGrid("air.threadgroups_per_grid");
+static constexpr StringLiteral
+    kMDThreadsPerThreadgroup("air.threads_per_threadgroup");
+static constexpr StringLiteral
+    kMDThreadsPerSimdgroup("air.threads_per_simdgroup");
+static constexpr StringLiteral
+    kMDSimdgroupsPerThreadgroup("air.simdgroups_per_threadgroup");
+static constexpr StringLiteral
+    kMDSimdgroupIndexInThreadgroup("air.simdgroup_index_in_threadgroup");
 
 static constexpr StringLiteral kMDBuffer("air.buffer");
 static constexpr StringLiteral kMDLocationIndex("air.location_index");
@@ -74,6 +88,10 @@ static const SysValParam kSysVals[] = {
     {kCallTidTG, "tidtg", true, {"tidtg_x", "tidtg_y", "tidtg_z"}},
     {kCallSimdlane, "simdlane", false, {"simdlane", "", ""}},
     {kCallNumProg, "numprog", true, {"numprog_x", "numprog_y", "numprog_z"}},
+    {kCallTGSize, "tgsize", true, {"tgsize_x", "tgsize_y", "tgsize_z"}},
+    {kCallSimdSize, "simdsize", false, {"simdsize", "", ""}},
+    {kCallNumSimd, "numsimd", false, {"numsimd", "", ""}},
+    {kCallSimdId, "simdid", false, {"simdid", "", ""}},
 };
 
 static Function *findDeclByPrefix(Module &M, StringRef Prefix) {
@@ -281,10 +299,20 @@ static bool airSystemValues(Module &M) {
           AirAttr = kMDThreadIndexInSimdgroup;
         else if (Name.starts_with("numprog"))
           AirAttr = kMDThreadgroupsPerGrid;
+        else if (Name.starts_with("tgsize"))
+          AirAttr = kMDThreadsPerThreadgroup;
+        else if (Name.starts_with("simdsize"))
+          AirAttr = kMDThreadsPerSimdgroup;
+        else if (Name.starts_with("numsimd"))
+          AirAttr = kMDSimdgroupsPerThreadgroup;
+        else if (Name.starts_with("simdid"))
+          AirAttr = kMDSimdgroupIndexInThreadgroup;
         else
           continue;
 
-        StringRef TypeName = (Name == "simdlane") ? "uint" : "uint3";
+        bool IsScalar = (Name == "simdlane" || Name == "simdsize" ||
+                         Name == "numsimd" || Name == "simdid");
+        StringRef TypeName = IsScalar ? "uint" : "uint3";
         ParamNodes.push_back(MDNode::get(
             Ctx,
             {ConstantAsMetadata::get(ConstantInt::get(I32, Arg.getArgNo())),

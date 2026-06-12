@@ -16,6 +16,7 @@ add_llvm_target(AIRCodeGen
   AIRBFloat16CastDecompose.cpp
   AIRBarrierRename.cpp
   AIRCrossBufferStoreSeparate.cpp
+  AIRFromGenericGPU.cpp
   AIRDemoteF64.cpp
   AIRDeviceLoadsVolatile.cpp
   AIRInlineNonKernel.cpp

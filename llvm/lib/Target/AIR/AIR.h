@@ -19,6 +19,14 @@ class ModulePass;
 class FunctionPass;
 class PassRegistry;
 
+/// Initializer for the generic-GPU (OpenCL/SPIR-V builtin) -> AIR lowering.
+void initializeAIRFromGenericGPUPass(PassRegistry &);
+
+/// Lower generic GPU LLVM IR (MLIR gpu dialect / SYCL / OpenCL, which emit
+/// mangled get_local_id/get_group_id/barrier builtins) to AIR intrinsics +
+/// "air-kernel" markers, so non-Triton frontends can target AIR.
+ModulePass *createAIRFromGenericGPULegacyPass();
+
 /// Initializer for the AIR inline-non-kernel pass.
 void initializeAIRInlineNonKernelLegacyPass(PassRegistry &);
 
