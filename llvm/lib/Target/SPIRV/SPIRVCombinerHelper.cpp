@@ -227,7 +227,8 @@ void SPIRVCombinerHelper::applyMatrixTranspose(MachineInstr &MI) const {
 
   Builder.setInstrAndDebugLoc(MI);
 
-  if (Rows == 1 && Cols == 1) {
+  // A 1xN or Nx1 transpose is a pure reshape.
+  if (Rows == 1 || Cols == 1) {
     Builder.buildCopy(ResReg, InReg);
     MI.eraseFromParent();
     return;

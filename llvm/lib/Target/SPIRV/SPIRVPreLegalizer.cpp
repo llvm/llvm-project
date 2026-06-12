@@ -514,30 +514,44 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         Register DstReg = MI.getOperand(0).getReg();
         Register SrcReg = MI.getOperand(1).getReg();
 
-        // TODO: handle vector types.
-        if (!MRI.getType(DstReg).isScalar()) {
-          assert(!MRI.getType(SrcReg).isScalar());
-          continue;
-        }
+        LLT DstTy = MRI.getType(DstReg);
+        LLT SrcTy = MRI.getType(SrcReg);
+        assert((DstTy.isScalar() || DstTy.isVector()) &&
+               (SrcTy.isScalar() || SrcTy.isVector()) &&
+               "Expected scalar or vector G_TRUNC types");
+        assert(DstTy.isVector() == SrcTy.isVector() &&
+               "Expected matching scalar/vector G_TRUNC types");
+        assert((!DstTy.isVector() ||
+                DstTy.getElementCount() == SrcTy.getElementCount()) &&
+               "Expected equal vector element counts");
 
-        unsigned OriginalDstWidth = MRI.getType(DstReg).getScalarSizeInBits();
-        unsigned OriginalSrcWidth = MRI.getType(SrcReg).getScalarSizeInBits();
+        unsigned OriginalDstWidth = DstTy.getScalarSizeInBits();
+        unsigned OriginalSrcWidth = SrcTy.getScalarSizeInBits();
 
         unsigned NewDstWidth = widenBitWidthToNextPow2(OriginalDstWidth);
         unsigned NewSrcWidth = widenBitWidthToNextPow2(OriginalSrcWidth);
+        LLT NewDstTy = DstTy.changeElementSize(NewDstWidth);
+        LLT NewSrcTy = SrcTy.changeElementSize(NewSrcWidth);
 
-        // No Dst width change means no truncation semantics change.
-        if (OriginalDstWidth == NewDstWidth)
+        // No Dst width change means no truncation semantics change, but the
+        // source still needs a legal type.
+        if (OriginalDstWidth == NewDstWidth) {
+          MRI.setType(SrcReg, NewSrcTy);
           continue;
+        }
 
-        MRI.setType(SrcReg, LLT::scalar(NewSrcWidth));
-        MRI.setType(DstReg, LLT::scalar(NewDstWidth));
+        MRI.setType(SrcReg, NewSrcTy);
+        MRI.setType(DstReg, NewDstTy);
 
         MIB.setInsertPt(MBB, MI.getIterator());
         APInt Mask = APInt::getLowBitsSet(NewSrcWidth, OriginalDstWidth);
-        auto MaskReg = MIB.buildConstant(LLT::scalar(NewSrcWidth), Mask);
-        Register MaskedReg =
-            MRI.createGenericVirtualRegister(LLT::scalar(NewSrcWidth));
+        MachineInstrBuilder MaskReg =
+            DstTy.isVector()
+                ? MIB.buildBuildVectorConstant(
+                      NewSrcTy,
+                      SmallVector<APInt, 4>(DstTy.getNumElements(), Mask))
+                : MIB.buildConstant(NewSrcTy, Mask);
+        Register MaskedReg = MRI.createGenericVirtualRegister(NewSrcTy);
         MIB.buildAnd(MaskedReg, SrcReg, MaskReg);
 
         if (NewSrcWidth == NewDstWidth) {
@@ -879,15 +893,6 @@ static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   insertInlineAsmProcess(MF, GR, ST, MIRBuilder, ToProcess);
 }
 
-static uint32_t convertFloatToSPIRVWord(float F) {
-  union {
-    float F;
-    uint32_t Spir;
-  } FPMaxError;
-  FPMaxError.F = F;
-  return FPMaxError.Spir;
-}
-
 static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                                    MachineIRBuilder MIB) {
   const SPIRVSubtarget &ST = cast<SPIRVSubtarget>(MIB.getMF().getSubtarget());
@@ -906,8 +911,7 @@ static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                                 Intrinsic::spv_assign_fpmaxerror_decoration)) {
         ConstantFP *OpV = mdconst::dyn_extract<ConstantFP>(
             MI.getOperand(2).getMetadata()->getOperand(0));
-        uint32_t OpValue =
-            convertFloatToSPIRVWord(OpV->getValueAPF().convertToFloat());
+        uint32_t OpValue = OpV->getValueAPF().bitcastToAPInt().getZExtValue();
 
         buildOpDecorate(MI.getOperand(1).getReg(), MIB,
                         SPIRV::Decoration::FPMaxErrorDecorationINTEL,

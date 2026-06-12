@@ -69,8 +69,8 @@ define half @half_imm_op(half %a) nounwind {
 ;
 ; CHECKIZFHMIN-LABEL: half_imm_op:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    lui a0, 260096
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
 ; CHECKIZFHMIN-NEXT:    fmv.w.x fa4, a0
 ; CHECKIZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECKIZFHMIN-NEXT:    fcvt.h.s fa0, fa5

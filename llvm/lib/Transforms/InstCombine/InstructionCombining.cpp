@@ -3612,10 +3612,12 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     APInt BasePtrOffset(IdxWidth, 0);
     Value *UnderlyingPtrOp =
         PtrOp->stripAndAccumulateInBoundsConstantOffsets(DL, BasePtrOffset);
-    bool CanBeNull, CanBeFreed;
+    bool CanBeNull;
     uint64_t DerefBytes = UnderlyingPtrOp->getPointerDereferenceableBytes(
-        DL, CanBeNull, CanBeFreed);
-    if (!CanBeNull && !CanBeFreed && DerefBytes != 0) {
+        DL, CanBeNull, /*CanBeFreed=*/nullptr);
+    // We can ignore CanBeFreed here, because inbounds is explicitly allowed to
+    // refer to a deallocated object.
+    if (!CanBeNull && DerefBytes != 0) {
       if (GEP.accumulateConstantOffset(DL, BasePtrOffset) &&
           BasePtrOffset.isNonNegative()) {
         APInt AllocSize(IdxWidth, DerefBytes);

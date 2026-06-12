@@ -1325,10 +1325,8 @@ OverloadKind Sema::CheckOverload(Scope *S, FunctionDecl *New,
       !New->getType()->isDependentType()) {
     LookupResult TemplateSpecResult(LookupResult::Temporary, Old);
     TemplateSpecResult.addAllDecls(Old);
-    if (CheckFunctionTemplateSpecialization(New, /*TemplateParams=*/nullptr,
-                                            /*ExplicitTemplateArgs=*/nullptr,
-                                            TemplateSpecResult,
-                                            /*QualifiedFriend*/ true)) {
+    if (CheckFunctionTemplateSpecialization(New, nullptr, TemplateSpecResult,
+                                            /*QualifiedFriend*/true)) {
       New->setInvalidDecl();
       return OverloadKind::Overload;
     }
@@ -7033,6 +7031,7 @@ ExprResult Sema::PerformContextualImplicitConversion(
   // Try converting the expression to an Lvalue first, to get rid of qualifiers.
   ExprResult Converted = DefaultLvalueConversion(From);
   QualType T = Converted.isUsable() ? Converted.get()->getType() : QualType();
+  From = Converted.isUsable() ? Converted.get() : nullptr;
   // If the expression already has a matching type, we're golden.
   if (Converter.match(T))
     return Converted;
