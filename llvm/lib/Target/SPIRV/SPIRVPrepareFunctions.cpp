@@ -28,6 +28,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -117,6 +118,23 @@ static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic,
   if (auto *MSI = dyn_cast<MemSetInst>(Intrinsic))
     if (isa<Constant>(MSI->getValue()) && isa<ConstantInt>(MSI->getLength()))
       return false; // It is handled later using OpCopyMemorySized.
+
+  // An intrinsic with a metadata argument has no SPIR-V lowering and can't be
+  // turned into a function.
+  for (Value *Arg : Intrinsic->args())
+    if (isa<MetadataAsValue>(Arg)) {
+      const Function *F = Intrinsic->getFunction();
+      F->getContext().diagnose(DiagnosticInfoUnsupported(
+          *F,
+          "cannot lower the intrinsic '" +
+              Intrinsic->getCalledFunction()->getName() +
+              "' that takes a metadata argument",
+          Intrinsic->getDebugLoc()));
+      if (!Intrinsic->getType()->isVoidTy())
+        Intrinsic->replaceAllUsesWith(PoisonValue::get(Intrinsic->getType()));
+      Intrinsic->eraseFromParent();
+      return true;
+    }
 
   Module *M = Intrinsic->getModule();
   std::string FuncName = lowerLLVMIntrinsicName(Intrinsic);
@@ -499,6 +517,11 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
       case Intrinsic::experimental_constrained_fcmps:
         lowerConstrainedFPCmpIntrinsic(dyn_cast<ConstrainedFPCmpIntrinsic>(II),
                                        EraseFromParent);
+        Changed = true;
+        break;
+      case Intrinsic::experimental_noalias_scope_decl:
+        // Drop as there is no SPIR-V representation.
+        II->eraseFromParent();
         Changed = true;
         break;
       default:
