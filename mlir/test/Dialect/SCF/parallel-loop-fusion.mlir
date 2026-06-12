@@ -1354,3 +1354,104 @@ func.func @fuse_duplicate_axes_permutation(
 // CHECK: scf.reduce
 // CHECK: }
 // CHECK-NOT: scf.parallel
+
+// -----
+
+func.func @fuse_interchanged_reductions(%A: memref<2x3xf32>,
+                                        %B: memref<2x3xf32>) -> (f32, f32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %init1 = arith.constant 1.0 : f32
+  %init2 = arith.constant 2.0 : f32
+  %res1 = scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c3)
+      step (%c1, %c1) init(%init1) -> f32 {
+    %A_elem = memref.load %A[%i, %j] : memref<2x3xf32>
+    scf.reduce(%A_elem : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %1 = arith.addf %lhs, %rhs : f32
+      scf.reduce.return %1 : f32
+    }
+  }
+  %res2 = scf.parallel (%j2, %i2) = (%c0, %c0) to (%c3, %c2)
+      step (%c1, %c1) init(%init2) -> f32 {
+    %B_elem = memref.load %B[%i2, %j2] : memref<2x3xf32>
+    scf.reduce(%B_elem : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %1 = arith.mulf %lhs, %rhs : f32
+      scf.reduce.return %1 : f32
+    }
+  }
+  return %res1, %res2 : f32, f32
+}
+
+// CHECK-LABEL: func @fuse_interchanged_reductions
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: %[[C2:.*]] = arith.constant 2 : index
+// CHECK: %[[C3:.*]] = arith.constant 3 : index
+// CHECK: %[[INIT1:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK: %[[INIT2:.*]] = arith.constant 2.000000e+00 : f32
+// CHECK: %[[RES:.*]]:2 = scf.parallel (%[[I:.*]], %[[J:.*]]) = (%[[C0]], %[[C0]])
+// CHECK-SAME: to (%[[C2]], %[[C3]]) step (%[[C1]], %[[C1]])
+// CHECK-SAME: init (%[[INIT1]], %[[INIT2]]) -> (f32, f32) {
+// CHECK:  %[[AELT:.*]] = memref.load %{{.*}}{{\[}}%[[I]], %[[J]]{{\]}} : memref<2x3xf32>
+// CHECK:  %[[BELT:.*]] = memref.load %{{.*}}{{\[}}%[[I]], %[[J]]{{\]}} : memref<2x3xf32>
+// CHECK:      scf.reduce(%[[AELT]], %[[BELT]] : f32, f32) {
+// CHECK:      ^bb0
+// CHECK:      ^bb0
+// CHECK:    return %[[RES]]#0, %[[RES]]#1 : f32, f32
+
+// -----
+
+func.func @fuse_three_cycle_reductions(%A: memref<2x3x5xf32>,
+                                       %B: memref<2x3x5xf32>) -> (f32, f32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c5 = arith.constant 5 : index
+  %init1 = arith.constant 1.0 : f32
+  %init2 = arith.constant 2.0 : f32
+
+  %res1 = scf.parallel (%i, %j, %k) = (%c0, %c0, %c0)
+      to (%c2, %c3, %c5) step (%c1, %c1, %c1) init(%init1) -> f32 {
+    %a = memref.load %A[%i, %j, %k] : memref<2x3x5xf32>
+    scf.reduce(%a : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %sum = arith.addf %lhs, %rhs : f32
+      scf.reduce.return %sum : f32
+    }
+  }
+
+  %res2 = scf.parallel (%k2, %i2, %j2) = (%c0, %c0, %c0)
+      to (%c5, %c2, %c3) step (%c1, %c1, %c1) init(%init2) -> f32 {
+    %b = memref.load %B[%i2, %j2, %k2] : memref<2x3x5xf32>
+    scf.reduce(%b : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %prod = arith.mulf %lhs, %rhs : f32
+      scf.reduce.return %prod : f32
+    }
+  }
+
+  return %res1, %res2 : f32, f32
+}
+
+// CHECK-LABEL: func @fuse_three_cycle_reductions
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: %[[C2:.*]] = arith.constant 2 : index
+// CHECK: %[[C3:.*]] = arith.constant 3 : index
+// CHECK: %[[C5:.*]] = arith.constant 5 : index
+// CHECK: %[[INIT1:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK: %[[INIT2:.*]] = arith.constant 2.000000e+00 : f32
+// CHECK: %[[RES:.*]]:2 = scf.parallel (%[[I:.*]], %[[J:.*]], %[[K:.*]]) = (%[[C0]], %[[C0]], %[[C0]])
+// CHECK-SAME: to (%[[C2]], %[[C3]], %[[C5]]) step (%[[C1]], %[[C1]], %[[C1]])
+// CHECK-SAME: init (%[[INIT1]], %[[INIT2]]) -> (f32, f32)
+// CHECK: %[[AELT:.*]] = memref.load %{{.*}}{{\[}}%[[I]], %[[J]], %[[K]]{{\]}} : memref<2x3x5xf32>
+// CHECK: %[[BELT:.*]] = memref.load %{{.*}}{{\[}}%[[I]], %[[J]], %[[K]]{{\]}} : memref<2x3x5xf32>
+// CHECK: scf.reduce(%[[AELT]], %[[BELT]] : f32, f32) {
+// CHECK: ^bb0
+// CHECK: ^bb0
+// CHECK: return %[[RES]]#0, %[[RES]]#1 : f32, f32

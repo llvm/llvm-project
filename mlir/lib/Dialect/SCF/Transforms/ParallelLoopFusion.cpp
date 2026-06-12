@@ -764,9 +764,11 @@ interchangeLoops(OpBuilder &builder, ParallelOp &loop,
   }
 
   // Copy parallel loop body
-  builder.setInsertionPoint(&(newOp.getBody()->front()));
-  for (auto &o : loop.getRegion().front().without_terminator()) {
-    builder.clone(o, mapping);
+  auto b = OpBuilder::atBlockBegin(newOp.getBody());
+  for (auto &o : loop.getNumReductions()
+                     ? loop.getBodyRegion().front()
+                     : loop.getBodyRegion().front().without_terminator()) {
+    b.clone(o, mapping);
   }
   return newOp;
 }
@@ -798,7 +800,8 @@ struct llvm::DenseMapInfo<LoopIV> {
 // can be empty
 static SmallVector<SmallVector<int64_t>>
 computeCandidateInterchangePermutations(ParallelOp &firstPloop,
-                                        ParallelOp &secondPloop) {
+                                        ParallelOp &secondPloop,
+                                        int axesLimit = 5) {
   SmallVector<SmallVector<int64_t>> extraResults;
 
   // Check preconditions
@@ -809,7 +812,7 @@ computeCandidateInterchangePermutations(ParallelOp &firstPloop,
   SmallVector<LoopIV> firstIVs(firstPloop.getNumLoops());
   SmallVector<LoopIV> secondIVs(secondPloop.getNumLoops());
   llvm::SmallSetVector<LoopIV, 6> unique;
-  for (unsigned index = 0; index < firstPloop.getNumLoops(); ++index) {
+  for (unsigned index : llvm::seq(firstPloop.getNumLoops())) {
     firstIVs[index].lBound = firstPloop.getLowerBound()[index];
     firstIVs[index].uBound = firstPloop.getUpperBound()[index];
     firstIVs[index].step = firstPloop.getStep()[index];
@@ -820,8 +823,9 @@ computeCandidateInterchangePermutations(ParallelOp &firstPloop,
   }
 
   SmallVector<bool> diffIVs(firstPloop.getNumLoops());
-  std::transform(firstIVs.begin(), firstIVs.end(), secondIVs.begin(),
-                 diffIVs.begin(), std::not_equal_to<LoopIV>());
+  llvm::transform(
+      llvm::zip(firstIVs, secondIVs), diffIVs.begin(),
+      [](auto const &pair) { return std::get<0>(pair) != std::get<1>(pair); });
 
   SmallVector<int64_t> indices;
   for (auto [idx, val] : enumerate(diffIVs))
@@ -879,9 +883,11 @@ computeCandidateInterchangePermutations(ParallelOp &firstPloop,
   SmallVector<SmallVector<int64_t>> groups;
   for (auto iv : unique) {
     SmallVector<int64_t> group;
-    for (unsigned index = 0; index < firstIVs.size(); ++index) {
-      if (firstIVs[index] == iv)
+    for (unsigned index : llvm::seq(firstIVs.size())) {
+      if (axesLimit && firstIVs[index] == iv) {
+        axesLimit--;
         group.push_back(index);
+      }
     }
     if (group.size() > 1)
       groups.push_back(std::move(group));
@@ -940,6 +946,7 @@ static void fuseIfLegal(ParallelOp firstPloop, ParallelOp &secondPloop,
         continue;
       }
 
+      secondPloop.replaceAllUsesWith(newLoop->getResults());
       secondPloop->erase();
       secondPloop = *newLoop;
       block2 = secondPloop.getBody();
