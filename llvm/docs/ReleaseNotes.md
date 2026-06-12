@@ -331,7 +331,7 @@ Makes programs 10x faster by doing Special New Thing.
   `.restorexmm128`, and `.unsetframe` MASM epilog directives. These are the
   epilog counterparts of `.pushreg`, `.allocstack`, `.savereg`,
   `.savexmm128`, and `.setframe` respectively, and are valid only inside
-  `.beginepilog`/`.endepilog` blocks.
+  `.beginepilog`/`.endepilog` blocks and only for V3 unwind information.
 * llvm-ml now supports `.pushframe code` syntax (without the `@` prefix)
   for interrupt handlers with error codes.
 * llvm-ml now diagnoses:
