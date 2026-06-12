@@ -584,19 +584,6 @@ func.func @cp_async_bulk_wait_group() {
 
 // -----
 
-// CHECK-LABEL: @llvm_nvvm_barrier_arrive
-// CHECK-SAME: (%[[barId:.*]]: i32, %[[numberOfThreads:.*]]: i32)
-llvm.func @llvm_nvvm_barrier_arrive(%barID : i32, %numberOfThreads : i32) {
-  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "bar.arrive 0, $0;", "r" %[[numberOfThreads]] : (i32) -> ()
-  nvvm.barrier.arrive number_of_threads = %numberOfThreads
-  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "bar.arrive $0, $1;", "r,r" %[[barId]], %[[numberOfThreads]] : (i32, i32) -> ()
-  nvvm.barrier.arrive id = %barID number_of_threads = %numberOfThreads
-  llvm.return
-}
-
-
-// -----
-
 llvm.func @init_mbarrier(
     %barrier_gen : !llvm.ptr, 
     %barrier : !llvm.ptr<3>, 

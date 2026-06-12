@@ -3744,6 +3744,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
         if (isGuaranteedNotToBeUndefOrPoison(Val, &AC, II, &DT))
           return RemoveBundle();
+
+        if (auto *LI = dyn_cast<LoadInst>(Val);
+            LI &&
+            isValidAssumeForContext(II, LI, &DT, /*AllowEphemerals=*/true)) {
+          LI->setMetadata(LLVMContext::MD_noundef,
+                          MDNode::get(II->getContext(), {}));
+          return RemoveBundle();
+        }
+
       } break;
 
       case BundleAttr::SeparateStorage: {
