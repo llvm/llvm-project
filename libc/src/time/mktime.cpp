@@ -8,22 +8,31 @@
 
 #include "src/time/mktime.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 #include "src/time/time_constants.h"
 #include "src/time/time_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(time_t, mktime, (struct tm * tm_out)) {
+  LIBC_CRASH_ON_NULLPTR(tm_out);
+
   auto mktime_result = time_utils::mktime_internal(tm_out);
-  if (!mktime_result)
-    return time_utils::out_of_range();
+  if (!mktime_result) {
+    libc_errno = time_utils::TIME_OVERFLOW;
+    return time_constants::OUT_OF_RANGE_RETURN_VALUE;
+  }
 
   time_t seconds = *mktime_result;
 
   // Update the tm structure's year, month, day, etc. from seconds.
-  if (time_utils::update_from_seconds(seconds, tm_out) < 0)
-    return time_utils::out_of_range();
+  auto status = time_utils::update_from_seconds(seconds, tm_out);
+  if (!status) {
+    libc_errno = status.error();
+    return time_constants::OUT_OF_RANGE_RETURN_VALUE;
+  }
 
   return seconds;
 }

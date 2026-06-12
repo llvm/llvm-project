@@ -392,6 +392,7 @@ void Demangler::parseMangle(OutputBuffer *Demangled,
         Demangled->insert(TypeLen, " ", 1);
       }
     }
+    std::free(TypeBuf.getBuffer());
   }
 }
 
