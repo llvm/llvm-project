@@ -10,3 +10,12 @@ RUN: perf2bolt %t -pa -p=%t.preagg -o %t.roundtrip.fdata -ignore-build-id
 RUN: sort %t.fdata > %t.fdata.sorted
 RUN: sort %t.roundtrip.fdata > %t.roundtrip.fdata.sorted
 RUN: diff %t.fdata.sorted %t.roundtrip.fdata.sorted
+## Check branch type (return) parsing: pre-aggregated profile is dumped before
+## Returns map is populated from disassembly, so we can use it to check if there
+## are/aren't any pre-aggregated returns.
+RUN: perf record -Fmax -j any,u -e cycles:u -o %t.perf.data.notype -- %t
+RUN: perf2bolt %t -p=%t.perf.data.notype -o %t.preagg.notype -ignore-build-id \
+RUN:   --profile-format=preagg --parse-branch-type=false
+## Expect no returns without branch type
+RUN: FileCheck %s --input-file=%t.preagg.notype --check-prefix=CHECK-NOTYPE
+CHECK-NOTYPE-NOT: R

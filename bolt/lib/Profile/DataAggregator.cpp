@@ -84,6 +84,11 @@ static cl::opt<bool> ParseMemProfile(
              "on by default unless `--itrace` is set."),
     cl::init(true), cl::cat(AggregatorCategory));
 
+static cl::opt<bool>
+    ParseBranchType("parse-branch-type",
+                    cl::desc("enable perf branch type parsing"), cl::init(true),
+                    cl::cat(AggregatorCategory));
+
 static cl::opt<unsigned long long>
 FilterPID("pid",
   cl::desc("only use samples from process with specified PID"),
@@ -1371,24 +1376,20 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
     MispredWarning = false;
   }
 
-  // Transaction, abort, cycles
-  for (unsigned I = 0; I < 3; ++I) {
-    ErrorOr<StringRef> IgnoredStr = parseString('/');
-    if (std::error_code EC = IgnoredStr.getError())
-      return EC;
-  }
-
-  // Type: COND/UNCOND/IND/CALL/IND_CALL/RET
-  ErrorOr<StringRef> TypeStr = parseString('/');
-  if (std::error_code EC = TypeStr.getError())
-    return EC;
-  Res.IsReturn = TypeStr.get() == "RET";
-
-  // Branch speculation
+  // Rest of the entry:
+  // INTX/ABORT/CYCLES/TYPE/SPEC
   ErrorOr<StringRef> Rest = parseString(FieldSeparator, true);
   if (std::error_code EC = Rest.getError())
     return EC;
-  if (Rest.get().size() < 1) {
+
+  bool ValidRest = Rest.get().size() >= 5;
+  if (opts::ParseBranchType) {
+    SmallVector<StringRef, 5> RestFields;
+    Rest.get().split(RestFields, '/');
+    ValidRest = RestFields.size() >= 5 && !RestFields[4].empty();
+    Res.IsReturn = ValidRest && RestFields[3] == "RET";
+  }
+  if (!ValidRest) {
     reportError("expected rest of brstack entry");
     Diag << "Found: " << Rest.get() << "\n";
     return make_error_code(llvm::errc::io_error);
@@ -1832,7 +1833,8 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     TakenBranchInfo &Info = TraceMap[Trace{LBR.From, LBR.To, TraceTo}];
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
-    Returns.emplace(LBR.From, LBR.IsReturn);
+    if (LBR.IsReturn)
+      Returns.emplace(LBR.From, true);
   }
   // Record LBR addresses not covered by fallthroughs (bottom-of-stack source
   // and top-of-stack target) as basic samples for heatmap.
@@ -2517,8 +2519,7 @@ DataAggregator::writePreAggregatedFile(StringRef OutputFilename) const {
     return EC;
 
   for (const auto &[Trace, Info] : Traces) {
-    auto ReturnIt = Returns.find(Trace.Branch);
-    const bool IsRet = ReturnIt != Returns.end() && ReturnIt->second;
+    const bool IsRet = Returns.count(Trace.Branch);
     OS << (IsRet ? 'R' : 'T') << " " << Trace << " " << Info << '\n';
   }
   if (!EventNames.empty())

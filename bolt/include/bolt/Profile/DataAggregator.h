@@ -90,10 +90,10 @@ public:
 
 private:
   struct LBREntry {
-    uint64_t From;
-    uint64_t To;
-    bool Mispred;
-    bool IsReturn;
+    uint64_t From{0};
+    uint64_t To{0};
+    bool Mispred{false};
+    bool IsReturn{false};
   };
   friend raw_ostream &operator<<(raw_ostream &OS, const LBREntry &);
 
