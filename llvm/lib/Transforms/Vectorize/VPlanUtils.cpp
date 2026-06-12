@@ -228,6 +228,14 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
       return SE.getMulExpr(Ops[0],
                            SE.getPowerOfTwo(Ops[0]->getType(), ShiftAmt));
     });
+  if (match(V, m_LShr(m_VPValue(LHSVal), m_ConstantInt(ShiftAmt)))) {
+    Type *Ty = V->getScalarType();
+    if (ShiftAmt < SE.getTypeSizeInBits(Ty))
+      return CreateSCEV(LHSVal, [&](ArrayRef<SCEVUse> Ops) {
+        return SE.getUDivExpr(Ops[0],
+                              SE.getPowerOfTwo(Ops[0]->getType(), ShiftAmt));
+      });
+  }
   if (match(V, m_UDiv(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getUDivExpr(Ops[0], Ops[1]);
