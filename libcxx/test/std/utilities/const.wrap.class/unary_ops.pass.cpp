@@ -148,7 +148,12 @@ static_assert(!HasPlus<std::constant_wrapper<NoOps{}>>);
 static_assert(!HasMinus<std::constant_wrapper<NoOps{}>>);
 static_assert(!HasBitNot<std::constant_wrapper<NoOps{}>>);
 static_assert(!HasNot<std::constant_wrapper<NoOps{}>>);
+
+// Skip this test on clang-21, see https://github.com/llvm/llvm-project/issues/151531.
+#if defined(__clang_major__) && __clang_major__ > 21
 static_assert(HasBitAnd<std::constant_wrapper<NoOps{}>>);
+#endif
+
 static_assert(!HasDeref<std::constant_wrapper<NoOps{}>>);
 
 // The operators from constant_wrapper do not exist, but they can be implicited converted
