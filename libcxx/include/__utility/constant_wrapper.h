@@ -47,130 +47,130 @@ constexpr auto cw = constant_wrapper<_Xp>{};
 struct __cw_operators {
   // unary operators
   template <__constexpr_param _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator+(_Tp) noexcept -> constant_wrapper<(+_Tp::value)> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator+(_Tp) noexcept -> constant_wrapper<auto(+_Tp::value)> {
     return {};
   }
   template <__constexpr_param _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator-(_Tp) noexcept -> constant_wrapper<(-_Tp::value)> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator-(_Tp) noexcept -> constant_wrapper<auto(-_Tp::value)> {
     return {};
   }
   template <__constexpr_param _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator~(_Tp) noexcept -> constant_wrapper<(~_Tp::value)> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator~(_Tp) noexcept -> constant_wrapper<auto(~_Tp::value)> {
     return {};
   }
   template <__constexpr_param _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator!(_Tp) noexcept -> constant_wrapper<(!_Tp::value)> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator!(_Tp) noexcept -> constant_wrapper<auto(!_Tp::value)> {
     return {};
   }
   template <__constexpr_param _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator&(_Tp) noexcept -> constant_wrapper<(&_Tp::value)> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator&(_Tp) noexcept -> constant_wrapper<auto(&_Tp::value)> {
     return {};
   }
   template <__constexpr_param _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator*(_Tp) noexcept -> constant_wrapper<(*_Tp::value)> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator*(_Tp) noexcept -> constant_wrapper<auto(*_Tp::value)> {
     return {};
   }
 
   // binary operators
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator+(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value + _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value + _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator-(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value - _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value - _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator*(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value * _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value * _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator/(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value / _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value / _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator%(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value % _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value % _Rp::value)> {
     return {};
   }
 
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<<(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value << _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value << _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator>>(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value >> _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value >> _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator&(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value & _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value & _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator|(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value | _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value | _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator^(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value ^ _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value ^ _Rp::value)> {
     return {};
   }
 
   template <__constexpr_param _Lp, __constexpr_param _Rp>
     requires(!is_constructible_v<bool, decltype(_Lp::value)> || !is_constructible_v<bool, decltype(_Rp::value)>)
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator&&(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value && _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value && _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
     requires(!is_constructible_v<bool, decltype(_Lp::value)> || !is_constructible_v<bool, decltype(_Rp::value)>)
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator||(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value || _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value || _Rp::value)> {
     return {};
   }
 
   // comparisons
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value <=> _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value <=> _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value < _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value < _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value <= _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value <= _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator==(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value == _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value == _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator!=(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value != _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value != _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator>(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value > _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value > _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator>=(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value >= _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value >= _Rp::value)> {
     return {};
   }
 
@@ -179,78 +179,78 @@ struct __cw_operators {
 
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator->*(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value->*_Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value->*_Rp::value)> {
     return {};
   }
 
   // pseudo-mutators
   template <__constexpr_param _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator++(this _Tp) noexcept -> constant_wrapper<(++_Tp::value)> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator++(this _Tp) noexcept -> constant_wrapper<auto(++_Tp::value)> {
     return {};
   }
   template <__constexpr_param _Tp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator++(this _Tp, int) noexcept
-      -> constant_wrapper<(_Tp::value++)> {
+      -> constant_wrapper<auto(_Tp::value++)> {
     return {};
   }
   template <__constexpr_param _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator--(this _Tp) noexcept -> constant_wrapper<(--_Tp::value)> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator--(this _Tp) noexcept -> constant_wrapper<auto(--_Tp::value)> {
     return {};
   }
   template <__constexpr_param _Tp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator--(this _Tp, int) noexcept
-      -> constant_wrapper<(_Tp::value--)> {
+      -> constant_wrapper<auto(_Tp::value--)> {
     return {};
   }
 
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator+=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value += _Rp::value)> {
+      -> constant_wrapper<auto(_Tp::value += _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator-=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value -= _Rp::value)> {
+      -> constant_wrapper<auto(_Tp::value -= _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator*=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value *= _Rp::value)> {
+      -> constant_wrapper<auto(_Tp::value *= _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator/=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value /= _Rp::value)> {
+      -> constant_wrapper<auto(_Tp::value /= _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator%=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value %= _Rp::value)> {
+      -> constant_wrapper<auto(_Tp::value %= _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator&=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value &= _Rp::value)> {
+      -> constant_wrapper<auto(_Tp::value &= _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator|=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value |= _Rp::value)> {
+      -> constant_wrapper<auto(_Tp::value |= _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator^=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value ^= _Rp::value)> {
+      -> constant_wrapper<auto(_Tp::value ^= _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator<<=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value <<= _Rp::value)> {
+      -> constant_wrapper<auto(_Tp::value <<= _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator>>=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value >>= _Rp::value)> {
+      -> constant_wrapper<auto(_Tp::value >>= _Rp::value)> {
     return {};
   }
 };
@@ -262,12 +262,12 @@ concept __constexpr_callable = (__constexpr_param<remove_cvref_t<_Args>> && ...)
 
 template <const auto& _Obj, class... _Args>
 concept __constexpr_indexable = (__constexpr_param<remove_cvref_t<_Args>> && ...) && requires {
-  typename constant_wrapper<_Obj[remove_cvref_t<_Args>::value...]>;
+  typename constant_wrapper<auto(_Obj[remove_cvref_t<_Args>::value...])>;
 };
 
 template <auto _Xp, class _Tp>
 struct constant_wrapper : __cw_operators {
-#  ifdef _LIB_CPP_COMPILER_GCC
+#  ifdef _LIBCPP_COMPILER_GCC
   // gcc bug: https://gcc.gnu.org/PR125188
   static constexpr decltype((_Xp)) value = (_Xp);
 #  else
@@ -306,7 +306,7 @@ struct constant_wrapper : __cw_operators {
   template <class... _Args>
     requires __constexpr_indexable<value, _Args...>
   [[nodiscard]]
-  _LIBCPP_HIDE_FROM_ABI static constexpr constant_wrapper<value[remove_cvref_t<_Args>::value...]>
+  _LIBCPP_HIDE_FROM_ABI static constexpr constant_wrapper<auto(value[remove_cvref_t<_Args>::value...])>
   operator[](_Args&&...) noexcept {
     return {};
   }
