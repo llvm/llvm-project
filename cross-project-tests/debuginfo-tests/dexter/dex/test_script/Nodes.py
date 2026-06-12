@@ -70,14 +70,6 @@ class Where:
             raise DexterNodeError(
                 self, f"unexpected attributes {', '.join(attributes)}"
             )
-        if (
-            not self.function
-            and not self.lines
-            and (self.for_hit_count or self.after_hit_count)
-        ):
-            raise DexterNodeError(
-                self, "can't check hit counts without an explicit lines or function arg"
-            )
         if self.at_frame_idx is not None and not self.is_and:
             raise DexterNodeError(self, "at_frame_idx can only be used with !and nodes")
 

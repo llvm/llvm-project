@@ -26,7 +26,7 @@ from dex.evaluation.Metrics import (
     get_variable_metrics,
     serialize_metric_to_json,
 )
-from dex.evaluation.StateMatch import StateMatchContext, get_active_where_matches
+from dex.evaluation.StateMatch import StateMatchContext, get_state_match
 from dex.test_script import DexterScript, Scope
 from dex.test_script.Nodes import Expect, Line, Step, Value
 
@@ -45,10 +45,10 @@ class DebuggerStepMatch:
         self.step = step
         self.script = script
         self.match_context = match_context
-        self.state_match = get_active_where_matches(script, step, state_match_context)
+        self.state_match = get_state_match(script, step, state_match_context)
         expects_to_match = {
             expect: where_match.frame_idx
-            for where_match in self.state_match.values()
+            for where_match in self.state_match.where_match_results.values()
             for expect in where_match.active_expects
         }
         self.var_expect_matches: Dict[Expect, DebuggerExpectMatch] = {}
@@ -177,7 +177,10 @@ class DebuggerRunMatch(object):
             result += f"Step {step_match.step.step_index}:\n"
             result += f"  {step_match.step.current_location}\n"
             frame_active_wheres = defaultdict(list)
-            for where, where_match in step_match.state_match.items():
+            for (
+                where,
+                where_match,
+            ) in step_match.state_match.where_match_results.items():
                 frame_active_wheres[where_match.frame_idx].append(str(where))
             if not frame_active_wheres:
                 result += f"  No active !where nodes.\n"
