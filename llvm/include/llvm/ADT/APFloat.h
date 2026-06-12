@@ -1005,15 +1005,18 @@ class HexFloat final {
   const fltSemantics *semantics;
 
   /// A binary fraction with an explicit integer bit.
-  APInt significand;
+  union SignificandParts {
+    integerPart single;
+    integerPart *many;
+  } significandParts;
 
   /// The signed unbiased exponent of the value.
-  ExponentType exponent;
+  int16_t exponent;
 
   /// The exponent in the low-order part of a HexFloat 128.
   /// This is ignored during computation, but must be preserved so that a
   /// bitcast to APInt and back is an identity operation.
-  ExponentType low_exponent;
+  int16_t low_exponent;
 
   /// What kind of floating point number this is.
   ///
@@ -1028,10 +1031,20 @@ class HexFloat final {
   /// This is ignored; see comment for low_exponent.
   unsigned int low_sign : 1;
 
+  unsigned int getPartCount() const;
+
+  integerPart *getSignificandParts();
+  const integerPart *getSignificandParts() const;
+
   void initialize(const fltSemantics *);
   void assign(const HexFloat &);
   void copySignificand(const HexFloat &);
   void freeSignificand();
+  static unsigned int getNumPrecisionBits(const fltSemantics *semantics);
+  unsigned int getNumPrecisionBits() const {
+    return getNumPrecisionBits(semantics);
+  }
+  void setSignificand(const APInt &S);
   void cohereLowSignAndExponent();
 
   opStatus convertToSignExtendedInteger(MutableArrayRef<integerPart> Input,
@@ -1135,7 +1148,7 @@ public:
 
   int getRadix() const { return 16; }
   ExponentType getExponent() const { return exponent; }
-  APInt getSignificand() const { return significand; }
+  APInt getSignificand() const;
   APInt getNaNPayload() const;
 
   hash_code hash_value() const;
@@ -1147,10 +1160,6 @@ public:
   friend HexFloat frexp(HexFloat X, int &Exp, roundingMode);
 
 private:
-  static unsigned int getNumPrecisionBits(const fltSemantics *semantics);
-  unsigned int getNumPrecisionBits() const {
-    return getNumPrecisionBits(semantics);
-  }
   Expected<opStatus> convertFromDecimalString(StringRef, roundingMode);
   Expected<opStatus> convertFromHexadecimalString(StringRef, roundingMode);
   opStatus handleOverflow(bool isNeg = false);
@@ -1923,6 +1932,9 @@ public:
   friend HexFloat;
 };
 
+static_assert(sizeof(APFloat) == sizeof(detail::IEEEFloat),
+              "Empty base class optimization is not performed.");
+
 /// See friend declarations above.
 ///
 /// These additional declarations are required in order to compile LLVM with IBM
@@ -1939,9 +1951,6 @@ LLVM_ABI hash_code hash_value(const APFloat &Arg);
 ///   Inf -> \c IEK_Inf
 ///
 inline int ilogb(const APFloat &Arg) {
-  static_assert(sizeof(APFloat) == sizeof(APFloat::Storage),
-                "Empty base class optimization is not performed.");
-
   if (APFloat::usesLayout<detail::IEEEFloat>(Arg.getSemantics()))
     return ilogb(Arg.U.IEEE);
   if (APFloat::usesLayout<detail::DoubleAPFloat>(Arg.getSemantics()))
