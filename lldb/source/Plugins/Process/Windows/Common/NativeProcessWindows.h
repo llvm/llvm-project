@@ -183,8 +183,6 @@ private:
   /// Set when Halt() / Interrupt() schedules a DebugBreakProcess injection.
   bool m_pending_halt = false;
 
-  /// Mirrors the client-side qXfer:libraries[-svr4]:read+ qSupported feature
-  /// reported by GDBRemoteCommunicationServerLLGS::HandleFeatures.
   bool m_client_supports_libraries_read = false;
 
   /// PseudoConsole for the lldb-server stdio-forwarding path.
