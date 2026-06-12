@@ -157,6 +157,8 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
       // anything happened.
       m_session_data->m_debugger->ContinueAsyncException(
           ExceptionResult::MaskException);
+    } else if (m_session_data->m_debugger->HasPendingDllEvent()) {
+      m_session_data->m_debugger->ContinueAsyncDllEvent();
     }
   } else {
     LLDB_LOG(log, "error: process {0} is in state {1}.  Returning...",
@@ -480,6 +482,15 @@ void NativeProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
     SetArchitecture(process_info.GetArchitecture());
   }
 
+  ProcessInstanceInfo info;
+  if (Host::GetProcessInfo(GetDebuggedProcessId(), info)) {
+    FileSpec exe = info.GetExecutableFile();
+    if (exe) {
+      FileSystem::Instance().Resolve(exe);
+      m_loaded_modules[exe] = image_base;
+    }
+  }
+
   // The very first one shall always be the main thread.
   assert(m_threads.empty());
   m_threads.push_back(std::make_unique<NativeThreadWindows>(
@@ -704,13 +715,59 @@ void NativeProcessWindows::OnExitThread(lldb::tid_t thread_id,
 
 void NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
                                      lldb::addr_t module_addr) {
-  m_loaded_modules.clear();
+  Log *log = GetLog(WindowsLog::Process);
+
+  if (module_spec.GetFileSpec()) {
+    FileSpec resolved = module_spec.GetFileSpec();
+    FileSystem::Instance().Resolve(resolved);
+    m_loaded_modules[resolved] = module_addr;
+  }
   m_pending_library_events = true;
+
+  if (!m_initial_stop_seen || !m_client_supports_libraries_read)
+    return;
+
+  if (!m_threads.empty()) {
+    auto first = static_cast<NativeThreadWindows *>(m_threads[0].get());
+    SetCurrentThreadID(first->GetID());
+    if (first->DoStop().Fail())
+      LLDB_LOG(log, "failed to suspend thread {0} on LOAD_DLL", first->GetID());
+    ThreadStopInfo info;
+    info.reason = lldb::eStopReasonNone;
+    info.signo = 0;
+    first->SetStopReason(info, "");
+  }
+  SetState(eStateStopped, true);
+
+  m_session_data->m_debugger->WaitForResumeAfterDllEvent();
 }
 
 void NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
-  m_loaded_modules.clear();
+  Log *log = GetLog(WindowsLog::Process);
+  for (auto it = m_loaded_modules.begin(); it != m_loaded_modules.end();) {
+    if (it->second == module_addr)
+      it = m_loaded_modules.erase(it);
+    else
+      ++it;
+  }
   m_pending_library_events = true;
+
+  if (!m_initial_stop_seen || m_client_supports_libraries_read)
+    return;
+
+  if (!m_threads.empty()) {
+    auto first = static_cast<NativeThreadWindows *>(m_threads[0].get());
+    SetCurrentThreadID(first->GetID());
+    if (first->DoStop().Fail())
+      LLDB_LOG(log, "failed to suspend thread {0} on UNLOAD_DLL",
+               first->GetID());
+    ThreadStopInfo info;
+    info.reason = lldb::eStopReasonNone;
+    info.signo = 0;
+    first->SetStopReason(info, "");
+  }
+  SetState(eStateStopped, true);
+  m_session_data->m_debugger->WaitForResumeAfterDllEvent();
 }
 
 void NativeProcessWindows::OnDebugString(lldb::addr_t debug_string_addr,

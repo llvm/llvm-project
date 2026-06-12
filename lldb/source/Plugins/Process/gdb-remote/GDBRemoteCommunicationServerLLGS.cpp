@@ -4496,6 +4496,11 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
             .Case("vfork-events+", Extension::vfork)
             .Default({});
 
+  if (bool(plugin_features & Extension::libraries))
+    m_extensions_supported |= Extension::libraries;
+  if (bool(plugin_features & Extension::libraries_svr4))
+    m_extensions_supported |= Extension::libraries_svr4;
+
   // We consume lldb's swbreak/hwbreak feature, but it doesn't change the
   // behaviour of lldb-server. We always adjust the program counter for targets
   // like x86

@@ -107,6 +107,20 @@ public:
 
   bool HasPendingLibraryEvents() override;
 
+  /// Records whether the gdb-remote client advertised
+  /// `qXfer:libraries:read+` (or `qXfer:libraries-svr4:read+`) in its
+  /// qSupported reply.
+  void SetClientSupportsLibrariesRead(bool v) {
+    m_client_supports_libraries_read = v;
+  }
+
+  /// Forwards to NativeProcessProtocol's bookkeeping.
+  void SetEnabledExtensions(Extension flags) override {
+    NativeProcessProtocol::SetEnabledExtensions(flags);
+    SetClientSupportsLibrariesRead(
+        bool(flags & (Extension::libraries | Extension::libraries_svr4)));
+  }
+
   /// Forward bytes from the gdb-remote `I` packet into the inferior's
   /// ConPTY-backed stdin via `m_stdio_communication.Write` →
   /// `ConnectionConPTY::Write` → `WriteFile` on the parent-side STDIN
@@ -163,7 +177,7 @@ private:
 
   /// Set whenever an OS DLL load/unload event has been seen since the last stop
   /// reply.
-  bool m_pending_library_events = true;
+  bool m_pending_library_events = false;
 
   /// Whether we've seen the loader breakpoint that fires once per process at
   /// launch / attach.
@@ -171,6 +185,10 @@ private:
 
   /// Set when Halt() / Interrupt() schedules a DebugBreakProcess injection.
   bool m_pending_halt = false;
+
+  /// Mirrors the client-side qXfer:libraries[-svr4]:read+ qSupported feature
+  /// reported by GDBRemoteCommunicationServerLLGS::HandleFeatures.
+  bool m_client_supports_libraries_read = false;
 
   /// PseudoConsole for the lldb-server stdio-forwarding path.
   std::shared_ptr<PseudoConsole> m_pty;
