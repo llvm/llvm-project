@@ -47,27 +47,33 @@ constexpr auto cw = constant_wrapper<_Xp>{};
 struct __cw_operators {
   // unary operators
   template <__constexpr_param _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator+(_Tp) noexcept -> constant_wrapper<auto(+_Tp::value)> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator+(_Tp) noexcept
+      -> constant_wrapper<auto(+_Tp::value)> {
     return {};
   }
   template <__constexpr_param _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator-(_Tp) noexcept -> constant_wrapper<auto(-_Tp::value)> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator-(_Tp) noexcept
+      -> constant_wrapper<auto(-_Tp::value)> {
     return {};
   }
   template <__constexpr_param _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator~(_Tp) noexcept -> constant_wrapper<auto(~_Tp::value)> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator~(_Tp) noexcept
+      -> constant_wrapper<auto(~_Tp::value)> {
     return {};
   }
   template <__constexpr_param _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator!(_Tp) noexcept -> constant_wrapper<auto(!_Tp::value)> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator!(_Tp) noexcept
+      -> constant_wrapper<auto(!_Tp::value)> {
     return {};
   }
   template <__constexpr_param _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator&(_Tp) noexcept -> constant_wrapper<auto(&_Tp::value)> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator&(_Tp) noexcept
+      -> constant_wrapper<auto(&_Tp::value)> {
     return {};
   }
   template <__constexpr_param _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator*(_Tp) noexcept -> constant_wrapper<auto(*_Tp::value)> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator*(_Tp) noexcept
+      -> constant_wrapper<auto(*_Tp::value)> {
     return {};
   }
 
@@ -84,7 +90,7 @@ struct __cw_operators {
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator*(_Lp, _Rp) noexcept
-      -> constant_wrapper<auto(_Lp::value * _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value* _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
@@ -110,7 +116,7 @@ struct __cw_operators {
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator&(_Lp, _Rp) noexcept
-      -> constant_wrapper<auto(_Lp::value & _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value& _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
@@ -127,7 +133,7 @@ struct __cw_operators {
   template <__constexpr_param _Lp, __constexpr_param _Rp>
     requires(!is_constructible_v<bool, decltype(_Lp::value)> || !is_constructible_v<bool, decltype(_Rp::value)>)
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator&&(_Lp, _Rp) noexcept
-      -> constant_wrapper<auto(_Lp::value && _Rp::value)> {
+      -> constant_wrapper<auto(_Lp::value&& _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Lp, __constexpr_param _Rp>
@@ -185,7 +191,8 @@ struct __cw_operators {
 
   // pseudo-mutators
   template <__constexpr_param _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator++(this _Tp) noexcept -> constant_wrapper<auto(++_Tp::value)> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator++(this _Tp) noexcept
+      -> constant_wrapper<auto(++_Tp::value)> {
     return {};
   }
   template <__constexpr_param _Tp>
@@ -194,7 +201,8 @@ struct __cw_operators {
     return {};
   }
   template <__constexpr_param _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator--(this _Tp) noexcept -> constant_wrapper<auto(--_Tp::value)> {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator--(this _Tp) noexcept
+      -> constant_wrapper<auto(--_Tp::value)> {
     return {};
   }
   template <__constexpr_param _Tp>
