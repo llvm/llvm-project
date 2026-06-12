@@ -15,6 +15,7 @@
 #ifndef LLVM_CODEGEN_LIVESTACKS_H
 #define LLVM_CODEGEN_LIVESTACKS_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/IR/PassManager.h"
@@ -22,7 +23,7 @@
 #include "llvm/PassRegistry.h"
 #include <cassert>
 #include <map>
-#include <unordered_map>
+#include <memory>
 
 namespace llvm {
 
@@ -40,8 +41,10 @@ class LiveStacks {
   ///
   VNInfo::Allocator VNInfoAllocator;
 
-  /// S2IMap - Stack slot indices to live interval mapping.
-  using SS2IntervalMap = std::unordered_map<int, LiveInterval>;
+  /// S2IMap - Stack slot indices to live interval mapping. The intervals are
+  /// heap-allocated so that references remain valid while new slots are
+  /// created.
+  using SS2IntervalMap = DenseMap<int, std::unique_ptr<LiveInterval>>;
   SS2IntervalMap S2IMap;
 
   /// S2RCMap - Stack slot indices to register class mapping.
@@ -65,14 +68,14 @@ public:
     assert(Slot >= 0 && "Spill slot indice must be >= 0");
     SS2IntervalMap::iterator I = S2IMap.find(Slot);
     assert(I != S2IMap.end() && "Interval does not exist for stack slot");
-    return I->second;
+    return *I->second;
   }
 
   const LiveInterval &getInterval(int Slot) const {
     assert(Slot >= 0 && "Spill slot indice must be >= 0");
     SS2IntervalMap::const_iterator I = S2IMap.find(Slot);
     assert(I != S2IMap.end() && "Interval does not exist for stack slot");
-    return I->second;
+    return *I->second;
   }
 
   bool hasInterval(int Slot) const { return S2IMap.count(Slot); }

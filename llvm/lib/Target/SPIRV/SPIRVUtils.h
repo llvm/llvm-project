@@ -16,6 +16,7 @@
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Dominators.h"
@@ -25,7 +26,6 @@
 #include <queue>
 #include <set>
 #include <string>
-#include <unordered_map>
 
 #include "SPIRVTypeInst.h"
 
@@ -568,7 +568,7 @@ bool isNestedPointer(const Type *Ty);
 enum FPDecorationId { NONE, RTE, RTZ, RTP, RTN, SAT };
 
 inline FPDecorationId demangledPostfixToDecorationId(const std::string &S) {
-  static std::unordered_map<std::string, FPDecorationId> Mapping = {
+  static const StringMap<FPDecorationId> Mapping = {
       {"rte", FPDecorationId::RTE},
       {"rtz", FPDecorationId::RTZ},
       {"rtp", FPDecorationId::RTP},

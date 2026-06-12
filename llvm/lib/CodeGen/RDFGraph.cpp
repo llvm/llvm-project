@@ -1015,13 +1015,14 @@ void DataFlowGraph::releaseBlock(NodeId B, DefStackMap &DefM) {
   for (auto &P : DefM)
     P.second.clear_block(B);
 
-  // Finally, remove empty stacks from the map.
-  for (auto I = DefM.begin(), E = DefM.end(), NextI = I; I != E; I = NextI) {
-    NextI = std::next(I);
-    // This preserves the validity of iterators other than I.
-    if (I->second.empty())
-      DefM.erase(I);
-  }
+  // Finally, remove empty stacks from the map. DenseMap's erase relocates
+  // other elements, so collect the keys first.
+  SmallVector<RegisterId, 8> EmptyRegs;
+  for (auto &P : DefM)
+    if (P.second.empty())
+      EmptyRegs.push_back(P.first);
+  for (RegisterId R : EmptyRegs)
+    DefM.erase(R);
 }
 
 // Push all definitions from the instruction node IA to an appropriate

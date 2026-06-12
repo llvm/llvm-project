@@ -573,8 +573,10 @@ void Liveness::computePhiInfo() {
           UI->second.insert({I.first, S.Mask});
         }
       }
-      UI = UI->second.empty() ? RealUses.erase(UI) : std::next(UI);
+      ++UI;
     }
+    // Drop the entries whose use sets ended up empty.
+    emptify(RealUses);
 
     // If this phi reaches some "real" uses, add it to the queue for upward
     // propagation.
@@ -696,7 +698,7 @@ void Liveness::computePhiInfo() {
         //     if MidDefs does not cover (R,U)
         //       then add (R-MidDefs,U) to RealUseMap[P]
         //
-        for (const std::pair<const RegisterId, NodeRefSet> &T : RUM) {
+        for (const auto &T : RUM) {
           RegisterRef R(T.first);
           // The current phi (PA) could be a phi for a regmask. It could
           // reach a whole variety of uses that are not related to the
@@ -829,7 +831,7 @@ void Liveness::computeLiveIns() {
         auto PrA = DFG.addr<BlockNode *>(PUA.Addr->getPredecessor());
         RefMap &LOX = PhiLOX[PrA.Addr->getCode()];
 
-        for (const std::pair<const RegisterId, NodeRefSet> &RS : RUs) {
+        for (const auto &RS : RUs) {
           // We need to visit each individual use.
           for (std::pair<NodeId, LaneBitmask> P : RS.second) {
             // Create a register ref corresponding to the use, and find
@@ -1047,7 +1049,7 @@ void Liveness::traverse(MachineBasicBlock *B, RefMap &LiveIn) {
   RefMap LiveInCopy = LiveIn;
   LiveIn.clear();
 
-  for (const std::pair<const RegisterId, NodeRefSet> &LE : LiveInCopy) {
+  for (const auto &LE : LiveInCopy) {
     RegisterRef LRef(LE.first);
     NodeRefSet &NewDefs = LiveIn[LRef.Id]; // To be filled.
     const NodeRefSet &OldDefs = LE.second;
@@ -1161,7 +1163,7 @@ void Liveness::traverse(MachineBasicBlock *B, RefMap &LiveIn) {
 
   for (auto *C : IIDF[B]) {
     RegisterAggr &LiveC = LiveMap[C];
-    for (const std::pair<const RegisterId, NodeRefSet> &S : LiveIn)
+    for (const auto &S : LiveIn)
       for (auto R : S.second)
         if (MDT.properlyDominates(getBlockWithRef(R.first), C))
           LiveC.insert(RegisterRef(S.first, R.second));
@@ -1169,8 +1171,13 @@ void Liveness::traverse(MachineBasicBlock *B, RefMap &LiveIn) {
 }
 
 void Liveness::emptify(RefMap &M) {
-  for (auto I = M.begin(), E = M.end(); I != E;)
-    I = I->second.empty() ? M.erase(I) : std::next(I);
+  // DenseMap's erase relocates other elements, so collect the keys first.
+  SmallVector<RegisterId, 8> Empty;
+  for (auto &P : M)
+    if (P.second.empty())
+      Empty.push_back(P.first);
+  for (RegisterId R : Empty)
+    M.erase(R);
 }
 
 } // namespace llvm::rdf

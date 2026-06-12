@@ -52,20 +52,17 @@ void LiveStacks::init(MachineFunction &MF) {
 LiveInterval &
 LiveStacks::getOrCreateInterval(int Slot, const TargetRegisterClass *RC) {
   assert(Slot >= 0 && "Spill slot indice must be >= 0");
-  SS2IntervalMap::iterator I = S2IMap.find(Slot);
-  if (I == S2IMap.end()) {
-    I = S2IMap
-            .emplace(
-                std::piecewise_construct, std::forward_as_tuple(Slot),
-                std::forward_as_tuple(Register::index2StackSlot(Slot), 0.0F))
-            .first;
+  auto [I, Inserted] = S2IMap.try_emplace(Slot);
+  if (Inserted) {
+    I->second =
+        std::make_unique<LiveInterval>(Register::index2StackSlot(Slot), 0.0F);
     S2RCMap.insert(std::make_pair(Slot, RC));
   } else {
     // Use the largest common subclass register class.
     const TargetRegisterClass *&OldRC = S2RCMap[Slot];
     OldRC = TRI->getCommonSubClass(OldRC, RC);
   }
-  return I->second;
+  return *I->second;
 }
 
 AnalysisKey LiveStacksAnalysis::Key;
@@ -99,9 +96,13 @@ void LiveStacksWrapperLegacy::print(raw_ostream &OS, const Module *) const {
 void LiveStacks::print(raw_ostream &OS, const Module*) const {
 
   OS << "********** INTERVALS **********\n";
-  for (const_iterator I = begin(), E = end(); I != E; ++I) {
-    I->second.print(OS);
-    int Slot = I->first;
+  // Print in slot order for deterministic output.
+  SmallVector<int, 8> Slots;
+  for (const_iterator I = begin(), E = end(); I != E; ++I)
+    Slots.push_back(I->first);
+  llvm::sort(Slots);
+  for (int Slot : Slots) {
+    getInterval(Slot).print(OS);
     const TargetRegisterClass *RC = getIntervalRegClass(Slot);
     if (RC)
       OS << " [" << TRI->getRegClassName(RC) << "]\n";

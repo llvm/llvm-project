@@ -69,7 +69,6 @@
 #include <string>
 #include <tuple>
 #include <type_traits>
-#include <unordered_map>
 #include <vector>
 
 namespace llvm {
@@ -273,10 +272,12 @@ public:
   MCPseudoProbeInlineTreeBase<ProbesType, DerivedProbeInlineTreeType,
                               InlinedProbeTreeMap> *Parent = nullptr;
   DerivedProbeInlineTreeType *getOrAddNode(const InlineSite &Site) {
-    auto Ret = Children.emplace(
-        Site, std::make_unique<DerivedProbeInlineTreeType>(Site));
-    Ret.first->second->Parent = this;
-    return Ret.first->second.get();
+    auto [It, Inserted] = Children.try_emplace(Site);
+    if (Inserted) {
+      It->second = std::make_unique<DerivedProbeInlineTreeType>(Site);
+      It->second->Parent = this;
+    }
+    return It->second.get();
   };
 };
 
@@ -285,17 +286,10 @@ public:
 // instance is created as the root of a tree.
 // A real instance of this class is created for each function, either a
 // not inlined function that has code in .text section or an inlined function.
-struct InlineSiteHash {
-  uint64_t operator()(const InlineSite &Site) const {
-    return std::get<0>(Site) ^ std::get<1>(Site);
-  }
-};
 class MCPseudoProbeInlineTree
     : public MCPseudoProbeInlineTreeBase<
           std::vector<MCPseudoProbe>, MCPseudoProbeInlineTree,
-          std::unordered_map<InlineSite,
-                             std::unique_ptr<MCPseudoProbeInlineTree>,
-                             InlineSiteHash>> {
+          DenseMap<InlineSite, std::unique_ptr<MCPseudoProbeInlineTree>>> {
 public:
   MCPseudoProbeInlineTree() = default;
   MCPseudoProbeInlineTree(uint64_t Guid) { this->Guid = Guid; }
@@ -345,12 +339,16 @@ class MCPseudoProbeSections {
 public:
   void addPseudoProbe(MCSymbol *FuncSym, const MCPseudoProbe &Probe,
                       const MCPseudoProbeInlineStack &InlineStack) {
-    MCProbeDivisions[FuncSym].addPseudoProbe(Probe, InlineStack);
+    auto &Tree = MCProbeDivisions[FuncSym];
+    if (!Tree)
+      Tree = std::make_unique<MCPseudoProbeInlineTree>();
+    Tree->addPseudoProbe(Probe, InlineStack);
   }
 
-  // The addresses of MCPseudoProbeInlineTree are used by the tree structure and
-  // need to be stable.
-  using MCProbeDivisionMap = std::unordered_map<MCSymbol *, MCPseudoProbeInlineTree>;
+  // The addresses of MCPseudoProbeInlineTree are used by the tree structure
+  // and need to be stable, so the trees are heap-allocated.
+  using MCProbeDivisionMap =
+      DenseMap<MCSymbol *, std::unique_ptr<MCPseudoProbeInlineTree>>;
 
 private:
   // A collection of MCPseudoProbe for each function. The MCPseudoProbes are
@@ -394,8 +392,8 @@ class MCPseudoProbeDecoder {
   //    reallocation so that pointers to its elements will become invalid.
   // 2) Probes belonging to function record must be contiguous in PseudoProbeVec
   //    as owning InlineTree references them with an ArrayRef to save space.
-  std::unordered_map<const MCDecodedPseudoProbeInlineTree *,
-                     std::vector<MCDecodedPseudoProbe>>
+  DenseMap<const MCDecodedPseudoProbeInlineTree *,
+           std::vector<MCDecodedPseudoProbe>>
       InjectedProbeMap;
   // Decoded inline records vector.
   std::vector<MCDecodedPseudoProbeInlineTree> InlineTreeVec;

@@ -213,7 +213,7 @@ void MCPseudoProbeSections::emit(MCObjectStreamer *MCOS) {
   SmallVector<std::pair<MCSymbol *, MCPseudoProbeInlineTree *>> Vec;
   Vec.reserve(MCProbeDivisions.size());
   for (auto &ProbeSec : MCProbeDivisions)
-    Vec.emplace_back(ProbeSec.first, &ProbeSec.second);
+    Vec.emplace_back(ProbeSec.first, ProbeSec.second.get());
   for (auto I : llvm::enumerate(MCOS->getAssembler()))
     I.value().setOrdinal(I.index());
   llvm::sort(Vec, [](auto A, auto B) {

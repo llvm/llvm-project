@@ -19,7 +19,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/LongestCommonSequence.h"
 
-#include <unordered_set>
 
 using namespace llvm;
 using namespace sampleprof;
@@ -467,7 +466,7 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
     if (IRCalleeId == ProfCalleeId) {
       auto It = CallsiteMatchStates.find(ProfileLoc);
       if (It == CallsiteMatchStates.end())
-        CallsiteMatchStates.emplace(ProfileLoc, MatchState::InitialMatch);
+        CallsiteMatchStates.try_emplace(ProfileLoc, MatchState::InitialMatch);
       else if (IsPostMatch) {
         if (It->second == MatchState::InitialMatch)
           It->second = MatchState::UnchangedMatch;
@@ -484,7 +483,7 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
     assert(!I.second.stringRef().empty() && "Callees should not be empty");
     auto It = CallsiteMatchStates.find(Loc);
     if (It == CallsiteMatchStates.end())
-      CallsiteMatchStates.emplace(Loc, MatchState::InitialMismatch);
+      CallsiteMatchStates.try_emplace(Loc, MatchState::InitialMismatch);
     else if (IsPostMatch) {
       // Update the state if it's not matched(UnchangedMatch or
       // RecoveredMismatch).
@@ -594,7 +593,7 @@ void SampleProfileMatcher::countMismatchCallsites(const FunctionSamples &FS) {
 
 void SampleProfileMatcher::countCallGraphRecoveredSamples(
     const FunctionSamples &FS,
-    std::unordered_set<FunctionId> &CallGraphRecoveredProfiles) {
+    DenseSet<FunctionId> &CallGraphRecoveredProfiles) {
   if (CallGraphRecoveredProfiles.count(FS.getFunction())) {
     NumCallGraphRecoveredFuncSamples += FS.getTotalSamples();
     return;
@@ -611,7 +610,7 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
   if (!ReportProfileStaleness && !PersistProfileStaleness)
     return;
 
-  std::unordered_set<FunctionId> CallGraphRecoveredProfiles;
+  DenseSet<FunctionId> CallGraphRecoveredProfiles;
   if (SalvageUnusedProfile) {
     for (const auto &I : FuncToProfileNameMap) {
       CallGraphRecoveredProfiles.insert(I.second);

@@ -33,9 +33,9 @@
 #include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <string>
 #include <tuple>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -176,7 +176,7 @@ private:
 
     /// Map from inlined call site to inlined instructions and child inlined
     /// call sites. Listed in program order.
-    std::unordered_map<const DILocation *, InlineSite> InlineSites;
+    DenseMap<const DILocation *, std::unique_ptr<InlineSite>> InlineSites;
 
     /// Ordered list of top-level inlined call sites.
     SmallVector<const DILocation *, 1> ChildSites;
@@ -187,7 +187,8 @@ private:
     SmallVector<LocalVariable, 1> Locals;
     SmallVector<CVGlobalVariable, 1> Globals;
 
-    std::unordered_map<const DILexicalBlockBase*, LexicalBlock> LexicalBlocks;
+    DenseMap<const DILexicalBlockBase *, std::unique_ptr<LexicalBlock>>
+        LexicalBlocks;
 
     // Lexical blocks containing local variables.
     SmallVector<LexicalBlock *, 1> ChildBlocks;

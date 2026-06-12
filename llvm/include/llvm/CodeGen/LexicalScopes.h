@@ -23,7 +23,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
-#include <unordered_map>
+#include <memory>
 #include <utility>
 
 namespace llvm {
@@ -190,19 +190,19 @@ public:
   /// Find an abstract scope or return null.
   LexicalScope *findAbstractScope(const DILocalScope *N) {
     auto I = AbstractScopeMap.find(N);
-    return I != AbstractScopeMap.end() ? &I->second : nullptr;
+    return I != AbstractScopeMap.end() ? I->second.get() : nullptr;
   }
 
   /// Find an inlined scope for the given scope/inlined-at.
   LexicalScope *findInlinedScope(const DILocalScope *N, const DILocation *IA) {
     auto I = InlinedLexicalScopeMap.find(std::make_pair(N, IA));
-    return I != InlinedLexicalScopeMap.end() ? &I->second : nullptr;
+    return I != InlinedLexicalScopeMap.end() ? I->second.get() : nullptr;
   }
 
   /// Find regular lexical scope or return null.
   LexicalScope *findLexicalScope(const DILocalScope *N) {
     auto I = LexicalScopeMap.find(N);
-    return I != LexicalScopeMap.end() ? &I->second : nullptr;
+    return I != LexicalScopeMap.end() ? I->second.get() : nullptr;
   }
 
   /// Find or create an abstract lexical scope.
@@ -246,18 +246,18 @@ private:
   DenseMap<const DISubprogram *, const Function *> FunctionMap;
 
   /// Tracks the scopes in the current function.
-  // Use an unordered_map to ensure value pointer validity over insertion.
-  std::unordered_map<const DILocalScope *, LexicalScope> LexicalScopeMap;
+  // The scopes are heap-allocated to ensure LexicalScope pointer validity
+  // over insertion.
+  DenseMap<const DILocalScope *, std::unique_ptr<LexicalScope>> LexicalScopeMap;
 
   /// Tracks inlined function scopes in current function.
-  std::unordered_map<std::pair<const DILocalScope *, const DILocation *>,
-                     LexicalScope,
-                     pair_hash<const DILocalScope *, const DILocation *>>
+  DenseMap<std::pair<const DILocalScope *, const DILocation *>,
+           std::unique_ptr<LexicalScope>>
       InlinedLexicalScopeMap;
 
   /// These scopes are  not included LexicalScopeMap.
-  // Use an unordered_map to ensure value pointer validity over insertion.
-  std::unordered_map<const DILocalScope *, LexicalScope> AbstractScopeMap;
+  DenseMap<const DILocalScope *, std::unique_ptr<LexicalScope>>
+      AbstractScopeMap;
 
   /// Tracks abstract scopes constructed while processing a function.
   SmallVector<LexicalScope *, 4> AbstractScopesList;

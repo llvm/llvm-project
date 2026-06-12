@@ -253,10 +253,11 @@ class SPIRVEmitIntrinsics
                                bool UnknownElemTypeI8);
 
   // deduce Types of operands of the Instruction if possible
-  void deduceOperandElementType(Instruction *I,
-                                SmallPtrSet<Instruction *, 4> *IncompleteRets,
-                                const SmallPtrSet<Value *, 4> *AskOps = nullptr,
-                                bool IsPostprocessing = false);
+  void
+  deduceOperandElementType(Instruction *I,
+                           SmallPtrSetImpl<Instruction *> *IncompleteRets,
+                           const SmallPtrSetImpl<Value *> *AskOps = nullptr,
+                           bool IsPostprocessing = false);
 
   void preprocessCompositeConstants(IRBuilder<> &B);
   void preprocessUndefs(IRBuilder<> &B);
@@ -296,8 +297,8 @@ class SPIRVEmitIntrinsics
       CallInst *CI, SmallVector<std::pair<Value *, unsigned>> &Ops,
       Type *&KnownElemTy, bool IsPostprocessing);
   bool deduceOperandElementTypeFunctionRet(
-      Instruction *I, SmallPtrSet<Instruction *, 4> *IncompleteRets,
-      const SmallPtrSet<Value *, 4> *AskOps, bool IsPostprocessing,
+      Instruction *I, SmallPtrSetImpl<Instruction *> *IncompleteRets,
+      const SmallPtrSetImpl<Value *> *AskOps, bool IsPostprocessing,
       Type *&KnownElemTy, Value *Op, Function *F);
 
   CallInst *buildSpvPtrcast(Function *F, Value *Op, Type *ElemTy);
@@ -1313,8 +1314,8 @@ void SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionPointer(
 }
 
 bool SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionRet(
-    Instruction *I, SmallPtrSet<Instruction *, 4> *IncompleteRets,
-    const SmallPtrSet<Value *, 4> *AskOps, bool IsPostprocessing,
+    Instruction *I, SmallPtrSetImpl<Instruction *> *IncompleteRets,
+    const SmallPtrSetImpl<Value *> *AskOps, bool IsPostprocessing,
     Type *&KnownElemTy, Value *Op, Function *F) {
   KnownElemTy = GR->findDeducedElementType(F);
   if (KnownElemTy)
@@ -1360,8 +1361,8 @@ bool SPIRVEmitIntrinsics::deduceOperandElementTypeFunctionRet(
 // types which differ from expected, this function tries to insert a bitcast to
 // resolve the issue.
 void SPIRVEmitIntrinsics::deduceOperandElementType(
-    Instruction *I, SmallPtrSet<Instruction *, 4> *IncompleteRets,
-    const SmallPtrSet<Value *, 4> *AskOps, bool IsPostprocessing) {
+    Instruction *I, SmallPtrSetImpl<Instruction *> *IncompleteRets,
+    const SmallPtrSetImpl<Value *> *AskOps, bool IsPostprocessing) {
   SmallVector<std::pair<Value *, unsigned>> Ops;
   Type *KnownElemTy = nullptr;
   bool Incomplete = false;

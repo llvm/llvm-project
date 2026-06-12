@@ -237,8 +237,13 @@ CodeViewDebug::InlineSite &
 CodeViewDebug::getInlineSite(const DILocation *InlinedAt,
                              const DISubprogram *Inlinee) {
   auto SiteInsertion = CurFn->InlineSites.try_emplace(InlinedAt);
-  InlineSite *Site = &SiteInsertion.first->second;
-  if (SiteInsertion.second) {
+  bool Inserted = SiteInsertion.second;
+  if (Inserted)
+    SiteInsertion.first->second = std::make_unique<InlineSite>();
+  // The InlineSite is heap-allocated, so Site stays valid while the recursive
+  // getInlineSite call below grows InlineSites.
+  InlineSite *Site = SiteInsertion.first->second.get();
+  if (Inserted) {
     unsigned ParentFuncId = CurFn->FuncId;
     if (const DILocation *OuterIA = InlinedAt->getInlinedAt())
       ParentFuncId =
@@ -1046,7 +1051,7 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
     auto I = FI.InlineSites.find(ChildSite);
     assert(I != FI.InlineSites.end() &&
            "child site not in function inline site map");
-    emitInlinedCallSite(FI, ChildSite, I->second);
+    emitInlinedCallSite(FI, ChildSite, *I->second);
   }
 
   // Close the scope.
@@ -1222,7 +1227,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
       auto I = FI.InlineSites.find(InlinedAt);
       assert(I != FI.InlineSites.end() &&
              "child site not in function inline site map");
-      emitInlinedCallSite(FI, InlinedAt, I->second);
+      emitInlinedCallSite(FI, InlinedAt, *I->second);
     }
 
     for (auto Annot : FI.Annotations) {
@@ -3052,12 +3057,15 @@ void CodeViewDebug::collectLexicalBlockInfo(
   auto BlockInsertion = CurFn->LexicalBlocks.try_emplace(DILB);
   if (!BlockInsertion.second)
     return;
+  BlockInsertion.first->second = std::make_unique<LexicalBlock>();
 
   // Create a lexical block containing the variables and collect the
   // lexical block information for the children.
   const InsnRange &Range = Ranges.front();
   assert(Range.first && Range.second);
-  LexicalBlock &Block = BlockInsertion.first->second;
+  // The LexicalBlock is heap-allocated, so Block stays valid while the
+  // recursive collectLexicalBlockInfo call below grows LexicalBlocks.
+  LexicalBlock &Block = *BlockInsertion.first->second;
   Block.Begin = getLabelBeforeInsn(Range.first);
   Block.End = getLabelAfterInsn(Range.second);
   assert(Block.Begin && "missing label for scope begin");

@@ -273,7 +273,7 @@ void StackSlotColoring::InitializeSlots() {
   // Gather all spill slots into a list.
   LLVM_DEBUG(dbgs() << "Spill slot intervals:\n");
   for (auto *I : Intervals) {
-    LiveInterval &li = I->second;
+    LiveInterval &li = *I->second;
     LLVM_DEBUG(li.dump());
     int FI = li.reg().stackSlotIndex();
     if (MFI->isDeadObjectIndex(FI))
