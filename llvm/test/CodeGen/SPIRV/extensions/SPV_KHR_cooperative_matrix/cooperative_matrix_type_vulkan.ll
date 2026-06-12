@@ -15,7 +15,7 @@
 ; CHECK-DAG: {{%[0-9]+}} = OpTypeCooperativeMatrixKHR
 
 ; A by-value parameter of the opaque type forces OpTypeCooperativeMatrixKHR into the
-; module (referenced by OpTypeFunction — cannot be eliminated like an unused local).
+; module (referenced by OpTypeFunction, so it is not eliminated like an unused local).
 define spir_func void @use_coopmat(target("spirv.CooperativeMatrixKHR", i32, 3, 12, 12, 2) %m) {
 entry:
   ret void
