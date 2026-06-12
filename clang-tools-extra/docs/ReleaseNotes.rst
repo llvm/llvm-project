@@ -298,6 +298,12 @@ New checks
 
   Finds lambda expressions with a redundant empty parameter list and removes it.
 
+- New :doc:`readability-redundant-nested-if
+  <clang-tidy/checks/readability/redundant-nested-if>` check.
+
+  Finds nested ``if`` statements that can be merged into a single ``if`` by
+  combining conditions with ``&&``.
+
 - New :doc:`readability-redundant-qualified-alias
   <clang-tidy/checks/readability/redundant-qualified-alias>` check.
 
@@ -341,7 +347,7 @@ Changes in existing checks
 - Improved :doc:`altera-id-dependent-backward-branch
   <clang-tidy/checks/altera/id-dependent-backward-branch>` check by fixing false
   positives when ordinary variable or field assignments are used in loop
-  conditions.
+  conditions and note locations for inferred ID-dependent fields.
 
 - Improved :doc:`bugprone-argument-comment
   <clang-tidy/checks/bugprone/argument-comment>`:
@@ -456,6 +462,9 @@ Changes in existing checks
     via a ``std::tie()`` assignment (e.g. ``std::tie(a, b) = f(std::move(a),
     std::move(b))``). The tuple assignment writes back through the stored
     references, which fully reinitializes the captured variables.
+
+  - Avoid false positives when forwarding a derived object to initialize a base
+    class subobject.
 
 - Improved :doc:`cert-err33-c
   <clang-tidy/checks/cert/err33-c>` check by not inheriting
@@ -580,6 +589,16 @@ Changes in existing checks
   <clang-tidy/checks/modernize/deprecated-headers>` check by avoiding false
   positives on project headers that use the same name as a standard library
   header.
+
+- Improve :doc:`modernize-loop-convert
+  <clang-tidy/checks/modernize/loop-convert>` checks to insert a space when
+  replacing ``*it`` with the loop variable in expressions like ``delete*it``,
+  where the missing space would cause the keyword and the new variable to
+  merge into a single identifier.
+
+- Improved :doc:`modernize-macro-to-enum
+  <clang-tidy/checks/modernize/macro-to-enum>` check by preserving source file
+  line endings in fix-it replacements.
 
 - Improved :doc:`modernize-pass-by-value
   <clang-tidy/checks/modernize/pass-by-value>` check by adding `IgnoreMacros`
@@ -710,6 +729,10 @@ Changes in existing checks
   - Correctly detecting ``this`` usage when a generic lambda calls an overloaded
     member function.
 
+- Improved :doc:`readability-delete-null-pointer
+  <clang-tidy/checks/readability/delete-null-pointer>` check by avoiding invalid
+  fix-its for ``if`` statements with condition variables or initializers.
+
 - Improved :doc:`readability-else-after-return
   <clang-tidy/checks/readability/else-after-return>` check:
 
@@ -775,6 +798,10 @@ Changes in existing checks
 
   - Fixed a false positive where ``bool`` conditions in C conditional
     operators were diagnosed as implicit conversions to ``int``.
+
+- Improved :doc:`readability-inconsistent-ifelse-braces
+  <clang-tidy/checks/readability/inconsistent-ifelse-braces>` check to
+  correctly handle labeled statements of ``if``/``else`` bodies.
 
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check:
