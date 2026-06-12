@@ -8873,11 +8873,15 @@ SDValue SITargetLowering::lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const {
     return Op;
 
   // fcopysign v2f16:mag, v2f32:sign ->
-  //   fcopysign v2f16:mag, bitcast (trunc (bitcast sign to v2i32) to v2i16)
+  //   fcopysign v2f16:mag,
+  //     bitcast (trunc (srl (bitcast sign to v2i32), 16) to v2i16)
 
   SDLoc SL(Op);
   SDValue SignAsInt32 = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Sign);
-  SDValue SignAsInt16 = DAG.getNode(ISD::TRUNCATE, SL, MVT::v2i16, SignAsInt32);
+  SDValue ShiftAmt = DAG.getConstant(16, SL, MVT::v2i32);
+  SDValue SignShifted =
+      DAG.getNode(ISD::SRL, SL, MVT::v2i32, SignAsInt32, ShiftAmt);
+  SDValue SignAsInt16 = DAG.getNode(ISD::TRUNCATE, SL, MVT::v2i16, SignShifted);
 
   SDValue SignAsHalf16 = DAG.getNode(ISD::BITCAST, SL, MagVT, SignAsInt16);
 
