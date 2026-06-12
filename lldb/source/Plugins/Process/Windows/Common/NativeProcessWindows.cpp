@@ -538,7 +538,7 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
     // This block of code will only be entered in case of a hardware
     // watchpoint or breakpoint hit on AArch64. However, we only handle
     // hardware watchpoints below as breakpoints are not yet supported.
-    const std::vector<ULONG_PTR> &args = record.GetExceptionArguments();
+    const ArrayRef<uint64_t> args = record.GetExceptionArguments();
     // Check that the ExceptionInformation array of EXCEPTION_RECORD
     // contains at least two elements: the first is a read-write flag
     // indicating the type of data access operation (read or write) while
