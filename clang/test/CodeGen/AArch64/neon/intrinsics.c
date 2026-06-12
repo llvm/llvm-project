@@ -496,11 +496,11 @@ float64_t test_vmaxvq_f64(float64x2_t a) {
 
 // ALL-LABEL: @test_vqshlh_s16(
 int16_t test_vqshlh_s16(int16_t a, int16_t b) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqshl" 
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqshl"
 
   // LLVM-SAME: i16 {{.*}}[[A:%.*]], i16 {{.*}}[[B:%.*]])
-  // LLVM:      [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i64 0
-  // LLVM:      [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
+  // LLVM:      [[TMP0:%.*]] = insertelement <4 x i16> {{poison|undef}}, i16 [[A]], i64 0
+  // LLVM:      [[TMP1:%.*]] = insertelement <4 x i16> {{poison|undef}}, i16 [[B]], i64 0
   // LLVM:      [[VQSHLH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
   // LLVM:      [[TMP2:%.*]] = extractelement <4 x i16> [[VQSHLH_S16_I]], i64 0
   // LLVM:      ret i16 [[TMP2]]
@@ -509,11 +509,11 @@ int16_t test_vqshlh_s16(int16_t a, int16_t b) {
 
 // ALL-LABEL: @test_vqshlh_u16(
 uint16_t test_vqshlh_u16(uint16_t a, int16_t b) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.uqshl" 
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.uqshl"
 
   // LLVM-SAME: i16 {{.*}}[[A:%.*]], i16 {{.*}}[[B:%.*]])
-  // LLVM:      [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i64 0
-  // LLVM:      [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
+  // LLVM:      [[TMP0:%.*]] = insertelement <4 x i16> {{poison|undef}}, i16 [[A]], i64 0
+  // LLVM:      [[TMP1:%.*]] = insertelement <4 x i16> {{poison|undef}}, i16 [[B]], i64 0
   // LLVM:      [[VQSHLH_U16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
   // LLVM:      [[TMP2:%.*]] = extractelement <4 x i16> [[VQSHLH_U16_I]], i64 0
   // LLVM:      ret i16 [[TMP2]]
@@ -522,11 +522,11 @@ uint16_t test_vqshlh_u16(uint16_t a, int16_t b) {
 
 // ALL-LABEL: @test_vqshlh_n_s16(
 int16_t test_vqshlh_n_s16(int16_t a) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqshl" 
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.sqshl"
 
   // LLVM-SAME: i16 {{.*}}[[A:%.*]])
-  // LLVM:      [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i64 0
-  // LLVM:      [[VQSHLH_N_S16:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> <i16 15, i16 poison, i16 poison, i16 poison>)
+  // LLVM:      [[TMP0:%.*]] = insertelement <4 x i16> {{poison|undef}}, i16 [[A]], i64 0
+  // LLVM:      [[VQSHLH_N_S16:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> <i16 15, i16 {{poison|undef}}, i16 {{poison|undef}}, i16 {{poison|undef}}>)
   // LLVM:      [[TMP1:%.*]] = extractelement <4 x i16> [[VQSHLH_N_S16]], i64 0
   // LLVM:      ret i16 [[TMP1]]
   return (int16_t)vqshlh_n_s16(a, 15);
@@ -534,11 +534,11 @@ int16_t test_vqshlh_n_s16(int16_t a) {
 
 // ALL-LABEL: @test_vqshlh_n_u16(
 uint16_t test_vqshlh_n_u16(uint16_t a) {
-  // CIR: cir.call_llvm_intrinsic "aarch64.neon.uqshl" 
+  // CIR: cir.call_llvm_intrinsic "aarch64.neon.uqshl"
 
   // LLVM-SAME: i16 {{.*}}[[A:%.*]])
-  // LLVM:      [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[A]], i64 0
-  // LLVM:      [[VQSHLH_N_U16:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> <i16 15, i16 poison, i16 poison, i16 poison>)
+  // LLVM:      [[TMP0:%.*]] = insertelement <4 x i16> {{poison|undef}}, i16 [[A]], i64 0
+  // LLVM:      [[VQSHLH_N_U16:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqshl.v4i16(<4 x i16> [[TMP0]], <4 x i16> <i16 15, i16 {{poison|undef}}, i16 {{poison|undef}}, i16 {{poison|undef}}>)
   // LLVM:      [[TMP1:%.*]] = extractelement <4 x i16> [[VQSHLH_N_U16]], i64 0
   // LLVM:      ret i16 [[TMP1]]
   return (uint16_t)vqshlh_n_u16(a, 15);
