@@ -1819,3 +1819,51 @@ define amdgpu_kernel void @fma_v32_vs(ptr addrspace(1) %a, <32 x double> %x) {
   store <32 x double> %fma, ptr addrspace(1) %gep, align 128
   ret void
 }
+
+define amdgpu_kernel void @fneg_v2f64_pkfma(ptr addrspace(1) %out) {
+; GFX1251-SDAG-LABEL: fneg_v2f64_pkfma:
+; GFX1251-SDAG:       ; %bb.0: ; %entry
+; GFX1251-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1251-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1251-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX1251-SDAG-NEXT:    s_mov_b32 s2, 0
+; GFX1251-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1251-SDAG-NEXT:    v_dual_mov_b32 v4, 0 :: v_dual_mov_b32 v2, s2
+; GFX1251-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; GFX1251-SDAG-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1251-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0x3ff00000, 0, vcc_lo
+; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1251-SDAG-NEXT:    v_mov_b32_e32 v3, v1
+; GFX1251-SDAG-NEXT:    v_pk_fma_f64 v[0:3], v[0:3], 0, v[0:3] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-SDAG-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX1251-SDAG-NEXT:    s_endpgm
+;
+; GFX1251-GISEL-LABEL: fneg_v2f64_pkfma:
+; GFX1251-GISEL:       ; %bb.0: ; %entry
+; GFX1251-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1251-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1251-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX1251-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; GFX1251-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1251-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0x3ff00000, 0, vcc_lo
+; GFX1251-GISEL-NEXT:    v_mov_b32_e32 v4, v0
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX1251-GISEL-NEXT:    v_xor_b32_e32 v5, 0x80000000, v1
+; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
+; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[6:7], v[4:5]
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-GISEL-NEXT:    v_pk_fma_f64 v[2:5], v[0:3], 0, v[4:7]
+; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-GISEL-NEXT:    global_store_b128 v0, v[2:5], s[0:1]
+; GFX1251-GISEL-NEXT:    s_endpgm
+entry:
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %cmp = icmp eq i32 %tid, 0
+  %v   = select i1 %cmp, <2 x double> zeroinitializer, <2 x double> splat (double 1.000000e+00)
+  %nv  = fneg <2 x double> %v
+  %r   = tail call <2 x double> @llvm.fma.v2f64(<2 x double> %v, <2 x double> zeroinitializer, <2 x double> %nv)
+  store <2 x double> %r, ptr addrspace(1) %out, align 16
+  ret void
+}
