@@ -77,10 +77,10 @@ define i16 @crc16.le.tc8(i8 %msg, i16 %checksum) {
 ; ZBC32-NEXT:    [[QUOT:%.*]] = call i32 @llvm.clmul.i32(i32 [[INDEXER_EXT]], i32 255)
 ; ZBC32-NEXT:    [[QUOT_LE_MASK:%.*]] = and i32 [[QUOT]], 255
 ; ZBC32-NEXT:    [[ENTRY3:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_LE_MASK]], i32 81922)
-; ZBC32-NEXT:    [[ENTRY_LE_SHIFT:%.*]] = lshr i32 [[ENTRY3]], 8
-; ZBC32-NEXT:    [[ENTRY_CAST:%.*]] = trunc i32 [[ENTRY_LE_SHIFT]] to i16
-; ZBC32-NEXT:    [[CRC_LE_SHIFT:%.*]] = lshr i16 [[CRC2]], 8
-; ZBC32-NEXT:    [[CRC_NEXT4]] = xor i16 [[CRC_LE_SHIFT]], [[ENTRY_CAST]]
+; ZBC32-NEXT:    [[CRC_WIDE:%.*]] = zext i16 [[CRC2]] to i32
+; ZBC32-NEXT:    [[CRC_WIDE_XOR:%.*]] = xor i32 [[CRC_WIDE]], [[ENTRY3]]
+; ZBC32-NEXT:    [[CRC_NEXT_WIDE:%.*]] = lshr i32 [[CRC_WIDE_XOR]], 8
+; ZBC32-NEXT:    [[CRC_NEXT4]] = trunc i32 [[CRC_NEXT_WIDE]] to i16
 ; ZBC32-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; ZBC32-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 0
 ; ZBC32-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -173,10 +173,10 @@ define i16 @crc16.le.tc8.udiv(i8 %msg, i16 %checksum) {
 ; ZBC32-NEXT:    [[QUOT:%.*]] = call i32 @llvm.clmul.i32(i32 [[INDEXER_EXT]], i32 255)
 ; ZBC32-NEXT:    [[QUOT_LE_MASK:%.*]] = and i32 [[QUOT]], 255
 ; ZBC32-NEXT:    [[ENTRY3:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_LE_MASK]], i32 81922)
-; ZBC32-NEXT:    [[ENTRY_LE_SHIFT:%.*]] = lshr i32 [[ENTRY3]], 8
-; ZBC32-NEXT:    [[ENTRY_CAST:%.*]] = trunc i32 [[ENTRY_LE_SHIFT]] to i16
-; ZBC32-NEXT:    [[CRC_LE_SHIFT:%.*]] = lshr i16 [[CRC2]], 8
-; ZBC32-NEXT:    [[CRC_NEXT4]] = xor i16 [[CRC_LE_SHIFT]], [[ENTRY_CAST]]
+; ZBC32-NEXT:    [[CRC_WIDE:%.*]] = zext i16 [[CRC2]] to i32
+; ZBC32-NEXT:    [[CRC_WIDE_XOR:%.*]] = xor i32 [[CRC_WIDE]], [[ENTRY3]]
+; ZBC32-NEXT:    [[CRC_NEXT_WIDE:%.*]] = lshr i32 [[CRC_WIDE_XOR]], 8
+; ZBC32-NEXT:    [[CRC_NEXT4]] = trunc i32 [[CRC_NEXT_WIDE]] to i16
 ; ZBC32-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; ZBC32-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 0
 ; ZBC32-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -271,10 +271,10 @@ define i16 @crc16.le.tc16(i16 %msg, i16 %checksum) {
 ; ZBC32-NEXT:    [[QUOT:%.*]] = call i32 @llvm.clmul.i32(i32 [[INDEXER_EXT]], i32 255)
 ; ZBC32-NEXT:    [[QUOT_LE_MASK:%.*]] = and i32 [[QUOT]], 255
 ; ZBC32-NEXT:    [[ENTRY3:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_LE_MASK]], i32 81922)
-; ZBC32-NEXT:    [[ENTRY_LE_SHIFT:%.*]] = lshr i32 [[ENTRY3]], 8
-; ZBC32-NEXT:    [[ENTRY_CAST:%.*]] = trunc i32 [[ENTRY_LE_SHIFT]] to i16
-; ZBC32-NEXT:    [[CRC_LE_SHIFT:%.*]] = lshr i16 [[CRC2]], 8
-; ZBC32-NEXT:    [[CRC_NEXT4]] = xor i16 [[CRC_LE_SHIFT]], [[ENTRY_CAST]]
+; ZBC32-NEXT:    [[CRC_WIDE:%.*]] = zext i16 [[CRC2]] to i32
+; ZBC32-NEXT:    [[CRC_WIDE_XOR:%.*]] = xor i32 [[CRC_WIDE]], [[ENTRY3]]
+; ZBC32-NEXT:    [[CRC_NEXT_WIDE:%.*]] = lshr i32 [[CRC_WIDE_XOR]], 8
+; ZBC32-NEXT:    [[CRC_NEXT4]] = trunc i32 [[CRC_NEXT_WIDE]] to i16
 ; ZBC32-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; ZBC32-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 1
 ; ZBC32-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -462,10 +462,9 @@ define i16 @crc16.be.tc8.crc.init.li(i16 %checksum, i8 %msg) {
 ; ZBC32-NEXT:    [[QUOT:%.*]] = call i32 @llvm.clmul.i32(i32 [[INDEXER_EXT]], i32 69936)
 ; ZBC32-NEXT:    [[QUOT_BE_SHIFT:%.*]] = lshr i32 [[QUOT]], 16
 ; ZBC32-NEXT:    [[ENTRY3:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_BE_SHIFT]], i32 69665)
-; ZBC32-NEXT:    [[ENTRY_BE_MASK:%.*]] = and i32 [[ENTRY3]], 65535
-; ZBC32-NEXT:    [[ENTRY_CAST:%.*]] = trunc i32 [[ENTRY_BE_MASK]] to i16
+; ZBC32-NEXT:    [[ENTRY_LO:%.*]] = trunc i32 [[ENTRY3]] to i16
 ; ZBC32-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
-; ZBC32-NEXT:    [[CRC_NEXT4]] = xor i16 [[CRC_BE_SHIFT]], [[ENTRY_CAST]]
+; ZBC32-NEXT:    [[CRC_NEXT4]] = xor i16 [[CRC_BE_SHIFT]], [[ENTRY_LO]]
 ; ZBC32-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; ZBC32-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i32 [[IV]], 0
 ; ZBC32-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -553,10 +552,9 @@ define i16 @crc16.be.tc8.crc.init.arg(i16 %crc.init) {
 ; ZBC32-NEXT:    [[QUOT:%.*]] = call i32 @llvm.clmul.i32(i32 [[INDEXER_EXT]], i32 69936)
 ; ZBC32-NEXT:    [[QUOT_BE_SHIFT:%.*]] = lshr i32 [[QUOT]], 16
 ; ZBC32-NEXT:    [[ENTRY3:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_BE_SHIFT]], i32 69665)
-; ZBC32-NEXT:    [[ENTRY_BE_MASK:%.*]] = and i32 [[ENTRY3]], 65535
-; ZBC32-NEXT:    [[ENTRY_CAST:%.*]] = trunc i32 [[ENTRY_BE_MASK]] to i16
+; ZBC32-NEXT:    [[ENTRY_LO:%.*]] = trunc i32 [[ENTRY3]] to i16
 ; ZBC32-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
-; ZBC32-NEXT:    [[CRC_NEXT4]] = xor i16 [[CRC_BE_SHIFT]], [[ENTRY_CAST]]
+; ZBC32-NEXT:    [[CRC_NEXT4]] = xor i16 [[CRC_BE_SHIFT]], [[ENTRY_LO]]
 ; ZBC32-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; ZBC32-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i32 [[IV]], 0
 ; ZBC32-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -638,10 +636,9 @@ define i16 @crc16.be.tc8.crc.init.arg.flipped.sb.check(i16 %crc.init) {
 ; ZBC32-NEXT:    [[QUOT:%.*]] = call i32 @llvm.clmul.i32(i32 [[INDEXER_EXT]], i32 69936)
 ; ZBC32-NEXT:    [[QUOT_BE_SHIFT:%.*]] = lshr i32 [[QUOT]], 16
 ; ZBC32-NEXT:    [[ENTRY3:%.*]] = call i32 @llvm.clmul.i32(i32 [[QUOT_BE_SHIFT]], i32 69665)
-; ZBC32-NEXT:    [[ENTRY_BE_MASK:%.*]] = and i32 [[ENTRY3]], 65535
-; ZBC32-NEXT:    [[ENTRY_CAST:%.*]] = trunc i32 [[ENTRY_BE_MASK]] to i16
+; ZBC32-NEXT:    [[ENTRY_LO:%.*]] = trunc i32 [[ENTRY3]] to i16
 ; ZBC32-NEXT:    [[CRC_BE_SHIFT:%.*]] = shl i16 [[CRC2]], 8
-; ZBC32-NEXT:    [[CRC_NEXT4]] = xor i16 [[CRC_BE_SHIFT]], [[ENTRY_CAST]]
+; ZBC32-NEXT:    [[CRC_NEXT4]] = xor i16 [[CRC_BE_SHIFT]], [[ENTRY_LO]]
 ; ZBC32-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; ZBC32-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i32 [[IV]], 0
 ; ZBC32-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -909,10 +906,10 @@ define i32 @crc32.le.tc8.data32(i32 %checksum, i32 %msg) {
 ; ZBC64-NEXT:    [[QUOT:%.*]] = call i64 @llvm.clmul.i64(i64 [[INDEXER_EXT]], i64 17)
 ; ZBC64-NEXT:    [[QUOT_LE_MASK:%.*]] = and i64 [[QUOT]], 255
 ; ZBC64-NEXT:    [[ENTRY3:%.*]] = call i64 @llvm.clmul.i64(i64 [[QUOT_LE_MASK]], i64 67600)
-; ZBC64-NEXT:    [[ENTRY_LE_SHIFT:%.*]] = lshr i64 [[ENTRY3]], 8
-; ZBC64-NEXT:    [[ENTRY_CAST:%.*]] = trunc i64 [[ENTRY_LE_SHIFT]] to i32
-; ZBC64-NEXT:    [[CRC_LE_SHIFT:%.*]] = lshr i32 [[CRC2]], 8
-; ZBC64-NEXT:    [[CRC_NEXT4]] = xor i32 [[CRC_LE_SHIFT]], [[ENTRY_CAST]]
+; ZBC64-NEXT:    [[CRC_WIDE:%.*]] = zext i32 [[CRC2]] to i64
+; ZBC64-NEXT:    [[CRC_WIDE_XOR:%.*]] = xor i64 [[CRC_WIDE]], [[ENTRY3]]
+; ZBC64-NEXT:    [[CRC_NEXT_WIDE:%.*]] = lshr i64 [[CRC_WIDE_XOR]], 8
+; ZBC64-NEXT:    [[CRC_NEXT4]] = trunc i64 [[CRC_NEXT_WIDE]] to i32
 ; ZBC64-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; ZBC64-NEXT:    [[EXIT_COND1:%.*]] = icmp ne i8 [[IV]], 0
 ; ZBC64-NEXT:    br i1 [[EXIT_COND1]], label %[[LOOP]], label %[[EXIT:.*]]
