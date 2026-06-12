@@ -147,7 +147,9 @@ mlirLinalgInferConvolutionDimensions(MlirOperation op) {
 MLIR_CAPI_EXPORTED MlirLinalgConvolutionDimensions
 mlirLinalgInferConvolutionDimensionsFromMaps(const MlirAffineMap *indexingMaps,
                                              size_t numMaps) {
-  if (!indexingMaps || numMaps == 0)
+  // inferConvolutionDims requires exactly 3 maps (input, filter, output);
+  // keep this check in sync with its contract
+  if (!indexingMaps || numMaps != 3)
     return {};
 
   SmallVector<AffineMap, 3> maps;
