@@ -25,22 +25,6 @@ define i32 @cttz_elts_v4i32() {
   ret i32 %res
 }
 
-define i32 @cttz_elts_v4i32_unused_lane_undef() {
-; CHECK-LABEL: @cttz_elts_v4i32_unused_lane_undef(
-; CHECK-NEXT:    ret i32 1
-;
-  %res = call i32 @llvm.experimental.cttz.elts.i32.v4i32(<4 x i32> <i32 0, i32 1, i32 undef, i32 3>, i1 false)
-  ret i32 %res
-}
-
-define i32 @cttz_elts_v4i32_used_lane_undef() {
-; CHECK-LABEL: @cttz_elts_v4i32_used_lane_undef(
-; CHECK-NEXT:    ret i32 3
-;
-  %res = call i32 @llvm.experimental.cttz.elts.i32.v4i32(<4 x i32> <i32 0, i32 0, i32 undef, i32 3>, i1 false)
-  ret i32 %res
-}
-
 define i32 @cttz_elts_v4i32_unused_lane_poison() {
 ; CHECK-LABEL: @cttz_elts_v4i32_unused_lane_poison(
 ; CHECK-NEXT:    ret i32 1
