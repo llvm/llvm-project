@@ -31,7 +31,7 @@ _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 namespace detail {
 
 inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 1, 0) string vformat_string(const char* msg, va_list ap) {
-  array<char, 256> buf;
+  array<char, 1024> buf;
 
   va_list apcopy;
   va_copy(apcopy, ap);
