@@ -37,7 +37,7 @@ def lit_test(
         name = name,
         srcs = [Label("//llvm:lit")],
         main = Label("//llvm:utils/lit/lit.py"),
-        args = args + ["-v"] + ["../$(rootpath %s)" % src for src in srcs],
+        args = args + ["-v"] + ["$(rootpath %s)" % src for src in srcs],
         data = data + srcs,
         legacy_create_init = False,
         deps = deps + [Label("//llvm:lit")],
@@ -59,14 +59,3 @@ def runfiles_path(label):
     rfiles_path = "../" + paths.join(Label(label).workspace_name, Label(label).package)
     rfiles_path = paths.normalize(rfiles_path)
     return rfiles_path
-
-
-def package_path(label):
-    """Returns the path to the package of 'label'.
-
-    Args:
-      label: label. The label to return the package path of.
-
-    For example, package_path("@foo//bar:BUILD") returns 'external/foo/bar'.
-    """
-    return paths.join(Label(label).workspace_root, Label(label).package)

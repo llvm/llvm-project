@@ -4,7 +4,7 @@
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
-load("//llvm:lit_test.bzl", "lit_test", "package_path")
+load("//llvm:lit_test.bzl", "lit_test", "runfiles_path")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -102,13 +102,13 @@ expand_template(
     testonly = True,
     out = "test/lit.site.cfg.py",
     substitutions = {
-        "@CMAKE_CURRENT_BINARY_DIR@": package_path("//clang-tools-extra/include-cleaner:BUILD") + "/test",
-        "@CMAKE_CURRENT_SOURCE_DIR@": package_path("//clang-tools-extra/include-cleaner:BUILD") + "/test",
-        "@CURRENT_TOOLS_DIR@": package_path("//clang-tools-extra/include-cleaner:BUILD"),
+        "@CMAKE_CURRENT_BINARY_DIR@": runfiles_path("//clang-tools-extra/include-cleaner:BUILD") + "/test",
+        "@CMAKE_CURRENT_SOURCE_DIR@": runfiles_path("//clang-tools-extra/include-cleaner:BUILD") + "/test",
+        "@CURRENT_TOOLS_DIR@": runfiles_path("//clang-tools-extra/include-cleaner:BUILD"),
         "@LIT_SITE_CFG_IN_HEADER@": LIT_SITE_CFG_IN_HEADER,
-        "@LLVM_LIBS_DIR@": package_path("//llvm:BUILD"),
-        "@LLVM_LIT_TOOLS_DIR@": package_path("//llvm:BUILD"),
-        "@LLVM_TOOLS_DIR@": package_path("//llvm:BUILD"),
+        "@LLVM_LIBS_DIR@": runfiles_path("//llvm:BUILD"),
+        "@LLVM_LIT_TOOLS_DIR@": runfiles_path("//llvm:BUILD"),
+        "@LLVM_TOOLS_DIR@": runfiles_path("//llvm:BUILD"),
         "@TARGET_TRIPLE@": "",
         '"@Python3_EXECUTABLE@"': "sys.executable",
     },
