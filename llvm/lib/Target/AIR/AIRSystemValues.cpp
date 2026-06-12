@@ -244,16 +244,20 @@ static bool airSystemValues(Module &M) {
         continue;
 
       SmallVector<Metadata *, 16> ParamNodes;
-      unsigned ArgIdx = 0;
+      unsigned ArgIdx = 0;  // device/constant buffer location-index space
+      unsigned TGIdx = 0;   // threadgroup buffers have their own index space
       auto *FTy = F.getFunctionType();
 
-      // Buffer params (device AS=1, constant AS=2).
+      // Buffer params: device AS=1, constant AS=2, threadgroup AS=3. Apple
+      // tags all three as "air.buffer" but threadgroup args carry
+      // air.address_space=3 and live in a separate location_index counter
+      // (xcrun's reduce gives the 3rd buffer, a threadgroup arg, index 0).
       for (unsigned I = 0; I < FTy->getNumParams(); ++I) {
         Type *ParamTy = FTy->getParamType(I);
         if (!ParamTy->isPointerTy())
           continue;
         unsigned AS = cast<PointerType>(ParamTy)->getAddressSpace();
-        if (AS != 1 && AS != 2)
+        if (AS != 1 && AS != 2 && AS != 3)
           continue;
 
         StringRef ArgName = F.getArg(I)->getName();
@@ -262,13 +266,14 @@ static bool airSystemValues(Module &M) {
           std::snprintf(NameBuf, sizeof(NameBuf), "%u", I);
           ArgName = NameBuf;
         }
+        unsigned &LocIdx = (AS == 3) ? TGIdx : ArgIdx;
         StringRef AccessMode = (AS == 2) ? kMDRead : kMDReadWrite;
         ParamNodes.push_back(MDNode::get(
             Ctx,
             {ConstantAsMetadata::get(ConstantInt::get(I32, I)),
              MDString::get(Ctx, kMDBuffer),
              MDString::get(Ctx, kMDLocationIndex),
-             ConstantAsMetadata::get(ConstantInt::get(I32, ArgIdx)),
+             ConstantAsMetadata::get(ConstantInt::get(I32, LocIdx)),
              ConstantAsMetadata::get(ConstantInt::get(I32, 1)),
              MDString::get(Ctx, AccessMode),
              MDString::get(Ctx, kMDAddressSpace),
@@ -279,7 +284,7 @@ static bool airSystemValues(Module &M) {
              ConstantAsMetadata::get(ConstantInt::get(I32, 4)),
              MDString::get(Ctx, kMDArgTypeName), MDString::get(Ctx, "float"),
              MDString::get(Ctx, kMDArgName), MDString::get(Ctx, ArgName)}));
-        ArgIdx++;
+        LocIdx++;
       }
 
       // System value params (non-pointer, prefix-matched).

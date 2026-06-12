@@ -48,7 +48,9 @@
 
 #include "AIR.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -140,11 +142,125 @@ public:
   bool runOnModule(Module &M) override {
     bool Changed = false;
     Changed |= markKernels(M);
+    Changed |= promoteWorkgroupAttributions(M);
     Changed |= lowerBuiltins(M);
     return Changed;
   }
 
 private:
+  // The MLIR gpu dialect passes a statically-sized `workgroup(...)` attribution
+  // as an addrspace(3) kernel pointer PARAMETER (Apple's host-bound
+  // `[[threadgroup(N)]]` shape). Metal cannot auto-allocate such a param and
+  // this pipeline's host runner has no API to bind threadgroup memory, so the
+  // buffer reads back as zero. Apple's own frontend lowers a kernel-local
+  // `threadgroup T s[N]` to an INTERNAL addrspace(3) global instead (no param,
+  // driver-allocated). Mirror that: replace each addrspace(3) pointer param
+  // with an internal addrspace(3) global and drop it from the signature, so the
+  // existing threadgroup-global machinery (TGGlobalCoalesce/AIRPrepare) and
+  // AIRSystemValues (which then sees no TG param) handle it unchanged.
+  bool promoteWorkgroupAttributions(Module &M) {
+    bool Changed = false;
+    SmallVector<Function *, 2> Kernels;
+    for (Function &F : M)
+      if (!F.isDeclaration() && F.hasFnAttribute("air-kernel"))
+        Kernels.push_back(&F);
+
+    for (Function *F : Kernels) {
+      SmallVector<unsigned, 2> TGParams;
+      for (unsigned I = 0; I < F->arg_size(); ++I) {
+        Type *T = F->getArg(I)->getType();
+        if (T->isPointerTy() && T->getPointerAddressSpace() == 3)
+          TGParams.push_back(I);
+      }
+      if (TGParams.empty())
+        continue;
+
+      for (unsigned I : TGParams) {
+        Argument *Arg = F->getArg(I);
+        auto [ElemTy, Count] = inferThreadgroupAlloc(Arg);
+        auto *ArrTy = ArrayType::get(ElemTy, Count);
+        auto *GV = new GlobalVariable(
+            M, ArrTy, /*isConstant=*/false, GlobalValue::InternalLinkage,
+            UndefValue::get(ArrTy),
+            (F->getName() + ".wg." + Twine(I)).str(), nullptr,
+            GlobalValue::NotThreadLocal, /*AddressSpace=*/3);
+        GV->setAlignment(Align(ElemTy->getPrimitiveSizeInBits() >= 32 ? 4 : 2));
+        Arg->replaceAllUsesWith(GV);
+      }
+
+      rebuildWithoutParams(F, TGParams);
+      Changed = true;
+    }
+    return Changed;
+  }
+
+  // Element type and element count for an addrspace(3) attribution param.
+  // Element type comes from the param's load/store/GEP uses; the count is the
+  // largest constant bound the access index is compared against (the loop /
+  // threadgroup range), defaulting to 1 when nothing constrains it.
+  std::pair<Type *, uint64_t> inferThreadgroupAlloc(Argument *Arg) {
+    Type *ElemTy = nullptr;
+    uint64_t Count = 1;
+    SmallVector<Value *, 8> IdxValues;
+    for (User *U : Arg->users()) {
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
+        if (!ElemTy)
+          ElemTy = GEP->getSourceElementType();
+        for (auto It = GEP->idx_begin(); It != GEP->idx_end(); ++It)
+          IdxValues.push_back(It->get());
+      } else if (auto *LI = dyn_cast<LoadInst>(U)) {
+        if (!ElemTy)
+          ElemTy = LI->getType();
+      } else if (auto *SI = dyn_cast<StoreInst>(U)) {
+        if (!ElemTy && SI->getPointerOperand() == Arg)
+          ElemTy = SI->getValueOperand()->getType();
+      }
+    }
+    if (!ElemTy)
+      ElemTy = Type::getFloatTy(Arg->getContext());
+
+    // Largest constant any index is icmp-compared against bounds the range.
+    for (Value *Idx : IdxValues)
+      for (User *IU : Idx->users())
+        if (auto *Cmp = dyn_cast<ICmpInst>(IU))
+          for (Value *Op : Cmp->operands())
+            if (auto *CI = dyn_cast<ConstantInt>(Op))
+              Count = std::max(Count, CI->getZExtValue());
+    return {ElemTy, Count};
+  }
+
+  // Clone F without the parameters in Drop (sorted ascending), splicing the
+  // body over and remapping surviving args, then RAUW the old function.
+  void rebuildWithoutParams(Function *&F, ArrayRef<unsigned> Drop) {
+    Module &M = *F->getParent();
+    SmallDenseSet<unsigned, 4> DropSet(Drop.begin(), Drop.end());
+    SmallVector<Type *, 8> NewParams;
+    for (unsigned I = 0; I < F->arg_size(); ++I)
+      if (!DropSet.count(I))
+        NewParams.push_back(F->getArg(I)->getType());
+
+    auto *NewFTy = FunctionType::get(F->getReturnType(), NewParams,
+                                     F->isVarArg());
+    auto *NewF = Function::Create(NewFTy, F->getLinkage(),
+                                  F->getAddressSpace(), "", &M);
+    NewF->copyAttributesFrom(F);
+    NewF->setCallingConv(F->getCallingConv());
+    NewF->takeName(F);
+    NewF->splice(NewF->begin(), F);
+
+    auto NewIt = NewF->arg_begin();
+    for (unsigned I = 0; I < F->arg_size(); ++I) {
+      if (DropSet.count(I))
+        continue;
+      Argument *Old = F->getArg(I);
+      NewIt->setName(Old->getName());
+      Old->replaceAllUsesWith(&*NewIt);
+      ++NewIt;
+    }
+    F->eraseFromParent();
+    F = NewF;
+  }
+
   // Mark SPIR_KERNEL / kernel-attributed functions as AIR kernels and normalize
   // their calling convention to C (the AIR writer keys on "air-kernel").
   bool markKernels(Module &M) {
