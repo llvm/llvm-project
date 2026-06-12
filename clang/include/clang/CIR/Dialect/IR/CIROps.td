@@ -863,6 +863,8 @@ def CIR_ReturnOp : CIR_Op<"return", [
   }];
 
   let hasVerifier = 1;
+
+  let llvmOp = "ReturnOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1646,6 +1648,8 @@ def CIR_IsConstantOp : CIR_Op<"is_constant", [Pure]> {
   let assemblyFormat = [{
     $val `:` qualified(type($val)) `->` qualified(type($result)) attr-dict
   }];
+
+  let llvmOp = "IsConstantOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2720,6 +2724,8 @@ def CIR_AndOp : CIR_BinaryOp<"and", CIR_AnyBitwiseType, [
     %1 = cir.and %a, %b : !cir.bool
     ```
   }];
+
+  let llvmOp = "AndOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2741,6 +2747,8 @@ def CIR_OrOp : CIR_BinaryOp<"or", CIR_AnyBitwiseType, [
     %1 = cir.or %a, %b : !cir.bool
     ```
   }];
+
+  let llvmOp = "OrOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2760,6 +2768,8 @@ def CIR_XorOp : CIR_BinaryOp<"xor", CIR_AnyBitwiseType, [Commutative]> {
     %1 = cir.xor %a, %b : !cir.bool
     ```
   }];
+
+  let llvmOp = "XOrOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -4796,6 +4806,7 @@ def CIR_StackSaveOp : CIR_Op<"stacksave"> {
 
   let results = (outs CIR_PointerType:$result);
   let assemblyFormat = "attr-dict `:` qualified(type($result))";
+  let llvmOp = "StackSaveOp";
 }
 
 def CIR_StackRestoreOp : CIR_Op<"stackrestore"> {
@@ -4818,6 +4829,7 @@ def CIR_StackRestoreOp : CIR_Op<"stackrestore"> {
 
   let arguments = (ins CIR_PointerType:$ptr);
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
+  let llvmOp = "StackRestoreOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -4995,6 +5007,8 @@ def CIR_UnreachableOp : CIR_Op<"unreachable", [Terminator]> {
   }];
 
   let assemblyFormat = "attr-dict";
+
+  let llvmOp = "UnreachableOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -6286,6 +6300,8 @@ def CIR_BitReverseOp : CIR_BitOpBase<"bitreverse",
   }];
   
   let append traits = [Involution];
+
+  let llvmOp = "BitReverseOp";
 }
 
 def CIR_ByteSwapOp : CIR_BitOpBase<"byte_swap",
@@ -6311,6 +6327,8 @@ def CIR_ByteSwapOp : CIR_BitOpBase<"byte_swap",
   }];
   
   let append traits = [Involution];
+
+  let llvmOp = "ByteSwapOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -8510,6 +8528,8 @@ def CIR_LaunderOp : CIR_Op<"launder", [SameOperandsAndResultType]> {
   let assemblyFormat = [{
     $arg `:` qualified(type($result)) attr-dict
   }];
+
+  let llvmOp = "LaunderInvariantGroupOp";
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD
