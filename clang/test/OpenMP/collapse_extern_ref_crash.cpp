@@ -38,3 +38,31 @@ auto test3() {
     }
   }
 }
+
+struct Iterator {
+  int value;
+  Iterator& operator=(int v) { value = v; return *this; }
+  bool operator<(int n) const { return value < n; }
+  Iterator& operator++() { ++value; return *this; }
+};
+
+Iterator i;
+auto test4() {
+#pragma omp parallel for collapse(2)
+  for (i = 0; i < dim; ++i) {
+    // expected-error@+1{{loop iteration variable 'i' cannot be reused in a nested loop of a collapsed loop nest}}
+    for (i = 0; i < 10; ++i) {
+      int dummy;
+    }
+  }
+}
+
+auto test5() {
+#pragma omp parallel for collapse(2)
+  for (i = 0; i < dim; ++i) {
+    // expected-error@+1{{loop iteration variable 'i' cannot be reused in a nested loop of a collapsed loop nest}}
+    for (i = 0; i < 10; ++i) {
+      int dummy;
+    }
+  }
+}

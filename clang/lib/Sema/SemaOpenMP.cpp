@@ -8523,7 +8523,18 @@ bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
           if (auto *ME = dyn_cast<MemberExpr>(getExprAsWritten(CED->getInit())))
             return setLCDeclAndLB(ME->getMemberDecl(), ME, BO->getRHS(),
                                   EmitDiags);
-        return setLCDeclAndLB(DRE->getDecl(), DRE, CE->getArg(1), EmitDiags);
+        // Check if this variable is already used as an induction variable
+        // in an outer collapsed loop.
+        ValueDecl *LoopVar = DRE->getDecl();
+        if (!CollapsedLoopInductionVars.empty() &&
+            CollapsedLoopInductionVars.count(LoopVar->getCanonicalDecl()) &&
+            EmitDiags) {
+          SemaRef.Diag(DRE->getLocation(),
+                       diag::err_omp_loop_var_reused_in_collapsed_loop)
+              << LoopVar;
+          return true;
+        }
+        return setLCDeclAndLB(LoopVar, DRE, CE->getArg(1), EmitDiags);
       }
       if (auto *ME = dyn_cast<MemberExpr>(LHS)) {
         if (ME->isArrow() &&
