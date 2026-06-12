@@ -173,6 +173,37 @@ public:
       setBranchProtectionFnAttributes(BPI, (*Fn));
     }
 
+    if (FD) {
+      bool HasLongCalls = false, HasExecOnly = false;
+      if (Fn->hasFnAttribute("target-features")) {
+        StringRef Features =
+            Fn->getFnAttribute("target-features").getValueAsString();
+        HasLongCalls = Features.contains("+long-calls");
+        HasExecOnly = Features.contains("+execute-only");
+      }
+
+      if (HasLongCalls && HasExecOnly) {
+        auto RelocModel = CGM.getCodeGenOpts().RelocationModel;
+        if (RelocModel == llvm::Reloc::PIC_)
+          CGM.getDiags().Report(
+              D->getLocation(),
+              diag::err_drv_long_calls_unsupported_with_execute_only_pic);
+      }
+
+      if (HasLongCalls) {
+        auto RelocModel = CGM.getCodeGenOpts().RelocationModel;
+        if (RelocModel == llvm::Reloc::ROPI ||
+            RelocModel == llvm::Reloc::ROPI_RWPI)
+          CGM.getDiags().Report(D->getLocation(),
+                                diag::err_drv_long_calls_unsupported_with_pi)
+              << 0; // ROPI
+        else if (RelocModel == llvm::Reloc::RWPI)
+          CGM.getDiags().Report(D->getLocation(),
+                                diag::err_drv_long_calls_unsupported_with_pi)
+              << 1; // RWPI
+      }
+    }
+
     if (!FD || !FD->hasAttr<ARMInterruptAttr>())
       return;
 

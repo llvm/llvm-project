@@ -5742,6 +5742,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       !Args.hasArg(options::OPT_fallow_unsupported))
     D.Diag(diag::err_drv_ropi_incompatible_with_cxx);
 
+  // long-calls is not compatible with ROPI or RWPI.
+  if ((IsROPI || IsRWPI) && !Args.hasArg(options::OPT_fallow_unsupported)) {
+    if (Arg *A = Args.getLastArg(options::OPT_mlong_calls,
+                                 options::OPT_mno_long_calls))
+      if (A->getOption().matches(options::OPT_mlong_calls))
+        D.Diag(diag::err_drv_long_calls_unsupported_with_pi)
+            << (IsROPI ? 0 : 1); // 0=ROPI, 1=RWPI;
+  }
+
   const char *RMName = RelocationModelName(RelocationModel);
   if (RMName) {
     CmdArgs.push_back("-mrelocation-model");

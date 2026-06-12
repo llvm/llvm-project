@@ -367,6 +367,11 @@ def err_opt_unsupported_with_suggest : Error<
   "option '%0' is unsupported; consider using '%1'">;
 def err_invalid_feature_combination : Error<
   "invalid feature combination: %0">;
+def err_drv_long_calls_unsupported_with_execute_only_pic : Error<
+  "'-mlong-calls' with '-mexecute-only' is not supported for "
+  "position-independent code">;
+def err_drv_long_calls_unsupported_with_pi : Error<
+  "'-mlong-calls' is not supported with %select{ROPI|RWPI}0">;
 def warn_invalid_feature_combination : Warning<
   "invalid feature combination: %0">, InGroup<DiagGroup<"invalid-feature-combination">>;
 def warn_target_unrecognized_env : Warning<
