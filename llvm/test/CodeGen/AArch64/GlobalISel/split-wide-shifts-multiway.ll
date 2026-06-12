@@ -5464,7 +5464,7 @@ define void @test_ashr_i512_const_1(ptr %result, ptr %input) {
 ; GISEL-NEXT:    extr x9, x10, x9, #1
 ; GISEL-NEXT:    extr x10, x11, x10, #1
 ; GISEL-NEXT:    stp x8, x9, [x0]
-; GISEL-NEXT:    asr x8, x13, #63
+; GISEL-NEXT:    lsr x8, x13, #63
 ; GISEL-NEXT:    extr x11, x14, x11, #1
 ; GISEL-NEXT:    extr x9, x15, x14, #1
 ; GISEL-NEXT:    lsl x8, x8, #63

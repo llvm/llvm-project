@@ -1102,6 +1102,41 @@ def trunc_shift: GICombineRule <
   (apply [{ Helper.applyCombineTruncOfShift(*${root}, ${matchinfo}); }])
 >;
 
+// Demanded-bits-driven narrowing of trunc-of-right-shift with a constant
+// shift amount. Fires when X's bits beyond the destination width are
+// provably idle (known-zero for LSHR, sign-bit-replicated for ASHR), in
+// which case the outer truncate can be dropped:
+//
+//   (trunc (lshr X, K))  -> (lshr (trunc X), K)  when X[DstBW..K+DstBW) == 0
+//   (trunc (ashr X, K))  -> (ashr (trunc X), K)  when X has SrcBW-DstBW+1
+//                                                sign bits.
+//
+// K must be a constant less than DstBW so the rewrite never recurses into
+// a re-truncated outer pattern -- guarantees fixpoint termination and
+// avoids the deadloop that a generic trunc-of-shift demand combine has
+// against existing rules like ``trunc_shift``.
+def narrow_trunc_shr_const : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_TRUNC):$root,
+    [{ return Helper.matchNarrowTruncShrConst(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
+// Demand-driven elimination of redundant G_AND / disjoint G_OR by a constant,
+// and simplification of operands feeding G_SHL / G_LSHR / G_ASHR with a
+// constant amount, where the mask is a no-op on every source bit the shift
+// can observe (including the case where the demanded bits are entirely
+// outside the mask and the operand folds to the constant).
+// Invokes a demanded-bits operand simplifier in the current combine context;
+// it does not compute a union of demands from all users of the root def.
+// Deadloop-safe: match returns true only when the rewrite will make progress.
+// Wired into the AArch64 post-legalizer combiner; not in the generic groups so
+// other targets opt in explicitly.
+def simplify_demanded_bits : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_AND, G_OR, G_SHL, G_LSHR, G_ASHR):$root,
+         [{ return Helper.matchSimplifyDemandedBits(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
+
 // Transform (mul x, -1) -> (sub 0, x)
 def mul_by_neg_one: GICombineRule <
   (defs root:$dst),
@@ -2533,7 +2568,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     reassocs, ptr_add_immed_chain, cmp_combines,
     shl_ashr_to_sext_inreg, neg_and_one_to_sext_inreg, sext_inreg_of_load,
     width_reduction_combines, select_combines, select_zero_false, select_not,
-    known_bits_simplifications, trunc_shift,
+    known_bits_simplifications, trunc_shift, narrow_trunc_shr_const,
     not_cmp_fold, opt_brcond_by_inverting_cond,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,

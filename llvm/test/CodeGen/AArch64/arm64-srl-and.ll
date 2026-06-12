@@ -28,10 +28,9 @@ define i32 @srl_and()  {
 ; CHECK-GI-NEXT:    eor w8, w8, w9
 ; CHECK-GI-NEXT:    mov w9, #65535 // =0xffff
 ; CHECK-GI-NEXT:    add w8, w9, w8, uxth
-; CHECK-GI-NEXT:    and w9, w8, #0xffff
-; CHECK-GI-NEXT:    cmp w8, w9
-; CHECK-GI-NEXT:    cset w8, ne
-; CHECK-GI-NEXT:    and w0, w9, w8
+; CHECK-GI-NEXT:    cmp w8, w8, uxth
+; CHECK-GI-NEXT:    cset w9, ne
+; CHECK-GI-NEXT:    and w0, w8, w9
 ; CHECK-GI-NEXT:    ret
 entry:
   %0 = load i16, ptr @g, align 4

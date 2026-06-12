@@ -397,5 +397,6 @@ def AArch64PostLegalizerCombiner
                         combine_mul_cmlt, combine_use_vector_truncate,
                         extmultomull, subaddmulreassoc, truncsat_combines,
                         lshr_of_trunc_of_lshr,
-                        funnel_shift_from_or_shift_constants_are_legal]> {
+                        funnel_shift_from_or_shift_constants_are_legal,
+                        simplify_demanded_bits]> {
 }

@@ -963,13 +963,12 @@ define i6 @no_combine_illegal_num_elements(<6 x i32> %vec) {
 ; CHECK-GI-NEXT:    bfi w11, w8, #1, #31
 ; CHECK-GI-NEXT:    and w8, w9, #0x1
 ; CHECK-GI-NEXT:    and w9, w10, #0x1
-; CHECK-GI-NEXT:    mov.s w10, v0[1]
+; CHECK-GI-NEXT:    fmov w10, s0
 ; CHECK-GI-NEXT:    orr w8, w11, w8, lsl #2
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #3
-; CHECK-GI-NEXT:    fmov w9, s0
-; CHECK-GI-NEXT:    and w9, w9, #0x1
-; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #4
-; CHECK-GI-NEXT:    and w9, w10, #0x1
+; CHECK-GI-NEXT:    mov.s w9, v0[1]
+; CHECK-GI-NEXT:    and w10, w10, #0x1
+; CHECK-GI-NEXT:    orr w8, w8, w10, lsl #4
 ; CHECK-GI-NEXT:    orr w8, w8, w9, lsl #5
 ; CHECK-GI-NEXT:    and w8, w8, #0x3f
 ; CHECK-GI-NEXT:    strb w8, [sp, #15]
