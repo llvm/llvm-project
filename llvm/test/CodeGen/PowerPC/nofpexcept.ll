@@ -120,9 +120,10 @@ define void @fptoint_nofpexcept(ppc_fp128 %p, fp128 %m, ptr %addr1, ptr %addr2) 
   ; CHECK-NEXT:   [[COPY17:%[0-9]+]]:crbitrc = COPY [[FCMPOD]].sub_lt
   ; CHECK-NEXT:   [[CRANDC:%[0-9]+]]:crbitrc = CRANDC killed [[COPY17]], killed [[COPY16]]
   ; CHECK-NEXT:   [[CROR:%[0-9]+]]:crbitrc = CROR killed [[CRANDC]], killed [[CRAND]]
-  ; CHECK-NEXT:   [[LIS:%[0-9]+]]:gprc_and_gprc_nor0 = LIS 32768
-  ; CHECK-NEXT:   [[LI:%[0-9]+]]:gprc_and_gprc_nor0 = LI 0
-  ; CHECK-NEXT:   [[ISEL:%[0-9]+]]:gprc = ISEL [[LI]], [[LIS]], [[CROR]]
+  ; CHECK-NEXT:   [[LI:%[0-9]+]]:gprc_and_gprc_nor0 = LI 1
+  ; CHECK-NEXT:   [[LI1:%[0-9]+]]:gprc_and_gprc_nor0 = LI 0
+  ; CHECK-NEXT:   [[ISEL:%[0-9]+]]:gprc = ISEL [[LI1]], [[LI]], [[CROR]]
+  ; CHECK-NEXT:   [[RLWINM:%[0-9]+]]:gprc = RLWINM killed [[ISEL]], 31, 0, 0
   ; CHECK-NEXT:   BC [[CROR]], %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.entry:
@@ -146,7 +147,7 @@ define void @fptoint_nofpexcept(ppc_fp128 %p, fp128 %m, ptr %addr1, ptr %addr2) 
   ; CHECK-NEXT:   MTFSFb 1, [[MFFS1]], implicit-def $rm
   ; CHECK-NEXT:   [[XSCVDPSXWS1:%[0-9]+]]:vsfrc = nofpexcept XSCVDPSXWS killed [[FADD1]], implicit $rm
   ; CHECK-NEXT:   [[MFVSRWZ:%[0-9]+]]:gprc = MFVSRWZ killed [[XSCVDPSXWS1]]
-  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:gprc = XOR killed [[MFVSRWZ]], killed [[ISEL]]
+  ; CHECK-NEXT:   [[XOR:%[0-9]+]]:gprc = XOR killed [[MFVSRWZ]], killed [[RLWINM]]
   ; CHECK-NEXT:   STW killed [[XOR]], 0, [[COPY1]] :: (volatile store (s32) into %ir.addr1)
   ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm
 entry:

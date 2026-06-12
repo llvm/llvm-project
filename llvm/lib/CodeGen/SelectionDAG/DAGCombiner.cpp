@@ -12753,6 +12753,15 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
     return NotCond;
   }
 
+  // select Cond, 0, Pow2 --> (zext (!Cond)) << log2(Pow2)
+  if (C1->isZero() && C2->getAPIntValue().isPowerOf2()) {
+    SDValue NotCond = DAG.getNOT(DL, Cond, MVT::i1);
+    NotCond = DAG.getZExtOrTrunc(NotCond, DL, VT);
+    SDValue ShAmtC =
+        DAG.getShiftAmountConstant(C2->getAPIntValue().exactLogBase2(), VT, DL);
+    return DAG.getNode(ISD::SHL, DL, VT, NotCond, ShAmtC);
+  }
+
   // Use a target hook because some targets may prefer to transform in the
   // other direction.
   if (!shouldConvertSelectOfConstantsToMath(Cond, VT, TLI))
