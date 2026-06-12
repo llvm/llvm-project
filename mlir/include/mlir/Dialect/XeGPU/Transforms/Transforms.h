@@ -49,11 +49,9 @@ struct UnrollOptions {
 
   /// Function that converts a ShapedType (TensorDescType or VectorType)
   /// into the unrolled type based on the tileShape. It returns a vector of
-  /// types representing the unrolled types for simplicity. When
-  /// `returnSingleType` is true, it returns a vector containing only one single
-  /// unrolled type.
+  /// types representing the unrolled types for simplicity.
   using UnrolledTypeFnType = std::function<SmallVector<Type>(
-      ShapedType type, ArrayRef<int64_t> tileShape, bool returnSingleType)>;
+      ShapedType type, ArrayRef<int64_t> tileShape)>;
   UnrolledTypeFnType getUnrolledTypes = nullptr;
   UnrollOptions &setUnrolledTypesFn(UnrolledTypeFnType fn) {
     getUnrolledTypes = std::move(fn);

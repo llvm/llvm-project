@@ -64,6 +64,7 @@ class StepIR:
         if watches is None:
             watches = {}
         self.watches = watches
+        self.hit_fn_bps: List[str] = []
 
     def __str__(self):
         try:
@@ -108,3 +109,24 @@ class StepIR:
             return self.current_frame.loc
         except AttributeError:
             return LocIR(path=None, lineno=None, column=None)
+
+    def detailed_print(self) -> List[str]:
+        lines: List[str] = []
+        lines.append(f"Step {self.step_index}")
+        lines.append(f"Stopped for {self.stop_reason}")
+        lines.append(f"Step was {self.step_kind}")
+        lines.append(f"Frames:")
+        for idx, frame in enumerate(self.frames):
+            lines.append(f"  Frame {idx}:")
+            fn_text = (
+                "[Inline Function] " if frame.is_inlined else ""
+            ) + frame.function
+            lines.append(f"    {fn_text}")
+            lines.append(f"    {frame.loc}")
+            lines.append(f"    $pc = {frame.instruction_addr}")
+
+        if self.watches:
+            lines.append(f"Variables:")
+            for value in sorted(self.watches.values(), key=lambda v: v.expression):
+                lines.append(f"  {value}")
+        return lines

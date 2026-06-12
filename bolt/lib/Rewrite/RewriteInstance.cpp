@@ -444,7 +444,7 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
       DWARFContext::create(*File, DWARFContext::ProcessDebugRelocations::Ignore,
                            nullptr, opts::DWPPathName,
                            WithColor::defaultErrorHandler,
-                           WithColor::defaultWarningHandler),
+                           WithColor::defaultWarningHandler, true),
       JournalingStreams{Stdout, Stderr});
   if (Error E = BCOrErr.takeError()) {
     Err = std::move(E);

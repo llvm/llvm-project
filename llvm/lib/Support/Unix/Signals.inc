@@ -607,11 +607,13 @@ public:
 
   /// Print llvm-symbolizer markup describing the layout of the given DSO.
   void printDSOMarkup(dl_phdr_info *Info) {
+    bool WasFirst = IsFirst;
+    IsFirst = false;
     ArrayRef<uint8_t> BuildID = findBuildID(Info);
     if (BuildID.empty())
       return;
     OS << format("{{{module:%d:%s:elf:", ModuleCount,
-                 IsFirst ? MainExecutableName : Info->dlpi_name);
+                 WasFirst ? MainExecutableName : Info->dlpi_name);
     for (uint8_t X : BuildID)
       OS << format("%02x", X);
     OS << "}}}\n";
@@ -627,7 +629,6 @@ public:
                    Phdr->p_memsz, ModuleCount, &ModeStr[0],
                    ModuleRelativeAddress);
     }
-    IsFirst = false;
     ModuleCount++;
   }
 

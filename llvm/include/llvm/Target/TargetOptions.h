@@ -119,8 +119,7 @@ enum CodeObjectVersionKind {
 class TargetOptions {
 public:
   TargetOptions()
-      : NoTrappingFPMath(true), NoSignedZerosFPMath(false),
-        EnableAIXExtendedAltivecABI(false),
+      : NoTrappingFPMath(true), EnableAIXExtendedAltivecABI(false),
         HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
         GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
         EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
@@ -159,12 +158,6 @@ public:
   /// -enable-no-trapping-fp-math is specified on the command line. This
   /// specifies that there are no trap handlers to handle exceptions.
   unsigned NoTrappingFPMath : 1;
-
-  /// NoSignedZerosFPMath - This flag is enabled when the
-  /// -enable-no-signed-zeros-fp-math is specified on the command line. This
-  /// specifies that optimizations are allowed to treat the sign of a zero
-  /// argument or result as insignificant.
-  unsigned NoSignedZerosFPMath : 1;
 
   /// EnableAIXExtendedAltivecABI - This flag returns true when -vec-extabi is
   /// specified. The code generator is then able to use both volatile and

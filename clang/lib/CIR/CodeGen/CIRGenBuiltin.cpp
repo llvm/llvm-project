@@ -1171,7 +1171,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIconjf:
   case Builtin::BIconjl: {
     mlir::Value complex = emitComplexExpr(e->getArg(0));
-    mlir::Value conj = builder.createNot(complex);
+    mlir::Value conj = builder.createComplexConj(loc, complex);
     return RValue::getComplex(conj);
   }
 

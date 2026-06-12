@@ -342,6 +342,9 @@ unsigned getArchVGPRAllocGranule();
 /// \returns Total number of VGPRs for given subtarget \p STI.
 unsigned getTotalNumVGPRs(const MCSubtargetInfo &STI);
 
+/// Maximum number of VGPR blocks that can be allocated in dynamic VGPR mode.
+static constexpr unsigned MaxDynamicVGPRBlocks = 8;
+
 /// \returns Addressable number of architectural VGPRs for a given subtarget \p
 /// STI.
 unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo &STI);
@@ -1678,6 +1681,7 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+  case AMDGPU::OPERAND_REG_IMM_V2FP64:
   case AMDGPU::OPERAND_KIMM64:
     return 8;
 
@@ -1769,6 +1773,10 @@ bool isArgPassedInSGPR(const Argument *Arg);
 bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);
 
 LLVM_READONLY bool isPackedFP32Inst(unsigned Opc);
+
+LLVM_READONLY bool isPacked64BitInst(unsigned Opc);
+
+LLVM_READONLY bool isPackedFP32or64BitInst(unsigned Opc);
 
 LLVM_READONLY
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,
