@@ -289,3 +289,28 @@ target_compile_definitions(obj.MLIRXeVMTarget
   PRIVATE
   MLIR_XEVM_OCLOC_LIB_AVAILABLE=${MLIR_XEVM_OCLOC_LIB_AVAILABLE}
 )
+
+if ("AIR" IN_LIST LLVM_EXPERIMENTAL_TARGETS_TO_BUILD)
+  set(AIR_LIBS
+    AIRCodeGen
+    AIRDesc
+    AIRInfo
+  )
+endif()
+
+add_mlir_dialect_library(MLIRAIRTarget
+  AIR/Target.cpp
+
+  OBJECT
+
+  LINK_COMPONENTS
+  ${AIR_LIBS}
+
+  LINK_LIBS PUBLIC
+  MLIRIR
+  MLIRExecutionEngineUtils
+  MLIRSupport
+  MLIRGPUDialect
+  MLIRAIRDialect
+  MLIRTargetLLVM
+)

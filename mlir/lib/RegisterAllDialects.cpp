@@ -110,6 +110,8 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Target/LLVM/AGXIR/Target.h"
+#include "mlir/Dialect/AIR/IR/AIRDialect.h"
+#include "mlir/Target/LLVM/AIR/Target.h"
 #include "mlir/Target/LLVM/NVVM/Target.h"
 #include "mlir/Target/LLVM/ROCDL/Target.h"
 #include "mlir/Target/LLVM/XeVM/Target.h"
@@ -122,6 +124,7 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
                   agx::AGXDialect,
                   AGXIR::AGXIRDialect,
                   affine::AffineDialect,
+                  air::AIRDialect,
                   amdgpu::AMDGPUDialect,
                   arith::ArithDialect,
                   arm_neon::ArmNeonDialect,
@@ -215,6 +218,7 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   vector::registerMemorySlotExternalModels(registry);
   vector::registerSubsetOpInterfaceExternalModels(registry);
   vector::registerValueBoundsOpInterfaceExternalModels(registry);
+  air::registerAIRTargetInterfaceExternalModels(registry);
   NVVM::registerNVVMTargetInterfaceExternalModels(registry);
   AGXIR::registerAGXIRTargetInterfaceExternalModels(registry);
   ROCDL::registerROCDLTargetInterfaceExternalModels(registry);

@@ -1,0 +1,6 @@
+add_mlir_dialect(AIROps air)
+add_mlir_doc(AIROps AIRDialect Dialects/ -gen-dialect-doc -dialect=air)
+set(LLVM_TARGET_DEFINITIONS AIROps.td)
+mlir_tablegen(AIROpsAttributes.h.inc -gen-attrdef-decls -attrdefs-dialect=air)
+mlir_tablegen(AIROpsAttributes.cpp.inc -gen-attrdef-defs -attrdefs-dialect=air)
+add_public_tablegen_target(MLIRAIRAttributesIncGen)
