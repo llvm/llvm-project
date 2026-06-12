@@ -10981,7 +10981,7 @@ def warn_lifetime_safety_use_after_scope_moved : Warning<
    InGroup<LifetimeSafetyUseAfterScopeMoved>, DefaultIgnore;
 
 def warn_lifetime_safety_use_after_free : Warning<
-    "%select{allocated object|parameter}0 does not live long enough">,
+    "%0 does not live long enough">,
     InGroup<LifetimeSafetyUseAfterFree>, DefaultIgnore;
 
 def warn_lifetime_safety_return_stack_addr : Warning<
@@ -10995,15 +10995,15 @@ def warn_lifetime_safety_return_stack_addr_moved : Warning<
   InGroup<LifetimeSafetyReturnStackAddrMoved>, DefaultIgnore;
 
 def warn_lifetime_safety_invalidation
-    : Warning<"%select{object whose reference is captured|parameter}0 is later invalidated">,
+    : Warning<"%0 is later invalidated">,
       InGroup<LifetimeSafetyInvalidation>,
       DefaultIgnore;
 def warn_lifetime_safety_invalidated_field
-    : Warning<"%select{object whose reference|parameter which}0 escapes to a field is later invalidated">,
+    : Warning<"%0 escapes to the %1 and is later invalidated">,
       InGroup<LifetimeSafetyInvalidation>,
       DefaultIgnore;
 def warn_lifetime_safety_invalidated_global
-    : Warning<"%select{object whose reference|parameter which}0 escapes to global or static storage is later invalidated">,
+    : Warning<"%0 escapes to the %1 and is later invalidated">,
       InGroup<LifetimeSafetyInvalidation>,
       DefaultIgnore;
 
