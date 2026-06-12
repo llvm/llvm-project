@@ -115,49 +115,40 @@ MLIR_CAPI_EXPORTED bool mlirLinalgIsAConvolutionOp(MlirOperation op) {
   return linalg::isaConvolutionOpInterface(linalgOp);
 }
 
+static MlirLinalgConvolutionDimensions
+toConvolutionDimensions(MLIRContext *ctx,
+                        const linalg::ConvolutionDimensions &dims) {
+  auto toI32Attr = [ctx](ArrayRef<unsigned> vals) -> MlirAttribute {
+    return wrap(DenseI32ArrayAttr::get(ctx, llvm::to_vector_of<int32_t>(vals)));
+  };
+  auto toI64Attr = [ctx](ArrayRef<int64_t> vals) -> MlirAttribute {
+    return wrap(DenseI64ArrayAttr::get(ctx, vals));
+  };
+  return {toI32Attr(dims.batch),         toI32Attr(dims.outputImage),
+          toI32Attr(dims.outputChannel), toI32Attr(dims.filterLoop),
+          toI32Attr(dims.inputChannel),  toI32Attr(dims.depth),
+          toI64Attr(dims.strides),       toI64Attr(dims.dilations)};
+}
+
 MLIR_CAPI_EXPORTED MlirLinalgConvolutionDimensions
 mlirLinalgInferConvolutionDimensions(MlirOperation op) {
-  MlirLinalgConvolutionDimensions result{};
   auto linalgOp = llvm::dyn_cast<mlir::linalg::LinalgOp>(unwrap(op));
   if (!linalgOp)
-    return result;
+    return MlirLinalgConvolutionDimensions{};
 
   FailureOr<linalg::ConvolutionDimensions> maybeDims =
       linalg::inferConvolutionDims(linalgOp);
   if (failed(maybeDims))
-    return result;
+    return MlirLinalgConvolutionDimensions{};
 
-  const linalg::ConvolutionDimensions &dims = *maybeDims;
-  MLIRContext *ctx = linalgOp.getContext();
-
-  auto toI32Attr =
-      [&ctx](const SmallVector<unsigned, 2> &vals) -> MlirAttribute {
-    return wrap(DenseI32ArrayAttr::get(ctx, llvm::to_vector_of<int32_t>(vals)));
-  };
-
-  auto toI64Attr =
-      [&ctx](const SmallVector<int64_t, 2> &vals) -> MlirAttribute {
-    return wrap(DenseI64ArrayAttr::get(ctx, vals));
-  };
-
-  result.batch = toI32Attr(dims.batch);
-  result.outputImage = toI32Attr(dims.outputImage);
-  result.outputChannel = toI32Attr(dims.outputChannel);
-  result.filterLoop = toI32Attr(dims.filterLoop);
-  result.inputChannel = toI32Attr(dims.inputChannel);
-  result.depth = toI32Attr(dims.depth);
-  result.strides = toI64Attr(dims.strides);
-  result.dilations = toI64Attr(dims.dilations);
-
-  return result;
+  return toConvolutionDimensions(linalgOp.getContext(), *maybeDims);
 }
 
 MLIR_CAPI_EXPORTED MlirLinalgConvolutionDimensions
 mlirLinalgInferConvolutionDimensionsFromMaps(const MlirAffineMap *indexingMaps,
                                              size_t numMaps) {
-  MlirLinalgConvolutionDimensions result{};
   if (!indexingMaps || numMaps == 0)
-    return result;
+    return MlirLinalgConvolutionDimensions{};
 
   SmallVector<AffineMap, 3> maps;
   maps.reserve(numMaps);
@@ -167,31 +158,9 @@ mlirLinalgInferConvolutionDimensionsFromMaps(const MlirAffineMap *indexingMaps,
   FailureOr<linalg::ConvolutionDimensions> maybeDims =
       linalg::inferConvolutionDims(maps);
   if (failed(maybeDims))
-    return result;
+    return MlirLinalgConvolutionDimensions{};
 
-  const linalg::ConvolutionDimensions &dims = *maybeDims;
-  MLIRContext *ctx = maps[0].getContext();
-
-  auto toI32Attr =
-      [&ctx](const SmallVector<unsigned, 2> &vals) -> MlirAttribute {
-    return wrap(DenseI32ArrayAttr::get(ctx, llvm::to_vector_of<int32_t>(vals)));
-  };
-
-  auto toI64Attr =
-      [&ctx](const SmallVector<int64_t, 2> &vals) -> MlirAttribute {
-    return wrap(DenseI64ArrayAttr::get(ctx, vals));
-  };
-
-  result.batch = toI32Attr(dims.batch);
-  result.outputImage = toI32Attr(dims.outputImage);
-  result.outputChannel = toI32Attr(dims.outputChannel);
-  result.filterLoop = toI32Attr(dims.filterLoop);
-  result.inputChannel = toI32Attr(dims.inputChannel);
-  result.depth = toI32Attr(dims.depth);
-  result.strides = toI64Attr(dims.strides);
-  result.dilations = toI64Attr(dims.dilations);
-
-  return result;
+  return toConvolutionDimensions(maps[0].getContext(), *maybeDims);
 }
 
 MLIR_CAPI_EXPORTED MlirAttribute
