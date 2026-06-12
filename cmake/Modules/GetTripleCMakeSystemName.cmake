@@ -14,7 +14,8 @@
 #
 # Parses the triple (arch-vendor-os[-env]) and sets <out_var> to the
 # CMake-style system name (e.g. "Darwin", "Linux", "Windows").
-# Unrecognized OS values are mapped to "Generic".
+# Unrecognized OS values are mapped to "Generic". This expects a
+# normalized triple.
 
 function(get_triple_cmake_system_name triple out_var)
   string(REPLACE "-" ";" _components "${triple}")
@@ -35,10 +36,8 @@ function(get_triple_cmake_system_name triple out_var)
   # override the usual OS mapping.
   if("${_env}" MATCHES "^android")
     set(${out_var} "Android" PARENT_SCOPE)
-  elseif("${_env}" MATCHES "^cygnus|^cygwin")
+  elseif("${_env}" MATCHES "^cygnus")
     set(${out_var} "CYGWIN" PARENT_SCOPE)
-  elseif("${_env}" MATCHES "^msys")
-    set(${out_var} "MSYS" PARENT_SCOPE)
   elseif("${_os}" MATCHES "^darwin|^macos")
     set(${out_var} "Darwin" PARENT_SCOPE)
   elseif("${_os}" MATCHES "^ios")
@@ -54,7 +53,7 @@ function(get_triple_cmake_system_name triple out_var)
     set(${out_var} "Darwin" PARENT_SCOPE)
   elseif("${_os}" MATCHES "^linux")
     set(${out_var} "Linux" PARENT_SCOPE)
-  elseif("${_os}" MATCHES "^win32|^windows|^mingw")
+  elseif("${_os}" MATCHES "^windows")
     set(${out_var} "Windows" PARENT_SCOPE)
   elseif("${_os}" MATCHES "^freebsd|^kfreebsd")
     set(${out_var} "FreeBSD" PARENT_SCOPE)
