@@ -1,17 +1,17 @@
-# Test writing a z/OS archive.
+## Test writing a z/OS archive.
 
-# Create a z/OS archive from a plain text file, without a symbol table.
+## Create a z/OS archive from a plain text file, without a symbol table.
 # RUN: rm -rf %t.dir && mkdir -p %t.dir
 # RUN: printf 'abcd' > %t.dir/test.txt
 # RUN: llvm-ar rcSD --format=zos %t.a %t.dir/test.txt
 
-# The archive should be written and read back successfully through llvm-ar.
+## The archive should be written and read back successfully through llvm-ar.
 # RUN: llvm-ar t %t.a | FileCheck %s --check-prefix=LIST
 # RUN: llvm-ar p %t.a test.txt | FileCheck %s --check-prefix=CONTENT
 
-# Check raw bytes:
-# - The first 8 bytes are the z/OS archive magic in EBCDIC.
-# - Bytes 66..67 are the first member header terminator (`\n in EBCDIC => 79 15)
+## Check raw bytes:
+## - The first 8 bytes are the z/OS archive magic in EBCDIC.
+## - Bytes 66..67 are the first member header terminator (`\n in EBCDIC => 79 15)
 # RUN: %python -c "d=open(r'%t.a','rb').read(); print(d[:8].hex()); print(d[66:68].hex())" | FileCheck %s --check-prefix=BYTES
 
 # LIST: test.txt
@@ -19,14 +19,14 @@
 # BYTES: 5a4c819983886e15
 # BYTES-NEXT: 7915
 
-# Odd-sized members should be padded with EBCDIC newline (0x15).
+## Odd-sized members should be padded with EBCDIC newline (0x15).
 # RUN: printf 'abc' > %t.dir/odd.txt
 # RUN: llvm-ar rcSD --format=zos %t.odd.a %t.dir/odd.txt
 # RUN: %python -c "d=open(r'%t.odd.a','rb').read(); print(f'{d[-1]:02x}')" | FileCheck %s --check-prefix=PAD
 
 # PAD: 15
 
-# Long member names should written and read back correctly.
+## Long member names should be written and read back correctly.
 # RUN: printf 'xyz' > %t.dir/very_long_member_name.txt
 # RUN: llvm-ar rcSD --format=zos %t.long.a %t.dir/very_long_member_name.txt
 # RUN: llvm-ar t %t.long.a | FileCheck %s --check-prefix=LONG-LIST
@@ -34,3 +34,21 @@
 
 # LONG-LIST: very_long_member_name.txt
 # LONG-CONTENT: xyz
+
+## A z/OS archive with real symbols should write a readable symbol table.
+# RUN: printf 'define i32 @mytest() {\nentry:\n  ret i32 87\n}\n' > %t.dir/mytest.ll
+# RUN: llvm-as %t.dir/mytest.ll -o %t.dir/mytest.bc
+# RUN: llvm-ar rcD --format=zos %t.sym.a %t.dir/mytest.bc
+# RUN: llvm-nm --print-armap %t.sym.a | FileCheck %s --check-prefix=SYMTAB
+
+# SYMTAB: Archive map
+# SYMTAB-NEXT: mytest in mytest.bc
+
+## A z/OS archive with no real symbols should still write the dummy blank symbol.
+# RUN: printf 'source_filename = "blank.ll"\n' > %t.dir/blank.ll
+# RUN: llvm-as %t.dir/blank.ll -o %t.dir/blank.bc
+# RUN: llvm-ar rcD --format=zos %t.blank-sym.a %t.dir/blank.bc
+# RUN: llvm-nm --print-armap %t.blank-sym.a | FileCheck %s --check-prefix=EMPTY-SYMTAB
+
+# EMPTY-SYMTAB: Archive map
+# EMPTY-SYMTAB-NEXT: {{^  in blank.bc$}}

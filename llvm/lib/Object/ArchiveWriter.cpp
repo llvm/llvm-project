@@ -416,10 +416,11 @@ static uint64_t computeSymbolTableSize(object::Archive::Kind Kind,
                                        uint32_t *Padding = nullptr) {
   assert((OffsetSize == 4 || OffsetSize == 8) && "Unsupported OffsetSize");
   uint64_t Size = OffsetSize; // Number of entries
-  if (isBSDLike(Kind))
+  // Each symbol table entry consists of a member offset.
+  // For BSD, each entry also includes a string table offset.
+  // For z/OS, each entry also includes a flag field.
+  if (isBSDLike(Kind) || isZOSArchive(Kind))
     Size += NumSyms * OffsetSize * 2; // Table
-  else if (isZOSArchive(Kind))
-    Size += NumSyms * OffsetSize * 2; // MemberOffset + symbol flags
   else
     Size += NumSyms * OffsetSize; // Table
 
@@ -647,7 +648,7 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
   writeSymbolTableHeader(Out, Kind, Deterministic, Size, PrevMemberOffset,
                          NextMemberOffset);
   // Padding size is not included in the Size field of the z/OS symbol table
-  // header
+  // header.
   if (isZOSArchive(Kind))
     Size -= Pad;
 
@@ -680,11 +681,8 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
     // byte count of the string table
     printNBits(Out, Kind, StringTable.size());
   if (isZOSArchive(Kind)) {
-    std::string AStringTable;
-    raw_string_ostream AOut(AStringTable);
-    AOut << StringTable;
     SmallString<256> EStringTable;
-    ConverterEBCDIC::convertToEBCDIC(AStringTable, EStringTable);
+    ConverterEBCDIC::convertToEBCDIC(StringTable, EStringTable);
     Out << EStringTable.str();
   } else {
     Out << StringTable;
