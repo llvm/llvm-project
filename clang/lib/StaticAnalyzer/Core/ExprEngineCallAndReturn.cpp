@@ -502,25 +502,21 @@ void ExprEngine::ctuBifurcate(const CallEvent &Call, const Decl *D,
                           (IK == CTUPhase1InliningKind::Small &&
                            isSmall(AMgr.getAnalysisDeclContext(D)));
     if (DoInline) {
-      Bldr.takeNodes(Pred);
       inlineCall(Engine.getWorkList(), Call, D, Pred, State);
       return;
     }
     const bool BState = State->get<CTUDispatchBifurcation>();
     if (!BState) { // This is the first time we see this foreign function.
       // Enqueue it to be analyzed in the second (ctu) phase.
-      Bldr.takeNodes(Pred);
       inlineCall(Engine.getCTUWorkList(), Call, D, Pred, State);
       // Conservatively evaluate in the first phase.
       ConservativeEvalState = State->set<CTUDispatchBifurcation>(true);
       Bldr.addNodes(conservativeEvalCall(Call, Pred, ConservativeEvalState));
     } else {
-      Bldr.takeNodes(Pred);
       Bldr.addNodes(conservativeEvalCall(Call, Pred, State));
     }
     return;
   }
-  Bldr.takeNodes(Pred);
   inlineCall(Engine.getWorkList(), Call, D, Pred, State);
 }
 
@@ -1260,6 +1256,7 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
           return;
         }
       }
+      Bldr.takeNodes(Pred);
       ctuBifurcate(Call, D, Bldr, Pred, State);
       return;
     }
@@ -1288,8 +1285,10 @@ void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
                         State->get<DynamicDispatchBifurcationMap>(BifurReg);
   if (BState) {
     // If we are on "inline path", keep inlining if possible.
-    if (*BState == DynamicDispatchModeInlined)
+    if (*BState == DynamicDispatchModeInlined) {
+      Bldr.takeNodes(Pred);
       ctuBifurcate(Call, D, Bldr, Pred, State);
+    }
     // If inline failed, or we are on the path where we assume we
     // don't have enough info about the receiver to inline, conjure the
     // return value and invalidate the regions.
@@ -1303,6 +1302,7 @@ void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
   ProgramStateRef IState =
       State->set<DynamicDispatchBifurcationMap>(BifurReg,
                                                DynamicDispatchModeInlined);
+  Bldr.takeNodes(Pred);
   ctuBifurcate(Call, D, Bldr, Pred, IState);
 
   ProgramStateRef NoIState =
