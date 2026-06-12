@@ -143,7 +143,7 @@ static size_t findClosingDelim(StringRef S, size_t From, char C, size_t Count) {
 // model (delimiter stacks, intraword underscore rules, links, autolinks).
 static ArrayRef<MDNode *> parseInline(StringRef S, BumpPtrAllocator &Arena) {
   SmallVector<MDNode *> Nodes;
-  size_t TextStart = 0, I = 0, E = S.size();
+  size_t TextStart = 0, Pos = 0, E = S.size();
 
   auto flushText = [&](size_t End) {
     if (End > TextStart)
@@ -151,54 +151,56 @@ static ArrayRef<MDNode *> parseInline(StringRef S, BumpPtrAllocator &Arena) {
           internString(S.substr(TextStart, End - TextStart), Arena)));
   };
 
-  while (I < E) {
-    char C = S[I];
+  while (Pos < E) {
+    char C = S[Pos];
 
-    // Inline code span: a run of N backticks closed by a run of N backticks.
+    // Inline code span: an opening backtick run closed by a run of the same
+    // length.
     if (C == '`') {
-      size_t N = countRun(S, I, '`');
-      size_t J = I + N;
-      while (J < E && countRun(S, J, '`') != N)
-        J += S[J] == '`' ? countRun(S, J, '`') : 1;
-      if (J < E) {
-        flushText(I);
-        StringRef Code = trimCodeSpan(S.substr(I + N, J - (I + N)));
+      size_t OpenLen = countRun(S, Pos, '`');
+      size_t ClosePos = Pos + OpenLen;
+      while (ClosePos < E && countRun(S, ClosePos, '`') != OpenLen)
+        ClosePos += S[ClosePos] == '`' ? countRun(S, ClosePos, '`') : 1;
+      if (ClosePos < E) {
+        flushText(Pos);
+        StringRef Code =
+            trimCodeSpan(S.substr(Pos + OpenLen, ClosePos - (Pos + OpenLen)));
         Nodes.push_back(new (Arena) InlineCodeNode(internString(Code, Arena)));
-        I = J + N;
-        TextStart = I;
+        Pos = ClosePos + OpenLen;
+        TextStart = Pos;
         continue;
       }
       // No closing run; leave the backticks as literal text.
-      I += N;
+      Pos += OpenLen;
       continue;
     }
 
     // Emphasis (*text*, _text_) and strong (**text**, __text__).
     if (C == '*' || C == '_') {
       // Strong binds the two-delimiter form before single-delimiter emphasis.
-      if (I + 1 < E && S[I + 1] == C) {
-        size_t Close = findClosingDelim(S, I + 2, C, 2);
+      if (Pos + 1 < E && S[Pos + 1] == C) {
+        size_t Close = findClosingDelim(S, Pos + 2, C, 2);
         if (Close != StringRef::npos) {
-          flushText(I);
-          StringRef Inner = S.substr(I + 2, Close - (I + 2));
+          flushText(Pos);
+          StringRef Inner = S.substr(Pos + 2, Close - (Pos + 2));
           Nodes.push_back(new (Arena) StrongNode(parseInline(Inner, Arena)));
-          I = Close + 2;
-          TextStart = I;
+          Pos = Close + 2;
+          TextStart = Pos;
           continue;
         }
       }
-      size_t Close = findClosingDelim(S, I + 1, C, 1);
+      size_t Close = findClosingDelim(S, Pos + 1, C, 1);
       if (Close != StringRef::npos) {
-        flushText(I);
-        StringRef Inner = S.substr(I + 1, Close - (I + 1));
+        flushText(Pos);
+        StringRef Inner = S.substr(Pos + 1, Close - (Pos + 1));
         Nodes.push_back(new (Arena) EmphasisNode(parseInline(Inner, Arena)));
-        I = Close + 1;
-        TextStart = I;
+        Pos = Close + 1;
+        TextStart = Pos;
         continue;
       }
     }
 
-    ++I;
+    ++Pos;
   }
 
   flushText(E);

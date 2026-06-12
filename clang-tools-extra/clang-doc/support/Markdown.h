@@ -9,20 +9,10 @@
 /// \file
 /// Standalone Markdown parsing library for the LLVM ecosystem.
 ///
-/// The parser takes plain paragraph text and returns a polymorphic tree of
-/// MDNode-derived objects allocated in a caller-supplied BumpPtrAllocator.
-/// Node types form a closed class hierarchy rooted at MDNode. Each concrete
-/// type carries exactly the fields it needs -- no overloaded Content field,
-/// no unused arrays. Use llvm::isa<>/cast<>/dyn_cast<> for type-safe
-/// downcasting; each concrete type provides classof() for this purpose.
-///
-/// See
-/// https://llvm.org/docs/ProgrammerManual.html#the-isa-cast-and-dyn-cast-templates
-///
-/// Field ordering in each derived struct is chosen to minimize padding:
-/// 4-byte fields (like Level or Start) are declared before 16-byte fields
-/// (ArrayRef, StringRef) so that no implicit padding is inserted between the
-/// base class's 4-byte Kind and the first derived field.
+/// The parser takes a single paragraph of plain text and returns a list of
+/// nodes describing the Markdown it found. Each kind of construct has its own
+/// node type, and every node shares a common MDNode base, so you can use
+/// llvm::isa<>/cast<>/dyn_cast<> to check what a node is.
 ///
 /// Inline nodes (appear inside ParagraphNode, HeadingNode, etc.):
 ///   TextNode       -- plain text run
@@ -165,9 +155,7 @@ struct ParagraphNode : MDNode {
   }
 };
 
-/// ATX heading: one to six leading # characters. Level is declared before
-/// Children to avoid padding between the base class's 4-byte Kind and the
-/// 8-byte-aligned ArrayRef, keeping sizeof(HeadingNode) at 24 bytes.
+/// ATX heading: one to six leading # characters.
 struct HeadingNode : MDNode {
   unsigned Level;                    // 1-6
   llvm::ArrayRef<MDNode *> Children; // inline content
@@ -226,8 +214,7 @@ struct UnorderedListNode : MDNode {
   }
 };
 
-/// Ordered (numbered) list. Start is the number on the first item. Start is
-/// declared before Items to avoid padding, keeping sizeof at 24 bytes.
+/// Ordered (numbered) list. Start is the number on the first item.
 struct OrderedListNode : MDNode {
   unsigned Start;
   llvm::ArrayRef<ListItemNode *> Items;
