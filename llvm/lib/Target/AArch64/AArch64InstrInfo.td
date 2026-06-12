@@ -1614,16 +1614,6 @@ def WFET : RegInputSystemI<0b0000, 0b000, "wfet">;
 def WFIT : RegInputSystemI<0b0000, 0b001, "wfit">;
 }
 
-// Branch Record Buffer two-word mnemonic instructions
-class BRBEI<bits<3> op2, string keyword>
-    : SimpleSystemI<0, (ins), "brb", keyword>, Sched<[WriteSys]> {
-  let Inst{31-8} = 0b110101010000100101110010;
-  let Inst{7-5} = op2;
-  let Predicates = [HasBRBE];
-}
-def BRB_IALL: BRBEI<0b100, "\tiall">;
-def BRB_INJ:  BRBEI<0b101, "\tinj">;
-
 }
 
 // Allow uppercase and lowercase keyword arguments for BRB IALL and BRB INJ
@@ -2552,6 +2542,14 @@ def SYSLxt : SystemLXtI<1, "sysl">;
 def : InstAlias<"sys $op1, $Cn, $Cm, $op2",
                 (SYSxt timm32_0_7:$op1, sys_cr_op:$Cn,
                  sys_cr_op:$Cm, timm32_0_7:$op2, XZR)>;
+def : InstAlias<"apas $Xt",
+                (SYSxt 6, 7, 0, 0, GPR64:$Xt), 2>;
+def : InstAlias<"brb\tiall",
+                (SYSxt 1, 7, 2, 4, XZR), 2>, Requires<[HasBRBE]>;
+def : InstAlias<"brb\tinj",
+                (SYSxt 1, 7, 2, 5, XZR), 2>, Requires<[HasBRBE]>;
+def : InstAlias<"trcit $Rt",
+                (SYSxt 3, 7, 2, 7, GPR64:$Rt), 2>, Requires<[HasITE]>;
 
 
 //===----------------------------------------------------------------------===//
@@ -3080,9 +3078,6 @@ let Predicates = [HasLSUI] in {
   defm : STOPregisterLSUI<"sttclr","LDTCLR">; // STTCLRx
   defm : STOPregisterLSUI<"sttset","LDTSET">; // STTSETx
 }
-
-// v9.6-a FEAT_RME_GPC3
-def APAS : APASI;
 
 // v8.1 atomic LD<OP>(register). Performs load and then ST<OP>(register)
 defm LDADD   : LDOPregister<0b000, "add", 0, 0, "">;
