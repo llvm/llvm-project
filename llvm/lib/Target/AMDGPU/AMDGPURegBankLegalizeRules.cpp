@@ -2553,13 +2553,21 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
              {IntrId, VgprAnyTy, VgprAnyTy, VgprOrAgprAnyTy}}});
 
   addRulesForIOpcs(
-      {amdgcn_smfmac_f32_16x16x32_f16, amdgcn_smfmac_f32_32x32x16_f16,
+      {// gfx942+
+       amdgcn_smfmac_f32_16x16x32_f16, amdgcn_smfmac_f32_32x32x16_f16,
        amdgcn_smfmac_f32_16x16x32_bf16, amdgcn_smfmac_f32_32x32x16_bf16,
        amdgcn_smfmac_i32_16x16x64_i8, amdgcn_smfmac_i32_32x32x32_i8,
        amdgcn_smfmac_f32_16x16x64_bf8_bf8, amdgcn_smfmac_f32_16x16x64_bf8_fp8,
        amdgcn_smfmac_f32_16x16x64_fp8_bf8, amdgcn_smfmac_f32_16x16x64_fp8_fp8,
        amdgcn_smfmac_f32_32x32x32_bf8_bf8, amdgcn_smfmac_f32_32x32x32_bf8_fp8,
-       amdgcn_smfmac_f32_32x32x32_fp8_bf8, amdgcn_smfmac_f32_32x32x32_fp8_fp8})
+       amdgcn_smfmac_f32_32x32x32_fp8_bf8, amdgcn_smfmac_f32_32x32x32_fp8_fp8,
+       // gfx950+
+       amdgcn_smfmac_f32_16x16x64_f16, amdgcn_smfmac_f32_32x32x32_f16,
+       amdgcn_smfmac_i32_16x16x128_i8, amdgcn_smfmac_i32_32x32x64_i8,
+       amdgcn_smfmac_f32_16x16x128_bf8_bf8, amdgcn_smfmac_f32_16x16x128_bf8_fp8,
+       amdgcn_smfmac_f32_16x16x128_fp8_bf8, amdgcn_smfmac_f32_16x16x128_fp8_fp8,
+       amdgcn_smfmac_f32_32x32x64_bf8_bf8, amdgcn_smfmac_f32_32x32x64_bf8_fp8,
+       amdgcn_smfmac_f32_32x32x64_fp8_bf8, amdgcn_smfmac_f32_32x32x64_fp8_fp8})
       .Any({{DivAnyTy},
             {{VgprOrAgprAnyTy},
              {IntrId, VgprAnyTy, VgprAnyTy, VgprOrAgprAnyTy, VgprAnyTy}}});
