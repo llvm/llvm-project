@@ -674,9 +674,11 @@ void Writer::populateTargetFeatures() {
 
   if (tlsUsed) {
     if (!allowed.contains("bulk-memory"))
-      error("'bulk-memory' feature must be used in order to use thread-local storage");
+      error("'bulk-memory' feature must be used in order to use thread-local "
+            "storage");
     if (!allowed.contains("atomics") && !ctx.arg.cooperativeThreading)
-      error("'atomics' feature must be used in order to use thread-local storage");
+      error("'atomics' feature must be used in order to use thread-local "
+            "storage");
   }
 
   // Validate that used features are allowed in output

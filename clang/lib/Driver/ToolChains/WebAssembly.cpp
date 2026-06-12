@@ -342,10 +342,11 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
     CC1Args.push_back("-fno-use-init-array");
 
   // '-pthread' implies bulk-memory, mutable-globals, and sign-ext.
-  // It also implies atomics, so long as we're not targeting a cooperative threading environment.
+  // It also implies atomics, so long as we're not targeting a cooperative
+  // threading environment.
   if (WantsPthread(getTriple(), DriverArgs)) {
     if (!WantsCooperativeMultithreading(getTriple(), DriverArgs) &&
-      DriverArgs.hasFlag(options::OPT_mno_atomics, options::OPT_matomics,
+        DriverArgs.hasFlag(options::OPT_mno_atomics, options::OPT_matomics,
                            false))
       getDriver().Diag(diag::err_drv_argument_not_allowed_with)
           << "-pthread"
