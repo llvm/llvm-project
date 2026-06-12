@@ -94,6 +94,11 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Fast math flags are now permitted on `uitofp` and `sitofp`.
 
+* Added `noipa` attribute which disables interprocedural analyses that inspect
+  the definition of the function. This attribute does *not* control inlining,
+  which is treated as a separate dimension. Add the `noinline` attribute as
+  well in cases where inlining should additionally be disabled.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
