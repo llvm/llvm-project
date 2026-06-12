@@ -1188,6 +1188,217 @@ fpclassify_not_inf:
   br label %fpclassify_end
 }
 
+define void @load_derefable(i8 %v0, ptr dereferenceable(1) %p) {
+; CHECK-LABEL: @load_derefable(
+; CHECK-NEXT:  pred:
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[LOAD]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[C0]], i1 [[C1]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       final_left:
+; CHECK-NEXT:    call void @sideeffect0()
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       final_right:
+; CHECK-NEXT:    call void @sideeffect1()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+pred:
+  %c0 = icmp eq i8 %v0, 0
+  br i1 %c0, label %dispatch, label %final_right
+dispatch:
+  %load = load i8, ptr %p
+  %c1 = icmp eq i8 %load, 0
+  br i1 %c1, label %final_left, label %final_right
+final_left:
+  call void @sideeffect0()
+  ret void
+final_right:
+  call void @sideeffect1()
+  ret void
+}
+
+define void @load_derefable_assume(i8 %v0, ptr %p) {
+; CHECK-LABEL: @load_derefable_assume(
+; CHECK-NEXT:  pred:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P:%.*]], i64 1) ]
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[LOAD]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[C0]], i1 [[C1]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       final_left:
+; CHECK-NEXT:    call void @sideeffect0()
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       final_right:
+; CHECK-NEXT:    call void @sideeffect1()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+pred:
+  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %p, i64 1)]
+  %c0 = icmp eq i8 %v0, 0
+  br i1 %c0, label %dispatch, label %final_right
+dispatch:
+  %load = load i8, ptr %p
+  %c1 = icmp eq i8 %load, 0
+  br i1 %c1, label %final_left, label %final_right
+final_left:
+  call void @sideeffect0()
+  ret void
+final_right:
+  call void @sideeffect1()
+  ret void
+}
+
+define void @load_derefable_two_preds(i8 %v0, i8 %v1, i8 %v2, ptr dereferenceable(1) %p) {
+; CHECK-LABEL: @load_derefable_two_preds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
+; CHECK-NEXT:    br i1 [[C0]], label [[PRED0:%.*]], label [[PRED1:%.*]]
+; CHECK:       pred0:
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
+; CHECK-NEXT:    [[V3_OLD:%.*]] = load i8, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[C3_OLD:%.*]] = icmp eq i8 [[V3_OLD]], 0
+; CHECK-NEXT:    [[OR_COND1:%.*]] = select i1 [[C1]], i1 true, i1 [[C3_OLD]]
+; CHECK-NEXT:    br i1 [[OR_COND1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT:%.*]]
+; CHECK:       pred1:
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[V2:%.*]], 0
+; CHECK-NEXT:    [[V3:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 [[V3]], 0
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[C2]], i1 [[C3]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FINAL_LEFT]], label [[FINAL_RIGHT]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       final_left:
+; CHECK-NEXT:    call void @sideeffect0()
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       final_right:
+; CHECK-NEXT:    call void @sideeffect1()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+entry:
+  %c0 = icmp eq i8 %v0, 0
+  br i1 %c0, label %pred0, label %pred1
+pred0:
+  %c1 = icmp eq i8 %v1, 0
+  br i1 %c1, label %final_left, label %dispatch
+pred1:
+  %c2 = icmp eq i8 %v2, 0
+  br i1 %c2, label %dispatch, label %final_right
+dispatch:
+  %v3 = load i8, ptr %p
+  %c3 = icmp eq i8 %v3, 0
+  br i1 %c3, label %final_left, label %final_right
+final_left:
+  call void @sideeffect0()
+  ret void
+final_right:
+  call void @sideeffect1()
+  ret void
+}
+
+; Can't speculate, as assume only present in one predecessor.
+define void @load_derefable_two_preds_assume_one(i8 %v0, i8 %v1, i8 %v2, ptr %p) {
+; CHECK-LABEL: @load_derefable_two_preds_assume_one(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
+; CHECK-NEXT:    br i1 [[C0]], label [[PRED0:%.*]], label [[PRED1:%.*]]
+; CHECK:       pred0:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P:%.*]], i64 1) ]
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
+; CHECK-NEXT:    br i1 [[C1]], label [[FINAL_LEFT:%.*]], label [[DISPATCH:%.*]]
+; CHECK:       pred1:
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[V2:%.*]], 0
+; CHECK-NEXT:    br i1 [[C2]], label [[DISPATCH]], label [[FINAL_RIGHT:%.*]]
+; CHECK:       dispatch:
+; CHECK-NEXT:    [[V3:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 [[V3]], 0
+; CHECK-NEXT:    br i1 [[C3]], label [[FINAL_LEFT]], label [[FINAL_RIGHT]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       final_left:
+; CHECK-NEXT:    call void @sideeffect0()
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       final_right:
+; CHECK-NEXT:    call void @sideeffect1()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+entry:
+  %c0 = icmp eq i8 %v0, 0
+  br i1 %c0, label %pred0, label %pred1
+pred0:
+  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %p, i64 1)]
+  %c1 = icmp eq i8 %v1, 0
+  br i1 %c1, label %final_left, label %dispatch
+pred1:
+  %c2 = icmp eq i8 %v2, 0
+  br i1 %c2, label %dispatch, label %final_right
+dispatch:
+  %v3 = load i8, ptr %p
+  %c3 = icmp eq i8 %v3, 0
+  br i1 %c3, label %final_left, label %final_right
+final_left:
+  call void @sideeffect0()
+  ret void
+final_right:
+  call void @sideeffect1()
+  ret void
+}
+
+; We should handle this case, but currently don't.
+define void @load_derefable_two_preds_assume_both(i8 %v0, i8 %v1, i8 %v2, ptr %p) {
+; CHECK-LABEL: @load_derefable_two_preds_assume_both(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
+; CHECK-NEXT:    br i1 [[C0]], label [[PRED0:%.*]], label [[PRED1:%.*]]
+; CHECK:       pred0:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P:%.*]], i64 1) ]
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[V1:%.*]], 0
+; CHECK-NEXT:    br i1 [[C1]], label [[FINAL_LEFT:%.*]], label [[DISPATCH:%.*]]
+; CHECK:       pred1:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 1) ]
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i8 [[V2:%.*]], 0
+; CHECK-NEXT:    br i1 [[C2]], label [[DISPATCH]], label [[FINAL_RIGHT:%.*]]
+; CHECK:       dispatch:
+; CHECK-NEXT:    [[V3:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    [[C3:%.*]] = icmp eq i8 [[V3]], 0
+; CHECK-NEXT:    br i1 [[C3]], label [[FINAL_LEFT]], label [[FINAL_RIGHT]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       final_left:
+; CHECK-NEXT:    call void @sideeffect0()
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       final_right:
+; CHECK-NEXT:    call void @sideeffect1()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+entry:
+  %c0 = icmp eq i8 %v0, 0
+  br i1 %c0, label %pred0, label %pred1
+pred0:
+  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %p, i64 1)]
+  %c1 = icmp eq i8 %v1, 0
+  br i1 %c1, label %final_left, label %dispatch
+pred1:
+  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %p, i64 1)]
+  %c2 = icmp eq i8 %v2, 0
+  br i1 %c2, label %dispatch, label %final_right
+dispatch:
+  %v3 = load i8, ptr %p
+  %c3 = icmp eq i8 %v3, 0
+  br i1 %c3, label %final_left, label %final_right
+final_left:
+  call void @sideeffect0()
+  ret void
+final_right:
+  call void @sideeffect1()
+  ret void
+}
+
 declare float @llvm.fabs.f32(float)
 
 attributes #0 = { nounwind argmemonly speculatable }
