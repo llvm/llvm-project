@@ -652,12 +652,13 @@ public:
   }
 
   static bool isLDSDMA(const MachineInstr &MI) {
-    return (isVALU(MI, /*AllowLDSDMA=*/true) && (isMUBUF(MI) || isFLAT(MI))) ||
+    return ((MI.getDesc().TSFlags & SIInstrFlags::VALU) &&
+            (isMUBUF(MI) || isFLAT(MI))) ||
            (MI.getDesc().TSFlags & SIInstrFlags::TENSOR_CNT);
   }
 
   bool isLDSDMA(uint32_t Opcode) const {
-    return (isVALU(Opcode, /*AllowLDSDMA=*/true) &&
+    return ((get(Opcode).TSFlags & SIInstrFlags::VALU) &&
             (isMUBUF(Opcode) || isFLAT(Opcode))) ||
            (get(Opcode).TSFlags & SIInstrFlags::TENSOR_CNT);
   }
