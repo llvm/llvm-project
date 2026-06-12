@@ -10,6 +10,7 @@ on:
       - "CI Checks"
       - "Test Issue Write"
       - "Check LLVM ABI annotations"
+      - "Diff test-suite codegen"
     types:
       - completed
 

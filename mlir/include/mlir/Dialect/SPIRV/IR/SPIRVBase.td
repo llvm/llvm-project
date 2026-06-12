@@ -1202,6 +1202,12 @@ def SPIRV_C_ImageReadWriteLodAMD                        : I32EnumAttrCase<"Image
     Extension<[SPV_AMD_shader_image_load_store_lod]>
   ];
 }
+def SPIRV_C_WeakLinkageAMD                              : I32EnumAttrCase<"WeakLinkageAMD", 5181> {
+  list<I32EnumAttrCase> implies = [SPIRV_C_Linkage];
+  list<Availability> availability = [
+    Extension<[SPV_AMD_weak_linkage]>
+  ];
+}
 def SPIRV_C_Int64ImageEXT                               : I32EnumAttrCase<"Int64ImageEXT", 5016> {
   list<I32EnumAttrCase> implies = [SPIRV_C_Shader];
   list<Availability> availability = [
@@ -1577,7 +1583,8 @@ def SPIRV_CapabilityAttr :
       SPIRV_C_VariablePointersStorageBuffer, SPIRV_C_RayQueryProvisionalKHR,
       SPIRV_C_RayQueryKHR, SPIRV_C_RayTracingKHR, SPIRV_C_Float16ImageAMD,
       SPIRV_C_ImageGatherBiasLodAMD, SPIRV_C_FragmentMaskAMD, SPIRV_C_StencilExportEXT,
-      SPIRV_C_ImageReadWriteLodAMD, SPIRV_C_Int64ImageEXT, SPIRV_C_ShaderClockKHR,
+      SPIRV_C_ImageReadWriteLodAMD, SPIRV_C_WeakLinkageAMD, SPIRV_C_Int64ImageEXT,
+      SPIRV_C_ShaderClockKHR,
       SPIRV_C_FragmentFullyCoveredEXT, SPIRV_C_FragmentDensityEXT,
       SPIRV_C_ShaderNonUniform, SPIRV_C_RuntimeDescriptorArray,
       SPIRV_C_StorageTexelBufferArrayDynamicIndexing, SPIRV_C_RayTracingNV,
@@ -3722,7 +3729,7 @@ def SPIRV_LT_LinkOnceODR : I32EnumAttrCase<"LinkOnceODR", 2> {
 def SPIRV_LT_Weak        : I32EnumAttrCase<"Weak", 3> {
   list<Availability> availability = [
     Extension<[SPV_AMD_weak_linkage]>,
-    Capability<[SPIRV_C_Linkage]>
+    Capability<[SPIRV_C_WeakLinkageAMD]>
   ];
 }
 

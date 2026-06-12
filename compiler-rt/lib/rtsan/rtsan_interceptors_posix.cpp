@@ -1531,7 +1531,10 @@ INTERCEPTOR(INT_TYPE_SYSCALL, syscall, INT_TYPE_SYSCALL number, ...) {
   arg_type arg6 = va_arg(args, arg_type);
 
   // these are various examples of things that COULD be passed
+  // On 32-bit platforms, 64-bit types like off_t are split across two args.
+#if SANITIZER_WORDSIZE >= 64
   static_assert(sizeof(arg_type) >= sizeof(off_t));
+#endif
   static_assert(sizeof(arg_type) >= sizeof(struct flock *));
   static_assert(sizeof(arg_type) >= sizeof(const char *));
   static_assert(sizeof(arg_type) >= sizeof(int));

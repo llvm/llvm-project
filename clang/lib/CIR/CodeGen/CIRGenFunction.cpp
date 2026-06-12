@@ -1157,31 +1157,23 @@ LValue CIRGenFunction::emitPseudoObjectLValue(const PseudoObjectExpr *e) {
 /// of the expression.
 /// FIXME: document this function better.
 LValue CIRGenFunction::emitLValue(const Expr *e) {
-  // FIXME: ApplyDebugLocation DL(*this, e);
+  assert(!cir::MissingFeatures::generateDebugInfo());
   switch (e->getStmtClass()) {
   default:
     getCIRGenModule().errorNYI(e->getSourceRange(),
-                               std::string("l-value not implemented for '") +
-                                   e->getStmtClassName() + "'");
+                               "emitLValue: unsupported l-value class");
     return LValue();
-  case Expr::ConditionalOperatorClass:
-    return emitConditionalOperatorLValue(cast<ConditionalOperator>(e));
-  case Expr::BinaryConditionalOperatorClass:
-    return emitConditionalOperatorLValue(cast<BinaryConditionalOperator>(e));
-  case Expr::ArraySubscriptExprClass:
-    return emitArraySubscriptExpr(cast<ArraySubscriptExpr>(e));
-  case Expr::ExtVectorElementExprClass:
-    return emitExtVectorElementExpr(cast<ExtVectorElementExpr>(e));
-  case Expr::UnaryOperatorClass:
-    return emitUnaryOpLValue(cast<UnaryOperator>(e));
-  case Expr::StringLiteralClass:
-    return emitStringLiteralLValue(cast<StringLiteral>(e));
-  case Expr::MemberExprClass:
-    return emitMemberExpr(cast<MemberExpr>(e));
-  case Expr::CompoundLiteralExprClass:
-    return emitCompoundLiteralLValue(cast<CompoundLiteralExpr>(e));
-  case Expr::PredefinedExprClass:
-    return emitPredefinedLValue(cast<PredefinedExpr>(e));
+
+  case Expr::ObjCPropertyRefExprClass:
+    llvm_unreachable("cannot emit a property reference directly");
+
+  case Expr::ObjCSelectorExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: ObjCSelectorExpr");
+    return LValue();
+  case Expr::ObjCIsaExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: ObjCIsaExpr");
+    return LValue();
   case Expr::BinaryOperatorClass:
     return emitBinaryOperatorLValue(cast<BinaryOperator>(e));
   case Expr::CompoundAssignOperatorClass: {
@@ -1198,6 +1190,48 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::CXXOperatorCallExprClass:
   case Expr::UserDefinedLiteralClass:
     return emitCallExprLValue(cast<CallExpr>(e));
+  case Expr::CXXRewrittenBinaryOperatorClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: CXXRewrittenBinaryOperator");
+    return LValue();
+  case Expr::VAArgExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: VAArgExpr");
+    return LValue();
+  case Expr::DeclRefExprClass:
+    return emitDeclRefLValue(cast<DeclRefExpr>(e));
+  case Expr::ConstantExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: ConstantExpr");
+    return LValue();
+  case Expr::ParenExprClass:
+    return emitLValue(cast<ParenExpr>(e)->getSubExpr());
+  case Expr::GenericSelectionExprClass:
+    return emitLValue(cast<GenericSelectionExpr>(e)->getResultExpr());
+  case Expr::PredefinedExprClass:
+    return emitPredefinedLValue(cast<PredefinedExpr>(e));
+  case Expr::StringLiteralClass:
+    return emitStringLiteralLValue(cast<StringLiteral>(e));
+  case Expr::ObjCEncodeExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: ObjCEncodeExpr");
+    return LValue();
+  case Expr::PseudoObjectExprClass:
+    return emitPseudoObjectLValue(cast<PseudoObjectExpr>(e));
+  case Expr::InitListExprClass:
+    return emitInitListLValue(cast<InitListExpr>(e));
+  case Expr::CXXTemporaryObjectExprClass:
+  case Expr::CXXConstructExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: CXXConstructExpr");
+    return LValue();
+  case Expr::CXXBindTemporaryExprClass:
+    return emitCXXBindTemporaryLValue(cast<CXXBindTemporaryExpr>(e));
+  case Expr::CXXUuidofExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: CXXUuidofExpr");
+    return LValue();
+  case Expr::LambdaExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: LambdaExpr");
+    return LValue();
   case Expr::ExprWithCleanupsClass: {
     const auto *cleanups = cast<ExprWithCleanups>(e);
     FullExprCleanupScope scope(*this, cleanups->getSubExpr());
@@ -1220,41 +1254,92 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     CXXDefaultArgExprScope scope(*this, dae);
     return emitLValue(dae->getExpr());
   }
-  case Expr::CXXTypeidExprClass:
-    return emitCXXTypeidLValue(cast<CXXTypeidExpr>(e));
-  case Expr::ParenExprClass:
-    return emitLValue(cast<ParenExpr>(e)->getSubExpr());
-  case Expr::GenericSelectionExprClass:
-    return emitLValue(cast<GenericSelectionExpr>(e)->getResultExpr());
-  case Expr::DeclRefExprClass:
-    return emitDeclRefLValue(cast<DeclRefExpr>(e));
-  case Expr::ImplicitCastExprClass:
-  case Expr::CStyleCastExprClass:
-  case Expr::CXXStaticCastExprClass:
-  case Expr::CXXDynamicCastExprClass:
-  case Expr::CXXReinterpretCastExprClass:
-  case Expr::CXXConstCastExprClass:
-  case Expr::CXXFunctionalCastExprClass:
-    // TODO(cir): The above list is missing
-    // CXXAddrSpaceCastExprClass, and ObjCBridgedCastExprClass.
-    return emitCastLValue(cast<CastExpr>(e));
-  case Expr::MaterializeTemporaryExprClass:
-    return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
-  case Expr::OpaqueValueExprClass:
-    return emitOpaqueValueLValue(cast<OpaqueValueExpr>(e));
-  case Expr::ChooseExprClass:
-    return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
-  case Expr::SubstNonTypeTemplateParmExprClass:
-    return emitLValue(cast<SubstNonTypeTemplateParmExpr>(e)->getReplacement());
-  case Expr::InitListExprClass:
-    return emitInitListLValue(cast<InitListExpr>(e));
-  case Expr::PseudoObjectExprClass:
-    return emitPseudoObjectLValue(cast<PseudoObjectExpr>(e));
   case Expr::CXXDefaultInitExprClass: {
     auto *die = cast<CXXDefaultInitExpr>(e);
     CXXDefaultInitExprScope scope(*this, die);
     return emitLValue(die->getExpr());
   }
+  case Expr::CXXTypeidExprClass:
+    return emitCXXTypeidLValue(cast<CXXTypeidExpr>(e));
+  case Expr::ObjCMessageExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: ObjCMessageExpr");
+    return LValue();
+  case Expr::ObjCIvarRefExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: ObjCIvarRefExpr");
+    return LValue();
+  case Expr::StmtExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: StmtExpr");
+    return LValue();
+  case Expr::UnaryOperatorClass:
+    return emitUnaryOpLValue(cast<UnaryOperator>(e));
+  case Expr::ArraySubscriptExprClass:
+    return emitArraySubscriptExpr(cast<ArraySubscriptExpr>(e));
+  case Expr::MatrixSingleSubscriptExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: MatrixSingleSubscriptExpr");
+    return LValue();
+  case Expr::MatrixSubscriptExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: MatrixSubscriptExpr");
+    return LValue();
+  case Expr::ArraySectionExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: ArraySectionExpr");
+    return LValue();
+  case Expr::ExtVectorElementExprClass:
+    return emitExtVectorElementExpr(cast<ExtVectorElementExpr>(e));
+  case Expr::MatrixElementExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: MatrixElementExpr");
+    return LValue();
+  case Expr::CXXThisExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CXXThisExpr");
+    return LValue();
+  case Expr::MemberExprClass:
+    return emitMemberExpr(cast<MemberExpr>(e));
+  case Expr::CompoundLiteralExprClass:
+    return emitCompoundLiteralLValue(cast<CompoundLiteralExpr>(e));
+  case Expr::ConditionalOperatorClass:
+    return emitConditionalOperatorLValue(cast<ConditionalOperator>(e));
+  case Expr::BinaryConditionalOperatorClass:
+    return emitConditionalOperatorLValue(cast<BinaryConditionalOperator>(e));
+  case Expr::ChooseExprClass:
+    return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
+  case Expr::OpaqueValueExprClass:
+    return emitOpaqueValueLValue(cast<OpaqueValueExpr>(e));
+  case Expr::SubstNonTypeTemplateParmExprClass:
+    return emitLValue(cast<SubstNonTypeTemplateParmExpr>(e)->getReplacement());
+  case Expr::ImplicitCastExprClass:
+  case Expr::CStyleCastExprClass:
+  case Expr::CXXFunctionalCastExprClass:
+  case Expr::CXXStaticCastExprClass:
+  case Expr::CXXDynamicCastExprClass:
+  case Expr::CXXReinterpretCastExprClass:
+  case Expr::CXXConstCastExprClass:
+    return emitCastLValue(cast<CastExpr>(e));
+  case Expr::CXXAddrspaceCastExprClass:
+  case Expr::ObjCBridgedCastExprClass:
+    // TODO(cir): These can just be moved into the cast handling above, but
+    //            they need test cases.
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: addrspace or ObjC bridged cast");
+    return LValue();
+  case Expr::MaterializeTemporaryExprClass:
+    return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
+  case Expr::CoawaitExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CoawaitExpr");
+    return LValue();
+  case Expr::CoyieldExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CoyieldExpr");
+    return LValue();
+  case Expr::PackIndexingExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: PackIndexingExpr");
+    return LValue();
+  case Expr::HLSLOutArgExprClass:
+    llvm_unreachable("cannot emit a HLSL out argument directly");
   }
 }
 
