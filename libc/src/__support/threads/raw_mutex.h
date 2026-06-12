@@ -83,8 +83,8 @@ private:
           futex.exchange(IN_CONTENTION, cpp::MemoryOrder::ACQUIRE) == UNLOCKED)
         return true;
       // Contention persists. Park the thread and wait for further notification.
-      if (!futex.wait(IN_CONTENTION, timeout, is_pshared).has_value() &&
-          timeout.has_value())
+      if (ErrorOr<int> res = futex.wait(IN_CONTENTION, timeout, is_pshared);
+          !res.has_value() && res.error() == ETIMEDOUT)
         return false;
 
       // Continue to spin after waking up.
