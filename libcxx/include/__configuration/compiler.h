@@ -46,6 +46,10 @@
 #    endif
 #  endif
 
+#  ifndef __has_warning
+#    define __has_warning(...) 0
+#  endif
+
 #endif
 
 #endif // _LIBCPP___CONFIGURATION_COMPILER_H

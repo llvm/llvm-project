@@ -57,10 +57,6 @@
 
 #  define __has_keyword(__x) !(__is_identifier(__x))
 
-#  ifndef __has_warning
-#    define __has_warning(...) 0
-#  endif
-
 #  if !defined(_LIBCPP_COMPILER_CLANG_BASED) && __cplusplus < 201103L
 #    error "libc++ only supports C++03 with Clang-based compilers. Please enable C++11"
 #  endif
