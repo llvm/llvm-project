@@ -1206,9 +1206,9 @@ supported for the ``amdgcn`` target.
   have a value corresponding to a valid barrier ID on the target.
   Otherwise, the behavior is undefined
 
-  Due to these pointers being a compiler abstraction without a corresponding hardware aperture,
-  the back-end handles them as-if they were local pointers with a very large offset as to not
-  overlap with any addressable local memory.
+  These pointers do not have a corresponding hardware aperture but safe round-tripping
+  through the generic address space is still possible. Attempting to dereference a
+  generic pointer derived from a barrier pointer is undefined behavior.
 
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register
