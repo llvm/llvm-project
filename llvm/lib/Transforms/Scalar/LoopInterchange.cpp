@@ -1666,8 +1666,8 @@ const DenseMap<const Loop *, unsigned> &CacheCostManager::getCostMap() {
 /// the addrec for \p L in \S.
 /// TODO: Handle more complex cases. Maybe using SCEVTraversal is a good way to
 /// do that.
-std::optional<const SCEV *> getAddRecCoefficient(ScalarEvolution &SE,
-                                                 const SCEV *S, const Loop *L) {
+static std::optional<const SCEV *>
+getAddRecCoefficient(ScalarEvolution &SE, const SCEV *S, const Loop *L) {
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S);
   if (!AR) {
     if (SE.isLoopInvariant(S, L))
