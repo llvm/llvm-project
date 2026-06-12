@@ -1,0 +1,89 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+// expected-error @below {{kernel execution metadata requires at least one field}}
+#attr = #cir.cl.kernel_execution_metadata<>
+
+// -----
+
+// expected-error @below {{reqd_work_group_size must have exactly three elements}}
+#attr = #cir.cl.kernel_execution_metadata<
+  reqd_work_group_size = [1, 2]
+>
+
+// -----
+
+// expected-error @below {{work_group_size_hint must have exactly three elements}}
+#attr = #cir.cl.kernel_execution_metadata<
+  work_group_size_hint = [8, 16, 32, 64]
+>
+
+// -----
+
+// expected-error @below {{reqd_work_group_size elements must be all zero or all non-zero}}
+#attr = #cir.cl.kernel_execution_metadata<
+  reqd_work_group_size = [1, 0, 4]
+>
+
+// -----
+
+// expected-error @below {{work_group_size_hint elements must be all zero or all non-zero}}
+#attr = #cir.cl.kernel_execution_metadata<
+  work_group_size_hint = [0, 16, 32]
+>
+
+// -----
+
+// expected-error @below {{vec_type_hint must be a CIR integer or floating-point type, or a fixed vector of such a type}}
+#attr = #cir.cl.kernel_execution_metadata<vec_type_hint = i32>
+
+// -----
+
+// expected-error @below {{vec_type_hint must be a CIR integer or floating-point type, or a fixed vector of such a type}}
+#attr = #cir.cl.kernel_execution_metadata<vec_type_hint = !cir.ptr<!cir.int<s, 32>>>
+
+// -----
+
+// expected-error @below {{vec_type_hint must be a CIR integer or floating-point type, or a fixed vector of such a type}}
+#attr = #cir.cl.kernel_execution_metadata<vec_type_hint = !cir.vector<4 x !cir.bool>>
+
+// -----
+
+// expected-error @below {{vec_type_hint must be a CIR integer or floating-point type, or a fixed vector of such a type}}
+#attr = #cir.cl.kernel_execution_metadata<vec_type_hint = !cir.vector<[4] x !cir.int<s, 32>, sve_data>>
+
+// -----
+
+// expected-error @below {{expected cir.cl.kernel_execution_metadata to be a #cir.cl.kernel_execution_metadata attribute}}
+cir.func private @wrong_value() attributes {cir.cl.kernel_execution_metadata = 7 : i32}
+
+// -----
+
+// expected-error @below {{cir.cl.kernel_execution_metadata attribute must be attached to a function}}
+module attributes {cir.cl.kernel_execution_metadata = #cir.cl.kernel_execution_metadata<reqd_work_group_size = [1, 2, 4]>} {}
+
+// -----
+
+cir.func private @callee()
+cir.func @caller() {
+  // expected-error @below {{cir.cl.kernel_execution_metadata attribute must be attached to a function}}
+  cir.call @callee() {cir.cl.kernel_execution_metadata = #cir.cl.kernel_execution_metadata<reqd_work_group_size = [1, 2, 4]>} : () -> ()
+  cir.return
+}
+
+// -----
+
+cir.func @target() {
+  cir.return
+}
+// expected-error @below {{cir.cl.kernel_execution_metadata attribute cannot be attached to an alias}}
+cir.func @alias() alias(@target) attributes {cir.cl.kernel_execution_metadata = #cir.cl.kernel_execution_metadata<reqd_work_group_size = [1, 2, 4]>}
+
+// -----
+
+// expected-error @below {{cir.cl.kernel_execution_metadata attribute cannot be attached to a function argument or result}}
+cir.func private @argument(!cir.int<s, 32> {cir.cl.kernel_execution_metadata = #cir.cl.kernel_execution_metadata<reqd_work_group_size = [1, 2, 4]>})
+
+// -----
+
+// expected-error @below {{cir.cl.kernel_execution_metadata attribute cannot be attached to a function argument or result}}
+cir.func private @result() -> (!cir.int<s, 32> {cir.cl.kernel_execution_metadata = #cir.cl.kernel_execution_metadata<reqd_work_group_size = [1, 2, 4]>})

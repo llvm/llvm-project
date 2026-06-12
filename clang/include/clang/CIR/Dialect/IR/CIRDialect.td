@@ -161,6 +161,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getAMDGPURawAtomicAttrName() { return "cir.amdgpu_raw_atomic"; }
     static llvm::StringRef getAMDGPUNoPrivateAddrSpaceAttrName() { return "cir.amdgpu_no_private_addrspace"; }
     static llvm::StringRef getOpenCLKernelArgMetadataAttrName() { return "cir.cl.kernel_arg_metadata"; }
+    static llvm::StringRef getOpenCLKernelExecutionMetadataAttrName() { return "cir.cl.kernel_execution_metadata"; }
     static llvm::StringRef getOpenCLVersionAttrName() { return "cir.cl.version"; }
     static llvm::StringRef getOpenCLCXXVersionAttrName() { return "cir.cl.cxx.version"; }
     static llvm::StringRef getOpenCLSPIRVersionAttrName() { return "cir.cl.spir.version"; }

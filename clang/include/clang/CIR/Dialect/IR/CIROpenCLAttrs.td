@@ -44,6 +44,42 @@ def CIR_OpenCLKernelArgMetadataAttr
 }
 
 //===----------------------------------------------------------------------===//
+// OpenCLKernelExecutionMetadataAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_OpenCLKernelExecutionMetadataAttr
+    : CIR_Attr<"OpenCLKernelExecutionMetadata",
+               "cl.kernel_execution_metadata"> {
+  let summary = "OpenCL kernel execution metadata";
+  let description = [{
+    Preserves the OpenCL kernel execution constraints and hints specified by
+    the `reqd_work_group_size`, `work_group_size_hint`, and `vec_type_hint`
+    source attributes. At least one field must be present.
+
+    The `cir.cl.kernel_execution_metadata` operation attribute may only be
+    attached to a `cir.func` that is not an alias.
+
+    The work-group-size fields are optional three-element arrays of unsigned
+    32-bit dimensions, stored as i32 bit patterns. The dimensions must be all
+    zero or all non-zero.
+    The vector-type hint stores a CIR integer or floating-point type, or a
+    fixed CIR vector of such a type. Integer signedness is part of the CIR
+    type. Later lowering derives the signedness flag required by LLVM IR
+    metadata from the hinted scalar or vector element type.
+  }];
+
+  let parameters = (ins
+    OptionalParameter<"mlir::DenseI32ArrayAttr">:$reqd_work_group_size,
+    OptionalParameter<"mlir::DenseI32ArrayAttr">:$work_group_size_hint,
+    OptionalParameter<"mlir::TypeAttr">:$vec_type_hint
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // OpenCLVersionAttr
 //===----------------------------------------------------------------------===//
 

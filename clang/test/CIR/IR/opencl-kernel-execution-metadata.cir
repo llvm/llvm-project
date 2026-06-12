@@ -1,0 +1,37 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+module {
+  cir.func @reqd_and_vec() attributes {cir.cl.kernel_execution_metadata = #cir.cl.kernel_execution_metadata<reqd_work_group_size = [1, 2, 4], vec_type_hint = !cir.int<s, 32>>} {
+    cir.return
+  }
+
+  cir.func @work_group_size_hint() attributes {cir.cl.kernel_execution_metadata = #cir.cl.kernel_execution_metadata<work_group_size_hint = [8, 16, 32]>} {
+    cir.return
+  }
+
+  cir.func @all_zero_work_group_size() attributes {cir.cl.kernel_execution_metadata = #cir.cl.kernel_execution_metadata<reqd_work_group_size = [0, 0, 0]>} {
+    cir.return
+  }
+
+  // DenseI32 stores the unsigned OpenCL value 4294967294 as the bit pattern -2.
+  cir.func @unsigned_work_group_size() attributes {cir.cl.kernel_execution_metadata = #cir.cl.kernel_execution_metadata<reqd_work_group_size = [8, 16, -2]>} {
+    cir.return
+  }
+}
+
+// CHECK-LABEL: cir.func @reqd_and_vec
+// CHECK-SAME: cir.cl.kernel_execution_metadata = #cir.cl.kernel_execution_metadata
+// CHECK-SAME: reqd_work_group_size = [1, 2, 4]
+// CHECK-SAME: vec_type_hint = !s32i
+
+// CHECK-LABEL: cir.func @work_group_size_hint
+// CHECK-SAME: cir.cl.kernel_execution_metadata = #cir.cl.kernel_execution_metadata
+// CHECK-SAME: work_group_size_hint = [8, 16, 32]
+
+// CHECK-LABEL: cir.func @all_zero_work_group_size
+// CHECK-SAME: cir.cl.kernel_execution_metadata = #cir.cl.kernel_execution_metadata
+// CHECK-SAME: reqd_work_group_size = [0, 0, 0]
+
+// CHECK-LABEL: cir.func @unsigned_work_group_size
+// CHECK-SAME: cir.cl.kernel_execution_metadata = #cir.cl.kernel_execution_metadata
+// CHECK-SAME: reqd_work_group_size = [8, 16, -2]
