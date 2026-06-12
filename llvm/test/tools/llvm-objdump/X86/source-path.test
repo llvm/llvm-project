@@ -4,15 +4,11 @@
 ;; lives in this test's Inputs directory. Without path remapping, --source
 ;; cannot load the file from disk.
 ;;
-;; --source-dir: one directory per flag; later flags on the command line are
-;; searched before earlier ones.
+;; --source-dir: one directory per flag; flags on the command line are
+;; searched in order fitst-to-last.
 ;;
 ;; --substitute-path: rules are tried in command-line order; the first match
 ;; wins (same as GDB set substitute-path).
-
-; RUN: sed -e "s,SRC_COMPDIR,/wrong/Inputs,g" %p/Inputs/source-interleave.ll > %t.ll
-; RUN: llc -o %t.o -filetype=obj -mtriple=x86_64-pc-linux %t.ll
-; REQUIRES: x86-registered-target
 
 ; RUN: llvm-objdump --no-print-imm-hex -d --line-numbers %t.o | FileCheck %s --check-prefix=LINE
 ; RUN: llvm-objdump --no-print-imm-hex -d --source %t.o 2>&1 | \

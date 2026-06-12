@@ -3916,7 +3916,7 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   for (StringRef Dir : InputArgs.getAllArgValues(OBJDUMP_source_dir)) {
     if (Dir.empty())
       reportCmdLineError("--source-dir argument must not be empty");
-    SourceDirs.insert(SourceDirs.begin(), Dir.str());
+    SourceDirs.insert(SourceDirs.end(), Dir.str());
   }
 
   if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_debug_vars_EQ)) {
