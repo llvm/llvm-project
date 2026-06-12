@@ -18,10 +18,13 @@
 
 #ifdef ENABLE_DEBUG
 #define DEBUG(X)                                                               \
-  { X; }
+  {                                                                            \
+    X;                                                                         \
+  }
 #else
 #define DEBUG(X)                                                               \
-  {}
+  {                                                                            \
+  }
 #endif
 
 // Function constrains trampoline to _start,

@@ -13,10 +13,14 @@
 #include "bolt/RuntimeLibs/RuntimeLibrary.h"
 #include "bolt/Core/Linker.h"
 #include "bolt/RuntimeLibs/RuntimeLibraryVariables.inc"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 
@@ -24,6 +28,12 @@
 
 using namespace llvm;
 using namespace bolt;
+
+namespace opts {
+static cl::opt<std::string> TargetTriple(
+    "target", cl::desc("Target triple used to select runtime libraries."),
+    cl::init(LLVM_DEFAULT_TARGET_TRIPLE), cl::cat(BoltOptCategory));
+} // namespace opts
 
 void RuntimeLibrary::anchor() {}
 
@@ -38,6 +48,8 @@ std::string RuntimeLibrary::getLibPathByToolPath(StringRef ToolPath,
     LibPath = llvm::sys::path::parent_path(llvm::sys::path::parent_path(Dir));
     llvm::sys::path::append(LibPath, "lib" LLVM_LIBDIR_SUFFIX);
   }
+  llvm::sys::path::append(LibPath, "bolt");
+  llvm::sys::path::append(LibPath, opts::TargetTriple);
   llvm::sys::path::append(LibPath, LibFileName);
   if (!llvm::sys::fs::exists(LibPath)) {
     // If it is a symlink, check the directory that the symlink points to.
@@ -61,6 +73,8 @@ std::string RuntimeLibrary::getLibPathByToolPath(StringRef ToolPath,
 
 std::string RuntimeLibrary::getLibPathByInstalled(StringRef LibFileName) {
   SmallString<128> LibPath(CMAKE_INSTALL_FULL_LIBDIR);
+  llvm::sys::path::append(LibPath, "bolt");
+  llvm::sys::path::append(LibPath, opts::TargetTriple);
   llvm::sys::path::append(LibPath, LibFileName);
   return std::string(LibPath);
 }

@@ -1,3 +1,9 @@
+if("bolt-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+  set(BOLT_ENABLE_RUNTIME ON)
+else()
+  set(BOLT_ENABLE_RUNTIME OFF)
+endif()
+
 llvm_canonicalize_cmake_booleans(
   BOLT_ENABLE_RUNTIME
   )

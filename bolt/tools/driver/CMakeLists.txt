@@ -5,8 +5,8 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-if (BOLT_ENABLE_RUNTIME)
-  set(BOLT_DRIVER_DEPS "bolt_rt")
+if ("bolt-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+  set(BOLT_DRIVER_DEPS "bolt-rt")
 else()
   set(BOLT_DRIVER_DEPS "")
 endif()

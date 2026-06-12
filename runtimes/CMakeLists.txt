@@ -37,7 +37,7 @@ list(INSERT CMAKE_MODULE_PATH 0
 # compiler-rt can depend on libc++, so we put it after. Offload can depend on
 # flang-rt so we order it before.
 set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;libclc;openmp;offload")
-set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;libclc;openmp;flang-rt;offload;llvm-libgcc;libsycl;orc-rt")
+set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;libclc;openmp;flang-rt;offload;llvm-libgcc;libsycl;orc-rt;bolt-rt")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
