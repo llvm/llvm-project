@@ -651,6 +651,47 @@ public:
   }
 };
 
+/// Converts SPIR-V extended arithmetic ops (`spirv.IAddCarry`,
+/// `spirv.ISubBorrow`) that produce a two-member struct of {low-order bits,
+/// carry/borrow} into the matching LLVM `*.with.overflow` intrinsic. The
+/// intrinsic yields an `i1` carry/borrow, which is zero-extended to the full
+/// component width and re-packed into the SPIR-V result struct.
+template <typename SPIRVOp, typename LLVMOp>
+class ArithmeticWithOverflowPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = this->getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Type operandType = adaptor.getOperand1().getType();
+    Type overflowType = rewriter.getI1Type();
+    if (auto vecType = dyn_cast<VectorType>(operandType))
+      overflowType = VectorType::get(vecType.getShape(), overflowType);
+
+    Type intrType = LLVM::LLVMStructType::getLiteral(
+        rewriter.getContext(), {operandType, overflowType});
+    Value intrResult = LLVMOp::create(
+        rewriter, loc, intrType, adaptor.getOperand1(), adaptor.getOperand2());
+    Value lowBits = LLVM::ExtractValueOp::create(rewriter, loc, intrResult, 0);
+    Value overflow = LLVM::ExtractValueOp::create(rewriter, loc, intrResult, 1);
+    overflow = LLVM::ZExtOp::create(rewriter, loc, operandType, overflow);
+
+    Value result = LLVM::PoisonOp::create(rewriter, loc, dstType);
+    result = LLVM::InsertValueOp::create(rewriter, loc, result, lowBits,
+                                         ArrayRef<int64_t>{0});
+    result = LLVM::InsertValueOp::create(rewriter, loc, result, overflow,
+                                         ArrayRef<int64_t>{1});
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 /// Converts `spirv.ExecutionMode` into a global struct constant that holds
 /// execution mode information.
 class ExecutionModePattern
@@ -1825,6 +1866,10 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::SRemOp, LLVM::SRemOp>,
       DirectConversionPattern<spirv::UDivOp, LLVM::UDivOp>,
       DirectConversionPattern<spirv::UModOp, LLVM::URemOp>,
+      ArithmeticWithOverflowPattern<spirv::IAddCarryOp,
+                                    LLVM::UAddWithOverflowOp>,
+      ArithmeticWithOverflowPattern<spirv::ISubBorrowOp,
+                                    LLVM::USubWithOverflowOp>,
 
       // Bitwise ops
       BitFieldInsertPattern, BitFieldUExtractPattern, BitFieldSExtractPattern,
