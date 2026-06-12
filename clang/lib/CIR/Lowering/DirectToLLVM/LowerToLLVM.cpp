@@ -3152,16 +3152,20 @@ static bool isHandledDiscardableFuncAttr(mlir::NamedAttribute attr) {
 /// Lower `cir.func` attributes for an `LLVMFuncOp` or `LLVM::AliasOp`.
 /// Drop attributes populated by the destination op builder. If
 /// `includeFunctionOnlyAttrs` is false, also omit attributes that are only
-/// valid on functions.  Fails when an argument attribute's pointee type has
-/// no memory representation.
+/// valid on functions. Fails when an argument attribute's pointee type has
+/// no memory representation or OpenCL metadata cannot be lowered.
 mlir::LogicalResult CIRToLLVMFuncOpLowering::lowerFuncAttributes(
     cir::FuncOp func, bool includeFunctionOnlyAttrs,
     SmallVectorImpl<mlir::NamedAttribute> &result) const {
-  FunctionMetadataLowering metadataLowering(func.getContext());
+  FunctionMetadataLowering metadataLowering(func.getLoc(), *typeConverter);
   for (mlir::NamedAttribute attr : func->getDiscardableAttrs()) {
     if (isHandledDiscardableFuncAttr(attr))
       continue;
-    if (metadataLowering.lower(attr, includeFunctionOnlyAttrs))
+    mlir::FailureOr<bool> lowered =
+        metadataLowering.lower(attr, includeFunctionOnlyAttrs);
+    if (failed(lowered))
+      return failure();
+    if (*lowered)
       continue;
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
     result.push_back(attr);
@@ -3196,7 +3200,8 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewriteAlias(
   SmallVector<mlir::NamedAttribute, 4> attributes;
   if (mlir::failed(lowerFuncAttributes(op, /*includeFunctionOnlyAttrs=*/false,
                                        attributes)))
-    return mlir::failure();
+    return rewriter.notifyMatchFailure(op,
+                                       "failed to lower function attributes");
 
   mlir::Location loc = op.getLoc();
   // Create the alias before replacing: without pattern rollback the
@@ -3275,7 +3280,8 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   SmallVector<mlir::NamedAttribute, 4> attributes;
   if (mlir::failed(lowerFuncAttributes(op, /*includeFunctionOnlyAttrs=*/true,
                                        attributes)))
-    return mlir::failure();
+    return rewriter.notifyMatchFailure(op,
+                                       "failed to lower function attributes");
 
   // Convert the body types here: this mutates the op, so it runs after the
   // last fallible read above and before any op creation below. A failure

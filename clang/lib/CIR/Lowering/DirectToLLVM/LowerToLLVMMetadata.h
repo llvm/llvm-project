@@ -13,12 +13,15 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Location.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace mlir {
 class MLIRContext;
+class TypeConverter;
 } // namespace mlir
 
 namespace cir {
@@ -66,15 +69,19 @@ private:
 
 class FunctionMetadataLowering {
 public:
-  FunctionMetadataLowering(mlir::MLIRContext *ctx);
+  FunctionMetadataLowering(mlir::Location loc,
+                           const mlir::TypeConverter &typeConverter);
 
-  bool lower(mlir::NamedAttribute attr, bool includeFunctionOnlyAttrs);
+  mlir::FailureOr<bool> lower(mlir::NamedAttribute attr,
+                              bool includeFunctionOnlyAttrs);
   void appendAttrs(llvm::SmallVectorImpl<mlir::NamedAttribute> &result) const;
 
 private:
   void lower(cir::MaxWorkGroupSizeAttr maxWGSize);
 
-  mlir::MLIRContext *ctx;
+  mlir::Location loc;
+  const mlir::TypeConverter &typeConverter;
+  llvm::SmallVector<mlir::NamedAttribute> attributes;
   llvm::SmallVector<mlir::Attribute> functionMetadata;
 };
 

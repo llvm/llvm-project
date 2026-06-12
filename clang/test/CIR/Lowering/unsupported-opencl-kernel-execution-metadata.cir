@@ -1,0 +1,9 @@
+// RUN: cir-opt %s --cir-to-llvm -verify-diagnostics
+
+module attributes {cir.triple = "spirv64-unknown-unknown"} {
+  // expected-error @below {{ClangIR lowering NYI: cannot convert '!cir.vector<4 x !cir.int<s, 7, bitint>>' for vec_type_hint}}
+  // expected-error @below {{failed to legalize operation 'cir.func'}}
+  cir.func @unsupported_hint() attributes {cir.cl.kernel_execution_metadata = #cir.cl.kernel_execution_metadata<vec_type_hint = !cir.vector<4 x !cir.int<s, 7, bitint>>>} {
+    cir.return
+  }
+}

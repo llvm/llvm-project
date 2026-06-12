@@ -12,17 +12,31 @@
 #include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/IR/OperationSupport.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace cir {
 namespace direct {
 
-FunctionMetadataLowering::FunctionMetadataLowering(mlir::MLIRContext *ctx)
-    : ctx(ctx) {}
+FunctionMetadataLowering::FunctionMetadataLowering(
+    mlir::Location loc, const mlir::TypeConverter &typeConverter)
+    : loc(loc), typeConverter(typeConverter) {}
 
-bool FunctionMetadataLowering::lower(mlir::NamedAttribute attr,
-                                     bool includeFunctionOnlyAttrs) {
-  return llvm::TypeSwitch<mlir::Attribute, bool>(attr.getValue())
+mlir::FailureOr<bool>
+FunctionMetadataLowering::lower(mlir::NamedAttribute attr,
+                                bool includeFunctionOnlyAttrs) {
+  if (attr.getName() ==
+      cir::CIRDialect::getOpenCLKernelExecutionMetadataAttrName()) {
+    if (includeFunctionOnlyAttrs &&
+        mlir::failed(lowerOpenCLKernelExecutionMetadata(
+            mlir::cast<cir::OpenCLKernelExecutionMetadataAttr>(attr.getValue()),
+            loc, typeConverter, attributes)))
+      return mlir::failure();
+    return true;
+  }
+
+  return llvm::TypeSwitch<mlir::Attribute, mlir::FailureOr<bool>>(
+             attr.getValue())
       .Case<cir::OpenCLKernelArgMetadataAttr>(
           [&](cir::OpenCLKernelArgMetadataAttr clArgMetadata) {
             if (includeFunctionOnlyAttrs)
@@ -35,12 +49,15 @@ bool FunctionMetadataLowering::lower(mlir::NamedAttribute attr,
               lower(maxWGSize);
             return true;
           })
-      .Default(false);
+      .Default(mlir::FailureOr<bool>(false));
 }
 
 void FunctionMetadataLowering::appendAttrs(
     llvm::SmallVectorImpl<mlir::NamedAttribute> &result) const {
+  llvm::append_range(result, attributes);
+
   if (!functionMetadata.empty()) {
+    mlir::MLIRContext *ctx = loc.getContext();
     result.push_back(mlir::NamedAttribute(
         mlir::LLVM::LLVMFuncOp::getFunctionMetadataAttrName(mlir::OperationName(
             mlir::LLVM::LLVMFuncOp::getOperationName(), ctx)),
@@ -49,6 +66,7 @@ void FunctionMetadataLowering::appendAttrs(
 }
 
 void FunctionMetadataLowering::lower(cir::MaxWorkGroupSizeAttr maxWGSize) {
+  mlir::MLIRContext *ctx = loc.getContext();
   LLVMMetadataNodeBuilder metadataBuilder(ctx);
   unsigned sizes[] = {maxWGSize.getX(), maxWGSize.getY(), maxWGSize.getZ()};
   functionMetadata.push_back(mlir::LLVM::FunctionMetadataAttr::get(
