@@ -296,7 +296,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
         RPT.advanceBeforeNext();
       }
 
-      const GCNRPTracker::LiveRegSet LiveRegsCopy(RPT.getLiveRegs());
+      const GCNRPTracker::LiveRegSet LiveRegsCopy(RPT.getVirtLiveRegs());
       RegUse Defs, Uses;
       if (!processRegUses(MI, Defs, Uses, RPT)) {
         RPT.reset(MI, MBB.end(), &LiveRegsCopy);
