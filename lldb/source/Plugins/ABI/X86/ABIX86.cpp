@@ -207,14 +207,9 @@ void ABIX86::AugmentRegisterInfo(
 
   uint32_t gpr_base_size =
       process_sp->GetTarget().GetArchitecture().GetAddressByteSize();
-  // Determine the GPR base size. Prefer the target architecture, but fall
-  // back to the register list itself when the target arch isn't set yet
-  bool is64bit = gpr_base_size == 8 || (gpr_base_size == 0 && Is64Bit());
-  if (gpr_base_size == 0)
-    gpr_base_size = is64bit ? 8 : 4;
 
   // primary map from a base register to its subregisters
-  BaseRegToRegsMap base_reg_map = makeBaseRegMap(is64bit);
+  BaseRegToRegsMap base_reg_map = makeBaseRegMap(gpr_base_size == 8);
   // set used for fast matching of register names to subregisters
   llvm::SmallDenseSet<llvm::StringRef, 64> subreg_name_set;
   // convenience array providing access to all subregisters of given kind,

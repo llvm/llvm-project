@@ -18,8 +18,6 @@ protected:
     return name;
   }
 
-  bool Is64Bit() const override { return true; }
-
 private:
   using ABIX86::ABIX86;
 };

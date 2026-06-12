@@ -5505,6 +5505,9 @@ void ProcessGDBRemote::AddRemoteRegisters(
                     remote_reg_info.invalidate_regs.begin(), proc_to_lldb);
   }
 
+  if (!GetTarget().GetArchitecture().IsValid() && arch_to_use.IsValid())
+    GetTarget().SetArchitecture(arch_to_use);
+
   // Don't use Process::GetABI, this code gets called from DidAttach, and
   // in that context we haven't set the Target's architecture yet, so the
   // ABI is also potentially incorrect.
