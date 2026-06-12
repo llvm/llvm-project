@@ -72,8 +72,8 @@ static mlir::Value createConvertOp(mlir::PatternRewriter &rewriter,
   return val;
 }
 
-// Scalar CUDA constants have a host-visible global for host reads/writes and a
-// device constant symbol for kernels.
+// Scalar CUDA constants use separate host-visible and device constant globals.
+// Host-to-device assignments keep them in sync.
 static bool isScalarCudaConstantGlobal(fir::GlobalOp global) {
   return global && global.getDataAttr() &&
          *global.getDataAttr() == cuf::DataAttribute::Constant &&
