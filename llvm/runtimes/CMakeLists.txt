@@ -663,7 +663,12 @@ if(build_runtimes)
       CMAKE_ARGS ${extra_cmake_args}
       PREFIXES ${prefixes}
       EXTRA_ARGS ${extra_args})
-    set(test_targets check-runtimes)
+    if(LLVM_INCLUDE_TESTS)
+      list(APPEND test_targets check-runtimes)
+      foreach(runtime_name ${RUNTIME_NAMES})
+        list(APPEND test_targets check-${runtime_name})
+      endforeach()
+    endif()
   else()
     if("default" IN_LIST LLVM_RUNTIME_TARGETS)
       runtime_default_target(
@@ -671,6 +676,12 @@ if(build_runtimes)
         CMAKE_ARGS ${extra_cmake_args}
         PREFIXES ${prefixes}
         EXTRA_ARGS ${extra_args})
+      if(LLVM_INCLUDE_TESTS)
+        list(APPEND test_targets check-runtimes)
+        foreach(runtime_name ${RUNTIME_NAMES})
+          list(APPEND test_targets check-${runtime_name})
+        endforeach()
+      endif()
       list(REMOVE_ITEM LLVM_RUNTIME_TARGETS "default")
     else()
       add_custom_target(runtimes)

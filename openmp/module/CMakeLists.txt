@@ -13,12 +13,7 @@ configure_file(omp_lib.h.var "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/omp_lib.h" @ON
 
 if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
   set(flang_rt_module_stamp
-    "${CMAKE_CURRENT_BINARY_DIR}/flang_rt.mod.stamp"
-  )
-  add_custom_command(OUTPUT "${flang_rt_module_stamp}"
-    COMMAND "${CMAKE_COMMAND}" -E touch "${flang_rt_module_stamp}"
-    DEPENDS ${RUNTIMES_FORTRAN_BUILD_DEPS}
-    VERBATIM
+    "${CMAKE_BINARY_DIR}/flang-rt/lib/runtime/flang_rt.mod.stamp"
   )
   set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/omp_lib.F90"
     APPEND PROPERTY OBJECT_DEPENDS "${flang_rt_module_stamp}"

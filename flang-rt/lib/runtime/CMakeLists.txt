@@ -318,6 +318,19 @@ if (FLANG_RT_FORTRAN_MODULES)
   flang_module_target(flang_rt.mod PUBLIC)
   add_module_barrier(flang-rt-mod flang_rt.mod)
 
+  set(flang_rt_module_stamp
+    "${CMAKE_CURRENT_BINARY_DIR}/flang_rt.mod.stamp"
+  )
+  add_custom_command(OUTPUT "${flang_rt_module_stamp}"
+    COMMAND "${CMAKE_COMMAND}" -E touch "${flang_rt_module_stamp}"
+    DEPENDS "$<TARGET_OBJECTS:flang_rt.mod>"
+    VERBATIM
+  )
+  add_custom_target(flang-rt-mod-stamp
+    DEPENDS "${flang_rt_module_stamp}"
+  )
+  add_dependencies(flang-rt-mod flang-rt-mod-stamp)
+
   if (RUNTIMES_FORTRAN_MODULES)
     set(_mod_install_dest "${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}/..")
     cmake_path(NORMAL_PATH _mod_install_dest)
