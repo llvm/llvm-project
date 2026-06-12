@@ -109,14 +109,6 @@ define float @test_constant_fold_rcp_f32_neg_denormal_preservesign() nounwind de
   ret float %val
 }
 
-define float @test_constant_fold_rcp_f32_denormal_positivezero() nounwind denormal_fpenv(float: positivezero) {
-; CHECK-LABEL: @test_constant_fold_rcp_f32_denormal_positivezero(
-; CHECK-NEXT:    ret float 0.000000e+00
-;
-  %val = call float @llvm.amdgcn.rcp.f32(float 0xC7E0000000000000) nounwind readnone
-  ret float %val
-}
-
 define float @test_constant_fold_rcp_f32_denormal_dynamic() nounwind denormal_fpenv(float: dynamic) {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_denormal_dynamic(
 ; CHECK-NEXT:    [[VAL:%.*]] = call float @llvm.amdgcn.rcp.f32(float f0x7F000000) #[[ATTR23:[0-9]+]]

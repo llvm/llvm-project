@@ -1138,8 +1138,6 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         DenormalMode Mode = II.getFunction()->getDenormalMode(Sem);
         if (Mode.Output == DenormalMode::PreserveSign)
           Val = APFloat::getZero(Sem, Val.isNegative());
-        else if (Mode.Output == DenormalMode::PositiveZero)
-          Val = APFloat::getZero(Sem, /*Negative=*/false);
         else if (Mode.Output != DenormalMode::IEEE)
           break; // Dynamic: hardware behavior is unknown, leave the call in
                  // place.
