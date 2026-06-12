@@ -3846,16 +3846,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
-    // If there is a dominating assume with the same condition as this one,
-    // then this one is redundant, and should be removed.
-    KnownBits Known(1);
-    computeKnownBits(IIOperand, Known, II);
-    if (Known.isAllOnes())
-      return eraseInstFromFunction(*II);
-
-    // assume(false) is unreachable.
-    if (match(IIOperand, m_CombineOr(m_Zero(), m_Undef()))) {
-      CreateNonTerminatorUnreachable(II);
+    // Remove assumes on true/false
+    if (auto *CI = dyn_cast<ConstantInt>(IIOperand);
+        CI || isa<UndefValue, PoisonValue>(IIOperand)) {
+      if (!CI || CI->isZero())
+        CreateNonTerminatorUnreachable(II);
       return eraseInstFromFunction(*II);
     }
 
