@@ -400,7 +400,8 @@ private:
       // reached.
       bool timeout_flag = false;
       if (!old.can_acquire<role>(get_preference())) {
-        ErrorOr<int> wait_result = queue.wait<role>(serial_number, timeout, is_pshared);
+        ErrorOr<int> wait_result =
+            queue.wait<role>(serial_number, timeout, is_pshared);
         timeout_flag =
             (!wait_result.has_value() && wait_result.error() == ETIMEDOUT);
       }
