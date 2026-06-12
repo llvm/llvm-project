@@ -65,6 +65,9 @@
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::removeDeadRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::convertToConcreteRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::convertEVLExitCond
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::dissolveLoopRegions
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::expandBranchOnTwoConds
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::convertToVariableLengthStep
 ; CHECK: VPlan for loop in 'foo' after printFinalVPlan
 
 ; Also verify that VPlans are actually printed (we aren't interested in the

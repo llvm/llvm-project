@@ -738,15 +738,12 @@ bool AArch64DAGToDAGISel::SelectArithImmed(SDValue N, SDValue &Val,
     return false;
 
   uint64_t Immed = N.getNode()->getAsZExtVal();
-  unsigned ShiftAmt;
 
-  if (Immed >> 12 == 0) {
-    ShiftAmt = 0;
-  } else if ((Immed & 0xfff) == 0 && Immed >> 24 == 0) {
-    ShiftAmt = 12;
-    Immed = Immed >> 12;
-  } else
+  if (!AArch64_AM::isLegalArithImmed(Immed))
     return false;
+
+  unsigned ShiftAmt = AArch64_AM::getArithImmedShift(Immed);
+  Immed >>= ShiftAmt;
 
   unsigned ShVal = AArch64_AM::getShifterImm(AArch64_AM::LSL, ShiftAmt);
   SDLoc dl(N);

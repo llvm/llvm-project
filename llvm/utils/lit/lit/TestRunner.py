@@ -992,11 +992,13 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     tmpName = tmpBase + ".tmp"
     tmpBaseName = os.path.basename(tmpBase)
     sourceBaseName = os.path.basename(sourcepath)
+    sourceStem = os.path.splitext(sourceBaseName)[0]
 
     substitutions.append(("%{pathsep}", os.pathsep))
     substitutions.append(("%basename_t", tmpBaseName))
 
     substitutions.append(("%{s:basename}", sourceBaseName))
+    substitutions.append(("%{s:stem}", sourceStem))
     substitutions.append(("%{t:stem}", tmpBaseName))
 
     fs_sep = os.path.sep

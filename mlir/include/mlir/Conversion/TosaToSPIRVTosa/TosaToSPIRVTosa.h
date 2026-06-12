@@ -16,7 +16,10 @@
 
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+
+#include <cstdint>
 
 namespace mlir {
 
@@ -55,6 +58,9 @@ void populateTosaToSPIRVTosaConversionPatterns(
     spirv::TargetEnvAttr targetAttr);
 void populateTosaToSPIRVTosaOpsConversionPatterns(
     SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns);
+void populateTosaToSPIRVTosaCustomConversionPatterns(
+    SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns,
+    llvm::StringMap<int32_t> domainToOpcode);
 
 } // namespace tosa
 } // namespace mlir

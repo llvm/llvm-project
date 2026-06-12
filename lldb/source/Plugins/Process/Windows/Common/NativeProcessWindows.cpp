@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/windows/windows.h"
+#include <dbghelp.h>
+#include <excpt.h>
 #include <psapi.h>
 
 #include "NativeProcessWindows.h"
@@ -536,7 +538,7 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
     // This block of code will only be entered in case of a hardware
     // watchpoint or breakpoint hit on AArch64. However, we only handle
     // hardware watchpoints below as breakpoints are not yet supported.
-    const std::vector<ULONG_PTR> &args = record.GetExceptionArguments();
+    const ArrayRef<uint64_t> args = record.GetExceptionArguments();
     // Check that the ExceptionInformation array of EXCEPTION_RECORD
     // contains at least two elements: the first is a read-write flag
     // indicating the type of data access operation (read or write) while
@@ -613,7 +615,7 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
   }
 
   std::string desc = formatv("Exception {0:x8} encountered at address {1:x8}",
-                             record.GetExceptionCode(), exception_addr)
+                             record.GetExceptionValue(), exception_addr)
                          .str();
   StopThread(thread_id, StopReason::eStopReasonException, std::move(desc));
   SetState(eStateStopped, true);
@@ -627,7 +629,7 @@ NativeProcessWindows::HandleGenericException(bool first_chance,
   LLDB_LOG(log,
            "Debugger thread reported exception {0:x} at address {1:x} "
            "(first_chance={2})",
-           record.GetExceptionCode(), record.GetExceptionAddress(),
+           record.GetExceptionValue(), record.GetExceptionAddress(),
            first_chance);
 
   if (first_chance)
@@ -635,11 +637,12 @@ NativeProcessWindows::HandleGenericException(bool first_chance,
 
   std::string desc;
   llvm::raw_string_ostream desc_stream(desc);
-  desc_stream << "Exception " << llvm::format_hex(record.GetExceptionCode(), 8)
+  desc_stream << "Exception " << llvm::format_hex(record.GetExceptionValue(), 8)
               << " encountered at address "
               << llvm::format_hex(record.GetExceptionAddress(), 8);
+  record.Dump(desc_stream);
   StopThread(record.GetThreadID(), StopReason::eStopReasonException,
-             desc.c_str());
+             std::move(desc));
 
   SetState(eStateStopped, true);
   return ExceptionResult::BreakInDebugger;
@@ -653,7 +656,7 @@ NativeProcessWindows::OnDebugException(bool first_chance,
   // Let the debugger establish the internal status.
   ProcessDebugger::OnDebugException(first_chance, record);
 
-  switch (record.GetExceptionCode()) {
+  switch (record.GetExceptionValue()) {
   case DWORD(STATUS_SINGLE_STEP):
   case STATUS_WX86_SINGLE_STEP:
     return HandleSingleStepException(record);

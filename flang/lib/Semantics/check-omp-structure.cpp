@@ -1904,25 +1904,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
         "DEPOBJ syntax with no argument is not handled yet"_err_en_US);
   }
 
-  auto getObjSymbol{[&](const parser::OmpObject &obj) {
-    return common::visit( //
-        common::visitors{
-            [&](auto &&s) { return GetLastName(s).symbol; },
-            [&](const parser::OmpObject::Invalid &invalid) {
-              return static_cast<Symbol *>(nullptr);
-            },
-        },
-        obj.u);
-  }};
-  auto getArgSymbol{[&](const parser::OmpArgument &arg) {
-    if (auto *locator{std::get_if<parser::OmpLocator>(&arg.u)}) {
-      if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
-        return getObjSymbol(*object);
-      }
-    }
-    return static_cast<Symbol *>(nullptr);
-  }};
-
   for (auto &clause : clauses.v) {
     llvm::omp::Clause clauseId{clause.Id()};
 
@@ -1935,8 +1916,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPDepobjConstruct &x) {
       // construct.
       auto &wrapper{std::get<parser::OmpClause::Destroy>(clause.u)};
       if (const std::optional<parser::OmpDestroyClause> &destroy{wrapper.v}) {
-        const Symbol *constrSym{getArgSymbol(arguments.v.front())};
-        const Symbol *clauseSym{getObjSymbol(destroy->v)};
+        const Symbol *constrSym{GetArgumentSymbol(arguments.v.front())};
+        const Symbol *clauseSym{GetObjectSymbol(destroy->v)};
         if (constrSym && clauseSym && constrSym != clauseSym) {
           context_.Say(x.source,
               "The DESTROY clause must refer to the same object as the "

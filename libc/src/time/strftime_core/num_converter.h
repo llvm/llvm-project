@@ -11,6 +11,7 @@
 
 #include "hdr/types/struct_tm.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/error_or.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/writer.h"
@@ -53,8 +54,8 @@ LIBC_INLINE int write_padded_int(printf_core::Writer<write_mode> *writer,
   return WRITE_OK;
 }
 
-LIBC_INLINE IntFormatSection get_int_format(const FormatSection &to_conv,
-                                            const tm *timeptr) {
+LIBC_INLINE ErrorOr<IntFormatSection>
+get_int_format(const FormatSection &to_conv, const tm *timeptr) {
   const time_utils::TMReader time_reader(timeptr);
 
   intmax_t raw_num;
@@ -111,10 +112,14 @@ LIBC_INLINE IntFormatSection get_int_format(const FormatSection &to_conv,
     raw_num = time_reader.get_min();
     result.pad_to_len = 2;
     break;
-  case 's': // Seconds since the epoch
-    raw_num = time_reader.get_epoch();
+  case 's': { // Seconds since the epoch
+    auto epoch_or = time_reader.get_epoch();
+    if (!epoch_or)
+      return cpp::unexpected(epoch_or.error());
+    raw_num = epoch_or.value();
     result.pad_to_len = 0;
     break;
+  }
   case 'S': // Second of the minute [00-60]
     raw_num = time_reader.get_sec();
     result.pad_to_len = 2;
@@ -191,8 +196,10 @@ LIBC_INLINE IntFormatSection get_int_format(const FormatSection &to_conv,
 template <printf_core::WriteMode write_mode>
 LIBC_INLINE int convert_int(printf_core::Writer<write_mode> *writer,
                             const FormatSection &to_conv, const tm *timeptr) {
-
-  return write_padded_int(writer, get_int_format(to_conv, timeptr));
+  auto num_info_or = get_int_format(to_conv, timeptr);
+  if (!num_info_or)
+    return -num_info_or.error();
+  return write_padded_int(writer, num_info_or.value());
 }
 
 } // namespace strftime_core

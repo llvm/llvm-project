@@ -13,7 +13,6 @@ define swifttailcc void @test_async_tail_call(ptr swiftasync %ctx) "ptrauth-retu
 ; CHECK-LABEL: test_async_tail_call:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    pacibsp
-; CHECK-NEXT:    .cfi_negate_ra_state
 ; CHECK-NEXT:    orr x29, x29, #0x1000000000000000
 ; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
@@ -57,7 +56,6 @@ define swifttailcc void @test_no_fpdiff_tail_call(ptr swiftasync %ctx) "ptrauth-
 ; CHECK-LABEL: test_no_fpdiff_tail_call:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    pacibsp
-; CHECK-NEXT:    .cfi_negate_ra_state
 ; CHECK-NEXT:    orr x29, x29, #0x1000000000000000
 ; CHECK-NEXT:    sub sp, sp, #32
 ; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill

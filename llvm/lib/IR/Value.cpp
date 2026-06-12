@@ -13,6 +13,7 @@
 #include "llvm/IR/Value.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -123,7 +124,7 @@ void Value::deleteValue() {
 #include "llvm/IR/Value.def"
 
 #define HANDLE_INST(N, OPC, CLASS)                                             \
-  case Value::InstructionVal + Instruction::OPC:                               \
+  case addEnumValues(Value::InstructionVal, Instruction::OPC):                 \
     delete static_cast<CLASS *>(this);                                         \
     break;
 #define HANDLE_USER_INST(N, OPC, CLASS)

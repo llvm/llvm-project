@@ -7131,6 +7131,10 @@ TEST_F(FormatTest, LayoutNestedBlocks) {
   verifyFormat("SomeFunction({MACRO({ return output; }), b});");
 
   verifyNoCrash("^{v^{a}}");
+  // Verify no crash on malformed input with unbalanced braces where angle
+  // bracket parsing resets the token stream and a brace is consumed twice
+  // through parseConditional(), leaving Scopes empty.
+  verifyNoCrash("{{ < ? } a} b");
 }
 
 TEST_F(FormatTest, FormatNestedBlocksInMacros) {

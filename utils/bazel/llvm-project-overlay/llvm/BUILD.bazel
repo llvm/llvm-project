@@ -1423,6 +1423,7 @@ cc_library(
         ":BinaryFormat",
         ":Core",
         ":FrontendHLSL",
+        ":MC",
         ":Object",
         ":ProfileData",
         ":Support",

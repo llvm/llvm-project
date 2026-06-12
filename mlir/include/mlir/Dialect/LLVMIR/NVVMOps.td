@@ -1139,9 +1139,10 @@ def NVVM_BarrierOp : NVVM_VoidIntrinsicOp<"barrier",
       When specified, the value must be a multiple of the warp size. If not specified, 
       all threads in the CTA participate in the barrier.
     - `aligned`: Selects between the `.aligned` and non-`.aligned` forms of the
-      underlying `@llvm.nvvm.barrier.cta.*` intrinsic family. Defaults to false.
-      Setting this to true requires every thread in the CTA to reach this same
-      barrier instruction, otherwise the behavior is undefined.
+      underlying `@llvm.nvvm.barrier.cta.*` intrinsic family. Defaults to true,
+      which requires every thread in the CTA to reach this same barrier
+      instruction, otherwise the behavior is undefined. Set it to false to emit
+      the non-`.aligned` form.
 
     Reduction variants of the barrier instruction are modeled by the
     `nvvm.barrier.reduction` op.
@@ -1160,7 +1161,7 @@ def NVVM_BarrierOp : NVVM_VoidIntrinsicOp<"barrier",
   let arguments = (ins
       Optional<I32>:$barrierId,
       Optional<I32>:$numberOfThreads,
-      DefaultValuedAttr<BoolAttr, "false">:$aligned);
+      DefaultValuedAttr<BoolAttr, "true">:$aligned);
 
   let assemblyFormat =
       "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? "
@@ -1187,8 +1188,9 @@ def NVVM_BarrierReductionOp :
       zero to form the i1 value fed into the reduction.
     - `aligned`: Selects between the `.aligned` and non-`.aligned` forms of the
       underlying `@llvm.nvvm.barrier.cta.red.*` intrinsic family. Defaults to
-      false. Setting this to true requires every thread in the CTA to reach
-      this same barrier instruction, otherwise the behavior is undefined.
+      true, which requires every thread in the CTA to reach this same barrier
+      instruction, otherwise the behavior is undefined. Set it to false to emit
+      the non-`.aligned` form.
 
     The result is the i32 reduction value computed across all threads
     participating in the barrier.
@@ -1200,7 +1202,7 @@ def NVVM_BarrierReductionOp :
       Optional<I32>:$barrierId,
       BarrierReductionAttr:$reductionOp,
       I32:$reductionPredicate,
-      DefaultValuedAttr<BoolAttr, "false">:$aligned);
+      DefaultValuedAttr<BoolAttr, "true">:$aligned);
   let results = (outs I32:$res);
 
   let assemblyFormat =
@@ -1215,9 +1217,10 @@ def NVVM_BarrierReductionOp :
   }];
 }
 
-def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive"> 
+def NVVM_BarrierArriveOp : NVVM_VoidIntrinsicOp<"barrier.arrive">
 {
-  let arguments = (ins Optional<I32>:$barrierId, I32:$numberOfThreads);
+  let arguments = (ins Optional<I32>:$barrierId, I32:$numberOfThreads,
+                       DefaultValuedAttr<BoolAttr, "true">:$aligned);
 
   let description = [{
     Thread that executes this op announces their arrival at the barrier with 
@@ -1226,19 +1229,14 @@ def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive">
     The default barrier id is 0 that is similar to `nvvm.barrier` Op. When 
     `barrierId` is not present, the default barrier id is used. 
 
+    The `aligned` attribute, which defaults to `true`, generates the aligned
+    form of the barrier (all threads in the CTA execute the same barrier
+    instruction). When set to `false`, the unaligned form is generated.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
   }];
   
   let assemblyFormat = "(`id` `=` $barrierId^)? `number_of_threads` `=` $numberOfThreads attr-dict";
-
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() {
-      std::string ptx = "bar.arrive ";
-      if (getBarrierId()) { ptx += "%0, %1;"; } 
-      else { ptx += "0, %0;"; }
-      return ptx;
-    }
-  }];
 }
 
 def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {

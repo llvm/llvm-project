@@ -1413,3 +1413,13 @@ namespace StoreCannotDeref {
     *m = 42;
   }
 }
+
+namespace FuncPtrRef {
+  const int &foo(int &&);
+  constexpr bool bullet_five_tests() {
+    using FooType = const int &(int &&);
+    FooType &fn = foo;
+    return true;
+  }
+  static_assert(bullet_five_tests());
+}

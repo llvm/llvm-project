@@ -236,8 +236,10 @@ struct FuncBasicSampleData {
 ///
 class DataReader : public ProfileReaderBase {
 public:
-  explicit DataReader(StringRef Filename)
-      : ProfileReaderBase(Filename), Diag(errs()) {}
+  explicit DataReader(StringRef Filename) : DataReader(Filename, errs()) {}
+
+  DataReader(StringRef Filename, raw_ostream &Diag)
+      : ProfileReaderBase(Filename), Diag(Diag) {}
 
   StringRef getReaderName() const override { return "branch profile reader"; }
 

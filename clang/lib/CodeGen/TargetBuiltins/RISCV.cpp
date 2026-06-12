@@ -1199,6 +1199,64 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
   }
 
+  // Packed Averaging Addition and Subtraction
+  case RISCV::BI__builtin_riscv_paadd_i8x4:
+  case RISCV::BI__builtin_riscv_paadd_i16x2:
+  case RISCV::BI__builtin_riscv_paadd_i8x8:
+  case RISCV::BI__builtin_riscv_paadd_i16x4:
+  case RISCV::BI__builtin_riscv_paadd_i32x2:
+  case RISCV::BI__builtin_riscv_paaddu_u8x4:
+  case RISCV::BI__builtin_riscv_paaddu_u16x2:
+  case RISCV::BI__builtin_riscv_paaddu_u8x8:
+  case RISCV::BI__builtin_riscv_paaddu_u16x4:
+  case RISCV::BI__builtin_riscv_paaddu_u32x2:
+  case RISCV::BI__builtin_riscv_pasub_i8x4:
+  case RISCV::BI__builtin_riscv_pasub_i16x2:
+  case RISCV::BI__builtin_riscv_pasub_i8x8:
+  case RISCV::BI__builtin_riscv_pasub_i16x4:
+  case RISCV::BI__builtin_riscv_pasub_i32x2:
+  case RISCV::BI__builtin_riscv_pasubu_u8x4:
+  case RISCV::BI__builtin_riscv_pasubu_u16x2:
+  case RISCV::BI__builtin_riscv_pasubu_u8x8:
+  case RISCV::BI__builtin_riscv_pasubu_u16x4:
+  case RISCV::BI__builtin_riscv_pasubu_u32x2: {
+    switch (BuiltinID) {
+    default:
+      llvm_unreachable("unexpected builtin ID");
+    case RISCV::BI__builtin_riscv_paadd_i8x4:
+    case RISCV::BI__builtin_riscv_paadd_i16x2:
+    case RISCV::BI__builtin_riscv_paadd_i8x8:
+    case RISCV::BI__builtin_riscv_paadd_i16x4:
+    case RISCV::BI__builtin_riscv_paadd_i32x2:
+      ID = Intrinsic::riscv_paadd;
+      break;
+    case RISCV::BI__builtin_riscv_paaddu_u8x4:
+    case RISCV::BI__builtin_riscv_paaddu_u16x2:
+    case RISCV::BI__builtin_riscv_paaddu_u8x8:
+    case RISCV::BI__builtin_riscv_paaddu_u16x4:
+    case RISCV::BI__builtin_riscv_paaddu_u32x2:
+      ID = Intrinsic::riscv_paaddu;
+      break;
+    case RISCV::BI__builtin_riscv_pasub_i8x4:
+    case RISCV::BI__builtin_riscv_pasub_i16x2:
+    case RISCV::BI__builtin_riscv_pasub_i8x8:
+    case RISCV::BI__builtin_riscv_pasub_i16x4:
+    case RISCV::BI__builtin_riscv_pasub_i32x2:
+      ID = Intrinsic::riscv_pasub;
+      break;
+    case RISCV::BI__builtin_riscv_pasubu_u8x4:
+    case RISCV::BI__builtin_riscv_pasubu_u16x2:
+    case RISCV::BI__builtin_riscv_pasubu_u8x8:
+    case RISCV::BI__builtin_riscv_pasubu_u16x4:
+    case RISCV::BI__builtin_riscv_pasubu_u32x2:
+      ID = Intrinsic::riscv_pasubu;
+      break;
+    }
+
+    IntrinsicTypes = {ResultType};
+    break;
+  }
+
   // Zk builtins
 
   // Zknh

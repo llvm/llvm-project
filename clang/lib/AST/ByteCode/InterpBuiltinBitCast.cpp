@@ -39,7 +39,7 @@ enum class Result { Success, Skip, Failure };
 
 /// Used to iterate over pointer fields.
 using DataFunc =
-    llvm::function_ref<Result(const Pointer &P, PrimType Ty, Bits BitOffset,
+    llvm::function_ref<Result(PtrView P, PrimType Ty, Bits BitOffset,
                               Bits FullBitWidth, bool PackedBools)>;
 
 #define BITCAST_TYPE_SWITCH(Expr, B)                                           \
@@ -80,7 +80,7 @@ using DataFunc =
 
 /// We use this to recursively iterate over all fields and elements of a pointer
 /// and extract relevant data for a bitcast.
-static Result enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
+static Result enumerateData(PtrView P, const Context &Ctx, Bits Offset,
                             Bits BitsToRead, DataFunc F, bool Initialize) {
   const Descriptor *FieldDesc = P.getFieldDesc();
   assert(FieldDesc);
@@ -139,7 +139,7 @@ static Result enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
       if (Fi.isUnnamedBitField())
         continue;
 
-      Pointer Elem = P.atField(Fi.Offset);
+      PtrView Elem = P.atField(Fi.Offset);
       Bits BitOffset =
           Offset + Bits(Layout.getFieldOffset(Fi.Decl->getFieldIndex()));
       Result Res =
@@ -153,7 +153,7 @@ static Result enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
       Ok = Ok && Res != Result::Failure;
     }
     for (const Record::Base &B : R->bases()) {
-      Pointer Elem = P.atField(B.Offset);
+      PtrView Elem = P.atField(B.Offset);
       if (!Initialize && !Elem.isInitialized())
         return Result::Failure;
 
@@ -179,8 +179,9 @@ static Result enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
 static bool enumeratePointerFields(const Pointer &P, const Context &Ctx,
                                    Bits BitsToRead, DataFunc F,
                                    bool Initialize) {
-  return enumerateData(P, Ctx, Bits::zero(), BitsToRead, F, Initialize) !=
-         Result::Failure;
+
+  return enumerateData(P.view(), Ctx, Bits::zero(), BitsToRead, F,
+                       Initialize) != Result::Failure;
 }
 
 //  This function is constexpr if and only if To, From, and the types of
@@ -298,7 +299,7 @@ bool clang::interp::readPointerToBuffer(const Context &Ctx,
 
   return enumeratePointerFields(
       FromPtr, Ctx, Buffer.size(),
-      [&](const Pointer &P, PrimType T, Bits BitOffset, Bits FullBitWidth,
+      [&](PtrView P, PrimType T, Bits BitOffset, Bits FullBitWidth,
           bool PackedBools) -> Result {
         Bits BitWidth = FullBitWidth;
 
@@ -426,7 +427,7 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
       ASTCtx.getTargetInfo().isLittleEndian() ? Endian::Little : Endian::Big;
   bool Success = enumeratePointerFields(
       ToPtr, S.getContext(), Buffer.size(),
-      [&](const Pointer &P, PrimType T, Bits BitOffset, Bits FullBitWidth,
+      [&](PtrView P, PrimType T, Bits BitOffset, Bits FullBitWidth,
           bool PackedBools) -> Result {
         QualType PtrType = P.getType();
         if (T == PT_Float) {
@@ -529,7 +530,7 @@ bool clang::interp::DoMemcpy(InterpState &S, CodePtr OpPC,
   llvm::SmallVector<PrimTypeVariant> Values;
   enumeratePointerFields(
       SrcPtr, S.getContext(), Size,
-      [&](const Pointer &P, PrimType T, Bits BitOffset, Bits FullBitWidth,
+      [&](const PtrView P, PrimType T, Bits BitOffset, Bits FullBitWidth,
           bool PackedBools) -> Result {
         TYPE_SWITCH(T, { Values.push_back(P.deref<T>()); });
         return Result::Success;
@@ -539,7 +540,7 @@ bool clang::interp::DoMemcpy(InterpState &S, CodePtr OpPC,
   unsigned ValueIndex = 0;
   enumeratePointerFields(
       DestPtr, S.getContext(), Size,
-      [&](const Pointer &P, PrimType T, Bits BitOffset, Bits FullBitWidth,
+      [&](const PtrView P, PrimType T, Bits BitOffset, Bits FullBitWidth,
           bool PackedBools) -> Result {
         TYPE_SWITCH(T, {
           P.deref<T>() = std::get<T>(Values[ValueIndex]);
