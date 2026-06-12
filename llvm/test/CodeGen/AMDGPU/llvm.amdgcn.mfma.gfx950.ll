@@ -440,8 +440,10 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_f16(<8 x half> %arg0, <8 x hal
 ; GISEL-NEXT:    v_mov_b64_e32 v[42:43], s[10:11]
 ; GISEL-NEXT:    v_mov_b64_e32 v[50:51], 48
 ; GISEL-NEXT:    v_mfma_f32_32x32x16_f16 v[16:31], v[32:35], v[36:39], v[0:15]
+; GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[14:15]
+; GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[12:13]
 ; GISEL-NEXT:    v_mov_b64_e32 v[40:41], s[8:9]
-; GISEL-NEXT:    s_nop 10
+; GISEL-NEXT:    s_nop 8
 ; GISEL-NEXT:    global_store_dwordx4 v[44:45], v[16:19], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    global_store_dwordx4 v[46:47], v[20:23], off sc0 sc1
@@ -452,19 +454,17 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_f16(<8 x half> %arg0, <8 x hal
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    global_store_dwordx4 v[44:45], v[40:43], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[12:13]
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[14:15]
-; GISEL-NEXT:    global_store_dwordx4 v[46:47], v[0:3], off sc0 sc1
+; GISEL-NEXT:    global_store_dwordx4 v[46:47], v[32:35], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[16:17]
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[18:19]
-; GISEL-NEXT:    global_store_dwordx4 v[48:49], v[0:3], off sc0 sc1
+; GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[18:19]
+; GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[16:17]
+; GISEL-NEXT:    global_store_dwordx4 v[48:49], v[32:35], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[20:21]
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[22:23]
-; GISEL-NEXT:    global_store_dwordx4 v[50:51], v[0:3], off sc0 sc1
+; GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[22:23]
+; GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[20:21]
+; GISEL-NEXT:    global_store_dwordx4 v[50:51], v[32:35], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_endpgm
 ;
@@ -806,8 +806,10 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_f16__flags(<8 x half> %arg0, <
 ; GISEL-NEXT:    v_mov_b64_e32 v[42:43], s[10:11]
 ; GISEL-NEXT:    v_mov_b64_e32 v[50:51], 48
 ; GISEL-NEXT:    v_mfma_f32_32x32x16_f16 v[16:31], v[32:35], v[36:39], v[0:15] cbsz:2 abid:3 blgp:1
+; GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[14:15]
+; GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[12:13]
 ; GISEL-NEXT:    v_mov_b64_e32 v[40:41], s[8:9]
-; GISEL-NEXT:    s_nop 10
+; GISEL-NEXT:    s_nop 8
 ; GISEL-NEXT:    global_store_dwordx4 v[44:45], v[16:19], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    global_store_dwordx4 v[46:47], v[20:23], off sc0 sc1
@@ -818,19 +820,17 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_f16__flags(<8 x half> %arg0, <
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    global_store_dwordx4 v[44:45], v[40:43], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[12:13]
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[14:15]
-; GISEL-NEXT:    global_store_dwordx4 v[46:47], v[0:3], off sc0 sc1
+; GISEL-NEXT:    global_store_dwordx4 v[46:47], v[32:35], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[16:17]
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[18:19]
-; GISEL-NEXT:    global_store_dwordx4 v[48:49], v[0:3], off sc0 sc1
+; GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[18:19]
+; GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[16:17]
+; GISEL-NEXT:    global_store_dwordx4 v[48:49], v[32:35], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[20:21]
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[22:23]
-; GISEL-NEXT:    global_store_dwordx4 v[50:51], v[0:3], off sc0 sc1
+; GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[22:23]
+; GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[20:21]
+; GISEL-NEXT:    global_store_dwordx4 v[50:51], v[32:35], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_endpgm
 ;
@@ -1422,25 +1422,20 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_f16__vgprcd(<8 x half> %arg0, 
 ; SDAG-NEXT:    v_mov_b32_e32 v35, s23
 ; SDAG-NEXT:    global_store_dwordx4 v36, v[32:35], s[0:1] offset:48 sc0 sc1
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    s_nop 2
-; SDAG-NEXT:    v_mov_b32_e32 v16, s16
-; SDAG-NEXT:    v_mov_b32_e32 v17, s17
-; SDAG-NEXT:    v_mov_b32_e32 v18, s18
-; SDAG-NEXT:    v_mov_b32_e32 v19, s19
-; SDAG-NEXT:    global_store_dwordx4 v36, v[16:19], s[0:1] offset:32 sc0 sc1
+; SDAG-NEXT:    s_nop 0
+; SDAG-NEXT:    v_mov_b32_e32 v32, s16
+; SDAG-NEXT:    v_mov_b32_e32 v33, s17
+; SDAG-NEXT:    v_mov_b32_e32 v34, s18
+; SDAG-NEXT:    v_mov_b32_e32 v35, s19
+; SDAG-NEXT:    global_store_dwordx4 v36, v[32:35], s[0:1] offset:32 sc0 sc1
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    v_mov_b32_e32 v16, s12
-; SDAG-NEXT:    v_mov_b32_e32 v17, s13
-; SDAG-NEXT:    v_mov_b32_e32 v18, s14
-; SDAG-NEXT:    v_mov_b32_e32 v19, s15
-; SDAG-NEXT:    global_store_dwordx4 v36, v[16:19], s[0:1] offset:16 sc0 sc1
+; SDAG-NEXT:    v_mov_b32_e32 v32, s12
+; SDAG-NEXT:    v_mov_b32_e32 v33, s13
+; SDAG-NEXT:    v_mov_b32_e32 v34, s14
+; SDAG-NEXT:    v_mov_b32_e32 v35, s15
+; SDAG-NEXT:    global_store_dwordx4 v36, v[32:35], s[0:1] offset:16 sc0 sc1
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    v_mov_b32_e32 v16, s8
-; SDAG-NEXT:    v_mov_b32_e32 v17, s9
-; SDAG-NEXT:    v_mov_b32_e32 v18, s10
-; SDAG-NEXT:    v_mov_b32_e32 v19, s11
 ; SDAG-NEXT:    global_store_dwordx4 v36, v[16:19], s[0:1] sc0 sc1
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    global_store_dwordx4 v36, v[8:11], s[0:1] offset:32 sc0 sc1
@@ -1525,25 +1520,20 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_f16__vgprcd(<8 x half> %arg0, 
 ; HEURRC-NEXT:    v_mov_b32_e32 v35, s23
 ; HEURRC-NEXT:    global_store_dwordx4 v36, v[32:35], s[0:1] offset:48 sc0 sc1
 ; HEURRC-NEXT:    s_waitcnt vmcnt(0)
-; HEURRC-NEXT:    s_nop 2
-; HEURRC-NEXT:    v_mov_b32_e32 v16, s16
-; HEURRC-NEXT:    v_mov_b32_e32 v17, s17
-; HEURRC-NEXT:    v_mov_b32_e32 v18, s18
-; HEURRC-NEXT:    v_mov_b32_e32 v19, s19
-; HEURRC-NEXT:    global_store_dwordx4 v36, v[16:19], s[0:1] offset:32 sc0 sc1
+; HEURRC-NEXT:    s_nop 0
+; HEURRC-NEXT:    v_mov_b32_e32 v32, s16
+; HEURRC-NEXT:    v_mov_b32_e32 v33, s17
+; HEURRC-NEXT:    v_mov_b32_e32 v34, s18
+; HEURRC-NEXT:    v_mov_b32_e32 v35, s19
+; HEURRC-NEXT:    global_store_dwordx4 v36, v[32:35], s[0:1] offset:32 sc0 sc1
 ; HEURRC-NEXT:    s_waitcnt vmcnt(0)
 ; HEURRC-NEXT:    s_nop 0
-; HEURRC-NEXT:    v_mov_b32_e32 v16, s12
-; HEURRC-NEXT:    v_mov_b32_e32 v17, s13
-; HEURRC-NEXT:    v_mov_b32_e32 v18, s14
-; HEURRC-NEXT:    v_mov_b32_e32 v19, s15
-; HEURRC-NEXT:    global_store_dwordx4 v36, v[16:19], s[0:1] offset:16 sc0 sc1
+; HEURRC-NEXT:    v_mov_b32_e32 v32, s12
+; HEURRC-NEXT:    v_mov_b32_e32 v33, s13
+; HEURRC-NEXT:    v_mov_b32_e32 v34, s14
+; HEURRC-NEXT:    v_mov_b32_e32 v35, s15
+; HEURRC-NEXT:    global_store_dwordx4 v36, v[32:35], s[0:1] offset:16 sc0 sc1
 ; HEURRC-NEXT:    s_waitcnt vmcnt(0)
-; HEURRC-NEXT:    s_nop 0
-; HEURRC-NEXT:    v_mov_b32_e32 v16, s8
-; HEURRC-NEXT:    v_mov_b32_e32 v17, s9
-; HEURRC-NEXT:    v_mov_b32_e32 v18, s10
-; HEURRC-NEXT:    v_mov_b32_e32 v19, s11
 ; HEURRC-NEXT:    global_store_dwordx4 v36, v[16:19], s[0:1] sc0 sc1
 ; HEURRC-NEXT:    s_waitcnt vmcnt(0)
 ; HEURRC-NEXT:    global_store_dwordx4 v36, v[8:11], s[0:1] offset:32 sc0 sc1
@@ -1582,25 +1572,20 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_f16__vgprcd(<8 x half> %arg0, 
 ; VGPRRC-NEXT:    v_mov_b32_e32 v35, s23
 ; VGPRRC-NEXT:    global_store_dwordx4 v36, v[32:35], s[0:1] offset:48 sc0 sc1
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
-; VGPRRC-NEXT:    s_nop 2
-; VGPRRC-NEXT:    v_mov_b32_e32 v16, s16
-; VGPRRC-NEXT:    v_mov_b32_e32 v17, s17
-; VGPRRC-NEXT:    v_mov_b32_e32 v18, s18
-; VGPRRC-NEXT:    v_mov_b32_e32 v19, s19
-; VGPRRC-NEXT:    global_store_dwordx4 v36, v[16:19], s[0:1] offset:32 sc0 sc1
+; VGPRRC-NEXT:    s_nop 0
+; VGPRRC-NEXT:    v_mov_b32_e32 v32, s16
+; VGPRRC-NEXT:    v_mov_b32_e32 v33, s17
+; VGPRRC-NEXT:    v_mov_b32_e32 v34, s18
+; VGPRRC-NEXT:    v_mov_b32_e32 v35, s19
+; VGPRRC-NEXT:    global_store_dwordx4 v36, v[32:35], s[0:1] offset:32 sc0 sc1
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
 ; VGPRRC-NEXT:    s_nop 0
-; VGPRRC-NEXT:    v_mov_b32_e32 v16, s12
-; VGPRRC-NEXT:    v_mov_b32_e32 v17, s13
-; VGPRRC-NEXT:    v_mov_b32_e32 v18, s14
-; VGPRRC-NEXT:    v_mov_b32_e32 v19, s15
-; VGPRRC-NEXT:    global_store_dwordx4 v36, v[16:19], s[0:1] offset:16 sc0 sc1
+; VGPRRC-NEXT:    v_mov_b32_e32 v32, s12
+; VGPRRC-NEXT:    v_mov_b32_e32 v33, s13
+; VGPRRC-NEXT:    v_mov_b32_e32 v34, s14
+; VGPRRC-NEXT:    v_mov_b32_e32 v35, s15
+; VGPRRC-NEXT:    global_store_dwordx4 v36, v[32:35], s[0:1] offset:16 sc0 sc1
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
-; VGPRRC-NEXT:    s_nop 0
-; VGPRRC-NEXT:    v_mov_b32_e32 v16, s8
-; VGPRRC-NEXT:    v_mov_b32_e32 v17, s9
-; VGPRRC-NEXT:    v_mov_b32_e32 v18, s10
-; VGPRRC-NEXT:    v_mov_b32_e32 v19, s11
 ; VGPRRC-NEXT:    global_store_dwordx4 v36, v[16:19], s[0:1] sc0 sc1
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
 ; VGPRRC-NEXT:    global_store_dwordx4 v36, v[8:11], s[0:1] offset:32 sc0 sc1
@@ -1764,25 +1749,20 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_f16__vgprcd__flags(<8 x half> 
 ; SDAG-NEXT:    v_mov_b32_e32 v35, s23
 ; SDAG-NEXT:    global_store_dwordx4 v36, v[32:35], s[0:1] offset:48 sc0 sc1
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    s_nop 2
-; SDAG-NEXT:    v_mov_b32_e32 v16, s16
-; SDAG-NEXT:    v_mov_b32_e32 v17, s17
-; SDAG-NEXT:    v_mov_b32_e32 v18, s18
-; SDAG-NEXT:    v_mov_b32_e32 v19, s19
-; SDAG-NEXT:    global_store_dwordx4 v36, v[16:19], s[0:1] offset:32 sc0 sc1
+; SDAG-NEXT:    s_nop 0
+; SDAG-NEXT:    v_mov_b32_e32 v32, s16
+; SDAG-NEXT:    v_mov_b32_e32 v33, s17
+; SDAG-NEXT:    v_mov_b32_e32 v34, s18
+; SDAG-NEXT:    v_mov_b32_e32 v35, s19
+; SDAG-NEXT:    global_store_dwordx4 v36, v[32:35], s[0:1] offset:32 sc0 sc1
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    v_mov_b32_e32 v16, s12
-; SDAG-NEXT:    v_mov_b32_e32 v17, s13
-; SDAG-NEXT:    v_mov_b32_e32 v18, s14
-; SDAG-NEXT:    v_mov_b32_e32 v19, s15
-; SDAG-NEXT:    global_store_dwordx4 v36, v[16:19], s[0:1] offset:16 sc0 sc1
+; SDAG-NEXT:    v_mov_b32_e32 v32, s12
+; SDAG-NEXT:    v_mov_b32_e32 v33, s13
+; SDAG-NEXT:    v_mov_b32_e32 v34, s14
+; SDAG-NEXT:    v_mov_b32_e32 v35, s15
+; SDAG-NEXT:    global_store_dwordx4 v36, v[32:35], s[0:1] offset:16 sc0 sc1
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    v_mov_b32_e32 v16, s8
-; SDAG-NEXT:    v_mov_b32_e32 v17, s9
-; SDAG-NEXT:    v_mov_b32_e32 v18, s10
-; SDAG-NEXT:    v_mov_b32_e32 v19, s11
 ; SDAG-NEXT:    global_store_dwordx4 v36, v[16:19], s[0:1] sc0 sc1
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    global_store_dwordx4 v36, v[8:11], s[0:1] offset:32 sc0 sc1
@@ -1867,25 +1847,20 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_f16__vgprcd__flags(<8 x half> 
 ; HEURRC-NEXT:    v_mov_b32_e32 v35, s23
 ; HEURRC-NEXT:    global_store_dwordx4 v36, v[32:35], s[0:1] offset:48 sc0 sc1
 ; HEURRC-NEXT:    s_waitcnt vmcnt(0)
-; HEURRC-NEXT:    s_nop 2
-; HEURRC-NEXT:    v_mov_b32_e32 v16, s16
-; HEURRC-NEXT:    v_mov_b32_e32 v17, s17
-; HEURRC-NEXT:    v_mov_b32_e32 v18, s18
-; HEURRC-NEXT:    v_mov_b32_e32 v19, s19
-; HEURRC-NEXT:    global_store_dwordx4 v36, v[16:19], s[0:1] offset:32 sc0 sc1
+; HEURRC-NEXT:    s_nop 0
+; HEURRC-NEXT:    v_mov_b32_e32 v32, s16
+; HEURRC-NEXT:    v_mov_b32_e32 v33, s17
+; HEURRC-NEXT:    v_mov_b32_e32 v34, s18
+; HEURRC-NEXT:    v_mov_b32_e32 v35, s19
+; HEURRC-NEXT:    global_store_dwordx4 v36, v[32:35], s[0:1] offset:32 sc0 sc1
 ; HEURRC-NEXT:    s_waitcnt vmcnt(0)
 ; HEURRC-NEXT:    s_nop 0
-; HEURRC-NEXT:    v_mov_b32_e32 v16, s12
-; HEURRC-NEXT:    v_mov_b32_e32 v17, s13
-; HEURRC-NEXT:    v_mov_b32_e32 v18, s14
-; HEURRC-NEXT:    v_mov_b32_e32 v19, s15
-; HEURRC-NEXT:    global_store_dwordx4 v36, v[16:19], s[0:1] offset:16 sc0 sc1
+; HEURRC-NEXT:    v_mov_b32_e32 v32, s12
+; HEURRC-NEXT:    v_mov_b32_e32 v33, s13
+; HEURRC-NEXT:    v_mov_b32_e32 v34, s14
+; HEURRC-NEXT:    v_mov_b32_e32 v35, s15
+; HEURRC-NEXT:    global_store_dwordx4 v36, v[32:35], s[0:1] offset:16 sc0 sc1
 ; HEURRC-NEXT:    s_waitcnt vmcnt(0)
-; HEURRC-NEXT:    s_nop 0
-; HEURRC-NEXT:    v_mov_b32_e32 v16, s8
-; HEURRC-NEXT:    v_mov_b32_e32 v17, s9
-; HEURRC-NEXT:    v_mov_b32_e32 v18, s10
-; HEURRC-NEXT:    v_mov_b32_e32 v19, s11
 ; HEURRC-NEXT:    global_store_dwordx4 v36, v[16:19], s[0:1] sc0 sc1
 ; HEURRC-NEXT:    s_waitcnt vmcnt(0)
 ; HEURRC-NEXT:    global_store_dwordx4 v36, v[8:11], s[0:1] offset:32 sc0 sc1
@@ -1924,25 +1899,20 @@ define amdgpu_kernel void @test_mfma_f32_32x32x16_f16__vgprcd__flags(<8 x half> 
 ; VGPRRC-NEXT:    v_mov_b32_e32 v35, s23
 ; VGPRRC-NEXT:    global_store_dwordx4 v36, v[32:35], s[0:1] offset:48 sc0 sc1
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
-; VGPRRC-NEXT:    s_nop 2
-; VGPRRC-NEXT:    v_mov_b32_e32 v16, s16
-; VGPRRC-NEXT:    v_mov_b32_e32 v17, s17
-; VGPRRC-NEXT:    v_mov_b32_e32 v18, s18
-; VGPRRC-NEXT:    v_mov_b32_e32 v19, s19
-; VGPRRC-NEXT:    global_store_dwordx4 v36, v[16:19], s[0:1] offset:32 sc0 sc1
+; VGPRRC-NEXT:    s_nop 0
+; VGPRRC-NEXT:    v_mov_b32_e32 v32, s16
+; VGPRRC-NEXT:    v_mov_b32_e32 v33, s17
+; VGPRRC-NEXT:    v_mov_b32_e32 v34, s18
+; VGPRRC-NEXT:    v_mov_b32_e32 v35, s19
+; VGPRRC-NEXT:    global_store_dwordx4 v36, v[32:35], s[0:1] offset:32 sc0 sc1
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
 ; VGPRRC-NEXT:    s_nop 0
-; VGPRRC-NEXT:    v_mov_b32_e32 v16, s12
-; VGPRRC-NEXT:    v_mov_b32_e32 v17, s13
-; VGPRRC-NEXT:    v_mov_b32_e32 v18, s14
-; VGPRRC-NEXT:    v_mov_b32_e32 v19, s15
-; VGPRRC-NEXT:    global_store_dwordx4 v36, v[16:19], s[0:1] offset:16 sc0 sc1
+; VGPRRC-NEXT:    v_mov_b32_e32 v32, s12
+; VGPRRC-NEXT:    v_mov_b32_e32 v33, s13
+; VGPRRC-NEXT:    v_mov_b32_e32 v34, s14
+; VGPRRC-NEXT:    v_mov_b32_e32 v35, s15
+; VGPRRC-NEXT:    global_store_dwordx4 v36, v[32:35], s[0:1] offset:16 sc0 sc1
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
-; VGPRRC-NEXT:    s_nop 0
-; VGPRRC-NEXT:    v_mov_b32_e32 v16, s8
-; VGPRRC-NEXT:    v_mov_b32_e32 v17, s9
-; VGPRRC-NEXT:    v_mov_b32_e32 v18, s10
-; VGPRRC-NEXT:    v_mov_b32_e32 v19, s11
 ; VGPRRC-NEXT:    global_store_dwordx4 v36, v[16:19], s[0:1] sc0 sc1
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
 ; VGPRRC-NEXT:    global_store_dwordx4 v36, v[8:11], s[0:1] offset:32 sc0 sc1
@@ -2943,8 +2913,10 @@ define amdgpu_kernel void @test_mfma_i32_32x32x32_i8(<4 x i32> %arg0, <4 x i32> 
 ; GISEL-NEXT:    v_mov_b64_e32 v[42:43], s[10:11]
 ; GISEL-NEXT:    v_mov_b64_e32 v[50:51], 48
 ; GISEL-NEXT:    v_mfma_i32_32x32x32_i8 v[16:31], v[32:35], v[36:39], v[0:15]
+; GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[14:15]
+; GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[12:13]
 ; GISEL-NEXT:    v_mov_b64_e32 v[40:41], s[8:9]
-; GISEL-NEXT:    s_nop 10
+; GISEL-NEXT:    s_nop 8
 ; GISEL-NEXT:    global_store_dwordx4 v[44:45], v[16:19], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    global_store_dwordx4 v[46:47], v[20:23], off sc0 sc1
@@ -2955,19 +2927,17 @@ define amdgpu_kernel void @test_mfma_i32_32x32x32_i8(<4 x i32> %arg0, <4 x i32> 
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    global_store_dwordx4 v[44:45], v[40:43], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[12:13]
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[14:15]
-; GISEL-NEXT:    global_store_dwordx4 v[46:47], v[0:3], off sc0 sc1
+; GISEL-NEXT:    global_store_dwordx4 v[46:47], v[32:35], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[16:17]
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[18:19]
-; GISEL-NEXT:    global_store_dwordx4 v[48:49], v[0:3], off sc0 sc1
+; GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[18:19]
+; GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[16:17]
+; GISEL-NEXT:    global_store_dwordx4 v[48:49], v[32:35], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[20:21]
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[22:23]
-; GISEL-NEXT:    global_store_dwordx4 v[50:51], v[0:3], off sc0 sc1
+; GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[22:23]
+; GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[20:21]
+; GISEL-NEXT:    global_store_dwordx4 v[50:51], v[32:35], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_endpgm
 ;
@@ -3344,8 +3314,10 @@ define amdgpu_kernel void @test_mfma_i32_32x32x32_i8__flags(<4 x i32> %arg0, <4 
 ; GISEL-NEXT:    v_mov_b64_e32 v[42:43], s[10:11]
 ; GISEL-NEXT:    v_mov_b64_e32 v[50:51], 48
 ; GISEL-NEXT:    v_mfma_i32_32x32x32_i8 v[16:31], v[32:35], v[36:39], v[0:15] cbsz:2 abid:3 blgp:1
+; GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[14:15]
+; GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[12:13]
 ; GISEL-NEXT:    v_mov_b64_e32 v[40:41], s[8:9]
-; GISEL-NEXT:    s_nop 10
+; GISEL-NEXT:    s_nop 8
 ; GISEL-NEXT:    global_store_dwordx4 v[44:45], v[16:19], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    global_store_dwordx4 v[46:47], v[20:23], off sc0 sc1
@@ -3356,19 +3328,17 @@ define amdgpu_kernel void @test_mfma_i32_32x32x32_i8__flags(<4 x i32> %arg0, <4 
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    global_store_dwordx4 v[44:45], v[40:43], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[12:13]
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[14:15]
-; GISEL-NEXT:    global_store_dwordx4 v[46:47], v[0:3], off sc0 sc1
+; GISEL-NEXT:    global_store_dwordx4 v[46:47], v[32:35], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[16:17]
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[18:19]
-; GISEL-NEXT:    global_store_dwordx4 v[48:49], v[0:3], off sc0 sc1
+; GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[18:19]
+; GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[16:17]
+; GISEL-NEXT:    global_store_dwordx4 v[48:49], v[32:35], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_nop 0
-; GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[20:21]
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[22:23]
-; GISEL-NEXT:    global_store_dwordx4 v[50:51], v[0:3], off sc0 sc1
+; GISEL-NEXT:    v_mov_b64_e32 v[34:35], s[22:23]
+; GISEL-NEXT:    v_mov_b64_e32 v[32:33], s[20:21]
+; GISEL-NEXT:    global_store_dwordx4 v[50:51], v[32:35], off sc0 sc1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_endpgm
 ;
@@ -3986,25 +3956,23 @@ define amdgpu_kernel void @test_mfma_i32_32x32x32_i8__vgprcd(<4 x i32> %arg0, <4
 ; SDAG-NEXT:    v_mov_b64_e32 v[16:17], s[8:9]
 ; SDAG-NEXT:    s_nop 1
 ; SDAG-NEXT:    v_mfma_i32_32x32x32_i8 v[0:15], v[32:35], v[36:39], v[16:31]
-; SDAG-NEXT:    s_nop 6
-; SDAG-NEXT:    v_mov_b32_e32 v16, s20
-; SDAG-NEXT:    v_mov_b32_e32 v17, s21
-; SDAG-NEXT:    v_mov_b32_e32 v18, s22
-; SDAG-NEXT:    v_mov_b32_e32 v19, s23
-; SDAG-NEXT:    global_store_dwordx4 v40, v[16:19], s[0:1] offset:48 sc0 sc1
-; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    v_mov_b32_e32 v16, s16
-; SDAG-NEXT:    v_mov_b32_e32 v17, s17
-; SDAG-NEXT:    v_mov_b32_e32 v18, s18
-; SDAG-NEXT:    v_mov_b32_e32 v19, s19
-; SDAG-NEXT:    global_store_dwordx4 v40, v[16:19], s[0:1] offset:32 sc0 sc1
+; SDAG-NEXT:    v_mov_b32_e32 v32, s20
+; SDAG-NEXT:    v_mov_b32_e32 v33, s21
+; SDAG-NEXT:    v_mov_b32_e32 v34, s22
+; SDAG-NEXT:    v_mov_b32_e32 v35, s23
+; SDAG-NEXT:    global_store_dwordx4 v40, v[32:35], s[0:1] offset:48 sc0 sc1
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    v_mov_b32_e32 v16, s12
 ; SDAG-NEXT:    v_mov_b32_e32 v17, s13
+; SDAG-NEXT:    v_mov_b32_e32 v32, s16
+; SDAG-NEXT:    v_mov_b32_e32 v33, s17
+; SDAG-NEXT:    v_mov_b32_e32 v34, s18
+; SDAG-NEXT:    v_mov_b32_e32 v35, s19
 ; SDAG-NEXT:    v_mov_b32_e32 v18, s14
 ; SDAG-NEXT:    v_mov_b32_e32 v19, s15
+; SDAG-NEXT:    global_store_dwordx4 v40, v[32:35], s[0:1] offset:32 sc0 sc1
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    global_store_dwordx4 v40, v[16:19], s[0:1] offset:16 sc0 sc1
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    s_nop 0
@@ -4096,25 +4064,23 @@ define amdgpu_kernel void @test_mfma_i32_32x32x32_i8__vgprcd(<4 x i32> %arg0, <4
 ; HEURRC-NEXT:    v_mov_b64_e32 v[16:17], s[8:9]
 ; HEURRC-NEXT:    s_nop 1
 ; HEURRC-NEXT:    v_mfma_i32_32x32x32_i8 v[0:15], v[32:35], v[36:39], v[16:31]
-; HEURRC-NEXT:    s_nop 6
-; HEURRC-NEXT:    v_mov_b32_e32 v16, s20
-; HEURRC-NEXT:    v_mov_b32_e32 v17, s21
-; HEURRC-NEXT:    v_mov_b32_e32 v18, s22
-; HEURRC-NEXT:    v_mov_b32_e32 v19, s23
-; HEURRC-NEXT:    global_store_dwordx4 v40, v[16:19], s[0:1] offset:48 sc0 sc1
-; HEURRC-NEXT:    s_waitcnt vmcnt(0)
-; HEURRC-NEXT:    s_nop 0
-; HEURRC-NEXT:    v_mov_b32_e32 v16, s16
-; HEURRC-NEXT:    v_mov_b32_e32 v17, s17
-; HEURRC-NEXT:    v_mov_b32_e32 v18, s18
-; HEURRC-NEXT:    v_mov_b32_e32 v19, s19
-; HEURRC-NEXT:    global_store_dwordx4 v40, v[16:19], s[0:1] offset:32 sc0 sc1
+; HEURRC-NEXT:    v_mov_b32_e32 v32, s20
+; HEURRC-NEXT:    v_mov_b32_e32 v33, s21
+; HEURRC-NEXT:    v_mov_b32_e32 v34, s22
+; HEURRC-NEXT:    v_mov_b32_e32 v35, s23
+; HEURRC-NEXT:    global_store_dwordx4 v40, v[32:35], s[0:1] offset:48 sc0 sc1
 ; HEURRC-NEXT:    s_waitcnt vmcnt(0)
 ; HEURRC-NEXT:    s_nop 0
 ; HEURRC-NEXT:    v_mov_b32_e32 v16, s12
 ; HEURRC-NEXT:    v_mov_b32_e32 v17, s13
+; HEURRC-NEXT:    v_mov_b32_e32 v32, s16
+; HEURRC-NEXT:    v_mov_b32_e32 v33, s17
+; HEURRC-NEXT:    v_mov_b32_e32 v34, s18
+; HEURRC-NEXT:    v_mov_b32_e32 v35, s19
 ; HEURRC-NEXT:    v_mov_b32_e32 v18, s14
 ; HEURRC-NEXT:    v_mov_b32_e32 v19, s15
+; HEURRC-NEXT:    global_store_dwordx4 v40, v[32:35], s[0:1] offset:32 sc0 sc1
+; HEURRC-NEXT:    s_waitcnt vmcnt(0)
 ; HEURRC-NEXT:    global_store_dwordx4 v40, v[16:19], s[0:1] offset:16 sc0 sc1
 ; HEURRC-NEXT:    s_waitcnt vmcnt(0)
 ; HEURRC-NEXT:    s_nop 0
@@ -4160,25 +4126,23 @@ define amdgpu_kernel void @test_mfma_i32_32x32x32_i8__vgprcd(<4 x i32> %arg0, <4
 ; VGPRRC-NEXT:    v_mov_b64_e32 v[16:17], s[8:9]
 ; VGPRRC-NEXT:    s_nop 1
 ; VGPRRC-NEXT:    v_mfma_i32_32x32x32_i8 v[0:15], v[32:35], v[36:39], v[16:31]
-; VGPRRC-NEXT:    s_nop 6
-; VGPRRC-NEXT:    v_mov_b32_e32 v16, s20
-; VGPRRC-NEXT:    v_mov_b32_e32 v17, s21
-; VGPRRC-NEXT:    v_mov_b32_e32 v18, s22
-; VGPRRC-NEXT:    v_mov_b32_e32 v19, s23
-; VGPRRC-NEXT:    global_store_dwordx4 v40, v[16:19], s[0:1] offset:48 sc0 sc1
-; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
-; VGPRRC-NEXT:    s_nop 0
-; VGPRRC-NEXT:    v_mov_b32_e32 v16, s16
-; VGPRRC-NEXT:    v_mov_b32_e32 v17, s17
-; VGPRRC-NEXT:    v_mov_b32_e32 v18, s18
-; VGPRRC-NEXT:    v_mov_b32_e32 v19, s19
-; VGPRRC-NEXT:    global_store_dwordx4 v40, v[16:19], s[0:1] offset:32 sc0 sc1
+; VGPRRC-NEXT:    v_mov_b32_e32 v32, s20
+; VGPRRC-NEXT:    v_mov_b32_e32 v33, s21
+; VGPRRC-NEXT:    v_mov_b32_e32 v34, s22
+; VGPRRC-NEXT:    v_mov_b32_e32 v35, s23
+; VGPRRC-NEXT:    global_store_dwordx4 v40, v[32:35], s[0:1] offset:48 sc0 sc1
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
 ; VGPRRC-NEXT:    s_nop 0
 ; VGPRRC-NEXT:    v_mov_b32_e32 v16, s12
 ; VGPRRC-NEXT:    v_mov_b32_e32 v17, s13
+; VGPRRC-NEXT:    v_mov_b32_e32 v32, s16
+; VGPRRC-NEXT:    v_mov_b32_e32 v33, s17
+; VGPRRC-NEXT:    v_mov_b32_e32 v34, s18
+; VGPRRC-NEXT:    v_mov_b32_e32 v35, s19
 ; VGPRRC-NEXT:    v_mov_b32_e32 v18, s14
 ; VGPRRC-NEXT:    v_mov_b32_e32 v19, s15
+; VGPRRC-NEXT:    global_store_dwordx4 v40, v[32:35], s[0:1] offset:32 sc0 sc1
+; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
 ; VGPRRC-NEXT:    global_store_dwordx4 v40, v[16:19], s[0:1] offset:16 sc0 sc1
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
 ; VGPRRC-NEXT:    s_nop 0
@@ -4363,25 +4327,23 @@ define amdgpu_kernel void @test_mfma_i32_32x32x32_i8__vgprcd__flags(<4 x i32> %a
 ; SDAG-NEXT:    v_mov_b64_e32 v[16:17], s[8:9]
 ; SDAG-NEXT:    s_nop 1
 ; SDAG-NEXT:    v_mfma_i32_32x32x32_i8 v[0:15], v[32:35], v[36:39], v[16:31] cbsz:1 abid:2 blgp:3
-; SDAG-NEXT:    s_nop 6
-; SDAG-NEXT:    v_mov_b32_e32 v16, s20
-; SDAG-NEXT:    v_mov_b32_e32 v17, s21
-; SDAG-NEXT:    v_mov_b32_e32 v18, s22
-; SDAG-NEXT:    v_mov_b32_e32 v19, s23
-; SDAG-NEXT:    global_store_dwordx4 v40, v[16:19], s[0:1] offset:48 sc0 sc1
-; SDAG-NEXT:    s_waitcnt vmcnt(0)
-; SDAG-NEXT:    s_nop 0
-; SDAG-NEXT:    v_mov_b32_e32 v16, s16
-; SDAG-NEXT:    v_mov_b32_e32 v17, s17
-; SDAG-NEXT:    v_mov_b32_e32 v18, s18
-; SDAG-NEXT:    v_mov_b32_e32 v19, s19
-; SDAG-NEXT:    global_store_dwordx4 v40, v[16:19], s[0:1] offset:32 sc0 sc1
+; SDAG-NEXT:    v_mov_b32_e32 v32, s20
+; SDAG-NEXT:    v_mov_b32_e32 v33, s21
+; SDAG-NEXT:    v_mov_b32_e32 v34, s22
+; SDAG-NEXT:    v_mov_b32_e32 v35, s23
+; SDAG-NEXT:    global_store_dwordx4 v40, v[32:35], s[0:1] offset:48 sc0 sc1
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    v_mov_b32_e32 v16, s12
 ; SDAG-NEXT:    v_mov_b32_e32 v17, s13
+; SDAG-NEXT:    v_mov_b32_e32 v32, s16
+; SDAG-NEXT:    v_mov_b32_e32 v33, s17
+; SDAG-NEXT:    v_mov_b32_e32 v34, s18
+; SDAG-NEXT:    v_mov_b32_e32 v35, s19
 ; SDAG-NEXT:    v_mov_b32_e32 v18, s14
 ; SDAG-NEXT:    v_mov_b32_e32 v19, s15
+; SDAG-NEXT:    global_store_dwordx4 v40, v[32:35], s[0:1] offset:32 sc0 sc1
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    global_store_dwordx4 v40, v[16:19], s[0:1] offset:16 sc0 sc1
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    s_nop 0
@@ -4473,25 +4435,23 @@ define amdgpu_kernel void @test_mfma_i32_32x32x32_i8__vgprcd__flags(<4 x i32> %a
 ; HEURRC-NEXT:    v_mov_b64_e32 v[16:17], s[8:9]
 ; HEURRC-NEXT:    s_nop 1
 ; HEURRC-NEXT:    v_mfma_i32_32x32x32_i8 v[0:15], v[32:35], v[36:39], v[16:31] cbsz:1 abid:2 blgp:3
-; HEURRC-NEXT:    s_nop 6
-; HEURRC-NEXT:    v_mov_b32_e32 v16, s20
-; HEURRC-NEXT:    v_mov_b32_e32 v17, s21
-; HEURRC-NEXT:    v_mov_b32_e32 v18, s22
-; HEURRC-NEXT:    v_mov_b32_e32 v19, s23
-; HEURRC-NEXT:    global_store_dwordx4 v40, v[16:19], s[0:1] offset:48 sc0 sc1
-; HEURRC-NEXT:    s_waitcnt vmcnt(0)
-; HEURRC-NEXT:    s_nop 0
-; HEURRC-NEXT:    v_mov_b32_e32 v16, s16
-; HEURRC-NEXT:    v_mov_b32_e32 v17, s17
-; HEURRC-NEXT:    v_mov_b32_e32 v18, s18
-; HEURRC-NEXT:    v_mov_b32_e32 v19, s19
-; HEURRC-NEXT:    global_store_dwordx4 v40, v[16:19], s[0:1] offset:32 sc0 sc1
+; HEURRC-NEXT:    v_mov_b32_e32 v32, s20
+; HEURRC-NEXT:    v_mov_b32_e32 v33, s21
+; HEURRC-NEXT:    v_mov_b32_e32 v34, s22
+; HEURRC-NEXT:    v_mov_b32_e32 v35, s23
+; HEURRC-NEXT:    global_store_dwordx4 v40, v[32:35], s[0:1] offset:48 sc0 sc1
 ; HEURRC-NEXT:    s_waitcnt vmcnt(0)
 ; HEURRC-NEXT:    s_nop 0
 ; HEURRC-NEXT:    v_mov_b32_e32 v16, s12
 ; HEURRC-NEXT:    v_mov_b32_e32 v17, s13
+; HEURRC-NEXT:    v_mov_b32_e32 v32, s16
+; HEURRC-NEXT:    v_mov_b32_e32 v33, s17
+; HEURRC-NEXT:    v_mov_b32_e32 v34, s18
+; HEURRC-NEXT:    v_mov_b32_e32 v35, s19
 ; HEURRC-NEXT:    v_mov_b32_e32 v18, s14
 ; HEURRC-NEXT:    v_mov_b32_e32 v19, s15
+; HEURRC-NEXT:    global_store_dwordx4 v40, v[32:35], s[0:1] offset:32 sc0 sc1
+; HEURRC-NEXT:    s_waitcnt vmcnt(0)
 ; HEURRC-NEXT:    global_store_dwordx4 v40, v[16:19], s[0:1] offset:16 sc0 sc1
 ; HEURRC-NEXT:    s_waitcnt vmcnt(0)
 ; HEURRC-NEXT:    s_nop 0
@@ -4537,25 +4497,23 @@ define amdgpu_kernel void @test_mfma_i32_32x32x32_i8__vgprcd__flags(<4 x i32> %a
 ; VGPRRC-NEXT:    v_mov_b64_e32 v[16:17], s[8:9]
 ; VGPRRC-NEXT:    s_nop 1
 ; VGPRRC-NEXT:    v_mfma_i32_32x32x32_i8 v[0:15], v[32:35], v[36:39], v[16:31] cbsz:1 abid:2 blgp:3
-; VGPRRC-NEXT:    s_nop 6
-; VGPRRC-NEXT:    v_mov_b32_e32 v16, s20
-; VGPRRC-NEXT:    v_mov_b32_e32 v17, s21
-; VGPRRC-NEXT:    v_mov_b32_e32 v18, s22
-; VGPRRC-NEXT:    v_mov_b32_e32 v19, s23
-; VGPRRC-NEXT:    global_store_dwordx4 v40, v[16:19], s[0:1] offset:48 sc0 sc1
-; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
-; VGPRRC-NEXT:    s_nop 0
-; VGPRRC-NEXT:    v_mov_b32_e32 v16, s16
-; VGPRRC-NEXT:    v_mov_b32_e32 v17, s17
-; VGPRRC-NEXT:    v_mov_b32_e32 v18, s18
-; VGPRRC-NEXT:    v_mov_b32_e32 v19, s19
-; VGPRRC-NEXT:    global_store_dwordx4 v40, v[16:19], s[0:1] offset:32 sc0 sc1
+; VGPRRC-NEXT:    v_mov_b32_e32 v32, s20
+; VGPRRC-NEXT:    v_mov_b32_e32 v33, s21
+; VGPRRC-NEXT:    v_mov_b32_e32 v34, s22
+; VGPRRC-NEXT:    v_mov_b32_e32 v35, s23
+; VGPRRC-NEXT:    global_store_dwordx4 v40, v[32:35], s[0:1] offset:48 sc0 sc1
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
 ; VGPRRC-NEXT:    s_nop 0
 ; VGPRRC-NEXT:    v_mov_b32_e32 v16, s12
 ; VGPRRC-NEXT:    v_mov_b32_e32 v17, s13
+; VGPRRC-NEXT:    v_mov_b32_e32 v32, s16
+; VGPRRC-NEXT:    v_mov_b32_e32 v33, s17
+; VGPRRC-NEXT:    v_mov_b32_e32 v34, s18
+; VGPRRC-NEXT:    v_mov_b32_e32 v35, s19
 ; VGPRRC-NEXT:    v_mov_b32_e32 v18, s14
 ; VGPRRC-NEXT:    v_mov_b32_e32 v19, s15
+; VGPRRC-NEXT:    global_store_dwordx4 v40, v[32:35], s[0:1] offset:32 sc0 sc1
+; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
 ; VGPRRC-NEXT:    global_store_dwordx4 v40, v[16:19], s[0:1] offset:16 sc0 sc1
 ; VGPRRC-NEXT:    s_waitcnt vmcnt(0)
 ; VGPRRC-NEXT:    s_nop 0

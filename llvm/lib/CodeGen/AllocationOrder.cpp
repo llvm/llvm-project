@@ -31,6 +31,7 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
                                         const LiveRegMatrix *Matrix) {
   const MachineFunction &MF = VRM.getMachineFunction();
   const TargetRegisterInfo *TRI = &VRM.getTargetRegInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   auto Order = RegClassInfo.getOrder(MF.getRegInfo().getRegClass(VirtReg));
   SmallVector<MCPhysReg, 16> Hints;
   bool HardHints =
@@ -44,8 +45,37 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
       dbgs() << '\n';
     }
   });
-  assert(all_of(Hints,
-                [&](MCPhysReg Hint) { return is_contained(Order, Hint); }) &&
+
+  // Get anti-hints
+  SmallVector<MCPhysReg, 16> AntiHintedPhysRegs;
+  MRI.getPhysRegAntiHints(VirtReg, AntiHintedPhysRegs, VRM);
+
+  LLVM_DEBUG({
+    if (!AntiHintedPhysRegs.empty()) {
+      dbgs() << "anti-hints:";
+      for (MCPhysReg AntiHint : AntiHintedPhysRegs)
+        dbgs() << ' ' << printReg(AntiHint, TRI);
+      dbgs() << '\n';
+    }
+  });
+
+  // Storage for filtered order (used if anti-hints cause reordering)
+  SmallVector<MCPhysReg, 16> ShuffledOrder;
+
+  if (!AntiHintedPhysRegs.empty()) {
+    TRI->applyRegAllocationAntiHints(VirtReg, Order, ShuffledOrder,
+                                     AntiHintedPhysRegs, MF, &VRM, Matrix);
+  }
+  // Use ShuffledOrder as the order if it was populated by anti-hints
+  // processing
+  ArrayRef<MCPhysReg> FinalOrder =
+      ShuffledOrder.empty() ? Order : ShuffledOrder;
+  // Create allocation order object
+  AllocationOrder AO(std::move(Hints), FinalOrder, HardHints,
+                     std::move(ShuffledOrder));
+
+  assert(all_of(AO.Hints,
+                [&](MCPhysReg Hint) { return is_contained(AO.Order, Hint); }) &&
          "Target hint is outside allocation order.");
-  return AllocationOrder(std::move(Hints), Order, HardHints);
+  return AO;
 }
