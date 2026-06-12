@@ -468,8 +468,7 @@ define i128 @zextload_global_i64_to_i128(ptr addrspace(1) %ptr) {
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX6-NEXT:    s_mov_b32 s6, 0
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
-; GFX6-NEXT:    s_mov_b32 s4, s6
-; GFX6-NEXT:    s_mov_b32 s5, s6
+; GFX6-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX6-NEXT:    buffer_load_dwordx2 v[0:1], v[0:1], s[4:7], 0 addr64
 ; GFX6-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX6-NEXT:    v_mov_b32_e32 v3, 0
