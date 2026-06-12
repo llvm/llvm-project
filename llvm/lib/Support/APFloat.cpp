@@ -5900,6 +5900,11 @@ public:
 };
 
 unsigned int HexFloat::getNumPrecisionBits(const fltSemantics *semantics) {
+  if (semantics == &APFloatBase::Bogus()) {
+    // The semantics may be "Bogus" when called from the move constructor
+    return 0;
+  }
+
   assert(APFloat::usesLayout<HexFloat>(*semantics) && "not a HexFloat");
   // The precision field in the fltSemantics is terms of places in
   // the semantics radix.  For HexFloat the radix is 16, so each radix place
@@ -5908,9 +5913,50 @@ unsigned int HexFloat::getNumPrecisionBits(const fltSemantics *semantics) {
   return 4 * semantics->precision;
 }
 
+unsigned int HexFloat::getPartCount() const {
+  return partCountForBits(getNumPrecisionBits(semantics));
+}
+
+APFloat::integerPart *HexFloat::getSignificandParts() {
+  if (getPartCount() > 1)
+    return significandParts.many;
+  return &significandParts.single;
+}
+
+const APFloat::integerPart *HexFloat::getSignificandParts() const {
+  return const_cast<HexFloat *>(this)->getSignificandParts();
+}
+
+APInt HexFloat::getSignificand() const {
+  auto *S = const_cast<HexFloat *>(this)->getSignificandParts();
+  // The constructor for the APInt takes an ArrayRef of uint64_t.
+  // Make sure uint64_t is the same size as the integerPart.
+  static_assert(sizeof(uint64_t) == sizeof(*S),
+                "sizes of integerPart and uint64_t expected by APInt differ");
+  return APInt(getNumPrecisionBits(), ArrayRef<uint64_t>(S, getPartCount()));
+}
+
+void HexFloat::copySignificand(const HexFloat &other) {
+  assert(semantics == other.semantics);
+  APInt::tcAssign(getSignificandParts(), other.getSignificandParts(),
+                  getPartCount());
+}
+
+void HexFloat::setSignificand(const APInt &S) {
+  assert(S.getBitWidth() == getNumPrecisionBits());
+  APInt::tcAssign(getSignificandParts(), S.getRawData(), getPartCount());
+}
+
+void HexFloat::freeSignificand() {
+  if (needsCleanup())
+    delete[] significandParts.many;
+}
+
 void HexFloat::initialize(const fltSemantics *ourSemantics) {
   semantics = ourSemantics;
-  significand = APInt(getNumPrecisionBits(semantics), 0);
+  const auto count = getPartCount();
+  if (count > 1)
+    significandParts.many = new integerPart[count];
   makeZero(/*IsNegative=*/false);
 }
 
@@ -5918,9 +5964,9 @@ void HexFloat::assign(const HexFloat &rhs) {
   assert(semantics == rhs.semantics);
   sign = rhs.sign;
   exponent = rhs.exponent;
-  significand = rhs.significand;
   low_sign = rhs.low_sign;
   low_exponent = rhs.low_exponent;
+  copySignificand(rhs);
 }
 
 HexFloat::HexFloat(const fltSemantics &ourSemantics)
@@ -5951,6 +5997,7 @@ HexFloat::HexFloat(const fltSemantics &ourSemantics, integerPart intValue)
   // intValue could contain.  We then normalize, decremeting exponent
   // each time we shift.
 
+  APInt significand(getSignificand());
   APInt working_significand(sizeof(intValue) * 8, intValue);
   APInt mask(working_significand.getBitWidth(), 0);
   mask.setBit(mask.getBitWidth() - 4); // lowest bit of top hexit
@@ -5960,7 +6007,7 @@ HexFloat::HexFloat(const fltSemantics &ourSemantics, integerPart intValue)
   sign = 0;
   exponent = (sizeof(intValue) * 8) / 4;
   // normalize
-  // Each4 bits represents one hexit, hence the division by 4 below.
+  // Each 4 bits represents one hexit, hence the division by 4 below.
   auto NumLeadingHexits = working_significand.countLeadingZeros() / 4;
   working_significand <<= (4 * NumLeadingHexits);
   exponent -= NumLeadingHexits;
@@ -5977,7 +6024,7 @@ HexFloat::HexFloat(const fltSemantics &ourSemantics, integerPart intValue)
     working_significand = working_significand.zext(significand.getBitWidth());
     working_significand <<= -delta_width;
   }
-  significand = working_significand;
+  setSignificand(working_significand);
   cohereLowSignAndExponent();
 }
 
@@ -6013,16 +6060,16 @@ HexFloat::HexFloat(const fltSemantics &ourSemantics,
     APInt low_significand(low.trunc(56).zext(112));
     APInt high_significand(high.trunc(56).zext(112));
     high_significand <<= 56;
-    significand = high_significand | low_significand;
+    setSignificand(high_significand | low_significand);
     get_sign_exponent(low, s, e);
     low_sign = s;
     low_exponent = e;
   } else {
     auto NumPrecisionBits = getNumPrecisionBits(semantics);
-    significand =
-        EncodedHexFloat.getLoBits(NumPrecisionBits).trunc(NumPrecisionBits);
+    setSignificand(
+        EncodedHexFloat.getLoBits(NumPrecisionBits).trunc(NumPrecisionBits));
   }
-  assert(significand.getBitWidth() == getNumPrecisionBits(semantics));
+  assert(getSignificand().getBitWidth() == getNumPrecisionBits(semantics));
 }
 
 HexFloat::HexFloat(const HexFloat &rhs) {
@@ -6030,13 +6077,22 @@ HexFloat::HexFloat(const HexFloat &rhs) {
   assign(rhs);
 }
 
-HexFloat::HexFloat(HexFloat &&rhs) { *this = std::move(rhs); }
+HexFloat::HexFloat(HexFloat &&rhs) : semantics(&APFloatBase::Bogus()) {
+  // NOTE WELL: the initialization of semantics above is crucial.
+  //            Methods like getNumPrecisionBits and freeSignificand rely
+  //            on semantics being something that behaves reasonably.
+  //            In the case of the Bogus semantics, the fields are 0,
+  //            which allow the basic methods needed in the constructor
+  //            or the move assignment operator to work corredtly.
+  *this = std::move(rhs);
+}
 
-HexFloat::~HexFloat() {}
+HexFloat::~HexFloat() { freeSignificand(); }
 
 HexFloat &HexFloat::operator=(const HexFloat &rhs) {
   if (this != &rhs) {
     if (semantics != rhs.semantics) {
+      freeSignificand();
       initialize(rhs.semantics);
     }
     assign(rhs);
@@ -6045,21 +6101,26 @@ HexFloat &HexFloat::operator=(const HexFloat &rhs) {
 }
 
 HexFloat &HexFloat::operator=(HexFloat &&rhs) {
-  if (this != &rhs) {
-    if (semantics != rhs.semantics) {
-      initialize(rhs.semantics);
-    }
-    assign(rhs);
-  }
+  freeSignificand();
+  semantics = rhs.semantics;
+  exponent = rhs.exponent;
+  low_exponent = rhs.low_exponent;
+  sign = rhs.sign;
+  low_sign = rhs.low_sign;
+  significandParts = rhs.significandParts;
+
+  rhs.semantics = &APFloatBase::Bogus();
+
   return *this;
 }
 
 void HexFloatArith::fetch(const HexFloat &hf, value_t &v) {
+  APInt significand(hf.getSignificand());
   v.sign = hf.sign ? -1 : 1;
   v.exponent = hf.exponent;
   // 4 bits each for the guard hexit on the right,
   // and possible carry on the left.
-  v.fraction = hf.significand.zext(hf.significand.getBitWidth() + 8);
+  v.fraction = significand.zext(significand.getBitWidth() + 8);
   // zext adds on left.
   v.fraction <<= 4;
   if (v.fraction.isZero())
@@ -6159,14 +6220,14 @@ int HexFloatArith::putres(const value_t &v, HexFloat &result) {
   // shift right to eliminate the guard hexit on the right.
   APInt fraction = v.fraction.lshr(4);
   fraction = fraction.trunc(fraction.getBitWidth() - 8);
-  assert((fraction.getBitWidth() == result.significand.getBitWidth()) &&
+  assert((fraction.getBitWidth() == result.getNumPrecisionBits()) &&
          "fraction has unexpected width");
-  result.significand = fraction;
-  if (result.significand.isZero()) {
+  if (fraction.isZero()) {
     result.makeZero(v.sign < 0);
     ret_val = 0;
   } else {
     assert(v.sign != 0 && "v.sign is unexpectedly zero");
+    result.setSignificand(fraction);
     result.sign = v.sign < 0 ? 1 : 0;
     if (v.exponent > 63) {
       // silently wrapround the exponent
@@ -6457,7 +6518,7 @@ void HexFloat::makeZero(bool Neg) {
   exponent = -64;
   low_sign = sign;
   low_exponent = -64;
-  significand.clearAllBits();
+  APInt::tcSet(getSignificandParts(), 0, getPartCount());
 }
 
 void HexFloat::makeInf(bool Neg) {
@@ -6476,7 +6537,9 @@ void HexFloat::makeNaN(bool SNaN, bool Neg, const APInt *fill) {
 void HexFloat::makeLargest(bool Neg) {
   sign = Neg ? 1 : 0;
   exponent = semantics->maxExponent;
+  APInt significand(getSignificand());
   significand.setAllBits();
+  setSignificand(significand);
   cohereLowSignAndExponent();
 }
 
@@ -6484,26 +6547,28 @@ void HexFloat::makeSmallest(bool Neg) {
   // this is a denormal
   sign = Neg ? 1 : 0;
   exponent = semantics->minExponent;
-  significand.clearAllBits();
-  significand.setBit(0);
+  APInt::tcSet(getSignificandParts(), 1, getPartCount());
   cohereLowSignAndExponent();
 }
 
 void HexFloat::makeSmallestNormalized(bool Neg) {
   sign = Neg ? 1 : 0;
   exponent = semantics->minExponent;
-  significand.clearAllBits();
-  significand.setBit(getNumPrecisionBits() - 4);
+  auto *S = getSignificandParts();
+  APInt::tcSet(S, 0, getPartCount());
+  APInt::tcSetBit(S, getNumPrecisionBits() - 4);
+
   cohereLowSignAndExponent();
 }
 
 bool HexFloat::needsCleanup() const {
   // All our members but significand are trivally destructable,
   // needsCleanup depends on significand
-  return significand.needsCleanup();
+  return getPartCount() > 1;
 }
 
 opStatus HexFloat::roundToIntegral(roundingMode RM) {
+  APInt significand(getSignificand());
   if (significand.isZero()) {
     return opOK;
   }
@@ -6529,7 +6594,7 @@ opStatus HexFloat::roundToIntegral(roundingMode RM) {
 
   if (exponent < 1) {
     // then the absolute value must be strictly less than one.
-    // THerefore the rounded value will be -1, 0, or 1,
+    // Therefore the rounded value will be -1, 0, or 1,
     // depending on the mode and the value.
     // We also know that the significand is not zero
     auto makeOne = [&]() {
@@ -6539,6 +6604,7 @@ opStatus HexFloat::roundToIntegral(roundingMode RM) {
       exponent = 1;
       significand.clearAllBits();
       significand.setBit(significand.getBitWidth() - 4);
+      setSignificand(significand);
       cohereLowSignAndExponent();
     };
 
@@ -6613,7 +6679,7 @@ opStatus HexFloat::roundToIntegral(roundingMode RM) {
   // to the left of the radix point.
   // From the tests above, we also know that there must be
   // at least one hexit to the right of the radix point.
-  int hexitsToRightOfPoint = hexitWidth - exponent;
+  const int hexitsToRightOfPoint = hexitWidth - exponent;
   assert(hexitsToRightOfPoint >= 1);
   assert(hexitsToRightOfPoint < hexitWidth);
 
@@ -6640,20 +6706,22 @@ opStatus HexFloat::roundToIntegral(roundingMode RM) {
     // only have anyting to do if the fraction part is not zero
     auto increment = [RM](HexFloat *lhs, const APInt &rhs) {
       HexFloat other(*lhs);
-      other.significand = rhs;
+      other.setSignificand(rhs);
       other.sign = 0;
       lhs->add(other, RM);
     };
     auto decrement = [RM](HexFloat *lhs, const APInt &rhs) {
       HexFloat other(*lhs);
-      other.significand = rhs;
+      other.setSignificand(rhs);
       other.sign = 0;
       lhs->subtract(other, RM);
     };
+    // In all cases below we will start with integer and adjust
+    setSignificand(integer);
     switch (RM) {
     case rmTowardZero:
-      // truncate away everything to right of radix point
-      significand = integer;
+      // truncate away everything to right of radix point;
+      // we did this above
       break;
     case rmTowardPositive:
       // negative:   -11.3 ==> -11, and -13.7 ==> -13.
@@ -6661,7 +6729,6 @@ opStatus HexFloat::roundToIntegral(roundingMode RM) {
       // positive:    11.3 ==> 12, and 13.7 ==> 14
       //    i.e., truncate away the fraction, and increment integer;
       // In either case, truncate away the fraction
-      significand = integer;
       if (!sign) {
         // i.e., positive
         increment(this, bottomBitOfIntegerMask);
@@ -6673,7 +6740,6 @@ opStatus HexFloat::roundToIntegral(roundingMode RM) {
       // positive:    11.3 ==> 11, and 13.7 ==> 13
       //   i.e., truncate away the fraction
       // In either case, truncate away the fraction.
-      significand = integer;
       if (sign) {
         // i.e., negative
         decrement(this, bottomBitOfIntegerMask);
@@ -6682,7 +6748,6 @@ opStatus HexFloat::roundToIntegral(roundingMode RM) {
     case rmNearestTiesToEven:
       if (sign) {
         // -11.5 ==> -12  and -12.5 ==> -12
-        significand = integer;
         if (fraction.ult(topBitOfFractionMask)) {
           // e.g., -11.3, which goes to -11
         } else if (fraction.ugt(topBitOfFractionMask)) {
@@ -6695,7 +6760,6 @@ opStatus HexFloat::roundToIntegral(roundingMode RM) {
         }
       } else {
         // 11.5 ==> 12   abd   12.5 ==> 12
-        significand = integer;
         if (fraction.ult(topBitOfFractionMask)) {
           // e.g., 12.3  ==>  12
         } else if (fraction.ugt(topBitOfFractionMask)) {
@@ -6709,7 +6773,6 @@ opStatus HexFloat::roundToIntegral(roundingMode RM) {
       break;
     case rmNearestTiesToAway:
       if (sign) {
-        significand = integer;
         if (fraction.ult(topBitOfFractionMask)) {
           // e.g.,  -11.4  ==>  -11
         } else {
@@ -6717,7 +6780,6 @@ opStatus HexFloat::roundToIntegral(roundingMode RM) {
           decrement(this, bottomBitOfIntegerMask);
         }
       } else {
-        significand = integer;
         if (fraction.ult(topBitOfFractionMask)) {
           // e.g.,  11.4  ==>  11
         } else {
@@ -6740,6 +6802,7 @@ opStatus HexFloat::roundToIntegral(roundingMode RM) {
 }
 
 opStatus HexFloat::next(bool nextDown) {
+  APInt significand(getSignificand());
   auto do_increment = [&]() {
     // incrementing the significand will cause a carry iff all bits are 1
     if (significand.isAllOnes()) {
@@ -6754,6 +6817,7 @@ opStatus HexFloat::next(bool nextDown) {
       // the easy case --- just increment the significand
       significand += 1;
     }
+    setSignificand(significand);
   };
   auto do_decrement = [&]() {
     // There are two cases where it would be unsafe to decrement:
@@ -6773,6 +6837,7 @@ opStatus HexFloat::next(bool nextDown) {
       significand <<= 4;
       exponent--;
     }
+    setSignificand(significand);
   };
 
   // Note that HexFloat does not have special representations for NaN
@@ -6834,6 +6899,7 @@ opStatus HexFloat::convert(const fltSemantics &toSemantics,
 
   const fltSemantics &fromSemantics = *semantics;
   if (APFloat::usesLayout<HexFloat>(toSemantics)) {
+    APInt significand(getSignificand());
     // converting from one HexFloat precision to another
     const int from_bits_precision = getNumPrecisionBits(&fromSemantics);
     const int to_bits_precision = getNumPrecisionBits(&toSemantics);
@@ -6873,6 +6939,8 @@ opStatus HexFloat::convert(const fltSemantics &toSemantics,
     }
     // finally, update the semantics
     semantics = &toSemantics;
+    assert(significand.getBitWidth() == getNumPrecisionBits());
+    setSignificand(significand);
   } else {
     llvm_unreachable("attempting to comver HexFloat to something else");
   }
@@ -6917,9 +6985,11 @@ cmpResult HexFloat::compareAbsoluteValue(const HexFloat &rhs) const {
   /* If exponents are equal, do an unsigned bignum comparison of the
      significands.  */
   if (compare == 0) {
-    if (significand.ugt(rhs.significand))
+    APInt LSig(getSignificand());
+    APInt RSig(rhs.getSignificand());
+    if (LSig.ugt(RSig))
       compare = 1;
-    else if (significand.ult(rhs.significand))
+    else if (LSig.ult(RSig))
       compare = -1;
   }
 
@@ -6943,7 +7013,7 @@ bool HexFloat::bitwiseIsEqual(const HexFloat &other) const {
     if (low_sign != other.low_sign || low_exponent != other.low_exponent)
       return false;
   }
-  return significand == other.significand;
+  return getSignificand() == other.getSignificand();
 }
 
 bool HexFloat::roundAwayFromZero(int sign, const APInt &fraction,
@@ -7001,7 +7071,8 @@ HexFloat::convertToSignExtendedInteger(MutableArrayRef<integerPart> output,
   assert(dstPartsCount <= output.size() &&
          "Integer width too large for output");
 
-  if (significand.isZero()) {
+  APInt fraction(getSignificand());
+  if (fraction.isZero()) {
     // then we don't care about the exponent
     OnExit.Exact = !isNegative();
     APInt::tcSet(output.data(), 0, dstPartsCount);
@@ -7010,7 +7081,6 @@ HexFloat::convertToSignExtendedInteger(MutableArrayRef<integerPart> output,
 
   // we can treat the significand as a binary fraction,
   // and adjust the exponent
-  APInt fraction(significand);
   int e = exponent * 4; // base 16 to base 2
 
   // normalize fraction to base 2
@@ -7162,7 +7232,7 @@ opStatus HexFloat::convertFromAPInt(const APInt &input, bool isSigned,
     api <<= 4;
     e--;
   }
-  int delta_width = api.getBitWidth() - significand.getBitWidth();
+  int delta_width = api.getBitWidth() - getNumPrecisionBits();
   if (delta_width > 0) {
     // the integer has more bits then the HexFloat has precision
     // We will always need to truncate away the excess.
@@ -7241,13 +7311,13 @@ opStatus HexFloat::convertFromAPInt(const APInt &input, bool isSigned,
     }
     // Now do the truncation
     api = api.lshr(delta_width);
-    api = api.trunc(significand.getBitWidth());
+    api = api.trunc(getNumPrecisionBits());
   } else if (delta_width < 0) {
     // APInt::zext extends on left
-    api = api.zext(significand.getBitWidth());
+    api = api.zext(getNumPrecisionBits());
     api <<= -delta_width;
   }
-  assert(api.getBitWidth() == significand.getBitWidth());
+  assert(api.getBitWidth() == getNumPrecisionBits());
   if (e < -64)
     return opUnderflow;
   else if (e > 63)
@@ -7255,7 +7325,7 @@ opStatus HexFloat::convertFromAPInt(const APInt &input, bool isSigned,
 
   sign = s;
   exponent = e;
-  significand = api;
+  setSignificand(api);
   cohereLowSignAndExponent();
   return opOK;
 }
@@ -7354,7 +7424,7 @@ HexFloat::convertFromHexadecimalString(StringRef str,
 
   assert(APFloat::usesLayout<HexFloat>(*semantics) && "Unexpected Semantics");
 
-  significand.clearAllBits();
+  APInt significand(getNumPrecisionBits(), 0);
   exponent = 0;
   // use one additional hexit than the precision to perform rounding
   unsigned size = std::max((unsigned)str.size() * 8, getNumPrecisionBits() + 4);
@@ -7505,8 +7575,8 @@ HexFloat::convertFromHexadecimalString(StringRef str,
     tmpSignificand += mask;
   }
 
-  significand = tmpSignificand.getHiBits(getNumPrecisionBits())
-                    .trunc(getNumPrecisionBits());
+  setSignificand(tmpSignificand.getHiBits(getNumPrecisionBits())
+                     .trunc(getNumPrecisionBits()));
   exponent = exp;
 
   cohereLowSignAndExponent();
@@ -7518,7 +7588,7 @@ Expected<opStatus>
 HexFloat::convertFromDecimalString(StringRef str, roundingMode rounding_mode) {
   assert(APFloat::usesLayout<HexFloat>(*semantics) && "Unexpected Semantics");
   decimalInfo D;
-  significand.clearAllBits();
+  APInt significand(getNumPrecisionBits(), 0);
   exponent = 0;
 
   /* Scan the text.  */
@@ -7648,8 +7718,8 @@ HexFloat::convertFromDecimalString(StringRef str, roundingMode rounding_mode) {
     tmpSignificand += mask;
   }
 
-  significand = tmpSignificand.getHiBits(getNumPrecisionBits())
-                    .trunc(getNumPrecisionBits());
+  setSignificand(tmpSignificand.getHiBits(getNumPrecisionBits())
+                     .trunc(getNumPrecisionBits()));
   exponent = tmpExponent;
 
   cohereLowSignAndExponent();
@@ -7662,12 +7732,7 @@ opStatus HexFloat::convertFrom(const IEEEFloat &ieee, roundingMode RM,
   opStatus fs = opOK;
   int ieee_sign = ieee.isNegative();
 
-  auto set_to_infinity = [&]() {
-    sign = ieee_sign;
-    exponent = 63;
-    significand.setAllBits();
-    cohereLowSignAndExponent();
-  };
+  auto set_to_infinity = [&]() { makeLargest(ieee.isNegative()); };
 
   if (ieee.isZero()) {
     makeZero(ieee_sign);
@@ -7684,7 +7749,7 @@ opStatus HexFloat::convertFrom(const IEEEFloat &ieee, roundingMode RM,
   } else {
     // Recall that our precision is in terms of hexits,
     // each of which needs 4 bits.
-    int BitsInOurPrecision = 4 * semantics->precision;
+    const int BitsInOurPrecision = getNumPrecisionBits();
     ExponentType ieee_exponent = ieee.getExponent();
     APInt ieee_significand = ieee.getSignificand();
     int ieee_precision = ieee_significand.getBitWidth();
@@ -7716,6 +7781,7 @@ opStatus HexFloat::convertFrom(const IEEEFloat &ieee, roundingMode RM,
     *losesInfo = false;
     if (ieee_exponent > 252) {
       // The IEEE exponent is too large to be represented in HexFloat.
+      // Recall: the maximum HexFloat exponent is 63, and 16^63 == 2^252.
       // We know the significand is non-zero.
       // FIXME: we should also check that whether the value could be
       //        be represented if is denormalized.
@@ -7723,6 +7789,7 @@ opStatus HexFloat::convertFrom(const IEEEFloat &ieee, roundingMode RM,
       *losesInfo = true;
     } else if (ieee_exponent < -256) {
       // The IEEE exponent is too small to be represented in HexFloat
+      // Recall: the minimum HexFloat exponent is -64, and 16^-64 == 2^-256.
       // FIXME: see above about whether the value can be denormalzed.
       makeZero(ieee_sign);
       *losesInfo = true;
@@ -7730,6 +7797,7 @@ opStatus HexFloat::convertFrom(const IEEEFloat &ieee, roundingMode RM,
       sign = ieee_sign;
       exponent = ieee_exponent / 4;
       cohereLowSignAndExponent();
+      APInt significand(BitsInOurPrecision, 0);
       if (BitsInOurPrecision >= ieee_precision) {
         significand = ieee_significand.zext(BitsInOurPrecision);
         significand <<= (BitsInOurPrecision - ieee_precision);
@@ -7744,6 +7812,7 @@ opStatus HexFloat::convertFrom(const IEEEFloat &ieee, roundingMode RM,
       } else {
         significand = ieee_significand;
       }
+      setSignificand(significand);
       cohereLowSignAndExponent();
     }
   }
@@ -7761,6 +7830,7 @@ APInt HexFloat::bitcastToAPInt() const {
   APInt sign_and_exponent(width, get_sign_exponent_byte(sign, exponent));
   sign_and_exponent <<= (width - 8);
   APInt Ret(sign_and_exponent);
+  APInt significand(getSignificand());
 
   if (is128) {
     APInt low(significand.extractBits(56, 0));
@@ -7787,7 +7857,10 @@ unsigned int HexFloat::convertToHexString(char *DST, unsigned int HexDigits,
 }
 
 bool HexFloat::isZero() const {
-  // exponent, and signficant are zero for zero value
+  // in the encoded bit pattern for zero, exponent and signficant are zero
+  return exponent == -64 &&
+         APInt::tcIsZero(getSignificandParts(), getPartCount());
+  APInt significand(getSignificand());
   return exponent == -64 && significand.isZero();
 }
 
@@ -7800,14 +7873,19 @@ bool HexFloat::isDenormal() const {
   // It seems that HexFloat allows arbitrary denormals,
   // i.e., when the exponent is other than -64.
   // We need, therefore, to look at the most significant hexit.
-  return significand.countLeadingZeros() >= 4;
+  return APInt::tcMSB(getSignificandParts(), getPartCount()) <
+         (getNumPrecisionBits() - 4);
 }
 
 bool HexFloat::isSmallest() const {
-  return exponent == -64 && significand.isOne();
+  auto *S = getSignificandParts();
+  auto count = getPartCount();
+  return (exponent == -64) && (APInt::tcLSB(S, count) == 0) &&
+         (APInt::tcMSB(S, count) == 0);
 }
 
 bool HexFloat::isLargest() const {
+  APInt significand(getSignificand());
   return exponent == 63 && significand.isAllOnes();
 }
 
@@ -7820,12 +7898,14 @@ bool HexFloat::isInteger() const {
 
 bool HexFloat::isSmallestNormalized() const {
   // we ignore the sign for this predicate --- see the corresponding IEEE method
+  APInt significand(getSignificand());
   return exponent == -64 && significand.isOneBitSet(getNumPrecisionBits() - 4);
 }
 
 int HexFloat::getExactLog2Abs() const {
   if (isZero())
     return INT_MIN;
+  APInt significand(getSignificand());
   if (1 != significand.popcount())
     return INT_MIN; // not exactly one bit set
 
@@ -7869,8 +7949,8 @@ void HexFloat::toString(SmallVectorImpl<char> &str, unsigned precision,
   // Additionally, toStringImpl treats the significand
   // as an integer, so we need to adjust the exponent
   // so the radix point is on the right.
-  int e = 4 * exponent - significand.getBitWidth();
-  toStringImpl(str, isNegative(), e, significand, precision, maxPadding,
+  int e = 4 * exponent - getNumPrecisionBits();
+  toStringImpl(str, isNegative(), e, getSignificand(), precision, maxPadding,
                truncateZero);
 }
 
@@ -7879,7 +7959,7 @@ hash_code HexFloat::hash_value() const {
     return hash_combine(semantics);
   }
   return hash_combine(getNumPrecisionBits(), (uint8_t)sign, exponent,
-                      ::hash_value(significand));
+                      ::hash_value(getSignificand()));
 }
 
 int ilogb(const HexFloat &Arg) {
@@ -7887,7 +7967,7 @@ int ilogb(const HexFloat &Arg) {
     return APFloatBase::IEK_Zero;
 
   // need to be careful in case significand is not normalized
-  int nLeadingZeroHexits = Arg.significand.countLeadingZeros() / 4;
+  int nLeadingZeroHexits = Arg.getSignificand().countLeadingZeros() / 4;
   return Arg.exponent - 1 - nLeadingZeroHexits;
 }
 
@@ -7900,10 +7980,11 @@ HexFloat scalbn(HexFloat X, int Exp, roundingMode RoundingMode) {
 
   // first normalize X, adjusting significand in place,
   // and assigning interim exponent to e
+  APInt significand(X.getSignificand());
   int e = X.exponent;
-  int nLeadingZeroHexits = X.significand.countLeadingZeros() / 4;
+  int nLeadingZeroHexits = significand.countLeadingZeros() / 4;
   if (nLeadingZeroHexits) {
-    X.significand <<= (4 * nLeadingZeroHexits);
+    significand <<= (4 * nLeadingZeroHexits);
     e -= nLeadingZeroHexits;
   }
 
@@ -7912,27 +7993,28 @@ HexFloat scalbn(HexFloat X, int Exp, roundingMode RoundingMode) {
   if (e > 63) {
     // overflow --- clamp to maximum value
     X.exponent = 63;
-    X.significand.setAllBits();
+    significand.setAllBits();
   } else {
     if (e < -64) {
       X.exponent = -64;
       // see if we can denormalize the significand
-      int nHexits = X.significand.getBitWidth() / 4;
+      int nHexits = significand.getBitWidth() / 4;
       int placesToShift = -64 - e;
       if (placesToShift <= nHexits) {
         // example: e is -66, so -64 - e == 2
         //          if 2 is less than the number of hexits
         //          in the significand, we can denormalize
-        X.significand = X.significand.lshr(placesToShift * 4);
+        significand = significand.lshr(placesToShift * 4);
       } else {
         // too small to denormalize
-        X.significand.clearAllBits();
+        significand.clearAllBits();
       }
     } else {
       // ordinary case
       X.exponent = e;
     }
   }
+  X.setSignificand(significand);
   X.cohereLowSignAndExponent();
 
   return X;
@@ -7946,9 +8028,10 @@ HexFloat frexp(HexFloat X, int &Exp, roundingMode RM) {
   }
   Exp = X.exponent;
   // normalize
-  int NumLeadingZeroHexits = X.significand.countLeadingZeros() / 4;
+  APInt significand(X.getSignificand());
+  int NumLeadingZeroHexits = significand.countLeadingZeros() / 4;
   if (NumLeadingZeroHexits > 0) {
-    X.significand <<= (NumLeadingZeroHexits * 4);
+    significand <<= (NumLeadingZeroHexits * 4);
     Exp -= NumLeadingZeroHexits;
   }
   X.exponent = 0;
@@ -7958,15 +8041,18 @@ HexFloat frexp(HexFloat X, int &Exp, roundingMode RM) {
   Exp *= 4;
   //  ensure that 1 < |significand| <= 1/2
   // Note that we are now working with a exponent of base 2.
-  while (!X.significand.isSignBitSet()) {
-    X.significand <<= 1;
-    Exp--;
-  }
+  auto NumLeadingZeros = significand.countLeadingZeros();
+  significand <<= NumLeadingZeros;
+  Exp -= NumLeadingZeros;
+
+  X.setSignificand(significand);
+
   return X;
 }
 
 void HexFloat::dump() const {
   SmallString<32> S;
+  APInt significand(getSignificand());
   significand.toStringUnsigned(S, 16);
   dbgs() << "(" << (isNegative() ? "1" : "0") << "/" << low_sign << ", "
          << exponent << "/" << low_exponent << ", ("
@@ -8081,7 +8167,7 @@ bool APFloat::getExactInverse(APFloat *Inv) const {
   } else {
     // general case
     // The exact inverse of 2^Exp is 2^-Exp
-    // Let Exp = Ar + b where  0 <\ !B| < r
+    // Let Exp = Ar + B where  0 <= !B| < r
     // then
     //   2^(Ar + B) == 2^(Ar) * 2^(B) == R^A * 2^B
     // and
