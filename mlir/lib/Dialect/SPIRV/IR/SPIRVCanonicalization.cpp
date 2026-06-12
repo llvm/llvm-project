@@ -122,90 +122,72 @@ void spirv::AccessChainOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
-// spirv.IAddCarry
+// spirv.IAddCarry / spirv.ISubBorrow
 //===----------------------------------------------------------------------===//
 
-// We are required to use CompositeConstructOp to create a constant struct as
-// they are not yet implemented as constant, hence we can not do so in a fold.
-struct IAddCarryFold final : OpRewritePattern<spirv::IAddCarryOp> {
-  using Base::Base;
+template <typename Op>
+struct ArithmeticExtendedBinaryFold final : OpRewritePattern<Op> {
+  using OpRewritePattern<Op>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(spirv::IAddCarryOp op,
+  static constexpr bool IsSub = std::is_same_v<Op, spirv::ISubBorrowOp>;
+
+  LogicalResult matchAndRewrite(Op op,
                                 PatternRewriter &rewriter) const override {
-    Location loc = op.getLoc();
     Value lhs = op.getOperand1();
     Value rhs = op.getOperand2();
-    Type constituentType = lhs.getType();
 
-    // iaddcarry (x, 0) = <0, x>
+    // iaddcarry  (x, 0) = <0, x>
+    // isubborrow (x, 0) = <x, 0>
     if (matchPattern(rhs, m_Zero())) {
-      Value constituents[2] = {rhs, lhs};
+      std::array<Value, 2> constituents =
+          IsSub ? std::array{lhs, rhs} : std::array{rhs, lhs};
       rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(op, op.getType(),
                                                                constituents);
       return success();
     }
 
-    // According to the SPIR-V spec:
-    //
-    //  Result Type must be from OpTypeStruct.  The struct must have two
-    //  members...
-    //
-    //  Member 0 of the result gets the low-order bits (full component width) of
-    //  the addition.
-    //
-    //  Member 1 of the result gets the high-order (carry) bit of the result of
-    //  the addition. That is, it gets the value 1 if the addition overflowed
-    //  the component width, and 0 otherwise.
     Attribute lhsAttr;
     Attribute rhsAttr;
     if (!matchPattern(lhs, m_Constant(&lhsAttr)) ||
         !matchPattern(rhs, m_Constant(&rhsAttr)))
       return failure();
 
-    auto adds = constFoldBinaryOp<IntegerAttr>(
+    auto lowBits = constFoldBinaryOp<IntegerAttr>(
         {lhsAttr, rhsAttr},
-        [](const APInt &a, const APInt &b) { return a + b; });
-    if (!adds)
+        [](const APInt &a, const APInt &b) { return IsSub ? a - b : a + b; });
+    if (!lowBits)
       return failure();
 
-    auto carrys = constFoldBinaryOp<IntegerAttr>(
-        ArrayRef{adds, lhsAttr}, [](const APInt &a, const APInt &b) {
-          APInt zero = APInt::getZero(a.getBitWidth());
-          return a.ult(b) ? (zero + 1) : zero;
+    auto wrapBit = constFoldBinaryOp<IntegerAttr>(
+        {lhsAttr, rhsAttr}, [](const APInt &a, const APInt &b) {
+          bool wrapped = IsSub ? a.ult(b) : (a + b).ult(a);
+          return APInt(a.getBitWidth(), wrapped ? 1 : 0);
         });
-
-    if (!carrys)
+    if (!wrapBit)
       return failure();
 
-    Value addsVal =
-        spirv::ConstantOp::create(rewriter, loc, constituentType, adds);
-
-    Value carrysVal =
-        spirv::ConstantOp::create(rewriter, loc, constituentType, carrys);
-
-    // Create empty struct
-    Value undef = spirv::UndefOp::create(rewriter, loc, op.getType());
-    // Fill in adds at id 0
-    Value intermediate =
-        spirv::CompositeInsertOp::create(rewriter, loc, addsVal, undef, 0);
-    // Fill in carrys at id 1
-    rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(op, carrysVal,
-                                                          intermediate, 1);
+    rewriter.replaceOpWithNewOp<spirv::ConstantOp>(
+        op, op.getType(), rewriter.getArrayAttr({lowBits, wrapBit}));
     return success();
   }
 };
 
+using IAddCarryFold = ArithmeticExtendedBinaryFold<spirv::IAddCarryOp>;
 void spirv::IAddCarryOp::getCanonicalizationPatterns(
     RewritePatternSet &patterns, MLIRContext *context) {
   patterns.add<IAddCarryFold>(context);
+}
+
+using ISubBorrowFold = ArithmeticExtendedBinaryFold<spirv::ISubBorrowOp>;
+void spirv::ISubBorrowOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<ISubBorrowFold>(context);
 }
 
 //===----------------------------------------------------------------------===//
 // spirv.[S|U]MulExtended
 //===----------------------------------------------------------------------===//
 
-// We are required to use CompositeConstructOp to create a constant struct as
-// they are not yet implemented as constant, hence we can not do so in a fold.
 template <typename MulOp, bool IsSigned>
 struct MulExtendedFold final : OpRewritePattern<MulOp> {
   using OpRewritePattern<MulOp>::OpRewritePattern;
@@ -258,20 +240,8 @@ struct MulExtendedFold final : OpRewritePattern<MulOp> {
     if (!highBits)
       return failure();
 
-    Value lowBitsVal =
-        spirv::ConstantOp::create(rewriter, loc, constituentType, lowBits);
-
-    Value highBitsVal =
-        spirv::ConstantOp::create(rewriter, loc, constituentType, highBits);
-
-    // Create empty struct
-    Value undef = spirv::UndefOp::create(rewriter, loc, op.getType());
-    // Fill in lowBits at id 0
-    Value intermediate =
-        spirv::CompositeInsertOp::create(rewriter, loc, lowBitsVal, undef, 0);
-    // Fill in highBits at id 1
-    rewriter.replaceOpWithNewOp<spirv::CompositeInsertOp>(op, highBitsVal,
-                                                          intermediate, 1);
+    rewriter.replaceOpWithNewOp<spirv::ConstantOp>(
+        op, op.getType(), rewriter.getArrayAttr({lowBits, highBits}));
     return success();
   }
 };

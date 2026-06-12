@@ -250,11 +250,6 @@ WebAssemblyTargetMachine::getSubtargetImpl(const Function &F) const {
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
 
-  // This needs to be done before we create a new subtarget since any
-  // creation will depend on the TM and the code generation flags on the
-  // function that reside in TargetOptions.
-  resetTargetOptions(F);
-
   return getSubtargetImpl(CPU, FS);
 }
 
@@ -410,7 +405,7 @@ private:
     // Code compiled without atomics or bulk-memory may have had its atomics or
     // thread-local data lowered to nonatomic operations or non-thread-local
     // data. In that case, we mark the pseudo-feature "shared-mem" as disallowed
-    // to tell the linker that it would be unsafe to allow this code ot be used
+    // to tell the linker that it would be unsafe to allow this code to be used
     // in a module with shared memory.
     if (Stripped) {
       M.addModuleFlag(Module::ModFlagBehavior::Error, "wasm-feature-shared-mem",

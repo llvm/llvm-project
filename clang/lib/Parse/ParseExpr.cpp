@@ -1343,6 +1343,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
   case tok::kw_auto:
   case tok::kw_typename:
   case tok::kw_typeof:
+  case tok::kw_typeof_unqual:
   case tok::kw___vector:
   case tok::kw__Accum:
   case tok::kw__Fract:
@@ -2407,7 +2408,18 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
       return ExprError();
     }
 
+    auto TriggerCompletion = [&](const Designation &D) {
+      cutOffParsing();
+      Actions.CodeCompletion().CodeCompleteOffsetOfDesignator(
+          Actions.GetTypeFromParser(Ty.get()), D);
+    };
+
     // We must have at least one identifier here.
+    Designation D;
+    if (Tok.is(tok::code_completion)) {
+      TriggerCompletion(D);
+      return ExprError();
+    }
     if (Tok.isNot(tok::identifier)) {
       Diag(Tok, diag::err_expected) << tok::identifier;
       SkipUntil(tok::r_paren, StopAtSemi);
@@ -2415,12 +2427,18 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
     }
 
     // Keep track of the various subcomponents we see.
+    // FIXME: Comps and D below carry the same designator chain in two
+    // different shapes. ActOnBuiltinOffsetOf should be taught to accept a
+    // Designation directly so this duplication can go away.
     SmallVector<Sema::OffsetOfComponent, 4> Comps;
 
     Comps.push_back(Sema::OffsetOfComponent());
     Comps.back().isBrackets = false;
     Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
-    Comps.back().LocStart = Comps.back().LocEnd = ConsumeToken();
+    Comps.back().LocStart = Comps.back().LocEnd = Tok.getLocation();
+    D.AddDesignator(Designator::CreateFieldDesignator(
+        Tok.getIdentifierInfo(), SourceLocation(), Tok.getLocation()));
+    ConsumeToken();
 
     // FIXME: This loop leaks the index expressions on error.
     while (true) {
@@ -2430,13 +2448,20 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
         Comps.back().isBrackets = false;
         Comps.back().LocStart = ConsumeToken();
 
+        if (Tok.is(tok::code_completion)) {
+          TriggerCompletion(D);
+          return ExprError();
+        }
         if (Tok.isNot(tok::identifier)) {
           Diag(Tok, diag::err_expected) << tok::identifier;
           SkipUntil(tok::r_paren, StopAtSemi);
           return ExprError();
         }
         Comps.back().U.IdentInfo = Tok.getIdentifierInfo();
-        Comps.back().LocEnd = ConsumeToken();
+        Comps.back().LocEnd = Tok.getLocation();
+        D.AddDesignator(Designator::CreateFieldDesignator(
+            Tok.getIdentifierInfo(), Comps.back().LocStart, Tok.getLocation()));
+        ConsumeToken();
       } else if (Tok.is(tok::l_square)) {
         if (CheckProhibitedCXX11Attribute())
           return ExprError();
@@ -2456,7 +2481,19 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
 
         ST.consumeClose();
         Comps.back().LocEnd = ST.getCloseLocation();
+        Designator ArrayD =
+            Designator::CreateArrayDesignator(Res.get(), Comps.back().LocStart);
+        ArrayD.setRBracketLoc(Comps.back().LocEnd);
+        D.AddDesignator(ArrayD);
       } else {
+        // A code-completion token here (e.g. cursor right after `]`) is past
+        // the point where a field can be applied without a leading `.`. Drop
+        // it on the floor rather than leak into outer-scope completion or
+        // emit field suggestions that wouldn't compose.
+        if (Tok.is(tok::code_completion)) {
+          cutOffParsing();
+          return ExprError();
+        }
         if (Tok.isNot(tok::r_paren)) {
           PT.consumeClose();
           Res = ExprError();

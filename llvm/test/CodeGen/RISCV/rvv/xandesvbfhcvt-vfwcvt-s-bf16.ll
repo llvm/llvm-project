@@ -39,8 +39,9 @@ entry:
 define <vscale x 4 x float> @intrinsic_vfwcvt_s.bf16_nxv4f32_nxv4bf16(<vscale x 4 x bfloat> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfwcvt_s.bf16_nxv4f32_nxv4bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-NEXT:    nds.vfwcvt.s.bf16 v8, v10
 ; CHECK-NEXT:    ret
 entry:
@@ -55,8 +56,9 @@ entry:
 define <vscale x 8 x float> @intrinsic_vfwcvt_s.bf16_nxv8f32_nxv8bf16(<vscale x 8 x bfloat> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfwcvt_s.bf16_nxv8f32_nxv8bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v12, v8
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; CHECK-NEXT:    nds.vfwcvt.s.bf16 v8, v12
 ; CHECK-NEXT:    ret
 entry:
@@ -71,8 +73,9 @@ entry:
 define <vscale x 16 x float> @intrinsic_vfwcvt_s.bf16_nxv16f32_nxv16bf16(<vscale x 16 x bfloat> %0, iXLen %1) nounwind {
 ; CHECK-LABEL: intrinsic_vfwcvt_s.bf16_nxv16f32_nxv16bf16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv4r.v v16, v8
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    nds.vfwcvt.s.bf16 v8, v16
 ; CHECK-NEXT:    ret
 entry:

@@ -186,9 +186,8 @@ contains
 ! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_avoid_double_finalization(
 ! CHECK: %[[b:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt3{t:!fir.type<_QMderived_type_finalizationTt2{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>}> {bindc_name = "b", uniq_name = "_QMderived_type_finalizationFtest_avoid_double_finalizationEb"}
 ! CHECK: %[[b_DECL:.*]]:2 = hlfir.declare %[[b]]
-! CHECK: fir.copy %{{.*}} to %[[b_DECL]]#0
+! CHECK: hlfir.assign %{{.*}} to %[[b_DECL]]#0
 ! CHECK-NOT: fir.call @_FortranADestroy
-! CHECK: hlfir.assign
 ! CHECK: fir.call @_FortranADestroy
 
   function no_func_ret_finalize() result(ty)

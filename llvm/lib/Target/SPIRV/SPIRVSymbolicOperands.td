@@ -403,6 +403,7 @@ defm SPV_AMD_weak_linkage : ExtensionOperand<137, [EnvOpenCL]>;
 // Vulkan/Shader support requires emitting explicit layout decorations on the
 // Message Type, which is not yet implemented.
 defm SPV_KHR_abort : ExtensionOperand<138, [EnvOpenCL]>;
+defm SPV_KHR_poison_freeze : ExtensionOperand<139, [EnvVulkan, EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -640,6 +641,7 @@ defm BlockingPipesALTERA : CapabilityOperand<5945, 0, 0, [SPV_ALTERA_blocking_pi
 defm ArbitraryPrecisionFixedPointALTERA : CapabilityOperand<5922, 0, 0, [SPV_ALTERA_arbitrary_precision_fixed_point], []>;
 defm ArbitraryPrecisionFloatingPointALTERA : CapabilityOperand<5845, 0, 0,[SPV_ALTERA_arbitrary_precision_floating_point], []>;
 defm UnstructuredLoopControlsINTEL : CapabilityOperand<5886, 0, 0, [SPV_INTEL_unstructured_loop_controls], []>;
+defm PoisonFreezeKHR : CapabilityOperand<5156, 0, 0, [SPV_KHR_poison_freeze], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -844,6 +846,7 @@ defm RoundingModeRTNINTEL : ExecutionModeOperand<5621, [RoundToInfinityINTEL]>;
 defm FloatingPointModeALTINTEL : ExecutionModeOperand<5622, [FloatingPointModeINTEL]>;
 defm FloatingPointModeIEEEINTEL : ExecutionModeOperand<5623, [FloatingPointModeINTEL]>;
 defm MaxWorkgroupSizeINTEL : ExecutionModeOperand<5893, [KernelAttributesINTEL]>;
+defm ArithmeticPoisonKHR : ExecutionModeOperand<5157, [PoisonFreezeKHR]>;
 // TODO-SPIRV: Add the following once they are used / tested.
 // defm MaxWorkDimINTEL : ExecutionModeOperand<5894, [KernelAttributesINTEL]>;
 // defm NoGlobalOffsetINTEL : ExecutionModeOperand<5895, [KernelAttributesINTEL]>;

@@ -15,6 +15,7 @@
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -82,6 +83,10 @@ static cl::opt<double> UnrollThresholdFactor(
     cl::desc("Factor for the unroll threshold to account for code "
              "simplifications still taking place"),
     cl::init(1.5));
+
+static cl::opt<bool> UseDefaultMaxThreads(
+    "openmp-ir-builder-use-default-max-threads", cl::Hidden,
+    cl::desc("Use a default max threads if none is provided."), cl::init(true));
 
 #ifndef NDEBUG
 /// Return whether IP1 and IP2 are ambiguous, i.e. that inserting instructions
@@ -642,7 +647,12 @@ void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
   Value *DynCGroupMemFallbackFlag =
       Builder.getInt64(static_cast<uint64_t>(KernelArgs.DynCGroupMemFallback));
   DynCGroupMemFallbackFlag = Builder.CreateShl(DynCGroupMemFallbackFlag, 2);
+
+  Value *StrictFlag = Builder.getInt64(KernelArgs.StrictBlocksAndThreads);
+  StrictFlag = Builder.CreateShl(StrictFlag, 6);
+
   Value *Flags = Builder.CreateOr(HasNoWaitFlag, DynCGroupMemFallbackFlag);
+  Flags = Builder.CreateOr(Flags, StrictFlag);
 
   assert(!KernelArgs.NumTeams.empty() && !KernelArgs.NumThreads.empty());
 
@@ -2382,9 +2392,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   Value *TaskDupFn = *TaskDupFnOrErr;
 
   OI->PostOutlineCB = [this, Ident, LBVal, UBVal, StepVal, Untied,
-                       TaskloopAllocaBB, CLI, Loc, TaskDupFn, ToBeDeleted,
-                       IfCond, GrainSize, NoGroup, Sched, FakeLB, FakeUB,
-                       FakeStep, FakeSharedsTy, Final, Mergeable, Priority,
+                       TaskloopAllocaBB, CLI, TaskDupFn, ToBeDeleted, IfCond,
+                       GrainSize, NoGroup, Sched, FakeLB, FakeUB, FakeStep,
+                       FakeSharedsTy, Final, Mergeable, Priority,
                        NumOfCollapseLoops](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.hasOneUse() &&
@@ -6557,28 +6567,38 @@ static void redirectAllPredecessorsTo(BasicBlock *OldTarget,
     redirectTo(Pred, NewTarget, DL);
 }
 
-/// Determine which blocks in \p BBs are reachable from outside and remove the
-/// ones that are not reachable from the function.
 static void removeUnusedBlocksFromParent(ArrayRef<BasicBlock *> BBs) {
-  SmallPtrSet<BasicBlock *, 6> BBsToErase(llvm::from_range, BBs);
-  auto HasRemainingUses = [&BBsToErase](BasicBlock *BB) {
-    for (Use &U : BB->uses()) {
-      auto *UseInst = dyn_cast<Instruction>(U.getUser());
-      if (!UseInst)
-        continue;
-      if (BBsToErase.count(UseInst->getParent()))
-        continue;
-      return true;
-    }
-    return false;
-  };
+  SmallPtrSet<BasicBlock *, 8> InternalBBs(from_range, BBs);
+  // We add a block to BBsToKeep iff we have proven it has an external use.
+  SmallPtrSet<BasicBlock *, 8> BBsToKeep;
 
-  while (BBsToErase.remove_if(HasRemainingUses)) {
-    // Try again if anything was removed.
+  while (true) {
+    bool Changed = false;
+
+    for (BasicBlock *BB : BBs) {
+      if (BBsToKeep.contains(BB))
+        continue;
+
+      for (Use &U : BB->uses()) {
+        auto *UseInst = dyn_cast<Instruction>(U.getUser());
+        if (!UseInst)
+          continue;
+        BasicBlock *UseBB = UseInst->getParent();
+        if (!InternalBBs.contains(UseBB) || BBsToKeep.contains(UseBB)) {
+          BBsToKeep.insert(BB);
+          Changed = true;
+          break;
+        }
+      }
+    }
+
+    if (!Changed)
+      break;
   }
 
-  SmallVector<BasicBlock *, 7> BBVec(BBsToErase.begin(), BBsToErase.end());
-  DeleteDeadBlocks(BBVec);
+  SmallVector<BasicBlock *> BBsToDelete = filter_to_vector(
+      BBs, [&BBsToKeep](BasicBlock *BB) { return !BBsToKeep.contains(BB); });
+  DeleteDeadBlocks(BBsToDelete);
 }
 
 CanonicalLoopInfo *
@@ -8155,10 +8175,10 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
   if (Attrs.MinTeams > 1 || Attrs.MaxTeams.front() > 0)
     writeTeamsForKernel(T, *Kernel, Attrs.MinTeams, Attrs.MaxTeams.front());
 
-  // If MaxThreads not set, select the maximum between the default workgroup
-  // size and the MinThreads value.
+  // If MaxThreads is not set and needs adjustment, select the maximum between
+  // the default workgroup size and the MinThreads value.
   int32_t MaxThreadsVal = Attrs.MaxThreads.front();
-  if (MaxThreadsVal < 0) {
+  if (MaxThreadsVal < 0 && UseDefaultMaxThreads) {
     if (hasGridValue(T)) {
       MaxThreadsVal =
           std::max(int32_t(getGridValue(T, Kernel).GV_Default_WG_Size),
@@ -9768,7 +9788,7 @@ static void emitTargetCall(
 
     KArgs = OpenMPIRBuilder::TargetKernelArgs(
         NumTargetItems, RTArgs, TripCount, NumTeamsC, NumThreadsC, DynCGroupMem,
-        HasNoWait, DynCGroupMemFallback);
+        HasNoWait, /*StrictBlocksAndThreads=*/false, DynCGroupMemFallback);
 
     // Assume no error was returned because TaskBodyCB and
     // EmitTargetCallFallbackCB don't produce any.
@@ -10903,6 +10923,21 @@ Value *OpenMPIRBuilder::emitRMWOpAsInstruction(Value *Src1, Value *Src2,
   llvm_unreachable("Unsupported atomic update operation");
 }
 
+static AtomicOrdering TransformReleaseAcquireRelease(AtomicOrdering AO) {
+  // Loads cannot use Release or AcquireRelease ordering. This load is
+  // just the initial value for the cmpxchg loop; the cmpxchg itself
+  // retains the original ordering.
+  AtomicOrdering LoadAO = AO;
+
+  if (AO == AtomicOrdering::Release) {
+    LoadAO = AtomicOrdering::Monotonic;
+  } else if (AO == AtomicOrdering::AcquireRelease) {
+    LoadAO = AtomicOrdering::Acquire;
+  }
+
+  return LoadAO;
+}
+
 Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
     InsertPointTy AllocaIP, Value *X, Type *XElemTy, Value *Expr,
     AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
@@ -10953,7 +10988,8 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
   } else if (XElemTy->isStructTy()) {
     LoadInst *OldVal =
         Builder.CreateLoad(XElemTy, X, X->getName() + ".atomic.load");
-    OldVal->setAtomic(AO);
+    AtomicOrdering LoadAO = TransformReleaseAcquireRelease(AO);
+    OldVal->setAtomic(LoadAO);
     const DataLayout &LoadDL = OldVal->getModule()->getDataLayout();
     unsigned LoadSize = LoadDL.getTypeStoreSize(XElemTy);
 
@@ -11004,7 +11040,8 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
         IntegerType::get(M.getContext(), XElemTy->getScalarSizeInBits());
     LoadInst *OldVal =
         Builder.CreateLoad(IntCastTy, X, X->getName() + ".atomic.load");
-    OldVal->setAtomic(AO);
+    AtomicOrdering LoadAO = TransformReleaseAcquireRelease(AO);
+    OldVal->setAtomic(LoadAO);
     // CurBB
     // |     /---\
     // ContBB    |
@@ -11109,18 +11146,18 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
     AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
     omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-    bool IsFailOnly) {
+    bool IsFailOnly, bool IsWeak) {
 
   AtomicOrdering Failure = AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
   return createAtomicCompare(Loc, X, V, R, E, D, AO, Op, IsXBinopExpr,
-                             IsPostfixUpdate, IsFailOnly, Failure);
+                             IsPostfixUpdate, IsFailOnly, Failure, IsWeak);
 }
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
     AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
     omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-    bool IsFailOnly, AtomicOrdering Failure) {
+    bool IsFailOnly, AtomicOrdering Failure, bool IsWeak) {
 
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -11136,80 +11173,254 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
   bool IsInteger = E->getType()->isIntegerTy();
 
   if (Op == OMPAtomicCompareOp::EQ) {
-    AtomicCmpXchgInst *Result = nullptr;
-    if (!IsInteger) {
+    // OldValue and SuccessOrFail are set below and used in the shared V.Var /
+    // R.Var handling.
+    Value *OldValue = nullptr;
+    Value *SuccessOrFail = nullptr;
+
+    if (!IsInteger && HandleFPNegZero) {
+      // IEEE 754 special cases for cmpxchg (which is bitwise):
+      //   1. -0.0 == +0.0 but they have different bit patterns.
+      //   2. NaN != NaN but identical NaN bit patterns would match.
+      //
+      //   CurBB:
+      //     %e_int      = bitcast E to intN
+      //     %d_int      = bitcast D to intN
+      //     %x_curr     = load atomic intN, X
+      //     %x_fp       = bitcast %x_curr to FP
+      //     %e_is_nan   = fcmp uno E, E
+      //     %x_is_nan   = fcmp uno %x_fp, %x_fp
+      //     %either_nan = or %e_is_nan, %x_is_nan
+      //     br %either_nan, NaNBB, NotNaNBB
+      //   NaNBB:            ; NaN == anything is always false
+      //     br ExitBB
+      //   NotNaNBB:
+      //     %x_is_zero  = fcmp oeq %x_fp, 0.0
+      //     %e_is_zero  = fcmp oeq E, 0.0
+      //     %both_zero  = and %x_is_zero, %e_is_zero
+      //     br %both_zero, ZeroBB, NormalBB
+      //   ZeroBB:           ; both ±0.0  →  x = d
+      //     cmpxchg X, %x_curr, %d_int
+      //     br ExitBB
+      //   NormalBB:         ; original path
+      //     cmpxchg X, %e_int, %d_int
+      //     br ExitBB
+      //   ExitBB:
+      //     phi merge
       IntegerType *IntCastTy =
           IntegerType::get(M.getContext(), X.ElemTy->getScalarSizeInBits());
       Value *EBCast = Builder.CreateBitCast(E, IntCastTy);
       Value *DBCast = Builder.CreateBitCast(D, IntCastTy);
-      Result = Builder.CreateAtomicCmpXchg(X.Var, EBCast, DBCast, MaybeAlign(),
-                                           AO, Failure);
-    } else {
-      Result =
-          Builder.CreateAtomicCmpXchg(X.Var, E, D, MaybeAlign(), AO, Failure);
-    }
 
-    if (V.Var) {
-      Value *OldValue = Builder.CreateExtractValue(Result, /*Idxs=*/0);
-      if (!IsInteger)
-        OldValue = Builder.CreateBitCast(OldValue, X.ElemTy);
-      assert(OldValue->getType() == V.ElemTy &&
-             "OldValue and V must be of same type");
-      if (IsPostfixUpdate) {
-        Builder.CreateStore(OldValue, V.Var, V.IsVolatile);
+      // Load X atomically.
+      LoadInst *XCurr = Builder.CreateLoad(IntCastTy, X.Var,
+                                           X.Var->getName() + ".atomic.load");
+      XCurr->setAtomic(AtomicOrdering::Monotonic);
+      Value *XFP = Builder.CreateBitCast(XCurr, X.ElemTy);
+
+      // IEEE 754: NaN != NaN, but cmpxchg would succeed if E and X have
+      // the same NaN bit pattern.  Skip cmpxchg when either is NaN.
+      Value *EIsNaN = Builder.CreateFCmpUNO(E, E, "atomic.e.isnan");
+      Value *XIsNaN = Builder.CreateFCmpUNO(XFP, XFP, "atomic.x.isnan");
+      Value *EitherNaN = Builder.CreateOr(EIsNaN, XIsNaN, "atomic.either.nan");
+
+      BasicBlock *CurBB = Builder.GetInsertBlock();
+      Function *F = CurBB->getParent();
+      Instruction *CurBBTI = CurBB->getTerminatorOrNull();
+      CurBBTI = CurBBTI ? CurBBTI : Builder.CreateUnreachable();
+      BasicBlock *ExitBB =
+          CurBB->splitBasicBlock(CurBBTI, X.Var->getName() + ".atomic.exit");
+      BasicBlock *NaNBB = BasicBlock::Create(
+          M.getContext(), X.Var->getName() + ".atomic.nan", F, ExitBB);
+      BasicBlock *NotNaNBB = BasicBlock::Create(
+          M.getContext(), X.Var->getName() + ".atomic.notnan", F, ExitBB);
+      BasicBlock *ZeroBB = BasicBlock::Create(
+          M.getContext(), X.Var->getName() + ".atomic.zero", F, ExitBB);
+      BasicBlock *NormalBB = BasicBlock::Create(
+          M.getContext(), X.Var->getName() + ".atomic.normal", F, ExitBB);
+
+      // If either E or X is NaN → NaNBB (always fails), else check for ±0.0.
+      CurBB->getTerminator()->eraseFromParent();
+      Builder.SetInsertPoint(CurBB);
+      Builder.CreateCondBr(EitherNaN, NaNBB, NotNaNBB);
+
+      // NaNBB: NaN == anything is always false; skip cmpxchg.
+      Builder.SetInsertPoint(NaNBB);
+      Builder.CreateBr(ExitBB);
+
+      // NotNaNBB: check both X and E for ±0.0.
+      Builder.SetInsertPoint(NotNaNBB);
+      Value *XIsZero =
+          Builder.CreateFCmpOEQ(XFP, ConstantFP::getZero(X.ElemTy),
+                                X.Var->getName() + ".atomic.xiszero");
+      Value *EIsZero = Builder.CreateFCmpOEQ(E, ConstantFP::getZero(X.ElemTy),
+                                             "atomic.e.iszero");
+      Value *BothZero = Builder.CreateAnd(XIsZero, EIsZero, "atomic.both.zero");
+      Builder.CreateCondBr(BothZero, ZeroBB, NormalBB);
+
+      // ZeroBB: cmpxchg with X's loaded bit-pattern.
+      Builder.SetInsertPoint(ZeroBB);
+      AtomicCmpXchgInst *ResZero = Builder.CreateAtomicCmpXchg(
+          X.Var, XCurr, DBCast, MaybeAlign(), AO, Failure);
+      ResZero->setWeak(IsWeak);
+      Value *OldZero = Builder.CreateExtractValue(ResZero, /*Idxs=*/0);
+      Value *OkZero = Builder.CreateExtractValue(ResZero, /*Idxs=*/1);
+      Builder.CreateBr(ExitBB);
+
+      // NormalBB: original bitwise cmpxchg.
+      Builder.SetInsertPoint(NormalBB);
+      AtomicCmpXchgInst *ResNormal = Builder.CreateAtomicCmpXchg(
+          X.Var, EBCast, DBCast, MaybeAlign(), AO, Failure);
+      ResNormal->setWeak(IsWeak);
+      Value *OldNormal = Builder.CreateExtractValue(ResNormal, /*Idxs=*/0);
+      Value *OkNormal = Builder.CreateExtractValue(ResNormal, /*Idxs=*/1);
+      Builder.CreateBr(ExitBB);
+
+      // ExitBB: merge results from NaN, Zero, and Normal paths.
+      Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+      PHINode *OldIntPHI =
+          Builder.CreatePHI(IntCastTy, 3, X.Var->getName() + ".atomic.old");
+      OldIntPHI->addIncoming(XCurr, NaNBB);
+      OldIntPHI->addIncoming(OldZero, ZeroBB);
+      OldIntPHI->addIncoming(OldNormal, NormalBB);
+      PHINode *SuccessPHI = Builder.CreatePHI(Builder.getInt1Ty(), 3,
+                                              X.Var->getName() + ".atomic.ok");
+      SuccessPHI->addIncoming(Builder.getFalse(), NaNBB);
+      SuccessPHI->addIncoming(OkZero, ZeroBB);
+      SuccessPHI->addIncoming(OkNormal, NormalBB);
+
+      if (isa<UnreachableInst>(ExitBB->getTerminator())) {
+        CurBBTI->eraseFromParent();
+        Builder.SetInsertPoint(ExitBB);
       } else {
-        Value *SuccessOrFail = Builder.CreateExtractValue(Result, /*Idxs=*/1);
-        if (IsFailOnly) {
-          // CurBB----
-          //   |     |
-          //   v     |
-          // ContBB  |
-          //   |     |
-          //   v     |
-          // ExitBB <-
-          //
-          // where ContBB only contains the store of old value to 'v'.
-          BasicBlock *CurBB = Builder.GetInsertBlock();
-          Instruction *CurBBTI = CurBB->getTerminatorOrNull();
-          CurBBTI = CurBBTI ? CurBBTI : Builder.CreateUnreachable();
-          BasicBlock *ExitBB = CurBB->splitBasicBlock(
-              CurBBTI, X.Var->getName() + ".atomic.exit");
-          BasicBlock *ContBB = CurBB->splitBasicBlock(
-              CurBB->getTerminator(), X.Var->getName() + ".atomic.cont");
-          ContBB->getTerminator()->eraseFromParent();
-          CurBB->getTerminator()->eraseFromParent();
+        Builder.SetInsertPoint(&*ExitBB->getFirstNonPHIIt());
+      }
 
-          Builder.CreateCondBr(SuccessOrFail, ExitBB, ContBB);
+      OldValue = Builder.CreateBitCast(OldIntPHI, X.ElemTy,
+                                       X.Var->getName() + ".atomic.old.fp");
+      SuccessOrFail = SuccessPHI;
+    } else {
+      AtomicCmpXchgInst *Result = nullptr;
+      if (!IsInteger) {
+        IntegerType *IntCastTy =
+            IntegerType::get(M.getContext(), X.ElemTy->getScalarSizeInBits());
+        Value *EBCast = Builder.CreateBitCast(E, IntCastTy);
+        Value *DBCast = Builder.CreateBitCast(D, IntCastTy);
+        Result = Builder.CreateAtomicCmpXchg(X.Var, EBCast, DBCast,
+                                             MaybeAlign(), AO, Failure);
+      } else {
+        Result =
+            Builder.CreateAtomicCmpXchg(X.Var, E, D, MaybeAlign(), AO, Failure);
+      }
+      Result->setWeak(IsWeak);
 
-          Builder.SetInsertPoint(ContBB);
-          Builder.CreateStore(OldValue, V.Var);
-          Builder.CreateBr(ExitBB);
-
-          if (UnreachableInst *ExitTI =
-                  dyn_cast<UnreachableInst>(ExitBB->getTerminator())) {
-            CurBBTI->eraseFromParent();
-            Builder.SetInsertPoint(ExitBB);
-          } else {
-            Builder.SetInsertPoint(ExitTI);
-          }
+      if (V.Var) {
+        OldValue = Builder.CreateExtractValue(Result, /*Idxs=*/0);
+        if (!IsInteger)
+          OldValue = Builder.CreateBitCast(OldValue, X.ElemTy);
+        assert(OldValue->getType() == V.ElemTy &&
+               "OldValue and V must be of same type");
+        if (IsPostfixUpdate) {
+          Builder.CreateStore(OldValue, V.Var, V.IsVolatile);
         } else {
-          Value *CapturedValue =
-              Builder.CreateSelect(SuccessOrFail, E, OldValue);
-          Builder.CreateStore(CapturedValue, V.Var, V.IsVolatile);
+          SuccessOrFail = Builder.CreateExtractValue(Result, /*Idxs=*/1);
+          if (IsFailOnly) {
+            BasicBlock *CurBB = Builder.GetInsertBlock();
+            Instruction *CurBBTI = CurBB->getTerminatorOrNull();
+            CurBBTI = CurBBTI ? CurBBTI : Builder.CreateUnreachable();
+            BasicBlock *ExitBB = CurBB->splitBasicBlock(
+                CurBBTI, X.Var->getName() + ".atomic.exit");
+            BasicBlock *ContBB = CurBB->splitBasicBlock(
+                CurBB->getTerminator(), X.Var->getName() + ".atomic.cont");
+            ContBB->getTerminator()->eraseFromParent();
+            CurBB->getTerminator()->eraseFromParent();
+
+            Builder.CreateCondBr(SuccessOrFail, ExitBB, ContBB);
+
+            Builder.SetInsertPoint(ContBB);
+            Builder.CreateStore(OldValue, V.Var);
+            Builder.CreateBr(ExitBB);
+
+            if (UnreachableInst *ExitTI =
+                    dyn_cast<UnreachableInst>(ExitBB->getTerminator())) {
+              CurBBTI->eraseFromParent();
+              Builder.SetInsertPoint(ExitBB);
+            } else {
+              Builder.SetInsertPoint(ExitTI);
+            }
+          } else {
+            Value *CapturedValue =
+                Builder.CreateSelect(SuccessOrFail, E, OldValue);
+            Builder.CreateStore(CapturedValue, V.Var, V.IsVolatile);
+          }
         }
       }
-    }
-    // The comparison result has to be stored.
-    if (R.Var) {
-      assert(R.Var->getType()->isPointerTy() &&
-             "r.var must be of pointer type");
-      assert(R.ElemTy->isIntegerTy() && "r must be of integral type");
+      // The comparison result has to be stored.
+      if (R.Var) {
+        assert(R.Var->getType()->isPointerTy() &&
+               "r.var must be of pointer type");
+        assert(R.ElemTy->isIntegerTy() && "r must be of integral type");
 
-      Value *SuccessFailureVal = Builder.CreateExtractValue(Result, /*Idxs=*/1);
-      Value *ResultCast = R.IsSigned
-                              ? Builder.CreateSExt(SuccessFailureVal, R.ElemTy)
-                              : Builder.CreateZExt(SuccessFailureVal, R.ElemTy);
-      Builder.CreateStore(ResultCast, R.Var, R.IsVolatile);
+        Value *SuccessFailureVal =
+            Builder.CreateExtractValue(Result, /*Idxs=*/1);
+        Value *ResultCast =
+            R.IsSigned ? Builder.CreateSExt(SuccessFailureVal, R.ElemTy)
+                       : Builder.CreateZExt(SuccessFailureVal, R.ElemTy);
+        Builder.CreateStore(ResultCast, R.Var, R.IsVolatile);
+      }
+    }
+
+    // For the HandleFPNegZero path, handle V.Var and R.Var using the
+    // pre-computed OldValue and SuccessOrFail.
+    if (HandleFPNegZero && !IsInteger) {
+      if (V.Var) {
+        assert(OldValue->getType() == V.ElemTy &&
+               "OldValue and V must be of same type");
+        if (IsPostfixUpdate) {
+          Builder.CreateStore(OldValue, V.Var, V.IsVolatile);
+        } else {
+          if (IsFailOnly) {
+            BasicBlock *CurBB = Builder.GetInsertBlock();
+            Instruction *CurBBTI = CurBB->getTerminatorOrNull();
+            CurBBTI = CurBBTI ? CurBBTI : Builder.CreateUnreachable();
+            BasicBlock *ExitBB = CurBB->splitBasicBlock(
+                CurBBTI, X.Var->getName() + ".atomic.exit");
+            BasicBlock *ContBB = CurBB->splitBasicBlock(
+                CurBB->getTerminator(), X.Var->getName() + ".atomic.cont");
+            ContBB->getTerminator()->eraseFromParent();
+            CurBB->getTerminator()->eraseFromParent();
+
+            Builder.CreateCondBr(SuccessOrFail, ExitBB, ContBB);
+
+            Builder.SetInsertPoint(ContBB);
+            Builder.CreateStore(OldValue, V.Var);
+            Builder.CreateBr(ExitBB);
+
+            if (UnreachableInst *ExitTI =
+                    dyn_cast<UnreachableInst>(ExitBB->getTerminator())) {
+              CurBBTI->eraseFromParent();
+              Builder.SetInsertPoint(ExitBB);
+            } else {
+              Builder.SetInsertPoint(ExitTI);
+            }
+          } else {
+            Value *CapturedValue =
+                Builder.CreateSelect(SuccessOrFail, E, OldValue);
+            Builder.CreateStore(CapturedValue, V.Var, V.IsVolatile);
+          }
+        }
+      }
+      // The comparison result has to be stored.
+      if (R.Var) {
+        assert(R.Var->getType()->isPointerTy() &&
+               "r.var must be of pointer type");
+        assert(R.ElemTy->isIntegerTy() && "r must be of integral type");
+
+        Value *ResultCast = R.IsSigned
+                                ? Builder.CreateSExt(SuccessOrFail, R.ElemTy)
+                                : Builder.CreateZExt(SuccessOrFail, R.ElemTy);
+        Builder.CreateStore(ResultCast, R.Var, R.IsVolatile);
+      }
     }
   } else {
     assert((Op == OMPAtomicCompareOp::MAX || Op == OMPAtomicCompareOp::MIN) &&
