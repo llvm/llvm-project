@@ -413,7 +413,13 @@ CRCBarrettConstants HashRecognize::genBarrettConstants(const APInt &GenPoly,
   APInt G = GenPoly.reverseBits().zext(DivBW);
   G.setBit(BW);
   APInt Mu = calculateGF2Quotient(Dividend, G);
+  // Only the low byte of the reciprocal is useful in LE because it will get
+  // multiplied by another byte and then immediately masked by 0xFF.
   C.Reciprocal = Mu.trunc(BW + 1).reverseBits().zext(ClmulBW).getLoBits(8);
+  // shl(1) here enables an optimization where two shifts then XOR can be
+  // replaced with an XOR then one shift. Normally one of the shifts would be by
+  // 7 and the other by 8, but by shifting here the shift by 7 becomes another
+  // shift by 8.
   C.Generator = GenPoly.zext(ClmulBW).shl(1);
   return C;
 }
