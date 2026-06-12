@@ -12339,7 +12339,7 @@ QualType ASTContext::mergeObjCGCQualifiers(QualType LHS, QualType RHS) {
       // id foo(); ... __strong id foo(); or: __strong id foo(); ... id foo();
       // In either case, use OldReturnType to build the new function type.
       const auto *F = LHS->castAs<FunctionType>();
-      if (const auto *FPT = cast<FunctionProtoType>(F)) {
+      if (const auto *FPT = cast_or_null<FunctionProtoType>(F)) {
         FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
         EPI.ExtInfo = getFunctionExtInfo(LHS);
         QualType ResultType =
@@ -12354,12 +12354,6 @@ QualType ASTContext::mergeObjCGCQualifiers(QualType LHS, QualType RHS) {
   Qualifiers LQuals = LHSCan.getLocalQualifiers();
   Qualifiers RQuals = RHSCan.getLocalQualifiers();
   if (LQuals != RQuals) {
-    // If any of these qualifiers are different, we have a type mismatch.
-    if (LQuals.getCVRQualifiers() != RQuals.getCVRQualifiers() ||
-        LQuals.getAddressSpace() != RQuals.getAddressSpace() ||
-        LQuals.getObjCLifetime() != RQuals.getObjCLifetime())
-      return {};
-
     // Exactly one GC qualifier difference is allowed: __strong is
     // okay if the other type has no GC qualifier but is an Objective
     // C object pointer (i.e. implicitly strong by default).  We fix
@@ -12367,7 +12361,10 @@ QualType ASTContext::mergeObjCGCQualifiers(QualType LHS, QualType RHS) {
     // qualified __strong.
     Qualifiers::GC GC_L = LQuals.getObjCGCAttr();
     Qualifiers::GC GC_R = RQuals.getObjCGCAttr();
-    assert((GC_L != GC_R) && "unequal qualifier sets had only equal elements");
+    if (GC_L == GC_R) {
+      // Some non-GC qualifiers differ, so merging fails.
+      return {};
+    }
 
     if (GC_L == Qualifiers::Weak || GC_R == Qualifiers::Weak)
       return {};

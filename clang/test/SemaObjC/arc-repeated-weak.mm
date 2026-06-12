@@ -340,9 +340,6 @@ void test_list_init(C *c) {
 }
 @end
 
-extern id foo; // expected-note {{previous declaration is here}}
-extern __weak id foo; // expected-error {{redeclaration of 'foo' with a different type}}
-
 @interface Base1
 @end
 @interface Sub1 : Base1
@@ -512,3 +509,6 @@ static NSString* const kGlobal = @"";
   (void)self.nd[@""]; // no warning
 }
 @end
+
+extern id mergeQualsVar; // expected-note {{previous declaration is here}}
+extern __weak id mergeQualsVar; // expected-error {{redeclaration of 'mergeQualsVar' with a different type}}
