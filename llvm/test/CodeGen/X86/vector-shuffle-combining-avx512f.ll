@@ -1112,6 +1112,22 @@ define <16 x i32> @combine_vcompressd_splat(i16 %m) {
   ret <16 x i32> %res
 }
 
+define <8 x i64> @concat_nonuniform_permq_v4i64_v8i64(<4 x i64> %a0, <4 x i64> %a1, <2 x i64> %a2) nounwind {
+; CHECK-LABEL: concat_nonuniform_permq_v4i64_v8i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[1,3,2,0]
+; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[3,2,1,0]
+; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpsrlq %xmm2, %zmm0, %zmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %perm0 = shufflevector <4 x i64> %a0, <4 x i64> poison, <4 x i32> <i32 1, i32 3, i32 2, i32 0>
+  %perm1 = shufflevector <4 x i64> %a1, <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %shift0 = tail call noundef <4 x i64> @llvm.x86.avx2.psrl.q(<4 x i64> %perm0, <2 x i64> %a2)
+  %shift1 = tail call noundef <4 x i64> @llvm.x86.avx2.psrl.q(<4 x i64> %perm1, <2 x i64> %a2)
+  %shuffle = shufflevector <4 x i64> %shift0, <4 x i64> %shift1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i64> %shuffle
+}
+
 define <8 x i64> @PR179008(ptr %p0) {
 ; X86-AVX512F-LABEL: PR179008:
 ; X86-AVX512F:       # %bb.0:
