@@ -228,7 +228,8 @@ private:
                                                 const SymbolRef *sym) const;
   void reportBug(CheckerContext &C, std::unique_ptr<BugType> BT[],
                  const Expr *MtxExpr, const MemRegion *MtxRegion,
-                 CheckerKind CheckKind, StringRef Desc) const;
+                 CheckerKind CheckKind, StringRef Desc,
+                 const MemRegion *ExtraInteresting = nullptr) const;
 
   // Init.
   void InitAnyLock(const CallEvent &Call, CheckerContext &C,
@@ -559,26 +560,13 @@ void PthreadLockChecker::ReleaseLockAux(const CallEvent &Call,
 
   if (!LS.isEmpty()) {
     if (WarnOnLockOrderReversal && LS.getHead() != lockR) {
-      reportBug(C, BT_lor, MtxExpr, CheckKind,
+      reportBug(C, BT_lor, MtxExpr, lockR, CheckKind,
                 "This was not the most recently acquired lock. Possible lock "
-                "order reversal");
-    const MemRegion *firstLockR = LS.getHead();
-    if (firstLockR != lockR) {
-      ExplodedNode *N = C.generateErrorNode();
-      if (!N)
-        return;
-      initBugType(CheckKind);
-      auto Report = std::make_unique<PathSensitiveBugReport>(
-          *BT_lor[CheckKind],
-          "This was not the most recently acquired lock. Possible lock "
-          "order reversal",
-          N);
-      Report->addRange(MtxExpr->getSourceRange());
-      Report->markInteresting(lockR);
-      Report->markInteresting(firstLockR);
-      C.emitReport(std::move(Report));
+                "order reversal",
+                LS.getHead());
       return;
     }
+
     auto &Factory = state->get_context<LockSet>();
     llvm::ImmutableList<const MemRegion *> NewLS = Factory.getEmptyList();
     for (const MemRegion *LockReg :
@@ -700,9 +688,12 @@ void PthreadLockChecker::InitLockAux(const CallEvent &Call, CheckerContext &C,
   reportBug(C, BT_initlock, MtxExpr, LockR, CheckKind, Message);
 }
 
-void PthreadLockChecker::reportBug(
-    CheckerContext &C, std::unique_ptr<BugType> BT[], const Expr *MtxExpr,
-    const MemRegion *MtxRegion, CheckerKind CheckKind, StringRef Desc) const {
+void PthreadLockChecker::reportBug(CheckerContext &C,
+                                   std::unique_ptr<BugType> BT[],
+                                   const Expr *MtxExpr,
+                                   const MemRegion *MtxRegion,
+                                   CheckerKind CheckKind, StringRef Desc,
+                                   const MemRegion *ExtraInteresting) const {
   ExplodedNode *N = C.generateErrorNode();
   if (!N)
     return;
@@ -712,6 +703,8 @@ void PthreadLockChecker::reportBug(
   Report->addRange(MtxExpr->getSourceRange());
   if (MtxRegion)
     Report->markInteresting(MtxRegion);
+  if (ExtraInteresting)
+    Report->markInteresting(ExtraInteresting);
   C.emitReport(std::move(Report));
 }
 
