@@ -205,11 +205,11 @@ static bool hoistArithmetics(Instruction &I, Loop &L,
                              MemorySSAUpdater &MSSAU, AssumptionCache *AC,
                              DominatorTree *DT);
 static bool
-hoistInsertPastInsert(InsertElementInst *Ins, Loop *CurLoop, DominatorTree *DT,
-                      BasicBlock *HoistDest, ICFLoopSafetyInfo *SafetyInfo,
-                      MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
-                      OptimizationRemarkEmitter *ORE,
-                      SmallVectorImpl<Instruction *> &HoistedInstructions);
+hoistBuildVector(Instruction *BV, Loop *CurLoop, DominatorTree *DT,
+                 BasicBlock *HoistDest, ICFLoopSafetyInfo *SafetyInfo,
+                 MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
+                 OptimizationRemarkEmitter *ORE,
+                 SmallVectorImpl<Instruction *> &HoistedInstructions);
 static Instruction *cloneInstructionInExitBlock(
     Instruction &I, BasicBlock &ExitBlock, PHINode &PN, const LoopInfo *LI,
     const LoopSafetyInfo *SafetyInfo, MemorySSAUpdater &MSSAU);
@@ -942,10 +942,9 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
         continue;
       }
 
-      if (auto *Ins = dyn_cast<InsertElementInst>(&I))
-        if (hoistInsertPastInsert(Ins, CurLoop, DT,
-                                  CFH.getOrCreateHoistedBlock(BB), SafetyInfo,
-                                  MSSAU, SE, ORE, HoistedInstructions)) {
+      if (isa<ShuffleVectorInst, InsertElementInst>(&I))
+        if (hoistBuildVector(&I, CurLoop, DT, CFH.getOrCreateHoistedBlock(BB),
+                             SafetyInfo, MSSAU, SE, ORE, HoistedInstructions)) {
           Changed = true;
           continue;
         }
@@ -1072,28 +1071,48 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
   return Changed;
 }
 
-static std::optional<uint64_t>
-getConstantInsertionIndex(InsertElementInst *Ins) {
+static std::optional<int> getConstantInsertionIndex(InsertElementInst *Ins,
+                                                    int NumElts) {
   // Must have constant insertion lane.
   auto *InsertedIdxCI = dyn_cast<ConstantInt>(Ins->getOperand(2));
   if (!InsertedIdxCI)
     return std::nullopt;
-  auto *VecTy = cast<VectorType>(Ins->getType());
 
   // Avoid hoisting past out of bounds inserts.
-  if (InsertedIdxCI->isNegative() ||
-      InsertedIdxCI->getValue().uge(
-          VecTy->getElementCount().getKnownMinValue()))
+  if (InsertedIdxCI->isNegative() || InsertedIdxCI->getValue().uge(NumElts))
     return std::nullopt;
-  return InsertedIdxCI->getValue().getLimitedValue();
+
+  // Safely handle large insertion indexes
+  APInt Idx = InsertedIdxCI->getValue();
+  if (!Idx.isSignedIntN(32))
+    return std::nullopt;
+  return static_cast<int>(Idx.getSExtValue());
+}
+
+// Make sure the mask is just inserting RHS elements, and not shuffling
+// LHS elements.
+static bool isBuildVectorMask(ShuffleVectorInst *SV, int NumElts) {
+  // No length-changing shuffles.
+  if (SV->getOperand(0)->getType() != SV->getType())
+    return false;
+
+  // Each mask index must be either:
+  // - identity of LHS
+  // - poison
+  // - RHS element
+  ArrayRef<int> Mask = SV->getShuffleMask();
+  return llvm::all_of(enumerate(Mask), [&](const auto &E) {
+    auto [Lane, M] = E;
+    return (int)Lane == M || M < 0 || M >= NumElts;
+  });
 }
 
 static bool
-hoistInsertPastInsert(InsertElementInst *Ins, Loop *CurLoop, DominatorTree *DT,
-                      BasicBlock *HoistDest, ICFLoopSafetyInfo *SafetyInfo,
-                      MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
-                      OptimizationRemarkEmitter *ORE,
-                      SmallVectorImpl<Instruction *> &HoistedInstructions) {
+hoistBuildVector(Instruction *BV, Loop *CurLoop, DominatorTree *DT,
+                 BasicBlock *HoistDest, ICFLoopSafetyInfo *SafetyInfo,
+                 MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
+                 OptimizationRemarkEmitter *ORE,
+                 SmallVectorImpl<Instruction *> &HoistedInstructions) {
   // Canonicalize:
   //   %inner = insertelement %base, %variant, C1
   //   %outer = insertelement %inner, %invariant, C2
@@ -1101,47 +1120,143 @@ hoistInsertPastInsert(InsertElementInst *Ins, Loop *CurLoop, DominatorTree *DT,
   //   %outer = insertelement %base, %invariant, C2
   //   %inner = insertelement %outer, %variant, C1
   // so we can hoist %outer
+  //
+  // Canonicalize:
+  //   %inner = shufflevector <4 x i32> %base, %variant, <4, 5, poison, poison>
+  //   %outer = shufflevector <4 x i32> %inner, %invariant, <0, 1, 4, 5>
+  // into:
+  //   %outer = shufflevector <4 x i32> %base, %invariant, <poison, poison, 4,
+  //   5> %inner = shufflevector <4 x i32> %outer, %variant, <4, 5, 2, 3>
+  // so we can hoist %outer
+  //
+  // is generalized to any chain or inserts/shuffles
 
   // The instruction we are hoisting must have invariant insertion data
-  Value *InsertedElt = Ins->getOperand(1);
+  Value *InsertedElt = BV->getOperand(1);
   if (!CurLoop->isLoopInvariant(InsertedElt))
     return false;
 
-  std::optional<uint64_t> HoistIdx = getConstantInsertionIndex(Ins);
-  if (!HoistIdx)
+  // Only allow fixed vector build sequences
+  auto *VecTy = cast<VectorType>(BV->getType());
+  int NumElts = (int)VecTy->getElementCount().getKnownMinValue();
+  // Safely bail on large vectors
+  if (NumElts < 0)
     return false;
 
-  InsertElementInst *Inner = Ins;
-  while (!CurLoop->isLoopInvariant(Inner->getOperand(0))) {
-    // If the inner value isn't invariant, check to see if it is another insert
-    // All instructions in the chain must be in the same basic block
-    auto *InnerIns = dyn_cast<InsertElementInst>(Inner->getOperand(0));
-    if (!InnerIns || InnerIns->getParent() != Ins->getParent())
+  SmallDenseSet<int> InsertedLanes;
+  if (auto *SV = dyn_cast<ShuffleVectorInst>(BV)) {
+    if (!isBuildVectorMask(SV, NumElts))
       return false;
 
-    // Make sure not hoisting past insertions into the same lane
-    std::optional<uint64_t> InsertIdx = getConstantInsertionIndex(InnerIns);
-    if (!InsertIdx || *InsertIdx == *HoistIdx)
+    ArrayRef<int> Mask = SV->getShuffleMask();
+    for (const auto E : enumerate(Mask)) {
+      auto [Lane, M] = E;
+      // Conservatively preserve poison indexes
+      if (M >= NumElts || M < 0)
+        InsertedLanes.insert(Lane);
+    }
+  } else if (auto *Ins = dyn_cast<InsertElementInst>(BV)) {
+    std::optional<int> InsertIndex = getConstantInsertionIndex(Ins, NumElts);
+    if (!InsertIndex)
+      return false;
+    InsertedLanes.insert(*InsertIndex);
+  }
+
+  // Track all shuffle instructions that are going to be bypasses as well as
+  // the indexes of the hoisted shuffle that can be changed to poison
+  // since we be overwritten by following instructions
+  // Will have to adjust mask indexes if hoisting:
+  // loop:
+  //   %inner = shufflevector poison, %variant, <poison, poison, 6, 7>
+  //   %outer = shufflevector %inner, %invariant, <4, 5, 2, 3>
+  // will need to adjust to:
+  //   %outer = shufflevector poison, %invariant, <4, 5, poison, poison>
+  // loop:
+  //   %inner = shufflevector poison, %variant, <1, 2, 6, 7>
+  SmallVector<ShuffleVectorInst *> BypassedSVs;
+  SmallDenseSet<int> CanBePoison;
+  Instruction *Inner = BV;
+  while (!CurLoop->isLoopInvariant(Inner->getOperand(0))) {
+    // If the inner value isn't invariant, check to see if it is another build
+    // vector instruction
+    Inner = dyn_cast<Instruction>(Inner->getOperand(0));
+    if (!Inner)
+      return false;
+
+    // Continue chain if invariant not found
+    // All instructions in the chain must be in the same basic block
+    if (Inner->getParent() != BV->getParent())
       return false;
 
     // Instruction being hoisted past must only have one use
-    if (!InnerIns->hasOneUse())
+    if (!Inner->hasOneUse())
       return false;
 
-    Inner = InnerIns;
+    // If the inner value isn't invariant, check to see if it is another insert
+    // or shuffle
+    if (auto *InnerIns = dyn_cast<InsertElementInst>(Inner)) {
+      // Make sure not hoisting past insertions into the same lane
+      std::optional<int> InsertIdx =
+          getConstantInsertionIndex(InnerIns, NumElts);
+      if (!InsertIdx || InsertedLanes.contains(*InsertIdx))
+        return false;
+      CanBePoison.insert(*InsertIdx);
+    } else if (auto *InnerSV = dyn_cast<ShuffleVectorInst>(Inner)) {
+      if (!isBuildVectorMask(InnerSV, NumElts))
+        return false;
+
+      // Don't bypass shuffles that would use the lanes our hoisted instruction
+      // uses
+      ArrayRef<int> InnerMask = InnerSV->getShuffleMask();
+      for (int Lane = 0; Lane < NumElts; ++Lane) {
+        int M = InnerMask[Lane];
+        if (M < 0 || M >= 2 * NumElts)
+          CanBePoison.insert(Lane);
+        if (M >= NumElts) {
+          if (InsertedLanes.contains(Lane))
+            return false;
+          CanBePoison.insert(Lane);
+        }
+      }
+      BypassedSVs.push_back(InnerSV);
+    } else {
+      // Must be either a shuffle or insert element instructions
+      return false;
+    }
   }
 
   // Base case of `insertelement <4 x i8> %invar0, i8 %invar1, i32 2` handled in
   // base LICM logic
-  if (Inner == Ins)
+  if (Inner == BV)
     return false;
 
-  Ins->replaceAllUsesWith(Ins->getOperand(0));
-  Ins->moveBefore(Inner->getIterator());
-  Ins->setOperand(0, Inner->getOperand(0));
-  Inner->setOperand(0, Ins);
-  hoist(*Ins, DT, CurLoop, HoistDest, SafetyInfo, MSSAU, SE, ORE);
-  HoistedInstructions.push_back(Ins);
+  if (auto *SV = dyn_cast<ShuffleVectorInst>(BV)) {
+    // We don't care about the indexes that will be inserted into later
+    ArrayRef<int> Mask = SV->getShuffleMask();
+    SmallVector<int, 16> NewOuterMask(Mask.begin(), Mask.end());
+    for (int PoisonLane : CanBePoison)
+      NewOuterMask[PoisonLane] = PoisonMaskElem;
+
+    SV->setShuffleMask(NewOuterMask);
+  }
+
+  // Make sure all shuffles preserve the lanes used by the hoisted shuffle
+  for (ShuffleVectorInst *BypassedSV : BypassedSVs) {
+    ArrayRef<int> BypassedMask = BypassedSV->getShuffleMask();
+    SmallVector<int, 16> NewBypassedMask(BypassedMask.begin(),
+                                         BypassedMask.end());
+    for (int InsertedLane : InsertedLanes)
+      NewBypassedMask[InsertedLane] = InsertedLane;
+
+    BypassedSV->setShuffleMask(NewBypassedMask);
+  }
+
+  BV->replaceAllUsesWith(BV->getOperand(0));
+  BV->moveBefore(Inner->getIterator());
+  BV->setOperand(0, Inner->getOperand(0));
+  Inner->setOperand(0, BV);
+  hoist(*BV, DT, CurLoop, HoistDest, SafetyInfo, MSSAU, SE, ORE);
+  HoistedInstructions.push_back(BV);
   return true;
 }
 
