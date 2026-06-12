@@ -1124,9 +1124,7 @@ SymbolFileDWARF::GetTypeUnitSupportFiles(DWARFTypeUnit &tu) {
   static SupportFileList empty_list;
 
   dw_offset_t offset = tu.GetLineTableOffset();
-  if (offset == DW_INVALID_OFFSET ||
-      offset == llvm::DenseMapInfo<dw_offset_t>::getEmptyKey() ||
-      offset == llvm::DenseMapInfo<dw_offset_t>::getTombstoneKey())
+  if (offset == DW_INVALID_OFFSET)
     return nullptr;
 
   // Many type units can share a line table, so parse the support file list
@@ -3465,6 +3463,33 @@ VariableSP SymbolFileDWARF::ParseVariableDIECached(const SymbolContext &sc,
   return var_sp;
 }
 
+/// Walks transparent type wrappers following DW_AT_type and returns
+/// the first DW_AT_byte_size encountered along the chain.
+static std::optional<uint64_t> GetByteSizeFromTypeDIE(DWARFDIE die,
+                                                      unsigned max_depth = 64) {
+  // Bound the walk to guard against malformed/cyclic DWARF.
+  if (!die || !max_depth)
+    return std::nullopt;
+
+  if (std::optional<uint64_t> byte_size =
+          die.GetAttributeValueAsOptionalUnsigned(DW_AT_byte_size))
+    return byte_size;
+
+  switch (die.Tag()) {
+  case DW_TAG_const_type:
+  case DW_TAG_volatile_type:
+  case DW_TAG_restrict_type:
+  case DW_TAG_atomic_type:
+  case DW_TAG_typedef:
+    if (DWARFDIE next = die.GetAttributeValueAsReferenceDIE(DW_AT_type))
+      return GetByteSizeFromTypeDIE(next, max_depth - 1);
+    break;
+  default:
+    break;
+  }
+  return std::nullopt;
+}
+
 /// Creates a DWARFExpressionList from an DW_AT_location form_value.
 static DWARFExpressionList GetExprListFromAtLocation(DWARFFormValue form_value,
                                                      ModuleSP module,
@@ -3816,13 +3841,24 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   bool use_type_size_for_value =
       location_is_const_value_data &&
       DWARFFormValue::IsDataForm(const_value_form.Form());
-  if (use_type_size_for_value && type_sp->GetType()) {
-    DWARFExpression *location = location_list.GetMutableExpressionAtAddress();
-    location->UpdateValue(
-        const_value_form.Unsigned(),
-        llvm::expectedToOptional(type_sp->GetType()->GetByteSize(nullptr))
-            .value_or(0),
-        die.GetCU()->GetAddressByteSize());
+  if (use_type_size_for_value) {
+    std::optional<uint64_t> byte_size;
+    if (Type *t = type_sp->GetType())
+      byte_size = llvm::expectedToOptional(t->GetByteSize(nullptr));
+
+    // Some TypeSystems (such as Swift) cannot determine a type's byte
+    // size without an execution context (e.g. types whose layout
+    // depends on runtime metadata). In those cases the debug info
+    // might still carry the static size of the value's box, which is
+    // enough if the value is a constant.
+    if (!byte_size)
+      byte_size = GetByteSizeFromTypeDIE(type_die_form.Reference());
+
+    if (byte_size) {
+      DWARFExpression *location = location_list.GetMutableExpressionAtAddress();
+      location->UpdateValue(const_value_form.Unsigned(), *byte_size,
+                            die.GetCU()->GetAddressByteSize());
+    }
   }
 
   return std::make_shared<Variable>(
@@ -4336,6 +4372,45 @@ void SymbolFileDWARF::DumpClangAST(Stream &s, llvm::StringRef filter,
   if (!clang)
     return;
   clang->Dump(s.AsRawOstream(), filter, show_color);
+}
+
+lldb_private::ModuleSpecList SymbolFileDWARF::GetSeparateDebugInfoFiles() {
+  DWARFDebugInfo &info = DebugInfo();
+  const size_t num_cus = info.GetNumUnits();
+  lldb_private::ModuleSpecList spec_list;
+  // Check if a .dwp file exists, returning it if it does.
+  if (const auto &dwp_sp = GetDwpSymbolFile()) {
+    if (ObjectFile *dwp_obj = dwp_sp->GetObjectFile()) {
+      spec_list.Append(ModuleSpec(dwp_obj->GetFileSpec()));
+      // Only one .dwp file is expected, so return early.
+      return spec_list;
+    }
+  }
+
+  for (uint32_t cu_idx = 0; cu_idx < num_cus; ++cu_idx) {
+    DWARFUnit *unit = info.GetUnitAtIndex(cu_idx);
+    DWARFCompileUnit *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(unit);
+    if (dwarf_cu == nullptr || !dwarf_cu->GetDWOId().has_value())
+      continue;
+
+    const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
+    if (!die)
+      continue;
+
+    const char *dwo_name = GetDWOName(*dwarf_cu, *die.GetDIE());
+    if (!dwo_name)
+      continue;
+
+    lldb_private::FileSpec dwo_file(dwo_name);
+    if (!dwo_file.IsAbsolute()) {
+      const char *comp_dir = die.GetDIE()->GetAttributeValueAsString(
+          dwarf_cu, DW_AT_comp_dir, nullptr);
+      if (comp_dir)
+        dwo_file.PrependPathComponent(comp_dir);
+    }
+    spec_list.Append(ModuleSpec(dwo_file));
+  }
+  return spec_list;
 }
 
 bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,

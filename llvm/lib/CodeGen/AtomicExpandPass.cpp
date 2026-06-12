@@ -73,7 +73,7 @@ private:
   ///              MetadataSrc)
   using CreateCmpXchgInstFun = function_ref<void(
       IRBuilderBase &, Value *, Value *, Value *, Align, AtomicOrdering,
-      SyncScope::ID, Value *&, Value *&, Instruction *)>;
+      SyncScope::ID, bool, Value *&, Value *&, Instruction *)>;
 
   void handleFailure(Instruction &FailedInst, const Twine &Msg,
                      Instruction *DiagnosticInst = nullptr) const {
@@ -122,9 +122,9 @@ private:
   void expandAtomicCmpXchgToMaskedIntrinsic(AtomicCmpXchgInst *CI);
 
   AtomicCmpXchgInst *convertCmpXchgToIntegerType(AtomicCmpXchgInst *CI);
-  static Value *insertRMWCmpXchgLoop(
+  Value *insertRMWCmpXchgLoop(
       IRBuilderBase &Builder, Type *ResultType, Value *Addr, Align AddrAlign,
-      AtomicOrdering MemOpOrder, SyncScope::ID SSID,
+      AtomicOrdering MemOpOrder, SyncScope::ID SSID, bool IsVolatile,
       function_ref<Value *(IRBuilderBase &, Value *)> PerformOp,
       CreateCmpXchgInstFun CreateCmpXchg, Instruction *MetadataSrc);
   bool tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI);
@@ -567,7 +567,9 @@ LoadInst *AtomicExpandImpl::convertAtomicLoadToIntegerType(LoadInst *LI) {
   NewLI->setAtomic(LI->getOrdering(), LI->getSyncScopeID());
   LLVM_DEBUG(dbgs() << "Replaced " << *LI << " with " << *NewLI << "\n");
 
-  Value *NewVal = Builder.CreateBitCast(NewLI, LI->getType());
+  Value *NewVal = LI->getType()->isPtrOrPtrVectorTy()
+                      ? Builder.CreateIntToPtr(NewLI, LI->getType())
+                      : Builder.CreateBitCast(NewLI, LI->getType());
   LI->replaceAllUsesWith(NewVal);
   LI->eraseFromParent();
   return NewLI;
@@ -671,12 +673,24 @@ bool AtomicExpandImpl::expandAtomicLoadToCmpXchg(LoadInst *LI) {
 
   Value *Addr = LI->getPointerOperand();
   Type *Ty = LI->getType();
-  Constant *DummyVal = Constant::getNullValue(Ty);
 
-  Value *Pair = Builder.CreateAtomicCmpXchg(
+  // cmpxchg supports only integer and pointer operands. If the load type is
+  // FP or vector, run the cmpxchg on the same-sized integer and bitcast the
+  // result back; mirrors createCmpXchgInstFun.
+  bool NeedBitcast = Ty->isFloatingPointTy() || Ty->isVectorTy();
+  Type *CmpXchgTy = Ty;
+  if (NeedBitcast)
+    CmpXchgTy = Builder.getIntNTy(Ty->getPrimitiveSizeInBits());
+  Constant *DummyVal = Constant::getNullValue(CmpXchgTy);
+
+  AtomicCmpXchgInst *Pair = Builder.CreateAtomicCmpXchg(
       Addr, DummyVal, DummyVal, LI->getAlign(), Order,
-      AtomicCmpXchgInst::getStrongestFailureOrdering(Order));
+      AtomicCmpXchgInst::getStrongestFailureOrdering(Order),
+      LI->getSyncScopeID());
+  Pair->setVolatile(LI->isVolatile());
   Value *Loaded = Builder.CreateExtractValue(Pair, 0, "loaded");
+  if (NeedBitcast)
+    Loaded = Builder.CreateBitCast(Loaded, Ty);
 
   LI->replaceAllUsesWith(Loaded);
   LI->eraseFromParent();
@@ -725,7 +739,8 @@ void AtomicExpandImpl::expandAtomicStoreToXChg(StoreInst *SI) {
                                    : Ordering;
   AtomicRMWInst *AI = Builder.CreateAtomicRMW(
       AtomicRMWInst::Xchg, SI->getPointerOperand(), SI->getValueOperand(),
-      SI->getAlign(), RMWOrdering);
+      SI->getAlign(), RMWOrdering, SI->getSyncScopeID());
+  AI->setVolatile(SI->isVolatile());
   SI->eraseFromParent();
 
   // Now we have an appropriate swap instruction, lower it as usual.
@@ -735,8 +750,8 @@ void AtomicExpandImpl::expandAtomicStoreToXChg(StoreInst *SI) {
 static void createCmpXchgInstFun(IRBuilderBase &Builder, Value *Addr,
                                  Value *Loaded, Value *NewVal, Align AddrAlign,
                                  AtomicOrdering MemOpOrder, SyncScope::ID SSID,
-                                 Value *&Success, Value *&NewLoaded,
-                                 Instruction *MetadataSrc) {
+                                 bool IsVolatile, Value *&Success,
+                                 Value *&NewLoaded, Instruction *MetadataSrc) {
   Type *OrigTy = NewVal->getType();
 
   // This code can go away when cmpxchg supports FP and vector types.
@@ -751,6 +766,7 @@ static void createCmpXchgInstFun(IRBuilderBase &Builder, Value *Addr,
   AtomicCmpXchgInst *Pair = Builder.CreateAtomicCmpXchg(
       Addr, Loaded, NewVal, AddrAlign, MemOpOrder,
       AtomicCmpXchgInst::getStrongestFailureOrdering(MemOpOrder), SSID);
+  Pair->setVolatile(IsVolatile);
   if (MetadataSrc)
     copyMetadataForAtomic(*Pair, *MetadataSrc);
 
@@ -1094,9 +1110,10 @@ void AtomicExpandImpl::expandPartwordAtomicRMW(
 
   Value *OldResult;
   if (ExpansionKind == TargetLoweringBase::AtomicExpansionKind::CmpXChg) {
-    OldResult = insertRMWCmpXchgLoop(
-        Builder, PMV.WordType, PMV.AlignedAddr, PMV.AlignedAddrAlignment,
-        MemOpOrder, SSID, PerformPartwordOp, createCmpXchgInstFun, AI);
+    OldResult = insertRMWCmpXchgLoop(Builder, PMV.WordType, PMV.AlignedAddr,
+                                     PMV.AlignedAddrAlignment, MemOpOrder, SSID,
+                                     AI->isVolatile(), PerformPartwordOp,
+                                     createCmpXchgInstFun, AI);
   } else {
     assert(ExpansionKind == TargetLoweringBase::AtomicExpansionKind::LLSC);
     OldResult = insertRMWLLSCLoop(Builder, PMV.WordType, PMV.AlignedAddr,
@@ -1138,6 +1155,7 @@ AtomicRMWInst *AtomicExpandImpl::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
       Op, PMV.AlignedAddr, NewOperand, PMV.AlignedAddrAlignment,
       AI->getOrdering(), AI->getSyncScopeID());
 
+  NewAI->setVolatile(AI->isVolatile());
   copyMetadataForAtomic(*NewAI, *AI);
 
   Value *FinalOldResult = extractMaskedValue(Builder, NewAI, PMV);
@@ -1215,7 +1233,6 @@ bool AtomicExpandImpl::expandPartwordCmpXchg(AtomicCmpXchgInst *CI) {
   // Load the entire current word, and mask into place the expected and new
   // values
   LoadInst *InitLoaded = Builder.CreateLoad(PMV.WordType, PMV.AlignedAddr);
-  InitLoaded->setVolatile(CI->isVolatile());
   Value *InitLoaded_MaskOut = Builder.CreateAnd(InitLoaded, PMV.Inv_Mask);
   Builder.CreateBr(LoopBB);
 
@@ -1223,6 +1240,20 @@ bool AtomicExpandImpl::expandPartwordCmpXchg(AtomicCmpXchgInst *CI) {
   Builder.SetInsertPoint(LoopBB);
   PHINode *Loaded_MaskOut = Builder.CreatePHI(PMV.WordType, 2);
   Loaded_MaskOut->addIncoming(InitLoaded_MaskOut, BB);
+
+  // The initial load must be atomic with the same synchronization scope
+  // to avoid a data race with concurrent stores. If the instruction being
+  // emulated is volatile, issue a volatile load.
+  // addIncoming is done first so that any replaceAllUsesWith calls during
+  // normalization correctly update the PHI incoming value.
+  InitLoaded->setVolatile(CI->isVolatile());
+  if (TLI->shouldIssueAtomicLoadForAtomicEmulationLoop()) {
+    InitLoaded->setAtomic(AtomicOrdering::Monotonic, CI->getSyncScopeID());
+    // The newly created load might need to be lowered further. Because it is
+    // created in the same block as the atomicrmw, the AtomicExpand loop will
+    // not process it again.
+    processAtomicInstr(InitLoaded);
+  }
 
   // Mask/Or the expected and new values into place in the loaded word.
   Value *FullWord_NewVal = Builder.CreateOr(Loaded_MaskOut, NewVal_Shifted);
@@ -1682,6 +1713,8 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 }
 
 bool AtomicExpandImpl::isIdempotentRMW(AtomicRMWInst *RMWI) {
+  if (RMWI->isVolatile())
+    return false;
   // TODO: Add floating point support.
   auto C = dyn_cast<ConstantInt>(RMWI->getValOperand());
   if (!C)
@@ -1718,7 +1751,7 @@ bool AtomicExpandImpl::simplifyIdempotentRMW(AtomicRMWInst *RMWI) {
 
 Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
     IRBuilderBase &Builder, Type *ResultTy, Value *Addr, Align AddrAlign,
-    AtomicOrdering MemOpOrder, SyncScope::ID SSID,
+    AtomicOrdering MemOpOrder, SyncScope::ID SSID, bool IsVolatile,
     function_ref<Value *(IRBuilderBase &, Value *)> PerformOp,
     CreateCmpXchgInstFun CreateCmpXchg, Instruction *MetadataSrc) {
   LLVMContext &Ctx = Builder.getContext();
@@ -1750,15 +1783,26 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
   std::prev(BB->end())->eraseFromParent();
   Builder.SetInsertPoint(BB);
   LoadInst *InitLoaded = Builder.CreateAlignedLoad(ResultTy, Addr, AddrAlign);
-  // TODO: The initial load must be atomic with the same synchronization scope
-  // to avoid a data race with concurrent stores. If the instruction being
-  // emulated is volatile, issue a volatile load.
   Builder.CreateBr(LoopBB);
 
   // Start the main loop block now that we've taken care of the preliminaries.
   Builder.SetInsertPoint(LoopBB);
   PHINode *Loaded = Builder.CreatePHI(ResultTy, 2, "loaded");
   Loaded->addIncoming(InitLoaded, BB);
+
+  // The initial load must be atomic with the same synchronization scope
+  // to avoid a data race with concurrent stores. If the instruction being
+  // emulated is volatile, issue a volatile load.
+  // addIncoming is done first so that any replaceAllUsesWith calls during
+  // normalization correctly update the PHI incoming value.
+  InitLoaded->setVolatile(IsVolatile);
+  if (TLI->shouldIssueAtomicLoadForAtomicEmulationLoop()) {
+    InitLoaded->setAtomic(AtomicOrdering::Monotonic, SSID);
+    // The newly created load might need to be lowered further. Because it is
+    // created in the same block as the atomicrmw, the AtomicExpand loop will
+    // not process it again.
+    processAtomicInstr(InitLoaded);
+  }
 
   Value *NewVal = PerformOp(Builder, Loaded);
 
@@ -1769,7 +1813,7 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
                 MemOpOrder == AtomicOrdering::Unordered
                     ? AtomicOrdering::Monotonic
                     : MemOpOrder,
-                SSID, Success, NewLoaded, MetadataSrc);
+                SSID, IsVolatile, Success, NewLoaded, MetadataSrc);
   assert(Success && NewLoaded);
 
   Loaded->addIncoming(NewLoaded, LoopBB);
@@ -1821,7 +1865,7 @@ bool AtomicExpandImpl::expandAtomicRMWToCmpXchg(
   // loop for the FP atomics.
   Value *Loaded = AtomicExpandImpl::insertRMWCmpXchgLoop(
       Builder, AI->getType(), AI->getPointerOperand(), AI->getAlign(),
-      AI->getOrdering(), AI->getSyncScopeID(),
+      AI->getOrdering(), AI->getSyncScopeID(), AI->isVolatile(),
       [&](IRBuilderBase &Builder, Value *Loaded) {
         return buildAtomicRMWValue(AI->getOperation(), Builder, Loaded,
                                    AI->getValOperand());
@@ -1984,12 +2028,13 @@ void AtomicExpandImpl::expandAtomicRMWToLibcall(AtomicRMWInst *I) {
     expandAtomicRMWToCmpXchg(
         I, [this, I](IRBuilderBase &Builder, Value *Addr, Value *Loaded,
                      Value *NewVal, Align Alignment, AtomicOrdering MemOpOrder,
-                     SyncScope::ID SSID, Value *&Success, Value *&NewLoaded,
-                     Instruction *MetadataSrc) {
+                     SyncScope::ID SSID, bool IsVolatile, Value *&Success,
+                     Value *&NewLoaded, Instruction *MetadataSrc) {
           // Create the CAS instruction normally...
           AtomicCmpXchgInst *Pair = Builder.CreateAtomicCmpXchg(
               Addr, Loaded, NewVal, Alignment, MemOpOrder,
               AtomicCmpXchgInst::getStrongestFailureOrdering(MemOpOrder), SSID);
+          Pair->setVolatile(IsVolatile);
           if (MetadataSrc)
             copyMetadataForAtomic(*Pair, *MetadataSrc);
 
@@ -2210,9 +2255,18 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     I->replaceAllUsesWith(V);
   } else if (HasResult) {
     Value *V;
-    if (UseSizedLibcall)
-      V = Builder.CreateBitOrPointerCast(Result, I->getType());
-    else {
+    if (UseSizedLibcall) {
+      // Add bitcasts from Result's scalar type to I's <n x ptr> vector type
+      auto *PtrTy = dyn_cast<PointerType>(I->getType()->getScalarType());
+      auto *VTy = dyn_cast<VectorType>(I->getType());
+      if (VTy && PtrTy && !Result->getType()->isVectorTy()) {
+        unsigned AS = PtrTy->getAddressSpace();
+        Value *BC = Builder.CreateBitCast(
+            Result, VTy->getWithNewType(DL.getIntPtrType(Ctx, AS)));
+        V = Builder.CreateIntToPtr(BC, I->getType());
+      } else
+        V = Builder.CreateBitOrPointerCast(Result, I->getType());
+    } else {
       V = Builder.CreateAlignedLoad(I->getType(), AllocaResult,
                                     AllocaAlignment);
       Builder.CreateLifetimeEnd(AllocaResult);

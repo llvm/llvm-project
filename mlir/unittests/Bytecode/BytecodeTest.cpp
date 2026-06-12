@@ -292,3 +292,112 @@ TEST(Bytecode, EmptyFusedLocRoundtrip) {
 
   module.erase();
 }
+
+TEST(Bytecode, LocationElision) {
+  MLIRContext context;
+  context.allowUnregisteredDialects();
+  ParserConfig config(&context);
+
+  // Module 1: Reuses the same location "foo" everywhere.
+  StringRef ir1 = R"mlir(
+    module @Test {
+      "test.op"() : () -> () loc("foo")
+    } loc("foo")
+  )mlir";
+
+  // Module 2: Uses unique locations everywhere.
+  StringRef ir2 = R"mlir(
+    module @Test {
+      "test.op"() : () -> () loc("a")
+    } loc("b")
+  )mlir";
+
+  OwningOpRef<Operation *> op1 = parseSourceString(ir1, config);
+  OwningOpRef<Operation *> op2 = parseSourceString(ir2, config);
+  ASSERT_TRUE(op1);
+  ASSERT_TRUE(op2);
+
+  // Serialize both with location elision enabled.
+  BytecodeWriterConfig writerConfig;
+  writerConfig.setElideLocations(true);
+
+  std::string bytecode1;
+  {
+    llvm::raw_string_ostream os(bytecode1);
+    ASSERT_TRUE(succeeded(writeBytecodeToFile(op1.get(), os, writerConfig)));
+  }
+
+  std::string bytecode2;
+  {
+    llvm::raw_string_ostream os(bytecode2);
+    ASSERT_TRUE(succeeded(writeBytecodeToFile(op2.get(), os, writerConfig)));
+  }
+
+  // If location elision is working correctly, both modules must produce
+  // the EXACT same bytecode representation, because all locations (shared or
+  // unique) will have been collapsed into a single shared UnknownLoc.
+  EXPECT_EQ(bytecode1, bytecode2);
+}
+
+TEST(Bytecode, LocationElisionPreservesAttributes) {
+  MLIRContext context;
+  context.allowUnregisteredDialects();
+  ParserConfig config(&context);
+
+  // An operation with a debug location ("elide_me") AND a semantic attribute
+  // that is a LocationAttr ("preserve_me").
+  StringRef ir = R"mlir(
+    module @Test {
+      "test.op"() {some_loc_attr = loc("preserve_me")} : () -> () loc("elide_me")
+    } loc("elide_me")
+  )mlir";
+
+  OwningOpRef<Operation *> op = parseSourceString(ir, config);
+  ASSERT_TRUE(op);
+
+  // Serialize with location elision enabled.
+  BytecodeWriterConfig writerConfig;
+  writerConfig.setElideLocations(true);
+
+  std::string bytecode;
+  {
+    llvm::raw_string_ostream os(bytecode);
+    ASSERT_TRUE(succeeded(writeBytecodeToFile(op.get(), os, writerConfig)));
+  }
+
+  // Parse it back using the bytecode reader.
+  std::unique_ptr<Block> block = std::make_unique<Block>();
+  ASSERT_TRUE(succeeded(readBytecodeFile(
+      llvm::MemoryBufferRef(bytecode, "string-buffer"), block.get(), config)));
+
+  // Verify we got the roundtripped module.
+  ASSERT_FALSE(block->empty());
+  Operation *roundTrippedModule = &block->front();
+  ASSERT_TRUE(roundTrippedModule);
+
+  // Find the inner "test.op" operation.
+  Operation *innerOp = nullptr;
+  roundTrippedModule->walk([&](Operation *op) {
+    if (op->getName().getStringRef() == "test.op") {
+      innerOp = op;
+    }
+  });
+  ASSERT_TRUE(innerOp);
+
+  // 1. Verify that the debug location of "test.op" WAS elided (became
+  // UnknownLoc).
+  EXPECT_TRUE(isa<UnknownLoc>(innerOp->getLoc()));
+
+  // 2. Verify that the semantic location attribute WAS PRESERVED.
+  Attribute semanticLocAttr = innerOp->getAttr("some_loc_attr");
+  ASSERT_TRUE(semanticLocAttr);
+  auto locAttr = dyn_cast<LocationAttr>(semanticLocAttr);
+  ASSERT_TRUE(locAttr);
+
+  // It should still be loc("preserve_me"), not UnknownLoc.
+  EXPECT_FALSE(isa<UnknownLoc>(locAttr));
+
+  auto nameLoc = dyn_cast<NameLoc>(locAttr);
+  ASSERT_TRUE(nameLoc);
+  EXPECT_EQ(nameLoc.getName().getValue(), "preserve_me");
+}

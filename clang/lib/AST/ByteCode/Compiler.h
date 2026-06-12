@@ -232,6 +232,7 @@ public:
   bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
   bool VisitObjCDictionaryLiteral(const ObjCDictionaryLiteral *E);
   bool VisitObjCArrayLiteral(const ObjCArrayLiteral *E);
+  bool VisitDesignatedInitUpdateExpr(const DesignatedInitUpdateExpr *E);
 
   // Statements.
   bool visitCompoundStmt(const CompoundStmt *S);
@@ -253,10 +254,12 @@ public:
 protected:
   bool visitStmt(const Stmt *S);
   bool visitExpr(const Expr *E, bool DestroyToplevelScope) override;
+  bool visitLValueExpr(const Expr *E, bool DestroyToplevelScope) override;
   bool visitFunc(const FunctionDecl *F) override;
 
   bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
                           bool ConstantContext) override;
+  bool visitDtorCall(const VarDecl *VD, const APValue &Value) override;
 
 protected:
   /// Emits scope cleanup instructions.
@@ -301,6 +304,8 @@ protected:
   /// been created. visitInitializer() then relies on a pointer to this
   /// variable being on top of the stack.
   bool visitInitializer(const Expr *E);
+  /// Similar, but will also pop the pointer.
+  bool visitInitializerPop(const Expr *E);
   bool visitAsLValue(const Expr *E);
   /// Evaluates an expression for side effects and discards the result.
   bool discard(const Expr *E);
@@ -415,12 +420,36 @@ private:
                              const BinaryOperator *E);
   bool emitRecordDestructionPop(const Record *R, SourceInfo Loc);
   bool emitDestructionPop(const Descriptor *Desc, SourceInfo Loc);
-  bool emitDummyPtr(const DeclTy &D, const Expr *E);
+  bool emitDummyPtr(const DeclTy &D, const Expr *E, bool CU = false);
   bool emitFloat(const APFloat &F, const Expr *E);
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
   bool emitBuiltinBitCast(const CastExpr *E);
+
+  bool emitHLSLAggregateSplat(PrimType SrcT, unsigned SrcOffset,
+                              QualType DestType, const Expr *E);
+  bool emitVectorConversion(const Expr *Src, const Expr *E);
+
+  /// A scalar element extracted during HLSL aggregate flattening.
+  struct HLSLFlatElement {
+    unsigned LocalOffset;
+    PrimType Type;
+  };
+  unsigned countHLSLFlatElements(QualType Ty);
+  bool emitHLSLFlattenAggregate(QualType SrcType, unsigned SrcPtrOffset,
+                                SmallVectorImpl<HLSLFlatElement> &Elements,
+                                unsigned MaxElements, const Expr *E);
+  bool emitHLSLConstructAggregate(QualType DestType,
+                                  ArrayRef<HLSLFlatElement> Elements,
+                                  unsigned &ElemIdx, const Expr *E);
+  bool emitHLSLConstructAggregate(QualType DestType,
+                                  ArrayRef<HLSLFlatElement> Elements,
+                                  const Expr *E) {
+    unsigned ElemIdx = 0;
+    return emitHLSLConstructAggregate(DestType, Elements, ElemIdx, E);
+  }
+
   bool compileConstructor(const CXXConstructorDecl *Ctor);
   bool compileDestructor(const CXXDestructorDecl *Dtor);
   bool compileUnionAssignmentOperator(const CXXMethodDecl *MD);
@@ -606,6 +635,7 @@ public:
         if (!this->Ctx->emitDestructionPop(Local.Desc, Local.Desc->getLoc()))
           return false;
 
+        this->Ctx->fallthrough(EndLabel);
         this->Ctx->emitLabel(EndLabel);
       } else {
         if (!this->Ctx->emitGetPtrLocal(Local.Offset, E))

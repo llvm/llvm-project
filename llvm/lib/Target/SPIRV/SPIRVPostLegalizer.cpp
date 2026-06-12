@@ -278,6 +278,7 @@ static SPIRVTypeInst deduceResultTypeFromOperands(MachineInstr *I,
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_PTRTOINT:
+  case TargetOpcode::G_TRUNC:
     return deduceIntTypeFromResult(ResVReg, MIB, GR);
   case TargetOpcode::G_BUILD_VECTOR:
     return deduceTypeFromOperandRange(I, MIB, GR, 1, I->getNumOperands());
@@ -318,7 +319,7 @@ static bool deduceAndAssignTypeForGUnmerge(MachineInstr *I, MachineFunction &MF,
   SPIRVTypeInst ScalarType = nullptr;
   if (SPIRVTypeInst DefType = GR->getSPIRVTypeForVReg(SrcReg)) {
     assert(DefType->getOpcode() == SPIRV::OpTypeVector);
-    ScalarType = GR->getSPIRVTypeForVReg(DefType->getOperand(1).getReg());
+    ScalarType = GR->getScalarOrVectorComponentType(DefType);
   }
 
   if (!ScalarType) {

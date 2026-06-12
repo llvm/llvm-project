@@ -434,24 +434,6 @@ ExprResult SemaObjC::BuildObjCNumericLiteral(SourceLocation AtLoc,
   return SemaRef.MaybeBindToTemporary(NumberLiteral);
 }
 
-ExprResult SemaObjC::ActOnObjCBoolLiteral(SourceLocation AtLoc,
-                                          SourceLocation ValueLoc, bool Value) {
-  ASTContext &Context = getASTContext();
-  ExprResult Inner;
-  if (getLangOpts().CPlusPlus) {
-    Inner = SemaRef.ActOnCXXBoolLiteral(ValueLoc,
-                                        Value ? tok::kw_true : tok::kw_false);
-  } else {
-    // C doesn't actually have a way to represent literal values of type
-    // _Bool. So, we'll use 0/1 and implicit cast to _Bool.
-    Inner = SemaRef.ActOnIntegerConstant(ValueLoc, Value ? 1 : 0);
-    Inner = SemaRef.ImpCastExprToType(Inner.get(), Context.BoolTy,
-                                      CK_IntegralToBoolean);
-  }
-
-  return BuildObjCNumericLiteral(AtLoc, Inner.get());
-}
-
 /// Check that the given expression is a valid element of an Objective-C
 /// collection literal.
 static ExprResult CheckObjCCollectionLiteralElement(Sema &S, Expr *Element,

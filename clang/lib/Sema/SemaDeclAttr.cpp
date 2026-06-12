@@ -436,10 +436,30 @@ static void checkAttrArgsAreCapabilityObjs(Sema &S, Decl *D,
   }
 }
 
+/// True if T (or its pointee, after stripping a top-level reference) is a
+/// function pointer or dependent.
+static bool isFunctionPointerOrDependent(QualType T) {
+  T = T.getNonReferenceType();
+  return T->isDependentType() || T->isFunctionPointerType();
+}
+
+/// Checks that thread-safety attributes on variables or fields apply only to
+/// function pointer types.
+static bool checkThreadSafetyValueDeclIsFunPtr(Sema &S, const ValueDecl *VD,
+                                               const AttributeCommonInfo &A) {
+  if (isFunctionPointerOrDependent(VD->getType()))
+    return true;
+  S.Diag(A.getLoc(), diag::warn_thread_attribute_not_on_fun_ptr)
+      << A << (isa<FieldDecl>(VD) ? 1 : 0);
+  return false;
+}
+
 static bool checkFunParamsAreScopedLockable(Sema &S,
                                             const ParmVarDecl *ParamDecl,
-                                            const ParsedAttr &AL) {
+                                            const AttributeCommonInfo &AL) {
   QualType ParamType = ParamDecl->getType();
+  if (ParamType->isDependentType())
+    return true;
   if (const auto *RefType = ParamType->getAs<ReferenceType>();
       RefType &&
       checkRecordTypeForScopedCapability(S, RefType->getPointeeType()))
@@ -447,6 +467,48 @@ static bool checkFunParamsAreScopedLockable(Sema &S,
   S.Diag(AL.getLoc(), diag::warn_thread_attribute_not_on_scoped_lockable_param)
       << AL;
   return false;
+}
+
+static bool checkThreadSafetyAttrSubject(Sema &S, Decl *D, const ParsedAttr &AL,
+                                         bool CheckParmVar = false) {
+  const auto *VD = dyn_cast<ValueDecl>(D);
+  if (!VD || isa<FunctionDecl>(VD))
+    return true;
+
+  if (CheckParmVar) {
+    if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
+      // A function-pointer parameter is also valid here.
+      if (isFunctionPointerOrDependent(PVD->getType()))
+        return true;
+      return checkFunParamsAreScopedLockable(S, PVD, AL);
+    }
+  }
+
+  return checkThreadSafetyValueDeclIsFunPtr(S, VD, AL);
+}
+
+bool Sema::checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A) {
+  if (!isa<AssertCapabilityAttr, AcquireCapabilityAttr,
+           TryAcquireCapabilityAttr, ReleaseCapabilityAttr,
+           RequiresCapabilityAttr, LocksExcludedAttr>(A))
+    return true;
+
+  const auto *VD = dyn_cast<ValueDecl>(D);
+  if (!VD)
+    return true;
+
+  // Parameters of template functions need to be re-checked during
+  // instantiation because their types might have been dependent.
+  if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
+    if (isFunctionPointerOrDependent(PVD->getType()))
+      return true;
+    return checkFunParamsAreScopedLockable(*this, PVD, *A);
+  }
+
+  if (isa<FunctionDecl>(VD))
+    return true;
+
+  return checkThreadSafetyValueDeclIsFunPtr(*this, VD, *A);
 }
 
 //===----------------------------------------------------------------------===//
@@ -630,8 +692,7 @@ static void handleLockReturnedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleLocksExcludedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
-      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+  if (!checkThreadSafetyAttrSubject(S, D, AL, /*CheckParmVar=*/true))
     return;
 
   if (!AL.checkAtLeastNumArgs(S, 1))
@@ -1526,6 +1587,20 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     Module = &S.PP.getIdentifierTable().get(ModuleName);
   }
 
+  // Check if the new ownership_returns attribute does not contain
+  // an index, but previous attributes do.
+  if (K == OwnershipAttr::Returns && AL.getNumArgs() == 1) {
+    for (const auto *I : D->specific_attrs<OwnershipAttr>()) {
+      if (I->getOwnKind() == OwnershipAttr::Returns && I->args_size() > 0) {
+        S.Diag(I->getLocation(), diag::err_ownership_returns_index_mismatch)
+            << I->args_begin()->getSourceIndex() << 0;
+        S.Diag(AL.getLoc(), diag::note_ownership_returns_index_mismatch)
+            << 0 << 1;
+        return;
+      }
+    }
+  }
+
   SmallVector<ParamIdx, 8> OwnershipArgs;
   for (unsigned i = 1; i < AL.getNumArgs(); ++i) {
     Expr *Ex = AL.getArgAsExpr(i);
@@ -1558,21 +1633,25 @@ static void handleOwnershipAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       // Cannot have two ownership attributes of different kinds for the same
       // index.
       if (I->getOwnKind() != K && llvm::is_contained(I->args(), Idx)) {
-          S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
-              << AL << I
-              << (AL.isRegularKeywordAttribute() ||
-                  I->isRegularKeywordAttribute());
-          return;
-      } else if (K == OwnershipAttr::Returns &&
-                 I->getOwnKind() == OwnershipAttr::Returns) {
-        // A returns attribute conflicts with any other returns attribute using
-        // a different index.
-        if (!llvm::is_contained(I->args(), Idx)) {
+        S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+            << AL << I
+            << (AL.isRegularKeywordAttribute() ||
+                I->isRegularKeywordAttribute());
+        return;
+      }
+
+      if (K == OwnershipAttr::Returns &&
+          I->getOwnKind() == OwnershipAttr::Returns) {
+        bool IHasArgs = I->args_size() > 0;
+
+        if (!IHasArgs || !llvm::is_contained(I->args(), Idx)) {
+          unsigned IIdx = IHasArgs ? I->args_begin()->getSourceIndex() : 0;
+
           S.Diag(I->getLocation(), diag::err_ownership_returns_index_mismatch)
-              << I->args_begin()->getSourceIndex();
-          if (I->args_size())
-            S.Diag(AL.getLoc(), diag::note_ownership_returns_index_mismatch)
-                << Idx.getSourceIndex() << Ex->getSourceRange();
+              << IIdx << (IHasArgs ? 0 : 1);
+
+          S.Diag(AL.getLoc(), diag::note_ownership_returns_index_mismatch)
+              << Idx.getSourceIndex() << 0 << Ex->getSourceRange();
           return;
         }
       } else if (K == OwnershipAttr::Takes &&
@@ -5805,15 +5884,29 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
       A = HostTI->checkCallingConvention(CC);
     if (A == TargetInfo::CCCR_OK && CheckDevice && DeviceTI)
       A = DeviceTI->checkCallingConvention(CC);
-  } else if (LangOpts.SYCLIsDevice && TI.getTriple().isAMDGPU() &&
-             CC == CC_X86VectorCall) {
-    // Assuming SYCL Device AMDGPU CC_X86VectorCall functions are always to be
-    // emitted on the host. The MSVC STL has CC-based specializations so we
-    // cannot change the CC to be the default as that will cause a clash with
-    // another specialization.
+  } else if (LangOpts.SYCLIsDevice) {
+    // During device compilation, calling conventions that are valid for the
+    // host, for the device, and for both the host and the device may be
+    // encountered. Diagnostics are desired for cases where the calling
+    // convention is not supported by either the host or the device. If Aux is
+    // null (which should rarely be the case), it isn't possible to check
+    // whether the calling convention is supported by the host, so just assume
+    // that it is. If the calling convention is supported for the device, there
+    // is no need to check the host; the device target gets priority since this
+    // check is only performed during device compilation.
     A = TI.checkCallingConvention(CC);
-    if (Aux && A != TargetInfo::CCCR_OK)
+    if (Aux && A == TargetInfo::CCCR_Warning) {
+      // If the calling convention would provoke a warning for the device, check
+      // the host and preserve the warning only if the calling convention would
+      // provoke an error for the host. Otherwise, assume this calling
+      // convention is only used for host only functions.
       A = Aux->checkCallingConvention(CC);
+      if (A == TargetInfo::CCCR_Error)
+        A = TargetInfo::CCCR_Warning;
+    } else if (Aux && A == TargetInfo::CCCR_Error) {
+      // Assume this calling convention is only used for host only functions.
+      A = Aux->checkCallingConvention(CC);
+    }
   } else {
     A = TI.checkCallingConvention(CC);
   }
@@ -5940,7 +6033,8 @@ static Expr *makeLaunchBoundsArgExpr(Sema &S, Expr *E,
 
 CUDALaunchBoundsAttr *
 Sema::CreateLaunchBoundsAttr(const AttributeCommonInfo &CI, Expr *MaxThreads,
-                             Expr *MinBlocks, Expr *MaxBlocks) {
+                             Expr *MinBlocks, Expr *MaxBlocks,
+                             bool IgnoreArch) {
   CUDALaunchBoundsAttr TmpAttr(Context, CI, MaxThreads, MinBlocks, MaxBlocks);
   MaxThreads = makeLaunchBoundsArgExpr(*this, MaxThreads, TmpAttr, 0);
   if (!MaxThreads)
@@ -5953,14 +6047,20 @@ Sema::CreateLaunchBoundsAttr(const AttributeCommonInfo &CI, Expr *MaxThreads,
   }
 
   if (MaxBlocks) {
-    // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
-    auto SM = getOffloadArch(Context.getTargetInfo());
-    if (SM == OffloadArch::Unknown || SM < OffloadArch::SM_90) {
-      Diag(MaxBlocks->getBeginLoc(), diag::warn_cuda_maxclusterrank_sm_90)
-          << OffloadArchToString(SM) << CI << MaxBlocks->getSourceRange();
-      // Ignore it by setting MaxBlocks to null;
-      MaxBlocks = nullptr;
-    } else {
+    // We might want to ignore the nvptx arch check, e.g., when processing the
+    // launch bounds attribute within ompx_attribute to support other archs.
+    if (!IgnoreArch) {
+      // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
+      auto SM = getOffloadArch(Context.getTargetInfo());
+      if (SM == OffloadArch::Unknown || SM < OffloadArch::SM_90) {
+        Diag(MaxBlocks->getBeginLoc(), diag::warn_cuda_maxclusterrank_sm_90)
+            << OffloadArchToString(SM) << CI << MaxBlocks->getSourceRange();
+        // Ignore it by setting MaxBlocks to null;
+        MaxBlocks = nullptr;
+      }
+    }
+
+    if (MaxBlocks) {
       MaxBlocks = makeLaunchBoundsArgExpr(*this, MaxBlocks, TmpAttr, 2);
       if (!MaxBlocks)
         return nullptr;
@@ -6673,6 +6773,9 @@ static void handleReentrantCapabilityAttr(Sema &S, Decl *D,
 }
 
 static void handleAssertCapabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (!checkThreadSafetyAttrSubject(S, D, AL))
+    return;
+
   SmallVector<Expr*, 1> Args;
   if (!checkLockFunAttrCommon(S, D, AL, Args))
     return;
@@ -6683,8 +6786,7 @@ static void handleAssertCapabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleAcquireCapabilityAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
-  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
-      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+  if (!checkThreadSafetyAttrSubject(S, D, AL, /*CheckParmVar=*/true))
     return;
 
   SmallVector<Expr*, 1> Args;
@@ -6697,6 +6799,9 @@ static void handleAcquireCapabilityAttr(Sema &S, Decl *D,
 
 static void handleTryAcquireCapabilityAttr(Sema &S, Decl *D,
                                            const ParsedAttr &AL) {
+  if (!checkThreadSafetyAttrSubject(S, D, AL))
+    return;
+
   SmallVector<Expr*, 2> Args;
   if (!checkTryLockFunAttrCommon(S, D, AL, Args))
     return;
@@ -6707,9 +6812,9 @@ static void handleTryAcquireCapabilityAttr(Sema &S, Decl *D,
 
 static void handleReleaseCapabilityAttr(Sema &S, Decl *D,
                                         const ParsedAttr &AL) {
-  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
-      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+  if (!checkThreadSafetyAttrSubject(S, D, AL, /*CheckParmVar=*/true))
     return;
+
   // Check that all arguments are lockable objects.
   SmallVector<Expr *, 1> Args;
   checkAttrArgsAreCapabilityObjs(S, D, AL, Args, 0, true);
@@ -6720,8 +6825,7 @@ static void handleReleaseCapabilityAttr(Sema &S, Decl *D,
 
 static void handleRequiresCapabilityAttr(Sema &S, Decl *D,
                                          const ParsedAttr &AL) {
-  if (const auto *ParmDecl = dyn_cast<ParmVarDecl>(D);
-      ParmDecl && !checkFunParamsAreScopedLockable(S, ParmDecl, AL))
+  if (!checkThreadSafetyAttrSubject(S, D, AL, /*CheckParmVar=*/true))
     return;
 
   if (!AL.checkAtLeastNumArgs(S, 1))
@@ -6881,9 +6985,6 @@ static void handleNoPFPAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
-  auto *FD = dyn_cast<FieldDecl>(D);
-  assert(FD);
-
   auto *CountExpr = AL.getArgAsExpr(0);
   if (!CountExpr)
     return;
@@ -6911,6 +7012,7 @@ static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
     llvm_unreachable("unexpected counted_by family attribute");
   }
 
+  FieldDecl *FD = cast<FieldDecl>(D);
   if (S.CheckCountedByAttrOnField(FD, CountExpr, CountInBytes, OrNull))
     return;
 
@@ -8830,8 +8932,10 @@ void Sema::ActOnCleanupAttr(Decl *D, const Attr *A) {
   // If this ever proves to be a problem it should be easy to fix.
   QualType Ty = this->Context.getPointerType(VD->getType());
   QualType ParamTy = FD->getParamDecl(0)->getType();
-  if (!this->IsAssignConvertCompatible(this->CheckAssignmentConstraints(
-          FD->getParamDecl(0)->getLocation(), ParamTy, Ty))) {
+  if (QualType ConvertedTy;
+      !this->IsAssignConvertCompatible(this->CheckAssignmentConstraints(
+          FD->getParamDecl(0)->getLocation(), ParamTy, Ty)) &&
+      !ObjC().isObjCWritebackConversion(Ty, ParamTy, ConvertedTy)) {
     this->Diag(Attr->getArgLoc(),
                diag::err_attribute_cleanup_func_arg_incompatible_type)
         << NI.getName() << ParamTy << Ty;

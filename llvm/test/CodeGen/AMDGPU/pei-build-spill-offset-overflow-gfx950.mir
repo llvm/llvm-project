@@ -22,6 +22,8 @@ body:             |
     ; CHECK-LABEL: name: test_spill_v6_offset_overflow
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
+    ; CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; CHECK-NEXT: $sgpr0 = S_ADD_I32 $sgpr32, 4084, implicit-def dead $scc
     ; CHECK-NEXT: SCRATCH_STORE_DWORDX4_SADDR $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: ("amdgpu-thread-private" store (s128) into %fixed-stack.0, align 4, addrspace 5)
     ; CHECK-NEXT: SCRATCH_STORE_DWORDX2_SADDR $vgpr4_vgpr5, killed $sgpr0, 16, 0, implicit $exec, implicit $flat_scr, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: ("amdgpu-thread-private" store (s64) into %fixed-stack.0 + 16, align 4, addrspace 5)

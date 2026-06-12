@@ -159,29 +159,56 @@ these variables, so extra care must be taken to manually ensure that all such
 accesses are safe. Furthermore, the addresses of such local variables should
 never be stored on the heap, as it would leak the location of the SafeStack.
 
+``sanitizer/safestack_interface.h``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To use the low-level API, include the header ``<sanitizer/safestack_interface.h>``.
+
+``__safestack_get_unsafe_stack_ptr()``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This function returns current unsafe stack pointer of the current thread.
+
+``__safestack_get_unsafe_stack_bottom()``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This function returns a pointer to the bottom of the unsafe stack of the
+current thread.
+
+``__safestack_get_unsafe_stack_top()``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This function returns a pointer to the top of the unsafe stack of the
+current thread.
+
+
+
+Deprecated Builtins
+~~~~~~~~~~~~~~~~~~~
+
+The following builtins are still supported but are deprecated and will emit a
+warning. Use the corresponding functions from ``<sanitizer/safestack_interface.h>``
+instead.
+
 ``__builtin___get_unsafe_stack_ptr()``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This builtin function returns current unsafe stack pointer of the current
-thread.
+Deprecated alias for ``__safestack_get_unsafe_stack_ptr()``.
 
 ``__builtin___get_unsafe_stack_bottom()``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This builtin function returns a pointer to the bottom of the unsafe stack of the
-current thread.
+Deprecated alias for ``__safestack_get_unsafe_stack_bottom()``.
 
 ``__builtin___get_unsafe_stack_top()``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This builtin function returns a pointer to the top of the unsafe stack of the
-current thread.
+Deprecated alias for ``__safestack_get_unsafe_stack_top()``.
 
 ``__builtin___get_unsafe_stack_start()``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Deprecated: This builtin function is an alias for
-``__builtin___get_unsafe_stack_bottom()``.
+Deprecated alias for ``__safestack_get_unsafe_stack_bottom()``.
 
 Design
 ======

@@ -107,6 +107,26 @@ public:
     return Error::success();
   }
 
+  bool isFast(FastMathFlags Flags) {
+    // HLSL Fast Math doesn't enable AllowContract flag; This can be
+    // removed when we enable it in the future.
+    return Flags.allowReassoc() && Flags.noNaNs() && Flags.noInfs() &&
+           Flags.noSignedZeros() && Flags.allowReciprocal() &&
+           Flags.approxFunc();
+  }
+
+  void setDxPrecise(CallInst *CI) {
+    const StringRef Key = "dx.precise";
+    Module *M = CI->getModule();
+
+    LLVMContext &Ctx = M->getContext();
+    MDNode *One =
+        llvm::MDNode::get(Ctx, ConstantAsMetadata::get(ConstantInt::get(
+                                   llvm::Type::getInt32Ty(Ctx), 1)));
+
+    CI->setMetadata(Key, One);
+  }
+
   [[nodiscard]] bool
   replaceFunctionWithOp(Function &F, dxil::OpCode DXILOp,
                         ArrayRef<IntrinArgSelect> ArgSelects) {
@@ -135,6 +155,10 @@ public:
           OpBuilder.tryCreateOp(DXILOp, Args, CI->getName(), F.getReturnType());
       if (Error E = OpCall.takeError())
         return E;
+
+      if (isa<FPMathOperator>(CI) &&
+          !isFast(cast<FPMathOperator>(CI)->getFastMathFlags()))
+        setDxPrecise(*OpCall);
 
       if (isa<StructType>(CI->getType())) {
         if (Error E = replaceNamedStructUses(CI, *OpCall))
@@ -566,6 +590,170 @@ public:
     });
   }
 
+  // Copies `Src` into `Args` starting at `ArgIdx`. If `Src` is a vector, its
+  // elements are extracted and stored in consecutive slots; otherwise `Src`
+  // is stored directly. At most `MaxElements` elements are expected.
+  static void extractElementsIntoArgs(IRBuilder<> &IRB,
+                                      MutableArrayRef<Value *> Args,
+                                      unsigned ArgIdx, Value *Src,
+                                      unsigned MaxElements) {
+    Type *Ty = Src->getType();
+    if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
+      unsigned Count = VecTy->getNumElements();
+      assert(Count <= MaxElements && "Expected at most 3 elements in vector");
+      for (unsigned I = 0; I < Count; ++I)
+        Args[ArgIdx + I] = IRB.CreateExtractElement(Src, uint64_t(I));
+    } else {
+      Args[ArgIdx] = Src;
+    }
+  }
+
+  /// Copy offsets into the argument list at the given index, unless
+  /// the offsets are known to be zero (i.e., a null constant).
+  static void extractNonZeroOffsets(IRBuilder<> &IRB,
+                                    MutableArrayRef<Value *> Args,
+                                    unsigned ArgIdx, Value *Offsets,
+                                    unsigned MaxElements) {
+    auto *COff = dyn_cast<Constant>(Offsets);
+    bool OffsetsAreZero = COff && COff->isNullValue();
+    if (!OffsetsAreZero)
+      extractElementsIntoArgs(IRB, Args, ArgIdx, Offsets, MaxElements);
+  }
+
+  [[nodiscard]] bool lowerTextureLoad(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    Type *Int32Ty = IRB.getInt32Ty();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Coords = CI->getArgOperand(1);
+      Value *MipLevel = CI->getArgOperand(2);
+      Value *Offsets = CI->getArgOperand(3);
+
+      Type *OldTy = CI->getType();
+      Type *NewRetTy = OpBuilder.getResRetType(OldTy->getScalarType());
+
+      Value *Undef = UndefValue::get(Int32Ty);
+      std::array<Value *, 8> Args{Handle, MipLevel, Undef, Undef,
+                                  Undef,  Undef,    Undef, Undef};
+
+      // Copy coordinates and offsets into Args.
+      extractElementsIntoArgs(IRB, Args, 2, Coords, 3);
+      extractNonZeroOffsets(IRB, Args, 5, Offsets, 3);
+
+      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
+          OpCode::TextureLoad, Args, CI->getName(), NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/false))
+        return E;
+
+      return Error::success();
+    });
+  }
+
+  /// Common helper for lowering sample operations (SampleBias, SampleGrad,
+  /// etc.) that share the same pattern: extract handle/sampler, unpack
+  /// coordinates and offsets, build the DXIL arg list, and replace uses.
+  [[nodiscard]] bool lowerSampleOp(
+      Function &F, OpCode Op, unsigned CoordsIdx, unsigned OffsetsIdx,
+      llvm::function_ref<void(IRBuilder<> &, CallInst *,
+                              SmallVectorImpl<Value *> &)> EmitExtraArgs) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      Value *Handle =
+          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
+      Value *Sampler =
+          createTmpHandleCast(CI->getArgOperand(1), OpBuilder.getHandleType());
+      Value *Coords = CI->getArgOperand(CoordsIdx);
+      Value *Offsets = CI->getArgOperand(OffsetsIdx);
+
+      Type *OldTy = CI->getType();
+      Type *NewRetTy = OpBuilder.getResRetType(OldTy->getScalarType());
+
+      Value *UndefF = UndefValue::get(IRB.getFloatTy());
+      Value *UndefI = UndefValue::get(IRB.getInt32Ty());
+      // Common prefix: Handle, Sampler, Coord0..3, Offset0..2
+      SmallVector<Value *, 17> Args{Handle, Sampler, UndefF, UndefF, UndefF,
+                                    UndefF, UndefI,  UndefI, UndefI};
+
+      // Copy coordinates and offsets into Args.
+      extractElementsIntoArgs(IRB, Args, 2, Coords, 4);
+      extractNonZeroOffsets(IRB, Args, 6, Offsets, 3);
+
+      // Emit op-specific trailing arguments (e.g. Bias+Clamp, DDX+DDY+Clamp).
+      EmitExtraArgs(IRB, CI, Args);
+
+      Expected<CallInst *> OpCall =
+          OpBuilder.tryCreateOp(Op, Args, CI->getName(), NewRetTy);
+      if (Error E = OpCall.takeError())
+        return E;
+      if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/false))
+        return E;
+
+      return Error::success();
+    });
+  }
+
+  [[nodiscard]] bool lowerSample(Function &F, bool HasClamp) {
+    return lowerSampleOp(F, OpCode::Sample, /*CoordsIdx=*/2, /*OffsetsIdx=*/3,
+                         [HasClamp](IRBuilder<> &IRB, CallInst *CI,
+                                    SmallVectorImpl<Value *> &Args) {
+                           // Clamp
+                           Args.push_back(
+                               HasClamp ? CI->getArgOperand(4)
+                                        : UndefValue::get(IRB.getFloatTy()));
+                         });
+  }
+
+  [[nodiscard]] bool lowerSampleBias(Function &F, bool HasClamp) {
+    return lowerSampleOp(
+        F, OpCode::SampleBias, /*CoordsIdx=*/2, /*OffsetsIdx=*/4,
+        [HasClamp](IRBuilder<> &IRB, CallInst *CI,
+                   SmallVectorImpl<Value *> &Args) {
+          // Bias is operand 3.
+          Args.push_back(CI->getArgOperand(3));
+          // Clamp
+          Args.push_back(HasClamp ? CI->getArgOperand(5)
+                                  : UndefValue::get(IRB.getFloatTy()));
+        });
+  }
+
+  [[nodiscard]] bool lowerSampleLevel(Function &F) {
+    return lowerSampleOp(
+        F, OpCode::SampleLevel, /*CoordsIdx=*/2, /*OffsetsIdx=*/4,
+        [](IRBuilder<> &, CallInst *CI, SmallVectorImpl<Value *> &Args) {
+          // LOD is operand 3.
+          Args.push_back(CI->getArgOperand(3));
+        });
+  }
+
+  [[nodiscard]] bool lowerSampleGrad(Function &F, bool HasClamp) {
+    return lowerSampleOp(
+        F, OpCode::SampleGrad, /*CoordsIdx=*/2, /*OffsetsIdx=*/5,
+        [HasClamp](IRBuilder<> &IRB, CallInst *CI,
+                   SmallVectorImpl<Value *> &Args) {
+          Value *DDX = CI->getArgOperand(3);
+          Value *DDY = CI->getArgOperand(4);
+          Value *UndefF = UndefValue::get(IRB.getFloatTy());
+          // DDX0..2
+          size_t DDXStart = Args.size();
+          Args.append(3, UndefF);
+          extractElementsIntoArgs(IRB, Args, DDXStart, DDX, 3);
+          // DDY0..2
+          size_t DDYStart = Args.size();
+          Args.append(3, UndefF);
+          extractElementsIntoArgs(IRB, Args, DDYStart, DDY, 3);
+          // Clamp
+          Args.push_back(HasClamp ? CI->getArgOperand(6) : UndefF);
+        });
+  }
+
   [[nodiscard]] bool lowerRawBufferLoad(Function &F) {
     const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
@@ -979,6 +1167,30 @@ public:
         break;
       case Intrinsic::dx_resource_load_typedbuffer:
         HasErrors |= lowerTypedBufferLoad(F, /*HasCheckBit=*/true);
+        break;
+      case Intrinsic::dx_resource_load_level:
+        HasErrors |= lowerTextureLoad(F);
+        break;
+      case Intrinsic::dx_resource_sample:
+        HasErrors |= lowerSample(F, /*HasClamp=*/false);
+        break;
+      case Intrinsic::dx_resource_sample_clamp:
+        HasErrors |= lowerSample(F, /*HasClamp=*/true);
+        break;
+      case Intrinsic::dx_resource_samplebias:
+        HasErrors |= lowerSampleBias(F, /*HasClamp=*/false);
+        break;
+      case Intrinsic::dx_resource_samplebias_clamp:
+        HasErrors |= lowerSampleBias(F, /*HasClamp=*/true);
+        break;
+      case Intrinsic::dx_resource_samplelevel:
+        HasErrors |= lowerSampleLevel(F);
+        break;
+      case Intrinsic::dx_resource_samplegrad:
+        HasErrors |= lowerSampleGrad(F, /*HasClamp=*/false);
+        break;
+      case Intrinsic::dx_resource_samplegrad_clamp:
+        HasErrors |= lowerSampleGrad(F, /*HasClamp=*/true);
         break;
       case Intrinsic::dx_resource_store_typedbuffer:
         HasErrors |= lowerBufferStore(F, /*IsRaw=*/false);

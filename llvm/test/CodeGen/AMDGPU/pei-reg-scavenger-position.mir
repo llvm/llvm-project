@@ -6,6 +6,11 @@
 # the current iterator in the scavenger, which was not yet set if the
 # spill was the first instruction in the block.
 
+--- |
+  define void @scavenge_register_position() #0 { unreachable }
+  attributes #0 = { nounwind }
+...
+---
 ---
 name: scavenge_register_position
 tracksRegLiveness: true

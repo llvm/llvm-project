@@ -182,6 +182,8 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"c_ptr_1", asAddr}, {"c_ptr_2", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"c_devloc", &I::genCDevLoc, {{{"x", asBox}}}, /*isElemental=*/false},
+    {"c_devptr_eq", &I::genCPtrCompare<mlir::arith::CmpIPredicate::eq>},
+    {"c_devptr_ne", &I::genCPtrCompare<mlir::arith::CmpIPredicate::ne>},
     {"c_f_pointer",
      &I::genCFPointer,
      {{{"cptr", asValue},
@@ -806,6 +808,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"team", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"time", &I::genTime, {}, /*isElemental=*/false},
+    {"timef", &I::genTimef, {}, /*isElemental=*/false},
     {"tokenize",
      &I::genTokenize,
      {{{"string", asAddr},
@@ -3105,15 +3108,12 @@ static void clocDeviceArgRewrite(fir::ExtendedValue arg) {
 static fir::ExtendedValue
 genCLocOrCFunLoc(fir::FirOpBuilder &builder, mlir::Location loc,
                  mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args,
-                 bool isFunc = false, bool isDevLoc = false) {
+                 bool isFunc = false) {
   assert(args.size() == 1);
   clocDeviceArgRewrite(args[0]);
   mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
-  mlir::Value resAddr;
-  if (isDevLoc)
-    resAddr = fir::factory::genCDevPtrAddr(builder, loc, res, resultType);
-  else
-    resAddr = fir::factory::genCPtrOrCFunptrAddr(builder, loc, res, resultType);
+  mlir::Value resAddr =
+      fir::factory::genCPtrOrCFunptrAddr(builder, loc, res, resultType);
   assert(fir::isa_box_type(fir::getBase(args[0]).getType()) &&
          "argument must have been lowered to box type");
   mlir::Value argAddr = getAddrFromBox(builder, loc, args[0], isFunc);
@@ -3175,8 +3175,7 @@ IntrinsicLibrary::genCAssociatedCPtr(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genCDevLoc(mlir::Type resultType,
                              llvm::ArrayRef<fir::ExtendedValue> args) {
-  return genCLocOrCFunLoc(builder, loc, resultType, args, /*isFunc=*/false,
-                          /*isDevLoc=*/true);
+  return genCLocOrCFunLoc(builder, loc, resultType, args);
 }
 
 // C_F_POINTER
@@ -3380,7 +3379,7 @@ IntrinsicLibrary::genCLoc(mlir::Type resultType,
   return genCLocOrCFunLoc(builder, loc, resultType, args);
 }
 
-// C_PTR_EQ and C_PTR_NE
+// C_PTR_EQ / C_PTR_NE and C_DEVPTR_EQ / C_DEVPTR_NE
 template <mlir::arith::CmpIPredicate pred>
 fir::ExtendedValue
 IntrinsicLibrary::genCPtrCompare(mlir::Type resultType,
@@ -8265,6 +8264,13 @@ IntrinsicLibrary::genThisImage(mlir::Type resultType,
   return builder.createConvert(loc, resultType, res);
 }
 
+// TIMEF
+mlir::Value IntrinsicLibrary::genTimef(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.empty() && "timef does not accept any args");
+  return fir::runtime::genTimef(builder, loc);
+}
+
 // TRAILZ
 mlir::Value IntrinsicLibrary::genTrailz(mlir::Type resultType,
                                         llvm::ArrayRef<mlir::Value> args) {
@@ -8700,8 +8706,8 @@ IntrinsicLibrary::genTransfer(mlir::Type resultType,
           loc, resultType, builder.getDataLayout(), builder.getKindMap());
       if (sourceSizeAndAlign && resultSizeAndAlign &&
           sourceSizeAndAlign->first == resultSizeAndAlign->first) {
-        if (mlir::isa<mlir::IntegerType, mlir::FloatType>(sourceType) &&
-            mlir::isa<mlir::IntegerType, mlir::FloatType>(resultType)) {
+        if (sourceType.isSignlessIntOrFloat() &&
+            resultType.isSignlessIntOrFloat()) {
           mlir::Value val = fir::LoadOp::create(builder, loc, sourceBase);
           if (sourceType != resultType)
             val = mlir::arith::BitcastOp::create(builder, loc, resultType, val);

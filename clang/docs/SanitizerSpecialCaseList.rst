@@ -230,6 +230,27 @@ tool-specific docs.
     [{cfi-vcall,cfi-icall}]
     fun:*BadCfiCall
 
+.. note::
+
+  By default, path matching (for ``src`` and ``mainfile``) matches the query
+  path as-is. For example, a query with ``./foo.c`` will not match a rule
+  defined as ``src:foo.c``.
+
+  Starting with version 3 (indicated by ``#!special-case-list-v3``), leading
+  ``./`` is canonicalized (removed) from paths before matching. This means
+  a rule like ``src:foo.c`` will match both ``foo.c`` and ``./foo.c``, while
+  a rule like ``src:./foo.c`` will no longer match.
+
+  Version 4 (indicated by ``#!special-case-list-v4``) is a transition version
+  that maintains backward compatibility by matching both canonicalized and
+  non-canonicalized paths, but emits a warning if a match would be lost in
+  Version 5 (i.e., if it only matches because of the deprecated leading ``./``
+  in the rule).
+
+  Version 5 (indicated by ``#!special-case-list-v5``) drops backward
+  compatibility and behaves like Version 3.
+
+
 ``mainfile`` is similar to applying ``-fno-sanitize=`` to a set of files but
 does not need plumbing into the build system. This works well for internal
 linkage functions but has a caveat for C++ vague linkage functions.

@@ -85,6 +85,10 @@ public:
 
   const FileAction *GetFileActionForFD(int fd) const;
 
+  /// Returns true if fd has an explicit file action, or is the destination of a
+  /// duplicate action.
+  bool IsFDRedirected(int fd) const;
+
   Flags &GetFlags() { return m_flags; }
 
   const Flags &GetFlags() const { return m_flags; }
@@ -170,6 +174,18 @@ public:
     return m_flags.Test(lldb::eLaunchFlagDetachOnError);
   }
 
+  /// Terminal window dimensions to use when the launcher creates a
+  /// pseudo-terminal for the inferior's stdio.
+  struct STDIOWindowSize {
+    uint16_t cols = 0;
+    uint16_t rows = 0;
+  };
+
+  void SetSTDIOWindowSize(uint16_t cols, uint16_t rows) {
+    m_stdio_window_size.cols = cols;
+    m_stdio_window_size.rows = rows;
+  }
+
 protected:
   FileSpec m_working_dir;
   std::string m_plugin_name;
@@ -182,6 +198,7 @@ protected:
   Host::MonitorChildProcessCallback m_monitor_callback;
   std::string m_event_data; // A string passed to the plugin launch, having no
                             // meaning to the upper levels of lldb.
+  STDIOWindowSize m_stdio_window_size;
 };
 }
 

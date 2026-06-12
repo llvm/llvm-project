@@ -116,8 +116,8 @@ define void @test(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fpext <2 x float> [[WIDE_LOAD]] to <2 x double>
 ; CHECK-NEXT:    [[TMP5:%.*]] = call fast <2 x double> @__simd_sin_v2f64(<2 x double> [[TMP4]])
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP5]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP5]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP5]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[DST:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP1]]
 ; CHECK-NEXT:    store double [[TMP8]], ptr [[TMP6]], align 8

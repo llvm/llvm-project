@@ -1385,6 +1385,23 @@ namespace ElementwisePopcount {
 #endif
 }
 
+namespace ElementwiseClmul {
+  static_assert(__builtin_elementwise_clmul(0U, 0U) == 0U);
+  static_assert(__builtin_elementwise_clmul(1U, 1U) == 1U);
+  static_assert(__builtin_elementwise_clmul(3U, 3U) == 5U);
+  static_assert(__builtin_elementwise_clmul(0xBU, 0xDU) == 0x7FU);
+  static_assert(__builtin_elementwise_clmul(0xFU, 0xFU) == 0x55U);
+#ifndef __AVR__
+  static_assert(__builtin_elementwise_clmul((unsigned _BitInt(31))3,
+                                            (unsigned _BitInt(31))3) ==
+                (unsigned _BitInt(31))5);
+#endif
+
+  static_assert(__builtin_reduce_add(__builtin_elementwise_clmul(
+                    (vector4uint){0U, 1U, 3U, 7U},
+                    (vector4uint){0U, 1U, 3U, 7U})) == 27U);
+}
+
 namespace BuiltinMemcpy {
   constexpr int simple() {
     int a = 12;
@@ -1949,6 +1966,16 @@ namespace WithinLifetime {
   static_assert(test_dynamic(false));
   static_assert(test_dynamic(true)); // both-error {{not an integral constant expression}} \
                                      // both-note {{in call to}}
+
+
+  void LocalGlobal() {
+    constexpr const int &temp = 0; // both-error {{must be initialized by a constant expression}} \
+                                   // both-note {{reference to temporary is not a constant expression}} \
+                                   // both-note {{temporary created here}} \
+                                   // ref-note {{declared here}}
+    static_assert(__builtin_is_within_lifetime(&temp)); // ref-error {{not an integral constant expression}} \
+                                                        // ref-note {{initializer of 'temp' is not a constant expression}}
+  }
 }
 
 #ifdef __SIZEOF_INT128__
@@ -1963,6 +1990,53 @@ namespace I128Mul {
   static_assert(mul() == 1);
 }
 #endif
+
+namespace OverflowOps {
+  constexpr bool add_bool() {
+    bool r = false;
+    return __builtin_add_overflow(1u, 1u, &r) && r == false;
+  }
+  static_assert(add_bool());
+
+  constexpr bool add_bool_non_overflow_true() {
+    bool r = false;
+    return !__builtin_add_overflow(1u, 0u, &r) && r == true;
+  }
+  static_assert(add_bool_non_overflow_true());
+
+  constexpr bool add_bool_non_overflow_false() {
+    bool r = true;
+    return !__builtin_add_overflow(0u, 0u, &r) && r == false;
+  }
+  static_assert(add_bool_non_overflow_false());
+
+  constexpr bool sub_bool() {
+    bool r = false;
+    return __builtin_sub_overflow(0u, 1u, &r) && r == true;
+  }
+  static_assert(sub_bool());
+
+  constexpr bool sub_bool_non_overflow_true() {
+    bool r = false;
+    return !__builtin_sub_overflow(1u, 0u, &r) && r == true;
+  }
+  static_assert(sub_bool_non_overflow_true());
+
+  constexpr bool sub_bool_non_overflow_false() {
+    bool r = true;
+    return !__builtin_sub_overflow(1u, 1u, &r) && r == false;
+  }
+  static_assert(sub_bool_non_overflow_false());
+
+  constexpr int add_sub() {
+    int r = 0;
+    int s = 0;
+    __builtin_add_overflow(10, 20, &r);
+    __builtin_sub_overflow(10, 3, &s);
+    return r + s;
+  }
+  static_assert(add_sub() == 37);
+}
 
 namespace InitParam {
   constexpr int foo(int a) {
@@ -1990,4 +2064,19 @@ namespace WcslenInvalidArg {
                                                               // both-note {{cast that performs the conversions of a reinterpret_cast}}
   static_assert(__builtin_wcslen(L"x") == 1);
 
+}
+
+namespace SubCb {
+  constexpr unsigned char subcb(unsigned char lhs, unsigned char rhs, unsigned char carry) {
+    return __builtin_subcb(lhs, rhs, carry, &rhs);
+  }
+  static_assert(subcb(10, 15, 1) == 250);
+
+  using u8 = unsigned char;
+  constexpr int subcb2() {
+    u8 a = 0, b = 0, c = 0;
+    __builtin_subcb(a, b, c, &c);
+    return 0;
+  }
+  static_assert(subcb2() == 0);
 }

@@ -2,9 +2,9 @@
 ; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=1 -S | FileCheck %s --check-prefixes=NEON
 ; RUN: opt < %s -passes=loop-vectorize -force-vector-interleave=2 -S | FileCheck %s --check-prefixes=NEON_INTERLEAVE
 ; RUN: opt < %s -mattr=+sve -passes=loop-vectorize -force-vector-interleave=1 -S | FileCheck %s --check-prefixes=SVE_OR_NEON
-; RUN: opt < %s -mattr=+sve -passes=loop-vectorize -force-vector-interleave=2 -S -prefer-predicate-over-epilogue=predicate-dont-vectorize | FileCheck %s --check-prefixes=SVE_OR_NEON_INTERLEAVE
-; RUN: opt < %s -mattr=+sve -passes=loop-vectorize -force-vector-interleave=1 -S -prefer-predicate-over-epilogue=predicate-dont-vectorize | FileCheck %s --check-prefixes=SVE_TF
-; RUN: opt < %s -mattr=+sve -passes=loop-vectorize -force-vector-interleave=2 -S -prefer-predicate-over-epilogue=predicate-dont-vectorize | FileCheck %s --check-prefixes=SVE_TF_INTERLEAVE
+; RUN: opt < %s -mattr=+sve -passes=loop-vectorize -force-vector-interleave=2 -S -tail-folding-policy=must-fold-tail | FileCheck %s --check-prefixes=SVE_OR_NEON_INTERLEAVE
+; RUN: opt < %s -mattr=+sve -passes=loop-vectorize -force-vector-interleave=1 -S -tail-folding-policy=must-fold-tail | FileCheck %s --check-prefixes=SVE_TF
+; RUN: opt < %s -mattr=+sve -passes=loop-vectorize -force-vector-interleave=2 -S -tail-folding-policy=must-fold-tail | FileCheck %s --check-prefixes=SVE_TF_INTERLEAVE
 
 target triple = "aarch64-unknown-linux-gnu"
 
@@ -227,22 +227,18 @@ for.cond.cleanup:
 define void @test_linear3_non_ptr(ptr noalias %a, i64 %n) {
 ; NEON-LABEL: define void @test_linear3_non_ptr
 ; NEON-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) {
-; NEON:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1:%.*]], i32 0
-; NEON:    [[TMP3:%.*]] = call <4 x i32> @vec_bar_linear3_nomask_neon(i32 [[TMP2]])
+; NEON:    [[TMP2:%.*]] = call <4 x i32> @vec_bar_linear3_nomask_neon(i32 [[TMP1:%.*]])
 ; NEON:    [[DATA:%.*]] = call i32 @bar(i32 [[TREBLED:%.*]]) #[[ATTR4:[0-9]+]]
 ;
 ; NEON_INTERLEAVE-LABEL: define void @test_linear3_non_ptr
 ; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) {
-; NEON_INTERLEAVE:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP2:%.*]], i32 0
-; NEON_INTERLEAVE:    [[TMP5:%.*]] = call <4 x i32> @vec_bar_linear3_nomask_neon(i32 [[TMP4]])
-; NEON_INTERLEAVE:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP3:%.*]], i32 0
-; NEON_INTERLEAVE:    [[TMP7:%.*]] = call <4 x i32> @vec_bar_linear3_nomask_neon(i32 [[TMP6]])
+; NEON_INTERLEAVE:    [[TMP4:%.*]] = call <4 x i32> @vec_bar_linear3_nomask_neon(i32 [[TMP2:%.*]])
+; NEON_INTERLEAVE:    [[TMP5:%.*]] = call <4 x i32> @vec_bar_linear3_nomask_neon(i32 [[TMP3:%.*]])
 ; NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @bar(i32 [[TREBLED:%.*]]) #[[ATTR4:[0-9]+]]
 ;
 ; SVE_OR_NEON-LABEL: define void @test_linear3_non_ptr
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_OR_NEON:    [[TMP13:%.*]] = extractelement <vscale x 4 x i32> [[TMP12:%.*]], i32 0
-; SVE_OR_NEON:    [[TMP14:%.*]] = call <vscale x 4 x i32> @vec_bar_linear3_nomask_sve(i32 [[TMP13]])
+; SVE_OR_NEON:    [[TMP6:%.*]] = call <vscale x 4 x i32> @vec_bar_linear3_nomask_sve(i32 [[TMP5:%.*]])
 ; SVE_OR_NEON:    [[DATA:%.*]] = call i32 @bar(i32 [[TREBLED:%.*]]) #[[ATTR6:[0-9]+]]
 ;
 ; SVE_OR_NEON_INTERLEAVE-LABEL: define void @test_linear3_non_ptr
@@ -278,22 +274,18 @@ for.cond.cleanup:
 define void @test_linearn5_non_ptr_neg_stride(ptr noalias %a, i64 %n) {
 ; NEON-LABEL: define void @test_linearn5_non_ptr_neg_stride
 ; NEON-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) {
-; NEON:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1:%.*]], i32 0
-; NEON:    [[TMP3:%.*]] = call <4 x i32> @vec_bar_linearn5_nomask_neon(i32 [[TMP2]])
+; NEON:    [[TMP2:%.*]] = call <4 x i32> @vec_bar_linearn5_nomask_neon(i32 [[TMP1:%.*]])
 ; NEON:    [[DATA:%.*]] = call i32 @bar(i32 [[NEGSTRIDE:%.*]]) #[[ATTR5:[0-9]+]]
 ;
 ; NEON_INTERLEAVE-LABEL: define void @test_linearn5_non_ptr_neg_stride
 ; NEON_INTERLEAVE-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) {
-; NEON_INTERLEAVE:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP2:%.*]], i32 0
-; NEON_INTERLEAVE:    [[TMP5:%.*]] = call <4 x i32> @vec_bar_linearn5_nomask_neon(i32 [[TMP4]])
-; NEON_INTERLEAVE:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP3:%.*]], i32 0
-; NEON_INTERLEAVE:    [[TMP7:%.*]] = call <4 x i32> @vec_bar_linearn5_nomask_neon(i32 [[TMP6]])
+; NEON_INTERLEAVE:    [[TMP4:%.*]] = call <4 x i32> @vec_bar_linearn5_nomask_neon(i32 [[TMP2:%.*]])
+; NEON_INTERLEAVE:    [[TMP5:%.*]] = call <4 x i32> @vec_bar_linearn5_nomask_neon(i32 [[TMP3:%.*]])
 ; NEON_INTERLEAVE:    [[DATA:%.*]] = call i32 @bar(i32 [[NEGSTRIDE:%.*]]) #[[ATTR5:[0-9]+]]
 ;
 ; SVE_OR_NEON-LABEL: define void @test_linearn5_non_ptr_neg_stride
 ; SVE_OR_NEON-SAME: (ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; SVE_OR_NEON:    [[TMP13:%.*]] = extractelement <vscale x 4 x i32> [[TMP12:%.*]], i32 0
-; SVE_OR_NEON:    [[TMP14:%.*]] = call <vscale x 4 x i32> @vec_bar_linearn5_nomask_sve(i32 [[TMP13]])
+; SVE_OR_NEON:    [[TMP6:%.*]] = call <vscale x 4 x i32> @vec_bar_linearn5_nomask_sve(i32 [[TMP5:%.*]])
 ; SVE_OR_NEON:    [[DATA:%.*]] = call i32 @bar(i32 [[NEGSTRIDE:%.*]]) #[[ATTR7:[0-9]+]]
 ;
 ; SVE_OR_NEON_INTERLEAVE-LABEL: define void @test_linearn5_non_ptr_neg_stride

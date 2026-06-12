@@ -33,6 +33,9 @@ template <typename T>
 struct HasSummaryName<T, std::void_t<decltype(T::summaryName())>>
     : std::is_same<decltype(T::summaryName()), SummaryName> {};
 
+template <typename T>
+inline constexpr bool HasSummaryName_v = HasSummaryName<T>::value;
+
 } // namespace clang::ssaf
 
 #endif // LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_CORE_SUMMARYDATA_SUMMARYDATATRAITS_H
