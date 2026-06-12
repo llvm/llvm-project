@@ -81,7 +81,7 @@ public:
     case Blob:
       return false;
     }
-    report_fatal_error("Invalid encoding");
+    reportFatalInternalError("Invalid encoding");
   }
 
   /// isChar6 - Return true if this character is legal in the Char6 encoding.
