@@ -7610,6 +7610,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   // `PointerOps` and their indicies in `PointerOps`.
   SmallDenseMap<int64_t, std::pair<SmallVector<Value *>, SmallVector<unsigned>>>
       OffsetToPointerOpIdxMap;
+  SmallDenseSet<const SCEV *> BaseSCEVs;
   for (auto [Idx, Ptr] : enumerate(PointerOps)) {
     const SCEV *PtrSCEV = SE->getSCEV(Ptr);
     if (!PtrSCEV)
@@ -7617,6 +7618,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
 
     const auto *Add = dyn_cast<SCEVAddExpr>(PtrSCEV);
     int64_t Offset = 0;
+    const SCEV *BaseSCEV = PtrSCEV;
     if (Add) {
       // `Offset` is non-zero.
       for (int I : seq<int>(Add->getNumOperands())) {
@@ -7628,11 +7630,13 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
           Offset = 0;
           continue;
         }
+        BaseSCEV = SE->getMinusSCEV(BaseSCEV, SC);
         break;
       }
     }
     OffsetToPointerOpIdxMap[Offset].first.push_back(Ptr);
     OffsetToPointerOpIdxMap[Offset].second.push_back(Idx);
+    BaseSCEVs.insert(BaseSCEV);
   }
   unsigned NumOffsets = OffsetToPointerOpIdxMap.size();
 
@@ -7646,6 +7650,10 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
       return false;
     VecSz = Sz / NumOffsets;
   }
+
+  if (BaseSCEVs.size() != VecSz)
+    return false;
+
   if (NumOffsets > 1 || BaseTy->isVectorTy())
     NewScalarTy = Type::getIntNTy(
         SE->getContext(),
