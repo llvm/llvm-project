@@ -26,7 +26,7 @@ public:
   explicit SimplifyCallGraph(CallGraph &CG,
                              const ModuleSummaryIndex &CombinedIndex,
                              Module &M)
-      : CG(CG), M(M) {
+      : CG(CG) {
     createSimplifyCallGraph(CombinedIndex);
   }
   ~SimplifyCallGraph() {};
@@ -74,14 +74,13 @@ public:
 
 private:
   CallGraph &CG;
-  Module &M;
 };
 
 class SimplifyCallGraphNode {
 public:
   using CalledFunctionsSet = DenseSet<SimplifyCallGraphNode *>;
   inline SimplifyCallGraphNode(SimplifyCallGraph *SCG, Function *F)
-      : SCG(SCG), F(F) {}
+      : F(F) {}
 
   SimplifyCallGraphNode(const SimplifyCallGraphNode &) = delete;
   SimplifyCallGraphNode &operator=(const SimplifyCallGraphNode &) = delete;
@@ -118,7 +117,6 @@ public:
 private:
   friend class SimplifyCallGraph;
 
-  SimplifyCallGraph *SCG;
   Function *F;
 
   DenseSet<SimplifyCallGraphNode *> CalledFunctions;
