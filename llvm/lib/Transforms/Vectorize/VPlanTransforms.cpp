@@ -5274,7 +5274,7 @@ void VPlanTransforms::materializeVectorTripCount(
   // and the vector trip count equals TC directly.
   const APInt *TCVal;
   if (!RequiresScalarEpilogue && match(TC, m_APInt(TCVal)) && MaxRuntimeStep &&
-      TCVal->getZExtValue() % *MaxRuntimeStep == 0) {
+      TCVal->urem(*MaxRuntimeStep) == 0) {
     VectorTC.replaceAllUsesWith(TC);
     return;
   }
