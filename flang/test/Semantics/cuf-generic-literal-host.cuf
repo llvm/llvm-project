@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -emit-hlfir -fcuda -fopenacc -gpu=unified %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -fcuda -fopenacc -gpu=unified %s -o - | FileCheck %s
 
 ! Literal scalar actuals are host temporaries even under -gpu=mem:unified.
 ! They must not make a device-scalar pointer-mode specific win when the
