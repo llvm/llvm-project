@@ -1007,7 +1007,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .clampScalar(0, S16, S64)
         .scalarize(0);
   } else if (ST.has16BitInsts()) {
-    MinNumMaxNumIeee.legalFor(!HasMinnumMaxnum, FPTypes16).clampScalar(0, S16, S64).scalarize(0);
+    MinNumMaxNumIeee.legalFor(!HasMinnumMaxnum, FPTypes16)
+        .clampScalar(0, S16, S64)
+        .scalarize(0);
   } else {
     MinNumMaxNumIeee.legalFor(!HasMinnumMaxnum, FPTypesBase)
         .clampScalar(0, S32, S64)
@@ -1019,6 +1021,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   if (ST.hasPackedFP64Ops()) {
     MinNumMaxNum.legalFor(HasMinnumMaxnum, FPTypesPK16_64)
+        .customFor(!HasMinnumMaxnum, FPTypesPK16_64)
         .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
         .clampMaxNumElements(0, S16, 2)
         .clampMaxNumElements(0, S64, 2)
@@ -1026,18 +1029,21 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .scalarize(0);
   } else if (ST.hasVOP3PInsts()) {
     MinNumMaxNum.legalFor(HasMinnumMaxnum, FPTypesPK16)
-      .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
-      .clampMaxNumElements(0, S16, 2)
-      .clampScalar(0, S16, S64)
-      .scalarize(0);
+        .customFor(!HasMinnumMaxnum, FPTypesPK16)
+        .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
+        .clampMaxNumElements(0, S16, 2)
+        .clampScalar(0, S16, S64)
+        .scalarize(0);
   } else if (ST.has16BitInsts()) {
     MinNumMaxNum.legalFor(HasMinnumMaxnum, FPTypes16)
-      .clampScalar(0, S16, S64)
-      .scalarize(0);
+        .customFor(!HasMinnumMaxnum, FPTypes16)
+        .clampScalar(0, S16, S64)
+        .scalarize(0);
   } else {
     MinNumMaxNum.legalFor(HasMinnumMaxnum, FPTypesBase)
-      .clampScalar(0, S32, S64)
-      .scalarize(0);
+        .customFor(!HasMinnumMaxnum, FPTypesBase)
+        .clampScalar(0, S32, S64)
+        .scalarize(0);
   }
 
   if (ST.hasVOP3PInsts())
