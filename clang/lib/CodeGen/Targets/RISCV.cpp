@@ -522,8 +522,8 @@ llvm::Type *RISCVABIInfo::detectVLSCCEligibleStruct(QualType Ty,
       NumElts);
 }
 
-llvm::Type *RISCVABIInfo::detectHomogeneousRVVFixedLengthStruct(
-    QualType Ty) const {
+llvm::Type *
+RISCVABIInfo::detectHomogeneousRVVFixedLengthStruct(QualType Ty) const {
   const auto *RT = Ty->getAsCanonical<RecordType>();
   if (!RT)
     return nullptr;
@@ -611,10 +611,9 @@ llvm::Type *RISCVABIInfo::detectHomogeneousRVVFixedLengthStruct(
   if (Count == 1)
     return llvm::ScalableVectorType::get(EltType, MinElts);
 
-  unsigned I8EltCount =
-      llvm::divideCeil((uint64_t)VT->getNumElements() *
-                           EltType->getScalarSizeInBits(),
-                       VScale->first * 8);
+  unsigned I8EltCount = llvm::divideCeil((uint64_t)VT->getNumElements() *
+                                             EltType->getScalarSizeInBits(),
+                                         VScale->first * 8);
   auto *I8Vec = llvm::ScalableVectorType::get(
       llvm::Type::getInt8Ty(getVMContext()), I8EltCount);
   return llvm::TargetExtType::get(getVMContext(), "riscv.vector.tuple", I8Vec,
