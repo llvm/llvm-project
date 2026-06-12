@@ -34,11 +34,13 @@ def library_EQ : Joined<["--", "-"], "library=">, Flags<[HelpHidden]>,
 def whole_archive : Flag<["--", "-"], "whole-archive">,
   HelpText<"Include all archive members in the link">;
 def no_whole_archive : Flag<["--", "-"], "no-whole-archive">,
-  HelpText<"Only include archive members that resolve undefined symbols (default)">;
+  HelpText<"Disable --whole-archive for the following inputs (default state)">;
 
 def u : JoinedOrSeparate<["-"], "u">, MetaVarName<"<symbol>">,
   HelpText<"Force undefined symbol during linking">;
 def undefined : JoinedOrSeparate<["--"], "undefined">, Alias<u>;
+def undefined_EQ : Joined<["--"], "undefined=">, Flags<[HelpHidden]>,
+  Alias<u>;
 
 def arch_EQ : Joined<["--", "-"], "arch=">,
               Flags<[LinkerOnlyOption]>,

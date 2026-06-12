@@ -5568,6 +5568,49 @@ static void WriteDocumentation(const RecordKeeper &Records,
   OS << "\n\n\n";
 }
 
+void GetListOfUndocumentedAttributes(
+    const RecordKeeper &Records,
+    std::vector<const Record *> &UndocumentedAttrs) {
+  const Record *Documentation = Records.getDef("GlobalDocumentation");
+  if (!Documentation) {
+    PrintFatalError("The Documentation top-level definition is missing.");
+    return;
+  }
+
+  for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
+    const Record &Attr = *A;
+    std::vector<const Record *> Docs =
+        Attr.getValueAsListOfDefs("Documentation");
+    for (const auto *D : Docs) {
+      const Record &Doc = *D;
+      const Record *Category = Doc.getValueAsDef("Category");
+      if (Category->getValueAsString("Name") == "Undocumented")
+        UndocumentedAttrs.push_back(A);
+    }
+  }
+}
+
+void EmitClangUndocumentedAttrList(const llvm::RecordKeeper &Records,
+                                   llvm::raw_ostream &OS) {
+  // Emit a newline separated list of attributes whose Documentation is set to
+  // Undocumented.
+  std::vector<const Record *> UndocumentedAttrs;
+  GetListOfUndocumentedAttributes(Records, UndocumentedAttrs);
+
+  // Print a small header; this helps catch the situation where someone adds an
+  // attribute without documentation but it is alphabetically before the first
+  // attribute in the test file.
+  OS << "Undocumented attributes:\n";
+
+  for (const auto *A : UndocumentedAttrs) {
+    OS << A->getName() << "\n";
+  }
+
+  // Also print the count; this helps catch attributes after the last one in
+  // the test file.
+  OS << "Total: " << UndocumentedAttrs.size() << "\n";
+}
+
 void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
   // Get the documentation introduction paragraph.
   const Record *Documentation = Records.getDef("GlobalDocumentation");
