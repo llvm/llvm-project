@@ -18665,7 +18665,7 @@ AArch64TargetLowering::getTargetMMOFlags(const Instruction &I) const {
     return MOStridedAccess;
 
   auto Flags = MachineMemOperand::MONone;
-  const MDNode *AtomicStHint = I.getMetadata(AARCH64_ATOMIC_STORE_HINT_MD);
+  const MDNode *AtomicStHint = I.getMetadata("aarch64.atomic.hint");
   if (AtomicStHint) {
     unsigned HintVal =
         cast<ConstantInt>(

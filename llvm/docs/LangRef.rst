@@ -8683,6 +8683,33 @@ to the SSA value of the pointer operand.
 Note that this is an experimental feature, which means that its semantics might
 change in the future.
 
+.. _md_aarch64.atomic.hint:
+
+'``aarch64.atomic.hint``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``aarch64.atomic.hint`` metadata may be attached to an atomic store
+instruction, referencing a single metadata node containing a single ``i32``
+entry:
+
+.. code-block:: llvm
+
+  store atomic i64 %x, ptr %y seq_cst, align 8, !aarch64.atomic.hint !0
+
+  ...
+  !0 = !{i32 1}
+
+On AArch64 targets, this metadata may be used to emit an atomic store together
+with a hint instruction. The hint is a suggestion to the compiler which may be
+used when selecting code sequences, but it is not required to emit a specific
+hint instruction. The following hint values are currently recognised:
+
+  * ``0``: ``stshh keep`` hint.
+  * ``1``: ``stshh strm`` hint.
+
+If the compiler does not recognise the hint value provided, it may ignore the
+metadata. Targets that do not support this metadata may also ignore it.
+
 '``type``' Metadata
 ^^^^^^^^^^^^^^^^^^^
 
@@ -12154,9 +12181,10 @@ Syntax:
 ::
 
       store [volatile] <ty> <value>, ptr <pointer>[, align <alignment>][, !nontemporal !<nontemp_node>][, !invariant.group !<empty_node>]        ; yields void
-      store atomic [volatile] <ty> <value>, ptr <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<empty_node>] ; yields void
+      store atomic [volatile] <ty> <value>, ptr <pointer> [syncscope("<target-scope>")] <ordering>, align <alignment> [, !invariant.group !<empty_node>][, !aarch64.atomic.hint !<aarch64_hint_value>]; yields void
       !<nontemp_node> = !{ i32 1 }
       !<empty_node> = !{}
+      !<aarch64_hint_value> = !{ i32 <hint> }
 
 Overview:
 """""""""
@@ -12211,6 +12239,10 @@ x86.
 
 The optional ``!invariant.group`` metadata must reference a
 single metadata name ``<empty_node>``. See ``invariant.group`` metadata.
+
+The optional ``!aarch64.atomic.hint`` metadata must reference a single metadata
+name ``<aarch64_hint_value>``. See ``aarch64.atomic.hint`` metadata.
+
 
 Semantics:
 """"""""""

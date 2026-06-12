@@ -522,6 +522,11 @@ private:
                                       MachineOperand &Predicate,
                                       MachineIRBuilder &MIRBuilder) const;
 
+  bool isAtomicHintInst(const MachineInstr &MI,
+                        AArch64AtomicStoreHint Hint) const;
+  bool isAtomicSTSHH_KEEP(const MachineInstr &MI) const;
+  bool isAtomicSTSHH_STRM(const MachineInstr &MI) const;
+
   /// Return true if \p MI is a load or store of \p NumBytes bytes.
   bool isLoadStoreOfNumBytes(const MachineInstr &MI, unsigned NumBytes) const;
 
@@ -2546,16 +2551,14 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     GStore &St = cast<GStore>(I);
     auto MMO = St.getMMO();
     LLT PtrTy = MRI.getType(St.getPointerReg());
+    AArch64AtomicStoreHint Hint = TII.decodeAtomicHintFlags(MMO.getFlags());
 
     // Only for handling atomic store with hint.
     // Can only handle AddressSpace 0, 64-bit pointers.
-    if (!St.isAtomic() || PtrTy != LLT::pointer(0, 64)) {
+    if (!St.isAtomic() || PtrTy != LLT::pointer(0, 64) ||
+        Hint == AArch64AtomicStoreHint::HINT_NONE) {
       return false;
     }
-
-    AArch64AtomicStoreHint Hint = TII.decodeAtomicHintFlags(MMO.getFlags());
-    if (Hint == AArch64AtomicStoreHint::HINT_NONE)
-      return false;
 
     unsigned HintOpc;
     unsigned StoreSize = St.getMemSizeInBits().getValue();
@@ -2594,7 +2597,7 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     auto StrPseudo = BuildMI(MBB, I, MIMetadata(I), TII.get(HintOpc))
                          .addReg(St.getPointerReg())
                          .addReg(ValueReg)
-                         .addImm((int)toCABI(St.getMMO().getSuccessOrdering()))
+                         .addImm((int)MMO.getSuccessOrdering())
                          .addImm(static_cast<unsigned>(HintImm));
 
     StrPseudo.cloneMemRefs(I);
@@ -8087,6 +8090,23 @@ void AArch64InstructionSelector::renderFPImm32SIMDModImmType4(
                                                       ->getValueAPF()
                                                       .bitcastToAPInt()
                                                       .getZExtValue()));
+}
+
+bool AArch64InstructionSelector::isAtomicHintInst(
+    const MachineInstr &MI, AArch64AtomicStoreHint Hint) const {
+  const GStore &St = cast<GStore>(MI);
+  auto MMO = St.getMMO();
+  return AArch64InstrInfo::decodeAtomicHintFlags(MMO.getFlags()) == Hint;
+}
+
+bool AArch64InstructionSelector::isAtomicSTSHH_KEEP(
+    const MachineInstr &MI) const {
+  return isAtomicHintInst(MI, AArch64AtomicStoreHint::HINT_STSHH_KEEP);
+}
+
+bool AArch64InstructionSelector::isAtomicSTSHH_STRM(
+    const MachineInstr &MI) const {
+  return isAtomicHintInst(MI, AArch64AtomicStoreHint::HINT_STSHH_STRM);
 }
 
 bool AArch64InstructionSelector::isLoadStoreOfNumBytes(

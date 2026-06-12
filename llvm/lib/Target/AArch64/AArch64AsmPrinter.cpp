@@ -3134,7 +3134,7 @@ void AArch64AsmPrinter::emitAtomicHintPseudoExpansion(const MachineInstr *MI,
 
   unsigned StOpc;
   unsigned Order = MI->getOperand(2).getImm();
-  bool Relaxed = Order == 0;
+  bool Relaxed = Order == 2;
   switch (Size) {
   case 8:
     StOpc = Relaxed ? AArch64::STRBBui : AArch64::STLRB;
