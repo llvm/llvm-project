@@ -893,10 +893,11 @@ public:
   /// constructor or if any existing special member function inhibits this.
   bool needsImplicitMoveConstructor() const {
     return !(data().DeclaredSpecialMembers & SMF_MoveConstructor) &&
+           (!getLangOpts().HLSL || isHLSLBuiltinRecord()) &&
            !hasUserDeclaredCopyConstructor() &&
            !hasUserDeclaredCopyAssignment() &&
-           !hasUserDeclaredMoveAssignment() && !hasUserDeclaredDestructor() &&
-           (!getLangOpts().HLSL || isHLSLBuiltinRecord());
+           !hasUserDeclaredMoveAssignment() &&
+           !hasUserDeclaredDestructor();
   }
 
   /// Determine whether we need to eagerly declare a defaulted move
