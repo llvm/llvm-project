@@ -466,7 +466,7 @@ define amdgpu_kernel void @ashr_i64_2(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 s8, s2
 ; VI-NEXT:    s_mov_b32 s9, s3
-; VI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0
+; VI-NEXT:    buffer_load_dwordx3 v[0:2], off, s[8:11], 0
 ; VI-NEXT:    s_mov_b32 s4, s0
 ; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
