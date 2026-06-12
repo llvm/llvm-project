@@ -30433,11 +30433,26 @@ public:
     // Emit ordered reduction for the vectorized window.
     Builder.SetCurrentDebugLocation(
         cast<Instruction>(ReductionRoot)->getDebugLoc());
-    if (VectorizedTree)
+    if (auto *VecTy = dyn_cast<FixedVectorType>(DestTy);
+        SLPReVec && VecTy && SuccessRoot) {
+      unsigned DestTyNumElements = getNumElements(VecTy);
+      unsigned VF = getNumElements(SuccessRoot->getType()) / DestTyNumElements;
+      for (auto I : seq<unsigned>(VF)) {
+        auto Position = I * DestTyNumElements;
+        Value *SubVec = createExtractVector(Builder, SuccessRoot,
+                                            DestTyNumElements, Position);
+        if (!VectorizedTree)
+          VectorizedTree = SubVec;
+        else
+          VectorizedTree = createOp(Builder, RdxKind, VectorizedTree, SubVec,
+                                    "op.rdx", ReductionOps);
+      }
+    } else if (VectorizedTree) {
       VectorizedTree =
           emitReduction(SuccessRoot, Builder, TTI, DestTy, VectorizedTree);
-    else
+    } else {
       VectorizedTree = emitReduction(SuccessRoot, Builder, TTI, DestTy);
+    }
 
     // Fold trailing scalars [SuccessStart+SuccessWidth, N).
     for (Value *RdxVal :
