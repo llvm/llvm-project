@@ -189,7 +189,8 @@ bool AMDGPUSetWavePriority::run(MachineFunction &MF) {
 
   // Raise the priority at the beginning of the shader.
   MachineBasicBlock::iterator I = Entry.begin(), E = Entry.end();
-  while (I != E && !SIInstrInfo::isVALU(*I, /*AllowLDSDMA=*/true) && !I->isTerminator())
+  while (I != E && !SIInstrInfo::isVALU(*I, /*AllowLDSDMA=*/true) &&
+         !I->isTerminator())
     ++I;
   BuildSetprioMI(Entry, I, HighPriority);
 

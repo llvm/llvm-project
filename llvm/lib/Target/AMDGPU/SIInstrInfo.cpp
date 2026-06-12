@@ -175,7 +175,8 @@ bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
 bool SIInstrInfo::isIgnorableUse(const MachineOperand &MO) const {
   // Any implicit use of exec by VALU is not a real register read.
   return MO.getReg() == AMDGPU::EXEC && MO.isImplicit() &&
-         isVALU(*MO.getParent(), /*AllowLDSDMA=*/true) && !resultDependsOnExec(*MO.getParent());
+         isVALU(*MO.getParent(), /*AllowLDSDMA=*/true) &&
+         !resultDependsOnExec(*MO.getParent());
 }
 
 bool SIInstrInfo::isSafeToSink(MachineInstr &MI,
@@ -5583,7 +5584,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   // Verify VOP*. Ignore multiple sgpr operands on writelane.
-  if (isVALU(MI, /*AllowLDSDMA=*/true) && Desc.getOpcode() != AMDGPU::V_WRITELANE_B32) {
+  if (isVALU(MI, /*AllowLDSDMA=*/true) &&
+      Desc.getOpcode() != AMDGPU::V_WRITELANE_B32) {
     unsigned ConstantBusCount = 0;
     bool UsesLiteral = false;
     const MachineOperand *LiteralVal = nullptr;
@@ -6573,7 +6575,8 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
 
   const bool IsInlineConst = !MO->isReg() && isInlineConstant(*MO, OpInfo);
 
-  if (isVALU(MI, /*AllowLDSDMA=*/true) && !IsInlineConst && usesConstantBus(MRI, *MO, OpInfo)) {
+  if (isVALU(MI, /*AllowLDSDMA=*/true) && !IsInlineConst &&
+      usesConstantBus(MRI, *MO, OpInfo)) {
     const MachineOperand *UsedLiteral = nullptr;
 
     int ConstantBusLimit = ST.getConstantBusLimit(MI.getOpcode());

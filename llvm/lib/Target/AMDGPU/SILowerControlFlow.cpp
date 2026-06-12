@@ -378,8 +378,8 @@ void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
   bool SkipAnding = false;
   if (MI.getOperand(1).isReg()) {
     if (MachineInstr *Def = MRI->getUniqueVRegDef(MI.getOperand(1).getReg())) {
-      SkipAnding = Def->getParent() == MI.getParent()
-          && SIInstrInfo::isVALU(*Def, /*AllowLDSDMA=*/true);
+      SkipAnding = Def->getParent() == MI.getParent() &&
+                   SIInstrInfo::isVALU(*Def, /*AllowLDSDMA=*/true);
     }
   }
 

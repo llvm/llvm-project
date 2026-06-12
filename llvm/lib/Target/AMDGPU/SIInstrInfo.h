@@ -657,7 +657,8 @@ public:
   }
 
   bool isLDSDMA(uint32_t Opcode) const {
-    return (isVALU(Opcode, /*AllowLDSDMA=*/true) && (isMUBUF(Opcode) || isFLAT(Opcode))) ||
+    return (isVALU(Opcode, /*AllowLDSDMA=*/true) &&
+            (isMUBUF(Opcode) || isFLAT(Opcode))) ||
            (get(Opcode).TSFlags & SIInstrFlags::TENSOR_CNT);
   }
 
