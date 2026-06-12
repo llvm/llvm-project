@@ -139,6 +139,14 @@ def CC_AMDGPU_Func : CallingConv<[
   CCIfType<[i1], CCPromoteToType<i32>>,
   CCIfType<[i8, i16], CCIfExtend<CCPromoteToType<i32>>>,
 
+  // The sret pointer is a constant offset from the wave-uniform stack pointer,
+  // so it is uniform and can be passed in an SGPR. This keeps the return-object
+  // address out of the VGPR file and avoids vector address arithmetic in the
+  // callee.
+  CCIfSRet<CCIfType<[i32], CCAssignToReg<
+    !foreach(i, !range(0, 30), !cast<Register>("SGPR"#i))  // SGPR0-29
+  >>>,
+
   CCIfInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16, bf16, v2bf16] , CCAssignToReg<
     !foreach(i, !range(0, 30), !cast<Register>("SGPR"#i))  // SGPR0-29
   >>>,

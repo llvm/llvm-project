@@ -16,16 +16,18 @@ define void @callee_sret(ptr addrspace(5) sret(%struct.big) %out) {
 ; GCN-LABEL: callee_sret:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v1, 42
-; GCN-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
+; GCN-NEXT:    v_mov_b32_e32 v0, 42
+; GCN-NEXT:    v_mov_b32_e32 v1, s16
+; GCN-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: callee_sret:
 ; GISEL:       ; %bb.0: ; %entry
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_mov_b32_e32 v1, 42
-; GISEL-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen
+; GISEL-NEXT:    v_mov_b32_e32 v0, 42
+; GISEL-NEXT:    v_mov_b32_e32 v1, s16
+; GISEL-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -51,10 +53,10 @@ define void @caller_sret() {
 ; GCN-NEXT:    s_getpc_b64 s[16:17]
 ; GCN-NEXT:    s_add_u32 s16, s16, ext_sret@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, ext_sret@gotpcrel32@hi+12
-; GCN-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
-; GCN-NEXT:    v_lshrrev_b32_e64 v0, 6, s33
+; GCN-NEXT:    s_load_dwordx2 s[18:19], s[16:17], 0x0
+; GCN-NEXT:    s_lshr_b32 s16, s33, 6
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GCN-NEXT:    v_readlane_b32 s30, v40, 0
 ; GCN-NEXT:    v_readlane_b32 s31, v40, 1
 ; GCN-NEXT:    s_mov_b32 s32, s33
@@ -81,10 +83,10 @@ define void @caller_sret() {
 ; GISEL-NEXT:    s_getpc_b64 s[16:17]
 ; GISEL-NEXT:    s_add_u32 s16, s16, ext_sret@gotpcrel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s17, s17, ext_sret@gotpcrel32@hi+12
-; GISEL-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
-; GISEL-NEXT:    v_lshrrev_b32_e64 v0, 6, s33
+; GISEL-NEXT:    s_load_dwordx2 s[18:19], s[16:17], 0x0
+; GISEL-NEXT:    s_lshr_b32 s16, s33, 6
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; GISEL-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GISEL-NEXT:    v_readlane_b32 s30, v40, 0
 ; GISEL-NEXT:    v_readlane_b32 s31, v40, 1
 ; GISEL-NEXT:    s_mov_b32 s32, s33
@@ -126,23 +128,82 @@ define void @caller_divergent_sret() {
 ; GCN-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:640 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[18:19]
-; GCN-NEXT:    v_writelane_b32 v40, s16, 2
-; GCN-NEXT:    v_writelane_b32 v40, s30, 0
+; GCN-NEXT:    v_writelane_b32 v40, s16, 18
 ; GCN-NEXT:    s_add_i32 s32, s32, 0xa400
-; GCN-NEXT:    v_writelane_b32 v40, s31, 1
-; GCN-NEXT:    s_getpc_b64 s[16:17]
-; GCN-NEXT:    s_add_u32 s16, s16, ext_sret@gotpcrel32@lo+4
-; GCN-NEXT:    s_addc_u32 s17, s17, ext_sret@gotpcrel32@hi+12
-; GCN-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
+; GCN-NEXT:    v_writelane_b32 v40, s34, 0
+; GCN-NEXT:    v_writelane_b32 v40, s35, 1
+; GCN-NEXT:    v_writelane_b32 v40, s36, 2
+; GCN-NEXT:    v_writelane_b32 v40, s37, 3
+; GCN-NEXT:    v_writelane_b32 v40, s38, 4
+; GCN-NEXT:    v_writelane_b32 v40, s39, 5
+; GCN-NEXT:    v_writelane_b32 v40, s48, 6
+; GCN-NEXT:    v_writelane_b32 v40, s49, 7
+; GCN-NEXT:    v_writelane_b32 v40, s50, 8
+; GCN-NEXT:    v_writelane_b32 v40, s51, 9
+; GCN-NEXT:    v_writelane_b32 v40, s52, 10
+; GCN-NEXT:    v_writelane_b32 v40, s53, 11
+; GCN-NEXT:    v_writelane_b32 v40, s54, 12
+; GCN-NEXT:    v_writelane_b32 v40, s55, 13
+; GCN-NEXT:    v_writelane_b32 v40, s64, 14
+; GCN-NEXT:    v_writelane_b32 v40, s65, 15
+; GCN-NEXT:    v_writelane_b32 v40, s30, 16
+; GCN-NEXT:    v_writelane_b32 v40, s31, 17
 ; GCN-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GCN-NEXT:    v_lshrrev_b32_e64 v1, 6, s33
+; GCN-NEXT:    s_mov_b32 s50, s15
+; GCN-NEXT:    s_mov_b32 s51, s14
+; GCN-NEXT:    s_mov_b32 s52, s13
+; GCN-NEXT:    s_mov_b32 s53, s12
+; GCN-NEXT:    s_mov_b64 s[34:35], s[10:11]
+; GCN-NEXT:    s_mov_b64 s[36:37], s[8:9]
+; GCN-NEXT:    s_mov_b64 s[38:39], s[6:7]
+; GCN-NEXT:    s_mov_b64 s[48:49], s[4:5]
 ; GCN-NEXT:    v_lshl_add_u32 v0, v0, 6, v1
+; GCN-NEXT:    s_mov_b64 s[54:55], exec
+; GCN-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
+; GCN-NEXT:    v_readfirstlane_b32 s16, v0
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, s16, v0
+; GCN-NEXT:    s_and_saveexec_b64 s[64:65], vcc
+; GCN-NEXT:    s_getpc_b64 s[4:5]
+; GCN-NEXT:    s_add_u32 s4, s4, ext_sret@gotpcrel32@lo+4
+; GCN-NEXT:    s_addc_u32 s5, s5, ext_sret@gotpcrel32@hi+12
+; GCN-NEXT:    s_load_dwordx2 s[18:19], s[4:5], 0x0
+; GCN-NEXT:    s_mov_b64 s[4:5], s[48:49]
+; GCN-NEXT:    s_mov_b64 s[6:7], s[38:39]
+; GCN-NEXT:    s_mov_b64 s[8:9], s[36:37]
+; GCN-NEXT:    s_mov_b64 s[10:11], s[34:35]
+; GCN-NEXT:    s_mov_b32 s12, s53
+; GCN-NEXT:    s_mov_b32 s13, s52
+; GCN-NEXT:    s_mov_b32 s14, s51
+; GCN-NEXT:    s_mov_b32 s15, s50
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_swappc_b64 s[30:31], s[16:17]
-; GCN-NEXT:    v_readlane_b32 s30, v40, 0
-; GCN-NEXT:    v_readlane_b32 s31, v40, 1
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
+; GCN-NEXT:    ; implicit-def: $vgpr0
+; GCN-NEXT:    ; implicit-def: $vgpr31
+; GCN-NEXT:    s_xor_b64 exec, exec, s[64:65]
+; GCN-NEXT:    s_cbranch_execnz .LBB2_1
+; GCN-NEXT:  ; %bb.2:
+; GCN-NEXT:    s_mov_b64 exec, s[54:55]
+; GCN-NEXT:    v_readlane_b32 s30, v40, 16
+; GCN-NEXT:    v_readlane_b32 s31, v40, 17
+; GCN-NEXT:    v_readlane_b32 s65, v40, 15
+; GCN-NEXT:    v_readlane_b32 s64, v40, 14
+; GCN-NEXT:    v_readlane_b32 s55, v40, 13
+; GCN-NEXT:    v_readlane_b32 s54, v40, 12
+; GCN-NEXT:    v_readlane_b32 s53, v40, 11
+; GCN-NEXT:    v_readlane_b32 s52, v40, 10
+; GCN-NEXT:    v_readlane_b32 s51, v40, 9
+; GCN-NEXT:    v_readlane_b32 s50, v40, 8
+; GCN-NEXT:    v_readlane_b32 s49, v40, 7
+; GCN-NEXT:    v_readlane_b32 s48, v40, 6
+; GCN-NEXT:    v_readlane_b32 s39, v40, 5
+; GCN-NEXT:    v_readlane_b32 s38, v40, 4
+; GCN-NEXT:    v_readlane_b32 s37, v40, 3
+; GCN-NEXT:    v_readlane_b32 s36, v40, 2
+; GCN-NEXT:    v_readlane_b32 s35, v40, 1
+; GCN-NEXT:    v_readlane_b32 s34, v40, 0
 ; GCN-NEXT:    s_mov_b32 s32, s33
-; GCN-NEXT:    v_readlane_b32 s4, v40, 2
+; GCN-NEXT:    v_readlane_b32 s4, v40, 18
 ; GCN-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:640 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[6:7]
@@ -162,16 +223,17 @@ define void @caller_divergent_sret() {
 ; GISEL-NEXT:    v_writelane_b32 v40, s30, 0
 ; GISEL-NEXT:    s_add_i32 s32, s32, 0xa400
 ; GISEL-NEXT:    v_writelane_b32 v40, s31, 1
-; GISEL-NEXT:    s_getpc_b64 s[16:17]
-; GISEL-NEXT:    s_add_u32 s16, s16, ext_sret@gotpcrel32@lo+4
-; GISEL-NEXT:    s_addc_u32 s17, s17, ext_sret@gotpcrel32@hi+12
-; GISEL-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
+; GISEL-NEXT:    s_getpc_b64 s[18:19]
+; GISEL-NEXT:    s_add_u32 s18, s18, ext_sret@gotpcrel32@lo+4
+; GISEL-NEXT:    s_addc_u32 s19, s19, ext_sret@gotpcrel32@hi+12
+; GISEL-NEXT:    s_load_dwordx2 s[18:19], s[18:19], 0x0
 ; GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v0, 6, v0
 ; GISEL-NEXT:    v_lshrrev_b32_e64 v1, 6, s33
 ; GISEL-NEXT:    v_add_u32_e32 v0, v0, v1
+; GISEL-NEXT:    v_readfirstlane_b32 s16, v0
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; GISEL-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GISEL-NEXT:    v_readlane_b32 s30, v40, 0
 ; GISEL-NEXT:    v_readlane_b32 s31, v40, 1
 ; GISEL-NEXT:    s_mov_b32 s32, s33

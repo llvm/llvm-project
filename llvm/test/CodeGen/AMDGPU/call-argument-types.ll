@@ -6085,18 +6085,18 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
 ; VI-NEXT:    buffer_store_dword v0, off, s[36:39], 0 offset:4
 ; VI-NEXT:    buffer_load_dword v0, off, s[36:39], 0 offset:4
 ; VI-NEXT:    buffer_load_dword v1, off, s[36:39], 0
-; VI-NEXT:    s_movk_i32 s32, 0x800
 ; VI-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; VI-NEXT:    s_mov_b64 s[0:1], s[36:37]
+; VI-NEXT:    s_mov_b64 s[2:3], s[38:39]
+; VI-NEXT:    s_movk_i32 s32, 0x800
 ; VI-NEXT:    s_getpc_b64 s[4:5]
 ; VI-NEXT:    s_add_u32 s4, s4, external_void_func_sret_struct_i8_i32_byval_struct_i8_i32@rel32@lo+4
 ; VI-NEXT:    s_addc_u32 s5, s5, external_void_func_sret_struct_i8_i32_byval_struct_i8_i32@rel32@hi+12
-; VI-NEXT:    s_mov_b64 s[2:3], s[38:39]
+; VI-NEXT:    s_mov_b32 s0, 8
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    buffer_store_dword v0, off, s[36:39], s32 offset:4
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    buffer_store_dword v1, off, s[36:39], s32
-; VI-NEXT:    v_mov_b32_e32 v0, 8
 ; VI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; VI-NEXT:    buffer_load_ubyte v0, off, s[36:39], 0 offset:8
 ; VI-NEXT:    buffer_load_dword v1, off, s[36:39], 0 offset:12
@@ -6123,18 +6123,18 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
 ; CI-NEXT:    buffer_store_dword v0, off, s[36:39], 0 offset:4
 ; CI-NEXT:    buffer_load_dword v0, off, s[36:39], 0 offset:4
 ; CI-NEXT:    buffer_load_dword v1, off, s[36:39], 0
-; CI-NEXT:    s_movk_i32 s32, 0x800
 ; CI-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; CI-NEXT:    s_mov_b64 s[0:1], s[36:37]
+; CI-NEXT:    s_mov_b64 s[2:3], s[38:39]
+; CI-NEXT:    s_movk_i32 s32, 0x800
 ; CI-NEXT:    s_getpc_b64 s[4:5]
 ; CI-NEXT:    s_add_u32 s4, s4, external_void_func_sret_struct_i8_i32_byval_struct_i8_i32@rel32@lo+4
 ; CI-NEXT:    s_addc_u32 s5, s5, external_void_func_sret_struct_i8_i32_byval_struct_i8_i32@rel32@hi+12
-; CI-NEXT:    s_mov_b64 s[2:3], s[38:39]
+; CI-NEXT:    s_mov_b32 s0, 8
 ; CI-NEXT:    s_waitcnt vmcnt(1)
 ; CI-NEXT:    buffer_store_dword v0, off, s[36:39], s32 offset:4
 ; CI-NEXT:    s_waitcnt vmcnt(1)
 ; CI-NEXT:    buffer_store_dword v1, off, s[36:39], s32
-; CI-NEXT:    v_mov_b32_e32 v0, 8
 ; CI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; CI-NEXT:    buffer_load_ubyte v0, off, s[36:39], 0 offset:8
 ; CI-NEXT:    buffer_load_dword v1, off, s[36:39], 0 offset:12
@@ -6162,18 +6162,18 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
 ; SDAG-NEXT:    buffer_load_dword v0, off, s[36:39], 0 offset:4
 ; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    buffer_load_dword v1, off, s[36:39], 0
-; SDAG-NEXT:    s_movk_i32 s32, 0x800
 ; SDAG-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; SDAG-NEXT:    s_mov_b64 s[0:1], s[36:37]
+; SDAG-NEXT:    s_mov_b64 s[2:3], s[38:39]
+; SDAG-NEXT:    s_movk_i32 s32, 0x800
 ; SDAG-NEXT:    s_getpc_b64 s[4:5]
 ; SDAG-NEXT:    s_add_u32 s4, s4, external_void_func_sret_struct_i8_i32_byval_struct_i8_i32@rel32@lo+4
 ; SDAG-NEXT:    s_addc_u32 s5, s5, external_void_func_sret_struct_i8_i32_byval_struct_i8_i32@rel32@hi+12
-; SDAG-NEXT:    s_mov_b64 s[2:3], s[38:39]
+; SDAG-NEXT:    s_mov_b32 s0, 8
 ; SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; SDAG-NEXT:    buffer_store_dword v0, off, s[36:39], s32 offset:4
 ; SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; SDAG-NEXT:    buffer_store_dword v1, off, s[36:39], s32
-; SDAG-NEXT:    v_mov_b32_e32 v0, 8
 ; SDAG-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; SDAG-NEXT:    buffer_load_ubyte v0, off, s[36:39], 0 offset:8
 ; SDAG-NEXT:    buffer_load_dword v1, off, s[36:39], 0 offset:12
@@ -6199,9 +6199,9 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
 ; GFX11-TRUE16-NEXT:    scratch_store_b8 off, v0, off
 ; GFX11-TRUE16-NEXT:    scratch_store_b32 off, v1, off offset:4
 ; GFX11-TRUE16-NEXT:    scratch_load_b64 v[0:1], off, off
+; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 8
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    scratch_store_b64 off, v[0:1], s32
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, 8
 ; GFX11-TRUE16-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    scratch_load_d16_u8 v0, off, off offset:8
@@ -6230,9 +6230,9 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
 ; GFX11-FAKE16-NEXT:    scratch_store_b8 off, v0, off
 ; GFX11-FAKE16-NEXT:    scratch_store_b32 off, v1, off offset:4
 ; GFX11-FAKE16-NEXT:    scratch_load_b64 v[0:1], off, off
+; GFX11-FAKE16-NEXT:    s_mov_b32 s0, 8
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    scratch_store_b64 off, v[0:1], s32
-; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, 8
 ; GFX11-FAKE16-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-FAKE16-NEXT:    s_clause 0x1
 ; GFX11-FAKE16-NEXT:    scratch_load_u8 v0, off, off offset:8
@@ -6271,7 +6271,7 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
 ; HSA-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:4
 ; HSA-NEXT:    s_waitcnt vmcnt(1)
 ; HSA-NEXT:    buffer_store_dword v1, off, s[0:3], s32
-; HSA-NEXT:    v_mov_b32_e32 v0, 8
+; HSA-NEXT:    s_mov_b32 s0, 8
 ; HSA-NEXT:    s_swappc_b64 s[30:31], s[8:9]
 ; HSA-NEXT:    buffer_load_ubyte v0, off, s[0:3], 0 offset:8
 ; HSA-NEXT:    buffer_load_dword v1, off, s[0:3], 0 offset:12
@@ -6299,9 +6299,9 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
 ; GISEL-NEXT:    buffer_load_dword v0, off, s[36:39], 0
 ; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    buffer_load_dword v1, off, s[36:39], 0 offset:4
-; GISEL-NEXT:    s_movk_i32 s32, 0x800
 ; GISEL-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GISEL-NEXT:    s_mov_b64 s[0:1], s[36:37]
+; GISEL-NEXT:    s_movk_i32 s32, 0x800
 ; GISEL-NEXT:    s_getpc_b64 s[4:5]
 ; GISEL-NEXT:    s_add_u32 s4, s4, external_void_func_sret_struct_i8_i32_byval_struct_i8_i32@rel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s5, s5, external_void_func_sret_struct_i8_i32_byval_struct_i8_i32@rel32@hi+12
@@ -6310,7 +6310,6 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
 ; GISEL-NEXT:    buffer_store_dword v0, off, s[36:39], s32
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
 ; GISEL-NEXT:    buffer_store_dword v1, off, s[36:39], s32 offset:4
-; GISEL-NEXT:    v_mov_b32_e32 v0, 8
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GISEL-NEXT:    buffer_load_ubyte v0, off, s[36:39], 0 offset:8
 ; GISEL-NEXT:    buffer_load_dword v1, off, s[36:39], 0 offset:12

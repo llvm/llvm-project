@@ -945,9 +945,9 @@ define {i8, i32} @struct_i8_i32_func_void() #0 {
 define void @void_func_sret_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }) %arg0) #0 {
   ; CHECK-LABEL: name: void_func_sret_struct_i8_i32
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $sgpr16
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s8) = G_LOAD [[DEF]](p1) :: (volatile load (s8) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p1) :: (volatile load (s32) from `ptr addrspace(1) poison`, addrspace 1)
@@ -972,9 +972,9 @@ define void @void_func_sret_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }) %ar
 define <33 x i32> @v33i32_func_void() #0 {
   ; CHECK-LABEL: name: v33i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $sgpr16
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<33 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<33 x s32>) from %ir.ptr, align 256, addrspace 1)
@@ -988,13 +988,13 @@ define <33 x i32> @v33i32_func_void() #0 {
 define <33 x i32> @v33i32_func_v33i32_i32(ptr addrspace(1) %p, i32 %idx) #0 {
   ; CHECK-LABEL: name: v33i32_func_v33i32_i32
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
+  ; CHECK-NEXT:   liveins: $sgpr16, $vgpr0, $vgpr1, $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $sgpr16
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY3]](s32)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 256
   ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(s64) = nsw G_MUL [[SEXT]], [[C]]
@@ -1011,9 +1011,9 @@ define <33 x i32> @v33i32_func_v33i32_i32(ptr addrspace(1) %p, i32 %idx) #0 {
 define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
   ; CHECK-LABEL: name: struct_v32i32_i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $sgpr16
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: (load (<32 x s32>) from %ir.ptr, addrspace 1)
@@ -1033,9 +1033,9 @@ define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
 define { i32, <32 x i32> } @struct_i32_v32i32_func_void() #0 {
   ; CHECK-LABEL: name: struct_i32_v32i32_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $sgpr16
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (volatile invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[LOAD]](p1) :: (load (s32) from %ir.ptr, align 128, addrspace 1)
@@ -1126,9 +1126,9 @@ define { <3 x float>, i32 } @v3f32_struct_func_void_wasted_reg() #0 {
 define void @void_func_sret_max_known_zero_bits(ptr addrspace(5) sret(i8) %arg0) #0 {
   ; CHECK-LABEL: name: void_func_sret_max_known_zero_bits
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $sgpr16
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 17
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 18
@@ -1290,9 +1290,9 @@ define zeroext i1022 @i1022_zeroext_func_void() #0 {
 define %struct.with.ptrs @ptr_in_struct_func_void() #0 {
   ; CHECK-LABEL: name: ptr_in_struct_func_void
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   liveins: $vgpr0
+  ; CHECK-NEXT:   liveins: $sgpr16
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $sgpr16
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[DEF]](p1) :: (volatile load (<32 x s32>) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 128

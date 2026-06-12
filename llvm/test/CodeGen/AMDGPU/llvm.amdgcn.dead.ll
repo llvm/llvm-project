@@ -620,7 +620,7 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; ASM-GISEL-TRUE16-NEXT:    s_clause 0x15
+; ASM-GISEL-TRUE16-NEXT:    s_clause 0x14
 ; ASM-GISEL-TRUE16-NEXT:    scratch_load_b32 v33, off, s32
 ; ASM-GISEL-TRUE16-NEXT:    scratch_load_b32 v34, off, s32 offset:4
 ; ASM-GISEL-TRUE16-NEXT:    scratch_load_b32 v35, off, s32 offset:8
@@ -639,29 +639,29 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-GISEL-TRUE16-NEXT:    scratch_load_b32 v64, off, s32 offset:60
 ; ASM-GISEL-TRUE16-NEXT:    scratch_load_b32 v65, off, s32 offset:64
 ; ASM-GISEL-TRUE16-NEXT:    scratch_load_b32 v66, off, s32 offset:68
-; ASM-GISEL-TRUE16-NEXT:    scratch_load_b32 v67, off, s32 offset:72
-; ASM-GISEL-TRUE16-NEXT:    scratch_load_b32 v31, off, s32 offset:76
-; ASM-GISEL-TRUE16-NEXT:    scratch_load_b32 v32, off, s32 offset:80
-; ASM-GISEL-TRUE16-NEXT:    scratch_load_b32 v68, off, s32 offset:84
-; ASM-GISEL-TRUE16-NEXT:    v_and_b32_e32 v1, 1, v1
-; ASM-GISEL-TRUE16-NEXT:    s_mov_b32 s0, exec_lo
+; ASM-GISEL-TRUE16-NEXT:    scratch_load_b32 v31, off, s32 offset:72
+; ASM-GISEL-TRUE16-NEXT:    scratch_load_b32 v32, off, s32 offset:76
+; ASM-GISEL-TRUE16-NEXT:    scratch_load_b32 v67, off, s32 offset:80
+; ASM-GISEL-TRUE16-NEXT:    v_and_b32_e32 v0, 1, v0
+; ASM-GISEL-TRUE16-NEXT:    s_mov_b32 s1, exec_lo
 ; ASM-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; ASM-GISEL-TRUE16-NEXT:    v_cmpx_ne_u32_e32 0, v1
+; ASM-GISEL-TRUE16-NEXT:    v_cmpx_ne_u32_e32 0, v0
 ; ASM-GISEL-TRUE16-NEXT:    s_cbranch_execz .LBB3_2
 ; ASM-GISEL-TRUE16-NEXT:  ; %bb.1: ; %if.then
-; ASM-GISEL-TRUE16-NEXT:    s_mov_b32 s1, 0
-; ASM-GISEL-TRUE16-NEXT:    s_movk_i32 s2, 0x3e00
+; ASM-GISEL-TRUE16-NEXT:    s_mov_b32 s2, 0
+; ASM-GISEL-TRUE16-NEXT:    s_movk_i32 s3, 0x3e00
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; ASM-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v8, s1 :: v_dual_add_nc_u32 v1, 15, v68
-; ASM-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v4.l, s2
-; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr2
-; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr3_lo16
-; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr5_lo16
+; ASM-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v7, s2 :: v_dual_add_nc_u32 v0, 15, v67
+; ASM-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v3.l, s3
+; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr1
+; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr2_lo16
+; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr4_lo16
+; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr5
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr6
-; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr7
-; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr9_vgpr10_vgpr11_vgpr12_vgpr13
-; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr14_vgpr15_vgpr16_vgpr17
+; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12
+; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr13_vgpr14_vgpr15_vgpr16
+; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr17
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr18
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr19
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr20
@@ -693,73 +693,71 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr64
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr65
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr66
-; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr67
-; ASM-GISEL-TRUE16-NEXT:    global_store_b32 v[31:32], v1, off
+; ASM-GISEL-TRUE16-NEXT:    global_store_b32 v[31:32], v0, off
 ; ASM-GISEL-TRUE16-NEXT:  .LBB3_2: ; %if.end
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; ASM-GISEL-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; ASM-GISEL-TRUE16-NEXT:    s_clause 0x16
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b8 v0, v2, off
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b16 v0, v3, off offset:2
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b16 v0, v4, off offset:4
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b16 v0, v5, off offset:6
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v6, off offset:8
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v7, off offset:12
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v8, off offset:16
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b128 v0, v[9:12], off offset:32
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v13, off offset:48
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b128 v0, v[14:17], off offset:64
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v18, off offset:80
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v19, off offset:84
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v20, off offset:88
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v21, off offset:92
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v22, off offset:96
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v23, off offset:100
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v24, off offset:104
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v25, off offset:108
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v26, off offset:112
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v27, off offset:116
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v28, off offset:120
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v29, off offset:124
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v30, off offset:128
-; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x15
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v33, off offset:132
+; ASM-GISEL-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; ASM-GISEL-TRUE16-NEXT:    s_clause 0x17
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b8 off, v1, s0
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b16 off, v2, s0 offset:2
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b16 off, v3, s0 offset:4
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b16 off, v4, s0 offset:6
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v5, s0 offset:8
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v6, s0 offset:12
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v7, s0 offset:16
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b128 off, v[8:11], s0 offset:32
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v12, s0 offset:48
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b128 off, v[13:16], s0 offset:64
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v17, s0 offset:80
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v18, s0 offset:84
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v19, s0 offset:88
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v20, s0 offset:92
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v21, s0 offset:96
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v22, s0 offset:100
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v23, s0 offset:104
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v24, s0 offset:108
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v25, s0 offset:112
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v26, s0 offset:116
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v27, s0 offset:120
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v28, s0 offset:124
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v29, s0 offset:128
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v30, s0 offset:132
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x14
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v34, off offset:136
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v33, s0 offset:136
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x13
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v35, off offset:140
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v34, s0 offset:140
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x12
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v36, off offset:144
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v35, s0 offset:144
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x11
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v37, off offset:148
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v36, s0 offset:148
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x10
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v38, off offset:152
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v37, s0 offset:152
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0xf
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v39, off offset:156
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v38, s0 offset:156
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0xe
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v48, off offset:160
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v39, s0 offset:160
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0xd
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v49, off offset:164
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v48, s0 offset:164
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0xc
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v50, off offset:168
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v49, s0 offset:168
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0xb
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v51, off offset:172
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v50, s0 offset:172
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0xa
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v52, off offset:176
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v51, s0 offset:176
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x9
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v53, off offset:180
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v52, s0 offset:180
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x8
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v54, off offset:184
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v53, s0 offset:184
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x7
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v55, off offset:188
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v54, s0 offset:188
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x6
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v64, off offset:192
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v55, s0 offset:192
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x5
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v65, off offset:196
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v64, s0 offset:196
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x4
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v66, off offset:200
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v65, s0 offset:200
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x3
-; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 v0, v67, off offset:204
+; ASM-GISEL-TRUE16-NEXT:    scratch_store_b32 off, v66, s0 offset:204
 ; ASM-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; ASM-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -770,7 +768,7 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; ASM-GISEL-FAKE16-NEXT:    s_clause 0x15
+; ASM-GISEL-FAKE16-NEXT:    s_clause 0x14
 ; ASM-GISEL-FAKE16-NEXT:    scratch_load_b32 v33, off, s32
 ; ASM-GISEL-FAKE16-NEXT:    scratch_load_b32 v34, off, s32 offset:4
 ; ASM-GISEL-FAKE16-NEXT:    scratch_load_b32 v35, off, s32 offset:8
@@ -789,29 +787,29 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-GISEL-FAKE16-NEXT:    scratch_load_b32 v64, off, s32 offset:60
 ; ASM-GISEL-FAKE16-NEXT:    scratch_load_b32 v65, off, s32 offset:64
 ; ASM-GISEL-FAKE16-NEXT:    scratch_load_b32 v66, off, s32 offset:68
-; ASM-GISEL-FAKE16-NEXT:    scratch_load_b32 v67, off, s32 offset:72
-; ASM-GISEL-FAKE16-NEXT:    scratch_load_b32 v31, off, s32 offset:76
-; ASM-GISEL-FAKE16-NEXT:    scratch_load_b32 v32, off, s32 offset:80
-; ASM-GISEL-FAKE16-NEXT:    scratch_load_b32 v68, off, s32 offset:84
-; ASM-GISEL-FAKE16-NEXT:    v_and_b32_e32 v1, 1, v1
-; ASM-GISEL-FAKE16-NEXT:    s_mov_b32 s0, exec_lo
+; ASM-GISEL-FAKE16-NEXT:    scratch_load_b32 v31, off, s32 offset:72
+; ASM-GISEL-FAKE16-NEXT:    scratch_load_b32 v32, off, s32 offset:76
+; ASM-GISEL-FAKE16-NEXT:    scratch_load_b32 v67, off, s32 offset:80
+; ASM-GISEL-FAKE16-NEXT:    v_and_b32_e32 v0, 1, v0
+; ASM-GISEL-FAKE16-NEXT:    s_mov_b32 s1, exec_lo
 ; ASM-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; ASM-GISEL-FAKE16-NEXT:    v_cmpx_ne_u32_e32 0, v1
+; ASM-GISEL-FAKE16-NEXT:    v_cmpx_ne_u32_e32 0, v0
 ; ASM-GISEL-FAKE16-NEXT:    s_cbranch_execz .LBB3_2
 ; ASM-GISEL-FAKE16-NEXT:  ; %bb.1: ; %if.then
-; ASM-GISEL-FAKE16-NEXT:    s_mov_b32 s1, 0
-; ASM-GISEL-FAKE16-NEXT:    s_movk_i32 s2, 0x3e00
+; ASM-GISEL-FAKE16-NEXT:    s_mov_b32 s2, 0
+; ASM-GISEL-FAKE16-NEXT:    s_movk_i32 s3, 0x3e00
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; ASM-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v4, s2 :: v_dual_add_nc_u32 v1, 15, v68
-; ASM-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v8, s1
+; ASM-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v3, s3 :: v_dual_add_nc_u32 v0, 15, v67
+; ASM-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v7, s2
+; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr1
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr2
-; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr3
+; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr4
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr5
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr6
-; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr7
-; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr9_vgpr10_vgpr11_vgpr12_vgpr13
-; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr14_vgpr15_vgpr16_vgpr17
+; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12
+; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr13_vgpr14_vgpr15_vgpr16
+; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr17
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr18
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr19
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr20
@@ -843,73 +841,71 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr64
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr65
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr66
-; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr67
-; ASM-GISEL-FAKE16-NEXT:    global_store_b32 v[31:32], v1, off
+; ASM-GISEL-FAKE16-NEXT:    global_store_b32 v[31:32], v0, off
 ; ASM-GISEL-FAKE16-NEXT:  .LBB3_2: ; %if.end
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; ASM-GISEL-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; ASM-GISEL-FAKE16-NEXT:    s_clause 0x16
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b8 v0, v2, off
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b16 v0, v3, off offset:2
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b16 v0, v4, off offset:4
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b16 v0, v5, off offset:6
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v6, off offset:8
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v7, off offset:12
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v8, off offset:16
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b128 v0, v[9:12], off offset:32
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v13, off offset:48
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b128 v0, v[14:17], off offset:64
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v18, off offset:80
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v19, off offset:84
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v20, off offset:88
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v21, off offset:92
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v22, off offset:96
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v23, off offset:100
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v24, off offset:104
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v25, off offset:108
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v26, off offset:112
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v27, off offset:116
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v28, off offset:120
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v29, off offset:124
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v30, off offset:128
-; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x15
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v33, off offset:132
+; ASM-GISEL-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; ASM-GISEL-FAKE16-NEXT:    s_clause 0x17
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b8 off, v1, s0
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b16 off, v2, s0 offset:2
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b16 off, v3, s0 offset:4
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b16 off, v4, s0 offset:6
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v5, s0 offset:8
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v6, s0 offset:12
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v7, s0 offset:16
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b128 off, v[8:11], s0 offset:32
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v12, s0 offset:48
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b128 off, v[13:16], s0 offset:64
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v17, s0 offset:80
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v18, s0 offset:84
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v19, s0 offset:88
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v20, s0 offset:92
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v21, s0 offset:96
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v22, s0 offset:100
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v23, s0 offset:104
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v24, s0 offset:108
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v25, s0 offset:112
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v26, s0 offset:116
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v27, s0 offset:120
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v28, s0 offset:124
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v29, s0 offset:128
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v30, s0 offset:132
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x14
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v34, off offset:136
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v33, s0 offset:136
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x13
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v35, off offset:140
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v34, s0 offset:140
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x12
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v36, off offset:144
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v35, s0 offset:144
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x11
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v37, off offset:148
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v36, s0 offset:148
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x10
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v38, off offset:152
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v37, s0 offset:152
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0xf
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v39, off offset:156
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v38, s0 offset:156
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0xe
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v48, off offset:160
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v39, s0 offset:160
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0xd
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v49, off offset:164
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v48, s0 offset:164
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0xc
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v50, off offset:168
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v49, s0 offset:168
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0xb
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v51, off offset:172
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v50, s0 offset:172
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0xa
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v52, off offset:176
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v51, s0 offset:176
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x9
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v53, off offset:180
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v52, s0 offset:180
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x8
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v54, off offset:184
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v53, s0 offset:184
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x7
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v55, off offset:188
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v54, s0 offset:188
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x6
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v64, off offset:192
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v55, s0 offset:192
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x5
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v65, off offset:196
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v64, s0 offset:196
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x4
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v66, off offset:200
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v65, s0 offset:200
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x3
-; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 v0, v67, off offset:204
+; ASM-GISEL-FAKE16-NEXT:    scratch_store_b32 off, v66, s0 offset:204
 ; ASM-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; ASM-GISEL-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ; ASM-GISEL-LABEL: dead_non_trivial:
