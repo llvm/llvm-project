@@ -500,6 +500,12 @@ void DeadArgumentEliminationPass::surveyFunction(const Function &F) {
     return;
   }
 
+  // Ensure function definition is available for interprocedural analysis.
+  if (!F.isDefinitionExact()) {
+    markFrozen(F);
+    return;
+  }
+
   unsigned RetCount = numRetVals(&F);
 
   // Assume all return values are dead
