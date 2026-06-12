@@ -21,9 +21,7 @@
 
 using namespace llvm;
 using namespace llvm::json;
-
-namespace clang {
-namespace doc {
+using namespace clang::doc;
 
 template <typename Container, typename SerializationFunc>
 static void serializeArray(
@@ -35,6 +33,7 @@ static void serializeArray(
 // sophisticated heuristic than number of parameters.
 constexpr static unsigned getMaxParamWrapLimit() { return 2; }
 
+namespace {
 typedef std::function<void(const Reference &, Object &)> ReferenceFunc;
 
 class JSONGenerator : public Generator {
@@ -81,15 +80,14 @@ class JSONGenerator : public Generator {
   }
 
   llvm::DenseMap<const Info *, SmallVector<Context, 4>> ContextsMap;
-  llvm::StringMap<doc::Info *> *Infos = nullptr;
+  llvm::StringMap<Info *> *Infos = nullptr;
   const ClangDocContext *CDCtx;
   bool Markdown;
 
 public:
   static const char *Format;
 
-  Error generateDocumentation(StringRef RootDir,
-                              llvm::StringMap<doc::Info *> Infos,
+  Error generateDocumentation(StringRef RootDir, llvm::StringMap<Info *> Infos,
                               const ClangDocContext &CDCtx,
                               std::string DirName) override;
   Error createResources(ClangDocContext &CDCtx) override;
@@ -98,6 +96,8 @@ public:
   Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                            const ClangDocContext &CDCtx) override;
 };
+
+} // namespace
 
 const char *JSONGenerator::Format = "json";
 
@@ -589,11 +589,11 @@ void JSONGenerator::serializeInfo(const TemplateInfo &Template, Object &Obj) {
 
   if (!Template.Params.empty()) {
     bool VerticalDisplay = Template.Params.size() > getMaxParamWrapLimit();
-    serializeArray(Template.Params, TemplateObj, "Parameters",
-                   SerializeTemplateParam, "End",
-                   [VerticalDisplay](Object &JsonObj) {
-                     JsonObj["VerticalDisplay"] = VerticalDisplay;
-                   });
+    ::serializeArray(Template.Params, TemplateObj, "Parameters",
+                     SerializeTemplateParam, "End",
+                     [VerticalDisplay](Object &JsonObj) {
+                       JsonObj["VerticalDisplay"] = VerticalDisplay;
+                     });
   }
 
   if (!Template.Constraints.empty())
@@ -738,10 +738,10 @@ void JSONGenerator::serializeInfo(const RecordInfo &I, json::Object &Obj) {
       json::Value FunctionVal = Object();
       auto &FunctionObj = *FunctionVal.getAsObject();
       serializeInfo(Function, FunctionObj);
-      AccessSpecifier Access = Function->Access;
-      if (Access == AccessSpecifier::AS_public)
+      clang::AccessSpecifier Access = Function->Access;
+      if (Access == clang::AccessSpecifier::AS_public)
         PubFunctionsArrayRef.push_back(FunctionVal);
-      else if (Access == AccessSpecifier::AS_protected)
+      else if (Access == clang::AccessSpecifier::AS_protected)
         ProtFunctionsArrayRef.push_back(FunctionVal);
     }
 
@@ -767,11 +767,11 @@ void JSONGenerator::serializeInfo(const RecordInfo &I, json::Object &Obj) {
       MemberObj["Type"] = Member.Type.Name;
       MemberObj["IsStatic"] = Member.IsStatic;
 
-      if (Member.Access == AccessSpecifier::AS_public)
+      if (Member.Access == clang::AccessSpecifier::AS_public)
         PubMembersArrayRef.push_back(MemberVal);
-      else if (Member.Access == AccessSpecifier::AS_protected)
+      else if (Member.Access == clang::AccessSpecifier::AS_protected)
         ProtMembersArrayRef.push_back(MemberVal);
-      else if (Member.Access == AccessSpecifier::AS_private)
+      else if (Member.Access == clang::AccessSpecifier::AS_private)
         PrivateMembersArrayRef.push_back(MemberVal);
     }
 
@@ -945,7 +945,7 @@ Error JSONGenerator::serializeIndex(StringRef RootDir) {
     json::Value IdxVal = Object();
     auto &IdxObj = *IdxVal.getAsObject();
     if (Markdown)
-      TypeStr.at(0) = toUppercase(TypeStr.at(0));
+      TypeStr.at(0) = clang::toUppercase(TypeStr.at(0));
     IdxObj["Type"] = TypeStr;
     serializeReference(*Idx, IdxObj);
     IndexArrayRef.push_back(IdxVal);
@@ -994,13 +994,13 @@ void JSONGenerator::serializeContexts(Info *I, StringMap<Info *> &Infos) {
 }
 
 Error JSONGenerator::generateDocumentation(StringRef RootDir,
-                                           llvm::StringMap<doc::Info *> Infos,
+                                           llvm::StringMap<Info *> Infos,
                                            const ClangDocContext &CDCtx,
                                            std::string DirName) {
   this->CDCtx = &CDCtx;
   this->Infos = &Infos;
   StringSet<> CreatedDirs;
-  StringMap<std::vector<doc::Info *>> FileToInfos;
+  StringMap<std::vector<Info *>> FileToInfos;
   for (const auto &Group : Infos) {
     Info *Info = Group.getValue();
 
@@ -1067,10 +1067,8 @@ Error JSONGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
   case InfoType::IT_default:
     return createStringError(inconvertibleErrorCode(), "unexpected info type");
   }
-  if (CDCtx.Pretty)
-    OS << llvm::formatv("{0:2}", llvm::json::Value(std::move(Obj)));
-  else
-    OS << llvm::formatv("{0}", llvm::json::Value(std::move(Obj)));
+  StringRef Fmt = CDCtx.Pretty ? "{0:2}" : "{0}";
+  OS << llvm::formatv(Fmt.data(), llvm::json::Value(std::move(Obj)));
   return Error::success();
 }
 
@@ -1080,6 +1078,6 @@ Error JSONGenerator::createResources(ClangDocContext &CDCtx) {
 
 static GeneratorRegistry::Add<JSONGenerator> JSON(JSONGenerator::Format,
                                                   "Generator for JSON output.");
+namespace clang::doc {
 volatile int JSONGeneratorAnchorSource = 0;
-} // namespace doc
-} // namespace clang
+} // namespace clang::doc
