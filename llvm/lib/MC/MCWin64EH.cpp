@@ -15,6 +15,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Win64EH.h"
 
@@ -1077,6 +1078,60 @@ static int64_t GetAbsDifference(MCStreamer &Streamer, const MCSymbol *LHS,
   return *MaybeDiff;
 }
 
+// Conservative upper bound, in bytes, on the distance from \p Begin to \p End
+// when both are in the same section, or std::nullopt if it can't be bounded
+// (e.g. a .org directive in between). Used to prove an AArch64 function fits in
+// a single unwind segment when its exact length can't yet be computed because a
+// layout-deferring directive (such as an inline-asm alignment) lies between
+// Begin and End. Walking the fragments and summing each one's maximum possible
+// size never under-estimates, so a bound <= the segment limit guarantees no
+// segment splitting is required.
+static std::optional<int64_t> GetMaxDistance(const MCSymbol *Begin,
+                                             const MCSymbol *End) {
+  if (!Begin->isInSection() || !End->isInSection())
+    return std::nullopt;
+  const MCFragment *BeginF = Begin->getFragment();
+  const MCFragment *EndF = End->getFragment();
+  if (!BeginF || !EndF || BeginF->getParent() != EndF->getParent())
+    return std::nullopt;
+  int64_t Max = 0;
+  for (const MCFragment *F = BeginF; F; F = F->getNext()) {
+    switch (F->getKind()) {
+    case MCFragment::FT_Data:
+    case MCFragment::FT_Relaxable:
+      // AArch64 is a fixed-width ISA, so relaxable fragments don't change
+      // size; the current encoded size is exact.
+      Max += F->getSize();
+      break;
+    case MCFragment::FT_Align: {
+      int64_t Pad = F->getAlignment().value() - 1;
+      if (unsigned MaxBytes = F->getAlignMaxBytesToEmit())
+        Pad = std::min<int64_t>(Pad, MaxBytes);
+      Max += Pad;
+      break;
+    }
+    case MCFragment::FT_Nops:
+      Max += cast<MCNopsFragment>(F)->getNumBytes();
+      break;
+    case MCFragment::FT_Fill: {
+      const auto *FF = cast<MCFillFragment>(F);
+      int64_t NumValues;
+      if (!FF->getNumValues().evaluateAsAbsolute(NumValues) || NumValues < 0)
+        return std::nullopt;
+      Max += NumValues * FF->getValueSize();
+      break;
+    }
+    default:
+      // FT_Org and anything else whose size we can't conservatively bound.
+      return std::nullopt;
+    }
+    if (F == EndF)
+      break;
+  }
+  return Max;
+}
+
+
 static void checkARM64Instructions(MCStreamer &Streamer,
                                    ArrayRef<WinEH::Instruction> Insns,
                                    const MCSymbol *Begin, const MCSymbol *End,
@@ -1991,10 +2046,19 @@ static void ARM64FindSegmentsInFunction(MCStreamer &streamer,
   for (auto &I : info->EpilogMap) {
     MCSymbol *Start = I.first;
     auto &Instrs = I.second.Instructions;
-    int64_t Offset = GetAbsDifference(streamer, Start, info->Begin);
+    // When the function length isn't an absolute value (FuncLengthRelocatable),
+    // an alignment directive may also make an epilog's offset non-absolute. We
+    // are then guaranteed a single segment, so the offset is only needed for the
+    // epilog-scope word, which is emitted as a relocation; use 0 as a
+    // placeholder here.
+    int64_t Offset =
+        info->FuncLengthRelocatable
+            ? GetOptionalAbsDifference(streamer, Start, info->Begin).value_or(0)
+            : GetAbsDifference(streamer, Start, info->Begin);
     checkARM64Instructions(streamer, Instrs, Start, I.second.End,
                            info->Function->getName(), "epilogue");
-    assert((Epilogs.size() == 0 || Offset >= Epilogs.back().End) &&
+    assert((info->FuncLengthRelocatable || Epilogs.size() == 0 ||
+            Offset >= Epilogs.back().End) &&
            "Epilogs should be monotonically ordered");
     // Exclue the end opcode from Instrs.size() when calculating the end of the
     // epilog.
@@ -2084,7 +2148,8 @@ static void ARM64EmitUnwindInfoForSegment(MCStreamer &streamer,
   //    prolog nor epilog.
   if (info->Segments.size() == 1 && PackedEpilogOffset >= 0 &&
       uint32_t(PackedEpilogOffset) < PrologCodeBytes &&
-      !info->HandlesExceptions && SegLength <= 0x7ff && TryPacked) {
+      !info->HandlesExceptions && !info->FuncLengthRelocatable &&
+      SegLength <= 0x7ff && TryPacked) {
     // Matching prolog/epilog and no exception handlers; check if the
     // prolog matches the patterns that can be described by the packed
     // format.
@@ -2135,8 +2200,22 @@ static void ARM64EmitUnwindInfoForSegment(MCStreamer &streamer,
     row1 |= 1 << 20;
   if (PackedEpilogOffset >= 0) // E
     row1 |= 1 << 21;
-  row1 |= SegLength & 0x3FFFF;
-  streamer.emitInt32(row1);
+  if (info->FuncLengthRelocatable) {
+    // The function length wasn't computable as an absolute value; row1 carries
+    // the flag bits (its low 18 length bits are zero) and the length is added
+    // as a relocation, (FuncEnd - Begin) / 4, resolved once layout is final.
+    // GetMaxDistance proved a single segment, so this is the only segment and
+    // the length cannot overflow into the flag bits.
+    const MCExpr *Length =
+        GetSubDivExpr(streamer, info->FuncletOrFuncEnd, info->Begin, 4);
+    streamer.emitValue(MCBinaryExpr::createAdd(
+                           MCConstantExpr::create(row1, context), Length,
+                           context),
+                       4);
+  } else {
+    row1 |= SegLength & 0x3FFFF;
+    streamer.emitInt32(row1);
+  }
 
   // Extended Code Words, Extended Epilog Count
   if (ExtensionWord) {
@@ -2158,6 +2237,19 @@ static void ARM64EmitUnwindInfoForSegment(MCStreamer &streamer,
       MCSymbol *EpilogStart = I.first;
       uint32_t EpilogIndex = I.second;
       // Epilog offset within the Segment.
+      if (info->FuncLengthRelocatable) {
+        // Single segment (Seg.Offset == 0); the epilog offset isn't an absolute
+        // value, so emit (EpilogStart - Begin)/4 in the low 22 bits as a
+        // relocation, added to the constant epilog index in the high bits.
+        const MCExpr *EpOff =
+            GetSubDivExpr(streamer, EpilogStart, info->Begin, 4);
+        streamer.emitValue(
+            MCBinaryExpr::createAdd(
+                MCConstantExpr::create((EpilogIndex & 0x3FF) << 22, context),
+                EpOff, context),
+            4);
+        continue;
+      }
       uint32_t EpilogOffset = (uint32_t)(Seg.Epilogs[EpilogStart] - Seg.Offset);
       if (EpilogOffset)
         EpilogOffset /= 4;
@@ -2236,38 +2328,32 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
   int64_t RawFuncLength;
   if (!info->FuncletOrFuncEnd) {
     report_fatal_error("FuncletOrFuncEnd not set");
+  } else if (std::optional<int64_t> MaybeLength = GetOptionalAbsDifference(
+                 streamer, info->FuncletOrFuncEnd, info->Begin)) {
+    RawFuncLength = *MaybeLength;
   } else {
-    // FIXME: GetAbsDifference tries to compute the length of the function
-    // immediately, before the whole file is emitted, but in general
-    // that's impossible: the size in bytes of certain assembler directives
-    // like .align and .fill is not known until the whole file is parsed and
-    // relaxations are applied. Currently, GetAbsDifference fails with a fatal
-    // error in that case. (We mostly don't hit this because inline assembly
-    // specifying those directives is rare, and we don't normally try to
-    // align loops on AArch64.)
+    // The exact length of the function can't be computed yet: in general the
+    // size in bytes of directives like .align/.fill (e.g. from inline asm) is
+    // not known until the whole file is parsed and relaxations are applied.
     //
-    // There are two potential approaches to delaying the computation. One,
-    // we could emit something like ".word (endfunc-beginfunc)/4+0x10800000",
-    // as long as we have some conservative estimate we could use to prove
-    // that we don't need to split the unwind data. Emitting the constant
-    // is straightforward, but there's no existing code for estimating the
-    // size of the function.
+    // Emit the length as a relocation (".word (endfunc-beginfunc)/4 + flags",
+    // see ARM64EmitUnwindInfoForSegment) which is resolved once the layout is
+    // final, provided we can prove the function fits in a single unwind segment
+    // so that no splitting decision depends on the length here. GetMaxDistance
+    // gives that conservative bound; if it can't, fall back to the diagnostic.
     //
-    // The other approach would be to use a dedicated, relaxable fragment,
-    // which could grow to accommodate splitting the unwind data if
-    // necessary. This is more straightforward, since it automatically works
-    // without any new infrastructure, and it's consistent with how we handle
-    // relaxation in other contexts.  But it would require some refactoring
-    // to move parts of the pdata/xdata emission into the implementation of
-    // a fragment. We could probably continue to encode the unwind codes
-    // here, but we'd have to emit the pdata, the xdata header, and the
-    // epilogue scopes later, since they depend on whether the we need to
-    // split the unwind data.
-    //
-    // If this is fixed, remove code in AArch64ISelLowering.cpp that
-    // disables loop alignment on Windows.
-    RawFuncLength = GetAbsDifference(streamer, info->FuncletOrFuncEnd,
-                                     info->Begin);
+    // (The other, more invasive approach is a dedicated relaxable fragment that
+    // could also grow to split the unwind data; this single-segment relocation
+    // covers the cases seen in practice.)
+    std::optional<int64_t> MaxLength =
+        GetMaxDistance(info->Begin, info->FuncletOrFuncEnd);
+    if (!MaxLength || *MaxLength > 0xFFFFC)
+      report_fatal_error(
+          "Failed to evaluate function length in SEH unwind info");
+    info->FuncLengthRelocatable = true;
+    // Use the bound as RawFuncLength; it only feeds the (now single-) segment
+    // computation, not the emitted length, which is the relocation above.
+    RawFuncLength = *MaxLength;
   }
 
   ARM64FindSegmentsInFunction(streamer, info, RawFuncLength);
