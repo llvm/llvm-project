@@ -743,15 +743,19 @@ const Value *Value::stripAndAccumulateConstantOffsets(
          "The offset bit width does not match the DL specification.");
 
   // Even though we don't look through PHI nodes, we could be called on an
-  // instruction in an unreachable block, which may be on a cycle.
-  SmallPtrSet<const Value *, 4> Visited;
-  Visited.insert(this);
+  // instruction in an unreachable block, which may be on a cycle. E.g.:
+  //   %gep = getelementptr inbounds nuw i8, ptr %gep, i64 32
+  //
+  // Bound against that case with a simple iteration counter. The number of
+  // iterations can be quite high for very long GEP chains after loop unrolling.
+  // However, most cases take less than 30 iterations. The rare cases that have
+  // longer chains probably won't benefit from additional information...
   const Value *V = this;
-  do {
+  for (unsigned N = 0; N < 30; ++N) {
     if (auto *GEP = dyn_cast<GEPOperator>(V)) {
       // If in-bounds was requested, we do not strip non-in-bounds GEPs.
       if (!AllowNonInbounds && !GEP->isInBounds())
-        return V;
+        break;
 
       // If one of the values we have visited is an addrspacecast, then
       // the pointer type of this GEP may be different from the type
@@ -761,13 +765,13 @@ const Value *Value::stripAndAccumulateConstantOffsets(
       // pointer type.
       APInt GEPOffset(DL.getIndexTypeSizeInBits(V->getType()), 0);
       if (!GEP->accumulateConstantOffset(DL, GEPOffset, ExternalAnalysis))
-        return V;
+        break;
 
       // Stop traversal if the pointer offset wouldn't fit in the bit-width
       // provided by the Offset argument. This can happen due to AddrSpaceCast
       // stripping.
       if (GEPOffset.getSignificantBits() > BitWidth)
-        return V;
+        break;
 
       // External Analysis can return a result higher/lower than the value
       // represents. We need to detect overflow/underflow.
@@ -780,10 +784,14 @@ const Value *Value::stripAndAccumulateConstantOffsets(
         Offset = Offset.sadd_ov(GEPOffsetST, Overflow);
         if (Overflow) {
           Offset = std::move(OldOffset);
-          return V;
+          break;
         }
       }
-      V = GEP->getPointerOperand();
+      const Value *NewV = GEP->getPointerOperand();
+      // Quick exit for degenerate IR, which can happen in unreachable blocks.
+      if (NewV == V)
+        break;
+      V = NewV;
     } else if (Operator::getOpcode(V) == Instruction::BitCast ||
                Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
       V = cast<Operator>(V)->getOperand(0);
@@ -793,29 +801,33 @@ const Value *Value::stripAndAccumulateConstantOffsets(
     } else if (const auto *Call = dyn_cast<CallBase>(V)) {
         if (const Value *RV = Call->getReturnedArgOperand())
           V = RV;
-        if (AllowInvariantGroup && Call->isLaunderOrStripInvariantGroup())
+        else if (AllowInvariantGroup && Call->isLaunderOrStripInvariantGroup())
           V = Call->getArgOperand(0);
+        else
+          break;
     } else if (auto *Int2Ptr = dyn_cast<Operator>(V)) {
       // Try to accumulate across (inttoptr (add (ptrtoint p), off)).
       if (!AllowNonInbounds || !LookThroughIntToPtr || !Int2Ptr ||
           Int2Ptr->getOpcode() != Instruction::IntToPtr ||
           Int2Ptr->getOperand(0)->getType()->getScalarSizeInBits() != BitWidth)
-        return V;
+        break;
 
       auto *Add = dyn_cast<AddOperator>(Int2Ptr->getOperand(0));
       if (!Add)
-        return V;
+        break;
 
       auto *Ptr2Int = dyn_cast<PtrToIntOperator>(Add->getOperand(0));
       auto *CI = dyn_cast<ConstantInt>(Add->getOperand(1));
       if (!Ptr2Int || !CI)
-        return V;
+        break;
 
       Offset += CI->getValue();
       V = Ptr2Int->getOperand(0);
+    } else {
+      break;
     }
     assert(V->getType()->isPtrOrPtrVectorTy() && "Unexpected operand type!");
-  } while (Visited.insert(V).second);
+  }
 
   return V;
 }
