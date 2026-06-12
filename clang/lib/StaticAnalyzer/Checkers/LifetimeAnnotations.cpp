@@ -95,30 +95,53 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
 }
 
 bool LifetimeAnnotations::isSourceDangle(const MemRegion *Source, ProgramStateRef State, CheckerContext &C) const {
-  // Q1: Am I sure I need ProgramStateRef State as a parameter?
-
+  llvm::errs() << "isSourceDangle called";
   if (const auto *StackSpace = Source->getMemorySpaceAs<StackSpaceRegion>(State)) {
+    llvm::errs() << "isSourceDanle non null";
     const StackFrame *SF = StackSpace->getStackFrame();
     const StackFrame *CurrentSF = C.getStackFrame();
-    if (SF == CurrentSF || SF->isParentOf(CurrentSF))
+    if (SF == CurrentSF || SF->isParentOf(CurrentSF)) {
+      llvm::errs() << "isSourceDangle about to fire";
       return false;
+    }
     return false;
   }
 
-  // Currently return false, but this has to be replaced when the source is a SymRegion instead of a MemRegion
+  // Currently return true, but this has to be replaced when the source is a SymRegion instead of a MemRegion
   return true;
 }
 
 void LifetimeAnnotations::checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const {
   ProgramStateRef State = C.getState();
+  auto LBMap = State->get<LifetimeBoundMap>();
   auto LBMapVal = State->get<LifetimeBoundMapVal>();
-  if (LBMapVal.isEmpty())
+
+  llvm::SmallString<128> Str;
+  llvm::raw_svector_ostream OS(Str);
+  ExplodedNode *N = C.generateErrorNode();
+
+  if (LBMapVal.isEmpty() && LBMapVal.isEmpty())
     return;
+
+  for (auto&& [OriginSym, SourceSet] : LBMapVal) {
+    for (const auto *Region : SourceSet) {
+      if (isSourceDangle(Region, State, C)) {
+        OS << " Returning value bound to a local " << Region << " that will go out of scope.";
+        auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
+        C.emitReport(std::move(BR));
+        Str.clear();
+      }
+    }
+  }
 
   for (auto&& [OriginRegion, SourceSet] : LBMapVal) {
     for (const auto *Region : SourceSet) {
-      if (isSourceDangle(Region, State, C) == true)
-        return;
+      if (isSourceDangle(Region, State, C)) {
+        OS << " Returning value bound to a local " << Region << " that will go out of scope.";
+        auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
+        C.emitReport(std::move(BR));
+        Str.clear();
+      }
     }
   }
 }
