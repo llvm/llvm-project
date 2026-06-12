@@ -1112,13 +1112,13 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
     SlotIndex MBBStartSlot = LIS.getSlotIndexes()->getMBBStartIdx(&MBB);
     SlotIndex MBBLastSlot = LIS.getSlotIndexes()->getMBBLastIdx(&MBB);
 
-    GCNRPTracker::LiveRegSet LiveIn, LiveOut;
+    GCNRPTracker::LiveRegSet VirtLiveIn, VirtLiveOut;
     GCNRegPressure RPAtMBBEnd;
 
     if (UseDownwardTracker) {
       if (MBB.empty()) {
-        LiveIn = LiveOut = getVirtLiveRegs(MBBStartSlot, LIS, MRI);
-        RPAtMBBEnd = getVirtRegPressure(MRI, LiveIn);
+        VirtLiveIn = VirtLiveOut = getVirtLiveRegs(MBBStartSlot, LIS, MRI);
+        RPAtMBBEnd = getVirtRegPressure(MRI, VirtLiveIn);
         const SIRegisterInfo *SRI =
             static_cast<const SIRegisterInfo *>(TRI);
         BitVector SeenUnits(SRI->getNumRegUnits());
@@ -1133,7 +1133,7 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
         GCNDownwardRPTracker RPT(LIS, MRI);
         RPT.reset(MBB.front(), /*VirtLiveRegs=*/nullptr, &MBB);
 
-        LiveIn = RPT.getVirtLiveRegs();
+        VirtLiveIn = RPT.getVirtLiveRegs();
 
         while (!RPT.advanceBeforeNext()) {
           GCNRegPressure RPBeforeMI = RPT.getPressure();
@@ -1141,14 +1141,14 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
           RP.emplace_back(RPBeforeMI, RPT.getPressure());
         }
 
-        LiveOut = RPT.getVirtLiveRegs();
+        VirtLiveOut = RPT.getVirtLiveRegs();
         RPAtMBBEnd = RPT.getPressure();
       }
     } else {
       GCNUpwardRPTracker RPT(LIS, MRI);
       RPT.reset(MRI, MBBLastSlot, &MBB);
 
-      LiveOut = RPT.getVirtLiveRegs();
+      VirtLiveOut = RPT.getVirtLiveRegs();
       RPAtMBBEnd = RPT.getPressure();
 
       for (auto &MI : reverse(MBB)) {
@@ -1158,12 +1158,13 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
           RP.emplace_back(RPT.getPressure(), RPT.getMaxPressure());
       }
 
-      LiveIn = RPT.getVirtLiveRegs();
+      VirtLiveIn = RPT.getVirtLiveRegs();
     }
 
-    OS << PFX "  Live-in: " << llvm::print(LiveIn, MRI);
+    OS << PFX "  Live-in: " << llvm::print(VirtLiveIn, MRI);
     if (!UseDownwardTracker)
-      ReportLISMismatchIfAny(LiveIn, getVirtLiveRegs(MBBStartSlot, LIS, MRI));
+      ReportLISMismatchIfAny(VirtLiveIn,
+                             getVirtLiveRegs(MBBStartSlot, LIS, MRI));
 
     OS << PFX "  SGPR  VGPR\n";
     int I = 0;
@@ -1179,13 +1180,14 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
     }
     OS << printRP(RPAtMBBEnd) << '\n';
 
-    OS << PFX "  Live-out:" << llvm::print(LiveOut, MRI);
+    OS << PFX "  Live-out:" << llvm::print(VirtLiveOut, MRI);
     if (UseDownwardTracker)
-      ReportLISMismatchIfAny(LiveOut, getVirtLiveRegs(MBBLastSlot, LIS, MRI));
+      ReportLISMismatchIfAny(VirtLiveOut,
+                             getVirtLiveRegs(MBBLastSlot, LIS, MRI));
 
     GCNRPTracker::LiveRegSet LiveThrough;
-    for (auto [Reg, Mask] : LiveIn) {
-      LaneBitmask MaskIntersection = Mask & LiveOut.lookup(Reg);
+    for (auto [Reg, Mask] : VirtLiveIn) {
+      LaneBitmask MaskIntersection = Mask & VirtLiveOut.lookup(Reg);
       if (MaskIntersection.any()) {
         LaneBitmask LTMask = getRegLiveThroughMask(
             MRI, LIS, Reg, MBBStartSlot, MBBLastSlot, MaskIntersection);
