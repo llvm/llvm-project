@@ -94,6 +94,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Fast math flags are now permitted on `uitofp` and `sitofp`.
 
+* The ``modular-format`` attribute now supports the ``fixed`` aspect for C
+  ISO 18037 fixed-point ``printf`` specifiers.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
@@ -150,6 +153,9 @@ Makes programs 10x faster by doing Special New Thing.
 * ``TargetRegisterInfo::getMinimalPhysRegClass`` and related APIs have been
   refactored and no longer take a type. This API is also now precomputed in
   TableGen to improve compile-time.
+
+* ``APInt::sqrt`` (square root rounded to nearest integer) has been replaced
+  with ``APInt::sqrtFloor`` (floor of square root).
 
 ### Changes to building LLVM
 
@@ -248,6 +254,7 @@ Makes programs 10x faster by doing Special New Thing.
 * `-mcpu=sifive-870` has been renamed `-mcpu=sifive-p870-d`.
 * Adds experimental assembler support for batched dot-product extensions(Zvqwbdota8i, Zvqwbdota16i, Zvfwbdota16bf, Zvfqwbdota8f and Zvfbdota32f).
 * Adds experimental assembler support for dot-product extensions(Zvqwdota8i, Zvqwdota16i, Zvfwdota16bf and Zvfqwdota8f).
+* `-mtune=generic` now uses the scheduling model from SpacemiT X60 instead of an empty scheduling model.
 
 ### Changes to the WebAssembly Backend
 
@@ -262,6 +269,8 @@ Makes programs 10x faster by doing Special New Thing.
   in use. This matches the behaviour of Intel syntax and aids with
   compatibility when changing the default Clang syntax to the Intel syntax.
 
+* EGPR (R16-R31) now requires V3 unwind info on Windows x64. Using EGPR
+  without V3 unwind produces a fatal error.
 * Implemented Win64 APX ABI callee-saved registers: R30 and R31 are now
   treated as non-volatile in the Win64 calling convention when APX is
   available, per the Microsoft x64 calling convention specification.
@@ -270,6 +279,10 @@ Makes programs 10x faster by doing Special New Thing.
   register allocation, as the unwinder cannot restore APX extended
   registers across longjmp. A warning is emitted for large functions
   where this reservation may impact performance.
+
+* Added ``.seh_push2regs`` assembly directive for explicitly encoding a
+  two-register push in Windows x64 V3 unwind info. The directive takes two
+  register operands: ``.seh_push2regs %r12, %r13``.
 
 ### Changes to the OCaml bindings
 

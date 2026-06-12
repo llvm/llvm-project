@@ -244,6 +244,8 @@ let isBranch = 1, isTerminator = 1, isCodeGenOnly = 1 in {
 let isPseudo = 1, isMeta = 1, isNotDuplicable = 1, SchedRW = [WriteSystem] in {
   def SEH_PushReg : I<0, Pseudo, (outs), (ins i32imm:$reg),
                             "#SEH_PushReg $reg", []>;
+  def SEH_Push2Regs : I<0, Pseudo, (outs), (ins i32imm:$reg1, i32imm:$reg2),
+                            "#SEH_Push2Regs $reg1, $reg2", []>;
   def SEH_SaveReg : I<0, Pseudo, (outs), (ins i32imm:$reg, i32imm:$dst),
                             "#SEH_SaveReg $reg, $dst", []>;
   def SEH_SaveXMM : I<0, Pseudo, (outs), (ins i32imm:$reg, i32imm:$dst),
@@ -276,6 +278,8 @@ let isPseudo = 1, isMeta = 1, SchedRW = [WriteSystem] in {
 let isPseudo = 1, isMeta = 1, SchedRW = [WriteSystem] in {
   def SEH_SplitChainedAtEndOfBlock : I<0, Pseudo, (outs), (ins),
                             "#SEH_SplitChainedAtEndOfBlock", []>;
+  def SEH_SplitChained : I<0, Pseudo, (outs), (ins),
+                            "#SEH_SplitChained", []>;
 }
 
 //===----------------------------------------------------------------------===//

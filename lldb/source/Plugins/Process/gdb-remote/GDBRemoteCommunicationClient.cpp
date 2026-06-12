@@ -2037,6 +2037,25 @@ int GDBRemoteCommunicationClient::SetSTDERR(const FileSpec &file_spec) {
   return -1;
 }
 
+int GDBRemoteCommunicationClient::SetSTDIOWindowSize(uint16_t cols,
+                                                     uint16_t rows) {
+  if (cols == 0 || rows == 0)
+    return -1;
+  StreamString packet;
+  packet.Printf("QSetSTDIOWindowSize:cols=%u;rows=%u",
+                static_cast<unsigned>(cols), static_cast<unsigned>(rows));
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(packet.GetString(), response) !=
+      PacketResult::Success)
+    return -1;
+  if (response.IsOKResponse())
+    return 0;
+  if (response.IsUnsupportedResponse())
+    return 0;
+  uint8_t error = response.GetError();
+  return error ? error : -1;
+}
+
 bool GDBRemoteCommunicationClient::GetWorkingDir(FileSpec &working_dir) {
   StringExtractorGDBRemote response;
   if (SendPacketAndWaitForResponse("qGetWorkingDir", response) ==
