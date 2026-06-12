@@ -5032,6 +5032,8 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
   return true;
 }
 
+/// Returns a copy from WZR or XZR. This can be used during instruction
+/// selection (it does not require any further selection/legalization).
 static SDValue getZeroRegister(SelectionDAG &DAG, SDLoc DL, EVT VT) {
   if (VT == MVT::i32)
     return DAG.getCopyFromReg(DAG.getEntryNode(), DL, AArch64::WZR, MVT::i32);
@@ -5123,8 +5125,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     // the coalescer to propagate these into other instructions.
     ConstantSDNode *ConstNode = cast<ConstantSDNode>(Node);
     if (ConstNode->isZero() && (VT == MVT::i32 || VT == MVT::i64))
-      return ReplaceNode(Node,
-                         getZeroRegister(*CurDAG, SDLoc(Node), VT).getNode());
+      ReplaceNode(Node, getZeroRegister(*CurDAG, SDLoc(Node), VT).getNode());
     break;
   }
 
