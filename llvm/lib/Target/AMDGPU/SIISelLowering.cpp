@@ -7485,13 +7485,7 @@ SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
                                               SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
-  assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v4bf16 ||
-         VT == MVT::v4f32 || VT == MVT::v8i16 || VT == MVT::v8f16 ||
-         VT == MVT::v8bf16 || VT == MVT::v16i16 || VT == MVT::v16f16 ||
-         VT == MVT::v16bf16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
-         VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16 ||
-         VT == MVT::v32bf16 || VT == MVT::v4f64 || VT == MVT::v8f64 ||
-         VT == MVT::v16f64 || VT == MVT::v32f64);
+  assert(VT.isVector() && VT.getVectorElementCount().isKnownEven());
 
   auto [Lo0, Hi0] = DAG.SplitVectorOperand(Op.getNode(), 0);
   auto [Lo1, Hi1] = DAG.SplitVectorOperand(Op.getNode(), 1);
@@ -7510,13 +7504,7 @@ SDValue SITargetLowering::splitTernaryVectorOp(SDValue Op,
                                                SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
-  assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v8i16 ||
-         VT == MVT::v8f16 || VT == MVT::v4f32 || VT == MVT::v16i16 ||
-         VT == MVT::v16f16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
-         VT == MVT::v32f32 || VT == MVT::v32f16 || VT == MVT::v32i16 ||
-         VT == MVT::v4bf16 || VT == MVT::v8bf16 || VT == MVT::v16bf16 ||
-         VT == MVT::v32bf16 || VT == MVT::v4f64 || VT == MVT::v8f64 ||
-         VT == MVT::v16f64 || VT == MVT::v16f64);
+  assert(VT.isVector() && VT.getVectorElementCount().isKnownEven());
 
   SDValue Op0 = Op.getOperand(0);
   auto [Lo0, Hi0] = Op0.getValueType().isVector()
