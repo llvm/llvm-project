@@ -1581,9 +1581,9 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
       // the i32 value-id type up front in runOnFunction, so only the operand
       // needs replacing here; their extractvalue users are lowered to
       // spv_extractv by visitExtractValueInst.
-      assert(
-          U->getType() == New->getType() &&
-          "aggregate PHI/select/freeze should have been mutated to value-id type");
+      assert(U->getType() == New->getType() &&
+             "aggregate PHI/select/freeze should have been mutated to value-id "
+             "type");
       U->replaceUsesOfWith(Old, New);
     } else {
       llvm_unreachable("illegal aggregate intrinsic user");
