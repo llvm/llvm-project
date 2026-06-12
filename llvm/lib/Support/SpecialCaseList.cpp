@@ -416,8 +416,8 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   bool RemoveDotSlash = MinVersion(3);
   bool WarnDotSlash = MinVersion(4) && !MinVersion(5);
 
-  bool SlashAgnostic = Version > 3 && llvm::sys::path::is_style_windows(
-                                          llvm::sys::path::Style::native);
+  bool SlashAgnostic = MinVersion(4) && llvm::sys::path::is_style_windows(
+                                            llvm::sys::path::Style::native);
 
   auto ErrOrSection = addSection("*", FileIdx, 1, true);
   if (auto Err = ErrOrSection.takeError()) {
