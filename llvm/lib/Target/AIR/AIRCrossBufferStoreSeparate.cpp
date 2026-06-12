@@ -311,17 +311,24 @@ static bool separateInFunction(Function &F) {
     // run) would become a use-before-def -> the AIR writer emits an invalid
     // forward record. Such a group is skipped (left un-separated) rather than
     // miscompiled.
+    SmallVector<Value *, 8> OffsetOrder;
+    for (auto &R : Stores)
+      if (R.Offset && ByOffset.count(R.Offset) &&
+          !llvm::is_contained(OffsetOrder, R.Offset))
+        OffsetOrder.push_back(R.Offset);
+
     SmallVector<StoreInst *, 4> *Group = nullptr;
     Value *Guard = nullptr;
-    for (auto &KV : ByOffset) {
-      if (!CrossBuffer.lookup(KV.first))
+    for (Value *Offset : OffsetOrder) {
+      auto &Vec = ByOffset[Offset];
+      if (!CrossBuffer.lookup(Offset))
         continue; // single-buffer offset: not the trigger, leave it.
-      Value *G = findMaskForOffset(KV.first, KV.second.front());
+      Value *G = findMaskForOffset(Offset, Vec.front());
       if (!G)
         continue; // no real in-bounds mask: never emit a constant guard.
       // Hoist target = the group's first store (earliest in program order).
-      StoreInst *FirstSI = KV.second.front();
-      for (StoreInst *SI : KV.second)
+      StoreInst *FirstSI = Vec.front();
+      for (StoreInst *SI : Vec)
         if (SI->comesBefore(FirstSI))
           FirstSI = SI;
       // guardStoreGroup relocates each store along with the pure single-use
@@ -342,13 +349,13 @@ static bool separateInFunction(Function &F) {
       auto allUsersInGroup = [&](Instruction *V) {
         for (User *U : V->users()) {
           auto *SU = dyn_cast<StoreInst>(U);
-          if (!SU || !llvm::is_contained(KV.second, SU))
+          if (!SU || !llvm::is_contained(Vec, SU))
             return false;
         }
         return true;
       };
       bool Safe = true;
-      for (StoreInst *SI : KV.second) {
+      for (StoreInst *SI : Vec) {
         auto *V = dyn_cast<Instruction>(SI->getValueOperand());
         if (!V || V->getParent() != BB || V->comesBefore(FirstSI))
           continue; // defined before the hoist point (or non-instr) -> safe.
@@ -359,7 +366,7 @@ static bool separateInFunction(Function &F) {
       }
       if (!Safe)
         continue; // value-after-store would forward-reference; leave it.
-      Group = &KV.second;
+      Group = &Vec;
       Guard = G;
       break;
     }

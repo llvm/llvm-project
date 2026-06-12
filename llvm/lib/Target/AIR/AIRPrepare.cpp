@@ -745,8 +745,12 @@ splitMixedByteGlobals(Module &M,
     if (GV->use_empty())
       GV->eraseFromParent();
     ByteGlobals[Gi] = NewGV;
+    SmallVector<int64_t, 8> SplitKeys;
     for (auto &Kv : SplitMap)
-      ByteGlobals.push_back(Kv.second);
+      SplitKeys.push_back(Kv.first);
+    llvm::sort(SplitKeys);
+    for (int64_t K : SplitKeys)
+      ByteGlobals.push_back(SplitMap[K]);
     Changed = true;
   }
   return Changed;
@@ -1284,8 +1288,12 @@ static bool retypeByteGlobals(Module &M) {
 
     SmallVector<GlobalVariable *, 4> ToRetype;
     ToRetype.push_back(NewGV);
+    SmallVector<int64_t, 8> SplitKeys;
     for (auto &Kv : SplitMap)
-      ToRetype.push_back(Kv.second);
+      SplitKeys.push_back(Kv.first);
+    llvm::sort(SplitKeys);
+    for (int64_t K : SplitKeys)
+      ToRetype.push_back(SplitMap[K]);
     for (auto *SplitGV : ToRetype) {
       Type *ElemTy = inferElementType(SplitGV);
       if (!ElemTy)
