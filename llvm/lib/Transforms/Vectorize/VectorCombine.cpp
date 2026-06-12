@@ -4146,19 +4146,44 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     }
     Partials.push_back({Src, LaneMask(D, SrcSizes[Src]), SrcSizes[Src]});
   }
-  // The deepest intermediate whose lanes all feed the result, each exactly once
-  // for non-idempotent ops.
+  // Reducing V replaces the entire chain, so every contribution to the result
+  // must flow through V. Reject if anything above V reads outside the chain.
+  auto CoversChain = [&](Value *V) {
+    SmallVector<Value *, 8> Worklist(1, VecOpEE);
+    SmallPtrSet<Value *, 8> Seen;
+    Seen.insert(VecOpEE);
+    while (!Worklist.empty()) {
+      auto *U = cast<Instruction>(Worklist.pop_back_val());
+      unsigned NumOps = isa<ShuffleVectorInst>(U) ? 1 : 2;
+      for (unsigned I = 0; I != NumOps; ++I) {
+        Value *Op = U->getOperand(I);
+        if (Op == V || !Seen.insert(Op).second)
+          continue;
+        if (!KeptChain.contains(Op))
+          return false;
+        Worklist.push_back(Op);
+      }
+    }
+    return true;
+  };
+
+  // Every lane feeds the result exactly once unless the op is idempotent.
+  auto EveryLaneOnce = [&](ArrayRef<unsigned> D) {
+    return !D.empty() && all_of(D, [&](unsigned C) {
+      return C >= 1 && (IsIdempotent || C == 1);
+    });
+  };
+
+  // Find the deepest intermediate where every lane feeds the result exactly
+  // once (idempotent ops tolerate duplicates) and that covers the whole chain.
   Value *FullInter = nullptr;
   for (Value *V : ChainPostorder) {
     if (!isa<BinaryOperator>(V))
       continue;
-    SmallVector<unsigned, 16> D = Demand.lookup(V);
-    if (!D.empty() && all_of(D, [&](unsigned C) {
-          return C >= 1 && (IsIdempotent || C == 1);
-        })) {
-      FullInter = V;
-      break;
-    }
+    if (!EveryLaneOnce(Demand.lookup(V)) || !CoversChain(V))
+      continue;
+    FullInter = V;
+    break;
   }
 
   // Multi-source chains also take the intermediate, since one reduce replaces

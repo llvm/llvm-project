@@ -415,3 +415,26 @@ define float @test_reduce_v4f32_fadd_fmf_intersect(<4 x float> %a0) {
   %5 = extractelement <4 x float> %4, i64 0
   ret float %5
 }
+
+; Reconvergent chain (lane 0 = 2*(a[0]+a[1]+a[2])). An inner sub-sum is cleanly demanded but does not cover the full reduction so the fold must reduce the covering intermediate.
+define i32 @test_reduce_reconvergent_intermediate_v4i32(<4 x i32> %a) {
+; CHECK-LABEL: define i32 @test_reduce_reconvergent_intermediate_v4i32(
+; CHECK-SAME: <4 x i32> [[A:%.*]]) {
+; CHECK-NEXT:    [[SH1:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[SH2:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> poison, <2 x i32> <i32 1, i32 2>
+; CHECK-NEXT:    [[SH3:%.*]] = shufflevector <4 x i32> [[A]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[B1:%.*]] = add <2 x i32> [[SH1]], [[SH2]]
+; CHECK-NEXT:    [[B2:%.*]] = add <2 x i32> [[SH3]], [[B1]]
+; CHECK-NEXT:    [[E:%.*]] = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> [[B2]])
+; CHECK-NEXT:    ret i32 [[E]]
+;
+  %sh1 = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+  %sh2 = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 1, i32 2>
+  %sh3 = shufflevector <4 x i32> %a, <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+  %b1 = add <2 x i32> %sh1, %sh2
+  %b2 = add <2 x i32> %sh3, %b1
+  %sh4 = shufflevector <2 x i32> %b2, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+  %c = add <2 x i32> %b2, %sh4
+  %e = extractelement <2 x i32> %c, i64 0
+  ret i32 %e
+}
