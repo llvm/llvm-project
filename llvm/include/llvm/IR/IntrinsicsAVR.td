@@ -1,4 +1,4 @@
-//==- IntrinsicsAVR.td - AVR intrinsics                 -*- tablegen -*-==//
+//===- IntrinsicsAVR.td - Defines AVR intrinsics ------------*- tablegen -*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
