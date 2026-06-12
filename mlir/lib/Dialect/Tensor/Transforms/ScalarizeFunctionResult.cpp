@@ -77,6 +77,8 @@ getScalarizableFunctionInfoIfEligible(func::FuncOp func) {
       sfi.returnOps.push_back(returnOp);
   }
 
+  // While FuncOp is guaranteed to contain terminator ops, there is no guarantee
+  // that it will contain ReturnOp(s). Hence the check.
   if (sfi.returnOps.empty())
     return failure();
   return sfi;
