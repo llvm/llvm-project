@@ -1449,13 +1449,11 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
 
   // VectorTripCount now equals TripCount so simplify the MiddleVPBB branch.
   assert(match(Plan.getMiddleBlock()->getTerminator(),
-               m_BranchOnCond(m_OneUse(m_SpecificICmp(
+               m_BranchOnCond(m_SpecificICmp(
                    CmpInst::ICMP_EQ, m_Specific(Plan.getTripCount()),
-                   m_Specific(&Plan.getVectorTripCount()))))) &&
+                   m_Specific(&Plan.getVectorTripCount())))) &&
          "Unexpected MiddleVPBB branch");
-  VPValue *OldCond = Plan.getMiddleBlock()->getTerminator()->getOperand(0);
   Plan.getMiddleBlock()->getTerminator()->setOperand(0, Plan.getTrue());
-  OldCond->getDefiningRecipe()->eraseFromParent();
 }
 
 /// Insert \p CheckBlockVPBB on the edge leading to the vector preheader,
