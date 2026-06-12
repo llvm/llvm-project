@@ -209,21 +209,12 @@ void ABIX86::AugmentRegisterInfo(
       process_sp->GetTarget().GetArchitecture().GetAddressByteSize();
   // Determine the GPR base size. Prefer the target architecture, but fall
   // back to the register list itself when the target arch isn't set yet
-  if (gpr_base_size == 0) {
-    for (const auto &reg : regs) {
-      if (reg.name == "rax" || reg.name == "rsp" || reg.name == "rip") {
-        gpr_base_size = 8;
-        break;
-      }
-      if (reg.name == "eax" || reg.name == "esp" || reg.name == "eip") {
-        gpr_base_size = 4;
-        break;
-      }
-    }
-  }
+  bool is64bit = gpr_base_size == 8 || (gpr_base_size == 0 && Is64Bit());
+  if (gpr_base_size == 0)
+    gpr_base_size = is64bit ? 8 : 4;
 
   // primary map from a base register to its subregisters
-  BaseRegToRegsMap base_reg_map = makeBaseRegMap(gpr_base_size == 8);
+  BaseRegToRegsMap base_reg_map = makeBaseRegMap(is64bit);
   // set used for fast matching of register names to subregisters
   llvm::SmallDenseSet<llvm::StringRef, 64> subreg_name_set;
   // convenience array providing access to all subregisters of given kind,
