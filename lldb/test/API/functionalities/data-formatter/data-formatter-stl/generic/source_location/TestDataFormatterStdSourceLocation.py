@@ -21,12 +21,12 @@ class StdSourceLocationTestCase(TestBase):
 
         loc_main = frame.FindVariable("loc_main")
         self.assertTrue(loc_main.GetError().Success())
-        self.assertRegex(loc_main.summary, r"main\.cpp\":\d+:\d+ \(\"int main\(\)\"\)")
+        self.assertRegex(loc_main.summary, r"main\.cpp\":6:\d+ \(\"int main\(\)\"\)")
 
         loc_foo = frame.FindVariable("loc_foo")
         self.assertTrue(loc_foo.GetError().Success())
         self.assertRegex(
-            loc_foo.summary, r"main\.cpp\":\d+:\d+ \(\"std::source_location foo\(\)\"\)"
+            loc_foo.summary, r"main\.cpp\":3:\d+ \(\"std::source_location foo\(\)\"\)"
         )
 
         loc_empty = frame.FindVariable("loc_empty")
