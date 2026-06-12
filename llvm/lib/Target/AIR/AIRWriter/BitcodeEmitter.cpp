@@ -1176,7 +1176,7 @@ static std::optional<uint64_t> airEnumAttrKind(Attribute::AttrKind K) {
   case Attribute::ReadOnly:
     return 21;
   case Attribute::NonNull:
-    return 26;
+    return 39;
   case Attribute::Convergent:
     return 43;
   case Attribute::WriteOnly:
