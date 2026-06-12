@@ -44,6 +44,7 @@ target_link_libraries(clangDoc
   )
 
 add_subdirectory(tool)
+add_subdirectory(fuzzer)
 
 if (LLVM_INCLUDE_BENCHMARKS)
   add_subdirectory(benchmarks)
