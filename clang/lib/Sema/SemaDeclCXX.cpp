@@ -6392,10 +6392,8 @@ static void checkForMultipleExportedDefaultConstructors(Sema &S,
     // If the class is non-dependent, mark the default arguments as ODR-used so
     // that we can properly codegen the constructor closure.
     if (!Class->isDependentContext()) {
-      for (ParmVarDecl *PD : CD->parameters()) {
-        (void)S.CheckCXXDefaultArgExpr(Attr->getLocation(), CD, PD);
-        S.DiscardCleanupsInEvaluationContext();
-      }
+      S.BuildDefaultArgsForCtorClosure(Attr->getLocation(), CD);
+      S.DiscardCleanupsInEvaluationContext();
     }
 
     if (LastExportedDefaultCtor) {
@@ -19814,9 +19812,11 @@ bool Sema::BuildDefaultArgsForCtorClosure(SourceLocation Loc, CXXConstructorDecl
 
   unsigned FirstParam = IsCopy ? 1 : 0;
   for (unsigned I = FirstParam; I != NumParams; ++I) {
-    if (CheckCXXDefaultArgExpr(Loc, Ctor, Ctor->getParamDecl(I)))
+    ExprResult R = BuildCXXDefaultArgExpr(Loc, Ctor, Ctor->getParamDecl(I));
+    if (R.isInvalid())
       return true;
-    CleanupVarDeclMarking(); // XXX: still not sure what this does.
+
+    CleanupVarDeclMarking();
   }
 
   return false;
