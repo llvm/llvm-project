@@ -495,9 +495,22 @@ private:
       return "temporary object";
     if (isa<CXXNewExpr>(E))
       return "allocated object";
-
     if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
       return getDiagSubjectDescription(DRE->getDecl());
+
+    if (const auto *CE = dyn_cast<CallExpr>(E)) {
+      const auto *FD = CE->getDirectCallee();
+      if (!FD)
+        return "result of call";
+      if (FD->isOverloadedOperator() || isa<CXXConversionDecl>(FD))
+        return "expression";
+      std::string Name;
+      llvm::raw_string_ostream OS(Name);
+      FD->getNameForDiagnostic(OS, S.getPrintingPolicy(),
+                               /*Qualified=*/false);
+      return "result of call to '" + Name + "'";
+    }
+
     // TODO: Handle other expression types.
     return "expression";
   }
