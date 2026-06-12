@@ -109,6 +109,20 @@ bool LifetimeAnnotations::isSourceDangle(const MemRegion *Source, ProgramStateRe
   return true;
 }
 
+void LifetimeAnnotations::checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  auto LBMapVal = State->get<LifetimeBoundMapVal>();
+  if (LBMapVal.isEmpty())
+    return;
+
+  for (auto&& [OriginRegion, SourceSet] : LBMapVal) {
+    for (const auto *Region : SourceSet) {
+      if (isSourceDangle(Region, State, C) == true)
+        return;
+    }
+  }
+}
+
 void LifetimeAnnotations::printState(raw_ostream &Out, ProgramStateRef State,
                                      const char *NL, const char *Sep) const {
   auto LBMap = State->get<LifetimeBoundMap>();
