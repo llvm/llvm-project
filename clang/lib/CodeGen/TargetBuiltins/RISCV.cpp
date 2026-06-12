@@ -309,6 +309,44 @@ emitRVVVsetvliBuiltin(CodeGenFunction *CGF, const CallExpr *E,
 }
 
 static LLVM_ATTRIBUTE_NOINLINE Value *
+emitRVVIMEBuiltin(CodeGenFunction *CGF, const CallExpr *E,
+                  ReturnValueSlot ReturnValue, llvm::Type *ResultType,
+                  Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,
+                  int PolicyAttrs, bool IsMasked) {
+  auto &Builder = CGF->Builder;
+  auto &CGM = CGF->CGM;
+
+  switch (ID) {
+  case Intrinsic::riscv_ime_vlen:
+  case Intrinsic::riscv_ime_lambda: {
+    assert(Ops.empty() && "unexpected IME geometry operands");
+    llvm::Function *F = CGM.getIntrinsic(ID, {ResultType});
+    return Builder.CreateCall(F);
+  }
+  case Intrinsic::riscv_ime_vsetlambda_nonzero:
+    break;
+  default:
+    llvm_unreachable("unexpected IME builtin");
+  }
+
+  assert(Ops.size() == 1 && "unexpected vsetlambda arity");
+  Value *Req = Ops[0];
+
+  auto *C = dyn_cast<llvm::ConstantInt>(Req);
+  assert(C && "Sema should reject non-constant __riscv_vsetlambda arguments");
+
+  if (C->isZero()) {
+    llvm::Function *ReadF =
+        CGM.getIntrinsic(Intrinsic::riscv_ime_readlambda, {ResultType});
+    return Builder.CreateCall(ReadF);
+  }
+
+  llvm::Function *SetF = CGM.getIntrinsic(
+      Intrinsic::riscv_ime_vsetlambda_nonzero, {ResultType});
+  return Builder.CreateCall(SetF, {Req});
+}
+
+static LLVM_ATTRIBUTE_NOINLINE Value *
 emitRVVVSEMaskBuiltin(CodeGenFunction *CGF, const CallExpr *E,
                       ReturnValueSlot ReturnValue, llvm::Type *ResultType,
                       Intrinsic::ID ID, SmallVectorImpl<Value *> &Ops,

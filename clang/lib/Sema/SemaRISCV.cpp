@@ -26,6 +26,7 @@
 #include "clang/Sema/Sema.h"
 #include "clang/Support/RISCVVIntrinsicUtils.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <optional>
@@ -677,11 +678,47 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
     return SemaRef.BuiltinConstantArgRange(TheCall, SEWOffset, 0, 3) ||
            CheckLMUL(TheCall, LMULOffset);
   };
+
+  auto CheckIMEVSetLambda = [&]() -> bool {
+    assert(TheCall->getNumArgs() == 1 && "unexpected vsetlambda arity");
+
+    Expr *Arg = TheCall->getArg(0);
+    if (Arg->isTypeDependent() || Arg->isValueDependent())
+      return false;
+    Expr *DiagArg = Arg->IgnoreParenCasts();
+
+    Expr::EvalResult Eval;
+    Expr *EvalArg = DiagArg;
+    if (!EvalArg->EvaluateAsInt(Eval, Context, Expr::SE_NoSideEffects)) {
+      EvalArg = Arg;
+      if (!EvalArg->EvaluateAsInt(Eval, Context, Expr::SE_NoSideEffects))
+        return Diag(DiagArg->getBeginLoc(),
+                    diag::err_riscv_builtin_invalid_ime_lambda)
+               << DiagArg->getSourceRange();
+    }
+
+    llvm::APSInt Val = Eval.Val.getInt();
+    if (Val.isSigned() && Val.isNegative())
+      return Diag(DiagArg->getBeginLoc(),
+                  diag::err_riscv_builtin_invalid_ime_lambda)
+             << DiagArg->getSourceRange();
+
+    uint64_t U = Val.getLimitedValue(65);
+    if (U != 0 && (U > 64 || !llvm::isPowerOf2_64(U)))
+      return Diag(DiagArg->getBeginLoc(),
+                  diag::err_riscv_builtin_invalid_ime_lambda)
+             << DiagArg->getSourceRange();
+
+    return false;
+  };
+
   switch (BuiltinID) {
   case RISCVVector::BI__builtin_rvv_vsetvli:
     return CheckVSetVL(1, 2);
   case RISCVVector::BI__builtin_rvv_vsetvlimax:
     return CheckVSetVL(0, 1);
+  case RISCVVector::BI__builtin_rvv_vsetlambda:
+    return CheckIMEVSetLambda();
   case RISCVVector::BI__builtin_rvv_sf_vsettnt:
   case RISCVVector::BI__builtin_rvv_sf_vsettm:
   case RISCVVector::BI__builtin_rvv_sf_vsettn:
