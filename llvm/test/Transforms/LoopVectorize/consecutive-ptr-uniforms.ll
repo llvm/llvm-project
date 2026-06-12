@@ -1065,7 +1065,8 @@ define void @pointer_iv_non_uniform_0(ptr %a, i64 %n) {
 ; INTER-NEXT:    [[TMP32:%.*]] = insertelement <4 x ptr> [[TMP31]], ptr [[TMP28]], i32 1
 ; INTER-NEXT:    [[TMP33:%.*]] = insertelement <4 x ptr> [[TMP32]], ptr [[TMP29]], i32 2
 ; INTER-NEXT:    [[TMP34:%.*]] = insertelement <4 x ptr> [[TMP33]], ptr [[TMP30]], i32 3
-; INTER-NEXT:    [[STRIDED_VEC6:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 8 [[TMP34]], <4 x i1> splat (i1 true), <4 x i32> poison)
+; INTER-NEXT:    [[WIDE_GEP:%.*]] = getelementptr i32, <4 x ptr> [[TMP34]], <4 x i64> <i64 0, i64 4, i64 8, i64 12>
+; INTER-NEXT:    [[STRIDED_VEC6:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 8 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i32> poison)
 ; INTER-NEXT:    [[TMP17:%.*]] = sub <4 x i32> [[STRIDED_VEC6]], [[STRIDED_VEC]]
 ; INTER-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP17]], i64 0
 ; INTER-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP17]], i64 1
