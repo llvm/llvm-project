@@ -366,6 +366,13 @@ public:
 
   bool isInEpilogCFI() const { return CurrentWinEpilog; }
 
+  /// Returns true if a WinCFI prolog has been completed (.seh_endprologue)
+  /// in the current frame.
+  bool isWinCFIPrologEnded() const {
+    return CurrentWinFrameInfo && !CurrentWinFrameInfo->End &&
+           CurrentWinFrameInfo->PrologEnd;
+  }
+
   /// \name Assembly File Formatting.
   /// @{
 
@@ -1087,6 +1094,9 @@ public:
   /// Set the default unwind version for new WinCFI frames.
   void setDefaultWinCFIUnwindVersion(uint8_t V) {
     DefaultWinCFIUnwindVersion = V;
+  }
+  uint8_t getDefaultWinCFIUnwindVersion() const {
+    return DefaultWinCFIUnwindVersion;
   }
   virtual void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                                 SMLoc Loc = SMLoc());
