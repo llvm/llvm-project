@@ -466,6 +466,7 @@ TEST(Attributes, SetIntersect) {
         V1 = FPClassTest::fcNan;
         break;
       case Attribute::Range:
+      case Attribute::RangeSet:
         break;
       case Attribute::Captures:
         V0 = CaptureInfo(CaptureComponents::AddressIsNull,
@@ -554,6 +555,14 @@ TEST(Attributes, SetIntersect) {
         ASSERT_EQ(Res->getAttribute(Kind).getRange(),
                   ConstantRange(APInt(32, 0), APInt(32, 20)));
         break;
+      case Attribute::RangeSet: {
+        ArrayRef<ConstantRange> RangeSet =
+            Res->getAttribute(Kind).getRangeSet();
+        ASSERT_EQ(RangeSet.size(), 2u);
+        ASSERT_EQ(RangeSet[0], CR0);
+        ASSERT_EQ(RangeSet[1], CR1);
+        break;
+      }
       case Attribute::Captures:
         ASSERT_EQ(Res->getCaptureInfo(),
                   CaptureInfo(CaptureComponents::AddressIsNull,

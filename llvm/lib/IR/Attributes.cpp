@@ -92,6 +92,64 @@ unpackVScaleRangeArgs(uint64_t Value) {
                         MaxValue > 0 ? MaxValue : std::optional<unsigned>());
 }
 
+static void appendRangeSetRange(SmallVectorImpl<ConstantRange> &Ranges,
+                                const ConstantRange &CR) {
+  if (CR.isEmptySet())
+    return;
+  if (CR.isFullSet()) {
+    Ranges.assign(1, CR);
+    return;
+  }
+  if (Ranges.empty()) {
+    Ranges.push_back(CR);
+    return;
+  }
+  if (Ranges.front().isFullSet())
+    return;
+
+  APInt PreviousUpper = Ranges.back().getUpper();
+  if (PreviousUpper.isMinSignedValue())
+    return;
+  if (CR.getLower().sle(PreviousUpper)) {
+    APInt NewUpper = CR.getUpper().isMinSignedValue()
+                         ? APInt::getSignedMinValue(CR.getBitWidth())
+                         : APIntOps::smax(PreviousUpper, CR.getUpper());
+    Ranges.back() = ConstantRange(Ranges.back().getLower(), NewUpper);
+    if (Ranges.back().isFullSet())
+      Ranges.truncate(1);
+    return;
+  }
+
+  Ranges.push_back(CR);
+}
+
+static SmallVector<ConstantRange, 2>
+unionRangeSetLists(ArrayRef<ConstantRange> LHS, ArrayRef<ConstantRange> RHS) {
+  assert(AttributeFuncs::isOrderedRangeSet(LHS) &&
+         AttributeFuncs::isOrderedRangeSet(RHS) &&
+         "rangeset attribute must be ordered");
+  if (LHS.empty())
+    return SmallVector<ConstantRange, 2>(RHS);
+  if (RHS.empty())
+    return SmallVector<ConstantRange, 2>(LHS);
+
+  SmallVector<ConstantRange, 2> Result;
+  size_t LHSIdx = 0, RHSIdx = 0;
+  while (LHSIdx < LHS.size() || RHSIdx < RHS.size()) {
+    const ConstantRange *NextRange;
+    if (RHSIdx == RHS.size() ||
+        (LHSIdx < LHS.size() &&
+         LHS[LHSIdx].getLower().slt(RHS[RHSIdx].getLower())))
+      NextRange = &LHS[LHSIdx++];
+    else
+      NextRange = &RHS[RHSIdx++];
+    appendRangeSetRange(Result, *NextRange);
+    if (Result.size() == 1 && Result.front().isFullSet())
+      break;
+  }
+  return Result;
+}
+
 Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
                          uint64_t Val) {
   bool IsIntAttr = Attribute::isIntAttrKind(Kind);
@@ -529,6 +587,12 @@ const ConstantRange &Attribute::getRange() const {
   return pImpl->getValueAsConstantRange();
 }
 
+ArrayRef<ConstantRange> Attribute::getRangeSet() const {
+  assert(hasAttribute(Attribute::RangeSet) &&
+         "Trying to get rangeset attr from non-ConstantRangeList attribute");
+  return pImpl->getValueAsConstantRangeList();
+}
+
 ArrayRef<ConstantRange> Attribute::getInitializes() const {
   assert(hasAttribute(Attribute::Initializes) &&
          "Trying to get initializes attr from non-ConstantRangeList attribute");
@@ -735,6 +799,21 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     OS << "range(";
     OS << "i" << CR.getBitWidth() << " ";
     OS << CR.getLower() << ", " << CR.getUpper();
+    OS << ")";
+    return Result;
+  }
+
+  if (hasAttribute(Attribute::RangeSet)) {
+    std::string Result;
+    raw_string_ostream OS(Result);
+    ArrayRef<ConstantRange> Ranges = getRangeSet();
+    assert(!Ranges.empty() &&
+           "rangeset attribute must have at least one range");
+    OS << "rangeset(";
+    OS << "i" << Ranges.front().getBitWidth() << " ";
+    interleaveComma(Ranges, OS, [&](const ConstantRange &CR) {
+      OS << "(" << CR.getLower() << ", " << CR.getUpper() - 1 << ")";
+    });
     OS << ")";
     return Result;
   }
@@ -1149,6 +1228,11 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
         ConstantRange NewRange = Range0.unionWith(Range1);
         if (!NewRange.isFullSet())
           Intersected.addRangeAttr(NewRange);
+      } break;
+      case Attribute::RangeSet: {
+        SmallVector<ConstantRange> NewRangeSet =
+            unionRangeSetLists(Attr0.getRangeSet(), Attr1.getRangeSet());
+        Intersected.addRangeSetAttr(NewRangeSet);
       } break;
       default:
         llvm_unreachable("Unknown attribute with custom intersection rule");
@@ -2371,9 +2455,17 @@ AttrBuilder &AttrBuilder::addRangeAttr(const ConstantRange &CR) {
   return addConstantRangeAttr(Attribute::Range, CR);
 }
 
+AttrBuilder &AttrBuilder::addRangeSetAttr(ArrayRef<ConstantRange> CRs) {
+  if (CRs.empty() || (CRs.size() == 1 && CRs.front().isFullSet()))
+    return *this;
+  return addAttribute(Attribute::get(Ctx, Attribute::RangeSet, CRs));
+}
+
 AttrBuilder &
 AttrBuilder::addConstantRangeListAttr(Attribute::AttrKind Kind,
                                       ArrayRef<ConstantRange> Val) {
+  if (Kind == Attribute::RangeSet)
+    return addRangeSetAttr(Val);
   return addAttribute(Attribute::get(Ctx, Kind, Val));
 }
 
@@ -2479,6 +2571,33 @@ bool AttributeFuncs::isNoFPClassCompatibleType(Type *Ty) {
   return FPMathOperator::isSupportedFloatingPointType(Ty);
 }
 
+bool AttributeFuncs::isOrderedRangeSet(ArrayRef<ConstantRange> Ranges) {
+  if (Ranges.empty())
+    return true;
+
+  for (unsigned I = 0; I < Ranges.size(); ++I) {
+    const ConstantRange &Range = Ranges[I];
+    if (Range.isEmptySet())
+      return false;
+    if (I != 0 && Range.getBitWidth() != Ranges.front().getBitWidth())
+      return false;
+    if (Range.isFullSet())
+      return Ranges.size() == 1;
+    if (!Range.getLower().slt(Range.getUpper()) &&
+        !Range.getUpper().isMinSignedValue())
+      return false;
+    if (I == 0)
+      continue;
+
+    const ConstantRange &PrevRange = Ranges[I - 1];
+    if (PrevRange.isFullSet() || PrevRange.getUpper().isMinSignedValue())
+      return false;
+    if (Range.getLower().sle(PrevRange.getUpper()))
+      return false;
+  }
+  return true;
+}
+
 /// Which attributes cannot be applied to a type.
 AttributeMask AttributeFuncs::typeIncompatible(Type *Ty, AttributeSet AS,
                                                AttributeSafetyKind ASK) {
@@ -2499,12 +2618,20 @@ AttributeMask AttributeFuncs::typeIncompatible(Type *Ty, AttributeSet AS,
   if (!Ty->isIntOrIntVectorTy()) {
     // Attributes that only apply to integers or vector of integers.
     if (ASK & ASK_SAFE_TO_DROP)
-      Incompatible.addAttribute(Attribute::Range);
+      Incompatible.addAttribute(Attribute::Range)
+          .addAttribute(Attribute::RangeSet);
   } else {
     Attribute RangeAttr = AS.getAttribute(Attribute::Range);
     if (RangeAttr.isValid() &&
         RangeAttr.getRange().getBitWidth() != Ty->getScalarSizeInBits())
       Incompatible.addAttribute(Attribute::Range);
+    Attribute RangeSetAttr = AS.getAttribute(Attribute::RangeSet);
+    if (RangeSetAttr.isValid()) {
+      ArrayRef<ConstantRange> Ranges = RangeSetAttr.getRangeSet();
+      if (!Ranges.empty() &&
+          Ranges.front().getBitWidth() != Ty->getScalarSizeInBits())
+        Incompatible.addAttribute(Attribute::RangeSet);
+    }
   }
 
   if (!Ty->isPointerTy()) {
