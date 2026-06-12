@@ -156,6 +156,14 @@ def get_active_where_matches(
                 # If the target frame is -1, we can't match the !where yet, but we should prepare to step into it.
                 active_where_expects[scope.where].pending_wheres.append(where)
                 return
+            if where.at_frame_idx is not None:
+                # !and {at_frame_idx} is a special case: it cannot contain !where nodes, so there's no point checking it
+                # when the parent !where is not in the current frame (frame_idx=0), and we match its other conditions
+                # against the requested frame index.
+                assert where.is_and, "illegal `at_frame_idx` property for !where"
+                if target_frame_idx != 0 or where.at_frame_idx >= len(step_info.frames):
+                    return
+                target_frame_idx = where.at_frame_idx
             labels = script.get_labels(
                 expected_file or step_info.frames[target_frame_idx].loc.path
             )
@@ -184,17 +192,17 @@ def get_active_where_matches(
     # As we visit the script nodes in pre-order traversal, we can always assume that an expect's parent !where
     # has already been visited, and thus should have an entry in active_where_expects if it is active.
     def get_active_expects(expect: Expect, expected_value, scope: Scope):
-        if (
-            scope.where in active_where_expects
-            and active_where_expects[scope.where].frame_idx == 0
-        ):
+        # Active if the matching frame index is either 0, or equal to scope.get_desired_frame_idx() if it is not None.
+        if scope.where in active_where_expects and active_where_expects[
+            scope.where
+        ].frame_idx == (scope.get_desired_frame_idx() or 0):
             active_where_expects[scope.where].active_expects.append(expect)
 
     def get_active_thens(then: Then, scope: Scope):
-        if (
-            scope.where in active_where_expects
-            and active_where_expects[scope.where].frame_idx == 0
-        ):
+        # Active if the matching frame index is either 0, or equal to scope.get_desired_frame_idx() if it is not None.
+        if scope.where in active_where_expects and active_where_expects[
+            scope.where
+        ].frame_idx == (scope.get_desired_frame_idx() or 0):
             active_where_expects[scope.where].active_thens.append(then)
 
     script.visit_script(

@@ -46,7 +46,7 @@ class DebuggerStepMatch:
         self.match_context = match_context
         self.state_match = get_active_where_matches(script, step, state_match_context)
         expects_to_match = {
-            expect
+            expect: where_match.frame_idx
             for where_match in self.state_match.values()
             for expect in where_match.active_expects
         }
@@ -55,10 +55,11 @@ class DebuggerStepMatch:
         def add_expected_values(expect: Expect, expected_value: Any, scope: Scope):
             assert isinstance(expect, Value), "Non-Value expects currently unsupported"
             if expect in expects_to_match:
+                expect_frame_idx = expects_to_match[expect]
                 self.expect_matches[expect] = get_expect_match(
                     expect,
                     expected_value,
-                    step.watches[expect.get_watched_expr()],
+                    step.frames[expect_frame_idx].watches[expect.get_watched_expr()],
                     self.match_context,
                 )
 

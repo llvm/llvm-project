@@ -399,7 +399,7 @@ class VisualStudio(
         )
 
     def collect_watches(
-        self, step: StepIR, watches: List[str], scope_watches: List[str]
+        self, step: StepIR, frame_idx: int, watches: List[str], scope_watches: List[str]
     ):
         raise NotImplementedError(
             "--use-script debugging not supported in visual studio yet."

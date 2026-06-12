@@ -139,6 +139,14 @@ class Scope:
             next_scope = next_scope.parent_scope
         return next_scope.file
 
+    def get_desired_frame_idx(self) -> Optional[int]:
+        if not (self.where and self.where.is_and):
+            return None
+        if self.where.at_frame_idx is not None:
+            return self.where.at_frame_idx
+        assert self.parent_scope
+        return self.parent_scope.get_desired_frame_idx()
+
 
 class ScriptLoadContext:
     """Contains information about the context that the script was loaded from."""
@@ -179,9 +187,24 @@ class DexterScript:
                     f"!expect/all node {expect} should not have an expected value."
                 )
 
+        def validate_where(where: Where, scope: Scope):
+            if where.is_and and not scope.where:
+                raise DexterScriptError(
+                    f"!and node must be contained by another state node."
+                )
+            if scope.get_desired_frame_idx() is not None:
+                if not where.is_and:
+                    raise DexterScriptError(
+                        f"!where node {where} cannot be contained by a node with at_frame_idx."
+                    )
+                if where.at_frame_idx:
+                    raise DexterScriptError(
+                        f"!and node {where} with at_frame_idx cannot be contained by another node with at_frame_idx."
+                    )
+
         # `visit_script` will validate the structure of the script, as it traverses the full script and raises an
         # exception if it sees anything unexpected.
-        self.visit_script(visit_expect=validate_expect)
+        self.visit_script(visit_expect=validate_expect, visit_where=validate_where)
 
     # If a truthy value is returned, abort further visiting and return that value.
     def _visit_script(
