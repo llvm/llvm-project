@@ -1,0 +1,19 @@
+RUN: not %dexter_regression_test_run --binary %s --use-script --skip-run -- %s 2>&1 | FileCheck %s
+
+Tests that !step expected values must not be anything other than a list of integers.
+
+CHECK: No valid Dexter script found in file
+
+CHECK: Script starting line [[# @LINE + 2]]:
+CHECK: Expected value for !step node Step(order) must be list of integers
+---
+!where {function: foo}:
+    !step order: 12
+...
+
+CHECK: Script starting line [[# @LINE + 2]]:
+CHECK: Expected value for !step node Step(order) must be list of integers
+---
+!where {function: foo}:
+    !step order: ["0", "1"]
+...
