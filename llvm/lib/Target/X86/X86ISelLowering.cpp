@@ -27104,11 +27104,20 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                 Attribute::StrictFP)) {
           unsigned StrictOpc = 0;
           switch (IntrData->Opc0) {
-          case ISD::FADD: StrictOpc = ISD::STRICT_FADD; break;
-          case ISD::FSUB: StrictOpc = ISD::STRICT_FSUB; break;
-          case ISD::FMUL: StrictOpc = ISD::STRICT_FMUL; break;
-          case ISD::FDIV: StrictOpc = ISD::STRICT_FDIV; break;
-          default: break;
+          case ISD::FADD:
+            StrictOpc = ISD::STRICT_FADD;
+            break;
+          case ISD::FSUB:
+            StrictOpc = ISD::STRICT_FSUB;
+            break;
+          case ISD::FMUL:
+            StrictOpc = ISD::STRICT_FMUL;
+            break;
+          case ISD::FDIV:
+            StrictOpc = ISD::STRICT_FDIV;
+            break;
+          default:
+            break;
           }
           if (StrictOpc) {
             SDValue StrictNode = DAG.getNode(
