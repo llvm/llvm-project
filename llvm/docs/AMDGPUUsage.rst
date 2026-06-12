@@ -866,7 +866,7 @@ consumed by the AMDGPU backend during code generation.
          straddle an OOB boundary (e.g. as required by Vulkan
          ``robustBufferAccess2``) and by splitting vector accesses to buffer
          fat pointers that may produce incorrect results under a robust buffer
-         access scheme. See `__amdgpu_fat_buffer_oob_handling` for details.
+         access scheme. See :ref:`_amdgpu_fat_buffer_oob_handling` for details.
 
    * - ``amdgpu.tbuffer.oob.mode``
      - ``i32``
@@ -1342,7 +1342,7 @@ instruction with ``one-as`` sync scope is specified via
                             other operations within the same address space.
     ======================= ===================================================
 
-.. __amdgpu_fat_buffer_oob_handling:
+.. _amdgpu_fat_buffer_oob_handling:
 
 Buffer Fat Pointer out of bounds (OOB) handling
 -----------------------------------------------
@@ -1352,7 +1352,7 @@ buffer fat pointers and buffer strided pointers) generally implement handling fo
 out of bounds (OOB) memory accesses, including those that are partially OOB,
 if the buffer resource resource has the required flags set. How ordinary
 ``load`` and ``store`` instructions are lowered to buffer operations is partly
-controlled by the ``amdgpu.buffer.oob.mode`` (see `__amdgpu_metadata`). If
+controlled by the ``amdgpu.buffer.oob.mode`` (see :ref:`_amdgpu_metadata`). If
 that flag is set to ``1`` (relaxed), no handling to improve the expected behavior
 of OOB accesses is performed, while if it is set to ``0`` (any) or ``2`` (strict),
 oerations may be spliit to ensure correctness under stronger models of how
