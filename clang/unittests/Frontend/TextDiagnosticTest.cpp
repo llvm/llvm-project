@@ -96,8 +96,8 @@ TEST(TextDiagnostic, ShowLine) {
   EXPECT_EQ("main.cpp:1: warning: message\n", PrintDiag(DiagOpts, Loc));
 }
 
-// Parameterized fixture for ShowLevel tests: bool param = ShowLevel value.
-struct ShowLevelNoLocationTest : public ::testing::TestWithParam<bool> {};
+struct ShowLevelNoLocationTest
+    : public ::testing::TestWithParam<bool /* ShowLevel */> {};
 
 TEST_P(ShowLevelNoLocationTest, LevelPrefixRespected) {
   bool ShowLevel = GetParam();
