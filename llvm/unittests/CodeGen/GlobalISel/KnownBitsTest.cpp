@@ -2315,34 +2315,32 @@ TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroDepthCutoff) {
       Info.isKnownNeverZero(MRI->getVRegDef(CopyOr)->getOperand(1).getReg()));
 }
 
-namespace {
-
-MachineInstr *findOpcode(MachineFunction &MF, unsigned Opcode,
-                         unsigned Index = 0) {
+/// Return the \p Index'th instruction with opcode \p Opcode in \p MF, in
+/// program order, or nullptr.
+static MachineInstr *findOpcode(MachineFunction &MF, unsigned Opcode,
+                                unsigned Index = 0) {
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (MI.getOpcode() == Opcode) {
-        if (Index == 0)
-          return &MI;
-        --Index;
-      }
+      if (MI.getOpcode() != Opcode)
+        continue;
+      if (Index == 0)
+        return &MI;
+      --Index;
     }
   }
   return nullptr;
 }
 
-KnownBits simplifyDemandedBitsOperand(MachineFunction &MF,
-                                      MachineRegisterInfo &MRI,
-                                      MachineIRBuilder &B, MachineInstr &Use,
-                                      const APInt &Demand) {
+static KnownBits simplifyDemandedBitsOperand(MachineFunction &MF,
+                                             MachineIRBuilder &B,
+                                             MachineInstr &Use,
+                                             const APInt &Demand) {
   GISelValueTracking VT(MF);
   CombinerHelper Helper(VT, B, /*IsPreLegalize=*/false, &VT);
   KnownBits Known(Demand.getBitWidth());
   EXPECT_TRUE(Helper.simplifyDemandedBits(Use, /*OpNo=*/1, Demand, Known));
   return Known;
 }
-
-} // namespace
 
 TEST_F(AArch64GISelMITest, SimplifyDemandedBitsAndSingleUse) {
   StringRef MIRString = R"(
@@ -2364,7 +2362,7 @@ TEST_F(AArch64GISelMITest, SimplifyDemandedBitsAndSingleUse) {
 
   Register ProducerReg = Producer->getOperand(0).getReg();
   Register XReg = Producer->getOperand(1).getReg();
-  simplifyDemandedBitsOperand(*MF, *MRI, B, *Use, APInt(32, 0x0F));
+  simplifyDemandedBitsOperand(*MF, B, *Use, APInt(32, 0x0F));
   EXPECT_EQ(Use->getOperand(1).getReg(), XReg);
   EXPECT_TRUE(MRI->use_nodbg_empty(ProducerReg));
 }
@@ -2394,7 +2392,7 @@ TEST_F(AArch64GISelMITest, SimplifyDemandedBitsAndMultiUse) {
 
   Register ProducerReg = Producer->getOperand(0).getReg();
   Register XReg = Producer->getOperand(1).getReg();
-  simplifyDemandedBitsOperand(*MF, *MRI, B, *Use, APInt(32, 0x0F));
+  simplifyDemandedBitsOperand(*MF, B, *Use, APInt(32, 0x0F));
   EXPECT_EQ(Use->getOperand(1).getReg(), XReg);
   EXPECT_EQ(Side->getOperand(1).getReg(), ProducerReg);
   EXPECT_EQ(MRI->getVRegDef(ProducerReg)->getOpcode(), TargetOpcode::G_AND);
@@ -2420,7 +2418,7 @@ TEST_F(AArch64GISelMITest, SimplifyDemandedBitsOrSingleUse) {
 
   Register ProducerReg = Producer->getOperand(0).getReg();
   Register XReg = Producer->getOperand(1).getReg();
-  simplifyDemandedBitsOperand(*MF, *MRI, B, *Use, APInt(32, 0xFF));
+  simplifyDemandedBitsOperand(*MF, B, *Use, APInt(32, 0xFF));
   EXPECT_EQ(Use->getOperand(1).getReg(), XReg);
   EXPECT_TRUE(MRI->use_nodbg_empty(ProducerReg));
 }
@@ -2450,7 +2448,7 @@ TEST_F(AArch64GISelMITest, SimplifyDemandedBitsOrMultiUse) {
 
   Register ProducerReg = Producer->getOperand(0).getReg();
   Register XReg = Producer->getOperand(1).getReg();
-  simplifyDemandedBitsOperand(*MF, *MRI, B, *Use, APInt(32, 0xFF));
+  simplifyDemandedBitsOperand(*MF, B, *Use, APInt(32, 0xFF));
   EXPECT_EQ(Use->getOperand(1).getReg(), XReg);
   EXPECT_EQ(Side->getOperand(1).getReg(), ProducerReg);
   EXPECT_EQ(MRI->getVRegDef(ProducerReg)->getOpcode(), TargetOpcode::G_OR);
@@ -2476,8 +2474,7 @@ TEST_F(AArch64GISelMITest, SimplifyDemandedBitsOrConstantExplainsDemand) {
 
   Register ProducerReg = Producer->getOperand(0).getReg();
   Register LowCstReg = Producer->getOperand(2).getReg();
-  KnownBits Known =
-      simplifyDemandedBitsOperand(*MF, *MRI, B, *Use, APInt(32, 0x0F));
+  KnownBits Known = simplifyDemandedBitsOperand(*MF, B, *Use, APInt(32, 0x0F));
   EXPECT_EQ(Use->getOperand(1).getReg(), LowCstReg);
   EXPECT_TRUE(MRI->use_nodbg_empty(ProducerReg));
   EXPECT_TRUE(APInt(32, 0x0F).isSubsetOf(Known.One));
@@ -2506,7 +2503,7 @@ TEST_F(AArch64GISelMITest, SimplifyDemandedBitsThroughShl) {
   ASSERT_NE(Inner, nullptr);
 
   Register InnerDst = Inner->getOperand(0).getReg();
-  simplifyDemandedBitsOperand(*MF, *MRI, B, *Use, APInt(32, 0xFFF));
+  simplifyDemandedBitsOperand(*MF, B, *Use, APInt(32, 0xFFF));
   EXPECT_TRUE(MRI->use_nodbg_empty(InnerDst));
 }
 
@@ -2528,7 +2525,7 @@ TEST_F(AArch64GISelMITest, SimplifyDemandedBitsAshrToLshr) {
   MachineInstr *Use = findOpcode(*MF, TargetOpcode::G_AND);
   ASSERT_NE(Use, nullptr);
 
-  simplifyDemandedBitsOperand(*MF, *MRI, B, *Use, APInt(32, 0xFFFF));
+  simplifyDemandedBitsOperand(*MF, B, *Use, APInt(32, 0xFFFF));
   EXPECT_EQ(findOpcode(*MF, TargetOpcode::G_ASHR), nullptr);
   EXPECT_NE(findOpcode(*MF, TargetOpcode::G_LSHR), nullptr);
 }
@@ -2641,7 +2638,7 @@ TEST_F(AArch64GISelMITest, SimplifyDemandedBitsRelaxThroughMultiUseShift) {
 
   Register InnerDst = Inner->getOperand(0).getReg();
   Register XReg = Inner->getOperand(1).getReg();
-  simplifyDemandedBitsOperand(*MF, *MRI, B, *Root, APInt(32, 0xFF));
+  simplifyDemandedBitsOperand(*MF, B, *Root, APInt(32, 0xFF));
   EXPECT_TRUE(MRI->use_nodbg_empty(InnerDst));
   EXPECT_EQ(Shl->getOperand(1).getReg(), XReg);
 }
