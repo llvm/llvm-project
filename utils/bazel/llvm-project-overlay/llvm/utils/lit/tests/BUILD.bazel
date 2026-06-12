@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
-load("//llvm:lit_test.bzl", "lit_test", "package_path")
+load("//llvm:lit_test.bzl", "lit_test", "runfiles_path")
 
 expand_template(
     name = "lit_site_cfg",

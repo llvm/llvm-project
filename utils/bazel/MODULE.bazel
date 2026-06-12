@@ -18,8 +18,7 @@ bazel_dep(name = "rules_shell", version = "0.6.1")
 bazel_dep(name = "zlib-ng", version = "2.0.7", repo_name = "llvm_zlib")
 bazel_dep(name = "zstd", version = "1.5.7", repo_name = "llvm_zstd")
 
-bazel_dep(name = "llvm", version = "0.8.6", dev_dependency = True)
-register_toolchains("@llvm//toolchain:all")
+bazel_dep(name = "llvm", version = "0.7.1", dev_dependency = True)
 
 llvm_repos_extension = use_extension(":extensions.bzl", "llvm_repos_extension")
 use_repo(
@@ -38,8 +37,4 @@ use_repo(
 
 llvm_configure = use_repo_rule("@llvm-raw//utils/bazel:configure.bzl", "llvm_configure")
 
-llvm_configure(name = "llvm-project",
-targets = [
-    "AArch64",
-]
-)
+llvm_configure(name = "llvm-project")

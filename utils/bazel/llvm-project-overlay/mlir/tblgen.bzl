@@ -63,22 +63,27 @@ def _get_transitive_includes(includes, deps):
     )
 
 def _resolve_includes(ctx, includes):
-    """Resolves include paths to paths relative to the execution root.
+    """Resolves include paths to paths suitable for consumption by all execution contexts.
 
-    Relative paths are interpreted as relative to the current label's package.
-    Absolute paths are interpreted as relative to the current label's workspace
-    root."""
+    For each include path, returns two "absolute" paths: one for the runfiles layout
+    (used by run/test targets) and one relative to the output directory (used by
+    build targets)."""
     package = ctx.label.package
     workspace_root = ctx.label.workspace_root
     workspace_root = workspace_root if workspace_root else "."
+    workspace_name = ctx.label.workspace_name
+    workspace_name = workspace_name if workspace_name else ""
     resolved_includes = []
     for include in includes:
         if paths.is_absolute(include):
             include = include.lstrip("/")
         else:
             include = paths.join(package, include)
-        include = paths.join(workspace_root, include)
-        resolved_includes.append(include)
+        # Path in runfiles layout for target configuration (run/test)
+        resolved_includes.append(paths.join("../", workspace_name, include))
+        # Path relative to output directory for exec configuration
+        resolved_includes.append(paths.join(workspace_root, include))
+
     return resolved_includes
 
 def _td_library_impl(ctx):
@@ -220,18 +225,17 @@ gentbl_rule = rule(
 def _gentbl_test_impl(ctx):
     td_file = ctx.file.td_file
 
-    # Note that the td_file.dirname is already relative to the execution root,
-    # i.e. may contain an `external/<workspace_name>` prefix if the current
-    # workspace is not the main workspace. Therefore it is not included in the
-    # _resolve_includes call that prepends this prefix.
+    # td_file.short_path gives the path of the file relative to the runfiles directory
+    # so it doesn't have to be passed to _resolve_includes that prepends the prefix
+    # relative to the runfiles_dir
     trans_includes = _get_transitive_includes(
-        _resolve_includes(ctx, ctx.attr.includes + ["/"]) + [td_file.dirname],
+        _resolve_includes(ctx, ctx.attr.includes + ["/"]) + [paths.dirname(td_file.short_path)],
         ctx.attr.deps,
     )
 
     test_args = [ctx.executable.tblgen.short_path]
     test_args.extend(ctx.attr.opts)
-    test_args.append(td_file.path)
+    test_args.append(td_file.short_path)
     test_args.extend([
         arg
         for include in trans_includes.to_list()
