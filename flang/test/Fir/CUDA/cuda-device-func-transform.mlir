@@ -157,6 +157,20 @@ func.func @_QPpartialsumshflshflr8(%arg0: !fir.ref<!fir.array<?xf64>> {cuf.data_
 
 // -----
 
+func.func @_QPldg_attrs(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "a"}, %arg1: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "b"}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+  %c10 = arith.constant 10 : index
+  %scope = fir.dummy_scope : !fir.dscope
+  %shape = fir.shape %c10 : (index) -> !fir.shape<1>
+  %0 = fir.declare %arg0(%shape) dummy_scope %scope arg 1 {fortran_attrs = #fir.var_attrs<intent_out>, uniq_name = "_QFldg_attrsEa"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xf32>>
+  %1 = fir.declare %arg1(%shape) dummy_scope %scope arg 2 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFldg_attrsEb"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xf32>>
+  return
+}
+
+// CHECK-LABEL: gpu.module @cuda_device_mod
+// CHECK: gpu.func @_QPldg_attrs(%{{.*}}: !fir.ref<!fir.array<?xf32>>, %{{.*}}: !fir.ref<!fir.array<?xf32>> {llvm.noalias, llvm.readonly}) kernel
+
+// -----
+
 func.func @_QPsub_maxtnid() attributes {cuf.launch_bounds = #cuf.launch_bounds<maxTPB = 256 : i64, minBPM = 2 : i64, upperBoundClusterSize = 3 : i64>, cuf.proc_attr = #cuf.cuda_proc<global>} {
   %cst = arith.constant 2.000000e+00 : f32
   return
