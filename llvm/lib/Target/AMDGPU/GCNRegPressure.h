@@ -372,6 +372,10 @@ protected:
   void reset(const MachineInstr &MI, const LiveRegSet *VirtLiveRegsCopy,
              bool After);
 
+  // reset tracker and set live register set to the specified value.
+  void reset(const MachineRegisterInfo &MRInfo,
+             const LiveRegSet &VirtLiveRegsSet);
+
   /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
   void bumpDeadDefs(ArrayRef<VRegMaskOrUnit> DeadDefs);
 
@@ -404,13 +408,30 @@ public:
   // TrackPhysRegInTrackers are true.
   void setPhysRegTracking();
 
-  // reset tracker and set live register set to the specified value.
+  // Reset tracker with both virtual and physical live register state.
   void reset(const MachineRegisterInfo &MRInfo,
-             const LiveRegSet &VirtLiveRegsSet);
+             const LiveRegSet &VirtLiveRegsSet,
+             const BitVector &PhysLiveUnits);
 
   // live regs for the current state
   const decltype(VirtLiveRegs) &getVirtLiveRegs() const { return VirtLiveRegs; }
+  const BitVector &getPhysLiveRegUnits() const { return PhysLiveRegUnits; }
   const MachineInstr *getLastTrackedMI() const { return LastTrackedMI; }
+
+  /// Initialize PhysLiveRegUnits from a range of RegisterMaskPair entries
+  /// and update CurPressure/MaxPressure accordingly.
+  template <typename RangeT>
+  void initPhysLiveUnitsFromRegMaskPairs(RangeT &&Pairs) {
+    assert(TrackPhysRegs && "physical register tracking must be enabled");
+    for (const auto &RM : Pairs)
+      if (MRI->isAllocatable(RM.PhysReg))
+        addUnitsAndIncPressure(RM.PhysReg, CurPressure);
+    MaxPressure = max(MaxPressure, CurPressure);
+  }
+
+  /// Restore PhysLiveRegUnits from a previously saved BitVector and update
+  /// CurPressure/MaxPressure accordingly.
+  void initPhysLiveUnits(const BitVector &PhysLiveUnits);
 
   void clearMaxPressure() { MaxPressure.clear(); }
 
@@ -434,20 +455,30 @@ public:
 
   using GCNRPTracker::reset;
 
-  /// reset tracker at the specified slot index \p SI.
-  void reset(const MachineRegisterInfo &MRI, SlotIndex SI) {
+  /// reset tracker at the specified slot index \p SI. If \p SeedPhysMBB is
+  /// non-null, also seed physical live-out state from that MBB's successors.
+  void reset(const MachineRegisterInfo &MRI, SlotIndex SI,
+             const MachineBasicBlock *SeedPhysMBB = nullptr) {
     GCNRPTracker::reset(MRI, llvm::getVirtLiveRegs(SI, LIS, MRI));
+    if (SeedPhysMBB && TrackPhysRegs &&
+        SeedPhysMBB->getParent()->getProperties().hasTracksLiveness())
+      initPhysLiveUnitsFromRegMaskPairs(SeedPhysMBB->liveouts());
   }
 
-  /// reset tracker to the end of the \p MBB.
+  /// reset tracker to the end of the \p MBB and seed physical live-outs
+  /// from the MBB's successors.
   void reset(const MachineBasicBlock &MBB) {
     SlotIndex MBBLastSlot = LIS.getSlotIndexes()->getMBBLastIdx(&MBB);
-    reset(MBB.getParent()->getRegInfo(), MBBLastSlot);
+    reset(MBB.getParent()->getRegInfo(), MBBLastSlot, &MBB);
   }
 
   /// reset tracker to the point just after \p MI (in program order).
-  void reset(const MachineInstr &MI) {
-    reset(MI.getMF()->getRegInfo(), LIS.getInstructionIndex(MI).getDeadSlot());
+  /// If \p SeedPhysMBB is non-null, also seed physical live-out state from
+  /// that MBB's successors.
+  void reset(const MachineInstr &MI,
+             const MachineBasicBlock *SeedPhysMBB = nullptr) {
+    reset(MI.getMF()->getRegInfo(), LIS.getInstructionIndex(MI).getDeadSlot(),
+          SeedPhysMBB);
   }
 
   /// Move to the state of RP just before the \p MI . If \p UseInternalIterator
@@ -496,8 +527,17 @@ public:
 
   /// Reset tracker to the point before the \p MI
   /// filling \p VirtLiveRegs upon this point using LIS.
+  /// If \p SeedPhysMBB is non-null, also seed physical live-in state from
+  /// that MBB's live-in list.
   /// \p returns false if block is empty except debug values.
-  bool reset(const MachineInstr &MI, const LiveRegSet *VirtLiveRegs = nullptr);
+  bool reset(const MachineInstr &MI, const LiveRegSet *VirtLiveRegs = nullptr,
+             const MachineBasicBlock *SeedPhysMBB = nullptr);
+
+  /// Reset tracker to the point before \p MI, restoring both virtual and
+  /// physical register state from saved snapshots.
+  /// \p returns false if block is empty except debug values.
+  bool reset(const MachineInstr &MI, const LiveRegSet &VirtLiveRegs,
+             const BitVector &PhysLiveUnits);
 
   /// Move to the state right before the next MI or after the end of MBB.
   /// \p returns false if reached end of the block.

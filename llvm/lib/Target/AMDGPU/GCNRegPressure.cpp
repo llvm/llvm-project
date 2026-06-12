@@ -539,6 +539,7 @@ void GCNRPTracker::removeKilledUnitsAndDecPressure(MCRegister Reg, SlotIndex SI,
   }
 }
 
+
 GCNRegPressure GCNRPTracker::constructPhysRegPressure() const {
   GCNRegPressure Res;
   for (unsigned U : PhysLiveRegUnits.set_bits())
@@ -615,6 +616,22 @@ void GCNRPTracker::reset(const MachineRegisterInfo &MRInfo,
   // Always clear PhysLiveRegUnits even when TrackPhysRegs is false, to avoid
   // stale data if physical tracking was previously enabled.
   PhysLiveRegUnits.reset();
+}
+
+void GCNRPTracker::reset(const MachineRegisterInfo &MRInfo,
+                         const LiveRegSet &VirtLiveRegsSet,
+                         const BitVector &PhysLiveUnits) {
+  reset(MRInfo, VirtLiveRegsSet);
+  initPhysLiveUnits(PhysLiveUnits);
+}
+
+void GCNRPTracker::initPhysLiveUnits(const BitVector &PhysLiveUnits) {
+  if (!TrackPhysRegs)
+    return;
+  PhysLiveRegUnits = PhysLiveUnits;
+  GCNRegPressure PhysPressure = constructPhysRegPressure();
+  CurPressure += PhysPressure;
+  MaxPressure = max(MaxPressure, CurPressure);
 }
 
 /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
@@ -722,7 +739,8 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
 // GCNDownwardRPTracker
 
 bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
-                                 const LiveRegSet *VirtLiveRegsCopy) {
+                                 const LiveRegSet *VirtLiveRegsCopy,
+                                 const MachineBasicBlock *SeedPhysMBB) {
   MRI = &MI.getMF()->getRegInfo();
   SRI = static_cast<const SIRegisterInfo *>(MRI->getTargetRegisterInfo());
   LastTrackedMI = nullptr;
@@ -732,7 +750,18 @@ bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
   if (NextMI == MBBEnd)
     return false;
   GCNRPTracker::reset(*NextMI, VirtLiveRegsCopy, false);
+  if (SeedPhysMBB && TrackPhysRegs &&
+      MI.getMF()->getProperties().hasTracksLiveness())
+    initPhysLiveUnitsFromRegMaskPairs(SeedPhysMBB->liveins());
   return true;
+}
+
+bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
+                                 const LiveRegSet &VirtLiveRegs,
+                                 const BitVector &PhysLiveUnits) {
+  bool Result = reset(MI, &VirtLiveRegs);
+  initPhysLiveUnits(PhysLiveUnits);
+  return Result;
 }
 
 bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
@@ -1090,9 +1119,19 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
       if (MBB.empty()) {
         LiveIn = LiveOut = getVirtLiveRegs(MBBStartSlot, LIS, MRI);
         RPAtMBBEnd = getVirtRegPressure(MRI, LiveIn);
+        const SIRegisterInfo *SRI =
+            static_cast<const SIRegisterInfo *>(TRI);
+        BitVector SeenUnits(SRI->getNumRegUnits());
+        for (const auto &LI : MBB.liveins())
+          if (MRI.isAllocatable(LI.PhysReg))
+            for (MCRegUnit Unit : SRI->regunits(LI.PhysReg))
+              if (!SeenUnits.test(static_cast<unsigned>(Unit))) {
+                SeenUnits.set(static_cast<unsigned>(Unit));
+                RPAtMBBEnd.inc(Unit, *SRI);
+              }
       } else {
         GCNDownwardRPTracker RPT(LIS, MRI);
-        RPT.reset(MBB.front());
+        RPT.reset(MBB.front(), /*VirtLiveRegs=*/nullptr, &MBB);
 
         LiveIn = RPT.getVirtLiveRegs();
 
@@ -1107,7 +1146,7 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
       }
     } else {
       GCNUpwardRPTracker RPT(LIS, MRI);
-      RPT.reset(MRI, MBBLastSlot);
+      RPT.reset(MRI, MBBLastSlot, &MBB);
 
       LiveOut = RPT.getVirtLiveRegs();
       RPAtMBBEnd = RPT.getPressure();
@@ -1178,7 +1217,8 @@ LLVM_DUMP_METHOD void llvm::dumpMaxRegPressure(MachineFunction &MF,
   const MachineInstr *MaxPressureMI = nullptr;
   GCNUpwardRPTracker RPT(LIS, MRI);
   for (const MachineBasicBlock &MBB : MF) {
-    RPT.reset(MRI, LIS.getSlotIndexes()->getMBBEndIdx(&MBB).getPrevSlot());
+    RPT.reset(MRI, LIS.getSlotIndexes()->getMBBEndIdx(&MBB).getPrevSlot(),
+              &MBB);
     for (const MachineInstr &MI : reverse(MBB)) {
       RPT.recede(MI);
       unsigned NumRegs = RPT.getMaxPressure().getNumRegs(Kind);

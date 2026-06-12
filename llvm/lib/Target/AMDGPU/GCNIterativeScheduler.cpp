@@ -257,7 +257,7 @@ GCNIterativeScheduler::getRegionPressure(MachineBasicBlock::iterator Begin,
   auto AfterBottomMI = std::next(BottomMI);
   if (AfterBottomMI == BBEnd ||
       &*AfterBottomMI != UPTracker.getLastTrackedMI()) {
-    UPTracker.reset(*BottomMI);
+    UPTracker.reset(*BottomMI, Begin->getParent());
   } else {
     assert(UPTracker.isValid());
   }
@@ -277,16 +277,17 @@ GCNIterativeScheduler::getRegionPressure(MachineBasicBlock::iterator Begin,
 template <typename Range> GCNRegPressure
 GCNIterativeScheduler::getSchedulePressure(const Region &R,
                                            Range &&Schedule) const {
-  auto const BBEnd = R.Begin->getParent()->end();
+  const MachineBasicBlock *MBB = R.Begin->getParent();
+  auto const BBEnd = MBB->end();
   GCNUpwardRPTracker RPTracker(*LIS, MF.getRegInfo());
   if (R.End != BBEnd) {
     // R.End points to the boundary instruction but the
     // schedule doesn't include it
-    RPTracker.reset(*R.End);
+    RPTracker.reset(*R.End, MBB);
     RPTracker.recede(*R.End);
   } else {
     // R.End doesn't point to the boundary instruction
-    RPTracker.reset(*std::prev(BBEnd));
+    RPTracker.reset(*std::prev(BBEnd), MBB);
   }
   for (auto I = Schedule.end(), B = Schedule.begin(); I != B;) {
     RPTracker.recede(*getMachineInstr(*--I));

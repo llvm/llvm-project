@@ -1002,8 +1002,12 @@ GCNScheduleDAGMILive::getRealRegPressure(unsigned RegionIdx) const {
   if (Regions[RegionIdx].first == Regions[RegionIdx].second)
     return llvm::getVirtRegPressure(MRI, VirtLiveIns[RegionIdx]);
   GCNDownwardRPTracker RPTracker(*LIS, MF.getRegInfo());
-  RPTracker.advance(Regions[RegionIdx].first, Regions[RegionIdx].second,
-                    &VirtLiveIns[RegionIdx]);
+  if (!PhysLiveIns.empty())
+    RPTracker.reset(*Regions[RegionIdx].first, VirtLiveIns[RegionIdx],
+                    PhysLiveIns[RegionIdx]);
+  else
+    RPTracker.reset(*Regions[RegionIdx].first, &VirtLiveIns[RegionIdx]);
+  RPTracker.advance(Regions[RegionIdx].second);
   return RPTracker.moveMaxPressure();
 }
 
@@ -1048,7 +1052,7 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
   auto *NonDbgMI = &*skipDebugInstructionsForward(Rgn.first, Rgn.second);
   if (LiveInIt != MBBVirtLiveIns.end()) {
     auto LiveIn = std::move(LiveInIt->second);
-    RPTracker.reset(*MBB->begin(), &LiveIn);
+    RPTracker.reset(*MBB->begin(), &LiveIn, MBB);
     MBBVirtLiveIns.erase(LiveInIt);
   } else {
     I = Rgn.first;
@@ -1056,7 +1060,7 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
 #ifdef EXPENSIVE_CHECKS
     assert(isEqual(getVirtLiveRegsBefore(*NonDbgMI, *LIS), LRS));
 #endif
-    RPTracker.reset(*I, &LRS);
+    RPTracker.reset(*I, &LRS, MBB);
   }
 
   for (;;) {
@@ -1064,10 +1068,12 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
 
     if (Regions[CurRegion].first == I || NonDbgMI == I) {
       VirtLiveIns[CurRegion] = RPTracker.getVirtLiveRegs();
+      PhysLiveIns[CurRegion] = RPTracker.getPhysLiveRegUnits();
       RPTracker.clearMaxPressure();
     }
 
     if (Regions[CurRegion].second == I) {
+      PhysLiveOuts[CurRegion] = RPTracker.getPhysLiveRegUnits();
       Pressure[CurRegion] = RPTracker.moveMaxPressure();
       if (CurRegion-- == RegionIdx)
         break;
@@ -1135,6 +1141,8 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
   // MachineScheduler after all regions have been recorded by
   // GCNScheduleDAGMILive::schedule().
   VirtLiveIns.resize(Regions.size());
+  PhysLiveIns.resize(Regions.size());
+  PhysLiveOuts.resize(Regions.size());
   Pressure.resize(Regions.size());
   RegionsWithHighRP.resize(Regions.size());
   RegionsWithExcessRP.resize(Regions.size());
@@ -1181,14 +1189,14 @@ void GCNScheduleDAGMILive::runSchedStages() {
       if (GCNTrackers) {
         GCNDownwardRPTracker *DownwardTracker = S.getDownwardTracker();
         GCNUpwardRPTracker *UpwardTracker = S.getUpwardTracker();
-        GCNRPTracker::LiveRegSet *RegionLiveIns =
-            &VirtLiveIns[Stage->getRegionIdx()];
+        unsigned Idx = Stage->getRegionIdx();
+        GCNRPTracker::LiveRegSet *RegionLiveIns = &VirtLiveIns[Idx];
 
         reinterpret_cast<GCNRPTracker *>(DownwardTracker)
-            ->reset(MRI, *RegionLiveIns);
+            ->reset(MRI, *RegionLiveIns, PhysLiveIns[Idx]);
         reinterpret_cast<GCNRPTracker *>(UpwardTracker)
-            ->reset(MRI, RegionVirtLiveOuts.getVirtLiveRegsForRegionIdx(
-                             Stage->getRegionIdx()));
+            ->reset(MRI, RegionVirtLiveOuts.getVirtLiveRegsForRegionIdx(Idx),
+                    PhysLiveOuts[Idx]);
       }
 
       ScheduleDAGMILive::schedule();
