@@ -51,17 +51,17 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_fadd)
   // zeroes. Branch out of line if any are found. We do this by XORing each
   // input with itself shifted left by a bit, which means that exponents 00 and
   // FF will both end up with seven zero bits at the top.
-  eor     r2, r0, r0, lsl #1   // combine x with itself shifted
-  eor     r3, r1, r1, lsl #1   // same for y
-  tst     r2, #0x7F000000      // is x uncommon?
-  tstne   r3, #0x7F000000      // if not, is y uncommon?
-  beq     LOCAL_LABEL(add_uncommon)        // if either, branch out of line
+  eor     r2, r0, r0, lsl #1        // combine x with itself shifted
+  eor     r3, r1, r1, lsl #1        // same for y
+  tst     r2, #0x7F000000           // is x uncommon?
+  tstne   r3, #0x7F000000           // if not, is y uncommon?
+  beq     LOCAL_LABEL(add_uncommon) // if either, branch out of line
 
   // Now we have two normalised numbers. If their signs are opposite, we should
   // be subtracting their magnitudes rather than adding, so cross-jump to fsub.
-  teq     r0, r1               // set N if signs are unequal
-  eormi   r1, r1, #1 << 31     // if so, flip the sign of y
-  bmi     LOCAL_LABEL(sub_magnitude)       // and go to magnitude subtraction
+  teq     r0, r1                     // set N if signs are unequal
+  eormi   r1, r1, #1 << 31           // if so, flip the sign of y
+  bmi     LOCAL_LABEL(sub_magnitude) // and go to magnitude subtraction
 LOCAL_LABEL(add_magnitude):
   // If we get here, we're adding operands with equal signs (i.e. a magnitude
   // addition). First thing to do is put the operands in magnitude order, so
@@ -202,9 +202,9 @@ LOCAL_LABEL(add_carry):
   beq     LOCAL_LABEL(add_roundeven_ovf)
 
   // Otherwise, we still need to check for overflow.
-  cmp     r12, #0xff000000  // if r12 >= this, the exponent has overflowed
-  bxlo    lr                // so if not, we can leave
-  b       LOCAL_LABEL(add_ovf)          // but if so, go and handle overflow
+  cmp     r12, #0xff000000     // if r12 >= this, the exponent has overflowed
+  bxlo    lr                   // so if not, we can leave
+  b       LOCAL_LABEL(add_ovf) // but if so, go and handle overflow
 
 LOCAL_LABEL(add_roundeven_ovf):
   // We came here if we detected a need to do the full check for RTE. But we
@@ -244,7 +244,7 @@ LOCAL_LABEL(add_uncommon):
   // fast path.
   teq     r0, r1             // opposite signs?
   eormi   r1, r1, #1 << 31   // if so, negate the second operand
-  bmi     LOCAL_LABEL(sub_zerodenorm)    // and cross-jump to the fsub version of this code
+  bmi     LOCAL_LABEL(sub_zerodenorm) // and cross-jump to the fsub version
 LOCAL_LABEL(add_zerodenorm):
   // Now we know x and y have the same sign, and at least one of them is zero
   // or denormal. If there aren't any zeroes, we'll end up rejoining the fast
@@ -270,11 +270,11 @@ LOCAL_LABEL(add_zerodenorm):
   // Now we know there aren't any zeroes, and that y is a denormal. x might or
   // might not be a denormal, so we must check that and decide whether to set
   // its top mantissa bit.
-  mov     r0, r0, lsl #8       // shift mantissa of x to the top of r0
-  tst     r2, #255             // is x's exponent 0? If so, it's denormal
-  orrne   r0, r0, #1 << 31     // if not, set leading bit of x,
-  subne   r3, r3, #1           //   adjust exponent difference,
-  bne     LOCAL_LABEL(add_doadd)           //  and go back to mainstream
+  mov     r0, r0, lsl #8         // shift mantissa of x to the top of r0
+  tst     r2, #255               // is x's exponent 0? If so, it's denormal
+  orrne   r0, r0, #1 << 31       // if not, set leading bit of x,
+  subne   r3, r3, #1             //   adjust exponent difference,
+  bne     LOCAL_LABEL(add_doadd) //   and go back to mainstream
 
   // If both operands are denormals, addition becomes trivial: denormals and
   // the smallest exponent of normalised numbers both multiply the mantissa by
@@ -331,11 +331,11 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_frsub)
   // reversal of the operand order by flipping signs. (Preserving the sign of
   // an input NaN was the only case where that wasn't right.)
 
-  eor     r0, r0, #1 << 31  // flip sign of the operand we're subtracting
-  teq     r0, r1            // are the signs now the same?
-  bpl     LOCAL_LABEL(add_magnitude)    // if so, we're doing magnitude addition
-  eor     r1, r1, #1 << 31  // otherwise, flip the other sign too
-  b       LOCAL_LABEL(sub_magnitude)    // and we're doing magnitude subtraction
+  eor     r0, r0, #1 << 31           // flip sign of operand we're subtracting
+  teq     r0, r1                     // are the signs now the same?
+  bpl     LOCAL_LABEL(add_magnitude) // if so, we're doing magnitude addition
+  eor     r1, r1, #1 << 31           // otherwise, flip the other sign too
+  b       LOCAL_LABEL(sub_magnitude) // and we're doing magnitude subtraction
 
 LOCAL_LABEL(rsb_uncommon):
   // Any uncommon operands to frsub are handled by just swapping the two
@@ -508,8 +508,8 @@ LOCAL_LABEL(sub_renorm_0):
   //
   // Since the leading bit is set, we need to decrement the exponent, to
   // account for the leading bit adding 1 to it when we recombine.
-  movs    r0, r12, lsr #8  // also sets C if we need to round up
-  sub     r2, r2, #1       // adjust exponent
+  movs    r0, r12, lsr #8     // also sets C if we need to round up
+  sub     r2, r2, #1          // adjust exponent
   adc     r0, r0, r2, lsl #23 // recombine, and also do basic rounding
 
   // As in the 1-bit case above, if we didn't round up just now then we're
@@ -618,7 +618,7 @@ LOCAL_LABEL(sub_renorm_orunder):
   // happens.
 
   rsb     r2, r2, #0           // r2 is now the shift count
-LOCAL_LABEL(sub_do_underflow):             // we can also come here from below
+LOCAL_LABEL(sub_do_underflow): // we can also come here from below
   mov     r0, r0, lsr r2       // shift the mantissa down
   orr     r0, r0, r3, lsl #31  // put the sign back on
   bx      lr                   // and return
@@ -656,9 +656,9 @@ LOCAL_LABEL(sub_uncommon):
   // Now we know both inputs are finite, but there may be denormals or zeroes.
   // So it's safe to do the same sign check and cross-jump as we did on the
   // fast path.
-  teq     r0, r1             // opposite signs?
-  eormi   r1, r1, #1 << 31   // if so, negate the second operand
-  bmi     LOCAL_LABEL(add_zerodenorm)    // and cross-jump to the fadd version of this code
+  teq     r0, r1                      // opposite signs?
+  eormi   r1, r1, #1 << 31            // if so, negate the second operand
+  bmi     LOCAL_LABEL(add_zerodenorm) // and cross-jump to the fadd version
 
 LOCAL_LABEL(sub_zerodenorm):
   // Now we know x and y have the same sign, and at least one of them is zero
@@ -668,10 +668,10 @@ LOCAL_LABEL(sub_zerodenorm):
   //
   // Start by exactly repeating the initial fast-path setup code: sort into
   // magnitude order, get the output sign+exponent and the exponent shift.
-  subs    r2, r0, r1         // compare inputs, also keeping x-y
-  eorlo   r2, r2, #1 << 31   // if misordered, flip high bit of difference
-  sublo   r0, r0, r2         // and use that to swap and sign-flip
-  addlo   r1, r1, r2         //   the two inputs
+  subs    r2, r0, r1           // compare inputs, also keeping x-y
+  eorlo   r2, r2, #1 << 31     // if misordered, flip high bit of difference
+  sublo   r0, r0, r2           // and use that to swap and sign-flip
+  addlo   r1, r1, r2           //   the two inputs
   mov     r2, r0, lsr #23      // r2 = sign<<8 + exponent
   sub     r3, r2, r1, lsr #23  // shift = 0..254 (sign bits cancel)
 
@@ -707,7 +707,7 @@ LOCAL_LABEL(sub_naninf):
   // inputs are NaN then we hand off to __fnan2 which will propagate a NaN from
   // the input.
   mov     r12, #0xFF000000
-  cmp     r12, r0, lsl #1          // if (r0 << 1) > 0xFF000000, r0 is a NaN
+  cmp     r12, r0, lsl #1      // if (r0 << 1) > 0xFF000000, r0 is a NaN
   blo     SYMBOL_NAME(__compiler_rt_fnan2)
   cmp     r12, r1, lsl #1
   blo     SYMBOL_NAME(__compiler_rt_fnan2)

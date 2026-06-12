@@ -151,9 +151,9 @@ LOCAL_LABEL(add_renormed):
   // Some of those bits are in r5 (the 32-bit version of the sum's mantissa).
   // It's cheap to check those, and should exclude _most_ cases where
   // round-to-even isn't needed.
-  adds    r0, r0, #1          // simple round up
-  lsls    r5, r5, #(32-7)     // check top 7 bits
-  beq     LOCAL_LABEL(add_check_rte)      // if those are zero, go to full RTE check
+  adds    r0, r0, #1                 // simple round up
+  lsls    r5, r5, #(32-7)            // check top 7 bits
+  beq     LOCAL_LABEL(add_check_rte) // if those are zero, go to full RTE check
 LOCAL_LABEL(add_rounded):
   // Put the sign+exponent back on. The leading bit of the mantissa increments
   // the exponent field unwantedly, so we must decrement r6 first to compensate
@@ -296,13 +296,13 @@ LOCAL_LABEL(add_naninf):
   // inf fadd, since on this code path we haven't cross-jumped into fsub),
   // where we return NaN.
   cmp     r2, r3        // at least one exponent is 0xFF, so if EQ, both are
-  beq     LOCAL_LABEL(add_infinf)   //   and therefore we're adding infinity to infinity
+  beq     LOCAL_LABEL(add_infinf) // so we're adding infinity to infinity
 
   // With one infinity, we just find which register it's in, and return it.
   cmp     r2, #255
   beq     LOCAL_LABEL(add_ret_exact)  // just return x
-LOCAL_LABEL(add_retb): // we reuse this code in the denormal handler
-  movs    r0, r1          // otherwise, return y
+LOCAL_LABEL(add_retb):                // we reuse this in the denormal handler
+  movs    r0, r1                      // otherwise, return y
 LOCAL_LABEL(add_ret_exact):
   pop     {r4,r5,r6,pc}
 
@@ -352,9 +352,9 @@ LOCAL_LABEL(add_zerodenorm_y):
   subs    r6, r0, r1     // are x and y equal
   cmp     r6, r5         //   except for opposite sign bits? (r5 = 0x80000000)
   beq     LOCAL_LABEL(add_diffsame)
-  lsls    r6, r1, #1     // is y zero?
+  lsls    r6, r1, #1                 // is y zero?
   beq     LOCAL_LABEL(add_ret_exact) // if so, return x
-  lsls    r6, r0, #1     // is x zero?
+  lsls    r6, r0, #1                 // is x zero?
   beq     LOCAL_LABEL(add_retb)      // if so, return y
 
   // Now we've dealt with all the possibilities involving zeroes, so we have
@@ -573,7 +573,8 @@ LOCAL_LABEL(sub_dosub): // we may come back here after sorting out denorms
   // Renormalise by one bit, and check the new top bit to see if we need to
   // renormalise by more than that.
   lsls    r5, r5, #1
-  bpl     LOCAL_LABEL(sub_renorm_big) // if new top bit still clear, renormalise by more
+  bpl     LOCAL_LABEL(sub_renorm_big) // if new top bit still clear,
+                                      // renormalise by more
   // Decrement both exponent registers (r6 with the sign, r2 without). We
   // decrement r6 by 2 instead of 1, because now the output mantissa has the
   // top bit set, so we must compensate when we put the sign and exponent back
@@ -600,9 +601,9 @@ LOCAL_LABEL(sub_renormed):
   // So it doesn't affect the result in round-to-nearest mode unless it puts us
   // just below a rounding boundary, which means we can ignore it until the
   // full round-to-even check.
-  lsls    r6, r6, #23  // prepare sign and exponent
-  lsrs    r0, r5, #8   // shift down, and put the round bit into C
-  bcs     LOCAL_LABEL(sub_round)   // diverge based on round bit
+  lsls    r6, r6, #23            // prepare sign and exponent
+  lsrs    r0, r5, #8             // shift down, and put the round bit into C
+  bcs     LOCAL_LABEL(sub_round) // diverge based on round bit
   // If the round bit shifted off the bottom of r5 was clear, then we're not
   // rounding up, so we can make the output value and finish immediately.
   adds    r0, r0, r6   // reconstitute output value without rounding
@@ -612,16 +613,17 @@ LOCAL_LABEL(sub_round):
   // check the low bits of r5 (the 32-bit version of the mantissa) so that we
   // can rule out round-to-even if any of those is nonzero; finally, in as few
   // cases as possible, check the rest of y's mantissa to check for RTE fully.
-  adcs    r0, r0, r6      // reconstitute output value while rounding up
-  lsls    r5, r5, #(32-7) // check first 7 guard bits
-  beq     LOCAL_LABEL(sub_check_rte)  // if the're all 0, do the full check for RTE
-  pop     {r4,r5,r6,pc}   // otherwise we're done
+  adcs    r0, r0, r6                  // reconstitute output value while
+                                      // rounding up
+  lsls    r5, r5, #(32-7)             // check first 7 guard bits
+  beq     LOCAL_LABEL(sub_check_rte)  // if all 0, do the full check for RTE
+  pop     {r4,r5,r6,pc}               // otherwise we're done
 
 LOCAL_LABEL(sub_add):
   // Trampoline to cross-jump to fadd, because a 16-bit branch won't reach that
   // far. Also a convenient place to flip y's sign, so we only have to do it
   // once.
-  eors    r1, r1, r5      // we know r5 = 0x80000000
+  eors    r1, r1, r5                  // we know r5 = 0x80000000
   bl      LOCAL_LABEL(add_magnitude)  // clobbers lr, which doesn't matter
 
 LOCAL_LABEL(sub_check_rte):
@@ -634,11 +636,11 @@ LOCAL_LABEL(sub_check_rte):
   // can never affect round-to-even, because if we rounded at all then the
   // round bit must have come from y, so the leading bit of y is at the round
   // bit or above, hence not one of the bits we're checking for RTE.
-  lsls    r4, r4, r3  // undo the shift of y's mantissa
-  lsls    r1, r1, #8  // shift y's original mantissa back to the same place
-  eors    r1, r1, r4  // find any differences
-  lsls    r1, r1, #1  // but ignore the leading mantissa bit
-  beq     LOCAL_LABEL(sub_rte)    // if all bits now clear, we're rounding to even
+  lsls    r4, r4, r3           // undo the shift of y's mantissa
+  lsls    r1, r1, #8           // shift y's original mantissa to same place
+  eors    r1, r1, r4           // find any differences
+  lsls    r1, r1, #1           // but ignore the leading mantissa bit
+  beq     LOCAL_LABEL(sub_rte) // if all bits now clear, we're rounding to even
 
   // If we're not RTEing, we must undo the simplistic rounding we've already
   // done. (We incremented the result based on the belief that the shifted-off
@@ -832,11 +834,11 @@ LOCAL_LABEL(sub_zerodenorm_y):
   //  - if x = -y (including both being zero), return 0 of the appropriate sign
   //  - if y = 0, return x (including the case of oppositely signed zeroes)
   //  - if x = 0 and y != 0, return -y
-  cmp     r0, r1         // are x and y equal?
+  cmp     r0, r1                     // are x and y equal?
   beq     LOCAL_LABEL(sub_diffsame)
-  lsls    r6, r1, #1     // is y zero?
+  lsls    r6, r1, #1                 // is y zero?
   beq     LOCAL_LABEL(sub_retx)      // if so, return x
-  lsls    r6, r0, #1     // is x zero?
+  lsls    r6, r0, #1                 // is x zero?
   beq     LOCAL_LABEL(sub_retminusy) // if so, return -y
 
   // Now we've dealt with all the possibilities involving zeroes, so we have
