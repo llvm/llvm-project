@@ -72,6 +72,8 @@ MachO Improvements
   concatenated segment+section name (e.g. ``__TEXT__text``).
 * Restructure thunk generation algorithm to be more efficiently create thunks
   (`#193367 <https://github.com/llvm/llvm-project/pull/193367>`_)
+* Alphabetically sort LC_LINKER_OPTIONS before processing to match Apple linker behavior
+  (`#201604 https://github.com/llvm/llvm-project/pull/201604`)
 
 WebAssembly Improvements
 ------------------------

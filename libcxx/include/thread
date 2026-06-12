@@ -91,6 +91,11 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #else
 #  include <__config>
 
+// standard-mandated includes
+
+// [thread.syn]
+#  include <compare>
+
 #  if _LIBCPP_HAS_THREADS
 
 #    include <__thread/this_thread.h>
@@ -105,11 +110,6 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #    endif
 
 #    include <version>
-
-// standard-mandated includes
-
-// [thread.syn]
-#    include <compare>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #      pragma GCC system_header
@@ -128,6 +128,11 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #    include <system_error>
 #    include <type_traits>
 #  endif
+
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 23
+#    include <atomic>
+#  endif
+
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_THREAD

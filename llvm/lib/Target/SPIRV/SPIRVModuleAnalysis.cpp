@@ -1195,7 +1195,10 @@ static void AddAtomicVectorFloatRequirements(const MachineInstr &MI,
         "The element type for the result type of an atomic vector float "
         "instruction must be a 16-bit floating-point scalar");
 
-  if (isBFloat16Type(EltTypeDef))
+  // The extension is defined for fp16, but the AMD target lets a bf16 vector
+  // use the same instruction so it can lower to a packed bf16 atomic.
+  if (isBFloat16Type(EltTypeDef) &&
+      ST.getTargetTriple().getVendor() != Triple::AMD)
     reportFatalUsageError(
         "The element type for the result type of an atomic vector float "
         "instruction cannot be a bfloat16 scalar");
@@ -1478,7 +1481,8 @@ void addPrintfRequirements(const MachineInstr &MI,
                            SPIRV::RequirementHandler &Reqs,
                            const SPIRVSubtarget &ST) {
   SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
-  SPIRVTypeInst PtrType = GR->getSPIRVTypeForVReg(MI.getOperand(4).getReg());
+  SPIRVTypeInst PtrType =
+      GR->getSPIRVTypeForVReg(MI.getOperand(4).getReg(), MI.getMF());
   if (PtrType) {
     MachineOperand ASOp = PtrType->getOperand(1);
     if (ASOp.isImm()) {
@@ -2152,14 +2156,24 @@ void addInstrRequirements(const MachineInstr &MI,
 
     // Check Layout operand in case if it's not a standard one and add the
     // appropriate capability.
-    DenseMap<unsigned, unsigned> LayoutToInstMap = {
-        {SPIRV::OpCooperativeMatrixLoadKHR, 3},
-        {SPIRV::OpCooperativeMatrixStoreKHR, 2},
-        {SPIRV::OpCooperativeMatrixLoadCheckedINTEL, 5},
-        {SPIRV::OpCooperativeMatrixStoreCheckedINTEL, 4},
-        {SPIRV::OpCooperativeMatrixPrefetchINTEL, 4}};
-
-    const unsigned LayoutNum = LayoutToInstMap[Op];
+    unsigned LayoutNum;
+    switch (Op) {
+    case SPIRV::OpCooperativeMatrixLoadKHR:
+      LayoutNum = 3;
+      break;
+    case SPIRV::OpCooperativeMatrixStoreKHR:
+      LayoutNum = 2;
+      break;
+    case SPIRV::OpCooperativeMatrixLoadCheckedINTEL:
+      LayoutNum = 5;
+      break;
+    case SPIRV::OpCooperativeMatrixStoreCheckedINTEL:
+    case SPIRV::OpCooperativeMatrixPrefetchINTEL:
+      LayoutNum = 4;
+      break;
+    default:
+      llvm_unreachable("unexpected cooperative matrix opcode");
+    }
     Register RegLayout = MI.getOperand(LayoutNum).getReg();
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
     MachineInstr *MILayout = MRI.getUniqueVRegDef(RegLayout);

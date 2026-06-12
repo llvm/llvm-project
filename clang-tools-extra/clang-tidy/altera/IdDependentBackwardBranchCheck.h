@@ -61,7 +61,8 @@ private:
                                           const VarDecl *PotentialVar);
   /// Stores the location an ID-dependent field is created from a potential
   /// reference to another ID-dependent variable or field in IdDepFieldsMap.
-  void saveIdDepFieldFromPotentialReference(const DeclRefExpr *RefExpr,
+  void saveIdDepFieldFromPotentialReference(const Stmt *Statement,
+                                            const DeclRefExpr *RefExpr,
                                             const MemberExpr *MemExpr,
                                             const FieldDecl *PotentialField);
   /// Returns the loop type.

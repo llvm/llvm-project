@@ -302,6 +302,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.socket.socketpair
     # TODO: These functions are not compatible with 64-bit musl. They need to
     # be excluded if overlaying musl.
+    libc.src.sys.socket.recvmmsg
     libc.src.sys.socket.recvmsg
     libc.src.sys.socket.sendmmsg
     libc.src.sys.socket.sendmsg
@@ -874,6 +875,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.getpayloadf128
     libc.src.math.ilogbf128
     libc.src.math.iscanonicalf128
+    libc.src.math.isnanf128
     libc.src.math.issignalingf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
@@ -909,6 +911,7 @@ endif()
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.atanbf16
+  libc.src.math.acosbf16
   libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
@@ -1092,6 +1095,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_setspecific
 
     # sched.h entrypoints
+    libc.src.sched.__sched_cpualloc
+    libc.src.sched.__sched_cpufree
     libc.src.sched.__sched_getcpucount
     libc.src.sched.__sched_setcpuzero
     libc.src.sched.__sched_setcpuset
