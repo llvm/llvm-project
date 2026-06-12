@@ -837,7 +837,7 @@ bool DwarfLinkerForBinary::linkImpl(
     llvm::StringSet<> VisitedPaths;
     std::string CASConfigs = "[\n";
     raw_string_ostream CASConfigStream(CASConfigs);
-    bool Found = false;
+    bool First = true;
     for (const auto &Obj : Map.objects()) {
       StringRef ObjPath = Obj->getObjectFilename();
       for (StringRef Dir = sys::path::parent_path(ObjPath); !Dir.empty();
@@ -851,12 +851,14 @@ bool DwarfLinkerForBinary::linkImpl(
         if (!BufferOrErr)
           continue;
 
-        CASConfigStream << (*BufferOrErr)->getBuffer() << ",\n";
-        Found = true;
+        if (!First)
+          CASConfigStream << ",\n";
+        First = false;
+        CASConfigStream << (*BufferOrErr)->getBuffer().rtrim('\n');
       }
     }
-    CASConfigStream << "]\n";
-    if (Found) {
+    CASConfigStream << "\n]\n";
+    if (!First) {
       std::error_code EC;
       SmallString<128> CASConfigsPath;
       sys::path::append(CASConfigsPath, *Options.ResourceDir);
@@ -1011,7 +1013,7 @@ void DwarfLinkerForBinary::AddressManager::findValidRelocsMachO(
     Linker.reportWarning("error reading section", DMO.getObjectFilename());
     return;
   }
-  DataExtractor Data(*ContentsOrErr, Obj.isLittleEndian(), 0);
+  DataExtractor Data(*ContentsOrErr, Obj.isLittleEndian());
   bool SkipNext = false;
 
   for (const object::RelocationRef &Reloc : Section.relocations()) {

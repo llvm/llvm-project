@@ -19,6 +19,7 @@ Usage:
 import argparse
 import os
 import re
+import shutil
 import subprocess
 import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -51,7 +52,6 @@ ARCH_TO_REQUIRES = {
 SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 UPDATE_SCRIPT = REPO_ROOT / "llvm" / "utils" / "update_cc_test_checks.py"
-CLANG = REPO_ROOT / "build" / "bin" / "clang"
 
 
 def find_cl_files(test_dir: Path):
@@ -64,19 +64,17 @@ def replace_in_file(path: Path, triple: str, cpu: str, check_prefix: str):
     if cpu:
         content = content.replace(b"%cpu", cpu.encode())
     content = content.replace(b"%check_prefix", check_prefix.encode())
+    content = content.replace(b"%libclc_lib", b"")
     path.write_bytes(content)
 
 
-def revert_in_file(path: Path, triple: str, cpu: str, check_prefix: str):
-    # Only revert in the RUN line context, not in generated CHECK lines.
-    content = path.read_bytes()
-    content = content.replace(f"--target={triple}".encode(), b"--target=%target")
-    if cpu:
-        content = content.replace(f"-mcpu={cpu}".encode(), b"-mcpu=%cpu")
-    content = content.replace(
-        f"--check-prefix={check_prefix}".encode(), b"--check-prefix=%check_prefix"
-    )
-    path.write_bytes(content)
+def _run_line_indices(content: bytes) -> list:
+    RUN_MARKERS = (b"// RUN:", b"; RUN:")
+    return [
+        i
+        for i, l in enumerate(content.splitlines(keepends=True))
+        if any(l.lstrip().startswith(m) for m in RUN_MARKERS)
+    ]
 
 
 def file_requires_feature(path: Path, feature: str) -> bool:
@@ -94,13 +92,18 @@ def file_requires_feature(path: Path, feature: str) -> bool:
     return False
 
 
-def process_file(cl_file: Path, triple: str, cpu: str, check_prefix: str) -> bool:
+def process_file(
+    cl_file: Path, triple: str, cpu: str, check_prefix: str, clang: Path
+) -> bool:
+    original = cl_file.read_bytes()
+    orig_lines = original.splitlines(keepends=True)
+    saved_run = {i: orig_lines[i] for i in _run_line_indices(original)}
     replace_in_file(cl_file, triple, cpu, check_prefix)
     cmd = [
         sys.executable,
         str(UPDATE_SCRIPT),
         "--clang",
-        str(CLANG),
+        str(clang),
         str(cl_file),
     ]
     print(f"  update: {cl_file.relative_to(REPO_ROOT)}")
@@ -108,7 +111,11 @@ def process_file(cl_file: Path, triple: str, cpu: str, check_prefix: str) -> boo
     ok = result.returncode == 0
     if not ok:
         print(f"  FAILED: {result.stderr.strip()}", file=sys.stderr)
-    revert_in_file(cl_file, triple, cpu, check_prefix)
+    updated = cl_file.read_bytes()
+    updated_lines = updated.splitlines(keepends=True)
+    for i, line in saved_run.items():
+        updated_lines[i] = line
+    cl_file.write_bytes(b"".join(updated_lines))
     return ok
 
 
@@ -121,7 +128,27 @@ def main():
         choices=list(ARCH_TO_TRIPLE.keys()),
         help="Target arch: amdgpu, amdgcn, nvptx64, spirv, spirv64",
     )
+    parser.add_argument(
+        "--clang-binary",
+        default=None,
+        help="The clang binary used to generate the test case (default: clang from PATH)",
+    )
     args = parser.parse_args()
+
+    if args.clang_binary:
+        clang = Path(args.clang_binary)
+        if not clang.is_file():
+            print(f"Error: clang binary not found: {clang}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        clang_in_path = shutil.which("clang")
+        if not clang_in_path:
+            print(
+                "Error: clang not found in PATH; use --clang-binary to specify.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        clang = Path(clang_in_path)
 
     arch = args.arch.lower()
     triple = ARCH_TO_TRIPLE[arch]
@@ -142,7 +169,7 @@ def main():
         return
 
     print(
-        f"arch={arch}  triple={triple}  cpu={cpu}  check_prefix={check_prefix}  requires={requires_feature}"
+        f"arch={arch}  triple={triple}  cpu={cpu}  check_prefix={check_prefix}  requires={requires_feature}  clang={clang}"
     )
     print(f"Processing {len(target_files)} file(s)...")
 
@@ -150,7 +177,7 @@ def main():
     num_workers = max(1, os.cpu_count() // 2)
     with ProcessPoolExecutor(max_workers=num_workers) as executor:
         futures = {
-            executor.submit(process_file, f, triple, cpu, check_prefix): f
+            executor.submit(process_file, f, triple, cpu, check_prefix, clang): f
             for f in target_files
         }
         for future in as_completed(futures):

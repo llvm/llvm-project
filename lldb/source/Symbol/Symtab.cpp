@@ -1249,8 +1249,8 @@ bool Symtab::Encode(DataEncoder &encoder) const {
     return false;
   ConstStringTable strtab;
 
-  // Encoder the symbol table into a separate encoder first. This allows us
-  // gather all of the strings we willl need in "strtab" as we will need to
+  // Encode the symbol table into a separate encoder first. This allows us
+  // gather all of the strings we will need in "strtab" as we will need to
   // write the string table out before the symbol table.
   DataEncoder symtab_encoder(encoder.GetByteOrder(),
                               encoder.GetAddressByteSize());

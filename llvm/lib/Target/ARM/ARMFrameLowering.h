@@ -51,6 +51,8 @@ public:
   bool canSimplifyCallFramePseudos(const MachineFunction &MF) const override;
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
+  StackOffset getNonLocalFrameIndexReference(const MachineFunction &MF,
+                                             int FI) const override;
   int ResolveFrameIndexReference(const MachineFunction &MF, int FI,
                                  Register &FrameReg, int SPAdj) const;
 

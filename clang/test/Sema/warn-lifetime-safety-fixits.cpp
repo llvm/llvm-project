@@ -69,12 +69,11 @@ int *arr_default(int a[2] = nullptr) {
   return a;
 }
 
-// FIXME: Iterate over redecls and add [[clang::lifetimebound]]
 View multi_decl(View a);
+// CHECK: :[[@LINE-1]]:17: warning: parameter in intra-TU function should be marked
+// CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:23-[[@LINE-2]]:23}:" {{\[\[}}clang::lifetimebound]]"
 View multi_decl(View a);
 View multi_decl(View a) {
-  // CHECK: :[[@LINE-1]]:17: warning: parameter in intra-TU function should be marked
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:23-[[@LINE-2]]:23}:" {{\[\[}}clang::lifetimebound]]"
   return a;
 }
 
@@ -145,10 +144,10 @@ struct OutOfLine {
   OutOfLine() {}
   ~OutOfLine() {}
   const OutOfLine &get() const;
+  // CHECK: :[[@LINE-1]]:31: warning: implicit this in intra-TU function should be marked
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:31-[[@LINE-2]]:31}:" {{\[\[}}clang::lifetimebound]]"
 };
 const OutOfLine &OutOfLine::get() const {
-  // CHECK: :[[@LINE-1]]:40: warning: implicit this in intra-TU function should be marked
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:40-[[@LINE-2]]:40}:" {{\[\[}}clang::lifetimebound]]"
   return *this;
 }
 

@@ -146,14 +146,8 @@ static bool computeDependenciesForDriverCommandLine(
     DependencyScanningWorker &Worker, StringRef WorkingDirectory,
     ArrayRef<std::string> CommandLine, DependencyConsumer &Consumer,
     DependencyActionController &Controller, DiagnosticConsumer &DiagConsumer,
-    IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr;
-  if (OverlayFS) {
-    FS = OverlayFS;
-  } else {
-    FS = &Worker.getVFS();
-    FS->setCurrentWorkingDirectory(WorkingDirectory);
-  }
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS) {
+  auto FS = Worker.makeEffectiveVFS(WorkingDirectory, OverlayFS);
 
   // Compilation holds a non-owning a reference to the Driver, hence we need to
   // keep the Driver alive when we use Compilation. Arguments to commands may be
@@ -174,7 +168,7 @@ static bool computeDependenciesForDriverCommandLine(
 
   return Worker.computeDependencies(WorkingDirectory, FrontendCommandLinesView,
                                     Consumer, Controller, DiagConsumer,
-                                    OverlayFS);
+                                    std::move(OverlayFS));
 }
 
 static llvm::Error makeErrorFromDiagnosticsOS(
@@ -187,7 +181,7 @@ bool tooling::computeDependencies(
     DependencyScanningWorker &Worker, StringRef WorkingDirectory,
     ArrayRef<std::string> CommandLine, DependencyConsumer &Consumer,
     DependencyActionController &Controller, DiagnosticConsumer &DiagConsumer,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS) {
   const auto IsCC1Input = (CommandLine.size() >= 2 && CommandLine[1] == "-cc1");
   return IsCC1Input ? Worker.computeDependencies(WorkingDirectory, CommandLine,
                                                  Consumer, Controller,
@@ -269,61 +263,44 @@ std::optional<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
   return Rule;
 }
 
-static std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
+static std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>,
                  std::vector<std::string>>
-initVFSForTUBufferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                           ArrayRef<std::string> CommandLine,
-                           StringRef WorkingDirectory,
+initVFSForTUBufferScanning(ArrayRef<std::string> CommandLine,
                            llvm::MemoryBufferRef TUBuffer) {
-  // Reset what might have been modified in the previous worker invocation.
-  BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
+  StringRef InputPath = TUBuffer.getBufferIdentifier();
+  auto InputBuf = llvm::MemoryBuffer::getMemBufferCopy(TUBuffer.getBuffer());
 
-  auto OverlayFS =
-      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
-  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
-  auto InputPath = TUBuffer.getBufferIdentifier();
-  InMemoryFS->addFile(
-      InputPath, 0, llvm::MemoryBuffer::getMemBufferCopy(TUBuffer.getBuffer()));
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  FS->addFile(InputPath, 0, std::move(InputBuf));
 
-  OverlayFS->pushOverlay(InMemoryOverlay);
   std::vector<std::string> ModifiedCommandLine(CommandLine);
   ModifiedCommandLine.emplace_back(InputPath);
 
-  return std::make_pair(OverlayFS, ModifiedCommandLine);
+  return std::make_pair(std::move(FS), ModifiedCommandLine);
 }
 
-static std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
+static std::pair<IntrusiveRefCntPtr<llvm::vfs::FileSystem>,
                  std::vector<std::string>>
-initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                         ArrayRef<std::string> CommandLine,
-                         StringRef WorkingDirectory) {
-  // Reset what might have been modified in the previous worker invocation.
-  BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
-
-  // If we're scanning based on a module name alone, we don't expect the client
-  // to provide us with an input file. However, the driver really wants to have
-  // one. Let's just make it up to make the driver happy.
-  auto OverlayFS =
-      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
-  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
-  StringRef FakeInputPath("module-include.input");
-  // The fake input buffer is read-only, and it is used to produce
-  // unique source locations for the diagnostics. Therefore sharing
-  // this global buffer across threads is ok.
+initVFSForByNameScanning(ArrayRef<std::string> CommandLine) {
+  // The fake input buffer is read-only, and it is used to produce unique source
+  // locations for the diagnostics. Therefore, sharing this global buffer across
+  // threads is ok.
   static const std::string FakeInput(
-      clang::tooling::CompilerInstanceWithContext::MaxNumOfQueries, ' ');
-  InMemoryFS->addFile(FakeInputPath, 0,
-                      llvm::MemoryBuffer::getMemBuffer(FakeInput));
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
-  OverlayFS->pushOverlay(InMemoryOverlay);
+      CompilerInstanceWithContext::MaxNumOfQueries, ' ');
+
+  StringRef InputPath =
+      llvm::sys::path::is_style_windows(llvm::sys::path::Style::native)
+          ? "Z:\\module-include.input"
+          : "/module-include.input";
+  auto InputBuf = llvm::MemoryBuffer::getMemBuffer(FakeInput, InputPath);
+
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  FS->addFile(InputPath, 0, std::move(InputBuf));
 
   std::vector<std::string> ModifiedCommandLine(CommandLine);
-  ModifiedCommandLine.emplace_back(FakeInputPath);
+  ModifiedCommandLine.emplace_back(InputPath);
 
-  return std::make_pair(OverlayFS, ModifiedCommandLine);
+  return std::make_pair(std::move(FS), ModifiedCommandLine);
 }
 
 std::optional<TranslationUnitDeps>
@@ -338,17 +315,16 @@ DependencyScanningTool::getTranslationUnitDependencies(
 
   // If we are scanning from a TUBuffer, create an overlay filesystem with the
   // input as an in-memory file and add it to the command line.
-  IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS = nullptr;
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr;
   std::vector<std::string> CommandLineWithTUBufferInput;
   if (TUBuffer) {
     std::tie(OverlayFS, CommandLineWithTUBufferInput) =
-        initVFSForTUBufferScanning(&Worker.getVFS(), CommandLine, CWD,
-                                   *TUBuffer);
+        initVFSForTUBufferScanning(CommandLine, *TUBuffer);
     CommandLine = CommandLineWithTUBufferInput;
   }
 
   if (!computeDependencies(Worker, CWD, CommandLine, Consumer, Controller,
-                           DiagConsumer, OverlayFS))
+                           DiagConsumer, std::move(OverlayFS)))
     return std::nullopt;
   return Consumer.takeTranslationUnitDeps();
 }
@@ -367,15 +343,16 @@ DependencyScanningTool::getModuleDependencies(
       ModuleName, AlreadySeen, Controller);
 }
 
-static std::optional<SmallVector<std::string, 0>> getFirstCC1CommandLine(
-    ArrayRef<std::string> CommandLine, DiagnosticsEngine &Diags,
-    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
+static std::optional<SmallVector<std::string, 0>>
+getFirstCC1CommandLine(ArrayRef<std::string> CommandLine,
+                       DiagnosticsEngine &Diags,
+                       llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
   // Compilation holds a non-owning a reference to the Driver, hence we need to
   // keep the Driver alive when we use Compilation. Arguments to commands may be
   // owned by Alloc when expanded from response files.
   llvm::BumpPtrAllocator Alloc;
   const auto [Driver, Compilation] =
-      buildCompilation(CommandLine, Diags, OverlayFS, Alloc);
+      buildCompilation(CommandLine, Diags, std::move(FS), Alloc);
   if (!Compilation)
     return std::nullopt;
 
@@ -394,18 +371,20 @@ CompilerInstanceWithContext::initializeFromCommandline(
     DependencyScanningTool &Tool, StringRef CWD,
     ArrayRef<std::string> CommandLine, DependencyActionController &Controller,
     DiagnosticConsumer &DC) {
-  auto [OverlayFS, ModifiedCommandLine] =
-      initVFSForByNameScanning(&Tool.Worker.getVFS(), CommandLine, CWD);
+  auto [OverlayFS, ModifiedCommandLine] = initVFSForByNameScanning(CommandLine);
+  auto FS = Tool.Worker.makeEffectiveVFS(CWD, OverlayFS);
+
   auto DiagEngineWithCmdAndOpts =
-      std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine,
-                                                      OverlayFS, DC);
+      std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine, FS,
+                                                      DC);
 
   if (CommandLine.size() >= 2 && CommandLine[1] == "-cc1") {
     // The input command line is already a -cc1 invocation; initialize the
     // compiler instance directly from it.
     CompilerInstanceWithContext CIWithContext(Tool.Worker, CWD, CommandLine);
-    if (!CIWithContext.initialize(
-            Controller, std::move(DiagEngineWithCmdAndOpts), OverlayFS))
+    if (!CIWithContext.initialize(Controller,
+                                  std::move(DiagEngineWithCmdAndOpts),
+                                  std::move(OverlayFS)))
       return std::nullopt;
     return std::move(CIWithContext);
   }
@@ -414,7 +393,7 @@ CompilerInstanceWithContext::initializeFromCommandline(
   // ill-formed. In this case, we will first call the Driver to build a -cc1
   // command line for this compilation or diagnose any ill-formed input.
   const auto MaybeFirstCC1 = getFirstCC1CommandLine(
-      ModifiedCommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, OverlayFS);
+      ModifiedCommandLine, *DiagEngineWithCmdAndOpts->DiagEngine, FS);
   if (!MaybeFirstCC1)
     return std::nullopt;
 
@@ -423,7 +402,7 @@ CompilerInstanceWithContext::initializeFromCommandline(
   CompilerInstanceWithContext CIWithContext(Tool.Worker, CWD,
                                             std::move(CC1CommandLine));
   if (!CIWithContext.initialize(Controller, std::move(DiagEngineWithCmdAndOpts),
-                                OverlayFS))
+                                std::move(OverlayFS)))
     return std::nullopt;
   return std::move(CIWithContext);
 }
@@ -460,19 +439,13 @@ CompilerInstanceWithContext::computeDependenciesByNameOrError(
 bool CompilerInstanceWithContext::initialize(
     DependencyActionController &Controller,
     std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
-    IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS) {
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS) {
   assert(DiagEngineWithDiagOpts && "Valid diagnostics engine required!");
   DiagEngineWithCmdAndOpts = std::move(DiagEngineWithDiagOpts);
   DiagConsumer = DiagEngineWithCmdAndOpts->DiagEngine->getClient();
 
-#ifndef NDEBUG
   assert(OverlayFS && "OverlayFS required!");
-  bool SawDepFS = false;
-  OverlayFS->visit([&](llvm::vfs::FileSystem &VFS) {
-    SawDepFS |= &VFS == Worker.DepFS.get();
-  });
-  assert(SawDepFS && "OverlayFS not based on DepFS");
-#endif
+  auto FS = Worker.makeEffectiveVFS(CWD, std::move(OverlayFS));
 
   OriginalInvocation = createCompilerInvocation(
       CommandLine, *DiagEngineWithCmdAndOpts->DiagEngine);
@@ -497,7 +470,7 @@ bool CompilerInstanceWithContext::initialize(
   auto &CI = *CIPtr;
 
   initializeScanCompilerInstance(
-      CI, OverlayFS, DiagEngineWithCmdAndOpts->DiagEngine->getClient(),
+      CI, std::move(FS), DiagEngineWithCmdAndOpts->DiagEngine->getClient(),
       Worker.Service, Worker.DepFS);
 
   StableDirs = getInitialStableDirs(CI);

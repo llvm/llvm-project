@@ -75,11 +75,11 @@ public:
       else
         return queue.pending_writers;
     }
-    template <Role role> LIBC_INLINE FutexWordType &serialization() {
+    template <Role role> LIBC_INLINE Futex &serialization() {
       if constexpr (role == Role::Reader)
-        return queue.reader_serialization.val;
+        return queue.reader_serialization;
       else
-        return queue.writer_serialization.val;
+        return queue.writer_serialization;
     }
     friend WaitingQueue;
   };
@@ -375,7 +375,7 @@ private:
         return result;
 
       // Phase 5: register ourselves as a  reader.
-      int serial_number;
+      FutexWordType serial_number;
       {
         // The queue need to be protected by a mutex since the operations in
         // this block must be executed as a whole transaction. It is possible
@@ -391,8 +391,9 @@ private:
         // sleep on the futex, we can avoid such waiting.
         old = RwState::fetch_set_pending_bit<role>(state,
                                                    cpp::MemoryOrder::RELAXED);
-        // no need to use atomic since it is already protected by the mutex.
-        serial_number = guard.serialization<role>();
+        // relaxed atomic since it is already protected by the mutex.
+        serial_number =
+            guard.serialization<role>().load(cpp::MemoryOrder::RELAXED);
       }
 
       // Phase 6: do futex wait until the lock is available or timeout is
@@ -404,22 +405,35 @@ private:
       }
 
       // Phase 7: unregister ourselves as a pending reader/writer.
+      bool writer_serial_changed = false;
       {
         // Similarly, the unregister operation should also be an atomic
         // transaction.
         WaitingQueue::Guard guard = queue.acquire(is_pshared);
         guard.pending_count<role>()--;
-        // Clear the flag if we are the last reader. The flag must be
-        // cleared otherwise operations like trylock may fail even though
-        // there is no competitors.
+        // Clear the flag if we are the last pending thread of this role. The
+        // flag must be cleared; otherwise operations like trylock may fail even
+        // though there are no competitors.
         if (guard.pending_count<role>() == 0)
           RwState::fetch_clear_pending_bit<role>(state,
                                                  cpp::MemoryOrder::RELAXED);
+        if constexpr (role == Role::Writer) {
+          FutexWordType new_serial =
+              guard.serialization<role>().load(cpp::MemoryOrder::RELAXED);
+          writer_serial_changed = new_serial != serial_number;
+        }
       }
 
-      // Phase 8: exit the loop is timeout is reached.
-      if (timeout_flag)
+      // Phase 8: exit the loop if timeout is reached.
+      if (timeout_flag) {
+        // A timed out (but not unregistered) thread can still be the target of
+        // a wakeup signal. If this happens, we must wake up the next thread to
+        // avoid a deadlock. This is only a problem for writers because readers
+        // are woken up all at once and we prefer waking up writers first.
+        if (writer_serial_changed)
+          notify_pending_threads();
         return LockResult::TimedOut;
+      }
 
       // Phase 9: reload the state and retry the acquisition.
       old = RwState::spin_reload<role>(state, get_preference(), spin_count);
@@ -431,16 +445,26 @@ private:
   // Since notifcation routine is colder we mark it as noinline explicitly.
   [[gnu::noinline]]
   LIBC_INLINE void notify_pending_threads() {
+    // We wake up writers first. This ordering is relevant for the correctness
+    // of timeout handling in lock_slow. Because writers are preferred, we do
+    // not need to handle reader timeouts specially:
+    // 1. If there are pending writers, they are woken up first, so a reader
+    //    cannot steal their wake-up signal.
+    // 2. If there are only pending readers, they are all woken up together
+    //    (via notify_all), so a timed-out reader cannot steal other readers'
+    //    wake-up signals.
     enum class WakeTarget { Readers, Writers, None };
     WakeTarget status;
 
     {
       WaitingQueue::Guard guard = queue.acquire(is_pshared);
       if (guard.pending_count<Role::Writer>() != 0) {
-        guard.serialization<Role::Writer>()++;
+        guard.serialization<Role::Writer>().fetch_add(
+            1, cpp::MemoryOrder::RELEASE);
         status = WakeTarget::Writers;
       } else if (guard.pending_count<Role::Reader>() != 0) {
-        guard.serialization<Role::Reader>()++;
+        guard.serialization<Role::Reader>().fetch_add(
+            1, cpp::MemoryOrder::RELEASE);
         status = WakeTarget::Readers;
       } else {
         status = WakeTarget::None;

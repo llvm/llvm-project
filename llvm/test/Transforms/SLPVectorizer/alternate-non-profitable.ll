@@ -34,7 +34,7 @@ define <2 x float> @replace_through_casts(i16 %inp) {
 ; CHECK-SAME: i16 [[INP:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> poison, i16 [[INP]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i16> [[TMP2]], <i16 0, i16 -10>
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i16> [[TMP2]], <i16 0, i16 -10>
 ; CHECK-NEXT:    [[TMP4:%.*]] = uitofp <2 x i16> [[TMP3]] to <2 x float>
 ; CHECK-NEXT:    [[TMP5:%.*]] = sitofp <2 x i16> [[TMP3]] to <2 x float>
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> [[TMP5]], <2 x i32> <i32 0, i32 3>
@@ -121,7 +121,7 @@ define <2 x i32> @replace_through_int_casts(i16 %inp, <2 x i16> %dead) {
 ; CHECK-SAME: i16 [[INP:%.*]], <2 x i16> [[DEAD:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> poison, i16 [[INP]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i16> [[TMP2]], <i16 0, i16 -10>
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <2 x i16> [[TMP2]], <i16 0, i16 -10>
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <2 x i16> [[TMP3]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = sext <2 x i16> [[TMP3]] to <2 x i32>
 ; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> [[TMP5]], <2 x i32> <i32 0, i32 3>
@@ -178,7 +178,7 @@ define <2 x i8> @replace_through_binop_preserve_flags(i8 %inp, <2 x i8> %d, <2 x
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8> poison, i8 [[INP]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i8> [[TMP1]], <2 x i8> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i8> [[TMP2]], <i8 123, i8 5>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[TMP3]], <i8 0, i8 1>
+; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i8> [[TMP3]], <i8 0, i8 1>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %add = xor i8 %inp, 5

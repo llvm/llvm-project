@@ -1,0 +1,25 @@
+# Verify llvm-dwp preserves the ELF OS/ABI from input .dwo files.
+
+# RUN: yaml2obj %s -o %t.dwo
+# RUN: llvm-dwp %t.dwo -o %t.dwp
+# RUN: llvm-readobj --file-headers %t.dwp | FileCheck %s
+
+# CHECK: OS/ABI: GNU/Linux (0x3)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+  OSABI:   ELFOSABI_GNU
+Sections:
+  - Name:    .debug_info.dwo
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_EXCLUDE ]
+    Content: '110000000500050800000000887766554433221101'
+  - Name:    .debug_abbrev.dwo
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_EXCLUDE ]
+    Content: '011100000000'
+...
