@@ -74,15 +74,15 @@ define float @nvvm_rcp(float %0) {
 ; CHECK-LABEL: @llvm_nvvm_barrier0()
 define void @llvm_nvvm_barrier0() {
   ; CHECK: %[[c0:.*]] = llvm.mlir.constant(0 : i32) : i32
-  ; CHECK: nvvm.barrier id = %[[c0]] {aligned = true}
+  ; CHECK: nvvm.barrier id = %[[c0]]
+  ; CHECK-NOT: aligned
   call void @llvm.nvvm.barrier0()
   ret void
 }
 
 ; CHECK-LABEL: @llvm_nvvm_barrier_sync_all
 define void @llvm_nvvm_barrier_sync_all(i32 %bar) {
-  ; CHECK: nvvm.barrier id = %{{.*}}
-  ; CHECK-NOT: aligned
+  ; CHECK: nvvm.barrier id = %{{.*}} {aligned = false}
   ; CHECK-NOT: number_of_threads
   call void @llvm.nvvm.barrier.cta.sync.all(i32 %bar)
   ret void
@@ -90,22 +90,24 @@ define void @llvm_nvvm_barrier_sync_all(i32 %bar) {
 
 ; CHECK-LABEL: @llvm_nvvm_barrier_sync_aligned_all
 define void @llvm_nvvm_barrier_sync_aligned_all(i32 %bar) {
-  ; CHECK: nvvm.barrier id = %{{.*}} {aligned = true}
+  ; CHECK: nvvm.barrier id = %{{.*}}
+  ; CHECK-NOT: aligned
+  ; CHECK-NOT: number_of_threads
   call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %bar)
   ret void
 }
 
 ; CHECK-LABEL: @llvm_nvvm_barrier_sync_count
 define void @llvm_nvvm_barrier_sync_count(i32 %bar, i32 %n) {
-  ; CHECK: nvvm.barrier id = %{{.*}} number_of_threads = %{{.*}}
-  ; CHECK-NOT: aligned
+  ; CHECK: nvvm.barrier id = %{{.*}} number_of_threads = %{{.*}} {aligned = false}
   call void @llvm.nvvm.barrier.cta.sync.count(i32 %bar, i32 %n)
   ret void
 }
 
 ; CHECK-LABEL: @llvm_nvvm_barrier_sync_aligned_count
 define void @llvm_nvvm_barrier_sync_aligned_count(i32 %bar, i32 %n) {
-  ; CHECK: nvvm.barrier id = %{{.*}} number_of_threads = %{{.*}} {aligned = true}
+  ; CHECK: nvvm.barrier id = %{{.*}} number_of_threads = %{{.*}}
+  ; CHECK-NOT: aligned
   call void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 %bar, i32 %n)
   ret void
 }
