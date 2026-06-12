@@ -152,8 +152,13 @@ private:
     for (Function &F : M) {
       if (F.isDeclaration())
         continue;
+      // Only the canonical generic-GPU kernel markers: the SPIR_KERNEL calling
+      // convention (clang OpenCL / SYCL / SPIR-V) and the gpu dialect's
+      // "gpu.kernel" attribute. We deliberately do NOT key on a bare "kernel"
+      // attribute -- it is not an ecosystem-standard marker. Functions already
+      // carrying "air-kernel" (Triton arrives pre-marked) are skipped, so this
+      // is a no-op on AIR-native IR.
       bool IsKernel = F.getCallingConv() == CallingConv::SPIR_KERNEL ||
-                      F.hasFnAttribute("kernel") ||
                       F.hasFnAttribute("gpu.kernel");
       if (!IsKernel || F.hasFnAttribute("air-kernel"))
         continue;
