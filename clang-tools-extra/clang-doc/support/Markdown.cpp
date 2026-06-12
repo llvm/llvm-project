@@ -107,26 +107,27 @@ static StringRef trimCodeSpan(StringRef Code) {
   return Code;
 }
 
-// Finds the start index of a closing emphasis run of exactly Count copies of C,
-// searching forward from From. Requires non-whitespace immediately inside both
-// the opening and closing delimiters and non-empty content, a simplified take
-// on the CommonMark §6.2 flanking rules. Returns StringRef::npos if no valid
-// closing run exists.
-static size_t findClosingDelim(StringRef S, size_t From, char C, size_t Count) {
+// Finds the start index of a closing emphasis run of exactly DelimLen copies of
+// DelimChar, searching forward from StartPos. Requires non-whitespace
+// immediately inside both the opening and closing delimiters and non-empty
+// content, a simplified take on the CommonMark §6.2 flanking rules. Returns
+// StringRef::npos if no valid closing run exists.
+static size_t findClosingDelim(StringRef S, size_t StartPos, char DelimChar,
+                               size_t DelimLen) {
   size_t E = S.size();
   // Opening delimiter is not left-flanking if whitespace follows it.
-  if (From >= E || isSpace(S[From]))
+  if (StartPos >= E || isSpace(S[StartPos]))
     return StringRef::npos;
-  for (size_t J = From; J + Count <= E; ++J) {
-    if (S[J] != C)
+  for (size_t J = StartPos; J + DelimLen <= E; ++J) {
+    if (S[J] != DelimChar)
       continue;
-    size_t Run = countRun(S, J, C);
-    if (Run != Count) {
+    size_t Run = countRun(S, J, DelimChar);
+    if (Run != DelimLen) {
       J += Run - 1; // Skip the whole run; the loop's ++J lands past it.
       continue;
     }
     // Reject empty content and closing runs that are not right-flanking.
-    if (J == From || isSpace(S[J - 1]))
+    if (J == StartPos || isSpace(S[J - 1]))
       continue;
     return J;
   }
@@ -257,6 +258,9 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
     // Pipe table: current line has | and next line is a separator row.
     if (Line.contains('|') && isSepRow(Reader.peek(1).trim())) {
       SmallVector<StringRef> Rows;
+      // TODO: Rows are kept as raw line text for now. Table cells may contain
+      // inline content (emphasis, code spans, links), so each row may need to
+      // be split on '|' and parsed further into structured cells.
       while (!Reader.atEnd() && Reader.peek().trim().contains('|'))
         Rows.push_back(internString(Reader.advance().trim(), Arena));
       auto *Table = new (Arena) TableNode(allocateArray(Rows, Arena));
