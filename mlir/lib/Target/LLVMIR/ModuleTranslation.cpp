@@ -1617,6 +1617,45 @@ FailureOr<llvm::Metadata *> ModuleTranslation::convertMetadataAttr(
       });
 }
 
+/// Converts generic function metadata from `func` and attaches it to
+/// `llvmFunc`.
+static LogicalResult convertFunctionMetadata(ModuleTranslation &translation,
+                                             LLVMFuncOp func,
+                                             llvm::Function *llvmFunc) {
+  ArrayAttr metadata = func.getFunctionMetadataAttr();
+  if (!metadata)
+    return success();
+
+  for (auto entry : metadata.getAsRange<LLVM::FunctionMetadataAttr>()) {
+    StringRef metadataName = entry.getMetadataName().getValue();
+
+    FailureOr<llvm::Metadata *> md =
+        translation.convertMetadataAttr(entry.getNode(), [&]() {
+          return func.emitError()
+                 << "failed to convert function_metadata entry '"
+                 << metadataName << "': ";
+        });
+    if (failed(md))
+      return failure();
+    llvm::MDNode *node = llvm::dyn_cast_if_present<llvm::MDNode>(*md);
+    if (!node)
+      return func.emitError() << "failed to convert function_metadata entry '"
+                              << metadataName << "'";
+    llvmFunc->addMetadata(metadataName, *node);
+  }
+  return success();
+}
+
+static LogicalResult convertFunctionMetadata(ModuleTranslation &translation,
+                                             Operation *module) {
+  for (auto function : getModuleBody(module).getOps<LLVMFuncOp>()) {
+    llvm::Function *llvmFunc = translation.lookupFunction(function.getName());
+    if (failed(convertFunctionMetadata(translation, function, llvmFunc)))
+      return failure();
+  }
+  return success();
+}
+
 LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   // Clear the block, branch value mappings, they are only relevant within one
   // function.
@@ -2036,18 +2075,20 @@ ModuleTranslation::convertParameterAttrs(Location loc,
 
 LogicalResult ModuleTranslation::convertFunctionSignatures() {
   // Declare all functions first because there may be function calls that form a
-  // call graph with cycles, or global initializers that reference functions.
+  // call graph with cycles, global initializers that reference functions, or
+  // metadata that references functions declared later in the module.
   for (auto function : getModuleBody(mlirModule).getOps<LLVMFuncOp>()) {
     llvm::FunctionCallee llvmFuncCst = llvmModule->getOrInsertFunction(
         function.getName(),
         cast<llvm::FunctionType>(convertType(function.getFunctionType())));
     llvm::Function *llvmFunc = cast<llvm::Function>(llvmFuncCst.getCallee());
+    mapFunction(function.getName(), llvmFunc);
+  }
+
+  for (auto function : getModuleBody(mlirModule).getOps<LLVMFuncOp>()) {
+    llvm::Function *llvmFunc = lookupFunction(function.getName());
     llvmFunc->setLinkage(convertLinkageToLLVM(function.getLinkage()));
     llvmFunc->setCallingConv(convertCConvToLLVM(function.getCConv()));
-    mapFunction(function.getName(), llvmFunc);
-    if (function.getFunctionMetadataAttr())
-      return function.emitError()
-             << "not yet implemented: translating function_metadata to LLVM IR";
     addRuntimePreemptionSpecifier(function.getDsoLocal(), llvmFunc);
 
     // Convert function attributes.
@@ -2619,6 +2660,8 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   if (failed(translator.convertGlobalsAndAliases()))
     return nullptr;
   if (failed(translator.convertIFuncs()))
+    return nullptr;
+  if (failed(convertFunctionMetadata(translator, module)))
     return nullptr;
   if (failed(translator.createTBAAMetadata()))
     return nullptr;
