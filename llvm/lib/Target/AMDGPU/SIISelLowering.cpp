@@ -15797,12 +15797,13 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
 
   case ISD::BITCAST: {
     // Canonicality isn't preserved across a bitcast that changes the FP type.
-    EVT SrcVT = Op.getOperand(0).getValueType();
+    SDValue Src = peekThroughBitcasts(Op.getOperand(0));
+    EVT SrcVT = Src.getValueType();
     EVT DstVT = Op.getValueType();
     if (SrcVT.isFloatingPoint() && DstVT.isFloatingPoint() &&
         SrcVT.getScalarType() != DstVT.getScalarType())
       return false;
-    return isCanonicalized(DAG, Op.getOperand(0), MaxDepth - 1);
+    return isCanonicalized(DAG, Src, MaxDepth - 1);
   }
   case ISD::TRUNCATE: {
     // Hack round the mess we make when legalizing extract_vector_elt
