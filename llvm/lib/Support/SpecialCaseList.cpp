@@ -415,7 +415,13 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   bool UseGlobs = MinVersion(2);
   bool RemoveDotSlash = MinVersion(3);
   bool WarnDotSlash = MinVersion(4) && !MinVersion(5);
-
+  // FIXME: Improve efficiency on Windows.
+  // `SlashAgnostic` makes `GlobMatcher` lookup inefficient by reducing the part
+  // of the pattern handled by the RadixTree. This was already the case even
+  // before `SlashAgnostic` because `GlobMatcher` pessimizes on escape sequences
+  // needed to represent Windows backslashes. A possible, but not unique,
+  // solution is to assume (or convert Windows query) backslashes, and preprocess
+  // the Glob pattern to use different escape sequences.
   bool SlashAgnostic = MinVersion(4) && llvm::sys::path::is_style_windows(
                                             llvm::sys::path::Style::native);
 
