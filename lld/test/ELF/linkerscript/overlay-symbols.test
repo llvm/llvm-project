@@ -1,0 +1,49 @@
+# REQUIRES: x86
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
+# RUN: ld.lld a.o --script overlay.lds -o a
+# RUN: llvm-readelf --symbols a | FileCheck %s
+
+CHECK:      {{[0-9]+}}: 0000000000001000     0 NOTYPE  GLOBAL DEFAULT     2 __data_start
+CHECK-NEXT: {{[0-9]+}}: 0000000000001017     0 NOTYPE  GLOBAL DEFAULT     2 __data_end
+CHECK-NEXT: {{[0-9]+}}: 0000000000001000     0 NOTYPE  GLOBAL DEFAULT     3 __bss_start
+CHECK-NEXT: {{[0-9]+}}: 0000000000001008     0 NOTYPE  GLOBAL DEFAULT     3 __bss_end
+CHECK-NEXT: {{[0-9]+}}: 0000000000001017     0 NOTYPE  GLOBAL DEFAULT     3 __end
+
+
+#--- overlay.lds
+
+SECTIONS {
+  .text : { *(.text) }
+  OVERLAY 0x1000 : {
+    .data {
+      __data_start = .;
+      *(.data)
+      QUAD(1)
+      LONG(1)
+      SHORT(1)
+      BYTE(1)
+      __data_end = .;
+    }
+    .bss {
+      __bss_start = .;
+      *(.bss)
+      . += 0x4;
+      __bss_end = .;
+    }
+  }
+  __end = .;
+}
+
+#--- a.s
+
+ .globl __start
+ .text
+__start:
+ nop
+
+ .data
+ .space 0x8
+
+ .bss
+ .space 0x4
