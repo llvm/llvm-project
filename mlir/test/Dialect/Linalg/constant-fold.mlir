@@ -228,3 +228,20 @@ func.func @elementwise_nofold_non_cst_input(%input: tensor<4xf32>, %init: tensor
   return %1 : tensor<4xf32>
 }
 
+// -----
+
+// Verify that multi-use constants are not folded (controlFn requires single use).
+// CHECK-LABEL: @elementwise_nofold_multi_use_cst
+func.func @elementwise_nofold_multi_use_cst(%init1: tensor<4xf32>, %init2: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
+  %cst = arith.constant dense<[1.0, 2.0, 3.0, 4.0]> : tensor<4xf32>
+  // CHECK: linalg.elementwise kind=#linalg.elementwise_kind<sin>
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<sin>
+    ins(%cst : tensor<4xf32>)
+    outs(%init1 : tensor<4xf32>) -> tensor<4xf32>
+  // CHECK: linalg.elementwise kind=#linalg.elementwise_kind<cos>
+  %2 = linalg.elementwise kind=#linalg.elementwise_kind<cos>
+    ins(%cst : tensor<4xf32>)
+    outs(%init2 : tensor<4xf32>) -> tensor<4xf32>
+  return %1, %2 : tensor<4xf32>, tensor<4xf32>
+}
+
