@@ -6563,8 +6563,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   // loop with an in-loop mask, then the middle check has already been
   // created to compare against the actual number of lanes executed.
   if (EEStyle != UncountableExitStyle::MaskedHandleExitInScalarLoop)
-    RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0,
-                   CM.foldTailByMasking());
+    RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::createLoopRegions, *VPlan0,
                  getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
   if (CM.foldTailByMasking())
