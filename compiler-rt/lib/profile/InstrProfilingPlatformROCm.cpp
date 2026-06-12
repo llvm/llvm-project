@@ -19,6 +19,9 @@ extern "C" {
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <wchar.h>
+#endif
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -116,20 +119,44 @@ static int AnyDeviceUsed = 0;
 #endif
 
 #ifdef _WIN32
-static int strEndsWithNoCase(const char *S, const char *Suffix) {
-  size_t SLen = strlen(S);
-  size_t SuffixLen = strlen(Suffix);
-  return SLen >= SuffixLen && _stricmp(S + SLen - SuffixLen, Suffix) == 0;
+static wchar_t toLowerAsciiW(wchar_t C) {
+  return C >= L'A' && C <= L'Z' ? C - L'A' + L'a' : C;
 }
 
-static int isHipRuntimeModuleName(const char *Name) {
-  return _stricmp(Name, "amdhip64.dll") == 0 ||
-         (_strnicmp(Name, "amdhip64_", strlen("amdhip64_")) == 0 &&
-          strEndsWithNoCase(Name, ".dll"));
+static int wcsEqualNoCase(const wchar_t *A, const wchar_t *B) {
+  while (*A && *B) {
+    if (toLowerAsciiW(*A) != toLowerAsciiW(*B))
+      return 0;
+    ++A;
+    ++B;
+  }
+  return *A == *B;
+}
+
+static int wcsStartsWithNoCase(const wchar_t *S, const wchar_t *Prefix) {
+  while (*Prefix) {
+    if (toLowerAsciiW(*S) != toLowerAsciiW(*Prefix))
+      return 0;
+    ++S;
+    ++Prefix;
+  }
+  return 1;
+}
+
+static int wcsEndsWithNoCase(const wchar_t *S, const wchar_t *Suffix) {
+  size_t SLen = wcslen(S);
+  size_t SuffixLen = wcslen(Suffix);
+  return SLen >= SuffixLen && wcsEqualNoCase(S + SLen - SuffixLen, Suffix);
+}
+
+static int isHipRuntimeModuleName(const wchar_t *Name) {
+  return wcsEqualNoCase(Name, L"amdhip64.dll") ||
+         (wcsStartsWithNoCase(Name, L"amdhip64_") &&
+          wcsEndsWithNoCase(Name, L".dll"));
 }
 
 static void *findLoadedHipRuntime(void) {
-  HMODULE Handle = GetModuleHandleA("amdhip64.dll");
+  HMODULE Handle = GetModuleHandleW(L"amdhip64.dll");
   if (Handle)
     return (void *)Handle;
 
@@ -138,15 +165,15 @@ static void *findLoadedHipRuntime(void) {
   if (Snapshot == INVALID_HANDLE_VALUE)
     return nullptr;
 
-  MODULEENTRY32A Entry;
+  MODULEENTRY32W Entry;
   Entry.dwSize = sizeof(Entry);
-  if (Module32FirstA(Snapshot, &Entry)) {
+  if (Module32FirstW(Snapshot, &Entry)) {
     do {
       if (isHipRuntimeModuleName(Entry.szModule)) {
         Handle = Entry.hModule;
         break;
       }
-    } while (Module32NextA(Snapshot, &Entry));
+    } while (Module32NextW(Snapshot, &Entry));
   }
 
   CloseHandle(Snapshot);
