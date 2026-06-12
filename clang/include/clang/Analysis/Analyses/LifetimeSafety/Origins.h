@@ -173,7 +173,7 @@ public:
   ///   - Lambdas capturing pointer-like objects
   ///   - Standard callable wrappers (std::function)
   ///
-  /// TODO: Expend this list with other origin types such as: user-defined
+  /// TODO: Expand this list with other origin types such as: user-defined
   /// structs with pointer-like fields.
   ///
   /// Contextual origin types (excluded when IntrinsicOnly=true):
