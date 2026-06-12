@@ -8858,6 +8858,59 @@ APInt CombinerHelper::getDemandedSrcBitsForShiftConst(unsigned Opcode,
   }
 }
 
+Register CombinerHelper::simplifyMultipleUseDemandedBits(
+    Register R, const APInt &DemandedBits, unsigned Depth) const {
+  if (!R.isVirtual() || DemandedBits.isZero() ||
+      Depth >= MaxAnalysisRecursionDepth)
+    return Register();
+
+  LLT Ty = MRI.getType(R);
+  if (!Ty.isValid())
+    return Register();
+  assert(DemandedBits.getBitWidth() == Ty.getScalarSizeInBits() &&
+         "DemandedBits width must match the register scalar type");
+
+  MachineInstr *DefMI = MRI.getVRegDef(R);
+  if (!DefMI || DefMI->getNumExplicitDefs() != 1 ||
+      !isRegUseOperand(*DefMI, 1) || !isRegUseOperand(*DefMI, 2))
+    return Register();
+
+  unsigned Opcode = DefMI->getOpcode();
+  if (Opcode != TargetOpcode::G_AND && Opcode != TargetOpcode::G_OR)
+    return Register();
+
+  Register LHS = DefMI->getOperand(1).getReg();
+  Register RHS = DefMI->getOperand(2).getReg();
+  if (MRI.getType(LHS) != Ty || MRI.getType(RHS) != Ty)
+    return Register();
+
+  auto LookThrough = [&](Register X, Register CReg) -> Register {
+    std::optional<APInt> C = getConstantOrConstantSplatVector(CReg);
+    if (!C || C->getBitWidth() != DemandedBits.getBitWidth())
+      return Register();
+    bool BypassToX = Opcode == TargetOpcode::G_AND
+                         ? DemandedBits.isSubsetOf(*C)
+                         : DemandedBits.isSubsetOf(~*C);
+    if (BypassToX) {
+      // X agrees with the def on every demanded bit; keep looking through.
+      if (Register Deeper =
+              simplifyMultipleUseDemandedBits(X, DemandedBits, Depth + 1))
+        return Deeper;
+      return X;
+    }
+    bool BypassToC = Opcode == TargetOpcode::G_AND
+                         ? DemandedBits.isSubsetOf(~*C)
+                         : DemandedBits.isSubsetOf(*C);
+    if (BypassToC)
+      return CReg;
+    return Register();
+  };
+
+  if (Register Repl = LookThrough(LHS, RHS))
+    return Repl;
+  return LookThrough(RHS, LHS);
+}
+
 bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
                                               const APInt &DemandedBits,
                                               KnownBits &Known, unsigned Depth,
@@ -8905,12 +8958,21 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
     return true;
   };
 
-  // Descending into a def that has other users with a partial demand could
-  // rewrite it in ways those users observe (they demand bits we don't).
-  // Mirror SDAG: only recurse into single-use defs, unless every bit is
-  // demanded (then any derived deeper demand is intrinsic to the operators
-  // and value-preserving for all users).
-  bool CanRecurse = MRI.hasOneNonDBGUse(OpReg) || DemandedBits.isAllOnes();
+  // Multi-use defs cannot be rewritten under a partial demand (other users
+  // observe bits we do not). First try a pure look-through to an existing
+  // register that agrees on the demanded bits and reroute only this use;
+  // otherwise relax the demand to all bits, as SDAG does, so that any
+  // rewrite below remains value-preserving for every user of this def.
+  APInt Demanded = DemandedBits;
+  if (!MRI.hasOneNonDBGUse(OpReg) && !Demanded.isAllOnes()) {
+    if (Register Repl =
+            simplifyMultipleUseDemandedBits(OpReg, Demanded, Depth)) {
+      Known = VT->getKnownBits(Repl);
+      if (Rewrite(Repl))
+        return true;
+    }
+    Demanded = APInt::getAllOnes(BW);
+  }
 
   unsigned Opcode = DefMI->getOpcode();
   switch (Opcode) {
@@ -8933,15 +8995,15 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
       if (!C || C->getBitWidth() != BW)
         return std::nullopt;
       if (Opcode == TargetOpcode::G_AND) {
-        if (DemandedBits.isSubsetOf(*C))
+        if (Demanded.isSubsetOf(*C))
           return X;
-        if (DemandedBits.isSubsetOf(~*C))
+        if (Demanded.isSubsetOf(~*C))
           return CReg;
         return std::nullopt;
       }
-      if (DemandedBits.isSubsetOf(~*C))
+      if (Demanded.isSubsetOf(~*C))
         return X;
-      if (DemandedBits.isSubsetOf(*C))
+      if (Demanded.isSubsetOf(*C))
         return CReg;
       return std::nullopt;
     };
@@ -8960,16 +9022,10 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
         return true;
     }
 
-    // Node-local constant elimination above is multi-use safe (Rewrite
-    // reroutes only this operand for multi-use defs), but recursing into the
-    // def's operands with a partial demand is not.
-    if (!CanRecurse)
-      return GiveUp();
-
     KnownBits RHSKnown(BW);
-    bool Changed = simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/2, DemandedBits,
+    bool Changed = simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/2, Demanded,
                                             RHSKnown, Depth + 1, DoRewrite);
-    APInt LHSDemand = DemandedBits;
+    APInt LHSDemand = Demanded;
     if (Opcode == TargetOpcode::G_AND)
       LHSDemand &= ~RHSKnown.Zero;
     else
@@ -8997,14 +9053,8 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
     unsigned ShAmt = Amt->getZExtValue();
     if (ShAmt == 0)
       return GiveUp();
-    // Bail entirely for a multi-use def under partial demand (SDAG does the
-    // same): both the recursion and the ASHR->LSHR rewrite below derive from
-    // a demand the other users do not share.
-    if (!CanRecurse)
-      return GiveUp();
 
-    APInt SrcDemand =
-        getDemandedSrcBitsForShiftConst(Opcode, DemandedBits, ShAmt);
+    APInt SrcDemand = getDemandedSrcBitsForShiftConst(Opcode, Demanded, ShAmt);
     KnownBits SrcKnown(BW);
     bool Changed = simplifyDemandedBitsImpl(*DefMI, /*OpNo=*/1, SrcDemand,
                                             SrcKnown, Depth + 1, DoRewrite);
@@ -9020,8 +9070,7 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
       // If none of the sign-fill result bits [BW-ShAmt, BW) are demanded, or
       // the sign bit is known zero, an unsigned shift computes the same
       // demanded bits (SDAG's SRA-case rewrite).
-      if (DemandedBits.countLeadingZeros() >= ShAmt ||
-          SrcKnown.isNonNegative()) {
+      if (Demanded.countLeadingZeros() >= ShAmt || SrcKnown.isNonNegative()) {
         if (DoRewrite) {
           Builder.setInstrAndDebugLoc(*DefMI);
           auto Lshr = Builder.buildLShr(DstTy, DefMI->getOperand(1).getReg(),

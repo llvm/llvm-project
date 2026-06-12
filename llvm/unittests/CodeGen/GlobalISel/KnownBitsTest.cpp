@@ -2391,9 +2391,10 @@ TEST_F(AArch64GISelMITest, SimplifyDemandedBitsMultiUseDefNoDescend) {
     GTEST_SKIP();
 
   // %s has two users (%root's G_AND and %side's COPY, which demands all
-  // bits). Walking from %root with partial demand 0xFF must NOT descend
-  // through the multi-use %s and erase %y's mask (0xFFFF00) -- the COPY
-  // observes bits the root does not demand.
+  // bits). Walking from %root with partial demand 0xFF relaxes to all bits
+  // at the multi-use %s, so the derived source demand (0xFFFFFF00) straddles
+  // %y's mask (0xFFFF00) and the mask must survive -- the COPY observes bits
+  // the root does not demand.
   MachineInstr *Root = findOpcode(*MF, TargetOpcode::G_AND, /*Index=*/1);
   MachineInstr *Inner = findOpcode(*MF, TargetOpcode::G_AND);
   ASSERT_NE(Root, nullptr);
@@ -2406,6 +2407,84 @@ TEST_F(AArch64GISelMITest, SimplifyDemandedBitsMultiUseDefNoDescend) {
   Helper.simplifyDemandedBits(*Root, /*OpNo=*/1, APInt(32, 0xFF), Known);
   // The inner mask must survive: %s is multi-use and the demand is partial.
   EXPECT_FALSE(MRI->use_nodbg_empty(InnerDst));
+}
+
+TEST_F(AArch64GISelMITest, SimplifyMultipleUseDemandedBitsChain) {
+  StringRef MIRString = R"(
+   %x:_(s32) = G_TRUNC %0
+   %c1:_(s32) = G_CONSTANT i32 255
+   %a:_(s32) = G_AND %x, %c1
+   %c2:_(s32) = G_CONSTANT i32 15
+   %b:_(s32) = G_AND %a, %c2
+   %one:_(s32) = G_CONSTANT i32 1
+   %root:_(s32) = G_AND %b, %one
+   %sidea:_(s32) = COPY %a
+   %sideb:_(s32) = COPY %b
+   %out:_(s32) = COPY %root
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  // %a and %b are both multi-use (each has a side COPY). A pure look-through
+  // may still walk the whole chain: bit 0 passes unchanged through both
+  // masks, so %root's operand can be rerouted all the way to %x while the
+  // shared ANDs survive for their other users.
+  MachineInstr *ADef = findOpcode(*MF, TargetOpcode::G_AND);
+  MachineInstr *BDef = findOpcode(*MF, TargetOpcode::G_AND, /*Index=*/1);
+  MachineInstr *Root = findOpcode(*MF, TargetOpcode::G_AND, /*Index=*/2);
+  ASSERT_NE(ADef, nullptr);
+  ASSERT_NE(BDef, nullptr);
+  ASSERT_NE(Root, nullptr);
+
+  Register XReg = ADef->getOperand(1).getReg();
+  Register AReg = ADef->getOperand(0).getReg();
+  Register BReg = BDef->getOperand(0).getReg();
+
+  GISelValueTracking VT(*MF);
+  CombinerHelper Helper(VT, B, /*IsPreLegalize=*/false, &VT);
+  EXPECT_EQ(Helper.simplifyMultipleUseDemandedBits(BReg, APInt(32, 1)), XReg);
+
+  KnownBits Known(32);
+  EXPECT_TRUE(
+      Helper.simplifyDemandedBits(*Root, /*OpNo=*/1, APInt(32, 1), Known));
+  EXPECT_EQ(Root->getOperand(1).getReg(), XReg);
+  EXPECT_FALSE(MRI->use_nodbg_empty(AReg));
+  EXPECT_FALSE(MRI->use_nodbg_empty(BReg));
+}
+
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsRelaxThroughMultiUseShift) {
+  StringRef MIRString = R"(
+   %x:_(s32) = G_TRUNC %0
+   %mask:_(s32) = G_CONSTANT i32 268435455
+   %y:_(s32) = G_AND %x, %mask
+   %amt:_(s32) = G_CONSTANT i32 4
+   %s:_(s32) = G_SHL %y, %amt
+   %lowmask:_(s32) = G_CONSTANT i32 255
+   %root:_(s32) = G_AND %s, %lowmask
+   %side:_(s32) = COPY %s
+   %out:_(s32) = COPY %root
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  // %s is multi-use, so the partial demand 0xFF relaxes to all bits at %s's
+  // frame instead of giving up. Through shl-by-4 that demands src bits
+  // [0,28), exactly what %mask keeps, so the single-use inner G_AND is
+  // redundant for every user of %s and must be erased.
+  MachineInstr *Inner = findOpcode(*MF, TargetOpcode::G_AND);
+  MachineInstr *Root = findOpcode(*MF, TargetOpcode::G_AND, /*Index=*/1);
+  MachineInstr *Shl = findOpcode(*MF, TargetOpcode::G_SHL);
+  ASSERT_NE(Inner, nullptr);
+  ASSERT_NE(Root, nullptr);
+  ASSERT_NE(Shl, nullptr);
+
+  Register InnerDst = Inner->getOperand(0).getReg();
+  Register XReg = Inner->getOperand(1).getReg();
+  simplifyDemandedBitsOperand(*MF, *MRI, B, *Root, APInt(32, 0xFF));
+  EXPECT_TRUE(MRI->use_nodbg_empty(InnerDst));
+  EXPECT_EQ(Shl->getOperand(1).getReg(), XReg);
 }
 
 TEST(GISelShiftDemand, DemandedSrcBitsForShiftConst) {

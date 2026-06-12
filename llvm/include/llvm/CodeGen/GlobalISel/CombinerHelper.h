@@ -1189,6 +1189,15 @@ public:
                                      KnownBits &Known,
                                      unsigned Depth = 0) const;
 
+  /// Look through \p R's def for an existing register that computes the same
+  /// \p DemandedBits more cheaply, without modifying any instruction
+  /// (GlobalISel counterpart of SDAG's SimplifyMultipleUseDemandedBits).
+  /// Because nothing is rewritten, this may walk through defs with multiple
+  /// uses. Returns the empty Register when no simpler value exists.
+  LLVM_ABI Register simplifyMultipleUseDemandedBits(Register R,
+                                                    const APInt &DemandedBits,
+                                                    unsigned Depth = 0) const;
+
   /// Demand transfer for a shift by constant \p ShAmt: which source bits can
   /// influence the demanded result bits. For G_ASHR the source sign bit is
   /// demanded whenever any of the top ShAmt result bits (copies of it) are.
