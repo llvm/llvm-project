@@ -3057,8 +3057,8 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
       return new VPInterleaveEVLRecipe(*Interleave, EVL, Mask);
 
   VPValue *LHS, *RHS;
-  if (match(&CurRecipe, m_Select(m_RemoveMask(HeaderMask, Mask), m_VPValue(LHS),
-                                 m_VPValue(RHS))))
+  if (match(&CurRecipe, m_SelectLike(m_RemoveMask(HeaderMask, Mask),
+                                     m_VPValue(LHS), m_VPValue(RHS))))
     return new VPWidenIntrinsicRecipe(
         Intrinsic::vp_merge, {Mask ? Mask : Plan->getTrue(), LHS, RHS, &EVL},
         LHS->getScalarType(), {}, {}, DL);
@@ -6119,11 +6119,11 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     // phi. The find-last select should be a select between the phi and the
     // find-last expression.
     VPValue *Cond, *FindLastExpression;
-    if (!match(FindLastSelect, m_Select(m_VPValue(Cond), m_Specific(PhiR),
-                                        m_VPValue(FindLastExpression))) &&
+    if (!match(FindLastSelect, m_SelectLike(m_VPValue(Cond), m_Specific(PhiR),
+                                            m_VPValue(FindLastExpression))) &&
         !match(FindLastSelect,
-               m_Select(m_VPValue(Cond), m_VPValue(FindLastExpression),
-                        m_Specific(PhiR))))
+               m_SelectLike(m_VPValue(Cond), m_VPValue(FindLastExpression),
+                            m_Specific(PhiR))))
       continue;
 
     // Check if FindLastExpression is a simple expression of a widened IV. If
