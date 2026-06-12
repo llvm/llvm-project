@@ -167,6 +167,7 @@ CODEGENOPT(InstrumentForProfiling , 1, 0, Benign) ///< Set when -pg is enabled.
 CODEGENOPT(CallFEntry , 1, 0, Benign) ///< Set when -mfentry is enabled.
 CODEGENOPT(MNopMCount , 1, 0, Benign) ///< Set when -mnop-mcount is enabled.
 CODEGENOPT(RecordMCount , 1, 0, Benign) ///< Set when -mrecord-mcount is enabled.
+CODEGENOPT(StackProtectorGuardRecord, 1, 0, Benign) ///< Set when -mstack-protector-guard-record is enabled.
 CODEGENOPT(PackedStack , 1, 0, Benign) ///< Set when -mpacked-stack is enabled.
 CODEGENOPT(LessPreciseFPMAD  , 1, 0, Benign) ///< Enable less precise MAD instructions to
                                              ///< be generated.
@@ -433,6 +434,9 @@ ENUM_CODEGENOPT(ExtendVariableLiveness, ExtendVariableLivenessKind, 2, ExtendVar
 /// The default stack protector guard offset to use.
 VALUE_CODEGENOPT(StackProtectorGuardOffset, 32, INT_MAX, Benign)
 
+/// The width to use for the stack protector guard value.
+VALUE_CODEGENOPT(StackProtectorGuardValueWidth, 32, UINT_MAX, Benign)
+
 /// Number of path components to strip when emitting checks. (0 == full
 /// filename)
 VALUE_CODEGENOPT(EmitCheckPathComponentsToStrip, 32, 0, Benign)
@@ -517,10 +521,9 @@ CODEGENOPT(ResMayAlias, 1, 0, Benign)
 /// Assume that all resources are bound if enabled
 CODEGENOPT(AllResourcesBound, 1, 0, Benign)
 
-/// Controls how unwind v2 (epilog) information should be generated for x64
-/// Windows.
-ENUM_CODEGENOPT(WinX64EHUnwindV2, WinX64EHUnwindV2Mode,
-                2, WinX64EHUnwindV2Mode::Disabled, Benign)
+/// Controls the x64 Windows unwind info version.
+ENUM_CODEGENOPT(WinX64EHUnwind, WinX64EHUnwindMode, 3,
+                WinX64EHUnwindMode::Default, Benign)
 
 /// Controls the mechanism used for Control Flow Guard (CFG) on Windows.
 ENUM_CODEGENOPT(WinControlFlowGuardMechanism, ControlFlowGuardMechanism,

@@ -244,6 +244,8 @@ let isBranch = 1, isTerminator = 1, isCodeGenOnly = 1 in {
 let isPseudo = 1, isMeta = 1, isNotDuplicable = 1, SchedRW = [WriteSystem] in {
   def SEH_PushReg : I<0, Pseudo, (outs), (ins i32imm:$reg),
                             "#SEH_PushReg $reg", []>;
+  def SEH_Push2Regs : I<0, Pseudo, (outs), (ins i32imm:$reg1, i32imm:$reg2),
+                            "#SEH_Push2Regs $reg1, $reg2", []>;
   def SEH_SaveReg : I<0, Pseudo, (outs), (ins i32imm:$reg, i32imm:$dst),
                             "#SEH_SaveReg $reg, $dst", []>;
   def SEH_SaveXMM : I<0, Pseudo, (outs), (ins i32imm:$reg, i32imm:$dst),
@@ -276,6 +278,8 @@ let isPseudo = 1, isMeta = 1, SchedRW = [WriteSystem] in {
 let isPseudo = 1, isMeta = 1, SchedRW = [WriteSystem] in {
   def SEH_SplitChainedAtEndOfBlock : I<0, Pseudo, (outs), (ins),
                             "#SEH_SplitChainedAtEndOfBlock", []>;
+  def SEH_SplitChained : I<0, Pseudo, (outs), (ins),
+                            "#SEH_SplitChained", []>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2086,6 +2090,18 @@ multiclass OneBitPats<RegisterClass rc, ValueType vt, Instruction btr,
 defm : OneBitPats<GR16, i16, BTR16rr, BTS16rr, BTC16rr, shiftMask16>;
 defm : OneBitPats<GR32, i32, BTR32rr, BTS32rr, BTC32rr, shiftMask32>;
 defm : OneBitPats<GR64, i64, BTR64rr, BTS64rr, BTC64rr, shiftMask64>;
+
+// Flag-producing variants: reuse the BTR/BTS/BTC encodings so CF can replace
+// a separate X86ISD::BT. Emitted by a DAG combine in combineBT. Only i32/i64
+// since getBT promotes <32-bit Src to i32 before creating X86ISD::BT. Unlike
+// the OneBitPats above, the bit index here is already a same-width register
+// (combineBTToBitOpFlag emits it that way), so no GR8 sub-reg insertion.
+def : Pat<(X86btr GR32:$src1, GR32:$src2), (BTR32rr GR32:$src1, GR32:$src2)>;
+def : Pat<(X86bts GR32:$src1, GR32:$src2), (BTS32rr GR32:$src1, GR32:$src2)>;
+def : Pat<(X86btc GR32:$src1, GR32:$src2), (BTC32rr GR32:$src1, GR32:$src2)>;
+def : Pat<(X86btr GR64:$src1, GR64:$src2), (BTR64rr GR64:$src1, GR64:$src2)>;
+def : Pat<(X86bts GR64:$src1, GR64:$src2), (BTS64rr GR64:$src1, GR64:$src2)>;
+def : Pat<(X86btc GR64:$src1, GR64:$src2), (BTC64rr GR64:$src1, GR64:$src2)>;
 
 //===----------------------------------------------------------------------===//
 // EFLAGS-defining Patterns

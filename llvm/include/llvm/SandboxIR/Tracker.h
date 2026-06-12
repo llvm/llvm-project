@@ -19,13 +19,18 @@
 // are saved in the order they are registered with the tracker and are stored in
 // the `Tracker::Changes` vector. All of this is done transparently to
 // the user.
+// Calling `Tracker::save()` a second time without having accepted/reverted the
+// state, creates a second nested checkpoint.
 //
 // Reverting changes
 // -----------------
-// Calling `Tracker::revert()` will restore the state saved when
+// Calling `Tracker::revert()` will restore the state saved when the last
 // `Tracker::save()` was called. Internally this goes through the
 // change objects in `Tracker::Changes` in reverse order, calling their
 // `IRChangeBase::revert()` function one by one.
+// In the context of a nested checkpoint, this will revert the state
+// until the last `Tracker::save()` checkpoint.
+// You can revert all changes with `Tracker::revert(/*RevertAll=*/true)`.
 //
 // Accepting changes
 // -----------------
@@ -34,6 +39,9 @@
 // This is the job of `Tracker::accept()`. Internally this will go
 // through the change objects in `Tracker::Changes` in order, calling
 // `IRChangeBase::accept()`.
+// In the context of a nested checkpoint, this will leave the state unchanged
+// and will remove the last checkpoint for the stack.
+// You can accept all changes with `Tracker::accept(/*AcceptAll=*/true)`.
 //
 //===----------------------------------------------------------------------===//
 
@@ -504,12 +512,16 @@ public:
   bool isTracking() const { return State == TrackerState::Record; }
   /// \Returns the current state of the tracker.
   TrackerState getState() const { return State; }
-  /// Turns on IR tracking.
+  /// Turns on IR tracking. If tracking is already enabled this creates a new
+  /// nested checkpoint.
   LLVM_ABI void save();
-  /// Stops tracking and accept changes.
-  LLVM_ABI void accept();
-  /// Stops tracking and reverts to saved state.
-  LLVM_ABI void revert();
+  /// Stops tracking and accept changes. If we have nested checkpoints, this
+  /// will remove the last checkpoint from the stack without modifying the
+  /// state.
+  LLVM_ABI void accept(bool AcceptAll = false);
+  /// Stops tracking and reverts to saved state. If we have nested checkpoints
+  /// this will revert the state to the last checkpoint.
+  LLVM_ABI void revert(bool RevertAll = false);
   /// \returns the number of nested (outstanding) checkpoints.
   unsigned nestingDepth() const { return Snapshots.size(); }
 

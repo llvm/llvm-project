@@ -187,8 +187,8 @@ Operation *traceToVectorReadLikeParentOperation(Value v) {
 // This function recursively traces a value through its uses to find
 // a downstream vector write-like operation (`vector.transfer_write`
 // or `vector.store`). It transparently follows values across `scf.for`
-// and `scf.yield` boundaries while stopping if layout-altering ops such
-// as `shape_cast` or `shuffle` are encountered. The traversal returns
+// and `scf.yield` boundaries while stopping if layout-altering ops
+// like `shuffle` are encountered. The traversal returns
 // the  matching write-like user. Returns `nullptr` if none is found or
 // the value has multiple users.
 Operation *traceToVectorWriteLikeUserOperation(Value v) {
@@ -203,7 +203,7 @@ Operation *traceToVectorWriteLikeUserOperation(Value v) {
     if (isa<vector::TransferWriteOp>(user) || isa<vector::StoreOp>(user))
       return user;
 
-    if (isa<vector::ShapeCastOp, vector::ShuffleOp>(user))
+    if (isa<vector::ShuffleOp>(user))
       return nullptr;
 
     // --- SCF YIELD ---

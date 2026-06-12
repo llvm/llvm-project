@@ -32,6 +32,20 @@
 using namespace llvm;
 using namespace llvm::object;
 
+StringRef objcopy::getObjectFormatName(const object::Binary &B) {
+  if (const auto *OF = dyn_cast<ObjectFile>(&B))
+    return OF->getFileFormatName();
+  return {};
+}
+
+void objcopy::printCopyMessage(StringRef InPath, StringRef InFormatName,
+                               StringRef OutPath, StringRef OutFormatName) {
+  if (OutFormatName.empty())
+    OutFormatName = InFormatName;
+  outs() << "copy from '" << InPath << "' [" << InFormatName << "] to '"
+         << OutPath << "' [" << OutFormatName << "]\n";
+}
+
 /// The function executeObjcopyOnBinary does the dispatch based on the format
 /// of the input binary (ELF, MachO or COFF).
 Error objcopy::executeObjcopyOnBinary(const MultiFormatConfig &Config,

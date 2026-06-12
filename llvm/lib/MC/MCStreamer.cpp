@@ -638,6 +638,60 @@ void MCStreamer::emitCFIGnuArgsSize(int64_t Size, SMLoc Loc) {
   CurFrame->Instructions.push_back(std::move(Instruction));
 }
 
+void MCStreamer::emitCFILLVMRegisterPair(int64_t Register, int64_t R1,
+                                         int64_t R1Size, int64_t R2,
+                                         int64_t R2Size, SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction = MCCFIInstruction::createLLVMRegisterPair(
+      Label, Register, R1, R1Size, R2, R2Size, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
+void MCStreamer::emitCFILLVMVectorRegisters(
+    int64_t Register, ArrayRef<MCCFIInstruction::VectorRegisterWithLane> VRs,
+    SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction =
+      MCCFIInstruction::createLLVMVectorRegisters(Label, Register, VRs, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
+void MCStreamer::emitCFILLVMVectorOffset(int64_t Register,
+                                         int64_t RegisterSizeInBits,
+                                         int64_t MaskRegister,
+                                         int64_t MaskRegisterSizeInBits,
+                                         int64_t Offset, SMLoc Loc) {
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction = MCCFIInstruction::createLLVMVectorOffset(
+      Label, Register, RegisterSizeInBits, MaskRegister, MaskRegisterSizeInBits,
+      Offset, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
+void MCStreamer::emitCFILLVMVectorRegisterMask(
+    int64_t Register, int64_t SpillRegister,
+    int64_t SpillRegisterLaneSizeInBits, int64_t MaskRegister,
+    int64_t MaskRegisterSizeInBits, SMLoc Loc) {
+
+  MCSymbol *Label = emitCFILabel();
+  MCCFIInstruction Instruction = MCCFIInstruction::createLLVMVectorRegisterMask(
+      Label, Register, SpillRegister, SpillRegisterLaneSizeInBits, MaskRegister,
+      MaskRegisterSizeInBits, Loc);
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->Instructions.push_back(std::move(Instruction));
+}
+
 void MCStreamer::emitCFISignalFrame() {
   MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
   if (!CurFrame)
@@ -751,6 +805,8 @@ void MCStreamer::emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) {
   CurrentWinFrameInfo = WinFrameInfos.back().get();
   CurrentWinFrameInfo->TextSection = getCurrentSectionOnly();
   CurrentWinFrameInfo->FunctionLoc = Loc;
+  // Inherit the module-wide default unwind version.
+  CurrentWinFrameInfo->Version = DefaultWinCFIUnwindVersion;
 }
 
 void MCStreamer::emitWinCFIEndProc(SMLoc Loc) {
@@ -908,7 +964,35 @@ void MCStreamer::emitWinCFIPushReg(MCRegister Register, SMLoc Loc) {
 
   WinEH::Instruction Inst = Win64EH::Instruction::PushNonVol(
       Label, encodeSEHRegNum(Context, Register));
-  CurFrame->Instructions.push_back(Inst);
+  if (CurrentWinEpilog) {
+    if (CurFrame->Version < 3)
+      return getContext().reportError(
+          Loc, ".seh_pushreg inside epilog requires unwind v3");
+    CurrentWinEpilog->Instructions.push_back(Inst);
+  } else {
+    CurFrame->Instructions.push_back(Inst);
+  }
+}
+
+void MCStreamer::emitWinCFIPush2Regs(MCRegister Reg1, MCRegister Reg2,
+                                     SMLoc Loc) {
+  WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
+  if (!CurFrame)
+    return;
+
+  // UOP_Push2 is V3-only - reject for V1/V2.
+  if (CurFrame->Version < 3)
+    return getContext().reportError(
+        Loc, ".seh_push2regs is only supported for unwind v3");
+
+  MCSymbol *Label = emitCFILabel();
+
+  WinEH::Instruction Inst = Win64EH::Instruction::Push2(
+      Label, encodeSEHRegNum(Context, Reg1), encodeSEHRegNum(Context, Reg2));
+  if (CurrentWinEpilog)
+    CurrentWinEpilog->Instructions.push_back(Inst);
+  else
+    CurFrame->Instructions.push_back(Inst);
 }
 
 void MCStreamer::emitWinCFISetFrame(MCRegister Register, unsigned Offset,
@@ -916,7 +1000,7 @@ void MCStreamer::emitWinCFISetFrame(MCRegister Register, unsigned Offset,
   WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
   if (!CurFrame)
     return;
-  if (CurFrame->LastFrameInst >= 0)
+  if (!CurrentWinEpilog && CurFrame->LastFrameInst >= 0)
     return getContext().reportError(
         Loc, "frame register and offset can be set at most once");
   if (Offset & 0x0F)
@@ -929,8 +1013,15 @@ void MCStreamer::emitWinCFISetFrame(MCRegister Register, unsigned Offset,
 
   WinEH::Instruction Inst = Win64EH::Instruction::SetFPReg(
       Label, encodeSEHRegNum(getContext(), Register), Offset);
-  CurFrame->LastFrameInst = CurFrame->Instructions.size();
-  CurFrame->Instructions.push_back(Inst);
+  if (CurrentWinEpilog) {
+    if (CurFrame->Version < 3)
+      return getContext().reportError(
+          Loc, ".seh_setframe inside epilog requires unwind v3");
+    CurrentWinEpilog->Instructions.push_back(Inst);
+  } else {
+    CurFrame->LastFrameInst = CurFrame->Instructions.size();
+    CurFrame->Instructions.push_back(Inst);
+  }
 }
 
 void MCStreamer::emitWinCFIAllocStack(unsigned Size, SMLoc Loc) {
@@ -947,7 +1038,14 @@ void MCStreamer::emitWinCFIAllocStack(unsigned Size, SMLoc Loc) {
   MCSymbol *Label = emitCFILabel();
 
   WinEH::Instruction Inst = Win64EH::Instruction::Alloc(Label, Size);
-  CurFrame->Instructions.push_back(Inst);
+  if (CurrentWinEpilog) {
+    if (CurFrame->Version < 3)
+      return getContext().reportError(
+          Loc, ".seh_stackalloc inside epilog requires unwind v3");
+    CurrentWinEpilog->Instructions.push_back(Inst);
+  } else {
+    CurFrame->Instructions.push_back(Inst);
+  }
 }
 
 void MCStreamer::emitWinCFISaveReg(MCRegister Register, unsigned Offset,
@@ -964,7 +1062,14 @@ void MCStreamer::emitWinCFISaveReg(MCRegister Register, unsigned Offset,
 
   WinEH::Instruction Inst = Win64EH::Instruction::SaveNonVol(
       Label, encodeSEHRegNum(Context, Register), Offset);
-  CurFrame->Instructions.push_back(Inst);
+  if (CurrentWinEpilog) {
+    if (CurFrame->Version < 3)
+      return getContext().reportError(
+          Loc, ".seh_savereg inside epilog requires unwind v3");
+    CurrentWinEpilog->Instructions.push_back(Inst);
+  } else {
+    CurFrame->Instructions.push_back(Inst);
+  }
 }
 
 void MCStreamer::emitWinCFISaveXMM(MCRegister Register, unsigned Offset,
@@ -979,13 +1084,29 @@ void MCStreamer::emitWinCFISaveXMM(MCRegister Register, unsigned Offset,
 
   WinEH::Instruction Inst = Win64EH::Instruction::SaveXMM(
       Label, encodeSEHRegNum(Context, Register), Offset);
-  CurFrame->Instructions.push_back(Inst);
+  if (CurrentWinEpilog) {
+    if (CurFrame->Version < 3)
+      return getContext().reportError(
+          Loc, ".seh_savexmm inside epilog requires unwind v3");
+    CurrentWinEpilog->Instructions.push_back(Inst);
+  } else {
+    CurFrame->Instructions.push_back(Inst);
+  }
 }
 
 void MCStreamer::emitWinCFIPushFrame(bool Code, SMLoc Loc) {
   WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
   if (!CurFrame)
     return;
+  if (CurrentWinEpilog) {
+    if (CurFrame->Version < 3)
+      return getContext().reportError(
+          Loc, ".seh_pushframe inside epilog requires unwind v3");
+    MCSymbol *Label = emitCFILabel();
+    WinEH::Instruction Inst = Win64EH::Instruction::PushMachFrame(Label, Code);
+    CurrentWinEpilog->Instructions.push_back(Inst);
+    return;
+  }
   if (!CurFrame->Instructions.empty())
     return getContext().reportError(
         Loc, "If present, PushMachFrame must be the first UOP");
@@ -1036,7 +1157,7 @@ void MCStreamer::emitWinCFIEndEpilogue(SMLoc Loc) {
     return getContext().reportError(Loc, "Stray .seh_endepilogue in " +
                                              CurFrame->Function->getName());
 
-  if ((CurFrame->Version >= 2) && !CurrentWinEpilog->UnwindV2Start) {
+  if ((CurFrame->Version == 2) && !CurrentWinEpilog->UnwindV2Start) {
     // Set UnwindV2Start to... something... to prevent crashes later.
     CurrentWinEpilog->UnwindV2Start = CurrentWinEpilog->Start;
     getContext().reportError(Loc, "Missing .seh_unwindv2start in " +
@@ -1065,15 +1186,26 @@ void MCStreamer::emitWinCFIUnwindV2Start(SMLoc Loc) {
 }
 
 void MCStreamer::emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc) {
-  WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
-  if (!CurFrame)
-    return;
+  bool SupportedVersion = (Version >= 1 && Version <= 3);
 
-  if (CurFrame->Version != WinEH::FrameInfo::DefaultVersion)
+  // If called outside a proc, set the module-level default.
+  if (!CurrentWinFrameInfo || CurrentWinFrameInfo->End) {
+    if (!SupportedVersion)
+      return getContext().reportError(
+          Loc, "Unsupported version for .seh_unwindversion");
+    setDefaultWinCFIUnwindVersion(Version);
+    return;
+  }
+
+  // Per-function override (existing behaviour).
+  WinEH::FrameInfo *CurFrame = CurrentWinFrameInfo;
+
+  if (CurFrame->Version != DefaultWinCFIUnwindVersion &&
+      CurFrame->Version != WinEH::FrameInfo::DefaultVersion)
     return getContext().reportError(Loc, "Duplicate .seh_unwindversion in " +
                                              CurFrame->Function->getName());
 
-  if (Version != 2)
+  if (!SupportedVersion)
     return getContext().reportError(
         Loc, "Unsupported version specified in .seh_unwindversion in " +
                  CurFrame->Function->getName());
@@ -1117,7 +1249,7 @@ void MCStreamer::emitWindowsUnwindTables() {}
 void MCStreamer::emitWindowsUnwindTables(WinEH::FrameInfo *Frame) {}
 
 void MCStreamer::finish(SMLoc EndLoc) {
-  if ((!DwarfFrameInfos.empty() && !DwarfFrameInfos.back().End) ||
+  if (hasUnfinishedDwarfFrameInfo() ||
       (!WinFrameInfos.empty() && !WinFrameInfos.back()->End)) {
     getContext().reportError(EndLoc, "Unfinished frame!");
     return;

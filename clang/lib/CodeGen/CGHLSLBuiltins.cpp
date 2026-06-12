@@ -13,6 +13,7 @@
 #include "CGBuiltin.h"
 #include "CGHLSLRuntime.h"
 #include "CodeGenFunction.h"
+#include "clang/AST/MatrixUtils.h"
 #include "llvm/IR/MatrixBuilder.h"
 
 using namespace clang;
@@ -115,6 +116,12 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
     if (auto *Op0VecTy = E->getArg(0)->getType()->getAs<clang::VectorType>())
       RetElementTy = llvm::VectorType::get(
           CGF->Int32Ty, ElementCount::getFixed(Op0VecTy->getNumElements()));
+    else if (auto *Op0MatTy =
+                 E->getArg(0)->getType()->getAs<ConstantMatrixType>())
+      RetElementTy = llvm::VectorType::get(
+          CGF->Int32Ty, ElementCount::getFixed(Op0MatTy->getNumRows() *
+                                               Op0MatTy->getNumColumns()));
+
     auto *RetTy = llvm::StructType::get(RetElementTy, RetElementTy);
 
     CallInst *CI = CGF->Builder.CreateIntrinsic(
@@ -136,6 +143,9 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
       if (const auto *VecTy =
               E->getArg(0)->getType()->getAs<clang::VectorType>())
         NumElements = VecTy->getNumElements();
+      else if (const auto *MatTy =
+                   E->getArg(0)->getType()->getAs<ConstantMatrixType>())
+        NumElements = MatTy->getNumRows() * MatTy->getNumColumns();
 
       FixedVectorType *Uint32VecTy =
           FixedVectorType::get(CGF->Int32Ty, NumElements * 2);
@@ -172,9 +182,8 @@ static Value *handleHlslWaveActiveBallot(CodeGenFunction &CGF,
 
   if (CGF.CGM.getTarget().getTriple().isDXIL()) {
     // Call DXIL intrinsic: returns { i32, i32, i32, i32 }
-    llvm::Function *Fn = CGF.CGM.getIntrinsic(Intrinsic::dx_wave_ballot, {I32});
-
-    Value *StructVal = CGF.EmitRuntimeCall(Fn, Cond);
+    Value *StructVal =
+        CGF.EmitIntrinsicCall(Intrinsic::dx_wave_ballot, {I32}, {Cond});
     assert(StructVal->getType() == Struct4I32 &&
            "dx.wave.ballot must return {i32,i32,i32,i32}");
 
@@ -190,8 +199,7 @@ static Value *handleHlslWaveActiveBallot(CodeGenFunction &CGF,
   }
 
   if (CGF.CGM.getTarget().getTriple().isSPIRV())
-    return CGF.EmitRuntimeCall(
-        CGF.CGM.getIntrinsic(Intrinsic::spv_subgroup_ballot), Cond);
+    return CGF.EmitIntrinsicCall(Intrinsic::spv_subgroup_ballot, {Cond});
 
   llvm_unreachable(
       "WaveActiveBallot is only supported for DXIL and SPIRV targets");
@@ -576,15 +584,24 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         E->getNumArgs() > 1;
 
     llvm::Type *RetTy = ConvertType(E->getType());
+    llvm::Function *IntrFn = nullptr;
+    llvm::CallInst *CI = nullptr;
     if (IsIndexed) {
       Value *IndexOp = EmitScalarExpr(E->getArg(1));
-      return Builder.CreateIntrinsic(
-          RetTy, CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
-          ArrayRef<Value *>{HandleOp, IndexOp});
+      IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
+          &CGM.getModule(),
+          CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
+          {RetTy, HandleOp->getType(), IndexOp->getType()});
+      CI = EmitRuntimeCall(IntrFn, {HandleOp, IndexOp});
+    } else {
+      IntrFn = llvm::Intrinsic::getOrInsertDeclaration(
+          &CGM.getModule(),
+          CGM.getHLSLRuntime().getCreateResourceGetBasePointerIntrinsic(),
+          {RetTy, HandleOp->getType()});
+      CI = EmitRuntimeCall(IntrFn, {HandleOp});
     }
-    return Builder.CreateIntrinsic(
-        RetTy, CGM.getHLSLRuntime().getCreateResourceGetBasePointerIntrinsic(),
-        ArrayRef<Value *>{HandleOp});
+    CI->setCallingConv(IntrFn->getCallingConv());
+    return CI;
   }
   case Builtin::BI__builtin_hlsl_resource_sample: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
@@ -1190,8 +1207,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     // The matrix multiply intrinsic only operates on column-major order
     // matrices. Therefore matrix memory layout transforms must be inserted
     // before and after matrix multiply intrinsics.
-    bool IsRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
-                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+    // Use whichever operand is a matrix to discover its declared layout.
+    bool IsRowMajorMat0 = IsMat0 && isMatrixRowMajor(getLangOpts(), QTy0);
+    bool IsRowMajorMat1 = IsMat1 && isMatrixRowMajor(getLangOpts(), QTy1);
 
     llvm::MatrixBuilder MB(Builder);
     if (IsVec0 && IsMat1) {
@@ -1200,7 +1218,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       unsigned Rows = MatTy->getNumRows();
       unsigned Cols = MatTy->getNumColumns();
       assert(N == Rows && "vector length must match matrix row count");
-      if (IsRowMajor)
+      if (IsRowMajorMat1)
         Op1 = MB.CreateRowMajorToColumnMajorTransform(Op1, Rows, Cols);
       return MB.CreateMatrixMultiply(Op0, Op1, 1, N, Cols, "hlsl.mul");
     }
@@ -1210,7 +1228,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       unsigned Cols = MatTy->getNumColumns();
       assert(QTy1->castAs<VectorType>()->getNumElements() == Cols &&
              "vector length must match matrix column count");
-      if (IsRowMajor)
+      if (IsRowMajorMat0)
         Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows, Cols);
       return MB.CreateMatrixMultiply(Op0, Op1, Rows, Cols, 1, "hlsl.mul");
     }
@@ -1223,13 +1241,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     unsigned Cols1 = MatTy1->getNumColumns();
     assert(Cols0 == Rows1 &&
            "inner matrix dimensions must match for multiplication");
-    if (IsRowMajor) {
+    if (IsRowMajorMat0)
       Op0 = MB.CreateRowMajorToColumnMajorTransform(Op0, Rows0, Cols0);
+    if (IsRowMajorMat1)
       Op1 = MB.CreateRowMajorToColumnMajorTransform(Op1, Rows1, Cols1);
-    }
+
     Value *Result =
         MB.CreateMatrixMultiply(Op0, Op1, Rows0, Cols0, Cols1, "hlsl.mul");
-    if (IsRowMajor)
+
+    bool IsResultRowMajor = isMatrixRowMajor(getLangOpts(), E->getType());
+    if (IsResultRowMajor)
       Result = MB.CreateColumnMajorToRowMajorTransform(Result, Rows0, Cols1);
     return Result;
   }
@@ -1243,8 +1264,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     // For row-major, a row-major RxC matrix is equivalent to a column-major
     // CxR matrix, so transposing with swapped dimensions produces the correct
     // row-major CxR result directly.
-    bool IsRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
-                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+    bool IsRowMajor = isMatrixRowMajor(getLangOpts(), E->getArg(0)->getType());
     if (IsRowMajor)
       return MB.CreateMatrixTranspose(Op0, Cols, Rows);
     return MB.CreateMatrixTranspose(Op0, Rows, Cols);
@@ -1288,9 +1308,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID IID =
         getPrefixCountBitsIntrinsic(getTarget().getTriple().getArch());
 
-    return EmitRuntimeCall(
-        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), IID), ArrayRef{Op},
-        "hlsl.wave.prefix.bit.count");
+    return EmitIntrinsicCall(IID, ArrayRef{Op}, "hlsl.wave.prefix.bit.count");
   }
   case Builtin::BI__builtin_hlsl_select: {
     Value *OpCond = EmitScalarExpr(E->getArg(0));
@@ -1335,9 +1353,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *Op = EmitScalarExpr(E->getArg(0));
 
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveAllEqualIntrinsic();
-    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
-                               &CGM.getModule(), ID, {Op->getType()}),
-                           {Op});
+    return EmitIntrinsicCall(ID, {Op->getType()}, {Op});
   }
   case Builtin::BI__builtin_hlsl_wave_active_all_true: {
     Value *Op = EmitScalarExpr(E->getArg(0));
@@ -1345,8 +1361,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
            "Intrinsic WaveActiveAllTrue operand must be a bool");
 
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveAllTrueIntrinsic();
-    return EmitRuntimeCall(
-        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID), {Op});
+    return EmitIntrinsicCall(ID, {Op});
   }
   case Builtin::BI__builtin_hlsl_wave_active_any_true: {
     Value *Op = EmitScalarExpr(E->getArg(0));
@@ -1354,8 +1369,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
            "Intrinsic WaveActiveAnyTrue operand must be a bool");
 
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveAnyTrueIntrinsic();
-    return EmitRuntimeCall(
-        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID), {Op});
+    return EmitIntrinsicCall(ID, {Op});
   }
   case Builtin::BI__builtin_hlsl_wave_active_bit_or: {
     Value *Op = EmitScalarExpr(E->getArg(0));
@@ -1364,9 +1378,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
            "representation");
 
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveBitOrIntrinsic();
-    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
-                               &CGM.getModule(), ID, {Op->getType()}),
-                           ArrayRef{Op}, "hlsl.wave.active.bit.or");
+    return EmitIntrinsicCall(ID, {Op->getType()}, ArrayRef{Op},
+                             "hlsl.wave.active.bit.or");
   }
   case Builtin::BI__builtin_hlsl_wave_active_bit_xor: {
     Value *Op = EmitScalarExpr(E->getArg(0));
@@ -1375,9 +1388,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
            "representation");
 
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveBitXorIntrinsic();
-    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
-                               &CGM.getModule(), ID, {Op->getType()}),
-                           ArrayRef{Op}, "hlsl.wave.active.bit.xor");
+    return EmitIntrinsicCall(ID, {Op->getType()}, ArrayRef{Op},
+                             "hlsl.wave.active.bit.xor");
   }
   case Builtin::BI__builtin_hlsl_wave_active_bit_and: {
     Value *Op = EmitScalarExpr(E->getArg(0));
@@ -1386,9 +1398,35 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
            "representation");
 
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveBitAndIntrinsic();
-    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
-                               &CGM.getModule(), ID, {Op->getType()}),
-                           ArrayRef{Op}, "hlsl.wave.active.bit.and");
+    return EmitIntrinsicCall(ID, {Op->getType()}, ArrayRef{Op},
+                             "hlsl.wave.active.bit.and");
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_add: {
+    // HLSL signatures (synthesized as overloads in HLSLExternalSemaSource):
+    //   void InterlockedAdd(groupshared|device T &dest, T value);
+    //   void InterlockedAdd(groupshared|device T &dest, T value,
+    //                       T &original_value);
+    // Both `dest` and `original_value` are plain references, so we can use
+    // the underlying lvalue directly without HLSLOutArgExpr unwrapping.
+    LValue DestLV = EmitLValue(E->getArg(0));
+    Value *Ptr = DestLV.getAddress().emitRawPointer(*this);
+    Value *Val = EmitScalarExpr(E->getArg(1));
+    assert(E->getArg(1)->getType()->isIntegerType() &&
+           "Intrinsic InterlockedAdd value operand must be an integer");
+
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getInterlockedAddIntrinsic();
+    Value *Call = EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID,
+                                          {Val->getType(), Ptr->getType()}),
+        ArrayRef<Value *>{Ptr, Val}, "hlsl.interlocked.add");
+
+    // The 3-arg overload writes the old value (the intrinsic's return value)
+    // into the `original_value` reference parameter.
+    if (E->getNumArgs() == 3) {
+      LValue OrigLV = EmitLValue(E->getArg(2));
+      EmitStoreThroughLValue(RValue::get(Call), OrigLV);
+    }
+    return Call;
   }
   case Builtin::BI__builtin_hlsl_wave_active_ballot: {
     [[maybe_unused]] Value *Op = EmitScalarExpr(E->getArg(0));
@@ -1400,9 +1438,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_wave_active_count_bits: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveCountBitsIntrinsic();
-    return EmitRuntimeCall(
-        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID),
-        ArrayRef{OpExpr});
+    return EmitIntrinsicCall(ID, ArrayRef{OpExpr});
   }
   case Builtin::BI__builtin_hlsl_wave_active_sum: {
     // Due to the use of variadic arguments, explicitly retrieve argument
@@ -1410,9 +1446,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID IID = getWaveActiveSumIntrinsic(
         getTarget().getTriple().getArch(), E->getArg(0)->getType());
 
-    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
-                               &CGM.getModule(), IID, {OpExpr->getType()}),
-                           ArrayRef{OpExpr}, "hlsl.wave.active.sum");
+    return EmitIntrinsicCall(IID, {OpExpr->getType()}, ArrayRef{OpExpr},
+                             "hlsl.wave.active.sum");
   }
   case Builtin::BI__builtin_hlsl_wave_active_product: {
     // Due to the use of variadic arguments, explicitly retrieve argument
@@ -1420,9 +1455,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Intrinsic::ID IID = getWaveActiveProductIntrinsic(
         getTarget().getTriple().getArch(), E->getArg(0)->getType());
 
-    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
-                               &CGM.getModule(), IID, {OpExpr->getType()}),
-                           ArrayRef{OpExpr}, "hlsl.wave.active.product");
+    return EmitIntrinsicCall(IID, {OpExpr->getType()}, ArrayRef{OpExpr},
+                             "hlsl.wave.active.product");
   }
   case Builtin::BI__builtin_hlsl_wave_active_max: {
     // Due to the use of variadic arguments, explicitly retrieve argument
@@ -1434,9 +1468,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     else
       IID = CGM.getHLSLRuntime().getWaveActiveMaxIntrinsic();
 
-    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
-                               &CGM.getModule(), IID, {OpExpr->getType()}),
-                           ArrayRef{OpExpr}, "hlsl.wave.active.max");
+    return EmitIntrinsicCall(IID, {OpExpr->getType()}, ArrayRef{OpExpr},
+                             "hlsl.wave.active.max");
   }
   case Builtin::BI__builtin_hlsl_wave_active_min: {
     // Due to the use of variadic arguments, explicitly retrieve argument
@@ -1448,9 +1481,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     else
       IID = CGM.getHLSLRuntime().getWaveActiveMinIntrinsic();
 
-    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
-                               &CGM.getModule(), IID, {OpExpr->getType()}),
-                           ArrayRef{OpExpr}, "hlsl.wave.active.min");
+    return EmitIntrinsicCall(IID, {OpExpr->getType()}, ArrayRef{OpExpr},
+                             "hlsl.wave.active.min");
   }
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
     // We don't define a SPIR-V intrinsic, instead it is a SPIR-V built-in
@@ -1458,8 +1490,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     // for the DirectX intrinsic and the demangled builtin name
     switch (CGM.getTarget().getTriple().getArch()) {
     case llvm::Triple::dxil:
-      return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
-          &CGM.getModule(), Intrinsic::dx_wave_getlaneindex));
+      return EmitIntrinsicCall(Intrinsic::dx_wave_getlaneindex);
     case llvm::Triple::spirv:
       return EmitRuntimeCall(CGM.CreateRuntimeFunction(
           llvm::FunctionType::get(IntTy, {}, false),
@@ -1471,54 +1502,46 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   }
   case Builtin::BI__builtin_hlsl_wave_is_first_lane: {
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveIsFirstLaneIntrinsic();
-    return EmitRuntimeCall(
-        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
+    return EmitIntrinsicCall(ID);
   }
   case Builtin::BI__builtin_hlsl_wave_get_lane_count: {
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveGetLaneCountIntrinsic();
-    return EmitRuntimeCall(
-        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
+    return EmitIntrinsicCall(ID);
   }
   case Builtin::BI__builtin_hlsl_wave_read_lane_at: {
     // Due to the use of variadic arguments we must explicitly retrieve them and
     // create our function type.
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
     Value *OpIndex = EmitScalarExpr(E->getArg(1));
-    return EmitRuntimeCall(
-        Intrinsic::getOrInsertDeclaration(
-            &CGM.getModule(), CGM.getHLSLRuntime().getWaveReadLaneAtIntrinsic(),
-            {OpExpr->getType()}),
-        ArrayRef{OpExpr, OpIndex}, "hlsl.wave.readlane");
+    return EmitIntrinsicCall(CGM.getHLSLRuntime().getWaveReadLaneAtIntrinsic(),
+                             {OpExpr->getType()}, ArrayRef{OpExpr, OpIndex},
+                             "hlsl.wave.readlane");
   }
   case Builtin::BI__builtin_hlsl_wave_prefix_sum: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
     Intrinsic::ID IID = getWavePrefixSumIntrinsic(
         getTarget().getTriple().getArch(), E->getArg(0)->getType());
-    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
-                               &CGM.getModule(), IID, {OpExpr->getType()}),
-                           ArrayRef{OpExpr}, "hlsl.wave.prefix.sum");
+    return EmitIntrinsicCall(IID, {OpExpr->getType()}, ArrayRef{OpExpr},
+                             "hlsl.wave.prefix.sum");
   }
   case Builtin::BI__builtin_hlsl_wave_prefix_product: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
     Intrinsic::ID IID = getWavePrefixProductIntrinsic(
         getTarget().getTriple().getArch(), E->getArg(0)->getType());
-    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
-                               &CGM.getModule(), IID, {OpExpr->getType()}),
-                           ArrayRef{OpExpr}, "hlsl.wave.prefix.product");
+    return EmitIntrinsicCall(IID, {OpExpr->getType()}, ArrayRef{OpExpr},
+                             "hlsl.wave.prefix.product");
   }
   case Builtin::BI__builtin_hlsl_quad_read_across_x: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
     Intrinsic::ID ID = CGM.getHLSLRuntime().getQuadReadAcrossXIntrinsic();
-    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
-                               &CGM.getModule(), ID, {OpExpr->getType()}),
-                           ArrayRef{OpExpr}, "hlsl.quad.read.across.x");
+    return EmitIntrinsicCall(ID, {OpExpr->getType()}, ArrayRef{OpExpr},
+                             "hlsl.quad.read.across.x");
   }
   case Builtin::BI__builtin_hlsl_quad_read_across_y: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
     Intrinsic::ID ID = CGM.getHLSLRuntime().getQuadReadAcrossYIntrinsic();
-    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
-                               &CGM.getModule(), ID, {OpExpr->getType()}),
-                           ArrayRef{OpExpr}, "hlsl.quad.read.across.y");
+    return EmitIntrinsicCall(ID, {OpExpr->getType()}, ArrayRef{OpExpr},
+                             "hlsl.quad.read.across.y");
   }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     auto *Arg0 = E->getArg(0);
@@ -1576,36 +1599,30 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return handleHlslClip(E, this);
   case Builtin::BI__builtin_hlsl_all_memory_barrier: {
     Intrinsic::ID ID = CGM.getHLSLRuntime().getAllMemoryBarrierIntrinsic();
-    return EmitRuntimeCall(
-        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
+    return EmitIntrinsicCall(ID);
   }
   case Builtin::BI__builtin_hlsl_all_memory_barrier_with_group_sync: {
     Intrinsic::ID ID =
         CGM.getHLSLRuntime().getAllMemoryBarrierWithGroupSyncIntrinsic();
-    return EmitRuntimeCall(
-        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
+    return EmitIntrinsicCall(ID);
   }
   case Builtin::BI__builtin_hlsl_device_memory_barrier: {
     Intrinsic::ID ID = CGM.getHLSLRuntime().getDeviceMemoryBarrierIntrinsic();
-    return EmitRuntimeCall(
-        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
+    return EmitIntrinsicCall(ID);
   }
   case Builtin::BI__builtin_hlsl_device_memory_barrier_with_group_sync: {
     Intrinsic::ID ID =
         CGM.getHLSLRuntime().getDeviceMemoryBarrierWithGroupSyncIntrinsic();
-    return EmitRuntimeCall(
-        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
+    return EmitIntrinsicCall(ID);
   }
   case Builtin::BI__builtin_hlsl_group_memory_barrier: {
     Intrinsic::ID ID = CGM.getHLSLRuntime().getGroupMemoryBarrierIntrinsic();
-    return EmitRuntimeCall(
-        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
+    return EmitIntrinsicCall(ID);
   }
   case Builtin::BI__builtin_hlsl_group_memory_barrier_with_group_sync: {
     Intrinsic::ID ID =
         CGM.getHLSLRuntime().getGroupMemoryBarrierWithGroupSyncIntrinsic();
-    return EmitRuntimeCall(
-        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID));
+    return EmitIntrinsicCall(ID);
   }
   case Builtin::BI__builtin_hlsl_elementwise_ddx_coarse: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));

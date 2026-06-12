@@ -40,13 +40,12 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O0-NEXT:    lui a0, %hi(.L.str)
 ; SPILL-O0-NEXT:    addi a0, a0, %lo(.L.str)
 ; SPILL-O0-NEXT:    call puts
-; SPILL-O0-NEXT:    addi a1, sp, 32
-; SPILL-O0-NEXT:    vl1r.v v10, (a1) # vscale x 8-byte Folded Reload
-; SPILL-O0-NEXT:    csrr a1, vlenb
-; SPILL-O0-NEXT:    add a1, sp, a1
-; SPILL-O0-NEXT:    addi a1, a1, 32
-; SPILL-O0-NEXT:    vl1r.v v9, (a1) # vscale x 8-byte Folded Reload
-; SPILL-O0-NEXT:    # kill: def $x11 killed $x10
+; SPILL-O0-NEXT:    addi a0, sp, 32
+; SPILL-O0-NEXT:    vl1r.v v10, (a0) # vscale x 8-byte Folded Reload
+; SPILL-O0-NEXT:    csrr a0, vlenb
+; SPILL-O0-NEXT:    add a0, sp, a0
+; SPILL-O0-NEXT:    addi a0, a0, 32
+; SPILL-O0-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
 ; SPILL-O0-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
 ; SPILL-O0-NEXT:    # implicit-def: $v8
 ; SPILL-O0-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
@@ -66,9 +65,9 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-NEXT:    csrr a1, vlenb
 ; SPILL-O2-NEXT:    slli a1, a1, 1
 ; SPILL-O2-NEXT:    sub sp, sp, a1
-; SPILL-O2-NEXT:    mv s0, a0
 ; SPILL-O2-NEXT:    addi a1, sp, 16
 ; SPILL-O2-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Folded Spill
+; SPILL-O2-NEXT:    mv s0, a0
 ; SPILL-O2-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; SPILL-O2-NEXT:    vfadd.vv v9, v8, v9
 ; SPILL-O2-NEXT:    csrr a0, vlenb
@@ -100,9 +99,9 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-VLEN128-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; SPILL-O2-VLEN128-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; SPILL-O2-VLEN128-NEXT:    addi sp, sp, -32
-; SPILL-O2-VLEN128-NEXT:    mv s0, a0
 ; SPILL-O2-VLEN128-NEXT:    addi a1, sp, 16
 ; SPILL-O2-VLEN128-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Folded Spill
+; SPILL-O2-VLEN128-NEXT:    mv s0, a0
 ; SPILL-O2-VLEN128-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; SPILL-O2-VLEN128-NEXT:    vfadd.vv v9, v8, v9
 ; SPILL-O2-VLEN128-NEXT:    addi a0, sp, 32
@@ -128,9 +127,9 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-ZCMP-NEXT:    csrr a1, vlenb
 ; SPILL-O2-ZCMP-NEXT:    slli a1, a1, 1
 ; SPILL-O2-ZCMP-NEXT:    sub sp, sp, a1
-; SPILL-O2-ZCMP-NEXT:    mv s0, a0
 ; SPILL-O2-ZCMP-NEXT:    addi a1, sp, 16
 ; SPILL-O2-ZCMP-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Folded Spill
+; SPILL-O2-ZCMP-NEXT:    mv s0, a0
 ; SPILL-O2-ZCMP-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; SPILL-O2-ZCMP-NEXT:    vfadd.vv v9, v8, v9
 ; SPILL-O2-ZCMP-NEXT:    csrr a0, vlenb
@@ -175,13 +174,12 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O0-VSETVLI-NEXT:    lui a0, %hi(.L.str)
 ; SPILL-O0-VSETVLI-NEXT:    addi a0, a0, %lo(.L.str)
 ; SPILL-O0-VSETVLI-NEXT:    call puts
-; SPILL-O0-VSETVLI-NEXT:    addi a1, sp, 32
-; SPILL-O0-VSETVLI-NEXT:    vl1r.v v10, (a1) # vscale x 8-byte Folded Reload
-; SPILL-O0-VSETVLI-NEXT:    csrr a1, vlenb
-; SPILL-O0-VSETVLI-NEXT:    add a1, sp, a1
-; SPILL-O0-VSETVLI-NEXT:    addi a1, a1, 32
-; SPILL-O0-VSETVLI-NEXT:    vl1r.v v9, (a1) # vscale x 8-byte Folded Reload
-; SPILL-O0-VSETVLI-NEXT:    # kill: def $x11 killed $x10
+; SPILL-O0-VSETVLI-NEXT:    addi a0, sp, 32
+; SPILL-O0-VSETVLI-NEXT:    vl1r.v v10, (a0) # vscale x 8-byte Folded Reload
+; SPILL-O0-VSETVLI-NEXT:    csrr a0, vlenb
+; SPILL-O0-VSETVLI-NEXT:    add a0, sp, a0
+; SPILL-O0-VSETVLI-NEXT:    addi a0, a0, 32
+; SPILL-O0-VSETVLI-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
 ; SPILL-O0-VSETVLI-NEXT:    ld a0, 16(sp) # 8-byte Folded Reload
 ; SPILL-O0-VSETVLI-NEXT:    # implicit-def: $v8
 ; SPILL-O0-VSETVLI-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
@@ -199,9 +197,9 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-VSETVLI-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; SPILL-O2-VSETVLI-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
 ; SPILL-O2-VSETVLI-NEXT:    sub sp, sp, a1
-; SPILL-O2-VSETVLI-NEXT:    mv s0, a0
 ; SPILL-O2-VSETVLI-NEXT:    addi a1, sp, 16
 ; SPILL-O2-VSETVLI-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Folded Spill
+; SPILL-O2-VSETVLI-NEXT:    mv s0, a0
 ; SPILL-O2-VSETVLI-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; SPILL-O2-VSETVLI-NEXT:    vfadd.vv v9, v8, v9
 ; SPILL-O2-VSETVLI-NEXT:    csrr a0, vlenb
@@ -231,9 +229,9 @@ define <vscale x 1 x double> @foo(<vscale x 1 x double> %a, <vscale x 1 x double
 ; SPILL-O2-ZCMP-VSETVLI-NEXT:    cm.push {ra, s0}, -32
 ; SPILL-O2-ZCMP-VSETVLI-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
 ; SPILL-O2-ZCMP-VSETVLI-NEXT:    sub sp, sp, a1
-; SPILL-O2-ZCMP-VSETVLI-NEXT:    mv s0, a0
 ; SPILL-O2-ZCMP-VSETVLI-NEXT:    addi a1, sp, 16
 ; SPILL-O2-ZCMP-VSETVLI-NEXT:    vs1r.v v8, (a1) # vscale x 8-byte Folded Spill
+; SPILL-O2-ZCMP-VSETVLI-NEXT:    mv s0, a0
 ; SPILL-O2-ZCMP-VSETVLI-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; SPILL-O2-ZCMP-VSETVLI-NEXT:    vfadd.vv v9, v8, v9
 ; SPILL-O2-ZCMP-VSETVLI-NEXT:    csrr a0, vlenb

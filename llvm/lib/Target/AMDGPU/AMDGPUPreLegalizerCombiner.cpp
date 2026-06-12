@@ -103,12 +103,6 @@ AMDGPUPreLegalizerCombinerImpl::AMDGPUPreLegalizerCombinerImpl(
 bool AMDGPUPreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
   if (tryCombineAllImpl(MI))
     return true;
-
-  switch (MI.getOpcode()) {
-  case TargetOpcode::G_SHUFFLE_VECTOR:
-    return Helper.tryCombineShuffleVector(MI);
-  }
-
   return false;
 }
 

@@ -24,7 +24,8 @@
 // RUN: %clang -target arm64_32-apple-watchos8      -mlinker-version=1249  -### %s 2>&1 | FileCheck %s --check-prefix=INST_STUB_ONLY
 // RUN: %clang -target arm64_32-apple-watchos8      -mlinker-version=811.2 -### %s 2>&1 | FileCheck %s --check-prefix=INST_STUB_ONLY
 // RUN: %clang -target arm64_32-apple-watchos8      -mlinker-version=811   -### %s 2>&1 | FileCheck %s --check-prefix=NOSTUBS
-
+// FIXME(#203385): LLD does not support ObjC class selector stubs yet.
+// RUN: %clang -target arm64-apple-macos12 -fuse-ld=lld -B%S/Inputs/lld -mlinker-version=1250 -### %s 2>&1 | FileCheck %s --check-prefix=INST_STUB_ONLY
 
 // Disabled elsewhere, e.g. x86_64.
 // RUN: %clang -target x86_64-apple-macos12         -mlinker-version=1250  -### %s 2>&1 | FileCheck %s --check-prefix=NOSTUBS

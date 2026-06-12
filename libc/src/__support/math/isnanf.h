@@ -17,7 +17,7 @@ namespace math {
 
 #undef isnanf
 LIBC_INLINE LIBC_CONSTEXPR int isnanf(float x) {
-#if defined(__LIBC_USE_BUILTIN_ISNAN) && !defined(LIBC_HAS_CONSTANT_EVALUATION)
+#if defined(__LIBC_USE_BUILTIN_ISNAN) && !defined(LIBC_USE_CONSTEXPR)
   return __builtin_isnan(x);
 #else
   return fputil::FPBits<float>(x).is_nan();
