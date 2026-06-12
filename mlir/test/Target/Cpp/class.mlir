@@ -98,3 +98,23 @@ emitc.class union @unionClass {
 // CHECK-NEXT:    float asFloat;
 // CHECK-NEXT:  };
 
+// Test that get_field is supported inside an expression
+emitc.class @expressionClass {
+  emitc.field @x : i32
+  emitc.func @test_precedence() -> i32 {
+    %0 = emitc.get_field @x : i32
+    %1 = emitc.expression %0 : (i32) -> i32 {
+      %2 = emitc.add %0, %0 : (i32, i32) -> i32
+      emitc.yield %2 : i32
+    }
+    return %1 : i32
+  }
+}
+
+// CHECK-LABEL: class expressionClass {
+// CHECK-NEXT:   public:
+// CHECK-NEXT:    int32_t x;
+// CHECK-NEXT:    int32_t test_precedence() {
+// CHECK-NEXT:     return x + x;
+// CHECK-NEXT:    }
+// CHECK-NEXT:  };
