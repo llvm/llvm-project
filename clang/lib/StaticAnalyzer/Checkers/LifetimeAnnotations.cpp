@@ -96,38 +96,43 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
 }
 
 bool LifetimeAnnotations::isSourceDangle(const MemRegion *Source, ProgramStateRef State, CheckerContext &C) const {
-  llvm::errs() << "isSourceDangle called" << "\n";
+  // This check works for checkEndFunction
   if (const auto *StackSpace = Source->getMemorySpaceAs<StackSpaceRegion>(State)) {
-    llvm::errs() << "isSourceDangle non null" << "\n";
     const StackFrame *SF = StackSpace->getStackFrame();
     const StackFrame *CurrentSF = C.getStackFrame();
-    if (SF == CurrentSF || SF->isParentOf(CurrentSF)) {
-      llvm::errs() << "isSourceDangle about to fire" << "\n";
-      return false;
-    }
-    return false;
+    if (SF == CurrentSF)
+      return true;
   }
-  // Currently return true, but this has to be replaced when the source is a SymRegion instead of a MemRegion
-  return true;
+  // Currently return false, but this has to be replaced when the source is a SymRegion instead of a MemRegion
+  return false;
 }
 
 void LifetimeAnnotations::checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const {
-  llvm::errs() << "checkEndFunction called." << "\n";
   ProgramStateRef State = C.getState();
   auto LBMap = State->get<LifetimeBoundMap>();
   auto LBMapVal = State->get<LifetimeBoundMapVal>();
+  
+  const Expr *RetExpr = RS->getRetValue();
+  if (!RetExpr)
+    return;
+
+  RetExpr = RetExpr->IgnoreParens();
+  SVal RetVal = C.getSVal(RetExpr);
+  const MemRegion *RetValRegion = RetVal.getAsRegion();
+  if (!RetValRegion)
+    return;
 
   llvm::SmallString<128> Str;
   llvm::raw_svector_ostream OS(Str);
-  ExplodedNode *N = C.generateErrorNode();
-  llvm::errs() << "maps are not empty before check" << "\n";
+
   if (LBMap.isEmpty() && LBMapVal.isEmpty())
-    return;
-  
-  llvm::errs() << "maps are not empty after null check" << "\n";
+    return; 
 
   for (auto&& [OriginSym, SourceSet] : LBMap) {
-    llvm::errs() << "LBMapVal isEmpty: " << LBMap.isEmpty() << "\n";
+    ExplodedNode *N = C.generateNonFatalErrorNode();
+    if (!N)
+      return;
+
     for (const auto *Region : SourceSet) {
       if (isSourceDangle(Region, State, C)) {
         OS << " Returning value bound to a local " << Region << " that will go out of scope.";
@@ -135,22 +140,23 @@ void LifetimeAnnotations::checkEndFunction(const ReturnStmt *RS, CheckerContext 
         C.emitReport(std::move(BR));
         Str.clear();
       }
-      llvm::errs() << "Checking source: " << Region << " isDangling: "
-             << isSourceDangle(Region, State, C) << "\n";
     }
   }
 
   for (auto&& [OriginRegion, SourceSet] : LBMapVal) {
-    llvm::errs() << "LBMapVal isEmpty: " << LBMapVal.isEmpty() << "\n";
+    ExplodedNode *N = C.generateNonFatalErrorNode();
+    if (!N)
+      return;
+
     for (const auto *Region : SourceSet) {
-      if (isSourceDangle(Region, State, C)) {
-        OS << " Returning value bound to a local " << Region << " that will go out of scope.";
-        auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
-        C.emitReport(std::move(BR));
-        Str.clear();
+      if (OriginRegion == RetValRegion) {
+        if (isSourceDangle(Region, State, C)) {
+          OS << " Returning value bound to a local " << Region << " that will go out of scope.";
+          auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
+          C.emitReport(std::move(BR));
+          Str.clear();
+        }
       }
-      llvm::errs() << "Checking source: " << Region << " isDangling: "
-             << isSourceDangle(Region, State, C) << "\n";
     }
   }
 }
