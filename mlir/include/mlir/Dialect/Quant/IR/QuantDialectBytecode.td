@@ -120,8 +120,7 @@ def QuantDialectTypes : DialectTypes<"Quant"> {
   let elems = [ReservedOrDead, AnyQuantizedType,
                AnyQuantizedTypeWithExpressedType, CalibratedQuantizedType,
                UniformQuantizedType, UniformQuantizedPerAxisType,
-               UniformQuantizedSubChannelType,
-               QuantileQuantizedType, QuantileQuantizedPerAxisType];
+               UniformQuantizedSubChannelType, QuantileType];
 }
 
 #endif // QUANT_BYTECODE
