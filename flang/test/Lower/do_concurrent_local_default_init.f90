@@ -1,5 +1,5 @@
 ! Test default initialization of DO CONCURRENT LOCAL() entities.
-! RUN: bbc -emit-hlfir -I nowhere -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir --enable-delayed-privatization-staging=true -I nowhere -o - %s | FileCheck %s
 
 subroutine test_ptr(p)
   interface

@@ -3390,13 +3390,6 @@ CodeGenFunction::getSVEType(const SVETypeFlags &TypeFlags) {
   }
 }
 
-llvm::Value *
-CodeGenFunction::EmitSVEAllTruePred(const SVETypeFlags &TypeFlags) {
-  Function *Ptrue =
-      CGM.getIntrinsic(Intrinsic::aarch64_sve_ptrue, getSVEPredType(TypeFlags));
-  return Builder.CreateCall(Ptrue, {Builder.getInt32(/*SV_ALL*/ 31)});
-}
-
 constexpr unsigned SVEBitsPerBlock = 128;
 
 static llvm::ScalableVectorType *getSVEVectorForElementType(llvm::Type *EltTy) {
@@ -4277,7 +4270,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
       return DupQLane;
 
     SVETypeFlags TypeFlags(Builtin->TypeModifier);
-    Value *Pred = EmitSVEAllTruePred(TypeFlags);
+    Constant *Pred = ConstantInt::getTrue(getSVEPredType(TypeFlags));
 
     // For svdupq_n_b* we need to add an additional 'cmpne' with '0'.
     F = CGM.getIntrinsic(NumOpnds == 2 ? Intrinsic::aarch64_sve_cmpne

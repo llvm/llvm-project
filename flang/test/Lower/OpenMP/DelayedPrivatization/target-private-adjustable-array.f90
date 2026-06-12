@@ -1,12 +1,13 @@
 ! Tests delayed privatization for `targets ... private(..)` for adjustable arrays.
 ! Tests different allocation 
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging \
 ! RUN: -mmlir --enable-gpu-heap-alloc  -o - %s 2>&1 | FileCheck %s --check-prefix=CPU
 
 ! RUN: %if amdgpu-registered-target %{ \
 ! RUN:   %flang_fc1 -triple amdgcn-amd-amdhsa -emit-hlfir  \
 ! RUN:     -fopenmp -fopenmp-is-target-device \
+! RUN:     -mmlir --enable-delayed-privatization-staging \
 ! RUN:     -mmlir --enable-gpu-heap-alloc \
 ! RUN:     -o - %s 2>&1 | \
 ! RUN:   FileCheck %s --check-prefix=GPU-HEAP \
@@ -15,6 +16,7 @@
 ! RUN: %if amdgpu-registered-target %{ \
 ! RUN:   %flang_fc1 -triple amdgcn-amd-amdhsa -emit-hlfir  \
 ! RUN:     -fopenmp -fopenmp-is-target-device \
+! RUN:     -mmlir --enable-delayed-privatization-staging \
 ! RUN:     -o - %s 2>&1 | \
 ! RUN:   FileCheck %s --check-prefix=GPU-STACK  \
 ! RUN: %}
