@@ -892,15 +892,14 @@ void elf::initSymbolAnchors(Ctx &ctx) {
 }
 
 struct RISCVRelaxCapability {
-  bool rvc = false; // C or Zca: enables c.j / c.jal relaxation
-  bool valid = false;
+  bool rvc = false;   // C or Zca: enables c.j / c.jal relaxation.
+  bool valid = false; // Whether this entry holds a computed result.
 };
 
 class RISCVRelaxCapabilityManager {
   // Maps ISA string (after "$x" prefix) to its computed capabilities.
   StringMap<RISCVRelaxCapability> cache;
 
-public:
   RISCVRelaxCapability get(Ctx &ctx, const InputSection &sec,
                            const Relocation &relaxReloc) {
     const Symbol *sym = relaxReloc.sym;
@@ -924,18 +923,30 @@ public:
       if (it->second.valid)
         return it->second;
     }
-    // Fall back to the file-level EF_RISCV_RV flag.
+    // Fall back to the file-level EF_RISCV_RVC flag.
     return {/*rvc=*/static_cast<bool>(getEFlags(ctx, sec.file) & EF_RISCV_RVC),
             /*valid=*/true};
+  }
+
+public:
+  // Returns the relaxation capability of relocs[i], or std::nullopt if it is
+  // not relaxable (not followed by R_RISCV_RELAX). When relaxable, the
+  // capability describes the extensions available in the code region as
+  // recorded by that R_RISCV_RELAX's ISA mapping symbol.
+  std::optional<RISCVRelaxCapability> relaxable(Ctx &ctx,
+                                                const InputSection &sec,
+                                                ArrayRef<Relocation> relocs,
+                                                size_t i) {
+    if (i + 1 == relocs.size() || relocs[i + 1].type != R_RISCV_RELAX)
+      return std::nullopt;
+    return get(ctx, sec, relocs[i + 1]);
   }
 };
 
 // Relax R_RISCV_CALL/R_RISCV_CALL_PLT auipc+jalr to c.j, c.jal, or jal.
 static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
                       Relocation &r, uint32_t &remove,
-                      const Relocation &relaxReloc,
-                      RISCVRelaxCapabilityManager &capMgr) {
-  const RISCVRelaxCapability cap = capMgr.get(ctx, sec, relaxReloc);
+                      const RISCVRelaxCapability &cap) {
   const bool rvc = cap.rvc;
   const Symbol &sym = *r.sym;
   const uint64_t insnPair = read64le(sec.content().data() + r.offset);
@@ -1074,27 +1085,28 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec,
       // Prevent oscillation between states by disallowing the increment of
       // `remove` after a few passes. The previous `remove` value is
       // `cur-delta`.
-      if (relaxable(relocs, i)) {
+      if (std::optional<RISCVRelaxCapability> cap =
+              capMgr.relaxable(ctx, sec, relocs, i)) {
         remove = pass < 4 ? 6 : cur - delta;
-        relaxCall(ctx, sec, i, loc, r, remove, relocs[i + 1], capMgr);
+        relaxCall(ctx, sec, i, loc, r, remove, *cap);
       }
       break;
     case R_RISCV_TPREL_HI20:
     case R_RISCV_TPREL_ADD:
     case R_RISCV_TPREL_LO12_I:
     case R_RISCV_TPREL_LO12_S:
-      if (relaxable(relocs, i))
+      if (capMgr.relaxable(ctx, sec, relocs, i))
         relaxTlsLe(ctx, sec, i, loc, r, remove);
       break;
     case R_RISCV_HI20:
     case R_RISCV_LO12_I:
     case R_RISCV_LO12_S:
-      if (relaxable(relocs, i))
+      if (capMgr.relaxable(ctx, sec, relocs, i))
         relaxHi20Lo12(ctx, sec, i, loc, r, remove);
       break;
     case R_RISCV_TLSDESC_HI20:
       // For TLSDESC=>LE, we can use the short form if hi20 is zero.
-      tlsdescRelax = relaxable(relocs, i);
+      tlsdescRelax = capMgr.relaxable(ctx, sec, relocs, i).has_value();
       toLeShortForm = tlsdescRelax && r.expr == R_TPREL &&
                       !hi20(r.sym->getVA(ctx, r.addend));
       [[fallthrough]];

@@ -1,38 +1,52 @@
 # REQUIRES: riscv
-## Tests that R_RISCV_RELAX ISA mapping symbols ($x<isa-string>, emitted by
-## .option arch) control per-region RVC relaxation.
-## Within a single object that has EF_RISCV_RVC set at the file level:
-##   - a region with an ISA-with-C mapping symbol MUST use compressed jumps.
-##   - a region with an ISA-without-C mapping symbol must NOT use compressed jumps,
-##     even though EF_RISCV_RVC is set for the whole file.
+## R_RISCV_RELAX's ISA mapping symbol ($x<isa-string>) drives per-region RVC
+## relaxation, overriding the file-level EF_RISCV_RVC flag. Built with +c,+relax,
+## so regions whose mapping symbol lacks C must still avoid c.j.
 
-## Build with +c,+relax so EF_RISCV_RVC is set at the file level.
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+relax %s -o %t.o
+# RUN: llvm-readobj -r %t.o | FileCheck %s --check-prefix=RELOC
 # RUN: ld.lld %t.o -Ttext=0x10000 -o %t
 # RUN: llvm-objdump -d --no-show-raw-insn -M no-aliases %t | FileCheck %s
 
-## The call inside the rv64imafdc region should relax to compressed c.j.
+## No .option arch yet: initial mapping symbol includes C (from +c) -> c.j.
+# RELOC: R_RISCV_RELAX $xrv64{{.*}}_c2p0
+# CHECK-LABEL: <compat>:
+# CHECK-NEXT: {{.*}}: c.j {{.*}} <target>
+.globl compat
+compat:
+    tail target
+
+## C in mapping symbol -> c.j.
 # CHECK-LABEL: <with_c>:
 # CHECK-NEXT: {{.*}}: c.j {{.*}} <target>
-
-## The call inside the rv64imafd region must NOT use a compressed jump,
-## even though EF_RISCV_RVC is set for the whole file.
-# CHECK-LABEL: <without_c>:
-# CHECK-NEXT: {{.*}}: jal zero, {{.*}} <target>
-
-## Region 1: .option arch sets ISA to rv64imafdc (C extension present).
-## The R_RISCV_RELAX for 'tail' will reference the $xrv64..._c2p0_... symbol.
 .option arch, rv64imafdc
 .globl with_c
 with_c:
     tail target
 
-## Region 2: .option arch removes the C extension.
-## The R_RISCV_RELAX for 'tail' will reference the $xrv64..._zicsr... symbol
-## (no c2p0), preventing compressed-jump relaxation.
+## No C in mapping symbol -> jal, despite file-level EF_RISCV_RVC.
+# CHECK-LABEL: <without_c>:
+# CHECK-NEXT: {{.*}}: jal zero, {{.*}} <target>
 .option arch, rv64imafd
 .globl without_c
 without_c:
+    tail target
+
+## .option norvc drops C -> jal.
+# CHECK-LABEL: <norvc_region>:
+# CHECK-NEXT: {{.*}}: jal zero, {{.*}} <target>
+.option arch, rv64imafdc
+.option norvc
+.globl norvc_region
+norvc_region:
+    tail target
+
+## .option rvc restores C -> c.j.
+# CHECK-LABEL: <after_rvc>:
+# CHECK-NEXT: {{.*}}: c.j {{.*}} <target>
+.option rvc
+.globl after_rvc
+after_rvc:
     tail target
 
 .globl target
