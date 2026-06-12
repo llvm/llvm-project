@@ -5187,6 +5187,8 @@ As ``global_device`` and ``global_host`` are a subset of
 ``global_device`` and ``global_host`` address spaces to
 ``__global/opencl_global`` address spaces (following ISO/IEC TR 18037 5.1.3
 "Address space nesting and rules for pointers").
+
+These attributes are deprecated and may be removed in a future version of Clang.
   }];
 }
 
