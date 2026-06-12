@@ -5,9 +5,6 @@
 // RUN: %clang_cc1 -std=c++03 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
 
-// A multi-argument constructor call written with explicit type syntax produces
-// a CXXTemporaryObjectExpr. Using it as the base of a member access reaches
-// emitLValue with that expression class.
 struct Pt {
   Pt(int a, int b);
   int v;
@@ -39,10 +36,6 @@ int tempObj(int i) { return Pt(i, i).v; }
 // LLVM:         %[[V:.*]] = getelementptr inbounds nuw %struct.Pt, ptr %[[TMP]], i32 0, i32 0
 // LLVM:         %[[VAL:.*]] = load i32, ptr %[[V]]
 
-// A single-argument constructor call performs a constructor conversion, so the
-// base of the member access is a CXXFunctionalCastExpr whose subexpression is a
-// CXXConstructExpr. emitCastLValue forwards to the subexpression, reaching
-// emitLValue with the CXXConstructExpr class.
 struct Conv {
   Conv(int a);
   int y;
