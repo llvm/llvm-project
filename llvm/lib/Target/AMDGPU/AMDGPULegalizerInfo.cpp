@@ -981,6 +981,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     FPOpActions.clampMaxNumElementsStrict(0, S32, 2);
   }
 
+  if (ST.hasPackedFP64Ops()) {
+    FPOpActions.legalFor({V2S64});
+    FPOpActions.clampMaxNumElementsStrict(0, S64, 2);
+  }
+
   auto &MinNumMaxNumIeee =
       getActionDefinitionsBuilder({G_FMINNUM_IEEE, G_FMAXNUM_IEEE});
 
@@ -8069,6 +8074,31 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   // Replace the use G_BRCOND with the exec manipulate and branch pseudos.
   auto IntrID = cast<GIntrinsic>(MI).getIntrinsicID();
   switch (IntrID) {
+  case Intrinsic::amdgcn_icmp: {
+    // amdgcn.icmp(i1 src0, i1 0, NE) -> ballot(src0)
+    // This is the only valid form of amdgcn.icmp with i1 inputs.
+    Register Src0 = MI.getOperand(2).getReg();
+    LLT SrcTy = MRI.getType(Src0);
+    if (SrcTy != LLT::scalar(1))
+      return true; // Not i1, leave for default handling.
+
+    // Check that src1 is constant 0.
+    Register Src1 = MI.getOperand(3).getReg();
+    auto Src1Const = getIConstantVRegValWithLookThrough(Src1, MRI);
+    if (!Src1Const || Src1Const->Value != 0)
+      return false; // Invalid i1 icmp form.
+
+    // Check that predicate is ICMP_NE.
+    int64_t Pred = MI.getOperand(4).getImm();
+    if (Pred != CmpInst::ICMP_NE)
+      return false; // Invalid i1 icmp form.
+
+    // Convert to ballot.
+    Register Dst = MI.getOperand(0).getReg();
+    B.buildIntrinsic(Intrinsic::amdgcn_ballot, Dst).addUse(Src0);
+    MI.eraseFromParent();
+    return true;
+  }
   case Intrinsic::sponentry:
     if (B.getMF().getInfo<SIMachineFunctionInfo>()->isBottomOfStack()) {
       // FIXME: The imported pattern checks for i32 instead of p5; if we fix
@@ -8168,6 +8198,34 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     }
 
     return false;
+  }
+  case Intrinsic::amdgcn_wave_reduce_min:
+  case Intrinsic::amdgcn_wave_reduce_umin:
+  case Intrinsic::amdgcn_wave_reduce_max:
+  case Intrinsic::amdgcn_wave_reduce_umax:
+  case Intrinsic::amdgcn_wave_reduce_add:
+  case Intrinsic::amdgcn_wave_reduce_sub:
+  case Intrinsic::amdgcn_wave_reduce_and:
+  case Intrinsic::amdgcn_wave_reduce_or:
+  case Intrinsic::amdgcn_wave_reduce_xor: {
+    Register SrcReg = MI.getOperand(2).getReg();
+    if (MRI.getType(SrcReg) != LLT::scalar(16))
+      return true;
+    Register DstReg = MI.getOperand(0).getReg();
+    bool NeedsSignExt = IntrID == Intrinsic::amdgcn_wave_reduce_min ||
+                        IntrID == Intrinsic::amdgcn_wave_reduce_max ||
+                        IntrID == Intrinsic::amdgcn_wave_reduce_add ||
+                        IntrID == Intrinsic::amdgcn_wave_reduce_sub;
+    auto Ext = NeedsSignExt ? B.buildSExt(LLT::scalar(32), SrcReg)
+                            : B.buildZExt(LLT::scalar(32), SrcReg);
+    auto NewDst = MRI.createGenericVirtualRegister(LLT::scalar(32));
+    B.buildIntrinsic(IntrID, ArrayRef<Register>{NewDst},
+                     /*hasSideEffects=*/false, /*isConvergent=*/true)
+        .addUse(Ext.getReg(0))
+        .addImm(MI.getOperand(3).getImm()); // strategy
+    B.buildTrunc(DstReg, NewDst);
+    MI.eraseFromParent();
+    return true;
   }
   case Intrinsic::amdgcn_addrspacecast_nonnull:
     return legalizeAddrSpaceCast(MI, MRI, B);
