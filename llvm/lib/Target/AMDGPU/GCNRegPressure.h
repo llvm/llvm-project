@@ -340,20 +340,20 @@ public:
   void reset(const MachineRegisterInfo &MRInfo,
              const LiveRegSet &VirtLiveRegsSet);
   // live regs for the current state
-  const decltype(VirtLiveRegs) &getLiveRegs() const { return VirtLiveRegs; }
+  const decltype(VirtLiveRegs) &getVirtLiveRegs() const { return VirtLiveRegs; }
   const MachineInstr *getLastTrackedMI() const { return LastTrackedMI; }
 
   void clearMaxPressure() { MaxPressure.clear(); }
 
   GCNRegPressure getPressure() const { return CurPressure; }
 
-  decltype(VirtLiveRegs) moveLiveRegs() { return std::move(VirtLiveRegs); }
+  decltype(VirtLiveRegs) moveVirtLiveRegs() { return std::move(VirtLiveRegs); }
 };
 
 GCNRPTracker::LiveRegSet
-getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
-            const MachineRegisterInfo &MRI,
-            GCNRegPressure::RegKind RegKind = GCNRegPressure::TOTAL_KINDS);
+getVirtLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
+                const MachineRegisterInfo &MRI,
+                GCNRegPressure::RegKind RegKind = GCNRegPressure::TOTAL_KINDS);
 
 ////////////////////////////////////////////////////////////////////////////////
 // GCNUpwardRPTracker
@@ -366,7 +366,7 @@ public:
 
   /// reset tracker at the specified slot index \p SI.
   void reset(const MachineRegisterInfo &MRI, SlotIndex SI) {
-    GCNRPTracker::reset(MRI, llvm::getLiveRegs(SI, LIS, MRI));
+    GCNRPTracker::reset(MRI, llvm::getVirtLiveRegs(SI, LIS, MRI));
   }
 
   /// reset tracker to the end of the \p MBB.
@@ -492,8 +492,8 @@ LaneBitmask getLiveLaneMask(const LiveInterval &LI, SlotIndex SI,
 /// Note: there is no entry in the map for instructions with empty live reg set
 /// Complexity = O(NumVirtRegs * averageLiveRangeSegmentsPerReg * lg(R))
 template <typename Range>
-DenseMap<MachineInstr*, GCNRPTracker::LiveRegSet>
-getLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
+DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet>
+getVirtLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
   std::vector<SlotIndex> Indexes;
   Indexes.reserve(llvm::size(R));
   auto &SII = *LIS.getSlotIndexes();
@@ -530,21 +530,21 @@ getLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
   return LiveRegMap;
 }
 
-inline GCNRPTracker::LiveRegSet getLiveRegsAfter(const MachineInstr &MI,
-                                                 const LiveIntervals &LIS) {
-  return getLiveRegs(LIS.getInstructionIndex(MI).getDeadSlot(), LIS,
-                     MI.getMF()->getRegInfo());
+inline GCNRPTracker::LiveRegSet getVirtLiveRegsAfter(const MachineInstr &MI,
+                                                     const LiveIntervals &LIS) {
+  return getVirtLiveRegs(LIS.getInstructionIndex(MI).getDeadSlot(), LIS,
+                         MI.getMF()->getRegInfo());
 }
 
-inline GCNRPTracker::LiveRegSet getLiveRegsBefore(const MachineInstr &MI,
-                                                  const LiveIntervals &LIS) {
-  return getLiveRegs(LIS.getInstructionIndex(MI).getBaseIndex(), LIS,
-                     MI.getMF()->getRegInfo());
+inline GCNRPTracker::LiveRegSet
+getVirtLiveRegsBefore(const MachineInstr &MI, const LiveIntervals &LIS) {
+  return getVirtLiveRegs(LIS.getInstructionIndex(MI).getBaseIndex(), LIS,
+                         MI.getMF()->getRegInfo());
 }
 
 template <typename Range>
-GCNRegPressure getRegPressure(const MachineRegisterInfo &MRI,
-                              Range &&LiveRegs) {
+GCNRegPressure getVirtRegPressure(const MachineRegisterInfo &MRI,
+                                  Range &&LiveRegs) {
   GCNRegPressure Res;
   for (const auto &RM : LiveRegs)
     Res.inc(RM.first, LaneBitmask::getNone(), RM.second, MRI);

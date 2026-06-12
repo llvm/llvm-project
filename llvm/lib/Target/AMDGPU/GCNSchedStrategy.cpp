@@ -940,7 +940,7 @@ GCNScheduleDAGMILive::GCNScheduleDAGMILive(
     : ScheduleDAGMILive(C, std::move(S)), ST(MF.getSubtarget<GCNSubtarget>()),
       MFI(*MF.getInfo<SIMachineFunctionInfo>()),
       StartingOccupancy(MFI.getOccupancy()), MinOccupancy(StartingOccupancy),
-      RegionLiveOuts(this, /*IsLiveOut=*/true) {
+      RegionVirtLiveOuts(this, /*IsLiveOut=*/true) {
 
   // We want regions with a single MI to be scheduled so that we can reason
   // about them correctly during scheduling stages that move MIs between regions
@@ -987,10 +987,10 @@ void GCNScheduleDAGMILive::schedule() {
 GCNRegPressure
 GCNScheduleDAGMILive::getRealRegPressure(unsigned RegionIdx) const {
   if (Regions[RegionIdx].first == Regions[RegionIdx].second)
-    return llvm::getRegPressure(MRI, LiveIns[RegionIdx]);
+    return llvm::getVirtRegPressure(MRI, VirtLiveIns[RegionIdx]);
   GCNDownwardRPTracker RPTracker(*LIS);
   RPTracker.advance(Regions[RegionIdx].first, Regions[RegionIdx].second,
-                    &LiveIns[RegionIdx]);
+                    &VirtLiveIns[RegionIdx]);
   return RPTracker.moveMaxPressure();
 }
 
@@ -1030,27 +1030,27 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
   --CurRegion;
 
   auto I = MBB->begin();
-  auto LiveInIt = MBBLiveIns.find(MBB);
+  auto VirtLiveInIt = MBBVirtLiveIns.find(MBB);
   auto &Rgn = Regions[CurRegion];
   auto *NonDbgMI = &*skipDebugInstructionsForward(Rgn.first, Rgn.second);
-  if (LiveInIt != MBBLiveIns.end()) {
-    auto LiveIn = std::move(LiveInIt->second);
-    RPTracker.reset(*MBB->begin(), &LiveIn);
-    MBBLiveIns.erase(LiveInIt);
+  if (VirtLiveInIt != MBBVirtLiveIns.end()) {
+    auto VirtLiveIn = std::move(VirtLiveInIt->second);
+    RPTracker.reset(*MBB->begin(), &VirtLiveIn);
+    MBBVirtLiveIns.erase(VirtLiveInIt);
   } else {
     I = Rgn.first;
-    auto LRS = BBLiveInMap.lookup(NonDbgMI);
+    auto VirtLiveInSet = BBVirtLiveInMap.lookup(NonDbgMI);
 #ifdef EXPENSIVE_CHECKS
-    assert(isEqual(getLiveRegsBefore(*NonDbgMI, *LIS), LRS));
+    assert(isEqual(getVirtLiveRegsBefore(*NonDbgMI, *LIS), VirtLiveInSet));
 #endif
-    RPTracker.reset(*I, &LRS);
+    RPTracker.reset(*I, &VirtLiveInSet);
   }
 
   for (;;) {
     I = RPTracker.getNext();
 
     if (Regions[CurRegion].first == I || NonDbgMI == I) {
-      LiveIns[CurRegion] = RPTracker.getLiveRegs();
+      VirtLiveIns[CurRegion] = RPTracker.getVirtLiveRegs();
       RPTracker.clearMaxPressure();
     }
 
@@ -1071,12 +1071,12 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
       RPTracker.advanceToNext();
       RPTracker.advance(MBB->end());
     }
-    MBBLiveIns[OnlySucc] = RPTracker.moveLiveRegs();
+    MBBVirtLiveIns[OnlySucc] = RPTracker.moveVirtLiveRegs();
   }
 }
 
 DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet>
-GCNScheduleDAGMILive::getRegionLiveInMap() const {
+GCNScheduleDAGMILive::getRegionVirtLiveInMap() const {
   assert(!Regions.empty());
   std::vector<MachineInstr *> RegionFirstMIs;
   RegionFirstMIs.reserve(Regions.size());
@@ -1084,11 +1084,11 @@ GCNScheduleDAGMILive::getRegionLiveInMap() const {
     RegionFirstMIs.push_back(
         &*skipDebugInstructionsForward(RegionBegin, RegionEnd));
 
-  return getLiveRegMap(RegionFirstMIs, /*After=*/false, *LIS);
+  return getVirtLiveRegMap(RegionFirstMIs, /*After=*/false, *LIS);
 }
 
 DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet>
-GCNScheduleDAGMILive::getRegionLiveOutMap() const {
+GCNScheduleDAGMILive::getRegionVirtLiveOutMap() const {
   assert(!Regions.empty());
   std::vector<MachineInstr *> RegionLastMIs;
   RegionLastMIs.reserve(Regions.size());
@@ -1098,14 +1098,14 @@ GCNScheduleDAGMILive::getRegionLiveOutMap() const {
       continue;
     RegionLastMIs.push_back(getLastMIForRegion(RegionBegin, RegionEnd));
   }
-  return getLiveRegMap(RegionLastMIs, /*After=*/true, *LIS);
+  return getVirtLiveRegMap(RegionLastMIs, /*After=*/true, *LIS);
 }
 
-void RegionPressureMap::buildLiveRegMap() {
+void RegionPressureMap::buildVirtLiveRegMap() {
   IdxToInstruction.clear();
 
-  RegionLiveRegMap =
-      IsLiveOut ? DAG->getRegionLiveOutMap() : DAG->getRegionLiveInMap();
+  RegionVirtLiveRegMap = IsLiveOut ? DAG->getRegionVirtLiveOutMap()
+                                   : DAG->getRegionVirtLiveInMap();
   for (unsigned I = 0; I < DAG->Regions.size(); I++) {
     auto &[RegionBegin, RegionEnd] = DAG->Regions[I];
     // Skip empty regions.
@@ -1121,7 +1121,7 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
   // Start actual scheduling here. This function is called by the base
   // MachineScheduler after all regions have been recorded by
   // GCNScheduleDAGMILive::schedule().
-  LiveIns.resize(Regions.size());
+  VirtLiveIns.resize(Regions.size());
   Pressure.resize(Regions.size());
   RegionsWithHighRP.resize(Regions.size());
   RegionsWithExcessRP.resize(Regions.size());
@@ -1137,9 +1137,9 @@ void GCNScheduleDAGMILive::runSchedStages() {
   LLVM_DEBUG(dbgs() << "All regions recorded, starting actual scheduling.\n");
 
   if (!Regions.empty()) {
-    BBLiveInMap = getRegionLiveInMap();
+    BBVirtLiveInMap = getRegionVirtLiveInMap();
     if (GCNTrackers)
-      RegionLiveOuts.buildLiveRegMap();
+      RegionVirtLiveOuts.buildVirtLiveRegMap();
   }
 
 #ifdef DUMP_MAX_REG_PRESSURE
@@ -1169,13 +1169,13 @@ void GCNScheduleDAGMILive::runSchedStages() {
       if (GCNTrackers) {
         GCNDownwardRPTracker *DownwardTracker = S.getDownwardTracker();
         GCNUpwardRPTracker *UpwardTracker = S.getUpwardTracker();
-        GCNRPTracker::LiveRegSet *RegionLiveIns =
-            &LiveIns[Stage->getRegionIdx()];
+        GCNRPTracker::LiveRegSet *RegionVirtLiveIns =
+            &VirtLiveIns[Stage->getRegionIdx()];
 
         reinterpret_cast<GCNRPTracker *>(DownwardTracker)
-            ->reset(MRI, *RegionLiveIns);
+            ->reset(MRI, *RegionVirtLiveIns);
         reinterpret_cast<GCNRPTracker *>(UpwardTracker)
-            ->reset(MRI, RegionLiveOuts.getLiveRegsForRegionIdx(
+            ->reset(MRI, RegionVirtLiveOuts.getVirtLiveRegsForRegionIdx(
                              Stage->getRegionIdx()));
       }
 
@@ -1405,9 +1405,9 @@ Printable PreRARematStage::ScoredRemat::print() const {
 #endif
 
 bool PreRARematStage::initGCNSchedStage() {
-  // FIXME: This pass will invalidate cached BBLiveInMap and MBBLiveIns for
-  // regions inbetween the defs and region we sinked the def to. Will need to be
-  // fixed if there is another pass after this pass.
+  // FIXME: This pass will invalidate cached BBVirtLiveInMap and MBBVirtLiveIns
+  // for regions inbetween the defs and region we sinked the def to. Will need
+  // to be fixed if there is another pass after this pass.
   assert(!S.hasNextStage());
 
   if (!GCNSchedStage::initGCNSchedStage() || DAG.Regions.size() <= 1)
@@ -1712,12 +1712,12 @@ bool GCNSchedStage::initGCNRegion() {
 
   PressureBefore = DAG.Pressure[RegionIdx];
 
-  LLVM_DEBUG(
-      dbgs() << "Pressure before scheduling:\nRegion live-ins:"
-             << print(DAG.LiveIns[RegionIdx], DAG.MRI)
-             << "Region live-in pressure:  "
-             << print(llvm::getRegPressure(DAG.MRI, DAG.LiveIns[RegionIdx]))
-             << "Region register pressure: " << print(PressureBefore));
+  LLVM_DEBUG(dbgs() << "Pressure before scheduling:\nRegion live-ins:"
+                    << print(DAG.VirtLiveIns[RegionIdx], DAG.MRI)
+                    << "Region live-in pressure:  "
+                    << print(llvm::getVirtRegPressure(
+                           DAG.MRI, DAG.VirtLiveIns[RegionIdx]))
+                    << "Region register pressure: " << print(PressureBefore));
 
   S.HasHighPressure = false;
   S.KnownExcessRP = isRegionWithExcessRP();
@@ -2724,11 +2724,12 @@ bool RewriteMFMAFormStage::rewrite(
   // Bulk update the LIS.
   DAG.LIS->reanalyze(DAG.MF);
   // Liveins may have been modified for cross RC copies
-  RegionPressureMap LiveInUpdater(&DAG, false);
-  LiveInUpdater.buildLiveRegMap();
+  RegionPressureMap VirtLiveInUpdater(&DAG, false);
+  VirtLiveInUpdater.buildVirtLiveRegMap();
 
   for (unsigned Region = 0; Region < DAG.Regions.size(); Region++)
-    DAG.LiveIns[Region] = LiveInUpdater.getLiveRegsForRegionIdx(Region);
+    DAG.VirtLiveIns[Region] =
+        VirtLiveInUpdater.getVirtLiveRegsForRegionIdx(Region);
 
   DAG.Pressure[RegionIdx] = DAG.getRealRegPressure(RegionIdx);
 
@@ -2779,7 +2780,7 @@ bool PreRARematStage::collectRematRegs(
     const DenseMap<MachineInstr *, unsigned> &MIRegion) {
   // We need up-to-date live-out info. to query live-out register masks in
   // regions containing rematerializable instructions.
-  DAG.RegionLiveOuts.buildLiveRegMap();
+  DAG.RegionVirtLiveOuts.buildVirtLiveRegMap();
 
   // Set of registers already marked for potential remterialization; used to
   // avoid rematerialization chains.
@@ -2853,16 +2854,18 @@ PreRARematStage::RematReg::RematReg(
   // Mark regions in which the rematerializable register is live.
   Register Reg = getReg();
   for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
-    auto LiveInIt = DAG.LiveIns[I].find(Reg);
-    if (LiveInIt != DAG.LiveIns[I].end())
+    auto VirtLiveInIt = DAG.VirtLiveIns[I].find(Reg);
+    if (VirtLiveInIt != DAG.VirtLiveIns[I].end())
       LiveIn.set(I);
-    const auto &LiveOuts = DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I);
-    if (auto LiveOutIt = LiveOuts.find(Reg); LiveOutIt != LiveOuts.end())
+    const auto &VirtLiveOuts =
+        DAG.RegionVirtLiveOuts.getVirtLiveRegsForRegionIdx(I);
+    if (auto VirtLiveOutIt = VirtLiveOuts.find(Reg);
+        VirtLiveOutIt != VirtLiveOuts.end())
       LiveOut.set(I);
   }
   Live |= LiveIn;
   Live |= LiveOut;
-  Mask = DAG.RegionLiveOuts.getLiveRegsForRegionIdx(DefRegion).at(Reg);
+  Mask = DAG.RegionVirtLiveOuts.getVirtLiveRegsForRegionIdx(DefRegion).at(Reg);
 }
 
 bool PreRARematStage::RematReg::maybeBeneficial(
@@ -3003,9 +3006,9 @@ MachineInstr *PreRARematStage::ScoredRemat::rematerialize(
     if (LI.hasSubRanges() && MO.getSubReg())
       LM = DAG.TRI->getSubRegIndexLaneMask(MO.getSubReg());
 
-    LaneBitmask LiveInMask = DAG.LiveIns[Remat->UseRegion].at(UseReg);
-    LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
-    // If this register has lanes not covered by the LiveIns, be sure they
+    LaneBitmask VirtLiveInMask = DAG.VirtLiveIns[Remat->UseRegion].at(UseReg);
+    LaneBitmask UncoveredLanes = LM & ~(VirtLiveInMask & LM);
+    // If this register has lanes not covered by the VirtLiveIns, be sure they
     // do not map to any subrange. ref:
     // machine-scheduler-sink-trivial-remats.mir::omitted_subrange
     if (UncoveredLanes.any()) {
@@ -3022,8 +3025,8 @@ MachineInstr *PreRARematStage::ScoredRemat::rematerialize(
   // where the register is live.
   for (unsigned I : Remat->Live.set_bits()) {
     RPTargets[I].saveRP(RPSave);
-    DAG.LiveIns[I].erase(Reg);
-    DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I).erase(Reg);
+    DAG.VirtLiveIns[I].erase(Reg);
+    DAG.RegionVirtLiveOuts.getVirtLiveRegsForRegionIdx(I).erase(Reg);
     if (!Remat->isUnusedLiveThrough(I))
       RecomputeRP.set(I);
   }
@@ -3151,9 +3154,9 @@ void PreRARematStage::finalizeGCNSchedStage() {
     // to be one in.
     std::pair<Register, LaneBitmask> LiveReg(OriginalReg, Remat->Mask);
     for (unsigned I : Remat->LiveIn.set_bits())
-      DAG.LiveIns[I].insert(LiveReg);
+      DAG.VirtLiveIns[I].insert(LiveReg);
     for (unsigned I : Remat->LiveOut.set_bits())
-      DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I).insert(LiveReg);
+      DAG.RegionVirtLiveOuts.getVirtLiveRegsForRegionIdx(I).insert(LiveReg);
 
     RecomputeRP |= Rollback.Remat->Live;
     // Regenerate intervals for all register operands of rematerialized MIs as
