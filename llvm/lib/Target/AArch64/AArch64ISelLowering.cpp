@@ -19676,6 +19676,15 @@ bool AArch64TargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
   return (Index == 0 || Index == ResVT.getVectorMinNumElements());
 }
 
+bool AArch64TargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
+                                                  EVT DestVT) const {
+  // Splitting a wide vector binop into narrower ones removes the wide operand
+  // construction (a concatenation), so prefer narrowing for vectors. Scalar
+  // bit-width narrowing is not generally profitable on AArch64, so keep the
+  // conservative default there.
+  return SrcVT.isVector() && isBinOp(N->getOpcode());
+}
+
 bool AArch64TargetLowering::shouldOptimizeMulOverflowWithZeroHighBits(
     LLVMContext &Context, EVT VT) const {
   if (getTypeAction(Context, VT) != TypeExpandInteger)

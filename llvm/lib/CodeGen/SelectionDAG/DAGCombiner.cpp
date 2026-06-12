@@ -27235,13 +27235,16 @@ static SDValue narrowInsertExtractVectorBinOp(SDNode *N, SDValue BinOp,
 
   EVT VecVT = BinOp.getValueType();
   SDValue Bop0 = BinOp.getOperand(0), Bop1 = BinOp.getOperand(1);
-  if (VecVT != Bop0.getValueType() || VecVT != Bop1.getValueType())
+  if (VecVT != Bop0.getValueType() || VecVT != Bop1.getValueType() ||
+      VecVT.isScalableVT())
     return SDValue();
 
   // This fold only pays off when the wide binop disappears completely, so every
   // user must be an extract_subvector. Require them all to extract N's type so
   // a single chain scan serves every extract, and seed the source map by index.
   EVT SubVT = N->getValueType(0);
+  if (VecVT.getSizeInBits() <= SubVT.getSizeInBits())
+    return SDValue();
   SmallMapVector<unsigned, std::tuple<SDNode *, SDValue, SDValue>, 4> Extracts;
   for (SDNode *User : BinOp->users()) {
     if (User->getOpcode() != ISD::EXTRACT_SUBVECTOR ||
@@ -27264,6 +27267,15 @@ static SDValue narrowInsertExtractVectorBinOp(SDNode *N, SDValue BinOp,
   for (auto &[Idx, Ext] : Extracts)
     if (!std::get<1>(Ext) || !std::get<2>(Ext))
       return SDValue();
+
+  if (TLI.isTypeLegal(VecVT)) {
+    bool AllExtractsCheap = true;
+    for (auto &[Idx, Ext] : Extracts)
+      AllExtractsCheap &= TLI.isExtractSubvectorCheap(SubVT, VecVT, Idx);
+    if (AllExtractsCheap &&
+        !TLI.isNarrowingProfitable(BinOp.getNode(), VecVT, SubVT))
+      return SDValue();
+  }
 
   // Replace each extract with a narrow binop over the matching subvectors:
   // ext (binop (ins ?, X, Idx), (ins ?, Y, Idx)), Idx --> binop X, Y
