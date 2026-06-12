@@ -286,42 +286,6 @@ def : Pat<(relaxed_store<atomic_store_64>
 // Atomic store with hint pseudos
 //===----------------------------------
 
-class seq_cst_store<PatFrags base>
-  : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val)> {
-  let IsAtomic = 1;
-  let IsAtomicOrderingSequentiallyConsistent = 1;
-}
-
-class atomic_hint_stshh_keep_relaxed<PatFrag base>
-  : PatFrag<(ops node:$ptr, node:$val),
-            (relaxed_store<base> node:$ptr, node:$val),
-            [{ return isAtomicSTSHH_KEEP(N); }]>;
-
-class atomic_hint_stshh_keep_release<PatFrag base>
-  : PatFrag<(ops node:$ptr, node:$val),
-            (releasing_store<base> node:$ptr, node:$val),
-            [{ return isAtomicSTSHH_KEEP(N); }]>;
-
-class atomic_hint_stshh_keep_seqcst<PatFrag base>
-  : PatFrag<(ops node:$ptr, node:$val),
-            (seq_cst_store<base> node:$ptr, node:$val),
-            [{ return isAtomicSTSHH_KEEP(N); }]>;
-
-class atomic_hint_stshh_strm_relaxed<PatFrag base>
-  : PatFrag<(ops node:$ptr, node:$val),
-            (relaxed_store<base> node:$ptr, node:$val),
-            [{ return isAtomicSTSHH_STRM(N); }]>;
-
-class atomic_hint_stshh_strm_release<PatFrag base>
-  : PatFrag<(ops node:$ptr, node:$val),
-            (releasing_store<base> node:$ptr, node:$val),
-            [{ return isAtomicSTSHH_STRM(N); }]>;
-
-class atomic_hint_stshh_strm_seqcst<PatFrag base>
-  : PatFrag<(ops node:$ptr, node:$val),
-            (seq_cst_store<base> node:$ptr, node:$val),
-            [{ return isAtomicSTSHH_STRM(N); }]>;
-
 class BaseStoreHintPseudo<RegisterClass regtype>
       : Pseudo<(outs), (ins GPR64sp:$addr, regtype:$data,
                         i32imm:$order, i32imm:$hint), []>, Sched<[WriteAtomic]> {
@@ -336,60 +300,33 @@ def ATOMIC_STORE_HINT_H : BaseStoreHintPseudo<GPR32>;
 def ATOMIC_STORE_HINT_S : BaseStoreHintPseudo<GPR32>;
 def ATOMIC_STORE_HINT_D : BaseStoreHintPseudo<GPR64>;
 
+class atomic_hint_store<PatFrag Base, bit Rel, bit SeqCst, code Pred, code GIPred>
+  : PatFrag<(ops node:$ptr, node:$val),
+            (Base node:$val, node:$ptr), Pred> {
+  let IsAtomic = 1;
+  let IsAtomicOrderingReleaseOrStronger = Rel;
+  let IsAtomicOrderingSequentiallyConsistent = SeqCst;
+  let GISelPredicateCode = GIPred;
+}
+
+multiclass AtomicHintPatterns<int Order, int Hint, bit Rel, bit SeqCst, code Pred, code GIPred> {
+  def : Pat<(atomic_hint_store<atomic_store_8, Rel, SeqCst, Pred, GIPred> GPR64sp:$addr, GPR32:$data),
+            (ATOMIC_STORE_HINT_B GPR64sp:$addr, GPR32:$data, (i32 Order), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_16, Rel, SeqCst, Pred, GIPred> GPR64sp:$addr, GPR32:$data),
+            (ATOMIC_STORE_HINT_H GPR64sp:$addr, GPR32:$data, (i32 Order), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_32, Rel, SeqCst, Pred, GIPred> GPR64sp:$addr, GPR32:$data),
+            (ATOMIC_STORE_HINT_S GPR64sp:$addr, GPR32:$data, (i32 Order), (i32 Hint))>;
+  def : Pat<(atomic_hint_store<atomic_store_64, Rel, SeqCst, Pred, GIPred> GPR64sp:$addr, GPR64:$data),
+            (ATOMIC_STORE_HINT_D GPR64sp:$addr, GPR64:$data, (i32 Order), (i32 Hint))>;
+}
+
 let AddedComplexity = 15 in {
-  def : Pat<(atomic_hint_stshh_keep_relaxed<atomic_store_8> GPR64sp:$addr, GPR32:$data),
-            (ATOMIC_STORE_HINT_B GPR64sp:$addr, GPR32:$data, (i32 0), (i32 0))>;
-  def : Pat<(atomic_hint_stshh_keep_relaxed<atomic_store_16> GPR64sp:$addr, GPR32:$data),
-            (ATOMIC_STORE_HINT_H GPR64sp:$addr, GPR32:$data, (i32 0), (i32 0))>;
-  def : Pat<(atomic_hint_stshh_keep_relaxed<atomic_store_32> GPR64sp:$addr, GPR32:$data),
-            (ATOMIC_STORE_HINT_S GPR64sp:$addr, GPR32:$data, (i32 0), (i32 0))>;
-  def : Pat<(atomic_hint_stshh_keep_relaxed<atomic_store_64> GPR64sp:$addr, GPR64:$data),
-            (ATOMIC_STORE_HINT_D GPR64sp:$addr, GPR64:$data, (i32 0), (i32 0))>;
-
-  def : Pat<(atomic_hint_stshh_keep_release<atomic_store_8> GPR64sp:$addr, GPR32:$data),
-            (ATOMIC_STORE_HINT_B GPR64sp:$addr, GPR32:$data, (i32 3), (i32 0))>;
-  def : Pat<(atomic_hint_stshh_keep_release<atomic_store_16> GPR64sp:$addr, GPR32:$data),
-            (ATOMIC_STORE_HINT_H GPR64sp:$addr, GPR32:$data, (i32 3), (i32 0))>;
-  def : Pat<(atomic_hint_stshh_keep_release<atomic_store_32> GPR64sp:$addr, GPR32:$data),
-            (ATOMIC_STORE_HINT_S GPR64sp:$addr, GPR32:$data, (i32 3), (i32 0))>;
-  def : Pat<(atomic_hint_stshh_keep_release<atomic_store_64> GPR64sp:$addr, GPR64:$data),
-            (ATOMIC_STORE_HINT_D GPR64sp:$addr, GPR64:$data, (i32 3), (i32 0))>;
-
-  def : Pat<(atomic_hint_stshh_keep_seqcst<atomic_store_8> GPR64sp:$addr, GPR32:$data),
-            (ATOMIC_STORE_HINT_B GPR64sp:$addr, GPR32:$data, (i32 5), (i32 0))>;
-  def : Pat<(atomic_hint_stshh_keep_seqcst<atomic_store_16> GPR64sp:$addr, GPR32:$data),
-            (ATOMIC_STORE_HINT_H GPR64sp:$addr, GPR32:$data, (i32 5), (i32 0))>;
-  def : Pat<(atomic_hint_stshh_keep_seqcst<atomic_store_32> GPR64sp:$addr, GPR32:$data),
-            (ATOMIC_STORE_HINT_S GPR64sp:$addr, GPR32:$data, (i32 5), (i32 0))>;
-  def : Pat<(atomic_hint_stshh_keep_seqcst<atomic_store_64> GPR64sp:$addr, GPR64:$data),
-            (ATOMIC_STORE_HINT_D GPR64sp:$addr, GPR64:$data, (i32 5), (i32 0))>;
-
-  def : Pat<(atomic_hint_stshh_strm_relaxed<atomic_store_8> GPR64sp:$addr, GPR32:$data),
-            (ATOMIC_STORE_HINT_B GPR64sp:$addr, GPR32:$data, (i32 0), (i32 1))>;
-  def : Pat<(atomic_hint_stshh_strm_relaxed<atomic_store_16> GPR64sp:$addr, GPR32:$data),
-            (ATOMIC_STORE_HINT_H GPR64sp:$addr, GPR32:$data, (i32 0), (i32 1))>;
-  def : Pat<(atomic_hint_stshh_strm_relaxed<atomic_store_32> GPR64sp:$addr, GPR32:$data),
-            (ATOMIC_STORE_HINT_S GPR64sp:$addr, GPR32:$data, (i32 0), (i32 1))>;
-  def : Pat<(atomic_hint_stshh_strm_relaxed<atomic_store_64> GPR64sp:$addr, GPR64:$data),
-            (ATOMIC_STORE_HINT_D GPR64sp:$addr, GPR64:$data, (i32 0), (i32 1))>;
-
-  def : Pat<(atomic_hint_stshh_strm_release<atomic_store_8> GPR64sp:$addr, GPR32:$data),
-            (ATOMIC_STORE_HINT_B GPR64sp:$addr, GPR32:$data, (i32 3), (i32 1))>;
-  def : Pat<(atomic_hint_stshh_strm_release<atomic_store_16> GPR64sp:$addr, GPR32:$data),
-            (ATOMIC_STORE_HINT_H GPR64sp:$addr, GPR32:$data, (i32 3), (i32 1))>;
-  def : Pat<(atomic_hint_stshh_strm_release<atomic_store_32> GPR64sp:$addr, GPR32:$data),
-            (ATOMIC_STORE_HINT_S GPR64sp:$addr, GPR32:$data, (i32 3), (i32 1))>;
-  def : Pat<(atomic_hint_stshh_strm_release<atomic_store_64> GPR64sp:$addr, GPR64:$data),
-            (ATOMIC_STORE_HINT_D GPR64sp:$addr, GPR64:$data, (i32 3), (i32 1))>;
-
-  def : Pat<(atomic_hint_stshh_strm_seqcst<atomic_store_8> GPR64sp:$addr, GPR32:$data),
-            (ATOMIC_STORE_HINT_B GPR64sp:$addr, GPR32:$data, (i32 5), (i32 1))>;
-  def : Pat<(atomic_hint_stshh_strm_seqcst<atomic_store_16> GPR64sp:$addr, GPR32:$data),
-            (ATOMIC_STORE_HINT_H GPR64sp:$addr, GPR32:$data, (i32 5), (i32 1))>;
-  def : Pat<(atomic_hint_stshh_strm_seqcst<atomic_store_32> GPR64sp:$addr, GPR32:$data),
-            (ATOMIC_STORE_HINT_S GPR64sp:$addr, GPR32:$data, (i32 5), (i32 1))>;
-  def : Pat<(atomic_hint_stshh_strm_seqcst<atomic_store_64> GPR64sp:$addr, GPR64:$data),
-            (ATOMIC_STORE_HINT_D GPR64sp:$addr, GPR64:$data, (i32 5), (i32 1))>;
+  defm : AtomicHintPatterns<2, 0, 0, 0, [{ return isAtomicSTSHH_KEEP(N); }], [{ return isAtomicSTSHH_KEEP(MI); }]>;
+  defm : AtomicHintPatterns<5, 0, 1, 0, [{ return isAtomicSTSHH_KEEP(N); }], [{ return isAtomicSTSHH_KEEP(MI); }]>;
+  defm : AtomicHintPatterns<7, 0, 0, 1, [{ return isAtomicSTSHH_KEEP(N); }], [{ return isAtomicSTSHH_KEEP(MI); }]>;
+  defm : AtomicHintPatterns<2, 1, 0, 0, [{ return isAtomicSTSHH_STRM(N); }], [{ return isAtomicSTSHH_STRM(MI); }]>;
+  defm : AtomicHintPatterns<5, 1, 1, 0, [{ return isAtomicSTSHH_STRM(N); }], [{ return isAtomicSTSHH_STRM(MI); }]>;
+  defm : AtomicHintPatterns<7, 1, 0, 1, [{ return isAtomicSTSHH_STRM(N); }], [{ return isAtomicSTSHH_STRM(MI); }]>;
 }
 
 //===----------------------------------

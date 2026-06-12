@@ -338,7 +338,7 @@ bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
   auto *PtrTy = PtrArg->getType()->getAs<PointerType>();
   if (!PtrTy)
     return Diag(TheCall->getBeginLoc(),
-                diag::err_atomic_builtin_must_be_pointer)
+                diag::err_atomic_hint_builtin_must_be_pointer)
            << PtrArg->getType() << 0 << PtrArg->getSourceRange();
   QualType PtrQT = PtrTy->getPointeeType();
 
@@ -348,8 +348,7 @@ bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
                 diag::err_atomic_op_needs_atomic_int_or_fp)
            << 0 << PtrQT << PtrArg->getSourceRange();
 
-  unsigned TySize =
-      Context.getTypeSize(Context.getCanonicalType(PtrQT).getUnqualifiedType());
+  unsigned TySize = Context.getTypeSize(PtrQT);
   if (TySize != 8 && TySize != 16 && TySize != 32 && TySize != 64)
     return Diag(TheCall->getBeginLoc(), diag::err_atomic_op_hint_data_size)
            << PtrArg->getSourceRange();
@@ -398,14 +397,14 @@ bool SemaARM::BuiltinARMAtomicStoreHintCall(unsigned BuiltinID,
   std::optional<llvm::APSInt> HintAP = HintArg->getIntegerConstantExpr(Context);
   if (!HintAP)
     return Diag(TheCall->getBeginLoc(),
-                diag::err_atomic_hint_has_invalid_hint_type)
+                diag::warn_atomic_hint_has_invalid_hint_type)
            << HintArg->getType() << HintArg->getSourceRange();
 
   unsigned Hint = HintAP->getZExtValue();
   if (llvm::getAtomicStoreHintFromMD(Hint) ==
       llvm::AArch64AtomicStoreHint::HINT_NONE)
     return Diag(TheCall->getBeginLoc(),
-                diag::err_atomic_hint_has_invalid_hint_type)
+                diag::warn_atomic_hint_has_invalid_hint_type)
            << *HintAP << HintArg->getSourceRange();
 
   return false;
