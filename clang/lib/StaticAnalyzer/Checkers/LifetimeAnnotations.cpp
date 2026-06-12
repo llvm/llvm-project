@@ -62,6 +62,7 @@ ProgramStateRef LifetimeAnnotations::bindValues(ProgramStateRef State, SymbolRef
 
 void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
                                         CheckerContext &C) const {
+  llvm::errs() << "checkPostCall called" << "\n";
   ProgramStateRef State = C.getState();
 
   const auto *FC = dyn_cast<AnyFunctionCall>(&Call);
@@ -95,23 +96,23 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
 }
 
 bool LifetimeAnnotations::isSourceDangle(const MemRegion *Source, ProgramStateRef State, CheckerContext &C) const {
-  llvm::errs() << "isSourceDangle called";
+  llvm::errs() << "isSourceDangle called" << "\n";
   if (const auto *StackSpace = Source->getMemorySpaceAs<StackSpaceRegion>(State)) {
-    llvm::errs() << "isSourceDanle non null";
+    llvm::errs() << "isSourceDangle non null" << "\n";
     const StackFrame *SF = StackSpace->getStackFrame();
     const StackFrame *CurrentSF = C.getStackFrame();
     if (SF == CurrentSF || SF->isParentOf(CurrentSF)) {
-      llvm::errs() << "isSourceDangle about to fire";
+      llvm::errs() << "isSourceDangle about to fire" << "\n";
       return false;
     }
     return false;
   }
-
   // Currently return true, but this has to be replaced when the source is a SymRegion instead of a MemRegion
   return true;
 }
 
 void LifetimeAnnotations::checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const {
+  llvm::errs() << "checkEndFunction called." << "\n";
   ProgramStateRef State = C.getState();
   auto LBMap = State->get<LifetimeBoundMap>();
   auto LBMapVal = State->get<LifetimeBoundMapVal>();
@@ -119,11 +120,14 @@ void LifetimeAnnotations::checkEndFunction(const ReturnStmt *RS, CheckerContext 
   llvm::SmallString<128> Str;
   llvm::raw_svector_ostream OS(Str);
   ExplodedNode *N = C.generateErrorNode();
-
-  if (LBMapVal.isEmpty() && LBMapVal.isEmpty())
+  llvm::errs() << "maps are not empty before check" << "\n";
+  if (LBMap.isEmpty() && LBMapVal.isEmpty())
     return;
+  
+  llvm::errs() << "maps are not empty after null check" << "\n";
 
-  for (auto&& [OriginSym, SourceSet] : LBMapVal) {
+  for (auto&& [OriginSym, SourceSet] : LBMap) {
+    llvm::errs() << "LBMapVal isEmpty: " << LBMap.isEmpty() << "\n";
     for (const auto *Region : SourceSet) {
       if (isSourceDangle(Region, State, C)) {
         OS << " Returning value bound to a local " << Region << " that will go out of scope.";
@@ -131,10 +135,13 @@ void LifetimeAnnotations::checkEndFunction(const ReturnStmt *RS, CheckerContext 
         C.emitReport(std::move(BR));
         Str.clear();
       }
+      llvm::errs() << "Checking source: " << Region << " isDangling: "
+             << isSourceDangle(Region, State, C) << "\n";
     }
   }
 
   for (auto&& [OriginRegion, SourceSet] : LBMapVal) {
+    llvm::errs() << "LBMapVal isEmpty: " << LBMapVal.isEmpty() << "\n";
     for (const auto *Region : SourceSet) {
       if (isSourceDangle(Region, State, C)) {
         OS << " Returning value bound to a local " << Region << " that will go out of scope.";
@@ -142,6 +149,8 @@ void LifetimeAnnotations::checkEndFunction(const ReturnStmt *RS, CheckerContext 
         C.emitReport(std::move(BR));
         Str.clear();
       }
+      llvm::errs() << "Checking source: " << Region << " isDangling: "
+             << isSourceDangle(Region, State, C) << "\n";
     }
   }
 }
