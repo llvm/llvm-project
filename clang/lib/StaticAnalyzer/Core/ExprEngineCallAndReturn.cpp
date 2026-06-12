@@ -1228,6 +1228,7 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
 
   // Special-case trivial assignment operators.
   if (isTrivialObjectAssignment(Call)) {
+    Bldr.takeNodes(Pred);
     performTrivialCopy(Bldr, Pred, Call);
     return;
   }

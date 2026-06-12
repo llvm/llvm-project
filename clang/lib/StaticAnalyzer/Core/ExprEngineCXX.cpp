@@ -68,7 +68,6 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
   const Expr *CallExpr = Call.getOriginExpr();
 
   ExplodedNodeSet DstEval;
-  Bldr.takeNodes(Pred);
 
   assert(ThisRD);
 
@@ -729,7 +728,7 @@ void ExprEngine::handleConstructor(const Expr *E,
   if (CE && CE->getConstructor()->isTrivial() &&
       CE->getConstructor()->isCopyOrMoveConstructor() &&
       !CallOpts.IsArrayCtorOrDtor) {
-    NodeBuilder Bldr(DstPreCall, DstEvaluated, *currBldrCtx);
+    NodeBuilder Bldr(DstEvaluated, *currBldrCtx);
     // FIXME: Handle other kinds of trivial constructors as well.
     for (ExplodedNode *N : DstPreCall)
       performTrivialCopy(Bldr, N, *Call);
