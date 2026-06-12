@@ -14266,7 +14266,7 @@ public:
                           LocalInstantiationScope *OuterMostScope = nullptr);
 
   /// XXX: comment
-  void BuildDefaultArgsForCtorClosure(CXXConstructorDecl *Ctor);
+  bool BuildDefaultArgsForCtorClosure(SourceLocation Loc, CXXConstructorDecl *Ctor, bool IsCopy = false);
 
   bool InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
                                   ParmVarDecl *Param);
