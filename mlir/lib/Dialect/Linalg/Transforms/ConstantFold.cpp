@@ -300,10 +300,95 @@ struct FoldConstantTranspose : public FoldConstantBase<FoldConstantTranspose> {
 
   ControlFusionFn controlFn;
 };
+
+/// Folds linalg.elementwise ops with all-constant inputs by interpreting the
+/// region body. Each op in the body is folded using its own fold()
+/// implementation, enabling constant propagation through any elementwise kind
+/// (unary, binary, ternary) without explicit per-kind handling.
+struct FoldConstantElementwise
+    : public FoldConstantBase<FoldConstantElementwise> {
+
+  using FoldConstantBase::FoldConstantBase;
+
+  bool matchIndexingMaps(LinalgOp linalgOp) const {
+    return isa<ElementwiseOp>(linalgOp.getOperation());
+  }
+
+  RegionComputationFn getRegionComputeFn(LinalgOp linalgOp) const {
+    Block &body = linalgOp->getRegion(0).front();
+
+    auto yieldOp = dyn_cast<linalg::YieldOp>(body.getTerminator());
+    if (!yieldOp || yieldOp.getNumOperands() != 1)
+      return nullptr;
+
+    return [&body](const APIntOrFloatArray &inputs) -> APIntOrFloat {
+      // Map Value -> folded constant Attribute.
+      DenseMap<Value, Attribute> valueMap;
+
+      // Seed block arguments with input constant attributes.
+      bool isFloat = !inputs.apFloats.empty();
+      unsigned numInputs =
+          isFloat ? inputs.apFloats.size() : inputs.apInts.size();
+      for (unsigned i = 0; i < numInputs; ++i) {
+        Value blockArg = body.getArgument(i);
+        Type argType = blockArg.getType();
+        if (isFloat)
+          valueMap[blockArg] = FloatAttr::get(argType, inputs.apFloats[i]);
+        else
+          valueMap[blockArg] = IntegerAttr::get(argType, inputs.apInts[i]);
+      }
+
+      // Walk body ops (excluding terminator) and fold each one.
+      for (Operation &op : body.without_terminator()) {
+        SmallVector<Attribute> operandAttrs;
+        for (Value operand : op.getOperands()) {
+          auto it = valueMap.find(operand);
+          if (it == valueMap.end())
+            return APIntOrFloat{std::nullopt, std::nullopt};
+          operandAttrs.push_back(it->second);
+        }
+
+        SmallVector<OpFoldResult> foldResults;
+        if (failed(op.fold(operandAttrs, foldResults)) || foldResults.empty())
+          return APIntOrFloat{std::nullopt, std::nullopt};
+
+        for (auto [result, foldResult] :
+             llvm::zip(op.getResults(), foldResults)) {
+          if (auto attr = dyn_cast<Attribute>(foldResult)) {
+            valueMap[result] = attr;
+          } else {
+            // Fold returned a Value; look it up in our map.
+            Value foldVal = cast<Value>(foldResult);
+            auto it = valueMap.find(foldVal);
+            if (it != valueMap.end())
+              valueMap[result] = it->second;
+            else
+              return APIntOrFloat{std::nullopt, std::nullopt};
+          }
+        }
+      }
+
+      // Extract the yielded result.
+      Value yieldedVal =
+          cast<linalg::YieldOp>(body.getTerminator()).getOperand(0);
+      auto it = valueMap.find(yieldedVal);
+      if (it == valueMap.end())
+        return APIntOrFloat{std::nullopt, std::nullopt};
+
+      Attribute resultAttr = it->second;
+      if (auto floatAttr = dyn_cast<FloatAttr>(resultAttr))
+        return APIntOrFloat{std::nullopt, floatAttr.getValue()};
+      if (auto intAttr = dyn_cast<IntegerAttr>(resultAttr))
+        return APIntOrFloat{intAttr.getValue(), std::nullopt};
+      return APIntOrFloat{std::nullopt, std::nullopt};
+    };
+  }
+};
 } // namespace
 
 void mlir::linalg::populateConstantFoldLinalgOperations(
     RewritePatternSet &patterns, const ControlFusionFn &controlFn) {
   MLIRContext *context = patterns.getContext();
   patterns.insert<FoldConstantTranspose>(context, controlFn);
+  patterns.insert<FoldConstantElementwise>(context, controlFn);
 }

@@ -145,4 +145,86 @@ func.func @named_transpose_fold_2d_fp32(%init: tensor<3x2xf32>) -> tensor<3x2xf3
 
 // -----
 
+// CHECK-LABEL: @elementwise_fold_add_f32
+func.func @elementwise_fold_add_f32(%init: tensor<4xf32>) -> tensor<4xf32> {
+  %lhs = arith.constant dense<[1.0, 2.0, 3.0, 4.0]> : tensor<4xf32>
+  %rhs = arith.constant dense<[5.0, 6.0, 7.0, 8.0]> : tensor<4xf32>
+  //               CHECK: %[[CST:.+]] = arith.constant
+  // CHECK-SAME{LITERAL}:   dense<[6.000000e+00, 8.000000e+00, 1.000000e+01, 1.200000e+01]> : tensor<4xf32>
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<add>
+    ins(%lhs, %rhs : tensor<4xf32>, tensor<4xf32>)
+    outs(%init : tensor<4xf32>) -> tensor<4xf32>
+  // CHECK: return %[[CST]]
+  return %1 : tensor<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_fold_mul_i32
+func.func @elementwise_fold_mul_i32(%init: tensor<3xi32>) -> tensor<3xi32> {
+  %lhs = arith.constant dense<[2, 3, 4]> : tensor<3xi32>
+  %rhs = arith.constant dense<[5, 6, 7]> : tensor<3xi32>
+  //               CHECK: %[[CST:.+]] = arith.constant
+  // CHECK-SAME{LITERAL}:   dense<[10, 18, 28]> : tensor<3xi32>
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%lhs, %rhs : tensor<3xi32>, tensor<3xi32>)
+    outs(%init : tensor<3xi32>) -> tensor<3xi32>
+  // CHECK: return %[[CST]]
+  return %1 : tensor<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_fold_sub_f64
+func.func @elementwise_fold_sub_f64(%init: tensor<2x2xf64>) -> tensor<2x2xf64> {
+  %lhs = arith.constant dense<[[10.0, 20.0], [30.0, 40.0]]> : tensor<2x2xf64>
+  %rhs = arith.constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf64>
+  //               CHECK: %[[CST:.+]] = arith.constant
+  // CHECK-SAME{LITERAL}:   dense<[[9.000000e+00, 1.800000e+01], [2.700000e+01, 3.600000e+01]]> : tensor<2x2xf64>
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<sub>
+    ins(%lhs, %rhs : tensor<2x2xf64>, tensor<2x2xf64>)
+    outs(%init : tensor<2x2xf64>) -> tensor<2x2xf64>
+  // CHECK: return %[[CST]]
+  return %1 : tensor<2x2xf64>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_fold_sin_f32
+func.func @elementwise_fold_sin_f32(%init: tensor<4xf32>) -> tensor<4xf32> {
+  %input = arith.constant dense<[0.0, 1.0, 2.0, 3.0]> : tensor<4xf32>
+  //               CHECK: %[[CST:.+]] = arith.constant
+  // CHECK-SAME{LITERAL}:   dense<[0.000000e+00, 0.841470957, 0.909297406, 1.411200e-01]> : tensor<4xf32>
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<sin>
+    ins(%input : tensor<4xf32>)
+    outs(%init : tensor<4xf32>) -> tensor<4xf32>
+  // CHECK: return %[[CST]]
+  return %1 : tensor<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_fold_cos_f32
+func.func @elementwise_fold_cos_f32(%init: tensor<4xf32>) -> tensor<4xf32> {
+  %input = arith.constant dense<[0.0, 1.0, 2.0, 3.0]> : tensor<4xf32>
+  //               CHECK: %[[CST:.+]] = arith.constant
+  // CHECK-SAME{LITERAL}:   dense<[1.000000e+00, 0.540302277, -0.416146845, -0.989992499]> : tensor<4xf32>
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<cos>
+    ins(%input : tensor<4xf32>)
+    outs(%init : tensor<4xf32>) -> tensor<4xf32>
+  // CHECK: return %[[CST]]
+  return %1 : tensor<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_nofold_non_cst_input
+func.func @elementwise_nofold_non_cst_input(%input: tensor<4xf32>, %init: tensor<4xf32>) -> tensor<4xf32> {
+  %rhs = arith.constant dense<[5.0, 6.0, 7.0, 8.0]> : tensor<4xf32>
+  // CHECK: linalg.elementwise
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<add>
+    ins(%input, %rhs : tensor<4xf32>, tensor<4xf32>)
+    outs(%init : tensor<4xf32>) -> tensor<4xf32>
+  return %1 : tensor<4xf32>
+}
 
