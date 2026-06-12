@@ -266,6 +266,9 @@ class CA_ALU<bits<6> funct6, bits<2> funct2, string OpcodeStr>
 
 let Predicates = [HasStdExtZca] in {
 
+// Ideally we would reuse C_ADDI16SP for StdExtY, but since the CompressPat
+// uses instructions with different register classes (ADDI vs YADDI) we can't
+// do this yet. Instead, add a variant of the instruction in RISCVInstrInfoY.td.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
     append Predicates = [NotStdExtYCapMode] in
 def C_ADDI4SPN : RVInst16CIW<0b000, OPC_C0, (outs GPRC:$rd),
@@ -371,6 +374,9 @@ def C_LI : RVInst16CI<0b010, OPC_C1, (outs GPR:$rd), (ins simm6:$imm),
                       "c.li", "$rd, $imm">,
            Sched<[WriteIALU]>;
 
+// Ideally we would reuse C_ADDI16SP for StdExtY, but since the CompressPat
+// uses instructions with different register classes (ADDI vs YADDI) we can't
+// do this yet. Instead, add a variant of the instruction in RISCVInstrInfoY.td.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
     append Predicates = [NotStdExtYCapMode] in
 def C_ADDI16SP : RVInst16CI<0b011, OPC_C1, (outs SP_X:$rd_wb),

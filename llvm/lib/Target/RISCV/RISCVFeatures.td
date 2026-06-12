@@ -1894,11 +1894,11 @@ def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
              AssemblerPredicate<(all_of (not Feature64Bit)),
                                 "RV32I Base Instruction Set">;
 def IsStdExtYCapMode
-    : Predicate<"Subtarget->hasStdExtY() && !Subtarget->isRVYIntMode()">,
+    : Predicate<"Subtarget->isStdExtYCapMode()">,
       AssemblerPredicate<(all_of FeatureStdExtY, (not FeatureVendorXLLVMRVYIPM)),
                          "Using RVY Capability pointer mode">;
 def NotStdExtYCapMode
-    : Predicate<"!Subtarget->hasStdExtY() || Subtarget->isRVYIntMode()">,
+    : Predicate<"!Subtarget->isStdExtYCapMode()">,
       AssemblerPredicate<(any_of (not FeatureStdExtY), FeatureVendorXLLVMRVYIPM),
                          "Not using RVY Capability Pointer Mode">;
 defvar RV32I = DefaultMode;
