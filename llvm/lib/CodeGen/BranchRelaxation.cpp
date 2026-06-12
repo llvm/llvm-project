@@ -106,6 +106,8 @@ class BranchRelaxation {
   MachineBasicBlock *splitBlockBeforeInstr(MachineInstr &MI,
                                            MachineBasicBlock *DestBB);
   void adjustBlockOffsets(MachineBasicBlock &Start);
+  // Computes basic block offsets for blocks in the range (Start, End),
+  // i.e. beginning with the block immediately following Start.
   void adjustBlockOffsets(MachineBasicBlock &Start,
                           MachineFunction::iterator End);
   bool isBlockInRange(const MachineInstr &MI,
@@ -280,9 +282,12 @@ BranchRelaxation::createNewBlockAfter(MachineBasicBlock &OrigMBB,
   OrigMBB.setIsEndSection(false);
 
   // Insert an entry into BlockInfo to align it properly with the block numbers.
-  auto It = BlockInfo.insert(BlockInfo.begin() + NewBB->getNumber(),
-                             BasicBlockInfo());
-  It->Offset = BlockInfo[OrigMBB.getNumber()].postOffset(*NewBB);
+  BlockInfo.insert(BlockInfo.begin() + NewBB->getNumber(), BasicBlockInfo());
+
+  // Keep the block offsets approximately up to date. While they will be
+  // slight underestimates, we will update them appropriately in the next
+  // scan through the function.
+  adjustBlockOffsets(OrigMBB, std::next(NewBB->getIterator()));
 
   return NewBB;
 }
@@ -405,14 +410,8 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
   };
 
   // Populate the block offset and live-ins for a new basic block.
-  auto updateOffsetAndLiveness = [&](MachineBasicBlock *NewBB) {
-    assert(NewBB != nullptr && "can't populate offset for nullptr");
-
-    // Keep the block offsets approximately up to date. While they will be
-    // slight underestimates, we will update them appropriately in the next
-    // scan through the function.
-    adjustBlockOffsets(*std::prev(NewBB->getIterator()),
-                       std::next(NewBB->getIterator()));
+  auto updateLiveness = [&](MachineBasicBlock *NewBB) {
+    assert(NewBB != nullptr && "can't update liveness for nullptr");
 
     // Need to fix live-in lists if we track liveness.
     if (TRI->trackLivenessAfterRegAlloc(*MF))
@@ -455,7 +454,7 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
       insertBranch(MBB, NewBB, FBB, Cond);
 
       TrampolineInsertionPoint = NewBB;
-      updateOffsetAndLiveness(NewBB);
+      updateLiveness(NewBB);
       return true;
     }
 
@@ -518,7 +517,7 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
       // Do it here since if there's no split, no update is needed.
       MBB->replaceSuccessor(FBB, NewBB);
       NewBB->addSuccessor(FBB);
-      updateOffsetAndLiveness(NewBB);
+      updateLiveness(NewBB);
     }
 
     // We now have an appropriate fall-through block in place (either naturally
@@ -571,7 +570,7 @@ bool BranchRelaxation::fixupConditionalBranch(MachineInstr &MI) {
   removeBranch(MBB);
   insertBranch(MBB, NewBB, FBB, Cond);
 
-  updateOffsetAndLiveness(NewBB);
+  updateLiveness(NewBB);
   return true;
 }
 
