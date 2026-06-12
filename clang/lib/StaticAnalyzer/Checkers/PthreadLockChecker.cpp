@@ -13,8 +13,6 @@
 //  * FuchsiaLocksChecker, which is also rather similar.
 //  * C11LockChecker which also closely follows Pthread semantics.
 //
-//  TODO: Path notes.
-//
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
@@ -25,9 +23,34 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 
 using namespace clang;
 using namespace ento;
+
+constexpr llvm::StringRef LOCK_CHECKER_CATEGORY = "Lock checker";
+
+static bool isLockRelevant(const MemRegion *R,
+                           const PathSensitiveBugReport &BR) {
+  return BR.getBugType().getCategory() == LOCK_CHECKER_CATEGORY &&
+         BR.isInteresting(R);
+}
+
+static const NoteTag *createMutexNote(CheckerContext &C, const MemRegion *R,
+                                      StringRef MsgForNamed,
+                                      StringRef MsgForUnnamed) {
+  return C.getNoteTag(
+      [R, Named = MsgForNamed.str(), Unnamed = MsgForUnnamed.str()](
+          PathSensitiveBugReport &BR, llvm::raw_ostream &OS) {
+        if (!isLockRelevant(R, BR))
+          return;
+        std::string Name = R->getDescriptiveName();
+        if (Name.empty())
+          OS << Unnamed;
+        else
+          OS << Named << Name << " here";
+      });
+}
 
 namespace {
 
@@ -204,8 +227,8 @@ private:
                                                 const MemRegion *lockR,
                                                 const SymbolRef *sym) const;
   void reportBug(CheckerContext &C, std::unique_ptr<BugType> BT[],
-                 const Expr *MtxExpr, CheckerKind CheckKind,
-                 StringRef Desc) const;
+                 const Expr *MtxExpr, const MemRegion *MtxRegion,
+                 CheckerKind CheckKind, StringRef Desc) const;
 
   // Init.
   void InitAnyLock(const CallEvent &Call, CheckerContext &C,
@@ -268,16 +291,16 @@ private:
   void initBugType(CheckerKind CheckKind) const {
     if (BT_doublelock[CheckKind])
       return;
-    BT_doublelock[CheckKind].reset(
-        new BugType{CheckNames[CheckKind], "Double locking", "Lock checker"});
-    BT_doubleunlock[CheckKind].reset(
-        new BugType{CheckNames[CheckKind], "Double unlocking", "Lock checker"});
+    BT_doublelock[CheckKind].reset(new BugType{
+        CheckNames[CheckKind], "Double locking", LOCK_CHECKER_CATEGORY});
+    BT_doubleunlock[CheckKind].reset(new BugType{
+        CheckNames[CheckKind], "Double unlocking", LOCK_CHECKER_CATEGORY});
     BT_destroylock[CheckKind].reset(new BugType{
-        CheckNames[CheckKind], "Use destroyed lock", "Lock checker"});
+        CheckNames[CheckKind], "Use destroyed lock", LOCK_CHECKER_CATEGORY});
     BT_initlock[CheckKind].reset(new BugType{
-        CheckNames[CheckKind], "Init invalid lock", "Lock checker"});
-    BT_lor[CheckKind].reset(new BugType{CheckNames[CheckKind],
-                                        "Lock order reversal", "Lock checker"});
+        CheckNames[CheckKind], "Init invalid lock", LOCK_CHECKER_CATEGORY});
+    BT_lor[CheckKind].reset(new BugType{
+        CheckNames[CheckKind], "Lock order reversal", LOCK_CHECKER_CATEGORY});
   }
 };
 } // end anonymous namespace
@@ -443,11 +466,11 @@ void PthreadLockChecker::AcquireLockAux(const CallEvent &Call,
 
   if (const LockState *LState = state->get<LockMap>(lockR)) {
     if (LState->isLocked()) {
-      reportBug(C, BT_doublelock, MtxExpr, CheckKind,
+      reportBug(C, BT_doublelock, MtxExpr, lockR, CheckKind,
                 "This lock has already been acquired");
       return;
     } else if (LState->isDestroyed()) {
-      reportBug(C, BT_destroylock, MtxExpr, CheckKind,
+      reportBug(C, BT_destroylock, MtxExpr, lockR, CheckKind,
                 "This lock has already been destroyed");
       return;
     }
@@ -494,7 +517,8 @@ void PthreadLockChecker::AcquireLockAux(const CallEvent &Call,
   // Record that the lock was acquired.
   lockSucc = lockSucc->add<LockSet>(lockR);
   lockSucc = lockSucc->set<LockMap>(lockR, LockState::getLocked());
-  C.addTransition(lockSucc);
+  C.addTransition(lockSucc,
+                  createMutexNote(C, lockR, "Locking ", "Mutex acquired here"));
 }
 
 void PthreadLockChecker::ReleaseAnyLock(const CallEvent &Call,
@@ -521,11 +545,11 @@ void PthreadLockChecker::ReleaseLockAux(const CallEvent &Call,
 
   if (const LockState *LState = state->get<LockMap>(lockR)) {
     if (LState->isUnlocked()) {
-      reportBug(C, BT_doubleunlock, MtxExpr, CheckKind,
+      reportBug(C, BT_doubleunlock, MtxExpr, lockR, CheckKind,
                 "This lock has already been unlocked");
       return;
     } else if (LState->isDestroyed()) {
-      reportBug(C, BT_destroylock, MtxExpr, CheckKind,
+      reportBug(C, BT_destroylock, MtxExpr, lockR, CheckKind,
                 "This lock has already been destroyed");
       return;
     }
@@ -538,6 +562,21 @@ void PthreadLockChecker::ReleaseLockAux(const CallEvent &Call,
       reportBug(C, BT_lor, MtxExpr, CheckKind,
                 "This was not the most recently acquired lock. Possible lock "
                 "order reversal");
+    const MemRegion *firstLockR = LS.getHead();
+    if (firstLockR != lockR) {
+      ExplodedNode *N = C.generateErrorNode();
+      if (!N)
+        return;
+      initBugType(CheckKind);
+      auto Report = std::make_unique<PathSensitiveBugReport>(
+          *BT_lor[CheckKind],
+          "This was not the most recently acquired lock. Possible lock "
+          "order reversal",
+          N);
+      Report->addRange(MtxExpr->getSourceRange());
+      Report->markInteresting(lockR);
+      Report->markInteresting(firstLockR);
+      C.emitReport(std::move(Report));
       return;
     }
     auto &Factory = state->get_context<LockSet>();
@@ -550,7 +589,8 @@ void PthreadLockChecker::ReleaseLockAux(const CallEvent &Call,
   }
 
   state = state->set<LockMap>(lockR, LockState::getUnlocked());
-  C.addTransition(state);
+  C.addTransition(
+      state, createMutexNote(C, lockR, "Unlocking ", "Mutex released here"));
 }
 
 void PthreadLockChecker::DestroyPthreadLock(const CallEvent &Call,
@@ -593,7 +633,8 @@ void PthreadLockChecker::DestroyLockAux(const CallEvent &Call,
       SymbolRef sym = Call.getReturnValue().getAsSymbol();
       if (!sym) {
         State = State->remove<LockMap>(LockR);
-        C.addTransition(State);
+        C.addTransition(State, createMutexNote(C, LockR, "Destroying ",
+                                               "Mutex destroyed here"));
         return;
       }
       State = State->set<DestroyRetVal>(LockR, sym);
@@ -603,13 +644,15 @@ void PthreadLockChecker::DestroyLockAux(const CallEvent &Call,
       else
         State = State->set<LockMap>(
             LockR, LockState::getUntouchedAndPossiblyDestroyed());
-      C.addTransition(State);
+      C.addTransition(State, createMutexNote(C, LockR, "Destroying ",
+                                             "Mutex destroyed here"));
       return;
     }
   } else {
     if (!LState || LState->isUnlocked()) {
       State = State->set<LockMap>(LockR, LockState::getDestroyed());
-      C.addTransition(State);
+      C.addTransition(State, createMutexNote(C, LockR, "Destroying ",
+                                             "Mutex destroyed here"));
       return;
     }
   }
@@ -618,7 +661,7 @@ void PthreadLockChecker::DestroyLockAux(const CallEvent &Call,
                           ? "This lock is still locked"
                           : "This lock has already been destroyed";
 
-  reportBug(C, BT_destroylock, MtxExpr, CheckKind, Message);
+  reportBug(C, BT_destroylock, MtxExpr, LockR, CheckKind, Message);
 }
 
 void PthreadLockChecker::InitAnyLock(const CallEvent &Call, CheckerContext &C,
@@ -645,7 +688,8 @@ void PthreadLockChecker::InitLockAux(const CallEvent &Call, CheckerContext &C,
   const struct LockState *LState = State->get<LockMap>(LockR);
   if (!LState || LState->isDestroyed()) {
     State = State->set<LockMap>(LockR, LockState::getUnlocked());
-    C.addTransition(State);
+    C.addTransition(State, createMutexNote(C, LockR, "Initializing ",
+                                           "Mutex initialized here"));
     return;
   }
 
@@ -653,13 +697,12 @@ void PthreadLockChecker::InitLockAux(const CallEvent &Call, CheckerContext &C,
                           ? "This lock is still being held"
                           : "This lock has already been initialized";
 
-  reportBug(C, BT_initlock, MtxExpr, CheckKind, Message);
+  reportBug(C, BT_initlock, MtxExpr, LockR, CheckKind, Message);
 }
 
-void PthreadLockChecker::reportBug(CheckerContext &C,
-                                   std::unique_ptr<BugType> BT[],
-                                   const Expr *MtxExpr, CheckerKind CheckKind,
-                                   StringRef Desc) const {
+void PthreadLockChecker::reportBug(
+    CheckerContext &C, std::unique_ptr<BugType> BT[], const Expr *MtxExpr,
+    const MemRegion *MtxRegion, CheckerKind CheckKind, StringRef Desc) const {
   ExplodedNode *N = C.generateErrorNode();
   if (!N)
     return;
@@ -667,6 +710,8 @@ void PthreadLockChecker::reportBug(CheckerContext &C,
   auto Report =
       std::make_unique<PathSensitiveBugReport>(*BT[CheckKind], Desc, N);
   Report->addRange(MtxExpr->getSourceRange());
+  if (MtxRegion)
+    Report->markInteresting(MtxRegion);
   C.emitReport(std::move(Report));
 }
 

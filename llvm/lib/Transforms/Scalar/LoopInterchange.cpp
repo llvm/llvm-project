@@ -1251,8 +1251,12 @@ bool LoopInterchangeLegality::checkInductionsAndReductions(Loop *OuterLoop) {
     for (PHINode &PHI : CurLoop->getHeader()->phis()) {
       InductionDescriptor ID;
       if (InductionDescriptor::isInductionPHI(&PHI, CurLoop, SE, ID)) {
-        if (CurLoop == InnerLoop)
+        if (CurLoop == InnerLoop) {
+          const SCEV *Step = ID.getStep();
+          if (!SE->isLoopInvariant(Step, OuterLoop))
+            return false;
           InnerLoopInductions.push_back(&PHI);
+        }
         continue;
       }
 
@@ -1266,8 +1270,26 @@ bool LoopInterchangeLegality::checkInductionsAndReductions(Loop *OuterLoop) {
             PHI.getIncomingValueForBlock(OuterLoop->getLoopLatch()));
         PHINode *InnerRedPhi = findInnerReductionPhi(
             InnerLoop, V, HasNoWrapReductions, HasNoInfInsts);
+
+        // Reject if PHI has users other than InnerRedPhi. The typical case is
+        // as follows:
+        //
+        //   o.header:
+        //     %red.o = phi [ 0, ... ], [ %red.next, %o.latch ]
+        //     br label %i.header
+        //
+        //   i.header:
+        //     %red.i = phi [ %red.o, %o.header ], [ %red.next, %i.latch ]
+        //     br label %i.body
+        //
+        //   i.body:
+        //     store %red.o to %mem
+        //     ...
+        //
         if (!InnerRedPhi ||
-            !llvm::is_contained(InnerRedPhi->incoming_values(), &PHI)) {
+            !llvm::is_contained(InnerRedPhi->incoming_values(), &PHI) ||
+            !all_of(PHI.users(),
+                    [InnerRedPhi](User *U) { return U == InnerRedPhi; })) {
           LLVM_DEBUG(
               dbgs()
               << "Failed to recognize PHI as an induction or reduction.\n");
@@ -1280,6 +1302,7 @@ bool LoopInterchangeLegality::checkInductionsAndReductions(Loop *OuterLoop) {
           });
           return false;
         }
+
         OuterInnerReductions.insert(&PHI);
         OuterInnerReductions.insert(InnerRedPhi);
       } else {

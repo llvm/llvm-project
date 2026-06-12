@@ -127,6 +127,21 @@ multiclass VOP3_VOP3PInst_t16<string OpName, VOP3P_Mix_Profile P> {
     }
 }
 
+def V_PK_VOP2_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64, VOP3_PACKED> {
+  let HasOpSel = 0;
+  let HasOMod = 0;
+  let Src0RC64 = VSrc_v2f64;
+  let Src1RC64 = VSrc_v2f64;
+}
+
+def V_PK_VOP3_F64_Profile : VOP3P_Profile<VOP_V2F64_V2F64_V2F64_V2F64, VOP3_PACKED> {
+  let HasOpSel = 0;
+  let HasOMod = 0;
+  let Src0RC64 = VSrc_v2f64;
+  let Src1RC64 = VSrc_v2f64;
+  let Src2RC64 = VSrc_v2f64;
+}
+
 let isReMaterializable = 1 in {
 let isCommutable = 1 in {
 defm V_PK_MAD_I16 : VOP3PInst<"v_pk_mad_i16", VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16>>;
@@ -1383,6 +1398,12 @@ let isCommutable = 1, isReMaterializable = 1 in {
     let True16Predicate = UseFakeTrue16Insts in
     defm V_MAX_BF16_PSEUDO : VOP3Inst <"v_max_bf16", VOP_BF16_BF16_BF16>;
   }
+
+  let SubtargetPredicate = HasPackedFP64Ops, SchedRW = [WriteDouble] in {
+    defm V_PK_FMA_F64 : VOP3PInst<"v_pk_fma_f64", V_PK_VOP3_F64_Profile, any_fma>;
+    defm V_PK_MUL_F64 : VOP3PInst<"v_pk_mul_f64", V_PK_VOP2_F64_Profile, any_fmul>;
+    defm V_PK_ADD_F64 : VOP3PInst<"v_pk_add_f64", V_PK_VOP2_F64_Profile, any_fadd>;
+  } // End SubtargetPredicate = HasPackedFP64Ops, SchedRW = [WriteDouble]
 } // End isCommutable = 1, isReMaterializable = 1
 
 def : AMDGPUMnemonicAlias<"v_accvgpr_read",  "v_accvgpr_read_b32">;
@@ -1904,6 +1925,8 @@ def F32_FP8BF8_SWMMAC_w64 : VOP3PWMMA_Profile<[v4f32,   i32, v2i32, v4f32], /*_I
 // *** IU4X32_SWMMAC_w64 lanes 0-31 will have 8xi4 remaining lanes are ignored
 //                       for matrix A, index is i16; Matrix B uses all lanes
 
+def F64_F64X4_WMMA_w32           : VOP3PWMMA_Profile<[v8f64, v2f64,    v2f64,    v8f64], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8=*/0,
+                                     /*_Has_ImodOp=*/1, /*HasMatrixFMT*/0, /*_HasMatrixScale*/0,/*_Scale16*/0, /*_HasMatrixReuse*/1>;
 def F32_F32_WMMA_w32             : VOP3PWMMA_Profile<[v8f32, v2f32,    v2f32,    v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8=*/0,
                                      /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1, /*_IsF4*/0,
                                      /*_NoABMods*/1>;
@@ -2069,6 +2092,10 @@ let WaveSizePredicate = isWave32 in {
       defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3PInst<"v_wmma_ld_scale16_paired_b64", VOP_WMMA_LD_SCALE<i64, VCSrc_b64_Lo256>>;
     } // End isConvergent = 1
   } // End SubtargetPredicate = isGFX125xOnly
+
+  let SubtargetPredicate = HasGFX1251GEMMInsts in {
+    defm V_WMMA_F64_16X16X4_F64_w32      : WMMAInstGFX12<"v_wmma_f64_16x16x4_f64",       F64_F64X4_WMMA_w32, "_w32">;
+  } // End SubtargetPredicate = HasGFX1251GEMMInsts
 } // End WaveSizePredicate = isWave32
 
 let WaveSizePredicate = isWave32 in {
@@ -2250,6 +2277,10 @@ let SubtargetPredicate = isGFX125xOnly in {
   def : SWMMACPat<V_SWMMAC_F32_16X16X64_F16_w32_twoaddr,      int_amdgcn_swmmac_f32_16x16x64_f16,      F32_F16X64_SWMMAC_w32>;
   def : SWMMACPat<V_SWMMAC_F16_16X16X64_F16_w32_twoaddr,      int_amdgcn_swmmac_f16_16x16x64_f16,      F16_F16X64_SWMMAC_w32>;
 } // End SubtargetPredicate = isGFX125xOnly
+
+let SubtargetPredicate = HasGFX1251GEMMInsts in {
+  defm : WMMAPat<"V_WMMA_F64_16X16X4_F64_w32",  int_amdgcn_wmma_f64_16x16x4_f64,  F64_F64X4_WMMA_w32>;
+} // End SubtargetPredicate = HasGFX1251GEMMInsts
 } // End WaveSizePredicate = isWave32
 
 //===----------------------------------------------------------------------===//
@@ -2515,6 +2546,7 @@ defm V_SWMMAC_F32_16X16X32_BF8_FP8_w64 : VOP3P_Real_WMMA_gfx1170_gfx12w64 <0x059
 defm V_SWMMAC_F32_16X16X32_BF8_BF8_w64 : VOP3P_Real_WMMA_gfx1170_gfx12w64 <0x05a, F32_FP8BF8_SWMMAC_w64>;
 } // End OtherPredicates = [HasSWMMACGfx1200Insts]
 
+defm V_WMMA_F64_16X16X4_F64_w32       : VOP3P_Real_WMMA_gfx1250 <0x05b, F64_F64X4_WMMA_w32>;
 defm V_WMMA_F32_16X16X4_F32_w32       : VOP3P_Real_WMMA_gfx1250 <0x05d, F32_F32_WMMA_w32>;
 defm V_WMMA_F32_16X16X32_BF16_w32     : VOP3P_Real_WMMA_gfx1250 <0x062, F32_BF16X32_WMMA_w32>;
 defm V_WMMA_F32_16X16X32_F16_w32      : VOP3P_Real_WMMA_gfx1250 <0x060, F32_F16X32_WMMA_w32>;
@@ -2669,6 +2701,10 @@ let PostEncoderMethod = "postEncodeVOP3<true, true, false>" in {
   defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3P_Real_gfx1250<0x35>;
   defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3P_Real_gfx1250<0x3a>;
 }
+
+defm V_PK_FMA_F64      : VOP3P_Real_gfx1250<0x3b>;
+defm V_PK_MUL_F64      : VOP3P_Real_gfx1250<0x3c>;
+defm V_PK_ADD_F64      : VOP3P_Real_gfx1250<0x4b>;
 
 let AssemblerPredicate = isGFX1250Plus in
 def : AMDGPUMnemonicAlias<"v_fma_mix_f32_f16",  "v_fma_mix_f32">;
