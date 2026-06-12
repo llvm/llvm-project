@@ -359,10 +359,10 @@ define <16 x double> @vfmax_vv_v16f64_unmasked(<16 x double> %va, <16 x double> 
 define <32 x double> @vfmax_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmax_vv_v32f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, 128
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a0)
-; CHECK-NEXT:    vle64.v v0, (a1)
+; CHECK-NEXT:    addi a0, a0, 128
+; CHECK-NEXT:    vle64.v v0, (a0)
 ; CHECK-NEXT:    vfmax.vv v8, v8, v24
 ; CHECK-NEXT:    vfmax.vv v16, v16, v0
 ; CHECK-NEXT:    ret
@@ -373,10 +373,10 @@ define <32 x double> @vfmax_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 
 define <32 x double> @vfmax_vv_v32f64_unmasked(<32 x double> %va, <32 x double> %vb, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmax_vv_v32f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, 128
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a0)
-; CHECK-NEXT:    vle64.v v0, (a1)
+; CHECK-NEXT:    addi a0, a0, 128
+; CHECK-NEXT:    vle64.v v0, (a0)
 ; CHECK-NEXT:    vfmax.vv v8, v8, v24
 ; CHECK-NEXT:    vfmax.vv v16, v16, v0
 ; CHECK-NEXT:    ret

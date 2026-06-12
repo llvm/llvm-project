@@ -97,7 +97,7 @@ multiclass PTX_InstantiateLoop<list<int> ptx_list> {
   }
 }
 
-defm PTX : PTX_InstantiateLoop<[90, 88, 87, 86, 85, 84, 83, 82, 81, 80, 78, 77, 76, 75, 74, 73, 72, 71, 70, 65, 64, 63, 62, 61, 60, 42]>;
+defm PTX : PTX_InstantiateLoop<[92, 91, 90, 88, 87, 86, 85, 84, 83, 82, 81, 80, 78, 77, 76, 75, 74, 73, 72, 71, 70, 65, 64, 63, 62, 61, 60, 42]>;
 
 class NVPTXBuiltin<string prototype> : TargetBuiltin {
   let Spellings = [NAME];

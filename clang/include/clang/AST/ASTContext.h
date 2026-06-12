@@ -30,6 +30,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/MacroBase.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
@@ -39,6 +40,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -68,12 +70,6 @@ struct ScalableVecTyKey {
 // Provide a DenseMapInfo specialization so that ScalableVecTyKey can be used
 // as a key in DenseMap.
 template <> struct DenseMapInfo<ScalableVecTyKey> {
-  static inline ScalableVecTyKey getEmptyKey() {
-    return {DenseMapInfo<clang::QualType>::getEmptyKey(), ~0U, ~0U};
-  }
-  static inline ScalableVecTyKey getTombstoneKey() {
-    return {DenseMapInfo<clang::QualType>::getTombstoneKey(), ~0U, ~0U};
-  }
   static unsigned getHashValue(const ScalableVecTyKey &Val) {
     return hash_combine(DenseMapInfo<clang::QualType>::getHashValue(Val.EltTy),
                         Val.NumElts, Val.NumFields);
@@ -292,7 +288,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<DeducedTemplateSpecializationType>
     DeducedTemplateSpecializationTypes;
   mutable llvm::FoldingSet<AtomicType> AtomicTypes;
-  mutable llvm::FoldingSet<AttributedType> AttributedTypes;
+  mutable llvm::ContextualFoldingSet<AttributedType, ASTContext &>
+      AttributedTypes;
   mutable llvm::FoldingSet<PipeType> PipeTypes;
   mutable llvm::FoldingSet<BitIntType> BitIntTypes;
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
@@ -497,12 +494,6 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
   /// The type for the C ucontext_t type.
   TypeDecl *ucontext_tDecl = nullptr;
-
-  /// The type for the C fexcept_t type.
-  TypeDecl *fexcept_tDecl = nullptr;
-
-  /// The type for the C fenv_t type.
-  TypeDecl *fenv_tDecl = nullptr;
 
   /// Type for the Block descriptor for Blocks CodeGen.
   ///
@@ -954,6 +945,9 @@ public:
   QualType getIntTypeForBitwidth(unsigned DestWidth,
                                  unsigned Signed) const;
 
+  QualType getLeastIntTypeForBitwidth(unsigned DestWidth,
+                                      unsigned Signed) const;
+
   /// getRealTypeForBitwidth -
   /// sets floating point QualTy according to specified bitwidth.
   /// Returns empty type if there is no appropriate target types.
@@ -1002,11 +996,15 @@ public:
   /// True if comments are already loaded from ExternalASTSource.
   mutable bool CommentsLoaded = false;
 
-  /// Mapping from declaration to directly attached comment.
+  /// Key used to look up the raw comment attached to a declaration or macro.
+  using RawCommentLookupKey =
+      llvm::PointerUnion<const Decl *, const MacroInfo *>;
+
+  /// Mapping from declaration or macro to directly attached comment.
   ///
   /// Raw comments are owned by Comments list.  This mapping is populated
   /// lazily.
-  mutable llvm::DenseMap<const Decl *, const RawComment *> DeclRawComments;
+  mutable llvm::DenseMap<RawCommentLookupKey, const RawComment *> RawComments;
 
   /// Mapping from canonical declaration to the first redeclaration in chain
   /// that has a comment attached.
@@ -1028,37 +1026,40 @@ public:
   /// redeclaration.
   mutable llvm::DenseMap<const Decl *, comments::FullComment *> ParsedComments;
 
-  /// Attaches \p Comment to \p OriginalD and to its redeclaration chain
-  /// and removes the redeclaration chain from the set of commentless chains.
+  /// Attaches \p Comment to \p Original (a declaration or macro), and to its
+  /// redeclaration chain when \p Original is a declaration. Removes the
+  /// redeclaration chain from the set of commentless chains.
   ///
-  /// Don't do anything if a comment has already been attached to \p OriginalD
+  /// Don't do anything if a comment has already been attached to \p Original
   /// or its redeclaration chain.
-  void cacheRawCommentForDecl(const Decl &OriginalD,
-                              const RawComment &Comment) const;
+  void cacheRawComment(RawCommentLookupKey Original,
+                       const RawComment &Comment) const;
 
-  /// \returns searches \p CommentsInFile for doc comment for \p D.
+  /// \returns searches \p CommentsInFile for doc comment for \p Key.
   ///
   /// \p RepresentativeLocForDecl is used as a location for searching doc
   /// comments. \p CommentsInFile is a mapping offset -> comment of files in the
   /// same file where \p RepresentativeLocForDecl is.
-  RawComment *getRawCommentForDeclNoCacheImpl(
-      const Decl *D, const SourceLocation RepresentativeLocForDecl,
+  RawComment *getRawCommentNoCacheImpl(
+      RawCommentLookupKey Key, const SourceLocation RepresentativeLoc,
       const std::map<unsigned, RawComment *> &CommentsInFile) const;
 
-  /// Return the documentation comment attached to a given declaration,
-  /// without looking into cache.
-  RawComment *getRawCommentForDeclNoCache(const Decl *D) const;
+  /// Return the documentation comment attached to a given declaration or
+  /// macro, without looking into cache.
+  RawComment *getRawCommentNoCache(RawCommentLookupKey Key) const;
 
 public:
   void addComment(const RawComment &RC);
 
-  /// Return the documentation comment attached to a given declaration.
-  /// Returns nullptr if no comment is attached.
+  /// Return the documentation comment attached to a given declaration or
+  /// macro.  Returns nullptr if no comment is attached.
   ///
   /// \param OriginalDecl if not nullptr, is set to declaration AST node that
   /// had the comment, if the comment we found comes from a redeclaration.
+  /// Macros have no redeclaration chain, so this is set to nullptr when
+  /// \p Key is a \c MacroInfo.
   const RawComment *
-  getRawCommentForAnyRedecl(const Decl *D,
+  getRawCommentForAnyRedecl(RawCommentLookupKey Key,
                             const Decl **OriginalDecl = nullptr) const;
 
   /// Searches existing comments for doc comments that should be attached to \p
@@ -1400,6 +1401,9 @@ public:
   /// Keep track of CUDA/HIP implicit host device functions used on device side
   /// in device compilation.
   llvm::DenseSet<const FunctionDecl *> CUDAImplicitHostDeviceFunUsedByDevice;
+
+  /// Functions whose device body should be replaced with a trap stub.
+  llvm::SmallPtrSet<const FunctionDecl *, 4> CUDADeviceInvalidFuncs;
 
   /// Map of SYCL kernels indexed by the unique type used to name the kernel.
   /// Entries are not serialized but are recreated on deserialization of a
@@ -2356,30 +2360,6 @@ public:
     return QualType();
   }
 
-  /// Set the type for the C fexcept_t type.
-  void setfexcept_tDecl(TypeDecl *fexcept_tDecl) {
-    this->fexcept_tDecl = fexcept_tDecl;
-  }
-
-  /// Retrieve the C fexcept_t type.
-  QualType getfexcept_tType() const {
-    if (fexcept_tDecl)
-      return getTypeDeclType(ElaboratedTypeKeyword::None,
-                             /*Qualifier=*/std::nullopt, fexcept_tDecl);
-    return QualType();
-  }
-
-  /// Set the type for the C fenv_t type.
-  void setfenv_tDecl(TypeDecl *fenv_tDecl) { this->fenv_tDecl = fenv_tDecl; }
-
-  /// Retrieve the C fenv_t type.
-  QualType getfenv_tType() const {
-    if (fenv_tDecl)
-      return getTypeDeclType(ElaboratedTypeKeyword::None,
-                             /*Qualifier=*/std::nullopt, fenv_tDecl);
-    return QualType();
-  }
-
   /// The result type of logical operations, '<', '>', '!=', etc.
   CanQualType getLogicalOperationType() const {
     return getLangOpts().CPlusPlus ? BoolTy : IntTy;
@@ -2660,10 +2640,7 @@ public:
     GE_Missing_setjmp,
 
     /// Missing a type from <ucontext.h>
-    GE_Missing_ucontext,
-
-    /// Missing a type from <fenv.h>
-    GE_Missing_fenv
+    GE_Missing_ucontext
   };
 
   QualType DecodeTypeStr(const char *&Str, const ASTContext &Context,
@@ -4028,16 +4005,6 @@ typename clang::LazyGenerationalUpdatePtr<Owner, T, Update>::ValueType
   return Value;
 }
 template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
-  static FoldingSetNodeID getEmptyKey() { return FoldingSetNodeID{}; }
-
-  static FoldingSetNodeID getTombstoneKey() {
-    FoldingSetNodeID ID;
-    for (size_t I = 0; I < sizeof(ID) / sizeof(unsigned); ++I) {
-      ID.AddInteger(std::numeric_limits<unsigned>::max());
-    }
-    return ID;
-  }
-
   static unsigned getHashValue(const FoldingSetNodeID &Val) {
     return Val.ComputeHash();
   }

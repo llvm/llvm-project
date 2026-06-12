@@ -424,6 +424,48 @@ TEST_F(CallGraphExtractorTest, ObjCMessageExprs) {
       hasSummaryThat(HasNoDirectCallees(), HasNoVirtualCallees()));
 }
 
+TEST_F(CallGraphExtractorTest, ObjCMessageToLocallyImplementedMethod) {
+  // When the receiver class is implemented in the same TU, `clang::CallGraph`
+  // resolves the ObjCMessageExpr (via `lookupPrivateMethod`) to an
+  // ObjCMethodDecl and adds it as a callee. The extractor must not abort on
+  // these — ObjC dispatch is dynamic and we don't model it as a direct callee.
+  runExtractor(R"cpp(
+    @interface NSObject @end
+    @interface Inner : NSObject
+    - (int) val;
+    @end
+    @implementation Inner
+    - (int) val { return 42; }
+    @end
+    int caller(Inner *x) { return [x val]; }
+  )cpp",
+               {"-x", "objective-c"});
+
+  ASSERT_THAT_EXPECTED(
+      findSummary("caller"),
+      hasSummaryThat(HasNoDirectCallees(), HasNoVirtualCallees()));
+}
+
+TEST_F(CallGraphExtractorTest, ObjCPropertyDotSyntax) {
+  // Property dot-syntax (`x.val`) desugars to an ObjCMessageExpr to the
+  // synthesized getter; same dynamic dispatch as bracket syntax. Cover it
+  // explicitly because real-world hits often come through dot-syntax.
+  runExtractor(R"cpp(
+    @interface NSObject @end
+    @interface Inner : NSObject
+    @property (readonly) int val;
+    @end
+    @implementation Inner
+    @end
+    int caller(Inner *x) { return x.val; }
+  )cpp",
+               {"-x", "objective-c"});
+
+  ASSERT_THAT_EXPECTED(
+      findSummary("caller"),
+      hasSummaryThat(HasNoDirectCallees(), HasNoVirtualCallees()));
+}
+
 TEST_F(CallGraphExtractorTest, DefinitionLocation) {
   runExtractor(R"cpp(
     void callee_with_def() {}

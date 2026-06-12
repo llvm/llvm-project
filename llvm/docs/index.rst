@@ -87,10 +87,12 @@ LLVM welcomes contributions of all kinds. To learn more, see the following artic
 
    GettingInvolved
    RFCProcess
+   ProjectGovernance
 
 * :doc:`GettingInvolved`
 * :ref:`development-process`
 * :doc:`RFCProcess`
+* :doc:`ProjectGovernance`
 * :ref:`lists-forums`
 * :ref:`meetups-social-events`
 * :ref:`community-proposals`

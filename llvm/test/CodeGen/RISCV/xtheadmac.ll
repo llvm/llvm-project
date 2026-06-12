@@ -37,15 +37,15 @@ define i32 @muls_i32(i32 %a, i32 %b, i32 %c) {
 define i64 @mula_i64(i64 %a, i64 %b, i64 %c) {
 ; RV32XTHEADMAC-LABEL: mula_i64:
 ; RV32XTHEADMAC:       # %bb.0:
-; RV32XTHEADMAC-NEXT:    mulhu a6, a2, a4
-; RV32XTHEADMAC-NEXT:    th.mula a6, a2, a5
-; RV32XTHEADMAC-NEXT:    mv a5, a0
-; RV32XTHEADMAC-NEXT:    th.mula a5, a2, a4
-; RV32XTHEADMAC-NEXT:    th.mula a6, a3, a4
-; RV32XTHEADMAC-NEXT:    sltu a0, a5, a0
+; RV32XTHEADMAC-NEXT:    mulhu a7, a2, a4
+; RV32XTHEADMAC-NEXT:    mv a6, a0
+; RV32XTHEADMAC-NEXT:    th.mula a6, a2, a4
+; RV32XTHEADMAC-NEXT:    th.mula a7, a2, a5
+; RV32XTHEADMAC-NEXT:    sltu a0, a6, a0
+; RV32XTHEADMAC-NEXT:    th.mula a7, a3, a4
 ; RV32XTHEADMAC-NEXT:    add a0, a1, a0
-; RV32XTHEADMAC-NEXT:    add a1, a0, a6
-; RV32XTHEADMAC-NEXT:    mv a0, a5
+; RV32XTHEADMAC-NEXT:    add a1, a0, a7
+; RV32XTHEADMAC-NEXT:    mv a0, a6
 ; RV32XTHEADMAC-NEXT:    ret
 ;
 ; RV64XTHEADMAC-LABEL: mula_i64:
@@ -97,12 +97,12 @@ define i64 @muls_i64(i64 %a, i64 %b, i64 %c) {
 ; RV32XTHEADMAC-LABEL: muls_i64:
 ; RV32XTHEADMAC:       # %bb.0:
 ; RV32XTHEADMAC-NEXT:    mulhu a6, a2, a4
+; RV32XTHEADMAC-NEXT:    mul a7, a2, a4
 ; RV32XTHEADMAC-NEXT:    th.mula a6, a2, a5
-; RV32XTHEADMAC-NEXT:    mul a5, a2, a4
-; RV32XTHEADMAC-NEXT:    sltu a5, a0, a5
-; RV32XTHEADMAC-NEXT:    th.muls a0, a2, a4
+; RV32XTHEADMAC-NEXT:    sltu a5, a0, a7
 ; RV32XTHEADMAC-NEXT:    th.mula a6, a3, a4
 ; RV32XTHEADMAC-NEXT:    sub a1, a1, a5
+; RV32XTHEADMAC-NEXT:    th.muls a0, a2, a4
 ; RV32XTHEADMAC-NEXT:    sub a1, a1, a6
 ; RV32XTHEADMAC-NEXT:    ret
 ;

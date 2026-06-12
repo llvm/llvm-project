@@ -876,11 +876,12 @@ def SimdOp : OpenMP_Op<"simd", traits = [
   let hasRegionVerifier = 1;
 }
 
+
 def YieldOp
     : OpenMP_Op<"yield", [Pure, ReturnLike, Terminator,
-                          ParentOneOf<["AtomicUpdateOp", "DeclareReductionOp",
-                                       "LoopNestOp", "PrivateClauseOp",
-                                       "IteratorOp"]>]> {
+                          ParentOneOf<["AtomicUpdateOp", "AtomicCompareOp",
+                                       "DeclareReductionOp", "LoopNestOp",
+                                       "PrivateClauseOp", "IteratorOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "omp.yield" yields SSA values from the OpenMP dialect op region and
@@ -1657,6 +1658,7 @@ def TargetOp : OpenMP_Op<"target", traits = [
   }] # clausesExtraClassDeclaration;
 
   let assemblyFormat = clausesAssemblyFormat # [{
+    ( `map_iterated` `(` $map_iterated^ `:` type($map_iterated) `)` )?
     custom<TargetOpRegion>(
         $region, $has_device_addr_vars, type($has_device_addr_vars),
         $host_eval_vars, type($host_eval_vars), $in_reduction_vars,
@@ -1952,6 +1954,51 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture", traits = [
 }
 
 //===----------------------------------------------------------------------===//
+// [5.1] 2.17.7 atomic Directive - compare clause
+//===----------------------------------------------------------------------===//
+
+def AtomicCompareOp : OpenMP_Op<"atomic.compare", traits = [
+    AtomicCompareOpInterface, RecursiveMemoryEffects,
+    SingleBlockImplicitTerminator<"YieldOp">
+  ], clauses = [
+    OpenMP_HintClause, OpenMP_MemoryOrderClause
+  ], singleRegion = 1> {
+  let summary = "performs an atomic compare";
+  let description = [{
+    This operation performs an atomic compare-and-swap.
+
+    The `atomic compare` construct implements atomic conditional update
+    semantics. The operand `x` is the address of the variable that is being
+    compared and potentially updated. The region describes the comparison
+    and update logic.
+
+    The region has the following structure:
+    ```
+      omp.atomic.compare {
+        if (x == d) x = e
+        omp.yield
+      }
+    ```
+  }] # clausesDescription;
+
+  let arguments = !con(
+      (ins Arg<OpenMP_PointerLikeType,
+               "Address of variable to be compared/updated", [MemRead, MemWrite]>:$x,
+           UnitAttr:$weak),
+      clausesArgs);
+
+  // Override region definition.
+  let regions = (region SizedRegion<1>:$region);
+
+  // Override clause-based assemblyFormat.
+  let assemblyFormat = clausesAssemblyFormat #
+    "$x `:` type($x) $region attr-dict";
+
+  let hasVerifier = 1;
+  let hasRegionVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // [5.1] 2.21.2 threadprivate Directive
 //===----------------------------------------------------------------------===//
 
@@ -2078,17 +2125,18 @@ def DeclareMapperOp : OpenMP_Op<"declare_mapper", [
   let hasRegionVerifier = 1;
 }
 
-def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper.info", [
-    HasParent<"DeclareMapperOp">,
-    Terminator
-  ], clauses = [
-    OpenMP_MapClause
-  ]> {
+def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper.info",
+                                    [AttrSizedOperandSegments,
+                                     HasParent<"DeclareMapperOp">, Terminator],
+                                    clauses = [OpenMP_MapClause]> {
   let summary = "declare mapper info";
   let description = [{
     This Op is used to capture the map information related to it's
     parent DeclareMapperOp.
   }] # clausesDescription;
+
+  let builders = [OpBuilder<(
+      ins CArg<"const DeclareMapperInfoOperands &">:$clauses)>];
 
   let extraClassDeclaration = [{
     // Override BlockArgOpenMPOpInterface method because `map` clauses have no
@@ -2507,9 +2555,7 @@ def AffinityEntryOp : OpenMP_Op<"affinity_entry", [Pure]> {
 // Iterator Op
 //===----------------------------------------------------------------------===//
 
-def IteratorOp : OpenMP_Op<"iterator",
-                           [AttrSizedOperandSegments,
-                            SingleBlockImplicitTerminator<"YieldOp">],
+def IteratorOp : OpenMP_Op<"iterator", [AttrSizedOperandSegments, SingleBlock],
                            clauses = [OpenMP_LoopRelatedClause]> {
   let summary = "OpenMP iterator modifier";
   let description = [{

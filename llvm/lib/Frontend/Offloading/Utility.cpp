@@ -315,6 +315,27 @@ private:
       KernelData.WavefrontSize = V.second.getUInt();
     } else if (IsKey(V.first, ".max_flat_workgroup_size")) {
       KernelData.MaxFlatWorkgroupSize = V.second.getUInt();
+    } else if (IsKey(V.first, ".args")) {
+      auto ArgsArray = V.second.getArray();
+      for (auto ArgIt = ArgsArray.begin(), ArgEnd = ArgsArray.end();
+           ArgIt != ArgEnd; ++ArgIt) {
+        auto ArgMap = ArgIt->getMap();
+
+        auto OffsetIt = ArgMap.find(".offset");
+        if (OffsetIt == ArgMap.end())
+          return createStringError(
+              inconvertibleErrorCode(),
+              "Missing required .offset key in kernel argument metadata map");
+
+        auto SizeIt = ArgMap.find(".size");
+        if (SizeIt == ArgMap.end())
+          return createStringError(
+              inconvertibleErrorCode(),
+              "Missing required .size key in kernel argument metadata map");
+
+        KernelData.ArgMDs.emplace_back(OffsetIt->second.getUInt(),
+                                       SizeIt->second.getUInt());
+      }
     }
 
     return Error::success();
