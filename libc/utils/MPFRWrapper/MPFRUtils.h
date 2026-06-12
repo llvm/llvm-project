@@ -396,16 +396,37 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
                   input, match_value, ulp_tolerance,                           \
                   LIBC_NAMESPACE::testing::mpfr::RoundingMode::Nearest))
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
+#define EXPECT_MPFR_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,      \
+                                   rounding)                                   \
+  EXPECT_MPFR_MATCH_DEFAULT(op, input, match_value, ulp_tolerance)
+
+#else // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
 #define EXPECT_MPFR_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,      \
                                    rounding)                                   \
   EXPECT_THAT(match_value,                                                     \
               LIBC_NAMESPACE::testing::mpfr::get_mpfr_matcher<op>(             \
                   input, match_value, ulp_tolerance, rounding))
 
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
 #define EXPECT_MPFR_MATCH(...)                                                 \
   GET_MPFR_MACRO(__VA_ARGS__, EXPECT_MPFR_MATCH_ROUNDING,                      \
                  EXPECT_MPFR_MATCH_DEFAULT, GET_MPFR_DUMMY_ARG)                \
   (__VA_ARGS__)
+
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
+#define TEST_MPFR_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,        \
+                                 rounding)                                     \
+  LIBC_NAMESPACE::testing::mpfr::get_mpfr_matcher<op>(                         \
+      input, match_value, ulp_tolerance,                                       \
+      LIBC_NAMESPACE::testing::mpfr::RoundingMode::Nearest)                    \
+      .match(match_value)
+
+#else // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
 #define TEST_MPFR_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,        \
                                  rounding)                                     \
@@ -413,10 +434,39 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
                                                       ulp_tolerance, rounding) \
       .match(match_value)
 
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
 #define TEST_MPFR_MATCH(...)                                                   \
   GET_MPFR_MACRO(__VA_ARGS__, TEST_MPFR_MATCH_ROUNDING,                        \
                  EXPECT_MPFR_MATCH_DEFAULT, GET_MPFR_DUMMY_ARG)                \
   (__VA_ARGS__)
+
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
+#define TEST_MPFR_MATCH_ROUNDING_SILENTLY(op, input, match_value,              \
+                                          ulp_tolerance, rounding)             \
+  LIBC_NAMESPACE::testing::mpfr::get_silent_mpfr_matcher<op>(                  \
+      input, match_value, ulp_tolerance,                                       \
+      LIBC_NAMESPACE::testing::mpfr::RoundingMode::Nearest)                    \
+      .match(match_value)
+
+#define EXPECT_MPFR_MATCH_ALL_ROUNDING(op, input, match_value, ulp_tolerance)  \
+  {                                                                            \
+    namespace mpfr = LIBC_NAMESPACE::testing::mpfr;                            \
+    mpfr::ForceRoundingMode __r1(mpfr::RoundingMode::Nearest);                 \
+    if (__r1.success) {                                                        \
+      EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
+                        mpfr::RoundingMode::Nearest);                          \
+    }                                                                          \
+  }
+
+#else // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
+#define TEST_MPFR_MATCH_ROUNDING_SILENTLY(op, input, match_value,              \
+                                          ulp_tolerance, rounding)             \
+  LIBC_NAMESPACE::testing::mpfr::get_silent_mpfr_matcher<op>(                  \
+      input, match_value, ulp_tolerance, rounding)                             \
+      .match(match_value)
 
 #define EXPECT_MPFR_MATCH_ALL_ROUNDING(op, input, match_value, ulp_tolerance)  \
   {                                                                            \
@@ -443,28 +493,47 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
     }                                                                          \
   }
 
-#define TEST_MPFR_MATCH_ROUNDING_SILENTLY(op, input, match_value,              \
-                                          ulp_tolerance, rounding)             \
-  LIBC_NAMESPACE::testing::mpfr::get_silent_mpfr_matcher<op>(                  \
-      input, match_value, ulp_tolerance, rounding)                             \
-      .match(match_value)
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
-#define ASSERT_MPFR_MATCH_DEFAULT(op, input, match_value, ulp_tolerance)       \
-  ASSERT_THAT(match_value,                                                     \
-              LIBC_NAMESPACE::testing::mpfr::get_mpfr_matcher<op>(             \
-                  input, match_value, ulp_tolerance,                           \
-                  LIBC_NAMESPACE::testing::mpfr::RoundingMode::Nearest))
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
+#define ASSERT_MPFR_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,      \
+                                   rounding)                                   \
+  ASSERT_MPFR_MATCH_DEFAULT(op, input, match_value, ulp_tolerance)
+
+#else // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
 #define ASSERT_MPFR_MATCH_ROUNDING(op, input, match_value, ulp_tolerance,      \
                                    rounding)                                   \
   ASSERT_THAT(match_value,                                                     \
               LIBC_NAMESPACE::testing::mpfr::get_mpfr_matcher<op>(             \
                   input, match_value, ulp_tolerance, rounding))
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
 #define ASSERT_MPFR_MATCH(...)                                                 \
   GET_MPFR_MACRO(__VA_ARGS__, ASSERT_MPFR_MATCH_ROUNDING,                      \
                  ASSERT_MPFR_MATCH_DEFAULT, GET_MPFR_DUMMY_ARG)                \
   (__VA_ARGS__)
+
+#define ASSERT_MPFR_MATCH_DEFAULT(op, input, match_value, ulp_tolerance)       \
+  ASSERT_THAT(                                                                 \
+      match_value,                                                             \
+      LIBC_NAMESPACE::testing::mpfr::get_mpfr_matcher<op>(                     \
+          input, match_value, ulp_tolerance, mpfr::RoundingMode::Nearest))
+
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+
+#define ASSERT_MPFR_MATCH_ALL_ROUNDING(op, input, match_value, ulp_tolerance)  \
+  {                                                                            \
+    namespace mpfr = LIBC_NAMESPACE::testing::mpfr;                            \
+    mpfr::ForceRoundingMode __r1(mpfr::RoundingMode::Nearest);                 \
+    if (__r1.success) {                                                        \
+      ASSERT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                 \
+                        mpfr::RoundingMode::Nearest);                          \
+    }                                                                          \
+  }
+
+#else // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
 #define ASSERT_MPFR_MATCH_ALL_ROUNDING(op, input, match_value, ulp_tolerance)  \
   {                                                                            \
@@ -490,5 +559,7 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
                         mpfr::RoundingMode::TowardZero);                       \
     }                                                                          \
   }
+
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
 #endif // LLVM_LIBC_UTILS_MPFRWRAPPER_MPFRUTILS_H
