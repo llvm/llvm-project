@@ -60938,20 +60938,51 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                            Op0.getOperand(1));
       }
       break;
-    case X86ISD::VPERMI:
     case X86ISD::VROTLI:
     case X86ISD::VROTRI:
       if (!IsSplat &&
-          ((VT.is256BitVector() && Subtarget.hasVLX()) ||
+          ((VT.is256BitVector() && Subtarget.hasAVX512()) ||
            (VT.is512BitVector() && Subtarget.useAVX512Regs())) &&
           llvm::all_of(Ops, [Op0](SDValue Op) {
             return Op0.getOperand(1) == Op.getOperand(1);
           })) {
-        assert(!(Opcode == X86ISD::VPERMI &&
-                 Op0.getValueType().is128BitVector()) &&
-               "Illegal 128-bit X86ISD::VPERMI nodes");
         return DAG.getNode(Opcode, DL, VT, ConcatSubOperand(VT, Ops, 0),
                            Op0.getOperand(1));
+      }
+      break;
+    case ISD::ROTL:
+    case ISD::ROTR:
+      if (!IsSplat && ((VT.is256BitVector() && Subtarget.hasAVX512()) ||
+                       (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {
+        SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
+        SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
+        if (Concat0 || Concat1)
+          return DAG.getNode(Opcode, DL, VT,
+                             Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
+                             Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1));
+      }
+      break;
+    case X86ISD::VPERMI:
+      if (!IsSplat && NumOps == 2 &&
+          (VT.is512BitVector() && Subtarget.useAVX512Regs())) {
+        // If both halves share the mask - then concat as VPERMI.
+        if (Ops[0].getOperand(1) == Ops[1].getOperand(1))
+          return DAG.getNode(Opcode, DL, VT, ConcatSubOperand(VT, Ops, 0),
+                             Op0.getOperand(1));
+
+        // Fallback to a VPERMV3 variable mask shuffle.
+        SmallVector<int, 8> Mask, HiMask;
+        unsigned NumElts = VT.getVectorNumElements();
+        DecodeVPERMMask(NumElts / 2, Ops[0].getConstantOperandVal(1), Mask);
+        DecodeVPERMMask(NumElts / 2, Ops[1].getConstantOperandVal(1), HiMask);
+        for (int M : HiMask)
+          Mask.push_back(NumElts + M);
+
+        return lowerShuffleWithPERMV(
+            DL, VT, Mask,
+            widenSubVector(VT, Ops[0].getOperand(0), false, Subtarget, DAG, DL),
+            widenSubVector(VT, Ops[1].getOperand(0), false, Subtarget, DAG, DL),
+            Subtarget, DAG);
       }
       break;
     case ISD::AND:

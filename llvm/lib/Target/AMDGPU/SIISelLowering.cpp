@@ -15070,7 +15070,7 @@ static bool hasNon16BitAccesses(uint64_t PermMask, SDValue &Op,
   auto TempOtherOp = peekThroughBitcasts(OtherOp);
 
   auto OpIs16Bit =
-      TempOtherOp.getValueSizeInBits() == 16 || isExtendedFrom16Bits(TempOp);
+      TempOp.getValueSizeInBits() == 16 || isExtendedFrom16Bits(TempOp);
   if (!OpIs16Bit)
     return true;
 
