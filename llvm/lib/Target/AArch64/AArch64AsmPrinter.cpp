@@ -2243,12 +2243,12 @@ bool AArch64AsmPrinter::emitDeactivationSymbolRelocation(Value *DS) {
 
 AArch64AsmPrinter::PtrAuthSchema AArch64AsmPrinter::PtrAuthSchema::CreateImmReg(
     AArch64PACKey::ID Key, uint64_t IntDisc, const MachineOperand &AddrDiscOp) {
-  PtrAuthSchema Schema{
-      .Key = Key,
-      .IntDisc = IntDisc,
-      .AddrDisc = AddrDiscOp.getReg(),
-      .AddrDiscIsKilled = AddrDiscOp.isKill(),
-  };
+  PtrAuthSchema Schema;
+  Schema.Key = Key;
+  Schema.IntDisc = IntDisc;
+  Schema.AddrDisc = AddrDiscOp.getReg();
+  Schema.AddrDiscIsKilled = AddrDiscOp.isKill();
+  Schema.PCDisc = AArch64::NoRegister;
   return Schema;
 }
 
@@ -2256,13 +2256,12 @@ AArch64AsmPrinter::PtrAuthSchema AArch64AsmPrinter::PtrAuthSchema::CreateRegReg(
     AArch64PACKey::ID Key, Register AddrDisc, Register PCDisc) {
   assert(PCDisc != AArch64::NoRegister &&
          "Use CreateImmReg for non-PC schemas");
-  PtrAuthSchema Schema{
-      .Key = Key,
-      .IntDisc = 0,
-      .AddrDisc = AddrDisc,
-      .AddrDiscIsKilled = true,
-      .PCDisc = PCDisc,
-  };
+  PtrAuthSchema Schema;
+  Schema.Key = Key;
+  Schema.IntDisc = 0;
+  Schema.AddrDisc = AddrDisc;
+  Schema.AddrDiscIsKilled = true;
+  Schema.PCDisc = PCDisc;
   return Schema;
 }
 
