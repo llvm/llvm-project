@@ -134,12 +134,12 @@ MLIR_CAPI_EXPORTED MlirLinalgConvolutionDimensions
 mlirLinalgInferConvolutionDimensions(MlirOperation op) {
   auto linalgOp = llvm::dyn_cast<mlir::linalg::LinalgOp>(unwrap(op));
   if (!linalgOp)
-    return MlirLinalgConvolutionDimensions{};
+    return {};
 
   FailureOr<linalg::ConvolutionDimensions> maybeDims =
       linalg::inferConvolutionDims(linalgOp);
   if (failed(maybeDims))
-    return MlirLinalgConvolutionDimensions{};
+    return {};
 
   return toConvolutionDimensions(linalgOp.getContext(), *maybeDims);
 }
@@ -148,17 +148,16 @@ MLIR_CAPI_EXPORTED MlirLinalgConvolutionDimensions
 mlirLinalgInferConvolutionDimensionsFromMaps(const MlirAffineMap *indexingMaps,
                                              size_t numMaps) {
   if (!indexingMaps || numMaps == 0)
-    return MlirLinalgConvolutionDimensions{};
+    return {};
 
   SmallVector<AffineMap, 3> maps;
-  maps.reserve(numMaps);
   for (size_t i = 0; i < numMaps; ++i)
     maps.push_back(unwrap(indexingMaps[i]));
 
   FailureOr<linalg::ConvolutionDimensions> maybeDims =
       linalg::inferConvolutionDims(maps);
   if (failed(maybeDims))
-    return MlirLinalgConvolutionDimensions{};
+    return {};
 
   return toConvolutionDimensions(maps[0].getContext(), *maybeDims);
 }
