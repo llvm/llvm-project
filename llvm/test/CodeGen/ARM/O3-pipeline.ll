@@ -158,11 +158,11 @@
 ; CHECK-NEXT:      Tail Duplication
 ; CHECK-NEXT:      Machine Copy Propagation Pass
 ; CHECK-NEXT:      Post-RA pseudo instruction expansion pass
+; CHECK-NEXT:      ARM pseudo instruction expansion pass
 ; CHECK-NEXT:      ARM load / store optimization pass
 ; CHECK-NEXT:      Reaching Definitions Analysis
 ; CHECK-NEXT:      ARM Execution Domain Fix
 ; CHECK-NEXT:      BreakFalseDeps
-; CHECK-NEXT:      ARM pseudo instruction expansion pass
 ; CHECK-NEXT:      Insert KCFI indirect call checks
 ; CHECK-NEXT:      Thumb2 instruction size reduce pass
 ; CHECK-NEXT:      MachineDominator Tree Construction
