@@ -3946,10 +3946,7 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
       (SrcVT == MVT::f32 || SrcVT == MVT::f64))
     return Op;
 
-  if (DstVT == MVT::i16 && SatWidth == DstWidth && SrcVT == MVT::f16)
-    return Op;
-
-  if (DstVT == MVT::i16 && SatWidth == 16 && SrcVT == MVT::f32)
+  if (DstVT == MVT::i16 && SatWidth == DstWidth && (SrcVT == MVT::f16 || SrcVT == MVT::f32))
     return Op;
 
   // Perform all saturation at selected width (i16 or i32) and truncate

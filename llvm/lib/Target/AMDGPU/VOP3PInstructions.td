@@ -3144,25 +3144,30 @@ defm V_DOT8_I32_I4  : VOP3P_Real_gfx10 <0x18>;
 // GFX11+ Patterns
 //===----------------------------------------------------------------------===//
 
+multiclass FPToIntSatI16Pat<dag lhs, dag rhs> {
+  let True16Predicate = UseRealTrue16Insts in
+    def : GCNPat<lhs, (EXTRACT_SUBREG rhs, lo16)>;
+  let True16Predicate = NotUseRealTrue16Insts in
+    def : GCNPat<lhs, rhs>;
+}
+
 // Packed f32 -> i16 saturated conversion.
 multiclass CvtPkF32ToI16Pat<SDPatternOperator dagOp, Instruction inst> {
+  // Needed for SDAG as it uses build_vector.
   def : GCNPat<(v2i16 (build_vector
                   (i16 (dagOp (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)),
                   (i16 (dagOp (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)), i16)))),
                (inst $src0_modifiers, $src0, $src1_modifiers, $src1)>;
+  // Needed for GISel as ut legalizes V2S32 for both divergent and uniform cases.
   def : GCNPat<(v2i16 (dagOp (v2f32 VReg_64:$src), i16)),
                (inst 0, (EXTRACT_SUBREG VReg_64:$src, sub0),
                      0, (EXTRACT_SUBREG VReg_64:$src, sub1))>;
   def : GCNPat<(v2i16 (dagOp (v2f32 SReg_64:$src), i16)),
                (inst 0, (EXTRACT_SUBREG SReg_64:$src, sub0),
                      0, (EXTRACT_SUBREG SReg_64:$src, sub1))>;
-}
-
-multiclass FPToIntSatI16Pat<dag lhs, dag rhs> {
-  let True16Predicate = UseRealTrue16Insts in
-    def : GCNPat<lhs, (EXTRACT_SUBREG rhs, lo16)>;
-  let True16Predicate = NotUseRealTrue16Insts in
-    def : GCNPat<lhs, rhs>;
+  // Single value conversion: use a packed instruction with a dummy second input.
+  defm : FPToIntSatI16Pat<(i16 (dagOp (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)),
+                          (inst $src0_modifiers, $src0, 0, (f32 (IMPLICIT_DEF)))>;
 }
 
 multiclass FPToSSatI16Pat<dag lhs, int hi, int lo> {
@@ -3176,12 +3181,14 @@ multiclass FPToUSatI16Pat<dag lhs, int hi> {
 }
 
 let SubtargetPredicate = isGFX11Plus in {
-  // f32 -> i16 saturated conversion.
+  // f32 -> i16 saturated conversion (vector and scalar types).
   defm : CvtPkF32ToI16Pat<fp_to_sint_sat, V_CVT_PK_I16_F32_e64>;
   defm : CvtPkF32ToI16Pat<fp_to_uint_sat, V_CVT_PK_U16_F32_e64>;
 }
 
-// Fallback for f32 -> i16 saturated conversion. Required because
+// Fallback for f32 -> i16 saturated conversion on pre-GFX11. Required because
 // f32 -> i16 has to be legal so that the packed pattern above can match.
-defm : FPToSSatI16Pat<(i16 (fp_to_sint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)), 0x7fff, 0x8000>;
-defm : FPToUSatI16Pat<(i16 (fp_to_uint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)), 0xffff>;
+let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
+  defm : FPToSSatI16Pat<(i16 (fp_to_sint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)), 0x7fff, 0x8000>;
+  defm : FPToUSatI16Pat<(i16 (fp_to_uint_sat (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)), 0xffff>;
+}
