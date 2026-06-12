@@ -1130,10 +1130,20 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       APFloat Val(ArgVal.getSemantics(), 1);
       Val.divide(ArgVal, APFloat::rmNearestTiesToEven);
 
-      // This is more precise than the instruction may give.
-      //
-      // TODO: The instruction always flushes denormal results (except for f16),
-      // should this also?
+      // v_rcp_f32/f64 flush denormal results to zero (preserving sign); only
+      // f16 always keeps them. Match the hardware so the fold cannot emit a
+      // denormal the instruction wouldn't.
+      const fltSemantics &Sem = Val.getSemantics();
+      if (Val.isDenormal() && &Sem != &APFloat::IEEEhalf()) {
+        DenormalMode Mode = II.getFunction()->getDenormalMode(Sem);
+        if (Mode.Output == DenormalMode::PreserveSign)
+          Val = APFloat::getZero(Sem, Val.isNegative());
+        else if (Mode.Output == DenormalMode::PositiveZero)
+          Val = APFloat::getZero(Sem, /*Negative=*/false);
+        else if (Mode.Output != DenormalMode::IEEE)
+          break; // Dynamic: hardware behavior is unknown, leave the call in place.
+      }
+
       return IC.replaceInstUsesWith(II, ConstantFP::get(II.getContext(), Val));
     }
 
