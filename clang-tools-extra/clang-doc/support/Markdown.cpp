@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/DebugLog.h"
+#include <cassert>
 
 #define DEBUG_TYPE "clang-doc"
 
@@ -52,6 +53,42 @@ static bool isListItem(StringRef Line) {
          Line.starts_with("+ ");
 }
 
+// A forward cursor over the lines of a paragraph. Encapsulates the parse
+// position so the loop can inspect the current or an upcoming line and consume
+// lines without manual index arithmetic. Lines are stored untrimmed; callers
+// trim where they need a normalized view.
+class LineReader {
+public:
+  explicit LineReader(ArrayRef<StringRef> Lines) : Lines(Lines) {}
+
+  // True once every line has been consumed.
+  bool atEnd() const { return Pos >= Lines.size(); }
+
+  // The current line, untrimmed. Must not be called when atEnd().
+  StringRef peek() const {
+    assert(!atEnd() && "peek past end of input");
+    return Lines[Pos];
+  }
+
+  // The line Offset positions ahead of the cursor, or an empty StringRef when
+  // that position is past the end. peek(0) is the current line.
+  StringRef peek(size_t Offset) const {
+    size_t Target = Pos + Offset;
+    return Target < Lines.size() ? Lines[Target] : StringRef();
+  }
+
+  // Consume the current line and return it, untrimmed. Must not be called when
+  // atEnd().
+  StringRef advance() {
+    assert(!atEnd() && "advance past end of input");
+    return Lines[Pos++];
+  }
+
+private:
+  ArrayRef<StringRef> Lines;
+  size_t Pos = 0;
+};
+
 ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
                                  BumpPtrAllocator &Arena) {
   if (ParagraphText.trim().empty())
@@ -61,13 +98,13 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
   ParagraphText.split(Lines, '\n');
 
   SmallVector<MDNode *> Nodes;
-  size_t I = 0, E = Lines.size();
+  LineReader Reader(Lines);
 
-  while (I < E) {
-    StringRef Line = Lines[I].trim();
+  while (!Reader.atEnd()) {
+    StringRef Line = Reader.peek().trim();
 
     if (Line.empty()) {
-      ++I;
+      Reader.advance();
       continue;
     }
 
@@ -79,18 +116,18 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
     if (Line.starts_with("```") || Line.starts_with("~~~")) {
       char Fence = Line[0];
       StringRef Lang = internString(Line.drop_front(3).trim(), Arena);
+      Reader.advance(); // consume opening fence
       SmallVector<StringRef> CodeLines;
-      ++I;
-      while (I < E) {
-        StringRef CodeLine = Lines[I].trim();
+      while (!Reader.atEnd()) {
+        StringRef CodeLine = Reader.peek().trim();
         if (CodeLine.size() >= 3 &&
             all_of(CodeLine.take_front(3),
                    [Fence](char C) { return C == Fence; }))
           break;
-        CodeLines.push_back(internString(Lines[I], Arena));
-        ++I;
+        CodeLines.push_back(internString(Reader.advance(), Arena));
       }
-      ++I; // skip closing fence
+      if (!Reader.atEnd())
+        Reader.advance(); // consume closing fence
       auto *Code =
           new (Arena) FencedCodeNode(Lang, allocateArray(CodeLines, Arena));
       LDBG() << "emitting FencedCodeNode lang='" << Lang
@@ -100,12 +137,10 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
     }
 
     // Pipe table: current line has | and next line is a separator row.
-    if (Line.contains('|') && I + 1 < E && isSepRow(Lines[I + 1].trim())) {
+    if (Line.contains('|') && isSepRow(Reader.peek(1).trim())) {
       SmallVector<StringRef> Rows;
-      while (I < E && Lines[I].trim().contains('|')) {
-        Rows.push_back(internString(Lines[I].trim(), Arena));
-        ++I;
-      }
+      while (!Reader.atEnd() && Reader.peek().trim().contains('|'))
+        Rows.push_back(internString(Reader.advance().trim(), Arena));
       auto *Table = new (Arena) TableNode(allocateArray(Rows, Arena));
       LDBG() << "emitting TableNode rows=" << Rows.size();
       Nodes.push_back(Table);
@@ -115,8 +150,8 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
     // Unordered list item.
     if (isListItem(Line)) {
       SmallVector<ListItemNode *> Items;
-      while (I < E) {
-        StringRef L = Lines[I].trim();
+      while (!Reader.atEnd()) {
+        StringRef L = Reader.peek().trim();
         if (!isListItem(L))
           break;
         StringRef ItemText = internString(L.drop_front(2).trim(), Arena);
@@ -125,7 +160,7 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
         auto *Item =
             new (Arena) ListItemNode(allocateArray(ItemChildren, Arena));
         Items.push_back(Item);
-        ++I;
+        Reader.advance();
       }
       auto *List = new (Arena) UnorderedListNode(allocateArray(Items, Arena));
       LDBG() << "emitting UnorderedListNode items=" << Items.size();
@@ -135,7 +170,7 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
 
     // Plain text fallback.
     Nodes.push_back(new (Arena) TextNode(internString(Line, Arena)));
-    ++I;
+    Reader.advance();
   }
 
   LDBG() << "parseMarkdown done nodes=" << Nodes.size();
