@@ -76,7 +76,6 @@ struct Y {
 
 void dangligGslPtrFromTemporary() {
   MyIntPointer p = Y{}.a; // cfg-warning {{local temporary object does not live long enough}} \
-                          // cfg-note {{expression aliases the storage of local temporary object}} \
                           // cfg-note {{destroyed here}}
   (void)p;                // cfg-note {{later used here}}
 }
@@ -613,7 +612,6 @@ std::string StrCat(std::string_view, std::string_view);
 void test1() {
   UrlAnalyzed url(StrCat("abc", "bcd")); // expected-warning {{object backing the pointer will be destroyed}} \
                                          // cfg-warning {{local temporary object does not live long enough}} \
-                                         // cfg-note {{expression aliases the storage of local temporary object}} \
                                          // cfg-note {{destroyed here}}
   use(url);                              // cfg-note {{later used here}}
 }
@@ -961,11 +959,9 @@ struct [[gsl::Pointer]] Pointer {
   Pointer(const Bar & bar [[clang::lifetimebound]]);
 };
 Pointer test3(Bar bar) {
-  Pointer p = Pointer(Bar()); // expected-warning {{temporary}} cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                              // cfg-note {{expression aliases the storage of local temporary object}}
+  Pointer p = Pointer(Bar()); // expected-warning {{temporary}} cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(p);                     // cfg-note {{later used here}}
-  p = Pointer(Bar());         // expected-warning {{object backing}} cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                              // cfg-note {{expression aliases the storage of local temporary object}}
+  p = Pointer(Bar());         // expected-warning {{object backing}} cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}}
   use(p);                     // cfg-note {{later used here}}
   return bar;                 // expected-warning {{address of stack}} cfg-warning {{stack memory associated with parameter 'bar' is returned}} cfg-note {{returned here}}
 }
@@ -1070,11 +1066,11 @@ void operator_star_arrow_of_iterators_false_positive_no_cfg_analysis() {
 
   auto temporary = []() { return std::vector<std::pair<int, std::string>>{{1, "1"}}; };
   const char* x = temporary().begin()->second.data();   // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                                                        // cfg-note 4 {{expression aliases the storage of local temporary object}}
-  const char* y = (*temporary().begin()).second.data(); // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
-                                                        // cfg-note 4 {{expression aliases the storage of local temporary object}}
-  const std::string& z = (*temporary().begin()).second; // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
                                                         // cfg-note 3 {{expression aliases the storage of local temporary object}}
+  const char* y = (*temporary().begin()).second.data(); // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                                        // cfg-note 3 {{expression aliases the storage of local temporary object}}
+  const std::string& z = (*temporary().begin()).second; // cfg-warning {{local temporary object does not live long enough}} cfg-note {{destroyed here}} \
+                                                        // cfg-note 2 {{expression aliases the storage of local temporary object}}
 
   use(p, q, r, x, y, z); // cfg-note 3 {{later used here}}
 }

@@ -278,7 +278,7 @@ View return_view_field(const ViewProvider& v) {    // expected-warning {{paramet
 void test_get_on_temporary_pointer() {
   const ReturnsSelf* s_ref = &ReturnsSelf().get(); // expected-warning {{local temporary object does not live long enough}}.
                                                    // expected-note@-1 {{destroyed here}}
-                                                   // expected-note@-2 2 {{expression aliases the storage of local temporary object}}
+                                                   // expected-note@-2 {{expression aliases the storage of local temporary object}}
   (void)s_ref;                                     // expected-note {{later used here}}
 }
 

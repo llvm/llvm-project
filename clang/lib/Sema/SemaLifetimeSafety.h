@@ -488,7 +488,7 @@ private:
     CurrExpr = CurrExpr->IgnoreImpCasts();
     LastExpr = LastExpr->IgnoreImpCasts();
 
-    if (isa<MaterializeTemporaryExpr, ParenExpr>(CurrExpr))
+    if (!isa<CallExpr, DeclRefExpr>(CurrExpr))
       return false;
     // Source ranges can be used to filter out many implicit expressions,
     // because operations between class objects often involve numerous implicit
