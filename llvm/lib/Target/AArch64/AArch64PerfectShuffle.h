@@ -16,11 +16,10 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
-extern LLVM_LIBRARY_VISIBILITY const unsigned PerfectShuffleTable[6561 + 1];
+extern const unsigned PerfectShuffleTable[6561 + 1];
 
 inline unsigned getPerfectShuffleCost(llvm::ArrayRef<int> M) {
   assert(M.size() == 4 && "Expected a 4 entry perfect shuffle");
