@@ -124,6 +124,15 @@ if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT FLANG_STANDALONE_BUILD)
   # Flang tests need runtimes module files (flang-rt-mod, libomp-mod, etc.).
   add_custom_target(flang-rt-test-deps)
   list(APPEND FLANG_TEST_DEPENDS flang-rt-test-deps)
+
+  function(add_flang_rt_check_target_dependency)
+    if (TARGET check-flang-rt AND TARGET flang)
+      add_dependencies(check-flang-rt flang)
+    endif ()
+  endfunction()
+  # check-flang-rt is created later by llvm/runtimes, so defer this edge.
+  cmake_language(DEFER DIRECTORY "${LLVM_MAIN_SRC_DIR}"
+    CALL add_flang_rt_check_target_dependency)
 endif ()
 
 add_custom_target(flang-test-depends DEPENDS ${FLANG_TEST_DEPENDS})

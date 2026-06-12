@@ -134,16 +134,6 @@ function(add_flang_mod_deps build_target)
   endif()
 endfunction()
 
-function(add_flang_target_deps)
-  if(TARGET flang)
-    foreach(tgt IN LISTS ARGN)
-      if(TARGET ${tgt})
-        add_dependencies(${tgt} flang)
-      endif()
-    endforeach()
-  endif()
-endfunction()
-
 function(builtin_default_target compiler_rt_path)
   cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
 
@@ -674,9 +664,6 @@ if(build_runtimes)
       PREFIXES ${prefixes}
       EXTRA_ARGS ${extra_args})
     set(test_targets check-runtimes)
-    if("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-      add_flang_target_deps(check-flang-rt)
-    endif()
   else()
     if("default" IN_LIST LLVM_RUNTIME_TARGETS)
       runtime_default_target(
@@ -684,9 +671,6 @@ if(build_runtimes)
         CMAKE_ARGS ${extra_cmake_args}
         PREFIXES ${prefixes}
         EXTRA_ARGS ${extra_args})
-      if("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-        add_flang_target_deps(check-flang-rt)
-      endif()
       list(REMOVE_ITEM LLVM_RUNTIME_TARGETS "default")
     else()
       add_custom_target(runtimes)
