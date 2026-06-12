@@ -5069,6 +5069,14 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
   return true;
 }
 
+/// Returns a copy from WZR or XZR. This can be used during instruction
+/// selection (it does not require any further selection/legalization).
+static SDValue getZeroRegister(SelectionDAG &DAG, SDLoc DL, EVT VT) {
+  assert(VT == MVT::i32 || VT == MVT::i64);
+  return DAG.getCopyFromReg(DAG.getEntryNode(), DL,
+                            VT == MVT::i32 ? AArch64::WZR : AArch64::XZR, VT);
+}
+
 void AArch64DAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
@@ -5152,18 +5160,9 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     // Materialize zero constants as copies from WZR/XZR.  This allows
     // the coalescer to propagate these into other instructions.
     ConstantSDNode *ConstNode = cast<ConstantSDNode>(Node);
-    if (ConstNode->isZero()) {
-      if (VT == MVT::i32) {
-        SDValue New = CurDAG->getCopyFromReg(
-            CurDAG->getEntryNode(), SDLoc(Node), AArch64::WZR, MVT::i32);
-        ReplaceNode(Node, New.getNode());
-        return;
-      } else if (VT == MVT::i64) {
-        SDValue New = CurDAG->getCopyFromReg(
-            CurDAG->getEntryNode(), SDLoc(Node), AArch64::XZR, MVT::i64);
-        ReplaceNode(Node, New.getNode());
-        return;
-      }
+    if (ConstNode->isZero() && (VT == MVT::i32 || VT == MVT::i64)) {
+      ReplaceNode(Node, getZeroRegister(*CurDAG, SDLoc(Node), VT).getNode());
+      return;
     }
     break;
   }
@@ -8019,7 +8018,7 @@ bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned MaxSize,
   };
 
   if (SDValue C = MatchConstantOffset(N)) {
-    Base = CurDAG->getConstant(0, SDLoc(N), MVT::i32);
+    Base = getZeroRegister(*CurDAG, SDLoc(N), MVT::i32);
     Offset = C;
     return true;
   }
