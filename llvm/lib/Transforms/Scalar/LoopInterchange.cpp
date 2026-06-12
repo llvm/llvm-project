@@ -2273,7 +2273,7 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
     // value defined from the innermost loop.
     auto *IncIInnerMost = dyn_cast<Instruction>(followLCSSA(IncI));
     // Skip phis when:
-    // - Constant incoming values.
+    // - they are not an instruction, e.g. incoming values are constants.
     // - Incomming values from the inner loop body, excluding the header and
     //   latch.
     if (!IncIInnerMost || (IncIInnerMost->getParent() != InnerLatch &&
