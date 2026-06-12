@@ -7031,9 +7031,11 @@ ExprResult Sema::PerformContextualImplicitConversion(
   // Try converting the expression to an Lvalue first, to get rid of qualifiers.
   ExprResult Converted = DefaultLvalueConversion(From);
   QualType T = Converted.isUsable() ? Converted.get()->getType() : QualType();
+  From = Converted.get();
   // If the expression already has a matching type, we're golden.
   if (Converter.match(T))
     return Converted;
+
 
   // FIXME: Check for missing '()' if T is a function type?
 
