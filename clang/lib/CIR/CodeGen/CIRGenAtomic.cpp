@@ -68,6 +68,7 @@ public:
   }
 
   QualType getValueType() const { return valueTy; }
+  QualType getAtomicType() const { return atomicTy; }
   CharUnits getAtomicAlignment() const { return atomicAlign; }
   TypeEvaluationKind getEvaluationKind() const { return evaluationKind; }
   mlir::Value getAtomicPointer() const {
@@ -110,8 +111,13 @@ public:
   /// copy the value across.
   Address convertToAtomicIntPointer(Address addr) const;
 
+  /// Turn an atomic-layout object into an r-value.
+  RValue convertAtomicTempToRValue(Address addr, SourceLocation loc,
+                                   bool asValue) const;
+
   /// Converts a rvalue to integer value.
-  mlir::Value convertRValueToInt(RValue rvalue, bool cmpxchg = false) const;
+  mlir::Value convertRValueToInt(RValue rvalue, mlir::Location loc,
+                                 bool cmpxchg = false) const;
 
   RValue convertToValueOrAtomic(mlir::Value intVal, AggValueSlot resultSlot,
                                 SourceLocation loc, bool asValue,
@@ -124,9 +130,9 @@ public:
   LValue projectValue() const {
     assert(lvalue.isSimple());
     Address addr = getAtomicAddress();
-    if (hasPadding()) {
-      cgf.cgm.errorNYI(loc, "AtomicInfo::projectValue: padding");
-    }
+    if (hasPadding())
+      addr = cgf.getBuilder().createGetMember(loc, addr, /*name=*/"value",
+                                              /*index=*/0);
 
     assert(!cir::MissingFeatures::opTBAA());
     return LValue::makeAddr(addr, getValueType(), lvalue.getBaseInfo());
@@ -136,6 +142,9 @@ public:
   /// \returns Loaded value.
   RValue emitAtomicLoad(AggValueSlot resultSlot, SourceLocation loc,
                         bool asValue, cir::MemOrder order, bool isVolatile);
+
+  /// Materialize an atomic r-value in atomic-layout memory.
+  Address materializeRValue(RValue rvalue, mlir::Location loc) const;
 
   /// Creates temp alloca for intermediate operations on atomic value.
   Address createTempAlloca() const;
@@ -202,6 +211,33 @@ Address AtomicInfo::convertToAtomicIntPointer(Address addr) const {
   return castToAtomicIntPointer(addr);
 }
 
+RValue AtomicInfo::convertAtomicTempToRValue(Address addr, SourceLocation loc,
+                                             bool asValue) const {
+  if (lvalue.isSimple()) {
+    if (evaluationKind == TEK_Aggregate) {
+      cgf.cgm.errorNYI(
+          loc,
+          "AtomicInfo::convertAtomicTempToRValue: evaluationKind is aggregate");
+      return RValue::get(nullptr);
+    }
+
+    // Drill into the padding structure if we have one.
+    if (hasPadding()) {
+      cgf.cgm.errorNYI(loc,
+                       "AtomicInfo::convertAtomicTempToRValue: hasPadding");
+      return RValue::get(nullptr);
+    }
+
+    // Otherwise, just convert the temporary to an r-value using the
+    // normal conversion routine.
+    return cgf.convertTempToRValue(addr, getValueType(), loc);
+  }
+
+  cgf.cgm.errorNYI(
+      loc, "AtomicInfo::convertAtomicTempToRValue: lvalue is not simple");
+  return RValue::get(nullptr);
+}
+
 RValue AtomicInfo::emitAtomicLoad(AggValueSlot resultSlot, SourceLocation loc,
                                   bool asValue, cir::MemOrder order,
                                   bool isVolatile) {
@@ -262,9 +298,14 @@ bool AtomicInfo::emitMemSetZeroIfNecessary() const {
   if (!requiresMemSetZero(addr.getElementType()))
     return false;
 
-  cgf.cgm.errorNYI(loc,
-                   "AtomicInfo::emitMemSetZeroIfNecaessary: emit memset zero");
-  return false;
+  addr = addr.withElementType(cgf.getBuilder(), cgf.cgm.voidTy);
+  mlir::Value zero = cgf.getBuilder().getConstInt(loc, cgf.cgm.uInt8Ty, 0);
+  mlir::Value memSetSize = cgf.getBuilder().getConstInt(
+      loc, cgf.cgm.uInt64Ty,
+      cgf.getContext().toCharUnitsFromBits(atomicSizeInBits).getQuantity());
+
+  cgf.getBuilder().createMemSet(loc, addr, zero, memSetSize);
+  return true;
 }
 
 /// Return true if \param valueTy is a type that should be casted to integer
@@ -292,7 +333,8 @@ mlir::Value AtomicInfo::emitAtomicLoadOp(cir::MemOrder order, bool isVolatile,
   return op;
 }
 
-mlir::Value AtomicInfo::convertRValueToInt(RValue rvalue, bool cmpxchg) const {
+mlir::Value AtomicInfo::convertRValueToInt(RValue rvalue, mlir::Location loc,
+                                           bool cmpxchg) const {
   // If we've got a scalar value of the right size, try to avoid going
   // through memory. Floats get casted if needed by AtomicExpandPass.
   if (mlir::Value value = getScalarRValValueOrNull(rvalue)) {
@@ -304,9 +346,14 @@ mlir::Value AtomicInfo::convertRValueToInt(RValue rvalue, bool cmpxchg) const {
     return nullptr;
   }
 
-  cgf.cgm.errorNYI(
-      loc, "AtomicInfo::convertRValueToInt: cast non-scalar rvalue to int");
-  return nullptr;
+  // Otherwise, we need to go through memory.
+  // Put the r-value in memory.
+  Address addr = materializeRValue(rvalue, loc);
+
+  // Cast the temporary to the atomic int type and pull a value out.
+  addr = castToAtomicIntPointer(addr);
+
+  return cgf.getBuilder().createLoad(loc, addr);
 }
 
 RValue AtomicInfo::convertToValueOrAtomic(mlir::Value intVal,
@@ -334,8 +381,20 @@ RValue AtomicInfo::convertToValueOrAtomic(mlir::Value intVal,
     return RValue::get(nullptr);
   }
 
-  cgf.cgm.errorNYI("convertToValueOrAtomic: convert through temp");
-  return RValue::get(nullptr);
+  // Create a temporary.  This needs to be big enough to hold the
+  // atomic integer.
+  Address temp = Address::invalid();
+  if (asValue && getEvaluationKind() == TEK_Aggregate) {
+    cgf.cgm.errorNYI("convertToValueOrAtomic: temporary aggregate");
+    return RValue::get(nullptr);
+  } else {
+    temp = createTempAlloca();
+  }
+
+  // Slam the integer into the temporary.
+  Address castTemp = castToAtomicIntPointer(temp);
+  cgf.getBuilder().createStore(cgf.getLoc(loc), intVal, castTemp);
+  return convertAtomicTempToRValue(temp, loc, asValue);
 }
 
 /// Copy an r-value into memory as part of storing to an atomic type.
@@ -366,6 +425,22 @@ void AtomicInfo::emitCopyIntoMemory(RValue rvalue) const {
     cgf.emitStoreOfComplex(loc, rvalue.getComplexValue(), tempLValue,
                            /*isInit=*/true);
   }
+}
+
+/// Materialize an r-value into memory for the purposes of storing it
+/// to an atomic type.
+Address AtomicInfo::materializeRValue(RValue rvalue, mlir::Location loc) const {
+  // Aggregate r-values are already in memory, and EmitAtomicStore
+  // requires them to be values of the atomic type.
+  if (rvalue.isAggregate())
+    return rvalue.getAggregateAddress();
+
+  // Otherwise, make a temporary and materialize into it.
+  LValue tempLV = cgf.makeAddrLValue(createTempAlloca(), getAtomicType());
+  AtomicInfo atomics(cgf, tempLV, loc);
+
+  atomics.emitCopyIntoMemory(rvalue);
+  return tempLV.getAddress();
 }
 
 static void emitDefaultCaseLabel(CIRGenBuilderTy &builder, mlir::Location loc) {
@@ -1344,7 +1419,7 @@ void CIRGenFunction::emitAtomicStore(RValue rvalue, LValue dest,
     }
 
     // Okay, we're doing this natively.
-    mlir::Value valueToStore = atomics.convertRValueToInt(rvalue);
+    mlir::Value valueToStore = atomics.convertRValueToInt(rvalue, loc);
 
     // Do the atomic store.
     Address addr = atomics.getAtomicAddress();

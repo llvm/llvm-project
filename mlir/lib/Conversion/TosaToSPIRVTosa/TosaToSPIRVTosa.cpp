@@ -22,13 +22,6 @@
 namespace mlir::tosa {
 namespace {
 
-// Allows users to specify descriptor sets and binding ids on the source
-// function inputs and outputs. Use a source-side GraphARM attribute because
-// `spirv.interface_var_abi` is verified by the SPIR-V dialect before this
-// conversion runs, and result attrs are only accepted on `spirv.ARM.Graph`.
-constexpr StringLiteral graphARMInterfaceVarABIAttrName =
-    "grapharm.interface_var_abi";
-
 void copyFuncAttrsToGraph(func::FuncOp funcOp, func::FuncOpAdaptor adaptor,
                           spirv::GraphARMOp graphOp) {
   for (NamedAttribute attr : adaptor.getAttributes()) {

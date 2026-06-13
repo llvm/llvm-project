@@ -17,4 +17,4 @@ void test() {
   Child x;
 }
 
-// CHECK: @_ZTV5Child = external hidden unnamed_addr constant
+// CHECK: @_ZTV5Child = external hidden constant

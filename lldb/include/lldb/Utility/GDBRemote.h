@@ -13,6 +13,7 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstddef>
@@ -45,6 +46,28 @@ public:
 
   /// Equivalent to PutEscapedBytes(str.data(), str.size());
   int PutEscapedBytes(llvm::StringRef str);
+
+  template <class T> int PutAsJSON(const T &obj, bool hex_ascii) {
+    std::string json_string;
+    llvm::raw_string_ostream os(json_string);
+    os << llvm::json::Value(toJSON(obj));
+    if (hex_ascii)
+      return PutStringAsRawHex8(json_string);
+    return PutEscapedBytes(json_string.c_str(), json_string.size());
+  }
+
+  template <class T>
+  int PutAsJSONArray(const std::vector<T> &array, bool hex_ascii) {
+    llvm::json::Array json_array;
+    for (const auto &obj : array)
+      json_array.push_back(toJSON(obj));
+    std::string json_string;
+    llvm::raw_string_ostream os(json_string);
+    os << llvm::json::Value(std::move(json_array));
+    if (hex_ascii)
+      return PutStringAsRawHex8(json_string);
+    return PutEscapedBytes(json_string.data(), json_string.size());
+  }
 };
 
 /// GDB remote packet as used by the GDB remote communication history. Packets

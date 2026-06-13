@@ -9284,14 +9284,6 @@ bool CodeGenPrepare::placePseudoProbes(Function &F) {
   return MadeChange;
 }
 
-/// Scale down both weights to fit into uint32_t.
-static void scaleWeights(uint64_t &NewTrue, uint64_t &NewFalse) {
-  uint64_t NewMax = (NewTrue > NewFalse) ? NewTrue : NewFalse;
-  uint32_t Scale = (NewMax / std::numeric_limits<uint32_t>::max()) + 1;
-  NewTrue = NewTrue / Scale;
-  NewFalse = NewFalse / Scale;
-}
-
 /// Some targets prefer to split a conditional branch like:
 /// \code
 ///   %0 = icmp ne i32 %a, 0
@@ -9444,18 +9436,13 @@ bool CodeGenPrepare::splitBranchCondition(Function &F) {
       if (extractBranchWeights(*Br1, TrueWeight, FalseWeight)) {
         uint64_t NewTrueWeight = TrueWeight;
         uint64_t NewFalseWeight = TrueWeight + 2 * FalseWeight;
-        scaleWeights(NewTrueWeight, NewFalseWeight);
-        Br1->setMetadata(LLVMContext::MD_prof,
-                         MDBuilder(Br1->getContext())
-                             .createBranchWeights(TrueWeight, FalseWeight,
-                                                  hasBranchWeightOrigin(*Br1)));
+        setFittedBranchWeights(*Br1, {NewTrueWeight, NewFalseWeight},
+                               hasBranchWeightOrigin(*Br1));
 
         NewTrueWeight = TrueWeight;
         NewFalseWeight = 2 * FalseWeight;
-        scaleWeights(NewTrueWeight, NewFalseWeight);
-        Br2->setMetadata(LLVMContext::MD_prof,
-                         MDBuilder(Br2->getContext())
-                             .createBranchWeights(TrueWeight, FalseWeight));
+        setFittedBranchWeights(*Br2, {NewTrueWeight, NewFalseWeight},
+                               /*IsExpected=*/false);
       }
     } else {
       // Codegen X & Y as:
@@ -9480,17 +9467,13 @@ bool CodeGenPrepare::splitBranchCondition(Function &F) {
       if (extractBranchWeights(*Br1, TrueWeight, FalseWeight)) {
         uint64_t NewTrueWeight = 2 * TrueWeight + FalseWeight;
         uint64_t NewFalseWeight = FalseWeight;
-        scaleWeights(NewTrueWeight, NewFalseWeight);
-        Br1->setMetadata(LLVMContext::MD_prof,
-                         MDBuilder(Br1->getContext())
-                             .createBranchWeights(TrueWeight, FalseWeight));
+        setFittedBranchWeights(*Br1, {NewTrueWeight, NewFalseWeight},
+                               /*IsExpected=*/false);
 
         NewTrueWeight = 2 * TrueWeight;
         NewFalseWeight = FalseWeight;
-        scaleWeights(NewTrueWeight, NewFalseWeight);
-        Br2->setMetadata(LLVMContext::MD_prof,
-                         MDBuilder(Br2->getContext())
-                             .createBranchWeights(TrueWeight, FalseWeight));
+        setFittedBranchWeights(*Br2, {NewTrueWeight, NewFalseWeight},
+                               /*IsExpected=*/false);
       }
     }
 

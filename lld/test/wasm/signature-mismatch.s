@@ -74,9 +74,6 @@ ret32_address_main:
 # YAML-NEXT:         Name:            ret32
 # YAML-NEXT:       - Index:           3
 # YAML-NEXT:         Name:            call_ret32
-# YAML-NEXT:     GlobalNames:
-# YAML-NEXT:       - Index:           0
-# YAML-NEXT:         Name:            __stack_pointer
 # YAML-NEXT:     DataSegmentNames:
 # YAML-NEXT:       - Index:           0
 # YAML-NEXT:         Name:            .data

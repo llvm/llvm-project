@@ -15,7 +15,7 @@ $_ZNSt6vectorIiSaIiEEixEm = comdat any
 
 define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8 dereferenceable(24) %data, i64 noundef %numElems) {
 ; O1-LABEL: define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(
-; O1-SAME: ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; O1-SAME: ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O1-NEXT:  [[ENTRY:.*]]:
 ; O1-NEXT:    [[CMP24_NOT:%.*]] = icmp eq i64 [[NUMELEMS]], 0
 ; O1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DATA]], align 8
@@ -40,8 +40,8 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O1-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE]], label %[[FOR_BODY5]], !llvm.loop [[LOOP6:![0-9]+]]
 ;
 ; O2-LABEL: define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(
-; O2-SAME: ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-; O2-NEXT:  [[ENTRY:.*:]]
+; O2-SAME: ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; O2-NEXT:  [[ENTRY:.*]]:
 ; O2-NEXT:    [[CMP24_NOT:%.*]] = icmp eq i64 [[NUMELEMS]], 0
 ; O2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DATA]], align 8
 ; O2-NEXT:    br i1 [[CMP24_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_COND1_PREHEADER_PREHEADER:.*]]
@@ -88,7 +88,7 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O2-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP3]], label %[[FOR_BODY4]], !llvm.loop [[LOOP9:![0-9]+]]
 ;
 ; O3-LABEL: define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(
-; O3-SAME: ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; O3-SAME: ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O3-NEXT:  [[ENTRY:.*:]]
 ; O3-NEXT:    [[CMP24_NOT:%.*]] = icmp eq i64 [[NUMELEMS]], 0
 ; O3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DATA]], align 8

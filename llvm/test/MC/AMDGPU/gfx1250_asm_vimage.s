@@ -26,6 +26,18 @@ tensor_store_from_lds s[0:3], s[4:11] th:TH_STORE_BYPASS scope:SCOPE_SYS
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): tensor_store_from_lds
 // GFX1250: tensor_store_from_lds s[0:3], s[4:11] th:TH_STORE_BYPASS scope:SCOPE_SYS ; encoding: [0x01,0x40,0x71,0xd0,0x00,0x00,0x3c,0x7c,0x00,0x04,0x7c,0x7c]
 
+tensor_store_from_lds s[0:3], s[4:11], null, null th:TH_STORE_NT_HT scope:SCOPE_DEV
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): tensor_store_from_lds
+// GFX1250: tensor_store_from_lds s[0:3], s[4:11], null, null th:TH_STORE_NT_HT scope:SCOPE_DEV ; encoding: [0x01,0x40,0x71,0xd0,0x00,0x00,0x68,0x7c,0x00,0x04,0x7c,0x7c]
+
+tensor_store_from_lds s[0:3], s[4:11], null, s[16:19] th:TH_STORE_NT_HT scope:SCOPE_DEV
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): tensor_store_from_lds
+// GFX1250: tensor_store_from_lds s[0:3], s[4:11], null, s[16:19] th:TH_STORE_NT_HT scope:SCOPE_DEV ; encoding: [0x01,0x40,0x71,0xd0,0x00,0x00,0x68,0x7c,0x00,0x04,0x7c,0x10]
+
+tensor_store_from_lds s[0:3], s[4:11], s[12:15], null th:TH_STORE_NT_HT scope:SCOPE_DEV
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): tensor_store_from_lds
+// GFX1250: tensor_store_from_lds s[0:3], s[4:11], s[12:15], null th:TH_STORE_NT_HT scope:SCOPE_DEV ; encoding: [0x01,0x40,0x71,0xd0,0x00,0x00,0x68,0x7c,0x00,0x04,0x0c,0x7c]
+
 tensor_store_from_lds s[0:3], s[4:11], s[12:15], s[16:19]
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): tensor_store_from_lds
 // GFX1250: tensor_store_from_lds s[0:3], s[4:11], s[12:15], s[16:19] ; encoding: [0x01,0x40,0x71,0xd0,0x00,0x00,0x00,0x7c,0x00,0x04,0x0c,0x10]

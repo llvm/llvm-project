@@ -404,8 +404,6 @@ struct VOP3CDPPAsmOnlyInfo {
 struct VOPDComponentInfo {
   uint16_t BaseVOP;
   uint16_t VOPDOp;
-  bool CanBeVOPDX;
-  bool CanBeVOPD3X;
 };
 
 struct VOPDInfo {
@@ -419,6 +417,12 @@ struct VOPDInfo {
 struct VOPTrue16Info {
   uint32_t Opcode;
   bool IsTrue16;
+};
+
+struct VOPDXYInfo {
+  uint16_t VOPDOp;
+  uint16_t Subtarget;
+  bool VOPD3;
 };
 
 #define GET_FP4FP8DstByteSelTable_DECL
@@ -461,6 +465,10 @@ struct FP4FP8DstByteSelInfo {
 #define GET_VOPDComponentTable_IMPL
 #define GET_VOPDPairs_DECL
 #define GET_VOPDPairs_IMPL
+#define GET_VOPDXTable_DECL
+#define GET_VOPDXTable_IMPL
+#define GET_VOPDYTable_DECL
+#define GET_VOPDYTable_IMPL
 #define GET_VOPTrue16Table_DECL
 #define GET_VOPTrue16Table_IMPL
 #define GET_True16D16Table_IMPL
@@ -640,6 +648,37 @@ const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
   return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
 }
 
+bool isValidWMMAScaleFmtCombination(unsigned AFmt, unsigned AScale,
+                                    unsigned BFmt, unsigned BScale) {
+  auto isValid = [](unsigned Fmt, unsigned Scale) -> bool {
+    switch (Fmt) {
+    case WMMA::MATRIX_FMT_FP8:
+    case WMMA::MATRIX_FMT_BF8:
+    case WMMA::MATRIX_FMT_FP6:
+    case WMMA::MATRIX_FMT_BF6:
+      if (Scale != WMMA::MATRIX_SCALE_FMT_E8)
+        return false;
+      break;
+    case WMMA::MATRIX_FMT_FP4:
+      if (Scale != WMMA::MATRIX_SCALE_FMT_E8 &&
+          Scale != WMMA::MATRIX_SCALE_FMT_E5M3 &&
+          Scale != WMMA::MATRIX_SCALE_FMT_E4M3)
+        return false;
+      break;
+    }
+    return true;
+  };
+
+  if (!isValid(AFmt, AScale) || !isValid(BFmt, BScale))
+    return false;
+
+  if (AFmt == WMMA::MATRIX_FMT_FP4 && BFmt == WMMA::MATRIX_FMT_FP4 &&
+      AScale != BScale)
+    return false;
+
+  return true;
+}
+
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
   if (ST.hasFeature(AMDGPU::FeatureGFX13Insts))
     return SIEncodingFamily::GFX13;
@@ -654,31 +693,37 @@ unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
   llvm_unreachable("Subtarget generation does not support VOPD!");
 }
 
+static constexpr unsigned getVOPDXYKey(unsigned VOPDOp, unsigned Subtarget,
+                                       bool VOPD3) {
+  return (VOPDOp << 5) | (Subtarget << 1) | (VOPD3 ? 1u : 0u);
+}
+
+// TODO: Ideally, the table should be emitted by the TableGen backend, however
+// this is currently not supported, so the direct lookup table is generated
+// manually here.
+constexpr unsigned VOPDXYKeyBits = 11;
+static constexpr std::array<CanBeVOPD, 1 << VOPDXYKeyBits> buildVOPDXYLookup() {
+  std::array<CanBeVOPD, 1 << VOPDXYKeyBits> Table{};
+  for (auto &E : Table)
+    E = {false, false};
+  for (const auto &E : VOPDXTable)
+    Table[getVOPDXYKey(E.VOPDOp, E.Subtarget, E.VOPD3)].X = true;
+  for (const auto &E : VOPDYTable)
+    Table[getVOPDXYKey(E.VOPDOp, E.Subtarget, E.VOPD3)].Y = true;
+  return Table;
+}
+
+constexpr auto VOPDXYLookup = buildVOPDXYLookup();
+
 CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
   bool IsConvertibleToBitOp = VOPD3 ? getBitOp2(Opc) : 0;
   Opc = IsConvertibleToBitOp ? (unsigned)AMDGPU::V_BITOP3_B32_e64 : Opc;
+  // Normalize through VOPDComponentTable so that e32 and e64 variants
+  // of the same logical opcode all share a single entry.
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
-  if (Info) {
-    // Check that Opc can be used as VOPDY for this encoding. V_MOV_B32 as a
-    // VOPDX is just a placeholder here, it is supported on all encodings.
-    // TODO: This can be optimized by creating tables of supported VOPDY
-    // opcodes per encoding.
-    unsigned VOPDMov = AMDGPU::getVOPDOpcode(AMDGPU::V_MOV_B32_e32, VOPD3);
-    bool CanBeVOPDX;
-    if (VOPD3) {
-      CanBeVOPDX = getVOPDFull(AMDGPU::getVOPDOpcode(Opc, VOPD3), VOPDMov,
-                               EncodingFamily, VOPD3) != -1;
-    } else {
-      // The list of VOPDX opcodes is currently the same in all encoding
-      // families, so we do not need a family-specific check.
-      CanBeVOPDX = Info->CanBeVOPDX;
-    }
-    bool CanBeVOPDY = getVOPDFull(VOPDMov, AMDGPU::getVOPDOpcode(Opc, VOPD3),
-                                  EncodingFamily, VOPD3) != -1;
-    return {CanBeVOPDX, CanBeVOPDY};
-  }
-
-  return {false, false};
+  if (!Info)
+    return {false, false};
+  return VOPDXYLookup[getVOPDXYKey(Info->VOPDOp, EncodingFamily, VOPD3)];
 }
 
 unsigned getVOPDOpcode(unsigned Opc, bool VOPD3) {
@@ -1459,9 +1504,11 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo &STI,
   if (Features.test(FeatureGFX90AInsts))
     return 512;
 
-  if (DynamicVGPRBlockSize != 0)
-    // On GFX12 we can allocate at most 8 blocks of VGPRs.
-    return 8 * getVGPRAllocGranule(STI, DynamicVGPRBlockSize);
+  if (DynamicVGPRBlockSize != 0) {
+    // On GFX12 we can allocate at most MaxDynamicVGPRBlocks blocks of VGPRs.
+    return MaxDynamicVGPRBlocks *
+           getVGPRAllocGranule(STI, DynamicVGPRBlockSize);
+  }
   return getAddressableNumArchVGPRs(STI);
 }
 
@@ -2875,6 +2922,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
   case AMDGPU::OPERAND_REG_IMM_V2FP32:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+  case AMDGPU::OPERAND_REG_IMM_V2FP64:
     return true;
   default:
     return false;
@@ -3328,6 +3376,7 @@ int64_t encode32BitLiteral(int64_t Imm, OperandType Type, bool IsLit) {
   case OPERAND_REG_INLINE_C_INT32:
     return Lo_32(Imm);
   case OPERAND_REG_IMM_FP64:
+  case AMDGPU::OPERAND_REG_IMM_V2FP64:
     return IsLit ? Imm : Hi_32(Imm);
   }
   return Imm;
@@ -3790,6 +3839,34 @@ bool isPackedFP32Inst(unsigned Opc) {
   default:
     return false;
   }
+}
+
+bool isPacked64BitInst(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::V_PK_ADD_F64:
+  case AMDGPU::V_PK_ADD_F64_gfx1250:
+  case AMDGPU::V_PK_MUL_F64:
+  case AMDGPU::V_PK_MUL_F64_gfx1250:
+  case AMDGPU::V_PK_FMA_F64:
+  case AMDGPU::V_PK_FMA_F64_gfx1250:
+  case AMDGPU::V_PK_MAX_NUM_F64:
+  case AMDGPU::V_PK_MAX_NUM_F64_gfx1250:
+  case AMDGPU::V_PK_MIN_NUM_F64:
+  case AMDGPU::V_PK_MIN_NUM_F64_gfx1250:
+  case AMDGPU::V_PK_ADD_NC_U64:
+  case AMDGPU::V_PK_ADD_NC_U64_gfx1250:
+  case AMDGPU::V_PK_SUB_NC_U64:
+  case AMDGPU::V_PK_SUB_NC_U64_gfx1250:
+  case AMDGPU::V_PK_LSHL_ADD_U64:
+  case AMDGPU::V_PK_LSHL_ADD_U64_gfx1250:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool isPackedFP32or64BitInst(unsigned Opc) {
+  return isPackedFP32Inst(Opc) || isPacked64BitInst(Opc);
 }
 
 const std::array<unsigned, 3> &ClusterDimsAttr::getDims() const {

@@ -92,9 +92,9 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
   if (!I)
     return false;
 
+  if (!L->contains(I))
+    return false;
   for (const Value *V : I->operand_values()) {
-    if (!L->contains(I))
-      continue;
     if (const PHINode *PHI = dyn_cast<PHINode>(V)) {
       if (llvm::none_of(L->getSubLoops(), [PHI](const Loop* SubLoop) {
                   return SubLoop->contains(PHI); }))
@@ -128,9 +128,8 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
   UP.UnrollVectorizedLoop = true;
 
   // Enable runtime unrolling for loops whose trip count is not known at
-  // compile time.  Use a reduced PartialThreshold to limit code-size growth.
+  // compile time.
   UP.Runtime = true;
-  UP.PartialThreshold = UP.Threshold / 4;
 
   // Maximum alloca size than can fit registers. Reserve 16 registers.
   const unsigned MaxAlloca = (256 - 16) * 4;

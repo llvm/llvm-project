@@ -497,6 +497,7 @@ void TemplUses(T t, U u, T*PointerParam) {
   // CHECK-NEXT: private clause
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}}'const unsigned int' lvalue
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} referenced 'auto &' depth 0 index 0 NTTP
+  // CHECK-NEXT: ParenExpr
   // CHECK-NEXT: DeclRefExpr{{.*}}'const unsigned int' lvalue Var{{.*}} 'CEVar' 'const unsigned int'
   // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'
   // CHECK-NEXT: WhileStmt
@@ -510,6 +511,7 @@ void TemplUses(T t, U u, T*PointerParam) {
   // CHECK-NEXT: firstprivate clause
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}}'const unsigned int' lvalue
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} referenced 'auto &' depth 0 index 0 NTTP
+  // CHECK-NEXT: ParenExpr
   // CHECK-NEXT: DeclRefExpr{{.*}}'const unsigned int' lvalue Var{{.*}} 'CEVar' 'const unsigned int'
   // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'
   // CHECK-NEXT: WhileStmt
@@ -523,6 +525,7 @@ void TemplUses(T t, U u, T*PointerParam) {
   // CHECK-NEXT: present clause
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}}'const unsigned int' lvalue
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} referenced 'auto &' depth 0 index 0 NTTP
+  // CHECK-NEXT: ParenExpr
   // CHECK-NEXT: DeclRefExpr{{.*}}'const unsigned int' lvalue Var{{.*}} 'CEVar' 'const unsigned int'
   // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'
   // CHECK-NEXT: WhileStmt
@@ -536,6 +539,7 @@ void TemplUses(T t, U u, T*PointerParam) {
   // CHECK-NEXT: pcopy clause modifiers: always
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}}'const unsigned int' lvalue
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} referenced 'auto &' depth 0 index 0 NTTP
+  // CHECK-NEXT: ParenExpr
   // CHECK-NEXT: DeclRefExpr{{.*}}'const unsigned int' lvalue Var{{.*}} 'CEVar' 'const unsigned int'
   // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'
   // CHECK-NEXT: present_or_copy clause modifiers: alwaysin, alwaysout
@@ -556,6 +560,7 @@ void TemplUses(T t, U u, T*PointerParam) {
   // CHECK-NEXT: pcopyin clause modifiers: readonly
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}}'const unsigned int' lvalue
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} referenced 'auto &' depth 0 index 0 NTTP
+  // CHECK-NEXT: ParenExpr
   // CHECK-NEXT: DeclRefExpr{{.*}}'const unsigned int' lvalue Var{{.*}} 'CEVar' 'const unsigned int'
   // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'
   // CHECK-NEXT: present_or_copyin clause modifiers: always, alwaysin
@@ -576,6 +581,7 @@ void TemplUses(T t, U u, T*PointerParam) {
   // CHECK-NEXT: pcopyout clause modifiers: zero
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}}'const unsigned int' lvalue
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} referenced 'auto &' depth 0 index 0 NTTP
+  // CHECK-NEXT: ParenExpr
   // CHECK-NEXT: DeclRefExpr{{.*}}'const unsigned int' lvalue Var{{.*}} 'CEVar' 'const unsigned int'
   // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'
   // CHECK-NEXT: present_or_copyout clause modifiers: always, alwaysout
@@ -596,6 +602,7 @@ void TemplUses(T t, U u, T*PointerParam) {
   // CHECK-NEXT: pcreate clause modifiers: zero
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}}'const unsigned int' lvalue
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} referenced 'auto &' depth 0 index 0 NTTP
+  // CHECK-NEXT: ParenExpr
   // CHECK-NEXT: DeclRefExpr{{.*}}'const unsigned int' lvalue Var{{.*}} 'CEVar' 'const unsigned int'
   // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'
   // CHECK-NEXT: present_or_create clause
