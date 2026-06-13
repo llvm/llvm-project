@@ -5385,7 +5385,7 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
     SectionRef SecRef = File->toSectionRef(&Section);
     BinarySection *BinSec = BC->getSectionForSectionRef(SecRef);
     assert(BinSec && "Matching BinarySection should exist.");
-    if (BinSec->isBackupSection())
+    if (BC->isPPC64() && BinSec->isBackupSection())
       continue;
     ELFShdrTy NewSection = Section;
     NewSection.sh_offset = BinSec->getOutputFileOffset();
@@ -5403,7 +5403,7 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
   for (BinarySection &Section : BC->nonAllocatableSections()) {
     if (Section.getOutputFileOffset() <= LastFileOffset)
       continue;
-    if (Section.isBackupSection())
+    if (BC->isPPC64() && Section.isBackupSection())
       continue;
     if (opts::Verbosity >= 1)
       BC->outs() << "BOLT-INFO: writing section header for "
