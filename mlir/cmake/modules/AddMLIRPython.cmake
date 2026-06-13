@@ -360,6 +360,14 @@ function(build_nanobind_lib)
     PRIVATE
     NB_DOMAIN=${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
   )
+  target_compile_options(${NB_LIBRARY_TARGET_NAME}
+    PRIVATE
+      ${MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_COMPILE_OPTIONS}
+  )
+  target_link_libraries(${NB_LIBRARY_TARGET_NAME}
+    PRIVATE
+      ${MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_LINK_LIBS}
+  )
   # Propagate stable ABI to the shared nanobind library. nanobind internally
   # skips this when the interpreter is free-threaded.
   if(MLIR_ENABLE_PYTHON_STABLE_ABI AND NOT (NB_ABI MATCHES "[0-9]t"))
@@ -420,6 +428,13 @@ endfunction()
 #     DAG of source modules is included.
 #   COMMON_CAPI_LINK_LIBS: List of dylibs (typically one) to make every
 #     extension depend on (see mlir_python_add_common_capi_library).
+#
+# The following variables can be set by superprojects to add compilation and
+# linking options to all the generated Python binding targets:
+#   MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_COMPILE_OPTIONS
+#   MLIR_BINDINGS_PYTHON_EXTRA_NANOBIND_LINK_LIBS
+#   MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_COMPILE_OPTIONS
+#   MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_LINK_LIBS
 function(add_mlir_python_modules name)
   cmake_parse_arguments(ARG
     ""
@@ -981,6 +996,10 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
     PRIVATE
     MLIR_BINDINGS_PYTHON_DOMAIN=${ARG_MLIR_BINDINGS_PYTHON_NB_DOMAIN}
   )
+  target_compile_options(${libname}
+    PRIVATE
+      ${MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_COMPILE_OPTIONS}
+  )
   if(APPLE)
     # In llvm/cmake/modules/HandleLLVMOptions.cmake:268 we set -Wl,-flat_namespace which breaks
     # the default name spacing on MacOS and causes "cross-wired" symbol resolution when multiple
@@ -1073,6 +1092,7 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
   target_link_libraries(${libname}
     PRIVATE
     ${ARG_LINK_LIBS}
+    ${MLIR_BINDINGS_PYTHON_EXTRA_EXTENSION_LINK_LIBS}
   )
 
   target_link_options(${libname}
