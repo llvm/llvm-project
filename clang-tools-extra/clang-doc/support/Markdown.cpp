@@ -248,6 +248,75 @@ static ArrayRef<MDNode *> parseInline(StringRef S, BumpPtrAllocator &Arena,
   return allocateArray(Nodes, Arena);
 }
 
+// Parses a fenced code block opened with ``` or ~~~. The cursor must be on the
+// opening fence; the fence, body lines, and closing fence are consumed.
+//
+// TODO: Follow CommonMark spec §4.5 more closely -- opening fences may be
+// indented up to 3 spaces, the closing fence must use the same character and be
+// at least as long as the opening fence, and the closing fence may only be
+// followed by spaces. Doxygen specifics should be handled on a case-by-case
+// basis.
+static FencedCodeNode *parseFencedCode(LineReader &Reader,
+                                       BumpPtrAllocator &Arena,
+                                       StringSaver &Saver) {
+  StringRef Open = Reader.peek().trim();
+  char Fence = Open[0];
+  StringRef Lang = Saver.save(Open.drop_front(3).trim());
+  Reader.advance(); // consume opening fence
+  SmallVector<StringRef> CodeLines;
+  while (!Reader.atEnd()) {
+    StringRef CodeLine = Reader.peek().trim();
+    if (CodeLine.size() >= 3 &&
+        all_of(CodeLine.take_front(3), [Fence](char C) { return C == Fence; }))
+      break;
+    CodeLines.push_back(Saver.save(Reader.advance()));
+  }
+  if (!Reader.atEnd())
+    Reader.advance(); // consume closing fence
+  auto *Code =
+      new (Arena) FencedCodeNode(Lang, allocateArray(CodeLines, Arena));
+  LDBG() << "emitting FencedCodeNode lang='" << Lang
+         << "' lines=" << CodeLines.size();
+  return Code;
+}
+
+// Parses a pipe table. The cursor must be on the header row, with a separator
+// row following; consecutive lines containing a | are taken as rows.
+static TableNode *parsePipeTable(LineReader &Reader, BumpPtrAllocator &Arena,
+                                 StringSaver &Saver) {
+  SmallVector<StringRef> Rows;
+  // TODO: Rows are kept as raw line text for now. Table cells may contain
+  // inline content (emphasis, code spans, links), so each row may need to be
+  // split on '|' and parsed further into structured cells.
+  while (!Reader.atEnd() && Reader.peek().trim().contains('|'))
+    Rows.push_back(Saver.save(Reader.advance().trim()));
+  auto *Table = new (Arena) TableNode(allocateArray(Rows, Arena));
+  LDBG() << "emitting TableNode rows=" << Rows.size();
+  return Table;
+}
+
+// Parses an unordered (bullet) list. The cursor must be on the first item;
+// consecutive bullet lines are consumed into list items.
+static UnorderedListNode *parseUnorderedList(LineReader &Reader,
+                                             BumpPtrAllocator &Arena,
+                                             StringSaver &Saver) {
+  SmallVector<ListItemNode *> Items;
+  while (!Reader.atEnd()) {
+    StringRef L = Reader.peek().trim();
+    if (!isListItem(L))
+      break;
+    StringRef ItemText = Saver.save(L.drop_front(2).trim());
+    SmallVector<MDNode *> ItemChildren;
+    ItemChildren.push_back(new (Arena) TextNode(ItemText));
+    auto *Item = new (Arena) ListItemNode(allocateArray(ItemChildren, Arena));
+    Items.push_back(Item);
+    Reader.advance();
+  }
+  auto *List = new (Arena) UnorderedListNode(allocateArray(Items, Arena));
+  LDBG() << "emitting UnorderedListNode items=" << Items.size();
+  return List;
+}
+
 ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
                                  BumpPtrAllocator &Arena) {
   if (ParagraphText.trim().empty())
@@ -268,66 +337,21 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
       continue;
     }
 
-    // TODO: Follow CommonMark spec §4.5 more closely -- opening fences may be
-    // indented up to 3 spaces, the closing fence must use the same character
-    // and be at least as long as the opening fence, and the closing fence may
-    // only be followed by spaces. Doxygen specifics should be handled on a
-    // case-by-case basis.
+    // Fenced code block.
     if (Line.starts_with("```") || Line.starts_with("~~~")) {
-      char Fence = Line[0];
-      StringRef Lang = Saver.save(Line.drop_front(3).trim());
-      Reader.advance(); // consume opening fence
-      SmallVector<StringRef> CodeLines;
-      while (!Reader.atEnd()) {
-        StringRef CodeLine = Reader.peek().trim();
-        if (CodeLine.size() >= 3 &&
-            all_of(CodeLine.take_front(3),
-                   [Fence](char C) { return C == Fence; }))
-          break;
-        CodeLines.push_back(Saver.save(Reader.advance()));
-      }
-      if (!Reader.atEnd())
-        Reader.advance(); // consume closing fence
-      auto *Code =
-          new (Arena) FencedCodeNode(Lang, allocateArray(CodeLines, Arena));
-      LDBG() << "emitting FencedCodeNode lang='" << Lang
-             << "' lines=" << CodeLines.size();
-      Nodes.push_back(Code);
+      Nodes.push_back(parseFencedCode(Reader, Arena, Saver));
       continue;
     }
 
     // Pipe table: current line has | and next line is a separator row.
     if (Line.contains('|') && isSepRow(Reader.peek(1).trim())) {
-      SmallVector<StringRef> Rows;
-      // TODO: Rows are kept as raw line text for now. Table cells may contain
-      // inline content (emphasis, code spans, links), so each row may need to
-      // be split on '|' and parsed further into structured cells.
-      while (!Reader.atEnd() && Reader.peek().trim().contains('|'))
-        Rows.push_back(Saver.save(Reader.advance().trim()));
-      auto *Table = new (Arena) TableNode(allocateArray(Rows, Arena));
-      LDBG() << "emitting TableNode rows=" << Rows.size();
-      Nodes.push_back(Table);
+      Nodes.push_back(parsePipeTable(Reader, Arena, Saver));
       continue;
     }
 
     // Unordered list item.
     if (isListItem(Line)) {
-      SmallVector<ListItemNode *> Items;
-      while (!Reader.atEnd()) {
-        StringRef L = Reader.peek().trim();
-        if (!isListItem(L))
-          break;
-        StringRef ItemText = Saver.save(L.drop_front(2).trim());
-        SmallVector<MDNode *> ItemChildren;
-        ItemChildren.push_back(new (Arena) TextNode(ItemText));
-        auto *Item =
-            new (Arena) ListItemNode(allocateArray(ItemChildren, Arena));
-        Items.push_back(Item);
-        Reader.advance();
-      }
-      auto *List = new (Arena) UnorderedListNode(allocateArray(Items, Arena));
-      LDBG() << "emitting UnorderedListNode items=" << Items.size();
-      Nodes.push_back(List);
+      Nodes.push_back(parseUnorderedList(Reader, Arena, Saver));
       continue;
     }
 
