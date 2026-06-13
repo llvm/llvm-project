@@ -996,6 +996,7 @@ def CIR_LangAddressSpaceAttr : CIR_EnumAttr<CIR_LangAddressSpace,
   }];
 }
 
+// Used by OpenCL kernel argument metadata for the addr_space field.
 def CIR_LangAddressSpaceArrayAttr
     : CIR_TypedArrayAttrBase<CIR_LangAddressSpaceAttr,
                              "language address space array attribute">;
