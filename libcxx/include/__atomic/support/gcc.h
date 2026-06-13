@@ -63,8 +63,11 @@ struct __cxx_atomic_base_impl {
   __cxx_atomic_base_impl() _NOEXCEPT : __a_value() {
   }
 #endif // _LIBCPP_CXX03_LANG
-  _LIBCPP_CONSTEXPR explicit __cxx_atomic_base_impl(_Tp value) _NOEXCEPT : __a_value(value) {
+  _LIBCPP_CONSTEXPR explicit __cxx_atomic_base_impl(_Tp __value) _NOEXCEPT : __a_value(__value) {
+    // gcc c++11 mode constexpr constructor requires empty body
+#if _LIBCPP_STD_VER >= 14
     std::__clear_padding_if_needed(__a_value);
+#endif
   }
   _Tp __a_value;
 };
