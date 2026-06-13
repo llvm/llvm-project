@@ -125,6 +125,16 @@ void test9(void) {
   char macro_char_dec = CHAR_MACRO_DEC;  // expected-warning {{implicit conversion from 'int' to 'char' changes value from 255 to -1}}
 
   char array_init[] = { 255, 127, 128, 129, 0 };
+  unsigned char unsigned_array_init[] = { 255 };
+  unsigned char unsigned_array_init_multi[] = { 255, 127, 128, 129, 0 };
+  signed char signed_array_init[] = { 255 }; // expected-warning {{implicit conversion from 'int' to 'signed char' changes value from 255 to -1}}
+  signed char signed_array_init_multi[] = {
+    255, // expected-warning {{implicit conversion from 'int' to 'signed char' changes value from 255 to -1}}
+    127,
+    128, // expected-warning {{implicit conversion from 'int' to 'signed char' changes value from 128 to -128}}
+    129, // expected-warning {{implicit conversion from 'int' to 'signed char' changes value from 129 to -127}}
+    0
+  };
 }
 
 #define A 1
