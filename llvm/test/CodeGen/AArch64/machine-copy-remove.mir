@@ -609,3 +609,104 @@ body:             |
 
   bb.2:
     RET_ReallyLR
+...
+# CHECK-LABEL: name: cmp_rr
+# CHECK: SUBSWrr
+# CHECK: bb.1:
+# CHECK-NOT: COPY
+---
+name:            cmp_rr
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1, $x2
+
+    dead $wzr = SUBSWrr $w0, $w1, implicit-def $nzcv
+    Bcc 0, %bb.1, implicit killed $nzcv
+    B %bb.2
+
+  bb.1:
+    liveins: $w1, $x2
+
+    $w0 = COPY $w1
+    STRWui killed $w0, killed $x2, 0
+
+  bb.2:
+    RET_ReallyLR
+
+...
+# CHECK-LABEL: name: cmp_copy_prop
+# CHECK: SUBSWrr
+# CHECK: bb.1:
+# CHECK-NOT: COPY
+---
+name:            cmp_copy_prop
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1, $x2
+
+    $w2 = COPY $w0
+    dead $wzr = SUBSWrr $w0, $w1, implicit-def $nzcv
+    Bcc 0, %bb.1, implicit killed $nzcv
+    B %bb.2
+
+  bb.1:
+    liveins: $w1, $x2
+
+    $w0 = COPY $w2
+    STRWui killed $w0, killed $x2, 0
+
+  bb.2:
+    RET_ReallyLR
+
+...
+# CHECK-LABEL: name: gpr_zero_copy
+# CHECK: CBNZW
+# CHECK: bb.1:
+# CHECK-NOT: COPY
+---
+name:            gpr_zero_copy
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1, $x2
+
+    $w1 = COPY $wzr
+    CBNZW $w1, %bb.2
+
+  bb.1:
+    liveins: $w1, $x2
+
+    $w0 = COPY $w1
+    STRWui killed $w0, killed $x2, 0
+
+  bb.2:
+    RET_ReallyLR
+
+...
+# CHECK-LABEL: name: cmp_rr_clobber
+# CHECK: SUBSWrr
+# CHECK: bb.1:
+# CHECK: COPY
+---
+name:            cmp_rr_clobber
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $w0, $w1, $x2
+
+    dead $wzr = SUBSWrr $w0, $w1, implicit-def $nzcv
+    $w0 = LDRWui $x2, 0
+    STRWui killed $w0, killed $x2, 0
+    Bcc 0, %bb.1, implicit killed $nzcv
+    B %bb.2
+
+  bb.1:
+    liveins: $w1, $x2
+
+    $w0 = COPY $w1
+    STRWui killed $w0, killed $x2, 4
+
+  bb.2:
+    RET_ReallyLR

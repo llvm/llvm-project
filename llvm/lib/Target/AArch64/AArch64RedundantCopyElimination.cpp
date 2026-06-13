@@ -7,7 +7,7 @@
 // This pass removes unnecessary copies/moves in BBs based on a dominating
 // condition.
 //
-// We handle three cases:
+// We handle four cases:
 // 1. For BBs that are targets of CBZ/CBNZ instructions, we know the value of
 //    the CBZ/CBNZ source register is zero on the taken/not-taken path. For
 //    instance, the copy instruction in the code below can be removed because
@@ -40,6 +40,17 @@
 //  .LBB0_1:
 //    orr x0, xzr, #0x1  ; <-- redundant
 //
+// 4. If the flag setting instruction is a register comparison (i.e.,
+// SUBS[W|X]rr
+//    to WZR/XZR), we can remove a redundant copy between the compared registers
+//    on the EQ path.
+//
+//  %bb.0:
+//    subs xzr, x0, x1
+//    b.eq .LBB0_1
+//  .LBB0_1:
+//    mov x0, x1  ; <-- redundant
+//
 // This pass should be run after register allocation.
 //
 // FIXME: This could also be extended to check the whole dominance subtree below
@@ -66,6 +77,18 @@ using namespace llvm;
 STATISTIC(NumCopiesRemoved, "Number of copies removed.");
 
 namespace {
+struct RegImm {
+  MCPhysReg Reg;
+  int32_t Imm;
+  RegImm(MCPhysReg Reg, int32_t Imm) : Reg(Reg), Imm(Imm) {}
+};
+
+struct RegEqual {
+  MCPhysReg Reg1;
+  MCPhysReg Reg2;
+  RegEqual(MCPhysReg Reg1, MCPhysReg Reg2) : Reg1(Reg1), Reg2(Reg2) {}
+};
+
 class AArch64RedundantCopyEliminationImpl {
 public:
   bool run(MachineFunction &MF);
@@ -81,14 +104,9 @@ private:
   // OptBBClobberedRegs is used when optimizing away redundant copies/moves.
   LiveRegUnits OptBBClobberedRegs, OptBBUsedRegs;
 
-  struct RegImm {
-    MCPhysReg Reg;
-    int32_t Imm;
-    RegImm(MCPhysReg Reg, int32_t Imm) : Reg(Reg), Imm(Imm) {}
-  };
-
   bool knownRegValInBlock(MachineInstr &CondBr, MachineBasicBlock *MBB,
                           SmallVectorImpl<RegImm> &KnownRegs,
+                          SmallVectorImpl<RegEqual> &KnownEqualRegs,
                           MachineBasicBlock::iterator &FirstUse);
   bool optimizeBlock(MachineBasicBlock *MBB);
 };
@@ -113,6 +131,73 @@ char AArch64RedundantCopyEliminationLegacy::ID = 0;
 INITIALIZE_PASS(AArch64RedundantCopyEliminationLegacy, "aarch64-copyelim",
                 "AArch64 redundant copy elimination pass", false, false)
 
+static bool isCompareReg(const MachineInstr &MI, MCPhysReg &Rn, MCPhysReg &Rm) {
+  MCPhysReg DstReg;
+  switch (MI.getOpcode()) {
+  case AArch64::SUBSWrr:
+  case AArch64::SUBSXrr:
+    DstReg = MI.getOperand(0).getReg();
+    if (DstReg != AArch64::WZR && DstReg != AArch64::XZR)
+      return false;
+    Rn = MI.getOperand(1).getReg();
+    Rm = MI.getOperand(2).getReg();
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool isKnownZeroSource(Register SrcReg, ArrayRef<RegImm> KnownRegs) {
+  for (const RegImm &KnownReg : KnownRegs) {
+    if (KnownReg.Imm == 0 && KnownReg.Reg == SrcReg)
+      return true;
+  }
+  return false;
+}
+
+static bool isRedundantEqualRegAssign(const MachineInstr &MI,
+                                      ArrayRef<RegEqual> KnownEqualRegs) {
+  if (MI.getNumOperands() < 2 || !MI.getOperand(0).isReg() ||
+      !MI.getOperand(1).isReg())
+    return false;
+  MCPhysReg DefReg = MI.getOperand(0).getReg();
+  MCPhysReg SrcReg = MI.getOperand(1).getReg();
+  for (const RegEqual &Eq : KnownEqualRegs) {
+    if ((DefReg == Eq.Reg1 && SrcReg == Eq.Reg2) ||
+        (DefReg == Eq.Reg2 && SrcReg == Eq.Reg1))
+      return true;
+  }
+  return false;
+}
+
+static void propagateEqualRegThroughCopy(MCPhysReg CopyDstReg,
+                                         MCPhysReg CopySrcReg,
+                                         ArrayRef<RegEqual> KnownEqualRegs,
+                                         SmallVectorImpl<RegEqual> &Out) {
+  Out.push_back(RegEqual(CopyDstReg, CopySrcReg));
+  for (const RegEqual &Eq : KnownEqualRegs) {
+    if (CopySrcReg == Eq.Reg1)
+      Out.push_back(RegEqual(CopyDstReg, Eq.Reg2));
+    else if (CopySrcReg == Eq.Reg2)
+      Out.push_back(RegEqual(CopyDstReg, Eq.Reg1));
+    else if (CopyDstReg == Eq.Reg1)
+      Out.push_back(RegEqual(CopySrcReg, Eq.Reg2));
+    else if (CopyDstReg == Eq.Reg2)
+      Out.push_back(RegEqual(CopySrcReg, Eq.Reg1));
+  }
+}
+
+static bool shouldStopPredScan(ArrayRef<RegImm> KnownRegs,
+                               ArrayRef<RegEqual> KnownEqualRegs,
+                               const LiveRegUnits &Clobbered) {
+  bool AnyKnownReg = any_of(
+      KnownRegs, [&](const RegImm &K) { return Clobbered.available(K.Reg); });
+  bool AnyKnownEqual = any_of(KnownEqualRegs, [&](const RegEqual &Eq) {
+    return Clobbered.available(Eq.Reg1) && Clobbered.available(Eq.Reg2);
+  });
+  return !AnyKnownReg && !AnyKnownEqual;
+}
+
 /// It's possible to determine the value of a register based on a dominating
 /// condition.  To do so, this function checks to see if the basic block \p MBB
 /// is the target of a conditional branch \p CondBr with an equality comparison.
@@ -122,12 +207,16 @@ INITIALIZE_PASS(AArch64RedundantCopyEliminationLegacy, "aarch64-copyelim",
 /// other than WZR/XZR, we know the value of the destination register is zero in
 /// \p MMB for some cases.  In addition, if the NZCV setting instruction is
 /// comparing against a constant we know the other source register is equal to
-/// the constant in \p MBB for some cases.  If we find any constant values, push
-/// a physical register and constant value pair onto the KnownRegs vector and
-/// return true.  Otherwise, return false if no known values were found.
+/// the constant in \p MBB for some cases.  If the NZCV setting instruction is a
+/// register comparison, we know the compared registers are equal in \p MBB for
+/// some cases.  If we find any known values, push them onto the KnownRegs or
+/// KnownEqualRegs vectors and return true.  Otherwise, return false if no known
+/// values were found.
 bool AArch64RedundantCopyEliminationImpl::knownRegValInBlock(
     MachineInstr &CondBr, MachineBasicBlock *MBB,
-    SmallVectorImpl<RegImm> &KnownRegs, MachineBasicBlock::iterator &FirstUse) {
+    SmallVectorImpl<RegImm> &KnownRegs,
+    SmallVectorImpl<RegEqual> &KnownEqualRegs,
+    MachineBasicBlock::iterator &FirstUse) {
   unsigned Opc = CondBr.getOpcode();
 
   // Check if the current basic block is the target block to which the
@@ -170,6 +259,19 @@ bool AArch64RedundantCopyEliminationImpl::knownRegValInBlock(
   // Find compare instruction that sets NZCV used by CondBr.
   MachineBasicBlock::reverse_iterator RIt = CondBr.getReverseIterator();
   for (MachineInstr &PredI : make_range(std::next(RIt), PredMBB->rend())) {
+    MCPhysReg Rn;
+    MCPhysReg Rm;
+    if (isCompareReg(PredI, Rn, Rm)) {
+      // If both source registers of the compare are not modified between the
+      // compare and conditional branch we know they are equal.
+      if (DomBBClobberedRegs.available(Rn) &&
+          DomBBClobberedRegs.available(Rm)) {
+        FirstUse = PredI;
+        KnownEqualRegs.push_back(RegEqual(Rn, Rm));
+        return true;
+      }
+      return false;
+    }
 
     bool IsCMN = false;
     switch (PredI.getOpcode()) {
@@ -307,12 +409,13 @@ bool AArch64RedundantCopyEliminationImpl::optimizeBlock(
   bool SeenFirstUse = false;
   // Registers that contain a known value at the start of MBB.
   SmallVector<RegImm, 4> KnownRegs;
+  SmallVector<RegEqual, 2> KnownEqualRegs;
 
   MachineBasicBlock::iterator Itr = std::next(CondBr);
   do {
     --Itr;
 
-    if (!knownRegValInBlock(*Itr, MBB, KnownRegs, FirstUse))
+    if (!knownRegValInBlock(*Itr, MBB, KnownRegs, KnownEqualRegs, FirstUse))
       continue;
 
     // Reset the clobbered and used register units.
@@ -350,6 +453,17 @@ bool AArch64RedundantCopyEliminationImpl::optimizeBlock(
             break;
           }
         }
+        SmallVector<RegEqual, 2> NewEqual;
+        if (OptBBClobberedRegs.available(CopyDstReg) &&
+            OptBBClobberedRegs.available(CopySrcReg)) {
+          propagateEqualRegThroughCopy(CopyDstReg, CopySrcReg, KnownEqualRegs,
+                                       NewEqual);
+        }
+        if (!NewEqual.empty()) {
+          KnownEqualRegs.append(NewEqual.begin(), NewEqual.end());
+          if (SeenFirstUse)
+            FirstUse = PredI;
+        }
       }
 
       // Stop if we get to the beginning of PredMBB.
@@ -358,18 +472,16 @@ bool AArch64RedundantCopyEliminationImpl::optimizeBlock(
 
       LiveRegUnits::accumulateUsedDefed(*PredI, OptBBClobberedRegs,
                                         OptBBUsedRegs, TRI);
-      // Stop if all of the known-zero regs have been clobbered.
-      if (all_of(KnownRegs, [&](RegImm KnownReg) {
-            return !OptBBClobberedRegs.available(KnownReg.Reg);
-          }))
+      // Stop if all of the known regs have been clobbered.
+      if (shouldStopPredScan(KnownRegs, KnownEqualRegs, OptBBClobberedRegs))
         break;
     }
     break;
 
   } while (Itr != PredMBB->begin() && Itr->isTerminator());
 
-  // We've not found a registers with a known value, time to bail out.
-  if (KnownRegs.empty())
+  // We've not found registers with a known value, time to bail out.
+  if (KnownRegs.empty() && KnownEqualRegs.empty())
     return false;
 
   bool Changed = false;
@@ -383,23 +495,65 @@ bool AArch64RedundantCopyEliminationImpl::optimizeBlock(
     bool RemovedMI = false;
     bool IsCopy = MI->isCopy();
     bool IsMoveImm = MI->isMoveImmediate();
+    Register SrcReg = IsCopy ? MI->getOperand(1).getReg() : Register();
+    int64_t SrcImm = IsMoveImm ? MI->getOperand(1).getImm() : 0;
     if (IsCopy || IsMoveImm) {
       Register DefReg = MI->getOperand(0).getReg();
-      Register SrcReg = IsCopy ? MI->getOperand(1).getReg() : Register();
-      int64_t SrcImm = IsMoveImm ? MI->getOperand(1).getImm() : 0;
-      if (!MRI->isReserved(DefReg) &&
-          ((IsCopy && (SrcReg == AArch64::XZR || SrcReg == AArch64::WZR)) ||
-           IsMoveImm)) {
-        for (RegImm &KnownReg : KnownRegs) {
-          if (KnownReg.Reg != DefReg &&
-              !TRI->isSuperRegister(DefReg, KnownReg.Reg))
+      if (!MRI->isReserved(DefReg)) {
+        if (IsCopy && !KnownEqualRegs.empty() &&
+            isRedundantEqualRegAssign(*MI, KnownEqualRegs)) {
+          // Don't remove an instruction that has other live defs.
+          if (any_of(MI->operands(), [DefReg](MachineOperand &O) {
+                return O.isReg() && O.isDef() && !O.isDead() &&
+                       O.getReg() != DefReg;
+              }))
             continue;
 
-          // For a copy, the known value must be a zero.
-          if (IsCopy && KnownReg.Imm != 0)
-            continue;
+          for (const RegEqual &Eq : KnownEqualRegs) {
+            if (MI->getOperand(0).getReg() == Eq.Reg1 ||
+                MI->getOperand(0).getReg() == Eq.Reg2 ||
+                MI->getOperand(1).getReg() == Eq.Reg1 ||
+                MI->getOperand(1).getReg() == Eq.Reg2) {
+              UsedKnownRegs.insert(Eq.Reg1);
+              UsedKnownRegs.insert(Eq.Reg2);
+            }
+          }
+          LLVM_DEBUG(dbgs() << "Remove redundant equal-reg copy: " << *MI);
+          MI->eraseFromParent();
+          Changed = true;
+          LastChange = I;
+          NumCopiesRemoved++;
+          RemovedMI = true;
+        }
 
-          if (IsMoveImm) {
+        if (!RemovedMI && IsCopy) {
+          bool SrcIsZero = (SrcReg == AArch64::XZR || SrcReg == AArch64::WZR ||
+                            isKnownZeroSource(SrcReg, KnownRegs));
+          if (SrcIsZero) {
+            for (RegImm &KnownReg : KnownRegs) {
+              if (KnownReg.Imm != 0)
+                continue;
+              if (KnownReg.Reg != DefReg &&
+                  !TRI->isSuperRegister(DefReg, KnownReg.Reg))
+                continue;
+              LLVM_DEBUG(dbgs() << "Remove redundant Copy : " << *MI);
+              MI->eraseFromParent();
+              Changed = true;
+              LastChange = I;
+              NumCopiesRemoved++;
+              UsedKnownRegs.insert(KnownReg.Reg);
+              RemovedMI = true;
+              break;
+            }
+          }
+        }
+
+        if (!RemovedMI && IsMoveImm) {
+          for (RegImm &KnownReg : KnownRegs) {
+            if (KnownReg.Reg != DefReg &&
+                !TRI->isSuperRegister(DefReg, KnownReg.Reg))
+              continue;
+
             // For a move immediate, the known immediate must match the source
             // immediate.
             if (KnownReg.Imm != SrcImm)
@@ -418,20 +572,17 @@ bool AArch64RedundantCopyEliminationImpl::optimizeBlock(
             // bits as different.
             if (TRI->isSuperRegister(DefReg, KnownReg.Reg) && KnownReg.Imm < 0)
               continue;
-          }
 
-          if (IsCopy)
-            LLVM_DEBUG(dbgs() << "Remove redundant Copy : " << *MI);
-          else
             LLVM_DEBUG(dbgs() << "Remove redundant Move : " << *MI);
 
-          MI->eraseFromParent();
-          Changed = true;
-          LastChange = I;
-          NumCopiesRemoved++;
-          UsedKnownRegs.insert(KnownReg.Reg);
-          RemovedMI = true;
-          break;
+            MI->eraseFromParent();
+            Changed = true;
+            LastChange = I;
+            NumCopiesRemoved++;
+            UsedKnownRegs.insert(KnownReg.Reg);
+            RemovedMI = true;
+            break;
+          }
         }
       }
     }
@@ -440,7 +591,7 @@ bool AArch64RedundantCopyEliminationImpl::optimizeBlock(
     if (RemovedMI)
       continue;
 
-    // Remove any regs the MI clobbers from the KnownConstRegs set.
+    // Remove any regs the MI clobbers from the KnownRegs set.
     for (unsigned RI = 0; RI < KnownRegs.size();)
       if (MI->modifiesRegister(KnownRegs[RI].Reg, TRI)) {
         std::swap(KnownRegs[RI], KnownRegs[KnownRegs.size() - 1]);
@@ -451,8 +602,20 @@ bool AArch64RedundantCopyEliminationImpl::optimizeBlock(
         ++RI;
       }
 
-    // Continue until the KnownRegs set is empty.
-    if (KnownRegs.empty())
+    // Remove any equal-reg pairs the MI clobbers from the KnownEqualRegs set.
+    for (unsigned RI = 0; RI < KnownEqualRegs.size();) {
+      if (MI->modifiesRegister(KnownEqualRegs[RI].Reg1, TRI) ||
+          MI->modifiesRegister(KnownEqualRegs[RI].Reg2, TRI)) {
+        std::swap(KnownEqualRegs[RI],
+                  KnownEqualRegs[KnownEqualRegs.size() - 1]);
+        KnownEqualRegs.pop_back();
+      } else {
+        ++RI;
+      }
+    }
+
+    // Continue until the KnownRegs and KnownEqualRegs sets are empty.
+    if (KnownRegs.empty() && KnownEqualRegs.empty())
       break;
   }
 
