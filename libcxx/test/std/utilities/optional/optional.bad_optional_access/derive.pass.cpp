@@ -12,6 +12,7 @@
 
 // class bad_optional_access : public exception
 
+#include <exception>
 #include <optional>
 #include <type_traits>
 
