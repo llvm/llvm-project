@@ -55,3 +55,15 @@ TEST(LlvmLibcWCSLCatTest, SmallerNoOverwriteAfter0) {
   ASSERT_TRUE(dst[7] == L'\0');
   ASSERT_EQ(res, size_t(4));
 }
+
+TEST(LlvmLibcWCSLCatTest, DestUnterminatedWithinBuffer) {
+  const wchar_t *src = L"de";
+  wchar_t dst[3]{L'a', L'b', L'c'};
+
+  // the function must not access memory after the 3rd character
+  size_t res = LIBC_NAMESPACE::wcslcat(dst, src, 3);
+  ASSERT_TRUE(dst[0] == L'a');
+  ASSERT_TRUE(dst[1] == L'b');
+  ASSERT_TRUE(dst[2] == L'c');
+  ASSERT_EQ(res, size_t(5));
+}

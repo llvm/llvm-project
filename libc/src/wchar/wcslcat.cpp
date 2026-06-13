@@ -19,21 +19,23 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(size_t, wcslcat,
                    (wchar_t *__restrict dst, const wchar_t *__restrict src,
                     size_t dstsize)) {
-  const size_t dstlen = internal::string_length(dst);
+  size_t dstlen = 0;
+  while (dstlen < dstsize && dst[dstlen] != L'\0') {
+    dstlen++;
+  }
   const size_t srclen = internal::string_length(src);
-  int limit = static_cast<int>(dstsize - dstlen - 1);
-  size_t returnval = (dstsize < dstlen ? dstsize : dstlen) + srclen;
-  if (limit < 0)
-    return returnval;
-  int i = 0;
-  for (; i < limit && src[i] != L'\0'; ++i) {
+  if (dstlen == dstsize) {
+    return dstlen + srclen;
+  }
+  size_t copy_limit = dstsize - dstlen - 1;
+  size_t i = 0;
+  for (; i < copy_limit && src[i] != L'\0'; ++i) {
     dst[dstlen + i] = src[i];
   }
 
-  // appending null terminator if there is room
-  if (dstlen + i < dstlen + dstsize)
-    dst[dstlen + i] = L'\0';
-  return returnval;
+  // appending null terminator to the end of the result
+  dst[dstlen + i] = L'\0';
+  return dstlen + srclen;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -80,3 +80,30 @@ TEST(LlvmLibcWCSNCatTest, NonEmptyDest) {
   ASSERT_TRUE(dest[3] == L'\0');
   ASSERT_TRUE(dest[4] == L'Z');
 }
+
+TEST(LlvmLibcWCSNCatTest, UnterminatedSrcArray) {
+  wchar_t dest[7] = {L'x', L'y', L'z', L'\0'};
+  wchar_t src[3] = {L'a', L'b', L'c'};
+
+  // Adding only part of the src string
+  LIBC_NAMESPACE::wcsncat(dest, src, 2);
+  ASSERT_TRUE(dest[0] == L'x');
+  ASSERT_TRUE(dest[1] == L'y');
+  ASSERT_TRUE(dest[2] == L'z');
+  ASSERT_TRUE(dest[3] == L'a');
+  ASSERT_TRUE(dest[4] == L'b');
+  ASSERT_TRUE(dest[5] == L'\0');
+
+  // resetting for last test
+  dest[3] = L'\0';
+
+  // Adding full src string
+  LIBC_NAMESPACE::wcsncat(dest, src, 3);
+  ASSERT_TRUE(dest[0] == L'x');
+  ASSERT_TRUE(dest[1] == L'y');
+  ASSERT_TRUE(dest[2] == L'z');
+  ASSERT_TRUE(dest[3] == L'a');
+  ASSERT_TRUE(dest[4] == L'b');
+  ASSERT_TRUE(dest[5] == L'c');
+  ASSERT_TRUE(dest[6] == L'\0');
+}
