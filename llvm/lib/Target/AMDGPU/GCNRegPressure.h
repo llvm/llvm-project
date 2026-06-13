@@ -410,8 +410,7 @@ public:
 
   // Reset tracker with both virtual and physical live register state.
   void reset(const MachineRegisterInfo &MRInfo,
-             const LiveRegSet &VirtLiveRegsSet,
-             const BitVector &PhysLiveUnits);
+             const LiveRegSet &VirtLiveRegsSet, const BitVector &PhysLiveUnits);
 
   // live regs for the current state
   const decltype(VirtLiveRegs) &getVirtLiveRegs() const { return VirtLiveRegs; }
@@ -442,8 +441,8 @@ public:
 
 GCNRPTracker::LiveRegSet
 getVirtLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
-            const MachineRegisterInfo &MRI,
-            GCNRegPressure::RegKind RegKind = GCNRegPressure::TOTAL_KINDS);
+                const MachineRegisterInfo &MRI,
+                GCNRegPressure::RegKind RegKind = GCNRegPressure::TOTAL_KINDS);
 
 ////////////////////////////////////////////////////////////////////////////////
 // GCNUpwardRPTracker
@@ -603,7 +602,7 @@ LaneBitmask getLiveLaneMask(const LiveInterval &LI, SlotIndex SI,
 /// Note: there is no entry in the map for instructions with empty live reg set
 /// Complexity = O(NumVirtRegs * averageLiveRangeSegmentsPerReg * lg(R))
 template <typename Range>
-DenseMap<MachineInstr*, GCNRPTracker::LiveRegSet>
+DenseMap<MachineInstr *, GCNRPTracker::LiveRegSet>
 getVirtLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
   std::vector<SlotIndex> Indexes;
   Indexes.reserve(llvm::size(R));
@@ -642,20 +641,20 @@ getVirtLiveRegMap(Range &&R, bool After, LiveIntervals &LIS) {
 }
 
 inline GCNRPTracker::LiveRegSet getVirtLiveRegsAfter(const MachineInstr &MI,
-                                                 const LiveIntervals &LIS) {
+                                                     const LiveIntervals &LIS) {
   return getVirtLiveRegs(LIS.getInstructionIndex(MI).getDeadSlot(), LIS,
-                     MI.getMF()->getRegInfo());
+                         MI.getMF()->getRegInfo());
 }
 
-inline GCNRPTracker::LiveRegSet getVirtLiveRegsBefore(const MachineInstr &MI,
-                                                  const LiveIntervals &LIS) {
+inline GCNRPTracker::LiveRegSet
+getVirtLiveRegsBefore(const MachineInstr &MI, const LiveIntervals &LIS) {
   return getVirtLiveRegs(LIS.getInstructionIndex(MI).getBaseIndex(), LIS,
-                     MI.getMF()->getRegInfo());
+                         MI.getMF()->getRegInfo());
 }
 
 template <typename Range>
 GCNRegPressure getVirtRegPressure(const MachineRegisterInfo &MRI,
-                              Range &&LiveRegs) {
+                                  Range &&LiveRegs) {
   GCNRegPressure Res;
   for (const auto &RM : LiveRegs)
     Res.inc(RM.first, LaneBitmask::getNone(), RM.second, MRI);

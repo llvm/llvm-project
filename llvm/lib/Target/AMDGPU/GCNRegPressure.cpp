@@ -539,7 +539,6 @@ void GCNRPTracker::removeKilledUnitsAndDecPressure(MCRegister Reg, SlotIndex SI,
   }
 }
 
-
 GCNRegPressure GCNRPTracker::constructPhysRegPressure() const {
   GCNRegPressure Res;
   for (unsigned U : PhysLiveRegUnits.set_bits())
@@ -564,10 +563,10 @@ LaneBitmask llvm::getLiveLaneMask(const LiveInterval &LI, SlotIndex SI,
   return LiveMask;
 }
 
-GCNRPTracker::LiveRegSet llvm::getVirtLiveRegs(SlotIndex SI,
-                                           const LiveIntervals &LIS,
-                                           const MachineRegisterInfo &MRI,
-                                           GCNRegPressure::RegKind RegKind) {
+GCNRPTracker::LiveRegSet
+llvm::getVirtLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
+                      const MachineRegisterInfo &MRI,
+                      GCNRegPressure::RegKind RegKind) {
   GCNRPTracker::LiveRegSet VirtLiveRegs;
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     auto Reg = Register::index2VirtReg(I);
@@ -1119,8 +1118,7 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
       if (MBB.empty()) {
         VirtLiveIn = VirtLiveOut = getVirtLiveRegs(MBBStartSlot, LIS, MRI);
         RPAtMBBEnd = getVirtRegPressure(MRI, VirtLiveIn);
-        const SIRegisterInfo *SRI =
-            static_cast<const SIRegisterInfo *>(TRI);
+        const SIRegisterInfo *SRI = static_cast<const SIRegisterInfo *>(TRI);
         BitVector SeenUnits(SRI->getNumRegUnits());
         for (const auto &LI : MBB.liveins())
           if (MRI.isAllocatable(LI.PhysReg))

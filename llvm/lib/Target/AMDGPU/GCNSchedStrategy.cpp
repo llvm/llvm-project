@@ -1123,8 +1123,8 @@ GCNScheduleDAGMILive::getRegionVirtLiveOutMap() const {
 void RegionPressureMap::buildVirtLiveRegMap() {
   IdxToInstruction.clear();
 
-  RegionVirtLiveRegMap =
-      IsLiveOut ? DAG->getRegionVirtLiveOutMap() : DAG->getRegionVirtLiveInMap();
+  RegionVirtLiveRegMap = IsLiveOut ? DAG->getRegionVirtLiveOutMap()
+                                   : DAG->getRegionVirtLiveInMap();
   for (unsigned I = 0; I < DAG->Regions.size(); I++) {
     auto &[RegionBegin, RegionEnd] = DAG->Regions[I];
     // Skip empty regions.
@@ -1425,9 +1425,9 @@ Printable PreRARematStage::ScoredRemat::print() const {
 #endif
 
 bool PreRARematStage::initGCNSchedStage() {
-  // FIXME: This pass will invalidate cached BBVirtLiveInMap and MBBVirtLiveIns for
-  // regions inbetween the defs and region we sinked the def to. Will need to be
-  // fixed if there is another pass after this pass.
+  // FIXME: This pass will invalidate cached BBVirtLiveInMap and MBBVirtLiveIns
+  // for regions inbetween the defs and region we sinked the def to. Will need
+  // to be fixed if there is another pass after this pass.
   assert(!S.hasNextStage());
 
   if (!GCNSchedStage::initGCNSchedStage() || DAG.Regions.size() <= 1)
@@ -1732,12 +1732,12 @@ bool GCNSchedStage::initGCNRegion() {
 
   PressureBefore = DAG.Pressure[RegionIdx];
 
-  LLVM_DEBUG(
-      dbgs() << "Pressure before scheduling:\nRegion live-ins:"
-             << print(DAG.VirtLiveIns[RegionIdx], DAG.MRI)
-             << "Region live-in pressure:  "
-             << print(llvm::getVirtRegPressure(DAG.MRI, DAG.VirtLiveIns[RegionIdx]))
-             << "Region register pressure: " << print(PressureBefore));
+  LLVM_DEBUG(dbgs() << "Pressure before scheduling:\nRegion live-ins:"
+                    << print(DAG.VirtLiveIns[RegionIdx], DAG.MRI)
+                    << "Region live-in pressure:  "
+                    << print(llvm::getVirtRegPressure(
+                           DAG.MRI, DAG.VirtLiveIns[RegionIdx]))
+                    << "Region register pressure: " << print(PressureBefore));
 
   S.HasHighPressure = false;
   S.KnownExcessRP = isRegionWithExcessRP();
