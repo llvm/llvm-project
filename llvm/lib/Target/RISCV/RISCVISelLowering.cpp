@@ -11755,14 +11755,10 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     SDValue S1 = Op.getOperand(1);
     SDValue S2 = Op.getOperand(2);
-    SDValue Zero = DAG.getVectorIdxConstant(0, DL);
-    SDValue One = DAG.getVectorIdxConstant(1, DL);
-    SDValue S1Even =
-        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, S1, Zero);
-    SDValue S1Odd = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, S1, One);
-    SDValue S2Even =
-        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, S2, Zero);
-    SDValue S2Odd = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, S2, One);
+    SDValue S1Even = DAG.getExtractVectorElt(DL, MVT::i32, S1, 0);
+    SDValue S1Odd = DAG.getExtractVectorElt(DL, MVT::i32, S1, 1);
+    SDValue S2Even = DAG.getExtractVectorElt(DL, MVT::i32, S2, 0);
+    SDValue S2Odd = DAG.getExtractVectorElt(DL, MVT::i32, S2, 1);
 
     SDValue REven = DAG.getNode(EvenOpc, DL, MVT::i32, S1Even, S2Odd);
     SDValue ROdd = DAG.getNode(OddOpc, DL, MVT::i32, S1Odd, S2Even);
