@@ -714,8 +714,8 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_call(ptr addrspace(1) %arg) 
 ; GFX908-NEXT:    v_accvgpr_read_b32 v24, a0
 ; GFX908-NEXT:    v_accvgpr_read_b32 v31, a7
 ; GFX908-NEXT:    v_accvgpr_read_b32 v30, a6
-; GFX908-NEXT:    v_accvgpr_read_b32 v29, a5
 ; GFX908-NEXT:    global_store_dwordx4 v40, v[0:3], s[34:35] offset:96
+; GFX908-NEXT:    v_accvgpr_read_b32 v29, a5
 ; GFX908-NEXT:    v_accvgpr_read_b32 v28, a4
 ; GFX908-NEXT:    global_store_dwordx4 v40, v[4:7], s[34:35] offset:112
 ; GFX908-NEXT:    global_store_dwordx4 v40, v[8:11], s[34:35] offset:64

@@ -5331,6 +5331,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
 ; GISEL-NEXT:    v_mov_b32_e32 v14, s50
 ; GISEL-NEXT:    v_mov_b32_e32 v15, s51
 ; GISEL-NEXT:    v_mov_b32_e32 v16, s8
+; GISEL-NEXT:    s_mov_b64 s[2:3], s[54:55]
 ; GISEL-NEXT:    v_mov_b32_e32 v17, s9
 ; GISEL-NEXT:    v_mov_b32_e32 v18, s10
 ; GISEL-NEXT:    v_mov_b32_e32 v19, s11
@@ -5345,7 +5346,6 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
 ; GISEL-NEXT:    v_mov_b32_e32 v28, s20
 ; GISEL-NEXT:    v_mov_b32_e32 v29, s21
 ; GISEL-NEXT:    v_mov_b32_e32 v30, s22
-; GISEL-NEXT:    s_mov_b64 s[2:3], s[54:55]
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GISEL-NEXT:    s_endpgm
   %ptr = load ptr addrspace(1), ptr addrspace(4) poison
@@ -5564,6 +5564,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
 ; GISEL-NEXT:    v_mov_b32_e32 v14, s50
 ; GISEL-NEXT:    v_mov_b32_e32 v15, s51
 ; GISEL-NEXT:    v_mov_b32_e32 v16, s8
+; GISEL-NEXT:    s_mov_b64 s[2:3], s[54:55]
 ; GISEL-NEXT:    v_mov_b32_e32 v17, s9
 ; GISEL-NEXT:    v_mov_b32_e32 v18, s10
 ; GISEL-NEXT:    v_mov_b32_e32 v19, s11
@@ -5578,7 +5579,6 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
 ; GISEL-NEXT:    v_mov_b32_e32 v28, s20
 ; GISEL-NEXT:    v_mov_b32_e32 v29, s21
 ; GISEL-NEXT:    v_mov_b32_e32 v30, s22
-; GISEL-NEXT:    s_mov_b64 s[2:3], s[54:55]
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GISEL-NEXT:    s_endpgm
   %ptr0 = load ptr addrspace(1), ptr addrspace(4) poison
@@ -6902,6 +6902,7 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
 ; GISEL-NEXT:    v_mov_b32_e32 v14, s50
 ; GISEL-NEXT:    v_mov_b32_e32 v15, s51
 ; GISEL-NEXT:    v_mov_b32_e32 v16, s8
+; GISEL-NEXT:    s_mov_b64 s[2:3], s[54:55]
 ; GISEL-NEXT:    v_mov_b32_e32 v17, s9
 ; GISEL-NEXT:    v_mov_b32_e32 v18, s10
 ; GISEL-NEXT:    v_mov_b32_e32 v19, s11
@@ -6916,7 +6917,6 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
 ; GISEL-NEXT:    v_mov_b32_e32 v28, s20
 ; GISEL-NEXT:    v_mov_b32_e32 v29, s21
 ; GISEL-NEXT:    v_mov_b32_e32 v30, s22
-; GISEL-NEXT:    s_mov_b64 s[2:3], s[54:55]
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GISEL-NEXT:    s_endpgm
 entry:
