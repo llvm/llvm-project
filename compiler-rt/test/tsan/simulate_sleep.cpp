@@ -1,13 +1,17 @@
-// RUN: %clangxx_tsan -O1 %s -o %t && env TSAN_OPTIONS="simulate_scheduler=random:simulate_iterations=10" not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_tsan -O1 %s -o %t && env TSAN_OPTIONS="simulate_scheduler=random:simulate_iterations=10" %run %t 2>&1 | FileCheck %s
 
 #include <pthread.h>
-#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
 #include <unistd.h>
 
 extern "C" int __tsan_simulate(void (*callback)(void *arg), void *arg);
 
 void *thread_func(void *arg) {
+  sleep(1);
   usleep(1000);
+  struct timespec ts = {0, 1000000};
+  nanosleep(&ts, nullptr);
   return nullptr;
 }
 
@@ -17,8 +21,11 @@ void test_callback(void *arg) {
   pthread_join(t, nullptr);
 }
 
-int main() { return __tsan_simulate(test_callback, nullptr); }
+int main() {
+  int res = __tsan_simulate(test_callback, nullptr);
+  fprintf(stderr, "simulation result: %d\n", res);
+  return res;
+}
 
-// CHECK: ThreadSanitizer: simulation error - unsupported interceptor called: usleep
-// CHECK: Simulation does not support this synchronization primitive
-// CHECK: ThreadSanitizer: simulation aborted after 1 iterations
+// CHECK: ThreadSanitizer: simulation starting
+// CHECK: simulation result: 0
