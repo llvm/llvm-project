@@ -75,6 +75,10 @@ EnableARMLoadStoreOpt("arm-load-store-opt", cl::Hidden,
                       cl::desc("Enable ARM load/store optimization pass"),
                       cl::init(true));
 
+static cl::opt<bool> EnableRedundantCopyElimination(
+    "arm-copy-elim", cl::Hidden,
+    cl::desc("Enable ARM redundant copy elimination pass"), cl::init(true));
+
 // FIXME: Unify control over GlobalMerge.
 static cl::opt<cl::boolOrDefault>
 EnableGlobalMerge("arm-global-merge", cl::Hidden,
@@ -113,6 +117,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeARMFixCortexA57AES1742098Pass(Registry);
   initializeARMDAGToDAGISelLegacyPass(Registry);
   initializeMachineKCFILegacyPass(Registry);
+  initializeARMRedundantCopyEliminationPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -312,6 +317,7 @@ public:
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
   void addPreRegAlloc() override;
+  void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
   void addPreEmitPass2() override;
@@ -475,6 +481,11 @@ void ARMPassConfig::addPreRegAlloc() {
     if (!DisableA15SDOptimization)
       addPass(createA15SDOptimizerPass());
   }
+}
+
+void ARMPassConfig::addPostRegAlloc() {
+  if (getOptLevel() != CodeGenOptLevel::None && EnableRedundantCopyElimination)
+    addPass(createARMRedundantCopyEliminationPass());
 }
 
 void ARMPassConfig::addPreSched2() {

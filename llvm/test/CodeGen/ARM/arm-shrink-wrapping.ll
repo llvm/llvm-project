@@ -1029,7 +1029,6 @@ define i32 @inlineAsm(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-ENABLE-NEXT:    @ InlineAsm End
 ; ARM-ENABLE-NEXT:    bne LBB6_2
 ; ARM-ENABLE-NEXT:  @ %bb.3: @ %for.exit
-; ARM-ENABLE-NEXT:    mov r0, #0
 ; ARM-ENABLE-NEXT:    @ InlineAsm Start
 ; ARM-ENABLE-NEXT:    nop
 ; ARM-ENABLE-NEXT:    @ InlineAsm End
@@ -1059,7 +1058,6 @@ define i32 @inlineAsm(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-DISABLE-NEXT:    @ InlineAsm End
 ; ARM-DISABLE-NEXT:    bne LBB6_2
 ; ARM-DISABLE-NEXT:  @ %bb.3: @ %for.exit
-; ARM-DISABLE-NEXT:    mov r0, #0
 ; ARM-DISABLE-NEXT:    @ InlineAsm Start
 ; ARM-DISABLE-NEXT:    nop
 ; ARM-DISABLE-NEXT:    @ InlineAsm End
@@ -1088,7 +1086,6 @@ define i32 @inlineAsm(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; THUMB-ENABLE-NEXT:    @ InlineAsm End
 ; THUMB-ENABLE-NEXT:    bne LBB6_2
 ; THUMB-ENABLE-NEXT:  @ %bb.3: @ %for.exit
-; THUMB-ENABLE-NEXT:    movs r0, #0
 ; THUMB-ENABLE-NEXT:    @ InlineAsm Start
 ; THUMB-ENABLE-NEXT:    nop
 ; THUMB-ENABLE-NEXT:    @ InlineAsm End
@@ -1117,7 +1114,6 @@ define i32 @inlineAsm(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; THUMB-DISABLE-NEXT:    @ InlineAsm End
 ; THUMB-DISABLE-NEXT:    bne LBB6_2
 ; THUMB-DISABLE-NEXT:  @ %bb.3: @ %for.exit
-; THUMB-DISABLE-NEXT:    movs r0, #0
 ; THUMB-DISABLE-NEXT:    @ InlineAsm Start
 ; THUMB-DISABLE-NEXT:    nop
 ; THUMB-DISABLE-NEXT:    @ InlineAsm End

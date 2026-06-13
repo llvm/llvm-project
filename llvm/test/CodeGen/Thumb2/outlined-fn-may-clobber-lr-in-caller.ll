@@ -20,7 +20,6 @@ define void @test(ptr nocapture noundef writeonly %arg, i32 noundef %arg1, i8 no
 ; CHECK-NEXT:    cmp r1, #1
 ; CHECK-NEXT:    bne .LBB0_5
 ; CHECK-NEXT:  @ %bb.2: @ %bb4
-; CHECK-NEXT:    movs r1, #1
 ; CHECK-NEXT:    strb.w r1, [r0, #36]
 ; CHECK-NEXT:    movs r1, #30
 ; CHECK-NEXT:    strb.w r1, [r0, #34]
