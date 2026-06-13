@@ -769,15 +769,22 @@ template <class _Tp>
 inline constexpr bool __is_valid_optional_contained_type = is_object_v<_Tp> || is_lvalue_reference_v<_Tp>;
 #    endif
 
-template <class _Tp, class = void>
+template <class _Tp>
 struct __optional_iterator_base : __optional_move_assign_base<_Tp> {
   using __optional_move_assign_base<_Tp>::__optional_move_assign_base;
 };
 
-#    if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
+#    if _LIBCPP_STD_VER >= 26
+template <class _Tp>
+struct __optional_iterator_base<_Tp&> : __optional_storage_base<_Tp&> {
+  using __optional_storage_base<_Tp&>::__optional_storage_base;
+};
+
+#      if _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
 
 template <class _Tp>
-struct __optional_iterator_base<_Tp, enable_if_t<is_object_v<_Tp>>> : __optional_move_assign_base<_Tp> {
+  requires is_object_v<_Tp>
+struct __optional_iterator_base<_Tp> : __optional_move_assign_base<_Tp> {
 private:
   using __pointer _LIBCPP_NODEBUG       = add_pointer_t<_Tp>;
   using __const_pointer _LIBCPP_NODEBUG = add_pointer_t<const _Tp>;
@@ -785,33 +792,33 @@ private:
 public:
   using __optional_move_assign_base<_Tp>::__optional_move_assign_base;
 
-#      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+#        ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
   using iterator       = __bounded_iter<__pointer>;
   using const_iterator = __bounded_iter<__const_pointer>;
-#      else
+#        else
   using iterator       = __capacity_aware_iterator<__pointer, optional<_Tp>, 1>;
   using const_iterator = __capacity_aware_iterator<__const_pointer, optional<_Tp>, 1>;
-#      endif
+#        endif
 
   // [optional.iterators], iterator support
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator begin() noexcept {
     auto* __ptr = std::addressof(this->__get());
 
-#      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+#        ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
     return std::__make_bounded_iter(__ptr, __ptr, __ptr + (this->has_value() ? 1 : 0));
-#      else
+#        else
     return std::__make_capacity_aware_iterator<__pointer, optional<_Tp>, 1>(__ptr);
-#      endif
+#        endif
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const_iterator begin() const noexcept {
     auto* __ptr = std::addressof(this->__get());
 
-#      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+#        ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
     return std::__make_bounded_iter(__ptr, __ptr, __ptr + (this->has_value() ? 1 : 0));
-#      else
+#        else
     return std::__make_capacity_aware_iterator<__const_pointer, optional<_Tp>, 1>(__ptr);
-#      endif
+#        endif
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator end() noexcept {
@@ -823,30 +830,30 @@ public:
 };
 
 template <class _Tp>
-struct __optional_iterator_base<_Tp&, enable_if_t<is_object_v<_Tp> && !__is_unbounded_array_v<_Tp> >>
-    : __optional_storage_base<_Tp&> {
+  requires(is_object_v<_Tp> && !__is_unbounded_array_v<_Tp>)
+struct __optional_iterator_base<_Tp&> : __optional_storage_base<_Tp&> {
 private:
   using __pointer _LIBCPP_NODEBUG = add_pointer_t<_Tp>;
 
 public:
   using __optional_storage_base<_Tp&>::__optional_storage_base;
 
-#      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+#        ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
   using iterator = __bounded_iter<__pointer>;
-#      else
+#        else
   using iterator = __capacity_aware_iterator<__pointer, optional<_Tp&>, 1>;
-#      endif
+#        endif
 
   // [optional.ref.iterators], iterator support
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const noexcept {
     auto* __ptr = this->has_value() ? std::addressof(this->__get()) : nullptr;
 
-#      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
+#        ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
     return std::__make_bounded_iter(__ptr, __ptr, __ptr + (this->has_value() ? 1 : 0));
-#      else
+#        else
     return std::__make_capacity_aware_iterator<__pointer, optional<_Tp&>, 1>(__ptr);
-#      endif
+#        endif
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const noexcept {
@@ -854,7 +861,8 @@ public:
   }
 };
 
-#    endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
+#      endif // _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
+#    endif   // _LIBCPP_STD_VER >= 26
 
 template <class _Tp>
 class _LIBCPP_DECLSPEC_EMPTY_BASES optional
