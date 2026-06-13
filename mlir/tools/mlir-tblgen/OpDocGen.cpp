@@ -395,11 +395,9 @@ getEnumParameterDocSyntax(const AttrOrTypeParameter &param) {
   EnumInfo enumInfo(enumRec);
   std::vector<EnumCase> cases = enumInfo.getAllCases();
   std::string result;
-  for (const auto &caseIt : llvm::enumerate(cases)) {
-    if (caseIt.index() > 0)
-      result += " | ";
-    result += (llvm::Twine("`") + caseIt.value().getStr() + "`").str();
-  }
+  llvm::interleave(
+      cases, [&](const EnumCase &c) { result += "`" + c.getStr().str() + "`"; },
+      [&] { result += " | "; });
   return result;
 }
 
