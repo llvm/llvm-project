@@ -121,6 +121,50 @@ TEST_F(MarkdownParserTest, ListItemWithEmphasis) {
   EXPECT_EQ(cast<TextNode>(Item->Children[2])->Text, " note");
 }
 
+TEST_F(MarkdownParserTest, OrderedList) {
+  auto Nodes = parseMarkdown(R"(1. foo
+2. bar
+3. baz)",
+                             Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *N = cast<OrderedListNode>(Nodes[0]);
+  EXPECT_EQ(N->Start, 1u);
+  ASSERT_EQ(N->Items.size(), 3u);
+  StringRef ExpectedText[] = {"foo", "bar", "baz"};
+  for (size_t I = 0; I < N->Items.size(); ++I) {
+    auto *Item = N->Items[I];
+    ASSERT_EQ(Item->Children.size(), 1u);
+    EXPECT_EQ(cast<TextNode>(Item->Children[0])->Text, ExpectedText[I]);
+  }
+}
+
+TEST_F(MarkdownParserTest, OrderedListCustomStart) {
+  auto Nodes = parseMarkdown(R"(5. five
+6. six)",
+                             Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *N = cast<OrderedListNode>(Nodes[0]);
+  EXPECT_EQ(N->Start, 5u);
+  ASSERT_EQ(N->Items.size(), 2u);
+  EXPECT_EQ(cast<TextNode>(N->Items[0]->Children[0])->Text, "five");
+  EXPECT_EQ(cast<TextNode>(N->Items[1]->Children[0])->Text, "six");
+}
+
+TEST_F(MarkdownParserTest, OrderedListItemWithEmphasis) {
+  auto Nodes = parseMarkdown("1. an *important* note", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *N = cast<OrderedListNode>(Nodes[0]);
+  EXPECT_EQ(N->Start, 1u);
+  ASSERT_EQ(N->Items.size(), 1u);
+  auto *Item = N->Items[0];
+  ASSERT_EQ(Item->Children.size(), 3u);
+  EXPECT_EQ(cast<TextNode>(Item->Children[0])->Text, "an ");
+  auto *Em = cast<EmphasisNode>(Item->Children[1]);
+  ASSERT_EQ(Em->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(Em->Children[0])->Text, "important");
+  EXPECT_EQ(cast<TextNode>(Item->Children[2])->Text, " note");
+}
+
 TEST_F(MarkdownParserTest, MixedContent) {
   auto Nodes = parseMarkdown(R"(some text
 ```````

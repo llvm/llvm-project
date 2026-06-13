@@ -46,6 +46,14 @@ static bool isListItem(StringRef Line) {
          Line.starts_with("+ ");
 }
 
+// Returns true if Line begins with an ordered list marker: one or more digits
+// followed by a period and a space (e.g. "1. ", "42. ").
+static bool isOrderedListItem(StringRef Line) {
+  size_t Dot = Line.find_first_not_of("0123456789");
+  return Dot != StringRef::npos && Dot > 0 && Line[Dot] == '.' &&
+         Dot + 1 < Line.size() && Line[Dot + 1] == ' ';
+}
+
 // Returns the ATX heading level (1 to 6) when Line is an ATX heading: one to
 // six leading # characters followed by a space. Returns 0 otherwise, so seven
 // or more # characters fall back to plain text.
@@ -325,6 +333,32 @@ static UnorderedListNode *parseUnorderedList(LineReader &Reader,
   return List;
 }
 
+// Parses an ordered (numbered) list. The cursor must be on the first item; the
+// start number is taken from that item's marker and consecutive numbered lines
+// are consumed. Item numbers after the first are not validated.
+static OrderedListNode *parseOrderedList(LineReader &Reader,
+                                         BumpPtrAllocator &Arena,
+                                         StringSaver &Saver) {
+  unsigned Start = 0;
+  Reader.peek().trim().take_while(isDigit).getAsInteger(10, Start);
+  SmallVector<ListItemNode *> Items;
+  while (!Reader.atEnd()) {
+    StringRef L = Reader.peek().trim();
+    if (!isOrderedListItem(L))
+      break;
+    // Drop the "<digits>. " marker: the digits, the period, and the space.
+    StringRef ItemText =
+        L.drop_front(L.find_first_not_of("0123456789") + 2).trim();
+    auto *Item = new (Arena) ListItemNode(parseInline(ItemText, Arena, Saver));
+    Items.push_back(Item);
+    Reader.advance();
+  }
+  auto *List = new (Arena) OrderedListNode(Start, allocateArray(Items, Arena));
+  LDBG() << "emitting OrderedListNode start=" << Start
+         << " items=" << Items.size();
+  return List;
+}
+
 // Parses an ATX heading: one to six leading # characters and a space, followed
 // by inline content. The cursor must be on the heading line, which is consumed.
 //
@@ -384,6 +418,12 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
     // Unordered list item.
     if (isListItem(Line)) {
       Nodes.push_back(parseUnorderedList(Reader, Arena, Saver));
+      continue;
+    }
+
+    // Ordered list item: digits followed by a period and a space.
+    if (isOrderedListItem(Line)) {
+      Nodes.push_back(parseOrderedList(Reader, Arena, Saver));
       continue;
     }
 
