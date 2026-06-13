@@ -334,7 +334,7 @@ Overview
 ~~~~~~~~
 
 The Simulation Scheduler is an optional ThreadSanitizer feature that enables
-systematic exploration of thread interleavings to expose data races that may be
+random exploration of thread interleavings to expose data races that may be
 difficult to trigger in normal execution. Unlike standard ThreadSanitizer which
 detects races as they occur naturally during program execution, the simulation
 scheduler takes control of thread scheduling to deliberately explore different
@@ -343,8 +343,9 @@ execution orderings.
 Simulation is particularly useful for:
 
 * Testing concurrent data structure or algorithms during development to ensure
-  correctness (for example, a lock free queue).
-* Finding races in rarely-executed interleavings that standard TSAN may miss
+  correctness (for example, a lock-free queue).
+* Finding races in rarely-executed interleavings that standard ThreadSanitizer
+  may miss
 * Reproducing specific race conditions deterministically
 
 Simulation is not useful for running full applications, and will likely not
@@ -390,16 +391,15 @@ Then compile with ThreadSanitizer and enable the simulation scheduler:
   $ TSAN_OPTIONS=simulate_scheduler=random ./a.out
   ThreadSanitizer: simulation starting (iterations 0..999, max_depth=10000, scheduler=random)
 
-Automatic Main Wrapping
-~~~~~~~~~~~~~~~~~~~~~~~~
+Wrapping Main for Simulation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For convenience, the ``-fsanitize-thread-simulate-main`` compiler flag
-automatically wraps ``main()`` to call ``__tsan_simulate()``, eliminating the
-need to manually modify code:
+To avoid modifying existing test code, you can use the linker's ``--wrap=main``
+option to automatically run ``main()`` under simulation.
 
 .. code-block:: c
 
-    // No need to call __tsan_simulate() manually
+    // mytest.c
     void *thread_func(void *arg) { /* ... */ }
 
     int main() {
@@ -412,17 +412,18 @@ need to manually modify code:
       return 0;
     }
 
-Compile and run:
+Compile and link with ``-Wl,--wrap=main``:
 
 .. code-block:: console
 
-  $ clang -fsanitize=thread -fsanitize-thread-simulate-main -g -O1 mytest.c
+  $ clang -fsanitize=thread -g -O1 mytest.c -Wl,--wrap=main
   $ TSAN_OPTIONS=simulate_scheduler=random ./a.out
   ThreadSanitizer: simulation starting (iterations 0..999, max_depth=10000, scheduler=random)
 
-**Platform Support**: This flag requires GNU ld linker support for ``--wrap=main``
-and is currently only supported on Linux. Do not manually specify ``-Wl,--wrap=main``
-when using this flag, as the compiler handles the wrapping automatically.
+The ``--wrap`` option is supported by GNU ld and lld but is not available on all
+linkers (notably, the macOS linker does not support it). The linker replaces
+calls to ``main`` with ``__wrap_main`` and provides access to the original
+``main`` as ``__real_main``.
 
 Configuration Options
 ~~~~~~~~~~~~~~~~~~~~~
@@ -482,7 +483,7 @@ Configuration Options
 Examples
 ~~~~~~~~
 
-Basic race detection that standard TSAN rarely finds:
+Basic race detection that standard ThreadSanitizer rarely finds:
 
 .. code-block:: c
 
@@ -512,7 +513,7 @@ Basic race detection that standard TSAN rarely finds:
 
     int main() { return __tsan_simulate(test_callback, NULL); }
 
-Standard TSAN execution rarely detects this race. Running 100 times produces no
+Standard ThreadSanitizer execution rarely detects this race. Running 100 times produces no
 output most of the time:
 
 .. code-block:: console
