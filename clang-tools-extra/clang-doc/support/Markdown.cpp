@@ -14,6 +14,7 @@
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/StringSaver.h"
 #include <cassert>
+#include <string>
 
 #define DEBUG_TYPE "clang-doc"
 
@@ -69,6 +70,12 @@ static bool isThematicBreak(StringRef Line) {
       return false;
   }
   return Count >= 3;
+}
+
+// Returns true if Line is a block quote line: it starts with "> ", or is a bare
+// ">" marking an empty quote line.
+static bool isBlockQuote(StringRef Line) {
+  return Line.starts_with("> ") || Line == ">";
 }
 
 // Returns the ATX heading level (1 to 6) when Line is an ATX heading: one to
@@ -394,6 +401,31 @@ static HeadingNode *parseHeading(LineReader &Reader, BumpPtrAllocator &Arena,
   return Heading;
 }
 
+// Parses a block quote: one or more consecutive lines beginning with "> ". The
+// > marker and one following space are stripped from each line, and the
+// collected text is parsed recursively, so a quote's children are block-level
+// nodes and nested quotes fall out naturally.
+static BlockQuoteNode *parseBlockQuote(LineReader &Reader,
+                                       BumpPtrAllocator &Arena) {
+  std::string Inner;
+  bool First = true;
+  while (!Reader.atEnd()) {
+    StringRef L = Reader.peek().trim();
+    if (!isBlockQuote(L))
+      break;
+    if (!First)
+      Inner += '\n';
+    First = false;
+    StringRef Content = L.starts_with("> ") ? L.drop_front(2) : L.drop_front(1);
+    Inner.append(Content.data(), Content.size());
+    Reader.advance();
+  }
+  ArrayRef<MDNode *> Children = parseMarkdown(Inner, Arena);
+  auto *Quote = new (Arena) BlockQuoteNode(Children);
+  LDBG() << "emitting BlockQuoteNode children=" << Children.size();
+  return Quote;
+}
+
 ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
                                  BumpPtrAllocator &Arena) {
   if (ParagraphText.trim().empty())
@@ -432,6 +464,12 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
       Reader.advance();
       Nodes.push_back(new (Arena) ThematicBreakNode());
       LDBG() << "emitting ThematicBreakNode";
+      continue;
+    }
+
+    // Block quote: consecutive lines beginning with "> ".
+    if (isBlockQuote(Line)) {
+      Nodes.push_back(parseBlockQuote(Reader, Arena));
       continue;
     }
 

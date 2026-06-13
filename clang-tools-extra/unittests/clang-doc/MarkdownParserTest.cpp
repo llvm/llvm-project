@@ -614,4 +614,54 @@ TEST_F(MarkdownParserTest, CodeSpanStripsSurroundingSpaces) {
   EXPECT_EQ(cast<InlineCodeNode>(P->Children[0])->Code, "x");
 }
 
+TEST_F(MarkdownParserTest, BlockQuote) {
+  auto Nodes = parseMarkdown("> hello", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *Q = cast<BlockQuoteNode>(Nodes[0]);
+  ASSERT_EQ(Q->Children.size(), 1u);
+  auto *P = cast<ParagraphNode>(Q->Children[0]);
+  ASSERT_EQ(P->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(P->Children[0])->Text, "hello");
+}
+
+TEST_F(MarkdownParserTest, BlockQuoteWithFencedCode) {
+  auto Nodes = parseMarkdown(R"(> ```cpp
+> int x = 0;
+> ```)",
+                             Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *Q = cast<BlockQuoteNode>(Nodes[0]);
+  ASSERT_EQ(Q->Children.size(), 1u);
+  auto *Code = cast<FencedCodeNode>(Q->Children[0]);
+  EXPECT_EQ(Code->Lang, "cpp");
+  ASSERT_EQ(Code->Lines.size(), 1u);
+  EXPECT_EQ(Code->Lines[0], "int x = 0;");
+}
+
+TEST_F(MarkdownParserTest, BlockQuoteWithEmphasis) {
+  auto Nodes = parseMarkdown("> an *important* note", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *Q = cast<BlockQuoteNode>(Nodes[0]);
+  ASSERT_EQ(Q->Children.size(), 1u);
+  auto *P = cast<ParagraphNode>(Q->Children[0]);
+  ASSERT_EQ(P->Children.size(), 3u);
+  EXPECT_EQ(cast<TextNode>(P->Children[0])->Text, "an ");
+  auto *Em = cast<EmphasisNode>(P->Children[1]);
+  ASSERT_EQ(Em->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(Em->Children[0])->Text, "important");
+  EXPECT_EQ(cast<TextNode>(P->Children[2])->Text, " note");
+}
+
+TEST_F(MarkdownParserTest, NestedBlockQuote) {
+  auto Nodes = parseMarkdown("> > deep", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *Outer = cast<BlockQuoteNode>(Nodes[0]);
+  ASSERT_EQ(Outer->Children.size(), 1u);
+  auto *Inner = cast<BlockQuoteNode>(Outer->Children[0]);
+  ASSERT_EQ(Inner->Children.size(), 1u);
+  auto *P = cast<ParagraphNode>(Inner->Children[0]);
+  ASSERT_EQ(P->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(P->Children[0])->Text, "deep");
+}
+
 } // namespace
