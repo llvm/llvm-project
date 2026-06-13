@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
+// REQUIRES: std-at-least-c++11
+//
 // Due to C++17 inline variables ASAN flags this test as containing an ODR
 // violation because Clock::is_steady is defined in both the dylib and this TU.
 // UNSUPPORTED: asan
@@ -16,13 +18,11 @@
 
 // check clock invariants
 
+#include <cassert>
 #include <chrono>
 #include <type_traits>
 
 #include "test_macros.h"
-
-template <class T>
-void test(const T &) {}
 
 int main(int, char**)
 {
@@ -30,8 +30,11 @@ int main(int, char**)
     static_assert((std::is_same<C::rep, C::duration::rep>::value), "");
     static_assert((std::is_same<C::period, C::duration::period>::value), "");
     static_assert((std::is_same<C::duration, C::time_point::duration>::value), "");
+
     static_assert(std::is_same<decltype(C::is_steady), const bool>::value, "");
-    test(std::chrono::high_resolution_clock::is_steady);
+    TEST_CONSTEXPR_CXX14 const bool is_steady = C::is_steady;
+    (void)is_steady;
+    LIBCPP_ASSERT(C::is_steady);
 
   return 0;
 }
