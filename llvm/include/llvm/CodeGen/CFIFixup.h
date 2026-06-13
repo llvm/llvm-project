@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_CFIFIXUP_H
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/InitializePasses.h"
 
 namespace llvm {
@@ -30,6 +31,12 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+};
+
+class LLVM_ABI CFIFixupPass : public PassInfoMixin<CFIFixupPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 } // namespace llvm
 

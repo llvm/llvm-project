@@ -301,7 +301,7 @@ fixupBlock(MachineBasicBlock &CurrBB, const BlockFlagsVector &BlockInfo,
   return true;
 }
 
-bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
+static bool runImpl(MachineFunction &MF) {
   if (!MF.getSubtarget().getFrameLowering()->enableCFIFixup(MF))
     return false;
 
@@ -342,3 +342,11 @@ bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
 
   return Change;
 }
+
+PreservedAnalyses CFIFixupPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &) {
+  runImpl(MF);
+  return PreservedAnalyses::all();
+}
+
+bool CFIFixup::runOnMachineFunction(MachineFunction &MF) { return runImpl(MF); }
