@@ -13,6 +13,8 @@ define void @main() {
   %ptrdiff2 = sub i64 %addr1, %addr2
 
   %p = inttoptr i64 %addr1 to ptr
+  ; For out-of-bounds GEP with wildcard provenance, it returns poison.
+  %gep_oob = getelementptr inbounds i8, ptr %p, i64 %ptrdiff1
   %gep1 = getelementptr i8, ptr %p, i64 %ptrdiff1
   %gep2 = getelementptr inbounds i8, ptr %gep1, i64 2
   %gep3 = getelementptr i8, ptr %gep2, i64 %ptrdiff2
@@ -29,10 +31,11 @@ define void @main() {
 ; CHECK-NEXT:   %ptrdiff1 = sub i64 %addr2, %addr1 => i64 8
 ; CHECK-NEXT:   %ptrdiff2 = sub i64 %addr1, %addr2 => i64 -8
 ; CHECK-NEXT:   %p = inttoptr i64 %addr1 to ptr => ptr 0x8 [wildcard]
+; CHECK-NEXT:   %gep_oob = getelementptr inbounds i8, ptr %p, i64 %ptrdiff1 => poison
 ; CHECK-NEXT:   %gep1 = getelementptr i8, ptr %p, i64 %ptrdiff1 => ptr 0x10 [wildcard]
 ; CHECK-NEXT:   %gep2 = getelementptr inbounds i8, ptr %gep1, i64 2 => ptr 0x12 [alloc2 + 2]
 ; CHECK-NEXT:   %gep3 = getelementptr i8, ptr %gep2, i64 %ptrdiff2 => ptr 0xA [alloc2 + -6]
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   store i16 0, ptr %gep3, align 2 at @main <stdin>:21
+; CHECK-NEXT: #0   store i16 0, ptr %gep3, align 2 at @main <stdin>:23
 ; CHECK-NEXT: Immediate UB detected: Invalid memory access via a pointer with nullary provenance.
 ; CHECK-NEXT: error: Execution of function 'main' failed.
