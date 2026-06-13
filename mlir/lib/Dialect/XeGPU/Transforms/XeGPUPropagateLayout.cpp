@@ -550,8 +550,8 @@ bool LayoutInfoPropagation::hasParamsOfLayoutKind(
 // Returns layouts:
 //   [(8,4), (16,2)], which correspond to sgData [16,16] and [8,32].
 SmallVector<std::pair<int, int>>
-computeCandidateSgLayouts(ArrayRef<int64_t> wgShape, ArrayRef<int> instData,
-                          int64_t sgCount) {
+getSgLayoutCandidates(ArrayRef<int64_t> wgShape, ArrayRef<int> instData,
+                      int64_t sgCount) {
   SmallVector<std::pair<int, int>> candidates;
   for (int sgLayout0 = 1; sgLayout0 <= sgCount; ++sgLayout0) {
     if (sgCount % sgLayout0)
