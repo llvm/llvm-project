@@ -48,4 +48,13 @@
 #define ORC_RT_C_ABI
 #endif
 
+/* ORC_RT_C_NOTHROW indicates that a function won't throw a C++ exception. */
+#if defined(__cplusplus)
+#define ORC_RT_C_NOTHROW noexcept
+#elif defined(__GNUC__) || defined(__clang__)
+#define ORC_RT_C_NOTHROW __attribute__((nothrow))
+#else
+#define ORC_RT_C_NOTHROW
+#endif
+
 #endif /* ORC_RT_C_COMPILER_H */
