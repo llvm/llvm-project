@@ -10,6 +10,8 @@
 
 // Check that functions are marked [[nodiscard]]
 
+#include <execution>
+#include <functional>
 #include <numeric>
 
 #include "test_macros.h"
@@ -19,10 +21,71 @@ void test() {
     std::initializer_list<int> il{94, 82};
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    accumulate(il.begin(), il.end(), 49);
+    std::accumulate(il.begin(), il.end(), 49);
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    accumulate(il.begin(), il.end(), 49, std::multiplies<>());
+    std::accumulate(il.begin(), il.end(), 49, std::multiplies<>());
+  }
 
+  {
+    std::initializer_list<int> il{94, 82};
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::inner_product(il.begin(), il.end(), il.begin(), 49);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::inner_product(il.begin(), il.end(), il.begin(), 49, std::multiplies<>(), std::plus<>());
+  }
+
+  {
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::gcd(94, 82);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::lcm(94, 82);
+  }
+
+#if TEST_STD_VER >= 20
+  {
+    int arr[]{94, 82, 49};
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::midpoint(94, 82);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::midpoint(arr, arr + 2);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::midpoint(94.0, 82.0);
+  }
+#endif
+
+  {
+    std::initializer_list<int> il{94, 82};
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::reduce(std::execution::par, il.begin(), il.end(), 49);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::reduce(std::execution::par,
+                il.begin(),
+                il.end(),
+                49,
+                std::multiplies<>());
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::reduce(std::execution::par_unseq,
+                il.begin(),
+                il.end(),
+                49);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::reduce(std::execution::par_unseq,
+                il.begin(),
+                il.end(),
+                49,
+                std::multiplies<>());
+  }
+
+  {
+    std::initializer_list<int> il{94, 82}; 
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::reduce(il.begin(), il.end(), 49);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::reduce(il.begin(), il.end(), 49, std::multiplies<>());
   }
 
 #if TEST_STD_VER >= 26
@@ -39,16 +102,12 @@ void test() {
   std::saturating_cast<signed int>(49);
 #endif // TEST_STD_VER >= 26
 
-#if TEST_STD_VER >= 20
   {
-    int arr[]{94, 82, 49};
+    std::initializer_list<int> il{94, 82};
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::midpoint(94, 82);
+    std::transform_reduce(il.begin(), il.end(), 49, std::plus<>(), std::negate<>());
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::midpoint(arr, arr + 2);
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::midpoint(94.0, 82.0);
+    std::transform_reduce(il.begin(), il.end(), il.begin(), 49, std::plus<>(), std::multiplies<>());
   }
-#endif
 }
