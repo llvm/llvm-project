@@ -61,7 +61,7 @@ _LIBCPP_HIDE_FROM_ABI bool __atomic_cas_with_clear_padding(_Tp* __expected, _Up&
 #else // _LIBCPP_STD_VER >= 20 && __has_builtin(__builtin_clear_padding)
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR void __clear_padding_if_needed(_Tp&&) noexcept {}
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR void __clear_padding_if_needed(_Tp&&) _NOEXCEPT {}
 
 template <class _Tp, class _Up, class _CasFunc>
 _LIBCPP_HIDE_FROM_ABI bool __atomic_cas_with_clear_padding(_Tp* __expected, _Up&& __value, _CasFunc&& __cas_func) {
