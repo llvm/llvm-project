@@ -1409,8 +1409,8 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
             regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
         unwindplan_regloc.SetUndefined();
         return unwindplan_regloc;
-        return {};
       }
+      return {};
     }
 
     if (regnum.IsValid() && active_row &&
