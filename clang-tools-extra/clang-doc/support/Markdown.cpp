@@ -138,13 +138,6 @@ public:
     return S[Pos];
   }
 
-  // The character Offset positions ahead of the cursor, or '\0' when that
-  // position is past the end. peek(0) is the current character.
-  char peek(size_t Offset) const {
-    size_t Target = Pos + Offset;
-    return Target < S.size() ? S[Target] : '\0';
-  }
-
   // Consume the current character and return it. Must not be called when
   // atEnd().
   char advance() {
