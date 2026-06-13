@@ -959,9 +959,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr optional(optional&&)      = default;
   _LIBCPP_HIDE_FROM_ABI constexpr optional(nullopt_t) noexcept {}
 
-  template < class _InPlaceT,
-             class... _Args,
-             enable_if_t<_And<_IsSame<_InPlaceT, in_place_t>, is_constructible<_Tp, _Args...>>::value, int> = 0>
+  template <class _InPlaceT,
+            class... _Args,
+            enable_if_t<_And<_IsSame<_InPlaceT, in_place_t>, is_constructible<_Tp, _Args...>>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit optional(_InPlaceT, _Args&&... __args)
       : __base(in_place, std::forward<_Args>(__args)...) {}
 
