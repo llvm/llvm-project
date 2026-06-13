@@ -23,9 +23,6 @@
 
 #include "test_macros.h"
 
-template <class T>
-void test(const T &) {}
-
 int main(int, char**)
 {
     typedef std::chrono::file_clock C;
@@ -33,8 +30,9 @@ int main(int, char**)
     static_assert((std::is_same<C::period, C::duration::period>::value), "");
     static_assert((std::is_same<C::duration, C::time_point::duration>::value), "");
     static_assert((std::is_same<C::time_point::clock, C>::value), "");
-    static_assert(!C::is_steady, "");
-    test(std::chrono::file_clock::is_steady);
+
+    [[maybe_unused]] constexpr std::same_as<const bool> decltype(auto) is_steady = C::is_steady;
+    LIBCPP_STATIC_ASSERT(C::is_steady == false);
 
   return 0;
 }
