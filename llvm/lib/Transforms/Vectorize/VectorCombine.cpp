@@ -6392,8 +6392,9 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   AAResults &AA = FAM.getResult<AAManager>(F);
   const DataLayout *DL = &F.getDataLayout();
-  VectorCombine Combiner(F, TTI, DT, AA, AC, DL, TTI::TCK_RecipThroughput,
-                         TryEarlyFoldsOnly);
+  TTI::TargetCostKind CostKind =
+      F.hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
+  VectorCombine Combiner(F, TTI, DT, AA, AC, DL, CostKind, TryEarlyFoldsOnly);
   if (!Combiner.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA;

@@ -19,6 +19,6 @@ void main() {
   // CHECK: error: no viable constructor copying variable of type 'const hlsl_constant S'
   S s2 = cb;
 
-  // CHECK: error: no viable conversion from 'ConstantBuffer<S>' to 'const S'
+  // CHECK: error: assigning to 'S' from incompatible type 'ConstantBuffer<S>'
   s = cb;
 }

@@ -1244,6 +1244,7 @@ gpu.func @vector_multi_reduction_1d_to_scalar() {
     }> : f32
   gpu.return
 }
+
 }
 
 // -----

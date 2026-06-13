@@ -137,3 +137,28 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
 // CHECK-LABEL:  func.func @_QQmain()
 // CHECK: fir.address_of(@_QMcon2Ezzz) : !fir.ref<i32>
 // CHECK-NOT: fir.call {{.*}}GetDeviceAddress
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
+  func.func @_QQconstant_scalar_host_load() attributes {fir.bindc_name = "T"} {
+    %c32_i32 = arith.constant 32 : i32
+    %0 = fir.address_of(@_QMcon3Ezzz) : !fir.ref<i32>
+    %1 = fir.declare %0 {data_attr = #cuf.cuda<constant>, uniq_name = "_QMcon3Ezzz"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %2 = fir.load %1 : !fir.ref<i32>
+    %3 = fir.convert %2 : (i32) -> index
+    cuf.data_transfer %c32_i32 to %1 {transfer_kind = #cuf.cuda_transfer<host_device>} : i32, !fir.ref<i32>
+    fir.call @_QPuse_index(%3) : (index) -> ()
+    return
+  }
+  func.func private @_QPuse_index(index)
+  fir.global @_QMcon3Ezzz {data_attr = #cuf.cuda<constant>} : i32
+}
+
+// CHECK-LABEL: func.func @_QQconstant_scalar_host_load()
+// CHECK: %[[ADDR:.*]] = fir.address_of(@_QMcon3Ezzz) : !fir.ref<i32>
+// CHECK: %[[DECL:.*]] = fir.declare %[[ADDR]] {data_attr = #cuf.cuda<constant>, uniq_name = "_QMcon3Ezzz"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK: fir.load %[[DECL]] : !fir.ref<i32>
+// CHECK: fir.store %{{.*}} to %[[ADDR]] : !fir.ref<i32>
+// CHECK: fir.call @_FortranACUFGetDeviceAddress
+// CHECK-NOT: fir.load %{{.*}} : !fir.ref<i32>

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++17 -flifetime-safety-inference \
 // RUN:   -fexperimental-lifetime-safety-tu-analysis \
-// RUN:   -Wlifetime-safety-suggestions -Wno-dangling \
+// RUN:   -Wlifetime-safety-suggestions -Wlifetime-safety-annotation-placement -Wno-dangling \
 // RUN:   -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 // RUN: cp %s %t.cpp
 // RUN: %clang_cc1 -std=c++17 -flifetime-safety-inference \

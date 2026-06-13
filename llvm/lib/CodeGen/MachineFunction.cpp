@@ -264,6 +264,22 @@ void MachineFunction::initTargetMachineFunctionInfo(
   MFInfo = Target.createMachineFunctionInfo(Allocator, F, &STI);
 }
 
+MachineFunctionInfo *MachineFunction::cloneInfoFrom(
+    const MachineFunction &OrigMF,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB) {
+  assert(!MFInfo && "new function already has MachineFunctionInfo");
+  if (!OrigMF.MFInfo)
+    return nullptr;
+
+  MachineFunctionInfo *ClonedInfo =
+      OrigMF.MFInfo->clone(Allocator, *this, Src2DstMBB);
+  if (!ClonedInfo)
+    return nullptr;
+
+  RegInfo->copyPendingVirtRegMapEntriesFrom(OrigMF.getRegInfo());
+  return ClonedInfo;
+}
+
 MachineFunction::~MachineFunction() {
   clear();
 }

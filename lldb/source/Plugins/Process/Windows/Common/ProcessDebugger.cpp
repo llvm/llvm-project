@@ -555,6 +555,57 @@ void ProcessDebugger::OnDebugString(lldb::addr_t debug_string_addr,
   // Do nothing by default
 }
 
+llvm::Error
+ProcessDebugger::ReadDebugString(lldb::addr_t debug_string_addr,
+                                 bool is_unicode, uint16_t length_lower_word,
+                                 llvm::SmallVectorImpl<char> &output) {
+  if (is_unicode && length_lower_word % 2 != 0)
+    return llvm::createStringError(
+        "Utf16 string can't have uneven size in bytes");
+
+  const auto is_zero_terminated = [&] {
+    // The zero terminator is always at the end of the buffer.
+    if (is_unicode)
+      return output.size() >= 2 && output.back() == 0 &&
+             output[output.size() - 2] == 0;
+
+    return !output.empty() && output.back() == 0;
+  };
+
+  // Read at most 1 MiB ((1 << 16) * 16 - 1 Bytes) since we don't know the exact
+  // size of the string. We know that `strlen(string) & 0xffff ==
+  // length_lower_word`, so we read in chunks until we reach the terminator:
+  // - 0: `length_lower_word` Bytes
+  // - 1..16: 64 KiB (= 2^16 Bytes)
+  size_t start = length_lower_word == 0 ? 1 : 0;
+  for (size_t i = start; i < 16; ++i) {
+    output.resize_for_overwrite(length_lower_word + i * (1 << 16));
+    size_t chunk_size = i == 0 ? length_lower_word : (1 << 16);
+    lldb::addr_t addr = debug_string_addr + output.size_in_bytes() - chunk_size;
+
+    size_t bytes_read = 0;
+    Status error =
+        ReadMemory(addr, output.end() - chunk_size, chunk_size, bytes_read);
+    if (error.Fail())
+      return error.takeError();
+
+    if (bytes_read != chunk_size) {
+      return llvm::createStringErrorV(
+          "Expected to read {0} bytes, but read {1}", chunk_size, bytes_read);
+    }
+
+    if (is_zero_terminated())
+      break;
+  }
+
+  if (!is_zero_terminated())
+    return llvm::createStringError("String is 1 MiB or larger");
+
+  // Remove null terminator.
+  output.pop_back_n(is_unicode ? 2 : 1);
+  return llvm::Error::success();
+}
+
 void ProcessDebugger::OnDebuggerError(const Status &error, uint32_t type) {
   llvm::sys::ScopedLock lock(m_mutex);
   Log *log = GetLog(WindowsLog::Process);

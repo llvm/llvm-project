@@ -1204,7 +1204,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_raw_memory_algorithms",
-            "values": {"c++17": 201606},
+            "values": {"c++17": 201606, "c++26": 202411},
             "headers": ["memory"],
         },
         {

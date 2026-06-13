@@ -3801,6 +3801,12 @@ multiclass SelectCanonicalizeAsMax<
     // FIXME: Should have VOP3P subtarget predicate
     let OtherPredicates = f16_preds;
   }
+
+  def : GCNPat<
+    (fcanonicalize (v2f64 (VOP3PMods v2f64:$src, i32:$src_mods))),
+    (V_PK_MAX_NUM_F64 $src_mods, $src, $src_mods, $src)> {
+    let OtherPredicates = !listconcat(f64_preds, [HasPackedFP64Ops]);
+  }
 }
 
 // On pre-gfx9 targets, v_max_*/v_min_* did not respect the denormal

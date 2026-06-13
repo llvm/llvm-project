@@ -40,7 +40,7 @@
 "`LWG3990 <https://wg21.link/LWG3990>`__","Program-defined specializations of ``std::tuple`` and ``std::variant`` can't be properly supported","2023-11 (Kona)","|Complete|","21","`#105310 <https://github.com/llvm/llvm-project/issues/105310>`__",""
 "`LWG4001 <https://wg21.link/LWG4001>`__","``iota_view`` should provide ``empty``","2023-11 (Kona)","|Complete|","19","`#105311 <https://github.com/llvm/llvm-project/issues/105311>`__",""
 "","","","","","",""
-"`LWG3767 <https://wg21.link/LWG3767>`__","``codecvt<charN_t, char8_t, mbstate_t>`` incorrectly added to locale","2024-03 (Tokyo)","","","`#105313 <https://github.com/llvm/llvm-project/issues/105313>`__",""
+"`LWG3767 <https://wg21.link/LWG3767>`__","``codecvt<charN_t, char8_t, mbstate_t>`` incorrectly added to locale","2024-03 (Tokyo)","|Complete|","23","`#105313 <https://github.com/llvm/llvm-project/issues/105313>`__",""
 "`LWG3919 <https://wg21.link/LWG3919>`__","``enumerate_view`` may invoke UB for sized common non-forward underlying ranges","2024-03 (Tokyo)","|Complete|","23","`#105315 <https://github.com/llvm/llvm-project/issues/105315>`__",""
 "`LWG3950 <https://wg21.link/LWG3950>`__","``std::basic_string_view`` comparison operators are overspecified","2024-03 (Tokyo)","|Complete|","18","`#105316 <https://github.com/llvm/llvm-project/issues/105316>`__",""
 "`LWG3975 <https://wg21.link/LWG3975>`__","Specializations of ``basic_format_context`` should not be permitted","2024-03 (Tokyo)","|Nothing To Do|","","`#105317 <https://github.com/llvm/llvm-project/issues/105317>`__",""

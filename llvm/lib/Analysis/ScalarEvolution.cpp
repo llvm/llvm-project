@@ -7158,9 +7158,9 @@ const ConstantRange &ScalarEvolution::getRangeRef(
     if (U->getType()->isPointerTy() && SignHint == HINT_RANGE_UNSIGNED) {
       // Strengthen the range if the underlying IR value is a
       // global/alloca/heap allocation using the size of the object.
-      bool CanBeNull, CanBeFreed;
-      uint64_t DerefBytes =
-          V->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
+      bool CanBeNull;
+      uint64_t DerefBytes = V->getPointerDereferenceableBytes(
+          DL, CanBeNull, /*CanBeFreed=*/nullptr);
       if (DerefBytes > 1 && isUIntN(BitWidth, DerefBytes)) {
         // The highest address the object can start is DerefBytes bytes before
         // the end (unsigned max value). If this value is not a multiple of the

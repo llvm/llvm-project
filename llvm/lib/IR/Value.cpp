@@ -904,7 +904,7 @@ bool Value::canBeFreed() const {
 
 uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
                                                bool &CanBeNull,
-                                               bool &CanBeFreed) const {
+                                               bool *CanBeFreed) const {
   assert(getType()->isPointerTy() && "must be pointer");
 
   uint64_t DerefBytes = 0;
@@ -974,12 +974,14 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
     }
   }
 
-  // Call canBeFreed() only if there are dereferenceable bytes and it's not
-  // one of the cases that can never be freed.
-  if (!CanNotBeFreed && DerefBytes != 0)
-    CanBeFreed = UseDerefAtPointSemantics && canBeFreed();
-  else
-    CanBeFreed = false;
+  if (CanBeFreed) {
+    // Call canBeFreed() only if there are dereferenceable bytes and it's not
+    // one of the cases that can never be freed.
+    if (!CanNotBeFreed && DerefBytes != 0)
+      *CanBeFreed = UseDerefAtPointSemantics && canBeFreed();
+    else
+      *CanBeFreed = false;
+  }
 
   return DerefBytes;
 }

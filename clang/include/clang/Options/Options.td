@@ -969,6 +969,16 @@ def _ssaf_list_formats :
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Display the list of available SSAF serialization formats">,
   MarshallingInfoFlag<FrontendOpts<"SSAFShowFormats">>;
+def _ssaf_compilation_unit_id :
+  Joined<["--"], "ssaf-compilation-unit-id=">,
+  MetaVarName<"<id>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Stable identifier used as the CompilationUnit namespace name of every "
+    "produced SSAF TU summary. Required when '--ssaf-tu-summary-file=' is "
+    "set.">,
+  MarshallingInfoString<FrontendOpts<"SSAFCompilationUnitId">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
       Flags<[NoXarchOption]>,

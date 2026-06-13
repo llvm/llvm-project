@@ -65,6 +65,10 @@ struct AssumeSeparateStorageInfo {
 LLVM_ABI
 AssumeSeparateStorageInfo getAssumeSeparateStorageInfo(OperandBundleUse);
 
+LLVM_ABI bool assumeBundleImpliesNonNull(const Value *Val,
+                                         const Function *Context,
+                                         OperandBundleUse OBU);
+
 } // namespace llvm
 
 #endif // LLVM_IR_BUNDLE_ATTRIBUTES_H

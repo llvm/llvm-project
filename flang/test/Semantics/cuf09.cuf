@@ -78,6 +78,13 @@ module m
     stop ! ok
   end subroutine
 
+  attributes(global) subroutine pausetest()
+    !ERROR: device subprograms may not contain PAUSE statements
+    pause
+    !ERROR: device subprograms may not contain PAUSE statements
+    pause 1
+  end subroutine
+
   attributes(global) subroutine cycletest()
     integer :: i
     do i = 1, 10

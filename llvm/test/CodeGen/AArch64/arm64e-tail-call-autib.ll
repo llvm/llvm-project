@@ -38,8 +38,8 @@ define swifttailcc void @test_async_tail_call(ptr swiftasync %ctx) "ptrauth-retu
 ; CHECK-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-NEXT:    and x29, x29, #0xefffffffffffffff
 ; CHECK-NEXT:    add sp, sp, #32
-; CHECK-NEXT:    mov x17, x30
 ; CHECK-NEXT:    add x16, sp, #16
+; CHECK-NEXT:    mov x17, x30
 ; CHECK-NEXT:    autib1716
 ; CHECK-NEXT:    mov x30, x17
 ; CHECK-NEXT:    eor x16, x30, x30, lsl #1

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-intra-tu-misplaced-lifetimebound -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-intra-tu-misplaced-lifetimebound -Wlifetime-safety-annotation-placement -Wno-dangling -verify %s
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-intra-tu-misplaced-lifetimebound -Wno-dangling -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 // RUN: cp %s %t.intra.cpp
 // RUN: %clang_cc1 -Wlifetime-safety-intra-tu-misplaced-lifetimebound -Wno-dangling -fixit %t.intra.cpp

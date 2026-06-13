@@ -220,12 +220,12 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   if (!StartPtr)
     return false;
   const Loop *L = AR->getLoop();
-  bool CheckForNonNull, CheckForFreed;
+  bool CheckForNonNull;
   Value *StartPtrV = StartPtr->getValue();
   // We can ignore frees, as the fact that an object of a certain size existed
   // at the location *at some point* is sufficient to derive the nowrap fact.
   uint64_t DerefBytes = StartPtrV->getPointerDereferenceableBytes(
-      DL, CheckForNonNull, CheckForFreed);
+      DL, CheckForNonNull, /*CanBeFreed=*/nullptr);
 
   if (DerefBytes && CheckForNonNull)
     return false;

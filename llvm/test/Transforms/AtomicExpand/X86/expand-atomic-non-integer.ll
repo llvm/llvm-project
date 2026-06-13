@@ -14,6 +14,12 @@ define float @float_load_expand(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to float
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
+; CX16-LABEL: define float @float_load_expand(
+; CX16-SAME: ptr [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
+; CX16-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR]] unordered, align 4
+; CX16-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to float
+; CX16-NEXT:    ret float [[TMP2]]
+;
   %res = load atomic float, ptr %ptr unordered, align 4
   ret float %res
 }
@@ -24,6 +30,12 @@ define float @float_load_expand_seq_cst(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR]] seq_cst, align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to float
 ; CHECK-NEXT:    ret float [[TMP2]]
+;
+; CX16-LABEL: define float @float_load_expand_seq_cst(
+; CX16-SAME: ptr [[PTR:%.*]]) #[[ATTR0]] {
+; CX16-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[PTR]] seq_cst, align 4
+; CX16-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to float
+; CX16-NEXT:    ret float [[TMP2]]
 ;
   %res = load atomic float, ptr %ptr seq_cst, align 4
   ret float %res
@@ -36,6 +48,12 @@ define float @float_load_expand_vol(ptr %ptr) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to float
 ; CHECK-NEXT:    ret float [[TMP2]]
 ;
+; CX16-LABEL: define float @float_load_expand_vol(
+; CX16-SAME: ptr [[PTR:%.*]]) #[[ATTR0]] {
+; CX16-NEXT:    [[TMP1:%.*]] = load atomic volatile i32, ptr [[PTR]] unordered, align 4
+; CX16-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to float
+; CX16-NEXT:    ret float [[TMP2]]
+;
   %res = load atomic volatile float, ptr %ptr unordered, align 4
   ret float %res
 }
@@ -46,6 +64,12 @@ define float @float_load_expand_addr1(ptr addrspace(1) %ptr) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] unordered, align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to float
 ; CHECK-NEXT:    ret float [[TMP2]]
+;
+; CX16-LABEL: define float @float_load_expand_addr1(
+; CX16-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
+; CX16-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr addrspace(1) [[PTR]] unordered, align 4
+; CX16-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to float
+; CX16-NEXT:    ret float [[TMP2]]
 ;
   %res = load atomic float, ptr addrspace(1) %ptr unordered, align 4
   ret float %res
@@ -58,6 +82,12 @@ define void @float_store_expand(ptr %ptr, float %v) {
 ; CHECK-NEXT:    store atomic i32 [[TMP1]], ptr [[PTR]] unordered, align 4
 ; CHECK-NEXT:    ret void
 ;
+; CX16-LABEL: define void @float_store_expand(
+; CX16-SAME: ptr [[PTR:%.*]], float [[V:%.*]]) #[[ATTR0]] {
+; CX16-NEXT:    [[TMP1:%.*]] = bitcast float [[V]] to i32
+; CX16-NEXT:    store atomic i32 [[TMP1]], ptr [[PTR]] unordered, align 4
+; CX16-NEXT:    ret void
+;
   store atomic float %v, ptr %ptr unordered, align 4
   ret void
 }
@@ -68,6 +98,12 @@ define void @float_store_expand_seq_cst(ptr %ptr, float %v) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[V]] to i32
 ; CHECK-NEXT:    store atomic i32 [[TMP1]], ptr [[PTR]] seq_cst, align 4
 ; CHECK-NEXT:    ret void
+;
+; CX16-LABEL: define void @float_store_expand_seq_cst(
+; CX16-SAME: ptr [[PTR:%.*]], float [[V:%.*]]) #[[ATTR0]] {
+; CX16-NEXT:    [[TMP1:%.*]] = bitcast float [[V]] to i32
+; CX16-NEXT:    store atomic i32 [[TMP1]], ptr [[PTR]] seq_cst, align 4
+; CX16-NEXT:    ret void
 ;
   store atomic float %v, ptr %ptr seq_cst, align 4
   ret void
@@ -80,6 +116,12 @@ define void @float_store_expand_vol(ptr %ptr, float %v) {
 ; CHECK-NEXT:    store atomic volatile i32 [[TMP1]], ptr [[PTR]] unordered, align 4
 ; CHECK-NEXT:    ret void
 ;
+; CX16-LABEL: define void @float_store_expand_vol(
+; CX16-SAME: ptr [[PTR:%.*]], float [[V:%.*]]) #[[ATTR0]] {
+; CX16-NEXT:    [[TMP1:%.*]] = bitcast float [[V]] to i32
+; CX16-NEXT:    store atomic volatile i32 [[TMP1]], ptr [[PTR]] unordered, align 4
+; CX16-NEXT:    ret void
+;
   store atomic volatile float %v, ptr %ptr unordered, align 4
   ret void
 }
@@ -90,6 +132,12 @@ define void @float_store_expand_addr1(ptr addrspace(1) %ptr, float %v) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float [[V]] to i32
 ; CHECK-NEXT:    store atomic i32 [[TMP1]], ptr addrspace(1) [[PTR]] unordered, align 4
 ; CHECK-NEXT:    ret void
+;
+; CX16-LABEL: define void @float_store_expand_addr1(
+; CX16-SAME: ptr addrspace(1) [[PTR:%.*]], float [[V:%.*]]) #[[ATTR0]] {
+; CX16-NEXT:    [[TMP1:%.*]] = bitcast float [[V]] to i32
+; CX16-NEXT:    store atomic i32 [[TMP1]], ptr addrspace(1) [[PTR]] unordered, align 4
+; CX16-NEXT:    ret void
 ;
   store atomic float %v, ptr addrspace(1) %ptr unordered, align 4
   ret void
@@ -118,6 +166,17 @@ define void @pointer_cmpxchg_expand(ptr %ptr, ptr %v) {
 ; CHECK32-NEXT:    [[TMP7:%.*]] = insertvalue { ptr, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK32-NEXT:    ret void
 ;
+; CX16-LABEL: define void @pointer_cmpxchg_expand(
+; CX16-SAME: ptr [[PTR:%.*]], ptr [[V:%.*]]) #[[ATTR0]] {
+; CX16-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[V]] to i64
+; CX16-NEXT:    [[TMP2:%.*]] = cmpxchg ptr [[PTR]], i64 0, i64 [[TMP1]] seq_cst monotonic, align 8
+; CX16-NEXT:    [[TMP3:%.*]] = extractvalue { i64, i1 } [[TMP2]], 0
+; CX16-NEXT:    [[TMP4:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; CX16-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CX16-NEXT:    [[TMP6:%.*]] = insertvalue { ptr, i1 } poison, ptr [[TMP5]], 0
+; CX16-NEXT:    [[TMP7:%.*]] = insertvalue { ptr, i1 } [[TMP6]], i1 [[TMP4]], 1
+; CX16-NEXT:    ret void
+;
   cmpxchg ptr %ptr, ptr null, ptr %v seq_cst monotonic
   ret void
 }
@@ -144,6 +203,17 @@ define void @pointer_cmpxchg_expand2(ptr %ptr, ptr %v) {
 ; CHECK32-NEXT:    [[TMP6:%.*]] = insertvalue { ptr, i1 } poison, ptr [[TMP5]], 0
 ; CHECK32-NEXT:    [[TMP7:%.*]] = insertvalue { ptr, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK32-NEXT:    ret void
+;
+; CX16-LABEL: define void @pointer_cmpxchg_expand2(
+; CX16-SAME: ptr [[PTR:%.*]], ptr [[V:%.*]]) #[[ATTR0]] {
+; CX16-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[V]] to i64
+; CX16-NEXT:    [[TMP2:%.*]] = cmpxchg ptr [[PTR]], i64 0, i64 [[TMP1]] release monotonic, align 8
+; CX16-NEXT:    [[TMP3:%.*]] = extractvalue { i64, i1 } [[TMP2]], 0
+; CX16-NEXT:    [[TMP4:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; CX16-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CX16-NEXT:    [[TMP6:%.*]] = insertvalue { ptr, i1 } poison, ptr [[TMP5]], 0
+; CX16-NEXT:    [[TMP7:%.*]] = insertvalue { ptr, i1 } [[TMP6]], i1 [[TMP4]], 1
+; CX16-NEXT:    ret void
 ;
   cmpxchg ptr %ptr, ptr null, ptr %v release monotonic
   ret void
@@ -172,6 +242,17 @@ define void @pointer_cmpxchg_expand3(ptr %ptr, ptr %v) {
 ; CHECK32-NEXT:    [[TMP7:%.*]] = insertvalue { ptr, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK32-NEXT:    ret void
 ;
+; CX16-LABEL: define void @pointer_cmpxchg_expand3(
+; CX16-SAME: ptr [[PTR:%.*]], ptr [[V:%.*]]) #[[ATTR0]] {
+; CX16-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[V]] to i64
+; CX16-NEXT:    [[TMP2:%.*]] = cmpxchg ptr [[PTR]], i64 0, i64 [[TMP1]] seq_cst seq_cst, align 8
+; CX16-NEXT:    [[TMP3:%.*]] = extractvalue { i64, i1 } [[TMP2]], 0
+; CX16-NEXT:    [[TMP4:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; CX16-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CX16-NEXT:    [[TMP6:%.*]] = insertvalue { ptr, i1 } poison, ptr [[TMP5]], 0
+; CX16-NEXT:    [[TMP7:%.*]] = insertvalue { ptr, i1 } [[TMP6]], i1 [[TMP4]], 1
+; CX16-NEXT:    ret void
+;
   cmpxchg ptr %ptr, ptr null, ptr %v seq_cst seq_cst
   ret void
 }
@@ -198,6 +279,17 @@ define void @pointer_cmpxchg_expand4(ptr %ptr, ptr %v) {
 ; CHECK32-NEXT:    [[TMP6:%.*]] = insertvalue { ptr, i1 } poison, ptr [[TMP5]], 0
 ; CHECK32-NEXT:    [[TMP7:%.*]] = insertvalue { ptr, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK32-NEXT:    ret void
+;
+; CX16-LABEL: define void @pointer_cmpxchg_expand4(
+; CX16-SAME: ptr [[PTR:%.*]], ptr [[V:%.*]]) #[[ATTR0]] {
+; CX16-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[V]] to i64
+; CX16-NEXT:    [[TMP2:%.*]] = cmpxchg weak ptr [[PTR]], i64 0, i64 [[TMP1]] seq_cst seq_cst, align 8
+; CX16-NEXT:    [[TMP3:%.*]] = extractvalue { i64, i1 } [[TMP2]], 0
+; CX16-NEXT:    [[TMP4:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; CX16-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CX16-NEXT:    [[TMP6:%.*]] = insertvalue { ptr, i1 } poison, ptr [[TMP5]], 0
+; CX16-NEXT:    [[TMP7:%.*]] = insertvalue { ptr, i1 } [[TMP6]], i1 [[TMP4]], 1
+; CX16-NEXT:    ret void
 ;
   cmpxchg weak ptr %ptr, ptr null, ptr %v seq_cst seq_cst
   ret void
@@ -226,6 +318,17 @@ define void @pointer_cmpxchg_expand5(ptr %ptr, ptr %v) {
 ; CHECK32-NEXT:    [[TMP7:%.*]] = insertvalue { ptr, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK32-NEXT:    ret void
 ;
+; CX16-LABEL: define void @pointer_cmpxchg_expand5(
+; CX16-SAME: ptr [[PTR:%.*]], ptr [[V:%.*]]) #[[ATTR0]] {
+; CX16-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[V]] to i64
+; CX16-NEXT:    [[TMP2:%.*]] = cmpxchg volatile ptr [[PTR]], i64 0, i64 [[TMP1]] seq_cst seq_cst, align 8
+; CX16-NEXT:    [[TMP3:%.*]] = extractvalue { i64, i1 } [[TMP2]], 0
+; CX16-NEXT:    [[TMP4:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; CX16-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CX16-NEXT:    [[TMP6:%.*]] = insertvalue { ptr, i1 } poison, ptr [[TMP5]], 0
+; CX16-NEXT:    [[TMP7:%.*]] = insertvalue { ptr, i1 } [[TMP6]], i1 [[TMP4]], 1
+; CX16-NEXT:    ret void
+;
   cmpxchg volatile ptr %ptr, ptr null, ptr %v seq_cst seq_cst
   ret void
 }
@@ -253,6 +356,17 @@ define void @pointer_cmpxchg_expand6(ptr addrspace(1) %ptr, ptr addrspace(2) %v)
 ; CHECK32-NEXT:    [[TMP7:%.*]] = insertvalue { ptr addrspace(2), i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK32-NEXT:    ret void
 ;
+; CX16-LABEL: define void @pointer_cmpxchg_expand6(
+; CX16-SAME: ptr addrspace(1) [[PTR:%.*]], ptr addrspace(2) [[V:%.*]]) #[[ATTR0]] {
+; CX16-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(2) [[V]] to i64
+; CX16-NEXT:    [[TMP2:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 0, i64 [[TMP1]] seq_cst seq_cst, align 8
+; CX16-NEXT:    [[TMP3:%.*]] = extractvalue { i64, i1 } [[TMP2]], 0
+; CX16-NEXT:    [[TMP4:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
+; CX16-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP3]] to ptr addrspace(2)
+; CX16-NEXT:    [[TMP6:%.*]] = insertvalue { ptr addrspace(2), i1 } poison, ptr addrspace(2) [[TMP5]], 0
+; CX16-NEXT:    [[TMP7:%.*]] = insertvalue { ptr addrspace(2), i1 } [[TMP6]], i1 [[TMP4]], 1
+; CX16-NEXT:    ret void
+;
   cmpxchg ptr addrspace(1) %ptr, ptr addrspace(2) null, ptr addrspace(2) %v seq_cst seq_cst
   ret void
 }
@@ -269,6 +383,11 @@ define <2 x ptr> @atomic_vec2_ptr_align(ptr %x) nounwind {
 ; CHECK32-SAME: ptr [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK32-NEXT:    [[RET:%.*]] = load atomic <2 x ptr>, ptr [[X]] acquire, align 16
 ; CHECK32-NEXT:    ret <2 x ptr> [[RET]]
+;
+; CX16-LABEL: define <2 x ptr> @atomic_vec2_ptr_align(
+; CX16-SAME: ptr [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; CX16-NEXT:    [[RET:%.*]] = load atomic <2 x ptr>, ptr [[X]] acquire, align 16
+; CX16-NEXT:    ret <2 x ptr> [[RET]]
 ;
   %ret = load atomic <2 x ptr>, ptr %x acquire, align 16
   ret <2 x ptr> %ret
@@ -291,6 +410,11 @@ define <4 x ptr addrspace(270)> @atomic_vec4_ptr_align(ptr %x) nounwind {
 ; CHECK32-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK32-NEXT:    ret <4 x ptr addrspace(270)> [[TMP2]]
 ;
+; CX16-LABEL: define <4 x ptr addrspace(270)> @atomic_vec4_ptr_align(
+; CX16-SAME: ptr [[X:%.*]]) #[[ATTR1]] {
+; CX16-NEXT:    [[RET:%.*]] = load atomic <4 x ptr addrspace(270)>, ptr [[X]] acquire, align 16
+; CX16-NEXT:    ret <4 x ptr addrspace(270)> [[RET]]
+;
   %ret = load atomic <4 x ptr addrspace(270)>, ptr %x acquire, align 16
   ret <4 x ptr addrspace(270)> %ret
 }
@@ -300,6 +424,11 @@ define <2 x i16> @atomic_vec2_i16(ptr %x) nounwind {
 ; CHECK-SAME: ptr [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[RET:%.*]] = load atomic <2 x i16>, ptr [[X]] acquire, align 8
 ; CHECK-NEXT:    ret <2 x i16> [[RET]]
+;
+; CX16-LABEL: define <2 x i16> @atomic_vec2_i16(
+; CX16-SAME: ptr [[X:%.*]]) #[[ATTR1]] {
+; CX16-NEXT:    [[RET:%.*]] = load atomic <2 x i16>, ptr [[X]] acquire, align 8
+; CX16-NEXT:    ret <2 x i16> [[RET]]
 ;
   %ret = load atomic <2 x i16>, ptr %x acquire, align 8
   ret <2 x i16> %ret
@@ -311,6 +440,12 @@ define <2 x half> @atomic_vec2_half(ptr %x) nounwind {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[X]] acquire, align 8
 ; CHECK-NEXT:    [[RET:%.*]] = bitcast i32 [[TMP1]] to <2 x half>
 ; CHECK-NEXT:    ret <2 x half> [[RET]]
+;
+; CX16-LABEL: define <2 x half> @atomic_vec2_half(
+; CX16-SAME: ptr [[X:%.*]]) #[[ATTR1]] {
+; CX16-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr [[X]] acquire, align 8
+; CX16-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to <2 x half>
+; CX16-NEXT:    ret <2 x half> [[TMP2]]
 ;
   %ret = load atomic <2 x half>, ptr %x acquire, align 8
   ret <2 x half> %ret
@@ -332,6 +467,13 @@ define <4 x i32> @atomic_vec4_i32(ptr %x) nounwind {
 ; CHECK32-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK32-NEXT:    ret <4 x i32> [[TMP2]]
 ;
+; CX16-LABEL: define <4 x i32> @atomic_vec4_i32(
+; CX16-SAME: ptr [[X:%.*]]) #[[ATTR1]] {
+; CX16-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[X]], i128 0, i128 0 acquire acquire, align 16
+; CX16-NEXT:    [[LOADED:%.*]] = extractvalue { i128, i1 } [[TMP1]], 0
+; CX16-NEXT:    [[TMP2:%.*]] = bitcast i128 [[LOADED]] to <4 x i32>
+; CX16-NEXT:    ret <4 x i32> [[TMP2]]
+;
   %ret = load atomic <4 x i32>, ptr %x acquire, align 16
   ret <4 x i32> %ret
 }
@@ -352,6 +494,13 @@ define <4 x float> @atomic_vec4_float(ptr %x) nounwind {
 ; CHECK32-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK32-NEXT:    ret <4 x float> [[TMP2]]
 ;
+; CX16-LABEL: define <4 x float> @atomic_vec4_float(
+; CX16-SAME: ptr [[X:%.*]]) #[[ATTR1]] {
+; CX16-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[X]], i128 0, i128 0 acquire acquire, align 16
+; CX16-NEXT:    [[LOADED:%.*]] = extractvalue { i128, i1 } [[TMP1]], 0
+; CX16-NEXT:    [[TMP2:%.*]] = bitcast i128 [[LOADED]] to <4 x float>
+; CX16-NEXT:    ret <4 x float> [[TMP2]]
+;
   %ret = load atomic <4 x float>, ptr %x acquire, align 16
   ret <4 x float> %ret
 }
@@ -360,8 +509,23 @@ define <4 x float> @atomic_vec4_float(ptr %x) nounwind {
 ; a bitcast back to the original type when X86 chooses the cmpxchg expansion.
 
 define <2 x i64> @load_v2i64_cmpxchg(ptr %p) {
+; CHECK64-LABEL: define <2 x i64> @load_v2i64_cmpxchg(
+; CHECK64-SAME: ptr [[P:%.*]]) {
+; CHECK64-NEXT:    [[TMP1:%.*]] = call i128 @__atomic_load_16(ptr [[P]], i32 5)
+; CHECK64-NEXT:    [[TMP2:%.*]] = bitcast i128 [[TMP1]] to <2 x i64>
+; CHECK64-NEXT:    ret <2 x i64> [[TMP2]]
+;
+; CHECK32-LABEL: define <2 x i64> @load_v2i64_cmpxchg(
+; CHECK32-SAME: ptr [[P:%.*]]) {
+; CHECK32-NEXT:    [[TMP1:%.*]] = alloca <2 x i64>, align 16
+; CHECK32-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
+; CHECK32-NEXT:    call void @__atomic_load(i32 16, ptr [[P]], ptr [[TMP1]], i32 5)
+; CHECK32-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr [[TMP1]], align 16
+; CHECK32-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
+; CHECK32-NEXT:    ret <2 x i64> [[TMP2]]
+;
 ; CX16-LABEL: define <2 x i64> @load_v2i64_cmpxchg(
-; CX16-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+; CX16-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CX16-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[P]], i128 0, i128 0 seq_cst seq_cst, align 16
 ; CX16-NEXT:    [[LOADED:%.*]] = extractvalue { i128, i1 } [[TMP1]], 0
 ; CX16-NEXT:    [[TMP2:%.*]] = bitcast i128 [[LOADED]] to <2 x i64>
@@ -372,6 +536,21 @@ define <2 x i64> @load_v2i64_cmpxchg(ptr %p) {
 }
 
 define <4 x i32> @load_v4i32_cmpxchg(ptr %p) {
+; CHECK64-LABEL: define <4 x i32> @load_v4i32_cmpxchg(
+; CHECK64-SAME: ptr [[P:%.*]]) {
+; CHECK64-NEXT:    [[TMP1:%.*]] = call i128 @__atomic_load_16(ptr [[P]], i32 5)
+; CHECK64-NEXT:    [[TMP2:%.*]] = bitcast i128 [[TMP1]] to <4 x i32>
+; CHECK64-NEXT:    ret <4 x i32> [[TMP2]]
+;
+; CHECK32-LABEL: define <4 x i32> @load_v4i32_cmpxchg(
+; CHECK32-SAME: ptr [[P:%.*]]) {
+; CHECK32-NEXT:    [[TMP1:%.*]] = alloca <4 x i32>, align 16
+; CHECK32-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
+; CHECK32-NEXT:    call void @__atomic_load(i32 16, ptr [[P]], ptr [[TMP1]], i32 5)
+; CHECK32-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[TMP1]], align 16
+; CHECK32-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
+; CHECK32-NEXT:    ret <4 x i32> [[TMP2]]
+;
 ; CX16-LABEL: define <4 x i32> @load_v4i32_cmpxchg(
 ; CX16-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CX16-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[P]], i128 0, i128 0 seq_cst seq_cst, align 16
@@ -384,6 +563,21 @@ define <4 x i32> @load_v4i32_cmpxchg(ptr %p) {
 }
 
 define <16 x i8> @load_v16i8_cmpxchg(ptr %p) {
+; CHECK64-LABEL: define <16 x i8> @load_v16i8_cmpxchg(
+; CHECK64-SAME: ptr [[P:%.*]]) {
+; CHECK64-NEXT:    [[TMP1:%.*]] = call i128 @__atomic_load_16(ptr [[P]], i32 5)
+; CHECK64-NEXT:    [[TMP2:%.*]] = bitcast i128 [[TMP1]] to <16 x i8>
+; CHECK64-NEXT:    ret <16 x i8> [[TMP2]]
+;
+; CHECK32-LABEL: define <16 x i8> @load_v16i8_cmpxchg(
+; CHECK32-SAME: ptr [[P:%.*]]) {
+; CHECK32-NEXT:    [[TMP1:%.*]] = alloca <16 x i8>, align 16
+; CHECK32-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
+; CHECK32-NEXT:    call void @__atomic_load(i32 16, ptr [[P]], ptr [[TMP1]], i32 5)
+; CHECK32-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr [[TMP1]], align 16
+; CHECK32-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
+; CHECK32-NEXT:    ret <16 x i8> [[TMP2]]
+;
 ; CX16-LABEL: define <16 x i8> @load_v16i8_cmpxchg(
 ; CX16-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CX16-NEXT:    [[TMP1:%.*]] = cmpxchg ptr [[P]], i128 0, i128 0 seq_cst seq_cst, align 16
