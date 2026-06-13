@@ -80,8 +80,12 @@ Type *PointeeTypeMap::inferFromUsage(Value *Ptr,
         }
     }
     if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
-      if (Type *T = inferFromUsage(GEP, Visited))
+      if (Type *T = inferFromUsage(GEP, Visited)) {
+        if (auto *VT = dyn_cast<VectorType>(T))
+          if (VT->getElementType() == GEP->getSourceElementType())
+            return GEP->getSourceElementType();
         return T;
+      }
       if (!GepType)
         GepType = GEP->getSourceElementType();
     }

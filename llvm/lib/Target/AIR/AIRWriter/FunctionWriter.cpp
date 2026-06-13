@@ -228,10 +228,10 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
         V.push_back(GetID(Sel->getTrueValue()));
         V.push_back(GetID(Sel->getFalseValue()));
         V.push_back(GetID(Sel->getCondition()));
-        // Use SELECT (code 5) for scalar selects - AIR GPU JIT uses this
-        // encoding (3 operands: trueVal, falseVal, cond). VSELECT (code 29)
-        // has a different format (5 operands) and causes materializeAll.
-        W.EmitRecord(bitc::FUNC_CODE_INST_SELECT, V);
+        if (Sel->getCondition()->getType()->isVectorTy())
+          W.EmitRecord(bitc::FUNC_CODE_INST_VSELECT, V);
+        else
+          W.EmitRecord(bitc::FUNC_CODE_INST_SELECT, V);
       } else if (auto *Cmp = dyn_cast<CmpInst>(&I)) {
         V.push_back(GetID(Cmp->getOperand(0)));
         V.push_back(GetID(Cmp->getOperand(1)));

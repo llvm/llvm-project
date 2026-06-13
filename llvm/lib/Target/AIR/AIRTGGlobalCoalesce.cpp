@@ -9,13 +9,16 @@
 #include "AIRTGGlobalCoalesce.h"
 #include "AIR.h"
 #include "AIRAddressSpaces.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
@@ -65,6 +68,162 @@ static bool eraseDeadThreadgroupGlobals(Module &M) {
   return !Dead.empty();
 }
 
+static void collectUseBlocks(GlobalVariable *GV,
+                             SmallPtrSetImpl<BasicBlock *> &Blocks) {
+  SmallVector<User *, 16> Work(GV->users());
+  SmallPtrSet<User *, 16> Seen;
+  while (!Work.empty()) {
+    User *U = Work.pop_back_val();
+    if (!Seen.insert(U).second)
+      continue;
+    if (auto *I = dyn_cast<Instruction>(U)) {
+      if (isa<GetElementPtrInst>(I) || isa<BitCastInst>(I) ||
+          isa<AddrSpaceCastInst>(I)) {
+        for (User *UU : I->users())
+          Work.push_back(UU);
+        continue;
+      }
+      Blocks.insert(I->getParent());
+      continue;
+    }
+    if (isa<ConstantExpr>(U))
+      for (User *UU : U->users())
+        Work.push_back(UU);
+  }
+}
+
+static bool functionHasBarrier(Function &F) {
+  for (Instruction &I : instructions(F))
+    if (auto *CI = dyn_cast<CallInst>(&I))
+      if (Function *Callee = CI->getCalledFunction())
+        if (Callee->getName().starts_with("air.wg.barrier") ||
+            Callee->getName().starts_with("air.threadgroup.barrier"))
+          return true;
+  return false;
+}
+
+static bool mergeDisjointDotBuffers(Module &M) {
+  SmallVector<GlobalVariable *, 4> Dots;
+  for (GlobalVariable &GV : M.globals()) {
+    if (GV.getAddressSpace() != metal::AS::Threadgroup)
+      continue;
+    auto *AT = dyn_cast<ArrayType>(GV.getValueType());
+    if (!AT || AT->getNumElements() <= 64)
+      continue;
+    StringRef Name = GV.getName();
+    if (Name.starts_with(kDotPrefix) && Name.contains(kDotAbInfix))
+      Dots.push_back(&GV);
+  }
+  if (Dots.size() < 2)
+    return false;
+
+  Function *Kernel = nullptr;
+  for (Function &F : M)
+    if (!F.isDeclaration()) {
+      Kernel = &F;
+      break;
+    }
+  if (!Kernel || !functionHasBarrier(*Kernel))
+    return false;
+  DominatorTree DT(*Kernel);
+
+  SmallVector<Instruction *, 8> Barriers;
+  for (Instruction &I : instructions(*Kernel))
+    if (auto *CI = dyn_cast<CallInst>(&I))
+      if (Function *Callee = CI->getCalledFunction())
+        if (Callee->getName().starts_with("air.wg.barrier") ||
+            Callee->getName().starts_with("air.threadgroup.barrier"))
+          Barriers.push_back(&I);
+
+  struct DotInfo {
+    GlobalVariable *GV;
+    SmallPtrSet<BasicBlock *, 8> Blocks;
+  };
+  SmallVector<DotInfo, 4> Infos;
+  for (GlobalVariable *GV : Dots) {
+    DotInfo DI;
+    DI.GV = GV;
+    collectUseBlocks(GV, DI.Blocks);
+    bool AllInKernel = !DI.Blocks.empty();
+    for (BasicBlock *BB : DI.Blocks)
+      if (BB->getParent() != Kernel)
+        AllInKernel = false;
+    if (AllInKernel)
+      Infos.push_back(std::move(DI));
+  }
+  if (Infos.size() < 2)
+    return false;
+
+  auto disjointBefore = [&](const DotInfo &A, const DotInfo &B) {
+    for (BasicBlock *BA : A.Blocks)
+      if (B.Blocks.count(BA))
+        return false;
+    for (BasicBlock *BB : B.Blocks)
+      for (BasicBlock *BA : A.Blocks)
+        if (BA == BB || !DT.dominates(BA, BB))
+          return false;
+    for (Instruction *Bar : Barriers) {
+      BasicBlock *BarBB = Bar->getParent();
+      if (A.Blocks.count(BarBB) || B.Blocks.count(BarBB))
+        continue;
+      bool AfterA = true, BeforeB = true;
+      for (BasicBlock *BA : A.Blocks)
+        if (!DT.dominates(BA, BarBB)) {
+          AfterA = false;
+          break;
+        }
+      if (!AfterA)
+        continue;
+      for (BasicBlock *BB : B.Blocks)
+        if (!DT.dominates(BarBB, BB)) {
+          BeforeB = false;
+          break;
+        }
+      if (BeforeB)
+        return true;
+    }
+    return false;
+  };
+
+  bool Changed = false;
+  for (size_t I = 1; I < Infos.size(); ++I) {
+    DotInfo &Cur = Infos[I];
+    auto *CurAT = cast<ArrayType>(Cur.GV->getValueType());
+    for (size_t J = 0; J < I; ++J) {
+      DotInfo &Prev = Infos[J];
+      if (!Prev.GV)
+        continue;
+      auto *PrevAT = cast<ArrayType>(Prev.GV->getValueType());
+      if (PrevAT->getElementType() != CurAT->getElementType())
+        continue;
+      if (!disjointBefore(Prev, Cur) && !disjointBefore(Cur, Prev))
+        continue;
+      GlobalVariable *Surv = Prev.GV;
+      auto *SurvAT = cast<ArrayType>(Surv->getValueType());
+      if (CurAT->getNumElements() > SurvAT->getNumElements()) {
+        auto *NewAT =
+            ArrayType::get(SurvAT->getElementType(), CurAT->getNumElements());
+        auto *NewGV = new GlobalVariable(
+            M, NewAT, false, Surv->getLinkage(), UndefValue::get(NewAT),
+            Surv->getName(), Surv, GlobalVariable::NotThreadLocal,
+            Surv->getAddressSpace());
+        NewGV->setAlignment(Surv->getAlign());
+        Surv->replaceAllUsesWith(NewGV);
+        Surv->eraseFromParent();
+        Surv = NewGV;
+        Prev.GV = NewGV;
+      }
+      Cur.GV->replaceAllUsesWith(Surv);
+      Cur.GV->eraseFromParent();
+      Cur.GV = nullptr;
+      Prev.Blocks.insert(Cur.Blocks.begin(), Cur.Blocks.end());
+      Changed = true;
+      break;
+    }
+  }
+  return Changed;
+}
+
 static bool tgGlobalCoalesce(Module &M) {
   if (!moduleHasMMA(M))
     return false;
@@ -72,6 +231,8 @@ static bool tgGlobalCoalesce(Module &M) {
   // Reclaim dead threadgroup globals (e.g. the unused upstream global_smem
   // swizzle scratch) before/independently of the cvt/dot merge below.
   bool Changed = eraseDeadThreadgroupGlobals(M);
+
+  Changed |= mergeDisjointDotBuffers(M);
 
   SmallVector<GlobalVariable *, 4> CvtGlobals;
   SmallVector<GlobalVariable *, 4> DotAbGlobals;

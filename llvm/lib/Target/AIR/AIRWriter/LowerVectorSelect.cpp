@@ -34,6 +34,8 @@ namespace llvm {
 namespace metal {
 
 void lowerVectorSelects(Module &M) {
+  if (getenv("AIR_DISABLE_LVS"))
+    return;
   SmallVector<SelectInst *, 16> Sels;
   for (Function &F : M)
     for (BasicBlock &BB : F)
