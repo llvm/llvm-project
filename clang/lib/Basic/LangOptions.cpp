@@ -77,8 +77,8 @@ unsigned LangOptions::getOpenCLCompatibleVersion() const {
 bool LangOptions::remapPathPrefix(SmallVectorImpl<char> &Path,
                                   const bool reverse /*=false*/) const {
   for (const auto &Entry : MacroPrefixMap) {
-    const std::string& From = reverse ? Entry.second : Entry.first;
-    const std::string& To = reverse ? Entry.first : Entry.second;
+    const std::string &From = reverse ? Entry.second : Entry.first;
+    const std::string &To = reverse ? Entry.first : Entry.second;
     if (llvm::sys::path::replace_path_prefix(Path, From, To))
       return true;
   }
