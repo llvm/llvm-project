@@ -979,6 +979,44 @@ def _ssaf_compilation_unit_id :
     "produced SSAF TU summary. Required when '--ssaf-tu-summary-file=' is "
     "set.">,
   MarshallingInfoString<FrontendOpts<"SSAFCompilationUnitId">>;
+def _ssaf_source_transformation :
+  Joined<["--"], "ssaf-source-transformation=">,
+  MetaVarName<"<name>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Name of the SSAF source transformation to run. Exactly one transformation "
+    "per invocation.">,
+  MarshallingInfoString<FrontendOpts<"SSAFSourceTransformation">>;
+def _ssaf_global_scope_analysis_result :
+  Joined<["--"], "ssaf-global-scope-analysis-result=">,
+  MetaVarName<"<path>.<format>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Path to the WPASuite file containing the whole-program analysis result "
+    "consumed by the source transformation. The extension selects which file "
+    "format to use.">,
+  MarshallingInfoString<FrontendOpts<"SSAFGlobalScopeAnalysisResult">>;
+def _ssaf_src_edit_file :
+  Joined<["--"], "ssaf-src-edit-file=">,
+  MetaVarName<"<path>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Output file for the source edits produced by the source transformation. "
+    "The output is a YAML document compatible with "
+    "'clang-apply-replacements'.">,
+  MarshallingInfoString<FrontendOpts<"SSAFSrcEditFile">>;
+def _ssaf_transformation_report_file :
+  Joined<["--"], "ssaf-transformation-report-file=">,
+  MetaVarName<"<path>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Output file for the transformation report produced by the source "
+    "transformation. The output is a SARIF 2.1.0 JSON document.">,
+  MarshallingInfoString<FrontendOpts<"SSAFTransformationReportFile">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
       Flags<[NoXarchOption]>,

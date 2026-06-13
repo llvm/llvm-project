@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangScalableStaticAnalysisFrameworkFrontend
+  SourceTransformationFrontendAction.cpp
   TUSummaryExtractorFrontendAction.cpp
 
   LINK_LIBS
@@ -11,5 +12,7 @@ add_clang_library(clangScalableStaticAnalysisFrameworkFrontend
   clangFrontend
   clangScalableStaticAnalysisFrameworkAnalyses
   clangScalableStaticAnalysisFrameworkCore
+  clangScalableStaticAnalysisFrameworkSourceTransformation
   clangSema
+  clangToolingCore
   )

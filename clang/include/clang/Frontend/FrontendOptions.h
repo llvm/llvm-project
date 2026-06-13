@@ -556,6 +556,24 @@ public:
   /// across stages of the SSAF pipeline.
   std::string SSAFCompilationUnitId;
 
+  /// Name of the SSAF source transformation to run. Exactly one transformation
+  /// per invocation; non-empty implies the source-transformation pipeline is
+  /// active.
+  std::string SSAFSourceTransformation;
+
+  /// Path of the WPASuite input consumed by the source transformation. The
+  /// extension selects which serialization format reads it.
+  std::string SSAFGlobalScopeAnalysisResult;
+
+  /// Path of the source-edit output file produced by the source
+  /// transformation. The extension selects which `SourceEditFormat` writes it.
+  std::string SSAFSrcEditFile;
+
+  /// Path of the transformation-report output file produced by the source
+  /// transformation. The extension selects which `TransformationReportFormat`
+  /// writes it.
+  std::string SSAFTransformationReportFile;
+
   /// Show available SSAF summary extractors.
   LLVM_PREFERRED_TYPE(bool)
   unsigned SSAFShowExtractors : 1;

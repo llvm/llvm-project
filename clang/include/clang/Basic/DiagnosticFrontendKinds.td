@@ -434,6 +434,52 @@ def warn_ssaf_tu_summary_requires_compilation_unit_id :
           "'--ssaf-compilation-unit-id=' to be set">,
   InGroup<ScalableStaticAnalysisFramework>, DefaultError;
 
+def warn_ssaf_source_transformation_unknown_name :
+  Warning<"no source transformation registered with name: %0">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
+def warn_ssaf_source_transformation_requires_wpa_file :
+  Warning<"option '--ssaf-source-transformation=' requires "
+          "'--ssaf-global-scope-analysis-result=' to be set">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
+def warn_ssaf_source_transformation_requires_edit_file :
+  Warning<"option '--ssaf-source-transformation=' requires "
+          "'--ssaf-src-edit-file=' to be set">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
+def warn_ssaf_source_transformation_requires_report_file :
+  Warning<"option '--ssaf-source-transformation=' requires "
+          "'--ssaf-transformation-report-file=' to be set">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
+def warn_ssaf_source_transformation_requires_compilation_unit_id :
+  Warning<"option '--ssaf-source-transformation=' requires "
+          "'--ssaf-compilation-unit-id=' to be set">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
+def warn_ssaf_read_wpa_suite_failed :
+  Warning<"failed to read whole-program analysis result from '%0': %1">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
+def warn_ssaf_src_edit_file_requires_transformation :
+  Warning<"option '--ssaf-src-edit-file=' requires "
+          "'--ssaf-source-transformation=' to be set">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
+def warn_ssaf_write_src_edit_failed :
+  Warning<"failed to write source edits to '%0': %1">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
+def warn_ssaf_transformation_report_file_requires_transformation :
+  Warning<"option '--ssaf-transformation-report-file=' requires "
+          "'--ssaf-source-transformation=' to be set">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
+def warn_ssaf_write_transformation_report_failed :
+  Warning<"failed to write transformation report to '%0': %1">,
+  InGroup<ScalableStaticAnalysisFramework>, DefaultError;
+
 def err_extract_api_ignores_file_not_found :
   Error<"file '%0' specified by '--extract-api-ignores=' not found">, DefaultFatal;
 
