@@ -14,9 +14,7 @@
 #include "mlir/Transforms/CSE.h"
 
 #include "mlir/IR/Dominance.h"
-#include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/Region.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/ScopedHashTable.h"
@@ -394,6 +392,11 @@ void CSEDriver::eraseDeadOp(Operation *op) {
   for (Region &region : op->getRegions())
     domInfo->invalidate(&region);
   rewriter.eraseOp(op);
+
+  // Note: CSE only removes ops within blocks, without adding or removing
+  // blocks themselves. Since DominanceInfo captures relationships between
+  // the direct blocks of the region being analyzed, not the blocks inside
+  // any nested regions of those ops, it remains valid after CSE.
 }
 
 void CSEDriver::simplify(Operation *op, bool *changed) {
