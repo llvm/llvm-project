@@ -1179,6 +1179,8 @@ def EmitC_MemberOp : EmitC_Op<"member", [CExpressionInterface]> {
 
     ```mlir
     %0 = "emitc.member" (%arg0) {member = "a"}
+        : (!emitc.opaque<"mystruct">) -> i32
+    %0 = "emitc.member" (%arg0) {member = "a"}
         : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
     %1 = "emitc.member" (%arg0) {member = "b"}
         : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
