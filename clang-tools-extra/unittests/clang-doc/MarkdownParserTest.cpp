@@ -58,13 +58,17 @@ some code
   EXPECT_TRUE(N->Lang.empty());
 }
 
-TEST_F(MarkdownParserTest, UnterminatedFenceReturnsEmpty) {
+TEST_F(MarkdownParserTest, UnterminatedFenceProducesCodeNode) {
   auto Nodes = parseMarkdown(R"(```cpp
 int x = 0;)",
                              Arena);
-  // Unterminated fence should not crash and should produce a code node
-  // with whatever lines were found.
-  EXPECT_FALSE(Nodes.empty());
+  // An unterminated fence should not crash. The parser falls back to emitting a
+  // FencedCodeNode with whatever lines were found before the end of input.
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *N = cast<FencedCodeNode>(Nodes[0]);
+  EXPECT_EQ(N->Lang, "cpp");
+  ASSERT_EQ(N->Lines.size(), 1u);
+  EXPECT_EQ(N->Lines[0], "int x = 0;");
 }
 
 TEST_F(MarkdownParserTest, PipeTable) {
@@ -105,7 +109,10 @@ code
 ````````
 - item)",
                              Arena);
-  EXPECT_EQ(Nodes.size(), 3u);
+  ASSERT_EQ(Nodes.size(), 3u);
+  EXPECT_TRUE(isa<TextNode>(Nodes[0]));
+  EXPECT_TRUE(isa<FencedCodeNode>(Nodes[1]));
+  EXPECT_TRUE(isa<UnorderedListNode>(Nodes[2]));
 }
 
 // CommonMark §4.5 example 120: tilde fences work the same as backtick fences.
