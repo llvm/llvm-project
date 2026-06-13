@@ -973,6 +973,10 @@ def warn_fortify_strlen_overflow: Warning<
   " but the source string has length %2 (including NUL byte)">,
   InGroup<FortifySource>;
 
+def warn_fortify_literal_copy_too_large : Warning<
+  "copying %0 bytes into buffer of size %1 (including null terminator)">,
+  InGroup<FortifySource>;
+
 def subst_format_overflow : TextSubstitution<
   "'%0' will always overflow; destination buffer has size %1,"
   " but format string expands to at least %2">;

@@ -1253,6 +1253,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   std::optional<llvm::APSInt> DestinationSize;
   unsigned DiagID = 0;
   bool IsChkVariant = false;
+  bool UseLiteralCopyOverflowDiag = false;
 
   auto GetFunctionName = [&]() {
     std::string FunctionNameStr =
@@ -1282,6 +1283,10 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     DiagID = diag::warn_fortify_strlen_overflow;
     SourceSize = ComputeStrLenArgument(1);
     DestinationSize = ComputeSizeArgument(0);
+    UseLiteralCopyOverflowDiag =
+        (BuiltinID == Builtin::BI__builtin_strcpy ||
+         BuiltinID == Builtin::BIstrcpy) &&
+        isa<StringLiteral>(TheCall->getArg(1)->IgnoreParenCasts());
     break;
   }
 
@@ -1292,6 +1297,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     SourceSize = ComputeStrLenArgument(1);
     DestinationSize = ComputeExplicitObjectSizeArgument(2);
     IsChkVariant = true;
+    UseLiteralCopyOverflowDiag =
+        BuiltinID == Builtin::BI__builtin___strcpy_chk &&
+        isa<StringLiteral>(TheCall->getArg(1)->IgnoreParenCasts());
     break;
   }
 
@@ -1485,6 +1493,14 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   SmallString<16> SourceStr;
   DestinationSize->toString(DestinationStr, /*Radix=*/10);
   SourceSize->toString(SourceStr, /*Radix=*/10);
+
+  if (UseLiteralCopyOverflowDiag) {
+    DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
+                        PDiag(diag::warn_fortify_literal_copy_too_large)
+                            << SourceStr << DestinationStr);
+    return;
+  }
+
   DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
                       PDiag(DiagID)
                           << FunctionName << DestinationStr << SourceStr);
