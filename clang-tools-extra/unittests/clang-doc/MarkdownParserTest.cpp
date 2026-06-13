@@ -469,4 +469,149 @@ TEST_F(MarkdownParserTest, ThematicBreakUnderscores) {
   EXPECT_TRUE(isa<ThematicBreakNode>(Nodes[0]));
 }
 
+//===----------------------------------------------------------------------===//
+// CommonMark spec edge cases (spec.commonmark.org/0.31.2). Each test cites the
+// section and example it exercises. Cases marked DIVERGENCE document where this
+// simplified parser intentionally differs from full CommonMark.
+//===----------------------------------------------------------------------===//
+
+// CommonMark §4.1 Example 51: spaces are allowed between the characters.
+TEST_F(MarkdownParserTest, ThematicBreakSpacedDashes) {
+  auto Nodes = parseMarkdown("- - -", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  EXPECT_TRUE(isa<ThematicBreakNode>(Nodes[0]));
+}
+
+// CommonMark §4.1 Example 44: +++ is not a thematic break.
+TEST_F(MarkdownParserTest, PlusesAreNotThematicBreak) {
+  auto Nodes = parseMarkdown("+++", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *P = cast<ParagraphNode>(Nodes[0]);
+  ASSERT_EQ(P->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(P->Children[0])->Text, "+++");
+}
+
+// CommonMark §4.1 Example 46: fewer than three characters is not a break.
+TEST_F(MarkdownParserTest, TwoDashesAreNotThematicBreak) {
+  auto Nodes = parseMarkdown("--", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *P = cast<ParagraphNode>(Nodes[0]);
+  ASSERT_EQ(P->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(P->Children[0])->Text, "--");
+}
+
+// CommonMark §4.2 Example 64: a # not followed by a space is not a heading.
+TEST_F(MarkdownParserTest, HashWithoutSpaceIsNotHeading) {
+  auto Nodes = parseMarkdown("#5 bolt", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *P = cast<ParagraphNode>(Nodes[0]);
+  ASSERT_EQ(P->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(P->Children[0])->Text, "#5 bolt");
+}
+
+// CommonMark §4.2 Example 64: "#hashtag" is a paragraph, not a heading.
+TEST_F(MarkdownParserTest, HashtagIsNotHeading) {
+  auto Nodes = parseMarkdown("#hashtag", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *P = cast<ParagraphNode>(Nodes[0]);
+  ASSERT_EQ(P->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(P->Children[0])->Text, "#hashtag");
+}
+
+// CommonMark §4.2 Example 67: spaces around the heading content are stripped.
+TEST_F(MarkdownParserTest, HeadingStripsContentSpaces) {
+  auto Nodes = parseMarkdown("#         foo", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *H = cast<HeadingNode>(Nodes[0]);
+  EXPECT_EQ(H->Level, 1u);
+  ASSERT_EQ(H->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(H->Children[0])->Text, "foo");
+}
+
+// CommonMark §5.2: * is a valid bullet list marker.
+TEST_F(MarkdownParserTest, UnorderedListAsteriskMarker) {
+  auto Nodes = parseMarkdown("* foo", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *N = cast<UnorderedListNode>(Nodes[0]);
+  ASSERT_EQ(N->Items.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(N->Items[0]->Children[0])->Text, "foo");
+}
+
+// CommonMark §5.2 Example 301: + is a valid bullet list marker.
+TEST_F(MarkdownParserTest, UnorderedListPlusMarker) {
+  auto Nodes = parseMarkdown("+ foo", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *N = cast<UnorderedListNode>(Nodes[0]);
+  ASSERT_EQ(N->Items.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(N->Items[0]->Children[0])->Text, "foo");
+}
+
+// CommonMark §5.2 Example 267: an ordered list may start at 0.
+TEST_F(MarkdownParserTest, OrderedListStartZero) {
+  auto Nodes = parseMarkdown("0. ok", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *N = cast<OrderedListNode>(Nodes[0]);
+  EXPECT_EQ(N->Start, 0u);
+  ASSERT_EQ(N->Items.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(N->Items[0]->Children[0])->Text, "ok");
+}
+
+// CommonMark §5.2 Example 296: ordered lists may use a ) delimiter. DIVERGENCE:
+// this parser only recognizes the . delimiter, so "1) foo" is plain text.
+TEST_F(MarkdownParserTest, OrderedListParenDelimiterNotSupported) {
+  auto Nodes = parseMarkdown("1) foo", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *P = cast<ParagraphNode>(Nodes[0]);
+  ASSERT_EQ(P->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(P->Children[0])->Text, "1) foo");
+}
+
+// CommonMark §6.2 Example 355: intraword emphasis with asterisks.
+TEST_F(MarkdownParserTest, IntrawordEmphasisAsterisk) {
+  auto Nodes = parseMarkdown("foo*bar*", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *P = cast<ParagraphNode>(Nodes[0]);
+  ASSERT_EQ(P->Children.size(), 2u);
+  EXPECT_EQ(cast<TextNode>(P->Children[0])->Text, "foo");
+  auto *Em = cast<EmphasisNode>(P->Children[1]);
+  ASSERT_EQ(Em->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(Em->Children[0])->Text, "bar");
+}
+
+// CommonMark §6.2 Example 381: intraword strong with asterisks.
+TEST_F(MarkdownParserTest, IntrawordStrongAsterisk) {
+  auto Nodes = parseMarkdown("foo**bar**", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *P = cast<ParagraphNode>(Nodes[0]);
+  ASSERT_EQ(P->Children.size(), 2u);
+  EXPECT_EQ(cast<TextNode>(P->Children[0])->Text, "foo");
+  auto *St = cast<StrongNode>(P->Children[1]);
+  ASSERT_EQ(St->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(St->Children[0])->Text, "bar");
+}
+
+// CommonMark §6.2 Example 360: intraword underscores do NOT open emphasis, so
+// "foo_bar_" is literal text. DIVERGENCE: this parser lacks the intraword
+// underscore rule (see the findClosingDelim TODO) and treats it as emphasis.
+TEST_F(MarkdownParserTest, IntrawordUnderscoreEmphasisDivergence) {
+  auto Nodes = parseMarkdown("foo_bar_", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *P = cast<ParagraphNode>(Nodes[0]);
+  ASSERT_EQ(P->Children.size(), 2u);
+  EXPECT_EQ(cast<TextNode>(P->Children[0])->Text, "foo");
+  auto *Em = cast<EmphasisNode>(P->Children[1]);
+  ASSERT_EQ(Em->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(Em->Children[0])->Text, "bar");
+}
+
+// CommonMark §6.1 Example 331: a code span strips one leading and trailing
+// space when both are present.
+TEST_F(MarkdownParserTest, CodeSpanStripsSurroundingSpaces) {
+  auto Nodes = parseMarkdown("`` x ``", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *P = cast<ParagraphNode>(Nodes[0]);
+  ASSERT_EQ(P->Children.size(), 1u);
+  EXPECT_EQ(cast<InlineCodeNode>(P->Children[0])->Code, "x");
+}
+
 } // namespace
