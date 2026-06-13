@@ -590,18 +590,14 @@ TEST_F(MarkdownParserTest, IntrawordStrongAsterisk) {
   EXPECT_EQ(cast<TextNode>(St->Children[0])->Text, "bar");
 }
 
-// CommonMark §6.2 Example 360: intraword underscores do NOT open emphasis, so
-// "foo_bar_" is literal text. DIVERGENCE: this parser lacks the intraword
-// underscore rule (see the findClosingDelim TODO) and treats it as emphasis.
-TEST_F(MarkdownParserTest, IntrawordUnderscoreEmphasisDivergence) {
+// CommonMark §6.2 Example 360: intraword underscores do not open or close
+// emphasis, so "foo_bar_" stays as literal text.
+TEST_F(MarkdownParserTest, IntrawordUnderscoreIsText) {
   auto Nodes = parseMarkdown("foo_bar_", Arena);
   ASSERT_EQ(Nodes.size(), 1u);
   auto *P = cast<ParagraphNode>(Nodes[0]);
-  ASSERT_EQ(P->Children.size(), 2u);
-  EXPECT_EQ(cast<TextNode>(P->Children[0])->Text, "foo");
-  auto *Em = cast<EmphasisNode>(P->Children[1]);
-  ASSERT_EQ(Em->Children.size(), 1u);
-  EXPECT_EQ(cast<TextNode>(Em->Children[0])->Text, "bar");
+  ASSERT_EQ(P->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(P->Children[0])->Text, "foo_bar_");
 }
 
 // CommonMark §6.1 Example 331: a code span strips one leading and trailing

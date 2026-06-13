@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/StringSaver.h"
 #include <cassert>
@@ -184,50 +185,108 @@ static StringRef trimCodeSpan(StringRef Code) {
   return Code;
 }
 
-// Finds the start index of a closing emphasis run of exactly DelimLen copies of
-// DelimChar, searching forward from StartPos. Requires non-whitespace
-// immediately inside both the opening and closing delimiters and non-empty
-// content, a simplified take on the CommonMark §6.2 flanking rules. Returns
-// StringRef::npos if no valid closing run exists.
-static size_t findClosingDelim(StringRef S, size_t StartPos, char DelimChar,
-                               size_t DelimLen) {
-  size_t E = S.size();
-  // Opening delimiter is not left-flanking if whitespace follows it.
-  if (StartPos >= E || isSpace(S[StartPos]))
-    return StringRef::npos;
-  for (size_t J = StartPos; J + DelimLen <= E; ++J) {
-    if (S[J] != DelimChar)
-      continue;
-    size_t Run = countRun(S, J, DelimChar);
-    if (Run != DelimLen) {
-      J += Run - 1; // Skip the whole run; the loop's ++J lands past it.
-      continue;
-    }
-    // Reject empty content and closing runs that are not right-flanking.
-    if (J == StartPos || isSpace(S[J - 1]))
-      continue;
-    return J;
+// Treats the start and end of the string (passed as '\0') as whitespace for the
+// CommonMark flanking rules.
+static bool isFlankWhitespace(char C) { return C == '\0' || isSpace(C); }
+
+// Computes whether a delimiter run can open or close emphasis, from the
+// characters immediately before and after the run, per the CommonMark §6.2
+// flanking rules. Before and After are '\0' at the string boundaries.
+static void computeFlanking(char Before, char Marker, char After, bool &CanOpen,
+                            bool &CanClose) {
+  bool AfterWS = isFlankWhitespace(After);
+  bool BeforeWS = isFlankWhitespace(Before);
+  bool AfterPunct = isPunct(After);
+  bool BeforePunct = isPunct(Before);
+  bool LeftFlanking = !AfterWS && (!AfterPunct || BeforeWS || BeforePunct);
+  bool RightFlanking = !BeforeWS && (!BeforePunct || AfterWS || AfterPunct);
+  if (Marker == '_') {
+    // Underscore does not open or close emphasis intraword.
+    CanOpen = LeftFlanking && (!RightFlanking || BeforePunct);
+    CanClose = RightFlanking && (!LeftFlanking || AfterPunct);
+  } else {
+    CanOpen = LeftFlanking;
+    CanClose = RightFlanking;
   }
-  return StringRef::npos;
 }
 
+namespace {
+// One piece of inline content while emphasis is being resolved. A piece is
+// either a finished content node (text, code span, or a built emphasis or
+// strong node) or a run of delimiter characters that may still open or close
+// emphasis. Pieces form a doubly linked list through Prev/Next so matched runs
+// can be spliced out without shifting the others.
+struct InlinePiece {
+  MDNode *Node = nullptr; // content node, or null while this is a delimiter run
+  char Ch = 0;            // '*' or '_' for a delimiter run
+  size_t Len = 0;         // delimiters still available in the run
+  unsigned OrigLen = 0;   // original run length, for the multiple-of-three rule
+  bool CanOpen = false;
+  bool CanClose = false;
+  int Prev = -1;
+  int Next = -1;
+};
+} // namespace
+
 // Parses the inline content of a single line into a sequence of inline nodes:
-// inline code (`code`), strong (**text** or __text__), and emphasis (*text* or
-// _text_). Runs that match no construct become TextNodes. Emphasis and strong
-// recurse so their content may itself contain inline constructs. Text with no
-// markers yields a single TextNode.
+// inline code (`code`), emphasis (*text* or _text_), and strong (**text** or
+// __text__). Emphasis is resolved with a CommonMark-style delimiter stack: a
+// first pass tokenizes the line into text, code spans, and delimiter runs (each
+// tagged with its flanking flags), then a second pass walks closers back to
+// openers, honoring the multiple-of-three rule. Unmatched runs stay as text.
 //
-// TODO: This covers the common cases but not the full CommonMark §6 inline
-// model (delimiter stacks, intraword underscore rules, links, autolinks).
+// TODO: This does not yet handle links, autolinks, or backslash escapes.
 static ArrayRef<MDNode *> parseInline(StringRef S, BumpPtrAllocator &Arena,
                                       StringSaver &Saver) {
-  SmallVector<MDNode *> Nodes;
+  SmallVector<InlinePiece> Pool;
+  int Head = -1, Tail = -1;
+
+  auto makePiece = [&]() -> int {
+    Pool.emplace_back();
+    return Pool.size() - 1;
+  };
+  auto linkAtTail = [&](int Idx) {
+    Pool[Idx].Prev = Tail;
+    (Tail != -1 ? Pool[Tail].Next : Head) = Idx;
+    Tail = Idx;
+  };
+  auto appendNode = [&](MDNode *N) {
+    int Idx = makePiece();
+    Pool[Idx].Node = N;
+    linkAtTail(Idx);
+  };
+  // Content nodes pass through; a leftover delimiter run becomes a TextNode of
+  // its remaining characters.
+  auto pieceNode = [&](int P) -> MDNode * {
+    if (Pool[P].Node)
+      return Pool[P].Node;
+    return new (Arena)
+        TextNode(Saver.save(std::string(Pool[P].Len, Pool[P].Ch)));
+  };
+  // Merges adjacent TextNodes so unmatched delimiters coalesce with neighboring
+  // text, then copies the result into the arena.
+  auto finalize = [&](SmallVectorImpl<MDNode *> &Nodes) -> ArrayRef<MDNode *> {
+    SmallVector<MDNode *> Merged;
+    for (MDNode *Nd : Nodes) {
+      if (isa<TextNode>(Nd) && !Merged.empty() &&
+          isa<TextNode>(Merged.back())) {
+        StringRef Prev = cast<TextNode>(Merged.back())->Text;
+        StringRef Cur = cast<TextNode>(Nd)->Text;
+        Merged.back() =
+            new (Arena) TextNode(Saver.save(Prev.str() + Cur.str()));
+      } else {
+        Merged.push_back(Nd);
+      }
+    }
+    return allocateArray(Merged, Arena);
+  };
+
+  // Phase 1: tokenize the line into text, code spans, and delimiter runs.
   CharReader Reader(S);
   size_t TextStart = 0;
-
   auto flushText = [&](size_t End) {
     if (End > TextStart)
-      Nodes.push_back(new (Arena) TextNode(
+      appendNode(new (Arena) TextNode(
           Saver.save(S.substr(TextStart, End - TextStart))));
   };
 
@@ -246,7 +305,7 @@ static ArrayRef<MDNode *> parseInline(StringRef S, BumpPtrAllocator &Arena,
         flushText(Pos);
         StringRef Code =
             trimCodeSpan(S.substr(Pos + OpenLen, ClosePos - (Pos + OpenLen)));
-        Nodes.push_back(new (Arena) InlineCodeNode(Saver.save(Code)));
+        appendNode(new (Arena) InlineCodeNode(Saver.save(Code)));
         Reader.seek(ClosePos + OpenLen);
         TextStart = Reader.position();
         continue;
@@ -256,38 +315,117 @@ static ArrayRef<MDNode *> parseInline(StringRef S, BumpPtrAllocator &Arena,
       continue;
     }
 
-    // Emphasis (*text*, _text_) and strong (**text**, __text__).
+    // Delimiter run for emphasis or strong.
     if (C == '*' || C == '_') {
-      // Strong binds the two-delimiter form before single-delimiter emphasis.
-      if (Reader.peek(1) == C) {
-        size_t Close = findClosingDelim(S, Pos + 2, C, 2);
-        if (Close != StringRef::npos) {
-          flushText(Pos);
-          StringRef Inner = S.substr(Pos + 2, Close - (Pos + 2));
-          Nodes.push_back(new (Arena)
-                              StrongNode(parseInline(Inner, Arena, Saver)));
-          Reader.seek(Close + 2);
-          TextStart = Reader.position();
-          continue;
-        }
-      }
-      size_t Close = findClosingDelim(S, Pos + 1, C, 1);
-      if (Close != StringRef::npos) {
-        flushText(Pos);
-        StringRef Inner = S.substr(Pos + 1, Close - (Pos + 1));
-        Nodes.push_back(new (Arena)
-                            EmphasisNode(parseInline(Inner, Arena, Saver)));
-        Reader.seek(Close + 1);
-        TextStart = Reader.position();
-        continue;
-      }
+      size_t RunLen = countRun(S, Pos, C);
+      flushText(Pos);
+      char Before = Pos == 0 ? '\0' : S[Pos - 1];
+      char After = Pos + RunLen < S.size() ? S[Pos + RunLen] : '\0';
+      int Idx = makePiece();
+      InlinePiece &D = Pool[Idx];
+      D.Ch = C;
+      D.Len = RunLen;
+      D.OrigLen = RunLen;
+      computeFlanking(Before, C, After, D.CanOpen, D.CanClose);
+      linkAtTail(Idx);
+      Reader.seek(Pos + RunLen);
+      TextStart = Reader.position();
+      continue;
     }
 
     Reader.advance();
   }
-
   flushText(S.size());
-  return allocateArray(Nodes, Arena);
+
+  // Phase 2: match closers back to openers. OpenersBottom records, per closer
+  // kind, how far back a failed search needs to look, keyed by delimiter char,
+  // run length mod 3, and whether the closer can also open.
+  int OpenersBottom[12];
+  for (int &B : OpenersBottom)
+    B = -1;
+  auto bucket = [](const InlinePiece &P) {
+    return (P.Ch == '_' ? 6 : 0) + (P.OrigLen % 3) * 2 + (P.CanOpen ? 1 : 0);
+  };
+
+  int Current = Head;
+  while (Current != -1) {
+    // Advance to the next run that can close.
+    while (Current != -1 &&
+           !(Pool[Current].Ch && Pool[Current].CanClose && Pool[Current].Len))
+      Current = Pool[Current].Next;
+    if (Current == -1)
+      break;
+    int Closer = Current;
+    int Key = bucket(Pool[Closer]);
+
+    // Search back for the nearest matching opener.
+    int Opener = Pool[Closer].Prev;
+    bool Found = false;
+    while (Opener != -1 && Opener != OpenersBottom[Key]) {
+      InlinePiece &O = Pool[Opener];
+      if (O.Ch == Pool[Closer].Ch && O.Len && O.CanOpen) {
+        unsigned Sum = O.OrigLen + Pool[Closer].OrigLen;
+        bool OddMatch = (O.CanClose || Pool[Closer].CanOpen) && Sum % 3 == 0 &&
+                        !(O.OrigLen % 3 == 0 && Pool[Closer].OrigLen % 3 == 0);
+        if (!OddMatch) {
+          Found = true;
+          break;
+        }
+      }
+      Opener = Pool[Opener].Prev;
+    }
+
+    if (!Found) {
+      OpenersBottom[Key] = Pool[Closer].Prev;
+      // A run that cannot also open will never match anything; keep its text
+      // but stop treating it as a delimiter.
+      if (!Pool[Closer].CanOpen)
+        Pool[Closer].CanClose = false;
+      Current = Pool[Closer].Next;
+      continue;
+    }
+
+    // Wrap the pieces between opener and closer, consuming one delimiter from
+    // each side for emphasis or two for strong.
+    unsigned Use = Pool[Opener].Len >= 2 && Pool[Closer].Len >= 2 ? 2 : 1;
+    SmallVector<MDNode *> Inner;
+    for (int P = Pool[Opener].Next; P != Closer; P = Pool[P].Next)
+      Inner.push_back(pieceNode(P));
+    Pool[Opener].Len -= Use;
+    Pool[Closer].Len -= Use;
+    MDNode *Emph =
+        Use == 2
+            ? static_cast<MDNode *>(new (Arena) StrongNode(finalize(Inner)))
+            : static_cast<MDNode *>(new (Arena) EmphasisNode(finalize(Inner)));
+    int EP = makePiece();
+    Pool[EP].Node = Emph;
+    Pool[EP].Prev = Opener;
+    Pool[EP].Next = Closer;
+    Pool[Opener].Next = EP;
+    Pool[Closer].Prev = EP;
+
+    // Drop the opener or closer once its run is fully consumed.
+    if (Pool[Opener].Len == 0) {
+      int Pr = Pool[Opener].Prev;
+      Pool[EP].Prev = Pr;
+      (Pr != -1 ? Pool[Pr].Next : Head) = EP;
+    }
+    if (Pool[Closer].Len == 0) {
+      int Nx = Pool[Closer].Next;
+      Pool[EP].Next = Nx;
+      (Nx != -1 ? Pool[Nx].Prev : Tail) = EP;
+      Current = Nx;
+    } else {
+      Current = Closer;
+    }
+  }
+
+  // Phase 3: collect the surviving pieces, dropping fully consumed delimiters.
+  SmallVector<MDNode *> Result;
+  for (int P = Head; P != -1; P = Pool[P].Next)
+    if (Pool[P].Node || Pool[P].Len)
+      Result.push_back(pieceNode(P));
+  return finalize(Result);
 }
 
 // Parses a fenced code block opened with ``` or ~~~. The cursor must be on the
