@@ -1499,6 +1499,53 @@ def CIR_BlockAddrInfoAttr
 }
 
 //===----------------------------------------------------------------------===//
+// CIR_BlockAddrDiffAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_BlockAddrDiffAttr
+    : CIR_ValueLikeAttr<"BlockAddrDiff", "block_addr_diff"> {
+  let summary = "Difference between two block addresses";
+  let description = [{
+    This attribute represents the constant difference between the addresses of
+    two basic blocks within the same function. It is produced for GCC's "labels
+    as values" extension when the difference of two label addresses appears in a
+    constant context, e.g. `&&lhs - &&rhs`.
+
+    Both labels belong to the function referenced by `func`. The value is the
+    address of `lhs_label` minus the address of `rhs_label`, truncated to the
+    attribute's integer type.
+
+    Example:
+    ```
+    cir.global "private" internal @b.ar =
+        #cir.block_addr_diff<@b, "l2", "l1"> : !s32i
+    ```
+  }];
+
+  let parameters = (ins
+      AttributeSelfTypeParameter<"", "cir::IntType">:$type,
+      "mlir::FlatSymbolRefAttr":$func,
+      "mlir::StringAttr":$lhs_label,
+      "mlir::StringAttr":$rhs_label);
+
+  let assemblyFormat = "`<` $func `,` $lhs_label `,` $rhs_label `>`";
+
+  let builders = [
+    AttrBuilder<(ins "cir::IntType":$type,
+                     "llvm::StringRef":$func_name,
+                     "llvm::StringRef":$lhs_label_name,
+                     "llvm::StringRef":$rhs_label_name), [{
+      return $_get($_ctxt, type,
+                   mlir::FlatSymbolRefAttr::get($_ctxt, func_name),
+                   mlir::StringAttr::get($_ctxt, lhs_label_name),
+                   mlir::StringAttr::get($_ctxt, rhs_label_name));
+    }]>
+  ];
+
+  let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // Side Effect
 //===----------------------------------------------------------------------===//
 

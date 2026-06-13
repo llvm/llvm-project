@@ -83,6 +83,14 @@ void GotoSolverPass::runOnOperation() {
         globalBlockAddrLabels[info.getFunc().getValue()].insert(
             info.getLabel());
       });
+      // A block-address difference attribute references two labels in the same
+      // function; keep both alive.
+      namedAttr.getValue().walk([&](cir::BlockAddrDiffAttr diff) {
+        llvm::StringSet<> &labels =
+            globalBlockAddrLabels[diff.getFunc().getValue()];
+        labels.insert(diff.getLhsLabel().getValue());
+        labels.insert(diff.getRhsLabel().getValue());
+      });
     }
   });
 
