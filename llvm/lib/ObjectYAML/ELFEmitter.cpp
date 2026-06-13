@@ -1480,11 +1480,12 @@ void ELFState<ELFT>::writeSectionContent(
       }
     }
     auto FeatureOrErr = llvm::object::BBAddrMap::Features::decode(E.Feature);
-    bool MultiBBRangeFeatureEnabled = false;
-    if (!FeatureOrErr)
+    if (!FeatureOrErr) {
+      // Invalid feature: warn and skip the entry.
       WithColor::warning() << toString(FeatureOrErr.takeError());
-    else
-      MultiBBRangeFeatureEnabled = FeatureOrErr->MultiBBRange;
+      continue;
+    }
+    bool MultiBBRangeFeatureEnabled = FeatureOrErr->MultiBBRange;
     bool MultiBBRange =
         MultiBBRangeFeatureEnabled ||
         (E.NumBBRanges.has_value() && E.NumBBRanges.value() != 1) ||

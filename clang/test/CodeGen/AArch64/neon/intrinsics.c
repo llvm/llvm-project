@@ -4476,6 +4476,120 @@ uint64_t test_vcvtd_n_u64_f64(float64_t a) {
   return (uint64_t)vcvtd_n_u64_f64(a, 64);
 }
 
+// LLVM-LABEL: @test_vcvt_s32_f32
+// CIR-LABEL: @vcvt_s32_f32
+int32x2_t test_vcvt_s32_f32(float32x2_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptosi.sat
+
+// LLVM-SAME: <2 x float> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
+// LLVM:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x float>
+// LLVM:    [[VCVTZ_I:%.*]] = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f32(<2 x float> [[TMP2]])
+// LLVM:    ret <2 x i32> [[VCVTZ_I]]
+  return vcvt_s32_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvtq_s32_f32
+// CIR-LABEL: @vcvtq_s32_f32
+int32x4_t test_vcvtq_s32_f32(float32x4_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptosi.sat
+
+// LLVM-SAME: <4 x float> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
+// LLVM:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
+// LLVM:    [[VCVTZ_I:%.*]] = call <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float> [[TMP2]])
+// LLVM:    ret <4 x i32> [[VCVTZ_I]]
+  return vcvtq_s32_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvt_u32_f32
+// CIR-LABEL: @vcvt_u32_f32
+uint32x2_t test_vcvt_u32_f32(float32x2_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptoui.sat
+
+// LLVM-SAME: <2 x float> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
+// LLVM:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x float>
+// LLVM:    [[VCVTZ_I:%.*]] = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float> [[TMP2]])
+// LLVM:    ret <2 x i32> [[VCVTZ_I]]
+  return vcvt_u32_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvtq_u32_f32
+// CIR-LABEL: @vcvtq_u32_f32
+uint32x4_t test_vcvtq_u32_f32(float32x4_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptoui.sat
+
+// LLVM-SAME: <4 x float> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
+// LLVM:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
+// LLVM:    [[VCVTZ_I:%.*]] = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> [[TMP2]])
+// LLVM:    ret <4 x i32> [[VCVTZ_I]]
+  return vcvtq_u32_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvt_s64_f64
+// CIR-LABEL: @vcvt_s64_f64
+int64x1_t test_vcvt_s64_f64(float64x1_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptosi.sat
+
+// LLVM-SAME: <1 x double> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
+// LLVM:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// LLVM:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
+// LLVM:    [[VCVTZ_I:%.*]] = call <1 x i64> @llvm.fptosi.sat.v1i64.v1f64(<1 x double> [[TMP2]])
+// LLVM:    ret <1 x i64> [[VCVTZ_I]]
+  return vcvt_s64_f64(a);
+}
+
+// LLVM-LABEL: @test_vcvtq_s64_f64
+// CIR-LABEL: @vcvtq_s64_f64
+int64x2_t test_vcvtq_s64_f64(float64x2_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptosi.sat
+
+// LLVM-SAME: <2 x double> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
+// LLVM:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
+// LLVM:    [[VCVTZ_I:%.*]] = call <2 x i64> @llvm.fptosi.sat.v2i64.v2f64(<2 x double> [[TMP2]])
+// LLVM:    ret <2 x i64> [[VCVTZ_I]]
+  return vcvtq_s64_f64(a);
+}
+
+// LLVM-LABEL: @test_vcvt_u64_f64
+// CIR-LABEL: @vcvt_u64_f64
+uint64x1_t test_vcvt_u64_f64(float64x1_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptoui.sat
+
+// LLVM-SAME: <1 x double> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
+// LLVM:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// LLVM:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
+// LLVM:    [[VCVTZ_I:%.*]] = call <1 x i64> @llvm.fptoui.sat.v1i64.v1f64(<1 x double> [[TMP2]])
+// LLVM:    ret <1 x i64> [[VCVTZ_I]]
+  return vcvt_u64_f64(a);
+}
+
+// LLVM-LABEL: @test_vcvtq_u64_f64
+// CIR-LABEL: @vcvtq_u64_f64
+uint64x2_t test_vcvtq_u64_f64(float64x2_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptoui.sat
+
+// LLVM-SAME: <2 x double> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
+// LLVM:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
+// LLVM:    [[VCVTZ_I:%.*]] = call <2 x i64> @llvm.fptoui.sat.v2i64.v2f64(<2 x double> [[TMP2]])
+// LLVM:    ret <2 x i64> [[VCVTZ_I]]
+  return vcvtq_u64_f64(a);
+}
+
 //===------------------------------------------------------===//
 // 2.1.3.2.3 Vector shift right and accumulate
 // https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#vector-shift-right-and-accumulate
@@ -6766,4 +6880,251 @@ float64_t test_vpmaxnmqd_f64(float64x2_t a) {
 // LLVM:    [[VPMAXNMQD_F64_I:%.*]] = call double @llvm.aarch64.neon.fmaxnmv.f64.v2f64(<2 x double> [[A]])
 // LLVM-NEXT:    ret double [[VPMAXNMQD_F64_I]]
   return vpmaxnmqd_f64(a);
+}
+
+//===------------------------------------------------------===//
+// 2.1.1.1.1 Addition
+// https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#addition
+//===------------------------------------------------------===//
+
+// LLVM-LABEL: @test_vadd_s8(
+// CIR-LABEL: @vadd_s8(
+int8x8_t test_vadd_s8(int8x8_t a, int8x8_t b) {
+// CIR: cir.add
+
+// LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]], <8 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = add <8 x i8> [[A]], [[B]]
+// LLVM: ret <8 x i8> [[ADD_I]]
+  return vadd_s8(a, b);
+}
+
+// LLVM-LABEL: @test_vadd_s16(
+// CIR-LABEL: @vadd_s16(
+int16x4_t test_vadd_s16(int16x4_t a, int16x4_t b) {
+// CIR: cir.add
+
+// LLVM-SAME: <4 x i16> {{.*}}[[A:%.*]], <4 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = add <4 x i16> [[A]], [[B]]
+// LLVM: ret <4 x i16> [[ADD_I]]
+  return vadd_s16(a, b);
+}
+
+// LLVM-LABEL: @test_vadd_s32(
+// CIR-LABEL: @vadd_s32(
+int32x2_t test_vadd_s32(int32x2_t a, int32x2_t b) {
+// CIR: cir.add
+
+// LLVM-SAME: <2 x i32> {{.*}}[[A:%.*]], <2 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = add <2 x i32> [[A]], [[B]]
+// LLVM: ret <2 x i32> [[ADD_I]]
+  return vadd_s32(a, b);
+}
+
+// LLVM-LABEL: @test_vadd_s64(
+// CIR-LABEL: @vadd_s64(
+int64x1_t test_vadd_s64(int64x1_t a, int64x1_t b) {
+// CIR: cir.add
+
+// LLVM-SAME: <1 x i64> {{.*}}[[A:%.*]], <1 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = add <1 x i64> [[A]], [[B]]
+// LLVM: ret <1 x i64> [[ADD_I]]
+  return vadd_s64(a, b);
+}
+
+// LLVM-LABEL: @test_vadd_f32(
+// CIR-LABEL: @vadd_f32(
+float32x2_t test_vadd_f32(float32x2_t a, float32x2_t b) {
+// CIR: cir.fadd
+
+// LLVM-SAME: <2 x float> {{.*}}[[A:%.*]], <2 x float> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = fadd <2 x float> [[A]], [[B]]
+// LLVM: ret <2 x float> [[ADD_I]]
+  return vadd_f32(a, b);
+}
+
+// LLVM-LABEL: @test_vadd_u8(
+// CIR-LABEL: @vadd_u8(
+uint8x8_t test_vadd_u8(uint8x8_t a, uint8x8_t b) {
+// CIR: cir.add
+
+// LLVM-SAME: <8 x i8> {{.*}}[[A:%.*]], <8 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = add <8 x i8> [[A]], [[B]]
+// LLVM: ret <8 x i8> [[ADD_I]]
+  return vadd_u8(a, b);
+}
+
+// LLVM-LABEL: @test_vadd_u16(
+// CIR-LABEL: @vadd_u16(
+uint16x4_t test_vadd_u16(uint16x4_t a, uint16x4_t b) {
+// CIR: cir.add
+
+// LLVM-SAME: <4 x i16> {{.*}}[[A:%.*]], <4 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = add <4 x i16> [[A]], [[B]]
+// LLVM: ret <4 x i16> [[ADD_I]]
+  return vadd_u16(a, b);
+}
+
+// LLVM-LABEL: @test_vadd_u32(
+// CIR-LABEL: @vadd_u32(
+uint32x2_t test_vadd_u32(uint32x2_t a, uint32x2_t b) {
+// CIR: cir.add
+
+// LLVM-SAME: <2 x i32> {{.*}}[[A:%.*]], <2 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = add <2 x i32> [[A]], [[B]]
+// LLVM: ret <2 x i32> [[ADD_I]]
+  return vadd_u32(a, b);
+}
+
+// LLVM-LABEL: @test_vadd_u64(
+// CIR-LABEL: @vadd_u64(
+uint64x1_t test_vadd_u64(uint64x1_t a, uint64x1_t b) {
+// CIR: cir.add
+
+// LLVM-SAME: <1 x i64> {{.*}}[[A:%.*]], <1 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = add <1 x i64> [[A]], [[B]]
+// LLVM: ret <1 x i64> [[ADD_I]]
+  return vadd_u64(a, b);
+}
+
+// LLVM-LABEL: @test_vaddq_s8(
+// CIR-LABEL: @vaddq_s8(
+int8x16_t test_vaddq_s8(int8x16_t a, int8x16_t b) {
+// CIR: cir.add
+
+// LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]], <16 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = add <16 x i8> [[A]], [[B]]
+// LLVM: ret <16 x i8> [[ADD_I]]
+  return vaddq_s8(a, b);
+}
+
+// LLVM-LABEL: @test_vaddq_s16(
+// CIR-LABEL: @vaddq_s16(
+int16x8_t test_vaddq_s16(int16x8_t a, int16x8_t b) {
+// CIR: cir.add
+
+// LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = add <8 x i16> [[A]], [[B]]
+// LLVM: ret <8 x i16> [[ADD_I]]
+  return vaddq_s16(a, b);
+}
+
+// LLVM-LABEL: @test_vaddq_s32(
+// CIR-LABEL: @vaddq_s32(
+int32x4_t test_vaddq_s32(int32x4_t a, int32x4_t b) {
+// CIR: cir.add
+
+// LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = add <4 x i32> [[A]], [[B]]
+// LLVM: ret <4 x i32> [[ADD_I]]
+  return vaddq_s32(a, b);
+}
+
+// LLVM-LABEL: @test_vaddq_s64(
+// CIR-LABEL: @vaddq_s64(
+int64x2_t test_vaddq_s64(int64x2_t a, int64x2_t b) {
+// CIR: cir.add
+
+// LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = add <2 x i64> [[A]], [[B]]
+// LLVM: ret <2 x i64> [[ADD_I]]
+  return vaddq_s64(a, b);
+}
+
+// LLVM-LABEL: @test_vaddq_f32(
+// CIR-LABEL: @vaddq_f32(
+float32x4_t test_vaddq_f32(float32x4_t a, float32x4_t b) {
+// CIR: cir.fadd
+
+// LLVM-SAME: <4 x float> {{.*}}[[A:%.*]], <4 x float> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = fadd <4 x float> [[A]], [[B]]
+// LLVM: ret <4 x float> [[ADD_I]]
+  return vaddq_f32(a, b);
+}
+
+// LLVM-LABEL: @test_vaddq_f64(
+// CIR-LABEL: @vaddq_f64(
+float64x2_t test_vaddq_f64(float64x2_t a, float64x2_t b) {
+// CIR: cir.fadd
+
+// LLVM-SAME: <2 x double> {{.*}}[[A:%.*]], <2 x double> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = fadd <2 x double> [[A]], [[B]]
+// LLVM: ret <2 x double> [[ADD_I]]
+  return vaddq_f64(a, b);
+}
+
+// LLVM-LABEL: @test_vaddq_u8(
+// CIR-LABEL: @vaddq_u8(
+uint8x16_t test_vaddq_u8(uint8x16_t a, uint8x16_t b) {
+// CIR: cir.add
+
+// LLVM-SAME: <16 x i8> {{.*}}[[A:%.*]], <16 x i8> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = add <16 x i8> [[A]], [[B]]
+// LLVM: ret <16 x i8> [[ADD_I]]
+  return vaddq_u8(a, b);
+}
+
+// LLVM-LABEL: @test_vaddq_u16(
+// CIR-LABEL: @vaddq_u16(
+uint16x8_t test_vaddq_u16(uint16x8_t a, uint16x8_t b) {
+// CIR: cir.add
+
+// LLVM-SAME: <8 x i16> {{.*}}[[A:%.*]], <8 x i16> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = add <8 x i16> [[A]], [[B]]
+// LLVM: ret <8 x i16> [[ADD_I]]
+  return vaddq_u16(a, b);
+}
+
+// LLVM-LABEL: @test_vaddq_u32(
+// CIR-LABEL: @vaddq_u32(
+uint32x4_t test_vaddq_u32(uint32x4_t a, uint32x4_t b) {
+// CIR: cir.add
+
+// LLVM-SAME: <4 x i32> {{.*}}[[A:%.*]], <4 x i32> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = add <4 x i32> [[A]], [[B]]
+// LLVM: ret <4 x i32> [[ADD_I]]
+  return vaddq_u32(a, b);
+}
+
+// LLVM-LABEL: @test_vaddq_u64(
+// CIR-LABEL: @vaddq_u64(
+uint64x2_t test_vaddq_u64(uint64x2_t a, uint64x2_t b) {
+// CIR: cir.add
+
+// LLVM-SAME: <2 x i64> {{.*}}[[A:%.*]], <2 x i64> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = add <2 x i64> [[A]], [[B]]
+// LLVM: ret <2 x i64> [[ADD_I]]
+  return vaddq_u64(a, b);
+}
+
+// LLVM-LABEL: @test_vadd_f64(
+// CIR-LABEL: @vadd_f64(
+float64x1_t test_vadd_f64(float64x1_t a, float64x1_t b) {
+// CIR: cir.fadd
+
+// LLVM-SAME: <1 x double> {{.*}}[[A:%.*]], <1 x double> {{.*}}[[B:%.*]])
+// LLVM: [[ADD_I:%.*]] = fadd <1 x double> [[A]], [[B]]
+// LLVM: ret <1 x double> [[ADD_I]]
+  return vadd_f64(a, b);
+}
+
+// LLVM-LABEL: @test_vaddd_s64(
+// CIR-LABEL: @vaddd_s64(
+int64_t test_vaddd_s64(int64_t a, int64_t b) {
+// CIR: cir.add
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]], i64 {{.*}}[[B:%.*]])
+// LLVM: [[VADDD_I:%.*]] = add i64 [[A]], [[B]]
+// LLVM: ret i64 [[VADDD_I]]
+  return vaddd_s64(a, b);
+}
+
+// LLVM-LABEL: @test_vaddd_u64(
+// CIR-LABEL: @vaddd_u64(
+uint64_t test_vaddd_u64(uint64_t a, uint64_t b) {
+// CIR: cir.add
+
+// LLVM-SAME: i64 {{.*}}[[A:%.*]], i64 {{.*}}[[B:%.*]])
+// LLVM: [[VADDD_I:%.*]] = add i64 [[A]], [[B]]
+// LLVM: ret i64 [[VADDD_I]]
+  return vaddd_u64(a, b);
 }
