@@ -263,5 +263,5 @@ namespace rdar8986308 {
 namespace GH201490 {
   template<class T> struct A {};
   template<class T> struct B : A<T> {};
-  template<> template<class T> class A<int>::B {}; // expected-error{{out-of-line definition of 'B' does not match any declaration in 'A<int>'}}
+  template<> template<class T> class A<int>::B {}; // expected-error{{out-of-line definition of 'B' does not match any declaration in 'GH201490::A<int>'}}
 }
