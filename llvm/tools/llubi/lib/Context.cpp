@@ -623,10 +623,8 @@ void Context::exposeProvenance(Provenance &Prov) {
     return;
   uint64_t Address = Obj->getAddress();
   ExposedProvenanceSet &Set = ExposedProvenances[Address];
-  if (Set.Set.insert(&Prov).second) {
-    Set.List.emplace_back(&Prov);
-    Set.GenerationList.push_back(++ExposedProvenanceSetGeneration);
-  }
+  if (Set.Set.insert(&Prov).second)
+    Set.List.push_back({&Prov, ++ExposedProvenanceSetGeneration});
 }
 
 MemoryObject *
@@ -642,7 +640,7 @@ Context::checkProvenance(const Pointer &Ptr,
 
   MemoryObject *MO = nullptr;
   APInt &Mask = Prov.Wildcard->ActiveMask;
-  SmallVector<IntrusiveRefCntPtr<Provenance>> *List = nullptr;
+  SmallVector<ExposedProvenance> *List = nullptr;
   uint32_t ProvenanceCount = 0;
   if (Mask.isZero()) {
     // The memory object hasn't been determined.
@@ -658,8 +656,9 @@ Context::checkProvenance(const Pointer &Ptr,
     // We only inspect the first N exposed provenances according to the global
     // generation number of the wildcard pointer.
     ProvenanceCount = std::distance(
-        Set.GenerationList.begin(),
-        upper_bound(Set.GenerationList, Prov.Wildcard->Generation));
+        Set.List.begin(),
+        upper_bound(Set.List,
+                    ExposedProvenance{nullptr, Prov.Wildcard->Generation}));
     if (HasSideEffect) {
       Mask = APInt::getAllOnes(ProvenanceCount);
       Prov.Wildcard->BaseAddress = BaseAddress;
@@ -691,7 +690,7 @@ Context::checkProvenance(const Pointer &Ptr,
            "Mask must be initialized if HasSideEffect is true.");
     if (!Mask.isZero() && !Mask[I])
       continue;
-    if (Check(*(*List)[I])) {
+    if (Check(*(*List)[I].Prov)) {
       Valid = true;
       // Early return as we don't need to update the Mask.
       if (!HasSideEffect)

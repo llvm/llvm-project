@@ -253,9 +253,17 @@ class Context {
 
   /// Exposed provenances are grouped by associated memory objects for efficient
   /// invalidation.
+  struct ExposedProvenance {
+    IntrusiveRefCntPtr<Provenance> Prov;
+    uint64_t Generation;
+
+    bool operator<(const ExposedProvenance &RHS) const {
+      return Generation < RHS.Generation;
+    }
+  };
   struct ExposedProvenanceSet {
-    SmallVector<IntrusiveRefCntPtr<Provenance>> List;
-    SmallVector<uint64_t> GenerationList;
+    // (Provenance, Generation)
+    SmallVector<ExposedProvenance> List;
     // FIXME: Implement a partial order comparator for provenance instead of
     // deduplicating by pointers.
     SmallPtrSet<Provenance *, 4> Set;
