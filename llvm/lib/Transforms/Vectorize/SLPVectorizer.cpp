@@ -1055,7 +1055,7 @@ namespace {
 class BinOpSameOpcodeHelper {
   using MaskType = std::uint_fast32_t;
   /// Sort SupportedOp because it is used by binary_search.
-  constexpr static std::initializer_list<unsigned> SupportedOp = {
+  constexpr static unsigned SupportedOp[] = {
       Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
       Instruction::AShr, Instruction::And, Instruction::Or,  Instruction::Xor};
   static_assert(llvm::is_sorted_constexpr(SupportedOp) &&
@@ -24678,6 +24678,26 @@ bool BoUpSLP::canVersionForRuntimeChecks() {
         return CB && (CB->cannotDuplicate() || CB->isConvergent());
       }))
     return false;
+
+  // The scalar fallback is a clone of the body. Operands defined inside the
+  // body are remapped to their clones, but operands defined outside the body
+  // (header PHIs, dominating definitions) are reused as-is by the clone. If
+  // such an outside operand is itself vectorized by this tree, vectorizeTree()
+  // will delete its scalar, leaving the clone with a dangling, out-of-tree use.
+  // Versioning cannot model that, so bail out.
+  for (Instruction &I : *BB) {
+    if (isa<PHINode>(&I) || I.isTerminator())
+      continue;
+    for (Value *Op : I.operands()) {
+      auto *OpI = dyn_cast<Instruction>(Op);
+      if (!OpI)
+        continue;
+      bool DefinedInBody =
+          OpI->getParent() == BB && !isa<PHINode>(OpI) && !OpI->isTerminator();
+      if (!DefinedInBody && isVectorized(OpI))
+        return false;
+    }
+  }
 
   SmallPtrSet<const Value *, 8> Bases;
   for (const auto &P : RTChecks.BasePairs) {
