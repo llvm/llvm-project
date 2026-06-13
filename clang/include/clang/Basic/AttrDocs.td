@@ -4674,6 +4674,7 @@ have their lifetimes extended.
 
 def LifetimeCaptureByDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "lifetime_capture_by, lifetime_capture_by_this, lifetime_capture_by_global, lifetime_capture_by_unknown";
   let Content = [{
 Similar to `lifetimebound`_, the ``lifetime_capture_by(X)`` attribute on a
 function parameter or implicit object parameter indicates that the capturing
@@ -4719,28 +4720,30 @@ The capturing entity ``X`` can be one of the following:
       s.insert(a);
     }
 
-- ``this`` (in case of member functions).
+- ``this`` (in case of member functions), written as
+  ``lifetime_capture_by_this``.
 
   .. code-block:: c++
 
     class S {
-      void addToSet(std::string_view a [[clang::lifetime_capture_by(this)]]) {
+      void addToSet(std::string_view a [[clang::lifetime_capture_by_this]]) {
         s.insert(a);
       }
       std::set<std::string_view> s;
     };
 
-  Note: When applied to a constructor parameter, `[[clang::lifetime_capture_by(this)]]` is just an alias of `[[clang::lifetimebound]]`.
+  Note: When applied to a constructor parameter, `[[clang::lifetime_capture_by_this]]` is just an alias of `[[clang::lifetimebound]]`.
 
-- `global`, `unknown`.
+- ``global`` and ``unknown``, written as ``lifetime_capture_by_global`` and
+  ``lifetime_capture_by_unknown`` respectively.
 
   .. code-block:: c++
 
     std::set<std::string_view> s;
-    void addToSet(std::string_view a [[clang::lifetime_capture_by(global)]]) {
+    void addToSet(std::string_view a [[clang::lifetime_capture_by_global]]) {
       s.insert(a);
     }
-    void addSomewhere(std::string_view a [[clang::lifetime_capture_by(unknown)]]);
+    void addSomewhere(std::string_view a [[clang::lifetime_capture_by_unknown]]);
 
 The attribute can be applied to the implicit ``this`` parameter of a member
 function by writing the attribute after the function type:
