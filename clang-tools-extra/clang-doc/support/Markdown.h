@@ -49,8 +49,7 @@
 namespace clang::doc::markdown {
 
 /// Discriminator for all Markdown AST nodes. Inline kinds are grouped before
-/// block kinds so that the sentinels NK_LastInline and NK_FirstBlock enable
-/// cheap range-based checks in classof() implementations.
+/// block kinds.
 enum class NodeKind {
   // Inline nodes
   NK_Text,
@@ -193,8 +192,7 @@ struct TableNode : MDNode {
   static bool classof(const MDNode *N) { return N->Kind == NodeKind::NK_Table; }
 };
 
-/// A single list item. Children may contain block-level nodes for loose
-/// lists, or a single inline sequence for tight lists.
+/// A single list item. Children holds the item's inline content.
 struct ListItemNode : MDNode {
   llvm::ArrayRef<MDNode *> Children;
   explicit ListItemNode(llvm::ArrayRef<MDNode *> Children)
@@ -248,9 +246,9 @@ struct ThematicBreakNode : MDNode {
 //===----------------------------------------------------------------------===//
 
 /// Parse Markdown from a single paragraph of plain text. Returns a list of
-/// top-level block nodes allocated in Arena. Returns an empty ArrayRef if no
-/// Markdown constructs are found, letting callers fall back to plain-text
-/// rendering at zero cost. The parser never crashes on malformed input.
+/// top-level nodes allocated in Arena. Returns an empty ArrayRef only for empty
+/// or whitespace-only input; plain text with no Markdown constructs returns a
+/// single TextNode.
 ///
 /// The caller must keep Arena alive for the lifetime of any returned nodes.
 llvm::ArrayRef<MDNode *> parseMarkdown(llvm::StringRef ParagraphText,

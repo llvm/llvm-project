@@ -196,16 +196,13 @@ foo
   ASSERT_EQ(N->Lines.size(), 1u);
 }
 
-// CommonMark §4.5 example 124: closing fence must be at least as long as the
-// opening fence.
-// TODO: our parser currently closes on the first line with 3 matching fence
-// chars regardless of opening fence length. Fix as part of the CommonMark
-// TODO in parseMarkdown().
+// CommonMark §4.5 example 124: the closing fence must be at least as long as
+// the opening fence. Our parser closes on the first line with 3 matching fence
+// chars regardless of opening length, so this documents the current
+// non-conformant behavior.
+// TODO: fix as part of the CommonMark TODO in parseMarkdown().
 TEST_F(MarkdownParserTest, ClosingFenceLengthTODO) {
   auto Nodes = parseMarkdown("````\naaa\n```", Arena);
-  // The ``` line should not close the ```` fence per CommonMark, but our
-  // parser currently treats it as a closing fence. This test documents the
-  // current (non-conformant) behavior.
   ASSERT_EQ(Nodes.size(), 1u);
   auto *N = cast<FencedCodeNode>(Nodes[0]);
   ASSERT_EQ(N->Lines.size(), 1u);
