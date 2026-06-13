@@ -1,0 +1,35 @@
+// Tests that LineCoverageStats correctly handles lines where a gap region
+// with count=0 wraps into a line that has a non-entry segment with count > 0.
+//
+// In this test, line 11 ("int result = 42;") is between two scoped blocks
+// each containing a never-taken early return. The gap region from the first
+// block's closing "}" wraps to line 11, but line 11 has a non-entry segment
+// with count=1 (the function body continues). LineCoverageStats should
+// report count=1 for line 11, not count=0.
+//
+// Similarly, line 22 ("return true;") is after the second block and has
+// the same issue.
+//
+// Test inputs generated with Apple clang (-O0) which produces the specific
+// gap-region segment pattern needed to trigger this bug.
+
+// RUN: llvm-cov show %S/Inputs/gap-region-quirk/gap-quirk.covmapping \
+// RUN:   -instr-profile %S/Inputs/gap-region-quirk/gap-quirk.profdata \
+// RUN:   -path-equivalence=/tmp,%S/Inputs/gap-region-quirk \
+// RUN:   2>&1 | FileCheck -check-prefix=SHOW %s
+
+// Lines between the two blocks should show count 1, not 0.
+// SHOW:     11|      1|  int result = 42;
+// SHOW:     22|      1|  return true;
+
+// RUN: llvm-cov report %S/Inputs/gap-region-quirk/gap-quirk.covmapping \
+// RUN:   -instr-profile %S/Inputs/gap-region-quirk/gap-quirk.profdata \
+// RUN:   -path-equivalence=/tmp,%S/Inputs/gap-region-quirk \
+// RUN:   --show-branch-summary=false \
+// RUN:   2>&1 | FileCheck -check-prefix=REPORT %s
+
+// 22 mapped lines, 4 genuinely missed (lines 6-7, 17-18: never-taken returns).
+// Lines 11 and 22 should NOT be counted as missed.
+// REPORT: TOTAL
+// REPORT-SAME: 27
+// REPORT-SAME: 4
