@@ -418,6 +418,52 @@ body: |
     RET undef $lr
 ...
 
+# CHECK-LABEL: eorwrs_cbz
+# CHECK: SU({{[0-9]+}}): $w0 = EORWrs $w0, $w1, 0
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBZW
+---
+name: eorwrs_cbz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $w1, $w2
+    $w0 = EORWrs $w0, $w1, 0
+    $w3 = ORRWri $w2, 4096
+    CBZW $w0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: eorwrs_cbnz
+# CHECK: SU({{[0-9]+}}): $w0 = EORWrs $w0, $w1, 0
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBNZW
+---
+name: eorwrs_cbnz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $w1, $w2
+    $w0 = EORWrs $w0, $w1, 0
+    $w3 = ORRWri $w2, 4096
+    CBNZW $w0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
 # CHECK-LABEL: no_fuse_positive_shift_eorwrs
 # CHECK: SU({{[0-9]+}}): $w0 = EORWrs $w0, $w1, 12
 # CHECK: Successors:
@@ -433,6 +479,121 @@ body: |
     successors: %bb.1, %bb.2
     liveins: $w0, $w1, $w2
     $w0 = EORWrs $w0, $w1, 12
+    $w3 = ORRWri $w2, 4096
+    CBNZW $w0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: ornwrr_cbz
+# CHECK: SU({{[0-9]+}}): $w0 = ORNWrr $w0, $w1
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBZW
+---
+name: ornwrr_cbz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $w1, $w2
+    $w0 = ORNWrr $w0, $w1
+    $w3 = ORRWri $w2, 4096
+    CBZW $w0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: ornwrr_cbnz
+# CHECK: SU({{[0-9]+}}): $w0 = ORNWrr $w0, $w1
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBNZW
+---
+name: ornwrr_cbnz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $w1, $w2
+    $w0 = ORNWrr $w0, $w1
+    $w3 = ORRWri $w2, 4096
+    CBNZW $w0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: ornwrs_cbz
+# CHECK: SU({{[0-9]+}}): $w0 = ORNWrs $w0, $w1, 0
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBZW
+---
+name: ornwrs_cbz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $w1, $w2
+    $w0 = ORNWrs $w0, $w1, 0
+    $w3 = ORRWri $w2, 4096
+    CBZW $w0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: ornwrs_cbnz
+# CHECK: SU({{[0-9]+}}): $w0 = ORNWrs $w0, $w1, 0
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBNZW
+---
+name: ornwrs_cbnz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $w1, $w2
+    $w0 = ORNWrs $w0, $w1, 0
+    $w3 = ORRWri $w2, 4096
+    CBNZW $w0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: no_fuse_positive_shift_ornwrs
+# CHECK: SU({{[0-9]+}}): $w0 = ORNWrs $w0, $w1, 12
+# CHECK: Successors:
+# CHECK-NOT: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBNZW
+---
+name: no_fuse_positive_shift_ornwrs
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $w1, $w2
+    $w0 = ORNWrs $w0, $w1, 12
     $w3 = ORRWri $w2, 4096
     CBNZW $w0, %bb.2
   bb.1:
@@ -525,6 +686,52 @@ body: |
     successors: %bb.1, %bb.2
     liveins: $w0, $w1, $w2
     $w0 = ORRWrr $w0, $w1
+    $w3 = ORRWri $w2, 4096
+    CBNZW $w0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: orrwrs_cbz
+# CHECK: SU({{[0-9]+}}): $w0 = ORRWrs $w0, $w1, 0
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBZW
+---
+name: orrwrs_cbz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $w1, $w2
+    $w0 = ORRWrs $w0, $w1, 0
+    $w3 = ORRWri $w2, 4096
+    CBZW $w0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: orrwrs_cbnz
+# CHECK: SU({{[0-9]+}}): $w0 = ORRWrs $w0, $w1, 0
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBNZW
+---
+name: orrwrs_cbnz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $w1, $w2
+    $w0 = ORRWrs $w0, $w1, 0
     $w3 = ORRWri $w2, 4096
     CBNZW $w0, %bb.2
   bb.1:
@@ -709,6 +916,52 @@ body: |
     successors: %bb.1, %bb.2
     liveins: $w0, $w1, $w2
     $w0 = SUBWrs $w0, $w1, 12
+    $w3 = ORRWri $w2, 4096
+    CBNZW $w0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: bicwrr_cbz
+# CHECK: SU({{[0-9]+}}): $w0 = BICWrr $w0, $w1
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBZW
+---
+name: bicwrr_cbz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $w1, $w2
+    $w0 = BICWrr $w0, $w1
+    $w3 = ORRWri $w2, 4096
+    CBZW $w0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: bicwrr_cbnz
+# CHECK: SU({{[0-9]+}}): $w0 = BICWrr $w0, $w1
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBNZW
+---
+name: bicwrr_cbnz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $w1, $w2
+    $w0 = BICWrr $w0, $w1
     $w3 = ORRWri $w2, 4096
     CBNZW $w0, %bb.2
   bb.1:
@@ -1200,6 +1453,52 @@ body: |
     RET undef $lr
 ...
 
+# CHECK-LABEL: eorxrs_cbz
+# CHECK: SU({{[0-9]+}}): $x0 = EORXrs $x0, $x1, 0
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBZX
+---
+name: eorxrs_cbz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $x1, $x2
+    $x0 = EORXrs $x0, $x1, 0
+    $x3 = ORRXri $x2, 8192
+    CBZX $x0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: eorxrs_cbnz
+# CHECK: SU({{[0-9]+}}): $x0 = EORXrs $x0, $x1, 0
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBNZX
+---
+name: eorxrs_cbnz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $x1, $x2
+    $x0 = EORXrs $x0, $x1, 0
+    $x3 = ORRXri $x2, 8192
+    CBNZX $x0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
 # CHECK-LABEL: no_fuse_positive_shift_eorxrs
 # CHECK: SU({{[0-9]+}}): $x0 = EORXrs $x0, $x1, 12
 # CHECK: Successors:
@@ -1215,6 +1514,121 @@ body: |
     successors: %bb.1, %bb.2
     liveins: $x0, $x1, $x2
     $x0 = EORXrs $x0, $x1, 12
+    $x3 = ORRXri $x2, 8192
+    CBNZX $x0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: ornxrr_cbz
+# CHECK: SU({{[0-9]+}}): $x0 = ORNXrr $x0, $x1
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBZX
+---
+name: ornxrr_cbz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $x1, $x2
+    $x0 = ORNXrr $x0, $x1
+    $x3 = ORRXri $x2, 8192
+    CBZX $x0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: ornxrr_cbnz
+# CHECK: SU({{[0-9]+}}): $x0 = ORNXrr $x0, $x1
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBNZX
+---
+name: ornxrr_cbnz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $x1, $x2
+    $x0 = ORNXrr $x0, $x1
+    $x3 = ORRXri $x2, 8192
+    CBNZX $x0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: ornxrs_cbz
+# CHECK: SU({{[0-9]+}}): $x0 = ORNXrs $x0, $x1, 0
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBZX
+---
+name: ornxrs_cbz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $x1, $x2
+    $x0 = ORNXrs $x0, $x1, 0
+    $x3 = ORRXri $x2, 8192
+    CBZX $x0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: ornxrs_cbnz
+# CHECK: SU({{[0-9]+}}): $x0 = ORNXrs $x0, $x1, 0
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBNZX
+---
+name: ornxrs_cbnz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $x1, $x2
+    $x0 = ORNXrs $x0, $x1, 0
+    $x3 = ORRXri $x2, 8192
+    CBNZX $x0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: no_fuse_positive_shift_ornxrs
+# CHECK: SU({{[0-9]+}}): $x0 = ORNXrs $x0, $x1, 12
+# CHECK: Successors:
+# CHECK-NOT: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBNZX
+---
+name: no_fuse_positive_shift_ornxrs
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $x1, $x2
+    $x0 = ORNXrs $x0, $x1, 12
     $x3 = ORRXri $x2, 8192
     CBNZX $x0, %bb.2
   bb.1:
@@ -1307,6 +1721,52 @@ body: |
     successors: %bb.1, %bb.2
     liveins: $x0, $x1, $x2
     $x0 = ORRXrr $x0, $x1
+    $x3 = ORRXri $x2, 8192
+    CBNZX $x0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: orrxrs_cbz
+# CHECK: SU({{[0-9]+}}): $x0 = ORRXrs $x0, $x1, 0
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBZX
+---
+name: orrxrs_cbz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $x1, $x2
+    $x0 = ORRXrs $x0, $x1, 0
+    $x3 = ORRXri $x2, 8192
+    CBZX $x0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: orrxrs_cbnz
+# CHECK: SU({{[0-9]+}}): $x0 = ORRXrs $x0, $x1, 0
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBNZX
+---
+name: orrxrs_cbnz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $x1, $x2
+    $x0 = ORRXrs $x0, $x1, 0
     $x3 = ORRXri $x2, 8192
     CBNZX $x0, %bb.2
   bb.1:
@@ -1491,6 +1951,52 @@ body: |
     successors: %bb.1, %bb.2
     liveins: $x0, $x1, $x2
     $x0 = SUBXrs $x0, $x1, 12
+    $x3 = ORRXri $x2, 8192
+    CBNZX $x0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: bicxrr_cbz
+# CHECK: SU({{[0-9]+}}): $x0 = BICXrr $x0, $x1
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBZX
+---
+name: bicxrr_cbz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $x1, $x2
+    $x0 = BICXrr $x0, $x1
+    $x3 = ORRXri $x2, 8192
+    CBZX $x0, %bb.2
+  bb.1:
+    RET undef $lr
+  bb.2:
+    RET undef $lr
+...
+
+# CHECK-LABEL: bicxrr_cbnz
+# CHECK: SU({{[0-9]+}}): $x0 = BICXrr $x0, $x1
+# CHECK: Successors:
+# CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
+# CHECK: ExitSU: CBNZX
+---
+name: bicxrr_cbnz
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $x0, $x1, $x2
+    $x0 = BICXrr $x0, $x1
     $x3 = ORRXri $x2, 8192
     CBNZX $x0, %bb.2
   bb.1:

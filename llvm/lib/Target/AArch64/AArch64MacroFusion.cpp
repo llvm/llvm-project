@@ -97,15 +97,25 @@ static bool isArithmeticCbzPair(const MachineInstr *FirstMI,
   case AArch64::ORRWrr:
   case AArch64::ORRXri:
   case AArch64::ORRXrr:
+  case AArch64::ORNWrr:
+  case AArch64::ORNXrr:
   case AArch64::SUBWri:
   case AArch64::SUBWrr:
   case AArch64::SUBXri:
   case AArch64::SUBXrr:
+  case AArch64::BICWrr:
+  case AArch64::BICXrr:
     return true;
   case AArch64::ADDWrs:
   case AArch64::ADDXrs:
   case AArch64::ANDWrs:
   case AArch64::ANDXrs:
+  case AArch64::EORWrs:
+  case AArch64::EORXrs:
+  case AArch64::ORNWrs:
+  case AArch64::ORNXrs:
+  case AArch64::ORRWrs:
+  case AArch64::ORRXrs:
   case AArch64::SUBWrs:
   case AArch64::SUBXrs:
   case AArch64::BICWrs:
