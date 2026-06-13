@@ -130,7 +130,9 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
 
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   if (HasHWShadowStack) {
-    BuildMI(MBB, MI, DL, TII->get(RISCV::SSPUSH)).addReg(RAReg);
+    BuildMI(MBB, MI, DL, TII->get(RISCV::SSPUSH))
+        .addReg(RAReg)
+        .setMIFlag(MachineInstr::FrameSetup);
     return;
   }
 
@@ -192,7 +194,9 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
 
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   if (HasHWShadowStack) {
-    BuildMI(MBB, MI, DL, TII->get(RISCV::SSPOPCHK)).addReg(RAReg);
+    BuildMI(MBB, MI, DL, TII->get(RISCV::SSPOPCHK))
+        .addReg(RAReg)
+        .setMIFlag(MachineInstr::FrameDestroy);
     return;
   }
 

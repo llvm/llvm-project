@@ -6783,7 +6783,8 @@ public:
   SwitchReplacement(
       Module &M, uint64_t TableSize, ConstantInt *Offset,
       const SmallVectorImpl<std::pair<ConstantInt *, Constant *>> &Values,
-      Constant *DefaultValue, const DataLayout &DL, const StringRef &FuncName);
+      Constant *DefaultValue, const DataLayout &DL,
+      const TargetTransformInfo &TTI, const StringRef &FuncName);
 
   /// Build instructions with Builder to retrieve values using Index
   /// and replace the switch.
@@ -6853,7 +6854,8 @@ private:
 SwitchReplacement::SwitchReplacement(
     Module &M, uint64_t TableSize, ConstantInt *Offset,
     const SmallVectorImpl<std::pair<ConstantInt *, Constant *>> &Values,
-    Constant *DefaultValue, const DataLayout &DL, const StringRef &FuncName)
+    Constant *DefaultValue, const DataLayout &DL,
+    const TargetTransformInfo &TTI, const StringRef &FuncName)
     : DefaultValue(DefaultValue) {
   assert(Values.size() && "Can't build lookup table without values!");
   assert(TableSize >= Values.size() && "Can't fit values in table!");
@@ -6980,7 +6982,8 @@ SwitchReplacement::SwitchReplacement(
         Range = Range.unionWith(cast<ConstantInt>(Value)->getValue());
     // TODO: handle sign extension as well?
     unsigned NeededBitWidth =
-        std::max(8u, unsigned(PowerOf2Ceil(Range.getActiveBits())));
+        std::max(TTI.getMinimumLookupTableEntryBitWidth(),
+                 unsigned(PowerOf2Ceil(Range.getActiveBits())));
     if (NeededBitWidth < IT->getBitWidth()) {
       IntegerType *DstTy = IntegerType::get(IT->getContext(), NeededBitWidth);
       for (Constant *&Value : TableContents)
@@ -7442,7 +7445,7 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
         AllHolesArePoison ? PoisonValue::get(ResultType) : DefaultResults[PHI];
     StringRef FuncName = Fn->getName();
     SwitchReplacement Replacement(*Fn->getParent(), TableSize, TableIndexOffset,
-                                  ResultList, DefaultVal, DL, FuncName);
+                                  ResultList, DefaultVal, DL, TTI, FuncName);
     PhiToReplacementMap.insert({PHI, Replacement});
   }
 

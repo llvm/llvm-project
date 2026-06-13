@@ -1576,13 +1576,14 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
           CI->setCalledFunction(NewF);
         }
       }
-    } else if (isa<PHINode>(U) || isa<SelectInst>(U)) {
-      // Aggregate-typed PHIs and selects have already been mutated to the
-      // i32 value-id type up front in runOnFunction, so only the operand
+    } else if (isa<PHINode>(U) || isa<SelectInst>(U) || isa<FreezeInst>(U)) {
+      // Aggregate-typed PHIs, selects and freezes have already been mutated to
+      // the i32 value-id type up front in runOnFunction, so only the operand
       // needs replacing here; their extractvalue users are lowered to
       // spv_extractv by visitExtractValueInst.
       assert(U->getType() == New->getType() &&
-             "aggregate PHI/select should have been mutated to value-id type");
+             "aggregate PHI/select/freeze should have been mutated to value-id "
+             "type");
       U->replaceUsesOfWith(Old, New);
     } else {
       llvm_unreachable("illegal aggregate intrinsic user");
@@ -3514,15 +3515,15 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   simplifyNullAddrSpaceCasts();
   preprocessCompositeConstants(B);
 
-  // A PHINode or SelectInst takes its result type from its operands. Aggregate
-  // arms are lowered to i32 value-ids (composite constants here, loads and
-  // other producers during the visitor pass below), so mutate an aggregate PHI
-  // or select to match. The original type is tracked in AggrConstTypes (used to
-  // assign the SPIR-V type) and its extractvalue users are lowered to
-  // spv_extractv.
+  // A PHINode, SelectInst or FreezeInst takes its result type from its
+  // operands. Aggregate arms are lowered to i32 value-ids (composite constants
+  // here, loads and other producers during the visitor pass below), so mutate
+  // an aggregate PHI, select or freeze to match. The original type is tracked
+  // in AggrConstTypes (used to assign the SPIR-V type) and its extractvalue
+  // users are lowered to spv_extractv.
   Type *I32Ty = B.getInt32Ty();
   for (Instruction &I : instructions(Func)) {
-    if (!isa<PHINode>(I) && !isa<SelectInst>(I))
+    if (!isa<PHINode>(I) && !isa<SelectInst>(I) && !isa<FreezeInst>(I))
       continue;
     if (!I.getType()->isAggregateType())
       continue;
