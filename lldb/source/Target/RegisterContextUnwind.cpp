@@ -1401,7 +1401,16 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
                    "could not convert lldb regnum {0} ({1}) into {2} "
                    "RegisterKind reg numbering scheme",
                    regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB), kind);
-      return {};
+      if (active_row && active_row->GetUnspecifiedRegistersAreUndefined()) {
+        UNWIND_LONG(
+            log,
+            "marking register {0} ({1}) as Undefined (volatile) in this "
+            "stack frame because this row is UnspecifiedRegistersAreUndefined.",
+            regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+        unwindplan_regloc.SetUndefined();
+        return unwindplan_regloc;
+        return {};
+      }
     }
 
     if (regnum.IsValid() && active_row &&
@@ -1495,6 +1504,15 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
           }
         }
       }
+    }
+    if (active_row && active_row->GetUnspecifiedRegistersAreUndefined()) {
+      UNWIND_LOG(
+          log,
+          "marking register {0} ({1}) as Undefined (volatile) in this "
+          "stack frame because this row is UnspecifiedRegistersAreUndefined.",
+          regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+      unwindplan_regloc.SetUndefined();
+      return unwindplan_regloc;
     }
   }
 
