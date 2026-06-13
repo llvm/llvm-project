@@ -138,6 +138,15 @@ bool RISCVPushPopOpt::runOnMachineFunction(MachineFunction &Fn) {
   if (!Subtarget->hasStdExtZcmp() && !Subtarget->hasVendorXqccmp())
     return false;
 
+  // We don't want any popret[z] instructions when emitting code with hardware
+  // shadow stack protection. Note that this pass would actually fail to insert
+  // any popret[z] instructions in this case since the cm.pop and ret will not
+  // be adjacent. But there's no point in running a pass that won't do anything.
+  if ((Fn.getFunction().hasFnAttribute("hw-shadow-stack") ||
+       Fn.getFunction().hasFnAttribute(Attribute::ShadowCallStack)) &&
+      Subtarget->hasStdExtZimop())
+    return false;
+
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
 
