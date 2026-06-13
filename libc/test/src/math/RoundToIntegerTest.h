@@ -10,7 +10,6 @@
 #define LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
 
 #include "test/UnitTest/RoundingModeUtils.h"
-#include <cfenv>
 #undef LIBC_MATH_USE_SYSTEM_FENV
 
 #include "src/__support/CPP/algorithm.h"

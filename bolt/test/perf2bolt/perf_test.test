@@ -36,3 +36,7 @@ RUN:   --heatmap %t.hm2 2>&1 | FileCheck %s
 RUN: FileCheck %s --input-file %t.hm2-section-hotness.csv --check-prefix=CHECK-HM
 
 CHECK-HM: .text
+
+# Expect an error if the process did not match any PID in perf data
+RUN: not perf2bolt %t -p=%t2 -o %t.null --pid=99999 2>&1 | FileCheck %s --check-prefix=CHECK-PID
+CHECK-PID: PERF2BOLT-ERROR: could not find a profile matching PID "99999" for binary
