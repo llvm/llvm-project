@@ -2569,6 +2569,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::BitInt:
     case Type::HLSLInlineSpirv:
     case Type::PredefinedSugar:
+    case Type::LateParsedAttr:
       llvm_unreachable("type class is never variably-modified!");
 
     case Type::Adjusted:
