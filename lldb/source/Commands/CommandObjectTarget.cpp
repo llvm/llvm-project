@@ -3786,6 +3786,13 @@ protected:
       ABISP abi_sp = process->GetABI();
       if (abi_sp) {
         if (UnwindPlanSP plan_sp = abi_sp->CreateDefaultUnwindPlan()) {
+#ifndef NDEBUG
+          if (plan_sp && plan_sp->GetRowCount() > 0)
+            assert(plan_sp->GetRowAtIndex(0)
+                       ->GetUnspecifiedRegistersAreUndefined() &&
+                   "Default UnwindPlan must set "
+                   "UnspecifiedRegistersAreUndefined to true");
+#endif
           result.GetOutputStream().Printf("Arch default UnwindPlan:\n");
           plan_sp->Dump(result.GetOutputStream(), thread.get(),
                         LLDB_INVALID_ADDRESS);

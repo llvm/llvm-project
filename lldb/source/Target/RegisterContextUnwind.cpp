@@ -442,6 +442,13 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     if (abi_sp) {
       m_fast_unwind_plan_sp.reset();
       m_full_unwind_plan_sp = abi_sp->CreateDefaultUnwindPlan();
+#ifndef NDEBUG
+      if (m_full_unwind_plan_sp && m_full_unwind_plan_sp->GetRowCount() > 0)
+        assert(m_full_unwind_plan_sp->GetRowAtIndex(0)
+                   ->GetUnspecifiedRegistersAreUndefined() &&
+               "Default UnwindPlan must set UnspecifiedRegistersAreUndefined "
+               "to true");
+#endif
       if (m_frame_type != eSkipFrame) // don't override eSkipFrame
       {
         m_frame_type = eNormalFrame;
@@ -810,6 +817,14 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
   ABI *abi = process ? process->GetABI().get() : nullptr;
   if (abi) {
     arch_default_unwind_plan_sp = abi->CreateDefaultUnwindPlan();
+#ifndef NDEBUG
+    if (arch_default_unwind_plan_sp &&
+        arch_default_unwind_plan_sp->GetRowCount() > 0)
+      assert(arch_default_unwind_plan_sp->GetRowAtIndex(0)
+                 ->GetUnspecifiedRegistersAreUndefined() &&
+             "Default UnwindPlan must set UnspecifiedRegistersAreUndefined to "
+             "true");
+#endif
   } else {
     UNWIND_LOG(
         log, "unable to get architectural default UnwindPlan from ABI plugin");
