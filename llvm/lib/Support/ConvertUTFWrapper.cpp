@@ -8,6 +8,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <string>
@@ -267,7 +268,7 @@ bool ConvertUTF8toWide(const char *Source, std::wstring &Result) {
   return ConvertUTF8toWide(llvm::StringRef(Source), Result);
 }
 
-bool convertWideToUTF8(const std::wstring &Source, std::string &Result) {
+bool convertWideToUTF8(ArrayRef<wchar_t> Source, std::string &Result) {
   if (sizeof(wchar_t) == 1) {
     const UTF8 *Start = reinterpret_cast<const UTF8 *>(Source.data());
     const UTF8 *End =
@@ -301,6 +302,10 @@ bool convertWideToUTF8(const std::wstring &Source, std::string &Result) {
     llvm_unreachable(
         "Control should never reach this point; see static_assert further up");
   }
+}
+
+bool convertWideToUTF8(const wchar_t *Source, std::string &Result) {
+  return convertWideToUTF8(std::wstring_view(Source), Result);
 }
 
 bool IsSingleCodeUnitUTF8Codepoint(unsigned V) { return V <= 0x7F; }

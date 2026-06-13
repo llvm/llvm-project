@@ -39,10 +39,13 @@ void IncDecInConditionsCheck::registerMatchers(MatchFinder *Finder) {
       expr(anyOf(hasAncestor(expr(matchers::hasUnevaluatedContext())),
                  hasAncestor(typeLoc())));
 
+  auto IsInLambda =
+      hasAncestor(lambdaExpr(hasAncestor(expr(equalsBoundNode("parent")))));
+
   Finder->addMatcher(
       expr(
-          OperatorMatcher, unless(isExpansionInSystemHeader()),
-          unless(hasAncestor(OperatorMatcher)), expr().bind("parent"),
+          OperatorMatcher, unless(hasAncestor(OperatorMatcher)),
+          expr().bind("parent"),
 
           forEachDescendant(
               expr(anyOf(unaryOperator(isUnaryPrePostOperator(),
@@ -50,7 +53,7 @@ void IncDecInConditionsCheck::registerMatchers(MatchFinder *Finder) {
                          cxxOperatorCallExpr(
                              isPrePostOperator(),
                              hasUnaryOperand(expr().bind("operand")))),
-                   unless(IsInUnevaluatedContext),
+                   unless(IsInUnevaluatedContext), unless(IsInLambda),
                    hasAncestor(
                        expr(equalsBoundNode("parent"),
                             hasDescendant(

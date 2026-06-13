@@ -61,3 +61,131 @@ define <64 x i8> @test_affine_xor_no_fold_512_variable(<64 x i8> %src1, <64 x i8
   %xor = xor <64 x i8> %gfni, %var
   ret <64 x i8> %xor
 }
+
+define <64 x i8> @test_affine_src_xor_fold_512(<64 x i8> %src) nounwind {
+; CHECK-LABEL: test_affine_src_xor_fold_512:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [181,117,21,37,61,49,55,52,181,117,21,37,61,49,55,52,181,117,21,37,61,49,55,52,181,117,21,37,61,49,55,52,181,117,21,37,61,49,55,52,181,117,21,37,61,49,55,52,181,117,21,37,61,49,55,52,181,117,21,37,61,49,55,52]
+; CHECK-NEXT:    retq
+  %gfni = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src, <64 x i8> splat(i8 53), i8 0)
+  %xor = xor <64 x i8> %gfni, %src
+  ret <64 x i8> %xor
+}
+
+define <64 x i8> @test_affine_src_xor_fold_alternative_matrix(<64 x i8> %src) nounwind {
+; CHECK-LABEL: test_affine_src_xor_fold_alternative_matrix:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [128,65,34,19,12,1,4,6,136,73,42,27,4,9,12,14,144,81,50,3,28,17,20,22,152,89,58,11,20,25,28,30,160,97,2,51,44,33,36,38,168,105,10,59,36,41,44,46,176,113,18,35,60,49,52,54,184,121,26,43,52,57,60,62]
+; CHECK-NEXT:    retq
+  %gfni = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src, <64 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23, i8 24, i8 25, i8 26, i8 27, i8 28, i8 29, i8 30, i8 31, i8 32, i8 33, i8 34, i8 35, i8 36, i8 37, i8 38, i8 39, i8 40, i8 41, i8 42, i8 43, i8 44, i8 45, i8 46, i8 47, i8 48, i8 49, i8 50, i8 51, i8 52, i8 53, i8 54, i8 55, i8 56, i8 57, i8 58, i8 59, i8 60, i8 61, i8 62, i8 63>, i8 0)
+  %xor = xor <64 x i8> %gfni, %src
+  ret <64 x i8> %xor
+}
+
+define <64 x i8> @test_affine_src_xor_nonzero_imm(<64 x i8> %src) nounwind {
+; CHECK-LABEL: test_affine_src_xor_nonzero_imm:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vgf2p8affineqb $107, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 # [181,117,21,37,61,49,55,52,181,117,21,37,61,49,55,52,181,117,21,37,61,49,55,52,181,117,21,37,61,49,55,52,181,117,21,37,61,49,55,52,181,117,21,37,61,49,55,52,181,117,21,37,61,49,55,52,181,117,21,37,61,49,55,52]
+; CHECK-NEXT:    retq
+  %gfni = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src, <64 x i8> splat(i8 53), i8 107)
+  %xor = xor <64 x i8> %gfni, %src
+  ret <64 x i8> %xor
+}
+
+define <64 x i8> @test_affine_src_xor_no_fold_multi_use(<64 x i8> %src, ptr %sink) nounwind {
+; CHECK-LABEL: test_affine_src_xor_no_fold_multi_use:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm1 # [53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53,53]
+; CHECK-NEXT:    vmovdqa64 %zmm1, (%rdi)
+; CHECK-NEXT:    vpxorq %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %gfni = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src, <64 x i8> splat(i8 53), i8 0)
+  store <64 x i8> %gfni, ptr %sink
+  %xor = xor <64 x i8> %gfni, %src
+  ret <64 x i8> %xor
+}
+
+define <64 x i8> @test_affine_src_xor_no_fold_var_matrix(<64 x i8> %src, <64 x i8> %matrix) nounwind {
+; CHECK-LABEL: test_affine_src_xor_no_fold_var_matrix:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vgf2p8affineqb $0, %zmm1, %zmm0, %zmm1
+; CHECK-NEXT:    vpxorq %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %gfni = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src, <64 x i8> %matrix, i8 0)
+  %xor = xor <64 x i8> %gfni, %src
+  ret <64 x i8> %xor
+}
+
+;; Test folding XOR of two vgf2p8affineqb with same input - 512-bit
+define <64 x i8> @test_affine_affine_xor_fold_512(<64 x i8> %src, <64 x i8> %m1, <64 x i8> %m2) nounwind {
+;
+; CHECK-LABEL: test_affine_affine_xor_fold_512:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpxorq %zmm2, %zmm1, %zmm1
+; CHECK-NEXT:    vgf2p8affineqb $89, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %gfni1 = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src, <64 x i8> %m1, i8 42)
+  %gfni2 = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src, <64 x i8> %m2, i8 115)
+  %xor = xor <64 x i8> %gfni1, %gfni2
+  ret <64 x i8> %xor
+}
+
+;; Test with non-zero immediates - 512-bit
+define <64 x i8> @test_affine_affine_xor_fold_512_nonzero(<64 x i8> %src, <64 x i8> %m1, <64 x i8> %m2) nounwind {
+;
+; CHECK-LABEL: test_affine_affine_xor_fold_512_nonzero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpxorq %zmm2, %zmm1, %zmm1
+; CHECK-NEXT:    vgf2p8affineqb $15, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %gfni1 = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src, <64 x i8> %m1, i8 5)
+  %gfni2 = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src, <64 x i8> %m2, i8 10)
+  %xor = xor <64 x i8> %gfni1, %gfni2
+  ret <64 x i8> %xor
+}
+
+;; Test commutative XOR - 512-bit
+define <64 x i8> @test_affine_affine_xor_fold_512_commutative(<64 x i8> %src, <64 x i8> %m1, <64 x i8> %m2) nounwind {
+;
+; CHECK-LABEL: test_affine_affine_xor_fold_512_commutative:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpxorq %zmm1, %zmm2, %zmm1
+; CHECK-NEXT:    vgf2p8affineqb $166, %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %gfni1 = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src, <64 x i8> %m1, i8 199)
+  %gfni2 = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src, <64 x i8> %m2, i8 97)
+  %xor = xor <64 x i8> %gfni2, %gfni1
+  ret <64 x i8> %xor
+}
+
+;; Negative test: multi-use should not fold - 512-bit
+define <64 x i8> @test_affine_affine_xor_no_fold_512_multi_use(<64 x i8> %src, <64 x i8> %m1, <64 x i8> %m2, ptr %out) nounwind {
+;
+; CHECK-LABEL: test_affine_affine_xor_no_fold_512_multi_use:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vgf2p8affineqb $23, %zmm1, %zmm0, %zmm1
+; CHECK-NEXT:    vgf2p8affineqb $200, %zmm2, %zmm0, %zmm0
+; CHECK-NEXT:    vmovdqa64 %zmm1, (%rdi)
+; CHECK-NEXT:    vpxorq %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    retq
+  %gfni1 = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src, <64 x i8> %m1, i8 23)
+  %gfni2 = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src, <64 x i8> %m2, i8 200)
+  store <64 x i8> %gfni1, ptr %out
+  %xor = xor <64 x i8> %gfni1, %gfni2
+  ret <64 x i8> %xor
+}
+
+;; Negative test: different inputs should not fold - 512-bit
+define <64 x i8> @test_affine_affine_xor_no_fold_512_different_inputs(<64 x i8> %src1, <64 x i8> %src2, <64 x i8> %m1, <64 x i8> %m2) nounwind {
+;
+; CHECK-LABEL: test_affine_affine_xor_no_fold_512_different_inputs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vgf2p8affineqb $55, %zmm2, %zmm0, %zmm0
+; CHECK-NEXT:    vgf2p8affineqb $77, %zmm3, %zmm1, %zmm1
+; CHECK-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %gfni1 = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src1, <64 x i8> %m1, i8 55)
+  %gfni2 = call <64 x i8> @llvm.x86.vgf2p8affineqb.512(<64 x i8> %src2, <64 x i8> %m2, i8 77)
+  %xor = xor <64 x i8> %gfni1, %gfni2
+  ret <64 x i8> %xor
+}

@@ -207,13 +207,13 @@ static cl::opt<bool> AllowRecursiveContexts(
 // Set the minimum absolute count threshold for allowing inlining of indirect
 // calls promoted during cloning.
 static cl::opt<unsigned> MemProfICPNoInlineThreshold(
-    "memprof-icp-noinline-threshold", cl::init(2), cl::Hidden,
+    "memprof-icp-noinline-threshold", cl::init(0), cl::Hidden,
     cl::desc("Minimum absolute count for promoted target to be inlinable"));
 
 namespace llvm {
 cl::opt<bool> EnableMemProfContextDisambiguation(
-    "enable-memprof-context-disambiguation", cl::init(false), cl::Hidden,
-    cl::ZeroOrMore, cl::desc("Enable MemProf context disambiguation"));
+    "enable-memprof-context-disambiguation", cl::Hidden,
+    cl::desc("Enable MemProf context disambiguation"));
 
 // Indicate we are linking with an allocator that supports hot/cold operator
 // new interfaces.
@@ -266,7 +266,8 @@ public:
 
   /// Main entry point to perform analysis and transformations on graph.
   bool process(function_ref<void(StringRef, StringRef, const Twine &)>
-                   EmitRemark = nullptr);
+                   EmitRemark = nullptr,
+               bool AllowExtraAnalysis = false);
 
   /// Perform cloning on the graph necessary to uniquely identify the allocation
   /// behavior of an allocation based on its context.
@@ -1056,7 +1057,7 @@ public:
     for (auto &I : FunctionCalleesToSynthesizedCallsiteInfos) {
       auto *FS = I.first;
       for (auto &Callsite : I.second)
-        FS->addCallsite(*Callsite.second);
+        FS->addCallsite(std::move(*Callsite.second));
     }
   }
 
@@ -3366,11 +3367,27 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
             Msg += " marked " + getAllocTypeString((uint8_t)AllocTypeFromCall) +
                    " due to cold byte percent";
           // Print the internal context id to aid debugging and visualization.
-          Msg += " (context id " + std::to_string(Id) + ")";
-          OS << Msg << "\n";
+          Msg += " (internal context id " + std::to_string(Id) + ")";
+          if (MemProfReportHintedSizes)
+            OS << Msg << "\n";
           if (EmitRemark)
             EmitRemark(DEBUG_TYPE, "MemProfReport", Msg);
         }
+      } else {
+        // This is only emitted if the context size info is not present.
+        std::string Msg =
+            "MemProf hinting: " + getAllocTypeString((uint8_t)TypeI->second) +
+            " context is " + getAllocTypeString(Node->AllocTypes) +
+            " after cloning";
+        if (allocTypeToUse(Node->AllocTypes) != AllocTypeFromCall)
+          Msg += " marked " + getAllocTypeString((uint8_t)AllocTypeFromCall) +
+                 " due to cold byte percent";
+        // Print the internal context id to aid debugging and visualization.
+        Msg += " (internal context id " + std::to_string(Id) + ")";
+        if (MemProfReportHintedSizes)
+          OS << Msg << "\n";
+        if (EmitRemark)
+          EmitRemark(DEBUG_TYPE, "MemProfReport", Msg);
       }
     }
   }
@@ -5883,8 +5900,19 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
           break;
         }
       }
-      assert(GVSummary && GVSummary->modulePath() == SrcModule);
+      // TODO: Put back the assert once we have metadata on imported copies of
+      // aliases linking them back to the original alias GUID, which would allow
+      // us to locate the alias summary here.
+      // assert(GVSummary && GVSummary->modulePath() == SrcModule);
     }
+
+    // GVSummary can be null if this is a function imported as a copy of an
+    // alias, and we don't have the aliasee's summary in our distributed index.
+    // TODO: Once we can locate the original GUID for imported aliases (e.g. via
+    // TBD additional metadata), we should find the alias summary instead, and
+    // we can remove this check and fall back to the original check below.
+    if (!GVSummary)
+      continue;
 
     // If this was an imported alias skip it as we won't have the function
     // summary, and it should be cloned in the original module.
@@ -6181,8 +6209,8 @@ void MemProfContextDisambiguation::performICP(
     auto *CB = Info.CB;
     auto CallsiteIndex = Info.CallsiteInfoStartIndex;
     auto TotalCount = Info.TotalCount;
-    unsigned NumPromoted = 0;
     unsigned NumClones = 0;
+    SmallVector<InstrProfValueData, 8> RemainingCandidates;
 
     for (auto &Candidate : Info.CandidateProfileData) {
       auto &StackNode = AllCallsites[CallsiteIndex++];
@@ -6211,6 +6239,7 @@ void MemProfContextDisambiguation::performICP(
         // FIXME: See if we can use the new declaration importing support to
         // at least get the declarations imported for this case. Hot indirect
         // targets should have been imported normally, however.
+        RemainingCandidates.push_back(Candidate);
         continue;
       }
 
@@ -6224,6 +6253,7 @@ void MemProfContextDisambiguation::performICP(
                  << " with count of " << ore::NV("TotalCount", TotalCount)
                  << ": " << Reason;
         });
+        RemainingCandidates.push_back(Candidate);
         continue;
       }
 
@@ -6277,10 +6307,9 @@ void MemProfContextDisambiguation::performICP(
 
       // Update TotalCount (all clones should get same count above)
       TotalCount -= Candidate.Count;
-      NumPromoted++;
     }
     // Adjust the MD.prof metadata for all clones, now that we have the new
-    // TotalCount and the number promoted.
+    // TotalCount and the remaining candidates.
     CallBase *CBClone = CB;
     for (unsigned J = 0; J < NumClones; J++) {
       // If the VMap is empty, this clone was a duplicate of another and was
@@ -6295,16 +6324,16 @@ void MemProfContextDisambiguation::performICP(
       // If all promoted, we don't need the MD.prof metadata.
       // Otherwise we need update with the un-promoted records back.
       if (TotalCount != 0)
-        annotateValueSite(
-            M, *CBClone, ArrayRef(Info.CandidateProfileData).slice(NumPromoted),
-            TotalCount, IPVK_IndirectCallTarget, Info.NumCandidates);
+        annotateValueSite(M, *CBClone, RemainingCandidates, TotalCount,
+                          IPVK_IndirectCallTarget, Info.NumCandidates);
     }
   }
 }
 
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::process(
-    function_ref<void(StringRef, StringRef, const Twine &)> EmitRemark) {
+    function_ref<void(StringRef, StringRef, const Twine &)> EmitRemark,
+    bool AllowExtraAnalysis) {
   if (DumpCCG) {
     dbgs() << "CCG before cloning:\n";
     dbgs() << *this;
@@ -6338,7 +6367,7 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::process(
   if (ExportToDot)
     exportToDot("clonefuncassign");
 
-  if (MemProfReportHintedSizes)
+  if (MemProfReportHintedSizes || AllowExtraAnalysis)
     printTotalSizes(errs(), EmitRemark);
 
   return Changed;
@@ -6365,6 +6394,8 @@ bool MemProfContextDisambiguation::processModule(
     return false;
 
   ModuleCallsiteContextGraph CCG(M, OREGetter);
+  // TODO: Set up remarks for regular LTO. We need to decide what function to
+  // use in the callback.
   return CCG.process();
 }
 
@@ -6429,6 +6460,7 @@ void MemProfContextDisambiguation::run(
     ModuleSummaryIndex &Index,
     llvm::function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
+    LLVMContext &Ctx,
     function_ref<void(StringRef, StringRef, const Twine &)> EmitRemark) {
   // TODO: If/when other types of memprof cloning are enabled beyond just for
   // hot and cold, we will need to change this to individually control the
@@ -6438,8 +6470,11 @@ void MemProfContextDisambiguation::run(
   if (!SupportsHotColdNew)
     return;
 
+  bool AllowExtraAnalysis =
+      OptimizationRemarkEmitter::allowExtraAnalysis(Ctx, DEBUG_TYPE);
+
   IndexCallsiteContextGraph CCG(Index, isPrevailing);
-  CCG.process(EmitRemark);
+  CCG.process(EmitRemark, AllowExtraAnalysis);
 }
 
 // Strips MemProf attributes and metadata. Can be invoked by the pass pipeline

@@ -399,7 +399,10 @@ KnownBits KnownBits::abds(KnownBits LHS, KnownBits RHS) {
 
 static unsigned getMaxShiftAmount(const APInt &MaxValue, unsigned BitWidth) {
   if (isPowerOf2_32(BitWidth))
-    return MaxValue.extractBitsAsZExtValue(Log2_32(BitWidth), 0);
+    // Clamp to the shift amount's width: a narrower amount is already
+    // < BitWidth, so this stays a valid upper bound.
+    return MaxValue.extractBitsAsZExtValue(
+        std::min(Log2_32(BitWidth), MaxValue.getBitWidth()), 0);
   // This is only an approximate upper bound.
   return MaxValue.getLimitedValue(BitWidth - 1);
 }
@@ -601,6 +604,18 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
   if (Known.hasConflict())
     Known.setAllZero();
   return Known;
+}
+
+KnownBits KnownBits::fshl(const KnownBits &LHS, const KnownBits &RHS,
+                          const APInt &Amt) {
+  return KnownBits(APIntOps::fshl(LHS.Zero, RHS.Zero, Amt),
+                   APIntOps::fshl(LHS.One, RHS.One, Amt));
+}
+
+KnownBits KnownBits::fshr(const KnownBits &LHS, const KnownBits &RHS,
+                          const APInt &Amt) {
+  return KnownBits(APIntOps::fshr(LHS.Zero, RHS.Zero, Amt),
+                   APIntOps::fshr(LHS.One, RHS.One, Amt));
 }
 
 KnownBits KnownBits::clmul(const KnownBits &LHS, const KnownBits &RHS) {

@@ -46,6 +46,7 @@ enum ActionType {
   GenClangAttrIsTypeDependent,
   GenClangAttrTextNodeDump,
   GenClangAttrNodeTraverse,
+  GenClangAttrUndocumentedAttrList,
   GenClangBasicReader,
   GenClangBasicWriter,
   GenClangBuiltins,
@@ -55,6 +56,7 @@ enum ActionType {
   GenClangDiagsEnums,
   GenClangDiagGroups,
   GenClangDiagsIndexName,
+  GenClangDiagsStableIDs,
   GenClangDiagsInterface,
   GenClangCommentNodes,
   GenClangDeclNodes,
@@ -117,6 +119,8 @@ enum ActionType {
   GenRISCVAndesVectorBuiltins,
   GenRISCVAndesVectorBuiltinCG,
   GenRISCVAndesVectorBuiltinSema,
+  GenHLSLAliasIntrinsics,
+  GenHLSLInlineIntrinsics,
   GenAttrDocs,
   GenBuiltinDocs,
   GenDiagDocs,
@@ -188,6 +192,9 @@ cl::opt<ActionType> Action(
                    "Generate clang attribute text node dumper"),
         clEnumValN(GenClangAttrNodeTraverse, "gen-clang-attr-node-traverse",
                    "Generate clang attribute traverser"),
+        clEnumValN(GenClangAttrUndocumentedAttrList,
+                   "gen-clang-attr-undocumented-list",
+                   "Generate a list of undocumented attributes"),
         clEnumValN(GenClangBuiltins, "gen-clang-builtins",
                    "Generate clang builtins list"),
         clEnumValN(GenClangBuiltinTemplates, "gen-clang-builtin-templates",
@@ -202,6 +209,8 @@ cl::opt<ActionType> Action(
                    "Generate Clang diagnostic groups"),
         clEnumValN(GenClangDiagsIndexName, "gen-clang-diags-index-name",
                    "Generate Clang diagnostic name index"),
+        clEnumValN(GenClangDiagsStableIDs, "gen-clang-diags-stable-ids",
+                   "Generate Clang diagnostic stable IDs"),
         clEnumValN(GenClangDiagsInterface, "gen-clang-diags-iface",
                    "Generate Clang diagnostic interface headers"),
         clEnumValN(GenClangBasicReader, "gen-clang-basic-reader",
@@ -343,6 +352,12 @@ cl::opt<ActionType> Action(
         clEnumValN(GenRISCVAndesVectorBuiltinSema,
                    "gen-riscv-andes-vector-builtin-sema",
                    "Generate riscv_andes_vector_builtin_sema.inc for clang"),
+        clEnumValN(GenHLSLAliasIntrinsics, "gen-hlsl-alias-intrinsics",
+                   "Generate HLSL alias intrinsic overloads for "
+                   "hlsl_alias_intrinsics.h"),
+        clEnumValN(GenHLSLInlineIntrinsics, "gen-hlsl-inline-intrinsics",
+                   "Generate HLSL inline intrinsic overloads for "
+                   "hlsl_intrinsics.h"),
         clEnumValN(GenAttrDocs, "gen-attr-docs",
                    "Generate attribute documentation"),
         clEnumValN(GenBuiltinDocs, "gen-builtin-docs",
@@ -439,6 +454,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
   case GenClangAttrNodeTraverse:
     EmitClangAttrNodeTraverse(Records, OS);
     break;
+  case GenClangAttrUndocumentedAttrList:
+    EmitClangUndocumentedAttrList(Records, OS);
+    break;
   case GenClangBuiltins:
     EmitClangBuiltins(Records, OS);
     break;
@@ -459,6 +477,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenClangDiagsIndexName:
     EmitClangDiagsIndexName(Records, OS);
+    break;
+  case GenClangDiagsStableIDs:
+    EmitClangDiagsStableIDs(Records, OS);
     break;
   case GenClangDiagsInterface:
     EmitClangDiagsInterface(OS, ClangComponent);
@@ -647,6 +668,12 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenRISCVAndesVectorBuiltinSema:
     EmitRVVBuiltinSema(Records, OS);
+    break;
+  case GenHLSLAliasIntrinsics:
+    EmitHLSLAliasIntrinsics(Records, OS);
+    break;
+  case GenHLSLInlineIntrinsics:
+    EmitHLSLInlineIntrinsics(Records, OS);
     break;
   case GenAttrDocs:
     EmitClangAttrDocs(Records, OS);

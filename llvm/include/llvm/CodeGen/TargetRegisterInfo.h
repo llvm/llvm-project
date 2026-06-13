@@ -21,6 +21,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/RegisterBank.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -61,6 +62,7 @@ public:
 
   /// Configurable target specific flags.
   const uint8_t TSFlags;
+  const uint8_t SpillStackID;
   /// Whether the class supports two (or more) disjunct subregister indices.
   const bool HasDisjunctSubRegs;
   /// Whether a combination of subregisters can cover every register in the
@@ -251,13 +253,14 @@ public:
   /// SubRegCoveredBits - Emitted by tablegen: bit range covered by a subreg
   /// index, -1 in any being invalid.
   struct SubRegCoveredBits {
-    uint16_t Offset;
-    uint16_t Size;
+    uint32_t Offset;
+    uint32_t Size;
   };
 
 private:
   const TargetRegisterInfoDesc *InfoDesc;     // Extra desc array for codegen
-  const char *const *SubRegIndexNames;        // Names of subreg indexes.
+  const char *SubRegIndexStrings;             // Names of subreg indexes.
+  ArrayRef<uint32_t> SubRegIndexNameOffsets;
   const SubRegCoveredBits *SubRegIdxRanges;   // Pointer to the subreg covered
                                               // bit ranges array.
 
@@ -271,11 +274,14 @@ private:
   unsigned HwMode;
 
 protected:
-  TargetRegisterInfo(const TargetRegisterInfoDesc *ID, regclass_iterator RCB,
-                     regclass_iterator RCE, const char *const *SRINames,
-                     const SubRegCoveredBits *SubIdxRanges,
-                     const LaneBitmask *SRILaneMasks, LaneBitmask CoveringLanes,
-                     const RegClassInfo *const RCIs,
+  TargetRegisterInfo(const TargetRegisterInfoDesc *ID,
+                     ArrayRef<const TargetRegisterClass *> RegisterClasses,
+                     const char *SubRegIndexStrings,
+                     ArrayRef<uint32_t> SubRegIndexNameOffsets,
+                     const SubRegCoveredBits *SubRegIdxRanges,
+                     const LaneBitmask *SubRegIndexLaneMasks,
+                     LaneBitmask CoveringLanes,
+                     const RegClassInfo *const RCInfos,
                      const MVT::SimpleValueType *const RCVTLists,
                      unsigned Mode = 0);
 
@@ -315,6 +321,12 @@ public:
     return Align(getRegClassInfo(RC).SpillAlignment / 8);
   }
 
+  /// Return the stack ID for spill slots holding a spilled copy of a register
+  /// from this class.
+  TargetStackID::Value getSpillStackID(const TargetRegisterClass &RC) const {
+    return static_cast<TargetStackID::Value>(RC.SpillStackID);
+  }
+
   /// Return true if the given TargetRegisterClass has the ValueType T.
   bool isTypeLegalForClass(const TargetRegisterClass &RC, MVT T) const {
     for (auto I = legalclasstypes_begin(RC); *I != MVT::Other; ++I)
@@ -349,33 +361,15 @@ public:
     return I;
   }
 
-  /// Returns the Register Class of a physical register of the given type,
-  /// picking the most sub register class of the right type that contains this
-  /// physreg.
-  const TargetRegisterClass *getMinimalPhysRegClass(MCRegister Reg,
-                                                    MVT VT = MVT::Other) const;
+  /// Returns the Register Class of a physical register, picking the smallest
+  /// register subclass that contains this physreg.
+  virtual const TargetRegisterClass *
+  getMinimalPhysRegClass(MCRegister Reg) const = 0;
 
-  /// Returns the common Register Class of two physical registers of the given
-  /// type, picking the most sub register class of the right type that contains
-  /// these two physregs.
+  /// Returns the common Register Class of two physical registers, picking the
+  /// smallest register subclass that contains these two physregs.
   const TargetRegisterClass *
-  getCommonMinimalPhysRegClass(MCRegister Reg1, MCRegister Reg2,
-                               MVT VT = MVT::Other) const;
-
-  /// Returns the Register Class of a physical register of the given type,
-  /// picking the most sub register class of the right type that contains this
-  /// physreg. If there is no register class compatible with the given type,
-  /// returns nullptr.
-  const TargetRegisterClass *getMinimalPhysRegClassLLT(MCRegister Reg,
-                                                       LLT Ty = LLT()) const;
-
-  /// Returns the common Register Class of two physical registers of the given
-  /// type, picking the most sub register class of the right type that contains
-  /// these two physregs. If there is no register class compatible with the
-  /// given type, returns nullptr.
-  const TargetRegisterClass *
-  getCommonMinimalPhysRegClassLLT(MCRegister Reg1, MCRegister Reg2,
-                                  LLT Ty = LLT()) const;
+  getCommonMinimalPhysRegClass(MCRegister Reg1, MCRegister Reg2) const;
 
   /// Return the maximal subclass of the given register class that is
   /// allocatable or NULL.
@@ -403,12 +397,12 @@ public:
     return InfoDesc->InAllocatableClass[RegNo];
   }
 
-  /// Return the human-readable symbolic target-specific
-  /// name for the specified SubRegIndex.
+  /// Return the human-readable symbolic target-specific name for the specified
+  /// SubRegIndex.
   const char *getSubRegIndexName(unsigned SubIdx) const {
     assert(SubIdx && SubIdx < getNumSubRegIndices() &&
            "This is not a subregister index");
-    return SubRegIndexNames[SubIdx-1];
+    return SubRegIndexStrings + SubRegIndexNameOffsets[SubIdx - 1];
   }
 
   /// Get the size of the bit range covered by a sub-register index.
@@ -472,6 +466,11 @@ public:
       return MCRegisterInfo::regsOverlap(RegA.asMCReg(), RegB.asMCReg());
     return false;
   }
+
+  /// Returns true if the two subregisters are equal or overlap.
+  /// The registers may be virtual registers.
+  bool checkSubRegInterference(Register RegA, unsigned SubA, Register RegB,
+                               unsigned SubB) const;
 
   /// Returns true if Reg contains RegUnit.
   bool hasRegUnit(MCRegister Reg, MCRegUnit RegUnit) const {

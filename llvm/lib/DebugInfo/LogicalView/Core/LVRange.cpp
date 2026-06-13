@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVRange.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLocation.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVOptions.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace llvm;
 using namespace llvm::logicalview;
@@ -81,7 +82,7 @@ void LVRange::addEntry(LVScope *Scope) {
 
 // Get the scope associated with the input address.
 LVScope *LVRange::getEntry(LVAddress Address) const {
-  LLVM_DEBUG({ dbgs() << format("Searching: 0x%08x\nFound: ", Address); });
+  LLVM_DEBUG({ dbgs() << formatv("Searching: {0:x8}\nFound: ", Address); });
 
   LVScope *Target = nullptr;
   LVLevel TargetLevel = 0;
@@ -90,8 +91,9 @@ LVScope *LVRange::getEntry(LVAddress Address) const {
   for (LVRangesTree::find_iterator Iter = RangesTree.find(Address),
                                    End = RangesTree.find_end();
        Iter != End; ++Iter) {
-    LLVM_DEBUG(
-        { dbgs() << format("[0x%08x,0x%08x] ", Iter->left(), Iter->right()); });
+    LLVM_DEBUG({
+      dbgs() << formatv("[{0:x8},{1:x8}] ", Iter->left(), Iter->right());
+    });
     Scope = Iter->value();
     Level = Scope->getLevel();
     if (Level > TargetLevel) {
@@ -150,7 +152,7 @@ void LVRange::print(raw_ostream &OS, bool Full) const {
     Indentation = options().indentationSize();
     if (Indentation)
       OS << " ";
-    OS << format("[0x%08x,0x%08x] ", RangeEntry.lower(), RangeEntry.upper())
+    OS << formatv("[{0:x8},{1:x8}] ", RangeEntry.lower(), RangeEntry.upper())
        << formattedKind(Scope->kind()) << " " << formattedName(Scope->getName())
        << "\n";
   }

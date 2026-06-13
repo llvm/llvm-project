@@ -92,8 +92,8 @@ public:
   };
 
   XtensaAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-                  const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII),
+                  const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII),
         MRI(*Parser.getContext().getRegisterInfo()) {
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
@@ -676,12 +676,8 @@ ParseStatus XtensaAsmParser::parseImmediate(OperandVector &Operands) {
       return ParseStatus::Failure;
     break;
   case AsmToken::Identifier: {
-    StringRef Identifier;
-    if (getParser().parseIdentifier(Identifier))
+    if (getParser().parseExpression(Res))
       return ParseStatus::Failure;
-
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
-    Res = MCSymbolRefExpr::create(Sym, getContext());
     break;
   }
   case AsmToken::Percent:

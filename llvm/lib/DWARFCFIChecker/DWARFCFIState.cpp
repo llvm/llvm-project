@@ -160,6 +160,16 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
     CFIP.addInstruction(dwarf::DW_CFA_val_offset, Directive.getRegister(),
                         Directive.getOffset());
     break;
+  case MCCFIInstruction::OpLLVMRegisterPair:
+  case MCCFIInstruction::OpLLVMVectorRegisters:
+  case MCCFIInstruction::OpLLVMVectorOffset:
+  case MCCFIInstruction::OpLLVMVectorRegisterMask:
+    // TODO: These should be pretty straightforward to support, but is low
+    // priority. Similarly the implementation of OpLLVMDefAspaceCfa above
+    // seem incomplete and should be fixed.
+    Context->reportWarning(Directive.getLoc(),
+                           "this directive is not supported, ignoring it");
+    break;
   }
 
   return CFIP;

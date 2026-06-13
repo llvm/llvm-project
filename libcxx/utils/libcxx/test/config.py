@@ -52,7 +52,7 @@ def configure(parameters, features, config, lit_config):
 
     # Print the basic substitutions
     for sub in ("%{cxx}", "%{flags}", "%{compile_flags}", "%{link_flags}", "%{benchmark_flags}", "%{exec}"):
-        note("Using {} substitution: '{}'".format(sub, _getSubstitution(sub, config.substitutions)))
+        debug("Using {} substitution: '{}'".format(sub, _getSubstitution(sub, config.substitutions)))
 
     # Print all available features
     note("All available features: {}".format(", ".join(sorted(config.available_features))))
