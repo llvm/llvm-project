@@ -260,6 +260,15 @@ PointeeTypeMap buildPointeeTypeMap(Module &M) {
           PTM.set(&I, Ty);
       }
 
+  for (auto &F : M)
+    if (F.getMetadata("air.argbuf.member_as"))
+      for (auto &BB : F)
+        for (auto &I : BB)
+          if (I.getType()->isPointerTy() &&
+              I.getType()->getPointerAddressSpace() == AS::Device &&
+              !isIntegerDevicePointer(&I))
+            PTM.set(&I, F32);
+
   // Phase 2b: Force float* for device pointer phi nodes
   for (auto &F : M)
     for (auto &BB : F)

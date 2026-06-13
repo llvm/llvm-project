@@ -133,6 +133,15 @@ AIRSerializer::moduleToObject(llvm::Module &llvmModule) {
 
   propagateWorkgroupAttributionSizes(&getOperation(), llvmModule);
 
+  if (const char *dir = ::getenv("AIR_DUMP_LLVM_IR")) {
+    std::error_code ec;
+    std::string path =
+        std::string(dir) + "/" + llvmModule.getName().str() + ".ll";
+    llvm::raw_fd_ostream os(path, ec);
+    if (!ec)
+      llvmModule.print(os, nullptr);
+  }
+
   FailureOr<llvm::TargetMachine *> targetMachine = getOrCreateTargetMachine();
   if (failed(targetMachine))
     return getOperation().emitError()
