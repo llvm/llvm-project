@@ -85,6 +85,26 @@ def TestAttrWithEnum : AttrDef<Test_Dialect, "TestAttrWithEnum"> {
   let assemblyFormat = "`<` $value `,` $mode `>`";
 }
 
+def TestEnumWithAttrWrapper :
+    I32EnumAttr<"TestEnumWithWrapper",
+        "enum with attr wrapper", [
+        I32EnumAttrCase<"Red", 0, "red">,
+        I32EnumAttrCase<"Green", 1, "green">,
+        I32EnumAttrCase<"Blue", 2, "blue">]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "NS";
+}
+def TestEnumWithWrapperAttr : EnumAttr<Test_Dialect, TestEnumWithAttrWrapper, "color">;
+
+def TestAttrWithWrappedEnum : AttrDef<Test_Dialect, "TestAttrWithWrappedEnum"> {
+  let mnemonic = "with_wrapped_enum";
+  let parameters = (ins
+    "int":$id,
+    EnumParameter<TestEnumWithAttrWrapper>:$color
+  );
+  let assemblyFormat = "`<` $id `,` $color `>`";
+}
+
 def TestTypeDef : TypeDef<Test_Dialect, "TestTypeDef"> {
   let mnemonic = "test_type_def";
 }
@@ -163,6 +183,13 @@ def TestEnum :
 // CHECK:      #test.with_enum<
 // CHECK-NEXT:   int,   # value
 // CHECK-NEXT:   `alpha` | `beta`   # mode
+// CHECK-NEXT: >
+
+// CHECK: TestAttrWithWrappedEnumAttr
+// CHECK: Syntax:
+// CHECK:      #test.with_wrapped_enum<
+// CHECK-NEXT:   int,   # id
+// CHECK-NEXT:   `red` | `green` | `blue`   # color
 // CHECK-NEXT: >
 
 // CHECK: ## Type constraints
