@@ -1031,7 +1031,7 @@ namespace {
 class BinOpSameOpcodeHelper {
   using MaskType = std::uint_fast32_t;
   /// Sort SupportedOp because it is used by binary_search.
-  constexpr static std::initializer_list<unsigned> SupportedOp = {
+  constexpr static unsigned SupportedOp[] = {
       Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
       Instruction::AShr, Instruction::And, Instruction::Or,  Instruction::Xor};
   static_assert(llvm::is_sorted_constexpr(SupportedOp) &&
