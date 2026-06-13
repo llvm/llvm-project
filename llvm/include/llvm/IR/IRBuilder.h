@@ -1767,6 +1767,53 @@ public:
     return Insert(BinOp, Name);
   }
 
+  Value *CreateFlaggedBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                            const Twine &Name = "", bool HasNUW = false,
+                            bool HasNSW = false, bool IsExact = false,
+                            bool IsDisjoint = false, FMFSource FMFSource = {}) {
+    switch (Opc) {
+    case Instruction::Add:
+      return CreateAdd(LHS, RHS, Name, HasNUW, HasNSW);
+    case Instruction::Sub:
+      return CreateSub(LHS, RHS, Name, HasNUW, HasNSW);
+    case Instruction::Mul:
+      return CreateMul(LHS, RHS, Name, HasNUW, HasNSW);
+    case Instruction::Shl:
+      return CreateShl(LHS, RHS, Name, HasNUW, HasNSW);
+    case Instruction::UDiv:
+      return CreateUDiv(LHS, RHS, Name, IsExact);
+    case Instruction::SDiv:
+      return CreateSDiv(LHS, RHS, Name, IsExact);
+    case Instruction::LShr:
+      return CreateLShr(LHS, RHS, Name, IsExact);
+    case Instruction::AShr:
+      return CreateAShr(LHS, RHS, Name, IsExact);
+    case Instruction::Or:
+      return CreateOr(LHS, RHS, Name, IsDisjoint);
+    case Instruction::URem:
+      return CreateURem(LHS, RHS, Name);
+    case Instruction::SRem:
+      return CreateSRem(LHS, RHS, Name);
+    case Instruction::And:
+      return CreateAnd(LHS, RHS, Name);
+    case Instruction::Xor:
+      return CreateBinOpFMF(Opc, LHS, RHS, FMFSource, Name);
+    case Instruction::FAdd:
+      return CreateFAddFMF(LHS, RHS, FMFSource, Name);
+    case Instruction::FSub:
+      return CreateFSubFMF(LHS, RHS, FMFSource, Name);
+    case Instruction::FMul:
+      return CreateFMulFMF(LHS, RHS, FMFSource, Name);
+    case Instruction::FDiv:
+      return CreateFDivFMF(LHS, RHS, FMFSource, Name);
+    case Instruction::FRem:
+      return CreateFRemFMF(LHS, RHS, FMFSource, Name);
+    default:
+      llvm_unreachable("Invalid binary opcode");
+    }
+    llvm_unreachable("Invalid binary opcode");
+  }
+
   Value *CreateNoWrapBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
                            bool IsNUW, bool IsNSW, const Twine &Name = "") {
     if (Value *V = Folder.FoldNoWrapBinOp(Opc, LHS, RHS, IsNUW, IsNSW))
@@ -2509,6 +2556,14 @@ public:
                    const Twine &Name = "", MDNode *FPMathTag = nullptr) {
     return CmpInst::isFPPredicate(Pred)
                ? CreateFCmp(Pred, LHS, RHS, Name, FPMathTag)
+               : CreateICmp(Pred, LHS, RHS, Name);
+  }
+
+  Value *CreateFlaggedCmp(CmpInst::Predicate Pred, Value *LHS, Value *RHS,
+                          FMFSource FMFSource, const Twine &Name = "",
+                          MDNode *FPMathTag = nullptr) {
+    return CmpInst::isFPPredicate(Pred)
+               ? CreateFCmpFMF(Pred, LHS, RHS, FMFSource, Name, FPMathTag)
                : CreateICmp(Pred, LHS, RHS, Name);
   }
 
