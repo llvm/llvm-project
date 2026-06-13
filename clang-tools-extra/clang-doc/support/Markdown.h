@@ -168,10 +168,6 @@ struct HeadingNode : MDNode {
 /// Fenced code block opened with ``` or ~~~. Lang is the info string (e.g.
 /// "cpp"); empty when no language was specified. Lines contains the raw text
 /// of each interior line, without the opening or closing fence.
-///
-/// TODO: Follow CommonMark spec §4.5. The opening fence may be indented up
-/// to 3 spaces; the closing fence must use the same character and be at least
-/// as long as the opening fence; only spaces may follow the closing fence.
 struct FencedCodeNode : MDNode {
   llvm::StringRef Lang;
   llvm::ArrayRef<llvm::StringRef> Lines;
@@ -259,7 +255,7 @@ struct ThematicBreakNode : MDNode {
 /// Parse Markdown from a single paragraph of plain text. Returns a list of
 /// top-level nodes allocated in Arena. Returns an empty ArrayRef only for empty
 /// or whitespace-only input; plain text with no Markdown constructs returns a
-/// single TextNode.
+/// single ParagraphNode.
 ///
 /// The caller must keep Arena alive for the lifetime of any returned nodes.
 llvm::ArrayRef<MDNode *> parseMarkdown(llvm::StringRef ParagraphText,

@@ -89,10 +89,8 @@ static unsigned atxHeadingLevel(StringRef Line) {
   return Level;
 }
 
-// A forward cursor over the lines of a paragraph. Encapsulates the parse
-// position so the loop can inspect the current or an upcoming line and consume
-// lines without manual index arithmetic. Lines are stored untrimmed; callers
-// trim where they need a normalized view.
+// A forward cursor over the lines of a paragraph. Lines are stored untrimmed;
+// callers trim where they need a normalized view.
 class LineReader {
 public:
   explicit LineReader(ArrayRef<StringRef> Lines) : Lines(Lines) {}
@@ -125,11 +123,8 @@ private:
   size_t Pos = 0;
 };
 
-// A forward cursor over the characters of a string. The character-level analog
-// of LineReader: the inline scanner inspects the current or an upcoming
-// character and consumes characters without manual index arithmetic. position()
-// and seek() let it interoperate with the index-based run and delimiter helpers
-// below, since inline constructs are not consumed one character at a time.
+// A forward cursor over the characters of a string. position() and seek() let
+// it interoperate with the index-based run and delimiter helpers below.
 class CharReader {
 public:
   explicit CharReader(StringRef S) : S(S) {}
@@ -434,8 +429,7 @@ static ArrayRef<MDNode *> parseInline(StringRef S, BumpPtrAllocator &Arena,
 // TODO: Follow CommonMark spec §4.5 more closely. Opening fences may be
 // indented up to 3 spaces, the closing fence must use the same character and be
 // at least as long as the opening fence, and the closing fence may only be
-// followed by spaces. Doxygen specifics should be handled on a case-by-case
-// basis.
+// followed by spaces.
 static FencedCodeNode *parseFencedCode(LineReader &Reader,
                                        BumpPtrAllocator &Arena,
                                        StringSaver &Saver) {
