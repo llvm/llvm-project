@@ -1039,6 +1039,9 @@ bool FunctionSpecializer::isCandidateFunction(Function *F) {
   if (F->hasFnAttribute(Attribute::NoDuplicate))
     return false;
 
+  if (F->hasFnAttribute(Attribute::NoIPA))
+    return false;
+
   if (F->hasOptSize())
     return false;
 
