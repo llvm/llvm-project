@@ -26,7 +26,7 @@
 ///   ParagraphNode: sequence of inline nodes
 ///   HeadingNode: ATX heading (# through ######), level 1-6
 ///   FencedCodeNode: fenced code block (``` or ~~~)
-///   TableNode: pipe table (raw row text; TODO: structured cells)
+///   TableNode: pipe table (a header row and body rows of cells)
 ///   UnorderedListNode: bullet list (-, *, +)
 ///   OrderedListNode: numbered list with explicit start number
 ///   ListItemNode: single item inside a list
@@ -182,13 +182,24 @@ struct FencedCodeNode : MDNode {
   }
 };
 
-/// Pipe table. Rows contains the raw text of each row line including the
-/// header and separator rows.
-/// TODO: replace with a structured header/body/cell representation.
+/// A single table cell. Children holds the cell's parsed inline content.
+struct TableCell {
+  llvm::ArrayRef<MDNode *> Children;
+};
+
+/// A table row, split into cells on the row's pipe characters.
+struct TableRow {
+  llvm::ArrayRef<TableCell> Cells;
+};
+
+/// Pipe table. Header is the first row; Body holds the rows following the
+/// alignment separator. Each cell's text is parsed into inline nodes.
+/// TODO: capture per-column alignment from the separator row.
 struct TableNode : MDNode {
-  llvm::ArrayRef<llvm::StringRef> Rows;
-  explicit TableNode(llvm::ArrayRef<llvm::StringRef> Rows)
-      : MDNode(NodeKind::NK_Table), Rows(Rows) {}
+  TableRow Header;
+  llvm::ArrayRef<TableRow> Body;
+  TableNode(TableRow Header, llvm::ArrayRef<TableRow> Body)
+      : MDNode(NodeKind::NK_Table), Header(Header), Body(Body) {}
   static bool classof(const MDNode *N) { return N->Kind == NodeKind::NK_Table; }
 };
 

@@ -78,7 +78,47 @@ TEST_F(MarkdownParserTest, PipeTable) {
 | 1 | 2 |)",
                              Arena);
   ASSERT_EQ(Nodes.size(), 1u);
-  EXPECT_TRUE(isa<TableNode>(Nodes[0]));
+  auto *T = cast<TableNode>(Nodes[0]);
+  ASSERT_EQ(T->Header.Cells.size(), 2u);
+  ASSERT_EQ(T->Header.Cells[0].Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(T->Header.Cells[0].Children[0])->Text, "A");
+  ASSERT_EQ(T->Header.Cells[1].Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(T->Header.Cells[1].Children[0])->Text, "B");
+  ASSERT_EQ(T->Body.size(), 1u);
+  ASSERT_EQ(T->Body[0].Cells.size(), 2u);
+  EXPECT_EQ(cast<TextNode>(T->Body[0].Cells[0].Children[0])->Text, "1");
+  EXPECT_EQ(cast<TextNode>(T->Body[0].Cells[1].Children[0])->Text, "2");
+}
+
+// A table cell's text runs through the inline parser, so emphasis inside a cell
+// becomes an EmphasisNode rather than literal text.
+TEST_F(MarkdownParserTest, TableCellWithEmphasis) {
+  auto Nodes = parseMarkdown(R"(| *a* | b |
+|---|---|
+| c | d |)",
+                             Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *T = cast<TableNode>(Nodes[0]);
+  ASSERT_EQ(T->Header.Cells.size(), 2u);
+  ASSERT_EQ(T->Header.Cells[0].Children.size(), 1u);
+  auto *Em = cast<EmphasisNode>(T->Header.Cells[0].Children[0]);
+  ASSERT_EQ(Em->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(Em->Children[0])->Text, "a");
+  EXPECT_EQ(cast<TextNode>(T->Header.Cells[1].Children[0])->Text, "b");
+}
+
+// A code span inside a table cell becomes an InlineCodeNode.
+TEST_F(MarkdownParserTest, TableCellWithInlineCode) {
+  auto Nodes = parseMarkdown(R"(| `x` | y |
+|---|---|
+| z | w |)",
+                             Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *T = cast<TableNode>(Nodes[0]);
+  ASSERT_EQ(T->Header.Cells.size(), 2u);
+  ASSERT_EQ(T->Header.Cells[0].Children.size(), 1u);
+  EXPECT_EQ(cast<InlineCodeNode>(T->Header.Cells[0].Children[0])->Code, "x");
+  EXPECT_EQ(cast<TextNode>(T->Body[0].Cells[0].Children[0])->Text, "z");
 }
 
 TEST_F(MarkdownParserTest, PipeCharacterWithoutSepRowIsPlainText) {

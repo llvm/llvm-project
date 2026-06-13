@@ -460,18 +460,44 @@ static FencedCodeNode *parseFencedCode(LineReader &Reader,
   return Code;
 }
 
+// Splits a pipe table row into cell texts. A single optional leading and
+// trailing pipe are dropped, then the remainder is split on '|' and each cell
+// is trimmed.
+// TODO: A '|' inside a code span or escaped as "\|" should not split a cell.
+static void splitTableRow(StringRef Row, SmallVectorImpl<StringRef> &Cells) {
+  Row = Row.trim();
+  if (Row.starts_with("|"))
+    Row = Row.drop_front();
+  if (Row.ends_with("|"))
+    Row = Row.drop_back();
+  SmallVector<StringRef> Parts;
+  Row.split(Parts, '|');
+  for (StringRef Part : Parts)
+    Cells.push_back(Part.trim());
+}
+
 // Parses a pipe table. The cursor must be on the header row, with a separator
-// row following; consecutive lines containing a | are taken as rows.
+// row following; consecutive lines containing a | are taken as body rows. Each
+// cell's text is parsed into inline nodes.
 static TableNode *parsePipeTable(LineReader &Reader, BumpPtrAllocator &Arena,
                                  StringSaver &Saver) {
-  SmallVector<StringRef> Rows;
-  // TODO: Rows are kept as raw line text for now. Table cells may contain
-  // inline content (emphasis, code spans, links), so each row may need to be
-  // split on '|' and parsed further into structured cells.
+  auto parseRow = [&](StringRef Line) -> TableRow {
+    SmallVector<StringRef> CellTexts;
+    splitTableRow(Line, CellTexts);
+    SmallVector<TableCell> Cells;
+    for (StringRef Text : CellTexts)
+      Cells.push_back(TableCell{parseInline(Text, Arena, Saver)});
+    return TableRow{allocateArray(Cells, Arena)};
+  };
+
+  TableRow Header = parseRow(Reader.advance());
+  Reader.advance(); // skip the alignment separator row
+  SmallVector<TableRow> Body;
   while (!Reader.atEnd() && Reader.peek().trim().contains('|'))
-    Rows.push_back(Saver.save(Reader.advance().trim()));
-  auto *Table = new (Arena) TableNode(allocateArray(Rows, Arena));
-  LDBG() << "emitting TableNode rows=" << Rows.size();
+    Body.push_back(parseRow(Reader.advance()));
+  auto *Table = new (Arena) TableNode(Header, allocateArray(Body, Arena));
+  LDBG() << "emitting TableNode header_cells=" << Header.Cells.size()
+         << " body_rows=" << Body.size();
   return Table;
 }
 
