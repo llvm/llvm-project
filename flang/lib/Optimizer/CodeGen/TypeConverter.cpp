@@ -70,8 +70,8 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
       kindMapping(getKindMapping(module)),
       specifics(CodeGenSpecifics::get(
           module.getContext(), getTargetTriple(module), getKindMapping(module),
-          getTargetCPU(module), getTargetFeatures(module), dl,
-          getTuneCPU(module))),
+          getTargetCPU(module), getTargetFeatures(module), getTargetABI(module),
+          dl, getTuneCPU(module))),
       tbaaBuilder(std::make_unique<TBAABuilder>(module->getContext(), applyTBAA,
                                                 forceUnifiedTBAATree)),
       dataLayout{&dl} {
@@ -122,6 +122,18 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
       [&](fir::ReferenceType ref) { return convertPointerLike(ref); });
   addConversion([&](fir::SequenceType sequence) {
     return convertSequenceType(sequence);
+  });
+  addConversion([&](fir::ShapeType shape) {
+    mlir::Type i64Ty = mlir::IntegerType::get(&getContext(), 64);
+    llvm::SmallVector<mlir::Type> members(shape.getRank(), i64Ty);
+    return mlir::LLVM::LLVMStructType::getLiteral(&getContext(), members,
+                                                  /*isPacked=*/false);
+  });
+  addConversion([&](fir::ShapeShiftType shapeShift) {
+    mlir::Type i64Ty = mlir::IntegerType::get(&getContext(), 64);
+    llvm::SmallVector<mlir::Type> members(shapeShift.getRank(), i64Ty);
+    return mlir::LLVM::LLVMStructType::getLiteral(&getContext(), members,
+                                                  /*isPacked=*/false);
   });
   addConversion([&](fir::TypeDescType tdesc) {
     return convertTypeDescType(tdesc.getContext());

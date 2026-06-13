@@ -1774,6 +1774,10 @@ bool VectorCombine::foldBinopOfReductions(Instruction &I) {
     ReductionIID = Intrinsic::vector_reduce_add;
   if (ReductionIID == Intrinsic::not_intrinsic)
     return false;
+  // FP reductions have a start-value operand that this fold doesn't handle.
+  if (ReductionIID == Intrinsic::vector_reduce_fadd ||
+      ReductionIID == Intrinsic::vector_reduce_fmul)
+    return false;
 
   auto checkIntrinsicAndGetItsArgument = [](Value *V,
                                             Intrinsic::ID IID) -> Value * {
@@ -3043,8 +3047,11 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
     }
   }
 
-  if (!NewX)
-    return PoisonValue::get(ShuffleDstTy);
+  if (!NewX) {
+    replaceValue(I, *PoisonValue::get(ShuffleDstTy));
+    return true;
+  }
+
   if (!NewY)
     NewY = PoisonValue::get(ShuffleSrcTy);
 
@@ -3988,6 +3995,10 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   std::optional<unsigned int> CommonCallOp = std::nullopt;
   std::optional<Instruction::BinaryOps> CommonBinOp = std::nullopt;
 
+  // For floating-point reductions, track FMF intersection across all binops.
+  FastMathFlags CommonFMF;
+  bool IsFloatReduction = false;
+
   bool IsFirstCallOrBinInst = true;
   bool ShouldBeCallOrBinInst = true;
 
@@ -4106,7 +4117,9 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       case BinaryOperator::Mul:
       case BinaryOperator::Or:
       case BinaryOperator::And:
-      case BinaryOperator::Xor: {
+      case BinaryOperator::Xor:
+      case BinaryOperator::FAdd:
+      case BinaryOperator::FMul: {
         auto *Op0 = BinOp->getOperand(0);
         auto *Op1 = BinOp->getOperand(1);
         PrevVecV[0] = Op0;
@@ -4116,6 +4129,20 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       default:
         return false;
       }
+
+      // For FP reductions, require reassoc on every binop and collect FMF.
+      if (*CommonBinOp == Instruction::FAdd ||
+          *CommonBinOp == Instruction::FMul) {
+        if (!BinOp->hasAllowReassoc())
+          return false;
+        if (!IsFloatReduction) {
+          CommonFMF = BinOp->getFastMathFlags();
+          IsFloatReduction = true;
+        } else {
+          CommonFMF &= BinOp->getFastMathFlags();
+        }
+      }
+
       ShouldBeCallOrBinInst ^= 1;
 
       OrigCost +=
@@ -4217,7 +4244,12 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
                                   CostKind, 0, ReduceVecTy);
   }
 
-  IntrinsicCostAttributes ICA(ReducedOp, ReduceVecTy, {ReduceVecTy});
+  IntrinsicCostAttributes ICA(
+      ReducedOp, ReduceVecTy->getElementType(),
+      IsFloatReduction
+          ? SmallVector<Type *, 2>{ReduceVecTy->getElementType(), ReduceVecTy}
+          : SmallVector<Type *, 2>{ReduceVecTy},
+      IsFloatReduction ? CommonFMF : FastMathFlags());
   NewCost += TTI.getIntrinsicInstrCost(ICA, CostKind);
 
   LLVM_DEBUG(dbgs() << "Found reduction shuffle chain: " << I << "\n OldCost : "
@@ -4230,8 +4262,18 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   if (IsPartialReduction)
     ReduceInput = Builder.CreateShuffleVector(FinalVecV, ExtractMask);
 
-  auto *ReducedResult = Builder.CreateIntrinsic(
-      ReducedOp, {ReduceInput->getType()}, {ReduceInput});
+  CallInst *ReducedResult;
+  if (IsFloatReduction) {
+    Value *Identity = ConstantExpr::getBinOpIdentity(
+        *CommonBinOp, ReduceVecTy->getElementType(), /*AllowRHSConstant=*/false,
+        CommonFMF.noSignedZeros());
+    ReducedResult = Builder.CreateIntrinsic(ReducedOp, {ReduceVecTy},
+                                            {Identity, ReduceInput});
+    ReducedResult->setFastMathFlags(CommonFMF);
+  } else {
+    ReducedResult =
+        Builder.CreateIntrinsic(ReducedOp, {ReduceVecTy}, {ReduceInput});
+  }
   replaceValue(I, *ReducedResult);
 
   return true;
@@ -6367,8 +6409,9 @@ PreservedAnalyses VectorCombinePass::run(Function &F,
   DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   AAResults &AA = FAM.getResult<AAManager>(F);
   const DataLayout *DL = &F.getDataLayout();
-  VectorCombine Combiner(F, TTI, DT, AA, AC, DL, TTI::TCK_RecipThroughput,
-                         TryEarlyFoldsOnly);
+  TTI::TargetCostKind CostKind =
+      F.hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
+  VectorCombine Combiner(F, TTI, DT, AA, AC, DL, CostKind, TryEarlyFoldsOnly);
   if (!Combiner.run())
     return PreservedAnalyses::all();
   PreservedAnalyses PA;

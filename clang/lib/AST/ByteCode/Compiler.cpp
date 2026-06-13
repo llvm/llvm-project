@@ -434,18 +434,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
   case CK_NullToMemberPointer: {
     if (!this->discard(SubExpr))
       return false;
-    const Descriptor *Desc = nullptr;
-    const QualType PointeeType = E->getType()->getPointeeType();
-    if (!PointeeType.isNull()) {
-      if (OptPrimType T = classify(PointeeType))
-        Desc = P.createDescriptor(SubExpr, *T);
-      else
-        Desc = P.createDescriptor(SubExpr, PointeeType.getTypePtr(),
-                                  std::nullopt, /*IsConst=*/true);
-    }
-
     uint64_t Val = Ctx.getASTContext().getTargetNullPointerValue(E->getType());
-    return this->emitNull(classifyPrim(E->getType()), Val, Desc, E);
+    return this->emitNull(classifyPrim(E->getType()), Val,
+                          E->getType().getTypePtr(), E);
   }
 
   case CK_PointerToIntegral: {
@@ -481,19 +472,10 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
     // FIXME: I think the discard is wrong since the int->ptr cast might cause a
     // diagnostic.
     PrimType T = classifyPrim(IntType);
-    QualType PtrType = E->getType();
-    const Descriptor *Desc;
-    if (OptPrimType T = classify(PtrType->getPointeeType()))
-      Desc = P.createDescriptor(SubExpr, *T);
-    else if (PtrType->getPointeeType()->isVoidType())
-      Desc = nullptr;
-    else
-      Desc = P.createDescriptor(E, PtrType->getPointeeType().getTypePtr(),
-                                Descriptor::InlineDescMD, /*IsConst=*/true);
-
-    if (!this->emitGetIntPtr(T, Desc, E))
+    if (!this->emitGetIntPtr(T, E->getType().getTypePtr(), E))
       return false;
 
+    QualType PtrType = E->getType();
     PrimType DestPtrT = classifyPrim(PtrType);
     if (DestPtrT == PT_Ptr)
       return true;
@@ -2836,16 +2818,6 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
     return this->delegate(FalseExpr);
   }
 
-  // Force-init the scope, which creates a InitScope op. This is necessary so
-  // the scope is not only initialized in one arm of the conditional operator.
-  this->VarScope->forceInit();
-  // The TrueExpr and FalseExpr of a conditional operator do _not_ create a
-  // scope, which means the local variables created within them unconditionally
-  // always exist. However, we need to later differentiate which branch was
-  // taken and only destroy the varibles of the active branch. This is what the
-  // "enabled" flags on local variables are used for.
-  llvm::SaveAndRestore LAAA(this->VarScope->LocalsAlwaysEnabled,
-                            /*NewValue=*/false);
   bool IsBcpCall = false;
   if (const auto *CE = dyn_cast<CallExpr>(Condition->IgnoreParenCasts());
       CE && CE->getBuiltinCallee() == Builtin::BI__builtin_constant_p) {
@@ -2872,6 +2844,17 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
     }
     return false;
   }
+
+  // Force-init the scope, which creates a InitScope op. This is necessary so
+  // the scope is not only initialized in one arm of the conditional operator.
+  this->VarScope->forceInit();
+  // The TrueExpr and FalseExpr of a conditional operator do _not_ create a
+  // scope, which means the local variables created within them unconditionally
+  // always exist. However, we need to later differentiate which branch was
+  // taken and only destroy the varibles of the active branch. This is what the
+  // "enabled" flags on local variables are used for.
+  llvm::SaveAndRestore LAAA(this->VarScope->LocalsAlwaysEnabled,
+                            /*NewValue=*/false);
 
   if (!this->jumpFalse(LabelFalse, E))
     return false;
@@ -4390,6 +4373,9 @@ bool Compiler<Emitter>::VisitAddrLabelExpr(const AddrLabelExpr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::emitVectorConversion(const Expr *Src, const Expr *E) {
+  if (Src->containsErrors())
+    return false;
+
   const auto *VT = E->getType()->castAs<VectorType>();
   QualType ElemType = VT->getElementType();
   PrimType ElemT = classifyPrim(ElemType);
@@ -5413,6 +5399,11 @@ bool Compiler<Emitter>::visitDtorCall(const VarDecl *VD, const APValue &Value) {
       /*IsVolatile=*/Ty.isVolatileQualified(), nullptr);
   if (!D)
     return false;
+
+  // FIXME: Would be nice if we didn't allocate the descriptor at all in this
+  // case.
+  if (D->hasTrivialDtor())
+    return true;
 
   Scope::Local Local = this->createLocal(D);
   Locals.insert({VD, Local});
@@ -7381,6 +7372,17 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       if (DiscardResult)
         return true;
       return this->emitGetMemberPtr(cast<DeclRefExpr>(SubExpr)->getDecl(), E);
+    }
+    // [C11 6.5.3.2p3]: if the operand of '&' is the result of a unary '*'
+    // operator, neither operator is evaluated and the result is as if both
+    // were omitted. So '&*q' is just 'q' with no dereference; delegate to the
+    // pointer operand directly instead of to the '*' (which would emit a null
+    // check), so that e.g. '&*(int *)0' is not rejected.
+    if (!Ctx.getLangOpts().CPlusPlus) {
+      const Expr *Sub = SubExpr->IgnoreParens();
+      if (const auto *Deref = dyn_cast<UnaryOperator>(Sub);
+          Deref && Deref->getOpcode() == UO_Deref)
+        return this->delegate(Deref->getSubExpr());
     }
     // We should already have a pointer when we get here.
     return this->delegate(SubExpr);
