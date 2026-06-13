@@ -97,6 +97,7 @@ struct Subgroup2DBlockLoadInstruction : public Instruction {
 
     static const int kWidth32[] = {32};
     static const int kWidth16[] = {16};
+    static const int kWidthAtLeast16[] = {16, 32};
     static const int kWidth8[] = {8};
 
     static const int32_t kCount1[] = {1};
@@ -109,7 +110,7 @@ struct Subgroup2DBlockLoadInstruction : public Instruction {
     using Value = std::tuple<llvm::ArrayRef<int32_t>, llvm::ArrayRef<int32_t>,
                              llvm::ArrayRef<int32_t>>;
     static const llvm::DenseMap<Key, Value> kMap = {
-        {{1, false, false, false}, {kWidth32, kHeightAtLeast1, kCount2}},
+        {{1, false, false, false}, {kWidthAtLeast16, kHeightAtLeast1, kCount2}},
         {{1, false, false, true}, {kWidth16, kHeightAtLeast8, kCount4Only}},
         {{2, false, false, false}, {kWidth16, kHeightAtLeast1, kCount2}},
         {{4, false, false, false}, {kWidth16, kHeightAtLeast1, kCount1}},
@@ -117,8 +118,9 @@ struct Subgroup2DBlockLoadInstruction : public Instruction {
         {{1, true, false, false}, {kWidth16, kHeightAtLeast32, kCount4}},
         {{2, true, false, false}, {kWidth16, kHeightAtLeast16, kCount2}},
         // Block Loads with Transpose:
-        {{4, false, true, false}, {kWidth8, kHeightAtLeast16, kCount1}},
-    };
+        {{1, false, true, false}, {kWidth32, kHeightAtLeast16, kCount1}},
+        {{2, false, true, false}, {kWidth16, kHeightAtLeast16, kCount1}},
+        {{4, false, true, false}, {kWidth8, kHeightAtLeast16, kCount1}}};
     const int elemByteSize = elemTy.getIntOrFloatBitWidth() / 8;
     auto it = kMap.find({elemByteSize, hasTransform, hasTranspose, upConv});
     if (it != kMap.end())

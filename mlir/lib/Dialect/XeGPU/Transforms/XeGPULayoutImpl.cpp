@@ -1510,15 +1510,50 @@ xegpu::DistributeLayoutAttr xegpu::completeScatterIOLaneLayoutFromInstData(
 static std::pair<SmallVector<int64_t>, SmallVector<int64_t>>
 compute2DBlockIOLaneLayoutAndData(ArrayRef<int64_t> instShape,
                                   int64_t subgroupSize, int64_t bitwidth,
-                                  int64_t packingSize, bool vnni = false) {
+                                  int64_t packingSize, bool vnni = false,
+                                  bool transpose = false) {
   int64_t rank = instShape.size();
   SmallVector<int64_t> laneLayout(rank, 1), laneData(rank, 1);
   int64_t packingDim = vnni ? rank - 2 : rank - 1;
   laneData[packingDim] = bitwidth < packingSize ? packingSize / bitwidth : 1;
-  laneLayout.back() = subgroupSize;
+  assert(
+      !(vnni && transpose) &&
+      "transpose and VNNI cannot be enabled at the same time for 2D block IO");
+  if (transpose)
+    laneLayout[rank - 2] = subgroupSize;
+  else
+    laneLayout.back() = subgroupSize;
+  llvm::dbgs() << "[DEBUG compute2DBlockIOLaneLayoutAndData] instShape = [";
+  for (int64_t i = 0; i < rank; ++i) {
+    if (i > 0)
+      llvm::dbgs() << ", ";
+    llvm::dbgs() << instShape[i];
+  }
+  llvm::dbgs() << "], subgroupSize = " << subgroupSize
+               << ", bitwidth = " << bitwidth
+               << ", packingSize = " << packingSize << ", vnni = " << vnni
+               << "\n";
+  llvm::dbgs() << "[DEBUG compute2DBlockIOLaneLayoutAndData] laneLayout = [";
+  for (int64_t i = 0; i < rank; ++i) {
+    if (i > 0)
+      llvm::dbgs() << ", ";
+    llvm::dbgs() << laneLayout[i];
+  }
+  llvm::dbgs() << "], laneData = [";
+  for (int64_t i = 0; i < rank; ++i) {
+    if (i > 0)
+      llvm::dbgs() << ", ";
+    llvm::dbgs() << laneData[i];
+  }
+  llvm::dbgs() << "]\n";
   // assert that the lane layout and data fit in the inst shape
   for (int64_t i = 0; i < rank; ++i) {
     int64_t laneProduct = laneLayout[i] * laneData[i];
+    llvm::dbgs() << "[DEBUG compute2DBlockIOLaneLayoutAndData] dim " << i
+                 << ": instShape[i] = " << instShape[i]
+                 << ", laneProduct = " << laneProduct
+                 << ", divisible = " << (instShape[i] % laneProduct == 0)
+                 << "\n";
     assert(instShape[i] % laneProduct == 0 &&
            "lane_layout * lane_data must evenly divide the inst shape");
     (void)laneProduct;
@@ -1658,7 +1693,7 @@ static xegpu::LayoutAttr buildSgLayout(mlir::MLIRContext *context,
                                        DenseI32ArrayAttr orderAttr = nullptr) {
   SmallVector<int> sgData(sgLayout.size());
   SmallVector<int> sgLayoutInt(sgLayout.begin(), sgLayout.end());
-  for (int dim = 0; dim < sgLayout.size(); ++dim) {
+  for (int dim = 0; dim < (int)sgLayout.size(); ++dim) {
     if (dim == dimK)
       sgData[dim] = wgTileShape[dim];
     else
@@ -1696,6 +1731,17 @@ static xegpu::DistributeLayoutAttr setupGenericNdAnchorLayout(
     const xegpu::uArch::uArch *uArch) {
   int rank = dataShape.size();
   assert(rank >= 1 && "Expected at least 1D shape for ND op");
+
+  llvm::dbgs() << "[DEBUG setupGenericNdAnchorLayout] ENTRY, layoutKind = "
+               << static_cast<int>(layoutKind) << "\n";
+  llvm::dbgs() << "[DEBUG setupGenericNdAnchorLayout] dataShape = [";
+  for (int i = 0; i < rank; ++i) {
+    if (i > 0)
+      llvm::dbgs() << ", ";
+    llvm::dbgs() << dataShape[i];
+  }
+  llvm::dbgs() << "], elemTy = " << elemTy << ", packingSize = " << packingSize
+               << "\n";
 
   // Compute the default 2D block IO lane layout / lane data.
   unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
@@ -1791,11 +1837,29 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
                                int numSg, const xegpu::uArch::uArch *uArch) {
 
   assert(consumerLayout && "Expected a valid consumer layout");
+  llvm::dbgs() << "[DEBUG setupLoadNdAnchorLayout] ENTRY, layoutKind = "
+               << static_cast<int>(layoutKind) << ", resVecTy = " << resVecTy
+               << ", consumerLayout = " << consumerLayout << "\n";
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     assert(consumerLayout.isForWorkgroup() &&
            "Expected consumer layout to be a complete workgroup-level layout");
     return consumerLayout;
   }
+
+  auto context = resVecTy.getContext();
+  Type elemTy = resVecTy.getElementType();
+  auto subgroupSize = uArch->getSubgroupSize();
+  auto dataShape = resVecTy.getShape();
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::Subgroup2DBlockLoadInstruction>(
+          uArch->getInstruction(
+              xegpu::uArch::InstructionKind::Subgroup2DBlockLoad));
+  if (!uArchInstruction) {
+    llvm::dbgs() << "[DEBUG setupLoadNdAnchorLayout] uArchInstruction is null, "
+                    "returning nullptr\n";
+    return nullptr;
+  }
+
   int rank = resVecTy.getRank();
   SmallVector<int64_t> consumerInstData =
       consumerLayout.getEffectiveInstDataAsInt();
@@ -1805,27 +1869,29 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
       consumerLayout.getEffectiveLaneDataAsInt();
   SmallVector<int64_t> consumerOrder = consumerLayout.getEffectiveOrderAsInt();
 
-  bool hasTransform = false;
-  bool hasTranspose = false;
-  if (!consumerLaneLayout.empty()) {
-    hasTransform = consumerLaneData[rank - 2] != 1;
-    hasTranspose = consumerOrder[0] != rank;
+  if (consumerLaneLayout.empty() || consumerLaneData.empty()) {
+    auto [laneLayoutCD, laneDataCD] = compute2DBlockIOLaneLayoutAndData(
+        dataShape, subgroupSize, elemTy.getIntOrFloatBitWidth(),
+        elemTy.getIntOrFloatBitWidth(), false, false);
   }
-  auto context = resVecTy.getContext();
-  Type elemTy = resVecTy.getElementType();
-  auto dataShape = resVecTy.getShape();
-  const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::Subgroup2DBlockLoadInstruction>(
-          uArch->getInstruction(
-              xegpu::uArch::InstructionKind::Subgroup2DBlockLoad));
-  if (!uArchInstruction)
-    return nullptr;
-  unsigned packingSize = uArchInstruction->getPackedFormatBitSize();
+  bool hasTransform = consumerLaneData[rank - 2] != 1;
+  bool hasTranspose = consumerLaneLayout[rank - 2] != 1;
+  unsigned packingFactor =
+      hasTransform ? consumerLaneData[rank - 2] : consumerLaneData[rank - 1];
+  unsigned packingSize = packingFactor * elemTy.getIntOrFloatBitWidth();
+
+  llvm::dbgs() << "[DEBUG setupLoadNdAnchorLayout] calling "
+                  "getBlockWidthHeightCount with elemTy = "
+               << elemTy << ", hasTransform = " << hasTransform
+               << ", hasTranspose = " << hasTranspose << "\n";
   auto blockWHC = uArchInstruction->getBlockWidthHeightCount(
       elemTy, hasTransform, hasTranspose,
       /*upConv=*/false);
-  if (!blockWHC)
+  if (!blockWHC) {
+    llvm::dbgs() << "[DEBUG setupLoadNdAnchorLayout] blockWHC is nullopt, "
+                    "returning nullptr\n";
     return nullptr;
+  }
   auto [bWidths, bHeights, bCounts] = blockWHC.value();
 
   if (layoutKind == xegpu::LayoutKind::InstData) {
@@ -1833,11 +1899,44 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
     int64_t width = consumerInstData[rank - 1];
     auto maxBlockCount = *llvm::max_element(bCounts);
     auto maxWidth = *llvm::max_element(bWidths);
+    llvm::dbgs() << "[DEBUG setupLoadNdAnchorLayout] InstData check: height = "
+                 << height << ", width = " << width
+                 << ", maxBlockCount = " << maxBlockCount
+                 << ", maxWidth = " << maxWidth << "\n";
+    llvm::dbgs() << "[DEBUG setupLoadNdAnchorLayout] bWidths = [";
+    for (size_t i = 0; i < bWidths.size(); ++i) {
+      if (i > 0)
+        llvm::dbgs() << ", ";
+      llvm::dbgs() << bWidths[i];
+    }
+    llvm::dbgs() << "], bHeights = [";
+    for (size_t i = 0; i < bHeights.size(); ++i) {
+      if (i > 0)
+        llvm::dbgs() << ", ";
+      llvm::dbgs() << bHeights[i];
+    }
+    llvm::dbgs() << "]\n";
     if (llvm::is_contained(bWidths, static_cast<int>(width)) ||
         (width % maxWidth == 0 && width / maxWidth < maxBlockCount)) {
-      if (!llvm::is_contained(bHeights, static_cast<int>(height)))
+      llvm::dbgs() << "[DEBUG setupLoadNdAnchorLayout] width check PASSED\n";
+      if (llvm::is_contained(bHeights, static_cast<int>(height))) {
+        llvm::dbgs() << "[DEBUG setupLoadNdAnchorLayout] height check PASSED, "
+                        "honoring consumer layout\n";
         return consumerLayout;
+      }
     }
+    llvm::dbgs()
+        << "[DEBUG setupLoadNdAnchorLayout] height and width check FAILED, "
+           "falling through\n";
+
+    auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
+        dataShape, subgroupSize, elemTy.getIntOrFloatBitWidth(), packingSize,
+        hasTransform, hasTranspose);
+    auto instData = get2DBlockIOInstDataLayout(dataShape, bWidths, bHeights,
+                                               laneLayout, laneData);
+
+    return buildInstDataLayoutWithLane(context, *instData, laneLayout,
+                                       laneData);
   }
   if (layoutKind == xegpu::LayoutKind::Lane) {
     bool validLaneLayout = true;
@@ -1846,13 +1945,15 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
       if (dataShape[dim] % laneProduct != 0)
         validLaneLayout = false;
     }
-    if (validLaneLayout)
+    if (validLaneLayout) {
       return consumerLayout;
+    } else {
+      auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
+          dataShape, subgroupSize, elemTy.getIntOrFloatBitWidth(), packingSize,
+          hasTransform, hasTranspose);
+      return buildLaneLayout(context, laneLayout, laneData);
+    }
   }
-
-  return setupGenericNdAnchorLayout(layoutKind, context, resVecTy.getShape(),
-                                    elemTy, bWidths, bHeights, packingSize,
-                                    numSg, uArch);
 }
 
 /// Helper function to compute inst_data vectors for DPAS operands A, B, and
