@@ -29,7 +29,7 @@ define fastcc i64 @foo(ptr %p0, ptr %p1, i64 %p2, i64 %p3, ptr %p4, ptr %p5, ptr
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:  .LBB0_7: # %bb3
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:  .LBB0_8: # %cleanup
+; CHECK-NEXT:  .LBB0_8: # %bb19
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
@@ -58,7 +58,7 @@ define fastcc i64 @foo(ptr %p0, ptr %p1, i64 %p2, i64 %p3, ptr %p4, ptr %p5, ptr
 ; CHECK-NEXT:  # %bb.20: # %bb15
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    je .LBB0_7
+; CHECK-NEXT:    je .LBB0_8
 ; CHECK-NEXT:  # %bb.21: # %bb15
 ; CHECK-NEXT:    cmpl $2, %eax
 ; CHECK-NEXT:    je .LBB0_7

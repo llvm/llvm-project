@@ -13,7 +13,7 @@ define  i32 @perimeter(ptr %tree, i32 %size) nounwind  {
 ; CHECK-NEXT:    je LBB0_3
 ; CHECK-NEXT:  ## %bb.1: ## %entry
 ; CHECK-NEXT:    cmpl $2, %eax
-; CHECK-NEXT:    jne LBB0_3
+; CHECK-NEXT:    jne LBB0_4
 ; CHECK-NEXT:  ## %bb.2: ## %bb
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $0, (%esp)
@@ -23,10 +23,10 @@ define  i32 @perimeter(ptr %tree, i32 %size) nounwind  {
 ; CHECK-NEXT:    movl $0, (%esp)
 ; CHECK-NEXT:    calll _perimeter
 ; CHECK-NEXT:    addl %esi, %eax
-; CHECK-NEXT:    jmp LBB0_4
-; CHECK-NEXT:  LBB0_3: ## %UnifiedReturnBlock
-; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    jmp LBB0_3
 ; CHECK-NEXT:  LBB0_4: ## %UnifiedReturnBlock
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:  LBB0_3: ## %bb50
 ; CHECK-NEXT:    addl $8, %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl

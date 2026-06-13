@@ -504,7 +504,6 @@ define zeroext i1 @pr31257(ptr nocapture readonly dereferenceable(8) %s) minsize
 ; WIN64-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; WIN64-NEXT:    movzbl (%rcx), %r9d # encoding: [0x44,0x0f,0xb6,0x09]
 ; WIN64-NEXT:    addl $-48, %r9d # encoding: [0x41,0x83,0xc1,0xd0]
-; WIN64-NEXT:    movl $2, %r8d # encoding: [0x41,0xb8,0x02,0x00,0x00,0x00]
 ; WIN64-NEXT:    cmpl $10, %r9d # encoding: [0x41,0x83,0xf9,0x0a]
 ; WIN64-NEXT:    jae _Z20isValidIntegerSuffixN9__gnu_cxx17__normal_iteratorIPKcSsEES3_ # TAILCALL
 ; WIN64-NEXT:    # encoding: [0x73,A]

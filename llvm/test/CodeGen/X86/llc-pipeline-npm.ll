@@ -163,6 +163,7 @@
 ; O2-NEXT:     stack-slot-coloring
 ; O2-NEXT:     machine-cp
 ; O2-NEXT:     machinelicm
+; O2-NEXT:     x86-copyelim
 ; O2-NEXT:     x86-lower-tile-copy
 ; O2-NEXT:     x86-fp-stackifier
 ; O2-NEXT:     x86-lvi-load
@@ -364,6 +365,7 @@
 ; O3-WINDOWS-NEXT:     stack-slot-coloring
 ; O3-WINDOWS-NEXT:     machine-cp
 ; O3-WINDOWS-NEXT:     machinelicm
+; O3-WINDOWS-NEXT:     x86-copyelim
 ; O3-WINDOWS-NEXT:     x86-lower-tile-copy
 ; O3-WINDOWS-NEXT:     x86-fp-stackifier
 ; O3-WINDOWS-NEXT:     x86-lvi-load

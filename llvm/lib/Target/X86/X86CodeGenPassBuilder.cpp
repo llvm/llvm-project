@@ -163,6 +163,8 @@ void X86CodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) const {
 }
 
 void X86CodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
+  if (getOptLevel() != CodeGenOptLevel::None && EnableRedundantCopyElimination)
+    addMachineFunctionPass(X86RedundantCopyEliminationPass(), PMW);
   addMachineFunctionPass(X86LowerTileCopyPass(), PMW);
   addMachineFunctionPass(X86FPStackifierPass(), PMW);
   // When -O0 is enabled, the Load Value Injection Hardening pass will fall back

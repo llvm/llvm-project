@@ -20,9 +20,12 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/PassInfo.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
+
+extern cl::opt<bool> EnableRedundantCopyElimination;
 
 class FunctionPass;
 class InstructionSelector;
@@ -223,6 +226,16 @@ public:
 };
 
 FunctionPass *createX86LowerTileCopyLegacyPass();
+
+/// Remove redundant copies/moves based on dominating branch conditions.
+class X86RedundantCopyEliminationPass
+    : public OptionalPassInfoMixin<X86RedundantCopyEliminationPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86RedundantCopyEliminationLegacyPass();
 
 /// Return a pass that inserts int3 at the end of the function if it ends with a
 /// CALL instruction. The pass does the same for each funclet as well. This
@@ -498,6 +511,7 @@ void initializeX86LoadValueInjectionRetHardeningLegacyPass(PassRegistry &);
 void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);
 void initializeX86LowerAMXTypeLegacyPassPass(PassRegistry &);
 void initializeX86LowerTileCopyLegacyPass(PassRegistry &);
+void initializeX86RedundantCopyEliminationLegacyPass(PassRegistry &);
 void initializeX86OptimizeLEAsLegacyPass(PassRegistry &);
 void initializeX86PartialReductionLegacyPass(PassRegistry &);
 void initializeX86PreTileConfigLegacyPass(PassRegistry &);

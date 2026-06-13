@@ -960,7 +960,6 @@ define void @optimal_jump_table1(i32 %x) {
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jne .LBB10_8
 ; CHECK-NEXT:  # %bb.2: # %bb0
-; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ; CHECK-NEXT:  .LBB10_8: # %return
 ; CHECK-NEXT:    retq
@@ -1726,41 +1725,38 @@ define void @zero_weight_tree(i32 %x) {
 ; CHECK-NEXT:    jg .LBB18_5
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jne .LBB18_2
-; CHECK-NEXT:  # %bb.9: # %bb0
-; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    jmp g@PLT # TAILCALL
+; CHECK-NEXT:    je g@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    cmpl $10, %edi
+; CHECK-NEXT:    je .LBB18_9
+; CHECK-NEXT:  # %bb.3: # %entry
+; CHECK-NEXT:    cmpl $20, %edi
+; CHECK-NEXT:    je .LBB18_4
+; CHECK-NEXT:  .LBB18_12: # %return
+; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB18_5: # %entry
 ; CHECK-NEXT:    cmpl $50, %edi
 ; CHECK-NEXT:    jne .LBB18_6
-; CHECK-NEXT:  # %bb.12: # %bb5
+; CHECK-NEXT:  # %bb.11: # %bb5
 ; CHECK-NEXT:    movl $5, %edi
-; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB18_2: # %entry
-; CHECK-NEXT:    cmpl $10, %edi
-; CHECK-NEXT:    je .LBB18_10
-; CHECK-NEXT:  # %bb.3: # %entry
-; CHECK-NEXT:    cmpl $20, %edi
-; CHECK-NEXT:    jne .LBB18_13
-; CHECK-NEXT:  # %bb.4: # %bb2
-; CHECK-NEXT:    movl $2, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ; CHECK-NEXT:  .LBB18_6: # %entry
 ; CHECK-NEXT:    cmpl $30, %edi
-; CHECK-NEXT:    je .LBB18_11
+; CHECK-NEXT:    je .LBB18_10
 ; CHECK-NEXT:  # %bb.7: # %entry
 ; CHECK-NEXT:    cmpl $40, %edi
-; CHECK-NEXT:    je .LBB18_8
-; CHECK-NEXT:  .LBB18_13: # %return
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB18_10: # %bb1
+; CHECK-NEXT:    jne .LBB18_12
+; CHECK-NEXT:  # %bb.8: # %bb4
+; CHECK-NEXT:    movl $4, %edi
+; CHECK-NEXT:    jmp g@PLT # TAILCALL
+; CHECK-NEXT:  .LBB18_9: # %bb1
 ; CHECK-NEXT:    movl $1, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB18_11: # %bb3
-; CHECK-NEXT:    movl $3, %edi
+; CHECK-NEXT:  .LBB18_4: # %bb2
+; CHECK-NEXT:    movl $2, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB18_8: # %bb4
-; CHECK-NEXT:    movl $4, %edi
+; CHECK-NEXT:  .LBB18_10: # %bb3
+; CHECK-NEXT:    movl $3, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ;
 ; NOOPT-LABEL: zero_weight_tree:
@@ -1853,58 +1849,56 @@ define void @left_leaning_weight_balanced_tree(i32 %x) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl $49, %edi
 ; CHECK-NEXT:    jle .LBB19_1
-; CHECK-NEXT:  # %bb.11: # %entry
+; CHECK-NEXT:  # %bb.10: # %entry
 ; CHECK-NEXT:    cmpl $70, %edi
-; CHECK-NEXT:    jne .LBB19_12
-; CHECK-NEXT:  .LBB19_14: # %bb6
+; CHECK-NEXT:    jne .LBB19_11
+; CHECK-NEXT:  .LBB19_13: # %bb6
 ; CHECK-NEXT:    movl $6, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ; CHECK-NEXT:  .LBB19_1: # %entry
 ; CHECK-NEXT:    cmpl $9, %edi
-; CHECK-NEXT:    jg .LBB19_4
+; CHECK-NEXT:    jg .LBB19_3
 ; CHECK-NEXT:  # %bb.2: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jne .LBB19_18
-; CHECK-NEXT:  # %bb.3: # %bb0
-; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB19_4: # %entry
+; CHECK-NEXT:    je g@PLT # TAILCALL
+; CHECK-NEXT:    jmp .LBB19_17
+; CHECK-NEXT:  .LBB19_3: # %entry
 ; CHECK-NEXT:    cmpl $29, %edi
-; CHECK-NEXT:    jg .LBB19_8
-; CHECK-NEXT:  # %bb.5: # %entry
+; CHECK-NEXT:    jg .LBB19_7
+; CHECK-NEXT:  # %bb.4: # %entry
 ; CHECK-NEXT:    cmpl $10, %edi
-; CHECK-NEXT:    je .LBB19_15
-; CHECK-NEXT:  # %bb.6: # %entry
+; CHECK-NEXT:    je .LBB19_14
+; CHECK-NEXT:  # %bb.5: # %entry
 ; CHECK-NEXT:    cmpl $20, %edi
-; CHECK-NEXT:    jne .LBB19_18
-; CHECK-NEXT:  # %bb.7: # %bb2
+; CHECK-NEXT:    jne .LBB19_17
+; CHECK-NEXT:  # %bb.6: # %bb2
 ; CHECK-NEXT:    movl $2, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB19_12: # %entry
+; CHECK-NEXT:  .LBB19_11: # %entry
 ; CHECK-NEXT:    cmpl $50, %edi
-; CHECK-NEXT:    je .LBB19_17
-; CHECK-NEXT:  # %bb.13: # %entry
-; CHECK-NEXT:    cmpl $60, %edi
-; CHECK-NEXT:    je .LBB19_14
-; CHECK-NEXT:    jmp .LBB19_18
-; CHECK-NEXT:  .LBB19_8: # %entry
-; CHECK-NEXT:    cmpl $30, %edi
 ; CHECK-NEXT:    je .LBB19_16
-; CHECK-NEXT:  # %bb.9: # %entry
+; CHECK-NEXT:  # %bb.12: # %entry
+; CHECK-NEXT:    cmpl $60, %edi
+; CHECK-NEXT:    je .LBB19_13
+; CHECK-NEXT:    jmp .LBB19_17
+; CHECK-NEXT:  .LBB19_7: # %entry
+; CHECK-NEXT:    cmpl $30, %edi
+; CHECK-NEXT:    je .LBB19_15
+; CHECK-NEXT:  # %bb.8: # %entry
 ; CHECK-NEXT:    cmpl $40, %edi
-; CHECK-NEXT:    jne .LBB19_18
-; CHECK-NEXT:  # %bb.10: # %bb4
+; CHECK-NEXT:    jne .LBB19_17
+; CHECK-NEXT:  # %bb.9: # %bb4
 ; CHECK-NEXT:    movl $4, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB19_15: # %bb1
+; CHECK-NEXT:  .LBB19_17: # %return
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB19_14: # %bb1
 ; CHECK-NEXT:    movl $1, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB19_16: # %bb3
+; CHECK-NEXT:  .LBB19_15: # %bb3
 ; CHECK-NEXT:    movl $3, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB19_18: # %return
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB19_17: # %bb5
+; CHECK-NEXT:  .LBB19_16: # %bb5
 ; CHECK-NEXT:    movl $5, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ;
@@ -2027,45 +2021,42 @@ define void @left_leaning_weight_balanced_tree2(i32 %x) {
 ; CHECK-NEXT:  # %bb.6: # %entry
 ; CHECK-NEXT:    cmpl $50, %edi
 ; CHECK-NEXT:    jne .LBB20_7
-; CHECK-NEXT:  # %bb.16: # %bb5
+; CHECK-NEXT:  # %bb.15: # %bb5
 ; CHECK-NEXT:    movl $5, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ; CHECK-NEXT:  .LBB20_11: # %entry
 ; CHECK-NEXT:    cmpl $60, %edi
 ; CHECK-NEXT:    je .LBB20_12
-; CHECK-NEXT:    jmp .LBB20_17
+; CHECK-NEXT:    jmp .LBB20_16
 ; CHECK-NEXT:  .LBB20_2: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jne .LBB20_3
-; CHECK-NEXT:  # %bb.13: # %bb0
-; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB20_3: # %entry
+; CHECK-NEXT:    je g@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    cmpl $10, %edi
-; CHECK-NEXT:    je .LBB20_14
+; CHECK-NEXT:    je .LBB20_13
 ; CHECK-NEXT:  # %bb.4: # %entry
 ; CHECK-NEXT:    cmpl $20, %edi
-; CHECK-NEXT:    jne .LBB20_17
+; CHECK-NEXT:    jne .LBB20_16
 ; CHECK-NEXT:  # %bb.5: # %bb2
 ; CHECK-NEXT:    movl $2, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
+; CHECK-NEXT:  .LBB20_13: # %bb1
+; CHECK-NEXT:    movl $1, %edi
+; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ; CHECK-NEXT:  .LBB20_7: # %entry
 ; CHECK-NEXT:    cmpl $30, %edi
-; CHECK-NEXT:    je .LBB20_15
+; CHECK-NEXT:    je .LBB20_14
 ; CHECK-NEXT:  # %bb.8: # %entry
 ; CHECK-NEXT:    cmpl $40, %edi
-; CHECK-NEXT:    jne .LBB20_17
+; CHECK-NEXT:    jne .LBB20_16
 ; CHECK-NEXT:  # %bb.9: # %bb4
 ; CHECK-NEXT:    movl $4, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB20_14: # %bb1
-; CHECK-NEXT:    movl $1, %edi
-; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB20_15: # %bb3
+; CHECK-NEXT:  .LBB20_16: # %return
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB20_14: # %bb3
 ; CHECK-NEXT:    movl $3, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB20_17: # %return
-; CHECK-NEXT:    retq
 ;
 ; NOOPT-LABEL: left_leaning_weight_balanced_tree2:
 ; NOOPT:       # %bb.0: # %entry
@@ -2174,9 +2165,12 @@ define void @right_leaning_weight_balanced_tree(i32 %x) {
 ; CHECK-NEXT:    jg .LBB21_4
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jne .LBB21_2
-; CHECK-NEXT:  # %bb.13: # %bb0
-; CHECK-NEXT:    xorl %edi, %edi
+; CHECK-NEXT:    je g@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    cmpl $10, %edi
+; CHECK-NEXT:    jne .LBB21_16
+; CHECK-NEXT:  # %bb.3: # %bb1
+; CHECK-NEXT:    movl $1, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ; CHECK-NEXT:  .LBB21_4: # %entry
 ; CHECK-NEXT:    cmpl $49, %edi
@@ -2189,38 +2183,31 @@ define void @right_leaning_weight_balanced_tree(i32 %x) {
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ; CHECK-NEXT:  .LBB21_5: # %entry
 ; CHECK-NEXT:    cmpl $20, %edi
-; CHECK-NEXT:    je .LBB21_14
+; CHECK-NEXT:    je .LBB21_13
 ; CHECK-NEXT:  # %bb.6: # %entry
 ; CHECK-NEXT:    cmpl $30, %edi
-; CHECK-NEXT:    je .LBB21_15
+; CHECK-NEXT:    je .LBB21_14
 ; CHECK-NEXT:  # %bb.7: # %entry
 ; CHECK-NEXT:    cmpl $40, %edi
-; CHECK-NEXT:    jne .LBB21_17
+; CHECK-NEXT:    jne .LBB21_16
 ; CHECK-NEXT:  # %bb.8: # %bb4
 ; CHECK-NEXT:    movl $4, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ; CHECK-NEXT:  .LBB21_10: # %entry
 ; CHECK-NEXT:    cmpl $50, %edi
-; CHECK-NEXT:    je .LBB21_16
+; CHECK-NEXT:    je .LBB21_15
 ; CHECK-NEXT:  # %bb.11: # %entry
 ; CHECK-NEXT:    cmpl $60, %edi
 ; CHECK-NEXT:    je .LBB21_12
-; CHECK-NEXT:    jmp .LBB21_17
-; CHECK-NEXT:  .LBB21_14: # %bb2
+; CHECK-NEXT:  .LBB21_16: # %return
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB21_13: # %bb2
 ; CHECK-NEXT:    movl $2, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB21_15: # %bb3
+; CHECK-NEXT:  .LBB21_14: # %bb3
 ; CHECK-NEXT:    movl $3, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB21_2: # %entry
-; CHECK-NEXT:    cmpl $10, %edi
-; CHECK-NEXT:    jne .LBB21_17
-; CHECK-NEXT:  # %bb.3: # %bb1
-; CHECK-NEXT:    movl $1, %edi
-; CHECK-NEXT:    jmp g@PLT # TAILCALL
-; CHECK-NEXT:  .LBB21_17: # %return
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB21_16: # %bb5
+; CHECK-NEXT:  .LBB21_15: # %bb5
 ; CHECK-NEXT:    movl $5, %edi
 ; CHECK-NEXT:    jmp g@PLT # TAILCALL
 ;

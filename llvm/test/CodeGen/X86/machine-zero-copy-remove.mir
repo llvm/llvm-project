@@ -1,0 +1,277 @@
+# RUN: llc -mtriple=i386-- -run-pass=x86-copyelim %s -verify-machineinstrs -o - | FileCheck %s
+# RUN: llc -mtriple=i386-- -passes=x86-copyelim %s -o - | FileCheck %s
+---
+# CHECK-LABEL: name: test1
+# CHECK: TEST32rr
+# CHECK: bb.1:
+# CHECK-NOT: MOV32ri
+name:            test1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $eax, $ecx
+
+    TEST32rr killed $eax, killed $eax, implicit-def $eflags
+    JCC_1 %bb.1, 4, implicit killed $eflags
+    JMP_1 %bb.2
+
+  bb.1:
+    liveins: $eax, $ecx
+
+    $eax = MOV32ri 0
+    MOV32mr $ecx, 1, $noreg, 0, $noreg, killed $eax
+
+  bb.2:
+    RET 0
+
+...
+# CHECK-LABEL: name: test2
+# CHECK: TEST32rr
+# CHECK: bb.1:
+# CHECK-NOT: XOR32rr
+name:            test2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $eax, $ecx
+
+    TEST32rr killed $eax, killed $eax, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit killed $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    liveins: $eax, $ecx
+
+    $eax = XOR32rr $eax, $eax, implicit-def dead $eflags
+    MOV32mr $ecx, 1, $noreg, 0, $noreg, killed $eax
+
+  bb.2:
+    RET 0
+
+...
+# CHECK-LABEL: name: negative
+# CHECK: MOV32ri
+name:            negative
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $eax, $ecx
+
+    TEST32rr killed $eax, killed $eax, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    liveins: $eax, $ecx
+
+    $eax = MOV32ri 0
+    MOV32mr $ecx, 1, $noreg, 0, $noreg, killed $eax
+
+  bb.2:
+    RET 0
+
+...
+# CHECK-LABEL: name: test3_cmp
+# CHECK: CMP32rr
+# CHECK: bb.1:
+# CHECK-NOT: MOV32rr
+name:            test3_cmp
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $eax, $ecx
+
+    CMP32rr $eax, $ecx, implicit-def $eflags
+    JCC_1 %bb.1, 4, implicit killed $eflags
+    JMP_1 %bb.2
+
+  bb.1:
+    liveins: $eax, $ecx
+
+    $eax = MOV32rr $ecx
+    MOV32mr $ecx, 1, $noreg, 0, $noreg, killed $eax
+
+  bb.2:
+    RET 0
+
+...
+# CHECK-LABEL: name: test4_glue
+# CHECK: TEST32rr
+# CHECK: bb.2:
+# CHECK-NOT: MOV32ri
+name:            test4_glue
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $eax, $ecx
+
+    TEST32rr killed $eax, killed $eax, implicit-def $eflags
+    JCC_1 %bb.1, 4, implicit killed $eflags
+    JMP_1 %bb.3
+
+  bb.1:
+    liveins: $eax
+
+    JMP_1 %bb.2
+
+  bb.2:
+    liveins: $eax, $ecx
+
+    $eax = MOV32ri 0
+    MOV32mr $ecx, 1, $noreg, 0, $noreg, killed $eax
+
+  bb.3:
+    RET 0
+
+...
+# CHECK-LABEL: name: test5_fallthrough
+# CHECK: TEST32rr
+# CHECK: bb.2:
+# CHECK-NOT: MOV32ri
+name:            test5_fallthrough
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $eax, $ecx
+
+    TEST32rr killed $eax, killed $eax, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit killed $eflags
+
+  bb.1:
+    RET 0
+
+  bb.2:
+    liveins: $eax, $ecx
+
+    $eax = MOV32ri 0
+    MOV32mr $ecx, 1, $noreg, 0, $noreg, killed $eax
+
+...
+# CMP reg, imm: if equal, the register holds the immediate.
+# The MOV32ri 42 in bb.1 is redundant.
+# CHECK-LABEL: name: test6_cmpri
+# CHECK: CMP32ri
+# CHECK: bb.1:
+# CHECK-NOT: MOV32ri
+name:            test6_cmpri
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $eax, $ecx
+
+    CMP32ri $eax, 42, implicit-def $eflags
+    JCC_1 %bb.1, 4, implicit killed $eflags
+    JMP_1 %bb.2
+
+  bb.1:
+    liveins: $eax, $ecx
+
+    $eax = MOV32ri 42
+    MOV32mr $ecx, 1, $noreg, 0, $noreg, killed $eax
+
+  bb.2:
+    RET 0
+
+...
+# CMP reg, imm: negative test — wrong immediate value.
+# The MOV32ri 99 must NOT be removed since we know eax==42, not 99.
+# CHECK-LABEL: name: negative_cmpri_wrong_imm
+# CHECK: bb.1:
+# CHECK: MOV32ri
+name:            negative_cmpri_wrong_imm
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $eax, $ecx
+
+    CMP32ri $eax, 42, implicit-def $eflags
+    JCC_1 %bb.1, 4, implicit killed $eflags
+    JMP_1 %bb.2
+
+  bb.1:
+    liveins: $eax, $ecx
+
+    $eax = MOV32ri 99
+    MOV32mr $ecx, 1, $noreg, 0, $noreg, killed $eax
+
+  bb.2:
+    RET 0
+
+...
+# SUB reg, reg: if equal, the destination is zero.
+# The MOV32ri 0 in bb.1 is redundant because eax is already zero.
+# CHECK-LABEL: name: test7_sub_eq
+# CHECK: SUB32rr
+# CHECK: bb.1:
+# CHECK-NOT: MOV32ri
+name:            test7_sub_eq
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $eax, $edx
+
+    $eax = SUB32rr $eax, $edx, implicit-def $eflags
+    JCC_1 %bb.1, 4, implicit killed $eflags
+    JMP_1 %bb.2
+
+  bb.1:
+    liveins: $eax, $edx
+
+    $eax = MOV32ri 0
+    MOV32mr $edx, 1, $noreg, 0, $noreg, killed $eax
+
+  bb.2:
+    RET 0
+
+...
+# AND self-test: AND eax, eax sets ZF iff eax==0.
+# The MOV32ri 0 is redundant on the equal path.
+# CHECK-LABEL: name: test8_and_self
+# CHECK: AND32rr
+# CHECK: bb.1:
+# CHECK-NOT: MOV32ri
+name:            test8_and_self
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $eax, $ecx
+
+    dead $eax = AND32rr $eax, $eax, implicit-def $eflags
+    JCC_1 %bb.1, 4, implicit killed $eflags
+    JMP_1 %bb.2
+
+  bb.1:
+    liveins: $eax, $ecx
+
+    $eax = MOV32ri 0
+    MOV32mr $ecx, 1, $noreg, 0, $noreg, killed $eax
+
+  bb.2:
+    RET 0
+
+...
+# Negative: register clobbered between flag setter and branch.
+# $eax is modified after CMP, so we can't trust the known value.
+# CHECK-LABEL: name: negative_clobbered
+# CHECK: bb.1:
+# CHECK: MOV32rr
+name:            negative_clobbered
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $eax, $ecx, $edx
+
+    CMP32rr $eax, $ecx, implicit-def $eflags
+    $eax = MOV32ri 7
+    JCC_1 %bb.1, 4, implicit killed $eflags
+    JMP_1 %bb.2
+
+  bb.1:
+    liveins: $eax, $ecx, $edx
+
+    $eax = MOV32rr $ecx
+    MOV32mr $ecx, 1, $noreg, 0, $noreg, killed $eax
+
+  bb.2:
+    RET 0
+

@@ -94,6 +94,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86SpeculativeLoadHardeningLegacyPass(PR);
   initializeX86SpeculativeExecutionSideEffectSuppressionLegacyPass(PR);
   initializeX86FlagsCopyLoweringLegacyPass(PR);
+  initializeX86RedundantCopyEliminationLegacyPass(PR);
   initializeX86LoadValueInjectionLoadHardeningLegacyPass(PR);
   initializeX86LoadValueInjectionRetHardeningLegacyPass(PR);
   initializeX86OptimizeLEAsLegacyPass(PR);
@@ -539,6 +540,8 @@ void X86PassConfig::addMachineSSAOptimization() {
 }
 
 void X86PassConfig::addPostRegAlloc() {
+  if (getOptLevel() != CodeGenOptLevel::None && EnableRedundantCopyElimination)
+    addPass(createX86RedundantCopyEliminationLegacyPass());
   addPass(createX86LowerTileCopyLegacyPass());
   addPass(createX86FPStackifierLegacyPass());
   // When -O0 is enabled, the Load Value Injection Hardening pass will fall back

@@ -105,7 +105,6 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    jmp .LBB0_8
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_6: # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    movb {{[-0-9]+}}(%e{{[sb]}}p), %dh # 1-byte Reload
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_19: # %for.cond47
@@ -129,7 +128,6 @@ define dso_local void @fn() {
 ; CHECK-NEXT:  # %bb.14: # %if.then31
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    xorl %ebp, %ebp
 ; CHECK-NEXT:    jmp .LBB0_15
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_9: # in Loop: Header=BB0_1 Depth=1
