@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/DebugLog.h"
+#include "llvm/Support/StringSaver.h"
 #include <cassert>
 
 #define DEBUG_TYPE "clang-doc"
@@ -29,15 +30,6 @@ static ArrayRef<T> allocateArray(SmallVectorImpl<T> &Vec,
   T *Allocated = Arena.Allocate<T>(Vec.size());
   std::uninitialized_copy(Vec.begin(), Vec.end(), Allocated);
   return ArrayRef<T>(Allocated, Vec.size());
-}
-
-// Interns a StringRef into the arena so it outlives the parse loop.
-static StringRef internString(StringRef S, BumpPtrAllocator &Arena) {
-  if (S.empty())
-    return {};
-  char *Buf = Arena.Allocate<char>(S.size());
-  std::copy(S.begin(), S.end(), Buf);
-  return StringRef(Buf, S.size());
 }
 
 // A line is a table separator if it only contains |, -, :, and spaces,
@@ -142,14 +134,15 @@ static size_t findClosingDelim(StringRef S, size_t StartPos, char DelimChar,
 //
 // TODO: This covers the common cases but not the full CommonMark §6 inline
 // model (delimiter stacks, intraword underscore rules, links, autolinks).
-static ArrayRef<MDNode *> parseInline(StringRef S, BumpPtrAllocator &Arena) {
+static ArrayRef<MDNode *> parseInline(StringRef S, BumpPtrAllocator &Arena,
+                                      StringSaver &Saver) {
   SmallVector<MDNode *> Nodes;
   size_t TextStart = 0, Pos = 0, E = S.size();
 
   auto flushText = [&](size_t End) {
     if (End > TextStart)
       Nodes.push_back(new (Arena) TextNode(
-          internString(S.substr(TextStart, End - TextStart), Arena)));
+          Saver.save(S.substr(TextStart, End - TextStart))));
   };
 
   while (Pos < E) {
@@ -166,7 +159,7 @@ static ArrayRef<MDNode *> parseInline(StringRef S, BumpPtrAllocator &Arena) {
         flushText(Pos);
         StringRef Code =
             trimCodeSpan(S.substr(Pos + OpenLen, ClosePos - (Pos + OpenLen)));
-        Nodes.push_back(new (Arena) InlineCodeNode(internString(Code, Arena)));
+        Nodes.push_back(new (Arena) InlineCodeNode(Saver.save(Code)));
         Pos = ClosePos + OpenLen;
         TextStart = Pos;
         continue;
@@ -184,7 +177,8 @@ static ArrayRef<MDNode *> parseInline(StringRef S, BumpPtrAllocator &Arena) {
         if (Close != StringRef::npos) {
           flushText(Pos);
           StringRef Inner = S.substr(Pos + 2, Close - (Pos + 2));
-          Nodes.push_back(new (Arena) StrongNode(parseInline(Inner, Arena)));
+          Nodes.push_back(new (Arena)
+                              StrongNode(parseInline(Inner, Arena, Saver)));
           Pos = Close + 2;
           TextStart = Pos;
           continue;
@@ -194,7 +188,8 @@ static ArrayRef<MDNode *> parseInline(StringRef S, BumpPtrAllocator &Arena) {
       if (Close != StringRef::npos) {
         flushText(Pos);
         StringRef Inner = S.substr(Pos + 1, Close - (Pos + 1));
-        Nodes.push_back(new (Arena) EmphasisNode(parseInline(Inner, Arena)));
+        Nodes.push_back(new (Arena)
+                            EmphasisNode(parseInline(Inner, Arena, Saver)));
         Pos = Close + 1;
         TextStart = Pos;
         continue;
@@ -213,6 +208,7 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
   if (ParagraphText.trim().empty())
     return {};
 
+  StringSaver Saver(Arena);
   SmallVector<StringRef, 16> Lines;
   ParagraphText.split(Lines, '\n');
 
@@ -234,7 +230,7 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
     // case-by-case basis.
     if (Line.starts_with("```") || Line.starts_with("~~~")) {
       char Fence = Line[0];
-      StringRef Lang = internString(Line.drop_front(3).trim(), Arena);
+      StringRef Lang = Saver.save(Line.drop_front(3).trim());
       Reader.advance(); // consume opening fence
       SmallVector<StringRef> CodeLines;
       while (!Reader.atEnd()) {
@@ -243,7 +239,7 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
             all_of(CodeLine.take_front(3),
                    [Fence](char C) { return C == Fence; }))
           break;
-        CodeLines.push_back(internString(Reader.advance(), Arena));
+        CodeLines.push_back(Saver.save(Reader.advance()));
       }
       if (!Reader.atEnd())
         Reader.advance(); // consume closing fence
@@ -262,7 +258,7 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
       // inline content (emphasis, code spans, links), so each row may need to
       // be split on '|' and parsed further into structured cells.
       while (!Reader.atEnd() && Reader.peek().trim().contains('|'))
-        Rows.push_back(internString(Reader.advance().trim(), Arena));
+        Rows.push_back(Saver.save(Reader.advance().trim()));
       auto *Table = new (Arena) TableNode(allocateArray(Rows, Arena));
       LDBG() << "emitting TableNode rows=" << Rows.size();
       Nodes.push_back(Table);
@@ -276,7 +272,7 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
         StringRef L = Reader.peek().trim();
         if (!isListItem(L))
           break;
-        StringRef ItemText = internString(L.drop_front(2).trim(), Arena);
+        StringRef ItemText = Saver.save(L.drop_front(2).trim());
         SmallVector<MDNode *> ItemChildren;
         ItemChildren.push_back(new (Arena) TextNode(ItemText));
         auto *Item =
@@ -291,7 +287,7 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
     }
 
     // Plain text, scanned for inline constructs (emphasis, strong, code).
-    for (MDNode *Inline : parseInline(Line, Arena))
+    for (MDNode *Inline : parseInline(Line, Arena, Saver))
       Nodes.push_back(Inline);
     Reader.advance();
   }
