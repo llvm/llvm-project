@@ -113,60 +113,54 @@ void HwModePredicates::add(const HwModePredicates &Other) {
 // Evaluates if the current set of predicates contains a contradiction.
 // Performs unit propagation: if we have a known feature F, we can simplify
 // OR-sets (A || B) containing F or !F.
+// Returns true if the OrSet is satisfied, false otherwise.
+// If not satisfied, fills SimplifiedSet with remaining active literals.
+static bool simplifyOrSet(const std::set<SubtargetFeatureLiteral> &OrSet,
+                          const std::set<SubtargetFeatureLiteral> &FeaturesSet,
+                          std::set<SubtargetFeatureLiteral> &SimplifiedSet) {
+  for (const auto &Lit : OrSet) {
+    if (FeaturesSet.count(Lit))
+      return true; // Satisfied
+    if (!FeaturesSet.count({Lit.Feature, !Lit.IsNot}))
+      SimplifiedSet.insert(Lit);
+  }
+  return false;
+}
+
+// Evaluates if the current set of predicates contains a contradiction.
+// Performs unit propagation: if we have a known feature F, we can simplify
+// OR-sets (A || B) containing F or !F.
 bool HwModePredicates::isSelfContradictory() {
-  while (true) {
-    // 1. Check for immediate contradictions (e.g. requiring both F and !F).
-    for (const auto &Lit : FeaturesSet) {
-      if (FeaturesSet.count({Lit.Feature, !Lit.IsNot}))
-        return true;
+  // Check for immediate contradictions (e.g. requiring both F and !F).
+  for (const auto &Lit : FeaturesSet) {
+    if (FeaturesSet.count({Lit.Feature, !Lit.IsNot}))
+      return true;
+  }
+
+  std::set<std::set<SubtargetFeatureLiteral>> NewAnyOfs;
+  bool FeaturesChanged = false;
+
+  for (const auto &OrSet : AnyOfFeatureSets) {
+    std::set<SubtargetFeatureLiteral> SimplifiedSet;
+    if (simplifyOrSet(OrSet, FeaturesSet, SimplifiedSet))
+      continue; // Discard satisfied set
+
+    // All literals in this OR-set are false, causing a contradiction.
+    if (SimplifiedSet.empty())
+      return true;
+
+    if (SimplifiedSet.size() == 1) {
+      // Unit clause: only one choice remains, so it must be true.
+      FeaturesSet.insert(*SimplifiedSet.begin());
+      FeaturesChanged = true;
+    } else {
+      NewAnyOfs.insert(std::move(SimplifiedSet));
     }
+  }
 
-    // 2. Propagate known features to simplify OR-sets.
-    std::set<std::set<SubtargetFeatureLiteral>> NewAnyOfs;
-    bool MadeProgress = false;
-
-    for (const auto &OrSet : AnyOfFeatureSets) {
-      bool IsSatisfied = false;
-      std::set<SubtargetFeatureLiteral> SimplifiedSet;
-
-      for (const auto &Lit : OrSet) {
-        // If a literal in the OR-set is already known to be true,
-        // the entire OR-set is satisfied and can be discarded.
-        if (FeaturesSet.count(Lit)) {
-          IsSatisfied = true;
-          break;
-        }
-        // If a literal's negation is known to be true (so this literal is
-        // false), we can remove it from the OR-set.
-        if (FeaturesSet.count({Lit.Feature, !Lit.IsNot})) {
-          MadeProgress = true;
-          continue;
-        }
-        SimplifiedSet.insert(Lit);
-      }
-
-      if (IsSatisfied) {
-        MadeProgress = true;
-        continue; // Discard satisfied set
-      }
-
-      if (SimplifiedSet.empty())
-        return true; // All literals in this OR-set are false ->
-                     // contradiction.
-
-      if (SimplifiedSet.size() == 1) {
-        // Unit clause: only one choice remains, so it must be true.
-        FeaturesSet.insert(*SimplifiedSet.begin());
-        MadeProgress = true;
-      } else {
-        NewAnyOfs.insert(std::move(SimplifiedSet));
-      }
-    }
-
-    if (!MadeProgress)
-      break;
-
+  if (FeaturesChanged) {
     AnyOfFeatureSets = std::move(NewAnyOfs);
+    return isSelfContradictory();
   }
 
   return false;

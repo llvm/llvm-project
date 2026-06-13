@@ -86,6 +86,12 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
         __builtin_elementwise_add_sat(__rs1, __rs1), __rs2);                   \
   }
 
+#define __packed_cmp(name, ty, rty, op)                                        \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
+                                                          ty __rs2) {          \
+    return (rty)(__rs1 op __rs2);                                              \
+  }
+
 // clang-format off: macro call sites have no trailing semicolons, which
 // confuses clang-format into a deeply nested expression.
 
@@ -213,6 +219,70 @@ __packed_binary_builtin(pmaxu_u8x8, uint8x8_t, __builtin_elementwise_max)
 __packed_binary_builtin(pmaxu_u16x4, uint16x4_t, __builtin_elementwise_max)
 __packed_binary_builtin(pmaxu_u32x2, uint32x2_t, __builtin_elementwise_max)
 
+/* Packed Comparison (32-bit) */
+__packed_cmp(pmseq_i8x4_u8x4, int8x4_t, uint8x4_t, ==)
+__packed_cmp(pmseq_u8x4_u8x4, uint8x4_t, uint8x4_t, ==)
+__packed_cmp(pmsne_i8x4_u8x4, int8x4_t, uint8x4_t, !=)
+__packed_cmp(pmsne_u8x4_u8x4, uint8x4_t, uint8x4_t, !=)
+__packed_cmp(pmslt_u8x4, int8x4_t, uint8x4_t, <)
+__packed_cmp(pmsltu_u8x4, uint8x4_t, uint8x4_t, <)
+__packed_cmp(pmsgt_u8x4, int8x4_t, uint8x4_t, >)
+__packed_cmp(pmsgtu_u8x4, uint8x4_t, uint8x4_t, >)
+__packed_cmp(pmsge_u8x4, int8x4_t, uint8x4_t, >=)
+__packed_cmp(pmsgeu_u8x4, uint8x4_t, uint8x4_t, >=)
+__packed_cmp(pmsle_u8x4, int8x4_t, uint8x4_t, <=)
+__packed_cmp(pmsleu_u8x4, uint8x4_t, uint8x4_t, <=)
+__packed_cmp(pmseq_i16x2_u16x2, int16x2_t, uint16x2_t, ==)
+__packed_cmp(pmseq_u16x2_u16x2, uint16x2_t, uint16x2_t, ==)
+__packed_cmp(pmsne_i16x2_u16x2, int16x2_t, uint16x2_t, !=)
+__packed_cmp(pmsne_u16x2_u16x2, uint16x2_t, uint16x2_t, !=)
+__packed_cmp(pmslt_u16x2, int16x2_t, uint16x2_t, <)
+__packed_cmp(pmsltu_u16x2, uint16x2_t, uint16x2_t, <)
+__packed_cmp(pmsgt_u16x2, int16x2_t, uint16x2_t, >)
+__packed_cmp(pmsgtu_u16x2, uint16x2_t, uint16x2_t, >)
+__packed_cmp(pmsge_u16x2, int16x2_t, uint16x2_t, >=)
+__packed_cmp(pmsgeu_u16x2, uint16x2_t, uint16x2_t, >=)
+__packed_cmp(pmsle_u16x2, int16x2_t, uint16x2_t, <=)
+__packed_cmp(pmsleu_u16x2, uint16x2_t, uint16x2_t, <=)
+
+/* Packed Comparison (64-bit) */
+__packed_cmp(pmseq_i8x8_u8x8, int8x8_t, uint8x8_t, ==)
+__packed_cmp(pmseq_u8x8_u8x8, uint8x8_t, uint8x8_t, ==)
+__packed_cmp(pmsne_i8x8_u8x8, int8x8_t, uint8x8_t, !=)
+__packed_cmp(pmsne_u8x8_u8x8, uint8x8_t, uint8x8_t, !=)
+__packed_cmp(pmslt_u8x8, int8x8_t, uint8x8_t, <)
+__packed_cmp(pmsltu_u8x8, uint8x8_t, uint8x8_t, <)
+__packed_cmp(pmsgt_u8x8, int8x8_t, uint8x8_t, >)
+__packed_cmp(pmsgtu_u8x8, uint8x8_t, uint8x8_t, >)
+__packed_cmp(pmsge_u8x8, int8x8_t, uint8x8_t, >=)
+__packed_cmp(pmsgeu_u8x8, uint8x8_t, uint8x8_t, >=)
+__packed_cmp(pmsle_u8x8, int8x8_t, uint8x8_t, <=)
+__packed_cmp(pmsleu_u8x8, uint8x8_t, uint8x8_t, <=)
+__packed_cmp(pmseq_i16x4_u16x4, int16x4_t, uint16x4_t, ==)
+__packed_cmp(pmseq_u16x4_u16x4, uint16x4_t, uint16x4_t, ==)
+__packed_cmp(pmsne_i16x4_u16x4, int16x4_t, uint16x4_t, !=)
+__packed_cmp(pmsne_u16x4_u16x4, uint16x4_t, uint16x4_t, !=)
+__packed_cmp(pmslt_u16x4, int16x4_t, uint16x4_t, <)
+__packed_cmp(pmsltu_u16x4, uint16x4_t, uint16x4_t, <)
+__packed_cmp(pmsgt_u16x4, int16x4_t, uint16x4_t, >)
+__packed_cmp(pmsgtu_u16x4, uint16x4_t, uint16x4_t, >)
+__packed_cmp(pmsge_u16x4, int16x4_t, uint16x4_t, >=)
+__packed_cmp(pmsgeu_u16x4, uint16x4_t, uint16x4_t, >=)
+__packed_cmp(pmsle_u16x4, int16x4_t, uint16x4_t, <=)
+__packed_cmp(pmsleu_u16x4, uint16x4_t, uint16x4_t, <=)
+__packed_cmp(pmseq_i32x2_u32x2, int32x2_t, uint32x2_t, ==)
+__packed_cmp(pmseq_u32x2_u32x2, uint32x2_t, uint32x2_t, ==)
+__packed_cmp(pmsne_i32x2_u32x2, int32x2_t, uint32x2_t, !=)
+__packed_cmp(pmsne_u32x2_u32x2, uint32x2_t, uint32x2_t, !=)
+__packed_cmp(pmslt_u32x2, int32x2_t, uint32x2_t, <)
+__packed_cmp(pmsltu_u32x2, uint32x2_t, uint32x2_t, <)
+__packed_cmp(pmsgt_u32x2, int32x2_t, uint32x2_t, >)
+__packed_cmp(pmsgtu_u32x2, uint32x2_t, uint32x2_t, >)
+__packed_cmp(pmsge_u32x2, int32x2_t, uint32x2_t, >=)
+__packed_cmp(pmsgeu_u32x2, uint32x2_t, uint32x2_t, >=)
+__packed_cmp(pmsle_u32x2, int32x2_t, uint32x2_t, <=)
+__packed_cmp(pmsleu_u32x2, uint32x2_t, uint32x2_t, <=)
+
 /* Packed Shifts (32-bit) */
 __packed_shift8(psll_s_u8x4, uint8x4_t, <<)
 __packed_shift8(psll_s_i8x4, int8x4_t, <<)
@@ -281,6 +351,30 @@ __packed_unary_op(pnot_u16x4, uint16x4_t, ~)
 __packed_unary_op(pnot_i32x2, int32x2_t, ~)
 __packed_unary_op(pnot_u32x2, uint32x2_t, ~)
 
+/* Packed Averaging Addition and Subtraction (32-bit) */
+__packed_binary_builtin(paadd_i8x4, int8x4_t, __builtin_riscv_paadd_i8x4)
+__packed_binary_builtin(paadd_i16x2, int16x2_t, __builtin_riscv_paadd_i16x2)
+__packed_binary_builtin(paaddu_u8x4, uint8x4_t, __builtin_riscv_paaddu_u8x4)
+__packed_binary_builtin(paaddu_u16x2, uint16x2_t, __builtin_riscv_paaddu_u16x2)
+__packed_binary_builtin(pasub_i8x4, int8x4_t, __builtin_riscv_pasub_i8x4)
+__packed_binary_builtin(pasub_i16x2, int16x2_t, __builtin_riscv_pasub_i16x2)
+__packed_binary_builtin(pasubu_u8x4, uint8x4_t, __builtin_riscv_pasubu_u8x4)
+__packed_binary_builtin(pasubu_u16x2, uint16x2_t, __builtin_riscv_pasubu_u16x2)
+
+/* Packed Averaging Addition and Subtraction (64-bit) */
+__packed_binary_builtin(paadd_i8x8, int8x8_t, __builtin_riscv_paadd_i8x8)
+__packed_binary_builtin(paadd_i16x4, int16x4_t, __builtin_riscv_paadd_i16x4)
+__packed_binary_builtin(paadd_i32x2, int32x2_t, __builtin_riscv_paadd_i32x2)
+__packed_binary_builtin(paaddu_u8x8, uint8x8_t, __builtin_riscv_paaddu_u8x8)
+__packed_binary_builtin(paaddu_u16x4, uint16x4_t, __builtin_riscv_paaddu_u16x4)
+__packed_binary_builtin(paaddu_u32x2, uint32x2_t, __builtin_riscv_paaddu_u32x2)
+__packed_binary_builtin(pasub_i8x8, int8x8_t, __builtin_riscv_pasub_i8x8)
+__packed_binary_builtin(pasub_i16x4, int16x4_t, __builtin_riscv_pasub_i16x4)
+__packed_binary_builtin(pasub_i32x2, int32x2_t, __builtin_riscv_pasub_i32x2)
+__packed_binary_builtin(pasubu_u8x8, uint8x8_t, __builtin_riscv_pasubu_u8x8)
+__packed_binary_builtin(pasubu_u16x4, uint16x4_t, __builtin_riscv_pasubu_u16x4)
+__packed_binary_builtin(pasubu_u32x2, uint32x2_t, __builtin_riscv_pasubu_u32x2)
+
 // clang-format on
 
 #undef __packed_splat2
@@ -297,6 +391,7 @@ __packed_unary_op(pnot_u32x2, uint32x2_t, ~)
 #undef __packed_binary_builtin
 #undef __packed_sh1add
 #undef __packed_sh1sadd
+#undef __packed_cmp
 #undef __DEFAULT_FN_ATTRS
 
 #if defined(__cplusplus)

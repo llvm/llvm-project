@@ -10047,7 +10047,8 @@ excepting that the aspects may be in any order.
 
 The following aspects are currently supported:
 
-- ``float``: The call has a floating point argument
+- ``fixed``: The call has a C ISO 18037 fixed-point argument.
+- ``float``: The call has a floating-point argument.
   }];
 }
 
