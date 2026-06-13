@@ -446,7 +446,7 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
         mh->GetValueForKey("cpusubtype")->GetUnsignedIntegerValue();
     image_infos[i].header.filetype =
         mh->GetValueForKey("filetype")->GetUnsignedIntegerValue();
-    if (mh->HasKey("sizeof_h_and_loadcmds"))
+    if (mh->HasKey("sizeof_mh_and_loadcmds"))
       image_infos[i].mh_and_load_cmd_size =
           mh->GetValueForKey("sizeof_mh_and_loadcmds")
               ->GetUnsignedIntegerValue();

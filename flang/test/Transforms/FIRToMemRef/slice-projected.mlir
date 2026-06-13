@@ -258,3 +258,49 @@ func.func @derived_component_not_projected(
   }
   return
 }
+
+// ----------------------------------------------------------------------------
+// ref + fir.shape + projected %re/%im (0093_0105): shapeVec path, no box_dims.
+// ----------------------------------------------------------------------------
+
+// CHECK-LABEL: func.func @projected_slice_ref_shapevec_stride_store
+// CHECK:       fir.do_loop
+// CHECK:         [[COMP:%[0-9]+]] = fir.convert %{{.*}} : (memref<5xcomplex<f32>>) -> memref<5x2xf32>
+// CHECK-NOT:     fir.box_dims %arg0
+// CHECK:         memref.reinterpret_cast [[COMP]]{{.*}}strides: [%c2{{.*}}, %c1{{.*}}] : memref<5x2xf32> to memref<?x?xf32, strided<
+// CHECK-NEXT:    memref.store
+func.func @projected_slice_ref_shapevec_stride_store(
+    %arg0: !fir.ref<!fir.array<5xcomplex<f32>>>, %arg1: f32) {
+  %c1 = arith.constant 1 : index
+  %c5 = arith.constant 5 : index
+  %c0 = arith.constant 0 : index
+  %shape = fir.shape %c5 : (index) -> !fir.shape<1>
+  %slice = fir.slice %c1, %c5, %c1 path %c0 : (index, index, index, index) -> !fir.slice<1>
+  fir.do_loop %i = %c1 to %c5 step %c1 unordered {
+    %coor = fir.array_coor %arg0 (%shape) [%slice] %i
+        : (!fir.ref<!fir.array<5xcomplex<f32>>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<f32>
+    fir.store %arg1 to %coor : !fir.ref<f32>
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @projected_slice_ref_shapevec_stride_load_im
+// CHECK:       fir.do_loop
+// CHECK:         [[COMP:%[0-9]+]] = fir.convert %{{.*}} : (memref<4xcomplex<f64>>) -> memref<4x2xf64>
+// CHECK-NOT:     fir.box_dims
+// CHECK:         memref.reinterpret_cast [[COMP]]{{.*}}strides: [%c2{{.*}}, %c1{{.*}}] : memref<4x2xf64> to memref<?x?xf64, strided<
+// CHECK-NEXT:    memref.load
+func.func @projected_slice_ref_shapevec_stride_load_im(
+    %arg0: !fir.ref<!fir.array<4xcomplex<f64>>>) {
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c1_im = arith.constant 1 : index
+  %shape = fir.shape %c4 : (index) -> !fir.shape<1>
+  %slice = fir.slice %c1, %c4, %c1 path %c1_im : (index, index, index, index) -> !fir.slice<1>
+  fir.do_loop %i = %c1 to %c4 step %c1 unordered {
+    %coor = fir.array_coor %arg0 (%shape) [%slice] %i
+        : (!fir.ref<!fir.array<4xcomplex<f64>>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<f64>
+    %val = fir.load %coor : !fir.ref<f64>
+  }
+  return
+}

@@ -16,6 +16,7 @@
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Module.h"
 #include <map>
+#include <optional>
 #include <random>
 
 namespace llvm::ubi {
@@ -28,6 +29,7 @@ enum class MemInitKind {
 
 enum class MemAllocKind {
   Global,
+  BlockAddress,
   Stack,
   Malloc,
   New,
@@ -107,21 +109,18 @@ class MemoryObject : public RefCountedBase<MemoryObject> {
   MemoryObjectState State;
   MemAllocKind AllocKind;
   bool IsConstant = false;
+  bool IsIRGlobalValue = false;
 
-  // A tag is a randomly generated unique identifier to recover the provenance
-  // of a pointer. The length of tag is equal to the store size of the pointer
-  // type, in bits. It may produce false negatives in some corner cases. But in
-  // real practice the false negative rate should be negligible.
-  // A zero tag is invalid.
-  // TODO: we need a tag->provenance mapping instead of assigning a tag to each
-  // memory object.
-  // TODO: we need a special tag encoding for wildcard provenance, which is
-  // introduced by inttoptr.
-  APInt Tag;
+  // Tagged provenances related to this memory object.
+  // It is used to erasing the tags after the memory object is freed.
+  SmallVector<APInt> AssociatedTags;
+
+  friend class Context;
 
 public:
   MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name, unsigned AS,
-               MemInitKind InitKind, MemAllocKind AllocKind);
+               MemInitKind InitKind, MemAllocKind AllocKind,
+               bool IsIRGlobalValue = false);
   MemoryObject(const MemoryObject &) = delete;
   MemoryObject(MemoryObject &&) = delete;
   MemoryObject &operator=(const MemoryObject &) = delete;
@@ -135,10 +134,9 @@ public:
   MemoryObjectState getState() const { return State; }
   void setState(MemoryObjectState S) { State = S; }
   MemAllocKind getAllocKind() const { return AllocKind; }
+  bool isIRGlobalValue() const { return IsIRGlobalValue; }
   bool isConstant() const { return IsConstant; }
   void setIsConstant(bool C) { IsConstant = C; }
-  const APInt &getTag() const { return Tag; }
-  void setTag(const APInt &T) { Tag = T; }
 
   bool inBounds(const APInt &NewAddr) const {
     return NewAddr.uge(Address) && NewAddr.ule(Address + Size);
@@ -150,8 +148,6 @@ public:
   }
   ArrayRef<Byte> getBytes() const { return Bytes; }
   MutableArrayRef<Byte> getBytes() { return Bytes; }
-
-  void markAsFreed();
 
   bool isGlobal() const;
   bool isStackAllocated() const;
@@ -238,15 +234,14 @@ class Context {
   uint64_t AllocationBase = 8;
   // All live memory objects.
   DenseMap<uint64_t, IntrusiveRefCntPtr<MemoryObject>> MemoryObjects;
-  // Mapping from tags to memory objects. Tags are lazily generated when a
+  // Mapping from tags to provenances. Tags are lazily generated when a
   // pointer is captured by memory.
-  DenseMap<APInt, IntrusiveRefCntPtr<MemoryObject>> TaggedMemoryObjects;
+  DenseMap<APInt, IntrusiveRefCntPtr<Provenance>> TaggedProvenances;
   // TODO: Maintains a global list of 'exposed' provenances. This is used to
   // convert an address back to a pointer with a previously exposed provenance.
 
-  /// Get the tag for a pointer to the given memory object.
-  /// TODO: encode metadata bits into the tag.
-  APInt getTag(uint32_t BitWidth, MemoryObject *Obj);
+  /// Get the tag for the given pointer provenance.
+  APInt getTag(uint32_t BitWidth, Provenance &Prov);
   AnyValue fromBytes(ConstBytesView Bytes, Type *Ty, uint32_t OffsetInBits,
                      bool CheckPaddingBits, bool *ContainsUndefinedBits);
   void toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
@@ -261,7 +256,8 @@ class Context {
       ValidFuncTargets;
   DenseMap<uint64_t, std::pair<BasicBlock *, IntrusiveRefCntPtr<MemoryObject>>>
       ValidBlockTargets;
-  AnyValue getConstantValueImpl(Constant *C);
+  DenseMap<GlobalVariable *, Pointer> GlobalAddrMap;
+  std::optional<AnyValue> getConstantValueImpl(Constant *C);
 
   // Floating-point environment
   RoundingMode CurrentRoundingMode = RoundingMode::NearestTiesToEven;
@@ -323,11 +319,12 @@ public:
   uint64_t getEffectiveTypeAllocSize(Type *Ty);
   uint64_t getEffectiveTypeStoreSize(Type *Ty);
 
-  const AnyValue &getConstantValue(Constant *C);
+  const AnyValue *getConstantValue(Constant *C);
   IntrusiveRefCntPtr<MemoryObject> allocate(uint64_t Size, uint64_t Align,
                                             StringRef Name, unsigned AS,
                                             MemInitKind InitKind,
-                                            MemAllocKind AllocKind);
+                                            MemAllocKind AllocKind,
+                                            bool IsIRGlobalValue = false);
   bool free(const MemoryObject &Obj);
   /// Derive a pointer from a memory object with offset 0.
   /// Please use Pointer's interface for further manipulations.

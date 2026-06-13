@@ -12,6 +12,7 @@
 
 #include "RISCVInstPrinter.h"
 #include "RISCVBaseInfo.h"
+#include "RISCVMCAsmInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -221,18 +222,8 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
   // Print the raw immediate for reserved values: vlmul[2:0]=4, vsew[2:0]=0b1xx,
-  // altfmt=1 without zvfbfa or zvfofp8min extension, or non-zero in bits 9 and
-  // above.
-  if (!RISCVVType::isValidVType(Imm) ||
-      (RISCVVType::isAltFmt(Imm) &&
-       !(STI.hasFeature(RISCV::FeatureStdExtZvfbfa) ||
-         STI.hasFeature(RISCV::FeatureStdExtZvfofp8min) ||
-         STI.hasFeature(RISCV::FeatureVendorXSfvfbfexp16e) ||
-         STI.hasFeature(RISCV::FeatureStdExtZvqwbdota8i) ||
-         STI.hasFeature(RISCV::FeatureStdExtZvqwbdota16i) ||
-         STI.hasFeature(RISCV::FeatureStdExtZvfqwbdota8f) ||
-         STI.hasFeature(RISCV::FeatureStdExtZvfwbdota16bf))) ||
-      (Imm >> 9) != 0) {
+  // altfmt=1 without sew=8 or sew=16, or non-zero in bits 9 and above.
+  if (!RISCVVType::isValidVType(Imm) || (Imm >> 9) != 0) {
     O << formatImm(Imm);
     return;
   }
@@ -354,6 +345,20 @@ void RISCVInstPrinter::printVScaleReg(const MCInst *MI, unsigned OpNo,
   O << ", ";
   printRegName(O, MO.getReg());
   O << ".scale";
+}
+
+void RISCVInstPrinter::printTileLambda(const MCInst *MI, unsigned OpNo,
+                                       const MCSubtargetInfo &STI,
+                                       raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNo);
+
+  assert(MO.isImm() && "printTileLambda can only print immediate operands");
+  unsigned Lambda = MO.getImm();
+  if (Lambda == 0)
+    return;
+
+  assert(Lambda <= 7 && "Unexpected tile lambda encoding");
+  O << ", L" << (1U << (Lambda - 1));
 }
 
 void RISCVInstPrinter::printImm(const MCInst *MI, unsigned OpNo,

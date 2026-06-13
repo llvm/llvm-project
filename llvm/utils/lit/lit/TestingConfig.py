@@ -143,7 +143,6 @@ class TestingConfig:
                 data = f.read()
         except OSError:
             litConfig.fatal("unable to load config file: %r" % (path,))
-        f.close()
 
         # Execute the config script to initialize the object.
         cfg_globals = dict(globals())

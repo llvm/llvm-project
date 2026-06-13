@@ -118,7 +118,7 @@ two_ints test_rvalue_aggregate() {
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z21test_rvalue_aggregatev()
-//  CIR:        %[[#TMP_SLOT:]] = cir.alloca !u64i, !cir.ptr<!u64i>
+//  CIR:        %[[#TMP_SLOT:]] = cir.alloca {{.*}} : !cir.ptr<!u64i>
 //  CIR-NEXT:   %[[#A:]] = cir.const #cir.int<42> : !u64i
 //  CIR-NEXT:   cir.store{{.*}} %[[#A]], %[[#TMP_SLOT]] : !u64i, !cir.ptr<!u64i>
 //  CIR-NEXT:   %[[#SRC_VOID_PTR:]] = cir.cast bitcast %[[#TMP_SLOT]] : !cir.ptr<!u64i> -> !cir.ptr<!void>

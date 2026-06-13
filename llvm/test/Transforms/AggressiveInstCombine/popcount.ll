@@ -9,16 +9,7 @@
 ;}
 define signext i32 @popcount8(i8 zeroext %0) {
 ; CHECK-LABEL: @popcount8(
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP0:%.*]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 85
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i8 [[TMP0]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and i8 [[TMP4]], 51
-; CHECK-NEXT:    [[TMP6:%.*]] = lshr i8 [[TMP4]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = and i8 [[TMP6]], 51
-; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i8 [[TMP7]], [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = lshr i8 [[TMP8]], 4
-; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i8 [[TMP9]], [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = and i8 [[TMP10]], 15
+; CHECK-NEXT:    [[TMP11:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP0:%.*]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext i8 [[TMP11]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP12]]
 ;
@@ -168,16 +159,7 @@ define signext i32 @popcount128(i128 %0) {
 ;}
 define <16 x i8> @popcount8vec(<16 x i8> %0) {
 ; CHECK-LABEL: @popcount8vec(
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <16 x i8> [[TMP0:%.*]], splat (i8 1)
-; CHECK-NEXT:    [[TMP3:%.*]] = and <16 x i8> [[TMP2]], splat (i8 85)
-; CHECK-NEXT:    [[TMP4:%.*]] = sub <16 x i8> [[TMP0]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and <16 x i8> [[TMP4]], splat (i8 51)
-; CHECK-NEXT:    [[TMP6:%.*]] = lshr <16 x i8> [[TMP4]], splat (i8 2)
-; CHECK-NEXT:    [[TMP7:%.*]] = and <16 x i8> [[TMP6]], splat (i8 51)
-; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw <16 x i8> [[TMP7]], [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = lshr <16 x i8> [[TMP8]], splat (i8 4)
-; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw <16 x i8> [[TMP9]], [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = and <16 x i8> [[TMP10]], splat (i8 15)
+; CHECK-NEXT:    [[TMP11:%.*]] = call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> [[TMP0:%.*]])
 ; CHECK-NEXT:    ret <16 x i8> [[TMP11]]
 ;
   %2 = lshr <16 x i8> %0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
@@ -1944,7 +1926,7 @@ define i8 @popcnt2_negative_i8(i8 noundef %0) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr i8 [[TMP0:%.*]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 85
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i8 [[TMP0]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and i8 [[TMP4]], 51
+; CHECK-NEXT:    [[TMP5:%.*]] = and i8 [[TMP4]], 50
 ; CHECK-NEXT:    [[TMP6:%.*]] = lshr i8 [[TMP4]], 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = and i8 [[TMP6]], 51
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i8 [[TMP7]], [[TMP5]]
@@ -1956,7 +1938,7 @@ define i8 @popcnt2_negative_i8(i8 noundef %0) {
   %2 = lshr i8 %0, 1
   %3 = and i8 %2, 85
   %4 = sub i8 %0, %3
-  %5 = and i8 %4, 51
+  %5 = and i8 %4, 50
   %6 = lshr i8 %4, 2
   %7 = and i8 %6, 51
   %8 = add nuw nsw i8 %7, %5
@@ -1974,7 +1956,7 @@ define i8 @popcnt3_negative_i8(i8 noundef %0) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i8 [[TMP0]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i8 [[TMP4]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = and i8 [[TMP5]], 51
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i8 [[TMP6]], -3
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i8 [[TMP6]], -2
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i8 [[TMP7]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = lshr i8 [[TMP8]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i8 [[TMP9]], [[TMP8]]
@@ -1986,7 +1968,7 @@ define i8 @popcnt3_negative_i8(i8 noundef %0) {
   %4 = sub i8 %0, %3
   %5 = lshr i8 %4, 2
   %6 = and i8 %5, 51
-  %7 = mul i8 %6, -3
+  %7 = mul i8 %6, -2
   %8 = add i8 %7, %4
   %9 = lshr i8 %8, 4
   %10 = add i8 %9, %8

@@ -476,7 +476,7 @@ bb:
 
 define dso_local i32 @sad_unroll_nonzero_initial(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3) {
 ; CHECK-LABEL: define dso_local i32 @sad_unroll_nonzero_initial(
-; CHECK-SAME: ptr readonly captures(none) [[ARG:%.*]], ptr readonly captures(none) [[ARG1:%.*]], ptr readonly captures(none) [[ARG2:%.*]], ptr readonly captures(none) [[ARG3:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[ARG:%.*]], ptr nofree readonly captures(none) [[ARG1:%.*]], ptr nofree readonly captures(none) [[ARG2:%.*]], ptr nofree readonly captures(none) [[ARG3:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = load <16 x i8>, ptr [[ARG]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr [[ARG1]], align 1
@@ -528,7 +528,7 @@ bb:
 
 define dso_local i32 @sad_double_reduction(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3) {
 ; CHECK-LABEL: define dso_local i32 @sad_double_reduction(
-; CHECK-SAME: ptr readonly captures(none) [[ARG:%.*]], ptr readonly captures(none) [[ARG1:%.*]], ptr readonly captures(none) [[ARG2:%.*]], ptr readonly captures(none) [[ARG3:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[ARG:%.*]], ptr nofree readonly captures(none) [[ARG1:%.*]], ptr nofree readonly captures(none) [[ARG2:%.*]], ptr nofree readonly captures(none) [[ARG3:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = load <16 x i8>, ptr [[ARG]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr [[ARG1]], align 1
@@ -578,7 +578,7 @@ bb:
 
 define dso_local i32 @sad_double_reduction_abs(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3) {
 ; CHECK-LABEL: define dso_local i32 @sad_double_reduction_abs(
-; CHECK-SAME: ptr readonly captures(none) [[ARG:%.*]], ptr readonly captures(none) [[ARG1:%.*]], ptr readonly captures(none) [[ARG2:%.*]], ptr readonly captures(none) [[ARG3:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[ARG:%.*]], ptr nofree readonly captures(none) [[ARG1:%.*]], ptr nofree readonly captures(none) [[ARG2:%.*]], ptr nofree readonly captures(none) [[ARG3:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[TMP:%.*]] = load <16 x i8>, ptr [[ARG]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr [[ARG1]], align 1
@@ -624,7 +624,7 @@ bb:
 
 define i32 @PR143456(ptr %p0, ptr %p1) {
 ; CHECK-LABEL: define range(i32 0, 256) i32 @PR143456(
-; CHECK-SAME: ptr readonly captures(none) [[P0:%.*]], ptr readonly captures(none) [[P1:%.*]]) local_unnamed_addr #[[ATTR2]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[P0:%.*]], ptr nofree readonly captures(none) [[P1:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[V0:%.*]] = load <8 x i8>, ptr [[P0]], align 1
 ; CHECK-NEXT:    [[V1:%.*]] = load <8 x i8>, ptr [[P1]], align 1
