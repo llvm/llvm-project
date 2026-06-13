@@ -610,6 +610,71 @@ TEST_F(MarkdownParserTest, CodeSpanStripsSurroundingSpaces) {
   EXPECT_EQ(cast<InlineCodeNode>(P->Children[0])->Code, "x");
 }
 
+// CommonMark §6.2 Example 413: a triple run splits across two matches, the
+// inner pair forming strong and the outer pair emphasis, so "***foo***" is
+// emphasis wrapping strong. The old findClosingDelim search matched a run only
+// against an equal-length run and could not split one this way.
+TEST_F(MarkdownParserTest, TripleDelimiterBoldItalic) {
+  auto Nodes = parseMarkdown("***foo***", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *P = cast<ParagraphNode>(Nodes[0]);
+  ASSERT_EQ(P->Children.size(), 1u);
+  auto *Em = cast<EmphasisNode>(P->Children[0]);
+  ASSERT_EQ(Em->Children.size(), 1u);
+  auto *St = cast<StrongNode>(Em->Children[0]);
+  ASSERT_EQ(St->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(St->Children[0])->Text, "foo");
+}
+
+// CommonMark §6.2: emphasis containing a strong span, "*foo **bar** baz*". The
+// outer emphasis spans delimiter runs of two different lengths, which the
+// equal-length findClosingDelim search could not pair.
+TEST_F(MarkdownParserTest, MixedDelimitersEmStrongEm) {
+  auto Nodes = parseMarkdown("*foo **bar** baz*", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *P = cast<ParagraphNode>(Nodes[0]);
+  ASSERT_EQ(P->Children.size(), 1u);
+  auto *Em = cast<EmphasisNode>(P->Children[0]);
+  ASSERT_EQ(Em->Children.size(), 3u);
+  EXPECT_EQ(cast<TextNode>(Em->Children[0])->Text, "foo ");
+  auto *St = cast<StrongNode>(Em->Children[1]);
+  ASSERT_EQ(St->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(St->Children[0])->Text, "bar");
+  EXPECT_EQ(cast<TextNode>(Em->Children[2])->Text, " baz");
+}
+
+// CommonMark §6.2: strong containing emphasis with text on both sides,
+// "**foo *bar* baz**". The inner emphasis closes before the outer strong does,
+// which the single forward scan handled only by coincidence of nesting order.
+TEST_F(MarkdownParserTest, NestedEmphasisInsideStrong) {
+  auto Nodes = parseMarkdown("**foo *bar* baz**", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *P = cast<ParagraphNode>(Nodes[0]);
+  ASSERT_EQ(P->Children.size(), 1u);
+  auto *St = cast<StrongNode>(P->Children[0]);
+  ASSERT_EQ(St->Children.size(), 3u);
+  EXPECT_EQ(cast<TextNode>(St->Children[0])->Text, "foo ");
+  auto *Em = cast<EmphasisNode>(St->Children[1]);
+  ASSERT_EQ(Em->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(Em->Children[0])->Text, "bar");
+  EXPECT_EQ(cast<TextNode>(St->Children[2])->Text, " baz");
+}
+
+// CommonMark §6.2 rule of three: when a closer can also open, it may not match
+// an opener whose run length sums with the closer's to a multiple of three. In
+// "**foo*bar*" the leading ** cannot close against the inner *, so ** stays
+// literal and only *bar* becomes emphasis.
+TEST_F(MarkdownParserTest, MultipleOfThreeBlocksClose) {
+  auto Nodes = parseMarkdown("**foo*bar*", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *P = cast<ParagraphNode>(Nodes[0]);
+  ASSERT_EQ(P->Children.size(), 2u);
+  EXPECT_EQ(cast<TextNode>(P->Children[0])->Text, "**foo");
+  auto *Em = cast<EmphasisNode>(P->Children[1]);
+  ASSERT_EQ(Em->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(Em->Children[0])->Text, "bar");
+}
+
 TEST_F(MarkdownParserTest, BlockQuote) {
   auto Nodes = parseMarkdown("> hello", Arena);
   ASSERT_EQ(Nodes.size(), 1u);
