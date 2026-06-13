@@ -1,0 +1,37 @@
+// Tests that LineCoverageStats correctly handles lines where a gap region
+// with count=0 wraps into a line that has a non-entry segment with count > 0.
+//
+// In this test, line 15 ("int result = 42;") follows a scoped block containing
+// a never-taken early return. The gap region from the block's closing "}" wraps
+// to line 15, but line 15 has a non-entry segment with count=1 (the function
+// body continues). LineCoverageStats should report count=1 for line 15.
+//
+// Test inputs generated with (CWD and source must be in /tmp for path-equivalence):
+//   cp Inputs/gap-region-quirk/gap-quirk-v2.cpp /tmp/gap-quirk-v2.cpp
+//   cd /tmp
+//   %clang -fprofile-instr-generate -fcoverage-mapping -O0 \
+//       -mllvm -enable-name-compression=false \
+//       -c -o gap-quirk.o gap-quirk-v2.cpp
+//   llvm-cov convert-for-testing gap-quirk.o -o gap-quirk.covmapping
+//   %clang -fprofile-instr-generate -fcoverage-mapping -O0 \
+//       -o gap-quirk gap-quirk-v2.cpp
+//   LLVM_PROFILE_FILE=gap-quirk.profraw ./gap-quirk
+//   llvm-profdata merge --sparse gap-quirk.profraw -o gap-quirk.profdata
+
+// RUN: llvm-cov show %S/Inputs/gap-region-quirk/gap-quirk.covmapping \
+// RUN:   -instr-profile %S/Inputs/gap-region-quirk/gap-quirk.profdata \
+// RUN:   -path-equivalence=/tmp,%S/Inputs/gap-region-quirk \
+// RUN:   2>&1 | FileCheck -check-prefix=SHOW %s
+
+// Line 15 ("int result = 42;") should show count 1, not 0.
+// SHOW:     15|      1|  int result = 42;
+
+// RUN: llvm-cov report %S/Inputs/gap-region-quirk/gap-quirk.covmapping \
+// RUN:   -instr-profile %S/Inputs/gap-region-quirk/gap-quirk.profdata \
+// RUN:   -path-equivalence=/tmp,%S/Inputs/gap-region-quirk \
+// RUN:   --show-branch-summary=false \
+// RUN:   2>&1 | FileCheck -check-prefix=REPORT %s
+
+// Line 15 should NOT be counted as missed (16 total lines, 2 missed).
+// REPORT: Filename{{.*}}Regions{{.*}}Missed Regions{{.*}}Cover{{.*}}Functions{{.*}}Missed Functions{{.*}}Executed{{.*}}Lines{{.*}}Missed Lines{{.*}}Cover
+// REPORT: gap-quirk-v2.cpp{{[[:space:]]+}}5{{[[:space:]]+}}1{{[[:space:]]+}}80.00%{{[[:space:]]+}}2{{[[:space:]]+}}0{{[[:space:]]+}}100.00%{{[[:space:]]+}}16{{[[:space:]]+}}2{{[[:space:]]+}}87.50%
