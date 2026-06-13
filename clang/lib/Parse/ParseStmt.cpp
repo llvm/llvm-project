@@ -2496,8 +2496,10 @@ bool Parser::trySkippingFunctionBody() {
 
   // We're in code-completion mode. Skip parsing for all function bodies unless
   // the body contains the code-completion point.
+  if (Tok.is(tok::kw_try))
+    return false;
+
   TentativeParsingAction PA(*this);
-  bool IsTryCatch = Tok.is(tok::kw_try);
   CachedTokens Toks;
   bool ErrorInPrologue = ConsumeAndStoreFunctionPrologue(Toks);
   if (llvm::any_of(Toks, [](const Token &Tok) {
@@ -2511,18 +2513,12 @@ bool Parser::trySkippingFunctionBody() {
     SkipMalformedDecl();
     return true;
   }
-  if (!SkipUntil(tok::r_brace, StopAtCodeCompletion)) {
+  if (!SkipUntil(tok::r_brace, StopAtCodeCompletion | StopBeforeMatch)) {
     PA.Revert();
     return false;
   }
-  while (IsTryCatch && Tok.is(tok::kw_catch)) {
-    if (!SkipUntil(tok::l_brace, StopAtCodeCompletion) ||
-        !SkipUntil(tok::r_brace, StopAtCodeCompletion)) {
-      PA.Revert();
-      return false;
-    }
-  }
   PA.Commit();
+  ConsumeBrace();
   return true;
 }
 
