@@ -2729,12 +2729,26 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     S.split(Args, ',');
     Check(Args.size() >= 5,
           "modular-format attribute requires at least 5 arguments", V);
+    unsigned UpperBound = FT->getNumParams() + (FT->isVarArg() ? 1 : 0);
+    unsigned FormatIdx;
+    Check(!Args[1].getAsInteger(10, FormatIdx),
+          "modular-format attribute format string index is not an integer", V);
+    Check(FormatIdx > 0,
+          "modular-format attribute format string index must be greater than 0",
+          V);
+    Check(FormatIdx <= UpperBound,
+          "modular-format attribute format string index is out of bounds", V);
     unsigned FirstArgIdx;
     Check(!Args[2].getAsInteger(10, FirstArgIdx),
           "modular-format attribute first arg index is not an integer", V);
-    unsigned UpperBound = FT->getNumParams() + (FT->isVarArg() ? 1 : 0);
     Check(FirstArgIdx <= UpperBound,
           "modular-format attribute first arg index is out of bounds", V);
+    Check(!Args[3].empty(),
+          "modular-format attribute modular implementation function name "
+          "cannot be empty",
+          V);
+    Check(!Args[4].empty(),
+          "modular-format attribute implementation name cannot be empty", V);
   }
 
   if (auto A = Attrs.getFnAttr("target-features"); A.isValid()) {

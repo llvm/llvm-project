@@ -3958,14 +3958,17 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/XeGPU/Utils/*.h"]),
     includes = ["include"],
     deps = [
+        ":ArithUtils",
         ":DialectUtils",
         ":GPUDialect",
         ":IR",
         ":IndexDialect",
         ":LLVMDialect",
         ":LoopLikeInterface",
+        ":SCFDialect",
         ":SCFTransforms",
         ":TransformUtils",
+        ":VectorDialect",
         ":XeGPUDialect",
         ":XeGPUuArch",
         ":XeVMDialect",
@@ -7377,8 +7380,10 @@ cc_library(
         ":ConvertToEmitCInterface",
         ":EmitCDialect",
         ":FuncDialect",
+        ":IR",
         ":Pass",
         ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 
