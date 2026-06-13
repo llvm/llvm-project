@@ -322,6 +322,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v4i32, Custom);
     setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v4i32, Custom);
   }
+  if (Subtarget.hasAVX()) {
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v8i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v8i32, Custom);
+  }
+  if (Subtarget.hasAVX512()) {
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v16i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v16i32, Custom);
+  }
   if (Subtarget.hasAVX10_2()) {
     for (MVT VT : {MVT::v8i8, MVT::v16i8, MVT::v32i8}) {
       setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
@@ -22963,12 +22971,9 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
         DAG.getNode(X86ISD::FMIN, dl, SrcVT, ClampedBottom, MaxC);
 
     // For smaller widths, the max unsigned value fits in a signed 32-bit int.
-    // Use FP_TO_SINT instead of FP_TO_UINT to avoid expensive legalization.
-    unsigned CastOpc = FpToIntOpcode;
-    if (!IsSigned && SatWidth < 32)
-      CastOpc = ISD::FP_TO_SINT;
-
-    SDValue Result = DAG.getNode(CastOpc, dl, DstVT, ClampedTop);
+    // Use X86ISD::CVTTP2SI instead of FP_TO_UINT to avoid expensive legalization
+    // and guarantee the out-of-range behavior.
+    SDValue Result = DAG.getNode(X86ISD::CVTTP2SI, dl, DstVT, ClampedTop);
 
     // For signed saturation, NaN was mapped to MinC, so FP_TO_SINT produces
     // INT_MIN. ISD::FP_TO_SINT_SAT requires NaN -> 0; fix with a zero-select.
