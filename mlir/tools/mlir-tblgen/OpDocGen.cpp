@@ -384,7 +384,7 @@ static void emitTypeDoc(const Type &type, raw_ostream &os) {
 // TypeDef Documentation
 //===----------------------------------------------------------------------===//
 
-/// If \p param is an EnumParameter, return a string listing the enum's keyword
+/// If `param` is an EnumParameter, return a string listing the enum's keyword
 /// alternatives (e.g. "`read` | `read_write`"). Otherwise return std::nullopt.
 static std::optional<std::string>
 getEnumParameterDocSyntax(const AttrOrTypeParameter &param) {
