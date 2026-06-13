@@ -22,7 +22,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <optional>
+#include <cstdlib>
 
 static constexpr char kIntegerPrefix[] = "i_0x";
 static constexpr char kDoublePrefix[] = "f_";
@@ -158,7 +158,7 @@ private:
     return InstrName;
   }
 
-  std::optional<StringRef> findNearestOpcodeName(StringRef InstrName) const {
+  StringRef findNearestOpcodeName(StringRef InstrName) const {
     unsigned BestDistance = 2;
     StringRef Nearest;
 
@@ -180,21 +180,22 @@ private:
       if (Distance < BestDistance) {
         BestDistance = Distance;
         Nearest = Candidate;
+        if (BestDistance == 1)
+          break;
       }
     }
 
-    if (BestDistance <= 1 && !Nearest.empty())
-      return Nearest;
-    return std::nullopt;
+    return Nearest;
   }
 
   unsigned getInstrOpcode(StringRef InstrName) {
     auto Iter = OpcodeNameToOpcodeIdx.find(InstrName);
     if (Iter != OpcodeNameToOpcodeIdx.end())
       return Iter->second;
+
     ErrorStream << "No opcode with name '" << InstrName << "'";
-    if (std::optional<StringRef> Nearest = findNearestOpcodeName(InstrName))
-      ErrorStream << " - did you mean '" << *Nearest << "' ?";
+    if (StringRef Nearest = findNearestOpcodeName(InstrName); !Nearest.empty())
+      ErrorStream << " - did you mean '" << Nearest << "' ?";
     ErrorStream << "\n";
     return 0;
   }

@@ -5,7 +5,8 @@
 # RUN: FileCheck -check-prefix=CHECK-WARN %s < %t.err
 
 # CHECK-WARN: warning: skipping benchmark entry: No opcode with name 'VADDPDYrrr' - did you mean 'VADDPDYrr' ?
-# CHECK-WARN: warning: skipped 1 benchmark entries that could not be parsed
+# CHECK-WARN: warning: skipping benchmark entry: No opcode with name 'foo'{{$}}
+# CHECK-WARN: warning: skipped 2 benchmark entries that could not be parsed
 
 # CHECK-CLUSTERS: {{^}}cluster_id,opcode_name,config,sched_class,
 # CHECK-CLUSTERS-NEXT: {{^}}0,
@@ -35,5 +36,18 @@ llvm_triple:     x86_64-pc-linux-gnu
 num_repetitions: 10000
 measurements:
   - { key: NumMicroOps, value: 1.0146, per_snippet_value: 14.2044 }
+error:           ''
+...
+---
+mode:            uops
+key:
+  instructions:
+    - 'foo RAX'
+  config:          ''
+  register_initial_values: []
+cpu_name:        znver3
+llvm_triple:     x86_64-pc-linux-gnu
+num_repetitions: 10000
+measurements: []
 error:           ''
 ...
