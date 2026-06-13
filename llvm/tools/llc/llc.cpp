@@ -675,8 +675,8 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
     Err.print(argv[0], WithColor::error(errs(), argv[0]));
     return 1;
   }
-  if (!TargetTriple.empty())
-    M->setTargetTriple(Triple(Triple::normalize(TargetTriple)));
+
+  M->setTargetTriple(TheTriple);
 
   std::optional<CodeModel::Model> CM_IR = M->getCodeModel();
   if (!CM && CM_IR)
