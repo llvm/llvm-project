@@ -21,6 +21,8 @@ LLVM_LIBC_FUNCTION(size_t, wcslcat,
                     size_t dstsize)) {
   const size_t dstlen = internal::string_length(dst);
   const size_t srclen = internal::string_length(src);
+  if (dstlen >= dstsize) 
+    return dstsize + srclen;
   int limit = static_cast<int>(dstsize - dstlen - 1);
   size_t returnval = (dstsize < dstlen ? dstsize : dstlen) + srclen;
   if (limit < 0)
