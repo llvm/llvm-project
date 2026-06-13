@@ -1402,7 +1402,7 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
                    "RegisterKind reg numbering scheme",
                    regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB), kind);
       if (active_row && active_row->GetUnspecifiedRegistersAreUndefined()) {
-        UNWIND_LONG(
+        UNWIND_LOG(
             log,
             "marking register {0} ({1}) as Undefined (volatile) in this "
             "stack frame because this row is UnspecifiedRegistersAreUndefined.",
