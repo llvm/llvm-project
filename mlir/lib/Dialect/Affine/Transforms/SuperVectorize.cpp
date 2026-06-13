@@ -1220,28 +1220,6 @@ static bool isIVMappedToMultipleIndices(
   return false;
 }
 
-/// Returns an in-bounds mask for a transfer op given its permutation map and
-/// the memref being accessed. Dimension i is in-bounds when the map result is
-/// an AffineDimExpr pointing to a static memref dimension that is divisible by
-/// the vector size, or an AffineConstantExpr.
-static SmallVector<bool> computeInBoundsMask(AffineMap permutationMap,
-                                             VectorType vectorType,
-                                             MemRefType memrefType) {
-  SmallVector<bool> inBounds(vectorType.getRank(), false);
-  for (unsigned i = 0; i < vectorType.getRank(); ++i) {
-    AffineExpr expr = permutationMap.getResult(i);
-    if (auto dimExpr = dyn_cast<AffineDimExpr>(expr)) {
-      unsigned memDim = dimExpr.getPosition();
-      if (!memrefType.isDynamicDim(memDim) &&
-          memrefType.getDimSize(memDim) % vectorType.getDimSize(i) == 0)
-        inBounds[i] = true;
-    } else if (isa<AffineConstantExpr>(expr)) {
-      inBounds[i] = true;
-    }
-  }
-  return inBounds;
-}
-
 /// Vectorizes an affine load with the vectorization strategy in 'state' by
 /// generating a 'vector.transfer_read' op with the proper permutation map
 /// inferred from the indices of the load. The new 'vector.transfer_read' is
@@ -1287,12 +1265,11 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ permutationMap: ");
   LLVM_DEBUG(permutationMap.print(dbgs()));
 
-  SmallVector<bool> inBounds =
-      computeInBoundsMask(permutationMap, vectorType,
-                          cast<MemRefType>(loadOp.getMemRef().getType()));
-  auto transfer = vector::TransferReadOp::create(
-      state.builder, loadOp.getLoc(), vectorType, loadOp.getMemRef(), indices,
-      /*padding=*/std::nullopt, permutationMap, ArrayRef<bool>(inBounds));
+  Value transferVal = createReadOrMaskedRead(
+      state.builder, loadOp.getLoc(), loadOp.getMemRef(), vectorType,
+      /*padValue=*/std::nullopt, /*useInBoundsInsteadOfMasking=*/true, indices,
+      permutationMap);
+  Operation *transfer = transferVal.getDefiningOp();
 
   // Register replacement for future uses in the scope.
   state.registerOpVectorReplacement(loadOp, transfer);
@@ -1346,13 +1323,11 @@ static Operation *vectorizeAffineStore(AffineStoreOp storeOp,
     return nullptr;
   }
 
-  auto vType = cast<VectorType>(vectorValue.getType());
-  SmallVector<bool> inBounds = computeInBoundsMask(
-      permutationMap, vType, cast<MemRefType>(storeOp.getMemRef().getType()));
-  auto transfer = vector::TransferWriteOp::create(
+  Operation *transfer = createWriteOrMaskedWrite(
       state.builder, storeOp.getLoc(), vectorValue, storeOp.getMemRef(),
-      indices, permutationMap, ArrayRef<bool>(inBounds));
-  LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ vectorized store: " << transfer);
+      SmallVector<Value>(indices.begin(), indices.end()),
+      /*useInBoundsInsteadOfMasking=*/true, permutationMap);
+  LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ vectorized store: " << *transfer);
 
   // Register replacement for future uses in the scope.
   state.registerOpVectorReplacement(storeOp, transfer);
