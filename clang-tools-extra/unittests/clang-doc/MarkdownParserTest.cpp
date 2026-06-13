@@ -451,4 +451,22 @@ TEST_F(MarkdownParserTest, SevenHashesIsPlainText) {
   EXPECT_EQ(cast<TextNode>(P->Children[0])->Text, "####### too many");
 }
 
+TEST_F(MarkdownParserTest, ThematicBreakDashes) {
+  auto Nodes = parseMarkdown("---", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  EXPECT_TRUE(isa<ThematicBreakNode>(Nodes[0]));
+}
+
+TEST_F(MarkdownParserTest, ThematicBreakAsterisks) {
+  auto Nodes = parseMarkdown("***", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  EXPECT_TRUE(isa<ThematicBreakNode>(Nodes[0]));
+}
+
+TEST_F(MarkdownParserTest, ThematicBreakUnderscores) {
+  auto Nodes = parseMarkdown("___", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  EXPECT_TRUE(isa<ThematicBreakNode>(Nodes[0]));
+}
+
 } // namespace

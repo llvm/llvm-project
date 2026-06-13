@@ -54,6 +54,23 @@ static bool isOrderedListItem(StringRef Line) {
          Dot + 1 < Line.size() && Line[Dot + 1] == ' ';
 }
 
+// Returns true if Line is a thematic break: three or more matching -, *, or _
+// characters, optionally separated by spaces, with nothing else. Line is
+// expected to be trimmed.
+static bool isThematicBreak(StringRef Line) {
+  char Marker = Line.empty() ? '\0' : Line[0];
+  if (Marker != '-' && Marker != '*' && Marker != '_')
+    return false;
+  unsigned Count = 0;
+  for (char C : Line) {
+    if (C == Marker)
+      ++Count;
+    else if (C != ' ')
+      return false;
+  }
+  return Count >= 3;
+}
+
 // Returns the ATX heading level (1 to 6) when Line is an ATX heading: one to
 // six leading # characters followed by a space. Returns 0 otherwise, so seven
 // or more # characters fall back to plain text.
@@ -406,6 +423,15 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
     // ATX heading: 1 to 6 leading # characters and a space.
     if (atxHeadingLevel(Line)) {
       Nodes.push_back(parseHeading(Reader, Arena, Saver));
+      continue;
+    }
+
+    // Thematic break: 3 or more matching -, *, or _ characters. Checked before
+    // the list cases so that "* * *" and "- - -" are breaks, not list items.
+    if (isThematicBreak(Line)) {
+      Reader.advance();
+      Nodes.push_back(new (Arena) ThematicBreakNode());
+      LDBG() << "emitting ThematicBreakNode";
       continue;
     }
 
