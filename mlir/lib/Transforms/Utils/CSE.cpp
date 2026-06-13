@@ -109,6 +109,9 @@ private:
   /// between the two operations.
   bool hasOtherSideEffectingOpInBetween(Operation *fromOp, Operation *toOp);
 
+  /// This function removes trivially dead ops starting at the root op.
+  void pruneDeadOps(Operation *root, ScopedMapTy &knownValues);
+
   /// A rewriter for modifying the IR.
   RewriterBase &rewriter;
 
@@ -291,6 +294,32 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
   return failure();
 }
 
+void CSEDriver::pruneDeadOps(Operation *root, ScopedMapTy &knownValues) {
+  // We use `SetVector` to prevent already inserted ops from being added to the
+  // `worklist` repeatedly, avoiding secondary access to erased operations.
+  llvm::SetVector<Operation *> worklist;
+  worklist.insert(root);
+  while (!worklist.empty()) {
+    Operation *op = worklist.front();
+    worklist.erase(worklist.begin());
+    if (!isOpTriviallyDead(op))
+      continue;
+
+    for (Value arg : op->getOperands())
+      if (Operation *argOp = arg.getDefiningOp())
+        worklist.insert(argOp);
+
+    // If the `op` is not the `root`, it must be an "existing op" previously
+    // inserted into the ScopedHashTable (since it had users). We erase it here
+    // to maintain the balance of the ScopedHashTable. The `root` itself was
+    // never inserted.
+    if (op != root)
+      knownValues.erase(op);
+    rewriter.eraseOp(op);
+    ++numDCE;
+  }
+}
+
 void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
                               bool hasSSADominance) {
   for (auto &op : llvm::make_early_inc_range(*bb)) {
@@ -298,8 +327,7 @@ void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
     // This also avoids calling `simplifyRegion` on dead region ops
     // unnecessarily.
     if (isOpTriviallyDead(&op)) {
-      opsToErase.push_back(&op);
-      ++numDCE;
+      pruneDeadOps(&op, knownValues);
       continue;
     }
 

@@ -37,13 +37,13 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:      %[[FILTER:.*]]: tensor<1x?xi8>,
 // CHECK-SAME:      %[[OUTPUT:.*]]: tensor<1x8x?xi8>) -> tensor<1x8x?xi8> {
 
-// CHECK:           %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[C0:.*]] = arith.constant 0 : index
 // CHECK:           %[[PAD:.*]] = arith.constant 0 : i8
 
 /// Create a mask for the input tensor
 // CHECK:           %[[C2:.*]] = arith.constant 2 : index
 // CHECK:           %[[CH_DIM_IN:.*]] = tensor.dim %[[INPUT]], %[[C2]] : tensor<1x8x?xi8>
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[C8:.*]] = arith.constant 8 : index
 // CHECK:           %[[MASK_IN:.*]] = vector.create_mask %[[C1]], %[[C8]], %[[CH_DIM_IN]] : vector<1x8x4xi1>
 /// Read the input tensor
@@ -97,14 +97,13 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:      %[[INPUT:.*]]: tensor<1x8x?xi8>,
 // CHECK-SAME:      %[[FILTER:.*]]: tensor<1x?xi8>,
 // CHECK-SAME:      %[[OUTPUT:.*]]: tensor<1x8x?xi8>) -> tensor<1x8x?xi8> {
-
-// CHECK:           %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[C0:.*]] = arith.constant 0 : index
 // CHECK:           %[[PAD:.*]] = arith.constant 0 : i8
 
 /// Create a mask for the input tensor
 // CHECK:           %[[C2:.*]] = arith.constant 2 : index
 // CHECK:           %[[CH_DIM_IN:.*]] = tensor.dim %[[INPUT]], %[[C2]] : tensor<1x8x?xi8>
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[C8:.*]] = arith.constant 8 : index
 // CHECK:           %[[MASK_IN:.*]] = vector.create_mask %[[C1]], %[[C8]], %[[CH_DIM_IN]] : vector<1x8x[4]xi1>
 /// Read the input tensor
@@ -159,7 +158,6 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:      %[[FILTER:.*]]: memref<2x?xf32>,
 // CHECK-SAME:      %[[OUTPUT:.*]]: memref<3x2x?xf32>) {
 
-// CHECK:           %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[C0:.*]] = arith.constant 0 : index
 // CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[C2:.*]] = arith.constant 2 : index
@@ -173,6 +171,7 @@ module attributes {transform.with_named_sequence} {
 // CHECK:           %[[VEC_IN:.*]] = vector.mask %[[MASK_IN]] { vector.transfer_read %[[INPUT]]{{\[}}%[[C0]], %[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, true, true]} : memref<3x5x?xf32>, vector<3x4x[4]xf32> } : vector<3x4x[4]xi1> -> vector<3x4x[4]xf32>
 
 /// Create a mask for the filter tensor
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[CH_DIM_FLT:.*]] = memref.dim %[[FILTER]], %[[C1]] : memref<2x?xf32>
 // CHECK:           %[[MASK_FLT:.*]] = vector.create_mask %[[C2]], %[[CH_DIM_FLT]] : vector<2x[4]xi1>
 /// Read the filter tensor

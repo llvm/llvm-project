@@ -49,7 +49,6 @@ func.func @loop_with_load_and_store(%a1: !arr_d1, %a2: !arr_d1, %a3: !arr_d1) {
 // CHECK:  func @loop_with_load_and_store(%[[VAL_0:.*]]: !fir.ref<!fir.array<?xf32>>, %[[VAL_1:.*]]: !fir.ref<!fir.array<?xf32>>, %[[VAL_2:.*]]: !fir.ref<!fir.array<?xf32>>) {
 // CHECK:    %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK:    %[[VAL_4:.*]] = arith.constant 100 : index
-// CHECK:    %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 // CHECK:    %[[VAL_6:.*]] = affine.apply #{{.*}}(){{\[}}%[[VAL_3]], %[[VAL_4]]]
 // CHECK:    %[[VAL_7:.*]] = fir.alloca !fir.array<?xf32>, %[[VAL_6]]
 // CHECK:    %[[VAL_8:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
@@ -108,11 +107,8 @@ func.func @loop_with_if(%a: !arr_d1, %v: f32) {
 }
 
 // CHECK: func @loop_with_if(%[[VAL_0:.*]]: !fir.ref<!fir.array<?xf32>>, %[[VAL_1:.*]]: f32) {
-// CHECK:   %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK:   %[[VAL_3:.*]] = arith.constant 1 : index
-// CHECK:   %[[VAL_4:.*]] = arith.constant 2 : index
 // CHECK:   %[[VAL_5:.*]] = arith.constant 100 : index
-// CHECK:   %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 // CHECK:   %[[VAL_7:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
 // CHECK:   affine.for %[[VAL_8:.*]] = %[[VAL_3]] to #{{.*}}(){{\[}}%[[VAL_5]]] {
 // CHECK:     %[[VAL_9:.*]] = affine.apply #{{.*}}(%[[VAL_8]]){{\[}}%[[VAL_3]], %[[VAL_5]], %[[VAL_3]]]
@@ -123,7 +119,6 @@ func.func @loop_with_if(%a: !arr_d1, %v: f32) {
 // CHECK:     affine.store %[[VAL_1]], %[[VAL_7]]{{\[}}%[[VAL_11]]] : memref<?xf32>
 // CHECK:   }
 // CHECK:   affine.for %[[VAL_12:.*]] = %[[VAL_3]] to #{{.*}}(){{\[}}%[[VAL_5]]] {
-// CHECK:     %[[VAL_13:.*]] = arith.subi %[[VAL_12]], %[[VAL_4]] : index
 // CHECK:     affine.if #set(%[[VAL_12]]) {
 // CHECK:       %[[VAL_14:.*]] = affine.apply #{{.*}}(%[[VAL_12]]){{\[}}%[[VAL_3]], %[[VAL_5]], %[[VAL_3]]]
 // CHECK:       affine.store %[[VAL_1]], %[[VAL_7]]{{\[}}%[[VAL_14]]] : memref<?xf32>
@@ -180,7 +175,6 @@ func.func @loop_with_result(%arg0: !fir.ref<!fir.array<100xf32>>, %arg1: !fir.re
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_1:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[VAL_2:.*]] = arith.constant 100 : index
-// CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_2]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_5:.*]] = fir.alloca i32
 // CHECK:           %[[VAL_6:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<100xf32>>) -> memref<?xf32>
