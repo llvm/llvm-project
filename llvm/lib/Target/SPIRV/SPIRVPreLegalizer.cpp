@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 
 #define DEBUG_TYPE "spirv-prelegalizer"
@@ -564,6 +565,83 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     }
     for (MachineInstr *MI : TruncToRemove)
       MI->eraseFromParent();
+
+    // The widening loop below only retypes registers, so sign-sensitive ops
+    // (G_ASHR, G_SDIV, G_SREM, signed G_ICMP) on sub-pow2 widths see the sign
+    // bit at the wrong position. Emit G_SEXT_INREG; the legalizer lowers it.
+    // TODO: handle vector operands.
+    auto IsSignSensitive = [](const MachineInstr &MI) {
+      switch (MI.getOpcode()) {
+      case TargetOpcode::G_ASHR:
+      case TargetOpcode::G_SDIV:
+      case TargetOpcode::G_SREM:
+        return true;
+      case TargetOpcode::G_ICMP:
+        return CmpInst::isSigned(
+            static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate()));
+      default:
+        return false;
+      }
+    };
+
+    // Per-Reg original width: once we retype a Reg to its widened width,
+    // a later visit can no longer infer the narrow width from MRI. Record
+    // it on first visit so subsequent visits still know to sign-extend.
+    DenseMap<Register, unsigned> OrigWidth;
+    // Per-MI cache so the same vreg used as both operands of a single MI
+    // (e.g. G_ICMP slt %x, %x) gets one shared sext, not two — and so the
+    // second operand isn't left referring to the un-extended Reg after the
+    // first call retypes it.
+    DenseMap<Register, Register> SExtedThisMI;
+    auto SignExtendOperand = [&](MachineOperand &MOP, MachineInstr &MI) {
+      if (MOP.isCImm()) {
+        const ConstantInt *V = MOP.getCImm();
+        unsigned NewWidth = widenBitWidthToNextPow2(V->getBitWidth());
+        if (NewWidth != V->getBitWidth())
+          MOP.setCImm(ConstantInt::get(V->getType()->getContext(),
+                                       V->getValue().sextOrTrunc(NewWidth)));
+        return;
+      }
+      if (!MOP.isReg())
+        return;
+      Register Reg = MOP.getReg();
+      auto [OWIt, OWInserted] =
+          OrigWidth.try_emplace(Reg, MRI.getType(Reg).getScalarSizeInBits());
+      unsigned OldW = OWIt->second;
+      unsigned NewW = widenBitWidthToNextPow2(OldW);
+      if (NewW == OldW)
+        return;
+
+      auto [It, Inserted] = SExtedThisMI.try_emplace(Reg, Register());
+      if (Inserted) {
+        LLT NewLLT = LLT::scalar(NewW);
+        SPIRVTypeInst SpvTy = GR->getOrCreateSPIRVIntegerType(NewW, MIB);
+        Register SExted = MRI.createGenericVirtualRegister(NewLLT);
+        GR->assignSPIRVTypeToVReg(SpvTy, SExted, MF);
+        MRI.setRegClass(SExted, GR->getRegClass(SpvTy));
+        MRI.setType(Reg, NewLLT);
+        MIB.setInsertPt(*MI.getParent(), MI.getIterator());
+        MIB.buildSExtInReg(SExted, Reg, OldW);
+        It->second = SExted;
+      }
+      MOP.setReg(It->second);
+    };
+
+    for (MachineBasicBlock &MBB : MF) {
+      for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+        if (!IsSignSensitive(MI))
+          continue;
+        // For sign-sensitive instructions, the value operands are always
+        // the last two, regardless of any leading def or predicate operands.
+        unsigned N = MI.getNumOperands();
+        const MachineOperand &LHS = MI.getOperand(N - 2);
+        if (LHS.isReg() && !MRI.getType(LHS.getReg()).isScalar())
+          continue;
+        SExtedThisMI.clear();
+        SignExtendOperand(MI.getOperand(N - 2), MI);
+        SignExtendOperand(MI.getOperand(N - 1), MI);
+      }
+    }
   }
 
   for (MachineBasicBlock *MBB : post_order(&MF)) {
