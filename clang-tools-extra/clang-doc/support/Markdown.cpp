@@ -82,6 +82,49 @@ private:
   size_t Pos = 0;
 };
 
+// A forward cursor over the characters of a string. The character-level analog
+// of LineReader: the inline scanner inspects the current or an upcoming
+// character and consumes characters without manual index arithmetic. position()
+// and seek() let it interoperate with the index-based run and delimiter helpers
+// below, since inline constructs are not consumed one character at a time.
+class CharReader {
+public:
+  explicit CharReader(StringRef S) : S(S) {}
+
+  // True once every character has been consumed.
+  bool atEnd() const { return Pos >= S.size(); }
+
+  // The current character. Must not be called when atEnd().
+  char peek() const {
+    assert(!atEnd() && "peek past end of input");
+    return S[Pos];
+  }
+
+  // The character Offset positions ahead of the cursor, or '\0' when that
+  // position is past the end. peek(0) is the current character.
+  char peek(size_t Offset) const {
+    size_t Target = Pos + Offset;
+    return Target < S.size() ? S[Target] : '\0';
+  }
+
+  // Consume the current character and return it. Must not be called when
+  // atEnd().
+  char advance() {
+    assert(!atEnd() && "advance past end of input");
+    return S[Pos++];
+  }
+
+  // The current scan position, for substring, run, and delimiter computations.
+  size_t position() const { return Pos; }
+
+  // Move the cursor to an absolute position, used to skip past a matched span.
+  void seek(size_t NewPos) { Pos = NewPos; }
+
+private:
+  StringRef S;
+  size_t Pos = 0;
+};
+
 // Returns the number of consecutive copies of C starting at S[Start].
 static size_t countRun(StringRef S, size_t Start, char C) {
   size_t I = Start;
@@ -137,7 +180,8 @@ static size_t findClosingDelim(StringRef S, size_t StartPos, char DelimChar,
 static ArrayRef<MDNode *> parseInline(StringRef S, BumpPtrAllocator &Arena,
                                       StringSaver &Saver) {
   SmallVector<MDNode *> Nodes;
-  size_t TextStart = 0, Pos = 0, E = S.size();
+  CharReader Reader(S);
+  size_t TextStart = 0;
 
   auto flushText = [&](size_t End) {
     if (End > TextStart)
@@ -145,42 +189,43 @@ static ArrayRef<MDNode *> parseInline(StringRef S, BumpPtrAllocator &Arena,
           Saver.save(S.substr(TextStart, End - TextStart))));
   };
 
-  while (Pos < E) {
-    char C = S[Pos];
+  while (!Reader.atEnd()) {
+    size_t Pos = Reader.position();
+    char C = Reader.peek();
 
     // Inline code span: an opening backtick run closed by a run of the same
     // length.
     if (C == '`') {
       size_t OpenLen = countRun(S, Pos, '`');
       size_t ClosePos = Pos + OpenLen;
-      while (ClosePos < E && countRun(S, ClosePos, '`') != OpenLen)
+      while (ClosePos < S.size() && countRun(S, ClosePos, '`') != OpenLen)
         ClosePos += S[ClosePos] == '`' ? countRun(S, ClosePos, '`') : 1;
-      if (ClosePos < E) {
+      if (ClosePos < S.size()) {
         flushText(Pos);
         StringRef Code =
             trimCodeSpan(S.substr(Pos + OpenLen, ClosePos - (Pos + OpenLen)));
         Nodes.push_back(new (Arena) InlineCodeNode(Saver.save(Code)));
-        Pos = ClosePos + OpenLen;
-        TextStart = Pos;
+        Reader.seek(ClosePos + OpenLen);
+        TextStart = Reader.position();
         continue;
       }
       // No closing run; leave the backticks as literal text.
-      Pos += OpenLen;
+      Reader.seek(Pos + OpenLen);
       continue;
     }
 
     // Emphasis (*text*, _text_) and strong (**text**, __text__).
     if (C == '*' || C == '_') {
       // Strong binds the two-delimiter form before single-delimiter emphasis.
-      if (Pos + 1 < E && S[Pos + 1] == C) {
+      if (Reader.peek(1) == C) {
         size_t Close = findClosingDelim(S, Pos + 2, C, 2);
         if (Close != StringRef::npos) {
           flushText(Pos);
           StringRef Inner = S.substr(Pos + 2, Close - (Pos + 2));
           Nodes.push_back(new (Arena)
                               StrongNode(parseInline(Inner, Arena, Saver)));
-          Pos = Close + 2;
-          TextStart = Pos;
+          Reader.seek(Close + 2);
+          TextStart = Reader.position();
           continue;
         }
       }
@@ -190,16 +235,16 @@ static ArrayRef<MDNode *> parseInline(StringRef S, BumpPtrAllocator &Arena,
         StringRef Inner = S.substr(Pos + 1, Close - (Pos + 1));
         Nodes.push_back(new (Arena)
                             EmphasisNode(parseInline(Inner, Arena, Saver)));
-        Pos = Close + 1;
-        TextStart = Pos;
+        Reader.seek(Close + 1);
+        TextStart = Reader.position();
         continue;
       }
     }
 
-    ++Pos;
+    Reader.advance();
   }
 
-  flushText(E);
+  flushText(S.size());
   return allocateArray(Nodes, Arena);
 }
 
