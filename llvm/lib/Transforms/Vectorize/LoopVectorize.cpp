@@ -5978,6 +5978,12 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     VPlanTransforms::expandSCEVsToVPInstructions(BestVPlan, *PSE.getSE());
   VPlanTransforms::cse(BestVPlan);
   VPlanTransforms::simplifyRecipes(BestVPlan);
+  // Removing branches and incoming values may expose additional simplification
+  // opportunities.
+  if (VPlanTransforms::removeBranchOnConst(BestVPlan,
+                                           /*OnlyLatches=*/EpilogueVecKind !=
+                                               EpilogueVectorizationKind::None))
+    VPlanTransforms::simplifyRecipes(BestVPlan);
   VPlanTransforms::simplifyKnownEVL(BestVPlan, BestVF, PSE);
 
   // 0. Generate SCEV-dependent code in the entry, including TripCount, before
