@@ -286,9 +286,10 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
       continue;
     }
 
-    // Plain text, scanned for inline constructs (emphasis, strong, code).
-    for (MDNode *Inline : parseInline(Line, Arena, Saver))
-      Nodes.push_back(Inline);
+    // Plain text line: scan for inline constructs (emphasis, strong, code) and
+    // wrap the result in a paragraph.
+    auto Inlines = parseInline(Line, Arena, Saver);
+    Nodes.push_back(new (Arena) ParagraphNode(Inlines));
     Reader.advance();
   }
 
