@@ -221,3 +221,46 @@ void SubtargetFeatureInfo::emitComputeAssemblerAvailableFeatures(
   OS << "  return Features;\n";
   OS << "}\n\n";
 }
+
+void llvm::getRequiredFeatures(
+    std::set<SubtargetFeatureLiteral> &FeaturesSet,
+    std::set<std::set<SubtargetFeatureLiteral>> &AnyOfFeatureSets,
+    ArrayRef<const Record *> ReqPredicates) {
+  for (const Record *R : ReqPredicates) {
+    const RecordVal *V = R->getValue("AssemblerCondDag");
+    if (!V || !V->getValue() || !isa<DagInit>(V->getValue())) {
+      // Ignore this predicate for semantic analysis, as it has no subtarget
+      // features.
+      continue;
+    }
+    const DagInit *D = cast<DagInit>(V->getValue());
+    std::string CombineType = D->getOperator()->getAsString();
+    if (CombineType != "any_of" && CombineType != "all_of")
+      PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
+    if (D->getNumArgs() == 0)
+      PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
+    bool IsOr = CombineType == "any_of";
+    std::set<SubtargetFeatureLiteral> AnyOfSet;
+
+    for (auto *Arg : D->getArgs()) {
+      bool IsNot = false;
+      if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
+        if (NotArg->getOperator()->getAsString() != "not" ||
+            NotArg->getNumArgs() != 1)
+          PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
+        Arg = NotArg->getArg(0);
+        IsNot = true;
+      }
+      if (!isa<DefInit>(Arg) ||
+          !cast<DefInit>(Arg)->getDef()->isSubClassOf("SubtargetFeature"))
+        PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
+      if (IsOr)
+        AnyOfSet.insert({cast<DefInit>(Arg)->getDef()->getName(), IsNot});
+      else
+        FeaturesSet.insert({cast<DefInit>(Arg)->getDef()->getName(), IsNot});
+    }
+
+    if (IsOr)
+      AnyOfFeatureSets.insert(std::move(AnyOfSet));
+  }
+}

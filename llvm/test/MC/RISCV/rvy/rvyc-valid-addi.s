@@ -20,8 +20,7 @@
 c.addi4spn a0, sp, 12
 // CHECK-ASM-AND-OBJ: c.addi4spn	a0, sp, 12
 // CHECK-ASM-SAME: # encoding: [0x68,0x00]
-// CHECK-INT-NEXT: # <MCInst #[[#]] C_ADDI4SPN{{$}}
-// CHECK-CAP-NEXT: # <MCInst #[[#]] C_YADDI4SPN{{$}}
+// CHECK-ASM-NEXT: # <MCInst #[[#]] C_ADDI4SPN{{$}}
 // CHECK-INT-NEXT: #  <MCOperand Reg:X10>
 // CHECK-CAP-NEXT: #  <MCOperand Reg:X10_Y>
 // CHECK-INT-NEXT: #  <MCOperand Reg:X2>
@@ -31,8 +30,7 @@ c.addi4spn a0, sp, 12
 c.addi16sp sp, 16
 // CHECK-ASM-AND-OBJ: c.addi16sp	sp, 16
 // CHECK-ASM-SAME: # encoding: [0x41,0x61]
-// CHECK-INT-NEXT: # <MCInst #[[#]] C_ADDI16SP{{$}}
-// CHECK-CAP-NEXT: # <MCInst #[[#]] C_YADDI16SP{{$}}
+// CHECK-ASM-NEXT: # <MCInst #[[#]] C_ADDI16SP{{$}}
 // CHECK-INT-NEXT: #  <MCOperand Reg:X2>
 // CHECK-CAP-NEXT: #  <MCOperand Reg:X2_Y>
 // CHECK-INT-NEXT: #  <MCOperand Reg:X2>
@@ -56,7 +54,7 @@ yaddi a0, sp, 12
 // CHECK-CAP-ASM-AND-OBJ: c.addi4spn	a0, sp, 12
 // CHECK-CAP-SAME: # encoding: [0x68,0x00]
 // CHECK-INT-NEXT: # <MCInst #[[#]] YADDI{{$}}
-// CHECK-CAP-NEXT: # <MCInst #[[#]] C_YADDI4SPN{{$}}
+// CHECK-CAP-NEXT: # <MCInst #[[#]] C_ADDI4SPN{{$}}
 // CHECK-ASM-NEXT: #  <MCOperand Reg:X10_Y>
 // CHECK-ASM-NEXT: #  <MCOperand Reg:X2_Y>
 // CHECK-ASM-NEXT: #  <MCOperand Imm:12>>
@@ -67,7 +65,7 @@ yaddi sp, sp, 16
 // CHECK-CAP-ASM-AND-OBJ: c.addi16sp	sp, 16
 // CHECK-CAP-SAME: # encoding: [0x41,0x61]
 // CHECK-INT-NEXT: # <MCInst #[[#]] YADDI{{$}}
-// CHECK-CAP-NEXT: # <MCInst #[[#]] C_YADDI16SP{{$}}
+// CHECK-CAP-NEXT: # <MCInst #[[#]] C_ADDI16SP{{$}}
 // CHECK-ASM-NEXT: #  <MCOperand Reg:X2_Y>
 // CHECK-ASM-NEXT: #  <MCOperand Reg:X2_Y>
 // CHECK-ASM-NEXT: #  <MCOperand Imm:16>>

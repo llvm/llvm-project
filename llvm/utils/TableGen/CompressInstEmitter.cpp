@@ -64,9 +64,12 @@
 
 //===----------------------------------------------------------------------===//
 
+#include "Common/CodeGenHwModes.h"
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenRegisters.h"
 #include "Common/CodeGenTarget.h"
+#include "Common/InfoByHwMode.h"
+#include "Common/SubtargetFeatureInfo.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -138,13 +141,14 @@ class CompressInstEmitter {
   void addDagOperandMapping(const Record *Rec, const DagInit *Dag,
                             const CodeGenInstruction &Inst,
                             IndexedMap<OpData> &OperandMap,
-                            StringMap<ArgData> &Operands, bool IsSourceInst);
+                            StringMap<ArgData> &Operands, bool IsSourceInst,
+                            ArrayRef<const Record *> PatPreds);
   void evaluateCompressPat(const Record *Compress);
   void emitCompressInstEmitter(raw_ostream &OS, EmitterType EType);
   bool validateTypes(const Record *DagOpType, const Record *InstOpType,
-                     bool IsSourceInst);
+                     bool IsSourceInst, ArrayRef<const Record *> PatPreds);
   bool validateRegister(const Record *Reg, const Record *RegClass,
-                        ArrayRef<SMLoc> Loc);
+                        ArrayRef<SMLoc> Loc, ArrayRef<const Record *> PatPreds);
   void checkDagOperandMapping(const Record *Rec,
                               const StringMap<ArgData> &DestOperands,
                               const DagInit *SourceDag, const DagInit *DestDag);
@@ -165,18 +169,38 @@ public:
 
 bool CompressInstEmitter::validateRegister(const Record *Reg,
                                            const Record *RegClass,
-                                           ArrayRef<SMLoc> Loc) {
+                                           ArrayRef<SMLoc> Loc,
+                                           ArrayRef<const Record *> PatPreds) {
   assert((Reg->isSubClassOf("Register") ||
           Reg->isSubClassOf("RegisterByHwMode")) &&
          "Reg record should be a Register");
   assert(RegClass->isSubClassOf("RegisterClassLike") &&
          "RegClass record should be RegisterClassLike");
+
+  const Record *RC = Target.getHwModes().resolveModeSelect(RegClass, PatPreds);
+  const Record *R = Target.getHwModes().resolveModeSelect(Reg, PatPreds);
+
+  if (RC && R) {
+    RegClass = RC;
+    Reg = R;
+  }
+
   return Target.getRegBank().regClassContainsReg(RegClass, Reg, Loc);
 }
 
 bool CompressInstEmitter::validateTypes(const Record *DagOpType,
                                         const Record *InstOpType,
-                                        bool IsSourceInst) {
+                                        bool IsSourceInst,
+                                        ArrayRef<const Record *> PatPreds) {
+  if (DagOpType == InstOpType)
+    return true;
+
+  DagOpType = Target.getHwModes().resolveModeSelect(DagOpType, PatPreds);
+  InstOpType = Target.getHwModes().resolveModeSelect(InstOpType, PatPreds);
+
+  if (!DagOpType || !InstOpType)
+    return false;
+
   if (DagOpType == InstOpType)
     return true;
 
@@ -213,12 +237,10 @@ static bool validateArgsTypes(const Init *Arg1, const Init *Arg2) {
 /// operands and fixed registers it expects the Dag operand type to be contained
 /// in the instantiated instruction operand type. For immediate operands and
 /// immediates no validation checks are enforced at pattern validation time.
-void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
-                                               const DagInit *Dag,
-                                               const CodeGenInstruction &Inst,
-                                               IndexedMap<OpData> &OperandMap,
-                                               StringMap<ArgData> &Operands,
-                                               bool IsSourceInst) {
+void CompressInstEmitter::addDagOperandMapping(
+    const Record *Rec, const DagInit *Dag, const CodeGenInstruction &Inst,
+    IndexedMap<OpData> &OperandMap, StringMap<ArgData> &Operands,
+    bool IsSourceInst, ArrayRef<const Record *> PatPreds) {
   unsigned NumMIOperands = 0;
   if (!Inst.Operands.empty())
     NumMIOperands =
@@ -258,7 +280,7 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
         if (DI->getDef()->isSubClassOf("Register") ||
             DI->getDef()->isSubClassOf("RegisterByHwMode")) {
           // Check if the fixed register belongs to the Register class.
-          if (!validateRegister(DI->getDef(), OpndRec, Rec->getLoc()))
+          if (!validateRegister(DI->getDef(), OpndRec, Rec->getLoc(), PatPreds))
             PrintFatalError(Rec->getLoc(),
                             "Error in Dag '" + Dag->getAsString() +
                                 "': Register '" + DI->getDef()->getName() +
@@ -272,7 +294,7 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
         // corresponding instruction. Operands in the input and output Dag
         // patterns are allowed to be a subclass of the type specified in the
         // corresponding instruction operand instead of being an exact match.
-        if (!validateTypes(DI->getDef(), OpndRec, IsSourceInst))
+        if (!validateTypes(DI->getDef(), OpndRec, IsSourceInst, PatPreds))
           PrintFatalError(Rec->getLoc(),
                           "Error in Dag '" + Dag->getAsString() +
                               "'. Operand '" + Dag->getArgNameStr(DAGOpNo) +
@@ -471,8 +493,10 @@ void CompressInstEmitter::evaluateCompressPat(const Record *Rec) {
   // Map from arg name to DAG operand number and MI operand number.
   StringMap<ArgData> SourceOperands;
   // Create a mapping between source Dag operands and source Inst operands.
+  std::vector<const Record *> PatPreds =
+      Rec->getValueAsListOfDefs("Predicates");
   addDagOperandMapping(Rec, SourceDag, SourceInst, SourceOperandMap,
-                       SourceOperands, /*IsSourceInst*/ true);
+                       SourceOperands, /*IsSourceInst*/ true, PatPreds);
 
   IndexedMap<OpData> DestOperandMap;
   // Map from arg name to DAG operand number and MI operand number.
@@ -480,7 +504,7 @@ void CompressInstEmitter::evaluateCompressPat(const Record *Rec) {
   // Create a mapping between destination Dag operands and destination Inst
   // operands.
   addDagOperandMapping(Rec, DestDag, DestInst, DestOperandMap, DestOperands,
-                       /*IsSourceInst*/ false);
+                       /*IsSourceInst*/ false, PatPreds);
 
   checkDagOperandMapping(Rec, DestOperands, SourceDag, DestDag);
   // Create operand mapping between the source and destination instructions.
@@ -497,43 +521,6 @@ void CompressInstEmitter::evaluateCompressPat(const Record *Rec) {
   CompressPatterns.emplace_back(SourceInst, DestInst, std::move(PatReqFeatures),
                                 SourceOperandMap, DestOperandMap,
                                 Rec->getValueAsBit("isCompressOnly"));
-}
-
-static void
-getReqFeatures(std::set<std::pair<bool, StringRef>> &FeaturesSet,
-               std::set<std::set<std::pair<bool, StringRef>>> &AnyOfFeatureSets,
-               ArrayRef<const Record *> ReqFeatures) {
-  for (const Record *R : ReqFeatures) {
-    const DagInit *D = R->getValueAsDag("AssemblerCondDag");
-    std::string CombineType = D->getOperator()->getAsString();
-    if (CombineType != "any_of" && CombineType != "all_of")
-      PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
-    if (D->getNumArgs() == 0)
-      PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
-    bool IsOr = CombineType == "any_of";
-    std::set<std::pair<bool, StringRef>> AnyOfSet;
-
-    for (auto *Arg : D->getArgs()) {
-      bool IsNot = false;
-      if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
-        if (NotArg->getOperator()->getAsString() != "not" ||
-            NotArg->getNumArgs() != 1)
-          PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
-        Arg = NotArg->getArg(0);
-        IsNot = true;
-      }
-      if (!isa<DefInit>(Arg) ||
-          !cast<DefInit>(Arg)->getDef()->isSubClassOf("SubtargetFeature"))
-        PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
-      if (IsOr)
-        AnyOfSet.emplace(IsNot, cast<DefInit>(Arg)->getDef()->getName());
-      else
-        FeaturesSet.emplace(IsNot, cast<DefInit>(Arg)->getDef()->getName());
-    }
-
-    if (IsOr)
-      AnyOfFeatureSets.insert(std::move(AnyOfSet));
-  }
 }
 
 static unsigned getPredicates(DenseMap<const Record *, unsigned> &PredicateMap,
@@ -693,10 +680,11 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
       CaseStream.indent(2) << "case " + TargetName + "::" + CurOp + ": {\n";
     }
 
-    std::set<std::pair<bool, StringRef>> FeaturesSet;
-    std::set<std::set<std::pair<bool, StringRef>>> AnyOfFeatureSets;
+    std::set<SubtargetFeatureLiteral> FeaturesSet;
+    std::set<std::set<SubtargetFeatureLiteral>> AnyOfFeatureSets;
     // Add CompressPat required features.
-    getReqFeatures(FeaturesSet, AnyOfFeatureSets, CompressPat.PatReqFeatures);
+    getRequiredFeatures(FeaturesSet, AnyOfFeatureSets,
+                        CompressPat.PatReqFeatures);
 
     // Add Dest instruction required features.
     std::vector<const Record *> ReqFeatures;
@@ -705,25 +693,25 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     copy_if(RF, std::back_inserter(ReqFeatures), [](const Record *R) {
       return R->getValueAsBit("AssemblerMatcherPredicate");
     });
-    getReqFeatures(FeaturesSet, AnyOfFeatureSets, ReqFeatures);
+    getRequiredFeatures(FeaturesSet, AnyOfFeatureSets, ReqFeatures);
 
     ListSeparator CondSep(" &&\n        ");
 
     // Emit checks for all required features.
-    for (auto &Op : FeaturesSet) {
-      StringRef Not = Op.first ? "!" : "";
+    for (const auto &Op : FeaturesSet) {
+      StringRef Not = Op.IsNot ? "!" : "";
       CondStream << CondSep << Not << "STI.getFeatureBits()[" << TargetName
-                 << "::" << Op.second << "]";
+                 << "::" << Op.Feature << "]";
     }
 
     // Emit checks for all required feature groups.
-    for (auto &Set : AnyOfFeatureSets) {
+    for (const auto &Set : AnyOfFeatureSets) {
       CondStream << CondSep << "(";
-      for (auto &Op : Set) {
+      for (const auto &Op : Set) {
         bool IsLast = &Op == &*Set.rbegin();
-        StringRef Not = Op.first ? "!" : "";
+        StringRef Not = Op.IsNot ? "!" : "";
         CondStream << Not << "STI.getFeatureBits()[" << TargetName
-                   << "::" << Op.second << "]";
+                   << "::" << Op.Feature << "]";
         if (!IsLast)
           CondStream << " || ";
       }

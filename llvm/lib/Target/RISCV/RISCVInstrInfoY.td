@@ -220,37 +220,10 @@ def : CompressPat<(SY YGPR:$rs2, SPMem:$rs1, uimm9_lsb000:$imm),
 } // Predicates = [HasStdExtZca, IsStdExtYCapMode, IsRV32]
 
 let Predicates = [HasStdExtZca, IsStdExtYCapMode] in {
-// Ideally, we would reuse C_ADDI4SPN/C_ADDI16SP with SP:$rs1, but since the
-// CompressPat uses instructions with different register classes (ADDI vs YADDI)
-// we can't do this until tablegen resolves predicates in CompressPat.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, DecoderNamespace = "RVY" in {
-def C_YADDI4SPN : RVInst16CIW<0b000, OPC_C0, (outs YGPRC:$rd),
-                              (ins SP_Y:$rs1, uimm10_lsb00nonzero:$imm),
-                              "c.addi4spn", "$rd, $rs1, $imm">,
-                              Sched<[WriteIALU, ReadIALU]> {
-  bits<0> rs1;
-  let Inst{12-11} = imm{5-4};
-  let Inst{10-7} = imm{9-6};
-  let Inst{6} = imm{2};
-  let Inst{5} = imm{3};
-}
-def C_YADDI16SP : RVInst16CI<0b011, OPC_C1, (outs SP_Y:$rd_wb),
-                             (ins SP_Y:$rd, simm10_lsb0000nonzero:$imm),
-                             "c.addi16sp", "$rd, $imm">,
-                  Sched<[WriteIALU, ReadIALU]> {
-  let Constraints = "$rd = $rd_wb";
-  let rd = 2;
-  let Inst{12} = imm{9};
-  let Inst{6} = imm{4};
-  let Inst{5} = imm{6};
-  let Inst{4-3} = imm{8-7};
-  let Inst{2} = imm{5};
-}
-} // hasSideEffects = 0, mayLoad = 0, mayStore = 0, DecoderNamespace = "RVY"
 def : CompressPat<(YADDI YGPRC:$rd, SP_Y:$rs1, uimm10_lsb00nonzero:$imm),
-                  (C_YADDI4SPN YGPRC:$rd, SP_Y:$rs1, uimm10_lsb00nonzero:$imm)>;
+                  (C_ADDI4SPN YGPRC:$rd, SP_Y:$rs1, uimm10_lsb00nonzero:$imm)>;
 def : CompressPat<(YADDI X2_Y, X2_Y, simm10_lsb0000nonzero:$imm),
-                  (C_YADDI16SP X2_Y, simm10_lsb0000nonzero:$imm)>;
+                  (C_ADDI16SP X2_Y, simm10_lsb0000nonzero:$imm)>;
 } // Predicates = [HasStdExtZca, IsStdExtYCapMode]
 
 let Predicates = [HasStdExtZca, IsStdExtYCapMode, IsRV64] in {

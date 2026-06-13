@@ -266,13 +266,9 @@ class CA_ALU<bits<6> funct6, bits<2> funct2, string OpcodeStr>
 
 let Predicates = [HasStdExtZca] in {
 
-// Ideally we would reuse C_ADDI16SP for StdExtY, but since the CompressPat
-// uses instructions with different register classes (ADDI vs YADDI) we can't
-// do this yet. Instead, add a variant of the instruction in RISCVInstrInfoY.td.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
-    append Predicates = [NotStdExtYCapMode] in
-def C_ADDI4SPN : RVInst16CIW<0b000, OPC_C0, (outs GPRC:$rd),
-                             (ins SP_X:$rs1, uimm10_lsb00nonzero:$imm),
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def C_ADDI4SPN : RVInst16CIW<0b000, OPC_C0, (outs BasePtrCRegClass:$rd),
+                             (ins SP:$rs1, uimm10_lsb00nonzero:$imm),
                              "c.addi4spn", "$rd, $rs1, $imm">,
                              Sched<[WriteIALU, ReadIALU]> {
   bits<0> rs1;
@@ -374,13 +370,9 @@ def C_LI : RVInst16CI<0b010, OPC_C1, (outs GPR:$rd), (ins simm6:$imm),
                       "c.li", "$rd, $imm">,
            Sched<[WriteIALU]>;
 
-// Ideally we would reuse C_ADDI16SP for StdExtY, but since the CompressPat
-// uses instructions with different register classes (ADDI vs YADDI) we can't
-// do this yet. Instead, add a variant of the instruction in RISCVInstrInfoY.td.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
-    append Predicates = [NotStdExtYCapMode] in
-def C_ADDI16SP : RVInst16CI<0b011, OPC_C1, (outs SP_X:$rd_wb),
-                            (ins SP_X:$rd, simm10_lsb0000nonzero:$imm),
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def C_ADDI16SP : RVInst16CI<0b011, OPC_C1, (outs SP:$rd_wb),
+                            (ins SP:$rd, simm10_lsb0000nonzero:$imm),
                             "c.addi16sp", "$rd, $imm">,
                  Sched<[WriteIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
@@ -753,6 +745,7 @@ def : InstAlias<".insn_cj $opcode, $funct3, $imm11",
 
 // Quadrant 0
 let Predicates = [HasStdExtZca] in {
+let append Predicates = [NotStdExtYCapMode] in
 def : CompressPat<(ADDI GPRC:$rd, SP_X:$rs1, uimm10_lsb00nonzero:$imm),
                   (C_ADDI4SPN GPRC:$rd, SP_X:$rs1, uimm10_lsb00nonzero:$imm)>;
 
@@ -799,6 +792,7 @@ def : CompressPat<(ADDIW GPRNoX0:$rs1, GPRNoX0:$rs1, simm6:$imm),
 
 def : CompressPat<(ADDI GPRNoX0:$rd, X0, simm6:$imm),
                   (C_LI GPRNoX0:$rd, simm6:$imm)>;
+let append Predicates = [NotStdExtYCapMode] in
 def : CompressPat<(ADDI X2, X2, simm10_lsb0000nonzero:$imm),
                   (C_ADDI16SP X2, simm10_lsb0000nonzero:$imm)>;
 def : CompressPat<(LUI GPRNoX0X2:$rd, c_lui_imm:$imm),

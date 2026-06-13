@@ -12,7 +12,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/TableGen/Record.h"
 #include <map>
+#include <set>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -108,6 +110,23 @@ struct SubtargetFeatureInfo {
   static void emitMCPredicateCheck(raw_ostream &OS, StringRef TargetName,
                                    ArrayRef<const Record *> Predicates);
 };
+
+struct SubtargetFeatureLiteral {
+  StringRef Feature;
+  bool IsNot;
+
+  bool operator<(const SubtargetFeatureLiteral &Other) const {
+    return std::tie(Feature, IsNot) < std::tie(Other.Feature, Other.IsNot);
+  }
+  bool operator==(const SubtargetFeatureLiteral &Other) const {
+    return Feature == Other.Feature && IsNot == Other.IsNot;
+  }
+};
+
+void getRequiredFeatures(
+    std::set<SubtargetFeatureLiteral> &FeaturesSet,
+    std::set<std::set<SubtargetFeatureLiteral>> &AnyOfFeatureSets,
+    ArrayRef<const Record *> ReqPredicates);
 } // end namespace llvm
 
 #endif // LLVM_UTIL_TABLEGEN_COMMON_SUBTARGETFEATUREINFO_H

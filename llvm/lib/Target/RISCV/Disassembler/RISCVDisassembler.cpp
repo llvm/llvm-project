@@ -115,12 +115,6 @@ static DecodeStatus DecodeGPRX1RegisterClass(MCInst &Inst,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeSP_XRegisterClass(MCInst &Inst,
-                                            const MCDisassembler *Decoder) {
-  Inst.addOperand(MCOperand::createReg(RISCV::X2));
-  return MCDisassembler::Success;
-}
-
 static DecodeStatus DecodeSP_XRegisterClass(MCInst &Inst, uint64_t RegNo,
                                             uint32_t Address,
                                             const MCDisassembler *Decoder) {
@@ -641,7 +635,6 @@ static constexpr DecoderListEntry DecoderList16[]{
     {DecoderTableRVY64Only16,
      {RISCV::FeatureStdExtY, RISCV::Feature64Bit},
      "RVY64-only 16-bit instructions"},
-    {DecoderTableRVY16, {RISCV::FeatureStdExtY}, "RVY 16-bit instructions"},
     {DecoderTable16, {}, "standard 16-bit instructions"},
     {DecoderTableRV32Only16, {}, "RV32-only 16-bit instructions"},
     // Zc* instructions incompatible with Zcf or Zcd
