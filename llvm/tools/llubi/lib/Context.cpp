@@ -632,7 +632,7 @@ void Context::exposeProvenance(Provenance &Prov) {
 MemoryObject *
 Context::checkProvenance(const Pointer &Ptr,
                          function_ref<bool(const Provenance &)> Check,
-                         unsigned AS, bool HasSideEffect) {
+                         bool HasSideEffect) {
   auto &Prov = Ptr.provenance();
   if (!Check(Prov))
     return nullptr;
@@ -641,10 +641,10 @@ Context::checkProvenance(const Pointer &Ptr,
     return Prov.Obj.get();
 
   MemoryObject *MO = nullptr;
-  APInt TempMask;
-  APInt *Mask = HasSideEffect ? &Prov.Wildcard->ActiveMask : &TempMask;
+  APInt &Mask = Prov.Wildcard->ActiveMask;
   SmallVector<IntrusiveRefCntPtr<Provenance>> *List = nullptr;
-  if (Prov.Wildcard->ActiveMask.isZero()) {
+  uint32_t ProvenanceCount = 0;
+  if (Mask.isZero()) {
     // The memory object hasn't been determined.
     uint64_t Addr = Ptr.address().getLimitedValue();
     auto Iter = ExposedProvenances.upper_bound(Addr);
@@ -652,27 +652,31 @@ Context::checkProvenance(const Pointer &Ptr,
       return nullptr;
     auto &[BaseAddress, Set] = *std::prev(Iter);
     auto &Obj = MemoryObjects.at(BaseAddress);
-    if (Obj->getAddressSpace() != AS || !Obj->inBounds(Ptr.address()))
+    if (!Obj->inBounds(Ptr.address()))
       return nullptr;
     MO = Obj.get();
-    uint32_t Generation = std::distance(
+    // We only inspect the first N exposed provenances according to the global
+    // generation number of the wildcard pointer.
+    ProvenanceCount = std::distance(
         Set.GenerationList.begin(),
         upper_bound(Set.GenerationList, Prov.Wildcard->Generation));
-    *Mask = APInt::getAllOnes(Generation);
+    if (HasSideEffect) {
+      Mask = APInt::getAllOnes(ProvenanceCount);
+      Prov.Wildcard->BaseAddress = BaseAddress;
+    }
     List = &Set.List;
   } else {
-    // We already determined the memory object in a previous memory access。
+    // We already determined the memory object in a previous memory access.
     uint64_t BaseAddress = Prov.Wildcard->BaseAddress;
     auto Iter = ExposedProvenances.find(BaseAddress);
     // The memory object has been freed.
     if (Iter == ExposedProvenances.end())
       return nullptr;
     MO = MemoryObjects.at(BaseAddress).get();
-    if (MO->getAddressSpace() != AS || !MO->inBounds(Ptr.address()))
+    if (!MO->inBounds(Ptr.address()))
       return nullptr;
-    if (HasSideEffect)
-      TempMask = Prov.Wildcard->ActiveMask;
     List = &Iter->second.List;
+    ProvenanceCount = Mask.getBitWidth();
   }
   if (Prov.Obj) {
     // We already determined the memory object via speculatable operations like
@@ -681,15 +685,19 @@ Context::checkProvenance(const Pointer &Ptr,
       return nullptr;
   }
 
-  uint32_t Generation = Mask->getBitWidth();
   bool Valid = false;
-  for (uint32_t I = 0; I != Generation; ++I) {
-    if (!(*Mask)[I])
+  for (uint32_t I = 0; I != ProvenanceCount; ++I) {
+    assert((!HasSideEffect || !Mask.isZero()) &&
+           "Mask must be initialized if HasSideEffect is true.");
+    if (!Mask.isZero() && !Mask[I])
       continue;
-    if (Check(*(*List)[I]))
+    if (Check(*(*List)[I])) {
       Valid = true;
-    else
-      Mask->clearBit(I);
+      // Early return as we don't need to update the Mask.
+      if (!HasSideEffect)
+        break;
+    } else if (HasSideEffect)
+      Mask.clearBit(I);
   }
 
   return Valid ? MO : nullptr;

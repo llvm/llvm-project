@@ -55,15 +55,12 @@ void ExecutorBase::reportErrorString(StringRef Msg) {
 
 std::pair<MemoryObject *, uint64_t>
 ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
-                              Align Alignment, bool IsStore, unsigned AS) {
-  auto *MO = Ctx.checkProvenance(
-      Ptr,
-      [](const Provenance &) {
-        // TODO: check provenance
-        // TODO: check inrange(S, E)
-        return true;
-      },
-      AS);
+                              Align Alignment, bool IsStore) {
+  auto *MO = Ctx.checkProvenance(Ptr, [](const Provenance &) {
+    // TODO: check provenance
+    // TODO: check inrange(S, E)
+    return true;
+  });
   if (!MO) {
     reportImmediateUB()
         << "Invalid memory access via a pointer with nullary provenance.";
@@ -113,7 +110,7 @@ ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
 }
 
 AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
-                            bool NoUndef, unsigned AS) {
+                            bool NoUndef) {
   if (Ptr.isPoison()) {
     reportImmediateUB() << "Invalid memory access with a poison pointer.";
     return AnyValue::getPoisonValue(Ctx, ValTy);
@@ -121,7 +118,7 @@ AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
   auto &PtrVal = Ptr.asPointer();
   if (auto [MO, Offset] = verifyMemAccess(
           PtrVal, Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
-          /*IsStore=*/false, AS);
+          /*IsStore=*/false);
       MO) {
     // Load from a dead stack object yields poison value.
     if (MO->getState() == MemoryObjectState::Dead)
@@ -138,7 +135,7 @@ AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
 }
 
 void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
-                         const AnyValue &Val, Type *ValTy, unsigned AS) {
+                         const AnyValue &Val, Type *ValTy) {
   if (Ptr.isPoison()) {
     reportImmediateUB() << "Invalid memory access with a poison pointer.";
     return;
@@ -146,7 +143,7 @@ void ExecutorBase::store(const AnyValue &Ptr, Align Alignment,
   auto &PtrVal = Ptr.asPointer();
   if (auto [MO, Offset] = verifyMemAccess(
           PtrVal, Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
-          /*IsStore=*/true, AS);
+          /*IsStore=*/true);
       MO) {
     if (MO->isConstant()) {
       reportImmediateUB() << "Try to write to a constant memory object: "

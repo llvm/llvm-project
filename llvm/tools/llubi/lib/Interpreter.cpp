@@ -131,14 +131,11 @@ static bool violatesDereferenceableBytesAttr(const AnyValue &V, uint64_t Bytes,
     return true;
   }
 
-  auto *MO = Ctx.checkProvenance(
-      Ptr,
-      [&](const Provenance &) {
-        // TODO: check read_provenance
-        // TODO: check nofree for attributes/metadata.
-        return true;
-      },
-      AS);
+  auto *MO = Ctx.checkProvenance(Ptr, [&](const Provenance &) {
+    // TODO: check read_provenance
+    // TODO: check nofree for attributes/metadata.
+    return true;
+  });
   if (!MO)
     return true;
 
@@ -715,8 +712,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   AnyValue computePtrAdd(const Pointer &Ptr, const APInt &Offset,
-                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset,
-                         unsigned AS) {
+                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset) {
     if (Offset.isZero())
       return Ptr;
     APInt IndexBits = Ptr.address().trunc(Offset.getBitWidth());
@@ -739,7 +735,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     MemoryObject *MO = nullptr;
     if (Flags.isInBounds()) {
       MO = Ctx.checkProvenance(
-          Ptr, [](const Provenance &) { return true; }, AS,
+          Ptr, [](const Provenance &) { return true; },
           /*HasSideEffect=*/false);
       if (!MO || !MO->inBounds(NewAddr))
         return AnyValue::poison();
@@ -765,29 +761,27 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
   }
 
   AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
-                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset,
-                         unsigned AS) {
+                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset) {
     if (Ptr.isPoison())
       return AnyValue::poison();
-    return computePtrAdd(Ptr.asPointer(), Offset, Flags, AccumulatedOffset, AS);
+    return computePtrAdd(Ptr.asPointer(), Offset, Flags, AccumulatedOffset);
   }
 
   AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
                                const APInt &Scale, GEPNoWrapFlags Flags,
-                               AnyValue &AccumulatedOffset, unsigned AS) {
+                               AnyValue &AccumulatedOffset) {
     if (Ptr.isPoison() || Index.isPoison())
       return AnyValue::poison();
     assert(Ptr.isPointer() && Index.isInteger() && "Unexpected type.");
     if (Scale.isOne())
-      return computePtrAdd(Ptr, Index.asInteger(), Flags, AccumulatedOffset,
-                           AS);
+      return computePtrAdd(Ptr, Index.asInteger(), Flags, AccumulatedOffset);
     auto ScaledOffset =
         mulNoWrap(Index.asInteger(), Scale, Flags.hasNoUnsignedSignedWrap(),
                   Flags.hasNoUnsignedWrap());
     if (ScaledOffset.isPoison())
       return AnyValue::poison();
     return computePtrAdd(Ptr, ScaledOffset.asInteger(), Flags,
-                         AccumulatedOffset, AS);
+                         AccumulatedOffset);
   }
 
   AnyValue canonicalizeIndex(const AnyValue &Idx, unsigned IndexBitWidth,
@@ -1027,9 +1021,8 @@ public:
       auto Ptr = Args[0];
       if (Ptr.isPoison())
         return AnyValue();
-      auto *MO = Ctx.checkProvenance(
-          Ptr.asPointer(), [](const Provenance &) { return true; },
-          CB.getOperand(0)->getType()->getPointerAddressSpace());
+      auto *MO = Ctx.checkProvenance(Ptr.asPointer(),
+                                     [](const Provenance &) { return true; });
       assert(MO && "Memory object accessed by lifetime intrinsic should be "
                    "always valid.");
       if (IID == Intrinsic::lifetime_start) {
@@ -2368,7 +2361,6 @@ public:
   void visitGetElementPtrInst(GetElementPtrInst &GEP) {
     uint32_t IndexBitWidth =
         DL.getIndexSizeInBits(GEP.getType()->getPointerAddressSpace());
-    unsigned AS = GEP.getType()->getPointerAddressSpace();
     GEPNoWrapFlags Flags = GEP.getNoWrapFlags();
     AnyValue Res = getValue(GEP.getPointerOperand());
     AnyValue AccumulatedOffset = APInt(IndexBitWidth, 0);
@@ -2387,7 +2379,7 @@ public:
                  AccumulatedOffset.asAggregate()))
           ResElem = computeScaledPtrAdd(
               ResElem, canonicalizeIndex(IndexElem, IndexBitWidth, Flags),
-              Scale, Flags, OffsetElem, AS);
+              Scale, Flags, OffsetElem);
       } else {
         AnyValue CanonicalIndex =
             canonicalizeIndex(Index, IndexBitWidth, Flags);
@@ -2395,10 +2387,10 @@ public:
           for (auto &&[ResElem, OffsetElem] :
                zip(Res.asAggregate(), AccumulatedOffset.asAggregate()))
             ResElem = computeScaledPtrAdd(ResElem, CanonicalIndex, Scale, Flags,
-                                          OffsetElem, AS);
+                                          OffsetElem);
         } else {
           Res = computeScaledPtrAdd(Res, CanonicalIndex, Scale, Flags,
-                                    AccumulatedOffset, AS);
+                                    AccumulatedOffset);
         }
       }
     };
@@ -2465,8 +2457,7 @@ public:
 
   void visitLoadInst(LoadInst &LI) {
     auto RetVal = load(getValue(LI.getPointerOperand()), LI.getAlign(),
-                       LI.getType(), LI.hasMetadata(LLVMContext::MD_noundef),
-                       LI.getPointerAddressSpace());
+                       LI.getType(), LI.hasMetadata(LLVMContext::MD_noundef));
     // TODO: track volatile loads
     handleMetadata(LI.getType(), RetVal, LI);
     setResult(LI, std::move(RetVal));
@@ -2477,8 +2468,7 @@ public:
     auto &Val = getValue(SI.getValueOperand());
     // TODO: track volatile stores
     // TODO: handle metadata
-    store(Ptr, SI.getAlign(), Val, SI.getValueOperand()->getType(),
-          SI.getPointerAddressSpace());
+    store(Ptr, SI.getAlign(), Val, SI.getValueOperand()->getType());
     if (!hasProgramExited() && !Handler.onInstructionExecuted(SI, AnyValue()))
       setFailed();
   }

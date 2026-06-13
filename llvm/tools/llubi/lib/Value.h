@@ -106,20 +106,26 @@ enum class BooleanKind { False, True, Poison };
 
 /// A set of previously exposed provenances. It is originally yielded by
 /// inttoptr, and shared by pointers derived from the result.
+///
+/// Each capability check may invalidate some provenances. If we cannot
+/// pick one, it is UB. That is, from the angelic non-determinism view,
+/// we cannot pick a provenance to make the program reach this point.
+///
+/// For efficiency, this class has different forms in two stages:
+/// 1. Before any memory access is performed, ActiveMask is set to zero and
+/// Generation represents the global generation number of the snapshot.
+/// 2. After a memory access is performed, we can determine exactly one memory
+/// object to be accessed (address ranges are distinct). In this case,
+/// BaseAddress is set and ActiveMask is non-zero. ActiveMask represents the
+/// validity of first N exposed provenances associated with the memory object.
+/// The bitwidth N is the first index I in the provenance list with
+/// List[I].Generation > WildcardProvenance::Generation. That is, we can only
+/// access through exposed provenances before inttoptr executes.
+/// Note that if ActiveMask becomes zero again, UB must be triggered.
 class WildcardProvenance : public RefCountedBase<WildcardProvenance> {
-  // Each capability check may invalidate some provenances. If we cannot
-  // pick one, it is UB. That is, from the angelic non-determinism view,
-  // we cannot pick a provenance to make the program reach this point.
-  // The bitwidth represents the generation of the set. We only consider
-  // the exposed provenances in the snapshot, which is captured at the
-  // point where inttoptr executes.
   APInt ActiveMask;
   union {
-    // Initially, we record a snapshot of exposed provenances. It is active when
-    // ActiveMask is zero.
     uint64_t Generation;
-    // After a memory access is performed, the memory object can be determined.
-    // It is active when ActiveMask is non-zero.
     uint64_t BaseAddress;
   };
 
@@ -135,11 +141,12 @@ public:
 /// Each node will be assigned a unique, pointer-sized tag, which is used to
 /// represent the pointer in the memory.
 /// The provenance can be either concrete or wildcard, as determined by the
-/// cases below: Obj        Wildcard      State Null       Null          Invalid
-/// Null       NonNull       Wildcard
-/// NonNull    Null          Concrete
-/// NonNull    NonNull       Wildcard (limited to exposed provenances associated
-/// with a specific memory object)
+/// cases below:
+///  Obj        Wildcard      State
+///  Null       Null          Invalid
+///  Null       NonNull       Wildcard
+///  NonNull    Null          Concrete
+///  NonNull    NonNull       Wildcard (associated with a specific MO)
 class Provenance : public RefCountedBase<Provenance> {
   // TODO: store reference to the provenance of the pointer it is derived from
 

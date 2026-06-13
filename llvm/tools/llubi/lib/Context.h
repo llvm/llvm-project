@@ -245,12 +245,11 @@ class Context {
   //   1. Each address maps to at most one memory object during the execution of
   //   the program, as AllocationBase increases monotonically.
   //   2. We maintain the set of exposed provenances. When ptrtoint/addr
-  //   executes,
-  //      the provenance is inserted to the set. When inttoptr executes, it
-  //      yields a pointer with a wildcard provenance. That is, each later use
-  //      will check whether there is an exposed provenance in the snapshot
-  //      allowing the operation. The invalid provenance will be masked out
-  //      after the operation. If we cannot pick one, it is UB.
+  //   executes, the provenance is inserted to the set. When inttoptr executes,
+  //   it yields a pointer with a wildcard provenance. That is, each later use
+  //   will check whether there is an exposed provenance in the snapshot
+  //   allowing the operation. The invalid provenance will be masked out after
+  //   the operation. If we cannot pick one, it is UB.
 
   /// Exposed provenances are grouped by associated memory objects for efficient
   /// invalidation.
@@ -367,7 +366,7 @@ public:
   /// must report UB when the result is nullptr.
   MemoryObject *checkProvenance(const Pointer &Ptr,
                                 function_ref<bool(const Provenance &)> Check,
-                                unsigned AS, bool HasSideEffect = true);
+                                bool HasSideEffect = true);
   /// Returns the snapshot of currently exposed provenances.
   IntrusiveRefCntPtr<Provenance> getWildcardProvenance();
   /// Convert byte sequence to a value of the given type. Uninitialized bits are

@@ -34,9 +34,8 @@ std::optional<std::string> Library::readStringFromMemory(const Pointer &Ptr) {
   uint64_t Offset = 0;
 
   while (true) {
-    auto [MO, ValidOffset] =
-        Executor.verifyMemAccess(Ptr.getWithNewAddr(Address + Offset), 1,
-                                 Align(1), /*IsStore=*/false, /*AS=*/0);
+    auto [MO, ValidOffset] = Executor.verifyMemAccess(
+        Ptr.getWithNewAddr(Address + Offset), 1, Align(1), /*IsStore=*/false);
     if (!MO)
       return std::nullopt;
 
@@ -122,13 +121,10 @@ AnyValue Library::executeFree(ArrayRef<AnyValue> Args) {
   if (Ptr.isNullPtr(/*AS=*/0, DL))
     return AnyValue();
 
-  MemoryObject *Obj = Ctx.checkProvenance(
-      Ptr,
-      [](const Provenance &) {
-        // TODO: check nofree
-        return true;
-      },
-      /*AS=*/0);
+  MemoryObject *Obj = Ctx.checkProvenance(Ptr, [](const Provenance &) {
+    // TODO: check nofree
+    return true;
+  });
   if (!Obj) {
     Executor.reportImmediateUB()
         << "freeing a pointer with nullary provenance.";
@@ -282,7 +278,7 @@ AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
     case 'n': {
       OS.flush();
       Executor.store(Arg, Align(4), AnyValue(APInt(32, Output.size())),
-                     Type::getInt32Ty(Ctx.getContext()), /*AS=*/0);
+                     Type::getInt32Ty(Ctx.getContext()));
       break;
     }
     case 'p': {
