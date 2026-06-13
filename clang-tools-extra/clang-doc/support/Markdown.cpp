@@ -46,6 +46,16 @@ static bool isListItem(StringRef Line) {
          Line.starts_with("+ ");
 }
 
+// Returns the ATX heading level (1 to 6) when Line is an ATX heading: one to
+// six leading # characters followed by a space. Returns 0 otherwise, so seven
+// or more # characters fall back to plain text.
+static unsigned atxHeadingLevel(StringRef Line) {
+  size_t Level = Line.find_first_not_of('#');
+  if (Level == StringRef::npos || Level < 1 || Level > 6 || Line[Level] != ' ')
+    return 0;
+  return Level;
+}
+
 // A forward cursor over the lines of a paragraph. Encapsulates the parse
 // position so the loop can inspect the current or an upcoming line and consume
 // lines without manual index arithmetic. Lines are stored untrimmed; callers
@@ -317,6 +327,24 @@ static UnorderedListNode *parseUnorderedList(LineReader &Reader,
   return List;
 }
 
+// Parses an ATX heading: one to six leading # characters and a space, followed
+// by inline content. The cursor must be on the heading line, which is consumed.
+//
+// TODO: CommonMark §4.2 also allows up to 3 leading spaces and an optional
+// closing run of # characters; neither is handled yet.
+static HeadingNode *parseHeading(LineReader &Reader, BumpPtrAllocator &Arena,
+                                 StringSaver &Saver) {
+  StringRef Line = Reader.peek().trim();
+  unsigned Level = atxHeadingLevel(Line);
+  assert(Level >= 1 && Level <= 6 && "parseHeading called on a non-heading");
+  StringRef Content = Line.drop_front(Level).trim();
+  Reader.advance();
+  auto *Heading =
+      new (Arena) HeadingNode(Level, parseInline(Content, Arena, Saver));
+  LDBG() << "emitting HeadingNode level=" << Level;
+  return Heading;
+}
+
 ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
                                  BumpPtrAllocator &Arena) {
   if (ParagraphText.trim().empty())
@@ -340,6 +368,12 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
     // Fenced code block.
     if (Line.starts_with("```") || Line.starts_with("~~~")) {
       Nodes.push_back(parseFencedCode(Reader, Arena, Saver));
+      continue;
+    }
+
+    // ATX heading: 1 to 6 leading # characters and a space.
+    if (atxHeadingLevel(Line)) {
+      Nodes.push_back(parseHeading(Reader, Arena, Saver));
       continue;
     }
 

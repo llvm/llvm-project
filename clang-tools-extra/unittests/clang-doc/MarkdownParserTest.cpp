@@ -330,4 +330,63 @@ TEST_F(MarkdownParserTest, PlainTextHasNoInlineNodes) {
   EXPECT_EQ(cast<TextNode>(P->Children[0])->Text, "just words");
 }
 
+TEST_F(MarkdownParserTest, Heading1) {
+  auto Nodes = parseMarkdown("# Title", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *H = cast<HeadingNode>(Nodes[0]);
+  EXPECT_EQ(H->Level, 1u);
+  ASSERT_EQ(H->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(H->Children[0])->Text, "Title");
+}
+
+TEST_F(MarkdownParserTest, Heading2) {
+  auto Nodes = parseMarkdown("## Title", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *H = cast<HeadingNode>(Nodes[0]);
+  EXPECT_EQ(H->Level, 2u);
+  ASSERT_EQ(H->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(H->Children[0])->Text, "Title");
+}
+
+TEST_F(MarkdownParserTest, Heading3) {
+  auto Nodes = parseMarkdown("### Title", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *H = cast<HeadingNode>(Nodes[0]);
+  EXPECT_EQ(H->Level, 3u);
+  ASSERT_EQ(H->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(H->Children[0])->Text, "Title");
+}
+
+TEST_F(MarkdownParserTest, HeadingWithInlineCode) {
+  auto Nodes = parseMarkdown("# Use `foo()`", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *H = cast<HeadingNode>(Nodes[0]);
+  EXPECT_EQ(H->Level, 1u);
+  ASSERT_EQ(H->Children.size(), 2u);
+  EXPECT_EQ(cast<TextNode>(H->Children[0])->Text, "Use ");
+  EXPECT_EQ(cast<InlineCodeNode>(H->Children[1])->Code, "foo()");
+}
+
+TEST_F(MarkdownParserTest, HeadingWithEmphasis) {
+  auto Nodes = parseMarkdown("## see *this*", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *H = cast<HeadingNode>(Nodes[0]);
+  EXPECT_EQ(H->Level, 2u);
+  ASSERT_EQ(H->Children.size(), 2u);
+  EXPECT_EQ(cast<TextNode>(H->Children[0])->Text, "see ");
+  auto *Em = cast<EmphasisNode>(H->Children[1]);
+  ASSERT_EQ(Em->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(Em->Children[0])->Text, "this");
+}
+
+// Seven or more # characters are not a valid ATX heading, so the line falls
+// back to a plain-text paragraph.
+TEST_F(MarkdownParserTest, SevenHashesIsPlainText) {
+  auto Nodes = parseMarkdown("####### too many", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *P = cast<ParagraphNode>(Nodes[0]);
+  ASSERT_EQ(P->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(P->Children[0])->Text, "####### too many");
+}
+
 } // namespace
