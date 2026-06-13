@@ -593,20 +593,21 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   }
 
   std::optional<int> LatchIdx = std::nullopt;
-  if (SE && FullUnswitch && L.getUniqueLatchExitBlock() != nullptr) {
-    if (BI.getSuccessor(0) == L.getLoopLatch() &&
+  auto *LoopLatch = L.getLoopLatch();
+  auto *ULExit = L.getUniqueLatchExitBlock();
+  if (SE && FullUnswitch && ULExit) {
+    if (BI.getSuccessor(0) == LoopLatch &&
         L.contains(BI.getSuccessor(1)))
       LatchIdx = 0;
-    else if (BI.getSuccessor(1) == L.getLoopLatch() &&
+    else if (BI.getSuccessor(1) == LoopLatch &&
              L.contains(BI.getSuccessor(0)))
       LatchIdx = 1;
   }
 
   bool ModifiedBranch = false;
   if (LatchIdx &&
-      areLoopExitPHIsLoopInvariant(L, *L.getLoopLatch(),
-                                   *L.getUniqueLatchExitBlock()) &&
-      !llvm::any_of(*L.getLoopLatch(),
+      areLoopExitPHIsLoopInvariant(L, *LoopLatch, *ULExit) &&
+      !llvm::any_of(*LoopLatch,
                     [](Instruction &I) { return I.mayHaveSideEffects(); })) {
 
     // We need to prove the loop is finite, otherwise this change will convert
@@ -619,11 +620,11 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
       Updates.push_back({cfg::UpdateKind::Delete, BI.getParent(),
                          BI.getSuccessor(*LatchIdx)});
       Updates.push_back({cfg::UpdateKind::Insert, BI.getParent(),
-                         L.getUniqueLatchExitBlock()});
-      L.getLoopLatch()->removePredecessor(BI.getParent());
-      BI.setSuccessor(*LatchIdx, L.getUniqueLatchExitBlock());
-      for (PHINode &PN : L.getUniqueLatchExitBlock()->phis()) {
-        Value *V = PN.getIncomingValueForBlock(L.getLoopLatch());
+                         ULExit});
+      LoopLatch->removePredecessor(BI.getParent());
+      BI.setSuccessor(*LatchIdx, ULExit);
+      for (PHINode &PN : ULExit->phis()) {
+        Value *V = PN.getIncomingValueForBlock(LoopLatch);
         PN.addIncoming(V, BI.getParent());
       }
       if (MSSAU)
