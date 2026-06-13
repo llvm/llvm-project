@@ -3589,8 +3589,9 @@ public:
       : VPExpressionRecipe(ExpressionTypes::NegatedExtendedReduction,
                            {Ext, Neg, Red}) {
     assert((Red->getRecurrenceKind() == RecurKind::Add ||
-            Red->getRecurrenceKind() == RecurKind::FAdd) &&
-           "Expected an add reduction");
+            Red->getRecurrenceKind() == RecurKind::FAdd ||
+            Red->getRecurrenceKind() == RecurKind::AddChainWithSubs) &&
+           "Expected an add or add-chain-with-subs reduction");
     if (Neg->getOpcode() == Instruction::Sub) {
       [[maybe_unused]] auto *SubConst = dyn_cast<VPConstantInt>(getOperand(1));
       assert(SubConst && SubConst->isZero() && "Expected a negating sub");
@@ -3612,8 +3613,9 @@ public:
             Mul->getOpcode() == Instruction::FMul) &&
            "Expected a mul");
     assert((Red->getRecurrenceKind() == RecurKind::Add ||
-            Red->getRecurrenceKind() == RecurKind::FAdd) &&
-           "Expected an add reduction");
+            Red->getRecurrenceKind() == RecurKind::FAdd ||
+            Red->getRecurrenceKind() == RecurKind::AddChainWithSubs) &&
+           "Expected an add or add-chain-with-subs reduction");
     assert(getNumOperands() >= 3 && "Expected at least three operands");
     if (Neg->getOpcode() == Instruction::Sub) {
       [[maybe_unused]] auto *SubConst = dyn_cast<VPConstantInt>(getOperand(2));
