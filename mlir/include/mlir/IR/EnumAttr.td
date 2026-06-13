@@ -503,6 +503,9 @@ class I64BitEnumAttr<string name, string summary,
 class EnumParameter<EnumInfo enumInfo>
     : AttrParameter<enumInfo.cppNamespace # "::" # enumInfo.className,
                     "an enum of type " # enumInfo.className> {
+  // Store the enum info so that tooling (e.g. doc generation) can inspect the
+  // enum cases without re-parsing the C++ type string.
+  EnumInfo enum = enumInfo;
   let parser = !if(!isa<EnumAttrInfo>(enumInfo),
     !cast<EnumAttrInfo>(enumInfo).parameterParser, ?);
   let printer = !if(!isa<EnumAttrInfo>(enumInfo),

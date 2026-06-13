@@ -67,6 +67,24 @@ def TestAttrDefParams : AttrDef<Test_Dialect, "TestAttrDefParams"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
+def TestEnumForParam :
+    I32EnumAttr<"TestEnumForParam",
+        "enum for param test", [
+        I32EnumAttrCase<"Alpha", 0, "alpha">,
+        I32EnumAttrCase<"Beta", 1, "beta">]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "NS";
+}
+
+def TestAttrWithEnum : AttrDef<Test_Dialect, "TestAttrWithEnum"> {
+  let mnemonic = "with_enum";
+  let parameters = (ins
+    "int":$value,
+    EnumParameter<TestEnumForParam>:$mode
+  );
+  let assemblyFormat = "`<` $value `,` $mode `>`";
+}
+
 def TestTypeDef : TypeDef<Test_Dialect, "TestTypeDef"> {
   let mnemonic = "test_type_def";
 }
@@ -139,6 +157,13 @@ def TestEnum :
 // CHECK: TestAttrDefParamsAttr
 // CHECK: Syntax:
 // CHECK: #test.test_attr_def_params
+
+// CHECK: TestAttrWithEnumAttr
+// CHECK: Syntax:
+// CHECK:      #test.with_enum<
+// CHECK-NEXT:   int,   # value
+// CHECK-NEXT:   `alpha` | `beta`   # mode
+// CHECK-NEXT: >
 
 // CHECK: ## Type constraints
 // CHECK: ### type summary
