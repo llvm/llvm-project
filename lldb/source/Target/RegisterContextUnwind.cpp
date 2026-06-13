@@ -80,7 +80,8 @@ RegisterContextUnwind::RegisterContextUnwind(Thread &thread,
       m_fallback_unwind_plan_sp(), m_all_registers_available(false),
       m_frame_type(-1), m_cfa(LLDB_INVALID_ADDRESS),
       m_afa(LLDB_INVALID_ADDRESS), m_start_pc(), m_current_pc(),
-      m_current_offset(0), m_current_offset_backed_up_one(0),
+      m_current_offset(std::nullopt),
+      m_current_offset_backed_up_one(std::nullopt),
       m_behaves_like_zeroth_frame(false), m_sym_ctx(sym_ctx),
       m_sym_ctx_valid(false), m_frame_number(frame_number), m_registers(),
       m_parent_unwind(unwind_lldb) {
@@ -1014,7 +1015,7 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
     // If we're on the first instruction of a function, and we have an
     // architectural default UnwindPlan for the initial instruction of a
     // function, use that.
-    if (m_current_offset == 0) {
+    if (m_current_offset.has_value() && m_current_offset.value() == 0) {
       unwind_plan_sp =
           func_unwinders_sp->GetUnwindPlanArchitectureDefaultAtFunctionEntry(
               m_thread);
