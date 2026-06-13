@@ -498,17 +498,19 @@ struct SocccAllocator {
   using value_type = T;
 
   int count_ = 0;
-  explicit SocccAllocator(int i) : count_(i) {}
+  TEST_CONSTEXPR_CXX20 explicit SocccAllocator(int i = 0) : count_(i) {}
 
   template <class U>
-  SocccAllocator(const SocccAllocator<U>& a) : count_(a.count_) {}
+  TEST_CONSTEXPR_CXX20 SocccAllocator(const SocccAllocator<U>& a) : count_(a.count_) {}
 
-  T* allocate(std::size_t n) { return std::allocator<T>().allocate(n); }
-  void deallocate(T* p, std::size_t n) { std::allocator<T>().deallocate(p, n); }
+  TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) { return std::allocator<T>().allocate(n); }
+  TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t n) { std::allocator<T>().deallocate(p, n); }
 
-  SocccAllocator select_on_container_copy_construction() const { return SocccAllocator(count_ + 1); }
+  TEST_CONSTEXPR_CXX20 SocccAllocator select_on_container_copy_construction() const {
+    return SocccAllocator(count_ + 1);
+  }
 
-  bool operator==(const SocccAllocator&) const { return true; }
+  TEST_CONSTEXPR_CXX20 bool operator==(const SocccAllocator&) const { return true; }
 
   using propagate_on_container_copy_assignment = std::false_type;
   using propagate_on_container_move_assignment = std::false_type;

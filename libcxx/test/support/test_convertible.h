@@ -14,6 +14,7 @@
 // Unlike 'std::is_convertible' which only allows checking for single argument
 // conversions.
 
+#include <type_traits>
 #include <utility>
 
 #include "test_macros.h"
@@ -37,5 +38,12 @@ namespace detail {
 template <class Tp, class ...Args>
 constexpr bool test_convertible()
 { return detail::test_convertible_imp<Tp, Args...>(0); }
+
+#if TEST_STD_VER >= 20
+
+template <class Tp, class... Args>
+concept only_explicitly_constructible_from = std::is_constructible_v<Tp, Args...> && !test_convertible<Tp, Args...>();
+
+#endif // TEST_STD_VER >= 20
 
 #endif // SUPPORT_TEST_CONVERTIBLE_H

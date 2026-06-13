@@ -115,7 +115,7 @@
 "`P2846R6 <https://wg21.link/P2846R6>`__","``reserve_hint``: Eagerly reserving memory for not-quite-sized lazy ranges","2025-02 (Hagenberg)","","","`#127884 <https://github.com/llvm/llvm-project/issues/127884>`__",""
 "`P3471R4 <https://wg21.link/P3471R4>`__","Standard Library Hardening","2025-02 (Hagenberg)","","","`#127885 <https://github.com/llvm/llvm-project/issues/127885>`__",""
 "`P0447R28 <https://wg21.link/P0447R28>`__","Introduction of ``std::hive`` to the standard library","2025-02 (Hagenberg)","","","`#127886 <https://github.com/llvm/llvm-project/issues/127886>`__",""
-"`P3019R14 <https://wg21.link/P3019R14>`__","``indirect`` and ``polymorphic``: Vocabulary Types for Composite Class Design","2025-02 (Hagenberg)","","","`#127887 <https://github.com/llvm/llvm-project/issues/127887>`__",""
+"`P3019R14 <https://wg21.link/P3019R14>`__","``indirect`` and ``polymorphic``: Vocabulary Types for Composite Class Design","2025-02 (Hagenberg)","|Partial|","","`#127887 <https://github.com/llvm/llvm-project/issues/127887>`__","``polymorphic`` is not yet implemented."
 "","","","","","",""
 "`P2996R13 <https://wg21.link/P2996R13>`__","Reflection for C++26","2025-06 (Sofia)","","","`#148123 <https://github.com/llvm/llvm-project/issues/148123>`__",""
 "`P3394R4 <https://wg21.link/P3394R4>`__","Annotations for Reflection","2025-06 (Sofia)","","","`#148124 <https://github.com/llvm/llvm-project/issues/148124>`__",""
