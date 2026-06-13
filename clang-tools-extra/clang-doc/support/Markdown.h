@@ -15,27 +15,27 @@
 /// llvm::isa<>/cast<>/dyn_cast<> to check what a node is.
 ///
 /// Inline nodes (appear inside ParagraphNode, HeadingNode, etc.):
-///   TextNode       -- plain text run
-///   SoftBreakNode  -- soft line break
-///   HardBreakNode  -- hard line break (trailing spaces or backslash)
-///   InlineCodeNode -- inline code span (`code`)
-///   EmphasisNode   -- emphasis (*text* or _text_)
-///   StrongNode     -- strong emphasis (**text** or __text__)
+///   TextNode: plain text run
+///   SoftBreakNode: soft line break
+///   HardBreakNode: hard line break (trailing spaces or backslash)
+///   InlineCodeNode: inline code span (`code`)
+///   EmphasisNode: emphasis (*text* or _text_)
+///   StrongNode: strong emphasis (**text** or __text__)
 ///
 /// Block nodes:
-///   ParagraphNode     -- sequence of inline nodes
-///   HeadingNode       -- ATX heading (# through ######), level 1-6
-///   FencedCodeNode    -- fenced code block (``` or ~~~)
-///   TableNode         -- pipe table (raw row text; TODO: structured cells)
-///   UnorderedListNode -- bullet list (-, *, +)
-///   OrderedListNode   -- numbered list with explicit start number
-///   ListItemNode      -- single item inside a list
-///   BlockQuoteNode    -- block quote (>)
-///   ThematicBreakNode -- horizontal rule (---, ***, ___)
+///   ParagraphNode: sequence of inline nodes
+///   HeadingNode: ATX heading (# through ######), level 1-6
+///   FencedCodeNode: fenced code block (``` or ~~~)
+///   TableNode: pipe table (raw row text; TODO: structured cells)
+///   UnorderedListNode: bullet list (-, *, +)
+///   OrderedListNode: numbered list with explicit start number
+///   ListItemNode: single item inside a list
+///   BlockQuoteNode: block quote (>)
+///   ThematicBreakNode: horizontal rule (---, ***, ___)
 ///
 /// All nodes are arena-allocated. The caller owns the arena and must keep it
-/// alive for the lifetime of any returned nodes. The parser never crashes on
-/// malformed input; unrecognized text falls back to TextNode.
+/// alive for the lifetime of any returned nodes. Malformed input is parsed as
+/// plain text rather than rejected; unrecognized text falls back to TextNode.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -58,7 +58,7 @@ enum class NodeKind {
   NK_InlineCode,
   NK_Emphasis,
   NK_Strong,
-  NK_LastInline = NK_Strong, // sentinel -- all inline kinds are <= this
+  NK_LastInline = NK_Strong, // sentinel: all inline kinds are <= this
 
   // Block nodes
   NK_Paragraph,
@@ -70,12 +70,12 @@ enum class NodeKind {
   NK_ListItem,
   NK_BlockQuote,
   NK_ThematicBreak,
-  NK_FirstBlock = NK_Paragraph, // sentinel -- all block kinds are >= this
+  NK_FirstBlock = NK_Paragraph, // sentinel: all block kinds are >= this
 };
 
-/// Base type for all Markdown AST nodes. Carries only the kind discriminator.
-/// Nodes are arena-allocated and have no virtual destructor; use
-/// llvm::isa<>/cast<>/dyn_cast<> for type-safe downcasting.
+/// Base type for all Markdown AST nodes. Nodes are arena-allocated and have no
+/// virtual destructor; use llvm::isa<>/cast<>/dyn_cast<> for type-safe
+/// downcasting.
 struct MDNode {
   NodeKind Kind;
   explicit MDNode(NodeKind K) : Kind(K) {}
@@ -93,7 +93,7 @@ struct TextNode : MDNode {
   static bool classof(const MDNode *N) { return N->Kind == NodeKind::NK_Text; }
 };
 
-/// Soft line break -- a newline that does not end the paragraph.
+/// Soft line break: a newline that does not end the paragraph.
 struct SoftBreakNode : MDNode {
   SoftBreakNode() : MDNode(NodeKind::NK_SoftBreak) {}
   static bool classof(const MDNode *N) {
@@ -101,7 +101,7 @@ struct SoftBreakNode : MDNode {
   }
 };
 
-/// Hard line break -- two trailing spaces or a backslash before a newline.
+/// Hard line break: two trailing spaces or a backslash before a newline.
 struct HardBreakNode : MDNode {
   HardBreakNode() : MDNode(NodeKind::NK_HardBreak) {}
   static bool classof(const MDNode *N) {
@@ -143,7 +143,7 @@ struct StrongNode : MDNode {
 // Block nodes
 //===----------------------------------------------------------------------===//
 
-/// A paragraph -- sequence of inline nodes separated from other blocks by
+/// A paragraph: sequence of inline nodes separated from other blocks by
 /// blank lines.
 struct ParagraphNode : MDNode {
   llvm::ArrayRef<MDNode *> Children;
@@ -169,7 +169,7 @@ struct HeadingNode : MDNode {
 /// "cpp"); empty when no language was specified. Lines contains the raw text
 /// of each interior line, without the opening or closing fence.
 ///
-/// TODO: Follow CommonMark spec §4.5 -- the opening fence may be indented up
+/// TODO: Follow CommonMark spec §4.5. The opening fence may be indented up
 /// to 3 spaces; the closing fence must use the same character and be at least
 /// as long as the opening fence; only spaces may follow the closing fence.
 struct FencedCodeNode : MDNode {

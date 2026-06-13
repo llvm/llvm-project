@@ -293,7 +293,7 @@ static ArrayRef<MDNode *> parseInline(StringRef S, BumpPtrAllocator &Arena,
 // Parses a fenced code block opened with ``` or ~~~. The cursor must be on the
 // opening fence; the fence, body lines, and closing fence are consumed.
 //
-// TODO: Follow CommonMark spec §4.5 more closely -- opening fences may be
+// TODO: Follow CommonMark spec §4.5 more closely. Opening fences may be
 // indented up to 3 spaces, the closing fence must use the same character and be
 // at least as long as the opening fence, and the closing fence may only be
 // followed by spaces. Doxygen specifics should be handled on a case-by-case
