@@ -645,6 +645,7 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
     LoopExitBB = BI.getSuccessor(1);
     if (L.contains(LoopExitBB)) {
       LLVM_DEBUG(dbgs() << "   Branch doesn't exit the loop!\n");
+      assert(!ModifiedBranch && "Modified the branch but didn't unswitch");
       return false;
     }
   }
@@ -653,6 +654,7 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   if (!ModifiedBranch &&
       !areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB)) {
     LLVM_DEBUG(dbgs() << "   Loop exit PHI's aren't loop-invariant!\n");
+    assert(!ModifiedBranch && "Modified the branch but didn't unswitch");
     return false;
   }
 
@@ -666,6 +668,7 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
                       : !match(Cond, m_LogicalAnd())) {
       LLVM_DEBUG(dbgs() << "   Branch condition is in improper form for "
                            "non-full unswitch!\n");
+      assert(!ModifiedBranch && "Modified the branch but didn't unswitch");
       return false;
     }
   }
