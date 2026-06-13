@@ -66,3 +66,42 @@ auto test5() {
     }
   }
 }
+
+struct S {
+  int x;
+  void test6() {
+#pragma omp parallel for collapse(2)
+    for (this->x = 0; this->x < 10; ++this->x) {
+      // expected-error@+1{{loop iteration variable 'x' cannot be reused in a nested loop of a collapsed loop nest}}
+      for (this->x = 0; this->x < 10; ++this->x) {
+	int dummy;
+      }
+    }
+  }
+};
+
+struct S2 {
+  int x;
+  int y;
+  void test7() {
+#pragma omp parallel for collapse(2)
+    for (this->x = 0; this->x < 10; ++this->x) {
+      for (this->y = 0; this->y < 10; ++this->y) {
+	int dummy;
+      }
+    }
+  }
+};
+
+struct S3 {
+  Iterator x;
+  void test8() {
+#pragma omp parallel for collapse(2)
+    for (this->x = 0; this->x < 10; ++this->x) {
+      // expected-error@+1{{loop iteration variable 'x' cannot be reused in a nested loop of a collapsed loop nest}}
+      for (this->x = 0; this->x < 10; ++this->x) {
+	int dummy;
+      }
+    }
+  }
+};

@@ -8083,7 +8083,7 @@ class OpenMPIterationSpaceChecker {
   /// The set of variables declared within the (to be collapsed) loop nest.
   const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopVarDecls;
   /// The set of induction variables from outer collapsed loops.
-  const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopInductionVars;
+  llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopInductionVars;
   /// A source location for referring to loop init later.
   SourceRange InitSrcRange;
   /// A source location for referring to condition later.
@@ -8131,7 +8131,7 @@ public:
       Sema &SemaRef, bool SupportsNonRectangular, DSAStackTy &Stack,
       SourceLocation DefaultLoc,
       const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopDecls,
-      const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopInductionVars)
+      llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopInductionVars)
       : SemaRef(SemaRef), SupportsNonRectangular(SupportsNonRectangular),
         Stack(Stack), DefaultLoc(DefaultLoc), ConditionLoc(DefaultLoc),
         CollapsedLoopVarDecls(CollapsedLoopDecls),
@@ -8466,6 +8466,19 @@ bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
     }
   }
 
+  // Helper lambda to check if a loop variable is already used in an outer
+  // loop.
+  auto CheckLoopVarReuse = [&](ValueDecl *LoopVar, SourceLocation Loc) -> bool {
+    if (!CollapsedLoopInductionVars.empty() &&
+        CollapsedLoopInductionVars.count(LoopVar->getCanonicalDecl()) &&
+        EmitDiags) {
+      SemaRef.Diag(Loc, diag::err_omp_loop_var_reused_in_collapsed_loop)
+          << LoopVar;
+      return true;
+    }
+    return false;
+  };
+
   InitSrcRange = S->getSourceRange();
   if (Expr *E = dyn_cast<Expr>(S))
     S = E->IgnoreParens();
@@ -8474,27 +8487,26 @@ bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
       Expr *LHS = BO->getLHS()->IgnoreParens();
       if (auto *DRE = dyn_cast<DeclRefExpr>(LHS)) {
         if (auto *CED = dyn_cast<OMPCapturedExprDecl>(DRE->getDecl()))
-          if (auto *ME = dyn_cast<MemberExpr>(getExprAsWritten(CED->getInit())))
-            return setLCDeclAndLB(ME->getMemberDecl(), ME, BO->getRHS(),
-                                  EmitDiags);
-        // Check if this variable is already used as an induction variable
-        // in an outer collapsed loop.
+          if (auto *ME =
+                  dyn_cast<MemberExpr>(getExprAsWritten(CED->getInit()))) {
+            ValueDecl *LoopVar = ME->getMemberDecl();
+            if (CheckLoopVarReuse(LoopVar, DRE->getLocation()))
+              return true;
+            return setLCDeclAndLB(LoopVar, ME, BO->getRHS(), EmitDiags);
+          }
         ValueDecl *LoopVar = DRE->getDecl();
-        if (!CollapsedLoopInductionVars.empty() &&
-            CollapsedLoopInductionVars.count(LoopVar->getCanonicalDecl()) &&
-            EmitDiags) {
-          SemaRef.Diag(DRE->getLocation(),
-                       diag::err_omp_loop_var_reused_in_collapsed_loop)
-              << LoopVar;
+        if (CheckLoopVarReuse(LoopVar, DRE->getLocation()))
           return true;
-        }
         return setLCDeclAndLB(LoopVar, DRE, BO->getRHS(), EmitDiags);
       }
       if (auto *ME = dyn_cast<MemberExpr>(LHS)) {
         if (ME->isArrow() &&
-            isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
-          return setLCDeclAndLB(ME->getMemberDecl(), ME, BO->getRHS(),
-                                EmitDiags);
+            isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts())) {
+          ValueDecl *LoopVar = ME->getMemberDecl();
+          if (CheckLoopVarReuse(LoopVar, LHS->getBeginLoc()))
+            return true;
+          return setLCDeclAndLB(LoopVar, ME, BO->getRHS(), EmitDiags);
+        }
       }
     }
   } else if (auto *DS = dyn_cast<DeclStmt>(S)) {
@@ -8506,6 +8518,8 @@ bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
             SemaRef.Diag(S->getBeginLoc(),
                          diag::ext_omp_loop_not_canonical_init)
                 << S->getSourceRange();
+          if (CheckLoopVarReuse(Var, Var->getLocation()))
+            return true;
           return setLCDeclAndLB(
               Var,
               buildDeclRefExpr(SemaRef, Var,
@@ -8520,27 +8534,26 @@ bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
       Expr *LHS = CE->getArg(0);
       if (auto *DRE = dyn_cast<DeclRefExpr>(LHS)) {
         if (auto *CED = dyn_cast<OMPCapturedExprDecl>(DRE->getDecl()))
-          if (auto *ME = dyn_cast<MemberExpr>(getExprAsWritten(CED->getInit())))
-            return setLCDeclAndLB(ME->getMemberDecl(), ME, BO->getRHS(),
-                                  EmitDiags);
-        // Check if this variable is already used as an induction variable
-        // in an outer collapsed loop.
+          if (auto *ME =
+                  dyn_cast<MemberExpr>(getExprAsWritten(CED->getInit()))) {
+            ValueDecl *LoopVar = ME->getMemberDecl();
+            if (CheckLoopVarReuse(LoopVar, DRE->getLocation()))
+              return true;
+            return setLCDeclAndLB(LoopVar, ME, CE->getArg(1), EmitDiags);
+          }
         ValueDecl *LoopVar = DRE->getDecl();
-        if (!CollapsedLoopInductionVars.empty() &&
-            CollapsedLoopInductionVars.count(LoopVar->getCanonicalDecl()) &&
-            EmitDiags) {
-          SemaRef.Diag(DRE->getLocation(),
-                       diag::err_omp_loop_var_reused_in_collapsed_loop)
-              << LoopVar;
+        if (CheckLoopVarReuse(LoopVar, DRE->getLocation()))
           return true;
-        }
         return setLCDeclAndLB(LoopVar, DRE, CE->getArg(1), EmitDiags);
       }
       if (auto *ME = dyn_cast<MemberExpr>(LHS)) {
         if (ME->isArrow() &&
-            isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
-          return setLCDeclAndLB(ME->getMemberDecl(), ME, BO->getRHS(),
-                                EmitDiags);
+            isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts())) {
+          ValueDecl *LoopVar = ME->getMemberDecl();
+          if (CheckLoopVarReuse(LoopVar, LHS->getBeginLoc()))
+            return true;
+          return setLCDeclAndLB(LoopVar, ME, CE->getArg(1), EmitDiags);
+        }
       }
     }
   }
@@ -9563,7 +9576,7 @@ static bool checkOpenMPIterationSpace(
     llvm::MutableArrayRef<LoopIterationSpace> ResultIterSpaces,
     llvm::MapVector<const Expr *, DeclRefExpr *> &Captures,
     const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopVarDecls,
-    const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopInductionVars) {
+    llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopInductionVars) {
   bool SupportsNonRectangular = !isOpenMPLoopTransformationDirective(DKind);
   // OpenMP [2.9.1, Canonical Loop Form]
   //   for (init-expr; test-expr; incr-expr) structured-block
@@ -9769,7 +9782,12 @@ static bool checkOpenMPIterationSpace(
         DoacrossC->setLoopData(CurrentNestedLoopCount, CntValue);
     }
   }
-
+  // Record the loop induction variable for nested loop reuse checking.
+  if (CurrentNestedLoopCount < NestedLoopCount && !HasErrors) {
+    if (const ValueDecl *LCDecl = ISC.getLoopDecl()) {
+      CollapsedLoopInductionVars.insert(LCDecl->getCanonicalDecl());
+    }
+  }
   return HasErrors;
 }
 
