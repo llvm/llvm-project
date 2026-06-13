@@ -1577,9 +1577,10 @@ FailureOr<llvm::Metadata *> ModuleTranslation::convertMetadataAttr(
       })
       .Case<MDConstantAttr>([&](auto a) -> FailureOr<llvm::Metadata *> {
         IntegerAttr intAttr = llvm::dyn_cast<IntegerAttr>(a.getValue());
-        if (!intAttr)
+        if (!intAttr) {
           return emitError()
                  << "expected integer attribute in metadata constant";
+        }
         return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
             llvm::Type::getIntNTy(llvmContext,
                                   intAttr.getType().getIntOrFloatBitWidth()),
@@ -1592,12 +1593,14 @@ FailureOr<llvm::Metadata *> ModuleTranslation::convertMetadataAttr(
           return llvm::ValueAsMetadata::get(global);
         Operation *symbol =
             symbolTable().lookupSymbolIn(mlirModule, a.getName());
-        if (auto alias = dyn_cast_if_present<LLVM::AliasOp>(symbol))
+        if (auto alias = dyn_cast_if_present<LLVM::AliasOp>(symbol)) {
           if (llvm::GlobalValue *global = lookupAlias(alias))
             return llvm::ValueAsMetadata::get(global);
-        if (auto ifunc = dyn_cast_if_present<LLVM::IFuncOp>(symbol))
+        }
+        if (auto ifunc = dyn_cast_if_present<LLVM::IFuncOp>(symbol)) {
           if (llvm::GlobalValue *global = lookupIFunc(ifunc))
             return llvm::ValueAsMetadata::get(global);
+        }
         return emitError() << "could not resolve metadata reference '"
                            << a.getName() << "'";
       })

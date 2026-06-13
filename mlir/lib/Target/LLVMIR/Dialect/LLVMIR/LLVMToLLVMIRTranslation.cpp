@@ -225,9 +225,10 @@ convertNamedMetadataOp(NamedMetadataOp op,
     if (failed(md))
       return failure();
     auto *mdNode = llvm::dyn_cast_if_present<llvm::MDNode>(*md);
-    if (!mdNode)
+    if (!mdNode) {
       return op.emitError() << "failed to convert named metadata '"
                             << op.getMetadataName() << "'";
+    }
     namedMD->addOperand(mdNode);
   }
   return success();
