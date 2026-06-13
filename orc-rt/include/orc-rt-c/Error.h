@@ -16,9 +16,8 @@
 #ifndef ORC_RT_C_ERROR_H
 #define ORC_RT_C_ERROR_H
 
+#include "orc-rt-c/Compiler.h"
 #include "orc-rt-c/CoreTypes.h"
-#include "orc-rt-c/ExternC.h"
-#include "orc-rt-c/Visibility.h"
 
 ORC_RT_C_EXTERN_C_BEGIN
 
