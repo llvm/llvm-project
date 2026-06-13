@@ -24,7 +24,6 @@ static cl::opt<bool> AArch64PassOpt(
     "aarch64-relaxation",
     cl::desc("Replace ARM non-local ADR/LDR instructions with ADRP"),
     cl::init(true), cl::cat(BoltCategory), cl::ReallyHidden);
-
 } // namespace opts
 
 namespace llvm {
