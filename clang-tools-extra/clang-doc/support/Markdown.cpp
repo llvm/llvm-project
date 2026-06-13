@@ -315,10 +315,8 @@ static UnorderedListNode *parseUnorderedList(LineReader &Reader,
     StringRef L = Reader.peek().trim();
     if (!isListItem(L))
       break;
-    StringRef ItemText = Saver.save(L.drop_front(2).trim());
-    SmallVector<MDNode *> ItemChildren;
-    ItemChildren.push_back(new (Arena) TextNode(ItemText));
-    auto *Item = new (Arena) ListItemNode(allocateArray(ItemChildren, Arena));
+    StringRef ItemText = L.drop_front(2).trim();
+    auto *Item = new (Arena) ListItemNode(parseInline(ItemText, Arena, Saver));
     Items.push_back(Item);
     Reader.advance();
   }

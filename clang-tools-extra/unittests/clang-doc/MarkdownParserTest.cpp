@@ -98,9 +98,27 @@ TEST_F(MarkdownParserTest, UnorderedList) {
   ASSERT_EQ(Nodes.size(), 1u);
   auto *N = cast<UnorderedListNode>(Nodes[0]);
   ASSERT_EQ(N->Items.size(), 3u);
-  EXPECT_EQ(cast<TextNode>(N->Items[0]->Children[0])->Text, "foo");
-  EXPECT_EQ(cast<TextNode>(N->Items[1]->Children[0])->Text, "bar");
-  EXPECT_EQ(cast<TextNode>(N->Items[2]->Children[0])->Text, "baz");
+  // Each item's children are the inline nodes from parseInline.
+  StringRef ExpectedText[] = {"foo", "bar", "baz"};
+  for (size_t I = 0; I < N->Items.size(); ++I) {
+    auto *Item = N->Items[I];
+    ASSERT_EQ(Item->Children.size(), 1u);
+    EXPECT_EQ(cast<TextNode>(Item->Children[0])->Text, ExpectedText[I]);
+  }
+}
+
+TEST_F(MarkdownParserTest, ListItemWithEmphasis) {
+  auto Nodes = parseMarkdown("- an *important* note", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  auto *N = cast<UnorderedListNode>(Nodes[0]);
+  ASSERT_EQ(N->Items.size(), 1u);
+  auto *Item = N->Items[0];
+  ASSERT_EQ(Item->Children.size(), 3u);
+  EXPECT_EQ(cast<TextNode>(Item->Children[0])->Text, "an ");
+  auto *Em = cast<EmphasisNode>(Item->Children[1]);
+  ASSERT_EQ(Em->Children.size(), 1u);
+  EXPECT_EQ(cast<TextNode>(Em->Children[0])->Text, "important");
+  EXPECT_EQ(cast<TextNode>(Item->Children[2])->Text, " note");
 }
 
 TEST_F(MarkdownParserTest, MixedContent) {
