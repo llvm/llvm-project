@@ -596,17 +596,14 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   auto *LoopLatch = L.getLoopLatch();
   auto *ULExit = L.getUniqueLatchExitBlock();
   if (SE && FullUnswitch && ULExit) {
-    if (BI.getSuccessor(0) == LoopLatch &&
-        L.contains(BI.getSuccessor(1)))
+    if (BI.getSuccessor(0) == LoopLatch && L.contains(BI.getSuccessor(1)))
       LatchIdx = 0;
-    else if (BI.getSuccessor(1) == LoopLatch &&
-             L.contains(BI.getSuccessor(0)))
+    else if (BI.getSuccessor(1) == LoopLatch && L.contains(BI.getSuccessor(0)))
       LatchIdx = 1;
   }
 
   bool ModifiedBranch = false;
-  if (LatchIdx &&
-      areLoopExitPHIsLoopInvariant(L, *LoopLatch, *ULExit) &&
+  if (LatchIdx && areLoopExitPHIsLoopInvariant(L, *LoopLatch, *ULExit) &&
       !llvm::any_of(*LoopLatch,
                     [](Instruction &I) { return I.mayHaveSideEffects(); })) {
 
@@ -619,8 +616,7 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
       SmallVector<cfg::Update<BasicBlock *>, 2> Updates;
       Updates.push_back({cfg::UpdateKind::Delete, BI.getParent(),
                          BI.getSuccessor(*LatchIdx)});
-      Updates.push_back({cfg::UpdateKind::Insert, BI.getParent(),
-                         ULExit});
+      Updates.push_back({cfg::UpdateKind::Insert, BI.getParent(), ULExit});
       LoopLatch->removePredecessor(BI.getParent());
       BI.setSuccessor(*LatchIdx, ULExit);
       for (PHINode &PN : ULExit->phis()) {
