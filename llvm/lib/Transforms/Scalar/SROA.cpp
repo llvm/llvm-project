@@ -2969,6 +2969,12 @@ public:
       }
     }
 
+    // Need at least two partial stores to benefit from tree-merging; a
+    // single store is already optimal as-is. This applies to both patterns
+    // below, so check it before classifying.
+    if (StoreInfos.size() < 2)
+      return std::nullopt;
+
     // Classify the pattern by looking at what we collected:
     //   Pattern 1 (stores-only): only partial stores + exactly one full load.
     //   Pattern 2 (RMW): one full init store + partial loads + partial stores
@@ -2978,11 +2984,6 @@ public:
     bool IsRMWPattern = InitStore && VecTy && !LoadInfos.empty();
     bool IsStoresOnlyPattern = !InitStore && FullLoad && LoadInfos.empty();
     if (!IsRMWPattern && !IsStoresOnlyPattern)
-      return std::nullopt;
-
-    // Need at least two partial stores to benefit from tree-merging; a
-    // single store is already optimal as-is.
-    if (StoreInfos.size() < 2)
       return std::nullopt;
 
     // All partial stores must live in the same basic block — the tree merge
@@ -3221,11 +3222,10 @@ public:
           V = IRB.CreateBitCast(V, Acc.Inst->getType());
         }
         Acc.Inst->replaceAllUsesWith(V);
-        DeletedValues.push_back(Acc.Inst);
       } else {
         SliceValues[Range] = cast<StoreInst>(Acc.Inst)->getValueOperand();
-        DeletedValues.push_back(Acc.Inst);
       }
+      DeletedValues.push_back(Acc.Inst);
     }
 
     // Tree-merge the final per-range values (in range order) into the
