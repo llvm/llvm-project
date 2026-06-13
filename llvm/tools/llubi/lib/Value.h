@@ -117,11 +117,12 @@ enum class BooleanKind { False, True, Poison };
 /// 2. After a memory access is performed, we can determine exactly one memory
 /// object to be accessed (address ranges are distinct). In this case,
 /// BaseAddress is set and ActiveMask is non-zero. ActiveMask represents the
-/// validity of first N exposed provenances associated with the memory object.
-/// The bitwidth N is the first index I in the provenance list with
-/// List[I].Generation > WildcardProvenance::Generation. That is, we can only
-/// access through exposed provenances before inttoptr executes.
-/// Note that if ActiveMask becomes zero again, UB must be triggered.
+/// validity of the first N exposed provenances associated with the memory
+/// object. The bitwidth N is the number of provenances in the list with
+/// List[I].Generation <= WildcardProvenance::Generation (The generation field
+/// in the list is monotonically increasing). That is, we can only access
+/// through exposed provenances before inttoptr executes. Note that if
+/// ActiveMask becomes zero again, UB must be triggered.
 class WildcardProvenance : public RefCountedBase<WildcardProvenance> {
   APInt ActiveMask;
   union {

@@ -2440,8 +2440,7 @@ public:
     });
   }
 
-  // TODO: Add support for ptrtoaddr, which only exposes the captured address
-  // capability.
+  // TODO: Add support for ptrtoaddr, which exposes nothing.
 
   void visitIntToPtr(IntToPtrInst &I) {
     return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
