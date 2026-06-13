@@ -425,8 +425,6 @@ if config.clang:
     clang_resource_dir = subprocess.run(
         [config.clang, "-print-resource-dir"], stdout=subprocess.PIPE, text=True
     ).stdout.rstrip()
-    if platform.system() is "Windows":
-        clang_resource_dir = clang_resource_dir.replace('\\', '\\\\')
     config.substitutions.append(("%clang-resource-dir", clang_resource_dir))
 
 # Check if we should allow outputs to console.
