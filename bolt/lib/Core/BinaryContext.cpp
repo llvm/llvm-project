@@ -166,7 +166,6 @@ BinaryContext::BinaryContext(std::unique_ptr<MCContext> Ctx,
 
 BinaryContext::~BinaryContext() {
   for (BinarySection *Section : Sections)
-    if (!Section->isBackupSection())
       delete Section;
   for (BinaryFunction *InjectedFunction : InjectedBinaryFunctions)
     delete InjectedFunction;
@@ -2355,22 +2354,7 @@ BinaryContext::registerOrUpdateSection(const Twine &Name, unsigned ELFType,
   auto NamedSections = getSectionByName(Name);
 
   if (NamedSections.begin() != NamedSections.end()) {
-    // 1) Detect true duplicates (more than one object for the same name)
-    if (std::next(NamedSections.begin()) != NamedSections.end()) {
-      LLVM_DEBUG({
-        dbgs() << "[sect] DUP-NAME (" << Name << ") count="
-               << std::distance(NamedSections.begin(), NamedSections.end()) << "\n";
-        for (auto &P : NamedSections)
-          dbgs() << "  idx=" << P.first
-                 << " addr=0x" << format_hex(P.second->getAddress(), 10)
-                 << " size=0x" << format_hex(P.second->getSize(), 10)
-                 << " flags=0x" << format_hex(P.second->getELFFlags(), 6)
-                 << " type=0x"  << format_hex(P.second->getELFType(), 6) << "\n";
-      });
-      llvm::report_fatal_error("[sect] duplicate section objects with same name");
-    }
 
-    // 2) Now safe to assert uniqueness
     assert(std::next(NamedSections.begin()) == NamedSections.end() &&
            "can only update unique sections");
 
