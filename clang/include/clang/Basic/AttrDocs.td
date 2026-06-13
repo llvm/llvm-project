@@ -388,6 +388,40 @@ pointer, but not any provenance of the allocation:
   }];
 }
 
+def WarnUnusedDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``warn_unused`` attribute can be placed on the declaration of a structure or union type.
+When the ``-Wunused-variable`` diagnostic is enabled, local variables of types which have a non-trivial constructor or destructor are considered "used" by virtue of the constructor or destructor invocations involved.
+Those constructor or destructor invocations are not considered a use if the type is declared with the ``warn_unused`` attribute.
+The variable is considered used if it is named outside of its declaration.
+
+This attribute is available in both C and C++ language modes but is primarily useful in C++ for classes which have a non-trivial constructor or destructor but act as a value type rather than an RAII type.
+
+.. code-block:: c++
+
+  struct [[gnu::warn_unused]] S {
+    S();
+    ~S();
+  };
+
+  struct T {
+    T();
+    ~T();
+   };
+
+   int func() {
+     S s1; // -Wunused-variable warning
+     S s2; // No -Wunused-variable warning because of the member access expression below
+     S s3; // No -Wunused-variable warning because of the sizeof operand below
+     T t;  // No -Wunused-variable warning
+
+     s2.~S();
+     return sizeof(s3);
+   }
+  }];
+}
+
 def MaybeUndefDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
@@ -9314,8 +9348,8 @@ def HLSLMatrixLayoutDocs : Documentation {
   let Category = DocCatVariable;
   let Heading = "row_major, column_major";
   let Content = [{
-The ``row_major`` and ``column_major`` keywords specify the memory layout 
-of an HLSL matrix type. 
+The ``row_major`` and ``column_major`` keywords specify the memory layout
+of an HLSL matrix type.
 
 * ``row_major``: Matrices are stored in memory row-by-row.
 * ``column_major``: Matrices are stored in memory column-by-column (default).
@@ -10013,7 +10047,53 @@ excepting that the aspects may be in any order.
 
 The following aspects are currently supported:
 
-- ``float``: The call has a floating point argument
+- ``fixed``: The call has a C ISO 18037 fixed-point argument.
+- ``float``: The call has a floating-point argument.
+  }];
+}
+
+def OverflowBehaviorDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``overflow_behavior`` attribute provides fine-grained, type-level control
+over how arithmetic operations on an integer type behave on overflow. It may be
+applied to a ``typedef``, to a variable or data member, or to an integer type
+directly, and accepts one of two behaviors as its argument:
+
+* ``wrap``: arithmetic on the attributed type wraps on overflow, using two's
+  complement semantics. This is equivalent to ``-fwrapv`` but scoped to the
+  attributed type, and works for both signed and unsigned types. UBSan's
+  ``signed-integer-overflow``, ``unsigned-integer-overflow``,
+  ``implicit-signed-integer-truncation``, and
+  ``implicit-unsigned-integer-truncation`` checks are suppressed for the type.
+
+* ``trap``: arithmetic on the attributed type is checked for overflow, enabling
+  overflow checks for the type even when ``-fwrapv`` is in effect globally.
+
+.. code-block:: c++
+
+  typedef unsigned int __attribute__((overflow_behavior(trap))) non_wrapping_uint;
+
+  non_wrapping_uint add_one(non_wrapping_uint a) {
+    return a + 1; // Overflow is checked for this operation.
+  }
+
+  int mul_alot(int n) {
+    int __attribute__((overflow_behavior(wrap))) a = n;
+    return a * 1337; // Overflow is not checked and is well-defined.
+  }
+
+The keyword spellings ``__ob_wrap`` and ``__ob_trap`` are equivalent to
+``overflow_behavior(wrap)`` and ``overflow_behavior(trap)`` respectively.
+
+The attribute wholly overrides global flags (``-ftrapv``, ``-fwrapv``,
+sanitizers, and Sanitizer Special Case Lists) for the attributed type. It can
+only be applied to integer types.
+
+This feature is experimental and must be enabled with the ``-cc1`` option
+``-fexperimental-overflow-behavior-types``. For full details on promotion and
+conversion rules, pointer semantics, diagnostics, and interaction with
+sanitizers, see :doc:`OverflowBehaviorTypes`.
   }];
 }
 
@@ -10053,5 +10133,67 @@ exception and what cleanup actions to perform. It effectively colors the
 language-agnostic unwinding mechanism with language-specific semantics, enabling
 different languages to coexist on the same call stack while each interpreting
 exceptions according to their own rules.
+  }];
+}
+
+def SentinelDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``sentinel`` attribute can be applied to variadic functions and pointers to
+variadic functions, to diagnose each function call that does not pass a
+sentinel value (a null pointer constant) as the last argument to the function
+call. The attribute accepts two optional arguments: the first argument is the
+position of the expected sentinel value, starting from the last parameter. The
+second argument describes whether the last fixed parameter is treated as a
+valid sentinel value when set to '1'.
+All arguments described above defaults to '0' when elided.
+The attribute is also supported with blocks and in Objective-C.
+
+.. code-block:: c
+
+  void foo(const char*, ...) __attribute__((sentinel));
+  void bar(int, ...) __attribute__((sentinel(1)));
+  void baz(const char*, const char*, ...) __attribute__((sentinel(0, 1)));
+
+  void example() {
+    foo("Example", (void*)0);
+    foo("Another", "example", NULL);
+    foo("Missing", "sentinel"); // Not OK
+
+    bar(1, 2, NULL, 3);         // OK: sentinel value at the 2nd to last positon
+    bar(1, 2, 3, nullptr, 4);   // OK: `nullptr` is valid in C23
+    bar(1, 2, 3, 4, NULL);      // Not OK
+
+    baz("Test", "with", "multiple", "args", NULL);
+    baz("One", NULL);           // OK: last fixed parameter is a valid sentinel
+
+    void (*ptr) (int arg, ...) __attribute__ ((__sentinel__));
+    ptr(1, 2, 3, NULL);
+  }
+
+.. code-block:: c++
+
+  struct Ty {
+      int value;
+
+      template<typename T>
+      auto&& foo(T&& val, ...) __attribute__((sentinel(1))) {
+          return std::forward<T>(val);
+      }
+
+      template<class Self>
+      auto&& bar(this Self&& self, ...) __attribute__((sentinel(1))) {
+          return std::forward<Self>(self).value;
+      }
+  };
+
+  void example2() {
+      auto sty = Ty{};
+      sty.foo(1, nullptr, 3);
+      sty.bar(1, nullptr, 3);
+
+      auto lmbd = [](int a, ...) __attribute__((sentinel)) {};
+      lmbd(1, 2, nullptr);
+  }
   }];
 }

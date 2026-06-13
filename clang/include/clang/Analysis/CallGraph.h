@@ -194,7 +194,8 @@ public:
   Decl *getDecl() const { return FD; }
 
   FunctionDecl *getDefinition() const {
-    return getDecl()->getAsFunction()->getDefinition();
+    FunctionDecl *FD = getDecl()->getAsFunction();
+    return FD ? FD->getDefinition() : nullptr;
   }
 
   void print(raw_ostream &os) const;
@@ -214,12 +215,6 @@ namespace llvm {
 
 // Specialize DenseMapInfo for clang::CallGraphNode::CallRecord.
 template <> struct DenseMapInfo<clang::CallGraphNode::CallRecord> {
-  static inline clang::CallGraphNode::CallRecord getEmptyKey() {
-    return clang::CallGraphNode::CallRecord(
-        DenseMapInfo<clang::CallGraphNode *>::getEmptyKey(),
-        DenseMapInfo<clang::Expr *>::getEmptyKey());
-  }
-
   static unsigned getHashValue(const clang::CallGraphNode::CallRecord &Val) {
     // NOTE: we are comparing based on the callee only.
     // Different call records with the same callee will compare equal!

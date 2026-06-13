@@ -129,4 +129,5 @@ TODO for added SYCL classes
 * ``range``, ``id`` - to add operators
 * general opens:
 
-  * define a way to report errors from object dtors.
+  * define a way to report errors from object dtors
+  * unittests: add functions to reset libsycl internal state completely (static variables)

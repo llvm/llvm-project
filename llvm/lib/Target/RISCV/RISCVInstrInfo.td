@@ -2161,6 +2161,11 @@ def SetFCSRImm : SetSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
 
 /// Other pseudo-instructions
 
+// Used by -fzero-call-used-regs to zero out registers.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def PseudoClearGPR : Pseudo<(outs GPR:$rd), (ins), []>,
+                     PseudoInstExpansion<(ADDI GPR:$rd, X0, 0)>;
+
 // Pessimistically assume the stack pointer will be clobbered
 let Defs = [X2], Uses = [X2] in {
 def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
@@ -2380,6 +2385,7 @@ include "RISCVInstrInfoZk.td"
 // Vector
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvabd.td"
+include "RISCVInstrInfoZvdota.td"
 include "RISCVInstrInfoZvk.td"
 include "RISCVInstrInfoZvdot4a8i.td"
 include "RISCVInstrInfoZvfofp8min.td"

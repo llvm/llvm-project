@@ -309,23 +309,23 @@ def : GCNPat <(f16 (fptrunc_round (f32 (VOP3OpSelMods f32:$src0, i32:$src0_modif
      (FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 $src0_modifiers, $src0, (as_hw_round_mode $round))>;
 
 let True16Predicate = NotUseRealTrue16Insts in
-def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 0))),
+def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
      (V_CVT_PKRTZ_F16_F32_e32 $src0, (IMPLICIT_DEF))>;
 
 let True16Predicate = UseRealTrue16Insts in
-def : GCNPat <(f16 (fptrunc_round (f32 (VOP3OpSelMods f32:$src0, i32:$src0_modifiers)), (i32 0))),
+def : GCNPat <(f16 (fptrunc_round (f32 (VOP3OpSelMods f32:$src0, i32:$src0_modifiers)), (i32 RtzRoundMode))),
      (EXTRACT_SUBREG (V_CVT_PKRTZ_F16_F32_e64 $src0_modifiers, $src0, 0, (IMPLICIT_DEF)), lo16)>;
 
-def : GCNPat <(v2f16 (build_vector (f16 (fptrunc_round f32:$src0, (i32 0))),
-                                 (f16 (fptrunc_round f32:$src1, (i32 0))))),
+def : GCNPat <(v2f16 (build_vector (f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
+                                 (f16 (fptrunc_round f32:$src1, (i32 RtzRoundMode))))),
      (V_CVT_PKRTZ_F16_F32_e32 $src0, $src1)>;
 
 let True16Predicate = NotUseRealTrue16Insts in
-def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 0))),
+def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
      (V_CVT_PKRTZ_F16_F32_e32 $src0, (IMPLICIT_DEF))>;
 
 let True16Predicate = UseRealTrue16Insts in
-def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 0))),
+def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
      (EXTRACT_SUBREG (V_CVT_PKRTZ_F16_F32_e32 $src0, (IMPLICIT_DEF)), lo16)>;
 
 def : GCNPat <(f32 (fptrunc_round f64:$src0, (i32 SupportedRoundMode:$round))),
@@ -1348,6 +1348,24 @@ def SI_PC_ADD_REL_OFFSET64 : SPseudoInstSI <
 }
 
 def : GCNPat<
+  (p0 blockaddress:$ba),
+  (SI_PC_ADD_REL_OFFSET64 $ba)
+>;
+
+let SubtargetPredicate = HasSmemPrefetchInsts in {
+  def : GCNPat <
+    (int_amdgcn_s_prefetch_inst (i64 tblockaddress:$ptr), imm:$len),
+    (S_PREFETCH_INST (SI_PC_ADD_REL_OFFSET64 tblockaddress:$ptr), 0,
+                     (i32 SGPR_NULL), (as_i8timm $len))
+  >;
+
+  def : GCNPat <
+    (int_amdgcn_s_prefetch_inst (i64 tblockaddress:$ptr), (i32 SReg_32:$len)),
+    (S_PREFETCH_INST (SI_PC_ADD_REL_OFFSET64 tblockaddress:$ptr), 0, $len, 0)
+  >;
+} // End let SubtargetPredicate = HasSmemPrefetchInsts
+
+def : GCNPat<
   (AMDGPUtrap timm:$trapid),
   (S_TRAP $trapid)
 >;
@@ -2198,6 +2216,19 @@ def : GCNPat <
                                  SReg_32)), sub1))
 >;
 
+def : GCNPat <
+  (UniformUnaryFrag<fneg> (v2f64 SGPR_128:$src)),
+  (v2f64 (REG_SEQUENCE SGPR_128,
+         (i32 (EXTRACT_SUBREG $src, sub0)), sub0,
+         (i32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG $src, sub1)),
+                                           (i32 (S_MOV_B32 (i32 0x80000000)))),
+                                 SReg_32)), sub1,
+         (i32 (EXTRACT_SUBREG $src, sub2)), sub2,
+         (i32 (COPY_TO_REGCLASS (S_XOR_B32 (i32 (EXTRACT_SUBREG $src, sub3)),
+                                           (i32 (S_MOV_B32 (i32 0x80000000)))),
+                                 SReg_32)), sub3))
+>;
+
 // FIXME: Use S_BITSET0_B32/B64?
 def : GCNPat <
   (UniformUnaryFrag<fabs> (f64 SReg_64:$src)),
@@ -2337,6 +2368,14 @@ def : GCNPat <
                      (i32 (S_MOV_B32 (i32 0x80000000)))), sub1)
 > {
   let SubtargetPredicate = HasPackedFP32Ops;
+}
+
+def : GCNPat <
+  (DivergentUnaryFrag<fneg> (v2f64 VReg_128:$src)),
+  (V_PK_ADD_F64 !or(SRCMODS.NEG, SRCMODS.NEG_HI), VReg_128:$src,
+                !or(SRCMODS.NEG, SRCMODS.NEG_HI), (v2i64 (as_i64imm (i32 0))))
+> {
+  let SubtargetPredicate = HasPackedFP64Ops;
 }
 
 foreach fp16vt = [f16, bf16] in {
@@ -3762,6 +3801,12 @@ multiclass SelectCanonicalizeAsMax<
     // FIXME: Should have VOP3P subtarget predicate
     let OtherPredicates = f16_preds;
   }
+
+  def : GCNPat<
+    (fcanonicalize (v2f64 (VOP3PMods v2f64:$src, i32:$src_mods))),
+    (V_PK_MAX_NUM_F64 $src_mods, $src, $src_mods, $src)> {
+    let OtherPredicates = !listconcat(f64_preds, [HasPackedFP64Ops]);
+  }
 }
 
 // On pre-gfx9 targets, v_max_*/v_min_* did not respect the denormal
@@ -4697,6 +4742,54 @@ def G_AMDGPU_UMED3 : AMDGPUGenericInstruction {
 }
 
 def G_AMDGPU_FMED3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_SMIN3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_UMIN3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_FMIN3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_SMAX3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_UMAX3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_FMAX3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_FMAXIMUM3 : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+def G_AMDGPU_FMINIMUM3 : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0, type0:$src1, type0:$src2);
   let hasSideEffects = 0;

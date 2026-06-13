@@ -1990,14 +1990,13 @@ bool SampleProfileLoader::doInitialization(Module &M,
   if (ProfAccForSymsInList) {
     NamesInProfile.clear();
     GUIDsInProfile.clear();
-    if (auto NameTable = Reader->getNameTable()) {
-      if (FunctionSamples::UseMD5) {
-        for (auto Name : *NameTable)
-          GUIDsInProfile.insert(Name.getHashCode());
-      } else {
-        for (auto Name : *NameTable)
-          NamesInProfile.insert(Name.stringRef());
-      }
+    auto NameTable = Reader->getNameTable();
+    if (FunctionSamples::UseMD5) {
+      for (FunctionId Name : NameTable)
+        GUIDsInProfile.insert(Name.getHashCode());
+    } else {
+      for (FunctionId Name : NameTable)
+        NamesInProfile.insert(Name.stringRef());
     }
     CoverageTracker.setProfAccForSymsInList(true);
   }
