@@ -152,6 +152,12 @@ void va_arg_array_regression(int n, ...) {
   (void)p;
 }
 
+void take(int* q);
+void va_arg_array_paren_regression(int n, ...) {
+  __builtin_va_list ap;
+  take((__builtin_va_arg(ap, int[4]))); // expected-warning {{second argument to 'va_arg' is of array type 'int[4]'}}
+}
+
 void va_arg_function_regression(int n, ...) {
   __builtin_va_list ap;
   __builtin_va_start(ap, n);

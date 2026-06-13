@@ -326,7 +326,7 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
   case CK_ArrayToPointerDecay:
     // va_arg(ap, array_type) is UB and does not provide addressable array
     // storage to model.
-    if (isa<VAArgExpr>(SubExpr))
+    if (isa<VAArgExpr>(SubExpr->IgnoreParens()))
       return;
     assert(Src && "Array expression should have origins as it is GL value");
     CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
