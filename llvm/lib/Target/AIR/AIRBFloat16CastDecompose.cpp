@@ -85,6 +85,66 @@ static bool bfloat16CastDecompose(Module &M) {
     }
   }
 
+  // Phase 0.5: sink a vector `bitcast <N x i16> -> <N x bfloat>` (the RNE
+  // decompose tail) through its extractelement users to scalars. When the i16
+  // vector traces back to a simdgroup_matrix accumulator, the AGX JIT
+  // miscompiles MULTI-LANE extraction of the narrow <N x i16> register to zero
+  // (a single-lane extract, and the integer RNE math itself, are fine — the
+  // bug is narrowing the wide simdgroup f32 register to i16 *as a vector* and
+  // then pulling several lanes out of it). If the i16 vector is a
+  // `trunc <N x i32> -> <N x i16>`, sink the trunc too so the extract reads the
+  // <N x i32> (full-width) register and the trunc+reinterpret run on scalars.
+  // Every vector op is preserved; only the free trunc/reinterpret moves to
+  // scalars — no extra work, no scalarized arithmetic. Same shape for half.
+  for (Function &F : M) {
+    SmallVector<Instruction *, 8> DeadBC;
+    for (BasicBlock &BB : F) {
+      for (Instruction &Inst : BB) {
+        auto *BC = dyn_cast<BitCastInst>(&Inst);
+        if (!BC)
+          continue;
+        auto *DstVT = dyn_cast<FixedVectorType>(BC->getType());
+        auto *SrcVT = dyn_cast<FixedVectorType>(BC->getSrcTy());
+        if (!DstVT || !SrcVT)
+          continue;
+        Type *DstElem = DstVT->getElementType();
+        if (!DstElem->isBFloatTy() && !DstElem->isHalfTy())
+          continue;
+        if (!SrcVT->getElementType()->isIntegerTy(16))
+          continue;
+        bool AllExtract = !BC->use_empty();
+        for (User *U : BC->users())
+          if (!isa<ExtractElementInst>(U))
+            AllExtract = false;
+        if (!AllExtract)
+          continue;
+        Value *I16Vec = BC->getOperand(0);
+        auto *Trn = dyn_cast<TruncInst>(I16Vec);
+        Value *WideVec =
+            (Trn && isa<FixedVectorType>(Trn->getSrcTy())) ? Trn->getOperand(0)
+                                                           : nullptr;
+        for (User *U : llvm::make_early_inc_range(BC->users())) {
+          auto *EE = cast<ExtractElementInst>(U);
+          IRBuilder<> B(EE);
+          Value *Si;
+          if (WideVec) {
+            Value *Wi = B.CreateExtractElement(WideVec, EE->getIndexOperand());
+            Si = B.CreateTrunc(Wi, Type::getInt16Ty(M.getContext()));
+          } else {
+            Si = B.CreateExtractElement(I16Vec, EE->getIndexOperand());
+          }
+          Value *Sf = B.CreateBitCast(Si, DstElem);
+          EE->replaceAllUsesWith(Sf);
+          DeadBC.push_back(EE);
+        }
+        DeadBC.push_back(BC);
+      }
+    }
+    for (Instruction *I : DeadBC)
+      if (I->use_empty())
+        I->eraseFromParent();
+  }
+
   // Phase 1: decompose sitofp/uitofp iN -> bfloat via f32 + bit manipulation.
   for (Function &F : M) {
     for (BasicBlock &BB : F) {
