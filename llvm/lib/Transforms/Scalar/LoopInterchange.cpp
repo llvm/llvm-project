@@ -1666,8 +1666,8 @@ const DenseMap<const Loop *, unsigned> &CacheCostManager::getCostMap() {
 /// the addrec for \p L in \S.
 /// TODO: Handle more complex cases. Maybe using SCEVTraversal is a good way to
 /// do that.
-std::optional<const SCEV *> getAddRecCoefficient(ScalarEvolution &SE,
-                                                 const SCEV *S, const Loop *L) {
+static std::optional<const SCEV *>
+getAddRecCoefficient(ScalarEvolution &SE, const SCEV *S, const Loop *L) {
   const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S);
   if (!AR) {
     if (SE.isLoopInvariant(S, L))
@@ -2271,11 +2271,13 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
 
     // In case of multi-level nested loops, follow LCSSA to find the incoming
     // value defined from the innermost loop.
-    auto IncIInnerMost = cast<Instruction>(followLCSSA(IncI));
-    // Skip phis with incoming values from the inner loop body, excluding the
-    // header and latch.
-    if (IncIInnerMost->getParent() != InnerLatch &&
-        IncIInnerMost->getParent() != InnerHeader)
+    auto *IncIInnerMost = dyn_cast<Instruction>(followLCSSA(IncI));
+    // Skip phis when:
+    // - they are not an instruction, e.g. incoming values are constants.
+    // - Incomming values from the inner loop body, excluding the header and
+    //   latch.
+    if (!IncIInnerMost || (IncIInnerMost->getParent() != InnerLatch &&
+                           IncIInnerMost->getParent() != InnerHeader))
       continue;
 
     assert(all_of(P.users(),

@@ -12,7 +12,6 @@
 
 // XFAIL: availability-fp_to_chars-missing
 
-
 // <format>
 
 //  template<class T, class charT = char>

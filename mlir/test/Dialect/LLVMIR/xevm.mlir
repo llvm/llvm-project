@@ -125,6 +125,26 @@ func.func @truncf_vector() -> vector<8xi4> {
 }
 
 // -----
+// CHECK-LABEL: func.func @extf_scalar
+func.func @extf_scalar() -> f16 {
+  // CHECK: %[[VAR0:.*]] = arith.constant
+  %0 = arith.constant 1 : i8
+  // CHECK: xevm.extf %[[VAR0]] {src_etype = bf8, dst_etype = f16} : (i8) -> f16
+  %2 = xevm.extf %0 { src_etype=bf8, dst_etype=f16 } : (i8) -> f16
+  return %2 : f16
+}
+
+// -----
+// CHECK-LABEL: func.func @extf_vector
+func.func @extf_vector() -> vector<8xbf16> {
+  // CHECK: %[[VAR0:.*]] = arith.constant
+  %0 = arith.constant dense<1> : vector<8xi4>
+  // CHECK: xevm.extf %[[VAR0]] {src_etype = e2m1, dst_etype = bf16} : (vector<8xi4>) -> vector<8xbf16>
+  %2 = xevm.extf %0 { src_etype=e2m1, dst_etype=bf16 } : (vector<8xi4>) -> vector<8xbf16>
+  return %2 : vector<8xbf16>
+}
+
+// -----
 // CHECK-LABEL: func.func @memfence()
 func.func @memfence() {
   // CHECK: xevm.memfence
