@@ -15,29 +15,26 @@ struct Agg { int x; };
 extern "C" {
 #endif
 
-// LHS checks - C only
-// Note: In C++, aggregate assignment goes through operator=
-// which is a different code path (CGExprCXX.cpp).
-// FIXME: LHS checks for C++ will be addressed in a follow-up PR
+// LHS checks - both C and C++
 
-// C-LABEL: define {{.*}}@test_lhs_ptrcheck_deref(
-// C: [[DEST:%.*]] = load ptr, ptr %dest.addr
-// C-NEXT: [[CMP:%.*]] = icmp ne ptr [[DEST]], null, !nosanitize
-// C-NEXT: [[INT:%.*]] = ptrtoint ptr [[DEST]] to i64, !nosanitize
-// C-NEXT: [[AND:%.*]] = and i64 [[INT]], 3, !nosanitize
-// C-NEXT: [[ALIGN:%.*]] = icmp eq i64 [[AND]], 0, !nosanitize
-// C-NEXT: [[OK:%.*]] = and i1 [[CMP]], [[ALIGN]], !nosanitize
-// C-NEXT: br i1 [[OK]], label %cont, label %handler.type_mismatch
-// C: handler.type_mismatch:
-// C-NEXT: call void @__ubsan_handle_type_mismatch_v1_abort
-// C: call void @llvm.memcpy
+// CHECK-LABEL: define {{.*}}@test_lhs_ptrcheck_deref(
+// CHECK: [[DEST:%.*]] = load ptr, ptr %dest.addr
+// CHECK-NEXT: [[CMP:%.*]] = icmp ne ptr [[DEST]], null, !nosanitize
+// CHECK-NEXT: [[INT:%.*]] = ptrtoint ptr [[DEST]] to i64, !nosanitize
+// CHECK-NEXT: [[AND:%.*]] = and i64 [[INT]], 3, !nosanitize
+// CHECK-NEXT: [[ALIGN:%.*]] = icmp eq i64 [[AND]], 0, !nosanitize
+// CHECK-NEXT: [[OK:%.*]] = and i1 [[CMP]], [[ALIGN]], !nosanitize
+// CHECK-NEXT: br i1 [[OK]], label %cont, label %handler.type_mismatch
+// CHECK: handler.type_mismatch:
+// CHECK-NEXT: call void @__ubsan_handle_type_mismatch_v1_abort
+// CHECK: call void @llvm.memcpy
 void test_lhs_ptrcheck_deref(AGG *dest) {
   AGG local = {0};
   *dest = local;
 }
 
-// C-LABEL: define {{.*}}@test_lhs_ptrcheck_subscript(
-// C: call void @__ubsan_handle_type_mismatch_v1_abort
+// CHECK-LABEL: define {{.*}}@test_lhs_ptrcheck_subscript(
+// CHECK: call void @__ubsan_handle_type_mismatch_v1_abort
 void test_lhs_ptrcheck_subscript(AGG arr[4]) {
   AGG local = {0};
   arr[0] = local;
@@ -88,6 +85,8 @@ void test_init_from_subscript(AGG arr[4]) {
 }
 
 // Array bounds - out-of-bounds access (RHS)
+// Note: GCC also does not detect the out-of-bounds access here when compiled as
+// C++.
 
 // CHECK-LABEL: define {{.*}}@test_oob_rhs(
 // C: br i1 false, label %cont, label %handler.out_of_bounds
@@ -105,15 +104,13 @@ void test_oob_rhs(void) {
 }
 
 // Array bounds - out-of-bounds access (LHS)
-// FIXME: LHS checks for C++ will be addressed in a follow-up PR.
 
 // CHECK-LABEL: define {{.*}}@test_oob_lhs(
-// C: br i1 false, label %cont, label %handler.out_of_bounds
-// CXX: br i1 true, label %cont, label %handler.out_of_bounds
+// CHECK: br i1 false, label %cont, label %handler.out_of_bounds
 // CHECK: handler.out_of_bounds:
 // CHECK-NEXT: call void @__ubsan_handle_out_of_bounds_abort
-// C: handler.type_mismatch:
-// C-NEXT: call void @__ubsan_handle_type_mismatch_v1_abort
+// CHECK: handler.type_mismatch:
+// CHECK-NEXT: call void @__ubsan_handle_type_mismatch_v1_abort
 // CHECK: call void @llvm.memcpy
 void test_oob_lhs(void) {
   AGG arr[4];
@@ -126,11 +123,29 @@ void test_oob_lhs(void) {
 }
 #endif
 
-// C++ RHS cases - handler call only
+// C++ cases - handler call only
 
 #ifdef __cplusplus
 
 extern "C" {
+
+// C++ LHS cases
+
+// CXX-LABEL: define {{.*}}@test_cxx_lhs_dot_operator_function_call(
+// CXX: call void @__ubsan_handle_type_mismatch_v1_abort
+void test_cxx_lhs_dot_operator_function_call(AGG *src) {
+  AGG aggValue(void);
+  (*src).operator=(aggValue());
+}
+
+// C++ RHS cases
+
+// CXX-LABEL: define {{.*}}@test_cxx_rhs_operator_function_call(
+// CXX: call void @__ubsan_handle_type_mismatch_v1_abort
+void test_cxx_rhs_operator_function_call(AGG *src) {
+  AGG local = {0};
+  local.operator=(*src);
+}
 
 // CXX-LABEL: define {{.*}}@test_cxx_direct_init(
 // CXX: call void @__ubsan_handle_type_mismatch_v1_abort
