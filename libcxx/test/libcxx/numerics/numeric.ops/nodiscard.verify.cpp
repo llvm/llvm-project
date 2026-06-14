@@ -13,34 +13,57 @@
 #include <execution>
 #include <functional>
 #include <numeric>
+#include <vector>
 
 #include "test_macros.h"
 
 void test() {
   {
-    std::initializer_list<int> il{94, 82};
+    std::vector<int> vec{94, 82};
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::accumulate(il.begin(), il.end(), 49);
+    std::accumulate(vec.begin(), vec.end(), 49);
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::accumulate(il.begin(), il.end(), 49, std::multiplies<>());
+    std::accumulate(vec.begin(), vec.end(), 49, std::multiplies<>());
   }
 
   {
-    std::initializer_list<int> il{94, 82};
+    std::vector<int> vec{94, 82};
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::inner_product(il.begin(), il.end(), il.begin(), 49);
+    std::inner_product(vec.begin(), vec.end(), vec.begin(), 49);
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::inner_product(il.begin(), il.end(), il.begin(), 49, std::multiplies<>(), std::plus<>());
+    std::inner_product(vec.begin(), vec.end(), vec.begin(), 49, std::multiplies<>(), std::plus<>());
   }
 
+#if TEST_STD_VER >= 17
   {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::gcd(94, 82);
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::lcm(94, 82);
   }
+#endif // TEST_STD_VER >= 17
+
+#if TEST_STD_VER >= 17
+  {
+    std::initializer_list<int> il{94, 82};
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::reduce(std::execution::seq, il.begin(), il.end(), 49);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::reduce(std::execution::seq, il.begin(), il.end(), 49, std::multiplies<>());
+  }
+
+  {
+    std::initializer_list<int> il{94, 82};
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::reduce(il.begin(), il.end(), 49);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    std::reduce(il.begin(), il.end(), 49, std::multiplies<>());
+  }
+#endif // TEST_STD_VER >= 17
 
 #if TEST_STD_VER >= 20
   {
@@ -61,26 +84,15 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::reduce(std::execution::par, il.begin(), il.end(), 49);
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::reduce(std::execution::par,
-                il.begin(),
-                il.end(),
-                49,
-                std::multiplies<>());
+    std::reduce(std::execution::par, il.begin(), il.end(), 49, std::multiplies<>());
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::reduce(std::execution::par_unseq,
-                il.begin(),
-                il.end(),
-                49);
+    std::reduce(std::execution::par_unseq, il.begin(), il.end(), 49);
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    std::reduce(std::execution::par_unseq,
-                il.begin(),
-                il.end(),
-                49,
-                std::multiplies<>());
+    std::reduce(std::execution::par_unseq, il.begin(), il.end(), 49, std::multiplies<>());
   }
 
   {
-    std::initializer_list<int> il{94, 82}; 
+    std::initializer_list<int> il{94, 82};
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::reduce(il.begin(), il.end(), 49);
@@ -102,6 +114,7 @@ void test() {
   std::saturating_cast<signed int>(49);
 #endif // TEST_STD_VER >= 26
 
+#if TEST_STD_VER >= 17
   {
     std::initializer_list<int> il{94, 82};
 
@@ -110,4 +123,5 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::transform_reduce(il.begin(), il.end(), il.begin(), 49, std::plus<>(), std::multiplies<>());
   }
+#endif // TEST_STD_VER >= 17
 }
