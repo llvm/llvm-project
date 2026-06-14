@@ -415,12 +415,12 @@ define <4 x i32> @srem_op1_constant(ptr %p) nounwind {
 ; SSE-LABEL: srem_op1_constant:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movslq (%rdi), %rax
-; SSE-NEXT:    imulq $818089009, %rax, %rcx # imm = 0x30C30C31
-; SSE-NEXT:    movq %rcx, %rdx
-; SSE-NEXT:    shrq $63, %rdx
-; SSE-NEXT:    sarq $35, %rcx
-; SSE-NEXT:    addl %edx, %ecx
-; SSE-NEXT:    imull $42, %ecx, %ecx
+; SSE-NEXT:    movl %eax, %ecx
+; SSE-NEXT:    sarl $31, %ecx
+; SSE-NEXT:    imulq $818089009, %rax, %rdx # imm = 0x30C30C31
+; SSE-NEXT:    sarq $35, %rdx
+; SSE-NEXT:    subl %ecx, %edx
+; SSE-NEXT:    imull $42, %edx, %ecx
 ; SSE-NEXT:    subl %ecx, %eax
 ; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    retq
@@ -428,12 +428,12 @@ define <4 x i32> @srem_op1_constant(ptr %p) nounwind {
 ; AVX-LABEL: srem_op1_constant:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movslq (%rdi), %rax
-; AVX-NEXT:    imulq $818089009, %rax, %rcx # imm = 0x30C30C31
-; AVX-NEXT:    movq %rcx, %rdx
-; AVX-NEXT:    shrq $63, %rdx
-; AVX-NEXT:    sarq $35, %rcx
-; AVX-NEXT:    addl %edx, %ecx
-; AVX-NEXT:    imull $42, %ecx, %ecx
+; AVX-NEXT:    movl %eax, %ecx
+; AVX-NEXT:    sarl $31, %ecx
+; AVX-NEXT:    imulq $818089009, %rax, %rdx # imm = 0x30C30C31
+; AVX-NEXT:    sarq $35, %rdx
+; AVX-NEXT:    subl %ecx, %edx
+; AVX-NEXT:    imull $42, %edx, %ecx
 ; AVX-NEXT:    subl %ecx, %eax
 ; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    retq

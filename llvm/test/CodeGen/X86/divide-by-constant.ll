@@ -67,22 +67,20 @@ entry:
 define signext i16 @test4(i16 signext %x) nounwind {
 ; X86-LABEL: test4:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    imull $1986, %eax, %eax # imm = 0x7C2
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shrl $31, %ecx
+; X86-NEXT:    movswl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    imull $1986, %ecx, %eax # imm = 0x7C2
+; X86-NEXT:    sarl $15, %ecx
 ; X86-NEXT:    shrl $16, %eax
-; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test4:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    imull $1986, %edi, %eax # imm = 0x7C2
-; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    shrl $31, %ecx
+; X64-NEXT:    sarl $15, %edi
 ; X64-NEXT:    shrl $16, %eax
-; X64-NEXT:    addl %ecx, %eax
+; X64-NEXT:    subl %edi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
@@ -113,22 +111,20 @@ define i32 @test5(i32 %A) nounwind {
 define signext i16 @test6(i16 signext %x) nounwind {
 ; X86-LABEL: test6:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    imull $26215, %eax, %eax # imm = 0x6667
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    shrl $31, %ecx
+; X86-NEXT:    movswl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    imull $26215, %ecx, %eax # imm = 0x6667
+; X86-NEXT:    sarl $15, %ecx
 ; X86-NEXT:    sarl $18, %eax
-; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test6:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    imull $26215, %edi, %eax # imm = 0x6667
-; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    shrl $31, %ecx
+; X64-NEXT:    sarl $15, %edi
 ; X64-NEXT:    sarl $18, %eax
-; X64-NEXT:    addl %ecx, %eax
+; X64-NEXT:    subl %edi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:

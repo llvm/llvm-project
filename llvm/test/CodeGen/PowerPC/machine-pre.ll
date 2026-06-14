@@ -92,8 +92,8 @@ define dso_local signext i32 @foo(i32 signext %x, i32 signext %y) nounwind {
 ; CHECK-P9-NEXT:    nop
 ; CHECK-P9-NEXT:    mr r30, r3
 ; CHECK-P9-NEXT:    mulhw r3, r28, r27
-; CHECK-P9-NEXT:    srwi r4, r3, 31
-; CHECK-P9-NEXT:    add r3, r3, r4
+; CHECK-P9-NEXT:    srawi r4, r28, 31
+; CHECK-P9-NEXT:    sub r3, r3, r4
 ; CHECK-P9-NEXT:    slwi r4, r3, 1
 ; CHECK-P9-NEXT:    add r3, r3, r4
 ; CHECK-P9-NEXT:    sub r3, r28, r3

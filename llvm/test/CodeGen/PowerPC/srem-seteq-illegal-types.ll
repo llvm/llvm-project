@@ -45,10 +45,10 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; PPC:       # %bb.0:
 ; PPC-NEXT:    slwi 4, 3, 28
 ; PPC-NEXT:    srawi 4, 4, 28
+; PPC-NEXT:    srwi 5, 4, 3
 ; PPC-NEXT:    mulli 4, 4, 3
-; PPC-NEXT:    srwi 5, 4, 31
 ; PPC-NEXT:    srwi 4, 4, 4
-; PPC-NEXT:    add 4, 4, 5
+; PPC-NEXT:    sub 4, 4, 5
 ; PPC-NEXT:    mulli 4, 4, 6
 ; PPC-NEXT:    sub 3, 3, 4
 ; PPC-NEXT:    clrlwi 3, 3, 28
@@ -64,10 +64,10 @@ define i1 @test_srem_even(i4 %X) nounwind {
 ; PPC64LE-NEXT:    slwi 4, 3, 28
 ; PPC64LE-NEXT:    srawi 4, 4, 28
 ; PPC64LE-NEXT:    slwi 5, 4, 1
-; PPC64LE-NEXT:    add 4, 4, 5
-; PPC64LE-NEXT:    srwi 5, 4, 31
-; PPC64LE-NEXT:    srwi 4, 4, 4
-; PPC64LE-NEXT:    add 4, 4, 5
+; PPC64LE-NEXT:    add 5, 4, 5
+; PPC64LE-NEXT:    srwi 4, 4, 3
+; PPC64LE-NEXT:    srwi 5, 5, 4
+; PPC64LE-NEXT:    sub 4, 5, 4
 ; PPC64LE-NEXT:    mulli 4, 4, 6
 ; PPC64LE-NEXT:    sub 3, 3, 4
 ; PPC64LE-NEXT:    li 4, 1
@@ -182,32 +182,32 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ;
 ; PPC64LE-LABEL: test_srem_vec:
 ; PPC64LE:       # %bb.0:
-; PPC64LE-NEXT:    lis 6, 1820
+; PPC64LE-NEXT:    lis 8, 1820
 ; PPC64LE-NEXT:    sldi 3, 3, 31
 ; PPC64LE-NEXT:    sldi 4, 4, 31
 ; PPC64LE-NEXT:    sldi 5, 5, 31
-; PPC64LE-NEXT:    ori 6, 6, 29127
-; PPC64LE-NEXT:    sradi 3, 3, 31
-; PPC64LE-NEXT:    sradi 4, 4, 31
+; PPC64LE-NEXT:    ori 8, 8, 29127
+; PPC64LE-NEXT:    sradi 7, 3, 31
+; PPC64LE-NEXT:    sradi 3, 3, 63
+; PPC64LE-NEXT:    sradi 6, 4, 31
+; PPC64LE-NEXT:    sradi 4, 4, 63
 ; PPC64LE-NEXT:    sradi 5, 5, 31
-; PPC64LE-NEXT:    rldic 6, 6, 34, 3
-; PPC64LE-NEXT:    oris 6, 6, 29127
-; PPC64LE-NEXT:    ori 7, 6, 7282
-; PPC64LE-NEXT:    mulhd 8, 3, 7
-; PPC64LE-NEXT:    rldicl 9, 8, 1, 63
-; PPC64LE-NEXT:    add 8, 8, 9
-; PPC64LE-NEXT:    sldi 9, 8, 3
-; PPC64LE-NEXT:    add 8, 8, 9
-; PPC64LE-NEXT:    sub 3, 3, 8
+; PPC64LE-NEXT:    rldic 8, 8, 34, 3
+; PPC64LE-NEXT:    oris 8, 8, 29127
+; PPC64LE-NEXT:    ori 9, 8, 7282
+; PPC64LE-NEXT:    mulhd 10, 7, 9
+; PPC64LE-NEXT:    sub 3, 10, 3
+; PPC64LE-NEXT:    sldi 10, 3, 3
+; PPC64LE-NEXT:    add 3, 3, 10
+; PPC64LE-NEXT:    sub 3, 7, 3
 ; PPC64LE-NEXT:    mtfprd 0, 3
-; PPC64LE-NEXT:    mulhd 3, 4, 7
-; PPC64LE-NEXT:    rldicl 7, 3, 1, 63
-; PPC64LE-NEXT:    add 3, 3, 7
-; PPC64LE-NEXT:    sldi 7, 3, 3
-; PPC64LE-NEXT:    add 3, 3, 7
-; PPC64LE-NEXT:    sub 3, 4, 3
+; PPC64LE-NEXT:    mulhd 3, 6, 9
+; PPC64LE-NEXT:    sub 3, 3, 4
+; PPC64LE-NEXT:    sldi 4, 3, 3
+; PPC64LE-NEXT:    add 3, 3, 4
+; PPC64LE-NEXT:    sub 3, 6, 3
 ; PPC64LE-NEXT:    mtfprd 1, 3
-; PPC64LE-NEXT:    ori 3, 6, 7281
+; PPC64LE-NEXT:    ori 3, 8, 7281
 ; PPC64LE-NEXT:    mulhd 3, 5, 3
 ; PPC64LE-NEXT:    sub 3, 3, 5
 ; PPC64LE-NEXT:    rldicl 4, 3, 1, 63
@@ -230,16 +230,16 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; PPC64LE-NEXT:    addi 3, 3, .LCPI3_0@toc@l
 ; PPC64LE-NEXT:    xxswapd 37, 0
 ; PPC64LE-NEXT:    lxvd2x 0, 0, 3
-; PPC64LE-NEXT:    xxland 34, 34, 0
 ; PPC64LE-NEXT:    xxland 35, 35, 0
-; PPC64LE-NEXT:    vcmpequd 2, 2, 4
+; PPC64LE-NEXT:    xxland 34, 34, 0
+; PPC64LE-NEXT:    vcmpequd 3, 3, 4
+; PPC64LE-NEXT:    vcmpequd 2, 2, 5
+; PPC64LE-NEXT:    xxlnor 35, 35, 35
 ; PPC64LE-NEXT:    xxlnor 0, 34, 34
-; PPC64LE-NEXT:    vcmpequd 2, 3, 5
-; PPC64LE-NEXT:    xxlnor 34, 34, 34
 ; PPC64LE-NEXT:    mffprwz 4, 0
 ; PPC64LE-NEXT:    xxswapd 1, 0
+; PPC64LE-NEXT:    xxswapd 2, 35
 ; PPC64LE-NEXT:    mffprwz 3, 1
-; PPC64LE-NEXT:    xxswapd 2, 34
 ; PPC64LE-NEXT:    mffprwz 5, 2
 ; PPC64LE-NEXT:    blr
   %srem = srem <3 x i33> %X, <i33 9, i33 9, i33 -9>

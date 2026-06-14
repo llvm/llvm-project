@@ -4491,6 +4491,8 @@ bool MipsTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   return Imm.isZero();
 }
 
+bool MipsTargetLowering::preferSDivSRASUB(EVT VT) const { return true; }
+
 bool MipsTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
   return isInt<16>(Imm);
 }

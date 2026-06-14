@@ -9,11 +9,10 @@ define i32 @Test_use_divrem_reg_imm(i32 %a) nounwind {
 ; DEFAULT-LABEL: Test_use_divrem_reg_imm:
 ; DEFAULT:       # %bb.0:
 ; DEFAULT-NEXT:    movslq %edi, %rax
+; DEFAULT-NEXT:    sarl $31, %edi
 ; DEFAULT-NEXT:    imulq $1041204193, %rax, %rcx # imm = 0x3E0F83E1
-; DEFAULT-NEXT:    movq %rcx, %rdx
-; DEFAULT-NEXT:    shrq $63, %rdx
 ; DEFAULT-NEXT:    sarq $35, %rcx
-; DEFAULT-NEXT:    addl %edx, %ecx
+; DEFAULT-NEXT:    subl %edi, %ecx
 ; DEFAULT-NEXT:    movl %ecx, %edx
 ; DEFAULT-NEXT:    shll $5, %edx
 ; DEFAULT-NEXT:    addl %ecx, %edx
@@ -25,11 +24,10 @@ define i32 @Test_use_divrem_reg_imm(i32 %a) nounwind {
 ; TOPOLOGICAL-LABEL: Test_use_divrem_reg_imm:
 ; TOPOLOGICAL:       # %bb.0:
 ; TOPOLOGICAL-NEXT:    movslq %edi, %rax
+; TOPOLOGICAL-NEXT:    sarl $31, %edi
 ; TOPOLOGICAL-NEXT:    imulq $1041204193, %rax, %rcx # imm = 0x3E0F83E1
-; TOPOLOGICAL-NEXT:    movq %rcx, %rdx
-; TOPOLOGICAL-NEXT:    shrq $63, %rdx
 ; TOPOLOGICAL-NEXT:    shrq $35, %rcx
-; TOPOLOGICAL-NEXT:    addl %edx, %ecx
+; TOPOLOGICAL-NEXT:    subl %edi, %ecx
 ; TOPOLOGICAL-NEXT:    shll $5, %ecx
 ; TOPOLOGICAL-NEXT:    subl %ecx, %eax
 ; TOPOLOGICAL-NEXT:    # kill: def $eax killed $eax killed $rax

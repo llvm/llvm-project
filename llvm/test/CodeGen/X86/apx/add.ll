@@ -1262,12 +1262,12 @@ define i32 @two_address_no_subreg(i32 %arg0, ptr %arg1, i1 %arg2) nounwind {
 ; NDD-NEXT:    movl %edx, %ebp # encoding: [0x89,0xd5]
 ; NDD-NEXT:    movq %rsi, %r14 # encoding: [0x49,0x89,0xf6]
 ; NDD-NEXT:    movl %edi, %ebx # encoding: [0x89,0xfb]
+; NDD-NEXT:    sarl $31, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xc1,0xff,0x1f]
+; NDD-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; NDD-NEXT:    # encoding: [0x89,0x44,0x24,0x04]
 ; NDD-NEXT:    movslq %edi, %rax # encoding: [0x48,0x63,0xc7]
 ; NDD-NEXT:    imulq $715827883, %rax, %r13 # encoding: [0x4c,0x69,0xe8,0xab,0xaa,0xaa,0x2a]
 ; NDD-NEXT:    # imm = 0x2AAAAAAB
-; NDD-NEXT:    shrq $63, %r13, %rax # encoding: [0x62,0xd4,0xfc,0x18,0xc1,0xed,0x3f]
-; NDD-NEXT:    movq %rax, (%rsp) # 8-byte Spill
-; NDD-NEXT:    # encoding: [0x48,0x89,0x04,0x24]
 ; NDD-NEXT:    shrq $32, %r13 # EVEX TO LEGACY Compression encoding: [0x49,0xc1,0xed,0x20]
 ; NDD-NEXT:    xorl %r15d, %r15d # encoding: [0x45,0x31,0xff]
 ; NDD-NEXT:    movq %rsi, %rdi # encoding: [0x48,0x89,0xf7]
@@ -1282,8 +1282,8 @@ define i32 @two_address_no_subreg(i32 %arg0, ptr %arg1, i1 %arg2) nounwind {
 ; NDD-NEXT:    xorl %r12d, %r12d # encoding: [0x45,0x31,0xe4]
 ; NDD-NEXT:  .LBB50_2: # %bb1
 ; NDD-NEXT:    movl %r13d, %esi # encoding: [0x44,0x89,0xee]
-; NDD-NEXT:    addl (%rsp), %esi # 4-byte Folded Reload
-; NDD-NEXT:    # encoding: [0x03,0x34,0x24]
+; NDD-NEXT:    subl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 4-byte Folded Reload
+; NDD-NEXT:    # encoding: [0x2b,0x74,0x24,0x04]
 ; NDD-NEXT:    imull %ebx, %ebx, %r13d # encoding: [0x62,0xf4,0x14,0x18,0xaf,0xdb]
 ; NDD-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
 ; NDD-NEXT:    jne .LBB50_4 # encoding: [0x75,A]
@@ -1327,12 +1327,12 @@ define i32 @two_address_no_subreg(i32 %arg0, ptr %arg1, i1 %arg2) nounwind {
 ; IMMONLY-NEXT:    movl %edx, %ebp # encoding: [0x89,0xd5]
 ; IMMONLY-NEXT:    movq %rsi, %r14 # encoding: [0x49,0x89,0xf6]
 ; IMMONLY-NEXT:    movl %edi, %ebx # encoding: [0x89,0xfb]
+; IMMONLY-NEXT:    sarl $31, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xc1,0xff,0x1f]
+; IMMONLY-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; IMMONLY-NEXT:    # encoding: [0x89,0x44,0x24,0x04]
 ; IMMONLY-NEXT:    movslq %edi, %rax # encoding: [0x48,0x63,0xc7]
 ; IMMONLY-NEXT:    imulq $715827883, %rax, %r13 # encoding: [0x4c,0x69,0xe8,0xab,0xaa,0xaa,0x2a]
 ; IMMONLY-NEXT:    # imm = 0x2AAAAAAB
-; IMMONLY-NEXT:    shrq $63, %r13, %rax # encoding: [0x62,0xd4,0xfc,0x18,0xc1,0xed,0x3f]
-; IMMONLY-NEXT:    movq %rax, (%rsp) # 8-byte Spill
-; IMMONLY-NEXT:    # encoding: [0x48,0x89,0x04,0x24]
 ; IMMONLY-NEXT:    shrq $32, %r13 # EVEX TO LEGACY Compression encoding: [0x49,0xc1,0xed,0x20]
 ; IMMONLY-NEXT:    xorl %r15d, %r15d # encoding: [0x45,0x31,0xff]
 ; IMMONLY-NEXT:    movq %rsi, %rdi # encoding: [0x48,0x89,0xf7]
@@ -1347,8 +1347,8 @@ define i32 @two_address_no_subreg(i32 %arg0, ptr %arg1, i1 %arg2) nounwind {
 ; IMMONLY-NEXT:    xorl %r12d, %r12d # encoding: [0x45,0x31,0xe4]
 ; IMMONLY-NEXT:  .LBB50_2: # %bb1
 ; IMMONLY-NEXT:    movl %r13d, %esi # encoding: [0x44,0x89,0xee]
-; IMMONLY-NEXT:    addl (%rsp), %esi # 4-byte Folded Reload
-; IMMONLY-NEXT:    # encoding: [0x03,0x34,0x24]
+; IMMONLY-NEXT:    subl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 4-byte Folded Reload
+; IMMONLY-NEXT:    # encoding: [0x2b,0x74,0x24,0x04]
 ; IMMONLY-NEXT:    imull %ebx, %ebx, %r13d # encoding: [0x62,0xf4,0x14,0x18,0xaf,0xdb]
 ; IMMONLY-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
 ; IMMONLY-NEXT:    jne .LBB50_4 # encoding: [0x75,A]
@@ -1392,12 +1392,12 @@ define i32 @two_address_no_subreg(i32 %arg0, ptr %arg1, i1 %arg2) nounwind {
 ; MEM-NEXT:    movl %edx, %ebp # encoding: [0x89,0xd5]
 ; MEM-NEXT:    movq %rsi, %r14 # encoding: [0x49,0x89,0xf6]
 ; MEM-NEXT:    movl %edi, %ebx # encoding: [0x89,0xfb]
+; MEM-NEXT:    sarl $31, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0xc1,0xff,0x1f]
+; MEM-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; MEM-NEXT:    # encoding: [0x89,0x44,0x24,0x04]
 ; MEM-NEXT:    movslq %edi, %rax # encoding: [0x48,0x63,0xc7]
 ; MEM-NEXT:    imulq $715827883, %rax, %r13 # encoding: [0x4c,0x69,0xe8,0xab,0xaa,0xaa,0x2a]
 ; MEM-NEXT:    # imm = 0x2AAAAAAB
-; MEM-NEXT:    shrq $63, %r13, %rax # encoding: [0x62,0xd4,0xfc,0x18,0xc1,0xed,0x3f]
-; MEM-NEXT:    movq %rax, (%rsp) # 8-byte Spill
-; MEM-NEXT:    # encoding: [0x48,0x89,0x04,0x24]
 ; MEM-NEXT:    shrq $32, %r13 # EVEX TO LEGACY Compression encoding: [0x49,0xc1,0xed,0x20]
 ; MEM-NEXT:    xorl %r15d, %r15d # encoding: [0x45,0x31,0xff]
 ; MEM-NEXT:    movq %rsi, %rdi # encoding: [0x48,0x89,0xf7]
@@ -1411,8 +1411,8 @@ define i32 @two_address_no_subreg(i32 %arg0, ptr %arg1, i1 %arg2) nounwind {
 ; MEM-NEXT:  # %bb.1: # %bb2
 ; MEM-NEXT:    xorl %r12d, %r12d # encoding: [0x45,0x31,0xe4]
 ; MEM-NEXT:  .LBB50_2: # %bb1
-; MEM-NEXT:    addl (%rsp), %r13d, %esi # 4-byte Folded Reload
-; MEM-NEXT:    # encoding: [0x62,0x74,0x4c,0x18,0x03,0x2c,0x24]
+; MEM-NEXT:    subl {{[-0-9]+}}(%r{{[sb]}}p), %r13d, %esi # 4-byte Folded Reload
+; MEM-NEXT:    # encoding: [0x62,0x74,0x4c,0x18,0x2b,0x6c,0x24,0x04]
 ; MEM-NEXT:    imull %ebx, %ebx, %r13d # encoding: [0x62,0xf4,0x14,0x18,0xaf,0xdb]
 ; MEM-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
 ; MEM-NEXT:    jne .LBB50_4 # encoding: [0x75,A]
@@ -1456,12 +1456,12 @@ define i32 @two_address_no_subreg(i32 %arg0, ptr %arg1, i1 %arg2) nounwind {
 ; NF-NEXT:    movl %edx, %ebp # encoding: [0x89,0xd5]
 ; NF-NEXT:    movq %rsi, %r14 # encoding: [0x49,0x89,0xf6]
 ; NF-NEXT:    movl %edi, %ebx # encoding: [0x89,0xfb]
+; NF-NEXT:    {nf} sarl $31, %edi, %eax # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x7c,0x1c,0xc1,0xff,0x1f]
+; NF-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; NF-NEXT:    # encoding: [0x89,0x44,0x24,0x04]
 ; NF-NEXT:    movslq %edi, %rax # encoding: [0x48,0x63,0xc7]
 ; NF-NEXT:    imulq $715827883, %rax, %r13 # encoding: [0x4c,0x69,0xe8,0xab,0xaa,0xaa,0x2a]
 ; NF-NEXT:    # imm = 0x2AAAAAAB
-; NF-NEXT:    {nf} shrq $63, %r13, %rax # EVEX TO EVEX Compression encoding: [0x62,0xd4,0xfc,0x1c,0xc1,0xed,0x3f]
-; NF-NEXT:    movq %rax, (%rsp) # 8-byte Spill
-; NF-NEXT:    # encoding: [0x48,0x89,0x04,0x24]
 ; NF-NEXT:    shrq $32, %r13 # EVEX TO LEGACY Compression encoding: [0x49,0xc1,0xed,0x20]
 ; NF-NEXT:    xorl %r15d, %r15d # encoding: [0x45,0x31,0xff]
 ; NF-NEXT:    movq %rsi, %rdi # encoding: [0x48,0x89,0xf7]
@@ -1476,8 +1476,8 @@ define i32 @two_address_no_subreg(i32 %arg0, ptr %arg1, i1 %arg2) nounwind {
 ; NF-NEXT:    xorl %r12d, %r12d # encoding: [0x45,0x31,0xe4]
 ; NF-NEXT:  .LBB50_2: # %bb1
 ; NF-NEXT:    movl %r13d, %esi # encoding: [0x44,0x89,0xee]
-; NF-NEXT:    addl (%rsp), %esi # 4-byte Folded Reload
-; NF-NEXT:    # encoding: [0x03,0x34,0x24]
+; NF-NEXT:    subl {{[-0-9]+}}(%r{{[sb]}}p), %esi # 4-byte Folded Reload
+; NF-NEXT:    # encoding: [0x2b,0x74,0x24,0x04]
 ; NF-NEXT:    {nf} imull %ebx, %ebx, %r13d # EVEX TO EVEX Compression encoding: [0x62,0xf4,0x14,0x1c,0xaf,0xdb]
 ; NF-NEXT:    testb $1, %bpl # encoding: [0x40,0xf6,0xc5,0x01]
 ; NF-NEXT:    jne .LBB50_4 # encoding: [0x75,A]

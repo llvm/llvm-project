@@ -900,6 +900,7 @@ namespace llvm {
     SDValue getSqrtResultForDenormInput(SDValue Operand,
                                         SelectionDAG &DAG) const override;
     unsigned combineRepeatedFPDivisors() const override;
+    bool preferSDivSRASUB(EVT VT) const override;
 
     SDValue
     combineElementTruncationToVectorTruncation(SDNode *N,

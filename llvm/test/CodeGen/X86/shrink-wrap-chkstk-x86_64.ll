@@ -13,12 +13,12 @@ define void @fn1() nounwind uwtable {
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %select.true.sink
-; CHECK-NEXT:    cltq
-; CHECK-NEXT:    imulq $715827883, %rax, %rax # imm = 0x2AAAAAAB
-; CHECK-NEXT:    movq %rax, %rcx
-; CHECK-NEXT:    shrq $63, %rcx
-; CHECK-NEXT:    shrq $32, %rax
-; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    movslq %eax, %rcx
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    imulq $715827883, %rcx, %rcx # imm = 0x2AAAAAAB
+; CHECK-NEXT:    shrq $32, %rcx
+; CHECK-NEXT:    subl %eax, %ecx
+; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:  .LBB0_2: # %select.end
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl $4128, %eax # imm = 0x1020
