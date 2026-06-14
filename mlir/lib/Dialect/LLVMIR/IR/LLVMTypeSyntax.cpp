@@ -103,8 +103,9 @@ void mlir::LLVM::detail::printType(Type type, AsmPrinter &printer) {
   printer << getTypeKeyword(type);
 
   llvm::TypeSwitch<Type>(type)
-      .Case<LLVMPointerType, LLVMArrayType, LLVMByteType, LLVMFunctionType, LLVMTargetExtType,
-            LLVMStructType>([&](auto type) { type.print(printer); });
+      .Case<LLVMPointerType, LLVMArrayType, LLVMByteType, LLVMFunctionType,
+            LLVMTargetExtType, LLVMStructType>(
+          [&](auto type) { type.print(printer); });
 }
 
 //===----------------------------------------------------------------------===//
