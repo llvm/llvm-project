@@ -14,7 +14,7 @@ define void @main() {
   %p = inttoptr i64 %addr1 to ptr
   %gep = getelementptr i8, ptr %p, i64 %ptrdiff
 
-  ; After %alloc1 is acceed, we cannot access other memory objects later.
+  ; After %alloc1 is accessed, we cannot access other memory objects later.
   store i32 0, ptr %p
 
   ; %gep2 is poison as the wildcard provenance has been resolved to %alloc1.

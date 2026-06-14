@@ -16,7 +16,7 @@ define void @main() {
   %gep1 = getelementptr i8, ptr %p, i64 %ptrdiff
   %gep2 = getelementptr inbounds i8, ptr %gep1, i64 2
 
-  ; We can access %alloc1, although %gep2 has been resolved to %alloc2
+  ; We can access %alloc1, although %gep2 has been resolved to %alloc2.
   store i32 0, ptr %p
 
   ; Now we cannot access %alloc2 through %gep2, since the wildcard provenance has been resolved to %alloc1.
