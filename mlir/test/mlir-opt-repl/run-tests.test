@@ -1,0 +1,1 @@
+// RUN: %python -m pytest %S -n auto -q --cov=mlir_opt_repl --cov-config=%pyproject --cov-report=term-missing --cov-fail-under=100

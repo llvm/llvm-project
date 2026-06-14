@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mlir-opt-repl"
+version = "0.1.0"
+description = "Interactive MLIR pass pipeline explorer — MCP server and terminal REPL"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.9"
+dependencies = ["click>=8.0"]
+authors = [
+    {name = "Maksim Levental", email = "maksim.levental@gmail.com"},
+]
+keywords = ["mlir", "llvm", "mcp", "repl", "compiler"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Compilers",
+    "Programming Language :: Python :: 3",
+]
+
+[project.scripts]
+mlir-opt-repl = "mlir_opt_repl.__main__:main"
+
+[project.urls]
+Repository = "https://github.com/llvm/llvm-project/tree/main/mlir/tools/mlir-opt-repl"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "if __name__ == .__main__.",
+    "^def main\\(\\):",
+]
