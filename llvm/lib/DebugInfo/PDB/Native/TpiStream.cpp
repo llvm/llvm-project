@@ -209,8 +209,14 @@ TpiStream::findFullDeclForForwardRef(TypeIndex ForwardRefTI) const {
       continue;
     }
 
-    if (!FullTR.hasUniqueName())
+    if (!FullTR.hasUniqueName()) {
+      // `ForwardTR` does have a unique name, but the type we found doesn't.
+      // Remember this type, but look for better candidates in the bucket first.
+      if (ForwardTR.getName() == FullTR.getName())
+        ForwardRefTI = TI;
       continue;
+    }
+
     if (ForwardTR.getUniqueName() == FullTR.getUniqueName())
       return TI;
   }
