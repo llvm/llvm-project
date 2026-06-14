@@ -56358,14 +56358,14 @@ static SDValue combineXorWithTwoGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
                                               SelectionDAG &DAG, EVT VT) {
   using namespace SDPatternMatch;
 
-  SDValue X0, X1, Y0, Y1;
+  SDValue X0, X1, M0, M1;
   APInt Imm0, Imm1;
   // Use sd_match for structure matching - m_Xor handles commutation
   if (!sd_match(N,
                 m_Xor(m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(X0),
-                                           m_Value(Y0), m_ConstInt(Imm0))),
+                                           m_Value(M0), m_ConstInt(Imm0))),
                       m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(X1),
-                                           m_Value(Y1), m_ConstInt(Imm1))))))
+                                           m_Value(M1), m_ConstInt(Imm1))))))
     return SDValue();
 
   assert((VT == MVT::v16i8 || VT == MVT::v32i8 || VT == MVT::v64i8) &&
@@ -56375,17 +56375,17 @@ static SDValue combineXorWithTwoGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
   //   =>  GF2P8AFFINEQB(x0 ^ x1, m, i1 ^ i2)
   // This instruction performs an XOR permutation of the input, which is
   // associative. Therefore XORing before permuting is equivalent.
-  if (Y0 == Y1) {
+  if (M0 == M1) {
     uint64_t NewImm = Imm0.getZExtValue() ^ Imm1.getZExtValue();
 
     SDValue NewSrc = DAG.getNode(ISD::XOR, DL, VT, X0, X1);
 
-    return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, NewSrc, Y0,
+    return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, NewSrc, M0,
                        DAG.getTargetConstant(NewImm, DL, MVT::i8));
   }
 
-  // Fold: vgf2p8affineqb(x, m1, i1) ^ vgf2p8affineqb(x, m2, i2)
-  //   =>  vgf2p8affineqb(x, m1 ^ m2, i1 ^ i2)
+  // Fold: vgf2p8affineqb(x, m0, i1) ^ vgf2p8affineqb(x, m1, i2)
+  //   =>  vgf2p8affineqb(x, m0 ^ m1, i1 ^ i2)
   // The matrix in vgf2p8affineqb determines which bits of the input are XORed
   // together. XORing two affine transformations of the same input can be folded
   // by XORing both their matrices and immediates together.
@@ -56394,7 +56394,7 @@ static SDValue combineXorWithTwoGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
 
   uint64_t NewImm = Imm0.getZExtValue() ^ Imm1.getZExtValue();
 
-  SDValue NewMatrix = DAG.getNode(ISD::XOR, DL, VT, Y0, Y1);
+  SDValue NewMatrix = DAG.getNode(ISD::XOR, DL, VT, M0, M1);
 
   return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, X0, NewMatrix,
                      DAG.getTargetConstant(NewImm, DL, MVT::i8));
