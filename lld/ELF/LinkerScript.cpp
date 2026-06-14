@@ -1226,12 +1226,12 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   // heuristics described in
   // https://sourceware.org/binutils/docs/ld/Output-Section-LMA.html
   if (sec->lmaExpr) {
-    state->lmaOffset = sec->lmaExpr().getValue() - dot;
+    state->lmaOffset = sec->lmaExpr().getValue() - sec->addr;
   } else if (MemoryRegion *mr = sec->lmaRegion) {
     uint64_t lmaStart = alignToPowerOf2(mr->curPos, sec->addralign);
     if (mr->curPos < lmaStart)
       expandMemoryRegion(mr, lmaStart - mr->curPos, sec->name);
-    state->lmaOffset = lmaStart - dot;
+    state->lmaOffset = lmaStart - sec->addr;
   } else if (!sameMemRegion || !prevLMARegionIsDefault) {
     state->lmaOffset = 0;
   }
