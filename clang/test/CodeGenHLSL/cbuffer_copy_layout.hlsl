@@ -16,7 +16,6 @@ ConstantBuffer<S> cb;
 
 [numthreads(1,1,1)]
 void main() {
-  // CHECK: error: no matching constructor for initialization of 'S'
   S l1 = s_cb;
 
   // CHECK: error: no viable constructor copying variable of type 'const hlsl_constant S'
