@@ -1460,19 +1460,19 @@ def sse_load_f64 : PatFrags<(ops node:$ptr),
                              (v2f64 (scalar_to_vector (loadf64 node:$ptr)))]>;
 
 def fp16imm0 : PatLeaf<(f16 fpimm), [{
-  return N->isExactlyValue(+0.0);
+  return N->isPosZero();
 }]>;
 
 def fp32imm0 : PatLeaf<(f32 fpimm), [{
-  return N->isExactlyValue(+0.0);
+  return N->isPosZero();
 }]>;
 
 def fp64imm0 : PatLeaf<(f64 fpimm), [{
-  return N->isExactlyValue(+0.0);
+  return N->isPosZero();
 }]>;
 
 def fp128imm0 : PatLeaf<(f128 fpimm), [{
-  return N->isExactlyValue(+0.0);
+  return N->isPosZero();
 }]>;
 
 // EXTRACT_get_vextract128_imm xform function: convert extract_subvector index

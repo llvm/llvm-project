@@ -100,9 +100,24 @@ class PExpectTest(TestBase):
                 self.child.expect_exact(s)
         self.expect_prompt()
 
+    def tearDown(self):
+        # Ensure the child is always cleaned up, even if the test didn't call
+        # quit() explicitly or failed before reaching it.
+        if self.child is not None:
+            self.quit()
+        super().tearDown()
+
     def quit(self, gracefully=True):
-        self.child.sendeof()
-        self.child.close(force=not gracefully)
+        if self.child is None:
+            return
+
+        try:
+            self.child.sendeof()
+            self.child.close(force=not gracefully)
+        except OSError:
+            # This can happen if LLDB quit itself because it is running in
+            # batch mode.
+            pass
         self.child = None
 
     def cursor_forward_escape_seq(self, chars_to_move):

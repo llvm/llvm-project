@@ -1001,6 +1001,17 @@ def SVCVTLT_Z_F32_F16  : SInst<"svcvtlt_f32[_f16]", "dPh", "f", MergeZeroExp, "a
 def SVCVTLT_Z_F64_F32  : SInst<"svcvtlt_f64[_f32]", "dPh", "d", MergeZeroExp, "aarch64_sve_fcvtlt_f64f32",  [IsOverloadNone, VerifyRuntimeMode]>;
 
 }
+
+let SVETargetGuard = "sve2p3|sme2p3", SMETargetGuard = "sve2p3|sme2p3" in {
+def SVCVTN_S : SInst<"svcvtn_{0}[_{1}_x2]", "y2.d", "hfd", MergeNone, "aarch64_sve_fcvtzsn_x2", [IsReductionQV, VerifyRuntimeMode]>;
+def SVCVTN_U : SInst<"svcvtn_{0}[_{1}_x2]", "e2.d", "hfd", MergeNone, "aarch64_sve_fcvtzun_x2", [IsReductionQV, VerifyRuntimeMode]>;
+
+foreach suffix = ["b", "t"] in {
+def SVCVT # !toupper(suffix) # _S: SInst<"svcvt" # suffix # "_{d}[_{1}]", "dy", "hfd", MergeNone, "aarch64_sve_scvtf" # suffix, [IsOverloadDefaultAndOp0, VerifyRuntimeMode]>;
+def SVCVT # !toupper(suffix) # _U: SInst<"svcvt" # suffix # "_{d}[_{1}]", "de", "hfd", MergeNone, "aarch64_sve_ucvtf" # suffix, [IsOverloadDefaultAndOp0, VerifyRuntimeMode]>;
+}
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Permutations and selection
 
@@ -1906,6 +1917,19 @@ let SVETargetGuard = "(sve2|sme2),lut", SMETargetGuard = "sme2,lut" in {
   def SVLUTI4_H : SInst<"svluti4_lane[_{d}]", "dd[i", "sUshb", MergeNone, "aarch64_sve_luti4_lane", [VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
 
   def SVLUTI4_x2 : SInst<"svluti4_lane[_{d}_x2]", "d2.d[i", "sUshb", MergeNone, "aarch64_sve_luti4_lane_x2", [VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
+}
+
+let SVETargetGuard = "sve2p3", SMETargetGuard = InvalidMode in {
+  def SVLUTI6 : SInst<"svluti6[_{d}_x2]", "d2[", "cUcm", MergeNone, "aarch64_sve_luti6", [IsOverloadNone]>;
+}
+
+let SVETargetGuard = "sve2p3", SMETargetGuard = "sve2p3|sme2p3" in {
+  def SVLUTI6_x2 : SInst<"svluti6_lane[_{d}_x2]", "d2.d[i", "sUshb", MergeNone, "aarch64_sve_luti6_lane_x2", [VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_1>]>;
+}
+
+let SVETargetGuard = InvalidMode, SMETargetGuard = "sme2p3" in {
+  def SVLUTI6_X4_U8X2 : SInst<"svluti6_lane_{d}_x4[_{d}_x2_u8_x2]", "422.[i", "sUshb", MergeNone, "aarch64_sme_luti6_lane_x4_x2", [IsStreaming], [ImmCheck<2, ImmCheck0_1>]>;
+  def SVLUTI6_X4_U8X3 : SInst<"svluti6_lane_{d}_x4[_{d}_x2_u8_x3]", "423.[i", "sUshb", MergeNone, "aarch64_sme_luti6_lane_x4_x3", [IsStreaming], [ImmCheck<2, ImmCheck0_1>]>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -5,6 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains general utility functions and helpers used across the
+/// clang-doc tool, including string manipulation and path handling. It
+/// provides lightweight utilities that do not depend on the core clang-doc
+/// data model.
+///
+//===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_FILE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_FILE_H
 

@@ -334,7 +334,7 @@ DwarfInstrProfCorrelator<IntPtrT>::getLocation(const DWARFDie &Die) const {
   auto &DU = *Die.getDwarfUnit();
   auto AddressSize = DU.getAddressByteSize();
   for (auto &Location : *Locations) {
-    DataExtractor Data(Location.Expr, DICtx->isLittleEndian(), AddressSize);
+    DataExtractor Data(Location.Expr, DICtx->isLittleEndian());
     DWARFExpression Expr(Data, AddressSize);
     for (auto &Op : Expr) {
       if (Op.getCode() == dwarf::DW_OP_addr)

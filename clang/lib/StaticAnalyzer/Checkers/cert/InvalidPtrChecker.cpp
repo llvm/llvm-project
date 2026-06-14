@@ -202,13 +202,13 @@ void InvalidPtrChecker::postPreviousReturnInvalidatingCall(
     });
   }
 
-  const LocationContext *LCtx = C.getLocationContext();
+  const StackFrame *SF = C.getStackFrame();
   const auto *CE = cast<CallExpr>(Call.getOriginExpr());
 
   // Function call will return a pointer to the new symbolic region.
   DefinedOrUnknownSVal RetVal =
       C.getSValBuilder().conjureSymbolVal(Call, C.blockCount());
-  State = State->BindExpr(CE, LCtx, RetVal);
+  State = State->BindExpr(CE, SF, RetVal);
 
   const auto *SymRegOfRetVal =
       dyn_cast_or_null<SymbolicRegion>(RetVal.getAsRegion());
@@ -316,13 +316,13 @@ void InvalidPtrChecker::checkBeginFunction(CheckerContext &C) const {
   if (!C.inTopFrame())
     return;
 
-  const auto *FD = dyn_cast<FunctionDecl>(C.getLocationContext()->getDecl());
+  const auto *FD = dyn_cast<FunctionDecl>(C.getStackFrame()->getDecl());
   if (!FD || FD->param_size() != 3 || !FD->isMain())
     return;
 
   ProgramStateRef State = C.getState();
   const MemRegion *EnvpReg =
-      State->getRegion(FD->parameters()[2], C.getLocationContext());
+      State->getRegion(FD->parameters()[2], C.getStackFrame());
 
   // Save the memory region pointed by the environment pointer parameter of
   // 'main'.

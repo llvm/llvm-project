@@ -6,7 +6,11 @@ add_library(LLVMOffload SHARED
 )
 add_dependencies(LLVMOffload OffloadAPI PluginErrcodes)
 
-llvm_map_components_to_libnames(llvm_libs FrontendOpenMP Support)
+if(LLVM_LINK_LLVM_DYLIB)
+  set(llvm_libs LLVM)
+else()
+  llvm_map_components_to_libnames(llvm_libs FrontendOpenMP Support)
+endif()
 target_link_libraries(LLVMOffload PRIVATE ${llvm_libs})
 
 foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
@@ -38,6 +42,11 @@ set_target_properties(LLVMOffload PROPERTIES
                       POSITION_INDEPENDENT_CODE ON
                       INSTALL_RPATH "$ORIGIN"
                       BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
+if(UNIX AND NOT APPLE)
+  set_target_properties(LLVMOffload PROPERTIES
+                        SOVERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}"
+                        VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}")
+endif()
 install(TARGETS LLVMOffload LIBRARY COMPONENT offload DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/API/OffloadAPI.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include/offload COMPONENT offload)

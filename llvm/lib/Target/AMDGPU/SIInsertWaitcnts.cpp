@@ -99,6 +99,15 @@ static unsigned getWaitCountMax(const AMDGPU::HardwareLimits &Limits,
   }
 }
 
+template <typename EmitWaitcntFn>
+static void EmitExpandedWaitcnt(unsigned Outstanding, unsigned Target,
+                                EmitWaitcntFn &&EmitWaitcnt) {
+  // Emit waitcnts from (Outstanding - 1) down to Target.
+  for (unsigned I = Outstanding - 1; I > Target && I != ~0u; --I)
+    EmitWaitcnt(I);
+  EmitWaitcnt(Target);
+}
+
 /// Integer IDs used to track vector memory locations we may have to wait on.
 /// Encoded as u16 chunks:
 ///
@@ -161,7 +170,8 @@ static constexpr VMEMID toVMEMID(MCRegUnit RU) {
   DECL(VGPR_LDS_READ)            /* read VGPR source in LDS */                 \
   DECL(VGPR_FLAT_READ)           /* read VGPR source in FLAT */                \
   DECL(VGPR_VMEM_READ)           /* read VGPR source in other VMEM */          \
-  DECL(ASYNC_ACCESS)             /* access that uses ASYNC_CNT */
+  DECL(ASYNC_ACCESS)             /* access that uses ASYNC_CNT */              \
+  DECL(TENSOR_ACCESS)            /* access that uses TENSOR_CNT */
 
 // clang-format off
 #define AMDGPU_EVENT_ENUM(Name) Name,
@@ -221,7 +231,7 @@ static const unsigned
         AMDGPU::S_WAIT_EXPCNT,    AMDGPU::S_WAIT_STORECNT,
         AMDGPU::S_WAIT_SAMPLECNT, AMDGPU::S_WAIT_BVHCNT,
         AMDGPU::S_WAIT_KMCNT,     AMDGPU::S_WAIT_XCNT,
-        AMDGPU::S_WAIT_ASYNCCNT};
+        AMDGPU::S_WAIT_ASYNCCNT,  AMDGPU::S_WAIT_TENSORCNT};
 
 // ASYNCMARK and WAIT_ASYNCMARK are meta instructions that emit no hardware
 // code but still need to be processed by this pass for async vmcnt tracking.
@@ -425,8 +435,9 @@ public:
 
   // Returns a new waitcnt with all counters except VScnt set to 0. If
   // IncludeVSCnt is true, VScnt is set to 0, otherwise it is set to ~0u.
-  // AsyncCnt always defaults to ~0u (don't wait for it). It is only updated
-  // when a call to @llvm.amdgcn.wait.asyncmark() is processed.
+  // AsyncCnt and TensorCnt always default to ~0u (don't wait for it). They
+  // are only updated when a call to @llvm.amdgcn.wait.asyncmark() is
+  // processed.
   virtual AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const = 0;
 
   virtual ~WaitcntGenerator() = default;
@@ -441,6 +452,8 @@ class WaitcntGeneratorPreGFX12 final : public WaitcntGenerator {
           WaitEventSet({EXP_GPR_LOCK, GDS_GPR_LOCK, VMW_GPR_LOCK,
                         EXP_PARAM_ACCESS, EXP_POS_ACCESS, EXP_LDS_ACCESS}),
           WaitEventSet({VMEM_WRITE_ACCESS, SCRATCH_WRITE_ACCESS}),
+          WaitEventSet(),
+          WaitEventSet(),
           WaitEventSet(),
           WaitEventSet(),
           WaitEventSet(),
@@ -482,6 +495,7 @@ protected:
           WaitEventSet({SMEM_ACCESS, SQ_MESSAGE, SCC_WRITE}),
           WaitEventSet({VMEM_GROUP, SMEM_GROUP}),
           WaitEventSet({ASYNC_ACCESS}),
+          WaitEventSet({TENSOR_ACCESS}),
           WaitEventSet({VGPR_CSMACC_WRITE, VGPR_DPMACC_WRITE, VGPR_TRANS_WRITE,
                         VGPR_XDL_WRITE}),
           WaitEventSet({VGPR_LDS_READ, VGPR_FLAT_READ, VGPR_VMEM_READ})};
@@ -675,6 +689,8 @@ public:
 
   bool shouldUpdateAsyncMark(const MachineInstr &MI,
                              AMDGPU::InstCounterType T) const {
+    if (SIInstrInfo::usesTENSOR_CNT(MI))
+      return T == AMDGPU::TENSOR_CNT;
     if (!isAsyncLdsDmaWrite(MI))
       return false;
     if (SIInstrInfo::usesASYNC_CNT(MI))
@@ -1120,7 +1136,8 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
 
   unsigned UB = getScoreUB(T);
   unsigned Increment = 1;
-  if (T == AMDGPU::VA_VDST && AMDGPU::getHasMatrixScale(Inst.getOpcode())) {
+  if (T == AMDGPU::VA_VDST && AMDGPU::getHasMatrixScale(Inst.getOpcode()) &&
+      Context->ST.hasVOP3PX2IncrementsVaVdstTwice()) {
     // V_WMMA_SCALE instructions use VOP3PX2 encoding. Hardware treats this as
     // two VOP3P instructions and increments VA_VDST twice.
     Increment = 2;
@@ -1559,14 +1576,8 @@ void WaitcntBrackets::simplifyVmVsrc(const AMDGPU::Waitcnt &CheckWait,
 }
 
 void WaitcntBrackets::purgeEmptyTrackingData() {
-  for (auto &[K, V] : make_early_inc_range(VMem)) {
-    if (V.empty())
-      VMem.erase(K);
-  }
-  for (auto &[K, V] : make_early_inc_range(SGPRs)) {
-    if (V.empty())
-      SGPRs.erase(K);
-  }
+  VMem.remove_if([](const auto &P) { return P.second.empty(); });
+  SGPRs.remove_if([](const auto &P) { return P.second.empty(); });
 }
 
 void WaitcntBrackets::determineWaitForScore(AMDGPU::InstCounterType T,
@@ -1841,6 +1852,8 @@ counterTypeForInstr(unsigned Opcode) {
     return AMDGPU::X_CNT;
   case AMDGPU::S_WAIT_ASYNCCNT:
     return AMDGPU::ASYNC_CNT;
+  case AMDGPU::S_WAIT_TENSORCNT:
+    return AMDGPU::TENSOR_CNT;
   default:
     return {};
   }
@@ -1993,17 +2006,6 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
   bool Modified = false;
   const DebugLoc &DL = Block.findDebugLoc(It);
 
-  // Helper to emit expanded waitcnt sequence for profiling.
-  // Emits waitcnts from (Outstanding-1) down to Target.
-  // The EmitWaitcnt callback emits a single waitcnt.
-  auto EmitExpandedWaitcnt = [&](unsigned Outstanding, unsigned Target,
-                                 auto EmitWaitcnt) {
-    do {
-      EmitWaitcnt(--Outstanding);
-    } while (Outstanding > Target);
-    Modified = true;
-  };
-
   // Waits for VMcnt, LKGMcnt and/or EXPcnt are encoded together into a
   // single instruction while VScnt has its own instruction.
   if (Wait.hasWaitExceptStoreCnt()) {
@@ -2041,6 +2043,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
             BuildMI(Block, It, DL, TII.get(AMDGPU::S_WAITCNT))
                 .addImm(AMDGPU::encodeWaitcnt(IV, W));
           });
+          Modified = true;
         }
       }
     } else {
@@ -2071,6 +2074,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
                 .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
                 .addImm(Count);
           });
+      Modified = true;
     } else {
       [[maybe_unused]] auto SWaitInst =
           BuildMI(Block, It, DL, TII.get(AMDGPU::S_WAITCNT_VSCNT))
@@ -2096,8 +2100,8 @@ AMDGPU::Waitcnt
 WaitcntGeneratorGFX12Plus::getAllZeroWaitcnt(bool IncludeVSCnt) const {
   unsigned ExpertVal = IsExpertMode ? 0 : ~0u;
   return AMDGPU::Waitcnt(0, 0, 0, IncludeVSCnt ? 0 : ~0u, 0, 0, 0,
-                         ~0u /* XCNT */, ~0u /* ASYNC_CNT */, ExpertVal,
-                         ExpertVal);
+                         ~0u /* XCNT */, ~0u /* ASYNC_CNT */,
+                         ~0u /* TENSOR_CNT */, ExpertVal, ExpertVal);
 }
 
 /// Combine consecutive S_WAIT_*CNT instructions that precede \p It and
@@ -2401,15 +2405,6 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
   bool Modified = false;
   const DebugLoc &DL = Block.findDebugLoc(It);
 
-  // Helper to emit expanded waitcnt sequence for profiling.
-  auto EmitExpandedWaitcnt = [&](unsigned Outstanding, unsigned Target,
-                                 auto EmitWaitcnt) {
-    for (unsigned I = Outstanding - 1; I > Target && I != ~0u; --I)
-      EmitWaitcnt(I);
-    EmitWaitcnt(Target);
-    Modified = true;
-  };
-
   // For GFX12+, we use separate wait instructions, which makes expansion
   // simpler
   if (ExpandWaitcntProfiling) {
@@ -2432,6 +2427,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
         BuildMI(Block, It, DL, TII.get(instrsForExtendedCounterTypes[CT]))
             .addImm(Val);
       });
+      Modified = true;
     }
     return Modified;
   }
@@ -3063,15 +3059,22 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     if (SIInstrInfo::usesASYNC_CNT(Inst)) {
       ScoreBrackets->updateByEvent(ASYNC_ACCESS, Inst);
     }
+  } else if (SIInstrInfo::usesTENSOR_CNT(Inst)) {
+    ScoreBrackets->updateByEvent(TENSOR_ACCESS, Inst);
   } else if (Inst.isCall()) {
-    // Act as a wait on everything, but AsyncCnt is never included in such
-    // blanket waits.
+    // Act as a wait on everything, but AsyncCnt and TensorCnt are never
+    // included in such blanket waits.
     ScoreBrackets->applyWaitcnt(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));
     ScoreBrackets->setStateOnFunctionEntryOrReturn();
   } else if (TII.isVINTERP(Inst)) {
     int64_t Imm = TII.getNamedOperand(Inst, AMDGPU::OpName::waitexp)->getImm();
     ScoreBrackets->applyWaitcnt(AMDGPU::EXP_CNT, Imm);
   }
+
+  // Set XCNT to zero in the bracket for instructions that implicitly drain
+  // XCNT.
+  if (ST.hasWaitXcnt() && SIInstrInfo::isXcntDrain(Inst))
+    ScoreBrackets->applyWaitcnt(AMDGPU::X_CNT, 0);
 }
 
 bool WaitcntBrackets::mergeScore(const MergeInfo &M, unsigned &Score,
@@ -3814,7 +3817,7 @@ bool SIInsertWaitcnts::run() {
       for (auto CT : inst_counter_types(AMDGPU::NUM_EXTENDED_INST_CNTS)) {
         if (CT == AMDGPU::LOAD_CNT || CT == AMDGPU::DS_CNT ||
             CT == AMDGPU::STORE_CNT || CT == AMDGPU::X_CNT ||
-            CT == AMDGPU::ASYNC_CNT)
+            CT == AMDGPU::ASYNC_CNT || CT == AMDGPU::TENSOR_CNT)
           continue;
 
         if (!ST.hasImageInsts() &&
