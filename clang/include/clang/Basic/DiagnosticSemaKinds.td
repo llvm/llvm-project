@@ -11048,6 +11048,11 @@ def warn_lifetime_safety_inapplicable_lifetimebound
       InGroup<LifetimeSafetyInapplicableLifetimebound>,
       DefaultIgnore;
 
+def warn_lifetime_safety_inapplicable_lifetimebound_return
+    : Warning<"'lifetimebound' attribute has no effect on this function because return type %0 cannot carry a lifetime. The attribute only applies when the return type is a reference type, pointer type, or non-owner record type">,
+      InGroup<LifetimeSafetyInapplicableLifetimebound>,
+      DefaultIgnore;
+
 def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_invalidated_here : Note<"invalidated here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;

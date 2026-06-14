@@ -353,13 +353,24 @@ public:
         << Attr->getRange();
   }
 
-  void reportInapplicableLifetimebound(const ParmVarDecl *PVD) override {
+  void reportInapplicableLifetimebound(const ParmVarDecl *PVD, QualType Type,
+                                       bool IsReturnType) override {
     assert(PVD->hasAttr<LifetimeBoundAttr>() &&
            "Expected parameter to have lifetimebound attribute");
     const auto *Attr = PVD->getAttr<LifetimeBoundAttr>();
+    unsigned DiagID =
+        IsReturnType
+            ? diag::warn_lifetime_safety_inapplicable_lifetimebound_return
+            : diag::warn_lifetime_safety_inapplicable_lifetimebound;
+    S.Diag(Attr->getLocation(), DiagID) << Type << Attr->getRange();
+  }
+
+  void reportInapplicableLifetimebound(const CXXMethodDecl *MD) override {
+    const auto *Attr = getImplicitObjectParamLifetimeBoundAttr(MD);
+    assert(Attr && "Expected lifetimebound attribute");
     S.Diag(Attr->getLocation(),
-           diag::warn_lifetime_safety_inapplicable_lifetimebound)
-        << PVD->getType() << Attr->getRange();
+           diag::warn_lifetime_safety_inapplicable_lifetimebound_return)
+        << MD->getReturnType() << Attr->getRange();
   }
 
   void suggestLifetimeboundToImplicitThis(WarningScope Scope,

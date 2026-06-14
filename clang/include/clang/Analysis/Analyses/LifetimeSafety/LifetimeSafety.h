@@ -142,7 +142,10 @@ public:
                                             const ParmVarDecl *PVDDef,
                                             const ParmVarDecl *PVDDecl) {}
 
-  virtual void reportInapplicableLifetimebound(const ParmVarDecl *PVD) {}
+  virtual void reportInapplicableLifetimebound(const ParmVarDecl *PVD,
+                                               QualType Type,
+                                               bool IsReturnType) {}
+  virtual void reportInapplicableLifetimebound(const CXXMethodDecl *MD) {}
 
   // Suggests lifetime bound annotations for implicit this.
   virtual void suggestLifetimeboundToImplicitThis(WarningScope Scope,
