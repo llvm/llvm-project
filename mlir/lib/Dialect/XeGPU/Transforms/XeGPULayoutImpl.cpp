@@ -1869,11 +1869,9 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
       consumerLayout.getEffectiveLaneDataAsInt();
   SmallVector<int64_t> consumerOrder = consumerLayout.getEffectiveOrderAsInt();
 
-  if (consumerLaneLayout.empty() || consumerLaneData.empty()) {
-    auto [laneLayoutCD, laneDataCD] = compute2DBlockIOLaneLayoutAndData(
-        dataShape, subgroupSize, elemTy.getIntOrFloatBitWidth(),
-        elemTy.getIntOrFloatBitWidth(), false, false);
-  }
+  assert(!consumerLaneLayout.empty() && !consumerLaneData.empty() &&
+         "Expected consumer layout to have lane_layout and lane_data");
+
   bool hasTransform = consumerLaneData[rank - 2] != 1;
   bool hasTranspose = consumerLaneLayout[rank - 2] != 1;
   unsigned packingFactor =
@@ -1922,7 +1920,9 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
       if (llvm::is_contained(bHeights, static_cast<int>(height))) {
         llvm::dbgs() << "[DEBUG setupLoadNdAnchorLayout] height check PASSED, "
                         "honoring consumer layout\n";
-        return consumerLayout;
+        return buildInstDataLayoutWithLane(context, consumerInstData,
+                                           consumerLaneLayout, consumerLaneData,
+                                           consumerLayout.getOrder());
       }
     }
     llvm::dbgs()
@@ -1954,6 +1954,7 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
       return buildLaneLayout(context, laneLayout, laneData);
     }
   }
+  return nullptr;
 }
 
 /// Helper function to compute inst_data vectors for DPAS operands A, B, and
