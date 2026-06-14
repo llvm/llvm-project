@@ -400,12 +400,12 @@ using BumpPtrAllocator = BumpPtrAllocatorImpl<>;
 /// This allows calling the destructor in DestroyAll() and when the allocator is
 /// destroyed.
 template <typename T> class SpecificBumpPtrAllocator {
-  // MinAlign=alignof(T) keeps DestroyAll()'s fixed sizeof(T) stride tight and,
-  // for the common alignof(T)==8, reuses the default BumpPtrAllocator
-  // instantiation.
+  // DestroyAll() walks objects at a fixed sizeof(T) stride, so it needs tight
+  // packing: MinAlign=1 disables the size rounding. (alignof(T) would pack just
+  // as tightly and reuse the default instantiation, but T may be incomplete
+  // here, e.g. SpecificBumpPtrAllocator<MCSectionELF>.)
   using BumpPtrAllocatorTy =
-      BumpPtrAllocatorImpl<MallocAllocator, 4096, 4096, 128,
-                           std::min(alignof(T), alignof(std::max_align_t))>;
+      BumpPtrAllocatorImpl<MallocAllocator, 4096, 4096, 128, /*MinAlign=*/1>;
   BumpPtrAllocatorTy Allocator;
 
 public:
@@ -455,7 +455,14 @@ public:
   }
 
   /// Allocate space for an array of objects without constructing them.
-  T *Allocate(size_t num = 1) { return Allocator.template Allocate<T>(num); }
+  T *Allocate(size_t num = 1) {
+    // Slabs are max_align_t-aligned and every size is a multiple of alignof(T),
+    // so the bump pointer is already alignof(T)-aligned. Request alignment 1 so
+    // the fast path skips realigning CurPtr; over-aligned T still needs it.
+    if constexpr (alignof(T) <= alignof(std::max_align_t))
+      return static_cast<T *>(Allocator.Allocate(num * sizeof(T), Align()));
+    return Allocator.Allocate<T>(num);
+  }
 
   /// \return An index uniquely and reproducibly identifying
   /// an input pointer \p Ptr in the given allocator.
