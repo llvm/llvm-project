@@ -1177,8 +1177,8 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   const bool isTbss = (sec->flags & SHF_TLS) && sec->type == SHT_NOBITS;
   const bool sameMemRegion = state->memRegion == sec->memRegion;
   const bool prevLMARegionIsDefault = state->lmaRegion == nullptr;
+  const uint64_t oldAddress = sec->addr;
   const uint64_t savedDot = dot;
-  bool addressChanged = false;
   state->memRegion = sec->memRegion;
   state->lmaRegion = sec->lmaRegion;
 
@@ -1217,7 +1217,6 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
     dot = alignToPowerOf2(dot, sec->addralign);
     expandMemoryRegions(dot - pos);
   }
-  addressChanged = sec->addr != dot;
   sec->addr = dot;
 
   // state->lmaOffset is LMA minus VMA. If LMA is explicitly specified via AT()
@@ -1315,7 +1314,7 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
     state->tbssAddr = dot;
     dot = savedDot;
   }
-  return addressChanged;
+  return sec->addr != oldAddress;
 }
 
 static bool isDiscardable(const OutputSection &sec) {
