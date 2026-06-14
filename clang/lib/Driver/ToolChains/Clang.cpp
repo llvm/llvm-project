@@ -2933,7 +2933,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   bool TrappingMathPresent = false; // Is trapping-math in args, and not
                                     // overriden by ffp-exception-behavior?
   bool RoundingFPMath = false;
-  bool SignalingNaNs = false;
+  std::optional<bool> SignalingNaNs;
   // -ffp-model values: strict, fast, precise
   StringRef FPModel = "";
   // -ffp-exception-behavior options: strict, maytrap, ignore
@@ -3447,8 +3447,12 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   if (!BFloat16ExcessPrecision.empty())
     CmdArgs.push_back(Args.MakeArgString("-fbfloat16-excess-precision=" +
                                          BFloat16ExcessPrecision));
-  if (SignalingNaNs)
-    CmdArgs.push_back(Args.MakeArgString("-fsignaling-nans"));
+  if (SignalingNaNs) {
+    if (*SignalingNaNs)
+      CmdArgs.push_back(Args.MakeArgString("-fsignaling-nans"));
+    else
+      CmdArgs.push_back(Args.MakeArgString("-fno-signaling-nans"));
+  }
 
   StringRef Recip = parseMRecipOption(D.getDiags(), Args);
   if (!Recip.empty())
@@ -3459,7 +3463,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   // that's consistent with gcc's behaviour.
   if (!HonorINFs && !HonorNaNs && !MathErrno && AssociativeMath && ApproxFunc &&
       ReciprocalMath && !SignedZeros && !TrappingMath && !RoundingFPMath &&
-      !SignalingNaNs)
+      (SignalingNaNs.has_value() && !SignalingNaNs.value()))
     CmdArgs.push_back("-ffast-math");
 
   // Handle __FINITE_MATH_ONLY__ similarly.

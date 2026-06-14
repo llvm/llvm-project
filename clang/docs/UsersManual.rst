@@ -1908,7 +1908,8 @@ for more details.
    supporting architectures, it can enable additional optimization opportunities.
 
    If more than one option is specified, the last one takes effect. If none is
-   specified, the compiler assumes ``-fno-signaling-nans``.
+   specified, the compiler assumes ``-fno-signaling-nans``, unless the code is
+   compiled as strictfp functions, in which case ``-fsignaling-nans`` is assumed.
 
 .. option:: -ffp-model=<value>
 

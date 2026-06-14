@@ -654,13 +654,16 @@
 // RUN: %clang -### -S --target=x86_64-unknown-linux %s 2>&1 | FileCheck -check-prefix=CHECK-UNKNOWN-SIGNALING-NANS %s
 // CHECK-UNKNOWN-SIGNALING-NANS: "-cc1"
 // CHECK-UNKNOWN-SIGNALING-NANS-NOT: "-fsignaling-nans"
+// CHECK-UNKNOWN-SIGNALING-NANS-NOT: "-fno-signaling-nans"
 
 // RUN: %clang -### -S --target=x86_64-unknown-linux -fsignaling-nans %s 2>&1 | FileCheck -check-prefix=CHECK-SIGNALING-NANS %s
 // CHECK-SIGNALING-NANS: "-cc1"
 // CHECK-SIGNALING-NANS: "-fsignaling-nans"
+// CHECK-SIGNALING-NANS-NOT: "-fno-signaling-nans"
 
 // RUN: %clang -### -S --target=x86_64-unknown-linux -fno-signaling-nans %s 2>&1 | FileCheck -check-prefix=CHECK-NO-SIGNALING-NANS %s
 // CHECK-NO-SIGNALING-NANS: "-cc1"
+// CHECK-NO-SIGNALING-NANS: "-fno-signaling-nans"
 // CHECK-NO-SIGNALING-NANS-NOT: "-fsignaling-nans"
 
 // RUN: %clang -### -S --target=x86_64-unknown-linux -fsignaling-nans -fno-signaling-nans %s 2>&1 | FileCheck -check-prefix=CHECK-NO-SIGNALING-NANS %s

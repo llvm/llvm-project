@@ -3047,14 +3047,15 @@ def ffp_contract : Joined<["-"], "ffp-contract=">, Group<f_Group>,
   " Default is 'fast' for CUDA, 'fast-honor-pragmas' for HIP, and 'on' otherwise.">,
   HelpText<"Form fused FP ops (e.g. FMAs)">,
   Values<"fast,on,off,fast-honor-pragmas">;
-defm signaling_nans
-    : BoolFOption<"signaling-nans", CodeGenOpts<"SignalingNans">, DefaultFalse,
-                  PosFlag<SetTrue, [], [ClangOption, CC1Option],
-                          "Assume signaling NaNs behave according to IEEE rules "
-                          "and can raise floating-point exceptions">,
-                  NegFlag<SetFalse, [], [ClangOption],
-                          "Assume signaling NaNs are treated identically to "
-                          "quiet NaNs">>;
+def fsignaling_nans : Flag<["-"], "fsignaling-nans">,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoFlag<CodeGenOpts<"SignalingNans">>,
+  HelpText<"Assume signaling NaNs behave according to IEEE rules and can"
+           "raise floating-point exceptions">;
+def fno_signaling_nans : Flag<["-"], "fno-signaling-nans">,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoFlag<CodeGenOpts<"NoSignalingNans">>,
+  HelpText<"Assume signaling NaNs are treated identically to quiet NaNs">;
 
 defm strict_float_cast_overflow : BoolFOption<"strict-float-cast-overflow",
   CodeGenOpts<"StrictFloatCastOverflow">, DefaultTrue,
