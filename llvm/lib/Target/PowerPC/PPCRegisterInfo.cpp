@@ -200,8 +200,7 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
 
   if (MF->getFunction().getCallingConv() == CallingConv::PreserveAll) {
-    if (Subtarget.hasSPE() || Subtarget.pairedVectorMemops() ||
-        Subtarget.isAIXABI())
+    if (Subtarget.pairedVectorMemops() || Subtarget.isAIXABI())
       report_fatal_error("PreserveAll unimplemented on this target.");
 
     if (TM.isPPC64())
