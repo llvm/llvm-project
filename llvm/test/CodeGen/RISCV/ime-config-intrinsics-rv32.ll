@@ -27,6 +27,12 @@ define i32 @ime_vlen_rv32() {
 ; RV32-VLEN1024:       # %bb.0:
 ; RV32-VLEN1024-NEXT:    li a0, 1024
 ; RV32-VLEN1024-NEXT:    ret
+;
+; RV32-ZBB-LABEL: ime_vlen_rv32:
+; RV32-ZBB:       # %bb.0:
+; RV32-ZBB-NEXT:    csrr a0, vlenb
+; RV32-ZBB-NEXT:    slli a0, a0, 3
+; RV32-ZBB-NEXT:    ret
   %vlen = call i32 @llvm.riscv.ime.vlen.i32()
   ret i32 %vlen
 }
@@ -76,6 +82,24 @@ define i32 @ime_lambda_rv32() {
 ; RV32-VLEN1024:       # %bb.0:
 ; RV32-VLEN1024-NEXT:    li a0, 4
 ; RV32-VLEN1024-NEXT:    ret
+;
+; RV32-ZBB-LABEL: ime_lambda_rv32:
+; RV32-ZBB:       # %bb.0:
+; RV32-ZBB-NEXT:    csrr a0, vlenb
+; RV32-ZBB-NEXT:    ctz a0, a0
+; RV32-ZBB-NEXT:    sltiu a1, a0, 3
+; RV32-ZBB-NEXT:    addi a0, a0, -3
+; RV32-ZBB-NEXT:    addi a1, a1, -1
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    srli a0, a0, 1
+; RV32-ZBB-NEXT:    li a1, 6
+; RV32-ZBB-NEXT:    bgeu a1, a0, .LBB1_2
+; RV32-ZBB-NEXT:  # %bb.1:
+; RV32-ZBB-NEXT:    li a0, 6
+; RV32-ZBB-NEXT:  .LBB1_2:
+; RV32-ZBB-NEXT:    li a1, 1
+; RV32-ZBB-NEXT:    sll a0, a1, a0
+; RV32-ZBB-NEXT:    ret
   %lambda = call i32 @llvm.riscv.ime.lambda.i32()
   ret i32 %lambda
 }
@@ -122,6 +146,20 @@ define i32 @readlambda_rv32() {
 ; RV32-VLEN1024-NEXT:    sll a0, a2, a0
 ; RV32-VLEN1024-NEXT:    and a0, a1, a0
 ; RV32-VLEN1024-NEXT:    ret
+;
+; RV32-ZBB-LABEL: readlambda_rv32:
+; RV32-ZBB:       # %bb.0:
+; RV32-ZBB-NEXT:    csrr a0, vtype
+; RV32-ZBB-NEXT:    srli a0, a0, 28
+; RV32-ZBB-NEXT:    andi a0, a0, 7
+; RV32-ZBB-NEXT:    seqz a1, a0
+; RV32-ZBB-NEXT:    addi a0, a0, -1
+; RV32-ZBB-NEXT:    addi a1, a1, -1
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    li a2, 1
+; RV32-ZBB-NEXT:    sll a0, a2, a0
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    ret
   %lambda = call i32 @llvm.riscv.ime.readlambda.i32()
   ret i32 %lambda
 }
@@ -189,6 +227,26 @@ define i32 @vsetlambda_1_rv32() {
 ; RV32-VLEN1024-NEXT:    sll a0, a2, a0
 ; RV32-VLEN1024-NEXT:    and a0, a1, a0
 ; RV32-VLEN1024-NEXT:    ret
+;
+; RV32-ZBB-LABEL: vsetlambda_1_rv32:
+; RV32-ZBB:       # %bb.0:
+; RV32-ZBB-NEXT:    csrr a0, vtype
+; RV32-ZBB-NEXT:    lui a1, 458752
+; RV32-ZBB-NEXT:    andn a0, a0, a1
+; RV32-ZBB-NEXT:    lui a1, 65536
+; RV32-ZBB-NEXT:    or a0, a0, a1
+; RV32-ZBB-NEXT:    vsetvl zero, zero, a0
+; RV32-ZBB-NEXT:    csrr a0, vtype
+; RV32-ZBB-NEXT:    srli a0, a0, 28
+; RV32-ZBB-NEXT:    andi a0, a0, 7
+; RV32-ZBB-NEXT:    seqz a1, a0
+; RV32-ZBB-NEXT:    addi a0, a0, -1
+; RV32-ZBB-NEXT:    addi a1, a1, -1
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    li a2, 1
+; RV32-ZBB-NEXT:    sll a0, a2, a0
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    ret
   %lambda = call i32 @llvm.riscv.ime.vsetlambda.nonzero.i32(i32 1)
   ret i32 %lambda
 }
@@ -256,6 +314,26 @@ define i32 @vsetlambda_2_rv32() {
 ; RV32-VLEN1024-NEXT:    sll a0, a2, a0
 ; RV32-VLEN1024-NEXT:    and a0, a1, a0
 ; RV32-VLEN1024-NEXT:    ret
+;
+; RV32-ZBB-LABEL: vsetlambda_2_rv32:
+; RV32-ZBB:       # %bb.0:
+; RV32-ZBB-NEXT:    csrr a0, vtype
+; RV32-ZBB-NEXT:    lui a1, 458752
+; RV32-ZBB-NEXT:    andn a0, a0, a1
+; RV32-ZBB-NEXT:    lui a1, 131072
+; RV32-ZBB-NEXT:    or a0, a0, a1
+; RV32-ZBB-NEXT:    vsetvl zero, zero, a0
+; RV32-ZBB-NEXT:    csrr a0, vtype
+; RV32-ZBB-NEXT:    srli a0, a0, 28
+; RV32-ZBB-NEXT:    andi a0, a0, 7
+; RV32-ZBB-NEXT:    seqz a1, a0
+; RV32-ZBB-NEXT:    addi a0, a0, -1
+; RV32-ZBB-NEXT:    addi a1, a1, -1
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    li a2, 1
+; RV32-ZBB-NEXT:    sll a0, a2, a0
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    ret
   %lambda = call i32 @llvm.riscv.ime.vsetlambda.nonzero.i32(i32 2)
   ret i32 %lambda
 }
@@ -323,6 +401,26 @@ define i32 @vsetlambda_4_rv32() {
 ; RV32-VLEN1024-NEXT:    sll a0, a2, a0
 ; RV32-VLEN1024-NEXT:    and a0, a1, a0
 ; RV32-VLEN1024-NEXT:    ret
+;
+; RV32-ZBB-LABEL: vsetlambda_4_rv32:
+; RV32-ZBB:       # %bb.0:
+; RV32-ZBB-NEXT:    csrr a0, vtype
+; RV32-ZBB-NEXT:    lui a1, 458752
+; RV32-ZBB-NEXT:    andn a0, a0, a1
+; RV32-ZBB-NEXT:    lui a1, 196608
+; RV32-ZBB-NEXT:    or a0, a0, a1
+; RV32-ZBB-NEXT:    vsetvl zero, zero, a0
+; RV32-ZBB-NEXT:    csrr a0, vtype
+; RV32-ZBB-NEXT:    srli a0, a0, 28
+; RV32-ZBB-NEXT:    andi a0, a0, 7
+; RV32-ZBB-NEXT:    seqz a1, a0
+; RV32-ZBB-NEXT:    addi a0, a0, -1
+; RV32-ZBB-NEXT:    addi a1, a1, -1
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    li a2, 1
+; RV32-ZBB-NEXT:    sll a0, a2, a0
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    ret
   %lambda = call i32 @llvm.riscv.ime.vsetlambda.nonzero.i32(i32 4)
   ret i32 %lambda
 }
@@ -390,6 +488,26 @@ define i32 @vsetlambda_8_rv32() {
 ; RV32-VLEN1024-NEXT:    sll a0, a2, a0
 ; RV32-VLEN1024-NEXT:    and a0, a1, a0
 ; RV32-VLEN1024-NEXT:    ret
+;
+; RV32-ZBB-LABEL: vsetlambda_8_rv32:
+; RV32-ZBB:       # %bb.0:
+; RV32-ZBB-NEXT:    csrr a0, vtype
+; RV32-ZBB-NEXT:    lui a1, 458752
+; RV32-ZBB-NEXT:    andn a0, a0, a1
+; RV32-ZBB-NEXT:    lui a1, 262144
+; RV32-ZBB-NEXT:    or a0, a0, a1
+; RV32-ZBB-NEXT:    vsetvl zero, zero, a0
+; RV32-ZBB-NEXT:    csrr a0, vtype
+; RV32-ZBB-NEXT:    srli a0, a0, 28
+; RV32-ZBB-NEXT:    andi a0, a0, 7
+; RV32-ZBB-NEXT:    seqz a1, a0
+; RV32-ZBB-NEXT:    addi a0, a0, -1
+; RV32-ZBB-NEXT:    addi a1, a1, -1
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    li a2, 1
+; RV32-ZBB-NEXT:    sll a0, a2, a0
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    ret
   %lambda = call i32 @llvm.riscv.ime.vsetlambda.nonzero.i32(i32 8)
   ret i32 %lambda
 }
@@ -457,6 +575,26 @@ define i32 @vsetlambda_16_rv32() {
 ; RV32-VLEN1024-NEXT:    sll a0, a2, a0
 ; RV32-VLEN1024-NEXT:    and a0, a1, a0
 ; RV32-VLEN1024-NEXT:    ret
+;
+; RV32-ZBB-LABEL: vsetlambda_16_rv32:
+; RV32-ZBB:       # %bb.0:
+; RV32-ZBB-NEXT:    csrr a0, vtype
+; RV32-ZBB-NEXT:    lui a1, 458752
+; RV32-ZBB-NEXT:    andn a0, a0, a1
+; RV32-ZBB-NEXT:    lui a1, 327680
+; RV32-ZBB-NEXT:    or a0, a0, a1
+; RV32-ZBB-NEXT:    vsetvl zero, zero, a0
+; RV32-ZBB-NEXT:    csrr a0, vtype
+; RV32-ZBB-NEXT:    srli a0, a0, 28
+; RV32-ZBB-NEXT:    andi a0, a0, 7
+; RV32-ZBB-NEXT:    seqz a1, a0
+; RV32-ZBB-NEXT:    addi a0, a0, -1
+; RV32-ZBB-NEXT:    addi a1, a1, -1
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    li a2, 1
+; RV32-ZBB-NEXT:    sll a0, a2, a0
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    ret
   %lambda = call i32 @llvm.riscv.ime.vsetlambda.nonzero.i32(i32 16)
   ret i32 %lambda
 }
@@ -524,6 +662,26 @@ define i32 @vsetlambda_32_rv32() {
 ; RV32-VLEN1024-NEXT:    sll a0, a2, a0
 ; RV32-VLEN1024-NEXT:    and a0, a1, a0
 ; RV32-VLEN1024-NEXT:    ret
+;
+; RV32-ZBB-LABEL: vsetlambda_32_rv32:
+; RV32-ZBB:       # %bb.0:
+; RV32-ZBB-NEXT:    csrr a0, vtype
+; RV32-ZBB-NEXT:    lui a1, 458752
+; RV32-ZBB-NEXT:    andn a0, a0, a1
+; RV32-ZBB-NEXT:    lui a1, 393216
+; RV32-ZBB-NEXT:    or a0, a0, a1
+; RV32-ZBB-NEXT:    vsetvl zero, zero, a0
+; RV32-ZBB-NEXT:    csrr a0, vtype
+; RV32-ZBB-NEXT:    srli a0, a0, 28
+; RV32-ZBB-NEXT:    andi a0, a0, 7
+; RV32-ZBB-NEXT:    seqz a1, a0
+; RV32-ZBB-NEXT:    addi a0, a0, -1
+; RV32-ZBB-NEXT:    addi a1, a1, -1
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    li a2, 1
+; RV32-ZBB-NEXT:    sll a0, a2, a0
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    ret
   %lambda = call i32 @llvm.riscv.ime.vsetlambda.nonzero.i32(i32 32)
   ret i32 %lambda
 }
@@ -582,106 +740,466 @@ define i32 @vsetlambda_64_rv32() {
 ; RV32-VLEN1024-NEXT:    sll a0, a2, a0
 ; RV32-VLEN1024-NEXT:    and a0, a1, a0
 ; RV32-VLEN1024-NEXT:    ret
+;
+; RV32-ZBB-LABEL: vsetlambda_64_rv32:
+; RV32-ZBB:       # %bb.0:
+; RV32-ZBB-NEXT:    csrr a0, vtype
+; RV32-ZBB-NEXT:    lui a1, 458752
+; RV32-ZBB-NEXT:    or a0, a0, a1
+; RV32-ZBB-NEXT:    vsetvl zero, zero, a0
+; RV32-ZBB-NEXT:    csrr a0, vtype
+; RV32-ZBB-NEXT:    srli a0, a0, 28
+; RV32-ZBB-NEXT:    andi a0, a0, 7
+; RV32-ZBB-NEXT:    seqz a1, a0
+; RV32-ZBB-NEXT:    addi a0, a0, -1
+; RV32-ZBB-NEXT:    addi a1, a1, -1
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    li a2, 1
+; RV32-ZBB-NEXT:    sll a0, a2, a0
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    ret
   %lambda = call i32 @llvm.riscv.ime.vsetlambda.nonzero.i32(i32 64)
   ret i32 %lambda
 }
 
 define i32 @vsetlambda_nonzero_runtime_rv32(i32 %x) {
 ; RV32-LABEL: vsetlambda_nonzero_runtime_rv32:
-; RV32-NOT:    call
-; RV32:        csrr {{.*}}, vtype
-; RV32-NOT:    call
-; RV32:        vsetvl zero, zero,
-; RV32-NOT:    call
-; RV32:        csrr a0, vtype
-; RV32-NOT:    call
-; RV32:        ret
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 2
+; RV32-NEXT:    bne a0, a1, .LBB10_8
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    li a2, 4
+; RV32-NEXT:    beq a0, a2, .LBB10_9
+; RV32-NEXT:  .LBB10_2:
+; RV32-NEXT:    li a2, 8
+; RV32-NEXT:    beq a0, a2, .LBB10_10
+; RV32-NEXT:  .LBB10_3:
+; RV32-NEXT:    li a2, 16
+; RV32-NEXT:    beq a0, a2, .LBB10_11
+; RV32-NEXT:  .LBB10_4:
+; RV32-NEXT:    li a2, 32
+; RV32-NEXT:    beq a0, a2, .LBB10_12
+; RV32-NEXT:  .LBB10_5:
+; RV32-NEXT:    li a2, 64
+; RV32-NEXT:    bne a0, a2, .LBB10_7
+; RV32-NEXT:  .LBB10_6:
+; RV32-NEXT:    li a1, 7
+; RV32-NEXT:  .LBB10_7:
+; RV32-NEXT:    lui a0, 589824
+; RV32-NEXT:    csrr a2, vtype
+; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    slli a1, a1, 28
+; RV32-NEXT:    and a0, a2, a0
+; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    vsetvl zero, zero, a0
+; RV32-NEXT:    csrr a0, vtype
+; RV32-NEXT:    srli a0, a0, 28
+; RV32-NEXT:    andi a0, a0, 7
+; RV32-NEXT:    seqz a1, a0
+; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    addi a1, a1, -1
+; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    li a2, 1
+; RV32-NEXT:    sll a0, a2, a0
+; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB10_8:
+; RV32-NEXT:    addi a1, a0, -1
+; RV32-NEXT:    seqz a1, a1
+; RV32-NEXT:    li a2, 4
+; RV32-NEXT:    bne a0, a2, .LBB10_2
+; RV32-NEXT:  .LBB10_9:
+; RV32-NEXT:    li a1, 3
+; RV32-NEXT:    li a2, 8
+; RV32-NEXT:    bne a0, a2, .LBB10_3
+; RV32-NEXT:  .LBB10_10:
+; RV32-NEXT:    li a1, 4
+; RV32-NEXT:    li a2, 16
+; RV32-NEXT:    bne a0, a2, .LBB10_4
+; RV32-NEXT:  .LBB10_11:
+; RV32-NEXT:    li a1, 5
+; RV32-NEXT:    li a2, 32
+; RV32-NEXT:    bne a0, a2, .LBB10_5
+; RV32-NEXT:  .LBB10_12:
+; RV32-NEXT:    li a1, 6
+; RV32-NEXT:    li a2, 64
+; RV32-NEXT:    beq a0, a2, .LBB10_6
+; RV32-NEXT:    j .LBB10_7
 ;
 ; RV32-VLEN512-LABEL: vsetlambda_nonzero_runtime_rv32:
-; RV32-VLEN512-NOT:    call
-; RV32-VLEN512:        csrr {{.*}}, vtype
-; RV32-VLEN512-NOT:    call
-; RV32-VLEN512:        vsetvl zero, zero,
-; RV32-VLEN512-NOT:    call
-; RV32-VLEN512:        csrr a0, vtype
-; RV32-VLEN512-NOT:    call
-; RV32-VLEN512:        ret
+; RV32-VLEN512:       # %bb.0:
+; RV32-VLEN512-NEXT:    li a1, 2
+; RV32-VLEN512-NEXT:    bne a0, a1, .LBB10_8
+; RV32-VLEN512-NEXT:  # %bb.1:
+; RV32-VLEN512-NEXT:    li a2, 4
+; RV32-VLEN512-NEXT:    beq a0, a2, .LBB10_9
+; RV32-VLEN512-NEXT:  .LBB10_2:
+; RV32-VLEN512-NEXT:    li a2, 8
+; RV32-VLEN512-NEXT:    beq a0, a2, .LBB10_10
+; RV32-VLEN512-NEXT:  .LBB10_3:
+; RV32-VLEN512-NEXT:    li a2, 16
+; RV32-VLEN512-NEXT:    beq a0, a2, .LBB10_11
+; RV32-VLEN512-NEXT:  .LBB10_4:
+; RV32-VLEN512-NEXT:    li a2, 32
+; RV32-VLEN512-NEXT:    beq a0, a2, .LBB10_12
+; RV32-VLEN512-NEXT:  .LBB10_5:
+; RV32-VLEN512-NEXT:    li a2, 64
+; RV32-VLEN512-NEXT:    bne a0, a2, .LBB10_7
+; RV32-VLEN512-NEXT:  .LBB10_6:
+; RV32-VLEN512-NEXT:    li a1, 7
+; RV32-VLEN512-NEXT:  .LBB10_7:
+; RV32-VLEN512-NEXT:    lui a0, 589824
+; RV32-VLEN512-NEXT:    csrr a2, vtype
+; RV32-VLEN512-NEXT:    addi a0, a0, -1
+; RV32-VLEN512-NEXT:    slli a1, a1, 28
+; RV32-VLEN512-NEXT:    and a0, a2, a0
+; RV32-VLEN512-NEXT:    or a0, a0, a1
+; RV32-VLEN512-NEXT:    vsetvl zero, zero, a0
+; RV32-VLEN512-NEXT:    csrr a0, vtype
+; RV32-VLEN512-NEXT:    srli a0, a0, 28
+; RV32-VLEN512-NEXT:    andi a0, a0, 7
+; RV32-VLEN512-NEXT:    seqz a1, a0
+; RV32-VLEN512-NEXT:    addi a0, a0, -1
+; RV32-VLEN512-NEXT:    addi a1, a1, -1
+; RV32-VLEN512-NEXT:    and a0, a1, a0
+; RV32-VLEN512-NEXT:    li a2, 1
+; RV32-VLEN512-NEXT:    sll a0, a2, a0
+; RV32-VLEN512-NEXT:    and a0, a1, a0
+; RV32-VLEN512-NEXT:    ret
+; RV32-VLEN512-NEXT:  .LBB10_8:
+; RV32-VLEN512-NEXT:    addi a1, a0, -1
+; RV32-VLEN512-NEXT:    seqz a1, a1
+; RV32-VLEN512-NEXT:    li a2, 4
+; RV32-VLEN512-NEXT:    bne a0, a2, .LBB10_2
+; RV32-VLEN512-NEXT:  .LBB10_9:
+; RV32-VLEN512-NEXT:    li a1, 3
+; RV32-VLEN512-NEXT:    li a2, 8
+; RV32-VLEN512-NEXT:    bne a0, a2, .LBB10_3
+; RV32-VLEN512-NEXT:  .LBB10_10:
+; RV32-VLEN512-NEXT:    li a1, 4
+; RV32-VLEN512-NEXT:    li a2, 16
+; RV32-VLEN512-NEXT:    bne a0, a2, .LBB10_4
+; RV32-VLEN512-NEXT:  .LBB10_11:
+; RV32-VLEN512-NEXT:    li a1, 5
+; RV32-VLEN512-NEXT:    li a2, 32
+; RV32-VLEN512-NEXT:    bne a0, a2, .LBB10_5
+; RV32-VLEN512-NEXT:  .LBB10_12:
+; RV32-VLEN512-NEXT:    li a1, 6
+; RV32-VLEN512-NEXT:    li a2, 64
+; RV32-VLEN512-NEXT:    beq a0, a2, .LBB10_6
+; RV32-VLEN512-NEXT:    j .LBB10_7
 ;
 ; RV32-VLEN1024-LABEL: vsetlambda_nonzero_runtime_rv32:
-; RV32-VLEN1024-NOT:    call
-; RV32-VLEN1024:        csrr {{.*}}, vtype
-; RV32-VLEN1024-NOT:    call
-; RV32-VLEN1024:        vsetvl zero, zero,
-; RV32-VLEN1024-NOT:    call
-; RV32-VLEN1024:        csrr a0, vtype
-; RV32-VLEN1024-NOT:    call
-; RV32-VLEN1024:        ret
+; RV32-VLEN1024:       # %bb.0:
+; RV32-VLEN1024-NEXT:    li a1, 2
+; RV32-VLEN1024-NEXT:    bne a0, a1, .LBB10_8
+; RV32-VLEN1024-NEXT:  # %bb.1:
+; RV32-VLEN1024-NEXT:    li a2, 4
+; RV32-VLEN1024-NEXT:    beq a0, a2, .LBB10_9
+; RV32-VLEN1024-NEXT:  .LBB10_2:
+; RV32-VLEN1024-NEXT:    li a2, 8
+; RV32-VLEN1024-NEXT:    beq a0, a2, .LBB10_10
+; RV32-VLEN1024-NEXT:  .LBB10_3:
+; RV32-VLEN1024-NEXT:    li a2, 16
+; RV32-VLEN1024-NEXT:    beq a0, a2, .LBB10_11
+; RV32-VLEN1024-NEXT:  .LBB10_4:
+; RV32-VLEN1024-NEXT:    li a2, 32
+; RV32-VLEN1024-NEXT:    beq a0, a2, .LBB10_12
+; RV32-VLEN1024-NEXT:  .LBB10_5:
+; RV32-VLEN1024-NEXT:    li a2, 64
+; RV32-VLEN1024-NEXT:    bne a0, a2, .LBB10_7
+; RV32-VLEN1024-NEXT:  .LBB10_6:
+; RV32-VLEN1024-NEXT:    li a1, 7
+; RV32-VLEN1024-NEXT:  .LBB10_7:
+; RV32-VLEN1024-NEXT:    lui a0, 589824
+; RV32-VLEN1024-NEXT:    csrr a2, vtype
+; RV32-VLEN1024-NEXT:    addi a0, a0, -1
+; RV32-VLEN1024-NEXT:    slli a1, a1, 28
+; RV32-VLEN1024-NEXT:    and a0, a2, a0
+; RV32-VLEN1024-NEXT:    or a0, a0, a1
+; RV32-VLEN1024-NEXT:    vsetvl zero, zero, a0
+; RV32-VLEN1024-NEXT:    csrr a0, vtype
+; RV32-VLEN1024-NEXT:    srli a0, a0, 28
+; RV32-VLEN1024-NEXT:    andi a0, a0, 7
+; RV32-VLEN1024-NEXT:    seqz a1, a0
+; RV32-VLEN1024-NEXT:    addi a0, a0, -1
+; RV32-VLEN1024-NEXT:    addi a1, a1, -1
+; RV32-VLEN1024-NEXT:    and a0, a1, a0
+; RV32-VLEN1024-NEXT:    li a2, 1
+; RV32-VLEN1024-NEXT:    sll a0, a2, a0
+; RV32-VLEN1024-NEXT:    and a0, a1, a0
+; RV32-VLEN1024-NEXT:    ret
+; RV32-VLEN1024-NEXT:  .LBB10_8:
+; RV32-VLEN1024-NEXT:    addi a1, a0, -1
+; RV32-VLEN1024-NEXT:    seqz a1, a1
+; RV32-VLEN1024-NEXT:    li a2, 4
+; RV32-VLEN1024-NEXT:    bne a0, a2, .LBB10_2
+; RV32-VLEN1024-NEXT:  .LBB10_9:
+; RV32-VLEN1024-NEXT:    li a1, 3
+; RV32-VLEN1024-NEXT:    li a2, 8
+; RV32-VLEN1024-NEXT:    bne a0, a2, .LBB10_3
+; RV32-VLEN1024-NEXT:  .LBB10_10:
+; RV32-VLEN1024-NEXT:    li a1, 4
+; RV32-VLEN1024-NEXT:    li a2, 16
+; RV32-VLEN1024-NEXT:    bne a0, a2, .LBB10_4
+; RV32-VLEN1024-NEXT:  .LBB10_11:
+; RV32-VLEN1024-NEXT:    li a1, 5
+; RV32-VLEN1024-NEXT:    li a2, 32
+; RV32-VLEN1024-NEXT:    bne a0, a2, .LBB10_5
+; RV32-VLEN1024-NEXT:  .LBB10_12:
+; RV32-VLEN1024-NEXT:    li a1, 6
+; RV32-VLEN1024-NEXT:    li a2, 64
+; RV32-VLEN1024-NEXT:    beq a0, a2, .LBB10_6
+; RV32-VLEN1024-NEXT:    j .LBB10_7
 ;
 ; RV32-ZBB-LABEL: vsetlambda_nonzero_runtime_rv32:
-; RV32-ZBB-NOT:    call
-; RV32-ZBB:        csrr {{.*}}, vtype
-; RV32-ZBB-NOT:    call
-; RV32-ZBB:        ctz {{.*}}, a0
-; RV32-ZBB-NOT:    call
-; RV32-ZBB:        vsetvl zero, zero,
-; RV32-ZBB-NOT:    call
-; RV32-ZBB:        csrr a0, vtype
-; RV32-ZBB-NOT:    call
-; RV32-ZBB:        ret
+; RV32-ZBB:       # %bb.0:
+; RV32-ZBB-NEXT:    csrr a1, vtype
+; RV32-ZBB-NEXT:    ctz a0, a0
+; RV32-ZBB-NEXT:    lui a2, 458752
+; RV32-ZBB-NEXT:    addi a0, a0, 1
+; RV32-ZBB-NEXT:    andn a1, a1, a2
+; RV32-ZBB-NEXT:    slli a0, a0, 28
+; RV32-ZBB-NEXT:    or a0, a1, a0
+; RV32-ZBB-NEXT:    vsetvl zero, zero, a0
+; RV32-ZBB-NEXT:    csrr a0, vtype
+; RV32-ZBB-NEXT:    srli a0, a0, 28
+; RV32-ZBB-NEXT:    andi a0, a0, 7
+; RV32-ZBB-NEXT:    seqz a1, a0
+; RV32-ZBB-NEXT:    addi a0, a0, -1
+; RV32-ZBB-NEXT:    addi a1, a1, -1
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    li a2, 1
+; RV32-ZBB-NEXT:    sll a0, a2, a0
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    ret
   %lambda = call i32 @llvm.riscv.ime.vsetlambda.nonzero.i32(i32 %x)
   ret i32 %lambda
 }
 
 define i32 @vsetlambda_runtime_split_rv32(i32 %x) {
 ; RV32-LABEL: vsetlambda_runtime_split_rv32:
-; RV32-NOT:    call
-; RV32:        beqz a0, [[READ:.LBB[0-9_]+]]
-; RV32-NOT:    call
-; RV32:        vsetvl zero, zero,
-; RV32-NOT:    call
-; RV32:      [[READ]]: # %cont
-; RV32-NEXT:   csrr a0, vtype
-; RV32-NOT:    vsetvl
-; RV32-NOT:    call
-; RV32:        ret
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    beqz a0, .LBB11_9
+; RV32-NEXT:  # %bb.1: # %set
+; RV32-NEXT:    li a1, 2
+; RV32-NEXT:    bne a0, a1, .LBB11_10
+; RV32-NEXT:  # %bb.2: # %set
+; RV32-NEXT:    li a2, 4
+; RV32-NEXT:    beq a0, a2, .LBB11_11
+; RV32-NEXT:  .LBB11_3: # %set
+; RV32-NEXT:    li a2, 8
+; RV32-NEXT:    beq a0, a2, .LBB11_12
+; RV32-NEXT:  .LBB11_4: # %set
+; RV32-NEXT:    li a2, 16
+; RV32-NEXT:    beq a0, a2, .LBB11_13
+; RV32-NEXT:  .LBB11_5: # %set
+; RV32-NEXT:    li a2, 32
+; RV32-NEXT:    beq a0, a2, .LBB11_14
+; RV32-NEXT:  .LBB11_6: # %set
+; RV32-NEXT:    li a2, 64
+; RV32-NEXT:    bne a0, a2, .LBB11_8
+; RV32-NEXT:  .LBB11_7: # %set
+; RV32-NEXT:    li a1, 7
+; RV32-NEXT:  .LBB11_8: # %set
+; RV32-NEXT:    lui a0, 589824
+; RV32-NEXT:    csrr a2, vtype
+; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    slli a1, a1, 28
+; RV32-NEXT:    and a0, a2, a0
+; RV32-NEXT:    or a0, a0, a1
+; RV32-NEXT:    vsetvl zero, zero, a0
+; RV32-NEXT:  .LBB11_9: # %cont
+; RV32-NEXT:    csrr a0, vtype
+; RV32-NEXT:    srli a0, a0, 28
+; RV32-NEXT:    andi a0, a0, 7
+; RV32-NEXT:    seqz a1, a0
+; RV32-NEXT:    addi a0, a0, -1
+; RV32-NEXT:    addi a1, a1, -1
+; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    li a2, 1
+; RV32-NEXT:    sll a0, a2, a0
+; RV32-NEXT:    and a0, a1, a0
+; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB11_10:
+; RV32-NEXT:    addi a1, a0, -1
+; RV32-NEXT:    seqz a1, a1
+; RV32-NEXT:    li a2, 4
+; RV32-NEXT:    bne a0, a2, .LBB11_3
+; RV32-NEXT:  .LBB11_11: # %set
+; RV32-NEXT:    li a1, 3
+; RV32-NEXT:    li a2, 8
+; RV32-NEXT:    bne a0, a2, .LBB11_4
+; RV32-NEXT:  .LBB11_12: # %set
+; RV32-NEXT:    li a1, 4
+; RV32-NEXT:    li a2, 16
+; RV32-NEXT:    bne a0, a2, .LBB11_5
+; RV32-NEXT:  .LBB11_13: # %set
+; RV32-NEXT:    li a1, 5
+; RV32-NEXT:    li a2, 32
+; RV32-NEXT:    bne a0, a2, .LBB11_6
+; RV32-NEXT:  .LBB11_14: # %set
+; RV32-NEXT:    li a1, 6
+; RV32-NEXT:    li a2, 64
+; RV32-NEXT:    beq a0, a2, .LBB11_7
+; RV32-NEXT:    j .LBB11_8
 ;
 ; RV32-VLEN512-LABEL: vsetlambda_runtime_split_rv32:
-; RV32-VLEN512-NOT:    call
-; RV32-VLEN512:        beqz a0, [[READ:.LBB[0-9_]+]]
-; RV32-VLEN512-NOT:    call
-; RV32-VLEN512:        vsetvl zero, zero,
-; RV32-VLEN512-NOT:    call
-; RV32-VLEN512:      [[READ]]: # %cont
-; RV32-VLEN512-NEXT:   csrr a0, vtype
-; RV32-VLEN512-NOT:    vsetvl
-; RV32-VLEN512-NOT:    call
-; RV32-VLEN512:        ret
+; RV32-VLEN512:       # %bb.0: # %entry
+; RV32-VLEN512-NEXT:    beqz a0, .LBB11_9
+; RV32-VLEN512-NEXT:  # %bb.1: # %set
+; RV32-VLEN512-NEXT:    li a1, 2
+; RV32-VLEN512-NEXT:    bne a0, a1, .LBB11_10
+; RV32-VLEN512-NEXT:  # %bb.2: # %set
+; RV32-VLEN512-NEXT:    li a2, 4
+; RV32-VLEN512-NEXT:    beq a0, a2, .LBB11_11
+; RV32-VLEN512-NEXT:  .LBB11_3: # %set
+; RV32-VLEN512-NEXT:    li a2, 8
+; RV32-VLEN512-NEXT:    beq a0, a2, .LBB11_12
+; RV32-VLEN512-NEXT:  .LBB11_4: # %set
+; RV32-VLEN512-NEXT:    li a2, 16
+; RV32-VLEN512-NEXT:    beq a0, a2, .LBB11_13
+; RV32-VLEN512-NEXT:  .LBB11_5: # %set
+; RV32-VLEN512-NEXT:    li a2, 32
+; RV32-VLEN512-NEXT:    beq a0, a2, .LBB11_14
+; RV32-VLEN512-NEXT:  .LBB11_6: # %set
+; RV32-VLEN512-NEXT:    li a2, 64
+; RV32-VLEN512-NEXT:    bne a0, a2, .LBB11_8
+; RV32-VLEN512-NEXT:  .LBB11_7: # %set
+; RV32-VLEN512-NEXT:    li a1, 7
+; RV32-VLEN512-NEXT:  .LBB11_8: # %set
+; RV32-VLEN512-NEXT:    lui a0, 589824
+; RV32-VLEN512-NEXT:    csrr a2, vtype
+; RV32-VLEN512-NEXT:    addi a0, a0, -1
+; RV32-VLEN512-NEXT:    slli a1, a1, 28
+; RV32-VLEN512-NEXT:    and a0, a2, a0
+; RV32-VLEN512-NEXT:    or a0, a0, a1
+; RV32-VLEN512-NEXT:    vsetvl zero, zero, a0
+; RV32-VLEN512-NEXT:  .LBB11_9: # %cont
+; RV32-VLEN512-NEXT:    csrr a0, vtype
+; RV32-VLEN512-NEXT:    srli a0, a0, 28
+; RV32-VLEN512-NEXT:    andi a0, a0, 7
+; RV32-VLEN512-NEXT:    seqz a1, a0
+; RV32-VLEN512-NEXT:    addi a0, a0, -1
+; RV32-VLEN512-NEXT:    addi a1, a1, -1
+; RV32-VLEN512-NEXT:    and a0, a1, a0
+; RV32-VLEN512-NEXT:    li a2, 1
+; RV32-VLEN512-NEXT:    sll a0, a2, a0
+; RV32-VLEN512-NEXT:    and a0, a1, a0
+; RV32-VLEN512-NEXT:    ret
+; RV32-VLEN512-NEXT:  .LBB11_10:
+; RV32-VLEN512-NEXT:    addi a1, a0, -1
+; RV32-VLEN512-NEXT:    seqz a1, a1
+; RV32-VLEN512-NEXT:    li a2, 4
+; RV32-VLEN512-NEXT:    bne a0, a2, .LBB11_3
+; RV32-VLEN512-NEXT:  .LBB11_11: # %set
+; RV32-VLEN512-NEXT:    li a1, 3
+; RV32-VLEN512-NEXT:    li a2, 8
+; RV32-VLEN512-NEXT:    bne a0, a2, .LBB11_4
+; RV32-VLEN512-NEXT:  .LBB11_12: # %set
+; RV32-VLEN512-NEXT:    li a1, 4
+; RV32-VLEN512-NEXT:    li a2, 16
+; RV32-VLEN512-NEXT:    bne a0, a2, .LBB11_5
+; RV32-VLEN512-NEXT:  .LBB11_13: # %set
+; RV32-VLEN512-NEXT:    li a1, 5
+; RV32-VLEN512-NEXT:    li a2, 32
+; RV32-VLEN512-NEXT:    bne a0, a2, .LBB11_6
+; RV32-VLEN512-NEXT:  .LBB11_14: # %set
+; RV32-VLEN512-NEXT:    li a1, 6
+; RV32-VLEN512-NEXT:    li a2, 64
+; RV32-VLEN512-NEXT:    beq a0, a2, .LBB11_7
+; RV32-VLEN512-NEXT:    j .LBB11_8
 ;
 ; RV32-VLEN1024-LABEL: vsetlambda_runtime_split_rv32:
-; RV32-VLEN1024-NOT:    call
-; RV32-VLEN1024:        beqz a0, [[READ:.LBB[0-9_]+]]
-; RV32-VLEN1024-NOT:    call
-; RV32-VLEN1024:        vsetvl zero, zero,
-; RV32-VLEN1024-NOT:    call
-; RV32-VLEN1024:      [[READ]]: # %cont
-; RV32-VLEN1024-NEXT:   csrr a0, vtype
-; RV32-VLEN1024-NOT:    vsetvl
-; RV32-VLEN1024-NOT:    call
-; RV32-VLEN1024:        ret
+; RV32-VLEN1024:       # %bb.0: # %entry
+; RV32-VLEN1024-NEXT:    beqz a0, .LBB11_9
+; RV32-VLEN1024-NEXT:  # %bb.1: # %set
+; RV32-VLEN1024-NEXT:    li a1, 2
+; RV32-VLEN1024-NEXT:    bne a0, a1, .LBB11_10
+; RV32-VLEN1024-NEXT:  # %bb.2: # %set
+; RV32-VLEN1024-NEXT:    li a2, 4
+; RV32-VLEN1024-NEXT:    beq a0, a2, .LBB11_11
+; RV32-VLEN1024-NEXT:  .LBB11_3: # %set
+; RV32-VLEN1024-NEXT:    li a2, 8
+; RV32-VLEN1024-NEXT:    beq a0, a2, .LBB11_12
+; RV32-VLEN1024-NEXT:  .LBB11_4: # %set
+; RV32-VLEN1024-NEXT:    li a2, 16
+; RV32-VLEN1024-NEXT:    beq a0, a2, .LBB11_13
+; RV32-VLEN1024-NEXT:  .LBB11_5: # %set
+; RV32-VLEN1024-NEXT:    li a2, 32
+; RV32-VLEN1024-NEXT:    beq a0, a2, .LBB11_14
+; RV32-VLEN1024-NEXT:  .LBB11_6: # %set
+; RV32-VLEN1024-NEXT:    li a2, 64
+; RV32-VLEN1024-NEXT:    bne a0, a2, .LBB11_8
+; RV32-VLEN1024-NEXT:  .LBB11_7: # %set
+; RV32-VLEN1024-NEXT:    li a1, 7
+; RV32-VLEN1024-NEXT:  .LBB11_8: # %set
+; RV32-VLEN1024-NEXT:    lui a0, 589824
+; RV32-VLEN1024-NEXT:    csrr a2, vtype
+; RV32-VLEN1024-NEXT:    addi a0, a0, -1
+; RV32-VLEN1024-NEXT:    slli a1, a1, 28
+; RV32-VLEN1024-NEXT:    and a0, a2, a0
+; RV32-VLEN1024-NEXT:    or a0, a0, a1
+; RV32-VLEN1024-NEXT:    vsetvl zero, zero, a0
+; RV32-VLEN1024-NEXT:  .LBB11_9: # %cont
+; RV32-VLEN1024-NEXT:    csrr a0, vtype
+; RV32-VLEN1024-NEXT:    srli a0, a0, 28
+; RV32-VLEN1024-NEXT:    andi a0, a0, 7
+; RV32-VLEN1024-NEXT:    seqz a1, a0
+; RV32-VLEN1024-NEXT:    addi a0, a0, -1
+; RV32-VLEN1024-NEXT:    addi a1, a1, -1
+; RV32-VLEN1024-NEXT:    and a0, a1, a0
+; RV32-VLEN1024-NEXT:    li a2, 1
+; RV32-VLEN1024-NEXT:    sll a0, a2, a0
+; RV32-VLEN1024-NEXT:    and a0, a1, a0
+; RV32-VLEN1024-NEXT:    ret
+; RV32-VLEN1024-NEXT:  .LBB11_10:
+; RV32-VLEN1024-NEXT:    addi a1, a0, -1
+; RV32-VLEN1024-NEXT:    seqz a1, a1
+; RV32-VLEN1024-NEXT:    li a2, 4
+; RV32-VLEN1024-NEXT:    bne a0, a2, .LBB11_3
+; RV32-VLEN1024-NEXT:  .LBB11_11: # %set
+; RV32-VLEN1024-NEXT:    li a1, 3
+; RV32-VLEN1024-NEXT:    li a2, 8
+; RV32-VLEN1024-NEXT:    bne a0, a2, .LBB11_4
+; RV32-VLEN1024-NEXT:  .LBB11_12: # %set
+; RV32-VLEN1024-NEXT:    li a1, 4
+; RV32-VLEN1024-NEXT:    li a2, 16
+; RV32-VLEN1024-NEXT:    bne a0, a2, .LBB11_5
+; RV32-VLEN1024-NEXT:  .LBB11_13: # %set
+; RV32-VLEN1024-NEXT:    li a1, 5
+; RV32-VLEN1024-NEXT:    li a2, 32
+; RV32-VLEN1024-NEXT:    bne a0, a2, .LBB11_6
+; RV32-VLEN1024-NEXT:  .LBB11_14: # %set
+; RV32-VLEN1024-NEXT:    li a1, 6
+; RV32-VLEN1024-NEXT:    li a2, 64
+; RV32-VLEN1024-NEXT:    beq a0, a2, .LBB11_7
+; RV32-VLEN1024-NEXT:    j .LBB11_8
 ;
 ; RV32-ZBB-LABEL: vsetlambda_runtime_split_rv32:
-; RV32-ZBB-NOT:    call
-; RV32-ZBB:        beqz a0, [[READ:.LBB[0-9_]+]]
-; RV32-ZBB-NOT:    call
-; RV32-ZBB:        ctz {{.*}}, a0
-; RV32-ZBB-NOT:    call
-; RV32-ZBB:        vsetvl zero, zero,
-; RV32-ZBB-NOT:    call
-; RV32-ZBB:      [[READ]]: # %cont
-; RV32-ZBB-NEXT:   csrr a0, vtype
-; RV32-ZBB-NOT:    vsetvl
-; RV32-ZBB-NOT:    call
-; RV32-ZBB:        ret
+; RV32-ZBB:       # %bb.0: # %entry
+; RV32-ZBB-NEXT:    beqz a0, .LBB11_2
+; RV32-ZBB-NEXT:  # %bb.1: # %set
+; RV32-ZBB-NEXT:    csrr a1, vtype
+; RV32-ZBB-NEXT:    ctz a0, a0
+; RV32-ZBB-NEXT:    lui a2, 458752
+; RV32-ZBB-NEXT:    addi a0, a0, 1
+; RV32-ZBB-NEXT:    andn a1, a1, a2
+; RV32-ZBB-NEXT:    slli a0, a0, 28
+; RV32-ZBB-NEXT:    or a0, a1, a0
+; RV32-ZBB-NEXT:    vsetvl zero, zero, a0
+; RV32-ZBB-NEXT:  .LBB11_2: # %cont
+; RV32-ZBB-NEXT:    csrr a0, vtype
+; RV32-ZBB-NEXT:    srli a0, a0, 28
+; RV32-ZBB-NEXT:    andi a0, a0, 7
+; RV32-ZBB-NEXT:    seqz a1, a0
+; RV32-ZBB-NEXT:    addi a0, a0, -1
+; RV32-ZBB-NEXT:    addi a1, a1, -1
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    li a2, 1
+; RV32-ZBB-NEXT:    sll a0, a2, a0
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    ret
 entry:
   %iszero = icmp eq i32 %x, 0
   br i1 %iszero, label %read, label %set

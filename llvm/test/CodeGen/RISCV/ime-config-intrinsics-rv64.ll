@@ -27,6 +27,12 @@ define i64 @ime_vlen_rv64() {
 ; RV64-VLEN1024:       # %bb.0:
 ; RV64-VLEN1024-NEXT:    li a0, 1024
 ; RV64-VLEN1024-NEXT:    ret
+;
+; RV64-ZBB-LABEL: ime_vlen_rv64:
+; RV64-ZBB:       # %bb.0:
+; RV64-ZBB-NEXT:    csrr a0, vlenb
+; RV64-ZBB-NEXT:    slli a0, a0, 3
+; RV64-ZBB-NEXT:    ret
   %vlen = call i64 @llvm.riscv.ime.vlen.i64()
   ret i64 %vlen
 }
@@ -76,6 +82,24 @@ define i64 @ime_lambda_rv64() {
 ; RV64-VLEN1024:       # %bb.0:
 ; RV64-VLEN1024-NEXT:    li a0, 4
 ; RV64-VLEN1024-NEXT:    ret
+;
+; RV64-ZBB-LABEL: ime_lambda_rv64:
+; RV64-ZBB:       # %bb.0:
+; RV64-ZBB-NEXT:    csrr a0, vlenb
+; RV64-ZBB-NEXT:    ctz a0, a0
+; RV64-ZBB-NEXT:    sltiu a1, a0, 3
+; RV64-ZBB-NEXT:    addi a0, a0, -3
+; RV64-ZBB-NEXT:    addi a1, a1, -1
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    srli a0, a0, 1
+; RV64-ZBB-NEXT:    li a1, 6
+; RV64-ZBB-NEXT:    bgeu a1, a0, .LBB1_2
+; RV64-ZBB-NEXT:  # %bb.1:
+; RV64-ZBB-NEXT:    li a0, 6
+; RV64-ZBB-NEXT:  .LBB1_2:
+; RV64-ZBB-NEXT:    li a1, 1
+; RV64-ZBB-NEXT:    sll a0, a1, a0
+; RV64-ZBB-NEXT:    ret
   %lambda = call i64 @llvm.riscv.ime.lambda.i64()
   ret i64 %lambda
 }
@@ -122,6 +146,20 @@ define i64 @readlambda_rv64() {
 ; RV64-VLEN1024-NEXT:    sll a0, a2, a0
 ; RV64-VLEN1024-NEXT:    and a0, a1, a0
 ; RV64-VLEN1024-NEXT:    ret
+;
+; RV64-ZBB-LABEL: readlambda_rv64:
+; RV64-ZBB:       # %bb.0:
+; RV64-ZBB-NEXT:    csrr a0, vtype
+; RV64-ZBB-NEXT:    srli a0, a0, 60
+; RV64-ZBB-NEXT:    andi a0, a0, 7
+; RV64-ZBB-NEXT:    seqz a1, a0
+; RV64-ZBB-NEXT:    addi a0, a0, -1
+; RV64-ZBB-NEXT:    addi a1, a1, -1
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    li a2, 1
+; RV64-ZBB-NEXT:    sll a0, a2, a0
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    ret
   %lambda = call i64 @llvm.riscv.ime.readlambda.i64()
   ret i64 %lambda
 }
@@ -192,6 +230,27 @@ define i64 @vsetlambda_1_rv64() {
 ; RV64-VLEN1024-NEXT:    sll a0, a2, a0
 ; RV64-VLEN1024-NEXT:    and a0, a1, a0
 ; RV64-VLEN1024-NEXT:    ret
+;
+; RV64-ZBB-LABEL: vsetlambda_1_rv64:
+; RV64-ZBB:       # %bb.0:
+; RV64-ZBB-NEXT:    csrr a0, vtype
+; RV64-ZBB-NEXT:    li a1, -8
+; RV64-ZBB-NEXT:    rori a1, a1, 4
+; RV64-ZBB-NEXT:    li a2, 1
+; RV64-ZBB-NEXT:    and a0, a0, a1
+; RV64-ZBB-NEXT:    slli a1, a2, 60
+; RV64-ZBB-NEXT:    or a0, a0, a1
+; RV64-ZBB-NEXT:    vsetvl zero, zero, a0
+; RV64-ZBB-NEXT:    csrr a0, vtype
+; RV64-ZBB-NEXT:    srli a0, a0, 60
+; RV64-ZBB-NEXT:    andi a0, a0, 7
+; RV64-ZBB-NEXT:    seqz a1, a0
+; RV64-ZBB-NEXT:    addi a0, a0, -1
+; RV64-ZBB-NEXT:    addi a1, a1, -1
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    sll a0, a2, a0
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    ret
   %lambda = call i64 @llvm.riscv.ime.vsetlambda.nonzero.i64(i64 1)
   ret i64 %lambda
 }
@@ -262,6 +321,27 @@ define i64 @vsetlambda_2_rv64() {
 ; RV64-VLEN1024-NEXT:    sll a0, a2, a0
 ; RV64-VLEN1024-NEXT:    and a0, a1, a0
 ; RV64-VLEN1024-NEXT:    ret
+;
+; RV64-ZBB-LABEL: vsetlambda_2_rv64:
+; RV64-ZBB:       # %bb.0:
+; RV64-ZBB-NEXT:    csrr a0, vtype
+; RV64-ZBB-NEXT:    li a1, -8
+; RV64-ZBB-NEXT:    rori a1, a1, 4
+; RV64-ZBB-NEXT:    li a2, 1
+; RV64-ZBB-NEXT:    and a0, a0, a1
+; RV64-ZBB-NEXT:    slli a1, a2, 61
+; RV64-ZBB-NEXT:    or a0, a0, a1
+; RV64-ZBB-NEXT:    vsetvl zero, zero, a0
+; RV64-ZBB-NEXT:    csrr a0, vtype
+; RV64-ZBB-NEXT:    srli a0, a0, 60
+; RV64-ZBB-NEXT:    andi a0, a0, 7
+; RV64-ZBB-NEXT:    seqz a1, a0
+; RV64-ZBB-NEXT:    addi a0, a0, -1
+; RV64-ZBB-NEXT:    addi a1, a1, -1
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    sll a0, a2, a0
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    ret
   %lambda = call i64 @llvm.riscv.ime.vsetlambda.nonzero.i64(i64 2)
   ret i64 %lambda
 }
@@ -335,6 +415,28 @@ define i64 @vsetlambda_4_rv64() {
 ; RV64-VLEN1024-NEXT:    sll a0, a2, a0
 ; RV64-VLEN1024-NEXT:    and a0, a1, a0
 ; RV64-VLEN1024-NEXT:    ret
+;
+; RV64-ZBB-LABEL: vsetlambda_4_rv64:
+; RV64-ZBB:       # %bb.0:
+; RV64-ZBB-NEXT:    csrr a0, vtype
+; RV64-ZBB-NEXT:    li a1, -8
+; RV64-ZBB-NEXT:    rori a1, a1, 4
+; RV64-ZBB-NEXT:    li a2, 3
+; RV64-ZBB-NEXT:    and a0, a0, a1
+; RV64-ZBB-NEXT:    slli a2, a2, 60
+; RV64-ZBB-NEXT:    or a0, a0, a2
+; RV64-ZBB-NEXT:    vsetvl zero, zero, a0
+; RV64-ZBB-NEXT:    csrr a0, vtype
+; RV64-ZBB-NEXT:    srli a0, a0, 60
+; RV64-ZBB-NEXT:    andi a0, a0, 7
+; RV64-ZBB-NEXT:    seqz a1, a0
+; RV64-ZBB-NEXT:    addi a0, a0, -1
+; RV64-ZBB-NEXT:    addi a1, a1, -1
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    li a2, 1
+; RV64-ZBB-NEXT:    sll a0, a2, a0
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    ret
   %lambda = call i64 @llvm.riscv.ime.vsetlambda.nonzero.i64(i64 4)
   ret i64 %lambda
 }
@@ -405,6 +507,27 @@ define i64 @vsetlambda_8_rv64() {
 ; RV64-VLEN1024-NEXT:    sll a0, a2, a0
 ; RV64-VLEN1024-NEXT:    and a0, a1, a0
 ; RV64-VLEN1024-NEXT:    ret
+;
+; RV64-ZBB-LABEL: vsetlambda_8_rv64:
+; RV64-ZBB:       # %bb.0:
+; RV64-ZBB-NEXT:    csrr a0, vtype
+; RV64-ZBB-NEXT:    li a1, -8
+; RV64-ZBB-NEXT:    rori a1, a1, 4
+; RV64-ZBB-NEXT:    li a2, 1
+; RV64-ZBB-NEXT:    and a0, a0, a1
+; RV64-ZBB-NEXT:    slli a1, a2, 62
+; RV64-ZBB-NEXT:    or a0, a0, a1
+; RV64-ZBB-NEXT:    vsetvl zero, zero, a0
+; RV64-ZBB-NEXT:    csrr a0, vtype
+; RV64-ZBB-NEXT:    srli a0, a0, 60
+; RV64-ZBB-NEXT:    andi a0, a0, 7
+; RV64-ZBB-NEXT:    seqz a1, a0
+; RV64-ZBB-NEXT:    addi a0, a0, -1
+; RV64-ZBB-NEXT:    addi a1, a1, -1
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    sll a0, a2, a0
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    ret
   %lambda = call i64 @llvm.riscv.ime.vsetlambda.nonzero.i64(i64 8)
   ret i64 %lambda
 }
@@ -478,6 +601,28 @@ define i64 @vsetlambda_16_rv64() {
 ; RV64-VLEN1024-NEXT:    sll a0, a2, a0
 ; RV64-VLEN1024-NEXT:    and a0, a1, a0
 ; RV64-VLEN1024-NEXT:    ret
+;
+; RV64-ZBB-LABEL: vsetlambda_16_rv64:
+; RV64-ZBB:       # %bb.0:
+; RV64-ZBB-NEXT:    csrr a0, vtype
+; RV64-ZBB-NEXT:    li a1, -8
+; RV64-ZBB-NEXT:    rori a1, a1, 4
+; RV64-ZBB-NEXT:    li a2, 5
+; RV64-ZBB-NEXT:    and a0, a0, a1
+; RV64-ZBB-NEXT:    slli a2, a2, 60
+; RV64-ZBB-NEXT:    or a0, a0, a2
+; RV64-ZBB-NEXT:    vsetvl zero, zero, a0
+; RV64-ZBB-NEXT:    csrr a0, vtype
+; RV64-ZBB-NEXT:    srli a0, a0, 60
+; RV64-ZBB-NEXT:    andi a0, a0, 7
+; RV64-ZBB-NEXT:    seqz a1, a0
+; RV64-ZBB-NEXT:    addi a0, a0, -1
+; RV64-ZBB-NEXT:    addi a1, a1, -1
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    li a2, 1
+; RV64-ZBB-NEXT:    sll a0, a2, a0
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    ret
   %lambda = call i64 @llvm.riscv.ime.vsetlambda.nonzero.i64(i64 16)
   ret i64 %lambda
 }
@@ -551,6 +696,28 @@ define i64 @vsetlambda_32_rv64() {
 ; RV64-VLEN1024-NEXT:    sll a0, a2, a0
 ; RV64-VLEN1024-NEXT:    and a0, a1, a0
 ; RV64-VLEN1024-NEXT:    ret
+;
+; RV64-ZBB-LABEL: vsetlambda_32_rv64:
+; RV64-ZBB:       # %bb.0:
+; RV64-ZBB-NEXT:    csrr a0, vtype
+; RV64-ZBB-NEXT:    li a1, -8
+; RV64-ZBB-NEXT:    rori a1, a1, 4
+; RV64-ZBB-NEXT:    li a2, 3
+; RV64-ZBB-NEXT:    and a0, a0, a1
+; RV64-ZBB-NEXT:    slli a2, a2, 61
+; RV64-ZBB-NEXT:    or a0, a0, a2
+; RV64-ZBB-NEXT:    vsetvl zero, zero, a0
+; RV64-ZBB-NEXT:    csrr a0, vtype
+; RV64-ZBB-NEXT:    srli a0, a0, 60
+; RV64-ZBB-NEXT:    andi a0, a0, 7
+; RV64-ZBB-NEXT:    seqz a1, a0
+; RV64-ZBB-NEXT:    addi a0, a0, -1
+; RV64-ZBB-NEXT:    addi a1, a1, -1
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    li a2, 1
+; RV64-ZBB-NEXT:    sll a0, a2, a0
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    ret
   %lambda = call i64 @llvm.riscv.ime.vsetlambda.nonzero.i64(i64 32)
   ret i64 %lambda
 }
@@ -612,106 +779,475 @@ define i64 @vsetlambda_64_rv64() {
 ; RV64-VLEN1024-NEXT:    sll a0, a2, a0
 ; RV64-VLEN1024-NEXT:    and a0, a1, a0
 ; RV64-VLEN1024-NEXT:    ret
+;
+; RV64-ZBB-LABEL: vsetlambda_64_rv64:
+; RV64-ZBB:       # %bb.0:
+; RV64-ZBB-NEXT:    li a0, 7
+; RV64-ZBB-NEXT:    csrr a1, vtype
+; RV64-ZBB-NEXT:    slli a0, a0, 60
+; RV64-ZBB-NEXT:    or a0, a1, a0
+; RV64-ZBB-NEXT:    vsetvl zero, zero, a0
+; RV64-ZBB-NEXT:    csrr a0, vtype
+; RV64-ZBB-NEXT:    srli a0, a0, 60
+; RV64-ZBB-NEXT:    andi a0, a0, 7
+; RV64-ZBB-NEXT:    seqz a1, a0
+; RV64-ZBB-NEXT:    addi a0, a0, -1
+; RV64-ZBB-NEXT:    addi a1, a1, -1
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    li a2, 1
+; RV64-ZBB-NEXT:    sll a0, a2, a0
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    ret
   %lambda = call i64 @llvm.riscv.ime.vsetlambda.nonzero.i64(i64 64)
   ret i64 %lambda
 }
 
 define i64 @vsetlambda_nonzero_runtime_rv64(i64 %x) {
 ; RV64-LABEL: vsetlambda_nonzero_runtime_rv64:
-; RV64-NOT:    call
-; RV64:        csrr {{.*}}, vtype
-; RV64-NOT:    call
-; RV64:        vsetvl zero, zero,
-; RV64-NOT:    call
-; RV64:        csrr a0, vtype
-; RV64-NOT:    call
-; RV64:        ret
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, 2
+; RV64-NEXT:    bne a0, a1, .LBB10_8
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    li a2, 4
+; RV64-NEXT:    beq a0, a2, .LBB10_9
+; RV64-NEXT:  .LBB10_2:
+; RV64-NEXT:    li a2, 8
+; RV64-NEXT:    beq a0, a2, .LBB10_10
+; RV64-NEXT:  .LBB10_3:
+; RV64-NEXT:    li a2, 16
+; RV64-NEXT:    beq a0, a2, .LBB10_11
+; RV64-NEXT:  .LBB10_4:
+; RV64-NEXT:    li a2, 32
+; RV64-NEXT:    beq a0, a2, .LBB10_12
+; RV64-NEXT:  .LBB10_5:
+; RV64-NEXT:    li a2, 64
+; RV64-NEXT:    bne a0, a2, .LBB10_7
+; RV64-NEXT:  .LBB10_6:
+; RV64-NEXT:    li a1, 7
+; RV64-NEXT:  .LBB10_7:
+; RV64-NEXT:    li a0, -7
+; RV64-NEXT:    slli a0, a0, 60
+; RV64-NEXT:    csrr a2, vtype
+; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    slli a1, a1, 60
+; RV64-NEXT:    and a0, a2, a0
+; RV64-NEXT:    or a0, a0, a1
+; RV64-NEXT:    vsetvl zero, zero, a0
+; RV64-NEXT:    csrr a0, vtype
+; RV64-NEXT:    srli a0, a0, 60
+; RV64-NEXT:    andi a0, a0, 7
+; RV64-NEXT:    seqz a1, a0
+; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    addi a1, a1, -1
+; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    li a2, 1
+; RV64-NEXT:    sll a0, a2, a0
+; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB10_8:
+; RV64-NEXT:    addi a1, a0, -1
+; RV64-NEXT:    seqz a1, a1
+; RV64-NEXT:    li a2, 4
+; RV64-NEXT:    bne a0, a2, .LBB10_2
+; RV64-NEXT:  .LBB10_9:
+; RV64-NEXT:    li a1, 3
+; RV64-NEXT:    li a2, 8
+; RV64-NEXT:    bne a0, a2, .LBB10_3
+; RV64-NEXT:  .LBB10_10:
+; RV64-NEXT:    li a1, 4
+; RV64-NEXT:    li a2, 16
+; RV64-NEXT:    bne a0, a2, .LBB10_4
+; RV64-NEXT:  .LBB10_11:
+; RV64-NEXT:    li a1, 5
+; RV64-NEXT:    li a2, 32
+; RV64-NEXT:    bne a0, a2, .LBB10_5
+; RV64-NEXT:  .LBB10_12:
+; RV64-NEXT:    li a1, 6
+; RV64-NEXT:    li a2, 64
+; RV64-NEXT:    beq a0, a2, .LBB10_6
+; RV64-NEXT:    j .LBB10_7
 ;
 ; RV64-VLEN512-LABEL: vsetlambda_nonzero_runtime_rv64:
-; RV64-VLEN512-NOT:    call
-; RV64-VLEN512:        csrr {{.*}}, vtype
-; RV64-VLEN512-NOT:    call
-; RV64-VLEN512:        vsetvl zero, zero,
-; RV64-VLEN512-NOT:    call
-; RV64-VLEN512:        csrr a0, vtype
-; RV64-VLEN512-NOT:    call
-; RV64-VLEN512:        ret
+; RV64-VLEN512:       # %bb.0:
+; RV64-VLEN512-NEXT:    li a1, 2
+; RV64-VLEN512-NEXT:    bne a0, a1, .LBB10_8
+; RV64-VLEN512-NEXT:  # %bb.1:
+; RV64-VLEN512-NEXT:    li a2, 4
+; RV64-VLEN512-NEXT:    beq a0, a2, .LBB10_9
+; RV64-VLEN512-NEXT:  .LBB10_2:
+; RV64-VLEN512-NEXT:    li a2, 8
+; RV64-VLEN512-NEXT:    beq a0, a2, .LBB10_10
+; RV64-VLEN512-NEXT:  .LBB10_3:
+; RV64-VLEN512-NEXT:    li a2, 16
+; RV64-VLEN512-NEXT:    beq a0, a2, .LBB10_11
+; RV64-VLEN512-NEXT:  .LBB10_4:
+; RV64-VLEN512-NEXT:    li a2, 32
+; RV64-VLEN512-NEXT:    beq a0, a2, .LBB10_12
+; RV64-VLEN512-NEXT:  .LBB10_5:
+; RV64-VLEN512-NEXT:    li a2, 64
+; RV64-VLEN512-NEXT:    bne a0, a2, .LBB10_7
+; RV64-VLEN512-NEXT:  .LBB10_6:
+; RV64-VLEN512-NEXT:    li a1, 7
+; RV64-VLEN512-NEXT:  .LBB10_7:
+; RV64-VLEN512-NEXT:    li a0, -7
+; RV64-VLEN512-NEXT:    slli a0, a0, 60
+; RV64-VLEN512-NEXT:    csrr a2, vtype
+; RV64-VLEN512-NEXT:    addi a0, a0, -1
+; RV64-VLEN512-NEXT:    slli a1, a1, 60
+; RV64-VLEN512-NEXT:    and a0, a2, a0
+; RV64-VLEN512-NEXT:    or a0, a0, a1
+; RV64-VLEN512-NEXT:    vsetvl zero, zero, a0
+; RV64-VLEN512-NEXT:    csrr a0, vtype
+; RV64-VLEN512-NEXT:    srli a0, a0, 60
+; RV64-VLEN512-NEXT:    andi a0, a0, 7
+; RV64-VLEN512-NEXT:    seqz a1, a0
+; RV64-VLEN512-NEXT:    addi a0, a0, -1
+; RV64-VLEN512-NEXT:    addi a1, a1, -1
+; RV64-VLEN512-NEXT:    and a0, a1, a0
+; RV64-VLEN512-NEXT:    li a2, 1
+; RV64-VLEN512-NEXT:    sll a0, a2, a0
+; RV64-VLEN512-NEXT:    and a0, a1, a0
+; RV64-VLEN512-NEXT:    ret
+; RV64-VLEN512-NEXT:  .LBB10_8:
+; RV64-VLEN512-NEXT:    addi a1, a0, -1
+; RV64-VLEN512-NEXT:    seqz a1, a1
+; RV64-VLEN512-NEXT:    li a2, 4
+; RV64-VLEN512-NEXT:    bne a0, a2, .LBB10_2
+; RV64-VLEN512-NEXT:  .LBB10_9:
+; RV64-VLEN512-NEXT:    li a1, 3
+; RV64-VLEN512-NEXT:    li a2, 8
+; RV64-VLEN512-NEXT:    bne a0, a2, .LBB10_3
+; RV64-VLEN512-NEXT:  .LBB10_10:
+; RV64-VLEN512-NEXT:    li a1, 4
+; RV64-VLEN512-NEXT:    li a2, 16
+; RV64-VLEN512-NEXT:    bne a0, a2, .LBB10_4
+; RV64-VLEN512-NEXT:  .LBB10_11:
+; RV64-VLEN512-NEXT:    li a1, 5
+; RV64-VLEN512-NEXT:    li a2, 32
+; RV64-VLEN512-NEXT:    bne a0, a2, .LBB10_5
+; RV64-VLEN512-NEXT:  .LBB10_12:
+; RV64-VLEN512-NEXT:    li a1, 6
+; RV64-VLEN512-NEXT:    li a2, 64
+; RV64-VLEN512-NEXT:    beq a0, a2, .LBB10_6
+; RV64-VLEN512-NEXT:    j .LBB10_7
 ;
 ; RV64-VLEN1024-LABEL: vsetlambda_nonzero_runtime_rv64:
-; RV64-VLEN1024-NOT:    call
-; RV64-VLEN1024:        csrr {{.*}}, vtype
-; RV64-VLEN1024-NOT:    call
-; RV64-VLEN1024:        vsetvl zero, zero,
-; RV64-VLEN1024-NOT:    call
-; RV64-VLEN1024:        csrr a0, vtype
-; RV64-VLEN1024-NOT:    call
-; RV64-VLEN1024:        ret
+; RV64-VLEN1024:       # %bb.0:
+; RV64-VLEN1024-NEXT:    li a1, 2
+; RV64-VLEN1024-NEXT:    bne a0, a1, .LBB10_8
+; RV64-VLEN1024-NEXT:  # %bb.1:
+; RV64-VLEN1024-NEXT:    li a2, 4
+; RV64-VLEN1024-NEXT:    beq a0, a2, .LBB10_9
+; RV64-VLEN1024-NEXT:  .LBB10_2:
+; RV64-VLEN1024-NEXT:    li a2, 8
+; RV64-VLEN1024-NEXT:    beq a0, a2, .LBB10_10
+; RV64-VLEN1024-NEXT:  .LBB10_3:
+; RV64-VLEN1024-NEXT:    li a2, 16
+; RV64-VLEN1024-NEXT:    beq a0, a2, .LBB10_11
+; RV64-VLEN1024-NEXT:  .LBB10_4:
+; RV64-VLEN1024-NEXT:    li a2, 32
+; RV64-VLEN1024-NEXT:    beq a0, a2, .LBB10_12
+; RV64-VLEN1024-NEXT:  .LBB10_5:
+; RV64-VLEN1024-NEXT:    li a2, 64
+; RV64-VLEN1024-NEXT:    bne a0, a2, .LBB10_7
+; RV64-VLEN1024-NEXT:  .LBB10_6:
+; RV64-VLEN1024-NEXT:    li a1, 7
+; RV64-VLEN1024-NEXT:  .LBB10_7:
+; RV64-VLEN1024-NEXT:    li a0, -7
+; RV64-VLEN1024-NEXT:    slli a0, a0, 60
+; RV64-VLEN1024-NEXT:    csrr a2, vtype
+; RV64-VLEN1024-NEXT:    addi a0, a0, -1
+; RV64-VLEN1024-NEXT:    slli a1, a1, 60
+; RV64-VLEN1024-NEXT:    and a0, a2, a0
+; RV64-VLEN1024-NEXT:    or a0, a0, a1
+; RV64-VLEN1024-NEXT:    vsetvl zero, zero, a0
+; RV64-VLEN1024-NEXT:    csrr a0, vtype
+; RV64-VLEN1024-NEXT:    srli a0, a0, 60
+; RV64-VLEN1024-NEXT:    andi a0, a0, 7
+; RV64-VLEN1024-NEXT:    seqz a1, a0
+; RV64-VLEN1024-NEXT:    addi a0, a0, -1
+; RV64-VLEN1024-NEXT:    addi a1, a1, -1
+; RV64-VLEN1024-NEXT:    and a0, a1, a0
+; RV64-VLEN1024-NEXT:    li a2, 1
+; RV64-VLEN1024-NEXT:    sll a0, a2, a0
+; RV64-VLEN1024-NEXT:    and a0, a1, a0
+; RV64-VLEN1024-NEXT:    ret
+; RV64-VLEN1024-NEXT:  .LBB10_8:
+; RV64-VLEN1024-NEXT:    addi a1, a0, -1
+; RV64-VLEN1024-NEXT:    seqz a1, a1
+; RV64-VLEN1024-NEXT:    li a2, 4
+; RV64-VLEN1024-NEXT:    bne a0, a2, .LBB10_2
+; RV64-VLEN1024-NEXT:  .LBB10_9:
+; RV64-VLEN1024-NEXT:    li a1, 3
+; RV64-VLEN1024-NEXT:    li a2, 8
+; RV64-VLEN1024-NEXT:    bne a0, a2, .LBB10_3
+; RV64-VLEN1024-NEXT:  .LBB10_10:
+; RV64-VLEN1024-NEXT:    li a1, 4
+; RV64-VLEN1024-NEXT:    li a2, 16
+; RV64-VLEN1024-NEXT:    bne a0, a2, .LBB10_4
+; RV64-VLEN1024-NEXT:  .LBB10_11:
+; RV64-VLEN1024-NEXT:    li a1, 5
+; RV64-VLEN1024-NEXT:    li a2, 32
+; RV64-VLEN1024-NEXT:    bne a0, a2, .LBB10_5
+; RV64-VLEN1024-NEXT:  .LBB10_12:
+; RV64-VLEN1024-NEXT:    li a1, 6
+; RV64-VLEN1024-NEXT:    li a2, 64
+; RV64-VLEN1024-NEXT:    beq a0, a2, .LBB10_6
+; RV64-VLEN1024-NEXT:    j .LBB10_7
 ;
 ; RV64-ZBB-LABEL: vsetlambda_nonzero_runtime_rv64:
-; RV64-ZBB-NOT:    call
-; RV64-ZBB:        csrr {{.*}}, vtype
-; RV64-ZBB-NOT:    call
-; RV64-ZBB:        ctz {{.*}}, a0
-; RV64-ZBB-NOT:    call
-; RV64-ZBB:        vsetvl zero, zero,
-; RV64-ZBB-NOT:    call
-; RV64-ZBB:        csrr a0, vtype
-; RV64-ZBB-NOT:    call
-; RV64-ZBB:        ret
+; RV64-ZBB:       # %bb.0:
+; RV64-ZBB-NEXT:    csrr a1, vtype
+; RV64-ZBB-NEXT:    li a2, -8
+; RV64-ZBB-NEXT:    ctz a0, a0
+; RV64-ZBB-NEXT:    rori a2, a2, 4
+; RV64-ZBB-NEXT:    addi a0, a0, 1
+; RV64-ZBB-NEXT:    and a1, a1, a2
+; RV64-ZBB-NEXT:    slli a0, a0, 60
+; RV64-ZBB-NEXT:    or a0, a1, a0
+; RV64-ZBB-NEXT:    vsetvl zero, zero, a0
+; RV64-ZBB-NEXT:    csrr a0, vtype
+; RV64-ZBB-NEXT:    srli a0, a0, 60
+; RV64-ZBB-NEXT:    andi a0, a0, 7
+; RV64-ZBB-NEXT:    seqz a1, a0
+; RV64-ZBB-NEXT:    addi a0, a0, -1
+; RV64-ZBB-NEXT:    addi a1, a1, -1
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    li a2, 1
+; RV64-ZBB-NEXT:    sll a0, a2, a0
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    ret
   %lambda = call i64 @llvm.riscv.ime.vsetlambda.nonzero.i64(i64 %x)
   ret i64 %lambda
 }
 
 define i64 @vsetlambda_runtime_split_rv64(i64 %x) {
 ; RV64-LABEL: vsetlambda_runtime_split_rv64:
-; RV64-NOT:    call
-; RV64:        beqz a0, [[READ:.LBB[0-9_]+]]
-; RV64-NOT:    call
-; RV64:        vsetvl zero, zero,
-; RV64-NOT:    call
-; RV64:      [[READ]]: # %cont
-; RV64-NEXT:   csrr a0, vtype
-; RV64-NOT:    vsetvl
-; RV64-NOT:    call
-; RV64:        ret
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    beqz a0, .LBB11_9
+; RV64-NEXT:  # %bb.1: # %set
+; RV64-NEXT:    li a1, 2
+; RV64-NEXT:    bne a0, a1, .LBB11_10
+; RV64-NEXT:  # %bb.2: # %set
+; RV64-NEXT:    li a2, 4
+; RV64-NEXT:    beq a0, a2, .LBB11_11
+; RV64-NEXT:  .LBB11_3: # %set
+; RV64-NEXT:    li a2, 8
+; RV64-NEXT:    beq a0, a2, .LBB11_12
+; RV64-NEXT:  .LBB11_4: # %set
+; RV64-NEXT:    li a2, 16
+; RV64-NEXT:    beq a0, a2, .LBB11_13
+; RV64-NEXT:  .LBB11_5: # %set
+; RV64-NEXT:    li a2, 32
+; RV64-NEXT:    beq a0, a2, .LBB11_14
+; RV64-NEXT:  .LBB11_6: # %set
+; RV64-NEXT:    li a2, 64
+; RV64-NEXT:    bne a0, a2, .LBB11_8
+; RV64-NEXT:  .LBB11_7: # %set
+; RV64-NEXT:    li a1, 7
+; RV64-NEXT:  .LBB11_8: # %set
+; RV64-NEXT:    li a0, -7
+; RV64-NEXT:    slli a0, a0, 60
+; RV64-NEXT:    csrr a2, vtype
+; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    slli a1, a1, 60
+; RV64-NEXT:    and a0, a2, a0
+; RV64-NEXT:    or a0, a0, a1
+; RV64-NEXT:    vsetvl zero, zero, a0
+; RV64-NEXT:  .LBB11_9: # %cont
+; RV64-NEXT:    csrr a0, vtype
+; RV64-NEXT:    srli a0, a0, 60
+; RV64-NEXT:    andi a0, a0, 7
+; RV64-NEXT:    seqz a1, a0
+; RV64-NEXT:    addi a0, a0, -1
+; RV64-NEXT:    addi a1, a1, -1
+; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    li a2, 1
+; RV64-NEXT:    sll a0, a2, a0
+; RV64-NEXT:    and a0, a1, a0
+; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB11_10:
+; RV64-NEXT:    addi a1, a0, -1
+; RV64-NEXT:    seqz a1, a1
+; RV64-NEXT:    li a2, 4
+; RV64-NEXT:    bne a0, a2, .LBB11_3
+; RV64-NEXT:  .LBB11_11: # %set
+; RV64-NEXT:    li a1, 3
+; RV64-NEXT:    li a2, 8
+; RV64-NEXT:    bne a0, a2, .LBB11_4
+; RV64-NEXT:  .LBB11_12: # %set
+; RV64-NEXT:    li a1, 4
+; RV64-NEXT:    li a2, 16
+; RV64-NEXT:    bne a0, a2, .LBB11_5
+; RV64-NEXT:  .LBB11_13: # %set
+; RV64-NEXT:    li a1, 5
+; RV64-NEXT:    li a2, 32
+; RV64-NEXT:    bne a0, a2, .LBB11_6
+; RV64-NEXT:  .LBB11_14: # %set
+; RV64-NEXT:    li a1, 6
+; RV64-NEXT:    li a2, 64
+; RV64-NEXT:    beq a0, a2, .LBB11_7
+; RV64-NEXT:    j .LBB11_8
 ;
 ; RV64-VLEN512-LABEL: vsetlambda_runtime_split_rv64:
-; RV64-VLEN512-NOT:    call
-; RV64-VLEN512:        beqz a0, [[READ:.LBB[0-9_]+]]
-; RV64-VLEN512-NOT:    call
-; RV64-VLEN512:        vsetvl zero, zero,
-; RV64-VLEN512-NOT:    call
-; RV64-VLEN512:      [[READ]]: # %cont
-; RV64-VLEN512-NEXT:   csrr a0, vtype
-; RV64-VLEN512-NOT:    vsetvl
-; RV64-VLEN512-NOT:    call
-; RV64-VLEN512:        ret
+; RV64-VLEN512:       # %bb.0: # %entry
+; RV64-VLEN512-NEXT:    beqz a0, .LBB11_9
+; RV64-VLEN512-NEXT:  # %bb.1: # %set
+; RV64-VLEN512-NEXT:    li a1, 2
+; RV64-VLEN512-NEXT:    bne a0, a1, .LBB11_10
+; RV64-VLEN512-NEXT:  # %bb.2: # %set
+; RV64-VLEN512-NEXT:    li a2, 4
+; RV64-VLEN512-NEXT:    beq a0, a2, .LBB11_11
+; RV64-VLEN512-NEXT:  .LBB11_3: # %set
+; RV64-VLEN512-NEXT:    li a2, 8
+; RV64-VLEN512-NEXT:    beq a0, a2, .LBB11_12
+; RV64-VLEN512-NEXT:  .LBB11_4: # %set
+; RV64-VLEN512-NEXT:    li a2, 16
+; RV64-VLEN512-NEXT:    beq a0, a2, .LBB11_13
+; RV64-VLEN512-NEXT:  .LBB11_5: # %set
+; RV64-VLEN512-NEXT:    li a2, 32
+; RV64-VLEN512-NEXT:    beq a0, a2, .LBB11_14
+; RV64-VLEN512-NEXT:  .LBB11_6: # %set
+; RV64-VLEN512-NEXT:    li a2, 64
+; RV64-VLEN512-NEXT:    bne a0, a2, .LBB11_8
+; RV64-VLEN512-NEXT:  .LBB11_7: # %set
+; RV64-VLEN512-NEXT:    li a1, 7
+; RV64-VLEN512-NEXT:  .LBB11_8: # %set
+; RV64-VLEN512-NEXT:    li a0, -7
+; RV64-VLEN512-NEXT:    slli a0, a0, 60
+; RV64-VLEN512-NEXT:    csrr a2, vtype
+; RV64-VLEN512-NEXT:    addi a0, a0, -1
+; RV64-VLEN512-NEXT:    slli a1, a1, 60
+; RV64-VLEN512-NEXT:    and a0, a2, a0
+; RV64-VLEN512-NEXT:    or a0, a0, a1
+; RV64-VLEN512-NEXT:    vsetvl zero, zero, a0
+; RV64-VLEN512-NEXT:  .LBB11_9: # %cont
+; RV64-VLEN512-NEXT:    csrr a0, vtype
+; RV64-VLEN512-NEXT:    srli a0, a0, 60
+; RV64-VLEN512-NEXT:    andi a0, a0, 7
+; RV64-VLEN512-NEXT:    seqz a1, a0
+; RV64-VLEN512-NEXT:    addi a0, a0, -1
+; RV64-VLEN512-NEXT:    addi a1, a1, -1
+; RV64-VLEN512-NEXT:    and a0, a1, a0
+; RV64-VLEN512-NEXT:    li a2, 1
+; RV64-VLEN512-NEXT:    sll a0, a2, a0
+; RV64-VLEN512-NEXT:    and a0, a1, a0
+; RV64-VLEN512-NEXT:    ret
+; RV64-VLEN512-NEXT:  .LBB11_10:
+; RV64-VLEN512-NEXT:    addi a1, a0, -1
+; RV64-VLEN512-NEXT:    seqz a1, a1
+; RV64-VLEN512-NEXT:    li a2, 4
+; RV64-VLEN512-NEXT:    bne a0, a2, .LBB11_3
+; RV64-VLEN512-NEXT:  .LBB11_11: # %set
+; RV64-VLEN512-NEXT:    li a1, 3
+; RV64-VLEN512-NEXT:    li a2, 8
+; RV64-VLEN512-NEXT:    bne a0, a2, .LBB11_4
+; RV64-VLEN512-NEXT:  .LBB11_12: # %set
+; RV64-VLEN512-NEXT:    li a1, 4
+; RV64-VLEN512-NEXT:    li a2, 16
+; RV64-VLEN512-NEXT:    bne a0, a2, .LBB11_5
+; RV64-VLEN512-NEXT:  .LBB11_13: # %set
+; RV64-VLEN512-NEXT:    li a1, 5
+; RV64-VLEN512-NEXT:    li a2, 32
+; RV64-VLEN512-NEXT:    bne a0, a2, .LBB11_6
+; RV64-VLEN512-NEXT:  .LBB11_14: # %set
+; RV64-VLEN512-NEXT:    li a1, 6
+; RV64-VLEN512-NEXT:    li a2, 64
+; RV64-VLEN512-NEXT:    beq a0, a2, .LBB11_7
+; RV64-VLEN512-NEXT:    j .LBB11_8
 ;
 ; RV64-VLEN1024-LABEL: vsetlambda_runtime_split_rv64:
-; RV64-VLEN1024-NOT:    call
-; RV64-VLEN1024:        beqz a0, [[READ:.LBB[0-9_]+]]
-; RV64-VLEN1024-NOT:    call
-; RV64-VLEN1024:        vsetvl zero, zero,
-; RV64-VLEN1024-NOT:    call
-; RV64-VLEN1024:      [[READ]]: # %cont
-; RV64-VLEN1024-NEXT:   csrr a0, vtype
-; RV64-VLEN1024-NOT:    vsetvl
-; RV64-VLEN1024-NOT:    call
-; RV64-VLEN1024:        ret
+; RV64-VLEN1024:       # %bb.0: # %entry
+; RV64-VLEN1024-NEXT:    beqz a0, .LBB11_9
+; RV64-VLEN1024-NEXT:  # %bb.1: # %set
+; RV64-VLEN1024-NEXT:    li a1, 2
+; RV64-VLEN1024-NEXT:    bne a0, a1, .LBB11_10
+; RV64-VLEN1024-NEXT:  # %bb.2: # %set
+; RV64-VLEN1024-NEXT:    li a2, 4
+; RV64-VLEN1024-NEXT:    beq a0, a2, .LBB11_11
+; RV64-VLEN1024-NEXT:  .LBB11_3: # %set
+; RV64-VLEN1024-NEXT:    li a2, 8
+; RV64-VLEN1024-NEXT:    beq a0, a2, .LBB11_12
+; RV64-VLEN1024-NEXT:  .LBB11_4: # %set
+; RV64-VLEN1024-NEXT:    li a2, 16
+; RV64-VLEN1024-NEXT:    beq a0, a2, .LBB11_13
+; RV64-VLEN1024-NEXT:  .LBB11_5: # %set
+; RV64-VLEN1024-NEXT:    li a2, 32
+; RV64-VLEN1024-NEXT:    beq a0, a2, .LBB11_14
+; RV64-VLEN1024-NEXT:  .LBB11_6: # %set
+; RV64-VLEN1024-NEXT:    li a2, 64
+; RV64-VLEN1024-NEXT:    bne a0, a2, .LBB11_8
+; RV64-VLEN1024-NEXT:  .LBB11_7: # %set
+; RV64-VLEN1024-NEXT:    li a1, 7
+; RV64-VLEN1024-NEXT:  .LBB11_8: # %set
+; RV64-VLEN1024-NEXT:    li a0, -7
+; RV64-VLEN1024-NEXT:    slli a0, a0, 60
+; RV64-VLEN1024-NEXT:    csrr a2, vtype
+; RV64-VLEN1024-NEXT:    addi a0, a0, -1
+; RV64-VLEN1024-NEXT:    slli a1, a1, 60
+; RV64-VLEN1024-NEXT:    and a0, a2, a0
+; RV64-VLEN1024-NEXT:    or a0, a0, a1
+; RV64-VLEN1024-NEXT:    vsetvl zero, zero, a0
+; RV64-VLEN1024-NEXT:  .LBB11_9: # %cont
+; RV64-VLEN1024-NEXT:    csrr a0, vtype
+; RV64-VLEN1024-NEXT:    srli a0, a0, 60
+; RV64-VLEN1024-NEXT:    andi a0, a0, 7
+; RV64-VLEN1024-NEXT:    seqz a1, a0
+; RV64-VLEN1024-NEXT:    addi a0, a0, -1
+; RV64-VLEN1024-NEXT:    addi a1, a1, -1
+; RV64-VLEN1024-NEXT:    and a0, a1, a0
+; RV64-VLEN1024-NEXT:    li a2, 1
+; RV64-VLEN1024-NEXT:    sll a0, a2, a0
+; RV64-VLEN1024-NEXT:    and a0, a1, a0
+; RV64-VLEN1024-NEXT:    ret
+; RV64-VLEN1024-NEXT:  .LBB11_10:
+; RV64-VLEN1024-NEXT:    addi a1, a0, -1
+; RV64-VLEN1024-NEXT:    seqz a1, a1
+; RV64-VLEN1024-NEXT:    li a2, 4
+; RV64-VLEN1024-NEXT:    bne a0, a2, .LBB11_3
+; RV64-VLEN1024-NEXT:  .LBB11_11: # %set
+; RV64-VLEN1024-NEXT:    li a1, 3
+; RV64-VLEN1024-NEXT:    li a2, 8
+; RV64-VLEN1024-NEXT:    bne a0, a2, .LBB11_4
+; RV64-VLEN1024-NEXT:  .LBB11_12: # %set
+; RV64-VLEN1024-NEXT:    li a1, 4
+; RV64-VLEN1024-NEXT:    li a2, 16
+; RV64-VLEN1024-NEXT:    bne a0, a2, .LBB11_5
+; RV64-VLEN1024-NEXT:  .LBB11_13: # %set
+; RV64-VLEN1024-NEXT:    li a1, 5
+; RV64-VLEN1024-NEXT:    li a2, 32
+; RV64-VLEN1024-NEXT:    bne a0, a2, .LBB11_6
+; RV64-VLEN1024-NEXT:  .LBB11_14: # %set
+; RV64-VLEN1024-NEXT:    li a1, 6
+; RV64-VLEN1024-NEXT:    li a2, 64
+; RV64-VLEN1024-NEXT:    beq a0, a2, .LBB11_7
+; RV64-VLEN1024-NEXT:    j .LBB11_8
 ;
 ; RV64-ZBB-LABEL: vsetlambda_runtime_split_rv64:
-; RV64-ZBB-NOT:    call
-; RV64-ZBB:        beqz a0, [[READ:.LBB[0-9_]+]]
-; RV64-ZBB-NOT:    call
-; RV64-ZBB:        ctz {{.*}}, a0
-; RV64-ZBB-NOT:    call
-; RV64-ZBB:        vsetvl zero, zero,
-; RV64-ZBB-NOT:    call
-; RV64-ZBB:      [[READ]]: # %cont
-; RV64-ZBB-NEXT:   csrr a0, vtype
-; RV64-ZBB-NOT:    vsetvl
-; RV64-ZBB-NOT:    call
-; RV64-ZBB:        ret
+; RV64-ZBB:       # %bb.0: # %entry
+; RV64-ZBB-NEXT:    beqz a0, .LBB11_2
+; RV64-ZBB-NEXT:  # %bb.1: # %set
+; RV64-ZBB-NEXT:    csrr a1, vtype
+; RV64-ZBB-NEXT:    li a2, -8
+; RV64-ZBB-NEXT:    ctz a0, a0
+; RV64-ZBB-NEXT:    rori a2, a2, 4
+; RV64-ZBB-NEXT:    addi a0, a0, 1
+; RV64-ZBB-NEXT:    and a1, a1, a2
+; RV64-ZBB-NEXT:    slli a0, a0, 60
+; RV64-ZBB-NEXT:    or a0, a1, a0
+; RV64-ZBB-NEXT:    vsetvl zero, zero, a0
+; RV64-ZBB-NEXT:  .LBB11_2: # %cont
+; RV64-ZBB-NEXT:    csrr a0, vtype
+; RV64-ZBB-NEXT:    srli a0, a0, 60
+; RV64-ZBB-NEXT:    andi a0, a0, 7
+; RV64-ZBB-NEXT:    seqz a1, a0
+; RV64-ZBB-NEXT:    addi a0, a0, -1
+; RV64-ZBB-NEXT:    addi a1, a1, -1
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    li a2, 1
+; RV64-ZBB-NEXT:    sll a0, a2, a0
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    ret
 entry:
   %iszero = icmp eq i64 %x, 0
   br i1 %iszero, label %read, label %set
