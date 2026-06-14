@@ -450,6 +450,10 @@ Error DXContainer::parseSourceInfo(StringRef Part) {
     return Err;
   Current += sizeof(SourceInfo->Parameters);
 
+  if (SourceInfo->Parameters.AlignedSizeInBytes > Part.size())
+    return parseFailed(formatv("size field in SRCI header ({0} bytes) is greater than SRCI part size ({1} bytes)",
+                               SourceInfo->Parameters.AlignedSizeInBytes,
+                               Part.size()));
   if (SourceInfo->Parameters.Flags)
     return parseFailed("SRCI header flags must be zero");
   if (SourceInfo->Parameters.SectionCount != 3)
