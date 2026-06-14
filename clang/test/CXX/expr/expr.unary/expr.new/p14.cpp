@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++1z -fexceptions %s -verify
+// RUN: %clang_cc1 -std=c++1z -fexceptions %s -verify=expected,cxx17
+// RUN: %clang_cc1 -std=c++20 -fexceptions %s -verify=expected,since-cxx20
 
 using size_t = decltype(sizeof(0));
 namespace std { enum class align_val_t : size_t {}; }
@@ -6,7 +7,9 @@ namespace std { enum class align_val_t : size_t {}; }
 struct Arg {} arg;
 
 // If the type is aligned, first try with an alignment argument and then
-// without. If not, never consider supplying an alignment.
+// without. If not:
+// - For C++17, never consider supplying an alignment;
+// - For C++20 and later, try without an alignment argument first, then with it.
 
 template<unsigned Align, typename ...Ts>
 struct alignas(Align) Unaligned {
@@ -19,11 +22,11 @@ auto *ubp = new (arg) Unaligned<__STDCPP_DEFAULT_NEW_ALIGNMENT__ * 2, Arg>; // e
 
 template<unsigned Align, typename ...Ts>
 struct alignas(Align) Aligned {
-  void *operator new(size_t, std::align_val_t, Ts...) = delete; // expected-note 2{{deleted}} expected-note 2{{not viable}}
+  void *operator new(size_t, std::align_val_t, Ts...) = delete; // cxx17-note 2{{deleted}} cxx17-note 2{{not viable}} since-cxx20-note 4{{deleted}}
 };
-auto *aa = new Aligned<__STDCPP_DEFAULT_NEW_ALIGNMENT__>; // expected-error {{no matching}}
+auto *aa = new Aligned<__STDCPP_DEFAULT_NEW_ALIGNMENT__>; // cxx17-error {{no matching}} since-cxx20-error {{deleted}}
 auto *ab = new Aligned<__STDCPP_DEFAULT_NEW_ALIGNMENT__ * 2>; // expected-error {{deleted}}
-auto *aap = new (arg) Aligned<__STDCPP_DEFAULT_NEW_ALIGNMENT__, Arg>; // expected-error {{no matching}}
+auto *aap = new (arg) Aligned<__STDCPP_DEFAULT_NEW_ALIGNMENT__, Arg>; // cxx17-error {{no matching}} since-cxx20-error {{deleted}}
 auto *abp = new (arg) Aligned<__STDCPP_DEFAULT_NEW_ALIGNMENT__ * 2, Arg>; // expected-error {{deleted}}
 
 // If both are available, we prefer the aligned version for an overaligned

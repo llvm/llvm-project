@@ -4,6 +4,8 @@
 // RUN: %clang_cc1 -std=c++14 -faligned-allocation -fsyntax-only -verify %s
 // RUN: %clang_cc1 -std=c++17                      -fsyntax-only -verify %s
 // RUN: %clang_cc1 -std=c++17 -faligned-allocation -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++20                      -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++20 -faligned-allocation -fsyntax-only -verify %s
 
 namespace std {
 typedef __SIZE_TYPE__ size_t;
@@ -62,7 +64,11 @@ void *operator new(std::size_t, std::align_val_t, X); // #3
 // FIXME: Consider improving notes 1 and 3 here to say that these are aligned
 // allocation functions and the type is not over-aligned.
 X *p = new (123) X; // expected-error {{no matching function}}
+#if __cplusplus >= 202002L
+// expected-note@#1 {{requires 2 arguments, but 4 were provided}}
+#else
 // expected-note@#1 {{no known conversion from 'int' to 'std::align_val_t' for 2nd argument}}
+#endif
 // expected-note@#2 {{no known conversion from 'int' to 'X' for 2nd argument}}
 // expected-note@#3 {{requires 3 arguments}}
 // expected-note@* {{requires 1 argument, but 2 were provided}} (builtin)

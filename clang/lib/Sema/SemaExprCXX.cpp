@@ -2767,7 +2767,8 @@ static bool resolveAllocationOverload(
 
   case OR_No_Viable_Function:
     if (!PrefCandidates && !FallbackArgs.empty()) {
-      PassAlignment = AlignedAllocationMode::No;
+      PassAlignment =
+          alignedAllocationModeFromBool(!isAlignedAllocation(PassAlignment));
       return resolveAllocationOverload(S, R, Range, Mode, PrefArgs,
                                        FallbackArgs, PassAlignment, Operator,
                                        &Candidates, Diagnose);
@@ -2799,17 +2800,19 @@ static bool resolveAllocationOverload(
       // If this is an allocation of the form 'new (p) X' for some object
       // pointer p (or an expression that will decay to such a pointer),
       // diagnose the reason for the error.
-      if (!R.isClassLookup() && Args.size() == 2 &&
-          (Args[1]->getType()->isObjectPointerType() ||
-           Args[1]->getType()->isArrayType())) {
-        const QualType Arg1Type = Args[1]->getType();
+      if (!R.isClassLookup() &&
+          (Args.size() == 2 ||
+           (Args.size() == 3 && isAlignedAllocation(PassAlignment))) &&
+          (Args.back()->getType()->isObjectPointerType() ||
+           Args.back()->getType()->isArrayType())) {
+        const QualType Arg1Type = Args.back()->getType();
         QualType UnderlyingType = S.Context.getBaseElementType(Arg1Type);
         if (UnderlyingType->isPointerType())
           UnderlyingType = UnderlyingType->getPointeeType();
         if (UnderlyingType.isConstQualified()) {
-          S.Diag(Args[1]->getExprLoc(),
+          S.Diag(Args.back()->getExprLoc(),
                  diag::err_placement_new_into_const_qualified_storage)
-              << Arg1Type << Args[1]->getSourceRange();
+              << Arg1Type << Args.back()->getSourceRange();
           return true;
         }
         S.Diag(R.getNameLoc(), diag::err_need_header_before_placement_new)
@@ -2829,6 +2832,10 @@ static bool resolveAllocationOverload(
       if (PrefCandidates) {
         assert(Mode == ResolveMode::Untyped &&
                "Typed mode does not issue diagnostics");
+        bool PrefHasAlignArg = PrefArgs.size() > FallbackArgs.size();
+        assert(
+            PrefHasAlignArg == !isAlignedAllocation(PassAlignment) &&
+            "PassAlignment must match preferable and fallback argument lists");
         auto IsAligned = [](OverloadCandidate &C) {
           const unsigned AlignArgOffset = 1;
           return C.Function->getNumParams() > AlignArgOffset &&
@@ -2836,13 +2843,18 @@ static bool resolveAllocationOverload(
                      ->getType()
                      ->isAlignValT();
         };
-        auto IsUnaligned = [&](OverloadCandidate &C) { return !IsAligned(C); };
+        auto IsPref = [&](OverloadCandidate &C) {
+          return PrefHasAlignArg ? IsAligned(C) : !IsAligned(C);
+        };
+        auto IsFallback = [&](OverloadCandidate &C) {
+          return PrefHasAlignArg ? !IsAligned(C) : IsAligned(C);
+        };
 
         PrefCands = PrefCandidates->CompleteCandidates(
-            S, OCD_AllCandidates, PrefArgs, R.getNameLoc(), IsAligned);
+            S, OCD_AllCandidates, PrefArgs, R.getNameLoc(), IsPref);
 
         Cands = Candidates.CompleteCandidates(S, OCD_AllCandidates, Args,
-                                              R.getNameLoc(), IsUnaligned);
+                                              R.getNameLoc(), IsFallback);
       } else {
         Cands = Candidates.CompleteCandidates(S, OCD_AllCandidates, Args,
                                               R.getNameLoc());
@@ -2957,9 +2969,10 @@ bool Sema::FindAllocationFunctions(
 
   QualType AlignValT = Context.VoidTy;
   if (isTypeAwareAllocation(OriginalTypeAwareState) ||
-      isAlignedAllocation(OriginalAlignedAllocationMode)) {
+      getLangOpts().AlignedAllocation) {
     DeclareGlobalNewDelete();
-    AlignValT = Context.getCanonicalTagType(getStdAlignValT());
+    if (EnumDecl *StdAlignValT = getStdAlignValT())
+      AlignValT = Context.getCanonicalTagType(StdAlignValT);
   }
   CXXScalarValueInitExpr Align(AlignValT, nullptr, SourceLocation());
 
@@ -3043,11 +3056,23 @@ bool Sema::FindAllocationFunctions(
       //   If no matching function is found and the allocated object type has
       //   new-extended alignment, the alignment argument is removed from the
       //   argument list, and overload resolution is performed again.
+      //
+      // C++20 [expr.new]p18:
+      //   If no matching function is found then
+      //     — if the allocated object type has new-extended alignment, the
+      //       alignment argument is removed from the argument list;
+      //     — otherwise, an argument that is the type’s alignment and has type
+      //       std::align_val_t is added into the argument list immediately
+      //       after the first argument;
+      //   and then overload resolution is performed again.
+      bool UseFallback = isAlignedAllocation(OriginalAlignedAllocationMode) ||
+                         (getLangOpts().CPlusPlus20 && getStdAlignValT());
+      auto FallbackAlignedAllocationMode = alignedAllocationModeFromBool(
+          !isAlignedAllocation(OriginalAlignedAllocationMode));
       auto FallbackAllocArgs =
-          isAlignedAllocation(OriginalAlignedAllocationMode)
-              ? FillAllocArgs(TypeAwareAllocationMode::No,
-                              AlignedAllocationMode::No)
-              : ArgsVector();
+          UseFallback ? FillAllocArgs(TypeAwareAllocationMode::No,
+                                      FallbackAlignedAllocationMode)
+                      : ArgsVector();
       if (resolveAllocationOverload(*this, R, Range, ResolveMode::Untyped,
                                     AllocArgs, FallbackAllocArgs,
                                     IAP.PassAlignment, OperatorNew,

@@ -2,20 +2,21 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++11
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++14
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++17
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++20
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++23
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,since-cxx26,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++2c
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++20
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++23
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,since-cxx26,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++2c
 
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++98 -fexperimental-new-constant-interpreter -DNEW_INTERP
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++11 -fexperimental-new-constant-interpreter -DNEW_INTERP
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++14 -fexperimental-new-constant-interpreter -DNEW_INTERP
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,precxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++17 -fexperimental-new-constant-interpreter -DNEW_INTERP
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++20 -fexperimental-new-constant-interpreter -DNEW_INTERP
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++23 -fexperimental-new-constant-interpreter -DNEW_INTERP
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,since-cxx26,cxx17,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++2c -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++20 -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx98-23,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++23 -fexperimental-new-constant-interpreter -DNEW_INTERP
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,since-cxx26,cxx20 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++2c -fexperimental-new-constant-interpreter -DNEW_INTERP
 
 // FIXME Location is (frontend)
 // cxx17-note@*:* {{candidate function not viable: requires 2 arguments, but 3 were provided}}
+// cxx20-note@*:* {{candidate function not viable: requires 2 arguments, but 4 were provided}}
 
 #include <stddef.h>
 

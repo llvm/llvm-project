@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,cxx98-11,cxx98-14,cxx98-17,cxx98
 // RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,cxx98-11,cxx98-14,cxx98-17,since-cxx11
 // RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,cxx98-14,cxx98-17,since-cxx11
-// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,since-cxx17,cxx98-17,since-cxx11
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,since-cxx17,cxx17,cxx98-17,since-cxx11
 // RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,since-cxx20,since-cxx17,since-cxx11
 // RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-23,since-cxx23,since-cxx20,since-cxx17,since-cxx11
 // RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx26,since-cxx23,since-cxx20,since-cxx17,since-cxx11
@@ -682,8 +682,9 @@ namespace cwg553 {
   // "is looked up in global scope", where it is not visible.
   void *p = new (c) int;
   // expected-error@-1 {{no matching function for call to 'operator new'}}
-  //   since-cxx17-note@#cwg5xx-global-operator-new-aligned {{candidate function not viable: no known conversion from 'cwg553_class' to 'std::align_val_t' for 2nd argument}}
+  //   cxx17-note@#cwg5xx-global-operator-new-aligned {{candidate function not viable: no known conversion from 'cwg553_class' to 'std::align_val_t' for 2nd argument}}
   //   expected-note@#cwg5xx-global-operator-new {{candidate function not viable: requires 1 argument, but 2 were provided}}
+  //   since-cxx20-note@#cwg5xx-global-operator-new-aligned {{candidate function not viable: requires 2 arguments, but 3 were provided}}
 
   struct namespace_scope {
     friend void *operator new(size_t, namespace_scope);
