@@ -1478,6 +1478,23 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
       PredPHI->replaceAllUsesWith(Op);
   }
 
+  // Drop the mask of a predicated store masked by the header mask (which is
+  // guaranteed to be true at least for the first lane) and both the stored
+  // value and the address are uniform across VF and UF.
+  if (auto *RepR = dyn_cast<VPReplicateRecipe>(Def);
+      RepR && RepR->isPredicated() && RepR->getOpcode() == Instruction::Store &&
+      all_of(RepR->operandsWithoutMask(), vputils::isUniformAcrossVFsAndUFs) &&
+      vputils::isHeaderMask(RepR->getMask(), *Plan)) {
+    auto *Unmasked = new VPReplicateRecipe(
+        RepR->getUnderlyingInstr(), RepR->operandsWithoutMask(),
+        RepR->isSingleScalar(), /*Mask=*/nullptr, *RepR, *RepR,
+        RepR->getDebugLoc());
+    Unmasked->insertBefore(RepR);
+    RepR->replaceAllUsesWith(Unmasked);
+    RepR->eraseFromParent();
+    return;
+  }
+
   VPBuilder Builder(Def);
 
   // Avoid replacing VPInstructions with underlying values with new
