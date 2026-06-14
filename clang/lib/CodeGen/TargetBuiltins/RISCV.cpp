@@ -343,12 +343,9 @@ emitRVVIMEBuiltin(CodeGenFunction *CGF, const CallExpr *E,
     // selected-lambda query, so emit real control flow instead of an
     // unconditional vsetvl guarded only by a selected vtype value.
     llvm::Function *Fn = Builder.GetInsertBlock()->getParent();
-    llvm::BasicBlock *ReadBB =
-        CGF->createBasicBlock("ime.vsetlambda.read", Fn);
-    llvm::BasicBlock *SetBB =
-        CGF->createBasicBlock("ime.vsetlambda.set", Fn);
-    llvm::BasicBlock *ContBB =
-        CGF->createBasicBlock("ime.vsetlambda.cont", Fn);
+    llvm::BasicBlock *ReadBB = CGF->createBasicBlock("ime.vsetlambda.read", Fn);
+    llvm::BasicBlock *SetBB = CGF->createBasicBlock("ime.vsetlambda.set", Fn);
+    llvm::BasicBlock *ContBB = CGF->createBasicBlock("ime.vsetlambda.cont", Fn);
 
     Value *IsZero =
         Builder.CreateICmpEQ(Req, llvm::ConstantInt::get(ResultType, 0));
@@ -362,8 +359,8 @@ emitRVVIMEBuiltin(CodeGenFunction *CGF, const CallExpr *E,
     ReadBB = Builder.GetInsertBlock();
 
     Builder.SetInsertPoint(SetBB);
-    llvm::Function *SetF = CGM.getIntrinsic(
-        Intrinsic::riscv_ime_vsetlambda_nonzero, {ResultType});
+    llvm::Function *SetF =
+        CGM.getIntrinsic(Intrinsic::riscv_ime_vsetlambda_nonzero, {ResultType});
     Value *SetVal = Builder.CreateCall(SetF, {Req});
     Builder.CreateBr(ContBB);
     SetBB = Builder.GetInsertBlock();

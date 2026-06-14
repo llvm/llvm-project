@@ -11616,9 +11616,10 @@ static unsigned getKnownIMEImplementationLambda(unsigned VLenBits) {
 //
 //   encoded 0 -> lambda 0
 //   encoded n -> lambda 1 << (n - 1), for n in [1, 7]
-static SDValue decodeSelectedIMELambdaFromVType(
-    SDValue VType, const SDLoc &DL, SelectionDAG &DAG,
-    const RISCVSubtarget &Subtarget) {
+static SDValue
+decodeSelectedIMELambdaFromVType(SDValue VType, const SDLoc &DL,
+                                 SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
   MVT XLenVT = Subtarget.getXLenVT();
   SDValue Encoded =
       DAG.getNode(ISD::SRL, DL, XLenVT, VType,
@@ -11628,14 +11629,12 @@ static SDValue decodeSelectedIMELambdaFromVType(
 
   SDValue Zero = DAG.getConstant(0, DL, XLenVT);
   SDValue IsZero = DAG.getSetCC(DL, XLenVT, Encoded, Zero, ISD::SETEQ);
-  SDValue ShiftAmt =
-      DAG.getNode(ISD::SUB, DL, XLenVT, Encoded,
-                  DAG.getConstant(1, DL, XLenVT));
+  SDValue ShiftAmt = DAG.getNode(ISD::SUB, DL, XLenVT, Encoded,
+                                 DAG.getConstant(1, DL, XLenVT));
   ShiftAmt = DAG.getSelect(DL, XLenVT, IsZero, Zero, ShiftAmt);
 
-  SDValue Lambda =
-      DAG.getNode(ISD::SHL, DL, XLenVT, DAG.getConstant(1, DL, XLenVT),
-                  ShiftAmt);
+  SDValue Lambda = DAG.getNode(ISD::SHL, DL, XLenVT,
+                               DAG.getConstant(1, DL, XLenVT), ShiftAmt);
   return DAG.getSelect(DL, XLenVT, IsZero, Zero, Lambda);
 }
 
@@ -11699,29 +11698,26 @@ static SDValue lowerIMEImplementationLambda(SDValue Op, SelectionDAG &DAG,
 
   SDValue Lambda;
   if (std::optional<unsigned> KnownVLen = Subtarget.getRealVLen()) {
-    Lambda =
-        DAG.getConstant(getKnownIMEImplementationLambda(*KnownVLen), DL, XLenVT);
+    Lambda = DAG.getConstant(getKnownIMEImplementationLambda(*KnownVLen), DL,
+                             XLenVT);
   } else {
     SDValue VLenB = DAG.getNode(RISCVISD::READ_VLENB, DL, XLenVT);
     SDValue Ctz = DAG.getNode(ISD::CTTZ_ZERO_POISON, DL, XLenVT, VLenB);
 
     SDValue Three = DAG.getConstant(3, DL, XLenVT);
     SDValue IsSmall = DAG.getSetCC(DL, XLenVT, Ctz, Three, ISD::SETULT);
-    SDValue LambdaLog2 =
-        DAG.getNode(ISD::SUB, DL, XLenVT, Ctz, Three);
+    SDValue LambdaLog2 = DAG.getNode(ISD::SUB, DL, XLenVT, Ctz, Three);
     LambdaLog2 = DAG.getSelect(DL, XLenVT, IsSmall,
                                DAG.getConstant(0, DL, XLenVT), LambdaLog2);
-    LambdaLog2 =
-        DAG.getNode(ISD::SRL, DL, XLenVT, LambdaLog2,
-                    DAG.getConstant(1, DL, XLenVT));
+    LambdaLog2 = DAG.getNode(ISD::SRL, DL, XLenVT, LambdaLog2,
+                             DAG.getConstant(1, DL, XLenVT));
 
     SDValue Six = DAG.getConstant(6, DL, XLenVT);
-    SDValue IsTooLarge =
-        DAG.getSetCC(DL, XLenVT, LambdaLog2, Six, ISD::SETUGT);
+    SDValue IsTooLarge = DAG.getSetCC(DL, XLenVT, LambdaLog2, Six, ISD::SETUGT);
     LambdaLog2 = DAG.getSelect(DL, XLenVT, IsTooLarge, Six, LambdaLog2);
 
-    Lambda = DAG.getNode(ISD::SHL, DL, XLenVT,
-                         DAG.getConstant(1, DL, XLenVT), LambdaLog2);
+    Lambda = DAG.getNode(ISD::SHL, DL, XLenVT, DAG.getConstant(1, DL, XLenVT),
+                         LambdaLog2);
   }
 
   return Lambda;
@@ -11766,11 +11762,10 @@ static SDValue encodeRuntimeIMELambda(SDValue Requested, const SDLoc &DL,
   SDValue Encoded = DAG.getConstant(0, DL, XLenVT);
 
   auto SelectIfEq = [&](uint64_t Value, unsigned Enc) {
-    SDValue IsEq =
-        DAG.getSetCC(DL, XLenVT, Requested,
-                     DAG.getConstant(Value, DL, XLenVT), ISD::SETEQ);
-    Encoded = DAG.getSelect(DL, XLenVT, IsEq,
-                            DAG.getConstant(Enc, DL, XLenVT), Encoded);
+    SDValue IsEq = DAG.getSetCC(DL, XLenVT, Requested,
+                                DAG.getConstant(Value, DL, XLenVT), ISD::SETEQ);
+    Encoded = DAG.getSelect(DL, XLenVT, IsEq, DAG.getConstant(Enc, DL, XLenVT),
+                            Encoded);
   };
 
   SelectIfEq(1, 1);
@@ -11812,26 +11807,23 @@ static SDValue lowerIMEVSetLambdaNonZero(SDValue Op, SelectionDAG &DAG,
   if (auto *C = dyn_cast<ConstantSDNode>(Requested)) {
     uint64_t Value = C->getZExtValue();
     if (!isValidIMELambdaValue(Value))
-      report_fatal_error(
-          "invalid constant requested lambda for "
-          "llvm.riscv.ime.vsetlambda.nonzero");
+      report_fatal_error("invalid constant requested lambda for "
+                         "llvm.riscv.ime.vsetlambda.nonzero");
 
     Encoded = DAG.getConstant(Log2_64(Value) + 1, DL, XLenVT);
   } else {
     Encoded = encodeRuntimeIMELambda(Requested, DL, DAG, Subtarget, XLenVT);
   }
 
-  SDValue Cleared =
-      DAG.getNode(ISD::AND, DL, XLenVT, OldVType,
-                  DAG.getConstant(getIMEClearLambdaMask(Subtarget), DL,
-                                  XLenVT));
+  SDValue Cleared = DAG.getNode(
+      ISD::AND, DL, XLenVT, OldVType,
+      DAG.getConstant(getIMEClearLambdaMask(Subtarget), DL, XLenVT));
   SDValue EncodedBits =
       DAG.getNode(ISD::SHL, DL, XLenVT, Encoded,
                   DAG.getConstant(getIMELambdaShift(Subtarget), DL, XLenVT));
   SDValue NewVType = DAG.getNode(ISD::OR, DL, XLenVT, Cleared, EncodedBits);
 
-  Chain = DAG.getNode(RISCVISD::IME_VSETVTYPE, DL, MVT::Other, Chain,
-                      NewVType);
+  Chain = DAG.getNode(RISCVISD::IME_VSETVTYPE, DL, MVT::Other, Chain, NewVType);
 
   SDValue UpdatedVType = readIMEVType(Chain, DL, DAG, Subtarget);
   Chain = UpdatedVType.getValue(1);
