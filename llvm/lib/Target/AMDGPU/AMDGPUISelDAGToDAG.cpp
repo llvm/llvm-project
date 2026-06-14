@@ -4086,6 +4086,29 @@ bool AMDGPUDAGToDAGISel::SelectWMMAVISrc(SDValue In, SDValue &Src) const {
         }
     }
 
+  // Currently f64 immediate vectors are represented as vectors of v2i32, with
+  // different lo and hi 32-bit values even though double values are splated.
+  // So we have to manually compare to determine whether it is splated.
+  if (CurDAG->isConstantIntBuildVectorOrConstantInt(SplatSrc32)) {
+    int64_t Imm64 = 0;
+    for (unsigned i = 0; i < SplatSrc32->getNumOperands(); i += 2) {
+      auto Lo32 = cast<ConstantSDNode>(SplatSrc32->getOperand(i));
+      auto Hi32 = cast<ConstantSDNode>(SplatSrc32->getOperand(i + 1));
+      int64_t LoImm = Lo32->getAPIntValue().getSExtValue();
+      int64_t HiImm = Hi32->getAPIntValue().getSExtValue();
+      int64_t Imm64I = (HiImm << 32) + LoImm;
+      if (i == 0) {
+        if (!isInlineImmediate(APInt(64, Imm64I)))
+          return false;
+        Imm64 = Imm64I;
+      } else if (Imm64I != Imm64)
+        return false;
+    } // end for
+
+    Src = CurDAG->getTargetConstant(Imm64, SDLoc(In), MVT::i64);
+    return true;
+  }
+
   return false;
 }
 
@@ -4407,16 +4430,107 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
     }
 
     // Recursion is naturally limited by the size of the operand vector.
-    auto Op = BitOp3_Op(LHS, Src);
-    if (Op.first) {
-      NumOpcodes += Op.first;
-      LHSBits = Op.second;
+    //
+    // When LHS and RHS share a common sub-expression, one side's recursion
+    // may decompose that sub-expression and replace the Src slot the other
+    // side occupies with sub-operands via the "replace parent" path in
+    // getOperandBits. The other side's cached bit-pattern then refers to a
+    // slot whose contents changed, producing a wrong truth table.
+    //
+    // We detect this in three ways:
+    // (A) If LHS recursed, its truth table is valid against the Src state
+    //     when LHS recursion completed (SrcAfterLHS). If RHS recursion
+    //     then mutates a Src slot that LHSBits depends on, LHSBits is
+    //     stale.
+    // (B) If RHS did not recurse, RHSBits came from getOperandBits and
+    //     refers to a specific Src slot. If that slot's contents changed
+    //     (by either recursion), RHSBits is stale.
+    // (C) Symmetrically for LHS if it did not recurse.
+    SmallVector<SDValue, 3> SrcBeforeRecurse(Src.begin(), Src.end());
+    uint8_t LHSBitsOrig = LHSBits;
+    uint8_t RHSBitsOrig = RHSBits;
+
+    auto LHSOp = BitOp3_Op(LHS, Src);
+    if (LHSOp.first) {
+      NumOpcodes += LHSOp.first;
+      LHSBits = LHSOp.second;
     }
 
-    Op = BitOp3_Op(RHS, Src);
-    if (Op.first) {
-      NumOpcodes += Op.first;
-      RHSBits = Op.second;
+    SmallVector<SDValue, 3> SrcAfterLHS(Src.begin(), Src.end());
+
+    auto RHSOp = BitOp3_Op(RHS, Src);
+    if (RHSOp.first) {
+      NumOpcodes += RHSOp.first;
+      RHSBits = RHSOp.second;
+    }
+
+    // dependsOnSlot: true iff the truth table TT varies with slot Slot.
+    auto dependsOnSlot = [](uint8_t TT, int Slot) -> bool {
+      if (Slot < 0 || Slot > 2)
+        return false;
+      const uint8_t Masks[3] = {0x0f, 0x33, 0x55};
+      const int Shifts[3] = {4, 2, 1};
+      return ((TT ^ (TT >> Shifts[Slot])) & Masks[Slot]) != 0;
+    };
+
+    // findSlot: locate the Src slot a getOperandBits result depends on,
+    // including negated (XOR with -1) patterns that getOperandBits
+    // resolves via the NOT shortcut (~SrcBits[I]).
+    const uint8_t SrcBitsConst[3] = {0xf0, 0xcc, 0xaa};
+    auto findSlot = [&](uint8_t Bits, SDValue Op,
+                        const SmallVectorImpl<SDValue> &S) -> int {
+      SDValue NegatedInner;
+      bool IsNegationOp =
+          Op.getOpcode() == ISD::XOR && isAllOnesConstant(Op.getOperand(1));
+      if (IsNegationOp)
+        NegatedInner = Op.getOperand(0);
+      for (int I = 0; I < (int)S.size(); I++) {
+        if (Bits == SrcBitsConst[I] && S[I] == Op)
+          return I;
+        if (IsNegationOp && Bits == (uint8_t)~SrcBitsConst[I] &&
+            S[I] == NegatedInner)
+          return I;
+      }
+      return -1;
+    };
+
+    bool Stale = false;
+
+    // (A) LHS recursed: its truth table is against SrcAfterLHS.
+    //     Check if RHS recursion mutated a slot that LHSBits uses.
+    if (LHSOp.first) {
+      for (int I = 0; I < (int)SrcAfterLHS.size() && I < 3; I++) {
+        if (I < (int)Src.size() && Src[I] != SrcAfterLHS[I] &&
+            dependsOnSlot(LHSBits, I)) {
+          Stale = true;
+          break;
+        }
+      }
+    }
+
+    // (B) RHS did not recurse: RHSBits from getOperandBits is against
+    //     SrcBeforeRecurse. Check if that slot was mutated since then.
+    if (!Stale && !RHSOp.first) {
+      int Slot = findSlot(RHSBitsOrig, RHS, SrcBeforeRecurse);
+      if (Slot >= 0 &&
+          (Slot >= (int)Src.size() || Src[Slot] != SrcBeforeRecurse[Slot]))
+        Stale = true;
+    }
+
+    // (C) LHS did not recurse: LHSBits from getOperandBits is against
+    //     SrcBeforeRecurse. Check if that slot was mutated since then.
+    if (!Stale && !LHSOp.first) {
+      int Slot = findSlot(LHSBitsOrig, LHS, SrcBeforeRecurse);
+      if (Slot >= 0 &&
+          (Slot >= (int)Src.size() || Src[Slot] != SrcBeforeRecurse[Slot]))
+        Stale = true;
+    }
+
+    if (Stale) {
+      Src = std::move(SrcBeforeRecurse);
+      LHSBits = LHSBitsOrig;
+      RHSBits = RHSBitsOrig;
+      NumOpcodes = 0;
     }
     break;
   }

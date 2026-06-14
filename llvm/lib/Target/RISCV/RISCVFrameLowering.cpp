@@ -132,9 +132,13 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
   if (HasHWShadowStack) {
     if (STI.hasStdExtZcmop()) {
       static_assert(RAReg == RISCV::X1, "C.SSPUSH only accepts X1");
-      BuildMI(MBB, MI, DL, TII->get(RISCV::C_SSPUSH)).addReg(RAReg);
+      BuildMI(MBB, MI, DL, TII->get(RISCV::C_SSPUSH))
+          .addReg(RAReg)
+          .setMIFlag(MachineInstr::FrameSetup);
     } else {
-      BuildMI(MBB, MI, DL, TII->get(RISCV::SSPUSH)).addReg(RAReg);
+      BuildMI(MBB, MI, DL, TII->get(RISCV::SSPUSH))
+          .addReg(RAReg)
+          .setMIFlag(MachineInstr::FrameSetup);
     }
     return;
   }
@@ -197,7 +201,9 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
 
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   if (HasHWShadowStack) {
-    BuildMI(MBB, MI, DL, TII->get(RISCV::SSPOPCHK)).addReg(RAReg);
+    BuildMI(MBB, MI, DL, TII->get(RISCV::SSPOPCHK))
+        .addReg(RAReg)
+        .setMIFlag(MachineInstr::FrameDestroy);
     return;
   }
 
@@ -1433,6 +1439,27 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL);
 }
 
+void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
+                                              MachineBasicBlock &MBB) const {
+  // Insertion point.
+  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
+
+  // Fake a debug loc.
+  DebugLoc DL;
+  if (MBBI != MBB.end())
+    DL = MBBI->getDebugLoc();
+
+  const MachineFunction &MF = *MBB.getParent();
+  const RISCVSubtarget &STI = MF.getSubtarget<RISCVSubtarget>();
+  const RISCVRegisterInfo &TRI = *STI.getRegisterInfo();
+  const RISCVInstrInfo &TII = *STI.getInstrInfo();
+
+  for (MCRegister Reg : RegsToZero.set_bits()) {
+    if (TRI.isGeneralPurposeRegister(MF, Reg))
+      TII.buildClearRegister(Reg, MBB, MBBI, DL);
+  }
+}
+
 StackOffset
 RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
                                            Register &FrameReg) const {
@@ -1518,8 +1545,35 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
       assert(!MFI.hasVarSizedObjects());
       FrameReg = SPReg;
     }
+  } else if (!RI->hasStackRealignment(MF)) {
+    // Note: Keeping the following as multiple 'if' statements rather than
+    // merging to a single expression for readability.
+    if (!hasFP(MF)) {
+      // No FP available, must use SP.
+      FrameReg = SPReg;
+    } else {
+      FrameReg = FPReg;
+      // SP-relative addressing is only valid when SP is stable throughout
+      // the function body: no dynamic SP adjustments for outgoing call args,
+      // no variable-sized objects, and no RVV scalable stack regions.
+      // hasReservedCallFrame() conservatively encompasses all these checks.
+      if (hasReservedCallFrame(MF)) {
+        // Both FP and SP are candidates.
+        // Prefer SP when the SP-relative offset fits in the compressed
+        // instruction immediate range.
+        int64_t SPOff = Offset.getFixed() + MFI.getStackSize();
+        int64_t CLWSPMaxOffset = 252;
+        int64_t CLDSPMaxOffset = 504;
+        int64_t SPThreshold = STI.is64Bit() ? CLDSPMaxOffset : CLWSPMaxOffset;
+        if (SPOff >= 0 && SPOff <= SPThreshold)
+          FrameReg = SPReg;
+      }
+    }
   } else {
-    FrameReg = RI->getFrameRegister(MF);
+    assert(RI->hasStackRealignment(MF) && MFI.isFixedObjectIndex(FI) &&
+           "Expected fixed object with stack realignment");
+    assert(hasFP(MF) && "Re-aligned stack must have frame pointer");
+    FrameReg = FPReg;
   }
 
   if (FrameReg == FPReg) {

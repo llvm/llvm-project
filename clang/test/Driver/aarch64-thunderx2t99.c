@@ -4,8 +4,8 @@
 // RUN: %clang --target=aarch64 -mtune=thunderx2t99 -### -c %s 2>&1 | FileCheck -check-prefix=THUNDERX2T99-TUNE %s
 // RUN: %clang --target=aarch64 -mlittle-endian -mtune=thunderx2t99 -### -c %s 2>&1 | FileCheck -check-prefix=THUNDERX2T99-TUNE %s
 // RUN: %clang --target=aarch64_be -mlittle-endian -mtune=thunderx2t99 -### -c %s 2>&1 | FileCheck -check-prefix=THUNDERX2T99-TUNE %s
-// THUNDERX2T99: "-cc1"{{.*}} "-triple" "aarch64{{(--)?}}"{{.*}} "-target-cpu" "thunderx2t99" "-target-feature" "+v8.1a"
-// THUNDERX2T99-TUNE: "-cc1"{{.*}} "-triple" "aarch64{{(--)?}}"{{.*}} "-target-cpu" "generic"
+// THUNDERX2T99: "-cc1"{{.*}} "-triple" "aarch64{{(-unknown-unknown)?}}"{{.*}} "-target-cpu" "thunderx2t99" "-target-feature" "+v8.1a"
+// THUNDERX2T99-TUNE: "-cc1"{{.*}} "-triple" "aarch64{{(-unknown-unknown)?}}"{{.*}} "-target-cpu" "generic"
 // THUNDERX2T99-TUNE-NOT: +v8.1a
 
 // RUN: %clang --target=arm64 -mcpu=thunderx2t99 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-THUNDERX2T99 %s

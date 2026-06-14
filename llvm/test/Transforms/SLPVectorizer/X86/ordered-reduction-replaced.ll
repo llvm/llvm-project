@@ -5,13 +5,12 @@ define double @test(double %0) {
 ; CHECK-LABEL: define double @test(
 ; CHECK-SAME: double [[TMP0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double 1.000000e+00, double poison>, double [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> zeroinitializer, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP3]])
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul double [[TMP0]], 0.000000e+00
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc double [[TMP5]], 0.000000e+00
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd reassoc double [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    ret double [[OP_RDX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd reassoc double [[TMP5]], [[OP_RDX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd reassoc double [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    ret double [[TMP7]]
 ;
 entry:
   %1 = fmul double %0, 0.000000e+00

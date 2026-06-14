@@ -605,7 +605,8 @@ LLVM_ABI Type *computeScalarTypeForInstruction(unsigned Opcode,
 /// VPSingleDefRecipe is a base class for recipes that model a sequence of one
 /// or more output IR that define a single result VPValue. Note that
 /// VPSingleDefRecipe must inherit from VPRecipeBase before VPSingleDefValue.
-class VPSingleDefRecipe : public VPRecipeBase, public VPSingleDefValue {
+class LLVM_ABI_FOR_TEST VPSingleDefRecipe : public VPRecipeBase,
+                                            public VPSingleDefValue {
 public:
   VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,
                     DebugLoc DL = DebugLoc::getUnknown())
@@ -1001,7 +1002,7 @@ public:
            OpType == OperationType::ReductionOp;
   }
 
-  LLVM_ABI_FOR_TEST FastMathFlags getFastMathFlags() const;
+  LLVM_ABI_FOR_TEST FastMathFlags getFastMathFlagsOrNone() const;
 
   /// Returns true if the recipe has non-negative flag.
   bool hasNonNegFlag() const { return OpType == OperationType::NonNegOp; }
@@ -1167,7 +1168,7 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
 
 /// Helper to manage IR metadata for recipes. It filters out metadata that
 /// cannot be propagated.
-class VPIRMetadata {
+class LLVM_ABI_FOR_TEST VPIRMetadata {
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
 
 public:
@@ -1541,8 +1542,10 @@ public:
                         Type *ResultTy, const VPIRFlags &Flags = {},
                         const VPIRMetadata &Metadata = {},
                         DebugLoc DL = DebugLoc::getUnknown(),
-                        const Twine &Name = "")
-      : VPInstruction(Opcode, Operands, Flags, Metadata, DL, Name, ResultTy) {}
+                        const Twine &Name = "", Value *UV = nullptr)
+      : VPInstruction(Opcode, Operands, Flags, Metadata, DL, Name, ResultTy) {
+    setUnderlyingValue(UV);
+  }
 
   static inline bool classof(const VPRecipeBase *R) {
     // VPInstructionWithType are VPInstructions with specific opcodes requiring
@@ -1580,12 +1583,16 @@ public:
 
   /// Return the cost of this VPInstruction.
   InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override {
-    // TODO: Compute accurate cost after retiring the legacy cost model.
-    return 0;
-  }
+                              VPCostContext &Ctx) const override;
 
   Type *getResultType() const { return getScalarType(); }
+
+  /// Cast recipes always use scalars of their operand.
+  bool usesScalars(const VPValue *Op) const override {
+    if (Instruction::isCast(getOpcode()))
+      return true;
+    return VPInstruction::usesScalars(Op);
+  }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2198,14 +2205,6 @@ protected:
 /// A recipe for handling GEP instructions.
 class LLVM_ABI_FOR_TEST VPWidenGEPRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
-
-  bool isPointerLoopInvariant() const {
-    return getOperand(0)->isDefinedOutsideLoopRegions();
-  }
-
-  bool isIndexLoopInvariant(unsigned I) const {
-    return getOperand(I + 1)->isDefinedOutsideLoopRegions();
-  }
 
 public:
   VPWidenGEPRecipe(Type *SourceElementTy, ArrayRef<VPValue *> Operands,
@@ -2918,11 +2917,6 @@ public:
     Style = RdxUnordered{ScaleFactor};
   }
 
-  /// Returns the number of incoming values, also number of incoming blocks.
-  /// Note that at the moment, VPWidenPointerInductionRecipe only has a single
-  /// incoming value, its start value.
-  unsigned getNumIncoming() const override { return 2; }
-
   /// Returns the recurrence kind of the reduction.
   RecurKind getRecurrenceKind() const { return Kind; }
 
@@ -3285,7 +3279,7 @@ public:
   ~VPReductionRecipe() override = default;
 
   VPReductionRecipe *clone() override {
-    return new VPReductionRecipe(RdxKind, getFastMathFlags(),
+    return new VPReductionRecipe(RdxKind, getFastMathFlagsOrNone(),
                                  getUnderlyingInstr(), getChainOp(), getVecOp(),
                                  getCondOp(), Style, getDebugLoc());
   }
@@ -3361,7 +3355,7 @@ public:
   VPReductionEVLRecipe(VPReductionRecipe &R, VPValue &EVL, VPValue *CondOp,
                        DebugLoc DL = DebugLoc::getUnknown())
       : VPReductionRecipe(VPRecipeBase::VPReductionEVLSC, R.getRecurrenceKind(),
-                          R.getFastMathFlags(),
+                          R.getFastMathFlagsOrNone(),
                           cast_or_null<Instruction>(R.getUnderlyingValue()),
                           {R.getChainOp(), R.getVecOp(), &EVL}, CondOp,
                           getReductionStyle(/*InLoop=*/true, R.isOrdered(), 1),
@@ -3417,6 +3411,8 @@ public:
                             computeScalarType(I, Operands), Flags, DL),
         VPIRMetadata(Metadata), IsSingleScalar(IsSingleScalar),
         IsPredicated(Mask) {
+    assert((!IsSingleScalar || !I->isCast()) &&
+           "single-scalar casts should use VPInstructionWithType");
     setUnderlyingValue(I);
     if (Mask)
       addOperand(Mask);
@@ -3593,8 +3589,9 @@ public:
       : VPExpressionRecipe(ExpressionTypes::NegatedExtendedReduction,
                            {Ext, Neg, Red}) {
     assert((Red->getRecurrenceKind() == RecurKind::Add ||
-            Red->getRecurrenceKind() == RecurKind::FAdd) &&
-           "Expected an add reduction");
+            Red->getRecurrenceKind() == RecurKind::FAdd ||
+            Red->getRecurrenceKind() == RecurKind::AddChainWithSubs) &&
+           "Expected an add or add-chain-with-subs reduction");
     if (Neg->getOpcode() == Instruction::Sub) {
       [[maybe_unused]] auto *SubConst = dyn_cast<VPConstantInt>(getOperand(1));
       assert(SubConst && SubConst->isZero() && "Expected a negating sub");
@@ -3616,8 +3613,9 @@ public:
             Mul->getOpcode() == Instruction::FMul) &&
            "Expected a mul");
     assert((Red->getRecurrenceKind() == RecurKind::Add ||
-            Red->getRecurrenceKind() == RecurKind::FAdd) &&
-           "Expected an add reduction");
+            Red->getRecurrenceKind() == RecurKind::FAdd ||
+            Red->getRecurrenceKind() == RecurKind::AddChainWithSubs) &&
+           "Expected an add or add-chain-with-subs reduction");
     assert(getNumOperands() >= 3 && "Expected at least three operands");
     if (Neg->getOpcode() == Instruction::Sub) {
       [[maybe_unused]] auto *SubConst = dyn_cast<VPConstantInt>(getOperand(2));
@@ -3841,8 +3839,8 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPSingleDefRecipe,
   }
 
 protected:
-  VPRecipeBase *getAsRecipe() override { return this; }
-  const VPRecipeBase *getAsRecipe() const override { return this; }
+  VPRecipeBase *getAsRecipe() override;
+  const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3854,8 +3852,9 @@ protected:
 /// A recipe for widening load operations with vector-predication intrinsics,
 /// using the address to load from, the explicit vector length and an optional
 /// mask.
-struct VPWidenLoadEVLRecipe final : public VPSingleDefRecipe,
-                                    public VPWidenMemoryRecipe {
+struct LLVM_ABI_FOR_TEST VPWidenLoadEVLRecipe final
+    : public VPSingleDefRecipe,
+      public VPWidenMemoryRecipe {
   VPWidenLoadEVLRecipe(VPWidenLoadRecipe &L, VPValue *Addr, VPValue &EVL,
                        VPValue *Mask)
       : VPSingleDefRecipe(VPRecipeBase::VPWidenLoadEVLSC, {Addr, &EVL},
@@ -3891,8 +3890,8 @@ struct VPWidenLoadEVLRecipe final : public VPSingleDefRecipe,
   }
 
 protected:
-  VPRecipeBase *getAsRecipe() override { return this; }
-  const VPRecipeBase *getAsRecipe() const override { return this; }
+  LLVM_ABI_FOR_TEST VPRecipeBase *getAsRecipe() override;
+  LLVM_ABI_FOR_TEST const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3943,8 +3942,8 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPRecipeBase,
   }
 
 protected:
-  VPRecipeBase *getAsRecipe() override { return this; }
-  const VPRecipeBase *getAsRecipe() const override { return this; }
+  VPRecipeBase *getAsRecipe() override;
+  const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3956,8 +3955,9 @@ protected:
 /// A recipe for widening store operations with vector-predication intrinsics,
 /// using the value to store, the address to store to, the explicit vector
 /// length and an optional mask.
-struct VPWidenStoreEVLRecipe final : public VPRecipeBase,
-                                     public VPWidenMemoryRecipe {
+struct LLVM_ABI_FOR_TEST VPWidenStoreEVLRecipe final
+    : public VPRecipeBase,
+      public VPWidenMemoryRecipe {
   VPWidenStoreEVLRecipe(VPWidenStoreRecipe &S, VPValue *Addr,
                         VPValue *StoredVal, VPValue &EVL, VPValue *Mask)
       : VPRecipeBase(VPRecipeBase::VPWidenStoreEVLSC, {Addr, StoredVal, &EVL},
@@ -4000,8 +4000,8 @@ struct VPWidenStoreEVLRecipe final : public VPRecipeBase,
   }
 
 protected:
-  VPRecipeBase *getAsRecipe() override { return this; }
-  const VPRecipeBase *getAsRecipe() const override { return this; }
+  LLVM_ABI_FOR_TEST VPRecipeBase *getAsRecipe() override;
+  LLVM_ABI_FOR_TEST const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -4270,9 +4270,9 @@ public:
   ~VPScalarIVStepsRecipe() override = default;
 
   VPScalarIVStepsRecipe *clone() override {
-    auto *NewR = new VPScalarIVStepsRecipe(getOperand(0), getOperand(1),
-                                           getOperand(2), InductionOpcode,
-                                           getFastMathFlags(), getDebugLoc());
+    auto *NewR = new VPScalarIVStepsRecipe(
+        getOperand(0), getOperand(1), getOperand(2), InductionOpcode,
+        getFastMathFlagsOrNone(), getDebugLoc());
     if (VPValue *StartIndex = getStartIndex())
       NewR->setStartIndex(StartIndex);
     return NewR;

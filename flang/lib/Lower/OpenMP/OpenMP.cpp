@@ -4589,7 +4589,7 @@ genOpenMPDeclareMapperImpl(lower::AbstractConverter &converter,
   List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processMap(loc, stmtCtx, clauseOps);
-  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps.mapVars);
+  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps);
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -4650,49 +4650,6 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 }
 
 namespace {
-struct TargetOMPContext final : public llvm::omp::OMPContext {
-  TargetOMPContext(mlir::ModuleOp module,
-                   llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits)
-      // Metadirective lowering has no selected target device, so construct the
-      // context with an unknown device number. Target-device selectors are
-      // rejected before matching because OMPContext would otherwise describe
-      // the host device in this mode.
-      : OMPContext(isDeviceCompilation(module), fir::getTargetTriple(module),
-                   getOffloadTargetTriple(module),
-                   /*DeviceNum=*/-1),
-        targetFeatures(fir::getTargetFeatures(module)) {
-    for (llvm::omp::TraitProperty trait : constructTraits)
-      addTrait(trait);
-  }
-
-  bool matchesISATrait(llvm::StringRef rawString) const override {
-    if (!targetFeatures || targetFeatures.nullOrEmpty())
-      return false;
-    return targetFeatures.contains(("+" + rawString).str());
-  }
-
-private:
-  static bool isDeviceCompilation(mlir::ModuleOp module) {
-    return llvm::cast<mlir::omp::OffloadModuleInterface>(*module.getOperation())
-        .getIsTargetDevice();
-  }
-
-  static llvm::Triple getOffloadTargetTriple(mlir::ModuleOp module) {
-    auto offloadMod =
-        llvm::cast<mlir::omp::OffloadModuleInterface>(*module.getOperation());
-    auto targetTriples = offloadMod.getTargetTriples();
-
-    if (!targetTriples.empty())
-      if (auto tripleAttr =
-              llvm::dyn_cast<mlir::StringAttr>(targetTriples.front()))
-        return llvm::Triple(tripleAttr.getValue());
-
-    return llvm::Triple();
-  }
-
-  mlir::LLVM::TargetFeaturesAttr targetFeatures;
-};
-
 struct MetadirectiveCandidate {
   MetadirectiveCandidate(
       const parser::OmpDirectiveSpecification *spec,
@@ -4742,7 +4699,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
     appendConstructTraits(op, constructTraits);
 
   std::reverse(constructTraits.begin(), constructTraits.end());
-  TargetOMPContext ompCtx(builder.getModule(), constructTraits);
+  FlangOMPContext ompCtx(builder.getModule(), constructTraits);
 
   llvm::SmallVector<MetadirectiveCandidate, 4> candidates;
   // A null directive specification represents either the implicit `nothing`
@@ -4923,7 +4880,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
   auto selectBestCandidate =
       [](llvm::ArrayRef<unsigned> candidateIndices,
          llvm::ArrayRef<MetadirectiveCandidate> candidates,
-         const TargetOMPContext &ompCtx) -> std::optional<unsigned> {
+         const FlangOMPContext &ompCtx) -> std::optional<unsigned> {
     if (candidateIndices.empty())
       return std::nullopt;
     if (candidateIndices.size() == 1)
@@ -5304,9 +5261,18 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OmpUtilityDirective &) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OmpUtilityDirective");
+                   const parser::OmpUtilityDirective &dir) {
+  common::visit(common::visitors{
+                    [&](const parser::OmpNothingDirective &) {
+                      // nothing-directive is a no-op (OpenMP 5.2 [8.4])
+                    },
+                    [&](const parser::OmpErrorDirective &) {
+                      if (!semaCtx.langOptions().OpenMPSimd)
+                        TODO(converter.getCurrentLocation(),
+                             "OmpErrorDirective");
+                    },
+                },
+                dir.u);
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

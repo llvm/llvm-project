@@ -9,6 +9,9 @@
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=kryo | FileCheck %s --match-full-lines -check-prefixes=ALL,ZCZ-FPR64
 ; RUN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=falkor | FileCheck %s --match-full-lines -check-prefixes=ALL,ZCZ-FPR64
 
+;; Test Global ISel
+; RUN: llc < %s -mtriple=arm64-apple-macosx -mcpu=apple-m5 -global-isel | FileCheck %s --match-full-lines -check-prefixes=ALL,NOZCZ-FPR64-ZCZ-FPR128
+
 define half @tf16() {
 entry:
 ; ALL-LABEL: {{_?}}tf16:{{ *(;|//) *}}@tf16
