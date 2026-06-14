@@ -6,17 +6,27 @@
 import collections
 import re
 import os
-from urllib.request import urlopen
-
-
-CLASS_INDEX_PAGE_URL = "https://clang.llvm.org/doxygen/classes.html"
-try:
-    CLASS_INDEX_PAGE = urlopen(CLASS_INDEX_PAGE_URL).read().decode("utf-8")
-except Exception as e:
-    CLASS_INDEX_PAGE = None
-    print("Unable to get %s: %s" % (CLASS_INDEX_PAGE_URL, e))
 
 CURRENT_DIR = os.path.dirname(__file__)
+
+
+def _build_local_class_set():
+    """Return the set of class names declared in clang/include/clang/AST/"""
+    classes = set()
+    ast_dir = os.path.join(CURRENT_DIR, "../../include/clang/AST")
+    for fname in os.listdir(ast_dir):
+        if not fname.endswith(".h"):
+            continue
+        try:
+            content = open(os.path.join(ast_dir, fname)).read()
+        except OSError:
+            continue
+        for m in re.finditer(r"\b(?:class|struct)\s+([A-Z][a-zA-Z0-9_]+)\b", content):
+            classes.add(m.group(1))
+    return classes
+
+
+CLANG_CLASSES = _build_local_class_set()
 MATCHERS_FILE = os.path.join(
     CURRENT_DIR, "../../include/clang/ASTMatchers/ASTMatchers.h"
 )
@@ -41,10 +51,6 @@ traversal_matchers = {}
 # pop-up. ids[name] keeps track of those ids.
 ids = collections.defaultdict(int)
 
-# Cache for doxygen urls we have already verified.
-doxygen_probes = {}
-
-
 def esc(text):
     """Escape any html in the given text."""
     text = re.sub(r"&", "&amp;", text)
@@ -52,25 +58,16 @@ def esc(text):
     text = re.sub(r">", "&gt;", text)
 
     def link_if_exists(m):
-        """Wrap a likely AST node name in a link to its clang docs.
+        """Wrap an AST node name in a link to its Doxygen page.
 
-        We want to do this only if the page exists, in which case it will be
-        referenced from the class index page.
+        Existence is determined by scanning local clang headers.
         """
         name = m.group(1)
-        url = "https://clang.llvm.org/doxygen/classclang_1_1%s.html" % name
-        if url not in doxygen_probes:
-            search_str = 'href="classclang_1_1%s.html"' % name
-            if CLASS_INDEX_PAGE is not None:
-                doxygen_probes[url] = search_str in CLASS_INDEX_PAGE
-            else:
-                doxygen_probes[url] = True
-            if not doxygen_probes[url]:
-                print("Did not find %s in class index page" % name)
-        if doxygen_probes[url]:
-            return r'Matcher&lt;<a href="%s">%s</a>&gt;' % (url, name)
-        else:
+        if name not in CLANG_CLASSES:
+            print("Did not find %s in clang headers" % name)
             return m.group(0)
+        url = "https://clang.llvm.org/doxygen/classclang_1_1%s.html" % name
+        return r'Matcher&lt;<a href="%s">%s</a>&gt;' % (url, name)
 
     text = re.sub(r"Matcher&lt;([^\*&]+)&gt;", link_if_exists, text)
     return text
