@@ -1,0 +1,65 @@
+# REQUIRES: mips, llvm-windres
+
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llc -filetype=obj main.ll -mtriple mipsel-windows-gnu -o main.obj
+# RUN: llvm-windres main.rc rc.obj --target=mipsel-windows-gnu
+# RUN: llvm-objdump main.obj rc.obj --reloc -S | FileCheck %s
+# RUN: lld-link main.obj rc.obj /out:main.exe /subsystem:console,4 /entry:_start /base:0x30000 && llvm-objdump -sS main.exe | FileCheck %s --check-prefix=CHECK-LOW
+# RUN: lld-link main.obj rc.obj /out:main.exe /subsystem:console,4 /entry:_start /base:0x10000000 && llvm-objdump -sS main.exe | FileCheck %s --check-prefix=CHECK-HIGH
+
+# CHECK:      lui $1, 0x0 <_start>
+# CHECK-NEXT: IMAGE_REL_MIPS_REFHI i
+# CHECK-NEXT: IMAGE_REL_MIPS_PAIR
+# CHECK-NEXT: sw $zero, 0x0($1)
+# CHECK-NEXT: IMAGE_REL_MIPS_REFLO i
+
+# CHECK:      j	0x18 <_start+0x18>
+# CHECK-NEXT: IMAGE_REL_MIPS_JMPADDR	.text
+
+# CHECK-LOW: Contents of section .rdata:
+# CHECK-LOW: 32000 00300300
+# CHECK-LOW: Contents of section .rsrc:
+# CHECK-LOW: 34040 09040000 48000000 60400000 15000000
+# CHECK-LOW: 00031000 <.text>:
+# CHECK-LOW: lui $1, 0x3
+# CHECK-LOW: sw $zero, 0x3000($1)
+# CHECK-LOW: j	0x31018 <.text+0x18>
+
+# CHECK-HIGH: Contents of section .rdata:
+# CHECK-HIGH: 10002000 00300010
+# CHECK-HIGH: Contents of section .rsrc:
+# CHECK-HIGH: 10004040 09040000 48000000 60400000 15000000
+# CHECK-HIGH: 10001000 <.text>:
+# CHECK-HIGH: lui $1, 0x1000
+# CHECK-HIGH: sw $zero, 0x3000($1)
+# CHECK-HIGH: j	0x1018 <.text+0x18>
+
+#--- main.ll
+target datalayout = "e-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64"
+target triple = "mipsel-unknown-windows-gnu"
+
+%struct.foo = type { ptr }
+
+@i = internal global i32 0, align 4
+@__const._start.f = private unnamed_addr constant %struct.foo { ptr @i }, align 4
+
+; Function Attrs: noinline nounwind optnone
+define dso_local void @_start() {
+entry:
+  %f = alloca %struct.foo, align 4
+  store i32 0, ptr @i, align 4
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %f, ptr align 4 @__const._start.f, i32 4, i1 false)
+  br label %for.cond
+
+for.cond:                                         ; preds = %for.cond, %entry
+  br label %for.cond
+}
+
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.memcpy.p0.p0.i32(ptr noalias writeonly captures(none), ptr noalias readonly captures(none), i32, i1 immarg) #0
+
+attributes #0 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+#--- main.rc
+42 RCDATA {
+  "a long string of data"
+}
