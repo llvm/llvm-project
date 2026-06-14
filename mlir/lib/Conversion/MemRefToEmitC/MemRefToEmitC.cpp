@@ -100,15 +100,22 @@ Type convertMemRefType(MemRefType opTy, const TypeConverter *typeConverter) {
   return resultTy;
 }
 
-static Value calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
-                                           OpBuilder &builder) {
+static FailureOr<Value>
+calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
+                              OpBuilder &builder,
+                              const TypeConverter *typeConverter) {
   assert(isMemRefTypeLegalForEmitC(memrefType) &&
          "incompatible memref type for EmitC conversion");
+
+  Type elementType = typeConverter->convertType(memrefType.getElementType());
+  if (!elementType) {
+    return failure();
+  }
   emitc::CallOpaqueOp elementSize = emitc::CallOpaqueOp::create(
       builder, loc, emitc::SizeTType::get(builder.getContext()),
       builder.getStringAttr("sizeof"), ValueRange{},
       ArrayAttr::get(builder.getContext(),
-                     {TypeAttr::get(memrefType.getElementType())}));
+                     {TypeAttr::get(elementType)}));
 
   IndexType indexType = builder.getIndexType();
   int64_t numElements = llvm::product_of(memrefType.getShape());
@@ -301,11 +308,19 @@ struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
     emitc::AddressOfOp targetPtr =
         createPointerFromEmitcArray(loc, rewriter, targetArrayValue);
 
-    emitc::CallOpaqueOp memCpyCall = emitc::CallOpaqueOp::create(
-        rewriter, loc, TypeRange{}, "memcpy",
-        ValueRange{
-            targetPtr.getResult(), srcPtr.getResult(),
-            calculateMemrefTotalSizeBytes(loc, srcMemrefType, rewriter)});
+    FailureOr<Value> totalSizeOrFail = calculateMemrefTotalSizeBytes(
+        loc, srcMemrefType, rewriter, getTypeConverter());
+    if (failed(totalSizeOrFail)) {
+      return rewriter.notifyMatchFailure(
+          loc, "Failed to calculate total size of memref in bytes.");
+    }
+    emitc::CallOpaqueOp memCpyCall =
+        emitc::CallOpaqueOp::create(rewriter, loc, TypeRange{}, "memcpy",
+                                    ValueRange{
+                                        targetPtr.getResult(),
+                                        srcPtr.getResult(),
+                                        *totalSizeOrFail,
+                                    });
 
     rewriter.replaceOp(copyOp, memCpyCall.getResults());
 
