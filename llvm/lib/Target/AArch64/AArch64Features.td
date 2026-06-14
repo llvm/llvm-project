@@ -1079,6 +1079,11 @@ def FeatureHardenSlsNoComdat : SubtargetFeature<"harden-sls-nocomdat",
   "Generate thunk code for SLS mitigation in the normal text section">;
 
 
+def FeatureNoLFILoads : SubtargetFeature<"no-lfi-loads", "NoLFILoads", "true",
+  "Disable LFI sandboxing for load instructions">;
+def FeatureNoLFIStores : SubtargetFeature<"no-lfi-stores", "NoLFIStores", "true",
+  "Disable LFI sandboxing for store instructions">;
+
 // Only intended to be used by disassemblers.
 def FeatureAll
     : SubtargetFeature<"all", "IsAll", "true", "Enable all instructions">;

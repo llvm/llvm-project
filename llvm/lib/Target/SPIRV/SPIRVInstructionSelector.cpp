@@ -177,6 +177,9 @@ private:
   bool selectAtomicRMW(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
                        unsigned NewOpcode, unsigned NegateOpcode = 0) const;
 
+  bool selectInterlockedAdd(Register ResVReg, SPIRVTypeInst ResType,
+                            MachineInstr &I) const;
+
   bool selectAtomicCmpXchg(Register ResVReg, SPIRVTypeInst ResType,
                            MachineInstr &I) const;
 
@@ -184,6 +187,9 @@ private:
 
   bool selectAddrSpaceCast(Register ResVReg, SPIRVTypeInst ResType,
                            MachineInstr &I) const;
+
+  bool selectPtrMask(Register ResVReg, SPIRVTypeInst ResType,
+                     MachineInstr &I) const;
 
   bool selectAnyOrAll(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
                       unsigned OpType) const;
@@ -1264,6 +1270,8 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectBitcast(ResVReg, ResType, I);
   case TargetOpcode::G_ADDRSPACE_CAST:
     return selectAddrSpaceCast(ResVReg, ResType, I);
+  case TargetOpcode::G_PTRMASK:
+    return selectPtrMask(ResVReg, ResType, I);
   case TargetOpcode::G_PTR_ADD: {
     // Currently, we get G_PTR_ADD only applied to global variables.
     assert(I.getOperand(1).isReg() && I.getOperand(2).isReg());
@@ -2056,10 +2064,6 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
 
   SPIRVTypeInst PtrType = GR.getSPIRVTypeForVReg(Ptr);
   SPIRVTypeInst PointeeType = GR.getPointeeType(PtrType);
-  if (!PointeeType.isTypeIntOrFloat())
-    return diagnoseUnsupported(I,
-                               "Lowering to SPIR-V of atomic store is only "
-                               "allowed for integer or floating point types");
 
   assert(I.getNumMemOperands());
   const MachineMemOperand &MemOp = **I.memoperands_begin();
@@ -2076,14 +2080,63 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
   if (MemOp.isVolatile() && STI.getTargetTriple().isVulkanOS())
     MemSem |= static_cast<uint32_t>(SPIRV::MemorySemantics::Volatile);
   Register MemSemReg = buildI32Constant(MemSem | StorageClass, I);
-
   MachineIRBuilder MIRBuilder(I);
+
+  if (PointeeType.isTypePtr()) {
+    if (!STI.isPhysicalSPIRV())
+      return diagnoseUnsupported(
+          I, "Lowering to SPIR-V of atomic store is only "
+             "allowed for pointer types for physical addressing model");
+    // If data to store is a pointer type we cast it to an integer type of the
+    // same size as the pointer size using OpConvertPtrToU, bitcast Ptr
+    // parameter to pointer to integer type and then generate OpAtomicStore
+    // with casted values as required by spec.
+    unsigned PtrSize = GR.getPointerSize();
+    SPIRVTypeInst PtrAsIntSpirvType =
+        GR.getOrCreateSPIRVIntegerType(PtrSize, MIRBuilder);
+
+    Register PtrToUVal =
+        MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
+    MRI->setRegClass(PtrToUVal, MRI->getRegClassOrNull(StoreVal));
+    GR.assignSPIRVTypeToVReg(PtrAsIntSpirvType, PtrToUVal, MIRBuilder.getMF());
+    MIRBuilder.buildInstr(SPIRV::OpConvertPtrToU)
+        .addDef(PtrToUVal)
+        .addUse(GR.getSPIRVTypeID(PtrAsIntSpirvType)) // Result type
+        .addUse(StoreVal)                             // Pointer operand
+        .constrainAllUses(TII, TRI, RBI);
+
+    Register PtrCastedToMatchValReg =
+        MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
+    MRI->setRegClass(PtrCastedToMatchValReg, MRI->getRegClassOrNull(Ptr));
+    SPIRVTypeInst PtrType = GR.getOrCreateSPIRVPointerType(
+        PtrAsIntSpirvType, MIRBuilder,
+        addressSpaceToStorageClass(MemOp.getAddrSpace(), STI));
+    GR.assignSPIRVTypeToVReg(PtrType, PtrCastedToMatchValReg,
+                             MIRBuilder.getMF());
+
+    MIRBuilder.buildInstr(SPIRV::OpBitcast)
+        .addDef(PtrCastedToMatchValReg)
+        .addUse(GR.getSPIRVTypeID(PtrType))
+        .addUse(Ptr)
+        .constrainAllUses(TII, TRI, RBI);
+
+    StoreVal = PtrToUVal;
+    Ptr = PtrCastedToMatchValReg;
+    PointeeType = PtrAsIntSpirvType;
+  }
+
+  if (!PointeeType.isTypeIntOrFloat())
+    return diagnoseUnsupported(I,
+                               "Lowering to SPIR-V of atomic store is only "
+                               "allowed for integer or floating point types");
+
   auto AtomicStore = MIRBuilder.buildInstr(SPIRV::OpAtomicStore)
                          .addUse(Ptr)
                          .addUse(ScopeReg)
                          .addUse(MemSemReg)
                          .addUse(StoreVal);
   AtomicStore.constrainAllUses(TII, TRI, RBI);
+
   return true;
 }
 
@@ -2334,6 +2387,35 @@ bool SPIRVInstructionSelector::selectAtomicRMW(Register ResVReg,
       .addUse(ScopeReg)
       .addUse(MemSemReg)
       .addUse(ValueReg)
+      .constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectInterlockedAdd(Register ResVReg,
+                                                    SPIRVTypeInst ResType,
+                                                    MachineInstr &I) const {
+  Register Ptr = I.getOperand(2).getReg();
+  Register Value = I.getOperand(3).getReg();
+
+  SPIRV::StorageClass::StorageClass SC = GR.getPointerStorageClass(Ptr);
+  assert((SC == SPIRV::StorageClass::Workgroup ||
+          SC == SPIRV::StorageClass::StorageBuffer) &&
+         "InterlockedAdd requires Workgroup or StorageBuffer storage class");
+  uint32_t Scope = static_cast<uint32_t>(SC == SPIRV::StorageClass::Workgroup
+                                             ? SPIRV::Scope::Workgroup
+                                             : SPIRV::Scope::Device);
+  Register ScopeReg = buildI32Constant(Scope, I);
+
+  uint32_t MemSem = static_cast<uint32_t>(getMemSemanticsForStorageClass(SC));
+  Register MemSemReg = buildI32Constant(MemSem, I);
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpAtomicIAdd))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(Ptr)
+      .addUse(ScopeReg)
+      .addUse(MemSemReg)
+      .addUse(Value)
       .constrainAllUses(TII, TRI, RBI);
   return true;
 }
@@ -2692,6 +2774,60 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
 
   // Bitcast for pointers requires that the address spaces must match
   return false;
+}
+
+// G_PTRMASK - Apply a bitmask to a pointer value.
+// Result = Ptr & Mask
+// We need to convert the pointer to an integer, perform the AND operation,
+// and convert back to a pointer.
+bool SPIRVInstructionSelector::selectPtrMask(Register ResVReg,
+                                             SPIRVTypeInst ResType,
+                                             MachineInstr &I) const {
+  if (STI.isLogicalSPIRV())
+    return diagnoseUnsupported(
+        I, "G_PTRMASK is not supported with logical SPIR-V");
+  MachineBasicBlock &BB = *I.getParent();
+  MachineFunction &MF = *BB.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+
+  Register PtrReg = I.getOperand(1).getReg();
+  Register MaskReg = I.getOperand(2).getReg();
+
+  SPIRVTypeInst MaskType = GR.getSPIRVTypeForVReg(MaskReg);
+
+  // Convert pointer to integer.
+  Register PtrAsInt = MRI->createVirtualRegister(GR.getRegClass(MaskType));
+  GR.assignSPIRVTypeToVReg(MaskType, PtrAsInt, MF);
+
+  BuildMI(BB, I, DL, TII.get(SPIRV::OpConvertPtrToU))
+      .addDef(PtrAsInt)
+      .addUse(GR.getSPIRVTypeID(MaskType))
+      .addUse(PtrReg)
+      .constrainAllUses(TII, TRI, RBI);
+
+  // Perform bitwise AND.
+  Register MaskedInt = MRI->createVirtualRegister(GR.getRegClass(MaskType));
+  GR.assignSPIRVTypeToVReg(MaskType, MaskedInt, MF);
+
+  unsigned AndOpcode = GR.getScalarOrVectorComponentCount(MaskType) > 1
+                           ? SPIRV::OpBitwiseAndV
+                           : SPIRV::OpBitwiseAndS;
+
+  BuildMI(BB, I, DL, TII.get(AndOpcode))
+      .addDef(MaskedInt)
+      .addUse(GR.getSPIRVTypeID(MaskType))
+      .addUse(PtrAsInt)
+      .addUse(MaskReg)
+      .constrainAllUses(TII, TRI, RBI);
+
+  // Convert integer back to pointer.
+  BuildMI(BB, I, DL, TII.get(SPIRV::OpConvertUToPtr))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(MaskedInt)
+      .constrainAllUses(TII, TRI, RBI);
+
+  return true;
 }
 
 static unsigned getFCmpOpcode(unsigned PredNum) {
@@ -3933,6 +4069,22 @@ bool SPIRVInstructionSelector::selectBuildVector(Register ResVReg,
         I, "There must be at least two constituent operands in a vector");
 
   MRI->setRegClass(ResVReg, GR.getRegClass(ResType));
+
+  bool IsNullVector = IsConst && !STI.isShader();
+  for (unsigned i = I.getNumExplicitDefs();
+       i < I.getNumExplicitOperands() && IsNullVector; ++i) {
+    MachineInstr *Def = getDef(I.getOperand(i), MRI);
+    IsNullVector = Def && isNullOrNullSplat(*Def, *MRI);
+  }
+
+  if (IsNullVector) {
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .constrainAllUses(TII, TRI, RBI);
+    return true;
+  }
+
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
                      TII.get(IsConst ? SPIRV::OpConstantComposite
                                      : SPIRV::OpCompositeConstruct))
@@ -5155,6 +5307,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_reduce_and:
     return selectWaveReduceOp(ResVReg, ResType, I,
                               SPIRV::OpGroupNonUniformBitwiseAnd);
+  case Intrinsic::spv_interlocked_add:
+    return selectInterlockedAdd(ResVReg, ResType, I);
   case Intrinsic::spv_wave_reduce_umax:
     return selectWaveReduceMax(ResVReg, ResType, I, /*IsUnsigned*/ true);
   case Intrinsic::spv_wave_reduce_max:

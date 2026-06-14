@@ -878,7 +878,7 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
 
   // -frelaxed-c-loc-checks
   if (args.hasArg(clang::options::OPT_relaxed_c_loc)) {
-    opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLoc);
+    opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLocChecks);
   }
 
   // -f{no-}openacc-default-none-scalars-strict
