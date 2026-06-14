@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-extern "C" int __tsan_simulate(void (*callback)(void *arg), void *arg);
+#include <sanitizer/tsan_interface.h>
 
 pthread_mutex_t mutex;
 

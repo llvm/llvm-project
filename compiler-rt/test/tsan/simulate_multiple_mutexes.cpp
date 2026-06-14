@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <pthread.h>
 
-extern "C" int __tsan_simulate(void (*callback)(void *), void *arg);
+#include <sanitizer/tsan_interface.h>
 
 const int num_mutexes = 10;
 const int num_threads = 5;

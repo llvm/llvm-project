@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <pthread.h>
 
-extern "C" int __tsan_simulate(void (*callback)(void *), void *arg);
+#include <sanitizer/tsan_interface.h>
 
 pthread_mutex_t mutex;
 int counter = 0;

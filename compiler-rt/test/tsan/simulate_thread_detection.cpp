@@ -6,7 +6,7 @@
 #include <atomic>
 #include <stdio.h>
 
-extern "C" int __tsan_simulate(void (*callback)(void *arg), void *arg);
+#include <sanitizer/tsan_interface.h>
 
 std::atomic<bool> keep_running(true);
 

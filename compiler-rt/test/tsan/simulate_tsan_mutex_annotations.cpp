@@ -6,11 +6,7 @@
 
 #include <pthread.h>
 
-extern "C" int __tsan_simulate(void (*callback)(void *arg), void *arg);
-extern "C" void __tsan_mutex_pre_lock(void *m, unsigned flagz);
-extern "C" void __tsan_mutex_post_lock(void *m, unsigned flagz, int rec);
-extern "C" int __tsan_mutex_pre_unlock(void *m, unsigned flagz);
-extern "C" void __tsan_mutex_post_unlock(void *m, unsigned flagz);
+#include <sanitizer/tsan_interface.h>
 
 int fake_mutex;
 

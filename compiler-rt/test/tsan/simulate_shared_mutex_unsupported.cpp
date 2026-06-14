@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 
-extern "C" int __tsan_simulate(void (*callback)(void *arg), void *arg);
+#include <sanitizer/tsan_interface.h>
 
 pthread_rwlock_t rwlock;
 

@@ -4,7 +4,7 @@
 #include <atomic>
 #include <pthread.h>
 
-extern "C" int __tsan_simulate(void (*callback)(void *), void *arg);
+#include <sanitizer/tsan_interface.h>
 
 void *thread_func(void *arg) { return nullptr; }
 

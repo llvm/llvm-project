@@ -5,7 +5,7 @@
 #include <atomic>
 #include <pthread.h>
 
-extern "C" int __tsan_simulate(void (*callback)(void *), void *arg);
+#include <sanitizer/tsan_interface.h>
 
 static std::atomic<int> counter(0);
 

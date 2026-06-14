@@ -5,7 +5,7 @@
 #include <pthread.h>
 #include <stdio.h>
 
-extern "C" int __tsan_simulate(void (*callback)(void *), void *arg);
+#include <sanitizer/tsan_interface.h>
 
 static int called;
 void test_callback(void *arg) {

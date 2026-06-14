@@ -5,7 +5,7 @@
 #include <time.h>
 #include <unistd.h>
 
-extern "C" int __tsan_simulate(void (*callback)(void *arg), void *arg);
+#include <sanitizer/tsan_interface.h>
 
 void *thread_func(void *arg) {
   sleep(1);
