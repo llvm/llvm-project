@@ -88,6 +88,8 @@ void EmitClangAttrTextNodeDump(const llvm::RecordKeeper &Records,
                                llvm::raw_ostream &OS);
 void EmitClangAttrNodeTraverse(const llvm::RecordKeeper &Records,
                                llvm::raw_ostream &OS);
+void EmitClangUndocumentedAttrList(const llvm::RecordKeeper &Records,
+                                   llvm::raw_ostream &OS);
 void EmitClangAttrDocTable(const llvm::RecordKeeper &Records,
                            llvm::raw_ostream &OS);
 
@@ -190,6 +192,11 @@ void EmitCdeBuiltinSema(const llvm::RecordKeeper &Records,
 void EmitCdeBuiltinCG(const llvm::RecordKeeper &Records, llvm::raw_ostream &OS);
 void EmitCdeBuiltinAliases(const llvm::RecordKeeper &Records,
                            llvm::raw_ostream &OS);
+
+void EmitHLSLAliasIntrinsics(const llvm::RecordKeeper &Records,
+                             llvm::raw_ostream &OS);
+void EmitHLSLInlineIntrinsics(const llvm::RecordKeeper &Records,
+                              llvm::raw_ostream &OS);
 
 void EmitClangAttrDocs(const llvm::RecordKeeper &Records,
                        llvm::raw_ostream &OS);

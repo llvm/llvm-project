@@ -132,8 +132,8 @@ extern template struct Polymorphic<NoAttrTag>;
 ///
 void usePolymorphic() {
   new Polymorphic<WithImportTag>();
-  // MSC-DAG: @"??_S?$Polymorphic@UWithImportTag@@@@6B@" = unnamed_addr
-  // GNU-DAG: @_ZTV11PolymorphicI13WithImportTagE = external dllimport unnamed_addr
+  // MSC-DAG: @"??_S?$Polymorphic@UWithImportTag@@@@6B@" =
+  // GNU-DAG: @_ZTV11PolymorphicI13WithImportTagE = external dllimport
 
   // MSC-DAG: declare dllimport void @"?noAttrVirtualMethod@?$Polymorphic@UWithImportTag@@@@UEAAXXZ"
   // NEGATIVE-GNU-NOT: @_ZN11PolymorphicI13WithImportTagE19noAttrVirtualMethodEv
@@ -145,8 +145,8 @@ void usePolymorphic() {
   // NEGATIVE-GNU-NOT: @_ZN11PolymorphicI13WithImportTagE29excludedImportedVirtualMethodEv
 
   new Polymorphic<NoAttrTag>();
-  // MSC-DAG: @"??_7?$Polymorphic@UNoAttrTag@@@@6B@" = unnamed_addr
-  // GNU-DAG: @_ZTV11PolymorphicI9NoAttrTagE = external unnamed_addr
+  // MSC-DAG: @"??_7?$Polymorphic@UNoAttrTag@@@@6B@" =
+  // GNU-DAG: @_ZTV11PolymorphicI9NoAttrTagE = external
 
   // MSC-DAG: declare dso_local void @"?noAttrVirtualMethod@?$Polymorphic@UNoAttrTag@@@@UEAAXXZ"
   // NEGATIVE-GNU-NOT: @_ZN11PolymorphicI9NoAttrTagE19noAttrVirtualMethodEv
@@ -158,8 +158,8 @@ void usePolymorphic() {
   // NEGATIVE-GNU-NOT: @_ZN11PolymorphicI9NoAttrTagE29excludedImportedVirtualMethodEv
 
   new Polymorphic<ImplicitTag>();
-  // MSC-DAG: @"??_7?$Polymorphic@UImplicitTag@@@@6B@" = unnamed_addr
-  // GNU-DAG: @_ZTV11PolymorphicI11ImplicitTagE = linkonce_odr dso_local unnamed_addr
+  // MSC-DAG: @"??_7?$Polymorphic@UImplicitTag@@@@6B@" =
+  // GNU-DAG: @_ZTV11PolymorphicI11ImplicitTagE = linkonce_odr dso_local
 
   // MSC-DAG: define linkonce_odr dso_local void @"?noAttrVirtualMethod@?$Polymorphic@UImplicitTag@@@@UEAAXXZ"
   // GNU-DAG: define linkonce_odr dso_local void @_ZN11PolymorphicI11ImplicitTagE19noAttrVirtualMethodEv
@@ -171,23 +171,25 @@ void usePolymorphic() {
   // GNU-DAG: define linkonce_odr dso_local void @_ZN11PolymorphicI11ImplicitTagE29excludedImportedVirtualMethodEv
 }
 
-/// Test that the DLL attrribute wins over the exclude attribute on a
-/// non-template context.
+/// Test that the exclude attibute takes precedence over the DLL attrribute in
+/// a non-template context also.
 struct NonTemplateClass {
   EXCLUDE_ATTR __declspec(dllimport) void excludedImportedMethod();
 };
+void NonTemplateClass::excludedImportedMethod() {}
 
 struct __declspec(dllimport) NonTemplateImportedClass {
   EXCLUDE_ATTR void excludedMethod();
 };
+void NonTemplateImportedClass::excludedMethod() {}
 
 void useNonTemplateClass() {
   NonTemplateClass().excludedImportedMethod();
-  // MSC-DAG: declare dllimport void @"?excludedImportedMethod@NonTemplateClass@@QEAAXXZ"
-  // GNU-DAG: declare dllimport void @_ZN16NonTemplateClass22excludedImportedMethodEv
+  // MSC-DAG: define dso_local void @"?excludedImportedMethod@NonTemplateClass@@QEAAXXZ"
+  // GNU-DAG: define dso_local void @_ZN16NonTemplateClass22excludedImportedMethodEv
 
   NonTemplateImportedClass().excludedMethod();
-  // MSC-DAG: declare dllimport void @"?excludedMethod@NonTemplateImportedClass@@QEAAXXZ"
-  // GNU-DAG: declare dllimport void @_ZN24NonTemplateImportedClass14excludedMethodEv
+  // MSC-DAG: define dso_local void @"?excludedMethod@NonTemplateImportedClass@@QEAAXXZ"
+  // GNU-DAG: define dso_local void @_ZN24NonTemplateImportedClass14excludedMethodEv
 }
 

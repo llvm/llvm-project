@@ -2,9 +2,14 @@
 
 # CHECK-LABEL: name: empty_entry_block
 # CHECK: SI_SPILL_S32_TO_VGPR
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_registers
 # CHECK-NEXT: SI_SPILL_S32_TO_VGPR
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_registers
 # CHECK-NEXT: SI_SPILL_S32_TO_VGPR
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_registers
 # CHECK-NEXT: SI_SPILL_S32_TO_VGPR
+# CHECK-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_registers
+
 # CHECK: SI_RESTORE_S32_FROM_VGPR
 # CHECK-NEXT: SI_RESTORE_S32_FROM_VGPR
 # CHECK-NEXT: SI_RESTORE_S32_FROM_VGPR

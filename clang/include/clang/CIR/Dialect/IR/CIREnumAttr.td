@@ -43,7 +43,9 @@ def CIR_LangAddressSpace : CIR_I32EnumAttr<
   I32EnumAttrCase<"OffloadLocal", 2, "offload_local">,
   I32EnumAttrCase<"OffloadGlobal", 3, "offload_global">,
   I32EnumAttrCase<"OffloadConstant", 4, "offload_constant">,
-  I32EnumAttrCase<"OffloadGeneric", 5, "offload_generic">
+  I32EnumAttrCase<"OffloadGeneric", 5, "offload_generic">,
+  I32EnumAttrCase<"OffloadGlobalDevice", 6, "offload_global_device">,
+  I32EnumAttrCase<"OffloadGlobalHost", 7, "offload_global_host">
 ]> {
   let description = [{
     Enumerates language-specific address spaces used by CIR. These represent

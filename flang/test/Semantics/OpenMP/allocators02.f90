@@ -15,7 +15,7 @@ use omp_lib
 
   type(my_type) :: my_var
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the ALLOCATORS directive
+  !ERROR: A structure component cannot appear on the ALLOCATORS directive
   !$omp allocators allocate(my_var%array)
     allocate(my_var%array(10))
 

@@ -18,6 +18,9 @@
 #ifndef SEGV_BNDERR
 #define SEGV_BNDERR 3
 #endif
+#ifndef SEGV_PKUERR
+#define SEGV_PKUERR 4
+#endif
 #ifndef SEGV_MTEAERR
 #define SEGV_MTEAERR 8
 #endif

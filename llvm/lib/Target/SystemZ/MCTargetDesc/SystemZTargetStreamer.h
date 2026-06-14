@@ -67,6 +67,8 @@ public:
                                            const MCSymbol *Lo) {
     return nullptr;
   }
+
+  virtual void emitADA(MCSymbol *Sym, MCSection *Section) {}
 };
 
 class SystemZTargetGOFFStreamer : public SystemZTargetStreamer {
@@ -79,6 +81,10 @@ public:
   }
   virtual void emitExternalName(MCSection *Sec, StringRef Name) override {
     static_cast<MCSectionGOFF *>(Sec)->setExternalName(Name);
+  }
+  void emitADA(MCSymbol *Sym, MCSection *Section) override {
+    static_cast<MCSymbolGOFF *>(Sym)->setADA(
+        static_cast<MCSectionGOFF *>(Section));
   }
 };
 
@@ -96,6 +102,10 @@ public:
   }
   virtual void emitExternalName(MCSection *Sec, StringRef Name) override {
     static_cast<MCSectionGOFF *>(Sec)->setExternalName(Name);
+  }
+  void emitADA(MCSymbol *Sym, MCSection *Section) override {
+    static_cast<MCSymbolGOFF *>(Sym)->setADA(
+        static_cast<MCSectionGOFF *>(Section));
   }
 };
 

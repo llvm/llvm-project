@@ -71,6 +71,63 @@ bool PredIterator::operator==(const PredIterator &Other) const {
   return OpIt == Other.OpIt && MemIt == Other.MemIt;
 }
 
+User::user_iterator SuccIterator::skipOutOfScope(User::user_iterator UserIt,
+                                                 User::user_iterator UserItE,
+                                                 const DependencyGraph &DAG) {
+  auto Skip = [&DAG](User::user_iterator UserIt) {
+    auto *I = dyn_cast<Instruction>(*UserIt);
+    return I == nullptr || DAG.getNode(I) == nullptr;
+  };
+  while (UserIt != UserItE && Skip(UserIt))
+    ++UserIt;
+  return UserIt;
+}
+
+SuccIterator::value_type SuccIterator::operator*() {
+  // If it's a DGNode then we dereference the user iterator.
+  if (!isa<MemDGNode>(N)) {
+    assert(UserIt != UserItE && "Can't dereference end iterator!");
+    return DAG->getNode(cast<Instruction>((Value *)*UserIt));
+  }
+  // It's a MemDGNode, so we check if we return either the def-use operand,
+  // or a mem predecessor.
+  if (UserIt != UserItE)
+    return DAG->getNode(cast<Instruction>((Value *)*UserIt));
+  // It's a MemDGNode with UserIt == end, so we need to use MemIt.
+  assert(MemIt != cast<MemDGNode>(N)->MemSuccs.end() &&
+         "Cant' dereference end iterator!");
+  return *MemIt;
+}
+
+SuccIterator &SuccIterator::operator++() {
+  // If it's a DGNode then we increment the use-def iterator.
+  if (!isa<MemDGNode>(N)) {
+    assert(UserIt != UserItE && "Already at end!");
+    ++UserIt;
+    // Skip users that are not instructions or are outside the DAG.
+    UserIt = SuccIterator::skipOutOfScope(UserIt, UserItE, *DAG);
+    return *this;
+  }
+  // It's a MemDGNode, so if we are not at the end of the def-use iterator we
+  // need to first increment that.
+  if (UserIt != UserItE) {
+    ++UserIt;
+    // Skip operands that are not instructions or are outside the DAG.
+    UserIt = SuccIterator::skipOutOfScope(UserIt, UserItE, *DAG);
+    return *this;
+  }
+  // It's a MemDGNode with UserIt == end, so we need to increment MemIt.
+  assert(MemIt != cast<MemDGNode>(N)->MemSuccs.end() && "Already at end!");
+  ++MemIt;
+  return *this;
+}
+
+bool SuccIterator::operator==(const SuccIterator &Other) const {
+  assert(DAG == Other.DAG && "Iterators of different DAGs!");
+  assert(N == Other.N && "Iterators of different nodes!");
+  return UserIt == Other.UserIt && MemIt == Other.MemIt;
+}
+
 void DGNode::setSchedBundle(SchedBundle &SB) {
   if (this->SB != nullptr)
     this->SB->eraseFromBundle(this);
@@ -260,7 +317,7 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
       auto *OpN = getNode(OpI);
       if (OpN == nullptr)
         continue;
-      ++OpN->UnscheduledSuccs;
+      OpN->incrUnscheduledSuccs();
     }
   }
 
@@ -292,7 +349,7 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
         continue;
       if (!TopInterval.contains(OpI))
         continue;
-      ++OpN->UnscheduledSuccs;
+      OpN->incrUnscheduledSuccs();
     }
   }
 }
@@ -531,18 +588,29 @@ void DependencyGraph::notifySetUse(const Use &U, Value *NewSrc) {
   //  ---|---   ---|---   -
   //  U.User     U.User
   auto *UserI = dyn_cast_or_null<Instruction>(U.getUser());
-  if (UserI == nullptr || !getNode(UserI))
+  if (UserI == nullptr)
+    return;
+  auto *UserN = getNode(UserI);
+  if (UserN == nullptr)
+    return;
+  // If UserN is marked as scheduled then we should not update CrrSrcN' or
+  // NewSrcN's unscheduled successors.
+  if (UserN->scheduled())
     return;
   // Update the UnscheduledSuccs counter for both the current source and
   // NewSrc if needed.
   if (auto *CurrSrcI = dyn_cast<Instruction>(U.get())) {
     if (auto *CurrSrcN = getNode(CurrSrcI)) {
-      CurrSrcN->decrUnscheduledSuccs();
+      // If CurrSrcN is scheduled there is no point in updating UnscheduleSuccs.
+      if (!CurrSrcN->scheduled())
+        CurrSrcN->decrUnscheduledSuccs();
     }
   }
   if (auto *NewSrcI = dyn_cast<Instruction>(NewSrc)) {
     if (auto *NewSrcN = getNode(NewSrcI)) {
-      ++NewSrcN->UnscheduledSuccs;
+      // If CurrSrcN is scheduled there is no point in updating UnscheduleSuccs.
+      if (!NewSrcN->scheduled())
+        NewSrcN->incrUnscheduledSuccs();
     }
   }
 }

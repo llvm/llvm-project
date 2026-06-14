@@ -193,8 +193,8 @@ void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,
   EmitEOL();
 }
 
-static void emitXATTR(raw_ostream &OS, StringRef Name, bool IsIndirectReference,
-                      GOFF::ESDLinkageType Linkage,
+static void emitXATTR(raw_ostream &OS, StringRef Name, MCSectionGOFF *ADA,
+                      bool IsIndirectReference, GOFF::ESDLinkageType Linkage,
                       GOFF::ESDExecutable Executable,
                       GOFF::ESDBindingScope BindingScope) {
   llvm::ListSeparator Sep(",");
@@ -215,6 +215,9 @@ static void emitXATTR(raw_ostream &OS, StringRef Name, bool IsIndirectReference,
 
     OS << ")";
   }
+  // Emit PSECT only for code symbols.
+  if (ADA && Executable != GOFF::ESD_EXE_DATA)
+    OS << Sep << "PSECT(" << ADA->getName() << ")";
   if (BindingScope != GOFF::ESD_BSC_Unspecified) {
     OS << Sep << "SCOPE(";
     switch (BindingScope) {
@@ -255,8 +258,8 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
       EmitEOL();
     }
 
-    emitXATTR(OS, Sym->getName(), Sym->isIndirect(), Sym->getLinkage(),
-              Sym->getCodeData(), Sym->getBindingScope());
+    emitXATTR(OS, Sym->getName(), Sym->getADA(), Sym->isIndirect(),
+              Sym->getLinkage(), Sym->getCodeData(), Sym->getBindingScope());
     EmitEOL();
     if (Sym->hasExternalName())
       OS << Sym->getName() << " ALIAS C'" << Sym->getExternalName() << "'\n";
@@ -365,10 +368,16 @@ void SystemZHLASMAsmStreamer::finishImpl() {
     if (Symbol.isTemporary() || !Symbol.isRegistered() || Symbol.isDefined())
       continue;
     auto &Sym = static_cast<MCSymbolGOFF &>(const_cast<MCSymbol &>(Symbol));
-    OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();
-    EmitEOL();
-    emitXATTR(OS, Sym.getName(), Sym.isIndirect(), Sym.getLinkage(),
-              Sym.getCodeData(), Sym.getBindingScope());
+    if (Sym.getCodeData() == GOFF::ESD_EXE_DATA) {
+      OS << Sym.getADA()->getParent()->getExternalName() << " CATTR PART("
+         << Sym.getName() << ")";
+      EmitEOL();
+    } else {
+      OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();
+      EmitEOL();
+    }
+    emitXATTR(OS, Sym.getName(), Sym.getADA(), Sym.isIndirect(),
+              Sym.getLinkage(), Sym.getCodeData(), Sym.getBindingScope());
     EmitEOL();
     if (Sym.hasExternalName())
       OS << Sym.getName() << " ALIAS C'" << Sym.getExternalName() << "'\n";

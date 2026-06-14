@@ -107,11 +107,11 @@ body:             |
     ; CHECK-NEXT: [[INSvi16lane:%[0-9]+]]:fpr128 = INSvi16lane [[COPY1]], 1, [[INSERT_SUBREG]], 0
     ; CHECK-NEXT: $q0 = COPY [[INSvi16lane]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %0:fpr(s16) = COPY $h0
-    %1:fpr(<8 x s16>) = COPY $q1
-    %3:gpr(s64) = G_CONSTANT i64 1
-    %2:fpr(<8 x s16>) = G_INSERT_VECTOR_ELT %1, %0(s16), %3(s64)
-    $q0 = COPY %2(<8 x s16>)
+    %0:fpr(f16) = COPY $h0
+    %1:fpr(<8 x f16>) = COPY $q1
+    %3:gpr(i64) = G_CONSTANT i64 1
+    %2:fpr(<8 x f16>) = G_INSERT_VECTOR_ELT %1, %0(f16), %3(i64)
+    $q0 = COPY %2(<8 x f16>)
     RET_ReallyLR implicit $q0
 
 ...

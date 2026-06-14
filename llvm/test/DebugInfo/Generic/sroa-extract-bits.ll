@@ -179,7 +179,7 @@ entry:
 !0 = !{i32 7, !"Dwarf Version", i32 5}
 !1 = !{i32 2, !"Debug Info Version", i32 3}
 !2 = !DILocalVariable(name: "x", scope: !3, type: !6)
-!3 = distinct !DISubprogram(name: "test", unit: !4)
+!3 = distinct !DISubprogram(name: "test", unit: !4, type: !13)
 !4 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !5, emissionKind: FullDebug)
 !5 = !DIFile(filename: "dbg-bit-piece.cpp", directory: "")
 !6 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
@@ -192,7 +192,7 @@ entry:
 
 ;.
 ; CHECK: [[META2]] = !DILocalVariable(name: "x", scope: [[META3:![0-9]+]], type: [[META6:![0-9]+]])
-; CHECK: [[META3]] = distinct !DISubprogram(name: "test", scope: null, spFlags: DISPFlagDefinition, unit: [[META4:![0-9]+]])
+; CHECK: [[META3]] = distinct !DISubprogram(name: "test", scope: null, type: [[TYPE:![0-9]+]], spFlags: DISPFlagDefinition, unit: [[META4:![0-9]+]])
 ; CHECK: [[META4]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META5:![0-9]+]], isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
 ; CHECK: [[META5]] = !DIFile(filename: "dbg-bit-piece.cpp", directory: "")
 ; CHECK: [[META6]] = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
@@ -203,3 +203,5 @@ entry:
 ; CHECK: [[META11]] = !DILocalVariable(name: "x", scope: [[META3]], type: [[META12:![0-9]+]])
 ; CHECK: [[META12]] = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
 ;.
+!13 = !DISubroutineType(types: !14)
+!14 = !{null}

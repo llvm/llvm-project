@@ -205,8 +205,8 @@ umbrella or components used to support such tools.
 MyDeveloperDay \
 mydeveloperday@gmail.com (email), MyDeveloperDay (Phabricator), [MyDeveloperDay](https://github.com/MyDeveloperDay) (GitHub)
 
-Owen Pan \
-owenpiano@gmail.com (email), owenpan (Phabricator), [owenca](https://github.com/owenca) (GitHub)
+Björn Schäpers \
+llvm@hazardy.de (email), [HazardyKnusperkeks](https://github.com/HazardyKnusperkeks) (GitHub), HazardyKnusperkeks (Discourse)
 
 ## ABIs
 
@@ -234,6 +234,11 @@ components within the compiler.
 
 Aaron Ballman \
 aaron@aaronballman.com (email), aaron.ballman (Phabricator), [AaronBallman](https://github.com/AaronBallman) (GitHub), AaronBallman (Discourse), aaronballman (Discord)
+
+### Floating-point and numerics
+
+Joshua Cranmer \
+joshua.cranmer@intel.com (email), [jcranmer-intel](https://github.com/jcranmer-intel) (GitHub), jcranmer (Discourse)
 
 ### Plugins
 
@@ -316,7 +321,10 @@ ekeane@nvidia.com (email), ErichKeane (Phabricator), [erichkeane](https://github
 ### SYCL conformance
 
 Alexey Bader \
-alexey.bader@intel.com (email), bader (Phabricator), [bader](https://github.com/bader) (GitHub)
+alexey.bader@intel.com (email), [bader](https://github.com/bader) (GitHub), bader7427 (Discord), bader (Discourse)
+
+Tom Honermann \
+tom@honermann.net (email), [tahonermann](https://github.com/tahonermann) (GitHub), tahonermann (Discord), tahonermann (Discourse)
 
 ### HLSL conformance
 
@@ -352,4 +360,5 @@ Dmitri Gribenko (gribozavr@gmail.com (email), gribozavr (Phabricator), [gribozav
 Tom Honermann (tom@honermann.net (email), tahonermann (Phabricator), [tahonermann](https://github.com/tahonermann) (GitHub)) \-- Text Encodings \
 John McCall (rjmccall@apple.com (email), rjmccall (Phabricator), [rjmccall](https://github.com/rjmccall) (GitHub)) \-- Clang LLVM IR generation, Objective-C/C++ conformance, Itanium ABI \
 John Ericson (git@johnericson.me (email), Ericson2314 (Phabricator), [Ericson2314](https://github.com/Ericson2314) (GitHub)) \-- CMake Integration \
-Stanislav Gatev (sgatev@google.com (email), sgatev (Phabricator), [sgatev](https://github.com/sgatev) (GitHub)) -- Analysis & CFG
+Stanislav Gatev (sgatev@google.com (email), sgatev (Phabricator), [sgatev](https://github.com/sgatev) (GitHub)) \-- Analysis & CFG \
+Owen Pan (owenpiano@gmail.com (email), owenpan (Phabricator), [owenca](https://github.com/owenca) (GitHub)) \-- clang-format

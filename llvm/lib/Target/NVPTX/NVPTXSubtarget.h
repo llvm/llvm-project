@@ -241,6 +241,11 @@ public:
     return hasPTXWithAccelSMs(91, {100, 103, 110, 120, 121});
   }
 
+  // Checks support for conversions from narrow FP types to bf16x2.
+  bool hasNarrowFPToBF16x2ConversionSupport() const {
+    return hasPTXWithFamilySMs(92, {100, 110, 120});
+  }
+
   bool hasTensormapReplaceSupport() const {
     return hasPTXWithFamilySMs(90, {90, 100, 110, 120}) ||
            hasPTXWithFamilySMs(88, {90, 100, 101, 120}) ||
@@ -329,14 +334,6 @@ public:
 
   bool hasNativeBF16Support(int Opcode) const;
 
-  // Get maximum value of required alignments among the supported data types.
-  // From the PTX ISA doc, section 8.2.3:
-  //  The memory consistency model relates operations executed on memory
-  //  locations with scalar data-types, which have a maximum size and alignment
-  //  of 64 bits. Memory operations with a vector data-type are modelled as a
-  //  set of equivalent memory operations with a scalar data-type, executed in
-  //  an unspecified order on the elements in the vector.
-  unsigned getMaxRequiredAlignment() const { return 8; }
   // Get the smallest cmpxchg word size that the hardware supports.
   unsigned getMinCmpXchgSizeInBits() const { return 32; }
 

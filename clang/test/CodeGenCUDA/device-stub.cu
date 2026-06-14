@@ -45,6 +45,9 @@
 // RUN:     -fcuda-include-gpubinary %t -o - -x hip\
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s --check-prefixes=ALL,LNX,NORDC,HIP,HIPEF
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
+// RUN:     -fcuda-include-gpubinary %t -fsanitize=address -o - -x hip\
+// RUN:   | FileCheck %s --check-prefix=HIP-ASAN
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o -  -DNOGLOBALS -x hip \
 // RUN:   | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=NOGLOBALS,HIPNOGLOBALS
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
@@ -173,6 +176,7 @@ __device__ void device_use() {
 // LNX-SAME: ptr null }
 // CUDA-SAME: section ".nvFatBinSegment"
 // HIP-SAME: section ".hipFatBinSegment"
+// HIP-ASAN: @__hip_fatbin_wrapper = internal constant {{.*}}, section ".hipFatBinSegment", no_sanitize_address
 // * variable to save GPU binary handle after initialization
 // CUDANORDC: @__[[PREFIX]]_gpubin_handle = internal global ptr null
 // HIPNEF: @__[[PREFIX]]_gpubin_handle_{{[0-9a-f]+}} = internal global ptr null, align 8

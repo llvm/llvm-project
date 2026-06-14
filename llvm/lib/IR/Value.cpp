@@ -13,6 +13,7 @@
 #include "llvm/IR/Value.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -53,7 +54,7 @@ static inline Type *checkType(Type *Ty) {
 Value::Value(Type *ty, unsigned scid)
     : SubclassID(scid), HasValueHandle(0), SubclassOptionalData(0),
       SubclassData(0), NumUserOperands(0), IsUsedByMD(false), HasName(false),
-      HasMetadata(false), VTy(checkType(ty)) {
+      VTy(checkType(ty)) {
   static_assert(ConstantFirstVal == 0, "!(SubclassID < ConstantFirstVal)");
   // FIXME: Why isn't this in the subclass gunk??
   // Note, we cannot call isa<CallInst> before the CallInst has been
@@ -79,10 +80,6 @@ Value::~Value() {
     ValueHandleBase::ValueIsDeleted(this);
   if (isUsedByMetadata())
     ValueAsMetadata::handleDeletion(this);
-
-  // Remove associated metadata from context.
-  if (HasMetadata)
-    clearMetadata();
 
 #ifndef NDEBUG      // Only in -g mode...
   // Check to make sure that there are no uses of this value that are still
@@ -127,7 +124,7 @@ void Value::deleteValue() {
 #include "llvm/IR/Value.def"
 
 #define HANDLE_INST(N, OPC, CLASS)                                             \
-  case Value::InstructionVal + Instruction::OPC:                               \
+  case addEnumValues(Value::InstructionVal, Instruction::OPC):                 \
     delete static_cast<CLASS *>(this);                                         \
     break;
 #define HANDLE_USER_INST(N, OPC, CLASS)
@@ -546,8 +543,11 @@ void Value::doRAUW(Value *New, ReplaceMetadataUses ReplaceMetaUses) {
     U.set(New);
   }
 
-  if (BasicBlock *BB = dyn_cast<BasicBlock>(this))
+  if (BasicBlock *BB = dyn_cast<BasicBlock>(this)) {
     BB->replaceSuccessorsPhiUsesWith(cast<BasicBlock>(New));
+    if (BB->hasAddressTaken())
+      BlockAddress::lookup(BB)->handleOperandChange(this, New);
+  }
 }
 
 void Value::replaceAllUsesWith(Value *New) {
@@ -833,22 +833,34 @@ bool Value::canBeFreed() const {
   if (isa<Constant>(this))
     return false;
 
+  // Allocas cannot be freed: They remain dereferenceable after lifetime.end,
+  // in the sense that they can be loaded from without UB. They only become
+  // non-writable, which is not tracked by this API.
+  if (isa<AllocaInst>(this))
+    return false;
+
   // Handle byval/byref/sret/inalloca/preallocated arguments.  The storage
   // lifetime is guaranteed to be longer than the callee's lifetime.
   if (auto *A = dyn_cast<Argument>(this)) {
     if (A->hasPointeeInMemoryValueAttr())
       return false;
-    // A pointer to an object in a function which neither frees, nor can arrange
-    // for another thread to free on its behalf, can not be freed in the scope
-    // of the function.  Note that this logic is restricted to memory
-    // allocations in existance before the call; a nofree function *is* allowed
-    // to free memory it allocated.
+    // A nofree function can not free (including via synchronization) any
+    // allocations that existed prior to the call, but may free allocations
+    // created inside the function. This logic is limited to argument pointers,
+    // as they definitely exist prior to the call.
     const Function *F = A->getParent();
-    if (F->doesNotFreeMemory() && F->hasNoSync())
+    if (F->doesNotFreeMemory())
+      return false;
+
+    // nofree on the argument ensures that it cannot be freed through that
+    // pointer. noalias additionally ensures that it can't be freed through
+    // another pointer to the same allocation. Readonly implies nofree.
+    if ((A->hasNoFreeAttr() || A->onlyReadsMemory()) && A->hasNoAliasAttr())
       return false;
   }
 
-  if (isa<IntToPtrInst>(this) && getMetadata(LLVMContext::MD_nofree))
+  if (auto *ITP = dyn_cast<IntToPtrInst>(this);
+      ITP && ITP->hasMetadata(LLVMContext::MD_nofree))
     return false;
 
   const Function *F = nullptr;
@@ -892,12 +904,12 @@ bool Value::canBeFreed() const {
 
 uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
                                                bool &CanBeNull,
-                                               bool &CanBeFreed) const {
+                                               bool *CanBeFreed) const {
   assert(getType()->isPointerTy() && "must be pointer");
 
   uint64_t DerefBytes = 0;
   CanBeNull = false;
-  CanBeFreed = UseDerefAtPointSemantics && canBeFreed();
+  bool CanNotBeFreed = false;
   if (const Argument *A = dyn_cast<Argument>(this)) {
     DerefBytes = A->getDereferenceableBytes();
     if (DerefBytes == 0) {
@@ -950,7 +962,7 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
     if (std::optional<TypeSize> Size = AI->getAllocationSize(DL)) {
       DerefBytes = Size->getKnownMinValue();
       CanBeNull = false;
-      CanBeFreed = false;
+      CanNotBeFreed = true;
     }
   } else if (auto *GV = dyn_cast<GlobalVariable>(this)) {
     if (GV->getValueType()->isSized() && !GV->hasExternalWeakLinkage()) {
@@ -958,9 +970,19 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
       // CanBeNull flag.
       DerefBytes = DL.getTypeStoreSize(GV->getValueType()).getFixedValue();
       CanBeNull = false;
-      CanBeFreed = false;
+      CanNotBeFreed = true;
     }
   }
+
+  if (CanBeFreed) {
+    // Call canBeFreed() only if there are dereferenceable bytes and it's not
+    // one of the cases that can never be freed.
+    if (!CanNotBeFreed && DerefBytes != 0)
+      *CanBeFreed = UseDerefAtPointSemantics && canBeFreed();
+    else
+      *CanBeFreed = false;
+  }
+
   return DerefBytes;
 }
 
@@ -1198,8 +1220,7 @@ void ValueHandleBase::AddToUseList() {
   }
 
   // Okay, reallocation did happen.  Fix the Prev Pointers.
-  for (DenseMap<Value*, ValueHandleBase*>::iterator I = Handles.begin(),
-       E = Handles.end(); I != E; ++I) {
+  for (auto I = Handles.begin(), E = Handles.end(); I != E; ++I) {
     assert(I->second && I->first == I->second->getValPtr() &&
            "List invariant broken!");
     I->second->setPrevPtr(&I->second);
@@ -1227,7 +1248,10 @@ void ValueHandleBase::RemoveFromUseList() {
   LLVMContextImpl *pImpl = getValPtr()->getContext().pImpl;
   DenseMap<Value*, ValueHandleBase*> &Handles = pImpl->ValueHandles;
   if (Handles.isPointerIntoBucketsArray(PrevPtr)) {
-    Handles.erase(getValPtr());
+    // TODO: Remove the only user of DenseMap's callback erase.
+    Handles.erase(getValPtr(), [](auto &Bucket) {
+      Bucket.second->setPrevPtr(&Bucket.second);
+    });
     getValPtr()->HasValueHandle = false;
   }
 }

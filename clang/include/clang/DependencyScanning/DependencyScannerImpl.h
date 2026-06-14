@@ -11,12 +11,9 @@
 
 #include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/DependencyScanning/ModuleDepCollector.h"
-#include "clang/Driver/Compilation.h"
-#include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
-#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang {
@@ -35,8 +32,7 @@ public:
   DependencyScanningAction(
       DependencyScanningService &Service, StringRef WorkingDirectory,
       DependencyConsumer &Consumer, DependencyActionController &Controller,
-      IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
-      std::optional<StringRef> ModuleName = std::nullopt)
+      IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS)
       : Service(Service), WorkingDirectory(WorkingDirectory),
         Consumer(Consumer), Controller(Controller), DepFS(std::move(DepFS)) {}
   bool runInvocation(std::string Executable,
@@ -97,7 +93,8 @@ void canonicalizeDefines(PreprocessorOptions &PPOpts);
 /// Creates a CompilerInvocation suitable for the dependency scanner.
 std::shared_ptr<CompilerInvocation>
 createScanCompilerInvocation(const CompilerInvocation &Invocation,
-                             const DependencyScanningService &Service);
+                             const DependencyScanningService &Service,
+                             DependencyActionController &Controller);
 
 /// Creates dependency output options to be reported to the dependency consumer,
 /// deducing missing information if necessary.
@@ -123,11 +120,10 @@ computePrebuiltModulesASTMap(CompilerInstance &ScanInstance,
 std::shared_ptr<ModuleDepCollector> initializeScanInstanceDependencyCollector(
     CompilerInstance &ScanInstance,
     std::unique_ptr<DependencyOutputOptions> DepOutputOpts,
-    StringRef WorkingDirectory, DependencyConsumer &Consumer,
     DependencyScanningService &Service, CompilerInvocation &Inv,
     DependencyActionController &Controller,
     PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
-    llvm::SmallVector<StringRef> &StableDirs);
+    SmallVector<StringRef> &StableDirs);
 } // namespace dependencies
 } // namespace clang
 

@@ -94,8 +94,6 @@ __lldb_objc_find_implementation_for_selector (void *object,
                                               int is_stret,
                                               int is_super,
                                               int is_super2,
-                                              int is_fixup,
-                                              int is_fixed,
                                               int debug)
 {
   struct __lldb_imp_return_struct {
@@ -122,9 +120,9 @@ __lldb_objc_find_implementation_for_selector (void *object,
   if (debug)
     printf ("\n*** Called with obj: %p sel: %p is_str_ptr: %d "
             "is_stret: %d is_super: %d, "
-            "is_super2: %d, is_fixup: %d, is_fixed: %d\n",
+            "is_super2: %d\n",
              object, sel, is_str_ptr, is_stret,
-             is_super, is_super2, is_fixup, is_fixed);
+             is_super, is_super2);
 
   if (is_str_ptr) {
     if (debug)
@@ -140,6 +138,10 @@ __lldb_objc_find_implementation_for_selector (void *object,
     } else {
       return_struct.class_addr = ((__lldb_objc_super *) object)->class_ptr;
     }
+#if defined(__arm64e__)
+    return_struct.class_addr =
+      __builtin_ptrauth_strip(return_struct.class_addr, /*ptrauth_key_asda*/ 2);
+#endif
     if (debug)
       printf("*** Super, class addr: %p\n", return_struct.class_addr);
   } else {
@@ -163,19 +165,8 @@ __lldb_objc_find_implementation_for_selector (void *object,
     }
   }
 
-  if (is_fixup) {
-    if (is_fixed) {
-        return_struct.sel_addr = ((__lldb_msg_ref *) sel)->sel;
-    } else {
-      char *sel_name = (char *) ((__lldb_msg_ref *) sel)->sel;
-      return_struct.sel_addr = sel_getUid (sel_name);
-      if (debug)
-        printf ("\n*** Got fixed up selector: %p for name %s.\n",
-                return_struct.sel_addr, sel_name);
-    }
-  } else {
-    return_struct.sel_addr = sel;
-  }
+  return_struct.sel_addr = sel;
+
 )";
 
 AppleObjCTrampolineHandler::AppleObjCVTables::VTableRegion::VTableRegion(
@@ -511,44 +502,15 @@ bool AppleObjCTrampolineHandler::AppleObjCVTables::IsAddressInVTables(
 
 const AppleObjCTrampolineHandler::DispatchFunction
     AppleObjCTrampolineHandler::g_dispatch_functions[] = {
-        // NAME                              STRET  SUPER  SUPER2  FIXUP TYPE
-        {"objc_msgSend", false, false, false, DispatchFunction::eFixUpNone},
-        {"objc_msgSend_fixup", false, false, false,
-         DispatchFunction::eFixUpToFix},
-        {"objc_msgSend_fixedup", false, false, false,
-         DispatchFunction::eFixUpFixed},
-        {"objc_msgSend_stret", true, false, false,
-         DispatchFunction::eFixUpNone},
-        {"objc_msgSend_stret_fixup", true, false, false,
-         DispatchFunction::eFixUpToFix},
-        {"objc_msgSend_stret_fixedup", true, false, false,
-         DispatchFunction::eFixUpFixed},
-        {"objc_msgSend_fpret", false, false, false,
-         DispatchFunction::eFixUpNone},
-        {"objc_msgSend_fpret_fixup", false, false, false,
-         DispatchFunction::eFixUpToFix},
-        {"objc_msgSend_fpret_fixedup", false, false, false,
-         DispatchFunction::eFixUpFixed},
-        {"objc_msgSend_fp2ret", false, false, true,
-         DispatchFunction::eFixUpNone},
-        {"objc_msgSend_fp2ret_fixup", false, false, true,
-         DispatchFunction::eFixUpToFix},
-        {"objc_msgSend_fp2ret_fixedup", false, false, true,
-         DispatchFunction::eFixUpFixed},
-        {"objc_msgSendSuper", false, true, false, DispatchFunction::eFixUpNone},
-        {"objc_msgSendSuper_stret", true, true, false,
-         DispatchFunction::eFixUpNone},
-        {"objc_msgSendSuper2", false, true, true, DispatchFunction::eFixUpNone},
-        {"objc_msgSendSuper2_fixup", false, true, true,
-         DispatchFunction::eFixUpToFix},
-        {"objc_msgSendSuper2_fixedup", false, true, true,
-         DispatchFunction::eFixUpFixed},
-        {"objc_msgSendSuper2_stret", true, true, true,
-         DispatchFunction::eFixUpNone},
-        {"objc_msgSendSuper2_stret_fixup", true, true, true,
-         DispatchFunction::eFixUpToFix},
-        {"objc_msgSendSuper2_stret_fixedup", true, true, true,
-         DispatchFunction::eFixUpFixed},
+        // NAME          STRET  SUPER  SUPER2 ReExp
+        {"objc_msgSend", false, false, false, true},
+        {"objc_msgSend_stret", true, false, false},
+        {"objc_msgSend_fpret", false, false, false},
+        {"objc_msgSend_fp2ret", false, false, true},
+        {"objc_msgSendSuper", false, true, false, true},
+        {"objc_msgSendSuper_stret", true, true, false},
+        {"objc_msgSendSuper2", false, true, true, true},
+        {"objc_msgSendSuper2_stret", true, true, true},
 };
 
 // This is the table of ObjC "accelerated dispatch" functions.  They are a set
@@ -622,10 +584,10 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
     // step through any method dispatches.  Warn to that effect and get out of
     // here.
     if (process_sp->CanJIT()) {
-      process_sp->GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
-          "Could not find implementation lookup function \"%s\""
-          " step in through ObjC method dispatch will not work.\n",
-          get_impl_name.AsCString());
+      process_sp->GetTarget().GetDebugger().GetAsyncErrorStream()->Format(
+          "Could not find implementation lookup function \"{0}\" step in "
+          "through ObjC method dispatch will not work.\n",
+          get_impl_name);
     }
     return;
   }
@@ -656,20 +618,29 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
   // map from there.
 
   for (size_t i = 0; i != std::size(g_dispatch_functions); i++) {
-    ConstString name_const_str(g_dispatch_functions[i].name);
-    const Symbol *msgSend_symbol =
-        m_objc_module_sp->FindFirstSymbolWithNameAndType(name_const_str,
-                                                         eSymbolTypeCode);
-    if (msgSend_symbol && msgSend_symbol->ValueIsAddress()) {
-      // FIXME: Make g_dispatch_functions static table of
-      // DispatchFunctions, and have the map be address->index.
-      // Problem is we also need to lookup the dispatch function.  For
-      // now we could have a side table of stret & non-stret dispatch
-      // functions.  If that's as complex as it gets, we're fine.
+    const AppleObjCTrampolineHandler::DispatchFunction &dispatch_function =
+        g_dispatch_functions[i];
+    ConstString name_const_str(dispatch_function.name);
+    // If this might be a re-exported symbol look there first.
+    const Symbol *msgSend_symbol = nullptr;
+    if (dispatch_function.might_be_reexport) {
+      msgSend_symbol = m_objc_module_sp->FindFirstSymbolWithNameAndType(
+          name_const_str, eSymbolTypeReExported);
+      if (msgSend_symbol) {
+        while (msgSend_symbol->GetType() == eSymbolTypeReExported) {
+          msgSend_symbol = msgSend_symbol->ResolveReExportedSymbol(*target);
+          if (!msgSend_symbol)
+            break;
+        }
+      }
+    }
+    if (!msgSend_symbol)
+      msgSend_symbol = m_objc_module_sp->FindFirstSymbolWithNameAndType(
+          name_const_str, eSymbolTypeCode);
 
+    if (msgSend_symbol && msgSend_symbol->ValueIsAddress()) {
       lldb::addr_t sym_addr =
           msgSend_symbol->GetAddressRef().GetOpcodeLoadAddress(target);
-
       m_msgSend_map.insert(std::pair<lldb::addr_t, int>(sym_addr, i));
     }
   }
@@ -793,8 +764,7 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
   ThreadPlanSP ret_plan_sp;
   lldb::addr_t curr_pc = thread.GetRegisterContext()->GetPC();
 
-  DispatchFunction vtable_dispatch = {"vtable", false, false, false,
-                                      DispatchFunction::eFixUpFixed};
+  DispatchFunction vtable_dispatch = {"vtable", false, false, false};
   // The selector specific stubs are a wrapper for objc_msgSend.  They don't get
   // passed a SEL, but instead the selector string is encoded in the stub
   // name, in the form:
@@ -803,8 +773,6 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
   // one of these stubs, we strip off the selector string and pass that to the
   // implementation finder function, which looks up the SEL (you have to do this
   // in process) and passes that to the runtime lookup function.
-  DispatchFunction sel_stub_dispatch = {"sel-specific-stub", false, false,
-                                        false, DispatchFunction::eFixUpNone};
 
   // First step is to see if we're in a selector-specific dispatch stub.
   // Those are of the form _objc_msgSend$<SELECTOR>, so see if the current
@@ -818,19 +786,24 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
     const Symbol *curr_sym = func_addr.CalculateSymbolContextSymbol();
     if (curr_sym)
       sym_name = curr_sym->GetName().GetStringRef();
-
-    if (!sym_name.empty() && !sym_name.consume_front("objc_msgSend$"))
-      sym_name = {};
-    else
-      this_dispatch = &sel_stub_dispatch;
   }
-  bool in_selector_stub = !sym_name.empty();
+
+  // objc has introduced new accelerated dispatch stubs which figure out the
+  // selector and in some cases the object in one way or another, then call
+  // objc_msgSend.  If we're in one of those stubs, we can use "step through
+  // direct dispatch" plan to get to the actual dispatch.
+  if (!sym_name.empty() && (sym_name.consume_front("objc_msgSend$")
+                            || sym_name.consume_front("objc_msgSendClass$"))) {
+    ret_plan_sp = std::make_shared<AppleThreadPlanStepThroughDirectDispatch>(
+        thread, *this);
+    return ret_plan_sp;
+  }
+
   // Second step is to look and see if we are in one of the known ObjC
   // dispatch functions.  We've already compiled a table of same, so
   // consult it.
 
-  if (!in_selector_stub)
-    this_dispatch = FindDispatchFunction(curr_pc);
+  this_dispatch = FindDispatchFunction(curr_pc);
 
   // Next check to see if we are in a vtable region:
 
@@ -882,17 +855,11 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
     int obj_index;
     int sel_index;
 
-    // If this is a selector-specific stub then just push one value, 'cause
-    // we only get the object.
     // If this is a struct return dispatch, then the first argument is
     // the return struct pointer, and the object is the second, and
     // the selector is the third.
     // Otherwise the object is the first and the selector the second.
-    if (in_selector_stub) {
-      obj_index = 0;
-      sel_index = 1;
-      argument_values.PushValue(void_ptr_value);
-    } else if (this_dispatch->stret_return) {
+    if (this_dispatch->stret_return) {
       obj_index = 1;
       sel_index = 2;
       argument_values.PushValue(void_ptr_value);
@@ -926,10 +893,9 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
 
     lldb::addr_t isa_addr = LLDB_INVALID_ADDRESS;
     lldb::addr_t sel_addr = LLDB_INVALID_ADDRESS;
-    // If we are not in a selector stub, get the sel address from the arguments.
-    if (!in_selector_stub)
-      sel_addr =
-          argument_values.GetValueAtIndex(sel_index)->GetScalar().ULongLong();
+    // Get the sel address from the arguments.
+    sel_addr =
+        argument_values.GetValueAtIndex(sel_index)->GetScalar().ULongLong();
 
     // Figure out the class this is being dispatched to and see if
     // we've already cached this method call, If so we can push a
@@ -1011,15 +977,9 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
       ObjCLanguageRuntime *objc_runtime =
           ObjCLanguageRuntime::Get(*thread.GetProcess());
       assert(objc_runtime != nullptr);
-      if (!in_selector_stub) {
-        LLDB_LOG(log, "Resolving call for class - {0} and selector - {1}",
-                 isa_addr, sel_addr);
-        impl_addr = objc_runtime->LookupInMethodCache(isa_addr, sel_addr);
-      } else {
-        LLDB_LOG(log, "Resolving call for class - {0} and selector - {1}",
-                 isa_addr, sym_name);
-        impl_addr = objc_runtime->LookupInMethodCache(isa_addr, sym_name);
-      }
+      LLDB_LOG(log, "Resolving call for class - {0} and selector - {1}",
+               isa_addr, sel_addr);
+      impl_addr = objc_runtime->LookupInMethodCache(isa_addr, sel_addr);
     }
     // If it is a selector-specific stub dispatch, look in the string cache:
 
@@ -1048,8 +1008,6 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
       //                                                          int is_stret,
       //                                                          int is_super,
       //                                                          int is_super2,
-      //                                                          int is_fixup,
-      //                                                          int is_fixed,
       //                                                          int debug)
       // If we don't have an actual SEL, but rather a string version of the
       // selector WE injected, set is_str_ptr to true, and sel to the address
@@ -1058,46 +1016,18 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
 
       dispatch_values.PushValue(*(argument_values.GetValueAtIndex(obj_index)));
       lldb::addr_t sel_str_addr = LLDB_INVALID_ADDRESS;
-      if (!in_selector_stub) {
-        // If we don't have a selector string, push the selector from arguments.
-        dispatch_values.PushValue(
-            *(argument_values.GetValueAtIndex(sel_index)));
-      } else {
-        // Otherwise, inject the string into the target, and push that value for
-        // the sel argument.
-        Status error;
-        sel_str_addr = process_sp->AllocateMemory(
-            sym_name.size() + 1, ePermissionsReadable | ePermissionsWritable,
-            error);
-        if (sel_str_addr == LLDB_INVALID_ADDRESS || error.Fail()) {
-          LLDB_LOG(log,
-                   "Could not allocate memory for selector string {0}: {1}",
-                   sym_name, error);
-          return ret_plan_sp;
-        }
-        process_sp->WriteMemory(sel_str_addr, sym_name.str().c_str(),
-                                sym_name.size() + 1, error);
-        if (error.Fail()) {
-          LLDB_LOG(log, "Could not write string to address {0}", sel_str_addr);
-          return ret_plan_sp;
-        }
-        Value sel_ptr_value(void_ptr_value);
-        sel_ptr_value.GetScalar() = sel_str_addr;
-        dispatch_values.PushValue(sel_ptr_value);
-      }
+      // Push the selector from arguments.
+      dispatch_values.PushValue(*(argument_values.GetValueAtIndex(sel_index)));
 
       Value flag_value;
       CompilerType clang_int_type =
           scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(
               lldb::eEncodingSint, 32);
       flag_value.SetValueType(Value::ValueType::Scalar);
-      // flag_value.SetContext (Value::eContextTypeClangType, clang_int_type);
       flag_value.SetCompilerType(clang_int_type);
 
-      if (in_selector_stub)
-        flag_value.GetScalar() = 1;
-      else
-        flag_value.GetScalar() = 0;
+      // We are passing in a sel addr now a string pointer in all cases for now.
+      flag_value.GetScalar() = 0;
       dispatch_values.PushValue(flag_value);
 
       if (this_dispatch->stret_return)
@@ -1118,29 +1048,10 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
         flag_value.GetScalar() = 0;
       dispatch_values.PushValue(flag_value);
 
-      switch (this_dispatch->fixedup) {
-      case DispatchFunction::eFixUpNone:
-        flag_value.GetScalar() = 0;
-        dispatch_values.PushValue(flag_value);
-        dispatch_values.PushValue(flag_value);
-        break;
-      case DispatchFunction::eFixUpFixed:
-        flag_value.GetScalar() = 1;
-        dispatch_values.PushValue(flag_value);
-        flag_value.GetScalar() = 1;
-        dispatch_values.PushValue(flag_value);
-        break;
-      case DispatchFunction::eFixUpToFix:
-        flag_value.GetScalar() = 1;
-        dispatch_values.PushValue(flag_value);
-        flag_value.GetScalar() = 0;
-        dispatch_values.PushValue(flag_value);
-        break;
-      }
       if (log && log->GetVerbose())
         flag_value.GetScalar() = 1;
       else
-        flag_value.GetScalar() = 0; // FIXME - Set to 0 when debugging is done.
+        flag_value.GetScalar() = 0;
       dispatch_values.PushValue(flag_value);
 
       ret_plan_sp = std::make_shared<AppleThreadPlanStepThroughObjCTrampoline>(
@@ -1153,20 +1064,19 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
       }
     }
   }
-  
-  // Finally, check if we have hit an "optimized dispatch" function.  This will
+
+  // Next, check if we have hit an "optimized dispatch" function.  This will
   // either directly call the base implementation or dispatch an objc_msgSend
   // if the method has been overridden.  So we just do a "step in/step out",
-  // setting a breakpoint on objc_msgSend, and if we hit the msgSend, we 
-  // will automatically step in again.  That's the job of the 
+  // setting a breakpoint on objc_msgSend, and if we hit the msgSend, we
+  // will automatically step in again.  That's the job of the
   // AppleThreadPlanStepThroughDirectDispatch.
   if (!this_dispatch && !ret_plan_sp) {
     MsgsendMap::iterator pos;
     pos = m_opt_dispatch_map.find(curr_pc);
     if (pos != m_opt_dispatch_map.end()) {
-      const char *opt_name = g_opt_dispatch_names[(*pos).second];
       ret_plan_sp = std::make_shared<AppleThreadPlanStepThroughDirectDispatch>(
-          thread, *this, opt_name);
+          thread, *this);
     }
   }
 
