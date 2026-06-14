@@ -1182,10 +1182,7 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   state->memRegion = sec->memRegion;
   state->lmaRegion = sec->lmaRegion;
 
-  if (!(sec->flags & SHF_ALLOC)) {
-    // Non-SHF_ALLOC sections have zero addresses.
-    dot = 0;
-  } else if (isTbss) {
+  if (isTbss) {
     // Allow consecutive SHF_TLS SHT_NOBITS output sections. The address range
     // starts from the end address of the previous tbss section.
     if (state->tbssAddr == 0)
@@ -1207,6 +1204,25 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
     if (state->memRegion && state->memRegion->curPos < dot)
       expandMemoryRegion(state->memRegion, dot - state->memRegion->curPos,
                          sec->name);
+  }
+
+  if (!(sec->flags & SHF_ALLOC)) {
+    // Non-SHF_ALLOC sections usually have zero addresses, with two exceptions:
+    // 1) Explicit address expressions are still respected.
+    // 2) The presence of symbol assignments (not to `.`) is considered user
+    //    intent for the section to have an address.
+    bool hasAssign = false;
+    for (SectionCommand *cmd : sec->commands) {
+      if (auto *assign = dyn_cast<SymbolAssignment>(cmd)) {
+        if (assign->name != ".") {
+          hasAssign = true;
+          break;
+        }
+      }
+    }
+
+    if (!(hasSectionsCommand && sec->addrExpr) && !hasAssign)
+      dot = 0;
   }
 
   state->outSec = sec;
