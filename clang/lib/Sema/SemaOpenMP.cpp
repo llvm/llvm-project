@@ -8469,9 +8469,8 @@ bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
   // Helper lambda to check if a loop variable is already used in an outer
   // loop.
   auto CheckLoopVarReuse = [&](ValueDecl *LoopVar, SourceLocation Loc) -> bool {
-    if (!CollapsedLoopInductionVars.empty() &&
-        CollapsedLoopInductionVars.count(LoopVar->getCanonicalDecl()) &&
-        EmitDiags) {
+    if (EmitDiags &&
+        CollapsedLoopInductionVars.count(LoopVar->getCanonicalDecl())) {
       SemaRef.Diag(Loc, diag::err_omp_loop_var_reused_in_collapsed_loop)
           << LoopVar;
       return true;
@@ -9784,9 +9783,8 @@ static bool checkOpenMPIterationSpace(
   }
   // Record the loop induction variable for nested loop reuse checking.
   if (CurrentNestedLoopCount < NestedLoopCount && !HasErrors) {
-    if (const ValueDecl *LCDecl = ISC.getLoopDecl()) {
+    if (const ValueDecl *LCDecl = ISC.getLoopDecl())
       CollapsedLoopInductionVars.insert(LCDecl->getCanonicalDecl());
-    }
   }
   return HasErrors;
 }
@@ -10103,16 +10101,6 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
                     VarsWithImplicitDSA, IterSpaces, Captures,
                     CollapsedLoopVarDecls, CollapsedLoopInductionVars))
               return true;
-            // Add the current loop's induction variable to the set so nested
-            // loops can check against it.
-            if (Cnt < NestedLoopCount && IterSpaces[Cnt].CounterVar) {
-              if (auto *DRE =
-                      dyn_cast<DeclRefExpr>(IterSpaces[Cnt].CounterVar)) {
-                if (ValueDecl *VD = DRE->getDecl()) {
-                  CollapsedLoopInductionVars.insert(VD->getCanonicalDecl());
-                }
-              }
-            }
             if (Cnt > 0 && Cnt >= NestedLoopCount &&
                 IterSpaces[Cnt].CounterVar) {
               // Handle initialization of captured loop iterator variables.

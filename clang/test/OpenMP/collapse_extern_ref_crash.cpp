@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 %s
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 %s
 
-// This test verify two behaviors:
+// This test verifies two behaviors:
 // 1. No crash when the loop bound is an extern reference (fixed null pointer
 // dereference).
 // 2. Proper diagnostic when a nested loop reuses the outer loop's induction
