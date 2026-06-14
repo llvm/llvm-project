@@ -11744,11 +11744,51 @@ static SDValue lowerIMEReadSelectedLambda(SDValue Op, SelectionDAG &DAG,
   return DAG.getMergeValues({Lambda, Chain}, DL);
 }
 
-// Lower the nonzero selected-lambda write/readback primitive used by
-// __riscv_vsetlambda(N), for N in {1,2,4,8,16,32,64}.  The IME vtype fields
-// live in high vtype bits outside the vsetvli/vsetivli immediate fields, so the
-// spec requires configuring them with register-form vsetvl using a full vtype
-// value in a GPR.
+static SDValue encodeRuntimeIMELambda(SDValue Requested, const SDLoc &DL,
+                                      SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget,
+                                      MVT XLenVT) {
+  // This primitive is the nonzero arm of the C-level __riscv_vsetlambda
+  // lowering. Valid runtime inputs are {1,2,4,8,16,32,64}. On targets with
+  // Zbb, ctz(x) + 1 maps directly to the 3-bit vtype.lambda encoding.
+  if (Subtarget.hasStdExtZbb()) {
+    SDValue Encoded = DAG.getNode(ISD::CTTZ_ZERO_POISON, DL, XLenVT, Requested);
+    return DAG.getNode(ISD::ADD, DL, XLenVT, Encoded,
+                       DAG.getConstant(1, DL, XLenVT));
+  }
+
+  // Without Zbb, generic cttz can expand to libcalls. Build the 3-bit
+  // vtype.lambda encoding directly instead.
+  //
+  // Invalid runtime inputs are outside the source-level contract. Leave their
+  // encoding as zero so this lowering does not write outside lambda[2:0] or
+  // synthesize an encoding that sets VILL.
+  SDValue Encoded = DAG.getConstant(0, DL, XLenVT);
+
+  auto SelectIfEq = [&](uint64_t Value, unsigned Enc) {
+    SDValue IsEq =
+        DAG.getSetCC(DL, XLenVT, Requested,
+                     DAG.getConstant(Value, DL, XLenVT), ISD::SETEQ);
+    Encoded = DAG.getSelect(DL, XLenVT, IsEq,
+                            DAG.getConstant(Enc, DL, XLenVT), Encoded);
+  };
+
+  SelectIfEq(1, 1);
+  SelectIfEq(2, 2);
+  SelectIfEq(4, 3);
+  SelectIfEq(8, 4);
+  SelectIfEq(16, 5);
+  SelectIfEq(32, 6);
+  SelectIfEq(64, 7);
+
+  return Encoded;
+}
+
+// Lower the nonzero selected-lambda write/readback primitive used by the
+// nonzero path of __riscv_vsetlambda(N). Valid source-level values are
+// {1,2,4,8,16,32,64}. The IME vtype fields live in high vtype bits outside the
+// vsetvli/vsetivli immediate fields, so the spec requires configuring them
+// with register-form vsetvl using a full vtype value in a GPR.
 //
 // The lowering preserves the current vl and all other vtype fields:
 //
@@ -11765,21 +11805,22 @@ static SDValue lowerIMEVSetLambdaNonZero(SDValue Op, SelectionDAG &DAG,
   SDValue Requested = Op.getOperand(2);
   MVT XLenVT = Subtarget.getXLenVT();
 
-  auto *C = dyn_cast<ConstantSDNode>(Requested);
-  if (!C)
-    report_fatal_error(
-        "llvm.riscv.ime.vsetlambda.nonzero requires an immediate argument");
-
-  uint64_t Value = C->getZExtValue();
-  if (!isValidIMELambdaValue(Value))
-    report_fatal_error(
-        "invalid argument for llvm.riscv.ime.vsetlambda.nonzero: expected a "
-        "power of two in {1,2,4,8,16,32,64}");
-
   SDValue OldVType = readIMEVType(Chain, DL, DAG, Subtarget);
   Chain = OldVType.getValue(1);
 
-  SDValue Encoded = DAG.getConstant(Log2_64(Value) + 1, DL, XLenVT);
+  SDValue Encoded;
+  if (auto *C = dyn_cast<ConstantSDNode>(Requested)) {
+    uint64_t Value = C->getZExtValue();
+    if (!isValidIMELambdaValue(Value))
+      report_fatal_error(
+          "invalid constant requested lambda for "
+          "llvm.riscv.ime.vsetlambda.nonzero");
+
+    Encoded = DAG.getConstant(Log2_64(Value) + 1, DL, XLenVT);
+  } else {
+    Encoded = encodeRuntimeIMELambda(Requested, DL, DAG, Subtarget, XLenVT);
+  }
+
   SDValue Cleared =
       DAG.getNode(ISD::AND, DL, XLenVT, OldVType,
                   DAG.getConstant(getIMEClearLambdaMask(Subtarget), DL,

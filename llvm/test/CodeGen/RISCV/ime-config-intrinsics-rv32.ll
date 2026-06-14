@@ -8,6 +8,8 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-zvvmm \
 ; RUN:   -riscv-v-vector-bits-min=1024 -riscv-v-vector-bits-max=1024 < %s \
 ; RUN:   | FileCheck %s --check-prefix=RV32-VLEN1024
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-zvvmm,+zbb < %s \
+; RUN:   | FileCheck %s --check-prefix=RV32-ZBB
 
 define i32 @ime_vlen_rv32() {
 ; RV32-LABEL: ime_vlen_rv32:
@@ -581,6 +583,119 @@ define i32 @vsetlambda_64_rv32() {
 ; RV32-VLEN1024-NEXT:    and a0, a1, a0
 ; RV32-VLEN1024-NEXT:    ret
   %lambda = call i32 @llvm.riscv.ime.vsetlambda.nonzero.i32(i32 64)
+  ret i32 %lambda
+}
+
+define i32 @vsetlambda_nonzero_runtime_rv32(i32 %x) {
+; RV32-LABEL: vsetlambda_nonzero_runtime_rv32:
+; RV32-NOT:    call
+; RV32:        csrr {{.*}}, vtype
+; RV32-NOT:    call
+; RV32:        vsetvl zero, zero,
+; RV32-NOT:    call
+; RV32:        csrr a0, vtype
+; RV32-NOT:    call
+; RV32:        ret
+;
+; RV32-VLEN512-LABEL: vsetlambda_nonzero_runtime_rv32:
+; RV32-VLEN512-NOT:    call
+; RV32-VLEN512:        csrr {{.*}}, vtype
+; RV32-VLEN512-NOT:    call
+; RV32-VLEN512:        vsetvl zero, zero,
+; RV32-VLEN512-NOT:    call
+; RV32-VLEN512:        csrr a0, vtype
+; RV32-VLEN512-NOT:    call
+; RV32-VLEN512:        ret
+;
+; RV32-VLEN1024-LABEL: vsetlambda_nonzero_runtime_rv32:
+; RV32-VLEN1024-NOT:    call
+; RV32-VLEN1024:        csrr {{.*}}, vtype
+; RV32-VLEN1024-NOT:    call
+; RV32-VLEN1024:        vsetvl zero, zero,
+; RV32-VLEN1024-NOT:    call
+; RV32-VLEN1024:        csrr a0, vtype
+; RV32-VLEN1024-NOT:    call
+; RV32-VLEN1024:        ret
+;
+; RV32-ZBB-LABEL: vsetlambda_nonzero_runtime_rv32:
+; RV32-ZBB-NOT:    call
+; RV32-ZBB:        csrr {{.*}}, vtype
+; RV32-ZBB-NOT:    call
+; RV32-ZBB:        ctz {{.*}}, a0
+; RV32-ZBB-NOT:    call
+; RV32-ZBB:        vsetvl zero, zero,
+; RV32-ZBB-NOT:    call
+; RV32-ZBB:        csrr a0, vtype
+; RV32-ZBB-NOT:    call
+; RV32-ZBB:        ret
+  %lambda = call i32 @llvm.riscv.ime.vsetlambda.nonzero.i32(i32 %x)
+  ret i32 %lambda
+}
+
+define i32 @vsetlambda_runtime_split_rv32(i32 %x) {
+; RV32-LABEL: vsetlambda_runtime_split_rv32:
+; RV32-NOT:    call
+; RV32:        beqz a0, [[READ:.LBB[0-9_]+]]
+; RV32-NOT:    call
+; RV32:        vsetvl zero, zero,
+; RV32-NOT:    call
+; RV32:      [[READ]]: # %cont
+; RV32-NEXT:   csrr a0, vtype
+; RV32-NOT:    vsetvl
+; RV32-NOT:    call
+; RV32:        ret
+;
+; RV32-VLEN512-LABEL: vsetlambda_runtime_split_rv32:
+; RV32-VLEN512-NOT:    call
+; RV32-VLEN512:        beqz a0, [[READ:.LBB[0-9_]+]]
+; RV32-VLEN512-NOT:    call
+; RV32-VLEN512:        vsetvl zero, zero,
+; RV32-VLEN512-NOT:    call
+; RV32-VLEN512:      [[READ]]: # %cont
+; RV32-VLEN512-NEXT:   csrr a0, vtype
+; RV32-VLEN512-NOT:    vsetvl
+; RV32-VLEN512-NOT:    call
+; RV32-VLEN512:        ret
+;
+; RV32-VLEN1024-LABEL: vsetlambda_runtime_split_rv32:
+; RV32-VLEN1024-NOT:    call
+; RV32-VLEN1024:        beqz a0, [[READ:.LBB[0-9_]+]]
+; RV32-VLEN1024-NOT:    call
+; RV32-VLEN1024:        vsetvl zero, zero,
+; RV32-VLEN1024-NOT:    call
+; RV32-VLEN1024:      [[READ]]: # %cont
+; RV32-VLEN1024-NEXT:   csrr a0, vtype
+; RV32-VLEN1024-NOT:    vsetvl
+; RV32-VLEN1024-NOT:    call
+; RV32-VLEN1024:        ret
+;
+; RV32-ZBB-LABEL: vsetlambda_runtime_split_rv32:
+; RV32-ZBB-NOT:    call
+; RV32-ZBB:        beqz a0, [[READ:.LBB[0-9_]+]]
+; RV32-ZBB-NOT:    call
+; RV32-ZBB:        ctz {{.*}}, a0
+; RV32-ZBB-NOT:    call
+; RV32-ZBB:        vsetvl zero, zero,
+; RV32-ZBB-NOT:    call
+; RV32-ZBB:      [[READ]]: # %cont
+; RV32-ZBB-NEXT:   csrr a0, vtype
+; RV32-ZBB-NOT:    vsetvl
+; RV32-ZBB-NOT:    call
+; RV32-ZBB:        ret
+entry:
+  %iszero = icmp eq i32 %x, 0
+  br i1 %iszero, label %read, label %set
+
+read:
+  %readlambda = call i32 @llvm.riscv.ime.readlambda.i32()
+  br label %cont
+
+set:
+  %setlambda = call i32 @llvm.riscv.ime.vsetlambda.nonzero.i32(i32 %x)
+  br label %cont
+
+cont:
+  %lambda = phi i32 [ %readlambda, %read ], [ %setlambda, %set ]
   ret i32 %lambda
 }
 

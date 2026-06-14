@@ -2080,10 +2080,12 @@ let TargetPrefix = "riscv" in {
       : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 
   // Write a nonzero requested lambda and return the established lambda.
-  // The argument contract is: positive power of two in {1,2,4,8,16,32,64}.
+  // Source-level contract: the argument is a positive power of two in
+  // {1,2,4,8,16,32,64}. Clang emits a separate readlambda path for
+  // requested_lambda == 0 before calling this primitive.
   def int_riscv_ime_vsetlambda_nonzero
       : Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>],
-                  [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+                  [IntrNoMem, IntrHasSideEffects]>;
 } // TargetPrefix = "riscv"
 
 // Vendor extensions

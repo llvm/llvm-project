@@ -689,13 +689,11 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
 
     Expr::EvalResult Eval;
     Expr *EvalArg = DiagArg;
-    if (!EvalArg->EvaluateAsInt(Eval, Context, Expr::SE_NoSideEffects)) {
-      EvalArg = Arg;
-      if (!EvalArg->EvaluateAsInt(Eval, Context, Expr::SE_NoSideEffects))
-        return Diag(DiagArg->getBeginLoc(),
-                    diag::err_riscv_builtin_invalid_ime_lambda)
-               << DiagArg->getSourceRange();
-    }
+    // Prefer evaluating the user source expression before the macro-introduced
+    // (size_t) cast. This catches constants that would otherwise wrap into a
+    // valid size_t value on RV32, e.g. 0x100000004ULL -> 4.
+    if (!EvalArg->EvaluateAsInt(Eval, Context, Expr::SE_NoSideEffects))
+      return false;
 
     llvm::APSInt Val = Eval.Val.getInt();
     if (Val.isSigned() && Val.isNegative())
