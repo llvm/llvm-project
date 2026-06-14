@@ -13,8 +13,8 @@
 
 #include "mlir/Conversion/ArithToEmitC/ArithToEmitCPass.h"
 
-#include "mlir/Conversion/EmitCCommon/TypeConverter.h"
 #include "mlir/Conversion/ArithToEmitC/ArithToEmitC.h"
+#include "mlir/Conversion/EmitCCommon/TypeConverter.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Pass/Pass.h"

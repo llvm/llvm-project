@@ -12,8 +12,8 @@
 
 #include "mlir/Conversion/SCFToEmitC/SCFToEmitC.h"
 
-#include "mlir/Conversion/EmitCCommon/TypeConverter.h"
 #include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
+#include "mlir/Conversion/EmitCCommon/TypeConverter.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/EmitC/Transforms/TypeConversions.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
