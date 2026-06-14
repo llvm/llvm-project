@@ -73,7 +73,8 @@ define float @reduce_ordered_fadd_reversed(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[A0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr [[B0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <8 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[R6:%.*]] = call float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[R6:%.*]] = call float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP3]])
 ; CHECK-NEXT:    ret float [[R6]]
 ;
 entry:
@@ -133,7 +134,7 @@ define float @reduce_ordered_fadd_reassoc_no_nsz(ptr %p) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds float, ptr [[P]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[P0]], align 4
-; CHECK-NEXT:    [[R6:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP0]])
+; CHECK-NEXT:    [[R6:%.*]] = call float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP0]])
 ; CHECK-NEXT:    ret float [[R6]]
 ;
 entry:
