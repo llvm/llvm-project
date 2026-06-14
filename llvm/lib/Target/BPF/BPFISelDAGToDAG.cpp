@@ -26,6 +26,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 
 using namespace llvm;
 
@@ -397,6 +398,10 @@ bool BPFDAGToDAGISel::fillGenericConstant(const DataLayout &DL,
                                           val_vec_type &Vals, uint64_t Offset) {
   uint64_t Size = DL.getTypeAllocSize(CV->getType());
 
+  uint64_t ValsSize = Vals.size();
+  if (Offset > ValsSize || Size > ValsSize - Offset)
+    return false;
+
   if (isa<ConstantAggregateZero>(CV) || isa<UndefValue>(CV))
     return true; // already done
 
@@ -491,8 +496,8 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
         (IntNo == Intrinsic::bpf_load_word && MaskV == 0xFFFFFFFF)))
     return;
 
-  LLVM_DEBUG(dbgs() << "Remove the redundant AND operation in: ";
-             Node->dump(); dbgs() << '\n');
+  LLVM_DEBUG(dbgs() << "Remove the redundant AND operation in: "; Node->dump();
+             dbgs() << '\n');
 
   I--;
   CurDAG->ReplaceAllUsesWith(SDValue(Node, 0), BaseV);
