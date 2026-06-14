@@ -44,14 +44,11 @@ evaluating emitter.
 Primitive Types
 ---------------
 
-* ``PT_Char``
+* ``PT_{U|S}int{8|16|32|64}``
 
-  Signed or unsigned 1-byte character type.
-
-* ``PT_{U|S}int{16|32|64}``
-
-  Signed or unsigned integers of a specific bit width, implemented using
-  the ``Integral`` type. All of these take up 24 bytes each since they
+  Signed or unsigned integers of a specific bit width.
+  1-byte types are also 1 byte in size. Sizes >= 16 bits are implemented
+  using the ``Integral`` class. they take up 24 bytes each since they
   need to be able to represent a pointer that has been casted to an integer.
 
 
