@@ -344,7 +344,7 @@ def CSR_PPC64_R2_Altivec : CalleeSavedRegs<(add CSR_PPC64_Altivec, X2)>;
 def CSR_NoRegs : CalleeSavedRegs<(add)>;
 
 def CSR_PPC32_PreserveAll
-    : CalleeSavedRegs<(add (sequence "R%u", 5, 10), (sequence "R%u", 14, 31),
+    : CalleeSavedRegs<(add (sequence "R%u", 5, 11), (sequence "R%u", 14, 31),
                            F0, (sequence "F%u", 2, 31))>;
 
 def CSR_PPC32_PreserveAll_Altivec
@@ -352,11 +352,11 @@ def CSR_PPC32_PreserveAll_Altivec
                            (sequence "V%u", 0, 1), (sequence "V%u", 3, 31))>;
 
 def CSR_PPC32_PreserveAll_SPE
-    : CalleeSavedRegs<(add (sequence "R%u", 5, 10), (sequence "R%u", 14, 31),
+    : CalleeSavedRegs<(add (sequence "R%u", 5, 11), (sequence "R%u", 14, 31),
                            (sequence "S%u", 5, 31))>;
 
 def CSR_PPC64_PreserveAll
-    : CalleeSavedRegs<(add (sequence "X%u", 5, 10), (sequence "X%u", 14, 31),
+    : CalleeSavedRegs<(add (sequence "X%u", 5, 11), (sequence "X%u", 14, 31),
                            F0, (sequence "F%u", 2, 31))>;
 
 def CSR_PPC64_PreserveAll_Altivec
