@@ -204,6 +204,21 @@ LLVMArrayType::getPreferredAlignment(const DataLayout &dataLayout,
 }
 
 //===----------------------------------------------------------------------===//
+// LLVMByteType
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize
+LLVMByteType::getTypeSizeInBits(const DataLayout &dataLayout,
+                                DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(getBitWidth());
+}
+
+uint64_t LLVMByteType::getABIAlignment(const DataLayout &dataLayout,
+                                       DataLayoutEntryListRef params) const {
+  return llvm::PowerOf2Ceil(llvm::divideCeil(getBitWidth(), 8));
+}
+
+//===----------------------------------------------------------------------===//
 // Function type.
 //===----------------------------------------------------------------------===//
 
@@ -737,6 +752,7 @@ bool mlir::LLVM::isCompatibleOuterType(Type type) {
       Float80Type,
       Float128Type,
       LLVMArrayType,
+      LLVMByteType,
       LLVMFunctionType,
       LLVMLabelType,
       LLVMMetadataType,
@@ -800,6 +816,7 @@ static bool isCompatibleImpl(Type type, DenseSet<Type> &compatibleTypes) {
             Float64Type,
             Float80Type,
             Float128Type,
+            LLVMByteType,
             LLVMLabelType,
             LLVMMetadataType,
             LLVMPPCFP128Type,
@@ -856,7 +873,8 @@ bool mlir::LLVM::isCompatibleVectorType(Type type) {
     if (auto intType = llvm::dyn_cast<IntegerType>(elementType))
       return intType.isSignless();
     return llvm::isa<BFloat16Type, Float16Type, Float32Type, Float64Type,
-                     Float80Type, Float128Type, LLVMPointerType>(elementType) ||
+                     Float80Type, Float128Type, LLVMByteType, LLVMPointerType>(
+               elementType) ||
            isCompatiblePtrType(elementType);
   }
   return false;
@@ -906,6 +924,9 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
       .Case([](IntegerType intTy) {
         return llvm::TypeSize::getFixed(intTy.getWidth());
       })
+      .Case([](LLVMByteType byteTy) {
+        return llvm::TypeSize::getFixed(byteTy.getBitWidth());
+      })
       .Case<LLVMPPCFP128Type>(
           [](Type) { return llvm::TypeSize::getFixed(128); })
       .Case([](VectorType t) {
@@ -934,6 +955,7 @@ void LLVMDialect::registerTypes() {
   addTypes<
 #define GET_TYPEDEF_LIST
 #include "mlir/Dialect/LLVMIR/LLVMTypes.cpp.inc"
+
       >();
 }
 
