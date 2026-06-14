@@ -468,12 +468,6 @@ Configuration Options
        point. Lower values (e.g., 0) disable context switching, allowing threads
        to run more sequentially. Useful for comparing simulation results against
        sequential execution.
-   * - ``simulate_schedule_on_memory_access``
-     - bool
-     - false
-     - Insert scheduling points at every memory read/write during simulation for
-       maximum interleaving exploration. This can significantly increase overhead
-       but may expose additional races.
    * - ``simulate_print_schedule_stacks``
      - bool
      - false
