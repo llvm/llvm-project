@@ -580,7 +580,15 @@ getSgLayoutCandidates(ArrayRef<int64_t> wgShape, ArrayRef<int> instData,
   return candidates;
 }
 
-FailureOr<int64_t> getNumSg(Operation *op, const int sgSize) {
+FailureOr<int64_t>
+getNumSg(Operation *op, const int sgSize,
+         xegpu::DistributeLayoutAttr consumerLayout = nullptr) {
+  // first look for the number of subgroups required by the consumer layout
+  if (consumerLayout) {
+    auto sgLayout = consumerLayout.getEffectiveSgLayoutAsInt();
+    if (!sgLayout.empty())
+      return llvm::product_of(sgLayout);
+  }
   // Oblivious to workitem layout, the total count matters.
   auto gpuFunc = op->getParentOfType<gpu::GPUFuncOp>();
   if (!gpuFunc)
@@ -606,19 +614,15 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
     if (!uArch)
       return;
 
-    int numSg = 0;
-    if (layoutKind == xegpu::LayoutKind::Subgroup) {
-      auto numSgOrErr = getNumSg(prefetch, uArch->getSubgroupSize());
-      if (failed(numSgOrErr)) {
-        prefetch.emitWarning(
-            "Unable to determine the number of subgroups for the operation.");
-        return;
-      }
-      numSg = numSgOrErr.value();
+    auto numSgOrErr = getNumSg(prefetch, uArch->getSubgroupSize());
+    if (layoutKind == xegpu::LayoutKind::Subgroup && failed(numSgOrErr)) {
+      prefetch.emitWarning(
+          "Unable to determine the number of subgroups for the operation.");
+      return;
     }
 
-    auto layoutAttr =
-        xegpu::setupPrefetchNdAnchorLayout(layoutKind, tdescTy, numSg, uArch);
+    auto layoutAttr = xegpu::setupPrefetchNdAnchorLayout(
+        layoutKind, tdescTy, numSgOrErr.value_or(0), uArch);
     if (!layoutAttr) {
       prefetch.emitWarning(
           "Failed to determine required layout for prefetch_nd.");
@@ -653,11 +657,13 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   const uArch *uArch = getUArch(xegpu::getChipStr(reduction).value_or(""));
   if (!uArch)
     return;
-  int numSg = 0;
-  if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    auto numSgOrErr = getNumSg(reduction, uArch->getSubgroupSize());
-    if (succeeded(numSgOrErr))
-      numSg = numSgOrErr.value();
+
+  auto numSgOrErr =
+      getNumSg(reduction, uArch->getSubgroupSize(), consumerLayoutAttr);
+  if (layoutKind == xegpu::LayoutKind::Subgroup && failed(numSgOrErr)) {
+    reduction.emitWarning(
+        "Unable to determine the number of subgroups for the operation.");
+    return;
   }
 
   // The result layout represents the layout requirements of the operation.
@@ -666,7 +672,8 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   // propagated from consumer op, the conflict is resolved in later phase by
   // converting the required result layout to the consumer layout
   auto requiredResLayoutAttr = xegpu::setupMultiReductionResultLayout(
-      layoutKind, sourceTy, consumerLayoutAttr, reductionDims, numSg, uArch);
+      layoutKind, sourceTy, consumerLayoutAttr, reductionDims,
+      numSgOrErr.value_or(0), uArch);
 
   xegpu::setTemporaryLayout(reduction->getResult(0), requiredResLayoutAttr);
 
@@ -776,23 +783,23 @@ void LayoutInfoPropagation::visitDpasOp(
     xegpu::DistributeLayoutAttr requiredCDLayoutAttr, requiredALayout,
         requiredBLayout;
 
-    int numSg = 0;
-    if (layoutKind == xegpu::LayoutKind::Subgroup) {
-      LayoutInfo consumerLayout = results[0]->getValue();
-      if (!consumerLayout.isAssigned())
-        return;
-      consumerLayoutAttr =
-          dyn_cast<xegpu::DistributeLayoutAttr>(consumerLayout.get());
-      auto numSgOrErr = getNumSg(dpas, uArch->getSubgroupSize());
-      if (failed(numSgOrErr)) {
-        dpas.emitWarning(
-            "Unable to determine the number of subgroups for the operation.");
-        return;
-      }
-      numSg = numSgOrErr.value();
+    LayoutInfo consumerLayout = results[0]->getValue();
+    if (!consumerLayout.isAssigned())
+      return;
+    consumerLayoutAttr =
+        dyn_cast<xegpu::DistributeLayoutAttr>(consumerLayout.get());
+
+    auto numSgOrErr =
+        getNumSg(dpas, uArch->getSubgroupSize(), consumerLayoutAttr);
+    if (layoutKind == xegpu::LayoutKind::Subgroup && failed(numSgOrErr)) {
+      dpas.emitWarning(
+          "Unable to determine the number of subgroups for the operation.");
+      return;
     }
-    auto layouts = xegpu::setupDpasLayout(layoutKind, aTy, bTy, cdTy,
-                                          consumerLayoutAttr, numSg, uArch);
+
+    auto layouts =
+        xegpu::setupDpasLayout(layoutKind, aTy, bTy, cdTy, consumerLayoutAttr,
+                               numSgOrErr.value_or(0), uArch);
     if (!layouts.has_value()) {
       dpas.emitWarning(
           "Failed to determine required layouts for DPAS operands.");
@@ -872,25 +879,23 @@ void LayoutInfoPropagation::visitDpasMxOp(
     xegpu::DistributeLayoutAttr requiredCDLayoutAttr, requiredALayout,
         requiredBLayout, requiredAScaleLayout, requiredBScaleLayout;
 
-    int numSg = 0;
-    if (layoutKind == xegpu::LayoutKind::Subgroup) {
-      LayoutInfo consumerLayout = results[0]->getValue();
-      if (!consumerLayout.isAssigned())
-        return;
-      consumerLayoutAttr =
-          dyn_cast<xegpu::DistributeLayoutAttr>(consumerLayout.get());
-      auto numSgOrErr = getNumSg(dpasMx, uArch->getSubgroupSize());
-      if (failed(numSgOrErr)) {
-        dpasMx.emitWarning(
-            "Unable to determine the number of subgroups for the operation.");
-        return;
-      }
-      numSg = numSgOrErr.value();
+    LayoutInfo consumerLayout = results[0]->getValue();
+    if (!consumerLayout.isAssigned())
+      return;
+    consumerLayoutAttr =
+        dyn_cast<xegpu::DistributeLayoutAttr>(consumerLayout.get());
+
+    auto numSgOrErr =
+        getNumSg(dpasMx, uArch->getSubgroupSize(), consumerLayoutAttr);
+    if (layoutKind == xegpu::LayoutKind::Subgroup && failed(numSgOrErr)) {
+      dpasMx.emitWarning(
+          "Unable to determine the number of subgroups for the operation.");
+      return;
     }
 
-    auto layouts =
-        xegpu::setupDpasMxLayout(layoutKind, aTy, bTy, cdTy, aScaleTy, bScaleTy,
-                                 consumerLayoutAttr, numSg, uArch);
+    auto layouts = xegpu::setupDpasMxLayout(
+        layoutKind, aTy, bTy, cdTy, aScaleTy, bScaleTy, consumerLayoutAttr,
+        numSgOrErr.value_or(0), uArch);
     if (!layouts.has_value()) {
       dpasMx.emitWarning(
           "Failed to determine required layouts for DPAS_MX operands.");
@@ -955,19 +960,15 @@ void LayoutInfoPropagation::visitStoreNdOp(
     if (!uArch)
       return;
 
-    int numSg = 0;
-    if (layoutKind == xegpu::LayoutKind::Subgroup) {
-      auto numSgOrErr = getNumSg(store, uArch->getSubgroupSize());
-      if (failed(numSgOrErr)) {
-        store.emitWarning(
-            "Unable to determine the number of subgroups for the operation.");
-        return;
-      }
-      numSg = numSgOrErr.value();
+    auto numSgOrErr = getNumSg(store, uArch->getSubgroupSize());
+    if (layoutKind == xegpu::LayoutKind::Subgroup && failed(numSgOrErr)) {
+      store.emitWarning(
+          "Unable to determine the number of subgroups for the operation.");
+      return;
     }
 
     auto layoutAttr = xegpu::setupStoreNdAnchorLayout(
-        layoutKind, store.getValueType(), numSg, uArch);
+        layoutKind, store.getValueType(), numSgOrErr.value_or(0), uArch);
     if (!layoutAttr) {
       store.emitWarning("Failed to determine required layout for store_nd.");
       return;
@@ -1012,19 +1013,17 @@ void LayoutInfoPropagation::visitLoadNdOp(
     if (!uArch)
       return;
 
-    int numSg = 0;
-    if (layoutKind == xegpu::LayoutKind::Subgroup) {
-      auto numSgOrErr = getNumSg(load, uArch->getSubgroupSize());
-      if (failed(numSgOrErr)) {
-        load.emitWarning(
-            "Unable to determine the number of subgroups for the operation.");
-        return;
-      }
-      numSg = numSgOrErr.value();
+    auto numSgOrErr =
+        getNumSg(load, uArch->getSubgroupSize(), consumerLayoutAttr);
+    if (layoutKind == xegpu::LayoutKind::Subgroup && failed(numSgOrErr)) {
+      load.emitWarning(
+          "Unable to determine the number of subgroups for the operation.");
+      return;
     }
 
     auto layoutAttr = xegpu::setupLoadNdAnchorLayout(
-        layoutKind, load.getType(), consumerLayoutAttr, numSg, uArch);
+        layoutKind, load.getType(), consumerLayoutAttr, numSgOrErr.value_or(0),
+        uArch);
     if (!layoutAttr) {
       load.emitWarning("Failed to determine required layout for load_nd.");
       return;
