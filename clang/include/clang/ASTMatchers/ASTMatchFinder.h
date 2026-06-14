@@ -82,8 +82,8 @@ public:
 
     /// Utilities for interpreting the matched AST structures.
     /// @{
-    clang::ASTContext * const Context;
-    clang::SourceManager * const SourceManager;
+    clang::ASTContext *const Context;
+    clang::SourceManager *const SourceManager;
     /// @}
   };
 
@@ -159,18 +159,14 @@ public:
   ///
   /// Does not take ownership of 'Action'.
   /// @{
-  void addMatcher(const DeclarationMatcher &NodeMatch,
-                  MatchCallback *Action);
-  void addMatcher(const TypeMatcher &NodeMatch,
-                  MatchCallback *Action);
-  void addMatcher(const StatementMatcher &NodeMatch,
-                  MatchCallback *Action);
+  void addMatcher(const DeclarationMatcher &NodeMatch, MatchCallback *Action);
+  void addMatcher(const TypeMatcher &NodeMatch, MatchCallback *Action);
+  void addMatcher(const StatementMatcher &NodeMatch, MatchCallback *Action);
   void addMatcher(const NestedNameSpecifierMatcher &NodeMatch,
                   MatchCallback *Action);
   void addMatcher(const NestedNameSpecifierLocMatcher &NodeMatch,
                   MatchCallback *Action);
-  void addMatcher(const TypeLocMatcher &NodeMatch,
-                  MatchCallback *Action);
+  void addMatcher(const TypeLocMatcher &NodeMatch, MatchCallback *Action);
   void addMatcher(const CXXCtorInitializerMatcher &NodeMatch,
                   MatchCallback *Action);
   void addMatcher(const TemplateArgumentLocMatcher &NodeMatch,
@@ -257,8 +253,8 @@ private:
 /// \see selectFirst
 /// @{
 template <typename MatcherT, typename NodeT>
-SmallVector<BoundNodes, 1>
-match(MatcherT Matcher, const NodeT &Node, ASTContext &Context);
+SmallVector<BoundNodes, 1> match(MatcherT Matcher, const NodeT &Node,
+                                 ASTContext &Context);
 
 template <typename MatcherT>
 SmallVector<BoundNodes, 1> match(MatcherT Matcher, const DynTypedNode &Node,
@@ -281,8 +277,8 @@ SmallVector<BoundNodes, 1> match(MatcherT Matcher, ASTContext &Context);
 ///                                                 Node, Context));
 /// \endcode
 template <typename NodeT>
-const NodeT *
-selectFirst(StringRef BoundTo, const SmallVectorImpl<BoundNodes> &Results) {
+const NodeT *selectFirst(StringRef BoundTo,
+                         const SmallVectorImpl<BoundNodes> &Results) {
   for (const BoundNodes &N : Results) {
     if (const NodeT *Node = N.getNodeAs<NodeT>(BoundTo))
       return Node;
@@ -303,7 +299,7 @@ public:
 
   SmallVector<BoundNodes, 1> Nodes;
 };
-}
+} // namespace internal
 
 template <typename MatcherT>
 SmallVector<BoundNodes, 1> match(MatcherT Matcher, const DynTypedNode &Node,
@@ -316,14 +312,13 @@ SmallVector<BoundNodes, 1> match(MatcherT Matcher, const DynTypedNode &Node,
 }
 
 template <typename MatcherT, typename NodeT>
-SmallVector<BoundNodes, 1>
-match(MatcherT Matcher, const NodeT &Node, ASTContext &Context) {
+SmallVector<BoundNodes, 1> match(MatcherT Matcher, const NodeT &Node,
+                                 ASTContext &Context) {
   return match(Matcher, DynTypedNode::create(Node), Context);
 }
 
 template <typename MatcherT>
-SmallVector<BoundNodes, 1>
-match(MatcherT Matcher, ASTContext &Context) {
+SmallVector<BoundNodes, 1> match(MatcherT Matcher, ASTContext &Context) {
   internal::CollectMatchesCallback Callback;
   MatchFinder Finder;
   Finder.addMatcher(Matcher, &Callback);
