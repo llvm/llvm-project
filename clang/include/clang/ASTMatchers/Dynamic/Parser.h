@@ -244,8 +244,7 @@ private:
   struct ScopedContextEntry;
   struct TokenInfo;
 
-  Parser(CodeTokenizer *Tokenizer, Sema *S,
-         const NamedValueMap *NamedValues,
+  Parser(CodeTokenizer *Tokenizer, Sema *S, const NamedValueMap *NamedValues,
          Diagnostics *Error);
 
   bool parseBindID(std::string &BindID);
