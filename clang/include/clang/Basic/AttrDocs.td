@@ -6712,8 +6712,9 @@ returned in callee-saved registers.
   point registers.
 
 - On PowerPC the callee preserves all general purpose registers, except for
-  R0-R4, R12, and R13. Furthermore it also preserves all
-  floating-point registers, except F1, and all vector registers, except V2.
+  R0, R3, R4, R12, and R13. R2 is preserved on PPC64 when used as the TOC
+  register. Furthermore it also preserves all floating-point registers, except
+  F1, and all vector registers, except V2.
 
 The idea behind this convention is to support calls to runtime functions
 that don't need to call out to any other functions.

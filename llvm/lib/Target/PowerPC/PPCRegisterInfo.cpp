@@ -199,21 +199,6 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_64_AllRegs_SaveList;
   }
 
-  if (MF->getFunction().getCallingConv() == CallingConv::PreserveAll) {
-    if (Subtarget.pairedVectorMemops() || Subtarget.isAIXABI())
-      report_fatal_error("PreserveAll unimplemented on this target.");
-
-    if (TM.isPPC64())
-      return Subtarget.hasAltivec() ? CSR_PPC64_PreserveAll_Altivec_SaveList
-                                    : CSR_PPC64_PreserveAll_SaveList;
-
-    if (Subtarget.hasAltivec())
-      return CSR_PPC32_PreserveAll_Altivec_SaveList;
-    if (Subtarget.hasSPE())
-      return CSR_PPC32_PreserveAll_SPE_SaveList;
-    return CSR_PPC32_PreserveAll_SaveList;
-  }
-
   // On PPC64, we might need to save r2 (but only if it is not reserved).
   // We do not need to treat R2 as callee-saved when using PC-Relative calls
   // because any direct uses of R2 will cause it to be reserved. If the function
@@ -223,6 +208,25 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   // clobbers the TOC.
   bool SaveR2 = MF->getRegInfo().isAllocatable(PPC::X2) &&
                 !Subtarget.isUsingPCRelativeCalls();
+
+  if (MF->getFunction().getCallingConv() == CallingConv::PreserveAll) {
+    if (Subtarget.pairedVectorMemops() || Subtarget.isAIXABI())
+      report_fatal_error("PreserveAll unimplemented on this target.");
+
+    if (TM.isPPC64()) {
+      if (Subtarget.hasAltivec())
+        return SaveR2 ? CSR_PPC64_PreserveAll_R2_Altivec_SaveList
+                      : CSR_PPC64_PreserveAll_Altivec_SaveList;
+      return SaveR2 ? CSR_PPC64_PreserveAll_R2_SaveList
+                    : CSR_PPC64_PreserveAll_SaveList;
+    }
+
+    if (Subtarget.hasAltivec())
+      return CSR_PPC32_PreserveAll_Altivec_SaveList;
+    if (Subtarget.hasSPE())
+      return CSR_PPC32_PreserveAll_SPE_SaveList;
+    return CSR_PPC32_PreserveAll_SaveList;
+  }
 
   // Cold calling convention CSRs.
   if (MF->getFunction().getCallingConv() == CallingConv::Cold) {

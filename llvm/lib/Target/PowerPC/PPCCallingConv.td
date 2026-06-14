@@ -363,6 +363,12 @@ def CSR_PPC64_PreserveAll_Altivec
     : CalleeSavedRegs<(add CSR_PPC64_PreserveAll,
                            (sequence "V%u", 0, 1), (sequence "V%u", 3, 31))>;
 
+def CSR_PPC64_PreserveAll_R2
+    : CalleeSavedRegs<(add CSR_PPC64_PreserveAll, X2)>;
+
+def CSR_PPC64_PreserveAll_R2_Altivec
+    : CalleeSavedRegs<(add CSR_PPC64_PreserveAll_Altivec, X2)>;
+
 // coldcc calling convection marks most registers as non-volatile.
 // Do not include r1 since the stack pointer is never considered a CSR.
 // Do not include r2, since it is the TOC register and is added depending
