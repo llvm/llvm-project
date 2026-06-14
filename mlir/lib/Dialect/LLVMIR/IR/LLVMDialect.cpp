@@ -25,6 +25,7 @@
 #include "mlir/Transforms/InliningUtils.h"
 
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Error.h"
@@ -4171,9 +4172,23 @@ LogicalResult ModuleFlagsOp::verify() {
   if (Operation *parentOp = (*this)->getParentOp();
       parentOp && !satisfiesLLVMModule(parentOp))
     return emitOpError("must appear at the module level");
-  for (Attribute flag : getFlags())
-    if (!isa<ModuleFlagAttr>(flag))
+
+  llvm::DenseSet<StringAttr> seenNonRequireKeys;
+  for (Attribute flag : getFlags()) {
+    auto moduleFlag = dyn_cast<ModuleFlagAttrInterface>(flag);
+    if (!moduleFlag)
       return emitOpError("expected a module flag attribute");
+    if (failed(LLVM::detail::verifyModuleFlagValue(
+            moduleFlag.getModuleFlagKey(), moduleFlag.getModuleFlagValue(),
+            [&] { return emitOpError(); })))
+      return failure();
+    if (moduleFlag.getModuleFlagBehavior() == ModFlagBehavior::Require)
+      continue;
+    StringAttr key = moduleFlag.getModuleFlagKey();
+    if (!seenNonRequireKeys.insert(key).second)
+      return emitOpError("expected module flag key '")
+             << key.getValue() << "' to be unique for non-require flags";
+  }
   return success();
 }
 

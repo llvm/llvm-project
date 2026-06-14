@@ -38,8 +38,11 @@ convertStringAttrToDenseElementsAttr(cir::ConstArrayAttr attr,
   llvm::SmallVector<mlir::APInt> values;
   values.reserve(totalSize);
 
+  // String bytes are raw values; interpret each as an unsigned byte so a
+  // high-bit char (>= 0x80) does not sign-extend to a value that overflows
+  // the element bit width when constructing the APInt.
   for (const char element : stringAttr)
-    values.emplace_back(bitWidth, element);
+    values.emplace_back(bitWidth, static_cast<unsigned char>(element));
 
   values.insert(values.end(), trailingZeros, mlir::APInt::getZero(bitWidth));
 
