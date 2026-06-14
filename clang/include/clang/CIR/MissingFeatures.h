@@ -125,6 +125,7 @@ struct MissingFeatures {
 
   // Coroutines
   static bool coroOutsideFrameMD() { return false; }
+  static bool coroutineGroManager() { return false; };
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }

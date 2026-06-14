@@ -835,7 +835,8 @@ public:
         } else if (isa<cir::LoopOpInterface>(nestedOp)) {
           collectExitsInLoop(nestedOp);
           return mlir::WalkResult::skip();
-        } else if (isa<cir::ReturnOp, cir::ContinueOp>(nestedOp)) {
+        } else if (isa<cir::CoReturnOp, cir::ReturnOp, cir::ContinueOp>(
+                       nestedOp)) {
           exits.emplace_back(nestedOp, nextId++);
         } else if (isGotoThatExitsCleanup(nestedOp)) {
           exits.emplace_back(nestedOp, nextId++);
@@ -857,7 +858,7 @@ public:
         // the nested cleanup.
         if (!ignoreBreak && isa<cir::BreakOp>(op)) {
           exits.emplace_back(op, nextId++);
-        } else if (isa<cir::ContinueOp, cir::ReturnOp>(op)) {
+        } else if (isa<cir::CoReturnOp, cir::ContinueOp, cir::ReturnOp>(op)) {
           exits.emplace_back(op, nextId++);
         } else if (isGotoThatExitsCleanup(op)) {
           exits.emplace_back(op, nextId++);
@@ -1008,6 +1009,13 @@ public:
         .Case<cir::ContinueOp>([&](auto) {
           // Continue is preserved for later lowering by enclosing loop.
           cir::ContinueOp::create(rewriter, loc);
+          return mlir::success();
+        })
+        .Case<cir::CoReturnOp>([&](auto) {
+          // CoReturnOp does not carry a destination operand. The continuation
+          // block determines whether execution proceeds to another cleanup or
+          // to the coroutine's final suspend path.
+          cir::CoReturnOp::create(rewriter, loc);
           return mlir::success();
         })
         .Case<cir::ReturnOp>([&](auto returnOp) {
@@ -1805,11 +1813,212 @@ public:
   }
 };
 
+static mlir::Block *getOrCreateBlockForSuspendPoint(
+    cir::FuncOp funcOp, mlir::PatternRewriter &rewriter, mlir::Location loc) {
+  mlir::Block &entryBlock = funcOp.getBody().front();
+
+  auto it = llvm::find_if(entryBlock, [](auto &op) {
+    return mlir::isa<AllocaOp>(&op) &&
+           mlir::cast<AllocaOp>(&op).getCoroutineSuspendPoint();
+  });
+
+  assert(it->hasOneUse() &&
+         "coroutine suspend point alloca must have exactly one use");
+  auto storeOp = cast<cir::StoreOp>(*it->getUses().begin()->getOwner());
+  auto suspendPoint = cast<cir::ConstantOp>(storeOp.getValue().getDefiningOp());
+  mlir::Block *suspendBlock = suspendPoint->getBlock();
+  if (&suspendBlock->front() == suspendPoint)
+    return suspendBlock;
+
+  mlir::OpBuilder::InsertionGuard guard(rewriter);
+  mlir::Block *remainingBlock =
+      rewriter.splitBlock(suspendBlock, suspendPoint->getIterator());
+  rewriter.setInsertionPointToEnd(suspendBlock);
+  cir::BrOp::create(rewriter, loc, remainingBlock);
+  return remainingBlock;
+}
+
+class CIRAwaitOpFlattening : public mlir::OpRewritePattern<cir::AwaitOp> {
+public:
+  using OpRewritePattern<cir::AwaitOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::AwaitOp awaitOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::Block *awaitBlock = rewriter.getInsertionBlock();
+    mlir::Block *remainingOpsBlock =
+        rewriter.splitBlock(awaitBlock, rewriter.getInsertionPoint());
+
+    mlir::Location loc = awaitOp.getLoc();
+
+    mlir::Region &readyRegion = awaitOp.getReady();
+    mlir::Block &beforeReady = awaitOp.getReady().front();
+    mlir::Region &suspendRegion = awaitOp.getSuspend();
+    mlir::Region &resumeRegion = awaitOp.getResume();
+    auto conditionOp =
+        cast<cir::ConditionOp>(readyRegion.back().getTerminator());
+    {
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPoint(conditionOp);
+      rewriter.replaceOpWithNewOp<cir::BrCondOp>(
+          conditionOp, conditionOp.getCondition(), &resumeRegion.front(),
+          &suspendRegion.front());
+    }
+    rewriter.inlineRegionBefore(readyRegion, remainingOpsBlock);
+
+    {
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToEnd(awaitBlock);
+      cir::BrOp::create(rewriter, loc, mlir::ValueRange(), &beforeReady);
+    }
+
+    auto suspendYield =
+        cast<cir::YieldOp>(suspendRegion.back().getTerminator());
+    cir::LLVMIntrinsicCallOp coroSuspendIntri = nullptr;
+    {
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPoint(&suspendRegion.front().front());
+
+      // Insert coro.save at the beginning of the suspend region.
+      // This captures the current coroutine state before suspension.
+      auto voidPtrTy = cir::PointerType::get(cir::VoidType::get(getContext()));
+      auto nullPtr = cir::ConstantOp::create(
+          rewriter, loc,
+          cir::ConstPtrAttr::get(voidPtrTy, rewriter.getI64IntegerAttr(0)));
+      auto coroSaveIntri = cir::LLVMIntrinsicCallOp::create(
+          rewriter, loc, mlir::StringAttr::get(getContext(), "llvm.coro.save"),
+          cir::IntType::get(getContext(), 32, false),
+          mlir::ValueRange{nullPtr});
+      rewriter.setInsertionPoint(suspendYield);
+
+      bool isFinalSuspend = awaitOp.getKind() == cir::AwaitKind::Final;
+      auto isFinalCoroSuspend = cir::ConstantOp::create(
+          rewriter, loc, cir::BoolAttr::get(getContext(), isFinalSuspend));
+
+      // llvm.coro.suspend returns:
+      //  -1 : coroutine  suspended
+      //   0 : coroutine resumed
+      //   1 : coroutine destroyed
+      coroSuspendIntri = cir::LLVMIntrinsicCallOp::create(
+          rewriter, loc,
+          mlir::StringAttr::get(getContext(), "llvm.coro.suspend"),
+          cir::IntType::get(getContext(), 32, false),
+          mlir::ValueRange{coroSaveIntri.getResult(), isFinalCoroSuspend});
+    }
+    rewriter.inlineRegionBefore(suspendRegion, remainingOpsBlock);
+
+    auto func = awaitOp->getParentOfType<cir::FuncOp>();
+
+    {
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPoint(suspendYield);
+      llvm::SmallVector<mlir::APInt, 2> caseValues{mlir::APInt(32, 0),
+                                                   mlir::APInt(32, 1)};
+
+      llvm::SmallVector<mlir::ValueRange, 8> caseOperands{
+          mlir::ValueRange(), mlir::ValueRange(), mlir::ValueRange()};
+
+      llvm::SmallVector<mlir::Block *, 8> caseDestinations;
+
+      // In Classic CodeGen, the destroy path reaches the coroutine cleanup by
+      // emitting an EmitBranchThroughCleanup(), ensuring that all nested
+      // cleanup scopes are executed before control reaches the coro.free
+      // cleanup.
+      //
+      // We achieve the same effect by creating a block that only contains a
+      // cir.yield. createExitTerminator() then propagates control through every
+      // enclosing cleanup scope until the parent coroutine cleanup (coro.free)
+      // is reached, after which execution continues to the return block.
+      mlir::Block *cleanupBlock = nullptr;
+      {
+        mlir::OpBuilder::InsertionGuard guard(rewriter);
+        cleanupBlock = rewriter.createBlock(remainingOpsBlock);
+        cir::YieldOp::create(rewriter, loc);
+      }
+      caseDestinations.push_back(&resumeRegion.front());
+      caseDestinations.push_back(cleanupBlock);
+
+      assert(!cir::MissingFeatures::coroutineGroManager());
+
+      // Default destination must be de suspend BB (the return block or the pre
+      // gro conv)
+      auto coroSuspendSwitch = cir::SwitchFlatOp::create(
+          rewriter, loc, coroSuspendIntri.getResult(),
+          getOrCreateBlockForSuspendPoint(func, rewriter, loc),
+          mlir::ValueRange(), caseValues, caseDestinations, caseOperands);
+
+      rewriter.replaceOp(suspendYield, coroSuspendSwitch);
+    }
+
+    auto resumeYield = cast<cir::YieldOp>(resumeRegion.back().getTerminator());
+    {
+      mlir::OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPoint(resumeYield);
+      rewriter.replaceOpWithNewOp<cir::BrOp>(resumeYield, remainingOpsBlock);
+    }
+    rewriter.inlineRegionBefore(resumeRegion, remainingOpsBlock);
+
+    rewriter.eraseOp(awaitOp);
+
+    func.setCoroutine(false);
+    func.setFlattenCoroutine(true);
+
+    return mlir::success();
+  }
+};
+
+class CIRCoroBodyOpFlattening : public mlir::OpRewritePattern<cir::CoroBodyOp> {
+public:
+  using OpRewritePattern<cir::CoroBodyOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::CoroBodyOp coroBodyOp,
+                  mlir::PatternRewriter &rewriter) const override {
+
+    if (hasNestedOpsToFlatten(coroBodyOp.getBody()))
+      return mlir::failure();
+
+    llvm::SmallVector<cir::CoReturnOp> coReturns;
+    coroBodyOp.getBody().walk<mlir::WalkOrder::PreOrder>(
+        [&](cir::CoReturnOp op) {
+          coReturns.push_back(op);
+          return mlir::WalkResult::advance();
+        });
+
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    mlir::Location loc = coroBodyOp.getLoc();
+
+    mlir::Block *currentBlock = rewriter.getInsertionBlock();
+    mlir::Block *continueBlock =
+        rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
+
+    // Inline body region.
+    mlir::Block *beforeBody = &coroBodyOp.getBody().front();
+    rewriter.inlineRegionBefore(coroBodyOp.getBody(), continueBlock);
+
+    rewriter.setInsertionPointToEnd(currentBlock);
+    cir::BrOp::create(rewriter, loc, mlir::ValueRange(), beforeBody);
+
+    // In CIR CodeGen, the operation following CoroBodyOp is always the
+    // final-suspend path. Therefore, the continuation block created by the
+    // split corresponds to the final suspend point.
+    for (cir::CoReturnOp &coReturn : coReturns) {
+      rewriter.setInsertionPoint(coReturn);
+      rewriter.replaceOpWithNewOp<cir::BrOp>(coReturn, continueBlock);
+    }
+
+    rewriter.replaceOp(coroBodyOp, continueBlock->getArguments());
+
+    return mlir::success();
+  }
+};
+
 void populateFlattenCFGPatterns(RewritePatternSet &patterns) {
   patterns
       .add<CIRIfFlattening, CIRLoopOpInterfaceFlattening, CIRScopeOpFlattening,
            CIRSwitchOpFlattening, CIRTernaryOpFlattening,
-           CIRCleanupScopeOpFlattening, CIRTryOpFlattening>(
+           CIRCleanupScopeOpFlattening, CIRTryOpFlattening,
+           CIRAwaitOpFlattening, CIRCoroBodyOpFlattening>(
           patterns.getContext());
 }
 
@@ -1820,8 +2029,8 @@ void CIRFlattenCFGPass::runOnOperation() {
   // Collect operations to apply patterns.
   llvm::SmallVector<Operation *, 16> ops;
   getOperation()->walk<mlir::WalkOrder::PostOrder>([&](Operation *op) {
-    if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp, CleanupScopeOp,
-            TryOp>(op))
+    if (isa<AwaitOp, CoroBodyOp, IfOp, ScopeOp, SwitchOp, LoopOpInterface,
+            TernaryOp, CleanupScopeOp, TryOp>(op))
       ops.push_back(op);
   });
 
