@@ -275,7 +275,7 @@ std::optional<AnyValue> Context::evaluateConstantExpression(ConstantExpr *CE) {
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::AddrSpaceCast:
-    return std::optional;
+    return std::nullopt;
   default:
     assert(Instruction::isBinaryOp(Opc) && "Must be binary operator?");
     const AnyValue *LHS = getConstantValue(CE->getOperand(0));
