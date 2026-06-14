@@ -6711,8 +6711,9 @@ returned in callee-saved registers.
   X16-X18. Furthermore it also preserves lower 128 bits of V8-V31 SIMD - floating
   point registers.
 
-- On PowerPC the callee preserves all general purpose registers, except R1 and R2.
-  Furthermore it also preserves all floating-point and vector registers.
+- On PowerPC the callee preserves all general purpose registers, except for
+  R0-R4, R12, and R13. Furthermore it also preserves all
+  floating-point registers, except F1, and all vector registers, except V2.
 
 The idea behind this convention is to support calls to runtime functions
 that don't need to call out to any other functions.

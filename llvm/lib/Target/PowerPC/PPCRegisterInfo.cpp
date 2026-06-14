@@ -199,74 +199,20 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_64_AllRegs_SaveList;
   }
 
-  const Type *const ReturnTy = MF->getFunction().getReturnType();
-
-  // Preserve registers for PreserveAll attribute
-  // We need to skip r3 (return register) if the function isn't void
-  // however for floats it's f1 instead
-  // We also need to skip r4 if the return value is 64-bit on PPC32
-  // or 128-bit on PPC64
-  bool RetVec = ReturnTy->isVectorTy();
-  bool RetFloat = ReturnTy->isFloatingPointTy();
-  bool RetInt = ReturnTy->isIntOrPtrTy();
-  TypeSize RetIntSize = ReturnTy->getPrimitiveSizeInBits();
-  bool RetVoid = ReturnTy->isVoidTy();
-
   if (MF->getFunction().getCallingConv() == CallingConv::PreserveAll) {
     if (Subtarget.hasSPE() || Subtarget.pairedVectorMemops() ||
         Subtarget.isAIXABI())
       report_fatal_error("PreserveAll unimplemented on this target.");
 
-    if (TM.isPPC64()) {
-      if (RetVoid) {
-        if (Subtarget.hasAltivec())
-          return CSR_PPC64_PreserveAll_Altivec_SaveList;
-        return CSR_PPC64_PreserveAll_SaveList;
-      }
-      if (RetVec) {
-        if (Subtarget.hasAltivec())
-          return CSR_PPC64_PreserveAll_Altivec_NonVoid_Vec_SaveList;
-        report_fatal_error("Returning vector without vector extension");
-      }
-      if (RetFloat) {
-        if (Subtarget.hasAltivec())
-          return CSR_PPC64_PreserveAll_Altivec_NonVoid_Float_SaveList;
-        return CSR_PPC64_PreserveAll_NonVoid_Float_SaveList;
-      }
-      if (RetInt) {
-        if (Subtarget.hasAltivec())
-          return RetIntSize == 128
-                     ? CSR_PPC64_PreserveAll_Altivec_NonVoid_128_SaveList
-                     : CSR_PPC64_PreserveAll_Altivec_NonVoid_SaveList;
-        return RetIntSize == 128 ? CSR_PPC64_PreserveAll_NonVoid_128_SaveList
-                                 : CSR_PPC64_PreserveAll_NonVoid_SaveList;
-      }
-      report_fatal_error("Unhandled return type");
-    }
-    // PPC32:
-    if (RetVoid) {
-      if (Subtarget.hasAltivec())
-        return CSR_PPC32_PreserveAll_Altivec_SaveList;
-      return CSR_PPC32_PreserveAll_SaveList;
-    }
-    if (RetVec) {
-      if (Subtarget.hasAltivec())
-        return CSR_PPC32_PreserveAll_Altivec_NonVoid_Vec_SaveList;
-      report_fatal_error("Returning vector without vector extension");
-    }
-    if (RetFloat) {
-      if (Subtarget.hasAltivec())
-        return CSR_PPC32_PreserveAll_Altivec_NonVoid_Float_SaveList;
-      return CSR_PPC32_PreserveAll_NonVoid_Float_SaveList;
-    }
-    if (RetInt) {
-      if (Subtarget.hasAltivec())
-        return RetIntSize == 64
-                   ? CSR_PPC32_PreserveAll_Altivec_NonVoid_64_SaveList
-                   : CSR_PPC32_PreserveAll_Altivec_NonVoid_SaveList;
-      return RetIntSize == 64 ? CSR_PPC32_PreserveAll_NonVoid_64_SaveList
-                              : CSR_PPC32_PreserveAll_NonVoid_SaveList;
-    }
+    if (TM.isPPC64())
+      return Subtarget.hasAltivec() ? CSR_PPC64_PreserveAll_Altivec_SaveList
+                                    : CSR_PPC64_PreserveAll_SaveList;
+
+    if (Subtarget.hasAltivec())
+      return CSR_PPC32_PreserveAll_Altivec_SaveList;
+    if (Subtarget.hasSPE())
+      return CSR_PPC32_PreserveAll_SPE_SaveList;
+    return CSR_PPC32_PreserveAll_SaveList;
   }
 
   // On PPC64, we might need to save r2 (but only if it is not reserved).
@@ -362,14 +308,15 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   }
 
   if (CC == CallingConv::PreserveAll) {
-    if (TM.isPPC64()) {
-      if (Subtarget.hasAltivec())
-        return CSR_PPC64_PreserveAll_Altivec_Unknown_RegMask;
-      return CSR_PPC64_PreserveAll_Unknown_RegMask;
-    }
+    if (TM.isPPC64())
+      return Subtarget.hasAltivec() ? CSR_PPC64_PreserveAll_Altivec_RegMask
+                                    : CSR_PPC64_PreserveAll_RegMask;
+
     if (Subtarget.hasAltivec())
-      return CSR_PPC32_PreserveAll_Altivec_Unknown_RegMask;
-    return CSR_PPC32_PreserveAll_Unknown_RegMask;
+      return CSR_PPC32_PreserveAll_Altivec_RegMask;
+    if (Subtarget.hasSPE())
+      return CSR_PPC32_PreserveAll_SPE_RegMask;
+    return CSR_PPC32_PreserveAll_RegMask;
   }
 
   if (Subtarget.isAIXABI()) {
