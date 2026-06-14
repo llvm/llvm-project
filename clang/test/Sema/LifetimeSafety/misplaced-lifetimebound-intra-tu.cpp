@@ -121,9 +121,9 @@ IntraSuppressedObj &intra_suppressed(
   return obj;
 }
 
-struct View {
-  friend View friend_redecl(MyObj & obj // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
-                                        // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:{{[0-9]+}}-[[@LINE-1]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
+struct [[gsl::Pointer()]] View {
+  friend View friend_redecl(MyObj &  // expected-warning {{'lifetimebound' attribute on this definition is not visible to callers before the definition; add it to the declaration instead}}
+                            obj      // CHECK: fix-it:"{{.*}}":{[[@LINE]]:{{[0-9]+}}-[[@LINE]]:{{[0-9]+}}}:" {{\[\[clang::lifetimebound\]\]}}"
                             );
 };
 
