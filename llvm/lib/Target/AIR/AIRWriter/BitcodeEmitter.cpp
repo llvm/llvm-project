@@ -947,7 +947,7 @@ static void fixAccessTypeMismatch(Module &M, PointeeTypeMap &PTM) {
       // inttoptr-derived pointers get their typed pointer from the shared
       // per-type default, which other values' inference can claim first —
       // always retype them to the access type.
-      if (!isa<IntToPtrInst>(Ptr)) {
+      if (!isa<IntToPtrInst>(Ptr) && !isa<ConstantPointerNull>(Ptr)) {
         Type *Pointee = effectivePointee(Ptr, PTM);
         if (!Pointee || Pointee == AccessTy)
           return false;
