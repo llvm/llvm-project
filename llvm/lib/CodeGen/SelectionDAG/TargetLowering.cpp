@@ -8921,10 +8921,10 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
       // Create versions of X and Y that keep only the first, second, third, or
       // fourth bit of every nibble.
       SDValue M[4], Xp[4], Yp[4];
-      for (unsigned i = 0; i < 4; ++i) {
-        M[i] = DAG.getConstant(MaskVal.shl(i), DL, VT);
-        Xp[i] = DAG.getNode(ISD::AND, DL, VT, X, M[i]);
-        Yp[i] = DAG.getNode(ISD::AND, DL, VT, Y, M[i]);
+      for (unsigned I = 0; I < 4; ++I) {
+        M[I] = DAG.getConstant(MaskVal.shl(I), DL, VT);
+        Xp[I] = DAG.getNode(ISD::AND, DL, VT, X, M[I]);
+        Yp[I] = DAG.getNode(ISD::AND, DL, VT, Y, M[I]);
       }
 
       // Codegens these expressions (16 multiplications):
@@ -8934,17 +8934,17 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
       // z2 = (x0 * y2) ^ (x1 * y1) ^ (x2 * y0) ^ (x3 * y3);
       // z3 = (x0 * y3) ^ (x1 * y2) ^ (x2 * y1) ^ (x3 * y0);
       SDValue Res;
-      for (unsigned i = 0; i < 4; ++i) {
+      for (unsigned I = 0; I < 4; ++I) {
         SDValue Zi;
-        for (unsigned A = 0; A < 4; ++A) {
-          unsigned B = (i + 4 - A) % 4;
-          SDValue P = DAG.getNode(ISD::MUL, DL, VT, Xp[A], Yp[B]);
+        for (unsigned J = 0; J < 4; ++J) {
+          unsigned K = (I + 4 - J) % 4;
+          SDValue P = DAG.getNode(ISD::MUL, DL, VT, Xp[J], Yp[K]);
           Zi = Zi ? DAG.getNode(ISD::XOR, DL, VT, Zi, P) : P;
         }
 
         // Keep only the bits belonging to this iteration, and bitwise or it all
         // together.
-        Zi = DAG.getNode(ISD::AND, DL, VT, Zi, M[i]);
+        Zi = DAG.getNode(ISD::AND, DL, VT, Zi, M[I]);
         Res = Res ? DAG.getNode(ISD::OR, DL, VT, Res, Zi) : Zi;
       }
       return Res;
