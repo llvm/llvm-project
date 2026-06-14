@@ -24,6 +24,10 @@ class AIRTargetLowering : public TargetLowering {
 public:
   explicit AIRTargetLowering(const AIRTargetMachine &TM,
                                const AIRSubtarget &STI);
+
+  bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
+                             unsigned AS,
+                             Instruction *I = nullptr) const override;
 };
 
 } // end namespace llvm
