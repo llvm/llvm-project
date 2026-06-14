@@ -199,21 +199,13 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
           loc, "failed to convert memref element type");
     }
     IndexType indexType = rewriter.getIndexType();
-    emitc::CallOpaqueOp sizeofElementOp = emitc::CallOpaqueOp::create(
-        rewriter, loc, sizeTType, rewriter.getStringAttr("sizeof"),
-        ValueRange{},
-        ArrayAttr::get(rewriter.getContext(), {TypeAttr::get(elementType)}));
-
-    int64_t numElements = 1;
-    for (int64_t dimSize : memrefType.getShape()) {
-      numElements *= dimSize;
+    FailureOr<Value> totalSizeOrFail = calculateMemrefTotalSizeBytes(
+        loc, memrefType, rewriter, getTypeConverter());
+    if (failed(totalSizeOrFail)) {
+      return rewriter.notifyMatchFailure(
+          loc, "Failed to calculate total size of memref in bytes.");
     }
-    Value numElementsValue = emitc::ConstantOp::create(
-        rewriter, loc, indexType, rewriter.getIndexAttr(numElements));
-
-    Value totalSizeBytes =
-        emitc::MulOp::create(rewriter, loc, sizeTType,
-                             sizeofElementOp.getResult(0), numElementsValue);
+    Value totalSizeBytes = *totalSizeOrFail;
 
     emitc::CallOpaqueOp allocCall;
     StringAttr allocFunctionName;
