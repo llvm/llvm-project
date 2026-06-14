@@ -127,8 +127,15 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
         TrArgs.push_back("--spirv-max-version=1.3");
       else
         TrArgs.push_back("--spirv-max-version=1.2");
+      // Keep this extension list in sync with the in-tree backend fallback
+      // below. SPV_EXT_relaxed_printf_string_address_space is required to
+      // translate modules whose printf format string is not in the constant
+      // address space (e.g. device-side assert / dynamic %s lowering); without
+      // it llvm-spirv aborts with exit code 18.
       TrArgs.push_back(
-          "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups");
+          "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups"
+          ",+SPV_EXT_shader_atomic_float_add"
+          ",+SPV_EXT_relaxed_printf_string_address_space");
 
       InputInfo TrInput = InputInfo(types::TY_LLVM_BC, TempFile, "");
       SPIRV::constructTranslateCommand(C, *this, JA, Output, TrInput, TrArgs);
