@@ -7448,8 +7448,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
     // Fold: extractelt(v2i64 vector, 1) where vector is a spilled stack slot.
     // Instead of reloading the full vector and extracting with vpextrq, load
     // the upper 8 bytes directly from the spill slot at offset 8.
-    if (OpNum == 1 && MI.getOperand(2).getImm() == 1 &&
-        Alignment >= Align(8)) {
+    if (OpNum == 1 && MI.getOperand(2).getImm() == 1 && Alignment >= Align(8)) {
       MachineInstrBuilder MIB = BuildMI(*InsertPt->getParent(), InsertPt,
                                         MI.getDebugLoc(), get(X86::MOV64rm));
       MIB.add(MI.getOperand(0)); // dst register
