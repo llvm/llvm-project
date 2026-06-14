@@ -114,8 +114,7 @@ calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
   emitc::CallOpaqueOp elementSize = emitc::CallOpaqueOp::create(
       builder, loc, emitc::SizeTType::get(builder.getContext()),
       builder.getStringAttr("sizeof"), ValueRange{},
-      ArrayAttr::get(builder.getContext(),
-                     {TypeAttr::get(elementType)}));
+      ArrayAttr::get(builder.getContext(), {TypeAttr::get(elementType)}));
 
   IndexType indexType = builder.getIndexType();
   int64_t numElements = llvm::product_of(memrefType.getShape());
