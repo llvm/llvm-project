@@ -22892,10 +22892,10 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
     SDValue Res = DAG.getNode(IsSigned ? X86ISD::CVTTP2IBS : X86ISD::CVTTP2IUBS,
                               dl, VecI16VT, Src);
     return DAG.getNode(ISD::TRUNCATE, dl, DstVT, Res);
-  } 
+  }
   if ((DstVT == MVT::v4i32 && Subtarget.hasSSE2()) ||
-             (DstVT == MVT::v8i32 && Subtarget.hasAVX()) ||
-             (DstVT == MVT::v16i32 && Subtarget.hasAVX512())) {
+      (DstVT == MVT::v8i32 && Subtarget.hasAVX()) ||
+      (DstVT == MVT::v16i32 && Subtarget.hasAVX512())) {
     unsigned SatWidth = SatVT.getScalarSizeInBits();
     assert(SatWidth <= 32 &&
            "Expected saturation width no wider than result element");
@@ -22946,8 +22946,7 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
           IsOvf = DAG.getNode(ISD::TRUNCATE, dl, SelCCVT, IsOvf);
         // v16i32 (512-bit, AVX512): use X86ISD::CVTTP2UI (VCVTTPS2UDQZ).
         // v4i32 (128-bit, SSE) and v8i32 (256-bit, AVX) are already covered
-        // by CVTTPS2DQ/VCVTTPS2DQ via expandFP_TO_UINT_SSE — no AVX512VL
-        // needed.
+        // by CVTTPS2DQ/VCVTTPS2DQ via expandFP_TO_UINT_SSE
         SDValue Cvt;
         if (DstVT == MVT::v16i32)
           Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, DstVT, Clamped);
