@@ -146,7 +146,7 @@ Error synthesizeArtifacts(CapabilityContext &Context, StringRef StoreRoot,
 
   if (NeedsRemarks && findRemarksPath(Context).empty()) {
     SmallString<256> RemarksOut(ArtDir);
-    sys::path::append(RemarksOut, "remarks.opt.yaml");
+    sys::path::append(RemarksOut, "remarks.opt.bitstream");
     if (auto Path = emitOptRemarks(Context, RemarksOut))
       Context.RemarksPath = *Path;
     else
