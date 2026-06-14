@@ -13,6 +13,7 @@
 #include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Region.h"
 #include "llvm/SandboxIR/Utils.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
@@ -34,6 +35,7 @@ static cl::opt<unsigned long>
 
 static constexpr unsigned long StopBundleDisabled =
     std::numeric_limits<unsigned long>::max();
+
 static cl::opt<unsigned long>
     StopBundle("sbvec-stop-bndl", cl::init(StopBundleDisabled), cl::Hidden,
                cl::desc("Vectorize up to this many bundles."));
@@ -278,6 +280,58 @@ void BottomUpVec::collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl) {
   }
 }
 
+/// From a user \p U0 of lane 0 (\p V0), try to form a bundle of matching users
+/// for all lanes in \p Bndl. Used by the top-down vectorizer only. Returns an
+/// empty vector if no complete bundle can be formed.
+static SmallVector<Value *, 4> getNextUserBundle(ArrayRef<Value *> Bndl,
+                                                 User *U0, Value *V0,
+                                                 InstrMaps &IMaps) {
+  auto *UI0 = dyn_cast<Instruction>(U0);
+  if (!UI0 || IMaps.isVectorized(UI0))
+    return {};
+
+  // Find the operand index at which U0 uses lane 0.
+  unsigned OpIdx = UI0->getNumOperands();
+  for (unsigned Idx : seq<unsigned>(UI0->getNumOperands())) {
+    if (UI0->getOperand(Idx) == V0) {
+      OpIdx = Idx;
+      break;
+    }
+  }
+  if (OpIdx == UI0->getNumOperands())
+    return {};
+
+  // Find a distinct matching user for each of the remaining lanes.
+  SmallVector<Value *, 4> NextUserBndl;
+  NextUserBndl.push_back(UI0);
+  SmallPtrSet<Instruction *, 4> Claimed;
+  Claimed.insert(UI0);
+  for (Value *V : drop_begin(Bndl)) {
+    Instruction *Match = nullptr;
+    for (User *U : V->users()) {
+      auto *UI = dyn_cast<Instruction>(U);
+      if (!UI || IMaps.isVectorized(UI) || Claimed.contains(UI))
+        continue;
+      if (UI->getOpcode() != UI0->getOpcode() ||
+          UI->getType() != UI0->getType())
+        continue;
+      // The whole bundle must live in the same block.
+      if (UI->getParent() != UI0->getParent())
+        continue;
+      // The user must consume this lane at the same operand index.
+      if (OpIdx >= UI->getNumOperands() || UI->getOperand(OpIdx) != V)
+        continue;
+      Match = UI;
+      break;
+    }
+    if (!Match)
+      return {};
+    Claimed.insert(Match);
+    NextUserBndl.push_back(Match);
+  }
+  return NextUserBndl;
+}
+
 Action *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
                                   ArrayRef<Value *> UserBndl, unsigned Depth,
                                   LegalityAnalysis &Legality) {
@@ -285,9 +339,55 @@ Action *BottomUpVec::vectorizeRec(ArrayRef<Value *> Bndl,
       DebugBndlCnt++ >= StopBundle && StopBundle != StopBundleDisabled;
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "canVectorize() Bundle:\n";
              VecUtils::dump(Bndl));
-  const auto &LegalityRes = StopForDebug ? Legality.getForcedPackForDebugging()
-                                         : Legality.canVectorize(Bndl);
+  const auto &LegalityRes =
+      StopForDebug ? Legality.getForcedPackForDebugging()
+                   : Legality.canVectorize(Bndl,
+                                           /*SkipScheduling=*/Direction ==
+                                               VecDirection::TopDown);
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Legality: " << LegalityRes << "\n");
+
+  if (Direction == VecDirection::TopDown) {
+    auto ActionPtr = std::make_unique<Action>(&LegalityRes, Bndl,
+                                              ArrayRef<Value *>(), Depth);
+    Action *Action = ActionPtr.get();
+    if (LegalityRes.getSubclassID() == LegalityResultID::Widen)
+      IMaps->registerVector(Bndl, Action);
+
+    // Pre-order push so defs are before uses.
+    Actions.push_back(std::move(ActionPtr));
+    switch (LegalityRes.getSubclassID()) {
+    case LegalityResultID::Widen: {
+      // Walk down the def-use chain. Each lane in \p Bndl may feed several
+      // users, so we form every compatible user bundle and recurse into each
+      // one. A user bundle is compatible only if all of its users share the
+      // same opcode and type, live in the same block, are distinct and not
+      // already vectorized, and consume their corresponding element of \p Bndl
+      // at the same operand index, so that the widened vector lines up as a
+      // single vector operand.
+      //
+      // Recursing right after forming each bundle marks its instructions as
+      // vectorized (pre-order registration), which prevents sibling bundles
+      // from claiming the same instruction and guarantees termination.
+      Value *V0 = Bndl[0];
+      for (User *U0 : V0->users()) {
+        SmallVector<Value *, 4> NextUserBndl =
+            getNextUserBundle(Bndl, U0, V0, *IMaps);
+        if (NextUserBndl.size() == Bndl.size())
+          vectorizeRec(NextUserBndl, Bndl, Depth + 1, Legality);
+      }
+      break;
+    }
+    case LegalityResultID::DiamondReuse:
+    case LegalityResultID::DiamondReuseMultiInput:
+    case LegalityResultID::DiamondReuseWithShuffle:
+    case LegalityResultID::Pack:
+      llvm_unreachable("Not implemented.");
+    }
+
+    return Action;
+  }
+
+  // Bottom up direction
   auto ActionPtr =
       std::make_unique<Action>(&LegalityRes, Bndl, UserBndl, Depth);
   SmallVector<Action *> Operands;
@@ -362,13 +462,27 @@ void BottomUpVec::emitUnpacksForExternalUses(const ArrayRef<Value *> Bndl,
   }
 
   for (auto [Lane, Elm] : VecUtils::enumerateLanes(Bndl)) {
+    // Collect the distinct external users first. We can't redirect uses while
+    // iterating Elm's use list, as that would invalidate the iterator.
+    SmallVector<User *, 4> ExternalUsers;
+    SmallPtrSet<User *, 4> Seen;
     for (User *U : Elm->users()) {
-      // Skip users that we just vectorized.
+      // Skip users that we just vectorized. Note: we must only redirect the
+      // external (non-vectorized) uses to an unpack and leave the vectorized
+      // users untouched. A blanket replaceAllUsesWith() would also rewrite the
+      // operands of users we are going to vectorize but have not emitted yet
+      // (in the top-down direction a user bundle is emitted after its operand
+      // bundle), which would corrupt those operands.
       if (IMaps->isVectorized(U))
         continue;
-      auto *LastUnpackV = VecUtils::unpack(Vec, Elm->getType(), Lane, WhereIt);
-      Elm->replaceAllUsesWith(LastUnpackV);
+      if (Seen.insert(U).second)
+        ExternalUsers.push_back(U);
     }
+    if (ExternalUsers.empty())
+      continue;
+    auto *UnpackV = VecUtils::unpack(Vec, Elm->getType(), Lane, WhereIt);
+    for (User *U : ExternalUsers)
+      U->replaceUsesOfWith(Elm, UnpackV);
   }
 }
 
@@ -387,22 +501,44 @@ Value *BottomUpVec::emitVectors() {
     case LegalityResultID::Widen: {
       auto *I = cast<Instruction>(Bndl[0]);
       SmallVector<Value *, 2> VecOperands;
-      switch (I->getOpcode()) {
-      case Instruction::Opcode::Load:
-        VecOperands.push_back(cast<LoadInst>(I)->getPointerOperand());
-        break;
-      case Instruction::Opcode::Store: {
-        VecOperands.push_back(ActionPtr->Operands[0]->Vec);
-        VecOperands.push_back(cast<StoreInst>(I)->getPointerOperand());
-        break;
-      }
-      default:
-        // Visit all operands.
-        for (Action *OpA : ActionPtr->Operands) {
-          auto *VecOp = OpA->Vec;
-          VecOperands.push_back(VecOp);
+      if (Direction == VecDirection::BottomUp) {
+        switch (I->getOpcode()) {
+        case Instruction::Opcode::Load:
+          VecOperands.push_back(cast<LoadInst>(I)->getPointerOperand());
+          break;
+        case Instruction::Opcode::Store:
+          VecOperands.push_back(ActionPtr->Operands[0]->Vec);
+          VecOperands.push_back(cast<StoreInst>(I)->getPointerOperand());
+          break;
+        default:
+          for (Action *OpA : ActionPtr->Operands)
+            VecOperands.push_back(OpA->Vec);
+          break;
         }
-        break;
+      } else {
+        switch (I->getOpcode()) {
+        case Instruction::Opcode::Load:
+          VecOperands.push_back(cast<LoadInst>(I)->getPointerOperand());
+          break;
+        case Instruction::Opcode::Store: {
+          auto OpBndl = getOperand(Bndl, 0);
+          if (Action *OpA = IMaps->getVectorForOrig(OpBndl[0]))
+            VecOperands.push_back(OpA->Vec);
+          else
+            VecOperands.push_back(createPack(OpBndl, UserBB));
+          VecOperands.push_back(cast<StoreInst>(I)->getPointerOperand());
+          break;
+        }
+        default:
+          for (unsigned OpIdx = 0; OpIdx < I->getNumOperands(); ++OpIdx) {
+            SmallVector<Value *, 4> OpBndl = getOperand(Bndl, OpIdx);
+            if (Action *OpA = IMaps->getVectorForOrig(OpBndl[0]))
+              VecOperands.push_back(OpA->Vec);
+            else
+              VecOperands.push_back(createPack(OpBndl, UserBB));
+          }
+          break;
+        }
       }
       NewVec = createVectorInstr(ActionPtr->Bndl, VecOperands);
       // Collect any potentially dead scalar instructions, including the
@@ -526,7 +662,8 @@ bool BottomUpVec::tryVectorize(ArrayRef<Value *> Bndl,
   Actions.clear();
   DebugBndlCnt = 0;
   vectorizeRec(Bndl, {}, /*Depth=*/0, Legality);
-  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "BottomUpVec: Vectorization Actions:\n";
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << vecDirectionToStr()
+                    << ": Vectorization Actions:\n";
              Actions.dump());
   emitVectors();
   tryEraseDeadInstrs();

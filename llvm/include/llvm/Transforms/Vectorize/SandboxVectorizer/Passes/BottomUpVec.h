@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A Bottom-Up Vectorizer pass.
+// A bottom-up vectorizer pass. TopDownVec reuses this implementation with a
+// different traversal direction.
 //
 
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_PASSES_BOTTOMUPVEC_H
@@ -22,6 +23,8 @@
 
 namespace llvm::sandboxir {
 
+enum class VecDirection { TopDown, BottomUp };
+
 /// This is a simple bottom-up vectorizer Region pass.
 /// It expects a "seed slice" as an input in the Region's Aux vector.
 /// The "seed slice" is a vector of instructions that can be used as a starting
@@ -32,7 +35,10 @@ namespace llvm::sandboxir {
 /// profitable or not. For now profitability is checked at the end of the region
 /// pass pipeline by a dedicated pass that accepts or rejects the IR
 /// transaction, depending on the cost.
-class LLVM_ABI BottomUpVec final : public RegionPass {
+class LLVM_ABI BottomUpVec : public RegionPass {
+protected:
+  VecDirection Direction = VecDirection::BottomUp;
+  /// Set to true whenever the pass emits vector code in the current region.
   bool Change = false;
   /// The original instructions that are potentially dead after vectorization.
   DenseSet<Instruction *> DeadInstrCandidates;
@@ -61,6 +67,10 @@ class LLVM_ABI BottomUpVec final : public RegionPass {
   /// for loads/stores) so that they can be cleaned up later.
   void collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl);
 
+  StringRef vecDirectionToStr() {
+    return Direction == VecDirection::TopDown ? "TopDownVec" : "BottomUpVec";
+  }
+
   /// Helper class describing how(if) to vectorize the code.
   class ActionsVector {
   private:
@@ -84,8 +94,11 @@ class LLVM_ABI BottomUpVec final : public RegionPass {
   /// vectorize in vectorizeRec().
   unsigned DebugBndlCnt = 0;
 
-  /// Recursively try to vectorize \p Bndl and its operands. This populates the
-  /// `Actions` vector.
+  explicit BottomUpVec(StringRef Name, VecDirection Dir)
+      : RegionPass(Name), Direction(Dir) {}
+
+  /// Recursively try to vectorize \p Bndl. For bottom-up vectorization \p
+  /// UserBndl tracks the bundle of users that led to this recursion.
   Action *vectorizeRec(ArrayRef<Value *> Bndl, ArrayRef<Value *> UserBndl,
                        unsigned Depth, LegalityAnalysis &Legality);
   /// If the values in \p Bndl have external users, then emit unpacks and
@@ -102,6 +115,13 @@ public:
     assert(AuxArg.empty() && "This pass ignores aux arg!");
   }
   bool runOnRegion(Region &Rgn, const Analyses &A) final;
+};
+
+/// Top-down vectorizer Region pass. It expects a "seed slice" in the Region's
+/// Aux vector and walks down the def-use chain from the seed instructions.
+class LLVM_ABI TopDownVec final : public BottomUpVec {
+public:
+  TopDownVec() : BottomUpVec("top-down-vec", VecDirection::TopDown) {}
 };
 
 } // namespace llvm::sandboxir
