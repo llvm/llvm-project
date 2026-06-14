@@ -1015,7 +1015,8 @@ class HexFloat final {
   void assign(const HexFloat &);
   void copySignificand(const HexFloat &);
   void freeSignificand();
-  static unsigned int getNumPrecisionBits(const fltSemantics *semantics);
+  LLVM_ABI static unsigned int
+  getNumPrecisionBits(const fltSemantics *semantics);
   unsigned int getNumPrecisionBits() const {
     return getNumPrecisionBits(semantics);
   }
@@ -1031,83 +1032,90 @@ class HexFloat final {
                                 int truncatedBits);
 
 public:
-  HexFloat(const fltSemantics &); // Default construct to +0.0
-  HexFloat(const fltSemantics &, integerPart);
-  HexFloat(const fltSemantics &, uninitializedTag);
-  HexFloat(const fltSemantics &, const APInt &);
-  HexFloat(const HexFloat &);
-  HexFloat(HexFloat &&);
-  ~HexFloat();
+  LLVM_ABI HexFloat(const fltSemantics &); // Default construct to +0.0
+  LLVM_ABI HexFloat(const fltSemantics &, integerPart);
+  LLVM_ABI HexFloat(const fltSemantics &, uninitializedTag);
+  LLVM_ABI HexFloat(const fltSemantics &, const APInt &);
+  LLVM_ABI HexFloat(const HexFloat &);
+  LLVM_ABI HexFloat(HexFloat &&);
+  LLVM_ABI ~HexFloat();
 
-  HexFloat &operator=(const HexFloat &);
-  HexFloat &operator=(HexFloat &&);
+  LLVM_ABI HexFloat &operator=(const HexFloat &);
+  LLVM_ABI HexFloat &operator=(HexFloat &&);
 
-  fltCategory getCategory() const;
+  LLVM_ABI fltCategory getCategory() const;
 
-  void makeZero(bool Neg);
-  void makeInf(bool Neg);
-  void makeNaN(bool SNan = false, bool Neg = false,
-               const APInt *fill = nullptr);
-  void makeLargest(bool Neg = false);
-  void makeSmallest(bool Neg = false);
-  void makeSmallestNormalized(bool Neg = false);
+  LLVM_ABI void makeZero(bool Neg);
+  LLVM_ABI void makeInf(bool Neg);
+  LLVM_ABI void makeNaN(bool SNan = false, bool Neg = false,
+                        const APInt *fill = nullptr);
+  LLVM_ABI void makeLargest(bool Neg = false);
+  LLVM_ABI void makeSmallest(bool Neg = false);
+  LLVM_ABI void makeSmallestNormalized(bool Neg = false);
 
-  bool needsCleanup() const;
+  LLVM_ABI bool needsCleanup() const;
 
-  opStatus add(const HexFloat &RHS, roundingMode RM);
-  opStatus subtract(const HexFloat &RHS, roundingMode RM);
-  opStatus multiply(const HexFloat &RHS, roundingMode RM);
-  opStatus divide(const HexFloat &RHS, roundingMode RM);
-  opStatus remainder(const HexFloat &RHS);
-  opStatus mod(const HexFloat &RHS);
-  opStatus fusedMultiplyAdd(const HexFloat &Multiplicand,
-                            const HexFloat &Addend, roundingMode RM);
-  opStatus roundToIntegral(roundingMode RM);
-  opStatus next(bool nextDown);
+  LLVM_ABI opStatus add(const HexFloat &RHS, roundingMode RM);
+  LLVM_ABI opStatus subtract(const HexFloat &RHS, roundingMode RM);
+  LLVM_ABI opStatus multiply(const HexFloat &RHS, roundingMode RM);
+  LLVM_ABI opStatus divide(const HexFloat &RHS, roundingMode RM);
+  LLVM_ABI opStatus remainder(const HexFloat &RHS);
+  LLVM_ABI opStatus mod(const HexFloat &RHS);
+  LLVM_ABI opStatus fusedMultiplyAdd(const HexFloat &Multiplicand,
+                                     const HexFloat &Addend, roundingMode RM);
+  LLVM_ABI opStatus roundToIntegral(roundingMode RM);
+  LLVM_ABI opStatus next(bool nextDown);
 
-  void changeSign();
+  LLVM_ABI void changeSign();
 
-  opStatus convertToInteger(MutableArrayRef<integerPart> Input,
-                            unsigned int Width, bool IsSigned, roundingMode RM,
-                            bool *IsExact) const;
-  opStatus convertFromAPInt(const APInt &Input, bool isSigned, roundingMode RM);
-  opStatus convertFromSignExtendedInteger(const integerPart *Input,
-                                          unsigned int InputSize, bool IsSigned,
-                                          roundingMode RM);
-  opStatus convertFromZeroExtendedInteger(const integerPart *Input,
-                                          unsigned int InputSize, bool IsSigned,
-                                          roundingMode RM);
-  Expected<opStatus> convertFromString(StringRef, roundingMode);
-  APInt bitcastToAPInt() const;
+  LLVM_ABI opStatus convertToInteger(MutableArrayRef<integerPart> Input,
+                                     unsigned int Width, bool IsSigned,
+                                     roundingMode RM, bool *IsExact) const;
+  LLVM_ABI opStatus convertFromAPInt(const APInt &Input, bool isSigned,
+                                     roundingMode RM);
+  LLVM_ABI opStatus convertFromSignExtendedInteger(const integerPart *Input,
+                                                   unsigned int InputSize,
+                                                   bool IsSigned,
+                                                   roundingMode RM);
+  LLVM_ABI opStatus convertFromZeroExtendedInteger(const integerPart *Input,
+                                                   unsigned int InputSize,
+                                                   bool IsSigned,
+                                                   roundingMode RM);
+  LLVM_ABI Expected<opStatus> convertFromString(StringRef, roundingMode);
+  LLVM_ABI APInt bitcastToAPInt() const;
 
-  opStatus convert(const fltSemantics &, roundingMode, bool *);
+  LLVM_ABI opStatus convert(const fltSemantics &, roundingMode, bool *);
 
-  opStatus convertFrom(const IEEEFloat &ieee, roundingMode RM, bool *losesInfo);
+  LLVM_ABI opStatus convertFrom(const IEEEFloat &ieee, roundingMode RM,
+                                bool *losesInfo);
 
-  opStatus convertTo(const fltSemantics &toSemantics, roundingMode RM,
-                     APInt &encoding, bool *losesInfo) const;
+  LLVM_ABI opStatus convertTo(const fltSemantics &toSemantics, roundingMode RM,
+                              APInt &encoding, bool *losesInfo) const;
 
-  unsigned int convertToHexString(char *DST, unsigned int HexDigits,
-                                  bool UpperCase, roundingMode RM) const;
+  LLVM_ABI unsigned int convertToHexString(char *DST, unsigned int HexDigits,
+                                           bool UpperCase,
+                                           roundingMode RM) const;
 
-  cmpResult compare(const HexFloat &) const;
-  cmpResult compareAbsoluteValue(const HexFloat &) const;
+  LLVM_ABI cmpResult compare(const HexFloat &) const;
+  LLVM_ABI cmpResult compareAbsoluteValue(const HexFloat &) const;
 
-  bool bitwiseIsEqual(const HexFloat &other) const;
+  LLVM_ABI bool bitwiseIsEqual(const HexFloat &other) const;
 
-  bool isZero() const;
-  bool isNegative() const;
-  bool isDenormal() const;
-  bool isSmallest() const;
-  bool isLargest() const;
-  bool isInteger() const;
+  LLVM_ABI bool isZero() const;
+  LLVM_ABI bool isNegative() const;
+  LLVM_ABI bool isDenormal() const;
+  LLVM_ABI bool isSmallest() const;
+  LLVM_ABI bool isLargest() const;
+  LLVM_ABI bool isInteger() const;
 
-  bool isSmallestNormalized() const;
+  LLVM_ABI bool isSmallestNormalized() const;
 
-  void toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision = 0,
-                unsigned FormatMaxPadding = 3, bool TruncateZero = true) const;
+  LLVM_ABI void toString(SmallVectorImpl<char> &Str,
+                         unsigned FormatPrecision = 0,
+                         unsigned FormatMaxPadding = 3,
+                         bool TruncateZero = true) const;
 
-  bool getExactInverse(APFloat *inv) const;
+  LLVM_ABI bool getExactInverse(APFloat *inv) const;
 
   // If this is an exact power of two, return the exponent. If it's not an exact
   // power of 2, return INT_MIN
@@ -1119,16 +1127,16 @@ public:
   // If this is an exact power of two, return the exponent while ignoring the
   // sign bit. If it's not an exact power of 2, return INT_MIN
   LLVM_READONLY
-  int getExactLog2Abs() const;
+  LLVM_ABI int getExactLog2Abs() const;
 
   int getRadix() const { return 16; }
   ExponentType getExponent() const { return exponent; }
-  APInt getSignificand() const;
-  APInt getNaNPayload() const;
+  LLVM_ABI APInt getSignificand() const;
+  LLVM_ABI APInt getNaNPayload() const;
 
-  hash_code hash_value() const;
+  LLVM_ABI hash_code hash_value() const;
 
-  void dump() const;
+  LLVM_ABI void dump() const;
 
   friend int ilogb(const HexFloat &);
   friend HexFloat scalbn(HexFloat X, int Exp, roundingMode);
@@ -1141,9 +1149,9 @@ private:
   opStatus handleUnderflow(bool isNeg = false);
   opStatus handleDenorm(APInt &significand, int &exponent);
 };
-int ilogb(const HexFloat &Arg);
-HexFloat scalbn(HexFloat X, int Exp, roundingMode);
-HexFloat frexp(HexFloat X, int &Exp, roundingMode);
+LLVM_ABI int ilogb(const HexFloat &Arg);
+LLVM_ABI HexFloat scalbn(HexFloat X, int Exp, roundingMode);
+LLVM_ABI HexFloat frexp(HexFloat X, int &Exp, roundingMode);
 
 } // End detail namespace
 
