@@ -6,13 +6,13 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 < %s | FileCheck --check-prefix=CHECK %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-5-generic < %s | FileCheck --check-prefix=CHECK %s
 
-; Even with -mattr=+xnack or -mattr=-xnack, the target ID doesn't change
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=+xnack < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=-xnack < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 -mattr=+xnack < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 -mattr=-xnack < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-5-generic -mattr=+xnack < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-5-generic -mattr=-xnack < %s | FileCheck %s
+; Even with --amdgpu-xnack=true or --amdgpu-xnack=false, the target ID doesn't change
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 --amdgpu-xnack=true < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 --amdgpu-xnack=false < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 --amdgpu-xnack=true < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 --amdgpu-xnack=false < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-5-generic --amdgpu-xnack=true < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-5-generic --amdgpu-xnack=false < %s | FileCheck %s
 
 ; CHECK: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx{{1250|1251|12-5-generic}}"
 

@@ -5,10 +5,8 @@
 // RUN:   -nogpuinc --offload-arch=gfx906:xnack- --offload-arch=gfx900:xnack- %s \
 // RUN:   2>&1 | FileCheck %s -check-prefix=NOXNACK
 
-// XNACK: {{.*}}clang{{.*}}"-target-feature" "+xnack"
-// NOXNACK: {{.*}}clang{{.*}}"-target-feature" "-xnack"
-// XNACK: {{.*}}lld{{.*}} "-plugin-opt=-mattr=+xnack"
-// NOXNACK: {{.*}}lld{{.*}} "-plugin-opt=-mattr=-xnack"
+// XNACK: {{.*}}clang{{.*}}"-mxnack"
+// NOXNACK: {{.*}}clang{{.*}}"-mno-xnack"
 
 // RUN: %clang -### --target=x86_64-linux-gnu -fgpu-rdc -nogpulib \
 // RUN:   -nogpuinc --offload-arch=gfx908:sramecc+ --no-offload-new-driver %s \
@@ -17,10 +15,8 @@
 // RUN:   -nogpuinc --offload-arch=gfx908:sramecc- --no-offload-new-driver %s \
 // RUN:   2>&1 | FileCheck %s -check-prefix=NOSRAM
 
-// SRAM: {{.*}}clang{{.*}}"-target-feature" "+sramecc"
-// NOSRAM: {{.*}}clang{{.*}}"-target-feature" "-sramecc"
-// SRAM: {{.*}}lld{{.*}} "-plugin-opt=-mattr=+sramecc"
-// NOTSRAM: {{.*}}lld{{.*}} "-plugin-opt=-mattr=-sramecc"
+// SRAM: {{.*}}clang{{.*}}"-msramecc"
+// NOSRAM: {{.*}}clang{{.*}}"-mno-sramecc"
 
 // RUN: %clang -### --target=x86_64-linux-gnu -fgpu-rdc -nogpulib \
 // RUN:   -nogpuinc --offload-arch=gfx1010 --no-offload-new-driver %s \
@@ -41,8 +37,8 @@
 // RUN:   -nogpuinc --offload-arch=gfx908:xnack-:sramecc- --no-offload-new-driver %s \
 // RUN:   2>&1 | FileCheck %s -check-prefix=NOALL3
 
-// ALL3: {{.*}}clang{{.*}}"-target-feature" "+xnack" "-target-feature" "+sramecc"
-// NOALL3: {{.*}}clang{{.*}}"-target-feature" "-xnack" "-target-feature" "-sramecc"
+// ALL3: {{.*}}clang{{.*}}"-mxnack" {{.*}}"-msramecc"
+// NOALL3: {{.*}}clang{{.*}}"-mno-xnack" {{.*}}"-mno-sramecc"
 
 // RUN: %clang -### --target=x86_64-linux-gnu -fgpu-rdc -nogpulib \
 // RUN:   -nogpuinc --offload-arch=gfx1010 --no-offload-new-driver %s \
