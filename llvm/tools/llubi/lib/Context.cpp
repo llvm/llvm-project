@@ -91,7 +91,10 @@ std::optional<AnyValue> Context::getConstantValueImpl(Constant *C) {
   if (isa<PoisonValue>(C))
     return AnyValue::getPoisonValue(*this, C->getType());
 
-  if (isa<ConstantAggregateZero, ConstantPointerNull>(C))
+  if (isa<ConstantAggregateZero>(C))
+    return AnyValue::getNullValue(*this, C->getType());
+
+  if (isa<ConstantPointerNull>(C))
     return AnyValue::getNullValue(*this, C->getType());
 
   if (auto *CI = dyn_cast<ConstantInt>(C)) {
@@ -269,6 +272,10 @@ std::optional<AnyValue> Context::evaluateConstantExpression(ConstantExpr *CE) {
     }
     return AnyValue(std::move(Vec));
   }
+  case Instruction::PtrToInt:
+  case Instruction::IntToPtr:
+  case Instruction::AddrSpaceCast:
+    return std::optional;
   default:
     assert(Instruction::isBinaryOp(Opc) && "Must be binary operator?");
     const AnyValue *LHS = getConstantValue(CE->getOperand(0));
