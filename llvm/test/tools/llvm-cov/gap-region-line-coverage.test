@@ -5,30 +5,19 @@
 // a never-taken early return. The gap region from the block's closing "}" wraps
 // to line 15, but line 15 has a non-entry segment with count=1 (the function
 // body continues). LineCoverageStats should report count=1 for line 15.
-//
-// Test inputs generated with (CWD and source must be in /tmp for path-equivalence):
-//   cp Inputs/gap-region-quirk/gap-quirk-v2.cpp /tmp/gap-quirk-v2.cpp
-//   cd /tmp
-//   %clang -fprofile-instr-generate -fcoverage-mapping -O0 \
-//       -mllvm -enable-name-compression=false \
-//       -c -o gap-quirk.o gap-quirk-v2.cpp
-//   llvm-cov convert-for-testing gap-quirk.o -o gap-quirk.covmapping
-//   %clang -fprofile-instr-generate -fcoverage-mapping -O0 \
-//       -o gap-quirk gap-quirk-v2.cpp
-//   LLVM_PROFILE_FILE=gap-quirk.profraw ./gap-quirk
-//   llvm-profdata merge --sparse gap-quirk.profraw -o gap-quirk.profdata
 
-// RUN: llvm-cov show %S/Inputs/gap-region-quirk/gap-quirk.covmapping \
-// RUN:   -instr-profile %S/Inputs/gap-region-quirk/gap-quirk.profdata \
-// RUN:   -path-equivalence=/tmp,%S/Inputs/gap-region-quirk \
+// RUN: yaml2obj %S/Inputs/gap-region-quirk/gap-quirk.yaml -o %t.o
+// RUN: llvm-profdata merge %S/Inputs/gap-region-quirk/gap-quirk.proftext -o %t.profdata
+
+// RUN: llvm-cov show %t.o -instr-profile %t.profdata \
+// RUN:   -path-equivalence=.,%S/Inputs/gap-region-quirk \
 // RUN:   2>&1 | FileCheck -check-prefix=SHOW %s
 
 // Line 15 ("int result = 42;") should show count 1, not 0.
 // SHOW:     15|      1|  int result = 42;
 
-// RUN: llvm-cov report %S/Inputs/gap-region-quirk/gap-quirk.covmapping \
-// RUN:   -instr-profile %S/Inputs/gap-region-quirk/gap-quirk.profdata \
-// RUN:   -path-equivalence=/tmp,%S/Inputs/gap-region-quirk \
+// RUN: llvm-cov report %t.o -instr-profile %t.profdata \
+// RUN:   -path-equivalence=.,%S/Inputs/gap-region-quirk \
 // RUN:   --show-branch-summary=false \
 // RUN:   2>&1 | FileCheck -check-prefix=REPORT %s
 
