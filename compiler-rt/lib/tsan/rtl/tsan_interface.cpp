@@ -90,7 +90,6 @@ int __tsan_simulate(void (*callback)(void* arg), void* arg) {
   return SimulateRun(callback, arg);
 }
 
-
 void __tsan_acquire(void *addr) {
   Acquire(cur_thread(), CALLERPC, (uptr)addr);
 }
