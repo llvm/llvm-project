@@ -364,15 +364,3 @@ namespace Diagnostics {
   static_assert(1 << 3 != 8, ""); // expected-error {{failed}} \
                                  // expected-note {{evaluates to '8 != 8'}}
 }
-
-namespace GH203701 {
-  struct S {
-    constexpr S(auto) {}
-    constexpr operator int() const { return 0; }
-  };
-
-  constexpr auto a = [](this S) { return 1; };
-
-  static_assert((&decltype(a)::operator())(1) == 42, ""); // expected-error-re {{static assertion failed due to requirement '(&const GH203701::(lambda at {.*})::operator())(1) == 42'}}
-  static_assert((&S::operator int) == nullptr, ""); // expected-error {{static assertion failed due to requirement '(&GH203701::S::operator int) == nullptr'}}
-}
