@@ -60,8 +60,8 @@ define swifttailcc void @tail_call_fpdiff_a_key(ptr swiftasync %ctx) "branch-pro
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
-; CHECK-NEXT:    mov x17, x30
 ; CHECK-NEXT:    add x16, sp, #16
+; CHECK-NEXT:    mov x17, x30
 
 ; COMPAT-NEXT:   adrp x15, .Ltmp0
 ; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp0
@@ -138,8 +138,8 @@ define swifttailcc void @tail_call_fpdiff_b_key(ptr swiftasync %ctx) "branch-pro
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
-; CHECK-NEXT:    mov x17, x30
 ; CHECK-NEXT:    add x16, sp, #16
+; CHECK-NEXT:    mov x17, x30
 
 ; COMPAT-NEXT:   adrp x15, .Ltmp1
 ; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp1
@@ -241,7 +241,7 @@ define swifttailcc void @tail_call_no_fpdiff_b_key(ptr swiftasync %ctx) "branch-
 ; COMPAT-NEXT:   hint #27
 
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:      .cfi_negate_ra_state_with_pc
+; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:   .Ltmp3:
 ; V83A-NEXT:     pacibsp
 
@@ -341,8 +341,8 @@ define swifttailcc void @indirect_tail_call_fpdiff_a_key(ptr swiftasync %ctx, pt
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
-; CHECK-NEXT:    mov x17, x30
 ; CHECK-NEXT:    add x16, sp, #16
+; CHECK-NEXT:    mov x17, x30
 
 ; COMPAT-NEXT:   adrp x15, .Ltmp4
 ; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp4
@@ -420,8 +420,8 @@ define swifttailcc void @indirect_tail_call_fpdiff_b_key(ptr swiftasync %ctx, pt
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    .cfi_restore w29
-; CHECK-NEXT:    mov x17, x30
 ; CHECK-NEXT:    add x16, sp, #16
+; CHECK-NEXT:    mov x17, x30
 
 ; COMPAT-NEXT:   adrp x15, .Ltmp5
 ; COMPAT-NEXT:   add x15, x15, :lo12:.Ltmp5
@@ -523,7 +523,7 @@ define swifttailcc void @indirect_tail_call_no_fpdiff_b_key(ptr swiftasync %ctx,
 ; COMPAT-NEXT:   hint #27
 
 ; V83A-NEXT:     hint #39
-; V83A-NEXT:      .cfi_negate_ra_state_with_pc
+; V83A-NEXT:     .cfi_negate_ra_state_with_pc
 ; V83A-NEXT:   .Ltmp7:
 ; V83A-NEXT:     pacibsp
 
