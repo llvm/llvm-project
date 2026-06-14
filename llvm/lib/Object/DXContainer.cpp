@@ -451,7 +451,8 @@ Error DXContainer::parseSourceInfo(StringRef Part) {
   Current += sizeof(SourceInfo->Parameters);
 
   if (SourceInfo->Parameters.AlignedSizeInBytes > Part.size())
-    return parseFailed(formatv("size field in SRCI header ({0} bytes) is greater than SRCI part size ({1} bytes)",
+    return parseFailed(formatv("size field in SRCI header ({0} bytes) is "
+                               "greater than SRCI part size ({1} bytes)",
                                SourceInfo->Parameters.AlignedSizeInBytes,
                                Part.size()));
   if (SourceInfo->Parameters.Flags)
