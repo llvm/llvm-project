@@ -48,30 +48,34 @@ std::string ExceptionError::toString() const noexcept {
 
 #endif // ORC_RT_ENABLE_EXCEPTIONS
 
-extern "C" orc_rt_Error_TypeId orc_rt_Error_getTypeId(orc_rt_ErrorRef Err) {
+extern "C" orc_rt_Error_TypeId
+orc_rt_Error_getTypeId(orc_rt_ErrorRef Err) noexcept {
   assert(Err && "Err must not be null");
   return reinterpret_cast<ErrorInfoBase *>(Err)->dynamicClassID();
 }
 
-extern "C" void orc_rt_Error_consume(orc_rt_ErrorRef Err) {
+extern "C" void orc_rt_Error_consume(orc_rt_ErrorRef Err) noexcept {
   consumeError(unwrap(Err));
 }
 
-extern "C" void orc_rt_Error_cantFail(orc_rt_ErrorRef Err) {
+extern "C" void orc_rt_Error_cantFail(orc_rt_ErrorRef Err) noexcept {
   cantFail(unwrap(Err));
 }
 
-extern "C" char *orc_rt_Error_toString(orc_rt_ErrorRef Err) {
+extern "C" char *orc_rt_Error_toString(orc_rt_ErrorRef Err) noexcept {
   return strdup(toString(unwrap(Err)).c_str());
 }
 
-extern "C" void orc_rt_Error_freeErrorMessage(char *ErrMsg) { free(ErrMsg); }
+extern "C" void orc_rt_Error_freeErrorMessage(char *ErrMsg) noexcept {
+  free(ErrMsg);
+}
 
-extern "C" orc_rt_Error_TypeId orc_rt_StringError_getTypeId(void) {
+extern "C" orc_rt_Error_TypeId orc_rt_StringError_getTypeId(void) noexcept {
   return StringError::classID();
 }
 
-extern "C" orc_rt_ErrorRef orc_rt_StringError_create(const char *ErrMsg) {
+extern "C" orc_rt_ErrorRef
+orc_rt_StringError_create(const char *ErrMsg) noexcept {
   return wrap(make_error<StringError>(ErrMsg));
 }
 

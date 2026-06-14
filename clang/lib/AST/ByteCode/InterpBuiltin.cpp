@@ -113,7 +113,7 @@ static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
     return;
   }
 
-  if (QT->isSignedIntegerOrEnumerationType()) {
+  if (isSignedType(*T)) {
     int64_t V = Val.getSExtValue();
     INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V)); });
   } else {

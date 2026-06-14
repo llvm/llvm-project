@@ -20,6 +20,8 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <initializer_list>
@@ -684,4 +686,30 @@ TEST_F(UnsafeBufferUsageTest, CXXScalarValueInitExpr) {
   ASSERT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeSet(__LINE__, {{"q", 1U}}));
 }
+
+// Robustness test: unsupported constructs will not cause crash
+#ifndef NDEBUG
+TEST_F(UnsafeBufferUsageTest, StmtExprArrayAccess) {
+  // GNU statement expressions are not supported, but should not crash and
+  // should log a warning.
+  llvm::SaveAndRestore<bool> DebugFlag(llvm::DebugFlag, true);
+
+  llvm::setCurrentDebugType("ssaf-analyses");
+  testing::internal::CaptureStderr();
+
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo(int i) {
+      ({ int *p = 0; p; })[i];
+    }
+  )cpp"));
+
+  // The only unsafe pointer is unsupported, so no summary should be produced.
+  ASSERT_FALSE(getEntitySummary("foo"));
+  // Verify the warning was logged
+  EXPECT_TRUE(
+      StringRef(testing::internal::GetCapturedStderr())
+          .contains("attempt to translate StmtExpr to EntityPointerLevels"));
+}
+#endif
+
 } // namespace

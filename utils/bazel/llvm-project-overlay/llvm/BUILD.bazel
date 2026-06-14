@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
@@ -25,6 +25,20 @@ package(
 )
 
 licenses(["notice"])
+
+# Enable checks that alter LLVM's C++ ABI. Usage:
+#   bazel build --@llvm-project//llvm:enable_abi_breaking_checks=true @llvm-project//llvm:llvm
+bool_flag(
+    name = "enable_abi_breaking_checks",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "abi_breaking_checks_enabled",
+    flag_values = {
+        ":enable_abi_breaking_checks": "true",
+    },
+)
 
 exports_files([
     "LICENSE.TXT",
@@ -205,12 +219,16 @@ expand_template(
     name = "abi_breaking_h_gen",
     out = "include/llvm/Config/abi-breaking.h",
     substitutions = {
-        # Define to enable checks that alter the LLVM C++ ABI
-        "#cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS": "#define LLVM_ENABLE_ABI_BREAKING_CHECKS 0",
-
         # Define to enable reverse iteration of unordered llvm containers
         "#cmakedefine01 LLVM_ENABLE_REVERSE_ITERATION": "#define LLVM_ENABLE_REVERSE_ITERATION 0",
-    },
+    } | select({
+        ":abi_breaking_checks_enabled": {
+            "#cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS": "#define LLVM_ENABLE_ABI_BREAKING_CHECKS 1",
+        },
+        "//conditions:default": {
+            "#cmakedefine01 LLVM_ENABLE_ABI_BREAKING_CHECKS": "#define LLVM_ENABLE_ABI_BREAKING_CHECKS 0",
+        },
+    }),
     template = "include/llvm/Config/abi-breaking.h.cmake",
 )
 

@@ -241,15 +241,15 @@ define <16 x i8> @test_affine_src_xor_no_fold_var_matrix(<16 x i8> %src, <16 x i
 }
 
 ;; Test folding XOR of two vgf2p8affineqb with same input - 128-bit
-define <16 x i8> @test_affine_affine_xor_fold_128(<16 x i8> %src, <16 x i8> %m1, <16 x i8> %m2) nounwind {
+define <16 x i8> @test_affine_affine_xor_same_source_fold_128(<16 x i8> %src, <16 x i8> %m1, <16 x i8> %m2) nounwind {
 ;
-; AVX-LABEL: test_affine_affine_xor_fold_128:
+; AVX-LABEL: test_affine_affine_xor_same_source_fold_128:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vgf2p8affineqb $89, %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: test_affine_affine_xor_fold_128:
+; AVX512-LABEL: test_affine_affine_xor_same_source_fold_128:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vgf2p8affineqb $89, %xmm1, %xmm0, %xmm0
@@ -261,15 +261,15 @@ define <16 x i8> @test_affine_affine_xor_fold_128(<16 x i8> %src, <16 x i8> %m1,
 }
 
 ;; Test with non-zero immediates - 128-bit
-define <16 x i8> @test_affine_affine_xor_fold_128_nonzero(<16 x i8> %src, <16 x i8> %m1, <16 x i8> %m2) nounwind {
+define <16 x i8> @test_affine_affine_xor_same_source_fold_128_nonzero(<16 x i8> %src, <16 x i8> %m1, <16 x i8> %m2) nounwind {
 ;
-; AVX-LABEL: test_affine_affine_xor_fold_128_nonzero:
+; AVX-LABEL: test_affine_affine_xor_same_source_fold_128_nonzero:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; AVX-NEXT:    vgf2p8affineqb $15, %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: test_affine_affine_xor_fold_128_nonzero:
+; AVX512-LABEL: test_affine_affine_xor_same_source_fold_128_nonzero:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpxor %xmm2, %xmm1, %xmm1
 ; AVX512-NEXT:    vgf2p8affineqb $15, %xmm1, %xmm0, %xmm0
@@ -281,15 +281,15 @@ define <16 x i8> @test_affine_affine_xor_fold_128_nonzero(<16 x i8> %src, <16 x 
 }
 
 ;; Test commutative XOR - 128-bit
-define <16 x i8> @test_affine_affine_xor_fold_128_commutative(<16 x i8> %src, <16 x i8> %m1, <16 x i8> %m2) nounwind {
+define <16 x i8> @test_affine_affine_xor_same_source_fold_128_commutative(<16 x i8> %src, <16 x i8> %m1, <16 x i8> %m2) nounwind {
 ;
-; AVX-LABEL: test_affine_affine_xor_fold_128_commutative:
+; AVX-LABEL: test_affine_affine_xor_same_source_fold_128_commutative:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor %xmm1, %xmm2, %xmm1
 ; AVX-NEXT:    vgf2p8affineqb $166, %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: test_affine_affine_xor_fold_128_commutative:
+; AVX512-LABEL: test_affine_affine_xor_same_source_fold_128_commutative:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpxor %xmm1, %xmm2, %xmm1
 ; AVX512-NEXT:    vgf2p8affineqb $166, %xmm1, %xmm0, %xmm0
@@ -301,9 +301,9 @@ define <16 x i8> @test_affine_affine_xor_fold_128_commutative(<16 x i8> %src, <1
 }
 
 ;; Negative test: multi-use should not fold - 128-bit
-define <16 x i8> @test_affine_affine_xor_no_fold_multi_use(<16 x i8> %src, <16 x i8> %m1, <16 x i8> %m2, ptr %out) nounwind {
+define <16 x i8> @test_affine_affine_xor_same_source_no_fold_multi_use(<16 x i8> %src, <16 x i8> %m1, <16 x i8> %m2, ptr %out) nounwind {
 ;
-; AVX-LABEL: test_affine_affine_xor_no_fold_multi_use:
+; AVX-LABEL: test_affine_affine_xor_same_source_no_fold_multi_use:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vgf2p8affineqb $23, %xmm1, %xmm0, %xmm1
 ; AVX-NEXT:    vgf2p8affineqb $200, %xmm2, %xmm0, %xmm0
@@ -311,7 +311,7 @@ define <16 x i8> @test_affine_affine_xor_no_fold_multi_use(<16 x i8> %src, <16 x
 ; AVX-NEXT:    vpxor %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: test_affine_affine_xor_no_fold_multi_use:
+; AVX512-LABEL: test_affine_affine_xor_same_source_no_fold_multi_use:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vgf2p8affineqb $23, %xmm1, %xmm0, %xmm1
 ; AVX512-NEXT:    vgf2p8affineqb $200, %xmm2, %xmm0, %xmm0
@@ -321,6 +321,66 @@ define <16 x i8> @test_affine_affine_xor_no_fold_multi_use(<16 x i8> %src, <16 x
   %gfni1 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> %m1, i8 23)
   %gfni2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src, <16 x i8> %m2, i8 200)
   store <16 x i8> %gfni1, ptr %out
+  %xor = xor <16 x i8> %gfni1, %gfni2
+  ret <16 x i8> %xor
+}
+
+;; Test folding XOR of two vgf2p8affineqb with same matrix
+define <16 x i8> @test_affine_affine_same_matrix_fold_128(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %m) nounwind {
+; AVX-LABEL: test_affine_affine_same_matrix_fold_128:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vgf2p8affineqb $0, %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: test_affine_affine_same_matrix_fold_128:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vgf2p8affineqb $0, %xmm2, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %gfni1 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src1, <16 x i8> %m, i8 0)
+  %gfni2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src2, <16 x i8> %m, i8 0)
+  %xor = xor <16 x i8> %gfni1, %gfni2
+  ret <16 x i8> %xor
+}
+
+define <16 x i8> @test_affine_affine_same_matrix_fold_immediate(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %m) nounwind {
+; AVX-LABEL: test_affine_affine_same_matrix_fold_immediate:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vgf2p8affineqb $130, %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: test_affine_affine_same_matrix_fold_immediate:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vgf2p8affineqb $130, %xmm2, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %gfni1 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src1, <16 x i8> %m, i8 183)
+  %gfni2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src2, <16 x i8> %m, i8 53)
+  %xor = xor <16 x i8> %gfni1, %gfni2
+  ret <16 x i8> %xor
+}
+
+define <16 x i8> @test_affine_affine_same_matrix_no_fold_multi_use(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> %m, ptr %sink) nounwind {
+; AVX-LABEL: test_affine_affine_same_matrix_no_fold_multi_use:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $23, %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vgf2p8affineqb $200, %xmm2, %xmm1, %xmm1
+; AVX-NEXT:    vmovdqa %xmm0, (%rdi)
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: test_affine_affine_same_matrix_no_fold_multi_use:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $23, %xmm2, %xmm0, %xmm0
+; AVX512-NEXT:    vgf2p8affineqb $200, %xmm2, %xmm1, %xmm1
+; AVX512-NEXT:    vmovdqa %xmm0, (%rdi)
+; AVX512-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %gfni1 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src1, <16 x i8> %m, i8 23)
+  %gfni2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %src2, <16 x i8> %m, i8 200)
+  store <16 x i8> %gfni1, ptr %sink
   %xor = xor <16 x i8> %gfni1, %gfni2
   ret <16 x i8> %xor
 }
@@ -348,21 +408,39 @@ define <16 x i8> @test_affine_affine_xor_no_fold_different_inputs(<16 x i8> %src
 }
 
 ;; Test 256-bit vectors
-define <32 x i8> @test_affine_affine_xor_fold_256(<32 x i8> %src, <32 x i8> %m1, <32 x i8> %m2) nounwind {
+define <32 x i8> @test_affine_affine_xor_same_source_fold_256(<32 x i8> %src, <32 x i8> %m1, <32 x i8> %m2) nounwind {
 ;
-; AVX-LABEL: test_affine_affine_xor_fold_256:
+; AVX-LABEL: test_affine_affine_xor_same_source_fold_256:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %ymm2, %ymm1, %ymm1
 ; AVX-NEXT:    vgf2p8affineqb $89, %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: test_affine_affine_xor_fold_256:
+; AVX512-LABEL: test_affine_affine_xor_same_source_fold_256:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpxor %ymm2, %ymm1, %ymm1
 ; AVX512-NEXT:    vgf2p8affineqb $89, %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %gfni1 = call <32 x i8> @llvm.x86.vgf2p8affineqb.256(<32 x i8> %src, <32 x i8> %m1, i8 42)
   %gfni2 = call <32 x i8> @llvm.x86.vgf2p8affineqb.256(<32 x i8> %src, <32 x i8> %m2, i8 115)
+  %xor = xor <32 x i8> %gfni1, %gfni2
+  ret <32 x i8> %xor
+}
+
+define <32 x i8> @test_affine_affine_same_matrix_fold_256(<32 x i8> %src1, <32 x i8> %src2, <32 x i8> %m) nounwind {
+; AVX-LABEL: test_affine_affine_same_matrix_fold_256:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vgf2p8affineqb $89, %ymm2, %ymm0, %ymm0
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: test_affine_affine_same_matrix_fold_256:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxor %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vgf2p8affineqb $89, %ymm2, %ymm0, %ymm0
+; AVX512-NEXT:    retq
+  %gfni1 = call <32 x i8> @llvm.x86.vgf2p8affineqb.256(<32 x i8> %src1, <32 x i8> %m, i8 42)
+  %gfni2 = call <32 x i8> @llvm.x86.vgf2p8affineqb.256(<32 x i8> %src2, <32 x i8> %m, i8 115)
   %xor = xor <32 x i8> %gfni1, %gfni2
   ret <32 x i8> %xor
 }

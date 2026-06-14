@@ -355,3 +355,103 @@ entry:
   musttail call void @musttail_callee(ptr %dst, ptr %x, ptr %y)
   ret void
 }
+
+define void @reject_outside_operand_vectorized(ptr %q, ptr %p) {
+; CHECK-LABEL: define void @reject_outside_operand_vectorized(
+; CHECK-SAME: ptr [[Q:%.*]], ptr [[P:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[BUF:%.*]] = alloca [5 x i32], align 16
+; CHECK-NEXT:    br i1 true, label %[[PRE:.*]], label %[[BODY:.*]]
+; CHECK:       [[PRE]]:
+; CHECK-NEXT:    store i32 0, ptr [[BUF]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = getelementptr i8, ptr [[BUF]], i64 4
+; CHECK-NEXT:    [[PRE1:%.*]] = load i32, ptr [[T1]], align 4
+; CHECK-NEXT:    [[T2:%.*]] = getelementptr i8, ptr [[BUF]], i64 8
+; CHECK-NEXT:    [[PRE2:%.*]] = load i32, ptr [[T2]], align 8
+; CHECK-NEXT:    br label %[[BODY]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[PH1:%.*]] = phi i32 [ [[PRE2]], %[[PRE]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[PH2:%.*]] = phi i32 [ [[PRE1]], %[[PRE]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    store i32 0, ptr null, align 4
+; CHECK-NEXT:    [[Q0:%.*]] = load i32, ptr [[Q]], align 4
+; CHECK-NEXT:    [[Q0O:%.*]] = or i32 [[Q0]], 1
+; CHECK-NEXT:    store i32 [[Q0O]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[L4:%.*]] = load i32, ptr [[P4]], align 4
+; CHECK-NEXT:    [[O4:%.*]] = or i32 [[PH2]], [[L4]]
+; CHECK-NEXT:    store i32 [[O4]], ptr [[P4]], align 4
+; CHECK-NEXT:    [[Q1:%.*]] = load i32, ptr [[Q]], align 4
+; CHECK-NEXT:    [[Q1O:%.*]] = or i32 [[Q1]], 1
+; CHECK-NEXT:    store i32 [[Q1O]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[P8:%.*]] = getelementptr i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[L8:%.*]] = load i32, ptr [[P8]], align 4
+; CHECK-NEXT:    [[O8:%.*]] = or i32 [[PH1]], [[L8]]
+; CHECK-NEXT:    store i32 [[O8]], ptr [[P8]], align 4
+; CHECK-NEXT:    [[Q2:%.*]] = load i32, ptr [[Q]], align 4
+; CHECK-NEXT:    [[Q2O:%.*]] = or i32 [[Q2]], 1
+; CHECK-NEXT:    store i32 [[Q2O]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[P12:%.*]] = getelementptr i8, ptr [[P]], i64 12
+; CHECK-NEXT:    [[L12:%.*]] = load i32, ptr [[P12]], align 4
+; CHECK-NEXT:    [[O12:%.*]] = or i32 [[L12]], 1
+; CHECK-NEXT:    store i32 [[O12]], ptr [[P12]], align 4
+; CHECK-NEXT:    [[Q3:%.*]] = load i32, ptr [[Q]], align 4
+; CHECK-NEXT:    [[Q3O:%.*]] = or i32 [[Q3]], 1
+; CHECK-NEXT:    store i32 [[Q3O]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[P16:%.*]] = getelementptr i8, ptr [[P]], i64 16
+; CHECK-NEXT:    [[L16:%.*]] = load i32, ptr [[P16]], align 4
+; CHECK-NEXT:    [[O16:%.*]] = or i32 [[L16]], 1
+; CHECK-NEXT:    store i32 [[O16]], ptr [[P]], align 4
+; CHECK-NEXT:    [[Q4:%.*]] = load i32, ptr [[Q]], align 4
+; CHECK-NEXT:    [[Q4O:%.*]] = or i32 [[Q4]], 1
+; CHECK-NEXT:    store i32 [[Q4O]], ptr [[Q]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %buf = alloca [5 x i32], align 16
+  br i1 true, label %pre, label %body
+
+pre:
+  store i32 0, ptr %buf, align 4
+  %t1 = getelementptr i8, ptr %buf, i64 4
+  %pre1 = load i32, ptr %t1, align 4
+  %t2 = getelementptr i8, ptr %buf, i64 8
+  %pre2 = load i32, ptr %t2, align 8
+  br label %body
+
+body:
+  %ph1 = phi i32 [ %pre2, %pre ], [ 0, %entry ]
+  %ph2 = phi i32 [ %pre1, %pre ], [ 0, %entry ]
+  store i32 0, ptr null, align 4
+  %q0 = load i32, ptr %q, align 4
+  %q0o = or i32 %q0, 1
+  store i32 %q0o, ptr %q, align 4
+  %p4 = getelementptr i8, ptr %p, i64 4
+  %l4 = load i32, ptr %p4, align 4
+  %o4 = or i32 %ph2, %l4
+  store i32 %o4, ptr %p4, align 4
+  %q1 = load i32, ptr %q, align 4
+  %q1o = or i32 %q1, 1
+  store i32 %q1o, ptr %q, align 4
+  %p8 = getelementptr i8, ptr %p, i64 8
+  %l8 = load i32, ptr %p8, align 4
+  %o8 = or i32 %ph1, %l8
+  store i32 %o8, ptr %p8, align 4
+  %q2 = load i32, ptr %q, align 4
+  %q2o = or i32 %q2, 1
+  store i32 %q2o, ptr %q, align 4
+  %p12 = getelementptr i8, ptr %p, i64 12
+  %l12 = load i32, ptr %p12, align 4
+  %o12 = or i32 %l12, 1
+  store i32 %o12, ptr %p12, align 4
+  %q3 = load i32, ptr %q, align 4
+  %q3o = or i32 %q3, 1
+  store i32 %q3o, ptr %q, align 4
+  %p16 = getelementptr i8, ptr %p, i64 16
+  %l16 = load i32, ptr %p16, align 4
+  %o16 = or i32 %l16, 1
+  store i32 %o16, ptr %p, align 4
+  %q4 = load i32, ptr %q, align 4
+  %q4o = or i32 %q4, 1
+  store i32 %q4o, ptr %q, align 4
+  ret void
+}

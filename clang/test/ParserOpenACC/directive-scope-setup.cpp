@@ -7,4 +7,6 @@ void func() {
   using j; // expected-error{{using declaration requires a qualified name}}
 #pragma acc parallel loop
   using k; // expected-error{{using declaration requires a qualified name}}
+#pragma acc data default(none)
+  using l; // expected-error{{using declaration requires a qualified name}}
 }

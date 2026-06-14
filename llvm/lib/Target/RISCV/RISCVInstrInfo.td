@@ -2162,8 +2162,7 @@ def SetFCSRImm : SetSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
 /// Other pseudo-instructions
 
 // Used by -fzero-call-used-regs to zero out registers.
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
-    isCodeGenOnly = true in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def PseudoClearGPR : Pseudo<(outs GPR:$rd), (ins), []>,
                      PseudoInstExpansion<(ADDI GPR:$rd, X0, 0)>;
 

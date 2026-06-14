@@ -23,12 +23,11 @@ define void @load_store(ptr %p) {
 ; LMUL1-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; LMUL1-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL1:       middle.block:
-; LMUL1-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; LMUL1-NEXT:    br label [[FOR_END:%.*]]
 ; LMUL1:       scalar.ph:
-; LMUL1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; LMUL1-NEXT:    br label [[FOR_BODY:%.*]]
 ; LMUL1:       for.body:
-; LMUL1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; LMUL1-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; LMUL1-NEXT:    [[Q:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 [[IV]]
 ; LMUL1-NEXT:    [[V:%.*]] = load i64, ptr [[Q]], align 8
 ; LMUL1-NEXT:    [[W:%.*]] = add i64 [[V]], 1

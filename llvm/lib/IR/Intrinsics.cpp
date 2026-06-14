@@ -371,9 +371,11 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
         IITDescriptor::get(IITDescriptor::Pointer, Infos[NextElt++]));
     return;
   case IIT_ANY: {
-    unsigned OverloadInfo = Infos[NextElt++];
+    unsigned OverloadIndex = Infos[NextElt++];
+    unsigned ArgKindEnums = Infos[NextElt++];
+    unsigned Packed = (ArgKindEnums << 8) | OverloadIndex;
     OutputTable.push_back(
-        IITDescriptor::get(IITDescriptor::Overloaded, OverloadInfo));
+        IITDescriptor::get(IITDescriptor::Overloaded, Packed));
     return;
   }
   case IIT_MATCH: {
@@ -1076,20 +1078,69 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
            "Table consistency error");
     OverloadTys.push_back(Ty);
 
-    switch (D.getOverloadKind()) {
-    case IITDescriptor::AK_Any:
-      return false; // Success
-    case IITDescriptor::AK_AnyInteger:
-      return PrintMsg(Ty->isIntOrIntVectorTy(), "any integer or integer vector",
-                      OIdx);
-    case IITDescriptor::AK_AnyFloat:
-      return PrintMsg(Ty->isFPOrFPVectorTy(), "any fp or fp vector", OIdx);
-    case IITDescriptor::AK_AnyVector:
-      return PrintMsg(isa<VectorType>(Ty), "any vector type", OIdx);
-    case IITDescriptor::AK_AnyPointer:
-      return PrintMsg(isa<PointerType>(Ty), "any pointer type", OIdx);
+    IITDescriptor::AnyKindVectorConstraint VC;
+    IITDescriptor::AnyKindElementConstraint EC;
+    std::tie(VC, EC) = D.getOverloadConstraints();
+
+    bool IsValid = [&]() {
+      switch (VC) {
+      case IITDescriptor::VC_None:
+        return true;
+      case IITDescriptor::VC_Vector:
+        return isa<VectorType>(Ty);
+      case IITDescriptor::VC_Scalar:
+        return !isa<VectorType>(Ty);
+      }
+      llvm_unreachable("invalid vector constraint");
+    }();
+
+    IsValid &= [&]() {
+      Type *ETy = Ty->getScalarType();
+      switch (EC) {
+      case IITDescriptor::EC_None:
+        return true;
+      case IITDescriptor::EC_Integer:
+        return ETy->isIntegerTy();
+      case IITDescriptor::EC_Float:
+        return ETy->isFloatingPointTy();
+      case IITDescriptor::EC_Pointer:
+        return ETy->isPointerTy();
+      }
+      llvm_unreachable("invalid element constraint");
+    }();
+
+    if (IsValid)
+      return false;
+
+    static constexpr StringLiteral VectorKinds[] = {
+        "",
+        "vector",
+        "scalar",
+    };
+    static constexpr StringLiteral ElementKinds[] = {
+        "",
+        "integer",
+        "fp",
+        "pointer",
+    };
+
+    if (EC == IITDescriptor::EC_None) {
+      // No constraint on element type.
+      // Expected = any {vector | scalar} type.
+      StringLiteral VK = ArrayRef(VectorKinds)[VC];
+      return PrintMsg(false, formatv("any {} type", VK), OIdx);
     }
-    llvm_unreachable("all argument kinds not covered");
+
+    StringLiteral EK = ArrayRef(ElementKinds)[EC];
+    switch (VC) {
+    case IITDescriptor::VC_None:
+      // Expected = any EK or EK vector.
+      return PrintMsg(false, formatv("any {0} or {0} vector", EK), OIdx);
+    case IITDescriptor::VC_Vector:
+      return PrintMsg(false, formatv("any {} vector", EK), OIdx);
+    case IITDescriptor::VC_Scalar:
+      return PrintMsg(false, formatv("any {} type", EK), OIdx);
+    }
   }
 
   case IITDescriptor::Match: {

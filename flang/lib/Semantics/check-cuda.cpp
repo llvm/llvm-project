@@ -298,6 +298,10 @@ template <bool CUF_KERNEL> struct ActionStmtChecker {
       SemanticsContext &context, const parser::ContinueStmt &) {
     return {};
   }
+  static MaybeMsg WhyNotOk(SemanticsContext &, const parser::PauseStmt &) {
+    return parser::MessageFormattedText{
+        "device subprograms may not contain PAUSE statements"_err_en_US};
+  }
   static MaybeMsg WhyNotOk(SemanticsContext &context, const parser::IfStmt &x) {
     if (auto result{CheckUnwrappedExpr(
             context, std::get<parser::ScalarLogicalExpr>(x.t))}) {
