@@ -120,22 +120,24 @@ static bool violatesNoUndefAttr(AnyValue &V) {
 /// Assumes V is either a poison or a pointer.
 static bool violatesDereferenceableBytesAttr(const AnyValue &V, uint64_t Bytes,
                                              bool OrNull, unsigned AS,
-                                             const DataLayout &DL) {
+                                             Context &Ctx) {
   if (V.isPoison())
     return true;
 
   auto &Ptr = V.asPointer();
-  if (Ptr.isNullPtr(AS, DL)) {
+  if (Ptr.isNullPtr(AS, Ctx.getDataLayout())) {
     if (OrNull)
       return false;
     return true;
   }
-  auto *MO = Ptr.getMemoryObject();
+
+  auto *MO = Ctx.checkProvenance(Ptr, [&](const Provenance &) {
+    // TODO: check read_provenance
+    // TODO: check nofree for attributes/metadata.
+    return true;
+  });
   if (!MO)
     return true;
-
-  // TODO: check read_provenance
-  // TODO: check nofree for attributes/metadata.
 
   const APInt &PtrAddr = Ptr.address();
   return Bytes > MO->getSize() || PtrAddr.ult(MO->getAddress()) ||
@@ -732,9 +734,14 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     APInt NewAddr = Ptr.address();
     NewAddr.insertBits(NewIndex.asInteger(), 0);
 
-    auto *MO = Ptr.getMemoryObject();
-    if (Flags.isInBounds() && (!MO || !MO->inBounds(NewAddr)))
-      return AnyValue::poison();
+    MemoryObject *MO = nullptr;
+    if (Flags.isInBounds()) {
+      MO = Ctx.checkProvenance(
+          Ptr, [](const Provenance &) { return true; },
+          /*HasSideEffect=*/false);
+      if (!MO || !MO->inBounds(NewAddr))
+        return AnyValue::poison();
+    }
 
     if (!AccumulatedOffset.isPoison()) {
       AccumulatedOffset =
@@ -746,7 +753,13 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
 
     // Should not expose provenance here even if the new address doesn't point
     // to the original object.
-    return Ptr.getWithNewAddr(NewAddr);
+    auto Res = Ptr.getWithNewAddr(NewAddr);
+    if (MO) {
+      auto &Prov = Res.provenance();
+      if (Prov.isWildcard() && !Prov.getMemoryObject())
+        Res = Res.getWithNewProvenance(Prov.getWithKnownMemoryObject(*MO));
+    }
+    return Res;
   }
 
   AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
@@ -985,7 +998,7 @@ public:
               break;
             if (violatesDereferenceableBytesAttr(
                     WasOn, DereferenceableBytes.getLimitedValue(),
-                    Kind == Attribute::DereferenceableOrNull, AS, DL))
+                    Kind == Attribute::DereferenceableOrNull, AS, Ctx))
               reportImmediateUB() << "The pointer " << WasOn << " violates "
                                   << (Kind == Attribute::DereferenceableOrNull
                                           ? "dereferenceable_or_null("
@@ -1010,7 +1023,8 @@ public:
       auto Ptr = Args[0];
       if (Ptr.isPoison())
         return AnyValue();
-      auto *MO = Ptr.asPointer().getMemoryObject();
+      auto *MO = Ctx.checkProvenance(Ptr.asPointer(),
+                                     [](const Provenance &) { return true; });
       assert(MO && "Memory object accessed by lifetime intrinsic should be "
                    "always valid.");
       if (IID == Intrinsic::lifetime_start) {
@@ -1693,7 +1707,7 @@ public:
               std::max(AttrsAtCallSite.getDereferenceableBytes(),
                        AttrsAtCallee.getDereferenceableBytes())) {
         if (violatesDereferenceableBytesAttr(V, DereferenceableBytes,
-                                             /*OrNull=*/false, AS, DL))
+                                             /*OrNull=*/false, AS, Ctx))
           reportImmediateUB()
               << "The value " << V << " violates dereferenceable("
               << DereferenceableBytes << ") attribute.";
@@ -1701,7 +1715,7 @@ public:
                      std::max(AttrsAtCallSite.getDereferenceableOrNullBytes(),
                               AttrsAtCallee.getDereferenceableOrNullBytes())) {
         if (violatesDereferenceableBytesAttr(V, DereferenceableOrNullBytes,
-                                             /*OrNull=*/true, AS, DL))
+                                             /*OrNull=*/true, AS, Ctx))
           reportImmediateUB() << "The value " << V
                               << " violates "
                                  "dereferenceable_or_null("
@@ -1759,7 +1773,7 @@ public:
               I.getMetadata(LLVMContext::MD_dereferenceable)) {
         uint64_t Bytes = ExtractFirstIntOperand(DereferenceableBytes);
         if (violatesDereferenceableBytesAttr(V, Bytes,
-                                             /*OrNull=*/false, AS, DL))
+                                             /*OrNull=*/false, AS, Ctx))
           reportImmediateUB()
               << "The value " << V << " violates !dereferenceable !{i64 "
               << Bytes << "} metadata.";
@@ -1767,7 +1781,7 @@ public:
                      I.getMetadata(LLVMContext::MD_dereferenceable_or_null)) {
         uint64_t Bytes = ExtractFirstIntOperand(DereferenceableOrNullBytes);
         if (violatesDereferenceableBytesAttr(V, Bytes,
-                                             /*OrNull=*/true, AS, DL))
+                                             /*OrNull=*/true, AS, Ctx))
           reportImmediateUB()
               << "The value " << V << " violates !dereferenceable_or_null!{i64 "
               << Bytes << "} metadata.";
@@ -2419,14 +2433,26 @@ public:
     setResult(GEP, std::move(Res));
   }
 
+  void visitPtrToInt(PtrToIntInst &I) {
+    return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
+      if (V.isPoison())
+        return AnyValue::poison();
+      Ctx.exposeProvenance(V.asPointer().provenance());
+      return V.asPointer().address();
+    });
+  }
+
+  // TODO: Add support for ptrtoaddr, which exposes nothing.
+
   void visitIntToPtr(IntToPtrInst &I) {
     return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
       if (V.isPoison())
         return AnyValue::poison();
-      // TODO: expose provenance
+      auto Prov = Ctx.getWildcardProvenance();
       // TODO: check metadata
-      return Pointer(V.asInteger().zextOrTrunc(
-          DL.getPointerSizeInBits(I.getType()->getPointerAddressSpace())));
+      return Pointer(std::move(Prov),
+                     V.asInteger().zextOrTrunc(DL.getPointerSizeInBits(
+                         I.getType()->getPointerAddressSpace())));
     });
   }
 
