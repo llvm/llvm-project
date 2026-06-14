@@ -136,7 +136,7 @@ void Statusline::UpdateScrollWindow(ScrollWindowMode mode, uint64_t prev_width,
       const unsigned height = static_cast<unsigned>(m_terminal_height);
       unsigned reflow = 1;
       if (prev_width > m_terminal_width && m_terminal_width > 0)
-        reflow = (prev_width + m_terminal_width - 1) / m_terminal_width;
+        reflow = llvm::divideCeil(prev_width, m_terminal_width);
       if (reflow >= height)
         reflow = height - 1;
       unsigned first_row = height - reflow + 1;
