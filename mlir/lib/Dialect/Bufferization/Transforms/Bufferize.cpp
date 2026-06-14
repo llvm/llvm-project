@@ -20,6 +20,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/PassManager.h"
+#include "llvm/Support/DebugLog.h"
 #include <optional>
 
 namespace mlir {
@@ -78,14 +79,14 @@ struct OneShotBufferizePass
 
       if (mustInferMemorySpace) {
         opt.defaultMemorySpaceFn =
-            [](TensorType t) -> std::optional<Attribute> {
+            [](TensorLikeType t) -> std::optional<Attribute> {
           return std::nullopt;
         };
       }
 
       if (useEncodingForMemorySpace) {
         opt.defaultMemorySpaceFn =
-            [](TensorType t) -> std::optional<Attribute> {
+            [](TensorLikeType t) -> std::optional<Attribute> {
           if (auto rtt = dyn_cast<RankedTensorType>(t))
             return rtt.getEncoding();
           return std::nullopt;
@@ -107,17 +108,20 @@ struct OneShotBufferizePass
                   "'unknown-type-conversion'");
         return signalPassFailure();
       }
-      opt.unknownTypeConverterFn = [=](TensorType tensorType,
+      opt.unknownTypeConverterFn = [=](TensorLikeType type,
                                        Attribute memorySpace,
                                        const BufferizationOptions &options) {
+        const auto tensorType = cast<TensorType>(type);
         if (unknownTypeConversionOption == LayoutMapOption::IdentityLayoutMap)
-          return bufferization::getMemRefTypeWithStaticIdentityLayout(
-              tensorType, memorySpace);
+          return cast<bufferization::BufferLikeType>(
+              bufferization::getMemRefTypeWithStaticIdentityLayout(
+                  tensorType, memorySpace));
         assert(unknownTypeConversionOption ==
                    LayoutMapOption::FullyDynamicLayoutMap &&
                "invalid layout map option");
-        return bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType,
-                                                                  memorySpace);
+        return cast<bufferization::BufferLikeType>(
+            bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType,
+                                                               memorySpace));
       };
 
       // Configure op filter.
@@ -328,28 +332,30 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
               "blocks");
 
     // Bufferize the op.
-    LLVM_DEBUG(llvm::dbgs()
-               << "//===-------------------------------------------===//\n"
-               << "IR after bufferizing: " << nextOp->getName() << "\n");
+    LDBG(3) << "//===-------------------------------------------===//\n"
+            << "IR after bufferizing: " << nextOp->getName();
     rewriter.setInsertionPoint(nextOp);
     if (failed(
             bufferizableOp.bufferize(rewriter, options, bufferizationState))) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "failed to bufferize\n"
-                 << "//===-------------------------------------------===//\n");
+      LDBG(2) << "failed to bufferize\n"
+              << "//===-------------------------------------------===//";
       return nextOp->emitError("failed to bufferize op");
     }
-    LLVM_DEBUG(llvm::dbgs()
-               << *op
-               << "\n//===-------------------------------------------===//\n");
+    LDBG(3) << *op << "\n//===-------------------------------------------===//";
   }
 
   // Return early if the top-level op is entirely gone.
   if (erasedOps.contains(op))
     return success();
 
-  // Fold all to_buffer(to_tensor(x)) pairs.
-  for (Operation *op : toBufferOps) {
+  // Fold all to_buffer(to_tensor(x)) pairs.  Snapshot the set first:
+  // `foldToBufferToTensorPair` can erase ops, and the rewriter listener
+  // mutates `toBufferOps` from inside that call, which would invalidate
+  // any DenseSet iterator held across it.
+  SmallVector<Operation *> toBufferOpsSnapshot = llvm::to_vector(toBufferOps);
+  for (Operation *op : toBufferOpsSnapshot) {
+    if (erasedOps.contains(op))
+      continue;
     rewriter.setInsertionPoint(op);
     (void)bufferization::foldToBufferToTensorPair(
         rewriter, cast<ToBufferOp>(op), options);
@@ -404,7 +410,7 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
   // Compute the new signature.
   SmallVector<Type> newTypes;
   for (BlockArgument &bbArg : block->getArguments()) {
-    auto tensorType = dyn_cast<TensorType>(bbArg.getType());
+    auto tensorType = dyn_cast<TensorLikeType>(bbArg.getType());
     if (!tensorType) {
       newTypes.push_back(bbArg.getType());
       continue;
@@ -434,8 +440,8 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
     // Replace all uses of the original tensor bbArg.
     rewriter.setInsertionPointToStart(block);
     if (!bbArgUses.empty()) {
-      Value toTensorOp = rewriter.create<bufferization::ToTensorOp>(
-          bbArg.getLoc(), tensorType, bbArg);
+      Value toTensorOp = bufferization::ToTensorOp::create(
+          rewriter, bbArg.getLoc(), tensorType, bbArg);
       for (OpOperand *use : bbArgUses)
         use->set(toTensorOp);
     }
@@ -466,13 +472,13 @@ bufferization::bufferizeBlockSignature(Block *block, RewriterBase &rewriter,
       if (failed(operandBufferType))
         return failure();
       rewriter.setInsertionPointAfterValue(operand);
-      Value bufferizedOperand = rewriter.create<bufferization::ToBufferOp>(
-          operand.getLoc(), *operandBufferType, operand);
+      Value bufferizedOperand = bufferization::ToBufferOp::create(
+          rewriter, operand.getLoc(), *operandBufferType, operand);
       // A cast is needed if the operand and the block argument have different
       // bufferized types.
       if (type != *operandBufferType)
-        bufferizedOperand = rewriter.create<memref::CastOp>(
-            operand.getLoc(), type, bufferizedOperand);
+        bufferizedOperand = memref::CastOp::create(rewriter, operand.getLoc(),
+                                                   type, bufferizedOperand);
       newOperands.push_back(bufferizedOperand);
     }
     operands.getMutableForwardedOperands().assign(newOperands);

@@ -23,7 +23,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR int __popcount(_Tp __t) _NOEXCEPT {
-  static_assert(__is_unsigned_integer_v<_Tp>, "__popcount only works with unsigned types");
   return __builtin_popcountg(__t);
 }
 

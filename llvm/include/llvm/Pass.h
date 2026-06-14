@@ -114,6 +114,10 @@ public:
   /// Registration templates, but can be overloaded directly.
   virtual StringRef getPassName() const;
 
+  /// Return a nice clean name for a pass
+  /// corresponding to that used to enable the pass in opt.
+  StringRef getPassArgument() const;
+
   /// getPassID - Return the PassID number that corresponds to this pass.
   AnalysisID getPassID() const {
     return PassID;
@@ -319,6 +323,11 @@ public:
   /// per-function processing of the pass.
   virtual bool runOnFunction(Function &F) = 0;
 
+  /// For --print-changed, serialize the IR unit this pass operates on. The
+  /// default prints \p F; MachineFunctionPass prints its MachineFunction.
+  /// Returns false if there is nothing to report.
+  virtual bool printIRUnit(raw_ostream &OS, Function &F);
+
   void assignPassManager(PMStack &PMS, PassManagerType T) override;
 
   ///  Return what kind of Pass Manager can manage this pass.
@@ -330,17 +339,6 @@ protected:
   /// optimization bisect is over the limit.
   bool skipFunction(const Function &F) const;
 };
-
-/// If the user specifies the -time-passes argument on an LLVM tool command line
-/// then the value of this boolean will be true, otherwise false.
-/// This is the storage for the -time-passes option.
-LLVM_ABI extern bool TimePassesIsEnabled;
-/// If TimePassesPerRun is true, there would be one line of report for
-/// each pass invocation.
-/// If TimePassesPerRun is false, there would be only one line of
-/// report for each pass (even there are more than one pass objects).
-/// (For new pass manager only)
-LLVM_ABI extern bool TimePassesPerRun;
 
 } // end namespace llvm
 

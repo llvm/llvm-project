@@ -1,7 +1,7 @@
 // Test that clang doesn't emit llvm.expect when the counter is 0
 
 // RUN: llvm-profdata merge %S/Inputs/cxx-never-executed-branch.proftext -o %t.profdata
-// RUN: %clang_cc1 -std=c++20 %s -triple %itanium_abi_triple -O2 -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 %s -triple %itanium_abi_triple -O2 -o - -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%t.profdata -disable-llvm-passes | FileCheck %s
 
 int rand();
 

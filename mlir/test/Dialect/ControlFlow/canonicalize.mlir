@@ -490,3 +490,297 @@ func.func @branchCondProp(%arg0: i1) {
 ^exit:
   return
 }
+
+// -----
+
+/// Test that control-flow cycles are not simplified infinitely.
+
+// CHECK-LABEL:   @cycle_2_blocks
+// CHECK:           cf.br ^bb1
+// CHECK:         ^bb1:
+// CHECK:           cf.br ^bb1
+func.func @cycle_2_blocks() {
+  cf.br ^bb1
+^bb1:
+  cf.br ^bb2
+^bb2:
+  cf.br ^bb1
+}
+
+// CHECK-LABEL:   @no_cycle_2_blocks
+// CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i32
+// CHECK:           return %[[VAL_0]] : i32
+func.func @no_cycle_2_blocks() -> i32 {
+  cf.br ^bb1
+^bb1:
+  cf.br ^bb2
+^bb2:
+  cf.br ^bb3
+^bb3:
+  %ret = arith.constant 1 : i32
+  return %ret : i32
+}
+
+// CHECK-LABEL:   @cycle_4_blocks
+// CHECK:           cf.br ^bb1
+// CHECK:         ^bb1:
+// CHECK:           cf.br ^bb1
+func.func @cycle_4_blocks() {
+  cf.br ^bb1
+^bb1:
+  cf.br ^bb2
+^bb2:
+  cf.br ^bb3
+^bb3:
+  cf.br ^bb4
+^bb4:
+  cf.br ^bb1
+}
+
+// CHECK-LABEL:   @no_cycle_4_blocks
+// CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i32
+// CHECK:           return %[[VAL_0]] : i32
+func.func @no_cycle_4_blocks() -> i32 {
+  cf.br ^bb1
+^bb1:
+  cf.br ^bb2
+^bb2:
+  cf.br ^bb3
+^bb3:
+  cf.br ^bb4
+^bb4:
+  cf.br ^bb5
+^bb5:
+  %ret = arith.constant 1 : i32
+  return %ret : i32
+}
+
+// CHECK-LABEL:   @delayed_3_cycle
+// CHECK:           cf.br ^bb1
+// CHECK:         ^bb1:
+// CHECK:           cf.br ^bb1
+func.func @delayed_3_cycle() {
+  cf.br ^bb1
+^bb1:
+  cf.br ^bb2
+^bb2:
+  cf.br ^bb3
+^bb3:
+  cf.br ^bb4
+^bb4:
+  cf.br ^bb5
+^bb5:
+  cf.br ^bb3
+}
+
+// CHECK-LABEL:   @cycle_1_block
+// CHECK:           cf.br ^bb1
+// CHECK:         ^bb1:
+// CHECK:           cf.br ^bb1
+func.func @cycle_1_block() {
+  cf.br ^bb1
+^bb1:
+  cf.br ^bb2
+^bb2:
+  cf.br ^bb2
+}
+
+// CHECK-LABEL:   @unsimplified_cycle_1
+// CHECK-SAME:      %[[ARG0:.*]]: i1) {
+// CHECK:           cf.cond_br %[[ARG0]], ^bb1, ^bb2
+// CHECK:         ^bb1:
+// CHECK:           cf.br ^bb2
+// CHECK:         ^bb2:
+// CHECK:           cf.br ^bb3
+// CHECK:         ^bb3:
+// CHECK:           cf.br ^bb3
+func.func @unsimplified_cycle_1(%c : i1) {
+  cf.cond_br %c, ^bb1, ^bb2
+^bb1:
+  cf.br ^bb2
+^bb2:
+  cf.br ^bb3
+^bb3:
+  cf.br ^bb4
+^bb4:
+  cf.br ^bb3
+}
+
+// Make sure we terminate when other cf passes can't help us.
+
+// CHECK-LABEL:   @unsimplified_cycle_2
+// CHECK-SAME:      %[[ARG0:.*]]: i1) {
+// CHECK:           cf.cond_br %[[ARG0]], ^bb1, ^bb3
+// CHECK:         ^bb1:
+// CHECK:           cf.br ^bb2 {A}
+// CHECK:         ^bb2:
+// CHECK:           cf.br ^bb2 {E}
+// CHECK:         ^bb3:
+// CHECK:           cf.br ^bb1
+func.func @unsimplified_cycle_2(%c : i1) {
+  cf.cond_br %c, ^bb6, ^bb7
+^bb6:
+  cf.br ^bb5 {F}
+^bb5:
+  cf.br ^bb1 {A}
+^bb1:
+  cf.br ^bb2 {B}
+^bb2:
+  cf.br ^bb3 {C}
+^bb3:
+  cf.br ^bb4 {D}
+^bb4:
+  cf.br ^bb1 {E}
+^bb7:
+  cf.br ^bb6
+}
+
+// CHECK-LABEL: @drop_unreachable_branch_1
+//  CHECK-NEXT:   "test.foo"() : () -> ()
+//  CHECK-NEXT:   return
+func.func @drop_unreachable_branch_1(%c: i1) {
+  cf.cond_br %c, ^bb1, ^bb2
+^bb1:
+  "test.foo"() : () -> ()
+  return
+^bb2:
+  ub.unreachable
+}
+
+// CHECK-LABEL: @drop_unreachable_branch_2
+//  CHECK-NEXT:   ub.unreachable
+func.func @drop_unreachable_branch_2(%c: i1) {
+  cf.cond_br %c, ^bb1, ^bb2
+^bb1:
+  ub.unreachable
+^bb2:
+  ub.unreachable
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/126213:
+// simplifyBrToBlockWithSinglePred must not merge a block into its sole
+// predecessor when a branch operand is itself a block argument of the
+// destination — replaceAllUsesWith would be a no-op for that argument,
+// leaving the block argument live after the block is erased and crashing.
+//
+// ^guard is merged into the entry block (single predecessor), replacing %cond
+// with %true and folding the cond_br. This kills the external entry to
+// ^header, leaving ^body as its only predecessor. Without the fix,
+// simplifyBrToBlockWithSinglePred would attempt to merge ^header into ^body
+// despite %keep being a block argument of ^header, triggering the crash.
+
+// CHECK-LABEL: @no_merge_self_arg_loop
+//  CHECK-NEXT:   %[[TRUE:.*]] = arith.constant true
+//  CHECK-NEXT:   return %[[TRUE]]
+func.func @no_merge_self_arg_loop(%step: i1) -> i1 {
+  %true = arith.constant true
+  cf.br ^guard(%true : i1)
+^guard(%cond: i1):
+  cf.cond_br %cond, ^exit(%true : i1), ^header(%step, %true : i1, i1)
+^header(%iter: i1, %keep: i1):
+  cf.cond_br %iter, ^body, ^exit(%keep : i1)
+^body:
+  cf.br ^header(%step, %keep : i1, i1)
+^exit(%result: i1):
+  return %result : i1
+}
+
+// Verify that block arguments are replaced with a uniform incoming value
+// when all predecessors pass the same SSA value
+
+// CHECK-LABEL: func @fold_uniform_branch_block_arg
+// CHECK-SAME: %[[COND:.*]]: i1, %[[C:.*]]: i32
+func.func @fold_uniform_branch_block_arg(%cond: i1, %c: i32) -> i32 {
+  cf.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  "foo.op"() : () -> ()
+  cf.br ^bb3(%c : i32)
+^bb2:
+  "foo.op"() : () -> ()
+  cf.br ^bb3(%c : i32)
+^bb3(%arg0: i32):
+  // CHECK: ^bb3:
+  // CHECK: return %[[C]]
+  return %arg0 : i32
+}
+
+// Verify that block arguments are not folded when incoming values differ
+// across predecessors.
+
+// CHECK-LABEL: func @no_fold_non_uniform_block_arg
+// CHECK-SAME: %[[COND:.*]]: i1, %[[A:.*]]: i32, %[[B:.*]]: i32
+func.func @no_fold_non_uniform_block_arg(%cond: i1, %a: i32, %b: i32) -> i32 {
+  cf.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  "foo.op"() : () -> ()
+  cf.br ^bb3(%a : i32)
+^bb2:
+  "foo.op"() : () -> ()
+  cf.br ^bb3(%b : i32)
+^bb3(%arg0: i32):
+  // CHECK: ^bb3(%[[ARG0:.*]]: i32):
+  // CHECK-NEXT: return %[[ARG0]]
+  return %arg0 : i32
+}
+
+// Verify no folding when the same block appears multiple times as a
+// successor with different operands.
+
+// CHECK-LABEL: func @no_fold_same_dest_different_args
+func.func @no_fold_same_dest_different_args(%a: i32, %b: i32) -> i32 {
+  "test.producing_br"(%a, %b)[^bb1, ^bb1]
+    {operandSegmentSizes = array<i32: 1, 1>} : (i32, i32) -> i32
+^bb1(%arg0: i32):
+  // CHECK: ^bb1(%[[ARG0:.*]]: i32):
+  // CHECK-NEXT: return %[[ARG0]]
+  return %arg0 : i32
+}
+
+// Verify folding when the same block appears multiple times as a
+// successor with the same operand.
+
+// CHECK-LABEL: func @fold_same_dest_same_args
+// CHECK-SAME: %[[A:.*]]: i32
+func.func @fold_same_dest_same_args(%a: i32) -> i32 {
+  "test.producing_br"(%a, %a)[^bb1, ^bb1]
+      {operandSegmentSizes = array<i32: 1, 1>} : (i32, i32) -> i32
+^bb1(%arg0: i32):
+  // CHECK: ^bb1:
+  // CHECK-NEXT: return %[[A]]
+  return %arg0 : i32
+}
+
+// Verify no folding when a predecessor has an unknown terminator.
+
+// CHECK-LABEL: func @no_fold_unknown_terminator
+func.func @no_fold_unknown_terminator(%a: i32) -> i32 {
+  cf.br ^bb1
+^bb1:
+  "foo.two_successors"()[^bb2, ^bb3] : () -> ()
+^bb2:
+  // CHECK: ^bb2(%[[ARG0:.*]]: i32):
+  cf.br ^bb3(%a : i32)
+^bb3(%arg0: i32):
+  // CHECK-NEXT: return %[[ARG0]]
+  return %arg0 : i32
+}
+
+// Verify that unused block arguments are skipped and only used arguments
+// with uniform incoming values are folded.
+
+// CHECK-LABEL: func @skip_unused_block_arg
+func.func @skip_unused_block_arg(%flag: i32, %a: i32, %b: i32) -> i32 {
+  "foo.pred"()[^bb1, ^bb2] : () -> ()
+^bb1:
+  cf.br ^bb3(%b, %a : i32, i32)
+^bb2:
+  cf.br ^bb3(%a, %a : i32, i32)
+^bb3(%arg0: i32, %arg1: i32):
+  "foo.use"(%arg0) : (i32) -> ()
+  // CHECK: ^bb3(%[[ARG0:.*]]: i32):
+  // CHECK-NEXT: "foo.use"(%[[ARG0]])
+  // CHECK-NEXT: return %[[A:.*]]
+  return %arg1 : i32
+}

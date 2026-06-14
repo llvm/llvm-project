@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/powf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <stdint.h>
 
 using LlvmLibcPowfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 using LIBC_NAMESPACE::fputil::testing::ForceRoundingMode;
@@ -235,6 +234,13 @@ TEST_F(LlvmLibcPowfTest, SpecialNumbers) {
 
   EXPECT_FP_EQ(-0.0f, LIBC_NAMESPACE::powf(-0.015625f, 25.0f));
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::powf(-0.015625f, 26.0f));
+}
+
+TEST_F(LlvmLibcPowfTest, SubnormalBase) {
+  EXPECT_FP_EQ(0x1.0p-32f, LIBC_NAMESPACE::powf(0x1.0p-128f, 0.25f));
+  EXPECT_FP_EQ(0x1.0p96f, LIBC_NAMESPACE::powf(0x1.0p-128f, -0.75f));
+  EXPECT_FP_EQ(0x1.90a962p-33f, LIBC_NAMESPACE::powf(0x1.8p-130f, 0.25f));
+  EXPECT_FP_EQ(0x1.47238cp+32f, LIBC_NAMESPACE::powf(0x1.8p-130f, -0.25f));
 }
 
 #ifdef LIBC_TEST_FTZ_DAZ

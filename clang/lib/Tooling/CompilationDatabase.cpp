@@ -241,14 +241,13 @@ static bool stripPositionalArgs(std::vector<const char *> Args,
   llvm::raw_string_ostream Output(ErrorMsg);
   TextDiagnosticPrinter DiagnosticPrinter(Output, DiagOpts);
   UnusedInputDiagConsumer DiagClient(DiagnosticPrinter);
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts,
-      &DiagClient, false);
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts, &DiagClient,
+                                false);
 
   // The clang executable path isn't required since the jobs the driver builds
   // will not be executed.
   std::unique_ptr<driver::Driver> NewDriver(new driver::Driver(
-      /* ClangExecutable= */ "", llvm::sys::getDefaultTargetTriple(),
+      /* DriverExecutable= */ "", llvm::sys::getDefaultTargetTriple(),
       Diagnostics));
   NewDriver->setCheckInputsExist(false);
 
@@ -404,7 +403,7 @@ namespace tooling {
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the JSONCompilationDatabasePlugin.
 extern volatile int JSONAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED JSONAnchorDest = JSONAnchorSource;
+[[maybe_unused]] static int JSONAnchorDest = JSONAnchorSource;
 
 } // namespace tooling
 } // namespace clang

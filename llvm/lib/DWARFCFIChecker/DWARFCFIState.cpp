@@ -55,7 +55,7 @@ void DWARFCFIState::update(const MCCFIInstruction &Directive) {
     return;
   }
 
-  Row = NewRow;
+  Row = std::move(NewRow);
   IsInitiated = true;
 }
 
@@ -64,7 +64,6 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
       /* CodeAlignmentFactor */ 1, /* DataAlignmentFactor */ 1,
       Context->getTargetTriple().getArch());
 
-  auto MaybeCurrentRow = getCurrentUnwindRow();
   switch (Directive.getOperation()) {
   case MCCFIInstruction::OpSameValue:
     CFIP.addInstruction(dwarf::DW_CFA_same_value, Directive.getRegister());
@@ -160,6 +159,16 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
   case MCCFIInstruction::OpValOffset:
     CFIP.addInstruction(dwarf::DW_CFA_val_offset, Directive.getRegister(),
                         Directive.getOffset());
+    break;
+  case MCCFIInstruction::OpLLVMRegisterPair:
+  case MCCFIInstruction::OpLLVMVectorRegisters:
+  case MCCFIInstruction::OpLLVMVectorOffset:
+  case MCCFIInstruction::OpLLVMVectorRegisterMask:
+    // TODO: These should be pretty straightforward to support, but is low
+    // priority. Similarly the implementation of OpLLVMDefAspaceCfa above
+    // seem incomplete and should be fixed.
+    Context->reportWarning(Directive.getLoc(),
+                           "this directive is not supported, ignoring it");
     break;
   }
 

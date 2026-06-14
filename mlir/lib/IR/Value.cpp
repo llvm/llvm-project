@@ -8,9 +8,7 @@
 
 #include "mlir/IR/Value.h"
 #include "mlir/IR/Block.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -216,7 +214,7 @@ IRObjectWithUseList<BlockOperand> *BlockOperand::getUseList(Block *value) {
 }
 
 /// Return which operand this is in the operand list.
-unsigned BlockOperand::getOperandNumber() {
+unsigned BlockOperand::getOperandNumber() const {
   return this - &getOwner()->getBlockOperands()[0];
 }
 
@@ -225,6 +223,6 @@ unsigned BlockOperand::getOperandNumber() {
 //===----------------------------------------------------------------------===//
 
 /// Return which operand this is in the operand list.
-unsigned OpOperand::getOperandNumber() {
+unsigned OpOperand::getOperandNumber() const {
   return this - &getOwner()->getOpOperands()[0];
 }

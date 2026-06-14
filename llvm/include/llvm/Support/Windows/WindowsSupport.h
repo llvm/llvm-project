@@ -245,6 +245,15 @@ LLVM_ABI std::error_code widenPath(const Twine &Path8,
                                    SmallVectorImpl<wchar_t> &Path16,
                                    size_t MaxPathLen = MAX_PATH);
 
+/// Retrieves the handle to a in-memory system module such as ntdll.dll, while
+/// ensuring we're not retrieving a malicious injected module but a module
+/// loaded from the system path.
+LLVM_ABI HMODULE loadSystemModuleSecure(LPCWSTR lpModuleName);
+
+/// Convert a UTF-8 path to a long form UTF-8 path expanding any short 8.3 form
+/// components.
+LLVM_ABI std::error_code makeLongFormPath(const Twine &Path8,
+                                          llvm::SmallVectorImpl<char> &Result8);
 } // end namespace windows
 } // end namespace sys
 } // end namespace llvm.

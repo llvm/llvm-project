@@ -27,6 +27,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ReleaseModeModelRunner.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/TensorSpec.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
@@ -60,6 +61,9 @@ static cl::opt<SkipMLPolicyCriteria> SkipPolicy(
 static cl::opt<std::string> ModelSelector("ml-inliner-model-selector",
                                           cl::Hidden, cl::init(""));
 
+static cl::opt<bool> StopImmediatelyForTest("ml-inliner-stop-immediately",
+                                            cl::Hidden);
+
 #if defined(LLVM_HAVE_TF_AOT_INLINERSIZEMODEL)
 // codegen-ed file
 #include "InlinerSizeModel.h" // NOLINT
@@ -74,21 +78,22 @@ llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
   if (!llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() &&
       InteractiveChannelBaseName.empty())
     return nullptr;
-  std::unique_ptr<MLModelRunner> AOTRunner;
-  if (InteractiveChannelBaseName.empty())
-    AOTRunner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
-        M.getContext(), FeatureMap, DecisionName,
-        EmbeddedModelRunnerOptions().setModelSelector(ModelSelector));
-  else {
-    auto Features = FeatureMap;
-    if (InteractiveIncludeDefault)
-      Features.push_back(DefaultDecisionSpec);
-    AOTRunner = std::make_unique<InteractiveModelRunner>(
-        M.getContext(), Features, InlineDecisionSpec,
-        InteractiveChannelBaseName + ".out",
-        InteractiveChannelBaseName + ".in");
-  }
-  return std::make_unique<MLInlineAdvisor>(M, MAM, std::move(AOTRunner),
+  auto RunnerFactory = [&](const std::vector<TensorSpec> &InputFeatures)
+      -> std::unique_ptr<MLModelRunner> {
+    std::unique_ptr<MLModelRunner> AOTRunner;
+    if (InteractiveChannelBaseName.empty())
+      AOTRunner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
+          M.getContext(), InputFeatures, DecisionName,
+          EmbeddedModelRunnerOptions().setModelSelector(ModelSelector));
+    else {
+      AOTRunner = std::make_unique<InteractiveModelRunner>(
+          M.getContext(), InputFeatures, InlineDecisionSpec,
+          InteractiveChannelBaseName + ".out",
+          InteractiveChannelBaseName + ".in");
+    }
+    return AOTRunner;
+  };
+  return std::make_unique<MLInlineAdvisor>(M, MAM, RunnerFactory,
                                            GetDefaultAdvice);
 }
 
@@ -106,8 +111,9 @@ static cl::opt<bool> KeepFPICache(
         "For test - keep the ML Inline advisor's FunctionPropertiesInfo cache"),
     cl::init(false));
 
-// clang-format off
-std::vector<TensorSpec> llvm::FeatureMap{
+const std::vector<TensorSpec> &MLInlineAdvisor::getInitialFeatureMap() {
+  // clang-format off
+static std::vector<TensorSpec> FeatureMap{
 #define POPULATE_NAMES(DTYPE, SHAPE, NAME, __) TensorSpec::createSpec<DTYPE>(#NAME, SHAPE),
 // InlineCost features - these must come first
   INLINE_COST_FEATURE_ITERATOR(POPULATE_NAMES)
@@ -116,7 +122,9 @@ std::vector<TensorSpec> llvm::FeatureMap{
   INLINE_FEATURE_ITERATOR(POPULATE_NAMES)
 #undef POPULATE_NAMES
 };
-// clang-format on
+  // clang-format on
+  return FeatureMap;
+}
 
 const char *const llvm::DecisionName = "inlining_decision";
 const TensorSpec llvm::InlineDecisionSpec =
@@ -138,17 +146,17 @@ CallBase *getInlinableCS(Instruction &I) {
 
 MLInlineAdvisor::MLInlineAdvisor(
     Module &M, ModuleAnalysisManager &MAM,
-    std::unique_ptr<MLModelRunner> Runner,
+    std::function<
+        std::unique_ptr<MLModelRunner>(const std::vector<TensorSpec> &)>
+        GetModelRunner,
     std::function<bool(CallBase &)> GetDefaultAdvice)
     : InlineAdvisor(
           M, MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
-      ModelRunner(std::move(Runner)), GetDefaultAdvice(GetDefaultAdvice),
+      GetDefaultAdvice(GetDefaultAdvice), FeatureMap(getInitialFeatureMap()),
       CG(MAM.getResult<LazyCallGraphAnalysis>(M)),
       UseIR2Vec(MAM.getCachedResult<IR2VecVocabAnalysis>(M) != nullptr),
       InitialIRSize(getModuleIRSize()), CurrentIRSize(InitialIRSize),
       PSI(MAM.getResult<ProfileSummaryAnalysis>(M)) {
-  assert(ModelRunner);
-  ModelRunner->switchContext("");
   // Extract the 'call site height' feature - the position of a call site
   // relative to the farthest statically reachable SCC node. We don't mutate
   // this value while inlining happens. Empirically, this feature proved
@@ -188,7 +196,7 @@ MLInlineAdvisor::MLInlineAdvisor(
   }
   NodeCount = AllNodes.size();
 
-  if (auto IR2VecVocabResult = MAM.getCachedResult<IR2VecVocabAnalysis>(M)) {
+  if (auto *IR2VecVocabResult = MAM.getCachedResult<IR2VecVocabAnalysis>(M)) {
     if (!IR2VecVocabResult->isValid()) {
       M.getContext().emitError("IR2VecVocabAnalysis is not valid");
       return;
@@ -200,6 +208,16 @@ MLInlineAdvisor::MLInlineAdvisor(
     FeatureMap.push_back(
         TensorSpec::createSpec<float>("caller_embedding", {IR2VecDim}));
   }
+  if (InteractiveIncludeDefault)
+    FeatureMap.push_back(DefaultDecisionSpec);
+
+  ModelRunner = GetModelRunner(getFeatureMap());
+  if (!ModelRunner) {
+    M.getContext().emitError("Could not create model runner");
+    return;
+  }
+  ModelRunner->switchContext("");
+  ForceStop = StopImmediatelyForTest;
 }
 
 unsigned MLInlineAdvisor::getInitialFunctionLevel(const Function &F) const {
@@ -306,32 +324,44 @@ void MLInlineAdvisor::onSuccessfulInlining(const MLInlineAdvice &Advice,
     FAM.invalidate(*Caller, PA);
   }
   Advice.updateCachedCallerFPI(FAM);
-  int64_t IRSizeAfter =
-      getIRSize(*Caller) + (CalleeWasDeleted ? 0 : Advice.CalleeIRSize);
-  CurrentIRSize += IRSizeAfter - (Advice.CallerIRSize + Advice.CalleeIRSize);
+  if (Caller == Callee) {
+    assert(!CalleeWasDeleted);
+    // We double-counted CallerAndCalleeEdges - since the caller and callee
+    // would be the same
+    assert(Advice.CallerAndCalleeEdges % 2 == 0);
+    CurrentIRSize += getIRSize(*Caller) - Advice.CallerIRSize;
+    EdgeCount += getCachedFPI(*Caller).DirectCallsToDefinedFunctions -
+                 Advice.CallerAndCalleeEdges / 2;
+    // The NodeCount would stay the same.
+  } else {
+    int64_t IRSizeAfter =
+        getIRSize(*Caller) + (CalleeWasDeleted ? 0 : Advice.CalleeIRSize);
+    CurrentIRSize += IRSizeAfter - (Advice.CallerIRSize + Advice.CalleeIRSize);
+
+    // We can delta-update module-wide features. We know the inlining only
+    // changed the caller, and maybe the callee (by deleting the latter). Nodes
+    // are simple to update. For edges, we 'forget' the edges that the caller
+    // and callee used to have before inlining, and add back what they currently
+    // have together.
+    int64_t NewCallerAndCalleeEdges =
+        getCachedFPI(*Caller).DirectCallsToDefinedFunctions;
+
+    // A dead function's node is not actually removed from the call graph until
+    // the end of the call graph walk, but the node no longer belongs to any
+    // valid SCC.
+    if (CalleeWasDeleted) {
+      --NodeCount;
+      NodesInLastSCC.erase(CG.lookup(*Callee));
+      DeadFunctions.insert(Callee);
+    } else {
+      NewCallerAndCalleeEdges +=
+          getCachedFPI(*Callee).DirectCallsToDefinedFunctions;
+    }
+    EdgeCount += (NewCallerAndCalleeEdges - Advice.CallerAndCalleeEdges);
+  }
   if (CurrentIRSize > SizeIncreaseThreshold * InitialIRSize)
     ForceStop = true;
 
-  // We can delta-update module-wide features. We know the inlining only changed
-  // the caller, and maybe the callee (by deleting the latter).
-  // Nodes are simple to update.
-  // For edges, we 'forget' the edges that the caller and callee used to have
-  // before inlining, and add back what they currently have together.
-  int64_t NewCallerAndCalleeEdges =
-      getCachedFPI(*Caller).DirectCallsToDefinedFunctions;
-
-  // A dead function's node is not actually removed from the call graph until
-  // the end of the call graph walk, but the node no longer belongs to any valid
-  // SCC.
-  if (CalleeWasDeleted) {
-    --NodeCount;
-    NodesInLastSCC.erase(CG.lookup(*Callee));
-    DeadFunctions.insert(Callee);
-  } else {
-    NewCallerAndCalleeEdges +=
-        getCachedFPI(*Callee).DirectCallsToDefinedFunctions;
-  }
-  EdgeCount += (NewCallerAndCalleeEdges - Advice.CallerAndCalleeEdges);
   assert(CurrentIRSize >= 0 && EdgeCount >= 0 && NodeCount >= 0);
 }
 
@@ -365,9 +395,17 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(Caller);
 
   if (SkipPolicy == SkipMLPolicyCriteria::IfCallerIsNotCold) {
-    if (!PSI.isFunctionEntryCold(&Caller))
-      return std::make_unique<InlineAdvice>(this, CB, ORE,
-                                            GetDefaultAdvice(CB));
+    if (!PSI.isFunctionEntryCold(&Caller)) {
+      // Return a MLInlineAdvice, despite delegating to the default advice,
+      // because we need to keep track of the internal state. This is different
+      // from the other instances where we return a "default" InlineAdvice,
+      // which happen at points we won't come back to the MLAdvisor for
+      // decisions requiring that state.
+      return ForceStop ? std::make_unique<InlineAdvice>(this, CB, ORE,
+                                                        GetDefaultAdvice(CB))
+                       : std::make_unique<MLInlineAdvice>(this, CB, ORE,
+                                                          GetDefaultAdvice(CB));
+    }
   }
   auto MandatoryKind = InlineAdvisor::getMandatoryKind(CB, FAM, ORE);
   // If this is a "never inline" case, there won't be any changes to internal
@@ -471,7 +509,8 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   }
   // This one would have been set up to be right at the end.
   if (!InteractiveChannelBaseName.empty() && InteractiveIncludeDefault)
-    *ModelRunner->getTensor<int64_t>(FeatureMap.size()) = GetDefaultAdvice(CB);
+    *ModelRunner->getTensor<int64_t>(getFeatureMap().size() - 1) =
+        GetDefaultAdvice(CB);
   return getAdviceFromModel(CB, ORE);
 }
 
@@ -549,8 +588,8 @@ void MLInlineAdvice::reportContextForRemark(
     DiagnosticInfoOptimizationBase &OR) {
   using namespace ore;
   OR << NV("Callee", Callee->getName());
-  for (size_t I = 0; I < FeatureMap.size(); ++I)
-    OR << NV(FeatureMap[I].name(),
+  for (size_t I = 0; I < getAdvisor()->getFeatureMap().size(); ++I)
+    OR << NV(getAdvisor()->getFeatureMap()[I].name(),
              *getAdvisor()->getModelRunner().getTensor<int64_t>(I));
   OR << NV("ShouldInline", isInliningRecommended());
 }

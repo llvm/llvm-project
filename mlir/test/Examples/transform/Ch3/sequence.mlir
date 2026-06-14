@@ -101,11 +101,12 @@ module attributes {transform.with_named_sequence} {
     %_1, %outline_target = transform.structured.fuse_into_containing_op %matmul_fused_2 into %loop_third
         : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
     %func, %call = transform.loop.outline %outline_target {func_name = "outlined"}
-        : (!transform.any_op) -> (!transform.any_op, !transform.op<"func.call">)
-  
-    // Rewrite the call target.
-    transform.my.change_call_target %call, "microkernel" : !transform.op<"func.call">
-  
+        : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    // Cast to our new type.
+    %casted = transform.cast %call : !transform.any_op to !transform.my.call_op_interface
+    // Using our new operation.
+    transform.my.change_call_target %casted, "microkernel" : !transform.my.call_op_interface
+
     transform.yield
   }
 }

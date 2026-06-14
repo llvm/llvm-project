@@ -12,14 +12,14 @@ define void @func(ptr nocapture readnone %fmt, ...) {
 entry:
   %va0 = alloca %struct.__va_list, align 8
   %va1 = alloca %struct.__va_list, align 8
-  call void @llvm.lifetime.start.p0(i64 32, ptr %va0)
+  call void @llvm.lifetime.start.p0(ptr %va0)
   call void @llvm.va_start(ptr %va0)
-  call void @llvm.lifetime.start.p0(i64 32, ptr %va1)
+  call void @llvm.lifetime.start.p0(ptr %va1)
   call void @llvm.va_copy(ptr %va1, ptr %va0)
   call void @llvm.va_end(ptr %va1)
-  call void @llvm.lifetime.end.p0(i64 32, ptr %va1)
+  call void @llvm.lifetime.end.p0(ptr %va1)
   call void @llvm.va_end(ptr %va0)
-  call void @llvm.lifetime.end.p0(i64 32, ptr %va0)
+  call void @llvm.lifetime.end.p0(ptr %va0)
   ret void
 }
 
@@ -31,28 +31,28 @@ define void @func_destroy_copy_src(ptr nocapture readnone %fmt, ...) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VA0:%.*]] = alloca [[STRUCT___VA_LIST:%.*]], align 8
 ; CHECK-NEXT:    [[VA1:%.*]] = alloca [[STRUCT___VA_LIST]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VA0]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[VA1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VA0]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[VA1]])
 ; CHECK-NEXT:    call void @llvm.va_start.p0(ptr nonnull [[VA0]])
 ; CHECK-NEXT:    call void @llvm.va_copy.p0(ptr nonnull [[VA1]], ptr nonnull [[VA0]])
 ; CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VA0]])
 ; CHECK-NEXT:    call void @callee(ptr nonnull [[VA1]])
 ; CHECK-NEXT:    call void @llvm.va_end.p0(ptr [[VA1]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VA1]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[VA0]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VA1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[VA0]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %va0 = alloca %struct.__va_list, align 8
   %va1 = alloca %struct.__va_list, align 8
-  call void @llvm.lifetime.start.p0(i64 32, ptr %va0)
-  call void @llvm.lifetime.start.p0(i64 32, ptr %va1)
+  call void @llvm.lifetime.start.p0(ptr %va0)
+  call void @llvm.lifetime.start.p0(ptr %va1)
   call void @llvm.va_start(ptr %va0)
   call void @llvm.va_copy(ptr %va1, ptr %va0)
   call void @llvm.va_end(ptr %va0)
   call void @callee(ptr %va1)
   call void @llvm.va_end(ptr %va1)
-  call void @llvm.lifetime.end.p0(i64 32, ptr %va1)
-  call void @llvm.lifetime.end.p0(i64 32, ptr %va0)
+  call void @llvm.lifetime.end.p0(ptr %va1)
+  call void @llvm.lifetime.end.p0(ptr %va0)
   ret void
 }

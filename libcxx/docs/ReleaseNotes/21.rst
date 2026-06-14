@@ -10,7 +10,7 @@ Written by the `Libc++ Team <https://libcxx.llvm.org>`_
 
 .. warning::
 
-   These are in-progress notes for the upcoming libc++ 20.0.0 release.
+   These are in-progress notes for the upcoming libc++ 21.0.0 release.
    Release notes for previous releases can be found on
    `the Download Page <https://releases.llvm.org/download.html>`_.
 
@@ -18,7 +18,7 @@ Introduction
 ============
 
 This document contains the release notes for the libc++ C++ Standard Library,
-part of the LLVM Compiler Infrastructure, release 20.0.0. Here we describe the
+part of the LLVM Compiler Infrastructure, release 21.0.0. Here we describe the
 status of libc++ in some detail, including major improvements from the previous
 release and new feature work. For the general LLVM release notes, see `the LLVM
 documentation <https://llvm.org/docs/ReleaseNotes.html>`_. All LLVM releases may
@@ -42,6 +42,7 @@ Implemented Papers
 - P0767R1: Deprecate POD (`Github <https://github.com/llvm/llvm-project/issues/104013>`__)
 - P1361R2: Integration of chrono with text formatting (`Github <https://github.com/llvm/llvm-project/issues/100014>`__)
 - P2255R2: A type trait to detect reference binding to temporary (implemented the type traits only) (`Github <https://github.com/llvm/llvm-project/issues/105180>`__)
+- P2372R3: Fixing locale handling in chrono formatters (`Github <https://github.com/llvm/llvm-project/issues/100043>`__)
 - P2562R1: ``constexpr`` Stable Sorting (`Github <https://github.com/llvm/llvm-project/issues/105360>`__)
 - P0472R3: Put std::monostate in <utility> (`Github <https://github.com/llvm/llvm-project/issues/127874>`__)
 - P1222R4: A Standard ``flat_set`` (`Github <https://github.com/llvm/llvm-project/issues/105193>`__)
@@ -52,6 +53,7 @@ Implemented Papers
 - P2711R1: Making multi-param constructors of ``views`` ``explicit`` (`Github <https://github.com/llvm/llvm-project/issues/105252>`__)
 - P2770R0: Stashing stashing ``iterators`` for proper flattening (`Github <https://github.com/llvm/llvm-project/issues/105250>`__)
 - P2655R3: ``common_reference_t`` of ``reference_wrapper`` Should Be a Reference Type (`Github <https://github.com/llvm/llvm-project/issues/105260>`__)
+- P3379R0: Constrain ``std::expected`` equality operators (`Github <https://github.com/llvm/llvm-project/issues/118135>`__)
 
 Improvements and New Features
 -----------------------------
@@ -85,7 +87,13 @@ Improvements and New Features
 - The ``flat_map::insert`` and ``flat_set::insert_range`` have been optimized, resulting in a performance improvement of up
   to 10x for inserting elements into a ``flat_map`` when the input range is a ``flat_map`` or a ``zip_view``.
 
-- ``ctype::tolower`` and ``ctype::toupper`` have been optimized, resulting in a 2x performane improvement.
+- ``ctype::tolower`` and ``ctype::toupper`` have been optimized, resulting in a 2x performance improvement.
+
+- As an experimental feature, Hardening now supports assertion semantics that allow customizing how a hardening
+  assertion failure is handled. The four available semantics, modeled on C++26 Contracts, are ``ignore``, ``observe``,
+  ``quick-enforce`` and ``enforce``. The ``observe`` semantic is intended to make it easier to adopt Hardening in
+  production but should not be used outside of this scenario. Please refer to the :ref:`Hardening documentation
+  <hardening>` for details.
 
 Deprecations and Removals
 -------------------------
@@ -139,6 +147,21 @@ ABI Affecting Changes
   comparison between shared libraries, since all RTTI has the correct visibility now. There is no behaviour change on
   Clang.
 
+- LLVM 20 contained an ABI break that can result in the size of ``std::unordered_{map,set,multimap,multiset}`` and ``std::deque`` changing when used with an allocator type that is empty and contains a base class that is the same across rebound allocator instantiations (e.g. ``Allocator<int>`` and ``Allocator<char>`` are both empty and contain the same base class).
+  In addition, the layout of a user-defined type that:
+
+    - contains one of the following containers: ``std::unordered_{map,set,multimap,multiset}``, ``std::deque``, ``std::map``, ``std::set``, ``std::multimap``, ``std::multiset``, ``std::list`` or ``std::vector``, and
+    - passes an empty allocator, comparator or hasher type to that container, and
+    - has a member of that same empty allocator, comparator or hasher type inside the enclosing struct, and
+    - that member is either marked with ``[[no_unique_address]]`` or optimized out via the EBO (empty base optimization) technique
+
+  saw its size increase from LLVM 19 to LLVM 20. This was caused by the usage of ``[[no_unique_address]]`` within some of libc++'s containers in a way that allowed subtle interactions with enclosing objects. This is fixed in LLVM 21 when using the Clang compiler (returning to the LLVM 19 ABI), however that implies an ABI break from LLVM 20 to LLVM 21.
+
+  Furthermore, fixing this causes a slight regression to constant evaluation support in ``std::unique_ptr``. Specifically, constant evaluation will now fail when the deleter relies on being value-initialized for constant-evaluation admissibility. If a default-initialized deleter can be used during constant evaluation, or if the default constructor is non-trivial, the ``unique_ptr`` is not affected by this regression. In particular, this regression does not impact any ``unique_ptr`` using the default deleter.
+
+  Note that there is currently no way to realistically fix this ABI break on GCC, therefore GCC will remain on the ABI introduced in LLVM 19. That also means that Clang and GCC will have a slightly different ABI for the small subset of types listed above until we are able to apply the same fix we did with Clang on GCC.
+
+  For more details see https://llvm.org/PR154146.
 
 Build System Changes
 --------------------

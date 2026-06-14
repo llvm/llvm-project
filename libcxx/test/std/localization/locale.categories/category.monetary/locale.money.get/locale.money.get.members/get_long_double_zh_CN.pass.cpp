@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO(mordante) Investigate
-// UNSUPPORTED: apple-clang
-
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
 
@@ -158,7 +155,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative one, showbase
-#ifdef _AIX
+#if defined(_AIX) || defined(__APPLE__)
           std::string v = "-" + currency_symbol + "0.01";
 #else
           std::string v = currency_symbol + "-0.01";
@@ -172,7 +169,7 @@ int main(int, char**)
           assert(ex == -1);
         }
         {   // negative one, showbase
-#ifdef _AIX
+#if defined(_AIX) || defined(__APPLE__)
           std::string v = "-" + currency_symbol + "0.01";
 #else
           std::string v = currency_symbol + "-0.01";
@@ -212,7 +209,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-#ifdef _AIX
+#if defined(_AIX) || defined(__APPLE__)
           std::string v = "-" + currency_symbol + "1,234,567.89";
 #else
           std::string v = currency_symbol + "-1,234,567.89";
@@ -333,7 +330,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative one, showbase
-#if defined(TEST_HAS_GLIBC) || defined(_AIX)
+#if defined(TEST_HAS_GLIBC) || defined(_AIX) || defined(__APPLE__)
           std::string v = "-" + currency_name + "0.01";
 #else
             std::string v = currency_name + "-0.01";
@@ -348,7 +345,7 @@ int main(int, char**)
             assert(ex == -1);
         }
         {   // negative one, showbase
-#if defined(TEST_HAS_GLIBC) || defined(_AIX)
+#if defined(TEST_HAS_GLIBC) || defined(_AIX) || defined(__APPLE__)
           std::string v = "-" + currency_name + "0.01";
 #else
             std::string v = currency_name + "-0.01";
@@ -389,7 +386,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-#if defined(TEST_HAS_GLIBC) || defined(_AIX)
+#if defined(TEST_HAS_GLIBC) || defined(_AIX) || defined(__APPLE__)
           std::string v = "-" + currency_name + "1,234,567.89";
 #else
             std::string v = currency_name + "-1,234,567.89";
@@ -518,7 +515,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative one, showbase
-#  ifdef _AIX
+#  if defined(_AIX) || defined(__APPLE__)
           std::wstring v = L"-" + w_currency_symbol + L"0.01";
 #  else
           std::wstring v = w_currency_symbol + L"-0.01";
@@ -532,7 +529,7 @@ int main(int, char**)
           assert(ex == -1);
         }
         {   // negative one, showbase
-#  ifdef _AIX
+#  if defined(_AIX) || defined(__APPLE__)
           std::wstring v = L"-" + w_currency_symbol + L"0.01";
 #  else
           std::wstring v = w_currency_symbol + L"-0.01";
@@ -572,7 +569,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-#  ifdef _AIX
+#  if defined(_AIX) || defined(__APPLE__)
           std::wstring v = L"-" + w_currency_symbol + L"1,234,567.89";
 #  else
           std::wstring v = w_currency_symbol + L"-1,234,567.89";
@@ -693,7 +690,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative one, showbase
-#  if defined(TEST_HAS_GLIBC) || defined(_AIX)
+#  if defined(TEST_HAS_GLIBC) || defined(_AIX) || defined(__APPLE__)
           std::wstring v = L"-" + w_currency_name + L"0.01";
 #  else
           std::wstring v = w_currency_name + L"-0.01";
@@ -707,7 +704,7 @@ int main(int, char**)
           assert(ex == -1);
         }
         {   // negative one, showbase
-#  if defined(TEST_HAS_GLIBC) || defined(_AIX)
+#  if defined(TEST_HAS_GLIBC) || defined(_AIX) || defined(__APPLE__)
           std::wstring v = L"-" + w_currency_name + L"0.01";
 #  else
           std::wstring v = w_currency_name + L"-0.01";
@@ -747,7 +744,7 @@ int main(int, char**)
             std::noshowbase(ios);
         }
         {   // negative, showbase
-#  if defined(TEST_HAS_GLIBC) || defined(_AIX)
+#  if defined(TEST_HAS_GLIBC) || defined(_AIX) || defined(__APPLE__)
           std::wstring v = L"-" + w_currency_name + L"1,234,567.89";
 #  else
           std::wstring v = w_currency_name + L"-1,234,567.89";

@@ -1,19 +1,19 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
-// RUN:  -fnative-half-type -emit-llvm -disable-llvm-passes -o - | \
+// RUN:  -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-unknown-vulkan-compute %s \
-// RUN:  -fnative-half-type -emit-llvm -disable-llvm-passes -o - | \
+// RUN:  -fnative-half-type -fnative-int16-type -emit-llvm -disable-llvm-passes -o - | \
 // RUN:  FileCheck %s
 
  half2 half_vec_mod_by_int(half2 p1) {
 // CHECK-LABEL: half_vec_mod_by_int
-// CHECK: %rem = frem reassoc nnan ninf nsz arcp afn <2 x half> %{{.*}}, splat (half 0xH4000)
+// CHECK: %rem = frem reassoc nnan ninf nsz arcp afn <2 x half> %{{.*}}, splat (half 2.000000e+00)
     return  p1 % 2;
 }
 
  half2 half_vec_mod_by_float(half2 p1) {
 // CHECK-LABEL: half_vec_mod_by_float
-// CHECK: %rem = frem reassoc nnan ninf nsz arcp afn <2 x half> %{{.*}}, splat (half 0xH4000)
+// CHECK: %rem = frem reassoc nnan ninf nsz arcp afn <2 x half> %{{.*}}, splat (half 2.000000e+00)
     return  p1 % (half)2.0;
 }
 
@@ -33,13 +33,13 @@
 
  half half_vec_mod_by_int(half p1) {
 // CHECK-LABEL: half_vec_mod_by_int
-// CHECK: %rem = frem reassoc nnan ninf nsz arcp afn half  %{{.*}}, 0xH4000
+// CHECK: %rem = frem reassoc nnan ninf nsz arcp afn half  %{{.*}}, 2.000000e+00
     return  p1 % 2;
 }
 
  half half_mod_by_float(half p1) {
 // CHECK-LABEL: half_mod_by_float
-// CHECK: %rem = frem reassoc nnan ninf nsz arcp afn half  %{{.*}}, 0xH4000
+// CHECK: %rem = frem reassoc nnan ninf nsz arcp afn half  %{{.*}}, 2.000000e+00
     return  p1 % (half)2.0;
 }
 

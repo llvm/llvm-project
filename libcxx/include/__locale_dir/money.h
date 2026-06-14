@@ -32,6 +32,7 @@ _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 // money_base
 
@@ -55,15 +56,15 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit moneypunct(size_t __refs = 0) : locale::facet(__refs) {}
 
-  _LIBCPP_HIDE_FROM_ABI char_type decimal_point() const { return do_decimal_point(); }
-  _LIBCPP_HIDE_FROM_ABI char_type thousands_sep() const { return do_thousands_sep(); }
-  _LIBCPP_HIDE_FROM_ABI string grouping() const { return do_grouping(); }
-  _LIBCPP_HIDE_FROM_ABI string_type curr_symbol() const { return do_curr_symbol(); }
-  _LIBCPP_HIDE_FROM_ABI string_type positive_sign() const { return do_positive_sign(); }
-  _LIBCPP_HIDE_FROM_ABI string_type negative_sign() const { return do_negative_sign(); }
-  _LIBCPP_HIDE_FROM_ABI int frac_digits() const { return do_frac_digits(); }
-  _LIBCPP_HIDE_FROM_ABI pattern pos_format() const { return do_pos_format(); }
-  _LIBCPP_HIDE_FROM_ABI pattern neg_format() const { return do_neg_format(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type decimal_point() const { return do_decimal_point(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type thousands_sep() const { return do_thousands_sep(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string grouping() const { return do_grouping(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type curr_symbol() const { return do_curr_symbol(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type positive_sign() const { return do_positive_sign(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type negative_sign() const { return do_negative_sign(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI int frac_digits() const { return do_frac_digits(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI pattern pos_format() const { return do_pos_format(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI pattern neg_format() const { return do_neg_format(); }
 
   static locale::id id;
   static const bool intl = _International;
@@ -433,7 +434,7 @@ bool money_get<_CharT, _InputIterator>::__do_get(
           __err |= ios_base::failbit;
           return false;
         }
-        for (++__b; __fd > 0; --__fd, ++__b) {
+        for (++__b; __fd > 0; --__fd, (void)++__b) {
           if (__b == __e || !__ct.is(ctype_base::digit, *__b)) {
             __err |= ios_base::failbit;
             return false;
@@ -451,7 +452,7 @@ bool money_get<_CharT, _InputIterator>::__do_get(
     }
   }
   if (__trailing_sign) {
-    for (unsigned __i = 1; __i < __trailing_sign->size(); ++__i, ++__b) {
+    for (unsigned __i = 1; __i < __trailing_sign->size(); ++__i, (void)++__b) {
       if (__b == __e || *__b != (*__trailing_sign)[__i]) {
         __err |= ios_base::failbit;
         return false;
@@ -864,6 +865,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS money_put<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS money_put<wchar_t>;
 #  endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

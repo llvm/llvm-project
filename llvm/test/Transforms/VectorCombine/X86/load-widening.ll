@@ -443,8 +443,8 @@ define <8 x float> @load_v2f32_v8f32_hwasan(ptr dereferenceable(32) %p) sanitize
 
 define <4 x i32> @load_v2i32_v4i32_asan(ptr dereferenceable(16) %p) sanitize_address {
 ; CHECK-LABEL: @load_v2i32_v4i32_asan(
-; CHECK-NEXT:    [[L:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x i32> [[L]], <2 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x i32>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <1 x i32> [[TMP1]], <1 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret <4 x i32> [[S]]
 ;
   %l = load <2 x i32>, ptr %p, align 1

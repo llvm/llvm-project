@@ -32,16 +32,16 @@ contains
   print *, "in bar"
  end subroutine
 end module
-!DEF: /demo MainProgram
-program demo
+!DEF: /DEMO MainProgram
+program DEMO
  !REF: /m
  use :: m
- !DEF: /demo/bar (Subroutine) Use
- !DEF: /demo/p EXTERNAL, POINTER (Subroutine) ProcEntity
+ !DEF: /DEMO/bar (Subroutine) Use
+ !DEF: /DEMO/p EXTERNAL, POINTER (Subroutine) ProcEntity
  procedure(bar), pointer :: p
- !REF: /demo/p
- !DEF: /demo/foo (Function) Use
+ !REF: /DEMO/p
+ !DEF: /DEMO/foo (Function) Use
  p => foo()
- !REF: /demo/p
+ !REF: /DEMO/p
  call p
 end program

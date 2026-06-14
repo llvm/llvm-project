@@ -17,6 +17,7 @@ static_library("Object") {
   sources = [
     "Archive.cpp",
     "ArchiveWriter.cpp",
+    "BBAddrMap.cpp",
     "Binary.cpp",
     "BuildID.cpp",
     "COFFImportFile.cpp",
@@ -42,6 +43,7 @@ static_library("Object") {
     "OffloadBundle.cpp",
     "RecordStreamer.cpp",
     "RelocationResolver.cpp",
+    "SFrameParser.cpp",
     "SymbolSize.cpp",
     "SymbolicFile.cpp",
     "TapiFile.cpp",

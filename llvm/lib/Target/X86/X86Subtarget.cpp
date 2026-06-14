@@ -32,7 +32,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -242,7 +241,7 @@ bool X86Subtarget::isLegalToCallImmediateAddr() const {
   // FIXME: I386 PE/COFF supports PC relative calls using IMAGE_REL_I386_REL32
   // but WinCOFFObjectWriter::RecordRelocation cannot emit them.  Once it does,
   // the following check for Win32 should be removed.
-  if (Is64Bit || isTargetWin32())
+  if (Is64Bit || isTargetWin32() || isPositionIndependent())
     return false;
   return isTargetELF() || TM.getRelocationModel() == Reloc::Static;
 }
@@ -261,27 +260,10 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   if (!FS.empty())
     FullFS = (Twine(FullFS) + "," + FS).str();
 
-  // Attach EVEX512 feature when we have AVX512 features with a default CPU.
-  // "pentium4" is default CPU for 32-bit targets.
-  // "x86-64" is default CPU for 64-bit targets.
-  if (CPU == "generic" || CPU == "pentium4" || CPU == "x86-64") {
-    size_t posNoEVEX512 = FS.rfind("-evex512");
-    // Make sure we won't be cheated by "-avx512fp16".
-    size_t posNoAVX512F =
-        FS.ends_with("-avx512f") ? FS.size() - 8 : FS.rfind("-avx512f,");
-    size_t posEVEX512 = FS.rfind("+evex512");
-    // Any AVX512XXX will enable AVX512F.
-    size_t posAVX512F = FS.rfind("+avx512");
-
-    if (posAVX512F != StringRef::npos &&
-        (posNoAVX512F == StringRef::npos || posNoAVX512F < posAVX512F))
-      if (posEVEX512 == StringRef::npos && posNoEVEX512 == StringRef::npos)
-        FullFS += ",+evex512";
-  }
-
   // Disable 64-bit only features in non-64-bit mode.
-  SmallVector<StringRef, 9> FeaturesIn64BitOnly = {
-      "egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "cf", "zu", "uintr"};
+  StringRef FeaturesIn64BitOnly[] = {"egpr",   "push2pop2", "ppx", "ndd",
+                                     "ccmp",   "nf",        "cf",  "zu",
+                                     "jmpabs", "uintr"};
   if (FullFS.find("-64bit-mode") != std::string::npos)
     for (StringRef F : FeaturesIn64BitOnly)
       FullFS += ",-" + F.str();
@@ -302,13 +284,16 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     reportFatalUsageError("64-bit code requested on a subtarget that doesn't "
                           "support it!");
 
-  // Stack alignment is 16 bytes on Darwin, Linux, kFreeBSD, NaCl, and for all
+  if (HasEGPR && !hasSSE1() && isTargetWin64())
+    reportFatalUsageError("EGPR on Windows x64 requires SSE");
+
+  // Stack alignment is 16 bytes on Darwin, Linux, kFreeBSD, Hurd and for all
   // 64-bit targets.  On Solaris (32-bit), stack alignment is 4 bytes
   // following the i386 psABI, while on Illumos it is always 16 bytes.
   if (StackAlignOverride)
     stackAlignment = *StackAlignOverride;
   else if (isTargetDarwin() || isTargetLinux() || isTargetKFreeBSD() ||
-           isTargetNaCl() || Is64Bit)
+           isTargetHurd() || Is64Bit)
     stackAlignment = Align(16);
 
   // Consume the vector width attribute or apply any target specific limit.
@@ -318,6 +303,8 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     PreferVectorWidth = 128;
   else if (Prefer256Bit)
     PreferVectorWidth = 256;
+
+  HasUserReservedRegisters = ReservedRReg.any();
 }
 
 X86Subtarget &X86Subtarget::initializeSubtargetDependencies(StringRef CPU,

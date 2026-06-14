@@ -42,8 +42,12 @@ namespace {
 class FunctionPropertiesAnalysisTest : public testing::Test {
 public:
   FunctionPropertiesAnalysisTest() {
-    createTestVocabulary(1);
-    MAM.registerPass([&] { return IR2VecVocabAnalysis(Vocabulary); });
+    auto VocabVector = ir2vec::Vocabulary::createDummyVocabForTest(1);
+    MAM.registerPass([VocabVector = std::move(VocabVector)]() mutable {
+      return IR2VecVocabAnalysis(std::move(VocabVector));
+    });
+    IR2VecVocab = std::make_unique<ir2vec::Vocabulary>(
+        ir2vec::Vocabulary::createDummyVocabForTest(1));
     MAM.registerPass([&] { return PassInstrumentationAnalysis(); });
     FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
     FAM.registerPass([&] { return DominatorTreeAnalysis(); });
@@ -60,33 +64,12 @@ private:
   float OriginalTypeWeight = ir2vec::TypeWeight;
   float OriginalArgWeight = ir2vec::ArgWeight;
 
-  void createTestVocabulary(unsigned Dim) {
-    llvm::SmallVector<std::string, 32> SampleEntities = {
-        "add",        "sub",      "mul",        "icmp",          "br",
-        "ret",        "store",    "load",       "alloca",        "phi",
-        "call",       "voidTy",   "floatTy",    "integerTy",     "functionTy",
-        "structTy",   "arrayTy",  "pointerTy",  "vectorTy",      "emptyTy",
-        "labelTy",    "tokenTy",  "metadataTy", "unknownTy",     "function",
-        "pointer",    "constant", "variable",   "getelementptr", "invoke",
-        "landingpad", "resume",   "catch",      "cleanup"};
-    float EmbVal = 0.1f;
-
-    // Helper lambda to add entries to the vocabulary
-    auto addEntry = [&](std::string key) {
-      Vocabulary[key] = ir2vec::Embedding(Dim, EmbVal);
-      EmbVal += 0.1f;
-    };
-
-    for (auto &Name : SampleEntities)
-      addEntry(Name);
-  }
-
 protected:
   std::unique_ptr<DominatorTree> DT;
   std::unique_ptr<LoopInfo> LI;
   FunctionAnalysisManager FAM;
   ModuleAnalysisManager MAM;
-  ir2vec::Vocab Vocabulary;
+  std::unique_ptr<ir2vec::Vocabulary> IR2VecVocab;
 
   void TearDown() override {
     // Restore original IR2Vec weights
@@ -98,7 +81,7 @@ protected:
   FunctionPropertiesInfo buildFPI(Function &F) {
     // FunctionPropertiesInfo assumes IR2VecVocabAnalysis has been run to
     // use IR2Vec.
-    auto VocabResult = MAM.getResult<IR2VecVocabAnalysis>(*F.getParent());
+    auto &VocabResult = MAM.getResult<IR2VecVocabAnalysis>(*F.getParent());
     (void)VocabResult;
     return FunctionPropertiesInfo::getFunctionPropertiesInfo(F, FAM);
   }
@@ -126,7 +109,7 @@ protected:
   }
 
   std::unique_ptr<ir2vec::Embedder> createEmbedder(const Function &F) {
-    auto Emb = ir2vec::Embedder::create(IR2VecKind::Symbolic, F, Vocabulary);
+    auto Emb = ir2vec::Embedder::create(IR2VecKind::Symbolic, F, *IR2VecVocab);
     EXPECT_TRUE(static_cast<bool>(Emb));
     return Emb;
   }
@@ -474,7 +457,7 @@ entry:
   ret void
 }
 
-define i32 @caller() personality i32 (...)* @__gxx_personality_v0 {
+define i32 @caller() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @callee()
       to label %cont unwind label %exc
@@ -483,7 +466,7 @@ cont:
   ret i32 0
 
 exc:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
          cleanup
   ret i32 1
 }
@@ -515,7 +498,7 @@ TEST_F(FunctionPropertiesAnalysisTest, InvokeUnreachableHandler) {
                                              R"IR(
 declare void @might_throw()
 
-define internal i32 @callee() personality i32 (...)* @__gxx_personality_v0 {
+define internal i32 @callee() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @might_throw()
       to label %cont unwind label %exc
@@ -524,12 +507,12 @@ cont:
   ret i32 0
 
 exc:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
          cleanup
-  resume { i8*, i32 } %exn
+  resume { ptr, i32 } %exn
 }
 
-define i32 @caller() personality i32 (...)* @__gxx_personality_v0 {
+define i32 @caller() personality ptr @__gxx_personality_v0 {
 entry:
   %X = invoke i32 @callee()
            to label %cont unwind label %Handler
@@ -538,7 +521,7 @@ cont:
   ret i32 %X
 
 Handler:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
          cleanup
   ret i32 1
 }
@@ -571,7 +554,7 @@ TEST_F(FunctionPropertiesAnalysisTest, Rethrow) {
                                              R"IR(
 declare void @might_throw()
 
-define internal i32 @callee() personality i32 (...)* @__gxx_personality_v0 {
+define internal i32 @callee() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @might_throw()
       to label %cont unwind label %exc
@@ -580,12 +563,12 @@ cont:
   ret i32 0
 
 exc:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
          cleanup
-  resume { i8*, i32 } %exn
+  resume { ptr, i32 } %exn
 }
 
-define i32 @caller() personality i32 (...)* @__gxx_personality_v0 {
+define i32 @caller() personality ptr @__gxx_personality_v0 {
 entry:
   %X = invoke i32 @callee()
            to label %cont unwind label %Handler
@@ -594,7 +577,7 @@ cont:
   ret i32 %X
 
 Handler:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
          cleanup
   ret i32 1
 }
@@ -629,18 +612,18 @@ declare void @external_func()
 @exception_type2 = external global i8
 
 
-define internal void @inner() personality i8* null {
+define internal void @inner() personality ptr null {
   invoke void @external_func()
       to label %cont unwind label %lpad
 cont:
   ret void
 lpad:
   %lp = landingpad i32
-      catch i8* @exception_type1
+      catch ptr @exception_type1
   resume i32 %lp
 }
 
-define void @outer() personality i8* null {
+define void @outer() personality ptr null {
   invoke void @inner()
       to label %cont unwind label %lpad
 cont:
@@ -648,7 +631,7 @@ cont:
 lpad:
   %lp = landingpad i32
       cleanup
-      catch i8* @exception_type2
+      catch ptr @exception_type2
   resume i32 %lp
 }
 
@@ -683,18 +666,18 @@ declare void @external_func()
 @exception_type2 = external global i8
 
 
-define internal void @inner() personality i8* null {
+define internal void @inner() personality ptr null {
   invoke void @external_func()
       to label %cont unwind label %lpad
 cont:
   ret void
 lpad:
   %lp = landingpad i32
-      catch i8* @exception_type1
+      catch ptr @exception_type1
   resume i32 %lp
 }
 
-define void @outer(i32 %a) personality i8* null {
+define void @outer(i32 %a) personality ptr null {
 entry:
   %i = icmp slt i32 %a, 0
   br i1 %i, label %if.then, label %cont
@@ -706,7 +689,7 @@ cont:
 lpad:
   %lp = landingpad i32
       cleanup
-      catch i8* @exception_type2
+      catch ptr @exception_type2
   resume i32 %lp
 }
 
@@ -948,9 +931,9 @@ TEST_F(FunctionPropertiesAnalysisTest, DetailedOperandCount) {
 @a = global i64 1
 
 define i64 @f1(i64 %e) {
-	%b = load i64, i64* @a
+	%b = load i64, ptr @a
   %c = add i64 %b, 2
-  %d = call i64 asm "mov $1,$0", "=r,r" (i64 %c)																						
+  %d = call i64 asm "mov $1,$0", "=r,r" (i64 %c)
 	%f = add i64 %d, %e
 	ret i64 %f
 }

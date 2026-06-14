@@ -8,9 +8,9 @@
 
 #include "absolute-paths.h"
 
-// Check that the bogus prefix we added is stripped out even if absolute paths
-// are disabled.
-// NORMAL-NOT: SystemHeaderPrefix
+// Check whether the diagnostic from the header above includes the dummy
+// directory in the path.
+// NORMAL: SystemHeaderPrefix
 // ABSOLUTE-NOT: SystemHeaderPrefix
 // CHECK: warning: non-void function does not return a value
 

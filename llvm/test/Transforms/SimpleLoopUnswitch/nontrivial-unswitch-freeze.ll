@@ -1508,7 +1508,7 @@ define i32 @test29(i32 %arg) {
 ; CHECK-NEXT:    [[TMP_B_SUM:%.*]] = add i32 [[TMP_B_PHI]], [[TMP_B]]
 ; CHECK-NEXT:    br label [[BODY_C]]
 ; CHECK:       body.c:
-; CHECK-NEXT:    [[TMP_C_PHI:%.*]] = phi i32 [ [[TMP]], [[DISPATCH]] ], [ [[TMP_B_SUM]], [[BODY_B]] ]
+; CHECK-NEXT:    [[TMP_C_PHI:%.*]] = phi i32 [ [[TMP_B_SUM]], [[BODY_B]] ], [ [[TMP]], [[DISPATCH]] ]
 ; CHECK-NEXT:    [[TMP_C:%.*]] = call i32 @c()
 ; CHECK-NEXT:    [[TMP_C_SUM:%.*]] = add i32 [[TMP_C_PHI]], [[TMP_C]]
 ; CHECK-NEXT:    br label [[LATCH:%.*]]
@@ -1630,7 +1630,7 @@ define i32 @test30(i32 %arg) {
 ; CHECK-NEXT:    [[TMP_A_SUM_US9:%.*]] = add i32 [[TMP_A_PHI_US7]], [[TMP_A_US8]]
 ; CHECK-NEXT:    br label [[BODY_B_US10]]
 ; CHECK:       body.b.us10:
-; CHECK-NEXT:    [[TMP_B_PHI_US11:%.*]] = phi i32 [ [[TMP_US3]], [[DISPATCH_US5]] ], [ [[TMP_A_SUM_US9]], [[BODY_A_US6]] ]
+; CHECK-NEXT:    [[TMP_B_PHI_US11:%.*]] = phi i32 [ [[TMP_A_SUM_US9]], [[BODY_A_US6]] ], [ [[TMP_US3]], [[DISPATCH_US5]] ]
 ; CHECK-NEXT:    [[TMP_B_US12:%.*]] = call i32 @b()
 ; CHECK-NEXT:    [[TMP_B_SUM_US13:%.*]] = add i32 [[TMP_B_PHI_US11]], [[TMP_B_US12]]
 ; CHECK-NEXT:    br label [[LATCH_US14:%.*]]

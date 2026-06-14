@@ -11,12 +11,26 @@ from lldbsuite.test import lldbutil
 
 
 class StdStringDataFormatterTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break at.
         self.main_spec = lldb.SBFileSpec("main.cpp")
         self.namespace = "std"
+
+    def _makeStringName(self, typedef: str, char_type: str, allocator=None):
+        if allocator is None:
+            allocator = self.namespace + "::allocator"
+
+        if self.getDebugInfo() == "pdb":
+            return f"{self.namespace}::basic_string<{char_type}, std::char_traits<{char_type}>, {allocator}<{char_type}>>"
+
+        if typedef.startswith("::"):
+            return self.namespace + typedef
+        return typedef
 
     def do_test(self):
         """Test that that file and class static variables display correctly."""
@@ -36,10 +50,17 @@ class StdStringDataFormatterTestCase(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
-        ns = self.namespace
+        string_name = self._makeStringName("::string", "char")
+        wstring_name = self._makeStringName("::wstring", "wchar_t")
+        custom_string_name = self._makeStringName(
+            "CustomString", "char", allocator="CustomAlloc"
+        )
+        custom_wstring_name = self._makeStringName(
+            "CustomWString", "wchar_t", allocator="CustomAlloc"
+        )
 
         # Check 'S' pre-assignment.
-        self.expect("frame variable S", substrs=['(%s::wstring) S = L"!!!!"' % ns])
+        self.expect("frame variable S", substrs=[f'({wstring_name}) S = L"!!!!"'])
 
         thread.StepOver()
 
@@ -54,32 +75,31 @@ class StdStringDataFormatterTestCase(TestBase):
         )
 
         self.expect_expr(
-            "s", result_type=ns + "::wstring", result_summary='L"hello world! מזל טוב!"'
+            "s", result_type=wstring_name, result_summary='L"hello world! מזל טוב!"'
         )
 
-        self.expect_expr(
-            "q", result_type=ns + "::string", result_summary='"hello world"'
-        )
+        self.expect_expr("q", result_type=string_name, result_summary='"hello world"')
 
         self.expect_expr(
             "Q",
-            result_type=ns + "::string",
+            result_type=string_name,
             result_summary='"quite a long std::strin with lots of info inside it"',
         )
 
         self.expect(
             "frame variable",
             substrs=[
-                '(%s::wstring) wempty = L""' % ns,
-                '(%s::wstring) s = L"hello world! מזל טוב!"' % ns,
-                '(%s::wstring) S = L"!!!!!"' % ns,
+                f'({wstring_name}) wempty = L""',
+                f'({wstring_name}) s = L"hello world! מזל טוב!"',
+                f'({wstring_name}) S = L"!!!!!"',
                 "(const wchar_t *) mazeltov = 0x",
                 'L"מזל טוב"',
-                '(%s::string) empty = ""' % ns,
-                '(%s::string) q = "hello world"' % ns,
-                '(%s::string) Q = "quite a long std::strin with lots of info inside it"'
-                % ns,
-                "(%s::string *) null_str = nullptr" % ns,
+                f'({string_name}) empty = ""',
+                f'({string_name}) q = "hello world"',
+                f'({string_name}) Q = "quite a long std::strin with lots of info inside it"',
+                f"({string_name} *) null_str = nullptr",
+                f'({custom_string_name}) custom_str = "hello!"',
+                f'({custom_wstring_name}) custom_wstr = L"hello!"',
             ],
         )
 
@@ -134,15 +154,26 @@ class StdStringDataFormatterTestCase(TestBase):
             self, "Set break point at this line.", self.main_spec
         )
 
-        ns = self.namespace
+        u16string_name = self._makeStringName("::u16string", "char16_t")
+        u32string_name = self._makeStringName("::u32string", "char32_t")
+        custom_u16string_name = self._makeStringName(
+            "CustomStringU16", "char16_t", allocator="CustomAlloc"
+        )
+        custom_u32string_name = self._makeStringName(
+            "CustomStringU32", "char32_t", allocator="CustomAlloc"
+        )
 
         self.expect(
             "frame variable",
             substrs=[
-                '(%s::u16string) u16_string = u"ß水氶"' % ns,
-                '(%s::u16string) u16_empty = u""' % ns,
-                '(%s::u32string) u32_string = U"🍄🍅🍆🍌"' % ns,
-                '(%s::u32string) u32_empty = U""' % ns,
+                f'({u16string_name}) u16_string = u"ß水氶"',
+                f'({u16string_name}) u16_empty = u""',
+                f'({u32string_name}) u32_string = U"🍄🍅🍆🍌"',
+                f'({u32string_name}) u32_empty = U""',
+                f'({custom_u16string_name}) custom_u16 = u"ß水氶"',
+                f'({custom_u16string_name}) custom_u16_empty = u""',
+                f'({custom_u32string_name}) custom_u32 = U"🍄🍅🍆🍌"',
+                f'({custom_u32string_name}) custom_u32_empty = U""',
             ],
         )
 
@@ -217,9 +248,6 @@ class StdStringDataFormatterTestCase(TestBase):
         self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test_summary_unavailable()
 
-    @expectedFailureAll(
-        bugnumber="libstdc++ std::string summary provider doesn't output a user-friendly message for invalid strings."
-    )
     @add_test_categories(["libstdcxx"])
     def test_unavailable_summary_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
@@ -268,9 +296,8 @@ class StdStringDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable",
             substrs=[
-                '(%s::string) IHaveEmbeddedZeros = "a\\0b\\0c\\0d"' % ns,
-                '(%s::wstring) IHaveEmbeddedZerosToo = L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"'
-                % ns,
+                f'({self._makeStringName("::string", "char")}) IHaveEmbeddedZeros = "a\\0b\\0c\\0d"',
+                f'({self._makeStringName("::wstring", "wchar_t")}) IHaveEmbeddedZerosToo = L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"',
             ],
         )
 

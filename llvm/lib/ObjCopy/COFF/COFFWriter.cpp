@@ -12,6 +12,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Support/CRC.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstddef>
@@ -88,6 +90,77 @@ Error COFFWriter::finalizeSymbolContents() {
                                  Sym.Name.str().c_str());
       WE->TagIndex = Target->RawIndex;
     }
+  }
+  return Error::success();
+}
+
+Error COFFWriter::finalizeSymIdxContents() {
+  // CFGuards shouldn't be present in PE.
+  if (Obj.IsPE)
+    return Error::success();
+
+  // Currently handle only sections consisting only of .symidx.
+  // TODO: other sections such as .impcall and .hybmp$x require more complex
+  // handling as they have more complex layout.
+  auto IsSymIdxSection = [](StringRef Name) {
+    return Name == ".gljmp$y" || Name == ".giats$y" || Name == ".gfids$y" ||
+           Name == ".gehcont$y";
+  };
+
+  DenseMap<size_t, size_t> SymIdMap;
+  SmallDenseMap<ssize_t, coff_aux_section_definition *, 4> SecIdMap;
+  for (Symbol &Sym : Obj.getMutableSymbols()) {
+    SymIdMap[Sym.OriginalRawIndex] = Sym.RawIndex;
+
+    // We collect only definition symbols of the sections to update the
+    // checksums.
+    if (Sym.Sym.StorageClass == IMAGE_SYM_CLASS_STATIC &&
+        Sym.Sym.NumberOfAuxSymbols == 1 && Sym.Sym.Value == 0 &&
+        IsSymIdxSection(Sym.Name))
+      SecIdMap[Sym.TargetSectionId] =
+          reinterpret_cast<coff_aux_section_definition *>(
+              Sym.AuxData[0].Opaque);
+  }
+
+  for (Section &Sec : Obj.getMutableSections()) {
+    if (!IsSymIdxSection(Sec.Name))
+      continue;
+
+    ArrayRef<uint8_t> RawIds = Sec.getContents();
+    // Nothing to do and also the checksum will be -1 instead of 0 if we
+    // recalculate it on empty input.
+    if (RawIds.size() == 0)
+      continue;
+
+    auto SecDefIt = SecIdMap.find(Sec.UniqueId);
+    if (SecDefIt == SecIdMap.end())
+      return createStringError(object_error::invalid_symbol_index,
+                               "section '%s' does not have the corresponding "
+                               "symbol or the symbol has unexpected format",
+                               Sec.Name.str().c_str());
+
+    // Create updated content.
+    ArrayRef<support::ulittle32_t> Ids(
+        reinterpret_cast<const support::ulittle32_t *>(RawIds.data()),
+        RawIds.size() / 4);
+    std::vector<support::ulittle32_t> NewIds;
+    for (support::ulittle32_t Id : Ids) {
+      auto SymIdIt = SymIdMap.find(Id);
+      if (SymIdIt == SymIdMap.end())
+        return createStringError(object_error::invalid_symbol_index,
+                                 "section '%s' contains a .symidx (%d) that is "
+                                 "incorrect or was stripped",
+                                 Sec.Name.str().c_str(), Id.value());
+      NewIds.push_back(support::ulittle32_t(SymIdIt->getSecond()));
+    }
+    ArrayRef<uint8_t> NewRawIds(reinterpret_cast<uint8_t *>(NewIds.data()),
+                                RawIds.size());
+    // Update the checksum.
+    JamCRC JC(/*Init=*/0);
+    JC.update(NewRawIds);
+    SecDefIt->getSecond()->CheckSum = JC.getCRC();
+    // Set new content.
+    Sec.setOwnedContents(NewRawIds.vec());
   }
   return Error::success();
 }
@@ -182,6 +255,8 @@ Error COFFWriter::finalize(bool IsBigObj) {
   if (Error E = finalizeRelocTargets())
     return E;
   if (Error E = finalizeSymbolContents())
+    return E;
+  if (Error E = finalizeSymIdxContents())
     return E;
 
   size_t SizeOfHeaders = 0;

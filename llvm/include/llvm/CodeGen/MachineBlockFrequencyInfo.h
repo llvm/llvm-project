@@ -39,8 +39,8 @@ class MachineBlockFrequencyInfo {
 public:
   LLVM_ABI MachineBlockFrequencyInfo(); // Legacy pass manager only.
   LLVM_ABI explicit MachineBlockFrequencyInfo(
-      MachineFunction &F, MachineBranchProbabilityInfo &MBPI,
-      MachineLoopInfo &MLI);
+      const MachineFunction &F, const MachineBranchProbabilityInfo &MBPI,
+      const MachineLoopInfo &MLI);
   LLVM_ABI MachineBlockFrequencyInfo(MachineBlockFrequencyInfo &&);
   LLVM_ABI ~MachineBlockFrequencyInfo();
 
@@ -125,7 +125,7 @@ public:
 
 /// Printer pass for the \c MachineBlockFrequencyInfo results.
 class MachineBlockFrequencyPrinterPass
-    : public PassInfoMixin<MachineBlockFrequencyPrinterPass> {
+    : public RequiredPassInfoMixin<MachineBlockFrequencyPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -133,8 +133,6 @@ public:
 
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
-
-  static bool isRequired() { return true; }
 };
 
 class LLVM_ABI MachineBlockFrequencyInfoWrapperPass

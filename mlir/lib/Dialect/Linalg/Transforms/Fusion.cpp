@@ -21,6 +21,7 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "linalg-fusion"
@@ -148,8 +149,8 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
   LinalgOp clonedOp = clone(b, producer, resultTypes, clonedShapes);
 
   // Shift all IndexOp results by the tile offset.
-  SmallVector<OpFoldResult> allIvs = llvm::to_vector(
-      llvm::map_range(loopRanges, [&](Range range) { return range.offset; }));
+  SmallVector<OpFoldResult> allIvs = llvm::map_to_vector(
+      loopRanges, [&](Range range) { return range.offset; });
   offsetIndices(b, clonedOp, allIvs);
 
   return clonedOp;
@@ -277,7 +278,7 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
   // mismatches. Insert a `tensor.cast` op to propagate the transformation
   // invariant that types are compatible.
   if (consumerType != def.getType())
-    def = b.create<tensor::CastOp>(fusedProducer.getLoc(), consumerType, def);
+    def = tensor::CastOp::create(b, fusedProducer.getLoc(), consumerType, def);
   consumerOpOperand.set(def);
   return FusionInfo{cast<LinalgOp>(producerOpResult.getOwner()), fusedProducer};
 }

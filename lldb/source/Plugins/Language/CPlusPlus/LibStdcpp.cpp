@@ -9,18 +9,21 @@
 #include "LibStdcpp.h"
 #include "LibCxx.h"
 
+#include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
 #include "Plugins/Language/CPlusPlus/Generic.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/VectorIterator.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "llvm/Support/ErrorExtras.h"
 #include <optional>
 
 using namespace lldb;
@@ -28,6 +31,8 @@ using namespace lldb_private;
 using namespace lldb_private::formatters;
 
 namespace {
+
+using StringElementType = StringPrinter::StringElementType;
 
 class LibstdcppMapIteratorSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
   /*
@@ -73,7 +78,6 @@ public:
   llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
-
   // The lifetime of a ValueObject and all its derivative ValueObjects
   // (children, clones, etc.) is managed by a ClusterManager. These
   // objects are only destroyed when every shared pointer to any of them
@@ -139,8 +143,8 @@ lldb::ValueObjectSP
 LibstdcppMapIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (m_pair_address != 0 && m_pair_type) {
     if (!m_pair_sp)
-      m_pair_sp = CreateValueObjectFromAddress("pair", m_pair_address,
-                                               m_exe_ctx_ref, m_pair_type);
+      m_pair_sp = CreateChildValueObjectFromAddress("pair", m_pair_address,
+                                                    m_exe_ctx_ref, m_pair_type);
     if (m_pair_sp)
       return m_pair_sp->GetChildAtIndex(idx);
   }
@@ -154,8 +158,7 @@ LibstdcppMapIteratorSyntheticFrontEnd::GetIndexOfChildWithName(
     return 0;
   if (name == "second")
     return 1;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 SyntheticChildrenFrontEnd *
@@ -199,9 +202,6 @@ lldb::ChildCacheState VectorIteratorSyntheticFrontEnd::Update() {
   if (!valobj_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  if (!valobj_sp)
-    return lldb::ChildCacheState::eRefetch;
-
   ValueObjectSP item_ptr =
       formatters::GetChildMemberWithName(*valobj_sp, m_item_names);
   if (!item_ptr)
@@ -210,7 +210,7 @@ lldb::ChildCacheState VectorIteratorSyntheticFrontEnd::Update() {
     return lldb::ChildCacheState::eRefetch;
   Status err;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
-  m_item_sp = CreateValueObjectFromAddress(
+  m_item_sp = CreateChildValueObjectFromAddress(
       "item", item_ptr->GetValueAsUnsigned(0), m_exe_ctx_ref,
       item_ptr->GetCompilerType().GetPointeeType());
   if (err.Fail())
@@ -234,19 +234,101 @@ llvm::Expected<size_t>
 VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "item")
     return 0;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 bool lldb_private::formatters::LibStdcppStringSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   ValueObjectSP ptr = valobj.GetChildAtNamePath({"_M_dataplus", "_M_p"});
-  if (!ptr)
-    return false;
+  if (!ptr || !ptr->GetError().Success())
+    stream << "Summary Unavailable";
+  else
+    stream << ptr->GetSummaryAsCString();
 
-  stream << ptr->GetSummaryAsCString();
   return true;
 }
+
+template <StringPrinter::StringElementType element_type>
+static bool formatStringViewImpl(ValueObject &valobj, Stream &stream,
+                                 const TypeSummaryOptions &summary_options,
+                                 std::string prefix_token) {
+  auto data_sp = valobj.GetChildMemberWithName("_M_str");
+  auto size_sp = valobj.GetChildMemberWithName("_M_len");
+  if (!data_sp || !size_sp)
+    return false;
+
+  bool success = false;
+  uint64_t size = size_sp->GetValueAsUnsigned(0, &success);
+  if (!success) {
+    stream << "Summary Unavailable";
+    return true;
+  }
+
+  StreamString scratch_stream;
+  success = StringBufferSummaryProvider<element_type>(
+      scratch_stream, summary_options, data_sp, size, prefix_token);
+
+  if (success)
+    stream << scratch_stream.GetData();
+  else
+    stream << "Summary Unavailable";
+  return true;
+}
+
+bool lldb_private::formatters::LibStdcppWStringViewSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  auto wchar_t_size = GetWCharByteSize(valobj);
+  if (!wchar_t_size)
+    return false;
+
+  switch (*wchar_t_size) {
+  case 1:
+    return formatStringViewImpl<StringElementType::UTF8>(valobj, stream,
+                                                         options, "L");
+  case 2:
+    return formatStringViewImpl<StringElementType::UTF16>(valobj, stream,
+                                                          options, "L");
+  case 4:
+    return formatStringViewImpl<StringElementType::UTF32>(valobj, stream,
+                                                          options, "L");
+  }
+  return false;
+}
+
+template <StringElementType element_type>
+static constexpr const char *getPrefixToken() {
+  switch (element_type) {
+  case StringElementType::ASCII:
+    return "";
+  case StringElementType::UTF8:
+    return "u8";
+  case StringElementType::UTF16:
+    return "u";
+  case StringElementType::UTF32:
+    return "U";
+  }
+  llvm_unreachable("invalid element type");
+}
+
+template <StringPrinter::StringElementType element_type>
+bool lldb_private::formatters::LibStdcppStringViewSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  return formatStringViewImpl<element_type>(valobj, stream, options,
+                                            getPrefixToken<element_type>());
+}
+
+template bool lldb_private::formatters::LibStdcppStringViewSummaryProvider<
+    StringElementType::ASCII>(ValueObject &, Stream &,
+                              const TypeSummaryOptions &);
+template bool lldb_private::formatters::LibStdcppStringViewSummaryProvider<
+    StringElementType::UTF8>(ValueObject &, Stream &,
+                             const TypeSummaryOptions &);
+template bool lldb_private::formatters::LibStdcppStringViewSummaryProvider<
+    StringElementType::UTF16>(ValueObject &, Stream &,
+                              const TypeSummaryOptions &);
+template bool lldb_private::formatters::LibStdcppStringViewSummaryProvider<
+    StringElementType::UTF32>(ValueObject &, Stream &,
+                              const TypeSummaryOptions &);
 
 LibStdcppSharedPtrSyntheticFrontEnd::LibStdcppSharedPtrSyntheticFrontEnd(
     lldb::ValueObjectSP valobj_sp)
@@ -298,7 +380,7 @@ lldb::ChildCacheState LibStdcppSharedPtrSyntheticFrontEnd::Update() {
   if (!cast_ptr_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  m_ptr_obj = cast_ptr_sp->Clone(ConstString("pointer")).get();
+  m_ptr_obj = cast_ptr_sp->Clone("pointer").get();
 
   return lldb::ChildCacheState::eRefetch;
 }
@@ -311,8 +393,7 @@ LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "object" || name == "$$dereference$$")
     return 1;
 
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 SyntheticChildrenFrontEnd *
@@ -364,5 +445,134 @@ bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
     stream.Printf(" weak=%" PRId64, count - (shared_count != 0));
   }
 
+  return true;
+}
+
+static uint64_t LibStdcppVariantNposValue(size_t index_byte_size) {
+  switch (index_byte_size) {
+  case 1:
+    return 0xff;
+  case 2:
+    return 0xffff;
+  default:
+    return 0xffff'ffff;
+  }
+}
+
+bool formatters::LibStdcppVariantSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ValueObjectSP valobj_sp = valobj.GetNonSyntheticValue();
+  if (!valobj_sp)
+    return false;
+
+  ValueObjectSP index_obj = valobj_sp->GetChildMemberWithName("_M_index");
+  ValueObjectSP data_obj = valobj_sp->GetChildMemberWithName("_M_u");
+  if (!index_obj || !data_obj)
+    return false;
+
+  auto index_bytes_or_err = index_obj->GetByteSize();
+  if (!index_bytes_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters),
+                   index_bytes_or_err.takeError(),
+                   "failed to get variant index byte size: {0}");
+    return false;
+  }
+  auto npos_value = LibStdcppVariantNposValue(*index_bytes_or_err);
+  auto index = index_obj->GetValueAsUnsigned(0);
+  if (index == npos_value) {
+    stream.Printf(" No Value");
+    return true;
+  }
+
+  auto variant_type =
+      valobj_sp->GetCompilerType().GetCanonicalType().GetNonReferenceType();
+  if (!variant_type)
+    return false;
+  if (index >= variant_type.GetNumTemplateArguments(true)) {
+    stream.Printf(" <Invalid>");
+    return true;
+  }
+
+  auto active_type = variant_type.GetTypeTemplateArgument(index, true);
+  stream << " Active Type = " << active_type.GetDisplayTypeName() << " ";
+  return true;
+}
+
+static std::optional<int64_t>
+LibStdcppExtractOrderingValue(ValueObject &valobj) {
+  lldb::ValueObjectSP value_sp = valobj.GetChildMemberWithName("_M_value");
+  if (!value_sp)
+    return std::nullopt;
+  bool success;
+  int64_t value = value_sp->GetValueAsSigned(0, &success);
+  if (!success)
+    return std::nullopt;
+  return value;
+}
+
+bool lldb_private::formatters::LibStdcppPartialOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibStdcppExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equivalent";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  case -128:
+  case 2:
+    stream << "unordered";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::LibStdcppWeakOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibStdcppExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equivalent";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::LibStdcppStrongOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibStdcppExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equal";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  default:
+    return false;
+  }
   return true;
 }

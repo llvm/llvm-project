@@ -34,48 +34,104 @@ respectively.
 
 MCP uses standard input/output (stdio) for communication between client and
 server. The exact configuration depends on the client, but most applications
-allow you to specify an MCP server as a binary and arguments. This means that
-you need to use something like `netcat` to connect to LLDB's MCP server and
-forward communication over stdio over the network connection.
+allow you to specify an MCP server as a binary and arguments. LLDB ships with
+`lldb-mcp`, a small helper that bridges stdio to LLDB's MCP server socket.
 
 ```
 ┌──────────┐               ┌──────────┐               ┌──────────┐
 │          │               │          │               │          │
-│   LLDB   ├─────socket────┤  netcat  ├─────stdio─────┤MCP Client│
+│   LLDB   ├─────socket────┤ lldb-mcp ├─────stdio─────┤MCP Client│
 │          │               │          │               │          │
 └──────────┘               └──────────┘               └──────────┘
 ```
 
+`lldb-mcp` automatically discovers a running LLDB MCP server, so there is no
+need to specify a port. If no server is running, it will launch `lldb` in the
+background and connect to it. The `lldb` binary located next to `lldb-mcp` is
+used by default; set the `LLDB_EXE_PATH` environment variable to override this.
+
 Configuration example for [Claude Code](https://modelcontextprotocol.io/quickstart/user):
 
+```
+claude mcp add --transport stdio -- lldb-mcp /path/to/lldb-mcp
+```
+
+Configuration example (`mcp.json`) for [Visual Studio Code](https://code.visualstudio.com/docs/copilot/chat/mcp-servers):
+
 ```json
 {
-  "mcpServers": {
-    "tool": {
-      "command": "/usr/bin/nc",
-      "args": ["localhost", "59999"]
+  "servers": {
+    "lldb": {
+      "type": "stdio",
+      "command": "/path/to/lldb-mcp"
     }
   }
 }
 ```
 
-Configuration example for [Visual Studio Code](https://code.visualstudio.com/docs/copilot/chat/mcp-servers):
+## Tools
+
+Tools are a primitive in the Model Context Protocol that enable servers to
+expose functionality to clients.
+
+LLDB's MCP integration exposes one tool, named `lldb_command` which allows the
+model to run the same commands a user would type in the LLDB command
+interpreter. It takes two arguments:
+
+1. The unique debugger ID as a number.
+2. The command and its arguments as a string.
+
+## Resources
+
+Resources are a primitive in the Model Context Protocol that allow servers to
+expose content that can be read by clients.
+
+LLDB's MCP integration exposes a resource for each debugger and target
+instance. Debugger resources are accessible using the following URI:
+
+```
+lldb://debugger/<debugger id>
+```
+
+Example output:
 
 ```json
 {
-  "mcp": {
-    "servers": {
-      "lldb": {
-        "type": "stdio",
-        "command": "/usr/bin/nc",
-        "args": ["localhost", "59999"]
-      }
+  "contents": [
+    {
+      "uri": "lldb://debugger/1",
+      "mimeType": "application/json",
+      "text": "{\"debugger_id\":1,\"name\":\"debugger_1\",\"num_targets\":1}"
     }
-  }
+  ]
 }
 ```
 
-### Troubleshooting
+Debuggers can contain one or more targets, which are accessible using the
+following URI:
+
+```
+lldb://debugger/<debugger id>/target/<target idx>
+```
+
+Example output:
+
+```json
+{
+  "contents": [
+    {
+      "uri": "lldb://debugger/1/target/0",
+      "mimeType": "application/json",
+      "text": "{\"arch\":\"arm64-apple-macosx26.0.0\",\"debugger_id\":1,\"dummy\":false,\"path\":\"/bin/count\",\"platform\":\"host\",\"selected\":true,\"target_idx\":0}"
+    }
+  ]
+}
+```
+
+Note that unlike the debugger id, which is unique, the target index is not
+stable and may be reused when a target is removed and a new target is added.
+
+## Troubleshooting
 
 The MCP server uses the `Host` log channel. You can enable logging with the
 `log enable` command.

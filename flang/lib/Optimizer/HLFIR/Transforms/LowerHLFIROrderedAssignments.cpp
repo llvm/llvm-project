@@ -18,6 +18,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ScheduleOrderedAssignments.h"
+#include "flang/Common/Fortran-consts.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/TemporaryStorage.h"
@@ -96,7 +97,7 @@ struct MaskedArrayExpr {
   /// hlfir.elemental_addr that form the elemental tree producing
   /// the expression value. hlfir.elemental that produce values
   /// used inside transformational operations are not part of this set.
-  llvm::SmallSet<mlir::Operation *, 4> elementalParts{};
+  hlfir::ElementalTree elementalParts;
   /// Was generateNoneElementalPart called?
   bool noneElementalPartWasGenerated = false;
   /// Is this expression the mask expression of the outer where statement?
@@ -257,6 +258,11 @@ private:
   bool currentLoopNestIterationNumberCanBeComputed(
       llvm::SmallVectorImpl<fir::DoLoopOp> &loopNest);
 
+  /// Return the induction variables of the enclosing fir.do_loop nest at the
+  /// current insertion point, innermost first (same order as
+  /// currentLoopNestIterationNumberCanBeComputed).
+  llvm::SmallVector<mlir::Value> getLoopIndices();
+
   template <typename T>
   fir::factory::TemporaryStorage *insertSavedEntity(mlir::Region &region,
                                                     T &&temp) {
@@ -377,7 +383,7 @@ void OrderedAssignmentRewriter::pre(hlfir::ForallOp forallOp) {
   } else {
     step = generateYieldedScalarValue(forallOp.getStepRegion(), idxTy);
   }
-  auto doLoop = builder.create<fir::DoLoopOp>(loc, lb, ub, step);
+  auto doLoop = fir::DoLoopOp::create(builder, loc, lb, ub, step);
   builder.setInsertionPointToStart(doLoop.getBody());
   mlir::Value oldIndex = forallOp.getForallIndexValue();
   mlir::Value newIndex =
@@ -405,7 +411,7 @@ void OrderedAssignmentRewriter::pre(hlfir::ForallMaskOp forallMaskOp) {
   mlir::Location loc = forallMaskOp.getLoc();
   mlir::Value mask = generateYieldedScalarValue(forallMaskOp.getMaskRegion(),
                                                 builder.getI1Type());
-  auto ifOp = builder.create<fir::IfOp>(loc, std::nullopt, mask, false);
+  auto ifOp = fir::IfOp::create(builder, loc, mlir::TypeRange{}, mask, false);
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   constructStack.push_back(ifOp);
 }
@@ -431,14 +437,14 @@ convertToMoldType(mlir::Location loc, fir::FirOpBuilder &builder,
   if (input.isVariable() && mold.isValue()) {
     if (fir::isa_trivial(mold.getType())) {
       // fir.ref<T> to T.
-      mlir::Value load = builder.create<fir::LoadOp>(loc, input);
+      mlir::Value load = fir::LoadOp::create(builder, loc, input);
       return hlfir::Entity{builder.createConvert(loc, mold.getType(), load)};
     }
     // fir.ref<T> to hlfir.expr<T>.
-    mlir::Value asExpr = builder.create<hlfir::AsExprOp>(loc, input);
+    mlir::Value asExpr = hlfir::AsExprOp::create(builder, loc, input);
     if (asExpr.getType() != mold.getType())
       TODO(loc, "hlfir.expr conversion");
-    cleanups.emplace_back([=]() { b->create<hlfir::DestroyOp>(loc, asExpr); });
+    cleanups.emplace_back([=]() { hlfir::DestroyOp::create(*b, loc, asExpr); });
     return hlfir::Entity{asExpr};
   }
   if (input.isValue() && mold.isVariable()) {
@@ -446,7 +452,7 @@ convertToMoldType(mlir::Location loc, fir::FirOpBuilder &builder,
     hlfir::AssociateOp associate = hlfir::genAssociateExpr(
         loc, builder, input, mold.getFortranElementType(), ".tmp.val2ref");
     cleanups.emplace_back(
-        [=]() { b->create<hlfir::EndAssociateOp>(loc, associate); });
+        [=]() { hlfir::EndAssociateOp::create(*b, loc, associate); });
     return hlfir::Entity{associate.getBase()};
   }
   // Variable to Variable mismatch (e.g., fir.heap<T> vs fir.ref<T>), or value
@@ -517,7 +523,10 @@ void OrderedAssignmentRewriter::pre(hlfir::RegionAssignOp regionAssignOp) {
   } else {
     // TODO: preserve allocatable assignment aspects for forall once
     // they are conveyed in hlfir.region_assign.
-    builder.create<hlfir::AssignOp>(loc, rhsEntity, lhsEntity);
+    auto assignOp = hlfir::AssignOp::create(builder, loc, rhsEntity, lhsEntity);
+    if (auto accessGroups = regionAssignOp->getAttrOfType<mlir::ArrayAttr>(
+            fir::getAccessGroupsAttrName()))
+      assignOp->setAttr(fir::getAccessGroupsAttrName(), accessGroups);
   }
   generateCleanupIfAny(loweredLhs.elementalCleanup);
   if (loweredLhs.vectorSubscriptLoopNest)
@@ -530,8 +539,8 @@ void OrderedAssignmentRewriter::generateMaskIfOp(mlir::Value cdt) {
   mlir::Location loc = cdt.getLoc();
   cdt = hlfir::loadTrivialScalar(loc, builder, hlfir::Entity{cdt});
   cdt = builder.createConvert(loc, builder.getI1Type(), cdt);
-  auto ifOp = builder.create<fir::IfOp>(cdt.getLoc(), std::nullopt, cdt,
-                                        /*withElseRegion=*/false);
+  auto ifOp = fir::IfOp::create(builder, cdt.getLoc(), mlir::TypeRange{}, cdt,
+                                /*withElseRegion=*/false);
   constructStack.push_back(ifOp.getOperation());
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
 }
@@ -604,7 +613,7 @@ void OrderedAssignmentRewriter::enterElsewhere(hlfir::ElseWhereOp elseWhereOp) {
   if (ifOp.getElseRegion().empty()) {
     mlir::Location loc = elseWhereOp.getLoc();
     builder.createBlock(&ifOp.getElseRegion());
-    auto end = builder.create<fir::ResultOp>(loc);
+    auto end = fir::ResultOp::create(builder, loc);
     builder.setInsertionPoint(end);
   } else {
     builder.setInsertionPoint(&ifOp.getElseRegion().back().back());
@@ -666,7 +675,8 @@ OrderedAssignmentRewriter::getIfSaved(mlir::Region &region) {
   // If the region was saved in a previous run, fetch the saved value.
   if (auto temp = savedEntities.find(&region); temp != savedEntities.end()) {
     doBeforeLoopNest([&]() { temp->second.resetFetchPosition(loc, builder); });
-    return ValueAndCleanUp{temp->second.fetch(loc, builder), std::nullopt};
+    return ValueAndCleanUp{temp->second.fetch(loc, builder, getLoopIndices()),
+                           std::nullopt};
   }
   return std::nullopt;
 }
@@ -897,62 +907,11 @@ bool OrderedAssignmentRewriter::isRequiredInCurrentRun(
   return false;
 }
 
-/// Is the apply using all the elemental indices in order?
-static bool isInOrderApply(hlfir::ApplyOp apply,
-                           hlfir::ElementalOpInterface elemental) {
-  mlir::Region::BlockArgListType elementalIndices = elemental.getIndices();
-  if (elementalIndices.size() != apply.getIndices().size())
-    return false;
-  for (auto [elementalIdx, applyIdx] :
-       llvm::zip(elementalIndices, apply.getIndices()))
-    if (elementalIdx != applyIdx)
-      return false;
-  return true;
-}
-
-/// Gather the tree of hlfir::ElementalOpInterface use-def, if any, starting
-/// from \p elemental, which may be a nullptr.
-static void
-gatherElementalTree(hlfir::ElementalOpInterface elemental,
-                    llvm::SmallPtrSetImpl<mlir::Operation *> &elementalOps,
-                    bool isOutOfOrder) {
-  if (elemental) {
-    // Only inline an applied elemental that must be executed in order if the
-    // applying indices are in order. An hlfir::Elemental may have been created
-    // for a transformational like transpose, and Fortran 2018 standard
-    // section 10.2.3.2, point 10 imply that impure elemental sub-expression
-    // evaluations should not be masked if they are the arguments of
-    // transformational expressions.
-    if (isOutOfOrder && elemental.isOrdered())
-      return;
-    elementalOps.insert(elemental.getOperation());
-    for (mlir::Operation &op : elemental.getElementalRegion().getOps())
-      if (auto apply = mlir::dyn_cast<hlfir::ApplyOp>(op)) {
-        bool isUnorderedApply =
-            isOutOfOrder || !isInOrderApply(apply, elemental);
-        auto maybeElemental =
-            mlir::dyn_cast_or_null<hlfir::ElementalOpInterface>(
-                apply.getExpr().getDefiningOp());
-        gatherElementalTree(maybeElemental, elementalOps, isUnorderedApply);
-      }
-  }
-}
-
 MaskedArrayExpr::MaskedArrayExpr(mlir::Location loc, mlir::Region &region,
                                  bool isOuterMaskExpr)
     : loc{loc}, region{region}, isOuterMaskExpr{isOuterMaskExpr} {
   mlir::Operation &terminator = region.back().back();
-  if (auto elementalAddr =
-          mlir::dyn_cast<hlfir::ElementalOpInterface>(terminator)) {
-    // Vector subscripted designator (hlfir.elemental_addr terminator).
-    gatherElementalTree(elementalAddr, elementalParts, /*isOutOfOrder=*/false);
-    return;
-  }
-  // Try if elemental expression.
-  mlir::Value entity = mlir::cast<hlfir::YieldOp>(terminator).getEntity();
-  auto maybeElemental = mlir::dyn_cast_or_null<hlfir::ElementalOpInterface>(
-      entity.getDefiningOp());
-  gatherElementalTree(maybeElemental, elementalParts, /*isOutOfOrder=*/false);
+  elementalParts = hlfir::ElementalTree::buildElementalTree(terminator);
 }
 
 void MaskedArrayExpr::generateNoneElementalPart(fir::FirOpBuilder &builder,
@@ -1150,10 +1109,66 @@ computeLoopNestIterationNumber(mlir::Location loc, fir::FirOpBuilder &builder,
     if (!loopExtent)
       loopExtent = extent;
     else
-      loopExtent = builder.create<mlir::arith::MulIOp>(loc, loopExtent, extent);
+      loopExtent =
+          mlir::arith::MulIOp::create(builder, loc, loopExtent, extent);
   }
   assert(loopExtent && "loopNest must not be empty");
   return loopExtent;
+}
+
+/// If \p value is a compile-time integer constant (possibly hidden behind
+/// fir.convert ops), return its value. Otherwise return std::nullopt.
+static std::optional<int64_t> unwrapConstantInt(mlir::Value value) {
+  while (auto convert = value.getDefiningOp<fir::ConvertOp>())
+    value = convert.getValue();
+  return fir::getIntIfConstant(value);
+}
+
+/// Compute the extents and lower bounds of \p loopNest, in the same order as
+/// \p loopNest (innermost first). The lower bound of each dimension is the
+/// smallest induction variable value, so that the loop induction variable
+/// can directly index the temp via fir.shape_shift. This only works when
+/// every loop has a unit step: for step +1 the smallest iv is the loop's
+/// lower bound; for step -1 it is the loop's upper bound. Returns false
+/// (with \p extents and \p lowerBounds left in an unspecified state) when
+/// any loop has a non-unit or non-constant step, signalling that the caller
+/// should fall back to a counter-based temp.
+static bool computeLoopNestExtentsAndLowerBounds(
+    mlir::Location loc, fir::FirOpBuilder &builder,
+    llvm::ArrayRef<fir::DoLoopOp> loopNest,
+    llvm::SmallVectorImpl<mlir::Value> &extents,
+    llvm::SmallVectorImpl<mlir::Value> &lowerBounds) {
+  extents.reserve(loopNest.size());
+  lowerBounds.reserve(loopNest.size());
+  for (fir::DoLoopOp doLoop : loopNest) {
+    auto step = unwrapConstantInt(doLoop.getStep());
+    if (!step || std::abs(*step) != 1)
+      return false;
+    mlir::Value extent = builder.genExtentFromTriplet(
+        loc, doLoop.getLowerBound(), doLoop.getUpperBound(), doLoop.getStep(),
+        builder.getIndexType());
+    extents.push_back(extent);
+    lowerBounds.push_back(*step == 1 ? doLoop.getLowerBound()
+                                     : doLoop.getUpperBound());
+  }
+  return true;
+}
+
+llvm::SmallVector<mlir::Value> OrderedAssignmentRewriter::getLoopIndices() {
+  llvm::SmallVector<mlir::Value> indices;
+  if (constructStack.empty())
+    return indices;
+  mlir::Operation *outerLoop = constructStack[0];
+  mlir::Operation *currentConstruct = constructStack.back();
+  while (currentConstruct) {
+    if (auto doLoop = mlir::dyn_cast<fir::DoLoopOp>(currentConstruct))
+      indices.push_back(doLoop.getInductionVar());
+    if (currentConstruct == outerLoop)
+      currentConstruct = nullptr;
+    else
+      currentConstruct = currentConstruct->getParentOp();
+  }
+  return indices;
 }
 
 /// Return a name for temporary storage that indicates in which context
@@ -1207,11 +1222,27 @@ void OrderedAssignmentRewriter::generateSaveEntity(
     bool loopShapeCanBePreComputed =
         currentLoopNestIterationNumberCanBeComputed(loopNest);
     doBeforeLoopNest([&] {
-      /// For simple scalars inside loops whose total iteration number can be
-      /// pre-computed, create a rank-1 array outside of the loops. It will be
-      /// assigned/fetched inside the loops like a normal Fortran array given
-      /// the iteration count.
-      if (loopShapeCanBePreComputed && fir::isa_trivial(entityType)) {
+      // For simple scalars in a precomputable loop nest, prefer the
+      // multidimensional ArrayTemp (indexed by loop induction variables) so
+      // there is no loop-carried counter. Fall back to the 1D counter-based
+      // HomogeneousScalarStack when the nest is deeper than the maximum
+      // fir.array rank or when any loop has a non-unit/non-constant step
+      // (in which case the loop induction variable cannot index the temp
+      // directly).
+      llvm::SmallVector<mlir::Value> tempExtents;
+      llvm::SmallVector<mlir::Value> tempLowerBounds;
+      if (loopShapeCanBePreComputed && fir::isa_trivial(entityType) &&
+          loopNest.size() <= static_cast<size_t>(Fortran::common::maxRank) &&
+          computeLoopNestExtentsAndLowerBounds(loc, builder, loopNest,
+                                               tempExtents, tempLowerBounds)) {
+        auto sequenceType = mlir::cast<fir::SequenceType>(
+            builder.getVarLenSeqTy(entityType, /*rank=*/loopNest.size()));
+        temp = insertSavedEntity(
+            region,
+            fir::factory::ArrayTemp{loc, builder, sequenceType, tempExtents,
+                                    tempLowerBounds,
+                                    /*lengths=*/{}, allocateOnHeap, tempName});
+      } else if (loopShapeCanBePreComputed && fir::isa_trivial(entityType)) {
         mlir::Value loopExtent =
             computeLoopNestIterationNumber(loc, builder, loopNest);
         auto sequenceType =
@@ -1221,7 +1252,6 @@ void OrderedAssignmentRewriter::generateSaveEntity(
                                      loc, builder, sequenceType, loopExtent,
                                      /*lenParams=*/{}, allocateOnHeap,
                                      /*stackThroughLoops=*/true, tempName});
-
       } else {
         // If the number of iteration is not known, or if the values at each
         // iterations are values that may have different shape, type parameters
@@ -1232,8 +1262,8 @@ void OrderedAssignmentRewriter::generateSaveEntity(
       }
     });
     // Inside the loop nest (and any fir.if if there are active masks), copy
-    // the value to the temp and do clean-ups for the value if any.
-    temp->pushValue(loc, builder, entity);
+    // the value to the temp and do clean-ups of the value if any.
+    temp->pushValue(loc, builder, entity, getLoopIndices());
   }
 
   // Delay the clean-up if the entity will be used in the same run (i.e., the

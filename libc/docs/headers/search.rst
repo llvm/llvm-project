@@ -2,8 +2,6 @@
 search.h
 ========
 
-.. include:: ../check.rst
-
 ---------------
 Source Location
 ---------------
@@ -29,7 +27,7 @@ Type Name                    Available
 ============================ =========
 ACTION                       |check|
 ENTRY                        |check|
-VISIT
+VISIT                        |check|
 ============================ =========
 
 POSIX Standard Functions
@@ -43,7 +41,7 @@ hdestroy                     |check|
 hsearch                      |check|
 insque                       |check|
 lfind                        |check|
-lsearch
+lsearch                      |check|
 remque                       |check|
 tdelete
 tfind

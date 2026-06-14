@@ -132,7 +132,7 @@ void ModuleOp::build(OpBuilder &builder, OperationState &state,
 /// Construct a module from the given context.
 ModuleOp ModuleOp::create(Location loc, std::optional<StringRef> name) {
   OpBuilder builder(loc->getContext());
-  return builder.create<ModuleOp>(loc, name);
+  return ModuleOp::create(builder, loc, name);
 }
 
 DataLayoutSpecInterface ModuleOp::getDataLayoutSpec() {

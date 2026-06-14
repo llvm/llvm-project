@@ -36,12 +36,11 @@ protected:
   OpBuildGenTest()
       : ctx(getContext()), builder(&ctx), loc(builder.getUnknownLoc()),
         i32Ty(builder.getI32Type()), f32Ty(builder.getF32Type()),
-        cstI32(builder.create<test::TableGenConstant>(loc, i32Ty)),
-        cstF32(builder.create<test::TableGenConstant>(loc, f32Ty)),
-        noAttrs(), attrStorage{builder.getNamedAttr("attr0",
-                                                    builder.getBoolAttr(true)),
-                               builder.getNamedAttr(
-                                   "attr1", builder.getI32IntegerAttr(33))},
+        cstI32(test::TableGenConstant::create(builder, loc, i32Ty)),
+        cstF32(test::TableGenConstant::create(builder, loc, f32Ty)), noAttrs(),
+        attrStorage{
+            builder.getNamedAttr("attr0", builder.getBoolAttr(true)),
+            builder.getNamedAttr("attr1", builder.getI32IntegerAttr(33))},
         attrs(attrStorage) {}
 
   // Verify that `op` has the given set of result types, operands, and
@@ -123,21 +122,21 @@ protected:
 /// Test basic build methods.
 TEST_F(OpBuildGenTest, BasicBuildMethods) {
   // Test separate args, separate results build method.
-  auto op = builder.create<test::TableGenBuildOp0>(loc, i32Ty, *cstI32);
+  auto op = test::TableGenBuildOp0::create(builder, loc, i32Ty, *cstI32);
   verifyOp(op, {i32Ty}, {*cstI32}, noAttrs);
 
   // Test separate args, collective results build method.
-  op = builder.create<test::TableGenBuildOp0>(loc, TypeRange{i32Ty}, *cstI32);
+  op = test::TableGenBuildOp0::create(builder, loc, TypeRange{i32Ty}, *cstI32);
   verifyOp(op, {i32Ty}, {*cstI32}, noAttrs);
 
   // Test collective args, collective params build method.
-  op = builder.create<test::TableGenBuildOp0>(loc, TypeRange{i32Ty},
-                                              ValueRange{*cstI32});
+  op = test::TableGenBuildOp0::create(builder, loc, TypeRange{i32Ty},
+                                      ValueRange{*cstI32});
   verifyOp(op, {i32Ty}, {*cstI32}, noAttrs);
 
   // Test collective args, collective results, non-empty attributes
-  op = builder.create<test::TableGenBuildOp0>(loc, TypeRange{i32Ty},
-                                              ValueRange{*cstI32}, attrs);
+  op = test::TableGenBuildOp0::create(builder, loc, TypeRange{i32Ty},
+                                      ValueRange{*cstI32}, attrs);
   verifyOp(op, {i32Ty}, {*cstI32}, attrs);
 }
 
@@ -154,25 +153,25 @@ TEST_F(OpBuildGenTest, BasicBuildMethods) {
 /// variadic result.
 TEST_F(OpBuildGenTest, BuildMethodsSingleVariadicArgAndResult) {
   // Test collective args, collective results method, building a unary op.
-  auto op = builder.create<test::TableGenBuildOp1>(loc, TypeRange{i32Ty},
-                                                   ValueRange{*cstI32});
+  auto op = test::TableGenBuildOp1::create(builder, loc, TypeRange{i32Ty},
+                                           ValueRange{*cstI32});
   verifyOp(op, {i32Ty}, {*cstI32}, noAttrs);
 
   // Test collective args, collective results method, building a unary op with
   // named attributes.
-  op = builder.create<test::TableGenBuildOp1>(loc, TypeRange{i32Ty},
-                                              ValueRange{*cstI32}, attrs);
+  op = test::TableGenBuildOp1::create(builder, loc, TypeRange{i32Ty},
+                                      ValueRange{*cstI32}, attrs);
   verifyOp(op, {i32Ty}, {*cstI32}, attrs);
 
   // Test collective args, collective results method, building a binary op.
-  op = builder.create<test::TableGenBuildOp1>(loc, TypeRange{i32Ty, f32Ty},
-                                              ValueRange{*cstI32, *cstF32});
+  op = test::TableGenBuildOp1::create(builder, loc, TypeRange{i32Ty, f32Ty},
+                                      ValueRange{*cstI32, *cstF32});
   verifyOp(op, {i32Ty, f32Ty}, {*cstI32, *cstF32}, noAttrs);
 
   // Test collective args, collective results method, building a binary op with
   // named attributes.
-  op = builder.create<test::TableGenBuildOp1>(
-      loc, TypeRange{i32Ty, f32Ty}, ValueRange{*cstI32, *cstF32}, attrs);
+  op = test::TableGenBuildOp1::create(builder, loc, TypeRange{i32Ty, f32Ty},
+                                      ValueRange{*cstI32, *cstF32}, attrs);
   verifyOp(op, {i32Ty, f32Ty}, {*cstI32, *cstF32}, attrs);
 }
 
@@ -181,22 +180,22 @@ TEST_F(OpBuildGenTest, BuildMethodsSingleVariadicArgAndResult) {
 TEST_F(OpBuildGenTest, BuildMethodsSingleVariadicArgNonVariadicResults) {
   // Test separate arg, separate param build method.
   auto op =
-      builder.create<test::TableGenBuildOp1>(loc, i32Ty, ValueRange{*cstI32});
+      test::TableGenBuildOp1::create(builder, loc, i32Ty, ValueRange{*cstI32});
   verifyOp(op, {i32Ty}, {*cstI32}, noAttrs);
 
   // Test collective params build method, no attributes.
-  op = builder.create<test::TableGenBuildOp1>(loc, TypeRange{i32Ty},
-                                              ValueRange{*cstI32});
+  op = test::TableGenBuildOp1::create(builder, loc, TypeRange{i32Ty},
+                                      ValueRange{*cstI32});
   verifyOp(op, {i32Ty}, {*cstI32}, noAttrs);
 
   // Test collective params build method no attributes, 2 inputs.
-  op = builder.create<test::TableGenBuildOp1>(loc, TypeRange{i32Ty},
-                                              ValueRange{*cstI32, *cstF32});
+  op = test::TableGenBuildOp1::create(builder, loc, TypeRange{i32Ty},
+                                      ValueRange{*cstI32, *cstF32});
   verifyOp(op, {i32Ty}, {*cstI32, *cstF32}, noAttrs);
 
   // Test collective params build method, non-empty attributes.
-  op = builder.create<test::TableGenBuildOp1>(
-      loc, TypeRange{i32Ty}, ValueRange{*cstI32, *cstF32}, attrs);
+  op = test::TableGenBuildOp1::create(builder, loc, TypeRange{i32Ty},
+                                      ValueRange{*cstI32, *cstF32}, attrs);
   verifyOp(op, {i32Ty}, {*cstI32, *cstF32}, attrs);
 }
 
@@ -205,18 +204,18 @@ TEST_F(OpBuildGenTest, BuildMethodsSingleVariadicArgNonVariadicResults) {
 TEST_F(OpBuildGenTest,
        BuildMethodsSingleVariadicArgAndMultipleVariadicResults) {
   // Test separate arg, separate param build method.
-  auto op = builder.create<test::TableGenBuildOp3>(
-      loc, TypeRange{i32Ty}, TypeRange{f32Ty}, ValueRange{*cstI32});
+  auto op = test::TableGenBuildOp3::create(
+      builder, loc, TypeRange{i32Ty}, TypeRange{f32Ty}, ValueRange{*cstI32});
   verifyOp(op, {i32Ty, f32Ty}, {*cstI32}, noAttrs);
 
   // Test collective params build method, no attributes.
-  op = builder.create<test::TableGenBuildOp3>(loc, TypeRange{i32Ty, f32Ty},
-                                              ValueRange{*cstI32});
+  op = test::TableGenBuildOp3::create(builder, loc, TypeRange{i32Ty, f32Ty},
+                                      ValueRange{*cstI32});
   verifyOp(op, {i32Ty, f32Ty}, {*cstI32}, noAttrs);
 
   // Test collective params build method, with attributes.
-  op = builder.create<test::TableGenBuildOp3>(loc, TypeRange{i32Ty, f32Ty},
-                                              ValueRange{*cstI32}, attrs);
+  op = test::TableGenBuildOp3::create(builder, loc, TypeRange{i32Ty, f32Ty},
+                                      ValueRange{*cstI32}, attrs);
   verifyOp(op, {i32Ty, f32Ty}, {*cstI32}, attrs);
 }
 
@@ -227,29 +226,29 @@ TEST_F(OpBuildGenTest,
 // build methods with no result types as they are inferred from the input types.
 TEST_F(OpBuildGenTest, BuildMethodsSameOperandsAndResultTypeSuppression) {
   // Test separate arg, separate param build method.
-  auto op = builder.create<test::TableGenBuildOp4>(
-      loc, i32Ty, ValueRange{*cstI32, *cstI32});
+  auto op = test::TableGenBuildOp4::create(builder, loc, i32Ty,
+                                           ValueRange{*cstI32, *cstI32});
   verifyOp(std::move(op), {i32Ty}, {*cstI32, *cstI32}, noAttrs);
 
   // Test collective params build method.
-  op = builder.create<test::TableGenBuildOp4>(loc, TypeRange{i32Ty},
-                                              ValueRange{*cstI32, *cstI32});
+  op = test::TableGenBuildOp4::create(builder, loc, TypeRange{i32Ty},
+                                      ValueRange{*cstI32, *cstI32});
   verifyOp(std::move(op), {i32Ty}, {*cstI32, *cstI32}, noAttrs);
 
   // Test build method with no result types, default value of attributes.
-  op =
-      builder.create<test::TableGenBuildOp4>(loc, ValueRange{*cstI32, *cstI32});
+  op = test::TableGenBuildOp4::create(builder, loc,
+                                      ValueRange{*cstI32, *cstI32});
   verifyOp(std::move(op), {i32Ty}, {*cstI32, *cstI32}, noAttrs);
 
   // Test build method with no result types and supplied attributes.
-  op = builder.create<test::TableGenBuildOp4>(loc, ValueRange{*cstI32, *cstI32},
-                                              attrs);
+  op = test::TableGenBuildOp4::create(builder, loc,
+                                      ValueRange{*cstI32, *cstI32}, attrs);
   verifyOp(std::move(op), {i32Ty}, {*cstI32, *cstI32}, attrs);
 }
 
 TEST_F(OpBuildGenTest, BuildMethodsRegionsAndInferredType) {
-  auto op = builder.create<test::TableGenBuildOp5>(
-      loc, ValueRange{*cstI32, *cstF32}, /*attributes=*/noAttrs);
+  auto op = test::TableGenBuildOp5::create(
+      builder, loc, ValueRange{*cstI32, *cstF32}, /*attributes=*/noAttrs);
   ASSERT_EQ(op->getNumRegions(), 1u);
   verifyOp(op, {i32Ty}, {*cstI32, *cstF32}, noAttrs);
 }
@@ -266,28 +265,28 @@ TEST_F(OpBuildGenTest, BuildMethodsVariadicProperties) {
   ArrayRef<NamedAttribute> attrs(attrsStorage);
 
   // Test separate arg, separate param build method.
-  auto op = builder.create<test::TableGenBuildOp6>(
-      loc, f32Ty, ValueRange{*cstI32}, ValueRange{*cstI32});
+  auto op = test::TableGenBuildOp6::create(
+      builder, loc, f32Ty, ValueRange{*cstI32}, ValueRange{*cstI32});
   verifyOp(std::move(op), {f32Ty}, {*cstI32}, {*cstI32}, noAttrs);
 
   // Test build method with no result types, default value of attributes.
-  op = builder.create<test::TableGenBuildOp6>(loc, ValueRange{*cstI32},
-                                              ValueRange{*cstI32});
+  op = test::TableGenBuildOp6::create(builder, loc, ValueRange{*cstI32},
+                                      ValueRange{*cstI32});
   verifyOp(std::move(op), {f32Ty}, {*cstI32}, {*cstI32}, noAttrs);
 
   // Test collective params build method.
-  op = builder.create<test::TableGenBuildOp6>(
-      loc, TypeRange{f32Ty}, ValueRange{*cstI32}, ValueRange{*cstI32});
+  op = test::TableGenBuildOp6::create(builder, loc, TypeRange{f32Ty},
+                                      ValueRange{*cstI32}, ValueRange{*cstI32});
   verifyOp(std::move(op), {f32Ty}, {*cstI32}, {*cstI32}, noAttrs);
 
   // Test build method with result types, supplied attributes.
-  op = builder.create<test::TableGenBuildOp6>(
-      loc, TypeRange{f32Ty}, ValueRange{*cstI32, *cstI32}, attrs);
+  op = test::TableGenBuildOp6::create(builder, loc, TypeRange{f32Ty},
+                                      ValueRange{*cstI32, *cstI32}, attrs);
   verifyOp(std::move(op), {f32Ty}, {*cstI32}, {*cstI32}, attrs);
 
   // Test build method with no result types and supplied attributes.
-  op = builder.create<test::TableGenBuildOp6>(loc, ValueRange{*cstI32, *cstI32},
-                                              attrs);
+  op = test::TableGenBuildOp6::create(builder, loc,
+                                      ValueRange{*cstI32, *cstI32}, attrs);
   verifyOp(std::move(op), {f32Ty}, {*cstI32}, {*cstI32}, attrs);
 }
 
@@ -295,14 +294,14 @@ TEST_F(OpBuildGenTest, BuildMethodsInherentDiscardableAttrs) {
   test::TableGenBuildOp7::Properties props;
   props.attr0 = cast<BoolAttr>(attrs[0].getValue());
   ArrayRef<NamedAttribute> discardableAttrs = attrs.drop_front();
-  auto op7 = builder.create<test::TableGenBuildOp7>(
-      loc, TypeRange{}, ValueRange{}, props, discardableAttrs);
+  auto op7 = test::TableGenBuildOp7::create(
+      builder, loc, TypeRange{}, ValueRange{}, props, discardableAttrs);
   verifyOp(op7, {}, {}, attrs);
 
   // Check that the old-style builder where all the attributes go in the same
   // place works.
-  auto op7b = builder.create<test::TableGenBuildOp7>(loc, TypeRange{},
-                                                     ValueRange{}, attrs);
+  auto op7b = test::TableGenBuildOp7::create(builder, loc, TypeRange{},
+                                             ValueRange{}, attrs);
   // Note: this goes before verifyOp() because verifyOp() calls erase(), causing
   // use-after-free.
   ASSERT_EQ(op7b.getProperties().getAttr0(), attrs[0].getValue());

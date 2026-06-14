@@ -1,8 +1,26 @@
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+xmipslsp,+xmipscmov,+xmipscbop -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+xmipslsp,+xmipscmov,+xmipscbop,+xmipsexectl  -M no-aliases -show-encoding \
 # RUN:   | FileCheck -check-prefixes=CHECK-INST,CHECK-ENC %s
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+xmipslsp,+xmipscmov,+xmipscbop < %s \
-# RUN:   | llvm-objdump --mattr=+xmipslsp,+xmipscmov,+xmipscbop -M no-aliases -d - \
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+xmipslsp,+xmipscmov,+xmipscbop,+xmipsexectl < %s \
+# RUN:   | llvm-objdump --mattr=+xmipslsp,+xmipscmov,+xmipscbop,+xmipsexectl -M no-aliases -d - \
 # RUN:   | FileCheck -check-prefix=CHECK-DIS %s
+
+# CHECK-INST: mips.pause
+# CHECK-ENC:  encoding: [0x13,0x10,0x50,0x00]
+mips.pause
+
+# CHECK-DIS: mips.pause
+
+# CHECK-INST: mips.ehb
+# CHECK-ENC:  encoding: [0x13,0x10,0x30,0x00]
+mips.ehb
+
+# CHECK-DIS: mips.ehb
+
+# CHECK-INST: mips.ihb
+# CHECK-ENC:  encoding: [0x13,0x10,0x10,0x00]
+mips.ihb
+
+# CHECK-DIS: mips.ihb
 
 # CHECK-INST: mips.pref 8, 511(a0)
 # CHECK-ENC:  encoding: [0x0b,0x04,0xf5,0x1f]

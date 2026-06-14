@@ -22,6 +22,8 @@
 #include <string>
 #include <unordered_map>
 
+using namespace llvm::offload::debug;
+
 DLWRAP_INITIALIZE()
 
 DLWRAP_INTERNAL(cuInit, 1)
@@ -35,11 +37,12 @@ DLWRAP(cuFuncSetAttribute, 3)
 
 // Device info
 DLWRAP(cuDeviceGetName, 3)
+DLWRAP(cuDeviceGetUuid, 2)
 DLWRAP(cuDeviceTotalMem, 2)
 DLWRAP(cuDriverGetVersion, 1)
 
 DLWRAP(cuGetErrorString, 2)
-DLWRAP(cuLaunchKernel, 11)
+DLWRAP(cuLaunchKernelEx, 4)
 DLWRAP(cuLaunchHostFunc, 3)
 
 DLWRAP(cuMemAlloc, 2)
@@ -52,6 +55,13 @@ DLWRAP(cuMemcpyDtoH, 3)
 DLWRAP(cuMemcpyDtoHAsync, 4)
 DLWRAP(cuMemcpyHtoD, 3)
 DLWRAP(cuMemcpyHtoDAsync, 4)
+
+DLWRAP(cuMemsetD8Async, 4)
+DLWRAP(cuMemsetD16Async, 4)
+DLWRAP(cuMemsetD32Async, 4)
+DLWRAP(cuMemsetD2D8Async, 6)
+DLWRAP(cuMemsetD2D16Async, 6)
+DLWRAP(cuMemsetD2D32Async, 6)
 
 DLWRAP(cuMemFree, 1)
 DLWRAP(cuMemFreeHost, 1)
@@ -72,6 +82,9 @@ DLWRAP(cuDevicePrimaryCtxGetState, 3)
 DLWRAP(cuDevicePrimaryCtxSetFlags, 2)
 DLWRAP(cuDevicePrimaryCtxRetain, 2)
 DLWRAP(cuModuleLoadDataEx, 5)
+DLWRAP(cuOccupancyMaxPotentialBlockSize, 6)
+DLWRAP(cuOccupancyMaxActiveBlocksPerMultiprocessor, 4)
+DLWRAP(cuFuncGetParamInfo, 4)
 
 DLWRAP(cuDeviceCanAccessPeer, 3)
 DLWRAP(cuCtxEnablePeerAccess, 2)
@@ -82,11 +95,11 @@ DLWRAP(cuCtxSetLimit, 2)
 
 DLWRAP(cuEventCreate, 2)
 DLWRAP(cuEventRecord, 2)
+DLWRAP(cuEventQuery, 1)
 DLWRAP(cuStreamWaitEvent, 3)
 DLWRAP(cuEventSynchronize, 1)
+DLWRAP(cuEventElapsedTime, 3)
 DLWRAP(cuEventDestroy, 1)
-
-DLWRAP_FINALIZE()
 
 DLWRAP(cuMemUnmap, 2)
 DLWRAP(cuMemRelease, 1)
@@ -97,6 +110,8 @@ DLWRAP(cuMemMap, 5)
 DLWRAP(cuMemCreate, 4)
 DLWRAP(cuMemSetAccess, 4)
 DLWRAP(cuMemGetAllocationGranularity, 3)
+
+DLWRAP_FINALIZE()
 
 #ifndef DYNAMIC_CUDA_PATH
 #define DYNAMIC_CUDA_PATH "libcuda.so"
@@ -132,7 +147,8 @@ static bool checkForCUDA() {
   auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
       llvm::sys::DynamicLibrary::getPermanentLibrary(CudaLib, &ErrMsg));
   if (!DynlibHandle->isValid()) {
-    DP("Unable to load library '%s': %s!\n", CudaLib, ErrMsg.c_str());
+    ODBG(OLDT_Init) << "Unable to load library ' " << CudaLib << "': " << ErrMsg
+                    << "!";
     return false;
   }
 
@@ -144,7 +160,8 @@ static bool checkForCUDA() {
       const char *First = It->second;
       void *P = DynlibHandle->getAddressOfSymbol(First);
       if (P) {
-        DP("Implementing %s with dlsym(%s) -> %p\n", Sym, First, P);
+        ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << First
+                        << ") -> " << P;
         *dlwrap::pointer(I) = P;
         continue;
       }
@@ -152,10 +169,12 @@ static bool checkForCUDA() {
 
     void *P = DynlibHandle->getAddressOfSymbol(Sym);
     if (P == nullptr) {
-      DP("Unable to find '%s' in '%s'!\n", Sym, CudaLib);
+      ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << CudaLib
+                      << "'!";
       return false;
     }
-    DP("Implementing %s with dlsym(%s) -> %p\n", Sym, Sym, P);
+    ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
+                    << ") -> " << P;
 
     *dlwrap::pointer(I) = P;
   }

@@ -21,6 +21,11 @@
 using namespace mlir;
 using namespace cir;
 
+namespace mlir {
+#define GEN_PASS_DEF_CIRSIMPLIFY
+#include "clang/CIR/Dialect/Passes.h.inc"
+} // namespace mlir
+
 //===----------------------------------------------------------------------===//
 // Rewrite patterns
 //===----------------------------------------------------------------------===//
@@ -97,8 +102,8 @@ private:
     // Check whether the region/block contains a cir.const followed by a
     // cir.yield that yields the value.
     auto yieldOp = mlir::cast<cir::YieldOp>(onlyBlock.getTerminator());
-    auto yieldValueDefOp = mlir::dyn_cast_if_present<cir::ConstantOp>(
-        yieldOp.getArgs()[0].getDefiningOp());
+    auto yieldValueDefOp =
+        yieldOp.getArgs()[0].getDefiningOp<cir::ConstantOp>();
     return yieldValueDefOp && yieldValueDefOp->getBlock() == &onlyBlock;
   }
 };
@@ -120,24 +125,19 @@ private:
 ///
 ///    %0 = cir.select if %condition then false else true
 ///    ->
-///    %0 = cir.unary not %condition
+///    %0 = cir.not %condition
 struct SimplifySelect : public OpRewritePattern<SelectOp> {
   using OpRewritePattern<SelectOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(SelectOp op,
                                 PatternRewriter &rewriter) const final {
-    mlir::Operation *trueValueOp = op.getTrueValue().getDefiningOp();
-    mlir::Operation *falseValueOp = op.getFalseValue().getDefiningOp();
-    auto trueValueConstOp =
-        mlir::dyn_cast_if_present<cir::ConstantOp>(trueValueOp);
-    auto falseValueConstOp =
-        mlir::dyn_cast_if_present<cir::ConstantOp>(falseValueOp);
-    if (!trueValueConstOp || !falseValueConstOp)
+    auto trueValueOp = op.getTrueValue().getDefiningOp<cir::ConstantOp>();
+    auto falseValueOp = op.getFalseValue().getDefiningOp<cir::ConstantOp>();
+    if (!trueValueOp || !falseValueOp)
       return mlir::failure();
 
-    auto trueValue = mlir::dyn_cast<cir::BoolAttr>(trueValueConstOp.getValue());
-    auto falseValue =
-        mlir::dyn_cast<cir::BoolAttr>(falseValueConstOp.getValue());
+    auto trueValue = trueValueOp.getValueAttr<cir::BoolAttr>();
+    auto falseValue = falseValueOp.getValueAttr<cir::BoolAttr>();
     if (!trueValue || !falseValue)
       return mlir::failure();
 
@@ -148,10 +148,9 @@ struct SimplifySelect : public OpRewritePattern<SelectOp> {
       return mlir::success();
     }
 
-    // cir.select if %0 then #false else #true -> cir.unary not %0
+    // cir.select if %0 then #false else #true -> cir.not %0
     if (!trueValue.getValue() && falseValue.getValue()) {
-      rewriter.replaceOpWithNewOp<cir::UnaryOp>(op, cir::UnaryOpKind::Not,
-                                                op.getCondition());
+      rewriter.replaceOpWithNewOp<cir::NotOp>(op, op.getCondition());
       return mlir::success();
     }
 
@@ -265,8 +264,7 @@ struct SimplifyVecSplat : public OpRewritePattern<VecSplatOp> {
   LogicalResult matchAndRewrite(VecSplatOp op,
                                 PatternRewriter &rewriter) const override {
     mlir::Value splatValue = op.getValue();
-    auto constant =
-        mlir::dyn_cast_if_present<cir::ConstantOp>(splatValue.getDefiningOp());
+    auto constant = splatValue.getDefiningOp<cir::ConstantOp>();
     if (!constant)
       return mlir::failure();
 
@@ -289,7 +287,7 @@ struct SimplifyVecSplat : public OpRewritePattern<VecSplatOp> {
 // CIRSimplifyPass
 //===----------------------------------------------------------------------===//
 
-struct CIRSimplifyPass : public CIRSimplifyBase<CIRSimplifyPass> {
+struct CIRSimplifyPass : public impl::CIRSimplifyBase<CIRSimplifyPass> {
   using CIRSimplifyBase::CIRSimplifyBase;
 
   void runOnOperation() override;

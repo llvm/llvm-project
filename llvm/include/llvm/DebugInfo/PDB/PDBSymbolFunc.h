@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_PDB_PDBSYMBOLFUNC_H
 
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
 #include "llvm/Support/Compiler.h"
 
 #include "PDBSymbol.h"
@@ -21,7 +22,6 @@ namespace pdb {
 
 class PDBSymDumper;
 class PDBSymbolData;
-class PDBSymbolTypeFunctionSig;
 template <typename ChildType> class IPDBEnumChildren;
 
 class LLVM_ABI PDBSymbolFunc : public PDBSymbol {

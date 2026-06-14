@@ -58,7 +58,7 @@ void assignProfileData(Function &F, ArrayRef<uint64_t> RawCounters) {
         uint64_t TrueCount, FalseCount = 0;
         if (!PA.getSelectInstrProfile(*SI, TrueCount, FalseCount))
           continue;
-        setProfMetadata(F.getParent(), SI, {TrueCount, FalseCount},
+        setProfMetadata(SI, {TrueCount, FalseCount},
                         std::max(TrueCount, FalseCount));
       }
     if (succ_size(&BB) < 2)
@@ -67,7 +67,7 @@ void assignProfileData(Function &F, ArrayRef<uint64_t> RawCounters) {
     if (!PA.getOutgoingBranchWeights(BB, ProfileHolder, MaxCount))
       continue;
     assert(MaxCount > 0);
-    setProfMetadata(F.getParent(), BB.getTerminator(), ProfileHolder, MaxCount);
+    setProfMetadata(BB.getTerminator(), ProfileHolder, MaxCount);
   }
 }
 
@@ -152,7 +152,7 @@ PreservedAnalyses PGOCtxProfFlatteningPass::run(Module &M,
   // Note: in such cases we leave as-is any other profile info (if present -
   // e.g. synthetic weights, etc) because it wouldn't interfere with the
   // contextual - based one (which would be in other modules)
-  auto OnExit = llvm::make_scope_exit([&]() {
+  llvm::scope_exit OnExit([&]() {
     if (IsPreThinlink)
       return;
     for (auto &F : M)
@@ -176,7 +176,7 @@ PreservedAnalyses PGOCtxProfFlatteningPass::run(Module &M,
     assert(areAllBBsReachable(
                F, MAM.getResult<FunctionAnalysisManagerModuleProxy>(M)
                       .getManager()) &&
-           "Function has unreacheable basic blocks. The expectation was that "
+           "Function has unreachable basic blocks. The expectation was that "
            "DCE was run before.");
 
     auto It = FlattenedProfile.find(AssignGUIDPass::getGUID(F));

@@ -27,6 +27,8 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/RandomNumberGenerator.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -219,6 +221,7 @@ private:
   void sortECChunks();
   void appendECImportTables();
   void removeUnusedSections();
+  void layoutSections();
   void assignAddresses();
   bool isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin,
                  MachineTypes machine);
@@ -281,6 +284,8 @@ private:
   template <typename T>
   void prepareLoadConfig(SymbolTable &symtab, T *loadConfig);
 
+  void printSummary();
+
   std::unique_ptr<FileOutputBuffer> &buffer;
   std::map<PartialSectionKey, PartialSection *> partialSections;
   StringTableBuilder strtab;
@@ -314,10 +319,12 @@ private:
   uint32_t dataDirOffset64;
 
   OutputSection *textSec;
+  OutputSection *wowthkSec;
   OutputSection *hexpthkSec;
   OutputSection *bssSec;
   OutputSection *rdataSec;
   OutputSection *buildidSec;
+  OutputSection *cvinfoSec;
   OutputSection *dataSec;
   OutputSection *pdataSec;
   OutputSection *idataSec;
@@ -782,6 +789,7 @@ void Writer::run() {
     appendECImportTables();
     createDynamicRelocs();
     removeUnusedSections();
+    layoutSections();
     finalizeAddresses();
     removeEmptySections();
     assignOutputSectionIndices();
@@ -820,6 +828,8 @@ void Writer::run() {
 
   writePEChecksum();
 
+  printSummary();
+
   if (errorCount())
     return;
 
@@ -830,8 +840,10 @@ void Writer::run() {
                << "': " << toString(std::move(e));
 }
 
-static StringRef getOutputSectionName(StringRef name) {
+static StringRef getOutputSectionName(StringRef name, bool isMinGW) {
   StringRef s = name.split('$').first;
+  if (!isMinGW)
+    return s;
 
   // Treat a later period as a separator for MinGW, for sections like
   // ".ctors.01234".
@@ -1076,11 +1088,14 @@ void Writer::createSections() {
 
   // Try to match the section order used by link.exe.
   textSec = createSection(".text", code | r | x);
-  if (isArm64EC(ctx.config.machine))
+  if (isArm64EC(ctx.config.machine)) {
+    wowthkSec = createSection(".wowthk", code | r | x);
     hexpthkSec = createSection(".hexpthk", code | r | x);
+  }
   bssSec = createSection(".bss", bss | r | w);
   rdataSec = createSection(".rdata", data | r);
   buildidSec = createSection(".buildid", data | r);
+  cvinfoSec = createSection(".cvinfo", data | r);
   dataSec = createSection(".data", data | r | w);
   pdataSec = createSection(".pdata", data | r);
   idataSec = createSection(".idata", data | r);
@@ -1100,6 +1115,10 @@ void Writer::createSections() {
       if (ctx.config.verbose)
         sc->printDiscardedMessage();
       continue;
+    }
+    if (auto *cc = dyn_cast<CommonChunk>(c)) {
+      if (!cc->live)
+        continue;
     }
     StringRef name = c->getSectionName();
     if (shouldStripSectionSuffix(sc, name, ctx.config.mingw))
@@ -1129,13 +1148,16 @@ void Writer::createSections() {
   if (hasIdata)
     locateImportTables();
 
+  for (auto thunk : ctx.symtab.sameAddressThunks)
+    wowthkSec->addChunk(thunk);
+
   // Then create an OutputSection for each section.
   // '$' and all following characters in input section names are
   // discarded when determining output section. So, .text$foo
   // contributes to .text, for example. See PE/COFF spec 3.2.
   for (auto it : partialSections) {
     PartialSection *pSec = it.second;
-    StringRef name = getOutputSectionName(pSec->name);
+    StringRef name = getOutputSectionName(pSec->name, ctx.config.mingw);
     uint32_t outChars = pSec->characteristics;
 
     if (name == ".CRT") {
@@ -1214,9 +1236,17 @@ void Writer::createMiscChunks() {
   });
 
   // Create Debug Information Chunks
-  debugInfoSec = config->mingw ? buildidSec : rdataSec;
+  if (config->mingw) {
+    debugInfoSec = buildidSec;
+  } else if (!config->mergeDebugDirectory) {
+    debugInfoSec = cvinfoSec;
+  } else {
+    debugInfoSec = rdataSec;
+  }
   if (config->buildIDHash != BuildIDHash::None || config->debug ||
-      config->repro || config->cetCompat) {
+      config->repro || config->cetCompat || config->cetCompatStrict ||
+      config->cetCompatIpValidationRelaxed ||
+      config->cetCompatDynamicApisInProcOnly || config->hotpatchCompat) {
     debugDirectory =
         make<DebugDirectoryChunk>(ctx, debugRecords, config->repro);
     debugDirectory->setAlignment(4);
@@ -1237,10 +1267,26 @@ void Writer::createMiscChunks() {
     });
   }
 
-  if (config->cetCompat) {
-    debugRecords.emplace_back(COFF::IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS,
-                              make<ExtendedDllCharacteristicsChunk>(
-                                  IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT));
+  uint16_t ex_characteristics_flags = 0;
+  if (config->cetCompat)
+    ex_characteristics_flags |= IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT;
+  if (config->cetCompatStrict)
+    ex_characteristics_flags |=
+        IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT_STRICT_MODE;
+  if (config->cetCompatIpValidationRelaxed)
+    ex_characteristics_flags |=
+        IMAGE_DLL_CHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE;
+  if (config->cetCompatDynamicApisInProcOnly)
+    ex_characteristics_flags |=
+        IMAGE_DLL_CHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC_ONLY;
+  if (config->hotpatchCompat)
+    ex_characteristics_flags |=
+        IMAGE_DLL_CHARACTERISTICS_EX_HOTPATCH_COMPATIBLE;
+
+  if (ex_characteristics_flags) {
+    debugRecords.emplace_back(
+        COFF::IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS,
+        make<ExtendedDllCharacteristicsChunk>(ex_characteristics_flags));
   }
 
   // Align and add each chunk referenced by the debug data directory.
@@ -1286,7 +1332,7 @@ void Writer::createImportTables() {
     if (file->impSym && !isa<DefinedImportData>(file->impSym))
       Fatal(ctx) << file->symtab.printSymbol(file->impSym) << " was replaced";
     DefinedImportData *impSym = cast_or_null<DefinedImportData>(file->impSym);
-    if (ctx.config.delayLoads.count(StringRef(file->dllName).lower())) {
+    if (ctx.config.delayLoads.contains(StringRef(file->dllName).lower())) {
       if (!file->thunkSym)
         Fatal(ctx) << "cannot delay-load " << toString(file)
                    << " due to import of data: "
@@ -1405,6 +1451,33 @@ void Writer::removeUnusedSections() {
     return s->chunks.empty();
   };
   llvm::erase_if(ctx.outputSections, isUnused);
+}
+
+void Writer::layoutSections() {
+  llvm::TimeTraceScope timeScope("Layout sections");
+  if (ctx.config.sectionOrder.empty())
+    return;
+
+  llvm::stable_sort(ctx.outputSections,
+                    [this](const OutputSection *a, const OutputSection *b) {
+                      auto itA = ctx.config.sectionOrder.find(a->name.str());
+                      auto itB = ctx.config.sectionOrder.find(b->name.str());
+                      bool aInOrder = itA != ctx.config.sectionOrder.end();
+                      bool bInOrder = itB != ctx.config.sectionOrder.end();
+
+                      // Put unspecified sections after all specified sections
+                      if (aInOrder && bInOrder) {
+                        return itA->second < itB->second;
+                      } else if (aInOrder && !bInOrder) {
+                        return true; // ordered sections come before unordered
+                      } else {
+                        // (!aInOrder && bInOrder): unordered comes after
+                        // ordered
+                        // (!aInOrder && !bInOrder): both unspecified, preserve
+                        // the original order
+                        return false;
+                      }
+                    });
 }
 
 // The Windows loader doesn't seem to like empty sections,
@@ -1553,7 +1626,7 @@ void Writer::createSymbolAndStringTable() {
             dthunk->wrappedSym->writtenToSymtab = true;
             if (std::optional<coff_symbol16> sym =
                     createSymbol(dthunk->wrappedSym)) {
-              if (d->getName().size() > COFF::NameSize)
+              if (dthunk->wrappedSym->getName().size() > COFF::NameSize)
                 longNameSymbols.emplace_back(outputSymtab.size(),
                                              dthunk->wrappedSym->getName());
               outputSymtab.push_back(*sym);
@@ -1785,7 +1858,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   buf += sizeof(PEMagic);
 
   // Write COFF header
-  assert(coffHeaderOffset == buf - buffer->getBufferStart());
+  assert(coffHeaderOffset ==
+         static_cast<size_t>(buf - buffer->getBufferStart()));
   auto *coff = reinterpret_cast<coff_file_header *>(buf);
   buf += sizeof(*coff);
   SymbolTable &symtab =
@@ -1811,7 +1885,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
       sizeof(PEHeaderTy) + sizeof(data_directory) * numberOfDataDirectory;
 
   // Write PE header
-  assert(peHeaderOffset == buf - buffer->getBufferStart());
+  assert(peHeaderOffset == static_cast<size_t>(buf - buffer->getBufferStart()));
   auto *pe = reinterpret_cast<PEHeaderTy *>(buf);
   buf += sizeof(*pe);
   pe->Magic = config->is64() ? PE32Header::PE32_PLUS : PE32Header::PE32;
@@ -1878,7 +1952,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
 
   // Write data directory
   assert(!ctx.config.is64() ||
-         dataDirOffset64 == buf - buffer->getBufferStart());
+         dataDirOffset64 ==
+             static_cast<size_t>(buf - buffer->getBufferStart()));
   auto *dir = reinterpret_cast<data_directory *>(buf);
   buf += sizeof(*dir) * numberOfDataDirectory;
   if (symtab.edataStart) {
@@ -2310,6 +2385,14 @@ void Writer::createECChunks() {
       ctx.symtab.findUnderscore("__arm64x_redirection_metadata");
   replaceSymbol<DefinedSynthetic>(entryPointsSym, entryPointsSym->getName(),
                                   entryPoints);
+
+  for (auto thunk : ctx.symtab.sameAddressThunks) {
+    // Relocation values are set later in setECSymbols.
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           thunk);
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           Arm64XRelocVal(thunk, sizeof(uint32_t)));
+  }
 }
 
 // MinGW specific. Gather all relocations that are imported from a DLL even
@@ -2519,6 +2602,9 @@ void Writer::setECSymbols() {
           chpeSym->getRVA() + offsetof(chpe_metadata, ExtraRFETableSize),
           pdata.last->getRVA() + pdata.last->getSize() - pdata.first->getRVA());
   }
+
+  for (SameAddressThunkARM64EC *thunk : ctx.symtab.sameAddressThunks)
+    thunk->setDynamicRelocs(ctx);
 }
 
 // Write section contents to a mmap'ed file.
@@ -2535,16 +2621,29 @@ void Writer::writeSections() {
     if ((sec->header.Characteristics & IMAGE_SCN_CNT_CODE) &&
         (ctx.config.machine == AMD64 || ctx.config.machine == I386)) {
       uint32_t prevEnd = 0;
+      uint32_t rawSize = sec->getRawSize();
       for (Chunk *c : sec->chunks) {
         uint32_t off = c->getRVA() - sec->getRVA();
+        // Chunks without data (e.g., .bss) have virtual addresses beyond
+        // rawSize; stop filling when we reach the end of raw data.
+        if (off >= rawSize)
+          break;
         memset(secBuf + prevEnd, 0xCC, off - prevEnd);
-        prevEnd = off + c->getSize();
+        prevEnd = std::min(off + static_cast<uint32_t>(c->getSize()), rawSize);
       }
-      memset(secBuf + prevEnd, 0xCC, sec->getRawSize() - prevEnd);
+      memset(secBuf + prevEnd, 0xCC, rawSize - prevEnd);
     }
 
     parallelForEach(sec->chunks, [&](Chunk *c) {
-      c->writeTo(secBuf + c->getRVA() - sec->getRVA());
+      uint8_t *buf = secBuf + c->getRVA() - sec->getRVA();
+      c->writeTo(buf);
+
+      // Write the offset to EC entry thunk preceding section contents. The low
+      // bit is always set, so it's effectively an offset from the last byte of
+      // the offset.
+      if (Defined *entryThunk = c->getEntryThunk())
+        write32le(buf - sizeof(uint32_t),
+                  entryThunk->getRVA() - c->getRVA() + 1);
     });
   }
 }
@@ -2973,4 +3072,44 @@ void Writer::prepareLoadConfig(SymbolTable &symtab, T *loadConfig) {
 #undef IF_CONTAINS
 #undef CHECK_VA
 #undef CHECK_ABSOLUTE
+}
+
+void Writer::printSummary() {
+  if (!ctx.config.showSummary)
+    return;
+
+  SmallString<256> buffer;
+  raw_svector_ostream stream(buffer);
+
+  stream << center_justify("Summary", 80) << '\n'
+         << std::string(80, '-') << '\n';
+
+  auto print = [&](uint64_t v, StringRef s) {
+    stream << formatv("{0}",
+                      fmt_align(formatv("{0:N}", v), AlignStyle::Right, 20))
+           << " " << s << '\n';
+  };
+
+  bool hasStats = ctx.pdbStats.has_value();
+
+  print(ctx.objFileInstances.size(),
+        "Input OBJ files (expanded from all cmd-line inputs)");
+  print(ctx.consumedInputsSize,
+        "Size of all consumed OBJ files (non-lazy), in bytes");
+  print(ctx.typeServerSourceMappings.size(), "PDB type server dependencies");
+  print(ctx.precompSourceMappings.size(), "Precomp OBJ dependencies");
+  print(hasStats ? ctx.pdbStats->nbTypeRecords : 0, "Input debug type records");
+  print(hasStats ? ctx.pdbStats->nbTypeRecordsBytes : 0,
+        "Size of all input debug type records, in bytes");
+  print(hasStats ? ctx.pdbStats->nbTPIrecords : 0, "Merged TPI records");
+  print(hasStats ? ctx.pdbStats->nbIPIrecords : 0, "Merged IPI records");
+  print(hasStats ? ctx.pdbStats->strTabSize : 0, "Output PDB strings");
+  print(hasStats ? ctx.pdbStats->globalSymbols : 0, "Global symbol records");
+  print(hasStats ? ctx.pdbStats->moduleSymbols : 0, "Module symbol records");
+  print(hasStats ? ctx.pdbStats->publicSymbols : 0, "Public symbol records");
+
+  if (hasStats)
+    stream << ctx.pdbStats->largeInputTypeRecs;
+
+  Msg(ctx) << buffer;
 }

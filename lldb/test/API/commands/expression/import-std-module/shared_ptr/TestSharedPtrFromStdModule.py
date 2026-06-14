@@ -10,8 +10,9 @@ from lldbsuite.test import lldbutil
 class TestSharedPtr(TestBase):
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
+    @skipIf(macos_version=["<", "15.0"])
     @skipIf(compiler="clang", compiler_version=["<", "17.0"])
-    @skipUnlessDarwin
+    @skipIf(bugnumber="https://llvm.org/PR200154")
     def test(self):
         self.build()
 

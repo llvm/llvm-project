@@ -140,10 +140,8 @@ public:
     /// This is the scope of a C++ catch statement.
     CatchScope = 0x1000000,
 
-    /// This is a scope in which a condition variable is currently being
-    /// parsed. If such a scope is a ContinueScope, it's invalid to jump to the
-    /// continue block from here.
-    ConditionVarScope = 0x2000000,
+    /// This bit is currently unused.
+    Unused = 0x2000000,
 
     /// This is a scope of some OpenMP directive with
     /// order clause which specifies concurrent
@@ -255,6 +253,10 @@ private:
   /// available for this variable in the current scope.
   llvm::SmallPtrSet<VarDecl *, 8> ReturnSlots;
 
+  /// If this scope belongs to a loop or switch statement, the label that
+  /// directly precedes it, if any.
+  LabelDecl *PrecedingLabel;
+
   void setFlags(Scope *Parent, unsigned F);
 
 public:
@@ -267,6 +269,9 @@ public:
   unsigned getFlags() const { return Flags; }
 
   void setFlags(unsigned F) { setFlags(getParent(), F); }
+
+  /// Get the label that precedes this scope.
+  LabelDecl *getPrecedingLabel() const { return PrecedingLabel; }
 
   /// isBlockScope - Return true if this scope correspond to a closure.
   bool isBlockScope() const { return Flags & BlockScope; }
@@ -292,17 +297,6 @@ public:
 
   const Scope *getContinueParent() const {
     return const_cast<Scope*>(this)->getContinueParent();
-  }
-
-  // Set whether we're in the scope of a condition variable, where 'continue'
-  // is disallowed despite being a continue scope.
-  void setIsConditionVarScope(bool InConditionVarScope) {
-    Flags = (Flags & ~ConditionVarScope) |
-            (InConditionVarScope ? ConditionVarScope : NoScope);
-  }
-
-  bool isConditionVarScope() const {
-    return Flags & ConditionVarScope;
   }
 
   /// getBreakParent - Return the closest scope that a break statement
@@ -583,6 +577,12 @@ public:
     return getFlags() & ScopeFlags::ContinueScope;
   }
 
+  /// Determine whether this is a scope which can have 'break' or 'continue'
+  /// statements embedded into it.
+  bool isBreakOrContinueScope() const {
+    return getFlags() & (ContinueScope | BreakScope);
+  }
+
   /// Determine whether this scope is a C++ 'try' block.
   bool isTryScope() const { return getFlags() & Scope::TryScope; }
 
@@ -618,6 +618,16 @@ public:
   /// is an ancestor of the other.
   bool Contains(const Scope& rhs) const { return Depth < rhs.Depth; }
 
+  /// Mark that we're entering the body of a loop (for, while, do).
+  void EnterLoopBody(LabelDecl *PrecedingLabel);
+
+  /// Mark that we're entering the body of a switch statement.
+  void EnterSwitchBody(LabelDecl *PrecedingLabel);
+
+  /// Mark that we're leaving the body of a loop; this is only needed for do
+  /// loops where the condition follows the loop body.
+  void LeaveLoopBody();
+
   /// containedInPrototypeScope - Return true if this or a parent scope
   /// is a FunctionPrototypeScope.
   bool containedInPrototypeScope() const;
@@ -640,10 +650,6 @@ public:
 
   /// Init - This is used by the parser to implement scope caching.
   void Init(Scope *parent, unsigned flags);
-
-  /// Sets up the specified scope flags and adjusts the scope state
-  /// variables accordingly.
-  void AddFlags(unsigned Flags);
 
   void dumpImpl(raw_ostream &OS) const;
   void dump() const;

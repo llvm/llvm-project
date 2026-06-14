@@ -14,7 +14,7 @@
 
 // Long tokens. They might consist of more than one character.
 TOKEN(Invalid)      // Invalid token. Should not occur in a valid script.
-TOKEN(Int)          // Integer (decimal, octal or hexadecimal).
+TOKEN(Int)          // Integer (decimal or hexadecimal, and possibly octal for windres).
 TOKEN(String)       // String value.
 TOKEN(Identifier)   // Script identifier (resource name or type).
 TOKEN(LineComment)  // Beginning of single-line comment.

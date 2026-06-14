@@ -34,7 +34,8 @@ struct ConstantOpInterface
       return failure();
 
     Attribute memorySpace;
-    if (auto memSpace = options.defaultMemorySpaceFn(type))
+    if (auto memSpace =
+            options.defaultMemorySpaceFn(cast<TensorLikeType>(type)))
       memorySpace = *memSpace;
     else
       return constantOp->emitError("could not infer memory space");
@@ -170,10 +171,10 @@ struct SelectOpInterface
         return failure();
       if (trueBuffer.getType() != *targetType)
         trueBuffer =
-            rewriter.create<memref::CastOp>(loc, *targetType, trueBuffer);
+            memref::CastOp::create(rewriter, loc, *targetType, trueBuffer);
       if (falseBuffer.getType() != *targetType)
         falseBuffer =
-            rewriter.create<memref::CastOp>(loc, *targetType, falseBuffer);
+            memref::CastOp::create(rewriter, loc, *targetType, falseBuffer);
     }
 
     replaceOpWithNewBufferizedOp<arith::SelectOp>(

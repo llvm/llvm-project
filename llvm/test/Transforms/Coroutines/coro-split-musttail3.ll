@@ -4,13 +4,13 @@
 
 define void @f() #0 {
 entry:
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
 
   %save = call token @llvm.coro.save(ptr null)
   %addr1 = call ptr @llvm.coro.subfn.addr(ptr null, i8 0)
-  call fastcc void %addr1(ptr null)
+  call void %addr1(ptr null)
 
   %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
   %cmp = icmp eq i8 %suspend, 0
@@ -41,7 +41,7 @@ final.suspend:
 pre.exit:
   br label %exit
 exit:
-  call i1 @llvm.coro.end(ptr null, i1 false, token none)
+  call void @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 unreach:
   unreachable
@@ -50,23 +50,23 @@ unreach:
 ; Verify that in the initial function resume is not marked with musttail.
 ; CHECK-LABEL: @f(
 ; CHECK: %[[addr1:.+]] = call ptr @llvm.coro.subfn.addr(ptr null, i8 0)
-; CHECK-NOT: musttail call fastcc void %[[addr1]](ptr null)
+; CHECK-NOT: musttail call void %[[addr1]](ptr null)
 
 ; Verify that in the resume part resume call is marked with musttail.
 ; CHECK-LABEL: @f.resume(
 ; CHECK: %[[hdl:.+]] = call ptr @g()
 ; CHECK-NEXT: call ptr @await_suspend_function
 ; CHECK-NEXT: %[[addr2:.+]] = call ptr @llvm.coro.subfn.addr
-; CHECK-NEXT: musttail call fastcc void %[[addr2]]
+; CHECK-NEXT: musttail call void %[[addr2]]
 ; CHECK-NEXT: ret void
 ; CHECK: %[[hdl2:.+]] = call ptr @h()
 ; CHECK-NEXT: call ptr @await_suspend_function
 ; CHECK-NEXT: %[[addr3:.+]] = call ptr @llvm.coro.subfn.addr
-; CHECK-NEXT: musttail call fastcc void %[[addr3]]
+; CHECK-NEXT: musttail call void %[[addr3]]
 ; CHECK-NEXT: ret void
 ; CHECK: call ptr @await_suspend_function
 ; CHECK: %[[addr4:.+]] = call ptr @llvm.coro.subfn.addr
-; CHECK-NEXT: musttail call fastcc void %[[addr4]]
+; CHECK-NEXT: musttail call void %[[addr4]]
 ; CHECK-NEXT: ret void
 
 
@@ -78,7 +78,7 @@ declare token @llvm.coro.save(ptr) #2
 declare ptr @llvm.coro.frame() #3
 declare i8 @llvm.coro.suspend(token, i1) #2
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #1
-declare i1 @llvm.coro.end(ptr, i1, token) #2
+declare void @llvm.coro.end(ptr, i1, token) #2
 declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #1
 declare ptr @malloc(i64)
 declare i8 @switch_result()

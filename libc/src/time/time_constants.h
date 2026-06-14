@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_TIME_TIME_CONSTANTS_H
 #define LLVM_LIBC_SRC_TIME_TIME_CONSTANTS_H
 
+#include "hdr/stdint_proxy.h"
 #include "hdr/types/time_t.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/string_view.h"
-#include <stdint.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace time_constants {
@@ -84,12 +84,6 @@ constexpr int DAYS_PER400_YEARS =
 constexpr int DAYS_PER100_YEARS =
     (DAYS_PER_NON_LEAP_YEAR * 100) + (100 / 4) - 1;
 constexpr int DAYS_PER4_YEARS = (DAYS_PER_NON_LEAP_YEAR * 4) + 1;
-
-// The latest time that can be represented in this form is 03:14:07 UTC on
-// Tuesday, 19 January 2038 (corresponding to 2,147,483,647 seconds since the
-// start of the epoch). This means that systems using a 32-bit time_t type are
-// susceptible to the Year 2038 problem.
-constexpr int END_OF32_BIT_EPOCH_YEAR = 2038;
 
 constexpr time_t OUT_OF_RANGE_RETURN_VALUE = -1;
 

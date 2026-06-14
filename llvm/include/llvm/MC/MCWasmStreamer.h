@@ -20,7 +20,7 @@ namespace llvm {
 class MCExpr;
 class MCInst;
 
-class MCWasmStreamer : public MCObjectStreamer {
+class LLVM_ABI MCWasmStreamer : public MCObjectStreamer {
 public:
   MCWasmStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
                  std::unique_ptr<MCObjectWriter> OW,
@@ -42,7 +42,7 @@ public:
 
   void changeSection(MCSection *Section, uint32_t Subsection) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
-  void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCDataFragment &F,
+  void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment &F,
                       uint64_t Offset) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,

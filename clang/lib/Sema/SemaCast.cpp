@@ -23,6 +23,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
+#include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaRISCV.h"
@@ -263,7 +264,7 @@ static void DiagnoseCastQual(Sema &Self, const ExprResult &SrcExpr,
 // %2: Destination Type
 static TryCastResult TryLValueToRValueCast(Sema &Self, Expr *SrcExpr,
                                            QualType DestType, bool CStyle,
-                                           CastKind &Kind,
+                                           SourceRange OpRange, CastKind &Kind,
                                            CXXCastPath &BasePath,
                                            unsigned &msg);
 static TryCastResult
@@ -438,6 +439,13 @@ ExprResult Sema::ActOnBuiltinBitCastExpr(SourceLocation KWLoc, Declarator &D,
 ExprResult Sema::BuildBuiltinBitCastExpr(SourceLocation KWLoc,
                                          TypeSourceInfo *TSI, Expr *Operand,
                                          SourceLocation RParenLoc) {
+  if (Operand->hasPlaceholderType()) {
+    ExprResult PR = CheckPlaceholderExpr(Operand);
+    if (PR.isInvalid())
+      return ExprError();
+    Operand = PR.get();
+  }
+
   CastOperation Op(*this, TSI->getType(), Operand);
   Op.OpRange = CastOperation::OpRangeType(KWLoc, KWLoc, RParenLoc);
   TypeLoc TL = TSI->getTypeLoc();
@@ -595,13 +603,11 @@ static void diagnoseBadCast(Sema &S, unsigned msg, CastType castType,
     DifferentPtrness--;
   }
   if (!DifferentPtrness) {
-    auto RecFrom = From->getAs<RecordType>();
-    auto RecTo = To->getAs<RecordType>();
-    if (RecFrom && RecTo) {
-      auto DeclFrom = RecFrom->getAsCXXRecordDecl();
+    if (auto *DeclFrom = From->getAsCXXRecordDecl(),
+        *DeclTo = To->getAsCXXRecordDecl();
+        DeclFrom && DeclTo) {
       if (!DeclFrom->isCompleteDefinition())
         S.Diag(DeclFrom->getLocation(), diag::note_type_incomplete) << DeclFrom;
-      auto DeclTo = RecTo->getAsCXXRecordDecl();
       if (!DeclTo->isCompleteDefinition())
         S.Diag(DeclTo->getLocation(), diag::note_type_incomplete) << DeclTo;
     }
@@ -865,7 +871,7 @@ void CastOperation::CheckDynamicCast() {
     return;
   }
 
-  const RecordType *DestRecord = DestPointee->getAs<RecordType>();
+  const auto *DestRecord = DestPointee->getAsCanonical<RecordType>();
   if (DestPointee->isVoidType()) {
     assert(DestPointer && "Reference to void is not possible");
   } else if (DestRecord) {
@@ -912,7 +918,7 @@ void CastOperation::CheckDynamicCast() {
     SrcPointee = SrcType;
   }
 
-  const RecordType *SrcRecord = SrcPointee->getAs<RecordType>();
+  const auto *SrcRecord = SrcPointee->getAsCanonical<RecordType>();
   if (SrcRecord) {
     if (Self.RequireCompleteType(OpRange.getBegin(), SrcPointee,
                                  diag::err_bad_cast_incomplete,
@@ -1425,8 +1431,8 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
   // C++11 [expr.static.cast]p3:
   //   A glvalue of type "cv1 T1" can be cast to type "rvalue reference to cv2
   //   T2" if "cv2 T2" is reference-compatible with "cv1 T1".
-  tcr = TryLValueToRValueCast(Self, SrcExpr.get(), DestType, CStyle, Kind,
-                              BasePath, msg);
+  tcr = TryLValueToRValueCast(Self, SrcExpr.get(), DestType, CStyle, OpRange,
+                              Kind, BasePath, msg);
   if (tcr != TC_NotApplicable)
     return tcr;
 
@@ -1454,7 +1460,7 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
   // C++0x 5.2.9p9: A value of a scoped enumeration type can be explicitly
   // converted to an integral type. [...] A value of a scoped enumeration type
   // can also be explicitly converted to a floating-point type [...].
-  if (const EnumType *Enum = SrcType->getAs<EnumType>()) {
+  if (const EnumType *Enum = dyn_cast<EnumType>(SrcType)) {
     if (Enum->getDecl()->isScoped()) {
       if (DestType->isBooleanType()) {
         Kind = CK_IntegralToBoolean;
@@ -1486,9 +1492,8 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
     if (SrcType->isIntegralOrEnumerationType()) {
       // [expr.static.cast]p10 If the enumeration type has a fixed underlying
       // type, the value is first converted to that type by integral conversion
-      const EnumType *Enum = DestType->castAs<EnumType>();
-      Kind = Enum->getDecl()->isFixed() &&
-                     Enum->getDecl()->getIntegerType()->isBooleanType()
+      const auto *ED = DestType->castAsEnumDecl();
+      Kind = ED->isFixed() && ED->getIntegerType()->isBooleanType()
                  ? CK_IntegralToBoolean
                  : CK_IntegralCast;
       return TC_Success;
@@ -1581,17 +1586,24 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
 
   // See if it looks like the user is trying to convert between
   // related record types, and select a better diagnostic if so.
-  if (auto SrcPointer = SrcType->getAs<PointerType>())
-    if (auto DestPointer = DestType->getAs<PointerType>())
-      if (SrcPointer->getPointeeType()->getAs<RecordType>() &&
-          DestPointer->getPointeeType()->getAs<RecordType>())
-       msg = diag::err_bad_cxx_cast_unrelated_class;
+  if (const auto *SrcPointer = SrcType->getAs<PointerType>())
+    if (const auto *DestPointer = DestType->getAs<PointerType>())
+      if (SrcPointer->getPointeeType()->isRecordType() &&
+          DestPointer->getPointeeType()->isRecordType())
+        msg = diag::err_bad_cxx_cast_unrelated_class;
 
   if (SrcType->isMatrixType() && DestType->isMatrixType()) {
     if (Self.CheckMatrixCast(OpRange, DestType, SrcType, Kind)) {
       SrcExpr = ExprError();
       return TC_Failed;
     }
+    return TC_Success;
+  }
+
+  if (SrcType == Self.Context.AMDGPUFeaturePredicateTy &&
+      DestType == Self.Context.getLogicalOperationType()) {
+    SrcExpr = Self.AMDGPU().ExpandAMDGPUPredicateBuiltIn(SrcExpr.get());
+    Kind = CK_NoOp;
     return TC_Success;
   }
 
@@ -1602,8 +1614,8 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
 /// Tests whether a conversion according to N2844 is valid.
 TryCastResult TryLValueToRValueCast(Sema &Self, Expr *SrcExpr,
                                     QualType DestType, bool CStyle,
-                                    CastKind &Kind, CXXCastPath &BasePath,
-                                    unsigned &msg) {
+                                    SourceRange OpRange, CastKind &Kind,
+                                    CXXCastPath &BasePath, unsigned &msg) {
   // C++11 [expr.static.cast]p3:
   //   A glvalue of type "cv1 T1" can be cast to type "rvalue reference to
   //   cv2 T2" if "cv2 T2" is reference-compatible with "cv1 T1".
@@ -1616,7 +1628,6 @@ TryCastResult TryLValueToRValueCast(Sema &Self, Expr *SrcExpr,
 
   // Because we try the reference downcast before this function, from now on
   // this is the only cast possibility, so we issue an error if we fail now.
-  // FIXME: Should allow casting away constness if CStyle.
   QualType FromType = SrcExpr->getType();
   QualType ToType = R->getPointeeType();
   if (CStyle) {
@@ -1640,13 +1651,12 @@ TryCastResult TryLValueToRValueCast(Sema &Self, Expr *SrcExpr,
 
   if (RefConv & Sema::ReferenceConversions::DerivedToBase) {
     Kind = CK_DerivedToBase;
-    CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
-                       /*DetectVirtual=*/true);
-    if (!Self.IsDerivedFrom(SrcExpr->getBeginLoc(), SrcExpr->getType(),
-                            R->getPointeeType(), Paths))
-      return TC_NotApplicable;
-
-    Self.BuildBasePathArray(Paths, BasePath);
+    if (Self.CheckDerivedToBaseConversion(FromType, ToType,
+                                          SrcExpr->getBeginLoc(), OpRange,
+                                          &BasePath, CStyle)) {
+      msg = 0;
+      return TC_Failed;
+    }
   } else
     Kind = CK_NoOp;
 
@@ -1858,7 +1868,7 @@ TryCastResult TryStaticMemberPointerUpcast(Sema &Self, ExprResult &SrcExpr,
                                                     FoundOverload)) {
       CXXMethodDecl *M = cast<CXXMethodDecl>(Fn);
       SrcType = Self.Context.getMemberPointerType(
-          Fn->getType(), /*Qualifier=*/nullptr, M->getParent());
+          Fn->getType(), /*Qualifier=*/std::nullopt, M->getParent());
       WasOverloadedFunction = true;
     }
   }
@@ -2104,9 +2114,9 @@ void Sema::CheckCompatibleReinterpretCast(QualType SrcType, QualType DestType,
     return;
   }
   // or one of the types is a tag type.
-  if (SrcTy->getAs<TagType>() || DestTy->getAs<TagType>()) {
+  if (isa<TagType>(SrcTy.getCanonicalType()) ||
+      isa<TagType>(DestTy.getCanonicalType()))
     return;
-  }
 
   // FIXME: Scoped enums?
   if ((SrcTy->isUnsignedIntegerType() && DestTy->isSignedIntegerType()) ||
@@ -2932,6 +2942,8 @@ bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
       SrcExpr = Self.ImpCastExprToType(
           SrcExpr.get(), Self.Context.getArrayParameterType(SrcTy),
           CK_HLSLArrayRValue, VK_PRValue, nullptr, CCK);
+    else
+      SrcExpr = Self.DefaultLvalueConversion(SrcExpr.get());
     Kind = CK_HLSLElementwiseCast;
     return true;
   }
@@ -2940,11 +2952,18 @@ bool CastOperation::CheckHLSLCStyleCast(CheckedConversionKind CCK) {
   // If the relative order of this and the HLSLElementWise cast checks
   // are changed, it might change which cast handles what in a few cases
   if (Self.HLSL().CanPerformAggregateSplatCast(SrcExpr.get(), DestType)) {
+    SrcExpr = Self.DefaultLvalueConversion(SrcExpr.get());
     const VectorType *VT = SrcTy->getAs<VectorType>();
+    const ConstantMatrixType *MT = SrcTy->getAs<ConstantMatrixType>();
     // change splat from vec1 case to splat from scalar
     if (VT && VT->getNumElements() == 1)
       SrcExpr = Self.ImpCastExprToType(
           SrcExpr.get(), VT->getElementType(), CK_HLSLVectorTruncation,
+          SrcExpr.get()->getValueKind(), nullptr, CCK);
+    // change splat from 1x1 matrix case to splat from scalar
+    else if (MT && MT->getNumElementsFlattened() == 1)
+      SrcExpr = Self.ImpCastExprToType(
+          SrcExpr.get(), MT->getElementType(), CK_HLSLMatrixTruncation,
           SrcExpr.get()->getValueKind(), nullptr, CCK);
     // Inserting a scalar cast here allows for a simplified codegen in
     // the case the destTy is a vector
@@ -3099,27 +3118,27 @@ void CastOperation::CheckCStyleCast() {
 
   if (!DestType->isScalarType() && !DestType->isVectorType() &&
       !DestType->isMatrixType()) {
-    const RecordType *DestRecordTy = DestType->getAs<RecordType>();
-
-    if (DestRecordTy && Self.Context.hasSameUnqualifiedType(DestType, SrcType)){
-      // GCC struct/union extension: allow cast to self.
-      Self.Diag(OpRange.getBegin(), diag::ext_typecheck_cast_nonscalar)
-        << DestType << SrcExpr.get()->getSourceRange();
-      Kind = CK_NoOp;
-      return;
-    }
-
-    // GCC's cast to union extension.
-    if (DestRecordTy && DestRecordTy->getDecl()->isUnion()) {
-      RecordDecl *RD = DestRecordTy->getDecl();
-      if (CastExpr::getTargetFieldForToUnionCast(RD, SrcType)) {
-        Self.Diag(OpRange.getBegin(), diag::ext_typecheck_cast_to_union)
-          << SrcExpr.get()->getSourceRange();
-        Kind = CK_ToUnion;
+    if (const RecordType *DestRecordTy =
+            DestType->getAsCanonical<RecordType>()) {
+      if (Self.Context.hasSameUnqualifiedType(DestType, SrcType)) {
+        // GCC struct/union extension: allow cast to self.
+        Self.Diag(OpRange.getBegin(), diag::ext_typecheck_cast_nonscalar)
+            << DestType << SrcExpr.get()->getSourceRange();
+        Kind = CK_NoOp;
         return;
-      } else {
+      }
+
+      // GCC's cast to union extension.
+      if (RecordDecl *RD = DestRecordTy->getDecl(); RD->isUnion()) {
+        if (CastExpr::getTargetFieldForToUnionCast(RD->getDefinitionOrSelf(),
+                                                   SrcType)) {
+          Self.Diag(OpRange.getBegin(), diag::ext_typecheck_cast_to_union)
+              << SrcExpr.get()->getSourceRange();
+          Kind = CK_ToUnion;
+          return;
+        }
         Self.Diag(OpRange.getBegin(), diag::err_typecheck_cast_to_union_no_type)
-          << SrcType << SrcExpr.get()->getSourceRange();
+            << SrcType << SrcExpr.get()->getSourceRange();
         SrcExpr = ExprError();
         return;
       }
@@ -3176,7 +3195,12 @@ void CastOperation::CheckCStyleCast() {
       SrcExpr = ExprError();
       return;
     }
-    if (!DestType->isNullPtrType()) {
+    if (DestType->isBooleanType()) {
+      SrcExpr = ImplicitCastExpr::Create(
+          Self.Context, DestType, CK_PointerToBoolean, SrcExpr.get(), nullptr,
+          VK_PRValue, Self.CurFPFeatureOverrides());
+
+    } else if (!DestType->isNullPtrType()) {
       // Implicitly cast from the null pointer type to the type of the
       // destination.
       CastKind CK = DestType->isPointerType() ? CK_NullToPointer : CK_BitCast;

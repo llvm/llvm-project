@@ -9,11 +9,16 @@
 #ifndef __CLC_MATH_CLC_POW_H__
 #define __CLC_MATH_CLC_POW_H__
 
-#define __CLC_BODY <clc/shared/binary_decl.inc>
-#define FUNCTION __clc_pow
+#define __CLC_FUNCTION __clc_pow
+#define __CLC_BODY "clc/shared/binary_decl.inc"
+#include "clc/math/gentype.inc"
+#undef __CLC_FUNCTION
 
-#include <clc/math/gentype.inc>
-
-#undef FUNCTION
+#define __CLC_FLOAT_ONLY
+#define __CLC_BODY "clc/shared/binary_decl.inc"
+#define __CLC_FUNCTION __clc_pow_fast
+#include "clc/math/gentype.inc"
+#undef __CLC_FUNCTION
+#undef __CLC_FLOAT_ONLY
 
 #endif // __CLC_MATH_CLC_POW_H__

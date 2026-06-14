@@ -1,4 +1,4 @@
-; RUN: opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/dummy_3D_vocab.json %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print<ir2vec>' -o /dev/null -ir2vec-vocab-path=%S/Inputs/dummy_3D_nonzero_opc_vocab.json %s 2>&1 | FileCheck %s
 
 define void @bar2(ptr %foo)  {
   store i32 0, ptr %foo, align 4
@@ -9,5 +9,5 @@ define void @bar2(ptr %foo)  {
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) nounwind readnone
 
 ; CHECK: Instruction vectors:
-; CHECK-NEXT: Instruction:   store i32 0, ptr %foo, align 4 [ 7.00  8.00  9.00 ]
-; CHECK-NEXT: Instruction:   ret void [ 0.00  0.00  0.00 ]
+; CHECK-NEXT: Instruction:   store i32 0, ptr %foo, align 4 [ 97.00  98.00  99.00 ]
+; CHECK-NEXT: Instruction:   ret void [ 1.00  2.00  3.00 ]

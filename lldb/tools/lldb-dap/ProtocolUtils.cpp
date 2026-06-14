@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "ProtocolUtils.h"
+#include "JSONUtils.h"
 #include "LLDBUtils.h"
 
 #include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBDeclaration.h"
+#include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBMutex.h"
 #include "lldb/API/SBStream.h"
@@ -25,7 +28,7 @@ using namespace lldb_dap::protocol;
 namespace lldb_dap {
 
 static bool ShouldDisplayAssemblySource(
-    lldb::SBAddress address,
+    lldb::SBLineEntry line_entry,
     lldb::StopDisassemblyType stop_disassembly_display) {
   if (stop_disassembly_display == lldb::eStopDisassemblyTypeNever)
     return false;
@@ -35,7 +38,6 @@ static bool ShouldDisplayAssemblySource(
 
   // A line entry of 0 indicates the line is compiler generated i.e. no source
   // file is associated with the frame.
-  auto line_entry = address.GetLineEntry();
   auto file_spec = line_entry.GetFileSpec();
   if (!file_spec.IsValid() || line_entry.GetLine() == 0 ||
       line_entry.GetLine() == LLDB_INVALID_LINE_NUMBER)
@@ -158,8 +160,11 @@ std::optional<protocol::Source> CreateSource(const lldb::SBFileSpec &file) {
     source.name = name;
   char path[PATH_MAX] = "";
   if (file.GetPath(path, sizeof(path)) &&
-      lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX))
+      lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX)) {
     source.path = path;
+    if (!lldb::SBFileSpec(path).Exists())
+      source.presentationHint = Source::eSourcePresentationHintDeemphasize;
+  }
   return source;
 }
 
@@ -172,10 +177,10 @@ bool IsAssemblySource(const protocol::Source &source) {
 }
 
 bool DisplayAssemblySource(lldb::SBDebugger &debugger,
-                           lldb::SBAddress address) {
+                           lldb::SBLineEntry line_entry) {
   const lldb::StopDisassemblyType stop_disassembly_display =
       GetStopDisassemblyDisplay(debugger);
-  return ShouldDisplayAssemblySource(address, stop_disassembly_display);
+  return ShouldDisplayAssemblySource(line_entry, stop_disassembly_display);
 }
 
 std::string GetLoadAddressString(const lldb::addr_t addr) {
@@ -202,10 +207,9 @@ protocol::Thread CreateThread(lldb::SBThread &thread, lldb::SBFormat &format) {
         queue_kind_label = " (concurrent)";
 
       name = llvm::formatv("Thread {0} Queue: {1}{2}", thread.GetIndexID(),
-                           queue_name, queue_kind_label)
-                 .str();
+                           queue_name, queue_kind_label);
     } else {
-      name = llvm::formatv("Thread {0}", thread.GetIndexID()).str();
+      name = llvm::formatv("Thread {0}", thread.GetIndexID());
     }
   }
   return protocol::Thread{thread.GetThreadID(), name};
@@ -227,9 +231,9 @@ std::vector<protocol::Thread> GetThreads(lldb::SBProcess process,
   return threads;
 }
 
-protocol::ExceptionBreakpointsFilter
+ExceptionBreakpointsFilter
 CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
-  protocol::ExceptionBreakpointsFilter filter;
+  ExceptionBreakpointsFilter filter;
   filter.filter = bp.GetFilter();
   filter.label = bp.GetLabel();
   filter.description = bp.GetLabel();

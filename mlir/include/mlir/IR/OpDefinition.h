@@ -30,6 +30,7 @@
 namespace mlir {
 class Builder;
 class OpBuilder;
+class ImplicitLocOpBuilder;
 
 /// This class implements `Optional` functionality for ParseResult. We don't
 /// directly use Optional here, because it provides an implicit conversion
@@ -114,7 +115,7 @@ public:
   MLIRContext *getContext() { return getOperation()->getContext(); }
 
   /// Print the operation to the given stream.
-  void print(raw_ostream &os, OpPrintingFlags flags = std::nullopt) {
+  void print(raw_ostream &os, OpPrintingFlags flags = {}) {
     state->print(os, flags);
   }
   void print(raw_ostream &os, AsmState &asmState) {
@@ -242,9 +243,10 @@ protected:
   /// so we can cast it away here.
   explicit OpState(Operation *state) : state(state) {}
 
-  /// For all op which don't have properties, we keep a single instance of
-  /// `EmptyProperties` to be used where a reference to a properties is needed:
-  /// this allow to bind a pointer to the reference without triggering UB.
+  /// For all ops which don't have properties, we keep a single instance of
+  /// `EmptyProperties` to be used where a pointer to a struct of properties
+  /// is needed: this allows binding a pointer to the reference without
+  /// triggering UB.
   static EmptyProperties &getEmptyProperties() {
     static EmptyProperties emptyProperties;
     return emptyProperties;
@@ -776,6 +778,18 @@ public:
   }
 };
 
+/// This trait marks operations that are allowed to produce builtin token
+/// values.
+template <typename ConcreteType>
+class TokenProducerTrait : public TraitBase<ConcreteType, TokenProducerTrait> {
+};
+
+/// This trait marks operations that are allowed to consume builtin token
+/// values.
+template <typename ConcreteType>
+class TokenConsumerTrait : public TraitBase<ConcreteType, TokenConsumerTrait> {
+};
+
 /// This class provides verification for ops that are known to have zero
 /// successors.
 template <typename ConcreteType>
@@ -888,7 +902,7 @@ public:
         continue;
 
       // Non-empty regions must contain a single basic block.
-      if (!llvm::hasSingleElement(region))
+      if (!region.hasOneBlock())
         return op->emitOpError("expects region #")
                << i << " to have 0 or 1 blocks";
 
@@ -1318,6 +1332,32 @@ struct HasParent {
     getParentOp() {
       Operation *parent = this->getOperation()->getParentOp();
       return llvm::cast<ParentOpType>(parent);
+    }
+  };
+};
+
+/// This class provides a verifier for ops that are expecting an ancestor
+/// (anywhere up the parent chain) to be one of the given op types.
+template <typename... AncestorOpTypes>
+struct HasAncestor {
+  template <typename ConcreteType>
+  class Impl : public TraitBase<ConcreteType, Impl> {
+  public:
+    static LogicalResult verifyTrait(Operation *op) {
+      if (op->getParentOfType<AncestorOpTypes...>())
+        return success();
+
+      return op->emitOpError()
+             << "expects ancestor op "
+             << (sizeof...(AncestorOpTypes) != 1 ? "to be one of '" : "'")
+             << llvm::ArrayRef({AncestorOpTypes::getOperationName()...}) << "'";
+    }
+
+    template <typename AncestorOpType =
+                  std::tuple_element_t<0, std::tuple<AncestorOpTypes...>>>
+    std::enable_if_t<sizeof...(AncestorOpTypes) == 1, AncestorOpType>
+    getAncestorOp() {
+      return this->getOperation()->template getParentOfType<AncestorOpType>();
     }
   };
 };
@@ -1977,7 +2017,7 @@ public:
     if constexpr (!hasProperties())
       return getEmptyProperties();
     return *getOperation()
-                ->getPropertiesStorageUnsafe()
+                ->getPropertiesStorage()
                 .template as<InferredProperties<T> *>();
   }
 
@@ -2136,19 +2176,13 @@ template <typename T>
 struct DenseMapInfo<T,
                     std::enable_if_t<std::is_base_of<mlir::OpState, T>::value &&
                                      !mlir::detail::IsInterface<T>::value>> {
-  static inline T getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return T::getFromOpaquePointer(pointer);
-  }
-  static inline T getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return T::getFromOpaquePointer(pointer);
-  }
   static unsigned getHashValue(T val) {
     return hash_value(val.getAsOpaquePointer());
   }
   static bool isEqual(T lhs, T rhs) { return lhs == rhs; }
 };
 } // namespace llvm
+
+MLIR_DECLARE_EXPLICIT_TYPE_ID(mlir::EmptyProperties)
 
 #endif

@@ -5,96 +5,104 @@
 subroutine loop_transformation_construct1
   implicit none
 
+  !ERROR: This construct requires a canonical loop nest
   !$omp do
-  !ERROR: A DO loop must follow the UNROLL directive
+  !BECAUSE: Fully unrolled loop does not result in a loop nest
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
   !$omp unroll
 end subroutine
 
 subroutine loop_transformation_construct2
   implicit none
-  integer :: i = 5
-  integer :: y
+  integer, parameter :: i = 5
+  integer :: x
   integer :: v(i)
 
   !$omp do
+  !ERROR: At least one of SIZES clause must appear on the TILE directive
   !$omp tile
   do x = 1, i
-    v(x) = x(x) * 2
+    v(x) = v(x) * 2
   end do
   !$omp end tile
   !$omp end do
-  !ERROR: The END TILE directive must follow the DO loop associated with the loop construct
-  !$omp end tile
-end subroutine
-
-subroutine loop_transformation_construct2
-  implicit none
-  integer :: i = 5
-  integer :: y
-  integer :: v(i)
-
-  !$omp do
-  !ERROR: Only Loop Transformation Constructs or Loop Nests can be nested within Loop Constructs
-  !$omp parallel do
-  do x = 1, i
-    v(x) = x(x) * 2
-  end do
 end subroutine
 
 subroutine loop_transformation_construct3
   implicit none
-  integer :: i = 5
-  integer :: y
+  integer, parameter :: i = 5
+  integer :: x
   integer :: v(i)
 
+  !ERROR: This construct requires a canonical loop nest
   !$omp do
+  !ERROR: Only loop-transforming constructs are allowed inside loop constructs
+  !$omp parallel do
   do x = 1, i
-    v(x) = x(x) * 2
+    v(x) = v(x) * 2
   end do
-  !ERROR: A DO loop must follow the TILE directive
-  !$omp tile
 end subroutine
 
 subroutine loop_transformation_construct4
   implicit none
-  integer :: i = 5
-  integer :: y
+  integer, parameter :: i = 5
+  integer :: x
   integer :: v(i)
 
   !$omp do
-  !ERROR: If a loop construct has been fully unrolled, it cannot then be tiled
-  !$omp tile
-  !$omp unroll full
   do x = 1, i
-    v(x) = x(x) * 2
+    v(x) = v(x) * 2
   end do
+  !ERROR: This construct should contain a DO-loop or a loop-nest-generating construct
+  !ERROR: At least one of SIZES clause must appear on the TILE directive
+  !$omp tile
 end subroutine
 
 subroutine loop_transformation_construct5
   implicit none
-  integer :: i = 5
-  integer :: y
+  integer, parameter :: i = 5
+  integer :: x
   integer :: v(i)
 
   !$omp do
-  !ERROR: If a loop construct has been fully unrolled, it cannot then be tiled
+  !ERROR: This construct requires a canonical loop nest
+  !ERROR: At least one of SIZES clause must appear on the TILE directive
   !$omp tile
-  !$omp unroll
+  !BECAUSE: Fully unrolled loop does not result in a loop nest
+  !$omp unroll full
   do x = 1, i
-    v(x) = x(x) * 2
+    v(x) = v(x) * 2
   end do
 end subroutine
 
 subroutine loop_transformation_construct6
   implicit none
-  integer :: i = 5
-  integer :: y
+  integer, parameter :: i = 5
+  integer :: x
   integer :: v(i)
 
   !$omp do
+  !ERROR: This construct requires a canonical loop nest
+  !ERROR: At least one of SIZES clause must appear on the TILE directive
+  !$omp tile
+  !BECAUSE: Fully unrolled loop does not result in a loop nest
+  !$omp unroll
+  do x = 1, i
+    v(x) = v(x) * 2
+  end do
+end subroutine
+
+subroutine loop_transformation_construct7
+  implicit none
+  integer, parameter :: i = 5
+  integer :: x
+  integer :: v(i)
+
+  !$omp do
+  !ERROR: At least one of SIZES clause must appear on the TILE directive
   !$omp tile
   !$omp unroll partial(2)
   do x = 1, i
-    v(x) = x(x) * 2
+    v(x) = v(x) * 2
   end do
 end subroutine

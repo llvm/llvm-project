@@ -6,7 +6,7 @@
 !NORT-NOT: call{{.*}}__tgt_target_data_end_mapper
 
 !Make sure we generate the body
-!LLVM: define internal void @_QFPf(ptr %[[A0:[0-9]+]], ptr %[[A1:[0-9]+]])
+!LLVM: define internal void @_QFPf(ptr noalias %[[A0:[0-9]+]], ptr noalias %[[A1:[0-9]+]])
 !LLVM:   %[[V0:[0-9]+]] = load i32, ptr %[[A0]], align 4
 !LLVM:   %[[V1:[0-9]+]] = load i32, ptr %[[A1]], align 4
 !LLVM:   %[[V2:[0-9]+]] = add i32 %[[V0]], %[[V1]]
@@ -23,8 +23,14 @@ contains
 
 subroutine f(x, y)
   integer :: x, y
+  type :: t
+    integer, pointer :: p(:)
+  end type
+  type(t) :: d
   !$omp target data map(tofrom: x, y)
   x = x + y
   !$omp end target data
+  !$omp target enter data map(to: d)
+  !$omp target exit data map(release: d)
 end subroutine
 end

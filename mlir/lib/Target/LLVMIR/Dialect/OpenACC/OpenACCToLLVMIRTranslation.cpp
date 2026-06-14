@@ -151,8 +151,7 @@ processDataOperands(llvm::IRBuilderBase &builder,
   // Copyin operands are handled as `to` call.
   llvm::SmallVector<mlir::Value> create, copyin;
   for (mlir::Value dataOp : op.getDataClauseOperands()) {
-    if (auto createOp =
-            mlir::dyn_cast_or_null<acc::CreateOp>(dataOp.getDefiningOp())) {
+    if (auto createOp = dataOp.getDefiningOp<acc::CreateOp>()) {
       create.push_back(createOp.getVarPtr());
     } else if (auto copyinOp = mlir::dyn_cast_or_null<acc::CopyinOp>(
                    dataOp.getDefiningOp())) {
@@ -384,7 +383,7 @@ static LogicalResult convertDataOp(acc::DataOp &op,
 
   auto afterDataRegion = builder.saveIP();
 
-  llvm::BranchInst *sourceTerminator = builder.CreateBr(entryBlock);
+  llvm::UncondBrInst *sourceTerminator = builder.CreateBr(entryBlock);
 
   builder.restoreIP(afterDataRegion);
   llvm::BasicBlock *endDataBlock = llvm::BasicBlock::Create(

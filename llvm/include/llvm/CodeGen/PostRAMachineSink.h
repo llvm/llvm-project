@@ -14,14 +14,13 @@
 namespace llvm {
 
 class PostRAMachineSinkingPass
-    : public PassInfoMixin<PostRAMachineSinkingPass> {
+    : public OptionalPassInfoMixin<PostRAMachineSinkingPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 
   MachineFunctionProperties getRequiredProperties() const {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 };
 

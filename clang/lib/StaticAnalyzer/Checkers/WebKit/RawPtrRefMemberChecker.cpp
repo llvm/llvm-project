@@ -119,27 +119,27 @@ public:
     auto *Desugared = PointeeType->getUnqualifiedDesugaredType();
     if (!Desugared)
       return nullptr;
-    auto *ObjCType = dyn_cast<ObjCInterfaceType>(Desugared);
-    if (!ObjCType)
-      return nullptr;
-    return ObjCType->getDecl();
+    if (auto *ObjCType = dyn_cast<ObjCInterfaceType>(Desugared))
+      return ObjCType->getDecl();
+    if (auto *ObjCType = dyn_cast<ObjCObjectType>(Desugared))
+      return ObjCType->getInterface();
+    return nullptr;
   }
 
   void visitObjCDecl(const ObjCContainerDecl *CD) const {
     if (BR->getSourceManager().isInSystemHeader(CD->getLocation()))
       return;
 
-    ObjCContainerDecl::PropertyMap map;
-    CD->collectPropertiesToImplement(map);
-    for (auto it : map)
-      visitObjCPropertyDecl(CD, it.second);
-
-    if (auto *ID = dyn_cast<ObjCInterfaceDecl>(CD)) {
-      for (auto *Ivar : ID->ivars())
-        visitIvarDecl(CD, Ivar);
-      return;
-    }
     if (auto *ID = dyn_cast<ObjCImplementationDecl>(CD)) {
+      ObjCContainerDecl::PropertyMap map;
+      CD->collectPropertiesToImplement(map);
+      for (auto it : map)
+        visitObjCPropertyDecl(CD, it.second);
+
+      if (auto *Interface = ID->getClassInterface()) {
+        for (auto *Ivar : Interface->ivars())
+          visitIvarDecl(CD, Ivar);
+      }
       for (auto *PropImpl : ID->property_impls())
         visitPropImpl(CD, PropImpl);
       for (auto *Ivar : ID->ivars())
@@ -231,8 +231,11 @@ public:
     // "assign" property doesn't retain even under ARC so treat it as unsafe.
     bool ignoreARC =
         !PD->isReadOnly() && PD->getSetterKind() == ObjCPropertyDecl::Assign;
+    bool IsWeak =
+        PD->getPropertyAttributes() & ObjCPropertyAttribute::kind_weak;
+    bool HasSafeAttr = PD->isRetaining() || IsWeak;
     auto IsUnsafePtr = isUnsafePtr(QT, ignoreARC);
-    return {IsUnsafePtr && *IsUnsafePtr, PropType};
+    return {IsUnsafePtr && *IsUnsafePtr && !HasSafeAttr, PropType};
   }
 
   bool shouldSkipDecl(const RecordDecl *RD) const {
@@ -363,13 +366,15 @@ public:
   }
 
   std::optional<bool> isUnsafePtr(QualType QT, bool ignoreARC) const final {
+    if (QT.hasStrongOrWeakObjCLifetime())
+      return false;
     return RTC->isUnretained(QT, ignoreARC);
   }
 
   const char *typeName() const final { return "retainable type"; }
 
   const char *invariant() const final {
-    return "member variables must be a RetainPtr";
+    return "member variables must be a RetainPtr or OSObjectPtr";
   }
 
   PrintDeclKind printPointer(llvm::raw_svector_ostream &Os,

@@ -1,0 +1,167 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump -p %t | FileCheck %s --match-full-lines --strict-whitespace
+
+## This test covers llvm-objdump printing private headers for the ISG1, OSG1,
+## and PSG1 "parts" of the DX container file format. The test uses a few
+## absurdly large values and long string names to ensure that the columns in the
+## printed table widen correctly.
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  FileSize:        630
+  PartCount:       3
+  PartOffsets:     [ 64, 124, 184 ]
+Parts:
+  - Name:            ISG1
+    Size:            52
+    Signature:
+      Parameters:
+        - Stream:          0
+          Name:            AAA_HSFoo
+          Index:           4391238    # This value forces the index column to widen
+          SystemValue:     Undefined
+          CompType:        Float32
+          Register:        0
+          Mask:            7
+          ExclusiveMask:   2
+          MinPrecision:    Default
+  - Name:            OSG1
+    Size:            52
+    Signature:
+      Parameters:
+        - Stream:          0
+          Name:            SV_Position
+          Index:           0
+          SystemValue:     Position
+          CompType:        Float32
+          Register:        2147483647 # This value forces the register column to widen
+          Mask:            15
+          ExclusiveMask:   0
+          MinPrecision:    Default
+  - Name:            PSG1
+    Size:            402
+    Signature:
+      Parameters:
+        - Stream:          0
+          Name:            SV_TessFactor
+          Index:           0
+          SystemValue:     FinalQuadEdgeTessfactor  # The tessfactor forces the SysVal column to widen
+          CompType:        Float32
+          Register:        0
+          Mask:            8
+          ExclusiveMask:   8
+          MinPrecision:    Default
+        - Stream:          0
+          Name:            BBB
+          Index:           0
+          SystemValue:     Undefined
+          CompType:        Float32
+          Register:        0
+          Mask:            7
+          ExclusiveMask:   0
+          MinPrecision:    Default
+        - Stream:          0
+          Name:            SV_TessFactor
+          Index:           1
+          SystemValue:     FinalQuadEdgeTessfactor
+          CompType:        Float32
+          Register:        1
+          Mask:            8
+          ExclusiveMask:   8
+          MinPrecision:    Default
+        - Stream:          0
+          Name:            BBB
+          Index:           1
+          SystemValue:     Undefined
+          CompType:        Float32
+          Register:        1
+          Mask:            7
+          ExclusiveMask:   0
+          MinPrecision:    Default
+        - Stream:          0
+          Name:            SV_TessFactor
+          Index:           2
+          SystemValue:     FinalQuadEdgeTessfactor
+          CompType:        Float32
+          Register:        2
+          Mask:            8
+          ExclusiveMask:   8
+          MinPrecision:    Default
+        - Stream:          0
+          Name:            BBB
+          Index:           2
+          SystemValue:     Undefined
+          CompType:        Float32
+          Register:        2
+          Mask:            7
+          ExclusiveMask:   0
+          MinPrecision:    Default
+        - Stream:          0
+          Name:            SV_TessFactor
+          Index:           3
+          SystemValue:     FinalQuadEdgeTessfactor
+          CompType:        Float32
+          Register:        3
+          Mask:            8
+          ExclusiveMask:   8
+          MinPrecision:    Default
+        - Stream:          0
+          Name:            SV_InsideTessFactor
+          Index:           0
+          SystemValue:     FinalQuadInsideTessfactor
+          CompType:        Float32
+          Register:        4
+          Mask:            8
+          ExclusiveMask:   0
+          MinPrecision:    Default
+        - Stream:          0
+          Name:            SV_InsideTessFactor
+          Index:           1
+          SystemValue:     FinalQuadInsideTessfactor
+          CompType:        Float32
+          Register:        5
+          Mask:            8
+          ExclusiveMask:   0
+          MinPrecision:    Default
+        - Stream:          0
+          Name:            AVeryLongStringThatWillForceWidening # This value forces name column to widen
+          Index:           0
+          SystemValue:     Undefined
+          CompType:        Float32
+          Register:        6
+          Mask:            15
+          ExclusiveMask:   4
+          MinPrecision:    Default
+...
+
+# CHECK:; Input signature:
+# CHECK-NEXT:;
+# CHECK-NEXT:; Name                       Index  Mask Register   SysValue  Format  Used
+# CHECK-NEXT:; ------------------------ ------- ----- -------- ---------- ------- -----
+# CHECK-NEXT:; AAA_HSFoo                4391238  xyz         0  Undefined Float32   y
+
+# CHECK:; Output signature:
+# CHECK-NEXT:;
+# CHECK-NEXT:; Name                     Index  Mask   Register   SysValue  Format  Used
+# CHECK-NEXT:; ------------------------ ----- ----- ---------- ---------- ------- -----
+# CHECK-NEXT:; SV_Position                  0  xyzw 2147483647   Position Float32
+
+# CHECK:; Patch Constant signature:
+# CHECK-NEXT:;
+# CHECK-NEXT:; Name                                 Index  Mask Register                  SysValue  Format  Used
+# CHECK-NEXT:; ------------------------------------ ----- ----- -------- ------------------------- ------- -----
+# CHECK-NEXT:; SV_TessFactor                            0     w        0   FinalQuadEdgeTessfactor Float32     w
+# CHECK-NEXT:; BBB                                      0  xyz         0                 Undefined Float32
+# CHECK-NEXT:; SV_TessFactor                            1     w        1   FinalQuadEdgeTessfactor Float32     w
+# CHECK-NEXT:; BBB                                      1  xyz         1                 Undefined Float32
+# CHECK-NEXT:; SV_TessFactor                            2     w        2   FinalQuadEdgeTessfactor Float32     w
+# CHECK-NEXT:; BBB                                      2  xyz         2                 Undefined Float32
+# CHECK-NEXT:; SV_TessFactor                            3     w        3   FinalQuadEdgeTessfactor Float32     w
+# CHECK-NEXT:; SV_InsideTessFactor                      0     w        4 FinalQuadInsideTessfactor Float32
+# CHECK-NEXT:; SV_InsideTessFactor                      1     w        5 FinalQuadInsideTessfactor Float32
+# CHECK-NEXT:; AVeryLongStringThatWillForceWidening     0  xyzw        6                 Undefined Float32    z

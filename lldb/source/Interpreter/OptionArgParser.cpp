@@ -161,7 +161,7 @@ lldb::addr_t OptionArgParser::ToRawAddress(const ExecutionContext *exe_ctx,
                                            lldb::addr_t fail_value,
                                            Status *error_ptr) {
   std::optional<lldb::addr_t> maybe_addr = DoToAddress(exe_ctx, s, error_ptr);
-  return maybe_addr ? *maybe_addr : fail_value;
+  return maybe_addr.value_or(fail_value);
 }
 
 lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,

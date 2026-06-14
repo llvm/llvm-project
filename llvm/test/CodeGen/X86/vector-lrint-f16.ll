@@ -8,7 +8,7 @@
 ; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=x86_64-unknown -mattr=avx2,f16c | FileCheck %s --check-prefixes=X64-AVX-I32
 ; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=x86_64-unknown -mattr=avx512fp16,avx512vl | FileCheck %s --check-prefixes=X64-FP16-I32
 
-define <1 x iXLen> @lrint_v1f16(<1 x half> %x) {
+define <1 x iXLen> @lrint_v1f16(<1 x half> %x) nounwind {
 ; X86-AVX-I16-LABEL: lrint_v1f16:
 ; X86-AVX-I16:       # %bb.0:
 ; X86-AVX-I16-NEXT:    vcvtph2ps %xmm0, %xmm0
@@ -73,7 +73,7 @@ define <1 x iXLen> @lrint_v1f16(<1 x half> %x) {
 }
 declare <1 x iXLen> @llvm.lrint.v1iXLen.v1f16(<1 x half>)
 
-define <2 x iXLen> @lrint_v2f16(<2 x half> %x) {
+define <2 x iXLen> @lrint_v2f16(<2 x half> %x) nounwind {
 ; X86-AVX-I16-LABEL: lrint_v2f16:
 ; X86-AVX-I16:       # %bb.0:
 ; X86-AVX-I16-NEXT:    vpsrld $16, %xmm0, %xmm1
@@ -250,7 +250,7 @@ define <2 x iXLen> @lrint_v2f16(<2 x half> %x) {
 }
 declare <2 x iXLen> @llvm.lrint.v2iXLen.v2f16(<2 x half>)
 
-define <4 x iXLen> @lrint_v4f16(<4 x half> %x) {
+define <4 x iXLen> @lrint_v4f16(<4 x half> %x) nounwind {
 ; X86-AVX-I16-LABEL: lrint_v4f16:
 ; X86-AVX-I16:       # %bb.0:
 ; X86-AVX-I16-NEXT:    vpsrld $16, %xmm0, %xmm1
@@ -455,7 +455,7 @@ define <4 x iXLen> @lrint_v4f16(<4 x half> %x) {
 }
 declare <4 x iXLen> @llvm.lrint.v4iXLen.v4f16(<4 x half>)
 
-define <8 x iXLen> @lrint_v8f16(<8 x half> %x) {
+define <8 x iXLen> @lrint_v8f16(<8 x half> %x) nounwind {
 ; X86-AVX-I16-LABEL: lrint_v8f16:
 ; X86-AVX-I16:       # %bb.0:
 ; X86-AVX-I16-NEXT:    vpsrld $16, %xmm0, %xmm1
@@ -718,7 +718,7 @@ define <8 x iXLen> @lrint_v8f16(<8 x half> %x) {
 }
 declare <8 x iXLen> @llvm.lrint.v8iXLen.v8f16(<8 x half>)
 
-define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
+define <16 x iXLen> @lrint_v16f16(<16 x half> %x) nounwind {
 ; X86-AVX-I16-LABEL: lrint_v16f16:
 ; X86-AVX-I16:       # %bb.0:
 ; X86-AVX-I16-NEXT:    vextracti128 $1, %ymm0, %xmm1
@@ -1211,7 +1211,7 @@ define <16 x iXLen> @lrint_v16f16(<16 x half> %x) {
 }
 declare <16 x iXLen> @llvm.lrint.v16iXLen.v16f16(<16 x half>)
 
-define <32 x iXLen> @lrint_v32f32(<32 x half> %x) {
+define <32 x iXLen> @lrint_v32f32(<32 x half> %x) nounwind {
 ; X86-AVX-I16-LABEL: lrint_v32f32:
 ; X86-AVX-I16:       # %bb.0:
 ; X86-AVX-I16-NEXT:    vextracti128 $1, %ymm0, %xmm2

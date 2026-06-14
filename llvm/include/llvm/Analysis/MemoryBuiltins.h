@@ -59,10 +59,6 @@ isAllocationFn(const Value *V,
                function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
 
 /// Tests if a value is a call or invoke to a library function that
-/// allocates memory via new.
-LLVM_ABI bool isNewLikeFn(const Value *V, const TargetLibraryInfo *TLI);
-
-/// Tests if a value is a call or invoke to a library function that
 /// allocates memory similar to malloc or calloc.
 LLVM_ABI bool isMallocOrCallocLikeFn(const Value *V,
                                      const TargetLibraryInfo *TLI);
@@ -180,6 +176,14 @@ struct ObjectSizeOpts {
 LLVM_ABI bool getObjectSize(const Value *Ptr, uint64_t &Size,
                             const DataLayout &DL, const TargetLibraryInfo *TLI,
                             ObjectSizeOpts Opts = {});
+
+/// Like getObjectSize(), but only returns the size of base objects (like
+/// allocas, global variables and allocator calls) and std::nullopt otherwise.
+/// Requires ExactSizeFromOffset mode.
+LLVM_ABI std::optional<TypeSize> getBaseObjectSize(const Value *Ptr,
+                                                   const DataLayout &DL,
+                                                   const TargetLibraryInfo *TLI,
+                                                   ObjectSizeOpts Opts = {});
 
 /// Try to turn a call to \@llvm.objectsize into an integer value of the given
 /// Type. Returns null on failure. If MustSucceed is true, this function will

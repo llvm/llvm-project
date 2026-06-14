@@ -9,61 +9,153 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_VARIABLES_H
 #define LLDB_TOOLS_LLDB_DAP_VARIABLES_H
 
+#include "DAPForward.h"
+#include "DAPLog.h"
+#include "Protocol/DAPTypes.h"
+#include "Protocol/ProtocolRequests.h"
+#include "Protocol/ProtocolTypes.h"
+#include "lldb/API/SBFrame.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
-#include "llvm/ADT/DenseMap.h"
-
-#define VARREF_FIRST_VAR_IDX (int64_t)4
-#define VARREF_LOCALS (int64_t)1
-#define VARREF_GLOBALS (int64_t)2
-#define VARREF_REGS (int64_t)3
+#include "llvm/Support/ErrorHandling.h"
 
 namespace lldb_dap {
+struct VariableReferenceStorage;
 
-struct Variables {
-  lldb::SBValueList locals;
-  lldb::SBValueList globals;
-  lldb::SBValueList registers;
+enum ScopeKind : unsigned {
+  eScopeKindLocals,
+  eScopeKindGlobals,
+  eScopeKindRegisters
+};
 
-  /// Check if \p var_ref points to a variable that should persist for the
-  /// entire duration of the debug session, e.g. repl expandable variables
-  static bool IsPermanentVariableReference(int64_t var_ref);
+/// An Interface to get or find specific variables by name.
+class VariableStore {
+public:
+  explicit VariableStore(VariableReferenceStorage &storage, bool is_permanent,
+                         bool is_internal)
+      : m_storage(storage), m_is_permanent(is_permanent),
+        m_is_internal(is_internal) {}
+  virtual ~VariableStore() = default;
 
+  virtual llvm::Expected<std::vector<protocol::Variable>>
+  GetVariables(const protocol::VariablesArguments &args) = 0;
+  virtual lldb::SBValue FindVariable(llvm::StringRef name) = 0;
+  virtual lldb::SBValue GetVariable() const { return {}; }
+
+  // Not copyable.
+  VariableStore(const VariableStore &) = delete;
+  VariableStore &operator=(const VariableStore &) = delete;
+  VariableStore(VariableStore &&) = delete;
+  VariableStore &operator=(VariableStore &&) = delete;
+
+protected:
+  VariableReferenceStorage &m_storage;
+  bool m_is_permanent;
+  bool m_is_internal;
+};
+
+struct VariableReferenceStorage {
+  explicit VariableReferenceStorage(Log &log, protocol::Configuration &config)
+      : log(log), config(config) {}
   /// \return a new variableReference.
   /// Specify is_permanent as true for variable that should persist entire
   /// debug session.
-  int64_t GetNewVariableReference(bool is_permanent);
+  var_ref_t CreateVariableReference(bool is_permanent);
 
   /// \return the expandable variable corresponding with variableReference
   /// value of \p value.
   /// If \p var_ref is invalid an empty SBValue is returned.
-  lldb::SBValue GetVariable(int64_t var_ref) const;
+  lldb::SBValue GetVariable(var_ref_t var_ref);
 
   /// Insert a new \p variable.
   /// \return variableReference assigned to this expandable variable.
-  int64_t InsertVariable(lldb::SBValue variable, bool is_permanent);
+  var_ref_t Insert(const lldb::SBValue &variable, bool is_permanent,
+                   bool is_internal);
 
-  lldb::SBValueList *GetTopLevelScope(int64_t variablesReference);
+  /// Insert a value list. Used to store references to lldb repl command
+  /// outputs.
+  var_ref_t Insert(const lldb::SBValueList &values);
 
-  lldb::SBValue FindVariable(uint64_t variablesReference, llvm::StringRef name);
+  /// Insert a new frame into temporary storage.
+  std::vector<protocol::Scope> Insert(const lldb::SBFrame &frame);
 
-  /// Clear all scope variables and non-permanent expandable variables.
-  void Clear();
+  lldb::SBValue FindVariable(var_ref_t var_ref, llvm::StringRef name);
+
+  void Clear() { m_temporary_kind_pool.Clear(); }
+
+  VariableStore *GetVariableStore(var_ref_t var_ref);
+  Log &log;
+  protocol::Configuration &config;
 
 private:
-  /// Variable_reference start index of permanent expandable variable.
-  static constexpr int64_t PermanentVariableStartIndex = (1ll << 32);
+  /// Template class for managing pools of variable stores.
+  /// All references created starts from zero with the Reference kind mask
+  /// applied, the mask is then removed when fetching a variable store
+  ///
+  /// \tparam ReferenceKind
+  ///     The reference kind created in this pool
+  template <protocol::ReferenceKind Kind> class ReferenceKindPool {
+
+  public:
+    explicit ReferenceKindPool() = default;
+
+    /// Resets the count to zero and clears the pool,
+    /// disabled for permanent reference kind.
+    template <protocol::ReferenceKind LHS = Kind,
+              protocol::ReferenceKind RHS = protocol::eReferenceKindPermanent>
+    std::enable_if_t<LHS != RHS, void> Clear() {
+      reference_count = 0;
+      m_pool.clear();
+    }
+
+    VariableStore *GetVariableStore(var_ref_t var_ref) {
+      const uint32_t raw_ref = var_ref.Reference();
+
+      if (raw_ref != 0 && raw_ref <= m_pool.size())
+        return m_pool[raw_ref - 1].get();
+      return nullptr;
+    }
+
+    template <typename T, typename... Args> var_ref_t Add(Args &&...args) {
+      assert(reference_count == m_pool.size() &&
+             "Current reference_count must be the size of the pool");
+
+      if (LLVM_UNLIKELY(reference_count >=
+                        var_ref_t::k_max_variables_references)) {
+        // We cannot add new variables to the pool;
+        return var_ref_t(var_ref_t::k_invalid_var_ref);
+      }
+
+      m_pool.emplace_back(std::make_unique<T>(std::forward<Args>(args)...));
+      const uint32_t raw_ref = NextRawReference();
+      return var_ref_t(raw_ref, Kind);
+    }
+
+    [[nodiscard]] size_t Size() const { return m_pool.size(); }
+
+    // Non copyable and non movable.
+    ReferenceKindPool(const ReferenceKindPool &) = delete;
+    ReferenceKindPool &operator=(const ReferenceKindPool &) = delete;
+    ReferenceKindPool(ReferenceKindPool &&) = delete;
+    ReferenceKindPool &operator=(ReferenceKindPool &&) = delete;
+    ~ReferenceKindPool() = default;
+
+  private:
+    uint32_t NextRawReference() {
+      reference_count++;
+      return reference_count;
+    }
+
+    uint32_t reference_count = 0;
+    std::vector<std::unique_ptr<VariableStore>> m_pool;
+  };
 
   /// Variables that are alive in this stop state.
   /// Will be cleared when debuggee resumes.
-  llvm::DenseMap<int64_t, lldb::SBValue> m_referencedvariables;
-
+  ReferenceKindPool<protocol::eReferenceKindTemporary> m_temporary_kind_pool;
   /// Variables that persist across entire debug session.
   /// These are the variables evaluated from debug console REPL.
-  llvm::DenseMap<int64_t, lldb::SBValue> m_referencedpermanent_variables;
-
-  int64_t m_next_temporary_var_ref{VARREF_FIRST_VAR_IDX};
-  int64_t m_next_permanent_var_ref{PermanentVariableStartIndex};
+  ReferenceKindPool<protocol::eReferenceKindPermanent> m_permanent_kind_pool;
 };
 
 } // namespace lldb_dap

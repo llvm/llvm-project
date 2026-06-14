@@ -20,12 +20,14 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/DTLTO/DTLTO.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
 #include <memory>
@@ -36,6 +38,16 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace lld;
 using namespace lld::coff;
+
+static AddBufferFn
+createAddBufferFn(std::vector<std::unique_ptr<MemoryBuffer>> &files,
+                  std::vector<std::string> &filenames) {
+  return [&files, &filenames](unsigned task, const Twine &moduleName,
+                              std::unique_ptr<MemoryBuffer> mb) {
+    files[task] = std::move(mb);
+    filenames[task] = moduleName.str();
+  };
+}
 
 std::string BitcodeCompiler::getThinLTOOutputFile(StringRef path) {
   return lto::getThinLTOOutputFile(path, ctx.config.thinLTOPrefixReplaceOld,
@@ -100,6 +112,10 @@ lto::Config BitcodeCompiler::createConfig() {
     checkError(c.addSaveTemps(std::string(ctx.config.outputFile) + ".",
                               /*UseInputModulePath*/ true,
                               ctx.config.saveTempsArgs));
+
+  c.PTO.LoopVectorization = c.OptLevel > 1;
+  c.PTO.SLPVectorization = c.OptLevel > 1;
+
   return c;
 }
 
@@ -123,8 +139,19 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
         llvm::heavyweight_hardware_concurrency(ctx.config.thinLTOJobs));
   }
 
-  ltoObj = std::make_unique<lto::LTO>(createConfig(), backend,
-                                      ctx.config.ltoPartitions);
+  if (ctx.config.dtltoDistributor.empty())
+    ltoObj = std::make_unique<lto::LTO>(createConfig(), backend,
+                                        ctx.config.ltoPartitions);
+  else
+    ltoObj = std::make_unique<lto::DTLTO>(
+        createConfig(), ctx.config.ltoPartitions,
+        llvm::lto::LTO::LTOKind::LTOK_Default, nullptr,
+        ctx.config.thinLTOEmitImportsFiles, ctx.config.thinLTOIndexOnly,
+        ctx.config.outputFile, ctx.config.dtltoDistributor,
+        ctx.config.dtltoDistributorArgs, ctx.config.dtltoCompiler,
+        ctx.config.dtltoCompilerPrependArgs, ctx.config.dtltoCompilerArgs,
+        createAddBufferFn(files, file_names),
+        !ctx.config.saveTempsArgs.empty());
 }
 
 BitcodeCompiler::~BitcodeCompiler() = default;
@@ -167,6 +194,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting objects.
 std::vector<InputFile *> BitcodeCompiler::compile() {
+  llvm::TimeTraceScope timeScope("Bitcode compile");
   unsigned maxTasks = ltoObj->getMaxTasks();
   buf.resize(maxTasks);
   files.resize(maxTasks);
@@ -178,11 +206,7 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   FileCache cache;
   if (!ctx.config.ltoCache.empty())
     cache = check(localCache("ThinLTO", "Thin", ctx.config.ltoCache,
-                             [&](size_t task, const Twine &moduleName,
-                                 std::unique_ptr<MemoryBuffer> mb) {
-                               files[task] = std::move(mb);
-                               file_names[task] = moduleName.str();
-                             }));
+                             createAddBufferFn(files, file_names)));
 
   checkError(ltoObj->run(
       [&](size_t task, const Twine &moduleName) {
@@ -212,16 +236,17 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   }
 
   if (!ctx.config.ltoCache.empty())
-    pruneCache(ctx.config.ltoCache, ctx.config.ltoCachePolicy, files);
+    check(pruneCache(ctx.config.ltoCache, ctx.config.ltoCachePolicy, files));
 
   std::vector<InputFile *> ret;
   bool emitASM = ctx.config.emit == EmitKind::ASM;
   const char *Ext = emitASM ? ".s" : ".obj";
   for (unsigned i = 0; i != maxTasks; ++i) {
     StringRef bitcodeFilePath;
-    // Get the native object contents either from the cache or from memory.  Do
-    // not use the cached MemoryBuffer directly, or the PDB will not be
-    // deterministic.
+    // Get the native object contents either from a MemoryBuffer, for example
+    // from the cache or an external DTLTO backend compilation, or by reading
+    // from memory. Do not use the provided MemoryBuffer directly, or the PDB
+    // will not be deterministic.
     StringRef objBuf;
     if (files[i]) {
       objBuf = files[i]->getBuffer();
@@ -257,4 +282,8 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   }
 
   return ret;
+}
+
+void BitcodeCompiler::setBitcodeLibFuncs(ArrayRef<StringRef> bitcodeLibFuncs) {
+  ltoObj->setBitcodeLibFuncs(bitcodeLibFuncs);
 }

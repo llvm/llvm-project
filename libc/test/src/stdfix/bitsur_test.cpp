@@ -8,7 +8,7 @@
 
 #include "BitsFxTest.h"
 
-#include "llvm-libc-types/stdfix-types.h" // uint_ur_t
+#include "llvm-libc-types/uint_ur_t.h" // uint_ur_t
 #include "src/stdfix/bitsur.h"
 
 LIST_BITSFX_TESTS(ur, unsigned fract, uint_ur_t, LIBC_NAMESPACE::bitsur);

@@ -62,8 +62,12 @@ static std::string getDescription(const Module &M) {
 
 bool ModulePass::skipModule(const Module &M) const {
   const OptPassGate &Gate = M.getContext().getOptPassGate();
-  return Gate.isEnabled() &&
-         !Gate.shouldRunPass(this->getPassName(), getDescription(M));
+
+  StringRef PassName = getPassArgument();
+  if (PassName.empty())
+    PassName = this->getPassName();
+
+  return Gate.isEnabled() && !Gate.shouldRunPass(PassName, getDescription(M));
 }
 
 bool Pass::mustPreserveAnalysisID(char &AID) const {
@@ -84,6 +88,16 @@ StringRef Pass::getPassName() const {
   if (PI)
     return PI->getPassName();
   return "Unnamed pass: implement Pass::getPassName()";
+}
+
+/// getPassArgument - Return a nice clean name for a pass
+/// corresponding to that used to enable the pass in opt
+StringRef Pass::getPassArgument() const {
+  AnalysisID AID = getPassID();
+  const PassInfo *PI = Pass::lookupPassInfo(AID);
+  if (PI)
+    return PI->getPassArgument();
+  return "";
 }
 
 void Pass::preparePassManager(PMStack &) {
@@ -163,6 +177,11 @@ Pass *FunctionPass::createPrinterPass(raw_ostream &OS,
   return createPrintFunctionPass(OS, Banner);
 }
 
+bool FunctionPass::printIRUnit(raw_ostream &OS, Function &F) {
+  F.print(OS);
+  return true;
+}
+
 PassManagerType FunctionPass::getPotentialPassManagerType() const {
   return PMT_FunctionPassManager;
 }
@@ -173,8 +192,12 @@ static std::string getDescription(const Function &F) {
 
 bool FunctionPass::skipFunction(const Function &F) const {
   OptPassGate &Gate = F.getContext().getOptPassGate();
-  if (Gate.isEnabled() &&
-      !Gate.shouldRunPass(this->getPassName(), getDescription(F)))
+
+  StringRef PassName = getPassArgument();
+  if (PassName.empty())
+    PassName = this->getPassName();
+
+  if (Gate.isEnabled() && !Gate.shouldRunPass(PassName, getDescription(F)))
     return true;
 
   if (F.hasOptNone()) {

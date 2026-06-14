@@ -87,6 +87,179 @@ define <vscale x 8 x bfloat> @compact_bf16(<vscale x 8 x i1> %pg, <vscale x 8 x 
   ret <vscale x 8 x bfloat> %out
 }
 
+;
+; EXPAND
+;
+
+define <vscale x 16 x i8> @expand_i8(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a) {
+; CHECK-LABEL: expand_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    expand z0.b, p0, z0.b
+; CHECK-NEXT:    ret
+  %out = call <vscale x 16 x i8> @llvm.aarch64.sve.expand.nxv16i8(<vscale x 16 x i1> %pg,
+                                                                   <vscale x 16 x i8> %a)
+  ret <vscale x 16 x i8> %out
+}
+
+define <vscale x 8 x i16> @expand_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) {
+; CHECK-LABEL: expand_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    expand z0.h, p0, z0.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x i16> @llvm.aarch64.sve.expand.nxv8i16(<vscale x 8 x i1> %pg,
+                                                                   <vscale x 8 x i16> %a)
+  ret <vscale x 8 x i16> %out
+}
+
+define <vscale x 4 x i32> @expand_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) {
+; CHECK-LABEL: expand_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    expand z0.s, p0, z0.s
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.expand.nxv4i32(<vscale x 4 x i1> %pg,
+                                                                   <vscale x 4 x i32> %a)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 2 x i64> @expand_i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64> %a) {
+; CHECK-LABEL: expand_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    expand z0.d, p0, z0.d
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x i64> @llvm.aarch64.sve.expand.nxv2i64(<vscale x 2 x i1> %pg,
+                                                                   <vscale x 2 x i64> %a)
+  ret <vscale x 2 x i64> %out
+}
+
+define <vscale x 8 x half> @expand_f16(<vscale x 8 x i1> %pg, <vscale x 8 x half> %a) {
+; CHECK-LABEL: expand_f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    expand z0.h, p0, z0.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x half> @llvm.aarch64.sve.expand.nxv8f16(<vscale x 8 x i1> %pg,
+                                                                    <vscale x 8 x half> %a)
+  ret <vscale x 8 x half> %out
+}
+
+define <vscale x 4 x float> @expand_f32(<vscale x 4 x i1> %pg, <vscale x 4 x float> %a) {
+; CHECK-LABEL: expand_f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    expand z0.s, p0, z0.s
+; CHECK-NEXT:    ret
+  %out = call <vscale x 4 x float> @llvm.aarch64.sve.expand.nxv4f32(<vscale x 4 x i1> %pg,
+                                                                     <vscale x 4 x float> %a)
+  ret <vscale x 4 x float> %out
+}
+
+define <vscale x 2 x double> @expand_f64(<vscale x 2 x i1> %pg, <vscale x 2 x double> %a) {
+; CHECK-LABEL: expand_f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    expand z0.d, p0, z0.d
+; CHECK-NEXT:    ret
+  %out = call <vscale x 2 x double> @llvm.aarch64.sve.expand.nxv2f64(<vscale x 2 x i1> %pg,
+                                                                      <vscale x 2 x double> %a)
+  ret <vscale x 2 x double> %out
+}
+
+define <vscale x 8 x bfloat> @expand_bf16(<vscale x 8 x i1> %pg, <vscale x 8 x bfloat> %a) {
+; CHECK-LABEL: expand_bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    expand z0.h, p0, z0.h
+; CHECK-NEXT:    ret
+  %out = call <vscale x 8 x bfloat> @llvm.aarch64.sve.expand.nxv8bf16(<vscale x 8 x i1> %pg,
+                                                                       <vscale x 8 x bfloat> %a)
+  ret <vscale x 8 x bfloat> %out
+}
+
+;
+; FIRSTP
+;
+
+define i64 @firstp_b8(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a) {
+; CHECK-LABEL: firstp_b8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    firstp x0, p0, p1.b
+; CHECK-NEXT:    ret
+  %out = call i64 @llvm.aarch64.sve.firstp.nxv16i1(<vscale x 16 x i1> %pg,
+                                                 <vscale x 16 x i1> %a)
+  ret i64 %out
+}
+
+define i64 @firstp_b16(<vscale x 8 x i1> %pg, <vscale x 8 x i1> %a) {
+; CHECK-LABEL: firstp_b16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    firstp x0, p0, p1.h
+; CHECK-NEXT:    ret
+  %out = call i64 @llvm.aarch64.sve.firstp.nxv8i1(<vscale x 8 x i1> %pg,
+                                                <vscale x 8 x i1> %a)
+  ret i64 %out
+}
+
+define i64 @firstp_b32(<vscale x 4 x i1> %pg, <vscale x 4 x i1> %a) {
+; CHECK-LABEL: firstp_b32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    firstp x0, p0, p1.s
+; CHECK-NEXT:    ret
+  %out = call i64 @llvm.aarch64.sve.firstp.nxv4i1(<vscale x 4 x i1> %pg,
+                                                <vscale x 4 x i1> %a)
+  ret i64 %out
+}
+
+define i64 @firstp_b64(<vscale x 2 x i1> %pg, <vscale x 2 x i1> %a) {
+; CHECK-LABEL: firstp_b64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    firstp x0, p0, p1.d
+; CHECK-NEXT:    ret
+  %out = call i64 @llvm.aarch64.sve.firstp.nxv2i1(<vscale x 2 x i1> %pg,
+                                                <vscale x 2 x i1> %a)
+  ret i64 %out
+}
+
+;
+; LASTP
+;
+
+define i64 @lastp_b8(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a) {
+; CHECK-LABEL: lastp_b8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lastp x0, p0, p1.b
+; CHECK-NEXT:    ret
+  %out = call i64 @llvm.aarch64.sve.lastp.nxv16i1(<vscale x 16 x i1> %pg,
+                                                 <vscale x 16 x i1> %a)
+  ret i64 %out
+}
+
+define i64 @lastp_b16(<vscale x 8 x i1> %pg, <vscale x 8 x i1> %a) {
+; CHECK-LABEL: lastp_b16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lastp x0, p0, p1.h
+; CHECK-NEXT:    ret
+  %out = call i64 @llvm.aarch64.sve.lastp.nxv8i1(<vscale x 8 x i1> %pg,
+                                                <vscale x 8 x i1> %a)
+  ret i64 %out
+}
+
+define i64 @lastp_b32(<vscale x 4 x i1> %pg, <vscale x 4 x i1> %a) {
+; CHECK-LABEL: lastp_b32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lastp x0, p0, p1.s
+; CHECK-NEXT:    ret
+  %out = call i64 @llvm.aarch64.sve.lastp.nxv4i1(<vscale x 4 x i1> %pg,
+                                                <vscale x 4 x i1> %a)
+  ret i64 %out
+}
+
+define i64 @lastp_b64(<vscale x 2 x i1> %pg, <vscale x 2 x i1> %a) {
+; CHECK-LABEL: lastp_b64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lastp x0, p0, p1.d
+; CHECK-NEXT:    ret
+  %out = call i64 @llvm.aarch64.sve.lastp.nxv2i1(<vscale x 2 x i1> %pg,
+                                                <vscale x 2 x i1> %a)
+  ret i64 %out
+}
+
+
 declare <vscale x 16 x i8> @llvm.aarch64.sve.compact.nxv16i8(<vscale x 16 x i1>, <vscale x 16 x i8>)
 declare <vscale x 8 x i16> @llvm.aarch64.sve.compact.nxv8i16(<vscale x 8 x i1>, <vscale x 8 x i16>)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.compact.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>)

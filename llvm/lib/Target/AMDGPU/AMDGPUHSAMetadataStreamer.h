@@ -61,7 +61,7 @@ protected:
   virtual void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                                     msgpack::ArrayDocNode Args) = 0;
   virtual void emitKernelAttrs(const AMDGPUTargetMachine &TM,
-                               const Function &Func,
+                               const MachineFunction &MF,
                                msgpack::MapDocNode Kern) = 0;
 };
 
@@ -102,7 +102,7 @@ protected:
 
   void emitKernelLanguage(const Function &Func, msgpack::MapDocNode Kern);
 
-  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const Function &Func,
+  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,
                        msgpack::MapDocNode Kern) override;
 
   void emitKernelArgs(const MachineFunction &MF, msgpack::MapDocNode Kern);
@@ -131,7 +131,7 @@ protected:
 
 public:
   MetadataStreamerMsgPackV4() = default;
-  ~MetadataStreamerMsgPackV4() = default;
+  ~MetadataStreamerMsgPackV4() override = default;
 
   bool emitTo(AMDGPUTargetStreamer &TargetStreamer) override;
 
@@ -149,12 +149,12 @@ protected:
   void emitVersion() override;
   void emitHiddenKernelArgs(const MachineFunction &MF, unsigned &Offset,
                             msgpack::ArrayDocNode Args) override;
-  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const Function &Func,
+  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,
                        msgpack::MapDocNode Kern) override;
 
 public:
   MetadataStreamerMsgPackV5() = default;
-  ~MetadataStreamerMsgPackV5() = default;
+  ~MetadataStreamerMsgPackV5() override = default;
 };
 
 class MetadataStreamerMsgPackV6 final : public MetadataStreamerMsgPackV5 {
@@ -163,7 +163,10 @@ protected:
 
 public:
   MetadataStreamerMsgPackV6() = default;
-  ~MetadataStreamerMsgPackV6() = default;
+  ~MetadataStreamerMsgPackV6() override = default;
+
+  void emitKernelAttrs(const AMDGPUTargetMachine &TM, const MachineFunction &MF,
+                       msgpack::MapDocNode Kern) override;
 };
 
 } // end namespace HSAMD

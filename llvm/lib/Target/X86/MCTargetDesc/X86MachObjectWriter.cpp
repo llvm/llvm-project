@@ -17,6 +17,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
@@ -258,7 +259,7 @@ void X86MachObjectWriter::RecordX86_64Relocation(
           // x86_64 distinguishes movq foo@GOTPCREL so that the linker can
           // rewrite the movq to an leaq at link time if the symbol ends up in
           // the same linkage unit.
-          if (Fixup.getTargetKind() == X86::reloc_riprel_4byte_movq_load)
+          if (Fixup.getKind() == X86::reloc_riprel_4byte_movq_load)
             Type = MachO::X86_64_RELOC_GOT_LOAD;
           else
             Type = MachO::X86_64_RELOC_GOT;
@@ -320,7 +321,7 @@ void X86MachObjectWriter::RecordX86_64Relocation(
         return;
       } else {
         Type = MachO::X86_64_RELOC_UNSIGNED;
-        if (Fixup.getTargetKind() == X86::reloc_signed_4byte) {
+        if (Fixup.getKind() == X86::reloc_signed_4byte) {
           reportError(
               Fixup.getLoc(),
               "32-bit absolute addressing is not supported in 64-bit mode");
@@ -354,8 +355,7 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
   unsigned Type = MachO::GENERIC_RELOC_VANILLA;
 
   // See <reloc.h>.
-  const MCSymbol *A = Target.getAddSym();
-
+  auto *A = static_cast<const MCSymbolMachO *>(Target.getAddSym());
   if (!A->getFragment()) {
     reportError(Fixup.getLoc(),
                 "symbol '" + A->getName() +

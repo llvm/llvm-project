@@ -35,16 +35,16 @@ public:
   void foo();
 };
 
-// CK34-DAG: [[SIZE_TO:@.+]] = private {{.*}}constant [4 x i64] [i64 0, i64 0, i64 0, i64 {{16|8}}]
+// CK34-DAG: [[SIZE_TO:@.+]] = private {{.*}}constant [5 x i64] [i64 0, i64 0, i64 0, i64 {{16|8}}, i64 0]
 // TARGET_PARAM = 0x20
 // MEMBER_OF_1 | TO = 0x1000000000001
 // MEMBER_OF_1 | IMPLICIT | TO = 0x1000000000201
-// CK34-DAG: [[MTYPE_TO:@.+]] = {{.+}}constant [4 x i64] [i64 [[#0x20]], i64 [[#0x1000000000001]], i64 [[#0x1000000000001]], i64 [[#0x1000000000201]]]
-// CK34-DAG: [[SIZE_FROM:@.+]] = private {{.*}}constant [4 x i64] [i64 0, i64 0, i64 0, i64 {{16|8}}]
+// CK34-DAG: [[MTYPE_TO:@.+]] = {{.+}}constant [5 x i64] [i64 [[#0x20]], i64 [[#0x1000000000001]], i64 [[#0x1000000000001]], i64 [[#0x1000000000201]], i64 288]
+// CK34-DAG: [[SIZE_FROM:@.+]] = private {{.*}}constant [5 x i64] [i64 0, i64 0, i64 0, i64 {{16|8}}, i64 0]
 // TARGET_PARAM = 0x20
 // MEMBER_OF_1 | FROM = 0x1000000000002
 // MEMBER_OF_1 | IMPLICIT | FROM = 0x1000000000202
-// CK34-DAG: [[MTYPE_FROM:@.+]] = {{.+}}constant [4 x i64] [i64 [[#0x20]], i64 [[#0x1000000000002]], i64 [[#0x1000000000002]], i64 [[#0x1000000000202]]]
+// CK34-DAG: [[MTYPE_FROM:@.+]] = {{.+}}constant [5 x i64] [i64 [[#0x20]], i64 [[#0x1000000000002]], i64 [[#0x1000000000002]], i64 [[#0x1000000000202]], i64 288]
 
 void default_mapper() {
   S s;
@@ -74,10 +74,13 @@ void default_mapper() {
   // CK34-DAG: store i64 [[S_SIZE:%.+]], ptr [[S0]],
   // CK34-DAG: store ptr null, ptr [[MF0]],
 
-  // CK34-DAG: [[S_SIZE]] = sdiv exact i64 [[SZ:%.+]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-  // CK34-DAG: [[SZ]] = sub i64 [[S_1_INTPTR:%.+]], [[S_INTPTR:%.+]]
-  // CK34-DAG: [[S_1_INTPTR]] = ptrtoint ptr [[S_1:%.+]] to i64
-  // CK34-DAG: [[S_INTPTR]] = ptrtoint ptr [[S_ADDR]] to i64
+  // CK34-64-DAG: [[S_SIZE]] = sub i64 [[S_1_INTPTR:%.+]], [[S_INTPTR:%.+]]
+  // CK34-64-DAG: [[S_1_INTPTR]] = ptrtoaddr ptr [[S_1:%.+]] to i64
+  // CK34-64-DAG: [[S_INTPTR]] = ptrtoaddr ptr [[S_ADDR]] to i64
+  // CK34-32-DAG: [[S_SIZE]] = zext i32 [[SZ:%.+]] to i64
+  // CK34-32-DAG: [[SZ]] = sub i32 [[S_1_INTPTR:%.+]], [[S_INTPTR:%.+]]
+  // CK34-32-DAG: [[S_1_INTPTR]] = ptrtoaddr ptr [[S_1:%.+]] to i32
+  // CK34-32-DAG: [[S_INTPTR]] = ptrtoaddr ptr [[S_ADDR]] to i32
   // CK34-DAG: [[S_1]] = getelementptr %class.S, ptr [[S_ADDR]], i32 1
 
   // pass MEMBER_OF_1 | TO {&s, &s, ((void*)(&s.a+1)-(void*)&s)} to copy the data of s.a.
@@ -92,10 +95,13 @@ void default_mapper() {
   // CK34-DAG: store i64 [[A_SIZE:%.+]], ptr [[S1]],
   // CK34-DAG: store ptr null, ptr [[MF1]],
 
-  // CK34-DAG: [[A_SIZE]] = sdiv exact i64 [[SZ:%.+]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-  // CK34-DAG: [[SZ]] = sub i64 [[C_BEGIN_INTPTR:%.+]], [[S_INTPTR:%.+]]
-  // CK34-DAG: [[S_INTPTR]] = ptrtoint ptr [[S_ADDR]] to i64
-  // CK34-DAG: [[C_BEGIN_INTPTR]] = ptrtoint ptr [[C_ADDR:%.+]] to i64
+  // CK34-64-DAG: [[A_SIZE]] = sub i64 [[C_BEGIN_INTPTR:%.+]], [[S_INTPTR:%.+]]
+  // CK34-64-DAG: [[S_INTPTR]] = ptrtoaddr ptr [[S_ADDR]] to i64
+  // CK34-64-DAG: [[C_BEGIN_INTPTR]] = ptrtoaddr ptr [[C_ADDR:%.+]] to i64
+  // CK34-32-DAG: [[A_SIZE]] = zext i32 [[SZ:%.+]] to i64
+  // CK34-32-DAG: [[SZ]] = sub i32 [[C_BEGIN_INTPTR:%.+]], [[S_INTPTR:%.+]]
+  // CK34-32-DAG: [[S_INTPTR]] = ptrtoaddr ptr [[S_ADDR]] to i32
+  // CK34-32-DAG: [[C_BEGIN_INTPTR]] = ptrtoaddr ptr [[C_ADDR:%.+]] to i32
   // CK34-64-DAG: [[C_ADDR]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 2
   // CK34-32-DAG: [[C_ADDR]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 1
 
@@ -113,10 +119,13 @@ void default_mapper() {
 
   // CK34-DAG: [[C_END]] = getelementptr %class.C, ptr [[C_ADDR]], i{{.+}} 1
 
-  // CK34-DAG: [[B_SIZE]] = sdiv exact i64 [[SZ:%.+]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-  // CK34-DAG: [[SZ]] = sub i64 [[S_END_INTPTR:%.+]], [[C_END_INTPTR:%.+]]
-  // CK34-DAG: [[C_END_INTPTR]] = ptrtoint ptr [[C_END]] to i64
-  // CK34-DAG: [[S_END_INTPTR]] = ptrtoint ptr [[S_END_VOID:%.+]] to i64
+  // CK34-64-DAG: [[B_SIZE]] = sub i64 [[S_END_INTPTR:%.+]], [[C_END_INTPTR:%.+]]
+  // CK34-64-DAG: [[C_END_INTPTR]] = ptrtoaddr ptr [[C_END]] to i64
+  // CK34-64-DAG: [[S_END_INTPTR]] = ptrtoaddr ptr [[S_END_VOID:%.+]] to i64
+  // CK34-32-DAG: [[B_SIZE]] = zext i32 [[SZ:%.+]] to i64
+  // CK34-32-DAG: [[SZ]] = sub i32 [[S_END_INTPTR:%.+]], [[C_END_INTPTR:%.+]]
+  // CK34-32-DAG: [[C_END_INTPTR]] = ptrtoaddr ptr [[C_END]] to i32
+  // CK34-32-DAG: [[S_END_INTPTR]] = ptrtoaddr ptr [[S_END_VOID:%.+]] to i32
   // CK34-DAG: [[S_END_VOID]] = getelementptr i8, ptr [[S_LAST:%.+]], i{{.+}} 1
   // CK34-64-DAG: [[S_LAST]] = getelementptr i8, ptr [[S_ADDR]], i64 31
   // CK34-32-DAG: [[S_LAST]] = getelementptr i8, ptr [[S_ADDR]], i32 15
@@ -164,10 +173,13 @@ void default_mapper() {
   // CK34-DAG: store i64 [[S_SIZE:%.+]], ptr [[S0]],
   // CK34-DAG: store ptr null, ptr [[MF0]],
 
-  // CK34-DAG: [[S_SIZE]] = sdiv exact i64 [[SZ:%.+]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-  // CK34-DAG: [[SZ]] = sub i64 [[S_1_INTPTR:%.+]], [[S_INTPTR:%.+]]
-  // CK34-DAG: [[S_1_INTPTR]] = ptrtoint ptr [[S_1:%.+]] to i64
-  // CK34-DAG: [[S_INTPTR]] = ptrtoint ptr [[S_ADDR]] to i64
+  // CK34-64-DAG: [[S_SIZE]] = sub i64 [[S_1_INTPTR:%.+]], [[S_INTPTR:%.+]]
+  // CK34-64-DAG: [[S_1_INTPTR]] = ptrtoaddr ptr [[S_1:%.+]] to i64
+  // CK34-64-DAG: [[S_INTPTR]] = ptrtoaddr ptr [[S_ADDR]] to i64
+  // CK34-32-DAG: [[S_SIZE]] = zext i32 [[SZ:%.+]] to i64
+  // CK34-32-DAG: [[SZ]] = sub i32 [[S_1_INTPTR:%.+]], [[S_INTPTR:%.+]]
+  // CK34-32-DAG: [[S_1_INTPTR]] = ptrtoaddr ptr [[S_1:%.+]] to i32
+  // CK34-32-DAG: [[S_INTPTR]] = ptrtoaddr ptr [[S_ADDR]] to i32
   // CK34-DAG: [[S_1]] = getelementptr %class.S, ptr [[S_ADDR]], i32 1
 
   // pass MEMBER_OF_1 | FROM {&s, &s, ((void*)(&s.a+1)-(void*)&s)} to copy the data of s.a.
@@ -182,10 +194,13 @@ void default_mapper() {
   // CK34-DAG: store i64 [[A_SIZE:%.+]], ptr [[S1]],
   // CK34-DAG: store ptr null, ptr [[MF1]],
 
-  // CK34-DAG: [[A_SIZE]] = sdiv exact i64 [[SZ:%.+]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-  // CK34-DAG: [[SZ]] = sub i64 [[C_BEGIN_INTPTR:%.+]], [[S_INTPTR:%.+]]
-  // CK34-DAG: [[S_INTPTR]] = ptrtoint ptr [[S_ADDR]] to i64
-  // CK34-DAG: [[C_BEGIN_INTPTR]] = ptrtoint ptr [[C_ADDR:%.+]] to i64
+  // CK34-64-DAG: [[A_SIZE]] = sub i64 [[C_BEGIN_INTPTR:%.+]], [[S_INTPTR:%.+]]
+  // CK34-64-DAG: [[S_INTPTR]] = ptrtoaddr ptr [[S_ADDR]] to i64
+  // CK34-64-DAG: [[C_BEGIN_INTPTR]] = ptrtoaddr ptr [[C_ADDR:%.+]] to i64
+  // CK34-32-DAG: [[A_SIZE]] = zext i32 [[SZ:%.+]] to i64
+  // CK34-32-DAG: [[SZ]] = sub i32 [[C_BEGIN_INTPTR:%.+]], [[S_INTPTR:%.+]]
+  // CK34-32-DAG: [[S_INTPTR]] = ptrtoaddr ptr [[S_ADDR]] to i32
+  // CK34-32-DAG: [[C_BEGIN_INTPTR]] = ptrtoaddr ptr [[C_ADDR:%.+]] to i32
   // CK34-64-DAG: [[C_ADDR]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 2
   // CK34-32-DAG: [[C_ADDR]] = getelementptr inbounds nuw %class.S, ptr [[S_ADDR]], i32 0, i32 1
 
@@ -203,10 +218,13 @@ void default_mapper() {
 
   // CK34-DAG: [[C_END]] = getelementptr %class.C, ptr [[C_ADDR]], i{{.+}} 1
 
-  // CK34-DAG: [[B_SIZE]] = sdiv exact i64 [[SZ:%.+]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-  // CK34-DAG: [[SZ]] = sub i64 [[S_END_INTPTR:%.+]], [[C_END_INTPTR:%.+]]
-  // CK34-DAG: [[C_END_INTPTR]] = ptrtoint ptr [[C_END]] to i64
-  // CK34-DAG: [[S_END_INTPTR]] = ptrtoint ptr [[S_END_VOID:%.+]] to i64
+  // CK34-64-DAG: [[B_SIZE]] = sub i64 [[S_END_INTPTR:%.+]], [[C_END_INTPTR:%.+]]
+  // CK34-64-DAG: [[C_END_INTPTR]] = ptrtoaddr ptr [[C_END]] to i64
+  // CK34-64-DAG: [[S_END_INTPTR]] = ptrtoaddr ptr [[S_END_VOID:%.+]] to i64
+  // CK34-32-DAG: [[B_SIZE]] = zext i32 [[SZ:%.+]] to i64
+  // CK34-32-DAG: [[SZ]] = sub i32 [[S_END_INTPTR:%.+]], [[C_END_INTPTR:%.+]]
+  // CK34-32-DAG: [[C_END_INTPTR]] = ptrtoaddr ptr [[C_END]] to i32
+  // CK34-32-DAG: [[S_END_INTPTR]] = ptrtoaddr ptr [[S_END_VOID:%.+]] to i32
   // CK34-DAG: [[S_END_VOID]] = getelementptr i8, ptr [[S_LAST:%.+]], i{{.+}} 1
   // CK34-64-DAG: [[S_LAST]] = getelementptr i8, ptr [[S_ADDR]], i64 31
   // CK34-32-DAG: [[S_LAST]] = getelementptr i8, ptr [[S_ADDR]], i32 15

@@ -159,6 +159,38 @@ void Method::writeDefTo(raw_indented_ostream &os, StringRef namePrefix) const {
   os << "}\n\n";
 }
 
+bool Method::methodPropertiesAreCompatible(Properties properties) {
+  const bool isStatic = (properties & Method::Static);
+  const bool isConstructor = (properties & Method::Constructor);
+  // const bool isPrivate = (properties & Method::Private);
+  const bool isDeclaration = (properties & Method::Declaration);
+  const bool isInline = (properties & Method::Inline);
+  const bool isConstexprValue = (properties & Method::ConstexprValue);
+  const bool isConst = (properties & Method::Const);
+
+  // Note: assert to immediately fail and thus simplify debugging.
+  if (isStatic && isConstructor) {
+    assert(false && "constructor cannot be static");
+    return false;
+  }
+  if (isConstructor && isConst) { // albeit constexpr is fine
+    assert(false && "constructor cannot be const");
+    return false;
+  }
+  if (isDeclaration && isInline) {
+    assert(false &&
+           "declaration implies no definition and thus cannot be inline");
+    return false;
+  }
+  if (isDeclaration && isConstexprValue) {
+    assert(false &&
+           "declaration implies no definition and thus cannot be constexpr");
+    return false;
+  }
+
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Constructor definitions
 //===----------------------------------------------------------------------===//

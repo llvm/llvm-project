@@ -344,12 +344,16 @@ static void ioctl_table_fill() {
   _(SOUND_PCM_WRITE_CHANNELS, WRITE, sizeof(int));
   _(SOUND_PCM_WRITE_FILTER, WRITE, sizeof(int));
   _(TCFLSH, NONE, 0);
+#    if SANITIZER_TERMIOS_IOCTL_CONSTANTS
   _(TCGETS, WRITE, struct_termios_sz);
+#    endif
   _(TCSBRK, NONE, 0);
   _(TCSBRKP, NONE, 0);
+#    if SANITIZER_TERMIOS_IOCTL_CONSTANTS
   _(TCSETS, READ, struct_termios_sz);
   _(TCSETSF, READ, struct_termios_sz);
   _(TCSETSW, READ, struct_termios_sz);
+#    endif
   _(TCXONC, NONE, 0);
   _(TIOCGLCKTRMIOS, WRITE, struct_termios_sz);
   _(TIOCGSOFTCAR, WRITE, sizeof(int));

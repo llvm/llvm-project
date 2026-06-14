@@ -18,6 +18,7 @@
 #include "DWARFCFIFunctionFrameReceiver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -27,11 +28,11 @@ namespace llvm {
 /// emitted through the `MCContext` instance to the constructor. If a frame
 /// finishes without being started or if all the frames are not finished before
 /// this classes is destructed, the program fails through an assertion.
-class CFIFunctionFrameAnalyzer : public CFIFunctionFrameReceiver {
+class LLVM_ABI CFIFunctionFrameAnalyzer : public CFIFunctionFrameReceiver {
 public:
   CFIFunctionFrameAnalyzer(MCContext &Context, const MCInstrInfo &MCII)
       : CFIFunctionFrameReceiver(Context), MCII(MCII) {}
-  ~CFIFunctionFrameAnalyzer();
+  ~CFIFunctionFrameAnalyzer() override;
 
   void startFunctionFrame(bool IsEH,
                           ArrayRef<MCCFIInstruction> Prologue) override;

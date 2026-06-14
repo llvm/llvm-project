@@ -3,6 +3,10 @@
 // RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing %s -fcxx-exceptions
 // RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -fblocks %s -DCPP14_AND_EARLIER -fcxx-exceptions
 
+// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks %s -fcxx-exceptions -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++20 -verify -fsyntax-only -fblocks %s -fcxx-exceptions -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing %s -fcxx-exceptions -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -fblocks %s -DCPP14_AND_EARLIER -fcxx-exceptions -fexperimental-new-constant-interpreter
 
 namespace test_lambda_is_literal {
 #ifdef CPP14_AND_EARLIER
@@ -53,8 +57,8 @@ struct test_never_constant {
   // expected-error@+3 {{non-constexpr declaration of 'operator()' follows constexpr declaration}}
   // expected-error@+3 {{non-constexpr declaration of 'operator()' follows constexpr declaration}}
   #endif
-  friend auto decltype(never_constant_1)::operator()() const;
-  friend int decltype(never_constant_2)::operator()() const;
+  friend auto decltype(never_constant_1)::operator()() const; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
+  friend int decltype(never_constant_2)::operator()() const; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
 };
 
 } // end ns test_constexpr_checking

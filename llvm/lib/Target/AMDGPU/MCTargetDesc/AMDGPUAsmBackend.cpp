@@ -21,7 +21,7 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -33,10 +33,10 @@ public:
   AMDGPUAsmBackend(const Target &T) : MCAsmBackend(llvm::endianness::little) {}
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  MutableArrayRef<char> Data, uint64_t Value,
-                  bool IsResolved) override;
-  bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                            uint64_t Value) const override;
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
+  bool fixupNeedsRelaxationAdvanced(const MCFragment &, const MCFixup &,
+                                    const MCValue &, uint64_t,
+                                    bool) const override;
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
@@ -63,8 +63,13 @@ void AMDGPUAsmBackend::relaxInstruction(MCInst &Inst,
   Inst = std::move(Res);
 }
 
-bool AMDGPUAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
-                                            uint64_t Value) const {
+bool AMDGPUAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
+                                                    const MCFixup &Fixup,
+                                                    const MCValue &,
+                                                    uint64_t Value,
+                                                    bool Resolved) const {
+  if (!Resolved)
+    return true;
   // if the branch target has an offset of x3f this needs to be relaxed to
   // add a s_nop 0 immediately after branch to effectively increment offset
   // for hardware workaround in gfx1010
@@ -108,7 +113,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
                                  MCContext *Ctx) {
   int64_t SignedValue = static_cast<int64_t>(Value);
 
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   case AMDGPU::fixup_si_sopp_br: {
     int64_t BrImm = (SignedValue - 4) / 4;
 
@@ -129,9 +134,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
 }
 
 void AMDGPUAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                  const MCValue &Target,
-                                  MutableArrayRef<char> Data, uint64_t Value,
-                                  bool IsResolved) {
+                                  const MCValue &Target, uint8_t *Data,
+                                  uint64_t Value, bool IsResolved) {
   if (Target.getSpecifier())
     IsResolved = false;
   maybeAddReloc(F, Fixup, Target, Value, IsResolved);
@@ -148,13 +152,13 @@ void AMDGPUAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   Value <<= Info.TargetOffset;
 
   unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
-  uint32_t Offset = Fixup.getOffset();
-  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
 
   // For each byte of the fragment that the fixup touches, mask in the bits from
   // the fixup value.
   for (unsigned i = 0; i != NumBytes; ++i)
-    Data[Offset + i] |= static_cast<uint8_t>((Value >> (i * 8)) & 0xff);
+    Data[i] |= static_cast<uint8_t>((Value >> (i * 8)) & 0xff);
 }
 
 std::optional<MCFixupKind>
@@ -199,7 +203,7 @@ bool AMDGPUAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   // be writing data into the text section (otherwise we have unaligned
   // instructions, and thus have far bigger problems), so just write zeros
   // instead.
-  unsigned MinInstAlignment = getContext().getAsmInfo()->getMinInstAlignment();
+  unsigned MinInstAlignment = getContext().getAsmInfo().getMinInstAlignment();
   OS.write_zeros(Count % MinInstAlignment);
 
   // We are properly aligned, so write NOPs as requested.

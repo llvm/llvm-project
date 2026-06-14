@@ -33,7 +33,13 @@ void test(SBDebugger &dbg, vector<string> args) {
   SBTarget target = dbg.CreateTarget(args.at(0).c_str());
   if (!target.IsValid()) throw Exception("invalid target");
 
-  SBBreakpoint breakpoint = target.BreakpointCreateByName("next");
+  // Only look for the breakpoint in the main module.
+  SBFileSpec main_module(args.at(0).c_str(), /*resolve=*/true);
+  SBFileSpecList module_list;
+  module_list.Append(main_module);
+
+  SBBreakpoint breakpoint = target.BreakpointCreateByName(
+      "next", eFunctionNameTypeFull, module_list, SBFileSpecList());
   if (!breakpoint.IsValid()) throw Exception("invalid breakpoint");
 
   if(breakpoint.GetNumLocations() != 1) throw Exception("unexpected amount of breakpoint locations");

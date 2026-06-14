@@ -1,5 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen -S -verify-dom-info \
-; RUN:     < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -S -verify-dom-info < %s | FileCheck %s
 ;
 ; Check that we do not reuse the B[i-1] GEP created in block S again in
 ; block Q. Hence, we create two GEPs for B[i-1]:

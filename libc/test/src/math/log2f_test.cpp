@@ -14,7 +14,7 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <stdint.h>
+#include "hdr/stdint_proxy.h"
 
 using LlvmLibcLog2fTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
@@ -46,7 +46,7 @@ TEST_F(LlvmLibcLog2fTest, TrickyInputs) {
 }
 
 TEST_F(LlvmLibcLog2fTest, InFloatRange) {
-  constexpr uint32_t COUNT = 100'000;
+  constexpr uint32_t COUNT = 1'231;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = FPBits(v).get_val();

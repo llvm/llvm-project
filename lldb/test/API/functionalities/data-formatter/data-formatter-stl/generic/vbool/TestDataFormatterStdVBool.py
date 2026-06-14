@@ -9,6 +9,9 @@ from lldbsuite.test import lldbutil
 
 
 class StdVBoolDataFormatterTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -47,7 +50,7 @@ class StdVBoolDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable -A vBool",
             substrs=[
-                "size=49",
+                "size=73",
                 "[0] = false",
                 "[1] = true",
                 "[18] = false",
@@ -55,13 +58,20 @@ class StdVBoolDataFormatterTestCase(TestBase):
                 "[36] = false",
                 "[47] = true",
                 "[48] = true",
+                "[49] = true",
+                "[50] = false",
+                "[56] = false",
+                "[65] = true",
+                "[70] = false",
+                "[71] = true",
+                "[72] = true",
             ],
         )
 
         self.expect(
             "expr -A -- vBool",
             substrs=[
-                "size=49",
+                "size=73",
                 "[0] = false",
                 "[1] = true",
                 "[18] = false",
@@ -69,6 +79,13 @@ class StdVBoolDataFormatterTestCase(TestBase):
                 "[36] = false",
                 "[47] = true",
                 "[48] = true",
+                "[49] = true",
+                "[50] = false",
+                "[56] = false",
+                "[65] = true",
+                "[70] = false",
+                "[71] = true",
+                "[72] = true",
             ],
         )
 
@@ -87,4 +104,10 @@ class StdVBoolDataFormatterTestCase(TestBase):
         self.build(
             dictionary={"USE_LIBSTDCPP": 1, "CXXFLAGS_EXTRAS": "-D_GLIBCXX_DEBUG"}
         )
+        self.do_test()
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
+        self.build()
         self.do_test()

@@ -13,6 +13,7 @@
 #include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCExpr.h"
@@ -33,6 +34,7 @@
 #define DEBUG_TYPE "hexagon-disassembler"
 
 using namespace llvm;
+using namespace llvm::MCD;
 using namespace Hexagon;
 
 using DecodeStatus = MCDisassembler::DecodeStatus;
@@ -43,12 +45,12 @@ namespace {
 class HexagonDisassembler : public MCDisassembler {
 public:
   std::unique_ptr<MCInstrInfo const> const MCII;
-  std::unique_ptr<MCInst *> CurrentBundle;
+  mutable std::unique_ptr<MCInst> CurrentBundle;
   mutable MCInst const *CurrentExtender;
 
   HexagonDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
                       MCInstrInfo const *MCII)
-      : MCDisassembler(STI, Ctx), MCII(MCII), CurrentBundle(new MCInst *),
+      : MCDisassembler(STI, Ctx), MCII(MCII), CurrentBundle(nullptr),
         CurrentExtender(nullptr) {}
 
   DecodeStatus getSingleInstruction(MCInst &Instr, MCInst &MCB,
@@ -57,7 +59,27 @@ public:
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &CStream) const override;
+
+  DecodeStatus getInstructionBundle(MCInst &Instr, uint64_t &Size,
+                                    ArrayRef<uint8_t> Bytes, uint64_t Address,
+                                    raw_ostream &CStream) const override;
+
   void remapInstruction(MCInst &Instr) const;
+
+  Expected<bool> onSymbolStart(SymbolInfoTy &Symbol, uint64_t &Size,
+                               ArrayRef<uint8_t> Bytes,
+                               uint64_t Address) const override;
+
+private:
+  bool makeBundle(ArrayRef<uint8_t> Bytes, uint64_t Address,
+                  uint64_t &BytesToSkip, raw_ostream &CS) const;
+
+  void resetBundle() const {
+    CurrentBundle.reset();
+    CurrentInstruction = nullptr;
+  }
+
+  mutable MCOperand *CurrentInstruction = nullptr;
 };
 
 static uint64_t fullValue(HexagonDisassembler const &Disassembler, MCInst &MI,
@@ -156,6 +178,19 @@ static DecodeStatus s32_0ImmDecoder(MCInst &MI, unsigned tmp,
                                     const MCDisassembler *Decoder);
 static DecodeStatus brtargetDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
                                     const MCDisassembler *Decoder);
+
+static DecodeStatus n1ConstDecoder(MCInst &MI, const MCDisassembler *Decoder) {
+  MCContext &Ctx = Decoder->getContext();
+  MI.addOperand(MCOperand::createExpr(MCConstantExpr::create(-1, Ctx)));
+  return DecodeStatus::Success;
+}
+
+static DecodeStatus sgp10ConstDecoder(MCInst &MI,
+                                      const MCDisassembler *Decoder) {
+  MI.addOperand(MCOperand::createReg(Hexagon::SGP1_0));
+  return DecodeStatus::Success;
+}
+
 #include "HexagonDepDecoders.inc"
 #include "HexagonGenDisassemblerTables.inc"
 
@@ -171,41 +206,86 @@ LLVMInitializeHexagonDisassembler() {
                                          createHexagonDisassembler);
 }
 
+bool HexagonDisassembler::makeBundle(ArrayRef<uint8_t> Bytes, uint64_t Address,
+                                     uint64_t &BytesToSkip,
+                                     raw_ostream &CS) const {
+  bool Complete = false;
+  DecodeStatus Result = DecodeStatus::Success;
+
+  CurrentBundle.reset(new MCInst);
+  CurrentBundle->setOpcode(Hexagon::BUNDLE);
+  CurrentBundle->addOperand(MCOperand::createImm(0));
+  while (Result == Success && !Complete) {
+    if (Bytes.size() < HEXAGON_INSTR_SIZE)
+      return false;
+    MCInst *Inst = getContext().createMCInst();
+    Result = getSingleInstruction(*Inst, *CurrentBundle, Bytes, Address, CS,
+                                  Complete);
+    CurrentBundle->addOperand(MCOperand::createInst(Inst));
+    BytesToSkip += HEXAGON_INSTR_SIZE;
+    Bytes = Bytes.slice(HEXAGON_INSTR_SIZE);
+  }
+  if (Result == MCDisassembler::Fail)
+    return false;
+  if (BytesToSkip > HEXAGON_MAX_PACKET_SIZE)
+    return false;
+
+  const auto ArchSTI = Hexagon_MC::getArchSubtarget(&STI);
+  const auto STI_ = (ArchSTI != nullptr) ? *ArchSTI : STI;
+  HexagonMCChecker Checker(getContext(), *MCII, STI_, *CurrentBundle,
+                           *getContext().getRegisterInfo(), false);
+  if (!Checker.check())
+    return false;
+  remapInstruction(*CurrentBundle);
+  return true;
+}
+
 DecodeStatus HexagonDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
                                                  uint64_t Address,
                                                  raw_ostream &CS) const {
   CommentStream = &CS;
 
-  DecodeStatus Result = DecodeStatus::Success;
-  bool Complete = false;
   Size = 0;
+  uint64_t BytesToSkip = 0;
 
-  *CurrentBundle = &MI;
-  MI.setOpcode(Hexagon::BUNDLE);
-  MI.addOperand(MCOperand::createImm(0));
-  while (Result == Success && !Complete) {
-    if (Bytes.size() < HEXAGON_INSTR_SIZE)
+  if (!CurrentBundle) {
+    if (!makeBundle(Bytes, Address, BytesToSkip, CS)) {
+      Size = BytesToSkip;
+      resetBundle();
       return MCDisassembler::Fail;
-    MCInst *Inst = getContext().createMCInst();
-    Result = getSingleInstruction(*Inst, MI, Bytes, Address, CS, Complete);
-    MI.addOperand(MCOperand::createInst(Inst));
-    Size += HEXAGON_INSTR_SIZE;
-    Bytes = Bytes.slice(HEXAGON_INSTR_SIZE);
+    }
+    CurrentInstruction = (CurrentBundle->begin() + 1);
   }
-  if (Result == MCDisassembler::Fail)
-    return Result;
-  if (Size > HEXAGON_MAX_PACKET_SIZE)
-    return MCDisassembler::Fail;
 
-  const auto ArchSTI = Hexagon_MC::getArchSubtarget(&STI);
-  const auto STI_ = (ArchSTI != nullptr) ? *ArchSTI : STI;
-  HexagonMCChecker Checker(getContext(), *MCII, STI_, MI,
-                           *getContext().getRegisterInfo(), false);
-  if (!Checker.check())
-    return MCDisassembler::Fail;
-  remapInstruction(MI);
+  MI = *(CurrentInstruction->getInst());
+  Size = HEXAGON_INSTR_SIZE;
+  if (++CurrentInstruction == CurrentBundle->end())
+    resetBundle();
   return MCDisassembler::Success;
+}
+
+DecodeStatus HexagonDisassembler::getInstructionBundle(MCInst &MI,
+                                                       uint64_t &Size,
+                                                       ArrayRef<uint8_t> Bytes,
+                                                       uint64_t Address,
+                                                       raw_ostream &CS) const {
+  CommentStream = &CS;
+  Size = 0;
+  uint64_t BytesToSkip = 0;
+  assert(!CurrentBundle);
+
+  if (!makeBundle(Bytes, Address, BytesToSkip, CS)) {
+    Size = BytesToSkip;
+    resetBundle();
+    return MCDisassembler::Fail;
+  }
+
+  MI = *CurrentBundle;
+  Size = HEXAGON_INSTR_SIZE * HexagonMCInstrInfo::bundleSize(MI);
+  resetBundle();
+
+  return Success;
 }
 
 void HexagonDisassembler::remapInstruction(MCInst &Instr) const {
@@ -284,21 +364,6 @@ void HexagonDisassembler::remapInstruction(MCInst &Instr) const {
       }
       break;
     }
-  }
-}
-
-static void adjustDuplex(MCInst &MI, MCContext &Context) {
-  switch (MI.getOpcode()) {
-  case Hexagon::SA1_setin1:
-    MI.insert(MI.begin() + 1,
-              MCOperand::createExpr(MCConstantExpr::create(-1, Context)));
-    break;
-  case Hexagon::SA1_dec:
-    MI.insert(MI.begin() + 2,
-              MCOperand::createExpr(MCConstantExpr::create(-1, Context)));
-    break;
-  default:
-    break;
   }
 }
 
@@ -406,12 +471,10 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
     CurrentExtender = TmpExtender;
     if (Result != DecodeStatus::Success)
       return DecodeStatus::Fail;
-    adjustDuplex(*MILow, getContext());
     Result = decodeInstruction(
         DecodeHigh, *MIHigh, (Instruction >> 16) & 0x1fff, Address, this, STI);
     if (Result != DecodeStatus::Success)
       return DecodeStatus::Fail;
-    adjustDuplex(*MIHigh, getContext());
     MCOperand OPLow = MCOperand::createInst(MILow);
     MCOperand OPHigh = MCOperand::createInst(MIHigh);
     MI.addOperand(OPLow);
@@ -437,38 +500,6 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
 
   }
 
-  switch (MI.getOpcode()) {
-  case Hexagon::J4_cmpeqn1_f_jumpnv_nt:
-  case Hexagon::J4_cmpeqn1_f_jumpnv_t:
-  case Hexagon::J4_cmpeqn1_fp0_jump_nt:
-  case Hexagon::J4_cmpeqn1_fp0_jump_t:
-  case Hexagon::J4_cmpeqn1_fp1_jump_nt:
-  case Hexagon::J4_cmpeqn1_fp1_jump_t:
-  case Hexagon::J4_cmpeqn1_t_jumpnv_nt:
-  case Hexagon::J4_cmpeqn1_t_jumpnv_t:
-  case Hexagon::J4_cmpeqn1_tp0_jump_nt:
-  case Hexagon::J4_cmpeqn1_tp0_jump_t:
-  case Hexagon::J4_cmpeqn1_tp1_jump_nt:
-  case Hexagon::J4_cmpeqn1_tp1_jump_t:
-  case Hexagon::J4_cmpgtn1_f_jumpnv_nt:
-  case Hexagon::J4_cmpgtn1_f_jumpnv_t:
-  case Hexagon::J4_cmpgtn1_fp0_jump_nt:
-  case Hexagon::J4_cmpgtn1_fp0_jump_t:
-  case Hexagon::J4_cmpgtn1_fp1_jump_nt:
-  case Hexagon::J4_cmpgtn1_fp1_jump_t:
-  case Hexagon::J4_cmpgtn1_t_jumpnv_nt:
-  case Hexagon::J4_cmpgtn1_t_jumpnv_t:
-  case Hexagon::J4_cmpgtn1_tp0_jump_nt:
-  case Hexagon::J4_cmpgtn1_tp0_jump_t:
-  case Hexagon::J4_cmpgtn1_tp1_jump_nt:
-  case Hexagon::J4_cmpgtn1_tp1_jump_t:
-    MI.insert(MI.begin() + 1,
-              MCOperand::createExpr(MCConstantExpr::create(-1, getContext())));
-    break;
-  default:
-    break;
-  }
-
   if (HexagonMCInstrInfo::isNewValue(*MCII, MI)) {
     unsigned OpIndex = HexagonMCInstrInfo::getNewValueOp(*MCII, MI);
     MCOperand &MCO = MI.getOperand(OpIndex);
@@ -482,7 +513,7 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
     unsigned Offset = 1;
     bool Vector = HexagonMCInstrInfo::isVector(*MCII, MI);
     bool PrevVector = false;
-    auto Instructions = HexagonMCInstrInfo::bundleInstructions(**CurrentBundle);
+    auto Instructions = HexagonMCInstrInfo::bundleInstructions(*CurrentBundle);
     auto i = Instructions.end() - 1;
     for (auto n = Instructions.begin() - 1;; --i, ++Offset) {
       if (i == n)
@@ -538,6 +569,18 @@ DecodeStatus HexagonDisassembler::getSingleInstruction(MCInst &MI, MCInst &MCB,
       return MCDisassembler::Fail;
   }
   return Result;
+}
+
+Expected<bool> HexagonDisassembler::onSymbolStart(SymbolInfoTy &Symbol,
+                                                  uint64_t &Size,
+                                                  ArrayRef<uint8_t> Bytes,
+                                                  uint64_t Address) const {
+  // At the start of a symbol, force a fresh packet by resetting any
+  // in-progress bundle state. This prevents packets from straddling label
+  // boundaries when data (e.g. jump tables) appears in between.
+  Size = 0;
+  resetBundle();
+  return true;
 }
 
 static DecodeStatus DecodeRegisterClass(MCInst &Inst, unsigned RegNo,
@@ -640,11 +683,10 @@ static DecodeStatus DecodeHvxWRRegisterClass(MCInst &Inst, unsigned RegNo,
   return DecodeRegisterClass(Inst, RegNo, HvxWRDecoderTable);
 }
 
-LLVM_ATTRIBUTE_UNUSED // Suppress warning temporarily.
-    static DecodeStatus
-    DecodeHvxVQRRegisterClass(MCInst &Inst, unsigned RegNo,
-                              uint64_t /*Address*/,
-                              const MCDisassembler *Decoder) {
+[[maybe_unused]] // Suppress warning temporarily.
+static DecodeStatus DecodeHvxVQRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                              uint64_t /*Address*/,
+                                              const MCDisassembler *Decoder) {
   static const MCPhysReg HvxVQRDecoderTable[] = {
       Hexagon::VQ0,  Hexagon::VQ1,  Hexagon::VQ2,  Hexagon::VQ3,
       Hexagon::VQ4,  Hexagon::VQ5,  Hexagon::VQ6,  Hexagon::VQ7};

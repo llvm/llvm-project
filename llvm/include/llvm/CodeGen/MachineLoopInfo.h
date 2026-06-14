@@ -42,7 +42,8 @@ namespace llvm {
 class MachineDominatorTree;
 // Implementation in LoopInfoImpl.h
 class MachineLoop;
-extern template class LoopBase<MachineBasicBlock, MachineLoop>;
+extern template class LLVM_TEMPLATE_ABI
+    LoopBase<MachineBasicBlock, MachineLoop>;
 
 class MachineLoop : public LoopBase<MachineBasicBlock, MachineLoop> {
 public:
@@ -147,14 +148,14 @@ public:
 };
 
 /// Printer pass for the \c LoopAnalysis results.
-class MachineLoopPrinterPass : public PassInfoMixin<MachineLoopPrinterPass> {
+class MachineLoopPrinterPass
+    : public RequiredPassInfoMixin<MachineLoopPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit MachineLoopPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
 class LLVM_ABI MachineLoopInfoWrapperPass : public MachineFunctionPass {

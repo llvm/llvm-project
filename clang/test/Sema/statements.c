@@ -100,7 +100,7 @@ void foo(enum x X) {
 
 int test_pr8880(void) {
   int first = 1;
-  for ( ; ({ if (first) { first = 0; continue; } 0; }); )
+  for ( ; ({ if (first) { first = 0; continue; } 0; }); ) // expected-error {{'continue' statement not in loop statement}}
     return 0;
   return 1;
 }
@@ -119,14 +119,15 @@ void test_pr22849(void) {
   };
 }
 
-// GCC ignores empty statements at the end of compound expressions where the
-// result type is concerned.
+// Empty statements at the end of compound expressions have a result type 'void'.
 void test13(void) {
   int a;
   a = ({ 1; });
-  a = ({1;; });
+  a = ({ 1; 2; }); // expected-warning {{expression result unused}}
+  a = ({ 1;; }); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+                 // expected-warning@-1 {{expression result unused}}
   a = ({int x = 1; (void)x; }); // expected-error {{assigning to 'int' from incompatible type 'void'}}
-  a = ({int x = 1; (void)x;; }); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+  a = ({int x = 1;; }); // expected-error {{assigning to 'int' from incompatible type 'void'}}
 }
 
 void test14(void) { return ({}); }

@@ -9,11 +9,13 @@
 #ifndef __CLC_RELATIONAL_CLC_SIGNBIT_H__
 #define __CLC_RELATIONAL_CLC_SIGNBIT_H__
 
-#define FUNCTION __clc_signbit
-#define __CLC_BODY <clc/relational/unary_decl.inc>
+#include "clc/internal/clc.h"
 
-#include <clc/relational/floatn.inc>
+#define __CLC_FUNCTION __clc_signbit
+#define __CLC_BODY "clc/relational/unary_decl.inc"
 
-#undef FUNCTION
+#include "clc/math/gentype.inc"
+
+#undef __CLC_FUNCTION
 
 #endif // __CLC_RELATIONAL_CLC_SIGNBIT_H__

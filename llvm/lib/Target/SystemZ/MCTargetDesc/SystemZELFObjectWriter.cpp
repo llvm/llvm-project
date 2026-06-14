@@ -111,8 +111,8 @@ unsigned SystemZELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case SystemZ::S_TLSLD:
   case SystemZ::S_TLSLDM:
   case SystemZ::S_DTPOFF:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;

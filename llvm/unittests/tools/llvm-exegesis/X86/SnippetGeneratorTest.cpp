@@ -16,13 +16,8 @@
 #include "X86InstrInfo.h"
 #include "llvm/ADT/SetOperations.h"
 
-#include <unordered_set>
-
 namespace llvm {
 namespace exegesis {
-
-void InitializeX86ExegesisTarget();
-
 namespace {
 
 using testing::AnyOf;

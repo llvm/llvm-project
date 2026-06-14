@@ -93,8 +93,8 @@ TEST(IListIteratorBitsTest, ConsAndAssignment) {
 class dummy {
   // Test that we get an ilist_iterator_w_bits out of the node given that the
   // options are enabled.
-  using node_options = typename ilist_detail::compute_node_options<
-      Node, ilist_iterator_bits<true>>::type;
+  using node_options =
+      ilist_detail::compute_node_options<Node, ilist_iterator_bits<true>>::type;
   static_assert(std::is_same<Node::self_iterator,
                              llvm::ilist_iterator_w_bits<node_options, false,
                                                          false>>::value);
@@ -102,7 +102,7 @@ class dummy {
   // Now test that a plain node, without the option, gets a plain
   // ilist_iterator.
   using plain_node_options =
-      typename ilist_detail::compute_node_options<PlainNode>::type;
+      ilist_detail::compute_node_options<PlainNode>::type;
   static_assert(std::is_same<
                 PlainNode::self_iterator,
                 llvm::ilist_iterator<plain_node_options, false, false>>::value);

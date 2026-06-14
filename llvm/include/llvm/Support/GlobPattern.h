@@ -56,28 +56,46 @@ public:
   ///                       created from expanding braces otherwise disable
   ///                       brace expansion
   LLVM_ABI static Expected<GlobPattern>
-  create(StringRef Pat, std::optional<size_t> MaxSubPatterns = {});
+  create(StringRef Pat, std::optional<size_t> MaxSubPatterns = {},
+         bool SlashAgnostic = false);
   /// \returns \p true if \p S matches this glob pattern
   LLVM_ABI bool match(StringRef S) const;
 
   // Returns true for glob pattern "*". Can be used to avoid expensive
   // preparation/acquisition of the input for match().
   bool isTrivialMatchAll() const {
-    if (!Prefix.empty())
+    if (PrefixSize)
+      return false;
+    if (SuffixSize)
       return false;
     if (SubGlobs.size() != 1)
       return false;
     return SubGlobs[0].getPat() == "*";
   }
 
+  // The following functions are just shortcuts for faster matching. They are
+  // conservative to simplify implementations.
+
+  // Returns plain prefix of the pattern.
+  StringRef prefix() const { return Pattern.take_front(PrefixSize); }
+  // Returns plain suffix of the pattern.
+  StringRef suffix() const { return Pattern.take_back(SuffixSize); }
+  // Returns the longest plain substring of the pattern between prefix and
+  // suffix.
+  LLVM_ABI_FOR_TEST StringRef longest_substr() const;
+
 private:
-  StringRef Prefix;
+  StringRef Pattern;
+  size_t PrefixSize = 0;
+  size_t SuffixSize = 0;
+  bool SlashAgnostic = false;
 
   struct SubGlobPattern {
     /// \param Pat the pattern to match against
-    LLVM_ABI static Expected<SubGlobPattern> create(StringRef Pat);
+    LLVM_ABI static Expected<SubGlobPattern> create(StringRef Pat,
+                                                    bool SlashAgnostic);
     /// \returns \p true if \p S matches this glob pattern
-    LLVM_ABI bool match(StringRef S) const;
+    LLVM_ABI bool match(StringRef S, bool SlashAgnostic) const;
     StringRef getPat() const { return StringRef(Pat.data(), Pat.size()); }
 
     // Brackets with their end position and matched bytes.

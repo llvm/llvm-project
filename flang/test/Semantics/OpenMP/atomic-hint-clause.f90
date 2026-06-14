@@ -12,29 +12,29 @@ program sample
     integer, parameter :: a = 1
     !$omp atomic hint(1) write
         y = 2
-    
+
     !$omp atomic read hint(2)
-        y = x    
-     
+        y = x
+
     !ERROR: The synchronization hint is not valid
     !$omp atomic hint(3)
         y = y + 10
-    
+
     !$omp atomic update hint(5)
         y = x + y
-    
+
     !ERROR: The synchronization hint is not valid
     !$omp atomic hint(7) capture
     !WARNING: In ATOMIC UPDATE operation with CAPTURE either statement could be the update and the capture, assuming the first one is the capture statement
         y = x
         x = y
     !$omp end atomic
-   
+
     !ERROR: Synchronization hint must be a constant integer value
     !ERROR: Must be a constant value
     !$omp atomic update hint(x)
         y = y * 1
-    
+
     !$omp atomic read hint(4)
         y = x
 
@@ -46,11 +46,11 @@ program sample
 
     !$omp atomic hint(omp_lock_hint_speculative)
         x = y + x
-    
+
     !ERROR: Synchronization hint must be a constant integer value
     !ERROR: Must be a constant value
     !$omp atomic hint(omp_sync_hint_uncontended + omp_sync_hint) read
-        y = x 
+        y = x
 
     !$omp atomic hint(omp_sync_hint_nonspeculative)
         y = y * 9
@@ -72,7 +72,7 @@ program sample
 
     !ERROR: The synchronization hint is not valid
     !$omp atomic hint(omp_sync_hint_uncontended + omp_sync_hint_contended) read
-        y = x 
+        y = x
 
     !ERROR: The synchronization hint is not valid
     !$omp atomic hint(omp_sync_hint_nonspeculative + omp_lock_hint_speculative)

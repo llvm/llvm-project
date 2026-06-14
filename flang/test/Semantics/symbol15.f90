@@ -249,15 +249,15 @@ end subroutine
 !DEF: /ext3 (Subroutine) Subprogram
 subroutine ext3
 end subroutine
-!DEF: /main MainProgram
-program main
+!DEF: /MAIN MainProgram
+program MAIN
  !REF: /m
  use :: m
- !DEF: /main/pdt1 Use
- !DEF: /main/pdt1y ObjectEntity TYPE(pdt1(k=2_4))
+ !DEF: /MAIN/pdt1 Use
+ !DEF: /MAIN/pdt1y ObjectEntity TYPE(pdt1(k=2_4))
  type(pdt1(2)) :: pdt1y
- !DEF: /main/pdt2 Use
- !DEF: /main/pdt2y ObjectEntity TYPE(pdt2(k=2_4))
+ !DEF: /MAIN/pdt2 Use
+ !DEF: /MAIN/pdt2y ObjectEntity TYPE(pdt2(k=2_4))
  type(pdt2(2)) :: pdt2y
  print *, "compiled"
 end program

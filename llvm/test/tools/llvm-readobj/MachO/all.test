@@ -1,0 +1,34 @@
+# RUN: yaml2obj %s | llvm-readobj --all - | FileCheck %s
+
+## Make sure that --all at least doesn't crash.
+
+# CHECK: Format: Mach-O arm
+# CHECK: Arch: arm
+# CHECK: AddressSize: 32bit
+# CHECK: MachHeader {
+# CHECK:   Magic: Magic (0xFEEDFACE)
+# CHECK:   CpuType: Arm (0xC)
+# CHECK:   CpuSubType: CPU_SUBTYPE_ARM_V7 (0x9)
+# CHECK:   FileType: Relocatable (0x1)
+# CHECK:   NumOfLoadCommands: 0
+# CHECK:   SizeOfLoadCommands: 0
+# CHECK:   Flags [ (0x0)
+# CHECK:   ]
+# CHECK: }
+# CHECK: Sections [
+# CHECK: ]
+# CHECK: Relocations [
+# CHECK: ]
+# CHECK: UnwindInfo not implemented.
+# CHECK: Symbols [
+# CHECK: ]
+
+--- !mach-o
+FileHeader:
+  magic:      0xFEEDFACE
+  cputype:    0xC
+  cpusubtype: 0x9
+  filetype:   0x1
+  ncmds:      0
+  sizeofcmds: 0
+  flags:      0x0

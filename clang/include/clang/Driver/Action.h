@@ -76,9 +76,10 @@ public:
     StaticLibJobClass,
     BinaryAnalyzeJobClass,
     BinaryTranslatorJobClass,
+    ObjcopyJobClass,
 
     JobClassFirst = PreprocessJobClass,
-    JobClassLast = BinaryTranslatorJobClass
+    JobClassLast = ObjcopyJobClass
   };
 
   // The offloading kind determines if this action is binded to a particular
@@ -95,6 +96,9 @@ public:
     OFK_OpenMP = 0x04,
     OFK_HIP = 0x08,
     OFK_SYCL = 0x10,
+
+    OFK_DeviceFirst = OFK_Cuda,
+    OFK_DeviceLast = OFK_SYCL
   };
 
   static const char *getClassName(ActionClass AC);
@@ -684,6 +688,17 @@ public:
 
   static bool classof(const Action *A) {
     return A->getKind() == BinaryTranslatorJobClass;
+  }
+};
+
+class ObjcopyJobAction : public JobAction {
+  void anchor() override;
+
+public:
+  ObjcopyJobAction(Action *Input, types::ID Type);
+
+  static bool classof(const Action *A) {
+    return A->getKind() == ObjcopyJobClass;
   }
 };
 

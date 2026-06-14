@@ -10,6 +10,8 @@
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cinttypes>
 
@@ -22,27 +24,30 @@ void DWARFTypeUnit::dump(raw_ostream &OS, DIDumpOptions DumpOpts) {
 
   if (DumpOpts.SummarizeTypes) {
     OS << "name = '" << Name << "'"
-       << ", type_signature = " << format("0x%016" PRIx64, getTypeHash())
-       << ", length = " << format("0x%0*" PRIx64, OffsetDumpWidth, getLength())
+       << ", type_signature = " << formatv("{0:x16}", getTypeHash())
+       << ", length = "
+       << formatv("0x{0:x-}", fmt_align(getLength(), AlignStyle::Right,
+                                        OffsetDumpWidth, '0'))
        << '\n';
     return;
   }
 
-  OS << format("0x%08" PRIx64, getOffset()) << ": Type Unit:"
-     << " length = " << format("0x%0*" PRIx64, OffsetDumpWidth, getLength())
+  OS << formatv("{0:x8}", getOffset()) << ": Type Unit:"
+     << " length = "
+     << formatv("0x{0:x-}",
+                fmt_align(getLength(), AlignStyle::Right, OffsetDumpWidth, '0'))
      << ", format = " << dwarf::FormatString(getFormat())
-     << ", version = " << format("0x%04x", getVersion());
+     << ", version = " << formatv("{0:x4}", getVersion());
   if (getVersion() >= 5)
     OS << ", unit_type = " << dwarf::UnitTypeString(getUnitType());
-  OS << ", abbr_offset = " << format("0x%04" PRIx64, getAbbrOffset());
+  OS << ", abbr_offset = " << formatv("{0:x4}", getAbbrOffset());
   if (!getAbbreviations())
     OS << " (invalid)";
-  OS << ", addr_size = " << format("0x%02x", getAddressByteSize())
+  OS << ", addr_size = " << formatv("{0:x2}", getAddressByteSize())
      << ", name = '" << Name << "'"
-     << ", type_signature = " << format("0x%016" PRIx64, getTypeHash())
-     << ", type_offset = " << format("0x%04" PRIx64, getTypeOffset())
-     << " (next unit at " << format("0x%08" PRIx64, getNextUnitOffset())
-     << ")\n";
+     << ", type_signature = " << formatv("{0:x16}", getTypeHash())
+     << ", type_offset = " << formatv("{0:x4}", getTypeOffset())
+     << " (next unit at " << formatv("{0:x8}", getNextUnitOffset()) << ")\n";
 
   if (DWARFDie TU = getUnitDIE(false))
     TU.dump(OS, 0, DumpOpts);

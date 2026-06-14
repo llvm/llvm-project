@@ -13,11 +13,13 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
 #include "llvm/DebugInfo/LogicalView/LVReaderHandler.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/COM.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Testing/Support/Error.h"
 
 #include "gtest/gtest.h"
@@ -55,7 +57,8 @@ std::unique_ptr<LVReader> createReader(LVReaderHandler &ReaderHandler,
                                        SmallString<128> &InputsDir,
                                        StringRef Filename) {
   SmallString<128> ObjectName(InputsDir);
-  llvm::sys::path::append(ObjectName, Filename);
+  if (Filename != "")
+    llvm::sys::path::append(ObjectName, Filename);
 
   Expected<std::unique_ptr<LVReader>> ReaderOrErr =
       ReaderHandler.createReader(std::string(ObjectName));
@@ -81,7 +84,7 @@ void checkElementProperties(LVReader *Reader) {
   EXPECT_EQ(Language, LVSourceLanguage::DW_LANG_C_plus_plus_14);
   EXPECT_EQ(Language.getName(), "DW_LANG_C_plus_plus_14");
 
-  EXPECT_EQ(CompileUnit->lineCount(), 0u);
+  EXPECT_EQ(CompileUnit->lineCount(), 1u);
   EXPECT_EQ(CompileUnit->scopeCount(), 1u);
   EXPECT_EQ(CompileUnit->symbolCount(), 0u);
   EXPECT_EQ(CompileUnit->typeCount(), 7u);
@@ -129,7 +132,7 @@ void checkElementProperties(LVReader *Reader) {
   // Lines (debug and assembler) for 'foo'.
   const LVLines *Lines = Function->getLines();
   ASSERT_NE(Lines, nullptr);
-  ASSERT_EQ(Lines->size(), 0x12u);
+  ASSERT_EQ(Lines->size(), 19u);
 
   // Check size of types in CompileUnit.
   const LVTypes *Types = CompileUnit->getTypes();
@@ -163,13 +166,12 @@ void checkUnspecifiedParameters(LVReader *Reader) {
   LVPublicNames::const_iterator IterNames = PublicNames.cbegin();
   LVScope *Function = (*IterNames).first;
   EXPECT_EQ(Function->getName(), "foo_printf");
-  const LVElements *Elements = Function->getChildren();
-  ASSERT_NE(Elements, nullptr);
+  const LVElementsView Elements = Function->getChildren();
   // foo_printf is a variadic function whose prototype is
   // `int foo_printf(const char *, ...)`, where the '...' is represented by a
   // DW_TAG_unspecified_parameters, i.e. we expect to find at least one child
   // for which getIsUnspecified() returns true.
-  EXPECT_TRUE(llvm::any_of(*Elements, [](const LVElement *elt) {
+  EXPECT_TRUE(llvm::any_of(Elements, [](const LVElement *elt) {
     return elt->getIsSymbol() &&
            static_cast<const LVSymbol *>(elt)->getIsUnspecified();
   }));
@@ -183,8 +185,8 @@ void checkScopeModule(LVReader *Reader) {
   EXPECT_EQ(Root->getFileFormatName(), "Mach-O 64-bit x86-64");
   EXPECT_EQ(Root->getName(), DwarfClangModule);
 
-  ASSERT_NE(CompileUnit->getChildren(), nullptr);
-  LVElement *FirstChild = *(CompileUnit->getChildren()->begin());
+  LVElement *FirstChild = *(CompileUnit->getChildren().begin());
+  ASSERT_NE(FirstChild, nullptr);
   EXPECT_EQ(FirstChild->getIsScope(), 1);
   LVScopeModule *Module = static_cast<LVScopeModule *>(FirstChild);
   EXPECT_EQ(Module->getIsModule(), 1);
@@ -252,7 +254,7 @@ void checkElementComparison(LVReader *Reference, LVReader *Target) {
 
   // Get comparison table.
   LVPassTable PassTable = Compare.getPassTable();
-  ASSERT_EQ(PassTable.size(), 5u);
+  ASSERT_EQ(PassTable.size(), 4u);
 
   LVReader *Reader;
   LVElement *Element;
@@ -278,18 +280,8 @@ void checkElementComparison(LVReader *Reference, LVReader *Target) {
   EXPECT_EQ(Element->getName(), "INTEGER");
   EXPECT_EQ(Pass, LVComparePass::Missing);
 
-  // Reference: Missing DebugLine
-  std::tie(Reader, Element, Pass) = PassTable[2];
-  ASSERT_NE(Reader, nullptr);
-  ASSERT_NE(Element, nullptr);
-  EXPECT_EQ(Reader, Reference);
-  EXPECT_EQ(Element->getLevel(), 3u);
-  EXPECT_EQ(Element->getLineNumber(), 8u);
-  EXPECT_EQ(Element->getName(), "");
-  EXPECT_EQ(Pass, LVComparePass::Missing);
-
   // Target: Added Variable 'CONSTANT'
-  std::tie(Reader, Element, Pass) = PassTable[3];
+  std::tie(Reader, Element, Pass) = PassTable[2];
   ASSERT_NE(Reader, nullptr);
   ASSERT_NE(Element, nullptr);
   EXPECT_EQ(Reader, Target);
@@ -299,7 +291,7 @@ void checkElementComparison(LVReader *Reference, LVReader *Target) {
   EXPECT_EQ(Pass, LVComparePass::Added);
 
   // Target: Added TypeDefinition 'INTEGER'
-  std::tie(Reader, Element, Pass) = PassTable[4];
+  std::tie(Reader, Element, Pass) = PassTable[3];
   ASSERT_NE(Reader, nullptr);
   ASSERT_NE(Element, nullptr);
   EXPECT_EQ(Reader, Target);
@@ -425,6 +417,77 @@ TEST(LogicalViewTest, DWARFReader) {
 
   // Compare logical elements.
   compareElements(InputsDir);
+}
+
+bool CreateTempBrokenFile(SmallString<128> &TempPath) {
+  // create broken, but syntax correct Yaml file
+  // 0x41 - version of format
+  // 0x05000000 - length of section, false equal to 5 byte
+  StringRef Yaml = R"(
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_RISCV
+Sections:
+  - Name:            .riscv.attributes
+    Type:            SHT_RISCV_ATTRIBUTES
+    Content:         4105000000
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:            1
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_no
+)";
+
+  int FD;
+  sys::fs::createTemporaryFile("test-broken-dwarf", "", FD, TempPath);
+  raw_fd_ostream OS(FD, /*shouldClose=*/true);
+
+  llvm::yaml::Input YIn(Yaml);
+  const bool Success = llvm::yaml::convertYAML(
+      YIn, OS, [](const Twine &Msg) { FAIL() << Msg.str(); });
+  if (!Success)
+    return false;
+  OS.flush();
+
+  return true;
+}
+
+TEST(LogicalViewTest, DWARFReader_ReadBrokenFile) {
+  // Initialize targets and assembly printers/parsers.
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargetMCs();
+  InitializeAllDisassemblers();
+
+  llvm::sys::InitializeCOMRAII COM(llvm::sys::COMThreadingMode::MultiThreaded);
+
+  // This test requires a x86-registered-target.
+  Triple TT;
+  TT.setArch(Triple::riscv64);
+  TT.setVendor(Triple::UnknownVendor);
+  TT.setOS(Triple::UnknownOS);
+
+  std::string TargetLookupError;
+  if (!TargetRegistry::lookupTarget(TT, TargetLookupError))
+    GTEST_SKIP();
+
+  // Reader options.
+  LVOptions ReaderOptions;
+  std::vector<std::string> Objects;
+  ScopedPrinter W(outs());
+  LVReaderHandler ReaderHandler(Objects, W, ReaderOptions);
+
+  SmallString<128> TempPath;
+  if (!CreateTempBrokenFile(TempPath))
+    GTEST_SKIP();
+
+  // Check logical elements properties.
+  std::unique_ptr<LVReader> Reader = createReader(ReaderHandler, TempPath, "");
+
+  sys::fs::remove(TempPath);
 }
 
 } // namespace

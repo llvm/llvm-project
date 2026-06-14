@@ -77,6 +77,9 @@ enum PredefinedDeclIDs {
   /// The internal '__NSConstantString' tag type.
   PREDEF_DECL_CF_CONSTANT_STRING_TAG_ID,
 
+  /// The predeclared 'type_info' struct.
+  PREDEF_DECL_BUILTIN_MS_TYPE_INFO_TAG_ID,
+
 #define BuiltinTemplate(BTName) PREDEF_DECL##BTName##_ID,
 #include "clang/Basic/BuiltinTemplates.inc"
 
@@ -245,14 +248,6 @@ template <> struct DenseMapInfo<clang::GlobalDeclID> {
   using GlobalDeclID = clang::GlobalDeclID;
   using DeclID = GlobalDeclID::DeclID;
 
-  static GlobalDeclID getEmptyKey() {
-    return GlobalDeclID(DenseMapInfo<DeclID>::getEmptyKey());
-  }
-
-  static GlobalDeclID getTombstoneKey() {
-    return GlobalDeclID(DenseMapInfo<DeclID>::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const GlobalDeclID &Key) {
     return DenseMapInfo<DeclID>::getHashValue(Key.getRawValue());
   }
@@ -265,14 +260,6 @@ template <> struct DenseMapInfo<clang::GlobalDeclID> {
 template <> struct DenseMapInfo<clang::LocalDeclID> {
   using LocalDeclID = clang::LocalDeclID;
   using DeclID = LocalDeclID::DeclID;
-
-  static LocalDeclID getEmptyKey() {
-    return LocalDeclID(DenseMapInfo<DeclID>::getEmptyKey());
-  }
-
-  static LocalDeclID getTombstoneKey() {
-    return LocalDeclID(DenseMapInfo<DeclID>::getTombstoneKey());
-  }
 
   static unsigned getHashValue(const LocalDeclID &Key) {
     return DenseMapInfo<DeclID>::getHashValue(Key.getRawValue());

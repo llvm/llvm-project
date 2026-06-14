@@ -8,7 +8,7 @@ define void @test(i64 %d.promoted.i) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> <i64 poison, i64 0>, i64 [[D_PROMOTED_I]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i64> zeroinitializer, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc <2 x i64> [[TMP2]] to <2 x i1>
-; CHECK-NEXT:    [[TMP4:%.*]] = call <16 x i1> @llvm.vector.insert.v16i1.v2i1(<16 x i1> poison, <2 x i1> [[TMP3]], i64 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i1> [[TMP3]], <2 x i1> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <16 x i1> [[TMP4]], <16 x i1> <i1 poison, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 poison, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, <16 x i32> <i32 0, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 1, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul <16 x i1> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP6]])

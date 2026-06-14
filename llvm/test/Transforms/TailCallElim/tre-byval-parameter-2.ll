@@ -44,17 +44,17 @@ define dso_local void @_Z7dostuff1AS_i(ptr nocapture byval(%struct.A) align 8 %a
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds [[STRUCT_A]], ptr [[B]], i64 0, i32 0, i64 5
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[ARRAYIDX4]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str, i64 [[INC]], i64 [[TMP1]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 80, ptr nonnull [[AGG_TMP]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[AGG_TMP]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(80) [[AGG_TMP]], ptr nonnull align 8 dereferenceable(80) [[B]], i64 80, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 80, ptr nonnull [[AGG_TMP5]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[AGG_TMP5]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(80) [[AGG_TMP5]], ptr nonnull align 8 dereferenceable(80) [[A]], i64 80, i1 false)
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[I_TR]], 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP1]], ptr align 8 [[AGG_TMP]], i64 80, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP52]], ptr align 8 [[AGG_TMP5]], i64 80, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[A]], ptr align 8 [[AGG_TMP1]], i64 80, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[B]], ptr align 8 [[AGG_TMP52]], i64 80, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 80, ptr nonnull [[AGG_TMP]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 80, ptr nonnull [[AGG_TMP5]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[AGG_TMP5]])
 ; CHECK-NEXT:    br label [[TAILRECURSE]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
@@ -74,14 +74,14 @@ if.end:                                           ; preds = %entry
   %1 = load i64, ptr %arrayidx4, align 8
   %call = call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str
 , i64 %inc, i64 %1)
-  call void @llvm.lifetime.start.p0(i64 80, ptr nonnull %agg.tmp)
+  call void @llvm.lifetime.start.p0(ptr nonnull %agg.tmp)
   call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(80) %agg.tmp, ptr nonnull align 8 dereferenceable(80) %b, i64 80, i1 false)
-  call void @llvm.lifetime.start.p0(i64 80, ptr nonnull %agg.tmp5)
+  call void @llvm.lifetime.start.p0(ptr nonnull %agg.tmp5)
   call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(80) %agg.tmp5, ptr nonnull align 8 dereferenceable(80) %a, i64 80, i1 false)
   %add = add nsw i32 %i, 1
   call void @_Z7dostuff1AS_i(ptr nonnull byval(%struct.A) align 8 %agg.tmp, ptr nonnull byval(%struct.A) align 8 %agg.tmp5, i32 %add)
-  call void @llvm.lifetime.end.p0(i64 80, ptr nonnull %agg.tmp)
-  call void @llvm.lifetime.end.p0(i64 80, ptr nonnull %agg.tmp5)
+  call void @llvm.lifetime.end.p0(ptr nonnull %agg.tmp)
+  call void @llvm.lifetime.end.p0(ptr nonnull %agg.tmp5)
   br label %return
 
 return:                                           ; preds = %entry, %if.end
@@ -95,10 +95,10 @@ declare dso_local noundef i32 @printf(ptr nocapture noundef readonly, ...) local
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.start.p0(ptr nocapture) #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.end.p0(ptr nocapture) #2
 
 ; Function Attrs: noinline norecurse nounwind optnone uwtable
 define dso_local i32 @main() local_unnamed_addr #3 {

@@ -165,21 +165,63 @@ define void @freeze_bitcast_to_wider_elt_escape(ptr %origin, ptr %escape, ptr %d
   ret void
 }
 
+define <4 x i32> @freeze_extract_bitcast_high_demanded(<2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: freeze_extract_bitcast_high_demanded:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrld $1, %xmm1, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %poisonable = add nsw <2 x i64> %a, <i64 9223372036854775807, i64 9223372036854775807>
+  %wide = shufflevector <2 x i64> %poisonable, <2 x i64> %b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %bc = bitcast <4 x i64> %wide to <8 x i32>
+  %shifted = lshr <8 x i32> %bc, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %fr = freeze <8 x i32> %shifted
+  %ext = call <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32> %fr, i64 4)
+  ret <4 x i32> %ext
+}
+
+define <2 x i64> @freeze_extract_bitcast_low_width_high_demanded(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: freeze_extract_bitcast_low_width_high_demanded:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrlq $1, %xmm1, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %poisonable = add nsw <4 x i32> %a, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
+  %wide = shufflevector <4 x i32> %poisonable, <4 x i32> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %bc = bitcast <8 x i32> %wide to <4 x i64>
+  %shifted = lshr <4 x i64> %bc, <i64 1, i64 1, i64 1, i64 1>
+  %fr = freeze <4 x i64> %shifted
+  %ext = call <2 x i64> @llvm.vector.extract.v2i64.v4i64(<4 x i64> %fr, i64 2)
+  ret <2 x i64> %ext
+}
+
+define <4 x i32> @freeze_extract_bitcast_equal_width_high_demanded(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: freeze_extract_bitcast_equal_width_high_demanded:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrld $1, %xmm1, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %poisonable = fadd nnan <4 x float> %a, zeroinitializer
+  %wide = shufflevector <4 x float> %poisonable, <4 x float> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %bc = bitcast <8 x float> %wide to <8 x i32>
+  %shifted = lshr <8 x i32> %bc, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %fr = freeze <8 x i32> %shifted
+  %ext = call <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32> %fr, i64 4)
+  ret <4 x i32> %ext
+}
+
 define void @freeze_extractelement(ptr %origin0, ptr %origin1, ptr %dst) nounwind {
 ; X86-LABEL: freeze_extractelement:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    vmovdqa (%ecx), %xmm0
-; X86-NEXT:    vpand (%edx), %xmm0, %xmm0
+; X86-NEXT:    vmovdqa (%edx), %xmm0
+; X86-NEXT:    vpand (%ecx), %xmm0, %xmm0
 ; X86-NEXT:    vpextrb $6, %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_extractelement:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovdqa (%rsi), %xmm0
-; X64-NEXT:    vpand (%rdi), %xmm0, %xmm0
+; X64-NEXT:    vmovdqa (%rdi), %xmm0
+; X64-NEXT:    vpand (%rsi), %xmm0, %xmm0
 ; X64-NEXT:    vpextrb $6, %xmm0, (%rdx)
 ; X64-NEXT:    retq
   %i0 = load <16 x i8>, ptr %origin0
@@ -198,8 +240,8 @@ define void @freeze_extractelement_escape(ptr %origin0, ptr %origin1, ptr %dst, 
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    vmovdqa (%edx), %xmm0
-; X86-NEXT:    vpand (%esi), %xmm0, %xmm0
+; X86-NEXT:    vmovdqa (%esi), %xmm0
+; X86-NEXT:    vpand (%edx), %xmm0, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%ecx)
 ; X86-NEXT:    vpextrb $6, %xmm0, (%eax)
 ; X86-NEXT:    popl %esi
@@ -207,8 +249,8 @@ define void @freeze_extractelement_escape(ptr %origin0, ptr %origin1, ptr %dst, 
 ;
 ; X64-LABEL: freeze_extractelement_escape:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovdqa (%rsi), %xmm0
-; X64-NEXT:    vpand (%rdi), %xmm0, %xmm0
+; X64-NEXT:    vmovdqa (%rdi), %xmm0
+; X64-NEXT:    vpand (%rsi), %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rcx)
 ; X64-NEXT:    vpextrb $6, %xmm0, (%rdx)
 ; X64-NEXT:    retq
@@ -239,8 +281,8 @@ define void @freeze_extractelement_extra_use(ptr %origin0, ptr %origin1, i64 %id
 ; X86-NEXT:    movl 32(%ebp), %edx
 ; X86-NEXT:    movl 12(%ebp), %esi
 ; X86-NEXT:    movl 8(%ebp), %edi
-; X86-NEXT:    vmovaps (%esi), %xmm0
-; X86-NEXT:    vandps (%edi), %xmm0, %xmm0
+; X86-NEXT:    vmovaps (%edi), %xmm0
+; X86-NEXT:    vandps (%esi), %xmm0, %xmm0
 ; X86-NEXT:    vmovaps %xmm0, (%esp)
 ; X86-NEXT:    movzbl (%esp,%ecx), %ecx
 ; X86-NEXT:    cmpb (%esp,%eax), %cl
@@ -255,8 +297,8 @@ define void @freeze_extractelement_extra_use(ptr %origin0, ptr %origin1, i64 %id
 ; X64:       # %bb.0:
 ; X64-NEXT:    andl $15, %ecx
 ; X64-NEXT:    andl $15, %edx
-; X64-NEXT:    vmovaps (%rsi), %xmm0
-; X64-NEXT:    vandps (%rdi), %xmm0, %xmm0
+; X64-NEXT:    vmovaps (%rdi), %xmm0
+; X64-NEXT:    vandps (%rsi), %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl -24(%rsp,%rdx), %eax
 ; X64-NEXT:    cmpb -24(%rsp,%rcx), %al
@@ -470,7 +512,7 @@ define void @freeze_two_buildvectors_one_undef_elt(ptr %origin0, ptr %origin1, p
 ;
 ; X64-LABEL: freeze_two_buildvectors_one_undef_elt:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    movl (%rdi), %eax
 ; X64-NEXT:    andl $15, %eax
 ; X64-NEXT:    vmovd %eax, %xmm0
 ; X64-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [7,7]
@@ -600,8 +642,8 @@ define void @freeze_buildvector_extrause(ptr %origin0, ptr %origin1, ptr %origin
 ; X86-NEXT:    vpinsrd $1, (%edi), %xmm0, %xmm0
 ; X86-NEXT:    vpinsrd $2, (%esi), %xmm0, %xmm0
 ; X86-NEXT:    vpinsrd $3, (%edx), %xmm0, %xmm0
-; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-NEXT:    vmovdqa %xmm0, (%ecx)
+; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
+; X86-NEXT:    vmovdqa %xmm1, (%ecx)
 ; X86-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    popl %esi
@@ -616,8 +658,8 @@ define void @freeze_buildvector_extrause(ptr %origin0, ptr %origin1, ptr %origin
 ; X64-NEXT:    vpinsrd $2, (%rdx), %xmm0, %xmm0
 ; X64-NEXT:    vpinsrd $3, (%rcx), %xmm0, %xmm0
 ; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15]
-; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vmovdqa %xmm0, (%r9)
+; X64-NEXT:    vpand %xmm1, %xmm0, %xmm1
+; X64-NEXT:    vmovdqa %xmm1, (%r9)
 ; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [7,7,7,7]
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%r8)
@@ -698,4 +740,149 @@ define void @freeze_buildvector_not_simple_type(ptr %dst) nounwind {
   %i0 = freeze <5 x i8> <i8 poison, i8 0, i8 0, i8 undef, i8 0>
   store <5 x i8> %i0, ptr %dst
   ret void
+}
+
+define <4 x i32> @freeze_lshr_extract_concat_high_demanded(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: freeze_lshr_extract_concat_high_demanded:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrld $1, %xmm1, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %poisonable = add nsw <4 x i32> %a, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
+  %wide = shufflevector <4 x i32> %poisonable, <4 x i32> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %shifted = lshr <8 x i32> %wide, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  %fr = freeze <8 x i32> %shifted
+  %ext = call <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32> %fr, i64 4)
+  ret <4 x i32> %ext
+}
+
+define i32 @freeze_select_scalar_demanded(i1 %c, <2 x i32> %a, <2 x i32> %b, <2 x i32> %d) {
+; X86-LABEL: freeze_select_scalar_demanded:
+; X86:       # %bb.0:
+; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    jne .LBB27_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm1
+; X86-NEXT:    jmp .LBB27_3
+; X86-NEXT:  .LBB27_1:
+; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1 # [2147483647,2147483647,u,u]
+; X86-NEXT:  .LBB27_3:
+; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-NEXT:    vmovd %xmm0, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_select_scalar_demanded:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    retq
+  %poisonable.b = add nsw <2 x i32> %b, <i32 2147483647, i32 2147483647>
+  %poisonable.d = sub nsw <2 x i32> %d, <i32 -2147483648, i32 -2147483648>
+  %lhs = shufflevector <2 x i32> %a, <2 x i32> %poisonable.b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %rhs = shufflevector <2 x i32> %a, <2 x i32> %poisonable.d, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %sel = select i1 %c, <4 x i32> %lhs, <4 x i32> %rhs
+  %fr = freeze <4 x i32> %sel
+  %ext = extractelement <4 x i32> %fr, i64 0
+  ret i32 %ext
+}
+
+define <2 x i32> @freeze_vselect_high_demanded(<4 x i32> %csrc, <2 x i32> %a, <2 x i32> %b, <2 x i32> %e, <2 x i32> %d) {
+; X86-LABEL: freeze_vselect_high_demanded:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    vmovdqa 24(%ebp), %xmm3
+; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm4 # [2147483647,2147483647,2147483647,2147483647]
+; X86-NEXT:    vpxor %xmm5, %xmm5, %xmm5
+; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm4[0,1,2,3],xmm0[4,5,6,7]
+; X86-NEXT:    vpcmpgtd %xmm5, %xmm0, %xmm0
+; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm2 # [2147483647,2147483647,u,u]
+; X86-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm3, %xmm3
+; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],mem[0]
+; X86-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_vselect_high_demanded:
+; X64:       # %bb.0:
+; X64-NEXT:    vpbroadcastd {{.*#+}} xmm5 = [2147483647,2147483647,2147483647,2147483647]
+; X64-NEXT:    vpaddd %xmm5, %xmm0, %xmm6
+; X64-NEXT:    vpxor %xmm7, %xmm7, %xmm7
+; X64-NEXT:    vpblendd {{.*#+}} xmm0 = xmm6[0,1],xmm0[2,3]
+; X64-NEXT:    vpcmpgtd %xmm7, %xmm0, %xmm0
+; X64-NEXT:    vpaddd %xmm5, %xmm2, %xmm2
+; X64-NEXT:    vpbroadcastd {{.*#+}} xmm5 = [2147483648,2147483648,2147483648,2147483648]
+; X64-NEXT:    vpsubd %xmm5, %xmm4, %xmm4
+; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm4[0],xmm3[0]
+; X64-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; X64-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; X64-NEXT:    retq
+  %poisonable.c.val = add nsw <4 x i32> %csrc, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
+  %poisonable.c = icmp sgt <4 x i32> %poisonable.c.val, zeroinitializer
+  %safe.c = icmp sgt <4 x i32> %csrc, zeroinitializer
+  %cond = shufflevector <4 x i1> %poisonable.c, <4 x i1> %safe.c, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  %poisonable.b = add nsw <2 x i32> %b, <i32 2147483647, i32 2147483647>
+  %poisonable.d = sub nsw <2 x i32> %d, <i32 -2147483648, i32 -2147483648>
+  %lhs = shufflevector <2 x i32> %poisonable.b, <2 x i32> %a, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %rhs = shufflevector <2 x i32> %poisonable.d, <2 x i32> %e, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %sel = select <4 x i1> %cond, <4 x i32> %lhs, <4 x i32> %rhs
+  %fr = freeze <4 x i32> %sel
+  %ext = call <2 x i32> @llvm.vector.extract.v2i32.v4i32(<4 x i32> %fr, i64 2)
+  ret <2 x i32> %ext
+}
+
+define i32 @freeze_vselect_demanded(<4 x i32> %csrc, <2 x i32> %a, <2 x i32> %b, <2 x i32> %e, <2 x i32> %d) {
+; X86-LABEL: freeze_vselect_demanded:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    vmovdqa 8(%ebp), %xmm3
+; X86-NEXT:    vmovdqa 24(%ebp), %xmm4
+; X86-NEXT:    vpxor %xmm5, %xmm5, %xmm5
+; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm6 # [2147483647,2147483647,2147483647,2147483647]
+; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm6[0]
+; X86-NEXT:    vpcmpgtd %xmm5, %xmm0, %xmm0
+; X86-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2, %xmm2 # [2147483647,2147483647,u,u]
+; X86-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm4, %xmm4
+; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
+; X86-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; X86-NEXT:    vblendvps %xmm0, %xmm1, %xmm3, %xmm0
+; X86-NEXT:    vmovd %xmm0, %eax
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_vselect_demanded:
+; X64:       # %bb.0:
+; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X64-NEXT:    vpcmpgtd %xmm2, %xmm0, %xmm0
+; X64-NEXT:    vblendvps %xmm0, %xmm1, %xmm3, %xmm0
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    retq
+  %safe.c = icmp sgt <4 x i32> %csrc, zeroinitializer
+  %poisonable.c.val = add nsw <4 x i32> %csrc, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
+  %poisonable.c = icmp sgt <4 x i32> %poisonable.c.val, zeroinitializer
+  %cond = shufflevector <4 x i1> %safe.c, <4 x i1> %poisonable.c, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %poisonable.b = add nsw <2 x i32> %b, <i32 2147483647, i32 2147483647>
+  %poisonable.d = sub nsw <2 x i32> %d, <i32 -2147483648, i32 -2147483648>
+  %lhs = shufflevector <2 x i32> %a, <2 x i32> %poisonable.b, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %rhs = shufflevector <2 x i32> %e, <2 x i32> %poisonable.d, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %sel = select <4 x i1> %cond, <4 x i32> %lhs, <4 x i32> %rhs
+  %fr = freeze <4 x i32> %sel
+  %ext = extractelement <4 x i32> %fr, i64 0
+  ret i32 %ext
 }

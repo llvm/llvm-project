@@ -18,8 +18,9 @@ jobs:
       github.event.label.name == 'infra:commit-access-request'
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          persist-credentials: false
           sparse-checkout: llvm/utils/git/
 
       - name: Setup Automation Script
@@ -30,7 +31,6 @@ jobs:
       - name: Add comments to issue
         working-directory: ./llvm/utils/git/
         env:
-          LABEL_NAME: ${{ github.event.label.name }}
           GITHUB_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |

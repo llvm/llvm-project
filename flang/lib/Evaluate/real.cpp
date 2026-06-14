@@ -466,6 +466,24 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::MODULO(
 }
 
 template <typename W, int P>
+ValueWithRealFlags<Real<W, P>> Real<W, P>::KahanSummation(
+    const Real &y, Real &correction, Rounding rounding) const {
+  Real next{y.Subtract(correction, rounding).value};
+  if (next.IsNotANumber()) {
+    // Avoid propagating an accidental NaN from Inf-Inf in corrections
+    correction = Real{}; // 0.
+    return Add(y, rounding);
+  } else {
+    auto sum{Add(next, rounding)};
+    // correction = (sum - *this) - next; algebraically zero
+    correction = sum.value.Subtract(*this, rounding)
+                     .value.Subtract(next, rounding)
+                     .value;
+    return sum;
+  }
+}
+
+template <typename W, int P>
 ValueWithRealFlags<Real<W, P>> Real<W, P>::DIM(
     const Real &y, Rounding rounding) const {
   ValueWithRealFlags<Real> result;
@@ -748,6 +766,14 @@ llvm::raw_ostream &Real<W, P>::AsFortran(
     o << '_' << kind;
   }
   return o;
+}
+
+template <typename W, int P>
+std::string Real<W, P>::AsFortran(int kind, bool minimal) const {
+  std::string result;
+  llvm::raw_string_ostream sstream(result);
+  AsFortran(sstream, kind, minimal);
+  return result;
 }
 
 // 16.9.180

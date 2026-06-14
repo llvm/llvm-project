@@ -1047,9 +1047,6 @@ X86MCCodeEmitter::emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
 
   Prefix.setL(TSFlags & X86II::VEX_L);
   Prefix.setL2(TSFlags & X86II::EVEX_L2);
-  if ((TSFlags & X86II::EVEX_L2) && STI.hasFeature(X86::FeatureAVX512) &&
-      !STI.hasFeature(X86::FeatureEVEX512))
-    report_fatal_error("ZMM registers are not supported without EVEX512");
   switch (TSFlags & X86II::OpPrefixMask) {
   case X86II::PD:
     Prefix.setPP(0x1); // 66
@@ -2002,6 +1999,14 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
 
     // Skip two trainling conditional operands encoded in EVEX prefix
     unsigned RemainingOps = NumOps - CurOp - 2 * HasTwoConditionalOps;
+    // Verify that hasImm(TSFlags) matches the presence of remaining operands.
+    // Exclude forms that emit immediates in the switch above (RawFrm and
+    // AddCCFrm may consume a PC-relative operand; RawFrmImm8/16 and
+    // RawFrmMemOffs always consume their immediates there).
+    assert((!X86II::hasImm(TSFlags) || RemainingOps || Form == X86II::RawFrm ||
+            Form == X86II::AddCCFrm || Form == X86II::RawFrmImm8 ||
+            Form == X86II::RawFrmImm16 || Form == X86II::RawFrmMemOffs) &&
+           "TSFlags indicates immediate but no operand provides it");
     while (RemainingOps) {
       emitImmediate(MI.getOperand(CurOp++), MI.getLoc(),
                     getImmFixupKind(Desc.TSFlags),

@@ -19,8 +19,8 @@
 #include "DWARFUnit.h"
 
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 void DWARFFormValue::Clear() {
   m_unit = nullptr;
@@ -76,6 +76,8 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
     case DW_FORM_strp:
     case DW_FORM_line_strp:
     case DW_FORM_sec_offset:
+    case DW_FORM_GNU_ref_alt:
+    case DW_FORM_GNU_strp_alt:
       assert(m_unit);
       m_value.uval = data.GetMaxU64(
           offset_ptr, m_unit->GetFormParams().getDwarfOffsetByteSize());
@@ -280,6 +282,8 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
     case DW_FORM_sec_offset:
     case DW_FORM_strp:
     case DW_FORM_line_strp:
+    case DW_FORM_GNU_ref_alt:
+    case DW_FORM_GNU_strp_alt:
       assert(unit);
       *offset_ptr += unit->GetFormParams().getDwarfOffsetByteSize();
       return true;
@@ -416,6 +420,13 @@ void DWARFFormValue::Dump(Stream &s) const {
                 m_unit->GetFormParams().getRefAddrByteSize());
     break;
   }
+  case DW_FORM_GNU_ref_alt:
+  case DW_FORM_GNU_strp_alt: {
+    assert(m_unit);
+    DumpAddress(s.AsRawOstream(), uvalue,
+                m_unit->GetFormParams().getDwarfOffsetByteSize());
+    break;
+  }
   case DW_FORM_ref1:
     unit_relative_offset = true;
     break;
@@ -439,6 +450,7 @@ void DWARFFormValue::Dump(Stream &s) const {
     break;
   case DW_FORM_flag_present:
     break;
+
   default:
     s.Printf("DW_FORM(0x%4.4x)", m_form);
     break;
@@ -564,25 +576,25 @@ uint64_t DWARFFormValue::Reference(dw_offset_t base_offset) const {
 }
 
 std::optional<uint64_t> DWARFFormValue::getAsUnsignedConstant() const {
-  if ((!IsDataForm(m_form)) || m_form == lldb_private::dwarf::DW_FORM_sdata)
+  if ((!IsDataForm(m_form)) || m_form == llvm::dwarf::DW_FORM_sdata)
     return std::nullopt;
   return m_value.uval;
 }
 
 std::optional<int64_t> DWARFFormValue::getAsSignedConstant() const {
   if ((!IsDataForm(m_form)) ||
-      (m_form == lldb_private::dwarf::DW_FORM_udata &&
+      (m_form == llvm::dwarf::DW_FORM_udata &&
        uint64_t(std::numeric_limits<int64_t>::max()) < m_value.uval))
     return std::nullopt;
   switch (m_form) {
-  case lldb_private::dwarf::DW_FORM_data4:
+  case llvm::dwarf::DW_FORM_data4:
     return int32_t(m_value.uval);
-  case lldb_private::dwarf::DW_FORM_data2:
+  case llvm::dwarf::DW_FORM_data2:
     return int16_t(m_value.uval);
-  case lldb_private::dwarf::DW_FORM_data1:
+  case llvm::dwarf::DW_FORM_data1:
     return int8_t(m_value.uval);
-  case lldb_private::dwarf::DW_FORM_sdata:
-  case lldb_private::dwarf::DW_FORM_data8:
+  case llvm::dwarf::DW_FORM_sdata:
+  case llvm::dwarf::DW_FORM_data8:
   default:
     return m_value.sval;
   }
@@ -660,6 +672,8 @@ bool DWARFFormValue::FormIsSupported(dw_form_t form) {
     case DW_FORM_GNU_str_index:
     case DW_FORM_GNU_addr_index:
     case DW_FORM_implicit_const:
+    case DW_FORM_GNU_ref_alt:
+    case DW_FORM_GNU_strp_alt:
       return true;
     default:
       break;

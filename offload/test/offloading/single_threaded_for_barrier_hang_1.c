@@ -1,6 +1,9 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 // RUN: %libomptarget-compileopt-run-and-check-generic
 
+// FIXME: https://github.com/llvm/llvm-project/issues/161265
+// UNSUPPORTED: gpu
+
 #include <omp.h>
 #include <stdio.h>
 

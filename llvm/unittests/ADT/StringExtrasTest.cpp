@@ -290,6 +290,12 @@ TEST(StringExtrasTest, ListSeparator) {
   EXPECT_EQ(S, "");
   S = LS2;
   EXPECT_EQ(S, " ");
+
+  ListSeparator LS3(",", "{");
+  S = LS3;
+  EXPECT_EQ(S, "{");
+  S = LS3;
+  EXPECT_EQ(S, ",");
 }
 
 TEST(StringExtrasTest, toStringAPInt) {

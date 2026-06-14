@@ -136,7 +136,7 @@ namespace pr16061 {
 
   template<typename T> struct Test2 {
     union {
-      struct {  // expected-note-re {{default constructor of 'Test2<pr16061::X>' is implicitly deleted because variant field 'struct (anonymous struct at{{.+}})' has a non-trivial default constructor}}
+      struct {  // expected-note-re {{default constructor of 'Test2<pr16061::X>' is implicitly deleted because variant field 'struct (anonymous at{{.+}})' has a non-trivial default constructor}}
         T x;
       };
     };
@@ -188,3 +188,14 @@ static_assert(U2().b.x == 100, "");
 static_assert(U3().b.x == 100, "");
 
 } // namespace GH48416
+
+namespace GH81774 {
+struct Handle {
+    Handle(int) {}
+};
+// Should be well-formed because NoState has a brace-or-equal-initializer.
+union a {
+        int NoState = 0;
+        Handle CustomState;
+} b;
+} // namespace GH81774

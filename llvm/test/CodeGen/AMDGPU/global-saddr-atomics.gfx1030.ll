@@ -10,10 +10,12 @@ define amdgpu_ps float @global_csub_saddr_i32_rtn(ptr addrspace(1) inreg %sbase,
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_atomic_csub v0, v0, v1, s[2:3] glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_gl1_inv
+; GCN-NEXT:    buffer_gl0_inv
 ; GCN-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %rtn = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %gep0, i32 %data)
+  %rtn = atomicrmw usub_sat ptr addrspace(1) %gep0, i32 %data seq_cst, !amdgpu.no.remote.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -23,11 +25,13 @@ define amdgpu_ps float @global_csub_saddr_i32_rtn_neg128(ptr addrspace(1) inreg 
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_atomic_csub v0, v0, v1, s[2:3] offset:-128 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_gl1_inv
+; GCN-NEXT:    buffer_gl0_inv
 ; GCN-NEXT:    ; return to shader part epilog
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %rtn = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %gep1, i32 %data)
+  %rtn = atomicrmw usub_sat ptr addrspace(1) %gep1, i32 %data seq_cst, !amdgpu.no.remote.memory !0
   %cast.rtn = bitcast i32 %rtn to float
   ret float %cast.rtn
 }
@@ -36,10 +40,13 @@ define amdgpu_ps void @global_csub_saddr_i32_nortn(ptr addrspace(1) inreg %sbase
 ; GCN-LABEL: global_csub_saddr_i32_nortn:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_atomic_csub v0, v0, v1, s[2:3] glc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_gl1_inv
+; GCN-NEXT:    buffer_gl0_inv
 ; GCN-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
-  %unused = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %gep0, i32 %data)
+  %unused = atomicrmw usub_sat ptr addrspace(1) %gep0, i32 %data seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
@@ -47,14 +54,19 @@ define amdgpu_ps void @global_csub_saddr_i32_nortn_neg128(ptr addrspace(1) inreg
 ; GCN-LABEL: global_csub_saddr_i32_nortn_neg128:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    global_atomic_csub v0, v0, v1, s[2:3] offset:-128 glc
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_gl1_inv
+; GCN-NEXT:    buffer_gl0_inv
 ; GCN-NEXT:    s_endpgm
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
-  %unused = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %gep1, i32 %data)
+  %unused = atomicrmw usub_sat ptr addrspace(1) %gep1, i32 %data seq_cst, !amdgpu.no.remote.memory !0
   ret void
 }
 
 declare i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) nocapture, i32) #0
 
 attributes #0 = { argmemonly nounwind willreturn }
+
+!0 = !{}

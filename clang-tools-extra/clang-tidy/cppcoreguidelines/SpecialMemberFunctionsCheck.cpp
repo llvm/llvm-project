@@ -1,4 +1,4 @@
-//===--- SpecialMemberFunctionsCheck.cpp - clang-tidy----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -76,7 +76,7 @@ void SpecialMemberFunctionsCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-static llvm::StringRef
+static StringRef
 toString(SpecialMemberFunctionsCheck::SpecialMemberFunctionKind K) {
   switch (K) {
   case SpecialMemberFunctionsCheck::SpecialMemberFunctionKind::Destructor:
@@ -101,21 +101,18 @@ toString(SpecialMemberFunctionsCheck::SpecialMemberFunctionKind K) {
 
 static std::string
 join(ArrayRef<SpecialMemberFunctionsCheck::SpecialMemberFunctionKind> SMFS,
-     llvm::StringRef AndOr) {
-
+     StringRef AndOr) {
   assert(!SMFS.empty() &&
          "List of defined or undefined members should never be empty.");
   std::string Buffer;
   llvm::raw_string_ostream Stream(Buffer);
 
   Stream << toString(SMFS[0]);
-  size_t LastIndex = SMFS.size() - 1;
-  for (size_t I = 1; I < LastIndex; ++I) {
+  const size_t LastIndex = SMFS.size() - 1;
+  for (size_t I = 1; I < LastIndex; ++I)
     Stream << ", " << toString(SMFS[I]);
-  }
-  if (LastIndex != 0) {
+  if (LastIndex != 0)
     Stream << AndOr << toString(SMFS[LastIndex]);
-  }
   return Stream.str();
 }
 
@@ -129,7 +126,7 @@ void SpecialMemberFunctionsCheck::check(
                 std::string(MatchedDecl->getName()));
 
   auto StoreMember = [this, &ID](SpecialMemberFunctionData Data) {
-    llvm::SmallVectorImpl<SpecialMemberFunctionData> &Members =
+    SmallVectorImpl<SpecialMemberFunctionData> &Members =
         ClassWithSpecialMembers[ID];
     if (!llvm::is_contained(Members, Data))
       Members.push_back(std::move(Data));
@@ -146,7 +143,7 @@ void SpecialMemberFunctionsCheck::check(
     StoreMember({DestructorType, Dtor->isDeleted()});
   }
 
-  std::initializer_list<std::pair<std::string, SpecialMemberFunctionKind>>
+  const std::initializer_list<std::pair<std::string, SpecialMemberFunctionKind>>
       Matchers = {{"copy-ctor", SpecialMemberFunctionKind::CopyConstructor},
                   {"copy-assign", SpecialMemberFunctionKind::CopyAssignment},
                   {"move-ctor", SpecialMemberFunctionKind::MoveConstructor},
@@ -161,15 +158,14 @@ void SpecialMemberFunctionsCheck::check(
 }
 
 void SpecialMemberFunctionsCheck::onEndOfTranslationUnit() {
-  for (const auto &C : ClassWithSpecialMembers) {
+  for (const auto &C : ClassWithSpecialMembers)
     checkForMissingMembers(C.first, C.second);
-  }
 }
 
 void SpecialMemberFunctionsCheck::checkForMissingMembers(
     const ClassDefId &ID,
     llvm::ArrayRef<SpecialMemberFunctionData> DefinedMembers) {
-  llvm::SmallVector<SpecialMemberFunctionKind, 5> MissingMembers;
+  SmallVector<SpecialMemberFunctionKind, 5> MissingMembers;
 
   auto HasMember = [&](SpecialMemberFunctionKind Kind) {
     return llvm::any_of(DefinedMembers, [Kind](const auto &Data) {
@@ -202,7 +198,7 @@ void SpecialMemberFunctionsCheck::checkForMissingMembers(
       MissingMembers.push_back(Kind2);
   };
 
-  bool RequireThree =
+  const bool RequireThree =
       HasMember(SpecialMemberFunctionKind::NonDefaultDestructor) ||
       (!AllowSoleDefaultDtor &&
        (HasMember(SpecialMemberFunctionKind::Destructor) ||
@@ -212,10 +208,11 @@ void SpecialMemberFunctionsCheck::checkForMissingMembers(
       HasMember(SpecialMemberFunctionKind::MoveConstructor) ||
       HasMember(SpecialMemberFunctionKind::MoveAssignment);
 
-  bool RequireFive = (!AllowMissingMoveFunctions && RequireThree &&
-                      getLangOpts().CPlusPlus11) ||
-                     HasMember(SpecialMemberFunctionKind::MoveConstructor) ||
-                     HasMember(SpecialMemberFunctionKind::MoveAssignment);
+  const bool RequireFive =
+      (!AllowMissingMoveFunctions && RequireThree &&
+       getLangOpts().CPlusPlus11) ||
+      HasMember(SpecialMemberFunctionKind::MoveConstructor) ||
+      HasMember(SpecialMemberFunctionKind::MoveAssignment);
 
   if (RequireThree) {
     if (!HasMember(SpecialMemberFunctionKind::Destructor) &&
@@ -237,11 +234,10 @@ void SpecialMemberFunctionsCheck::checkForMissingMembers(
   }
 
   if (!MissingMembers.empty()) {
-    llvm::SmallVector<SpecialMemberFunctionKind, 5> DefinedMemberKinds;
-    for (const auto &Data : DefinedMembers) {
+    SmallVector<SpecialMemberFunctionKind, 5> DefinedMemberKinds;
+    for (const auto &Data : DefinedMembers)
       if (!Data.IsImplicit)
         DefinedMemberKinds.push_back(Data.FunctionKind);
-    }
     diag(ID.first, "class '%0' defines %1 but does not define %2")
         << ID.second << cppcoreguidelines::join(DefinedMemberKinds, " and ")
         << cppcoreguidelines::join(MissingMembers, " or ");

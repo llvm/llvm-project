@@ -27,7 +27,7 @@ public:
                          lldb::FunctionNameType name_type_mask,
                          lldb::LanguageType language,
                          Breakpoint::MatchType type, lldb::addr_t offset,
-                         bool skip_prologue);
+                         bool offset_is_insn_count, bool skip_prologue);
 
   // This one takes an array of names.  It is always MatchType = Exact.
   BreakpointResolverName(const lldb::BreakpointSP &bkpt, const char *names[],
@@ -81,7 +81,6 @@ protected:
   BreakpointResolverName(const BreakpointResolverName &rhs);
 
   std::vector<Module::LookupInfo> m_lookups;
-  ConstString m_class_name;
   RegularExpression m_regex;
   Breakpoint::MatchType m_match_type;
   lldb::LanguageType m_language;

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT_H
-#define LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT_H
+#ifndef CLANG_CIR_DIALECT_IR_CIRDIALECT_H
+#define CLANG_CIR_DIALECT_IR_CIRDIALECT_H
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -41,6 +41,10 @@ using BuilderOpStateCallbackRef = llvm::function_ref<void(
 
 namespace cir {
 void buildTerminatedBody(mlir::OpBuilder &builder, mlir::Location loc);
+
+/// Look up the RecordLayoutAttr for a named record in the module's
+/// cir.record_layouts dictionary.  Asserts if the entry is missing.
+RecordLayoutAttr getRecordLayout(mlir::ModuleOp module, mlir::StringAttr name);
 } // namespace cir
 
 // TableGen'erated files for MLIR dialects require that a macro be defined when
@@ -49,4 +53,4 @@ void buildTerminatedBody(mlir::OpBuilder &builder, mlir::Location loc);
 #define GET_OP_CLASSES
 #include "clang/CIR/Dialect/IR/CIROps.h.inc"
 
-#endif // LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT_H
+#endif // CLANG_CIR_DIALECT_IR_CIRDIALECT_H

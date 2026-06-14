@@ -19,11 +19,12 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
-static constexpr const char kIntegerPrefix[] = "i_0x";
-static constexpr const char kDoublePrefix[] = "f_";
-static constexpr const char kInvalidOperand[] = "INVALID";
+static constexpr char kIntegerPrefix[] = "i_0x";
+static constexpr char kDoublePrefix[] = "f_";
+static constexpr char kInvalidOperand[] = "INVALID";
 
 namespace llvm {
 
@@ -63,7 +64,21 @@ struct YamlContext {
 
   std::string &getLastError() { return ErrorStream.str(); }
 
+  // Returns the recorded error to report to the YAML parser from a
+  // ScalarTraits::input. When ContinueOnError is set, recoverable per-entry
+  // errors (e.g. an unknown opcode in a bitrotted sample) are left recorded for
+  // the caller to inspect but are not reported to the parser, which would
+  // otherwise abort parsing of every remaining document.
+  StringRef getInputError() {
+    return ContinueOnError ? StringRef() : StringRef(getLastError());
+  }
+
   raw_string_ostream &getErrorStream() { return ErrorStream; }
+
+  // When set, ScalarTraits::input swallows recoverable deserialization errors
+  // (see getInputError) so that readYamls can skip the offending entry instead
+  // of aborting the whole file.
+  bool ContinueOnError = false;
 
   StringRef getRegName(MCRegister Reg) {
     // Special case: Reg may be invalid. We have to deal with it explicitly.
@@ -177,7 +192,7 @@ template <> struct ScalarTraits<MCInst> {
   static StringRef input(StringRef Scalar, void *Ctx, MCInst &Value) {
     YamlContext &Context = getTypedContext(Ctx);
     Context.deserializeMCInst(Scalar, Value);
-    return Context.getLastError();
+    return Context.getInputError();
   }
 
   // By default strings are quoted only when necessary.
@@ -202,7 +217,7 @@ struct CustomMappingTraits<std::map<exegesis::ValidationEvent, int64_t>> {
       Io.setError("Key is not a valid validation event");
       return;
     }
-    Io.mapRequired(KeyStr.str().c_str(), VI[*Key]);
+    Io.mapRequired(KeyStr, VI[*Key]);
   }
 
   static void output(IO &Io, std::map<exegesis::ValidationEvent, int64_t> &VI) {
@@ -245,8 +260,8 @@ template <> struct SequenceElementTraits<exegesis::RegisterValue> {
 };
 
 template <> struct ScalarTraits<exegesis::RegisterValue> {
-  static constexpr const unsigned kRadix = 16;
-  static constexpr const bool kSigned = false;
+  static constexpr unsigned kRadix = 16;
+  static constexpr bool kSigned = false;
 
   static void output(const exegesis::RegisterValue &RV, void *Ctx,
                      raw_ostream &Out) {
@@ -270,7 +285,7 @@ template <> struct ScalarTraits<exegesis::RegisterValue> {
       Context.getErrorStream()
           << "Unknown initial register value: '" << String << "'";
     }
-    return Context.getLastError();
+    return Context.getInputError();
   }
 
   static QuotingType mustQuote(StringRef) { return QuotingType::Single; }
@@ -297,7 +312,6 @@ template <> struct MappingContextTraits<exegesis::Benchmark, YamlContext> {
       std::string Str;
       raw_string_ostream OSS(Str);
       Binary.writeAsBinary(OSS);
-      OSS.flush();
       Data.assign(Str.begin(), Str.end());
       return Data;
     }
@@ -380,21 +394,37 @@ Expected<std::vector<Benchmark>> Benchmark::readYamls(const LLVMState &State,
                                                       MemoryBufferRef Buffer) {
   yaml::Input Yin(Buffer);
   YamlContext Context(State);
+  // Recoverable per-entry errors (e.g. unknown opcodes) are recorded rather
+  // than reported to the parser, so a single bad entry can be dropped without
+  // aborting the read of the whole file.
+  Context.ContinueOnError = true;
   std::vector<Benchmark> Benchmarks;
+  unsigned NumSkippedEntries = 0;
   while (Yin.setCurrentDocument()) {
     Benchmarks.emplace_back();
     yamlize(Yin, Benchmarks.back(), /*unused*/ true, Context);
     if (Yin.error())
       return errorCodeToError(Yin.error());
-    if (!Context.getLastError().empty())
-      return make_error<Failure>(Context.getLastError());
+    if (!Context.getLastError().empty()) {
+      // Warn about the unparsable entry (e.g. an unknown opcode from a
+      // bitrotted sample), discard it, and continue so that a single bad entry
+      // doesn't abort the read of the whole file.
+      WithColor::warning() << "skipping benchmark entry: "
+                           << Context.getLastError();
+      Context.getLastError().clear();
+      Benchmarks.pop_back();
+      ++NumSkippedEntries;
+    }
     Yin.nextDocument();
   }
+  if (NumSkippedEntries)
+    WithColor::warning() << "skipped " << NumSkippedEntries
+                         << " benchmark entries that could not be parsed\n";
   return std::move(Benchmarks);
 }
 
 Error Benchmark::writeYamlTo(const LLVMState &State, raw_ostream &OS) {
-  auto Cleanup = make_scope_exit([&] { OS.flush(); });
+  llvm::scope_exit Cleanup([&] { OS.flush(); });
   yaml::Output Yout(OS, nullptr /*Ctx*/, 200 /*WrapColumn*/);
   YamlContext Context(State);
   Yout.beginDocuments();

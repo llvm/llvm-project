@@ -20,6 +20,7 @@
 #include <__config>
 #include <__format/buffer.h>
 #include <__format/concepts.h>
+#include <__format/fmt_pair_like.h>
 #include <__format/format_context.h>
 #include <__format/format_error.h>
 #include <__format/formatter.h>
@@ -214,6 +215,8 @@ private:
     switch (*__begin) {
     case _CharT('m'):
       if constexpr (__fmt_pair_like<_Tp>) {
+        __underlying_.set_separator(_LIBCPP_STATICALLY_WIDEN(_CharT, ": "));
+        __underlying_.set_brackets({}, {});
         set_brackets(_LIBCPP_STATICALLY_WIDEN(_CharT, "{"), _LIBCPP_STATICALLY_WIDEN(_CharT, "}"));
         set_separator(_LIBCPP_STATICALLY_WIDEN(_CharT, ", "));
         ++__begin;

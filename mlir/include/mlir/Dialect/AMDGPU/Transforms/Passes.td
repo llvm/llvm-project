@@ -70,4 +70,5 @@ def AmdgpuMaskedloadToLoadPass : Pass<"amdgpu-maskedload-to-load"> {
     "memref::MemRefDialect"
   ];
 }
+
 #endif // MLIR_DIALECT_AMDGPU_TRANSFORMS_PASSES_TD_

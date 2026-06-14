@@ -17,6 +17,7 @@
 #include "Protocol/ProtocolTypes.h"
 
 #include "lldb/API/SBAddress.h"
+#include "lldb/lldb-types.h"
 
 namespace lldb_dap {
 
@@ -53,7 +54,8 @@ std::optional<protocol::Source> CreateSource(const lldb::SBFileSpec &file);
 /// Checks if the given source is for assembly code.
 bool IsAssemblySource(const protocol::Source &source);
 
-bool DisplayAssemblySource(lldb::SBDebugger &debugger, lldb::SBAddress address);
+bool DisplayAssemblySource(lldb::SBDebugger &debugger,
+                           lldb::SBLineEntry line_entry);
 
 /// Get the address as a 16-digit hex string, e.g. "0x0000000000012345"
 std::string GetLoadAddressString(const lldb::addr_t addr);
@@ -105,6 +107,14 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp);
 ///     A string representing the size in a readable format (e.g., "1 KB",
 ///     "2 MB").
 std::string ConvertDebugInfoSizeToString(uint64_t debug_size);
+
+/// Add a mask to the breakpoint's id, this is to avoid id collision
+/// as internally, lldb breakpoint's id and watchpoint's id starts from one.
+/// Similar to the variables_reference we start from 8'000'000.
+inline lldb::break_id_t ApplyWatchpointMask(lldb::break_id_t breakpoint_id) {
+  constexpr lldb::break_id_t watchpoint_mask = 8'000'000;
+  return watchpoint_mask + breakpoint_id;
+}
 
 } // namespace lldb_dap
 

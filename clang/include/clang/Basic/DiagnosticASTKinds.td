@@ -174,10 +174,11 @@ def note_constexpr_heap_alloc_limit_exceeded : Note<
 def note_constexpr_this : Note<
   "%select{|implicit }0use of 'this' pointer is only allowed within the "
   "evaluation of a call to a 'constexpr' member function">;
-def access_kind : TextSubstitution<
-  "%select{read of|read of|assignment to|increment of|decrement of|"
-  "member call on|dynamic_cast of|typeid applied to|construction of|"
-  "destruction of|read of}0">;
+def access_kind
+    : TextSubstitution<
+          "%select{read of|read of|assignment to|increment of|decrement of|"
+          "member call on|dynamic_cast of|typeid applied to|construction of|"
+          "destruction of|read of|read of}0">;
 def access_kind_subobject : TextSubstitution<
   "%select{read of|read of|assignment to|increment of|decrement of|"
   "member call on|dynamic_cast of|typeid applied to|"
@@ -185,9 +186,6 @@ def access_kind_subobject : TextSubstitution<
 def access_kind_volatile : TextSubstitution<
   "%select{read of|read of|assignment to|increment of|decrement of|"
   "<ERROR>|<ERROR>|<ERROR>|<ERROR>|<ERROR>|<ERROR>}0">;
-def note_constexpr_lifetime_ended : Note<
-  "%sub{access_kind}0 %select{temporary|variable}1 whose "
-  "%plural{8:storage duration|:lifetime}0 has ended">;
 def note_constexpr_access_uninit : Note<
   "%sub{access_kind_subobject}0 "
   "%select{object outside its lifetime|uninitialized object}1 "
@@ -222,6 +220,9 @@ def note_constexpr_ltor_incomplete_type : Note<
 def note_constexpr_access_null : Note<
   "%sub{access_kind}0 "
   "dereferenced null pointer is not allowed in a constant expression">;
+def note_constexpr_dereferencing_null
+    : Note<"dereferencing a null pointer is not allowed in a constant "
+           "expression">;
 def note_constexpr_access_past_end : Note<
   "%sub{access_kind}0 dereferenced one-past-the-end pointer "
   "is not allowed in a constant expression">;
@@ -396,8 +397,15 @@ def note_constexpr_non_const_vectorelements : Note<
   "cannot determine number of elements for sizeless vectors in a constant expression">;
 def note_constexpr_assumption_failed : Note<
   "assumption evaluated to false">;
-def err_experimental_clang_interp_failed : Error<
-  "the experimental clang interpreter failed to evaluate an expression">;
+def note_constexpr_countzeroes_zero : Note<
+  "evaluation of %select{__builtin_elementwise_clzg|__builtin_elementwise_ctzg}0 "
+  "with a zero value is undefined">;
+def note_constexpr_infer_alloc_token_type_inference_failed : Note<
+  "could not infer allocation type for __builtin_infer_alloc_token">;
+def note_constexpr_infer_alloc_token_no_metadata : Note<
+  "could not get token metadata for inferred type">;
+def note_constexpr_infer_alloc_token_stateful_mode
+    : Note<"stateful alloc token mode not supported in constexpr">;
 
 def warn_attribute_needs_aggregate : Warning<
   "%0 attribute is ignored in non-aggregate type %1">,
@@ -418,12 +426,6 @@ def warn_fixedpoint_constant_overflow : Warning<
 def note_constexpr_unscoped_enum_out_of_range : Note<
   "integer value %0 is outside the valid range of values [%1, %2] for the "
   "enumeration type %3">;
-
-// This is a temporary diagnostic, and shall be removed once our
-// implementation is complete, and like the preceding constexpr notes belongs
-// in Sema.
-def note_unimplemented_constexpr_lambda_feature_ast : Note<
-    "unimplemented constexpr lambda feature: %0 (coming soon!)">;
 
 def warn_is_constant_evaluated_always_true_constexpr : Warning<
   "'%0' will always evaluate to 'true' in a manifestly constant-evaluated expression">,
@@ -507,6 +509,14 @@ def note_odr_number_of_bases : Note<
   "class has %0 base %plural{1:class|:classes}0">;
 def note_odr_enumerator : Note<"enumerator %0 with value %1 here">;
 def note_odr_missing_enumerator : Note<"no corresponding enumerator here">;
+def note_odr_incompatible_fixed_underlying_type : Note<
+  "enumeration %0 declared with incompatible fixed underlying types (%1 vs. "
+  "%2)">;
+def note_odr_fixed_underlying_type : Note<
+  "enumeration %0 has fixed underlying type here">;
+def note_odr_missing_fixed_underlying_type : Note<
+  "enumeration %0 missing fixed underlying type here">;
+
 def err_odr_field_type_inconsistent : Error<
   "field %0 declared with incompatible types in different "
   "translation units (%1 vs. %2)">;
@@ -585,6 +595,8 @@ def warn_odr_objc_synthesize_ivar_inconsistent : Warning<
   InGroup<ODR>;
 def note_odr_objc_synthesize_ivar_here : Note<
   "property is synthesized to ivar %0 here">;
+def err_unsupported_objc_primitive_encoding
+    : Error<"cannot yet @encode type %0">;
 
 // Importing C++ ASTs
 def note_odr_friend : Note<"friend declared here">;
@@ -1018,6 +1030,39 @@ def warn_npot_ms_struct : Warning<
   "ms_struct may not produce Microsoft-compatible layouts with fundamental "
   "data types with sizes that aren't a power of two">,
   DefaultError, InGroup<IncompatibleMSStruct>;
+
+def err_itanium_layout_unimplemented : Error<
+  "Itanium-compatible layout for the Microsoft C++ ABI is not yet supported">;
+
+// Unsupported features in name mangling
+def err_unsupported_itanium_mangling : Error<
+    "cannot yet mangle "
+    "%enum_select<UnsupportedItaniumManglingKind>"
+    "{%FixedPointLiteral{fixed point literal}"
+    "|%DependentNeonVector{dependent neon vector type}"
+    "|%DependentFixedLengthSVEVector{dependent fixed-length SVE vector "
+    "type}"
+    "|%DependentFixedLengthRVVVectorType{dependent fixed-length RVV "
+    "vector type}"
+    "|%TernaryWithOmittedMiddleOperand{?: operator with omitted middle "
+    "operand}"
+    "|%OpenACCAsteriskSizeExpr{OpenACC Asterisk Size expression}"
+    "|%UnnamedUnionNTTP{unnamed union non-type template parameter}"
+    "|%RequiresExprWithSubstitutionFailure{requires-expression "
+    "containing a substitution failure}"
+    "}0">;
+
+def err_unsupported_itanium_expr_mangling : Error<
+    "cannot yet mangle %0 expression">;
+
+def err_ms_mangle_number_overflow : Error<
+    "mangling number exceeds limit (65535)">;
+def err_ms_mangle_unsupported_with_detail : Error<
+    "cannot mangle this %0 %1 yet">;
+def err_ms_mangle_unsupported : Error<"cannot mangle this %0 yet">;
+
+def err_unexpected_vftable_component : Error<
+    "unexpected vftable component type %0 for component number %1">;
 
 // -Wpadded-bitfield
 def warn_padded_struct_bitfield : Warning<

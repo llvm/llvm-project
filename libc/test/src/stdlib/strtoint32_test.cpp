@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdint.h>
-
+#include "hdr/stdint_proxy.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
@@ -23,7 +22,7 @@ int32_t strtoint32(const char *__restrict str, char **__restrict str_end,
   if (result.has_error())
     libc_errno = result.error;
 
-  if (str_end != nullptr)
+  if (str_end != nullptr && result.error != EINVAL)
     *str_end = const_cast<char *>(str + result.parsed_len);
 
   return result;
@@ -35,7 +34,7 @@ uint32_t strtouint32(const char *__restrict str, char **__restrict str_end,
   if (result.has_error())
     libc_errno = result.error;
 
-  if (str_end != nullptr)
+  if (str_end != nullptr && result.error != EINVAL)
     *str_end = const_cast<char *>(str + result.parsed_len);
 
   return result;

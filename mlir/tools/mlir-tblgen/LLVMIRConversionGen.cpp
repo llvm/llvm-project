@@ -416,7 +416,7 @@ static void emitOneEnumToConversion(const Record *record, raw_ostream &os) {
 
   // Emit the function converting the enum attribute to its LLVM counterpart.
   os << formatv(
-      "static LLVM_ATTRIBUTE_UNUSED {0} convert{1}ToLLVM({2}::{1} value) {{\n",
+      "[[maybe_unused]] static {0} convert{1}ToLLVM({2}::{1} value) {{\n",
       llvmClass, cppClassName, cppNamespace);
   os << "  switch (value) {\n";
 
@@ -444,7 +444,7 @@ static void emitOneCEnumToConversion(const Record *record, raw_ostream &os) {
   StringRef cppNamespace = enumAttr.getCppNamespace();
 
   // Emit the function converting the enum attribute to its LLVM counterpart.
-  os << formatv("static LLVM_ATTRIBUTE_UNUSED int64_t "
+  os << formatv("[[maybe_unused]] static int64_t "
                 "convert{0}ToLLVM({1}::{0} value) {{\n",
                 cppClassName, cppNamespace);
   os << "  switch (value) {\n";
@@ -474,7 +474,7 @@ static void emitOneEnumFromConversion(const Record *record, raw_ostream &os) {
   StringRef cppNamespace = enumInfo.getCppNamespace();
 
   // Emit the function converting the enum attribute from its LLVM counterpart.
-  os << formatv("inline LLVM_ATTRIBUTE_UNUSED {0}::{1} convert{1}FromLLVM({2} "
+  os << formatv("[[maybe_unused]] inline {0}::{1} convert{1}FromLLVM({2} "
                 "value) {{\n",
                 cppNamespace, cppClassName, llvmClass);
   os << "  switch (value) {\n";
@@ -509,10 +509,9 @@ static void emitOneCEnumFromConversion(const Record *record, raw_ostream &os) {
   StringRef cppNamespace = enumInfo.getCppNamespace();
 
   // Emit the function converting the enum attribute from its LLVM counterpart.
-  os << formatv(
-      "inline LLVM_ATTRIBUTE_UNUSED {0}::{1} convert{1}FromLLVM(int64_t "
-      "value) {{\n",
-      cppNamespace, cppClassName);
+  os << formatv("[[maybe_unused]] inline {0}::{1} convert{1}FromLLVM(int64_t "
+                "value) {{\n",
+                cppNamespace, cppClassName);
   os << "  switch (value) {\n";
 
   for (const auto &enumerant : enumInfo.getAllCases()) {

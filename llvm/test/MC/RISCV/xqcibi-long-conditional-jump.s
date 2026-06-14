@@ -1,8 +1,8 @@
-# RUN: llvm-mc -filetype=obj --mattr=+experimental-xqcibi -triple=riscv32 %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcibi -d -M no-aliases - \
+# RUN: llvm-mc -filetype=obj --mattr=+xqcibi -triple=riscv32 %s \
+# RUN:     | llvm-objdump --mattr=+xqcibi -d -M no-aliases - \
 # RUN:     | FileCheck --check-prefix=CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+relax,+experimental-xqcibi %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcibi -dr -M no-aliases - \
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+relax,+xqcibi %s \
+# RUN:     | llvm-objdump --mattr=+xqcibi -dr -M no-aliases - \
 # RUN:     | FileCheck --check-prefix=CHECK-INST-RELAX %s
 
        .text

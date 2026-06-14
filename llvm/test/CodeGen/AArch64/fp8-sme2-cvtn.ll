@@ -8,13 +8,13 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @cvtn_f16_tuple(i64 %stride, p
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z11, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z10, [sp, #2, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 16 - 8 * VG
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4b, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 16 - 16 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d10 @ cfa - 8 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4b, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x40, 0x1c // $d11 @ cfa - 16 * VG - 16
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    add x8, x1, x0
 ; CHECK-NEXT:    ld1h { z2.h, z10.h }, pn8/z, [x1]
@@ -23,7 +23,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @cvtn_f16_tuple(i64 %stride, p
 ; CHECK-NEXT:    fcvtn z1.b, { z10.h, z11.h }
 ; CHECK-NEXT:    ldr z11, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z10, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -49,13 +49,13 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @cvtnt_f32_tuple(i64 %stride, 
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-3
-; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    str z11, [sp, #1, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    str z10, [sp, #2, mul vl] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 24 * VG
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x48, 0x1e, 0x22 // sp + 16 + 24 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 16 - 8 * VG
-; CHECK-NEXT:    .cfi_escape 0x10, 0x4b, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 16 - 16 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d10 @ cfa - 8 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4b, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x40, 0x1c // $d11 @ cfa - 16 * VG - 16
 ; CHECK-NEXT:    ptrue pn8.b
 ; CHECK-NEXT:    add x8, x1, x0
 ; CHECK-NEXT:    mov z1.d, z0.d
@@ -65,7 +65,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @cvtnt_f32_tuple(i64 %stride, 
 ; CHECK-NEXT:    fcvtnt z1.b, { z10.s, z11.s }
 ; CHECK-NEXT:    ldr z11, [sp, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr z10, [sp, #2, mul vl] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    addvl sp, sp, #3
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret

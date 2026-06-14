@@ -11,7 +11,7 @@ define i8 @test_or(i8 %a, i8 %b) sanitize_memory {
 ; CHECK-LABEL: define i8 @test_or(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i8 [[A]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i8 [[B]], -1
@@ -29,28 +29,41 @@ define i8 @test_or(i8 %a, i8 %b) sanitize_memory {
 }
 
 define i8 @test_disjoint_or(i8 %a, i8 %b) sanitize_memory {
-; CHECK-LABEL: define i8 @test_disjoint_or(
-; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i8 [[A]], -1
-; CHECK-NEXT:    [[TMP4:%.*]] = xor i8 [[B]], -1
-; CHECK-NEXT:    [[TMP5:%.*]] = and i8 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = and i8 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = and i8 [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP8:%.*]] = or i8 [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP11:%.*]] = or i8 [[TMP8]], [[TMP7]]
+; CHECK-IMPRECISE-LABEL: define i8 @test_disjoint_or(
+; CHECK-IMPRECISE-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-IMPRECISE-NEXT:    [[TMP1:%.*]] = load i8, ptr @__msan_param_tls, align 8
+; CHECK-IMPRECISE-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-IMPRECISE-NEXT:    call void @llvm.donothing()
+; CHECK-IMPRECISE-NEXT:    [[TMP3:%.*]] = xor i8 [[A]], -1
+; CHECK-IMPRECISE-NEXT:    [[TMP4:%.*]] = xor i8 [[B]], -1
+; CHECK-IMPRECISE-NEXT:    [[TMP5:%.*]] = and i8 [[TMP1]], [[TMP2]]
+; CHECK-IMPRECISE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP3]], [[TMP2]]
+; CHECK-IMPRECISE-NEXT:    [[TMP7:%.*]] = and i8 [[TMP1]], [[TMP4]]
+; CHECK-IMPRECISE-NEXT:    [[TMP8:%.*]] = or i8 [[TMP5]], [[TMP6]]
+; CHECK-IMPRECISE-NEXT:    [[TMP9:%.*]] = or i8 [[TMP8]], [[TMP7]]
+; CHECK-IMPRECISE-NEXT:    [[C:%.*]] = or disjoint i8 [[A]], [[B]]
+; CHECK-IMPRECISE-NEXT:    store i8 [[TMP9]], ptr @__msan_retval_tls, align 8
+; CHECK-IMPRECISE-NEXT:    ret i8 [[C]]
 ;
-; CHECK-IMPRECISE:      [[C:%.*]] = or disjoint i8 [[A]], [[B]]
-; CHECK-IMPRECISE-NEXT: store i8 [[TMP11]], ptr @__msan_retval_tls, align 8
-;
-; CHECK-PRECISE:         [[TMP10:%.*]] = and i8 [[A]], [[B]]
-; CHECK-PRECISE-NEXT:    [[TMP12:%.*]] = or i8 [[TMP11]], [[TMP10]]
+; CHECK-PRECISE-LABEL: define i8 @test_disjoint_or(
+; CHECK-PRECISE-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) #[[ATTR0]] {
+; CHECK-PRECISE-NEXT:    [[TMP1:%.*]] = load i8, ptr @__msan_param_tls, align 8
+; CHECK-PRECISE-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; CHECK-PRECISE-NEXT:    call void @llvm.donothing()
+; CHECK-PRECISE-NEXT:    [[TMP3:%.*]] = xor i8 [[A]], -1
+; CHECK-PRECISE-NEXT:    [[TMP4:%.*]] = xor i8 [[B]], -1
+; CHECK-PRECISE-NEXT:    [[TMP5:%.*]] = and i8 [[TMP1]], [[TMP2]]
+; CHECK-PRECISE-NEXT:    [[TMP6:%.*]] = and i8 [[TMP3]], [[TMP2]]
+; CHECK-PRECISE-NEXT:    [[TMP7:%.*]] = and i8 [[TMP1]], [[TMP4]]
+; CHECK-PRECISE-NEXT:    [[TMP8:%.*]] = or i8 [[TMP5]], [[TMP6]]
+; CHECK-PRECISE-NEXT:    [[TMP9:%.*]] = or i8 [[TMP8]], [[TMP7]]
+; CHECK-PRECISE-NEXT:    [[TMP10:%.*]] = and i8 [[A]], [[B]]
+; CHECK-PRECISE-NEXT:    [[TMP11:%.*]] = icmp ne i8 [[TMP10]], 0
+; CHECK-PRECISE-NEXT:    [[TMP12:%.*]] = sext i1 [[TMP11]] to i8
+; CHECK-PRECISE-NEXT:    [[_MS_DISJOINT:%.*]] = or i8 [[TMP9]], [[TMP12]]
 ; CHECK-PRECISE-NEXT:    [[C:%.*]] = or disjoint i8 [[A]], [[B]]
-; CHECK-PRECISE-NEXT:    store i8 [[TMP12]], ptr @__msan_retval_tls, align 8
-;
-; CHECK-NEXT:    ret i8 [[C]]
+; CHECK-PRECISE-NEXT:    store i8 [[_MS_DISJOINT]], ptr @__msan_retval_tls, align 8
+; CHECK-PRECISE-NEXT:    ret i8 [[C]]
 ;
   %c = or disjoint i8 %a, %b
   ret i8 %c

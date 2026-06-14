@@ -33,7 +33,7 @@ static bool requiresGOTAccess(const Symbol *sym) {
   return true;
 }
 
-static bool allowUndefined(const Symbol* sym) {
+static bool allowUndefined(const Symbol *sym) {
   // Symbols that are explicitly imported are always allowed to be undefined at
   // link time.
   if (sym->isImported())
@@ -41,7 +41,7 @@ static bool allowUndefined(const Symbol* sym) {
   if (isa<UndefinedFunction>(sym) && ctx.arg.importUndefined)
     return true;
 
-  return ctx.arg.allowUndefinedSymbols.count(sym->getName()) != 0;
+  return ctx.arg.allowUndefinedSymbols.contains(sym->getName());
 }
 
 static void reportUndefined(ObjFile *file, Symbol *sym) {

@@ -16,6 +16,8 @@
 // stable ABI), and its rethrow_exception(std::__exception_ptr::exception_ptr)
 // function.
 
+#include <exception>
+
 namespace std {
 
 namespace __exception_ptr {

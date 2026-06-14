@@ -36,7 +36,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include <list>
-#include <map>
 #include <plugin-api.h>
 #include <string>
 #include <system_error>
@@ -1157,7 +1156,7 @@ static ld_plugin_status allSymbolsReadHook() {
     llvm::timeTraceProfilerInitialize(options::time_trace_granularity,
                                       options::extra.size() ? options::extra[0]
                                                             : "LLVMgold");
-  auto FinalizeTimeTrace = llvm::make_scope_exit([&]() {
+  llvm::scope_exit FinalizeTimeTrace([&]() {
     if (!llvm::timeTraceProfilerEnabled())
       return;
     assert(!options::time_trace_file.empty());
@@ -1221,7 +1220,7 @@ static ld_plugin_status cleanup_hook(void) {
   // Prune cache
   if (!options::cache_dir.empty()) {
     CachePruningPolicy policy = check(parseCachePruningPolicy(options::cache_policy));
-    pruneCache(options::cache_dir, policy);
+    check(pruneCache(options::cache_dir, policy));
   }
 
   return LDPS_OK;
