@@ -12,8 +12,6 @@
 
 // XFAIL: availability-fp_to_chars-missing
 
-// Missing mkstemp
-// XFAIL: LLVM-LIBC-FIXME
 
 // <format>
 

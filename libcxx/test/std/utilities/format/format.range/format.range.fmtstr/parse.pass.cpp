@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
-// Missing mkstemp
-// XFAIL: LLVM-LIBC-FIXME
 
 // <format>
 
