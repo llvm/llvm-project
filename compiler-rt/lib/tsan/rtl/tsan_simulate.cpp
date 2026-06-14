@@ -9,6 +9,20 @@
 // This file is a part of ThreadSanitizer (TSan), a race detector.
 //
 //===----------------------------------------------------------------------===//
+//
+// TODO:
+//   - Support calling __tsan_simulate while other threads are running.
+//   - Support custom mutexes (e.g. absl::Mutex) and direct futex calls in
+//     simulation mode. Currently, only pthread mutexes and condition variables
+//     are supported; other synchronization primitives abort the simulation.
+//   - Support timed operations (pthread_cond_timedwait, pthread_mutex_timedlock,
+//     pthread_timedjoin_np) by treating them as their non-timed counterparts.
+//   - Support spinlocks (pthread_spin_lock/trylock/unlock) using the same
+//     trylock-loop pattern as pthread_mutex_lock.
+//   - Support rwlocks (pthread_rwlock_*) with reader/writer tracking in the
+//     scheduler.
+//   - Support barriers (pthread_barrier_wait) with a rendezvous mechanism in
+//     the scheduler.
 
 #include "tsan_simulate.h"
 
