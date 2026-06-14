@@ -82,7 +82,7 @@ TOOLS = [
     },
     {
         "name": "rewind",
-        "description": "Rewind the IR state by N steps (default 1). Undoes the last N pass applications.",
+        "description": "Rewind the IR state by N steps or to a named bookmark.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -91,8 +91,48 @@ TOOLS = [
                     "description": "Number of steps to rewind (default 1)",
                     "default": 1,
                     "minimum": 1,
+                },
+                "target": {
+                    "type": "string",
+                    "description": "Bookmark name to rewind to (overrides steps)",
+                },
+            },
+        },
+    },
+    {
+        "name": "bookmark",
+        "description": "Bookmark the current history step with a name, or list all bookmarks (no name).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "Name for the bookmark. Omit to list existing bookmarks.",
+                    "default": "",
                 }
             },
+        },
+    },
+    {
+        "name": "save",
+        "description": "Save the current IR state to a file.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "File path to write the current IR to",
+                }
+            },
+            "required": ["path"],
+        },
+    },
+    {
+        "name": "verify",
+        "description": "Verify that the current IR is valid (runs mlir-opt --verify-diagnostics).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
         },
     },
     {

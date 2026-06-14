@@ -4,14 +4,23 @@ import json
 import subprocess
 from unittest.mock import patch
 
+import pytest
 from click.testing import CliRunner
 
 import mlir_opt_repl.engine as engine
-from conftest import capture_stdio
+from conftest import (
+    INIT_MSG,
+    capture_stdio,
+    parse_responses,
+    run_mcp,
+    run_repl,
+    tool_call,
+)
+from mlir_opt_repl import repl as repl_module
 from mlir_opt_repl.__main__ import cli
 from mlir_opt_repl.diff import render_side_by_side, render_unified_diff
 from mlir_opt_repl.mcp import mcp_main
-from mlir_opt_repl.repl import interactive_main
+from mlir_opt_repl.repl import _completer, _get_pass_names, interactive_main
 
 
 class TestClickCLI:
@@ -58,7 +67,6 @@ class TestEngineEdgeCases:
             engine.MLIR_OPT = old
 
     def test_check_mlir_opt_exits(self):
-        import pytest
 
         old = engine.MLIR_OPT
         engine.MLIR_OPT = "/nonexistent/mlir-opt"
@@ -111,6 +119,96 @@ class TestReplLoadEOF:
             except (EOFError, SystemExit):
                 pass
         assert "Loaded" in stdout.getvalue()
+
+
+class TestCompleter:
+    def test_command_completion(self):
+
+        with patch("mlir_opt_repl.repl.readline") as mock_rl:
+            mock_rl.get_line_buffer.return_value = "lo"
+            result = _completer("lo", 0)
+            assert result == "load "
+
+    def test_pass_completion(self):
+
+        with patch("mlir_opt_repl.repl.readline") as mock_rl:
+            mock_rl.get_line_buffer.return_value = "run convert-arith"
+            result = _completer("convert-arith", 0)
+            assert result is not None
+            assert "convert-arith" in result
+
+    def test_no_match(self):
+
+        with patch("mlir_opt_repl.repl.readline") as mock_rl:
+            mock_rl.get_line_buffer.return_value = "zzz"
+            result = _completer("zzz", 0)
+            assert result is None
+
+    def test_bookmark_completion(self):
+
+        repl_module.bookmarks = {"mymark": 0}
+        with patch("mlir_opt_repl.repl.readline") as mock_rl:
+            mock_rl.get_line_buffer.return_value = "rewind my"
+            result = _completer("my", 0)
+            assert result == "mymark "
+
+    def test_state_out_of_range(self):
+
+        with patch("mlir_opt_repl.repl.readline") as mock_rl:
+            mock_rl.get_line_buffer.return_value = "lo"
+            result = _completer("lo", 99)
+            assert result is None
+
+    def test_other_command_no_completions(self):
+        with patch("mlir_opt_repl.repl.readline") as mock_rl:
+            mock_rl.get_line_buffer.return_value = "save "
+            result = _completer("", 0)
+            assert result is None
+
+
+class TestBookmarkInvalidIndex:
+    def test_rewind_to_invalid_bookmark_mcp(self):
+
+        engine.ir_history = [("initial", "module {}")]
+        engine.current_ir = "module {}"
+        engine.bookmarks = {"stale": 99}
+        result = engine.handle_tool_call("rewind", {"target": "stale"})
+        assert result["isError"] is True
+        assert "invalid index" in result["content"][0]["text"]
+
+    def test_rewind_to_invalid_bookmark_repl(self):
+
+        engine.ir_history = [("initial", "module {}")]
+        engine.current_ir = "module {}"
+        repl_module.bookmarks = {"stale": 99}
+        output = run_repl("rewind stale\nquit\n")
+        assert "invalid index" in output
+
+
+class TestVerifyInvalid:
+    def test_verify_fails_on_bad_ir(self):
+        engine.current_ir = "func.func @f() -> i32 { return }"
+        engine.ir_history = [("initial", engine.current_ir)]
+        result = engine.handle_tool_call("verify", {})
+        assert result["isError"] is True
+        assert "Verification failed" in result["content"][0]["text"]
+
+
+class TestBookmarkNoBookmarksMCP:
+    def test_list_empty(self):
+        output = run_mcp(
+            INIT_MSG,
+            tool_call(
+                1,
+                "run_pipeline",
+                {"mlir": "func.func @f() { return }", "passes": ["canonicalize"]},
+            ),
+            tool_call(2, "bookmark"),
+        )
+        assert (
+            "(no bookmarks)"
+            in parse_responses(output)[2]["result"]["content"][0]["text"]
+        )
 
 
 class TestDiffEdgeCases:

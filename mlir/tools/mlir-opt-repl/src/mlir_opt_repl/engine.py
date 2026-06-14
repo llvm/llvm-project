@@ -21,6 +21,17 @@ def check_mlir_opt():
 
 current_ir = None
 ir_history = []
+bookmarks = {}
+
+
+def _build_pass_args(passes, extra_args=None):
+    if len(passes) == 1 and "(" in passes[0]:
+        args = [f"--pass-pipeline={passes[0]}"]
+    else:
+        args = ["--" + p.lstrip("-") for p in passes]
+    if extra_args:
+        args += ["--" + a.lstrip("-") for a in extra_args]
+    return args
 
 
 def run_mlir_opt(ir_text, args):
@@ -69,13 +80,12 @@ def list_passes():
 
 
 def handle_tool_call(name, arguments):
-    global current_ir, ir_history
+    global current_ir, ir_history, bookmarks
 
     if name == "run_pipeline":
         mlir = arguments["mlir"]
-        passes = ["--" + p.lstrip("-") for p in arguments["passes"]]
-        extra = ["--" + a.lstrip("-") for a in arguments.get("extra_args", [])]
-        output, err = run_mlir_opt(mlir, passes + extra)
+        passes = _build_pass_args(arguments["passes"], arguments.get("extra_args"))
+        output, err = run_mlir_opt(mlir, passes)
         if err:
             return {
                 "content": [{"type": "text", "text": f"Error:\n{err}"}],
@@ -97,9 +107,8 @@ def handle_tool_call(name, arguments):
                 ],
                 "isError": True,
             }
-        passes = ["--" + p.lstrip("-") for p in arguments["passes"]]
-        extra = ["--" + a.lstrip("-") for a in arguments.get("extra_args", [])]
-        output, err = run_mlir_opt(current_ir, passes + extra)
+        passes = _build_pass_args(arguments["passes"], arguments.get("extra_args"))
+        output, err = run_mlir_opt(current_ir, passes)
         if err:
             return {
                 "content": [
@@ -119,6 +128,7 @@ def handle_tool_call(name, arguments):
     elif name == "reset":
         current_ir = None
         ir_history = []
+        bookmarks = {}
         return {"content": [{"type": "text", "text": "IR state cleared."}]}
 
     elif name == "rewind":
@@ -127,7 +137,31 @@ def handle_tool_call(name, arguments):
                 "content": [{"type": "text", "text": "Error: no history to rewind."}],
                 "isError": True,
             }
+        target = arguments.get("target")
         steps = arguments.get("steps", 1)
+        if target and target in bookmarks:
+            idx = bookmarks[target]
+            if idx >= len(ir_history):
+                return {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": f"Error: bookmark '{target}' points to invalid index.",
+                        }
+                    ],
+                    "isError": True,
+                }
+            ir_history = ir_history[: idx + 1]
+            desc, ir = ir_history[-1]
+            current_ir = ir
+            return {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"Rewound to bookmark '{target}' ({desc}).\n\n{ir}",
+                    }
+                ]
+            }
         if steps >= len(ir_history):
             desc, ir = ir_history[0]
             ir_history = [ir_history[0]]
@@ -152,6 +186,58 @@ def handle_tool_call(name, arguments):
             ]
         }
 
+    elif name == "bookmark":
+        if not ir_history:
+            return {
+                "content": [{"type": "text", "text": "Error: no history to bookmark."}],
+                "isError": True,
+            }
+        bm_name = arguments.get("name", "")
+        if not bm_name:
+            if not bookmarks:
+                return {"content": [{"type": "text", "text": "(no bookmarks)"}]}
+            lines = []
+            for n, idx in sorted(bookmarks.items(), key=lambda x: x[1]):
+                desc = ir_history[idx][0] if idx < len(ir_history) else "?"
+                lines.append(f"  {n} -> [{idx}] {desc}")
+            return {"content": [{"type": "text", "text": "\n".join(lines)}]}
+        idx = len(ir_history) - 1
+        bookmarks[bm_name] = idx
+        return {
+            "content": [{"type": "text", "text": f"Bookmarked [{idx}] as '{bm_name}'"}]
+        }
+
+    elif name == "save":
+        if current_ir is None:
+            return {
+                "content": [{"type": "text", "text": "Error: no IR to save."}],
+                "isError": True,
+            }
+        path = arguments.get("path", "")
+        if not path:
+            return {
+                "content": [{"type": "text", "text": "Error: path is required."}],
+                "isError": True,
+            }
+        with open(path, "w") as f:
+            f.write(current_ir)
+            f.write("\n")
+        return {"content": [{"type": "text", "text": f"Saved to {path}"}]}
+
+    elif name == "verify":
+        if current_ir is None:
+            return {
+                "content": [{"type": "text", "text": "Error: no IR to verify."}],
+                "isError": True,
+            }
+        _, err = run_mlir_opt(current_ir, ["--verify-diagnostics"])
+        if err:
+            return {
+                "content": [{"type": "text", "text": f"Verification failed:\n{err}"}],
+                "isError": True,
+            }
+        return {"content": [{"type": "text", "text": "IR is valid."}]}
+
     elif name == "history":
         if not ir_history:
             return {"content": [{"type": "text", "text": "(no history)"}]}
@@ -160,9 +246,11 @@ def handle_tool_call(name, arguments):
         pretty = arguments.get("pretty", False)
         width = arguments.get("width")
         lines = []
+        bookmark_at = {v: k for k, v in bookmarks.items()}
         for i, (desc, ir) in enumerate(ir_history):
             marker = " <-- current" if i == len(ir_history) - 1 else ""
-            lines.append(f"[{i}] {desc}{marker}")
+            bm = f" [{bookmark_at[i]}]" if i in bookmark_at else ""
+            lines.append(f"[{i}] {desc}{bm}{marker}")
             if fmt == "side_by_side" and i > 0:
                 prev_ir = ir_history[i - 1][1]
                 sbs = render_side_by_side(

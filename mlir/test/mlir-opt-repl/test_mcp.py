@@ -27,6 +27,9 @@ class TestToolsList:
             "reset",
             "list_passes",
             "rewind",
+            "bookmark",
+            "save",
+            "verify",
             "history",
         }
 
@@ -279,3 +282,134 @@ class TestErrors:
             INIT_MSG, {"jsonrpc": "2.0", "method": "notifications/initialized"}
         )
         assert len(parse_responses(output)) == 1
+
+
+class TestBookmarkMCP:
+    def test_bookmark_and_rewind(self):
+        output = run_mcp(
+            INIT_MSG,
+            tool_call(
+                1, "run_pipeline", {"mlir": SAMPLE_MLIR, "passes": ["canonicalize"]}
+            ),
+            tool_call(2, "bookmark", {"name": "pre-lower"}),
+            tool_call(3, "chain_pipeline", {"passes": ["convert-arith-to-llvm"]}),
+            tool_call(4, "rewind", {"target": "pre-lower"}),
+        )
+        responses = parse_responses(output)
+        assert (
+            "Bookmarked [1] as 'pre-lower'"
+            in responses[2]["result"]["content"][0]["text"]
+        )
+        assert (
+            "Rewound to bookmark 'pre-lower'"
+            in responses[4]["result"]["content"][0]["text"]
+        )
+        assert "arith.addf" in responses[4]["result"]["content"][0]["text"]
+
+    def test_bookmark_list(self):
+        output = run_mcp(
+            INIT_MSG,
+            tool_call(
+                1, "run_pipeline", {"mlir": SAMPLE_MLIR, "passes": ["canonicalize"]}
+            ),
+            tool_call(2, "bookmark", {"name": "snap"}),
+            tool_call(3, "bookmark"),
+        )
+        responses = parse_responses(output)
+        assert "snap" in responses[3]["result"]["content"][0]["text"]
+
+    def test_bookmark_no_history(self):
+        output = run_mcp(INIT_MSG, tool_call(1, "bookmark", {"name": "x"}))
+        assert parse_responses(output)[1]["result"]["isError"] is True
+
+    def test_bookmark_shown_in_history(self):
+        output = run_mcp(
+            INIT_MSG,
+            tool_call(
+                1, "run_pipeline", {"mlir": SAMPLE_MLIR, "passes": ["canonicalize"]}
+            ),
+            tool_call(2, "bookmark", {"name": "marked"}),
+            tool_call(3, "history"),
+        )
+        assert "marked" in parse_responses(output)[3]["result"]["content"][0]["text"]
+
+
+class TestSaveMCP:
+    def test_save(self, tmp_path):
+        path = str(tmp_path / "out.mlir")
+        output = run_mcp(
+            INIT_MSG,
+            tool_call(
+                1,
+                "run_pipeline",
+                {"mlir": "func.func @f() { return }", "passes": ["canonicalize"]},
+            ),
+            tool_call(2, "save", {"path": path}),
+        )
+        assert "Saved to" in parse_responses(output)[2]["result"]["content"][0]["text"]
+        assert "func.func @f" in open(path).read()
+
+    def test_save_no_ir(self):
+        output = run_mcp(INIT_MSG, tool_call(1, "save", {"path": "/tmp/x.mlir"}))
+        assert parse_responses(output)[1]["result"]["isError"] is True
+
+    def test_save_no_path(self):
+        output = run_mcp(
+            INIT_MSG,
+            tool_call(
+                1,
+                "run_pipeline",
+                {"mlir": "func.func @f() { return }", "passes": ["canonicalize"]},
+            ),
+            tool_call(2, "save", {"path": ""}),
+        )
+        assert parse_responses(output)[2]["result"]["isError"] is True
+
+
+class TestVerifyMCP:
+    def test_valid(self):
+        output = run_mcp(
+            INIT_MSG,
+            tool_call(
+                1,
+                "run_pipeline",
+                {"mlir": "func.func @f() { return }", "passes": ["canonicalize"]},
+            ),
+            tool_call(2, "verify"),
+        )
+        assert (
+            "IR is valid" in parse_responses(output)[2]["result"]["content"][0]["text"]
+        )
+
+    def test_no_ir(self):
+        output = run_mcp(INIT_MSG, tool_call(1, "verify"))
+        assert parse_responses(output)[1]["result"]["isError"] is True
+
+
+class TestPassPipelineMCP:
+    def test_pipeline_string(self):
+        output = run_mcp(
+            INIT_MSG,
+            tool_call(
+                1,
+                "run_pipeline",
+                {"mlir": SAMPLE_MLIR, "passes": ["builtin.module(canonicalize,cse)"]},
+            ),
+        )
+        text = parse_responses(output)[1]["result"]["content"][0]["text"]
+        assert "arith.addf" in text
+
+    def test_chain_pipeline_string(self):
+        output = run_mcp(
+            INIT_MSG,
+            tool_call(
+                1, "run_pipeline", {"mlir": SAMPLE_MLIR, "passes": ["canonicalize"]}
+            ),
+            tool_call(
+                2,
+                "chain_pipeline",
+                {"passes": ["builtin.module(convert-arith-to-llvm)"]},
+            ),
+        )
+        text = parse_responses(output)[2]["result"]["content"][0]["text"]
+        assert "llvm.fadd" in text

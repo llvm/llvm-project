@@ -1,18 +1,67 @@
+import readline
 from textwrap import dedent
 
 from mlir_opt_repl import engine
 from mlir_opt_repl.diff import render_side_by_side, render_unified_diff
 from mlir_opt_repl.render import BOLD, CYAN, DIM, GREEN, RED, RESET
 
+COMMANDS = [
+    "load",
+    "run",
+    "ir",
+    "history",
+    "diff",
+    "sbs",
+    "rewind",
+    "reset",
+    "passes",
+    "save",
+    "bookmark",
+    "verify",
+    "help",
+    "quit",
+    "exit",
+]
+
+_pass_names_cache = None
+bookmarks = {}
+
+
+def _get_pass_names():
+    global _pass_names_cache
+    if _pass_names_cache is None:
+        _pass_names_cache = [p["name"] for p in engine.list_passes()]
+    return _pass_names_cache
+
+
+def _completer(text, state):
+    line = readline.get_line_buffer()
+    parts = line.lstrip().split()
+
+    if len(parts) == 0 or (len(parts) == 1 and not line.endswith(" ")):
+        matches = [c + " " for c in COMMANDS if c.startswith(text)]
+    elif parts[0] == "run":
+        pass_names = _get_pass_names()
+        matches = [p + " " for p in pass_names if p.startswith(text)]
+    elif parts[0] == "rewind" and bookmarks:
+        matches = [b + " " for b in bookmarks if b.startswith(text)]
+    else:
+        matches = []
+
+    return matches[state] if state < len(matches) else None
+
 
 def interactive_main():
-    import readline  # noqa: F401 — enables line editing in input()
-
     engine.check_mlir_opt()
+
+    readline.set_completer(_completer)
+    readline.set_completer_delims(" ")
+    readline.parse_and_bind("tab: complete")
 
     print(f"{BOLD}mlir-opt-repl{RESET} (using {engine.MLIR_OPT})")
     print(
-        "Commands: load <file>, run <passes...>, rewind [N], history, diff, sbs, ir, reset, quit"
+        "Commands: load, run, ir, history, diff, sbs, rewind, reset, "
+        "save, bookmark, verify, passes, help, quit"
     )
     print()
 
@@ -59,7 +108,6 @@ def interactive_main():
                 except FileNotFoundError:
                     print(f"{RED}File not found: {path}{RESET}")
                     continue
-            # Validate the IR by running mlir-opt with no passes
             _, err = engine.run_mlir_opt(mlir_text, [])
             if err:
                 print(f"{RED}Invalid MLIR:{RESET}")
@@ -78,7 +126,11 @@ def interactive_main():
             if engine.current_ir is None:
                 print(f"{RED}No IR loaded. Use 'load <file>' first.{RESET}")
                 continue
-            passes = ["--" + p.lstrip("-") for p in parts[1:]]
+            pipeline_str = " ".join(parts[1:])
+            if "(" in pipeline_str:
+                passes = [f"--pass-pipeline={pipeline_str}"]
+            else:
+                passes = ["--" + p.lstrip("-") for p in parts[1:]]
             output, err = engine.run_mlir_opt(engine.current_ir, passes)
             if err:
                 print(f"{RED}{err}{RESET}")
@@ -92,17 +144,28 @@ def interactive_main():
             if not engine.ir_history:
                 print(f"{RED}No history to rewind.{RESET}")
                 continue
-            steps = int(parts[1]) if len(parts) > 1 else 1
-            if steps >= len(engine.ir_history):
-                desc, ir = engine.ir_history[0]
-                engine.ir_history = [engine.ir_history[0]]
-                engine.current_ir = ir
-                print(f"{GREEN}Rewound to beginning ({desc}).{RESET}")
-            else:
-                engine.ir_history = engine.ir_history[:-steps]
+            target = parts[1] if len(parts) > 1 else "1"
+            if target in bookmarks:
+                idx = bookmarks[target]
+                if idx >= len(engine.ir_history):
+                    print(f"{RED}Bookmark '{target}' points to invalid index.{RESET}")
+                    continue
+                engine.ir_history = engine.ir_history[: idx + 1]
                 desc, ir = engine.ir_history[-1]
                 engine.current_ir = ir
-                print(f"{GREEN}Rewound {steps} step(s). Now at: {desc}{RESET}")
+                print(f"{GREEN}Rewound to bookmark '{target}' ({desc}).{RESET}")
+            else:
+                steps = int(target)
+                if steps >= len(engine.ir_history):
+                    desc, ir = engine.ir_history[0]
+                    engine.ir_history = [engine.ir_history[0]]
+                    engine.current_ir = ir
+                    print(f"{GREEN}Rewound to beginning ({desc}).{RESET}")
+                else:
+                    engine.ir_history = engine.ir_history[:-steps]
+                    desc, ir = engine.ir_history[-1]
+                    engine.current_ir = ir
+                    print(f"{GREEN}Rewound {steps} step(s). Now at: {desc}{RESET}")
             print()
             print(engine.current_ir)
 
@@ -110,13 +173,15 @@ def interactive_main():
             if not engine.ir_history:
                 print(f"{DIM}(no history){RESET}")
                 continue
+            bookmark_at = {v: k for k, v in bookmarks.items()}
             for i, (desc, _) in enumerate(engine.ir_history):
                 marker = (
                     f" {GREEN}<-- current{RESET}"
                     if i == len(engine.ir_history) - 1
                     else ""
                 )
-                print(f"  {BOLD}[{i}]{RESET} {desc}{marker}")
+                bm = f" {CYAN}[{bookmark_at[i]}]{RESET}" if i in bookmark_at else ""
+                print(f"  {BOLD}[{i}]{RESET} {desc}{bm}{marker}")
 
         elif cmd == "diff":
             if len(engine.ir_history) < 2:
@@ -169,7 +234,49 @@ def interactive_main():
         elif cmd == "reset":
             engine.current_ir = None
             engine.ir_history = []
+            bookmarks.clear()
             print(f"{GREEN}IR state cleared.{RESET}")
+
+        elif cmd == "save":
+            if len(parts) < 2:
+                print(f"{RED}Usage: save <file.mlir>{RESET}")
+                continue
+            if engine.current_ir is None:
+                print(f"{RED}No IR to save.{RESET}")
+                continue
+            path = " ".join(parts[1:])
+            with open(path, "w") as f:
+                f.write(engine.current_ir)
+                f.write("\n")
+            print(f"{GREEN}Saved to {path}{RESET}")
+
+        elif cmd == "bookmark":
+            if len(parts) < 2:
+                if not bookmarks:
+                    print(f"{DIM}(no bookmarks){RESET}")
+                else:
+                    for name, idx in sorted(bookmarks.items(), key=lambda x: x[1]):
+                        desc = (
+                            engine.ir_history[idx][0]
+                            if idx < len(engine.ir_history)
+                            else "?"
+                        )
+                        print(f"  {BOLD}{name}{RESET} -> [{idx}] {desc}")
+                continue
+            name = parts[1]
+            idx = len(engine.ir_history) - 1
+            bookmarks[name] = idx
+            print(f"{GREEN}Bookmarked [{idx}] as '{name}'{RESET}")
+
+        elif cmd == "verify":
+            if engine.current_ir is None:
+                print(f"{RED}No IR loaded.{RESET}")
+                continue
+            _, err = engine.run_mlir_opt(engine.current_ir, ["--verify-diagnostics"])
+            if err:
+                print(f"{RED}{err}{RESET}")
+            else:
+                print(f"{GREEN}IR is valid.{RESET}")
 
         elif cmd == "passes":
             filt = parts[1] if len(parts) > 1 else ""
@@ -187,24 +294,24 @@ def interactive_main():
                 print(f"{DIM}(no passes matched){RESET}")
 
         elif cmd == "help":
-            print(
-                dedent(
-                    f"""\
-                {BOLD}Commands:{RESET}
-                  {CYAN}load <file.mlir>{RESET}    Load MLIR from a file
-                  {CYAN}load -{RESET}              Load MLIR from stdin (blank line to finish)
-                  {CYAN}run <passes...>{RESET}     Apply passes to current IR
-                  {CYAN}ir{RESET}                  Show current IR
-                  {CYAN}history{RESET}             Show pass application history
-                  {CYAN}diff [a b]{RESET}          Unified diff (last step, or between indices a and b)
-                  {CYAN}sbs [a b]{RESET}           Side-by-side diff (last step, or between indices a and b)
-                  {CYAN}rewind [N]{RESET}          Undo last N steps (default 1)
-                  {CYAN}reset{RESET}               Clear all state
-                  {CYAN}passes [filter]{RESET}     List available passes
-                  {CYAN}quit{RESET}                Exit
-            """
-                )
-            )
+            print(dedent(f"""\
+                    {BOLD}Commands:{RESET}
+                      {CYAN}load <file.mlir>{RESET}    Load MLIR from a file
+                      {CYAN}load -{RESET}              Load MLIR from stdin (blank line to finish)
+                      {CYAN}run <passes...>{RESET}     Apply passes to current IR
+                      {CYAN}run <pipeline>{RESET}      Apply a pass-pipeline string (e.g. builtin.module(...))
+                      {CYAN}ir{RESET}                  Show current IR
+                      {CYAN}history{RESET}             Show pass application history
+                      {CYAN}diff [a b]{RESET}          Unified diff (last step, or between indices a and b)
+                      {CYAN}sbs [a b]{RESET}           Side-by-side diff (last step, or between indices a and b)
+                      {CYAN}rewind [N|name]{RESET}     Undo last N steps or rewind to a bookmark
+                      {CYAN}bookmark [name]{RESET}     Bookmark current step (no arg: list bookmarks)
+                      {CYAN}save <file>{RESET}         Save current IR to a file
+                      {CYAN}verify{RESET}              Verify current IR is valid
+                      {CYAN}reset{RESET}               Clear all state
+                      {CYAN}passes [filter]{RESET}     List available passes (tab-completable)
+                      {CYAN}quit{RESET}                Exit
+                """))
 
         else:
             print(f"{RED}Unknown command: {cmd}. Type 'help' for usage.{RESET}")
