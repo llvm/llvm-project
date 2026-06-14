@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Markdown.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -15,6 +16,7 @@
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/StringSaver.h"
 #include <cassert>
+#include <memory>
 #include <string>
 
 #define DEBUG_TYPE "clang-doc"
@@ -434,7 +436,8 @@ static FencedCodeNode *parseFencedCode(LineReader &Reader,
   while (!Reader.atEnd()) {
     StringRef CodeLine = Reader.peek().trim();
     if (CodeLine.size() >= 3 &&
-        all_of(CodeLine.take_front(3), [Fence](char C) { return C == Fence; }))
+        llvm::all_of(CodeLine.take_front(3),
+                     [Fence](char C) { return C == Fence; }))
       break;
     CodeLines.push_back(Saver.save(Reader.advance()));
   }
@@ -510,12 +513,15 @@ static UnorderedListNode *parseUnorderedList(LineReader &Reader,
 
 // Parses an ordered (numbered) list. The cursor must be on the first item; the
 // start number is taken from that item's marker and consecutive numbered lines
-// are consumed. Item numbers after the first are not validated.
+// are consumed. Item numbers after the first are not validated. Returns nullptr
+// without consuming input when the start number does not fit in unsigned, so
+// the caller can fall back to treating the line as plain text.
 static OrderedListNode *parseOrderedList(LineReader &Reader,
                                          BumpPtrAllocator &Arena,
                                          StringSaver &Saver) {
   unsigned Start = 0;
-  Reader.peek().trim().take_while(isDigit).getAsInteger(10, Start);
+  if (Reader.peek().trim().take_while(isDigit).getAsInteger(10, Start))
+    return nullptr;
   SmallVector<ListItemNode *> Items;
   while (!Reader.atEnd()) {
     StringRef L = Reader.peek().trim();
@@ -636,10 +642,13 @@ ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
       continue;
     }
 
-    // Ordered list item: digits followed by a period and a space.
+    // Ordered list item: digits followed by a period and a space. A start
+    // number too large for unsigned falls through to plain text.
     if (isOrderedListItem(Line)) {
-      Nodes.push_back(parseOrderedList(Reader, Arena, Saver));
-      continue;
+      if (auto *List = parseOrderedList(Reader, Arena, Saver)) {
+        Nodes.push_back(List);
+        continue;
+      }
     }
 
     // Plain text line: scan for inline constructs (emphasis, strong, code) and

@@ -9,9 +9,9 @@
 /// \file
 /// Standalone Markdown parsing library for the LLVM ecosystem.
 ///
-/// The parser takes a single paragraph of plain text and returns a list of
-/// nodes describing the Markdown it found. Each kind of construct has its own
-/// node type, and every node shares a common MDNode base, so you can use
+/// The parser takes plain text and returns a list of nodes describing the
+/// Markdown it found. Each kind of construct has its own node type, and every
+/// node shares a common MDNode base, so you can use
 /// llvm::isa<>/cast<>/dyn_cast<> to check what a node is.
 ///
 /// Inline nodes (appear inside ParagraphNode, HeadingNode, etc.):
@@ -252,10 +252,10 @@ struct ThematicBreakNode : MDNode {
 // Parser entry point
 //===----------------------------------------------------------------------===//
 
-/// Parse Markdown from a single paragraph of plain text. Returns a list of
-/// top-level nodes allocated in Arena. Returns an empty ArrayRef only for empty
-/// or whitespace-only input; plain text with no Markdown constructs returns a
-/// single ParagraphNode.
+/// Parse Markdown from plain text, which may span multiple lines and block
+/// constructs. Returns a list of top-level nodes allocated in Arena. Returns an
+/// empty ArrayRef only for empty or whitespace-only input; plain text with no
+/// Markdown constructs returns a single ParagraphNode.
 ///
 /// The caller must keep Arena alive for the lifetime of any returned nodes.
 llvm::ArrayRef<MDNode *> parseMarkdown(llvm::StringRef ParagraphText,
