@@ -223,6 +223,16 @@ static void replaceLoadOrStoreOp(vector::MaskedStoreOp storeOp,
       storeOp, adaptor.getValueToStore(), ptr, adaptor.getMask(), align);
 }
 
+/// Returns true if all strides of `memRefTy` are static and non-negative. A
+/// negative (or dynamic, hence unknown-sign) stride would make `mul nuw` on the
+/// index arithmetic wrap, so `nuw` must not be emitted in that case.
+static bool hasNonNegativeStrides(MemRefType memRefTy) {
+  auto [strides, offset] = memRefTy.getStridesAndOffset();
+  return llvm::all_of(strides, [](int64_t stride) {
+    return !ShapedType::isDynamic(stride) && stride >= 0;
+  });
+}
+
 /// Conversion pattern for a vector.load, vector.store, vector.maskedload, and
 /// vector.maskedstore.
 template <class LoadOrStoreOp>
@@ -256,14 +266,22 @@ public:
                                          "could not resolve alignment");
 
     // Resolve address.
-    // Per vector.load/store spec, indices must be in-bounds (0 <= idx <
-    // dim_size). Emit inbounds|nuw so LLVM can apply no-wrap optimizations on
-    // the generated index arithmetic and GEP. Masked variants are designed for
-    // near-boundary access, so they conservatively omit these flags.
+    // `vector.load`/`vector.store` may carry `inbounds`/`nneg` assertions about
+    // their indices (see the op docs). Translate them into GEP no-wrap flags so
+    // LLVM can apply no-wrap optimizations on the generated index arithmetic
+    // and GEP. When the attributes are absent (and for the masked variants,
+    // which target near-boundary access) no flag is emitted, preserving any
+    // target-defined out-of-bounds behavior.
     LLVM::GEPNoWrapFlags noWrapFlags = LLVM::GEPNoWrapFlags::none;
     if constexpr (std::is_same_v<LoadOrStoreOp, vector::LoadOp> ||
-                  std::is_same_v<LoadOrStoreOp, vector::StoreOp>)
-      noWrapFlags = LLVM::GEPNoWrapFlags::inbounds | LLVM::GEPNoWrapFlags::nuw;
+                  std::is_same_v<LoadOrStoreOp, vector::StoreOp>) {
+      if (loadOrStoreOp.getInbounds())
+        noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::inbounds;
+      // `nuw` additionally requires the whole offset computation to be
+      // non-negative: non-negative indices (nneg) *and* non-negative strides.
+      if (loadOrStoreOp.getNneg() && hasNonNegativeStrides(memRefTy))
+        noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::nuw;
+    }
     auto vtype = cast<VectorType>(
         this->typeConverter->convertType(loadOrStoreOp.getVectorType()));
     Value dataPtr =

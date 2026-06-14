@@ -474,9 +474,15 @@ struct TransferReadToVectorLoadLowering
           rewriter, read.getLoc(), unbroadcastedVectorType, read.getBase(),
           read.getIndices(), read.getMask(), fill);
     } else {
+      // This pattern only matches when no dimension is out-of-bounds (see the
+      // `hasOutOfBoundsDim` check above), so the access is in-bounds and the
+      // indices are non-negative. Propagate that as `inbounds`/`nneg` so the
+      // LLVM lowering can emit the corresponding GEP no-wrap flags.
       res = vector::LoadOp::create(rewriter, read.getLoc(),
                                    unbroadcastedVectorType, read.getBase(),
-                                   read.getIndices());
+                                   read.getIndices(), /*nontemporal=*/false,
+                                   /*alignment=*/llvm::MaybeAlign(),
+                                   /*inbounds=*/true, /*nneg=*/true);
     }
 
     // Insert a broadcasting op if required.
@@ -570,8 +576,15 @@ struct TransferWriteToVectorStoreLowering
                                     write.getIndices(), write.getMask(),
                                     write.getVector());
     } else {
+      // This pattern only matches when no dimension is out-of-bounds (see the
+      // `hasOutOfBoundsDim` check above), so the access is in-bounds and the
+      // indices are non-negative. Propagate that as `inbounds`/`nneg` so the
+      // LLVM lowering can emit the corresponding GEP no-wrap flags.
       vector::StoreOp::create(rewriter, write.getLoc(), write.getVector(),
-                              write.getBase(), write.getIndices());
+                              write.getBase(), write.getIndices(),
+                              /*nontemporal=*/false,
+                              /*alignment=*/llvm::MaybeAlign(),
+                              /*inbounds=*/true, /*nneg=*/true);
     }
     // There's no return value for StoreOps. Use Value() to signal success to
     // matchAndRewrite.

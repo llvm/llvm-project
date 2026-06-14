@@ -1588,9 +1588,9 @@ func.func @load(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector
 
 // CHECK-LABEL: func @load
 // CHECK: %[[C100:.*]] = llvm.mlir.constant(100 : index) : i64
-// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]] overflow<nsw, nuw>  : i64
-// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} overflow<nsw, nuw>  : i64
-// CHECK: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]]  : i64
+// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}  : i64
+// CHECK: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK: llvm.load %[[GEP]] {alignment = 4 : i64} : !llvm.ptr -> vector<8xf32>
 
 // -----
@@ -1602,9 +1602,9 @@ func.func @load_scalable(%memref : memref<200x100xf32>, %i : index, %j : index) 
 
 // CHECK-LABEL: func @load_scalable
 // CHECK: %[[C100:.*]] = llvm.mlir.constant(100 : index) : i64
-// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]] overflow<nsw, nuw>  : i64
-// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} overflow<nsw, nuw>  : i64
-// CHECK: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]]  : i64
+// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}  : i64
+// CHECK: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK: llvm.load %[[GEP]] {alignment = 4 : i64} : !llvm.ptr -> vector<[8]xf32>
 
 // -----
@@ -1616,9 +1616,9 @@ func.func @load_nontemporal(%memref : memref<200x100xf32>, %i : index, %j : inde
 
 // CHECK-LABEL: func @load_nontemporal
 // CHECK: %[[C100:.*]] = llvm.mlir.constant(100 : index) : i64
-// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]] overflow<nsw, nuw>  : i64
-// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} overflow<nsw, nuw>  : i64
-// CHECK: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]]  : i64
+// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}  : i64
+// CHECK: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK: llvm.load %[[GEP]] {alignment = 4 : i64, nontemporal} : !llvm.ptr -> vector<8xf32>
 
 // -----
@@ -1630,9 +1630,9 @@ func.func @load_nontemporal_scalable(%memref : memref<200x100xf32>, %i : index, 
 
 // CHECK-LABEL: func @load_nontemporal_scalable
 // CHECK: %[[C100:.*]] = llvm.mlir.constant(100 : index) : i64
-// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]] overflow<nsw, nuw>  : i64
-// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} overflow<nsw, nuw>  : i64
-// CHECK: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]]  : i64
+// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}  : i64
+// CHECK: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK: llvm.load %[[GEP]] {alignment = 4 : i64, nontemporal} : !llvm.ptr -> vector<[8]xf32>
 
 // -----
@@ -1670,9 +1670,9 @@ func.func @load_0d(%memref : memref<200x100xf32>, %i : index, %j : index) -> vec
 // CHECK: %[[CAST_MEMREF:.*]] = builtin.unrealized_conversion_cast %{{.*}} : memref<200x100xf32> to !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[REF:.*]] = llvm.extractvalue %[[CAST_MEMREF]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[C100:.*]] = llvm.mlir.constant(100 : index) : i64
-// CHECK: %[[MUL:.*]] = llvm.mul %[[I]], %[[C100]] overflow<nsw, nuw> : i64
-// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %[[J]] overflow<nsw, nuw> : i64
-// CHECK: %[[ADDR:.*]] = llvm.getelementptr inbounds|nuw %[[REF]][%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: %[[MUL:.*]] = llvm.mul %[[I]], %[[C100]] : i64
+// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %[[J]] : i64
+// CHECK: %[[ADDR:.*]] = llvm.getelementptr %[[REF]][%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK: %[[LOAD:.*]] = llvm.load %[[ADDR]] {alignment = 4 : i64} : !llvm.ptr -> vector<1xf32>
 // CHECK: %[[RES:.*]] = builtin.unrealized_conversion_cast %[[LOAD]] : vector<1xf32> to vector<f32>
 // CHECK: return %[[RES]] : vector<f32>
@@ -1701,9 +1701,9 @@ func.func @store(%memref : memref<200x100xf32>, %i : index, %j : index) {
 
 // CHECK-LABEL: func @store
 // CHECK: %[[C100:.*]] = llvm.mlir.constant(100 : index) : i64
-// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]] overflow<nsw, nuw>  : i64
-// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} overflow<nsw, nuw>  : i64
-// CHECK: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]]  : i64
+// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}  : i64
+// CHECK: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK: llvm.store %{{.*}}, %[[GEP]] {alignment = 4 : i64} :  vector<4xf32>, !llvm.ptr
 
 // -----
@@ -1716,9 +1716,9 @@ func.func @store_scalable(%memref : memref<200x100xf32>, %i : index, %j : index)
 
 // CHECK-LABEL: func @store_scalable
 // CHECK: %[[C100:.*]] = llvm.mlir.constant(100 : index) : i64
-// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]] overflow<nsw, nuw>  : i64
-// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} overflow<nsw, nuw>  : i64
-// CHECK: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]]  : i64
+// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}  : i64
+// CHECK: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK: llvm.store %{{.*}}, %[[GEP]] {alignment = 4 : i64} :  vector<[4]xf32>, !llvm.ptr
 
 // -----
@@ -1731,9 +1731,9 @@ func.func @store_nontemporal(%memref : memref<200x100xf32>, %i : index, %j : ind
 
 // CHECK-LABEL: func @store_nontemporal
 // CHECK: %[[C100:.*]] = llvm.mlir.constant(100 : index) : i64
-// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]] overflow<nsw, nuw>  : i64
-// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} overflow<nsw, nuw>  : i64
-// CHECK: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]]  : i64
+// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}  : i64
+// CHECK: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK: llvm.store %{{.*}}, %[[GEP]] {alignment = 4 : i64, nontemporal} :  vector<4xf32>, !llvm.ptr
 
 // -----
@@ -1746,9 +1746,9 @@ func.func @store_nontemporal_scalable(%memref : memref<200x100xf32>, %i : index,
 
 // CHECK-LABEL: func @store_nontemporal_scalable
 // CHECK: %[[C100:.*]] = llvm.mlir.constant(100 : index) : i64
-// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]] overflow<nsw, nuw>  : i64
-// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} overflow<nsw, nuw>  : i64
-// CHECK: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]]  : i64
+// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}  : i64
+// CHECK: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK: llvm.store %{{.*}}, %[[GEP]] {alignment = 4 : i64, nontemporal} :  vector<[4]xf32>, !llvm.ptr
 
 // -----
@@ -1787,9 +1787,9 @@ func.func @store_0d(%memref : memref<200x100xf32>, %i : index, %j : index) {
 // CHECK: %[[VAL:.*]] = builtin.unrealized_conversion_cast %[[CST]] : vector<f32> to vector<1xf32>
 // CHECK: %[[REF:.*]] = llvm.extractvalue %[[CAST_MEMREF]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[C100:.*]] = llvm.mlir.constant(100 : index) : i64
-// CHECK: %[[MUL:.*]] = llvm.mul %[[I]], %[[C100]] overflow<nsw, nuw> : i64
-// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %[[J]] overflow<nsw, nuw> : i64
-// CHECK: %[[ADDR:.*]] = llvm.getelementptr inbounds|nuw %[[REF]][%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: %[[MUL:.*]] = llvm.mul %[[I]], %[[C100]] : i64
+// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %[[J]] : i64
+// CHECK: %[[ADDR:.*]] = llvm.getelementptr %[[REF]][%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK: llvm.store %[[VAL]], %[[ADDR]] {alignment = 4 : i64} : vector<1xf32>, !llvm.ptr
 // CHECK: return
 
@@ -1802,6 +1802,87 @@ func.func @store_with_alignment(%memref : memref<200x100xf32>, %i : index, %j : 
 
 // CHECK-LABEL: func @store_with_alignment
 // CHECK: llvm.store %{{.*}} {alignment = 8 : i64} :  vector<4xf32>, !llvm.ptr
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// vector.load / vector.store inbounds / nneg flags
+//===----------------------------------------------------------------------===//
+
+// `inbounds` alone lowers to `getelementptr inbounds` (which implies nusw, hence
+// `nsw` on the index arithmetic). No `nuw` without `nneg`.
+func.func @load_inbounds(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
+  %0 = vector.load %memref[%i, %j] {inbounds} : memref<200x100xf32>, vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @load_inbounds
+// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %{{.*}} overflow<nsw> : i64
+// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} overflow<nsw> : i64
+// CHECK: %[[GEP:.*]] = llvm.getelementptr inbounds %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: llvm.load %[[GEP]] {alignment = 4 : i64} : !llvm.ptr -> vector<8xf32>
+
+// -----
+
+// `inbounds` + `nneg` on a non-negative-strided memref lowers to
+// `getelementptr inbounds|nuw` and `overflow<nsw, nuw>`.
+func.func @load_inbounds_nneg(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
+  %0 = vector.load %memref[%i, %j] {inbounds, nneg} : memref<200x100xf32>, vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @load_inbounds_nneg
+// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %{{.*}} overflow<nsw, nuw> : i64
+// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} overflow<nsw, nuw> : i64
+// CHECK: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: llvm.load %[[GEP]] {alignment = 4 : i64} : !llvm.ptr -> vector<8xf32>
+
+// -----
+
+// `nneg` alone (no `inbounds`) lowers to `getelementptr nuw` / `overflow<nuw>`.
+// This is the out-of-bounds-but-non-negative case (e.g. AMDGPU buffer fat
+// pointers), where we must not claim `inbounds`.
+func.func @load_nneg(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
+  %0 = vector.load %memref[%i, %j] {nneg} : memref<200x100xf32>, vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @load_nneg
+// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %{{.*}} overflow<nuw> : i64
+// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} overflow<nuw> : i64
+// CHECK: %[[GEP:.*]] = llvm.getelementptr nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: llvm.load %[[GEP]] {alignment = 4 : i64} : !llvm.ptr -> vector<8xf32>
+
+// -----
+
+// `nneg` must not produce `nuw` when a stride is negative: `mul nuw idx, stride`
+// would wrap. The negative major stride here disables `nuw` (and `inbounds` is
+// not requested), so a plain GEP is emitted.
+func.func @load_nneg_negative_stride(%memref : memref<200x100xf32, strided<[-100, 1], offset: ?>>, %i : index, %j : index) -> vector<8xf32> {
+  %0 = vector.load %memref[%i, %j] {nneg} : memref<200x100xf32, strided<[-100, 1], offset: ?>>, vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @load_nneg_negative_stride
+// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %{{.*}} : i64
+// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} : i64
+// CHECK: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: llvm.load %[[GEP]] {alignment = 4 : i64} : !llvm.ptr -> vector<8xf32>
+
+// -----
+
+// Store side: `inbounds` + `nneg` lowers to `getelementptr inbounds|nuw`.
+func.func @store_inbounds_nneg(%memref : memref<200x100xf32>, %i : index, %j : index) {
+  %val = arith.constant dense<11.0> : vector<4xf32>
+  vector.store %val, %memref[%i, %j] {inbounds, nneg} : memref<200x100xf32>, vector<4xf32>
+  return
+}
+
+// CHECK-LABEL: func @store_inbounds_nneg
+// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %{{.*}} overflow<nsw, nuw> : i64
+// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} overflow<nsw, nuw> : i64
+// CHECK: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: llvm.store %{{.*}}, %[[GEP]] {alignment = 4 : i64} :  vector<4xf32>, !llvm.ptr
 
 // -----
 
