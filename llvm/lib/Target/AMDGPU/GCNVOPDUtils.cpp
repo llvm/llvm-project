@@ -284,23 +284,36 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
       return;
     }
 
-    std::vector<SUnit>::iterator ISUI, JSUI;
-    for (ISUI = DAG->SUnits.begin(); ISUI != DAG->SUnits.end(); ++ISUI) {
+    BitVector VOPDCapable(DAG->SUnits.size());
+    unsigned IIdx = 0;
+    // Pre-compute whether each individual instruction can be VOPD
+    for (auto ISUI = DAG->SUnits.begin(), E = DAG->SUnits.end(); ISUI != E;
+         ++ISUI, ++IIdx) {
       const MachineInstr *IMI = ISUI->getInstr();
-      if (!shouldScheduleAdjacent(TII, ST, nullptr, *IMI))
-        continue;
-      if (!hasLessThanNumFused(*ISUI, 2))
-        continue;
+      if (shouldScheduleAdjacent(TII, ST, nullptr, *IMI) &&
+          hasLessThanNumFused(*ISUI, 2))
+        VOPDCapable[IIdx] = true;
+    }
 
-      for (JSUI = ISUI + 1; JSUI != DAG->SUnits.end(); ++JSUI) {
-        if (JSUI->isBoundaryNode())
+    IIdx = 0;
+    for (auto ISUI = DAG->SUnits.begin(), E = DAG->SUnits.end(); ISUI != E;
+         ++ISUI, ++IIdx) {
+      if (!VOPDCapable[IIdx])
+        continue;
+      const MachineInstr *IMI = ISUI->getInstr();
+      unsigned JIdx = IIdx + 1;
+      for (auto JSUI = ISUI + 1; JSUI != E; ++JSUI, ++JIdx) {
+        if (!VOPDCapable[JIdx] || JSUI->isBoundaryNode())
           continue;
         const MachineInstr *JMI = JSUI->getInstr();
         if (!hasLessThanNumFused(*JSUI, 2) ||
             !shouldScheduleAdjacent(TII, ST, IMI, *JMI))
           continue;
-        if (fuseInstructionPair(*DAG, *ISUI, *JSUI))
+        if (fuseInstructionPair(*DAG, *ISUI, *JSUI)) {
+          // Clear to prevent future checks/fusing
+          VOPDCapable[JIdx] = false;
           break;
+        }
       }
     }
     LLVM_DEBUG(dbgs() << "Completed VOPDPairingMutation\n");

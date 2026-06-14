@@ -48,7 +48,8 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_cross_tu_param_suggestion,
       diag::warn_lifetime_safety_intra_tu_param_suggestion,
       diag::warn_lifetime_safety_cross_tu_this_suggestion,
-      diag::warn_lifetime_safety_intra_tu_this_suggestion};
+      diag::warn_lifetime_safety_intra_tu_this_suggestion,
+      diag::warn_lifetime_safety_inapplicable_lifetimebound};
   for (unsigned DiagID : DiagIDs)
     if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
       return true;
@@ -61,8 +62,8 @@ public:
   LifetimeSafetySemaHelperImpl(Sema &S) : S(S) {}
 
   void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
-                           const Expr *MovedExpr,
-                           SourceLocation FreeLoc) override {
+                           const Expr *MovedExpr, SourceLocation FreeLoc,
+                           llvm::ArrayRef<const Expr *> ExprChain) override {
     unsigned DiagID = MovedExpr
                           ? diag::warn_lifetime_safety_use_after_scope_moved
                           : diag::warn_lifetime_safety_use_after_scope;
@@ -73,6 +74,9 @@ public:
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
     S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
+
+    reportAliasingChain(ExprChain);
+
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }
@@ -147,7 +151,7 @@ public:
                        ? diag::note_lifetime_safety_freed_here
                        : diag::note_lifetime_safety_invalidated_here;
     S.Diag(IssueExpr->getExprLoc(), WarnDiag)
-        << false << IssueExpr->getSourceRange();
+        << getDiagSubjectDescription(IssueExpr) << IssueExpr->getSourceRange();
     S.Diag(InvalidationExpr->getExprLoc(), UseDiag)
         << InvalidationExpr->getSourceRange();
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
@@ -164,7 +168,7 @@ public:
                        : diag::note_lifetime_safety_invalidated_here;
 
     S.Diag(PVD->getSourceRange().getBegin(), WarnDiag)
-        << true << PVD->getSourceRange();
+        << getDiagSubjectDescription(PVD) << PVD->getSourceRange();
     S.Diag(InvalidationExpr->getExprLoc(), UseDiag)
         << InvalidationExpr->getSourceRange();
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
@@ -179,7 +183,9 @@ public:
                                 : diag::note_lifetime_safety_invalidated_here;
     S.Diag(IssueExpr->getExprLoc(),
            diag::warn_lifetime_safety_invalidated_field)
-        << false << IssueExpr->getSourceRange();
+        << getDiagSubjectDescription(IssueExpr)
+        << getDiagSubjectDescription(DanglingField)
+        << IssueExpr->getSourceRange();
     S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
         << InvalidationExpr->getSourceRange();
     S.Diag(DanglingField->getLocation(),
@@ -195,7 +201,8 @@ public:
                                 : diag::note_lifetime_safety_invalidated_here;
     S.Diag(PVD->getSourceRange().getBegin(),
            diag::warn_lifetime_safety_invalidated_field)
-        << true << PVD->getSourceRange();
+        << getDiagSubjectDescription(PVD)
+        << getDiagSubjectDescription(DanglingField) << PVD->getSourceRange();
     S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
         << InvalidationExpr->getSourceRange();
     S.Diag(DanglingField->getLocation(),
@@ -211,7 +218,9 @@ public:
                                 : diag::note_lifetime_safety_invalidated_here;
     S.Diag(IssueExpr->getExprLoc(),
            diag::warn_lifetime_safety_invalidated_global)
-        << false << IssueExpr->getSourceRange();
+        << getDiagSubjectDescription(IssueExpr)
+        << getDiagSubjectDescription(DanglingGlobal)
+        << IssueExpr->getSourceRange();
     S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
         << InvalidationExpr->getSourceRange();
     if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
@@ -232,7 +241,8 @@ public:
                                 : diag::note_lifetime_safety_invalidated_here;
     S.Diag(PVD->getSourceRange().getBegin(),
            diag::warn_lifetime_safety_invalidated_global)
-        << true << PVD->getSourceRange();
+        << getDiagSubjectDescription(PVD)
+        << getDiagSubjectDescription(DanglingGlobal) << PVD->getSourceRange();
     S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
         << InvalidationExpr->getSourceRange();
     if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
@@ -341,6 +351,15 @@ public:
 
     S.Diag(Attr->getLocation(), diag::note_lifetime_safety_lifetimebound_here)
         << Attr->getRange();
+  }
+
+  void reportInapplicableLifetimebound(const ParmVarDecl *PVD) override {
+    assert(PVD->hasAttr<LifetimeBoundAttr>() &&
+           "Expected parameter to have lifetimebound attribute");
+    const auto *Attr = PVD->getAttr<LifetimeBoundAttr>();
+    S.Diag(Attr->getLocation(),
+           diag::warn_lifetime_safety_inapplicable_lifetimebound)
+        << PVD->getType() << Attr->getRange();
   }
 
   void suggestLifetimeboundToImplicitThis(WarningScope Scope,
@@ -471,13 +490,59 @@ private:
   }
 
   std::string getDiagSubjectDescription(const Expr *E) {
+    E = E->IgnoreImpCasts();
     if (isa<MaterializeTemporaryExpr>(E))
-      return "local temporary object";
-
+      return "temporary object";
+    if (isa<CXXNewExpr>(E))
+      return "allocated object";
     if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
       return getDiagSubjectDescription(DRE->getDecl());
+
+    if (const auto *CE = dyn_cast<CallExpr>(E)) {
+      const auto *FD = CE->getDirectCallee();
+      if (!FD)
+        return "result of call";
+      if (FD->isOverloadedOperator() || isa<CXXConversionDecl>(FD))
+        return "expression";
+      std::string Name;
+      llvm::raw_string_ostream OS(Name);
+      FD->getNameForDiagnostic(OS, S.getPrintingPolicy(),
+                               /*Qualified=*/false);
+      return "result of call to '" + Name + "'";
+    }
+
     // TODO: Handle other expression types.
-    return "";
+    return "expression";
+  }
+
+  bool shouldShowInAliasChain(const Expr *CurrExpr, const Expr *LastExpr) {
+    CurrExpr = CurrExpr->IgnoreImpCasts();
+    LastExpr = LastExpr->IgnoreImpCasts();
+
+    if (!isa<CallExpr, DeclRefExpr>(CurrExpr))
+      return false;
+    // Source ranges can be used to filter out many implicit expressions,
+    // because operations between class objects often involve numerous implicit
+    // conversions, yet they share the same source range.
+    return CurrExpr->getSourceRange() != LastExpr->getSourceRange();
+  }
+
+  void reportAliasingChain(llvm::ArrayRef<const Expr *> OriginExprChain) {
+    if (OriginExprChain.empty())
+      return;
+
+    const Expr *LastExpr = OriginExprChain.back();
+    std::string IssueStr = getDiagSubjectDescription(LastExpr);
+
+    for (const Expr *CurrExpr : reverse(OriginExprChain.drop_back())) {
+      if (!shouldShowInAliasChain(CurrExpr, LastExpr))
+        continue;
+      S.Diag(CurrExpr->getBeginLoc(),
+             diag::note_lifetime_safety_aliases_storage)
+          << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)
+          << IssueStr;
+      LastExpr = CurrExpr;
+    }
   }
 
   Sema &S;

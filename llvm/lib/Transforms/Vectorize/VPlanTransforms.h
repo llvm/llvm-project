@@ -140,6 +140,7 @@ struct VPlanTransforms {
   /// recurrence cannot be handled.
   static bool createHeaderPhiRecipes(
       VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
+      const VPDominatorTree &VPDT,
       const MapVector<PHINode *, InductionDescriptor> &Inductions,
       const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
       const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
@@ -295,7 +296,8 @@ struct VPlanTransforms {
   /// possible.
   static void
   replaceSymbolicStrides(VPlan &Plan, PredicatedScalarEvolution &PSE,
-                         const DenseMap<Value *, const SCEV *> &StridesMap);
+                         const DenseMap<Value *, const SCEV *> &StridesMap,
+                         const VPDominatorTree &VPDT);
 
   /// Drop poison flags from recipes that may generate a poison value that is
   /// used after vectorization, even when their operands are not poison. Those
@@ -388,8 +390,9 @@ struct VPlanTransforms {
 
   /// Remove BranchOnCond recipes with true or false conditions together with
   /// removing dead edges to their successors. If \p OnlyLatches is true, only
-  /// process loop latches.
-  static void removeBranchOnConst(VPlan &Plan, bool OnlyLatches = false);
+  /// process loop latches. Returns true if incoming values from any phi-like
+  /// recipe have been removed.
+  static bool removeBranchOnConst(VPlan &Plan, bool OnlyLatches = false);
 
   /// Perform common-subexpression-elimination on \p Plan.
   static void cse(VPlan &Plan);

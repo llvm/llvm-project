@@ -14,46 +14,34 @@
 ; In the original code, the final value of `red` is 2, but if the loops are
 ; interchanged, the final value of `red` becomes 1.
 ;
-; FIXME: The loops are now interchanged.
-;
 define i8 @reduce_anyof(ptr %A) {
 ; CHECK-LABEL: define i8 @reduce_anyof(
 ; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:  [[FOR_I_HEADER_PREHEADER:.*:]]
-; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
-; CHECK:       [[FOR_I_HEADER_PREHEADER1:.*]]:
+; CHECK-NEXT:  [[FOR_I_HEADER_PREHEADER1:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER1:.*]]
 ; CHECK:       [[FOR_I_HEADER1]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER1]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i8 [ [[SEL:%.*]], %[[FOR_I_LATCH]] ], [ [[RED_OUTER:%.*]], %[[FOR_I_HEADER_PREHEADER1]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[FOR_I_HEADER_PREHEADER1]] ], [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ]
+; CHECK-NEXT:    [[RED_OUTER:%.*]] = phi i8 [ 0, %[[FOR_I_HEADER_PREHEADER1]] ], [ [[RED_LCSSA:%.*]], %[[FOR_I_LATCH]] ]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[ADD8:%.*]] = trunc i64 [[ADD]] to i8
 ; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
-; CHECK:       [[FOR_I_HEADER]]:
-; CHECK-NEXT:    br label %[[FOR_J:.*]]
-; CHECK:       [[FOR_J]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP2:%.*]], %[[FOR_J_SPLIT2:.*]] ], [ 0, %[[FOR_I_HEADER]] ]
-; CHECK-NEXT:    [[RED_OUTER]] = phi i8 [ [[RED_LCSSA:%.*]], %[[FOR_J_SPLIT2]] ], [ 0, %[[FOR_I_HEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER1]]
 ; CHECK:       [[FOR_J_SPLIT1]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[FOR_I_HEADER1]] ], [ [[TMP2:%.*]], %[[FOR_J_SPLIT1]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i8 [ [[RED_OUTER]], %[[FOR_I_HEADER1]] ], [ [[SEL:%.*]], %[[FOR_J_SPLIT1]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i8], ptr [[A]], i64 [[J]], i64 [[I]]
 ; CHECK-NEXT:    [[LV:%.*]] = load i8, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[LV]], 0
 ; CHECK-NEXT:    [[SEL]] = select i1 [[CMP]], i8 [[ADD8]], i8 [[RED]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 2
-; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
-; CHECK:       [[FOR_J_SPLIT2]]:
-; CHECK-NEXT:    [[RED_LCSSA]] = phi i8 [ [[SEL]], %[[FOR_I_LATCH]] ]
 ; CHECK-NEXT:    [[TMP2]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 2
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[FOR_J_SPLIT:.*]], label %[[FOR_J]]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[FOR_I_LATCH]], label %[[FOR_J_SPLIT1]]
 ; CHECK:       [[FOR_I_LATCH]]:
+; CHECK-NEXT:    [[RED_LCSSA]] = phi i8 [ [[SEL]], %[[FOR_J_SPLIT1]] ]
 ; CHECK-NEXT:    [[I_INC]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 2
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[FOR_J_SPLIT2]], label %[[FOR_I_HEADER1]]
-; CHECK:       [[FOR_J_SPLIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi i8 [ [[RED_LCSSA]], %[[FOR_J_SPLIT2]] ]
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[FOR_J_SPLIT2:.*]], label %[[FOR_I_HEADER1]]
+; CHECK:       [[FOR_J_SPLIT2]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i8 [ [[RED_LCSSA]], %[[FOR_I_LATCH]] ]
 ; CHECK-NEXT:    ret i8 [[RES]]
 ;
 entry:

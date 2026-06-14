@@ -26865,11 +26865,12 @@ static SDValue LowerVACOPY(SDValue Op, const X86Subtarget &Subtarget,
   const Value *DstSV = cast<SrcValueSDNode>(Op.getOperand(3))->getValue();
   const Value *SrcSV = cast<SrcValueSDNode>(Op.getOperand(4))->getValue();
   SDLoc DL(Op);
+  Align Alignment = Align(Subtarget.isTarget64BitLP64() ? 8 : 4);
 
   return DAG.getMemcpy(
       Chain, DL, DstPtr, SrcPtr,
       DAG.getIntPtrConstant(Subtarget.isTarget64BitLP64() ? 24 : 16, DL),
-      Align(Subtarget.isTarget64BitLP64() ? 8 : 4), /*isVolatile*/ false, false,
+      Alignment, Alignment, /*isVolatile*/ false, false,
       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(DstSV),
       MachinePointerInfo(SrcSV));
 }
@@ -29473,7 +29474,7 @@ SDValue X86TargetLowering::LowerRESET_FPENV(SDValue Op,
   MachinePointerInfo MPI =
       MachinePointerInfo::getConstantPool(DAG.getMachineFunction());
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MPI, MachineMemOperand::MOStore, X87StateSize, Align(4));
+      MPI, MachineMemOperand::MOLoad, X87StateSize, Align(4));
 
   return createSetFPEnvNodes(Env, Chain, DL, MVT::i32, MMO, DAG, Subtarget);
 }
@@ -43973,20 +43974,26 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         return lowerShuffleWithPERMV(DL, VT, Mask, N.getOperand(0),
                                      DAG.getUNDEF(VT), Subtarget, DAG);
       }
-      // If sources are half width, then concat and use VPERMV with adjusted
-      // mask.
+      // If sources are widened, then concat and use VPERMV with adjusted mask.
       SDValue Ops[2];
-      MVT HalfVT = VT.getHalfNumVectorElementsVT();
       if (sd_match(V1,
                    m_InsertSubvector(m_Undef(), m_Value(Ops[0]), m_Zero())) &&
           sd_match(V2,
                    m_InsertSubvector(m_Undef(), m_Value(Ops[1]), m_Zero())) &&
-          Ops[0].getValueType() == HalfVT && Ops[1].getValueType() == HalfVT) {
+          (Ops[0].getValueSizeInBits() % VT.getScalarSizeInBits()) == 0 &&
+          Ops[0].getValueType() == Ops[1].getValueType() &&
+          Ops[0].getValueType().isSimple()) {
+        MVT SubVT = Ops[0].getSimpleValueType();
+        MVT ConcatVT = SubVT.getDoubleNumVectorElementsVT();
+        unsigned NumSubElts = SubVT.getSizeInBits() / VT.getScalarSizeInBits();
         if (SDValue ConcatSrc =
-                combineConcatVectorOps(DL, VT, Ops, DAG, Subtarget)) {
+                combineConcatVectorOps(DL, ConcatVT, Ops, DAG, Subtarget)) {
+          ConcatSrc = widenSubVector(ConcatSrc, false, Subtarget, DAG, DL,
+                                     VT.getSizeInBits());
           for (int &M : Mask)
-            M = (M < (int)NumElts ? M : (M - (NumElts / 2)));
-          return lowerShuffleWithPERMV(DL, VT, Mask, ConcatSrc,
+            M = (M < (int)NumElts ? M : (M - (NumElts - NumSubElts)));
+          return lowerShuffleWithPERMV(DL, VT, Mask,
+                                       DAG.getBitcast(VT, ConcatSrc),
                                        DAG.getUNDEF(VT), Subtarget, DAG);
         }
       }
@@ -56501,32 +56508,49 @@ static SDValue combineXorWithGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
                      DAG.getTargetConstant(NewImm, DL, MVT::i8));
 }
 
-// Fold: vgf2p8affineqb(x, m1, i1) ^ vgf2p8affineqb(x, m2, i2)
-//   =>  vgf2p8affineqb(x, m1 ^ m2, i1 ^ i2)
-// The matrix in vgf2p8affineqb determines which bits of the input are XORed
-// together. XORing two affine transformations of the same input can be folded
-// by XORing both their matrices and immediates together.
+// Given that vgf2p8affineqb performs a XOR permutation, two affines that share
+// a operand can be reassociated through a standalone XOR.
 static SDValue combineXorWithTwoGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
                                               SelectionDAG &DAG, EVT VT) {
   using namespace SDPatternMatch;
 
-  SDValue X0, Y0, Y1;
+  SDValue X0, X1, M0, M1;
   APInt Imm0, Imm1;
   // Use sd_match for structure matching - m_Xor handles commutation
-  // Match: GF2P8AFFINEQB(x, m1, i1) ^ GF2P8AFFINEQB(x, m2, i2)
-  if (!sd_match(
-          N, m_Xor(m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(X0),
-                                        m_Value(Y0), m_ConstInt(Imm0))),
-                   m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Deferred(X0),
-                                        m_Value(Y1), m_ConstInt(Imm1))))))
+  if (!sd_match(N,
+                m_Xor(m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(X0),
+                                           m_Value(M0), m_ConstInt(Imm0))),
+                      m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(X1),
+                                           m_Value(M1), m_ConstInt(Imm1))))))
     return SDValue();
 
   assert((VT == MVT::v16i8 || VT == MVT::v32i8 || VT == MVT::v64i8) &&
          "Unsupported GFNI type");
 
+  // Fold: GF2P8AFFINEQB(x0, m, i1) ^ GF2P8AFFINEQB(x1, m, i2)
+  //   =>  GF2P8AFFINEQB(x0 ^ x1, m, i1 ^ i2)
+  // This instruction performs an XOR permutation of the input, which is
+  // associative. Therefore XORing before permuting is equivalent.
+  if (M0 == M1) {
+    uint64_t NewImm = Imm0.getZExtValue() ^ Imm1.getZExtValue();
+
+    SDValue NewSrc = DAG.getNode(ISD::XOR, DL, VT, X0, X1);
+
+    return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, NewSrc, M0,
+                       DAG.getTargetConstant(NewImm, DL, MVT::i8));
+  }
+
+  // Fold: vgf2p8affineqb(x, m0, i1) ^ vgf2p8affineqb(x, m1, i2)
+  //   =>  vgf2p8affineqb(x, m0 ^ m1, i1 ^ i2)
+  // The matrix in vgf2p8affineqb determines which bits of the input are XORed
+  // together. XORing two affine transformations of the same input can be folded
+  // by XORing both their matrices and immediates together.
+  if (X0 != X1)
+    return SDValue();
+
   uint64_t NewImm = Imm0.getZExtValue() ^ Imm1.getZExtValue();
 
-  SDValue NewMatrix = DAG.getNode(ISD::XOR, DL, VT, Y0, Y1);
+  SDValue NewMatrix = DAG.getNode(ISD::XOR, DL, VT, M0, M1);
 
   return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, X0, NewMatrix,
                      DAG.getTargetConstant(NewImm, DL, MVT::i8));
@@ -60931,20 +60955,51 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                            Op0.getOperand(1));
       }
       break;
-    case X86ISD::VPERMI:
     case X86ISD::VROTLI:
     case X86ISD::VROTRI:
       if (!IsSplat &&
-          ((VT.is256BitVector() && Subtarget.hasVLX()) ||
+          ((VT.is256BitVector() && Subtarget.hasAVX512()) ||
            (VT.is512BitVector() && Subtarget.useAVX512Regs())) &&
           llvm::all_of(Ops, [Op0](SDValue Op) {
             return Op0.getOperand(1) == Op.getOperand(1);
           })) {
-        assert(!(Opcode == X86ISD::VPERMI &&
-                 Op0.getValueType().is128BitVector()) &&
-               "Illegal 128-bit X86ISD::VPERMI nodes");
         return DAG.getNode(Opcode, DL, VT, ConcatSubOperand(VT, Ops, 0),
                            Op0.getOperand(1));
+      }
+      break;
+    case ISD::ROTL:
+    case ISD::ROTR:
+      if (!IsSplat && ((VT.is256BitVector() && Subtarget.hasAVX512()) ||
+                       (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {
+        SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
+        SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
+        if (Concat0 || Concat1)
+          return DAG.getNode(Opcode, DL, VT,
+                             Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
+                             Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1));
+      }
+      break;
+    case X86ISD::VPERMI:
+      if (!IsSplat && NumOps == 2 &&
+          (VT.is512BitVector() && Subtarget.useAVX512Regs())) {
+        // If both halves share the mask - then concat as VPERMI.
+        if (Ops[0].getOperand(1) == Ops[1].getOperand(1))
+          return DAG.getNode(Opcode, DL, VT, ConcatSubOperand(VT, Ops, 0),
+                             Op0.getOperand(1));
+
+        // Fallback to a VPERMV3 variable mask shuffle.
+        SmallVector<int, 8> Mask, HiMask;
+        unsigned NumElts = VT.getVectorNumElements();
+        DecodeVPERMMask(NumElts / 2, Ops[0].getConstantOperandVal(1), Mask);
+        DecodeVPERMMask(NumElts / 2, Ops[1].getConstantOperandVal(1), HiMask);
+        for (int M : HiMask)
+          Mask.push_back(NumElts + M);
+
+        return lowerShuffleWithPERMV(
+            DL, VT, Mask,
+            widenSubVector(VT, Ops[0].getOperand(0), false, Subtarget, DAG, DL),
+            widenSubVector(VT, Ops[1].getOperand(0), false, Subtarget, DAG, DL),
+            Subtarget, DAG);
       }
       break;
     case ISD::AND:
@@ -60973,7 +61028,6 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       break;
     case X86ISD::PCMPEQ:
     case X86ISD::PCMPGT:
-      // TODO: 512-bit PCMPEQ/PCMPGT -> VPCMP+VPMOVM2 handling.
       if (!IsSplat && VT.is256BitVector() && Subtarget.hasInt256()) {
         SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
         SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
@@ -60981,6 +61035,19 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           return DAG.getNode(Opcode, DL, VT,
                              Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
                              Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1));
+        break;
+      }
+      if (!IsSplat && VT.is512BitVector() && Subtarget.useAVX512Regs() &&
+          (EltSizeInBits >= 32 || Subtarget.useBWIRegs())) {
+        if (IsConcatFree(VT, Ops, 0) && IsConcatFree(VT, Ops, 1)) {
+          MVT BoolVT = VT.changeVectorElementType(MVT::i1);
+          SDValue Cmp =
+              DAG.getSetCC(DL, BoolVT, ConcatSubOperand(VT, Ops, 0),
+                           ConcatSubOperand(VT, Ops, 1),
+                           Opcode == X86ISD::PCMPEQ ? ISD::CondCode::SETEQ
+                                                    : ISD::CondCode::SETGT);
+          return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Cmp);
+        }
         break;
       }
 
