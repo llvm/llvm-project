@@ -702,6 +702,10 @@ defm PackedFP64Ops : AMDGPUSubtargetFeature<"packed-fp64-ops",
   "Support packed fp64 instructions"
 >;
 
+defm PackedU64Ops : AMDGPUSubtargetFeature<"packed-u64-ops",
+  "Support packed uint64 instructions"
+>;
+
 defm R128A16 : AMDGPUSubtargetFeature<"r128-a16",
   "Support gfx9-style A16 for 16-bit coordinates/gradients/lod/clamp/mip image "
   "operands, where a16 is aliased with r128"
@@ -2229,6 +2233,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureVOP3PX2IncrementsVaVdstTwice,
    FeatureDPALU_DPP,
    FeaturePackedFP64Ops,
+   FeaturePackedU64Ops,
    FeatureGFX1251GEMMInsts,
    FeatureGFX125xLowestRateWMMA,
    FeatureCubeInsts,
@@ -2242,7 +2247,8 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
    FeatureSWMMACGfx1200Insts,
-   FeatureSWMMACGfx1250Insts])>;
+   FeatureSWMMACGfx1250Insts,
+   FeatureUseAddPC64Inst])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,

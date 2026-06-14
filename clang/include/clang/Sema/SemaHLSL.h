@@ -138,6 +138,8 @@ public:
   bool CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr, Expr *RHSExpr,
                           SourceLocation Loc);
 
+  bool canHaveOverloadedBinOp(QualType Ty, BinaryOperatorKind Opc);
+
   QualType handleVectorBinOpConversion(ExprResult &LHS, ExprResult &RHS,
                                        QualType LHSType, QualType RHSType,
                                        bool IsCompAssign);
