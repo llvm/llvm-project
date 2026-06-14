@@ -2653,19 +2653,15 @@ public:
   getAsAddRec(Value *V,
               SmallVectorImpl<const SCEVPredicate *> *WrapPredsAdded = nullptr);
 
-  /// Proves that V doesn't overflow by adding SCEV predicate.
-  LLVM_ABI void setNoOverflow(Value *V,
-                              SCEVWrapPredicate::IncrementWrapFlags Flags);
-
-  /// Returns true if we've proved that V doesn't wrap by means of a SCEV
-  /// predicate.
+  /// Returns true if we've statically proved that V doesn't wrap.
   LLVM_ABI bool hasNoOverflow(Value *V,
                               SCEVWrapPredicate::IncrementWrapFlags Flags);
 
   /// Returns the ScalarEvolution analysis used.
   ScalarEvolution *getSE() const { return &SE; }
 
-  /// We need to explicitly define the copy constructor because of FlagsMap.
+  /// We need to explicitly define the copy constructor because of the unique
+  /// SCEVUnionPredicate owned by Preds.
   LLVM_ABI PredicatedScalarEvolution(const PredicatedScalarEvolution &);
 
   /// Print the SCEV mappings done by the Predicated Scalar Evolution.
@@ -2693,9 +2689,6 @@ private:
   /// rewrites, we will rewrite the previous result instead of the original
   /// SCEV.
   DenseMap<const SCEV *, RewriteEntry> RewriteMap;
-
-  /// Records what NoWrap flags we've added to a Value *.
-  ValueMap<Value *, SCEVWrapPredicate::IncrementWrapFlags> FlagsMap;
 
   /// The ScalarEvolution analysis.
   ScalarEvolution &SE;
