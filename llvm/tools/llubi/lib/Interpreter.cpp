@@ -2246,8 +2246,6 @@ public:
     });
   }
 
-  // TODO: Add support for ptrtoaddr, which exposes nothing.
-
   void visitIntToPtr(IntToPtrInst &I) {
     return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
       if (V.isPoison())
@@ -2257,6 +2255,15 @@ public:
       return Pointer(std::move(Prov),
                      V.asInteger().zextOrTrunc(DL.getPointerSizeInBits(
                          I.getType()->getPointerAddressSpace())));
+    });
+  }
+
+  void visitPtrToAddr(PtrToAddrInst &I) {
+    unsigned BitWidth = I.getType()->getScalarSizeInBits();
+    return visitUnOp(I, [&](const AnyValue &V) -> AnyValue {
+      if (V.isPoison())
+        return AnyValue::poison();
+      return V.asPointer().address().trunc(BitWidth);
     });
   }
 
