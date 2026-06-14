@@ -1,13 +1,14 @@
 # REQUIRES: asserts
 
-# RUN: llc -o /dev/null %s -mtriple=aarch64-unknown -mattr=+arith-bcc-fusion -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s
-# RUN: llc -o /dev/null %s -mtriple=aarch64-unknown -mcpu=cyclone -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s
-# RUN: llc -o /dev/null %s -mtriple=aarch64-unknown -mcpu=apple-m5 -passes=machine-scheduler -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -mtriple=aarch64-unknown -mattr=+arith-bcc-fusion -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -mtriple=aarch64-unknown -mcpu=cyclone -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -mtriple=aarch64-unknown -mcpu=apple-m5 -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s
 
-# CHECK-LABEL: SU({{[0-9]+}}): $w0 = ADDSWri $w0, 13, 0, implicit-def $nzcv
+# CHECK-LABEL: addswri
+# CHECK: SU({{[0-9]+}}): $w0 = ADDSWri $w0, 13, 0, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: addswri
 tracksRegLiveness: true
@@ -26,10 +27,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $w0 = ADDSWrr $w0, $w1, implicit-def $nzcv
+# CHECK-LABEL: addswrr
+# CHECK: SU({{[0-9]+}}): $w0 = ADDSWrr $w0, $w1, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: addswrr
 tracksRegLiveness: true
@@ -48,10 +50,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $w0 = ADDSWrs $w0, $w1, 0, implicit-def $nzcv
+# CHECK-LABEL: addswrs
+# CHECK: SU({{[0-9]+}}): $w0 = ADDSWrs $w0, $w1, 0, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: addswrs
 tracksRegLiveness: true
@@ -70,10 +73,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $w0 = ADDSWrs $w0, $w1, 12, implicit-def $nzcv
+# CHECK-LABEL: no_fuse_positive_shift_addswrs
+# CHECK: SU({{[0-9]+}}): $w0 = ADDSWrs $w0, $w1, 12, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK-NOT: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: no_fuse_positive_shift_addswrs
 tracksRegLiveness: true
@@ -92,10 +96,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $w0 = ANDSWri $w0, 4096, implicit-def $nzcv
+# CHECK-LABEL: andswri
+# CHECK: SU({{[0-9]+}}): $w0 = ANDSWri $w0, 4096, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: andswri
 tracksRegLiveness: true
@@ -114,10 +119,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $w0 = ANDSWrr $w0, $w1, implicit-def $nzcv
+# CHECK-LABEL: andswrr
+# CHECK: SU({{[0-9]+}}): $w0 = ANDSWrr $w0, $w1, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: andswrr
 tracksRegLiveness: true
@@ -136,10 +142,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $w0 = ANDSWrs $w0, $w1, 0, implicit-def $nzcv
+# CHECK-LABEL: andswrs
+# CHECK: SU({{[0-9]+}}): $w0 = ANDSWrs $w0, $w1, 0, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: andswrs
 tracksRegLiveness: true
@@ -158,10 +165,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $w0 = ANDSWrs $w0, $w1, 12, implicit-def $nzcv
+# CHECK-LABEL: no_fuse_positive_shift_andswrs
+# CHECK: SU({{[0-9]+}}): $w0 = ANDSWrs $w0, $w1, 12, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK-NOT: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: no_fuse_positive_shift_andswrs
 tracksRegLiveness: true
@@ -180,10 +188,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $w0 = SUBSWri $w0, 13, 0, implicit-def $nzcv
+# CHECK-LABEL: subswri
+# CHECK: SU({{[0-9]+}}): $w0 = SUBSWri $w0, 13, 0, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: subswri
 tracksRegLiveness: true
@@ -202,10 +211,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $w0 = SUBSWrr $w0, $w1, implicit-def $nzcv
+# CHECK-LABEL: subswrr
+# CHECK: SU({{[0-9]+}}): $w0 = SUBSWrr $w0, $w1, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: subswrr
 tracksRegLiveness: true
@@ -224,10 +234,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $w0 = SUBSWrs $w0, $w1, 0, implicit-def $nzcv
+# CHECK-LABEL: subswrs
+# CHECK: SU({{[0-9]+}}): $w0 = SUBSWrs $w0, $w1, 0, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: subswrs
 tracksRegLiveness: true
@@ -246,10 +257,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $w0 = SUBSWrs $w0, $w1, 12, implicit-def $nzcv
+# CHECK-LABEL: no_fuse_positive_shift_subswrs
+# CHECK: SU({{[0-9]+}}): $w0 = SUBSWrs $w0, $w1, 12, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK-NOT: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: no_fuse_positive_shift_subswrs
 tracksRegLiveness: true
@@ -268,10 +280,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $w0 = BICSWrr $w0, $w1, implicit-def $nzcv
+# CHECK-LABEL: bicswrr
+# CHECK: SU({{[0-9]+}}): $w0 = BICSWrr $w0, $w1, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: bicswrr
 tracksRegLiveness: true
@@ -290,10 +303,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $w0 = BICSWrs $w0, $w1, 0, implicit-def $nzcv
+# CHECK-LABEL: bicswrs
+# CHECK: SU({{[0-9]+}}): $w0 = BICSWrs $w0, $w1, 0, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: bicswrs
 tracksRegLiveness: true
@@ -312,10 +326,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $w0 = BICSWrs $w0, $w1, 12, implicit-def $nzcv
+# CHECK-LABEL: no_fuse_positive_shift_bicswrs
+# CHECK: SU({{[0-9]+}}): $w0 = BICSWrs $w0, $w1, 12, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK-NOT: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: no_fuse_positive_shift_bicswrs
 tracksRegLiveness: true
@@ -334,10 +349,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $x0 = ADDSXri $x0, 13, 0, implicit-def $nzcv
+# CHECK-LABEL: addsxri
+# CHECK: SU({{[0-9]+}}): $x0 = ADDSXri $x0, 13, 0, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: addsxri
 tracksRegLiveness: true
@@ -356,10 +372,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $x0 = ADDSXrr $x0, $x1, implicit-def $nzcv
+# CHECK-LABEL: addsxrr
+# CHECK: SU({{[0-9]+}}): $x0 = ADDSXrr $x0, $x1, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: addsxrr
 tracksRegLiveness: true
@@ -378,10 +395,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $x0 = ADDSXrs $x0, $x1, 0, implicit-def $nzcv
+# CHECK-LABEL: addsxrs
+# CHECK: SU({{[0-9]+}}): $x0 = ADDSXrs $x0, $x1, 0, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: addsxrs
 tracksRegLiveness: true
@@ -400,10 +418,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $x0 = ADDSXrs $x0, $x1, 12, implicit-def $nzcv
+# CHECK-LABEL: no_fuse_positive_shift_addsxrs
+# CHECK: SU({{[0-9]+}}): $x0 = ADDSXrs $x0, $x1, 12, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK-NOT: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: no_fuse_positive_shift_addsxrs
 tracksRegLiveness: true
@@ -422,10 +441,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $x0 = ANDSXri $x0, 8192, implicit-def $nzcv
+# CHECK-LABEL: andsxri
+# CHECK: SU({{[0-9]+}}): $x0 = ANDSXri $x0, 8192, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: andsxri
 tracksRegLiveness: true
@@ -444,10 +464,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $x0 = ANDSXrr $x0, $x1, implicit-def $nzcv
+# CHECK-LABEL: andsxrr
+# CHECK: SU({{[0-9]+}}): $x0 = ANDSXrr $x0, $x1, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: andsxrr
 tracksRegLiveness: true
@@ -466,10 +487,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $x0 = ANDSXrs $x0, $x1, 0, implicit-def $nzcv
+# CHECK-LABEL: andsxrs
+# CHECK: SU({{[0-9]+}}): $x0 = ANDSXrs $x0, $x1, 0, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: andsxrs
 tracksRegLiveness: true
@@ -488,10 +510,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $x0 = ANDSXrs $x0, $x1, 12, implicit-def $nzcv
+# CHECK-LABEL: no_fuse_positive_shift_andsxrs
+# CHECK: SU({{[0-9]+}}): $x0 = ANDSXrs $x0, $x1, 12, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK-NOT: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: no_fuse_positive_shift_andsxrs
 tracksRegLiveness: true
@@ -510,10 +533,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $x0 = SUBSXri $x0, 13, 0, implicit-def $nzcv
+# CHECK-LABEL: subsxri
+# CHECK: SU({{[0-9]+}}): $x0 = SUBSXri $x0, 13, 0, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: subsxri
 tracksRegLiveness: true
@@ -532,10 +556,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $x0 = SUBSXrr $x0, $x1, implicit-def $nzcv
+# CHECK-LABEL: subsxrr
+# CHECK: SU({{[0-9]+}}): $x0 = SUBSXrr $x0, $x1, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: subsxrr
 tracksRegLiveness: true
@@ -554,10 +579,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $x0 = SUBSXrs $x0, $x1, 0, implicit-def $nzcv
+# CHECK-LABEL: subsxrs
+# CHECK: SU({{[0-9]+}}): $x0 = SUBSXrs $x0, $x1, 0, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: subsxrs
 tracksRegLiveness: true
@@ -576,10 +602,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $x0 = SUBSXrs $x0, $x1, 12, implicit-def $nzcv
+# CHECK-LABEL: no_fuse_positive_shift_subsxrs
+# CHECK: SU({{[0-9]+}}): $x0 = SUBSXrs $x0, $x1, 12, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK-NOT: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: no_fuse_positive_shift_subsxrs
 tracksRegLiveness: true
@@ -598,10 +625,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $x0 = BICSXrr $x0, $x1, implicit-def $nzcv
+# CHECK-LABEL: bicsxrr
+# CHECK: SU({{[0-9]+}}): $x0 = BICSXrr $x0, $x1, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: bicsxrr
 tracksRegLiveness: true
@@ -620,10 +648,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $x0 = BICSXrs $x0, $x1, 0, implicit-def $nzcv
+# CHECK-LABEL: bicsxrs
+# CHECK: SU({{[0-9]+}}): $x0 = BICSXrs $x0, $x1, 0, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: bicsxrs
 tracksRegLiveness: true
@@ -642,10 +671,11 @@ body: |
     RET undef $lr
 ...
 
-# CHECK-LABEL: SU({{[0-9]+}}): $x0 = BICSXrs $x0, $x1, 12, implicit-def $nzcv
+# CHECK-LABEL: no_fuse_positive_shift_bicsxrs
+# CHECK: SU({{[0-9]+}}): $x0 = BICSXrs $x0, $x1, 12, implicit-def $nzcv
 # CHECK: Successors:
 # CHECK-NOT: ExitSU: Ord  Latency={{[0-9]+}} Cluster
-# CHECK-LABEL: ExitSU: Bcc
+# CHECK: ExitSU: Bcc
 ---
 name: no_fuse_positive_shift_bicsxrs
 tracksRegLiveness: true
