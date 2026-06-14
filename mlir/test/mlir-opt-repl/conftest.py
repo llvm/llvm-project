@@ -14,6 +14,7 @@ sys.path.insert(
 import mlir_opt_repl.engine as engine
 from mlir_opt_repl.mcp import mcp_main
 from mlir_opt_repl.repl import interactive_main
+from mlir_opt_repl import repl as repl_module
 
 SAMPLE_MLIR = "func.func @test(%arg0: f32, %arg1: f32) -> f32 { %0 = arith.addf %arg0, %arg1 : f32 return %0 : f32 }"
 INIT_MSG = {"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {}}
@@ -23,9 +24,13 @@ INIT_MSG = {"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {}}
 def reset_engine():
     engine.current_ir = None
     engine.ir_history = []
+    engine.bookmarks = {}
+    repl_module.bookmarks = {}
     yield
     engine.current_ir = None
     engine.ir_history = []
+    engine.bookmarks = {}
+    repl_module.bookmarks = {}
 
 
 @contextmanager

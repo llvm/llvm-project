@@ -1,5 +1,6 @@
 """Tests for the interactive REPL."""
 
+import mlir_opt_repl.engine as engine
 from conftest import SAMPLE_MLIR, run_repl
 
 LOAD_SAMPLE = f"load -\n{SAMPLE_MLIR}\n\n"
@@ -201,3 +202,76 @@ class TestMisc:
     def test_exit_alias(self):
         output = run_repl("exit\n")
         assert "mlir-opt-repl" in output
+
+
+class TestSave:
+    def test_save_to_file(self, tmp_path):
+        f = tmp_path / "out.mlir"
+        output = run_repl(LOAD_SAMPLE + f"save {f}\nquit\n")
+        assert "Saved to" in output
+        assert f.exists()
+        assert "arith.addf" in f.read_text()
+
+    def test_save_no_arg(self):
+        output = run_repl(LOAD_SAMPLE + "save\nquit\n")
+        assert "Usage:" in output
+
+    def test_save_no_ir(self):
+        output = run_repl("save /tmp/x.mlir\nquit\n")
+        assert "No IR to save" in output
+
+
+class TestBookmark:
+    def test_bookmark_and_rewind(self):
+        output = run_repl(
+            LOAD_SAMPLE
+            + "run canonicalize\nbookmark pre-lower\nrun convert-arith-to-llvm\nrewind pre-lower\nquit\n"
+        )
+        assert "Bookmarked [1] as 'pre-lower'" in output
+        assert "Rewound to bookmark 'pre-lower'" in output
+        assert "arith.addf" in output
+
+    def test_bookmark_list(self):
+        output = run_repl(
+            LOAD_SAMPLE + "run canonicalize\nbookmark mymark\nbookmark\nquit\n"
+        )
+        assert "mymark" in output
+        assert "[1]" in output
+
+    def test_bookmark_no_arg_empty(self):
+        output = run_repl("bookmark\nquit\n")
+        assert "(no bookmarks)" in output
+
+    def test_bookmark_shown_in_history(self):
+        output = run_repl(
+            LOAD_SAMPLE + "run canonicalize\nbookmark snap\nhistory\nquit\n"
+        )
+        assert "snap" in output
+
+
+class TestVerify:
+    def test_valid_ir(self):
+        output = run_repl(LOAD_SAMPLE + "run canonicalize\nverify\nquit\n")
+        assert "IR is valid" in output
+
+    def test_no_ir(self):
+        output = run_repl("verify\nquit\n")
+        assert "No IR loaded" in output
+
+    def test_invalid_ir(self):
+        engine.current_ir = "func.func @f() -> i32 { return }"
+        engine.ir_history = [("initial", engine.current_ir)]
+        output = run_repl("verify\nquit\n")
+        assert "error" in output.lower()
+
+
+class TestPassPipeline:
+    def test_pipeline_string(self):
+        output = run_repl(LOAD_SAMPLE + "run builtin.module(canonicalize,cse)\nquit\n")
+        assert "arith.addf" in output
+
+    def test_pipeline_in_history(self):
+        output = run_repl(
+            LOAD_SAMPLE + "run builtin.module(canonicalize)\nhistory\nquit\n"
+        )
+        assert "--pass-pipeline" in output
