@@ -151,6 +151,7 @@ static bool isSupportedPPC64(uint32_t Type) {
   case ELF::R_PPC64_ADDR16_HA:
   case ELF::R_PPC64_ADDR32:
   case ELF::R_PPC64_ADDR64:
+  case ELF::R_PPC64_REL64:
   case ELF::R_PPC64_ADDR16_DS:
   case ELF::R_PPC64_ADDR16_LO_DS:
   case ELF::R_PPC64_REL14:
@@ -319,6 +320,7 @@ static size_t getSizeForTypePPC64(uint32_t Type) {
     return 4;
   case ELF::R_PPC64_ADDR64:
   case ELF::R_PPC64_REL32:
+  case ELF::R_PPC64_REL64:
   case ELF::R_PPC64_TOC:
     return 8;
   case ELF::R_PPC64_NONE:
@@ -362,6 +364,7 @@ static bool isPCRelativePPC64(uint32_t Type) {
   case ELF::R_PPC64_REL32:
   case ELF::R_PPC64_REL24:
   case ELF::R_PPC64_REL14:
+  case ELF::R_PPC64_REL64:
   case ELF::R_PPC64_REL14_BRTAKEN:
   case ELF::R_PPC64_REL14_BRNTAKEN:
     return true;
@@ -581,6 +584,7 @@ LLVM_DEBUG(dbgs() << "[extractValuePPC64] Type=" << Type
   case ELF::R_PPC64_ADDR16_HA:
   case ELF::R_PPC64_ADDR32:
   case ELF::R_PPC64_ADDR64:
+  case ELF::R_PPC64_REL64:
   case ELF::R_PPC64_TOC16_DS:
   case ELF::R_PPC64_TOC16_LO_DS:
   case ELF::R_PPC64_ADDR16_DS:
