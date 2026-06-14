@@ -930,6 +930,15 @@ void RewriteInstance::discoverFileObjects() {
     return Section.isAllocatable();
   };
   auto checkSymbolInSection = [this](const SymbolInfo &S) {
+   // PPC64: .TOC. legitimately resides at .got + 0x8000 (ELFv2 ABI), which can be
+   // past the end of a small .got. It is not a stray symbol, so do not apply
+   // the AArch64-marker out-of-section workaround to it.
+   if (BC->isPPC64()) {
+     auto SymName = S.Symbol.getName();
+     if (SymName && *SymName == ".TOC.")
+       return true;   // treat as valid; do not ignore
+   }
+
     // Sometimes, we encounter symbols with addresses outside their section. If
     // such symbols happen to fall into another section, they can interfere with
     // disassembly. Notably, this occurs with AArch64 marker symbols ($d and $t)
