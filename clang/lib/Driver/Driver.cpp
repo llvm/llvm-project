@@ -2734,7 +2734,7 @@ bool Driver::HandleImmediateArgs(Compilation &C) {
     // FIXME: Remove when darwin's toolchain is initialized during construction.
     // FIXME: For some more esoteric targets the default toolchain is not the
     //        correct one.
-    C.getArgsForToolChain(&TC, Triple.getArchName(), Action::OFK_None);
+    C.getArgsForToolChain(&TC, Triple.getArchName(), Action::OFK_Host);
     RegisterEffectiveTriple TripleRAII(TC, Triple);
     switch (RLT) {
     case ToolChain::RLT_CompilerRT:
@@ -6060,7 +6060,7 @@ InputInfoList Driver::BuildJobsForActionNoCache(
     // computed. Get the default arguments for OFK_None to ensure that
     // initialization is performed before processing the offload action.
     // FIXME: Remove when darwin's toolchain is initialized during construction.
-    C.getArgsForToolChain(TC, BoundArch, Action::OFK_None);
+    C.getArgsForToolChain(TC, BoundArch, Action::OFK_Host);
 
     // The offload action is expected to be used in four different situations.
     //

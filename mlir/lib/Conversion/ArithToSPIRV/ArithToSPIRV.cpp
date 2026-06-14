@@ -670,22 +670,24 @@ struct ShRSIBoolPattern final : public OpConversionPattern<arith::ShRSIOp> {
 };
 
 //===----------------------------------------------------------------------===//
-// UIToFPOp
+// i1 source to value
 //===----------------------------------------------------------------------===//
 
-/// Converts arith.uitofp to spirv.Select if the type of source is i1 or vector
-/// of i1.
-struct UIToFPI1Pattern final : public OpConversionPattern<arith::UIToFPOp> {
-  using Base::Base;
+/// Converts an op whose i1 (or vector of i1) source selects between one and
+/// zero of the destination type, i.e. spirv.Select(src, one, zero). Shared by
+/// arith.uitofp, arith.extui, and arith.index_cast on boolean sources.
+template <typename ArithOp>
+struct BoolToValuePattern final : public OpConversionPattern<ArithOp> {
+  using OpConversionPattern<ArithOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(arith::UIToFPOp op, OpAdaptor adaptor,
+  matchAndRewrite(ArithOp op, typename ArithOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type srcType = adaptor.getOperands().front().getType();
     if (!isBoolScalarOrVector(srcType))
       return failure();
 
-    Type dstType = getTypeConverter()->convertType(op.getType());
+    Type dstType = this->getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
 
@@ -697,6 +699,10 @@ struct UIToFPI1Pattern final : public OpConversionPattern<arith::UIToFPOp> {
     return success();
   }
 };
+
+//===----------------------------------------------------------------------===//
+// UIToFPOp
+//===----------------------------------------------------------------------===//
 
 /// Converts arith.uitofp/arith.sitofp to spirv.ConvertUToF/spirv.ConvertSToF.
 /// When the source integer type was widened during type conversion (e.g., i8
@@ -780,30 +786,6 @@ struct IndexCastIndexI1Pattern final
         spirv::ConstantOp::getZero(adaptor.getIn().getType(), loc, rewriter);
     rewriter.replaceOpWithNewOp<spirv::INotEqualOp>(op, dstType, zeroIdx,
                                                     adaptor.getIn());
-    return success();
-  }
-};
-
-/// Converts arith.index_cast to spirv.Select if the source type is i1.
-struct IndexCastI1IndexPattern final
-    : public OpConversionPattern<arith::IndexCastOp> {
-  using Base::Base;
-
-  LogicalResult
-  matchAndRewrite(arith::IndexCastOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    if (!isBoolScalarOrVector(adaptor.getIn().getType()))
-      return failure();
-
-    Type dstType = getTypeConverter()->convertType(op.getType());
-    if (!dstType)
-      return getTypeConversionFailure(rewriter, op);
-
-    Location loc = op.getLoc();
-    Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
-    Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
-    rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, dstType, adaptor.getIn(),
-                                                 one, zero);
     return success();
   }
 };
@@ -905,31 +887,6 @@ struct ExtSIPattern final : public OpConversionPattern<arith::ExtSIOp> {
 //===----------------------------------------------------------------------===//
 // ExtUIOp
 //===----------------------------------------------------------------------===//
-
-/// Converts arith.extui to spirv.Select if the type of source is i1 or vector
-/// of i1.
-struct ExtUII1Pattern final : public OpConversionPattern<arith::ExtUIOp> {
-  using Base::Base;
-
-  LogicalResult
-  matchAndRewrite(arith::ExtUIOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Type srcType = adaptor.getOperands().front().getType();
-    if (!isBoolScalarOrVector(srcType))
-      return failure();
-
-    Type dstType = getTypeConverter()->convertType(op.getType());
-    if (!dstType)
-      return getTypeConversionFailure(rewriter, op);
-
-    Location loc = op.getLoc();
-    Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
-    Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
-    rewriter.replaceOpWithNewOp<spirv::SelectOp>(
-        op, dstType, adaptor.getOperands().front(), one, zero);
-    return success();
-  }
-};
 
 /// Converts arith.extui for cases where the type of source is neither i1 nor
 /// vector of i1.
@@ -1538,18 +1495,18 @@ void mlir::arith::populateArithToSPIRVPatterns(
     spirv::ElementwiseOpPattern<arith::MulFOp, spirv::FMulOp>,
     spirv::ElementwiseOpPattern<arith::DivFOp, spirv::FDivOp>,
     spirv::ElementwiseOpPattern<arith::RemFOp, spirv::FRemOp>,
-    ExtUIPattern, ExtUII1Pattern,
+    ExtUIPattern, BoolToValuePattern<arith::ExtUIOp>,
     ExtSIPattern, ExtSII1Pattern,
     TypeCastingOpPattern<arith::ExtFOp, spirv::FConvertOp>,
     TruncIPattern, TruncII1Pattern,
     TypeCastingOpPattern<arith::TruncFOp, spirv::FConvertOp>,
     IntToFPPattern<arith::UIToFPOp, spirv::ConvertUToFOp, false>,
-    UIToFPI1Pattern,
+    BoolToValuePattern<arith::UIToFPOp>,
     IntToFPPattern<arith::SIToFPOp, spirv::ConvertSToFOp, true>,
     TypeCastingOpPattern<arith::FPToUIOp, spirv::ConvertFToUOp>,
     TypeCastingOpPattern<arith::FPToSIOp, spirv::ConvertFToSOp>,
     TypeCastingOpPattern<arith::IndexCastOp, spirv::SConvertOp>,
-    IndexCastIndexI1Pattern, IndexCastI1IndexPattern,
+    IndexCastIndexI1Pattern, BoolToValuePattern<arith::IndexCastOp>,
     TypeCastingOpPattern<arith::IndexCastUIOp, spirv::UConvertOp>,
     TypeCastingOpPattern<arith::BitcastOp, spirv::BitcastOp>,
     CmpIOpBooleanPattern, CmpIOpPattern,
