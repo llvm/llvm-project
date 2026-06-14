@@ -73,16 +73,16 @@ void test_rhs_ptrcheck_subscript(AGG arr[4]) {
 
 // RHS cases - handler call only
 
-// CHECK-LABEL: define {{.*}}@test_init_from_ptr(
+// CHECK-LABEL: define {{.*}}@test_init_from_deref(
 // CHECK: call void @__ubsan_handle_type_mismatch_v1_abort
-void test_init_from_ptr(AGG *src) {
+void test_init_from_deref(AGG *src) {
   AGG local = *src;
   (void)local;
 }
 
-// CHECK-LABEL: define {{.*}}@test_init_from_array(
+// CHECK-LABEL: define {{.*}}@test_init_from_subscript(
 // CHECK: call void @__ubsan_handle_type_mismatch_v1_abort
-void test_init_from_array(AGG arr[4]) {
+void test_init_from_subscript(AGG arr[4]) {
   AGG local = arr[0];
   (void)local;
 }

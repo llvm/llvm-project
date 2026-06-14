@@ -30266,6 +30266,12 @@ public:
       for (Instruction *Op : ReducedValsToOps.at(RdxVal))
         if (auto *FPMO = dyn_cast<FPMathOperator>(Op))
           RdxFMF &= FPMO->getFastMathFlags();
+    // This is an ordered reduction, selected because the reduction operations
+    // are not associative (e.g. an fadd without nsz). The accumulation order
+    // must be preserved, so the generated llvm.vector.reduce.fadd has to stay
+    // ordered. Drop 'reassoc' from the flags used to emit and cost the
+    // reduction.
+    RdxFMF.setAllowReassoc(/*B=*/false);
 
     unsigned MaxVecRegSize = V.getMaxVecRegSize();
     unsigned EltSize = V.getVectorElementSize(Candidates[0]);
@@ -30327,7 +30333,8 @@ public:
         V.analyzedReductionVals(VL);
         return false;
       }
-      V.reorderTopToBottom();
+      // Do not reorder whole tree to preserve the original order of the ordered
+      // reduction.
       V.reorderBottomToTop();
 
       BoUpSLP::ExtraValueToDebugLocsMap LocalExternallyUsedValues;
