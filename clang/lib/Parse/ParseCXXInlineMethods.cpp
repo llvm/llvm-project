@@ -421,7 +421,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
       PP.EnterTokenStream(*Toks, true, /*IsReinject*/ true);
 
       // Consume the previously-pushed token.
-      ConsumeAnyToken();
+      ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
 
       // Consume the '='.
       assert(Tok.is(tok::equal) && "Default argument not starting with '='");
@@ -501,7 +501,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
     PP.EnterTokenStream(*Toks, true, /*IsReinject*/true);
 
     // Consume the previously-pushed token.
-    ConsumeAnyToken();
+    ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
 
     // C++11 [expr.prim.general]p3:
     //   If a declaration declares a member function or member function
