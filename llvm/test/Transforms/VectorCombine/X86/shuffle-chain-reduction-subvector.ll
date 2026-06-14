@@ -168,9 +168,15 @@ define i32 @test_multishuffle_accumulator_v8i32(<8 x i32> %a0) {
 define i32 @test_multisource_full_plus_scalar_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define i32 @test_multisource_full_plus_scalar_v4i32(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[X]])
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[Y]], i64 2
-; CHECK-NEXT:    [[E:%.*]] = add i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[XS1:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[A1:%.*]] = add <4 x i32> [[X]], [[XS1]]
+; CHECK-NEXT:    [[XS2:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <4 x i32> <i32 2, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[A2:%.*]] = add <4 x i32> [[A1]], [[XS2]]
+; CHECK-NEXT:    [[XS3:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <4 x i32> <i32 3, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[A3:%.*]] = add <4 x i32> [[A2]], [[XS3]]
+; CHECK-NEXT:    [[YS:%.*]] = shufflevector <4 x i32> [[Y]], <4 x i32> poison, <4 x i32> <i32 2, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[A4:%.*]] = add <4 x i32> [[A3]], [[YS]]
+; CHECK-NEXT:    [[E:%.*]] = extractelement <4 x i32> [[A4]], i64 0
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
   %xs1 = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>

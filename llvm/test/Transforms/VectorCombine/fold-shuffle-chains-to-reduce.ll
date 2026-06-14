@@ -188,9 +188,6 @@ define i16 @test_reduce_v8i16_ssa_aliased(<8 x i16> %a0) {
   ret i16 %8
 }
 
-; Lane 0 is poison: the shuffle padding flows through the xor chain. Folding to
-; reduce.xor(%a0) would be a valid refinement, but a poison-producing chain isn't
-; a real reduction pattern, so it is left alone.
 define i16 @test_no_reduce_v6i16_xor_poison(<6 x i16> %a0) {
 ; CHECK-LABEL: define i16 @test_no_reduce_v6i16_xor_poison(
 ; CHECK-SAME: <6 x i16> [[A0:%.*]]) {
