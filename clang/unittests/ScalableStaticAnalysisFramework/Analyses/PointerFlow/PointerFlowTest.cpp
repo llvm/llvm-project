@@ -1268,6 +1268,7 @@ TEST_F(PointerFlowTest, CXXConstructExprArrayInit) {
 //          Robustness Tests (No Crash Tests)               //
 //////////////////////////////////////////////////////////////
 
+#ifndef NDEBUG
 TEST_F(PointerFlowTest, StructuredBindingWithPointers) {
   StringRef Code = R"cpp(
     void foo() {
@@ -1288,6 +1289,7 @@ TEST_F(PointerFlowTest, StructuredBindingWithPointers) {
   ASSERT_TRUE(StringRef(testing::internal::GetCapturedStderr())
                   .contains("failed to create EntityId for Decomposition"));
 }
+#endif
 
 TEST_F(PointerFlowTest, RHSResultsInNoEntityPointerLevel) {
   ASSERT_TRUE(setUpTest(R"cpp(

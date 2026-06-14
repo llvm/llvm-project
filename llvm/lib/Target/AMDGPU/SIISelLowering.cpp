@@ -905,9 +905,24 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                          Custom);
     }
     if (Subtarget->hasPackedFP64Ops()) {
-      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA}, MVT::v2f64, Legal);
-      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA},
-                         {MVT::v4f64, MVT::v8f64, MVT::v16f64, MVT::v32f64},
+      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG,
+                          ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE,
+                          ISD::FCANONICALIZE},
+                         MVT::v2f64, Legal);
+      setOperationAction(
+          {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+          MVT::v2f64, Custom);
+      setOperationAction(
+          {ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FMINNUM_IEEE,
+           ISD::FMAXNUM_IEEE, ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM,
+           ISD::FMAXIMUMNUM, ISD::FCANONICALIZE},
+          {MVT::v4f64, MVT::v8f64, MVT::v16f64, MVT::v32f64}, Custom);
+    }
+
+    if (Subtarget->hasPackedU64Ops()) {
+      setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL}, MVT::v2i64, Legal);
+      setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL},
+                         {MVT::v4i64, MVT::v8i64, MVT::v16i64, MVT::v32i64},
                          Custom);
     }
   }
@@ -4724,17 +4739,18 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
         DAG.getTargetConstant(Intrinsic::amdgcn_wave_reduce_umax, dl, MVT::i32);
     Size = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32, WaveReduction,
                        Size, DAG.getTargetConstant(0, dl, MVT::i32));
-    SDValue ReadFirstLaneID =
-        DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, dl, MVT::i32);
-    Size = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32, ReadFirstLaneID,
-                       Size);
     SDValue ScaledSize = Size;
     if (!HasFlatScratch) {
       ScaledSize =
           DAG.getNode(ISD::SHL, dl, VT, Size,
                       DAG.getConstant(WavefrontSizeLog2, dl, MVT::i32));
     }
-    NewSP = DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize);
+    NewSP =
+        DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value in vgpr.
+    SDValue ReadFirstLaneID =
+        DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, dl, MVT::i32);
+    NewSP = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32, ReadFirstLaneID,
+                        NewSP);
   }
 
   Chain = DAG.getCopyToReg(Chain, dl, SPReg, NewSP); // Output chain
@@ -7490,7 +7506,8 @@ SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
          VT == MVT::v16bf16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
          VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16 ||
          VT == MVT::v32bf16 || VT == MVT::v4f64 || VT == MVT::v8f64 ||
-         VT == MVT::v16f64 || VT == MVT::v32f64);
+         VT == MVT::v16f64 || VT == MVT::v32f64 || VT == MVT::v4i64 ||
+         VT == MVT::v8i64 || VT == MVT::v16i64 || VT == MVT::v32i64);
 
   auto [Lo0, Hi0] = DAG.SplitVectorOperand(Op.getNode(), 0);
   auto [Lo1, Hi1] = DAG.SplitVectorOperand(Op.getNode(), 1);
@@ -7509,13 +7526,7 @@ SDValue SITargetLowering::splitTernaryVectorOp(SDValue Op,
                                                SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
-  assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v8i16 ||
-         VT == MVT::v8f16 || VT == MVT::v4f32 || VT == MVT::v16i16 ||
-         VT == MVT::v16f16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
-         VT == MVT::v32f32 || VT == MVT::v32f16 || VT == MVT::v32i16 ||
-         VT == MVT::v4bf16 || VT == MVT::v8bf16 || VT == MVT::v16bf16 ||
-         VT == MVT::v32bf16 || VT == MVT::v4f64 || VT == MVT::v8f64 ||
-         VT == MVT::v16f64 || VT == MVT::v16f64);
+  assert(VT.isVector() && VT.getVectorElementCount().isKnownEven());
 
   SDValue Op0 = Op.getOperand(0);
   auto [Lo0, Hi0] = Op0.getValueType().isVector()
@@ -15081,7 +15092,7 @@ static bool hasNon16BitAccesses(uint64_t PermMask, SDValue &Op,
   auto TempOtherOp = peekThroughBitcasts(OtherOp);
 
   auto OpIs16Bit =
-      TempOtherOp.getValueSizeInBits() == 16 || isExtendedFrom16Bits(TempOp);
+      TempOp.getValueSizeInBits() == 16 || isExtendedFrom16Bits(TempOp);
   if (!OpIs16Bit)
     return true;
 

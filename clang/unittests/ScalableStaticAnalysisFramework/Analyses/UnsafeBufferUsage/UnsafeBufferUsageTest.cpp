@@ -688,6 +688,7 @@ TEST_F(UnsafeBufferUsageTest, CXXScalarValueInitExpr) {
 }
 
 // Robustness test: unsupported constructs will not cause crash
+#ifndef NDEBUG
 TEST_F(UnsafeBufferUsageTest, StmtExprArrayAccess) {
   // GNU statement expressions are not supported, but should not crash and
   // should log a warning.
@@ -709,5 +710,6 @@ TEST_F(UnsafeBufferUsageTest, StmtExprArrayAccess) {
       StringRef(testing::internal::GetCapturedStderr())
           .contains("attempt to translate StmtExpr to EntityPointerLevels"));
 }
+#endif
 
 } // namespace
