@@ -62,9 +62,7 @@ LLVM_ABI void printBumpPtrAllocatorStats(unsigned NumSlabs,
 ///
 /// MinAlign keeps the bump pointer aligned between allocations: each size is
 /// rounded up to a multiple of MinAlign so the fast path can skip realigning
-/// CurPtr when the requested alignment is no greater than MinAlign. Costs a
-/// little padding per allocation. Must be 1 for allocators walked at a fixed
-/// stride (see SpecificBumpPtrAllocator).
+/// CurPtr when the requested alignment is no greater than MinAlign.
 template <typename AllocatorT = MallocAllocator, size_t SlabSize = 4096,
           size_t SizeThreshold = SlabSize, size_t GrowthDelay = 128,
           size_t MinAlign = 8>
@@ -83,9 +81,9 @@ public:
                 "GrowthDelay must be at least 1 which already increases the"
                 "slab size after each allocated slab.");
   static_assert(MinAlign > 0 && (MinAlign & (MinAlign - 1)) == 0,
-                "MinAlign must be a power of two.");
+                "MinAlign must be a power of two");
   static_assert(MinAlign <= alignof(std::max_align_t),
-                "MinAlign must not exceed the alignment of fresh slabs.");
+                "MinAlign must not exceed the alignment of fresh slabs");
 
   BumpPtrAllocatorImpl() = default;
 
@@ -172,13 +170,15 @@ public:
     char *Ptr = CurPtr;
     if (Alignment.value() > MinAlign)
       Ptr = reinterpret_cast<char *>(alignAddr(Ptr, Alignment));
-    assert(uintptr_t(Ptr) + SizeToAllocate >= uintptr_t(Ptr) &&
-           "Alignment + Size must not overflow");
+    char *NewCurPtr = Ptr + SizeToAllocate;
+    assert(NewCurPtr >= Ptr && "Alignment + Size must not overflow");
 
-    // Fast path check. The condition also fails for an empty allocator (End ==
-    // nullptr) to avoid a separate null check.
-    if (LLVM_LIKELY(uintptr_t(Ptr) + SizeToAllocate - 1 < uintptr_t(End))) {
-      CurPtr = Ptr + SizeToAllocate;
+    // Check if we have enough space.
+    if (LLVM_LIKELY(
+            uintptr_t(NewCurPtr) <= uintptr_t(End) &&
+            //  We can't return nullptr even for a zero-sized allocation!
+            CurPtr != nullptr)) {
+      CurPtr = NewCurPtr;
       // Update the allocation point of this memory block in MemorySanitizer.
       // Without this, MemorySanitizer messages for values originated from here
       // will point to the allocation of the entire slab.
@@ -400,10 +400,12 @@ using BumpPtrAllocator = BumpPtrAllocatorImpl<>;
 /// This allows calling the destructor in DestroyAll() and when the allocator is
 /// destroyed.
 template <typename T> class SpecificBumpPtrAllocator {
-  // DestroyAll() walks objects at a fixed sizeof(T) stride, so it needs tight
-  // packing: MinAlign=1 disables the default size rounding.
+  // MinAlign=alignof(T) keeps DestroyAll()'s fixed sizeof(T) stride tight and,
+  // for the common alignof(T)==8, reuses the default BumpPtrAllocator
+  // instantiation.
   using BumpPtrAllocatorTy =
-      BumpPtrAllocatorImpl<MallocAllocator, 4096, 4096, 128, /*MinAlign=*/1>;
+      BumpPtrAllocatorImpl<MallocAllocator, 4096, 4096, 128,
+                           std::min(alignof(T), alignof(std::max_align_t))>;
   BumpPtrAllocatorTy Allocator;
 
 public:
@@ -453,7 +455,7 @@ public:
   }
 
   /// Allocate space for an array of objects without constructing them.
-  T *Allocate(size_t num = 1) { return Allocator.Allocate<T>(num); }
+  T *Allocate(size_t num = 1) { return Allocator.template Allocate<T>(num); }
 
   /// \return An index uniquely and reproducibly identifying
   /// an input pointer \p Ptr in the given allocator.
