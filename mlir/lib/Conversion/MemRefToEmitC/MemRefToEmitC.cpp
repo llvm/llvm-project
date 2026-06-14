@@ -185,7 +185,12 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
     }
 
     Type sizeTType = emitc::SizeTType::get(rewriter.getContext());
-    Type elementType = memrefType.getElementType();
+    Type elementType =
+        getTypeConverter()->convertType(memrefType.getElementType());
+    if (!elementType) {
+      return rewriter.notifyMatchFailure(
+          loc, "failed to convert memref element type");
+    }
     IndexType indexType = rewriter.getIndexType();
     emitc::CallOpaqueOp sizeofElementOp = emitc::CallOpaqueOp::create(
         rewriter, loc, sizeTType, rewriter.getStringAttr("sizeof"),
