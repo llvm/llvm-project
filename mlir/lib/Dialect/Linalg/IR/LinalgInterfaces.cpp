@@ -885,7 +885,7 @@ inferConvolutionDimsImpl(LinalgOp linalgOp,
 /// Returns a failure if `output_image` (and implicitly `filter_loop`) is empty.
 FailureOr<ConvolutionDimensions>
 mlir::linalg::inferConvolutionDims(LinalgOp linalgOp) {
-  if (linalgOp.getNumDpsInits() != 1 || linalgOp.getNumDpsInputs() != 2)
+  if (linalgOp.getNumDpsInits() != 1 || linalgOp.getNumDpsInputs() < 2)
     return failure();
 
   auto indexingMaps = linalgOp.getIndexingMapsArray();

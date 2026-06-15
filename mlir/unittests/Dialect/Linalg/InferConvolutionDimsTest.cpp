@@ -130,6 +130,86 @@ createConv2DWithSwappedFilterLoops(OpBuilder &builder,
       });
 }
 
+/// Creates a Quantize 2D Convolution using input and filter layout
+/// but with extra scalar input/filter zero-point operands.
+/// The zero points are hard-coded constants since their values
+/// do not affect dimension inference.
+///
+/// Loop order:
+///   d0 = output height (oh), parallel
+///   d1 = output width (ow), parallel
+///   d2 = kernel height (kh), reduction
+///   d3 = kernel width (kw), reduction
+///
+/// Indexing maps:
+///   input:     (d0 + d2, d1 + d3)
+///   filter:    (d2, d3)
+///   input zp:  scalar
+///   filter zp: scalar
+///   output:    (d0, d1)
+///
+/// Semantic pairing: d0 <-> d2, d1 <-> d3
+static linalg::GenericOp createQConv2DOp(OpBuilder &builder, int64_t oh,
+                                         int64_t ow, int64_t kh, int64_t kw) {
+  Location loc = builder.getUnknownLoc();
+  MLIRContext *ctx = builder.getContext();
+
+  auto i8Type = builder.getI8Type();
+  auto i32Type = builder.getI32Type();
+
+  int64_t ih = oh + kh - 1;
+  int64_t iw = ow + kw - 1;
+
+  auto inputType = RankedTensorType::get({ih, iw}, i8Type);
+  auto filterType = RankedTensorType::get({kh, kw}, i8Type);
+  auto outputType = RankedTensorType::get({oh, ow}, i32Type);
+
+  Value input = tensor::EmptyOp::create(builder, loc, inputType.getShape(),
+                                        inputType.getElementType());
+  Value filter = tensor::EmptyOp::create(builder, loc, filterType.getShape(),
+                                         filterType.getElementType());
+
+  // Non-Zero Input and Filter Zero-Points
+  Value inputZeroPoint = arith::ConstantIntOp::create(builder, loc, 7, 32);
+  Value filterZeroPoint = arith::ConstantIntOp::create(builder, loc, 9, 32);
+
+  Value output = tensor::EmptyOp::create(builder, loc, outputType.getShape(),
+                                         outputType.getElementType());
+
+  AffineExpr d0, d1, d2, d3;
+  bindDims(ctx, d0, d1, d2, d3);
+
+  auto inputMap = AffineMap::get(4, 0, {d0 + d2, d1 + d3}, ctx);
+  auto filterMap = AffineMap::get(4, 0, {d2, d3}, ctx);
+  auto scalarMap = AffineMap::get(4, 0, ArrayRef<AffineExpr>{}, ctx);
+  auto outputMap = AffineMap::get(4, 0, {d0, d1}, ctx);
+
+  SmallVector<AffineMap> indexingMaps = {inputMap, filterMap, scalarMap,
+                                         scalarMap, outputMap};
+
+  SmallVector<utils::IteratorType> iterTypes = {
+      utils::IteratorType::parallel, utils::IteratorType::parallel,
+      utils::IteratorType::reduction, utils::IteratorType::reduction};
+
+  return linalg::GenericOp::create(
+      builder, loc, outputType,
+      ValueRange{input, filter, inputZeroPoint, filterZeroPoint},
+      ValueRange{output}, indexingMaps, iterTypes,
+      [&](OpBuilder &b, Location loc, ValueRange args) {
+        Value inputI32 =
+            arith::ExtSIOp::create(b, loc, b.getI32Type(), args[0]);
+        Value filterI32 =
+            arith::ExtSIOp::create(b, loc, b.getI32Type(), args[1]);
+
+        inputI32 = arith::SubIOp::create(b, loc, inputI32, args[2]);
+        filterI32 = arith::SubIOp::create(b, loc, filterI32, args[3]);
+
+        Value mul = arith::MulIOp::create(b, loc, inputI32, filterI32);
+        Value add = arith::AddIOp::create(b, loc, args[4], mul);
+        linalg::YieldOp::create(b, loc, add);
+      });
+}
+
 TEST_F(InferConvolutionDimsTest, Conv2DPairing) {
   // Use non-square kernel to ensure dimension swapping is tested properly.
   const int64_t oh = 6, ow = 12, kh = 3, kw = 5;
@@ -174,6 +254,46 @@ TEST_F(InferConvolutionDimsTest, Conv2DPairing) {
       << "outputImage[0]=0 should pair with filterLoop[0]=3 (oh <-> kh)";
   EXPECT_EQ(swappedDims->filterLoop[1], 2u)
       << "outputImage[1]=1 should pair with filterLoop[1]=2 (ow <-> kw)";
+}
+
+TEST_F(InferConvolutionDimsTest, QConv2DWithZeroPoints) {
+  // Use non-square kernel to ensure dimension swapping is tested properly.
+  const int64_t oh = 6, ow = 12, kh = 3, kw = 5;
+
+  // Create a module to own all test operations and ensure proper cleanup.
+  OpBuilder builder(ctx.get());
+  OwningOpRef<ModuleOp> module = ModuleOp::create(builder.getUnknownLoc());
+  builder.setInsertionPointToStart(module->getBody());
+
+  // Create Quantize ConvOp with two extra scalar zero-point inputs.
+  linalg::GenericOp qConvOp = createQConv2DOp(builder, oh, ow, kh, kw);
+
+  // The qconv op should have:
+  //   input, filter, input zero point, filter zero point
+  ASSERT_EQ(qConvOp.getNumDpsInputs(), 4u);
+  ASSERT_EQ(qConvOp.getNumDpsInits(), 1u);
+
+  auto indexingMaps = qConvOp.getIndexingMapsArray();
+  ASSERT_EQ(indexingMaps.size(), static_cast<size_t>(qConvOp.getNumDpsInputs() +
+                                                     qConvOp.getNumDpsInits()));
+
+  // The two extra quantized conv operands must be scalar inputs.
+  EXPECT_EQ(indexingMaps[2].getNumResults(), 0u);
+  EXPECT_EQ(indexingMaps[3].getNumResults(), 0u);
+  EXPECT_EQ(indexingMaps[2].getNumDims(), 4u);
+  EXPECT_EQ(indexingMaps[3].getNumDims(), 4u);
+
+  FailureOr<ConvolutionDimensions> qConvDims = inferConvolutionDims(qConvOp);
+  ASSERT_TRUE(succeeded(qConvDims));
+  ASSERT_EQ(qConvDims->outputImage.size(), 2u);
+  ASSERT_EQ(qConvDims->filterLoop.size(), 2u);
+
+  // Standard pairing: outputImage=[0,1], filterLoop=[2,3]
+  // d0 <-> d2 (oh <-> kh), d1 <-> d3 (ow <-> kw)
+  EXPECT_EQ(qConvDims->outputImage[0], 0u);
+  EXPECT_EQ(qConvDims->outputImage[1], 1u);
+  EXPECT_EQ(qConvDims->filterLoop[0], 2u);
+  EXPECT_EQ(qConvDims->filterLoop[1], 3u);
 }
 
 } // namespace
