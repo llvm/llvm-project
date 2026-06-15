@@ -6,19 +6,19 @@ define i64 @multiple-phi-def() {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LBL_ENTRY:.*]]
 ; CHECK:       [[LBL_ENTRY]]:
-; CHECK-NEXT:    [[PHI3:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[PHI1:%.*]], %[[CASE2_JT0:.*]] ]
-; CHECK-NEXT:    br i1 true, label %[[THEN:.*]], label %[[SWITCH_BB_JT0:.*]]
+; CHECK-NEXT:    [[PHI3:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[PHI1:%.*]], %[[CASE2:.*]] ]
+; CHECK-NEXT:    br i1 true, label %[[THEN:.*]], label %[[SWITCH_BB:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    br label %[[CASE2_JT0]]
-; CHECK:       [[CASE2_JT0]]:
-; CHECK-NEXT:    [[PHI1]] = phi i16 [ 0, %[[THEN]] ], [ 0, %[[SWITCH_BB_JT0]] ]
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i16 [ 1, %[[THEN]] ], [ 0, %[[SWITCH_BB_JT0]] ]
-; CHECK-NEXT:    br i1 true, label %[[SWITCH_BB_JT0]], label %[[LBL_ENTRY]]
-; CHECK:       [[SWITCH_BB_JT0]]:
-; CHECK-NEXT:    [[PHI_OF_SWITCH:%.*]] = phi i16 [ [[PHI3]], %[[LBL_ENTRY]] ], [ [[PHI2]], %[[CASE2_JT0]] ]
+; CHECK-NEXT:    br label %[[CASE2]]
+; CHECK:       [[CASE2]]:
+; CHECK-NEXT:    [[PHI1]] = phi i16 [ 0, %[[THEN]] ], [ 0, %[[SWITCH_BB]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i16 [ 1, %[[THEN]] ], [ 0, %[[SWITCH_BB]] ]
+; CHECK-NEXT:    br i1 true, label %[[SWITCH_BB]], label %[[LBL_ENTRY]]
+; CHECK:       [[SWITCH_BB]]:
+; CHECK-NEXT:    [[PHI_OF_SWITCH:%.*]] = phi i16 [ [[PHI3]], %[[LBL_ENTRY]] ], [ [[PHI2]], %[[CASE2]] ]
 ; CHECK-NEXT:    switch i16 [[PHI_OF_SWITCH]], label %[[DEFAULT_BB:.*]] [
 ; CHECK-NEXT:      i16 1, label %[[CASE1:.*]]
-; CHECK-NEXT:      i16 2, label %[[CASE2_JT0]]
+; CHECK-NEXT:      i16 2, label %[[CASE2]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[CASE1]]:
 ; CHECK-NEXT:    ret i64 1
