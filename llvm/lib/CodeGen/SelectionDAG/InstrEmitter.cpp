@@ -1121,7 +1121,7 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
       MI->setFlag(MachineInstr::MIFlag::SameSign);
 
     if (Flags.hasNoConvergent())
-      MI->setFlag(MachineInstr::MIFlag::NoConvergent);
+      MI->setFlag(MachineInstr::MIFlag::OverrideConvergence);
   }
 
   // Emit all of the actual operands of this instruction, adding them to the

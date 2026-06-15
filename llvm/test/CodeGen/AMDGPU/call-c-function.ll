@@ -28,7 +28,7 @@ define amdgpu_ps void @amdgpu_ps_call_default_cc() {
   ; GISEL-NEXT:   $sgpr15 = COPY [[DEF2]]
   ; GISEL-NEXT:   $vgpr31 = COPY [[DEF2]]
   ; GISEL-NEXT:   [[S_MOV_B1:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 0
-  ; GISEL-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_MOV_B1]], 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
+  ; GISEL-NEXT:   $sgpr30_sgpr31 = override_convergence SI_CALL [[S_MOV_B1]], 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GISEL-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-NEXT:   S_ENDPGM 0
 main_body:
@@ -60,7 +60,7 @@ define amdgpu_gfx void @amdgpu_gfx_call_default_cc() {
   ; GISEL-NEXT:   $sgpr15 = COPY [[DEF2]]
   ; GISEL-NEXT:   $vgpr31 = COPY [[DEF2]]
   ; GISEL-NEXT:   [[S_MOV_B1:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 0
-  ; GISEL-NEXT:   $sgpr30_sgpr31 = noconvergent SI_CALL [[S_MOV_B1]], 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
+  ; GISEL-NEXT:   $sgpr30_sgpr31 = override_convergence SI_CALL [[S_MOV_B1]], 0, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; GISEL-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc, implicit-def $sgpr32, implicit $sgpr32
   ; GISEL-NEXT:   SI_RETURN
 main_body:

@@ -150,7 +150,7 @@ struct MIToken {
     kw_ir_block_address_taken,
     kw_machine_block_address_taken,
     kw_call_frame_size,
-    kw_noconvergent,
+    kw_override_convergence,
     kw_mmra,
 
     // Metadata types.

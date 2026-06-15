@@ -87,47 +87,47 @@ public:
 
   enum MIFlag {
     NoFlags = 0,
-    FrameSetup = 1 << 0,     // Instruction is used as a part of
-                             // function frame setup code.
-    FrameDestroy = 1 << 1,   // Instruction is used as a part of
-                             // function frame destruction code.
-    BundledPred = 1 << 2,    // Instruction has bundled predecessors.
-    BundledSucc = 1 << 3,    // Instruction has bundled successors.
-    FmNoNans = 1 << 4,       // Instruction does not support Fast
-                             // math nan values.
-    FmNoInfs = 1 << 5,       // Instruction does not support Fast
-                             // math infinity values.
-    FmNsz = 1 << 6,          // Instruction is not required to retain
-                             // signed zero values.
-    FmArcp = 1 << 7,         // Instruction supports Fast math
-                             // reciprocal approximations.
-    FmContract = 1 << 8,     // Instruction supports Fast math
-                             // contraction operations like fma.
-    FmAfn = 1 << 9,          // Instruction may map to Fast math
-                             // intrinsic approximation.
-    FmReassoc = 1 << 10,     // Instruction supports Fast math
-                             // reassociation of operand order.
-    NoUWrap = 1 << 11,       // Instruction supports binary operator
-                             // no unsigned wrap.
-    NoSWrap = 1 << 12,       // Instruction supports binary operator
-                             // no signed wrap.
-    IsExact = 1 << 13,       // Instruction supports division is
-                             // known to be exact.
-    NoFPExcept = 1 << 14,    // Instruction does not raise
-                             // floatint-point exceptions.
-    NoMerge = 1 << 15,       // Passes that drop source location info
-                             // (e.g. branch folding) should skip
-                             // this instruction.
-    Unpredictable = 1 << 16, // Instruction with unpredictable condition.
-    NoConvergent = 1 << 17,  // Call does not require convergence guarantees.
-    NonNeg = 1 << 18,        // The operand is non-negative.
-    Disjoint = 1 << 19,      // Each bit is zero in at least one of the inputs.
-    NoUSWrap = 1 << 20,      // Instruction supports geps
-                             // no unsigned signed wrap.
-    SameSign = 1 << 21,      // Both operands have the same sign.
-    InBounds = 1 << 22,      // Pointer arithmetic remains inbounds.
-                             // Implies NoUSWrap.
-    LRSplit = 1 << 23        // Instruction for live range split.
+    FrameSetup = 1 << 0,           // Instruction is used as a part of
+                                   // function frame setup code.
+    FrameDestroy = 1 << 1,         // Instruction is used as a part of
+                                   // function frame destruction code.
+    BundledPred = 1 << 2,          // Instruction has bundled predecessors.
+    BundledSucc = 1 << 3,          // Instruction has bundled successors.
+    FmNoNans = 1 << 4,             // Instruction does not support Fast
+                                   // math nan values.
+    FmNoInfs = 1 << 5,             // Instruction does not support Fast
+                                   // math infinity values.
+    FmNsz = 1 << 6,                // Instruction is not required to retain
+                                   // signed zero values.
+    FmArcp = 1 << 7,               // Instruction supports Fast math
+                                   // reciprocal approximations.
+    FmContract = 1 << 8,           // Instruction supports Fast math
+                                   // contraction operations like fma.
+    FmAfn = 1 << 9,                // Instruction may map to Fast math
+                                   // intrinsic approximation.
+    FmReassoc = 1 << 10,           // Instruction supports Fast math
+                                   // reassociation of operand order.
+    NoUWrap = 1 << 11,             // Instruction supports binary operator
+                                   // no unsigned wrap.
+    NoSWrap = 1 << 12,             // Instruction supports binary operator
+                                   // no signed wrap.
+    IsExact = 1 << 13,             // Instruction supports division is
+                                   // known to be exact.
+    NoFPExcept = 1 << 14,          // Instruction does not raise
+                                   // floatint-point exceptions.
+    NoMerge = 1 << 15,             // Passes that drop source location info
+                                   // (e.g. branch folding) should skip
+                                   // this instruction.
+    Unpredictable = 1 << 16,       // Instruction with unpredictable condition.
+    OverrideConvergence = 1 << 17, // Flip convergence implied by the opcode.
+    NonNeg = 1 << 18,              // The operand is non-negative.
+    Disjoint = 1 << 19, // Each bit is zero in at least one of the inputs.
+    NoUSWrap = 1 << 20, // Instruction supports geps
+                        // no unsigned signed wrap.
+    SameSign = 1 << 21, // Both operands have the same sign.
+    InBounds = 1 << 22, // Pointer arithmetic remains inbounds.
+                        // Implies NoUSWrap.
+    LRSplit = 1 << 23   // Instruction for live range split.
   };
 
 private:
@@ -1082,9 +1082,8 @@ public:
       if (ExtraInfo & InlineAsm::Extra_IsConvergent)
         return true;
     }
-    if (getFlag(NoConvergent))
-      return false;
-    return hasProperty(MCID::Convergent, Type);
+    bool OpcodeConvergent = hasProperty(MCID::Convergent, Type);
+    return getFlag(OverrideConvergence) ? !OpcodeConvergent : OpcodeConvergent;
   }
 
   /// Returns true if the specified instruction has a delay slot

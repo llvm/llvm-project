@@ -2,16 +2,16 @@
 # RUN: llc -mtriple=amdgcn -run-pass none -o - %s | FileCheck %s
 
 ---
-# Completely invalid code, but it checks that noconvergent round-trips properly.
-name:            use_noconvergent
+# Completely invalid code, but it checks that override_convergence round-trips properly.
+name:            use_override_convergence
 registers:
 body: |
   bb.0:
-    ; CHECK-LABEL: name: use_noconvergent
+    ; CHECK-LABEL: name: use_override_convergence
     ; CHECK: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
     ; CHECK-NEXT: [[SI_CALL:%[0-9]+]]:sreg_64 = SI_CALL [[DEF]], 1, csr_amdgpu
-    ; CHECK-NEXT: [[SI_CALL]]:sreg_64 = noconvergent SI_CALL [[DEF]], 2, csr_amdgpu
+    ; CHECK-NEXT: [[SI_CALL]]:sreg_64 = override_convergence SI_CALL [[DEF]], 2, csr_amdgpu
     %0:sreg_64 = IMPLICIT_DEF
     %1:sreg_64 = SI_CALL %0, 1, csr_amdgpu
-    %1:sreg_64 = noconvergent SI_CALL %0, 2, csr_amdgpu
+    %1:sreg_64 = override_convergence SI_CALL %0, 2, csr_amdgpu
 ...

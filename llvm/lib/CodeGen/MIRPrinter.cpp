@@ -880,8 +880,8 @@ static void printMI(raw_ostream &OS, MFPrintState &State,
     OS << "nomerge ";
   if (MI.getFlag(MachineInstr::Unpredictable))
     OS << "unpredictable ";
-  if (MI.getFlag(MachineInstr::NoConvergent))
-    OS << "noconvergent ";
+  if (MI.getFlag(MachineInstr::OverrideConvergence))
+    OS << "override_convergence ";
   if (MI.getFlag(MachineInstr::NonNeg))
     OS << "nneg ";
   if (MI.getFlag(MachineInstr::Disjoint))
