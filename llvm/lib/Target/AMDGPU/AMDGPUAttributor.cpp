@@ -1651,6 +1651,15 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
     if (ST.hasGFX90AInsts())
       A.getOrCreateAAFor<AAAMDGPUMinAGPRAlloc>(IRPosition::function(*F));
 
+    // Skip AAAddressSpace and AANoAliasAddrSpace for sanitized functions.
+    // AAAddressSpace can rewrite pointer address spaces by inserting
+    // addrspacecast instructions, which may interfere with ASAN instrumentation
+    // or SW LDS lowering that has already rewritten LDS accesses to global
+    // memory.
+    // TODO: AANoAliasAddrSpace (metadata-only) is also skipped conservatively
+    // and could be re-enabled independently.
+    const bool SkipAddrSpaceAA = hasSanitizerAttributes(*F);
+
     for (auto &I : instructions(F)) {
       Value *Ptr = nullptr;
       if (auto *LI = dyn_cast<LoadInst>(&I))
@@ -1663,8 +1672,10 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
         Ptr = CmpX->getPointerOperand();
 
       if (Ptr) {
-        A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
-        A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
+        if (!SkipAddrSpaceAA) {
+          A.getOrCreateAAFor<AAAddressSpace>(IRPosition::value(*Ptr));
+          A.getOrCreateAAFor<AANoAliasAddrSpace>(IRPosition::value(*Ptr));
+        }
         if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Ptr)) {
           if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc)
             A.getOrCreateAAFor<AAAlign>(IRPosition::value(*Ptr));
