@@ -676,11 +676,11 @@ public:
       Type *OldTy = CI->getType();
       Type *NewRetTy = OpBuilder.getResRetType(OldTy->getScalarType());
 
-      Value *UndefF = UndefValue::get(IRB.getFloatTy());
-      Value *UndefI = UndefValue::get(IRB.getInt32Ty());
+      Value *PoisonF = PoisonValue::get(IRB.getFloatTy());
+      Value *PoisonI = PoisonValue::get(IRB.getInt32Ty());
       // Common prefix: Handle, Sampler, Coord0..3, Offset0..2
-      SmallVector<Value *, 17> Args{Handle, Sampler, UndefF, UndefF, UndefF,
-                                    UndefF, UndefI,  UndefI, UndefI};
+      SmallVector<Value *, 17> Args{Handle, Sampler, PoisonF, PoisonF, PoisonF,
+                                    PoisonF, PoisonI, PoisonI, PoisonI};
 
       // Copy coordinates and offsets into Args.
       extractElementsIntoArgs(IRB, Args, 2, Coords, 4);
@@ -707,7 +707,7 @@ public:
                            // Clamp
                            Args.push_back(
                                HasClamp ? CI->getArgOperand(4)
-                                        : UndefValue::get(IRB.getFloatTy()));
+                                        : PoisonValue::get(IRB.getFloatTy()));
                          });
   }
 
@@ -720,7 +720,7 @@ public:
           Args.push_back(CI->getArgOperand(3));
           // Clamp
           Args.push_back(HasClamp ? CI->getArgOperand(5)
-                                  : UndefValue::get(IRB.getFloatTy()));
+                                  : PoisonValue::get(IRB.getFloatTy()));
         });
   }
 
@@ -740,17 +740,17 @@ public:
                    SmallVectorImpl<Value *> &Args) {
           Value *DDX = CI->getArgOperand(3);
           Value *DDY = CI->getArgOperand(4);
-          Value *UndefF = UndefValue::get(IRB.getFloatTy());
+          Value *PoisonF = PoisonValue::get(IRB.getFloatTy());
           // DDX0..2
           size_t DDXStart = Args.size();
-          Args.append(3, UndefF);
+          Args.append(3, PoisonF);
           extractElementsIntoArgs(IRB, Args, DDXStart, DDX, 3);
           // DDY0..2
           size_t DDYStart = Args.size();
-          Args.append(3, UndefF);
+          Args.append(3, PoisonF);
           extractElementsIntoArgs(IRB, Args, DDYStart, DDY, 3);
           // Clamp
-          Args.push_back(HasClamp ? CI->getArgOperand(6) : UndefF);
+          Args.push_back(HasClamp ? CI->getArgOperand(6) : PoisonF);
         });
   }
 

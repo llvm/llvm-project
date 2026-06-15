@@ -22,10 +22,10 @@ define void @samplebias_texture2d_float4(<2 x float> %coords, float %bias) {
   ; CHECK-SAME: @dx.op.sampleBias.f32(i32 61,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
-  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float undef, float undef,
-  ; CHECK-SAME: i32 undef, i32 undef, i32 undef,
+  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float poison, float poison,
+  ; CHECK-SAME: i32 poison, i32 poison, i32 poison,
   ; CHECK-SAME: float %bias,
-  ; CHECK-SAME: float undef)
+  ; CHECK-SAME: float poison)
   %data = call <4 x float>
       @llvm.dx.resource.samplebias.v4f32.tdx.Texture_v4f32_0_0_0_2t.tdx.Sampler_0t.v2f32.v2i32(
           target("dx.Texture", <4 x float>, 0, 0, 0, 2) %texture,
@@ -53,8 +53,8 @@ define void @samplebias_texture2d_with_clamp(<2 x float> %coords, float %bias, f
   ; CHECK-SAME: @dx.op.sampleBias.f32(i32 61,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
-  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float undef, float undef,
-  ; CHECK-SAME: i32 undef, i32 undef, i32 undef,
+  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float poison, float poison,
+  ; CHECK-SAME: i32 poison, i32 poison, i32 poison,
   ; CHECK-SAME: float %bias,
   ; CHECK-SAME: float %clamp)
   %data = call <4 x float>
@@ -84,10 +84,10 @@ define void @samplebias_texture2d_with_offset(<2 x float> %coords, float %bias) 
   ; CHECK-SAME: @dx.op.sampleBias.f32(i32 61,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
-  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float undef, float undef,
-  ; CHECK-SAME: i32 1, i32 -2, i32 undef,
+  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float poison, float poison,
+  ; CHECK-SAME: i32 1, i32 -2, i32 poison,
   ; CHECK-SAME: float %bias,
-  ; CHECK-SAME: float undef)
+  ; CHECK-SAME: float poison)
   %data = call <4 x float>
       @llvm.dx.resource.samplebias.v4f32.tdx.Texture_v4f32_0_0_0_2t.tdx.Sampler_0t.v2f32.v2i32(
           target("dx.Texture", <4 x float>, 0, 0, 0, 2) %texture,
@@ -117,10 +117,10 @@ define void @samplebias_texture2d_with_dynamic_offset(<2 x float> %coords, float
   ; CHECK-SAME: @dx.op.sampleBias.f32(i32 61,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
-  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float undef, float undef,
-  ; CHECK-SAME: i32 %[[OFF0]], i32 %[[OFF1]], i32 undef,
+  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float poison, float poison,
+  ; CHECK-SAME: i32 %[[OFF0]], i32 %[[OFF1]], i32 poison,
   ; CHECK-SAME: float %bias,
-  ; CHECK-SAME: float undef)
+  ; CHECK-SAME: float poison)
   %data = call <4 x float>
       @llvm.dx.resource.samplebias.v4f32.tdx.Texture_v4f32_0_0_0_2t.tdx.Sampler_0t.v2f32.v2i32(
           target("dx.Texture", <4 x float>, 0, 0, 0, 2) %texture,
@@ -148,8 +148,8 @@ define void @samplebias_texture2d_with_offset_and_clamp(<2 x float> %coords, flo
   ; CHECK-SAME: @dx.op.sampleBias.f32(i32 61,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
-  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float undef, float undef,
-  ; CHECK-SAME: i32 3, i32 -1, i32 undef,
+  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float poison, float poison,
+  ; CHECK-SAME: i32 3, i32 -1, i32 poison,
   ; CHECK-SAME: float %bias,
   ; CHECK-SAME: float %clamp)
   %data = call <4 x float>
@@ -177,10 +177,10 @@ define void @samplebias_texture1d_float4(float %coord, float %bias) {
   ; CHECK-SAME: @dx.op.sampleBias.f32(i32 61,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
-  ; CHECK-SAME: float %coord, float undef, float undef, float undef,
-  ; CHECK-SAME: i32 undef, i32 undef, i32 undef,
+  ; CHECK-SAME: float %coord, float poison, float poison, float poison,
+  ; CHECK-SAME: i32 poison, i32 poison, i32 poison,
   ; CHECK-SAME: float %bias,
-  ; CHECK-SAME: float undef)
+  ; CHECK-SAME: float poison)
   %data = call <4 x float>
       @llvm.dx.resource.samplebias.v4f32.tdx.Texture_v4f32_0_0_0_1t.tdx.Sampler_0t.f32.i32(
           target("dx.Texture", <4 x float>, 0, 0, 0, 1) %texture,
@@ -209,10 +209,10 @@ define void @samplebias_texture3d_float4(<3 x float> %coords, float %bias) {
   ; CHECK-SAME: @dx.op.sampleBias.f32(i32 61,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
-  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float %[[COORD2]], float undef,
-  ; CHECK-SAME: i32 undef, i32 undef, i32 undef,
+  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float %[[COORD2]], float poison,
+  ; CHECK-SAME: i32 poison, i32 poison, i32 poison,
   ; CHECK-SAME: float %bias,
-  ; CHECK-SAME: float undef)
+  ; CHECK-SAME: float poison)
   %data = call <4 x float>
       @llvm.dx.resource.samplebias.v4f32.tdx.Texture_v4f32_0_0_0_4t.tdx.Sampler_0t.v3f32.v3i32(
           target("dx.Texture", <4 x float>, 0, 0, 0, 4) %texture,
@@ -240,10 +240,10 @@ define void @samplebias_texture2d_scalar(<2 x float> %coords, float %bias) {
   ; CHECK-SAME: @dx.op.sampleBias.f32(i32 61,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
-  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float undef, float undef,
-  ; CHECK-SAME: i32 undef, i32 undef, i32 undef,
+  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float poison, float poison,
+  ; CHECK-SAME: i32 poison, i32 poison, i32 poison,
   ; CHECK-SAME: float %bias,
-  ; CHECK-SAME: float undef)
+  ; CHECK-SAME: float poison)
   %data = call float
       @llvm.dx.resource.samplebias.f32.tdx.Texture_f32_0_0_0_2t.tdx.Sampler_0t.v2f32.v2i32(
           target("dx.Texture", float, 0, 0, 0, 2) %texture,
@@ -271,10 +271,10 @@ define void @samplebias_texture2d_half4(<2 x float> %coords, float %bias) {
   ; CHECK-SAME: @dx.op.sampleBias.f16(i32 61,
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
   ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
-  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float undef, float undef,
-  ; CHECK-SAME: i32 undef, i32 undef, i32 undef,
+  ; CHECK-SAME: float %[[COORD0]], float %[[COORD1]], float poison, float poison,
+  ; CHECK-SAME: i32 poison, i32 poison, i32 poison,
   ; CHECK-SAME: float %bias,
-  ; CHECK-SAME: float undef)
+  ; CHECK-SAME: float poison)
   %data = call <4 x half>
       @llvm.dx.resource.samplebias.v4f16.tdx.Texture_v4f16_0_0_0_2t.tdx.Sampler_0t.v2f32.v2i32(
           target("dx.Texture", <4 x half>, 0, 0, 0, 2) %texture,
