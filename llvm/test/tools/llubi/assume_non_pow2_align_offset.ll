@@ -11,6 +11,6 @@ define void @main() {
 ; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
 ; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr %alloc, i32 17, i32 8) ]
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   call void @llvm.assume(i1 true) [ "align"(ptr %alloc, i32 17, i32 4) ] at @main <stdin>:10
+; CHECK-NEXT: #0   call void @llvm.assume(i1 true) [ "align"(ptr %alloc, i32 17, i32 4) ] at @main <stdin>:7
 ; CHECK-NEXT: Immediate UB detected: Assume on pointer ptr 0x8 [alloc] with a nonzero adjusted address and a non-power-of-two alignment 17.
 ; CHECK-NEXT: error: Execution of function 'main' failed.

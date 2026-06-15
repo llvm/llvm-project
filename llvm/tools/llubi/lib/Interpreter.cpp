@@ -834,7 +834,7 @@ public:
             APInt CheckedAddr = WasOnPtr.address();
             if (OBU.Inputs.size() == 3) {
               APInt Offset = getIntNonPoison(getValue(GetBundleArg(2)));
-              CheckedAddr -= Offset.zextOrTrunc(CheckedAddr.getBitWidth());
+              CheckedAddr -= Offset.sextOrTrunc(CheckedAddr.getBitWidth());
             }
             if (!Alignment.isPowerOf2()) {
               if (!CheckedAddr.isZero())
