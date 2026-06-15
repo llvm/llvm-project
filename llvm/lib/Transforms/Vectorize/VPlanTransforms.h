@@ -61,8 +61,7 @@ struct VPlanTransforms {
       dbgs()
           << "VPlan for loop in '"
           << Plan.getScalarHeader()->getIRBasicBlock()->getParent()->getName()
-          << "' " << BeforeOrAfterStr << " " << PassName
-          << '\n';
+          << "' " << BeforeOrAfterStr << " " << PassName << '\n';
       if (VPlanPrintVectorRegionScope && Plan.getVectorLoopRegion())
         Plan.getVectorLoopRegion()->print(dbgs());
       else
