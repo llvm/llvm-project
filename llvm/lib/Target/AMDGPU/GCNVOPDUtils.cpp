@@ -359,19 +359,20 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
     }
 
     IIdx = 0;
+    BitVector IVisited(DAG->SUnits.size());
+    BitVector JVisited(DAG->SUnits.size());
+    SmallVector<SUnit *> ILoadSuccs, JLoadPreds;
     for (auto ISUI = DAG->SUnits.begin(), E = DAG->SUnits.end(); ISUI != E;
          ++ISUI, ++IIdx) {
       if (!VOPDCapable[IIdx])
         continue;
       const MachineInstr *IMI = ISUI->getInstr();
 
-      BitVector IVisited(DAG->SUnits.size());
-      SmallVector<SUnit *> ILoadSuccs;
+      IVisited.reset();
+      ILoadSuccs.clear();
       collectLoads(ILoadSuccs, IVisited, *ISUI, /*Forward=*/true);
 
       unsigned JIdx = IIdx + 1;
-      BitVector JVisited;
-      SmallVector<SUnit *> JLoadPreds;
       for (auto JSUI = ISUI + 1; JSUI != E; ++JSUI, ++JIdx) {
         if (!VOPDCapable[JIdx] || JSUI->isBoundaryNode())
           continue;
