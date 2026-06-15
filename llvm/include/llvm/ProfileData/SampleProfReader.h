@@ -790,8 +790,8 @@ class FuncOffsetHashTableInfo {
 public:
   using key_type = uint64_t;
   using key_type_ref = uint64_t;
-  using data_type = uint64_t; // Offset
-  using data_type_ref = uint64_t;
+  using data_type = uint32_t; // Offset
+  using data_type_ref = uint32_t;
   using hash_value_type = uint32_t;
   using offset_type = uint32_t;
   using internal_key_type = uint64_t;
@@ -811,17 +811,17 @@ public:
   static std::pair<offset_type, offset_type>
   ReadKeyDataLength(const unsigned char *&D) {
     // Implicit lengths: do NOT read or advance pointer D.
-    return {8, 4};
+    return {sizeof(key_type), sizeof(data_type)};
   }
 
   static key_type ReadKey(const unsigned char *D, offset_type Len) {
-    assert(Len == 8 && "Key length must be 8");
+    assert(Len == sizeof(key_type) && "Key length mismatch");
     return support::endian::read64le(D);
   }
 
   static data_type ReadData(key_type_ref K, const unsigned char *D,
                             offset_type Len) {
-    assert(Len == 4 && "Data length must be 4");
+    assert(Len == sizeof(data_type) && "Data length mismatch");
     return support::endian::read32le(D);
   }
 };

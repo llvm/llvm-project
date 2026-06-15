@@ -279,8 +279,8 @@ class FuncOffsetHashTableWriterInfo {
 public:
   using key_type = uint64_t;
   using key_type_ref = uint64_t;
-  using data_type = uint64_t; // Offset
-  using data_type_ref = uint64_t;
+  using data_type = uint32_t; // Offset
+  using data_type_ref = uint32_t;
   using hash_value_type = uint32_t;
   using offset_type = uint32_t;
   using internal_key_type = uint64_t;
@@ -300,13 +300,13 @@ public:
   static std::pair<offset_type, offset_type>
   EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
     // Implicit lengths: do NOT write anything to Out.
-    return {8, 4};
+    return {sizeof(key_type), sizeof(data_type)};
   }
 
   static void EmitKey(raw_ostream &Out, key_type_ref K, offset_type Len) {
     using namespace llvm::support;
     endian::Writer LE(Out, llvm::endianness::little);
-    assert(Len == 8 && "Key length must be 8");
+    assert(Len == sizeof(key_type) && "Key length mismatch");
     LE.write<uint64_t>(K);
   }
 
@@ -314,9 +314,8 @@ public:
                        offset_type Len) {
     using namespace llvm::support;
     endian::Writer LE(Out, llvm::endianness::little);
-    assert(Len == 4 && "Data length must be 4");
-    assert(V <= std::numeric_limits<uint32_t>::max() && "Offset overflow");
-    LE.write<uint32_t>(static_cast<uint32_t>(V));
+    assert(Len == sizeof(data_type) && "Data length mismatch");
+    LE.write<uint32_t>(V);
   }
 };
 
