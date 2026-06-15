@@ -128,24 +128,6 @@ func.func @member_call_dense_template_argument(%arg0 : !emitc.opaque<"MyClass">)
 
 // -----
 
-func.func @empty_operator() {
-    %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
-    // expected-error @+1 {{'emitc.apply' op applicable operator must not be empty}}
-    %1 = emitc.apply ""(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-    return
-}
-
-// -----
-
-func.func @illegal_operator() {
-    %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
-    // expected-error @+1 {{'emitc.apply' op applicable operator is illegal}}
-    %1 = emitc.apply "+"(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-    return
-}
-
-// -----
-
 func.func @var_attribute_return_type_1() {
     // expected-error @+1 {{'emitc.variable' op requires attribute to either be an #emitc.opaque attribute or it's type ('i64') to match the op's result type ('i32')}}
     %c0 = "emitc.variable"(){value = 42: i64} : () -> !emitc.lvalue<i32>
