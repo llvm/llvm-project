@@ -32,6 +32,31 @@
 using namespace llvm;
 using namespace llvm::ejit;
 
+namespace llvm {
+namespace ejit {
+// Test-only accessor. EJitOptimizer deliberately keeps its individual pipeline
+// steps private (runPipeline() is the production entry point). This subclass is
+// granted access through a friend declaration in EJitOptimizer.h and re-exports
+// the steps so unit tests can drive them in isolation, without widening the
+// production public API. Tests construct an EJitOptimizerTestAccess in place of
+// an EJitOptimizer; all other call syntax is unchanged.
+struct EJitOptimizerTestAccess : EJitOptimizer {
+  using EJitOptimizer::EJitOptimizer;
+  using EJitOptimizer::preReplacePeriodIndices;
+  using EJitOptimizer::runInstCombine;
+  using EJitOptimizer::runStructFieldPass;
+  using EJitOptimizer::runOptimizationPipeline;
+};
+} // namespace ejit
+} // namespace llvm
+
+// ejit_status_t values mirrored locally. EJitError::code is a plain int that
+// stores ejit_status_t codes (see EJitRuntime.h). The C header is not included
+// here because it conflicts with the local extern "C" test declarations further
+// down (which intentionally use a private signature for the C API).
+static constexpr int kEjitStatusOk = 0;             // EJIT_OK
+static constexpr int kEjitStatusCompileFailed = -3; // EJIT_ERR_COMPILE_FAILED
+
 //===----------------------------------------------------------------------===//
 // EJitRegistrationStore tests (T3-08)
 //===----------------------------------------------------------------------===//
@@ -234,9 +259,9 @@ TEST(EJitCache, PeriodicInvalidation) {
   EJitCache cache(10, 1024 * 1024);
   int dummy;
 
-  std::set<std::string> depsA = {"cell=0"};
-  std::set<std::string> depsB = {"cell=1"};
-  std::set<std::string> depsC = {"trp=0"};
+  std::vector<std::string> depsA = {"cell=0"};
+  std::vector<std::string> depsB = {"cell=1"};
+  std::vector<std::string> depsC = {"trp=0"};
 
   cache.put(10, &dummy, 1, depsA);
   cache.put(20, &dummy, 1, depsB);
@@ -366,6 +391,10 @@ TEST(PeriodArrayRegistry, MultipleArraysSamePeriod) {
 
 TEST(EJitRuntimeState, ActivateAndDeactivate) {
   EJitRuntimeState state;
+  // Per-array activation model: a period must have a registered array before
+  // activate()/isActive() can track its cell state.
+  int cells[8];
+  state.getRegistry().registerArray("cell", "cells", cells, 8);
   EXPECT_FALSE(state.isActive("cell", 0));
 
   state.activate("cell", 0);
@@ -395,6 +424,9 @@ TEST(EJitRuntimeState, ActivateAllAndDeactivateAll) {
 
 TEST(EJitRuntimeState, IndependentPeriods) {
   EJitRuntimeState state;
+  int cells[8], trps[8];
+  state.getRegistry().registerArray("cell", "cells", cells, 8);
+  state.getRegistry().registerArray("trp", "trps", trps, 8);
 
   state.activate("cell", 1);
   state.deactivate("trp", 2);
@@ -410,6 +442,8 @@ TEST(EJitRuntimeState, UninitializedReturnsFalse) {
 
 TEST(EJitRuntimeState, ThreadSafety) {
   EJitRuntimeState state;
+  int cells[8];
+  state.getRegistry().registerArray("cell", "cells", cells, 8);
 
   std::thread activator([&]() {
     for (int i = 0; i < 1000; ++i)
@@ -437,11 +471,11 @@ TEST(EJitRuntimeState, ThreadSafety) {
 
 TEST(EJitLogger, LogAndGetLastError) {
   EJitLogger logger;
-  logger.log(ErrorCode::CompilationFailed, "test error", "myfunc", "mykey");
+  logger.log(kEjitStatusCompileFailed, "test error", "myfunc", "mykey");
 
   const EJitError *err = logger.getLastError();
   ASSERT_NE(err, nullptr);
-  EXPECT_EQ(err->code, ErrorCode::CompilationFailed);
+  EXPECT_EQ(err->code, kEjitStatusCompileFailed);
   EXPECT_EQ(err->message, "test error");
   EXPECT_EQ(err->funcName, "myfunc");
   EXPECT_EQ(err->cacheKey, "mykey");
@@ -457,7 +491,7 @@ TEST(EJitLogger, RingBufferWrap) {
 
   // Write more than kMaxErrors entries
   for (size_t i = 0; i < EJitLogger::kMaxErrors + 10; ++i) {
-    logger.log(ErrorCode::Success, "msg" + std::to_string(i));
+    logger.log(kEjitStatusOk, "msg" + std::to_string(i));
   }
 
   const EJitError *last = logger.getLastError();
@@ -469,7 +503,7 @@ TEST(EJitLogger, GetErrors) {
   EJitLogger logger;
 
   for (size_t i = 0; i < 5; ++i)
-    logger.log(ErrorCode::Success, "msg" + std::to_string(i));
+    logger.log(kEjitStatusOk, "msg" + std::to_string(i));
 
   auto errors = logger.getErrors(3);
   EXPECT_EQ(errors.size(), 3u);
@@ -480,7 +514,7 @@ TEST(EJitLogger, GetErrors) {
 
 TEST(EJitLogger, Clear) {
   EJitLogger logger;
-  logger.log(ErrorCode::Success, "test");
+  logger.log(kEjitStatusOk, "test");
   logger.clear();
   EXPECT_EQ(logger.getLastError(), nullptr);
 }
@@ -496,6 +530,10 @@ TEST(EJit, ConstructionAndBasicOps) {
   config.maxCacheSize = 1024 * 1024;
 
   EJit ejit(config);
+
+  // Per-array activation model: register an array for the period first.
+  int tp[8];
+  ejit.registerPeriodArray("test_period", "tp", tp, 8);
 
   // Basic lifecycle operations should not crash
   ejit.activate("test_period", 0);
@@ -568,10 +606,15 @@ extern "C" {
   extern bool ejit_is_active(const char *, uint8_t);
   extern void ejit_invalidate(const char *, uint8_t);
   extern void ejit_clear_cache(void);
+  extern void ejit_register_period_array(const char *, const char *, void *,
+                                         uint64_t);
 }
 
 TEST(EJitCApi, ActivateWithDynamicCellIdx) {
   ASSERT_EQ(ejit_init(nullptr), EJIT_OK_C);
+  // Per-array activation model: register an array for the period first.
+  int arr[256];
+  ejit_register_period_array("dynamic", "arr", arr, 256);
   uint8_t idx = 42;
   EXPECT_EQ(ejit_activate("dynamic", idx), EJIT_OK_C);
   EXPECT_TRUE(ejit_is_active("dynamic", idx));
@@ -582,6 +625,8 @@ TEST(EJitCApi, ActivateWithDynamicCellIdx) {
 
 TEST(EJitCApi, LoopWithDynamicCellIdx) {
   ASSERT_EQ(ejit_init(nullptr), EJIT_OK_C);
+  int arr[256];
+  ejit_register_period_array("loop", "arr", arr, 256);
   for (uint8_t i = 0; i < 10; i++)
     EXPECT_EQ(ejit_activate("loop", i), EJIT_OK_C);
   for (uint8_t i = 0; i < 10; i++)
@@ -599,6 +644,8 @@ static uint8_t computeCellIdx(int x, int y) {
 
 TEST(EJitCApi, ActivateWithComputedCellIdx) {
   ASSERT_EQ(ejit_init(nullptr), EJIT_OK_C);
+  int arr[256];
+  ejit_register_period_array("compute", "arr", arr, 256);
   uint8_t idx = computeCellIdx(100, 55);
   EXPECT_EQ(idx, 155);
   EXPECT_EQ(ejit_activate("compute", idx), EJIT_OK_C);
@@ -613,6 +660,8 @@ TEST(EJitCApi, ActivateWithComputedCellIdx) {
 
 TEST(EJitCApi, DynamicCellIdxBoundaries) {
   ASSERT_EQ(ejit_init(nullptr), EJIT_OK_C);
+  int arr[256];
+  ejit_register_period_array("bound", "arr", arr, 256);
   EXPECT_EQ(ejit_activate("bound", (uint8_t)0), EJIT_OK_C);
   EXPECT_TRUE(ejit_is_active("bound", (uint8_t)0));
   EXPECT_EQ(ejit_activate("bound", (uint8_t)255), EJIT_OK_C);
@@ -625,6 +674,9 @@ TEST(EJitCApi, DynamicCellIdxBoundaries) {
 
 TEST(EJitCApi, MultiPeriodDynamicIndices) {
   ASSERT_EQ(ejit_init(nullptr), EJIT_OK_C);
+  int cellArr[256], trpArr[256];
+  ejit_register_period_array("cell", "cellArr", cellArr, 256);
+  ejit_register_period_array("trp", "trpArr", trpArr, 256);
   uint8_t indices[] = {3, 7, 15, 31, 63};
   for (size_t i = 0; i < sizeof(indices)/sizeof(indices[0]); i++) {
     EXPECT_EQ(ejit_activate("cell", indices[i]), EJIT_OK_C);
@@ -645,6 +697,8 @@ TEST(EJitCApi, MultiPeriodDynamicIndices) {
 
 TEST(EJitCApi, InvalidateWithDynamicCellIdx) {
   ASSERT_EQ(ejit_init(nullptr), EJIT_OK_C);
+  int arr[256];
+  ejit_register_period_array("inv", "arr", arr, 256);
   for (uint8_t i = 0; i < 5; i++)
     ejit_activate("inv", i);
   for (uint8_t i = 0; i < 5; i++)
@@ -658,6 +712,8 @@ TEST(EJitCApi, InvalidateWithDynamicCellIdx) {
 
 TEST(EJitCApi, ActivationCycleWithRuntimeIndex) {
   ASSERT_EQ(ejit_init(nullptr), EJIT_OK_C);
+  int arr[256];
+  ejit_register_period_array("cycle", "arr", arr, 256);
   uint8_t workload[] = {10, 20, 30, 40, 50};
   for (size_t cycle = 0; cycle < 3; cycle++) {
     for (size_t i = 0; i < sizeof(workload)/sizeof(workload[0]); i++)
@@ -767,7 +823,7 @@ TEST(EJitOptimizer, PreReplacePeriodIndices) {
   auto &Arg = *F->arg_begin();
   EXPECT_TRUE(Arg.hasNUsesOrMore(1));
 
-  EJitOptimizer opt(reg);
+  EJitOptimizerTestAccess opt(reg);
   opt.preReplacePeriodIndices(*M, ctx);
 
   // After replacement: the arg should have zero uses (replaced by constant 42)
@@ -780,7 +836,7 @@ TEST(EJitOptimizer, OptimizationPipelineL1) {
   createPeriodIndFunc(Ctx, *M, "f");
 
   PeriodArrayRegistry reg;
-  EJitOptimizer opt(reg);
+  EJitOptimizerTestAccess opt(reg);
 
   // L1 should not crash
   opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L1);
@@ -792,7 +848,7 @@ TEST(EJitOptimizer, OptimizationPipelineL2) {
   createPeriodIndFunc(Ctx, *M, "f");
 
   PeriodArrayRegistry reg;
-  EJitOptimizer opt(reg);
+  EJitOptimizerTestAccess opt(reg);
 
   // L2 should not crash
   opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L2);
@@ -804,7 +860,7 @@ TEST(EJitOptimizer, OptimizationPipelineL3) {
   createPeriodIndFunc(Ctx, *M, "f");
 
   PeriodArrayRegistry reg;
-  EJitOptimizer opt(reg);
+  EJitOptimizerTestAccess opt(reg);
 
   // L3 should not crash
   opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L3);
@@ -821,7 +877,7 @@ TEST(EJitOptimizer, FullPipelineEndToEnd) {
   ctx.dimensions.push_back({"cell", 100});
   ctx.optLevel = llvm::ejit::OptimizationLevel::L3;
 
-  EJitOptimizer opt(reg);
+  EJitOptimizerTestAccess opt(reg);
 
   // 1. Pre-replace
   opt.preReplacePeriodIndices(*M, ctx);
@@ -900,6 +956,7 @@ TEST(EJitStructFieldPass, MayConstLoadSubstitution) {
 
   // Run the StructFieldPass
   EJitStructFieldPass structPass(reg);
+  structPass.initFromModule(*M);
   FunctionAnalysisManager FAM;
   LoopAnalysisManager LAM;
   CGSCCAnalysisManager CGAM;
@@ -950,6 +1007,7 @@ TEST(EJitStructFieldPass, NoMayConstNoChange) {
 
   PeriodArrayRegistry reg;
   EJitStructFieldPass structPass(reg);
+  structPass.initFromModule(*M);
   FunctionAnalysisManager FAM;
   LoopAnalysisManager LAM;
   CGSCCAnalysisManager CGAM;
@@ -1028,6 +1086,7 @@ TEST(EJitStructFieldPass, MayConstLoadSubstitutionMultipleFields) {
   reg.registerArray("cell", "g_arr", mockArr, 4);
 
   EJitStructFieldPass sp(reg);
+  sp.initFromModule(*M);
   FunctionAnalysisManager FAM;
   LoopAnalysisManager LAM;
   CGSCCAnalysisManager CGAM;
@@ -1042,7 +1101,7 @@ TEST(EJitStructFieldPass, MayConstLoadSubstitutionMultipleFields) {
   sp.run(*F, FAM);
 
   // Fold the add of two constants: 55 + 66 = 121
-  EJitOptimizer opt(reg);
+  EJitOptimizerTestAccess opt(reg);
   opt.runInstCombine(*M);
 
   auto *Ret = dyn_cast_or_null<ReturnInst>(&F->back().back());
@@ -1099,6 +1158,7 @@ TEST(EJitStructFieldPass, MayConstLoadSubstitutionNestedStruct) {
   reg.registerArray("cell", "g_data", mockArr, 4);
 
   EJitStructFieldPass sp(reg);
+  sp.initFromModule(*M);
   FunctionAnalysisManager FAM;
   LoopAnalysisManager LAM;
   CGSCCAnalysisManager CGAM;
@@ -1182,6 +1242,7 @@ TEST(EJitStructFieldPass, MayConstLoadSubstitutionMultipleArrays) {
   reg.registerArray("trp", "g_trps", trpData, 4);
 
   EJitStructFieldPass sp(reg);
+  sp.initFromModule(*M);
   FunctionAnalysisManager FAM;
   LoopAnalysisManager LAM;
   CGSCCAnalysisManager CGAM;
@@ -1194,7 +1255,7 @@ TEST(EJitStructFieldPass, MayConstLoadSubstitutionMultipleArrays) {
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
   sp.run(*F, FAM);
 
-  EJitOptimizer opt(reg);
+  EJitOptimizerTestAccess opt(reg);
   opt.runInstCombine(*M);
 
   auto *Ret = dyn_cast_or_null<ReturnInst>(&F->back().back());
@@ -1270,6 +1331,7 @@ TEST(EJitStructFieldPass, MayConstLoadSubstitutionIntFloat) {
   reg.registerArray("floats", "g_floats", fltData, 4);
 
   EJitStructFieldPass sp(reg);
+  sp.initFromModule(*M);
   FunctionAnalysisManager FAM;
   LoopAnalysisManager LAM;
   CGSCCAnalysisManager CGAM;
@@ -1282,7 +1344,7 @@ TEST(EJitStructFieldPass, MayConstLoadSubstitutionIntFloat) {
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
   sp.run(*F, FAM);
 
-  EJitOptimizer opt(reg);
+  EJitOptimizerTestAccess opt(reg);
   opt.runInstCombine(*M);
 
   auto *Ret = dyn_cast_or_null<ReturnInst>(&F->back().back());
@@ -1351,6 +1413,7 @@ TEST(EJitStructFieldPass, MayConstLoadSubstitutionMultiDimArray) {
   reg.registerArray("cell", "g_2d", mock2D, 4);
 
   EJitStructFieldPass sp(reg);
+  sp.initFromModule(*M);
   FunctionAnalysisManager FAM;
   LoopAnalysisManager LAM;
   CGSCCAnalysisManager CGAM;
@@ -1418,7 +1481,7 @@ TEST(EJitOptimizer, PreReplacePeriodIndicesMultiDim) {
   ctx.dimensions.push_back({"cell", 10});
   ctx.dimensions.push_back({"trp", 25});
 
-  EJitOptimizer opt(reg);
+  EJitOptimizerTestAccess opt(reg);
   opt.preReplacePeriodIndices(*M, ctx);
 
   // Both args should be replaced; sum should fold to 35
@@ -1473,7 +1536,7 @@ TEST(EJitOptimizer, OptimizationL1DeadCodeElimination) {
   int bbCount = (int)std::distance(F->begin(), F->end());
 
   PeriodArrayRegistry reg;
-  EJitOptimizer opt(reg);
+  EJitOptimizerTestAccess opt(reg);
   opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L1);
 
   // Dead block should be removed
@@ -1516,7 +1579,7 @@ TEST(EJitOptimizer, OptimizationL2InlineAndSimplify) {
   ASSERT_NE(F, nullptr);
 
   PeriodArrayRegistry reg;
-  EJitOptimizer opt(reg);
+  EJitOptimizerTestAccess opt(reg);
   opt.runOptimizationPipeline(*M, llvm::ejit::OptimizationLevel::L2);
 
   // After inlining 41+1, should fold to constant 42
@@ -1574,7 +1637,7 @@ TEST(EJitOptimizer, OptimizationL3LoopUnroll) {
   ASSERT_NE(F, nullptr);
 
   PeriodArrayRegistry reg;
-  EJitOptimizer opt(reg);
+  EJitOptimizerTestAccess opt(reg);
 
   // Promote first (mem2reg)
   opt.runInstCombine(*M);
@@ -1656,7 +1719,8 @@ TEST(EJitEndToEnd, BranchFolding) {
 
   // Full pipeline: StructField -> InstCombine -> Inline -> L2
   EJitStructFieldPass sfp(reg);
-  EJitOptimizer opt(reg);
+  sfp.initFromModule(*M);
+  EJitOptimizerTestAccess opt(reg);
 
   FunctionAnalysisManager FAM;
   LoopAnalysisManager LAM;
@@ -1701,6 +1765,7 @@ TEST(EJitEndToEnd, MultiPeriodSpecialization) {
   reg.registerArray("trp", "g_trps", trpA, 4);
 
   EJitStructFieldPass sfp(reg);
+  sfp.initFromModule(*M1);
 
   FunctionAnalysisManager FAM;
   LoopAnalysisManager LAM;
@@ -1715,7 +1780,7 @@ TEST(EJitEndToEnd, MultiPeriodSpecialization) {
 
   sfp.run(*F1, FAM);
 
-  EJitOptimizer opt1(reg);
+  EJitOptimizerTestAccess opt1(reg);
   opt1.runInstCombine(*M1);
 
   // g_cells[2] * g_trps[3] = 20 * 400 = 8000
@@ -1739,6 +1804,7 @@ TEST(EJitEndToEnd, MultiPeriodSpecialization) {
   reg2.registerArray("trp", "g_trps", trpB, 4);
 
   EJitStructFieldPass sfp2(reg2);
+  sfp2.initFromModule(*M2);
   FunctionAnalysisManager FAM2;
   PassBuilder PB2;
   PB2.registerFunctionAnalyses(FAM2);
@@ -1749,7 +1815,7 @@ TEST(EJitEndToEnd, MultiPeriodSpecialization) {
 
   sfp2.run(*F2, FAM2);
 
-  EJitOptimizer opt2(reg2);
+  EJitOptimizerTestAccess opt2(reg2);
   opt2.runInstCombine(*M2);
 
   auto *Ret2 = dyn_cast_or_null<ReturnInst>(&F2->back().back());
@@ -1768,9 +1834,9 @@ TEST(EJitEndToEnd, CacheInvalidation) {
   int dummy = 42;
 
   // Put entries with different period dependencies
-  std::set<std::string> depsA = {"cell=1", "trp=2"};
-  std::set<std::string> depsB = {"cell=3", "slice=0"};
-  std::set<std::string> depsC = {"cell=1", "carrier=5"};
+  std::vector<std::string> depsA = {"cell=1", "trp=2"};
+  std::vector<std::string> depsB = {"cell=3", "slice=0"};
+  std::vector<std::string> depsC = {"cell=1", "carrier=5"};
 
   cache.put(1001, &dummy, 64, depsA);
   cache.put(1002, &dummy, 64, depsB);
@@ -1871,7 +1937,8 @@ TEST(EJitPipelineIR, BranchFoldingOnMayConst) {
 
   // Full pipeline: StructField -> InstCombine -> Inline -> L2
   EJitStructFieldPass sfp(reg);
-  EJitOptimizer opt(reg);
+  sfp.initFromModule(*M);
+  EJitOptimizerTestAccess opt(reg);
 
   FunctionAnalysisManager FAM;
   LoopAnalysisManager LAM;
@@ -1994,7 +2061,7 @@ TEST(EJitPipelineIR, CellProcessBranchFolding) {
   ctx.dimensions.push_back({"cell", 0});
   ctx.optLevel = llvm::ejit::OptimizationLevel::L2;
 
-  EJitOptimizer opt(reg);
+  EJitOptimizerTestAccess opt(reg);
   // 1. Replace period index arg (cell_idx=0) with constant
   opt.preReplacePeriodIndices(*M, ctx);
   // 2. Fold constant chains + Promote
@@ -2002,6 +2069,7 @@ TEST(EJitPipelineIR, CellProcessBranchFolding) {
 
   // 3. StructField: replace may_const loads
   EJitStructFieldPass sfp(reg);
+  sfp.initFromModule(*M);
   FunctionAnalysisManager FAM;
   LoopAnalysisManager LAM;
   CGSCCAnalysisManager CGAM;
@@ -2072,7 +2140,7 @@ TEST(EJitPipelineIR, PeriodIndexReplacementAndFold) {
   ctx.fnName = "test_fn";
   ctx.dimensions.push_back({"cell", 42});
 
-  EJitOptimizer opt(reg);
+  EJitOptimizerTestAccess opt(reg);
   opt.preReplacePeriodIndices(*M, ctx);
   opt.runInstCombine(*M);
 
@@ -2098,7 +2166,7 @@ TEST(EJitCacheLifecycle, HitAfterPut) {
 TEST(EJitCacheLifecycle, MissAfterInvalidate) {
   EJitCache cache(100, 1024 * 1024);
   int dummy = 42;
-  std::set<std::string> deps = {"cell=5"};
+  std::vector<std::string> deps = {"cell=5"};
   cache.put(777, &dummy, 64, deps);
   EXPECT_NE(cache.getOrNull(777), nullptr);
   cache.invalidateByPeriod("cell", 5);
@@ -2128,7 +2196,7 @@ TEST(EJitCacheLifecycle, MissAfterClear) {
 TEST(EJitCacheLifecycle, ReputAfterInvalidate) {
   EJitCache cache(100, 1024 * 1024);
   int dummy = 42;
-  std::set<std::string> deps = {"cell=3"};
+  std::vector<std::string> deps = {"cell=3"};
   cache.put(777, &dummy, 64, deps);
   cache.invalidateByPeriod("cell", 3);
   // Reput with new value
