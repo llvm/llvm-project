@@ -42,6 +42,16 @@
 #define TEST_HAS_EXTENSION(X) 0
 #endif
 
+// _BitInt(N) is a Clang extension in C and C++ and a C23 standard feature.
+// __BITINT_MAXWIDTH__ is the portable probe: defined by every compiler that
+// accepts the syntax. Note __has_extension(bit_int) is not a recognized
+// identifier and reads as 0 on Clang, so __BITINT_MAXWIDTH__ is the way.
+#ifdef __BITINT_MAXWIDTH__
+#  define TEST_HAS_BITINT 1
+#else
+#  define TEST_HAS_BITINT 0
+#endif
+
 #ifdef __has_warning
 #define TEST_HAS_WARNING(X) __has_warning(X)
 #else
@@ -56,7 +66,7 @@
 #ifdef __is_identifier
 // '__is_identifier' returns '0' if '__x' is a reserved identifier provided by
 // the compiler and '1' otherwise.
-#define TEST_HAS_BUILTIN_IDENTIFIER(X) !__is_identifier(X)
+#  define TEST_HAS_BUILTIN_IDENTIFIER(X) !__is_identifier(X)
 #else
 #define TEST_HAS_BUILTIN_IDENTIFIER(X) 0
 #endif
@@ -76,7 +86,7 @@
 
 #if defined(__apple_build_version__)
 // Given AppleClang XX.Y.Z, TEST_APPLE_CLANG_VER is XXYZ (e.g. AppleClang 14.0.3 => 1403)
-#define TEST_APPLE_CLANG_VER (__apple_build_version__ / 10000)
+#  define TEST_APPLE_CLANG_VER (__apple_build_version__ / 10000)
 #elif defined(__clang_major__)
 #define TEST_CLANG_VER (__clang_major__ * 100) + __clang_minor__
 #elif defined(__GNUC__)
