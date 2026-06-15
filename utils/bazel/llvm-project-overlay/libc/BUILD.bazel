@@ -3092,12 +3092,15 @@ cc_library(
     name = "shared_math_headers_for_apfloat",
     srcs = glob([
         "src/__support/math/*.h",
+        "src/__support/math/check/*.h",
     ]),
     hdrs = [
         "shared/libc_common.h",
         "shared/math.h",
+        "shared/math_check_exceptions.h",
     ] + glob([
         "shared/math/*.h",
+        "shared/math/check/*.h",
     ]),
     copts = libc_common_copts(),
     includes = ["."],
