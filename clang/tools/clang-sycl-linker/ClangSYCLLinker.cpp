@@ -20,11 +20,12 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
-#include "llvm/Frontend/Offloading/ArchiveLinker.h"
 #include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/LLVMContext.h"
@@ -32,8 +33,10 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Object/IRSymtab.h"
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
@@ -43,6 +46,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
@@ -161,7 +165,7 @@ static Expected<std::string> findProgram(const ArgList &Args, StringRef Name,
     Path = sys::findProgramByName(Name);
   if (!Path)
     return createStringError(Path.getError(),
-                             "Unable to find '" + Name + "' in path");
+                             "unable to find '" + Name + "' in path");
   return *Path;
 }
 
@@ -189,10 +193,290 @@ static Error executeCommands(StringRef ExecutablePath,
   return Error::success();
 }
 
-static Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
-getInput(const ArgList &Args) {
-  // Build input descriptors for the shared archive resolver
-  SmallVector<offloading::InputDesc> InputDescs;
+namespace {
+/// A minimal symbol interface used to drive archive member extraction. Only the
+/// flags required by the symbol-resolution fixed-point loop are tracked.
+struct Symbol {
+  enum Flags {
+    None = 0,
+    Undefined = 1 << 0,
+    Weak = 1 << 1,
+  };
+
+  Symbol() : SymFlags(None) {}
+  Symbol(Symbol::Flags F) : SymFlags(F) {}
+  Symbol(const irsymtab::Reader::SymbolRef Sym) : SymFlags(0) {
+    if (Sym.isUndefined())
+      SymFlags |= Undefined;
+    if (Sym.isWeak())
+      SymFlags |= Weak;
+  }
+
+  bool isWeak() const { return SymFlags & Weak; }
+  bool isUndefined() const { return SymFlags & Undefined; }
+
+  uint32_t SymFlags;
+};
+
+/// Description of a single input (positional file or -l library).
+struct InputDesc {
+  enum class Kind { File, Library };
+
+  StringRef Value; // File path, or library name for -l (the value after -l).
+  Kind InputKind = Kind::File;
+  bool WholeArchive = false; // --whole-archive state in effect at this input.
+};
+
+/// An input buffer pending archive-member resolution, together with its parsed
+/// IR symbol table. The symbol table is parsed once and reused across all
+/// fixed-point passes so members are not re-parsed on every pass.
+struct PendingInput {
+  std::unique_ptr<MemoryBuffer> Buffer;
+  bool IsLazy = false;
+  bool FromArchive = false;
+  IRSymtabFile Symtab;
+};
+
+/// Resolved input buffers and their target triple.
+struct ResolvedInputs {
+  SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
+  llvm::Triple TargetTriple;
+  StringRef TripleSource; // Source of the triple (--triple= or filename)
+};
+} // namespace
+
+static std::optional<std::string> findFile(StringRef Dir, const Twine &Name) {
+  SmallString<128> Path;
+  sys::path::append(Path, Dir, Name);
+  // Skip directories so a directory whose name matches the requested library
+  // does not stop the search; a later -L path may hold the real archive.
+  if (sys::fs::exists(Path) && !sys::fs::is_directory(Path))
+    return static_cast<std::string>(Path);
+  return std::nullopt;
+}
+
+static std::optional<std::string>
+findFromSearchPaths(StringRef Name, ArrayRef<StringRef> SearchPaths) {
+  for (StringRef Dir : SearchPaths)
+    if (std::optional<std::string> File = findFile(Dir, Name))
+      return File;
+  return std::nullopt;
+}
+
+/// Search for static libraries in the linker's library path given input like
+/// `-lfoo`, `-l:libfoo.a`, or `-l/absolute/path/to/lib.a`.
+static std::optional<std::string>
+searchLibrary(StringRef Input, ArrayRef<StringRef> SearchPaths) {
+  // An absolute path is taken as-is; -L paths are only consulted for relative
+  // names.
+  if (sys::path::is_absolute(Input)) {
+    if (sys::fs::exists(Input) && !sys::fs::is_directory(Input))
+      return Input.str();
+    return std::nullopt;
+  }
+
+  if (Input.starts_with(":"))
+    return findFromSearchPaths(Input.drop_front(), SearchPaths);
+  SmallString<128> LibName("lib");
+  LibName += Input;
+  LibName += ".a";
+  return findFromSearchPaths(LibName, SearchPaths);
+}
+
+/// Scan a member's pre-parsed IR symbol table against \p LinkerSymtab and
+/// return true if the member should be extracted: it is non-lazy, or it defines
+/// a symbol that resolves a currently-undefined reference. Mirrors a linker's
+/// archive member selection.
+static bool scanSymbols(const IRSymtabFile &MemberSymtab,
+                        StringMap<Symbol> &LinkerSymtab, bool IsLazy) {
+  bool Extracted = !IsLazy;
+  StringMap<Symbol> PendingSymbols;
+  for (unsigned ModIdx = 0; ModIdx != MemberSymtab.Mods.size(); ++ModIdx) {
+    for (const auto &IRSym : MemberSymtab.TheReader.module_symbols(ModIdx)) {
+      if (IRSym.isFormatSpecific() || !IRSym.isGlobal())
+        continue;
+
+      bool IsNewSymbol = IsLazy && !LinkerSymtab.count(IRSym.getName());
+      StringMap<Symbol> &Target = IsNewSymbol ? PendingSymbols : LinkerSymtab;
+      Symbol Sym(IRSym);
+      auto [It, Inserted] = Target.try_emplace(IRSym.getName(), Sym);
+      // A freshly inserted entry has no prior symbol to resolve or upgrade, so
+      // it cannot trigger extraction.
+      if (Inserted)
+        continue;
+
+      Symbol &OldSym = It->second;
+      bool ResolvesReference =
+          !Sym.isUndefined() &&
+          (OldSym.isUndefined() || (OldSym.isWeak() && !Sym.isWeak())) &&
+          !(OldSym.isWeak() && OldSym.isUndefined() && IsLazy);
+      Extracted |= ResolvesReference;
+
+      if (ResolvesReference)
+        OldSym = Sym;
+    }
+  }
+  if (Extracted && IsLazy)
+    for (const auto &[Name, Sym] : PendingSymbols)
+      LinkerSymtab[Name] = Sym;
+  return Extracted;
+}
+
+/// Parse \p Buffer's IR symbol table and append it to \p Inputs. Errors if the
+/// buffer is not LLVM bitcode (the only member type the SYCL linker supports).
+static Error addBitcodeInput(SmallVector<PendingInput> &Inputs,
+                             std::unique_ptr<MemoryBuffer> Buffer, bool IsLazy,
+                             bool FromArchive) {
+  if (identify_magic(Buffer->getBuffer()) != file_magic::bitcode)
+    return createStringError("unsupported file type: '" +
+                             Buffer->getBufferIdentifier() + "'");
+  Expected<IRSymtabFile> SymtabOrErr = readIRSymtab(Buffer->getMemBufferRef());
+  if (!SymtabOrErr)
+    return SymtabOrErr.takeError();
+  Inputs.push_back(
+      {std::move(Buffer), IsLazy, FromArchive, std::move(*SymtabOrErr)});
+  return Error::success();
+}
+
+/// Resolve archive members from the given inputs using a symbol-driven
+/// fixed-point algorithm. For each input:
+/// - If it's a Library, search for lib<name>.a or :<name> in SearchPaths
+/// - If it's a File, use the path directly
+/// - Archives are expanded and members are lazily extracted based on symbol
+///   references unless WholeArchive is true
+/// - Non-archive bitcode inputs are always included
+///
+/// Returns the buffers to link, in extraction order, along with the resolved
+/// target triple. All returned buffers have compatible target triples;
+/// incompatible archive members are filtered during resolution.
+static Expected<ResolvedInputs> resolveArchiveMembers(
+    ArrayRef<InputDesc> Order, ArrayRef<StringRef> SearchPaths,
+    ArrayRef<StringRef> ForcedUndefs, StringRef TargetTripleArgValue) {
+  // Collect every candidate member, parsing each one's IR symbol table once.
+  SmallVector<PendingInput> Inputs;
+
+  for (const InputDesc &Desc : Order) {
+    std::optional<std::string> Filename;
+
+    if (Desc.InputKind == InputDesc::Kind::Library) {
+      Filename = searchLibrary(Desc.Value, SearchPaths);
+      if (!Filename)
+        return createStringError("unable to find library -l" + Desc.Value);
+    } else {
+      if (!sys::fs::exists(Desc.Value))
+        return createStringError("input file not found: '" + Desc.Value + "'");
+      if (sys::fs::is_directory(Desc.Value))
+        return createStringError("'" + Desc.Value + "': is a directory");
+      Filename = Desc.Value.str();
+    }
+
+    auto BufferOrErr =
+        errorOrToExpected(MemoryBuffer::getFileOrSTDIN(*Filename));
+    if (!BufferOrErr)
+      return createFileError(*Filename, BufferOrErr.takeError());
+
+    MemoryBufferRef Buffer = (*BufferOrErr)->getMemBufferRef();
+    switch (identify_magic(Buffer.getBuffer())) {
+    case file_magic::bitcode:
+      if (Error Err = addBitcodeInput(Inputs, std::move(*BufferOrErr),
+                                      /*IsLazy=*/false, /*FromArchive=*/false))
+        return Err;
+      break;
+    case file_magic::archive: {
+      Expected<std::unique_ptr<object::Archive>> LibFile =
+          object::Archive::create(Buffer);
+      if (!LibFile)
+        return LibFile.takeError();
+      Error Err = Error::success();
+      for (auto Child : (*LibFile)->children(Err)) {
+        auto ChildBufferOrErr = Child.getMemoryBufferRef();
+        if (!ChildBufferOrErr)
+          return ChildBufferOrErr.takeError();
+        // Include archive name in buffer identifier for better diagnostics.
+        std::string BufferIdentifier =
+            (*Filename + "(" + ChildBufferOrErr->getBufferIdentifier() + ")")
+                .str();
+        std::unique_ptr<MemoryBuffer> ChildBuffer =
+            MemoryBuffer::getMemBufferCopy(ChildBufferOrErr->getBuffer(),
+                                           BufferIdentifier);
+        if (Error E = addBitcodeInput(Inputs, std::move(ChildBuffer),
+                                      !Desc.WholeArchive, /*FromArchive=*/true))
+          return E;
+      }
+      if (Err)
+        return Err;
+      break;
+    }
+    default:
+      return createStringError("unsupported file type: '" + *Filename + "'");
+    }
+  }
+
+  // Resolve the target triple: use --triple= if provided, otherwise infer from
+  // the first non-archive input with a non-empty triple.
+  llvm::Triple TargetTriple(TargetTripleArgValue);
+  StringRef TripleSource = TargetTriple.empty() ? "" : "--triple=";
+
+  if (TargetTriple.empty()) {
+    for (const PendingInput &In : Inputs) {
+      if (!In.FromArchive && In.Symtab.Mods.size() > 0) {
+        StringRef Triple = In.Symtab.TheReader.getTargetTriple();
+        if (!Triple.empty()) {
+          TargetTriple = llvm::Triple(Triple);
+          TripleSource = In.Buffer->getBufferIdentifier();
+          break;
+        }
+      }
+    }
+  }
+
+  // Seed symbol table with forced undefined symbols.
+  StringMap<Symbol> SymTab;
+  for (StringRef Sym : ForcedUndefs)
+    SymTab[Sym] = Symbol(Symbol::Undefined);
+
+  // Fixed-point loop to extract archive members. Each pass may resolve symbols
+  // that unlock further members; iterate until no new member is extracted.
+  SmallVector<std::unique_ptr<MemoryBuffer>> Resolved;
+  bool KeepExtracting = true;
+  while (KeepExtracting) {
+    KeepExtracting = false;
+    for (PendingInput &In : Inputs) {
+      if (!In.Buffer)
+        continue;
+
+      // Filter archive members by target triple before symbol scanning.
+      // Members built for a different target are silently skipped, matching how
+      // a real linker treats device libraries built for other architectures.
+      if (In.FromArchive) {
+        StringRef MemberTriple = In.Symtab.TheReader.getTargetTriple();
+        if (!MemberTriple.empty() &&
+            llvm::Triple(MemberTriple) != TargetTriple) {
+          if (Verbose)
+            errs() << formatv(
+                "archive resolution: skipping {0}: triple {1} != {2}\n",
+                In.Buffer->getBufferIdentifier(), MemberTriple,
+                TargetTriple.str());
+          In.Buffer.reset();
+          In.Symtab = {};
+          continue;
+        }
+      }
+
+      if (!scanSymbols(In.Symtab, SymTab, In.IsLazy))
+        continue;
+      KeepExtracting = true;
+      Resolved.push_back(std::move(In.Buffer));
+    }
+  }
+
+  return ResolvedInputs{std::move(Resolved), std::move(TargetTriple),
+                        TripleSource};
+}
+
+static Expected<ResolvedInputs> getInput(const ArgList &Args) {
+  // Build input descriptors for the archive resolver.
+  SmallVector<InputDesc> InputDescs;
   bool WholeArchive = false;
   for (const opt::Arg *Arg : Args.filtered(
            OPT_INPUT, OPT_library, OPT_whole_archive, OPT_no_whole_archive)) {
@@ -202,36 +486,45 @@ getInput(const ArgList &Args) {
       continue;
     }
 
-    offloading::InputDesc Desc;
+    InputDesc Desc;
     Desc.Value = Arg->getValue();
     Desc.InputKind = Arg->getOption().matches(OPT_library)
-                         ? offloading::InputDesc::Kind::Library
-                         : offloading::InputDesc::Kind::File;
+                         ? InputDesc::Kind::Library
+                         : InputDesc::Kind::File;
     Desc.WholeArchive = WholeArchive;
     InputDescs.push_back(Desc);
   }
 
   if (InputDescs.empty())
-    return createStringError("No input files provided");
+    return createStringError("no input files provided");
 
-  // Gather search paths and forced undefined symbols
+  // Gather search paths and forced undefined symbols.
   SmallVector<StringRef> LibraryPaths;
   for (const opt::Arg *Arg : Args.filtered(OPT_library_path))
     LibraryPaths.push_back(Arg->getValue());
 
+  // getAllArgValues returns a temporary vector; retain it so the StringRefs
+  // remain valid through the resolveArchiveMembers call.
   std::vector<std::string> ForcedUndefStorage = Args.getAllArgValues(OPT_u);
   SmallVector<StringRef> ForcedUndefs(ForcedUndefStorage.begin(),
                                       ForcedUndefStorage.end());
 
-  Expected<offloading::ResolvedInputs> ResolvedOrErr =
-      offloading::resolveArchiveMembers(InputDescs, LibraryPaths, ForcedUndefs);
+  // Get target triple from command line if specified.
+  StringRef TargetTripleStr = Args.getLastArgValue(OPT_triple_EQ);
+
+  Expected<ResolvedInputs> ResolvedOrErr = resolveArchiveMembers(
+      InputDescs, LibraryPaths, ForcedUndefs, TargetTripleStr);
   if (!ResolvedOrErr)
     return ResolvedOrErr.takeError();
 
   if (ResolvedOrErr->Buffers.empty())
-    return createStringError("No input files could be resolved");
+    return createStringError("no input files could be resolved");
 
-  return std::move(ResolvedOrErr->Buffers);
+  if (ResolvedOrErr->TargetTriple.empty())
+    return createStringError(
+        "target triple must be specified or inferable from inputs");
+
+  return std::move(*ResolvedOrErr);
 }
 
 namespace {
@@ -242,17 +535,18 @@ struct LinkResult {
 };
 } // namespace
 
-/// Following tasks are performed:
-/// 1. Resolve the target triple: use --triple= when given, otherwise take the
-/// first input that supplies a triple as canonical. Issue an error if any
-/// triple inputs disagree.
-/// 2. Link all input bitcode images into one image using the linkInModule API.
+/// Link all resolved input bitcode images into one module. All resolved inputs
+/// are guaranteed to have compatible target triples (incompatible archive
+/// members are filtered during archive resolution). Triple conflicts between
+/// regular (non-archive) inputs are hard errors caught before running
+/// linkInModule.
 static Expected<LinkResult>
-linkInputs(ArrayRef<std::unique_ptr<MemoryBuffer>> InputBuffers,
+linkInputs(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
+           const llvm::Triple &TargetTriple, StringRef TripleSource,
            const ArgList &Args, LLVMContext &C) {
   llvm::TimeTraceScope TimeScope("Link code");
 
-  assert(InputBuffers.size() && "No inputs to link");
+  assert(Inputs.size() && "No inputs to link");
 
   // Create a new file to write the linked file to.
   auto BitcodeOutput =
@@ -261,51 +555,37 @@ linkInputs(ArrayRef<std::unique_ptr<MemoryBuffer>> InputBuffers,
     return BitcodeOutput.takeError();
 
   if (Verbose) {
-    std::string Inputs = llvm::join(
-        llvm::map_range(InputBuffers,
-                        [](const auto &B) { return B->getBufferIdentifier(); }),
-        ", ");
-    errs() << formatv("link: inputs: {0} output: {1}\n", Inputs,
+    std::string InputList =
+        llvm::join(llvm::map_range(Inputs,
+                                   [](const auto &Buffer) {
+                                     return Buffer->getBufferIdentifier();
+                                   }),
+                   ", ");
+    errs() << formatv("link: inputs: {0} output: {1}\n", InputList,
                       *BitcodeOutput);
   }
 
-  // Link input files. Resolve the target triple.
-  llvm::Triple TargetTriple(Args.getLastArgValue(OPT_triple_EQ));
-  StringRef TripleSource = TargetTriple.empty() ? "" : "--triple=";
   auto LinkerOutput = std::make_unique<Module>("linker-output", C);
   Linker L(*LinkerOutput);
 
-  for (const auto &Buffer : InputBuffers) {
-    // Check file type before attempting to parse as bitcode
-    file_magic Magic = identify_magic(Buffer->getBuffer());
-    if (Magic != file_magic::bitcode)
-      return createStringError("Unsupported file type: '" +
-                               Buffer->getBufferIdentifier() + "'");
-
+  for (const auto &Buffer : Inputs) {
     auto ModOrErr = parseBitcodeFile(Buffer->getMemBufferRef(), C);
     if (!ModOrErr)
       return ModOrErr.takeError();
 
     const llvm::Triple &T = (*ModOrErr)->getTargetTriple();
     if (!T.empty() && T != TargetTriple) {
-      if (TargetTriple.empty()) {
-        TargetTriple = T;
-        TripleSource = Buffer->getBufferIdentifier();
-      } else {
-        return createStringError(
-            "conflicting target triples: '" + TargetTriple.str() + "' (from " +
-            TripleSource + ") vs '" + T.str() + "' (from " +
-            Buffer->getBufferIdentifier() + ")");
-      }
+      // All incompatible archive members should have been filtered during
+      // resolution, so this is a conflict between regular inputs.
+      return createStringError("conflicting target triples: '" +
+                               TargetTriple.str() + "' (from " + TripleSource +
+                               ") vs '" + T.str() + "' (from " +
+                               Buffer->getBufferIdentifier() + ")");
     }
 
     if (L.linkInModule(std::move(*ModOrErr)))
-      return createStringError("Could not link IR");
+      return createStringError("could not link IR");
   }
-
-  if (TargetTriple.empty())
-    return createStringError(
-        "Target triple must be specified or inferable from inputs");
 
   // Dump linked output for testing.
   if (Args.hasArg(OPT_print_linked_module))
@@ -368,7 +648,7 @@ static Error runCodeGen(StringRef File, const llvm::Triple &TargetTriple,
       T->createTargetMachine(M->getTargetTriple(), /*CPU=*/"",
                              /*Features=*/"", Options, RM, CM));
   if (!TM)
-    return createStringError("Could not allocate target machine!");
+    return createStringError("could not allocate target machine");
 
   // Set data layout if needed.
   if (M->getDataLayout().isDefault())
@@ -385,7 +665,7 @@ static Error runCodeGen(StringRef File, const llvm::Triple &TargetTriple,
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
   if (TM->addPassesToEmitFile(CodeGenPasses, *OS, nullptr,
                               CodeGenFileType::ObjectFile))
-    return createStringError("Failed to execute LLVM backend");
+    return createStringError("failed to execute LLVM backend");
   CodeGenPasses.run(*M);
 
   return Error::success();
@@ -649,14 +929,16 @@ static bool canSkipModuleSplit(IRSplitMode Mode, const Module &M,
 /// 4. Optionally run AOT compilation when targeting an Intel HW arch.
 /// 5. Pack the resulting images into a single OffloadBinary written to the
 ///    output file.
-static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
-                         const ArgList &Args) {
+static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
+                         const llvm::Triple &TargetTriple,
+                         StringRef TripleSource, const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("SYCL linking");
 
   LLVMContext C;
 
   // Link all input bitcode files and library files.
-  Expected<LinkResult> LinkedOrErr = linkInputs(Buffers, Args, C);
+  Expected<LinkResult> LinkedOrErr =
+      linkInputs(Inputs, TargetTriple, TripleSource, Args, C);
   if (!LinkedOrErr)
     return LinkedOrErr.takeError();
   LinkResult &Result = *LinkedOrErr;
@@ -754,7 +1036,7 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
 
   llvm::SmallString<0> Buffer = OffloadBinary::write(Images);
   if (Buffer.size() % OffloadBinary::getAlignment() != 0)
-    return createStringError("Offload binary has invalid size alignment");
+    return createStringError("offload binary has invalid size alignment");
 
   if (DryRun)
     return Error::success();
@@ -803,13 +1085,13 @@ int main(int argc, char **argv) {
   DryRun = Args.hasArg(OPT_dry_run);
 
   if (!Args.hasArg(OPT_o))
-    reportError(createStringError("Output file must be specified"));
+    reportError(createStringError("output file must be specified"));
   OutputFile = Args.getLastArgValue(OPT_o);
 
   // Get the input buffers to pass to the linking stage.
-  auto BuffersOrErr = getInput(Args);
-  if (!BuffersOrErr)
-    reportError(BuffersOrErr.takeError());
+  auto ResolvedInputsOrErr = getInput(Args);
+  if (!ResolvedInputsOrErr)
+    reportError(ResolvedInputsOrErr.takeError());
 
   if (auto *A = Args.getLastArg(OPT_spirv_dump_device_code_EQ)) {
     StringRef V = A->getValue();
@@ -828,7 +1110,9 @@ int main(int argc, char **argv) {
   }
 
   // Run SYCL linking process on the generated inputs.
-  if (Error Err = runSYCLLink(*BuffersOrErr, Args))
+  if (Error Err = runSYCLLink(ResolvedInputsOrErr->Buffers,
+                              ResolvedInputsOrErr->TargetTriple,
+                              ResolvedInputsOrErr->TripleSource, Args))
     reportError(std::move(Err));
 
   // Remove the temporary files created.

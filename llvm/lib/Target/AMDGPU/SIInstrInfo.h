@@ -1172,6 +1172,23 @@ public:
            Opcode == AMDGPU::DS_GWS_BARRIER;
   }
 
+  static bool isLoadMonitor(unsigned Opc) {
+    switch (Opc) {
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B32:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B32_SADDR:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B64:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B64_SADDR:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B128:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B128_SADDR:
+    case AMDGPU::FLAT_LOAD_MONITOR_B32:
+    case AMDGPU::FLAT_LOAD_MONITOR_B64:
+    case AMDGPU::FLAT_LOAD_MONITOR_B128:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   static bool isGFX12CacheInvOrWBInst(unsigned Opc) {
     return Opc == AMDGPU::GLOBAL_INV || Opc == AMDGPU::GLOBAL_WB ||
            Opc == AMDGPU::GLOBAL_WBINV;
@@ -1490,15 +1507,15 @@ public:
   bool isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
                          const MachineOperand &MO) const;
 
-  /// Check if \p MO would be a legal operand for gfx12+ packed math FP32
-  /// instructions. Packed math FP32 instructions typically accept SGPRs or
-  /// VGPRs as source operands. On gfx12+, if a source operand uses SGPRs, the
-  /// HW can only read the first SGPR and use it for both the low and high
-  /// operations.
+  /// Check if \p MO would be a legal operand for gfx12+ packed math FP32 or
+  /// 64 instructions. Packed math FP32/FP64/U64 instructions typically accept
+  /// SGPRs or VGPRs as source operands. On gfx12+, if a source operand uses
+  /// SGPRs, the HW can only read the first SGPR and use it for both the low and
+  /// high operations.
   /// \p SrcN can be 0, 1, or 2, representing src0, src1, and src2,
   /// respectively. If \p MO is nullptr, the operand corresponding to SrcN will
   /// be used.
-  bool isLegalGFX12PlusPackedMathFP32Operand(
+  bool isLegalGFX12PlusPackedMathFP32or64BitOperand(
       const MachineRegisterInfo &MRI, const MachineInstr &MI, unsigned SrcN,
       const MachineOperand *MO = nullptr) const;
 

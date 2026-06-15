@@ -9,7 +9,7 @@ define i32 @test(i1 %tobool46.not) {
 ; CHECK:       [[U]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i32> [ <i32 0, i32 0, i32 undef, i32 undef>, %[[ENTRY]] ], [ zeroinitializer, %[[IF_END44:.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ zeroinitializer, %[[ENTRY]] ], [ zeroinitializer, %[[IF_END44]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i32> [[TMP3]], <8 x i32> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
@@ -24,13 +24,15 @@ define i32 @test(i1 %tobool46.not) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i32> [ zeroinitializer, %[[IF_END3]] ], [ zeroinitializer, %[[IF_END44]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i32> [ zeroinitializer, %[[IF_END3]] ], [ zeroinitializer, %[[IF_END44]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i32> [ zeroinitializer, %[[IF_END3]] ], [ zeroinitializer, %[[IF_END44]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> [[TMP7]], <8 x i32> <i32 1, i32 0, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <8 x i32> [[TMP9]], <8 x i32> [[TMP10]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    br i1 false, label %[[IF_END51]], label %[[V:.*]]
 ; CHECK:       [[V]]:
 ; CHECK-NEXT:    br label %[[IF_END51]]
 ; CHECK:       [[IF_END51]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <4 x i32> [ [[TMP6]], %[[AA]] ], [ [[TMP7]], %[[V]] ], [ [[TMP0]], %[[U]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = phi <8 x i32> [ [[TMP9]], %[[AA]] ], [ zeroinitializer, %[[V]] ], [ [[TMP5]], %[[U]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <4 x i32> [ [[TMP6]], %[[AA]] ], [ [[TMP7]], %[[V]] ], [ [[TMP0]], %[[U]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <8 x i32> [ [[TMP13]], %[[AA]] ], [ zeroinitializer, %[[V]] ], [ [[TMP5]], %[[U]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP11]])
 ; CHECK-NEXT:    ret i32 [[TMP12]]
 ;

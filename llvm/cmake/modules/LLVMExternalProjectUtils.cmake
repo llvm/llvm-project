@@ -100,9 +100,6 @@ function(llvm_ExternalProject_Add name source_dir)
 
   if(NOT ARG_TOOLCHAIN_TOOLS)
     set(ARG_TOOLCHAIN_TOOLS clang)
-    if (ARG_ENABLE_FORTRAN)
-      list(APPEND ARG_TOOLCHAIN_TOOLS flang)
-    endif ()
     # AIX 64-bit XCOFF and big AR format is not yet supported in some of these tools.
     if(NOT _cmake_system_name STREQUAL "AIX")
       list(APPEND ARG_TOOLCHAIN_TOOLS lld llvm-ar llvm-ranlib llvm-nm llvm-objdump)
@@ -153,7 +150,7 @@ function(llvm_ExternalProject_Add name source_dir)
     set(CLANG_IN_TOOLCHAIN On)
   endif()
 
-  if(flang IN_LIST TOOLCHAIN_TOOLS)
+  if(ARG_ENABLE_FORTRAN AND TARGET flang)
     set(FLANG_IN_TOOLCHAIN On)
   endif()
 

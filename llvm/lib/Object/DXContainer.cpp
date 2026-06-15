@@ -228,8 +228,6 @@ static Expected<size_t> parseNames(StringRef Section,
                                                             HeaderOnDisk))
     return Err;
   Names.Parameters = HeaderOnDisk;
-  if (sys::IsBigEndianHost)
-    Names.Parameters.swapBytes();
   Current += sizeof(HeaderOnDisk);
 
   if (Names.Parameters.Flags)
@@ -363,6 +361,7 @@ parseContentsEntries(StringRef Entries,
     return Contents.Parameters.EntriesSizeInBytes;
   }
   }
+  llvm_unreachable("unhandled compression type");
 }
 
 static Expected<size_t>

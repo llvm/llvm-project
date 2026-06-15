@@ -644,34 +644,6 @@ entry:
   ret half %arg
 }
 
-define float @assume_bundles(i1 %c, float %ret) {
-; CHECK-LABEL: define float @assume_bundles
-; CHECK-SAME: (i1 noundef [[C:%.*]], float returned [[RET:%.*]]) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
-; CHECK:       A:
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR22]] [ "nofpclass"(float [[RET]], i32 3) ]
-; CHECK-NEXT:    call void @extern.use(float nofpclass(nan) [[RET]])
-; CHECK-NEXT:    ret float [[RET]]
-; CHECK:       B:
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) [ "nofpclass"(float [[RET]], i32 12) ]
-; CHECK-NEXT:    call void @extern.use(float nofpclass(ninf nnorm) [[RET]])
-; CHECK-NEXT:    ret float [[RET]]
-;
-entry:
-  br i1 %c, label %A, label %B
-
-A:
-  call void @llvm.assume(i1 true) [ "nofpclass"(float %ret, i32 3) ]
-  call void @extern.use(float %ret)
-  ret float %ret
-
-B:
-  call void @llvm.assume(i1 true) [ "nofpclass"(float %ret, i32 12) ]
-  call void @extern.use(float %ret)
-  ret float %ret
-}
-
 define float @returned_load(ptr %ptr) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: define float @returned_load

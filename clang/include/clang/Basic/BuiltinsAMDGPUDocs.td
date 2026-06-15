@@ -574,6 +574,35 @@ WMMA with per-operand scale factors applied during the computation.
 }
 
 //===----------------------------------------------------------------------===//
+// Global Available/Visible Memory Access Builtins
+//===----------------------------------------------------------------------===//
+
+def DocCatAVLoadStore : DocumentationCategory<"Available/Visible Memory Access Builtins"> {
+  let Content = [{
+These builtins perform 128-bit global or flat memory loads and stores with
+available/visible (AV) semantics.
+}];
+}
+
+def DocAVLoadB128 : Documentation {
+  let Category = DocCatAVLoadStore;
+  let Content = [{
+Loads 128 bits (4 x i32) from the pointer ``ptr``. The pointer must be in
+the global or generic address space. The ``scope`` argument specifies the
+synchronization scope using a ``__MEMORY_SCOPE_*`` constant.
+}];
+}
+
+def DocAVStoreB128 : Documentation {
+  let Category = DocCatAVLoadStore;
+  let Content = [{
+Stores 128 bits (4 x i32) of ``data`` to the pointer ``ptr``. The pointer
+must be in the global or generic address space. The ``scope`` argument
+specifies the synchronization scope using a ``__MEMORY_SCOPE_*`` constant.
+}];
+}
+
+//===----------------------------------------------------------------------===//
 // Wave Data Exchange Builtins
 //===----------------------------------------------------------------------===//
 
@@ -611,6 +640,21 @@ scale variant.
 - ``matrix_a_scale_fmt`` / ``matrix_b_scale_fmt``: scale format selectors.
   Must be compile-time constants.
 - ``matrix_a_scale_exp`` / ``matrix_b_scale_exp``: 64-bit scale exponents.
+- ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
+  matrix A or B data can be reused from a previous WMMA instruction.
+}];
+}
+
+def DocWMMA_f64_16x16x4_f64_GFX1251 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Wave matrix multiply-accumulate with f64 inputs and f64 output, using a
+4-deep K dimension. Multiplies a 16x4 matrix ``A`` by a 4x16 matrix ``B``
+and adds the 16x16 f64 accumulator ``C``.
+
+- ``a_neg`` / ``b_neg``: if true, negate the corresponding input matrix.
+- ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
+  3 = neg(abs)).
 - ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
   matrix A or B data can be reused from a previous WMMA instruction.
 }];

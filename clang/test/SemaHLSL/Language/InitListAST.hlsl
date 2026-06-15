@@ -1076,12 +1076,14 @@ float case17() {
 // CHECK-NEXT: OpaqueValueExpr [[OPV0:0x[0-9a-f]+]] {{.*}} 'TwoInts' xvalue
 // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'TwoInts' xvalue
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'TwoInts' <HLSLElementwiseCast>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'TwoFloats' <LValueToRValue> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr {{.*}} 'TwoFloats' lvalue Var {{.*}} 'TF' 'TwoFloats'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'int' xvalue .W
 // CHECK-NEXT: OpaqueValueExpr [[OPV0]] {{.*}} 'TwoInts' xvalue
 // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'TwoInts' xvalue
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'TwoInts' <HLSLElementwiseCast>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'TwoFloats' <LValueToRValue> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr {{.*}} 'TwoFloats' lvalue Var {{.*}} 'TF' 'TwoFloats'
 int case18() {
   TwoFloats TF = {1.0,2.0};
@@ -1107,6 +1109,7 @@ int case18() {
 // CHECK-NEXT: OpaqueValueExpr [[OPV1:0x[0-9a-f]+]] {{.*}} 'int[4]' xvalue
 // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'int[4]' xvalue
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'int[4]' <HLSLElementwiseCast>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'FourFloats' <LValueToRValue> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr {{.*}} 'FourFloats' lvalue Var {{.*}} 'FF' 'FourFloats'
 // CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
@@ -1115,6 +1118,7 @@ int case18() {
 // CHECK-NEXT: OpaqueValueExpr [[OPV1]] {{.*}} 'int[4]' xvalue
 // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'int[4]' xvalue
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'int[4]' <HLSLElementwiseCast>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'FourFloats' <LValueToRValue> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr {{.*}} 'FourFloats' lvalue Var {{.*}} 'FF' 'FourFloats'
 // CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 1
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
@@ -1123,6 +1127,7 @@ int case18() {
 // CHECK-NEXT: OpaqueValueExpr [[OPV1]] {{.*}} 'int[4]' xvalue
 // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'int[4]' xvalue
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'int[4]' <HLSLElementwiseCast>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'FourFloats' <LValueToRValue> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr {{.*}} 'FourFloats' lvalue Var {{.*}} 'FF' 'FourFloats'
 // CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 2
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
@@ -1131,6 +1136,7 @@ int case18() {
 // CHECK-NEXT: OpaqueValueExpr [[OPV1]] {{.*}} 'int[4]' xvalue
 // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'int[4]' xvalue
 // CHECK-NEXT: CStyleCastExpr {{.*}} 'int[4]' <HLSLElementwiseCast>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'FourFloats' <LValueToRValue> part_of_explicit_cast
 // CHECK-NEXT: DeclRefExpr {{.*}} 'FourFloats' lvalue Var {{.*}} 'FF' 'FourFloats'
 // CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
 int case19() {

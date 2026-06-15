@@ -2872,9 +2872,13 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
   CHECK(!(isCudaUnified && isCudaManaged) && "expect only one enabled.");
 
   std::optional<common::CUDADataAttr> actualDataAttr, dummyDataAttr;
+  // True when an unattributed actual may use the implicit CUDA memory mode
+  // matching enabled by -gpu=mem:unified or -gpu=mem:managed.
+  bool actualCanUseImplicitCudaMemoryMode{false};
   if (actual) {
     if (auto *expr{actual->UnwrapExpr()}) {
       if (evaluate::IsVariable(*expr)) {
+        actualCanUseImplicitCudaMemoryMode = true;
         // Match check-call.cpp: walk the whole designator so e.g. b%a picks up
         // ATTRIBUTES(DEVICE) from the base b when the component a has no CUDA
         // attribute (OpenACC use_device(b) + doit(b%a)), not only from the
@@ -2888,6 +2892,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
           }
         }
       } else if (const auto *actualLastSymbol{evaluate::GetLastSymbol(*expr)}) {
+        actualCanUseImplicitCudaMemoryMode = true;
         const Symbol &resolved{
             semantics::ResolveAssociations(*actualLastSymbol)};
         if (const auto *actualObject{
@@ -2925,7 +2930,8 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
 
   if (!dummyDataAttr) {
     if (!actualDataAttr) {
-      if (isCudaUnified || isCudaManaged) {
+      if ((isCudaUnified || isCudaManaged) &&
+          actualCanUseImplicitCudaMemoryMode) {
         return 3;
       }
       return 0;
@@ -2937,7 +2943,8 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     }
   } else if (*dummyDataAttr == common::CUDADataAttr::Device) {
     if (!actualDataAttr) {
-      if (isCudaUnified || isCudaManaged) {
+      if ((isCudaUnified || isCudaManaged) &&
+          actualCanUseImplicitCudaMemoryMode) {
         return 2;
       }
       return cudaInfMatchingValue;
@@ -2949,6 +2956,9 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     }
   } else if (*dummyDataAttr == common::CUDADataAttr::Managed) {
     if (!actualDataAttr) {
+      if (!actualCanUseImplicitCudaMemoryMode) {
+        return cudaInfMatchingValue;
+      }
       return isCudaUnified ? 1 : isCudaManaged ? 0 : cudaInfMatchingValue;
     }
     if (actualIsDeviceMemory()) {
@@ -2960,6 +2970,9 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     }
   } else if (*dummyDataAttr == common::CUDADataAttr::Unified) {
     if (!actualDataAttr) {
+      if (!actualCanUseImplicitCudaMemoryMode) {
+        return cudaInfMatchingValue;
+      }
       return isCudaUnified ? 0 : isCudaManaged ? 1 : cudaInfMatchingValue;
     }
     if (actualIsDeviceMemory()) {
@@ -3778,6 +3791,9 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
   bool treatExternalAsImplicit{
       IsExternalCalledImplicitly(callSite, proc.GetSymbol())};
   const Symbol *procSymbol{proc.GetSymbol()};
+  // Statement functions have implicit interfaces and require the same checks
+  bool isStatementFunction{
+      procSymbol && procSymbol->flags().test(Symbol::Flag::StmtFunction)};
   std::optional<characteristics::Procedure> chars;
   if (procSymbol && procSymbol->has<semantics::ProcEntityDetails>() &&
       procSymbol->owner().IsGlobal()) {
@@ -3845,6 +3861,17 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
         Say(callSite,
             "Procedure %s referenced in pure subprogram '%s' must be pure too"_err_en_US,
             name, DEREF(pure->symbol()).name());
+      }
+    }
+    if (isStatementFunction) {
+      // Statement functions have implicit interfaces; check for
+      // keyword arguments and other implicit interface constraints
+      parser::ContextualMessages &messages{
+          context_.foldingContext().messages()};
+      for (auto &arg : arguments) {
+        if (arg) {
+          semantics::CheckImplicitInterfaceArg(*arg, messages, context_);
+        }
       }
     }
     ok &= semantics::CheckArguments(*chars, arguments, context_,
