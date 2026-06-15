@@ -409,7 +409,7 @@ public:
       m_unspecified_registers_are_undefined = unspec_is_undef;
     }
 
-    bool GetUnspecifiedRegistersAreUndefined() {
+    bool GetUnspecifiedRegistersAreUndefined() const {
       return m_unspecified_registers_are_undefined;
     }
 
