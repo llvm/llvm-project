@@ -799,6 +799,10 @@ Changes in existing checks
   - Fixed a false positive where ``bool`` conditions in C conditional
     operators were diagnosed as implicit conversions to ``int``.
 
+- Improved :doc:`readability-inconsistent-ifelse-braces
+  <clang-tidy/checks/readability/inconsistent-ifelse-braces>` check to
+  correctly handle labeled statements of ``if``/``else`` bodies.
+
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check:
 
@@ -807,6 +811,9 @@ Changes in existing checks
 
   - Fixed a false positive in array subscript expressions where the types are
     not yet resolved.
+
+  - Fixed a false positive when adding ``const`` to a pointer parameter would
+    conflict with an existing overload.
 
   - Fixed a crash when analyzing a redeclaration whose initializer is attached
     to another declaration.
