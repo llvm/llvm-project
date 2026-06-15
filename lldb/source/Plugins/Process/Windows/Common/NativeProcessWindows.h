@@ -107,6 +107,13 @@ public:
 
   bool HasPendingLibraryEvents() override;
 
+  /// Forward bytes from the gdb-remote `I` packet into the inferior's
+  /// ConPTY-backed stdin via `m_stdio_communication.Write` →
+  /// `ConnectionConPTY::Write` → `WriteFile` on the parent-side STDIN
+  /// HANDLE. Returns the number of bytes written (0 if the PTY is
+  /// disconnected or write fails).
+  size_t WriteStdin(const void *buf, size_t len, Status &error) override;
+
   // ProcessDebugger Overrides
   void OnExitProcess(uint32_t exit_code) override;
   void OnDebuggerConnected(lldb::addr_t image_base) override;
@@ -117,6 +124,8 @@ public:
   void OnLoadDll(const ModuleSpec &module_spec,
                  lldb::addr_t module_addr) override;
   void OnUnloadDll(lldb::addr_t module_addr) override;
+  void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
+                     uint16_t length_lower_word) override;
 
 protected:
   NativeThreadWindows *GetThreadByID(lldb::tid_t thread_id);
@@ -159,6 +168,9 @@ private:
   /// Whether we've seen the loader breakpoint that fires once per process at
   /// launch / attach.
   bool m_initial_stop_seen = false;
+
+  /// Set when Halt() / Interrupt() schedules a DebugBreakProcess injection.
+  bool m_pending_halt = false;
 
   /// PseudoConsole for the lldb-server stdio-forwarding path.
   std::shared_ptr<PseudoConsole> m_pty;

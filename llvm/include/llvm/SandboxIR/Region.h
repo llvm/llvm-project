@@ -63,7 +63,7 @@ enum RegionClassID {
   RegionWithScoreID,
 };
 
-class Region {
+class LLVM_ABI Region {
 protected:
   /// All the instructions in the Region. Only new instructions generated during
   /// vectorization are part of the Region.
@@ -103,7 +103,7 @@ protected:
   /// region.
   virtual void add(Instruction *I) { addRaw(I); }
   /// Removes I from the set.
-  LLVM_ABI virtual void remove(Instruction *I);
+  virtual void remove(Instruction *I);
   friend class Context; // The callbacks need to call add() and remove().
   friend class RegionInternalsAttorney; // For unit tests.
 
@@ -115,7 +115,7 @@ protected:
   /// Remove instruction \p I from Aux and drop metadata.
   void removeFromAux(Instruction *I);
 
-  LLVM_ABI Region(Context &Ctx, RegionClassID ID);
+  Region(Context &Ctx, RegionClassID ID);
 
   template <typename RegionT, typename RegionFactoryT>
   static SmallVector<std::unique_ptr<RegionT>>
@@ -159,8 +159,8 @@ protected:
   }
 
 public:
-  LLVM_ABI Region(Context &Ctx) : Region(Ctx, RegionClassID::RegionID) {}
-  LLVM_ABI virtual ~Region();
+  Region(Context &Ctx) : Region(Ctx, RegionClassID::RegionID) {}
+  virtual ~Region();
   // Disable copies to avoid unregistering the callback more than once.
   Region(const Region &) = delete;
   // Moves are allowed.
@@ -172,19 +172,18 @@ public:
   /// Returns true if the Region has no instructions.
   bool empty() const { return Insts.empty(); }
   /// Set the auxiliary vector.
-  LLVM_ABI void setAux(ArrayRef<Instruction *> Aux);
+  void setAux(ArrayRef<Instruction *> Aux);
   /// \Returns the auxiliary vector.
   const SmallVector<Instruction *> &getAux() const { return Aux; }
   /// Clears all auxiliary data.
-  LLVM_ABI void clearAux();
+  void clearAux();
 
   using iterator = decltype(Insts.begin());
   iterator begin() { return Insts.begin(); }
   iterator end() { return Insts.end(); }
   iterator_range<iterator> insts() { return make_range(begin(), end()); }
 
-  LLVM_ABI static SmallVector<std::unique_ptr<Region>>
-  createRegionsFromMD(Function &F);
+  static SmallVector<std::unique_ptr<Region>> createRegionsFromMD(Function &F);
 
   RegionClassID getSubclassID() const { return ID; }
 

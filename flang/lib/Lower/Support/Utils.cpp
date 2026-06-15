@@ -631,10 +631,6 @@ unsigned getHashValue(const Fortran::evaluate::Component *x) {
 
 bool isEqual(const Fortran::lower::SomeExpr *x,
              const Fortran::lower::SomeExpr *y) {
-  const auto *empty =
-      llvm::DenseMapInfo<const Fortran::lower::SomeExpr *>::getEmptyKey();
-  if (x == empty || y == empty)
-    return x == y;
   return x == y || IsEqualEvaluateExpr::isEqual(*x, *y);
 }
 
@@ -660,10 +656,6 @@ bool isEqual(const Fortran::lower::ExplicitIterSpace::ArrayBases &x,
 
 bool isEqual(const Fortran::evaluate::Component *x,
              const Fortran::evaluate::Component *y) {
-  const auto *empty =
-      llvm::DenseMapInfo<const Fortran::evaluate::Component *>::getEmptyKey();
-  if (x == empty || y == empty)
-    return x == y;
   return x == y || IsEqualEvaluateExpr::isEqual(*x, *y);
 }
 
