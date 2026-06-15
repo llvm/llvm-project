@@ -235,11 +235,13 @@ GDBRemoteCommunication::ReadPacket(StringExtractorGDBRemote &response,
 GDBRemoteCommunication::PacketType
 GDBRemoteCommunication::GetNextNonNotifyPacket(
     const uint8_t *src, size_t src_len, StringExtractorGDBRemote &packet) {
-  // Async notification packets (e.g. OpenOCD's "oocd_keepalive", sent during
-  // long memory operations) are not responses to our request. GDB silently
-  // drops unknown notifications while waiting for a packet; do the same and
-  // keep looking for the actual response. After the freshly-read bytes are
-  // consumed, drain any further buffered packets from the cache.
+  // Return the type of the next packet that is not an async notification.
+  // Notification packets (e.g. OpenOCD's "oocd_keepalive", sent during long
+  // memory operations) are not responses to our request; like GDB, silently
+  // drop them and keep looking for the actual response. CheckForPacket()
+  // appends src/src_len to its buffer and returns one packet per call, so the
+  // loop passes nullptr/0 to read each subsequent buffered packet until a
+  // non-notification packet (or PacketType::Invalid) is returned.
   Log *log = GetLog(GDBRLog::Packets);
   PacketType packet_type = CheckForPacket(src, src_len, packet);
   while (packet_type == PacketType::Notify) {
