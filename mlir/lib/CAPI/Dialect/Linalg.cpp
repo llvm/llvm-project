@@ -80,7 +80,6 @@ mlirLinalgInferContractionDimensionsFromMaps(const MlirAffineMap *indexingMaps,
     return {};
 
   SmallVector<AffineMap, 3> maps;
-  maps.reserve(numMaps);
   for (size_t i = 0; i < numMaps; ++i) {
     maps.push_back(unwrap(indexingMaps[i]));
   }
