@@ -5860,6 +5860,11 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     Results.push_back(DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Blocks));
     break;
   }
+  case ISD::FP_EXTEND:
+    // FP_EXTEND may reach here due to the Custom action for v2f32 results, but
+    // no target-specific lowering is required. Leave it unchanged and rely on
+    // the default type legalization.
+    break;
   }
 }
 
@@ -7636,9 +7641,9 @@ static SDValue performMOVFR2GR_SCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue performVMSKLTZCombine(SDNode *N, SelectionDAG &DAG,
-                                     TargetLowering::DAGCombinerInfo &DCI,
-                                     const LoongArchSubtarget &Subtarget) {
+static SDValue
+performDemandedBitsCombine(SDNode *N, SelectionDAG &DAG,
+                           TargetLowering::DAGCombinerInfo &DCI) {
   MVT VT = N->getSimpleValueType(0);
   unsigned NumBits = VT.getScalarSizeInBits();
 
@@ -8081,9 +8086,13 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performMOVGR2FR_WCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::MOVFR2GR_S_LA64:
     return performMOVFR2GR_SCombine(N, DAG, DCI, Subtarget);
+  case LoongArchISD::CRC_W_B_W:
+  case LoongArchISD::CRC_W_H_W:
+  case LoongArchISD::CRCC_W_B_W:
+  case LoongArchISD::CRCC_W_H_W:
   case LoongArchISD::VMSKLTZ:
   case LoongArchISD::XVMSKLTZ:
-    return performVMSKLTZCombine(N, DAG, DCI, Subtarget);
+    return performDemandedBitsCombine(N, DAG, DCI);
   case LoongArchISD::SPLIT_PAIR_F64:
     return performSPLIT_PAIR_F64Combine(N, DAG, DCI, Subtarget);
   case LoongArchISD::VANDN:
@@ -9627,7 +9636,7 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
     SDValue SizeNode = DAG.getConstant(Size, DL, GRLenVT);
 
-    Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
+    Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment, Alignment,
                           /*IsVolatile=*/false,
                           /*AlwaysInline=*/false, /*CI=*/nullptr, std::nullopt,
                           MachinePointerInfo(), MachinePointerInfo());
@@ -11077,6 +11086,19 @@ bool LoongArchTargetLowering::SimplifyDemandedBitsForTargetNode(
   switch (Opc) {
   default:
     break;
+  case LoongArchISD::CRC_W_B_W:
+  case LoongArchISD::CRC_W_H_W:
+  case LoongArchISD::CRCC_W_B_W:
+  case LoongArchISD::CRCC_W_H_W: {
+    KnownBits KnownSrc;
+    APInt DemandedSrcBits =
+        APInt::getLowBitsSet(BitWidth, (Opc == LoongArchISD::CRC_W_B_W ||
+                                        Opc == LoongArchISD::CRCC_W_B_W)
+                                           ? 8
+                                           : 16);
+    return SimplifyDemandedBits(Op.getOperand(1), DemandedSrcBits,
+                                OriginalDemandedElts, KnownSrc, TLO, Depth + 1);
+  }
   case LoongArchISD::VMSKLTZ:
   case LoongArchISD::XVMSKLTZ: {
     SDValue Src = Op.getOperand(0);

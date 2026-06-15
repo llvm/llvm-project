@@ -755,7 +755,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       IsWholeWaveFunction(MFI.isWholeWaveFunction()),
       DynamicVGPRBlockSize(MFI.getDynamicVGPRBlockSize()),
       ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()),
-      NumKernargPreloadSGPRs(MFI.getNumKernargPreloadedSGPRs()) {
+      NumKernargPreloadSGPRs(MFI.getNumKernargPreloadedSGPRs()),
+      MinNumAGPRs(MFI.getMinNumAGPRs()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));
 
@@ -802,6 +803,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   BytesInStackArgArea = YamlMFI.BytesInStackArgArea;
   ReturnsVoid = YamlMFI.ReturnsVoid;
   IsWholeWaveFunction = YamlMFI.IsWholeWaveFunction;
+  MinNumAGPRs = YamlMFI.MinNumAGPRs;
 
   UserSGPRInfo.allocKernargPreloadSGPRs(YamlMFI.NumKernargPreloadSGPRs);
 

@@ -647,7 +647,12 @@ void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
   Value *DynCGroupMemFallbackFlag =
       Builder.getInt64(static_cast<uint64_t>(KernelArgs.DynCGroupMemFallback));
   DynCGroupMemFallbackFlag = Builder.CreateShl(DynCGroupMemFallbackFlag, 2);
+
+  Value *StrictFlag = Builder.getInt64(KernelArgs.StrictBlocksAndThreads);
+  StrictFlag = Builder.CreateShl(StrictFlag, 6);
+
   Value *Flags = Builder.CreateOr(HasNoWaitFlag, DynCGroupMemFallbackFlag);
+  Flags = Builder.CreateOr(Flags, StrictFlag);
 
   assert(!KernelArgs.NumTeams.empty() && !KernelArgs.NumThreads.empty());
 
@@ -2387,9 +2392,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   Value *TaskDupFn = *TaskDupFnOrErr;
 
   OI->PostOutlineCB = [this, Ident, LBVal, UBVal, StepVal, Untied,
-                       TaskloopAllocaBB, CLI, Loc, TaskDupFn, ToBeDeleted,
-                       IfCond, GrainSize, NoGroup, Sched, FakeLB, FakeUB,
-                       FakeStep, FakeSharedsTy, Final, Mergeable, Priority,
+                       TaskloopAllocaBB, CLI, TaskDupFn, ToBeDeleted, IfCond,
+                       GrainSize, NoGroup, Sched, FakeLB, FakeUB, FakeStep,
+                       FakeSharedsTy, Final, Mergeable, Priority,
                        NumOfCollapseLoops](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.hasOneUse() &&
@@ -9783,7 +9788,7 @@ static void emitTargetCall(
 
     KArgs = OpenMPIRBuilder::TargetKernelArgs(
         NumTargetItems, RTArgs, TripCount, NumTeamsC, NumThreadsC, DynCGroupMem,
-        HasNoWait, DynCGroupMemFallback);
+        HasNoWait, /*StrictBlocksAndThreads=*/false, DynCGroupMemFallback);
 
     // Assume no error was returned because TaskBodyCB and
     // EmitTargetCallFallbackCB don't produce any.
@@ -11141,18 +11146,18 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
     AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
     omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-    bool IsFailOnly) {
+    bool IsFailOnly, bool IsWeak) {
 
   AtomicOrdering Failure = AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
   return createAtomicCompare(Loc, X, V, R, E, D, AO, Op, IsXBinopExpr,
-                             IsPostfixUpdate, IsFailOnly, Failure);
+                             IsPostfixUpdate, IsFailOnly, Failure, IsWeak);
 }
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
     AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
     omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
-    bool IsFailOnly, AtomicOrdering Failure) {
+    bool IsFailOnly, AtomicOrdering Failure, bool IsWeak) {
 
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -11257,6 +11262,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
       Builder.SetInsertPoint(ZeroBB);
       AtomicCmpXchgInst *ResZero = Builder.CreateAtomicCmpXchg(
           X.Var, XCurr, DBCast, MaybeAlign(), AO, Failure);
+      ResZero->setWeak(IsWeak);
       Value *OldZero = Builder.CreateExtractValue(ResZero, /*Idxs=*/0);
       Value *OkZero = Builder.CreateExtractValue(ResZero, /*Idxs=*/1);
       Builder.CreateBr(ExitBB);
@@ -11265,6 +11271,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
       Builder.SetInsertPoint(NormalBB);
       AtomicCmpXchgInst *ResNormal = Builder.CreateAtomicCmpXchg(
           X.Var, EBCast, DBCast, MaybeAlign(), AO, Failure);
+      ResNormal->setWeak(IsWeak);
       Value *OldNormal = Builder.CreateExtractValue(ResNormal, /*Idxs=*/0);
       Value *OkNormal = Builder.CreateExtractValue(ResNormal, /*Idxs=*/1);
       Builder.CreateBr(ExitBB);
@@ -11305,6 +11312,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
         Result =
             Builder.CreateAtomicCmpXchg(X.Var, E, D, MaybeAlign(), AO, Failure);
       }
+      Result->setWeak(IsWeak);
 
       if (V.Var) {
         OldValue = Builder.CreateExtractValue(Result, /*Idxs=*/0);

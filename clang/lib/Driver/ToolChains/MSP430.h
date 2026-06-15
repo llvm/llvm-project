@@ -34,6 +34,7 @@ public:
                             llvm::opt::ArgStringList &CC1Args) const override;
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args,
+                             llvm::StringRef BoundArch,
                              Action::OffloadKind) const override;
 
   bool isPICDefault() const override { return false; }

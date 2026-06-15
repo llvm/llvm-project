@@ -31,6 +31,7 @@
 #include "lld/Common/Reproduce.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -706,22 +707,41 @@ void macho::resolveLCLinkerOptions() {
     unprocessedLCLinkerOptions.clear();
 
     DeferredFiles deferred;
+    SmallVector<StringRef> frameworks;
+    SmallVector<StringRef> libraries;
+
     for (unsigned i = 0; i < LCLinkerOptions.size(); ++i) {
       StringRef arg = LCLinkerOptions[i];
       if (arg.consume_front("-l")) {
         assert(!config->ignoreAutoLinkOptions.contains(arg));
-        addLibrary(arg, /*isNeeded=*/false, /*isWeak=*/false,
-                   /*isReexport=*/false, /*isHidden=*/false,
-                   /*isExplicit=*/false, LoadType::LCLinkerOption, deferred);
+        libraries.push_back(arg);
       } else if (arg == "-framework") {
         StringRef name = LCLinkerOptions[++i];
         assert(!config->ignoreAutoLinkOptions.contains(name));
-        addFramework(name, /*isNeeded=*/false, /*isWeak=*/false,
-                     /*isReexport=*/false, /*isExplicit=*/false,
-                     LoadType::LCLinkerOption, deferred);
+        frameworks.push_back(name);
       } else {
         error(arg + " is not allowed in LC_LINKER_OPTION");
       }
+    }
+
+    llvm::sort(frameworks);
+    llvm::sort(libraries);
+
+    frameworks.erase(std::unique(frameworks.begin(), frameworks.end()),
+                     frameworks.end());
+    libraries.erase(std::unique(libraries.begin(), libraries.end()),
+                    libraries.end());
+
+    for (const StringRef framework : frameworks) {
+      addFramework(framework, /*isNeeded=*/false, /*isWeak=*/false,
+                   /*isReexport=*/false, /*isExplicit=*/false,
+                   LoadType::LCLinkerOption, deferred);
+    }
+
+    for (const StringRef library : libraries) {
+      addLibrary(library, /*isNeeded=*/false, /*isWeak=*/false,
+                 /*isReexport=*/false, /*isHidden=*/false,
+                 /*isExplicit=*/false, LoadType::LCLinkerOption, deferred);
     }
 
     for (auto &file : deferred) {
@@ -1733,6 +1753,16 @@ static SmallVector<StringRef, 0> getAllowableClients(opt::InputArgList &args) {
   return vals;
 }
 
+static void computeColdness() {
+  TimeTraceScope timeScope("Compute coldness");
+  for (InputSection *isec : inputSections) {
+    if (!isCodeSection(isec))
+      continue;
+    isec->isCold =
+        llvm::any_of(isec->symbols, [](Defined *sym) { return sym->isCold(); });
+  }
+}
+
 namespace lld {
 namespace macho {
 bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
@@ -2487,6 +2517,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     if (args.hasFlag(OPT_objc_category_merging, OPT_no_objc_category_merging,
                      false))
       objc::mergeCategories();
+
+    computeColdness();
 
     // ICF assumes that all literals have been folded already, so we must run
     // foldIdenticalLiterals before foldIdenticalSections.

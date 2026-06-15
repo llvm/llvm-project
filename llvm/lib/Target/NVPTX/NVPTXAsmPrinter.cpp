@@ -300,7 +300,7 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
   if (shouldPassAsArray(Ty)) {
     const unsigned TotalSize = DL.getTypeAllocSize(Ty);
     const Align RetAlignment =
-        getFunctionArgumentAlignment(F, Ty, AttributeList::ReturnIndex, DL);
+        getPTXParamAlign(F, Ty, AttributeList::ReturnIndex, DL);
     O << ".param .align " << RetAlignment.value() << " .b8 func_retval0["
       << TotalSize << "]";
   } else if (Ty->isFloatingPointTy()) {
@@ -1360,24 +1360,20 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
   const NVPTXMachineFunctionInfo *MFI =
       MF ? MF->getInfo<NVPTXMachineFunctionInfo>() : nullptr;
 
-  bool IsFirst = true;
   const bool IsKernelFunc = isKernelFunction(*F);
 
-  if (F->arg_empty() && !F->isVarArg()) {
+  assert(!F->isVarArg() && "VarArg functions lowered in ExpandVariadics");
+
+  if (F->arg_empty()) {
     O << "()";
     return;
   }
 
   O << "(\n";
 
-  for (const Argument &Arg : F->args()) {
+  auto EmitParam = [&](const Argument &Arg) {
     Type *Ty = Arg.getType();
     const std::string ParamSym = TLI->getParamName(F, Arg.getArgNo());
-
-    if (!IsFirst)
-      O << ",\n";
-
-    IsFirst = false;
 
     // Handle image/sampler parameters
     if (IsKernelFunc) {
@@ -1402,20 +1398,9 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
           llvm_unreachable("handled above");
         }
         O << ParamSym;
-        continue;
+        return;
       }
     }
-
-    auto GetOptimalAlignForParam = [&DL, F, &Arg](Type *Ty) -> Align {
-      if (MaybeAlign StackAlign =
-              getAlign(*F, Arg.getArgNo() + AttributeList::FirstArgIndex))
-        return StackAlign.value();
-
-      Align TypeAlign = getFunctionParamOptimizedAlign(F, Ty, DL);
-      MaybeAlign ParamAlign =
-          Arg.hasByValAttr() ? Arg.getParamAlign() : MaybeAlign();
-      return std::max(TypeAlign, ParamAlign.valueOrOne());
-    };
 
     if (Arg.hasByValAttr()) {
       // param has byVal attribute.
@@ -1427,13 +1412,15 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       //        PAL.getParamAlignment
       // size = typeallocsize of element type
       const Align OptimalAlign =
-          IsKernelFunc ? GetOptimalAlignForParam(ETy)
-                       : getFunctionByValParamAlign(
-                             F, ETy, Arg.getParamAlign().valueOrOne(), DL);
+          IsKernelFunc
+              ? getPTXParamAlign(
+                    F, ETy, Arg.getArgNo() + AttributeList::FirstArgIndex, DL)
+              : getDeviceByValParamAlign(F, ETy,
+                                         Arg.getParamAlign().valueOrOne(), DL);
 
       O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
         << "[" << DL.getTypeAllocSize(ETy) << "]";
-      continue;
+      return;
     }
 
     if (shouldPassAsArray(Ty)) {
@@ -1441,12 +1428,13 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       // <a>  = optimal alignment for the element type; always multiple of
       //        PAL.getParamAlignment
       // size = typeallocsize of element type
-      Align OptimalAlign = GetOptimalAlignForParam(Ty);
+      Align OptimalAlign = getPTXParamAlign(
+          F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
 
       O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
         << "[" << DL.getTypeAllocSize(Ty) << "]";
 
-      continue;
+      return;
     }
     // Just a scalar
     auto *PTy = dyn_cast<PointerType>(Ty);
@@ -1480,7 +1468,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
         O << " .align " << Arg.getParamAlign().valueOrOne().value() << " "
           << ParamSym;
-        continue;
+        return;
       }
 
       // non-pointer scalar to kernel func
@@ -1491,7 +1479,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       else
         O << getPTXFundamentalTypeStr(Ty);
       O << " " << ParamSym;
-      continue;
+      return;
     }
     // Non-kernel function, just print .param .b<size> for ABI
     // and .reg .b<size> for non-ABI
@@ -1504,14 +1492,8 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
     } else
       Size = Ty->getPrimitiveSizeInBits();
     O << "\t.param .b" << Size << " " << ParamSym;
-  }
-
-  if (F->isVarArg()) {
-    if (!IsFirst)
-      O << ",\n";
-    O << "\t.param .align " << STI.getMaxRequiredAlignment() << " .b8 "
-      << TLI->getParamName(F, /* vararg */ -1) << "[]";
-  }
+  };
+  interleave(F->args(), O, EmitParam, ",\n");
 
   O << "\n)";
 }
@@ -1689,6 +1671,13 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
         AggBuffer->addZeros(AllocSize);
         break;
       }
+      // A symbol-relative integer whose offset is applied outside the
+      // ptrtoint, e.g. add(ptrtoint(@g), C). It can't fold to a ConstantInt
+      // because it references a symbol; emit it through lowerConstantForGV, the
+      // same path scalar symbol-relative integer globals use.
+      AggBuffer->addSymbol(Cexpr, Cexpr);
+      AggBuffer->addZeros(AllocSize);
+      break;
     }
     llvm_unreachable("unsupported integer const type");
     break;
@@ -1715,9 +1704,14 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
   case Type::FixedVectorTyID:
   case Type::StructTyID: {
     if (isa<ConstantAggregate>(CPV) || isa<ConstantDataSequential>(CPV)) {
+      // bufferAggregateConstant doesn't emit tail-padding, i.e. it writes
+      // `store_size` bytes, not `alloc_size` bytes.  Do it ourselves here.
+      unsigned StartPos = AggBuffer->getCurpos();
       bufferAggregateConstant(CPV, AggBuffer);
-      if (Bytes > AllocSize)
-        AggBuffer->addZeros(Bytes - AllocSize);
+      unsigned Written = AggBuffer->getCurpos() - StartPos;
+      unsigned SlotSize = std::max<int>(Bytes, AllocSize);
+      if (SlotSize > Written)
+        AggBuffer->addZeros(SlotSize - Written);
     } else if (isa<ConstantAggregateZero>(CPV))
       AggBuffer->addZeros(Bytes);
     else
@@ -1735,8 +1729,11 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
   const DataLayout &DL = getDataLayout();
 
   auto ExtendBuffer = [](APInt Val, AggBuffer *Buffer) {
-    for (unsigned I : llvm::seq(Val.getBitWidth() / 8))
-      Buffer->addByte(Val.extractBitsAsZExtValue(8, I * 8));
+    unsigned NumBytes = divideCeil(Val.getBitWidth(), 8);
+    for (unsigned I : llvm::seq(NumBytes)) {
+      unsigned NumBits = std::min(8u, Val.getBitWidth() - I * 8);
+      Buffer->addByte(Val.extractBitsAsZExtValue(NumBits, I * 8));
+    }
   };
 
   // Integer or floating point vector splats.

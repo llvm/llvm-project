@@ -285,11 +285,9 @@ namespace unsized_array {
   void f(int (&a)[], int (&b)[], int (&c)[4]) {
     constexpr int t1 = a - a;
     constexpr int t2 = a - b; // expected-error {{constexpr variable 't2' must be initialized by a constant expression}} \
-                              // nointerpreter-note {{arithmetic involving unrelated objects '&a[0]' and '&b[0]' has unspecified value}} \
-                              // interpreter-note {{arithmetic involving unrelated objects '&a' and '&b' has unspecified value}}
+                              // expected-note {{arithmetic involving unrelated objects '&a[0]' and '&b[0]' has unspecified value}}
     constexpr int t3 = a - &c[2];  // expected-error {{constexpr variable 't3' must be initialized by a constant expression}} \
-                                   // nointerpreter-note {{arithmetic involving unrelated objects '&a[0]' and '&c[2]' has unspecified value}} \
-                                   // interpreter-note {{arithmetic involving unrelated objects '&a' and '&c[2]' has unspecified value}}
+                                   // expected-note {{arithmetic involving unrelated objects '&a[0]' and '&c[2]' has unspecified value}}
   }
 }
 
@@ -371,15 +369,14 @@ namespace enable_if_2 {
 
 namespace GH150015 {
   extern int (& c)[8];
-  constexpr int x = c <= c+8; // interpreter-error {{constexpr variable 'x' must be initialized by a constant expression}} \
-                              // interpreter-note {{cannot refer to element 8 of non-array object in a constant expression}}
+  constexpr int x = c <= c+8;
 
   struct X {};
   struct Y {};
   struct Z : X, Y {};
   extern Z &z;
-  constexpr int bases = (void*)(X*)&z <= (Y*)&z; // nointerpreter-error {{constexpr variable 'bases' must be initialized by a constant expression}} \
-                                                 // nointerpreter-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
+  constexpr int bases = (void*)(X*)&z <= (Y*)&z; // expected-error {{constexpr variable 'bases' must be initialized by a constant expression}} \
+                                                 // expected-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
 }
 
 namespace InvalidConstexprFn {

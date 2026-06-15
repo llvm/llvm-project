@@ -320,6 +320,32 @@ func.func @atanhvec(%arg0 : vector<3xf16>) -> () {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.Atan2
+//===----------------------------------------------------------------------===//
+
+func.func @atan2(%arg0 : f32, %arg1 : f32) -> () {
+  // CHECK: spirv.GL.Atan2 {{%.*}}, {{%.*}} : f32
+  %2 = spirv.GL.Atan2 %arg0, %arg1 : f32
+  return
+}
+
+func.func @atan2vec(%arg0 : vector<3xf16>, %arg1 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Atan2 {{%.*}}, {{%.*}} : vector<3xf16>
+  %2 = spirv.GL.Atan2 %arg0, %arg1 : vector<3xf16>
+  return
+}
+
+// -----
+
+func.func @atan2_error(%arg0 : i32, %arg1 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or fixed-length vector of 16/32-bit float values}}
+  %2 = spirv.GL.Atan2 %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Pow
 //===----------------------------------------------------------------------===//
 
@@ -366,6 +392,24 @@ func.func @round_even(%arg0 : f32) -> () {
 func.func @round_even_vec(%arg0 : vector<3xf16>) -> () {
   // CHECK: spirv.GL.RoundEven {{%.*}} : vector<3xf16>
   %2 = spirv.GL.RoundEven %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Trunc
+//===----------------------------------------------------------------------===//
+
+func.func @trunc(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Trunc {{%.*}} : f32
+  %2 = spirv.GL.Trunc %arg0 : f32
+  return
+}
+
+func.func @trunc_vec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.Trunc {{%.*}} : vector<3xf16>
+  %2 = spirv.GL.Trunc %arg0 : vector<3xf16>
   return
 }
 

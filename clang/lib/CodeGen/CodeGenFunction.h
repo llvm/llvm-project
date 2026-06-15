@@ -2962,10 +2962,11 @@ public:
   /// aggregate type.
   AggValueSlot CreateAggTemp(QualType T, const Twine &Name = "tmp",
                              RawAddress *Alloca = nullptr) {
+    RawAddress Addr = CreateMemTemp(T, Name, Alloca);
     return AggValueSlot::forAddr(
-        CreateMemTemp(T.getUnqualifiedType(), Name, Alloca), T.getQualifiers(),
-        AggValueSlot::IsNotDestructed, AggValueSlot::DoesNotNeedGCBarriers,
-        AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap);
+        Addr, T.getQualifiers(), AggValueSlot::IsNotDestructed,
+        AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+        AggValueSlot::DoesNotOverlap);
   }
 
   /// EvaluateExprAsBool - Perform the usual unary conversions on the specified
@@ -4876,7 +4877,6 @@ public:
   llvm::Value *EmitSVETupleCreate(const SVETypeFlags &TypeFlags,
                                   llvm::Type *ReturnType,
                                   ArrayRef<llvm::Value *> Ops);
-  llvm::Value *EmitSVEAllTruePred(const SVETypeFlags &TypeFlags);
   llvm::Value *EmitSVEDupX(llvm::Value *Scalar);
   llvm::Value *EmitSVEDupX(llvm::Value *Scalar, llvm::Type *Ty);
   llvm::Value *EmitSVEReinterpret(llvm::Value *Val, llvm::Type *Ty);

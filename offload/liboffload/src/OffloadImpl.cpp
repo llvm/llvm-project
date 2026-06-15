@@ -968,7 +968,7 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
     } else {
       return createOffloadError(
           ErrorCode::INVALID_ARGUMENT,
-          "ane of DstDevice and SrcDevice must be a non-host device if "
+          "one of DstDevice and SrcDevice must be a non-host device if "
           "queue is specified");
     }
   }
@@ -1124,6 +1124,7 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   LaunchArgs.UserThreadLimit[1] = LaunchSizeArgs->GroupSize.y;
   LaunchArgs.UserThreadLimit[2] = LaunchSizeArgs->GroupSize.z;
   LaunchArgs.DynCGroupMem = LaunchSizeArgs->DynSharedMemory;
+  LaunchArgs.Flags.StrictBlocksAndThreads = true;
 
   while (Properties && Properties->type != OL_KERNEL_LAUNCH_PROP_TYPE_NONE) {
     switch (Properties->type) {
