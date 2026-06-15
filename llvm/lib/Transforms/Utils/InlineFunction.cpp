@@ -1639,8 +1639,6 @@ static AttrBuilder IdentifyValidUBGeneratingAttributes(CallBase &CB) {
 // behavior or cause new UB.
 static AttrBuilder IdentifyValidPoisonGeneratingAttributes(CallBase &CB) {
   AttrBuilder Valid(CB.getContext());
-  if (CB.hasRetAttr(Attribute::NonNull))
-    Valid.addAttribute(Attribute::NonNull);
   if (CB.hasRetAttr(Attribute::Alignment))
     Valid.addAlignmentAttr(CB.getRetAlign());
   if (std::optional<ConstantRange> Range = CB.getRange())

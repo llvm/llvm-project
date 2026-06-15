@@ -16,7 +16,7 @@ define ptr @callee(ptr %p) alwaysinline {
 define ptr @caller(ptr %ptr, i64 %x) {
 ; CHECK-LABEL: @caller(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[X:%.*]]
-; CHECK-NEXT:    [[R_I:%.*]] = call nonnull ptr @foo(ptr noalias [[GEP]])
+; CHECK-NEXT:    [[R_I:%.*]] = call ptr @foo(ptr noalias [[GEP]])
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[R_I]]) ]
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
@@ -183,10 +183,10 @@ define void @test7(ptr %ptr, i64 %x, i1 %cond) {
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[PASS_I:%.*]], label [[FAIL_I:%.*]]
 ; CHECK:       pass.i:
-; CHECK-NEXT:    [[R_I:%.*]] = call nonnull ptr @foo(ptr noalias [[GEP]])
+; CHECK-NEXT:    [[R_I:%.*]] = call ptr @foo(ptr noalias [[GEP]])
 ; CHECK-NEXT:    br label [[CALLEE7_EXIT:%.*]]
 ; CHECK:       fail.i:
-; CHECK-NEXT:    [[S_I:%.*]] = call nonnull ptr @baz(ptr [[GEP]])
+; CHECK-NEXT:    [[S_I:%.*]] = call ptr @baz(ptr [[GEP]])
 ; CHECK-NEXT:    br label [[CALLEE7_EXIT]]
 ; CHECK:       callee7.exit:
 ; CHECK-NEXT:    [[T1:%.*]] = phi ptr [ [[R_I]], [[PASS_I]] ], [ [[S_I]], [[FAIL_I]] ]
