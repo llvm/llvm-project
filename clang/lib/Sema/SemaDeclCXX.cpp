@@ -19803,10 +19803,12 @@ void Sema::ActOnFinishFunctionDeclarationDeclarator(Declarator &Declarator) {
   InventedParameterInfos.pop_back();
 }
 
-bool Sema::BuildDefaultArgsForCtorClosure(SourceLocation Loc, CXXConstructorDecl *Ctor, bool IsCopy) {
+bool Sema::BuildDefaultArgsForCtorClosure(SourceLocation Loc,
+                                          CXXConstructorDecl *Ctor,
+                                          bool IsCopy) {
   assert(Context.getTargetInfo().getCXXABI().isMicrosoft());
 
-  if (Ctor->ctorClosureArgs())
+  if (!Ctor->getCtorClosureDefaultArgs().empty())
     return false;
 
   unsigned NumParams = Ctor->getNumParams();
@@ -19814,17 +19816,17 @@ bool Sema::BuildDefaultArgsForCtorClosure(SourceLocation Loc, CXXConstructorDecl
     return false;
   unsigned FirstParam = IsCopy ? 1 : 0;
 
-  Expr **Args = new (getASTContext()) Expr*[NumParams];
-  Args[0] = nullptr;
+  CXXDefaultArgExpr **Args =
+      new (getASTContext()) CXXDefaultArgExpr *[NumParams - FirstParam];
 
   for (unsigned I = FirstParam; I != NumParams; ++I) {
     ExprResult R = BuildCXXDefaultArgExpr(Loc, Ctor, Ctor->getParamDecl(I));
     CleanupVarDeclMarking();
     if (R.isInvalid())
       return true;
-    Args[I] = R.get();
+    Args[I - FirstParam] = cast<CXXDefaultArgExpr>(R.get());
   }
-  Ctor->setCtorClosureArgs(Args);
 
+  Ctor->setCtorClosureDefaultArgs(ArrayRef(Args, NumParams - FirstParam));
   return false;
 }

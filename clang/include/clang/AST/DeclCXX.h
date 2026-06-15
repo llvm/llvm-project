@@ -2668,11 +2668,6 @@ public:
   friend class ASTDeclWriter;
   friend TrailingObjects;
 
-  // FIXME: Just hacking it in here for now.
-  Expr **CtorClosureArgs = nullptr;
-  Expr **ctorClosureArgs() const { return getCanonicalDecl()->CtorClosureArgs; }
-  void setCtorClosureArgs(Expr **Args) { getCanonicalDecl()->CtorClosureArgs = Args; }
-
   static CXXConstructorDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                                 uint64_t AllocKind);
   static CXXConstructorDecl *
@@ -2868,6 +2863,9 @@ public:
   const CXXConstructorDecl *getCanonicalDecl() const {
     return const_cast<CXXConstructorDecl*>(this)->getCanonicalDecl();
   }
+
+  ArrayRef<CXXDefaultArgExpr*> getCtorClosureDefaultArgs() const;
+  void setCtorClosureDefaultArgs(ArrayRef<CXXDefaultArgExpr*> Args);
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }

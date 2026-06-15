@@ -4207,14 +4207,12 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
   if (SrcVal)
     Args.add(RValue::get(SrcVal), SrcParam->getType());
 
-
-  // Add the rest of the default arguments.
+  // Get the rest of the default arguments.
   SmallVector<const Stmt *, 4> ArgVec;
-  for (unsigned I = IsCopy ? 1 : 0, N = CD->getNumParams(); I != N; ++I) {
-    assert(CD->getParamDecl(I)->hasDefaultArg() && "ctor closure lacks default args");
-    assert(CD->ctorClosureArgs());
-    ArgVec.push_back(CD->ctorClosureArgs()[I]);
-  }
+  for (const CXXDefaultArgExpr *Expr : CD->getCtorClosureDefaultArgs())
+    ArgVec.push_back(Expr);
+  assert(ArgVec.size() == CD->getNumParams() - IsCopy);
+
 
   CodeGenFunction::RunCleanupsScope Cleanups(CGF);
 
