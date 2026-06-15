@@ -12,6 +12,8 @@
 // UNROLL-FULL-DAG: [[$MAP4:#map[0-9]*]] = affine_map<(d0, d1) -> (d0 + 1)>
 // UNROLL-FULL-DAG: [[$MAP5:#map[0-9]*]] = affine_map<(d0, d1) -> (d0 + 3)>
 // UNROLL-FULL-DAG: [[$MAP6:#map[0-9]*]] = affine_map<(d0)[s0] -> (d0 + s0 + 1)>
+// UNROLL-FULL-DAG: [[$MAP7:#map[0-9]*]] = affine_map<()[s0] -> (s0 + (((-s0 + 9) ceildiv 2) floordiv 4) * 8)>
+// UNROLL-FULL-DAG: [[$MAP8:#map[0-9]*]] = affine_map<()[s0, s1] -> (s0 + (((-s0 + s1) ceildiv 2) floordiv
 
 // SHORT-DAG: [[$MAP0:#map[0-9]*]] = affine_map<(d0) -> (d0 + 1)>
 
@@ -23,6 +25,7 @@
 // UNROLL-BY-4-DAG: [[$MAP5:#map[0-9]*]] = affine_map<(d0)[s0] -> (d0 + s0 + 1)>
 // UNROLL-BY-4-DAG: [[$MAP6:#map[0-9]*]] = affine_map<(d0, d1) -> (d0 * 16 + d1)>
 // UNROLL-BY-4-DAG: [[$MAP11:#map[0-9]*]] = affine_map<(d0) -> (d0)>
+// UNROLL-BY-4-DAG: [[$MAP8:#map[0-9]*]] = affine_map<()[s0] -> (s0 + (((-s0 + 11) ceildiv 2) floordiv 4) * 8)>
 
 // UNROLL-FULL-LABEL: func @loop_nest_simplest() {
 func.func @loop_nest_simplest() {
@@ -256,6 +259,81 @@ gpu.module @unroll_full {
     }           // GPU-UNROLL-FULL:  }
     gpu.return  // GPU-UNROLL-FULL:  return
   }
+}
+
+// UNROLL-FULL-LABEL: func @bound_unroll_partial
+func.func @bound_unroll_partial() {
+  %c0 = arith.constant 0 :index
+  // UNROLL-FULL: %[[C0:.*]] = arith.constant 0 : index
+  %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  affine.for %iv = %bound to 3 step 2 iter_args(%arg = %c0) -> index {
+      %sum = arith.addi %arg, %c0 : index
+      affine.yield %sum : index
+  }
+  // UNROLL-FULL: affine.for %{{.*}} = %{{.*}} to 3 step 2 iter_args(%[[ARG:.*]] = %[[C0]]) -> (index) {
+  // UNROLL-FULL-NEXT:   %[[SUM:.*]] = arith.addi %[[ARG]], %[[C0]] : index
+  // UNROLL-FULL-NEXT:   affine.yield %[[SUM]] : index
+  // UNROLL-FULL-NEXT: }
+  return
+}
+
+// UNROLL-FULL-LABEL: func @bound_unroll_all
+func.func @bound_unroll_all() {
+  %c0 = arith.constant 0 :index
+  // UNROLL-FULL: %[[C0:.*]] = arith.constant 0 : index
+  %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  affine.for %iv = %bound to 6 step 2 iter_args(%arg = %c0) -> index {
+    %sum = arith.addi %arg, %c0 : index
+    affine.yield %sum : index
+  }
+  // UNROLL-FULL: %[[SUM_0:.*]] = arith.addi %[[C0]], %[[C0]] : index
+  // UNROLL-FULL-NEXT: %[[SUM_1:.*]] = arith.addi %[[SUM_0]], %[[C0]] : index
+  // UNROLL-FULL-NEXT: %[[SUM_2:.*]] = arith.addi %[[SUM_1]], %[[C0]] : index
+  return
+}
+
+// UNROLL-FULL-LABEL: func.func @bound_partial_unroll_factor_4
+func.func @bound_partial_unroll_factor_4() {
+  %c0 = arith.constant 0 :index 
+  // UNROLL-FULL: %[[C0:.*]] = arith.constant 0 : index
+  // UNROLL-FULL: %[[Bound:.*]] = test.value_with_bounds {max = 1 : index, min = 0 : index}
+  %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  affine.for %iv = %bound to 9 step 2 iter_args(%arg = %c0) -> index {
+    %sum = arith.addi %arg, %c0 : index
+    affine.yield %sum : index
+  }
+  // UNROLL-FULL-NEXT: %[[SUM_0:.*]] = arith.addi %[[C0]], %[[C0]] : index
+  // UNROLL-FULL-NEXT: %[[SUM_1:.*]] = arith.addi %[[SUM_0]], %[[C0]] : index
+  // UNROLL-FULL-NEXT: %[[SUM_2:.*]] = arith.addi %[[SUM_1]], %[[C0]] : index
+  // UNROLL-FULL-NEXT: %[[SUM_3:.*]] = arith.addi %[[SUM_2]], %[[C0]] : index
+  // UNROLL-FULL-NEXT: affine.for %{{.*}} = [[$MAP7]]()[%[[Bound]]] to 9 step 2 iter_args(%[[ARG:.*]] = %[[SUM_3]]) -> (index) {
+  // UNROLL-FULL-NEXT:   %[[SUM_4:.*]] = arith.addi %[[ARG]], %[[C0]] : index
+  // UNROLL-FULL-NEXT:   affine.yield %[[SUM_4]] : index
+  // UNROLL-FULL-NEXT: }
+  return
+}
+
+// UNROLL-FULL-LABEL: func @bound_for_unroll_dynamic_lower_and_upper
+func.func @bound_for_unroll_dynamic_lower_and_upper() {
+  %c0 = arith.constant 0 :index
+  %lower_bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  %upper_bound = test.value_with_bounds { min = 6 : index, max = 7 : index}
+  affine.for %iv = %lower_bound to %upper_bound step 2 iter_args(%arg = %c0) -> index {
+      %sum = arith.addi %arg, %c0 : index
+      affine.yield %sum : index
+  }
+  // UNROLL-FULL-NEXT:   %[[C0:.*]] = arith.constant 0 : index
+  // UNROLL-FULL-NEXT:   %[[LB:.*]] = test.value_with_bounds {max = 1 : index, min = 0 : index}
+  // UNROLL-FULL-NEXT:   %[[UB:.*]] = test.value_with_bounds {max = 7 : index, min = 6 : index}
+  // UNROLL-FULL-NEXT:   %[[ADDI_0:.*]] = arith.addi %[[C0]], %[[C0]] : index
+  // UNROLL-FULL-NEXT:   %[[ADDI_1:.*]] = arith.addi %[[ADDI_0]], %[[C0]] : index
+  // UNROLL-FULL-NEXT:   %[[UNROLLED_INIT:.*]] = arith.addi %[[ADDI_1]], %[[C0]] : index
+  // UNROLL-FULL-NEXT:   %[[LOOP_RES:.*]] = affine.for %{{.*}} = [[$MAP8]]()
+  // UNROLL-FULL-SAME:     [%[[LB]], %[[UB]]] to %[[UB]] step 2 iter_args(%[[VAL:.*]] = %[[UNROLLED_INIT]]) -> (index) {
+  // UNROLL-FULL-NEXT:     %[[YIELD_VAL:.*]] = arith.addi %[[VAL]], %[[C0]] : index
+  // UNROLL-FULL-NEXT:     affine.yield %[[YIELD_VAL]] : index
+  // UNROLL-FULL-NEXT:   }
+  return
 }
 
 // SHORT-LABEL: func @loop_nest_outer_unroll() {
@@ -699,6 +777,27 @@ func.func @unroll_with_iter_args_and_promotion(%arg0 : f32, %arg1 : f32) -> f32 
   // UNROLL-BY-4-NEXT: %[[RES:.*]] = arith.addf %[[SUM]],
   // UNROLL-BY-4-NEXT: return %[[RES]]
   return %sum : f32
+}
+
+// UNROLL-BY-4-LABEL: func @bound_unroll_by_factor_4
+func.func @bound_unroll_by_factor_4() {
+  %c0 = arith.constant 0 :index
+  // UNROLL-BY-4: %[[C0:.*]] = arith.constant 0 : index
+  %bound = test.value_with_bounds { min = 0 : index, max = 1 : index}
+  // UNROLL-BY-4: %[[Bound:.*]] = test.value_with_bounds {max = 1 : index, min = 0 : index}
+  affine.for %iv = %bound to 11 step 2 iter_args(%arg = %c0) -> index {
+    %sum = arith.addi %arg, %c0 : index
+    affine.yield %sum : index
+  }
+  // UNROLL-BY-4-NEXT: %[[SUM_0:.*]] = arith.addi %[[C0]], %[[C0]] : index
+  // UNROLL-BY-4-NEXT: %[[SUM_1:.*]] = arith.addi %[[SUM_0]], %[[C0]] : index
+  // UNROLL-BY-4-NEXT: %[[SUM_2:.*]] = arith.addi %[[SUM_1]], %[[C0]] : index
+  // UNROLL-BY-4-NEXT: %[[SUM_3:.*]] = arith.addi %[[SUM_2]], %[[C0]] : index
+  // UNROLL-BY-4-NEXT: affine.for %[[VAL_20:.*]] = [[$MAP8]](){{\[}}%[[Bound]]] to 11 step 2 iter_args(%[[ARG:.*]] = %[[SUM_3]]) -> (index) {
+  // UNROLL-BY-4-NEXT:   %[[SUM_4:.*]] = arith.addi %[[ARG]], %[[C0]] : index
+  // UNROLL-BY-4-NEXT:   affine.yield %[[SUM_4]] : index
+  // UNROLL-BY-4-NEXT: }
+  return
 }
 
 // UNROLL-FULL: func @unroll_zero_trip_count_case
