@@ -545,6 +545,24 @@ func.func @test_row_gather_invalid_row_count(%arg0: tensor<13x21x3xf32>, %arg1: 
 }
 
 // -----
+// CHECK-LABEL: test_row_gather_invalid_row_count_negative
+func.func @test_row_gather_invalid_row_count_negative(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<13x26x3xf32> {
+  %row_count = "tosa.const"() {values = dense<-1> : tensor<1xi32>} : () -> tensor<1xi32>
+  // expected-error@+1 {{'tosa.row_gather' op requires row_count to be > 0, got -1}}
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x26x3xf32>
+  return %0 : tensor<13x26x3xf32>
+}
+
+// -----
+// CHECK-LABEL: test_row_gather_input_output_mismatch
+func.func @test_row_gather_input_output_mismatch(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> tensor<13x26x3xf16> {
+  %row_count = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>
+  // expected-error@+1 {{'tosa.row_gather' op expect input and output to have same element type, got 'f32' and 'f16'}}
+  %0 = tosa.row_gather %arg0, %arg1, %row_count : (tensor<13x21x3xf32>, tensor<13x26xi32>, tensor<1xi32>) -> tensor<13x26x3xf16>
+  return %0 : tensor<13x26x3xf16>
+}
+
+// -----
 // CHECK-LABEL: test_row_gather_block_scaled_output_count_mismatch
 func.func @test_row_gather_block_scaled_output_count_mismatch(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>) -> (tensor<13x52x3xf32>, tensor<13x52x3xf32>) {
   %row_count = "tosa.const"() {values = dense<2> : tensor<1xi32>} : () -> tensor<1xi32>

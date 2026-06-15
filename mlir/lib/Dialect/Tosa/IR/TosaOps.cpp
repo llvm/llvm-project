@@ -3395,7 +3395,7 @@ LogicalResult tosa::RowGatherOp::inferReturnTypeComponents(
 
     const FailureOr<int32_t> maybeRowCount =
         getConstantScalarIntValue<int32_t>(adaptor.getRowCount());
-    if (succeeded(maybeRowCount) && maybeRowCount.value() > 0) {
+    if (succeeded(maybeRowCount)) {
       const int64_t indicesW = indicesShape.getDimSize(1);
       if (ShapedType::isStatic(indicesW))
         outputShape[1] = indicesW * maybeRowCount.value();
@@ -3535,8 +3535,6 @@ LogicalResult tosa::RowGatherOp::verify() {
                                      "output", "channels")))
       return failure();
 
-    const FailureOr<int32_t> maybeRowCount =
-        getConstantScalarIntValue<int32_t>(getRowCount());
     if (succeeded(maybeRowCount) && maybeRowCount.value() > 0 &&
         ShapedType::isStatic(w)) {
       const int64_t expectedOutputRows = w * maybeRowCount.value();
