@@ -2173,8 +2173,8 @@ bool LoopInterchangeTransform::transform(
   if (InnerLoopPreHeader != OuterLoopHeader) {
     // Eliminate PHIs in the inner-loop preheader.
     for (PHINode &P : make_early_inc_range(InnerLoopPreHeader->phis())) {
-      assert(P.getNumIncomingValues() == 1 &&
-             "Expected single-incoming PHIs in inner loop preheader");
+      assert(all_equal(P.incoming_values()) &&
+             "Expected equivalent incoming values in inner loop preheader");
       P.replaceAllUsesWith(P.getIncomingValue(0));
       P.eraseFromParent();
     }
