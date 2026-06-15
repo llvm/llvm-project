@@ -175,6 +175,16 @@ static cl::opt<int> BrMergingCcmpBias(
              "makes merging branch conditions cheaper."),
     cl::Hidden);
 
+static cl::opt<int> BrMergingCbzTbnzBias(
+    "aarch64-br-merging-cbz-tbnz-bias", cl::init(6),
+    cl::desc("Decreases 'aarch64-br-merging-base-cost' when a condition can be "
+             "lowered to a single CBZ/CBNZ or TBZ/TBNZ compare-and-branch. The "
+             "split form needs no separate compare, so the CCMP merging "
+             "discount does not apply; the default cancels it. Set to 0 to "
+             "disable, or higher than 'aarch64-br-merging-ccmp-bias' to make "
+             "such conditions never merge."),
+    cl::Hidden);
+
 static cl::opt<int> BrMergingLikelyBias(
     "aarch64-br-merging-likely-bias", cl::init(0),
     cl::desc("Increases 'aarch64-br-merging-base-cost' in cases that it is "
@@ -31574,10 +31584,55 @@ TargetLoweringBase::CondMergingParams
 AArch64TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
                                                      const Value *Lhs,
                                                      const Value *Rhs) const {
+  using namespace llvm::PatternMatch;
+
+  // Returns true if \p V is a branch condition that AArch64 can lower to a
+  // single compare-and-branch (CBZ/CBNZ) or test-bit-and-branch (TBZ/TBNZ),
+  // i.e. without materializing a separate compare. Merging such a condition
+  // into a CMP/CCMP chain removes that fused form and tends to add
+  // instructions, so it is less likely to be profitable.
+  auto IsCbzTbnzCandidate = [](const Value *V) {
+    // A truncation to i1 feeding a branch tests bit #0 -> TBZ/TBNZ.
+    if (match(V, m_Trunc(m_Value())))
+      return true;
+    const auto *Cmp = dyn_cast<ICmpInst>(V);
+    if (!Cmp)
+      return false;
+    ICmpInst::Predicate P = Cmp->getPredicate();
+    // icmp eq/ne X, 0 -> CBZ/CBNZ. This also subsumes the bit-test form
+    // icmp eq/ne (and X, Pow2), 0, which AArch64 folds to TBZ/TBNZ.
+    if (ICmpInst::isEquality(P) && match(Cmp->getOperand(1), m_Zero()))
+      return true;
+    // Sign-bit tests lower to TBZ/TBNZ on the MSB: (X s< 0) and (X s> -1).
+    if (P == ICmpInst::ICMP_SLT && match(Cmp->getOperand(1), m_Zero()))
+      return true;
+    if (P == ICmpInst::ICMP_SGT && match(Cmp->getOperand(1), m_AllOnes()))
+      return true;
+    return false;
+  };
+
   int BaseCost = BrMergingBaseCostThresh.getValue();
-  // CCMP is always available on AArch64.
+  // CCMP is always available on AArch64 and folds the second compare and the
+  // branch into a single 1-cycle op (e.g. V2Write_1c_1F_1Flg on Neoverse V2),
+  // so merging is worth tolerating extra speculated work on the RHS dependency
+  // chain. The bias is that tolerance measured in TTI latency units: it stands
+  // in for the amortized cost of the branch the merge eliminates, i.e. roughly
+  // MispredictPenalty (~10 cycles on modern Arm cores) weighted by the branch's
+  // misprediction probability. With no profile, a branch is ~50/50, so the
+  // budget is ~MispredictPenalty/2; the default of 6 sits in the
+  // MispredictPenalty * [1/2 .. 3/4] band used elsewhere for this same tradeoff
+  // (see EarlyIfConversion and AArch64ConditionalCompares). The likely/unlikely
+  // biases below refine the misprediction estimate from BranchProbabilityInfo.
   if (BaseCost >= 0)
     BaseCost += BrMergingCcmpBias;
+
+  // Withdraw the CCMP discount when either unmerged condition would already be a
+  // single CBZ/CBNZ or TBZ/TBNZ: the split form needs no separate compare, so
+  // merging into a CMP/CCMP chain tends to add instructions rather than save
+  // them.
+  if (BaseCost >= 0 && BrMergingCbzTbnzBias > 0 &&
+      (IsCbzTbnzCandidate(Lhs) || IsCbzTbnzCandidate(Rhs)))
+    BaseCost -= BrMergingCbzTbnzBias;
 
   return {BaseCost, BrMergingLikelyBias.getValue(),
           BrMergingUnlikelyBias.getValue()};

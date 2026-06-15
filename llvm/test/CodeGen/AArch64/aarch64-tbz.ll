@@ -133,25 +133,15 @@ if.end3:                                          ; preds = %entry, %if.then2
 
 ; Make sure we use the W variant when log2(mask) is < 32.
 define void @test3(i64 %A, i64 %B) {
-; CHECK-SD-LABEL: test3:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ubfx x8, x0, #28, #1
-; CHECK-SD-NEXT:    and w8, w8, w1, lsr #3
-; CHECK-SD-NEXT:    tbnz w8, #0, .LBB2_2
-; CHECK-SD-NEXT:  // %bb.1: // %if.then2
-; CHECK-SD-NEXT:    b foo
-; CHECK-SD-NEXT:  .LBB2_2: // %if.end3
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test3:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    tbz w1, #3, .LBB2_3
-; CHECK-GI-NEXT:  // %bb.1: // %entry
-; CHECK-GI-NEXT:    tbz w0, #28, .LBB2_3
-; CHECK-GI-NEXT:  // %bb.2: // %if.end3
-; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:  .LBB2_3: // %if.then2
-; CHECK-GI-NEXT:    b foo
+; CHECK-LABEL: test3:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    tbz w1, #3, .LBB2_3
+; CHECK-NEXT:  // %bb.1: // %entry
+; CHECK-NEXT:    tbz w0, #28, .LBB2_3
+; CHECK-NEXT:  // %bb.2: // %if.end3
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB2_3: // %if.then2
+; CHECK-NEXT:    b foo
 ;
 ; CHECK-GIO0-LABEL: test3:
 ; CHECK-GIO0:       // %bb.0: // %entry
@@ -196,25 +186,15 @@ if.end3:                                          ; preds = %if.then2, %entry
 }
 
 define void @test4(i64 %A, i64 %B) {
-; CHECK-SD-LABEL: test4:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ubfx x8, x0, #35, #1
-; CHECK-SD-NEXT:    and w8, w8, w1, lsr #3
-; CHECK-SD-NEXT:    tbnz w8, #0, .LBB3_2
-; CHECK-SD-NEXT:  // %bb.1: // %if.then2
-; CHECK-SD-NEXT:    b foo
-; CHECK-SD-NEXT:  .LBB3_2: // %if.end3
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test4:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    tbz w1, #3, .LBB3_3
-; CHECK-GI-NEXT:  // %bb.1: // %entry
-; CHECK-GI-NEXT:    tbz x0, #35, .LBB3_3
-; CHECK-GI-NEXT:  // %bb.2: // %if.end3
-; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:  .LBB3_3: // %if.then2
-; CHECK-GI-NEXT:    b foo
+; CHECK-LABEL: test4:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    tbz w1, #3, .LBB3_3
+; CHECK-NEXT:  // %bb.1: // %entry
+; CHECK-NEXT:    tbz x0, #35, .LBB3_3
+; CHECK-NEXT:  // %bb.2: // %if.end3
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB3_3: // %if.then2
+; CHECK-NEXT:    b foo
 ;
 ; CHECK-GIO0-LABEL: test4:
 ; CHECK-GIO0:       // %bb.0: // %entry
