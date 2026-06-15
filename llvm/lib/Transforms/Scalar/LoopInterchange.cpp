@@ -167,8 +167,7 @@ static bool inThisOrder(const Instruction *Src, const Instruction *Dst) {
 #endif
 
 static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
-                                     Loop *L, ArrayRef<Loop *> LoopList,
-                                     LoopInfo *LI, DependenceInfo *DI,
+                                     Loop *L, DependenceInfo *DI,
                                      ScalarEvolution *SE,
                                      OptimizationRemarkEmitter *ORE) {
   using ValueVector = SmallVector<Value *, 16>;
@@ -176,14 +175,8 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   ValueVector MemInstr;
   unsigned NumInsts = 0;
 
-  // Collect memory instructions from the BB which belongs to all loops in the
-  // LoopList
-  for (BasicBlock *BB : L->getBlocksVector()) {
-    // In this iteration we need to handle the BB contained directly by Current
-    // Loop and all other BB of subloops will be handled in its own in next
-    // iterations.
-    if (!llvm::is_contained(LoopList, LI->getLoopFor(BB)))
-      continue;
+  // For each block.
+  for (BasicBlock *BB : L->blocks()) {
     // Scan the BB and collect legal loads and stores.
     for (Instruction &I : *BB) {
       NumInsts++;
@@ -239,9 +232,8 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
         // make it non-negative.
         if (D->normalize(SE))
           LLVM_DEBUG(dbgs() << "Negative dependence vector normalized.\n");
-        LLVM_DEBUG(StringRef DepType = D->isFlow()   ? "flow"
-                                       : D->isAnti() ? "anti"
-                                                     : "output";
+        LLVM_DEBUG(StringRef DepType =
+                       D->isFlow() ? "flow" : D->isAnti() ? "anti" : "output";
                    dbgs() << "Found " << DepType
                           << " dependency between Src and Dst\n"
                           << " Src:" << *Src << "\n Dst:" << *Dst << '\n');
@@ -273,7 +265,7 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
           Dep.assign(Level, '*');
         }
 
-        while (Dep.size() < Level) {
+        while (Dep.size() < L->getLoopDepth() + Level - 1) {
           Dep.push_back('I');
         }
 
@@ -688,6 +680,22 @@ struct LoopInterchange {
     return processLoopList(LoopList);
   }
 
+  /// Consider below kernel:
+  /// for(int i=0; i<n; i++){  // Loop 1
+  ///     for(int j=0; j<m; j++){  // Loop 2
+  ///         for(int r=0; r<m; r++){  // Loop 3
+  ///         // Do something
+  ///         }
+  ///     }
+  ///     for(int k=0; k<p; k++){  // Loop 4
+  ///         for(int l=0; l<p; l++){  // Loop 5
+  ///             // Do something
+  ///         }
+  ///     }
+  /// }
+  /// Then collectPerfectNests() will return:
+  /// - [Loop2, Loop3]
+  /// - [Loop4, Loop5]
   static SmallVector<SmallVector<Loop *, 8>, 4>
   collectPerfectNests(LoopNest &LN) {
     SmallVector<SmallVector<Loop *, 8>, 4> LoopLists;
@@ -713,22 +721,6 @@ struct LoopInterchange {
 
   bool run(LoopNest &LN) {
     SmallVector<SmallVector<Loop *, 8>, 4> LoopLists = collectPerfectNests(LN);
-    // Consider below kernel
-    // for(int i=0; i<n; i++){  // Loop 1
-    //     for(int j=0; j<m; j++){  // Loop 2
-    //         for(int r=0; r<m; r++){  // Loop 3
-    //         // Do something
-    //         }
-    //     }
-    //     for(int k=0; k<p; k++){  // Loop 4
-    //         for(int l=0; l<p; l++){  // Loop 5
-    //             // Do something
-    //         }
-    //     }
-    // }
-    // Then LoopLists will contain:
-    // - [Loop2, Loop3]
-    // - [Loop4, Loop5]
     bool Changed = false;
     for (SmallVector<Loop *, 8> &LoopList : LoopLists) {
       // Ensure minimum depth of the loop nest to do the interchange.
@@ -771,7 +763,7 @@ struct LoopInterchange {
     CharMatrix DependencyMatrix;
     Loop *OuterMostLoop = *(LoopList.begin());
     if (!populateDependencyMatrix(DependencyMatrix, LoopNestDepth,
-                                  OuterMostLoop, LoopList, LI, DI, SE, ORE)) {
+                                  OuterMostLoop, DI, SE, ORE)) {
       LLVM_DEBUG(dbgs() << "Populating dependency matrix failed\n");
       return false;
     }
@@ -1517,11 +1509,11 @@ static bool areOuterLoopExitPHIsSupported(Loop *OuterLoop, Loop *InnerLoop) {
         continue;
 
       // The incoming value is defined in the outer loop latch. Currently we
-      // only support that in case the outer loop latch has a single
-      // predecessor. This guarantees that the outer loop latch is executed if
-      // and only if the inner loop is executed (because tightlyNested()
-      // guarantees that the outer loop header only branches to the inner loop
-      // or the outer loop latch).
+      // only support that in case the outer loop latch has a single predecessor.
+      // This guarantees that the outer loop latch is executed if and only if
+      // the inner loop is executed (because tightlyNested() guarantees that the
+      // outer loop header only branches to the inner loop or the outer loop
+      // latch).
       // FIXME: We could weaken this logic and allow multiple predecessors,
       //        if the values are produced outside the loop latch. We would need
       //        additional logic to update the PHI nodes in the exit block as
