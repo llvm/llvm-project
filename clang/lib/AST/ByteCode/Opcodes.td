@@ -869,7 +869,9 @@ def SideEffect : Opcode {}
 def InvalidCast : Opcode {
   let Args = [ArgCastKind, ArgBool];
 }
-def CheckDynamicCast : Opcode {}
+def DynamicCast : Opcode {
+  let Args = [ArgTypePtr, ArgBool];
+}
 
 def InvalidStore : Opcode { let Args = [ArgTypePtr]; }
 def CheckPseudoDtor : SuccessOpcode;
