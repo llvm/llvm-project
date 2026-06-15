@@ -36,9 +36,9 @@ add_flang_unittest(FlangOptimizerTests
   Builder/Runtime/ReductionTest.cpp
   Builder/Runtime/StopTest.cpp
   Builder/Runtime/TransformationalTest.cpp
+  OpenACC/FIROpenACCPointerLikeTypeInterfaceTest.cpp
   FIRCallInterfaceTest.cpp
   FIRContextTest.cpp
-  OpenACC/FIROpenACCPointerLikeTypeInterfaceTest.cpp
   FIRTypesTest.cpp
   FortranVariableTest.cpp
   InternalNamesTest.cpp
