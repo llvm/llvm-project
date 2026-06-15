@@ -86,21 +86,15 @@ private:
   /// declaration to target for attribute placement, if one exists. Skips
   /// implicit specialization redeclarations that are backed by the template
   /// pattern. In other cases, returns nullptr.
-  const FunctionDecl *
+  static const FunctionDecl *
   getExplicitSpecializationDeclForAttr(const FunctionDecl *FDef) {
     if (FDef->getTemplateSpecializationKindForInstantiation() !=
         TSK_ExplicitSpecialization)
       return nullptr;
 
-    const SourceManager &SM = AST.getSourceManager();
-    auto IsImplicitTemplateSpecialization = [&SM](const FunctionDecl *Redecl,
-                                                  const FunctionDecl *Pattern) {
-      return Pattern && Redecl->getTypeSourceInfo() &&
-             Pattern->getTypeSourceInfo() &&
-             SM.getFileLoc(
-                 Redecl->getTypeSourceInfo()->getTypeLoc().getBeginLoc()) ==
-                 SM.getFileLoc(
-                     Pattern->getTypeSourceInfo()->getTypeLoc().getBeginLoc());
+    auto IsImplicitTemplateSpecialization = [](const FunctionDecl *Redecl,
+                                               const FunctionDecl *Pattern) {
+      return Pattern && Redecl->getBeginLoc() == Pattern->getBeginLoc();
     };
 
     auto redecls = llvm::to_vector(FDef->redecls());
@@ -113,7 +107,7 @@ private:
                 Redecl, dyn_cast<FunctionDecl>(MSI->getInstantiatedFrom())))
           return Redecl;
       if (auto *FTSI = Redecl->getTemplateSpecializationInfo();
-          FTSI && FTSI->isExplicitInstantiationOrSpecialization())
+          FTSI && FTSI->isExplicitSpecialization())
         if (!IsImplicitTemplateSpecialization(
                 Redecl, FTSI->getTemplate()->getTemplatedDecl()))
           return Redecl;
@@ -399,8 +393,8 @@ public:
       FileID File = GetFile(FD);
       if (File == DefFile)
         return;
-      // For explicit specializations, skip the primary template in the redecl
-      // chain.
+      // For explicit specializations, skip redeclarations that do not belong to
+      // the same explicit-specialization instantiation path.
       if (FDef->getTemplateSpecializationKindForInstantiation() ==
               TSK_ExplicitSpecialization &&
           FD->getTemplateSpecializationKindForInstantiation() !=
