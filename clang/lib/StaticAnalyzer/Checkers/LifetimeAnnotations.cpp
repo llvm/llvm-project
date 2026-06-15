@@ -23,8 +23,7 @@ public:
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
                   const char *Sep) const override;
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
-  void analyzerLifetimeBound(const CallEvent &Call, const CallExpr *,
-                             CheckerContext &C) const;
+  void analyzerLifetimeBound(const CallEvent &Call, CheckerContext &C) const;
   ProgramStateRef bindValues(ProgramStateRef State, SymbolRef RetValSym,
                              SVal RetVal, const MemRegion *Source) const;
   bool isSourceDangle(const MemRegion *Source, ProgramStateRef State,
@@ -41,9 +40,7 @@ public:
 
   const BugType BugMsg{this, "LifetimeAnnotations", "LifetimeBound"};
 
-  using FnCheck = void (LifetimeAnnotations::*)(const CallEvent &Call,
-                                                const CallExpr *,
-                                                CheckerContext &C) const;
+  using FnCheck = void (LifetimeAnnotations::*)(const CallEvent &Call, CheckerContext &C) const;
 
   const CallDescriptionMap<FnCheck> Callbacks = {
       {{CDM::SimpleFunc, {"clang_analyzer_lifetime_bound"}},
@@ -100,7 +97,7 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
   }
 
   if (const auto *IC = dyn_cast<CXXInstanceCall>(&Call)) {
-    if (clang::lifetimes::implicitObjectParamIsLifetimeBound(FD)) {
+    if (lifetimes::implicitObjectParamIsLifetimeBound(FD)) {
       if (const MemRegion *AttrRegion = IC->getCXXThisVal().getAsRegion()) {
         State = bindValues(State, RetValSym, RetVal, AttrRegion);
       }
@@ -150,15 +147,15 @@ void LifetimeAnnotations::checkEndFunction(const ReturnStmt *RS,
   auto LBMap = State->get<LifetimeBoundMap>();
   auto LBMapVal = State->get<LifetimeBoundMapVal>();
 
+  if (LBMap.isEmpty() && LBMapVal.isEmpty())
+    return;
+
   const Expr *RetExpr = RS->getRetValue();
   if (!RetExpr)
     return;
 
   RetExpr = RetExpr->IgnoreParens();
   SVal RetVal = C.getSVal(RetExpr);
-
-  if (LBMap.isEmpty() && LBMapVal.isEmpty())
-    return;
 
   SymbolRef RetValSym = RetVal.getAsSymbol(/*IncludeBaseRegions=*/true);
   const MemRegion *RetValRegion = RetVal.getAsRegion();
@@ -194,24 +191,29 @@ void LifetimeAnnotations::checkDeadSymbols(SymbolReaper &SymReaper, CheckerConte
   // Get both maps since both of them needs to be cleaned up
   LifetimeBoundMapTy LBMap = State->get<LifetimeBoundMap>();
   LifetimeBoundMapValTy LBMapVal = State->get<LifetimeBoundMapVal>();
-
+  bool StateChanged = false;
 
   for (auto &Entry : LBMap) {
     const SymExpr *Sym = Entry.first;
     bool IsSymbolLive = SymReaper.isLive(Sym);
 
-    if (!IsSymbolLive)
+    if (!IsSymbolLive) {
       State = State->remove<LifetimeBoundMap>(Sym);
+      StateChanged = true;
+    }
   }
 
   for(auto &Entry: LBMapVal) {
     const MemRegion *Region = Entry.first;
-    bool IsSymbolLive = SymReaper.isLiveRegion(Region);
+    bool IsRegionLive = SymReaper.isLiveRegion(Region);
 
-    if (!IsSymbolLive)
+    if (!IsRegionLive) {
       State = State->remove<LifetimeBoundMapVal>(Region);
+      StateChanged = true;
+    }
   }
-  C.addTransition(State);
+  if (StateChanged)
+    C.addTransition(State);
 }
 
 void LifetimeAnnotations::printState(raw_ostream &Out, ProgramStateRef State,
@@ -244,16 +246,14 @@ bool LifetimeAnnotations::evalCall(const CallEvent &Call,
   if (!Handler)
     return false;
 
-  (this->*(*Handler))(Call, CE, C);
+  (this->*(*Handler))(Call, C);
   return true;
 }
 
-void LifetimeAnnotations::analyzerLifetimeBound(const CallEvent &Call,
-                                                const CallExpr *CE,
-                                                CheckerContext &C) const {
+void LifetimeAnnotations::analyzerLifetimeBound(const CallEvent &Call, CheckerContext &C) const {
 
   ProgramStateRef State = C.getState();
-  unsigned int ArgCount = CE->getNumArgs();
+  unsigned int ArgCount = Call.getNumArgs();
   if (ArgCount != 1)
     return;
 
