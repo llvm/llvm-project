@@ -12,6 +12,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/OpenACC/Support/RegisterOpenACCExtensions.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 
 using namespace mlir;
@@ -21,7 +22,7 @@ namespace {
 struct FIROpenACCPointerLikeTypeInterfaceTest : public testing::Test {
   void SetUp() override {
     mlir::DialectRegistry registry;
-    fir::support::addFIRExtensions(registry);
+    fir::acc::registerOpenACCExtensions(registry);
     context.appendDialectRegistry(registry);
     fir::support::loadDialects(context);
     kindMap = std::make_unique<fir::KindMapping>(&context);
