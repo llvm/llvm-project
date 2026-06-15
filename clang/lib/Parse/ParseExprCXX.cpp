@@ -1880,7 +1880,7 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
     return Sema::ConditionError();
   }
 
-  if (!getLangOpts().CPlusPlus && Tok.is(tok::kw___extension__)) {
+  if (Tok.is(tok::kw___extension__)) {
     // In C, the first clause of a condition may be a declaration used as an
     // init-statement (C2y), and that declaration may be prefixed by one or more
     // __extension__ markers. Consume them up front -- mirroring block-statement
@@ -1923,15 +1923,18 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
       DG = ParseDeclaration(DeclaratorContext::SelectionInit, DeclEnd, attrs,
                             DeclSpecAttrs);
       StmtResult DeclStmt = Actions.ActOnDeclStmt(DG, DeclStart, DeclEnd);
-      if (InitStmt == nullptr)
-        Diag(DeclStmt.get()->getBeginLoc(), diag::err_expected_expression)
-            << DeclStmt.get()->getSourceRange();
-      else
+      if (InitStmt == nullptr) {
+        if (DeclStmt.isUsable())
+          Diag(DeclStmt.get()->getBeginLoc(), diag::err_expected_expression)
+              << DeclStmt.get()->getSourceRange();
+        else
+          Diag(DeclStart, diag::err_expected_expression);
+      } else
         *InitStmt = DeclStmt;
       return ParseCondition(nullptr, Loc, CK, MissingOK);
     }
 
-    // Handle 'if (; true)' and 'if ([[...]]; true)'.
+    // Handle '(; expr)', '(__attribute__((...)); expr)' and '([[...]]; expr)'.
     if (Tok.is(tok::semi)) {
       StmtResult Null = Actions.ActOnNullStmt(ConsumeToken());
       if (ParsedAttrs) {

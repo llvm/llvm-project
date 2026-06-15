@@ -1309,6 +1309,12 @@ bool Parser::ParseParenExprOrCondition(StmtResult *InitStmt,
           << (CK == Sema::ConditionKind::Switch);
   }
 
+  if (Tok.is(tok::comma)) {
+    Diag(Tok, diag::err_c2y_multiple_declarations);
+    // Skip until the next token is ')' (stop when current token is r_paren)
+    while (Tok.isNot(tok::r_paren) && !Tok.is(tok::eof))
+      ConsumeAnyToken();
+  }
   // Either the condition is valid or the rparen is present.
   T.consumeClose();
   LParenLoc = T.getOpenLocation();

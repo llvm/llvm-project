@@ -51,6 +51,20 @@ bool test_if() {
   typedef int MyInt;
   if (MyInt * p = &y; p) {}            // declaration of a pointer
   if (MyInt (q) = 3; q) {}             // parenthesized declarator
+  if (int scope_check = 12; scope_check) {
+  } else {
+    scope_check = 100; // This should be fine
+  }
+  scope_check = 100; // expected-error {{use of undeclared identifier 'scope_check'}}
+
+  if (struct ScopeCheck { int x; } s = {}; s.x == 0) {
+  } else if (false) {
+    struct ScopeCheck works; // okay
+  } else {
+    struct ScopeCheck works; // okay
+  }
+  struct ScopeCheck nope; /* expected-error {{variable has incomplete type 'struct ScopeCheck'}}
+                             expected-note {{forward declaration of 'struct ScopeCheck'}}*/
   return false;
 }
 
@@ -120,8 +134,7 @@ bool negative_test_if() {
   if (int x) {} // expected-error {{variable declaration in condition must have an initializer}}
   // The third form (the declaration that is itself the controlling expression)
   // is limited to a single declarator, so a declarator-list is rejected.
-  if (int x = 1, y = 2) {} /* expected-error {{expected ')'}}
-                              expected-note {{to match this '('}} */
+  if (int x = 1, y = 2) {} // expected-error {{multiple declarations are not allowed}}
   if (; true) {} // expected-error {{first clause in condition must be a declaration}}
   if (__extension__; true) {} // expected-error {{first clause in condition must be a declaration}}
   if (__extension__ true; true) {} /* expected-error {{first clause in condition must be a declaration}}
@@ -171,4 +184,7 @@ int negative_test_switch() {
   default:
     return y;
   }
+
+  switch (int x, y) {default:} /* expected-error {{multiple declarations are not allowed}}
+                                  expected-error {{variable declaration in condition must have an initializer}} */
 }
