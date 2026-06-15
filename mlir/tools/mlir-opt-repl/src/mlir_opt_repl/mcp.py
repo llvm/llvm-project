@@ -162,28 +162,18 @@ TOOLS = [
 
 def send(msg):
     text = json.dumps(msg)
-    sys.stdout.write(f"Content-Length: {len(text.encode())}\r\n\r\n{text}")
+    sys.stdout.write(text + "\n")
     sys.stdout.flush()
 
 
 def read_message():
-    headers = {}
-    while True:
-        line = sys.stdin.readline()
-        if not line:
-            return None
-        line = line.strip()
-        if line == "":
-            break
-        if ":" in line:
-            key, val = line.split(":", 1)
-            headers[key.strip()] = val.strip()
-
-    length = int(headers.get("Content-Length", 0))
-    if length == 0:
+    line = sys.stdin.readline()
+    if not line:
         return None
-    body = sys.stdin.read(length)
-    return json.loads(body)
+    line = line.strip()
+    if not line:
+        return None
+    return json.loads(line)
 
 
 def dispatch(msg):
@@ -196,7 +186,7 @@ def dispatch(msg):
                 "jsonrpc": "2.0",
                 "id": msg_id,
                 "result": {
-                    "protocolVersion": "2024-11-05",
+                    "protocolVersion": "2025-11-25",
                     "capabilities": {"tools": {"listChanged": False}},
                     "serverInfo": {"name": "mlir-opt-repl", "version": "0.1.0"},
                 },
