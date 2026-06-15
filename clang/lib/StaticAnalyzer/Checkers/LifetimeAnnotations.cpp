@@ -37,6 +37,7 @@ public:
                              ProgramStateRef State, ExplodedNode *N,
                              CheckerContext &C) const;
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
+  void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
 
   const BugType BugMsg{this, "LifetimeAnnotations", "LifetimeBound"};
 
@@ -181,10 +182,36 @@ void LifetimeAnnotations::reportDanglingSource(const MemRegion *Region,
   llvm::SmallString<128> Str;
   llvm::raw_svector_ostream OS(Str);
 
-  OS << " Returning value bound to a local " << Region
-     << " that will go out of scope";
+  OS << "Returning value bound to a local " << Region
+     << "that will go out of scope";
   auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
   C.emitReport(std::move(BR));
+}
+
+void LifetimeAnnotations::checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+
+  // Get both maps since both of them needs to be cleaned up
+  LifetimeBoundMapTy LBMap = State->get<LifetimeBoundMap>();
+  LifetimeBoundMapValTy LBMapVal = State->get<LifetimeBoundMapVal>();
+
+
+  for (auto &Entry : LBMap) {
+    const SymExpr *Sym = Entry.first;
+    bool IsSymbolLive = SymReaper.isLive(Sym);
+
+    if (!IsSymbolLive)
+      State = State->remove<LifetimeBoundMap>(Sym);
+  }
+
+  for(auto &Entry: LBMapVal) {
+    const MemRegion *Region = Entry.first;
+    bool IsSymbolLive = SymReaper.isLiveRegion(Region);
+
+    if (!IsSymbolLive)
+      State = State->remove<LifetimeBoundMapVal>(Region);
+  }
+  C.addTransition(State);
 }
 
 void LifetimeAnnotations::printState(raw_ostream &Out, ProgramStateRef State,
