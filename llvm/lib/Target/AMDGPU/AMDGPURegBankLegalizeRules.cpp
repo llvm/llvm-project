@@ -1775,6 +1775,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   // Intrinsics with no register operands.
   addRulesForIOpcs({amdgcn_asyncmark,
                     amdgcn_endpgm,
+                    amdgcn_iglp_opt,
                     amdgcn_init_exec,
                     amdgcn_s_barrier,
                     amdgcn_s_barrier_leave,
@@ -1799,6 +1800,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_s_wait_storecnt,
                     amdgcn_s_wait_tensorcnt,
                     amdgcn_s_waitcnt,
+                    amdgcn_sched_barrier,
+                    amdgcn_sched_group_barrier,
                     amdgcn_unreachable,
                     amdgcn_wait_asyncmark,
                     amdgcn_wave_barrier})
@@ -2397,6 +2400,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_set_inactive_chain_arg}, Standard)
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_cvt_sr_bf16_f32, amdgcn_cvt_sr_f16_f32}, Standard)
+      .Div(V2S16, {{VgprV2S16}, {IntrId, VgprV2S16, Vgpr32, Vgpr32, Imm}});
 
   addRulesForIOpcs({amdgcn_ballot}, Standard)
       .Uni(S64, {{Sgpr64}, {IntrId, Vcc}})
