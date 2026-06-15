@@ -349,7 +349,14 @@ private:
   /// A helper function to collect debug info for btf_decl_tag annotations.
   llvm::DINodeArray CollectBTFDeclTagAnnotations(const Decl *D);
 
-  /// A helper function to collect debug info for btf_type_tag annotations.
+  /// A helper function to collect debug info for btf_decl_tag annotations and
+  /// append them to Annotations.
+  void
+  CollectBTFDeclTagAnnotations(const Decl *D,
+                               SmallVectorImpl<llvm::Metadata *> &Annotations);
+
+  /// A helper function to collect debug info for btf_type_tag annotations and
+  /// append them to Annotations.
   void
   CollectBTFTypeTagAnnotations(QualType Ty,
                                SmallVectorImpl<llvm::Metadata *> &Annotations);

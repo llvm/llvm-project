@@ -3058,6 +3058,18 @@ tag follows the typedef down to its base type, e.g.:
 
   typedef struct foo __attribute__((btf_type_tag("tag"))) foo_t;
 
+The following is the corresponding btf:
+
+.. code-block::
+
+  ...
+  [2] TYPE_TAG 'tag' type_id=4
+  [3] TYPEDEF 'foo_t' type_id=2
+  [4] STRUCT 'foo' size=4 vlen=1
+      'c' type_id=5 bits_offset=0
+  [5] INT 'int' size=4 bits_offset=0 nr_bits=32 encoding=SIGNED
+  ...
+
 The attribute is currently silently ignored in any other position (note: this
 scenario may be diagnosed in the future).
 
