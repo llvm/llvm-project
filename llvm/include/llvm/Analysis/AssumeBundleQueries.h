@@ -144,11 +144,6 @@ constexpr StringRef IgnoreBundleTag = "ignore";
 /// function returned true.
 LLVM_ABI bool isAssumeWithEmptyBundle(const AssumeInst &Assume);
 
-/// Return a valid Knowledge associated to the Use U if its Attribute kind is
-/// in AttrKinds.
-LLVM_ABI RetainedKnowledge
-getKnowledgeFromUse(const Use *U, ArrayRef<Attribute::AttrKind> AttrKinds);
-
 /// Return a valid Knowledge associated to the Value V if its Attribute kind is
 /// in AttrKinds and it matches the Filter.
 LLVM_ABI RetainedKnowledge getKnowledgeForValue(

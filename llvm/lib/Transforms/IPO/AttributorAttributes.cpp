@@ -40,6 +40,7 @@
 #include "llvm/IR/Assumptions.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -2534,12 +2535,9 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
   const DataLayout &DL = A.getInfoCache().getDL();
   if (const auto *CB = dyn_cast<CallBase>(I)) {
     if (CB->isBundleOperand(U)) {
-      if (RetainedKnowledge RK = getKnowledgeFromUse(
-              U, {Attribute::NonNull, Attribute::Dereferenceable})) {
-        IsNonNull |=
-            (RK.AttrKind == Attribute::NonNull || !NullPointerIsDefined);
-        return RK.ArgValue;
-      }
+      IsNonNull |= assumeBundleImpliesNonNull(
+          *U, I->getFunction(),
+          CB->getOperandBundleForOperand(U->getOperandNo()));
       return 0;
     }
 
