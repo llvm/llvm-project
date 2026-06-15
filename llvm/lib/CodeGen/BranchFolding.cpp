@@ -1521,10 +1521,11 @@ ReoptimizeBlock:
                     });
     if (MBB->size() == 1 && PrevBB.canFallThrough() && CurTBB == PriorTBB &&
         AreConditionalsEqual) {
-      TII->removeBranch(*MBB);
-      // We leave the actual deletion of the block to later cleanup, but this
-      // requires a valid CFG.
-      MBB->removeSuccessor(CurTBB);
+      // We remove the branch from the previous basic block rather than this
+      // one in case there are other blocks that specifically branch to this
+      // one.
+      TII->removeBranch(PrevBB);
+      PrevBB.removeSuccessor(CurTBB);
       MadeChange = true;
       ++NumBranchOpts;
       goto ReoptimizeBlock;
