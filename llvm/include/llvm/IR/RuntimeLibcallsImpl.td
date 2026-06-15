@@ -64,6 +64,17 @@ class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   bit IsDefault = false;
 }
 
+/// A family of runtime libcalls implementing one floating-point operation, used
+/// to generate both the backend selector RTLIB::get<base>(EVT) and the IR-level
+/// getLibcallForIntrinsic() mapping. The libcall for a type is `<base>_<suffix>`
+/// (e.g. SIN_F64).
+class RuntimeLibcallFamily<string base, list<string> intrinsics = [],
+                           list<string> vectorSuffixes = []> {
+  string LibcallBase = base;
+  list<string> Intrinsics = intrinsics;
+  list<string> VectorSuffixes = vectorSuffixes;
+}
+
 class LibcallImpls<dag funcList,
                    RuntimeLibcallPredicate Pred = AlwaysAvailable> {
   // Function of the triple where this applies

@@ -11,6 +11,7 @@
 #include "RuntimeLibcalls.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
@@ -45,6 +46,15 @@ inline bool operator==(PredicateWithCC LHS, PredicateWithCC RHS) {
 }
 } // namespace
 
+namespace {
+/// A floating-point libcall family parsed from a RuntimeLibcallFamily record.
+struct FPLibcallFamily {
+  StringRef Base;
+  std::vector<StringRef> Intrinsics;
+  std::vector<StringRef> VectorSuffixes;
+};
+} // namespace
+
 namespace llvm {
 template <> struct DenseMapInfo<PredicateWithCC, void> {
   static unsigned getHashValue(const PredicateWithCC Val) {
@@ -71,6 +81,15 @@ private:
   void emitGetInitRuntimeLibcallNames(raw_ostream &OS) const;
 
   void emitSystemRuntimeLibrarySetCalls(raw_ostream &OS) const;
+
+  void emitFPLibcallSelectorDecls(raw_ostream &OS,
+                                  ArrayRef<FPLibcallFamily> Families) const;
+
+  void emitFPLibcallSelectors(raw_ostream &OS,
+                              ArrayRef<FPLibcallFamily> Families) const;
+
+  void emitGetLibcallForIntrinsic(raw_ostream &OS,
+                                  ArrayRef<FPLibcallFamily> Families) const;
 
 public:
   RuntimeLibcallEmitter(const RecordKeeper &R) : Records(R), Libcalls(R) {}
@@ -548,6 +567,139 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
         "}\n\n";
 }
 
+// Scalar FP type suffixes in the argument order of RTLIB::getFPLibCall, paired
+// with the llvm::Type predicate used by the IR-level mapping.
+static constexpr std::pair<StringRef, StringRef> ScalarFPSuffixes[] = {
+    {"F32", "isFloatTy()"},         {"F64", "isDoubleTy()"},
+    {"F80", "isX86_FP80Ty()"},      {"F128", "isFP128Ty()"},
+    {"PPCF128", "isPPC_FP128Ty()"},
+};
+
+static std::vector<FPLibcallFamily>
+collectFPLibcallFamilies(const RecordKeeper &Records) {
+  std::vector<FPLibcallFamily> Families;
+  for (const Record *R :
+       Records.getAllDerivedDefinitions("RuntimeLibcallFamily")) {
+    FPLibcallFamily Family;
+    Family.Base = R->getValueAsString("LibcallBase");
+    Family.Intrinsics = R->getValueAsListOfStrings("Intrinsics");
+    Family.VectorSuffixes = R->getValueAsListOfStrings("VectorSuffixes");
+    Families.push_back(std::move(Family));
+  }
+  llvm::sort(Families, [](const FPLibcallFamily &A, const FPLibcallFamily &B) {
+    return A.Base < B.Base;
+  });
+  return Families;
+}
+
+/// Generate the declarations for the RTLIB::get<base>(EVT) selectors.
+void RuntimeLibcallEmitter::emitFPLibcallSelectorDecls(
+    raw_ostream &OS, ArrayRef<FPLibcallFamily> Families) const {
+  IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALL_FP_SELECTOR_DECLS");
+  for (const FPLibcallFamily &Family : Families)
+    OS << "LLVM_ABI Libcall get" << Family.Base << "(EVT VT);\n";
+}
+
+/// Generate the backend RTLIB::get<base>(EVT) selectors from the floating-point
+/// libcall families.
+void RuntimeLibcallEmitter::emitFPLibcallSelectors(
+    raw_ostream &OS, ArrayRef<FPLibcallFamily> Families) const {
+  IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALL_FP_SELECTORS");
+
+  // Only emit a libcall enumerator if it actually exists in the declared set.
+  DenseSet<StringRef> ExistingLibcalls;
+  for (const RuntimeLibcall &LC : Libcalls.getRuntimeLibcallDefList())
+    ExistingLibcalls.insert(LC.getName());
+
+  auto scalarEnum = [&](StringRef Base, StringRef Suffix) -> std::string {
+    if (ExistingLibcalls.contains((Base + "_" + Suffix).str()))
+      return ("RTLIB::" + Base + "_" + Suffix).str();
+    return "RTLIB::UNKNOWN_LIBCALL";
+  };
+
+  for (const FPLibcallFamily &Family : Families) {
+    StringRef Base = Family.Base;
+    OS << "RTLIB::Libcall llvm::RTLIB::get" << Base << "(EVT VT) {\n";
+
+    if (!Family.VectorSuffixes.empty()) {
+      OS << "  if (VT.isVector()) {\n"
+            "    if (!VT.isSimple())\n"
+            "      return RTLIB::UNKNOWN_LIBCALL;\n"
+            "    switch (VT.getSimpleVT().SimpleTy) {\n";
+      for (StringRef Suffix : Family.VectorSuffixes) {
+        OS << "    case MVT::" << Suffix.lower()
+           << ":\n      return RTLIB::" << Base << "_" << Suffix << ";\n";
+      }
+      OS << "    default:\n"
+            "      return RTLIB::UNKNOWN_LIBCALL;\n"
+            "    }\n"
+            "  }\n";
+    }
+
+    OS << "  return getFPLibCall(VT";
+    for (auto [Suffix, Pred] : ScalarFPSuffixes)
+      OS << ", " << scalarEnum(Base, Suffix);
+    OS << ");\n}\n\n";
+  }
+}
+
+/// Emit the mapping from floating-point math intrinsics to the runtime libcall
+/// they may lower to, keyed by intrinsic ID and floating-point type. This is
+/// the IR-level counterpart to the backend's RTLIB::getXXX(EVT) selectors.
+void RuntimeLibcallEmitter::emitGetLibcallForIntrinsic(
+    raw_ostream &OS, ArrayRef<FPLibcallFamily> Families) const {
+  IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALL_INTRINSIC_TO_LIBCALL");
+
+  DenseSet<StringRef> ExistingLibcalls;
+  for (const RuntimeLibcall &LC : Libcalls.getRuntimeLibcallDefList())
+    ExistingLibcalls.insert(LC.getName());
+
+  std::vector<std::pair<StringRef, StringRef>> IntrinsicToBase;
+  for (const FPLibcallFamily &Family : Families)
+    for (StringRef Intrinsic : Family.Intrinsics)
+      IntrinsicToBase.emplace_back(Intrinsic, Family.Base);
+  llvm::sort(IntrinsicToBase);
+
+  for (size_t I = 1, E = IntrinsicToBase.size(); I < E; ++I)
+    if (IntrinsicToBase[I].first == IntrinsicToBase[I - 1].first)
+      PrintFatalError(
+          "intrinsic '" + IntrinsicToBase[I].first +
+          "' is mapped by multiple RuntimeLibcallFamily records ('" +
+          IntrinsicToBase[I - 1].second + "' and '" +
+          IntrinsicToBase[I].second + "')");
+
+  MapVector<StringRef, SmallVector<StringRef, 2>> BaseToIntrinsics;
+  for (auto [Intrinsic, Base] : IntrinsicToBase)
+    BaseToIntrinsics[Base].push_back(Intrinsic);
+
+  OS << "RTLIB::Libcall "
+        "llvm::RTLIB::RuntimeLibcallsInfo::getLibcallForIntrinsic("
+        "Intrinsic::ID ID, Type *Ty) {\n"
+        "  switch (ID) {\n";
+
+  for (const auto &[Base, Intrinsics] : BaseToIntrinsics) {
+    SmallVector<std::pair<StringRef, StringRef>, 5> Arms;
+    for (auto [Suffix, Pred] : ScalarFPSuffixes)
+      if (ExistingLibcalls.contains((Base + "_" + Suffix).str()))
+        Arms.emplace_back(Suffix, Pred);
+
+    if (Arms.empty())
+      PrintFatalError("no runtime libcall found for base name '" + Base + "'");
+
+    for (StringRef Intrinsic : Intrinsics)
+      OS << "  case Intrinsic::" << Intrinsic << ":\n";
+    for (auto [Suffix, Pred] : Arms)
+      OS << "    if (Ty->" << Pred << ")\n      return RTLIB::" << Base << "_"
+         << Suffix << ";\n";
+    OS << "    return RTLIB::UNKNOWN_LIBCALL;\n";
+  }
+
+  OS << "  default:\n"
+        "    return RTLIB::UNKNOWN_LIBCALL;\n"
+        "  }\n"
+        "}\n";
+}
+
 void RuntimeLibcallEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("Runtime LibCalls Source Fragment", OS, Records);
   emitGetRuntimeLibcallEnum(OS);
@@ -558,6 +710,11 @@ void RuntimeLibcallEmitter::run(raw_ostream &OS) {
     IfDefEmitter IfDef(OS, "GET_RUNTIME_LIBCALLS_INFO");
     emitSystemRuntimeLibrarySetCalls(OS);
   }
+
+  std::vector<FPLibcallFamily> FPFamilies = collectFPLibcallFamilies(Records);
+  emitFPLibcallSelectorDecls(OS, FPFamilies);
+  emitFPLibcallSelectors(OS, FPFamilies);
+  emitGetLibcallForIntrinsic(OS, FPFamilies);
 }
 
 static TableGen::Emitter::OptClass<RuntimeLibcallEmitter>
