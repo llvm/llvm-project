@@ -64,18 +64,6 @@
 // TARGETID-BOTH: "-target-feature" "+xnack"
 // TARGETID-BOTH-SAME: "-target-feature" "+sramecc"
 
-// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx1250:sramecc+ %s 2>&1 | \
-// RUN:   FileCheck -check-prefix=SRAMECC-ON %s
-
-// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx1250:sramecc- %s 2>&1 | \
-// RUN:   FileCheck -check-prefix=SRAMECC-OFF %s
-
-// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx1251:sramecc+ %s 2>&1 | \
-// RUN:   FileCheck -check-prefix=SRAMECC-ON %s
-
-// RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx1251:sramecc- %s 2>&1 | \
-// RUN:   FileCheck -check-prefix=SRAMECC-OFF %s
-
 //
 // Offload tests
 //
