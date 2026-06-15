@@ -40,7 +40,8 @@ public:
 
   const BugType BugMsg{this, "LifetimeAnnotations", "LifetimeBound"};
 
-  using FnCheck = void (LifetimeAnnotations::*)(const CallEvent &Call, CheckerContext &C) const;
+  using FnCheck = void (LifetimeAnnotations::*)(const CallEvent &Call,
+                                                CheckerContext &C) const;
 
   const CallDescriptionMap<FnCheck> Callbacks = {
       {{CDM::SimpleFunc, {"clang_analyzer_lifetime_bound"}},
@@ -185,7 +186,8 @@ void LifetimeAnnotations::reportDanglingSource(const MemRegion *Region,
   C.emitReport(std::move(BR));
 }
 
-void LifetimeAnnotations::checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const {
+void LifetimeAnnotations::checkDeadSymbols(SymbolReaper &SymReaper,
+                                           CheckerContext &C) const {
   ProgramStateRef State = C.getState();
 
   // Get both maps since both of them needs to be cleaned up
@@ -203,7 +205,7 @@ void LifetimeAnnotations::checkDeadSymbols(SymbolReaper &SymReaper, CheckerConte
     }
   }
 
-  for(auto &Entry: LBMapVal) {
+  for (auto &Entry : LBMapVal) {
     const MemRegion *Region = Entry.first;
     bool IsRegionLive = SymReaper.isLiveRegion(Region);
 
@@ -250,7 +252,8 @@ bool LifetimeAnnotations::evalCall(const CallEvent &Call,
   return true;
 }
 
-void LifetimeAnnotations::analyzerLifetimeBound(const CallEvent &Call, CheckerContext &C) const {
+void LifetimeAnnotations::analyzerLifetimeBound(const CallEvent &Call,
+                                                CheckerContext &C) const {
 
   ProgramStateRef State = C.getState();
   unsigned int ArgCount = Call.getNumArgs();

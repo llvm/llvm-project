@@ -136,4 +136,28 @@ void caller_view() {
 
 // These are the test cases for testing the correctness of the emitted warning from the LifetimeAnnotations checker.
 
+int *test_func(int *p [[clang::lifetimebound]]);
 
+
+int *direct_return() {
+  int i = 5;
+  return test_func(&i);
+  // expected-warning@-1 {{Returning value bound to a local i that will go out of scope}}
+  // expected-warning@-2 {{address of stack memory associated with local variable 'i' returned}}
+}
+
+int *variable_return() {
+  int y = 5;
+  int *p = test_func(&y);
+  return p; // expected-warning {{Returning value bound to a local y that will go out of scope}}
+}
+
+int *borrow_from_caller(int *b [[clang::lifetimebound]]) {
+  return test_func(b); // no-warning
+}
+
+void no_return() {
+  int i = 5;
+  int *p = test_func(&i);
+  (void)p; // no-warning
+}
