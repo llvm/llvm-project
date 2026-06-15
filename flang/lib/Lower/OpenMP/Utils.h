@@ -256,12 +256,12 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
     Fortran::lower::AbstractConverter &converter, const omp::Object &object,
     Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
 
-/// Walk the already-emitted MLIR parent operations from the current insertion
-/// point and collect the implied OpenMP construct traits in
-/// outermost-to-innermost order. Used by metadirective lowering to build the
-/// `ConstructTraits` of an `OMPContext`.
+/// Walk the already-emitted MLIR parent operations starting from \p op and
+/// collect the implied OpenMP construct traits in outermost-to-innermost
+/// order. Used by metadirective lowering to build the `ConstructTraits` of an
+/// `OMPContext`.
 void collectEnclosingConstructTraits(
-    fir::FirOpBuilder &builder,
+    mlir::Operation *op,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
 
 /// Non-constant user condition expression and source for runtime lowering.

@@ -1438,15 +1438,14 @@ bool FlangOMPContext::matchesISATrait(llvm::StringRef rawString) const {
 }
 
 void collectEnclosingConstructTraits(
-    fir::FirOpBuilder &builder,
+    mlir::Operation *op,
     llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
   // Collect enclosing OpenMP operations so variants chosen by an outer
   // metadirective are part of this metadirective's context. For example, an
   // inner metadirective inside `target` and an outer-selected `parallel` must
   // be able to match construct={target, parallel}. The final reverse yields
   // outermost-to-innermost order as required by OMPContext.
-  for (mlir::Operation *op = builder.getInsertionBlock()->getParentOp(); op;
-       op = op->getParentOp()) {
+  for (; op; op = op->getParentOp()) {
     if (mlir::isa<mlir::omp::WsloopOp>(op))
       constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
     if (mlir::isa<mlir::omp::ParallelOp>(op))

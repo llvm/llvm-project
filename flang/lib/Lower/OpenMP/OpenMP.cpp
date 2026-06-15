@@ -4675,7 +4675,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
-  collectEnclosingConstructTraits(builder, constructTraits);
+  collectEnclosingConstructTraits(builder.getInsertionBlock()->getParentOp(),
+                                  constructTraits);
   FlangOMPContext ompCtx(builder.getModule(), constructTraits);
 
   llvm::SmallVector<MetadirectiveCandidate, 4> candidates;
