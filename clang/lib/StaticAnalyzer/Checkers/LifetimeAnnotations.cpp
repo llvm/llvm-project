@@ -180,7 +180,7 @@ void LifetimeAnnotations::reportDanglingSource(const MemRegion *Region,
   llvm::raw_svector_ostream OS(Str);
 
   OS << "Returning value bound to a local " << Region
-     << "that will go out of scope";
+     << " that will go out of scope";
   auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
   C.emitReport(std::move(BR));
 }

@@ -131,3 +131,9 @@ void caller_view() {
   // FIXME: Currently none of the maps cover LazyCompoundVal
   clang_analyzer_lifetime_bound(w); // no-warning
 }
+
+
+
+// These are the test cases for testing the correctness of the emitted warning from the LifetimeAnnotations checker.
+
+
