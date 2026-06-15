@@ -105,3 +105,19 @@ struct S3 {
     }
   }
 };
+
+struct S_ref {
+  int x;
+  int &r;
+  S_ref() : x(0), r(x) {}
+
+  void test_ref() {
+#pragma omp parallel for collapse(2)
+    for (this->r = 0; this->r < 10; ++this->r) {
+      // expected-error@+1{{loop iteration variable 'r' cannot be reused in a nested loop of a collapsed loop nest}}
+      for (this->r = 0; this->r < 10; ++this->r) {
+	int dummy;
+      }
+    }
+  }
+};
