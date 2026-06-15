@@ -276,7 +276,7 @@ static void collectLoads(SmallVector<SUnit *> &Loads, BitVector &Visited,
     if (Edge.getKind() != SDep::Data)
       continue;
     SUnit *Dep = Edge.getSUnit();
-    if (Dep->isBoundaryNode())
+    if (Dep->isBoundaryNode() || Visited.test(Dep->NodeNum))
       continue;
 
     if (Dep->isInstr() && Dep->getInstr()->mayLoad()) {
