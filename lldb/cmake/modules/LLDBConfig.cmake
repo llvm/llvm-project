@@ -190,7 +190,7 @@ else()
   set(LLDB_ENABLE_MTE OFF)
 endif()
 
-if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin|FreeBSD")
   set(default_enable_dynamic_scriptinterpreters ON)
 else()
   set(default_enable_dynamic_scriptinterpreters OFF)
