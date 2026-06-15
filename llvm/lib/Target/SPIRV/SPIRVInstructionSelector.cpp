@@ -7118,7 +7118,6 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
                          .addUse(GR.getSPIRVTypeID(FloatType))
                          .addUse(Variable);
       LoadMIB.constrainAllUses(TII, TRI, RBI);
-      return true;
     }
 
     MIB.constrainAllUses(TII, TRI, RBI);
