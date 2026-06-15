@@ -2,16 +2,11 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GISEL %s
 
-; The sret pointer is a constant offset from the wave-uniform stack pointer, so
-; it is uniform and should be passed in an SGPR rather than a VGPR. The callee
-; should be able to use it as a scalar base for the result store.
-
 %struct.big = type { [16 x i32] }
 
 declare void @ext_sret(ptr addrspace(5) sret(%struct.big) %out)
 
-; The incoming sret pointer should arrive in an SGPR and be usable directly as a
-; scalar store base.
+; Callee: sret pointer arrives in an SGPR, used directly as a scalar store base.
 define void @callee_sret(ptr addrspace(5) sret(%struct.big) %out) {
 ; GCN-LABEL: callee_sret:
 ; GCN:       ; %bb.0: ; %entry
@@ -35,8 +30,7 @@ entry:
   ret void
 }
 
-; The alloca-based pointer is uniform; it should be materialized into an SGPR
-; before the call (readfirstlane if necessary), not occupy a VGPR.
+; Caller: uniform alloca pointer is materialized into an SGPR, not a VGPR.
 define void @caller_sret() {
 ; GCN-LABEL: caller_sret:
 ; GCN:       ; %bb.0: ; %entry
@@ -103,20 +97,9 @@ entry:
   ret void
 }
 
-; The sret pointer is a GEP into an
-; alloca indexed by the per-lane workitem id, so it is divergent. Passing sret in
-; an SGPR makes it behave like any other uniform (inreg) SGPR argument: the
-; caller is responsible for materializing a uniform value.
-;
-; SelectionDAG handles this correctly by wrapping the call in a waterfall loop
-; (readfirstlane + v_cmp_eq + exec masking + cbranch), so each distinct per-lane
-; pointer gets its own call (see the .LBB2_1 loop in the GCN checks below).
-;
-; GlobalISel currently emits a single readfirstlane with no waterfall (see the
-; GISEL checks), which collapses divergent lanes to one pointer. This is a
-; pre-existing limitation of the GlobalISel SGPR-argument path that affects
-; inreg arguments too (a divergent value passed to an inreg parameter is lowered
-; the same way), not something introduced by passing sret in an SGPR.
+; Divergent sret pointer (GEP indexed by workitem id). SelectionDAG legalizes it
+; with a waterfall loop (.LBB2_1). GlobalISel emits a lone readfirstlane, a
+; pre-existing SGPR-argument gap shared with inreg, not introduced here.
 declare i32 @llvm.amdgcn.workitem.id.x()
 
 define void @caller_divergent_sret() {
@@ -249,4 +232,109 @@ define void @caller_divergent_sret() {
   %gep = getelementptr [10 x %struct.big], ptr addrspace(5) %arr, i32 0, i32 %tid
   call void @ext_sret(ptr addrspace(5) sret(%struct.big) %gep)
   ret void
+}
+
+; sret pointer loaded from memory, unrelated to the stack pointer, so it can be
+; fully divergent. Disproves the "sret is always uniform" assumption.
+define void @sret_func(ptr addrspace(5) sret(i32) %sret) {
+; GCN-LABEL: sret_func:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, s16
+; GCN-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: sret_func:
+; GISEL:       ; %bb.0: ; %entry
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GISEL-NEXT:    v_mov_b32_e32 v1, s16
+; GISEL-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  store i32 0, ptr addrspace(5) %sret
+  ret void
+}
+
+; Caller stores through and reads back the same per-lane sret pointer. Collapsing
+; it to one value (lone readfirstlane) writes the wrong lanes and reads stale data.
+define i32 @call_func(ptr addrspace(1) %indirect) {
+; GCN-LABEL: call_func:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_mov_b32 s17, s33
+; GCN-NEXT:    s_mov_b32 s33, s32
+; GCN-NEXT:    s_xor_saveexec_b64 s[18:19], -1
+; GCN-NEXT:    buffer_store_dword v3, off, s[0:3], s33 ; 4-byte Folded Spill
+; GCN-NEXT:    s_mov_b64 exec, s[18:19]
+; GCN-NEXT:    v_writelane_b32 v3, s30, 0
+; GCN-NEXT:    s_addk_i32 s32, 0x400
+; GCN-NEXT:    v_writelane_b32 v3, s31, 1
+; GCN-NEXT:    global_load_dword v2, v[0:1], off
+; GCN-NEXT:    s_mov_b64 s[18:19], exec
+; GCN-NEXT:  .LBB4_1: ; =>This Inner Loop Header: Depth=1
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_readfirstlane_b32 s16, v2
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, s16, v2
+; GCN-NEXT:    s_and_saveexec_b64 vcc, vcc
+; GCN-NEXT:    s_getpc_b64 s[20:21]
+; GCN-NEXT:    s_add_u32 s20, s20, sret_func@gotpcrel32@lo+4
+; GCN-NEXT:    s_addc_u32 s21, s21, sret_func@gotpcrel32@hi+12
+; GCN-NEXT:    s_load_dwordx2 s[20:21], s[20:21], 0x0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_swappc_b64 s[30:31], s[20:21]
+; GCN-NEXT:    ; implicit-def: $vgpr31
+; GCN-NEXT:    s_xor_b64 exec, exec, vcc
+; GCN-NEXT:    s_cbranch_execnz .LBB4_1
+; GCN-NEXT:  ; %bb.2:
+; GCN-NEXT:    s_mov_b64 exec, s[18:19]
+; GCN-NEXT:    buffer_load_dword v0, v2, s[0:3], 0 offen
+; GCN-NEXT:    v_readlane_b32 s30, v3, 0
+; GCN-NEXT:    v_readlane_b32 s31, v3, 1
+; GCN-NEXT:    s_mov_b32 s32, s33
+; GCN-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GCN-NEXT:    buffer_load_dword v3, off, s[0:3], s33 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[4:5]
+; GCN-NEXT:    s_mov_b32 s33, s17
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: call_func:
+; GISEL:       ; %bb.0: ; %entry
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    s_mov_b32 s20, s33
+; GISEL-NEXT:    s_mov_b32 s33, s32
+; GISEL-NEXT:    s_xor_saveexec_b64 s[16:17], -1
+; GISEL-NEXT:    buffer_store_dword v3, off, s[0:3], s33 ; 4-byte Folded Spill
+; GISEL-NEXT:    s_mov_b64 exec, s[16:17]
+; GISEL-NEXT:    v_writelane_b32 v3, s30, 0
+; GISEL-NEXT:    s_addk_i32 s32, 0x400
+; GISEL-NEXT:    v_writelane_b32 v3, s31, 1
+; GISEL-NEXT:    global_load_dword v2, v[0:1], off
+; GISEL-NEXT:    s_getpc_b64 s[16:17]
+; GISEL-NEXT:    s_add_u32 s16, s16, sret_func@gotpcrel32@lo+4
+; GISEL-NEXT:    s_addc_u32 s17, s17, sret_func@gotpcrel32@hi+12
+; GISEL-NEXT:    s_load_dwordx2 s[18:19], s[16:17], 0x0
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    v_readfirstlane_b32 s16, v2
+; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GISEL-NEXT:    s_swappc_b64 s[30:31], s[18:19]
+; GISEL-NEXT:    buffer_load_dword v0, v2, s[0:3], 0 offen
+; GISEL-NEXT:    v_readlane_b32 s30, v3, 0
+; GISEL-NEXT:    v_readlane_b32 s31, v3, 1
+; GISEL-NEXT:    s_mov_b32 s32, s33
+; GISEL-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GISEL-NEXT:    buffer_load_dword v3, off, s[0:3], s33 ; 4-byte Folded Reload
+; GISEL-NEXT:    s_mov_b64 exec, s[4:5]
+; GISEL-NEXT:    s_mov_b32 s33, s20
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %ptr = load ptr addrspace(5), ptr addrspace(1) %indirect
+  call void @sret_func(ptr addrspace(5) sret(i32) %ptr)
+  %ld = load i32, ptr addrspace(5) %ptr
+  ret i32 %ld
 }

@@ -25,10 +25,13 @@ define amdgpu_kernel void @test_amdgpu_kernel(ptr addrspace(4) byref([4 x <16 x 
 }
 
 ; CHECK-LABEL: for function 'test_c':
-; CHECK: DIVERGENT:
-; CHECK: DIVERGENT:
-; CHECK: DIVERGENT:
-; CHECK: DIVERGENT:
+; CHECK-NOT: DIVERGENT:{{.*}}%arg0
+; CHECK-NOT: DIVERGENT:{{.*}}%arg1
+; CHECK-NOT: DIVERGENT:{{.*}}%arg2
+; CHECK-DAG: DIVERGENT:  <2 x i32> %arg3
+; CHECK-DAG: DIVERGENT:  <3 x i32> %arg4
+; CHECK-DAG: DIVERGENT:  float %arg5
+; CHECK-DAG: DIVERGENT:  i32 %arg6
 define void @test_c(ptr addrspace(5) byval([4 x <16 x i8>]) %arg0, float inreg %arg1, i32 inreg %arg2, <2 x i32> %arg3, <3 x i32> %arg4, float %arg5, i32 %arg6) #0 {
   ret void
 }
