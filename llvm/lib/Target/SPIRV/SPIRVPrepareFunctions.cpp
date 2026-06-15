@@ -121,20 +121,19 @@ static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic,
 
   // An intrinsic with a metadata argument has no SPIR-V lowering and can't be
   // turned into a function.
-  for (Value *Arg : Intrinsic->args())
-    if (isa<MetadataAsValue>(Arg)) {
-      const Function *F = Intrinsic->getFunction();
-      F->getContext().diagnose(DiagnosticInfoUnsupported(
-          *F,
-          "cannot lower the intrinsic '" +
-              Intrinsic->getCalledFunction()->getName() +
-              "' that takes a metadata argument",
-          Intrinsic->getDebugLoc()));
-      if (!Intrinsic->getType()->isVoidTy())
-        Intrinsic->replaceAllUsesWith(PoisonValue::get(Intrinsic->getType()));
-      Intrinsic->eraseFromParent();
-      return true;
-    }
+  if (any_of(Intrinsic->args(), IsaPred<MetadataAsValue>)) {
+    const Function *F = Intrinsic->getFunction();
+    F->getContext().diagnose(DiagnosticInfoUnsupported(
+        *F,
+        "cannot lower the intrinsic '" +
+            Intrinsic->getCalledFunction()->getName() +
+            "' that takes a metadata argument",
+        Intrinsic->getDebugLoc()));
+    if (!Intrinsic->getType()->isVoidTy())
+      Intrinsic->replaceAllUsesWith(PoisonValue::get(Intrinsic->getType()));
+    Intrinsic->eraseFromParent();
+    return true;
+  }
 
   Module *M = Intrinsic->getModule();
   std::string FuncName = lowerLLVMIntrinsicName(Intrinsic);
@@ -519,12 +518,15 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
                                        EraseFromParent);
         Changed = true;
         break;
-      case Intrinsic::experimental_noalias_scope_decl:
-        // Drop as there is no SPIR-V representation.
-        II->eraseFromParent();
-        Changed = true;
-        break;
       default:
+        // Drop assume-like intrinsics that have no SPIR-V representation.
+        if (II->isAssumeLikeIntrinsic()) {
+          if (!II->getType()->isVoidTy())
+            II->replaceAllUsesWith(PoisonValue::get(II->getType()));
+          II->eraseFromParent();
+          Changed = true;
+          break;
+        }
         if (TM.getTargetTriple().getVendor() == Triple::AMD ||
             any_of(SPVAllowUnknownIntrinsics, [II](auto &&Prefix) {
               if (Prefix.empty())
