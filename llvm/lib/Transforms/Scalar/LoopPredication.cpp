@@ -903,7 +903,8 @@ bool LoopPredication::isLoopProfitableToPredicate() {
   // If the latch exits into a deoptimize or an unreachable block, do not
   // predicate on that latch check.
   auto *LatchExitBlock = LatchTerm->getSuccessor(LatchBrExitIdx);
-  if (isa<UnreachableInst>(LatchTerm) ||
+  auto *LatchExitTerm = LatchExitBlock->getTerminator();
+  if (isa<UnreachableInst>(LatchExitTerm) ||
       LatchExitBlock->getPostdominatingDeoptimizeCall())
     return false;
 
