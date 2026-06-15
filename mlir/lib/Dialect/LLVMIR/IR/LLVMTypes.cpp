@@ -215,7 +215,18 @@ LLVMByteType::getTypeSizeInBits(const DataLayout &dataLayout,
 
 uint64_t LLVMByteType::getABIAlignment(const DataLayout &dataLayout,
                                        DataLayoutEntryListRef params) const {
-  return llvm::PowerOf2Ceil(llvm::divideCeil(getBitWidth(), 8));
+  return llvm::PowerOf2Ceil(llvm::divideCeil(getBitWidth(), kBitsInByte));
+}
+
+LogicalResult
+LLVMByteType::verify(function_ref<InFlightDiagnostic()> emitError,
+                     unsigned bitWidth) {
+  // Mirror LLVM IR, which limits the bit width to fit in 23 bits.
+  constexpr unsigned kMaxBitWidth = 1 << 23;
+  if (bitWidth >= kMaxBitWidth)
+    return emitError() << "bitwidth must be less than " << kMaxBitWidth
+                       << ", but got " << bitWidth;
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

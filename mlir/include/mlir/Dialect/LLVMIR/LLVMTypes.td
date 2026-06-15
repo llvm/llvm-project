@@ -83,6 +83,7 @@ def LLVMByteType : LLVMType<"LLVMByte", "byte", [
   let assemblyFormat = [{
     `<` $bitWidth `>`
   }];
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//
