@@ -111,6 +111,10 @@ static cl::opt<bool> PrintAddrspaceName("print-addrspace-name", cl::Hidden,
                                         cl::init(false),
                                         cl::desc("Print address space names"));
 
+static cl::opt<bool>
+    PrintNodeAddress("print-node-address", cl::Hidden, cl::init(true),
+                     cl::desc("Print metadata node addresses for debugging"));
+
 // Make virtual table appear in this compilation unit.
 AssemblyAnnotationWriter::~AssemblyAnnotationWriter() = default;
 
@@ -2847,7 +2851,10 @@ static void writeAsOperandInternal(raw_ostream &Out, const Metadata *MD,
       }
       // Give the pointer value instead of "badref", since this comes up all
       // the time when debugging.
-      Out << "<" << N << ">";
+      if (PrintNodeAddress)
+        Out << "<" << N << ">";
+      else
+        Out << "<badref>";
     } else
       Out << '!' << Slot;
     return;
