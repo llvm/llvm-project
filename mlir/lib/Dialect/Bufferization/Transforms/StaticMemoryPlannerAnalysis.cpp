@@ -39,8 +39,9 @@ namespace {
 struct AllocationCandidate {
   mlir::memref::AllocOp alloc;
   mlir::memref::DeallocOp dealloc;
-  int64_t offset = 0;      // Offset in elements from arena start
-  int64_t sizeInElements = 0; // Size in elements
+  int64_t offset = 0;         // Offset in bytes from arena start
+  int64_t sizeInBytes = 0;    // Size in bytes
+  int64_t alignment = 1;      // Required alignment in bytes
 };
 
 //===----------------------------------------------------------------------===//
@@ -67,6 +68,21 @@ static int64_t computeSizeInElements(mlir::MemRefType memrefType) {
   for (int64_t dim : memrefType.getShape())
     size *= dim;
   return size;
+}
+
+/// Compute the size in bytes for a memref type.
+static int64_t computeSizeInBytes(mlir::MemRefType memrefType) {
+  int64_t numElements = computeSizeInElements(memrefType);
+  unsigned elementSizeInBits = memrefType.getElementTypeBitWidth();
+  return (numElements * elementSizeInBits + 7) / 8; // Round up to bytes
+}
+
+/// Align an offset to the specified alignment.
+/// Returns the smallest value >= offset that is a multiple of alignment.
+static int64_t alignOffset(int64_t offset, int64_t alignment) {
+  if (alignment <= 1)
+    return offset;
+  return (offset + alignment - 1) / alignment * alignment;
 }
 
 //===----------------------------------------------------------------------===//
@@ -111,21 +127,28 @@ public:
       AllocationCandidate candidate;
       candidate.alloc = allocOp;
       candidate.dealloc = deallocOp;
-      candidate.sizeInElements = computeSizeInElements(memrefType);
+      candidate.sizeInBytes = computeSizeInBytes(memrefType);
+      // Extract alignment requirement (default to 1 if not specified)
+      candidate.alignment = allocOp.getAlignment().value_or(1);
       candidates.push_back(candidate);
     });
 
     if (candidates.empty())
       return;
 
-    // Step 2: Compute simple sequential offsets (no overlap optimization)
+    // Step 2: Compute simple sequential offsets with alignment padding
     int64_t totalSize = 0;
+    int64_t maxAlignment = 1;
     for (auto &candidate : candidates) {
+      // Align current offset to this allocation's requirement
+      totalSize = alignOffset(totalSize, candidate.alignment);
       candidate.offset = totalSize;
-      totalSize += candidate.sizeInElements;
+      totalSize += candidate.sizeInBytes;
+      maxAlignment = std::max(maxAlignment, candidate.alignment);
       LLVM_DEBUG(llvm::dbgs() << "[static-memory-planner] offset="
                               << candidate.offset
-                              << " size=" << candidate.sizeInElements << "\n");
+                              << " size=" << candidate.sizeInBytes
+                              << " alignment=" << candidate.alignment << "\n");
     }
 
     // Step 3: Find the first allocation's location to place arena
@@ -134,13 +157,19 @@ public:
 
     // Get element type from first allocation (assume all same type for now)
     mlir::Type elementType = candidates.front().alloc.getType().getElementType();
+    unsigned elementSizeInBits = elementType.getIntOrFloatBitWidth();
+    unsigned elementSizeInBytes = (elementSizeInBits + 7) / 8;
     
-    // Step 4: Create arena allocation
-    auto arenaType = mlir::MemRefType::get({totalSize}, elementType);
+    // Step 4: Create arena allocation with maximum alignment
+    // Convert total size from bytes to elements
+    int64_t arenaSizeInElements = (totalSize + elementSizeInBytes - 1) / elementSizeInBytes;
+    auto arenaType = mlir::MemRefType::get({arenaSizeInElements}, elementType);
     auto arenaAlloc = mlir::memref::AllocOp::create(builder, firstAlloc->getLoc(), arenaType);
+    arenaAlloc.setAlignmentAttr(builder.getI64IntegerAttr(maxAlignment));
 
     LLVM_DEBUG(llvm::dbgs() << "[static-memory-planner] created arena: size="
-                            << totalSize << " elements\n");
+                            << arenaSizeInElements << " elements (" << totalSize 
+                            << " bytes), alignment=" << maxAlignment << " bytes\n");
 
     // Step 5: Replace each alloc with a subview and remove deallocs
     for (auto &candidate : candidates) {
@@ -149,9 +178,12 @@ public:
       // Create subview into arena
       llvm::SmallVector<mlir::OpFoldResult> offsets, sizes, strides;
       
-      // Single offset into flat arena
-      offsets.push_back(subviewBuilder.getIndexAttr(candidate.offset));
-      sizes.push_back(subviewBuilder.getIndexAttr(candidate.sizeInElements));
+      // Convert byte offsets/sizes back to element indices for the arena
+      int64_t offsetInElements = candidate.offset / elementSizeInBytes;
+      int64_t sizeInElements = candidate.sizeInBytes / elementSizeInBytes;
+      
+      offsets.push_back(subviewBuilder.getIndexAttr(offsetInElements));
+      sizes.push_back(subviewBuilder.getIndexAttr(sizeInElements));
       strides.push_back(subviewBuilder.getIndexAttr(1));
       
       auto subview = mlir::memref::SubViewOp::create(
