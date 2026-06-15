@@ -292,6 +292,7 @@
 // TODO: isnan is a macro in <math.h>
 // #include "math/isnan.h"
 #include "math/isnanf.h"
+#include "math/isnanf128.h"
 #include "math/isnanf16.h"
 #include "math/isnanl.h"
 // TODO: issignaling is a macro in <math.h>
