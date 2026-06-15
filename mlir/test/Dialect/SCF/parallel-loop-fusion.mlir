@@ -1455,3 +1455,49 @@ func.func @fuse_three_cycle_reductions(%A: memref<2x3x5xf32>,
 // CHECK: ^bb0
 // CHECK: ^bb0
 // CHECK: return %[[RES]]#0, %[[RES]]#1 : f32, f32
+
+// -----
+
+// Two duplicate axis groups are interleaved: the first loop has iteration
+// extents (2, 3, 2, 3), while the second loop visits the same space as
+// (3, 2, 3, 2). Fusion should find the permutation that maps the second loop
+// back to the first loop order and then fold both bodies into one loop.
+func.func @fuse_interleaved_duplicate_axes_permutation(
+    %out: memref<2x3x2x3xf32>) {
+  %tmp = memref.alloc() : memref<2x3x2x3xf32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %v = arith.constant 1.0 : f32
+
+  scf.parallel (%a, %b, %c, %d) = (%c0, %c0, %c0, %c0)
+      to (%c2, %c3, %c2, %c3) step (%c1, %c1, %c1, %c1) {
+    memref.store %v, %tmp[%a, %b, %c, %d] : memref<2x3x2x3xf32>
+    scf.reduce
+  }
+
+  scf.parallel (%b2, %a2, %d2, %c2v) = (%c0, %c0, %c0, %c0)
+      to (%c3, %c2, %c3, %c2) step (%c1, %c1, %c1, %c1) {
+    %x = memref.load %tmp[%a2, %b2, %c2v, %d2] : memref<2x3x2x3xf32>
+    memref.store %x, %out[%a2, %b2, %c2v, %d2] : memref<2x3x2x3xf32>
+    scf.reduce
+  }
+  return
+}
+
+// CHECK-NAME: func @fuse_interleaved_duplicate_axes_permutation
+// CHECK: %[[TMP:.*]] = memref.alloc() : memref<2x3x2x3xf32>
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: %[[C2:.*]] = arith.constant 2 : index
+// CHECK: %[[C3:.*]] = arith.constant 3 : index
+// CHECK: %[[CST:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK: scf.parallel (%[[A:.*]], %[[B:.*]], %[[C:.*]], %[[D:.*]]) = (%[[C0]], %[[C0]], %[[C0]], %[[C0]])
+// CHECK-SAME: to (%[[C2]], %[[C3]], %[[C2]], %[[C3]])
+// CHECK-SAME: step (%[[C1]], %[[C1]], %[[C1]], %[[C1]])
+// CHECK:   memref.store %[[CST]], %[[TMP]]{{\[}}%[[A]], %[[B]], %[[C]], %[[D]]{{\]}} : memref<2x3x2x3xf32>
+// CHECK:   %[[V0:.*]] = memref.load %[[TMP]]{{\[}}%[[A]], %[[B]], %[[C]], %[[D]]{{\]}} : memref<2x3x2x3xf32>
+// CHECK:   memref.store %[[V0]], %{{.*}}{{\[}}%[[A]], %[[B]], %[[C]], %[[D]]{{\]}} : memref<2x3x2x3xf32>
+// CHECK:   scf.reduce
+// CHECK-NOT: scf.parallel

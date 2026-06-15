@@ -37,9 +37,11 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 
+#include "llvm/Support/Debug.h"
 #include <numeric>
 #include <optional>
 #include <tuple>
+#define DEBUG_TYPE "parallel-loop-fusion"
 
 namespace mlir {
 #define GEN_PASS_DEF_SCFPARALLELLOOPFUSION
@@ -55,6 +57,15 @@ static bool hasNestedParallelOp(ParallelOp ploop) {
       ploop.getBody()->walk([](ParallelOp) { return WalkResult::interrupt(); });
   return walkResult.wasInterrupted();
 }
+
+#ifndef NDEBUG
+template <class T>
+static inline std::string toString(T &cnt) {
+  std::stringstream ss;
+  std::copy(cnt.begin(), cnt.end(), std::ostream_iterator<int64_t>(ss, ""));
+  return ss.str();
+}
+#endif
 
 /// Verify equal iteration spaces.
 static bool equalIterationSpaces(ParallelOp firstPloop,
@@ -797,17 +808,17 @@ struct llvm::DenseMapInfo<LoopIV> {
 };
 
 // Returns vector of candidate permutation indices vectors,
-// can be empty
+// can be empty. Caps the number of extra candidate permutations
+// explored to avoid combinatorial explosion. This makes the search
+// intentionally incomplete.
 static SmallVector<SmallVector<int64_t>>
 computeCandidateInterchangePermutations(ParallelOp &firstPloop,
                                         ParallelOp &secondPloop,
-                                        int axesLimit = 5) {
-  SmallVector<SmallVector<int64_t>> extraResults;
-
+                                        int permBudget = 120) {
   // Check preconditions
   if (firstPloop.getNumLoops() < 2 ||
       firstPloop.getNumLoops() != secondPloop.getNumLoops())
-    return extraResults;
+    return {};
 
   SmallVector<LoopIV> firstIVs(firstPloop.getNumLoops());
   SmallVector<LoopIV> secondIVs(secondPloop.getNumLoops());
@@ -834,14 +845,14 @@ computeCandidateInterchangePermutations(ParallelOp &firstPloop,
 
   // Not a permutation shortcut
   if (indices.size() == 1)
-    return extraResults;
+    return {};
 
   // Initialize with identity permutations
-  SmallVector<int64_t> result(firstIVs.size());
-  std::iota(result.begin(), result.end(), 0);
+  SmallVector<int64_t> basic(firstIVs.size());
+  std::iota(basic.begin(), basic.end(), 0);
 
   if (indices.empty() && unique.size() == firstIVs.size())
-    return extraResults;
+    return {};
 
   if (indices.size() > 1) {
     // Determine whether the iteration space of the first loop is a permutation
@@ -853,24 +864,26 @@ computeCandidateInterchangePermutations(ParallelOp &firstPloop,
         if (fIdx != sIdx && firstIVs[fIdx] == secondIVs[sIdx] &&
             remaps.end() == std::find(remaps.begin(), remaps.end(), sIdx)) {
           remaps.push_back(sIdx);
+          break;
         }
       }
     }
 
     // Not a permutation
     if (indices.size() != remaps.size())
-      return extraResults;
+      return {};
 
     // compose permutation indices
     for (auto [from, to] : zip(indices, remaps)) {
-      result[from] = to;
+      basic[from] = to;
     }
 
-    extraResults.push_back(result);
+    LLVM_DEBUG(llvm::dbgs()
+               << "Collected basic permutations: " << toString(basic) << "\n");
 
     // All axes are unique, no further permutatons needed
     if (unique.size() == firstIVs.size()) {
-      return extraResults;
+      return {basic};
     }
   }
 
@@ -880,14 +893,13 @@ computeCandidateInterchangePermutations(ParallelOp &firstPloop,
          "Expected at least two equal axes");
 
   // Collect equal axes to groups
+  SmallVector<SmallVector<int64_t>> extraResults{basic};
   SmallVector<SmallVector<int64_t>> groups;
   for (auto iv : unique) {
     SmallVector<int64_t> group;
     for (unsigned index : llvm::seq(firstIVs.size())) {
-      if (axesLimit && firstIVs[index] == iv) {
-        axesLimit--;
+      if (firstIVs[index] == iv)
         group.push_back(index);
-      }
     }
     if (group.size() > 1)
       groups.push_back(std::move(group));
@@ -895,8 +907,8 @@ computeCandidateInterchangePermutations(ParallelOp &firstPloop,
 
   // Permute axes groups
   SmallVector<SmallVector<int64_t>> rmpdGroups(groups);
-  bool repeat = false;
-  do {
+  bool repeat = true;
+  while (repeat && permBudget) {
     repeat = false;
     for (auto const &[group, groupRemaps] : zip(groups, rmpdGroups)) {
       repeat |= std::next_permutation(groupRemaps.begin(), groupRemaps.end());
@@ -905,58 +917,31 @@ computeCandidateInterchangePermutations(ParallelOp &firstPloop,
     }
 
     if (repeat) {
-      SmallVector<int64_t> extra(result);
+      SmallVector<int64_t> extra(basic);
       for (auto const &[group, groupRemaps] : zip(groups, rmpdGroups)) {
         for (auto [from, to] : zip(group, groupRemaps))
-          extra[from] = result[to];
+          extra[from] = basic[to];
       }
-      if (result != extra)
+      if (basic != extra) {
+        LLVM_DEBUG(llvm::dbgs() << "Collected extra permutations: "
+                                << toString(extra) << "\n");
+
         extraResults.push_back(std::move(extra));
+        permBudget--;
+      }
     }
-  } while (repeat);
+  }
 
   return extraResults;
 }
 
 /// Prepend operations of firstPloop's body into secondPloop's body.
 /// Update secondPloop with new loop.
-static void fuseIfLegal(ParallelOp firstPloop, ParallelOp &secondPloop,
-                        OpBuilder builder,
-                        llvm::function_ref<bool(Value, Value)> mayAlias) {
+static void applyLoopFusion(ParallelOp &firstPloop, ParallelOp &secondPloop,
+                            OpBuilder &builder) {
+  DominanceInfo dom;
   Block *block1 = firstPloop.getBody();
   Block *block2 = secondPloop.getBody();
-  IRMapping firstToSecondPloopIndices;
-  firstToSecondPloopIndices.map(block1->getArguments(), block2->getArguments());
-
-  if (!isFusionLegal(firstPloop, secondPloop, firstToSecondPloopIndices,
-                     mayAlias, builder)) {
-    // If iteration space of the second parallel loop is a permutation of the
-    // first one then interchange iteration space of the second parallel loop
-    // and re-asses possibility of fusion.
-    for (auto &perms :
-         computeCandidateInterchangePermutations(firstPloop, secondPloop)) {
-      OpBuilder::InsertionGuard guard(builder);
-      auto newLoop = interchangeLoops(builder, secondPloop, perms);
-      firstToSecondPloopIndices.clear();
-      firstToSecondPloopIndices.map(block1->getArguments(),
-                                    newLoop->getBody()->getArguments());
-      if (!isFusionLegal(firstPloop, *newLoop, firstToSecondPloopIndices,
-                         mayAlias, builder)) {
-        newLoop->erase();
-        continue;
-      }
-
-      secondPloop.replaceAllUsesWith(newLoop->getResults());
-      secondPloop->erase();
-      secondPloop = *newLoop;
-      block2 = secondPloop.getBody();
-      goto fuseLabel;
-    }
-    return;
-  }
-
-fuseLabel:
-  DominanceInfo dom;
   // We are fusing first loop into second, make sure there are no users of the
   // first loop results between loops.
   for (Operation *user : firstPloop->getUsers())
@@ -1011,6 +996,48 @@ fuseLabel:
   firstPloop.erase();
   secondPloop.erase();
   secondPloop = newSecondPloop;
+}
+
+/// Check fusion pre-conditions and call fusion if it is possible
+static void fuseIfLegal(ParallelOp firstPloop, ParallelOp &secondPloop,
+                        OpBuilder builder,
+                        llvm::function_ref<bool(Value, Value)> mayAlias) {
+  Block *block1 = firstPloop.getBody();
+  Block *block2 = secondPloop.getBody();
+  IRMapping firstToSecondPloopIndices;
+  firstToSecondPloopIndices.map(block1->getArguments(), block2->getArguments());
+
+  if (!isFusionLegal(firstPloop, secondPloop, firstToSecondPloopIndices,
+                     mayAlias, builder)) {
+    // If iteration space of the second parallel loop is a permutation of the
+    // first one then interchange iteration space of the second parallel loop
+    // and re-asses possibility of fusion.
+    for (auto &perms :
+         computeCandidateInterchangePermutations(firstPloop, secondPloop)) {
+      OpBuilder::InsertionGuard guard(builder);
+      LLVM_DEBUG(llvm::dbgs()
+                 << "Applied permutation: " << toString(perms) << "\n");
+
+      auto newLoop = interchangeLoops(builder, secondPloop, perms);
+      firstToSecondPloopIndices.clear();
+      firstToSecondPloopIndices.map(block1->getArguments(),
+                                    newLoop->getBody()->getArguments());
+      if (!isFusionLegal(firstPloop, *newLoop, firstToSecondPloopIndices,
+                         mayAlias, builder)) {
+        LLVM_DEBUG(llvm::dbgs() << "Rejected: " << newLoop << "\n");
+
+        newLoop->erase();
+        continue;
+      }
+
+      secondPloop.replaceAllUsesWith(newLoop->getResults());
+      secondPloop->erase();
+      applyLoopFusion(firstPloop, *newLoop, builder);
+      break;
+    }
+    return;
+  }
+  applyLoopFusion(firstPloop, secondPloop, builder);
 }
 
 void mlir::scf::naivelyFuseParallelOps(
