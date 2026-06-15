@@ -2677,8 +2677,9 @@ LogicalResult AffineForOp::fold(FoldAdaptor adaptor,
 }
 
 OperandRange AffineForOp::getEntrySuccessorOperands(RegionSuccessor successor) {
-  assert((successor.isParent() || successor.getSuccessor() == &getRegion()) &&
-         "invalid region point");
+  assert(
+      (successor.isOperation() || successor.getSuccessor() == &getRegion()) &&
+      "invalid region point");
 
   // The initial operands map to the loop arguments after the induction
   // variable or are forwarded to the results when the trip count is zero.
@@ -2701,7 +2702,7 @@ void AffineForOp::getSuccessorRegions(
       // From the loop body, if the trip count is one, we can only branch back
       // to the parent.
       if (tripCount == 1) {
-        regions.push_back(RegionSuccessor::parent());
+        regions.push_back(RegionSuccessor(getOperation()));
         return;
       }
       if (tripCount == 0)
@@ -2712,7 +2713,7 @@ void AffineForOp::getSuccessorRegions(
         return;
       }
       if (tripCount.value() == 0) {
-        regions.push_back(RegionSuccessor::parent());
+        regions.push_back(RegionSuccessor(getOperation()));
         return;
       }
     }
@@ -2721,11 +2722,11 @@ void AffineForOp::getSuccessorRegions(
   // In all other cases, the loop may branch back to itself or the parent
   // operation.
   regions.push_back(RegionSuccessor(&getRegion()));
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange AffineForOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getResults();
   return getRegionIterArgs();
 }
@@ -3115,7 +3116,7 @@ void AffineIfOp::getSuccessorRegions(
     regions.push_back(RegionSuccessor(&getThenRegion()));
     // If the "else" region is empty, branch bach into parent.
     if (getElseRegion().empty()) {
-      regions.push_back(RegionSuccessor::parent());
+      regions.push_back(RegionSuccessor(getOperation()));
     } else {
       regions.push_back(RegionSuccessor(&getElseRegion()));
     }
@@ -3124,11 +3125,11 @@ void AffineIfOp::getSuccessorRegions(
 
   // If the predecessor is the `else`/`then` region, then branching into parent
   // op is valid.
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange AffineIfOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getResults();
   if (successor == &getThenRegion())
     return getThenRegion().getArguments();

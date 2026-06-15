@@ -2787,6 +2787,10 @@ QualType Type::getRVVEltType(const ASTContext &Ctx) const {
 }
 
 bool QualType::isPODType(const ASTContext &Context) const {
+  if (Context.getLangOpts().HLSL &&
+      getTypePtr()->isHLSLStandardLayoutRecordOrArrayOf())
+    return true;
+
   // C++11 has a more relaxed definition of POD.
   if (Context.getLangOpts().CPlusPlus11)
     return isCXX11PODType(Context);
@@ -5538,6 +5542,16 @@ bool Type::isHLSLIntangibleType() const {
          "all HLSL structs and classes should be CXXRecordDecl");
   assert(RD->isCompleteDefinition() && "expecting complete type");
   return RD->isHLSLIntangible();
+}
+
+bool Type::isHLSLStandardLayoutRecordOrArrayOf() const {
+  const Type *BaseTy = getBaseElementTypeUnsafe();
+  if (const auto *RD =
+          dyn_cast_or_null<CXXRecordDecl>(BaseTy->getAsRecordDecl())) {
+    if (!RD->isHLSLBuiltinRecord() && RD->isStandardLayout())
+      return true;
+  }
+  return false;
 }
 
 QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {

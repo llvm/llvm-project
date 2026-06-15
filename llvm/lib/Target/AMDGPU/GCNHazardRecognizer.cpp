@@ -2099,7 +2099,7 @@ static bool isCoexecutableVALUInst(const MachineInstr &MI) {
 //   V_SWMMAC_*_16X16X64_{F16,BF16}
 //   V_SWMMAC_{F32,F16}_16X16X128_{FP8,BF8}*
 //
-// Category: 32 Pass GFX1251 WMMA with latency 32
+// Category 5: 32 Pass GFX1251 WMMA with latency 32
 //   V_WMMA_F32_16x16x128_F8F6F4 (not all F4)
 //   V_WMMA_{F32,F16}_16X16X128_{FP8,BF8}*
 //   V_WMMA_F32_32X16X128_F4

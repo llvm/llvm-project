@@ -47,6 +47,15 @@ using VectorParts = SmallVector<Value *, 2>;
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+// It is sometimes necessary to disable printing of metadata in tests in order
+// to avoid non-deterministic behaviour due to metadata introduced by VPlan
+// that wasn't present in the original scalar IR.
+static cl::opt<bool> VPlanPrintMetadata(
+    "vplan-print-metadata", cl::init(true), cl::Hidden,
+    cl::desc("Controls the printing of recipe metadata when debugging."));
+#endif
+
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPRecipeID()) {
   case VPExpressionSC:
@@ -2038,7 +2047,7 @@ void VPIRMetadata::intersect(const VPIRMetadata &Other) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
   const Module *M = SlotTracker.getModule();
-  if (Metadata.empty() || !M)
+  if (Metadata.empty() || !M || !VPlanPrintMetadata)
     return;
 
   ArrayRef<StringRef> MDNames = SlotTracker.getMDNames();
