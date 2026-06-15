@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ast-dump -std=c++17 %s | FileCheck %s
+// RUN: %clang_cc1 -ast-dump %s | FileCheck %s
 
 // In C++, block-scope extern declarations target the enclosing namespace
 // scope ([dcl.meaning.general]/3.5), so they match against the namespace-scope
