@@ -415,17 +415,21 @@ def EmitC_CastOp : EmitC_Op<"cast",
     %1 = emitc.cast %arg1 :
         !emitc.ptr<!emitc.opaque<"void">> to !emitc.ptr<i32>
     ```
+
+    In general, C++ cast expressions cannot always be assumed to be pure:
+    they may invoke user-defined conversions or be affected by floating-point
+    environment settings. However, in many practical cases, such as integer
+    casts without operator overloading, the cast is pure and can be treated as
+    speculatable and side-effect-free. For such cases, the `pure` attribute
+    may be used.
+
+    When `pure` attribute is set, `getSpeculatability()` returns `Speculatable`
+    and `getEffects()` reports no effects. It is UB if the `pure` attribute is
+    set and the actual conversion is not pure, e.g. when the user-defined
+    conversion has memory effects.
   }];
 
   let arguments = (ins EmitCType:$source,
-    // In general, C++ cast expressions cannot always be assumed to be pure: they
-    // may invoke user-defined conversions or be affected by floating-point
-    // environment settings. However, in many practical cases, such as integer casts
-    // without operator overloading, the cast is pure and can be treated as
-    // speculatable and side-effect free.
-    //
-    // When this attribute is set, `getSpeculatability()` returns `Speculatable`
-    // and `getEffects()` reports no effects.
     UnitAttr:$pure
   );
 
