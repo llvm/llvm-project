@@ -102,6 +102,9 @@ static std::string findBuildDir(StringRef StartDir) {
     SmallString<256> Candidate(StartDir);
     sys::path::append(Candidate, Sub, "compile_commands.json");
     if (sys::fs::exists(Candidate)) {
+      SmallString<256> RealPath;
+      if (!sys::fs::real_path(Candidate, RealPath))
+        return std::string(sys::path::parent_path(RealPath));
       sys::path::remove_filename(Candidate);
       return std::string(Candidate);
     }
@@ -112,8 +115,12 @@ static std::string findBuildDir(StringRef StartDir) {
   for (int Depth = 0; Depth < 16; ++Depth) {
     SmallString<256> Candidate(Dir);
     sys::path::append(Candidate, "compile_commands.json");
-    if (sys::fs::exists(Candidate))
+    if (sys::fs::exists(Candidate)) {
+      SmallString<256> RealPath;
+      if (!sys::fs::real_path(Candidate, RealPath))
+        return std::string(sys::path::parent_path(RealPath));
       return std::string(Dir);
+    }
     StringRef Parent = sys::path::parent_path(Dir);
     if (Parent == Dir)
       break;
