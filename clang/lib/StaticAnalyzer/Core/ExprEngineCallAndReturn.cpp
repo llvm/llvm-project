@@ -493,7 +493,7 @@ REGISTER_MAP_WITH_PROGRAMSTATE(DynamicDispatchBifurcationMap,
 REGISTER_TRAIT_WITH_PROGRAMSTATE(CTUDispatchBifurcation, bool)
 
 void ExprEngine::ctuBifurcate(const CallEvent &Call, const Decl *D,
-                              NodeBuilder &Bldr, ExplodedNode *Pred,
+                              ExplodedNodeSet &Dst, ExplodedNode *Pred,
                               ProgramStateRef State) {
   ProgramStateRef ConservativeEvalState = nullptr;
   if (Call.isForeign() && !isSecondPhaseCTU()) {
@@ -511,9 +511,9 @@ void ExprEngine::ctuBifurcate(const CallEvent &Call, const Decl *D,
       inlineCall(Engine.getCTUWorkList(), Call, D, Pred, State);
       // Conservatively evaluate in the first phase.
       ConservativeEvalState = State->set<CTUDispatchBifurcation>(true);
-      Bldr.addNodes(conservativeEvalCall(Call, Pred, ConservativeEvalState));
+      Dst.insert(conservativeEvalCall(Call, Pred, ConservativeEvalState));
     } else {
-      Bldr.addNodes(conservativeEvalCall(Call, Pred, State));
+      Dst.insert(conservativeEvalCall(Call, Pred, State));
     }
     return;
   }
@@ -1216,7 +1216,7 @@ static bool isTrivialObjectAssignment(const CallEvent &Call) {
   return MD->isTrivial();
 }
 
-void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
+void ExprEngine::defaultEvalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
                                  const CallEvent &Call,
                                  const EvalCallOptions &CallOpts) {
   // Make sure we have the most recent state attached to the call.
@@ -1224,7 +1224,7 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
 
   // Special-case trivial assignment operators.
   if (isTrivialObjectAssignment(Call)) {
-    performTrivialCopy(Bldr, Pred, Call);
+    performTrivialCopy(Dst, Pred, Call);
     return;
   }
 
@@ -1244,17 +1244,17 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
 
         // Explore with and without inlining the call.
         if (Options.getIPAMode() == IPAK_DynamicDispatchBifurcate) {
-          BifurcateCall(RD.getDispatchRegion(), Call, D, Bldr, Pred);
+          BifurcateCall(RD.getDispatchRegion(), Call, D, Dst, Pred);
           return;
         }
 
         // Don't inline if we're not in any dynamic dispatch mode.
         if (Options.getIPAMode() != IPAK_DynamicDispatch) {
-          Bldr.addNodes(conservativeEvalCall(Call, Pred, State));
+          Dst.insert(conservativeEvalCall(Call, Pred, State));
           return;
         }
       }
-      ctuBifurcate(Call, D, Bldr, Pred, State);
+      ctuBifurcate(Call, D, Dst, Pred, State);
       return;
     }
   }
@@ -1265,12 +1265,12 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
       State, dyn_cast_or_null<CXXConstructExpr>(E), Call.getStackFrame());
 
   // Also handle the return value and invalidate the regions.
-  Bldr.addNodes(conservativeEvalCall(Call, Pred, State));
+  Dst.insert(conservativeEvalCall(Call, Pred, State));
 }
 
-void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
-                               const CallEvent &Call, const Decl *D,
-                               NodeBuilder &Bldr, ExplodedNode *Pred) {
+void ExprEngine::BifurcateCall(const MemRegion *BifurReg, const CallEvent &Call,
+                               const Decl *D, ExplodedNodeSet &Dst,
+                               ExplodedNode *Pred) {
   assert(BifurReg);
   BifurReg = BifurReg->StripCasts();
 
@@ -1282,11 +1282,11 @@ void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
   if (BState) {
     // If we are on "inline path", keep inlining if possible.
     if (*BState == DynamicDispatchModeInlined)
-      ctuBifurcate(Call, D, Bldr, Pred, State);
+      ctuBifurcate(Call, D, Dst, Pred, State);
     // If inline failed, or we are on the path where we assume we
     // don't have enough info about the receiver to inline, conjure the
     // return value and invalidate the regions.
-    Bldr.addNodes(conservativeEvalCall(Call, Pred, State));
+    Dst.insert(conservativeEvalCall(Call, Pred, State));
     return;
   }
 
@@ -1295,12 +1295,12 @@ void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
   ProgramStateRef IState =
       State->set<DynamicDispatchBifurcationMap>(BifurReg,
                                                DynamicDispatchModeInlined);
-  ctuBifurcate(Call, D, Bldr, Pred, IState);
+  ctuBifurcate(Call, D, Dst, Pred, IState);
 
   ProgramStateRef NoIState =
       State->set<DynamicDispatchBifurcationMap>(BifurReg,
                                                DynamicDispatchModeConservative);
-  Bldr.addNodes(conservativeEvalCall(Call, Pred, NoIState));
+  Dst.insert(conservativeEvalCall(Call, Pred, NoIState));
 
   NumOfDynamicDispatchPathSplits++;
 }

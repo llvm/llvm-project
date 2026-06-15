@@ -256,7 +256,6 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
 
   // Proceed with evaluate the message expression.
   ExplodedNodeSet dstEval;
-  NodeBuilder Bldr(dstEval, *currBldrCtx);
 
   for (ExplodedNode *Pred : dstGenericPrevisit) {
     ProgramStateRef State = Pred->getState();
@@ -283,7 +282,7 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
       }
     }
 
-    defaultEvalCall(Bldr, Pred, *UpdatedMsg);
+    defaultEvalCall(dstEval, Pred, *UpdatedMsg);
   }
 
   // If there were constructors called for object-type arguments, clean them up.
