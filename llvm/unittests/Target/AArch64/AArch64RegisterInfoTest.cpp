@@ -178,6 +178,8 @@ TEST(AArch64ReservedRegs, ArtificialHIRegistersAreReserved) {
   BitVector Reserved = TRI.getReservedRegs(MF);
 
   EXPECT_TRUE(Reserved.test(AArch64::W30_HI));
+  EXPECT_TRUE(Reserved.test(AArch64::WSP_HI));
+  EXPECT_TRUE(Reserved.test(AArch64::WZR_HI));
   EXPECT_TRUE(Reserved.test(AArch64::B31_HI));
   EXPECT_TRUE(Reserved.test(AArch64::H31_HI));
   EXPECT_TRUE(Reserved.test(AArch64::S31_HI));
