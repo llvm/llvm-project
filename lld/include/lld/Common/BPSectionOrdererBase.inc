@@ -182,7 +182,7 @@ auto BPOrderer<D>::computeOrder(
       return DenseMap<const Section *, int>();
     }
 
-    reader = std::move(*readerOrErr);
+    reader = std::move(readerOrErr.get());
     for (auto &entry : *reader) {
       // Read all entries
       (void)entry;
