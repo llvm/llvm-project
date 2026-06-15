@@ -33,7 +33,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
-class LLVM_ABI CFIFixupPass : public PassInfoMixin<CFIFixupPass> {
+class LLVM_ABI CFIFixupPass : public RequiredPassInfoMixin<CFIFixupPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
