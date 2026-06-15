@@ -21657,7 +21657,8 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
         (all_of(E->Scalars,
                 [&](Value *V) {
                   return isa<PoisonValue>(V) ||
-                         (E->Idx == 0 && isa<InsertElementInst>(V)) ||
+                         (E->Idx == 0 &&
+                          isa<InsertElementInst, InsertValueInst>(V)) ||
                          E->isCopyableElement(V) ||
                          (!isVectorLikeInstWithConstOps(V) &&
                           isUsedOutsideBlock(V));
