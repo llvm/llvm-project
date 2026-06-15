@@ -94,7 +94,7 @@ void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
 
     // Ensure the previous section gets aligned if necessary.
     auto *NewSectionELF = static_cast<const MCSectionELF *>(Section);
-    if (Asm.isBundlingEnabled() && CF->getParent()->hasInstructions() &&
+    if (CF->getParent()->hasInstructions() &&
         (NewSectionELF->getFlags() & ELF::SHF_EXECINSTR))
       Section->ensureMinAlignment(Align(Asm.getBundleAlignSize()));
   }
