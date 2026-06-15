@@ -7,7 +7,8 @@ from unittest.mock import patch
 import pytest
 from click.testing import CliRunner
 
-import mlir_opt_repl.engine as engine
+import mlir_opt_repl.engine as engine_module
+from mlir_opt_repl.engine import state, handle_tool_call
 from conftest import (
     INIT_MSG,
     capture_stdio,
@@ -55,46 +56,55 @@ class TestClickCLI:
 
 class TestEngineEdgeCases:
     def test_mlir_opt_not_found(self):
-        old = engine.MLIR_OPT
-        engine.MLIR_OPT = "/nonexistent/mlir-opt"
+        old = engine_module.MLIR_OPT
+        engine_module.MLIR_OPT = "/nonexistent/mlir-opt"
         try:
-            result = engine.handle_tool_call(
+            result = handle_tool_call(
                 "run_pipeline", {"mlir": "module {}", "passes": ["canonicalize"]}
             )
             assert result["isError"]
             assert "not found" in result["content"][0]["text"]
         finally:
-            engine.MLIR_OPT = old
+            engine_module.MLIR_OPT = old
 
     def test_check_mlir_opt_exits(self):
 
-        old = engine.MLIR_OPT
-        engine.MLIR_OPT = "/nonexistent/mlir-opt"
+        old = engine_module.MLIR_OPT
+        engine_module.MLIR_OPT = "/nonexistent/mlir-opt"
         try:
             with pytest.raises(SystemExit):
-                engine.check_mlir_opt()
+                engine_module.check_mlir_opt()
         finally:
-            engine.MLIR_OPT = old
+            engine_module.MLIR_OPT = old
 
     def test_check_mlir_opt_passes(self):
-        engine.check_mlir_opt()
+        engine_module.check_mlir_opt()
 
     def test_list_passes_error(self):
-        old = engine.MLIR_OPT
-        engine.MLIR_OPT = "/nonexistent/mlir-opt"
+        old = engine_module.MLIR_OPT
+        engine_module.MLIR_OPT = "/nonexistent/mlir-opt"
         try:
-            passes = engine.list_passes()
+            passes = engine_module.list_passes()
             assert len(passes) == 1
             assert "error" in passes[0]
         finally:
-            engine.MLIR_OPT = old
+            engine_module.MLIR_OPT = old
+
+    def test_get_help_text_error(self):
+        old = engine_module.MLIR_OPT
+        engine_module.MLIR_OPT = "/nonexistent/mlir-opt"
+        try:
+            text = engine_module.get_help_text()
+            assert "error" in text
+        finally:
+            engine_module.MLIR_OPT = old
 
     def test_timeout(self):
         with patch(
             "mlir_opt_repl.engine.subprocess.run",
             side_effect=subprocess.TimeoutExpired("cmd", 30),
         ):
-            result = engine.handle_tool_call(
+            result = handle_tool_call(
                 "run_pipeline", {"mlir": "module {}", "passes": ["canonicalize"]}
             )
         assert result["isError"]
@@ -169,17 +179,17 @@ class TestCompleter:
 class TestBookmarkInvalidIndex:
     def test_rewind_to_invalid_bookmark_mcp(self):
 
-        engine.ir_history = [("initial", "module {}")]
-        engine.current_ir = "module {}"
-        engine.bookmarks = {"stale": 99}
-        result = engine.handle_tool_call("rewind", {"target": "stale"})
+        state.history_clear()
+        state.history_append("initial", "module {}")
+        state.bookmarks = {"stale": 99}
+        result = handle_tool_call("rewind", {"target": "stale"})
         assert result["isError"] is True
         assert "invalid index" in result["content"][0]["text"]
 
     def test_rewind_to_invalid_bookmark_repl(self):
 
-        engine.ir_history = [("initial", "module {}")]
-        engine.current_ir = "module {}"
+        state.history_clear()
+        state.history_append("initial", "module {}")
         repl_module.bookmarks = {"stale": 99}
         output = run_repl("rewind stale\nquit\n")
         assert "invalid index" in output
@@ -187,9 +197,9 @@ class TestBookmarkInvalidIndex:
 
 class TestVerifyInvalid:
     def test_verify_fails_on_bad_ir(self):
-        engine.current_ir = "func.func @f() -> i32 { return }"
-        engine.ir_history = [("initial", engine.current_ir)]
-        result = engine.handle_tool_call("verify", {})
+        state.history_clear()
+        state.history_append("initial", "func.func @f() -> i32 { return }")
+        result = handle_tool_call("verify", {})
         assert result["isError"] is True
         assert "Verification failed" in result["content"][0]["text"]
 
@@ -246,3 +256,108 @@ class TestDiffEdgeCases:
             ["a", "b", "c"], ["x"], "left", "right", width=60, pretty=False
         )
         assert "b" in result and "c" in result
+
+
+class TestIRHistory:
+    def test_negative_getitem(self):
+        state.history_clear()
+        state.history_append("initial", "aaa")
+        state.history_append("step1", "bbb")
+        desc, ir = state.history_get(-1)
+        assert desc == "step1"
+        assert ir == "bbb"
+
+    def test_iter(self):
+        state.history_clear()
+        state.history_append("initial", "aaa")
+        state.history_append("step1", "bbb")
+        items = list(state._ir_history)
+        assert len(items) == 2
+        assert items[0] == ("initial", "aaa")
+        assert items[1] == ("step1", "bbb")
+
+    def test_negative_get_description(self):
+        state.history_clear()
+        state.history_append("initial", "aaa")
+        state.history_append("step1", "bbb")
+        assert state.history_get_description(-1) == "step1"
+
+    def test_out_of_bounds_get_description(self):
+        state.history_clear()
+        state.history_append("initial", "aaa")
+        assert state.history_get_description(99) == "?"
+
+    def test_truncate_noop(self):
+        state.history_clear()
+        state.history_append("initial", "aaa")
+        state.history_truncate(5)
+        assert state.history_len() == 1
+        assert state.get_current_ir() == "aaa"
+
+    def test_truncate_to_empty(self):
+        state.history_clear()
+        state.history_append("initial", "aaa")
+        state.history_truncate(0)
+        assert state.history_len() == 0
+        assert state.get_current_ir() is None
+
+    def test_reconstruct_negative_index(self):
+        state.history_clear()
+        state.history_append("initial", "aaa")
+        state.history_append("step1", "bbb")
+        ir = state._ir_history.reconstruct_ir(-1)
+        assert ir == "bbb"
+
+    def test_iter_with_ir_empty(self):
+        state.history_clear()
+        assert list(state.history_iter_with_ir()) == []
+
+    def test_reconstruct_middle_entry(self):
+        state.history_clear()
+        state.history_append("initial", "line1\nline2\n")
+        state.history_append("step1", "line1\nline2\nline3\n")
+        state.history_append("step2", "line1\nline2\nline3\nline4\n")
+        desc, ir = state.history_get(1)
+        assert ir == "line1\nline2\nline3\n"
+
+    def test_delete_and_insert_patches(self):
+        state.history_clear()
+        state.history_append("initial", "a\nb\nc\n")
+        state.history_append("deleted", "a\nc\n")
+        state.history_append("inserted", "a\nx\ny\nc\n")
+        assert state.get_current_ir() == "a\nx\ny\nc\n"
+        desc, ir = state.history_get(1)
+        assert ir == "a\nc\n"
+        state.history_truncate(2)
+        assert state.get_current_ir() == "a\nc\n"
+        state.history_truncate(1)
+        assert state.get_current_ir() == "a\nb\nc\n"
+
+    def test_redo_stack_cleared_on_append(self):
+        state.history_clear()
+        state.history_append("initial", "aaa")
+        state.history_append("step1", "bbb")
+        state.history_truncate(1)
+        assert state._ir_history._redo_stack
+        state.history_append("step2", "ccc")
+        assert not state._ir_history._redo_stack
+
+    def test_roundtrip_fidelity(self):
+        texts = ["hello\n", "hello\nworld\n", "world\n", "completely different"]
+        state.history_clear()
+        for i, t in enumerate(texts):
+            state.history_append(f"step{i}", t)
+        for i, t in enumerate(texts):
+            assert state._ir_history.reconstruct_ir(i) == t
+
+    def test_iter_with_ir_full_ir_entry(self):
+        from mlir_opt_repl.history import HistoryEntry
+
+        state.history_clear()
+        state.history_append("initial", "aaa\n")
+        state._ir_history._entries.append(
+            HistoryEntry(description="checkpoint", full_ir="bbb\n", parent_index=0)
+        )
+        state._ir_history._current_ir = "bbb\n"
+        items = list(state.history_iter_with_ir())
+        assert items[1] == (1, "checkpoint", "bbb\n")

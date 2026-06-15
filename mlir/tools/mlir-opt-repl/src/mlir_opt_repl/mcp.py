@@ -68,16 +68,10 @@ TOOLS = [
     },
     {
         "name": "list_passes",
-        "description": "List available mlir-opt passes (conversion passes, canonicalize, cse, etc.)",
+        "description": "List all available mlir-opt passes and options (full --help-hidden output)",
         "inputSchema": {
             "type": "object",
-            "properties": {
-                "filter": {
-                    "type": "string",
-                    "description": "Optional substring to filter pass names",
-                    "default": "",
-                }
-            },
+            "properties": {},
         },
     },
     {

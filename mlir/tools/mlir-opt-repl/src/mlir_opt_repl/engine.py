@@ -5,6 +5,7 @@ import sys
 import tempfile
 
 from mlir_opt_repl.diff import render_side_by_side, render_unified_diff
+from mlir_opt_repl.history import IRHistory
 
 MLIR_OPT = os.environ.get("MLIR_OPT", "mlir-opt")
 
@@ -19,9 +20,43 @@ def check_mlir_opt():
         sys.exit(1)
 
 
-current_ir = None
-ir_history = []
-bookmarks = {}
+class Engine:
+    def __init__(self):
+        self._ir_history = IRHistory()
+        self.bookmarks = {}
+
+    def get_current_ir(self):
+        return self._ir_history.current_ir
+
+    def history_len(self):
+        return len(self._ir_history)
+
+    def history_empty(self):
+        return not self._ir_history
+
+    def history_get(self, index):
+        return self._ir_history[index]
+
+    def history_get_description(self, index):
+        return self._ir_history.get_description(index)
+
+    def history_append(self, desc, ir_text):
+        self._ir_history.append(desc, ir_text)
+
+    def history_truncate(self, n):
+        self._ir_history.truncate(n)
+
+    def history_clear(self):
+        self._ir_history.clear()
+
+    def history_iter_with_ir(self):
+        return self._ir_history.iter_with_ir()
+
+    def history_iter_descriptions(self):
+        return self._ir_history.iter_descriptions()
+
+
+state = Engine()
 
 
 def _build_pass_args(passes, extra_args=None):
@@ -54,6 +89,16 @@ def run_mlir_opt(ir_text, args):
         os.unlink(tmp_path)
 
 
+def get_help_text():
+    try:
+        result = subprocess.run(
+            [MLIR_OPT, "--help-hidden"], capture_output=True, text=True, timeout=10
+        )
+        return result.stdout
+    except Exception as e:
+        return f"error: {e}"
+
+
 def list_passes():
     try:
         result = subprocess.run(
@@ -61,27 +106,19 @@ def list_passes():
         )
         passes = []
         for line in result.stdout.splitlines():
+            if not line.startswith("      --"):
+                continue
             stripped = line.strip()
-            if (
-                stripped.startswith("--convert-")
-                or stripped.startswith("--canonicalize")
-                or stripped.startswith("--cse")
-                or stripped.startswith("--inline")
-                or stripped.startswith("--mem2reg")
-                or stripped.startswith("--symbol-")
-            ):
-                parts = stripped.split(" - ", 1)
-                name = parts[0].strip().lstrip("-")
-                desc = parts[1].strip() if len(parts) > 1 else ""
-                passes.append({"name": name, "description": desc})
+            parts = stripped.split(" - ", 1)
+            name = parts[0].strip().lstrip("-")
+            desc = parts[1].strip() if len(parts) > 1 else ""
+            passes.append({"name": name, "description": desc})
         return passes
     except Exception as e:
         return [{"error": str(e)}]
 
 
 def handle_tool_call(name, arguments):
-    global current_ir, ir_history, bookmarks
-
     if name == "run_pipeline":
         mlir = arguments["mlir"]
         passes = _build_pass_args(arguments["passes"], arguments.get("extra_args"))
@@ -91,13 +128,13 @@ def handle_tool_call(name, arguments):
                 "content": [{"type": "text", "text": f"Error:\n{err}"}],
                 "isError": True,
             }
-        ir_history = [("initial", mlir)]
-        current_ir = output
-        ir_history.append((" ".join(passes), output))
+        state.history_clear()
+        state.history_append("initial", mlir)
+        state.history_append(" ".join(passes), output)
         return {"content": [{"type": "text", "text": output}]}
 
     elif name == "chain_pipeline":
-        if current_ir is None:
+        if state.get_current_ir() is None:
             return {
                 "content": [
                     {
@@ -108,7 +145,7 @@ def handle_tool_call(name, arguments):
                 "isError": True,
             }
         passes = _build_pass_args(arguments["passes"], arguments.get("extra_args"))
-        output, err = run_mlir_opt(current_ir, passes)
+        output, err = run_mlir_opt(state.get_current_ir(), passes)
         if err:
             return {
                 "content": [
@@ -116,32 +153,30 @@ def handle_tool_call(name, arguments):
                 ],
                 "isError": True,
             }
-        current_ir = output
-        ir_history.append((" ".join(passes), output))
+        state.history_append(" ".join(passes), output)
         return {"content": [{"type": "text", "text": output}]}
 
     elif name == "get_current_ir":
-        if current_ir is None:
+        if state.get_current_ir() is None:
             return {"content": [{"type": "text", "text": "(no IR state set)"}]}
-        return {"content": [{"type": "text", "text": current_ir}]}
+        return {"content": [{"type": "text", "text": state.get_current_ir()}]}
 
     elif name == "reset":
-        current_ir = None
-        ir_history = []
-        bookmarks = {}
+        state.history_clear()
+        state.bookmarks = {}
         return {"content": [{"type": "text", "text": "IR state cleared."}]}
 
     elif name == "rewind":
-        if not ir_history:
+        if state.history_empty():
             return {
                 "content": [{"type": "text", "text": "Error: no history to rewind."}],
                 "isError": True,
             }
         target = arguments.get("target")
         steps = arguments.get("steps", 1)
-        if target and target in bookmarks:
-            idx = bookmarks[target]
-            if idx >= len(ir_history):
+        if target and target in state.bookmarks:
+            idx = state.bookmarks[target]
+            if idx >= state.history_len():
                 return {
                     "content": [
                         {
@@ -151,9 +186,9 @@ def handle_tool_call(name, arguments):
                     ],
                     "isError": True,
                 }
-            ir_history = ir_history[: idx + 1]
-            desc, ir = ir_history[-1]
-            current_ir = ir
+            state.history_truncate(idx + 1)
+            desc = state.history_get_description(-1)
+            ir = state.get_current_ir()
             return {
                 "content": [
                     {
@@ -162,10 +197,10 @@ def handle_tool_call(name, arguments):
                     }
                 ]
             }
-        if steps >= len(ir_history):
-            desc, ir = ir_history[0]
-            ir_history = [ir_history[0]]
-            current_ir = ir
+        if steps >= state.history_len():
+            state.history_truncate(1)
+            desc = state.history_get_description(0)
+            ir = state.get_current_ir()
             return {
                 "content": [
                     {
@@ -174,9 +209,9 @@ def handle_tool_call(name, arguments):
                     }
                 ]
             }
-        ir_history = ir_history[:-steps]
-        desc, ir = ir_history[-1]
-        current_ir = ir
+        state.history_truncate(state.history_len() - steps)
+        desc = state.history_get_description(-1)
+        ir = state.get_current_ir()
         return {
             "content": [
                 {
@@ -187,28 +222,28 @@ def handle_tool_call(name, arguments):
         }
 
     elif name == "bookmark":
-        if not ir_history:
+        if state.history_empty():
             return {
                 "content": [{"type": "text", "text": "Error: no history to bookmark."}],
                 "isError": True,
             }
         bm_name = arguments.get("name", "")
         if not bm_name:
-            if not bookmarks:
+            if not state.bookmarks:
                 return {"content": [{"type": "text", "text": "(no bookmarks)"}]}
             lines = []
-            for n, idx in sorted(bookmarks.items(), key=lambda x: x[1]):
-                desc = ir_history[idx][0] if idx < len(ir_history) else "?"
+            for n, idx in sorted(state.bookmarks.items(), key=lambda x: x[1]):
+                desc = state.history_get_description(idx)
                 lines.append(f"  {n} -> [{idx}] {desc}")
             return {"content": [{"type": "text", "text": "\n".join(lines)}]}
-        idx = len(ir_history) - 1
-        bookmarks[bm_name] = idx
+        idx = state.history_len() - 1
+        state.bookmarks[bm_name] = idx
         return {
             "content": [{"type": "text", "text": f"Bookmarked [{idx}] as '{bm_name}'"}]
         }
 
     elif name == "save":
-        if current_ir is None:
+        if state.get_current_ir() is None:
             return {
                 "content": [{"type": "text", "text": "Error: no IR to save."}],
                 "isError": True,
@@ -220,17 +255,17 @@ def handle_tool_call(name, arguments):
                 "isError": True,
             }
         with open(path, "w") as f:
-            f.write(current_ir)
+            f.write(state.get_current_ir())
             f.write("\n")
         return {"content": [{"type": "text", "text": f"Saved to {path}"}]}
 
     elif name == "verify":
-        if current_ir is None:
+        if state.get_current_ir() is None:
             return {
                 "content": [{"type": "text", "text": "Error: no IR to verify."}],
                 "isError": True,
             }
-        _, err = run_mlir_opt(current_ir, ["--verify-diagnostics"])
+        _, err = run_mlir_opt(state.get_current_ir(), ["--verify-diagnostics"])
         if err:
             return {
                 "content": [{"type": "text", "text": f"Verification failed:\n{err}"}],
@@ -239,37 +274,36 @@ def handle_tool_call(name, arguments):
         return {"content": [{"type": "text", "text": "IR is valid."}]}
 
     elif name == "history":
-        if not ir_history:
+        if state.history_empty():
             return {"content": [{"type": "text", "text": "(no history)"}]}
         show_ir = arguments.get("show_ir", False)
         fmt = arguments.get("format")
         pretty = arguments.get("pretty", False)
         width = arguments.get("width")
         lines = []
-        bookmark_at = {v: k for k, v in bookmarks.items()}
-        for i, (desc, ir) in enumerate(ir_history):
-            marker = " <-- current" if i == len(ir_history) - 1 else ""
+        bookmark_at = {v: k for k, v in state.bookmarks.items()}
+        prev_ir = None
+        for i, desc, ir in state.history_iter_with_ir():
+            marker = " <-- current" if i == state.history_len() - 1 else ""
             bm = f" [{bookmark_at[i]}]" if i in bookmark_at else ""
             lines.append(f"[{i}] {desc}{bm}{marker}")
-            if fmt == "side_by_side" and i > 0:
-                prev_ir = ir_history[i - 1][1]
+            if fmt == "side_by_side" and i > 0 and prev_ir is not None:
                 sbs = render_side_by_side(
                     prev_ir.splitlines(),
                     ir.splitlines(),
-                    ir_history[i - 1][0],
+                    state.history_get_description(i - 1),
                     desc,
                     width=width,
                     pretty=pretty,
                 )
                 lines.append(sbs)
                 lines.append("")
-            elif fmt == "unified" and i > 0:
-                prev_ir = ir_history[i - 1][1]
+            elif fmt == "unified" and i > 0 and prev_ir is not None:
                 lines.append(
                     render_unified_diff(
                         prev_ir.splitlines(),
                         ir.splitlines(),
-                        ir_history[i - 1][0],
+                        state.history_get_description(i - 1),
                         desc,
                         pretty=pretty,
                     )
@@ -278,20 +312,12 @@ def handle_tool_call(name, arguments):
             elif show_ir:
                 lines.append(ir)
                 lines.append("")
+            prev_ir = ir
         return {"content": [{"type": "text", "text": "\n".join(lines)}]}
 
     elif name == "list_passes":
-        filt = arguments.get("filter", "")
-        passes = list_passes()
-        if filt:
-            passes = [
-                p
-                for p in passes
-                if filt.lower() in p.get("name", "").lower()
-                or filt.lower() in p.get("description", "").lower()
-            ]
-        text = "\n".join(f"--{p['name']}: {p['description']}" for p in passes)
-        return {"content": [{"type": "text", "text": text or "(no passes matched)"}]}
+        text = get_help_text()
+        return {"content": [{"type": "text", "text": text}]}
 
     return {
         "content": [{"type": "text", "text": f"Unknown tool: {name}"}],

@@ -245,23 +245,11 @@ class TestHistory:
 
 
 class TestListPasses:
-    def test_filter(self):
-        output = run_mcp(
-            INIT_MSG, tool_call(1, "list_passes", {"filter": "arith-to-llvm"})
-        )
-        assert (
-            "convert-arith-to-llvm"
-            in parse_responses(output)[1]["result"]["content"][0]["text"]
-        )
-
-    def test_no_match(self):
-        output = run_mcp(
-            INIT_MSG, tool_call(1, "list_passes", {"filter": "zzz-nonexistent"})
-        )
-        assert (
-            "(no passes matched)"
-            in parse_responses(output)[1]["result"]["content"][0]["text"]
-        )
+    def test_returns_help_text(self):
+        output = run_mcp(INIT_MSG, tool_call(1, "list_passes"))
+        text = parse_responses(output)[1]["result"]["content"][0]["text"]
+        assert "convert-arith-to-llvm" in text
+        assert "canonicalize" in text
 
 
 class TestErrors:

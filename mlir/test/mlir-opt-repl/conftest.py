@@ -11,7 +11,7 @@ sys.path.insert(
     0, str(Path(__file__).parent.parent.parent / "tools" / "mlir-opt-repl" / "src")
 )
 
-import mlir_opt_repl.engine as engine
+from mlir_opt_repl.engine import state
 from mlir_opt_repl.mcp import mcp_main
 from mlir_opt_repl.repl import interactive_main
 from mlir_opt_repl import repl as repl_module
@@ -22,14 +22,12 @@ INIT_MSG = {"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {}}
 
 @pytest.fixture(autouse=True)
 def reset_engine():
-    engine.current_ir = None
-    engine.ir_history = []
-    engine.bookmarks = {}
+    state.history_clear()
+    state.bookmarks = {}
     repl_module.bookmarks = {}
     yield
-    engine.current_ir = None
-    engine.ir_history = []
-    engine.bookmarks = {}
+    state.history_clear()
+    state.bookmarks = {}
     repl_module.bookmarks = {}
 
 

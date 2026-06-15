@@ -1,6 +1,6 @@
 """Tests for the interactive REPL."""
 
-import mlir_opt_repl.engine as engine
+from mlir_opt_repl.engine import state
 from conftest import SAMPLE_MLIR, run_repl
 
 LOAD_SAMPLE = f"load -\n{SAMPLE_MLIR}\n\n"
@@ -259,8 +259,8 @@ class TestVerify:
         assert "No IR loaded" in output
 
     def test_invalid_ir(self):
-        engine.current_ir = "func.func @f() -> i32 { return }"
-        engine.ir_history = [("initial", engine.current_ir)]
+        state.history_clear()
+        state.history_append("initial", "func.func @f() -> i32 { return }")
         output = run_repl("verify\nquit\n")
         assert "error" in output.lower()
 
