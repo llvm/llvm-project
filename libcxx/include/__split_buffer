@@ -224,7 +224,7 @@ public:
   ///   * `__front_spare() == __pivot - __first`
   ///   * `__back_spare() == __last - __pivot`
   /// Exceptions: This function has a strong exception guarantee if `__first == __pivot` or
-  /// `__last - __first == __pivot`.
+  /// `__last == __pivot`.
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer
   __relocate_with_pivot(pointer __pivot, pointer& __first, pointer& __last, pointer& __capacity) {
     pointer __result = __begin_;

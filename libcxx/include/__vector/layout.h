@@ -38,7 +38,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 /// `std::vector` can be represented in a variety of ways. Each representation strongly influences
 /// the codegen when calling vector operations, which can significantly impact runtime performance
 /// and memory utilisation. libc++ provides two alternative layouts for `std::vector`, although only
-/// one can be active for an enitre binary:
+/// one can be active for an entire binary:
 ///
 ///   * pointer-based layout (stable ABI default)
 ///   * size-based layout (unstable ABI alternative)
@@ -120,7 +120,7 @@ public:
   using size_type _LIBCPP_NODEBUG      = typename __alloc_traits::size_type;
   using pointer _LIBCPP_NODEBUG        = typename __alloc_traits::pointer;
   using const_pointer _LIBCPP_NODEBUG  = typename __alloc_traits::const_pointer;
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_VECTOR_LAYOUT_SIZE_BASED
   using _SplitBuffer _LIBCPP_NODEBUG = __split_buffer<_Tp, _Allocator, __split_buffer_size_layout>;
   using __bound_type _LIBCPP_NODEBUG = size_type;
 #else
@@ -175,14 +175,6 @@ public:
     return std::__to_address(__begin_);
   }
 
-  /// Returns the value that the layout uses to determine the vector's size.
-  ///
-  /// `__bound_representation()` should only be used when directly operating on the layout from
-  /// outside `__vector_layout`. Its result must be used with type deduction to avoid compile-time
-  /// failures.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bound_type
-  __bound_representation() const _NOEXCEPT;
-
   /// Returns how many elements can be added before a reallocation occurs.
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type
   __remaining_capacity() const _NOEXCEPT;
@@ -201,7 +193,6 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __reset_without_allocator() _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap(__vector_layout& __other) _NOEXCEPT;
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_layouts(_SplitBuffer& __other) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __move_assign_without_allocator(__vector_layout& __other) _NOEXCEPT;
 
@@ -223,7 +214,7 @@ public:
 private:
   pointer __begin_ = nullptr;
 
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_VECTOR_LAYOUT_SIZE_BASED
   size_type __size_     = 0;
   size_type __capacity_ = 0;
   [[no_unique_address]] allocator_type __alloc_;
@@ -246,7 +237,7 @@ private:
   }
 };
 
-#ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+#ifdef _LIBCPP_ABI_VECTOR_LAYOUT_SIZE_BASED
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 __vector_layout<_Tp, _Alloc>::__vector_layout(__vector_layout&& __other)
     _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
@@ -254,12 +245,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 __vector_layout<_Tp, _Alloc>::__vector_layout(__ve
       __size_(std::__exchange(__other.__size_, 0)),
       __capacity_(std::__exchange(__other.__capacity_, 0)),
       __alloc_(std::move(__other.__alloc_)) {}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::__bound_type
-__vector_layout<_Tp, _Alloc>::__bound_representation() const _NOEXCEPT {
-  return __size_;
-}
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::size_type
@@ -299,11 +284,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__swap(__vector
   swap(__size_, __other.__size_);
   swap(__capacity_, __other.__capacity_);
   std::__swap_allocator(__alloc_, __other.__alloc_);
-}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__swap_layouts(_SplitBuffer& __other) _NOEXCEPT {
-  __other.__swap_layouts(__begin_, __size_, __capacity_);
 }
 
 template <class _Tp, class _Alloc>
@@ -374,7 +354,7 @@ __vector_layout<_Tp, _Alloc>::__end_ptr() const _NOEXCEPT {
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
 __vector_layout<_Tp, _Alloc>::__capacity_ptr() _NOEXCEPT {
-  return __begin_ + __size_;
+  return __begin_ + __capacity_;
 }
 
 template <class _Tp, class _Alloc>
@@ -389,7 +369,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__invariants() 
     return __size_ == 0 && __capacity_ == 0;
   return __size_ <= __capacity_;
 }
-#else
+#else // !defined(_LIBCPP_ABI_VECTOR_LAYOUT_SIZE_BASED)
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 __vector_layout<_Tp, _Alloc>::__vector_layout(__vector_layout&& __other)
     _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
@@ -397,12 +377,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 __vector_layout<_Tp, _Alloc>::__vector_layout(__ve
       __end_(std::__exchange(__other.__end_, nullptr)),
       __capacity_(std::__exchange(__other.__capacity_, nullptr)),
       __alloc_(std::move(__other.__alloc_)) {}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::__bound_type
-__vector_layout<_Tp, _Alloc>::__bound_representation() const _NOEXCEPT {
-  return __end_;
-}
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::size_type
@@ -442,11 +416,6 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__swap(__vector
   swap(__end_, __other.__end_);
   swap(__capacity_, __other.__capacity_);
   std::__swap_allocator(__alloc_, __other.__alloc_);
-}
-
-template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__swap_layouts(_SplitBuffer& __other) _NOEXCEPT {
-  __other.__swap_layouts(__begin_, __end_, __capacity_);
 }
 
 template <class _Tp, class _Alloc>

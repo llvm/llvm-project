@@ -58,17 +58,19 @@ most cases.
 This significantly restructures how ``function`` is written to provide better performance, but is currently not ABI
 stable.
 
-``_LIBCPP_ABI_VECTOR_LAYOUT``
+``_LIBCPP_ABI_VECTOR_LAYOUT_SIZE_BASED``
 ---------------------------------
+Changes the layout of :cpp:type:`std::vector` from pointer-based to size-based.
+
 libc++ supports two different data layouts for :cpp:type:`std::vector`:
 
 .. list-table::
   :header-rows: 1
 
-  * - **Macro value**
+  * - **Layout**
     - ABI
     - Description
-  * - :c:macro:`_LIBCPP_ABI_VECTOR_LAYOUT_POINTER_BASED`
+  * - Pointer-based layout
     - Stable ABI (default)
     - :cpp:type:`std::vector` uses three pointers to manage its state:
 
@@ -86,7 +88,7 @@ libc++ supports two different data layouts for :cpp:type:`std::vector`:
       This is the original layout for libc++'s :cpp:type:`std::vector` implementation, and
       is the default layout as a result.
 
-  * - :c:macro:`_LIBCPP_ABI_VECTOR_LAYOUT_SIZE_BASED`
+  * - Size-based layout
     - Unstable ABI (opt-in)
     - :cpp:type:`std::vector` uses a pointer and two integers to manage its state:
 
