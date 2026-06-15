@@ -546,10 +546,12 @@ class ArgsProtocol(Protocol[T]):  # type: ignore[misc]
     __dataclass_fields__: ClassVar[Dict]
 
     @property
-    def response_class_(self) -> Type[T]: ...
+    def response_class_(self) -> Type[T]:
+        ...
 
     @property
-    def command_(self) -> str: ...
+    def command_(self) -> str:
+        ...
 
 
 class Console(StrEnum):
@@ -1645,6 +1647,7 @@ class EvaluateArgs:
 
     command_ = "evaluate"
     response_class_ = EvaluateResponse
+
 
 @dataclass(frozen=True)
 class StepInTargetsResponse(Response):

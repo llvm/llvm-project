@@ -36,7 +36,8 @@ class SubProcessSpawner(Protocol):
         extra_env: list[str] | None = None,
         install_remote: bool = True,
         **kwargs,
-    ) -> subprocess.Popen[bytes]: ...
+    ) -> subprocess.Popen[bytes]:
+        ...
 
 
 @dataclass(frozen=True)
@@ -523,11 +524,14 @@ class Transport(Protocol):
             adapter is already running and exposes connection URI.
     """
 
-    def write(self, data: bytes): ...
+    def write(self, data: bytes):
+        ...
 
-    def read(self, n: int) -> bytes: ...
+    def read(self, n: int) -> bytes:
+        ...
 
-    def readline(self) -> bytes: ...
+    def readline(self) -> bytes:
+        ...
 
     def close(self):
         """Close the transport.
