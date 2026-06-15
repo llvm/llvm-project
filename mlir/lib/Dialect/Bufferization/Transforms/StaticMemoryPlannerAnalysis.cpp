@@ -135,6 +135,18 @@ public:
   void runOnOperation() override {
     mlir::Operation *op = getOperation();
 
+    // Step 0: Check for memref return types (not supported)
+    if (auto funcOp = llvm::dyn_cast<mlir::func::FuncOp>(op)) {
+      mlir::FunctionType funcType = funcOp.getFunctionType();
+      for (mlir::Type resultType : funcType.getResults()) {
+        if (llvm::isa<mlir::MemRefType>(resultType)) {
+          funcOp.emitError("static-memory-planner does not support functions "
+                           "with memref return types");
+          return signalPassFailure();
+        }
+      }
+    }
+
     // Step 1: Collect eligible allocation candidates
     llvm::SmallVector<AllocationCandidate> candidates;
 

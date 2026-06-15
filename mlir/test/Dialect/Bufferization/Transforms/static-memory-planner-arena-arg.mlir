@@ -32,3 +32,14 @@ func.func @error_wrong_type(%arena: memref<8192xf32>) {
   memref.dealloc %alloc0 : memref<1024xf32>
   return
 }
+
+// -----
+
+// Test 4: Error when function returns memref
+// expected-error @+1 {{static-memory-planner does not support functions with memref return types}}
+func.func @error_memref_return(%arena: memref<8192xi8>) -> memref<1024xf32> {
+  %alloc0 = memref.alloc() : memref<1024xf32>
+  memref.dealloc %alloc0 : memref<1024xf32>
+  %result = memref.alloc() : memref<1024xf32>
+  return %result : memref<1024xf32>
+}
