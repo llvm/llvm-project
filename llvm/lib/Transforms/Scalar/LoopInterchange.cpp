@@ -1531,25 +1531,6 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     return false;
   }
 
-  BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
-  // Inner-preheader PHIs are removed by substituting each with its first
-  // incoming value. That is only correct when all incoming values are the
-  // same; a PHI with different incoming values would produce the wrong result.
-  if (InnerLoopPreHeader != OuterLoop->getHeader() &&
-      any_of(InnerLoopPreHeader->phis(),
-             [](PHINode &PHI) { return !all_equal(PHI.incoming_values()); })) {
-    LLVM_DEBUG(dbgs() << "Found unsupported PHI nodes in inner loop "
-                         "preheader.\n");
-    ORE->emit([&]() {
-      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedPreheaderPHI",
-                                      InnerLoop->getStartLoc(),
-                                      InnerLoop->getHeader())
-             << "Cannot interchange loops because unsupported PHI nodes found "
-                "in inner loop preheader.";
-    });
-    return false;
-  }
-
   if (!areInnerLoopLatchPHIsSupported(OuterLoop, InnerLoop)) {
     LLVM_DEBUG(dbgs() << "Found unsupported PHI nodes in inner loop latch.\n");
     ORE->emit([&]() {
