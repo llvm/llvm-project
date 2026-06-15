@@ -703,10 +703,8 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
       if (Region.empty())
         continue;
 
-      if (Region.isEntireFunctionCold()) {
-        LLVM_DEBUG(dbgs() << "Entire function is cold\n");
-        return markFunctionCold(F);
-      }
+      if (Region.isEntireFunctionCold())
+        return false;
 
       do {
         BlockSequence SubRegion = Region.takeSingleEntrySubRegion(*DT);
@@ -788,11 +786,8 @@ bool HotColdSplitting::run(Module &M) {
     if (F.hasOptNone())
       continue;
 
-    // Detect inherently cold functions and mark them as such.
-    if (isFunctionCold(F)) {
-      Changed |= markFunctionCold(F);
+    if (isFunctionCold(F))
       continue;
-    }
 
     if (!shouldOutlineFrom(F)) {
       LLVM_DEBUG(llvm::dbgs() << "Skipping " << F.getName() << "\n");
