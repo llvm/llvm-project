@@ -1367,7 +1367,9 @@ APIs that require out of bounds accesses to be handled strictly so that accessed
 that begin out of bounds but then access in-bounds elements (such as loading a
 ``<4 x i32>`` beginning at offset ``-4``) still load the three in-bounds integers
 (producing ``<0, v0, v1, v2>`` and not ``<0, 0, 0, 0>``. So, under strict OOB
-handling, such an access will be split into four ``i32`` accesses.
+handling, such an access will be split into four ``i32`` accesses. Note this this
+can only happen for underaligned loads - such wraparound isn't possible for
+loads thatare alligned to their natural size.
 
 Similarly, buffer fat pointers permit operating types such as ``<8 x i8>`` which
 must be accessed (and bounds-checked) 4 bytes at a time. Non-word-aligned
