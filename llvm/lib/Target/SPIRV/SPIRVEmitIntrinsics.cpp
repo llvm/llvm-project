@@ -190,7 +190,6 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
-  SmallPtrSet<Instruction *, 8> DeletedInstrs;
   GlobalVariableUsers GVUsers;
   std::unordered_set<Value *> Named;
 
@@ -546,6 +545,17 @@ static bool IsKernelArgInt8(Function *F, StoreInst *SI) {
          isa<Argument>(SI->getValueOperand());
 }
 
+// A pointer-typed local holds a pointer, so its deduced pointee must stay a
+// pointer.
+static bool tracesToPointerAlloca(Value *V) {
+  using namespace PatternMatch;
+  V = V->stripPointerCasts();
+  if (auto *AI = dyn_cast<AllocaInst>(V))
+    return isUntypedPointerTy(AI->getAllocatedType());
+  return match(
+      V, m_AnyIntrinsic<Intrinsic::spv_alloca, Intrinsic::spv_alloca_array>());
+}
+
 // Maybe restore original function return type.
 static inline Type *restoreMutatedType(SPIRVGlobalRegistry *GR, Instruction *I,
                                        Type *Ty) {
@@ -789,7 +799,7 @@ bool SPIRVEmitIntrinsics::walkLogicalAccessChainConstant(
 
   do {
     if (ArrayType *AT = dyn_cast<ArrayType>(CurType)) {
-      uint32_t EltTypeSize = DL.getTypeSizeInBits(AT->getElementType()) / 8;
+      uint64_t EltTypeSize = DL.getTypeAllocSize(AT->getElementType());
       assert(Offset < AT->getNumElements() * EltTypeSize);
       uint64_t Index = Offset / EltTypeSize;
       Offset = Offset - (Index * EltTypeSize);
@@ -1403,8 +1413,18 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
                                  StructuredGEPInst::getPointerOperandIndex()));
   } else if (auto *Ref = dyn_cast<LoadInst>(I)) {
     KnownElemTy = I->getType();
-    if (isUntypedPointerTy(KnownElemTy))
-      return;
+    if (isUntypedPointerTy(KnownElemTy)) {
+      // A T** loaded back from its alloca comes out opaque, dropping type info.
+      // When the load is a pointer-to-pointer, type the alloca as that pointer.
+      Type *LoadedElemTy = GR->findDeducedElementType(I);
+      if (!LoadedElemTy || !isPointerTyOrWrapper(LoadedElemTy))
+        return;
+      Value *Root = Ref->getPointerOperand()->stripPointerCasts();
+      if (!isa<AllocaInst>(Root))
+        return;
+      KnownElemTy = getTypedPointerWrapper(LoadedElemTy,
+                                           getPointerAddressSpace(KnownElemTy));
+    }
     Type *PointeeTy = GR->findDeducedElementType(Ref->getPointerOperand());
     if (PointeeTy && !isUntypedPointerTy(PointeeTy))
       return;
@@ -1509,7 +1529,12 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
       continue;
     Value *OpTyVal = getNormalizedPoisonValue(KnownElemTy);
     Type *OpTy = Op->getType();
-    if (Op->hasUseList() &&
+    // Do not let a non-pointer element type clobber an already-deduced pointer
+    // pointee.
+    bool WouldClobberPtrWithNonPtr = Ty && isPointerTyOrWrapper(Ty) &&
+                                     !isPointerTyOrWrapper(KnownElemTy) &&
+                                     tracesToPointerAlloca(Op);
+    if (Op->hasUseList() && !WouldClobberPtrWithNonPtr &&
         (!Ty || AskTy || isUntypedPointerTy(Ty) || isTodoType(Op))) {
       Type *PrevElemTy = GR->findDeducedElementType(Op);
       GR->addDeducedElementType(Op, normalizeType(KnownElemTy));
@@ -1577,29 +1602,15 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
           CI->setCalledFunction(NewF);
         }
       }
-    } else if (auto *Phi = dyn_cast<PHINode>(U)) {
-      if (Phi->getType() != New->getType()) {
-        Phi->mutateType(New->getType());
-        Phi->replaceUsesOfWith(Old, New);
-        // Convert extractvalue users of the mutated PHI to spv_extractv
-        SmallVector<ExtractValueInst *, 4> EVUsers;
-        for (User *PhiUser : Phi->users())
-          if (auto *EV = dyn_cast<ExtractValueInst>(PhiUser))
-            EVUsers.push_back(EV);
-        for (ExtractValueInst *EV : EVUsers) {
-          B.SetInsertPoint(EV);
-          SmallVector<Value *> Args(EV->operand_values());
-          for (unsigned Idx : EV->indices())
-            Args.push_back(B.getInt32(Idx));
-          auto *NewEV =
-              B.CreateIntrinsic(Intrinsic::spv_extractv, {EV->getType()}, Args);
-          EV->replaceAllUsesWith(NewEV);
-          DeletedInstrs.insert(EV);
-          EV->eraseFromParent();
-        }
-      } else {
-        Phi->replaceUsesOfWith(Old, New);
-      }
+    } else if (isa<PHINode>(U) || isa<SelectInst>(U) || isa<FreezeInst>(U)) {
+      // Aggregate-typed PHIs, selects and freezes have already been mutated to
+      // the i32 value-id type up front in runOnFunction, so only the operand
+      // needs replacing here; their extractvalue users are lowered to
+      // spv_extractv by visitExtractValueInst.
+      assert(U->getType() == New->getType() &&
+             "aggregate PHI/select/freeze should have been mutated to value-id "
+             "type");
+      U->replaceUsesOfWith(Old, New);
     } else {
       llvm_unreachable("illegal aggregate intrinsic user");
     }
@@ -2143,6 +2154,15 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
       return;
     }
   }
+
+  // Never replace an already-deduced pointer pointee with a non-pointer one.
+  // The conflicting use comes from a mis-deduced expected type. Leave the
+  // operand untouched rather than emitting a ptrcast that re-introduces
+  // the collapsed type at the use site.
+  if (PointerElemTy && isPointerTyOrWrapper(PointerElemTy) &&
+      !isPointerTyOrWrapper(ExpectedElementType) &&
+      tracesToPointerAlloca(Pointer))
+    return;
 
   if (isa<Instruction>(Pointer) || isa<Argument>(Pointer)) {
     if (FirstPtrCastOrAssignPtrType) {
@@ -3475,7 +3495,6 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   AggrConsts.clear();
   AggrConstTypes.clear();
   AggrStores.clear();
-  DeletedInstrs.clear();
 
   processParamTypesByFunHeader(CurrF, B);
 
@@ -3531,12 +3550,21 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   simplifyNullAddrSpaceCasts();
   preprocessCompositeConstants(B);
 
-  for (BasicBlock &BB : Func)
-    for (PHINode &Phi : BB.phis())
-      if (Phi.getType()->isAggregateType()) {
-        AggrConstTypes[&Phi] = Phi.getType();
-        Phi.mutateType(B.getInt32Ty());
-      }
+  // A PHINode, SelectInst or FreezeInst takes its result type from its
+  // operands. Aggregate arms are lowered to i32 value-ids (composite constants
+  // here, loads and other producers during the visitor pass below), so mutate
+  // an aggregate PHI, select or freeze to match. The original type is tracked
+  // in AggrConstTypes (used to assign the SPIR-V type) and its extractvalue
+  // users are lowered to spv_extractv.
+  Type *I32Ty = B.getInt32Ty();
+  for (Instruction &I : instructions(Func)) {
+    if (!isa<PHINode>(I) && !isa<SelectInst>(I) && !isa<FreezeInst>(I))
+      continue;
+    if (!I.getType()->isAggregateType())
+      continue;
+    AggrConstTypes[&I] = I.getType();
+    I.mutateType(I32Ty);
+  }
 
   preprocessBoolVectorBitcasts(Func);
   SmallVector<Instruction *> Worklist(
@@ -3578,8 +3606,6 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
         deduceOperandElementType(&Phi, nullptr);
 
   for (auto *I : Worklist) {
-    if (DeletedInstrs.count(I))
-      continue;
     TrackConstants = true;
     if (!I->getType()->isVoidTy() || isa<StoreInst>(I))
       setInsertPointAfterDef(B, I);
