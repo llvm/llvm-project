@@ -7745,6 +7745,22 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   if ((VT.getScalarSizeInBits() % 8) != 0)
     return SDValue();
 
+  // If all of these are oneuse frozen loads, then attempt to create a frozen
+  // consecutive load.
+  if (all_of(Elts, [](SDValue Elt) {
+        return Elt.getOpcode() == ISD::FREEZE &&
+               ISD::isNormalLoad(Elt.getOperand(0).getNode()) &&
+               Elt.hasOneUse();
+      })) {
+    SmallVector<SDValue, 16> SrcElts;
+    for (SDValue Elt : Elts)
+      SrcElts.push_back(peekThroughFreeze(Elt));
+    if (SDValue LD = EltsFromConsecutiveLoads(VT, SrcElts, DL, DAG, Subtarget,
+                                              IsAfterLegalize, Depth + 1))
+      return DAG.getFreeze(LD);
+    return SDValue();
+  }
+
   unsigned NumElems = Elts.size();
 
   int LastLoadedElt = -1;
