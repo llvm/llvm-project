@@ -490,8 +490,8 @@ public:
       // Generate the relaxed atomic RMW if we've asked for it and no more
       // promotion is possible.
       if (AtomicCounterUpdatePromoted ||
-               (IsAtomic &&
-                (!IterativeCounterPromotion || !LI.getLoopFor(ExitBlock))))
+          (IsAtomic &&
+           (!IterativeCounterPromotion || !LI.getLoopFor(ExitBlock))))
         Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, LiveInValue,
                                 MaybeAlign(), AtomicOrdering::Monotonic);
       else {
