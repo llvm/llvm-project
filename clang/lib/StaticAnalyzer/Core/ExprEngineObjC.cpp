@@ -256,7 +256,7 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
 
   // Proceed with evaluate the message expression.
   ExplodedNodeSet dstEval;
-  NodeBuilder Bldr(dstGenericPrevisit, dstEval, *currBldrCtx);
+  NodeBuilder Bldr(dstEval, *currBldrCtx);
 
   for (ExplodedNode *Pred : dstGenericPrevisit) {
     ProgramStateRef State = Pred->getState();
@@ -268,7 +268,7 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
         if (ObjCNoRet.isImplicitNoReturn(ME)) {
           // If we raise an exception, for now treat it as a sink.
           // Eventually we will want to handle exceptions properly.
-          Bldr.generateSink(ME, Pred, State);
+          Engine.makePostStmtNode(ME, State, Pred, /*MarkAsSink=*/true);
           continue;
         }
       }
@@ -278,12 +278,11 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
       if (ObjCNoRet.isImplicitNoReturn(ME)) {
         // If we raise an exception, for now treat it as a sink.
         // Eventually we will want to handle exceptions properly.
-        Bldr.generateSink(ME, Pred, Pred->getState());
+        Engine.makePostStmtNode(ME, State, Pred, /*MarkAsSink=*/true);
         continue;
       }
     }
 
-    Bldr.takeNodes(Pred);
     defaultEvalCall(Bldr, Pred, *UpdatedMsg);
   }
 
