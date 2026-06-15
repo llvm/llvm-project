@@ -262,6 +262,14 @@ Objective-C Language Changes
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- ``__has_extension(bit_int)`` now returns ``1`` in every language mode,
+  matching the long-standing availability of ``_BitInt(N)`` as a Clang
+  extension in C and C++. ``__has_feature(bit_int)`` returns ``1`` in C23+,
+  where ``_BitInt`` is a standard feature. The identifier previously had no
+  entry in ``Features.def`` and both probes returned ``0``, causing user
+  code and libcxx tests that gated ``_BitInt`` blocks on the probe to
+  silently take the no-``_BitInt`` branch.
+
 - Added support for floating point and pointer values in most ``__atomic_``
   builtins.
 

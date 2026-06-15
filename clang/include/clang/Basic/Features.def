@@ -337,6 +337,8 @@ EXTENSION(c_thread_local, PP.getTargetInfo().isTLSSupported())
 // C23 features supported by other languages as extensions
 EXTENSION(c_attributes, true)
 EXTENSION(c_fixed_enum, true)
+FEATURE(bit_int, LangOpts.C23)
+EXTENSION(bit_int, true)
 // C2y features supported by other languages as extensions
 EXTENSION(c_countof, !LangOpts.C2y && !LangOpts.CPlusPlus)
 // C++11 features supported by other languages as extensions.
