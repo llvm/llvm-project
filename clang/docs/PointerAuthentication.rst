@@ -666,6 +666,8 @@ same behavior on a null pointer that the language implementation would.
 This is a treacherous operation that can easily result in `signing oracles`_.
 Programs should use it seldom and carefully.
 
+.. _ptrauth_auth_and_resign:
+
 ``ptrauth_auth_and_resign``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -688,6 +690,7 @@ to guarantee non-attackability if these expressions are
 :ref:`safely-derived<Safe derivation>`.
 
 ``ptrauth_auth_with_pc_and_resign``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: c
 
