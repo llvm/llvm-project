@@ -3074,16 +3074,19 @@ void OmpAttributeVisitor::PropagateOmpFlagToEquivalenceSet(
 
 void OmpAttributeVisitor::ResolveOmpCommonBlock(
     const parser::Name &name, Symbol::Flag ompFlag) {
+  bool cbResolved{false};
   if (name.symbol) {
     if (auto *details{name.symbol->detailsIf<CommonBlockDetails>()}) {
       if (!details->objects().empty()) {
         // Common block already resolved
-        return;
+        cbResolved = true;
       }
     }
   }
 
-  if (auto *symbol{ResolveOmpCommonBlockName(&name)}) {
+  parser::Name cbName{name};
+  Symbol *originalCB{ResolveOmpCommonBlockName(&cbName)};
+  if (auto *symbol{cbResolved ? name.symbol : originalCB}) {
     if (!dataCopyingAttributeFlags.test(ompFlag)) {
       CheckMultipleAppearances(name, *symbol, Symbol::Flag::OmpCommonBlock);
     }
@@ -3091,7 +3094,8 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
     // same meaning as if every explicit member of the common block
     // appeared in the list
     auto &details{symbol->get<CommonBlockDetails>()};
-    bool cloneCommonBlock{dataSharingAttributeFlags.test(ompFlag)};
+    bool cbCloned{cbResolved && name.symbol != originalCB};
+    bool cloneCommonBlock{dataSharingAttributeFlags.test(ompFlag) && !cbCloned};
     CommonBlockDetails cloneDetails{symbol->name()};
     for (auto [index, object] : llvm::enumerate(details.objects())) {
       if (auto *resolvedObject{ResolveOmp(*object, ompFlag, currScope())}) {
@@ -3115,6 +3119,8 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
     if (cloneCommonBlock) {
       name.symbol = &currScope().MakeSymbol(
           symbol->name(), symbol->attrs(), std::move(cloneDetails));
+    } else {
+      name.symbol = symbol;
     }
   } else {
     context_.Say(name.source, // 2.15.3
