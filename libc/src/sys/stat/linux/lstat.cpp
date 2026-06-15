@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/sys/stat/lstat.h"
 #include "hdr/fcntl_macros.h"
 #include "hdr/types/struct_stat.h"
+#include "src/__support/OSUtil/linux/stat/stat_via_statx.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/OSUtil/linux/stat/stat_via_statx.h"
-#include "src/sys/stat/lstat.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

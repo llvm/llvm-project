@@ -16,11 +16,11 @@
 
 #include "hdr/stdint_proxy.h"
 #include "hdr/types/struct_stat.h"
+#include "src/__support/OSUtil/linux/stat/kernel_statx_types.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/statx.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/OSUtil/linux/stat/kernel_statx_types.h"
-#include "src/__support/OSUtil/linux/syscall_wrappers/statx.h"
 
 // It is safe to include this kernel header as it is designed to be
 // included from user programs without causing any name pollution.
@@ -30,9 +30,9 @@ namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
 /// Populates `statbuf` via a call to the `statx` syscall.
-LIBC_INLINE ErrorOr<int>
-stat_via_statx(int dirfd, const char *__restrict path, int flags,
-               struct stat *__restrict statbuf) {
+LIBC_INLINE ErrorOr<int> stat_via_statx(int dirfd, const char *__restrict path,
+                                        int flags,
+                                        struct stat *__restrict statbuf) {
   kernel_statx_buf xbuf;
   auto result = linux_syscalls::statx(dirfd, path, flags,
                                       KERNEL_STATX_BASIC_STATS_MASK, &xbuf);
