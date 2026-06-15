@@ -162,3 +162,11 @@ func.func @byte_invalid_bitwidth() {
     %0 = "some.op"() : () -> !llvm.byte<8388608>
     llvm.return
 }
+
+// -----
+
+llvm.func @byte_zero_bitwidth() {
+    // expected-error@below {{bitwidth must be greater than 0}}
+    %0 = "some.op"() : () -> !llvm.byte<0>
+    llvm.return
+}
