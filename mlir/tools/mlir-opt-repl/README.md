@@ -44,7 +44,16 @@ mlir-opt-repl> rewind 1
 mlir-opt-repl mcp
 ```
 
-To configure Claude Code, add to `.claude/settings.local.json`:
+To generate the Claude Code configuration with correct paths for your system:
+
+```bash
+mlir-opt-repl mcp-config
+```
+
+This prints a ready-to-paste JSON block for `.claude/settings.local.json` with
+the absolute path to this installation and `mlir-opt` (if found).
+
+Or configure manually in `.claude/settings.local.json`:
 
 ```json
 {

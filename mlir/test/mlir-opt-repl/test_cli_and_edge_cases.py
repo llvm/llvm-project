@@ -43,6 +43,20 @@ class TestClickCLI:
         result = CliRunner().invoke(cli, ["mcp"], input=input_text)
         assert "mlir-opt-repl" in result.output
 
+    def test_config_with_mlir_opt(self):
+        result = CliRunner().invoke(cli, ["mcp-config"])
+        assert result.exit_code == 0
+        assert "mcpServers" in result.output
+        assert "__main__.py" in result.output
+        assert "mcp" in result.output
+
+    def test_config_without_mlir_opt(self, monkeypatch):
+        monkeypatch.delenv("MLIR_OPT", raising=False)
+        monkeypatch.setattr("shutil.which", lambda x: None)
+        result = CliRunner().invoke(cli, ["mcp-config"])
+        assert result.exit_code == 0
+        assert "env" not in result.output
+
 
 class TestEngineEdgeCases:
     def test_mlir_opt_not_found(self):
