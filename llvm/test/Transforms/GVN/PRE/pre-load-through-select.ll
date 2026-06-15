@@ -930,3 +930,58 @@ for.body:
   %res.0.lcssa = phi i32 [ 0, %entry ], [ %spec.select, %for.body ]
   ret i32 %res.0.lcssa
 }
+
+; Negative test: a store that may clobber the loaded location sits between the
+; two loads, so the load through the select index must NOT be eliminated.
+define i32 @test_phi_select_index_loop_clobber(ptr %A, i32 %N)  {
+; CHECK-LABEL: @test_phi_select_index_loop_clobber(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N:%.*]], 1
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.preheader:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[FOR_BODY]] ], [ 1, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 7, ptr [[A]], align 4
+; CHECK-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[RES]] to i64
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP1]], i32 [[IDX]], i32 [[RES]]
+; CHECK-NEXT:    [[IDX_NEXT]] = add nsw i32 [[IDX]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[IDX_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[RES_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i32 [[RES_0_LCSSA]]
+;
+entry:
+  %cmp = icmp sgt i32 %N, 1
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+
+for.body:
+  %idx = phi i32 [ 1, %entry ], [ %idx.next, %for.body ]
+  %res = phi i32 [ 0, %entry ], [ %spec.select, %for.body ]
+  %idxprom = sext i32 %idx to i64
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
+  store i32 7, ptr %A, align 4
+  %idxprom1 = sext i32 %res to i64
+  %arrayidx1 = getelementptr inbounds i32, ptr %A, i64 %idxprom1
+  %1 = load i32, ptr %arrayidx1, align 4
+  %cmp1 = icmp slt i32 %0, %1
+  %spec.select = select i1 %cmp1, i32 %idx, i32 %res
+  %idx.next = add nsw i32 %idx, 1
+  %exitcond.not = icmp eq i32 %idx.next, %N
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+
+  for.cond.cleanup:
+  %res.0.lcssa = phi i32 [ 0, %entry ], [ %spec.select, %for.body ]
+  ret i32 %res.0.lcssa
+}
