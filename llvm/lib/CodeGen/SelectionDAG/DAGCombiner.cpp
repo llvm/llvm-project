@@ -29533,7 +29533,7 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
     unsigned Factor = ConcatOpVT.getVectorMinNumElements();
     unsigned ConcatOpIdx = InsIdx / Factor;
     unsigned RelativeIdx = InsIdx - ConcatOpIdx * Factor;
-    assert(ConcatOpIdx < N0.getNumOperands() && "have enoug concat operands");
+    assert(ConcatOpIdx < N0.getNumOperands() && "subvector index mismatch");
 
     // If the insert replaces a whole concat operand, optimize into a single
     // concat_vectors.
