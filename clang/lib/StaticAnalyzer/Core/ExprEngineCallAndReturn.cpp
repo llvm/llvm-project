@@ -495,7 +495,6 @@ REGISTER_TRAIT_WITH_PROGRAMSTATE(CTUDispatchBifurcation, bool)
 void ExprEngine::ctuBifurcate(const CallEvent &Call, const Decl *D,
                               ExplodedNodeSet &Dst, ExplodedNode *Pred,
                               ProgramStateRef State) {
-  ProgramStateRef ConservativeEvalState = nullptr;
   if (Call.isForeign() && !isSecondPhaseCTU()) {
     const auto IK = AMgr.options.getCTUPhase1Inlining();
     const bool DoInline = IK == CTUPhase1InliningKind::All ||
@@ -510,11 +509,9 @@ void ExprEngine::ctuBifurcate(const CallEvent &Call, const Decl *D,
       // Enqueue it to be analyzed in the second (ctu) phase.
       inlineCall(Engine.getCTUWorkList(), Call, D, Pred, State);
       // Conservatively evaluate in the first phase.
-      ConservativeEvalState = State->set<CTUDispatchBifurcation>(true);
-      Dst.insert(conservativeEvalCall(Call, Pred, ConservativeEvalState));
-    } else {
-      Dst.insert(conservativeEvalCall(Call, Pred, State));
+      State = State->set<CTUDispatchBifurcation>(true);
     }
+    Dst.insert(conservativeEvalCall(Call, Pred, State));
     return;
   }
   inlineCall(Engine.getWorkList(), Call, D, Pred, State);
