@@ -2395,7 +2395,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // GOT pointer.
     if (!isTailCall) {
       // Only PLT calls (GlobalAddress or ExternalSymbol) require the GOT in
-      // EBX. Indirect calls through a register or a constant address do not
+      // EBX. Indirect calls through a register or an absolute address do not
       // go through the PLT and do not need EBX to hold the GOT base.
       if ((Callee->getOpcode() == ISD::GlobalAddress ||
            Callee->getOpcode() == ISD::ExternalSymbol))
