@@ -2791,12 +2791,6 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
     // so inbounds is not sufficient), and their allocations aren't the same,
     // the pointers are not equal.
     if (haveNonOverlappingStorage(LHS, RHS)) {
-      uint64_t LHSSize, RHSSize;
-      ObjectSizeOpts Opts;
-      Opts.EvalMode = ObjectSizeOpts::Mode::Min;
-      const Function *F = Q.CxtI ? Q.CxtI->getFunction() : nullptr;
-      Opts.NullIsUnknownSize = F ? NullPointerIsDefined(F) : true;
-
       // Size of object V, falling back to `dereferenceable(N)` attribute on an
       // argument when getObjectSize cannot determine a concrete size.
       auto GetKnownSize = [&](Value *V, uint64_t &Size) {
@@ -2806,6 +2800,7 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
         return Size != 0 && !CanBeNull;
       };
 
+      uint64_t LHSSize, RHSSize;
       if (GetKnownSize(LHS, LHSSize) && GetKnownSize(RHS, RHSSize)) {
         APInt Dist = LHSOffset - RHSOffset;
         if (Dist.isNonNegative() ? Dist.ult(LHSSize) : (-Dist).ult(RHSSize))
