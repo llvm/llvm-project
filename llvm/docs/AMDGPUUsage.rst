@@ -1352,7 +1352,7 @@ buffer fat pointers and buffer strided pointers) generally implement handling fo
 out of bounds (OOB) memory accesses, including those that are partially OOB,
 if the buffer resource resource has the required flags set. How ordinary
 ``load`` and ``store`` instructions are lowered to buffer operations is partly
-controlled by the ``amdgpu.buffer.oob.mode`` (see :ref:`_amdgpu_metadata`). If
+controlled by the ``amdgpu.buffer.oob.mode`` (see :ref:`amdgpu-module-flags`). If
 that flag is set to ``1`` (relaxed), no handling to improve the expected behavior
 of OOB accesses is performed, while if it is set to ``0`` (any) or ``2`` (strict),
 oerations may be spliit to ensure correctness under stronger models of how
