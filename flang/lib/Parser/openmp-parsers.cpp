@@ -290,8 +290,8 @@ static bool IsReservedName(const Name &name) {
 TYPE_PARSER( //
     construct<OmpReservedIdentifier>(predicated(name, IsReservedName)))
 
+// Parse x(...)(...) as a substring instead of a function reference.
 TYPE_PARSER( //
-    // Parse x(...)(...) as a substring instead of a function reference.
     construct<OmpLocator>(functionReference / !lookAhead("("_tok)) ||
     construct<OmpLocator>(Parser<OmpReservedIdentifier>{}))
 

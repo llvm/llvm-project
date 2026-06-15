@@ -173,7 +173,7 @@ Object makeObject(const parser::EntityDecl &decl,
 ObjectList makeObjects(const parser::OmpArgumentList &objects,
                        semantics::SemanticsContext &semaCtx) {
   return makeList(objects.v, [&](const parser::OmpArgument &arg) {
-    return common::visit(
+    return common::visit( //
         common::visitors{
             [&](const parser::OmpObject &object) -> Object {
               return makeObject(object, semaCtx);

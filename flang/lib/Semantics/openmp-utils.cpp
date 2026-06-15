@@ -478,7 +478,7 @@ std::optional<bool> IsContiguous(
             }
             return std::optional<bool>{};
           },
-          [&](const parser::OmpLocator &) {
+          [&](const parser::OmpLocator &) { //
             return std::optional<bool>{};
           },
           [&](const parser::OmpObject::Invalid &) {
