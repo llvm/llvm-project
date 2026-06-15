@@ -946,9 +946,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                          Custom);
     }
     if (Subtarget->hasPackedFP64Ops()) {
-      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG,
-                          ISD::FCANONICALIZE},
-                         MVT::v2f64, Legal);
+      setOperationAction(
+          {ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FCANONICALIZE},
+          MVT::v2f64, Legal);
       setOperationAction(
           {ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FCANONICALIZE},
           {MVT::v4f64, MVT::v8f64, MVT::v16f64, MVT::v32f64}, Custom);
