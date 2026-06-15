@@ -955,6 +955,23 @@ static unsigned encodeSEHRegNum(MCContext &Ctx, MCRegister Reg) {
   return Ctx.getRegisterInfo()->getSEHRegNum(Reg);
 }
 
+// Unwind formats before v3 store the register operand of an unwind code in a
+// 4-bit field, so extended registers (r16-r31 / xmm16-xmm31, i.e. SEH register
+// numbers greater than 15) cannot be represented. Report an error rather than
+// silently truncating the register number to a different register. Returns true
+// if an error was reported.
+static bool checkUnwindV3ExtendedReg(MCContext &Ctx,
+                                     const WinEH::Instruction &Inst,
+                                     uint8_t Version, SMLoc Loc,
+                                     StringRef Directive) {
+  if (Version < 3 && Inst.Register > 15) {
+    Ctx.reportError(Loc, Directive +
+                             " with an extended register requires unwind v3");
+    return true;
+  }
+  return false;
+}
+
 void MCStreamer::emitWinCFIPushReg(MCRegister Register, SMLoc Loc) {
   WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
   if (!CurFrame)
@@ -970,6 +987,9 @@ void MCStreamer::emitWinCFIPushReg(MCRegister Register, SMLoc Loc) {
           Loc, ".seh_pushreg inside epilog requires unwind v3");
     CurrentWinEpilog->Instructions.push_back(Inst);
   } else {
+    if (checkUnwindV3ExtendedReg(getContext(), Inst, CurFrame->Version, Loc,
+                                 ".seh_pushreg"))
+      return;
     CurFrame->Instructions.push_back(Inst);
   }
 }
@@ -1019,6 +1039,9 @@ void MCStreamer::emitWinCFISetFrame(MCRegister Register, unsigned Offset,
           Loc, ".seh_setframe inside epilog requires unwind v3");
     CurrentWinEpilog->Instructions.push_back(Inst);
   } else {
+    if (checkUnwindV3ExtendedReg(getContext(), Inst, CurFrame->Version, Loc,
+                                 ".seh_setframe"))
+      return;
     CurFrame->LastFrameInst = CurFrame->Instructions.size();
     CurFrame->Instructions.push_back(Inst);
   }
@@ -1068,6 +1091,9 @@ void MCStreamer::emitWinCFISaveReg(MCRegister Register, unsigned Offset,
           Loc, ".seh_savereg inside epilog requires unwind v3");
     CurrentWinEpilog->Instructions.push_back(Inst);
   } else {
+    if (checkUnwindV3ExtendedReg(getContext(), Inst, CurFrame->Version, Loc,
+                                 ".seh_savereg"))
+      return;
     CurFrame->Instructions.push_back(Inst);
   }
 }
@@ -1090,6 +1116,9 @@ void MCStreamer::emitWinCFISaveXMM(MCRegister Register, unsigned Offset,
           Loc, ".seh_savexmm inside epilog requires unwind v3");
     CurrentWinEpilog->Instructions.push_back(Inst);
   } else {
+    if (checkUnwindV3ExtendedReg(getContext(), Inst, CurFrame->Version, Loc,
+                                 ".seh_savexmm"))
+      return;
     CurFrame->Instructions.push_back(Inst);
   }
 }

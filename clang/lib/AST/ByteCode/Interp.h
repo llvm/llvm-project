@@ -143,7 +143,8 @@ bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
 bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I);
 bool isConstexprUnknown(const Pointer &P);
 bool isConstexprUnknown(const Block *B);
-bool CheckDynamicCast(InterpState &S, CodePtr OpPC);
+bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestType,
+                 bool IsReferenceCast);
 
 enum class ShiftDir { Left, Right };
 
@@ -1234,6 +1235,11 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     return false;
   }
 
+  if (LHS == RHS) {
+    S.Stk.push<BoolT>(BoolT::from(Fn(ComparisonCategoryResult::Equal)));
+    return true;
+  }
+
   if (!Pointer::hasSameBase(LHS, RHS)) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
@@ -1242,13 +1248,25 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     return false;
   }
 
-  // Diagnose comparisons between fields with different access specifiers.
-  if (std::optional<std::pair<Pointer, Pointer>> Split =
+  // Diagnose comparisons between fields with different access specifiers,
+  // comparisons between bases and bases+fields.
+  if (std::optional<std::pair<PtrView, PtrView>> Split =
           Pointer::computeSplitPoint(LHS, RHS)) {
     const FieldDecl *LF = Split->first.getField();
     const FieldDecl *RF = Split->second.getField();
-    if (LF && RF && !LF->getParent()->isUnion() &&
-        LF->getAccess() != RF->getAccess()) {
+    if (!LF && !RF)
+      S.CCEDiag(S.Current->getSource(OpPC),
+                diag::note_constexpr_pointer_comparison_base_classes);
+    else if (!LF)
+      S.CCEDiag(S.Current->getSource(OpPC),
+                diag::note_constexpr_pointer_comparison_base_field)
+          << Split->first.getRecord()->getDecl() << RF->getParent() << RF;
+    else if (!RF)
+      S.CCEDiag(S.Current->getSource(OpPC),
+                diag::note_constexpr_pointer_comparison_base_field)
+          << Split->second.getRecord()->getDecl() << LF->getParent() << LF;
+    else if (!LF->getParent()->isUnion() &&
+             LF->getAccess() != RF->getAccess()) {
       S.CCEDiag(S.Current->getSource(OpPC),
                 diag::note_constexpr_pointer_comparison_differing_access)
           << LF << LF->getAccess() << RF << RF->getAccess() << LF->getParent();
