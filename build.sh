@@ -4,6 +4,7 @@
 #
 # Usage:
 #   ./build.sh release aarch64         # → build_release_aarch64/  (native, recommended)
+#   ./build.sh release aarch64_be      # → build_release_aarch64_be/ (SRE code pool ON by default)
 #   ./build.sh release x86             # → build_release_x86/
 #   ./build.sh debug   x86             # → build_debug_x86/
 #   ./build.sh debug   x86 --static    # → build_debug_x86_static/
@@ -18,7 +19,9 @@
 #   --no-ccache     disable ccache
 #   --trim-llvm-backend-experimental    build with EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL=ON (backend: trim non-ELF formats)
 #   --freestanding  build with EJIT_FREESTANDING=ON (runtime: no OS threads/I/O)
-#   --target-triple=<triple>  set EJIT_DEFAULT_TARGET_TRIPLE (required for
+#   --target-triple=<triple>  set EJIT_DEFAULT_TARGET_TRIPLE
+#   --sre-code-pool / --no-sre-code-pool  force EmbeddedJIT SRE code pool on/off
+#   --sre-code-pool-ptno=<n>  set SRE code pool partition number (default: 8)
 #   -h              show help
 #===----------------------------------------------------------------------===#
 
@@ -41,6 +44,7 @@ target_triple() {
   case "$1" in
     x86)     echo "x86_64-unknown-linux-gnu" ;;
     aarch64) echo "aarch64-linux-gnu" ;;
+    aarch64_be) echo "aarch64_be-unknown-linux-gnu" ;;
   esac
 }
 
@@ -48,6 +52,7 @@ llvm_target() {
   case "$1" in
     x86)     echo "X86" ;;
     aarch64) echo "AArch64" ;;
+    aarch64_be) echo "AArch64" ;;
   esac
 }
 
@@ -75,6 +80,7 @@ do_configure() {
   local type="$1" arch="$2" build_dir="$3" variant="${4:-default}"
   local target; target=$(llvm_target "$arch")
   local cc cxx; read -r cc cxx <<< "$(native_cc)"
+  local default_triple; default_triple=$(target_triple "$arch")
 
   local ccache_opts=""
   if $USE_CCACHE; then
@@ -91,6 +97,9 @@ do_configure() {
         -DLLVM_OPTIMIZED_TABLEGEN=ON \
         "-DLLVM_TARGETS_TO_BUILD=${target}" \
         -DLLVM_ENABLE_PROJECTS="clang;lld" \
+        -DEJIT_SRE_CODE_POOL=${EJIT_SRE_CODE_POOL} \
+        -DEJIT_SRE_CODE_POOL_PTNO=${EJIT_SRE_CODE_POOL_PTNO} \
+        "-DEJIT_DEFAULT_TARGET_TRIPLE=${EJIT_TARGET_TRIPLE:-${default_triple}}" \
         -DLLVM_ENABLE_ZLIB=OFF \
         -DLLVM_ENABLE_ZSTD=OFF \
         -DCMAKE_C_COMPILER=clang \
@@ -105,6 +114,9 @@ do_configure() {
         -DLLVM_OPTIMIZED_TABLEGEN=ON \
         "-DLLVM_TARGETS_TO_BUILD=${target}" \
         -DLLVM_ENABLE_PROJECTS="clang;lld" \
+        -DEJIT_SRE_CODE_POOL=${EJIT_SRE_CODE_POOL} \
+        -DEJIT_SRE_CODE_POOL_PTNO=${EJIT_SRE_CODE_POOL_PTNO} \
+        "-DEJIT_DEFAULT_TARGET_TRIPLE=${EJIT_TARGET_TRIPLE:-${default_triple}}" \
         -DLLVM_USE_SPLIT_DWARF=ON \
         -DLLVM_ENABLE_ZLIB=OFF \
         -DLLVM_ENABLE_ZSTD=OFF \
@@ -149,7 +161,9 @@ do_configure() {
       "-DCMAKE_CXX_COMPILER=${cxx}" \
       -DEJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL=${EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL} \
       -DEJIT_FREESTANDING=${EJIT_FREESTANDING} \
-      ${EJIT_TARGET_TRIPLE:+-DEJIT_DEFAULT_TARGET_TRIPLE="${EJIT_TARGET_TRIPLE}"} \
+      -DEJIT_SRE_CODE_POOL=${EJIT_SRE_CODE_POOL} \
+      -DEJIT_SRE_CODE_POOL_PTNO=${EJIT_SRE_CODE_POOL_PTNO} \
+      "-DEJIT_DEFAULT_TARGET_TRIPLE=${EJIT_TARGET_TRIPLE:-${default_triple}}" \
       ${ccache_opts} \
       ${extra_flags} \
       "-DCMAKE_C_FLAGS=-ffunction-sections -fdata-sections" \
@@ -180,7 +194,9 @@ do_configure() {
       "-DCMAKE_CXX_COMPILER=${cxx}" \
       -DEJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL=${EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL} \
       -DEJIT_FREESTANDING=${EJIT_FREESTANDING} \
-      ${EJIT_TARGET_TRIPLE:+-DEJIT_DEFAULT_TARGET_TRIPLE="${EJIT_TARGET_TRIPLE}"} \
+      -DEJIT_SRE_CODE_POOL=${EJIT_SRE_CODE_POOL} \
+      -DEJIT_SRE_CODE_POOL_PTNO=${EJIT_SRE_CODE_POOL_PTNO} \
+      "-DEJIT_DEFAULT_TARGET_TRIPLE=${EJIT_TARGET_TRIPLE:-${default_triple}}" \
       ${ccache_opts} \
       ${extra_flags} \
       "-DCMAKE_C_FLAGS=-ffunction-sections -fdata-sections" \
@@ -228,6 +244,13 @@ USE_CCACHE=true
 EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL=OFF
 EJIT_FREESTANDING=OFF
 EJIT_TARGET_TRIPLE=""
+EJIT_SRE_CODE_POOL=AUTO
+EJIT_SRE_CODE_POOL_PTNO=8
+
+if [[ "${1:-}" = "-h" || "${1:-}" = "--help" ]]; then
+  sed -n '2,25p' "$0"
+  exit 0
+fi
 
 shift 2 2>/dev/null || true
 while [[ $# -gt 0 ]]; do
@@ -240,8 +263,11 @@ while [[ $# -gt 0 ]]; do
     --trim-llvm-backend-experimental) EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL=ON ;;
     --freestanding) EJIT_FREESTANDING=ON ;;
     --target-triple=*) EJIT_TARGET_TRIPLE="${1#--target-triple=}" ;;
+    --sre-code-pool) EJIT_SRE_CODE_POOL=ON ;;
+    --no-sre-code-pool) EJIT_SRE_CODE_POOL=OFF ;;
+    --sre-code-pool-ptno=*) EJIT_SRE_CODE_POOL_PTNO="${1#--sre-code-pool-ptno=}" ;;
     -h|--help)
-      sed -n '2,18p' "$0"
+      sed -n '2,25p' "$0"
       exit 0
       ;;
     *) err "Unknown argument: $1"; exit 1 ;;
@@ -255,7 +281,15 @@ if [ -z "$TYPE" ] || [ -z "$ARCH" ]; then
 fi
 
 case "$TYPE" in  debug|release) ;;  *) err "Invalid type: $TYPE"; exit 1 ;; esac
-case "$ARCH" in  x86|aarch64) ;;    *) err "Invalid arch: $ARCH"; exit 1 ;; esac
+case "$ARCH" in  x86|aarch64|aarch64_be) ;;    *) err "Invalid arch: $ARCH"; exit 1 ;; esac
+
+if [ "$EJIT_SRE_CODE_POOL" = "AUTO" ]; then
+  if [ "$ARCH" = "aarch64_be" ]; then
+    EJIT_SRE_CODE_POOL=ON
+  else
+    EJIT_SRE_CODE_POOL=OFF
+  fi
+fi
 
 if [ "$TYPE" = "debug" ] && [ "$VARIANT" = "minimal" ]; then
   warn "debug + minimal is unusual; proceeding anyway."
@@ -263,6 +297,7 @@ fi
 
 BUILD_DIR=$(build_dir "$TYPE" "$ARCH" "$VARIANT")
 log "Type=${TYPE}  Arch=${ARCH}  Variant=${VARIANT}  ccache=$($USE_CCACHE && echo on || echo off)"
+log "EJIT: triple=${EJIT_TARGET_TRIPLE:-$(target_triple "$ARCH")}  sre-code-pool=${EJIT_SRE_CODE_POOL}  ptno=${EJIT_SRE_CODE_POOL_PTNO}"
 log "Build dir: ${BUILD_DIR}"
 
 if $DO_CONFIGURE; then

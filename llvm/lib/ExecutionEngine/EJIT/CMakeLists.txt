@@ -64,6 +64,9 @@ set(EJIT_SOURCES
   EJitStructFieldPass.cpp
   EJitOptimizer.cpp
   EJitPassBuilder.cpp
+  EJitCodePool.cpp
+  EJitCodePoolMemoryManager.cpp
+  EJitSrePlatform.cpp
 )
 
 # EJitLogger has its own #ifndef EJIT_FREESTANDING no-op stubs, so always include it.
