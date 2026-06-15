@@ -39,7 +39,6 @@
 //
 typedef uint32_t compact_unwind_encoding_t;
 
-
 // architecture independent bits
 // clang-format off
 enum {
@@ -48,9 +47,6 @@ enum {
     UNWIND_PERSONALITY_MASK                = 0x30000000,
 };
 // clang-format on
-
-
-
 
 //
 // x86
@@ -188,9 +184,6 @@ enum {
 //}
 //
 
-
-
-
 //
 // x86_64
 //
@@ -277,7 +270,6 @@ enum {
 //    linker in final linked images which have only DWARF unwind info for a
 //    function.
 //
-
 
 // ARM64
 //
