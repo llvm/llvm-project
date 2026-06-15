@@ -4214,7 +4214,6 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
     ArgVec.push_back(Expr);
   assert(ArgVec.size() == CD->getNumParams() - IsCopy);
 
-
   CodeGenFunction::RunCleanupsScope Cleanups(CGF);
 
   const auto *FPT = CD->getType()->castAs<FunctionProtoType>();

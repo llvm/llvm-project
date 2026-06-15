@@ -2864,8 +2864,8 @@ public:
     return const_cast<CXXConstructorDecl*>(this)->getCanonicalDecl();
   }
 
-  ArrayRef<CXXDefaultArgExpr*> getCtorClosureDefaultArgs() const;
-  void setCtorClosureDefaultArgs(ArrayRef<CXXDefaultArgExpr*> Args);
+  ArrayRef<CXXDefaultArgExpr *> getCtorClosureDefaultArgs() const;
+  void setCtorClosureDefaultArgs(ArrayRef<CXXDefaultArgExpr *> Args);
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
