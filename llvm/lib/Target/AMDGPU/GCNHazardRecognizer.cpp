@@ -896,11 +896,11 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) const {
     if (VDataIdx == -1)
       return -1;
     if (AMDGPU::getRegBitWidth(VDataRCID) > 64) {
-      // On gfx940-family the BUFFER_STORE source-vgpr WAR hazard exists for
-      // every SOFFSET shape; the wait-state count differs by SOFFSET, and is
-      // computed in checkVALUHazardsHelper. Pre-gfx940 the hazard only exists
-      // if soffset is not an SGPR.
-      if (ST.hasGFX940Insts())
+      // When SOFFSET-dependent wide-store windows apply, the BUFFER_STORE
+      // source-vgpr WAR hazard exists for every SOFFSET shape; the wait-state
+      // count differs by SOFFSET and is computed in checkVALUHazardsHelper.
+      // Otherwise the hazard only exists if soffset is not an SGPR.
+      if (ST.hasVDecCoExecHazard())
         return VDataIdx;
       const MachineOperand *SOffset =
           TII->getNamedOperand(MI, AMDGPU::OpName::soffset);
@@ -932,10 +932,11 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) const {
   return -1;
 }
 
-int GCNHazardRecognizer::checkPreGFX940VALUHazardsHelper(Register Reg) const {
-  // Pre-gfx940 wide stores need a single wait-state bubble before a VALU that
-  // overwrites store data. createsVALUHazard already excludes MUBUF/MTBUF
-  // stores with an SGPR SOFFSET.
+int GCNHazardRecognizer::checkUniformWindowVALUHazardsHelper(
+    Register Reg) const {
+  // Wide stores need a single wait-state bubble before a VALU that overwrites
+  // store data. createsVALUHazard already excludes MUBUF/MTBUF stores with an
+  // SGPR SOFFSET.
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
   auto IsHazard = [this, TRI, Reg](const MachineInstr &MI) {
@@ -947,16 +948,13 @@ int GCNHazardRecognizer::checkPreGFX940VALUHazardsHelper(Register Reg) const {
   return std::max(0, 1 - getWaitStatesSince(IsHazard, 1));
 }
 
-int GCNHazardRecognizer::checkGFX940FamilyVALUHazardsHelper(
+int GCNHazardRecognizer::checkSOFFSETWindowVALUHazardsHelper(
     Register Reg) const {
-  // On gfx940-family the required wait-state window depends on the producer's
-  // SOFFSET shape:
+  // The required wait-state window depends on the producer's SOFFSET shape:
   //   - MUBUF/MTBUF wide store with sgpr SOFFSET: 1 wait state.
   //   - MUBUF/MTBUF wide store with literal/absent SOFFSET, and FLAT wide
   //     store: 2 wait states.
-  // The 1-cycle sgpr-SOFFSET window was measured on gfx950 (MI350X); the same
-  // gate is applied to the rest of the gfx940 family to match the existing
-  // rule's granularity.
+  // The 1-cycle sgpr-SOFFSET window was measured on gfx950.
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const SIInstrInfo *TII = ST.getInstrInfo();
 
@@ -997,10 +995,10 @@ int GCNHazardRecognizer::checkVALUHazardsHelper(
   if (!TRI->isVectorRegister(MRI, Def.getReg()))
     return 0;
 
-  if (!ST.hasGFX940Insts())
-    return checkPreGFX940VALUHazardsHelper(Def.getReg());
+  if (ST.hasVDecCoExecHazard())
+    return checkSOFFSETWindowVALUHazardsHelper(Def.getReg());
 
-  return checkGFX940FamilyVALUHazardsHelper(Def.getReg());
+  return checkUniformWindowVALUHazardsHelper(Def.getReg());
 }
 
 /// Dest sel forwarding issue occurs if additional logic is needed to swizzle /

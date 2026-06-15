@@ -99,8 +99,8 @@ private:
   int checkVALUHazards(MachineInstr *VALU) const;
   int checkVALUHazardsHelper(const MachineOperand &Def,
                              const MachineRegisterInfo &MRI) const;
-  int checkPreGFX940VALUHazardsHelper(Register Reg) const;
-  int checkGFX940FamilyVALUHazardsHelper(Register Reg) const;
+  int checkUniformWindowVALUHazardsHelper(Register Reg) const;
+  int checkSOFFSETWindowVALUHazardsHelper(Register Reg) const;
   int checkRWLaneHazards(MachineInstr *RWLane) const;
   int checkRFEHazards(MachineInstr *RFE) const;
   int checkInlineAsmHazards(MachineInstr *IA) const;
