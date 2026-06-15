@@ -3010,7 +3010,6 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
 
   // Process type/const/global var/func decl instructions, number their
   // destination registers from 0 to N, collect Extensions and Capabilities.
-  collectReqs(M, MAI, MMI, *ST);
   collectDeclarations(M);
 
   // Number rest of registers from N+1 onwards.
