@@ -1,6 +1,6 @@
 # REQUIRES: asserts
 
-## Check that we dont fuse non-RAW dependent pairs.
+## Check that we don't fuse non-RAW dependent pairs.
 
 # RUN: llc -o /dev/null %s -mtriple=aarch64-unknown -mattr=+arith-cbz-fusion -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s
 # RUN: llc -o /dev/null %s -mtriple=aarch64-unknown -mcpu=cyclone -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s
