@@ -52,14 +52,6 @@ func.func @c() {
   return
 }
 
-func.func @a() {
-  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
-  %1 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
-  %2 = "emitc.apply"(%0) {applicableOperator = "&"} : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-  %3 = emitc.apply "&"(%1) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-  return
-}
-
 func.func @add_int(%arg0: i32, %arg1: i32) {
   %1 = "emitc.add" (%arg0, %arg1) : (i32, i32) -> i32
   return
