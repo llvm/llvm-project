@@ -969,6 +969,16 @@ def _ssaf_list_formats :
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Display the list of available SSAF serialization formats">,
   MarshallingInfoFlag<FrontendOpts<"SSAFShowFormats">>;
+def _ssaf_compilation_unit_id :
+  Joined<["--"], "ssaf-compilation-unit-id=">,
+  MetaVarName<"<id>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Stable identifier used as the CompilationUnit namespace name of every "
+    "produced SSAF TU summary. Required when '--ssaf-tu-summary-file=' is "
+    "set.">,
+  MarshallingInfoString<FrontendOpts<"SSAFCompilationUnitId">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
       Flags<[NoXarchOption]>,
@@ -4977,7 +4987,7 @@ defm raw_string_literals : BoolFOption<"raw-string-literals",
 def fzero_call_used_regs_EQ
     : Joined<["-"], "fzero-call-used-regs=">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
-      HelpText<"Clear call-used registers upon function return (AArch64/x86 only)">,
+      HelpText<"Clear call-used registers upon function return (AArch64/RISC-V/x86 only)">,
       Values<"skip,used-gpr-arg,used-gpr,used-arg,used,all-gpr-arg,all-gpr,all-arg,all">,
       NormalizedValues<["Skip", "UsedGPRArg", "UsedGPR", "UsedArg", "Used",
                         "AllGPRArg", "AllGPR", "AllArg", "All"]>,

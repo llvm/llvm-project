@@ -26,6 +26,7 @@
 #include "llvm/MC/DXContainerInfo.h"
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -54,6 +55,7 @@ class DXContainerGlobals : public llvm::ModulePass {
   void addPipelineStateValidationInfo(Module &M,
                                       SmallVector<GlobalValue *> &Globals);
   void addCompilerVersion(Module &M, SmallVector<GlobalValue *> &Globals);
+  void addSourceInfo(Module &M, SmallVector<GlobalValue *> &Globals);
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -85,6 +87,7 @@ bool DXContainerGlobals::runOnModule(Module &M) {
   addRootSignature(M, Globals);
   addPipelineStateValidationInfo(M, Globals);
   addCompilerVersion(M, Globals);
+  addSourceInfo(M, Globals);
   appendToCompilerUsed(M, Globals);
   return true;
 }
@@ -347,6 +350,24 @@ void DXContainerGlobals::addCompilerVersion(
   mcdxbc::CompilerVersion CompilerVersion;
   CompilerVersion.write(OS);
   addSection(M, Globals, Data, "dx.vers", "VERS");
+}
+
+void DXContainerGlobals::addSourceInfo(Module &M,
+                                       SmallVector<GlobalValue *> &Globals) {
+  dxil::ModuleMetadataInfo &MMI =
+      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+
+  if (!MMI.SourceInfo)
+    return;
+
+  MMI.SourceInfo->computeEntries();
+  MMI.SourceInfo->finalize();
+  SmallString<256> Data;
+  raw_svector_ostream OS(Data);
+  MMI.SourceInfo->write(OS);
+  Constant *Constant =
+      ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
+  Globals.emplace_back(buildContainerGlobal(M, Constant, "dx.srci", "SRCI"));
 }
 
 char DXContainerGlobals::ID = 0;
