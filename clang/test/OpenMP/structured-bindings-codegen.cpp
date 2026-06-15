@@ -766,32 +766,36 @@ void test_lambda_implicit_capture() {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P:%.*]], ptr align 4 @__const._Z20test_target_parallelv.p, i64 8, i1 false)
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP0:%.*]], ptr align 4 [[P]], i64 8, i1 false)
-// CHECK:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z20test_target_parallelv_l40(ptr [[TMP0]], ptr null) #[[ATTR3]]
+// CHECK:    [[TMP1:%.*]] = load [[STRUCT_POINT:%.*]], ptr [[TMP0]], align 4
+// CHECK:    store [[STRUCT_POINT]] [[TMP1]], ptr [[DOTCASTED:%.*]], align 4
+// CHECK:    [[TMP2:%.*]] = load i64, ptr [[DOTCASTED]], align 8
+// CHECK:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z20test_target_parallelv_l40(i64 [[TMP2]], ptr null) #[[ATTR3]]
 // CHECK:    ret void
 //
 //
 // CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z20test_target_parallelv_l40(
-// CHECK-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: i64 noundef [[TMP0:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
-// CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
+// CHECK:    store i64 [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
-// CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1:[0-9]+]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z20test_target_parallelv_l40.omp_outlined, ptr [[TMP1]])
+// CHECK:    [[TMP1:%.*]] = load i32, ptr [[DOTADDR]], align 4
+// CHECK:    store i32 [[TMP1]], ptr [[DOTCASTED:%.*]], align 4
+// CHECK:    [[TMP2:%.*]] = load i64, ptr [[DOTCASTED]], align 8
+// CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1:[0-9]+]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z20test_target_parallelv_l40.omp_outlined, i64 [[TMP2]])
 // CHECK:    ret void
 //
 //
 // CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z20test_target_parallelv_l40.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
-// CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
-// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
-// CHECK:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
-// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP1]], i32 0, i32 1
-// CHECK:    [[TMP3:%.*]] = load i32, ptr [[Y]], align 4
-// CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP2]], [[TMP3]]
+// CHECK:    store i64 [[TMP0]], ptr [[DOTADDR:%.*]], align 8
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[DOTADDR]], i32 0, i32 0
+// CHECK:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[DOTADDR]], i32 0, i32 1
+// CHECK:    [[TMP2:%.*]] = load i32, ptr [[Y]], align 4
+// CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP2]]
 // CHECK:    store i32 [[ADD]], ptr [[SUM:%.*]], align 4
 // CHECK:    ret void
 //
@@ -801,78 +805,82 @@ void test_lambda_implicit_capture() {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P:%.*]], ptr align 4 @__const._Z24test_target_parallel_forv.p, i64 8, i1 false)
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP0:%.*]], ptr align 4 [[P]], i64 8, i1 false)
-// CHECK:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z24test_target_parallel_forv_l50(ptr [[TMP0]], ptr null) #[[ATTR3]]
+// CHECK:    [[TMP1:%.*]] = load [[STRUCT_POINT:%.*]], ptr [[TMP0]], align 4
+// CHECK:    store [[STRUCT_POINT]] [[TMP1]], ptr [[DOTCASTED:%.*]], align 4
+// CHECK:    [[TMP2:%.*]] = load i64, ptr [[DOTCASTED]], align 8
+// CHECK:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z24test_target_parallel_forv_l50(i64 [[TMP2]], ptr null) #[[ATTR3]]
 // CHECK:    ret void
 //
 //
 // CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z24test_target_parallel_forv_l50(
-// CHECK-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: i64 noundef [[TMP0:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
-// CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
+// CHECK:    store i64 [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
-// CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z24test_target_parallel_forv_l50.omp_outlined, ptr [[TMP1]])
+// CHECK:    [[TMP1:%.*]] = load i32, ptr [[DOTADDR]], align 4
+// CHECK:    store i32 [[TMP1]], ptr [[DOTCASTED:%.*]], align 4
+// CHECK:    [[TMP2:%.*]] = load i64, ptr [[DOTCASTED]], align 8
+// CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z24test_target_parallel_forv_l50.omp_outlined, i64 [[TMP2]])
 // CHECK:    ret void
 //
 //
 // CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z24test_target_parallel_forv_l50.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
-// CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    store i64 [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store i32 0, ptr [[DOTOMP_LB:%.*]], align 4
 // CHECK:    store i32 9, ptr [[DOTOMP_UB:%.*]], align 4
 // CHECK:    store i32 1, ptr [[DOTOMP_STRIDE:%.*]], align 4
 // CHECK:    store i32 0, ptr [[DOTOMP_IS_LAST:%.*]], align 4
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
-// CHECK:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2:[0-9]+]], i32 [[TMP3]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
-// CHECK:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-// CHECK:    [[CMP:%.*]] = icmp sgt i32 [[TMP4]], 9
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
+// CHECK:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2:[0-9]+]], i32 [[TMP2]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// CHECK:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CHECK:    [[CMP:%.*]] = icmp sgt i32 [[TMP3]], 9
 // CHECK:    br i1 [[CMP]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
 // CHECK:       [[COND_TRUE]]:
 // CHECK:    br label %[[COND_END:.*]]
 // CHECK:       [[COND_FALSE]]:
-// CHECK:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CHECK:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // CHECK:    br label %[[COND_END]]
 // CHECK:       [[COND_END]]:
-// CHECK:    [[COND:%.*]] = phi i32 [ 9, %[[COND_TRUE]] ], [ [[TMP5]], %[[COND_FALSE]] ]
+// CHECK:    [[COND:%.*]] = phi i32 [ 9, %[[COND_TRUE]] ], [ [[TMP4]], %[[COND_FALSE]] ]
 // CHECK:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4
-// CHECK:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
-// CHECK:    store i32 [[TMP6]], ptr [[DOTOMP_IV:%.*]], align 4
+// CHECK:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
+// CHECK:    store i32 [[TMP5]], ptr [[DOTOMP_IV:%.*]], align 4
 // CHECK:    br label %[[OMP_INNER_FOR_COND:.*]]
 // CHECK:       [[OMP_INNER_FOR_COND]]:
-// CHECK:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// CHECK:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-// CHECK:    [[CMP1:%.*]] = icmp sle i32 [[TMP7]], [[TMP8]]
+// CHECK:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CHECK:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CHECK:    [[CMP1:%.*]] = icmp sle i32 [[TMP6]], [[TMP7]]
 // CHECK:    br i1 [[CMP1]], label %[[OMP_INNER_FOR_BODY:.*]], label %[[OMP_INNER_FOR_END:.*]]
 // CHECK:       [[OMP_INNER_FOR_BODY]]:
-// CHECK:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// CHECK:    [[MUL:%.*]] = mul nsw i32 [[TMP9]], 1
+// CHECK:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CHECK:    [[MUL:%.*]] = mul nsw i32 [[TMP8]], 1
 // CHECK:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK:    store i32 [[ADD]], ptr [[I:%.*]], align 4
-// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
-// CHECK:    [[TMP10:%.*]] = load i32, ptr [[X]], align 4
-// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP1]], i32 0, i32 1
-// CHECK:    [[TMP11:%.*]] = load i32, ptr [[Y]], align 4
-// CHECK:    [[ADD2:%.*]] = add nsw i32 [[TMP10]], [[TMP11]]
-// CHECK:    [[TMP12:%.*]] = load i32, ptr [[I]], align 4
-// CHECK:    [[ADD3:%.*]] = add nsw i32 [[ADD2]], [[TMP12]]
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[DOTADDR]], i32 0, i32 0
+// CHECK:    [[TMP9:%.*]] = load i32, ptr [[X]], align 4
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[DOTADDR]], i32 0, i32 1
+// CHECK:    [[TMP10:%.*]] = load i32, ptr [[Y]], align 4
+// CHECK:    [[ADD2:%.*]] = add nsw i32 [[TMP9]], [[TMP10]]
+// CHECK:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4
+// CHECK:    [[ADD3:%.*]] = add nsw i32 [[ADD2]], [[TMP11]]
 // CHECK:    store i32 [[ADD3]], ptr [[RESULT:%.*]], align 4
 // CHECK:    br label %[[OMP_BODY_CONTINUE:.*]]
 // CHECK:       [[OMP_BODY_CONTINUE]]:
 // CHECK:    br label %[[OMP_INNER_FOR_INC:.*]]
 // CHECK:       [[OMP_INNER_FOR_INC]]:
-// CHECK:    [[TMP13:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// CHECK:    [[ADD4:%.*]] = add nsw i32 [[TMP13]], 1
+// CHECK:    [[TMP12:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CHECK:    [[ADD4:%.*]] = add nsw i32 [[TMP12]], 1
 // CHECK:    store i32 [[ADD4]], ptr [[DOTOMP_IV]], align 4
 // CHECK:    br label %[[OMP_INNER_FOR_COND]]
 // CHECK:       [[OMP_INNER_FOR_END]]:
 // CHECK:    br label %[[OMP_LOOP_EXIT:.*]]
 // CHECK:       [[OMP_LOOP_EXIT]]:
-// CHECK:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
+// CHECK:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP2]])
 // CHECK:    ret void
 //
 //
@@ -892,8 +900,8 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[P]], ptr [[P_ADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[P_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4:![0-9]+]], !align [[META5:![0-9]+]]
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[P_ADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P1:%.*]], ptr align 4 [[TMP2]], i64 8, i1 false)
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    [[TMP3:%.*]] = load i32, ptr [[X]], align 4
@@ -919,7 +927,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP1]], i32 0, i32 1
@@ -946,8 +954,8 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[SUM]], ptr [[SUM_ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[SUM_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[SUM_ADDR]], align 8, !nonnull [[META4]], !align [[META5]]
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    store i32 0, ptr [[DOTOMP_LB:%.*]], align 4
 // CHECK:    store i32 9, ptr [[DOTOMP_UB:%.*]], align 4
 // CHECK:    store i32 1, ptr [[DOTOMP_STRIDE:%.*]], align 4
@@ -1055,7 +1063,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    store i32 0, ptr [[DOTOMP_LB:%.*]], align 4
 // CHECK:    store i32 9, ptr [[DOTOMP_UB:%.*]], align 4
 // CHECK:    store i32 1, ptr [[DOTOMP_STRIDE:%.*]], align 4
@@ -1125,7 +1133,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    store i32 0, ptr [[DOTOMP_LB:%.*]], align 4
 // CHECK:    store i32 9, ptr [[DOTOMP_UB:%.*]], align 4
 // CHECK:    store i32 1, ptr [[DOTOMP_STRIDE:%.*]], align 4
@@ -1192,78 +1200,82 @@ void test_lambda_implicit_capture() {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P:%.*]], ptr align 4 @__const._Z28test_target_teams_distributev.p, i64 8, i1 false)
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP0:%.*]], ptr align 4 [[P]], i64 8, i1 false)
-// CHECK:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28test_target_teams_distributev_l111(ptr [[TMP0]], ptr null) #[[ATTR3]]
+// CHECK:    [[TMP1:%.*]] = load [[STRUCT_POINT:%.*]], ptr [[TMP0]], align 4
+// CHECK:    store [[STRUCT_POINT]] [[TMP1]], ptr [[DOTCASTED:%.*]], align 4
+// CHECK:    [[TMP2:%.*]] = load i64, ptr [[DOTCASTED]], align 8
+// CHECK:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28test_target_teams_distributev_l111(i64 [[TMP2]], ptr null) #[[ATTR3]]
 // CHECK:    ret void
 //
 //
 // CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28test_target_teams_distributev_l111(
-// CHECK-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: i64 noundef [[TMP0:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
-// CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
+// CHECK:    store i64 [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
-// CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28test_target_teams_distributev_l111.omp_outlined, ptr [[TMP1]])
+// CHECK:    [[TMP1:%.*]] = load i32, ptr [[DOTADDR]], align 4
+// CHECK:    store i32 [[TMP1]], ptr [[DOTCASTED:%.*]], align 4
+// CHECK:    [[TMP2:%.*]] = load i64, ptr [[DOTCASTED]], align 8
+// CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_teams(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28test_target_teams_distributev_l111.omp_outlined, i64 [[TMP2]])
 // CHECK:    ret void
 //
 //
 // CHECK-LABEL: define internal void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z28test_target_teams_distributev_l111.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
-// CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    store i64 [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store i32 0, ptr [[DOTOMP_LB:%.*]], align 4
 // CHECK:    store i32 9, ptr [[DOTOMP_UB:%.*]], align 4
 // CHECK:    store i32 1, ptr [[DOTOMP_STRIDE:%.*]], align 4
 // CHECK:    store i32 0, ptr [[DOTOMP_IS_LAST:%.*]], align 4
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
-// CHECK:    call void @__kmpc_for_static_init_4(ptr @[[GLOB4:[0-9]+]], i32 [[TMP3]], i32 92, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
-// CHECK:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-// CHECK:    [[CMP:%.*]] = icmp sgt i32 [[TMP4]], 9
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
+// CHECK:    call void @__kmpc_for_static_init_4(ptr @[[GLOB4:[0-9]+]], i32 [[TMP2]], i32 92, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// CHECK:    [[TMP3:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CHECK:    [[CMP:%.*]] = icmp sgt i32 [[TMP3]], 9
 // CHECK:    br i1 [[CMP]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
 // CHECK:       [[COND_TRUE]]:
 // CHECK:    br label %[[COND_END:.*]]
 // CHECK:       [[COND_FALSE]]:
-// CHECK:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CHECK:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // CHECK:    br label %[[COND_END]]
 // CHECK:       [[COND_END]]:
-// CHECK:    [[COND:%.*]] = phi i32 [ 9, %[[COND_TRUE]] ], [ [[TMP5]], %[[COND_FALSE]] ]
+// CHECK:    [[COND:%.*]] = phi i32 [ 9, %[[COND_TRUE]] ], [ [[TMP4]], %[[COND_FALSE]] ]
 // CHECK:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4
-// CHECK:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
-// CHECK:    store i32 [[TMP6]], ptr [[DOTOMP_IV:%.*]], align 4
+// CHECK:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
+// CHECK:    store i32 [[TMP5]], ptr [[DOTOMP_IV:%.*]], align 4
 // CHECK:    br label %[[OMP_INNER_FOR_COND:.*]]
 // CHECK:       [[OMP_INNER_FOR_COND]]:
-// CHECK:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// CHECK:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-// CHECK:    [[CMP1:%.*]] = icmp sle i32 [[TMP7]], [[TMP8]]
+// CHECK:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CHECK:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CHECK:    [[CMP1:%.*]] = icmp sle i32 [[TMP6]], [[TMP7]]
 // CHECK:    br i1 [[CMP1]], label %[[OMP_INNER_FOR_BODY:.*]], label %[[OMP_INNER_FOR_END:.*]]
 // CHECK:       [[OMP_INNER_FOR_BODY]]:
-// CHECK:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// CHECK:    [[MUL:%.*]] = mul nsw i32 [[TMP9]], 1
+// CHECK:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CHECK:    [[MUL:%.*]] = mul nsw i32 [[TMP8]], 1
 // CHECK:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK:    store i32 [[ADD]], ptr [[I:%.*]], align 4
-// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
-// CHECK:    [[TMP10:%.*]] = load i32, ptr [[X]], align 4
-// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP1]], i32 0, i32 1
-// CHECK:    [[TMP11:%.*]] = load i32, ptr [[Y]], align 4
-// CHECK:    [[ADD2:%.*]] = add nsw i32 [[TMP10]], [[TMP11]]
-// CHECK:    [[TMP12:%.*]] = load i32, ptr [[I]], align 4
-// CHECK:    [[ADD3:%.*]] = add nsw i32 [[ADD2]], [[TMP12]]
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[DOTADDR]], i32 0, i32 0
+// CHECK:    [[TMP9:%.*]] = load i32, ptr [[X]], align 4
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[DOTADDR]], i32 0, i32 1
+// CHECK:    [[TMP10:%.*]] = load i32, ptr [[Y]], align 4
+// CHECK:    [[ADD2:%.*]] = add nsw i32 [[TMP9]], [[TMP10]]
+// CHECK:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4
+// CHECK:    [[ADD3:%.*]] = add nsw i32 [[ADD2]], [[TMP11]]
 // CHECK:    store i32 [[ADD3]], ptr [[RESULT:%.*]], align 4
 // CHECK:    br label %[[OMP_BODY_CONTINUE:.*]]
 // CHECK:       [[OMP_BODY_CONTINUE]]:
 // CHECK:    br label %[[OMP_INNER_FOR_INC:.*]]
 // CHECK:       [[OMP_INNER_FOR_INC]]:
-// CHECK:    [[TMP13:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// CHECK:    [[ADD4:%.*]] = add nsw i32 [[TMP13]], 1
+// CHECK:    [[TMP12:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CHECK:    [[ADD4:%.*]] = add nsw i32 [[TMP12]], 1
 // CHECK:    store i32 [[ADD4]], ptr [[DOTOMP_IV]], align 4
 // CHECK:    br label %[[OMP_INNER_FOR_COND]]
 // CHECK:       [[OMP_INNER_FOR_END]]:
 // CHECK:    br label %[[OMP_LOOP_EXIT:.*]]
 // CHECK:       [[OMP_LOOP_EXIT]]:
-// CHECK:    call void @__kmpc_for_static_fini(ptr @[[GLOB4]], i32 [[TMP3]])
+// CHECK:    call void @__kmpc_for_static_fini(ptr @[[GLOB4]], i32 [[TMP2]])
 // CHECK:    ret void
 //
 //
@@ -1306,9 +1318,9 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[TMP3]], ptr [[DOTTASK_T__ADDR_I:%.*]], align 8, !noalias [[META19]]
 // CHECK:    store ptr [[TMP7]], ptr [[__CONTEXT_ADDR_I:%.*]], align 8, !noalias [[META19]]
 // CHECK:    [[TMP8:%.*]] = load ptr, ptr [[__CONTEXT_ADDR_I]], align 8, !noalias [[META19]]
-// CHECK:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[TMP10:%.*]] = load i32, ptr [[TMP9]], align 4
-// CHECK:    [[TMP11:%.*]] = load ptr, ptr [[TMP8]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP11:%.*]] = load ptr, ptr [[TMP8]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[Y_I:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP11]], i32 0, i32 1
 // CHECK:    [[TMP12:%.*]] = load i32, ptr [[Y_I]], align 4
 // CHECK:    [[ADD_I:%.*]] = add nsw i32 [[TMP10]], [[TMP12]]
@@ -1375,9 +1387,9 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[TMP3]], ptr [[DOTTASK_T__ADDR_I:%.*]], align 8, !noalias [[META29]]
 // CHECK:    store ptr [[TMP7]], ptr [[__CONTEXT_ADDR_I:%.*]], align 8, !noalias [[META29]]
 // CHECK:    [[TMP8:%.*]] = load ptr, ptr [[__CONTEXT_ADDR_I]], align 8, !noalias [[META29]]
-// CHECK:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[TMP10:%.*]] = load i32, ptr [[TMP9]], align 4
-// CHECK:    [[TMP11:%.*]] = load ptr, ptr [[TMP8]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP11:%.*]] = load ptr, ptr [[TMP8]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[Y_I:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP11]], i32 0, i32 1
 // CHECK:    [[TMP12:%.*]] = load i32, ptr [[Y_I]], align 4
 // CHECK:    [[ADD_I:%.*]] = add nsw i32 [[TMP10]], [[TMP12]]
@@ -1454,7 +1466,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    [[TMP19:%.*]] = load i64, ptr [[DOTLB__ADDR_I]], align 8, !noalias [[META41]]
 // CHECK:    [[CONV_I:%.*]] = trunc i64 [[TMP19]] to i32
 // CHECK:    store i32 [[CONV_I]], ptr [[DOTOMP_IV_I:%.*]], align 4, !noalias [[META41]]
-// CHECK:    [[TMP20:%.*]] = load ptr, ptr [[TMP18]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP20:%.*]] = load ptr, ptr [[TMP18]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    br label %[[OMP_INNER_FOR_COND_I:.*]]
 // CHECK:       [[OMP_INNER_FOR_COND_I]]:
 // CHECK:    [[TMP21:%.*]] = load i32, ptr [[DOTOMP_IV_I]], align 4, !noalias [[META41]]
@@ -1579,8 +1591,8 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[RESULT]], ptr [[RESULT_ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META4]], !align [[META5]]
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    store i32 0, ptr [[RESULT1:%.*]], align 4
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP2]], i32 0, i32 0
 // CHECK:    [[TMP3:%.*]] = load i32, ptr [[X]], align 4
@@ -1636,7 +1648,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[RESULT]], ptr [[RESULT_ADDR:%.*]], align 8
 // CHECK:    store i64 [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[DOTADDR]], i32 0, i32 0
 // CHECK:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[DOTADDR]], i32 0, i32 1
@@ -1669,14 +1681,14 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[TMP7]], ptr [[__CONTEXT_ADDR_I:%.*]], align 8, !noalias [[META51]]
 // CHECK:    [[TMP8:%.*]] = load ptr, ptr [[__CONTEXT_ADDR_I]], align 8, !noalias [[META51]]
 // CHECK:    [[TMP9:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_6:%.*]], ptr [[TMP8]], i32 0, i32 1
-// CHECK:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP10:%.*]] = load ptr, ptr [[TMP9]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4
 // CHECK:    [[TMP12:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON_6]], ptr [[TMP8]], i32 0, i32 1
-// CHECK:    [[TMP13:%.*]] = load ptr, ptr [[TMP12]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP13:%.*]] = load ptr, ptr [[TMP12]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[Y_I:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP13]], i32 0, i32 1
 // CHECK:    [[TMP14:%.*]] = load i32, ptr [[Y_I]], align 4
 // CHECK:    [[ADD_I:%.*]] = add nsw i32 [[TMP11]], [[TMP14]]
-// CHECK:    [[TMP15:%.*]] = load ptr, ptr [[TMP8]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP15:%.*]] = load ptr, ptr [[TMP8]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    store i32 [[ADD_I]], ptr [[TMP15]], align 4
 // CHECK:    ret i32 0
 //
@@ -1688,8 +1700,8 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[RESULT]], ptr [[RESULT_ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META4]], !align [[META5]]
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    store i32 0, ptr [[RESULT1:%.*]], align 4
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT3D:%.*]], ptr [[TMP2]], i32 0, i32 0
 // CHECK:    [[TMP3:%.*]] = load i32, ptr [[X]], align 4
@@ -1893,9 +1905,9 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[TMP3]], ptr [[DOTTASK_T__ADDR_I:%.*]], align 8, !noalias [[META62]]
 // CHECK:    store ptr [[TMP7]], ptr [[__CONTEXT_ADDR_I:%.*]], align 8, !noalias [[META62]]
 // CHECK:    [[TMP8:%.*]] = load ptr, ptr [[__CONTEXT_ADDR_I]], align 8, !noalias [[META62]]
-// CHECK:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[TMP10:%.*]] = load i32, ptr [[TMP9]], align 4
-// CHECK:    [[TMP11:%.*]] = load ptr, ptr [[TMP8]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP11:%.*]] = load ptr, ptr [[TMP8]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[TMP12:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP11]], i64 0, i64 1
 // CHECK:    [[TMP13:%.*]] = load i32, ptr [[TMP12]], align 4
 // CHECK:    [[ADD_I:%.*]] = add nsw i32 [[TMP10]], [[TMP13]]
@@ -1918,7 +1930,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 // CHECK:    call void @__kmpc_critical(ptr @[[GLOB1]], i32 [[TMP3]], ptr @.gomp_critical_user_.var)
@@ -1962,9 +1974,9 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[TMP3]], ptr [[DOTTASK_T__ADDR_I:%.*]], align 8, !noalias [[META72]]
 // CHECK:    store ptr [[TMP7]], ptr [[__CONTEXT_ADDR_I:%.*]], align 8, !noalias [[META72]]
 // CHECK:    [[TMP8:%.*]] = load ptr, ptr [[__CONTEXT_ADDR_I]], align 8, !noalias [[META72]]
-// CHECK:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP9:%.*]] = load ptr, ptr [[TMP8]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[TMP10:%.*]] = load i32, ptr [[TMP9]], align 4
-// CHECK:    [[TMP11:%.*]] = load ptr, ptr [[TMP8]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP11:%.*]] = load ptr, ptr [[TMP8]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[Y_I:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP11]], i32 0, i32 1
 // CHECK:    [[TMP12:%.*]] = load i32, ptr [[Y_I]], align 4
 // CHECK:    [[MUL_I:%.*]] = mul nsw i32 [[TMP10]], [[TMP12]]
@@ -1977,7 +1989,7 @@ void test_lambda_implicit_capture() {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P:%.*]], ptr align 4 @__const._Z22test_reference_bindingv.p, i64 8, i1 false)
 // CHECK:    store ptr [[P]], ptr [[TMP0:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z22test_reference_bindingv.omp_outlined, ptr [[TMP1]])
 // CHECK:    ret void
 //
@@ -1988,12 +2000,12 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    store ptr [[TMP1]], ptr [[TMP:%.*]], align 8
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP2]], i32 0, i32 0
 // CHECK:    [[TMP3:%.*]] = load i32, ptr [[X]], align 4
-// CHECK:    [[TMP4:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP4:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP4]], i32 0, i32 1
 // CHECK:    [[TMP5:%.*]] = load i32, ptr [[Y]], align 4
 // CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP3]], [[TMP5]]
@@ -2016,7 +2028,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP1]], i32 0, i32 1
@@ -2044,8 +2056,8 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
-// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR1]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
+// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR1]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP2]], i32 0, i32 0
 // CHECK:    [[TMP4:%.*]] = load i32, ptr [[X]], align 4
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP2]], i32 0, i32 1
@@ -2080,9 +2092,9 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
 // CHECK:    store ptr [[P1]], ptr [[P1_ADDR:%.*]], align 8
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
-// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR1]], align 8, !nonnull [[META2]], !align [[META3]]
-// CHECK:    [[TMP4:%.*]] = load ptr, ptr [[P1_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
+// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR1]], align 8, !nonnull [[META4]], !align [[META5]]
+// CHECK:    [[TMP4:%.*]] = load ptr, ptr [[P1_ADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P12:%.*]], ptr align 4 [[TMP4]], i64 8, i1 false)
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP2]], i32 0, i32 0
 // CHECK:    [[TMP5:%.*]] = load i32, ptr [[X]], align 4
@@ -2125,7 +2137,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[TMP2:%.*]] = getelementptr inbounds [3 x i32], ptr [[TMP1]], i64 0, i64 0
 // CHECK:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 // CHECK:    [[TMP4:%.*]] = getelementptr inbounds [3 x i32], ptr [[TMP1]], i64 0, i64 1
@@ -2153,7 +2165,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 // CHECK:    [[TMP4:%.*]] = call i32 @__kmpc_single(ptr @[[GLOB1]], i32 [[TMP3]])
@@ -2188,7 +2200,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    store i32 0, ptr [[DOTOMP_SECTIONS_LB_:%.*]], align 4
 // CHECK:    store i32 1, ptr [[DOTOMP_SECTIONS_UB_:%.*]], align 4
 // CHECK:    store i32 1, ptr [[DOTOMP_SECTIONS_ST_:%.*]], align 4
@@ -2257,7 +2269,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z20test_nested_parallelv.omp_outlined.omp_outlined, ptr [[TMP1]])
 // CHECK:    ret void
 //
@@ -2268,7 +2280,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP1]], i32 0, i32 1
@@ -2338,22 +2350,24 @@ void test_lambda_implicit_capture() {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P:%.*]], ptr align 4 @__const._Z37test_firstprivate_individual_bindingsv.p, i64 8, i1 false)
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP0:%.*]], ptr align 4 [[P]], i64 8, i1 false)
-// CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z37test_firstprivate_individual_bindingsv.omp_outlined, ptr [[TMP0]])
+// CHECK:    [[TMP1:%.*]] = load [[STRUCT_POINT:%.*]], ptr [[TMP0]], align 4
+// CHECK:    store [[STRUCT_POINT]] [[TMP1]], ptr [[DOTCASTED:%.*]], align 4
+// CHECK:    [[TMP2:%.*]] = load i64, ptr [[DOTCASTED]], align 8
+// CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z37test_firstprivate_individual_bindingsv.omp_outlined, i64 [[TMP2]])
 // CHECK:    ret void
 //
 //
 // CHECK-LABEL: define internal void @_Z37test_firstprivate_individual_bindingsv.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
-// CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
-// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 1
-// CHECK:    [[TMP2:%.*]] = load i32, ptr [[Y]], align 4
-// CHECK:    store i32 [[TMP2]], ptr [[B:%.*]], align 4
-// CHECK:    [[TMP3:%.*]] = load i32, ptr [[B]], align 4
-// CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP3]], 10
+// CHECK:    store i64 [[TMP0]], ptr [[DOTADDR:%.*]], align 8
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[DOTADDR]], i32 0, i32 1
+// CHECK:    [[TMP1:%.*]] = load i32, ptr [[Y]], align 4
+// CHECK:    store i32 [[TMP1]], ptr [[B:%.*]], align 4
+// CHECK:    [[TMP2:%.*]] = load i32, ptr [[B]], align 4
+// CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP2]], 10
 // CHECK:    store i32 [[ADD]], ptr [[B]], align 4
 // CHECK:    ret void
 //
@@ -2363,24 +2377,26 @@ void test_lambda_implicit_capture() {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P:%.*]], ptr align 4 @__const._Z14test_mixed_dsav.p, i64 8, i1 false)
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP0:%.*]], ptr align 4 [[P]], i64 8, i1 false)
-// CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z14test_mixed_dsav.omp_outlined, ptr [[TMP0]])
+// CHECK:    [[TMP1:%.*]] = load [[STRUCT_POINT:%.*]], ptr [[TMP0]], align 4
+// CHECK:    store [[STRUCT_POINT]] [[TMP1]], ptr [[DOTCASTED:%.*]], align 4
+// CHECK:    [[TMP2:%.*]] = load i64, ptr [[DOTCASTED]], align 8
+// CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z14test_mixed_dsav.omp_outlined, i64 [[TMP2]])
 // CHECK:    ret void
 //
 //
 // CHECK-LABEL: define internal void @_Z14test_mixed_dsav.omp_outlined(
-// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[TMP0:%.*]]) #[[ATTR2]] {
 // CHECK:  [[ENTRY:.*:]]
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
-// CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
-// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
-// CHECK:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
-// CHECK:    store i32 [[TMP2]], ptr [[A:%.*]], align 4
-// CHECK:    [[TMP3:%.*]] = load i32, ptr [[A]], align 4
-// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP1]], i32 0, i32 1
-// CHECK:    [[TMP4:%.*]] = load i32, ptr [[Y]], align 4
-// CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP3]], [[TMP4]]
+// CHECK:    store i64 [[TMP0]], ptr [[DOTADDR:%.*]], align 8
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[DOTADDR]], i32 0, i32 0
+// CHECK:    [[TMP1:%.*]] = load i32, ptr [[X]], align 4
+// CHECK:    store i32 [[TMP1]], ptr [[A:%.*]], align 4
+// CHECK:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
+// CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[DOTADDR]], i32 0, i32 1
+// CHECK:    [[TMP3:%.*]] = load i32, ptr [[Y]], align 4
+// CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP2]], [[TMP3]]
 // CHECK:    store i32 [[ADD]], ptr [[RESULT:%.*]], align 4
 // CHECK:    ret void
 //
@@ -2470,7 +2486,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    [[TMP2:%.*]] = load i32, ptr [[X]], align 4
 // CHECK:    call void @_Z3usei(i32 noundef [[TMP2]])
@@ -2541,7 +2557,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    store i32 0, ptr [[DOTOMP_LB:%.*]], align 4
 // CHECK:    store i32 99, ptr [[DOTOMP_UB:%.*]], align 4
 // CHECK:    store i32 1, ptr [[DOTOMP_STRIDE:%.*]], align 4
@@ -2652,7 +2668,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    store i32 0, ptr [[DOTOMP_LB:%.*]], align 4
 // CHECK:    store i32 9, ptr [[DOTOMP_UB:%.*]], align 4
 // CHECK:    store i32 1, ptr [[DOTOMP_STRIDE:%.*]], align 4
@@ -2820,11 +2836,12 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    store i32 0, ptr [[DOTOMP_LB:%.*]], align 4
 // CHECK:    store i32 9, ptr [[DOTOMP_UB:%.*]], align 4
 // CHECK:    store i32 1, ptr [[DOTOMP_STRIDE:%.*]], align 4
 // CHECK:    store i32 0, ptr [[DOTOMP_IS_LAST:%.*]], align 4
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 // CHECK:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP3]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -2854,8 +2871,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store i32 [[ADD]], ptr [[I:%.*]], align 4
 // CHECK:    [[TMP10:%.*]] = load i32, ptr [[I]], align 4
 // CHECK:    [[MUL2:%.*]] = mul nsw i32 [[TMP10]], 10
-// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
-// CHECK:    store i32 [[MUL2]], ptr [[X]], align 4
+// CHECK:    store i32 [[MUL2]], ptr [[A:%.*]], align 4
 // CHECK:    br label %[[OMP_BODY_CONTINUE:.*]]
 // CHECK:       [[OMP_BODY_CONTINUE]]:
 // CHECK:    br label %[[OMP_INNER_FOR_INC:.*]]
@@ -2872,6 +2888,8 @@ void test_lambda_implicit_capture() {
 // CHECK:    [[TMP13:%.*]] = icmp ne i32 [[TMP12]], 0
 // CHECK:    br i1 [[TMP13]], [[DOTOMP_LASTPRIVATE_THEN:label %.*]], [[DOTOMP_LASTPRIVATE_DONE:label %.*]]
 // CHECK:       [[_OMP_LASTPRIVATE_THEN:.*:]]
+// CHECK:    [[TMP14:%.*]] = load i32, ptr [[A]], align 4
+// CHECK:    store i32 [[TMP14]], ptr [[A]], align 4
 // CHECK:    br [[DOTOMP_LASTPRIVATE_DONE]]
 // CHECK:       [[_OMP_LASTPRIVATE_DONE:.*:]]
 // CHECK:    ret void
@@ -2947,11 +2965,12 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    store i32 0, ptr [[DOTOMP_LB:%.*]], align 4
 // CHECK:    store i32 99, ptr [[DOTOMP_UB:%.*]], align 4
 // CHECK:    store i32 1, ptr [[DOTOMP_STRIDE:%.*]], align 4
 // CHECK:    store i32 0, ptr [[DOTOMP_IS_LAST:%.*]], align 4
+// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 // CHECK:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP3]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
@@ -2985,9 +3004,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    br i1 [[CMP2]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // CHECK:       [[IF_THEN]]:
 // CHECK:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4
-// CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP1]], i32 0, i32 0
-// CHECK:    store i32 [[TMP11]], ptr [[X]], align 4
-// CHECK:    [[X3:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT]], ptr [[TMP1]], i32 0, i32 0
+// CHECK:    store i32 [[TMP11]], ptr [[A:%.*]], align 4
 // CHECK:    [[TMP12:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
 // CHECK:    call void @__kmpc_critical(ptr @[[GLOB1]], i32 [[TMP3]], ptr @.gomp_critical_user_{{pl_cond[.].+[.|,]}}var)
 // CHECK:    [[TMP13:%.*]] = load i32, ptr @.{{pl_cond[.].+[.|,]}} align 4
@@ -2995,7 +3012,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    br i1 [[TMP14]], label %[[LP_COND_THEN:.*]], label %[[LP_COND_EXIT:.*]]
 // CHECK:       [[LP_COND_THEN]]:
 // CHECK:    store i32 [[TMP12]], ptr @.{{pl_cond[.].+[.|,]}} align 4
-// CHECK:    [[TMP15:%.*]] = load i32, ptr [[X3]], align 4
+// CHECK:    [[TMP15:%.*]] = load i32, ptr [[A]], align 4
 // CHECK:    store i32 [[TMP15]], ptr @{{pl_cond[.].+[.|,]}} align 4
 // CHECK:    br label %[[LP_COND_EXIT]]
 // CHECK:       [[LP_COND_EXIT]]:
@@ -3007,8 +3024,8 @@ void test_lambda_implicit_capture() {
 // CHECK:    br label %[[OMP_INNER_FOR_INC:.*]]
 // CHECK:       [[OMP_INNER_FOR_INC]]:
 // CHECK:    [[TMP16:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
-// CHECK:    [[ADD4:%.*]] = add nsw i32 [[TMP16]], 1
-// CHECK:    store i32 [[ADD4]], ptr [[DOTOMP_IV]], align 4
+// CHECK:    [[ADD3:%.*]] = add nsw i32 [[TMP16]], 1
+// CHECK:    store i32 [[ADD3]], ptr [[DOTOMP_IV]], align 4
 // CHECK:    br label %[[OMP_INNER_FOR_COND]]
 // CHECK:       [[OMP_INNER_FOR_END]]:
 // CHECK:    br label %[[OMP_LOOP_EXIT:.*]]
@@ -3019,6 +3036,8 @@ void test_lambda_implicit_capture() {
 // CHECK:    call void @__kmpc_barrier(ptr @[[GLOB7:[0-9]+]], i32 [[TMP3]])
 // CHECK:    br i1 [[TMP18]], [[DOTOMP_LASTPRIVATE_THEN:label %.*]], [[DOTOMP_LASTPRIVATE_DONE:label %.*]]
 // CHECK:       [[_OMP_LASTPRIVATE_THEN:.*:]]
+// CHECK:    [[TMP19:%.*]] = load i32, ptr [[A]], align 4
+// CHECK:    store i32 [[TMP19]], ptr [[A]], align 4
 // CHECK:    br [[DOTOMP_LASTPRIVATE_DONE]]
 // CHECK:       [[_OMP_LASTPRIVATE_DONE:.*:]]
 // CHECK:    ret void
@@ -3045,7 +3064,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    store i32 0, ptr [[DOTOMP_LB:%.*]], align 4
 // CHECK:    store i32 99, ptr [[DOTOMP_UB:%.*]], align 4
 // CHECK:    store i32 1, ptr [[DOTOMP_STRIDE:%.*]], align 4
@@ -3218,7 +3237,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_POINT:%.*]], ptr [[TMP2]], i32 0, i32 0
 // CHECK:    store i32 0, ptr [[A:%.*]], align 4
 // CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[P2:%.*]], ptr align 4 @"__const.<captured>.p2", i64 8, i1 false)
@@ -3314,7 +3333,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    call void @_ZN14NonTrivialCopyC1ERKS_(ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[X]])
 // CHECK:    [[VALUE:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIALCOPY:%.*]], ptr [[A]], i32 0, i32 0
@@ -3372,11 +3391,11 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR:%.*]], ptr [[THIS1]], i32 0, i32 0
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[X2:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    call void @_ZN14NonTrivialCopyC1ERKS_(ptr noundef nonnull align 4 dereferenceable(8) [[X]], ptr noundef nonnull align 4 dereferenceable(8) [[X2]])
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR]], ptr [[THIS1]], i32 0, i32 1
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[Y3:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR]], ptr [[TMP2]], i32 0, i32 1
 // CHECK:    call void @_ZN14NonTrivialCopyC1ERKS_(ptr noundef nonnull align 4 dereferenceable(8) [[Y]], ptr noundef nonnull align 4 dereferenceable(8) [[Y3]])
 // CHECK:    ret void
@@ -3389,12 +3408,12 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[OTHER]], ptr [[OTHER_ADDR:%.*]], align 8
 // CHECK:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK:    [[VALUE:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIALCOPY:%.*]], ptr [[THIS1]], i32 0, i32 0
-// CHECK:    [[TMP0:%.*]] = load ptr, ptr [[OTHER_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP0:%.*]] = load ptr, ptr [[OTHER_ADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[VALUE2:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIALCOPY]], ptr [[TMP0]], i32 0, i32 0
 // CHECK:    [[TMP1:%.*]] = load i32, ptr [[VALUE2]], align 4
 // CHECK:    store i32 [[TMP1]], ptr [[VALUE]], align 4
 // CHECK:    [[COPY_COUNT:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIALCOPY]], ptr [[THIS1]], i32 0, i32 1
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[OTHER_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[OTHER_ADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[COPY_COUNT3:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIALCOPY]], ptr [[TMP2]], i32 0, i32 1
 // CHECK:    [[TMP3:%.*]] = load i32, ptr [[COPY_COUNT3]], align 4
 // CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP3]], 1
@@ -3430,7 +3449,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR]], ptr [[P]], i32 0, i32 1
 // CHECK:    call void @_ZN14NonTrivialCopyC1Ei(ptr noundef nonnull align 4 dereferenceable(8) [[Y]], i32 noundef 20)
 // CHECK:    store ptr [[P]], ptr [[TMP0:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z32test_firstprivate_ref_binding_sbv.omp_outlined, ptr [[TMP1]])
 // CHECK:    call void @_ZN4PairD1Ev(ptr noundef nonnull align 4 dead_on_return(16) dereferenceable(16) [[P]]) #[[ATTR3]]
 // CHECK:    ret void
@@ -3442,9 +3461,9 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    store ptr [[TMP1]], ptr [[TMP:%.*]], align 8
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR:%.*]], ptr [[TMP2]], i32 0, i32 0
 // CHECK:    call void @_ZN14NonTrivialCopyC1ERKS_(ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[X]])
 // CHECK:    [[VALUE:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIALCOPY:%.*]], ptr [[A]], i32 0, i32 0
@@ -3460,7 +3479,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR]], ptr [[P]], i32 0, i32 1
 // CHECK:    call void @_ZN14NonTrivialCopyC1Ei(ptr noundef nonnull align 4 dereferenceable(8) [[Y]], i32 noundef 20)
 // CHECK:    store ptr [[P]], ptr [[TMP0:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z38test_firstprivate_const_ref_binding_sbv.omp_outlined, ptr [[TMP1]])
 // CHECK:    call void @_ZN4PairD1Ev(ptr noundef nonnull align 4 dead_on_return(16) dereferenceable(16) [[P]]) #[[ATTR3]]
 // CHECK:    ret void
@@ -3472,9 +3491,9 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    store ptr [[TMP1]], ptr [[TMP:%.*]], align 8
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR:%.*]], ptr [[TMP2]], i32 0, i32 0
 // CHECK:    call void @_ZN14NonTrivialCopyC1ERKS_(ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[X]])
 // CHECK:    [[VALUE:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIALCOPY:%.*]], ptr [[A]], i32 0, i32 0
@@ -3502,7 +3521,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    call void @_ZN14NonTrivialCopyC1ERKS_(ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[X]])
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR]], ptr [[TMP1]], i32 0, i32 1
@@ -3559,7 +3578,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META85:![0-9]+]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META85:![0-9]+]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIRWITHDTOR:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    call void @_ZN8WithDtorC1ERKS_(ptr noundef nonnull align 8 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[X]])
 // CHECK:    [[PTR:%.*]] = getelementptr inbounds nuw [[STRUCT_WITHDTOR:%.*]], ptr [[A]], i32 0, i32 0
@@ -3618,11 +3637,11 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIRWITHDTOR:%.*]], ptr [[THIS1]], i32 0, i32 0
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META85]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META85]]
 // CHECK:    [[X2:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIRWITHDTOR]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    call void @_ZN8WithDtorC1ERKS_(ptr noundef nonnull align 8 dereferenceable(8) [[X]], ptr noundef nonnull align 8 dereferenceable(8) [[X2]])
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIRWITHDTOR]], ptr [[THIS1]], i32 0, i32 1
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META85]]
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META85]]
 // CHECK:    [[Y3:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIRWITHDTOR]], ptr [[TMP2]], i32 0, i32 1
 // CHECK:    call void @_ZN8WithDtorC1ERKS_(ptr noundef nonnull align 8 dereferenceable(8) [[Y]], ptr noundef nonnull align 8 dereferenceable(8) [[Y3]])
 // CHECK:    ret void
@@ -3636,7 +3655,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK:    [[PTR:%.*]] = getelementptr inbounds nuw [[STRUCT_WITHDTOR:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK:    [[CALL:%.*]] = call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) #[[ATTR11]]
-// CHECK:    [[TMP0:%.*]] = load ptr, ptr [[OTHER_ADDR]], align 8, !nonnull [[META2]], !align [[META85]]
+// CHECK:    [[TMP0:%.*]] = load ptr, ptr [[OTHER_ADDR]], align 8, !nonnull [[META4]], !align [[META85]]
 // CHECK:    [[PTR2:%.*]] = getelementptr inbounds nuw [[STRUCT_WITHDTOR]], ptr [[TMP0]], i32 0, i32 0
 // CHECK:    [[TMP1:%.*]] = load ptr, ptr [[PTR2]], align 8
 // CHECK:    [[TMP2:%.*]] = load i32, ptr [[TMP1]], align 4
@@ -3722,7 +3741,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[TMP2:%.*]] = getelementptr inbounds [3 x [[STRUCT_NONTRIVIALCOPY:%.*]]], ptr [[TMP1]], i64 0, i64 0
 // CHECK:    call void @_ZN14NonTrivialCopyC1ERKS_(ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[TMP2]])
 // CHECK:    [[TMP3:%.*]] = getelementptr inbounds [3 x [[STRUCT_NONTRIVIALCOPY]]], ptr [[TMP1]], i64 0, i64 1
@@ -3763,7 +3782,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    call void @_ZN14NonTrivialCopyC1ERKS_(ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[X]])
 // CHECK:    [[VALUE:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIALCOPY:%.*]], ptr [[A]], i32 0, i32 0
@@ -3815,7 +3834,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[I1:%.*]] = getelementptr inbounds nuw [[STRUCT_OUTER:%.*]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    call void @_ZN5InnerC1ERKS_(ptr noundef nonnull align 4 dereferenceable(4) [[X:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[I1]])
 // CHECK:    [[VAL:%.*]] = getelementptr inbounds nuw [[STRUCT_INNER:%.*]], ptr [[X]], i32 0, i32 0
@@ -3871,11 +3890,11 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
 // CHECK:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK:    [[I1:%.*]] = getelementptr inbounds nuw [[STRUCT_OUTER:%.*]], ptr [[THIS1]], i32 0, i32 0
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[I12:%.*]] = getelementptr inbounds nuw [[STRUCT_OUTER]], ptr [[TMP1]], i32 0, i32 0
 // CHECK:    call void @_ZN5InnerC1ERKS_(ptr noundef nonnull align 4 dereferenceable(4) [[I1]], ptr noundef nonnull align 4 dereferenceable(4) [[I12]])
 // CHECK:    [[I2:%.*]] = getelementptr inbounds nuw [[STRUCT_OUTER]], ptr [[THIS1]], i32 0, i32 1
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[I23:%.*]] = getelementptr inbounds nuw [[STRUCT_OUTER]], ptr [[TMP2]], i32 0, i32 1
 // CHECK:    call void @_ZN5InnerC1ERKS_(ptr noundef nonnull align 4 dereferenceable(4) [[I2]], ptr noundef nonnull align 4 dereferenceable(4) [[I23]])
 // CHECK:    ret void
@@ -3888,7 +3907,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[O]], ptr [[O_ADDR:%.*]], align 8
 // CHECK:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK:    [[VAL:%.*]] = getelementptr inbounds nuw [[STRUCT_INNER:%.*]], ptr [[THIS1]], i32 0, i32 0
-// CHECK:    [[TMP0:%.*]] = load ptr, ptr [[O_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP0:%.*]] = load ptr, ptr [[O_ADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[VAL2:%.*]] = getelementptr inbounds nuw [[STRUCT_INNER]], ptr [[TMP0]], i32 0, i32 0
 // CHECK:    [[TMP1:%.*]] = load i32, ptr [[VAL2]], align 4
 // CHECK:    [[MUL:%.*]] = mul nsw i32 [[TMP1]], 2
@@ -3924,7 +3943,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR]], ptr [[P]], i32 0, i32 1
 // CHECK:    call void @_ZN14NonTrivialCopyC1Ei(ptr noundef nonnull align 4 dereferenceable(8) [[Y]], i32 noundef 20)
 // CHECK:    store ptr [[P]], ptr [[TMP0:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z46test_firstprivate_ref_binding_both_bindings_sbv.omp_outlined, ptr [[TMP1]])
 // CHECK:    call void @_ZN4PairD1Ev(ptr noundef nonnull align 4 dead_on_return(16) dereferenceable(16) [[P]]) #[[ATTR3]]
 // CHECK:    ret void
@@ -3936,12 +3955,12 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    store ptr [[TMP1]], ptr [[TMP:%.*]], align 8
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR:%.*]], ptr [[TMP2]], i32 0, i32 0
 // CHECK:    call void @_ZN14NonTrivialCopyC1ERKS_(ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[X]])
-// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR]], ptr [[TMP3]], i32 0, i32 1
 // CHECK:    call void @_ZN14NonTrivialCopyC1ERKS_(ptr noundef nonnull align 4 dereferenceable(8) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[Y]])
 // CHECK:    [[VALUE:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIALCOPY:%.*]], ptr [[A]], i32 0, i32 0
@@ -3962,7 +3981,7 @@ void test_lambda_implicit_capture() {
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR]], ptr [[P]], i32 0, i32 1
 // CHECK:    call void @_ZN14NonTrivialCopyC1Ei(ptr noundef nonnull align 4 dereferenceable(8) [[Y]], i32 noundef 20)
 // CHECK:    store ptr [[P]], ptr [[TMP0:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z52test_firstprivate_const_ref_binding_both_bindings_sbv.omp_outlined, ptr [[TMP1]])
 // CHECK:    call void @_ZN4PairD1Ev(ptr noundef nonnull align 4 dead_on_return(16) dereferenceable(16) [[P]]) #[[ATTR3]]
 // CHECK:    ret void
@@ -3974,12 +3993,12 @@ void test_lambda_implicit_capture() {
 // CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
 // CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
-// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    store ptr [[TMP1]], ptr [[TMP:%.*]], align 8
-// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR:%.*]], ptr [[TMP2]], i32 0, i32 0
 // CHECK:    call void @_ZN14NonTrivialCopyC1ERKS_(ptr noundef nonnull align 4 dereferenceable(8) [[A:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[X]])
-// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META2]], !align [[META3]]
+// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[TMP]], align 8, !nonnull [[META4]], !align [[META5]]
 // CHECK:    [[Y:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIR]], ptr [[TMP3]], i32 0, i32 1
 // CHECK:    call void @_ZN14NonTrivialCopyC1ERKS_(ptr noundef nonnull align 4 dereferenceable(8) [[B:%.*]], ptr noundef nonnull align 4 dereferenceable(8) [[Y]])
 // CHECK:    [[VALUE:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIALCOPY:%.*]], ptr [[A]], i32 0, i32 0

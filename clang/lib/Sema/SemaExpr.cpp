@@ -19670,6 +19670,7 @@ static bool captureInCapturedRegion(
     ByRef = (Kind == TryCaptureKind::ExplicitByRef);
   } else if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP) {
     bool IsBindingDecl = isa<BindingDecl>(Var);
+    ValueDecl *DSAVar = Var;
     // Using an LValue reference type is consistent with Lambdas (see below).
     if (VarDecl *VD = S.OpenMP().isOpenMPCapturedDecl(Var)) {
       Var = VD; // Capture the DecompositionDecl.
@@ -19688,7 +19689,7 @@ static bool captureInCapturedRegion(
         S.OpenMP().isOpenMPPrivateDecl(Var, RSI->OpenMPLevel,
                                        RSI->OpenMPCaptureLevel) != OMPC_unknown)
       return true;
-    ByRef = S.OpenMP().isOpenMPCapturedByRef(Var, RSI->OpenMPLevel,
+    ByRef = S.OpenMP().isOpenMPCapturedByRef(DSAVar, RSI->OpenMPLevel,
                                              RSI->OpenMPCaptureLevel);
   }
 
