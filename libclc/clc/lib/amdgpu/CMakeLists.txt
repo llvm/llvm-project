@@ -52,4 +52,5 @@ libclc_set_source_options(-fapprox-func
   math/clc_native_exp.cl
   math/clc_native_exp2.cl
   math/clc_native_log10.cl
+  math/clc_recip_fast.cl
 )
