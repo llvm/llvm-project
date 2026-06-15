@@ -23,8 +23,8 @@ using namespace clang;
 using namespace clang::interp;
 
 template <typename T> static constexpr bool needsCtor() {
-  if constexpr (std::is_same_v<T, Integral<8, true>> ||
-                std::is_same_v<T, Integral<8, false>> ||
+  if constexpr (std::is_same_v<T, Char<true>> ||
+                std::is_same_v<T, Char<false>> ||
                 std::is_same_v<T, Integral<16, true>> ||
                 std::is_same_v<T, Integral<16, false>> ||
                 std::is_same_v<T, Integral<32, true>> ||
