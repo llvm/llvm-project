@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../ABIInfo.h"
+#include "../CIRGenModule.h"
 #include "../TargetInfo.h"
 
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
