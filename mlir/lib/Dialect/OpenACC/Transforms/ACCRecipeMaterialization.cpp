@@ -120,9 +120,6 @@ static void cloneDestroy(RecipeOpTy recipe, mlir::Block *block,
                          const llvm::SmallVector<mlir::Value> &arguments) {
   IRMapping mapping{};
   Region &destroyRegion = recipe.getDestroyRegion();
-  llvm::dbgs() << "getNumArguments: "
-               << destroyRegion.getBlocks().front().getNumArguments() << "\n";
-  llvm::dbgs() << "arguments.size: " << arguments.size() << "\n";
   assert(destroyRegion.getBlocks().front().getNumArguments() ==
              arguments.size() &&
          "unexpected acc recipe destroy block arguments");
