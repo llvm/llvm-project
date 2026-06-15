@@ -34,8 +34,8 @@ LIBC_INLINE ErrorOr<int> stat_via_statx(int dirfd, const char *__restrict path,
                                         int flags,
                                         struct stat *__restrict statbuf) {
   kernel_statx_buf xbuf;
-  auto result = linux_syscalls::statx(dirfd, path, flags,
-                                      KERNEL_STATX_BASIC_STATS_MASK, &xbuf);
+  ErrorOr<int> result = linux_syscalls::statx(
+      dirfd, path, flags, KERNEL_STATX_BASIC_STATS_MASK, &xbuf);
   if (!result)
     return result;
 
