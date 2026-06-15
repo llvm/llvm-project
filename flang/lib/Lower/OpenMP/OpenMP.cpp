@@ -1899,11 +1899,6 @@ genTargetClauses(lower::AbstractConverter &converter,
   cp.processThreadLimit(stmtCtx, clauseOps);
   cp.processTODO<clause::Allocate, clause::InReduction, clause::UsesAllocators>(
       loc, llvm::omp::Directive::OMPD_target);
-
-  // `target private(..)` is only supported in delayed privatization mode.
-  if (!enableDelayedPrivatizationStaging)
-    cp.processTODO<clause::Firstprivate, clause::Private>(
-        loc, llvm::omp::Directive::OMPD_target);
 }
 
 static void genTargetDataClauses(
@@ -5261,9 +5256,18 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OmpUtilityDirective &) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OmpUtilityDirective");
+                   const parser::OmpUtilityDirective &dir) {
+  common::visit(common::visitors{
+                    [&](const parser::OmpNothingDirective &) {
+                      // nothing-directive is a no-op (OpenMP 5.2 [8.4])
+                    },
+                    [&](const parser::OmpErrorDirective &) {
+                      if (!semaCtx.langOptions().OpenMPSimd)
+                        TODO(converter.getCurrentLocation(),
+                             "OmpErrorDirective");
+                    },
+                },
+                dir.u);
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

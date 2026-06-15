@@ -22,6 +22,7 @@ StringRef llvm::getNameFromBundleAttr(BundleAttr BA) {
   case BundleAttr::None:
     return "none";
   }
+  llvm_unreachable("unknonwn bundle attribute");
 }
 
 BundleAttr llvm::getBundleAttrFromString(StringRef Str) {
@@ -70,4 +71,22 @@ llvm::getAssumeDereferenceableInfo(OperandBundleUse OBU) {
   if (auto *Size = dyn_cast<ConstantInt>(OBU.Inputs[1]))
     Ret.CountVal = Size->getZExtValue();
   return Ret;
+}
+
+bool llvm::assumeBundleImpliesNonNull(const Value *Val, const Function *Context,
+                                      OperandBundleUse OBU) {
+  switch (getBundleAttrFromOBU(OBU)) {
+  case BundleAttr::Dereferenceable: {
+    auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
+    return Ptr == Val && Count && *Count != 0 &&
+           !NullPointerIsDefined(Context,
+                                 Val->getType()->getPointerAddressSpace());
+  }
+
+  case BundleAttr::NonNull:
+    return getAssumeNonNullInfo(OBU).Ptr == Val;
+
+  default:
+    return false;
+  }
 }
