@@ -55,6 +55,17 @@ struct VoidTagReturnVoid {
   };
 };
 
+struct VoidTagReturnVoidAndReturnValue {
+  struct promise_type {
+    VoidTagReturnVoidAndReturnValue get_return_object();
+    suspend_always initial_suspend();
+    suspend_always final_suspend() noexcept;
+    void unhandled_exception();
+    void return_void();
+    void return_value(int);
+  };
+};
+
 struct promise_float {
   float get_return_object();
   suspend_always initial_suspend();
@@ -138,3 +149,23 @@ VoidTagReturnValue test11(bool b) {
   if (b)
     co_return 42;
 } // expected-warning {{non-void coroutine does not return a value in all control paths}}
+
+VoidTagReturnVoidAndReturnValue test12(bool a) {
+  if (a) co_return 42;
+  co_return;
+}
+
+VoidTagReturnVoidAndReturnValue test13(bool a) {
+  if (a) co_return;
+  co_return 42;
+}
+
+VoidTagReturnVoidAndReturnValue test14(bool a) {
+  if (a) co_return 42;
+  // Falling off here is ok since we have return_void().
+}
+
+void returns_void();
+VoidTagReturnVoidAndReturnValue test15() {
+  co_return returns_void();
+}
