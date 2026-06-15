@@ -121,16 +121,14 @@ struct VGPRThresholdParser : public cl::parser<unsigned> {
 
 } // end anonymous namespace
 
-static cl::opt<unsigned, false, VGPRThresholdParser>
-    VGPRThresholdPercentOpt(
-        "amdgpu-vgpr-threshold-percent", cl::Hidden,
-        cl::desc(
-            "Percent of VGPR limits that we should use as RP threshold "
-            "during scheduling. We have two limits relevant to scheduling: "
-            "Critical (avoid decreasing occupancy), Excess (avoid spilling). "
-            "This flag scales both limits back by an equal percent: (0 = use "
-            " default calculation, 1-100 = use percentage), default: 0"),
-        cl::init(0));
+static cl::opt<unsigned, false, VGPRThresholdParser> VGPRThresholdPercentOpt(
+    "amdgpu-vgpr-threshold-percent", cl::Hidden,
+    cl::desc("Percent of VGPR limits that we should use as RP threshold "
+             "during scheduling. We have two limits relevant to scheduling: "
+             "Critical (avoid decreasing occupancy), Excess (avoid spilling). "
+             "This flag scales both limits back by an equal percent: (0 = use "
+             " default calculation, 1-100 = use percentage), default: 0"),
+    cl::init(0));
 
 const unsigned ScheduleMetrics::ScaleFactor = 100;
 
@@ -187,8 +185,7 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   if (VGPRThresholdPercentOpt > 0) {
     [[maybe_unused]] unsigned OriginalVGPRExcessLimit = VGPRExcessLimit;
     [[maybe_unused]] unsigned OriginalVGPRCriticalLimit = VGPRCriticalLimit;
-    VGPRExcessLimit =
-        (VGPRThresholdPercentOpt * VGPRExcessLimit + 99) / 100;
+    VGPRExcessLimit = (VGPRThresholdPercentOpt * VGPRExcessLimit + 99) / 100;
     VGPRCriticalLimit =
         (VGPRThresholdPercentOpt * VGPRCriticalLimit + 99) / 100;
     LLVM_DEBUG(dbgs() << "Applied VGPR excess threshold "
