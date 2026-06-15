@@ -37,9 +37,8 @@ public:
                           unsigned Intrinsic) const override;
 
   // Helper for getting a function parameter name. Name is composed from
-  // its index and the function name. Negative index corresponds to special
-  // parameter (unsized array) used for passing variable arguments.
-  std::string getParamName(const Function *F, int Idx) const;
+  // its index and the function name.
+  std::string getParamName(const Function *F, unsigned Idx) const;
 
   /// isLegalAddressingMode - Return true if the addressing mode represented
   /// by AM is legal for this target, for a load/store of the specified type
@@ -85,7 +84,6 @@ public:
 
   std::string getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
                            const SmallVectorImpl<ISD::OutputArg> &,
-                           std::optional<unsigned> FirstVAArg,
                            const CallBase &CB, unsigned UniqueCallSite) const;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
@@ -194,8 +192,8 @@ private:
   const NVPTXSubtarget &STI; // cache the subtarget here
   mutable unsigned GlobalUniqueCallSite;
 
-  SDValue getParamSymbol(SelectionDAG &DAG, int I, EVT T) const;
-  SDValue getCallParamSymbol(SelectionDAG &DAG, int I, EVT T) const;
+  SDValue getParamSymbol(SelectionDAG &DAG, unsigned I, EVT T) const;
+  SDValue getCallParamSymbol(SelectionDAG &DAG, unsigned I, EVT T) const;
   SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
 
@@ -227,9 +225,6 @@ private:
 
   SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
-
-  SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerCopyToReg_128(SDValue Op, SelectionDAG &DAG) const;
   unsigned getNumRegisters(LLVMContext &Context, EVT VT,

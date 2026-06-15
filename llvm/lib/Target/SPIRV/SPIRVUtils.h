@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/Dominators.h"
@@ -199,23 +200,19 @@ void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
 // Add an OpDecorate instruction for the given Reg.
 void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs,
-                     StringRef StrImm = "");
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs,
-                     StringRef StrImm = "");
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 
 // Add an OpDecorate instruction for the given Reg.
 void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm = "");
+                           ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 void buildOpMemberDecorate(Register Reg, MachineInstr &I,
                            const SPIRVInstrInfo &TII,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm = "");
+                           ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 
 // Add an OpDecorate instruction by "spirv.Decorations" metadata node.
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
@@ -567,7 +564,7 @@ bool isNestedPointer(const Type *Ty);
 enum FPDecorationId { NONE, RTE, RTZ, RTP, RTN, SAT };
 
 inline FPDecorationId demangledPostfixToDecorationId(const std::string &S) {
-  static std::unordered_map<std::string, FPDecorationId> Mapping = {
+  static const StringMap<FPDecorationId> Mapping = {
       {"rte", FPDecorationId::RTE},
       {"rtz", FPDecorationId::RTZ},
       {"rtp", FPDecorationId::RTP},
