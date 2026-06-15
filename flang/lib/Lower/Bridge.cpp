@@ -603,7 +603,8 @@ public:
     if (getFoldingContext().languageFeatures().IsEnabled(
             Fortran::common::LanguageFeature::OpenACC))
       createBuilderOutsideOfFuncOpAndDo([&]() {
-        Fortran::lower::materializeOpenACCRoutineBindTargets(*this);
+        Fortran::lower::materializeOpenACCRoutineBindTargets(*this,
+                                                             getModuleOp());
       });
 
     // Once all the code has been translated, create global runtime type info
