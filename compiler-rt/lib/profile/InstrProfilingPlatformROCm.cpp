@@ -1378,9 +1378,14 @@ struct ProfBoundsTuple {
 };
 } // namespace
 
-#define PROF_MAX_SEEN_BOUNDS 256
-static ProfBoundsTuple SeenBounds[PROF_MAX_SEEN_BOUNDS];
+/* Grown on demand (doubling) rather than fixed-cap: in non-RDC mode the entry
+ * count scales like num_code_objects * num_agents, so any fixed cap could be
+ * exceeded and silently lose dedup coverage (double-counting drained sections).
+ * Starts at PROF_SEEN_BOUNDS_INIT_CAP. */
+#define PROF_SEEN_BOUNDS_INIT_CAP 64
+static ProfBoundsTuple *SeenBounds = nullptr;
 static int NumSeenBounds = 0;
+static int CapSeenBounds = 0;
 
 /* Pure check: has this bounds tuple already been drained? Does not mutate
  * state, so a transient failure does not permanently suppress retries. */
@@ -1399,12 +1404,22 @@ static void profRecordDrainedBounds(const void *D, const void *C,
                                     const void *N) {
   if (profBoundsAlreadyDrained(D, C, N))
     return;
-  if (NumSeenBounds < PROF_MAX_SEEN_BOUNDS) {
-    SeenBounds[NumSeenBounds].data = D;
-    SeenBounds[NumSeenBounds].cnts = C;
-    SeenBounds[NumSeenBounds].names = N;
-    NumSeenBounds++;
+  if (NumSeenBounds == CapSeenBounds) {
+    int NewCap = CapSeenBounds ? CapSeenBounds * 2 : PROF_SEEN_BOUNDS_INIT_CAP;
+    ProfBoundsTuple *New =
+        (ProfBoundsTuple *)realloc(SeenBounds, NewCap * sizeof(*New));
+    /* Best-effort: on OOM keep the existing table and skip recording. The
+     * worst case is that this one section is drained again later (a duplicate
+     * profraw record), never a crash. */
+    if (!New)
+      return;
+    SeenBounds = New;
+    CapSeenBounds = NewCap;
   }
+  SeenBounds[NumSeenBounds].data = D;
+  SeenBounds[NumSeenBounds].cnts = C;
+  SeenBounds[NumSeenBounds].names = N;
+  NumSeenBounds++;
 }
 
 #define PROF_MAX_GPU_AGENTS 64
