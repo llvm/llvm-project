@@ -14,7 +14,7 @@ from dex.evaluation.ExpectMatch import (
     MatchResult,
     get_expected_value_set,
 )
-from dex.test_script.Nodes import Expect, Step, Value
+from dex.test_script.Nodes import Expect, Step, Type, Value
 
 
 class Metric:
@@ -100,7 +100,7 @@ def get_variable_metrics(
 ) -> Dict[str, Metric]:
     """Given an Expect node with its expected values and a list of all matches for that Expect in a debugger session,
     returns the computed metrics for that Expect node."""
-    assert isinstance(expect, Value), "Non-Value expects currently unsupported"
+    assert isinstance(expect, (Type, Value)), f"Unexpected non-variable expect {expect}"
     if not isinstance(expected_values, list):
         expected_values = [expected_values]
     num_total_steps = len(matches)
@@ -129,6 +129,7 @@ def get_variable_metrics(
         0 if ev in seen_expected_values else count
         for ev, count in all_expected_values.items()
     )
+    kind_string = "value" if isinstance(expect, Value) else "type"
     # And finally produce the metrics map and add the new result to the list.
     metrics = {
         # The number of steps. Though this is not a useful metric in itself, it may be useful to see in tandem with
@@ -145,15 +146,15 @@ def get_variable_metrics(
         # The number of steps where the watched variable/expression was not available in the debugger.
         "missing_var_steps": ScalarMetric(num_missing_var_steps, improves_asc=False),
         # The number of steps where the watched variable/expression had a value not in the set of expected values.
-        "unexpected_value_steps": ScalarMetric(
+        f"unexpected_{kind_string}_steps": ScalarMetric(
             num_unexpected_value_steps, improves_asc=False
         ),
         # The % of steps where the expected value sequence was observed.
         "correct_step_coverage": FractionMetric(num_correct_steps, num_total_steps),
         # The number of expected values that were observed at least once.
-        "seen_values": ScalarMetric(num_seen_values),
+        f"seen_{kind_string}s": ScalarMetric(num_seen_values),
         # The number of expected values that were not observed.
-        "missing_values": ScalarMetric(num_missing_values, improves_asc=False),
+        f"missing_{kind_string}s": ScalarMetric(num_missing_values, improves_asc=False),
     }
     return metrics
 
