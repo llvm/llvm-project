@@ -153,10 +153,14 @@ exit:
 define i8 @align_deref_size_unknown(i1 %c, ptr %p, i64 %size) {
 ; CHECK-LABEL: define i8 @align_deref_size_unknown(
 ; CHECK-SAME: i1 [[C:%.*]], ptr [[P:%.*]], i64 [[SIZE:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 [[SIZE]]) ]
+; CHECK-NEXT:    br i1 [[C]], label %[[IF:.*]], label %[[EXIT:.*]]
+; CHECK:       [[IF]]:
 ; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C]], i8 [[V]], i8 0
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = phi i8 [ [[V]], %[[IF]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    ret i8 [[SPEC_SELECT]]
 ;
 entry:
