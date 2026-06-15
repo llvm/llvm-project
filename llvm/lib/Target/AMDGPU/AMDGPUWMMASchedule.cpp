@@ -20,7 +20,7 @@
 ///       - Add WMMA -> ds_load edges to stop loads from being bunched at
 ///         the start of the block
 ///       - Build a live range histogram of the A/B operand fragments under
-///         an as late as possible schedule, recording the minimum VGPRs 
+///         an as late as possible schedule, recording the minimum VGPRs
 ///         needed for such a schedule (so the WMMA -> ds_load edges can
 ///         be placed earlier if the minimum VGPR budget can afford it).
 ///
@@ -41,9 +41,10 @@ namespace {
 // A single ds_load and their order among the WMMAs.
 struct LoadInfo {
   SUnit *SU;
-  unsigned MinPos = UINT_MAX; // earliest WMMA consumer (UINT_MAX means none in region)
-  unsigned MaxPos = 0;        // latest WMMA consumer
-  long LatestCycle = 0;       // as late as possible cycle
+  unsigned MinPos =
+      UINT_MAX;        // earliest WMMA consumer (UINT_MAX means none in region)
+  unsigned MaxPos = 0; // latest WMMA consumer
+  long LatestCycle = 0; // as late as possible cycle
 };
 
 // A fragment: the wide vreg several ds_loads build (for example - a vreg_512
@@ -54,7 +55,7 @@ struct FragInfo {
   unsigned VGPRs = 0;
   unsigned MinPos = UINT_MAX;
   unsigned MaxPos = 0;
-  long LatestCycle = LONG_MAX;  // earliest subload's as late as possible cycle
+  long LatestCycle = LONG_MAX; // earliest subload's as late as possible cycle
   SmallVector<SUnit *, 4> Subloads;
 };
 
@@ -99,7 +100,7 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
 
     // Gather DS_LOADs
     if (TII->isDS(*MI) && MI->mayLoad()) {
-      if (!LoadLatency) 
+      if (!LoadLatency)
         LoadLatency = SM->computeInstrLatency(MI);
       if (!LDSBandwidth)
         LDSBandwidth = std::ceil(SM->computeReciprocalThroughput(MI));
@@ -120,7 +121,7 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
   }
 
   // For each load, find earliest and latest consuming WMMA positions, and
-  // correct the ds_load -> earliest consumer data edge latency (Both the 
+  // correct the ds_load -> earliest consumer data edge latency (Both the
   // Succs and Preds SDep is updated)
   for (LoadInfo &LI : Loads) {
     for (const SDep &D : LI.SU->Succs) {
@@ -133,7 +134,7 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
       LI.MinPos = std::min(LI.MinPos, It->second);
       LI.MaxPos = std::max(LI.MaxPos, It->second);
     }
-    if (LI.MinPos == UINT_MAX) 
+    if (LI.MinPos == UINT_MAX)
       continue;
     SUnit *EarliestConsumer = Wmmas.begin()[LI.MinPos].first;
     // Correct latency of edges between ds_load and earliest WMMA consumer
@@ -155,7 +156,7 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
   // Chain consecutive loads with an LDS bandwidth latency
   SUnit *Prev = nullptr;
   for (LoadInfo &LI : Loads) {
-    if (LI.MinPos == UINT_MAX) 
+    if (LI.MinPos == UINT_MAX)
       continue;
     if (Prev) {
       SDep D(Prev, SDep::Artificial);
@@ -185,8 +186,8 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
   }
 
   // Group subloads into fragments and build the live range histogram
-  // with a schedule as late as possible. Each fragment is live from 
-  // its earliest subload to its last WMMA consumer. The peak of the 
+  // with a schedule as late as possible. Each fragment is live from
+  // its earliest subload to its last WMMA consumer. The peak of the
   // histogram is the minimum VGPRs needed.
   MapVector<Register, FragInfo> Frags;
   for (LoadInfo &LI : Loads) {
