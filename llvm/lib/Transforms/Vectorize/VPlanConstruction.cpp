@@ -652,7 +652,9 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   // recipes. optimizeInductionLiveOutUsers will later compute the proper
   // DerivedIV.
   //
-  // For an IV that needs SCEV predicate, keep extracting the exit values from the loop directly, as the pre-computed exit value as-is would  be incorrect outside the loop.
+  // For an IV that requires SCEV predicate, keep extracting the exit values
+  // from the loop directly, as the pre-computed exit value as-is would  be
+  // incorrect outside the loop.
   auto ReplaceExtractsWithExitingIVValue = [&](VPWidenInductionRecipe *WideIV) {
     bool IsPredicated = !WideIV->getNoWrapPredicates().empty();
     for (VPUser *U : to_vector(BackedgeVal->users())) {
@@ -667,11 +669,12 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
       assert(is_contained(ExtractLastLane->getParent()->successors(),
                           Plan.getScalarPreheader()) &&
              "last lane must be extracted in the middle block");
-      // Keep the vector extract for exit-block live-out uses of a predicated IV.
+      // Keep the vector extract for exit-block live-out uses of a predicated
+      // IV.
       if (IsPredicated &&
           any_of(ExtractLastLane->users(), [&](VPUser *LaneUser) {
-            auto *R = dyn_cast<VPRecipeBase>(LaneUser);
-            return R && Plan.isExitBlock(R->getParent());
+            auto *R = cast<VPRecipeBase>(LaneUser);
+            return Plan.isExitBlock(R->getParent());
           }))
         continue;
       VPBuilder Builder(ExtractLastLane);
@@ -1289,7 +1292,7 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
   return true;
 }
 
-void VPlanTransforms::addMiddleCheck(VPlan &Plan, bool TailFolded) {
+void VPlanTransforms::addMiddleCheck(VPlan &Plan) {
   auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
   // If MiddleVPBB has a single successor then the original loop does not exit
   // via the latch and the single successor must be the scalar preheader.
@@ -1320,12 +1323,9 @@ void VPlanTransforms::addMiddleCheck(VPlan &Plan, bool TailFolded) {
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
   DebugLoc LatchDL = LatchVPBB->getTerminator()->getDebugLoc();
   VPBuilder Builder(MiddleVPBB);
-  VPValue *Cmp;
-  if (TailFolded)
-    Cmp = Plan.getTrue();
-  else
-    Cmp = Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
-                             &Plan.getVectorTripCount(), LatchDL, "cmp.n");
+  VPValue *Cmp =
+      Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
+                         &Plan.getVectorTripCount(), LatchDL, "cmp.n");
   Builder.createNaryOp(VPInstruction::BranchOnCond, {Cmp}, LatchDL);
 }
 
@@ -1437,6 +1437,14 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
         Builder.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});
     R.getVPSingleValue()->replaceAllUsesWith(Ext);
   }
+
+  // VectorTripCount now equals TripCount so simplify the MiddleVPBB branch.
+  assert(match(Plan.getMiddleBlock()->getTerminator(),
+               m_BranchOnCond(m_SpecificICmp(
+                   CmpInst::ICMP_EQ, m_Specific(Plan.getTripCount()),
+                   m_Specific(&Plan.getVectorTripCount())))) &&
+         "Unexpected MiddleVPBB branch");
+  Plan.getMiddleBlock()->getTerminator()->setOperand(0, Plan.getTrue());
 }
 
 /// Insert \p CheckBlockVPBB on the edge leading to the vector preheader,

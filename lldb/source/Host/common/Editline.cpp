@@ -1721,7 +1721,17 @@ void Editline::Refresh() {
   if (!m_editline || !m_output_stream_sp)
     return;
   LockedStreamFile locked_stream = m_output_stream_sp->Lock();
-  el_set(m_editline, EL_REFRESH);
+  if (m_editor_status == EditorStatus::Editing) {
+    // EL_REFRESH redraws from libedit's cursor model, which is stale once the
+    // statusline has moved the cursor, so it reprints the prompt at the wrong
+    // column. Repaint from our own tracked position instead.
+    SaveEditedLine();
+    MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);
+    DisplayInput();
+    MoveCursor(CursorLocation::BlockEnd, CursorLocation::EditingCursor);
+  } else {
+    el_set(m_editline, EL_REFRESH);
+  }
 }
 
 bool Editline::CompleteCharacter(char ch, EditLineGetCharType &out) {
