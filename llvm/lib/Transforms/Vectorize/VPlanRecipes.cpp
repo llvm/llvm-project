@@ -47,6 +47,15 @@ using VectorParts = SmallVector<Value *, 2>;
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+// It is sometimes necessary to disable printing of metadata in tests in order
+// to avoid non-deterministic behaviour due to metadata introduced by VPlan
+// that wasn't present in the original scalar IR.
+static cl::opt<bool> VPlanPrintMetadata(
+    "vplan-print-metadata", cl::init(true), cl::Hidden,
+    cl::desc("Controls the printing of recipe metadata when debugging."));
+#endif
+
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPRecipeID()) {
   case VPExpressionSC:
@@ -388,12 +397,8 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
 }
 
 FastMathFlags VPIRFlags::getFastMathFlagsOrNone() const {
-  assert((OpType == OperationType::FPMathOp || OpType == OperationType::FCmp ||
-          OpType == OperationType::ReductionOp ||
-          OpType == OperationType::Other) &&
-         "recipe doesn't have fast math flags");
-  if (OpType == OperationType::Other)
-    return FastMathFlags();
+  if (!hasFastMathFlags())
+    return {};
   const FastMathFlagsTy &F = getFMFsRef();
   FastMathFlags Res;
   Res.setAllowReassoc(F.AllowReassoc);
@@ -1513,8 +1518,7 @@ void VPInstruction::execute(VPTransformState &State) {
          "Set flags not supported for the provided opcode");
   assert(hasRequiredFlagsForOpcode(getOpcode()) &&
          "Opcode requires specific flags to be set");
-  if (hasFastMathFlags())
-    State.Builder.setFastMathFlags(getFastMathFlagsOrNone());
+  State.Builder.setFastMathFlags(getFastMathFlagsOrNone());
   Value *GeneratedValue = generate(State);
   if (!hasResult())
     return;
@@ -1821,6 +1825,38 @@ void VPInstructionWithType::execute(VPTransformState &State) {
   }
 }
 
+InstructionCost VPInstructionWithType::computeCost(ElementCount VF,
+                                                   VPCostContext &Ctx) const {
+  // NOTE: At the moment it seems only possible to expose this path for
+  // the trunc, zext and sext opcodes. However, isScalarCast also covers
+  // int<>fp conversions, bitcasts, ptr<>int conversions, etc.
+  if (Instruction::isCast(getOpcode()))
+    return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
+                                      Ctx);
+
+  switch (getOpcode()) {
+  case VPInstruction::VScale: {
+    Type *Ty = this->getScalarType();
+    ArrayRef<Type *> Tys;
+    IntrinsicCostAttributes Attrs(Intrinsic::vscale, Ty, Tys);
+    return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
+  }
+  case VPInstruction::StepVector:
+    // TODO: This isn't quite right since even if the step-vector is hoisted
+    // out of the loop it has a non-zero cost in the middle block, etc.
+    // Once the stepvector is correctly hoisted out of the vector loop by the
+    // licm transform we can add the cost here so that it doesn't incorrectly
+    // affect the choice of VF.
+    return 0;
+  default:
+    // Although VPInstructionWithType is also used for
+    // VPInstruction::WideIVStep it isn't currently possible to expose cases
+    // where the cost is queried.
+    llvm_unreachable("Unhandled opcode");
+  }
+  return 0;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
                                         VPSlotTracker &SlotTracker) const {
@@ -2011,7 +2047,7 @@ void VPIRMetadata::intersect(const VPIRMetadata &Other) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
   const Module *M = SlotTracker.getModule();
-  if (Metadata.empty() || !M)
+  if (Metadata.empty() || !M || !VPlanPrintMetadata)
     return;
 
   ArrayRef<StringRef> MDNames = SlotTracker.getMDNames();
@@ -3928,6 +3964,18 @@ void VPPredInstPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printOperands(O, SlotTracker);
 }
 #endif
+
+VPRecipeBase *VPWidenLoadRecipe::getAsRecipe() { return this; }
+const VPRecipeBase *VPWidenLoadRecipe::getAsRecipe() const { return this; }
+
+VPRecipeBase *VPWidenLoadEVLRecipe::getAsRecipe() { return this; }
+const VPRecipeBase *VPWidenLoadEVLRecipe::getAsRecipe() const { return this; }
+
+VPRecipeBase *VPWidenStoreRecipe::getAsRecipe() { return this; }
+const VPRecipeBase *VPWidenStoreRecipe::getAsRecipe() const { return this; }
+
+VPRecipeBase *VPWidenStoreEVLRecipe::getAsRecipe() { return this; }
+const VPRecipeBase *VPWidenStoreEVLRecipe::getAsRecipe() const { return this; }
 
 InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
                                                  VPCostContext &Ctx) const {

@@ -6071,14 +6071,14 @@ public:
         FunDecl);
 
     ExpectCorrectResult("ForCallable first",
-                        callExpr(forCallable(declaresSameEntityAsNode(FunDecl)),
+                        callExpr(forCallable(equalsNode(FunDecl)),
                                  callee(cxxMethodDecl().bind("callee")))
                             .bind("call"),
                         FunDecl);
 
     ExpectCorrectResult("ForCallable second",
                         callExpr(callee(cxxMethodDecl().bind("callee")),
-                                 forCallable(declaresSameEntityAsNode(FunDecl)))
+                                 forCallable(equalsNode(FunDecl)))
                             .bind("call"),
                         FunDecl);
 

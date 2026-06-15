@@ -74,7 +74,6 @@ static FailureOr<int> getOperatorPrecedence(Operation *operation) {
   return llvm::TypeSwitch<Operation *, FailureOr<int>>(operation)
       .Case([&](emitc::AddressOfOp op) { return 15; })
       .Case([&](emitc::AddOp op) { return 12; })
-      .Case([&](emitc::ApplyOp op) { return 15; })
       .Case([&](emitc::BitwiseAndOp op) { return 7; })
       .Case([&](emitc::BitwiseLeftShiftOp op) { return 11; })
       .Case([&](emitc::BitwiseNotOp op) { return 15; })
@@ -997,25 +996,6 @@ printOperation(CppEmitter &emitter,
 }
 
 static LogicalResult printOperation(CppEmitter &emitter,
-                                    emitc::ApplyOp applyOp) {
-  raw_ostream &os = emitter.ostream();
-  Operation &op = *applyOp.getOperation();
-
-  if (failed(emitter.emitAssignPrefix(op)))
-    return failure();
-
-  StringRef applicableOperator = applyOp.getApplicableOperator();
-  Value operand = applyOp.getOperand();
-
-  // Check if we're taking address of a const global.
-  if (applicableOperator == "&" && getConstGlobal(operand, &op))
-    return emitAddressOfWithConstCast(emitter, op, operand);
-
-  os << applicableOperator;
-  return emitter.emitOperand(operand);
-}
-
-static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::BitwiseAndOp bitwiseAndOp) {
   Operation *operation = bitwiseAndOp.getOperation();
   return printBinaryOperation(emitter, operation, "&");
@@ -1898,8 +1878,8 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           .Case<cf::BranchOp, cf::CondBranchOp>(
               [&](auto op) { return printOperation(*this, op); })
           // EmitC ops.
-          .Case<emitc::AddressOfOp, emitc::AddOp, emitc::ApplyOp,
-                emitc::AssignOp, emitc::BitwiseAndOp, emitc::BitwiseLeftShiftOp,
+          .Case<emitc::AddressOfOp, emitc::AddOp, emitc::AssignOp,
+                emitc::BitwiseAndOp, emitc::BitwiseLeftShiftOp,
                 emitc::BitwiseNotOp, emitc::BitwiseOrOp,
                 emitc::BitwiseRightShiftOp, emitc::BitwiseXorOp, emitc::CallOp,
                 emitc::CallOpaqueOp, emitc::CastOp, emitc::ClassOp,

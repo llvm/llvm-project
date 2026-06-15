@@ -263,36 +263,6 @@ LogicalResult AddOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// ApplyOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult ApplyOp::verify() {
-  StringRef applicableOperatorStr = getApplicableOperator();
-
-  // Applicable operator must not be empty.
-  if (applicableOperatorStr.empty())
-    return emitOpError("applicable operator must not be empty");
-
-  // Only `*` and `&` are supported.
-  if (applicableOperatorStr != "&" && applicableOperatorStr != "*")
-    return emitOpError("applicable operator is illegal");
-
-  Type operandType = getOperand().getType();
-  Type resultType = getResult().getType();
-  if (applicableOperatorStr == "&") {
-    if (!llvm::isa<emitc::LValueType>(operandType))
-      return emitOpError("operand type must be an lvalue when applying `&`");
-    if (!llvm::isa<emitc::PointerType>(resultType))
-      return emitOpError("result type must be a pointer when applying `&`");
-  } else {
-    if (!llvm::isa<emitc::PointerType>(operandType))
-      return emitOpError("operand type must be a pointer when applying `*`");
-  }
-
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // AssignOp
 //===----------------------------------------------------------------------===//
 
