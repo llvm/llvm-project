@@ -1241,7 +1241,7 @@ void ExprEngine::defaultEvalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
 
         // Explore with and without inlining the call.
         if (Options.getIPAMode() == IPAK_DynamicDispatchBifurcate) {
-          BifurcateCall(RD.getDispatchRegion(), Call, D, Dst, Pred);
+          dynDispatchBifurcate(RD.getDispatchRegion(), Call, D, Dst, Pred);
           return;
         }
 
@@ -1265,9 +1265,10 @@ void ExprEngine::defaultEvalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
   Dst.insert(conservativeEvalCall(Call, Pred, State));
 }
 
-void ExprEngine::BifurcateCall(const MemRegion *BifurReg, const CallEvent &Call,
-                               const Decl *D, ExplodedNodeSet &Dst,
-                               ExplodedNode *Pred) {
+void ExprEngine::dynDispatchBifurcate(const MemRegion *BifurReg,
+                                      const CallEvent &Call, const Decl *D,
+                                      ExplodedNodeSet &Dst,
+                                      ExplodedNode *Pred) {
   assert(BifurReg);
   BifurReg = BifurReg->StripCasts();
 

@@ -923,8 +923,9 @@ private:
 
   /// Either inline or process the call conservatively (or both), based
   /// on DynamicDispatchBifurcation data.
-  void BifurcateCall(const MemRegion *BifurReg, const CallEvent &Call,
-                     const Decl *D, ExplodedNodeSet &Dst, ExplodedNode *Pred);
+  void dynDispatchBifurcate(const MemRegion *BifurReg, const CallEvent &Call,
+                            const Decl *D, ExplodedNodeSet &Dst,
+                            ExplodedNode *Pred);
 
   bool replayWithoutInlining(ExplodedNode *P, const StackFrame *CalleeSF);
 
