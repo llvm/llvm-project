@@ -3025,8 +3025,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     auto *LoadR = new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe),
                                            Addr, EVL, Mask);
     LoadR->insertBefore(&CurRecipe);
-    VPValue *Poison =
-        Plan->getOrAddLiveIn(PoisonValue::get(LoadR->getScalarType()));
+    VPValue *Poison = Plan->getPoison(LoadR->getScalarType());
     return new VPWidenIntrinsicRecipe(Intrinsic::vector_splice_left,
                                       {Poison, LoadR, &EVL},
                                       LoadR->getScalarType(), {}, {}, DL);
@@ -3057,8 +3056,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
       match(EndPtr, m_VecEndPtr(m_VPValue(), m_Specific(&Plan->getVF())))) {
     Mask = GetVPReverse(Mask);
     Addr = AdjustEndPtr(EndPtr);
-    VPValue *Poison =
-        Plan->getOrAddLiveIn(PoisonValue::get(StoredVal->getScalarType()));
+    VPValue *Poison = Plan->getPoison(StoredVal->getScalarType());
     auto *SpliceR = new VPWidenIntrinsicRecipe(
         Intrinsic::vector_splice_right, {StoredVal, Poison, &EVL},
         StoredVal->getScalarType(), {}, {}, DL);
@@ -5522,8 +5520,7 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
     // TripCount should not be used after expansion to VPInstructions. Reset to
     // poison to avoid dangling references.
     if (Plan.getTripCount() == ExpSCEV)
-      Plan.resetTripCount(
-          Plan.getOrAddLiveIn(PoisonValue::get(ExpSCEV->getScalarType())));
+      Plan.resetTripCount(Plan.getPoison(ExpSCEV->getScalarType()));
     ExpSCEV->eraseFromParent();
   }
 }
