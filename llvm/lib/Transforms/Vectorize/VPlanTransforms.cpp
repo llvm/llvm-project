@@ -5696,10 +5696,6 @@ static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
     return V;
 
   if (!R) {
-    // V is a live-in. If all members are the same live-in, reuse it directly.
-    if (all_of(Members, equal_to(V)))
-      return V;
-    // Otherwise assemble the distinct live-ins into a BuildVector.
     assert(all_of(Members,
                   [V](VPValue *M) {
                     return !M->getDefiningRecipe() &&
