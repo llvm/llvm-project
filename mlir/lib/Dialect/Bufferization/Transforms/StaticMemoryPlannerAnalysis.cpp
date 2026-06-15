@@ -35,11 +35,19 @@ namespace {
 // Data structures
 //===----------------------------------------------------------------------===//
 
+/// Allocation info for memory planning (independent of MLIR).
+/// This can be used with pure planning algorithms.
+struct Alloc {
+  int64_t sizeInBytes = 0;    // Size in bytes
+  int64_t alignment = 1;      // Required alignment in bytes
+  // Note: time_start and time_end will be added later for lifetime-aware planning
+};
+
 /// A candidate allocation with its matching deallocation and assigned offset.
 struct AllocationCandidate {
   mlir::memref::AllocOp alloc;
   mlir::memref::DeallocOp dealloc;
-  int64_t offset = 0;         // Offset in bytes from arena start
+  int64_t offset = 0;         // Offset in bytes from arena start (assigned by planner)
   int64_t sizeInBytes = 0;    // Size in bytes
   int64_t alignment = 1;      // Required alignment in bytes
 };
@@ -83,6 +91,32 @@ static int64_t alignOffset(int64_t offset, int64_t alignment) {
   if (alignment <= 1)
     return offset;
   return (offset + alignment - 1) / alignment * alignment;
+}
+
+//===----------------------------------------------------------------------===//
+// Memory Planning Algorithms
+//===----------------------------------------------------------------------===//
+
+/// Simple sequential memory planner (baseline algorithm).
+/// Allocates each buffer one after another with proper alignment padding.
+/// Returns offsets in bytes for each allocation.
+static llvm::SmallVector<int64_t>
+trivialMemoryPlanner(int64_t arenaAlignment,
+                     llvm::ArrayRef<Alloc> allocs) {
+  llvm::SmallVector<int64_t> offsets;
+  int64_t currentOffset = 0;
+  
+  for (const auto &alloc : allocs) {
+    // Ensure offset respects both arena alignment and this allocation's alignment
+    // The comment from mentor: (arenaAlignment + offset) % alloc.alignment == 0
+    // This means: if arena starts at an arenaAlignment boundary,
+    // then offset must make the final address properly aligned for alloc.alignment
+    currentOffset = alignOffset(currentOffset, alloc.alignment);
+    offsets.push_back(currentOffset);
+    currentOffset += alloc.sizeInBytes;
+  }
+  
+  return offsets;
 }
 
 //===----------------------------------------------------------------------===//
@@ -136,22 +170,33 @@ public:
     if (candidates.empty())
       return;
 
-    // Step 2: Compute simple sequential offsets with alignment padding
-    int64_t totalSize = 0;
+    // Step 2: Prepare allocation info for planner
+    llvm::SmallVector<Alloc> allocInfos;
     int64_t maxAlignment = 1;
-    for (auto &candidate : candidates) {
-      // Align current offset to this allocation's requirement
-      totalSize = alignOffset(totalSize, candidate.alignment);
-      candidate.offset = totalSize;
-      totalSize += candidate.sizeInBytes;
+    for (const auto &candidate : candidates) {
+      Alloc allocInfo;
+      allocInfo.sizeInBytes = candidate.sizeInBytes;
+      allocInfo.alignment = candidate.alignment;
+      allocInfos.push_back(allocInfo);
       maxAlignment = std::max(maxAlignment, candidate.alignment);
-      LLVM_DEBUG(llvm::dbgs() << "[static-memory-planner] offset="
-                              << candidate.offset
-                              << " size=" << candidate.sizeInBytes
-                              << " alignment=" << candidate.alignment << "\n");
     }
 
-    // Step 3: Find the first allocation's location to place arena
+    // Step 3: Run the planning algorithm
+    llvm::SmallVector<int64_t> offsets = 
+        trivialMemoryPlanner(maxAlignment, allocInfos);
+    
+    // Assign computed offsets back to candidates
+    int64_t totalSize = 0;
+    for (size_t i = 0; i < candidates.size(); ++i) {
+      candidates[i].offset = offsets[i];
+      totalSize = std::max(totalSize, offsets[i] + candidates[i].sizeInBytes);
+      LLVM_DEBUG(llvm::dbgs() << "[static-memory-planner] offset="
+                              << candidates[i].offset
+                              << " size=" << candidates[i].sizeInBytes
+                              << " alignment=" << candidates[i].alignment << "\n");
+    }
+
+    // Step 4: Find the first allocation's location to place arena
     mlir::Operation *firstAlloc = candidates.front().alloc;
     mlir::OpBuilder builder(firstAlloc);
 
@@ -160,7 +205,7 @@ public:
     unsigned elementSizeInBits = elementType.getIntOrFloatBitWidth();
     unsigned elementSizeInBytes = (elementSizeInBits + 7) / 8;
     
-    // Step 4: Create arena allocation with maximum alignment
+    // Step 5: Create arena allocation with maximum alignment
     // Convert total size from bytes to elements
     int64_t arenaSizeInElements = (totalSize + elementSizeInBytes - 1) / elementSizeInBytes;
     auto arenaType = mlir::MemRefType::get({arenaSizeInElements}, elementType);
@@ -171,7 +216,7 @@ public:
                             << arenaSizeInElements << " elements (" << totalSize 
                             << " bytes), alignment=" << maxAlignment << " bytes\n");
 
-    // Step 5: Replace each alloc with a subview and remove deallocs
+    // Step 6: Replace each alloc with a subview and remove deallocs
     for (auto &candidate : candidates) {
       mlir::OpBuilder subviewBuilder(candidate.alloc);
       
