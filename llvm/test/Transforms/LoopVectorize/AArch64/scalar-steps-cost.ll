@@ -5,8 +5,8 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 define i32 @scalar_steps_all_lanes(ptr %start, ptr %end) {
 ; CHECK-LABEL: LV: Checking a loop in 'scalar_steps_all_lanes'
-; CHECK: Cost of 0 for VF 2: {{.*}} = SCALAR-STEPS {{.*}}, ir<1>, {{.*}}
-; CHECK: Cost of 0 for VF 4: {{.*}} = SCALAR-STEPS {{.*}}, ir<1>, {{.*}}
+; CHECK: Cost of 1 for VF 2: {{.*}} = SCALAR-STEPS {{.*}}, ir<1>, {{.*}}
+; CHECK: Cost of 1 for VF 4: {{.*}} = SCALAR-STEPS {{.*}}, ir<1>, {{.*}}
 entry:
   br label %loop
 
