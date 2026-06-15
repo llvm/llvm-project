@@ -1058,6 +1058,33 @@ LogicalResult emitc::LiteralOp::verify() {
     return emitOpError() << "value must not be empty";
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// MemberOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult MemberOp::verify() {
+  Type operandType = getOperand().getType();
+  Type resultType = getResult().getType();
+  bool resultIsWritable = isa<emitc::LValueType, emitc::ArrayType>(resultType);
+
+  // Make sure the operand and return type agree on value/memory semantics:
+  // If the operand is an lvalue it models a memory location and as such its
+  // elements are also memory locations: They require a load operation to use
+  // their value and they can be assigned new values.
+  // If the operand isn't an lvalue it models an aggregate SSA value and as
+  // such its elements are also SSA values: Their value can be used directly
+  // but they cannot be assigned to.
+
+  if (isa<emitc::LValueType>(operandType) && !resultIsWritable)
+    return emitOpError("lvalues must return lvalues or arrays");
+
+  if (!isa<emitc::LValueType>(operandType) && resultIsWritable)
+    return emitOpError("non-lvalues cannot return lvalues or arrays");
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // SubOp
 //===----------------------------------------------------------------------===//
