@@ -17,6 +17,7 @@
 #include "Pointer.h"
 #include "PrimType.h"
 #include "Record.h"
+#include "Reflect.h"
 #include "Source.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Allocator.h"

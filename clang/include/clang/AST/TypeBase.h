@@ -2766,6 +2766,7 @@ public:
   bool isUndeducedAutoType() const;             // C++11 auto or
                                                 // C++14 decltype(auto)
   bool isTypedefNameType() const;               // typedef or alias template
+  bool isMetaInfoType() const;                  // C++26 std::meta::info
 
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
   bool is##Id##Type() const;
@@ -9049,6 +9050,10 @@ inline bool Type::isNonOverloadPlaceholderType() const {
 
 inline bool Type::isVoidType() const {
   return isSpecificBuiltinType(BuiltinType::Void);
+}
+
+inline bool Type::isMetaInfoType() const {
+  return isSpecificBuiltinType(BuiltinType::MetaInfo);
 }
 
 inline bool Type::isHalfType() const {

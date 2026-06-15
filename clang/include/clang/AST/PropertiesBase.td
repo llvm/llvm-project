@@ -594,6 +594,31 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
   }]>;
 }
 
+def ReflectionKind : EnumPropertyType<"ReflectionKind">;
+
+let Class = PropertyTypeCase<APValue, "Reflection"> in {
+  def : Property<"reflectionKind", ReflectionKind> {
+    let Read = [{ node.getReflectionOperandKind() }];
+  }
+  def : Property<"reflectionType", QualType> {
+    let Conditional = [{ reflectionKind == ReflectionKind::Type }];
+    let Read = [{
+      QualType::getFromOpaquePtr(node.getReflectionOpaqueOperand())
+    }];
+  }
+  def : Creator<[{
+    switch (reflectionKind) {
+    // TODO(Reflection): Add support for TypeSourceInfo, NamespaceReference
+    // TemplateReference and DeclRefExpr
+    case ReflectionKind::Null:
+      return APValue(reflectionKind, nullptr);
+    case ReflectionKind::Type:
+      return APValue(reflectionKind, (*reflectionType).getAsOpaquePtr());
+    }
+    llvm_unreachable("unimplemented or unknow reflection entities");
+  }]>;
+}
+
 // Type cases for DeclarationName.
 def : PropertyTypeKind<DeclarationName, DeclarationNameKind,
                        "node.getNameKind()">;

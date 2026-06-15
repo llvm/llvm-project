@@ -681,6 +681,7 @@ namespace clang {
     ExpectedStmt VisitCXXThisExpr(CXXThisExpr *E);
     ExpectedStmt VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr *E);
     ExpectedStmt VisitCXXPseudoDestructorExpr(CXXPseudoDestructorExpr *E);
+    ExpectedStmt VisitCXXReflectExpr(CXXReflectExpr *E);
     ExpectedStmt VisitMemberExpr(MemberExpr *E);
     ExpectedStmt VisitCallExpr(CallExpr *E);
     ExpectedStmt VisitLambdaExpr(LambdaExpr *LE);
@@ -8716,6 +8717,16 @@ ExpectedStmt ASTNodeImporter::VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr *E) {
                                     *ToTypeOrErr, *ToLocationOrErr);
 }
 
+ExpectedStmt ASTNodeImporter::VisitCXXReflectExpr(CXXReflectExpr *E) {
+  Error Err = Error::success();
+  auto ToOperatorLoc = importChecked(Err, E->getOperatorLoc());
+  auto ToTSI = importChecked(Err, E->getTypeSourceInfo());
+  if (Err)
+    return std::move(Err);
+
+  return CXXReflectExpr::Create(Importer.getToContext(), ToOperatorLoc, ToTSI);
+}
+
 ExpectedStmt ASTNodeImporter::VisitMemberExpr(MemberExpr *E) {
   Error Err = Error::success();
   auto ToBase = importChecked(Err, E->getBase());
@@ -10714,7 +10725,7 @@ ASTNodeImporter::ImportAPValue(const APValue &FromValue) {
     }
     break;
   }
-  case APValue::LValue:
+  case APValue::LValue: {
     APValue::LValueBase Base;
     QualType FromElemTy;
     if (FromValue.getLValueBase()) {
@@ -10785,6 +10796,27 @@ ASTNodeImporter::ImportAPValue(const APValue &FromValue) {
     } else
       Result.setLValue(Base, Offset, APValue::NoLValuePath{},
                        FromValue.isNullPointer());
+    break;
+  }
+  case APValue::Reflection: {
+    switch (FromValue.getReflectionOperandKind()) {
+    case ReflectionKind::Null:
+      Result = APValue(ReflectionKind::Null, nullptr);
+      break;
+    case ReflectionKind::Type: {
+      const auto *FromTSI = static_cast<const TypeSourceInfo *>(
+          FromValue.getReflectionOpaqueOperand());
+      QualType ImpType = importChecked(Err, FromTSI->getType());
+      if (Err)
+        return std::move(Err);
+      TypeSourceInfo *ToTSI =
+          Importer.ToContext.getTrivialTypeSourceInfo(ImpType);
+      Result = APValue(ReflectionKind::Type, ToTSI);
+      break;
+    }
+    }
+    break;
+  }
   }
   if (Err)
     return std::move(Err);

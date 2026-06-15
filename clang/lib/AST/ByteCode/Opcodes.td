@@ -31,6 +31,7 @@ def Float : Type;
 def Ptr : Type;
 def MemberPtr : Type;
 def FixedPoint : Type;
+def Reflect : Type;
 
 //===----------------------------------------------------------------------===//
 // Types transferred to the interpreter.
@@ -71,6 +72,8 @@ def ArgDesc : ArgType { let Name = "const Descriptor *"; }
 def ArgPrimType : ArgType { let Name = "PrimType"; }
 def ArgEnumDecl : ArgType { let Name = "const EnumDecl *"; }
 def ArgTypePtr : ArgType { let Name = "const Type *"; }
+def ArgVoidPtr : ArgType { let Name = "const void *"; }
+def ArgReflectionKind : ArgType { let Name = "ReflectionKind"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -121,7 +124,7 @@ def NonPtrTypeClass : TypeClass {
 }
 
 def AllTypeClass : TypeClass {
-  let Types = !listconcat(AluTypeClass.Types, PtrTypeClass.Types, FloatTypeClass.Types);
+  let Types = !listconcat(AluTypeClass.Types, PtrTypeClass.Types, FloatTypeClass.Types, [Reflect]);
 }
 
 def ComparableTypeClass : TypeClass {
@@ -353,6 +356,10 @@ def CastMemberPtrBasePop : Opcode {
 def CastMemberPtrDerivedPop : Opcode {
   // Offset of field, which is a base.
   let Args = [ArgSint32, ArgRecordDecl];
+}
+
+def ReflectValue : Opcode {
+  let Args = [ArgReflectionKind, ArgVoidPtr];
 }
 
 def FinishInitPop : Opcode;

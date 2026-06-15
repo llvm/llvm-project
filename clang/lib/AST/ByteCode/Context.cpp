@@ -499,6 +499,9 @@ OptPrimType Context::classify(QualType T) const {
   if (T->isFixedPointType())
     return PT_FixedPoint;
 
+  if (T->isMetaInfoType())
+    return PT_Reflect;
+
   // Vector and complex types get here.
   return std::nullopt;
 }

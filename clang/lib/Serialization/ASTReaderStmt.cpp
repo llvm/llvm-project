@@ -540,8 +540,19 @@ void ASTStmtReader::VisitCapturedStmt(CapturedStmt *S) {
 }
 
 void ASTStmtReader::VisitCXXReflectExpr(CXXReflectExpr *E) {
-  // TODO(Reflection): Implement this.
-  assert(false && "not implemented yet");
+  // TODO(Reflection): add support for TemplateReference, NamespaceReference and
+  // DeclRefExpr
+  VisitExpr(E);
+  E->CaretCaretLoc = readSourceLocation();
+  E->Kind = static_cast<ReflectionKind>(Record.readInt());
+  switch (E->Kind) {
+  case ReflectionKind::Null:
+    E->Operand = nullptr;
+    break;
+  case ReflectionKind::Type:
+    E->Operand = Record.readTypeSourceInfo();
+    break;
+  }
 }
 
 void ASTStmtReader::VisitSYCLKernelCallStmt(SYCLKernelCallStmt *S) {

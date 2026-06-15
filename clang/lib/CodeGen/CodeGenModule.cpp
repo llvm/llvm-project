@@ -6302,6 +6302,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   if (getLangOpts().OpenCL && ASTTy->isSamplerT())
     return;
 
+  // TODO(Reflection): add support for consteval-only types.
+
   // HLSL default buffer constants will be emitted during HLSLBufferDecl codegen
   if (getLangOpts().HLSL &&
       D->getType().getAddressSpace() == LangAS::hlsl_constant)

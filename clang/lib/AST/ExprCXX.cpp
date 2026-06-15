@@ -24,6 +24,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/LambdaCapture.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/Reflection.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -1935,15 +1936,15 @@ TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
 CXXReflectExpr::CXXReflectExpr(EmptyShell Empty)
     : Expr(CXXReflectExprClass, Empty) {}
 
-CXXReflectExpr::CXXReflectExpr(SourceLocation CaretCaretLoc,
-                               const TypeSourceInfo *TSI)
-    : Expr(CXXReflectExprClass, TSI->getType(), VK_PRValue, OK_Ordinary),
-      CaretCaretLoc(CaretCaretLoc), Operand(TSI) {}
+CXXReflectExpr::CXXReflectExpr(ASTContext &C, SourceLocation CaretCaretLoc,
+                               TypeSourceInfo *TSI)
+    : Expr(CXXReflectExprClass, C.MetaInfoTy, VK_PRValue, OK_Ordinary),
+      CaretCaretLoc(CaretCaretLoc), Kind(ReflectionKind::Type), Operand(TSI) {}
 
 CXXReflectExpr *CXXReflectExpr::Create(ASTContext &C,
                                        SourceLocation CaretCaretLoc,
                                        TypeSourceInfo *TSI) {
-  return new (C) CXXReflectExpr(CaretCaretLoc, TSI);
+  return new (C) CXXReflectExpr(C, CaretCaretLoc, TSI);
 }
 
 CXXReflectExpr *CXXReflectExpr::CreateEmpty(ASTContext &C) {

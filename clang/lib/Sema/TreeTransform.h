@@ -13186,7 +13186,19 @@ StmtResult TreeTransform<Derived>::TransformUnresolvedSYCLKernelCallStmt(
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformCXXReflectExpr(CXXReflectExpr *E) {
   // TODO(reflection): Implement its transform
-  assert(false && "not implemented yet");
+
+  switch (E->getKind()) {
+  case ReflectionKind::Type: {
+    TypeSourceInfo *NewT = getDerived().TransformType(E->getTypeSourceInfo());
+    if (!NewT)
+      return ExprError();
+    return SemaRef.BuildCXXReflectExpr(E->getOperatorLoc(), NewT);
+  }
+  case ReflectionKind::Null:
+    llvm_unreachable("A null reflection should not reach here");
+  }
+
+  assert(false && "unknown or unimplemented reflection entities");
   return ExprError();
 }
 
