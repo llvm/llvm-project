@@ -41,7 +41,7 @@ public:
                 raw_ostream &OS)
       : StrVariableName(StrVariableName), Matches(Matches), OS(OS) {}
 
-  void Emit(unsigned Indent = 0, bool IgnoreDuplicates = false) const;
+  LLVM_ABI void Emit(unsigned Indent = 0, bool IgnoreDuplicates = false) const;
 
 private:
   bool EmitStringMatcherForChar(ArrayRef<const StringPair *> Matches,

@@ -234,9 +234,7 @@ HIPAMDToolChain::HIPAMDToolChain(const Driver &D, const llvm::Triple &Triple,
 
 void HIPAMDToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
-  HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
-
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
   assert(DeviceOffloadingKind == Action::OFK_HIP &&
          "Only HIP offloading kinds are supported for GPUs.");
 
@@ -281,7 +279,8 @@ void HIPAMDToolChain::addClangTargetOptions(
     return; // No DeviceLibs for SPIR-V.
   }
 
-  for (auto BCFile : getDeviceLibs(DriverArgs, DeviceOffloadingKind)) {
+  for (auto BCFile :
+       getDeviceLibs(DriverArgs, BoundArch, DeviceOffloadingKind)) {
     CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
                                                : "-mlink-bitcode-file");
     CC1Args.push_back(DriverArgs.MakeArgStringRef(BCFile.Path));
@@ -292,37 +291,14 @@ llvm::opt::DerivedArgList *
 HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
                                StringRef BoundArch,
                                Action::OffloadKind DeviceOffloadKind) const {
-  DerivedArgList *DAL =
-      HostTC.TranslateArgs(Args, BoundArch, DeviceOffloadKind);
-  if (!DAL)
-    DAL = new DerivedArgList(Args.getBaseArgs());
+  llvm::opt::DerivedArgList *DAL =
+      ROCMToolChain::TranslateArgs(Args, BoundArch, DeviceOffloadKind);
 
-  const OptTable &Opts = getDriver().getOpts();
-
-  for (Arg *A : Args) {
-    // Sanitizer coverage is currently not supported for AMDGPU.
-    if (A->getOption().matches(options::OPT_fsan_cov_Group)) {
-      diagnoseUnsupportedOption(A, *DAL, Args);
-      continue;
-    }
-
-    if (A->getOption().matches(options::OPT_fsanitize_EQ) &&
-        !Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
-                      true))
-      continue;
-
-    DAL->append(A);
-  }
-
-  if (!BoundArch.empty()) {
-    DAL->eraseArg(options::OPT_mcpu_EQ);
-    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mcpu_EQ), BoundArch);
-    checkTargetID(*DAL);
-  }
-
-  if (!Args.hasArg(options::OPT_flto_partitions_EQ))
+  if (!Args.hasArg(options::OPT_flto_partitions_EQ)) {
+    const OptTable &Opts = getDriver().getOpts();
     DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_flto_partitions_EQ),
                       "8");
+  }
 
   return DAL;
 }
@@ -331,11 +307,6 @@ Tool *HIPAMDToolChain::buildLinker() const {
   assert(getTriple().isAMDGCN() ||
          getTriple().getArch() == llvm::Triple::spirv64);
   return new tools::AMDGCN::Linker(*this);
-}
-
-void HIPAMDToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
-  AMDGPUToolChain::addClangWarningOptions(CC1Args);
-  HostTC.addClangWarningOptions(CC1Args);
 }
 
 ToolChain::CXXStdlibType
@@ -370,7 +341,10 @@ VersionTuple HIPAMDToolChain::computeMSVCVersion(const Driver *D,
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
+                               llvm::StringRef BoundArch,
                                Action::OffloadKind DeviceOffloadingKind) const {
+  assert(!BoundArch.empty() && "Must have an explicit GPU arch.");
+
   llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs;
   const llvm::Triple &TT = getEffectiveTriple();
 
@@ -379,8 +353,8 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
       TT.getEnvironment() == llvm::Triple::LLVM)
     return {};
 
-  AMDGPUToolChain::ParsedTargetIDType TargetID = getParsedTargetID(DriverArgs);
-  if (!TargetID.OptionalTargetID || TargetID.OptionalTargetID == "amdgcnspirv")
+  StringRef GpuArch = getProcessorFromTargetID(getTriple(), BoundArch);
+  if (GpuArch == "amdgcnspirv")
     return {};
 
   ArgStringList LibraryPaths;
@@ -417,9 +391,8 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
     }
 
     // Add common device libraries like ocml etc.
-    for (auto N : getCommonDeviceLibNames(
-             DriverArgs, *TargetID.OptionalTargetID, *TargetID.OptionalGPUArch,
-             DeviceOffloadingKind))
+    for (auto N : getCommonDeviceLibNames(DriverArgs, BoundArch, GpuArch,
+                                          DeviceOffloadingKind))
       BCLibs.emplace_back(N);
 
     // Add instrument lib.
