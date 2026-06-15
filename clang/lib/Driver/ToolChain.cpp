@@ -492,6 +492,12 @@ ToolChain::getMultilibFlags(const llvm::opt::ArgList &Args) const {
 
   processMultilibCustomFlags(Result, Args);
 
+  if (Arg *CStdLibArg = Args.getLastArg(options::OPT_cstdlib_EQ)) {
+    Result.push_back(std::string(CStdLibArg->getOption().getPrefixedName()) +
+                     CStdLibArg->getValue());
+    CStdLibArg->claim();
+  }
+
   // Include fno-exceptions and fno-rtti
   // to improve multilib selection
   if (getRTTIMode() == ToolChain::RTTIMode::RM_Disabled)
