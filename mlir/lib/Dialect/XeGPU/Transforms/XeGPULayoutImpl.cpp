@@ -30,7 +30,6 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
-#include <functional>
 #include <numeric>
 
 using namespace mlir;
@@ -842,26 +841,19 @@ buildLayout(mlir::MLIRContext *context, ArrayRef<int64_t> sgLayout,
       laneData.empty() ? nullptr : toI32Attr(laneData), orderAttr);
 }
 
-/// Computes the lane_layout and lane_data for a multi-reduction's source
-/// layout. Only the innermost two dimensions are distributed; all leading
-/// dimensions are assumed to be unit (the caller verifies this via
-/// `leadingDimsAreUnit`).
+/// Computes the (lane_layout, lane_data) for a multi-reduction's source layout.
+/// Only the innermost two dims are distributed; leading dims are assumed unit.
+/// `subgroupSize` lanes go on one dim; up to `maxReduceVectorSize` elements are
+/// packed into lane_data on the other. To minimize cross-lane reduction, lanes
+/// are spread across a non-reduction dim when possible so the reduction happens
+/// within a lane. inst_data is the element-wise product lane_layout *
+/// lane_data.
 ///
-/// The layout is chosen to minimize cross-lane reduction: whenever possible a
-/// reduction dimension is reduced *within* a lane (lane_layout == 1, with up to
-/// `maxReduceVectorSize` elements packed into lane_data), and the subgroup's
-/// lanes are spread across a non-reduction dimension instead.
-///
-///   - Exactly one of the innermost two dims is a reduction dim: place
-///     `subgroupSize` lanes on the non-reduction dim and keep lane_layout == 1
-///     on the reduction dim, packing up to `maxReduceVectorSize` reduced
-///     elements into lane_data along that reduction dim.
-///   - Both innermost dims are reduction dims (or the source is rank 1): fall
-///     back to the default of `subgroupSize` lanes on the innermost dim,
-///     packing `maxReduceVectorSize` elements on the second-to-innermost dim.
-///
-/// Returns the (lane_layout, lane_data) pair. The corresponding inst_data is
-/// simply the element-wise product lane_layout * lane_data.
+/// e.g. with srcShape=[32, 128], subgroupSize=16, maxReduceVectorSize=2:
+///   - Switch: reductionDims=[1] and consumerReductionDims=[] -> lanes move
+///     to the non-reduction dim 0: lane_layout=[16, 1], lane_data=[1, 2].
+///   - Default: reductionDims=[0, 1] (both reduced) -> lanes stay on the
+///     innermost dim: lane_layout=[1, 16], lane_data=[2, 1].
 static std::pair<SmallVector<int64_t>, SmallVector<int64_t>>
 computeReductionLaneLayoutAndData(ArrayRef<int64_t> srcShape,
                                   ArrayRef<int64_t> reductionDims,
@@ -947,15 +939,19 @@ computeReductionLaneLayoutAndData(ArrayRef<int64_t> srcShape,
 ///      first and then distribute remaining subgroups on the reduction
 ///      dimension.
 ///
-///   2. InstData layout - Column reduction:
+///   3. Lane layout - Default (lanes on innermost dim):
 ///      srcShape=[32, 64], reductionDims=[0], subgroupSize=16
-///      Result: instData=[1, 16] (maxReduceVectorSize=1, subgroupSize on
-///      innermost)
+///      Result: laneLayout=[1, 16], laneData=[1, 1]. The innermost dim is not
+///      reduced, so lanes stay on it.
 ///
-///   3. Lane layout - Multi-dimensional reduction:
-///      srcShape=[16, 32, 64], reductionDims=[1], subgroupSize=16
-///      Result: laneLayout=[1, 1, 16], laneData=[1, 1, 1]
-///      (subgroupSize on innermost dim, max vector size on reduction dim)
+///   4. Lane layout - Switch (lanes moved off the reduction dim):
+///      srcShape=[32, 64], reductionDims=[1], subgroupSize=16
+///      Result: laneLayout=[16, 1], laneData=[1, 1]. The innermost dim is the
+///      sole reduction dim, so lanes move to the non-reduction dim to reduce
+///      within a lane. This switch only happens when the consumer has no
+///      reduction dims to broadcast the result back along (i.e. the consumer
+///      layout is not a slice over this reduction); otherwise the default
+///      (example 3) is used.
 
 xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     xegpu::LayoutKind layoutKind, VectorType srcVecTy,
@@ -1541,37 +1537,9 @@ compute2DBlockIOLaneLayoutAndData(ArrayRef<int64_t> instShape,
     laneLayout[rank - 2] = subgroupSize;
   else
     laneLayout.back() = subgroupSize;
-  llvm::dbgs() << "[DEBUG compute2DBlockIOLaneLayoutAndData] instShape = [";
-  for (int64_t i = 0; i < rank; ++i) {
-    if (i > 0)
-      llvm::dbgs() << ", ";
-    llvm::dbgs() << instShape[i];
-  }
-  llvm::dbgs() << "], subgroupSize = " << subgroupSize
-               << ", bitwidth = " << bitwidth
-               << ", packingSize = " << packingSize << ", vnni = " << vnni
-               << "\n";
-  llvm::dbgs() << "[DEBUG compute2DBlockIOLaneLayoutAndData] laneLayout = [";
-  for (int64_t i = 0; i < rank; ++i) {
-    if (i > 0)
-      llvm::dbgs() << ", ";
-    llvm::dbgs() << laneLayout[i];
-  }
-  llvm::dbgs() << "], laneData = [";
-  for (int64_t i = 0; i < rank; ++i) {
-    if (i > 0)
-      llvm::dbgs() << ", ";
-    llvm::dbgs() << laneData[i];
-  }
-  llvm::dbgs() << "]\n";
   // assert that the lane layout and data fit in the inst shape
   for (int64_t i = 0; i < rank; ++i) {
     int64_t laneProduct = laneLayout[i] * laneData[i];
-    llvm::dbgs() << "[DEBUG compute2DBlockIOLaneLayoutAndData] dim " << i
-                 << ": instShape[i] = " << instShape[i]
-                 << ", laneProduct = " << laneProduct
-                 << ", divisible = " << (instShape[i] % laneProduct == 0)
-                 << "\n";
     assert(instShape[i] % laneProduct == 0 &&
            "lane_layout * lane_data must evenly divide the inst shape");
     (void)laneProduct;
@@ -1750,17 +1718,6 @@ static xegpu::DistributeLayoutAttr setupGenericNdAnchorLayout(
   int rank = dataShape.size();
   assert(rank >= 1 && "Expected at least 1D shape for ND op");
 
-  llvm::dbgs() << "[DEBUG setupGenericNdAnchorLayout] ENTRY, layoutKind = "
-               << static_cast<int>(layoutKind) << "\n";
-  llvm::dbgs() << "[DEBUG setupGenericNdAnchorLayout] dataShape = [";
-  for (int i = 0; i < rank; ++i) {
-    if (i > 0)
-      llvm::dbgs() << ", ";
-    llvm::dbgs() << dataShape[i];
-  }
-  llvm::dbgs() << "], elemTy = " << elemTy << ", packingSize = " << packingSize
-               << "\n";
-
   // Compute the default 2D block IO lane layout / lane data.
   unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
   auto [laneLayout, laneData] =
@@ -1855,9 +1812,6 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
                                int numSg, const xegpu::uArch::uArch *uArch) {
 
   assert(consumerLayout && "Expected a valid consumer layout");
-  llvm::dbgs() << "[DEBUG setupLoadNdAnchorLayout] ENTRY, layoutKind = "
-               << static_cast<int>(layoutKind) << ", resVecTy = " << resVecTy
-               << ", consumerLayout = " << consumerLayout << "\n";
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     assert(consumerLayout.isForWorkgroup() &&
            "Expected consumer layout to be a complete workgroup-level layout");
@@ -1872,11 +1826,8 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
       dyn_cast<xegpu::uArch::Subgroup2DBlockLoadInstruction>(
           uArch->getInstruction(
               xegpu::uArch::InstructionKind::Subgroup2DBlockLoad));
-  if (!uArchInstruction) {
-    llvm::dbgs() << "[DEBUG setupLoadNdAnchorLayout] uArchInstruction is null, "
-                    "returning nullptr\n";
+  if (!uArchInstruction)
     return nullptr;
-  }
 
   int rank = resVecTy.getRank();
   SmallVector<int64_t> consumerInstData =
@@ -1896,18 +1847,11 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
       hasTransform ? consumerLaneData[rank - 2] : consumerLaneData[rank - 1];
   unsigned packingSize = packingFactor * elemTy.getIntOrFloatBitWidth();
 
-  llvm::dbgs() << "[DEBUG setupLoadNdAnchorLayout] calling "
-                  "getBlockWidthHeightCount with elemTy = "
-               << elemTy << ", hasTransform = " << hasTransform
-               << ", hasTranspose = " << hasTranspose << "\n";
   auto blockWHC = uArchInstruction->getBlockWidthHeightCount(
       elemTy, hasTransform, hasTranspose,
       /*upConv=*/false);
-  if (!blockWHC) {
-    llvm::dbgs() << "[DEBUG setupLoadNdAnchorLayout] blockWHC is nullopt, "
-                    "returning nullptr\n";
+  if (!blockWHC)
     return nullptr;
-  }
   auto [bWidths, bHeights, bCounts] = blockWHC.value();
 
   if (layoutKind == xegpu::LayoutKind::InstData) {
@@ -1915,37 +1859,14 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
     int64_t width = consumerInstData[rank - 1];
     auto maxBlockCount = *llvm::max_element(bCounts);
     auto maxWidth = *llvm::max_element(bWidths);
-    llvm::dbgs() << "[DEBUG setupLoadNdAnchorLayout] InstData check: height = "
-                 << height << ", width = " << width
-                 << ", maxBlockCount = " << maxBlockCount
-                 << ", maxWidth = " << maxWidth << "\n";
-    llvm::dbgs() << "[DEBUG setupLoadNdAnchorLayout] bWidths = [";
-    for (size_t i = 0; i < bWidths.size(); ++i) {
-      if (i > 0)
-        llvm::dbgs() << ", ";
-      llvm::dbgs() << bWidths[i];
-    }
-    llvm::dbgs() << "], bHeights = [";
-    for (size_t i = 0; i < bHeights.size(); ++i) {
-      if (i > 0)
-        llvm::dbgs() << ", ";
-      llvm::dbgs() << bHeights[i];
-    }
-    llvm::dbgs() << "]\n";
     if (llvm::is_contained(bWidths, static_cast<int>(width)) ||
         (width % maxWidth == 0 && width / maxWidth < maxBlockCount)) {
-      llvm::dbgs() << "[DEBUG setupLoadNdAnchorLayout] width check PASSED\n";
       if (llvm::is_contained(bHeights, static_cast<int>(height))) {
-        llvm::dbgs() << "[DEBUG setupLoadNdAnchorLayout] height check PASSED, "
-                        "honoring consumer layout\n";
         return buildInstDataLayoutWithLane(context, consumerInstData,
                                            consumerLaneLayout, consumerLaneData,
                                            consumerLayout.getOrder());
       }
     }
-    llvm::dbgs()
-        << "[DEBUG setupLoadNdAnchorLayout] height and width check FAILED, "
-           "falling through\n";
 
     auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
         dataShape, subgroupSize, elemTy.getIntOrFloatBitWidth(), packingSize,
