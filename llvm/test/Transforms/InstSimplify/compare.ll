@@ -3579,5 +3579,135 @@ declare i64 @llvm.vscale.i64()
 
 ; TODO: Add coverage for global aliases, link once, etc..
 
+; Test dereferenceable(N) arguments when folding pointer equalities.
+
+define i1 @icmp_eq_arg_derefable_and_alloca(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_arg_derefable_and_alloca(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], [[Q]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q = alloca [3 x double], align 8
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+define i1 @icmp_ne_arg_derefable_and_alloca(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_ne_arg_derefable_and_alloca(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    [[C:%.*]] = icmp ne ptr [[P:%.*]], [[Q]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q = alloca [3 x double], align 8
+  %c = icmp ne ptr %p, %q
+  ret i1 %c
+}
+
+define i1 @icmp_eq_arg_derefable_null_valid_and_alloca(ptr dereferenceable(24) %p) null_pointer_is_valid {
+; CHECK-LABEL: @icmp_eq_arg_derefable_null_valid_and_alloca(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], [[Q]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q = alloca [3 x double], align 8
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+define i1 @icmp_eq_arg_derefable_and_noalias_call(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_arg_derefable_and_noalias_call(
+; CHECK-NEXT:    [[Q:%.*]] = call noalias ptr @opaque()
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], [[Q]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q = call noalias ptr @opaque()
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+define i1 @icmp_eq_gep_of_arg_derefable_and_alloca(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_gep_of_arg_derefable_and_alloca(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 8
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P2]], [[Q]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q  = alloca [3 x double], align 8
+  %p2 = getelementptr i8, ptr %p, i64 8
+  %c  = icmp eq ptr %p2, %q
+  ret i1 %c
+}
+
+%struct.S = type { [3 x double] }
+
+define i1 @icmp_eq_arg_derefable_and_byval_arg(ptr byval(%struct.S) %p, ptr dereferenceable(24) %q) {
+; CHECK-LABEL: @icmp_eq_arg_derefable_and_byval_arg(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], [[Q:%.*]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+; Negative tests.
+
+define i1 @icmp_eq_no_arg_derefable(ptr %p) {
+; CHECK-LABEL: @icmp_eq_no_arg_derefable(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], [[Q]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q = alloca [3 x double], align 8
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+define i1 @icmp_eq_gep_of_arg_derefable_past_one(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_gep_of_arg_derefable_past_one(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 24
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P2]], [[Q]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q  = alloca [3 x double], align 8
+  %p2 = getelementptr i8, ptr %p, i64 24
+  %c  = icmp eq ptr %p2, %q
+  ret i1 %c
+}
+
+define i1 @icmp_eq_gep_of_alloca_past_one(ptr dereferenceable(24) %p) {
+; CHECK-LABEL: @icmp_eq_gep_of_alloca_past_one(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [10 x double], align 8
+; CHECK-NEXT:    [[Q2:%.*]] = getelementptr i8, ptr [[Q]], i64 80
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], [[Q2]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q  = alloca [10 x double], align 8
+  %q2 = getelementptr i8, ptr %q, i64 80
+  %c  = icmp eq ptr %p, %q2
+  ret i1 %c
+}
+
+define i1 @icmp_eq_arg_derefable_or_null_and_alloca(ptr dereferenceable_or_null(24) %p) {
+; CHECK-LABEL: @icmp_eq_arg_derefable_or_null_and_alloca(
+; CHECK-NEXT:    [[Q:%.*]] = alloca [3 x double], align 8
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], [[Q]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %q = alloca [3 x double], align 8
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+define i1 @icmp_eq_two_args_derefable(ptr dereferenceable(24) %p, ptr dereferenceable(24) %q) {
+; CHECK-LABEL: @icmp_eq_two_args_derefable(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], [[Q:%.*]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %c = icmp eq ptr %p, %q
+  ret i1 %c
+}
+
+declare noalias ptr @opaque()
 
 attributes #0 = { null_pointer_is_valid }
