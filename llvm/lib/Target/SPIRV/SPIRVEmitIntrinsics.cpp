@@ -2635,12 +2635,14 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
   if (!shouldEmitIntrinsicsForGlobalValue(GVUsers, GV, CurrF))
     return;
 
+  // Record the pointee type for every global, not only initialized ones, so an
+  // undef non-constant aggregate global is not later collapsed to its element
+  // type. Result is ignored, because TypedPointerType is not supported
+  // by llvm IR general logic.
+  deduceElementTypeHelper(&GV, false);
+
   Constant *Init = nullptr;
   if (hasInitializer(&GV)) {
-    // Deduce element type and store results in Global Registry.
-    // Result is ignored, because TypedPointerType is not supported
-    // by llvm IR general logic.
-    deduceElementTypeHelper(&GV, false);
     Init = GV.getInitializer();
     Value *InitOp = Init;
     if (isa<UndefValue>(Init) && Init->getType()->isAggregateType()) {
