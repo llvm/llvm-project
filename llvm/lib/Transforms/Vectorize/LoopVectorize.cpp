@@ -4810,7 +4810,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
     return;
 
   // Start with all scalar pointer uses.
-  SmallPtrSet<Instruction *, 8> AddrDefs;
+  SmallSetVector<Instruction *, 8> AddrDefs;
   for (BasicBlock *BB : TheLoop->blocks())
     for (Instruction &I : *BB) {
       Instruction *PtrDef =
@@ -4828,7 +4828,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
     for (auto &Op : I->operands())
       if (auto *InstOp = dyn_cast<Instruction>(Op))
         if (TheLoop->contains(InstOp) && !isa<PHINode>(InstOp) &&
-            AddrDefs.insert(InstOp).second)
+            AddrDefs.insert(InstOp))
           Worklist.push_back(InstOp);
   }
 
@@ -5764,8 +5764,17 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
   LLVM_DEBUG(dbgs() << "Cost for VF " << VF << ": " << Cost
                     << " (Estimated cost per lane: ");
   if (Cost.isValid()) {
-    double CostPerLane = double(Cost.getValue()) / EstimatedWidth;
-    LLVM_DEBUG(dbgs() << format("%.1f", CostPerLane));
+    APFloat CostPerLane(APFloat::IEEEdouble());
+    APFloat EstimatedWidthAsAPFloat(APFloat::IEEEdouble());
+    (void)CostPerLane.convertFromAPInt(APInt(64, (uint64_t)Cost.getValue()),
+                                       false, APFloat::rmTowardZero);
+    (void)EstimatedWidthAsAPFloat.convertFromAPInt(
+        APInt(64, (uint64_t)EstimatedWidth), false, APFloat::rmTowardZero);
+    (void)CostPerLane.divide(EstimatedWidthAsAPFloat, APFloat::rmTowardZero);
+
+    SmallString<16> Str;
+    CostPerLane.toString(Str, 3);
+    LLVM_DEBUG(dbgs() << Str);
   } else /* No point dividing an invalid cost - it will still be invalid */
     LLVM_DEBUG(dbgs() << "Invalid");
   LLVM_DEBUG(dbgs() << ")\n");

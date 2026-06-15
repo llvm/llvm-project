@@ -111,40 +111,29 @@ bool isLDSVariableToLower(const GlobalVariable &GV) {
   return true;
 }
 
-bool eliminateConstantExprUsesOfLDSFromAllInstructions(Module &M) {
-  // Constants are uniqued within LLVM. A ConstantExpr referring to a LDS
-  // global may have uses from multiple different functions as a result.
-  // This pass specialises LDS variables with respect to the kernel that
-  // allocates them.
-
-  // This is semantically equivalent to (the unimplemented as slow):
-  // for (auto &F : M.functions())
-  //   for (auto &BB : F)
-  //     for (auto &I : BB)
-  //       for (Use &Op : I.operands())
-  //         if (constantExprUsesLDS(Op))
-  //           replaceConstantExprInFunction(I, Op);
-
-  SmallVector<Constant *> LDSGlobals;
+bool eliminateGVConstantExprUsesFromAllInstructions(
+    Module &M, function_ref<bool(const GlobalVariable &)> Filter) {
+  SmallVector<Constant *> Worklist;
   for (auto &GV : M.globals())
-    if (AMDGPU::isLDSVariableToLower(GV))
-      LDSGlobals.push_back(&GV);
-  return convertUsersOfConstantsToInstructions(LDSGlobals);
+    if (Filter(GV))
+      Worklist.push_back(&GV);
+  return convertUsersOfConstantsToInstructions(Worklist);
 }
 
-void getUsesOfLDSByFunction(const CallGraph &CG, Module &M,
-                            FunctionVariableMap &kernels,
-                            FunctionVariableMap &Functions) {
+void getUsesOfGVByFunction(const CallGraph &CG, Module &M,
+                           function_ref<bool(const GlobalVariable &)> Filter,
+                           FunctionVariableMap &Kernels,
+                           FunctionVariableMap &Functions) {
   // Get uses from the current function, excluding uses by called Functions
   // Two output variables to avoid walking the globals list twice
   for (auto &GV : M.globals()) {
-    if (!AMDGPU::isLDSVariableToLower(GV))
+    if (!Filter(GV))
       continue;
     for (User *V : GV.users()) {
       if (auto *I = dyn_cast<Instruction>(V)) {
         Function *F = I->getFunction();
         if (isKernel(*F))
-          kernels[F].insert(&GV);
+          Kernels[F].insert(&GV);
         else
           Functions[F].insert(&GV);
       }
@@ -152,11 +141,13 @@ void getUsesOfLDSByFunction(const CallGraph &CG, Module &M,
   }
 }
 
-LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
+GVUsesInfoTy
+getTransitiveUsesOfGV(const CallGraph &CG, Module &M,
+                      function_ref<bool(const GlobalVariable &)> Filter) {
 
   FunctionVariableMap DirectMapKernel;
   FunctionVariableMap DirectMapFunction;
-  getUsesOfLDSByFunction(CG, M, DirectMapKernel, DirectMapFunction);
+  getUsesOfGVByFunction(CG, M, Filter, DirectMapKernel, DirectMapFunction);
 
   // Collect functions whose address has escaped
   DenseSet<Function *> AddressTakenFuncs;
@@ -280,32 +271,36 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
     }
   }
 
+  return {std::move(DirectMapKernel), std::move(IndirectMapKernel)};
+}
+
+GVUsesInfoTy getTransitiveUsesOfLDSForLowering(const CallGraph &CG, Module &M) {
+  GVUsesInfoTy UsesInfo = getTransitiveUsesOfGV(CG, M, isLDSVariableToLower);
   // Verify that we fall into one of 2 cases:
   //    - All variables are either absolute
   //      or direct mapped dynamic LDS that is not lowered.
-  //      this is a re-run of the pass
-  //      so we don't have anything to do.
   //    - No variables are absolute.
   // Named-barriers which are absolute symbols are removed
   // from the maps.
   std::optional<bool> HasAbsoluteGVs;
-  bool HasSpecialGVs = false;
-  for (auto &Map : {DirectMapKernel, IndirectMapKernel}) {
+  for (auto &Map : {UsesInfo.DirectAccess, UsesInfo.IndirectAccess}) {
     for (auto &[Fn, GVs] : Map) {
       for (auto *GV : GVs) {
         bool IsAbsolute = GV->isAbsoluteSymbolRef();
         bool IsDirectMapDynLDSGV =
-            AMDGPU::isDynamicLDS(*GV) && DirectMapKernel.contains(Fn);
+            AMDGPU::isDynamicLDS(*GV) && UsesInfo.DirectAccess.contains(Fn);
         if (IsDirectMapDynLDSGV)
           continue;
+
+        // TODO: Remove once barriers are no longer in the LDS AS.
         if (isNamedBarrier(*GV)) {
           if (IsAbsolute) {
-            DirectMapKernel[Fn].erase(GV);
-            IndirectMapKernel[Fn].erase(GV);
+            UsesInfo.DirectAccess[Fn].erase(GV);
+            UsesInfo.IndirectAccess[Fn].erase(GV);
           }
-          HasSpecialGVs = true;
           continue;
         }
+
         if (HasAbsoluteGVs.has_value()) {
           if (*HasAbsoluteGVs != IsAbsolute) {
             reportFatalUsageError(
@@ -320,10 +315,9 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   // If we only had absolute GVs, we have nothing to do, return an empty
   // result.
   if (HasAbsoluteGVs && *HasAbsoluteGVs)
-    return {FunctionVariableMap(), FunctionVariableMap(), false};
+    return GVUsesInfoTy();
 
-  return {std::move(DirectMapKernel), std::move(IndirectMapKernel),
-          HasSpecialGVs};
+  return UsesInfo;
 }
 
 void removeFnAttrFromReachable(CallGraph &CG, Function *KernelRoot,
