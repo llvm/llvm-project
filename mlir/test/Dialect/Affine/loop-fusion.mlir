@@ -26,11 +26,14 @@ func.func @memref_copy_in_loop_nest_does_not_crash() {
   affine.for %j = 0 to 10 {
     %v = affine.load %mem[%j] : memref<10xi32>
   }
+  affine.for %k = 0 to 10 {
+    affine.store %c0, %mem2[%k] : memref<10xi32>
+  }
 
-  // CHECK:      affine.for
-  // CHECK-NEXT:   memref.copy
-  // CHECK-NEXT:   affine.store
-  // CHECK-NEXT:   %{{.*}} = affine.load
+  // CHECK:      memref.copy
+  // CHECK:      affine.store
+  // CHECK:      affine.load
+  // CHECK:      affine.store
   // CHECK:      return
   return
 }
