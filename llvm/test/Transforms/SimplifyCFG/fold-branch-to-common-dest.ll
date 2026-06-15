@@ -1254,6 +1254,41 @@ final_right:
   ret void
 }
 
+define void @load_derefable_assume_var(i8 %v0, ptr %p, i64 %size) {
+; CHECK-LABEL: @load_derefable_assume_var(
+; CHECK-NEXT:  pred:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P:%.*]], i64 [[SIZE:%.*]]) ]
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i8 [[V0:%.*]], 0
+; CHECK-NEXT:    br i1 [[C0]], label [[DISPATCH:%.*]], label [[FINAL_RIGHT:%.*]]
+; CHECK:       dispatch:
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[LOAD]], 0
+; CHECK-NEXT:    br i1 [[C1]], label [[FINAL_LEFT:%.*]], label [[FINAL_RIGHT]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    ret void
+; CHECK:       final_left:
+; CHECK-NEXT:    call void @sideeffect0()
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK:       final_right:
+; CHECK-NEXT:    call void @sideeffect1()
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+pred:
+  call void @llvm.assume(i1 true) ["dereferenceable"(ptr %p, i64 %size)]
+  %c0 = icmp eq i8 %v0, 0
+  br i1 %c0, label %dispatch, label %final_right
+dispatch:
+  %load = load i8, ptr %p
+  %c1 = icmp eq i8 %load, 0
+  br i1 %c1, label %final_left, label %final_right
+final_left:
+  call void @sideeffect0()
+  ret void
+final_right:
+  call void @sideeffect1()
+  ret void
+}
+
 define void @load_derefable_two_preds(i8 %v0, i8 %v1, i8 %v2, ptr dereferenceable(1) %p) {
 ; CHECK-LABEL: @load_derefable_two_preds(
 ; CHECK-NEXT:  entry:
