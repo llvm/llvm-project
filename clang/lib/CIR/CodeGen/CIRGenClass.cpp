@@ -901,30 +901,33 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::runCleanupsScope());
 
-  // For a memcpy-equivalent special member (a union, or a trivially-copyable
-  // record) the synthesized body either copies nothing -- a union body is just
-  // `return *this` -- or relies on a memcpy the AST does not spell out as
-  // field assignments.  Mirror classic CodeGen's AssignmentMemcpyizer: copy
-  // the whole object once, then fall through to emit the trailing
-  // `return *this`.  Emitting the copy but skipping the return would leave the
-  // result reference uninitialized.
+  // For a memcpy-equivalent assignment operator, copy the whole object, then
+  // fall through to emit the trailing `return *this`.
   if (assignOp->isMemcpyEquivalentSpecialMember(getContext())) {
     CanQualType recordTy =
         getContext().getCanonicalTagType(assignOp->getParent());
     LValue dest = makeNaturalAlignAddrLValue(loadCXXThis(), recordTy);
-    // The source is the trailing reference parameter; load it to get the
-    // referent's address before copying (mirrors the copy-constructor path).
     mlir::Value srcPtr = builder.createLoad(getLoc(assignOp->getLocation()),
                                             getAddrOfLocalVar(args.back()));
     LValue src = makeNaturalAlignAddrLValue(srcPtr, recordTy);
     emitAggregateAssign(dest, src, recordTy);
 
-    for (Stmt *s : rootCS->body())
-      if (isa<ReturnStmt>(s))
+    // The whole-object copy above subsumes the implicit memberwise field
+    // copies -- per-field assignment expressions, or a builtin memcpy call for
+    // array members -- so only the trailing `return *this` still needs to be
+    // emitted.  Those copies are all expressions; assert that nothing else
+    // appears rather than silently dropping an unexpected statement.
+    for (Stmt *s : rootCS->body()) {
+      if (isa<ReturnStmt>(s)) {
         if (emitStmt(s, /*useCurrentScope=*/true).failed())
-          cgm.errorNYI(s->getSourceRange(),
-                       std::string("emitImplicitAssignmentOperatorBody: ") +
-                           s->getStmtClassName());
+          cgm.error(s->getBeginLoc(),
+                    "failed to emit return in implicit assignment operator");
+        continue;
+      }
+      assert(isa<Expr>(s) &&
+             "unexpected statement in memcpy-equivalent assignment operator "
+             "body");
+    }
     return;
   }
 
