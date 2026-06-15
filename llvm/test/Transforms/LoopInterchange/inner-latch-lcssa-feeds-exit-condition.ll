@@ -61,10 +61,7 @@ mid.header:
   br label %inner.header
 
 inner.header:
-  %k = phi i64 [ 0, %mid.header ], [ %k.next, %inner.latch ]
-  br label %inner.latch
-
-inner.latch:
+  %k = phi i64 [ 0, %mid.header ], [ %k.next, %inner.header ]
   %k.next = add nsw i64 %k, 1
   %ec.k = icmp eq i64 %k.next, %mwide         ; inner exit uses the middle-header value
   br i1 %ec.k, label %mid.latch, label %inner.header

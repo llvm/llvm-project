@@ -1437,23 +1437,22 @@ static bool areOuterLoopExitPHIsSupported(Loop *OuterLoop, Loop *InnerLoop) {
   return true;
 }
 
-// In a multi-level nest the inner loop induction PHI lives in the header, so
-// any PHI in the inner latch is an lcssa phi whose incoming value is defined
-// further inside the nest. Interchange clones the latch's exit condition, so if
-// such a phi feeds that condition, a later interchange can leave the cloned phi
-// with a stale incoming block, producing invalid IR. Reject that case.
-//
-// For example, the inner latch is also the sub-loop's exit, %p is the lcssa phi
-// for the sub-loop value %v, and the inner loop's exit test reads %p, so %p
-// feeds the cloned condition:
-//
-//   inner.latch:
-//     %p  = phi i64 [ %v, %subloop.latch ]   ; lcssa: %v comes from sub-loop
-//     %ec = icmp eq i64 %iv, %p              ; inner exit test reads %p
-//     br i1 %ec, label %exit, label %inner.header
-//
-// TODO: Handle transformation of lcssa phis in the InnerLoop latch in case of
-// multi-level loop nests.
+/// The transform clones the inner latch's exit condition into the new latch
+/// (see MoveInstructions in LoopInterchangeTransform::transform), but it does
+/// not relocate PHI nodes. So if a PHI in the inner latch feeds that condition,
+/// a later interchange can leave the cloned PHI with a stale incoming block,
+/// producing invalid IR. Reject that case here.
+///
+/// For example, %p is a PHI in the inner latch and the inner loop's exit test
+/// reads %p, so %p feeds the condition that would be cloned:
+///
+///   inner.latch:
+///     %p  = phi i64 [ %v, %subloop.latch ]
+///     %ec = icmp eq i64 %iv, %p              ; inner exit test reads %p
+///     br i1 %ec, label %exit, label %inner.header
+///
+/// TODO: Handle transformation of lcssa phis in the InnerLoop latch in case of
+/// multi-level loop nests.
 static bool areInnerLoopLatchPHIsSupported(Loop *InnerLoop) {
   if (InnerLoop->getSubLoops().empty())
     return true;
@@ -2079,6 +2078,10 @@ bool LoopInterchangeTransform::transform(
   unsigned i = 0;
   auto MoveInstructions = [&i, &WorkList, this, &InductionPHIs, NewLatch]() {
     for (; i < WorkList.size(); i++) {
+      // PHI nodes cannot be cloned and moved here; the legality check
+      // (areInnerLoopLatchPHIsSupported) ensures none reach the worklist.
+      assert(!isa<PHINode>(WorkList[i]) &&
+             "MoveInstructions does not support PHI nodes");
       // Duplicate instruction and move it to the new latch. Update uses that
       // have been moved.
       Instruction *NewI = WorkList[i]->clone();
