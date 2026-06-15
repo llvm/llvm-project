@@ -1434,6 +1434,244 @@ TEST(EJitStructFieldPass, MayConstLoadSubstitutionMultiDimArray) {
 }
 
 //===----------------------------------------------------------------------===//
+// EJitStructFieldPass robustness tests (may_const metadata edge cases)
+//
+// These cover the cross-cutting behaviours flagged in the SPEC audit:
+//   1. spurious per-load !ejit.may_const on a non-period global is NOT replaced
+//   2. a load missing per-load metadata is still replaced via the GV-level
+//      ejit_may_const_field offset fallback (PASS1-drop recovery)
+//   3. a load missing metadata whose offset is NOT in the GV offset list is
+//      cleanly left alone (safe fallback, no mis-replacement)
+//   4. multiple loads of the same field are all replaced with the same value
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+/// Register the standard FAM/LAM/CGAM/MAM analysis managers for a struct-field
+/// pass run. Keeps the robustness tests focused on behaviour, not boilerplate.
+struct StructFieldHarness {
+  FunctionAnalysisManager FAM;
+  LoopAnalysisManager LAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+  PassBuilder PB;
+  StructFieldHarness() {
+    PB.registerFunctionAnalyses(FAM);
+    PB.registerLoopAnalyses(LAM);
+    PB.registerCGSCCAnalyses(CGAM);
+    PB.registerModuleAnalyses(MAM);
+    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+  }
+};
+
+/// Count the load instructions remaining in a function.
+static unsigned countLoads(Function &F) {
+  unsigned n = 0;
+  for (BasicBlock &BB : F)
+    for (Instruction &I : BB)
+      if (isa<LoadInst>(&I))
+        ++n;
+  return n;
+}
+
+} // anonymous namespace
+
+// 1. A load tagged !ejit.may_const whose pointer roots at a global that is NOT
+//    a registered period variable must be left untouched. This guards against
+//    a stray/incorrect annotation silently reading unrelated memory.
+TEST(EJitStructFieldPass, SpuriousMetadataOnNonPeriodGVNoReplace) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("test_spurious_md", Ctx);
+  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+
+  IRBuilder<> B(Ctx);
+  Type *Int32Ty = B.getInt32Ty();
+  auto *ArrTy = ArrayType::get(Int32Ty, 4);
+  // No !ejit.metadata on this global — it is not a period variable.
+  auto *GVar = new GlobalVariable(*M, ArrTy, false, GlobalValue::InternalLinkage,
+                                  ConstantAggregateZero::get(ArrTy), "g_plain");
+
+  FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "spurious", M.get());
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  B.SetInsertPoint(BB);
+  Value *Idx[] = {B.getInt32(0), B.getInt64(2)};
+  auto *GEP = B.CreateInBoundsGEP(ArrTy, GVar, Idx, "gep");
+  auto *Load = B.CreateLoad(Int32Ty, GEP, "load");
+  // Empty metadata node, matching Clang's actual !ejit.may_const !{} emission.
+  Load->setMetadata(MD_EJIT_MAY_CONST, MDNode::get(Ctx, {}));
+  B.CreateRet(Load);
+
+  int32_t mockArr[4] = {10, 20, 30, 40};
+  PeriodArrayRegistry reg;
+  // Registered under a different name — g_plain is unknown to the registry.
+  reg.registerArray("cell", "g_other", mockArr, 4);
+
+  EJitStructFieldPass sp(reg);
+  StructFieldHarness H;
+  sp.initFromModule(*M);
+  auto PA = sp.run(*F, H.FAM);
+
+  // The load must survive: no registered period GV backs this annotation.
+  EXPECT_EQ(countLoads(*F), 1u);
+  EXPECT_TRUE(PA.areAllPreserved());
+}
+
+// 2. A load WITHOUT per-load !ejit.may_const is still specialized when its byte
+//    offset appears in the GV-level ejit_may_const_field list. This is the
+//    fallback path that recovers metadata dropped by AOT optimization.
+TEST(EJitStructFieldPass, MissingPerLoadMetadataGVOffsetFallback) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("test_gv_fallback", Ctx);
+  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+
+  IRBuilder<> B(Ctx);
+  Type *Int32Ty = B.getInt32Ty();
+  auto *ArrTy = ArrayType::get(Int32Ty, 4);
+  auto *GVar = new GlobalVariable(*M, ArrTy, false, GlobalValue::InternalLinkage,
+                                  ConstantAggregateZero::get(ArrTy), "g_arr");
+  // GV metadata: ejit_period_arr "cell" size 4 + ejit_may_const_field offset 8
+  // (offset 8 == element index 2 for i32[4]).
+  Metadata *ArrOps[] = {
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR), MDString::get(Ctx, "cell"),
+      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4))};
+  Metadata *FieldOps[] = {
+      MDString::get(Ctx, TAG_EJIT_MAY_CONST_FIELD),
+      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 8))};
+  GVar->setMetadata(MD_EJIT_METADATA,
+                    MDNode::get(Ctx, {MDNode::get(Ctx, ArrOps),
+                                      MDNode::get(Ctx, FieldOps)}));
+
+  FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "fallback", M.get());
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  B.SetInsertPoint(BB);
+  Value *Idx[] = {B.getInt32(0), B.getInt64(2)};
+  auto *GEP = B.CreateInBoundsGEP(ArrTy, GVar, Idx, "gep");
+  // NOTE: deliberately NO per-load !ejit.may_const metadata here.
+  auto *Load = B.CreateLoad(Int32Ty, GEP, "load");
+  B.CreateRet(Load);
+
+  int32_t mockArr[4] = {10, 20, 30, 40};  // g_arr[2] = 30
+  PeriodArrayRegistry reg;
+  reg.registerArray("cell", "g_arr", mockArr, 4);
+
+  EJitStructFieldPass sp(reg);
+  StructFieldHarness H;
+  sp.initFromModule(*M);
+  auto PA = sp.run(*F, H.FAM);
+
+  EXPECT_EQ(countLoads(*F), 0u);
+  EXPECT_FALSE(PA.areAllPreserved());
+  auto *Ret = dyn_cast_or_null<ReturnInst>(&F->back().back());
+  ASSERT_NE(Ret, nullptr);
+  auto *RetVal = dyn_cast<ConstantInt>(Ret->getReturnValue());
+  ASSERT_NE(RetVal, nullptr);
+  EXPECT_EQ(RetVal->getSExtValue(), 30);
+}
+
+// 3. A load WITHOUT per-load metadata whose offset is NOT in the GV offset list
+//    must be left alone. Confirms the fallback does not over-fire.
+TEST(EJitStructFieldPass, MissingPerLoadMetadataWrongOffsetNoReplace) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("test_no_fallback", Ctx);
+  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+
+  IRBuilder<> B(Ctx);
+  Type *Int32Ty = B.getInt32Ty();
+  auto *ArrTy = ArrayType::get(Int32Ty, 4);
+  auto *GVar = new GlobalVariable(*M, ArrTy, false, GlobalValue::InternalLinkage,
+                                  ConstantAggregateZero::get(ArrTy), "g_arr");
+  // may_const_field offset list contains only 0; the load below is at offset 8.
+  Metadata *ArrOps[] = {
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR), MDString::get(Ctx, "cell"),
+      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4))};
+  Metadata *FieldOps[] = {
+      MDString::get(Ctx, TAG_EJIT_MAY_CONST_FIELD),
+      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 0))};
+  GVar->setMetadata(MD_EJIT_METADATA,
+                    MDNode::get(Ctx, {MDNode::get(Ctx, ArrOps),
+                                      MDNode::get(Ctx, FieldOps)}));
+
+  FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "no_fallback", M.get());
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  B.SetInsertPoint(BB);
+  Value *Idx[] = {B.getInt32(0), B.getInt64(2)};  // offset 8, not in {0}
+  auto *GEP = B.CreateInBoundsGEP(ArrTy, GVar, Idx, "gep");
+  auto *Load = B.CreateLoad(Int32Ty, GEP, "load");
+  B.CreateRet(Load);
+
+  int32_t mockArr[4] = {10, 20, 30, 40};
+  PeriodArrayRegistry reg;
+  reg.registerArray("cell", "g_arr", mockArr, 4);
+
+  EJitStructFieldPass sp(reg);
+  StructFieldHarness H;
+  sp.initFromModule(*M);
+  auto PA = sp.run(*F, H.FAM);
+
+  // Offset 8 is not a may_const field → load stays, AOT value is read at runtime.
+  EXPECT_EQ(countLoads(*F), 1u);
+  EXPECT_TRUE(PA.areAllPreserved());
+}
+
+// 4. Two loads of the same may_const field are each replaced with the same
+//    runtime constant (the optimizer later CSEs them, but the pass must handle
+//    repeated loads without leaving one behind).
+TEST(EJitStructFieldPass, MultipleLoadsSameFieldAllReplaced) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("test_dup_load", Ctx);
+  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
+
+  IRBuilder<> B(Ctx);
+  Type *Int32Ty = B.getInt32Ty();
+  auto *ArrTy = ArrayType::get(Int32Ty, 4);
+  auto *GVar = new GlobalVariable(*M, ArrTy, false, GlobalValue::InternalLinkage,
+                                  ConstantAggregateZero::get(ArrTy), "g_arr");
+  Metadata *ArrOps[] = {
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR), MDString::get(Ctx, "cell"),
+      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4))};
+  GVar->setMetadata(MD_EJIT_METADATA, MDNode::get(Ctx, {MDNode::get(Ctx, ArrOps)}));
+
+  FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "dup_load", M.get());
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
+  B.SetInsertPoint(BB);
+
+  // Two independent loads of g_arr[1] (offset 4), both annotated may_const.
+  Value *Idx[] = {B.getInt32(0), B.getInt64(1)};
+  auto *GEP1 = B.CreateInBoundsGEP(ArrTy, GVar, Idx, "gep1");
+  auto *L1 = B.CreateLoad(Int32Ty, GEP1, "v1");
+  L1->setMetadata(MD_EJIT_MAY_CONST, MDNode::get(Ctx, {}));
+  auto *GEP2 = B.CreateInBoundsGEP(ArrTy, GVar, Idx, "gep2");
+  auto *L2 = B.CreateLoad(Int32Ty, GEP2, "v2");
+  L2->setMetadata(MD_EJIT_MAY_CONST, MDNode::get(Ctx, {}));
+  B.CreateRet(B.CreateAdd(L1, L2, "sum"));
+
+  int32_t mockArr[4] = {10, 55, 30, 40};  // g_arr[1] = 55
+  PeriodArrayRegistry reg;
+  reg.registerArray("cell", "g_arr", mockArr, 4);
+
+  EJitStructFieldPass sp(reg);
+  StructFieldHarness H;
+  sp.initFromModule(*M);
+  auto PA = sp.run(*F, H.FAM);
+
+  EXPECT_EQ(countLoads(*F), 0u);
+  EXPECT_FALSE(PA.areAllPreserved());
+
+  // 55 + 55 = 110 after constant folding.
+  EJitOptimizerTestAccess opt(reg);
+  opt.runInstCombine(*M);
+  auto *Ret = dyn_cast_or_null<ReturnInst>(&F->back().back());
+  ASSERT_NE(Ret, nullptr);
+  auto *RetVal = dyn_cast<ConstantInt>(Ret->getReturnValue());
+  ASSERT_NE(RetVal, nullptr);
+  EXPECT_EQ(RetVal->getSExtValue(), 110);
+}
+
+//===----------------------------------------------------------------------===//
 // EJitOptimizer extended tests
 //===----------------------------------------------------------------------===//
 

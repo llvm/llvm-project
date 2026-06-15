@@ -520,7 +520,27 @@ struct EjitFuncMeta {
 %v = load i32, ptr %field, !ejit.may_const !{}
 ```
 
-PASS6 在 JIT 时直接检查 `load->hasMetadata("ejit.may_const")`，不再需要 offset 计算 + 注册表查找。metadata 被优化 pass 丢弃时仅导致错过一次 JIT 优化（fallback 到 AOT），不影响正确性。
+PASS6 在 JIT 时通过 `EJitStructFieldPass::isMayConstLoad` 识别 may_const load，采用
+**双重机制**（实现见 `EJitStructFieldPass.cpp`、`EJitRegisterBitcode.cpp`）：
+
+1. **主路径 — per-load metadata**：直接检查 `load->hasMetadata("ejit.may_const")`，
+   无需 offset 计算或注册表查找。
+2. **回退路径 — GV 级偏移列表**：当优化 pass 丢弃了 per-load metadata 时，PASS6
+   将 load 指针沿常量 GEP 链回溯到根全局变量，并在该 GV 的 `!ejit.metadata` 上的
+   `ejit_may_const_field` 字节偏移列表中查找；命中即视为 may_const。该偏移列表由
+   Clang CodeGen（`collectMayConstFieldOffsets`）生成。
+
+此外，AOT 阶段 PASS1（`EJitRegisterBitcode`）在预优化后运行 `reAnnotateMayConst`，
+依据同一 GV 偏移列表把被丢弃的 per-load `!ejit.may_const` 重新挂回 load 上，尽量保证
+metadata 在嵌入 bitcode 中完整。
+
+> **正确性**：以上均为软标注。若 per-load metadata 与 GV 偏移列表都未命中，PASS6
+> 不替换该 load，运行时读取 AOT 实际值（fallback 到 AOT），不影响正确性——丢失
+> metadata 仅可能错过一次 JIT 特化机会。
+>
+> **注意**：当前实现**不依赖**任何核心 LLVM 的 metadata 保留白名单
+> （`llvm/lib/IR`、`llvm/lib/Transforms/Utils` 中无 EJIT 改动）。保留依赖上述
+> per-load metadata + PASS1 重标注 + PASS6 GV 偏移回退三者组合。
 
 ### 3.6 Pass 架构模型
 
@@ -577,7 +597,7 @@ JIT Pipeline (ejit_compile_or_get 内部执行):
 
 | Pass 名称               | 类型          | 职责                                           |
 | --------------------- | ----------- | -------------------------------------------- |
-| `EJitRegisterBitcode` | Module Pass | 提取 ejit_entry 函数 bitcode，运行 AOT 预优化（Inline+Mem2Reg+EarlyCSE+InstCombine+SimplifyCFG），`!ejit.may_const` 由固定 metadata kind + copyMetadataForLoad 白名单 + GV offset 回退三重保证，自动注册外部符号 |
+| `EJitRegisterBitcode` | Module Pass | 提取 ejit_entry 函数 bitcode，运行 AOT 预优化（Inline+Mem2Reg+EarlyCSE+InstCombine+SimplifyCFG），随后 `reAnnotateMayConst` 依据 GV 级 `ejit_may_const_field` 偏移列表重新标注被预优化丢弃的 per-load `!ejit.may_const`（配合 PASS6 的 GV 偏移回退，见 §3.5），自动注册外部符号。注：预优化仅在 Release(NDEBUG) 构建启用 |
 
 **PASS2-4 — AOT (非LTO: 优化前; LTO: 优化后)**:
 
