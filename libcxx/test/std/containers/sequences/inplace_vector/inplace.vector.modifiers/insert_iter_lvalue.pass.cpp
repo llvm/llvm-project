@@ -22,6 +22,7 @@
 constexpr bool test() {
   std::inplace_vector<int, 5> c{1, 2, 4};
   int x = 3;
+
   std::same_as<std::inplace_vector<int, 5>::iterator> decltype(auto) i = c.insert(c.begin() + 2, x);
   assert(i == c.begin() + 2);
   assert_inplace_vector_equal(c, {1, 2, 3, 4});
