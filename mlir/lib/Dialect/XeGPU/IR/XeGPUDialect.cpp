@@ -123,6 +123,30 @@ static SmallVector<SmallVector<int64_t>> genStaticCoordinates(
   return coordinates;
 }
 
+/// Expands a list of per-distribution-unit block-start coordinates into the
+/// full list of element coordinates owned within each block. Each block start
+/// covers a `subShape`-sized region; this enumerates every element of that
+/// region (in row-major order) offset by the block start. Comparing these
+/// expanded coordinates - rather than the bare block starts - lets two layouts
+/// that differ only in how a lane's elements are blocked (i.e. `lane_data`),
+/// but that ultimately own the same elements in the same order, be recognized
+/// as equivalent.
+static SmallVector<SmallVector<int64_t>>
+expandBlockCoords(ArrayRef<SmallVector<int64_t>> blockStarts,
+                  ArrayRef<int64_t> subShape) {
+  SmallVector<int64_t> unitTile(subShape.size(), 1);
+  SmallVector<SmallVector<int64_t>> expanded;
+  for (const SmallVector<int64_t> &start : blockStarts) {
+    for (SmallVector<int64_t> off : StaticTileOffsetRange(subShape, unitTile)) {
+      SmallVector<int64_t> coord(start.size());
+      for (size_t i = 0; i < start.size(); ++i)
+        coord[i] = start[i] + off[i];
+      expanded.push_back(std::move(coord));
+    }
+  }
+  return expanded;
+}
+
 // Checks if the given memref type represents shared local memory (SLM).
 bool XeGPUDialect::isSharedMemory(const MemRefType &memrefTy) {
   Attribute attr = memrefTy.getMemorySpace();
@@ -951,9 +975,23 @@ bool LayoutAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
   }
 
   auto compareCoordsForAllIds = [&](int64_t size) {
+    // At the Lane level, `lane_data` only changes how a lane's elements are
+    // blocked across distribution units, not which elements it owns nor their
+    // order. Expand the per-unit block starts into the full element coordinate
+    // sequence (using each layout's `lane_data`) before comparing, so layouts
+    // that merely repack `lane_data` are treated as compatible.
+    SmallVector<int64_t> selfSubShape, otherSubShape;
+    if (level == xegpu::LayoutKind::Lane) {
+      selfSubShape = getEffectiveLaneDataAsInt();
+      otherSubShape = other.getEffectiveLaneDataAsInt();
+    }
     for (int64_t id : llvm::seq<int64_t>(0, size)) {
       auto coords = computeStaticDistributedCoords(id, shape);
       auto otherCoords = other.computeStaticDistributedCoords(id, shape);
+      if (!selfSubShape.empty())
+        coords = expandBlockCoords(coords, selfSubShape);
+      if (!otherSubShape.empty())
+        otherCoords = expandBlockCoords(otherCoords, otherSubShape);
       if (coords != otherCoords)
         return false;
     }
@@ -1172,9 +1210,23 @@ bool SliceAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
   }
 
   auto compareCoordsForAllIds = [&](int64_t size) {
+    // At the Lane level, `lane_data` only changes how a lane's elements are
+    // blocked across distribution units, not which elements it owns nor their
+    // order. Expand the per-unit block starts into the full element coordinate
+    // sequence (using each layout's `lane_data`) before comparing, so layouts
+    // that merely repack `lane_data` are treated as compatible.
+    SmallVector<int64_t> selfSubShape, otherSubShape;
+    if (level == xegpu::LayoutKind::Lane) {
+      selfSubShape = getEffectiveLaneDataAsInt();
+      otherSubShape = other.getEffectiveLaneDataAsInt();
+    }
     for (int64_t id : llvm::seq<int64_t>(0, size)) {
       auto coords = computeStaticDistributedCoords(id, shape);
       auto otherCoords = other.computeStaticDistributedCoords(id, shape);
+      if (!selfSubShape.empty())
+        coords = expandBlockCoords(coords, selfSubShape);
+      if (!otherSubShape.empty())
+        otherCoords = expandBlockCoords(otherCoords, otherSubShape);
       if (coords != otherCoords)
         return false;
     }
