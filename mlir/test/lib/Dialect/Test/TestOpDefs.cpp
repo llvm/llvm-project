@@ -775,7 +775,7 @@ void RegionIfOp::getSuccessorRegions(
         &getJoinRegion())
       regions.push_back(RegionSuccessor(&getJoinRegion()));
     else
-      regions.push_back(RegionSuccessor::parent());
+      regions.push_back(RegionSuccessor(getOperation()));
     return;
   }
 
@@ -785,7 +785,7 @@ void RegionIfOp::getSuccessorRegions(
 }
 
 ValueRange RegionIfOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getResults();
   if (successor == &getThenRegion())
     return getThenArgs();
@@ -814,11 +814,11 @@ void AnyCondOp::getSuccessorRegions(RegionBranchPoint point,
   if (point.isParent())
     regions.emplace_back(&getRegion());
   else
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange AnyCondOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
+  return successor.isOperation() ? ValueRange(getResults()) : ValueRange();
 }
 
 void AnyCondOp::getRegionInvocationBounds(
@@ -1309,12 +1309,12 @@ void LoopBlockOp::getSuccessorRegions(
   if (point.isParent())
     return;
 
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange LoopBlockOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange(getBody().getArguments());
+  return successor.isOperation() ? ValueRange(getOperation()->getResults())
+                                 : ValueRange(getBody().getArguments());
 }
 
 OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionSuccessor successor) {
@@ -1328,7 +1328,7 @@ OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionSuccessor successor) {
 
 MutableOperandRange
 LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getExitArgMutable();
   return getNextIterArgMutable();
 }
@@ -1447,12 +1447,12 @@ void TestStoreWithARegion::getSuccessorRegions(
   if (point.isParent())
     regions.emplace_back(&getBody());
   else
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange TestStoreWithARegion::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange(getBody().front().getArguments());
+  return successor.isOperation() ? ValueRange(getOperation()->getResults())
+                                 : ValueRange(getBody().front().getArguments());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1465,13 +1465,13 @@ void TestStoreWithALoopRegion::getSuccessorRegions(
   // back into the operation itself. It is possible for the operation not to
   // enter the body.
   regions.emplace_back(&getBody());
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange
 TestStoreWithALoopRegion::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange(getBody().front().getArguments());
+  return successor.isOperation() ? ValueRange(getOperation()->getResults())
+                                 : ValueRange(getBody().front().getArguments());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1483,7 +1483,7 @@ void TestRegionTypesCompatOp::getSuccessorRegions(
   if (point.isParent())
     regions.emplace_back(&getBody());
   else
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
 }
 
 OperandRange
@@ -1493,7 +1493,7 @@ TestRegionTypesCompatOp::getEntrySuccessorOperands(RegionSuccessor) {
 
 ValueRange
 TestRegionTypesCompatOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getResults();
   return getBody().getArguments();
 }
@@ -1510,7 +1510,7 @@ void TestLoopTypesCompatOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   regions.emplace_back(&getBody());
   if (!point.isParent())
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
 }
 
 OperandRange TestLoopTypesCompatOp::getEntrySuccessorOperands(RegionSuccessor) {
@@ -1519,7 +1519,7 @@ OperandRange TestLoopTypesCompatOp::getEntrySuccessorOperands(RegionSuccessor) {
 
 ValueRange
 TestLoopTypesCompatOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getResults();
   return getBody().getArguments();
 }
@@ -1555,7 +1555,7 @@ void TestRegionTypeChangerOp::getSuccessorRegions(
   if (point.isParent())
     regions.emplace_back(&getBody());
   else
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
 }
 
 OperandRange
@@ -1565,7 +1565,7 @@ TestRegionTypeChangerOp::getEntrySuccessorOperands(RegionSuccessor) {
 
 ValueRange
 TestRegionTypeChangerOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getResults();
   return getBody().getArguments();
 }

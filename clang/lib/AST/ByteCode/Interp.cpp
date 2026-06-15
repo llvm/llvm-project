@@ -1774,9 +1774,7 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame;
 
-  // Note that we cannot assert(CallResult.hasValue()) here since
-  // Ret() above only sets the APValue if the curent frame doesn't
-  // have a caller set.
+  InterpStateCCOverride CCOverride(S, Func->isImmediate());
   if (Interpret(S)) {
     assert(S.Current == FrameBefore);
     return true;
@@ -1868,9 +1866,6 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   S.Current = NewFrame;
 
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
-  // Note that we cannot assert(CallResult.hasValue()) here since
-  // Ret() above only sets the APValue if the curent frame doesn't
-  // have a caller set.
   bool Success = Interpret(S);
   // Remove initializing  block again.
   if (Func->isConstructor() || Func->isDestructor())

@@ -252,3 +252,37 @@ v_pk_sub_nc_u64 v[4:7], v[8:11], v[12:15] op_sel_hi:[1,0]
 v_pk_sub_nc_u64 v[4:7], v[5:8], null
 // GFX1251-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: vgpr tuples must be 64 bit aligned
 // GFX1251-ERR: v_pk_sub_nc_u64 v[4:7], v[5:8], null
+
+v_pk_lshl_add_u64 v[4:7], v[8:11], v[12:13], v[16:19] row_share:2
+// GFX1251-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1251-ERR: v_pk_lshl_add_u64 v[4:7], v[8:11], v[12:13], v[16:19] row_share:2
+// GFX1251-ERR:                                                       ^
+
+v_pk_lshl_add_u64 v[4:7], v[8:11], v[16:17], lit64(0x12345678a)
+// GFX1251-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1251-ERR: v_pk_lshl_add_u64 v[4:7], v[8:11], v[16:17], lit64(0x12345678a)
+// GFX1251-ERR:                                              ^
+
+v_pk_lshl_add_u64 v[4:7], v[8:11], v[12:13], v[16:19] op_sel:[1,0,0]
+// GFX1251-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1251-ERR: v_pk_lshl_add_u64 v[4:7], v[8:11], v[12:13], v[16:19] op_sel:[1,0,0]
+// GFX1251-ERR:                                                       ^
+
+v_pk_lshl_add_u64 v[4:7], v[8:11], v[12:13], v[16:19] op_sel_hi:[1,0,0]
+// GFX1251-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1251-ERR: v_pk_lshl_add_u64 v[4:7], v[8:11], v[12:13], v[16:19] op_sel_hi:[1,0,0]
+// GFX1251-ERR:                                                       ^
+
+v_pk_lshl_add_u64 v[4:7], v[8:11], v[12:13], v[16:19] clamp
+// GFX1251-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1251-ERR: v_pk_lshl_add_u64 v[4:7], v[8:11], v[12:13], v[16:19] clamp
+// GFX1251-ERR:                                                       ^
+
+v_pk_lshl_add_u64 v[4:7], v[8:11], v[12:13], v[16:19] neg_lo:[1,0,0]
+// GFX1251-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand.
+// GFX1251-ERR: v_pk_lshl_add_u64 v[4:7], v[8:11], v[12:13], v[16:19] neg_lo:[1,0,0]
+// GFX1251-ERR:                                                       ^
+
+v_pk_lshl_add_u64 v[4:7], v[17:20], v[6:7], null
+// GFX1251-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX1251-ERR: v_pk_lshl_add_u64 v[4:7], v[17:20], v[6:7], null
