@@ -1030,8 +1030,54 @@ Indirect make(const parser::OmpClause::Indirect &inp,
 
 Init make(const parser::OmpClause::Init &inp,
           semantics::SemanticsContext &semaCtx) {
-  // inp -> empty
-  llvm_unreachable("Empty: init");
+  // OmpInitClause has modifiers: OmpPreferType, OmpInteropType,
+  //   OmpDepinfoModifier, and an OmpObject (the interop variable).
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+
+  // Extract interop types (repeatable modifier).
+  Init::InteropTypes interopTypes;
+  for (auto *interopType :
+       semantics::OmpGetRepeatableModifier<parser::OmpInteropType>(mods)) {
+    switch (interopType->v) {
+    case parser::OmpInteropType::Value::Target:
+      interopTypes.push_back(Init::InteropType::Target);
+      break;
+    case parser::OmpInteropType::Value::Targetsync:
+      interopTypes.push_back(Init::InteropType::Targetsync);
+      break;
+    }
+  }
+
+  // Extract prefer_type (optional modifier).
+  std::optional<Init::InteropPreference> interopPreference;
+  if (auto *preferType =
+          semantics::OmpGetUniqueModifier<parser::OmpPreferType>(mods)) {
+    Init::InteropPreference prefs;
+    for (auto &prefSpec : preferType->v) {
+      common::visit(
+          common::visitors{
+              [&](const parser::OmpPreferenceSpecification::
+                      ForeignRuntimeIdentifier &fri) {
+                prefs.push_back(makeExpr(fri.value(), semaCtx));
+              },
+              [&](const std::list<parser::OmpPreferenceSelector> &selectors) {
+                // TODO: Handle preference-selector lists.
+                if (!selectors.empty())
+                  llvm::report_fatal_error(
+                      "not yet implemented: prefer_type with "
+                      "preference-selector lists in interop init clause");
+              },
+          },
+          prefSpec.u);
+    }
+    if (!prefs.empty())
+      interopPreference = std::move(prefs);
+  }
+
+  auto &interopVar = std::get<parser::OmpObject>(inp.v.t);
+  return Init{{/*InteropPreference=*/std::move(interopPreference),
+               /*InteropTypes=*/std::move(interopTypes),
+               /*InteropVar=*/makeObject(interopVar, semaCtx)}};
 }
 
 Initializer make(const parser::OmpClause::Initializer &inp,

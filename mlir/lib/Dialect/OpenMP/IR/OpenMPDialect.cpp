@@ -4528,6 +4528,46 @@ void OrderedRegionOp::build(OpBuilder &builder, OperationState &state,
 LogicalResult OrderedRegionOp::verify() { return verifyOrderedParent(**this); }
 
 //===----------------------------------------------------------------------===//
+// InteropInitOp
+//===----------------------------------------------------------------------===//
+
+void InteropInitOp::build(OpBuilder &builder, OperationState &state,
+                          const InteropInitOperands &clauses) {
+  // TODO Store clauses in op: dependKinds, dependVars, nowait.
+  InteropInitOp::build(builder, state, /*interop_var=*/nullptr,
+                       /*interop_types=*/nullptr, /*prefer_type=*/nullptr,
+                       /*device=*/nullptr, /*depend_kinds=*/nullptr,
+                       /*depend_vars=*/{}, /*depend_iterated_kinds=*/nullptr,
+                       /*depend_iterated=*/{}, /*nowait=*/nullptr);
+}
+
+//===----------------------------------------------------------------------===//
+// InteropUseOp
+//===----------------------------------------------------------------------===//
+
+void InteropUseOp::build(OpBuilder &builder, OperationState &state,
+                         const InteropUseOperands &clauses) {
+  // TODO Store clauses in op: dependKinds, dependVars, nowait.
+  InteropUseOp::build(builder, state, /*interop_var=*/nullptr,
+                      /*device=*/nullptr, /*depend_kinds=*/nullptr,
+                      /*depend_vars=*/{}, /*depend_iterated_kinds=*/nullptr,
+                      /*depend_iterated=*/{}, /*nowait=*/nullptr);
+}
+
+//===----------------------------------------------------------------------===//
+// InteropDestroyOp
+//===----------------------------------------------------------------------===//
+
+void InteropDestroyOp::build(OpBuilder &builder, OperationState &state,
+                             const InteropDestroyOperands &clauses) {
+  // TODO Store clauses in op: dependKinds, dependVars, nowait.
+  InteropDestroyOp::build(builder, state, /*interop_var=*/nullptr,
+                          /*device=*/nullptr, /*depend_kinds=*/nullptr,
+                          /*depend_vars=*/{}, /*depend_iterated_kinds=*/nullptr,
+                          /*depend_iterated=*/{}, /*nowait=*/nullptr);
+}
+
+//===----------------------------------------------------------------------===//
 // TaskwaitOp
 //===----------------------------------------------------------------------===//
 

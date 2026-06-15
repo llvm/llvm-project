@@ -5872,7 +5872,12 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
     context_.Say(GetContext().directiveSource,
         "Each interop-type may be specified at most once."_err_en_US);
   }
-  if (isDependClauseOccurred && !targetSyncCount) {
+  // Only enforce the depend/targetsync constraint when an init clause is
+  // present on this directive. For use/destroy-only directives, the interop
+  // object's type was established at its init site, which may be in a
+  // different statement — we cannot verify it statically here.
+  bool hasInitClause = (targetCount > 0 || targetSyncCount > 0);
+  if (isDependClauseOccurred && hasInitClause && !targetSyncCount) {
     context_.Say(GetContext().directiveSource,
         "A DEPEND clause can only appear on the directive if the interop-type includes TARGETSYNC"_err_en_US);
   }
