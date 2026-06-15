@@ -263,6 +263,47 @@ struct CUFDataTransferOpConversion
         return mlir::success();
       }
 
+      mlir::Value dst = op.getDst();
+      mlir::Value src = op.getSrc();
+      // Scalar CUDA constants keep a host shadow for host reads. Host-to-device
+      // assignments also update the device constant symbol.
+      auto getAddrOf = [](mlir::Value val) -> fir::AddrOfOp {
+        if (auto declareOp = val.getDefiningOp<fir::DeclareOp>())
+          return declareOp.getMemref().getDefiningOp<fir::AddrOfOp>();
+        if (auto declareOp = val.getDefiningOp<hlfir::DeclareOp>())
+          return declareOp.getMemref().getDefiningOp<fir::AddrOfOp>();
+        return {};
+      };
+      if (op.getTransferKind() == cuf::DataTransferKind::DeviceHost) {
+        if (fir::AddrOfOp addrOfOp = getAddrOf(src)) {
+          auto global = symtab.lookup<fir::GlobalOp>(
+              addrOfOp.getSymbol().getRootReference().getValue());
+          if (isScalarCudaConstantGlobal(global) &&
+              fir::isa_ref_type(dst.getType())) {
+            mlir::Value hostValue = fir::LoadOp::create(builder, loc, src);
+            hostValue = createConvertOp(rewriter, loc, dstTy, hostValue);
+            fir::StoreOp::create(builder, loc, hostValue, dst);
+            rewriter.eraseOp(op);
+            return mlir::success();
+          }
+        }
+      }
+      if (op.getTransferKind() == cuf::DataTransferKind::HostDevice) {
+        if (fir::AddrOfOp addrOfOp = getAddrOf(dst)) {
+          auto global = symtab.lookup<fir::GlobalOp>(
+              addrOfOp.getSymbol().getRootReference().getValue());
+          if (isScalarCudaConstantGlobal(global)) {
+            mlir::Value hostValue = src;
+            if (fir::isa_ref_type(src.getType()))
+              hostValue = fir::LoadOp::create(builder, loc, src);
+            hostValue = createConvertOp(rewriter, loc, dstTy, hostValue);
+            fir::StoreOp::create(builder, loc, hostValue, addrOfOp);
+            dst = cuf::DeviceAddressOp::create(rewriter, loc, dst.getType(),
+                                               addrOfOp.getSymbol());
+          }
+        }
+      }
+
       mlir::Type i64Ty = builder.getI64Type();
       mlir::Value nbElement =
           cuf::computeElementCount(rewriter, loc, op.getShape(), dstTy, i64Ty);
@@ -288,32 +329,6 @@ struct CUFDataTransferOpConversion
       mlir::Value sourceLine =
           fir::factory::locationToLineNo(builder, loc, fTy.getInput(5));
 
-      mlir::Value dst = op.getDst();
-      mlir::Value src = op.getSrc();
-      // Host assignments to scalar CUDA constants update both the host-visible
-      // global and the device constant symbol.
-      auto getAddrOf = [](mlir::Value val) -> fir::AddrOfOp {
-        if (auto declareOp = val.getDefiningOp<fir::DeclareOp>())
-          return declareOp.getMemref().getDefiningOp<fir::AddrOfOp>();
-        if (auto declareOp = val.getDefiningOp<hlfir::DeclareOp>())
-          return declareOp.getMemref().getDefiningOp<fir::AddrOfOp>();
-        return {};
-      };
-      if (op.getTransferKind() == cuf::DataTransferKind::HostDevice) {
-        if (fir::AddrOfOp addrOfOp = getAddrOf(dst)) {
-          auto global = symtab.lookup<fir::GlobalOp>(
-              addrOfOp.getSymbol().getRootReference().getValue());
-          if (isScalarCudaConstantGlobal(global)) {
-            mlir::Value hostValue = src;
-            if (fir::isa_ref_type(src.getType()))
-              hostValue = fir::LoadOp::create(builder, loc, src);
-            hostValue = createConvertOp(rewriter, loc, dstTy, hostValue);
-            fir::StoreOp::create(builder, loc, hostValue, addrOfOp);
-            dst = cuf::DeviceAddressOp::create(rewriter, loc, dst.getType(),
-                                               addrOfOp.getSymbol());
-          }
-        }
-      }
       // Materialize the src if constant.
       if (matchPattern(src.getDefiningOp(), mlir::m_Constant())) {
         mlir::Value temp = builder.createTemporary(loc, srcTy);
