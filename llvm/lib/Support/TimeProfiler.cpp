@@ -49,6 +49,8 @@ TimeTraceProfilerInstances &getTimeTraceProfilerInstances() {
   return Instances;
 }
 
+static const char TimeTraceFileExtension[] = ".time-trace.json";
+
 } // anonymous namespace
 
 // Per Thread instance

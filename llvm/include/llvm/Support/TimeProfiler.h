@@ -84,8 +84,6 @@ namespace llvm {
 
 class raw_pwrite_stream;
 
-static constexpr const auto TimeTraceFileExtension = ".time-trace.json";
-
 // Type of the time trace event.
 enum class TimeTraceEventType {
   // Complete events have a duration (start and end time points) and are marked
