@@ -22004,7 +22004,7 @@ Examples:
       ; because if any more lanes were active the load would be dependent on the
       ; completion of the store.
 
-.. _int_mask_beforefirst
+.. _int_mask_beforefirst:
 
 '``llvm.mask.beforefirst.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -22038,6 +22038,7 @@ Examples:
 """""""""
 
 .. code-block:: llvm
+
    @llvm.mask.beforefirst(<0,0,1,1>); ==> <1,1,0,0>
    @llvm.mask.beforefirst(<0,0,0,0>); ==> <1,1,1,1>
    @llvm.mask.beforefirst(<0,1,0,1>); ==> <1,0,0,0>
