@@ -370,6 +370,61 @@ void xegpu::removeTemporaryLayoutAttrs(Operation *op) {
   });
 }
 
+/// Returns true if every dimension of `shape` except the innermost
+/// `numInnerDims` is a unit (size-1) dimension.
+static bool leadingDimsAreUnit(ArrayRef<int64_t> shape, int numInnerDims) {
+  int numLeading = static_cast<int>(shape.size()) - numInnerDims;
+  if (numLeading <= 0)
+    return true;
+  return llvm::all_of(shape.take_front(numLeading),
+                      [](int64_t dim) { return dim == 1; });
+}
+
+static xegpu::LayoutAttr buildInstDataLayoutWithLane(
+    mlir::MLIRContext *context, ArrayRef<int64_t> instData,
+    ArrayRef<int64_t> laneLayout, ArrayRef<int64_t> laneData,
+    DenseI32ArrayAttr orderAttr = nullptr) {
+  auto toI32Attr = [&](auto range) {
+    SmallVector<int32_t> v(range.begin(), range.end());
+    return DenseI32ArrayAttr::get(context, v);
+  };
+  return xegpu::LayoutAttr::get(context, /*sg_layout=*/nullptr,
+                                /*sg_data=*/nullptr, toI32Attr(instData),
+                                toI32Attr(laneLayout), toI32Attr(laneData),
+                                orderAttr);
+}
+
+static xegpu::LayoutAttr
+buildLaneLayout(mlir::MLIRContext *context, ArrayRef<int64_t> laneLayout,
+                ArrayRef<int64_t> laneData,
+                DenseI32ArrayAttr orderAttr = nullptr) {
+  auto toI32Attr = [&](auto range) {
+    SmallVector<int32_t> v(range.begin(), range.end());
+    return DenseI32ArrayAttr::get(context, v);
+  };
+  return xegpu::LayoutAttr::get(context, /*sg_layout=*/nullptr,
+                                /*sg_data=*/nullptr,
+                                /*inst_data=*/nullptr, toI32Attr(laneLayout),
+                                toI32Attr(laneData), orderAttr);
+}
+
+static xegpu::LayoutAttr
+buildLayout(mlir::MLIRContext *context, ArrayRef<int64_t> sgLayout,
+            ArrayRef<int64_t> sgData, ArrayRef<int64_t> instData,
+            ArrayRef<int64_t> laneLayout, ArrayRef<int64_t> laneData,
+            DenseI32ArrayAttr orderAttr = nullptr) {
+  auto toI32Attr = [&](auto range) {
+    SmallVector<int32_t> v(range.begin(), range.end());
+    return DenseI32ArrayAttr::get(context, v);
+  };
+  return xegpu::LayoutAttr::get(
+      context, sgLayout.empty() ? nullptr : toI32Attr(sgLayout),
+      sgData.empty() ? nullptr : toI32Attr(sgData),
+      instData.empty() ? nullptr : toI32Attr(instData),
+      laneLayout.empty() ? nullptr : toI32Attr(laneLayout),
+      laneData.empty() ? nullptr : toI32Attr(laneData), orderAttr);
+}
+
 /// Infers the source layout attribute for a broadcast operation given the
 /// result layout attribute, result shape, source shape.
 xegpu::DistributeLayoutAttr
@@ -666,21 +721,13 @@ xegpu::inferExtractSourceLayout(xegpu::DistributeLayoutAttr resLayout,
       order.push_back(dimDiff - 1 - i);
     }
 
-    DenseI32ArrayAttr orderAttr = resLayout ? resLayout.getOrder() : nullptr;
-    auto toAttr = [&](ArrayRef<int64_t> v) -> DenseI32ArrayAttr {
-      if (v.empty())
-        return DenseI32ArrayAttr();
-      SmallVector<int32_t> v32(v.begin(), v.end());
-      return DenseI32ArrayAttr::get(context, v32);
-    };
-    auto srcLayout = xegpu::LayoutAttr::get(
-        context, sgLayout.empty() ? nullptr : toAttr(sgLayout),
-        sgData.empty() ? nullptr : toAttr(sgData),
-        instData.empty() ? nullptr : toAttr(instData),
-        laneLayout.empty() ? nullptr : toAttr(laneLayout),
-        laneData.empty() ? nullptr : toAttr(laneData),
-        (!orderAttr || orderAttr.empty()) ? nullptr : toAttr(order));
-    return srcLayout;
+    DenseI32ArrayAttr orderAttr = DenseI32ArrayAttr::get(
+        context, SmallVector<int32_t>(order.begin(), order.end()));
+    if (!resLayout.getOrder())
+      orderAttr = nullptr;
+
+    return buildLayout(context, sgLayout, sgData, instData, laneLayout,
+                       laneData, orderAttr);
   }
   return resLayout;
 }
@@ -727,18 +774,6 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 
   // Use case 3: General dim collapse, for cross-sg reduction to SLM and other
   // shape casts where consecutive src dims fold into a single dst dim.
-  //
-  // Mirrors use case 2's elegant shape: walk the dst-side groups and call
-  // a single layout-attribute primitive per group. Here the primitive is
-  // `expandDim(dim, targetShape)`, the inverse of `collapseDims`. It applies
-  // the per-field distribution policy required for a no-data-movement collapse
-  // (sg_layout/lane_layout spread outer-to-inner; sg_data/lane_data/inst_data
-  // fill innermost-first; inst_data is seeded from lane_layout * lane_data).
-  // See LayoutAttr::expandDim for the full policy.
-  //
-  // Iteration goes innermost-first (reverse dst order) so that each
-  // expandDim/dropDims call only mutates dst positions whose indices are
-  // unaffected by earlier calls.
   SmallVector<SmallVector<int64_t>> collapseDims;
   if (xegpu::matchDimCollapse(srcShape, resShape, collapseDims)) {
     auto srcLayout = resLayout;
@@ -746,12 +781,10 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
          dstIdx >= 0; --dstIdx) {
       ArrayRef<int64_t> srcDims = collapseDims[dstIdx];
       if (srcDims.empty()) {
-        // Unit dst dim with no backing src dim: drop it.
         srcLayout = srcLayout.dropDims({dstIdx});
         continue;
       }
       if (srcDims.size() == 1)
-        // 1:1 mapping, nothing to do for this dim.
         continue;
       SmallVector<int64_t> targetShape;
       targetShape.reserve(srcDims.size());
@@ -761,7 +794,6 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
     }
     return srcLayout;
   }
-  llvm_unreachable("running into unsupported shape cast scenarios");
   return nullptr;
 }
 
@@ -774,71 +806,6 @@ xegpu::DistributeLayoutAttr xegpu::inferMaskOffsetLayoutForScatterIO(
     return payloadLayout.dropDims(
         llvm::to_vector(llvm::seq<int64_t>(rank - 1, rank)));
   return payloadLayout;
-}
-
-/// Returns true if every dimension of `shape` except the innermost
-/// `numInnerDims` is a unit (size-1) dimension.
-///
-/// Several reduction layout-setup paths (InstData, Lane) only distribute the
-/// innermost one or two dimensions and rely on all the leading dimensions
-/// being degenerate. This helper makes that assumption explicit and checkable
-/// instead of silently leaving leading dimensions undistributed.
-static bool leadingDimsAreUnit(ArrayRef<int64_t> shape, int numInnerDims) {
-  int numLeading = static_cast<int>(shape.size()) - numInnerDims;
-  if (numLeading <= 0)
-    return true;
-  return llvm::all_of(shape.take_front(numLeading),
-                      [](int64_t dim) { return dim == 1; });
-}
-
-/// Builds a LayoutAttr carrying inst_data, lane_layout, and lane_data (no
-/// sg_layout / sg_data / order). Used by InstData-kind setup paths so the
-/// result layout can later be distributed without re-deriving the lane
-/// layout. `instData`, `laneLayout`, and `laneData` may have different
-/// element types; they are normalized to int32 entries.
-static xegpu::LayoutAttr buildInstDataLayoutWithLane(
-    mlir::MLIRContext *context, ArrayRef<int64_t> instData,
-    ArrayRef<int64_t> laneLayout, ArrayRef<int64_t> laneData,
-    DenseI32ArrayAttr orderAttr = nullptr) {
-  auto toI32Attr = [&](auto range) {
-    SmallVector<int32_t> v(range.begin(), range.end());
-    return DenseI32ArrayAttr::get(context, v);
-  };
-  return xegpu::LayoutAttr::get(context, /*sg_layout=*/nullptr,
-                                /*sg_data=*/nullptr, toI32Attr(instData),
-                                toI32Attr(laneLayout), toI32Attr(laneData),
-                                orderAttr);
-}
-
-static xegpu::LayoutAttr
-buildLaneLayout(mlir::MLIRContext *context, ArrayRef<int64_t> laneLayout,
-                ArrayRef<int64_t> laneData,
-                DenseI32ArrayAttr orderAttr = nullptr) {
-  auto toI32Attr = [&](auto range) {
-    SmallVector<int32_t> v(range.begin(), range.end());
-    return DenseI32ArrayAttr::get(context, v);
-  };
-  return xegpu::LayoutAttr::get(context, /*sg_layout=*/nullptr,
-                                /*sg_data=*/nullptr,
-                                /*inst_data=*/nullptr, toI32Attr(laneLayout),
-                                toI32Attr(laneData), orderAttr);
-}
-
-static xegpu::LayoutAttr
-buildLayout(mlir::MLIRContext *context, ArrayRef<int64_t> sgLayout,
-            ArrayRef<int64_t> sgData, ArrayRef<int64_t> instData,
-            ArrayRef<int64_t> laneLayout, ArrayRef<int64_t> laneData,
-            DenseI32ArrayAttr orderAttr = nullptr) {
-  auto toI32Attr = [&](auto range) {
-    SmallVector<int32_t> v(range.begin(), range.end());
-    return DenseI32ArrayAttr::get(context, v);
-  };
-  return xegpu::LayoutAttr::get(
-      context, sgLayout.empty() ? nullptr : toI32Attr(sgLayout),
-      sgData.empty() ? nullptr : toI32Attr(sgData),
-      instData.empty() ? nullptr : toI32Attr(instData),
-      laneLayout.empty() ? nullptr : toI32Attr(laneLayout),
-      laneData.empty() ? nullptr : toI32Attr(laneData), orderAttr);
 }
 
 /// Computes the (lane_layout, lane_data) for a multi-reduction's source layout.
@@ -962,12 +929,6 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
   int srcRank = srcShape.size();
   auto context = srcVecTy.getContext();
 
-  // Helper lambda to convert int64 vectors to int32 DenseArrayAttr
-  auto toInt32Attr = [&](ArrayRef<int64_t> vec) {
-    SmallVector<int32_t> vec32(vec.begin(), vec.end());
-    return DenseI32ArrayAttr::get(context, vec32);
-  };
-
   const int subgroupSize = uArch->getSubgroupSize();
   int64_t maxReduceVectorSize = 1; // could extend to spirv vector Size
   xegpu::DistributeLayoutAttr srcLayout;
@@ -1029,13 +990,14 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
           order[i] = remainOrder++;
         }
       }
-
+      DenseI32ArrayAttr resOrderAttr = DenseI32ArrayAttr::get(
+          context, SmallVector<int32_t>(order.begin(), order.end()));
+      if (!orderAttr || orderAttr.empty())
+        resOrderAttr = nullptr;
       assert(remainingSgCount == 1 && "not all subgroups distributed");
-      srcLayout = xegpu::LayoutAttr::get(
-          context, toInt32Attr(sgLayout), toInt32Attr(sgData),
-          /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
-          /*lane_data =*/nullptr, /*order =*/
-          (!orderAttr || orderAttr.empty()) ? nullptr : toInt32Attr(order));
+      srcLayout = buildLayout(context, sgLayout, sgData,
+                              /*instData=*/{}, /*laneLayout=*/{},
+                              /*laneData=*/{}, resOrderAttr);
     }
   } else if (layoutKind == xegpu::LayoutKind::InstData) {
     xegpu::SliceAttr consumerSliceLayout =
@@ -1066,11 +1028,18 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
         consumerSliceLayout
             ? SmallVector<int64_t>(consumerSliceLayout.getDims().asArrayRef())
             : SmallVector<int64_t>({});
-    auto [laneLayout, laneData] = computeReductionLaneLayoutAndData(
-        srcShape, reductionDims, consumerReductionDims, subgroupSize,
-        maxReduceVectorSize);
-    srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(laneLayout),
-                                       toInt32Attr(laneData));
+    if (consumerSliceLayout &&
+        consumerSliceLayout.getDims().asArrayRef().equals(reductionDims)) {
+      // at the lane level, the consumerSliceLayout can be directly reused
+      // since the inst_data propagation already insert convert_layout if 
+      // the layout is not consistent
+      srcLayout = consumerSliceLayout.getParent();
+    } else {
+      auto [laneLayout, laneData] = computeReductionLaneLayoutAndData(
+          srcShape, reductionDims, consumerReductionDims, subgroupSize,
+          maxReduceVectorSize);
+      srcLayout = buildLaneLayout(context, laneLayout, laneData);
+    }
   }
 
   return xegpu::SliceAttr::get(context, srcLayout,
