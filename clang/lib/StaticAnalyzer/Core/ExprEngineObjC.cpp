@@ -261,25 +261,13 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
     ProgramStateRef State = Pred->getState();
     CallEventRef<ObjCMethodCall> UpdatedMsg = Msg.cloneWithState(State);
 
-    if (UpdatedMsg->isInstanceMessage()) {
-      SVal recVal = UpdatedMsg->getReceiverSVal();
-      if (!recVal.isUndef()) {
-        if (ObjCNoRet.isImplicitNoReturn(ME)) {
-          // If we raise an exception, for now treat it as a sink.
-          // Eventually we will want to handle exceptions properly.
-          Engine.makePostStmtNode(ME, State, Pred, /*MarkAsSink=*/true);
-          continue;
-        }
-      }
-    } else {
-      // Check for special class methods that are known to not return
-      // and that we should treat as a sink.
-      if (ObjCNoRet.isImplicitNoReturn(ME)) {
-        // If we raise an exception, for now treat it as a sink.
-        // Eventually we will want to handle exceptions properly.
-        Engine.makePostStmtNode(ME, State, Pred, /*MarkAsSink=*/true);
-        continue;
-      }
+    if (ObjCNoRet.isImplicitNoReturn(ME) &&
+        !(UpdatedMsg->isInstanceMessage() &&
+          UpdatedMsg->getReceiverSVal().isUndef())) {
+      // If we raise an exception, for now treat it as a sink.
+      // Eventually we will want to handle exceptions properly.
+      Engine.makePostStmtNode(ME, State, Pred, /*MarkAsSink=*/true);
+      continue;
     }
 
     defaultEvalCall(dstEval, Pred, *UpdatedMsg);
