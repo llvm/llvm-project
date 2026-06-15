@@ -5058,6 +5058,11 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     // Latency doesn't make much sense for stores, so just return 1
     if (Opcode == Instruction::Store)
       return 1;
+    // The generic cpu uses the cortex-a510 scheduling model, which has a
+    // latency of 2 for most loads which is disproportionately low for many
+    // cpus. Therefore pretend all loads have latency 4.
+    if (ST->getTuneCPU() == "generic" || ST->getTuneCPU() == "")
+      return (LT.first - 1) + 4;
     // We expect the load to become LT.first loads of type LT.second. The
     // latency will be the latency of the last load plus the time it gets to get
     // there, which will be the amount of other loads before that (i.e. total
