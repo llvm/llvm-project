@@ -381,7 +381,7 @@ bool RewriteMutator::Pre(parser::OmpObject &object) {
   // This has to happen early, before the ExprChecker runs, or otherwise it
   // will emit undesirable diagnostics.
   if (auto *ref{parser::Unwrap<parser::FunctionReference>(object)}) {
-    if (IsMisparsedArrayElement(context_, *ref)) {
+    if (CheckMisparsedArrayElement(context_, *ref)) {
       object.u = ref->ConvertToArrayElementRef();
     }
   }
