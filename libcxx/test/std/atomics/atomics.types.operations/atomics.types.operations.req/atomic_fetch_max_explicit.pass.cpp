@@ -21,11 +21,10 @@
 #include <algorithm>
 #include <atomic>
 #include <cassert>
-#include <concepts>
 #include <type_traits>
-#include <utility>
 #include <vector>
 
+#include "atomic_fetch_max_helper.h"
 #include "atomic_helpers.h"
 #include "test_macros.h"
 
@@ -37,24 +36,18 @@
 
 template <class T, template <class> class MaybeVolatile = std::type_identity_t>
 void test_impl() {
-  static_assert(noexcept(
-      std::atomic_fetch_max_explicit(std::declval<MaybeVolatile<std::atomic<T>>*>(), T(0), std::memory_order_seq_cst)));
-
-  // atomic_fetch_max_explicit
   {
-    MaybeVolatile<std::atomic<T>> t(T(1));
-    assert(std::atomic_fetch_max_explicit(&t, T(2), std::memory_order_seq_cst) == T(1));
-    assert(t == T(2));
-  }
-  {
-    MaybeVolatile<std::atomic<T>> t(T(3));
-    std::same_as<T> decltype(auto) r = t.fetch_max(T(2), std::memory_order_seq_cst);
-    assert(r == T(3));
-    assert(t == T(3));
+    MaybeVolatile<std::atomic<T>> a;
+    auto load  = [&]() { return a.load(); };
+    auto store = [&](T val) { a.store(val); };
+    auto max   = [&](T val, auto order) { return std::atomic_fetch_max_explicit(&a, val, order); };
+    ASSERT_NOEXCEPT(std::atomic_fetch_max_explicit(&a, T(0), std::memory_order_seq_cst));
+    test_fetch_max_integral<T>(load, store, max);
   }
 
 #ifndef TEST_HAS_NO_THREADS
-  // atomic_fetch_max_explicit concurrent
+  // Concurrent stress test: many threads calling atomic_fetch_max_explicit should
+  // leave the atomic at the global maximum value seen.
   {
     constexpr auto number_of_threads = 4;
     constexpr auto loop              = 30;
@@ -98,8 +91,33 @@ struct TestFn {
   }
 };
 
+template <class T, template <class> class MaybeVolatile = std::type_identity_t>
+void test_pointer_impl() {
+  T arr[5];
+  T* p0 = &arr[0];
+  T* p2 = &arr[2];
+  T* p4 = &arr[4];
+
+  MaybeVolatile<std::atomic<T*>> a;
+  auto load  = [&]() { return a.load(); };
+  auto store = [&](T* val) { a.store(val); };
+  auto max   = [&](T* val, auto order) { return std::atomic_fetch_max_explicit(&a, val, order); };
+  ASSERT_NOEXCEPT(std::atomic_fetch_max_explicit(&a, p0, std::memory_order_seq_cst));
+  test_fetch_max_pointer<T>(p0, p2, p4, load, store, max);
+}
+
+template <class T>
+void test_pointer() {
+  test_pointer_impl<T>();
+  if constexpr (std::atomic<T*>::is_always_lock_free) {
+    test_pointer_impl<T, std::add_volatile_t>();
+  }
+}
+
 int main(int, char**) {
   TestEachIntegralType<TestFn>()();
+  test_pointer<int>();
+  test_pointer<char>();
 
   return 0;
 }

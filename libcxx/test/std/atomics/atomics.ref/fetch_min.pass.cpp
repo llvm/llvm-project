@@ -10,12 +10,14 @@
 // XFAIL: !has-64-bit-atomics
 
 // integral-type fetch_min(integral-type, memory_order = memory_order::seq_cst) const noexcept;
+// T* fetch_min(T*, memory_order = memory_order::seq_cst) const noexcept;
 
 #include <atomic>
 #include <cassert>
 #include <concepts>
 #include <type_traits>
 
+#include "atomic_fetch_min_helper.h"
 #include "atomic_helpers.h"
 #include "test_macros.h"
 
@@ -36,63 +38,37 @@ struct TestFetchMin {
     static_assert((std::is_integral_v<T> || std::is_pointer_v<T>) && has_fetch_min<T>);
 
     if constexpr (std::is_integral_v<T>) {
-      alignas(std::atomic_ref<T>::required_alignment) T x(T(3));
+      alignas(std::atomic_ref<T>::required_alignment) T x{};
       std::atomic_ref<T> const a(x);
 
-      {
-        std::same_as<T> decltype(auto) y = a.fetch_min(T(2));
-        assert(y == T(3));
-        assert(x == T(2));
-        y = a.fetch_min(T(4));
-        assert(y == T(2));
-        assert(x == T(2));
-        ASSERT_NOEXCEPT(a.fetch_min(T(0)));
-      }
+      auto load  = [&]() { return x; };
+      auto store = [&](T val) { x = val; };
+      auto min   = [&](T val, auto order) { return a.fetch_min(val, order); };
 
-      {
-        std::same_as<T> decltype(auto) y = a.fetch_min(T(1), std::memory_order_relaxed);
-        assert(y == T(2));
-        assert(x == T(1));
-        y = a.fetch_min(T(4));
-        assert(y == T(1));
-        assert(x == T(1));
-        ASSERT_NOEXCEPT(a.fetch_min(T(0), std::memory_order_relaxed));
-      }
+      ASSERT_NOEXCEPT(a.fetch_min(T(0), std::memory_order_seq_cst));
+      test_fetch_min_integral<T>(load, store, min);
+
     } else if constexpr (std::is_pointer_v<T>) {
       using U = std::remove_pointer_t<T>;
-      U t[9]  = {};
-      alignas(std::atomic_ref<T>::required_alignment) T x{&t[3]};
-      std::atomic_ref<T> const a(x);
+      U arr[5]{};
+      alignas(std::atomic_ref<T>::required_alignment) T p{};
+      std::atomic_ref<T> const a(p);
 
-      {
-        std::same_as<T> decltype(auto) y = a.fetch_min(&t[2]);
-        assert(y == &t[3]);
-        assert(x == &t[2]);
-        y = a.fetch_min(&t[4]);
-        assert(y == &t[2]);
-        assert(x == &t[2]);
-        ASSERT_NOEXCEPT(a.fetch_min(&t[0]));
-      }
+      auto load  = [&]() { return p; };
+      auto store = [&](T val) { p = val; };
+      auto min   = [&](T val, auto order) { return a.fetch_min(val, order); };
 
-      {
-        std::same_as<T> decltype(auto) y = a.fetch_min(&t[1], std::memory_order_relaxed);
-        assert(y == &t[2]);
-        assert(a == &t[1]);
-        y = a.fetch_min(&t[4]);
-        assert(y == &t[1]);
-        assert(x == &t[1]);
-        ASSERT_NOEXCEPT(a.fetch_min(&t[0], std::memory_order_relaxed));
-      }
+      ASSERT_NOEXCEPT(a.fetch_min(&arr[0], std::memory_order_seq_cst));
+      test_fetch_min_pointer<U>(&arr[0], &arr[2], &arr[4], load, store, min);
     }
   }
 };
 
 int main(int, char**) {
   TestEachIntegralType<TestFetchMin>()();
+  TestEachPointerType<TestFetchMin>()();
 
   TestEachFloatingPointType<TestDoesNotHaveFetchMin>()();
-
-  TestEachPointerType<TestFetchMin>()();
 
   TestDoesNotHaveFetchMin<bool>()();
   TestDoesNotHaveFetchMin<UserAtomicType>()();
