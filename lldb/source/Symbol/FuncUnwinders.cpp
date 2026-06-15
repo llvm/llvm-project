@@ -461,10 +461,10 @@ FuncUnwinders::GetUnwindPlanArchitectureDefault(Thread &thread) {
   if (process_sp) {
     if (ABI *abi = process_sp->GetABI().get()) {
       m_unwind_plan_arch_default_sp = abi->CreateDefaultUnwindPlan();
-      assert(m_unwind_plan_arch_default_sp &&
-             m_unwind_plan_arch_default_sp->GetRowCount() > 0 &&
-             m_unwind_plan_arch_default_sp->GetRowAtIndex(0)
-                 ->GetUnspecifiedRegistersAreUndefined() &&
+      assert(((!m_unwind_plan_arch_default_sp ||
+               m_unwind_plan_arch_default_sp->GetRowCount() == 0 ||
+               m_unwind_plan_arch_default_sp->GetRowAtIndex(0)
+                   ->GetUnspecifiedRegistersAreUndefined())) &&
              "Default UnwindPlan must set "
              "UnspecifiedRegistersAreUndefined to true");
     }

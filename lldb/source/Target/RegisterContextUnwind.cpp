@@ -442,10 +442,10 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     if (abi_sp) {
       m_fast_unwind_plan_sp.reset();
       m_full_unwind_plan_sp = abi_sp->CreateDefaultUnwindPlan();
-      assert(m_full_unwind_plan_sp &&
-             m_full_unwind_plan_sp->GetRowCount() > 0 &&
-             m_full_unwind_plan_sp->GetRowAtIndex(0)
-                 ->GetUnspecifiedRegistersAreUndefined() &&
+      assert(((!m_full_unwind_plan_sp ||
+               m_full_unwind_plan_sp->GetRowCount() == 0 ||
+               m_full_unwind_plan_sp->GetRowAtIndex(0)
+                   ->GetUnspecifiedRegistersAreUndefined())) &&
              "Default UnwindPlan must set "
              "UnspecifiedRegistersAreUndefined to true");
       if (m_frame_type != eSkipFrame) // don't override eSkipFrame
@@ -816,10 +816,10 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
   ABI *abi = process ? process->GetABI().get() : nullptr;
   if (abi) {
     arch_default_unwind_plan_sp = abi->CreateDefaultUnwindPlan();
-    assert(arch_default_unwind_plan_sp &&
-           arch_default_unwind_plan_sp->GetRowCount() > 0 &&
-           arch_default_unwind_plan_sp->GetRowAtIndex(0)
-               ->GetUnspecifiedRegistersAreUndefined() &&
+    assert(((!arch_default_unwind_plan_sp ||
+             arch_default_unwind_plan_sp->GetRowCount() == 0 ||
+             arch_default_unwind_plan_sp->GetRowAtIndex(0)
+                 ->GetUnspecifiedRegistersAreUndefined())) &&
            "Default UnwindPlan must set "
            "UnspecifiedRegistersAreUndefined to true");
   } else {

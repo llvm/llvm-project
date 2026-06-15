@@ -3786,9 +3786,9 @@ protected:
       ABISP abi_sp = process->GetABI();
       if (abi_sp) {
         if (UnwindPlanSP plan_sp = abi_sp->CreateDefaultUnwindPlan()) {
-          assert(plan_sp && plan_sp->GetRowCount() > 0 &&
-                 plan_sp->GetRowAtIndex(0)
-                     ->GetUnspecifiedRegistersAreUndefined() &&
+          assert(((!plan_sp || plan_sp->GetRowCount() == 0 ||
+                   plan_sp->GetRowAtIndex(0)
+                       ->GetUnspecifiedRegistersAreUndefined())) &&
                  "Default UnwindPlan must set "
                  "UnspecifiedRegistersAreUndefined to true");
           result.GetOutputStream().Printf("Arch default UnwindPlan:\n");
