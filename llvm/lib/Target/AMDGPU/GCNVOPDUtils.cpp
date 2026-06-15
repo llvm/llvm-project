@@ -356,8 +356,11 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
 
     IIdx = 0;
     BitVector IVisited(DAG->SUnits.size());
+    SmallVector<SUnit *> ILoadSuccs;
+
     BitVector JVisited(DAG->SUnits.size());
-    SmallVector<SUnit *> ILoadSuccs, JLoadPreds;
+    BitVector JLoadPredsComputed(DAG->SUnits.size());
+    SmallVector<SmallVector<SUnit *>> JLoadPredsCache(DAG->SUnits.size());
     for (auto ISUI = DAG->SUnits.begin(), E = DAG->SUnits.end(); ISUI != E;
          ++ISUI, ++IIdx) {
       if (!VOPDCapable[IIdx])
@@ -378,9 +381,12 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
           continue;
 
         if (!ILoadSuccs.empty()) {
-          JVisited = IVisited;
-          JLoadPreds.clear();
-          collectLoads(JLoadPreds, JVisited, *JSUI, /*Forward=*/false);
+          SmallVector<SUnit *> &JLoadPreds = JLoadPredsCache[JIdx];
+          if (!JLoadPredsComputed.test(JIdx)) {
+            JVisited.reset();
+            collectLoads(JLoadPreds, JVisited, *JSUI, /*Forward=*/false);
+            JLoadPredsComputed.set(JIdx);
+          }
           if (loadsMayOverlap(DAG, *ISUI, IVisited, ILoadSuccs, *JSUI, JVisited,
                               JLoadPreds))
             continue;

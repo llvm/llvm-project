@@ -272,9 +272,9 @@ define amdgpu_kernel void @madak_2_use_f32(ptr addrspace(1) noalias %out, ptr ad
 ; GFX11-MAD-NEXT:    global_load_b32 v3, v0, s[2:3] offset:8 glc dlc
 ; GFX11-MAD-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-MAD-NEXT:    v_mul_f32_e32 v2, v1, v2
-; GFX11-MAD-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-MAD-NEXT:    v_dual_mul_f32 v1, v1, v3 :: v_dual_add_f32 v2, 0x41200000, v2
-; GFX11-MAD-NEXT:    v_add_f32_e32 v1, 0x41200000, v1
+; GFX11-MAD-NEXT:    v_mul_f32_e32 v1, v1, v3
+; GFX11-MAD-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-MAD-NEXT:    v_dual_add_f32 v1, 0x41200000, v1 :: v_dual_add_f32 v2, 0x41200000, v2
 ; GFX11-MAD-NEXT:    global_store_b32 v0, v2, s[0:1] dlc
 ; GFX11-MAD-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-MAD-NEXT:    global_store_b32 v0, v1, s[2:3] offset:4 dlc
