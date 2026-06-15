@@ -24,7 +24,6 @@ add_flang_library(FIROpenACCSupport
   FIRDialect
   FIRDialectSupport
   FIRSupport
-  FIRTransforms
   HLFIRDialect
 
   MLIR_DEPS
