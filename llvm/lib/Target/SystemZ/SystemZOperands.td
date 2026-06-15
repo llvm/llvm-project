@@ -700,10 +700,6 @@ def bdladdr12onlylen8 : BDLMode<"BDLAddr",  "64", "12", "Only", "8">;
 def bdraddr12only     : BDRMode<"BDRAddr",  "64", "12", "Only">;
 def bdvaddr12only     : BDVMode<            "64", "12">;
 
-// Complex patterns for base register-displacement pairs.
-def bdaddr12pairCmplx : ComplexPattern<i64, 2, "selectBDAddr12Pair">;
-def bdaddr20pairCmplx : ComplexPattern<i64, 2, "selectBDAddr20Pair">;
-
 // 12-bit unsigned displacement variants (for NI, OI, XI)
 def bdaddr12off1 : ComplexPattern<i64, 2, "selectBDAddr12off1">;
 def bdaddr12off3 : ComplexPattern<i64, 2, "selectBDAddr12off3">;

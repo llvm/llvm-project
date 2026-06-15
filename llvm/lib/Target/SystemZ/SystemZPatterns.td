@@ -54,30 +54,26 @@ multiclass RMWIByte<SDPatternOperator operator, Instruction insn12,
                     PatFrag imm8Leaf32 = imm32zx8,
                     PatFrag imm8Leaf64 = imm64zx8> {
   // Base register-displacement pairs.
-  def : RMWI<i32, z_anyextloadi8, operator, truncstorei8, bdaddr12pairCmplx,
+  def : RMWI<i32, z_anyextloadi8, operator, truncstorei8, bdaddr12pair,
              imm8Leaf32, insn12>;
-  def : RMWI<i64, z_anyextloadi8, operator, truncstorei8, bdaddr12pairCmplx,
+  def : RMWI<i64, z_anyextloadi8, operator, truncstorei8, bdaddr12pair,
              imm8Leaf64, insn12>;
-  def : RMWI<i32, z_anyextloadi8, operator, truncstorei8, bdaddr20pairCmplx,
+  def : RMWI<i32, z_anyextloadi8, operator, truncstorei8, bdaddr20pair,
              imm8Leaf32, insn20>;
-  def : RMWI<i64, z_anyextloadi8, operator, truncstorei8, bdaddr20pairCmplx,
+  def : RMWI<i64, z_anyextloadi8, operator, truncstorei8, bdaddr20pair,
              imm8Leaf64, insn20>;
 
   // 12-bit instruction offset variants.
   def : RMWI<i32, anyextloadi16, operator, truncstorei16, bdaddr12off1,
              imm16Leaf, insn12>;
-  def : RMWI<i32, load,            operator, store,       bdaddr12off3,
-             imm32Leaf, insn12>;
-  def : RMWI<i64, load,            operator, store,       bdaddr12off7,
-             imm64Leaf, insn12>;
+  def : RMWI<i32, load, operator, store, bdaddr12off3, imm32Leaf, insn12>;
+  def : RMWI<i64, load, operator, store, bdaddr12off7, imm64Leaf, insn12>;
 
   // 20-bit instruction offset variants.
   def : RMWI<i32, anyextloadi16, operator, truncstorei16, bdaddr20off1,
              imm16Leaf, insn20>;
-  def : RMWI<i32, load,            operator, store,       bdaddr20off3,
-             imm32Leaf, insn20>;
-  def : RMWI<i64, load,            operator, store,       bdaddr20off7,
-             imm64Leaf, insn20>;
+  def : RMWI<i32, load, operator, store, bdaddr20off3, imm32Leaf, insn20>;
+  def : RMWI<i64, load, operator, store, bdaddr20off7, imm64Leaf, insn20>;
 }
 
 // Record that INSN performs insertion TYPE into a register of class CLS.
