@@ -1863,7 +1863,8 @@ func.func @dont_split_delinearize_undershooting_target(%arg0: index, %arg1: inde
 
 // Regression test: canonicalization can produce a linearize with no inputs
 // (empty basis), which must not be treated as splittable. This previously
-// crashed when reading the (nonexistent) last basis element.
+// Canonicalization can produce a linearize with no inputs (empty basis),
+// which must not be treated as splittable.
 // CHECK-LABEL: func @split_delinearize_empty_linearize_basis
 //  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index)
 //       CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
