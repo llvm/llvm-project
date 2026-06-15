@@ -149,7 +149,7 @@ private:
                          const MachineInstr *Init = nullptr) const;
 
   bool selectOpWithSrcs(Register ResVReg, SPIRVTypeInst ResType,
-                        MachineInstr &I, std::vector<Register> SrcRegs,
+                        MachineInstr &I, ArrayRef<Register> SrcRegs,
                         unsigned Opcode) const;
 
   bool selectUnOp(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
@@ -1608,7 +1608,7 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
 bool SPIRVInstructionSelector::selectOpWithSrcs(Register ResVReg,
                                                 SPIRVTypeInst ResType,
                                                 MachineInstr &I,
-                                                std::vector<Register> Srcs,
+                                                ArrayRef<Register> Srcs,
                                                 unsigned Opcode) const {
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
                  .addDef(ResVReg)
@@ -3836,7 +3836,7 @@ bool SPIRVInstructionSelector::handle64BitOverflow(
   }
   // Join all the resulting registers back into the return type in order
   // (ie i32x2, i32x2, i32x1 -> i32x5)
-  return selectOpWithSrcs(ResVReg, ResType, I, std::move(PartialRegs),
+  return selectOpWithSrcs(ResVReg, ResType, I, PartialRegs,
                           SPIRV::OpCompositeConstruct);
 }
 
