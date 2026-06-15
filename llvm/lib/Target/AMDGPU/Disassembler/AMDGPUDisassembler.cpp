@@ -527,9 +527,7 @@ void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
         Imm = getInlineImmValBF16(Imm);
         break;
       case AMDGPU::OPERAND_REG_IMM_FP16:
-      case AMDGPU::OPERAND_REG_IMM_INT16:
       case AMDGPU::OPERAND_REG_INLINE_C_FP16:
-      case AMDGPU::OPERAND_REG_INLINE_C_INT16:
         Imm = getInlineImmValF16(Imm);
         break;
       case AMDGPU::OPERAND_REG_IMM_V2FP16:
@@ -553,6 +551,8 @@ void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
       case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
       case AMDGPU::OPERAND_REG_INLINE_C_FP64:
       case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+      case AMDGPU::OPERAND_REG_IMM_V2FP64:
+      case AMDGPU::OPERAND_REG_IMM_V2INT64:
         Imm = getInlineImmVal64(Imm);
         break;
       default:
@@ -1681,12 +1681,14 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+  case AMDGPU::OPERAND_REG_IMM_V2FP64:
     UseLit = AMDGPU::isInlinableLiteral64(Val << 32, HasInv2Pi);
     if (!UseLit)
       Val <<= 32;
     break;
   case AMDGPU::OPERAND_REG_IMM_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+  case AMDGPU::OPERAND_REG_IMM_V2INT64:
     UseLit = AMDGPU::isInlinableLiteral64(Val, HasInv2Pi);
     break;
   case MCOI::OPERAND_REGISTER:

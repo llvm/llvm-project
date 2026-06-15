@@ -9,6 +9,7 @@
 #include "../lldb-python.h"
 
 #include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointResolverScripted.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/SymbolContext.h"

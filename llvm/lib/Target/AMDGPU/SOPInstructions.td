@@ -494,11 +494,6 @@ let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 9 in {
                  (S_CVT_I32_F32 (f32 $src0))>;
     def : GCNPat<(i32 (UniformBinFrag<fp_to_uint_sat> f32:$src0, i32)),
                  (S_CVT_U32_F32 (f32 $src0))>;
-
-    def : GCNPat<(i32 (UniformUnaryFrag<fp_to_sint_sat_gi> f32:$src0)),
-                 (S_CVT_I32_F32 (f32 $src0))>;
-    def : GCNPat<(i32 (UniformUnaryFrag<fp_to_uint_sat_gi> f32:$src0)),
-                 (S_CVT_U32_F32 (f32 $src0))>;
 }
 
 let hasSideEffects = 1 in {
@@ -855,8 +850,7 @@ def S_ASHR_I64 : SOP2_64_32 <"s_ashr_i64",
 } // End Defs = [SCC]
 
 let isReMaterializable = 1 in {
-def S_BFM_B32 : SOP2_32 <"s_bfm_b32",
-  [(set i32:$sdst, (UniformBinFrag<AMDGPUbfm> i32:$src0, i32:$src1))]>;
+def S_BFM_B32 : SOP2_32 <"s_bfm_b32">;
 def S_BFM_B64 : SOP2_64_32_32 <"s_bfm_b64">;
 
 def S_MUL_I32 : SOP2_32 <"s_mul_i32",
@@ -2135,6 +2129,20 @@ let WaveSizePredicate = isWave64 in {
 def : GCNPat<
   (i1 (not (or_oneuse i1:$src0, i1:$src1))),
   (S_NOR_B64 i1:$src0, i1:$src1)
+>;
+}
+
+// v2i64 shl is legal, we need a way to select scalar code
+let SubtargetPredicate = HasPackedU64Ops in {
+def : GCNPat<
+  (v2i64 (UniformBinFrag<cshl_64> v2i64:$src0, v2i64:$src1)),
+  (v2i64 (REG_SEQUENCE SReg_128,
+    (i64 (COPY_TO_REGCLASS
+           (S_LSHL_B64 (i64 (EXTRACT_SUBREG $src0, sub0_sub1)),
+                       (i32 (EXTRACT_SUBREG $src1, sub0))), SGPR_64)), sub0_sub1,
+    (i64 (COPY_TO_REGCLASS
+           (S_LSHL_B64 (i64 (EXTRACT_SUBREG $src0, sub2_sub3)),
+                       (i32 (EXTRACT_SUBREG $src1, sub2))), SGPR_64)), sub2_sub3))
 >;
 }
 

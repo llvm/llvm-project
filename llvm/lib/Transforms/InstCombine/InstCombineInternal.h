@@ -71,15 +71,15 @@ class LLVM_LIBRARY_VISIBILITY InstCombinerImpl final
     : public InstCombiner,
       public InstVisitor<InstCombinerImpl, Instruction *> {
 public:
-  InstCombinerImpl(InstructionWorklist &Worklist, BuilderTy &Builder,
-                   Function &F, AAResults *AA, AssumptionCache &AC,
-                   TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
-                   DominatorTree &DT, OptimizationRemarkEmitter &ORE,
-                   BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
-                   ProfileSummaryInfo *PSI, const DataLayout &DL,
+  InstCombinerImpl(InstructionWorklist &Worklist, Function &F, AAResults *AA,
+                   AssumptionCache &AC, TargetLibraryInfo &TLI,
+                   TargetTransformInfo &TTI, DominatorTree &DT,
+                   OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
+                   BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
+                   const DataLayout &DL,
                    ReversePostOrderTraversal<BasicBlock *> &RPOT)
-      : InstCombiner(Worklist, Builder, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI,
-                     PSI, DL, RPOT) {}
+      : InstCombiner(Worklist, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI, PSI, DL,
+                     RPOT) {}
 
   ~InstCombinerImpl() override = default;
 
@@ -822,6 +822,9 @@ public:
   Value *foldSelectWithConstOpToBinOp(ICmpInst *Cmp, Value *TrueVal,
                                       Value *FalseVal);
   Instruction *foldSelectValueEquivalence(SelectInst &SI, CmpInst &CI);
+
+  Instruction *foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt);
+
   bool replaceInInstruction(Value *V, Value *Old, Value *New,
                             unsigned Depth = 0);
 

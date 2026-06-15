@@ -14,7 +14,7 @@ entry:
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
 
   %save = call token @llvm.coro.save(ptr null)
-  call fastcc void @fakeresume1(ptr null)
+  call void @fakeresume1(ptr null)
 
   %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
   switch i8 %suspend, label %exit [
@@ -37,13 +37,13 @@ exit:
 
 ; Verify that in the initial function resume is not marked with musttail.
 ; CHECK-LABEL: @g(
-; CHECK-NOT: musttail call fastcc void @fakeresume1(ptr null)
+; CHECK-NOT: musttail call void @fakeresume1(ptr null)
 
 ; Verify that in the resume part resume call is marked with musttail.
 ; CHECK-LABEL: @g.resume(
 ; CHECK: call ptr @await_suspend_function
 ; CHECK-NEXT: call ptr @llvm.coro.subfn.addr
-; CHECK-NEXT: musttail call fastcc void
+; CHECK-NEXT: musttail call void
 ; CHECK-NEXT: ret void
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #1

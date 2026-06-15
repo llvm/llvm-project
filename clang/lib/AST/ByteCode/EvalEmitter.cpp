@@ -73,6 +73,18 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD, const Expr *Init,
   return std::move(this->EvalResult);
 }
 
+EvaluationResult EvalEmitter::interpretDestructor(const VarDecl *VD,
+                                                  const APValue &Value) {
+  assert(VD);
+  S.setEvalLocation(VD->getLocation());
+  EvalResult.setSource(VD);
+
+  if (!this->visitDtorCall(VD, Value))
+    EvalResult.setInvalid();
+
+  return std::move(this->EvalResult);
+}
+
 EvaluationResult EvalEmitter::interpretAsPointer(const Expr *E,
                                                  PtrCallback PtrCB) {
   S.setEvalLocation(E->getExprLoc());
@@ -122,7 +134,7 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   // Allocate memory for a local.
   auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize());
   auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, /*IsStatic=*/false);
-  B->invokeCtor();
+  B->invokeCtorNoMemset();
 
   // Initialize local variable inline descriptor.
   auto &Desc = B->getBlockDesc<InlineDescriptor>();
@@ -286,7 +298,7 @@ bool EvalEmitter::emitRetValue(SourceInfo Info) {
     return false;
 
   if (std::optional<APValue> APV =
-          Ptr.toRValue(S.getASTContext(), EvalResult.getSourceType())) {
+          Ptr.toRValue(Ctx, EvalResult.getSourceType())) {
     EvalResult.takeValue(std::move(*APV));
     return true;
   }

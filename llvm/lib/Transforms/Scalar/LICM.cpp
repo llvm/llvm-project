@@ -1979,7 +1979,7 @@ bool llvm::promoteLoopAccessesToScalars(
   // store is never executed, but the exit blocks are not executed either.
 
   bool DereferenceableInPH = false;
-  bool StoreIsGuanteedToExecute = false;
+  bool StoreIsGuaranteedToExecute = false;
   bool LoadIsGuaranteedToExecute = false;
   bool FoundLoadToPromote = false;
 
@@ -2075,7 +2075,7 @@ bool llvm::promoteLoopAccessesToScalars(
         Align InstAlignment = Store->getAlign();
         bool GuaranteedToExecute =
             SafetyInfo->isGuaranteedToExecute(*UI, DT, CurLoop);
-        StoreIsGuanteedToExecute |= GuaranteedToExecute;
+        StoreIsGuaranteedToExecute |= GuaranteedToExecute;
         if (GuaranteedToExecute) {
           DereferenceableInPH = true;
           if (StoreSafety == StoreSafetyUnknown)
@@ -2100,7 +2100,8 @@ bool llvm::promoteLoopAccessesToScalars(
         if (!DereferenceableInPH) {
           DereferenceableInPH = isDereferenceableAndAlignedPointer(
               Store->getPointerOperand(), Store->getValueOperand()->getType(),
-              Store->getAlign(), MDL, Preheader->getTerminator(), AC, DT, TLI);
+              Store->getAlign(),
+              SimplifyQuery(MDL, TLI, DT, AC, Preheader->getTerminator()));
         }
       } else
         continue; // Not a load or store.
@@ -2148,9 +2149,13 @@ bool llvm::promoteLoopAccessesToScalars(
   if (StoreSafety == StoreSafetyUnknown) {
     Value *Object = getUnderlyingObject(SomePtr);
     bool ExplicitlyDereferenceableOnly;
+    // The dereferenceability query here is only required to satisfy the
+    // writable contract, actual dereferenceability has already been proven
+    // above. As such, we can ignore frees.
     if (isWritableObject(Object, ExplicitlyDereferenceableOnly) &&
         (!ExplicitlyDereferenceableOnly ||
-         isDereferenceablePointer(SomePtr, AccessTy, MDL)) &&
+         isDereferenceablePointer(SomePtr, AccessTy, MDL,
+                                  /*IgnoreFree=*/true)) &&
         isThreadLocalObject(Object, CurLoop, DT, TTI))
       StoreSafety = StoreSafe;
   }
@@ -2190,13 +2195,13 @@ bool llvm::promoteLoopAccessesToScalars(
   LoopPromoter Promoter(SomePtr, LoopUses, SSA, ExitBlocks, InsertPts,
                         MSSAInsertPts, PIC, MSSAU, *LI, DL, Alignment,
                         SawUnorderedAtomic,
-                        StoreIsGuanteedToExecute ? AATags : AAMDNodes(),
+                        StoreIsGuaranteedToExecute ? AATags : AAMDNodes(),
                         *SafetyInfo, StoreSafety == StoreSafe);
 
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.
   LoadInst *PreheaderLoad = nullptr;
-  if (FoundLoadToPromote || !StoreIsGuanteedToExecute) {
+  if (FoundLoadToPromote || !StoreIsGuaranteedToExecute) {
     PreheaderLoad =
         new LoadInst(AccessTy, SomePtr, SomePtr->getName() + ".promoted",
                      Preheader->getTerminator()->getIterator());
@@ -2602,6 +2607,9 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
   ICmp.setPredicate(Pred);
   ICmp.setOperand(0, VariantOp);
   ICmp.setOperand(1, NewCmpOp);
+  // The new LHS is a different value, so a samesign (or any other
+  // poison-generating) flag asserted about the old operands may no longer hold.
+  ICmp.dropPoisonGeneratingFlags();
 
   Instruction &DeadI = cast<Instruction>(*VariantLHS);
   salvageDebugInfo(DeadI);
@@ -2683,6 +2691,9 @@ static bool hoistSub(ICmpInst::Predicate Pred, Value *VariantLHS,
   ICmp.setPredicate(Pred);
   ICmp.setOperand(0, VariantOp);
   ICmp.setOperand(1, NewCmpOp);
+  // The new LHS is a different value, so a samesign (or any other
+  // poison-generating) flag asserted about the old operands may no longer hold.
+  ICmp.dropPoisonGeneratingFlags();
 
   Instruction &DeadI = cast<Instruction>(*VariantLHS);
   salvageDebugInfo(DeadI);

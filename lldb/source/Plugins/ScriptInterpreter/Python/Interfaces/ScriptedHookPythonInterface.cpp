@@ -10,6 +10,7 @@
 
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
 
@@ -53,8 +54,8 @@ ScriptedHookPythonInterface::GetSupportedMethods() {
 
 llvm::Expected<StructuredData::GenericSP>
 ScriptedHookPythonInterface::CreatePluginObject(
-    const ScriptedMetadata &scripted_metadata, lldb::TargetSP target_sp,
-    const StructuredDataImpl &args_sp) {
+    const ScriptedMetadata &scripted_metadata, lldb::TargetSP target_sp) {
+  StructuredDataImpl args_sp(scripted_metadata.GetArgsSP());
   return ScriptedPythonInterface::CreatePluginObject(scripted_metadata, nullptr,
                                                      target_sp, args_sp);
 }

@@ -181,6 +181,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sendmmsg
+  SRCS
+    sendmmsg.cpp
+  HDRS
+    ../sendmmsg.h
+  DEPENDS
+    libc.hdr.types.struct_mmsghdr
+    libc.src.__support.common
+    libc.src.__support.OSUtil.linux.syscall_wrappers.sendmmsg
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   sendmsg
   SRCS
     sendmsg.cpp
@@ -220,6 +233,20 @@ add_entrypoint_object(
     libc.hdr.types.ssize_t
     libc.src.__support.common
     libc.src.__support.OSUtil.linux.syscall_wrappers.recvfrom
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  recvmmsg
+  SRCS
+    recvmmsg.cpp
+  HDRS
+    ../recvmmsg.h
+  DEPENDS
+    libc.hdr.types.struct_mmsghdr
+    libc.hdr.types.struct_timespec
+    libc.src.__support.common
+    libc.src.__support.OSUtil.linux.syscall_wrappers.recvmmsg
     libc.src.errno.errno
 )
 

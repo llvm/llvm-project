@@ -53,25 +53,36 @@ class OutputSection;
 class LinkerScript;
 class TargetInfo;
 struct Ctx;
-struct Partition;
 struct PhdrEntry;
 
+class ARMExidxSyntheticSection;
 class BssSection;
+class BuildIdSection;
+class EhFrameHeader;
+class EhFrameSection;
 class GdbIndexSection;
+class GnuHashTableSection;
 class GotPltSection;
 class GotSection;
+class HashTableSection;
 class IgotPltSection;
 class InputSection;
 class IpltSection;
+class MemtagAndroidNote;
+class MemtagGlobalDescriptors;
 class MipsGotSection;
 class PPC64LongBranchTargetSection;
+class PackageMetadataNote;
 class PltSection;
 class RelocationBaseSection;
+class RelrBaseSection;
 class RelroPaddingSection;
 class StringTableSection;
 class SymbolTableBaseSection;
 class SymtabShndxSection;
 class SyntheticSection;
+class VersionDefinitionSection;
+class VersionTableSection;
 
 enum ELFKind : uint8_t {
   ELFNoneKind,
@@ -582,34 +593,48 @@ struct UndefinedDiag {
   bool isWarning;
 };
 
-// Linker generated sections which can be used as inputs and are not specific to
-// a partition.
+// Linker generated sections which can be used as inputs.
 struct InStruct {
   std::unique_ptr<InputSection> attributes;
-  std::unique_ptr<SyntheticSection> hexagonAttributes;
-  std::unique_ptr<SyntheticSection> riscvAttributes;
   std::unique_ptr<BssSection> bss;
   std::unique_ptr<BssSection> bssRelRo;
+  std::unique_ptr<BuildIdSection> buildId;
+  std::unique_ptr<EhFrameHeader> ehFrameHdr;
+  std::unique_ptr<EhFrameSection> ehFrame;
+  std::unique_ptr<GnuHashTableSection> gnuHashTab;
+  std::unique_ptr<GotPltSection> gotPlt;
+  std::unique_ptr<GotSection> got;
+  std::unique_ptr<HashTableSection> hashTab;
+  std::unique_ptr<IgotPltSection> igotPlt;
+  std::unique_ptr<IpltSection> iplt;
+  std::unique_ptr<MemtagAndroidNote> memtagAndroidNote;
+  std::unique_ptr<MemtagGlobalDescriptors> memtagGlobalDescriptors;
+  std::unique_ptr<PackageMetadataNote> packageMetadataNote;
+  std::unique_ptr<PltSection> plt;
+  std::unique_ptr<RelocationBaseSection> relaDyn;
+  std::unique_ptr<RelocationBaseSection> relaPlt;
+  std::unique_ptr<RelrBaseSection> relrAuthDyn;
+  std::unique_ptr<RelrBaseSection> relrDyn;
+  std::unique_ptr<RelroPaddingSection> relroPadding;
+  std::unique_ptr<StringTableSection> dynStrTab;
+  std::unique_ptr<SymbolTableBaseSection> dynSymTab;
+  std::unique_ptr<SyntheticSection> dynamic;
   std::unique_ptr<SyntheticSection> gnuProperty;
   std::unique_ptr<SyntheticSection> gnuStack;
-  std::unique_ptr<GotSection> got;
-  std::unique_ptr<GotPltSection> gotPlt;
-  std::unique_ptr<IgotPltSection> igotPlt;
-  std::unique_ptr<RelroPaddingSection> relroPadding;
+  std::unique_ptr<SyntheticSection> ibtPlt;
+  std::unique_ptr<SyntheticSection> verNeed;
+  std::unique_ptr<VersionDefinitionSection> verDef;
+  std::unique_ptr<VersionTableSection> verSym;
+
   std::unique_ptr<SyntheticSection> armCmseSGSection;
+  std::unique_ptr<ARMExidxSyntheticSection> armExidx;
   std::unique_ptr<PPC64LongBranchTargetSection> ppc64LongBranchTarget;
   std::unique_ptr<SyntheticSection> mipsAbiFlags;
   std::unique_ptr<MipsGotSection> mipsGot;
   std::unique_ptr<SyntheticSection> mipsOptions;
   std::unique_ptr<SyntheticSection> mipsReginfo;
   std::unique_ptr<SyntheticSection> mipsRldMap;
-  std::unique_ptr<SyntheticSection> partEnd;
-  std::unique_ptr<SyntheticSection> partIndex;
-  std::unique_ptr<PltSection> plt;
-  std::unique_ptr<IpltSection> iplt;
   std::unique_ptr<SyntheticSection> ppc32Got2;
-  std::unique_ptr<SyntheticSection> ibtPlt;
-  std::unique_ptr<RelocationBaseSection> relaPlt;
   // Non-SHF_ALLOC sections
   std::unique_ptr<SyntheticSection> debugNames;
   std::unique_ptr<GdbIndexSection> gdbIndex;
@@ -617,6 +642,8 @@ struct InStruct {
   std::unique_ptr<StringTableSection> strTab;
   std::unique_ptr<SymbolTableBaseSection> symTab;
   std::unique_ptr<SymtabShndxSection> symTabShndx;
+  std::unique_ptr<SyntheticSection> hexagonAttributes;
+  std::unique_ptr<SyntheticSection> riscvAttributes;
 };
 
 struct Ctx : CommonLinkerContext {
@@ -628,8 +655,8 @@ struct Ctx : CommonLinkerContext {
   // These variables are initialized by Writer and should not be used before
   // Writer is initialized.
   uint8_t *bufferStart = nullptr;
-  Partition *mainPart = nullptr;
   PhdrEntry *tlsPhdr = nullptr;
+  SmallVector<std::unique_ptr<PhdrEntry>, 0> phdrs;
   struct OutSections {
     std::unique_ptr<OutputSection> elfHeader;
     std::unique_ptr<OutputSection> programHeaders;
@@ -639,7 +666,6 @@ struct Ctx : CommonLinkerContext {
   };
   OutSections out;
   SmallVector<OutputSection *, 0> outputSections;
-  std::vector<Partition> partitions;
 
   InStruct in;
 
@@ -726,8 +752,6 @@ struct Ctx : CommonLinkerContext {
   Undefined *dummySym = nullptr;
   // True if symbols can be exported (isExported) or preemptible.
   bool hasDynsym = false;
-  // True if SHT_LLVM_SYMPART is used.
-  std::atomic<bool> hasSympart{false};
   // True if there are TLS IE relocations. Set DF_STATIC_TLS if -shared.
   std::atomic<bool> hasTlsIe{false};
   // True if we need to reserve two .got entries for local-dynamic TLS model.

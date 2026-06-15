@@ -106,6 +106,16 @@
   #define BENCHMARK_MAYBE_UNUSED
 #endif
 
+#if defined(__GNUC__) || defined(__clang__)
+#define PRINTF_FORMAT_STRING_FUNC(format_arg, first_idx) \
+  __attribute__((format(printf, format_arg, first_idx)))
+#elif defined(__MINGW32__)
+#define PRINTF_FORMAT_STRING_FUNC(format_arg, first_idx) \
+  __attribute__((format(__MINGW_PRINTF_FORMAT, format_arg, first_idx)))
+#else
+#define PRINTF_FORMAT_STRING_FUNC(format_arg, first_idx)
+#endif
+
 // clang-format on
 
 #endif  // BENCHMARK_INTERNAL_MACROS_H_
