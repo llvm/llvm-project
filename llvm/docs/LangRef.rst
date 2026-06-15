@@ -3190,10 +3190,9 @@ The following attributes are currently accepted:
   Equivalent to :ref:`range(iN %lower_bound, %upper_bound) <attr_range>` on
   ``%val``, except that ``%inclusive`` determines whether the upper bound is
   inclusive or exclusive and ``%upper_bound`` is always allowed to be equal to
-  ``%lower_bound``. ``%lower_bound == %upper_bound`` and
-  ``%inclusive`` being false implies an empty range, while
-  ``%lower_bound == %upper_bound - 1`` and ``%inclusive`` being true implies an
-  empty range.
+  ``%lower_bound``. ``%lower_bound == %upper_bound`` and ``%inclusive`` being
+  false implies an empty range, while ``%lower_bound == %upper_bound - 1`` and
+  ``%inclusive`` being true implies a full range.
 
 ``"separate_storage"(ptr %p1, ptr %p2)``
   This indicates that no pointer :ref:`based <pointeraliasing>` on one of its
