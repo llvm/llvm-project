@@ -1379,8 +1379,9 @@ Under strict OOB handling, such a load will be split into a sequence of ``<2 x i
 loads.
 
 .. note::
-These transformations do not impact intrinsic calls (calling
-``llvm.amdgcn.raw.buffer.*.t`` directly.
+
+  These transformations do not impact buffer intrinsic calls (calling
+  ``llvm.amdgcn.raw.buffer.*`` directly).
 
 Target Types
 ------------
