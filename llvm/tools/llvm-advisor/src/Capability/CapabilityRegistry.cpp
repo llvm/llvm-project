@@ -15,6 +15,7 @@
 #include "Analysis/IR/RemarksMixAnalyzer.h"
 #include "Analysis/IR/RemarksRelationalAnalyzer.h"
 #include "Analysis/IR/RemarksSizeDiffAnalyzer.h"
+#include "Analysis/IR/RemarksHotspotAnalyzer.h"
 #include "Analysis/Inspection/RemarksDetailAnalyzer.h"
 #include "Utils/JSON.h"
 #include "llvm/Support/FileSystem.h"
@@ -228,6 +229,8 @@ void CapabilityRegistry::addBuiltinRunners() {
                          std::make_unique<RemarksSizeDiffAnalyzer>()));
   consumeError(addRunner("builtin.remarks_relational",
                          std::make_unique<RemarksRelationalAnalyzer>()));
+  consumeError(addRunner("builtin.remarks_hotspot",
+                         std::make_unique<RemarksHotspotAnalyzer>()));
   consumeError(addRunner("builtin.remarks_detail",
                          std::make_unique<RemarksDetailAnalyzer>()));
 }

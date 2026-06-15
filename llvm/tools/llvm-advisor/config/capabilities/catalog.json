@@ -43,6 +43,17 @@
       ]
     },
     {
+      "id": "llvm.remarks.hotspot",
+      "name": "Optimization remarks hotspots",
+      "version": "1",
+      "runner": "builtin.remarks_hotspot",
+      "summary": "hotspot analysis requires an optimization remarks artifact",
+      "readiness": "L1",
+      "dependencies": [
+        "llvm.remarks.summary"
+      ]
+    },
+    {
       "id": "llvm.remarks.detail",
       "name": "Optimization remarks detail",
       "version": "3",
