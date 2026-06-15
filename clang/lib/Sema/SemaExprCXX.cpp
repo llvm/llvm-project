@@ -1070,8 +1070,7 @@ bool Sema::CheckCXXThrowOperand(SourceLocation ThrowLoc,
 
       // We don't keep the instantiated default argument expressions around so
       // we must rebuild them here.
-      // XXX: surprisingly, CD->isCopyConstructor() is not necessarily true here!
-      if (BuildDefaultArgsForCtorClosure(ThrowLoc, CD, /*IsCopy=*/true))
+      if (BuildCtorClosureDefaultArgs(ThrowLoc, CD, /*IsCopy=*/true))
         return true;
     }
   }

@@ -16307,7 +16307,7 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
       // If this is an MS ABI dllexport default constructor, instantiate any
       // default arguments.
       if (DLLExportAttr *Attr = Ctor->getAttr<DLLExportAttr>())
-        BuildDefaultArgsForCtorClosure(Attr->getLocation(), Ctor);
+        BuildCtorClosureDefaultArgs(Attr->getLocation(), Ctor);
     }
   }
 

@@ -6339,7 +6339,8 @@ static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
       if (S.Context.getTargetInfo().getCXXABI().isMicrosoft()) {
         auto *CD = dyn_cast<CXXConstructorDecl>(MD);
         if (CD && CD->isDefaultConstructor() && TSK == TSK_Undeclared) {
-          S.BuildDefaultArgsForCtorClosure(CD->getAttr<DLLExportAttr>()->getLocation(), CD);
+          S.BuildCtorClosureDefaultArgs(
+              CD->getAttr<DLLExportAttr>()->getLocation(), CD);
         }
       }
 
@@ -6392,7 +6393,7 @@ static void checkForMultipleExportedDefaultConstructors(Sema &S,
     // If the class is non-dependent, mark the default arguments as ODR-used so
     // that we can properly codegen the constructor closure.
     if (!Class->isDependentContext()) {
-      S.BuildDefaultArgsForCtorClosure(Attr->getLocation(), CD);
+      S.BuildCtorClosureDefaultArgs(Attr->getLocation(), CD);
       S.DiscardCleanupsInEvaluationContext();
     }
 
@@ -19803,9 +19804,8 @@ void Sema::ActOnFinishFunctionDeclarationDeclarator(Declarator &Declarator) {
   InventedParameterInfos.pop_back();
 }
 
-bool Sema::BuildDefaultArgsForCtorClosure(SourceLocation Loc,
-                                          CXXConstructorDecl *Ctor,
-                                          bool IsCopy) {
+bool Sema::BuildCtorClosureDefaultArgs(SourceLocation Loc,
+                                       CXXConstructorDecl *Ctor, bool IsCopy) {
   assert(Context.getTargetInfo().getCXXABI().isMicrosoft());
 
   if (!Ctor->getCtorClosureDefaultArgs().empty())

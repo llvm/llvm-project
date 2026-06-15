@@ -5946,7 +5946,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
         if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
             Ctor->isDefaultConstructor()) {
           if (DLLExportAttr *Attr = Ctor->getAttr<DLLExportAttr>())
-            BuildDefaultArgsForCtorClosure(Attr->getLocation(), Ctor);
+            BuildCtorClosureDefaultArgs(Attr->getLocation(), Ctor);
         }
       }
 

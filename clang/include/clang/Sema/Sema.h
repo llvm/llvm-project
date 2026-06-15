@@ -14265,8 +14265,8 @@ public:
                           LateInstantiatedAttrVec *LateAttrs = nullptr,
                           LocalInstantiationScope *OuterMostScope = nullptr);
 
-  /// XXX: comment
-  bool BuildDefaultArgsForCtorClosure(SourceLocation Loc, CXXConstructorDecl *Ctor, bool IsCopy = false);
+  bool BuildCtorClosureDefaultArgs(SourceLocation Loc, CXXConstructorDecl *Ctor,
+                                   bool IsCopy = false);
 
   bool InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
                                   ParmVarDecl *Param);
