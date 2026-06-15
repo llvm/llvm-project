@@ -1064,6 +1064,12 @@ public:
   /// idea to avoid optimizing based on that undef behavior.
   virtual bool isCLZForZeroUndef() const { return true; }
 
+  /// Returns whether pointers and integers of the same size are considered
+  /// ABI-compatible on this target. Defaults to true; targets with separate
+  /// register files for pointers and integers (e.g., m68k) should override
+  /// to return false.
+  virtual bool arePointersAndIntegersABICompatible() const { return true; }
+
   /// Returns the kind of __builtin_va_list type that should be used
   /// with this target.
   virtual BuiltinVaListKind getBuiltinVaListKind() const = 0;
