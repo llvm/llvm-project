@@ -550,17 +550,16 @@ public:
   }
 
   bool run(int64_t *NumPromoted) {
-    bool RC = PromoteCandidates(NumPromoted);
+    bool RC = promoteCandidates(NumPromoted);
     if (IsAtomic)
-      for (auto &Cand : LoopToCandidates[&L]) {
+      for (auto &Cand : LoopToCandidates[&L])
         if (Cand.first != nullptr && Cand.second != nullptr)
           makeAtomic(Cand.first, Cand.second);
-      }
     return RC;
   }
 
 private:
-  bool PromoteCandidates(int64_t *NumPromoted) {
+  bool promoteCandidates(int64_t *NumPromoted) {
     // Skip 'infinite' loops:
     if (ExitBlocks.size() == 0)
       return false;
@@ -1293,7 +1292,6 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
     Value *Load = Builder.CreateLoad(IncStep->getType(), Addr, "pgocount");
     auto *Count = Builder.CreateAdd(Load, Inc->getStep());
     auto *Store = Builder.CreateStore(Count, Addr);
-
     if (isCounterPromotionEnabled())
       PromotionCandidates.emplace_back(cast<Instruction>(Load), Store);
   }
