@@ -43,18 +43,25 @@ class Semaphore {
   // Helper function for timed blocking wait, wait for a required
   // absolute timeout.
   LIBC_INLINE int wait_until(internal::AbsTimeout timeout) {
-    for (;;) {
-      if (trywait() == 0)
-        return 0;
-
+    while (trywait() != 0) {
       auto wait_or = value.wait(/*expected=*/0, timeout, is_shared);
-      if (!wait_or.has_value() && wait_or.error() == ETIMEDOUT) {
+      if (wait_or.has_value())
+        continue;
+
+      if (wait_or.error() == EAGAIN)
+        continue;
+
+      if (wait_or.error() == ETIMEDOUT) {
         // Final attempt in case a post() raced with the timeout.
         if (trywait() == 0)
           return 0;
         return ETIMEDOUT;
       }
+
+      // Any other error is unexpected (e.g. EINVAL/EFAULT).
+      return wait_or.error();
     }
+    return 0;
   }
 
 public:
@@ -117,16 +124,20 @@ public:
   // Blocking wait, decrements the value when positive, or blocks until a
   // post() makes it positive again.
   LIBC_INLINE int wait() {
-    for (;;) {
-      if (trywait() == 0)
-        return 0;
-
+    while (trywait() != 0) {
       // Blocks when value was zero.
       // Futex wait re-checks the value atomically,
       // so a racing post() before sleep is not lost.
       // Spurious wakeups just send back to trywait().
-      (void)value.wait(/*expected=*/0, /*timeout=*/cpp::nullopt, is_shared);
+      auto wait_or =
+          value.wait(/*expected=*/0, /*timeout=*/cpp::nullopt, is_shared);
+
+      // A successful wake or EAGAIN both just send it back to trywait().
+      // Any other error is unexpected.
+      if (!wait_or.has_value() && wait_or.error() != EAGAIN)
+        return wait_or.error();
     }
+    return 0;
   }
 
   // Blocking wait against an absolute CLOCK_REALTIME deadline.
