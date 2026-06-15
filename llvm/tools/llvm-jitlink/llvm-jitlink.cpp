@@ -199,6 +199,12 @@ static cl::list<std::string>
                     "required by the ORC runtime)"),
            cl::cat(JITLinkCategory));
 
+static cl::list<std::string> AutoImportDylibs(
+    "auto-import",
+    cl::desc("Synthesize COFF __imp_ slots and thunks for symbols exported by "
+             "the given dynamic library (in-process; x86_64/COFF only)"),
+    cl::cat(JITLinkCategory));
+
 static cl::list<std::string> InputArgv("args", cl::Positional,
                                        cl::desc("<program arguments>..."),
                                        cl::PositionalEatsArgs,
@@ -1976,6 +1982,20 @@ static void addPhonyExternalsGenerator(Session &S) {
   S.MainJD->addGenerator(std::make_unique<PhonyExternalsGenerator>());
 }
 
+static Error addAutoImportGenerators(Session &S) {
+  if (AutoImportDylibs.empty())
+    return Error::success();
+
+  for (const auto &LibPath : AutoImportDylibs) {
+    auto G = orc::AutoImportGenerator::Load(S.ES, *S.ObjLayer, *S.DylibMgr,
+                                            LibPath.c_str());
+    if (!G)
+      return G.takeError();
+    S.MainJD->addGenerator(std::move(*G));
+  }
+  return Error::success();
+}
+
 static Error createJITDylibs(Session &S,
                              std::map<unsigned, JITDylib *> &IdxToJD) {
   // First, set up JITDylibs.
@@ -3025,6 +3045,10 @@ int main(int argc, char *argv[]) {
     TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);
     ExitOnErr(addSessionInputs(*S));
   }
+
+  // Attach auto-import generators before the phony-externals catch-all so that
+  // real library symbols win over phony definitions.
+  ExitOnErr(addAutoImportGenerators(*S));
 
   if (PhonyExternals)
     addPhonyExternalsGenerator(*S);

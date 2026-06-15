@@ -583,5 +583,134 @@ DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
   return std::move(G);
 }
 
+Expected<std::unique_ptr<AutoImportGenerator>>
+AutoImportGenerator::Load(ExecutionSession &ES, ObjectLinkingLayer &L,
+                          DylibManager &DylibMgr, const char *LibraryPath) {
+  // x86_64-only for now: createStubsGraph emits x86_64 pointer slots / stubs.
+  if (ES.getTargetTriple().getArch() != Triple::x86_64)
+    return make_error<StringError>(
+        "AutoImportGenerator currently only supports x86_64",
+        inconvertibleErrorCode());
+
+  // Load the library in the executor. Symbols are later resolved via
+  // DylibMgr.lookupSymbols, which only returns exported symbols -- so the
+  // library's export table is the authority on what may be synthesized.
+  auto LibHandle = DylibMgr.loadDylib(LibraryPath);
+  if (!LibHandle)
+    return LibHandle.takeError();
+
+  return std::unique_ptr<AutoImportGenerator>(
+      new AutoImportGenerator(ES, L, DylibMgr, *LibHandle));
+}
+
+Error AutoImportGenerator::tryToGenerate(LookupState &LS, LookupKind K,
+                                         JITDylib &JD,
+                                         JITDylibLookupFlags JDLookupFlags,
+                                         const SymbolLookupSet &Symbols) {
+  if (Symbols.empty())
+    return Error::success();
+
+  // The library's export table is the authority on what may be synthesized:
+  // look each requested symbol up in the executor (with any __imp_ prefix
+  // stripped) as a weak reference, so names the library does not export come
+  // back null and are simply left unresolved -- the link then fails as a static
+  // link would. De-duplicate so __imp_X and X collapse to a single lookup.
+  SymbolLookupSet LookupSymbols;
+  DenseSet<SymbolStringPtr> Seen;
+  for (auto &KV : Symbols) {
+    StringRef Base = *KV.first;
+    if (Base.starts_with(getImpPrefix()))
+      Base = Base.drop_front(getImpPrefix().size());
+    SymbolStringPtr BaseName = ES.intern(Base);
+    if (Seen.insert(BaseName).second)
+      LookupSymbols.add(BaseName, SymbolLookupFlags::WeaklyReferencedSymbol);
+  }
+
+  DylibMgr.lookupSymbolsAsync(
+      LibHandle, LookupSymbols,
+      [this, &JD, LS = std::move(LS), LookupSymbols](auto Result) mutable {
+        if (!Result)
+          return LS.continueLookup(Result.takeError());
+
+        assert(Result->size() == LookupSymbols.size() &&
+               "Result has incorrect number of elements");
+
+        // Keep only the symbols the library actually exports (non-null
+        // addresses); anything else stays unresolved.
+        SymbolMap Resolved;
+        auto ResultIt = Result->begin();
+        for (auto &[Name, Flags] : LookupSymbols) {
+          const auto &Addr = *ResultIt++;
+          if (Addr && *Addr)
+            Resolved[Name] = {*Addr, JITSymbolFlags::Exported |
+                                         JITSymbolFlags::Callable};
+        }
+
+        if (Resolved.empty())
+          return LS.continueLookup(Error::success());
+
+        auto G = createStubsGraph(Resolved);
+        if (!G)
+          return LS.continueLookup(G.takeError());
+
+        // Add the synthesized stubs under a generator-owned ResourceTracker
+        // (created lazily, recreated if the client has reclaimed it) so that
+        // all synthesized __imp_ slots and thunks can be released in one step
+        // via getImportStubsResourceTracker()->remove(), without tearing down
+        // JD.
+        if (!ImportStubsRT || ImportStubsRT->isDefunct())
+          ImportStubsRT = JD.createResourceTracker();
+        LS.continueLookup(L.add(ImportStubsRT, std::move(*G)));
+      });
+
+  return Error::success();
+}
+
+Expected<std::unique_ptr<jitlink::LinkGraph>>
+AutoImportGenerator::createStubsGraph(const SymbolMap &Resolved) {
+  Triple TT = ES.getTargetTriple();
+
+  auto CreatePointer = jitlink::getAnonymousPointerCreator(TT);
+  if (!CreatePointer)
+    return make_error<StringError>(
+        "AutoImportGenerator: no pointer creator for " + TT.str(),
+        inconvertibleErrorCode());
+
+  auto CreateStub = jitlink::getPointerJumpStubCreator(TT);
+  if (!CreateStub)
+    return make_error<StringError>("AutoImportGenerator: no stub creator for " +
+                                       TT.str(),
+                                   inconvertibleErrorCode());
+
+  auto G = std::make_unique<jitlink::LinkGraph>(
+      "<AUTOIMPORT_STUBS>", ES.getSymbolStringPool(), TT, SubtargetFeatures(),
+      jitlink::getGenericEdgeKindName);
+  jitlink::Section &Sec =
+      G->createSection(getSectionName(), MemProt::Read | MemProt::Exec);
+
+  for (auto &KV : Resolved) {
+    // The real implementation in the library, frozen as an absolute symbol.
+    // It is referenced only by the __imp_ slot's pointer edge, so it is local
+    // and never collides with the same-named thunk below.
+    jitlink::Symbol &Target = G->addAbsoluteSymbol(
+        *KV.first, KV.second.getAddress(), G->getPointerSize(),
+        jitlink::Linkage::Strong, jitlink::Scope::Local, false);
+
+    // __imp_X: an 8-byte pointer slot holding X's address in the library.
+    jitlink::Symbol &Ptr = CreatePointer(*G, Sec, &Target, 0);
+    Ptr.setName(G->intern((Twine(getImpPrefix()) + *KV.first).str()));
+    Ptr.setLinkage(jitlink::Linkage::Strong);
+    Ptr.setScope(jitlink::Scope::Default);
+
+    // X: a thunk "jmpq *__imp_X(%rip)" so direct calls to X also work.
+    jitlink::Symbol &Stub = CreateStub(*G, Sec, Ptr);
+    Stub.setName(G->intern(*KV.first));
+    Stub.setLinkage(jitlink::Linkage::Strong);
+    Stub.setScope(jitlink::Scope::Default);
+  }
+
+  return std::move(G);
+}
+
 } // End namespace orc.
 } // End namespace llvm.

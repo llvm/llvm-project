@@ -877,6 +877,43 @@ example, to expose an allowed set of symbols from the main process:
     // and contained in the list.
     CompileLayer.add(JD, loadModule(...));
 
+On Windows/COFF targets, calls to dllimport functions are emitted as indirect
+calls through an ``__imp_`` *import address table* (IAT) slot, and even direct
+calls to library functions are expected to bind to a thunk supplied by an import
+library. ORC provides the ``AutoImportGenerator`` utility to synthesize these on
+demand from a dynamic library, so that COFF objects can be JIT-linked without
+building import libraries. The generator is bound to a single DLL: that DLL's
+export table is the authority on what may be synthesized, so a reference to a
+symbol the DLL does not export remains unresolved and the link fails, exactly as
+a static link against the corresponding import library would.
+
+  .. code-block:: c++
+
+    auto &JD = ES.createJITDylib("main");
+
+    if (auto AIGOrErr =
+            AutoImportGenerator::Load(ES, ObjLinkingLayer, "/path/to/lib.dll"))
+      JD.addGenerator(std::move(*AIGOrErr));
+    else
+      return AIGOrErr.takeError();
+
+    // COFF objects added to JD can now call functions exported by lib.dll, both
+    // directly and via the dllimport (__imp_) convention.
+    ObjLinkingLayer.add(JD, loadObject(...));
+
+For each exported function ``X`` that is referenced, the generator synthesizes an
+``__imp_X`` IAT slot holding ``X``'s address in the library plus an ``X`` thunk
+that jumps through that slot. It is "easy mode": it assumes every import is a
+function and makes no attempt to distinguish code from data, so data imports are
+unsupported and clients that need them must supply an import library or use
+``__declspec(dllimport)``. Note also that, because ``X`` resolves to a synthesized
+thunk, ``&X`` yields the thunk's address rather than the implementation in the
+library. ``AutoImportGenerator`` currently supports the x86_64 architecture. It
+resolves imports through the executor's ``DylibManager``, so it works for both
+in-process and out-of-process execution. For the more general case where the
+underlying symbol is resolved through the JITDylib's link order rather than a
+specific library, see ``DLLImportDefinitionGenerator``.
+
 References to process or library symbols could also be hardcoded into your IR
 or object files using the symbols' raw addresses, however symbolic resolution
 using the JIT symbol tables should be preferred: it keeps the IR and objects
