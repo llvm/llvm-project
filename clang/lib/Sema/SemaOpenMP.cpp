@@ -2972,10 +2972,26 @@ void SemaOpenMP::EndOpenMPDSABlock(Stmt *CurDirective) {
       }
       auto *DRE = cast<DeclRefExpr>(DE->IgnoreParens());
       auto *D = DRE->getDecl();
-      // BindingDecls don't need special lastprivate handling - they're already
-      // handled through their decomposition decl.
-      if (isa<BindingDecl>(D)) {
-        PrivateCopies.push_back(nullptr);
+      if (auto *BD = dyn_cast<BindingDecl>(D)) {
+        QualType Type = BD->getType().getNonReferenceType();
+        const DSAStackTy::DSAVarData DVar =
+            DSAStack->getTopDSA(BD, /*FromParent=*/false);
+        if (DVar.CKind != OMPC_lastprivate) {
+          // The variable is also a firstprivate, so initialization sequence
+          // for private copy is generated already.
+          PrivateCopies.push_back(nullptr);
+          continue;
+        }
+        VarDecl *VDPrivate = buildVarDecl(
+            SemaRef, DE->getExprLoc(), Type.getUnqualifiedType(), BD->getName(),
+            BD->hasAttrs() ? &BD->getAttrs() : nullptr, DRE);
+        SemaRef.ActOnUninitializedDecl(VDPrivate);
+        if (VDPrivate->isInvalidDecl()) {
+          PrivateCopies.push_back(nullptr);
+          continue;
+        }
+        PrivateCopies.push_back(buildDeclRefExpr(
+            SemaRef, VDPrivate, DE->getType(), DE->getExprLoc()));
         continue;
       }
       auto *VD = cast<VarDecl>(D);
