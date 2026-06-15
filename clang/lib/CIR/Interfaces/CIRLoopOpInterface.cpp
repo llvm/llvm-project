@@ -30,7 +30,7 @@ void LoopOpInterface::getLoopOpSuccessorRegions(
 
   // Branching from condition: go to body or exit.
   if (&op.getCond() == parentRegion) {
-    regions.emplace_back(mlir::RegionSuccessor(op));
+    regions.emplace_back(op);
     regions.emplace_back(&op.getBody());
     return;
   }
