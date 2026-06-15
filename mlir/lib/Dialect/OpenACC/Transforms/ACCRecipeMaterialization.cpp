@@ -263,7 +263,7 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
     if (!recipe.getDestroyRegion().empty()) {
       results.insert(results.begin(), origPtr);
       results.append(triples);
-      cloneDestroy(recipe, block, block->end(), results);
+      cloneDestroy(recipe, block, std::prev(block->end()), results);
     }
   } else if constexpr (std::is_same_v<OpTy, acc::FirstprivateOp>) {
     // Clone the init region for a firstprivate.
@@ -284,7 +284,7 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
                             mapping, {});
     if (!recipe.getDestroyRegion().empty()) {
       // origPtr was already pushed.
-      cloneDestroy(recipe, block, block->end(), results);
+      cloneDestroy(recipe, block, std::prev(block->end()), results);
     }
   } else if constexpr (std::is_same_v<OpTy, acc::ReductionOp>) {
     auto cloneRegionIntoAccRegion = [&](Region *src, Region *dest,
