@@ -3661,6 +3661,13 @@ private:
     const Fortran::parser::OpenACCCombinedConstruct *accCombined =
         std::get_if<Fortran::parser::OpenACCCombinedConstruct>(&acc.u);
 
+    // TODO: Determining curEval here re-walks the nested evaluations to the
+    // collapse/DO CONCURRENT depth that the construct absorbs, mirroring the
+    // descent genOpenACCConstruct already performs (visitLoopControl in
+    // OpenACC.cpp). That duplication is fragile and couples this code to
+    // genOpenACCConstruct's internals. Move the responsibility for determining
+    // curEval into genOpenACCConstruct -- where the absorbed evaluations are
+    // actually decided -- and return it from there.
     Fortran::lower::pft::Evaluation *curEval = &getEval();
     // Determine collapse depth/force and loopCount
     bool collapseForce = false;
