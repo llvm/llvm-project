@@ -1033,9 +1033,8 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
       if (Opcode == Instruction::ExtractElement && EltSize == 8) {
         if (auto *FVTy = dyn_cast<FixedVectorType>(ValTy)) {
           unsigned NumElts = FVTy->getNumElements();
-          if (NumElts >= 4 && isPowerOf2_32(NumElts)) {
+          if (NumElts >= 4 && isPowerOf2_32(NumElts))
             return 0;
-          }
         }
       }
       return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,
