@@ -46,6 +46,7 @@ MACHINE_FUNCTION_ANALYSIS("machine-opt-remark-emitter",
                           MachineOptimizationRemarkEmitterAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-post-dom-tree",
                           MachinePostDominatorTreeAnalysis())
+MACHINE_FUNCTION_ANALYSIS("machine-regions", MachineRegionInfoAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-trace-metrics", MachineTraceMetricsAnalysis())
 MACHINE_FUNCTION_ANALYSIS("machine-uniformity", MachineUniformityAnalysis())
 MACHINE_FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
@@ -55,8 +56,6 @@ MACHINE_FUNCTION_ANALYSIS("regalloc-priority", RegAllocPriorityAdvisorAnalysis()
 MACHINE_FUNCTION_ANALYSIS("slot-indexes", SlotIndexesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("spill-code-placement", SpillPlacementAnalysis())
 MACHINE_FUNCTION_ANALYSIS("virtregmap", VirtRegMapAnalysis())
-// MACHINE_FUNCTION_ANALYSIS("machine-region-info",
-// MachineRegionInfoPassAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("gc-analysis",
 // GCMachineCodeAnalysisPass())
 #undef MACHINE_FUNCTION_ANALYSIS
@@ -116,6 +115,8 @@ MACHINE_FUNCTION_PASS("print<machine-dom-tree>",
 MACHINE_FUNCTION_PASS("print<machine-loops>", MachineLoopPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-post-dom-tree>",
                       MachinePostDominatorTreePrinterPass(errs()))
+MACHINE_FUNCTION_PASS("print<machine-regions>",
+                      MachineRegionInfoPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<machine-uniformity>",
                       MachineUniformityPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<reaching-def>", ReachingDefPrinterPass(errs()))
