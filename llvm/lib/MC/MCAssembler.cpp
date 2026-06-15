@@ -991,17 +991,15 @@ MCAssembler::computeBoundaryAlignSize(const MCBoundaryAlignFragment &BF) {
   Align BoundaryAlignment = BF.getAlignment();
 
   uint64_t NewSize = 0;
-  if (isBundlingEnabled()) {
-    // For bundle alignment, we only pad instructions that cross the boundary.
-    NewSize = mayCrossBoundary(AlignedOffset, AlignedSize, BoundaryAlignment)
+  if (!isBundlingEnabled()) {
+    NewSize = needPadding(AlignedOffset, AlignedSize, BoundaryAlignment)
                   ? offsetToAlignment(AlignedOffset, BoundaryAlignment)
                   : 0U;
-    if (BF.isAlignToEnd()) {
-      NewSize =
-          offsetToAlignment(AlignedOffset + AlignedSize, BoundaryAlignment);
-    }
+  } else if (BF.isAlignToEnd()) {
+    NewSize = offsetToAlignment(AlignedOffset + AlignedSize, BoundaryAlignment);
   } else {
-    NewSize = needPadding(AlignedOffset, AlignedSize, BoundaryAlignment)
+    // For bundle alignment, we only pad instructions that cross the boundary.
+    NewSize = mayCrossBoundary(AlignedOffset, AlignedSize, BoundaryAlignment)
                   ? offsetToAlignment(AlignedOffset, BoundaryAlignment)
                   : 0U;
   }

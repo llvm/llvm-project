@@ -947,8 +947,6 @@ bool X86AsmBackend::padInstsBackward(SmallVectorImpl<MCFragment *> &Relaxable,
 bool X86AsmBackend::dividePadInBundle(const MCAssembler &Asm,
                                       ArrayRef<MCFragment *> Peephole) const {
   bool Changed = false;
-
-  // Last Fragment is either FT_Align or FT_BoundaryAlign
   auto *LastF = Peephole.back();
   unsigned RemainingSize =
       Asm.computeFragmentSize(*LastF) - LastF->getFixedSize();
@@ -985,8 +983,7 @@ bool X86AsmBackend::dividePadInBundle(const MCAssembler &Asm,
     }
 
     if (FIB->getKind() == MCFragment::FT_Relaxable) {
-      auto &RF = cast<MCFragment>(*FIB);
-      Relaxable.push_back(&RF);
+      Relaxable.push_back(FIB);
       continue;
     }
   }
@@ -1014,10 +1011,8 @@ bool X86AsmBackend::dividePadInBundle(const MCAssembler &Asm,
     RemainingSize += NextRemainingSize;
   }
 
-  // FT_Align sizes will be recalculated by layoutSection(),
-  // FT_BoundaryAlign sizes are adjusted here.
-  if (auto *BF = dyn_cast<MCBoundaryAlignFragment>(LastF))
-    BF->setSize(RemainingSize);
+  // Record the computed padding on the BoundaryAlignFragment.
+  cast<MCBoundaryAlignFragment>(LastF)->setSize(RemainingSize);
 
   return Changed;
 }

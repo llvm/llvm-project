@@ -413,18 +413,19 @@ void MCObjectStreamer::emitInstruction(const MCInst &Inst,
   MCAssembler &Assembler = getAssembler();
   MCAsmBackend &Backend = Assembler.getBackend();
 
+  auto relaxToFixpoint = [&](MCInst I) {
+    while (Backend.mayNeedRelaxation(I.getOpcode(), I.getOperands(), STI))
+      Backend.relaxInstruction(I, STI);
+    return I;
+  };
+
   // To enable better bundle-nop optimization, we emit every instruction
   // as a relaxable fragment.
   if (Assembler.isBundlingEnabled()) {
-    if (Sec->isBundleLocked() || Assembler.getRelaxAll()) {
-      MCInst Relaxed = Inst;
-      while (Backend.mayNeedRelaxation(Relaxed.getOpcode(),
-                                       Relaxed.getOperands(), STI))
-        Backend.relaxInstruction(Relaxed, STI);
-      emitInstToFragment(Relaxed, STI);
-    } else {
+    if (Sec->isBundleLocked() || Assembler.getRelaxAll())
+      emitInstToFragment(relaxToFixpoint(Inst), STI);
+    else
       emitInstToFragment(Inst, STI);
-    }
     return;
   }
 
@@ -436,11 +437,7 @@ void MCObjectStreamer::emitInstruction(const MCInst &Inst,
 
   // Otherwise, relax and emit it as data if RelaxAll is specified.
   if (Assembler.getRelaxAll()) {
-    MCInst Relaxed = Inst;
-    while (Backend.mayNeedRelaxation(Relaxed.getOpcode(), Relaxed.getOperands(),
-                                     STI))
-      Backend.relaxInstruction(Relaxed, STI);
-    emitInstToData(Relaxed, STI);
+    emitInstToData(relaxToFixpoint(Inst), STI);
     return;
   }
 
