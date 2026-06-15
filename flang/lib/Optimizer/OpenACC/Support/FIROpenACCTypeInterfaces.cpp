@@ -1605,8 +1605,9 @@ template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::genStore(
     mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
 
 template <typename Ty>
-mlir::MemRefType OpenACCPointerLikeModel<Ty>::getAsMemRefType(
-    mlir::Type pointer, mlir::ModuleOp module) const {
+mlir::MemRefType
+OpenACCPointerLikeModel<Ty>::getAsMemRefType(mlir::Type pointer,
+                                             mlir::ModuleOp module) const {
   if (auto memrefTy = mlir::dyn_cast<mlir::MemRefType>(pointer))
     return memrefTy;
   fir::FIRToMemRefTypeConverter converter(module);
@@ -1616,17 +1617,21 @@ mlir::MemRefType OpenACCPointerLikeModel<Ty>::getAsMemRefType(
   return converter.convertMemrefType(pointer);
 }
 
-template mlir::MemRefType OpenACCPointerLikeModel<fir::ReferenceType>::
-    getAsMemRefType(mlir::Type pointer, mlir::ModuleOp module) const;
-
-template mlir::MemRefType OpenACCPointerLikeModel<fir::PointerType>::
-    getAsMemRefType(mlir::Type pointer, mlir::ModuleOp module) const;
-
-template mlir::MemRefType OpenACCPointerLikeModel<fir::HeapType>::getAsMemRefType(
+template mlir::MemRefType
+OpenACCPointerLikeModel<fir::ReferenceType>::getAsMemRefType(
     mlir::Type pointer, mlir::ModuleOp module) const;
 
-template mlir::MemRefType OpenACCPointerLikeModel<fir::LLVMPointerType>::
-    getAsMemRefType(mlir::Type pointer, mlir::ModuleOp module) const;
+template mlir::MemRefType
+OpenACCPointerLikeModel<fir::PointerType>::getAsMemRefType(
+    mlir::Type pointer, mlir::ModuleOp module) const;
+
+template mlir::MemRefType
+OpenACCPointerLikeModel<fir::HeapType>::getAsMemRefType(
+    mlir::Type pointer, mlir::ModuleOp module) const;
+
+template mlir::MemRefType
+OpenACCPointerLikeModel<fir::LLVMPointerType>::getAsMemRefType(
+    mlir::Type pointer, mlir::ModuleOp module) const;
 
 template <typename Ty>
 mlir::Value OpenACCPointerLikeModel<Ty>::genCast(mlir::Type pointer,

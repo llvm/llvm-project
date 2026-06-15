@@ -301,7 +301,8 @@ TEST_F(OpenACCTypeInterfacesTest, PointerLikeGetAsMemRefTypeUnrankedMemref) {
   EXPECT_FALSE(ptrLike.getAsMemRefType(*module));
 }
 
-TEST_F(OpenACCTypeInterfacesTest, PointerLikeGetAsMemRefTypePrivateTypeMemrefBase) {
+TEST_F(OpenACCTypeInterfacesTest,
+       PointerLikeGetAsMemRefTypePrivateTypeMemrefBase) {
   Location loc = UnknownLoc::get(&context);
   OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
 
