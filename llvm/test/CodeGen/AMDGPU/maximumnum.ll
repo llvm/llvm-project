@@ -5133,11 +5133,11 @@ define <3 x half> @v_maximumnum_v3f16(<3 x half> %x, <3 x half> %y) #1 {
 ; GFX1251-SDAG:       ; %bb.0:
 ; GFX1251-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-SDAG-NEXT:    v_pk_max_num_f16 v3, v3, v3
 ; GFX1251-SDAG-NEXT:    v_pk_max_num_f16 v2, v2, v2
 ; GFX1251-SDAG-NEXT:    v_pk_max_num_f16 v0, v0, v0
+; GFX1251-SDAG-NEXT:    v_pk_max_num_f16 v3, v3, v3
 ; GFX1251-SDAG-NEXT:    v_pk_max_num_f16 v1, v1, v1
-; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1251-SDAG-NEXT:    v_pk_max_num_f16 v0, v0, v2
 ; GFX1251-SDAG-NEXT:    v_pk_max_num_f16 v1, v1, v3
 ; GFX1251-SDAG-NEXT:    s_set_pc_i64 s[30:31]
