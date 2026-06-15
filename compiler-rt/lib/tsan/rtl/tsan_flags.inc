@@ -109,7 +109,7 @@ TSAN_FLAG(
     "platform.")
 TSAN_FLAG(int, adaptive_delay_relaxed_sample_rate, 10000,
           "Sample 1 in N relaxed atomic operations for delay")
-TSAN_FLAG(int, adaptive_delay_sync_atomic_sample_rate, 100,
+TSAN_FLAG(int, adaptive_delay_sync_atomic_sample_rate, 20,
           "Sample 1 in N acquire/release/seq_cst atomic operations for delay")
 TSAN_FLAG(int, adaptive_delay_mutex_sample_rate, 10,
           "Sample 1 in N mutex/cv operations for delay")
