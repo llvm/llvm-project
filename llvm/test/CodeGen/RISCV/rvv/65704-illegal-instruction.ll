@@ -15,23 +15,25 @@ define void @foo(<vscale x 8 x i8> %0) {
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
 ; CHECK-NEXT:    .cfi_offset s2, -32
-; CHECK-NEXT:    li s0, 0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vsetivli zero, 0, e8, m1, tu, ma
 ; CHECK-NEXT:    vslideup.vi v9, v10, 0
-; CHECK-NEXT:    vslideup.vi v8, v10, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vmv.x.s s1, v9
-; CHECK-NEXT:    vmv.x.s s2, v8
+; CHECK-NEXT:    vmv.x.s s0, v9
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, tu, ma
+; CHECK-NEXT:    vslideup.vi v8, v9, 0
+; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vmv.x.s s1, v8
+; CHECK-NEXT:    li s2, 0
 ; CHECK-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mv a0, s1
-; CHECK-NEXT:    mv a1, s0
-; CHECK-NEXT:    mv a2, s2
-; CHECK-NEXT:    mv a3, s0
-; CHECK-NEXT:    mv a4, s0
-; CHECK-NEXT:    mv a5, s0
-; CHECK-NEXT:    jalr s0
+; CHECK-NEXT:    mv a0, s0
+; CHECK-NEXT:    mv a1, s2
+; CHECK-NEXT:    mv a2, s1
+; CHECK-NEXT:    mv a3, s2
+; CHECK-NEXT:    mv a4, s2
+; CHECK-NEXT:    mv a5, s2
+; CHECK-NEXT:    jalr s2
 ; CHECK-NEXT:    j .LBB0_1
   %2 = tail call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v16i8(<vscale x 8 x i8> poison, <16 x i8> poison, i64 0)
   %3 = tail call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v16i8(<vscale x 8 x i8> poison, <16 x i8> poison, i64 0)

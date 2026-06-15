@@ -17,7 +17,7 @@
 @import simple;
 const int x = MODULE_MACRO;
 
-// CRASH_ENV: PLEASE submit a bug report to {{.*}} and include the crash backtrace, preprocessed source, and associated run script.
+// CRASH_ENV: PLEASE submit a bug report to {{.*}} and include the crash backtrace and dumped files.
 // CRASH_ENV: failing because environment variable 'FORCE_CLANG_DIAGNOSTICS_CRASH' is set
 // CRASH_ENV: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // CRASH_ENV-NEXT: note: diagnostic msg: {{.*}}.m

@@ -61,8 +61,13 @@
 ! OPENMP-OFFLOAD-ARGS-SAME:  "-fopenmp"
 ! OPENMP-OFFLOAD-ARGS-SAME:  "-fopenmp-host-ir-file-path" "{{.*}}.bc" "-fopenmp-is-target-device"
 ! OPENMP-OFFLOAD-ARGS-SAME:  {{.*}}.f90"
+<<<<<<< flang-name
 ! OPENMP-OFFLOAD-ARGS: "{{[^"]*}}llvm-offload-binary{{.*}}" {{.*}} "--image=file={{.*}}.bc,triple=amdgcn-amd-amdhsa,arch=gfx90a,kind=openmp"
 ! OPENMP-OFFLOAD-ARGS-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
+=======
+! OPENMP-OFFLOAD-ARGS: "{{[^"]*}}llvm-offload-binary{{.*}}" {{.*}} "--image=file={{.*}}.s,triple=amdgcn-amd-amdhsa,arch=gfx90a,kind=openmp"
+! OPENMP-OFFLOAD-ARGS-NEXT: "{{[^"]*}}flang" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
+>>>>>>> main
 ! OPENMP-OFFLOAD-ARGS-SAME:  "-fopenmp"
 ! OPENMP-OFFLOAD-ARGS-SAME:  "-fembed-offload-object={{.*}}.out" {{.*}}.bc"
 

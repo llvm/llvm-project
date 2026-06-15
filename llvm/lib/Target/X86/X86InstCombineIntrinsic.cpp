@@ -3204,6 +3204,31 @@ X86TTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
     break;
 
+  case Intrinsic::x86_avx512_vpmadd52h_uq_128:
+  case Intrinsic::x86_avx512_vpmadd52l_uq_128:
+  case Intrinsic::x86_avx512_vpmadd52h_uq_256:
+  case Intrinsic::x86_avx512_vpmadd52l_uq_256:
+  case Intrinsic::x86_avx512_vpmadd52h_uq_512:
+  case Intrinsic::x86_avx512_vpmadd52l_uq_512: {
+    // Fold add(vpmadd52(<zero>, a, b), x) -> vpmadd52(x, a, b)
+    Value *Acc = II.getArgOperand(0);
+    if (!match(Acc, m_Zero()) || !II.hasOneUse())
+      break;
+
+    auto *Add = dyn_cast<BinaryOperator>(*II.user_begin());
+    Value *X;
+    if (!Add || !match(Add, m_c_Add(m_Specific(&II), m_Value(X))))
+      break;
+
+    IC.Builder.SetInsertPoint(Add);
+    Value *NewCall = IC.Builder.CreateIntrinsic(
+        IID, {}, {X, II.getArgOperand(1), II.getArgOperand(2)});
+
+    IC.replaceInstUsesWith(*Add, NewCall);
+    IC.eraseInstFromFunction(*Add);
+    return IC.eraseInstFromFunction(II);
+  }
+
   default:
     break;
   }

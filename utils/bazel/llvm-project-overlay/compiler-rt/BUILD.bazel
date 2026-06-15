@@ -15,7 +15,6 @@ cc_library(
     name = "config",
     defines = select({
         "@platforms//os:linux": [
-            "COMPILER_RT_BUILD_PROFILE_ROCM=1",
             "COMPILER_RT_HAS_ATOMICS=1",
             "COMPILER_RT_HAS_FCNTL_LCK=1",
             "COMPILER_RT_HAS_UNAME=1",
@@ -30,6 +29,10 @@ cc_library(
 
 WIN32_ONLY_FILES = [
     "lib/profile/WindowsMMap.c",
+]
+
+PROFILE_ROCM_FILES = [
+    "lib/profile/InstrProfilingPlatformROCm.cpp",
 ]
 
 cc_library(
@@ -79,7 +82,7 @@ cc_library(
             "lib/profile/*.cpp",
             "lib/profile/*.h",
         ],
-        exclude = WIN32_ONLY_FILES,
+        exclude = WIN32_ONLY_FILES + PROFILE_ROCM_FILES,
     ) + select({
         "@platforms//os:windows": WIN32_ONLY_FILES,
         "//conditions:default": [],
