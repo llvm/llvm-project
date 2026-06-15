@@ -5192,6 +5192,8 @@ bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
 }
 
 unsigned AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+  if (VF.isScalar())
+    return 4;
   return ST->getMaxInterleaveFactor();
 }
 
