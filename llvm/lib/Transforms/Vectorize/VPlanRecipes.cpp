@@ -688,7 +688,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   llvm_unreachable("all cases should be handled above");
 }
 
-bool VPInstruction::mustReplicate() const {
+bool VPInstruction::doesGeneratePerAllLanes() const {
   return Opcode == VPInstruction::Unpack ||
          (Opcode == VPInstruction::PtrAdd && !vputils::onlyFirstLaneUsed(this));
 }
@@ -1321,7 +1321,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
       return 0;
     }
 
-    assert(!mustReplicate() &&
+    assert(!doesGeneratePerAllLanes() &&
            "Should only generate a vector value or single scalar, not scalars "
            "for all lanes.");
     return getCostForRecipeWithOpcode(

@@ -64,9 +64,8 @@ bool isHeaderMask(const VPValue *V, const VPlan &Plan);
 /// VPDerivedIV or the canonical IV).
 bool isUniformAcrossVFsAndUFs(const VPValue *V);
 
-/// Returns true if \p R must be replicated, to produce scalar values for all
-/// lanes.
-bool mustReplicate(const VPRecipeBase *R);
+/// Returns true if \p R produces scalar values for all VF lanes.
+bool doesGeneratePerAllLanes(const VPRecipeBase *R);
 
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.

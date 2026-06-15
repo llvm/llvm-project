@@ -936,7 +936,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
   SmallVector<VPRecipeBase *> ToRemove;
   for (VPBasicBlock *VPBB : VPBBsToUnroll) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (!vputils::mustReplicate(&R))
+      if (!vputils::doesGeneratePerAllLanes(&R))
         continue;
 
       auto *DefR = cast<VPSingleDefRecipe>(&R);

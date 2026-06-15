@@ -1350,10 +1350,9 @@ public:
     OpsEnd = VScale,
   };
 
-  /// Returns true if this VPInstruction generates scalar values for all lanes;
-  /// i.e. if it behaves like a non-single-scalar VPReplicateRecipe (see also
-  /// VPReplicateRecipe::mustReplicate).
-  bool mustReplicate() const;
+  /// Returns true if this VPInstruction generates scalar values for all VF
+  /// lanes; i.e. if it behaves like a non-single-scalar VPReplicateRecipe.
+  bool doesGeneratePerAllLanes() const;
 
   /// Return the number of operands determined by the opcode of the
   /// VPInstruction, excluding mask. Returns -1u if the number of operands
@@ -3454,8 +3453,8 @@ public:
   /// operands.
   bool isSingleScalar() const { return IsSingleScalar; }
 
-  /// Returns true if the recipe produces scalar values for all lanes.
-  bool mustReplicate() const { return !IsSingleScalar; }
+  /// Returns true if the recipe produces scalar values for all VF lanes.
+  bool doesGeneratePerAllLanes() const { return !IsSingleScalar; }
 
   bool isPredicated() const { return IsPredicated; }
 

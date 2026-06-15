@@ -500,11 +500,11 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
       });
 }
 
-bool vputils::mustReplicate(const VPRecipeBase *R) {
+bool vputils::doesGeneratePerAllLanes(const VPRecipeBase *R) {
   if (auto *RepR = dyn_cast<VPReplicateRecipe>(R))
-    return RepR->mustReplicate();
+    return RepR->doesGeneratePerAllLanes();
   if (auto *VPI = dyn_cast<VPInstruction>(R))
-    return VPI->mustReplicate();
+    return VPI->doesGeneratePerAllLanes();
   return isa<VPScalarIVStepsRecipe>(R);
 }
 
