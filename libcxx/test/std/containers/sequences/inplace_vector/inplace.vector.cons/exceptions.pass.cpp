@@ -60,9 +60,8 @@ void test_iterator_constructor_exceptions() {
   {
     ThrowingValue values[] = {ThrowingValue(1), ThrowingValue(2)};
     try {
-      std::inplace_vector<ThrowingValue, 4> c(
-          throwing_iterator<ThrowingValue, std::input_iterator_tag>(values),
-          throwing_iterator<ThrowingValue, std::input_iterator_tag>(values + 2, 2));
+      std::inplace_vector<ThrowingValue, 4> c(throwing_iterator<ThrowingValue, std::input_iterator_tag>(values),
+                                              throwing_iterator<ThrowingValue, std::input_iterator_tag>(values + 2, 2));
       assert(false);
     } catch (int) {
       assert(ThrowingValue::alive == 2);

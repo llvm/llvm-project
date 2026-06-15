@@ -35,7 +35,7 @@ struct ThrowingMoveCtorOnly {
 };
 
 struct ThrowingMoveAssignOnly {
-  ThrowingMoveAssignOnly() = default;
+  ThrowingMoveAssignOnly()                                  = default;
   ThrowingMoveAssignOnly(ThrowingMoveAssignOnly&&) noexcept = default;
   ThrowingMoveAssignOnly& operator=(ThrowingMoveAssignOnly&&) noexcept(false) { return *this; }
 };
@@ -66,7 +66,7 @@ constexpr bool test() {
   { // self-move-assignment leaves the container in a valid state
     std::inplace_vector<int, 8> c{1, 2, 3};
     std::inplace_vector<int, 8>& ref = c;
-    c = std::move(ref);
+    c                                = std::move(ref);
     LIBCPP_ASSERT(c == (std::inplace_vector<int, 8>{1, 2, 3}));
   }
 
