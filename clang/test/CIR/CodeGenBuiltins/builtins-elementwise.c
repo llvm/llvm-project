@@ -518,27 +518,27 @@ void test_builtin_elementwise_add_sat(int i1, int i2, unsigned u1, unsigned u2,
   // CIR-LABEL: test_builtin_elementwise_add_sat
   // LLVM-LABEL: test_builtin_elementwise_add_sat
 
-  // CIR: cir.call_llvm_intrinsic "sadd.sat" %{{.*}}, %{{.*}} : (!s32i, !s32i) -> !s32i
+  // CIR: cir.add sat %{{.*}}, %{{.*}} : !s32i
   // LLVM: call i32 @llvm.sadd.sat.i32(i32 %{{.*}}, i32 %{{.*}})
   i1 = __builtin_elementwise_add_sat(i1, i2);
 
-  // CIR: cir.call_llvm_intrinsic "uadd.sat" %{{.*}}, %{{.*}} : (!u32i, !u32i) -> !u32i
+  // CIR: cir.add sat %{{.*}}, %{{.*}} : !u32i
   // LLVM: call i32 @llvm.uadd.sat.i32(i32 %{{.*}}, i32 %{{.*}})
   u1 = __builtin_elementwise_add_sat(u1, u2);
 
-  // CIR: cir.call_llvm_intrinsic "sadd.sat" %{{.*}}, %{{.*}} : (!s16i, !s16i) -> !s16i
+  // CIR: cir.add sat %{{.*}}, %{{.*}} : !s16i
   // LLVM: call i16 @llvm.sadd.sat.i16(i16 %{{.*}}, i16 %{{.*}})
   s1 = __builtin_elementwise_add_sat(s1, s2);
 
-  // CIR: cir.call_llvm_intrinsic "sadd.sat" %{{.*}}, %{{.*}} : (!cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>) -> !cir.vector<4 x !s32i>
+  // CIR: cir.add sat %{{.*}}, %{{.*}} : !cir.vector<4 x !s32i>
   // LLVM: call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   vi1 = __builtin_elementwise_add_sat(vi1, vi2);
 
-  // CIR: cir.call_llvm_intrinsic "uadd.sat" %{{.*}}, %{{.*}} : (!cir.vector<4 x !u32i>, !cir.vector<4 x !u32i>) -> !cir.vector<4 x !u32i>
+  // CIR: cir.add sat %{{.*}}, %{{.*}} : !cir.vector<4 x !u32i>
   // LLVM: call <4 x i32> @llvm.uadd.sat.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   vu1 = __builtin_elementwise_add_sat(vu1, vu2);
 
-  // CIR: cir.call_llvm_intrinsic "sadd.sat" %{{.*}}, %{{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>) -> !cir.vector<8 x !s16i>
+  // CIR: cir.add sat %{{.*}}, %{{.*}} : !cir.vector<8 x !s16i>
   // LLVM: call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   vs1 = __builtin_elementwise_add_sat(vs1, vs2);
 }
@@ -550,27 +550,27 @@ void test_builtin_elementwise_sub_sat(int i1, int i2, unsigned u1, unsigned u2,
   // CIR-LABEL: test_builtin_elementwise_sub_sat
   // LLVM-LABEL: test_builtin_elementwise_sub_sat
 
-  // CIR: cir.call_llvm_intrinsic "ssub.sat" %{{.*}}, %{{.*}} : (!s32i, !s32i) -> !s32i
+  // CIR: cir.sub sat %{{.*}}, %{{.*}} : !s32i
   // LLVM: call i32 @llvm.ssub.sat.i32(i32 %{{.*}}, i32 %{{.*}})
   i1 = __builtin_elementwise_sub_sat(i1, i2);
 
-  // CIR: cir.call_llvm_intrinsic "usub.sat" %{{.*}}, %{{.*}} : (!u32i, !u32i) -> !u32i
+  // CIR: cir.sub sat %{{.*}}, %{{.*}} : !u32i
   // LLVM: call i32 @llvm.usub.sat.i32(i32 %{{.*}}, i32 %{{.*}})
   u1 = __builtin_elementwise_sub_sat(u1, u2);
 
-  // CIR: cir.call_llvm_intrinsic "ssub.sat" %{{.*}}, %{{.*}} : (!s16i, !s16i) -> !s16i
+  // CIR: cir.sub sat %{{.*}}, %{{.*}} : !s16i
   // LLVM: call i16 @llvm.ssub.sat.i16(i16 %{{.*}}, i16 %{{.*}})
   s1 = __builtin_elementwise_sub_sat(s1, s2);
 
-  // CIR: cir.call_llvm_intrinsic "ssub.sat" %{{.*}}, %{{.*}} : (!cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>) -> !cir.vector<4 x !s32i>
+  // CIR: cir.sub sat %{{.*}}, %{{.*}} : !cir.vector<4 x !s32i>
   // LLVM: call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   vi1 = __builtin_elementwise_sub_sat(vi1, vi2);
 
-  // CIR: cir.call_llvm_intrinsic "usub.sat" %{{.*}}, %{{.*}} : (!cir.vector<4 x !u32i>, !cir.vector<4 x !u32i>) -> !cir.vector<4 x !u32i>
+  // CIR: cir.sub sat %{{.*}}, %{{.*}} : !cir.vector<4 x !u32i>
   // LLVM: call <4 x i32> @llvm.usub.sat.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   vu1 = __builtin_elementwise_sub_sat(vu1, vu2);
 
-  // CIR: cir.call_llvm_intrinsic "ssub.sat" %{{.*}}, %{{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>) -> !cir.vector<8 x !s16i>
+  // CIR: cir.sub sat %{{.*}}, %{{.*}} : !cir.vector<8 x !s16i>
   // LLVM: call <8 x i16> @llvm.ssub.sat.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   vs1 = __builtin_elementwise_sub_sat(vs1, vs2);
 }
