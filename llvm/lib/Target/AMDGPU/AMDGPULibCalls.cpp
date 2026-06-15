@@ -1169,7 +1169,12 @@ bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
   Module *M = B.GetInsertBlock()->getModule();
 
   CallInst *CI = cast<CallInst>(FPOp);
-  if (ci_opr1 == 2 &&
+
+  // rootn and sqrt disagree on signed-zero / -Inf inputs (e.g. rootn(-0.0, 2)
+  // is +0.0, sqrt(-0.0) is -0.0), so require nsz/ninf.
+  bool FMFOkForSqrt = FPOp->hasNoSignedZeros() && FPOp->hasNoInfs();
+
+  if (ci_opr1 == 2 && FMFOkForSqrt &&
       shouldReplaceLibcallWithIntrinsic(CI,
                                         /*AllowMinSizeF32=*/true,
                                         /*AllowF64=*/true)) {
@@ -1208,7 +1213,7 @@ bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
     return true;
   }
 
-  if (ci_opr1 == -2 &&
+  if (ci_opr1 == -2 && FMFOkForSqrt &&
       shouldReplaceLibcallWithIntrinsic(CI,
                                         /*AllowMinSizeF32=*/true,
                                         /*AllowF64=*/true)) {
