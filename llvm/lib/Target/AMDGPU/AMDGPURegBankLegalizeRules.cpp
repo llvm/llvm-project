@@ -165,6 +165,9 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
   case UniV32S32:
     return MRI.getType(Reg) == LLT::fixed_vector(32, 32) &&
            MUI.isUniformAtDef(Reg);
+  case UniV2S64:
+    return MRI.getType(Reg) == LLT::fixed_vector(2, 64) &&
+           MUI.isUniformAtDef(Reg);
   case UniB32:
     return MRI.getType(Reg).getSizeInBits() == 32 && MUI.isUniformAtDef(Reg);
   case UniB64:
@@ -1560,7 +1563,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16}})
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16}})
       .Any({{UniV2S32}, {{UniInVgprV2S32}, {VgprV2S32}}})
-      .Any({{DivV2S32}, {{VgprV2S32}, {VgprV2S32}}});
+      .Any({{DivV2S32}, {{VgprV2S32}, {VgprV2S32}}})
+      .Any({{UniV2S64}, {{UniInVgprV2S64}, {VgprV2S64}}})
+      .Any({{DivV2S64}, {{VgprV2S64}, {VgprV2S64}}});
 
   bool hasPST = ST->hasPseudoScalarTrans();
   addRulesForGOpcs({G_FSQRT}, Standard)
@@ -2049,9 +2054,14 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S64, {{Vgpr64}, {IntrId, Vgpr64, Vgpr32, Vgpr32}, V_BFE});
 
   addRulesForIOpcs({amdgcn_cvt_pk_i16, amdgcn_cvt_pk_u16, amdgcn_cvt_pknorm_i16,
-                    amdgcn_cvt_pknorm_u16, amdgcn_cvt_pkrtz},
+                    amdgcn_cvt_pknorm_u16},
                    Standard)
       .Uni(V2S16, {{UniInVgprV2S16}, {IntrId, Vgpr32, Vgpr32}})
+      .Div(V2S16, {{VgprV2S16}, {IntrId, Vgpr32, Vgpr32}});
+
+  addRulesForIOpcs({amdgcn_cvt_pkrtz}, Standard)
+      .Uni(V2S16, {{SgprV2S16}, {IntrId, Sgpr32, Sgpr32}}, hasSALUFloat)
+      .Uni(V2S16, {{UniInVgprV2S16}, {IntrId, Vgpr32, Vgpr32}}, !hasSALUFloat)
       .Div(V2S16, {{VgprV2S16}, {IntrId, Vgpr32, Vgpr32}});
 
   addRulesForIOpcs({amdgcn_cvt_scalef32_sr_pk32_bf6_f16,
@@ -2675,6 +2685,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
        amdgcn_wmma_scale_f32_16x16x128_f8f6f4,
        amdgcn_wmma_scale16_f32_16x16x128_f8f6f4, amdgcn_wmma_f32_32x16x128_f4,
        amdgcn_wmma_scale_f32_32x16x128_f4, amdgcn_wmma_scale16_f32_32x16x128_f4,
+       // WMMA GFX1251
+       amdgcn_wmma_f64_16x16x4_f64,
        // SWMMAC GFX12
        amdgcn_swmmac_f32_16x16x32_f16, amdgcn_swmmac_f32_16x16x32_bf16,
        amdgcn_swmmac_f16_16x16x32_f16, amdgcn_swmmac_bf16_16x16x32_bf16,

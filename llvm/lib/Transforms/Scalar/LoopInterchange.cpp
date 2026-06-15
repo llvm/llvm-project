@@ -1377,6 +1377,26 @@ bool LoopInterchangeLegality::currentLimitations() {
     return true;
   }
 
+  // Currently, we do not support loops that have a predecessor entering the
+  // loop via an indirectbr.
+  for (Loop *L : {OuterLoop, InnerLoop}) {
+    BasicBlock *Header = L->getHeader();
+    for (BasicBlock *Pred : predecessors(Header)) {
+      if (L->contains(Pred))
+        continue;
+      if (isa<IndirectBrInst>(Pred->getTerminator())) {
+        LLVM_DEBUG(
+            dbgs() << "Indirect branch found in the loop predecessor.\n");
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "IndirectBranchPreheader",
+                                          L->getStartLoc(), L->getHeader())
+                 << "Indirect branch found in the loop predecessor.";
+        });
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 
@@ -2173,8 +2193,8 @@ bool LoopInterchangeTransform::transform(
   if (InnerLoopPreHeader != OuterLoopHeader) {
     // Eliminate PHIs in the inner-loop preheader.
     for (PHINode &P : make_early_inc_range(InnerLoopPreHeader->phis())) {
-      assert(P.getNumIncomingValues() == 1 &&
-             "Expected single-incoming PHIs in inner loop preheader");
+      assert(all_equal(P.incoming_values()) &&
+             "Expected equivalent incoming values in inner loop preheader");
       P.replaceAllUsesWith(P.getIncomingValue(0));
       P.eraseFromParent();
     }
