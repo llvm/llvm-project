@@ -1966,10 +1966,10 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
   unsigned OpOffset = isa<GIntrinsic>(I) ? 1 : 0;
   Register Ptr = I.getOperand(1 + OpOffset).getReg();
 
-  if (!ResType.isTypeIntOrFloat())
-    return diagnoseUnsupported(I,
-                               "Lowering to SPIR-V of atomic load is only "
-                               "allowed for integer or floating point types");
+  if (!ResType.isTypeIntOrFloat() && !ResType.isTypePtr())
+    return diagnoseUnsupported(
+        I, "Lowering to SPIR-V of atomic load is only "
+           "allowed for integer, floating point or pointer types");
 
   assert(I.getNumMemOperands());
   const MachineMemOperand &MemOp = **I.memoperands_begin();
@@ -1988,6 +1988,54 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
   Register MemSemReg = buildI32Constant(MemSem | StorageClass, I);
 
   MachineIRBuilder MIRBuilder(I);
+
+  if (ResType.isTypePtr()) {
+    if (!STI.isPhysicalSPIRV())
+      return diagnoseUnsupported(
+          I, "Lowering to SPIR-V of atomic load is only "
+             "allowed for pointer types for physical addressing model");
+    // If data to load is a pointer type we bitcast the Ptr parameter to pointer
+    // to an integer type of the same size as the pointer size and then generate
+    // OpAtomicLoad the return value of that OpAtomicLoad is an integet that is
+    // converted back to a pointer type using OpConvertUToPtr.
+
+    unsigned PtrSize = GR.getPointerSize();
+    SPIRVTypeInst PtrAsIntSpirvType =
+        GR.getOrCreateSPIRVIntegerType(PtrSize, MIRBuilder);
+    Register PtrToUVal =
+        MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
+    MRI->setRegClass(PtrToUVal, GR.getRegClass(PtrAsIntSpirvType));
+    GR.assignSPIRVTypeToVReg(PtrAsIntSpirvType, PtrToUVal, MIRBuilder.getMF());
+
+    Register PtrCastedToMatchValReg =
+        MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
+    MRI->setRegClass(PtrCastedToMatchValReg, MRI->getRegClassOrNull(Ptr));
+    SPIRVTypeInst PtrType = GR.getOrCreateSPIRVPointerType(
+        PtrAsIntSpirvType, MIRBuilder,
+        addressSpaceToStorageClass(MemOp.getAddrSpace(), STI));
+    GR.assignSPIRVTypeToVReg(PtrType, PtrCastedToMatchValReg,
+                             MIRBuilder.getMF());
+
+    MIRBuilder.buildInstr(SPIRV::OpBitcast)
+        .addDef(PtrCastedToMatchValReg)
+        .addUse(GR.getSPIRVTypeID(PtrType))
+        .addUse(Ptr)
+        .constrainAllUses(TII, TRI, RBI);
+
+    MIRBuilder.buildInstr(SPIRV::OpAtomicLoad)
+        .addDef(PtrToUVal)
+        .addUse(GR.getSPIRVTypeID(PtrAsIntSpirvType))
+        .addUse(PtrCastedToMatchValReg)
+        .addUse(ScopeReg)
+        .addUse(MemSemReg)
+        .constrainAllUses(TII, TRI, RBI);
+    MIRBuilder.buildInstr(SPIRV::OpConvertUToPtr)
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(PtrToUVal)
+        .constrainAllUses(TII, TRI, RBI);
+    return true;
+  }
   auto AtomicLoad = MIRBuilder.buildInstr(SPIRV::OpAtomicLoad)
                         .addDef(ResVReg)
                         .addUse(GR.getSPIRVTypeID(ResType))
@@ -1995,6 +2043,7 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
                         .addUse(ScopeReg)
                         .addUse(MemSemReg);
   AtomicLoad.constrainAllUses(TII, TRI, RBI);
+
   return true;
 }
 
@@ -2097,7 +2146,7 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
 
     Register PtrToUVal =
         MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
-    MRI->setRegClass(PtrToUVal, MRI->getRegClassOrNull(StoreVal));
+    MRI->setRegClass(PtrToUVal, GR.getRegClass(PtrAsIntSpirvType));
     GR.assignSPIRVTypeToVReg(PtrAsIntSpirvType, PtrToUVal, MIRBuilder.getMF());
     MIRBuilder.buildInstr(SPIRV::OpConvertPtrToU)
         .addDef(PtrToUVal)
