@@ -22,7 +22,8 @@
 
 constexpr bool test() {
   std::inplace_vector<int, 8> c{1, 2, 3, 4, 5, 6};
-  ASSERT_SAME_TYPE(std::inplace_vector<int, 8>::size_type, decltype(std::erase_if(c, [](int v) { return v % 2 == 0; })));
+  ASSERT_SAME_TYPE(
+      std::inplace_vector<int, 8>::size_type, decltype(std::erase_if(c, [](int v) { return v % 2 == 0; })));
   auto erased = std::erase_if(c, [](int v) { return v % 2 == 0; });
   assert(erased == 3);
   assert_inplace_vector_equal(c, {1, 3, 5});

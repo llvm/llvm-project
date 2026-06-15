@@ -20,11 +20,10 @@
 
 using InplaceVector = std::inplace_vector<operator_hijacker, 16>;
 
-void test(
-    InplaceVector v,
-    InplaceVector::const_iterator it,
-    cpp17_input_iterator<operator_hijacker*> other_it,
-    operator_hijacker val) {
+void test(InplaceVector v,
+          InplaceVector::const_iterator it,
+          cpp17_input_iterator<operator_hijacker*> other_it,
+          operator_hijacker val) {
   // emplace / insert
   v.emplace(it);
   v.insert(it, it, it);

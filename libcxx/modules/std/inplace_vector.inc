@@ -12,4 +12,4 @@ export namespace std {
   using std::inplace_vector;
 #endif
 
-}
+} // namespace std

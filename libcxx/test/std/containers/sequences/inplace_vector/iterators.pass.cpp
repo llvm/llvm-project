@@ -82,7 +82,7 @@ constexpr bool test() {
     assert(j == j);
   }
   {
-    using C = std::inplace_vector<A, 4>;
+    using C             = std::inplace_vector<A, 4>;
     C c                 = {A{1, 2}};
     C::iterator i       = c.begin();
     i->first            = 3;

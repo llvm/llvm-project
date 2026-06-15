@@ -13,40 +13,40 @@
 void test() {
   std::inplace_vector<int, 4> v;
 
-  v.at(0);      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v.back();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v.begin();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v.capacity(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v.cbegin();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v.cend();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v.crbegin();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v.crend();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v.data();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v.empty();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v.end();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v.front();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v.max_size(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v.rbegin();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v.rend();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v.size();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v[0];         // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.at(0);               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.back();              // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.begin();             // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.capacity();          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.cbegin();            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.cend();              // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.crbegin();           // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.crend();             // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.data();              // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.empty();             // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.end();               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.front();             // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.max_size();          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.rbegin();            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.rend();              // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v.size();              // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v[0];                  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   v.try_emplace_back(1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   v.try_push_back(1);    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   std::inplace_vector<int, 0> v0;
-  v0.begin();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v0.capacity(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v0.cbegin();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v0.cend();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v0.crbegin();  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v0.crend();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v0.data();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v0.empty();    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v0.end();      // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v0.max_size(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v0.rbegin();   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v0.rend();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-  v0.size();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v0.begin();             // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v0.capacity();          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v0.cbegin();            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v0.cend();              // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v0.crbegin();           // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v0.crend();             // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v0.data();              // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v0.empty();             // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v0.end();               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v0.max_size();          // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v0.rbegin();            // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v0.rend();              // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  v0.size();              // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   v0.try_emplace_back(1); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   v0.try_push_back(1);    // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 

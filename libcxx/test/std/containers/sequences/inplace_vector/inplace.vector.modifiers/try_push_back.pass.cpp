@@ -36,6 +36,7 @@ constexpr bool test() {
   {
     std::inplace_vector<int, 2> c;
     int value = 1;
+
     std::same_as<std::optional<int&>> decltype(auto) r1 = c.try_push_back(value);
     assert(r1);
     assert(&*r1 == &c.back());

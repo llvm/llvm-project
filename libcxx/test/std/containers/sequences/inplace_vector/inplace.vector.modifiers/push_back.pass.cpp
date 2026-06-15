@@ -25,7 +25,9 @@ constexpr bool test() {
   int& r1 = c.push_back(x);
   assert(&r1 == &c.back());
   assert(c.back() == 1);
+
   x = 2;
+
   int& r2 = c.push_back(x);
   assert(&r2 == &c.back());
   assert_inplace_vector_equal(c, {1, 2});
