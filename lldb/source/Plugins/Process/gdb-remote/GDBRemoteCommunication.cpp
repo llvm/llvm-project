@@ -376,6 +376,11 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
         }
         break;
       case eConnectionStatusSuccess:
+        // Read() can return zero bytes with a success status (e.g. a spurious
+        // readable wakeup that yields EAGAIN on a non-socket connection). That
+        // is neither EOF nor an error, so keep looping -- we may still be
+        // waiting for the actual response, for instance after dropping the
+        // async notification packets handled above.
         // printf ("status = success but error = %s\n",
         // error.AsCString("<invalid>"));
         break;
