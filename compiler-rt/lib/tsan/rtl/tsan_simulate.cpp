@@ -15,7 +15,8 @@
 //   - Support custom mutexes (e.g. absl::Mutex) and direct futex calls in
 //     simulation mode. Currently, only pthread mutexes and condition variables
 //     are supported; other synchronization primitives abort the simulation.
-//   - Support timed operations (pthread_cond_timedwait, pthread_mutex_timedlock,
+//   - Support timed operations (pthread_cond_timedwait,
+//   pthread_mutex_timedlock,
 //     pthread_timedjoin_np) by treating them as their non-timed counterparts.
 //   - Support spinlocks (pthread_spin_lock/trylock/unlock) using the same
 //     trylock-loop pattern as pthread_mutex_lock.
@@ -108,15 +109,11 @@ struct Waitset {
   }
 
   // Randomly select and remove one thread from the waitset.
-  // Matches Relacy's approach to maximize interleaving exploration.
   int RemoveOne(u32* rng_state) {
     CHECK_GT(count, 0);
-    // Pick a random thread from the waitset.
     int idx = RandN(rng_state, count);
     int thread_idx = waiters[idx];
-    // Remove it by shifting remaining threads.
-    for (int i = idx + 1; i < count; i++) waiters[i - 1] = waiters[i];
-    count--;
+    waiters[idx] = waiters[--count];
     return thread_idx;
   }
 
@@ -631,6 +628,34 @@ int CheckForErors(int iter, int start_iter) {
         "iterations\n",
         iter - start_iter + 1);
     return -1;
+  }
+
+  // Check TSan's thread registry for threads that finished but were never
+  // joined or detached (thread leaks).
+  {
+    bool has_leak = false;
+    ThreadRegistryLock l(&ctx->thread_registry);
+    ctx->thread_registry.RunCallbackForEachThreadLocked(
+        [](ThreadContextBase* tctx_base, void* arg) {
+          auto* tctx = static_cast<ThreadContext*>(tctx_base);
+          if (tctx->detached || tctx->status != ThreadStatusFinished)
+            return;
+          *static_cast<bool*>(arg) = true;
+        },
+        &has_leak);
+    if (has_leak) {
+      Printf("ThreadSanitizer: thread leak detected at iteration %d\n", iter);
+      Printf(
+          "ThreadSanitizer: to reproduce, set "
+          "TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration="
+          "%d\n",
+          iter);
+      Printf(
+          "ThreadSanitizer: simulation stopped due to thread leak after %d "
+          "iterations\n",
+          iter - start_iter + 1);
+      return -1;
+    }
   }
 
   return 0;
