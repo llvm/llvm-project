@@ -1158,18 +1158,14 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
     bool IsReverse = false;
     // For Trunc/FPTrunc, get the context from the only user.
     if (Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) {
-      auto GetOnlyUser = [](const VPSingleDefRecipe *R) -> VPRecipeBase * {
-        if (R->getNumUsers() == 0 || R->hasMoreThanOneUniqueUser())
-          return nullptr;
-        return dyn_cast<VPRecipeBase>(*R->user_begin());
-      };
-      if (VPRecipeBase *Recipe = GetOnlyUser(this)) {
+      if (auto *Recipe = cast_or_null<VPRecipeBase>(getSingleUser())) {
         if (match(Recipe,
                   m_CombineOr(
                       m_Reverse(m_VPValue()),
                       m_Intrinsic<Intrinsic::experimental_vp_reverse>()))) {
-          Recipe = GetOnlyUser(cast<VPSingleDefRecipe>(Recipe));
           IsReverse = true;
+          Recipe = cast_or_null<VPRecipeBase>(
+              Recipe->getVPSingleValue()->getSingleUser());
         }
         if (Recipe)
           CCH = ComputeCCH(Recipe);
