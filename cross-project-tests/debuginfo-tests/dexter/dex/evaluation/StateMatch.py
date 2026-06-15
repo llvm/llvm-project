@@ -13,7 +13,7 @@ from typing import Dict, List, Tuple
 
 from dex.dextIR import FrameIR, StepIR
 from dex.test_script import DexterScript, Scope
-from dex.test_script.Nodes import Expect, FileLabels, Value, Where
+from dex.test_script.Nodes import Expect, Value, Where
 
 
 def is_subpath(subpath: str, superpath: str) -> bool:
@@ -28,7 +28,6 @@ def is_subpath(subpath: str, superpath: str) -> bool:
 def match_where_to_frame(
     where: Where,
     frame: FrameIR,
-    labels: FileLabels,
 ) -> bool:
     """A very simple matcher, returns True iff `where` matches `frame`."""
     if where.file is not None and not is_subpath(where.file, frame.loc.path):
@@ -40,7 +39,7 @@ def match_where_to_frame(
         if where.function != fn:
             return False
     if where.lines is not None:
-        if frame.loc.lineno not in where.get_lines(labels):
+        if frame.loc.lineno not in where.get_lines():
             return False
     if (
         where.for_hit_count is not None
@@ -75,7 +74,6 @@ def get_active_where_matches(
 
     def get_active_wheres(where: Where, scope: Scope):
         # For nested !wheres, we must match a specific frame relative to the parent !where.
-        expected_file = scope.get_known_file_for_where(where)
         if scope.where:
             if scope.where not in active_where_expects:
                 # If the parent !where doesn't match any frame, then this !where cannot match any either.
@@ -89,20 +87,18 @@ def get_active_where_matches(
                 # If the target frame is -1, we can't match the !where yet, but we should prepare to step into it.
                 active_where_expects[scope.where].pending_wheres.append(where)
                 return
-            labels = script.get_labels(
-                expected_file or step_info.frames[target_frame_idx].loc.path
-            )
-            if match_where_to_frame(where, step_info.frames[target_frame_idx], labels):
+            if match_where_to_frame(where, step_info.frames[target_frame_idx]):
                 active_where_expects[where] = WhereMatchResult(target_frame_idx)
             return
         # For this !where, search for the rootmost stack frame that matches it.
-        matching_frame_idx = None
-        for frame_idx, frame in reversed(list(enumerate(step_info.frames))):
-            labels = script.get_labels(expected_file or frame.loc.path)
-            if match_where_to_frame(where, frame, labels):
-                matching_frame_idx = frame_idx
-                break
-
+        matching_frame_idx = next(
+            (
+                frame_idx
+                for frame_idx, frame in reversed(list(enumerate(step_info.frames)))
+                if match_where_to_frame(where, frame)
+            ),
+            None,
+        )
         if matching_frame_idx is not None:
             active_where_expects[where] = WhereMatchResult(matching_frame_idx)
 
