@@ -191,6 +191,19 @@ LANGSTANDARD(gnucxx26, "gnu++2c",
              CPlusPlus20 | CPlusPlus23 | CPlusPlus26 | Digraphs | HexFloat | GNUMode, 202400)
 LANGSTANDARD_ALIAS(gnucxx26, "gnu++26")
 
+// FIXME: Use correct version code for C++29 once published.
+LANGSTANDARD(cxx29, "c++2d",
+             CXX, "Working draft for C++2d",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
+             CPlusPlus20 | CPlusPlus23 | CPlusPlus26 | CPlusPlus29 | Digraphs | HexFloat, 202700)
+LANGSTANDARD_ALIAS(cxx29, "c++29")
+
+LANGSTANDARD(gnucxx29, "gnu++2d",
+             CXX, "Working draft for C++2d with GNU extensions",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
+             CPlusPlus20 | CPlusPlus23 | CPlusPlus26 | CPlusPlus29 | Digraphs | HexFloat | GNUMode, 202700)
+LANGSTANDARD_ALIAS(gnucxx29, "gnu++29")
+
 // OpenCL
 LANGSTANDARD(opencl10, "cl1.0",
              OpenCL, "OpenCL 1.0",

@@ -40,7 +40,7 @@ specific section:
 -  :ref:`Objective-C Language <objc>`: ObjC 1, ObjC 2, ObjC 2.1, plus
    variants depending on base language.
 -  :ref:`C++ Language <cxx>`: C++98, C++03, C++11, C++14, C++17, C++20, C++23,
-   and C++26.
+   C++26, and C++29.
 -  :ref:`Objective C++ Language <objcxx>`
 -  :ref:`OpenCL Kernel Language <opencl>`: OpenCL C 1.0, 1.1, 1.2, 2.0, 3.0,
    and C++ for OpenCL 1.0 and 2021.
