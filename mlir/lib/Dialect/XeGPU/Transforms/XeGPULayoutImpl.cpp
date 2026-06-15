@@ -1031,7 +1031,7 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     if (consumerSliceLayout &&
         consumerSliceLayout.getDims().asArrayRef().equals(reductionDims)) {
       // at the lane level, the consumerSliceLayout can be directly reused
-      // since the inst_data propagation already insert convert_layout if 
+      // since the inst_data propagation already insert convert_layout if
       // the layout is not consistent
       srcLayout = consumerSliceLayout.getParent();
     } else {
@@ -1065,12 +1065,10 @@ xegpu::setupReductionResultLayout(xegpu::LayoutKind layoutKind,
     assert(true && "instData layout assignment not supported for reduction (op "
                    "is not expected at this level).");
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
-    SmallVector<int32_t> laneLayout(1), laneData(1);
-    laneLayout[0] = std::min(subgroupSize, static_cast<int32_t>(srcShape[0]));
+    SmallVector<int64_t> laneLayout(1), laneData(1);
+    laneLayout[0] = std::min(static_cast<int64_t>(subgroupSize), srcShape[0]);
     laneData[0] = 1;
-    srcLayout = xegpu::LayoutAttr::get(
-        context, DenseI32ArrayAttr::get(context, laneLayout),
-        DenseI32ArrayAttr::get(context, laneData));
+    srcLayout = buildLaneLayout(context, laneLayout, laneData);
   }
 
   auto result = xegpu::SliceAttr::get(context, srcLayout,
@@ -1490,33 +1488,6 @@ xegpu::DistributeLayoutAttr xegpu::completeScatterIOLaneLayoutFromInstData(
                                      defLaneData);
 }
 
-static std::pair<SmallVector<int64_t>, SmallVector<int64_t>>
-compute2DBlockIOLaneLayoutAndData(ArrayRef<int64_t> instShape,
-                                  int64_t subgroupSize, int64_t bitwidth,
-                                  int64_t packingSize, bool vnni = false,
-                                  bool transpose = false) {
-  int64_t rank = instShape.size();
-  SmallVector<int64_t> laneLayout(rank, 1), laneData(rank, 1);
-  int64_t packingDim = vnni ? rank - 2 : rank - 1;
-  laneData[packingDim] = bitwidth < packingSize ? packingSize / bitwidth : 1;
-  assert(
-      !(vnni && transpose) &&
-      "transpose and VNNI cannot be enabled at the same time for 2D block IO");
-  if (transpose)
-    laneLayout[rank - 2] = subgroupSize;
-  else
-    laneLayout.back() = subgroupSize;
-  // assert that the lane layout and data fit in the inst shape
-  for (int64_t i = 0; i < rank; ++i) {
-    int64_t laneProduct = laneLayout[i] * laneData[i];
-    assert(instShape[i] % laneProduct == 0 &&
-           "lane_layout * lane_data must evenly divide the inst shape");
-    (void)laneProduct;
-  }
-  return {laneLayout, laneData};
-}
-
-// Forward declaration: defined later in the file.
 using LayoutRepresentation = SmallVector<int64_t>;
 
 /// Enumerates all ways to split `total` into `rank` factors whose product
@@ -1609,6 +1580,52 @@ getSgLayoutCandidates(ArrayRef<int64_t> wgShape, ArrayRef<int64_t> instData,
   return candidates;
 }
 
+static xegpu::LayoutAttr buildSgLayout(mlir::MLIRContext *context,
+                                       ArrayRef<int64_t> wgTileShape,
+                                       ArrayRef<int64_t> sgLayout,
+                                       int dimK = -1,
+                                       DenseI32ArrayAttr orderAttr = nullptr) {
+  SmallVector<int64_t> sgData(sgLayout.size());
+  for (int dim = 0; dim < (int)sgLayout.size(); ++dim) {
+    if (dim == dimK)
+      sgData[dim] = wgTileShape[dim];
+    else
+      sgData[dim] = wgTileShape[dim] / sgLayout[dim];
+  }
+  return buildLayout(context, sgLayout, sgData,
+                     /*inst_data=*/{}, /*lane_layout=*/{},
+                     /*lane_data=*/{}, /*order=*/nullptr);
+}
+
+// Computes the per-lane layout and data for a 2D block load/store/prefetch:
+// lanes are spread across the subgroup along the last dim (or rank-2 if
+// transposed), and laneData packs sub-bitwidth elements along the packing dim.
+static std::pair<SmallVector<int64_t>, SmallVector<int64_t>>
+compute2DBlockIOLaneLayoutAndData(ArrayRef<int64_t> instShape,
+                                  int64_t subgroupSize, int64_t bitwidth,
+                                  int64_t packingSize, bool vnni = false,
+                                  bool transpose = false) {
+  int64_t rank = instShape.size();
+  SmallVector<int64_t> laneLayout(rank, 1), laneData(rank, 1);
+  int64_t packingDim = vnni ? rank - 2 : rank - 1;
+  laneData[packingDim] = bitwidth < packingSize ? packingSize / bitwidth : 1;
+  assert(
+      !(vnni && transpose) &&
+      "transpose and VNNI cannot be enabled at the same time for 2D block IO");
+  if (transpose)
+    laneLayout[rank - 2] = subgroupSize;
+  else
+    laneLayout.back() = subgroupSize;
+  // assert that the lane layout and data fit in the inst shape
+  for (int64_t i = 0; i < rank; ++i) {
+    int64_t laneProduct = laneLayout[i] * laneData[i];
+    assert(instShape[i] % laneProduct == 0 &&
+           "lane_layout * lane_data must evenly divide the inst shape");
+    (void)laneProduct;
+  }
+  return {laneLayout, laneData};
+}
+
 /// Helper function to compute inst_data vectors for DPAS operands A, B, and
 /// C/D.
 static std::optional<SmallVector<int64_t>>
@@ -1619,9 +1636,7 @@ get2DBlockIOInstDataLayout(ArrayRef<int64_t> dataShape, ArrayRef<int> bWidths,
   // Compute inst_data from hardware block params. For Nd ops, the lane
   // factorization above (laneLayout / laneData) is rigid; inst_data must be
   // a multiple of lane_layout * lane_data on each dim (Category A
-  // invariant). If block params are unavailable for this element type
-  // (e.g. sub-byte floats with no uArch entry), fall back to
-  // lane_layout * lane_data (k = 1).
+  // invariant).
   SmallVector<int64_t> instData(rank, 1);
   assert(rank >= 2 && "dataShape must be at least 2D for 2D-block IO");
   int instWidth =
@@ -1639,26 +1654,6 @@ get2DBlockIOInstDataLayout(ArrayRef<int64_t> dataShape, ArrayRef<int> bWidths,
     assert(instData[dim] % (laneLayout[dim] * laneData[dim]) == 0 &&
            "inst_data must be a multiple of lane_layout * lane_data for ND op");
   return instData;
-}
-
-static xegpu::LayoutAttr buildSgLayout(mlir::MLIRContext *context,
-                                       ArrayRef<int64_t> wgTileShape,
-                                       ArrayRef<int64_t> sgLayout,
-                                       int dimK = -1,
-                                       DenseI32ArrayAttr orderAttr = nullptr) {
-  SmallVector<int> sgData(sgLayout.size());
-  SmallVector<int> sgLayoutInt(sgLayout.begin(), sgLayout.end());
-  for (int dim = 0; dim < (int)sgLayout.size(); ++dim) {
-    if (dim == dimK)
-      sgData[dim] = wgTileShape[dim];
-    else
-      sgData[dim] = static_cast<int>(wgTileShape[dim]) / sgLayout[dim];
-  }
-  return xegpu::LayoutAttr::get(context,
-                                DenseI32ArrayAttr::get(context, sgLayoutInt),
-                                DenseI32ArrayAttr::get(context, sgData),
-                                /*inst_data=*/nullptr, /*lane_layout=*/nullptr,
-                                /*lane_data=*/nullptr, /*order=*/nullptr);
 }
 
 /// Generic anchor-layout setup for ND ops (load_nd, store_nd, prefetch_nd).
