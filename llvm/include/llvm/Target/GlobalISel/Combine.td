@@ -2491,7 +2491,7 @@ def integer_reassoc_combines: GICombineGroup<[
 
 def max_min_combines: GICombineGroup<[
   SubSmaxSub, 
-  SubUmaxSub, 
+  SubUmaxSub,
   SubSminSub, 
   SubUminSub
 ]>;
