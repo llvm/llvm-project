@@ -1322,13 +1322,11 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Handle "clang --driver-mode=flang" case
   bool isClangDriverWithFlangMode = false;
-  if (D.Name.find("clang") != std::string_view::npos) {
-    if (const Arg *A = Args.getLastArg(options::OPT_driver_mode)) {
-      if (std::string_view(A->getValue()) == "flang") {
+  if (D.Name.find("clang") != std::string_view::npos)
+    if (const Arg *A = Args.getLastArg(options::OPT_driver_mode))
+      if (StringRef(A->getValue()) == "flang")
         isClangDriverWithFlangMode = true;
-      }
-    }
-  }
+
   const char *Exec = isClangDriverWithFlangMode
                          ? Args.MakeArgString(D.GetProgramPath("flang", TC))
                          : D.getDriverProgramPath();
