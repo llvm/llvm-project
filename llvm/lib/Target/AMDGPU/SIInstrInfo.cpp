@@ -11034,12 +11034,6 @@ ValueUniformity SIInstrInfo::getValueUniformity(const MachineInstr &MI,
   if (MI.isInlineAsm())
     return ValueUniformity::NeverUniform;
 
-  unsigned opcode = MI.getOpcode();
-  if (opcode == AMDGPU::V_READLANE_B32 ||
-      opcode == AMDGPU::V_READFIRSTLANE_B32 ||
-      opcode == AMDGPU::SI_RESTORE_S32_FROM_VGPR)
-    return ValueUniformity::AlwaysUniform;
-
   if (isCopyInstr(MI)) {
     const MachineOperand &srcOp = MI.getOperand(1);
     if (srcOp.isReg() && srcOp.getReg().isPhysical()) {

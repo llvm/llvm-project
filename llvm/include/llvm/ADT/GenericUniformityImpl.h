@@ -815,9 +815,6 @@ auto llvm::GenericSyncDependenceAnalysis<ContextT>::getJoinBlocks(
 template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::markDivergent(
     const InstructionT &I) {
-  // Always-uniform values are filtered out below by the per-value/per-register
-  // markDivergent(), so there is no need for a separate instruction-level
-  // uniformity check here.
   // For custom uniformity candidates, check if the instruction can be
   // proven uniform based on which operands are uniform/divergent.
   // The candidate will be re-evaluated as operands become divergent.
