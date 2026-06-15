@@ -679,7 +679,7 @@ public:
       Value *PoisonF = PoisonValue::get(IRB.getFloatTy());
       Value *PoisonI = PoisonValue::get(IRB.getInt32Ty());
       // Common prefix: Handle, Sampler, Coord0..3, Offset0..2
-      SmallVector<Value *, 17> Args{Handle, Sampler, PoisonF, PoisonF, PoisonF,
+      SmallVector<Value *, 17> Args{Handle,  Sampler, PoisonF, PoisonF, PoisonF,
                                     PoisonF, PoisonI, PoisonI, PoisonI};
 
       // Copy coordinates and offsets into Args.
