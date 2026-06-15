@@ -3641,6 +3641,7 @@ inline bool PushIgnoreDiags(InterpState &S, CodePtr OpPC) {
     return true;
   assert(S.PrevDiags == nullptr);
   S.PrevDiags = S.getEvalStatus().Diag;
+  S.PrevDiagsEmitted = S.getEvalStatus().DiagEmitted;
   S.getEvalStatus().Diag = nullptr;
   assert(!S.diagnosing());
   return true;
@@ -3651,6 +3652,7 @@ inline bool PopIgnoreDiags(InterpState &S, CodePtr OpPC) {
   --S.DiagIgnoreDepth;
   if (S.DiagIgnoreDepth == 0) {
     S.getEvalStatus().Diag = S.PrevDiags;
+    S.getEvalStatus().DiagEmitted = S.PrevDiagsEmitted;
     S.PrevDiags = nullptr;
   }
   return true;
