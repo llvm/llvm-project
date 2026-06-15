@@ -14679,7 +14679,7 @@ arbitrarily complex and require, for example, memory allocation.
 
 On targets where ``llvm.va_copy`` is equivalent to ``memcpy``, ``memcpy``
 can be used instead to duplicate a ``va_list``. ``llvm.va_copy`` is
-equivalent to ``memcpy`` on all currently supported targets implement
+equivalent to ``memcpy`` on all currently supported targets.
 
 Accurate Garbage Collection Intrinsics
 --------------------------------------
