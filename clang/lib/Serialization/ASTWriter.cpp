@@ -1608,14 +1608,15 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   // Language options.
   Record.clear();
   const LangOptions &LangOpts = PP.getLangOpts();
-#define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
-  Record.push_back(LangOpts.Name);
+  const uint64_t LanguageOptionValues[] = {
+#define LANGOPT(Name, Bits, Default, Compatibility, Description) LangOpts.Name,
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
-  Record.push_back(static_cast<unsigned>(LangOpts.get##Name()));
+  static_cast<unsigned>(LangOpts.get##Name()),
 #include "clang/Basic/LangOptions.def"
-#define SANITIZER(NAME, ID)                                                    \
-  Record.push_back(LangOpts.Sanitize.has(SanitizerKind::ID));
+#define SANITIZER(NAME, ID) LangOpts.Sanitize.has(SanitizerKind::ID),
 #include "clang/Basic/Sanitizers.def"
+  };
+  llvm::append_range(Record, LanguageOptionValues);
 
   Record.push_back(LangOpts.ModuleFeatures.size());
   for (StringRef Feature : LangOpts.ModuleFeatures)

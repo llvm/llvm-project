@@ -312,29 +312,6 @@ bool IsMapExitingType(parser::OmpMapType::Value type) {
   }
 }
 
-// This function aims to return true when a symbol is going to result
-// in a temporary stack descriptor being allocated for it in the
-// lowering that may pose an issue for data mapping if left on
-// device accidentally.
-bool HasTemporaryStackDescriptor(const Symbol &symbol) {
-  const Symbol &ultimate(symbol.GetUltimate());
-  bool isDummy = IsDummy(ultimate);
-
-  if (IsAllocatableOrPointer(ultimate)) {
-    return !isDummy;
-  }
-
-  if (!isDummy) {
-    return false;
-  }
-
-  if (const auto *obj = ultimate.detailsIf<ObjectEntityDetails>()) {
-    return obj->IsAssumedShape() || obj->IsAssumedRank();
-  }
-
-  return false;
-}
-
 static MaybeExpr GetEvaluateExprFromTyped(const parser::TypedExpr &typedExpr) {
   // ForwardOwningPointer           typedExpr
   // `- GenericExprWrapper          ^.get()

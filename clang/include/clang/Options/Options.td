@@ -969,6 +969,16 @@ def _ssaf_list_formats :
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Display the list of available SSAF serialization formats">,
   MarshallingInfoFlag<FrontendOpts<"SSAFShowFormats">>;
+def _ssaf_compilation_unit_id :
+  Joined<["--"], "ssaf-compilation-unit-id=">,
+  MetaVarName<"<id>">,
+  Group<SSAF_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<
+    "Stable identifier used as the CompilationUnit namespace name of every "
+    "produced SSAF TU summary. Required when '--ssaf-tu-summary-file=' is "
+    "set.">,
+  MarshallingInfoString<FrontendOpts<"SSAFCompilationUnitId">>;
 def Xarch__
     : JoinedAndSeparate<["-"], "Xarch_">,
       Flags<[NoXarchOption]>,
@@ -4977,7 +4987,7 @@ defm raw_string_literals : BoolFOption<"raw-string-literals",
 def fzero_call_used_regs_EQ
     : Joined<["-"], "fzero-call-used-regs=">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
-      HelpText<"Clear call-used registers upon function return (AArch64/x86 only)">,
+      HelpText<"Clear call-used registers upon function return (AArch64/RISC-V/x86 only)">,
       Values<"skip,used-gpr-arg,used-gpr,used-arg,used,all-gpr-arg,all-gpr,all-arg,all">,
       NormalizedValues<["Skip", "UsedGPRArg", "UsedGPR", "UsedArg", "Used",
                         "AllGPRArg", "AllGPR", "AllArg", "All"]>,
@@ -5862,6 +5872,10 @@ defm cumode : SimpleMFlag<"cumode",
   " execution mode (AMDGPU only)", m_amdgpu_Features_Group>;
 defm tgsplit : SimpleMFlag<"tgsplit", "Enable", "Disable",
   " threadgroup split execution mode (AMDGPU only)", m_amdgpu_Features_Group>;
+defm xnack : SimpleMFlag<"xnack", "Enable", "Disable",
+  " XNACK (AMDGPU only)", m_amdgpu_Features_Group>;
+defm sramecc : SimpleMFlag<"sramecc", "Enable", "Disable",
+  " SRAMECC (AMDGPU only)", m_amdgpu_Features_Group>;
 defm wavefrontsize64 : SimpleMFlag<"wavefrontsize64",
   "Specify wavefront size 64", "Specify wavefront size 32",
   " mode (AMDGPU only)">;
@@ -7326,8 +7340,12 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
     HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu,jmpabs">,  Visibility<[ClangOption, CLOption, FlangOption]>;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu,jmpabs">, Visibility<[ClangOption, CLOption, FlangOption]>;
-def mapxf : Flag<["-"], "mapxf">, Group<m_x86_Features_Group>;
-def mno_apxf : Flag<["-"], "mno-apxf">, Group<m_x86_Features_Group>;
+def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>,
+            AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu","jmpabs"]>,
+            Group<m_x86_Features_Group>;
+def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>,
+               AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu","jmpabs"]>,
+               Group<m_x86_Features_Group>;
 def mapx_inline_asm_use_gpr32 : Flag<["-"], "mapx-inline-asm-use-gpr32">, Group<m_Group>,
                                 HelpText<"Enable use of GPR32 in inline assembly for APX">;
 def ffixed_edi : Flag<["-"], "ffixed-edi">, Group<m_Group>,
@@ -9705,6 +9723,19 @@ def dxc_rootsig_define :
   Alias<fdx_rootsignature_define>,
   Group<dxc_Group>,
   Visibility<[DXCOption]>;
+def dxc_record_command_line
+    : Separate<["-"], "fdx-record-command-line">,
+      Group<dxc_Group>,
+      Visibility<[CC1Option]>,
+      MarshallingInfoString<CodeGenOpts<"HLSLRecordCommandLine">>,
+      HelpText<
+          "Command line arguments to embed in the dx.source.args metadata">;
+def dxc_no_source_metadata
+    : Flag<["-"], "fdx-no-source-metadata">,
+      Group<dxc_Group>,
+      Visibility<[CC1Option]>,
+      MarshallingInfoFlag<CodeGenOpts<"DisableDXSourceMetadata">>,
+      HelpText<"Do not embed source info metadata in HLSL modules">;
 def hlsl_entrypoint : Option<["-"], "hlsl-entry", KIND_SEPARATE>,
                       Group<dxc_Group>,
                       Visibility<[ClangOption, CC1Option]>,
