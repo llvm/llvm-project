@@ -41,6 +41,7 @@
 #define LIBC_MATH (LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT)
 
 #include "shared/math.h"
+#include "shared/math_check_exceptions.h"
 
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
   do {                                                                         \
@@ -6093,22 +6094,53 @@ APFloat::Storage &APFloat::Storage::operator=(APFloat::Storage &&RHS) {
   return *this;
 }
 
+namespace {
+
+APFloat::opStatus getOpStatusFromLibc(int libc_exceptions) {
+  APFloat::opStatus status = APFloat::opOK;
+  if (libc_exceptions & FE_INVALID)
+    status = static_cast<APFloat::opStatus>(status | APFloat::opInvalidOp);
+  if (libc_exceptions & FE_DIVBYZERO)
+    status = static_cast<APFloat::opStatus>(status | APFloat::opDivByZero);
+  if (libc_exceptions & FE_OVERFLOW)
+    status = static_cast<APFloat::opStatus>(status | APFloat::opOverflow);
+  if (libc_exceptions & FE_UNDERFLOW)
+    status = static_cast<APFloat::opStatus>(status | APFloat::opUnderflow);
+  if (libc_exceptions & FE_INEXACT)
+    status = static_cast<APFloat::opStatus>(status | APFloat::opInexact);
+  return status;
+}
+
+} // namespace
+
 // TODO: Support other rounding modes when LLVM libc math implement static
 // roundings.
-APFloat exp(const APFloat &X, RoundingMode rounding_mode) {
+std::optional<APFloat> exp(const APFloat &x, RoundingMode rounding_mode,
+                           APFloat::opStatus *status) {
+
   if (rounding_mode == APFloatBase::rmNearestTiesToEven) {
-    if (APFloat::SemanticsToEnum(X.getSemantics()) ==
+    if (APFloat::SemanticsToEnum(x.getSemantics()) ==
         APFloatBase::S_IEEEsingle) {
-      float result = LIBC_NAMESPACE::shared::expf(X.convertToFloat());
+      float x_val = x.convertToFloat();
+      int exc =
+          LIBC_NAMESPACE::shared::check::exp_exceptions(x_val, FE_TONEAREST);
+      if (status)
+        *status = getOpStatusFromLibc(exc);
+      float result = LIBC_NAMESPACE::shared::expf(x_val);
       return APFloat(result);
     }
-    if (APFloat::SemanticsToEnum(X.getSemantics()) ==
+    if (APFloat::SemanticsToEnum(x.getSemantics()) ==
         APFloatBase::S_IEEEdouble) {
-      double result = LIBC_NAMESPACE::shared::exp(X.convertToDouble());
+      double x_val = x.convertToDouble();
+      int exc =
+          LIBC_NAMESPACE::shared::check::exp_exceptions(x_val, FE_TONEAREST);
+      if (status)
+        *status = getOpStatusFromLibc(exc);
+      double result = LIBC_NAMESPACE::shared::exp(x_val);
       return APFloat(result);
     }
   }
-  llvm_unreachable("Unexpected semantics");
+  return std::nullopt;
 }
 
 } // namespace llvm
