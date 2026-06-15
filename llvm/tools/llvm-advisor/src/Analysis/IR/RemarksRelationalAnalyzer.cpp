@@ -2,6 +2,7 @@
 #include "Analysis/IR/RemarksRelationalAnalyzer.h"
 #include "Analysis/IR/RemarksRelationalSchema.h"
 #include "Analysis/RemarksAnalysisUtils.h"
+#include "llvm/Demangle/Demangle.h"
 
 using namespace llvm;
 using namespace llvm::advisor;
@@ -15,11 +16,13 @@ public:
     NameCol.push_back(static_cast<int64_t>(Name.getOrAdd(R.RemarkName)));
     TypeCol.push_back(static_cast<int64_t>(R.RemarkType));
 
-    if (R.FunctionName.empty())
+    if (R.FunctionName.empty()) {
       FunctionCol.push_back(-1);
-    else
+    } else {
+      std::string Demangled = demangle(R.FunctionName);
       FunctionCol.push_back(
-          static_cast<int64_t>(Function.getOrAdd(R.FunctionName)));
+          static_cast<int64_t>(Function.getOrAdd(Demangled)));
+    }
 
     if (R.Loc) {
       FileCol.push_back(

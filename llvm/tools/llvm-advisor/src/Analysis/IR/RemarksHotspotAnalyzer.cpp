@@ -8,6 +8,7 @@
 
 #include "Analysis/IR/RemarksHotspotAnalyzer.h"
 #include "Analysis/RemarksAnalysisUtils.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/JSON.h"
 
 using namespace llvm;
@@ -32,7 +33,11 @@ public:
     
     auto &Entry = Hotspots[Key];
     if (Entry.Function.empty()) {
-      Entry.Function = R.FunctionName.empty() ? "<unknown>" : R.FunctionName.str();
+      if (R.FunctionName.empty()) {
+        Entry.Function = "<unknown>";
+      } else {
+        Entry.Function = demangle(R.FunctionName);
+      }
       Entry.File = R.Loc ? R.Loc->SourceFilePath.str() : "";
       Entry.Line = R.Loc ? static_cast<int64_t>(R.Loc->SourceLine) : 0;
       Entry.Count = 0;
