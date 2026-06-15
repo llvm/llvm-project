@@ -714,7 +714,8 @@ void NativeProcessWindows::OnExitThread(lldb::tid_t thread_id,
 }
 
 void NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
-                                     lldb::addr_t module_addr) {
+                                     lldb::addr_t module_addr,
+                                     lldb::tid_t thread_id) {
   Log *log = GetLog(WindowsLog::Process);
 
   if (module_spec.GetFileSpec()) {
@@ -727,22 +728,29 @@ void NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
   if (!m_initial_stop_seen || !m_client_supports_libraries_read)
     return;
 
-  if (!m_threads.empty()) {
-    auto first = static_cast<NativeThreadWindows *>(m_threads[0].get());
-    SetCurrentThreadID(first->GetID());
-    if (first->DoStop().Fail())
-      LLDB_LOG(log, "failed to suspend thread {0} on LOAD_DLL", first->GetID());
+  NativeThreadWindows *loader_thread = GetThreadByID(thread_id);
+  if (!loader_thread && !m_threads.empty()) {
+    LLDB_LOG(log, "LOAD_DLL on unknown tid {0:x}. Falling back to main thread.",
+             thread_id);
+    loader_thread = static_cast<NativeThreadWindows *>(m_threads[0].get());
+  }
+  if (loader_thread) {
+    SetCurrentThreadID(loader_thread->GetID());
+    if (loader_thread->DoStop().Fail())
+      LLDB_LOG(log, "Failed to suspend thread {0} on LOAD_DLL.",
+               loader_thread->GetID());
     ThreadStopInfo info;
     info.reason = lldb::eStopReasonNone;
     info.signo = 0;
-    first->SetStopReason(info, "");
+    loader_thread->SetStopReason(info, "");
   }
   SetState(eStateStopped, true);
 
   m_session_data->m_debugger->WaitForResumeAfterDllEvent();
 }
 
-void NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
+void NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
+                                       lldb::tid_t thread_id) {
   Log *log = GetLog(WindowsLog::Process);
   for (auto it = m_loaded_modules.begin(); it != m_loaded_modules.end();) {
     if (it->second == module_addr)
@@ -755,16 +763,22 @@ void NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
   if (!m_initial_stop_seen || m_client_supports_libraries_read)
     return;
 
-  if (!m_threads.empty()) {
-    auto first = static_cast<NativeThreadWindows *>(m_threads[0].get());
-    SetCurrentThreadID(first->GetID());
-    if (first->DoStop().Fail())
-      LLDB_LOG(log, "failed to suspend thread {0} on UNLOAD_DLL",
-               first->GetID());
+  NativeThreadWindows *unloader_thread = GetThreadByID(thread_id);
+  if (!unloader_thread && !m_threads.empty()) {
+    LLDB_LOG(log,
+             "UNLOAD_DLL on unknown tid {0:x}. Falling back to main thread.",
+             thread_id);
+    unloader_thread = static_cast<NativeThreadWindows *>(m_threads[0].get());
+  }
+  if (unloader_thread) {
+    SetCurrentThreadID(unloader_thread->GetID());
+    if (unloader_thread->DoStop().Fail())
+      LLDB_LOG(log, "Failed to suspend thread {0} on UNLOAD_DLL.",
+               unloader_thread->GetID());
     ThreadStopInfo info;
     info.reason = lldb::eStopReasonNone;
     info.signo = 0;
-    first->SetStopReason(info, "");
+    unloader_thread->SetStopReason(info, "");
   }
   SetState(eStateStopped, true);
   m_session_data->m_debugger->WaitForResumeAfterDllEvent();

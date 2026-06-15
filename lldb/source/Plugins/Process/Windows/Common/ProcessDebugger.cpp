@@ -541,11 +541,13 @@ void ProcessDebugger::OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) {
 }
 
 void ProcessDebugger::OnLoadDll(const ModuleSpec &module_spec,
-                                lldb::addr_t module_addr) {
+                                lldb::addr_t module_addr,
+                                lldb::tid_t thread_id) {
   // Do nothing by default
 }
 
-void ProcessDebugger::OnUnloadDll(lldb::addr_t module_addr) {
+void ProcessDebugger::OnUnloadDll(lldb::addr_t module_addr,
+                                  lldb::tid_t thread_id) {
   // Do nothing by default
 }
 

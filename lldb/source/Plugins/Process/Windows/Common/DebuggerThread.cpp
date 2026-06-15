@@ -252,10 +252,6 @@ void DebuggerThread::ContinueAsyncException(ExceptionResult result) {
 }
 
 void DebuggerThread::ContinueAsyncDllEvent() {
-  Log *log = GetLog(WindowsLog::Process | WindowsLog::Event);
-  LLDB_LOG(log, "releasing parked DLL event for inferior process {0}.",
-           m_process.GetProcessId());
-
   m_dll_event_pred.SetValue(true, eBroadcastAlways);
 }
 
@@ -725,7 +721,7 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
     LLDB_LOG(log, "Inferior {0} - DLL '{1}' loaded at address {2:x}...",
              m_process.GetProcessId(), path, info.lpBaseOfDll);
 
-    m_debug_delegate->OnLoadDll(module_spec, load_addr);
+    m_debug_delegate->OnLoadDll(module_spec, load_addr, thread_id);
   };
 
   std::optional<std::string> resolved_path;
@@ -776,7 +772,7 @@ DebuggerThread::HandleUnloadDllEvent(const UNLOAD_DLL_DEBUG_INFO &info,
            m_process.GetProcessId(), info.lpBaseOfDll);
 
   m_debug_delegate->OnUnloadDll(
-      reinterpret_cast<lldb::addr_t>(info.lpBaseOfDll));
+      reinterpret_cast<lldb::addr_t>(info.lpBaseOfDll), thread_id);
   return DBG_CONTINUE;
 }
 

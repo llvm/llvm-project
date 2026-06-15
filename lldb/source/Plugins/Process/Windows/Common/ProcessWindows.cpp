@@ -794,12 +794,14 @@ void ProcessWindows::OnExitThread(lldb::tid_t thread_id, uint32_t exit_code) {
 }
 
 void ProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
-                               lldb::addr_t module_addr) {
+                               lldb::addr_t module_addr,
+                               lldb::tid_t thread_id) {
   if (auto dyld = GetDynamicLoader())
     dyld->OnLoadModule(nullptr, module_spec, module_addr);
 }
 
-void ProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
+void ProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
+                                 lldb::tid_t thread_id) {
   if (auto dyld = GetDynamicLoader())
     dyld->OnUnloadModule(module_addr);
 }
