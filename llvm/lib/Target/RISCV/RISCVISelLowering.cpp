@@ -556,6 +556,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       // widen for those operations that will be unrolled.
       setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA},
                          {MVT::v2i16, MVT::v4i8}, Custom);
+      setOperationAction(ISD::INTRINSIC_WO_CHAIN, {MVT::v2i16, MVT::v4i8},
+                         Custom);
     } else {
       VTs = P32VecVTs;
     }
@@ -580,11 +582,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::USUBSAT, VTs, Legal);
     setOperationAction(ISD::SSUBSAT, VTs, Legal);
     setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, VTs, Legal);
+    setOperationAction(ISD::BITREVERSE, VTs, Legal);
     for (MVT VT : VTs) {
       if (VT != MVT::v2i32)
         setOperationAction({ISD::ABS, ISD::ABDS, ISD::ABDU}, VT, Legal);
-      if (VT.getVectorElementType() != MVT::i8)
+      if (VT.getVectorElementType() != MVT::i8) {
         setOperationAction(ISD::SSHLSAT, VT, Custom);
+        setOperationAction(ISD::BSWAP, VT, Legal);
+      }
     }
     setOperationAction(ISD::SPLAT_VECTOR, VTs, Legal);
     setOperationAction(ISD::BUILD_VECTOR, VTs, Legal);
@@ -630,6 +635,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(
           {ISD::UADDSAT, ISD::SADDSAT, ISD::USUBSAT, ISD::SSUBSAT}, P64VecVTs,
           Legal);
+      setOperationAction(ISD::INTRINSIC_WO_CHAIN, P64VecVTs, Legal);
       setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, P64VecVTs, Legal);
       setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX},
                          P64VecVTs, Legal);
@@ -637,6 +643,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          {MVT::v4i16, MVT::v8i8}, Legal);
       setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA}, P64VecVTs, Custom);
       setOperationAction(ISD::SSHLSAT, {MVT::v2i32, MVT::v4i16}, Custom);
+      setOperationAction(ISD::BSWAP, MVT::v4i16, Legal);
+      setOperationAction(ISD::BITREVERSE, {MVT::v4i16, MVT::v8i8}, Legal);
       setOperationAction(ISD::SPLAT_VECTOR, P64VecVTs, Legal);
       setOperationAction(ISD::BUILD_VECTOR, P64VecVTs, Legal);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i32, Legal);
@@ -647,12 +655,25 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          Legal);
       setOperationAction({ISD::SELECT, ISD::VSELECT}, {MVT::v4i16, MVT::v8i8},
                          Custom);
-      setOperationAction(ISD::MUL, {MVT::v4i16, MVT::v8i8}, Custom);
+      setOperationAction({ISD::MUL, ISD::MULHS, ISD::MULHU},
+                         {MVT::v4i16, MVT::v8i8}, Custom);
+      setOperationAction({ISD::SIGN_EXTEND, ISD::ZERO_EXTEND},
+                         {MVT::v4i16, MVT::v2i32}, Legal);
+      setOperationAction(ISD::TRUNCATE, {MVT::v4i8, MVT::v2i16}, Legal);
       setOperationAction(ISD::SETCC, P64VecVTs, Legal);
       setCondCodeAction(
           {ISD::SETGE, ISD::SETUGT, ISD::SETUGE, ISD::SETULE, ISD::SETLE},
           P64VecVTs, Expand);
       setCondCodeAction({ISD::SETNE, ISD::SETGT}, P64VecVTs, Custom);
+    } else {
+      setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG,
+                         {MVT::v4i16, MVT::v2i32}, Legal);
+      setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG, {MVT::v4i16, MVT::v2i32},
+                         Custom);
+      // LegalizeVectorOps uses result VT, LegalizeDAG uses ExtVT.
+      setOperationAction(ISD::SIGN_EXTEND_INREG,
+                         {MVT::v2i16, MVT::v4i8, MVT::v2i32, MVT::v4i16},
+                         Legal);
     }
   }
 
@@ -8950,8 +8971,6 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   }
   case ISD::ADD:
   case ISD::SUB:
-  case ISD::MULHS:
-  case ISD::MULHU:
   case ISD::SDIV:
   case ISD::SREM:
   case ISD::UDIV:
@@ -8987,9 +9006,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:
-  case ISD::MUL: {
+  case ISD::MUL:
+  case ISD::MULHS:
+  case ISD::MULHU: {
     EVT VT = Op.getValueType();
-    // Split 64-bit vector AND/OR/XOR/MUL on RV32 with P extension
+    // Split 64-bit vector AND/OR/XOR/MUL/MULHS/MULHU on RV32 with P extension
     if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() &&
         (VT == MVT::v4i16 || VT == MVT::v8i8)) {
       SDLoc DL(Op);
@@ -9013,6 +9034,14 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ResLo, ResHi);
     }
     return lowerToScalableOp(Op, DAG);
+  }
+  case ISD::ANY_EXTEND_VECTOR_INREG: {
+    EVT VT = Op.getValueType();
+    assert(Subtarget.hasStdExtP() && Subtarget.is64Bit() &&
+           (VT == MVT::v2i32 || VT == MVT::v4i16) &&
+           "Unexpected custom legalisation");
+    return DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, SDLoc(Op), VT,
+                       Op.getOperand(0));
   }
   case ISD::SHL:
   case ISD::SRL:
@@ -11706,6 +11735,29 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_clmulr: {
     unsigned Opc = IntNo == Intrinsic::riscv_clmulh ? ISD::CLMULH : ISD::CLMULR;
     return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1), Op.getOperand(2));
+  }
+  case Intrinsic::riscv_paadd:
+  case Intrinsic::riscv_paaddu:
+  case Intrinsic::riscv_pasub:
+  case Intrinsic::riscv_pasubu: {
+    unsigned Opc;
+    switch (IntNo) {
+    case Intrinsic::riscv_paadd:
+      Opc = ISD::AVGFLOORS;
+      break;
+    case Intrinsic::riscv_paaddu:
+      Opc = ISD::AVGFLOORU;
+      break;
+    case Intrinsic::riscv_pasub:
+      Opc = RISCVISD::ASUB;
+      break;
+    case Intrinsic::riscv_pasubu:
+      Opc = RISCVISD::ASUBU;
+      break;
+    }
+
+    return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(1),
+                       Op.getOperand(2));
   }
   case Intrinsic::experimental_get_vector_length:
     return lowerGetVectorLength(Op.getNode(), DAG, Subtarget);
@@ -15611,6 +15663,41 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
     }
+    case Intrinsic::riscv_paadd:
+    case Intrinsic::riscv_paaddu:
+    case Intrinsic::riscv_pasub:
+    case Intrinsic::riscv_pasubu: {
+      EVT VT = N->getValueType(0);
+      if (!Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
+        return;
+
+      unsigned Opc;
+      switch (IntNo) {
+      case Intrinsic::riscv_paadd:
+        Opc = ISD::AVGFLOORS;
+        break;
+      case Intrinsic::riscv_paaddu:
+        Opc = ISD::AVGFLOORU;
+        break;
+      case Intrinsic::riscv_pasub:
+        Opc = RISCVISD::ASUB;
+        break;
+      case Intrinsic::riscv_pasubu:
+        Opc = RISCVISD::ASUBU;
+        break;
+      }
+
+      EVT WideVT = VT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;
+      SDValue Undef = DAG.getUNDEF(VT);
+      SDValue Op0 =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(1), Undef);
+      SDValue Op1 =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(2), Undef);
+      SDValue Res = DAG.getNode(Opc, DL, WideVT, Op0, Op1);
+      Results.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
+                                    DAG.getVectorIdxConstant(0, DL)));
+      return;
+    }
     case Intrinsic::riscv_orc_b:
     case Intrinsic::riscv_brev8:
     case Intrinsic::riscv_sha256sig0:
@@ -16371,11 +16458,13 @@ static SDValue combineAddOfBooleanXor(SDNode *N, SelectionDAG &DAG) {
 //            = X * 2^32 + hi * 2^32 + lo
 //            = (X + hi) * 2^32 + lo
 // So mulhsu computes (X + hi).
-// TODO: Support vectors.
 static SDValue combineAddMulh(SDNode *N, SelectionDAG &DAG,
                               const RISCVSubtarget &Subtarget) {
   EVT VT = N->getValueType(0);
-  if (!Subtarget.hasStdExtZmmul() || VT != Subtarget.getXLenVT())
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  bool IsPExtPackedDoubleType =
+      VT.isSimple() && Subtarget.isPExtPackedDoubleType(VT.getSimpleVT());
+  if (!TLI.isOperationLegal(ISD::MULHS, VT) && !IsPExtPackedDoubleType)
     return SDValue();
 
   using namespace SDPatternMatch;
@@ -16388,7 +16477,20 @@ static SDValue combineAddMulh(SDNode *N, SelectionDAG &DAG,
       !C.isNegative())
     return SDValue();
 
-  return DAG.getNode(RISCVISD::MULHSU, SDLoc(N), VT, X, Mulh.getOperand(1));
+  SDLoc DL(N);
+
+  // We need to split double wide vectors ourselves, op legalization won't
+  // run for custom nodes.
+  if (IsPExtPackedDoubleType) {
+    MVT HalfVT = VT.getSimpleVT().getHalfNumVectorElementsVT();
+    auto [XLo, XHi] = DAG.SplitVector(X, DL, HalfVT, HalfVT);
+    auto [CLo, CHi] = DAG.SplitVector(Mulh.getOperand(1), DL, HalfVT, HalfVT);
+    SDValue ResLo = DAG.getNode(RISCVISD::MULHSU, DL, HalfVT, XLo, CLo);
+    SDValue ResHi = DAG.getNode(RISCVISD::MULHSU, DL, HalfVT, XHi, CHi);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ResLo, ResHi);
+  }
+
+  return DAG.getNode(RISCVISD::MULHSU, DL, VT, X, Mulh.getOperand(1));
 }
 
 static SDValue performADDCombine(SDNode *N,
@@ -16665,7 +16767,8 @@ static SDValue combineTruncSelectToSMaxUSat(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::TRUNCATE, DL, VT, Min);
 }
 
-// Handle P extension truncate patterns:
+// Handle P extension truncate patterns, both on packed vectors and on scalar
+// i32 (the RV32-only asub/asubu and mulhr* instructions):
 // ASUB/ASUBU: (trunc (srl (sub ([s|z]ext a), ([s|z]ext b)), 1))
 // MULHSU: (trunc (srl (mul (sext a), (zext b)), EltBits))
 // MULHR*: (trunc (srl (add (mul (sext a), (zext b)), round_const), EltBits))
@@ -16677,21 +16780,10 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   if (VT != MVT::v4i16 && VT != MVT::v2i16 && VT != MVT::v8i8 &&
-      VT != MVT::v4i8 && VT != MVT::v2i32)
+      VT != MVT::v4i8 && VT != MVT::v2i32 && VT != MVT::i32)
     return SDValue();
 
-  // Check if shift amount is a splat constant
-  SDValue ShAmt = N0.getOperand(1);
-  if (ShAmt.getOpcode() != ISD::BUILD_VECTOR)
-    return SDValue();
-
-  BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(ShAmt.getNode());
-  if (!BV)
-    return SDValue();
-  SDValue Splat = BV->getSplatValue();
-  if (!Splat)
-    return SDValue();
-  ConstantSDNode *C = dyn_cast<ConstantSDNode>(Splat);
+  ConstantSDNode *C = isConstOrConstSplat(N0.getOperand(1));
   if (!C)
     return SDValue();
 
@@ -16702,17 +16794,11 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
   // Check for rounding pattern: (add (mul ...), round_const)
   bool IsRounding = false;
   if (Op.getOpcode() == ISD::ADD && (EltBits == 16 || EltBits == 32)) {
-    SDValue AddRHS = Op.getOperand(1);
-    if (auto *RndBV = dyn_cast<BuildVectorSDNode>(AddRHS.getNode())) {
-      if (auto *RndC =
-              dyn_cast_or_null<ConstantSDNode>(RndBV->getSplatValue())) {
-        uint64_t ExpectedRnd = 1ULL << (EltBits - 1);
-        if (RndC->getZExtValue() == ExpectedRnd &&
-            Op.getOperand(0).getOpcode() == ISD::MUL) {
-          Op = Op.getOperand(0);
-          IsRounding = true;
-        }
-      }
+    ConstantSDNode *RndC = isConstOrConstSplat(Op.getOperand(1));
+    if (RndC && RndC->getZExtValue() == (1ULL << (EltBits - 1)) &&
+        Op.getOperand(0).getOpcode() == ISD::MUL) {
+      Op = Op.getOperand(0);
+      IsRounding = true;
     }
   }
 
@@ -16772,6 +16858,9 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
         return SDValue();
       }
     } else {
+      // Scalar mulhsu is handled elsewhere, only match the packed MULHSU here.
+      if (!VT.isVector())
+        return SDValue();
       if ((LHSIsSExt && RHSIsZExt) || (LHSIsZExt && RHSIsSExt)) {
         Opc = RISCVISD::MULHSU;
         // commuted case
@@ -16791,7 +16880,9 @@ static SDValue performTRUNCATECombine(SDNode *N, SelectionDAG &DAG,
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
 
-  if (VT.isFixedLengthVector() && Subtarget.hasStdExtP())
+  // P truncate patterns: packed vectors, plus RV32-only scalar i32.
+  if (Subtarget.hasStdExtP() &&
+      (VT.isFixedLengthVector() || (VT == MVT::i32 && !Subtarget.is64Bit())))
     return combinePExtTruncate(N, DAG, Subtarget);
 
   // Pre-promote (i1 (truncate (srl X, Y))) on RV64 with Zbs without zero
@@ -24824,7 +24915,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
     SDValue SizeNode = DAG.getConstant(Size, DL, XLenVT);
 
-    Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
+    Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment, Alignment,
                           /*IsVolatile=*/false,
                           /*AlwaysInline=*/false, /*CI*/ nullptr, IsTailCall,
                           MachinePointerInfo(), MachinePointerInfo());

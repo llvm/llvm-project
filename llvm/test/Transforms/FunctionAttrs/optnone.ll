@@ -6,7 +6,7 @@
 define void @test_opt(ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define void @test_opt(
-; CHECK-SAME: ptr readnone captures(none) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree readnone captures(none) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
   ret void

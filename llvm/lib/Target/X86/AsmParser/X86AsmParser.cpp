@@ -1232,10 +1232,14 @@ private:
   /// SEH directives.
   bool parseSEHRegisterNumber(unsigned RegClassID, MCRegister &RegNo);
   bool parseDirectiveSEHPushReg(SMLoc);
+  bool parseDirectiveSEHPush2Regs(SMLoc, bool SwapRegs = false);
   bool parseDirectiveSEHSetFrame(SMLoc);
   bool parseDirectiveSEHSaveReg(SMLoc);
   bool parseDirectiveSEHSaveXMM(SMLoc);
   bool parseDirectiveSEHPushFrame(SMLoc);
+
+  bool ensureMasmEpilogContext(SMLoc Loc);
+  bool ensureMasmPrologContext(SMLoc Loc);
 
   unsigned checkTargetMatchPredicate(MCInst &Inst) override;
 
@@ -4836,21 +4840,60 @@ bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
     return parseDirectiveFPOEndPrologue(DirectiveID.getLoc());
   else if (IDVal == ".cv_fpo_endproc")
     return parseDirectiveFPOEndProc(DirectiveID.getLoc());
-  else if (IDVal == ".seh_pushreg" ||
-           (Parser.isParsingMasm() && IDVal.equals_insensitive(".pushreg")))
+  else if (IDVal == ".seh_pushreg")
     return parseDirectiveSEHPushReg(DirectiveID.getLoc());
-  else if (IDVal == ".seh_setframe" ||
-           (Parser.isParsingMasm() && IDVal.equals_insensitive(".setframe")))
+  else if (IDVal == ".seh_push2regs")
+    return parseDirectiveSEHPush2Regs(DirectiveID.getLoc());
+  else if (IDVal == ".seh_setframe")
     return parseDirectiveSEHSetFrame(DirectiveID.getLoc());
-  else if (IDVal == ".seh_savereg" ||
-           (Parser.isParsingMasm() && IDVal.equals_insensitive(".savereg")))
+  else if (IDVal == ".seh_savereg")
     return parseDirectiveSEHSaveReg(DirectiveID.getLoc());
-  else if (IDVal == ".seh_savexmm" ||
-           (Parser.isParsingMasm() && IDVal.equals_insensitive(".savexmm128")))
+  else if (IDVal == ".seh_savexmm")
     return parseDirectiveSEHSaveXMM(DirectiveID.getLoc());
-  else if (IDVal == ".seh_pushframe" ||
-           (Parser.isParsingMasm() && IDVal.equals_insensitive(".pushframe")))
+  else if (IDVal == ".seh_pushframe")
     return parseDirectiveSEHPushFrame(DirectiveID.getLoc());
+  else if (Parser.isParsingMasm()) {
+    // MASM prolog directives.
+    if (IDVal.equals_insensitive(".pushreg")) {
+      return ensureMasmPrologContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHPushReg(DirectiveID.getLoc());
+    } else if (IDVal.equals_insensitive(".push2reg")) {
+      return ensureMasmPrologContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHPush2Regs(DirectiveID.getLoc());
+    } else if (IDVal.equals_insensitive(".setframe")) {
+      return ensureMasmPrologContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHSetFrame(DirectiveID.getLoc());
+    } else if (IDVal.equals_insensitive(".savereg")) {
+      return ensureMasmPrologContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHSaveReg(DirectiveID.getLoc());
+    } else if (IDVal.equals_insensitive(".savexmm128")) {
+      return ensureMasmPrologContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHSaveXMM(DirectiveID.getLoc());
+    } else if (IDVal.equals_insensitive(".pushframe")) {
+      return ensureMasmPrologContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHPushFrame(DirectiveID.getLoc());
+    }
+    // MASM epilog directives
+    if (IDVal.equals_insensitive(".popreg")) {
+      return ensureMasmEpilogContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHPushReg(DirectiveID.getLoc());
+    } else if (IDVal.equals_insensitive(".pop2reg")) {
+      // .pop2reg args are in the order they are popped, so reverse them to get
+      // the order they were pushed.
+      return ensureMasmEpilogContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHPush2Regs(DirectiveID.getLoc(),
+                                        /*SwapRegs=*/true);
+    } else if (IDVal.equals_insensitive(".unsetframe")) {
+      return ensureMasmEpilogContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHSetFrame(DirectiveID.getLoc());
+    } else if (IDVal.equals_insensitive(".restorereg")) {
+      return ensureMasmEpilogContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHSaveReg(DirectiveID.getLoc());
+    } else if (IDVal.equals_insensitive(".restorexmm128")) {
+      return ensureMasmEpilogContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHSaveXMM(DirectiveID.getLoc());
+    }
+  }
 
   return true;
 }
@@ -5075,6 +5118,30 @@ bool X86AsmParser::parseDirectiveSEHPushReg(SMLoc Loc) {
   return false;
 }
 
+bool X86AsmParser::parseDirectiveSEHPush2Regs(SMLoc Loc, bool SwapRegs) {
+  MCRegister Reg1;
+  if (parseSEHRegisterNumber(X86::GR64RegClassID, Reg1))
+    return true;
+
+  if (getLexer().isNot(AsmToken::Comma))
+    return TokError("expected comma between registers");
+  getParser().Lex();
+
+  MCRegister Reg2;
+  if (parseSEHRegisterNumber(X86::GR64RegClassID, Reg2))
+    return true;
+
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return TokError("expected end of directive");
+
+  getParser().Lex();
+  // Swap regs to go from pop order to push order.
+  if (SwapRegs)
+    std::swap(Reg1, Reg2);
+  getStreamer().emitWinCFIPush2Regs(Reg1, Reg2, Loc);
+  return false;
+}
+
 bool X86AsmParser::parseDirectiveSEHSetFrame(SMLoc Loc) {
   MCRegister Reg;
   int64_t Off;
@@ -5135,6 +5202,20 @@ bool X86AsmParser::parseDirectiveSEHSaveXMM(SMLoc Loc) {
   return false;
 }
 
+bool X86AsmParser::ensureMasmPrologContext(SMLoc Loc) {
+  if (getStreamer().isWinCFIPrologEnded()) {
+    return Error(Loc, "prolog directive must be used inside a prolog");
+  }
+  return false;
+}
+
+bool X86AsmParser::ensureMasmEpilogContext(SMLoc Loc) {
+  if (!getStreamer().isInEpilogCFI()) {
+    return Error(Loc, "epilog directive must be used inside an epilog");
+  }
+  return false;
+}
+
 bool X86AsmParser::parseDirectiveSEHPushFrame(SMLoc Loc) {
   bool Code = false;
   StringRef CodeID;
@@ -5146,6 +5227,11 @@ bool X86AsmParser::parseDirectiveSEHPushFrame(SMLoc Loc) {
         return Error(startLoc, "expected @code");
       Code = true;
     }
+  } else if (getParser().isParsingMasm() &&
+             getLexer().is(AsmToken::Identifier) &&
+             getTok().getString().equals_insensitive("code")) {
+    getParser().Lex();
+    Code = true;
   }
 
   if (getLexer().isNot(AsmToken::EndOfStatement))

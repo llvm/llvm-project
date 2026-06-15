@@ -22,7 +22,6 @@
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/MCInstUtils.h"
 #include "bolt/Core/MCPlusBuilder.h"
-#include "bolt/Passes/DataflowInfoManager.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -2046,25 +2045,6 @@ public:
     exit(1);
   }
 
-  unsigned getInvertedCC(unsigned Opcode) const {
-    // clang-format off
-    switch (Opcode) {
-    default:
-      llvm_unreachable("Failed to invert condition code");
-      return Opcode;
-    // Compare register with immediate and branch.
-    case AArch64::CBGTWri:  return AArch64CC::LE;
-    case AArch64::CBGTXri:  return AArch64CC::LE;
-    case AArch64::CBLTWri:  return AArch64CC::GE;
-    case AArch64::CBLTXri:  return AArch64CC::GE;
-    case AArch64::CBHIWri:  return AArch64CC::LS;
-    case AArch64::CBHIXri:  return AArch64CC::LS;
-    case AArch64::CBLOWri:  return AArch64CC::HS;
-    case AArch64::CBLOXri:  return AArch64CC::HS;
-    }
-    // clang-format on
-  }
-
   unsigned getInvertedBranchOpcode(unsigned Opcode) const {
     // clang-format off
     switch (Opcode) {
@@ -2191,78 +2171,38 @@ public:
     }
   }
 
-  bool isReversibleBranch(const MCInst &Inst,
-                          DataflowInfoManager *DIM = nullptr) const override {
+  bool isReversibleBranch(const MCInst &Inst) const override {
     if (isCompAndBranch(Inst)) {
-      bool MayClobberFlags =
-          DIM ? DIM->getLivenessAnalysis().getLiveIn(Inst).test(getFlagsReg())
-              : true;
       unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
-      if (needsImmDec(InvertedOpcode) && Inst.getOperand(1).getImm() == 0 &&
-          MayClobberFlags)
+      if (needsImmDec(InvertedOpcode) && Inst.getOperand(1).getImm() == 0)
         return false;
-      if (needsImmInc(InvertedOpcode) && Inst.getOperand(1).getImm() == 63 &&
-          MayClobberFlags)
+      if (needsImmInc(InvertedOpcode) && Inst.getOperand(1).getImm() == 63)
         return false;
     }
     return MCPlusBuilder::isReversibleBranch(Inst);
   }
 
-  void
-  reverseBranchCondition(BinaryBasicBlock *Parent, MCInst &Inst,
-                         const MCSymbol *TBB, MCContext *Ctx,
-                         DataflowInfoManager *DIM = nullptr) const override {
-    assert(isReversibleBranch(Inst, DIM) && "Irreversible branch");
+  void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
+                              MCContext *Ctx) const override {
+    if (!isReversibleBranch(Inst)) {
+      errs() << "BOLT-ERROR: Cannot reverse branch " << Inst << "\n";
+      exit(1);
+    }
 
     if (isTB(Inst) || isCB(Inst) || isCompAndBranch(Inst)) {
-      bool ImmediateOutOfBounds = false;
       unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
-      assert(InvertedOpcode != 0 && "Invalid branch instruction");
+      Inst.setOpcode(InvertedOpcode);
+      assert(Inst.getOpcode() != 0 && "Invalid branch instruction");
       // The FEAT_CMPBR compare-and-branch instructions cannot encode all
       // the possible condition codes, therefore we either have to adjust
       // the immediate value by +-1, or to swap the register operands
       // when reversing the branch condition.
       if (needsRegSwap(InvertedOpcode))
         std::swap(Inst.getOperand(0), Inst.getOperand(1));
-      else if (needsImmDec(InvertedOpcode)) {
-        if (Inst.getOperand(1).getImm() == 0)
-          ImmediateOutOfBounds = true;
-        else
-          Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() - 1);
-      } else if (needsImmInc(InvertedOpcode)) {
-        if (Inst.getOperand(1).getImm() == 63)
-          ImmediateOutOfBounds = true;
-        else
-          Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() + 1);
-      }
-      if (ImmediateOutOfBounds) {
-        auto is32BitVariant = [](unsigned Opcode) {
-          switch (Opcode) {
-          default:
-            return false;
-          case AArch64::CBGTWri:
-          case AArch64::CBLTWri:
-          case AArch64::CBHIWri:
-          case AArch64::CBLOWri:
-            return true;
-          }
-        };
-        InstructionListType Code;
-        MCInstBuilder Cmp =
-            is32BitVariant(InvertedOpcode)
-                ? MCInstBuilder(AArch64::SUBSWri).addReg(AArch64::WZR)
-                : MCInstBuilder(AArch64::SUBSXri).addReg(AArch64::XZR);
-        Cmp.addReg(Inst.getOperand(0).getReg())
-            .addImm(Inst.getOperand(1).getImm())
-            .addImm(0);
-        Code.emplace_back(std::move(Cmp));
-        Code.emplace_back(MCInstBuilder(AArch64::Bcc)
-                              .addImm(getInvertedCC(Inst.getOpcode()))
-                              .addExpr(MCSymbolRefExpr::create(TBB, *Ctx)));
-        Parent->replaceInstruction(Parent->findInstruction(&Inst), Code);
-        return;
-      }
-      Inst.setOpcode(InvertedOpcode);
+      else if (needsImmDec(InvertedOpcode))
+        Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() - 1);
+      else if (needsImmInc(InvertedOpcode))
+        Inst.getOperand(1).setImm(Inst.getOperand(1).getImm() + 1);
     } else if (Inst.getOpcode() == AArch64::Bcc) {
       Inst.getOperand(0).setImm(AArch64CC::getInvertedCondCode(
           static_cast<AArch64CC::CondCode>(Inst.getOperand(0).getImm())));

@@ -92,7 +92,7 @@ public:
   /// Release device image managers and corresponding resources.
   void releaseResources();
 
-private:
+protected:
   ProgramAndKernelManager() = default;
   ~ProgramAndKernelManager() = default;
   ProgramAndKernelManager(ProgramAndKernelManager const &) = delete;

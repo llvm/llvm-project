@@ -734,7 +734,13 @@ bool RISCVRegisterInfo::needsFrameBaseReg(MachineInstr *MI,
     }
 
     int64_t MaxFPOffset = Offset - CalleeSavedSize;
-    return !isFrameOffsetLegal(MI, RISCV::X8, MaxFPOffset);
+    if (isFrameOffsetLegal(MI, RISCV::X8, MaxFPOffset))
+      return false;
+
+    // If the FP-relative offset doesn't fit, fall through to check the
+    // SP-relative offset. getFrameIndexReference may select SP over FP when
+    // the SP offset fits in the compressed instruction immediate range, so a
+    // base register might not be needed.
   }
 
   // Assume 128 bytes spill slots size to estimate the maximum possible
@@ -816,6 +822,16 @@ int64_t RISCVRegisterInfo::getFrameIndexInstrOffset(const MachineInstr *MI,
 Register RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = getFrameLowering(MF);
   return TFI->hasFP(MF) ? RISCV::X8 : RISCV::X2;
+}
+
+bool RISCVRegisterInfo::isArgumentRegister(const MachineFunction &MF,
+                                           MCRegister Reg) const {
+  auto const &STI = MF.getSubtarget<RISCVSubtarget>();
+  if (!STI.getRegisterInfo()->isGeneralPurposeRegister(MF, Reg))
+    llvm::reportFatalInternalError(
+        "isArgumentRegister is not implemented for non-GPR registers");
+
+  return llvm::is_contained(RISCV::getArgGPRs(STI.getTargetABI()), Reg);
 }
 
 StringRef RISCVRegisterInfo::getRegAsmName(MCRegister Reg) const {
@@ -906,7 +922,10 @@ void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
 
 unsigned
 RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
-  return MF.getSubtarget<RISCVSubtarget>().hasStdExtZca() && !DisableCostPerUse
+  // Set CostPerUse to 1 only when optimizing for size and RVC exists.
+  return MF.getFunction().hasOptSize() &&
+                 MF.getSubtarget<RISCVSubtarget>().hasStdExtZca() &&
+                 !DisableCostPerUse
              ? 1
              : 0;
 }
