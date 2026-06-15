@@ -18,7 +18,7 @@ func.func @cvt_float_e4m3fn_to_f16(%in : vector<8xf8E4M3FN>) {
   // CHECK: nvvm.convert.f8x2.to.f16x2
   // CHECK: nvvm.convert.f8x2.to.f16x2
   // CHECK: llvm.bitcast {{.*}} : vector<4xi32> to vector<8xf16>
-  %out = nvgpu.convert.float %in : vector<8xf8E4M3FN> to vector<8xf16>
+  %out = nvgpu.convert.fpext %in : vector<8xf8E4M3FN> to vector<8xf16>
   return 
 }
 
@@ -48,7 +48,7 @@ func.func @cvt_float_e5m2_to_f16(%in : vector<8xf8E5M2>) {
   // CHECK: nvvm.convert.f8x2.to.f16x2
   // CHECK: nvvm.convert.f8x2.to.f16x2
   // CHECK: llvm.bitcast {{.*}} : vector<4xi32> to vector<8xf16>
-  %out = nvgpu.convert.float %in : vector<8xf8E5M2> to vector<8xf16>
+  %out = nvgpu.convert.fpext %in : vector<8xf8E5M2> to vector<8xf16>
   return 
 }
 
@@ -70,7 +70,7 @@ func.func @cvt_float_e8m0_to_bf16(%in : vector<8xf8E8M0FNU>) {
   // CHECK: nvvm.convert.f8x2.to.bf16x2
   // CHECK: nvvm.convert.f8x2.to.bf16x2
   // CHECK: llvm.bitcast {{.*}} : vector<4xi32> to vector<8xbf16>
-  %out = nvgpu.convert.float %in : vector<8xf8E8M0FNU> to vector<8xbf16>
+  %out = nvgpu.convert.fpext %in : vector<8xf8E8M0FNU> to vector<8xbf16>
   return 
 }
 
@@ -92,7 +92,7 @@ func.func @cvt_float_e2m3_to_f16(%in : vector<8xf6E2M3FN>) {
   // CHECK: nvvm.convert.f6x2.to.f16x2
   // CHECK: nvvm.convert.f6x2.to.f16x2
   // CHECK: llvm.bitcast {{.*}} : vector<4xi32> to vector<8xf16>
-  %out = nvgpu.convert.float %in : vector<8xf6E2M3FN> to vector<8xf16>
+  %out = nvgpu.convert.fpext %in : vector<8xf6E2M3FN> to vector<8xf16>
   return 
 }
 
@@ -117,7 +117,7 @@ func.func @cvt_float_e3m2_to_f16(%in : vector<8xf6E3M2FN>) {
   // CHECK: nvvm.convert.f6x2.to.f16x2
   // CHECK: nvvm.convert.f6x2.to.f16x2
   // CHECK: llvm.bitcast {{.*}} : vector<4xi32> to vector<8xf16>
-  %out = nvgpu.convert.float %in : vector<8xf6E3M2FN> to vector<8xf16>
+  %out = nvgpu.convert.fpext %in : vector<8xf6E3M2FN> to vector<8xf16>
   return
 }
 
@@ -150,7 +150,7 @@ func.func @cvt_float_e2m1_to_f16(%in : vector<16xf4E2M1FN>) {
   // CHECK: nvvm.convert.f4x2.to.f16x2
   // CHECK: nvvm.convert.f4x2.to.f16x2
   // CHECK: llvm.bitcast {{.*}} : vector<8xi32> to vector<16xf16>
-  %out = nvgpu.convert.float %in : vector<16xf4E2M1FN> to vector<16xf16>
+  %out = nvgpu.convert.fpext %in : vector<16xf4E2M1FN> to vector<16xf16>
   return 
 }
 
@@ -168,7 +168,7 @@ func.func @cvt_float_e2m3_to_bf16(%in : vector<8xf6E2M3FN>) {
   // CHECK: nvvm.convert.f6x2.to.bf16x2
   // CHECK: nvvm.convert.f6x2.to.bf16x2
   // CHECK: llvm.bitcast {{.*}} : vector<4xi32> to vector<8xbf16>
-  %out = nvgpu.convert.float %in : vector<8xf6E2M3FN> to vector<8xbf16>
+  %out = nvgpu.convert.fpext %in : vector<8xf6E2M3FN> to vector<8xbf16>
   return
 }
 
@@ -183,7 +183,7 @@ func.func @cvt_float_e2m1_to_bf16(%in : vector<16xf4E2M1FN>) {
   // CHECK-SAME: : i8(f4E2M1FN)
   // CHECK: nvvm.convert.f4x2.to.bf16x2
   // CHECK: llvm.bitcast {{.*}} : vector<8xi32> to vector<16xbf16>
-  %out = nvgpu.convert.float %in : vector<16xf4E2M1FN> to vector<16xbf16>
+  %out = nvgpu.convert.fpext %in : vector<16xf4E2M1FN> to vector<16xbf16>
   return
 }
 
@@ -200,7 +200,7 @@ func.func @fpext_e4m3fn_to_f32(%in : vector<4xf8E4M3FN>) -> vector<4xf32> {
   // CHECK: nvvm.convert.f8x2.to.f16x2
   // CHECK: llvm.bitcast {{.*}} : vector<2xi32> to vector<4xf16>
   // CHECK: llvm.fpext {{.*}} : vector<4xf16> to vector<4xf32>
-  %out = nvgpu.convert.float %in : vector<4xf8E4M3FN> to vector<4xf32>
+  %out = nvgpu.convert.fpext %in : vector<4xf8E4M3FN> to vector<4xf32>
   return %out : vector<4xf32>
 }
 
@@ -213,7 +213,7 @@ func.func @fpext_e5m2_to_f32(%in : vector<4xf8E5M2>) -> vector<4xf32> {
   // CHECK: nvvm.convert.f8x2.to.f16x2
   // CHECK: llvm.bitcast {{.*}} : vector<2xi32> to vector<4xf16>
   // CHECK: llvm.fpext {{.*}} : vector<4xf16> to vector<4xf32>
-  %out = nvgpu.convert.float %in : vector<4xf8E5M2> to vector<4xf32>
+  %out = nvgpu.convert.fpext %in : vector<4xf8E5M2> to vector<4xf32>
   return %out : vector<4xf32>
 }
 
@@ -226,7 +226,7 @@ func.func @fpext_e8m0_to_f32(%in : vector<4xf8E8M0FNU>) -> vector<4xf32> {
   // CHECK: nvvm.convert.f8x2.to.bf16x2
   // CHECK: llvm.bitcast {{.*}} : vector<2xi32> to vector<4xbf16>
   // CHECK: llvm.fpext {{.*}} : vector<4xbf16> to vector<4xf32>
-  %out = nvgpu.convert.float %in : vector<4xf8E8M0FNU> to vector<4xf32>
+  %out = nvgpu.convert.fpext %in : vector<4xf8E8M0FNU> to vector<4xf32>
   return %out : vector<4xf32>
 }
 
@@ -241,7 +241,7 @@ func.func @fpext_e2m3_to_f32(%in : vector<4xf6E2M3FN>) -> vector<4xf32> {
   // CHECK: nvvm.convert.f6x2.to.f16x2
   // CHECK: llvm.bitcast {{.*}} : vector<2xi32> to vector<4xf16>
   // CHECK: llvm.fpext {{.*}} : vector<4xf16> to vector<4xf32>
-  %out = nvgpu.convert.float %in : vector<4xf6E2M3FN> to vector<4xf32>
+  %out = nvgpu.convert.fpext %in : vector<4xf6E2M3FN> to vector<4xf32>
   return %out : vector<4xf32>
 }
 
@@ -253,7 +253,7 @@ func.func @fpext_e2m1_to_f32(%in : vector<8xf4E2M1FN>) -> vector<8xf32> {
   // CHECK: nvvm.convert.f4x2.to.f16x2
   // CHECK: llvm.bitcast {{.*}} : vector<4xi32> to vector<8xf16>
   // CHECK: llvm.fpext {{.*}} : vector<8xf16> to vector<8xf32>
-  %out = nvgpu.convert.float %in : vector<8xf4E2M1FN> to vector<8xf32>
+  %out = nvgpu.convert.fpext %in : vector<8xf4E2M1FN> to vector<8xf32>
   return %out : vector<8xf32>
 }
 
@@ -263,7 +263,7 @@ func.func @fpext_e2m1_to_f32(%in : vector<8xf4E2M1FN>) -> vector<8xf32> {
 // CHECK-SAME: %[[IN:.+]]: vector<4xf16>
 func.func @fpext_f16_to_f32(%in : vector<4xf16>) -> vector<4xf32> {
   // CHECK: llvm.fpext %[[IN]] : vector<4xf16> to vector<4xf32>
-  %out = nvgpu.convert.float %in : vector<4xf16> to vector<4xf32>
+  %out = nvgpu.convert.fpext %in : vector<4xf16> to vector<4xf32>
   return %out : vector<4xf32>
 }
 
@@ -273,7 +273,7 @@ func.func @fpext_f16_to_f32(%in : vector<4xf16>) -> vector<4xf32> {
 // CHECK-SAME: %[[IN:.+]]: vector<4xbf16>
 func.func @fpext_bf16_to_f32(%in : vector<4xbf16>) -> vector<4xf32> {
   // CHECK: llvm.fpext %[[IN]] : vector<4xbf16> to vector<4xf32>
-  %out = nvgpu.convert.float %in : vector<4xbf16> to vector<4xf32>
+  %out = nvgpu.convert.fpext %in : vector<4xbf16> to vector<4xf32>
   return %out : vector<4xf32>
 }
 
@@ -283,7 +283,7 @@ func.func @fpext_bf16_to_f32(%in : vector<4xbf16>) -> vector<4xf32> {
 func.func @fpext_f16_to_f64(%arg0: vector<4xf16>) -> vector<4xf64> {
   // CHECK: llvm.fpext %{{.*}} : vector<4xf16> to vector<4xf64>
   // CHECK-NOT: llvm.fpext
-  %out = nvgpu.convert.float %arg0 : vector<4xf16> to vector<4xf64>
+  %out = nvgpu.convert.fpext %arg0 : vector<4xf16> to vector<4xf64>
   return %out : vector<4xf64>
 }
 
@@ -291,7 +291,7 @@ func.func @fpext_f16_to_f64(%arg0: vector<4xf16>) -> vector<4xf64> {
 func.func @fpext_bf16_to_f64(%arg0: vector<4xbf16>) -> vector<4xf64> {
   // CHECK: llvm.fpext %{{.*}} : vector<4xbf16> to vector<4xf64>
   // CHECK-NOT: llvm.fpext
-  %out = nvgpu.convert.float %arg0 : vector<4xbf16> to vector<4xf64>
+  %out = nvgpu.convert.fpext %arg0 : vector<4xbf16> to vector<4xf64>
   return %out : vector<4xf64>
 }
 
@@ -299,7 +299,7 @@ func.func @fpext_bf16_to_f64(%arg0: vector<4xbf16>) -> vector<4xf64> {
 func.func @fpext_f32_to_f64(%arg0: vector<4xf32>) -> vector<4xf64> {
   // CHECK-NOT: nvvm
   // CHECK: llvm.fpext %{{.*}} : vector<4xf32> to vector<4xf64>
-  %out = nvgpu.convert.float %arg0 : vector<4xf32> to vector<4xf64>
+  %out = nvgpu.convert.fpext %arg0 : vector<4xf32> to vector<4xf64>
   return %out : vector<4xf64>
 }
 
@@ -309,7 +309,7 @@ func.func @fpext_f8_to_f64(%arg0: vector<4xf8E4M3FN>) -> vector<4xf64> {
   // CHECK: llvm.fpext {{.*}} to {{.*}}f64
   // CHECK-NOT: llvm.fpext {{.*}} to {{.*}}f32
   // CHECK: vector.extract_strided_slice
-  %out = nvgpu.convert.float %arg0 : vector<4xf8E4M3FN> to vector<4xf64>
+  %out = nvgpu.convert.fpext %arg0 : vector<4xf8E4M3FN> to vector<4xf64>
   return %out : vector<4xf64>
 }
 
@@ -318,7 +318,7 @@ func.func @fpext_f4_to_f64(%arg0: vector<8xf4E2M1FN>) -> vector<8xf64> {
   // CHECK: nvvm.convert.f4x2.to.f16x2
   // CHECK: llvm.fpext {{.*}} to {{.*}}f64
   // CHECK-NOT: llvm.fpext {{.*}} to {{.*}}f32
-  %out = nvgpu.convert.float %arg0 : vector<8xf4E2M1FN> to vector<8xf64>
+  %out = nvgpu.convert.fpext %arg0 : vector<8xf4E2M1FN> to vector<8xf64>
   return %out : vector<8xf64>
 }
 
@@ -328,7 +328,7 @@ func.func @fpext_e2m3_to_f64(%arg0: vector<4xf6E2M3FN>) -> vector<4xf64> {
   // CHECK: nvvm.convert.f6x2.to.f16x2
   // CHECK: llvm.fpext {{.*}} to {{.*}}f64
   // CHECK-NOT: llvm.fpext {{.*}} to {{.*}}f32
-  %out = nvgpu.convert.float %arg0 : vector<4xf6E2M3FN> to vector<4xf64>
+  %out = nvgpu.convert.fpext %arg0 : vector<4xf6E2M3FN> to vector<4xf64>
   return %out : vector<4xf64>
 }
 
@@ -342,7 +342,7 @@ func.func @fpext_scalar_f8_to_f16(%in : f8E4M3FN) -> f16 {
   // CHECK: nvvm.convert.f8x2.to.f16x2
   // CHECK: vector.extract_strided_slice
   // CHECK: vector.extract {{.*}}[0] : f16 from vector<1xf16>
-  %out = nvgpu.convert.float %in : f8E4M3FN to f16
+  %out = nvgpu.convert.fpext %in : f8E4M3FN to f16
   return %out : f16
 }
 
@@ -357,7 +357,7 @@ func.func @fpext_scalar_f8_to_f32(%in : f8E4M3FN) -> f32 {
   // CHECK: llvm.fpext
   // CHECK: vector.extract_strided_slice
   // CHECK: vector.extract {{.*}}[0] : f32 from vector<1xf32>
-  %out = nvgpu.convert.float %in : f8E4M3FN to f32
+  %out = nvgpu.convert.fpext %in : f8E4M3FN to f32
   return %out : f32
 }
 
@@ -369,7 +369,7 @@ func.func @fpext_v2x4_f8_to_f16(%in : vector<2x4xf8E4M3FN>) -> vector<2x4xf16> {
   // CHECK: vector.shape_cast %[[IN]] : vector<2x4xf8E4M3FN> to vector<8xf8E4M3FN>
   // CHECK: nvvm.convert.f8x2.to.f16x2
   // CHECK: vector.shape_cast {{.*}} to vector<2x4xf16>
-  %out = nvgpu.convert.float %in : vector<2x4xf8E4M3FN> to vector<2x4xf16>
+  %out = nvgpu.convert.fpext %in : vector<2x4xf8E4M3FN> to vector<2x4xf16>
   return %out : vector<2x4xf16>
 }
 
@@ -382,7 +382,7 @@ func.func @fpext_v2x4_f8_to_f32(%in : vector<2x4xf8E4M3FN>) -> vector<2x4xf32> {
   // CHECK: nvvm.convert.f8x2.to.f16x2
   // CHECK: llvm.fpext
   // CHECK: vector.shape_cast {{.*}} to vector<2x4xf32>
-  %out = nvgpu.convert.float %in : vector<2x4xf8E4M3FN> to vector<2x4xf32>
+  %out = nvgpu.convert.fpext %in : vector<2x4xf8E4M3FN> to vector<2x4xf32>
   return %out : vector<2x4xf32>
 }
 
@@ -394,7 +394,7 @@ func.func @fpext_v3f8_to_v3f16(%in : vector<3xf8E5M2>) -> vector<3xf16> {
   // CHECK: vector.insert_strided_slice %[[IN]]
   // CHECK: nvvm.convert.f8x2.to.f16x2
   // CHECK: vector.extract_strided_slice
-  %out = nvgpu.convert.float %in : vector<3xf8E5M2> to vector<3xf16>
+  %out = nvgpu.convert.fpext %in : vector<3xf8E5M2> to vector<3xf16>
   return %out : vector<3xf16>
 }
 
@@ -407,7 +407,7 @@ func.func @fpext_v3_f8_to_f32(%in : vector<3xf8E5M2>) -> vector<3xf32> {
   // CHECK: nvvm.convert.f8x2.to.f16x2
   // CHECK: llvm.fpext
   // CHECK: vector.extract_strided_slice
-  %out = nvgpu.convert.float %in : vector<3xf8E5M2> to vector<3xf32>
+  %out = nvgpu.convert.fpext %in : vector<3xf8E5M2> to vector<3xf32>
   return %out : vector<3xf32>
 }
 
@@ -421,7 +421,7 @@ func.func @fpext_v3x1_f8_to_f16(%in : vector<3x1xf8E4M3FN>) -> vector<3x1xf16> {
   // CHECK: nvvm.convert.f8x2.to.f16x2
   // CHECK: vector.extract_strided_slice
   // CHECK: vector.shape_cast {{.*}} to vector<3x1xf16>
-  %out = nvgpu.convert.float %in : vector<3x1xf8E4M3FN> to vector<3x1xf16>
+  %out = nvgpu.convert.fpext %in : vector<3x1xf8E4M3FN> to vector<3x1xf16>
   return %out : vector<3x1xf16>
 }
 
@@ -431,7 +431,7 @@ func.func @fpext_v3x1_f8_to_f16(%in : vector<3x1xf8E4M3FN>) -> vector<3x1xf16> {
 func.func @fpext_f8_to_f16_relu(%in : vector<8xf8E4M3FN>) {
   // CHECK: nvvm.convert.f8x2.to.f16x2
   // CHECK-SAME: relu = true
-  %out = nvgpu.convert.float %in {relu = true}
+  %out = nvgpu.convert.fpext %in {relu = true}
       : vector<8xf8E4M3FN> to vector<8xf16>
   return
 }
@@ -447,7 +447,7 @@ func.func @fpext_f8_to_f16_relu(%in : vector<8xf8E4M3FN>) {
 // CHECK-E2E: nvvm.convert.f8x2.to.f16x2
 // CHECK-E2E: return
 func.func @e2e_scalar_f8_to_f16(%in : f8E4M3FN) -> f16 {
-  %out = nvgpu.convert.float %in : f8E4M3FN to f16
+  %out = nvgpu.convert.fpext %in : f8E4M3FN to f16
   return %out : f16
 }
 
@@ -456,7 +456,7 @@ func.func @e2e_scalar_f8_to_f16(%in : f8E4M3FN) -> f16 {
 // CHECK-E2E: nvvm.convert.f8x2.to.f16x2
 // CHECK-E2E: return
 func.func @e2e_v2x4_f8_to_f16(%in : vector<2x4xf8E4M3FN>) -> vector<2x4xf16> {
-  %out = nvgpu.convert.float %in : vector<2x4xf8E4M3FN> to vector<2x4xf16>
+  %out = nvgpu.convert.fpext %in : vector<2x4xf8E4M3FN> to vector<2x4xf16>
   return %out : vector<2x4xf16>
 }
 
@@ -466,7 +466,7 @@ func.func @e2e_v2x4_f8_to_f16(%in : vector<2x4xf8E4M3FN>) -> vector<2x4xf16> {
 // CHECK-E2E: nvvm.convert.f8x2.to.f16x2
 // CHECK-E2E: return
 func.func @e2e_v3f8_to_v3f16(%in : vector<3xf8E5M2>) -> vector<3xf16> {
-  %out = nvgpu.convert.float %in : vector<3xf8E5M2> to vector<3xf16>
+  %out = nvgpu.convert.fpext %in : vector<3xf8E5M2> to vector<3xf16>
   return %out : vector<3xf16>
 }
 
@@ -480,7 +480,7 @@ func.func @e2e_v3f8_to_v3f16(%in : vector<3xf8E5M2>) -> vector<3xf16> {
 // CHECK-E2E: llvm.fpext
 // CHECK-E2E: return
 func.func @e2e_scalar_f8_to_f32(%in : f8E4M3FN) -> f32 {
-  %out = nvgpu.convert.float %in : f8E4M3FN to f32
+  %out = nvgpu.convert.fpext %in : f8E4M3FN to f32
   return %out : f32
 }
 
@@ -490,7 +490,7 @@ func.func @e2e_scalar_f8_to_f32(%in : f8E4M3FN) -> f32 {
 // CHECK-E2E: llvm.fpext
 // CHECK-E2E: return
 func.func @e2e_v2x4_f8_to_f32(%in : vector<2x4xf8E4M3FN>) -> vector<2x4xf32> {
-  %out = nvgpu.convert.float %in : vector<2x4xf8E4M3FN> to vector<2x4xf32>
+  %out = nvgpu.convert.fpext %in : vector<2x4xf8E4M3FN> to vector<2x4xf32>
   return %out : vector<2x4xf32>
 }
 
@@ -501,6 +501,6 @@ func.func @e2e_v2x4_f8_to_f32(%in : vector<2x4xf8E4M3FN>) -> vector<2x4xf32> {
 // CHECK-E2E: llvm.fpext
 // CHECK-E2E: return
 func.func @e2e_v3f8_to_v3f32(%in : vector<3xf8E5M2>) -> vector<3xf32> {
-  %out = nvgpu.convert.float %in : vector<3xf8E5M2> to vector<3xf32>
+  %out = nvgpu.convert.fpext %in : vector<3xf8E5M2> to vector<3xf32>
   return %out : vector<3xf32>
 }

@@ -1713,7 +1713,7 @@ struct NVGPURcpOpLowering : public ConvertOpToLLVMPattern<nvgpu::RcpOp> {
 };
 
 //===----------------------------------------------------------------------===//
-// NVGPUConvertFloatOp Lowering (truncation)
+// NVGPUConvertFPTruncOp Lowering
 //===----------------------------------------------------------------------===//
 
 enum class FPKind { F32, BF16, F16, F8, F6, F4 };
@@ -1754,7 +1754,7 @@ static int getNumSrcI32PerConv(FPKind src) {
   return src == FPKind::F32 ? 2 : 1;
 }
 
-/// Conversion op identifier for nvgpu.convert.float truncation dispatch table.
+/// Conversion op identifier for nvgpu.convert.fptrunc lowering dispatch table.
 enum class FPTruncConvOp {
   F32x2_TO_F16x2,
   F32x2_TO_BF16x2,
@@ -1916,8 +1916,8 @@ static Value createTruncConversion(
   llvm_unreachable("unhandled FPTruncConvOp");
 }
 
-static LogicalResult lowerFPTrunc(nvgpu::ConvertFloatOp op,
-                                  nvgpu::ConvertFloatOp::Adaptor adaptor,
+static LogicalResult lowerFPTrunc(nvgpu::ConvertFPTruncOp op,
+                                  nvgpu::ConvertFPTruncOp::Adaptor adaptor,
                                   ConversionPatternRewriter &rewriter,
                                   const LLVMTypeConverter *typeConverter) {
   MLIRContext *ctx = op.getContext();
@@ -2043,10 +2043,10 @@ static LogicalResult lowerFPTrunc(nvgpu::ConvertFloatOp op,
 }
 
 //===----------------------------------------------------------------------===//
-// NVGPUConvertFloatOp Lowering (extension)
+// NVGPUConvertFPExtOp Lowering
 //===----------------------------------------------------------------------===//
 
-/// Conversion op identifier for nvgpu.convert.float extension dispatch table.
+/// Conversion op identifier for nvgpu.convert.fpext lowering dispatch table.
 enum class FPExtConvOp {
   F8x2_TO_F16x2,
   F8x2_TO_BF16x2,
@@ -2129,8 +2129,8 @@ static Value createExtConversion(ImplicitLocOpBuilder &b, MLIRContext *ctx,
   llvm_unreachable("unhandled FPExtConvOp");
 }
 
-static LogicalResult lowerFPExt(nvgpu::ConvertFloatOp op,
-                                nvgpu::ConvertFloatOp::Adaptor adaptor,
+static LogicalResult lowerFPExt(nvgpu::ConvertFPExtOp op,
+                                nvgpu::ConvertFPExtOp::Adaptor adaptor,
                                 ConversionPatternRewriter &rewriter,
                                 const LLVMTypeConverter *typeConverter) {
   MLIRContext *ctx = op.getContext();
@@ -2266,25 +2266,30 @@ static LogicalResult lowerFPExt(nvgpu::ConvertFloatOp op,
   return success();
 }
 
-/// Lowers nvgpu.convert.float by dispatching to the truncation or extension
-/// helper based on the source/destination bitwidths.
-struct NVGPUConvertFloatOpLowering
-    : public ConvertOpToLLVMPattern<nvgpu::ConvertFloatOp> {
-  using ConvertOpToLLVMPattern<nvgpu::ConvertFloatOp>::ConvertOpToLLVMPattern;
+struct NVGPUConvertFPTruncOpLowering
+    : public ConvertOpToLLVMPattern<nvgpu::ConvertFPTruncOp> {
+  using ConvertOpToLLVMPattern<nvgpu::ConvertFPTruncOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(nvgpu::ConvertFloatOp op, OpAdaptor adaptor,
+  matchAndRewrite(nvgpu::ConvertFPTruncOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     if (isa<RankedTensorType>(op.getIn().getType()))
       return rewriter.notifyMatchFailure(
           op, "tensor inputs not handled; type converter should lower first");
+    return lowerFPTrunc(op, adaptor, rewriter, getTypeConverter());
+  }
+};
 
-    int srcBW =
-        getElementTypeOrSelf(op.getIn().getType()).getIntOrFloatBitWidth();
-    int dstBW =
-        getElementTypeOrSelf(op.getOut().getType()).getIntOrFloatBitWidth();
-    if (srcBW > dstBW)
-      return lowerFPTrunc(op, adaptor, rewriter, getTypeConverter());
+struct NVGPUConvertFPExtOpLowering
+    : public ConvertOpToLLVMPattern<nvgpu::ConvertFPExtOp> {
+  using ConvertOpToLLVMPattern<nvgpu::ConvertFPExtOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(nvgpu::ConvertFPExtOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (isa<RankedTensorType>(op.getIn().getType()))
+      return rewriter.notifyMatchFailure(
+          op, "tensor inputs not handled; type converter should lower first");
     return lowerFPExt(op, adaptor, rewriter, getTypeConverter());
   }
 };
@@ -2301,14 +2306,14 @@ static int64_t computePaddedElems(int64_t numElems, int srcBW, int dstBW,
   return ceilDiv(padded, step) * step;
 }
 
-/// Canonicalization pattern for nvgpu.convert.float: handles scalar inputs,
-/// non-32-bit-aligned vectors, and multi-rank vectors. Runs as an
-/// OpRewritePattern on MLIR types before LLVM type conversion.
-struct NVGPUConvertFloatCanonicalizePattern
-    : public OpRewritePattern<nvgpu::ConvertFloatOp> {
-  using OpRewritePattern<nvgpu::ConvertFloatOp>::OpRewritePattern;
+/// Canonicalization pattern for nvgpu.convert.fptrunc / nvgpu.convert.fpext:
+/// handles scalar inputs, non-32-bit-aligned vectors, and multi-rank vectors.
+/// Runs as an OpRewritePattern on MLIR types before LLVM type conversion.
+template <typename CvtOp, bool IsTrunc>
+struct NVGPUFPCanonicalizePattern : public OpRewritePattern<CvtOp> {
+  using OpRewritePattern<CvtOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(nvgpu::ConvertFloatOp op,
+  LogicalResult matchAndRewrite(CvtOp op,
                                 PatternRewriter &rewriter) const override {
     Type inType = op.getIn().getType();
     Type outType = op.getOut().getType();
@@ -2327,7 +2332,7 @@ struct NVGPUConvertFloatCanonicalizePattern
     auto srcVecTy = dyn_cast<VectorType>(inType);
     bool isMultiRank = srcVecTy && srcVecTy.getRank() > 1;
     int64_t numElems = isScalar ? 1 : srcVecTy.getNumElements();
-    int step = srcBW > dstBW ? effSrcBW / effDstBW : effDstBW / effSrcBW;
+    int step = IsTrunc ? effSrcBW / effDstBW : effDstBW / effSrcBW;
     int64_t paddedElems = computePaddedElems(numElems, srcBW, dstBW, step);
     bool needsPad = (paddedElems != numElems);
 
@@ -2355,9 +2360,14 @@ struct NVGPUConvertFloatCanonicalizePattern
 
     auto cvtDstTy =
         VectorType::get({needsPad ? paddedElems : numElems}, dstElemTy);
-    Value result = nvgpu::ConvertFloatOp::create(
-        b, cvtDstTy, input, op.getRndAttr(), op.getSatAttr(), op.getReluAttr(),
-        op.getRandomBits());
+    Value cvt;
+    if constexpr (IsTrunc)
+      cvt = CvtOp::create(b, cvtDstTy, input, op.getRndAttr(), op.getSatAttr(),
+                          op.getReluAttr(), op.getRandomBits());
+    else
+      cvt =
+          CvtOp::create(b, cvtDstTy, input, op.getRndAttr(), op.getReluAttr());
+    Value result = cvt;
 
     if (needsPad)
       result = vector::ExtractStridedSliceOp::create(
@@ -2375,6 +2385,11 @@ struct NVGPUConvertFloatCanonicalizePattern
     return success();
   }
 };
+
+using NVGPUConvertFPTruncCanonicalizePattern =
+    NVGPUFPCanonicalizePattern<nvgpu::ConvertFPTruncOp, true>;
+using NVGPUConvertFPExtCanonicalizePattern =
+    NVGPUFPCanonicalizePattern<nvgpu::ConvertFPExtOp, false>;
 } // namespace
 
 void mlir::nvgpu::populateCommonGPUTypeAndAttributeConversions(
@@ -2419,10 +2434,12 @@ void mlir::populateNVGPUToNVVMConversionPatterns(
       NVGPUWarpgroupMmaOpLowering,              // nvgpu.warpgroup.mma
       NVGPUWarpgroupMmaStoreOpLowering,         // nvgpu.warpgroup.mma.store
       NVGPUWarpgroupMmaInitAccumulatorOpLowering, // nvgpu.warpgroup.mma.init.accumulator
-      NVGPUConvertFloatOpLowering,                // nvgpu.convert.float
+      NVGPUConvertFPTruncOpLowering,              // nvgpu.convert.fptrunc
+      NVGPUConvertFPExtOpLowering,                // nvgpu.convert.fpext
       MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM, NVGPUAsyncCopyLowering,
       NVGPUAsyncCreateGroupLowering, NVGPUAsyncWaitLowering,
       NVGPUMmaSparseSyncLowering, NVGPURcpOpLowering>(converter);
 
-  patterns.add<NVGPUConvertFloatCanonicalizePattern>(patterns.getContext());
+  patterns.add<NVGPUConvertFPTruncCanonicalizePattern,
+               NVGPUConvertFPExtCanonicalizePattern>(patterns.getContext());
 }
