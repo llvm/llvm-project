@@ -1372,8 +1372,13 @@ bool RISCVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   TBB = FBB = nullptr;
   Cond.clear();
 
-  // If the block has no terminators, it just falls into the block after it.
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
+  // If we end up with a INLINEASM_BR instruction, the actual branch
+  // information is opaque and thus unanalyzeable.
+  if (I != MBB.end() && I->getOpcode() == TargetOpcode::INLINEASM_BR)
+    return true;
+
+  // If the block has no terminators, it just falls into the block after it.
   if (I == MBB.end() || !isUnpredicatedTerminator(*I))
     return false;
 
