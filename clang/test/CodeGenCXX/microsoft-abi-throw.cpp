@@ -82,6 +82,16 @@ void h2(DefaultConstEval &d) {
   throw d;
 }
 
+// This will generate both the default constructor closure and the copy constructor closure -- for the same constructor.
+struct DefaultCtorIsCopyCtor;
+const DefaultCtorIsCopyCtor& foo();
+struct DefaultCtorIsCopyCtor {
+  __declspec(dllexport) DefaultCtorIsCopyCtor(const DefaultCtorIsCopyCtor& = foo(), int = 42) {}
+};
+void h3(DefaultCtorIsCopyCtor &d) {
+  throw d;
+}
+
 struct DeletedCopy {
   DeletedCopy();
   DeletedCopy(DeletedCopy &&);
