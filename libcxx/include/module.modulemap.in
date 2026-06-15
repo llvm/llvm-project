@@ -129,6 +129,7 @@ module std_core [system] {
       header "__type_traits/is_base_of.h"
       export std_core.type_traits.integral_constant
     }
+    module is_bit_precise_integer { header "__type_traits/is_bit_precise_integer.h" }
     module is_callable {
       header "__type_traits/is_callable.h"
       export std_core.type_traits.integral_constant

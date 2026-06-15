@@ -12,6 +12,7 @@
 
 #include <__concepts/arithmetic.h>
 #include <__config>
+#include <__type_traits/is_bit_precise_integer.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_cv.h>
 #include <climits>
@@ -27,12 +28,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 23
 
 template <integral _Tp>
+  requires __admits_bitint_extension_v<_Tp>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp byteswap(_Tp __val) noexcept {
-  // [bit.byteswap]/Mandates: T does not have padding bits.
-  // bool is grandfathered: every shipping implementation admits it and the
-  // size-1 identity path can't shuffle padding bits into value positions.
-  // LWG 4583 proposes relaxing this to allow byte-aligned padding (e.g.
-  // _BitInt(48) where 2 whole bytes are padding); revisit once it resolves.
+  // [bit.byteswap]/Mandates: T has no padding bits. bool is admitted as the
+  // size-1 identity path. _BitInt operands are gated above; see
+  // <__type_traits/is_bit_precise_integer.h>.
   static_assert(is_same_v<remove_cv_t<_Tp>, bool> ||
                     numeric_limits<_Tp>::digits + numeric_limits<_Tp>::is_signed == sizeof(_Tp) * CHAR_BIT,
                 "std::byteswap requires T to have no padding bits");

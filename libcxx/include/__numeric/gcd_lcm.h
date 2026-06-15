@@ -15,6 +15,7 @@
 #include <__config>
 #include <__memory/addressof.h>
 #include <__type_traits/common_type.h>
+#include <__type_traits/is_bit_precise_integer.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_signed.h>
@@ -51,6 +52,8 @@ constexpr _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> gcd(_Tp __m, _Up __n) {
   static_assert(is_integral<_Tp>::value && is_integral<_Up>::value, "Arguments to gcd must be integer types");
   static_assert(!is_same<__remove_cv_t<_Tp>, bool>::value, "First argument to gcd cannot be bool");
   static_assert(!is_same<__remove_cv_t<_Up>, bool>::value, "Second argument to gcd cannot be bool");
+  static_assert(__admits_bitint_extension_v<_Tp> && __admits_bitint_extension_v<_Up>,
+                "std::gcd does not accept _BitInt unless _LIBCPP_ENABLE_BITINT_EXTENSIONS is defined");
   using _Rp = common_type_t<_Tp, _Up>;
   using _Wp = make_unsigned_t<_Rp>;
 
@@ -99,6 +102,8 @@ constexpr _LIBCPP_HIDE_FROM_ABI common_type_t<_Tp, _Up> lcm(_Tp __m, _Up __n) {
   static_assert(is_integral<_Tp>::value && is_integral<_Up>::value, "Arguments to lcm must be integer types");
   static_assert(!is_same<__remove_cv_t<_Tp>, bool>::value, "First argument to lcm cannot be bool");
   static_assert(!is_same<__remove_cv_t<_Up>, bool>::value, "Second argument to lcm cannot be bool");
+  static_assert(__admits_bitint_extension_v<_Tp> && __admits_bitint_extension_v<_Up>,
+                "std::lcm does not accept _BitInt unless _LIBCPP_ENABLE_BITINT_EXTENSIONS is defined");
   if (__m == 0 || __n == 0)
     return 0;
 

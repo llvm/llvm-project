@@ -86,6 +86,11 @@ Potentially breaking changes
   including the correct header. To ease the transition ``_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23`` can be defined, which
   includes the removed headers again. This macro will be removed in LLVM 24.
 
+- libc++'s experimental ``_BitInt(N)`` coverage in ``std::byteswap``, ``std::hash``, ``std::cmp_*``,
+  ``std::gcd``/``lcm``/``midpoint``, ``std::to_chars``/``from_chars``, ``std::format``, and saturation arithmetic is
+  now gated behind ``_LIBCPP_ENABLE_BITINT_EXTENSIONS`` (off by default) to align with P3666R4 section 5. Define the
+  macro to keep using the previous behavior.
+
 Announcements About Future Releases
 -----------------------------------
 

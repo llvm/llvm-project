@@ -10,6 +10,7 @@
 #define _LIBCPP___TYPE_TRAITS_INTEGER_TRAITS_H
 
 #include <__config>
+#include <__type_traits/is_bit_precise_integer.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_signed.h>
@@ -42,15 +43,16 @@ inline const bool __is_character_v<char16_t> = true;
 template <>
 inline const bool __is_character_v<char32_t> = true;
 
+// _BitInt participates only with _LIBCPP_HAS_BITINT_EXTENSIONS on (P3666R4).
 template <class _Tp>
 inline const bool __is_signed_integer_v =
     is_integral<_Tp>::value && is_signed<_Tp>::value && !__is_character_v<_Tp> && !is_same<_Tp, bool>::value &&
-    __is_unqualified_v<_Tp>;
+    __is_unqualified_v<_Tp> && __admits_bitint_extension_v<_Tp>;
 
 template <class _Tp>
 inline const bool __is_unsigned_integer_v =
     is_integral<_Tp>::value && is_unsigned<_Tp>::value && !__is_character_v<_Tp> && !is_same<_Tp, bool>::value &&
-    __is_unqualified_v<_Tp>;
+    __is_unqualified_v<_Tp> && __admits_bitint_extension_v<_Tp>;
 
 #if _LIBCPP_STD_VER >= 20
 template <class _Tp>

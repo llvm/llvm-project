@@ -16,6 +16,7 @@
 #include <__config>
 #include <__system_error/errc.h>
 #include <__type_traits/enable_if.h>
+#include <__type_traits/is_bit_precise_integer.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_signed.h>
 #include <__type_traits/is_unsigned.h>
@@ -216,13 +217,13 @@ __from_chars_integral(const char* __first, const char* __last, _Tp& __value, int
   return std::__sign_combinator(__first, __last, __value, __from_chars_integral<__t>, __base);
 }
 
-template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
+template <typename _Tp, __enable_if_t<is_integral<_Tp>::value && __admits_bitint_extension_v<_Tp>, int> = 0>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
 from_chars(const char* __first, const char* __last, _Tp& __value) {
   return std::__from_chars_atoi(__first, __last, __value);
 }
 
-template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
+template <typename _Tp, __enable_if_t<is_integral<_Tp>::value && __admits_bitint_extension_v<_Tp>, int> = 0>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
 from_chars(const char* __first, const char* __last, _Tp& __value, int __base) {
   _LIBCPP_ASSERT_UNCATEGORIZED(2 <= __base && __base <= 36, "base not in [2, 36]");

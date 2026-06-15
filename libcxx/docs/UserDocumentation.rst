@@ -119,6 +119,14 @@ enable or disable extended libc++ behavior.
   ensure that the appropriate experimental library (usually ``libc++experimental.a``)
   is linked into their program.
 
+**_LIBCPP_ENABLE_BITINT_EXTENSIONS**:
+  This macro opts into libc++'s experimental ``_BitInt(N)`` support in standard
+  library facilities such as ``std::byteswap``, ``std::hash``, ``std::to_chars``,
+  ``std::from_chars``, ``std::cmp_*``, ``std::gcd``, ``std::lcm``, ``std::midpoint``,
+  and saturation arithmetic. It is off by default to match P3666R4's "prevent
+  library support for ``_BitInt``" direction. Existing user code may still rely
+  on the previously-shipping behavior by defining this macro.
+
 **_LIBCPP_HARDENING_MODE**:
   This macro is used to choose the :ref:`hardening mode <using-hardening-modes>`.
 

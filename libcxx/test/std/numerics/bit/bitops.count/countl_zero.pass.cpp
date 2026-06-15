@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_BITINT_EXTENSIONS
+
 // template <class T>
 //   constexpr int countl_zero(T x) noexcept;
 

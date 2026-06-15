@@ -22,6 +22,7 @@
 #include <__system_error/errc.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
+#include <__type_traits/is_bit_precise_integer.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_signed.h>
@@ -318,7 +319,7 @@ _LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_SINCE_CXX14 char __hex_to_upper(c
 
 to_chars_result to_chars(char*, char*, bool, int = 10) = delete;
 
-template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
+template <typename _Tp, __enable_if_t<is_integral<_Tp>::value && __admits_bitint_extension_v<_Tp>, int> = 0>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
 to_chars(char* __first, char* __last, _Tp __value) {
   using _Type = __make_32_64_or_128_bit_t<_Tp>;
@@ -326,7 +327,7 @@ to_chars(char* __first, char* __last, _Tp __value) {
   return std::__to_chars_itoa(__first, __last, static_cast<_Type>(__value), is_signed<_Tp>());
 }
 
-template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
+template <typename _Tp, __enable_if_t<is_integral<_Tp>::value && __admits_bitint_extension_v<_Tp>, int> = 0>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
 to_chars(char* __first, char* __last, _Tp __value, int __base) {
   _LIBCPP_ASSERT_UNCATEGORIZED(2 <= __base && __base <= 36, "base not in [2, 36]");

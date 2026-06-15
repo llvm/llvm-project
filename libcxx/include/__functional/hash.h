@@ -17,6 +17,7 @@
 #include <__type_traits/conjunction.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
+#include <__type_traits/is_bit_precise_integer.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_enum.h>
 #include <__type_traits/is_floating_point.h>
@@ -369,16 +370,17 @@ struct __hash_impl<_Tp, __enable_if_t<is_enum<_Tp>::value && __is_unqualified_v<
 };
 
 template <class _Tp>
-struct __hash_impl<
-    _Tp,
-    __enable_if_t<is_integral<_Tp>::value && __is_unqualified_v<_Tp> && (sizeof(_Tp) <= sizeof(size_t))> >
+struct __hash_impl< _Tp,
+                    __enable_if_t<is_integral<_Tp>::value && __is_unqualified_v<_Tp> &&
+                                  __admits_bitint_extension_v<_Tp> && (sizeof(_Tp) <= sizeof(size_t))> >
     : __unary_function<_Tp, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(_Tp __v) const _NOEXCEPT { return static_cast<size_t>(__v); }
 };
 
 template <class _Tp>
 struct __hash_impl<_Tp,
-                   __enable_if_t<is_integral<_Tp>::value && __is_unqualified_v<_Tp> && (sizeof(_Tp) > sizeof(size_t))> >
+                   __enable_if_t<is_integral<_Tp>::value && __is_unqualified_v<_Tp> &&
+                                 __admits_bitint_extension_v<_Tp> && (sizeof(_Tp) > sizeof(size_t))> >
     : __scalar_hash<_Tp> {};
 
 template <class _Tp>

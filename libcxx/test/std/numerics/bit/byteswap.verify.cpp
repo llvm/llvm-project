@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_BITINT_EXTENSIONS
+
 // <bit>
 
 // std::byteswap rejects integer types that have padding bits per

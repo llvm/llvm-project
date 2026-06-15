@@ -8,6 +8,8 @@
 
 // REQUIRES: std-at-least-c++26
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_BITINT_EXTENSIONS
+
 // <numeric>
 
 // add_sat, sub_sat, mul_sat, div_sat, saturate_cast applied to _BitInt(N).

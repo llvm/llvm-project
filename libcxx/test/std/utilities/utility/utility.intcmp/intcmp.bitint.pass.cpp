@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_BITINT_EXTENSIONS
+
 // <utility>
 
 // cmp_equal, cmp_not_equal, cmp_less, cmp_less_equal, cmp_greater,
