@@ -2962,10 +2962,8 @@ bool LoopAccessInfo::blockNeedsPredication(const BasicBlock *BB,
   assert(TheLoop->contains(BB) && "Unknown block used");
 
   // Blocks that do not dominate the latch need predication.
-  // Treat blocks in loops with no unique latch as always needing predication.
   const BasicBlock *Latch = TheLoop->getLoopLatch();
-  if (!Latch)
-    return true;
+  assert(Latch && "Loop expected to have a single latch.");
   return !DT->dominates(BB, Latch);
 }
 

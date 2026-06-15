@@ -1358,11 +1358,22 @@ bool LoopVectorizationLegality::isFixedOrderRecurrence(
 
 bool LoopVectorizationLegality::blockNeedsPredication(
     const BasicBlock *BB) const {
+  BasicBlock *Latch = TheLoop->getLoopLatch();
+
+  // When doing extra analysis, we might not have a canonical loop form to work
+  // with. In that case, vectorisation will eventually be rejected due to
+  // previous checks, so return something that will not bloat opt remarks.
+  if (!Latch) {
+    assert(ORE->allowExtraAnalysis(DEBUG_TYPE) &&
+           !canVectorizeLoopCFG(TheLoop, /*UseVPlanNativePath=*/true) &&
+           "Loop shape should have been rejected by earlier checks");
+    return false;
+  }
+
   // When vectorizing early exits, create predicates for the latch block only.
   // For a single early exit, it must be a direct predecessor of the latch.
   // For multiple early exits, they form a chain where each exiting block
   // dominates all subsequent blocks up to the latch.
-  BasicBlock *Latch = TheLoop->getLoopLatch();
   if (hasUncountableEarlyExit())
     return BB == Latch;
   return LoopAccessInfo::blockNeedsPredication(BB, TheLoop, DT);
@@ -1538,8 +1549,8 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 }
 
 // Helper function to canVectorizeLoopNestCFG.
-bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
-                                                    bool UseVPlanNativePath) {
+bool LoopVectorizationLegality::canVectorizeLoopCFG(
+    Loop *Lp, bool UseVPlanNativePath) const {
   assert((UseVPlanNativePath || Lp->isInnermost()) &&
          "VPlan-native path is not enabled.");
 
