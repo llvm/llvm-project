@@ -143,8 +143,9 @@ static bool isConflictingWrite(mlir::Operation *op,
   return result.wasInterrupted();
 }
 
-bool isSafeToInline(hlfir::ElementalOp producer, hlfir::ApplyOp applySite,
-                    mlir::AliasAnalysis &aa, mlir::DominanceInfo &domInfo) {
+static bool isSafeToInline(hlfir::ElementalOp producer,
+                           hlfir::ApplyOp applySite, mlir::AliasAnalysis &aa,
+                           mlir::DominanceInfo &domInfo) {
   if (!domInfo.properlyDominates(producer.getOperation(),
                                  applySite.getOperation()))
     return false;
@@ -182,8 +183,9 @@ bool isSafeToInline(hlfir::ElementalOp producer, hlfir::ApplyOp applySite,
   return !result.wasInterrupted();
 }
 
-/// If the elemental has only two uses and those two are an apply operation and
-/// a destroy operation, return those two, otherwise return {}
+/// Traces the elemental's dataflow to find its unique apply and destroy
+/// operations. Returns the destroy op only if no other consumers require the
+/// array buffer.
 static std::optional<std::pair<hlfir::ApplyOp, hlfir::DestroyOp>>
 getTwoUses(hlfir::ElementalOp elemental, mlir::AliasAnalysis &aliasAnalysis,
            mlir::DominanceInfo &domInfo) {
