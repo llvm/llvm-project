@@ -19,8 +19,8 @@ Parts:
       NumStaticSamplers: 0
       StaticSamplersOffset: 48
       Parameters:         
-      - ParameterType: 2 # SRV
-        ShaderVisibility: 3 # Domain
+      - ParameterType: CBV
+        ShaderVisibility: Domain
         Descriptor:
           ShaderRegister: 31
           RegisterSpace: 32
@@ -37,8 +37,8 @@ Parts:
 # CHECK-NEXT:      NumStaticSamplers: 0
 # CHECK-NEXT:      StaticSamplersOffset: 48
 # CHECK-NEXT:      Parameters:         
-# CHECK-NEXT:      - ParameterType: 2
-# CHECK-NEXT:        ShaderVisibility: 3
+# CHECK-NEXT:      - ParameterType: CBV
+# CHECK-NEXT:        ShaderVisibility: Domain
 # CHECK-NEXT:        Descriptor:
 # CHECK-NEXT:          RegisterSpace: 32
 # CHECK-NEXT:          ShaderRegister: 31

@@ -16,7 +16,7 @@ target triple = "aarch64--"
 ; Make sure we don't mess up metadata arguments.
 declare void @llvm.write_register.i64(metadata, i64)
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: G_WRITE_REGISTER !0, %0:_(s64) (in function: test_write_register_intrin)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: G_WRITE_REGISTER !0, %0:_(i64) (in function: test_write_register_intrin)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for test_write_register_intrin
 ; FALLBACK-WITH-REPORT-LABEL: test_write_register_intrin:
 define void @test_write_register_intrin() {
@@ -36,15 +36,6 @@ define i64 @strict_align_feature(ptr %p) #0 {
 }
 
 attributes #0 = { "target-features"="+strict-align" }
-
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: call
-; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for direct_mem
-; FALLBACK-WITH-REPORT-OUT-LABEL: direct_mem
-define void @direct_mem(i32 %x, i32 %y) {
-entry:
-  tail call void asm sideeffect "", "imr,imr,~{memory}"(i32 %x, i32 %y)
-  ret void
-}
 
 ; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to lower function{{.*}}scalable_arg
 ; FALLBACK-WITH-REPORT-OUT-LABEL: scalable_arg
@@ -110,7 +101,7 @@ entry:
   ret void
 }
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %4:_(s128), %5:_(s1) = G_UMULO %0:_, %6:_ (in function: umul_s128)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: %4:_(i128), %5:_(i1) = G_UMULO %0:_, %6:_ (in function: umul_s128)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for umul_s128
 ; FALLBACK-WITH-REPORT-OUT-LABEL: umul_s128
 declare {i128, i1} @llvm.umul.with.overflow.i128(i128, i128) nounwind readnone

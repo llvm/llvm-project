@@ -72,9 +72,7 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         ptr_value = self.get_local_as_int("rawptr")
         self.assertIn(
             "memoryReference",
-            self.dap_server.request_setVariable(1, "rawptr", ptr_value + 2)[
-                "body"
-            ].keys(),
+            self.set_local("rawptr", ptr_value + 2)["body"].keys(),
         )
 
     @skipIfWindows

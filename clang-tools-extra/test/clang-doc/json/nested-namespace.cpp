@@ -1,12 +1,13 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --output=%t --format=json --executor=standalone %s
-// RUN: FileCheck %s < %t/json/nested.json --check-prefix=NESTED
-// RUN: FileCheck %s < %t/json/inner.json --check-prefix=INNER
+// RUN: clang-doc --pretty-json --output=%t --format=json --executor=standalone %s
+// RUN: FileCheck %s < %t/json/nested/index.json --check-prefix=NESTED
+// RUN: FileCheck %s < %t/json/nested/inner/index.json --check-prefix=INNER
 
 namespace nested {
   int Global;
   namespace inner {
     int InnerGlobal;
+    namespace inner_inner {}
   } // namespace inner
 } // namespace nested
 

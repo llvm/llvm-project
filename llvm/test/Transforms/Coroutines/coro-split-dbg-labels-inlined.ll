@@ -1,5 +1,8 @@
 ; RUN: opt %s -passes='cgscc(coro-split)' -S | FileCheck %s
 
+; Verifies that suspend points with inlined locations are handled properly,
+; i.e., that their debug labels point to the correct subprogram.
+
 source_filename = "coro.c"
 
 ; Function Attrs: nounwind uwtable
@@ -25,18 +28,18 @@ coro_Cleanup:
   br label %coro_Suspend, !dbg !37
 
 coro_Suspend:
-  tail call i1 @llvm.coro.end(ptr null, i1 false, token none) #3, !dbg !40
+  tail call void @llvm.coro.end(ptr null, i1 false, token none) #3, !dbg !40
   ret ptr %2, !dbg !41
 }
 
 ; Check that the resume function contains the `#dbg_label` instructions.
-; CHECK-LABEL:   define internal fastcc void @f.resume({{.*}})
+; CHECK-LABEL:   define internal void @f.resume({{.*}})
 ; CHECK-SAME:      !dbg ![[RESUME_SUBPROGRAM:[0-9]+]]
 ; CHECK:         resume.0:
 ; CHECK-NEXT:        #dbg_label(![[RESUME_0:[0-9]+]], ![[RESUME_LABEL_LOC:[0-9]+]])
 
 ; Check that the destroy function contains the `#dbg_label` instructions.
-; CHECK-LABEL:   define internal fastcc void @f.destroy({{.*}})
+; CHECK-LABEL:   define internal void @f.destroy({{.*}})
 ; CHECK-SAME:      !dbg ![[DESTROY_SUBPROGRAM:[0-9]+]]
 ; CHECK:         resume.0:
 ; CHECK-NEXT:        #dbg_label(![[DESTROY_0:[0-9]+]], ![[DESTROY_LABEL_LOC:[0-9]+]])
@@ -57,7 +60,7 @@ declare token @llvm.coro.save(ptr) #0
 declare i8 @llvm.coro.suspend(token, i1) #0
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #4
 declare void @free(ptr nocapture) local_unnamed_addr #0
-declare i1 @llvm.coro.end(ptr, i1, token) #0
+declare void @llvm.coro.end(ptr, i1, token) #0
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
@@ -96,4 +99,7 @@ attributes #4 = { argmemonly nounwind readonly }
 !41 = !DILocation(line: 17, column: 1, scope: !16)
 
 !100 = distinct !DISubprogram(name: "callee", scope: !1, file: !1, line: 8, type: !17, scopeLine: 4, isOptimized: true, unit: !0, retainedNodes: !2)
-!101 = !DILocation(line: 12, column: 6, scope: !16)
+!101 = !DILocation(line: 42, column: 6, scope: !102, inlinedAt: !103)
+
+!102 = distinct !DISubprogram(name: "callee_recursive", scope: !1, file: !1, line: 8, type: !17, scopeLine: 4, isOptimized: true, unit: !0, retainedNodes: !2)
+!103 = !DILocation(line: 12, column: 6, scope: !16)

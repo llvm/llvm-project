@@ -26,9 +26,9 @@ define i32 @reduce_and_v1i8(<1 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_and_v1i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    smov w8, v0.b[0]
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    csel w0, w0, w1, mi
+; CHECK-NEXT:    umov w8, v0.b[0]
+; CHECK-NEXT:    tst w8, #0x80
+; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <1 x i8> %a0, zeroinitializer
   %y = call i1 @llvm.vector.reduce.and.v1i1(<1 x i1> %x)
@@ -120,9 +120,9 @@ define i32 @reduce_and_v1i16(<1 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_and_v1i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    smov w8, v0.h[0]
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    csel w0, w0, w1, mi
+; CHECK-NEXT:    umov w8, v0.h[0]
+; CHECK-NEXT:    tst w8, #0x8000
+; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <1 x i16> %a0, zeroinitializer
   %y = call i1 @llvm.vector.reduce.and.v1i1(<1 x i1> %x)
@@ -305,9 +305,9 @@ define i32 @reduce_or_v1i8(<1 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_or_v1i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    smov w8, v0.b[0]
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    csel w0, w0, w1, mi
+; CHECK-NEXT:    umov w8, v0.b[0]
+; CHECK-NEXT:    tst w8, #0x80
+; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <1 x i8> %a0, zeroinitializer
   %y = call i1 @llvm.vector.reduce.or.v1i1(<1 x i1> %x)
@@ -399,9 +399,9 @@ define i32 @reduce_or_v1i16(<1 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_or_v1i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    smov w8, v0.h[0]
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    csel w0, w0, w1, mi
+; CHECK-NEXT:    umov w8, v0.h[0]
+; CHECK-NEXT:    tst w8, #0x8000
+; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <1 x i16> %a0, zeroinitializer
   %y = call i1 @llvm.vector.reduce.or.v1i1(<1 x i1> %x)
@@ -584,9 +584,9 @@ define i32 @reduce_xor_v1i8(<1 x i8> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_xor_v1i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    smov w8, v0.b[0]
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    csel w0, w0, w1, mi
+; CHECK-NEXT:    umov w8, v0.b[0]
+; CHECK-NEXT:    tst w8, #0x80
+; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <1 x i8> %a0, zeroinitializer
   %y = call i1 @llvm.vector.reduce.xor.v1i1(<1 x i1> %x)
@@ -679,9 +679,9 @@ define i32 @reduce_xor_v1i16(<1 x i16> %a0, i32 %a1, i32 %a2) nounwind {
 ; CHECK-LABEL: reduce_xor_v1i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    smov w8, v0.h[0]
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    csel w0, w0, w1, mi
+; CHECK-NEXT:    umov w8, v0.h[0]
+; CHECK-NEXT:    tst w8, #0x8000
+; CHECK-NEXT:    csel w0, w0, w1, ne
 ; CHECK-NEXT:    ret
   %x = icmp slt <1 x i16> %a0, zeroinitializer
   %y = call i1 @llvm.vector.reduce.xor.v1i1(<1 x i1> %x)

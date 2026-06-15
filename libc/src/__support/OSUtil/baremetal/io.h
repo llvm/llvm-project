@@ -14,6 +14,8 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/config.h"
 
+namespace LIBC_NAMESPACE_DECL {
+
 // These are intended to be provided by the vendor.
 //
 // The signature of these types and functions intentionally match `fopencookie`
@@ -42,21 +44,14 @@
 // All three symbols `__llvm_libc_stdin_cookie`, `__llvm_libc_stdout_cookie`,
 // and `__llvm_libc_stderr_cookie` must be provided, even if they don't point
 // at anything.
-namespace LIBC_NAMESPACE_DECL {
 
 struct __llvm_libc_stdio_cookie;
-
-extern "C" struct __llvm_libc_stdio_cookie __llvm_libc_stdin_cookie;
-extern "C" struct __llvm_libc_stdio_cookie __llvm_libc_stdout_cookie;
-extern "C" struct __llvm_libc_stdio_cookie __llvm_libc_stderr_cookie;
 
 extern "C" ssize_t __llvm_libc_stdio_read(void *cookie, char *buf, size_t size);
 extern "C" ssize_t __llvm_libc_stdio_write(void *cookie, const char *buf,
                                            size_t size);
 
-ssize_t read_from_stdin(char *buf, size_t size);
 void write_to_stderr(cpp::string_view msg);
-void write_to_stdout(cpp::string_view msg);
 
 } // namespace LIBC_NAMESPACE_DECL
 

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VESubtarget.h"
+#include "VESelectionDAGInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
@@ -43,7 +44,15 @@ VESubtarget::VESubtarget(const Triple &TT, const std::string &CPU,
                          const std::string &FS, const TargetMachine &TM)
     : VEGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
-      FrameLowering(*this) {}
+      FrameLowering(*this) {
+  TSInfo = std::make_unique<VESelectionDAGInfo>();
+}
+
+VESubtarget::~VESubtarget() = default;
+
+const SelectionDAGTargetInfo *VESubtarget::getSelectionDAGInfo() const {
+  return TSInfo.get();
+}
 
 uint64_t VESubtarget::getAdjustedFrameSize(uint64_t FrameSize) const {
   // Calculate adjusted frame size by adding the size of RSA frame,

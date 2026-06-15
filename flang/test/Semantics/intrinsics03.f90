@@ -129,6 +129,6 @@ subroutine ichar_tests()
   !Without -Wportability, the warning isn't emitted and the parameter is constant.
   integer, parameter :: a2 = ichar('B ')
   !ERROR: Character in intrinsic function ichar must have length one
-  !ERROR: Must be a constant value
+  !ERROR: Value of named constant 'a3' (ichar("")) cannot be computed as a constant value
   integer, parameter :: a3 = ichar('')
 end subroutine

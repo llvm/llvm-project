@@ -64,9 +64,9 @@ define float @ret_select_nonan__noinf_nonan(i1 %cond, float nofpclass(nan) %arg0
 }
 
 ; Clamp nan to 0 pattern
-define float @ret_select_clamp_nan_to_zero_uno(float %arg) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_select_clamp_nan_to_zero_uno
-; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
+define float @ret_select_clamp_nan_to_zero_uno(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nan) float @ret_select_clamp_nan_to_zero_uno
+; CHECK-SAME: (float noundef [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_NAN]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
@@ -77,7 +77,7 @@ define float @ret_select_clamp_nan_to_zero_uno(float %arg) {
 }
 
 define float @ret_select_clamp_nan_to_zero_ord(float %arg) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_select_clamp_nan_to_zero_ord
+; CHECK-LABEL: define float @ret_select_clamp_nan_to_zero_ord
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[NOT_NAN]], float [[ARG]], float 0.000000e+00
@@ -89,10 +89,10 @@ define float @ret_select_clamp_nan_to_zero_ord(float %arg) {
 }
 
 define float @ret_select_clamp_onlynans(float %arg) {
-; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret_select_clamp_onlynans
+; CHECK-LABEL: define float @ret_select_clamp_onlynans
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[NOT_NAN:%.*]] = fcmp ord float [[ARG]], 0.000000e+00
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[NOT_NAN]], float 0x7FF8000000000000, float [[ARG]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[NOT_NAN]], float +qnan, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %not.nan = fcmp ord float %arg, 0.0
@@ -101,10 +101,10 @@ define float @ret_select_clamp_onlynans(float %arg) {
 }
 
 define float @clamp_nonfinite_to_normal_olt(float %arg) {
-; CHECK-LABEL: define nofpclass(nan inf) float @clamp_nonfinite_to_normal_olt
+; CHECK-LABEL: define float @clamp_nonfinite_to_normal_olt
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR2]]
-; CHECK-NEXT:    [[IS_FINITE:%.*]] = fcmp olt float [[FABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[IS_FINITE:%.*]] = fcmp olt float [[FABS]], +inf
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_FINITE]], float [[ARG]], float 1.024000e+03
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -115,10 +115,10 @@ define float @clamp_nonfinite_to_normal_olt(float %arg) {
 }
 
 define float @clamp_eq_inf_to_pnormal(float %arg) {
-; CHECK-LABEL: define nofpclass(inf) float @clamp_eq_inf_to_pnormal
+; CHECK-LABEL: define float @clamp_eq_inf_to_pnormal
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR2]]
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[FABS]], +inf
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 1.024000e+03, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -129,9 +129,9 @@ define float @clamp_eq_inf_to_pnormal(float %arg) {
 }
 
 define float @clamp_eq_pinf_to_pnormal(float %arg) {
-; CHECK-LABEL: define nofpclass(pinf) float @clamp_eq_pinf_to_pnormal
+; CHECK-LABEL: define float @clamp_eq_pinf_to_pnormal
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[ARG]], 0x7FF0000000000000
+; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[ARG]], +inf
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 1.024000e+03, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -141,9 +141,9 @@ define float @clamp_eq_pinf_to_pnormal(float %arg) {
 }
 
 define float @clamp_eq_ninf_to_negnormal(float %arg) {
-; CHECK-LABEL: define nofpclass(ninf) float @clamp_eq_ninf_to_negnormal
+; CHECK-LABEL: define float @clamp_eq_ninf_to_negnormal
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[ARG]], 0xFFF0000000000000
+; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[ARG]], -inf
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float -1.024000e+03, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -153,11 +153,11 @@ define float @clamp_eq_ninf_to_negnormal(float %arg) {
 }
 
 define float @clamp_eq_inf_to_nan(float %arg) {
-; CHECK-LABEL: define nofpclass(inf) float @clamp_eq_inf_to_nan
+; CHECK-LABEL: define float @clamp_eq_inf_to_nan
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR2]]
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float 0x7FF8000000000000, float [[ARG]]
+; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[FABS]], +inf
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float +qnan, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs = call float @llvm.fabs.f32(float %arg)
@@ -179,10 +179,10 @@ define float @ret_select_clamp_nan_to_zero_uno_returned_different_arg(float %arg
 }
 
 define float @isfinite_select_fabs_val_0(float %arg) {
-; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) float @isfinite_select_fabs_val_0
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @isfinite_select_fabs_val_0
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float [[ARG]]) #[[ATTR2]]
-; CHECK-NEXT:    [[IS_FINITE:%.*]] = fcmp olt float [[FABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[IS_FINITE:%.*]] = fcmp olt float [[FABS]], +inf
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_FINITE]], float [[FABS]], float 1.024000e+03
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -193,10 +193,10 @@ define float @isfinite_select_fabs_val_0(float %arg) {
 }
 
 define float @isfinite_select_fabs_val_1(float %arg) {
-; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) float @isfinite_select_fabs_val_1
+; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @isfinite_select_fabs_val_1
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float [[ARG]]) #[[ATTR2]]
-; CHECK-NEXT:    [[NOT_IS_FINITE:%.*]] = fcmp uge float [[FABS]], 0x3810000000000000
+; CHECK-NEXT:    [[NOT_IS_FINITE:%.*]] = fcmp uge float [[FABS]], f0x00800000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[NOT_IS_FINITE]], float 1.024000e+03, float [[FABS]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -207,10 +207,10 @@ define float @isfinite_select_fabs_val_1(float %arg) {
 }
 
 define float @clamp_denormal_to_poszero(float %arg) {
-; CHECK-LABEL: define nofpclass(nzero sub) float @clamp_denormal_to_poszero
+; CHECK-LABEL: define float @clamp_denormal_to_poszero
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR2]]
-; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS]], f0x00800000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_DENORM_OR_ZERO]], float 0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -221,10 +221,10 @@ define float @clamp_denormal_to_poszero(float %arg) {
 }
 
 define float @clamp_denormal_to_negzero(float %arg) {
-; CHECK-LABEL: define nofpclass(pzero sub) float @clamp_denormal_to_negzero
+; CHECK-LABEL: define float @clamp_denormal_to_negzero
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR2]]
-; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS]], f0x00800000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_DENORM_OR_ZERO]], float -0.000000e+00, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -235,10 +235,10 @@ define float @clamp_denormal_to_negzero(float %arg) {
 }
 
 define float @clamp_denormal_to_zero_copysign(float %arg) {
-; CHECK-LABEL: define nofpclass(sub) float @clamp_denormal_to_zero_copysign
+; CHECK-LABEL: define float @clamp_denormal_to_zero_copysign
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR2]]
-; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS]], f0x00800000
 ; CHECK-NEXT:    [[ZERO:%.*]] = call float @llvm.copysign.f32(float noundef 0.000000e+00, float [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_DENORM_OR_ZERO]], float [[ZERO]], float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
@@ -251,10 +251,10 @@ define float @clamp_denormal_to_zero_copysign(float %arg) {
 }
 
 define float @clamp_only_denormal_or_zero(float %arg) {
-; CHECK-LABEL: define nofpclass(nan inf norm) float @clamp_only_denormal_or_zero
+; CHECK-LABEL: define float @clamp_only_denormal_or_zero
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR2]]
-; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS]], f0x00800000
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_DENORM_OR_ZERO]], float [[ARG]], float 0.000000e+00
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -268,7 +268,7 @@ define float @clamp_inf_to_fabs(float %arg) {
 ; CHECK-LABEL: define float @clamp_inf_to_fabs
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR2]]
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[FABS]], +inf
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float [[FABS]], float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -282,7 +282,7 @@ define float @not_clamp_inf_to_fabs(float %arg) {
 ; CHECK-LABEL: define float @not_clamp_inf_to_fabs
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float [[ARG]]) #[[ATTR2]]
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[FABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq float [[FABS]], +inf
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_INF]], float [[ARG]], float [[FABS]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
@@ -293,10 +293,10 @@ define float @not_clamp_inf_to_fabs(float %arg) {
 }
 
 define float @clamp_zero_to_inf(float %arg) {
-; CHECK-LABEL: define nofpclass(zero) float @clamp_zero_to_inf
+; CHECK-LABEL: define float @clamp_zero_to_inf
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[IS_ZERO:%.*]] = fcmp oeq float [[ARG]], 0.000000e+00
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_ZERO]], float 0x7FF0000000000000, float [[ARG]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_ZERO]], float +inf, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %is.zero = fcmp oeq float %arg, 0.0
@@ -305,10 +305,10 @@ define float @clamp_zero_to_inf(float %arg) {
 }
 
 define float @clamp_zero_to_only_inf(float %arg) {
-; CHECK-LABEL: define nofpclass(nan ninf sub norm) float @clamp_zero_to_only_inf
+; CHECK-LABEL: define float @clamp_zero_to_only_inf
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[IS_ZERO:%.*]] = fcmp oeq float [[ARG]], 0.000000e+00
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_ZERO]], float [[ARG]], float 0x7FF0000000000000
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_ZERO]], float [[ARG]], float +inf
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %is.zero = fcmp oeq float %arg, 0.0
@@ -317,10 +317,10 @@ define float @clamp_zero_to_only_inf(float %arg) {
 }
 
 define float @clamp_is_class_subnormal_or_inf_to_nan(float %arg) {
-; CHECK-LABEL: define nofpclass(inf sub) float @clamp_is_class_subnormal_or_inf_to_nan
+; CHECK-LABEL: define float @clamp_is_class_subnormal_or_inf_to_nan
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[IS_SUBNORMAL_OR_INF:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG]], i32 noundef 660) #[[ATTR2]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_SUBNORMAL_OR_INF]], float 0x7FF8000000000000, float [[ARG]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_SUBNORMAL_OR_INF]], float +qnan, float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %is.subnormal.or.inf = call i1 @llvm.is.fpclass.f32(float %arg, i32 660)
@@ -329,10 +329,10 @@ define float @clamp_is_class_subnormal_or_inf_to_nan(float %arg) {
 }
 
 define float @clamp_is_class_subnormal_or_inf_to_nan_swap(float %arg) {
-; CHECK-LABEL: define nofpclass(inf sub) float @clamp_is_class_subnormal_or_inf_to_nan_swap
+; CHECK-LABEL: define float @clamp_is_class_subnormal_or_inf_to_nan_swap
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[NOT_IS_SUBNORMAL_OR_INF:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG]], i32 noundef 363) #[[ATTR2]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[NOT_IS_SUBNORMAL_OR_INF]], float [[ARG]], float 0x7FF8000000000000
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[NOT_IS_SUBNORMAL_OR_INF]], float [[ARG]], float +qnan
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %not.is.subnormal.or.inf = call i1 @llvm.is.fpclass.f32(float %arg, i32 363)
@@ -341,7 +341,7 @@ define float @clamp_is_class_subnormal_or_inf_to_nan_swap(float %arg) {
 }
 
 define float @ret_select_clamp_nan_to_zero_fpclass(float %arg) {
-; CHECK-LABEL: define nofpclass(nan) float @ret_select_clamp_nan_to_zero_fpclass
+; CHECK-LABEL: define float @ret_select_clamp_nan_to_zero_fpclass
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[IS_NAN:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG]], i32 noundef 3) #[[ATTR2]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_NAN]], float 0.000000e+00, float [[ARG]]
@@ -353,7 +353,7 @@ define float @ret_select_clamp_nan_to_zero_fpclass(float %arg) {
 }
 
 define float @ret_select_clamp_snan_to_zero_fpclass(float %arg) {
-; CHECK-LABEL: define nofpclass(snan) float @ret_select_clamp_snan_to_zero_fpclass
+; CHECK-LABEL: define float @ret_select_clamp_snan_to_zero_fpclass
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[IS_NAN:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG]], i32 noundef 1) #[[ATTR2]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_NAN]], float 0.000000e+00, float [[ARG]]
@@ -365,7 +365,7 @@ define float @ret_select_clamp_snan_to_zero_fpclass(float %arg) {
 }
 
 define float @ret_select_clamp_qnan_to_zero_fpclass(float %arg) {
-; CHECK-LABEL: define nofpclass(qnan) float @ret_select_clamp_qnan_to_zero_fpclass
+; CHECK-LABEL: define float @ret_select_clamp_qnan_to_zero_fpclass
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[IS_NAN:%.*]] = call i1 @llvm.is.fpclass.f32(float [[ARG]], i32 noundef 2) #[[ATTR2]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_NAN]], float 0.000000e+00, float [[ARG]]
@@ -392,7 +392,7 @@ define float @clamp_is_denorm_or_zero_to_fneg(float %arg) {
 ; CHECK-LABEL: define float @clamp_is_denorm_or_zero_to_fneg
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR2]]
-; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS]], f0x00800000
 ; CHECK-NEXT:    [[NEG_ARG:%.*]] = fneg float [[ARG]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_DENORM_OR_ZERO]], float [[NEG_ARG]], float [[ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]
@@ -408,7 +408,7 @@ define float @select_is_denorm_or_zero_to_fneg_or_fabs(float %arg) {
 ; CHECK-LABEL: define float @select_is_denorm_or_zero_to_fneg_or_fabs
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float [[ARG]]) #[[ATTR2]]
-; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS]], f0x00800000
 ; CHECK-NEXT:    [[NEG_ARG:%.*]] = fneg float [[ARG]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_DENORM_OR_ZERO]], float [[NEG_ARG]], float [[FABS]]
 ; CHECK-NEXT:    ret float [[SELECT]]
@@ -424,7 +424,7 @@ define float @select_is_denorm_or_zero_to_fabs_or_fneg(float %arg) {
 ; CHECK-LABEL: define float @select_is_denorm_or_zero_to_fabs_or_fneg
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ARG]]) #[[ATTR2]]
-; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS]], 0x3810000000000000
+; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS]], f0x00800000
 ; CHECK-NEXT:    [[NEG_ARG:%.*]] = fneg float [[ARG]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[IS_DENORM_OR_ZERO]], float [[FABS]], float [[NEG_ARG]]
 ; CHECK-NEXT:    ret float [[SELECT]]

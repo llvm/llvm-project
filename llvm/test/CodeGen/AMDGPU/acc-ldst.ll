@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -early-live-intervals < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -amdgpu-mfma-vgpr-form=0 < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -amdgpu-mfma-vgpr-form=0 -early-live-intervals < %s | FileCheck -enable-var-scope --check-prefix=GCN %s
 
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32)
 declare <4 x i32> @llvm.amdgcn.mfma.i32.4x4x4i8(i32, i32, <4 x i32>, i32, i32, i32)
@@ -9,8 +9,7 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; GCN-COUNT-8: global_load_dwordx4 a[{{[0-9:]+}}], v{{[0-9:]+}}, s[{{[0-9:]+}}]
 ; GCN-NOT:     v_accvgpr_write
 ; GCN:         v_mfma_f32_32x32x1f32
-; GCN-NEXT:    s_nop 7
-; GCN-NEXT:    s_nop 7
+; GCN-NEXT:    s_nop 15
 ; GCN-NEXT:    s_nop 2
 ; GCN-NOT:     v_accvgpr_read
 ; GCN-COUNT-8: global_store_dwordx4 v{{[0-9:]+}}, a[{{[0-9:]+}}], s[{{[0-9:]+}}]
@@ -28,8 +27,7 @@ bb:
 ; GCN:      global_load_dword a{{[0-9]+}}, v{{[0-9:]+}}, s[{{[0-9:]+}}]
 ; GCN-NOT:  v_accvgpr_read
 ; GCN:      v_mfma_f32_32x32x1f32 a[[[N:[0-9]+]]:
-; GCN-NEXT: s_nop 7
-; GCN-NEXT: s_nop 7
+; GCN-NEXT: s_nop 15
 ; GCN-NEXT: s_nop 2
 ; GCN-NOT:  v_accvgpr_read
 ; GCN-NEXT: global_store_dword v{{[0-9:]+}}, a[[N]], s[{{[0-9:]+}}]
@@ -80,8 +78,7 @@ bb:
 ; GCN-COUNT-8:  global_load_dwordx4 v[{{[0-9:]+}}], v{{[0-9:]+}}, s[{{[0-9:]+}}]
 ; GCN-COUNT-32: v_accvgpr_write
 ; GCN:          v_mfma_f32_32x32x1f32
-; GCN-NEXT:     s_nop 7
-; GCN-NEXT:     s_nop 7
+; GCN-NEXT:     s_nop 15
 ; GCN-NEXT:     s_nop 2
 ; GCN-NOT:      v_accvgpr_read
 ; GCN-COUNT-8:  global_store_dwordx4 v{{[0-9:]+}}, a[{{[0-9:]+}}]

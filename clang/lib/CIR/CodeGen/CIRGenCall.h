@@ -33,6 +33,8 @@ public:
   CIRGenCalleeInfo(const clang::FunctionProtoType *calleeProtoTy,
                    clang::GlobalDecl calleeDecl)
       : calleeProtoTy(calleeProtoTy), calleeDecl(calleeDecl) {}
+  CIRGenCalleeInfo(const clang::FunctionProtoType *calleeProtoTy)
+      : calleeProtoTy(calleeProtoTy) {}
   CIRGenCalleeInfo(clang::GlobalDecl calleeDecl)
       : calleeProtoTy(nullptr), calleeDecl(calleeDecl) {}
 
@@ -200,7 +202,7 @@ private:
 
   /// A data-flow flag to make sure getRValue and/or copyInto are not
   /// called twice for duplicated IR emission.
-  [[maybe_unused]] mutable bool isUsed;
+  mutable bool isUsed;
 
 public:
   clang::QualType ty;
@@ -213,6 +215,10 @@ public:
 
   bool hasLValue() const { return hasLV; }
 
+  /// \returns an independent RValue. If the CallArg contains an LValue,
+  /// a temporary copy is returned.
+  RValue getRValue(CIRGenFunction &cgf, mlir::Location loc) const;
+
   LValue getKnownLValue() const {
     assert(hasLV && !isUsed);
     return lv;
@@ -224,6 +230,8 @@ public:
   }
 
   bool isAggregate() const { return hasLV || rv.isAggregate(); }
+
+  void copyInto(CIRGenFunction &cgf, Address addr, mlir::Location loc) const;
 };
 
 class CallArgList : public llvm::SmallVector<CallArg, 8> {
@@ -256,6 +264,7 @@ public:
   ReturnValueSlot() = default;
   ReturnValueSlot(Address addr) : addr(addr) {}
 
+  bool isNull() const { return !addr.isValid(); }
   Address getValue() const { return addr; }
 };
 

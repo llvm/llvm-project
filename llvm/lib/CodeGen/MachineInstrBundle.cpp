@@ -10,42 +10,24 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include <utility>
 using namespace llvm;
 
-namespace {
-  class UnpackMachineBundles : public MachineFunctionPass {
-  public:
-    static char ID; // Pass identification
-    UnpackMachineBundles(
-        std::function<bool(const MachineFunction &)> Ftor = nullptr)
-        : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {
-      initializeUnpackMachineBundlesPass(*PassRegistry::getPassRegistry());
-    }
-
-    bool runOnMachineFunction(MachineFunction &MF) override;
-
-  private:
-    std::function<bool(const MachineFunction &)> PredicateFtor;
-  };
-} // end anonymous namespace
-
-char UnpackMachineBundles::ID = 0;
-char &llvm::UnpackMachineBundlesID = UnpackMachineBundles::ID;
-INITIALIZE_PASS(UnpackMachineBundles, "unpack-mi-bundles",
-                "Unpack machine instruction bundles", false, false)
-
-bool UnpackMachineBundles::runOnMachineFunction(MachineFunction &MF) {
-  if (PredicateFtor && !PredicateFtor(MF))
+static bool unpackBundles(MachineFunction &MF,
+                          std::function<bool(const MachineFunction &)> Ftor) {
+  if (Ftor && !Ftor(MF))
     return false;
 
   bool Changed = false;
@@ -77,21 +59,59 @@ bool UnpackMachineBundles::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-FunctionPass *
-llvm::createUnpackMachineBundles(
-    std::function<bool(const MachineFunction &)> Ftor) {
-  return new UnpackMachineBundles(std::move(Ftor));
+namespace {
+
+class UnpackMachineBundlesLegacy : public MachineFunctionPass {
+public:
+  static char ID; // Pass identification
+  UnpackMachineBundlesLegacy(
+      std::function<bool(const MachineFunction &)> Ftor = nullptr)
+      : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+private:
+  std::function<bool(const MachineFunction &)> PredicateFtor;
+};
+} // end anonymous namespace
+
+PreservedAnalyses
+UnpackMachineBundlesPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  if (unpackBundles(MF, PredicateFtor))
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
 }
 
-/// Return the first found DebugLoc that has a DILocation, given a range of
-/// instructions. The search range is from FirstMI to LastMI (exclusive). If no
-/// DILocation is found, then an empty location is returned.
+char UnpackMachineBundlesLegacy::ID = 0;
+char &llvm::UnpackMachineBundlesID = UnpackMachineBundlesLegacy::ID;
+INITIALIZE_PASS(UnpackMachineBundlesLegacy, "unpack-mi-bundles",
+                "Unpack machine instruction bundles", false, false)
+
+bool UnpackMachineBundlesLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return unpackBundles(MF, PredicateFtor);
+}
+
+FunctionPass *llvm::createUnpackMachineBundlesLegacy(
+    std::function<bool(const MachineFunction &)> Ftor) {
+  return new UnpackMachineBundlesLegacy(std::move(Ftor));
+}
+
+/// Return the first DebugLoc that has line number information, given a
+/// range of instructions. The search range is from FirstMI to LastMI
+/// (exclusive). Otherwise return the first DILocation or an empty location if
+/// there are none.
 static DebugLoc getDebugLoc(MachineBasicBlock::instr_iterator FirstMI,
                             MachineBasicBlock::instr_iterator LastMI) {
-  for (auto MII = FirstMI; MII != LastMI; ++MII)
-    if (MII->getDebugLoc())
-      return MII->getDebugLoc();
-  return DebugLoc();
+  DebugLoc DL;
+  for (auto MII = FirstMI; MII != LastMI; ++MII) {
+    if (DebugLoc MIIDL = MII->getDebugLoc()) {
+      if (MIIDL.getLine() != 0)
+        return MIIDL;
+      DL = MIIDL.get();
+    }
+  }
+  return DL;
 }
 
 /// Check if target reg is contained in given lists, which are:
@@ -102,7 +122,7 @@ static bool containsReg(SmallSetVector<Register, 32> LocalDefsV,
                         const TargetRegisterInfo *TRI) {
   if (Reg.isPhysical()) {
     for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-      if (!LocalDefsP[Unit])
+      if (!LocalDefsP[static_cast<unsigned>(Unit)])
         return false;
 
     return true;
@@ -133,10 +153,11 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
   SmallSetVector<Register, 32> LocalDefs;
   BitVector LocalDefsP(TRI->getNumRegUnits());
   SmallSet<Register, 8> DeadDefSet;
-  SmallSet<Register, 16> KilledDefSet;
   SmallSetVector<Register, 8> ExternUses;
   SmallSet<Register, 8> KilledUseSet;
   SmallSet<Register, 8> UndefUseSet;
+  SmallVector<std::pair<Register, Register>> TiedOperands;
+  SmallVector<MachineInstr *> MemMIs;
   for (auto MII = FirstMI; MII != LastMI; ++MII) {
     // Debug instructions have no effects to track.
     if (MII->isDebugInstr())
@@ -151,7 +172,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
         MO.setIsInternalRead();
         if (MO.isKill()) {
           // Internal def is now killed.
-          KilledDefSet.insert(Reg);
+          DeadDefSet.insert(Reg);
         }
       } else {
         if (ExternUses.insert(Reg)) {
@@ -162,6 +183,15 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
           // External def is now killed.
           KilledUseSet.insert(Reg);
         }
+        if (MO.isTied() && Reg.isVirtual()) {
+          // Record tied operand constraints that involve virtual registers so
+          // that bundles that are formed pre-register allocation reflect the
+          // relevant constraints.
+          unsigned TiedIdx = MII->findTiedOperandIdx(MO.getOperandNo());
+          MachineOperand &TiedMO = MII->getOperand(TiedIdx);
+          Register DefReg = TiedMO.getReg();
+          TiedOperands.emplace_back(DefReg, Reg);
+        }
       }
     }
 
@@ -171,19 +201,18 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
         continue;
 
       if (LocalDefs.insert(Reg)) {
-        if (MO.isDead())
-          DeadDefSet.insert(Reg);
-        else if (Reg.isPhysical())
+        if (!MO.isDead() && Reg.isPhysical()) {
           for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-            LocalDefsP.set(Unit);
+            LocalDefsP.set(static_cast<unsigned>(Unit));
+        }
       } else {
-        // Re-defined inside the bundle, it's no longer killed.
-        KilledDefSet.erase(Reg);
         if (!MO.isDead()) {
-          // Previously defined but dead.
+          // Re-defined inside the bundle, it's no longer dead.
           DeadDefSet.erase(Reg);
         }
       }
+      if (MO.isDead())
+        DeadDefSet.insert(Reg);
     }
 
     // Set FrameSetup/FrameDestroy for the bundle. If any of the instructions
@@ -192,11 +221,14 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       MIB.setMIFlag(MachineInstr::FrameSetup);
     if (MII->getFlag(MachineInstr::FrameDestroy))
       MIB.setMIFlag(MachineInstr::FrameDestroy);
+
+    if (MII->mayLoadOrStore())
+      MemMIs.push_back(&*MII);
   }
 
   for (Register Reg : LocalDefs) {
     // If it's not live beyond end of the bundle, mark it dead.
-    bool isDead = DeadDefSet.contains(Reg) || KilledDefSet.contains(Reg);
+    bool isDead = DeadDefSet.contains(Reg);
     MIB.addReg(Reg, getDefRegState(true) | getDeadRegState(isDead) |
                         getImplRegState(true));
   }
@@ -205,8 +237,20 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
     bool isKill = KilledUseSet.contains(Reg);
     bool isUndef = UndefUseSet.contains(Reg);
     MIB.addReg(Reg, getKillRegState(isKill) | getUndefRegState(isUndef) |
-               getImplRegState(true));
+                        getImplRegState(true));
   }
+
+  for (auto [DefReg, UseReg] : TiedOperands) {
+    unsigned DefIdx =
+        std::distance(LocalDefs.begin(), llvm::find(LocalDefs, DefReg));
+    unsigned UseIdx =
+        std::distance(ExternUses.begin(), llvm::find(ExternUses, UseReg));
+    assert(DefIdx < LocalDefs.size());
+    assert(UseIdx < ExternUses.size());
+    MIB->tieOperands(DefIdx, LocalDefs.size() + UseIdx);
+  }
+
+  MIB->cloneMergedMemRefs(MF, MemMIs);
 }
 
 /// finalizeBundle - Same functionality as the previous finalizeBundle except
@@ -363,5 +407,5 @@ llvm::FinalizeBundleTestPass::run(MachineFunction &MF,
   // except for terminators.
   for (MachineBasicBlock &MBB : MF)
     finalizeBundle(MBB, MBB.instr_begin(), MBB.getFirstInstrTerminator());
-  return PreservedAnalyses::none();
+  return getMachineFunctionPassPreservedAnalyses();
 }

@@ -13,20 +13,14 @@ from lldbsuite.test import lldbutil
 class TestArmMachoCorefileRegctx(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
-    def setUp(self):
-        TestBase.setUp(self)
-        self.build()
-        self.create_corefile = self.getBuildArtifact("a.out")
-        self.corefile = self.getBuildArtifact("core")
-
     def test_armv7_corefile(self):
         ### Create corefile
-        retcode = call(self.create_corefile + " armv7 " + self.corefile, shell=True)
+        corefile = self.getBuildArtifact("core")
+        self.yaml2macho_core("armv7m.yaml", corefile)
 
         target = self.dbg.CreateTarget("")
         err = lldb.SBError()
-        process = target.LoadCore(self.corefile)
+        process = target.LoadCore(corefile)
         self.assertTrue(process.IsValid())
         thread = process.GetSelectedThread()
         frame = thread.GetSelectedFrame()
@@ -50,11 +44,12 @@ class TestArmMachoCorefileRegctx(TestBase):
 
     def test_arm64_corefile(self):
         ### Create corefile
-        retcode = call(self.create_corefile + " arm64 " + self.corefile, shell=True)
+        corefile = self.getBuildArtifact("core")
+        self.yaml2macho_core("arm64.yaml", corefile)
 
         target = self.dbg.CreateTarget("")
         err = lldb.SBError()
-        process = target.LoadCore(self.corefile)
+        process = target.LoadCore(corefile)
         self.assertTrue(process.IsValid())
         thread = process.GetSelectedThread()
         frame = thread.GetSelectedFrame()

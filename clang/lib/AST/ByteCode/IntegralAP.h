@@ -63,7 +63,7 @@ public:
     if (singleWord())
       return APInt(BitWidth, Val, Signed);
     unsigned NumWords = llvm::APInt::getNumWords(BitWidth);
-    return llvm::APInt(BitWidth, NumWords, Memory);
+    return llvm::APInt(BitWidth, llvm::ArrayRef(Memory, NumWords));
   }
 
 public:
@@ -138,7 +138,8 @@ public:
 
   constexpr uint32_t bitWidth() const { return BitWidth; }
   constexpr unsigned numWords() const { return APInt::getNumWords(BitWidth); }
-  constexpr bool singleWord() const { return numWords() == 1; }
+  constexpr bool singleWord() const { return numWords() <= 1; }
+  constexpr static bool isNumber() { return true; }
 
   APSInt toAPSInt(unsigned Bits = 0) const {
     if (Bits == 0)

@@ -1,24 +1,24 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND,WORKAROUND-TRUE16-SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND,WORKAROUND-FAKE16 %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND,WORKAROUND-FAKE16 %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND,WORKAROUND-FAKE16 %s
 
 ; Does not apply to wave64
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
 
 ; Does not apply to gfx1101
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1101 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1101 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1101 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
 
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1102 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1102 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1102 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND %s
 
 ; Does not apply to gfx1103
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1103 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1103 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1103 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
 
 ; There aren't any stack objects, but we still enable the
 ; private_segment_wavefront_offset to get to 16, and the workgroup ID
@@ -200,8 +200,8 @@ declare align 4 ptr addrspace(4) @llvm.amdgcn.queue.ptr() #3
 declare align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #3
 declare i64 @llvm.amdgcn.dispatch.id() #3
 
-attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
-attributes #1 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
-attributes #2 = { "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #1 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+attributes #2 = { "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-cluster-id-x" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 

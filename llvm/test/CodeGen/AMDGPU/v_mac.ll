@@ -116,7 +116,7 @@ entry:
 ; GCN-LABEL: {{^}}nsz_mad_sub0_src0:
 ; GCN-NOT: v_mac_f32
 ; GCN: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
-define amdgpu_kernel void @nsz_mad_sub0_src0(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
+define amdgpu_kernel void @nsz_mad_sub0_src0(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 entry:
   %b_ptr = getelementptr float, ptr addrspace(1) %in, i32 1
   %c_ptr = getelementptr float, ptr addrspace(1) %in, i32 2
@@ -125,7 +125,7 @@ entry:
   %b = load float, ptr addrspace(1) %b_ptr
   %c = load float, ptr addrspace(1) %c_ptr
 
-  %neg_a = fsub float 0.0, %a
+  %neg_a = fsub nsz float 0.0, %a
   %tmp0 = fmul float %neg_a, %b
   %tmp1 = fadd float %tmp0, %c
 
@@ -176,7 +176,7 @@ entry:
 ; GCN-LABEL: {{^}}nsz_mad_sub0_src1:
 ; GCN-NOT: v_mac_f32
 ; GCN: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
-define amdgpu_kernel void @nsz_mad_sub0_src1(ptr addrspace(1) %out, ptr addrspace(1) %in) #1 {
+define amdgpu_kernel void @nsz_mad_sub0_src1(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 entry:
   %b_ptr = getelementptr float, ptr addrspace(1) %in, i32 1
   %c_ptr = getelementptr float, ptr addrspace(1) %in, i32 2
@@ -185,7 +185,7 @@ entry:
   %b = load float, ptr addrspace(1) %b_ptr
   %c = load float, ptr addrspace(1) %c_ptr
 
-  %neg_b = fsub float 0.0, %b
+  %neg_b = fsub nsz float 0.0, %b
   %tmp0 = fmul float %a, %neg_b
   %tmp1 = fadd float %tmp0, %c
 
@@ -252,8 +252,16 @@ bb:
 ; SI-DAG: v_cvt_f32_f16_e32 [[CVT_B:v[0-9]+]], [[B]]
 
 ; SI: v_add_f32_e32 [[TMP2:v[0-9]+]], [[CVT_A]], [[CVT_A]]
-; SI: v_mad_f32 v{{[0-9]+}}, [[TMP2]], -4.0, 1.0
-; SI: v_madmk_f32 v{{[0-9]+}}, v{{[0-9]+}}, 0x41000000, v{{[0-9]+}}
+; SI: v_cvt_f16_f32
+; SI: v_cvt_f32_f16
+; SI: v_mul_f32
+; SI: v_mul_f32
+; SI: v_cvt_f16_f32
+; SI: v_cvt_f16_f32
+; SI: v_add_f32
+; SI: v_add_f32
+; SI: v_cvt_f16_f32
+; SI: v_cvt_f16_f32
 
 ; VI-FLUSH: v_add_f16_e32 [[TMP2:v[0-9]+]], [[A]], [[A]]
 ; VI-FLUSH: v_mad_f16 v{{[0-9]+}}, [[TMP2]], -4.0, 1.0
@@ -283,7 +291,7 @@ bb:
 ; GCN-LABEL: {{^}}v_mac_f32_dynamic:
 ; GCN: v_mul_f32
 ; GCN: v_add_f32
-define float @v_mac_f32_dynamic(float %a, float %b, float %c) "denormal-fp-math-f32"="dynamic,dynamic" {
+define float @v_mac_f32_dynamic(float %a, float %b, float %c) denormal_fpenv(float: dynamic|dynamic) {
   %mul = fmul float %a, %b
   %mad = fadd float %mul, %c
   ret float %mad
@@ -292,7 +300,7 @@ define float @v_mac_f32_dynamic(float %a, float %b, float %c) "denormal-fp-math-
 ; GCN-LABEL: {{^}}v_mac_f32_dynamic_daz:
 ; GCN: v_mul_f32
 ; GCN: v_add_f32
-define float @v_mac_f32_dynamic_daz(float %a, float %b, float %c) "denormal-fp-math-f32"="preserve-sign,dynamic" {
+define float @v_mac_f32_dynamic_daz(float %a, float %b, float %c) denormal_fpenv(float: preservesign|dynamic) {
   %mul = fmul float %a, %b
   %mad = fadd float %mul, %c
   ret float %mad
@@ -301,7 +309,7 @@ define float @v_mac_f32_dynamic_daz(float %a, float %b, float %c) "denormal-fp-m
 ; GCN-LABEL: {{^}}v_mac_f32_dynamic_ftz:
 ; GCN: v_mul_f32
 ; GCN: v_add_f32
-define float @v_mac_f32_dynamic_ftz(float %a, float %b, float %c) "denormal-fp-math-f32"="dynamic,preserve-sign" {
+define float @v_mac_f32_dynamic_ftz(float %a, float %b, float %c) denormal_fpenv(float: dynamic|preservesign) {
   %mul = fmul float %a, %b
   %mad = fadd float %mul, %c
   ret float %mad
@@ -310,6 +318,5 @@ define float @v_mac_f32_dynamic_ftz(float %a, float %b, float %c) "denormal-fp-m
 declare i32 @llvm.amdgcn.workitem.id.x() #2
 
 attributes #0 = { nounwind "no-signed-zeros-fp-math"="false" }
-attributes #1 = { nounwind "no-signed-zeros-fp-math"="true" }
 attributes #2 = { nounwind readnone }
 attributes #3 = { nounwind }

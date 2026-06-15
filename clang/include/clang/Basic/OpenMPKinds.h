@@ -107,6 +107,13 @@ enum OpenMPDistScheduleClauseKind {
   OMPC_DIST_SCHEDULE_unknown
 };
 
+/// OpenMP variable-category for 'default' clause.
+enum OpenMPDefaultClauseVariableCategory {
+#define OPENMP_DEFAULT_VARIABLE_CATEGORY(Name) OMPC_DEFAULT_VC_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DEFAULT_VC_unknown
+};
+
 /// OpenMP attributes for 'defaultmap' clause.
 enum OpenMPDefaultmapClauseKind {
 #define OPENMP_DEFAULTMAP_KIND(Name) \
@@ -181,6 +188,9 @@ struct OpenMPScheduleTy final {
   OpenMPScheduleClauseKind Schedule = OMPC_SCHEDULE_unknown;
   OpenMPScheduleClauseModifier M1 = OMPC_SCHEDULE_MODIFIER_unknown;
   OpenMPScheduleClauseModifier M2 = OMPC_SCHEDULE_MODIFIER_unknown;
+  /// Request the fused distr_static_chunk + static_chunkone runtime schedule
+  /// in `for_static_init`. The outer `distribute_static_init` is skipped.
+  bool UseFusedDistChunkSchedule = false;
 };
 
 /// OpenMP modifiers for 'reduction' clause.
@@ -204,6 +214,21 @@ enum OpenMPAdjustArgsOpKind {
   OMPC_ADJUST_ARGS_unknown,
 };
 
+/// OpenMP 6.1 need_device modifier
+enum OpenMPNeedDevicePtrModifier {
+#define OPENMP_NEED_DEVICE_PTR_KIND(Name) OMPC_NEED_DEVICE_PTR_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_NEED_DEVICE_PTR_unknown,
+};
+
+/// OpenMP 6.1 use_device_ptr fallback modifier
+enum OpenMPUseDevicePtrFallbackModifier {
+#define OPENMP_USE_DEVICE_PTR_FALLBACK_MODIFIER(Name)                          \
+  OMPC_USE_DEVICE_PTR_FALLBACK_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_USE_DEVICE_PTR_FALLBACK_unknown,
+};
+
 /// OpenMP bindings for the 'bind' clause.
 enum OpenMPBindClauseKind {
 #define OPENMP_BIND_KIND(Name) OMPC_BIND_##Name,
@@ -215,6 +240,20 @@ enum OpenMPGrainsizeClauseModifier {
 #define OPENMP_GRAINSIZE_MODIFIER(Name) OMPC_GRAINSIZE_##Name,
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_GRAINSIZE_unknown
+};
+
+enum OpenMPDynGroupprivateClauseModifier {
+#define OPENMP_DYN_GROUPPRIVATE_MODIFIER(Name) OMPC_DYN_GROUPPRIVATE_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DYN_GROUPPRIVATE_unknown
+};
+
+enum OpenMPDynGroupprivateClauseFallbackModifier {
+  OMPC_DYN_GROUPPRIVATE_FALLBACK_unknown = OMPC_DYN_GROUPPRIVATE_unknown,
+#define OPENMP_DYN_GROUPPRIVATE_FALLBACK_MODIFIER(Name)                        \
+  OMPC_DYN_GROUPPRIVATE_FALLBACK_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_DYN_GROUPPRIVATE_FALLBACK_last
 };
 
 enum OpenMPNumTasksClauseModifier {
@@ -243,19 +282,40 @@ enum OpenMPAllocateClauseModifier {
   OMPC_ALLOCATE_unknown
 };
 
+/// OpenMP modifiers for 'threadset' clause.
+enum OpenMPThreadsetKind {
+#define OPENMP_THREADSET_KIND(Name) OMPC_THREADSET_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_THREADSET_unknown
+};
+
 /// Number of allowed allocate-modifiers.
 static constexpr unsigned NumberOfOMPAllocateClauseModifiers =
     OMPC_ALLOCATE_unknown;
 
 /// Contains 'interop' data for 'append_args' and 'init' clauses.
 class Expr;
+/// One entry of a prefer_type list. Each pref-spec carries an optional fr()
+/// foreign-runtime-id expression and zero or more attr() ext-string-literal
+/// expressions. Fr is nullptr for attr-only specs.
+struct OMPInteropPref final {
+  OMPInteropPref(Expr *Fr, llvm::SmallVector<Expr *, 2> Attrs)
+      : Fr(Fr), Attrs(std::move(Attrs)) {}
+  Expr *Fr = nullptr;
+  llvm::SmallVector<Expr *, 2> Attrs;
+};
 struct OMPInteropInfo final {
   OMPInteropInfo(bool IsTarget = false, bool IsTargetSync = false)
       : IsTarget(IsTarget), IsTargetSync(IsTargetSync) {}
   bool IsTarget;
   bool IsTargetSync;
-  llvm::SmallVector<Expr *, 4> PreferTypes;
+  bool HasPreferAttrs = false;
+  llvm::SmallVector<OMPInteropPref, 4> Prefs;
 };
+
+OpenMPDefaultClauseVariableCategory
+getOpenMPDefaultVariableCategory(StringRef Str, const LangOptions &LangOpts);
+const char *getOpenMPDefaultVariableCategoryName(unsigned VC);
 
 unsigned getOpenMPSimpleClauseType(OpenMPClauseKind Kind, llvm::StringRef Str,
                                    const LangOptions &LangOpts);
@@ -300,6 +360,14 @@ bool isOpenMPTargetExecutionDirective(OpenMPDirectiveKind DKind);
 /// 'omp target exit data'
 /// otherwise - false.
 bool isOpenMPTargetDataManagementDirective(OpenMPDirectiveKind DKind);
+
+/// Checks if the specified directive is a map-entering target directive.
+/// \param DKind Specified directive.
+/// \return true - the directive is a map-entering target directive like
+/// 'omp target', 'omp target data', 'omp target enter data',
+/// 'omp target parallel', etc. (excludes 'omp target exit data', 'omp target
+/// update') otherwise - false.
+bool isOpenMPTargetMapEnteringDirective(OpenMPDirectiveKind DKind);
 
 /// Checks if the specified composite/combined directive constitutes a teams
 /// directive in the outermost nest.  For example
@@ -364,6 +432,20 @@ bool isOpenMPTaskingDirective(OpenMPDirectiveKind Kind);
 /// directives that need loop bound sharing across loops outlined in nested
 /// functions
 bool isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind);
+
+/// Checks if the specified directive is a loop transformation directive that
+/// applies to a canonical loop nest.
+/// \param DKind Specified directive.
+/// \return True iff the directive is a loop transformation.
+bool isOpenMPCanonicalLoopNestTransformationDirective(
+    OpenMPDirectiveKind DKind);
+
+/// Checks if the specified directive is a loop transformation directive that
+/// applies to a canonical loop sequence.
+/// \param DKind Specified directive.
+/// \return True iff the directive is a loop transformation.
+bool isOpenMPCanonicalLoopSequenceTransformationDirective(
+    OpenMPDirectiveKind DKind);
 
 /// Checks if the specified directive is a loop transformation directive.
 /// \param DKind Specified directive.

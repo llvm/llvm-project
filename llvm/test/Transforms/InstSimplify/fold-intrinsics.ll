@@ -53,6 +53,22 @@ define i32 @test_ctpop_poison(i32 %a) {
   ret i32 %res
 }
 
+define i8 @clmul() {
+; CHECK-LABEL: @clmul(
+; CHECK-NEXT:    ret i8 84
+;
+  %clmul = call i8 @llvm.clmul.i8(i8 7, i8 28)
+  ret i8 %clmul
+}
+
+define i8 @clmul_poison() {
+; CHECK-LABEL: @clmul_poison(
+; CHECK-NEXT:    ret i8 0
+;
+  %clmul = call i8 @llvm.clmul.i8(i8 3, i8 poison)
+  ret i8 %clmul
+}
+
 define void @pow_poison(i16 %arg_int,float %arg_flt, ptr %P) {
 ; CHECK-LABEL: @pow_poison(
 ; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
@@ -607,6 +623,66 @@ define void @umul_fix_sat_poison(ptr %P) {
 
   %umul_fix_sat4xi32 = call <4 x i32> @llvm.umul.fix.sat(<4 x i32> poison, <4 x i32> poison, i32 2)
   store volatile <4 x i32> %umul_fix_sat4xi32, ptr %P
+
+  ret void
+}
+
+declare void @use.i32(i32, i1)
+
+define void @umul_extractvalue(ptr %P, i32 %x) {
+; CHECK-LABEL: @umul_extractvalue(
+; CHECK-NEXT:    call void @use.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    call void @use.i32(i32 [[X]], i1 false)
+; CHECK-NEXT:    [[UMUL_3:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 2, i32 [[X]])
+; CHECK-NEXT:    [[R_3:%.*]] = extractvalue { i32, i1 } [[UMUL_3]], 0
+; CHECK-NEXT:    [[OV_3:%.*]] = extractvalue { i32, i1 } [[UMUL_3]], 1
+; CHECK-NEXT:    call void @use.i32(i32 [[R_3]], i1 [[OV_3]])
+; CHECK-NEXT:    ret void
+;
+  %umul.1 = call {i32, i1} @llvm.umul.with.overflow(i32 %x, i32 1)
+  %r.1 = extractvalue {i32, i1} %umul.1, 0
+  %ov.1 = extractvalue {i32, i1} %umul.1, 1
+  call void @use.i32(i32 %r.1, i1 %ov.1)
+
+  %umul.2 = call {i32, i1} @llvm.umul.with.overflow(i32 1, i32 %x)
+  %r.2 = extractvalue {i32, i1} %umul.2, 0
+  %ov.2 = extractvalue {i32, i1} %umul.2, 1
+  call void @use.i32(i32 %r.2, i1 %ov.2)
+
+  %umul.3 = call {i32, i1} @llvm.umul.with.overflow(i32 2, i32 %x)
+  %r.3 = extractvalue {i32, i1} %umul.3, 0
+  %ov.3 = extractvalue {i32, i1} %umul.3, 1
+  call void @use.i32(i32 %r.3, i1 %ov.3)
+
+  ret void
+}
+
+declare void @use.4xi32(<4 x i32>, <4 x i1>)
+
+define void @umul_extractvalue_vec(ptr %P, <4 x i32> %x) {
+; CHECK-LABEL: @umul_extractvalue_vec(
+; CHECK-NEXT:    call void @use.4xi32(<4 x i32> [[X:%.*]], <4 x i1> zeroinitializer)
+; CHECK-NEXT:    call void @use.4xi32(<4 x i32> [[X]], <4 x i1> zeroinitializer)
+; CHECK-NEXT:    [[UMUL_3:%.*]] = call { <4 x i32>, <4 x i1> } @llvm.umul.with.overflow.v4i32(<4 x i32> splat (i32 2), <4 x i32> [[X]])
+; CHECK-NEXT:    [[R_3:%.*]] = extractvalue { <4 x i32>, <4 x i1> } [[UMUL_3]], 0
+; CHECK-NEXT:    [[OV_3:%.*]] = extractvalue { <4 x i32>, <4 x i1> } [[UMUL_3]], 1
+; CHECK-NEXT:    call void @use.4xi32(<4 x i32> [[R_3]], <4 x i1> [[OV_3]])
+; CHECK-NEXT:    ret void
+;
+  %umul.1 = call {<4 x i32>, <4 x i1>} @llvm.umul.with.overflow.v4i32(<4 x i32> %x, <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
+  %r.1 = extractvalue {<4 x i32>, <4 x i1>} %umul.1, 0
+  %ov.1 = extractvalue {<4 x i32>, <4 x i1>} %umul.1, 1
+  call void @use.4xi32(<4 x i32> %r.1, <4 x i1> %ov.1)
+
+  %umul.2 = call {<4 x i32>, <4 x i1>} @llvm.umul.with.overflow.v4i32(<4 x i32> <i32 1, i32 1, i32 1, i32 1>, <4 x i32> %x)
+  %r.2 = extractvalue {<4 x i32>, <4 x i1>} %umul.2, 0
+  %ov.2 = extractvalue {<4 x i32>, <4 x i1>} %umul.2, 1
+  call void @use.4xi32(<4 x i32> %r.2, <4 x i1> %ov.2)
+
+  %umul.3 = call {<4 x i32>, <4 x i1>} @llvm.umul.with.overflow.v4i32(<4 x i32> <i32 2, i32 2, i32 2, i32 2>, <4 x i32> %x)
+  %r.3 = extractvalue {<4 x i32>, <4 x i1>} %umul.3, 0
+  %ov.3 = extractvalue {<4 x i32>, <4 x i1>} %umul.3, 1
+  call void @use.4xi32(<4 x i32> %r.3, <4 x i1> %ov.3)
 
   ret void
 }

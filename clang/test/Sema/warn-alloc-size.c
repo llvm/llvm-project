@@ -1,10 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-linux -fsyntax-only -verify -Walloc-size %s
 struct Foo { int x[10]; };
 
-struct ZeroSize {
-  int flexible_array[];
-};
-
 typedef __typeof__(sizeof(int)) size_t;
 void *my_malloc(size_t) __attribute__((alloc_size(1)));
 void *my_calloc(size_t, size_t) __attribute__((alloc_size(2, 1)));
@@ -42,8 +38,16 @@ void alloc_foo(void) {
                                                           // expected-warning@-1 {{allocation of insufficient size '1' for type 'int' with size '4'}}
   (void)(int *)my_malloc(1);                              // expected-warning {{allocation of insufficient size '1' for type 'int' with size '4'}}
 
-  struct ZeroSize *ptr18 = my_malloc(0); // okay because sizeof(struct ZeroSize) = 0
+  void *funcptr_1 = (void (*)(int))my_malloc(1);
 
-  void *funcptr_1 = (void (*)(int))my_malloc(0); // expected-warning {{allocation of insufficient size '0' for type 'void (int)' with size '1'}}
-  void *funcptr_2 = (void (*)(int))my_malloc(1);
+  // Zero size allocations are assumed to be intentional.
+  int *zero_alloc1 = my_malloc(0);
+  int *zero_alloc2 = (int *)my_malloc(0);
+}
+
+void *my_malloc_wide(__int128) __attribute__((alloc_size(1)));
+
+void alloc_foo_wide(void) {
+  struct Foo *ptr = (struct Foo *)my_malloc_wide(sizeof(*ptr));
+  struct Foo *ptr_wrong = (struct Foo *)my_malloc_wide(4); // expected-warning {{allocation of insufficient size '4' for type 'struct Foo' with size '40'}}
 }

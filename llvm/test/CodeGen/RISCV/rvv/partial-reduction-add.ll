@@ -9,22 +9,21 @@ define <4 x i32> @partial_reduce_add_v4i32_v4i32(<4 x i32> %accumulator, <4 x i3
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 entry:
-  %partial.reduce = call <4 x i32> @llvm.experimental.vector.partial.reduce.add(<4 x i32> %accumulator, <4 x i32> %0)
+  %partial.reduce = call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> %accumulator, <4 x i32> %0)
   ret <4 x i32> %partial.reduce
 }
 
 define <4 x i32> @partial_reduce_add_v4i32_v8i32(<4 x i32> %accumulator, <8 x i32> %0) {
 ; CHECK-LABEL: partial_reduce_add_v4i32_v8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v12, v8, v10
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v10, 4
+; CHECK-NEXT:    vslidedown.vi v12, v10, 4
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v8, v12
+; CHECK-NEXT:    vadd.vv v8, v8, v10
+; CHECK-NEXT:    vadd.vv v8, v12, v8
 ; CHECK-NEXT:    ret
 entry:
-  %partial.reduce = call <4 x i32> @llvm.experimental.vector.partial.reduce.add(<4 x i32> %accumulator, <8 x i32> %0)
+  %partial.reduce = call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> %accumulator, <8 x i32> %0)
   ret <4 x i32> %partial.reduce
 }
 
@@ -35,7 +34,7 @@ define <vscale x 4 x i32> @partial_reduce_add_nvx4i32_nvx4i32(<vscale x 4 x i32>
 ; CHECK-NEXT:    vadd.vv v8, v8, v10
 ; CHECK-NEXT:    ret
 entry:
-  %partial.reduce = call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 4 x i32> %accumulator, <vscale x 4 x i32> %0)
+  %partial.reduce = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> %accumulator, <vscale x 4 x i32> %0)
   ret <vscale x 4 x i32> %partial.reduce
 }
 
@@ -47,7 +46,7 @@ define <vscale x 4 x i32> @partial_reduce_add_nvx4i32_nvx8i32(<vscale x 4 x i32>
 ; CHECK-NEXT:    vadd.vv v8, v14, v8
 ; CHECK-NEXT:    ret
 entry:
-  %partial.reduce = call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 4 x i32> %accumulator, <vscale x 8 x i32> %0)
+  %partial.reduce = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> %accumulator, <vscale x 8 x i32> %0)
   ret <vscale x 4 x i32> %partial.reduce
 }
 
@@ -61,7 +60,7 @@ define <vscale x 4 x i32> @partial_reduce_add_nvx4i32_nvx16i32(<vscale x 4 x i32
 ; CHECK-NEXT:    vadd.vv v8, v10, v8
 ; CHECK-NEXT:    ret
 entry:
-  %partial.reduce = call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 4 x i32> %accumulator, <vscale x 16 x i32> %0)
+  %partial.reduce = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add(<vscale x 4 x i32> %accumulator, <vscale x 16 x i32> %0)
   ret <vscale x 4 x i32> %partial.reduce
 }
 
@@ -73,7 +72,7 @@ define <vscale x 8 x i32> @partial_reduce_add_nvx8i32_nvx16i32(<vscale x 8 x i32
 ; CHECK-NEXT:    vadd.vv v8, v20, v8
 ; CHECK-NEXT:    ret
 entry:
-  %partial.reduce = call <vscale x 8 x i32> @llvm.experimental.vector.partial.reduce.add(<vscale x 8 x i32> %accumulator, <vscale x 16 x i32> %0)
+  %partial.reduce = call <vscale x 8 x i32> @llvm.vector.partial.reduce.add(<vscale x 8 x i32> %accumulator, <vscale x 16 x i32> %0)
   ret <vscale x 8 x i32> %partial.reduce
 }
 

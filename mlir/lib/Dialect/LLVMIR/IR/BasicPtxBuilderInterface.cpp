@@ -12,10 +12,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/MLIRContext.h"
 
+#include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/Regex.h"
 
 #define DEBUG_TYPE "ptx-builder"
@@ -31,35 +38,88 @@ using namespace NVVM;
 
 static constexpr int64_t kSharedMemorySpace = 3;
 
-static char getRegisterType(Type type) {
-  if (type.isInteger(1))
-    return 'b';
-  if (type.isInteger(16))
-    return 'h';
-  if (type.isInteger(32))
-    return 'r';
-  if (type.isInteger(64))
-    return 'l';
-  if (type.isF32())
-    return 'f';
-  if (type.isF64())
-    return 'd';
-  if (auto ptr = dyn_cast<LLVM::LLVMPointerType>(type)) {
-    // Shared address spaces is addressed with 32-bit pointers.
-    if (ptr.getAddressSpace() == kSharedMemorySpace) {
+static FailureOr<char> getRegisterType(Type type, Location loc) {
+  MLIRContext *ctx = type.getContext();
+  auto i16 = IntegerType::get(ctx, 16);
+  auto i32 = IntegerType::get(ctx, 32);
+  auto f32 = Float32Type::get(ctx);
+
+  auto getRegisterTypeForScalar = [&](Type type) -> FailureOr<char> {
+    if (type.isInteger(1))
+      return 'b';
+    if (type.isInteger(16))
+      return 'h';
+    if (type.isInteger(32))
       return 'r';
+    if (type.isInteger(64))
+      return 'l';
+    if (type.isF32())
+      return 'f';
+    if (type.isF64())
+      return 'd';
+    if (auto ptr = dyn_cast<LLVM::LLVMPointerType>(type)) {
+      // Shared address spaces is addressed with 32-bit pointers.
+      if (ptr.getAddressSpace() == kSharedMemorySpace) {
+        return 'r';
+      }
+      return 'l';
     }
-    return 'l';
+    // register type for struct is not supported.
+    mlir::emitError(
+        loc, "The register type could not be deduced from MLIR type. The ")
+        << type
+        << " is not supported. Supported types are:"
+           "i1, i16, i32, i64, f32, f64,"
+           "pointers.\nPlease use llvm.bitcast if you have different type. "
+           "\nSee the constraints from here: "
+           "https://docs.nvidia.com/cuda/inline-ptx-assembly/"
+           "index.html#constraints";
+    return failure();
+  };
+
+  // Packed registers
+  if (auto v = dyn_cast<VectorType>(type)) {
+    assert(v.getNumDynamicDims() == 0 && "Dynamic vectors are not supported");
+
+    int64_t lanes = v.getNumElements();
+    Type elem = v.getElementType();
+
+    // Case 1. Single vector
+    if (lanes <= 1)
+      return getRegisterTypeForScalar(elem);
+
+    // Case 2. Packed registers
+    Type widened = elem;
+    switch (lanes) {
+
+    case 2:
+      if (elem.isF16() || elem.isBF16()) // vector<2xf16>
+        widened = f32;
+      else if (elem.isFloat(8)) // vector<2xf8>
+        widened = i16;
+      break;
+    case 4:
+      if (elem.isInteger(8)) // vector<i8x4>
+        widened = i32;
+      else if (elem.isFloat(8)) // vector<f8x4>
+        widened = f32;
+      else if (elem.isFloat(4)) // vector<f4x4>
+        widened = i16;
+      break;
+      // Other packing is not supported
+    default:
+      break;
+    }
+    return getRegisterTypeForScalar(widened);
   }
-  // register type for struct is not supported.
-  llvm_unreachable("The register type could not deduced from MLIR type");
-  return '?';
+
+  return getRegisterTypeForScalar(type);
 }
 
-static char getRegisterType(Value v) {
+static FailureOr<char> getRegisterType(Value v, Location loc) {
   if (v.getDefiningOp<LLVM::ConstantOp>())
     return 'n';
-  return getRegisterType(v.getType());
+  return getRegisterType(v.getType(), loc);
 }
 
 /// Extract every element of a struct value.
@@ -70,15 +130,16 @@ static SmallVector<Value> extractStructElements(PatternRewriter &rewriter,
 
   SmallVector<Value> elems;
   for (unsigned i : llvm::seq<unsigned>(0, structTy.getBody().size()))
-    elems.push_back(rewriter.create<LLVM::ExtractValueOp>(loc, structVal, i));
+    elems.push_back(LLVM::ExtractValueOp::create(rewriter, loc, structVal, i));
 
   return elems;
 }
 
-void PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
+LogicalResult PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
   LDBG() << v << "\t Modifier : " << itype << "\n";
   registerModifiers.push_back(itype);
 
+  Location loc = interfaceOp->getLoc();
   auto getModifier = [&]() -> const char * {
     switch (itype) {
     case PTXRegisterMod::Read:
@@ -111,21 +172,29 @@ void PtxBuilder::insertValue(Value v, PTXRegisterMod itype) {
     }
     for (auto [idx, t] : llvm::enumerate(stype.getBody())) {
       if (itype != PTXRegisterMod::Write) {
-        Value extractValue = LLVM::ExtractValueOp::create(
-            rewriter, interfaceOp->getLoc(), v, idx);
+        Value extractValue =
+            LLVM::ExtractValueOp::create(rewriter, loc, v, idx);
         addValue(extractValue);
       }
       if (itype == PTXRegisterMod::ReadWrite) {
         ss << idx << ",";
       } else {
-        ss << getModifier() << getRegisterType(t) << ",";
+        FailureOr<char> regType = getRegisterType(t, loc);
+        if (failed(regType))
+          return rewriter.notifyMatchFailure(loc,
+                                             "failed to get register type");
+        ss << getModifier() << regType.value() << ",";
       }
     }
-    return;
+    return success();
   }
   // Handle Scalars
   addValue(v);
-  ss << getModifier() << getRegisterType(v) << ",";
+  FailureOr<char> regType = getRegisterType(v, loc);
+  if (failed(regType))
+    return rewriter.notifyMatchFailure(loc, "failed to get register type");
+  ss << getModifier() << regType.value() << ",";
+  return success();
 }
 
 /// Check if the operation needs to pack and unpack results.
@@ -354,6 +423,31 @@ static std::string rewriteAsmPlaceholders(llvm::StringRef ptxCode) {
   return out;
 }
 
+/// Return the constraint index of the predicate operand.  The predicate
+/// constraint ("b") is always the last non-tied token in the canonicalized
+/// constraint string.  Tied constraints (digit-only tokens from read-write
+/// canonicalization) are appended at the end, so we walk backwards to skip
+/// them.
+static unsigned getPredicateConstraintIndex(StringRef constraints) {
+  SmallVector<StringRef> tokens;
+  constraints.split(tokens, ',');
+  assert(!tokens.empty() && "expected at least a predicate constraint");
+
+  auto isTiedConstraint = [](StringRef tok) {
+    unsigned idx;
+    return !tok.trim().getAsInteger(10, idx);
+  };
+
+  size_t numTied = 0;
+  for (StringRef tok : llvm::reverse(tokens)) {
+    if (!isTiedConstraint(tok))
+      break;
+    ++numTied;
+  }
+  assert(numTied < tokens.size() && "all constraints are tied");
+  return tokens.size() - numTied - 1;
+}
+
 LLVM::InlineAsmOp PtxBuilder::build() {
   auto asmDialectAttr = LLVM::AsmDialectAttr::get(interfaceOp->getContext(),
                                                   LLVM::AsmDialect::AD_ATT);
@@ -374,14 +468,27 @@ LLVM::InlineAsmOp PtxBuilder::build() {
   // Add the predicate to the asm string.
   if (interfaceOp.getPredicate().has_value() &&
       interfaceOp.getPredicate().value()) {
+    unsigned predIdx = getPredicateConstraintIndex(registerConstraints);
     std::string predicateStr = "@%";
-    predicateStr += std::to_string((ptxOperands.size() - 1));
+    predicateStr += std::to_string(predIdx);
     ptxInstruction = predicateStr + " " + ptxInstruction;
   }
 
-  // Tablegen doesn't accept $, so we use %, but inline assembly uses $.
-  // Replace all % with $
-  llvm::replace(ptxInstruction, '%', '$');
+  // Operand placeholders are written as %0, %1, ... (and the predicate as
+  // @%N), because TableGen string attributes cannot contain '$', which inline
+  // assembly uses for operand substitution. Convert only a '%' that is
+  // immediately followed by a digit; this leaves literal PTX special-register
+  // names such as %tid.x, %laneid or %dynamic_smem_size intact.
+  std::string mapped;
+  mapped.reserve(ptxInstruction.size());
+  for (size_t i = 0, e = ptxInstruction.size(); i < e; ++i) {
+    if (ptxInstruction[i] == '%' && i + 1 < e &&
+        llvm::isDigit(ptxInstruction[i + 1]))
+      mapped.push_back('$');
+    else
+      mapped.push_back(ptxInstruction[i]);
+  }
+  ptxInstruction = std::move(mapped);
 
   return LLVM::InlineAsmOp::create(
       rewriter, interfaceOp->getLoc(),
@@ -410,21 +517,31 @@ void PtxBuilder::buildAndReplaceOp() {
     return;
   }
 
-  // Case 1: Simple path, return single scalar
+  // Case 1: Simple path, single scalar inline asm result.
   if (!needsPackUnpack(interfaceOp, needsManualRegisterMapping,
                        registerModifiers)) {
-    if (inlineAsmOp->getNumResults() > 0) {
+    // Sub-case 1a: the wrapper op has a declared result -- replace it
+    // directly with the inline asm result.
+    if (interfaceOp->getNumResults() > 0) {
       rewriter.replaceOp(interfaceOp, inlineAsmOp->getResults());
-    } else {
-      // RW-only case with no declared results: forward the RW value.
-      SmallVector<Value> results;
-      for (auto [m, v] : llvm::zip(registerModifiers, ptxOperands))
-        if (m == PTXRegisterMod::ReadWrite) {
-          results.push_back(v);
-          break;
-        }
-      rewriter.replaceOp(interfaceOp, results);
+      return;
     }
+    // Sub-case 1b: RW-only, no declared result. The inline asm produces a
+    // single value that represents the post-asm value of the read-write
+    // operand; forward it to that operand's uses and erase the wrapper.
+    if (inlineAsmOp->getNumResults() > 0) {
+      Value postAsm = inlineAsmOp->getResult(0);
+      for (auto [m, v] : llvm::zip(registerModifiers, ptxOperands)) {
+        if (m != PTXRegisterMod::ReadWrite)
+          continue;
+        v.replaceUsesWithIf(postAsm, [&](OpOperand &use) {
+          Operation *owner = use.getOwner();
+          return owner != interfaceOp && owner != inlineAsmOp;
+        });
+        break;
+      }
+    }
+    rewriter.eraseOp(interfaceOp);
     return;
   }
 

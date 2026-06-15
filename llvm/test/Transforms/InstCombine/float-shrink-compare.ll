@@ -463,6 +463,34 @@ define i1 @test18(float %x, float %y, float %z) {
   ret i1 %5
 }
 
+define i1 @test_fminimum_num(float %x, float %y, float %z) {
+; CHECK-LABEL: @test_fminimum_num(
+; CHECK-NEXT:    [[FMINIMUM_NUMF:%.*]] = call float @llvm.minimumnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = fcmp oeq float [[FMINIMUM_NUMF]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP5]]
+;
+  %1 = fpext float %x to double
+  %2 = fpext float %y to double
+  %3 = call double @fminimum_num(double %1, double %2) nounwind
+  %4 = fpext float %z to double
+  %5 = fcmp oeq double %3, %4
+  ret i1 %5
+}
+
+define i1 @test_fmaximum_num(float %x, float %y, float %z) {
+; CHECK-LABEL: @test_fmaximum_num(
+; CHECK-NEXT:    [[FMAXIMUM_NUMF:%.*]] = call float @llvm.maximumnum.f32(float [[X:%.*]], float [[Y:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = fcmp oeq float [[FMAXIMUM_NUMF]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[TMP5]]
+;
+  %1 = fpext float %x to double
+  %2 = fpext float %y to double
+  %3 = call double @fmaximum_num(double %1, double %2) nounwind
+  %4 = fpext float %z to double
+  %5 = fcmp oeq double %3, %4
+  ret i1 %5
+}
+
 define i1 @test19(float %x, float %y, float %z) {
 ; CHECK-LABEL: @test19(
 ; CHECK-NEXT:    [[COPYSIGNF:%.*]] = call float @copysignf(float [[X:%.*]], float [[Y:%.*]]) #[[ATTR0:[0-9]+]]
@@ -518,6 +546,8 @@ declare double @roundeven(double) nounwind readnone
 declare double @trunc(double) nounwind readnone
 declare double @fmin(double, double) nounwind readnone
 declare double @fmax(double, double) nounwind readnone
+declare double @fminimum_num(double, double) nounwind readnone
+declare double @fmaximum_num(double, double) nounwind readnone
 
 declare double @llvm.fabs.f64(double) nounwind readnone
 declare double @llvm.ceil.f64(double) nounwind readnone

@@ -8,7 +8,6 @@
 
 #include "hdr/stdint_proxy.h" // uintptr_t
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/libc_errno.h"
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_getname_np.h"
 #include "src/pthread/pthread_join.h"
@@ -20,6 +19,7 @@
 #include "src/pthread/pthread_setname_np.h"
 #include "test/IntegrationTest/test.h"
 
+#include <errno.h>
 #include <pthread.h>
 
 using string_view = LIBC_NAMESPACE::cpp::string_view;

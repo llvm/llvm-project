@@ -87,7 +87,7 @@ using namespace clang;
 //      ends up executing RAV's implementation because we used a qualified
 //      function call.
 //
-//   End result: RAV::TraverseCallExpr() is executed,
+//   End result: RAV::TraverseCallExpr() is executed.
 namespace {
 template <bool Const> struct Impl : RecursiveASTVisitor<Impl<Const>> {
   DynamicRecursiveASTVisitorBase<Const> &Visitor;
@@ -161,6 +161,13 @@ template <bool Const> struct Impl : RecursiveASTVisitor<Impl<Const>> {
 
   bool TraverseConceptReference(ConceptReference *CR) {
     return Visitor.TraverseConceptReference(CR);
+  }
+
+  bool TraverseOffsetOfNode(const OffsetOfNode *Node) {
+    return Visitor.TraverseOffsetOfNode(Node);
+  }
+  bool VisitOffsetOfNode(const OffsetOfNode *Node) {
+    return Visitor.VisitOffsetOfNode(Node);
   }
 
   bool TraverseCXXBaseSpecifier(const CXXBaseSpecifier &Base) {
@@ -310,6 +317,8 @@ FORWARD_TO_BASE(TraverseConceptExprRequirement, concepts::ExprRequirement, *)
 FORWARD_TO_BASE(TraverseConceptReference, ConceptReference, *)
 FORWARD_TO_BASE(TraverseConceptNestedRequirement,
                 concepts::NestedRequirement, *)
+
+FORWARD_TO_BASE_EXACT(TraverseOffsetOfNode, const OffsetOfNode *)
 
 FORWARD_TO_BASE_EXACT(TraverseCXXBaseSpecifier, const CXXBaseSpecifier &)
 FORWARD_TO_BASE_EXACT(TraverseDeclarationNameInfo, DeclarationNameInfo)

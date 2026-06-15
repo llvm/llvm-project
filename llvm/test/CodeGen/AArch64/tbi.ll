@@ -7,7 +7,7 @@
 ; TBI-NOT: and x
 ; NO_TBI: and x
 define i32 @ld_and32(i64 %p) {
-  %and = and i64 %p, 72057594037927935
+  %and = and i64 %p, 1152921504606846975
   %cast = inttoptr i64 %and to ptr
   %load = load i32, ptr %cast
   ret i32 %load
@@ -18,7 +18,7 @@ define i32 @ld_and32(i64 %p) {
 ; TBI-NOT: and x
 ; NO_TBI: and x
 define i32 @ld_and_plus_offset(i64 %p) {
-  %and = and i64 %p, 72057594037927935
+  %and = and i64 %p, 1152921504606846975
   %cast = inttoptr i64 %and to ptr
   %gep = getelementptr i32, ptr %cast, i64 4
   %load = load i32, ptr %gep
@@ -40,7 +40,7 @@ define i32 @ld_and32_wider(i64 %p) {
 ; TBI-NOT: and x
 ; NO_TBI: and x
 define i64 @ld_and64(i64 %p) {
-  %and = and i64 %p, 72057594037927935
+  %and = and i64 %p, 1152921504606846975
   %cast = inttoptr i64 %and to ptr
   %load = load i64, ptr %cast
   ret i64 %load
@@ -50,7 +50,7 @@ define i64 @ld_and64(i64 %p) {
 ; TBI-NOT: and x
 ; NO_TBI: and x
 define void @st_and32(i64 %p, i32 %v) {
-  %and = and i64 %p, 72057594037927935
+  %and = and i64 %p, 1152921504606846975
   %cast = inttoptr i64 %and to ptr
   store i32 %v, ptr %cast
   ret void
@@ -62,7 +62,7 @@ define void @st_and32(i64 %p, i32 %v) {
 ; NO_TBI: and x
 define i32 @ld_ro(i64 %a, i64 %b) {
   %p = add i64 %a, %b
-  %and = and i64 %p, 72057594037927935
+  %and = and i64 %p, 1152921504606846975
   %cast = inttoptr i64 %and to ptr
   %load = load i32, ptr %cast
   ret i32 %load
@@ -73,7 +73,7 @@ define i32 @ld_ro(i64 %a, i64 %b) {
 ; TBI-NOT: and x
 ; NO_TBI: and x
 define i32 @ld_ro2(i64 %a, i64 %b) {
-  %and = and i64 %a, 72057594037927935
+  %and = and i64 %a, 1152921504606846975
   %p = add i64 %and, %b
   %cast = inttoptr i64 %p to ptr
   %load = load i32, ptr %cast
@@ -85,7 +85,7 @@ define i32 @ld_ro2(i64 %a, i64 %b) {
 ; TBI-NOT: and x
 ; NO_TBI: and x
 define i32 @ld_indirect_and(i64 %r1, i64 %r2) {
-  %and = and i64 %r1, 72057594037927935
+  %and = and i64 %r1, 1152921504606846975
   %p = or i64 %and, %r2
   %cast = inttoptr i64 %p to ptr
   %load = load i32, ptr %cast

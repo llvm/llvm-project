@@ -15,6 +15,7 @@
 #define LLVM_CLANG_INTERPRETER_INTERPRETER_H
 
 #include "clang/AST/GlobalDecl.h"
+#include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Interpreter/Value.h"
 
@@ -23,28 +24,32 @@
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Error.h"
+#include <cstdint>
 #include <memory>
 #include <vector>
 
 namespace llvm {
 namespace orc {
-class LLJIT;
-class LLJITBuilder;
 class ThreadSafeContext;
 } // namespace orc
 } // namespace llvm
 
 namespace clang {
 
+namespace driver {
+class Compilation;
+} // namespace driver
+
 class CompilerInstance;
 class CXXRecordDecl;
 class Decl;
-class IncrementalExecutor;
 class IncrementalParser;
 class IncrementalCUDADeviceParser;
 
 /// Create a pre-configured \c CompilerInstance for incremental processing.
 class IncrementalCompilerBuilder {
+  using DriverCompilationFn = llvm::Error(const driver::Compilation &);
+
 public:
   IncrementalCompilerBuilder() {}
 
@@ -63,11 +68,16 @@ public:
   // CUDA specific
   void SetCudaSDK(llvm::StringRef path) { CudaSDKPath = path; };
 
+  // Hand over the compilation.
+  void SetDriverCompilationCallback(std::function<DriverCompilationFn> C) {
+    CompilationCB = C;
+  }
+
   llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCudaHost();
   llvm::Expected<std::unique_ptr<CompilerInstance>> CreateCudaDevice();
 
 private:
-  static llvm::Expected<std::unique_ptr<CompilerInstance>>
+  llvm::Expected<std::unique_ptr<CompilerInstance>>
   create(std::string TT, std::vector<const char *> &ClangArgv);
 
   llvm::Expected<std::unique_ptr<CompilerInstance>> createCuda(bool device);
@@ -77,6 +87,8 @@ private:
 
   llvm::StringRef OffloadArch;
   llvm::StringRef CudaSDKPath;
+
+  std::optional<std::function<DriverCompilationFn>> CompilationCB;
 };
 
 class IncrementalAction;
@@ -118,7 +130,7 @@ class Interpreter {
 protected:
   // Derived classes can use an extended interface of the Interpreter.
   Interpreter(std::unique_ptr<CompilerInstance> Instance, llvm::Error &Err,
-              std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr,
+              std::unique_ptr<IncrementalExecutorBuilder> IEB = nullptr,
               std::unique_ptr<clang::ASTConsumer> Consumer = nullptr);
 
   // Create the internal IncrementalExecutor, or re-create it after calling
@@ -127,24 +139,22 @@ protected:
 
   // Delete the internal IncrementalExecutor. This causes a hard shutdown of the
   // JIT engine. In particular, it doesn't run cleanup or destructors.
-  void ResetExecutor();
+  void ResetExecutor() { IncrExecutor.reset(); }
 
 public:
   virtual ~Interpreter();
   static llvm::Expected<std::unique_ptr<Interpreter>>
   create(std::unique_ptr<CompilerInstance> CI,
-         std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder = nullptr);
+         std::unique_ptr<IncrementalExecutorBuilder> IEB = nullptr);
   static llvm::Expected<std::unique_ptr<Interpreter>>
   createWithCUDA(std::unique_ptr<CompilerInstance> CI,
                  std::unique_ptr<CompilerInstance> DCI);
-  static llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
-  createLLJITBuilder(std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
-                     llvm::StringRef OrcRuntimePath);
+
   const ASTContext &getASTContext() const;
   ASTContext &getASTContext();
   const CompilerInstance *getCompilerInstance() const;
   CompilerInstance *getCompilerInstance();
-  llvm::Expected<llvm::orc::LLJIT &> getExecutionEngine();
+  llvm::Expected<IncrementalExecutor &> getExecutionEngine();
 
   llvm::Expected<PartialTranslationUnit &> Parse(llvm::StringRef Code);
   llvm::Error Execute(PartialTranslationUnit &T);
@@ -170,6 +180,10 @@ public:
   llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddressFromLinkerName(llvm::StringRef LinkerName) const;
 
+  const IncrementalExecutorBuilder &getIncrementalExecutorBuilder() const {
+    return *IncrExecutorBuilder;
+  }
+
 private:
   size_t getEffectivePTUSize() const;
   void markUserCodeStart();
@@ -180,7 +194,7 @@ private:
 
   std::array<Expr *, 4> ValuePrintingInfo = {0};
 
-  std::unique_ptr<llvm::orc::LLJITBuilder> JITBuilder;
+  std::unique_ptr<IncrementalExecutorBuilder> IncrExecutorBuilder;
 
   /// @}
   /// @name Value and pretty printing support

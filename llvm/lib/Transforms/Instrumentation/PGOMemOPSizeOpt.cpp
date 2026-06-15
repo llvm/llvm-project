@@ -54,6 +54,8 @@ using namespace llvm;
 STATISTIC(NumOfPGOMemOPOpt, "Number of memop intrinsics optimized.");
 STATISTIC(NumOfPGOMemOPAnnotate, "Number of memop intrinsics annotated.");
 
+namespace llvm {
+
 // The minimum call count to optimize memory intrinsic calls.
 static cl::opt<unsigned>
     MemOPCountThreshold("pgo-memop-count-threshold", cl::Hidden, cl::init(1000),
@@ -92,6 +94,8 @@ cl::opt<bool>
 static cl::opt<unsigned>
     MemOpMaxOptSize("memop-value-prof-max-opt-size", cl::Hidden, cl::init(128),
                     cl::desc("Optimize the memop size <= this value"));
+
+} // end namespace llvm
 
 namespace {
 
@@ -286,7 +290,6 @@ bool MemOPSizeOpt::perform(MemOp MO) {
   uint64_t SavedRemainCount = SavedTotalCount;
   SmallVector<uint64_t, 16> SizeIds;
   SmallVector<uint64_t, 16> CaseCounts;
-  SmallDenseSet<uint64_t, 16> SeenSizeId;
   uint64_t MaxCount = 0;
   unsigned Version = 0;
   // Default case is in the front -- save the slot here.
@@ -309,12 +312,6 @@ bool MemOPSizeOpt::perform(MemOp MO) {
     if (!isProfitable(C, RemainCount)) {
       RemainingVDs.insert(RemainingVDs.end(), I, E);
       break;
-    }
-
-    if (!SeenSizeId.insert(V).second) {
-      errs() << "warning: Invalid Profile Data in Function " << Func.getName()
-             << ": Two identical values in MemOp value counts.\n";
-      return false;
     }
 
     SizeIds.push_back(V);

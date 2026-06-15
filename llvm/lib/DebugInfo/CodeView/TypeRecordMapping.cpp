@@ -28,7 +28,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
-#include <vector>
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -40,11 +39,6 @@ namespace {
     if (auto EC = X)                                                           \
       return EC;                                                               \
   } while (false)
-
-static const EnumEntry<TypeLeafKind> LeafTypeNames[] = {
-#define CV_TYPE(enum, val) {#enum, enum},
-#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
-};
 
 static StringRef getLeafTypeName(TypeLeafKind LT) {
   switch (LT) {
@@ -246,8 +240,8 @@ Error TypeRecordMapping::visitTypeBegin(CVType &CVR) {
   if (IO.isStreaming()) {
     auto RecordKind = CVR.kind();
     uint16_t RecordLen = CVR.length() - 2;
-    std::string RecordKindName = std::string(
-        getEnumName(IO, unsigned(RecordKind), ArrayRef(LeafTypeNames)));
+    std::string RecordKindName =
+        std::string(getEnumName(IO, unsigned(RecordKind), getTypeLeafNames()));
     error(IO.mapInteger(RecordLen, "Record length"));
     error(IO.mapEnum(RecordKind, "Record kind: " + RecordKindName));
   }
@@ -289,9 +283,7 @@ Error TypeRecordMapping::visitMemberBegin(CVMemberRecord &Record) {
     std::string MemberKindName = std::string(getLeafTypeName(Record.Kind));
     MemberKindName +=
         " ( " +
-        (getEnumName(IO, unsigned(Record.Kind), ArrayRef(LeafTypeNames)))
-            .str() +
-        " )";
+        getEnumName(IO, unsigned(Record.Kind), getTypeLeafNames()).str() + " )";
     error(IO.mapEnum(Record.Kind, "Member kind: " + MemberKindName));
   }
   return Error::success();

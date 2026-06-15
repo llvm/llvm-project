@@ -242,9 +242,8 @@ define <3 x i64> @freeze_v3i64() {
 ; CHECK-SD-LABEL: freeze_v3i64:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    add v0.2d, v0.2d, v0.2d
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    fmov d2, d0
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: freeze_v3i64:
@@ -296,10 +295,9 @@ define <3 x ptr> @freeze_v3p0() {
 ; CHECK-SD-NEXT:    mov w8, #4 // =0x4
 ; CHECK-SD-NEXT:    dup v2.2d, x8
 ; CHECK-SD-NEXT:    add v0.2d, v0.2d, v2.2d
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    add d2, d0, d2
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: freeze_v3p0:
@@ -428,6 +426,108 @@ define <8 x i16> @freeze_abds(<8 x i16> %a, <8 x i16> %b) {
   %f = freeze <8 x i16> %d
   %r = add <8 x i16> %a, %f
   ret <8 x i16> %r
+}
+
+define <8 x i16> @freeze_uhadd(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-SD-LABEL: freeze_uhadd:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v2.8h, #15
+; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-SD-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    uhadd v0.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_uhadd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v2.8h, #15
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    movi v2.8h, #31
+; CHECK-GI-NEXT:    uhadd v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    ret
+  %m0 = and <8 x i16> %a0, splat (i16 15)
+  %m1 = and <8 x i16> %a1, splat (i16 15)
+  %avg = call <8 x i16> @llvm.aarch64.neon.uhadd.v8i16(<8 x i16> %m0, <8 x i16> %m1)
+  %frozen = freeze <8 x i16> %avg
+  %masked = and <8 x i16> %frozen, splat (i16 31)
+  ret <8 x i16> %masked
+}
+
+define <8 x i16> @freeze_urhadd(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-SD-LABEL: freeze_urhadd:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v2.8h, #15
+; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-SD-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    urhadd v0.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_urhadd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi v2.8h, #15
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    movi v2.8h, #31
+; CHECK-GI-NEXT:    urhadd v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    ret
+  %m0 = and <8 x i16> %a0, splat (i16 15)
+  %m1 = and <8 x i16> %a1, splat (i16 15)
+  %avg = call <8 x i16> @llvm.aarch64.neon.urhadd.v8i16(<8 x i16> %m0, <8 x i16> %m1)
+  %frozen = freeze <8 x i16> %avg
+  %masked = and <8 x i16> %frozen, splat (i16 31)
+  ret <8 x i16> %masked
+}
+
+define <8 x i16> @freeze_shadd(<8 x i8> %a0, <8 x i16> %a1) {
+; CHECK-SD-LABEL: freeze_shadd:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    sshr v1.8h, v1.8h, #8
+; CHECK-SD-NEXT:    shadd v0.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_shadd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    sshr v1.8h, v1.8h, #8
+; CHECK-GI-NEXT:    shadd v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    shl v0.8h, v0.8h, #8
+; CHECK-GI-NEXT:    sshr v0.8h, v0.8h, #8
+; CHECK-GI-NEXT:    ret
+  %x0 = sext <8 x i8> %a0 to <8 x i16>
+  %x1 = ashr <8 x i16> %a1, splat (i16 8)
+  %avg = call <8 x i16> @llvm.aarch64.neon.shadd.v8i16(<8 x i16> %x0, <8 x i16> %x1)
+  %frozen = freeze <8 x i16> %avg
+  %trunc = trunc <8 x i16> %frozen to <8 x i8>
+  %sext = sext <8 x i8> %trunc to <8 x i16>
+  ret <8 x i16> %sext
+}
+
+define <8 x i16> @freeze_srhadd(<8 x i8> %a0, <8 x i16> %a1) {
+; CHECK-SD-LABEL: freeze_srhadd:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    sshr v1.8h, v1.8h, #8
+; CHECK-SD-NEXT:    srhadd v0.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_srhadd:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    sshr v1.8h, v1.8h, #8
+; CHECK-GI-NEXT:    srhadd v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    shl v0.8h, v0.8h, #8
+; CHECK-GI-NEXT:    sshr v0.8h, v0.8h, #8
+; CHECK-GI-NEXT:    ret
+  %x0 = sext <8 x i8> %a0 to <8 x i16>
+  %x1 = ashr <8 x i16> %a1, splat (i16 8)
+  %avg = call <8 x i16> @llvm.aarch64.neon.srhadd.v8i16(<8 x i16> %x0, <8 x i16> %x1)
+  %frozen = freeze <8 x i16> %avg
+  %trunc = trunc <8 x i16> %frozen to <8 x i8>
+  %sext = sext <8 x i8> %trunc to <8 x i16>
+  ret <8 x i16> %sext
 }
 
 define i32 @freeze_scmp(i32 %a0) nounwind {

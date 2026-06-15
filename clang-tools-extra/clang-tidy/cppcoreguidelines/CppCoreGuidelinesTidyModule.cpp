@@ -1,4 +1,4 @@
-//===-- CppCoreGuidelinesTidyModule.cpp - clang-tidy ----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,8 +8,8 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "../bugprone/NarrowingConversionsCheck.h"
+#include "../misc/ExplicitConstructorCheck.h"
 #include "../misc/NonPrivateMemberVariablesInClassesCheck.h"
 #include "../misc/UnconventionalAssignOperatorCheck.h"
 #include "../modernize/AvoidCArraysCheck.h"
@@ -36,7 +36,7 @@
 #include "OwningMemoryCheck.h"
 #include "PreferMemberInitializerCheck.h"
 #include "ProBoundsArrayToPointerDecayCheck.h"
-#include "ProBoundsAvoidUncheckedContainerAccess.h"
+#include "ProBoundsAvoidUncheckedContainerAccessCheck.h"
 #include "ProBoundsConstantArrayIndexCheck.h"
 #include "ProBoundsPointerArithmeticCheck.h"
 #include "ProTypeConstCastCheck.h"
@@ -54,6 +54,7 @@
 
 namespace clang::tidy {
 namespace cppcoreguidelines {
+namespace {
 
 /// A module containing checks of the C++ Core Guidelines
 class CppCoreGuidelinesModule : public ClangTidyModule {
@@ -75,6 +76,8 @@ public:
         "cppcoreguidelines-avoid-non-const-global-variables");
     CheckFactories.registerCheck<AvoidReferenceCoroutineParametersCheck>(
         "cppcoreguidelines-avoid-reference-coroutine-parameters");
+    CheckFactories.registerCheck<misc::ExplicitConstructorCheck>(
+        "cppcoreguidelines-explicit-constructor");
     CheckFactories.registerCheck<modernize::UseOverrideCheck>(
         "cppcoreguidelines-explicit-virtual-functions");
     CheckFactories.registerCheck<InitVariablesCheck>(
@@ -108,7 +111,7 @@ public:
         "cppcoreguidelines-prefer-member-initializer");
     CheckFactories.registerCheck<ProBoundsArrayToPointerDecayCheck>(
         "cppcoreguidelines-pro-bounds-array-to-pointer-decay");
-    CheckFactories.registerCheck<ProBoundsAvoidUncheckedContainerAccess>(
+    CheckFactories.registerCheck<ProBoundsAvoidUncheckedContainerAccessCheck>(
         "cppcoreguidelines-pro-bounds-avoid-unchecked-container-access");
     CheckFactories.registerCheck<ProBoundsConstantArrayIndexCheck>(
         "cppcoreguidelines-pro-bounds-constant-array-index");
@@ -153,6 +156,8 @@ public:
     return Options;
   }
 };
+
+} // namespace
 
 // Register the LLVMTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<CppCoreGuidelinesModule>

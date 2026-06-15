@@ -15,7 +15,7 @@ define ptr @foo(ptr %x, i32 %n) {
 define ptr @bar(i64 %n, ptr %p) {
 ; CHECK-LABEL: define ptr @bar(
 ; CHECK-SAME: i64 [[N:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[G:%.*]] = getelementptr { {}, [0 x { [0 x i8] }] }, ptr [[P]], i64 0, i32 1, i64 0, i32 0, i64 [[N]]
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[P]], i64 [[N]]
 ; CHECK-NEXT:    ret ptr [[G]]
 ;
   %g = getelementptr {{}, [0 x {[0 x i8]}]}, ptr %p, i64 %n, i32 1, i64 %n, i32 0, i64 %n

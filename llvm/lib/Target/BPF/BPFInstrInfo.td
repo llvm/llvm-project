@@ -41,14 +41,28 @@ def BPFcallseq_start: SDNode<"ISD::CALLSEQ_START", SDT_BPFCallSeqStart,
                              [SDNPHasChain, SDNPOutGlue]>;
 def BPFcallseq_end  : SDNode<"ISD::CALLSEQ_END",   SDT_BPFCallSeqEnd,
                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
-def BPFbrcc         : SDNode<"BPFISD::BR_CC", SDT_BPFBrCC,
-                             [SDNPHasChain, SDNPOutGlue, SDNPInGlue]>;
+def BPFbrcc         : SDNode<"BPFISD::BR_CC", SDT_BPFBrCC, [SDNPHasChain]>;
+
+def SDT_BPFLoadStackArg : SDTypeProfile<1, 1, [
+  SDTCisVT<0, i64>,  // result value
+  SDTCisVT<1, i64>   // operand: offset
+]>;
+def SDT_BPFStoreStackArg : SDTypeProfile<0, 2, [
+  SDTCisVT<0, i64>,  // operand 0: offset
+  SDTCisVT<1, i64>   // operand 1: stored value
+]>;
+
+def BPFload_stack_arg : SDNode<"BPFISD::LOAD_STACK_ARG",
+                               SDT_BPFLoadStackArg,
+                               [SDNPHasChain, SDNPMayLoad]>;
+def BPFstore_stack_arg : SDNode<"BPFISD::STORE_STACK_ARG",
+                                SDT_BPFStoreStackArg,
+                                [SDNPHasChain, SDNPMayStore]>;
 
 def BPFselectcc     : SDNode<"BPFISD::SELECT_CC", SDT_BPFSelectCC>;
 def BPFWrapper      : SDNode<"BPFISD::Wrapper", SDT_BPFWrapper>;
 def BPFmemcpy       : SDNode<"BPFISD::MEMCPY", SDT_BPFMEMCPY,
-                             [SDNPHasChain, SDNPInGlue, SDNPOutGlue,
-                              SDNPMayStore, SDNPMayLoad]>;
+                             [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 def BPFIsLittleEndian : Predicate<"Subtarget->isLittleEndian()">;
 def BPFIsBigEndian    : Predicate<"!Subtarget->isLittleEndian()">;
 def BPFHasALU32 : Predicate<"Subtarget->getHasAlu32()">;
@@ -61,6 +75,7 @@ def BPFNoMovsx : Predicate<"!Subtarget->hasMovsx()">;
 def BPFNoBswap : Predicate<"!Subtarget->hasBswap()">;
 def BPFHasStoreImm : Predicate<"Subtarget->hasStoreImm()">;
 def BPFHasLoadAcqStoreRel : Predicate<"Subtarget->hasLoadAcqStoreRel()">;
+def BPFHasGotox : Predicate<"Subtarget->hasGotox()">;
 
 class ImmediateAsmOperand<string name> : AsmOperandClass {
   let Name = name;
@@ -216,6 +231,18 @@ class JMP_RI<BPFJumpOp Opc, string OpcodeStr, PatLeaf Cond>
   let BPFClass = BPF_JMP;
 }
 
+class JMP_IND<BPFJumpOp Opc, string OpcodeStr, list<dag> Pattern>
+    : TYPE_ALU_JMP<Opc.Value, BPF_X.Value,
+                   (outs),
+                   (ins GPR:$dst),
+                   !strconcat(OpcodeStr, " $dst"),
+                   Pattern> {
+  bits<4> dst;
+
+  let Inst{51-48} = dst;
+  let BPFClass = BPF_JMP;
+}
+
 class JMP_JCOND<BPFJumpOp Opc, string OpcodeStr, list<dag> Pattern>
     : TYPE_ALU_JMP<Opc.Value, BPF_K.Value,
                    (outs),
@@ -281,6 +308,28 @@ defm JSLT : J<BPF_JSLT, "s<", BPF_CC_LT, BPF_CC_LT_32>;
 defm JSLE : J<BPF_JSLE, "s<=", BPF_CC_LE, BPF_CC_LE_32>;
 defm JSET : J<BPF_JSET, "&", NoCond, NoCond>;
 def JCOND : JMP_JCOND<BPF_JCOND, "may_goto", []>;
+
+let Predicates = [BPFHasGotox] in {
+  let isIndirectBranch = 1, isBarrier = 1 in {
+    def JX : JMP_IND<BPF_JA, "gotox", [(brind i64:$dst)]>;
+  }
+}
+}
+
+let hasSideEffects = 1, mayLoad = 1 in {
+  def LOAD_STACK_ARG_PSEUDO
+    : Pseudo<(outs GPR:$dst), (ins s16imm:$off),
+             "load_stack_arg\t$dst, $off", []>;
+}
+
+let hasSideEffects = 1, mayStore = 1 in {
+  def STORE_STACK_ARG_PSEUDO
+    : Pseudo<(outs), (ins s16imm:$off, GPR:$src),
+             "store_stack_arg\t$off, $src", []>;
+
+  def STORE_STACK_ARG_IMM_PSEUDO
+    : Pseudo<(outs), (ins s16imm:$off, i32imm:$val),
+             "store_stack_arg_imm\t$off, $val", []>;
 }
 
 // ALU instructions
@@ -849,8 +898,8 @@ let usesCustomInserter = 1, isCodeGenOnly = 1 in {
 }
 
 // load 64-bit global addr into register
-def : Pat<(BPFWrapper tglobaladdr:$in), (LD_imm64 tglobaladdr:$in)>;
 def : Pat<(BPFWrapper tconstpool:$in), (LD_imm64 tconstpool:$in)>;
+def : Pat<(BPFWrapper tjumptable:$in), (LD_imm64 tjumptable:$in)>;
 
 // 0xffffFFFF doesn't fit into simm32, optimize common case
 def : Pat<(i64 (and (i64 GPR:$src), 0xffffFFFF)),
@@ -1189,10 +1238,9 @@ let Defs = [R0, R1, R2, R3, R4, R5], Uses = [R6], hasSideEffects = 1,
     hasExtraDefRegAllocReq = 1, hasExtraSrcRegAllocReq = 1, mayLoad = 1 in {
 class LOAD_ABS<BPFWidthModifer SizeOp, string OpcodeStr, Intrinsic OpNode>
     : TYPE_LD_ST<BPF_ABS.Value, SizeOp.Value,
-                 (outs),
-                 (ins GPR:$skb, i64imm:$imm),
+                 (outs), (ins i64imm:$imm),
                  "r0 = *("#OpcodeStr#" *)skb[$imm]",
-                 [(set R0, (OpNode GPR:$skb, i64immSExt32:$imm))]> {
+                 [(set R0, (OpNode R6, i64immSExt32:$imm))]> {
   bits<32> imm;
 
   let Inst{31-0} = imm;
@@ -1201,10 +1249,9 @@ class LOAD_ABS<BPFWidthModifer SizeOp, string OpcodeStr, Intrinsic OpNode>
 
 class LOAD_IND<BPFWidthModifer SizeOp, string OpcodeStr, Intrinsic OpNode>
     : TYPE_LD_ST<BPF_IND.Value, SizeOp.Value,
-                 (outs),
-                 (ins GPR:$skb, GPR:$val),
+                 (outs), (ins GPR:$val),
                  "r0 = *("#OpcodeStr#" *)skb[$val]",
-                 [(set R0, (OpNode GPR:$skb, GPR:$val))]> {
+                 [(set R0, (OpNode R6, GPR:$val))]> {
   bits<4> val;
 
   let Inst{55-52} = val;
@@ -1328,17 +1375,17 @@ let Predicates = [BPFHasALU32] in {
   }
 
   def : Pat<(i64 (zextloadi8  ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDB32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDB32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (zextloadi16 ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDH32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDH32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (zextloadi32 ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDW32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDW32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (extloadi8  ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDB32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDB32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (extloadi16 ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDH32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDH32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (extloadi32 ADDRri:$src)),
-            (SUBREG_TO_REG (i64 0), (LDW32 ADDRri:$src), sub_32)>;
+            (SUBREG_TO_REG (LDW32 ADDRri:$src), sub_32)>;
 
   let Predicates = [BPFHasLoadAcqStoreRel] in {
     foreach P = [[relaxed_load<atomic_load_nonext_32>, LDW32],
@@ -1371,4 +1418,9 @@ let usesCustomInserter = 1, isCodeGenOnly = 1 in {
       (ins GPR:$dst, GPR:$src, i64imm:$len, i64imm:$align, variable_ops),
       "#memcpy dst: $dst, src: $src, len: $len, align: $align",
       [(BPFmemcpy GPR:$dst, GPR:$src, imm:$len, imm:$align)]>;
+}
+
+// For GlobalValue and BlockAddress.
+let usesCustomInserter = 1, isCodeGenOnly = 1 in {
+  def LDIMM64 : Pseudo<(outs GPR:$dst), (ins i64imm:$addr), "", []>;
 }

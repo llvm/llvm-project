@@ -268,7 +268,6 @@ class ConditionalController(DebuggerControllerBase):
             step_info = self.debugger.get_step_info(self._watches, self._step_index)
             backtrace = None
             if step_info.current_frame:
-                self._step_index += 1
                 backtrace = [f.function for f in step_info.frames]
 
             record_step = False
@@ -369,6 +368,7 @@ class ConditionalController(DebuggerControllerBase):
                         step_function_backtraces.pop()
 
             if record_step and step_info.current_frame:
+                self._step_index += 1
                 # Record the step.
                 update_step_watches(
                     step_info, self._watches, self.step_collection.commands

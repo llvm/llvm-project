@@ -10,8 +10,9 @@ struct B {
 // CHECK-SAME:                             identifier:
 // CHECK: ![[BMEMBERS]] = !{![[BB:[0-9]+]]}
   B(struct A *);
-// CHECK: ![[BB]] = !DISubprogram(name: "B", scope: ![[B]]
-// CHECK-SAME:                    line: [[@LINE-2]],
+// CHECK: ![[BB]] = !DISubprogram(name: "B",
+// CHECK-SAME:                    scope: ![[B]]
+// CHECK-SAME:                    line: [[@LINE-3]],
 // CHECK-SAME:                    type: ![[TY:[0-9]+]],
 // CHECK: ![[TY]] = !DISubroutineType(types: ![[ARGS:[0-9]+]])
 // CHECK: ![[ARGS]] = !{null, ![[THIS:[0-9]+]], !{{[^,]+}}}

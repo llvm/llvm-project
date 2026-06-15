@@ -163,13 +163,13 @@ static bool ParseOneFlag(const char *Param) {
         auto Val = MyStol(Str);
         *FlagDescriptions[F].IntFlag = static_cast<int>(Val);
         if (Flags.verbosity >= 2)
-          Printf("Flag: %s %d\n", Name, Val);
+          Printf("Flag: %s %d\n", Name, (int)Val);
         return true;
       } else if (FlagDescriptions[F].UIntFlag) {
         auto Val = std::stoul(Str);
         *FlagDescriptions[F].UIntFlag = static_cast<unsigned int>(Val);
         if (Flags.verbosity >= 2)
-          Printf("Flag: %s %u\n", Name, Val);
+          Printf("Flag: %s %u\n", Name, (uint32_t)Val);
         return true;
       } else if (FlagDescriptions[F].StrFlag) {
         *FlagDescriptions[F].StrFlag = Str;
@@ -609,7 +609,7 @@ int AnalyzeDictionary(Fuzzer *F, const std::vector<Unit> &Dict,
   return 0;
 }
 
-std::vector<std::string> ParseSeedInuts(const char *seed_inputs) {
+std::vector<std::string> ParseSeedInputs(const char *seed_inputs) {
   // Parse -seed_inputs=file1,file2,... or -seed_inputs=@seed_inputs_file
   std::vector<std::string> Files;
   if (!seed_inputs) return Files;
@@ -919,7 +919,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     exit(0);
   }
 
-  auto CorporaFiles = ReadCorpora(*Inputs, ParseSeedInuts(Flags.seed_inputs));
+  auto CorporaFiles = ReadCorpora(*Inputs, ParseSeedInputs(Flags.seed_inputs));
   F->Loop(CorporaFiles);
 
   if (Flags.verbosity)

@@ -1,0 +1,186 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -run-pass=machine-scheduler -o /dev/null %s
+# Verify that modifyRegionSchedule does not leave non-monotonic SlotIndexes
+# when reverting a schedule. This used to crash with "register isn't live"
+# in GCNDownwardRPTracker::advanceBeforeNext().
+---
+name:            test_revert_slot_monotonicity
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $vgpr0, $sgpr8_sgpr9
+  
+    %129:sgpr_64(p4) = COPY $sgpr8_sgpr9
+    %411:vgpr_32 = COPY $vgpr0
+    early-clobber %140:sgpr_256 = S_LOAD_DWORDX8_IMM_ec %129(p4), 0, 0 :: (dereferenceable invariant load (s256) from `ptr addrspace(3) null`, addrspace 4)
+    %141:sreg_64_xexec = S_LOAD_DWORDX2_IMM %129(p4), 32, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(3) null` + 32, addrspace 4)
+    S_BITCMP1_B32 %140.sub7, 0, implicit-def $scc
+    %9:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit killed $scc
+    undef %330.sub1:vreg_96 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    undef %162.sub15:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub14:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub13:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub12:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub11:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub10:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub9:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub8:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub7:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub6:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub5:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub4:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub3:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub2:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub1:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %162.sub0:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    undef %149.sub15:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub14:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub13:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub12:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub11:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub10:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub9:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub8:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub7:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub6:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub5:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub4:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub3:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub2:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub1:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %149.sub0:areg_512 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    %413:sreg_64 = S_MOV_B64 0
+    undef %227.sub0:sgpr_128 = S_MOV_B32 0
+    %227.sub1:sgpr_128 = COPY %227.sub0
+    %159:vgpr_32 = COPY %140.sub6
+    %161:vgpr_32 = COPY %141.sub1
+    %319:vgpr_32 = V_MOV_B32_e32 65535, implicit $exec
+    %184:vgpr_32 = COPY %140.sub3
+    %192:vgpr_32 = COPY %140.sub4
+    %193:vreg_64 = COPY %227.sub0_sub1
+    %202:vgpr_32 = V_MOV_B32_e32 84148480, implicit $exec
+    undef %217.sub0:vreg_64 = V_MOV_B32_e32 65537, implicit $exec
+    %217.sub1:vreg_64 = COPY %217.sub0
+    %210:vgpr_32 = COPY %141.sub0
+    %216:vgpr_32 = COPY %140.sub5
+    %310:vgpr_32 = V_MOV_B32_e32 4294901760, implicit $exec
+    %227.sub1:sgpr_128 = COPY %227.sub0
+    %227.sub2:sgpr_128 = COPY %227.sub0
+    %227.sub3:sgpr_128 = COPY %227.sub0
+    %229:vgpr_32 = COPY %140.sub2
+    %233:vgpr_32 = COPY %140.sub0
+    %235:vgpr_32 = COPY %140.sub1
+    %248:sreg_64 = S_AND_B64 $exec, -1, implicit-def dead $scc
+    %409:sreg_64_xexec = S_MOV_B64 0
+    %410:sreg_64_xexec = S_MOV_B64 0
+    %412:sreg_64 = S_MOV_B64 0
+    undef %228.sub1:vreg_128 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    undef %230.sub2:vreg_128 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    undef %234.sub1:vreg_128 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
+    undef %232.sub0:vreg_128 = COPY %330.sub1
+    %232.sub3:vreg_128 = COPY %330.sub1
+    undef %231.sub0:vreg_128 = COPY %330.sub1
+    %231.sub3:vreg_128 = COPY %330.sub1
+  
+  bb.1:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  
+    undef %146.sub15:av_512 = COPY %162.sub15
+    %146.sub14:av_512 = COPY %162.sub14
+    %146.sub13:av_512 = COPY %162.sub13
+    %146.sub12:av_512 = COPY %162.sub12
+    %146.sub11:av_512 = COPY %162.sub11
+    %146.sub10:av_512 = COPY %162.sub10
+    %146.sub9:av_512 = COPY %162.sub9
+    %146.sub8:av_512 = COPY %162.sub8
+    %146.sub7:av_512 = COPY %162.sub7
+    %146.sub6:av_512 = COPY %162.sub6
+    %146.sub5:av_512 = COPY %162.sub5
+    %146.sub4:av_512 = COPY %162.sub4
+    %146.sub3:av_512 = COPY %162.sub3
+    %146.sub2:av_512 = COPY %162.sub2
+    %146.sub1:av_512 = COPY %162.sub1
+    %146.sub0:av_512 = COPY %162.sub0
+    undef %147.sub15:av_512 = COPY %149.sub15
+    %147.sub14:av_512 = COPY %149.sub14
+    %147.sub13:av_512 = COPY %149.sub13
+    %147.sub12:av_512 = COPY %149.sub12
+    %147.sub11:av_512 = COPY %149.sub11
+    %147.sub10:av_512 = COPY %149.sub10
+    %147.sub9:av_512 = COPY %149.sub9
+    %147.sub8:av_512 = COPY %149.sub8
+    %147.sub7:av_512 = COPY %149.sub7
+    %147.sub6:av_512 = COPY %149.sub6
+    %147.sub5:av_512 = COPY %149.sub5
+    %147.sub4:av_512 = COPY %149.sub4
+    %147.sub3:av_512 = COPY %149.sub3
+    %147.sub2:av_512 = COPY %149.sub2
+    %147.sub1:av_512 = COPY %149.sub1
+    %147.sub0:av_512 = COPY %149.sub0
+    %149:areg_512 = COPY %147
+    %149:areg_512 = V_MFMA_F32_32X32X4BF16_mac_e64 %330.sub1, %330.sub1, %149, 0, 0, 0, implicit $mode, implicit $exec
+    %162:areg_512 = COPY %146
+    %162:areg_512 = V_MFMA_F32_32X32X4BF16_mac_e64 %330.sub1, %330.sub1, %162, 0, 0, 0, implicit $mode, implicit $exec
+    %158:vgpr_32 = DS_READ_B32_gfx9 %159, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) null`, addrspace 3)
+    %160:vgpr_32 = DS_READ_B32_gfx9 %161, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) null`, addrspace 3)
+    %162:areg_512 = V_MFMA_F32_32X32X4BF16_mac_e64 %158, %330.sub1, %162, 0, 0, 0, implicit $mode, implicit $exec
+    %162:areg_512 = V_MFMA_F32_32X32X4BF16_mac_e64 %330.sub1, %330.sub1, %162, 0, 0, 0, implicit $mode, implicit $exec
+    %162:areg_512 = V_MFMA_F32_32X32X4BF16_mac_e64 %160, %330.sub1, %162, 0, 0, 0, implicit $mode, implicit $exec
+    %162:areg_512 = V_MFMA_F32_32X32X4BF16_mac_e64 %330.sub1, %330.sub1, %162, 0, 0, 0, implicit $mode, implicit $exec
+    %162:areg_512 = V_MFMA_F32_32X32X4BF16_mac_e64 %330.sub1, %330.sub1, %162, 0, 0, 0, implicit $mode, implicit $exec
+    dead %335:sreg_64 = S_AND_B64 %413, $exec, implicit-def $scc
+    %176:sreg_32 = S_CSELECT_B32 65537, 0, implicit killed $scc
+    %178:sreg_32 = S_LSHR_B32 %176, 16, implicit-def dead $scc
+    undef %327.sub1:vreg_64 = V_BFI_B32_e64 %319, 0, %228.sub1, implicit $exec
+    %327.sub0:vreg_64 = COPY %178, implicit $exec
+    DS_WRITE_B64_gfx9 %184, %327, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
+    %326:vgpr_32 = V_AND_B32_e32 %176, %319, implicit $exec
+    %330.sub0:vreg_96 = V_LSHL_OR_B32_e64 %230.sub2, 16, %326, implicit $exec
+    DS_WRITE_B64_gfx9 %330.sub1, %330.sub0_sub1, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
+    DS_WRITE_B64_gfx9 %192, %193, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
+    %194:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, %231.sub0, %410, implicit $exec
+    undef %209.sub0:vreg_64 = V_PERM_B32_e64 1, %194, %202, implicit $exec
+    %313:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, %232.sub3, %9, implicit $exec
+    %316:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, %232.sub0, %9, implicit $exec
+    %209.sub1:vreg_64 = V_AND_B32_e32 65535, %316, implicit $exec
+    DS_WRITE_B64_gfx9 %330.sub1, %209, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
+    DS_WRITE_B64_gfx9 %210, %193, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
+    %330.sub2:vreg_96 = V_LSHLREV_B32_e32 16, %234.sub1, implicit $exec
+    DS_WRITE_B64_gfx9 %330.sub1, %330.sub1_sub2, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
+    DS_WRITE_B64_gfx9 %216, %217, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
+    dead %338:sreg_64 = S_AND_B64 %412, $exec, implicit-def $scc
+    %218:sreg_32 = S_CSELECT_B32 65537, 0, implicit killed $scc
+    %311:vgpr_32 = V_LSHRREV_B32_e32 16, %231.sub3, implicit $exec
+    undef %320.sub0:vreg_64 = V_AND_OR_B32_e64 %218, %310, %311, implicit $exec
+    %320.sub1:vreg_64 = V_LSHRREV_B32_e32 16, %313, implicit $exec
+    DS_WRITE_B64_gfx9 %330.sub1, %320, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
+    %410:sreg_64_xexec = V_CMP_GT_I32_e64 0, %411, implicit $exec
+    %228:vreg_128 = BUFFER_LOAD_DWORDX4_OFFEN %229, %227, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, addrspace 8)
+    %230:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %227, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, addrspace 8)
+    %231:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %227, 0, 1, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, addrspace 8)
+    %232:vreg_128 = BUFFER_LOAD_DWORDX4_OFFEN %233, %227, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, addrspace 8)
+    %234:vreg_128 = BUFFER_LOAD_DWORDX4_OFFEN %235, %227, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) null`, addrspace 8)
+    %237:vgpr_32 = V_ADD_U32_e32 64, %411, implicit $exec
+    SCHED_GROUP_BARRIER 1, 1, 0
+    SCHED_GROUP_BARRIER 1, 1, 0
+    SCHED_GROUP_BARRIER 1, 1, 0
+    SCHED_GROUP_BARRIER 512, 1, 0
+    SCHED_GROUP_BARRIER 8, 1, 0
+    SCHED_BARRIER 0
+    undef %242.sub0:vreg_64 = V_CNDMASK_B32_e64 0, 0, 0, %217.sub0, %409, implicit $exec
+    %242.sub1:vreg_64 = COPY %242.sub0
+    DS_WRITE_B64_gfx9 %330.sub1, %242, 0, 0, implicit $exec :: (store (s64) into `ptr addrspace(3) null`, addrspace 3)
+    %409:sreg_64_xexec = V_CMP_GT_I32_e64 0, %237, implicit $exec
+    %411:vgpr_32 = V_ADD_U32_e32 1, %411, implicit $exec
+    %162:areg_512 = V_MFMA_F32_32X32X4BF16_mac_e64 %330.sub1, %330.sub1, %162, 0, 0, 0, implicit $mode, implicit $exec
+    %412:sreg_64 = S_MOV_B64 -1
+    $vcc = COPY %248
+    %413:sreg_64 = COPY %9
+    S_CBRANCH_VCCNZ %bb.1, implicit killed $vcc
+    S_BRANCH %bb.2
+  
+  bb.2:
+    S_ENDPGM 0
+...

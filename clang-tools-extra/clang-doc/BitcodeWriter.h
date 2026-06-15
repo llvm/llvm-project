@@ -16,13 +16,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_BITCODEWRITER_H
 
 #include "Representation.h"
-#include "clang/AST/AST.h"
+#include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
-#include <initializer_list>
-#include <vector>
 
 namespace clang {
 namespace doc {
@@ -111,6 +107,7 @@ enum RecordId {
   NAMESPACE_USR,
   NAMESPACE_NAME,
   NAMESPACE_PATH,
+  NAMESPACE_PARENT_USR,
   ENUM_USR,
   ENUM_NAME,
   ENUM_DEFLOCATION,
@@ -127,6 +124,7 @@ enum RecordId {
   RECORD_TAG_TYPE,
   RECORD_IS_TYPE_DEF,
   RECORD_MANGLED_NAME,
+  RECORD_PARENT_USR,
   BASE_RECORD_USR,
   BASE_RECORD_NAME,
   BASE_RECORD_PATH,
@@ -151,6 +149,7 @@ enum RecordId {
   CONCEPT_NAME,
   CONCEPT_IS_TYPE,
   CONCEPT_CONSTRAINT_EXPRESSION,
+  CONCEPT_DEFLOCATION,
   CONSTRAINT_EXPRESSION,
   VAR_USR,
   VAR_NAME,
@@ -179,7 +178,8 @@ enum class FieldId {
 
 class ClangDocBitcodeWriter {
 public:
-  ClangDocBitcodeWriter(llvm::BitstreamWriter &Stream) : Stream(Stream) {
+  ClangDocBitcodeWriter(llvm::BitstreamWriter &Stream, DiagnosticsEngine &Diags)
+      : Stream(Stream), Diags(Diags) {
     emitHeader();
     emitBlockInfoBlock();
     emitVersionBlock();
@@ -224,8 +224,8 @@ private:
     llvm::BitstreamWriter &Stream;
 
   public:
-    StreamSubBlockGuard(llvm::BitstreamWriter &Stream_, BlockId ID)
-        : Stream(Stream_) {
+    StreamSubBlockGuard(llvm::BitstreamWriter &Stream, BlockId ID)
+        : Stream(Stream) {
       // NOTE: SubBlockIDSize could theoretically be calculated on the fly,
       // based on the initialization list of records in each block.
       Stream.EnterSubblock(ID, BitCodeConstants::SubblockIDSize);
@@ -243,7 +243,7 @@ private:
   void emitRecordID(RecordId ID);
   void emitBlockID(BlockId ID);
   void emitBlockInfoBlock();
-  void emitBlockInfo(BlockId BID, const std::vector<RecordId> &RIDs);
+  void emitBlockInfo(BlockId BID, llvm::ArrayRef<RecordId> RIDs);
 
   // Emission of individual record types.
   void emitRecord(StringRef Str, RecordId ID);
@@ -264,6 +264,7 @@ private:
   SmallVector<uint32_t, BitCodeConstants::RecordSize> Record;
   llvm::BitstreamWriter &Stream;
   AbbreviationMap Abbrevs;
+  DiagnosticsEngine &Diags;
 };
 
 } // namespace doc

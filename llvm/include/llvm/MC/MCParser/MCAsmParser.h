@@ -151,6 +151,11 @@ protected: // Can only create subclasses.
 
   bool ShowParsedOperands = false;
 
+  /// Flag tracking whether we're only interested in symbols, which allows us to
+  /// avoid some work (e.g. resolving .incbin directives).
+  // TODO: Adopt this in more places.
+  bool SymbolScanningMode = false;
+
 public:
   MCAsmParser(const MCAsmParser &) = delete;
   MCAsmParser &operator=(const MCAsmParser &) = delete;
@@ -175,6 +180,8 @@ public:
 
   bool getShowParsedOperands() const { return ShowParsedOperands; }
   void setShowParsedOperands(bool Value) { ShowParsedOperands = Value; }
+
+  void setSymbolScanningMode(bool Value) { SymbolScanningMode = Value; }
 
   /// Run the parser on the input source buffer.
   virtual bool Run(bool NoInitialTextSection, bool NoFinalize = false) = 0;
@@ -209,28 +216,25 @@ public:
       MCInstPrinter *IP, MCAsmParserSemaCallback &SI) = 0;
 
   /// Emit a note at the location \p L, with the message \p Msg.
-  virtual void Note(SMLoc L, const Twine &Msg,
-                    SMRange Range = std::nullopt) = 0;
+  virtual void Note(SMLoc L, const Twine &Msg, SMRange Range = {}) = 0;
 
   /// Emit a warning at the location \p L, with the message \p Msg.
   ///
   /// \return The return value is true, if warnings are fatal.
-  virtual bool Warning(SMLoc L, const Twine &Msg,
-                       SMRange Range = std::nullopt) = 0;
+  virtual bool Warning(SMLoc L, const Twine &Msg, SMRange Range = {}) = 0;
 
   /// Return an error at the location \p L, with the message \p Msg. This
   /// may be modified before being emitted.
   ///
   /// \return The return value is always true, as an idiomatic convenience to
   /// clients.
-  bool Error(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt);
+  bool Error(SMLoc L, const Twine &Msg, SMRange Range = {});
 
   /// Emit an error at the location \p L, with the message \p Msg.
   ///
   /// \return The return value is always true, as an idiomatic convenience to
   /// clients.
-  virtual bool printError(SMLoc L, const Twine &Msg,
-                          SMRange Range = std::nullopt) = 0;
+  virtual bool printError(SMLoc L, const Twine &Msg, SMRange Range = {}) = 0;
 
   bool hasPendingError() { return !PendingErrors.empty(); }
 
@@ -255,7 +259,7 @@ public:
   const AsmToken &getTok() const;
 
   /// Report an error at the current lexer location.
-  bool TokError(const Twine &Msg, SMRange Range = std::nullopt);
+  bool TokError(const Twine &Msg, SMRange Range = {});
 
   bool parseTokenLoc(SMLoc &Loc);
   bool parseToken(AsmToken::TokenKind T, const Twine &Msg = "unexpected token");
@@ -278,6 +282,9 @@ public:
   /// Parse an identifier or string (as a quoted identifier) and set \p
   /// Res to the identifier contents.
   virtual bool parseIdentifier(StringRef &Res) = 0;
+
+  /// Parse identifier and get or create symbol for it.
+  bool parseSymbol(MCSymbol *&Res);
 
   /// Parse up to the end of statement and return the contents from the
   /// current token until the end of the statement; the current token on exit

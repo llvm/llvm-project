@@ -9,7 +9,7 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 ;   ARMHWLoops: Trip count does not fit into 32bits
 ;   preferPredicateOverEpilogue: hardware-loop is not profitable.
 ;
-define dso_local void @tail_folding(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) {
+define void @tail_folding(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) {
 ; CHECK-LABEL: tail_folding(
 ; CHECK:       vector.body:
 ; CHECK-NOT:   call <4 x i32> @llvm.masked.load.v4i32.p0(
@@ -40,7 +40,7 @@ for.body:
 ; The same test case but now with predicate.enable = true should get
 ; tail-folded.
 ;
-define dso_local void @predicate_loop_hint(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) {
+define void @predicate_loop_hint(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) {
 ; CHECK-LABEL: predicate_loop_hint(
 ; CHECK:       vector.body:
 ; CHECK:         %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
@@ -52,7 +52,7 @@ define dso_local void @predicate_loop_hint(ptr noalias nocapture %A, ptr noalias
 ; CHECK:         %index.next = add nuw i64 %index, 4
 ; CHECK:         br i1 %{{.*}}, label %{{.*}}, label %vector.body, !llvm.loop [[VEC_LOOP2:![0-9]+]]
 ;
-; CHECK:         br i1 %{{.*}}, label %{{.*}}, label %for.body, !llvm.loop [[SCALAR_LOOP2:![0-9]+]]
+; CHECK-NOT:     br i1 %{{.*}}, label %{{.*}}, label %for.body, !llvm.loop
 entry:
   br label %for.body
 
@@ -78,7 +78,6 @@ for.body:
 ; CHECK-NEXT: [[MD_RT_UNROLL_DIS]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK-NEXT: [[SCALAR_LOOP1]] = distinct !{[[SCALAR_LOOP1]], [[MD_RT_UNROLL_DIS]], [[MD_IS_VEC]]}
 ; CHECK-NEXT: [[VEC_LOOP2]] = distinct !{[[VEC_LOOP2]], [[MD_IS_VEC]], [[MD_RT_UNROLL_DIS]]}
-; CHECK-NEXT: [[SCALAR_LOOP2]] = distinct !{[[SCALAR_LOOP2]], [[MD_RT_UNROLL_DIS]], [[MD_IS_VEC]]}
 
 !6 = distinct !{!6, !7, !8}
 !7 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}

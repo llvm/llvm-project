@@ -33,9 +33,13 @@ define i32 @main() {
 !llvm.module.flags = !{!2, !3}
 !llvm.md = !{!5}
 
+; IRLinker shouldn't assert about duplicated operands.
+!llvm.ident = !{!6, !6}
+
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, enums: !4)
 !1 = !DIFile(filename: "main.cpp", directory: "tmp")
 !2 = !{i32 2, !"Dwarf Version", i32 4}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{}
 !5 = !{!4}
+!6 = !{!"foo"}

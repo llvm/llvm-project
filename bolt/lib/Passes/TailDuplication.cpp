@@ -97,8 +97,8 @@ bool TailDuplication::regIsPossiblyOverwritten(const MCInst &Inst, unsigned Reg,
   getCallerSavedRegs(Inst, WrittenRegs, BC);
   if (BC.MIB->isRep(Inst))
     BC.MIB->getRepRegs(WrittenRegs);
-  WrittenRegs &= BC.MIB->getAliases(Reg, false);
-  return WrittenRegs.any();
+  const BitVector &AllAliases = BC.MIB->getAliases(Reg, false);
+  return WrittenRegs.anyCommon(AllAliases);
 }
 
 bool TailDuplication::regIsDefinitelyOverwritten(const MCInst &Inst,
@@ -117,8 +117,8 @@ bool TailDuplication::regIsUsed(const MCInst &Inst, unsigned Reg,
                                 BinaryContext &BC) const {
   BitVector SrcRegs = BitVector(BC.MRI->getNumRegs(), false);
   BC.MIB->getSrcRegs(Inst, SrcRegs);
-  SrcRegs &= BC.MIB->getAliases(Reg, true);
-  return SrcRegs.any();
+  const BitVector &SmallerAliases = BC.MIB->getAliases(Reg, true);
+  return SrcRegs.anyCommon(SmallerAliases);
 }
 
 bool TailDuplication::isOverwrittenBeforeUsed(BinaryBasicBlock &StartBB,
@@ -167,18 +167,22 @@ void TailDuplication::constantAndCopyPropagate(
 
   BlocksToPropagate.insert(BlocksToPropagate.begin(), &OriginalBB);
   // Iterate through the original instructions to find one to propagate
-  for (auto Itr = OriginalBB.begin(); Itr != OriginalBB.end(); ++Itr) {
+  for (auto Itr = OriginalBB.begin(); Itr != OriginalBB.end();) {
     MCInst &OriginalInst = *Itr;
     // It must be a non conditional
-    if (BC.MIB->isConditionalMove(OriginalInst))
+    if (BC.MIB->isConditionalMove(OriginalInst)) {
+      ++Itr;
       continue;
+    }
 
     // Move immediate or move register
     if ((!BC.MII->get(OriginalInst.getOpcode()).isMoveImmediate() ||
          !OriginalInst.getOperand(1).isImm()) &&
         (!BC.MII->get(OriginalInst.getOpcode()).isMoveReg() ||
-         !OriginalInst.getOperand(1).isReg()))
+         !OriginalInst.getOperand(1).isReg())) {
+      ++Itr;
       continue;
+    }
 
     // True if this is constant propagation and not copy propagation
     bool ConstantProp = BC.MII->get(OriginalInst.getOpcode()).isMoveImmediate();
@@ -247,7 +251,9 @@ void TailDuplication::constantAndCopyPropagate(
       // to replace is active for constant propagation
       StaticInstructionDeletionCount++;
       DynamicInstructionDeletionCount += OriginalBB.getExecutionCount();
-      Itr = std::prev(OriginalBB.eraseInstruction(Itr));
+      Itr = OriginalBB.eraseInstruction(Itr);
+    } else {
+      ++Itr;
     }
   }
 }

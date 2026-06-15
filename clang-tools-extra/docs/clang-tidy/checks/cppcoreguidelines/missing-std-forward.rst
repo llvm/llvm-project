@@ -43,5 +43,12 @@ Options
    Specify the function used for forwarding. Default is `::std::forward`.
 
 This check implements `F.19
-<http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rf-forward>`_
+<http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rf-forward>`_
 from the C++ Core Guidelines.
+
+Limitations
+-----------
+
+Explicit object parameters (``this Self&&``) with a type constraint are not
+checked to avoid false positives. Such parameters are rarely intended to be
+perfectly forwarded.

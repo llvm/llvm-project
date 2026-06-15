@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CGCXXABI.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "clang/CodeGen/CodeGenABITypes.h"
@@ -62,8 +63,22 @@ CodeGenModule::getPointerAuthDeclDiscriminator(GlobalDecl Declaration) {
   uint16_t &EntityHash = PtrAuthDiscriminatorHashes[Declaration];
 
   if (EntityHash == 0) {
-    StringRef Name = getMangledName(Declaration);
-    EntityHash = llvm::getPointerAuthStableSipHash(Name);
+    const auto *ND = cast<NamedDecl>(Declaration.getDecl());
+    if (ND->hasAttr<AsmLabelAttr>() &&
+        ND->getAttr<AsmLabelAttr>()->getLabel().starts_with(
+            LLDBManglingABI::FunctionLabelPrefix)) {
+      // If the declaration comes from LLDB, the asm label has a prefix that
+      // would producing a different discriminator. Compute the real C++ mangled
+      // name instead so the discriminator matches what the original translation
+      // unit used.
+      SmallString<256> Buffer;
+      llvm::raw_svector_ostream Out(Buffer);
+      getCXXABI().getMangleContext().mangleCXXName(Declaration, Out);
+      EntityHash = llvm::getPointerAuthStableSipHash(Out.str());
+    } else {
+      StringRef Name = getMangledName(Declaration);
+      EntityHash = llvm::getPointerAuthStableSipHash(Name);
+    }
   }
 
   return EntityHash;
@@ -426,10 +441,10 @@ CodeGenModule::getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
                                         llvm::ConstantInt *OtherDiscriminator) {
   llvm::Constant *AddressDiscriminator;
   if (StorageAddress) {
-    assert(StorageAddress->getType() == UnqualPtrTy);
+    assert(StorageAddress->getType() == DefaultPtrTy);
     AddressDiscriminator = StorageAddress;
   } else {
-    AddressDiscriminator = llvm::Constant::getNullValue(UnqualPtrTy);
+    AddressDiscriminator = llvm::Constant::getNullValue(DefaultPtrTy);
   }
 
   llvm::ConstantInt *IntegerDiscriminator;
@@ -440,9 +455,10 @@ CodeGenModule::getConstantSignedPointer(llvm::Constant *Pointer, unsigned Key,
     IntegerDiscriminator = llvm::ConstantInt::get(Int64Ty, 0);
   }
 
-  return llvm::ConstantPtrAuth::get(Pointer,
-                                    llvm::ConstantInt::get(Int32Ty, Key),
-                                    IntegerDiscriminator, AddressDiscriminator);
+  return llvm::ConstantPtrAuth::get(
+      Pointer, llvm::ConstantInt::get(Int32Ty, Key), IntegerDiscriminator,
+      AddressDiscriminator,
+      /*DeactivationSymbol=*/llvm::Constant::getNullValue(DefaultPtrTy));
 }
 
 /// Does a given PointerAuthScheme require us to sign a value
@@ -529,7 +545,7 @@ llvm::Constant *CodeGenModule::getMemberFunctionPointer(llvm::Constant *Pointer,
         cast_or_null<llvm::ConstantInt>(PointerAuth.getDiscriminator()));
 
   if (const auto *MFT = dyn_cast<MemberPointerType>(FT.getTypePtr())) {
-    if (MFT->hasPointeeToToCFIUncheckedCalleeFunctionType())
+    if (MFT->hasPointeeToCFIUncheckedCalleeFunctionType())
       Pointer = llvm::NoCFIValue::get(cast<llvm::GlobalValue>(Pointer));
   }
 

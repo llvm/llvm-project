@@ -53,6 +53,7 @@ FailureOr<TilingResult> tensor::replaceExtractSliceWithTiledProducer(
         builder, sliceOp.getLoc(), sliceOp.getType(),
         tiledResult->tiledValues[0], offsets, sliceOp.getMixedSizes(), strides);
     tiledResult->tiledValues[0] = newSliceOp;
+    tiledResult->generatedSlices.push_back(newSliceOp);
   }
 
   return *tiledResult;
@@ -77,7 +78,7 @@ FailureOr<TilingResult> tensor::replaceInsertSlicesWithTiledConsumer(
       dyn_cast<TilingInterface>(consumerOperands.front()->getOwner());
   if (!consumerOp)
     return failure();
-  for (auto opOperand : consumerOperands.drop_front()) {
+  for (auto *opOperand : consumerOperands.drop_front()) {
     if (opOperand->getOwner() != consumerOp) {
       LLVM_DEBUG({
         llvm::dbgs()

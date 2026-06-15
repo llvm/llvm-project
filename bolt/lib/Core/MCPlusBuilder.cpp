@@ -159,6 +159,50 @@ bool MCPlusBuilder::isTailCall(const MCInst &Inst) const {
   return false;
 }
 
+void MCPlusBuilder::setNegateRAState(MCInst &Inst) const {
+  assert(!hasAnnotation(Inst, MCAnnotation::kNegateState));
+  setAnnotationOpValue(Inst, MCAnnotation::kNegateState, true);
+}
+
+bool MCPlusBuilder::hasNegateRAState(const MCInst &Inst) const {
+  return hasAnnotation(Inst, MCAnnotation::kNegateState);
+}
+
+void MCPlusBuilder::setRememberState(MCInst &Inst) const {
+  assert(!hasAnnotation(Inst, MCAnnotation::kRememberState));
+  setAnnotationOpValue(Inst, MCAnnotation::kRememberState, true);
+}
+
+bool MCPlusBuilder::hasRememberState(const MCInst &Inst) const {
+  return hasAnnotation(Inst, MCAnnotation::kRememberState);
+}
+
+void MCPlusBuilder::setRestoreState(MCInst &Inst) const {
+  assert(!hasAnnotation(Inst, MCAnnotation::kRestoreState));
+  setAnnotationOpValue(Inst, MCAnnotation::kRestoreState, true);
+}
+
+bool MCPlusBuilder::hasRestoreState(const MCInst &Inst) const {
+  return hasAnnotation(Inst, MCAnnotation::kRestoreState);
+}
+
+void MCPlusBuilder::setRAState(MCInst &Inst, bool State) const {
+  assert(!hasAnnotation(Inst, MCAnnotation::kRASigned));
+  assert(!hasAnnotation(Inst, MCAnnotation::kRAUnsigned));
+  if (State)
+    setAnnotationOpValue(Inst, MCAnnotation::kRASigned, true);
+  else
+    setAnnotationOpValue(Inst, MCAnnotation::kRAUnsigned, true);
+}
+
+std::optional<bool> MCPlusBuilder::getRAState(const MCInst &Inst) const {
+  if (hasAnnotation(Inst, MCAnnotation::kRASigned))
+    return true;
+  if (hasAnnotation(Inst, MCAnnotation::kRAUnsigned))
+    return false;
+  return std::nullopt;
+}
+
 std::optional<MCLandingPad> MCPlusBuilder::getEHInfo(const MCInst &Inst) const {
   if (!isCall(Inst))
     return std::nullopt;
@@ -378,8 +422,8 @@ void MCPlusBuilder::stripAnnotations(MCInst &Inst, bool KeepTC) const {
     setTailCall(Inst);
 }
 
-void MCPlusBuilder::printAnnotations(const MCInst &Inst,
-                                     raw_ostream &OS) const {
+void MCPlusBuilder::printAnnotations(const MCInst &Inst, raw_ostream &OS,
+                                     bool PrintMemData) const {
   std::optional<unsigned> FirstAnnotationOp = getFirstAnnotationOpIndex(Inst);
   if (!FirstAnnotationOp)
     return;
@@ -390,7 +434,11 @@ void MCPlusBuilder::printAnnotations(const MCInst &Inst,
     const int64_t Value = extractAnnotationValue(Imm);
     const auto *Annotation = reinterpret_cast<const MCAnnotation *>(Value);
     if (Index >= MCAnnotation::kGeneric) {
-      OS << " # " << AnnotationNames[Index - MCAnnotation::kGeneric] << ": ";
+      std::string AnnotationName =
+          AnnotationNames[Index - MCAnnotation::kGeneric];
+      if (!PrintMemData && AnnotationName == "MemoryAccessProfile")
+        continue;
+      OS << " # " << AnnotationName << ": ";
       Annotation->print(OS);
     }
   }

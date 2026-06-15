@@ -107,10 +107,42 @@ static DecodeStatus DecodeFPCSCRegisterClass(MCInst &Inst, uint64_t RegNo,
 }
 #define DecodeFPICRegisterClass DecodeFPCSCRegisterClass
 
+static DecodeStatus DecodeCCRCRegisterClass(MCInst &Inst,
+                                            const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(M68k::CCR));
+  return DecodeStatus::Success;
+}
+
+static DecodeStatus DecodeSRCRegisterClass(MCInst &Inst,
+                                           const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(M68k::SR));
+  return DecodeStatus::Success;
+}
+
 static DecodeStatus DecodeImm32(MCInst &Inst, uint64_t Imm, uint64_t Address,
                                 const void *Decoder) {
   Inst.addOperand(MCOperand::createImm(M68k::swapWord<uint32_t>(Imm)));
   return DecodeStatus::Success;
+}
+
+static DecodeStatus DecodeScale(MCInst &Inst, uint64_t Imm, uint64_t Address,
+                                const void *Decoder) {
+  assert(isUInt<2>(Imm));
+  Inst.addOperand(MCOperand::createImm(1 << Imm));
+  return DecodeStatus::Success;
+}
+
+static DecodeStatus DecodeIndexRegister(MCInst &Inst, uint64_t IndexReg,
+                                        uint64_t Address, const void *Decoder) {
+  // 4 bits actual RegNo + 1 bit index suppress
+  assert(isUInt<5>(IndexReg));
+  if (IndexReg & 0b10000) {
+    // Index suppress, fill in with NoReg
+    Inst.addOperand(MCOperand::createReg(M68k::NoRegister));
+    return DecodeStatus::Success;
+  }
+
+  return DecodeXR32RegisterClass(Inst, IndexReg & 0b1111, Address, Decoder);
 }
 
 #include "M68kGenDisassemblerTables.inc"

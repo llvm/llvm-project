@@ -16,6 +16,8 @@
 #ifndef MLIR_DIALECT_SPIRV_IR_COOPERATIVE_MATRIX_OPS
 #define MLIR_DIALECT_SPIRV_IR_COOPERATIVE_MATRIX_OPS
 
+include "mlir/Interfaces/AlignmentAttrInterface.td"
+
 //===----------------------------------------------------------------------===//
 // SPV_KHR_cooperative_matrix extension ops.
 //===----------------------------------------------------------------------===//
@@ -62,7 +64,7 @@ def SPIRV_KHRCooperativeMatrixLengthOp :
 
 // -----
 
-def SPIRV_KHRCooperativeMatrixLoadOp : SPIRV_KhrVendorOp<"CooperativeMatrixLoad", []> {
+def SPIRV_KHRCooperativeMatrixLoadOp : SPIRV_KhrVendorOp<"CooperativeMatrixLoad", [DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = "Loads a cooperative matrix through a pointer";
 
   let description = [{
@@ -129,7 +131,7 @@ def SPIRV_KHRCooperativeMatrixLoadOp : SPIRV_KhrVendorOp<"CooperativeMatrixLoad"
     SPIRV_KHR_CooperativeMatrixLayoutAttr:$matrix_layout,
     SPIRV_Integer:$stride,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_operand,
-    OptionalAttr<I32Attr>:$alignment
+    OptionalAttr<IntValidAlignment<I32Attr>>:$alignment
   );
 
   let results = (outs
@@ -148,7 +150,7 @@ def SPIRV_KHRCooperativeMatrixLoadOp : SPIRV_KhrVendorOp<"CooperativeMatrixLoad"
 
 // -----
 
-def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStore", []> {
+def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStore", [DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = "Stores a cooperative matrix through a pointer";
 
   let description = [{
@@ -214,7 +216,7 @@ def SPIRV_KHRCooperativeMatrixStoreOp : SPIRV_KhrVendorOp<"CooperativeMatrixStor
     SPIRV_KHR_CooperativeMatrixLayoutAttr:$matrix_layout,
     SPIRV_Integer:$stride,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_operand,
-    OptionalAttr<I32Attr>:$alignment
+    OptionalAttr<IntValidAlignment<I32Attr>>:$alignment
   );
 
   let results = (outs);

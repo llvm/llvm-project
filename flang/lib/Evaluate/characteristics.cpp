@@ -458,7 +458,7 @@ std::optional<DummyDataObject> DummyDataObject::Characterize(
 }
 
 bool DummyDataObject::CanBePassedViaImplicitInterface(
-    std::string *whyNot) const {
+    std::string *whyNot, bool checkCUDA) const {
   if ((attrs &
           Attrs{Attr::Allocatable, Attr::Asynchronous, Attr::Optional,
               Attr::Pointer, Attr::Target, Attr::Value, Attr::Volatile})
@@ -482,7 +482,7 @@ bool DummyDataObject::CanBePassedViaImplicitInterface(
       *whyNot = "a dummy argument is polymorphic";
     }
     return false; // 15.4.2.2(3)(f)
-  } else if (cudaDataAttr) {
+  } else if (checkCUDA && cudaDataAttr) {
     if (whyNot) {
       *whyNot = "a dummy argument has a CUDA data attribute";
     }
@@ -625,8 +625,7 @@ static std::optional<Procedure> CharacterizeProcedure(
   if (seenProcs.find(symbol) != seenProcs.end()) {
     std::string procsList{GetSeenProcs(seenProcs)};
     context.messages().Say(symbol.name(),
-        "Procedure '%s' is recursively defined.  Procedures in the cycle:"
-        " %s"_err_en_US,
+        "Procedure '%s' is recursively defined.  Procedures in the cycle: %s"_err_en_US,
         symbol.name(), procsList);
     return std::nullopt;
   }
@@ -776,8 +775,10 @@ static std::optional<Procedure> CharacterizeProcedure(
             return std::optional<Procedure>{};
           },
           [&](const auto &) {
-            context.messages().Say(
-                "'%s' is not a procedure"_err_en_US, symbol.name());
+            if (emitError) {
+              context.messages().Say(
+                  "'%s' is not a procedure"_err_en_US, symbol.name());
+            }
             return std::optional<Procedure>{};
           },
       },
@@ -786,6 +787,7 @@ static std::optional<Procedure> CharacterizeProcedure(
     CopyAttrs<Procedure, Procedure::Attr>(symbol, *result,
         {
             {semantics::Attr::BIND_C, Procedure::Attr::BindC},
+            {semantics::Attr::SIMPLE, Procedure::Attr::Simple},
         });
     CopyAttrs<Procedure, Procedure::Attr>(DEREF(GetMainEntry(&symbol)), *result,
         {
@@ -1012,9 +1014,10 @@ common::Intent DummyArgument::GetIntent() const {
       u);
 }
 
-bool DummyArgument::CanBePassedViaImplicitInterface(std::string *whyNot) const {
+bool DummyArgument::CanBePassedViaImplicitInterface(
+    std::string *whyNot, bool checkCUDA) const {
   if (const auto *object{std::get_if<DummyDataObject>(&u)}) {
-    return object->CanBePassedViaImplicitInterface(whyNot);
+    return object->CanBePassedViaImplicitInterface(whyNot, checkCUDA);
   } else if (const auto *proc{std::get_if<DummyProcedure>(&u)}) {
     return proc->CanBePassedViaImplicitInterface(whyNot);
   } else {
@@ -1329,6 +1332,9 @@ bool Procedure::IsCompatibleWith(const Procedure &actual,
   if (!attrs.test(Attr::Pure)) {
     actualAttrs.reset(Attr::Pure);
   }
+  if (!attrs.test(Attr::Simple)) {
+    actualAttrs.reset(Attr::Simple);
+  }
   if (!attrs.test(Attr::Elemental) && specificIntrinsic) {
     actualAttrs.reset(Attr::Elemental);
   }
@@ -1501,7 +1507,8 @@ std::optional<Procedure> Procedure::FromActuals(const ProcedureDesignator &proc,
   return callee;
 }
 
-bool Procedure::CanBeCalledViaImplicitInterface(std::string *whyNot) const {
+bool Procedure::CanBeCalledViaImplicitInterface(
+    std::string *whyNot, bool checkCUDA) const {
   if (attrs.test(Attr::Elemental)) {
     if (whyNot) {
       *whyNot = "the procedure is elemental";
@@ -1524,7 +1531,7 @@ bool Procedure::CanBeCalledViaImplicitInterface(std::string *whyNot) const {
     return false;
   } else {
     for (const DummyArgument &arg : dummyArguments) {
-      if (!arg.CanBePassedViaImplicitInterface(whyNot)) {
+      if (!arg.CanBePassedViaImplicitInterface(whyNot, checkCUDA)) {
         return false;
       }
     }
@@ -1885,6 +1892,12 @@ bool DistinguishUtils::Distinguishable(const TypeAndShape &x,
   if (ignoreTKR.test(common::IgnoreTKR::Rank)) {
   } else if (x.attrs().test(TypeAndShape::Attr::AssumedRank) ||
       y.attrs().test(TypeAndShape::Attr::AssumedRank)) {
+  } else if ((x.attrs().test(TypeAndShape::Attr::AssumedSize) &&
+                 x.type().IsAssumedType() && y.Rank() == 0) ||
+      (y.attrs().test(TypeAndShape::Attr::AssumedSize) &&
+          y.type().IsAssumedType() && x.Rank() == 0)) {
+    // F'2023 15.5.2.5 p14, third bullet: scalar actual can be passed
+    // to TYPE(*) assumed-size dummy argument
   } else if (x.Rank() != y.Rank()) {
     return true;
   }

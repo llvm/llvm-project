@@ -6,19 +6,6 @@
 ; RUN:   -verify-machineinstrs -target-abi=lp64d < %s \
 ; RUN:   | FileCheck -check-prefixes=CHECK,RV64IFD %s
 
-declare <1 x half> @llvm.exp10.v1f16(<1 x half>)
-declare <2 x half> @llvm.exp10.v2f16(<2 x half>)
-declare <3 x half> @llvm.exp10.v3f16(<3 x half>)
-declare <4 x half> @llvm.exp10.v4f16(<4 x half>)
-declare <1 x float> @llvm.exp10.v1f32(<1 x float>)
-declare <2 x float> @llvm.exp10.v2f32(<2 x float>)
-declare <3 x float> @llvm.exp10.v3f32(<3 x float>)
-declare <4 x float> @llvm.exp10.v4f32(<4 x float>)
-declare <1 x double> @llvm.exp10.v1f64(<1 x double>)
-declare <2 x double> @llvm.exp10.v2f64(<2 x double>)
-declare <3 x double> @llvm.exp10.v3f64(<3 x double>)
-declare <4 x double> @llvm.exp10.v4f64(<4 x double>)
-
 define <1 x half> @exp10_v1f16(<1 x half> %x) {
 ; RV32IFD-LABEL: exp10_v1f16:
 ; RV32IFD:       # %bb.0:
@@ -142,13 +129,13 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; RV32IFD-NEXT:    .cfi_offset fs0, -24
 ; RV32IFD-NEXT:    .cfi_offset fs1, -32
 ; RV32IFD-NEXT:    .cfi_offset fs2, -40
-; RV32IFD-NEXT:    mv s0, a0
-; RV32IFD-NEXT:    lhu a0, 8(a1)
-; RV32IFD-NEXT:    lhu a2, 0(a1)
+; RV32IFD-NEXT:    lhu a2, 8(a1)
+; RV32IFD-NEXT:    lhu a3, 0(a1)
 ; RV32IFD-NEXT:    lhu a1, 4(a1)
-; RV32IFD-NEXT:    fmv.w.x fs0, a0
-; RV32IFD-NEXT:    fmv.w.x fs1, a2
+; RV32IFD-NEXT:    fmv.w.x fs0, a2
+; RV32IFD-NEXT:    fmv.w.x fs1, a3
 ; RV32IFD-NEXT:    fmv.w.x fa0, a1
+; RV32IFD-NEXT:    mv s0, a0
 ; RV32IFD-NEXT:    call __extendhfsf2
 ; RV32IFD-NEXT:    call exp10f
 ; RV32IFD-NEXT:    call __truncsfhf2
@@ -266,15 +253,15 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; RV32IFD-NEXT:    .cfi_offset fs1, -40
 ; RV32IFD-NEXT:    .cfi_offset fs2, -48
 ; RV32IFD-NEXT:    .cfi_offset fs3, -56
-; RV32IFD-NEXT:    mv s0, a0
-; RV32IFD-NEXT:    lhu a0, 12(a1)
-; RV32IFD-NEXT:    lhu a2, 0(a1)
-; RV32IFD-NEXT:    lhu a3, 4(a1)
+; RV32IFD-NEXT:    lhu a2, 12(a1)
+; RV32IFD-NEXT:    lhu a3, 0(a1)
+; RV32IFD-NEXT:    lhu a4, 4(a1)
 ; RV32IFD-NEXT:    lhu a1, 8(a1)
-; RV32IFD-NEXT:    fmv.w.x fs0, a0
-; RV32IFD-NEXT:    fmv.w.x fs1, a2
-; RV32IFD-NEXT:    fmv.w.x fs2, a3
+; RV32IFD-NEXT:    fmv.w.x fs0, a2
+; RV32IFD-NEXT:    fmv.w.x fs1, a3
+; RV32IFD-NEXT:    fmv.w.x fs2, a4
 ; RV32IFD-NEXT:    fmv.w.x fa0, a1
+; RV32IFD-NEXT:    mv s0, a0
 ; RV32IFD-NEXT:    call __extendhfsf2
 ; RV32IFD-NEXT:    call exp10f
 ; RV32IFD-NEXT:    call __truncsfhf2
@@ -548,8 +535,8 @@ define <3 x float> @exp10_v3f32(<3 x float> %x) {
 ; RV64IFD-NEXT:    fmv.s fa0, fa1
 ; RV64IFD-NEXT:    call exp10f
 ; RV64IFD-NEXT:    fmv.x.w a0, fa0
-; RV64IFD-NEXT:    slli s1, a0, 32
 ; RV64IFD-NEXT:    fmv.s fa0, fs1
+; RV64IFD-NEXT:    slli s1, a0, 32
 ; RV64IFD-NEXT:    call exp10f
 ; RV64IFD-NEXT:    fmv.x.w a0, fa0
 ; RV64IFD-NEXT:    slli a0, a0, 32

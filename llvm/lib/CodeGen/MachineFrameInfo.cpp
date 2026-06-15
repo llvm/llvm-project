@@ -63,9 +63,10 @@ int MachineFrameInfo::CreateStackObject(uint64_t Size, Align Alignment,
   return Index;
 }
 
-int MachineFrameInfo::CreateSpillStackObject(uint64_t Size, Align Alignment) {
+int MachineFrameInfo::CreateSpillStackObject(uint64_t Size, Align Alignment,
+                                             TargetStackID::Value StackID) {
   Alignment = clampStackAlignment(!StackRealignable, Alignment, StackAlignment);
-  CreateStackObject(Size, Alignment, true);
+  CreateStackObject(Size, Alignment, true, nullptr, StackID);
   int Index = (int)Objects.size() - NumFixedObjects - 1;
   ensureMaxAlignment(Alignment);
   return Index;
@@ -250,14 +251,14 @@ void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
     OS << "save points:\n";
 
     for (auto &item : SavePoints)
-      OS << printMBBReference(*item) << "\n";
+      OS << printMBBReference(*item.first) << "\n";
   } else
     OS << "save points are empty\n";
 
   if (!RestorePoints.empty()) {
     OS << "restore points:\n";
     for (auto &item : RestorePoints)
-      OS << printMBBReference(*item) << "\n";
+      OS << printMBBReference(*item.first) << "\n";
   } else
     OS << "restore points are empty\n";
 }

@@ -24,14 +24,14 @@ namespace interp {
 /// Stack frame storing temporaries and parameters.
 class InterpStack final {
 public:
-  InterpStack() {}
+  InterpStack() = default;
 
   /// Destroys the stack, freeing up storage.
   ~InterpStack();
 
   /// Constructs a value in place on the top of the stack.
   template <typename T, typename... Tys> void push(Tys &&...Args) {
-    new (grow(aligned_size<T>())) T(std::forward<Tys>(Args)...);
+    new (grow<aligned_size<T>()>()) T(std::forward<Tys>(Args)...);
     ItemTypes.push_back(toPrimType<T>());
   }
 
@@ -89,7 +89,7 @@ public:
 private:
   /// All stack slots are aligned to the native pointer alignment for storage.
   /// The size of an object is rounded up to a pointer alignment multiple.
-  template <typename T> constexpr size_t aligned_size() const {
+  template <typename T> static constexpr size_t aligned_size() {
     constexpr size_t PtrAlign = alignof(void *);
     return ((sizeof(T) + PtrAlign - 1) / PtrAlign) * PtrAlign;
   }
@@ -100,7 +100,30 @@ private:
   }
 
   /// Grows the stack to accommodate a value and returns a pointer to it.
-  void *grow(size_t Size);
+  template <size_t Size> void *grow() {
+    assert(Size < ChunkSize - sizeof(StackChunk) && "Object too large");
+    static_assert(aligned(Size));
+
+    // Allocate a new stack chunk if necessary.
+    if (LLVM_UNLIKELY(!Chunk)) {
+      Chunk = new (std::malloc(ChunkSize)) StackChunk(Chunk);
+    } else if (LLVM_UNLIKELY(Chunk->size() >
+                             ChunkSize - sizeof(StackChunk) - Size)) {
+      if (Chunk->Next) {
+        Chunk = Chunk->Next;
+      } else {
+        StackChunk *Next = new (std::malloc(ChunkSize)) StackChunk(Chunk);
+        Chunk->Next = Next;
+        Chunk = Next;
+      }
+    }
+
+    auto *Object = reinterpret_cast<void *>(Chunk->start() + Chunk->Size);
+    Chunk->Size += Size;
+    StackSize += Size;
+    return Object;
+  }
+
   /// Returns a pointer from the top of the stack.
   void *peekData(size_t Size) const;
   /// Shrinks the stack.
@@ -118,13 +141,13 @@ private:
   struct StackChunk {
     StackChunk *Next;
     StackChunk *Prev;
-    char *End;
+    uint32_t Size;
 
     StackChunk(StackChunk *Prev = nullptr)
-        : Next(nullptr), Prev(Prev), End(reinterpret_cast<char *>(this + 1)) {}
+        : Next(nullptr), Prev(Prev), Size(0) {}
 
     /// Returns the size of the chunk, minus the header.
-    size_t size() const { return End - start(); }
+    size_t size() const { return Size; }
 
     /// Returns a pointer to the start of the data region.
     char *start() { return reinterpret_cast<char *>(this + 1); }
@@ -151,29 +174,24 @@ private:
     else if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, Boolean>)
       return PT_Bool;
     else if constexpr (std::is_same_v<T, int8_t> ||
-                       std::is_same_v<T, Integral<8, true>>)
+                       std::is_same_v<T, Char<true>>)
       return PT_Sint8;
     else if constexpr (std::is_same_v<T, uint8_t> ||
-                       std::is_same_v<T, Integral<8, false>>)
+                       std::is_same_v<T, Char<false>>)
       return PT_Uint8;
-    else if constexpr (std::is_same_v<T, int16_t> ||
-                       std::is_same_v<T, Integral<16, true>>)
+    else if constexpr (std::is_same_v<T, Integral<16, true>>)
       return PT_Sint16;
-    else if constexpr (std::is_same_v<T, uint16_t> ||
-                       std::is_same_v<T, Integral<16, false>>)
+    else if constexpr (std::is_same_v<T, Integral<16, false>>)
       return PT_Uint16;
-    else if constexpr (std::is_same_v<T, int32_t> ||
-                       std::is_same_v<T, Integral<32, true>>)
+    else if constexpr (std::is_same_v<T, Integral<32, true>>)
       return PT_Sint32;
-    else if constexpr (std::is_same_v<T, uint32_t> ||
-                       std::is_same_v<T, Integral<32, false>>)
+    else if constexpr (std::is_same_v<T, Integral<32, false>>)
       return PT_Uint32;
-    else if constexpr (std::is_same_v<T, int64_t> ||
-                       std::is_same_v<T, Integral<64, true>>)
+    else if constexpr (std::is_same_v<T, Integral<64, true>>)
       return PT_Sint64;
-    else if constexpr (std::is_same_v<T, uint64_t> ||
-                       std::is_same_v<T, Integral<64, false>>)
+    else if constexpr (std::is_same_v<T, Integral<64, false>>)
       return PT_Uint64;
+
     else if constexpr (std::is_same_v<T, Floating>)
       return PT_Float;
     else if constexpr (std::is_same_v<T, IntegralAP<true>>)

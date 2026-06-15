@@ -16,7 +16,6 @@ namespace llvm {
 class MCFixup;
 class MCInst;
 class MCSubtargetInfo;
-class raw_ostream;
 template<typename T> class SmallVectorImpl;
 
 /// MCCodeEmitter - Generic instruction encoding interface.
@@ -36,6 +35,12 @@ public:
   virtual void encodeInstruction(const MCInst &Inst, SmallVectorImpl<char> &CB,
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const = 0;
+
+protected:
+  // Helper function used by CodeEmitterGen for error reporting.
+  [[noreturn]] static void reportUnsupportedInst(const MCInst &Inst);
+  [[noreturn]] static void reportUnsupportedOperand(const MCInst &Inst,
+                                                    unsigned OpNum);
 };
 
 } // end namespace llvm

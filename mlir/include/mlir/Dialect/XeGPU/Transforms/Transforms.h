@@ -9,9 +9,11 @@
 #ifndef MLIR_DIALECT_XEGPU_TRANSFORMS_TRANSFORMS_H
 #define MLIR_DIALECT_XEGPU_TRANSFORMS_TRANSFORMS_H
 
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/LogicalResult.h"
-#include "mlir/IR/Operation.h"
 
 #include <functional>
 #include <optional>
@@ -57,12 +59,34 @@ struct UnrollOptions {
   }
 };
 
-/// Appends patterns for folding aliasing ops into XeGPU ops into `patterns`.
-void populateXeGPUFoldAliasOpsPatterns(RewritePatternSet &patterns);
-
+/// Appends patterns for optimizing block load operations into `patterns`.
+void populateXeGPUPeepHoleOptimizerPatterns(RewritePatternSet &patterns);
+/// Appends patterns for array length optimization into `patterns`.
+void populateXeGPUArrayLengthOptimizationPatterns(RewritePatternSet &patterns);
 /// Appends patterns for XeGPU SIMT distribution into `patterns`.
 void populateXeGPUSubgroupDistributePatterns(RewritePatternSet &patterns);
+/// Appends patterns for moving function body into gpu.warp_execute_on_lane0 op.
+void populateXeGPUMoveFuncBodyToWarpOpPatterns(RewritePatternSet &patterns);
+/// Define the type conversions needed for XeGPU workgroup to subgroup
+/// distribution. This includes a context-aware 1:N conversion for VectorType
+/// (using the distribute layout attribute on the Value) and a 1:N conversion
+/// for TensorDescType.
+void populateXeGPUWgToSgDistributeTypeConversions(TypeConverter &converter,
+                                                  Operation *topLevelOp);
+/// Appends patterns for XeGPU workgroup to subgroup distribution into
+/// `patterns`.
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);
+/// Define only the type conversions needed for XeGPU subgroup to lane
+/// distribution.
+void populateXeGPUSgToLaneDistributeTypeConversions(
+    TypeConverter &typeConverter, Operation *topLevelOp);
+/// Defines type conversions and legality for XeGPU subgroup to lane
+/// distribution and appends the required conversion patterns into `patterns`.
+/// Appends patterns for XeGPU subgroup to lane distribution into
+/// `patterns`.
+void populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    ConversionTarget &target, Operation *topLevelOp);
 
 /// Collect a set of patterns to unroll xegpu operations to a smaller shapes.
 /// Users can control whether an operation to be unrolled or not, as well as
@@ -74,7 +98,7 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);
 ///   1. the unrolled type `unrolledType` and number of unrolled instances
 ///   `numUnrolledInstances` are computed from the `targetShape`.
 ///   2. pack each operand. ExtractStridedSlice are created to break-up the
-///   vector operands. And BuiltinUnrealizedCastop are created to break-up
+///   vector operands. And BuiltinUnrealizedCastOp are created to break-up
 ///    the TensorDesc operands.
 ///   3. the original op is cloned `numUnrolledInstances` times, once for each
 ///   result.

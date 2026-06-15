@@ -23,6 +23,16 @@ define i32 @weighted_select1(i32 %a, i32 %b, i1 %cmp) {
   ret i32 %sel
 }
 
+; But don't do anything for optnone functions.
+define i32 @weighted_select1_optnone(i32 %a, i32 %b, i1 %cmp) optnone noinline {
+; CHECK-LABEL: @weighted_select1_optnone(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP:%.*]], i32 [[A:%.*]], i32 [[B:%.*]], !prof [[PROF16]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %sel = select i1 %cmp, i32 %a, i32 %b, !prof !15
+  ret i32 %sel
+}
+
 ; If a select is obviously predictable (reversed profile weights),
 ; turn it into a branch.
 define i32 @weighted_select2(i32 %a, i32 %b, i1 %cmp) {
@@ -524,6 +534,8 @@ declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 declare void @free(ptr nocapture)
 
+!29 = !{null}
+!30 = !DISubroutineType(types: !29)
 !llvm.module.flags = !{!0, !26, !27}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
@@ -548,7 +560,7 @@ declare void @free(ptr nocapture)
 !20 = !{}
 !21 = !DIFile(filename: "test.c", directory: "/test")
 !22 = distinct !DICompileUnit(language: DW_LANG_C99, file: !21, producer: "clang version 15.0.0", isOptimized: true, emissionKind: FullDebug, globals: !25, splitDebugInlining: false, nameTableKind: None)
-!23 = distinct !DISubprogram(name: "test", scope: !21, file: !21, line: 1, unit: !22)
+!23 = distinct !DISubprogram(name: "test", scope: !21, file: !21, line: 1, type: !30, unit: !22)
 !24 = !DILocalVariable(name: "x", scope: !23)
 !25 = !{}
 !26 = !{i32 2, !"Dwarf Version", i32 4}

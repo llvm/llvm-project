@@ -255,3 +255,83 @@ func.func @no_crash_with_different_source_type() {
   %1 = vector.broadcast %0 : i64 to vector<128xi64>
   llvm.return
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/187972
+// DeadCodeAnalysis::visitRegionBranchEdges must not dereference the front()
+// of an empty region (acc.serial with no blocks).
+
+// CHECK-LABEL: no_crash_acc_serial_empty_region
+func.func @no_crash_acc_serial_empty_region() {
+  // CHECK: acc.serial
+  acc.serial {
+  }
+  return
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/188408
+// isRegionOrCallableReturn must guard getTerminator() with mightHaveTerminator()
+// to avoid asserting on blocks in nested acc regions without terminators.
+
+// CHECK-LABEL: no_crash_acc_kernel_environment
+func.func @no_crash_acc_kernel_environment(%data: memref<8xi32>) {
+  // CHECK: acc.kernel_environment
+  acc.kernel_environment {
+    acc.compute_region {
+      acc.yield
+    } {origin = "acc.parallel"}
+  }
+  return
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/187973
+// SwitchOp::getEntrySuccessorRegions must not call IntegerAttr::getInt() on
+// an unsigned integer type — that function asserts signless/index only.
+
+// CHECK-LABEL: no_crash_emitc_switch_unsigned_condition
+func.func @no_crash_emitc_switch_unsigned_condition() {
+  // CHECK: emitc.constant
+  %0 = "emitc.constant"() {value = 1 : ui32} : () -> ui32
+  // CHECK: emitc.switch
+  emitc.switch %0 : ui32
+  case 2 {
+    emitc.yield
+  }
+  default {
+    emitc.yield
+  }
+  return
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/137509
+//
+// %a (the ^bb3 block arg) joins ^bb1's Constant %c1 with ^bb2's non-foldable
+// %v, so %a's lattice is overdefined. %cast2's fold collapses the round-trip
+// cast chain to %a - a Value that is not one of %cast2's own operands - so
+// constant propagation must read %a's lattice directly to compute %cast2's.
+// %a being overdefined, the cast chain is preserved.
+
+// CHECK-LABEL: func @fold_to_non_operand_value
+func.func @fold_to_non_operand_value(%x: i64, %cond: i1) -> i64 {
+  %c1 = arith.constant 1 : i64
+  cf.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  cf.br ^bb3(%c1 : i64)
+^bb2:
+  %v = arith.addi %x, %c1 : i64
+  cf.br ^bb3(%v : i64)
+^bb3(%a: i64):
+  // CHECK: %[[CAST1:.*]] = builtin.unrealized_conversion_cast %{{.*}} : i64 to index
+  // CHECK: %[[CAST2:.*]] = builtin.unrealized_conversion_cast %[[CAST1]] : index to i64
+  // CHECK: return %[[CAST2]] : i64
+  %cast1 = builtin.unrealized_conversion_cast %a : i64 to index
+  %cast2 = builtin.unrealized_conversion_cast %cast1 : index to i64
+  return %cast2 : i64
+}

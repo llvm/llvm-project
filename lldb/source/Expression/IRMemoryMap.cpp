@@ -122,12 +122,9 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
           // it can make it harder to debug null dereference crashes
           // in the inferior.
           ret = region_info.GetRange().GetRangeEnd();
-        } else if (region_info.GetReadable() !=
-                       MemoryRegionInfo::OptionalBool::eNo ||
-                   region_info.GetWritable() !=
-                       MemoryRegionInfo::OptionalBool::eNo ||
-                   region_info.GetExecutable() !=
-                       MemoryRegionInfo::OptionalBool::eNo) {
+        } else if (region_info.GetReadable() != eLazyBoolNo ||
+                   region_info.GetWritable() != eLazyBoolNo ||
+                   region_info.GetExecutable() != eLazyBoolNo) {
           if (region_info.GetRange().GetRangeEnd() - 1 >= end_of_memory) {
             ret = LLDB_INVALID_ADDRESS;
             break;
@@ -143,7 +140,11 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
         err = process_sp->GetMemoryRegionInfo(
             region_info.GetRange().GetRangeEnd(), region_info);
         if (err.Fail()) {
-          lldbassert(0 && "GetMemoryRegionInfo() succeeded, then failed");
+          // The target can't describe memory beyond this point (e.g.
+          // WebAssembly linear memory). Treat the remaining address space
+          // as unmapped.
+          if (ret + size < end_of_memory)
+            return ret;
           ret = LLDB_INVALID_ADDRESS;
           break;
         }
@@ -637,10 +638,19 @@ void IRMemoryMap::WriteScalarToMemory(lldb::addr_t process_address,
 }
 
 void IRMemoryMap::WritePointerToMemory(lldb::addr_t process_address,
-                                       lldb::addr_t address, Status &error) {
+                                       lldb::addr_t pointer, Status &error) {
   error.Clear();
 
-  Scalar scalar(address);
+  /// Only ask the Process to fix `pointer` if the address belongs to the
+  /// process. An address belongs to the process if the Allocation policy is not
+  /// eAllocationPolicyHostOnly.
+  auto it = FindAllocation(pointer, 1);
+  if (it == m_allocations.end() ||
+      it->second.m_policy != AllocationPolicy::eAllocationPolicyHostOnly)
+    if (auto process_sp = GetProcessWP().lock())
+      pointer = process_sp->FixAnyAddress(pointer);
+
+  Scalar scalar(pointer);
 
   WriteScalarToMemory(process_address, scalar, GetAddressByteSize(), error);
 }

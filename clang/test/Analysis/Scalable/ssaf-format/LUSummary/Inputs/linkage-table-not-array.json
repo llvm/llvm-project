@@ -1,0 +1,11 @@
+{
+  "lu_namespace": [
+    {
+      "kind": "LinkUnit",
+      "name": "test.exe"
+    }
+  ],
+  "id_table": [],
+  "linkage_table": {},
+  "data": []
+}

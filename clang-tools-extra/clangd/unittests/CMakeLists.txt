@@ -54,6 +54,7 @@ add_unittest(ClangdUnitTests ClangdTests
   DumpASTTests.cpp
   ExpectedTypeTest.cpp
   FeatureModulesTests.cpp
+  FeatureModulesRegistryTests.cpp
   FileDistanceTests.cpp
   FileIndexTests.cpp
   FindSymbolsTests.cpp
@@ -147,6 +148,9 @@ add_unittest(ClangdUnitTests ClangdTests
   ${REMOTE_TEST_SOURCES}
 
   $<TARGET_OBJECTS:obj.clangDaemonTweaks>
+
+  # Disable PCH, gRPC adds -pthread
+  DISABLE_PCH_REUSE
   )
 
 # Include generated ComletionModel headers.

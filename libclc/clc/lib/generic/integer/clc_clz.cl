@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
-#include <clc/integer/clc_clz.h>
-#include <clc/internal/clc.h>
+#include "clc/integer/clc_clz.h"
+#include "clc/internal/clc.h"
 
-#define __CLC_BODY <clc_clz.inc>
-#include <clc/integer/gentype.inc>
+#define __CLC_BODY "clc_clz.inc"
+#include "clc/integer/gentype.inc"

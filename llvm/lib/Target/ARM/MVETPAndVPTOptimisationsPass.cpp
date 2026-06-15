@@ -534,7 +534,7 @@ bool MVETPAndVPTOptimisations::ConvertTailPredLoop(MachineLoop *ML,
     Register LR = LoopPhi->getOperand(0).getReg();
     for (MachineInstr *MI : MVEInstrs) {
       int Idx = findFirstVPTPredOperandIdx(*MI);
-      MI->getOperand(Idx + 2).setReg(LR);
+      MI->getOperand(Idx + ARM::SUBOP_vpred_n_tp_reg).setReg(LR);
     }
   }
 
@@ -858,7 +858,7 @@ bool MVETPAndVPTOptimisations::ReplaceVCMPsByVPNOTs(MachineBasicBlock &MBB) {
       if (MachineOperand *MO =
               Instr.findRegisterUseOperand(PrevVCMP->getOperand(0).getReg(),
                                            /*TRI=*/nullptr, /*isKill*/ true)) {
-        // If we come accross the instr that kills PrevVCMP's result, record it
+        // If we come across the instr that kills PrevVCMP's result, record it
         // so we can remove the kill flag later if we need to.
         PrevVCMPResultKiller = MO;
       }

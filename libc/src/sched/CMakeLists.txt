@@ -17,6 +17,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sched_getcpu
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sched_getcpu
+)
+
+add_entrypoint_object(
   sched_setaffinity
   ALIAS
   DEPENDS
@@ -77,6 +84,20 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.sched_rr_get_interval
+)
+
+add_entrypoint_object(
+  __sched_cpualloc
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.__sched_cpualloc
+)
+
+add_entrypoint_object(
+  __sched_cpufree
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.__sched_cpufree
 )
 
 add_entrypoint_object(

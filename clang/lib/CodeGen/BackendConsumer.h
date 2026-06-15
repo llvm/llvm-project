@@ -11,6 +11,7 @@
 
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/CodeGenAction.h"
+#include "clang/CodeGen/ModuleLinker.h"
 
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/Timer.h"
@@ -25,8 +26,6 @@ class CodeGenAction;
 class CoverageSourceInfo;
 
 class BackendConsumer : public ASTConsumer {
-  using LinkModule = CodeGenAction::LinkModule;
-
   virtual void anchor();
   CompilerInstance &CI;
   DiagnosticsEngine &Diags;
@@ -39,11 +38,6 @@ class BackendConsumer : public ASTConsumer {
 
   llvm::Timer LLVMIRGeneration;
   unsigned LLVMIRGenerationRefCount = 0;
-
-  /// True if we've finished generating IR. This prevents us from generating
-  /// additional LLVM IR after emitting output in HandleTranslationUnit. This
-  /// can happen when Clang plugins trigger additional AST deserialization.
-  bool IRGenFinished = false;
 
   bool TimerIsEnabled = false;
 

@@ -35,7 +35,7 @@ public:
   static IRObjectWithUseList<BlockOperand> *getUseList(Block *value);
 
   /// Return which operand this is in the BlockOperand list of the Operation.
-  unsigned getOperandNumber();
+  unsigned getOperandNumber() const;
 };
 
 //===----------------------------------------------------------------------===//
@@ -176,22 +176,10 @@ namespace llvm {
 /// Provide support for hashing successor ranges.
 template <>
 struct DenseMapInfo<mlir::SuccessorRange> {
-  static mlir::SuccessorRange getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<mlir::BlockOperand *>::getEmptyKey();
-    return mlir::SuccessorRange(pointer, 0);
-  }
-  static mlir::SuccessorRange getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<mlir::BlockOperand *>::getTombstoneKey();
-    return mlir::SuccessorRange(pointer, 0);
-  }
   static unsigned getHashValue(mlir::SuccessorRange value) {
     return llvm::hash_combine_range(value);
   }
   static bool isEqual(mlir::SuccessorRange lhs, mlir::SuccessorRange rhs) {
-    if (rhs.getBase() == getEmptyKey().getBase())
-      return lhs.getBase() == getEmptyKey().getBase();
-    if (rhs.getBase() == getTombstoneKey().getBase())
-      return lhs.getBase() == getTombstoneKey().getBase();
     return lhs == rhs;
   }
 };
@@ -206,12 +194,12 @@ namespace ilist_detail {
 // operations to have trailing Regions without a circular include
 // dependence.
 template <>
-struct SpecificNodeAccess<
-    typename compute_node_options<::mlir::Operation>::type> : NodeAccess {
+struct SpecificNodeAccess<compute_node_options<::mlir::Operation>::type>
+    : NodeAccess {
 protected:
-  using OptionsT = typename compute_node_options<mlir::Operation>::type;
-  using pointer = typename OptionsT::pointer;
-  using const_pointer = typename OptionsT::const_pointer;
+  using OptionsT = compute_node_options<mlir::Operation>::type;
+  using pointer = OptionsT::pointer;
+  using const_pointer = OptionsT::const_pointer;
   using node_type = ilist_node_impl<OptionsT>;
 
   static node_type *getNodePtr(pointer N);

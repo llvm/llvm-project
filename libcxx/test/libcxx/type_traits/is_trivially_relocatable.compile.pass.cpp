@@ -68,9 +68,27 @@ static_assert(!std::__libcpp_is_trivially_relocatable<NonTrivialDestructor>::val
 // ----------------------
 
 // __split_buffer
-static_assert(std::__libcpp_is_trivially_relocatable<std::__split_buffer<int> >::value, "");
-static_assert(std::__libcpp_is_trivially_relocatable<std::__split_buffer<NotTriviallyCopyable> >::value, "");
-static_assert(!std::__libcpp_is_trivially_relocatable<std::__split_buffer<int, test_allocator<int> > >::value, "");
+static_assert(std::__libcpp_is_trivially_relocatable<
+                  std::__split_buffer<int, std::allocator<int>, std::__split_buffer_pointer_layout> >::value,
+              "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::__split_buffer<NotTriviallyCopyable,
+                                                                         std::allocator<NotTriviallyCopyable>,
+                                                                         std::__split_buffer_pointer_layout> >::value,
+              "");
+static_assert(!std::__libcpp_is_trivially_relocatable<
+                  std::__split_buffer<int, test_allocator<int>, std::__split_buffer_pointer_layout > >::value,
+              "");
+
+static_assert(std::__libcpp_is_trivially_relocatable<
+                  std::__split_buffer<int, std::allocator<int>, std::__split_buffer_size_layout> >::value,
+              "");
+static_assert(std::__libcpp_is_trivially_relocatable<std::__split_buffer<NotTriviallyCopyable,
+                                                                         std::allocator<NotTriviallyCopyable>,
+                                                                         std::__split_buffer_size_layout> >::value,
+              "");
+static_assert(!std::__libcpp_is_trivially_relocatable<
+                  std::__split_buffer<int, test_allocator<int>, std::__split_buffer_size_layout > >::value,
+              "");
 
 // standard library types
 // ----------------------
@@ -85,7 +103,7 @@ static_assert(!std::__libcpp_is_trivially_relocatable<std::array<NotTriviallyCop
 static_assert(std::__libcpp_is_trivially_relocatable<std::array<std::unique_ptr<int>, 1> >::value, "");
 
 // basic_string
-#if !__has_feature(address_sanitizer) || !_LIBCPP_INSTRUMENTED_WITH_ASAN
+#if !_LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING
 struct MyChar {
   char c;
 };

@@ -59,6 +59,7 @@ add_lld_library(lldMachO
   LINK_LIBS
   lldCommon
   ${LLVM_PTHREAD_LIB}
+  ${LLVM_ATOMIC_LIB}
 
   DEPENDS
   MachOOptionsTableGen

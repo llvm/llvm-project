@@ -44,6 +44,8 @@ add_entrypoint_object(
     .time_constants
     libc.include.time
     libc.hdr.types.struct_tm
+    libc.src.errno.errno
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -57,6 +59,8 @@ add_entrypoint_object(
     .time_constants
     libc.include.time
     libc.hdr.types.struct_tm
+    libc.src.errno.errno
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -70,6 +74,8 @@ add_entrypoint_object(
     .time_constants
     libc.hdr.types.time_t
     libc.include.time
+    libc.src.errno.errno
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -83,6 +89,36 @@ add_entrypoint_object(
     .time_constants
     libc.hdr.types.time_t
     libc.include.time
+    libc.src.errno.errno
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  localtime
+  SRCS
+    localtime.cpp
+  HDRS
+    localtime.h
+  DEPENDS
+    .time_utils
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_tm
+    libc.src.errno.errno
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  localtime_r
+  SRCS
+    localtime_r.cpp
+  HDRS
+    localtime_r.h
+  DEPENDS
+    .time_utils
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_tm
+    libc.src.errno.errno
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -107,6 +143,8 @@ add_entrypoint_object(
     libc.include.time
     libc.hdr.types.time_t
     libc.hdr.types.struct_tm
+    libc.src.errno.errno
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -120,6 +158,8 @@ add_entrypoint_object(
     libc.include.time
     libc.hdr.types.time_t
     libc.hdr.types.struct_tm
+    libc.src.errno.errno
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -135,6 +175,7 @@ add_entrypoint_object(
     libc.src.errno.errno
     libc.hdr.types.time_t
     libc.hdr.types.struct_tm
+    libc.src.__support.macros.null_check
 )
 
 add_subdirectory(strftime_core) #TODO: Move to top
@@ -150,6 +191,7 @@ add_entrypoint_object(
     libc.hdr.types.struct_tm
     libc.src.stdio.printf_core.writer
     libc.src.time.strftime_core.strftime_main
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -164,6 +206,7 @@ add_entrypoint_object(
     libc.hdr.types.struct_tm
     libc.src.stdio.printf_core.writer
     libc.src.time.strftime_core.strftime_main
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -221,3 +264,11 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.clock_getres
 )
+
+add_entrypoint_object(
+  clock_settime
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.clock_settime
+)
+

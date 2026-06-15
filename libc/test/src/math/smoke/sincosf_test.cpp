@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/math_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/libc_errno.h"
 #include "src/math/sincosf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -17,7 +17,6 @@
 using LlvmLibcSinCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcSinCosfTest, SpecialNumbers) {
-  libc_errno = 0;
   float sin, cos;
 
   LIBC_NAMESPACE::sincosf(sNaN, &sin, &cos);

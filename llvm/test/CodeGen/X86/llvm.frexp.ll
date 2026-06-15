@@ -25,7 +25,7 @@ define { half, i32 } @test_frexp_f16_i32(half %a) nounwind {
 ; X64-NEXT:    cmpl $1024, %esi # imm = 0x400
 ; X64-NEXT:    cmovael %eax, %edi
 ; X64-NEXT:    addl $-14, %edi
-; X64-NEXT:    andl $-31745, %ecx # imm = 0x83FF
+; X64-NEXT:    andl $33791, %ecx # imm = 0x83FF
 ; X64-NEXT:    orl $14336, %ecx # imm = 0x3800
 ; X64-NEXT:    addl $-31744, %esi # imm = 0x8400
 ; X64-NEXT:    movzwl %si, %esi
@@ -76,7 +76,7 @@ define half @test_frexp_f16_i32_only_use_fract(half %a) nounwind {
 ; X64-NEXT:    andl $32767, %edx # imm = 0x7FFF
 ; X64-NEXT:    cmpl $1024, %edx # imm = 0x400
 ; X64-NEXT:    cmovael %ecx, %eax
-; X64-NEXT:    andl $-31745, %eax # imm = 0x83FF
+; X64-NEXT:    andl $33791, %eax # imm = 0x83FF
 ; X64-NEXT:    orl $14336, %eax # imm = 0x3800
 ; X64-NEXT:    addl $-31744, %edx # imm = 0x8400
 ; X64-NEXT:    movzwl %dx, %edx
@@ -580,6 +580,22 @@ define i32 @test_frexp_f64_i32_only_use_exp(double %a) nounwind {
   %result = call { double, i32 } @llvm.frexp.f64.i32(double %a)
   %result.0 = extractvalue { double, i32 } %result, 1
   ret i32 %result.0
+}
+
+define { float, i32 } @pr160981() {
+; X64-LABEL: pr160981:
+; X64:       # %bb.0:
+; X64-NEXT:    movss {{.*#+}} xmm0 = [9.9999988E-1,0.0E+0,0.0E+0,0.0E+0]
+; X64-NEXT:    movl $-126, %eax
+; X64-NEXT:    retq
+;
+; WIN32-LABEL: pr160981:
+; WIN32:       # %bb.0:
+; WIN32-NEXT:    flds __real@3f7ffffe
+; WIN32-NEXT:    movl $-126, %eax
+; WIN32-NEXT:    retl
+  %ret = call { float, i32 } @llvm.frexp.f32.i32(float bitcast (i32 8388607 to float))
+  ret { float, i32 } %ret
 }
 
 ; FIXME: Widen vector result

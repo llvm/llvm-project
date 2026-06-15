@@ -12,8 +12,8 @@
 // RUN:   --verify-debug-info -arch i386 -arch x86_64 %s -g 2> %t
 // RUN: FileCheck -check-prefix=CHECK-MULTIARCH-BINDINGS < %t %s
 //
-// CHECK-MULTIARCH-BINDINGS: # "x86_64-apple-darwin11" - "darwin::Dsymutil", inputs: ["a.out"], output: "a.out.dSYM"
-// CHECK-MULTIARCH-BINDINGS: # "x86_64-apple-darwin11" - "darwin::VerifyDebug", inputs: ["a.out.dSYM"], output: (nothing)
+// CHECK-MULTIARCH-BINDINGS: # "x86_64-apple-macosx10.7.0" - "darwin::Dsymutil", inputs: ["a.out"], output: "a.out.dSYM"
+// CHECK-MULTIARCH-BINDINGS: # "x86_64-apple-macosx10.7.0" - "darwin::VerifyDebug", inputs: ["a.out.dSYM"], output: (nothing)
 
 // Check output name derivation.
 //
@@ -21,9 +21,9 @@
 // RUN:   --verify-debug-info -o foo %s -g 2> %t
 // RUN: FileCheck -check-prefix=CHECK-OUTPUT-NAME < %t %s
 //
-// CHECK-OUTPUT-NAME: "x86_64-apple-darwin11" - "darwin::Linker", inputs: [{{.*}}], output: "foo"
-// CHECK-OUTPUT-NAME: "x86_64-apple-darwin11" - "darwin::Dsymutil", inputs: ["foo"], output: "foo.dSYM"
-// CHECK-OUTPUT-NAME: "x86_64-apple-darwin11" - "darwin::VerifyDebug", inputs: ["foo.dSYM"], output: (nothing)
+// CHECK-OUTPUT-NAME: "x86_64-apple-macosx10.7.0" - "darwin::Linker", inputs: [{{.*}}], output: "foo"
+// CHECK-OUTPUT-NAME: "x86_64-apple-macosx10.7.0" - "darwin::Dsymutil", inputs: ["foo"], output: "foo.dSYM"
+// CHECK-OUTPUT-NAME: "x86_64-apple-macosx10.7.0" - "darwin::VerifyDebug", inputs: ["foo.dSYM"], output: (nothing)
 
 // Check that we only verify when needed.
 //

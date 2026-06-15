@@ -25,6 +25,7 @@
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "Xtensa-disassembler"
 
@@ -411,6 +412,14 @@ static DecodeStatus decodeImm7_22Operand(MCInst &Inst, uint64_t Imm,
                                          int64_t Address, const void *Decoder) {
   assert(isUInt<4>(Imm) && "Invalid immediate");
   Inst.addOperand(MCOperand::createImm(Imm + 7));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeSelect_256Operand(MCInst &Inst, uint64_t Imm,
+                                            int64_t Address,
+                                            const void *Decoder) {
+  assert(isUInt<8>(Imm) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
 

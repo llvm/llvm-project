@@ -1,7 +1,6 @@
-// REQUIRES: crash-recovery, shell
-
-// FIXME: This XFAIL is cargo-culted from crash-report.c. Do we need it?
-// XFAIL: target={{.*-windows-gnu}}
+// REQUIRES: crash-recovery
+// File path separator differences.
+// UNSUPPORTED: system-windows
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/i %t/m %t
@@ -19,7 +18,7 @@
 // RUN: find %t/crash-vfs-*.cache/vfs | \
 // RUN:   grep "B.framework/Headers/B.h" | count 1
 
-// CHECK: Preprocessed source(s) and associated run script(s) are located at:
+// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.m
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.cache
 
@@ -44,4 +43,4 @@
 // RUN: rm -rf i
 // RUN: rm -rf crash-vfs-umbrella-*.cache/modules/*
 // RUN: chmod 755 crash-vfs-*.sh
-// RUN: ./crash-vfs-*.sh
+// RUN: bash ./crash-vfs-*.sh

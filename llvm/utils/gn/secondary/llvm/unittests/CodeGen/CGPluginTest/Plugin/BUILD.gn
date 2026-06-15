@@ -3,8 +3,8 @@ loadable_module("CGTestPlugin") {
   output_dir = "$target_out_dir/.."
 
   sources = [
-    "Plugin.cpp",
     "CodeGenTestPass.cpp",
+    "Plugin.cpp",
   ]
 
   if (host_os != "mac" && host_os != "win") {

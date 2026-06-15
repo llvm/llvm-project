@@ -11,7 +11,6 @@ class TestCase(TestBase):
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     @skipIf(macos_version=["<", "15.0"])
-    @skipUnlessDarwin
     def test(self):
         self.build()
 
@@ -27,6 +26,18 @@ class TestCase(TestBase):
         self.expect_expr("move_begin[0]", result_type="int", result_value="1")
 
         self.expect_expr("move_begin + 3 == move_end", result_value="true")
+
+    @add_test_categories(["libc++"])
+    @skipIf(compiler=no_match("clang"))
+    @expectedFailureAll(bugnumber="https://github.com/llvm/llvm-project/issues/149477")
+    def test_xfail(self):
+        self.build()
+
+        lldbutil.run_to_source_breakpoint(
+            self, "// Set break point at this line.", lldb.SBFileSpec("main.cpp")
+        )
+
+        self.runCmd("settings set target.import-std-module true")
 
         self.expect("expr move_begin++")
         self.expect_expr("move_begin + 2 == move_end", result_value="true")

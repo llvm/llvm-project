@@ -17,12 +17,11 @@
   char buffer[1000];
   std::vsnprintf(buffer, sizeof buffer, message, ap);
   va_end(ap);
-  llvm::errs()
-      << "Test "
-      << ::testing::UnitTest::GetInstance()->current_test_info()->name()
-      << " crashed in file "
-      << (sourceFile ? sourceFile : "unknown source file") << '(' << sourceLine
-      << "): " << buffer << '\n';
+  std::cerr << "Test "
+            << ::testing::UnitTest::GetInstance()->current_test_info()->name()
+            << " crashed in file "
+            << (sourceFile ? sourceFile : "unknown source file") << '('
+            << sourceLine << "): " << buffer << '\n';
   std::exit(EXIT_FAILURE);
 }
 

@@ -9,6 +9,8 @@
 #ifndef LLDB_CORE_STATUSLINE_H
 #define LLDB_CORE_STATUSLINE_H
 
+#include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/lldb-forward.h"
 #include <cstdint>
 #include <string>
@@ -19,15 +21,19 @@ public:
   Statusline(Debugger &debugger);
   ~Statusline();
 
+  using Context = std::pair<ExecutionContextRef, SymbolContext>;
+
   /// Reduce the scroll window and draw the statusline.
-  void Enable();
+  void Enable(std::optional<ExecutionContextRef> exe_ctx_ref);
 
   /// Hide the statusline and extend the scroll window.
   void Disable();
 
-  /// Redraw the statusline. If update is false, this will redraw the last
-  /// string.
-  void Redraw(bool update = true);
+  /// Redraw the statusline.
+  void Redraw(std::optional<ExecutionContextRef> exe_ctx_ref);
+
+  /// Clear the cached execution context to discard stale pointers.
+  void ClearExecutionContext();
 
   /// Inform the statusline that the terminal dimensions have changed.
   void TerminalSizeChanged();
@@ -42,11 +48,18 @@ private:
     ResizeStatusline,
   };
 
-  /// Set the scroll window for the given mode.
-  void UpdateScrollWindow(ScrollWindowMode mode);
+  /// Set the scroll window for the given mode. On a resize, \p prev_width and
+  /// \p prev_height are the dimensions the statusline was last drawn at, used
+  /// to clear the rows it still occupies.
+  void UpdateScrollWindow(ScrollWindowMode mode, uint64_t prev_width = 0,
+                          uint64_t prev_height = 0);
 
   Debugger &m_debugger;
-  std::string m_last_str;
+
+  /// Cached copy of the execution context that allows us to redraw the
+  /// statusline.
+  ExecutionContextRef m_exe_ctx_ref;
+
   uint64_t m_terminal_width = 0;
   uint64_t m_terminal_height = 0;
 };

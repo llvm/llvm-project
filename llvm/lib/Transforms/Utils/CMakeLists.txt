@@ -20,6 +20,7 @@ add_llvm_component_library(LLVMTransformUtils
   CtorUtils.cpp
   CountVisits.cpp
   Debugify.cpp
+  DebugSSAUpdater.cpp
   DeclareRuntimeLibcalls.cpp
   DemoteRegToStack.cpp
   DXILUpgrade.cpp
@@ -39,6 +40,7 @@ add_llvm_component_library(LLVMTransformUtils
   Instrumentation.cpp
   IntegerDivision.cpp
   IRNormalizer.cpp
+  KCFIHash.cpp
   LCSSA.cpp
   LibCallsShrinkWrap.cpp
   Local.cpp
@@ -73,6 +75,7 @@ add_llvm_component_library(LLVMTransformUtils
   RelLookupTableConverter.cpp
   ScalarEvolutionExpander.cpp
   SCCPSolver.cpp
+  StripConvergenceIntrinsics.cpp
   StripGCRelocates.cpp
   SSAUpdater.cpp
   SSAUpdaterBulk.cpp
@@ -87,6 +90,7 @@ add_llvm_component_library(LLVMTransformUtils
   SplitModuleByCategory.cpp
   StripNonLineTableDebugInfo.cpp
   SymbolRewriter.cpp
+  TriggerCrashPass.cpp
   UnifyFunctionExitNodes.cpp
   UnifyLoopExits.cpp
   Utils.cpp
@@ -103,6 +107,7 @@ add_llvm_component_library(LLVMTransformUtils
   LINK_COMPONENTS
   Analysis
   Core
+  ProfileData
   Support
   TargetParser
   )

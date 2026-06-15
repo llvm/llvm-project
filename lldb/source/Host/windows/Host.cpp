@@ -22,10 +22,8 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/ManagedStatic.h"
 
 // Windows includes
 #include <tlhelp32.h>
@@ -113,12 +111,12 @@ void Host::Kill(lldb::pid_t pid, int signo) {
     ::TerminateProcess(handle.get(), 1);
 }
 
-const char *Host::GetSignalAsCString(int signo) { return NULL; }
+const char *Host::GetSignalAsCString(int signo) { return nullptr; }
 
 FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   FileSpec module_filespec;
 
-  HMODULE hmodule = NULL;
+  HMODULE hmodule = nullptr;
   if (!::GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
                            (LPCTSTR)host_addr, &hmodule))
     return module_filespec;
@@ -233,9 +231,9 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
     int status;
     std::string output;
     std::string command = expand_command.GetString().str();
-    Status e =
-        RunShellCommand(command.c_str(), launch_info.GetWorkingDirectory(),
-                        &status, nullptr, &output, std::chrono::seconds(10));
+    Status e = RunShellCommand(
+        command.c_str(), launch_info.GetWorkingDirectory(), &status, nullptr,
+        &output, nullptr, std::chrono::seconds(10));
 
     if (e.Fail())
       return e;
@@ -308,52 +306,27 @@ Environment Host::GetEnvironment() {
   return env;
 }
 
-/// Manages the lifecycle of a Windows Event's Source.
-/// The destructor will call DeregisterEventSource.
-/// This class is meant to be used with \ref llvm::ManagedStatic.
-class WindowsEventLog {
-public:
-  WindowsEventLog() : handle(RegisterEventSource(nullptr, L"lldb")) {}
-
-  ~WindowsEventLog() {
-    if (handle)
-      DeregisterEventSource(handle);
-  }
-
-  HANDLE GetHandle() const { return handle; }
-
-private:
-  HANDLE handle;
-};
-
-static llvm::ManagedStatic<WindowsEventLog> event_log;
-
 void Host::SystemLog(Severity severity, llvm::StringRef message) {
   if (message.empty())
     return;
 
-  HANDLE h = event_log->GetHandle();
-  if (!h)
-    return;
+  std::string log_msg;
+  llvm::raw_string_ostream stream(log_msg);
 
-  llvm::SmallVector<wchar_t, 1> argsUTF16;
-  if (UTF8ToUTF16(message.str(), argsUTF16))
-    return;
-
-  WORD event_type;
   switch (severity) {
   case lldb::eSeverityWarning:
-    event_type = EVENTLOG_WARNING_TYPE;
+    stream << "[Warning] ";
     break;
   case lldb::eSeverityError:
-    event_type = EVENTLOG_ERROR_TYPE;
+    stream << "[Error] ";
     break;
   case lldb::eSeverityInfo:
-  default:
-    event_type = EVENTLOG_INFORMATION_TYPE;
+    stream << "[Info] ";
+    break;
   }
 
-  LPCWSTR messages[1] = {argsUTF16.data()};
-  ReportEventW(h, event_type, 0, 0, nullptr, std::size(messages), 0, messages,
-               nullptr);
+  stream << message;
+  stream.flush();
+
+  OutputDebugStringA(log_msg.c_str());
 }

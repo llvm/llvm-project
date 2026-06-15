@@ -8,20 +8,13 @@
 
 #include "io.h"
 
+#include "hdr/types/FILE.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-ssize_t read_from_stdin(char *buf, size_t size) {
-  return __llvm_libc_stdio_read(static_cast<void *>(&__llvm_libc_stdin_cookie),
-                                buf, size);
-}
-
-void write_to_stdout(cpp::string_view msg) {
-  __llvm_libc_stdio_write(static_cast<void *>(&__llvm_libc_stdout_cookie),
-                          msg.data(), msg.size());
-}
+extern "C" struct __llvm_libc_stdio_cookie __llvm_libc_stderr_cookie;
 
 void write_to_stderr(cpp::string_view msg) {
   __llvm_libc_stdio_write(static_cast<void *>(&__llvm_libc_stderr_cookie),

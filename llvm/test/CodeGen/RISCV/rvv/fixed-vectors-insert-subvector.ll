@@ -120,7 +120,7 @@ define <vscale x 8 x i32> @insert_nxv8i32_undef_v2i32_0(ptr %svp) {
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %sv = load <2 x i32>, ptr %svp
-  %v = call <vscale x 8 x i32> @llvm.vector.insert.v2i32.nxv8i32(<vscale x 8 x i32> undef, <2 x i32> %sv, i64 0)
+  %v = call <vscale x 8 x i32> @llvm.vector.insert.v2i32.nxv8i32(<vscale x 8 x i32> poison, <2 x i32> %sv, i64 0)
   ret <vscale x 8 x i32> %v
 }
 
@@ -139,7 +139,6 @@ define <vscale x 2 x i32> @insert_nxv8i32_v4i32_0(<vscale x 2 x i32> %vec, <4 x 
   %v = call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v4i32(<vscale x 2 x i32> %vec, <4 x i32> %subvec, i64 0)
   ret <vscale x 2 x i32> %v
 }
-
 
 define <4 x i32> @insert_v4i32_v4i32_0(<4 x i32> %vec, <4 x i32> %subvec) {
 ; CHECK-LABEL: insert_v4i32_v4i32_0:
@@ -223,7 +222,7 @@ define void @insert_v4i32_undef_v2i32_0(ptr %vp, ptr %svp) {
 ; VLS-NEXT:    vs1r.v v8, (a0)
 ; VLS-NEXT:    ret
   %sv = load <2 x i32>, ptr %svp
-  %v = call <4 x i32> @llvm.vector.insert.v2i32.v4i32(<4 x i32> undef, <2 x i32> %sv, i64 0)
+  %v = call <4 x i32> @llvm.vector.insert.v2i32.v4i32(<4 x i32> poison, <2 x i32> %sv, i64 0)
   store <4 x i32> %v, ptr %vp
   ret void
 }
@@ -245,32 +244,31 @@ define <4 x i32> @insert_v4i32_undef_v2i32_0_phi(<2 x i32> %subvec, i1 %cond) {
 entry:
   br i1 %cond, label %foo, label %bar
 foo:
-  %v = call <4 x i32> @llvm.vector.insert.v2i32.v4i32(<4 x i32> undef, <2 x i32> %subvec, i64 0)
+  %v = call <4 x i32> @llvm.vector.insert.v2i32.v4i32(<4 x i32> poison, <2 x i32> %subvec, i64 0)
   br label %bar
 bar:
   %w = phi <4 x i32> [%v, %foo], [zeroinitializer, %entry]
   ret <4 x i32> %w
 }
 
-
 define void @insert_v8i32_v2i32_0(ptr %vp, ptr %svp) {
 ; VLA-LABEL: insert_v8i32_v2i32_0:
 ; VLA:       # %bb.0:
+; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; VLA-NEXT:    vle32.v v8, (a0)
 ; VLA-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; VLA-NEXT:    vle32.v v8, (a1)
-; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; VLA-NEXT:    vle32.v v10, (a0)
+; VLA-NEXT:    vle32.v v10, (a1)
 ; VLA-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
-; VLA-NEXT:    vmv.v.v v10, v8
+; VLA-NEXT:    vmv.v.v v8, v10
 ; VLA-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; VLA-NEXT:    vse32.v v10, (a0)
+; VLA-NEXT:    vse32.v v8, (a0)
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: insert_v8i32_v2i32_0:
 ; VLS:       # %bb.0:
+; VLS-NEXT:    vl2re32.v v8, (a0)
 ; VLS-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; VLS-NEXT:    vle32.v v10, (a1)
-; VLS-NEXT:    vl2re32.v v8, (a0)
 ; VLS-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
 ; VLS-NEXT:    vmv.v.v v8, v10
 ; VLS-NEXT:    vs2r.v v8, (a0)
@@ -297,9 +295,9 @@ define void @insert_v8i32_v2i32_2(ptr %vp, ptr %svp) {
 ;
 ; VLS-LABEL: insert_v8i32_v2i32_2:
 ; VLS:       # %bb.0:
+; VLS-NEXT:    vl2re32.v v8, (a0)
 ; VLS-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; VLS-NEXT:    vle32.v v10, (a1)
-; VLS-NEXT:    vl2re32.v v8, (a0)
 ; VLS-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; VLS-NEXT:    vslideup.vi v8, v10, 2
 ; VLS-NEXT:    vs2r.v v8, (a0)
@@ -325,9 +323,9 @@ define void @insert_v8i32_v2i32_6(ptr %vp, ptr %svp) {
 ;
 ; VLS-LABEL: insert_v8i32_v2i32_6:
 ; VLS:       # %bb.0:
+; VLS-NEXT:    vl2re32.v v8, (a0)
 ; VLS-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; VLS-NEXT:    vle32.v v10, (a1)
-; VLS-NEXT:    vl2re32.v v8, (a0)
 ; VLS-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; VLS-NEXT:    vslideup.vi v9, v10, 2
 ; VLS-NEXT:    vs2r.v v8, (a0)
@@ -358,7 +356,7 @@ define void @insert_v8i32_undef_v2i32_6(ptr %vp, ptr %svp) {
 ; VLS-NEXT:    vs2r.v v8, (a0)
 ; VLS-NEXT:    ret
   %sv = load <2 x i32>, ptr %svp
-  %v = call <8 x i32> @llvm.vector.insert.v2i32.v8i32(<8 x i32> undef, <2 x i32> %sv, i64 6)
+  %v = call <8 x i32> @llvm.vector.insert.v2i32.v8i32(<8 x i32> poison, <2 x i32> %sv, i64 6)
   store <8 x i32> %v, ptr %vp
   ret void
 }
@@ -469,10 +467,10 @@ define void @insert_v8i1_v4i1_0(ptr %vp, ptr %svp) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a0)
+; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vlm.v v8, (a1)
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
@@ -496,10 +494,10 @@ define void @insert_v8i1_v4i1_4(ptr %vp, ptr %svp) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlm.v v0, (a0)
+; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vlm.v v8, (a1)
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
@@ -546,10 +544,11 @@ define <vscale x 2 x i16> @insert_nxv2i16_v2i16_2(<vscale x 2 x i16> %v, ptr %sv
 define <vscale x 2 x i1> @insert_nxv2i1_v4i1_0(<vscale x 2 x i1> %v, ptr %svp) {
 ; VLA-LABEL: insert_nxv2i1_v4i1_0:
 ; VLA:       # %bb.0:
+; VLA-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
+; VLA-NEXT:    vmv.v.i v9, 0
 ; VLA-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; VLA-NEXT:    vlm.v v8, (a0)
 ; VLA-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; VLA-NEXT:    vmv.v.i v9, 0
 ; VLA-NEXT:    vmerge.vim v9, v9, 1, v0
 ; VLA-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; VLA-NEXT:    vmv.v.i v10, 0
@@ -563,8 +562,8 @@ define <vscale x 2 x i1> @insert_nxv2i1_v4i1_0(<vscale x 2 x i1> %v, ptr %svp) {
 ; VLS-LABEL: insert_nxv2i1_v4i1_0:
 ; VLS:       # %bb.0:
 ; VLS-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; VLS-NEXT:    vlm.v v8, (a0)
 ; VLS-NEXT:    vmv.v.i v9, 0
+; VLS-NEXT:    vlm.v v8, (a0)
 ; VLS-NEXT:    vmerge.vim v10, v9, 1, v0
 ; VLS-NEXT:    vmv1r.v v0, v8
 ; VLS-NEXT:    vsetvli zero, zero, e8, mf4, tu, ma
@@ -603,17 +602,15 @@ define <vscale x 8 x i1> @insert_nxv8i1_v8i1_16(<vscale x 8 x i1> %v, ptr %svp) 
   ret <vscale x 8 x i1> %c
 }
 
-declare <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64>, <2 x i64>, i64)
-
 define void @insert_v2i64_nxv16i64(ptr %psv0, ptr %psv1, ptr %out) {
 ; VLA-LABEL: insert_v2i64_nxv16i64:
 ; VLA:       # %bb.0:
 ; VLA-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; VLA-NEXT:    vle64.v v8, (a0)
-; VLA-NEXT:    vle64.v v16, (a1)
+; VLA-NEXT:    vle64.v v8, (a1)
+; VLA-NEXT:    vle64.v v16, (a0)
 ; VLA-NEXT:    vsetivli zero, 6, e64, m8, tu, ma
-; VLA-NEXT:    vslideup.vi v8, v16, 4
-; VLA-NEXT:    vs8r.v v8, (a2)
+; VLA-NEXT:    vslideup.vi v16, v8, 4
+; VLA-NEXT:    vs8r.v v16, (a2)
 ; VLA-NEXT:    ret
 ;
 ; VLS-LABEL: insert_v2i64_nxv16i64:
@@ -624,7 +621,7 @@ define void @insert_v2i64_nxv16i64(ptr %psv0, ptr %psv1, ptr %out) {
 ; VLS-NEXT:    ret
   %sv0 = load <2 x i64>, ptr %psv0
   %sv1 = load <2 x i64>, ptr %psv1
-  %v0 = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv0, i64 0)
+  %v0 = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> poison, <2 x i64> %sv0, i64 0)
   %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> %v0, <2 x i64> %sv1, i64 4)
   store <vscale x 16 x i64> %v, ptr %out
   ret void
@@ -644,7 +641,7 @@ define void @insert_v2i64_nxv16i64_lo0(ptr %psv, ptr %out) {
 ; VLS-NEXT:    vs8r.v v8, (a1)
 ; VLS-NEXT:    ret
   %sv = load <2 x i64>, ptr %psv
-  %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 0)
+  %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> poison, <2 x i64> %sv, i64 0)
   store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
@@ -665,7 +662,7 @@ define void @insert_v2i64_nxv16i64_lo2(ptr %psv, ptr %out) {
 ; VLS-NEXT:    vs8r.v v8, (a1)
 ; VLS-NEXT:    ret
   %sv = load <2 x i64>, ptr %psv
-  %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 2)
+  %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> poison, <2 x i64> %sv, i64 2)
   store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
@@ -753,18 +750,18 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV32VLA-NEXT:    slli a2, a2, 4
 ; RV32VLA-NEXT:    sub sp, sp, a2
 ; RV32VLA-NEXT:    andi sp, sp, -64
+; RV32VLA-NEXT:    addi a2, sp, 128
 ; RV32VLA-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32VLA-NEXT:    vle64.v v8, (a0)
-; RV32VLA-NEXT:    addi a0, sp, 128
-; RV32VLA-NEXT:    csrr a2, vlenb
-; RV32VLA-NEXT:    addi a3, sp, 64
-; RV32VLA-NEXT:    slli a2, a2, 3
-; RV32VLA-NEXT:    vse64.v v8, (a0)
-; RV32VLA-NEXT:    add a0, a3, a2
-; RV32VLA-NEXT:    vl8re64.v v8, (a0)
-; RV32VLA-NEXT:    vl8re64.v v16, (a3)
-; RV32VLA-NEXT:    add a2, a1, a2
-; RV32VLA-NEXT:    vs8r.v v8, (a2)
+; RV32VLA-NEXT:    vse64.v v8, (a2)
+; RV32VLA-NEXT:    csrr a0, vlenb
+; RV32VLA-NEXT:    slli a0, a0, 3
+; RV32VLA-NEXT:    addi a2, sp, 64
+; RV32VLA-NEXT:    add a3, a2, a0
+; RV32VLA-NEXT:    vl8re64.v v8, (a3)
+; RV32VLA-NEXT:    vl8re64.v v16, (a2)
+; RV32VLA-NEXT:    add a0, a1, a0
+; RV32VLA-NEXT:    vs8r.v v8, (a0)
 ; RV32VLA-NEXT:    vs8r.v v16, (a1)
 ; RV32VLA-NEXT:    addi sp, s0, -80
 ; RV32VLA-NEXT:    .cfi_def_cfa sp, 80
@@ -790,18 +787,18 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV64VLA-NEXT:    slli a2, a2, 4
 ; RV64VLA-NEXT:    sub sp, sp, a2
 ; RV64VLA-NEXT:    andi sp, sp, -64
+; RV64VLA-NEXT:    addi a2, sp, 128
 ; RV64VLA-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64VLA-NEXT:    vle64.v v8, (a0)
-; RV64VLA-NEXT:    addi a0, sp, 128
-; RV64VLA-NEXT:    csrr a2, vlenb
-; RV64VLA-NEXT:    addi a3, sp, 64
-; RV64VLA-NEXT:    slli a2, a2, 3
-; RV64VLA-NEXT:    vse64.v v8, (a0)
-; RV64VLA-NEXT:    add a0, a3, a2
-; RV64VLA-NEXT:    vl8re64.v v8, (a0)
-; RV64VLA-NEXT:    vl8re64.v v16, (a3)
-; RV64VLA-NEXT:    add a2, a1, a2
-; RV64VLA-NEXT:    vs8r.v v8, (a2)
+; RV64VLA-NEXT:    vse64.v v8, (a2)
+; RV64VLA-NEXT:    csrr a0, vlenb
+; RV64VLA-NEXT:    slli a0, a0, 3
+; RV64VLA-NEXT:    addi a2, sp, 64
+; RV64VLA-NEXT:    add a3, a2, a0
+; RV64VLA-NEXT:    vl8re64.v v8, (a3)
+; RV64VLA-NEXT:    vl8re64.v v16, (a2)
+; RV64VLA-NEXT:    add a0, a1, a0
+; RV64VLA-NEXT:    vs8r.v v8, (a0)
 ; RV64VLA-NEXT:    vs8r.v v16, (a1)
 ; RV64VLA-NEXT:    addi sp, s0, -80
 ; RV64VLA-NEXT:    .cfi_def_cfa sp, 80
@@ -828,13 +825,13 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV32VLS-NEXT:    vl1re64.v v8, (a0)
 ; RV32VLS-NEXT:    addi a0, sp, 128
 ; RV32VLS-NEXT:    vs1r.v v8, (a0)
-; RV32VLS-NEXT:    addi a0, sp, 192
-; RV32VLS-NEXT:    vl8re64.v v8, (a0)
 ; RV32VLS-NEXT:    addi a0, sp, 64
+; RV32VLS-NEXT:    vl8re64.v v8, (a0)
+; RV32VLS-NEXT:    addi a0, sp, 192
 ; RV32VLS-NEXT:    vl8re64.v v16, (a0)
 ; RV32VLS-NEXT:    addi a0, a1, 128
-; RV32VLS-NEXT:    vs8r.v v8, (a0)
-; RV32VLS-NEXT:    vs8r.v v16, (a1)
+; RV32VLS-NEXT:    vs8r.v v16, (a0)
+; RV32VLS-NEXT:    vs8r.v v8, (a1)
 ; RV32VLS-NEXT:    addi sp, s0, -80
 ; RV32VLS-NEXT:    .cfi_def_cfa sp, 80
 ; RV32VLS-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
@@ -860,13 +857,13 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV64VLS-NEXT:    vl1re64.v v8, (a0)
 ; RV64VLS-NEXT:    addi a0, sp, 128
 ; RV64VLS-NEXT:    vs1r.v v8, (a0)
-; RV64VLS-NEXT:    addi a0, sp, 192
-; RV64VLS-NEXT:    vl8re64.v v8, (a0)
 ; RV64VLS-NEXT:    addi a0, sp, 64
+; RV64VLS-NEXT:    vl8re64.v v8, (a0)
+; RV64VLS-NEXT:    addi a0, sp, 192
 ; RV64VLS-NEXT:    vl8re64.v v16, (a0)
 ; RV64VLS-NEXT:    addi a0, a1, 128
-; RV64VLS-NEXT:    vs8r.v v8, (a0)
-; RV64VLS-NEXT:    vs8r.v v16, (a1)
+; RV64VLS-NEXT:    vs8r.v v16, (a0)
+; RV64VLS-NEXT:    vs8r.v v8, (a1)
 ; RV64VLS-NEXT:    addi sp, s0, -80
 ; RV64VLS-NEXT:    .cfi_def_cfa sp, 80
 ; RV64VLS-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
@@ -877,7 +874,7 @@ define void @insert_v2i64_nxv16i64_hi(ptr %psv, ptr %out) {
 ; RV64VLS-NEXT:    .cfi_def_cfa_offset 0
 ; RV64VLS-NEXT:    ret
   %sv = load <2 x i64>, ptr %psv
-  %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> undef, <2 x i64> %sv, i64 8)
+  %v = call <vscale x 16 x i64> @llvm.vector.insert.v2i64.nxv16i64(<vscale x 16 x i64> poison, <2 x i64> %sv, i64 8)
   store <vscale x 16 x i64> %v, ptr %out
   ret void
 }
@@ -966,32 +963,14 @@ define <vscale x 8 x half> @insert_nxv8f16_v2f16_2(<vscale x 8 x half> %vec, ptr
   ret <vscale x 8 x half> %v
 }
 
-declare <8 x i1> @llvm.vector.insert.v4i1.v8i1(<8 x i1>, <4 x i1>, i64)
-declare <32 x i1> @llvm.vector.insert.v8i1.v32i1(<32 x i1>, <8 x i1>, i64)
-
-declare <4 x i16> @llvm.vector.insert.v2i16.v4i16(<4 x i16>, <2 x i16>, i64)
-
-declare <4 x i32> @llvm.vector.insert.v2i32.v4i32(<4 x i32>, <2 x i32>, i64)
-declare <8 x i32> @llvm.vector.insert.v2i32.v8i32(<8 x i32>, <2 x i32>, i64)
-
-declare <vscale x 2 x i1> @llvm.vector.insert.v4i1.nxv2i1(<vscale x 2 x i1>, <4 x i1>, i64)
-declare <vscale x 8 x i1> @llvm.vector.insert.v8i1.nxv8i1(<vscale x 8 x i1>, <8 x i1>, i64)
-
-declare <vscale x 2 x i16> @llvm.vector.insert.v2i16.nxv2i16(<vscale x 2 x i16>, <2 x i16>, i64)
-
-declare <vscale x 8 x i32> @llvm.vector.insert.v2i32.nxv8i32(<vscale x 8 x i32>, <2 x i32>, i64)
-declare <vscale x 8 x i32> @llvm.vector.insert.v4i32.nxv8i32(<vscale x 8 x i32>, <4 x i32>, i64)
-declare <vscale x 8 x i32> @llvm.vector.insert.v8i32.nxv8i32(<vscale x 8 x i32>, <8 x i32>, i64)
-
 ; We emit insert_subvectors of fixed vectors at index 0 into undefs as a
 ; copy_to_regclass or insert_subreg, depending on the register classes of the
 ; vector types. Make sure that we use the correct type and not the shrunken
 ; LMUL=1 type, otherwise we will end up with an invalid extract_subvector when
 ; converting it from scalable->fixed, e.g. we get this for VLEN=128:
 ;
-;   t14: nxv2i32 = insert_subvector undef:nxv2i32, t4, Constant:i64<0>
+;   t14: nxv2i32 = insert_subvector poison:nxv2i32, t4, Constant:i64<0>
 ; t15: v8i32 = extract_subvector t14, Constant:i64<0>
-declare <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32>, i64)
 define <4 x i32> @insert_extract_v8i32_v2i32_0(<2 x i32> %v) {
 ; CHECK-LABEL: insert_extract_v8i32_v2i32_0:
 ; CHECK:       # %bb.0:

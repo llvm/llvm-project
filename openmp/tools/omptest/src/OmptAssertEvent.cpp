@@ -14,6 +14,8 @@
 #include "OmptAssertEvent.h"
 #include <omp-tools.h>
 
+#include <cstdlib>
+
 using namespace omptest;
 
 const char *omptest::to_string(ObserveState State) {
@@ -24,9 +26,6 @@ const char *omptest::to_string(ObserveState State) {
     return "Always";
   case ObserveState::Never:
     return "Never";
-  default:
-    assert(false && "Requested string representation for unknown ObserveState");
-    return "UNKNOWN";
   }
 }
 

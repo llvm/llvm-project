@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s cert-dcl16-c %t -- -- -I %clang_tidy_headers
+// RUN: %check_clang_tidy %s cert-dcl16-c %t
 
 #include "integral_constant.h"
 
@@ -127,4 +127,13 @@ void integer_suffix() {
   static constexpr auto v24 = 1LLU; // OK.
   static_assert(is_same<decltype(v24), const unsigned long long>::value, "");
   static_assert(v24 == 1, "");
+}
+
+void no_warning_on_hex_literals() {
+  int a = 0xa;
+  int b = 0xb;
+  int c = 0xc;
+  int d = 0xd;
+  int e = 0xe;
+  int f = 0xf;
 }

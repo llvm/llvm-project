@@ -14,8 +14,7 @@
 // but not rvalue callable to algorithms. While it is technically ill-formed for users
 // to provide us such predicates, this test is useful for libc++ to ensure that we check
 // predicate requirements correctly (i.e. that we check them on lvalues and not on
-// rvalues). See https://github.com/llvm/llvm-project/issues/69554 for additional
-// context.
+// rvalues). See https://llvm.org/PR69554 for additional context.
 
 #include <algorithm>
 

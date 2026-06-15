@@ -5,15 +5,14 @@ define i16 @test(ptr %i) {
 ; CHECK-LABEL: define i16 @test(
 ; CHECK-SAME: ptr [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> poison, ptr [[I]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x ptr> [[TMP0]], <2 x ptr> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, <2 x ptr> [[TMP1]], <2 x i64> <i64 132860, i64 137774>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x ptr> [[TMP2]], <2 x ptr> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x ptr> poison, ptr [[I]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x ptr> [[TMP0]], <4 x ptr> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <4 x ptr> [[TMP1]], <4 x i64> <i64 132860, i64 137774, i64 132860, i64 137774>
 ; CHECK-NEXT:    [[GEP_US154_2:%.*]] = getelementptr i8, ptr [[I]], i64 142688
 ; CHECK-NEXT:    br label %[[FOR_COND5_US:.*]]
 ; CHECK:       [[FOR_COND5_US]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i16> @llvm.experimental.vp.strided.load.v4i16.p0.i64(ptr align 2 [[GEP_US154_2]], i64 4914, <4 x i1> splat (i1 true), i32 4)
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> [[TMP3]], i32 2, <4 x i1> splat (i1 true), <4 x i16> poison)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> align 2 [[TMP3]], <4 x i1> splat (i1 true), <4 x i16> poison)
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i16> [[TMP4]], <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i16> [[TMP5]], <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i16> [[TMP4]], <4 x i16> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

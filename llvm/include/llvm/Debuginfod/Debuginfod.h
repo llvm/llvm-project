@@ -20,10 +20,9 @@
 #ifndef LLVM_DEBUGINFOD_DEBUGINFOD_H
 #define LLVM_DEBUGINFOD_DEBUGINFOD_H
 
-#include "HTTPServer.h"
-
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/HTTP/HTTPServer.h"
 #include "llvm/Object/BuildID.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -152,16 +151,11 @@ public:
   Expected<std::string> findBinaryPath(object::BuildIDRef);
 };
 
-class DebuginfodServer {
-public:
+struct DebuginfodServer {
   HTTPServer Server;
+  DebuginfodLog &Log;
+  DebuginfodCollection &Collection;
   DebuginfodServer(DebuginfodLog &Log, DebuginfodCollection &Collection);
-  static Expected<DebuginfodServer> create(DebuginfodLog &Log,
-                                           DebuginfodCollection &Collection);
-
-private:
-  DebuginfodServer() = default;
-  Error init(DebuginfodLog &Log, DebuginfodCollection &Collection);
 };
 
 } // end namespace llvm

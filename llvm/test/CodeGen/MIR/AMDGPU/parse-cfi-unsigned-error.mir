@@ -1,0 +1,9 @@
+# RUN: not llc -mtriple=amdgcn -mcpu=gfx908 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
+
+# Test MIParser::parseCFIUnsigned
+
+name: test
+body: |
+  bb.0:
+    ; CHECK: :[[@LINE+1]]:71: expected unsigned integer
+    CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, -32

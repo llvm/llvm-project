@@ -1,6 +1,9 @@
 !Offloading test for AUTOMAP modifier in declare target enter
 ! REQUIRES: flang, amdgpu
 
+! FIXME: https://github.com/llvm/llvm-project/issues/161265
+! XFAIL: amdgpu
+
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 program automap_program
    use iso_c_binding, only: c_loc
