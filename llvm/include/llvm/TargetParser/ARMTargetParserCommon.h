@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 namespace ARM {
@@ -47,7 +48,8 @@ struct ParsedBranchProtection {
 };
 
 LLVM_ABI bool parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
-                                    StringRef &Err, bool EnablePAuthLR = false);
+                                    StringRef &Err, const llvm::Triple &Triple,
+                                    bool EnablePAuthLR = false);
 
 } // namespace ARM
 } // namespace llvm
