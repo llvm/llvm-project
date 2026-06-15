@@ -2658,10 +2658,12 @@ static bool isAllocDisjoint(const Value *V) {
     return (GV->hasLocalLinkage() || GV->hasHiddenVisibility() ||
             GV->hasProtectedVisibility() || GV->hasGlobalUnnamedAddr()) &&
            !GV->isThreadLocal();
-  // Byval and dereferenceable arguments point to storage accessible to the
-  // caller, which is disjoint from the allocated storage returned by a noalias
-  // pointer.
-  return isByValArg(V) || isDereferenceableArg(V);
+  // Byval arguments point to storage accessible to the caller, which is
+  // disjoint from the allocated storage returned by a noalias pointer.
+  // TODO: possibly extend this to `dereferenceable(N)` arguments once the LLVM
+  // allocator model and its interaction with `noalias` on return values is
+  // clarified.
+  return isByValArg(V);
 }
 
 /// Return true if V1 and V2 are each the base of some distict storage region
@@ -2798,13 +2800,10 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
       // Size of object V, falling back to `dereferenceable(N)` attribute on an
       // argument when getObjectSize cannot determine a concrete size.
       auto GetKnownSize = [&](Value *V, uint64_t &Size) {
-        if (getObjectSize(V, Size, DL, TLI, Opts) && Size != 0)
-          return true;
-        if (auto *A = dyn_cast<Argument>(V)) {
-          Size = A->getDereferenceableBytes();
-          return true;
-        }
-        return false;
+        bool CanBeNull;
+        Size = V->getPointerDereferenceableBytes(DL, CanBeNull,
+                                                 /*CanBeFreed=*/nullptr);
+        return Size != 0 && !CanBeNull;
       };
 
       if (GetKnownSize(LHS, LHSSize) && GetKnownSize(RHS, RHSSize)) {
