@@ -13,6 +13,30 @@
 
 // -----
 
+// CHECK-LABEL: func @memref_copy_in_loop_nest_does_not_crash() {
+func.func @memref_copy_in_loop_nest_does_not_crash() {
+  %mem = memref.alloca() : memref<10xi32>
+  %mem2 = memref.alloca() : memref<10xi32>
+  %c0 = arith.constant 0 : i32
+
+  affine.for %i = 0 to 10 {
+    memref.copy %mem, %mem2 : memref<10xi32> to memref<10xi32>
+    affine.store %c0, %mem[%i] : memref<10xi32>
+  }
+  affine.for %j = 0 to 10 {
+    %v = affine.load %mem[%j] : memref<10xi32>
+  }
+
+  // CHECK:      affine.for
+  // CHECK-NEXT:   memref.copy
+  // CHECK-NEXT:   affine.store
+  // CHECK-NEXT:   %{{.*}} = affine.load
+  // CHECK:      return
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @should_fuse_raw_dep_for_locality() {
 func.func @should_fuse_raw_dep_for_locality() {
   %m = memref.alloc() : memref<10xf32>
@@ -1575,4 +1599,3 @@ func.func @producer_consumer_with_outmost_user(%arg0 : f16) {
 }
 
 // Add further tests in mlir/test/Transforms/loop-fusion-4.mlir
-
