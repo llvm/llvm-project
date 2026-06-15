@@ -6,13 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 //
-/// \file This file contains a DAG scheduling mutation to add additional
-///       edges between ds_load instructions and wmma instructions that
-///       occur a certain amount away from the actual wmma consumer of
-///       said ds_load. This forces the ds_load to properly prefetch
-///       and prevent early bunching of ds_loads that then lead to long
-///       stalls.
-//
+/// \file This file contains a DAG scheduling mutation that shapes how gfx1250
+///       ds_load (LDS) prefetches are placed relative to the WMMA instructions
+///       that consume them, to prevent the pre-RA scheduler from bunching all
+///       the loads at the head of the block (which forces the WMMAs behind
+///       long s_wait_dscnt stalls and inflates register pressure).
+///
+///       It does the following:
+///       - Order the WMMAs (WMMA -> WMMA edges added).
+///       - Order the ds_loads (ds_load -> ds_load edges added
+///         with latency attached to prevent them overhwelming
+///         the LDS bus and becoming memory bound).
+///       - Add WMMA -> ds_load edges to stop loads from being bunched at
+///         the start of the block
+///       - Build a live range histogram of the A/B operand fragments under
+///         an as late as possible schedule, recording the minimum VGPRs 
+///         needed for such a schedule (so the WMMA -> ds_load edges can
+///         be placed earlier if the minimum VGPR budget can afford it).
+///
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUWMMASchedule.h"
@@ -20,7 +31,6 @@
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
-#include "llvm/Support/Debug.h"
 #include <optional>
 #define DEBUG_TYPE "amdgpu-wmma-sched"
 
@@ -28,12 +38,24 @@ using namespace llvm;
 
 namespace {
 
-// A ds_load plus the program order positions (among WMMAs) of its
-// earliest and latest WMMA consumer.
+// A single ds_load and their order among the WMMAs.
 struct LoadInfo {
   SUnit *SU;
-  unsigned MinPos = UINT_MAX;  // earliest consumer (UINT_MAX means none in this region)
-  unsigned MaxPos = 0;         // latest consumer
+  unsigned MinPos = UINT_MAX; // earliest WMMA consumer (UINT_MAX means none in region)
+  unsigned MaxPos = 0;        // latest WMMA consumer
+  long LatestCycle = 0;       // as late as possible cycle
+};
+
+// A fragment: the wide vreg several ds_loads build (for example - a vreg_512
+// from four DS_READ_B128). This is the unit for VGPR pressure - the DS_READ
+// subloads share one register, so counting per ds_load instead of by fragments
+// would multiply the pressure.
+struct FragInfo {
+  unsigned VGPRs = 0;
+  unsigned MinPos = UINT_MAX;
+  unsigned MaxPos = 0;
+  long LatestCycle = LONG_MAX;  // earliest subload's as late as possible cycle
+  SmallVector<SUnit *, 4> Subloads;
 };
 
 class WMMASchedule : public ScheduleDAGMutation {
@@ -56,9 +78,9 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
   const SIInstrInfo *TII = ST.getInstrInfo();
 
   // Gather WMMAs (numbered in program order) and ds_loads.
-  MapVector<SUnit *, unsigned> Wmmas; // WMMA SUnit and its program position relative to one another
+  MapVector<SUnit *, unsigned> Wmmas; // Ordered WMMA SUnits
   SmallVector<LoadInfo> Loads;
-  std::optional<unsigned> LoadLatency = 64; 
+  std::optional<unsigned> LoadLatency;
   std::optional<unsigned> WmmaLatency;
   std::optional<double> LDSBandwidth;
 
@@ -93,16 +115,14 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
   auto [PrevSU, _] = *Wmmas.begin();
   for (auto *It = std::next(Wmmas.begin()); It != Wmmas.end(); ++It) {
     auto [SU, _] = *It;
-    bool Success = DAG->addEdge(SU, SDep(PrevSU, SDep::Artificial));
-    LLVM_DEBUG(dbgs() << "wmma SU" << SU->NodeNum << " <- after wmma SU"
-                      << PrevSU->NodeNum << (Success ? "\n" : " FAIL (cycle)\n"));
+    DAG->addEdge(SU, SDep(PrevSU, SDep::Artificial));
     PrevSU = SU;
   }
 
-  // For each load, find the earliest and latest consuming WMMA positions.
-  // Additionally correct the latency of the ds_load -> earliest WMMA consumer 
-  // data edge.
-  for (LoadInfo& LI : Loads) {
+  // For each load, find earliest and latest consuming WMMA positions, and
+  // correct the ds_load -> earliest consumer data edge latency (Both the 
+  // Succs and Preds SDep is updated)
+  for (LoadInfo &LI : Loads) {
     for (const SDep &D : LI.SU->Succs) {
       if (D.getKind() != SDep::Data)
         continue;
@@ -131,7 +151,9 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
   llvm::stable_sort(Loads, [](const LoadInfo &A, const LoadInfo &B) {
     return A.MinPos < B.MinPos;
   });
-  SUnit* Prev = nullptr; 
+
+  // Chain consecutive loads with an LDS bandwidth latency
+  SUnit *Prev = nullptr;
   for (LoadInfo &LI : Loads) {
     if (LI.MinPos == UINT_MAX) 
       continue;
@@ -143,47 +165,81 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
     Prev = LI.SU;
   }
 
-  // MaxPos in order
-  std::vector<bool> Present(Wmmas.size(), false);
-  for (const LoadInfo &LI : Loads)
-    // Check if there's a consumer for this load in the region
+  // Determing each load's as late as possible cycle - this means the
+  // latest cycle that still meets the load latency, then pushed earlier
+  // if the ds_load -> ds_load edges requires spacing (ds_loads cannot be
+  // too close to each other or it could overwhelm the LDS bus and lead to
+  // the program being memory bound).
+  for (LoadInfo &LI : Loads)
     if (LI.MinPos != UINT_MAX)
-      Present[LI.MaxPos] = true;
-  
-  // Latest position that's <= position Pos at which some load's register frees
-  // A load's register becomes free at its MaxPos, which is its last WMMA consumer.
-  std::vector<std::optional<unsigned>> DeadBy(Wmmas.size(), std::nullopt);
-  std::optional<unsigned> Latest;
-  for (unsigned Pos = 0; Pos < Wmmas.size(); ++Pos) {
-    if (Present[Pos])
-      Latest = Pos;
-    DeadBy[Pos] = Latest;
-  }
-
-  // Create the edges that constrain where the ds_loads can be placed
-  // minimum distance of a load is LI.MinPos - Dist
-  // maximum distance of a load is DeadBy[LI.MinPos - Dist]
-  unsigned Dist = std::max(1u, static_cast<unsigned>(std::ceil(static_cast<double>(*LoadLatency) / *WmmaLatency)));
-  for (const LoadInfo &LI : Loads) {
-    if (LI.MinPos == UINT_MAX || LI.MinPos < Dist)
+      LI.LatestCycle = (long)LI.MinPos * (*WmmaLatency) - (long)(*LoadLatency);
+  long PrevLatest = LONG_MAX;
+  for (int I = (int)Loads.size() - 1; I >= 0; --I) {
+    LoadInfo &LI = Loads[I];
+    if (LI.MinPos == UINT_MAX)
       continue;
-    
-    // Minimum distance edge
-    // Load scheduled before this point (heuristically)
-    long MinDist = LI.MinPos - Dist;
-
-    // Maximum distance edge
-    // Load scheduled after this point
-    bool MaxSuccess = true;
-    std::optional<unsigned> MaxDist = DeadBy[MinDist];
-    if (MaxDist && *MaxDist < MinDist)
-      MaxSuccess = DAG->addEdge(LI.SU, SDep(Wmmas.begin()[*MaxDist].first, SDep::Artificial));
-
-    LLVM_DEBUG(dbgs() << "load SU" << LI.SU->NodeNum << " Win=[" << (MaxDist ? *MaxDist : -1) << ","
-                      << MinDist << "] MinPos=" << LI.MinPos << " MaxPos=" << LI.MaxPos
-                      << (MaxSuccess ? "\n" : " (edge REJECTED: cycle)\n"));
+    long Spaced = PrevLatest - (long)(*LDSBandwidth);
+    if (Spaced < LI.LatestCycle)
+      LI.LatestCycle = Spaced;
+    PrevLatest = LI.LatestCycle;
   }
 
+  // Group subloads into fragments and build the live range histogram
+  // with a schedule as late as possible. Each fragment is live from 
+  // its earliest subload to its last WMMA consumer. The peak of the 
+  // histogram is the minimum VGPRs needed.
+  MapVector<Register, FragInfo> Frags;
+  for (LoadInfo &LI : Loads) {
+    if (LI.MinPos == UINT_MAX)
+      continue;
+    Register R = LI.SU->getInstr()->getOperand(0).getReg();
+    FragInfo &F = Frags[R];
+    if (F.Subloads.empty() && R.isVirtual())
+      F.VGPRs = TRI.getRegSizeInBits(*MRI.getRegClass(R)) / 32;
+    F.MinPos = std::min(F.MinPos, LI.MinPos);
+    F.MaxPos = std::max(F.MaxPos, LI.MaxPos);
+    F.LatestCycle = std::min(F.LatestCycle, LI.LatestCycle);
+    F.Subloads.push_back(LI.SU);
+  }
+
+  std::vector<unsigned> Hist(Wmmas.size(), 0);
+  for (auto &KV : Frags) {
+    FragInfo &F = KV.second;
+    long Pos = F.LatestCycle / (long)(*WmmaLatency);
+    unsigned StartPos = Pos < 0 ? 0 : (unsigned)Pos;
+    for (unsigned P = StartPos; P <= F.MaxPos && P < Wmmas.size(); ++P)
+      Hist[P] += F.VGPRs;
+  }
+
+  unsigned Budget = 0;
+  for (unsigned P = 0; P < Wmmas.size(); ++P)
+    Budget = std::max(Budget, Hist[P]);
+
+  // For each fragment (in order), find the earliest position it
+  // can be placed so the live set never exceeds the budget, then
+  // add a WMMAS[Earliest] -> ds_load edge - this is what leads to
+  // the debunching.
+  for (auto &KV : Frags) {
+    FragInfo &F = KV.second;
+    long Pos = F.LatestCycle / (long)(*WmmaLatency);
+    unsigned LateStartPos = Pos < 0 ? 0 : (unsigned)Pos;
+    unsigned Earliest = LateStartPos;
+    for (int P = (int)LateStartPos - 1; P >= 0; --P) {
+      if (Hist[(unsigned)P] + F.VGPRs <= Budget)
+        Earliest = (unsigned)P;
+      else
+        break;
+    }
+    // Update the histogram so later fragments don't schedule earlier and
+    // exceed the budget.
+    for (unsigned P = Earliest; P < LateStartPos; ++P)
+      Hist[P] += F.VGPRs;
+    // No need to add an edge if the load can be scheduled at the beginning.
+    if (Earliest == 0)
+      continue;
+    for (SUnit *L : F.Subloads)
+      DAG->addEdge(L, SDep(Wmmas.begin()[Earliest].first, SDep::Artificial));
+  }
 }
 
 } // end namespace
