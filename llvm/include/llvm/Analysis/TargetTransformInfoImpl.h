@@ -32,7 +32,7 @@ class Function;
 
 /// Base class for use as a mix-in that aids implementing
 /// a TargetTransformInfo-compatible class.
-class TargetTransformInfoImplBase {
+class LLVM_ABI TargetTransformInfoImplBase {
 
 protected:
   typedef TargetTransformInfo TTI;
@@ -474,6 +474,8 @@ public:
   virtual bool shouldBuildLookupTablesForConstant(Constant *C) const {
     return true;
   }
+
+  virtual unsigned getMinimumLookupTableEntryBitWidth() const { return 8; }
 
   virtual bool shouldBuildRelLookupTables() const { return false; }
 
@@ -1154,6 +1156,8 @@ public:
     return false;
   }
   virtual bool preferAlternateOpcodeVectorization() const { return true; }
+
+  virtual bool preferSLPInstCountCheck() const { return true; }
 
   virtual bool preferPredicatedReductionSelect() const { return false; }
 

@@ -54,4 +54,9 @@ set_target_properties(omptarget PROPERTIES
                       POSITION_INDEPENDENT_CODE ON
                       INSTALL_RPATH "$ORIGIN"
                       BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
+if(UNIX AND NOT APPLE)
+  set_target_properties(omptarget PROPERTIES
+                        SOVERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}"
+                        VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}")
+endif()
 install(TARGETS omptarget LIBRARY COMPONENT offload DESTINATION "${OFFLOAD_INSTALL_LIBDIR}")

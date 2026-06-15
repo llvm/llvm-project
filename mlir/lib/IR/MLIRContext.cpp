@@ -380,7 +380,11 @@ void MLIRContext::registerActionHandler(HandlerTy handler) {
   getImpl().actionHandler = std::move(handler);
 }
 
-const MLIRContext::HandlerTy &MLIRContext::getActionHandler() {
+const MLIRContext::HandlerTy &MLIRContext::getActionHandler() const {
+  return getImpl().actionHandler;
+}
+
+MLIRContext::HandlerTy &MLIRContext::getActionHandler() {
   return getImpl().actionHandler;
 }
 

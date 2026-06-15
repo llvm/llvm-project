@@ -93,11 +93,10 @@ namespace {
 /// automatically forwarded to each extractor.
 class TUSummaryRunner final : public MultiplexConsumer {
 public:
-  static std::unique_ptr<TUSummaryRunner> create(CompilerInstance &CI,
-                                                 StringRef InFile);
+  static std::unique_ptr<TUSummaryRunner> create(CompilerInstance &CI);
 
 private:
-  TUSummaryRunner(StringRef InFile, std::unique_ptr<SerializationFormat> Format,
+  TUSummaryRunner(std::unique_ptr<SerializationFormat> Format,
                   const FrontendOptions &Opts);
 
   void HandleTranslationUnit(ASTContext &Ctx) override;
@@ -109,10 +108,14 @@ private:
 };
 } // namespace
 
-std::unique_ptr<TUSummaryRunner> TUSummaryRunner::create(CompilerInstance &CI,
-                                                         StringRef InFile) {
+std::unique_ptr<TUSummaryRunner> TUSummaryRunner::create(CompilerInstance &CI) {
   const FrontendOptions &Opts = CI.getFrontendOpts();
   DiagnosticsEngine &Diags = CI.getDiagnostics();
+
+  if (Opts.SSAFCompilationUnitId.empty()) {
+    Diags.Report(diag::warn_ssaf_tu_summary_requires_compilation_unit_id);
+    return nullptr;
+  }
 
   auto MaybePair =
       parseOutputFileFormatAndPathOrReportError(Diags, Opts.SSAFTUSummaryFile);
@@ -124,16 +127,17 @@ std::unique_ptr<TUSummaryRunner> TUSummaryRunner::create(CompilerInstance &CI,
     return nullptr;
 
   return std::unique_ptr<TUSummaryRunner>{
-      new TUSummaryRunner{InFile, makeFormat(FormatName), Opts}};
+      new TUSummaryRunner{makeFormat(FormatName), Opts}};
 }
 
-TUSummaryRunner::TUSummaryRunner(StringRef InFile,
-                                 std::unique_ptr<SerializationFormat> Format,
+TUSummaryRunner::TUSummaryRunner(std::unique_ptr<SerializationFormat> Format,
                                  const FrontendOptions &Opts)
     : MultiplexConsumer(std::vector<std::unique_ptr<ASTConsumer>>{}),
-      Summary(BuildNamespace(BuildNamespaceKind::CompilationUnit, InFile)),
+      Summary(BuildNamespace(BuildNamespaceKind::CompilationUnit,
+                             Opts.SSAFCompilationUnitId)),
       Format(std::move(Format)), Opts(Opts) {
   assert(this->Format);
+  assert(!Opts.SSAFCompilationUnitId.empty());
 
   // Now the Summary and the builders are constructed, we can also construct the
   // extractors.
@@ -174,7 +178,7 @@ TUSummaryExtractorFrontendAction::CreateASTConsumer(CompilerInstance &CI,
   if (!WrappedConsumer)
     return nullptr;
 
-  if (auto Runner = TUSummaryRunner::create(CI, InFile)) {
+  if (auto Runner = TUSummaryRunner::create(CI)) {
     CI.getCodeGenOpts().ClearASTBeforeBackend = false;
     std::vector<std::unique_ptr<ASTConsumer>> Consumers;
     Consumers.reserve(2);

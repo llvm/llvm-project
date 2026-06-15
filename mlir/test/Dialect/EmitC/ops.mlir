@@ -9,9 +9,9 @@ emitc.include "test.h"
 // CHECK-LABEL: func @f(%{{.*}}: i32, %{{.*}}: !emitc.opaque<"int32_t">) {
 func.func @f(%arg0: i32, %f: !emitc.opaque<"int32_t">) {
   %1 = "emitc.call_opaque"() {callee = "blah"} : () -> i64
-  emitc.call_opaque "foo" (%1) {args = [
+  emitc.call_opaque "foo" (%1) <{args = [
     0 : index, dense<[0, 1]> : tensor<2xi32>, 0 : index
-  ]} : (i64) -> ()
+  ]}> : (i64) -> ()
   return
 }
 
@@ -49,14 +49,6 @@ func.func @c() {
   %2 = "emitc.constant"(){value = 42 : index} : () -> !emitc.size_t
   %3 = "emitc.constant"(){value = 42 : index} : () -> !emitc.ssize_t
   %4 = "emitc.constant"(){value = 42 : index} : () -> !emitc.ptrdiff_t
-  return
-}
-
-func.func @a() {
-  %0 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
-  %1 = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
-  %2 = "emitc.apply"(%0) {applicableOperator = "&"} : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-  %3 = emitc.apply "&"(%1) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
   return
 }
 

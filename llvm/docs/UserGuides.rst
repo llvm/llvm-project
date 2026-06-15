@@ -67,6 +67,7 @@ intermediate LLVM representation.
    AMDGPUDwarfExtensionsForHeterogeneousDebugging
    AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack
    AMDGPUExecutionSynchronization
+   AMDGPUMemoryModel
    SPIRVUsage
    DirectXUsage
    RISCVUsage
@@ -299,6 +300,10 @@ Additional Topics
 
 :doc:`AMDGPUAsyncOperations`
    Builtins for invoking asynchronous data transfer operations in AMD GPUs.
+
+:doc:`AMDGPUMemoryModel`
+   This document describes *AMDGPU Memory Model* which overrides the :ref:`LLVM
+   memory model<memmodel>` when a program is compiled for the AMDGPU target.
 
 :doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging`
    This document describes DWARF extensions to support heterogeneous debugging

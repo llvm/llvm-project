@@ -46,40 +46,6 @@ def AMDGPU_DPPPerm : I32Enum<"DPPPerm",
   let cppNamespace = "::mlir::amdgpu";
 }
 
-def AMDGPU_SchedBarrierOpOpt : I32BitEnum<"sched_barrier_opt_enum",
-    "The possible options for scheduling barriers",
-    [
-      I32BitEnumAttrCaseNone<"none">,
-      I32BitEnumAttrCaseBit<"non_mem_non_sideffect", 0>,
-      I32BitEnumAttrCaseBit<"valu", 1>,
-      I32BitEnumAttrCaseBit<"salu", 2>,
-      I32BitEnumAttrCaseBit<"mfma_wmma",  3>,
-      I32BitEnumAttrCaseBit<"all_vmem",  4>,
-      I32BitEnumAttrCaseBit<"vmem_read",  5>,
-      I32BitEnumAttrCaseBit<"vmem_write", 6>,
-      I32BitEnumAttrCaseBit<"all_ds", 7>,
-      I32BitEnumAttrCaseBit<"ds_read", 8>,
-      I32BitEnumAttrCaseBit<"ds_write", 9>,
-      I32BitEnumAttrCaseBit<"transcendental", 10>
-    ]> {
-  let cppNamespace = "::mlir::amdgpu";
-}
-
-def AMDGPU_MFMAPermB : I32Enum<"MFMAPermB",
-    "The possible permutations of the lanes storing B available in an MFMA",
-    [
-      I32EnumAttrCase<"none",            0>,
-      I32EnumAttrCase<"bcast_first_32",  1>,
-      I32EnumAttrCase<"bcast_second_32", 2>,
-      I32EnumAttrCase<"rotate_16_right", 3>,
-      I32EnumAttrCase<"bcast_first_16",  4>,
-      I32EnumAttrCase<"bcast_second_16", 5>,
-      I32EnumAttrCase<"bcast_third_16",  6>,
-      I32EnumAttrCase<"bcast_fourth_16", 7>
-    ]> {
-  let cppNamespace = "::mlir::amdgpu";
-}
-
 def AMDGPU_LoadTemporalHint : I32Enum<"LoadTemporalHint",
     "AMDGPU-specific prefetch temporal hints for load instructions. "
     "RT - regular temporal for both near and far caches; "

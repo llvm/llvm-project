@@ -49,4 +49,4 @@ Options
 .. option:: IgnoreExternC
 
    If set to `true`, the check will not give warning inside ``extern "C"``
-   scope. Default is `false`
+   scope. Default is `true`.

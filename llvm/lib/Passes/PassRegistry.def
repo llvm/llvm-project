@@ -450,7 +450,6 @@ FUNCTION_PASS("fix-irreducible", FixIrreduciblePass())
 FUNCTION_PASS("flatten-cfg", FlattenCFGPass())
 FUNCTION_PASS("float2int", Float2IntPass())
 FUNCTION_PASS("free-machine-function", FreeMachineFunctionPass())
-FUNCTION_PASS("func-properties-stats", FunctionPropertiesStatisticsPass())
 FUNCTION_PASS("gc-lowering", GCLoweringPass())
 FUNCTION_PASS("guard-widening", GuardWideningPass())
 FUNCTION_PASS("gvn-hoist", GVNHoistPass())
@@ -595,6 +594,12 @@ FUNCTION_PASS_WITH_PARAMS(
     [](bool PostInlining) { return EntryExitInstrumenterPass(PostInlining); },
     parseEntryExitInstrumenterPassOptions, "post-inline")
 FUNCTION_PASS_WITH_PARAMS(
+    "func-properties-stats", "FunctionPropertiesStatisticsPass",
+    [](bool IsPreOptimizations) {
+      return FunctionPropertiesStatisticsPass(IsPreOptimizations);
+    },
+    parseFunctionPropertiesStatisticsOptions, "pre-opt")
+FUNCTION_PASS_WITH_PARAMS(
     "function-simplification", "",
     [this](OptimizationLevel OL) {
       return buildFunctionSimplificationPipeline(OL, ThinOrFullLTOPhase::None);
@@ -619,9 +624,7 @@ FUNCTION_PASS_WITH_PARAMS(
     "no-verify-fixpoint;verify-fixpoint;max-iterations=N")
 FUNCTION_PASS_WITH_PARAMS(
     "instcount", "InstCountPass",
-    [](bool IsPreOptimizations) { 
-      return InstCountPass(IsPreOptimizations); 
-    },
+    [](bool IsPreOptimizations) { return InstCountPass(IsPreOptimizations); },
     parseInstCountOptions, "pre-opt")
 FUNCTION_PASS_WITH_PARAMS(
     "lint", "LintPass",

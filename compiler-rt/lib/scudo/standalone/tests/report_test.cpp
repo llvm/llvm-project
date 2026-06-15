@@ -105,6 +105,9 @@ TEST(ScudoReportDeathTest, Linux) {
   EXPECT_DEATH(scudo::reportMapError(1024U),
                "Scudo ERROR:.*internal map failure \\(error desc=.*\\) "
                "requesting 1KB");
+  EXPECT_DEATH(scudo::reportMapFixedError(0x1000U, 0x2000U),
+               "Scudo ERROR:.*internal map failure using fixed address "
+               "\\(expected: 0x1000 requested: 0x2000\\)");
   errno = ENOMEM;
   EXPECT_DEATH(scudo::reportUnmapError(0x1000U, 100U),
                "Scudo ERROR:.*internal unmap failure \\(error desc=.*\\) Addr "

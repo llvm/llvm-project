@@ -466,3 +466,11 @@ void evaluatevalue(void) {
   const struct Oops s = {0, 0.};
   *(int *)(&s.a) = 42; // all-warning {{cast from 'const int *' to 'int *' drops const qualifier}}
 }
+
+void AddrLabelDiffSub(void) {
+  _Static_assert((long)&&bar - (long)&&baz - 42 == foo, ""); // all-warning {{comparison between pointer and integer ('long' and 'int (*)()')}} \
+                                                             // all-error {{not an integral constant expression}} \
+                                                             // all-error {{use of undeclared label 'bar'}} \
+                                                             // all-error {{use of undeclared label 'baz'}} \
+                                                             // pedantic-warning 2{{use of GNU address-of-label extension}}
+}

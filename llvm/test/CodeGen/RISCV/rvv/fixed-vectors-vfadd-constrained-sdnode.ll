@@ -177,11 +177,11 @@ define <2 x half> @vfadd_vf_v2f16(<2 x half> %va, half %b) strictfp {
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    fmv.x.h a0, fa0
 ; ZVFBFA-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFBFA-NEXT:    vmv.v.x v9, a0
+; ZVFBFA-NEXT:    vfwcvt.f.f.v v9, v8
+; ZVFBFA-NEXT:    vmv.v.x v8, a0
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v9
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFBFA-NEXT:    vfadd.vv v9, v10, v8
+; ZVFBFA-NEXT:    vfadd.vv v9, v9, v10
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v9
 ; ZVFBFA-NEXT:    ret
@@ -224,11 +224,11 @@ define <4 x half> @vfadd_vf_v4f16(<4 x half> %va, half %b) strictfp {
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    fmv.x.h a0, fa0
 ; ZVFBFA-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFBFA-NEXT:    vmv.v.x v9, a0
+; ZVFBFA-NEXT:    vfwcvt.f.f.v v9, v8
+; ZVFBFA-NEXT:    vmv.v.x v8, a0
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v9
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFBFA-NEXT:    vfadd.vv v9, v10, v8
+; ZVFBFA-NEXT:    vfadd.vv v9, v9, v10
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; ZVFBFA-NEXT:    vfncvt.f.f.w v8, v9
 ; ZVFBFA-NEXT:    ret
@@ -271,8 +271,8 @@ define <8 x half> @vfadd_vf_v8f16(<8 x half> %va, half %b) strictfp {
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    fmv.x.h a0, fa0
 ; ZVFBFA-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; ZVFBFA-NEXT:    vmv.v.x v12, a0
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v10, v8
+; ZVFBFA-NEXT:    vmv.v.x v12, a0
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v12
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFBFA-NEXT:    vfadd.vv v10, v10, v8
@@ -318,8 +318,8 @@ define <16 x half> @vfadd_vf_v16f16(<16 x half> %va, half %b) strictfp {
 ; ZVFBFA:       # %bb.0:
 ; ZVFBFA-NEXT:    fmv.x.h a0, fa0
 ; ZVFBFA-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; ZVFBFA-NEXT:    vmv.v.x v16, a0
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v12, v8
+; ZVFBFA-NEXT:    vmv.v.x v16, a0
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v16
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFBFA-NEXT:    vfadd.vv v12, v12, v8
@@ -366,11 +366,11 @@ define <32 x half> @vfadd_vf_v32f16(<32 x half> %va, half %b) strictfp {
 ;
 ; ZVFBFA-LABEL: vfadd_vf_v32f16:
 ; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    fmv.x.h a0, fa0
-; ZVFBFA-NEXT:    li a1, 32
-; ZVFBFA-NEXT:    vsetvli zero, a1, e16, m4, ta, ma
-; ZVFBFA-NEXT:    vmv.v.x v24, a0
+; ZVFBFA-NEXT:    li a0, 32
+; ZVFBFA-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v16, v8
+; ZVFBFA-NEXT:    fmv.x.h a0, fa0
+; ZVFBFA-NEXT:    vmv.v.x v24, a0
 ; ZVFBFA-NEXT:    vfwcvt.f.f.v v8, v24
 ; ZVFBFA-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFBFA-NEXT:    vfadd.vv v16, v16, v8

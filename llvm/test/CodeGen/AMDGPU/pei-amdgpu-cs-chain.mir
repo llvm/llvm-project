@@ -7,12 +7,14 @@
   declare amdgpu_cs_chain void @callee()
   declare amdgpu_gfx void @gfx_callee()
 
-  define amdgpu_cs_chain void @preserve_inactive_wwm() {ret void}
-  define amdgpu_cs_chain void @dont_preserve_wwm_if_no_chain_calls() {ret void}
-  define amdgpu_cs_chain void @dont_preserve_wwm_if_init_whole_wave() {ret void}
-  define amdgpu_cs_chain void @dont_preserve_non_wwm() {ret void}
-  define amdgpu_cs_chain void @dont_preserve_v0_v7() {ret void}
-  define amdgpu_cs_chain void @dont_preserve_sgpr() {ret void}
+  define amdgpu_cs_chain void @preserve_inactive_wwm() #0 {ret void}
+  define amdgpu_cs_chain void @dont_preserve_wwm_if_no_chain_calls() #0 {ret void}
+  define amdgpu_cs_chain void @dont_preserve_wwm_if_init_whole_wave() #0 {ret void}
+  define amdgpu_cs_chain void @dont_preserve_non_wwm() #0 {ret void}
+  define amdgpu_cs_chain void @dont_preserve_v0_v7() #0 {ret void}
+  define amdgpu_cs_chain void @dont_preserve_sgpr() #0 {ret void}
+
+  attributes #0 = { nounwind }
 ...
 ---
 
