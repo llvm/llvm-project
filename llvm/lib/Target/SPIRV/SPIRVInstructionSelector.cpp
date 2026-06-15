@@ -3723,7 +3723,9 @@ bool SPIRVInstructionSelector::selectBitreverse16(Register ResVReg,
                                                   MachineInstr &I,
                                                   Register Op) const {
   SPIRVTypeInst Int32Type = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  Register ShiftConst = GR.getOrCreateConstInt(16, I, Int32Type, TII);
+  const unsigned BitWidth = GR.getScalarOrVectorBitWidth(ResType);
+  Register ShiftConst =
+      GR.getOrCreateConstInt(32 - BitWidth, I, Int32Type, TII);
   unsigned ShiftOp = SPIRV::OpShiftRightLogicalS;
 
   const unsigned N = GR.getScalarOrVectorComponentCount(ResType);
