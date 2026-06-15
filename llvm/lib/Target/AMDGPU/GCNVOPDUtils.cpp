@@ -332,6 +332,8 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
       collectLoads(ILoadSuccs, IVisited, *ISUI, /*Forward=*/true);
 
       unsigned JIdx = IIdx + 1;
+      BitVector JVisited;
+      SmallVector<SUnit *> JLoadPreds;
       for (auto JSUI = ISUI + 1; JSUI != E; ++JSUI, ++JIdx) {
         if (!VOPDCapable[JIdx] || JSUI->isBoundaryNode())
           continue;
@@ -341,9 +343,8 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
           continue;
 
         bool LoadsMayOverlap = !ILoadSuccs.empty() && [&] {
-          BitVector JVisited(
-              IVisited); // No need to collect from nodes reachable from ISUI
-          SmallVector<SUnit *> JLoadPreds;
+          JVisited = IVisited; // No need to collect from nodes reachable from ISUI
+          JLoadPreds.clear();
           collectLoads(JLoadPreds, JVisited, *JSUI, /*Forward=*/false);
           if (JLoadPreds.empty())
             return false;
