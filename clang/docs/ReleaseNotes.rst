@@ -191,6 +191,7 @@ C++ Language Changes
 --------------------
 
 - ``__is_trivially_equality_comparable`` no longer returns false for all enum types. (#GH132672)
+- ``auto`` parameters are now available in all C++ language modes as an extension.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -381,6 +382,17 @@ New Compiler Flags
   be aligned to 4-byte alignment rather than fully unaligned or fully (8-byte)
   aligned.
 
+- New ``-cl`` option ``/pathmap:`` added to match MSVC. This option acts as a
+  clang's ``-ffile-prefix-map=value`` and has known differences in behaviour
+  with the CL's option that do not affect the functionality: nomalizes the
+  macro prefix map pathes -- removes `./` and uses the target's platform-
+  specific path separator character when expanding the preprocessor macros -- 
+  ``-ffile-reproducible`` (but not the debug and coverage prefix maps);
+  does not require ``/experimental:deterministic`` as by MSVC. It needed for
+  removing a hostname from a mangling hash gen, but clang-cl does not use
+  a hostname when generates the hashes. Known issues -- does not remap the
+  source file pathes within PCH/PCM files.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -389,6 +401,9 @@ Modified Compiler Flags
 - The `-mno-outline` and `-moutline` compiler flags are now allowed on RISC-V and X86, which both support the machine outliner.
 - The `-mno-outline` flag will now add the `nooutline` IR attribute, so that
   `-mno-outline` and `-moutline` objects can be mixed correctly during LTO.
+- The `-fzero-call-used-regs` compiler flag is now allowed on RISC-V, only the
+  "skip", "used-gpr", "used-gpr-arg", "all-gpr" and "all-gpr-arg" options are
+  supported for the moment.
 
 - Slightly changed hash id generation to get the unique linkage symbols names 
   by ``-unique-internal-linkage-names`` option. Now it uses a path that
@@ -480,6 +495,9 @@ Attribute Changes in Clang
   instead be used by warnings and static analyses to provide more information
   about pointer lifetimes. It may be used to power optimizations in the future,
   however there are no concrete plans to do so at the moment.
+
+* The ``modular_format`` attribute now supports the ``fixed`` aspect for C
+  ISO 18037 fixed-point ``printf`` specifiers.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -687,6 +705,7 @@ Bug Fixes in This Version
 - Fixed crash when checking for overflow for unary operator that can't overflow (#GH170072)
 - Clang no longer handles a `" q-char-sequence "` header name as a string literal (#GH132643).
 - Fixed an assertion when ``__attribute__((alloc_size))`` is used with an argument type wider than the target's pointer width. (#GH190445)
+- Fixed an assertion where we improperly handled implicit conversions to integral types from an atomic-type with a conversion function. (#GH201770)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -722,7 +741,6 @@ Bug Fixes to C++ Support
 - Fixed an alias template CTAD crash.
 - Correctly diagnose uses of ``co_await`` / ``co_yield`` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
-- Fixed clang incorrectly rejecting several cases of out-of-line definitions. (#GH101330)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fixed crash instantiating class member specializations.
@@ -875,6 +893,9 @@ RISC-V Support
 - Tenstorrent Ascalon D8 was renamed to Ascalon X. Use `tt-ascalon-x` with `-mcpu` or `-mtune`.
 - Intrinsics were added for the 'Zvabd` (RISC-V Integer Vector Absolute Difference) extension.
 - Intrinsics were added for the 'Zvzip` (Reordering Structured Data in Vector Registers) extension.
+- A new ``-mtune`` syntax was added to support processor-specific tuning feature string
+  Currently this new syntax is gated by the ``-mexperimental-mtune-syntax`` flag.
+
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -981,6 +1002,12 @@ Crash and bug fixes
 - Fixed ``security.VAList`` checker producing false positives when analyzing
   C23 code where ``va_start`` expands to ``__builtin_c23_va_start``.
 
+Improvements
+^^^^^^^^^^^^
+
+- ``alpha.unix.PthreadLock`` now emits path notes on lock, unlock, destroy,
+  and init operations.
+
 .. comment:
   This is for the Static Analyzer.
   Using the caret `^^^` underlining for subsections:
@@ -994,6 +1021,14 @@ Crash and bug fixes
 Sanitizers
 ----------
 - UndefinedBehaviorSanitizer now supports ``__ubsan_default_suppressions``.
+
+- Sanitizer Special Case Lists (``-fsanitize-ignorelist``) now support
+  Version 4 of the Special Case List format, which introduces a transition
+  period for leading dot-slash (``./``) canonicalization in path matching.
+  Version 4 matches both canonicalized and non-canonicalized paths but emits a
+  warning for deprecated matches. Version 5 drops backward compatibility and
+  requires rules to match canonicalized paths (without leading ``./``).
+
 
 Python Binding Changes
 ----------------------
@@ -1020,6 +1055,10 @@ OpenMP Support
   ``fallback`` modifier (``fb_nullify`` or ``fb_preserve``) with OpenMP >= 61.
 - Added support for ``local`` clause with declare_target directive when
   OpenMP >= 60.
+- Fixed the identity element used for ``reduction(* : x)`` over C++ class types
+  (e.g. ``std::complex``). The private copy is now initialized to the
+  multiplicative identity instead of being value-initialized, which previously
+  produced a wrong result (the product collapsed to the additive identity).
 
 SYCL Support
 ------------

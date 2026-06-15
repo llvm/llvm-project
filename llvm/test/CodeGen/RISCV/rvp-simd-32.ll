@@ -786,14 +786,14 @@ define <2 x i16> @test_psslai_h(<2 x i16> %a) {
 define <4 x i8> @test_psslai_b(<4 x i8> %a) {
 ; CHECK-LABEL: test_psslai_b:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pmsltz.b a1, a0
-; CHECK-NEXT:    pli.b a2, -128
-; CHECK-NEXT:    pli.b a3, 127
-; CHECK-NEXT:    merge a1, a3, a2
-; CHECK-NEXT:    pslli.b a2, a0, 2
-; CHECK-NEXT:    psrai.b a3, a2, 2
-; CHECK-NEXT:    pmseq.b a0, a0, a3
-; CHECK-NEXT:    merge a0, a1, a2
+; CHECK-NEXT:    pli.b a1, -128
+; CHECK-NEXT:    pmsltz.b a2, a0
+; CHECK-NEXT:    pslli.b a3, a0, 2
+; CHECK-NEXT:    pli.b a4, 127
+; CHECK-NEXT:    psrai.b a5, a3, 2
+; CHECK-NEXT:    merge a2, a4, a1
+; CHECK-NEXT:    pmseq.b a0, a0, a5
+; CHECK-NEXT:    merge a0, a2, a3
 ; CHECK-NEXT:    ret
   %res = call <4 x i8> @llvm.sshl.sat.v4i8(<4 x i8> %a, <4 x i8> splat(i8 2))
   ret <4 x i8> %res
@@ -818,21 +818,21 @@ define <2 x i16> @test_pssla_h(<2 x i16> %a, <2 x i16> %b) {
 ; RV32-NEXT:    sll a2, a0, a1
 ; RV32-NEXT:    srli a3, a1, 16
 ; RV32-NEXT:    srli a4, a0, 16
-; RV32-NEXT:    sext.h a5, a2
-; RV32-NEXT:    sra a1, a5, a1
-; RV32-NEXT:    pmsltz.h a5, a0
 ; RV32-NEXT:    sll a4, a4, a3
+; RV32-NEXT:    sext.h a5, a2
 ; RV32-NEXT:    pack a2, a2, a4
 ; RV32-NEXT:    sext.h a4, a4
+; RV32-NEXT:    sra a1, a5, a1
 ; RV32-NEXT:    sra a3, a4, a3
-; RV32-NEXT:    lui a4, 8
 ; RV32-NEXT:    pack a1, a1, a3
-; RV32-NEXT:    plui.h a3, -512
-; RV32-NEXT:    addi a4, a4, -1
-; RV32-NEXT:    pmv.hs a4, a4
+; RV32-NEXT:    lui a3, 8
+; RV32-NEXT:    pmsltz.h a4, a0
+; RV32-NEXT:    addi a3, a3, -1
+; RV32-NEXT:    pmv.hs a3, a3
+; RV32-NEXT:    plui.h a5, -512
 ; RV32-NEXT:    pmseq.h a0, a0, a1
-; RV32-NEXT:    merge a5, a4, a3
-; RV32-NEXT:    merge a0, a5, a2
+; RV32-NEXT:    merge a4, a3, a5
+; RV32-NEXT:    merge a0, a4, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pssla_h:
@@ -841,34 +841,34 @@ define <2 x i16> @test_pssla_h(<2 x i16> %a, <2 x i16> %b) {
 ; RV64-NEXT:    srli a3, a0, 48
 ; RV64-NEXT:    srli a4, a1, 32
 ; RV64-NEXT:    srli a5, a0, 32
-; RV64-NEXT:    sll a6, a0, a1
-; RV64-NEXT:    srli a7, a1, 16
-; RV64-NEXT:    srli t0, a0, 16
-; RV64-NEXT:    pmsltz.h t1, a0
 ; RV64-NEXT:    sll a3, a3, a2
 ; RV64-NEXT:    sll a5, a5, a4
-; RV64-NEXT:    sll t0, t0, a7
-; RV64-NEXT:    sext.h t2, a6
-; RV64-NEXT:    sra a1, t2, a1
-; RV64-NEXT:    ppaire.h t2, a5, a3
-; RV64-NEXT:    ppaire.h a6, a6, t0
-; RV64-NEXT:    pack a6, a6, t2
-; RV64-NEXT:    lui t2, 8
+; RV64-NEXT:    srli a6, a1, 16
+; RV64-NEXT:    srli a7, a0, 16
+; RV64-NEXT:    sll t0, a0, a1
+; RV64-NEXT:    sll a7, a7, a6
+; RV64-NEXT:    ppaire.h t1, a5, a3
+; RV64-NEXT:    ppaire.h t2, t0, a7
+; RV64-NEXT:    pack t1, t2, t1
 ; RV64-NEXT:    sext.h a3, a3
-; RV64-NEXT:    sra a2, a3, a2
-; RV64-NEXT:    plui.h a3, -512
-; RV64-NEXT:    addi t2, t2, -1
 ; RV64-NEXT:    sext.h a5, a5
-; RV64-NEXT:    sext.h t0, t0
-; RV64-NEXT:    pmv.hs t2, t2
-; RV64-NEXT:    sra a4, a5, a4
-; RV64-NEXT:    sra a5, t0, a7
-; RV64-NEXT:    ppaire.h a2, a4, a2
-; RV64-NEXT:    ppaire.h a1, a1, a5
+; RV64-NEXT:    sra a2, a3, a2
+; RV64-NEXT:    sra a3, a5, a4
+; RV64-NEXT:    sext.h a4, t0
+; RV64-NEXT:    sext.h a5, a7
+; RV64-NEXT:    sra a1, a4, a1
+; RV64-NEXT:    sra a4, a5, a6
+; RV64-NEXT:    ppaire.h a2, a3, a2
+; RV64-NEXT:    ppaire.h a1, a1, a4
 ; RV64-NEXT:    pack a1, a1, a2
+; RV64-NEXT:    lui a2, 8
+; RV64-NEXT:    pmsltz.h a3, a0
+; RV64-NEXT:    addi a2, a2, -1
+; RV64-NEXT:    pmv.hs a2, a2
+; RV64-NEXT:    plui.h a4, -512
 ; RV64-NEXT:    pmseq.h a0, a0, a1
-; RV64-NEXT:    merge t1, t2, a3
-; RV64-NEXT:    merge a0, t1, a6
+; RV64-NEXT:    merge a3, a2, a4
+; RV64-NEXT:    merge a0, a3, t1
 ; RV64-NEXT:    ret
   %res = call <2 x i16> @llvm.sshl.sat.v2i16(<2 x i16> %a, <2 x i16> %b)
   ret <2 x i16> %res
@@ -961,41 +961,90 @@ define <4 x i8> @test_psll_bs_mask(<4 x i8> %a, i8 %shamt) {
 
 ; Test logical shift left(vector shamt)
 define <2 x i16> @test_psll_hs_vec_shamt(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-RV32-LABEL: test_psll_hs_vec_shamt:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    srli a2, a1, 16
+; CHECK-RV32-NEXT:    srli a3, a0, 16
+; CHECK-RV32-NEXT:    sll a0, a0, a1
+; CHECK-RV32-NEXT:    sll a1, a3, a2
+; CHECK-RV32-NEXT:    pack a0, a0, a1
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_psll_hs_vec_shamt:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    srli a2, a1, 16
+; CHECK-RV64-NEXT:    srli a3, a0, 16
+; CHECK-RV64-NEXT:    sll a0, a0, a1
+; CHECK-RV64-NEXT:    sll a1, a3, a2
+; CHECK-RV64-NEXT:    ppaire.h a0, a0, a1
+; CHECK-RV64-NEXT:    ret
 ; RV32-LABEL: test_psll_hs_vec_shamt:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    sll a2, a0, a1
-; RV32-NEXT:    srli a1, a1, 16
-; RV32-NEXT:    srli a0, a0, 16
+; RV32-NEXT:    srli a2, a1, 16
+; RV32-NEXT:    srli a3, a0, 16
 ; RV32-NEXT:    sll a0, a0, a1
-; RV32-NEXT:    pack a0, a2, a0
+; RV32-NEXT:    sll a1, a3, a2
+; RV32-NEXT:    pack a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_psll_hs_vec_shamt:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    sll a2, a0, a1
-; RV64-NEXT:    srli a1, a1, 16
-; RV64-NEXT:    srli a0, a0, 16
+; RV64-NEXT:    srli a2, a1, 16
+; RV64-NEXT:    srli a3, a0, 16
 ; RV64-NEXT:    sll a0, a0, a1
-; RV64-NEXT:    ppaire.h a0, a2, a0
+; RV64-NEXT:    sll a1, a3, a2
+; RV64-NEXT:    ppaire.h a0, a0, a1
 ; RV64-NEXT:    ret
   %res = shl <2 x i16> %a, %b
   ret <2 x i16> %res
 }
 
 define <4 x i8> @test_psll_bs_vec_shamt(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-RV32-LABEL: test_psll_bs_vec_shamt:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    srli a2, a1, 24
+; CHECK-RV32-NEXT:    srli a3, a0, 24
+; CHECK-RV32-NEXT:    srli a4, a1, 8
+; CHECK-RV32-NEXT:    sll a3, a3, a2
+; CHECK-RV32-NEXT:    srli a2, a0, 8
+; CHECK-RV32-NEXT:    sll a6, a0, a1
+; CHECK-RV32-NEXT:    srli a1, a1, 16
+; CHECK-RV32-NEXT:    srli a0, a0, 16
+; CHECK-RV32-NEXT:    sll a2, a2, a4
+; CHECK-RV32-NEXT:    sll a7, a0, a1
+; CHECK-RV32-NEXT:    ppaire.db a0, a6, a2
+; CHECK-RV32-NEXT:    pack a0, a0, a1
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_psll_bs_vec_shamt:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    srli a2, a1, 24
+; CHECK-RV64-NEXT:    srli a3, a0, 24
+; CHECK-RV64-NEXT:    srli a4, a1, 16
+; CHECK-RV64-NEXT:    srli a5, a0, 16
+; CHECK-RV64-NEXT:    sll a2, a3, a2
+; CHECK-RV64-NEXT:    sll a3, a5, a4
+; CHECK-RV64-NEXT:    srli a4, a1, 8
+; CHECK-RV64-NEXT:    srli a5, a0, 8
+; CHECK-RV64-NEXT:    sll a0, a0, a1
+; CHECK-RV64-NEXT:    sll a1, a5, a4
+; CHECK-RV64-NEXT:    ppaire.b a2, a3, a2
+; CHECK-RV64-NEXT:    ppaire.b a0, a0, a1
+; CHECK-RV64-NEXT:    ppaire.h a0, a0, a2
+; CHECK-RV64-NEXT:    ret
 ; RV32-LABEL: test_psll_bs_vec_shamt:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a2, a1, 24
 ; RV32-NEXT:    srli a3, a0, 24
 ; RV32-NEXT:    srli a4, a1, 8
-; RV32-NEXT:    srli a5, a0, 8
 ; RV32-NEXT:    sll a3, a3, a2
-; RV32-NEXT:    sll a2, a5, a4
-; RV32-NEXT:    sll a4, a0, a1
+; RV32-NEXT:    srli a2, a0, 8
+; RV32-NEXT:    sll a6, a0, a1
 ; RV32-NEXT:    srli a1, a1, 16
 ; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    sll a5, a0, a1
-; RV32-NEXT:    ppaire.db a0, a4, a2
+; RV32-NEXT:    sll a2, a2, a4
+; RV32-NEXT:    sll a7, a0, a1
+; RV32-NEXT:    ppaire.db a0, a6, a2
 ; RV32-NEXT:    pack a0, a0, a1
 ; RV32-NEXT:    ret
 ;
@@ -1004,16 +1053,16 @@ define <4 x i8> @test_psll_bs_vec_shamt(<4 x i8> %a, <4 x i8> %b) {
 ; RV64-NEXT:    srli a2, a1, 24
 ; RV64-NEXT:    srli a3, a0, 24
 ; RV64-NEXT:    srli a4, a1, 16
+; RV64-NEXT:    srli a5, a0, 16
 ; RV64-NEXT:    sll a2, a3, a2
-; RV64-NEXT:    srli a3, a0, 16
-; RV64-NEXT:    sll a3, a3, a4
-; RV64-NEXT:    sll a4, a0, a1
-; RV64-NEXT:    srli a1, a1, 8
-; RV64-NEXT:    srli a0, a0, 8
+; RV64-NEXT:    sll a3, a5, a4
+; RV64-NEXT:    srli a4, a1, 8
+; RV64-NEXT:    srli a5, a0, 8
 ; RV64-NEXT:    sll a0, a0, a1
-; RV64-NEXT:    ppaire.b a1, a3, a2
-; RV64-NEXT:    ppaire.b a0, a4, a0
-; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    sll a1, a5, a4
+; RV64-NEXT:    ppaire.b a2, a3, a2
+; RV64-NEXT:    ppaire.b a0, a0, a1
+; RV64-NEXT:    ppaire.h a0, a0, a2
 ; RV64-NEXT:    ret
   %res = shl <4 x i8> %a, %b
   ret <4 x i8> %res
@@ -1139,22 +1188,60 @@ define <2 x i16> @test_psrl_hs_vec_shamt(<2 x i16> %a, <2 x i16> %b) {
 }
 
 define <4 x i8> @test_psrl_bs_vec_shamt(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-RV32-LABEL: test_psrl_bs_vec_shamt:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    srli a2, a1, 24
+; CHECK-RV32-NEXT:    srli a3, a0, 24
+; CHECK-RV32-NEXT:    srli a4, a1, 8
+; CHECK-RV32-NEXT:    srl a3, a3, a2
+; CHECK-RV32-NEXT:    slli a2, a0, 16
+; CHECK-RV32-NEXT:    srli a2, a2, 24
+; CHECK-RV32-NEXT:    zext.b a5, a0
+; CHECK-RV32-NEXT:    srl a6, a5, a1
+; CHECK-RV32-NEXT:    slli a0, a0, 8
+; CHECK-RV32-NEXT:    srli a1, a1, 16
+; CHECK-RV32-NEXT:    srli a0, a0, 24
+; CHECK-RV32-NEXT:    srl a2, a2, a4
+; CHECK-RV32-NEXT:    srl a7, a0, a1
+; CHECK-RV32-NEXT:    ppaire.db a0, a6, a2
+; CHECK-RV32-NEXT:    pack a0, a0, a1
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_psrl_bs_vec_shamt:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    srli a2, a1, 24
+; CHECK-RV64-NEXT:    srliw a3, a0, 24
+; CHECK-RV64-NEXT:    slli a4, a0, 40
+; CHECK-RV64-NEXT:    srli a5, a1, 16
+; CHECK-RV64-NEXT:    srli a4, a4, 56
+; CHECK-RV64-NEXT:    srl a2, a3, a2
+; CHECK-RV64-NEXT:    srl a3, a4, a5
+; CHECK-RV64-NEXT:    zext.b a4, a0
+; CHECK-RV64-NEXT:    slli a0, a0, 48
+; CHECK-RV64-NEXT:    srli a5, a1, 8
+; CHECK-RV64-NEXT:    srli a0, a0, 56
+; CHECK-RV64-NEXT:    srl a1, a4, a1
+; CHECK-RV64-NEXT:    srl a0, a0, a5
+; CHECK-RV64-NEXT:    ppaire.b a2, a3, a2
+; CHECK-RV64-NEXT:    ppaire.b a0, a1, a0
+; CHECK-RV64-NEXT:    ppaire.h a0, a0, a2
+; CHECK-RV64-NEXT:    ret
 ; RV32-LABEL: test_psrl_bs_vec_shamt:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a2, a1, 24
 ; RV32-NEXT:    srli a3, a0, 24
 ; RV32-NEXT:    srli a4, a1, 8
-; RV32-NEXT:    slli a5, a0, 16
 ; RV32-NEXT:    srl a3, a3, a2
-; RV32-NEXT:    srli a5, a5, 24
-; RV32-NEXT:    srl a2, a5, a4
-; RV32-NEXT:    zext.b a4, a0
-; RV32-NEXT:    srli a5, a1, 16
+; RV32-NEXT:    slli a2, a0, 16
+; RV32-NEXT:    srli a2, a2, 24
+; RV32-NEXT:    zext.b a5, a0
+; RV32-NEXT:    srl a6, a5, a1
 ; RV32-NEXT:    slli a0, a0, 8
-; RV32-NEXT:    srl a4, a4, a1
+; RV32-NEXT:    srli a1, a1, 16
 ; RV32-NEXT:    srli a0, a0, 24
-; RV32-NEXT:    srl a5, a0, a5
-; RV32-NEXT:    ppaire.db a0, a4, a2
+; RV32-NEXT:    srl a2, a2, a4
+; RV32-NEXT:    srl a7, a0, a1
+; RV32-NEXT:    ppaire.db a0, a6, a2
 ; RV32-NEXT:    pack a0, a0, a1
 ; RV32-NEXT:    ret
 ;
@@ -1162,20 +1249,20 @@ define <4 x i8> @test_psrl_bs_vec_shamt(<4 x i8> %a, <4 x i8> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    srli a2, a1, 24
 ; RV64-NEXT:    srliw a3, a0, 24
-; RV64-NEXT:    srli a4, a1, 16
+; RV64-NEXT:    slli a4, a0, 40
+; RV64-NEXT:    srli a5, a1, 16
+; RV64-NEXT:    srli a4, a4, 56
 ; RV64-NEXT:    srl a2, a3, a2
-; RV64-NEXT:    slli a3, a0, 40
-; RV64-NEXT:    srli a3, a3, 56
-; RV64-NEXT:    srl a3, a3, a4
+; RV64-NEXT:    srl a3, a4, a5
 ; RV64-NEXT:    zext.b a4, a0
-; RV64-NEXT:    srl a4, a4, a1
-; RV64-NEXT:    srli a1, a1, 8
 ; RV64-NEXT:    slli a0, a0, 48
+; RV64-NEXT:    srli a5, a1, 8
 ; RV64-NEXT:    srli a0, a0, 56
-; RV64-NEXT:    srl a0, a0, a1
-; RV64-NEXT:    ppaire.b a1, a3, a2
-; RV64-NEXT:    ppaire.b a0, a4, a0
-; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    srl a1, a4, a1
+; RV64-NEXT:    srl a0, a0, a5
+; RV64-NEXT:    ppaire.b a2, a3, a2
+; RV64-NEXT:    ppaire.b a0, a1, a0
+; RV64-NEXT:    ppaire.h a0, a0, a2
 ; RV64-NEXT:    ret
   %res = lshr <4 x i8> %a, %b
   ret <4 x i8> %res
@@ -1196,34 +1283,83 @@ define <2 x i16> @test_psra_hs_vec_shamt(<2 x i16> %a, <2 x i16> %b) {
 ; RV64-LABEL: test_psra_hs_vec_shamt:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    sext.h a2, a0
-; RV64-NEXT:    sra a2, a2, a1
-; RV64-NEXT:    srli a1, a1, 16
 ; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a3, a1, 16
 ; RV64-NEXT:    srai a0, a0, 48
-; RV64-NEXT:    sra a0, a0, a1
-; RV64-NEXT:    ppaire.h a0, a2, a0
+; RV64-NEXT:    sra a1, a2, a1
+; RV64-NEXT:    sra a0, a0, a3
+; RV64-NEXT:    ppaire.h a0, a1, a0
 ; RV64-NEXT:    ret
+; CHECK-RV64-LABEL: test_psra_hs_vec_shamt:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    sext.h a2, a0
+; CHECK-RV64-NEXT:    srli a0, a0, 16
+; CHECK-RV64-NEXT:    srli a3, a1, 16
+; CHECK-RV64-NEXT:    sext.h a0, a0
+; CHECK-RV64-NEXT:    sra a1, a2, a1
+; CHECK-RV64-NEXT:    sra a0, a0, a3
+; CHECK-RV64-NEXT:    ppaire.h a0, a1, a0
+; CHECK-RV64-NEXT:    ret
   %res = ashr <2 x i16> %a, %b
   ret <2 x i16> %res
 }
 
 define <4 x i8> @test_psra_bs_vec_shamt(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-RV32-LABEL: test_psra_bs_vec_shamt:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    srli a2, a1, 24
+; CHECK-RV32-NEXT:    srai a3, a0, 24
+; CHECK-RV32-NEXT:    srli a4, a1, 8
+; CHECK-RV32-NEXT:    sra a3, a3, a2
+; CHECK-RV32-NEXT:    srli a2, a0, 8
+; CHECK-RV32-NEXT:    sext.b a2, a2
+; CHECK-RV32-NEXT:    sext.b a5, a0
+; CHECK-RV32-NEXT:    sra a6, a5, a1
+; CHECK-RV32-NEXT:    srli a0, a0, 16
+; CHECK-RV32-NEXT:    srli a1, a1, 16
+; CHECK-RV32-NEXT:    sext.b a0, a0
+; CHECK-RV32-NEXT:    sra a2, a2, a4
+; CHECK-RV32-NEXT:    sra a7, a0, a1
+; CHECK-RV32-NEXT:    ppaire.db a0, a6, a2
+; CHECK-RV32-NEXT:    pack a0, a0, a1
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_psra_bs_vec_shamt:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    srli a2, a1, 24
+; CHECK-RV64-NEXT:    srli a3, a0, 24
+; CHECK-RV64-NEXT:    srli a4, a0, 16
+; CHECK-RV64-NEXT:    sext.b a3, a3
+; CHECK-RV64-NEXT:    srli a5, a1, 16
+; CHECK-RV64-NEXT:    sext.b a4, a4
+; CHECK-RV64-NEXT:    sra a2, a3, a2
+; CHECK-RV64-NEXT:    sra a3, a4, a5
+; CHECK-RV64-NEXT:    sext.b a4, a0
+; CHECK-RV64-NEXT:    srli a0, a0, 8
+; CHECK-RV64-NEXT:    srli a5, a1, 8
+; CHECK-RV64-NEXT:    sext.b a0, a0
+; CHECK-RV64-NEXT:    sra a1, a4, a1
+; CHECK-RV64-NEXT:    sra a0, a0, a5
+; CHECK-RV64-NEXT:    ppaire.b a2, a3, a2
+; CHECK-RV64-NEXT:    ppaire.b a0, a1, a0
+; CHECK-RV64-NEXT:    ppaire.h a0, a0, a2
+; CHECK-RV64-NEXT:    ret
 ; RV32-LABEL: test_psra_bs_vec_shamt:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a2, a1, 24
 ; RV32-NEXT:    srai a3, a0, 24
 ; RV32-NEXT:    srli a4, a1, 8
-; RV32-NEXT:    slli a5, a0, 16
 ; RV32-NEXT:    sra a3, a3, a2
-; RV32-NEXT:    srai a5, a5, 24
-; RV32-NEXT:    sra a2, a5, a4
-; RV32-NEXT:    sext.b a4, a0
-; RV32-NEXT:    srli a5, a1, 16
+; RV32-NEXT:    slli a2, a0, 16
+; RV32-NEXT:    srai a2, a2, 24
+; RV32-NEXT:    sext.b a5, a0
+; RV32-NEXT:    sra a6, a5, a1
 ; RV32-NEXT:    slli a0, a0, 8
-; RV32-NEXT:    sra a4, a4, a1
+; RV32-NEXT:    srli a1, a1, 16
 ; RV32-NEXT:    srai a0, a0, 24
-; RV32-NEXT:    sra a5, a0, a5
-; RV32-NEXT:    ppaire.db a0, a4, a2
+; RV32-NEXT:    sra a2, a2, a4
+; RV32-NEXT:    sra a7, a0, a1
+; RV32-NEXT:    ppaire.db a0, a6, a2
 ; RV32-NEXT:    pack a0, a0, a1
 ; RV32-NEXT:    ret
 ;
@@ -1231,21 +1367,21 @@ define <4 x i8> @test_psra_bs_vec_shamt(<4 x i8> %a, <4 x i8> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    srli a2, a1, 24
 ; RV64-NEXT:    slli a3, a0, 32
-; RV64-NEXT:    srli a4, a1, 16
+; RV64-NEXT:    slli a4, a0, 40
 ; RV64-NEXT:    srai a3, a3, 56
+; RV64-NEXT:    srli a5, a1, 16
+; RV64-NEXT:    srai a4, a4, 56
 ; RV64-NEXT:    sra a2, a3, a2
-; RV64-NEXT:    slli a3, a0, 40
-; RV64-NEXT:    srai a3, a3, 56
-; RV64-NEXT:    sra a3, a3, a4
+; RV64-NEXT:    sra a3, a4, a5
 ; RV64-NEXT:    sext.b a4, a0
-; RV64-NEXT:    sra a4, a4, a1
-; RV64-NEXT:    srli a1, a1, 8
 ; RV64-NEXT:    slli a0, a0, 48
+; RV64-NEXT:    srli a5, a1, 8
 ; RV64-NEXT:    srai a0, a0, 56
-; RV64-NEXT:    sra a0, a0, a1
-; RV64-NEXT:    ppaire.b a1, a3, a2
-; RV64-NEXT:    ppaire.b a0, a4, a0
-; RV64-NEXT:    ppaire.h a0, a0, a1
+; RV64-NEXT:    sra a1, a4, a1
+; RV64-NEXT:    sra a0, a0, a5
+; RV64-NEXT:    ppaire.b a2, a3, a2
+; RV64-NEXT:    ppaire.b a0, a1, a0
+; RV64-NEXT:    ppaire.h a0, a0, a2
 ; RV64-NEXT:    ret
   %res = ashr <4 x i8> %a, %b
   ret <4 x i8> %res
@@ -1320,9 +1456,9 @@ define <4 x i8> @test_pmulhsu_b(<4 x i8> %a, <4 x i8> %b) {
 ; RV64-NEXT:    psrli.h a0, a0, 8
 ; RV64-NEXT:    srli a1, a0, 48
 ; RV64-NEXT:    srli a2, a0, 32
+; RV64-NEXT:    srli a3, a0, 16
 ; RV64-NEXT:    ppaire.b a1, a2, a1
-; RV64-NEXT:    srli a2, a0, 16
-; RV64-NEXT:    ppaire.b a0, a0, a2
+; RV64-NEXT:    ppaire.b a0, a0, a3
 ; RV64-NEXT:    ppaire.h a0, a0, a1
 ; RV64-NEXT:    ret
   %a_ext = sext <4 x i8> %a to <4 x i16>
@@ -1348,8 +1484,8 @@ define <4 x i8> @test_pmulhsu_b_commuted(<4 x i8> %a, <4 x i8> %b) {
 ;
 ; RV64-LABEL: test_pmulhsu_b_commuted:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    pwcvtu.b a0, a0
 ; RV64-NEXT:    pwcvtu.b a1, a1
+; RV64-NEXT:    pwcvtu.b a0, a0
 ; RV64-NEXT:    psext.h.b a1, a1
 ; RV64-NEXT:    pmul.w.h11 a2, a0, a1
 ; RV64-NEXT:    pmul.w.h00 a0, a0, a1
@@ -1357,9 +1493,9 @@ define <4 x i8> @test_pmulhsu_b_commuted(<4 x i8> %a, <4 x i8> %b) {
 ; RV64-NEXT:    psrli.h a0, a0, 8
 ; RV64-NEXT:    srli a1, a0, 48
 ; RV64-NEXT:    srli a2, a0, 32
+; RV64-NEXT:    srli a3, a0, 16
 ; RV64-NEXT:    ppaire.b a1, a2, a1
-; RV64-NEXT:    srli a2, a0, 16
-; RV64-NEXT:    ppaire.b a0, a0, a2
+; RV64-NEXT:    ppaire.b a0, a0, a3
 ; RV64-NEXT:    ppaire.h a0, a0, a1
 ; RV64-NEXT:    ret
   %a_ext = zext <4 x i8> %a to <4 x i16>
@@ -1522,13 +1658,36 @@ define <4 x i8> @test_pmul_b(<4 x i8> %a, <4 x i8> %b) {
 
 ; Division and remainder tests
 define <2 x i16> @test_psdiv_h(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-RV32-LABEL: test_psdiv_h:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    srai a2, a1, 16
+; CHECK-RV32-NEXT:    srai a3, a0, 16
+; CHECK-RV32-NEXT:    div a2, a3, a2
+; CHECK-RV32-NEXT:    sext.h a1, a1
+; CHECK-RV32-NEXT:    sext.h a0, a0
+; CHECK-RV32-NEXT:    div a0, a0, a1
+; CHECK-RV32-NEXT:    pack a0, a0, a2
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_psdiv_h:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    sext.h a2, a1
+; CHECK-RV64-NEXT:    sext.h a3, a0
+; CHECK-RV64-NEXT:    divw a2, a3, a2
+; CHECK-RV64-NEXT:    srli a1, a1, 16
+; CHECK-RV64-NEXT:    srli a0, a0, 16
+; CHECK-RV64-NEXT:    sext.h a1, a1
+; CHECK-RV64-NEXT:    sext.h a0, a0
+; CHECK-RV64-NEXT:    divw a0, a0, a1
+; CHECK-RV64-NEXT:    ppaire.h a0, a2, a0
+; CHECK-RV64-NEXT:    ret
 ; RV32-LABEL: test_psdiv_h:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srai a2, a1, 16
 ; RV32-NEXT:    srai a3, a0, 16
+; RV32-NEXT:    div a2, a3, a2
 ; RV32-NEXT:    sext.h a1, a1
 ; RV32-NEXT:    sext.h a0, a0
-; RV32-NEXT:    div a2, a3, a2
 ; RV32-NEXT:    div a0, a0, a1
 ; RV32-NEXT:    pack a0, a0, a2
 ; RV32-NEXT:    ret
@@ -1537,9 +1696,9 @@ define <2 x i16> @test_psdiv_h(<2 x i16> %a, <2 x i16> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    sext.h a2, a1
 ; RV64-NEXT:    sext.h a3, a0
+; RV64-NEXT:    divw a2, a3, a2
 ; RV64-NEXT:    slli a1, a1, 32
 ; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    divw a2, a3, a2
 ; RV64-NEXT:    srai a1, a1, 48
 ; RV64-NEXT:    srai a0, a0, 48
 ; RV64-NEXT:    divw a0, a0, a1
@@ -1565,21 +1724,67 @@ define <2 x i16> @test_psdiv_mulhsu_h(<2 x i16> %a) {
 }
 
 define <4 x i8> @test_psdiv_b(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-RV32-LABEL: test_psdiv_b:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    srai a2, a1, 24
+; CHECK-RV32-NEXT:    srai a3, a0, 24
+; CHECK-RV32-NEXT:    div a3, a3, a2
+; CHECK-RV32-NEXT:    srli a2, a1, 8
+; CHECK-RV32-NEXT:    srli a4, a0, 8
+; CHECK-RV32-NEXT:    sext.b a2, a2
+; CHECK-RV32-NEXT:    sext.b a4, a4
+; CHECK-RV32-NEXT:    div a2, a4, a2
+; CHECK-RV32-NEXT:    sext.b a4, a1
+; CHECK-RV32-NEXT:    sext.b a5, a0
+; CHECK-RV32-NEXT:    div a4, a5, a4
+; CHECK-RV32-NEXT:    srli a1, a1, 16
+; CHECK-RV32-NEXT:    srli a0, a0, 16
+; CHECK-RV32-NEXT:    sext.b a1, a1
+; CHECK-RV32-NEXT:    sext.b a0, a0
+; CHECK-RV32-NEXT:    div a5, a0, a1
+; CHECK-RV32-NEXT:    ppaire.db a0, a4, a2
+; CHECK-RV32-NEXT:    pack a0, a0, a1
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_psdiv_b:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    srli a2, a1, 24
+; CHECK-RV64-NEXT:    srli a3, a0, 24
+; CHECK-RV64-NEXT:    sext.b a2, a2
+; CHECK-RV64-NEXT:    sext.b a3, a3
+; CHECK-RV64-NEXT:    divw a2, a3, a2
+; CHECK-RV64-NEXT:    srli a3, a1, 16
+; CHECK-RV64-NEXT:    srli a4, a0, 16
+; CHECK-RV64-NEXT:    sext.b a3, a3
+; CHECK-RV64-NEXT:    sext.b a4, a4
+; CHECK-RV64-NEXT:    divw a3, a4, a3
+; CHECK-RV64-NEXT:    sext.b a4, a1
+; CHECK-RV64-NEXT:    sext.b a5, a0
+; CHECK-RV64-NEXT:    divw a4, a5, a4
+; CHECK-RV64-NEXT:    srli a1, a1, 8
+; CHECK-RV64-NEXT:    srli a0, a0, 8
+; CHECK-RV64-NEXT:    sext.b a1, a1
+; CHECK-RV64-NEXT:    sext.b a0, a0
+; CHECK-RV64-NEXT:    divw a0, a0, a1
+; CHECK-RV64-NEXT:    ppaire.b a1, a3, a2
+; CHECK-RV64-NEXT:    ppaire.b a0, a4, a0
+; CHECK-RV64-NEXT:    ppaire.h a0, a0, a1
+; CHECK-RV64-NEXT:    ret
 ; RV32-LABEL: test_psdiv_b:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srai a2, a1, 24
 ; RV32-NEXT:    srai a3, a0, 24
-; RV32-NEXT:    slli a4, a1, 16
-; RV32-NEXT:    slli a5, a0, 16
 ; RV32-NEXT:    div a3, a3, a2
+; RV32-NEXT:    slli a2, a1, 16
+; RV32-NEXT:    slli a4, a0, 16
+; RV32-NEXT:    srai a2, a2, 24
 ; RV32-NEXT:    srai a4, a4, 24
-; RV32-NEXT:    srai a5, a5, 24
-; RV32-NEXT:    div a2, a5, a4
+; RV32-NEXT:    div a2, a4, a2
 ; RV32-NEXT:    sext.b a4, a1
 ; RV32-NEXT:    sext.b a5, a0
+; RV32-NEXT:    div a4, a5, a4
 ; RV32-NEXT:    slli a1, a1, 8
 ; RV32-NEXT:    slli a0, a0, 8
-; RV32-NEXT:    div a4, a5, a4
 ; RV32-NEXT:    srai a1, a1, 24
 ; RV32-NEXT:    srai a0, a0, 24
 ; RV32-NEXT:    div a5, a0, a1
@@ -1591,17 +1796,17 @@ define <4 x i8> @test_psdiv_b(<4 x i8> %a, <4 x i8> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    slli a2, a1, 32
 ; RV64-NEXT:    slli a3, a0, 32
-; RV64-NEXT:    sext.b a4, a1
-; RV64-NEXT:    sext.b a5, a0
-; RV64-NEXT:    divw a4, a5, a4
-; RV64-NEXT:    slli a5, a1, 40
 ; RV64-NEXT:    srai a2, a2, 56
 ; RV64-NEXT:    srai a3, a3, 56
 ; RV64-NEXT:    divw a2, a3, a2
-; RV64-NEXT:    slli a3, a0, 40
-; RV64-NEXT:    srai a5, a5, 56
+; RV64-NEXT:    slli a3, a1, 40
+; RV64-NEXT:    slli a4, a0, 40
 ; RV64-NEXT:    srai a3, a3, 56
-; RV64-NEXT:    divw a3, a3, a5
+; RV64-NEXT:    srai a4, a4, 56
+; RV64-NEXT:    divw a3, a4, a3
+; RV64-NEXT:    sext.b a4, a1
+; RV64-NEXT:    sext.b a5, a0
+; RV64-NEXT:    divw a4, a5, a4
 ; RV64-NEXT:    slli a1, a1, 48
 ; RV64-NEXT:    slli a0, a0, 48
 ; RV64-NEXT:    srai a1, a1, 56
@@ -1616,13 +1821,34 @@ define <4 x i8> @test_psdiv_b(<4 x i8> %a, <4 x i8> %b) {
 }
 
 define <2 x i16> @test_pudiv_h(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-RV32-LABEL: test_pudiv_h:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    srli a2, a1, 16
+; CHECK-RV32-NEXT:    srli a3, a0, 16
+; CHECK-RV32-NEXT:    divu a2, a3, a2
+; CHECK-RV32-NEXT:    zext.h a1, a1
+; CHECK-RV32-NEXT:    zext.h a0, a0
+; CHECK-RV32-NEXT:    divu a0, a0, a1
+; CHECK-RV32-NEXT:    pack a0, a0, a2
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_pudiv_h:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    srliw a2, a1, 16
+; CHECK-RV64-NEXT:    srliw a3, a0, 16
+; CHECK-RV64-NEXT:    divuw a2, a3, a2
+; CHECK-RV64-NEXT:    zext.h a1, a1
+; CHECK-RV64-NEXT:    zext.h a0, a0
+; CHECK-RV64-NEXT:    divuw a0, a0, a1
+; CHECK-RV64-NEXT:    ppaire.h a0, a0, a2
+; CHECK-RV64-NEXT:    ret
 ; RV32-LABEL: test_pudiv_h:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a2, a1, 16
 ; RV32-NEXT:    srli a3, a0, 16
+; RV32-NEXT:    divu a2, a3, a2
 ; RV32-NEXT:    zext.h a1, a1
 ; RV32-NEXT:    zext.h a0, a0
-; RV32-NEXT:    divu a2, a3, a2
 ; RV32-NEXT:    divu a0, a0, a1
 ; RV32-NEXT:    pack a0, a0, a2
 ; RV32-NEXT:    ret
@@ -1631,9 +1857,9 @@ define <2 x i16> @test_pudiv_h(<2 x i16> %a, <2 x i16> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    srliw a2, a1, 16
 ; RV64-NEXT:    srliw a3, a0, 16
+; RV64-NEXT:    divuw a2, a3, a2
 ; RV64-NEXT:    zext.h a1, a1
 ; RV64-NEXT:    zext.h a0, a0
-; RV64-NEXT:    divuw a2, a3, a2
 ; RV64-NEXT:    divuw a0, a0, a1
 ; RV64-NEXT:    ppaire.h a0, a0, a2
 ; RV64-NEXT:    ret
@@ -1667,21 +1893,65 @@ define <4 x i8> @test_psdiv_mulhsu_b(<4 x i8> %a) {
 }
 
 define <4 x i8> @test_pudiv_b(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-RV32-LABEL: test_pudiv_b:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    srli a2, a1, 24
+; CHECK-RV32-NEXT:    srli a3, a0, 24
+; CHECK-RV32-NEXT:    divu a3, a3, a2
+; CHECK-RV32-NEXT:    slli a2, a1, 16
+; CHECK-RV32-NEXT:    slli a4, a0, 16
+; CHECK-RV32-NEXT:    srli a2, a2, 24
+; CHECK-RV32-NEXT:    srli a4, a4, 24
+; CHECK-RV32-NEXT:    divu a2, a4, a2
+; CHECK-RV32-NEXT:    zext.b a4, a1
+; CHECK-RV32-NEXT:    zext.b a5, a0
+; CHECK-RV32-NEXT:    divu a4, a5, a4
+; CHECK-RV32-NEXT:    slli a1, a1, 8
+; CHECK-RV32-NEXT:    slli a0, a0, 8
+; CHECK-RV32-NEXT:    srli a1, a1, 24
+; CHECK-RV32-NEXT:    srli a0, a0, 24
+; CHECK-RV32-NEXT:    divu a5, a0, a1
+; CHECK-RV32-NEXT:    ppaire.db a0, a4, a2
+; CHECK-RV32-NEXT:    pack a0, a0, a1
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_pudiv_b:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    srliw a2, a1, 24
+; CHECK-RV64-NEXT:    srliw a3, a0, 24
+; CHECK-RV64-NEXT:    divuw a2, a3, a2
+; CHECK-RV64-NEXT:    slli a3, a1, 40
+; CHECK-RV64-NEXT:    slli a4, a0, 40
+; CHECK-RV64-NEXT:    srli a3, a3, 56
+; CHECK-RV64-NEXT:    srli a4, a4, 56
+; CHECK-RV64-NEXT:    divuw a3, a4, a3
+; CHECK-RV64-NEXT:    zext.b a4, a1
+; CHECK-RV64-NEXT:    zext.b a5, a0
+; CHECK-RV64-NEXT:    divuw a4, a5, a4
+; CHECK-RV64-NEXT:    slli a1, a1, 48
+; CHECK-RV64-NEXT:    slli a0, a0, 48
+; CHECK-RV64-NEXT:    srli a1, a1, 56
+; CHECK-RV64-NEXT:    srli a0, a0, 56
+; CHECK-RV64-NEXT:    divuw a0, a0, a1
+; CHECK-RV64-NEXT:    ppaire.b a1, a3, a2
+; CHECK-RV64-NEXT:    ppaire.b a0, a4, a0
+; CHECK-RV64-NEXT:    ppaire.h a0, a0, a1
+; CHECK-RV64-NEXT:    ret
 ; RV32-LABEL: test_pudiv_b:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a2, a1, 24
 ; RV32-NEXT:    srli a3, a0, 24
-; RV32-NEXT:    slli a4, a1, 16
-; RV32-NEXT:    slli a5, a0, 16
 ; RV32-NEXT:    divu a3, a3, a2
+; RV32-NEXT:    slli a2, a1, 16
+; RV32-NEXT:    slli a4, a0, 16
+; RV32-NEXT:    srli a2, a2, 24
 ; RV32-NEXT:    srli a4, a4, 24
-; RV32-NEXT:    srli a5, a5, 24
-; RV32-NEXT:    divu a2, a5, a4
+; RV32-NEXT:    divu a2, a4, a2
 ; RV32-NEXT:    zext.b a4, a1
 ; RV32-NEXT:    zext.b a5, a0
+; RV32-NEXT:    divu a4, a5, a4
 ; RV32-NEXT:    slli a1, a1, 8
 ; RV32-NEXT:    slli a0, a0, 8
-; RV32-NEXT:    divu a4, a5, a4
 ; RV32-NEXT:    srli a1, a1, 24
 ; RV32-NEXT:    srli a0, a0, 24
 ; RV32-NEXT:    divu a5, a0, a1
@@ -1693,22 +1963,22 @@ define <4 x i8> @test_pudiv_b(<4 x i8> %a, <4 x i8> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    srliw a2, a1, 24
 ; RV64-NEXT:    srliw a3, a0, 24
-; RV64-NEXT:    slli a4, a1, 40
-; RV64-NEXT:    zext.b a5, a1
 ; RV64-NEXT:    divuw a2, a3, a2
-; RV64-NEXT:    zext.b a3, a0
-; RV64-NEXT:    divuw a3, a3, a5
-; RV64-NEXT:    slli a5, a0, 40
+; RV64-NEXT:    slli a3, a1, 40
+; RV64-NEXT:    slli a4, a0, 40
+; RV64-NEXT:    srli a3, a3, 56
 ; RV64-NEXT:    srli a4, a4, 56
-; RV64-NEXT:    srli a5, a5, 56
+; RV64-NEXT:    divuw a3, a4, a3
+; RV64-NEXT:    zext.b a4, a1
+; RV64-NEXT:    zext.b a5, a0
 ; RV64-NEXT:    divuw a4, a5, a4
 ; RV64-NEXT:    slli a1, a1, 48
 ; RV64-NEXT:    slli a0, a0, 48
 ; RV64-NEXT:    srli a1, a1, 56
 ; RV64-NEXT:    srli a0, a0, 56
 ; RV64-NEXT:    divuw a0, a0, a1
-; RV64-NEXT:    ppaire.b a1, a4, a2
-; RV64-NEXT:    ppaire.b a0, a3, a0
+; RV64-NEXT:    ppaire.b a1, a3, a2
+; RV64-NEXT:    ppaire.b a0, a4, a0
 ; RV64-NEXT:    ppaire.h a0, a0, a1
 ; RV64-NEXT:    ret
   %res = udiv <4 x i8> %a, %b
@@ -1716,13 +1986,36 @@ define <4 x i8> @test_pudiv_b(<4 x i8> %a, <4 x i8> %b) {
 }
 
 define <2 x i16> @test_psrem_h(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-RV32-LABEL: test_psrem_h:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    srai a2, a1, 16
+; CHECK-RV32-NEXT:    srai a3, a0, 16
+; CHECK-RV32-NEXT:    rem a2, a3, a2
+; CHECK-RV32-NEXT:    sext.h a1, a1
+; CHECK-RV32-NEXT:    sext.h a0, a0
+; CHECK-RV32-NEXT:    rem a0, a0, a1
+; CHECK-RV32-NEXT:    pack a0, a0, a2
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_psrem_h:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    sext.h a2, a1
+; CHECK-RV64-NEXT:    sext.h a3, a0
+; CHECK-RV64-NEXT:    remw a2, a3, a2
+; CHECK-RV64-NEXT:    srli a1, a1, 16
+; CHECK-RV64-NEXT:    srli a0, a0, 16
+; CHECK-RV64-NEXT:    sext.h a1, a1
+; CHECK-RV64-NEXT:    sext.h a0, a0
+; CHECK-RV64-NEXT:    remw a0, a0, a1
+; CHECK-RV64-NEXT:    ppaire.h a0, a2, a0
+; CHECK-RV64-NEXT:    ret
 ; RV32-LABEL: test_psrem_h:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srai a2, a1, 16
 ; RV32-NEXT:    srai a3, a0, 16
+; RV32-NEXT:    rem a2, a3, a2
 ; RV32-NEXT:    sext.h a1, a1
 ; RV32-NEXT:    sext.h a0, a0
-; RV32-NEXT:    rem a2, a3, a2
 ; RV32-NEXT:    rem a0, a0, a1
 ; RV32-NEXT:    pack a0, a0, a2
 ; RV32-NEXT:    ret
@@ -1731,9 +2024,9 @@ define <2 x i16> @test_psrem_h(<2 x i16> %a, <2 x i16> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    sext.h a2, a1
 ; RV64-NEXT:    sext.h a3, a0
+; RV64-NEXT:    remw a2, a3, a2
 ; RV64-NEXT:    slli a1, a1, 32
 ; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    remw a2, a3, a2
 ; RV64-NEXT:    srai a1, a1, 48
 ; RV64-NEXT:    srai a0, a0, 48
 ; RV64-NEXT:    remw a0, a0, a1
@@ -1744,21 +2037,67 @@ define <2 x i16> @test_psrem_h(<2 x i16> %a, <2 x i16> %b) {
 }
 
 define <4 x i8> @test_psrem_b(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-RV32-LABEL: test_psrem_b:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    srai a2, a1, 24
+; CHECK-RV32-NEXT:    srai a3, a0, 24
+; CHECK-RV32-NEXT:    rem a3, a3, a2
+; CHECK-RV32-NEXT:    srli a2, a1, 8
+; CHECK-RV32-NEXT:    srli a4, a0, 8
+; CHECK-RV32-NEXT:    sext.b a2, a2
+; CHECK-RV32-NEXT:    sext.b a4, a4
+; CHECK-RV32-NEXT:    rem a2, a4, a2
+; CHECK-RV32-NEXT:    sext.b a4, a1
+; CHECK-RV32-NEXT:    sext.b a5, a0
+; CHECK-RV32-NEXT:    rem a4, a5, a4
+; CHECK-RV32-NEXT:    srli a1, a1, 16
+; CHECK-RV32-NEXT:    srli a0, a0, 16
+; CHECK-RV32-NEXT:    sext.b a1, a1
+; CHECK-RV32-NEXT:    sext.b a0, a0
+; CHECK-RV32-NEXT:    rem a5, a0, a1
+; CHECK-RV32-NEXT:    ppaire.db a0, a4, a2
+; CHECK-RV32-NEXT:    pack a0, a0, a1
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_psrem_b:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    srli a2, a1, 24
+; CHECK-RV64-NEXT:    srli a3, a0, 24
+; CHECK-RV64-NEXT:    sext.b a2, a2
+; CHECK-RV64-NEXT:    sext.b a3, a3
+; CHECK-RV64-NEXT:    remw a2, a3, a2
+; CHECK-RV64-NEXT:    srli a3, a1, 16
+; CHECK-RV64-NEXT:    srli a4, a0, 16
+; CHECK-RV64-NEXT:    sext.b a3, a3
+; CHECK-RV64-NEXT:    sext.b a4, a4
+; CHECK-RV64-NEXT:    remw a3, a4, a3
+; CHECK-RV64-NEXT:    sext.b a4, a1
+; CHECK-RV64-NEXT:    sext.b a5, a0
+; CHECK-RV64-NEXT:    remw a4, a5, a4
+; CHECK-RV64-NEXT:    srli a1, a1, 8
+; CHECK-RV64-NEXT:    srli a0, a0, 8
+; CHECK-RV64-NEXT:    sext.b a1, a1
+; CHECK-RV64-NEXT:    sext.b a0, a0
+; CHECK-RV64-NEXT:    remw a0, a0, a1
+; CHECK-RV64-NEXT:    ppaire.b a1, a3, a2
+; CHECK-RV64-NEXT:    ppaire.b a0, a4, a0
+; CHECK-RV64-NEXT:    ppaire.h a0, a0, a1
+; CHECK-RV64-NEXT:    ret
 ; RV32-LABEL: test_psrem_b:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srai a2, a1, 24
 ; RV32-NEXT:    srai a3, a0, 24
-; RV32-NEXT:    slli a4, a1, 16
-; RV32-NEXT:    slli a5, a0, 16
 ; RV32-NEXT:    rem a3, a3, a2
+; RV32-NEXT:    slli a2, a1, 16
+; RV32-NEXT:    slli a4, a0, 16
+; RV32-NEXT:    srai a2, a2, 24
 ; RV32-NEXT:    srai a4, a4, 24
-; RV32-NEXT:    srai a5, a5, 24
-; RV32-NEXT:    rem a2, a5, a4
+; RV32-NEXT:    rem a2, a4, a2
 ; RV32-NEXT:    sext.b a4, a1
 ; RV32-NEXT:    sext.b a5, a0
+; RV32-NEXT:    rem a4, a5, a4
 ; RV32-NEXT:    slli a1, a1, 8
 ; RV32-NEXT:    slli a0, a0, 8
-; RV32-NEXT:    rem a4, a5, a4
 ; RV32-NEXT:    srai a1, a1, 24
 ; RV32-NEXT:    srai a0, a0, 24
 ; RV32-NEXT:    rem a5, a0, a1
@@ -1770,17 +2109,17 @@ define <4 x i8> @test_psrem_b(<4 x i8> %a, <4 x i8> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    slli a2, a1, 32
 ; RV64-NEXT:    slli a3, a0, 32
-; RV64-NEXT:    sext.b a4, a1
-; RV64-NEXT:    sext.b a5, a0
-; RV64-NEXT:    remw a4, a5, a4
-; RV64-NEXT:    slli a5, a1, 40
 ; RV64-NEXT:    srai a2, a2, 56
 ; RV64-NEXT:    srai a3, a3, 56
 ; RV64-NEXT:    remw a2, a3, a2
-; RV64-NEXT:    slli a3, a0, 40
-; RV64-NEXT:    srai a5, a5, 56
+; RV64-NEXT:    slli a3, a1, 40
+; RV64-NEXT:    slli a4, a0, 40
 ; RV64-NEXT:    srai a3, a3, 56
-; RV64-NEXT:    remw a3, a3, a5
+; RV64-NEXT:    srai a4, a4, 56
+; RV64-NEXT:    remw a3, a4, a3
+; RV64-NEXT:    sext.b a4, a1
+; RV64-NEXT:    sext.b a5, a0
+; RV64-NEXT:    remw a4, a5, a4
 ; RV64-NEXT:    slli a1, a1, 48
 ; RV64-NEXT:    slli a0, a0, 48
 ; RV64-NEXT:    srai a1, a1, 56
@@ -1795,13 +2134,34 @@ define <4 x i8> @test_psrem_b(<4 x i8> %a, <4 x i8> %b) {
 }
 
 define <2 x i16> @test_purem_h(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-RV32-LABEL: test_purem_h:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    srli a2, a1, 16
+; CHECK-RV32-NEXT:    srli a3, a0, 16
+; CHECK-RV32-NEXT:    remu a2, a3, a2
+; CHECK-RV32-NEXT:    zext.h a1, a1
+; CHECK-RV32-NEXT:    zext.h a0, a0
+; CHECK-RV32-NEXT:    remu a0, a0, a1
+; CHECK-RV32-NEXT:    pack a0, a0, a2
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_purem_h:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    srliw a2, a1, 16
+; CHECK-RV64-NEXT:    srliw a3, a0, 16
+; CHECK-RV64-NEXT:    remuw a2, a3, a2
+; CHECK-RV64-NEXT:    zext.h a1, a1
+; CHECK-RV64-NEXT:    zext.h a0, a0
+; CHECK-RV64-NEXT:    remuw a0, a0, a1
+; CHECK-RV64-NEXT:    ppaire.h a0, a0, a2
+; CHECK-RV64-NEXT:    ret
 ; RV32-LABEL: test_purem_h:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a2, a1, 16
 ; RV32-NEXT:    srli a3, a0, 16
+; RV32-NEXT:    remu a2, a3, a2
 ; RV32-NEXT:    zext.h a1, a1
 ; RV32-NEXT:    zext.h a0, a0
-; RV32-NEXT:    remu a2, a3, a2
 ; RV32-NEXT:    remu a0, a0, a1
 ; RV32-NEXT:    pack a0, a0, a2
 ; RV32-NEXT:    ret
@@ -1810,9 +2170,9 @@ define <2 x i16> @test_purem_h(<2 x i16> %a, <2 x i16> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    srliw a2, a1, 16
 ; RV64-NEXT:    srliw a3, a0, 16
+; RV64-NEXT:    remuw a2, a3, a2
 ; RV64-NEXT:    zext.h a1, a1
 ; RV64-NEXT:    zext.h a0, a0
-; RV64-NEXT:    remuw a2, a3, a2
 ; RV64-NEXT:    remuw a0, a0, a1
 ; RV64-NEXT:    ppaire.h a0, a0, a2
 ; RV64-NEXT:    ret
@@ -1821,21 +2181,65 @@ define <2 x i16> @test_purem_h(<2 x i16> %a, <2 x i16> %b) {
 }
 
 define <4 x i8> @test_purem_b(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-RV32-LABEL: test_purem_b:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    srli a2, a1, 24
+; CHECK-RV32-NEXT:    srli a3, a0, 24
+; CHECK-RV32-NEXT:    remu a3, a3, a2
+; CHECK-RV32-NEXT:    slli a2, a1, 16
+; CHECK-RV32-NEXT:    slli a4, a0, 16
+; CHECK-RV32-NEXT:    srli a2, a2, 24
+; CHECK-RV32-NEXT:    srli a4, a4, 24
+; CHECK-RV32-NEXT:    remu a2, a4, a2
+; CHECK-RV32-NEXT:    zext.b a4, a1
+; CHECK-RV32-NEXT:    zext.b a5, a0
+; CHECK-RV32-NEXT:    remu a4, a5, a4
+; CHECK-RV32-NEXT:    slli a1, a1, 8
+; CHECK-RV32-NEXT:    slli a0, a0, 8
+; CHECK-RV32-NEXT:    srli a1, a1, 24
+; CHECK-RV32-NEXT:    srli a0, a0, 24
+; CHECK-RV32-NEXT:    remu a5, a0, a1
+; CHECK-RV32-NEXT:    ppaire.db a0, a4, a2
+; CHECK-RV32-NEXT:    pack a0, a0, a1
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: test_purem_b:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    srliw a2, a1, 24
+; CHECK-RV64-NEXT:    srliw a3, a0, 24
+; CHECK-RV64-NEXT:    remuw a2, a3, a2
+; CHECK-RV64-NEXT:    slli a3, a1, 40
+; CHECK-RV64-NEXT:    slli a4, a0, 40
+; CHECK-RV64-NEXT:    srli a3, a3, 56
+; CHECK-RV64-NEXT:    srli a4, a4, 56
+; CHECK-RV64-NEXT:    remuw a3, a4, a3
+; CHECK-RV64-NEXT:    zext.b a4, a1
+; CHECK-RV64-NEXT:    zext.b a5, a0
+; CHECK-RV64-NEXT:    remuw a4, a5, a4
+; CHECK-RV64-NEXT:    slli a1, a1, 48
+; CHECK-RV64-NEXT:    slli a0, a0, 48
+; CHECK-RV64-NEXT:    srli a1, a1, 56
+; CHECK-RV64-NEXT:    srli a0, a0, 56
+; CHECK-RV64-NEXT:    remuw a0, a0, a1
+; CHECK-RV64-NEXT:    ppaire.b a1, a3, a2
+; CHECK-RV64-NEXT:    ppaire.b a0, a4, a0
+; CHECK-RV64-NEXT:    ppaire.h a0, a0, a1
+; CHECK-RV64-NEXT:    ret
 ; RV32-LABEL: test_purem_b:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    srli a2, a1, 24
 ; RV32-NEXT:    srli a3, a0, 24
-; RV32-NEXT:    slli a4, a1, 16
-; RV32-NEXT:    slli a5, a0, 16
 ; RV32-NEXT:    remu a3, a3, a2
+; RV32-NEXT:    slli a2, a1, 16
+; RV32-NEXT:    slli a4, a0, 16
+; RV32-NEXT:    srli a2, a2, 24
 ; RV32-NEXT:    srli a4, a4, 24
-; RV32-NEXT:    srli a5, a5, 24
-; RV32-NEXT:    remu a2, a5, a4
+; RV32-NEXT:    remu a2, a4, a2
 ; RV32-NEXT:    zext.b a4, a1
 ; RV32-NEXT:    zext.b a5, a0
+; RV32-NEXT:    remu a4, a5, a4
 ; RV32-NEXT:    slli a1, a1, 8
 ; RV32-NEXT:    slli a0, a0, 8
-; RV32-NEXT:    remu a4, a5, a4
 ; RV32-NEXT:    srli a1, a1, 24
 ; RV32-NEXT:    srli a0, a0, 24
 ; RV32-NEXT:    remu a5, a0, a1
@@ -1847,22 +2251,22 @@ define <4 x i8> @test_purem_b(<4 x i8> %a, <4 x i8> %b) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    srliw a2, a1, 24
 ; RV64-NEXT:    srliw a3, a0, 24
-; RV64-NEXT:    slli a4, a1, 40
-; RV64-NEXT:    zext.b a5, a1
 ; RV64-NEXT:    remuw a2, a3, a2
-; RV64-NEXT:    zext.b a3, a0
-; RV64-NEXT:    remuw a3, a3, a5
-; RV64-NEXT:    slli a5, a0, 40
+; RV64-NEXT:    slli a3, a1, 40
+; RV64-NEXT:    slli a4, a0, 40
+; RV64-NEXT:    srli a3, a3, 56
 ; RV64-NEXT:    srli a4, a4, 56
-; RV64-NEXT:    srli a5, a5, 56
+; RV64-NEXT:    remuw a3, a4, a3
+; RV64-NEXT:    zext.b a4, a1
+; RV64-NEXT:    zext.b a5, a0
 ; RV64-NEXT:    remuw a4, a5, a4
 ; RV64-NEXT:    slli a1, a1, 48
 ; RV64-NEXT:    slli a0, a0, 48
 ; RV64-NEXT:    srli a1, a1, 56
 ; RV64-NEXT:    srli a0, a0, 56
 ; RV64-NEXT:    remuw a0, a0, a1
-; RV64-NEXT:    ppaire.b a1, a4, a2
-; RV64-NEXT:    ppaire.b a0, a3, a0
+; RV64-NEXT:    ppaire.b a1, a3, a2
+; RV64-NEXT:    ppaire.b a0, a4, a0
 ; RV64-NEXT:    ppaire.h a0, a0, a1
 ; RV64-NEXT:    ret
   %res = urem <4 x i8> %a, %b
@@ -2280,5 +2684,77 @@ define <2 x i16> @test_bitreverse_v2i16(<2 x i16> %a) {
 ; RV64-NEXT:    rev16 a0, a0
 ; RV64-NEXT:    ret
   %res = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> %a)
+  ret <2 x i16> %res
+}
+
+define <4 x i8> @test_paadd_v4i8(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: test_paadd_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    paadd.b a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <4 x i8> @llvm.riscv.paadd.v4i8(<4 x i8> %a, <4 x i8> %b)
+  ret <4 x i8> %res
+}
+
+define <4 x i8> @test_paaddu_v4i8(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: test_paaddu_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    paaddu.b a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <4 x i8> @llvm.riscv.paaddu.v4i8(<4 x i8> %a, <4 x i8> %b)
+  ret <4 x i8> %res
+}
+
+define <4 x i8> @test_pasub_v4i8(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: test_pasub_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pasub.b a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <4 x i8> @llvm.riscv.pasub.v4i8(<4 x i8> %a, <4 x i8> %b)
+  ret <4 x i8> %res
+}
+
+define <4 x i8> @test_pasubu_v4i8(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: test_pasubu_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pasubu.b a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <4 x i8> @llvm.riscv.pasubu.v4i8(<4 x i8> %a, <4 x i8> %b)
+  ret <4 x i8> %res
+}
+
+define <2 x i16> @test_paadd_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_paadd_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    paadd.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.paadd.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_paaddu_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_paaddu_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    paaddu.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.paaddu.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pasub_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_pasub_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pasub.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pasub.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
+}
+
+define <2 x i16> @test_pasubu_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_pasubu_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pasubu.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pasubu.v2i16(<2 x i16> %a, <2 x i16> %b)
   ret <2 x i16> %res
 }

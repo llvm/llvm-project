@@ -331,21 +331,6 @@ void llvm::salvageKnowledgeBeforeInlining(CallBase *CB, AssumptionCache *AC) {
     AC->registerAssumption(Assume);
 }
 
-RetainedKnowledge llvm::simplifyRetainedKnowledge(AssumeInst *Assume,
-                                                  RetainedKnowledge RK,
-                                                  AssumptionCache *AC,
-                                                  DominatorTree *DT) {
-  AssumeBuilderState Builder(Assume->getModule(), Assume, AC, DT);
-  RK = canonicalizedKnowledge(RK, Assume->getDataLayout());
-
-  if (!Builder.isKnowledgeWorthPreserving(RK))
-    return RetainedKnowledge::none();
-
-  if (Builder.tryToPreserveWithoutAddingAssume(RK))
-    return RetainedKnowledge::none();
-  return RK;
-}
-
 namespace {
 
 struct AssumeSimplify {

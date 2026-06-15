@@ -2372,7 +2372,9 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoMemoryEffect]> {
 
 def fir_ResultOp
     : fir_Op<"result", [Pure, ReturnLike, Terminator,
-                        ParentOneOf<["IfOp", "DoLoopOp", "IterWhileOp"]>]> {
+                        ParentOneOf<["IfOp", "DoLoopOp", "IterWhileOp"]>,
+                        DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+                            ["getMutableSuccessorOperands"]>]> {
   let summary = "special terminator for use in fir region operations";
 
   let description = [{
@@ -2402,7 +2404,9 @@ class region_Op<string mnemonic, list<Trait> traits = []> :
 
 def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<LoopLikeOpInterface,
-        ["getYieldedValuesMutable"]>]> {
+        ["getYieldedValuesMutable"]>,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
   let summary = "generalized loop operation";
   let description = [{
     Generalized high-level looping construct. This operation is similar to

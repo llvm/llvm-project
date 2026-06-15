@@ -3904,7 +3904,7 @@ def VecReturn : InheritableAttr {
 def WarnUnused : InheritableAttr {
   let Spellings = [GCC<"warn_unused">];
   let Subjects = SubjectList<[Record]>;
-  let Documentation = [Undocumented];
+  let Documentation = [WarnUnusedDocs];
   let SimpleHandler = 1;
 }
 
@@ -5176,6 +5176,12 @@ def HLSLShader : InheritableAttr {
     return ShaderType >= llvm::Triple::Pixel && ShaderType <= llvm::Triple::Amplification;
   }
 }];
+}
+
+def HLSLIsArray : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_array">];
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
 }
 
 def HLSLROV : TypeAttr {
