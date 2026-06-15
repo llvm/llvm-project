@@ -4209,7 +4209,8 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
 
   // Get the rest of the default arguments.
   SmallVector<const Stmt *, 4> ArgVec;
-  for (const CXXDefaultArgExpr *Expr : CD->getCtorClosureDefaultArgs())
+  for (const CXXDefaultArgExpr *Expr :
+       CD->getCtorClosureDefaultArgs().drop_front(IsCopy ? 1 : 0))
     ArgVec.push_back(Expr);
   assert(ArgVec.size() == CD->getNumParams() - IsCopy);
 

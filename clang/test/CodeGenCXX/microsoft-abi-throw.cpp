@@ -86,11 +86,16 @@ void h2(DefaultConstEval &d) {
 struct DefaultCtorIsCopyCtor;
 const DefaultCtorIsCopyCtor& foo();
 struct DefaultCtorIsCopyCtor {
-  __declspec(dllexport) DefaultCtorIsCopyCtor(const DefaultCtorIsCopyCtor& = foo(), int = 42) {}
+  __declspec(dllexport) DefaultCtorIsCopyCtor(const DefaultCtorIsCopyCtor& = foo(), int = 456) {}
 };
 void h3(DefaultCtorIsCopyCtor &d) {
   throw d;
 }
+// CHECK-LABEL: @"??_FDefaultCtorIsCopyCtor@@QAEXXZ"
+// CHECK: %[[foo:.*]] = call {{.*}} @"?foo@@YAABUDefaultCtorIsCopyCtor@@XZ"
+// CHECK: call {{.*}} @"??0DefaultCtorIsCopyCtor@@QAE@ABU0@H@Z"({{.*}} %[[foo]], i32 noundef 456)
+// CHECK-LABEL: @"??_ODefaultCtorIsCopyCtor@@QAEXABU0@@Z"
+// CHECK: call {{.*}} @"??0DefaultCtorIsCopyCtor@@QAE@ABU0@H@Z"({{.*}} i32 noundef 456)
 
 struct DeletedCopy {
   DeletedCopy();
