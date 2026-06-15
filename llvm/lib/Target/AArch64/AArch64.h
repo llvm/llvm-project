@@ -16,6 +16,7 @@
 
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
@@ -25,7 +26,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include <map>
 #include <memory>
-#include <unordered_map>
 
 struct AArch64O0PreLegalizerCombinerImplRuleConfig;
 struct AArch64PreLegalizerCombinerImplRuleConfig;
@@ -302,7 +302,7 @@ public:
 class AArch64SIMDInstrOptPass
     : public OptionalPassInfoMixin<AArch64SIMDInstrOptPass> {
   std::map<std::pair<unsigned, std::string>, bool> SIMDInstrTable;
-  std::unordered_map<std::string, bool> InterlEarlyExit;
+  StringMap<bool> InterlEarlyExit;
 
 public:
   PreservedAnalyses run(MachineFunction &MF,

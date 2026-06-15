@@ -915,11 +915,11 @@ let SMETargetGuard = "sme2,sme-tmop,sme-b16b16" in {
 }
 
 let SMETargetGuard = "sme2,sme-tmop,sme-f8f16" in {
-  def SVTMOPA_ZA16_FPM : Inst<"svtmopa_lane_za16[_{d}_{d}]", "vi2.dd[i>", "m", MergeNone, "aarch64_sme_ftmopa_za16", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_1>, ImmCheck<4, ImmCheck0_3>]>;
+  def SVTMOPA_ZA16_FPM : Inst<"svtmopa_lane_za16[_{d}_{d}]", "vi2.dd[i>", "m", MergeNone, "aarch64_sme_fp8_ftmopa_za16", [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<0, ImmCheck0_1>, ImmCheck<4, ImmCheck0_3>]>;
 }
 
 let SMETargetGuard = "sme2,sme-tmop,sme-f8f32" in {
-  def SVTMOPA_ZA32_FPM : Inst<"svtmopa_lane_za32[_{d}_{d}]", "vi2.dd[i>", "m", MergeNone, "aarch64_sme_ftmopa_za32", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
+  def SVTMOPA_ZA32_FPM : Inst<"svtmopa_lane_za32[_{d}_{d}]", "vi2.dd[i>", "m", MergeNone, "aarch64_sme_fp8_ftmopa_za32", [IsStreaming, IsInOutZA, IsOverloadNone], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
 }
 
 multiclass ZAReadz<string n_suffix, string vg_num, string t, string i_prefix, list<ImmCheck> ch> {

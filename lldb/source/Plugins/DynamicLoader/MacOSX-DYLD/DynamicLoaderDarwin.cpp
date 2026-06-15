@@ -154,11 +154,11 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
 
       else
         image_info = HostInfo::GetSharedCacheImageInfo(
-            module_spec.GetFileSpec().GetPathAsConstString(), sc_uuid, sc_mode);
+            ConstString(module_spec.GetFileSpec().GetPath()), sc_uuid, sc_mode);
     } else {
       // Fall back to looking lldb's own shared cache by filename
       image_info = HostInfo::GetSharedCacheImageInfo(
-          module_spec.GetFileSpec().GetPathAsConstString(), sc_mode);
+          ConstString(module_spec.GetFileSpec().GetPath()), sc_mode);
     }
 
     // If we found it and it has the correct UUID, let's proceed with

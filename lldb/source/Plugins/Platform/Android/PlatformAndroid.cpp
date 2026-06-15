@@ -211,7 +211,7 @@ Status PlatformAndroid::GetFile(const FileSpec &source,
   FileSpec source_spec(source.GetPath(false), FileSpec::Style::posix);
   if (source_spec.IsRelative())
     source_spec = GetRemoteWorkingDirectory().CopyByAppendingPathComponent(
-        source_spec.GetPathAsConstString(false).GetStringRef());
+        source_spec.GetPath(false));
 
   Status error;
   auto sync_service = GetSyncService(error);

@@ -58,16 +58,8 @@ template <> mlir::APInt getZeroInitFromType(mlir::Type ty) {
 }
 
 template <> mlir::APFloat getZeroInitFromType(mlir::Type ty) {
-  assert((mlir::isa<cir::SingleType, cir::DoubleType>(ty)) &&
-         "only float and double supported");
-
-  if (ty.isF32() || mlir::isa<cir::SingleType>(ty))
-    return mlir::APFloat(0.f);
-
-  if (ty.isF64() || mlir::isa<cir::DoubleType>(ty))
-    return mlir::APFloat(0.0);
-
-  llvm_unreachable("NYI");
+  auto fpTy = mlir::cast<cir::FPTypeInterface>(ty);
+  return mlir::APFloat::getZero(fpTy.getFloatSemantics());
 }
 
 /// \param attr the ConstArrayAttr to convert

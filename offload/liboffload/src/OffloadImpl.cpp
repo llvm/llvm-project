@@ -968,7 +968,7 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
     } else {
       return createOffloadError(
           ErrorCode::INVALID_ARGUMENT,
-          "ane of DstDevice and SrcDevice must be a non-host device if "
+          "one of DstDevice and SrcDevice must be a non-host device if "
           "queue is specified");
     }
   }

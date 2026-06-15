@@ -506,7 +506,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     // Make a filespec that only fills in the directory of a FileSpec so when
     // we enumerate we can quickly fill in the filename for dst copies
     FileSpec recurse_dst;
-    recurse_dst.SetDirectory(dst_dir.GetPathAsConstString());
+    recurse_dst.SetDirectory(dst_dir.GetPath());
     RecurseCopyBaton rc_baton2 = {recurse_dst, rc_baton->platform_ptr,
                                   Status()};
     FileSystem::Instance().EnumerateDirectory(src_dir_path, true, true, true,
@@ -599,7 +599,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
       }
     } else {
       if (working_dir) {
-        fixed_dst.SetDirectory(working_dir.GetPathAsConstString());
+        fixed_dst.SetDirectory(working_dir.GetPath());
       } else {
         error = Status::FromErrorStringWithFormat(
             "platform working directory must be valid for relative path '%s'",
@@ -609,7 +609,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
     }
   } else {
     if (working_dir) {
-      fixed_dst.SetDirectory(working_dir.GetPathAsConstString());
+      fixed_dst.SetDirectory(working_dir.GetPath());
     } else {
       error =
           Status::FromErrorString("platform working directory must be valid "
@@ -637,7 +637,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
         // Make a filespec that only fills in the directory of a FileSpec so
         // when we enumerate we can quickly fill in the filename for dst copies
         FileSpec recurse_dst;
-        recurse_dst.SetDirectory(fixed_dst.GetPathAsConstString());
+        recurse_dst.SetDirectory(fixed_dst.GetPath());
         std::string src_dir_path(src.GetPath());
         RecurseCopyBaton baton = {recurse_dst, this, Status()};
         FileSystem::Instance().EnumerateDirectory(

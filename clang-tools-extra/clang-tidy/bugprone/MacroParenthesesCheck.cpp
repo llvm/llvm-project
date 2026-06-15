@@ -99,7 +99,7 @@ static bool possibleVarDecl(const MacroInfo *MI, const Token *Tok) {
          isVarDeclKeyword(*Tok);
 }
 
-static StringRef getMacroText(const MacroInfo *MI, Preprocessor *PP) {
+static StringRef getMacroText(const MacroInfo *MI, const Preprocessor *PP) {
   if (MI->tokens_empty())
     return {};
   return Lexer::getSourceText(

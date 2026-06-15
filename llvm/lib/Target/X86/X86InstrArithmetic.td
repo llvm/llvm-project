@@ -433,7 +433,7 @@ let isConvertibleToThreeAddress = 1 in {
     def DEC16r : DecOpR_RF<Xi16>, OpSize16;
     def DEC32r : DecOpR_RF<Xi32>, OpSize32;
   }
-  let Predicates = [NoNDDI] in {
+  let Predicates = [NoNDD] in {
     def INC64r : IncOpR_RF<Xi64>;
     def DEC64r : DecOpR_RF<Xi64>;
   }
@@ -445,7 +445,7 @@ let isConvertibleToThreeAddress = 1 in {
     def DEC16r_ND : DecOpR_RF<Xi16, 1>, PD;
     def DEC32r_ND : DecOpR_RF<Xi32, 1>;
   }
-  let Predicates = [HasNDDI, In64BitMode] in {
+  let Predicates = [HasNDD, In64BitMode] in {
     def INC64r_ND : IncOpR_RF<Xi64, 1>;
     def DEC64r_ND : DecOpR_RF<Xi64, 1>;
   }
@@ -639,8 +639,7 @@ multiclass ArithBinOp_RF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
                          string mnemonic, Format RegMRM, Format MemMRM,
                          SDNode opnodeflag, SDNode opnode,
                          bit CommutableRR, bit ConvertibleToThreeAddress,
-                         bit ConvertibleToThreeAddressRR,
-                         Predicate prd = HasNDD> {
+                         bit ConvertibleToThreeAddressRR> {
   let isCommutable = CommutableRR,
       isConvertibleToThreeAddress = ConvertibleToThreeAddressRR in {
     let Predicates = [NoNDD] in {
@@ -730,27 +729,23 @@ multiclass ArithBinOp_RF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
       def 8ri   : BinOpRI_RF<0x80, mnemonic, Xi8 , opnodeflag, RegMRM>;
       def 16ri  : BinOpRI_RF<0x81, mnemonic, Xi16, opnodeflag, RegMRM>, OpSize16;
       def 32ri  : BinOpRI_RF<0x81, mnemonic, Xi32, opnodeflag, RegMRM>, OpSize32;
-    }
-    let Predicates = [NoNDDI] in {
       def 64ri8 : BinOpRI8_RF<0x83, mnemonic, Xi64, RegMRM>;
       def 64ri32: BinOpRI_RF<0x81, mnemonic, Xi64, opnodeflag, RegMRM>;
     }
     let Predicates = [HasNDD, In64BitMode] in {
       def 16ri8_ND : BinOpRI8_RF<0x83, mnemonic, Xi16, RegMRM, 1>, PD;
       def 32ri8_ND : BinOpRI8_RF<0x83, mnemonic, Xi32, RegMRM, 1>;
+      def 64ri8_ND : BinOpRI8_RF<0x83, mnemonic, Xi64, RegMRM, 1>;
       def 8ri_ND   : BinOpRI_RF<0x80, mnemonic, Xi8 , opnodeflag, RegMRM, 1>;
       def 16ri_ND  : BinOpRI_RF<0x81, mnemonic, Xi16, opnodeflag, RegMRM, 1>, PD;
       def 32ri_ND  : BinOpRI_RF<0x81, mnemonic, Xi32, opnodeflag, RegMRM, 1>;
+      def 64ri32_ND: BinOpRI_RF<0x81, mnemonic, Xi64, opnodeflag, RegMRM, 1>;
       def 16ri8_NF_ND : BinOpRI8_R<0x83, mnemonic, Xi16, RegMRM, 1>, EVEX_NF, PD;
       def 32ri8_NF_ND : BinOpRI8_R<0x83, mnemonic, Xi32, RegMRM, 1>, EVEX_NF;
+      def 64ri8_NF_ND : BinOpRI8_R<0x83, mnemonic, Xi64, RegMRM, 1>, EVEX_NF;
       def 8ri_NF_ND  : BinOpRI_R<0x80, mnemonic, Xi8, RegMRM, 1>, EVEX_NF;
       def 16ri_NF_ND : BinOpRI_R<0x81, mnemonic, Xi16, RegMRM, 1>, EVEX_NF, PD;
       def 32ri_NF_ND : BinOpRI_R<0x81, mnemonic, Xi32, RegMRM, 1>, EVEX_NF;
-    }
-    let Predicates = [prd, In64BitMode] in {
-      def 64ri8_ND : BinOpRI8_RF<0x83, mnemonic, Xi64, RegMRM, 1>;
-      def 64ri32_ND: BinOpRI_RF<0x81, mnemonic, Xi64, opnodeflag, RegMRM, 1>;
-      def 64ri8_NF_ND : BinOpRI8_R<0x83, mnemonic, Xi64, RegMRM, 1>, EVEX_NF;
       def 64ri32_NF_ND : BinOpRI_R<0x81, mnemonic, Xi64, RegMRM, 1>, EVEX_NF;
     }
     let Predicates = [In64BitMode] in {
@@ -1103,10 +1098,10 @@ defm OR  : ArithBinOp_RF<0x09, 0x0B, 0x0D, "or", MRM1r, MRM1m,
 defm XOR : ArithBinOp_RF<0x31, 0x33, 0x35, "xor", MRM6r, MRM6m,
                          X86xor_flag, xor, 1, 0, 0>;
 defm ADD : ArithBinOp_RF<0x01, 0x03, 0x05, "add", MRM0r, MRM0m,
-                         X86add_flag, add, 1, 1, 1, HasNDDI>;
+                         X86add_flag, add, 1, 1, 1>;
 let isCompare = 1 in {
   defm SUB : ArithBinOp_RF<0x29, 0x2B, 0x2D, "sub", MRM5r, MRM5m,
-                           X86sub_flag, sub, 0, 1, 0, HasNDDI>;
+                           X86sub_flag, sub, 0, 1, 0>;
 }
 
 // Version of XOR8rr_NOREX that use GR8_NOREX. This is used by the handling of
@@ -1166,8 +1161,7 @@ def : Pat<(store (X86adc_flag GR64:$src, (loadi64 addr:$dst), EFLAGS),
           (ADC64mr addr:$dst, GR64:$src)>;
 
 // Patterns for basic arithmetic ops with relocImm for the immediate field.
-multiclass ArithBinOp_RF_relocImm_Pats<SDNode OpNodeFlag, SDNode OpNode,
-                                       Predicate prd=HasNDD> {
+multiclass ArithBinOp_RF_relocImm_Pats<SDNode OpNodeFlag, SDNode OpNode> {
   let Predicates = [NoNDD] in {
     def : Pat<(OpNodeFlag GR8:$src1, relocImm8_su:$src2),
               (!cast<Instruction>(NAME#"8ri") GR8:$src1, relocImm8_su:$src2)>;
@@ -1175,6 +1169,8 @@ multiclass ArithBinOp_RF_relocImm_Pats<SDNode OpNodeFlag, SDNode OpNode,
               (!cast<Instruction>(NAME#"16ri") GR16:$src1, relocImm16_su:$src2)>;
     def : Pat<(OpNodeFlag GR32:$src1, relocImm32_su:$src2),
               (!cast<Instruction>(NAME#"32ri") GR32:$src1, relocImm32_su:$src2)>;
+    def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2),
+              (!cast<Instruction>(NAME#"64ri32") GR64:$src1, i64relocImmSExt32_su:$src2)>;
 
     def : Pat<(store (OpNode (load addr:$dst), relocImm8_su:$src), addr:$dst),
               (!cast<Instruction>(NAME#"8mi") addr:$dst, relocImm8_su:$src)>;
@@ -1192,6 +1188,8 @@ multiclass ArithBinOp_RF_relocImm_Pats<SDNode OpNodeFlag, SDNode OpNode,
               (!cast<Instruction>(NAME#"16ri_ND") GR16:$src1, relocImm16_su:$src2)>;
     def : Pat<(OpNodeFlag GR32:$src1, relocImm32_su:$src2),
               (!cast<Instruction>(NAME#"32ri_ND") GR32:$src1, relocImm32_su:$src2)>;
+    def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2),
+              (!cast<Instruction>(NAME#"64ri32_ND") GR64:$src1, i64relocImmSExt32_su:$src2)>;
 
     def : Pat<(OpNode (load ndd_addr:$dst), relocImm8_su:$src),
               (!cast<Instruction>(NAME#"8mi_ND") ndd_addr:$dst, relocImm8_su:$src)>;
@@ -1202,14 +1200,6 @@ multiclass ArithBinOp_RF_relocImm_Pats<SDNode OpNodeFlag, SDNode OpNode,
     def : Pat<(OpNode (load ndd_addr:$dst), i64relocImmSExt32_su:$src),
               (!cast<Instruction>(NAME#"64mi32_ND") ndd_addr:$dst, i64relocImmSExt32_su:$src)>;
   }
-
-  let Predicates = [NoNDDI] in
-    def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2),
-              (!cast<Instruction>(NAME#"64ri32") GR64:$src1, i64relocImmSExt32_su:$src2)>;
-
-  let Predicates = [prd] in
-    def : Pat<(OpNodeFlag GR64:$src1, i64relocImmSExt32_su:$src2),
-              (!cast<Instruction>(NAME#"64ri32_ND") GR64:$src1, i64relocImmSExt32_su:$src2)>;
 }
 
 multiclass ArithBinOp_RFF_relocImm_Pats<SDNode OpNodeFlag> {
@@ -1276,8 +1266,8 @@ multiclass ArithBinOp_F_relocImm_Pats<SDNode OpNodeFlag> {
 defm AND : ArithBinOp_RF_relocImm_Pats<X86and_flag, and>;
 defm OR  : ArithBinOp_RF_relocImm_Pats<X86or_flag, or>;
 defm XOR : ArithBinOp_RF_relocImm_Pats<X86xor_flag, xor>;
-defm ADD : ArithBinOp_RF_relocImm_Pats<X86add_flag, add, HasNDDI>;
-defm SUB : ArithBinOp_RF_relocImm_Pats<X86sub_flag, sub, HasNDDI>;
+defm ADD : ArithBinOp_RF_relocImm_Pats<X86add_flag, add>;
+defm SUB : ArithBinOp_RF_relocImm_Pats<X86sub_flag, sub>;
 
 defm ADC : ArithBinOp_RFF_relocImm_Pats<X86adc_flag>;
 defm SBB : ArithBinOp_RFF_relocImm_Pats<X86sbb_flag>;

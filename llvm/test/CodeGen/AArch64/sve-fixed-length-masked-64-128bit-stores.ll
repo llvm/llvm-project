@@ -63,7 +63,56 @@ define void @masked_store_v2f64(ptr %dst, <2 x i1> %mask) {
   ret void
 }
 
-declare void @llvm.masked.store.v16i8(<16 x i8>, ptr, i32, <16 x i1>)
-declare void @llvm.masked.store.v8f16(<8 x half>, ptr, i32, <8 x i1>)
-declare void @llvm.masked.store.v4f32(<4 x float>, ptr, i32, <4 x i1>)
-declare void @llvm.masked.store.v2f64(<2 x double>, ptr, i32, <2 x i1>)
+;
+; 64-bit Masked Stores
+;
+
+define void @masked_store_v8i8(ptr %ap, ptr %bp) {
+; CHECK-LABEL: masked_store_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    st1b { z0.b }, p1, [x1]
+; CHECK-NEXT:    ret
+  %a = load <8 x i8>, ptr %ap
+  %b = load <8 x i8>, ptr %bp
+  %mask = icmp eq <8 x i8> %a, %b
+  call void @llvm.masked.store.v8i8(<8 x i8> %a, ptr %bp, i32 1, <8 x i1> %mask)
+  ret void
+}
+
+define void @masked_store_v4i16(ptr %ap, ptr %bp) {
+; CHECK-LABEL: masked_store_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1]
+; CHECK-NEXT:    ret
+  %a = load <4 x i16>, ptr %ap
+  %b = load <4 x i16>, ptr %bp
+  %mask = icmp eq <4 x i16> %a, %b
+  call void @llvm.masked.store.v4i16(<4 x i16> %a, ptr %bp, i32 2, <4 x i1> %mask)
+  ret void
+}
+
+define void @masked_store_v4f16(ptr %ap, ptr %bp) {
+; CHECK-LABEL: masked_store_v4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    fcmeq v1.4h, v0.4h, v1.4h
+; CHECK-NEXT:    cmpne p1.h, p0/z, z1.h, #0
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1]
+; CHECK-NEXT:    ret
+  %a = load <4 x half>, ptr %ap
+  %b = load <4 x half>, ptr %bp
+  %mask = fcmp oeq <4 x half> %a, %b
+  call void @llvm.masked.store.v4f16(<4 x half> %a, ptr %bp, i32 2, <4 x i1> %mask)
+  ret void
+}
+

@@ -241,7 +241,7 @@ void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
 }
 
 static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
-                                  const std::vector<uint32_t> &DecArgs,
+                                  ArrayRef<uint32_t> DecArgs,
                                   StringRef StrImm) {
   if (!StrImm.empty())
     addStringImm(StrImm, MIB);
@@ -251,7 +251,7 @@ static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
 
 void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs, StringRef StrImm) {
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                  .addUse(Reg)
                  .addImm(static_cast<uint32_t>(Dec));
@@ -260,7 +260,7 @@ void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
 
 void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs, StringRef StrImm) {
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   MachineBasicBlock &MBB = *I.getParent();
   auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpDecorate))
                  .addUse(Reg)
@@ -270,8 +270,7 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
 
 void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm) {
+                           ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpMemberDecorate)
                  .addUse(Reg)
                  .addImm(Member)
@@ -282,8 +281,7 @@ void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
 void buildOpMemberDecorate(Register Reg, MachineInstr &I,
                            const SPIRVInstrInfo &TII,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm) {
+                           ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   MachineBasicBlock &MBB = *I.getParent();
   auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemberDecorate))
                  .addUse(Reg)

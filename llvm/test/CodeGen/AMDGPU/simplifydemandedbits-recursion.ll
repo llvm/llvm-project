@@ -14,7 +14,7 @@ declare i32 @llvm.amdgcn.workitem.id.y() #0
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare float @llvm.fmuladd.f32(float, float, float) #0
 
-define amdgpu_kernel void @foo(ptr addrspace(1) noalias nocapture readonly %arg, ptr addrspace(1) noalias nocapture readonly %arg1, ptr addrspace(1) noalias nocapture %arg2, float %arg3, i1 %c0, i1 %c1, i1 %c2, i1 %c3, i1 %c4, i1 %c5) local_unnamed_addr !reqd_work_group_size !0 {
+define amdgpu_kernel void @foo(ptr addrspace(1) noalias nocapture readonly %arg, ptr addrspace(1) noalias nocapture readonly %arg1, ptr addrspace(1) noalias nocapture %arg2, float %arg3, i1 %c0, i1 %c1, i1 %c2, i1 %c3, i1 %c4, i1 %c5) local_unnamed_addr "amdgpu-flat-work-group-size"="128,128" !reqd_work_group_size !0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x10

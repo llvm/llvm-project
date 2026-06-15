@@ -1366,9 +1366,9 @@ bool JumpThreadingPass::simplifyPartiallyRedundantLoad(LoadInst *LoadI) {
   // overkill.
   if (PredsScanned.size() != AvailablePreds.size() &&
       !isSafeToSpeculativelyExecute(LoadI))
-    for (auto I = LoadBB->begin(); &*I != LoadI; ++I)
-      if (!isGuaranteedToTransferExecutionToSuccessor(&*I))
-        return false;
+    if (!isGuaranteedToTransferExecutionToSuccessor(LoadBB->begin(),
+                                                    LoadI->getIterator()))
+      return false;
 
   // If there is exactly one predecessor where the value is unavailable, the
   // already computed 'OneUnavailablePred' block is it.  If it ends in an

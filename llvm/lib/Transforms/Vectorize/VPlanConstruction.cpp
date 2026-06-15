@@ -1301,7 +1301,7 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
   return true;
 }
 
-void VPlanTransforms::addMiddleCheck(VPlan &Plan, bool TailFolded) {
+void VPlanTransforms::addMiddleCheck(VPlan &Plan) {
   auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
   // If MiddleVPBB has a single successor then the original loop does not exit
   // via the latch and the single successor must be the scalar preheader.
@@ -1332,12 +1332,9 @@ void VPlanTransforms::addMiddleCheck(VPlan &Plan, bool TailFolded) {
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
   DebugLoc LatchDL = LatchVPBB->getTerminator()->getDebugLoc();
   VPBuilder Builder(MiddleVPBB);
-  VPValue *Cmp;
-  if (TailFolded)
-    Cmp = Plan.getTrue();
-  else
-    Cmp = Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
-                             &Plan.getVectorTripCount(), LatchDL, "cmp.n");
+  VPValue *Cmp =
+      Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
+                         &Plan.getVectorTripCount(), LatchDL, "cmp.n");
   Builder.createNaryOp(VPInstruction::BranchOnCond, {Cmp}, LatchDL);
 }
 
@@ -1449,6 +1446,14 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
         Builder.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});
     R.getVPSingleValue()->replaceAllUsesWith(Ext);
   }
+
+  // VectorTripCount now equals TripCount so simplify the MiddleVPBB branch.
+  assert(match(Plan.getMiddleBlock()->getTerminator(),
+               m_BranchOnCond(m_SpecificICmp(
+                   CmpInst::ICMP_EQ, m_Specific(Plan.getTripCount()),
+                   m_Specific(&Plan.getVectorTripCount())))) &&
+         "Unexpected MiddleVPBB branch");
+  Plan.getMiddleBlock()->getTerminator()->setOperand(0, Plan.getTrue());
 }
 
 /// Insert \p CheckBlockVPBB on the edge leading to the vector preheader,

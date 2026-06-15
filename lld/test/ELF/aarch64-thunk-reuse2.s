@@ -2,6 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
 # RUN: ld.lld -pie -Ttext=0x10300 %t.o -o %t
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --disassemble-symbols=dest,__AArch64ADRPThunk_,high %t | FileCheck %s
+# RUN: rm %t.o %t
 
 ## We create initial ThunkSection before the gap. Because the ThunkSection
 ## selection code isn't so precise, we may create an unused thunk there (0x10704).

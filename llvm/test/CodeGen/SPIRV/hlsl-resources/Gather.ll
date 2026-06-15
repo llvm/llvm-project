@@ -13,7 +13,8 @@
 ; CHECK-DAG: %[[v2float:[0-9]+]] = OpTypeVector %[[float]] 2
 ; CHECK-DAG: %[[int:[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[v2int:[0-9]+]] = OpTypeVector %[[int]] 2
-; CHECK-DAG: %[[coord:[0-9]+]] = OpConstantNull %[[v2float]]
+; CHECK-DAG: %[[fzero:[0-9]+]] = OpConstant %[[float]] 0
+; CHECK-DAG: %[[coord:[0-9]+]] = OpConstantComposite %[[v2float]] %[[fzero]] %[[fzero]]
 ; CHECK-DAG: %[[component0:[0-9]+]] = OpConstant %[[int]] 0
 ; CHECK-DAG: %[[const1:[0-9]+]] = OpConstant %[[int]] 1
 ; CHECK-DAG: %[[compare:[0-9]+]] = OpConstant %[[float]] 0.5
@@ -21,7 +22,7 @@
 ; CHECK-DAG: %[[image_cube:[0-9]+]] = OpTypeImage %[[float]] Cube 0 0 0 1 Unknown
 ; CHECK-DAG: %[[sampled_image_cube:[0-9]+]] = OpTypeSampledImage %[[image_cube]]
 ; CHECK-DAG: %[[v3float:[0-9]+]] = OpTypeVector %[[float]] 3
-; CHECK-DAG: %[[coord_cube:[0-9]+]] = OpConstantNull %[[v3float]]
+; CHECK-DAG: %[[coord_cube:[0-9]+]] = OpConstantComposite %[[v3float]] %[[fzero]] %[[fzero]] %[[fzero]]
 ; CHECK-DAG: %[[offset_2d:[0-9]+]] = OpConstantNull %[[v2int]]
 ; CHECK-DAG: %[[ptr_int:[0-9]+]] = OpTypePointer Function %[[v2int]]
 

@@ -387,10 +387,6 @@ std::string FileSpec::GetPath(bool denormalize) const {
   return static_cast<std::string>(result);
 }
 
-ConstString FileSpec::GetPathAsConstString(bool denormalize) const {
-  return ConstString{GetPath(denormalize)};
-}
-
 void FileSpec::GetPath(llvm::SmallVectorImpl<char> &path,
                        bool denormalize) const {
   path.append(m_directory.GetStringRef().begin(),

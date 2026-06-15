@@ -3984,7 +3984,7 @@ void fir::DoLoopOp::getSuccessorRegions(
   // Loop-back (body → body): another iteration follows.
   regions.push_back(mlir::RegionSuccessor(&getRegion()));
   // Exit (body → parent): last iteration completes.
-  regions.push_back(mlir::RegionSuccessor::parent());
+  regions.push_back(mlir::RegionSuccessor(getOperation()));
 }
 
 // Note: when finalValue is set, result[0] tracks the IV's final value.
@@ -4007,7 +4007,7 @@ fir::DoLoopOp::getSuccessorInputs(mlir::RegionSuccessor successor) {
   //
   // %r#0 (finalValue IV) is excluded: it has no symmetric iter-arg slot in
   // the body, so it cannot participate in the 4-edge count check.
-  if (successor.isParent())
+  if (successor.isOperation())
     return getResults().drop_front(getFinalValue() ? 1 : 0);
   return getRegionIterArgs();
 }
@@ -5545,7 +5545,7 @@ void fir::IfOp::getSuccessorRegions(
     llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(mlir::RegionSuccessor::parent());
+    regions.push_back(mlir::RegionSuccessor(getOperation()));
     return;
   }
 
@@ -5555,14 +5555,14 @@ void fir::IfOp::getSuccessorRegions(
   // Don't consider the else region if it is empty.
   mlir::Region *elseRegion = &this->getElseRegion();
   if (elseRegion->empty())
-    regions.push_back(mlir::RegionSuccessor::parent());
+    regions.push_back(mlir::RegionSuccessor(getOperation()));
   else
     regions.push_back(mlir::RegionSuccessor(elseRegion));
 }
 
 mlir::ValueRange
 fir::IfOp::getSuccessorInputs(mlir::RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getOperation()->getResults();
   return mlir::ValueRange();
 }
@@ -5581,7 +5581,7 @@ void fir::IfOp::getEntrySuccessorRegions(
     if (!getElseRegion().empty())
       regions.emplace_back(&getElseRegion());
     else
-      regions.push_back(mlir::RegionSuccessor::parent());
+      regions.push_back(mlir::RegionSuccessor(getOperation()));
   }
 }
 

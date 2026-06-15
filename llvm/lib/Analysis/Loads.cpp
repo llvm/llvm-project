@@ -267,6 +267,11 @@ bool llvm::isDereferenceablePointer(const Value *V, Type *Ty,
   return isDereferenceableAndAlignedPointer(V, Ty, Align(1), SQ, IgnoreFree);
 }
 
+bool llvm::isDereferenceablePointer(const Value *V, const APInt &Size,
+                                    const SimplifyQuery &Q, bool IgnoreFree) {
+  return isDereferenceableAndAlignedPointer(V, Align(1), Size, Q, IgnoreFree);
+}
+
 /// Test if A and B will obviously have the same value.
 ///
 /// This includes recognizing that %t0 and %t1 will have the same

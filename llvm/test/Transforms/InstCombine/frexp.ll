@@ -109,8 +109,7 @@ define { <2 x float>, <2 x i32> } @frexp_zero_vector() {
 
 define { <vscale x 2 x float>, <vscale x 2 x i32> } @frexp_zero_scalable_vector() {
 ; CHECK-LABEL: define { <vscale x 2 x float>, <vscale x 2 x i32> } @frexp_zero_scalable_vector() {
-; CHECK-NEXT:    [[RET:%.*]] = call { <vscale x 2 x float>, <vscale x 2 x i32> } @llvm.frexp.nxv2f32.nxv2i32(<vscale x 2 x float> zeroinitializer)
-; CHECK-NEXT:    ret { <vscale x 2 x float>, <vscale x 2 x i32> } [[RET]]
+; CHECK-NEXT:    ret { <vscale x 2 x float>, <vscale x 2 x i32> } zeroinitializer
 ;
   %ret = call { <vscale x 2 x float>, <vscale x 2 x i32> } @llvm.frexp.nxv2f32.nxv2i32(<vscale x 2 x float> zeroinitializer)
   ret { <vscale x 2 x float>, <vscale x 2 x i32> } %ret

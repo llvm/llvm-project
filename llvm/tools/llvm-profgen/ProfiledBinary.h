@@ -236,7 +236,7 @@ class ProfiledBinary {
   std::set<std::pair<uint64_t, uint64_t>> TextSections;
 
   // A map of mapping function name to BinaryFunction info.
-  std::unordered_map<std::string, BinaryFunction> BinaryFunctions;
+  StringMap<BinaryFunction> BinaryFunctions;
 
   // Lookup BinaryFunctions using the function name's MD5 hash. Needed if the
   // profile is using MD5.
@@ -571,8 +571,7 @@ public:
     return FRange->Func->Ranges;
   }
 
-  const std::unordered_map<std::string, BinaryFunction> &
-  getAllBinaryFunctions() {
+  const StringMap<BinaryFunction> &getAllBinaryFunctions() {
     return BinaryFunctions;
   }
 
@@ -586,7 +585,7 @@ public:
 
   BinaryFunction *getBinaryFunction(FunctionId FName) {
     if (FName.isStringRef()) {
-      auto I = BinaryFunctions.find(FName.str());
+      auto I = BinaryFunctions.find(FName.stringRef());
       if (I == BinaryFunctions.end())
         return nullptr;
       return &I->second;

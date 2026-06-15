@@ -1377,6 +1377,26 @@ bool LoopInterchangeLegality::currentLimitations() {
     return true;
   }
 
+  // Currently, we do not support loops that have a predecessor entering the
+  // loop via an indirectbr.
+  for (Loop *L : {OuterLoop, InnerLoop}) {
+    BasicBlock *Header = L->getHeader();
+    for (BasicBlock *Pred : predecessors(Header)) {
+      if (L->contains(Pred))
+        continue;
+      if (isa<IndirectBrInst>(Pred->getTerminator())) {
+        LLVM_DEBUG(
+            dbgs() << "Indirect branch found in the loop predecessor.\n");
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "IndirectBranchPreheader",
+                                          L->getStartLoc(), L->getHeader())
+                 << "Indirect branch found in the loop predecessor.";
+        });
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 
@@ -1451,36 +1471,46 @@ static bool areOuterLoopExitPHIsSupported(Loop *OuterLoop, Loop *InnerLoop) {
   return true;
 }
 
-// In case of multi-level nested loops, it may occur that lcssa phis exist in
-// the latch of InnerLoop, i.e., when defs of the incoming values are further
-// inside the loopnest. Sometimes those incoming values are not available
-// after interchange, since the original inner latch will become the new outer
-// latch which may have predecessor paths that do not include those incoming
-// values.
-// TODO: Handle transformation of lcssa phis in the InnerLoop latch in case of
-// multi-level loop nests.
-static bool areInnerLoopLatchPHIsSupported(Loop *OuterLoop, Loop *InnerLoop) {
+/// The transform clones the inner latch's exit condition into the new latch
+/// (see MoveInstructions in LoopInterchangeTransform::transform), but it does
+/// not relocate PHI nodes. So if a PHI in the inner latch feeds that condition,
+/// a later interchange can leave the cloned PHI with a stale incoming block,
+/// producing invalid IR. Reject that case here.
+///
+/// For example, %p is a PHI in the inner latch and the inner loop's exit test
+/// reads %p, so %p feeds the condition that would be cloned:
+///
+///   inner.latch:
+///     %p  = phi i64 [ %v, %subloop.latch ]
+///     %ec = icmp eq i64 %iv, %p              ; inner exit test reads %p
+///     br i1 %ec, label %exit, label %inner.header
+///
+/// TODO: Handle transformation of lcssa phis in the InnerLoop latch in case of
+/// multi-level loop nests.
+static bool areInnerLoopLatchPHIsSupported(Loop *InnerLoop) {
   if (InnerLoop->getSubLoops().empty())
     return true;
-  // If the original outer latch has only one predecessor, then values defined
-  // further inside the looploop, e.g., in the innermost loop, will be available
-  // at the new outer latch after interchange.
-  if (OuterLoop->getLoopLatch()->getUniquePredecessor() != nullptr)
+
+  BasicBlock *InnerLoopLatch = InnerLoop->getLoopLatch();
+  auto *LatchBI = dyn_cast<CondBrInst>(InnerLoopLatch->getTerminator());
+  if (!LatchBI)
+    return true;
+  auto *CondI = dyn_cast<Instruction>(LatchBI->getCondition());
+  if (!CondI)
     return true;
 
-  // The outer latch has more than one predecessors, i.e., the inner
-  // exit and the inner header.
-  // PHI nodes in the inner latch are lcssa phis where the incoming values
-  // are defined further inside the loopnest. Check if those phis are used
-  // in the original inner latch. If that is the case then bail out since
-  // those incoming values may not be available at the new outer latch.
-  BasicBlock *InnerLoopLatch = InnerLoop->getLoopLatch();
-  for (PHINode &PHI : InnerLoopLatch->phis()) {
-    for (auto *U : PHI.users()) {
-      Instruction *UI = cast<Instruction>(U);
-      if (InnerLoopLatch == UI->getParent())
-        return false;
-    }
+  // Bail if a phi in the inner latch feeds the exit condition, walking operands
+  // within the inner loop.
+  SmallSetVector<Instruction *, 8> Worklist;
+  Worklist.insert(CondI);
+  for (unsigned I = 0; I < Worklist.size(); ++I) {
+    Instruction *Cur = Worklist[I];
+    if (isa<PHINode>(Cur) && Cur->getParent() == InnerLoopLatch)
+      return false;
+    for (Value *Op : Cur->operands())
+      if (auto *OpI = dyn_cast<Instruction>(Op))
+        if (InnerLoop->contains(OpI))
+          Worklist.insert(OpI);
   }
   return true;
 }
@@ -1531,7 +1561,7 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     return false;
   }
 
-  if (!areInnerLoopLatchPHIsSupported(OuterLoop, InnerLoop)) {
+  if (!areInnerLoopLatchPHIsSupported(InnerLoop)) {
     LLVM_DEBUG(dbgs() << "Found unsupported PHI nodes in inner loop latch.\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedInnerLatchPHI",
@@ -2103,6 +2133,10 @@ bool LoopInterchangeTransform::transform(
   unsigned i = 0;
   auto MoveInstructions = [&i, &WorkList, this, &InductionPHIs, NewLatch]() {
     for (; i < WorkList.size(); i++) {
+      // PHI nodes cannot be cloned and moved here; the legality check
+      // (areInnerLoopLatchPHIsSupported) ensures none reach the worklist.
+      assert(!isa<PHINode>(WorkList[i]) &&
+             "MoveInstructions does not support PHI nodes");
       // Duplicate instruction and move it to the new latch. Update uses that
       // have been moved.
       Instruction *NewI = WorkList[i]->clone();
@@ -2159,8 +2193,8 @@ bool LoopInterchangeTransform::transform(
   if (InnerLoopPreHeader != OuterLoopHeader) {
     // Eliminate PHIs in the inner-loop preheader.
     for (PHINode &P : make_early_inc_range(InnerLoopPreHeader->phis())) {
-      assert(P.getNumIncomingValues() == 1 &&
-             "Expected single-incoming PHIs in inner loop preheader");
+      assert(all_equal(P.incoming_values()) &&
+             "Expected equivalent incoming values in inner loop preheader");
       P.replaceAllUsesWith(P.getIncomingValue(0));
       P.eraseFromParent();
     }

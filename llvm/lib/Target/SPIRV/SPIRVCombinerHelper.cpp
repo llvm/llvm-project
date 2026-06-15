@@ -334,11 +334,9 @@ Register SPIRVCombinerHelper::computeDotProduct(Register RowA, Register ColB,
   return DotRes;
 }
 
-SmallVector<Register, 16>
-SPIRVCombinerHelper::computeDotProducts(const SmallVector<Register, 4> &RowsA,
-                                        const SmallVector<Register, 4> &ColsB,
-                                        SPIRVTypeInst SpvVecType,
-                                        SPIRVGlobalRegistry *GR) const {
+SmallVector<Register, 16> SPIRVCombinerHelper::computeDotProducts(
+    ArrayRef<Register> RowsA, ArrayRef<Register> ColsB,
+    SPIRVTypeInst SpvVecType, SPIRVGlobalRegistry *GR) const {
   SmallVector<Register, 16> ResultScalars;
   for (uint32_t J = 0; J < ColsB.size(); ++J) {
     for (uint32_t I = 0; I < RowsA.size(); ++I) {

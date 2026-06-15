@@ -3350,7 +3350,8 @@ const char *tools::renderEscapedCommandLine(const ToolChain &TC,
 bool tools::shouldRecordCommandLine(const ToolChain &TC,
                                     const llvm::opt::ArgList &Args,
                                     bool &FRecordCommandLine,
-                                    bool &GRecordCommandLine) {
+                                    bool &GRecordCommandLine,
+                                    bool &DXRecordCommandLine) {
   const Driver &D = TC.getDriver();
   const llvm::Triple &Triple = TC.getEffectiveTriple();
   const std::string &TripleStr = Triple.getTriple();
@@ -3361,13 +3362,15 @@ bool tools::shouldRecordCommandLine(const ToolChain &TC,
   GRecordCommandLine =
       Args.hasFlag(options::OPT_grecord_command_line,
                    options::OPT_gno_record_command_line, false);
+  DXRecordCommandLine = Triple.isDXIL() && Args.hasArg(options::OPT_g_Flag);
   if (FRecordCommandLine && !Triple.isOSBinFormatELF() &&
       !Triple.isOSBinFormatXCOFF() && !Triple.isOSBinFormatMachO())
     D.Diag(diag::err_drv_unsupported_opt_for_target)
         << Args.getLastArg(options::OPT_frecord_command_line)->getAsString(Args)
         << TripleStr;
 
-  return FRecordCommandLine || TC.UseDwarfDebugFlags() || GRecordCommandLine;
+  return FRecordCommandLine || TC.UseDwarfDebugFlags() || GRecordCommandLine ||
+         DXRecordCommandLine;
 }
 
 void tools::renderGlobalISelOptions(const Driver &D, const ArgList &Args,

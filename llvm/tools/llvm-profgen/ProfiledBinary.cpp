@@ -218,7 +218,7 @@ void ProfiledBinary::warnNoFuncEntry() {
       NoFuncEntryNum++;
       if (ShowDetailedWarning)
         WithColor::warning()
-            << "Failed to determine function entry for " << F.first
+            << "Failed to determine function entry for " << F.first()
             << " due to inconsistent name from symbol table and dwarf info.\n";
     }
   }
@@ -953,10 +953,10 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
       assert(findFuncRange(EndAddr - 1) == nullptr &&
              "Function range overlaps with existing functions.");
       // Function from symbol table not found previously in DWARF, store ranges.
-      auto Ret = BinaryFunctions.emplace(SymName, BinaryFunction());
+      auto Ret = BinaryFunctions.try_emplace(SymName);
       auto &Func = Ret.first->second;
       if (Ret.second) {
-        Func.FuncName = Ret.first->first;
+        Func.FuncName = Ret.first->first();
         HashBinaryFunctions[Function::getGUIDAssumingExternalLinkage(SymName)] =
             &Func;
       }
@@ -1030,10 +1030,10 @@ void ProfiledBinary::loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit) {
 
     // Different DWARF symbols can have same function name, search or create
     // BinaryFunction indexed by the name.
-    auto Ret = BinaryFunctions.emplace(Name, BinaryFunction());
+    auto Ret = BinaryFunctions.try_emplace(Name);
     auto &Func = Ret.first->second;
     if (Ret.second)
-      Func.FuncName = Ret.first->first;
+      Func.FuncName = Ret.first->first();
 
     for (const auto &Range : Ranges) {
       uint64_t StartAddress = Range.LowPC;
@@ -1106,7 +1106,7 @@ void ProfiledBinary::loadSymbolsFromDWARF(ObjectFile &Obj) {
   // Populate the hash binary function map for MD5 function name lookup. This
   // is done after BinaryFunctions are finalized.
   for (auto &BinaryFunction : BinaryFunctions) {
-    HashBinaryFunctions[MD5Hash(StringRef(BinaryFunction.first))] =
+    HashBinaryFunctions[MD5Hash(BinaryFunction.first())] =
         &BinaryFunction.second;
   }
 

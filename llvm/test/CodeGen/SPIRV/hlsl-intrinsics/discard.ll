@@ -17,7 +17,7 @@
 ; CHECK-DAG:   %[[#v4bool:]]  = OpTypeVector %[[#bool]] 4
 ; CHECK-DAG:   %[[#v4float:]] = OpTypeVector %[[#float]] 4
 ; CHECK-DAG:   %[[#fzero:]] = OpConstant %[[#float]] 0
-; CHECK-DAG:   %[[#v4fzero:]] = OpConstantNull %[[#v4float]]
+; CHECK-DAG:   %[[#v4fzero:]] = OpConstantComposite %[[#v4float]] %[[#fzero]] %[[#fzero]] %[[#fzero]] %[[#fzero]]
 
 define void @test_scalar(float noundef %Buf) {
 entry:

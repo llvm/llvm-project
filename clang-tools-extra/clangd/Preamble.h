@@ -36,6 +36,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -59,7 +60,8 @@ namespace clangd {
 struct CapturedASTCtx {
 public:
   CapturedASTCtx(CompilerInstance &Clang)
-      : Invocation(Clang.getInvocationPtr()),
+      : ModCache(Clang.getModuleCachePtr()),
+        Invocation(Clang.getInvocationPtr()),
         Diagnostics(Clang.getDiagnosticsPtr()), Target(Clang.getTargetPtr()),
         AuxTarget(Clang.getAuxTarget()), FileMgr(Clang.getFileManagerPtr()),
         SourceMgr(Clang.getSourceManagerPtr()), PP(Clang.getPreprocessorPtr()),
@@ -79,6 +81,7 @@ public:
   }
 
 private:
+  std::shared_ptr<ModuleCache> ModCache;
   std::shared_ptr<CompilerInvocation> Invocation;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diagnostics;
   IntrusiveRefCntPtr<TargetInfo> Target;

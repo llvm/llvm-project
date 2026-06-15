@@ -8060,6 +8060,8 @@ class BufferToAPValueConverter {
 
   std::optional<APValue> visit(const RecordType *RTy, CharUnits Offset) {
     const RecordDecl *RD = RTy->getAsRecordDecl();
+    if (RD->isInvalidDecl())
+      return std::nullopt;
     const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(RD);
 
     unsigned NumBases = 0;
