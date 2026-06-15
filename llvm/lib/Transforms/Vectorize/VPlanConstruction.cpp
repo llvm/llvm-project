@@ -651,7 +651,10 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   // Replace live-out extracts of WideIV's backedge value by ExitingIVValue
   // recipes. optimizeInductionLiveOutUsers will later compute the proper
   // DerivedIV.
-  auto ReplaceExtractsWithExitingIVValue = [&](VPHeaderPHIRecipe *WideIV) {
+  //
+  // For an IV that needs SCEV predicate, keep extracting the exit values from the loop directly, as the pre-computed exit value as-is would  be incorrect outside the loop.
+  auto ReplaceExtractsWithExitingIVValue = [&](VPWidenInductionRecipe *WideIV) {
+    bool IsPredicated = !WideIV->getNoWrapPredicates().empty();
     for (VPUser *U : to_vector(BackedgeVal->users())) {
       if (!match(U, m_ExtractLastPart(m_VPValue())))
         continue;
@@ -664,6 +667,13 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
       assert(is_contained(ExtractLastLane->getParent()->successors(),
                           Plan.getScalarPreheader()) &&
              "last lane must be extracted in the middle block");
+      // Keep the vector extract for exit-block live-out uses of a predicated IV.
+      if (IsPredicated &&
+          any_of(ExtractLastLane->users(), [&](VPUser *LaneUser) {
+            auto *R = dyn_cast<VPRecipeBase>(LaneUser);
+            return R && Plan.isExitBlock(R->getParent());
+          }))
+        continue;
       VPBuilder Builder(ExtractLastLane);
       ExtractLastLane->replaceAllUsesWith(
           Builder.createNaryOp(VPInstruction::ExitingIVValue, {WideIV}));
