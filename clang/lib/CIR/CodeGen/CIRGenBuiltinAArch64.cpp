@@ -2562,6 +2562,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return builder.createAdd(loc, ops[0], ops[1]);
   case NEON::BI__builtin_neon_vsubd_s64:
   case NEON::BI__builtin_neon_vsubd_u64:
+    return builder.createSub(loc, ops[0], ops[1]);
   case NEON::BI__builtin_neon_vqdmlalh_s16:
   case NEON::BI__builtin_neon_vqdmlslh_s16:
     cgm.errorNYI(expr->getSourceRange(),
