@@ -5872,6 +5872,10 @@ defm cumode : SimpleMFlag<"cumode",
   " execution mode (AMDGPU only)", m_amdgpu_Features_Group>;
 defm tgsplit : SimpleMFlag<"tgsplit", "Enable", "Disable",
   " threadgroup split execution mode (AMDGPU only)", m_amdgpu_Features_Group>;
+defm xnack : SimpleMFlag<"xnack", "Enable", "Disable",
+  " XNACK (AMDGPU only)", m_amdgpu_Features_Group>;
+defm sramecc : SimpleMFlag<"sramecc", "Enable", "Disable",
+  " SRAMECC (AMDGPU only)", m_amdgpu_Features_Group>;
 defm wavefrontsize64 : SimpleMFlag<"wavefrontsize64",
   "Specify wavefront size 64", "Specify wavefront size 32",
   " mode (AMDGPU only)">;
