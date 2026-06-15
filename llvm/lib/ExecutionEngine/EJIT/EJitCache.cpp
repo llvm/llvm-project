@@ -2,6 +2,7 @@
 
 #include "llvm/ExecutionEngine/EJIT/EJitCache.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ExecutionEngine/EJIT/EJitDiag.h"
 #include <cassert>
 #include <mutex>
 #include <shared_mutex>
@@ -84,23 +85,32 @@ void EJitCache::invalidateByPeriod(const std::string &periodName,
   if (it == periodIndex_.end())
     return;
 
+  size_t removed = 0;
   for (uint64_t key : it->second) {
     auto cacheIt = cache_.find(key);
     if (cacheIt != cache_.end()) {
       currentTotalSize_ -= cacheIt->second.codeSize;
       lruList_.erase(cacheIt->second.lruIt);  // O(1) via embedded iterator
       cache_.erase(cacheIt);
+      removed++;
     }
   }
   periodIndex_.erase(it);
+
+  EJIT_DIAG("cache invalidate period=%s cellIdx=%u: %zu entries removed",
+           periodName.c_str(), cellIdx, removed);
+  (void)removed;
 }
 
 void EJitCache::clear() {
   std::unique_lock<decltype(mutex_)> lock(mutex_);
+  size_t cleared = cache_.size();
   cache_.clear();
   lruList_.clear();
   periodIndex_.clear();
   currentTotalSize_ = 0;
+  EJIT_DIAG("cache cleared: %zu entries", cleared);
+  (void)cleared;
 }
 
 EJitCache::Stats EJitCache::getStats() const {
@@ -152,4 +162,6 @@ void EJitCache::evictLRU() {
 
   cache_.erase(it);
   evictions_++;
+  EJIT_DIAG("cache evict LRU key=0x%016lx: size=%zu entries=%zu/%zu",
+           key, currentTotalSize_, cache_.size(), maxEntries_);
 }

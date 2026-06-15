@@ -27,7 +27,9 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Error.h"
 #include "gtest/gtest.h"
+#ifndef EJIT_FREESTANDING
 #include <thread>
+#endif
 
 using namespace llvm;
 using namespace llvm::ejit;
@@ -128,6 +130,7 @@ TEST(EJitRegistrationStore, ConsumeClearsAllTypes) {
   EXPECT_EQ(result.staticVars.size(), 1u);
 }
 
+#ifndef EJIT_FREESTANDING
 TEST(EJitRegistrationStore, ThreadSafety) {
   EJitRegistrationStore &store = EJitRegistrationStore::instance();
   store.consume();
@@ -151,6 +154,7 @@ TEST(EJitRegistrationStore, ThreadSafety) {
   StoredData result = store.consume();
   EXPECT_EQ(result.bitcodes.size() + result.periodArrays.size(), 200u);
 }
+#endif // EJIT_FREESTANDING
 
 //===----------------------------------------------------------------------===//
 // EJitModuleLoader tests (T3-09)
@@ -308,6 +312,7 @@ TEST(EJitCache, Clear) {
   EXPECT_EQ(stats.entryCount, 0u);
 }
 
+#ifndef EJIT_FREESTANDING
 TEST(EJitCache, ThreadSafety) {
   EJitCache cache(1000, 1024 * 1024 * 100);
   int dummy[100]{};
@@ -328,6 +333,7 @@ TEST(EJitCache, ThreadSafety) {
   auto stats = cache.getStats();
   EXPECT_EQ(stats.entryCount, 100u);
 }
+#endif // EJIT_FREESTANDING
 
 //===----------------------------------------------------------------------===//
 // PeriodArrayRegistry tests (T3-11)
@@ -440,6 +446,7 @@ TEST(EJitRuntimeState, UninitializedReturnsFalse) {
   EXPECT_FALSE(state.isActive("nonexistent", 99));
 }
 
+#ifndef EJIT_FREESTANDING
 TEST(EJitRuntimeState, ThreadSafety) {
   EJitRuntimeState state;
   int cells[8];
@@ -464,11 +471,13 @@ TEST(EJitRuntimeState, ThreadSafety) {
   EXPECT_TRUE(state.isActive("cell", 0));
   EXPECT_TRUE(state.isActive("cell", 7));
 }
+#endif // EJIT_FREESTANDING
 
 //===----------------------------------------------------------------------===//
 // EJitLogger tests (T3-12)
 //===----------------------------------------------------------------------===//
 
+#ifndef EJIT_FREESTANDING
 TEST(EJitLogger, LogAndGetLastError) {
   EJitLogger logger;
   logger.log(kEjitStatusCompileFailed, "test error", "myfunc", "mykey");
@@ -518,6 +527,8 @@ TEST(EJitLogger, Clear) {
   logger.clear();
   EXPECT_EQ(logger.getLastError(), nullptr);
 }
+
+#endif // EJIT_FREESTANDING
 
 //===----------------------------------------------------------------------===//
 // EJit end-to-end construction test (T3-20)

@@ -3,6 +3,7 @@
 #include "llvm/ExecutionEngine/EJIT/EJit.h"
 #include "llvm/Config/Targets.h"
 #include "llvm/ExecutionEngine/EJIT/EJitCompileDriver.h"
+#include "llvm/ExecutionEngine/EJIT/EJitDiag.h"
 #include "llvm/ExecutionEngine/EJIT/EJitLogger.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRegistrationStore.h"
@@ -63,6 +64,10 @@ void initializeEJitTargets() {
 } // namespace
 
 EJit::EJit(const Config &config) : config_(config) {
+  EJIT_DIAG("constructing: mode=%d opt=%d maxCache=%zu maxEntries=%u",
+           (int)config.compileMode, (int)config.optLevel,
+           config.maxCacheSize, (unsigned)config.maxCacheEntries);
+
   // Create all runtime components
   runtimeState_ = std::make_unique<EJitRuntimeState>();
   moduleLoader_ = std::make_unique<EJitModuleLoader>();
@@ -139,6 +144,9 @@ EJit::EJit(const Config &config) : config_(config) {
   // Use InitializeAll* instead of InitializeNative* so that cross-compiled
   // builds (e.g. AArch64 target built on x86 host) also work correctly.
   initializeEJitTargets();
+  EJIT_DIAG("registered: bitcodes=%zu periodArrays=%zu staticVars=%zu symbols=%zu",
+           data.bitcodes.size(), data.periodArrays.size(),
+           data.staticVars.size(), data.userSymbols.size());
   auto engine = EJitOrcEngine::Create(config, runtimeState_->getRegistry(),
                                       *runtimeState_);
   if (engine) {
@@ -146,7 +154,9 @@ EJit::EJit(const Config &config) : config_(config) {
     for (auto &sym : data.userSymbols)
       (*engine)->addUserSymbol(sym.name, sym.addr);
     compileDriver_->setSyncEngine(std::move(*engine));
+    EJIT_DIAG("OrcJIT engine created successfully");
   } else {
+    EJIT_DIAG("FAILED to create OrcJIT engine");
 #ifndef EJIT_FREESTANDING
     std::string errStr;
     llvm::handleAllErrors(engine.takeError(),

@@ -66,10 +66,14 @@ set(EJIT_SOURCES
   EJitPassBuilder.cpp
 )
 
+# EJitLogger has its own #ifndef EJIT_FREESTANDING no-op stubs, so always include it.
+list(APPEND EJIT_SOURCES
+  EJitLogger.cpp
+)
+
 # Async/sync compiler — excluded in freestanding mode (single-threaded, no std::thread)
 if(NOT EJIT_FREESTANDING)
   list(APPEND EJIT_SOURCES
-    EJitLogger.cpp
     EJitSyncCompiler.cpp
     EJitAsyncCompiler.cpp
   )

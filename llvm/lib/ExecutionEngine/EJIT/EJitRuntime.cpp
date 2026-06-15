@@ -3,6 +3,7 @@
 #include "llvm/ExecutionEngine/EJIT/EJitRuntime.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/EJIT/EJit.h"
+#include "llvm/ExecutionEngine/EJIT/EJitDiag.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOptions.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRegistrationStore.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRuntimeState.h"
@@ -39,22 +40,31 @@ static void parseConfig(const ejit_config_t *src, Config &dst) {
 extern "C" {
 
 ejit_status_t ejit_init(const ejit_config_t *config) {
-  if (gEJIT)
+  if (gEJIT) {
+    EJIT_DIAG("already initialized, returning OK");
     return EJIT_OK;
+  }
 
   Config cfg;
   parseConfig(config, cfg);
 
   gEJIT = new (std::nothrow) EJit(cfg);
-  if (!gEJIT)
+  if (!gEJIT) {
+    EJIT_DIAG("failed: out of memory");
     return EJIT_ERR_MEMORY;
+  }
 
+  EJIT_DIAG("initialized: mode=%d opt=%d cache=%zu entries=%u",
+            (int)cfg.compileMode, (int)cfg.optLevel, cfg.maxCacheSize,
+            (unsigned)cfg.maxCacheEntries);
   return EJIT_OK;
 }
 
 void ejit_shutdown(void) {
+  EJIT_DIAG("shutting down");
   delete gEJIT;
   gEJIT = nullptr;
+  EJIT_DIAG("shutdown complete");
 }
 
 void ejit_register_symbol(const char *name, void *addr) {
@@ -97,15 +107,21 @@ void ejit_register_static_var(const char *varName, void *varAddr) {
 }
 
 ejit_status_t ejit_activate(const char *periodName, uint8_t cellIdx) {
-  if (!gEJIT)
+  if (!gEJIT) {
+    EJIT_DIAG("activate(%s,%u) failed: not initialized", periodName, cellIdx);
     return EJIT_ERR_NOT_ACTIVE;
+  }
+  EJIT_DIAG("activate(%s,%u)", periodName, cellIdx);
   gEJIT->activate(periodName, cellIdx);
   return EJIT_OK;
 }
 
 ejit_status_t ejit_deactivate(const char *periodName, uint8_t cellIdx) {
-  if (!gEJIT)
+  if (!gEJIT) {
+    EJIT_DIAG("deactivate(%s,%u) failed: not initialized", periodName, cellIdx);
     return EJIT_ERR_NOT_ACTIVE;
+  }
+  EJIT_DIAG("deactivate(%s,%u)", periodName, cellIdx);
   gEJIT->deactivate(periodName, cellIdx);
   gEJIT->invalidateByPeriod(periodName, cellIdx);
   return EJIT_OK;
@@ -164,21 +180,28 @@ bool ejit_is_active(const char *periodName, uint8_t cellIdx) {
 }
 
 void *ejit_compile_or_get(uint64_t cacheKey, void **out_pfn) {
-  if (!gEJIT)
+  if (!gEJIT) {
+    EJIT_DIAG("compile_or_get(key=0x%016lx) failed: not initialized", cacheKey);
     return nullptr;
+  }
 
   void *result = gEJIT->getOrCompile(cacheKey);
   if (out_pfn)
     *out_pfn = result;
+
+  EJIT_DIAG("compile_or_get(key=0x%016lx) → %s", cacheKey,
+           result ? "JIT" : "NULL");
   return result;
 }
 
 void ejit_clear_cache(void) {
+  EJIT_DIAG("clear_cache");
   if (gEJIT)
     gEJIT->clearCache();
 }
 
 void ejit_invalidate(const char *periodName, uint8_t cellIdx) {
+  EJIT_DIAG("invalidate(%s,%u)", periodName, cellIdx);
   if (gEJIT)
     gEJIT->invalidateByPeriod(periodName, cellIdx);
 }

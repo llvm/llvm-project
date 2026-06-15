@@ -1,6 +1,7 @@
 //===-- EJitCompileDriver.cpp - Compilation Scheduler ---------------------===//
 
 #include "llvm/ExecutionEngine/EJIT/EJitCompileDriver.h"
+#include "llvm/ExecutionEngine/EJIT/EJitDiag.h"
 #ifndef EJIT_FREESTANDING
 #include "llvm/ExecutionEngine/EJIT/EJitLogger.h"
 #endif
@@ -39,8 +40,10 @@ void EJitCompileDriver::registerSymbol(const std::string &name, void *addr) {
 void *EJitCompileDriver::getOrCompile(uint64_t cacheKey) {
 
   // ── Hot path: single hash find ──────────────────────────────────────────
-  if (void *cached = cache_.getOrNull(cacheKey))
+  if (void *cached = cache_.getOrNull(cacheKey)) {
+    EJIT_DIAG("cache HIT key=0x%016lx", cacheKey);
     return cached;
+  }
 
   // ── Cold path: decode cacheKey, verify, compile ────────────────────────
   uint32_t funcIdx = static_cast<uint32_t>(cacheKey >> 32);
@@ -53,12 +56,18 @@ void *EJitCompileDriver::getOrCompile(uint64_t cacheKey) {
 
   // Resolve funcName from loader
   const std::string &funcName = loader_.getFuncNameByFuncIdx(funcIdx);
-  if (funcName.empty())
+  if (funcName.empty()) {
+    EJIT_DIAG("cache MISS key=0x%016lx funcIdx=%u: unknown funcIdx", cacheKey, funcIdx);
     return nullptr;
+  }
+
+  EJIT_DIAG("cache MISS key=0x%016lx func=%s dims=[%u,%u,%u,%u]",
+           cacheKey, funcName.c_str(), dims[0], dims[1], dims[2], dims[3]);
 
   // Get bitcode
   auto bitcodeOrErr = loader_.getBitcodeByFuncIdx(funcIdx);
   if (!bitcodeOrErr) {
+    EJIT_DIAG("compile FAIL key=0x%016lx func=%s: bitcode not found", cacheKey, funcName.c_str());
 #ifndef EJIT_FREESTANDING
     if (logger_)
       logger_->log(EJIT_ERR_BITCODE_NOT_FOUND,
@@ -77,6 +86,8 @@ void *EJitCompileDriver::getOrCompile(uint64_t cacheKey) {
   // Verify time-window state for each dimension.
   for (unsigned i = 0; i < dimCount; ++i) {
     if (!runtimeState_.isActive(periodNames[i], dims[i])) {
+      EJIT_DIAG("compile SKIP key=0x%016lx func=%s: period %s[%u] not active",
+               cacheKey, funcName.c_str(), periodNames[i].c_str(), dims[i]);
 #ifndef EJIT_FREESTANDING
       if (logger_)
         logger_->log(EJIT_ERR_NOT_ACTIVE,
@@ -96,6 +107,7 @@ void *EJitCompileDriver::getOrCompile(uint64_t cacheKey) {
     ctx.dimensions.push_back({periodNames[i], dims[i]});
 
   if (!syncEngine_) {
+    EJIT_DIAG("compile FAIL key=0x%016lx func=%s: no sync engine", cacheKey, funcName.c_str());
 #ifndef EJIT_FREESTANDING
     if (logger_)
       logger_->log(EJIT_ERR_NOT_ACTIVE,
@@ -109,6 +121,7 @@ void *EJitCompileDriver::getOrCompile(uint64_t cacheKey) {
 
   if (auto Err = syncEngine_->loadBitcodeModule(bitcode, cacheKey, funcName)) {
     syncEngine_->setActiveContext(nullptr);
+    EJIT_DIAG("compile FAIL key=0x%016lx func=%s: load bitcode module failed", cacheKey, funcName.c_str());
 #ifndef EJIT_FREESTANDING
     if (logger_)
       logger_->log(EJIT_ERR_COMPILE_FAILED,
@@ -124,6 +137,7 @@ void *EJitCompileDriver::getOrCompile(uint64_t cacheKey) {
   syncEngine_->setActiveContext(nullptr);
 
   if (!addrOrErr) {
+    EJIT_DIAG("compile FAIL key=0x%016lx func=%s: lookup after compile failed", cacheKey, funcName.c_str());
 #ifndef EJIT_FREESTANDING
     if (logger_)
       logger_->log(EJIT_ERR_COMPILE_FAILED,
@@ -143,5 +157,6 @@ void *EJitCompileDriver::getOrCompile(uint64_t cacheKey) {
 
   cache_.put(cacheKey, funcPtr, bitcode.size(), periodDeps);
 
+  EJIT_DIAG("compile OK key=0x%016lx func=%s → pfn=%p", cacheKey, funcName.c_str(), funcPtr);
   return funcPtr;
 }
