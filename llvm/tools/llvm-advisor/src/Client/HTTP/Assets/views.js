@@ -1454,3 +1454,84 @@ const SettingsView = {
     return card;
   },
 };
+
+/* ============================================================
+   LLVM Advisor — Heatmap View
+   ============================================================ */
+
+const HeatmapView = {
+  async render() {
+    const container = h('div', {});
+    container.appendChild(h('h2', { style: { margin: '0 0 12px' } }, 'Hotspots'));
+
+    const snap = State.get('currentSnapshot');
+    if (!snap) {
+      container.appendChild(UI.emptyCard('No snapshot selected', 'Select a snapshot from the sidebar to view hotspots.'));
+      Shell.renderMain(container);
+      return;
+    }
+
+    const loading = h('div', { class: 'text-muted' }, 'Loading hotspots...');
+    container.appendChild(loading);
+    Shell.renderMain(container);
+
+    const res = await API.querySnapshot(snap.id, ['llvm.remarks.hotspot']);
+    if (!res.ok) {
+      container.innerHTML = '';
+      container.appendChild(UI.errorCard(res.error || 'Failed to load hotspots'));
+      return;
+    }
+
+    const results = Array.isArray(res.data) ? res.data : [];
+    const allHotspots = results.flatMap(unit => {
+      const unitResults = Array.isArray(unit.results) ? unit.results : [];
+      return unitResults.flatMap(r => {
+        if (r.capability === 'llvm.remarks.hotspot' && r.value && r.value.hotspots) {
+          return r.value.hotspots.map(h => ({
+            ...h,
+            unit: unit.source_path || unit.unit_id || '',
+          }));
+        }
+        return [];
+      });
+    });
+
+    container.innerHTML = '';
+
+    if (!allHotspots.length) {
+      container.appendChild(UI.emptyCard('No hotspots found', 'No optimization remark hotspots were detected for this snapshot.'));
+      return;
+    }
+
+    // Sort by count descending
+    allHotspots.sort((a, b) => b.count - a.count);
+
+    // Render table
+    const table = h('table', { class: 'data-table' });
+    const thead = h('thead', {},
+      h('tr', {},
+        h('th', {}, 'Function'),
+        h('th', {}, 'File'),
+        h('th', {}, 'Line'),
+        h('th', {}, 'Count'),
+        h('th', {}, 'Max Hotness')
+      )
+    );
+    table.appendChild(thead);
+
+    const tbody = h('tbody');
+    allHotspots.forEach(hotspot => {
+      const row = h('tr', {},
+        h('td', { class: 'mono' }, hotspot.function || ''),
+        h('td', { class: 'mono' }, hotspot.file || ''),
+        h('td', { class: 'mono' }, String(hotspot.line || '')),
+        h('td', {}, String(hotspot.count || 0)),
+        h('td', {}, String(hotspot.max_hotness !== undefined ? hotspot.max_hotness : '-'))
+      );
+      tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+
+    container.appendChild(table);
+  },
+};
