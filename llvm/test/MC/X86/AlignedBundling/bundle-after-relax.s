@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype=obj -triple x86_64 %s -o - \
+# RUN: llvm-mc -filetype=obj -triple x86_64 %s \
 # RUN:   | llvm-objdump -d - | FileCheck %s
 
 ## Test that instructions inside bundle-locked groups are relaxed even if their

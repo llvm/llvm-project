@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o - --x86-pad-max-prefix-size=1 \
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s --x86-pad-max-prefix-size=1 \
 # RUN:   | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
 
 # This test checks whether enabling prefix padding with bundling can properly relax instructions proactively, avoiding fixup value overflows.

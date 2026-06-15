@@ -1,11 +1,11 @@
 # RUN: split-file %s %t
-# RUN: llvm-mc -filetype=obj -triple x86_64 %t/two-sections.s -o - \
+# RUN: llvm-mc -filetype=obj -triple x86_64 %t/two-sections.s \
 # RUN:   | llvm-objdump -d --no-show-raw-insn - | FileCheck %t/two-sections.s
-# RUN: llvm-mc -filetype=obj -triple x86_64 -mc-relax-all %t/two-sections.s -o - \
+# RUN: llvm-mc -filetype=obj -triple x86_64 -mc-relax-all %t/two-sections.s \
 # RUN:   | llvm-objdump -d --no-show-raw-insn - | FileCheck %t/two-sections.s
-# RUN: llvm-mc -filetype=obj -triple x86_64 %t/section-alignment.s -o - \
+# RUN: llvm-mc -filetype=obj -triple x86_64 %t/section-alignment.s \
 # RUN:   | llvm-readobj --sections - | FileCheck %t/section-alignment.s
-# RUN: llvm-mc -filetype=obj -triple x86_64 %t/data-section-alignment.s -o - \
+# RUN: llvm-mc -filetype=obj -triple x86_64 %t/data-section-alignment.s \
 # RUN:   | llvm-readobj --sections - | FileCheck %t/data-section-alignment.s
 
 ## Test two different executable sections with bundling.
