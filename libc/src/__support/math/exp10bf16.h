@@ -20,8 +20,7 @@
 #include "src/__support/macros/optimization.h"
 
 // This is an algorithm for exp10(x) in bfloat16 which is correctly rounded for
-// all rounding modes, based on the implementation of exp10bf16(x)
-// from the RLIBM project at: https://people.cs.rutgers.edu/~sn349/rlibm
+// all rounding modes.
 
 // Step 1 - Range reduction of edge cases:
 // Find the largest value x for which exp10bf16(x) = +0.0
@@ -42,7 +41,17 @@
 // > exp2 = 2^x;
 // > I = [-0.5, 0.5];
 // > P = fpminimax(exp2, 4, [|1, SG...|], I);
+// > for i from 0 to degree(P) do print(coeff(P, i));
+// 0x1p0
+// 0x1.62e0dep-1
+// 0x1.ec00d6p-3
+// 0x1.ca13dcp-5
+// 0x1.3ac75ep-7
 // > E = infnorm(exp2 - P, I);
+// > print(inf(E))
+// 0x1.db819de6484597d89b3754abe9f1d6f60ba893ba8p-19
+// > print(sup(E))
+// 0x1.db819de6484597d89b3754abe9f1d6f60ba893ba8p-19
 
 // Step 4 - Output compensation:
 // exp10(x) = exp2(i) * P(f)
