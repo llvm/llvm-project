@@ -186,12 +186,13 @@ def OptimizeAllocationLivenessPass
 
 def StaticMemoryPlannerAnalysisPass
     : Pass<"static-memory-planner-analysis"> {
-  let summary = "Identifies same-block alloc/dealloc pairs eligible for "
-                "static memory planning";
+  let summary = "Transforms same-block alloc/dealloc pairs into static arena "
+                "allocation with computed offsets";
   let description = [{
-    This analysis-only pass identifies `memref.alloc` / `memref.dealloc` pairs
-    in the same basic block that are candidates for static memory planning and
-    buffer reuse.
+    This pass identifies and transforms `memref.alloc` / `memref.dealloc` pairs
+    in the same basic block into a single static arena allocation. All eligible
+    allocations are packed into a shared i8 byte buffer with aligned offsets,
+    and accessed via `memref.view` operations.
 
     For each allocation the pass checks a conservative eligibility envelope:
     - Static memref shape.
@@ -201,34 +202,46 @@ def StaticMemoryPlannerAnalysisPass
     - No cross-block alias or escaping use (alias set resolved via
       `BufferViewFlowAnalysis`).
 
-    Eligible allocations receive an alias-aware lifetime interval computed
-    using `BufferViewFlowAnalysis::resolve()`. The interval spans from the
-    alloc op's block-local index to the maximum of the dealloc index and the
-    last use index of any derived alias within the block. Allocation size in
-    bytes (for integer and floating-point element types) and alignment are
-    also reported where available.
+    Eligible allocations are packed into a single arena using a trivial
+    sequential allocation strategy with alignment padding. The arena is an
+    i8 byte buffer (`memref<Nxi8>`) that can hold allocations of different
+    element types. Each original allocation is replaced with a `memref.view`
+    operation that creates a typed view into the arena at the computed offset.
 
-    Ineligible allocations receive a skip reason. Both eligibility results
-    and skip reasons are reported via op remarks. Aggregate counts are
-    reported as pass statistics.
-
-    No IR modifications are made by this pass.
+    Ineligible allocations are skipped and retain their original
+    alloc/dealloc operations. Skip reasons are reported via op remarks.
+    Aggregate counts are reported as pass statistics.
 
     This pass is expected to run after the deallocation pipeline
     (`ownership-based-buffer-deallocation` followed by
     `bufferization-lower-deallocations`).
 
-    Example:
+    Example transformation:
     ```mlir
+    // Before:
     func.func @example() {
-      // Remark: static-memory-planner: eligible: size=4096 bytes, interval=[0,2]
       %0 = memref.alloc() : memref<1024xf32>
       "some.use"(%0) : (memref<1024xf32>) -> ()
       memref.dealloc %0 : memref<1024xf32>
       return
     }
+    
+    // After:
+    func.func @example() {
+      %arena = memref.alloc() {alignment = 1 : i64} : memref<4096xi8>
+      %c0 = arith.constant 0 : index
+      %0 = memref.view %arena[%c0][] : memref<4096xi8> to memref<1024xf32>
+      "some.use"(%0) : (memref<1024xf32>) -> ()
+      return
+    }
     ```
   }];
+
+  let options =
+      [Option<"arenaMode", "arena-mode", "std::string",
+              /*default=*/"\"allocate\"",
+              "Arena allocation mode: 'allocate' creates arena via AllocOp, "
+              "'arg' extracts arena from function arguments">];
 
   let statistics =
       [Statistic<"numEligible", "num-eligible",

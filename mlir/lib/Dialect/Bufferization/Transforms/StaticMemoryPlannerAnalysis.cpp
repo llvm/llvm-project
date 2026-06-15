@@ -128,7 +128,9 @@ struct StaticMemoryPlannerAnalysisPass
     : public mlir::bufferization::impl::StaticMemoryPlannerAnalysisPassBase<
           StaticMemoryPlannerAnalysisPass> {
 public:
-  StaticMemoryPlannerAnalysisPass() = default;
+  using Base = mlir::bufferization::impl::StaticMemoryPlannerAnalysisPassBase<
+      StaticMemoryPlannerAnalysisPass>;
+  using Base::Base;
 
   void runOnOperation() override {
     mlir::Operation *op = getOperation();
@@ -197,20 +199,49 @@ public:
                               << " alignment=" << candidates[i].alignment << "\n");
     }
 
-    // Step 4: Find the first allocation's location to place arena
+    // Step 4: Obtain arena based on arena mode
     mlir::Operation *firstAlloc = candidates.front().alloc;
     mlir::OpBuilder builder(firstAlloc);
+    mlir::Value arenaValue;
     
-    // Step 5: Create arena allocation as i8 byte buffer
-    // This allows the same arena to hold multiple data types (f32, i64, etc.)
-    auto i8Type = builder.getI8Type();
-    auto arenaType = mlir::MemRefType::get({totalSize}, i8Type);
-    auto arenaAlloc = mlir::memref::AllocOp::create(builder, firstAlloc->getLoc(), arenaType);
-    arenaAlloc.setAlignmentAttr(builder.getI64IntegerAttr(maxAlignment));
+    if (arenaMode == "allocate") {
+      // Step 5a: Create arena via AllocOp (default mode)
+      // Arena is i8 byte buffer to support multiple data types (f32, i64, etc.)
+      auto i8Type = builder.getI8Type();
+      auto arenaType = mlir::MemRefType::get({totalSize}, i8Type);
+      auto arenaAlloc = mlir::memref::AllocOp::create(builder, firstAlloc->getLoc(), arenaType);
+      arenaAlloc.setAlignmentAttr(builder.getI64IntegerAttr(maxAlignment));
+      arenaValue = arenaAlloc.getResult();
 
-    LLVM_DEBUG(llvm::dbgs() << "[static-memory-planner] created arena: size="
-                            << totalSize << " bytes, alignment="
-                            << maxAlignment << " bytes\n");
+      LLVM_DEBUG(llvm::dbgs() << "[static-memory-planner] created arena via AllocOp: size="
+                              << totalSize << " bytes, alignment="
+                              << maxAlignment << " bytes\n");
+    } else if (arenaMode == "arg") {
+      // Step 5b: Extract arena from function arguments (arg mode)
+      // Assumes first argument is an i8 buffer of sufficient size
+      auto funcOp = llvm::dyn_cast<mlir::func::FuncOp>(op);
+      if (!funcOp) {
+        op->emitError("arena-mode=arg requires function context");
+        return signalPassFailure();
+      }
+      
+      if (funcOp.getNumArguments() == 0) {
+        funcOp.emitError("arena-mode=arg requires at least one function argument");
+        return signalPassFailure();
+      }
+      
+      arenaValue = funcOp.getArgument(0);
+      auto arenaType = llvm::dyn_cast<mlir::MemRefType>(arenaValue.getType());
+      if (!arenaType || !arenaType.getElementType().isInteger(8)) {
+        funcOp.emitError("arena-mode=arg requires first argument to be memref<...xi8>");
+        return signalPassFailure();
+      }
+
+      LLVM_DEBUG(llvm::dbgs() << "[static-memory-planner] using arena from function arg 0\n");
+    } else {
+      op->emitError("invalid arena-mode: '" + arenaMode + "' (must be 'allocate' or 'arg')");
+      return signalPassFailure();
+    }
 
     // Step 6: Replace each alloc with memref.view directly on arena
     for (auto &candidate : candidates) {
@@ -229,7 +260,7 @@ public:
       llvm::SmallVector<mlir::Value> dynamicSizes; // Empty for static shapes
       
       auto view = mlir::memref::ViewOp::create(
-          viewBuilder, loc, originalType, arenaAlloc.getResult(), 
+          viewBuilder, loc, originalType, arenaValue, 
           offsetIndex, dynamicSizes);
 
       // Replace all uses of the original alloc with the viewed memref
