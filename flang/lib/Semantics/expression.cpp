@@ -5596,8 +5596,8 @@ void NoteUsedSymbols(
       evaluate::CollectUsedSymbolValues(context, expr, isDefinition));
 }
 
-bool IsMisparsedArrayElement(SemanticsContext &context,
-    const parser::FunctionReference &funcRef) {
+bool IsMisparsedArrayElement(
+    SemanticsContext &context, const parser::FunctionReference &funcRef) {
   // Ensure that there are no argument keywords
   for (const auto &arg :
       std::get<std::list<parser::ActualArgSpec>>(funcRef.v.t)) {
@@ -5606,8 +5606,7 @@ bool IsMisparsedArrayElement(SemanticsContext &context,
     }
   }
   auto &proc{std::get<parser::ProcedureDesignator>(funcRef.v.t)};
-  if (const Symbol *
-      origSymbol{common::visit(
+  if (const Symbol *origSymbol{common::visit(
           common::visitors{
               [&](const parser::Name &name) { return name.symbol; },
               [&](const parser::ProcComponentRef &pcr) {
