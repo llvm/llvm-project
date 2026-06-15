@@ -19,6 +19,7 @@
 #include "DWARFASTParserSwift.h"
 
 #include "DWARFDIE.h"
+#include "SymbolFileDWARFDebugMap.h"
 
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "swift/Demangling/ManglingFlavor.h"
@@ -73,8 +74,11 @@ DWARFASTParserSwift::ResolveTypeAlias(lldb_private::CompilerType alias) {
   if (!ts_sp)
     return {};
   auto &ts = *ts_sp;
-  auto *dwarf = llvm::dyn_cast_or_null<SymbolFileDWARF>(ts.GetSymbolFile());
-  if (!dwarf)
+
+  // The Type system must have a SymbolFileDWARF backing it to answer the
+  // queries below.
+  if (!llvm::isa_and_nonnull<SymbolFileDWARF, SymbolFileDWARFDebugMap>(
+          ts.GetSymbolFile()))
     return {};
 
   // Type aliases are (for LLVM implementation reasons) using the
@@ -88,6 +92,8 @@ DWARFASTParserSwift::ResolveTypeAlias(lldb_private::CompilerType alias) {
   DWARFDIE parent_die;
   if (TypeSP parent_type =
           ts.FindTypeInModule(parent_ctx.GetOpaqueQualType())) {
+    auto *dwarf =
+        llvm::cast<SymbolFileDWARF>(parent_type->GetSymbolFile());
     parent_die = dwarf->GetDIE(parent_type->GetID());
     auto unsubstituted_pair =
         findUnsubstitutedGenericTypeAndDIE(ts, parent_die);
@@ -157,9 +163,6 @@ getTypeAndDie(TypeSystemSwiftTypeRef &ts,
     return {};
   }
 
-  auto *dwarf = llvm::cast_or_null<SymbolFileDWARF>(ts.GetSymbolFile());
-  if (!dwarf)
-    return {};
   TypeSP lldb_type = ts.FindTypeInModule(type.GetOpaqueQualType());
   if (!lldb_type) {
     if (ts.ContainsBoundGenericType(type.GetOpaqueQualType())) {
@@ -170,6 +173,8 @@ getTypeAndDie(TypeSystemSwiftTypeRef &ts,
   if (!lldb_type) {
     std::tie(lldb_type, type) = DWARFASTParserSwift::ResolveTypeAlias(type);
     if (lldb_type) {
+      auto *dwarf =
+          llvm::cast<SymbolFileDWARF>(lldb_type->GetSymbolFile());
       auto die = dwarf->GetDIE(lldb_type->GetID());
       return {{type, die}};
     }
@@ -182,6 +187,7 @@ getTypeAndDie(TypeSystemSwiftTypeRef &ts,
                      type.GetMangledTypeName());
     return {};
   }
+  auto *dwarf = llvm::cast<SymbolFileDWARF>(lldb_type->GetSymbolFile());
   auto die = dwarf->GetDIE(lldb_type->GetID());
 
   if (auto unsubstituted_pair = findUnsubstitutedGenericTypeAndDIE(ts, die))
@@ -361,18 +367,18 @@ public:
 class DWARFFieldDescriptorImpl : public swift::reflection::FieldDescriptorBase {
   TypeSystemSwiftTypeRef &m_type_system;
   ConstString m_mangled_name;
-  DIERef m_die_ref;
+  DWARFDIE m_die;
   NodePointer m_superclass_node;
 
 public:
   DWARFFieldDescriptorImpl(swift::reflection::FieldDescriptorKind kind,
                            NodePointer superclass_node,
                            TypeSystemSwiftTypeRef &type_system,
-                           ConstString mangled_name, DIERef die_ref)
+                           ConstString mangled_name, DWARFDIE die)
       : swift::reflection::FieldDescriptorBase(kind,
                                                superclass_node != nullptr),
         m_type_system(type_system), m_mangled_name(mangled_name),
-        m_die_ref(die_ref), m_superclass_node(superclass_node) {}
+        m_die(die), m_superclass_node(superclass_node) {}
 
   ~DWARFFieldDescriptorImpl() override = default;
 
@@ -387,22 +393,16 @@ public:
                lldb_private::AutoBool::False &&
            "Full DWARF debugging for Swift is disabled!");
 
-    auto *dwarf =
-        llvm::dyn_cast<SymbolFileDWARF>(m_type_system.GetSymbolFile());
     auto *dwarf_parser = m_type_system.GetDWARFParser();
-    if (!dwarf || !dwarf_parser)
-      return {};
-
-    auto die = dwarf->GetDIE(m_die_ref);
-    if (!die)
+    if (!m_die || !dwarf_parser)
       return {};
 
     switch (Kind) {
     case swift::reflection::FieldDescriptorKind::Struct:
     case swift::reflection::FieldDescriptorKind::Class:
-      return getFieldRecordsFromStructOrClass(die, dwarf_parser);
+      return getFieldRecordsFromStructOrClass(m_die, dwarf_parser);
     case swift::reflection::FieldDescriptorKind::Enum:
-      return getFieldRecordsFromEnum(die, dwarf_parser);
+      return getFieldRecordsFromEnum(m_die, dwarf_parser);
     default:
       // TODO: handle more cases.
       LLDB_LOG(GetLog(LLDBLog::Types),
@@ -664,5 +664,5 @@ DWARFASTParserSwift::getFieldDescriptor(const swift::reflection::TypeRef *TR) {
 
   return std::make_unique<DWARFFieldDescriptorImpl>(
       *kind, superclass_pointer, m_swift_typesystem, type.GetMangledTypeName(),
-      *die.GetDIERef());
+      die);
 }
