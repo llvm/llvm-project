@@ -383,7 +383,7 @@ struct BlockingCall {
 
 TSAN_INTERCEPTOR(unsigned, sleep, unsigned sec) {
   SCOPED_TSAN_INTERCEPTOR(sleep, sec);
-  if (UNLIKELY(SimulateIsActive())) {
+  if (SimulateIsActive()) {
     SimulateSchedule();
     return 0;
   }
@@ -394,7 +394,7 @@ TSAN_INTERCEPTOR(unsigned, sleep, unsigned sec) {
 
 TSAN_INTERCEPTOR(int, usleep, long_t usec) {
   SCOPED_TSAN_INTERCEPTOR(usleep, usec);
-  if (UNLIKELY(SimulateIsActive())) {
+  if (SimulateIsActive()) {
     SimulateSchedule();
     return 0;
   }
@@ -405,7 +405,7 @@ TSAN_INTERCEPTOR(int, usleep, long_t usec) {
 
 TSAN_INTERCEPTOR(int, nanosleep, void *req, void *rem) {
   SCOPED_TSAN_INTERCEPTOR(nanosleep, req, rem);
-  if (UNLIKELY(SimulateIsActive())) {
+  if (SimulateIsActive()) {
     SimulateSchedule();
     return 0;
   }
