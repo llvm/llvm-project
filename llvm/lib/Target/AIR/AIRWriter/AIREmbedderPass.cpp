@@ -21,6 +21,7 @@
 #include "BitcodeEmitter.h"
 #include "PointeeTypeMap.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -46,13 +47,29 @@ static void emitTGBytesRemark(Module &M) {
     return;
   const DataLayout &DL = M.getDataLayout();
   uint64_t Total = 0;
+  uint64_t SmemHigh = 0, SmemAlign = 0;
   for (const GlobalVariable &GV : M.globals()) {
     if (GV.getAddressSpace() != 3 || GV.isDeclaration())
       continue;
+    StringRef Name = GV.getName();
+    if (Name.starts_with("global_smem")) {
+      uint64_t Off = 0;
+      if (size_t P = Name.find("__off"); P != StringRef::npos)
+        Name.substr(P + 5).consumeInteger(10, Off);
+      SmemHigh =
+          std::max(SmemHigh, Off + DL.getTypeAllocSize(GV.getValueType()));
+      SmemAlign = std::max(SmemAlign, GV.getAlign().value_or(Align(1)).value());
+      continue;
+    }
     uint64_t AlignB = GV.getAlign().value_or(Align(1)).value();
     if (Total % AlignB)
       Total += AlignB - (Total % AlignB);
     Total += DL.getTypeAllocSize(GV.getValueType());
+  }
+  if (SmemHigh) {
+    if (Total % SmemAlign)
+      Total += SmemAlign - (Total % SmemAlign);
+    Total += SmemHigh;
   }
   OptimizationRemark R("metal-tg", "TGBytes", DebugLoc(), &F->getEntryBlock());
   R << "threadgroup memory total "
