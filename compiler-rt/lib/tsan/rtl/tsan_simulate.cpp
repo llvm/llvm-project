@@ -24,6 +24,7 @@
 //     scheduler.
 //   - Support barriers (pthread_barrier_wait) with a rendezvous mechanism in
 //     the scheduler.
+//   - Embed Waitset into the Sync object to replace the linear WaitsetMap.
 
 #include "tsan_simulate.h"
 
