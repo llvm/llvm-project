@@ -24,7 +24,7 @@ LLVM_LIBC_FUNCTION(size_t, wcslcat,
   if (dstlen >= dstsize) 
     return dstsize + srclen;
   int limit = static_cast<int>(dstsize - dstlen - 1);
-  size_t returnval = (dstsize < dstlen ? dstsize : dstlen) + srclen;
+  size_t returnval = dstlen + srclen;
   if (limit < 0)
     return returnval;
   int i = 0;
