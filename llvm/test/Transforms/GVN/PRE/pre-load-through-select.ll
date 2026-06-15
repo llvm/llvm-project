@@ -1156,25 +1156,47 @@ for.body:
 ; eliminated: translating the true side yields `zext nneg (trunc nuw %iv)` which
 ; folds back to `%iv`, matching the existing `arr[i]` address.
 define i32 @test_phi_select_index_loop_trunc(ptr %arr, i64 %n) {
-; CHECK-LABEL: @test_phi_select_index_loop_trunc(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[MINLOC:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SEL:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR:%.*]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[IDXPROM:%.*]] = zext nneg i32 [[MINLOC]] to i64
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], i64 [[IDXPROM]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw nsw i64 [[IV]] to i32
-; CHECK-NEXT:    [[SEL]] = select i1 [[CMP]], i32 [[TMP2]], i32 [[MINLOC]]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
-; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[FOR_BODY]]
-; CHECK:       exit:
-; CHECK-NEXT:    ret i32 [[SEL]]
+; MDEP-LABEL: @test_phi_select_index_loop_trunc(
+; MDEP-NEXT:  entry:
+; MDEP-NEXT:    [[DOTPRE:%.*]] = load i32, ptr [[ARR:%.*]], align 4
+; MDEP-NEXT:    br label [[FOR_BODY:%.*]]
+; MDEP:       for.body:
+; MDEP-NEXT:    [[TMP0:%.*]] = phi i32 [ [[DOTPRE]], [[ENTRY:%.*]] ], [ [[TMP3:%.*]], [[FOR_BODY]] ]
+; MDEP-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; MDEP-NEXT:    [[MINLOC:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SEL:%.*]], [[FOR_BODY]] ]
+; MDEP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], i64 [[IV]]
+; MDEP-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; MDEP-NEXT:    [[IDXPROM:%.*]] = zext nneg i32 [[MINLOC]] to i64
+; MDEP-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], i64 [[IDXPROM]]
+; MDEP-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], [[TMP0]]
+; MDEP-NEXT:    [[TMP2:%.*]] = trunc nuw nsw i64 [[IV]] to i32
+; MDEP-NEXT:    [[SEL]] = select i1 [[CMP]], i32 [[TMP2]], i32 [[MINLOC]]
+; MDEP-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; MDEP-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
+; MDEP-NEXT:    [[TMP3]] = select i1 [[CMP]], i32 [[TMP1]], i32 [[TMP0]]
+; MDEP-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; MDEP:       exit:
+; MDEP-NEXT:    ret i32 [[SEL]]
+;
+; MSSA-LABEL: @test_phi_select_index_loop_trunc(
+; MSSA-NEXT:  entry:
+; MSSA-NEXT:    br label [[FOR_BODY:%.*]]
+; MSSA:       for.body:
+; MSSA-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; MSSA-NEXT:    [[MINLOC:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SEL:%.*]], [[FOR_BODY]] ]
+; MSSA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR:%.*]], i64 [[IV]]
+; MSSA-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; MSSA-NEXT:    [[IDXPROM:%.*]] = zext nneg i32 [[MINLOC]] to i64
+; MSSA-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], i64 [[IDXPROM]]
+; MSSA-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; MSSA-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], [[TMP1]]
+; MSSA-NEXT:    [[TMP2:%.*]] = trunc nuw nsw i64 [[IV]] to i32
+; MSSA-NEXT:    [[SEL]] = select i1 [[CMP]], i32 [[TMP2]], i32 [[MINLOC]]
+; MSSA-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; MSSA-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
+; MSSA-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; MSSA:       exit:
+; MSSA-NEXT:    ret i32 [[SEL]]
 ;
 entry:
   br label %for.body
