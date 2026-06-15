@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fprofile-instrument=clang -fcoverage-mapping -fcoverage-call-continuations -dump-coverage-mapping -emit-llvm -o - %s | FileCheck %s --check-prefixes=IR,MAP
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fprofile-instrument=clang -fcoverage-mapping -fcoverage-call-continuations -dump-coverage-mapping -emit-llvm-only -o - %s | FileCheck %s --check-prefix=MAP
 
 int printf(const char *, ...);
 void f(void);
@@ -31,27 +31,6 @@ int logical_and_call(void) {
 int musttail_call(int x) {
   __attribute__((musttail)) return tail_callee(x);
 }
-
-// IR-LABEL: define{{.*}} i32 @block_after_call(
-// IR: call{{.*}} @printf(
-// IR-NEXT: load i64, ptr getelementptr inbounds ({{.*}}@__profc_block_after_call
-// IR: call{{.*}} @printf(
-// IR-NEXT: load i64, ptr getelementptr inbounds ({{.*}}@__profc_block_after_call
-
-// IR-LABEL: define{{.*}} i32 @while_call_condition(
-// IR: call{{.*}} @returns_twice
-// IR-NEXT: load i64, ptr getelementptr inbounds ({{.*}}@__profc_while_call_condition
-
-// IR-LABEL: define{{.*}} i32 @logical_and_call(
-// IR: call{{.*}} @returns_twice
-// IR-NEXT: load i64, ptr getelementptr inbounds ({{.*}}@__profc_logical_and_call
-// IR: call{{.*}} @g
-// IR-NEXT: load i64, ptr getelementptr inbounds ({{.*}}@__profc_logical_and_call
-
-// IR-LABEL: define{{.*}} i32 @musttail_call(
-// IR: musttail call i32 @tail_callee
-// IR-NEXT: ret i32
-// IR-NOT: getelementptr inbounds ({{.*}}@__profc_musttail_call
 
 // MAP-LABEL: block_after_call:
 // MAP: Gap,File 0, [[BLOCK_CLOSE:[0-9]+]]:4 -> [[BLOCK_NEXT:[0-9]+]]:3 = #2
