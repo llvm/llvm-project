@@ -285,7 +285,8 @@ void AArch64PointerAuthImpl::authenticateLR(
         .setMIFlag(MachineInstr::FrameDestroy);
   } else {
     if (MFnI->branchProtectionPAuthLR()) {
-      emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X16);
+      emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
+                                      AArch64::X16);
 
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
           .setMIFlag(MachineInstr::FrameDestroy);
