@@ -112,6 +112,10 @@ namespace std {
     template<class OtherExtents>
       constexpr explicit(!is_convertible_v<OtherExtents, extents_type>)
         mapping(const layout_right::mapping<OtherExtents>&) noexcept;
+    template<class LayoutLeftPaddedMapping>
+      constexpr explicit(!is_convertible_v<typename LayoutLeftPaddedMapping::extents_type,
+                                           extents_type>)
+        mapping(const LayoutLeftPaddedMapping&) noexcept;
     template<class OtherExtents>
       constexpr explicit(extents_type::rank() > 0)
         mapping(const layout_stride::mapping<OtherExtents>&) noexcept;
@@ -166,6 +170,10 @@ namespace std {
     template<class OtherExtents>
       constexpr explicit(!is_convertible_v<OtherExtents, extents_type>)
         mapping(const layout_left::mapping<OtherExtents>&) noexcept;
+    template<class LayoutRightPaddedMapping>
+      constexpr explicit(!is_convertible_v<typename LayoutRightPaddedMapping::extents_type,
+                                           extents_type>)
+        mapping(const LayoutRightPaddedMapping&) noexcept;
     template<class OtherExtents>
       constexpr explicit(extents_type::rank() > 0)
         mapping(const layout_stride::mapping<OtherExtents>&) noexcept;
@@ -252,6 +260,154 @@ namespace std {
   private:
     extents_type extents_{};                    // exposition only
     array<index_type, rank_> strides_{};        // exposition only
+  };
+}
+
+// layout_left_padded synopsis
+
+namespace std {
+  template<size_t PaddingValue>
+  template<class Extents>
+  class layout_left_padded<PaddingValue>::mapping {
+  public:
+    static constexpr size_t padding_value = PaddingValue;
+
+    using extents_type = Extents;
+    using index_type = extents_type::index_type;
+    using size_type = extents_type::size_type;
+    using rank_type = extents_type::rank_type;
+    using layout_type = layout_left_padded<PaddingValue>;
+
+  private:
+    static constexpr size_t rank_ = extents_type::rank();         // exposition only
+    static constexpr size_t first-static-extent =                 // exposition only
+      extents_type::static_extent(0);
+
+    // [mdspan.layout.leftpad.expo], exposition-only members
+    static constexpr size_t static-padding-stride = see below;  // exposition only
+
+  public:
+    // [mdspan.layout.leftpad.cons], constructors
+    constexpr mapping() noexcept : mapping(extents_type{}) {}
+    constexpr mapping(const mapping&) noexcept = default;
+    constexpr mapping(const extents_type&);
+    template<class OtherIndexType>
+      constexpr mapping(const extents_type&, OtherIndexType);
+    template<class OtherExtents>
+      constexpr explicit(!is_convertible_v<OtherExtents, extents_type>)
+        mapping(const layout_left::mapping<OtherExtents>&);
+    template<class OtherExtents>
+      constexpr explicit(see below)
+        mapping(const layout_stride::mapping<OtherExtents>&);
+    template<class LayoutLeftPaddedMapping>
+      constexpr explicit(see below)
+        mapping(const LayoutLeftPaddedMapping&);
+    template<class LayoutRightPaddedMapping>
+      constexpr explicit(see below)
+        mapping(const LayoutRightPaddedMapping&) noexcept;
+
+    constexpr mapping& operator=(const mapping&) noexcept = default;
+
+    // [mdspan.layout.leftpad.obs], observers
+    constexpr const extents_type& extents() const noexcept { return extents_; }
+    constexpr array<index_type, rank_> strides() const noexcept;
+
+    constexpr index_type required_span_size() const noexcept;
+    template<class... Indices>
+      constexpr index_type operator()(Indices...) const noexcept;
+
+    static constexpr bool is_always_unique() noexcept { return true; }
+    static constexpr bool is_always_exhaustive() noexcept;
+    static constexpr bool is_always_strided() noexcept { return true; }
+
+    static constexpr bool is_unique() noexcept { return true; }
+    constexpr bool is_exhaustive() const noexcept;
+    static constexpr bool is_strided() noexcept { return true; }
+
+    constexpr index_type stride(rank_type) const noexcept;
+
+    template<class LayoutLeftPaddedMapping>
+      friend constexpr bool operator==(const mapping&, const LayoutLeftPaddedMapping&) noexcept;
+
+  private:
+    // [mdspan.layout.leftpad.expo], exposition-only members
+    index_type stride-1 = static-padding-stride;                           // exposition only
+    extents_type extents_{};                                               // exposition only
+  };
+}
+
+// layout_right_padded synopsis
+
+namespace std {
+  template<size_t PaddingValue>
+  template<class Extents>
+  class layout_right_padded<PaddingValue>::mapping {
+  public:
+    static constexpr size_t padding_value = PaddingValue;
+
+    using extents_type = Extents;
+    using index_type = extents_type::index_type;
+    using size_type = extents_type::size_type;
+    using rank_type = extents_type::rank_type;
+    using layout_type = layout_right_padded<PaddingValue>;
+
+  private:
+    static constexpr size_t rank_ = extents_type::rank();    // exposition only
+    static constexpr size_t last-static-extent =             // exposition only
+      extents_type::static_extent(rank_ - 1);
+
+    // [mdspan.layout.rightpad.expo], exposition-only members
+    static constexpr size_t static-padding-stride = see below; // exposition only
+
+  public:
+    // [mdspan.layout.rightpad.cons], constructors
+    constexpr mapping() noexcept : mapping(extents_type{}) {}
+    constexpr mapping(const mapping&) noexcept = default;
+    constexpr mapping(const extents_type&);
+    template<class OtherIndexType>
+      constexpr mapping(const extents_type&, OtherIndexType);
+
+    template<class OtherExtents>
+      constexpr explicit(!is_convertible_v<OtherExtents, extents_type>)
+        mapping(const layout_right::mapping<OtherExtents>&);
+    template<class OtherExtents>
+      constexpr explicit(see below)
+        mapping(const layout_stride::mapping<OtherExtents>&);
+    template<class LayoutRightPaddedMapping>
+      constexpr explicit(see below)
+        mapping(const LayoutRightPaddedMapping&);
+    template<class LayoutLeftPaddedMapping>
+      constexpr explicit(see below)
+        mapping(const LayoutLeftPaddedMapping&) noexcept;
+
+    constexpr mapping& operator=(const mapping&) noexcept = default;
+
+    // [mdspan.layout.rightpad.obs], observers
+    constexpr const extents_type& extents() const noexcept { return extents_; }
+    constexpr array<index_type, rank_> strides() const noexcept;
+
+    constexpr index_type required_span_size() const noexcept;
+
+    template<class... Indices>
+      constexpr index_type operator()(Indices...) const noexcept;
+
+    static constexpr bool is_always_unique() noexcept { return true; }
+    static constexpr bool is_always_exhaustive() noexcept;
+    static constexpr bool is_always_strided() noexcept { return true; }
+
+    static constexpr bool is_unique() noexcept { return true; }
+    constexpr bool is_exhaustive() const noexcept;
+    static constexpr bool is_strided() noexcept { return true; }
+
+    constexpr index_type stride(rank_type) const noexcept;
+
+    template<class LayoutRightPaddedMapping>
+      friend constexpr bool operator==(const mapping&, const LayoutRightPaddedMapping&) noexcept;
+
+  private:
+    // [mdspan.layout.rightpad.expo], exposition-only members
+    index_type stride-rm2 = static-padding-stride;                         // exposition only
+    extents_type extents_{};                                               // exposition only
   };
 }
 
@@ -462,6 +618,10 @@ namespace std {
 #    include <__mdspan/layout_right.h>
 #    include <__mdspan/layout_stride.h>
 #    include <__mdspan/mdspan.h>
+#    if _LIBCPP_STD_VER >= 26
+#      include <__mdspan/layout_left_padded.h>
+#      include <__mdspan/layout_right_padded.h>
+#    endif
 #  endif
 
 #  include <version>

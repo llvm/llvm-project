@@ -21,7 +21,9 @@
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <__fwd/mdspan.h>
+#include <__fwd/span.h>
 #include <__mdspan/extents.h>
+#include <__mdspan/layout_common.h>
 #include <__memory/addressof.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/is_constructible.h>
@@ -108,6 +110,36 @@ public:
         __mdspan_detail::__is_representable_as<index_type>(__other.required_span_size()),
         "layout_right::mapping converting ctor: other.required_span_size() must be representable as index_type.");
   }
+
+#  if _LIBCPP_STD_VER >= 26 // _LIBCPP_STD_VER >= 26
+
+  template <class _LayoutRightPaddedMapping>
+    requires __mdspan_detail::__layout_right_padded_mapping_of<_LayoutRightPaddedMapping> &&
+             is_constructible_v<extents_type, typename _LayoutRightPaddedMapping::extents_type>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit(
+      !is_convertible_v<typename _LayoutRightPaddedMapping::extents_type, extents_type>)
+      mapping(const _LayoutRightPaddedMapping& __other) noexcept
+      : __extents_(__other.extents()) {
+    static_assert(
+        extents_type::rank() <= 1 || extents_type::static_extent(extents_type::rank() - 1) == dynamic_extent ||
+            __mdspan_detail::__static_padding_stride_of<_LayoutRightPaddedMapping> == dynamic_extent ||
+            extents_type::static_extent(extents_type::rank() - 1) ==
+                __mdspan_detail::__static_padding_stride_of<_LayoutRightPaddedMapping>,
+        "layout_right::mapping converting from layout_right_padded ctor: incompatible static "
+        "extent(extents_type::rank() - 1) and source static padding stride.");
+
+    if constexpr (extents_type::rank() > 1)
+      _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+          __other.stride(extents_type::rank() - 2) == __other.extents().extent(extents_type::rank() - 1),
+          "layout_right::mapping from layout_right_padded ctor: other.stride(rank() - 2) must equal "
+          "other.extents().extent(rank() - 1).");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+        __mdspan_detail::__is_representable_as<index_type>(__other.required_span_size()),
+        "layout_right::mapping from layout_right_padded ctor: other.required_span_size() must be representable as "
+        "index_type.");
+  }
+
+#  endif // _LIBCPP_STD_VER >= 26
 
   template <class _OtherExtents>
     requires(is_constructible_v<extents_type, _OtherExtents>)

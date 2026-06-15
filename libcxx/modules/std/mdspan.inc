@@ -25,6 +25,11 @@ export namespace std {
   using std::layout_right;
   using std::layout_stride;
 
+#  if _LIBCPP_STD_VER >= 26
+  using std::layout_left_padded;
+  using std::layout_right_padded;
+#  endif // _LIBCPP_STD_VER >= 26
+
   // [mdspan.accessor.default], class template default_accessor
   using std::default_accessor;
 

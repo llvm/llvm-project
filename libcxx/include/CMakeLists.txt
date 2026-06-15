@@ -582,8 +582,11 @@ set(files
   __mdspan/aligned_accessor.h
   __mdspan/default_accessor.h
   __mdspan/extents.h
+  __mdspan/layout_common.h
   __mdspan/layout_left.h
+  __mdspan/layout_left_padded.h
   __mdspan/layout_right.h
+  __mdspan/layout_right_padded.h
   __mdspan/layout_stride.h
   __mdspan/mdspan.h
   __memory/addressof.h

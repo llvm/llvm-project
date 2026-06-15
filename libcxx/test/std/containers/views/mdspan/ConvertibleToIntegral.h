@@ -32,6 +32,12 @@ struct IntTypeNC {
   constexpr operator char() noexcept { return static_cast<char>(val); }
 };
 
+struct RValueInt {
+  int val;
+  constexpr RValueInt(int v) : val(v) {}
+  constexpr operator int() && noexcept { return val; }
+};
+
 // weird configurability of convertibility to int
 template <bool conv_c, bool conv_nc, bool ctor_nt_c, bool ctor_nt_nc>
 struct IntConfig {

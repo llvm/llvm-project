@@ -18,6 +18,8 @@
 #define _LIBCPP___MDSPAN_LAYOUTS_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
+#include <__fwd/span.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -47,6 +49,20 @@ struct layout_stride {
   template <class _Extents>
   class mapping;
 };
+
+#  if _LIBCPP_STD_VER >= 26
+template <size_t _PaddingValue = dynamic_extent>
+struct layout_left_padded {
+  template <class _Extents>
+  class mapping;
+};
+
+template <size_t _PaddingValue = dynamic_extent>
+struct layout_right_padded {
+  template <class _Extents>
+  class mapping;
+};
+#  endif
 
 #endif // _LIBCPP_STD_VER >= 23
 
