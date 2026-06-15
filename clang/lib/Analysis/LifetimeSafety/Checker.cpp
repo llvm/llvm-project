@@ -108,19 +108,15 @@ private:
       if (Redecl == FDef)
         continue;
       if (auto *MSI = Redecl->getMemberSpecializationInfo();
-          MSI && MSI->isExplicitSpecialization()) {
-        const auto *From = dyn_cast<FunctionDecl>(MSI->getInstantiatedFrom());
-        if (IsImplicitTemplateSpecialization(Redecl, From))
-          continue;
-        return Redecl;
-      }
+          MSI && MSI->isExplicitSpecialization())
+        if (!IsImplicitTemplateSpecialization(
+                Redecl, dyn_cast<FunctionDecl>(MSI->getInstantiatedFrom())))
+          return Redecl;
       if (auto *FTSI = Redecl->getTemplateSpecializationInfo();
-          FTSI && FTSI->isExplicitInstantiationOrSpecialization()) {
-        const FunctionDecl *Pattern = FTSI->getTemplate()->getTemplatedDecl();
-        if (IsImplicitTemplateSpecialization(Redecl, Pattern))
-          continue;
-        return Redecl;
-      }
+          FTSI && FTSI->isExplicitInstantiationOrSpecialization())
+        if (!IsImplicitTemplateSpecialization(
+                Redecl, FTSI->getTemplate()->getTemplatedDecl()))
+          return Redecl;
     }
     return nullptr;
   }
