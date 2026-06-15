@@ -1,4 +1,3 @@
-
 // RUN: not clang-tidy -- 2>&1 | FileCheck %s -check-prefix=CHECK-NO-INPUT
 // CHECK-NO-INPUT: Error: no input files specified.
 
