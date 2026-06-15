@@ -1146,12 +1146,27 @@ static bool argTypeIsABIEquivalent(QualType SrcType, QualType DestType,
   if (SrcType->isPointerType() && DestType->isPointerType())
     return true;
 
+  bool SrcIntOrEnum =
+      SrcType->isIntegralType(Context) || SrcType->isEnumeralType();
+  bool DstIntOrEnum =
+      DestType->isIntegralType(Context) || DestType->isEnumeralType();
+
   // Allow integral type mismatch if their size are equal.
-  if ((SrcType->isIntegralType(Context) || SrcType->isEnumeralType()) &&
-      (DestType->isIntegralType(Context) || DestType->isEnumeralType()))
-    if (Context.getTypeSizeInChars(SrcType) ==
-        Context.getTypeSizeInChars(DestType))
+  if (SrcIntOrEnum && DstIntOrEnum &&
+      Context.getTypeSizeInChars(SrcType) ==
+          Context.getTypeSizeInChars(DestType))
+    return true;
+
+  // Allow pointer/integral type mismatch if their sizes are equal and the
+  // target considers pointers and integers ABI-compatible.
+  if (Context.getTypeSizeInChars(SrcType) ==
+          Context.getTypeSizeInChars(DestType) &&
+      Context.getTargetInfo().arePointersAndIntegersABICompatible()) {
+    bool SrcPtr = SrcType->isPointerType();
+    bool DstPtr = DestType->isPointerType();
+    if ((SrcPtr && DstIntOrEnum) || (SrcIntOrEnum && DstPtr))
       return true;
+  }
 
   return Context.hasSameUnqualifiedType(SrcType, DestType);
 }

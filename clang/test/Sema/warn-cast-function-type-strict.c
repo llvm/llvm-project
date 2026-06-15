@@ -40,7 +40,7 @@ void foo(void) {
   a = (f1 *)x;
   a = (f1 *)efunc; // strict-warning {{cast from 'int (*)(enum E)' to 'f1 *' (aka 'int (*)(long)') converts to incompatible function type}}
   a = (f1 *)e2func; // strict-warning {{cast from 'int (*)(enum E2)' to 'f1 *' (aka 'int (*)(long)') converts to incompatible function type}}
-  b = (f2 *)x; /* expected-warning {{cast from 'int (*)(long)' to 'f2 *' (aka 'int (*)(void *)') converts to incompatible function type}} */
+  b = (f2 *)x; /* strict-warning {{cast from 'int (*)(long)' to 'f2 *' (aka 'int (*)(void *)') converts to incompatible function type}} */
   c = (f3 *)x; /* strict-warning {{cast from 'int (*)(long)' to 'f3 *' (aka 'int (*)()') converts to incompatible function type}} */
   d = (f4 *)x; /* expected-warning {{cast from 'int (*)(long)' to 'f4 *' (aka 'void (*)()') converts to incompatible function type}} */
   e = (f5 *)x; /* strict-warning {{cast from 'int (*)(long)' to 'f5 *' (aka 'void (*)(void)') converts to incompatible function type}} */
@@ -50,4 +50,14 @@ void foo(void) {
   i = (f9 *)u;
   // FIXME: return type qualifier should not be included in the function type . Warning should be absent after this issue is fixed. https://github.com/llvm/llvm-project/issues/39494 .
   j = (f10 *)v; /* strict-warning {{cast from 'const int (*)(int)' to 'f10 *' (aka 'int (*)(int)') converts to incompatible function type}} */
+}
+
+// Strict mode: pointer-vs-integral should still warn even when sizes match.
+typedef void *(*ptr_ret_fn)(void);
+typedef unsigned long (*ul_ret_fn)(void);
+ptr_ret_fn pr2;
+ul_ret_fn ur2;
+void test_ptr_int_return_strict(void) {
+  pr2 = (ptr_ret_fn)ur2; /* strict-warning {{cast from 'ul_ret_fn' (aka 'unsigned long (*)(void)') to 'ptr_ret_fn' (aka 'void *(*)(void)') converts to incompatible function type}} */
+  ur2 = (ul_ret_fn)pr2; /* strict-warning {{cast from 'ptr_ret_fn' (aka 'void *(*)(void)') to 'ul_ret_fn' (aka 'unsigned long (*)(void)') converts to incompatible function type}} */
 }
