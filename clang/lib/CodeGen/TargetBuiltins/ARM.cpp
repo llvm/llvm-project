@@ -6029,16 +6029,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     llvm::Type *V4BF16 = FixedVectorType::get(Builder.getBFloatTy(), 4);
     return Builder.CreateFPTrunc(Builder.CreateBitCast(Ops[0], V4F32), V4BF16);
   }
-  case NEON::BI__builtin_neon_vcvt_f16_f32: {
-    llvm::Type *V4F32 = FixedVectorType::get(Builder.getFloatTy(), 4);
-    llvm::Type *V4F16 = FixedVectorType::get(Builder.getHalfTy(), 4);
-    return Builder.CreateFPTrunc(Builder.CreateBitCast(Ops[0], V4F32), V4F16);
-  }
-  case NEON::BI__builtin_neon_vcvt_f32_f16: {
-    llvm::Type *V4F32 = FixedVectorType::get(Builder.getFloatTy(), 4);
-    llvm::Type *V4F16 = FixedVectorType::get(Builder.getHalfTy(), 4);
-    return Builder.CreateFPExt(Builder.CreateBitCast(Ops[0], V4F16), V4F32);
-  }
   case NEON::BI__builtin_neon_vcvtq_low_bf16_f32: {
     SmallVector<int, 16> ConcatMask(8);
     std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
@@ -6062,6 +6052,16 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     llvm::Value *Trunc =
         Builder.CreateFPTrunc(Builder.CreateBitCast(Ops[1], V4F32), V4BF16);
     return Builder.CreateShuffleVector(Inactive, Trunc, ConcatMask);
+  }
+  case NEON::BI__builtin_neon_vcvt_f16_f32: {
+    llvm::Type *V4F32 = FixedVectorType::get(Builder.getFloatTy(), 4);
+    llvm::Type *V4F16 = FixedVectorType::get(Builder.getHalfTy(), 4);
+    return Builder.CreateFPTrunc(Builder.CreateBitCast(Ops[0], V4F32), V4F16);
+  }
+  case NEON::BI__builtin_neon_vcvt_f32_f16: {
+    llvm::Type *V4F32 = FixedVectorType::get(Builder.getFloatTy(), 4);
+    llvm::Type *V4F16 = FixedVectorType::get(Builder.getHalfTy(), 4);
+    return Builder.CreateFPExt(Builder.CreateBitCast(Ops[0], V4F16), V4F32);
   }
 
   case clang::AArch64::BI_InterlockedAdd:
