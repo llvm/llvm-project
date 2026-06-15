@@ -12,7 +12,9 @@ set(LIBS
   FIRCodeGenDialect
   FIRDialect
   FIRDialectSupport
+  FIROpenACCSupport
   FIRSupport
+  FIRTransforms
   HLFIRDialect
   MIFDialect
 )
@@ -36,6 +38,7 @@ add_flang_unittest(FlangOptimizerTests
   Builder/Runtime/TransformationalTest.cpp
   FIRCallInterfaceTest.cpp
   FIRContextTest.cpp
+  OpenACC/FIROpenACCPointerLikeTypeInterfaceTest.cpp
   FIRTypesTest.cpp
   FortranVariableTest.cpp
   InternalNamesTest.cpp
@@ -60,4 +63,5 @@ mlir_target_link_libraries(FlangOptimizerTests
   PRIVATE
   ${dialect_libs}
   ${extension_libs}
+  MLIROpenACCDialect
   )
