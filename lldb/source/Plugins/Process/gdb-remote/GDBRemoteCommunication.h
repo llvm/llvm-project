@@ -119,6 +119,11 @@ public:
   PacketType CheckForPacket(const uint8_t *src, size_t src_len,
                             StringExtractorGDBRemote &packet);
 
+  // Like CheckForPacket, but silently drops any async notification packets and
+  // returns the type of the next non-notification packet. See the definition.
+  PacketType GetNextNonNotifyPacket(const uint8_t *src, size_t src_len,
+                                    StringExtractorGDBRemote &packet);
+
   bool GetSendAcks() { return m_send_acks; }
 
   // Set the global packet timeout.

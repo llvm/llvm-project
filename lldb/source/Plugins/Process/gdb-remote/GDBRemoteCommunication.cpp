@@ -232,6 +232,24 @@ GDBRemoteCommunication::ReadPacket(StringExtractorGDBRemote &response,
   }
 }
 
+GDBRemoteCommunication::PacketType
+GDBRemoteCommunication::GetNextNonNotifyPacket(
+    const uint8_t *src, size_t src_len, StringExtractorGDBRemote &packet) {
+  // Async notification packets (e.g. OpenOCD's "oocd_keepalive", sent during
+  // long memory operations) are not responses to our request. GDB silently
+  // drops unknown notifications while waiting for a packet; do the same and
+  // keep looking for the actual response. After the freshly-read bytes are
+  // consumed, drain any further buffered packets from the cache.
+  Log *log = GetLog(GDBRLog::Packets);
+  PacketType packet_type = CheckForPacket(src, src_len, packet);
+  while (packet_type == PacketType::Notify) {
+    LLDB_LOGF(log, "GDBRemoteCommunication::%s ignoring notification packet",
+              __FUNCTION__);
+    packet_type = CheckForPacket(nullptr, 0, packet);
+  }
+  return packet_type;
+}
+
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
                                             Timeout<std::micro> timeout,
@@ -242,17 +260,7 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
   Log *log = GetLog(GDBRLog::Packets);
 
   // Check for a packet from our cache first without trying any reading...
-  // Async notification packets (e.g. OpenOCD's "oocd_keepalive", sent during
-  // long memory operations) are not responses to our request. GDB silently
-  // drops such notifications while waiting for a packet; do the same and keep
-  // looking for the actual response.
-  PacketType packet_type = CheckForPacket(nullptr, 0, packet);
-  while (packet_type == PacketType::Notify) {
-    LLDB_LOGF(log, "GDBRemoteCommunication::%s ignoring notification packet",
-              __FUNCTION__);
-    packet_type = CheckForPacket(nullptr, 0, packet);
-  }
-  if (packet_type != PacketType::Invalid)
+  if (GetNextNonNotifyPacket(nullptr, 0, packet) != PacketType::Invalid)
     return PacketResult::Success;
 
   bool timed_out = false;
@@ -268,16 +276,8 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
                      error, bytes_read);
 
     if (bytes_read > 0) {
-      // Drop any async notification packets (see above) and keep waiting for
-      // the actual response.
-      packet_type = CheckForPacket(buffer, bytes_read, packet);
-      while (packet_type == PacketType::Notify) {
-        LLDB_LOGF(log,
-                  "GDBRemoteCommunication::%s ignoring notification packet",
-                  __FUNCTION__);
-        packet_type = CheckForPacket(nullptr, 0, packet);
-      }
-      if (packet_type != PacketType::Invalid)
+      if (GetNextNonNotifyPacket(buffer, bytes_read, packet) !=
+          PacketType::Invalid)
         return PacketResult::Success;
     } else {
       switch (status) {
