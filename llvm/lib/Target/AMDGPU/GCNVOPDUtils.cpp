@@ -292,6 +292,41 @@ static void collectLoads(SmallVector<SUnit *> &Loads, BitVector &Visited,
   }
 }
 
+/// Checks whether fusing SU \p I with SU \p J would force the loads preceding
+/// \p J to complete before loads depending on \p I.
+static bool loadsMayOverlap(ScheduleDAGInstrs *DAG, [[maybe_unused]] SUnit &I,
+                            const BitVector &IVisited,
+                            const SmallVector<SUnit *> &ILoadSuccs, SUnit &J,
+                            BitVector &JVisited,
+                            SmallVector<SUnit *> &JLoadPreds) {
+  if (ILoadSuccs.empty())
+    return false;
+  JVisited = IVisited;
+  JLoadPreds.clear();
+  collectLoads(JLoadPreds, JVisited, J, /*Forward=*/false);
+  if (JLoadPreds.empty())
+    return false;
+
+  for (SUnit *Succ : ILoadSuccs)
+    for (SUnit *Pred : JLoadPreds)
+      if (!DAG->IsReachable(Succ, Pred)) {
+        LLVM_DEBUG({
+          dbgs() << "Will not pair SU(" << I.NodeNum << ") with SU("
+                 << J.NodeNum << ")\n";
+          if (Pred == Succ)
+            dbgs() << "  Fusion would introduce a cyclic dependency "
+                      "with SU("
+                   << Pred->NodeNum << ")\n";
+          else
+            dbgs() << "  Fusion may force SU(" << Pred->NodeNum
+                   << ") to complete its load before dispatching SU("
+                   << Succ->NodeNum << ")\n";
+        });
+        return true;
+      }
+  return false;
+}
+
 namespace {
 /// Adapts design from MacroFusion
 /// Puts valid candidate instructions back-to-back so they can easily
@@ -345,35 +380,8 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
             !shouldScheduleAdjacent(TII, ST, IMI, *JMI))
           continue;
 
-        bool LoadsMayOverlap = !ILoadSuccs.empty() && [&] {
-          JVisited =
-              IVisited; // No need to collect from nodes reachable from ISUI
-          JLoadPreds.clear();
-          collectLoads(JLoadPreds, JVisited, *JSUI, /*Forward=*/false);
-          if (JLoadPreds.empty())
-            return false;
-
-          for (SUnit *Succ : ILoadSuccs)
-            for (SUnit *Pred : JLoadPreds)
-              if (!DAG->IsReachable(Succ, Pred)) {
-                LLVM_DEBUG({
-                  dbgs() << "Will not pair SU(" << ISUI->NodeNum << ") with SU("
-                         << JSUI->NodeNum << ")\n";
-                  if (Pred == Succ)
-                    dbgs() << "  Fusion would introduce a cyclic dependency "
-                              "with SU("
-                           << Pred->NodeNum << ")\n";
-                  else
-                    dbgs() << "  Fusion may force SU(" << Pred->NodeNum
-                           << ") to complete its load before dispatching SU("
-                           << Succ->NodeNum << ")\n";
-                });
-                return true;
-              }
-          return false;
-        }();
-
-        if (LoadsMayOverlap)
+        if (loadsMayOverlap(DAG, *ISUI, IVisited, ILoadSuccs, *JSUI, JVisited,
+                            JLoadPreds))
           continue;
 
         if (fuseInstructionPair(*DAG, *ISUI, *JSUI)) {
