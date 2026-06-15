@@ -2863,8 +2863,7 @@ For example:
 
     The following aspects are currently supported:
 
-    - ``fixed``: The call has a C ISO 18037 fixed-point argument.
-    - ``float``: The call has a floating-point argument.
+    - ``float``: The call has a floating point argument
 
 
 
@@ -3193,7 +3192,7 @@ The following attributes are currently accepted:
   wrap and ``%upper_bound`` is always allowed to be equal to ``%lower_bound``.
   As a result, ``%upper_bound <= %lower_bound`` and ``%wraps`` being false
   implies an empty range, while ``%lower_bound == %upper_bound`` and ``%wraps``
-  being true implies a full range (i.e. nothing).
+  being true implies a full range.
 
 ``"separate_storage"(ptr %p1, ptr %p2)``
   This indicates that no pointer :ref:`based <pointeraliasing>` on one of its
@@ -13166,9 +13165,6 @@ the default rounding mode.
 If the ``nneg`` flag is set, and the ``uitofp`` argument is negative,
 the result is a poison value.
 
-If the '``nsz``' flag is set and the input value is 0, the sign bit of
-the result is non-deterministic.
-
 
 Example:
 """"""""
@@ -13215,9 +13211,6 @@ The '``sitofp``' instruction interprets its operand as a signed integer
 quantity and converts it to the corresponding floating-point value. If the
 value cannot be exactly represented, it is rounded using the default rounding
 mode.
-
-If the '``nsz``' flag is set and the input value is 0, the sign bit of
-the result is non-deterministic.
 
 Example:
 """"""""
