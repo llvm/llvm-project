@@ -939,13 +939,13 @@ int GCNHazardRecognizer::checkUniformWindowVALUHazardsHelper(
   // SGPR SOFFSET.
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
-  auto IsHazard = [this, TRI, Reg](const MachineInstr &MI) {
+  auto IsHazard = [&](const MachineInstr &MI) {
     int DataIdx = createsVALUHazard(MI);
     return DataIdx >= 0 &&
            TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg);
   };
 
-  return std::max(0, 1 - getWaitStatesSince(IsHazard, 1));
+  return std::max(0, 1 - getWaitStatesSince(IsHazard, /*Limit=*/1));
 }
 
 int GCNHazardRecognizer::checkSOFFSETWindowVALUHazardsHelper(
@@ -963,7 +963,7 @@ int GCNHazardRecognizer::checkSOFFSETWindowVALUHazardsHelper(
   // Scan each wait-state window separately and take the max padding needed.
   // getWaitStatesSince supplies the minimum distance to a producer over paths.
   for (int Window = 1; Window <= 2; ++Window) {
-    auto IsHazard = [this, TII, TRI, Reg, Window](const MachineInstr &MI) {
+    auto IsHazard = [&](const MachineInstr &MI) {
       int DataIdx = createsVALUHazard(MI);
       if (DataIdx < 0 ||
           !TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg))
