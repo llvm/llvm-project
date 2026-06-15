@@ -1350,9 +1350,9 @@ public:
     OpsEnd = VScale,
   };
 
-  /// Returns true if this VPInstruction replicates for each part, and generates
-  /// scalar values for all lanes; i.e. if it behaves like a non-single-scalar
-  /// VPReplicateRecipe (see also VPReplicateRecipe::mustReplicate).
+  /// Returns true if this VPInstruction generates scalar values for all lanes;
+  /// i.e. if it behaves like a non-single-scalar VPReplicateRecipe (see also
+  /// VPReplicateRecipe::mustReplicate).
   bool mustReplicate() const;
 
   /// Return the number of operands determined by the opcode of the
