@@ -906,9 +906,9 @@ void t34(void) {
 
 // Register input (null element type) before a memory input: keep elementtype.
 //      CIR: cir.func{{.*}}@t35
-//      CIR: %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
-//      CIR: %[[G:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["g"]
-//      CIR: %[[I_LOAD:.*]] = cir.load align(4) %[[I]] : !cir.ptr<!s32i>, !s32i
+//      CIR: %[[I:.*]] = cir.alloca "i" {{.*}} init : !cir.ptr<!s32i>
+//      CIR: %[[G:.*]] = cir.alloca "g" {{.*}} : !cir.ptr<!s32i>
+//      CIR: %[[I_LOAD:.*]] = cir.load {{.*}} %[[I]] : !cir.ptr<!s32i>, !s32i
 //      CIR: cir.asm(x86_att,
 // CIR-NEXT:   out = [],
 // CIR-NEXT:   in = [%[[I_LOAD]] : !s32i, %[[G]] : !cir.ptr<!s32i> (maybe_memory)],

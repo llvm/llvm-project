@@ -366,10 +366,10 @@ static bool sinkScalarOperands(VPlan &Plan) {
               dyn_cast<VPReplicateRecipe>(SinkCandidate)) {
         // TODO: Handle converting to uniform recipes as separate transform,
         // then cloning should be sufficient here.
-        Instruction *I = SinkCandidate->getUnderlyingInstr();
-        Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true,
-                                      nullptr /*Mask*/, *SinkCandidateRepR,
-                                      *SinkCandidateRepR);
+        Clone = VPBuilder::createSingleScalarOp(
+            SinkCandidateRepR->getOpcode(), SinkCandidate->operands(),
+            /*Mask=*/nullptr, *SinkCandidateRepR, *SinkCandidateRepR,
+            SinkCandidate->getDebugLoc(), SinkCandidate->getUnderlyingInstr());
         // TODO: add ".cloned" suffix to name of Clone's VPValue.
       } else {
         Clone = SinkCandidate->clone();
@@ -902,9 +902,10 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
                 m_Binary<Instruction::ExtractValue>(m_VPValue(), m_VPValue())))
         continue;
 
-      auto *Clone = new VPReplicateRecipe(Def->getUnderlyingInstr(),
-                                          Def->operands(), /*IsUniform*/ true,
-                                          /*Mask*/ nullptr, /*Flags*/ *Def);
+      auto *Clone = VPBuilder::createSingleScalarOp(
+          Def->getUnderlyingInstr()->getOpcode(), Def->operands(),
+          /*Mask=*/nullptr, *Def, {}, DebugLoc::getUnknown(),
+          Def->getUnderlyingInstr());
       Clone->insertAfter(Def);
       Def->replaceAllUsesWith(Clone);
     }
@@ -1304,9 +1305,6 @@ static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
       return Folder.FoldCast(static_cast<Instruction::CastOps>(Opcode), Ops[0],
                              R.getVPSingleValue()->getScalarType());
     switch (Opcode) {
-    case VPInstruction::LogicalAnd:
-      return Folder.FoldSelect(Ops[0], Ops[1],
-                               ConstantInt::getNullValue(Ops[1]->getType()));
     case VPInstruction::Not:
       return Folder.FoldBinOp(Instruction::BinaryOps::Xor, Ops[0],
                               Constant::getAllOnesValue(Ops[0]->getType()));
@@ -1973,9 +1971,10 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
           }))
         continue;
 
-      auto *Clone = new VPReplicateRecipe(
-          RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
-          true /*IsSingleScalar*/, nullptr, *RepOrWidenR);
+      auto *Clone = VPBuilder::createSingleScalarOp(
+          getOpcodeOrIntrinsicID(RepOrWidenR)->second, RepOrWidenR->operands(),
+          /*Mask=*/nullptr, *RepOrWidenR, {}, DebugLoc::getUnknown(),
+          RepOrWidenR->getUnderlyingInstr());
       Clone->insertBefore(RepOrWidenR);
       RepOrWidenR->replaceAllUsesWith(Clone);
       if (isDeadRecipe(*RepOrWidenR))
@@ -2725,7 +2724,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   }
 }
 
-void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
+bool VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
   std::optional<VPDominatorTree> VPDT;
   if (OnlyLatches)
     VPDT.emplace(Plan);
@@ -2734,6 +2733,7 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
   // ones after constant branch removal.
   SmallVector<VPBlockBase *> AllBlocks(vp_depth_first_shallow(Plan.getEntry()));
 
+  bool SimplifiedPhi = false;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(AllBlocks)) {
     VPValue *Cond;
     // Skip blocks that are not terminated by BranchOnCond.
@@ -2759,8 +2759,10 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
            "There must be a single edge between VPBB and its successor");
     // Values coming from VPBB into phi recipes of RemovedSucc are removed from
     // these recipes.
-    for (VPRecipeBase &R : RemovedSucc->phis())
+    auto Phis = RemovedSucc->phis();
+    for (VPRecipeBase &R : Phis)
       cast<VPPhiAccessors>(&R)->removeIncomingValueFor(VPBB);
+    SimplifiedPhi |= !std::empty(Phis);
 
     // Disconnect blocks and remove the terminator.
     VPBlockUtils::disconnectBlocks(VPBB, RemovedSucc);
@@ -2793,6 +2795,7 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
       }
     }
   }
+  return SimplifiedPhi;
 }
 
 void VPlanTransforms::optimize(VPlan &Plan) {
@@ -3064,8 +3067,8 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
       return new VPInterleaveEVLRecipe(*Interleave, EVL, Mask);
 
   VPValue *LHS, *RHS;
-  if (match(&CurRecipe, m_Select(m_RemoveMask(HeaderMask, Mask), m_VPValue(LHS),
-                                 m_VPValue(RHS))))
+  if (match(&CurRecipe, m_SelectLike(m_RemoveMask(HeaderMask, Mask),
+                                     m_VPValue(LHS), m_VPValue(RHS))))
     return new VPWidenIntrinsicRecipe(
         Intrinsic::vp_merge, {Mask ? Mask : Plan->getTrue(), LHS, RHS, &EVL},
         LHS->getScalarType(), {}, {}, DL);
@@ -4257,6 +4260,8 @@ static bool handleUncountableExitsWithSideEffects(
     VPBlockUtils::disconnectBlocks(Exit.EarlyExitingVPBB, Exit.EarlyExitVPBB);
   }
 
+  VPDT.recalculate(Plan);
+
   // We can abandon a VPlan entirely if we return false here, so we shouldn't
   // crash if some earlier assumptions on scalar IR don't hold for the vplan
   // version of the loop.
@@ -5279,7 +5284,7 @@ void VPlanTransforms::materializeVectorTripCount(
   // and the vector trip count equals TC directly.
   const APInt *TCVal;
   if (!RequiresScalarEpilogue && match(TC, m_APInt(TCVal)) && MaxRuntimeStep &&
-      TCVal->getZExtValue() % *MaxRuntimeStep == 0) {
+      TCVal->urem(*MaxRuntimeStep) == 0) {
     VectorTC.replaceAllUsesWith(TC);
     return;
   }
@@ -6124,11 +6129,11 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     // phi. The find-last select should be a select between the phi and the
     // find-last expression.
     VPValue *Cond, *FindLastExpression;
-    if (!match(FindLastSelect, m_Select(m_VPValue(Cond), m_Specific(PhiR),
-                                        m_VPValue(FindLastExpression))) &&
+    if (!match(FindLastSelect, m_SelectLike(m_VPValue(Cond), m_Specific(PhiR),
+                                            m_VPValue(FindLastExpression))) &&
         !match(FindLastSelect,
-               m_Select(m_VPValue(Cond), m_VPValue(FindLastExpression),
-                        m_Specific(PhiR))))
+               m_SelectLike(m_VPValue(Cond), m_VPValue(FindLastExpression),
+                            m_Specific(PhiR))))
       continue;
 
     // Check if FindLastExpression is a simple expression of a widened IV. If
@@ -6999,9 +7004,9 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
       if (!vputils::onlyFirstLaneUsed(VPI))
         continue;
 
-      auto *Recipe = new VPReplicateRecipe(
-          I, VPI->operandsWithoutMask(), /*IsSingleScalar=*/true,
-          /*Mask=*/nullptr, *VPI, *VPI, VPI->getDebugLoc());
+      auto *Recipe = VPBuilder::createSingleScalarOp(
+          VPI->getOpcode(), VPI->operandsWithoutMask(), /*Mask=*/nullptr, *VPI,
+          *VPI, VPI->getDebugLoc(), I);
       Recipe->insertBefore(VPI);
       VPI->replaceAllUsesWith(Recipe);
       VPI->eraseFromParent();
