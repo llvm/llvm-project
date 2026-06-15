@@ -106,10 +106,10 @@ struct S3 {
   }
 };
 
-struct S_ref {
+struct S4 {
   int x;
   int &r;
-  S_ref() : x(0), r(x) {}
+  S4() : x(0), r(x) {}
 
   void test_ref() {
 #pragma omp parallel for collapse(2)
@@ -121,3 +121,16 @@ struct S_ref {
     }
   }
 };
+
+auto test9(int *out) {
+  int storage = 0;
+  int &r = storage;
+
+#pragma omp parallel for collapse(2)
+  for (r = 0; r < 10; ++r) {
+    // expected-error@+1{{loop iteration variable 'r' cannot be reused in a nested loop of a collapsed loop nest}}
+    for (r = 0; r < 10; ++r) {
+      out[r] = r;
+    }
+  }
+}
