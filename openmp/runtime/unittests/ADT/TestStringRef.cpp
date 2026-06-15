@@ -31,8 +31,8 @@ TEST(kmp_str_ref_test, ConstructFromCString) {
   EXPECT_TRUE(equals(s, "Hello"));
 }
 
-TEST(kmp_str_ref_test, ConstructFromStringView) {
-  kmp_str_ref s(std::string_view("Hello World", 5));
+TEST(kmp_str_ref_test, ConstructFromCStringWithLength) {
+  kmp_str_ref s("Hello World", 5);
   EXPECT_EQ(s.length(), 5u);
   EXPECT_TRUE(equals(s, "Hello"));
 }
@@ -48,6 +48,37 @@ TEST(kmp_str_ref_test, ConstructFromNullptr) {
   kmp_str_ref s(null_str);
   EXPECT_EQ(s.length(), 0u);
   EXPECT_TRUE(s.empty());
+}
+
+TEST(kmp_str_ref_test, ConstructFromNullptrWithLength) {
+  kmp_str_ref s(nullptr, 0);
+  EXPECT_EQ(s.length(), 0u);
+  EXPECT_TRUE(s.empty());
+}
+
+TEST(kmp_str_ref_test, NullptrOperations) {
+  const char *null_str = nullptr;
+  kmp_str_ref s(null_str);
+
+  // Iterators on a null-backed string must be consistent and yield no
+  // elements.
+  EXPECT_EQ(s.begin(), s.end());
+  EXPECT_EQ(s.end() - s.begin(), 0);
+
+  std::string result;
+  for (char c : s)
+    result += c;
+  EXPECT_TRUE(result.empty());
+
+  // Consuming the empty prefix must succeed and leave the string empty.
+  EXPECT_TRUE(s.consume_front(""));
+  EXPECT_TRUE(s.empty());
+
+  // Consuming a non-empty prefix must fail without dereferencing data.
+  EXPECT_FALSE(s.consume_front("x"));
+
+  // count_while must not dereference data when the string is empty.
+  EXPECT_EQ(s.count_while([](char) { return true; }), 0u);
 }
 
 TEST(kmp_str_ref_test, Length) {

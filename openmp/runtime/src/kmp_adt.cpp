@@ -38,7 +38,7 @@ bool kmp_str_ref::consume_integer(int &value, bool allow_zero,
     *this = orig;
     return false;
   }
-  value = __kmp_basic_str_to_int(sv.data(), num_digits);
+  value = __kmp_basic_str_to_int(data, num_digits);
   if (value == INT_MAX) {
     *this = orig;
     return false;
@@ -54,10 +54,10 @@ bool kmp_str_ref::consume_integer(int &value, bool allow_zero,
 }
 
 char *kmp_str_ref::copy() const {
-  char *copy_str = static_cast<char *>(KMP_INTERNAL_MALLOC(length() + 1));
+  char *copy_str = static_cast<char *>(KMP_INTERNAL_MALLOC(len + 1));
   if (!copy_str)
     KMP_FATAL(MemoryAllocFailed);
-  memcpy(copy_str, sv.data(), length());
-  copy_str[length()] = '\0';
+  memcpy(copy_str, data, len);
+  copy_str[len] = '\0';
   return copy_str;
 }

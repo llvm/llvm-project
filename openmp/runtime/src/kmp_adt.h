@@ -20,22 +20,25 @@
 #ifndef KMP_ADT_H
 #define KMP_ADT_H
 
+#include <cassert>
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
-#include <string_view>
+#include <cstring>
 #include <type_traits>
 
 /// kmp_str_ref is a non-owning string class (similar to llvm::StringRef).
 class kmp_str_ref final {
-  std::string_view sv;
+  const char *data;
+  size_t len;
 
 public:
   static constexpr size_t npos = SIZE_MAX;
 
-  kmp_str_ref(const char *str)
-      : sv(str ? std::string_view(str) : std::string_view()) {}
-  kmp_str_ref(std::string_view sv) : sv(sv) {}
+  kmp_str_ref(const char *str) : data(str), len(str ? strlen(str) : 0) {}
+  kmp_str_ref(const char *str, size_t len) : data(str), len(len) {
+    assert((data || !len) && "len must be 0 for nullptr data");
+  }
 
   kmp_str_ref(const kmp_str_ref &other) = default;
   kmp_str_ref &operator=(const kmp_str_ref &other) = default;
@@ -43,11 +46,13 @@ public:
   /// Check if the string starts with the given prefix and remove it from the
   /// string afterwards.
   bool consume_front(kmp_str_ref prefix) {
-    if (length() < prefix.length())
+    if (len < prefix.len)
       return false;
-    if (sv.compare(0, prefix.length(), prefix.sv) != 0)
+    if (empty() || prefix.empty()) // avoid calling memcmp on potential nullptr
+      return true;
+    if (memcmp(data, prefix.data, prefix.len) != 0)
       return false;
-    drop_front(prefix.length());
+    drop_front(prefix.len);
     return true;
   }
 
@@ -66,13 +71,18 @@ public:
   template <typename Fn> size_t count_while(const Fn &predicate) const {
     static_assert(std::is_invocable_r_v<bool, Fn, char>,
                   "predicate must be callable as bool(char)");
-    size_t len = find_if_not(predicate);
-    return len == npos ? length() : len;
+    size_t n = find_if_not(predicate);
+    return n == npos ? len : n;
   }
 
   /// Drop the first n characters from the string.
   /// (Limit n to the length of the string.)
-  void drop_front(size_t n) { sv.remove_prefix(std::min(n, length())); }
+  void drop_front(size_t n) {
+    if (n > len)
+      n = len;
+    data += n;
+    len -= n;
+  }
 
   /// Drop characters from the string while the predicate returns true.
   template <typename Fn> void drop_while(const Fn &predicate) {
@@ -82,7 +92,7 @@ public:
   }
 
   /// Check if the string is empty.
-  bool empty() const { return sv.empty(); }
+  bool empty() const { return len == 0; }
 
   /// Return the index of the first character in the string for which the
   /// predicate returns true.
@@ -91,8 +101,7 @@ public:
     static_assert(std::is_invocable_r_v<bool, Fn, char>,
                   "predicate must be callable as bool(char)");
     size_t i = 0;
-    size_t len = length();
-    while (i < len && !predicate(sv[i]))
+    while (i < len && !predicate(data[i]))
       ++i;
     return i < len ? i : npos;
   }
@@ -107,7 +116,7 @@ public:
   }
 
   /// Get the length of the string.
-  size_t length() const { return sv.length(); }
+  size_t length() const { return len; }
   size_t size() const { return length(); }
 
   /// Drop space from the start of the string.
@@ -122,12 +131,12 @@ public:
   template <typename Fn> kmp_str_ref take_while(const Fn &predicate) const {
     static_assert(std::is_invocable_r_v<bool, Fn, char>,
                   "predicate must be callable as bool(char)");
-    return kmp_str_ref(sv.substr(0, count_while(predicate)));
+    return kmp_str_ref(data, count_while(predicate));
   }
 
   /// Iterator support (raw pointers work as iterators for contiguous storage)
-  const char *begin() const { return sv.data(); }
-  const char *end() const { return sv.data() + length(); }
+  const char *begin() const { return data; }
+  const char *end() const { return data + len; }
 };
 
 #endif // KMP_ADT_H
