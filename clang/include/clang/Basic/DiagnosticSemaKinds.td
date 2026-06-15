@@ -3703,6 +3703,9 @@ def err_swift_abi_parameter_wrong_type : Error<
 def err_attribute_argument_invalid : Error<
   "%0 attribute argument is invalid: %select{max must be 0 since min is 0|"
   "min must not be greater than max}1">;
+def err_attribute_amdgpu_flat_work_group_size_mismatch : Error<
+  "'amdgpu_flat_work_group_size' attribute must match "
+  "'reqd_work_group_size' product">;
 def err_attribute_argument_is_zero : Error<
   "%0 attribute must be greater than 0">;
 def warn_attribute_argument_n_negative : Warning<
@@ -10981,7 +10984,7 @@ def warn_lifetime_safety_use_after_scope_moved : Warning<
    InGroup<LifetimeSafetyUseAfterScopeMoved>, DefaultIgnore;
 
 def warn_lifetime_safety_use_after_free : Warning<
-    "%select{allocated object|parameter}0 does not live long enough">,
+    "%0 does not live long enough">,
     InGroup<LifetimeSafetyUseAfterFree>, DefaultIgnore;
 
 def warn_lifetime_safety_return_stack_addr : Warning<
@@ -10995,15 +10998,15 @@ def warn_lifetime_safety_return_stack_addr_moved : Warning<
   InGroup<LifetimeSafetyReturnStackAddrMoved>, DefaultIgnore;
 
 def warn_lifetime_safety_invalidation
-    : Warning<"%select{object whose reference is captured|parameter}0 is later invalidated">,
+    : Warning<"%0 is later invalidated">,
       InGroup<LifetimeSafetyInvalidation>,
       DefaultIgnore;
 def warn_lifetime_safety_invalidated_field
-    : Warning<"%select{object whose reference|parameter which}0 escapes to a field is later invalidated">,
+    : Warning<"%0 escapes to the %1 and is later invalidated">,
       InGroup<LifetimeSafetyInvalidation>,
       DefaultIgnore;
 def warn_lifetime_safety_invalidated_global
-    : Warning<"%select{object whose reference|parameter which}0 escapes to global or static storage is later invalidated">,
+    : Warning<"%0 escapes to the %1 and is later invalidated">,
       InGroup<LifetimeSafetyInvalidation>,
       DefaultIgnore;
 

@@ -194,6 +194,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.memalignment
+    libc.src.stdlib.mkstemp
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
@@ -1017,6 +1018,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.arpa.inet.inet_aton
     libc.src.arpa.inet.ntohl
     libc.src.arpa.inet.ntohs
+
+    # netinet/in.h entrypoints
+    libc.src.netinet.in6addr_any
+    libc.src.netinet.in6addr_loopback
 
     # pthread.h entrypoints
     libc.src.pthread.pthread_atfork

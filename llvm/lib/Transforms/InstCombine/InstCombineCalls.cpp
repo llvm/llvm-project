@@ -3699,9 +3699,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (!Count)
           break;
 
-        if (*Count == 0 || isDereferenceableAndAlignedPointer(
-                               Ptr, Align(1), APInt(64, *Count),
-                               getSimplifyQuery().getWithInstruction(II)))
+        if (*Count == 0 ||
+            isDereferenceablePointer(Ptr, APInt(64, *Count),
+                                     getSimplifyQuery().getWithInstruction(II)))
           return RemoveBundle();
 
         break;
