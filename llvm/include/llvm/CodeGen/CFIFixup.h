@@ -19,11 +19,11 @@
 #include "llvm/InitializePasses.h"
 
 namespace llvm {
-class LLVM_ABI CFIFixup : public MachineFunctionPass {
+class LLVM_ABI CFIFixupLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  CFIFixup() : MachineFunctionPass(ID) {}
+  CFIFixupLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
