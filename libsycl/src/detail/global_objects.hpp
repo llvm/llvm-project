@@ -46,10 +46,6 @@ std::vector<std::unique_ptr<PlatformImpl>> &getPlatformCache();
 // the SYCL shared library is first being unloaded.
 void registerStaticVarShutdownHandler();
 
-// Releases all global objects related to liboffload. Used for unittests
-// purposes.
-void releaseOffloadObjects();
-
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL
 

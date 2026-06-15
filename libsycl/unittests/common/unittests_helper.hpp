@@ -34,7 +34,8 @@ struct UnittestsHelper {
 
   ~UnittestsHelper() {
     if (!detail::getPlatformCache().empty()) {
-      detail::releaseOffloadObjects();
+      detail::getPlatformCache().clear();
+      detail::getOffloadTopologies() = {};
     }
   }
 

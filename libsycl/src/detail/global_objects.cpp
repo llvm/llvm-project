@@ -54,10 +54,5 @@ std::vector<PlatformImplUPtr> &getPlatformCache() {
   return PlatformCache;
 }
 
-void releaseOffloadObjects() {
-  getPlatformCache().clear();
-  getOffloadTopologies() = {};
-}
-
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL
