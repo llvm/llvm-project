@@ -2587,12 +2587,18 @@ template <typename CIROp, typename LLVMIntOp>
 static mlir::LogicalResult
 lowerIncDecOp(CIROp op, typename CIROp::Adaptor adaptor,
               mlir::ConversionPatternRewriter &rewriter) {
-  mlir::Type elementType = elementTypeIfVector(op.getType());
   mlir::Type llvmType = adaptor.getInput().getType();
   mlir::Location loc = op.getLoc();
 
   auto maybeNSW = nswFlag(op.getNoSignedWrap());
-  auto one = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, 1);
+  mlir::LLVM::ConstantOp one;
+  if (mlir::isa<cir::VectorType>(op.getType())) {
+    mlir::DenseIntElementsAttr oneVec = mlir::DenseIntElementsAttr::get(
+        mlir::cast<mlir::ShapedType>(llvmType), 1);
+    one = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, oneVec);
+  } else {
+    one = mlir::LLVM::ConstantOp::create(rewriter, loc, llvmType, 1);
+  }
   rewriter.replaceOpWithNewOp<LLVMIntOp>(op, adaptor.getInput(), one, maybeNSW);
   return mlir::success();
 }
