@@ -14,6 +14,8 @@
   imull $17, %ebx, %ebp
 # CHECK: [[#@LINE+1]]:3: error: .bundle_lock forbidden when bundling is disabled
   .bundle_lock
+# CHECK: [[#@LINE+1]]:3: error: .bundle_unlock forbidden when bundling is disabled
+  .bundle_unlock
 
 ## .bundle_align_mode needs a following integer value
 #--- mode-without-arg.s
@@ -69,8 +71,10 @@ foo:
 #--- nested-lock.s
   .bundle_align_mode 4
 foo:
-## bundle alignment mode can be set more than once.
+## repeating .bundle_align_mode with the same value is allowed.
   .bundle_align_mode 4
+# CHECK: [[#@LINE+1]]:3: error: .bundle_align_mode cannot be changed once set
+  .bundle_align_mode 5
   .bundle_lock
 # CHECK: [[#@LINE+1]]:3: error: nested .bundle_lock is not allowed
   .bundle_lock
