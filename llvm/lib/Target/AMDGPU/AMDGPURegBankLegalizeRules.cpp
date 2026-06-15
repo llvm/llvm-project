@@ -2088,8 +2088,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({amdgcn_cvt_scalef32_f16_fp8, amdgcn_cvt_scalef32_f16_bf8},
                    Standard)
-      .Div(V2S16, {{VgprV2S16}, {IntrId, VgprV2S16, Vgpr32, Vgpr32}})
-      .Uni(V2S16, {{UniInVgprV2S16}, {IntrId, VgprV2S16, Vgpr32, Vgpr32}});
+      .Div(V2S16, {{VgprV2S16}, {IntrId, VgprV2S16, Vgpr32, Vgpr32, Imm}})
+      .Uni(V2S16, {{UniInVgprV2S16}, {IntrId, VgprV2S16, Vgpr32, Vgpr32, Imm}});
 
   addRulesForIOpcs({amdgcn_cvt_scalef32_f32_fp8, amdgcn_cvt_scalef32_f32_bf8},
                    Standard)
