@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=instrprof -atomic-counter-promote -S | FileCheck %s
+; RUN: opt < %s -passes=instrprof -instrprof-atomic-counter-update-all -do-counter-promotion -S | FileCheck %s
 
 ; CHECK: define i32 @foo(i32 %n) {
 ; CHECK: entry:

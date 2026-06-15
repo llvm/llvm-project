@@ -15,7 +15,6 @@
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -119,13 +118,8 @@ cl::opt<bool> AtomicCounterUpdateAll(
     cl::desc("Make all profile counter updates atomic (for testing only)"),
     cl::init(false));
 
-cl::opt<bool> AtomicCounterPromote(
-    "atomic-counter-promote",
-    cl::desc("Atomize profile counter updates and promote where possible"),
-    cl::init(false));
-
-cl::opt<bool> SanityCheck(
-    "atomic-counter-promote-check",
+cl::opt<bool> VerifyAtomicPromotion(
+    "verify-atomic-counter-promoted",
     cl::desc("Check that all profile counter updates were made atomic"),
     cl::init(false));
 
@@ -238,7 +232,6 @@ static SampledInstrumentationConfig getSampledInstrumentationConfig() {
 using LoadStorePair = std::pair<Instruction *, Instruction *>;
 
 static void makeAtomic(Instruction *Load, Instruction *Store) {
-  // assert the load and store are accessing the same memory?
   auto *Addition = dyn_cast<BinaryOperator>(Store->getOperand(0));
   assert(Addition && Addition->getOpcode() == Instruction::BinaryOps::Add);
   auto *Addend = Addition->getOperand(1);
@@ -336,6 +329,9 @@ private:
 
   /// Returns true if profile counter update register promotion is enabled.
   bool isCounterPromotionEnabled() const;
+
+  /// Returns true if profile counter updates should be atomic.
+  bool isAtomic() const;
 
   /// Return true if profile sampling is enabled.
   bool isSamplingEnabled() const;
@@ -458,9 +454,10 @@ public:
       BasicBlock *PH, ArrayRef<BasicBlock *> ExitBlocks,
       ArrayRef<Instruction *> InsertPts,
       DenseMap<Loop *, SmallVector<LoadStorePair, 8>> &LoopToCands,
-      LoopInfo &LI)
+      LoopInfo &LI, bool IsAtomic)
       : LoadAndStorePromoter({L, S}, SSA), Store(S), ExitBlocks(ExitBlocks),
-        InsertPts(InsertPts), LoopToCandidates(LoopToCands), LI(LI) {
+        InsertPts(InsertPts), LoopToCandidates(LoopToCands), LI(LI),
+        IsAtomic(IsAtomic) {
     assert(isa<LoadInst>(L));
     assert(isa<StoreInst>(S));
     SSA.AddAvailableValue(PH, Init);
@@ -490,16 +487,11 @@ public:
         Addr = Builder.CreateIntToPtr(BiasInst,
                                       PointerType::getUnqual(Ty->getContext()));
       }
-      if (AtomicCounterUpdatePromoted)
-        // automic update currently can only be promoted across the current
-        // loop, not the whole loop nest.
-        Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, LiveInValue,
-                                MaybeAlign(),
-                                AtomicOrdering::SequentiallyConsistent);
       // Generate the relaxed atomic RMW if we've asked for it and no more
       // promotion is possible.
-      else if (AtomicCounterPromote &&
-               (!IterativeCounterPromotion || !LI.getLoopFor(ExitBlock)))
+      if (AtomicCounterUpdatePromoted ||
+               (IsAtomic &&
+                (!IterativeCounterPromotion || !LI.getLoopFor(ExitBlock))))
         Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, LiveInValue,
                                 MaybeAlign(), AtomicOrdering::Monotonic);
       else {
@@ -523,6 +515,7 @@ private:
   ArrayRef<Instruction *> InsertPts;
   DenseMap<Loop *, SmallVector<LoadStorePair, 8>> &LoopToCandidates;
   LoopInfo &LI;
+  const bool IsAtomic;
 };
 
 /// A helper class to do register promotion for all profile counter
@@ -532,8 +525,9 @@ class PGOCounterPromoter {
 public:
   PGOCounterPromoter(
       DenseMap<Loop *, SmallVector<LoadStorePair, 8>> &LoopToCands,
-      Loop &CurLoop, LoopInfo &LI, BlockFrequencyInfo *BFI)
-      : LoopToCandidates(LoopToCands), L(CurLoop), LI(LI), BFI(BFI) {
+      Loop &CurLoop, LoopInfo &LI, BlockFrequencyInfo *BFI, bool IsAtomic)
+      : LoopToCandidates(LoopToCands), L(CurLoop), LI(LI), BFI(BFI),
+        IsAtomic(IsAtomic) {
 
     // Skip collection of ExitBlocks and InsertPts for loops that will not be
     // able to have counters promoted.
@@ -556,20 +550,17 @@ public:
   }
 
   bool run(int64_t *NumPromoted) {
-    // In this function we examine loop L and other parameters to decide what
-    // candidates are promotable. Once we've promoted what we can, we convert
-    // all remaining candidates to use atomics. This requires that promoted
-    // candidates are set to nullptr in the LoopToCandidates[&L] array.
-    llvm::scope_exit Cleanup([&]() {
-      if (!AtomicCounterPromote)
-        return;
+    bool RC = PromoteCandidates(NumPromoted);
+    if (IsAtomic)
       for (auto &Cand : LoopToCandidates[&L]) {
         if (Cand.first != nullptr && Cand.second != nullptr)
           makeAtomic(Cand.first, Cand.second);
-        Cand = {nullptr, nullptr};
       }
-    });
+    return RC;
+  }
 
+private:
+  bool PromoteCandidates(int64_t *NumPromoted) {
     // Skip 'infinite' loops:
     if (ExitBlocks.size() == 0)
       return false;
@@ -589,6 +580,7 @@ public:
     if (MaxProm == 0)
       return false;
 
+    const void *Ptr = LoopToCandidates.getPointerIntoBucketsArray();
     unsigned Promoted = 0;
     for (auto &Cand : LoopToCandidates[&L]) {
       SmallVector<PHINode *, 4> NewPHIs;
@@ -608,11 +600,15 @@ public:
           continue;
       }
 
-      PGOCounterPromoterHelper Promoter(Cand.first, Cand.second, SSA, InitVal,
-                                        L.getLoopPreheader(), ExitBlocks,
-                                        InsertPts, LoopToCandidates, LI);
+      PGOCounterPromoterHelper Promoter(
+          Cand.first, Cand.second, SSA, InitVal, L.getLoopPreheader(),
+          ExitBlocks, InsertPts, LoopToCandidates, LI, IsAtomic);
       Promoter.run(SmallVector<Instruction *, 2>({Cand.first, Cand.second}));
+
+      assert(LoopToCandidates.isPointerIntoBucketsArray(Ptr) &&
+             "References into LoopToCandidates might be invalid");
       Cand = {nullptr, nullptr};
+
       Promoted++;
       if (Promoted >= MaxProm)
         break;
@@ -706,6 +702,7 @@ private:
   Loop &L;
   LoopInfo &LI;
   BlockFrequencyInfo *BFI;
+  const bool IsAtomic;
 };
 
 enum class ValueProfilingCallType {
@@ -916,9 +913,11 @@ bool InstrLowerer::isSamplingEnabled() const {
 bool InstrLowerer::isCounterPromotionEnabled() const {
   if (DoCounterPromotion.getNumOccurrences() > 0)
     return DoCounterPromotion;
-  if (AtomicCounterPromote)
-    return true;
   return Options.DoCounterPromotion;
+}
+
+bool InstrLowerer::isAtomic() const {
+  return Options.Atomic || AtomicCounterUpdateAll;
 }
 
 static void doAtomicPromotionCheck(Function *F) {
@@ -958,7 +957,7 @@ void InstrLowerer::promoteCounterLoadStores(Function *F) {
     BasicBlock *BB = CounterLoad->getParent();
     Loop *ParentLoop = LI.getLoopFor(BB);
     if (!ParentLoop) {
-      if (AtomicCounterPromote)
+      if (isAtomic())
         makeAtomic(CounterLoad, CounterStore);
       continue;
     }
@@ -970,11 +969,12 @@ void InstrLowerer::promoteCounterLoadStores(Function *F) {
   // Do a post-order traversal of the loops so that counter updates can be
   // iteratively hoisted outside the loop nest.
   for (auto *Loop : llvm::reverse(Loops)) {
-    PGOCounterPromoter Promoter(LoopPromotionCandidates, *Loop, LI, BFI.get());
+    PGOCounterPromoter Promoter(LoopPromotionCandidates, *Loop, LI, BFI.get(),
+                                isAtomic());
     Promoter.run(&TotalCountersPromoted);
   }
 
-  if (AtomicCounterPromote && SanityCheck)
+  if (isAtomic() && VerifyAtomicPromotion)
     doAtomicPromotionCheck(F);
 }
 
@@ -1284,7 +1284,7 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
     Value *StepI64 =
         Builder.CreateZExtOrTrunc(Inc->getStep(), Int64Ty, "step.i64");
     Builder.CreateCall(Callee, {CastAddr, Uniform, StepI64});
-  } else if (Options.Atomic || AtomicCounterUpdateAll ||
+  } else if ((!isCounterPromotionEnabled() && isAtomic()) ||
              (Inc->getIndex()->isNullValue() && AtomicFirstCounter)) {
     Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
                             MaybeAlign(), AtomicOrdering::Monotonic);
@@ -1354,7 +1354,7 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
   //  %mcdc.bits = load i8, ptr %4, align 1
   auto *Bitmap = Builder.CreateLoad(Int8Ty, BitmapByteAddr, "mcdc.bits");
 
-  if (Options.Atomic || AtomicCounterUpdateAll) {
+  if (isAtomic()) {
     // If ((Bitmap & Val) != Val), then execute atomic (Bitmap |= Val).
     // Note, just-loaded Bitmap might not be up-to-date. Use it just for
     // early testing.
