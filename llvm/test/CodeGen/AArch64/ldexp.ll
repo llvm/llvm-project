@@ -55,6 +55,37 @@ entry:
   ret double %call
 }
 
+; A sub-int exponent must be sign-extended to int on the libcall path;
+; PromoteIntOp_ExpOp must not crash on it.
+define double @testExpIntrinsic_i16(double %val, i16 %a) nounwind {
+; SVE-LABEL: testExpIntrinsic_i16:
+; SVE:       // %bb.0: // %entry
+; SVE-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; SVE-NEXT:    sxth w0, w0
+; SVE-NEXT:    bl ldexp
+; SVE-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; SVE-NEXT:    ret
+;
+; GISEL-LABEL: testExpIntrinsic_i16:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; GISEL-NEXT:    sxth w0, w0
+; GISEL-NEXT:    bl ldexp
+; GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; GISEL-NEXT:    ret
+;
+; WINDOWS-LABEL: testExpIntrinsic_i16:
+; WINDOWS:       // %bb.0: // %entry
+; WINDOWS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; WINDOWS-NEXT:    sxth w0, w0
+; WINDOWS-NEXT:    bl ldexp
+; WINDOWS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; WINDOWS-NEXT:    ret
+entry:
+  %call = tail call fast double @llvm.ldexp.f64.i16(double %val, i16 %a)
+  ret double %call
+}
+
 define float @testExpf(float %val, i32 %a) {
 ; SVELINUX-LABEL: testExpf:
 ; SVELINUX:       // %bb.0: // %entry

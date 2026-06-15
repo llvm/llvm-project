@@ -170,42 +170,6 @@ def EmitC_AddOp : EmitC_BinaryOp<"add", []> {
   let hasVerifier = 1;
 }
 
-def EmitC_ApplyOp : EmitC_Op<"apply", [CExpressionInterface]> {
-  let summary = "Deprecated (use address_of/dereference)";
-  let description = [{
-    With the `emitc.apply` operation the operators & (address of) and * (contents of)
-    can be applied to a single operand.
-
-    Example:
-
-    ```mlir
-    // Custom form of applying the & operator.
-    %0 = emitc.apply "&"(%arg0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-
-    // Generic form of the same operation.
-    %0 = "emitc.apply"(%arg0) {applicableOperator = "&"}
-        : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-
-    ```
-  }];
-  let arguments = (ins
-    Arg<StrAttr, "the operator to apply">:$applicableOperator,
-    AnyTypeOf<[EmitCType, EmitC_LValueType]>:$operand
-  );
-  let results = (outs EmitCType:$result);
-  let assemblyFormat = [{
-    $applicableOperator `(` $operand `)` attr-dict `:` functional-type($operand, results)
-  }];
-
-  let extraClassDeclaration = [{
-    bool hasSideEffects() {
-      return getApplicableOperator() == "*";
-    }
-  }];
-
-  let hasVerifier = 1;
-}
-
 def EmitC_BitwiseAndOp : EmitC_BinaryOp<"bitwise_and", []> {
   let summary = "Bitwise and operation";
   let description = [{
@@ -1179,6 +1143,8 @@ def EmitC_MemberOp : EmitC_Op<"member", [CExpressionInterface]> {
 
     ```mlir
     %0 = "emitc.member" (%arg0) {member = "a"}
+        : (!emitc.opaque<"mystruct">) -> i32
+    %0 = "emitc.member" (%arg0) {member = "a"}
         : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
     %1 = "emitc.member" (%arg0) {member = "b"}
         : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
@@ -1187,16 +1153,18 @@ def EmitC_MemberOp : EmitC_Op<"member", [CExpressionInterface]> {
 
   let arguments = (ins
     Arg<StrAttr, "the member to access">:$member,
-    EmitC_LValueOf<[EmitC_OpaqueType]>:$operand
+    AnyTypeOf<[EmitC_OpaqueType, EmitC_LValueOf<[EmitC_OpaqueType]>]>:$operand
   );
-  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>);
+  let results = (outs AnyTypeOf<[EmitCType, EmitC_LValueType]>);
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
       return false;
     }
     bool alwaysInline() {
-      return true; // C doesn't support references.
+      // C doesn't support references.
+      return isa<emitc::LValueType, emitc::ArrayType>(getResult().getType());
     }
   }];
 }
@@ -1331,12 +1299,12 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
 
     Since folding is not supported, it can be used with pointers.
     As an example, it is valid to create pointers to `variable` operations
-    by using `apply` operations and pass these to a `call` operation.
+    by using `address_of` operations and pass these to a `call` operation.
     ```mlir
     %0 = "emitc.variable"() {value = 0 : i32} : () -> !emitc.lvalue<i32>
     %1 = "emitc.variable"() {value = 0 : i32} : () -> !emitc.lvalue<i32>
-    %2 = emitc.apply "&"(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
-    %3 = emitc.apply "&"(%1) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+    %2 = emitc.address_of %0 : !emitc.lvalue<i32>
+    %3 = emitc.address_of %1 : !emitc.lvalue<i32>
     emitc.call_opaque "write"(%2, %3)
       : (!emitc.ptr<i32>, !emitc.ptr<i32>) -> ()
     ```
