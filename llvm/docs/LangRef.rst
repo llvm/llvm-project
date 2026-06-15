@@ -3186,9 +3186,13 @@ The following attributes are currently accepted:
 ``"noundef"(any_type %v)``
   Equivalent to :ref:`noundef <attr_noundef>` on ``%v``.
 
-``"range"(iN %val, iN <lower_bound>, iN <upper_bound>)``
-  Equivalent to :ref:`range(iN <lower_bound>, <upper_bound>) <attr_range>` on
-  ``%val``.
+``"range"(iN %val, iN %lower_bound, iN %upper_bound, i1 %wraps)``
+  Equivalent to :ref:`range(iN %lower_bound, %upper_bound) <attr_range>` on
+  ``%val``, except that ``%wraps`` determines whether the range is allowed to
+  wrap and ``%upper_bound`` is always allowed to be equal to ``%lower_bound``.
+  As a result, ``%upper_bound <= %lower_bound`` and ``%wraps`` being false
+  implies an empty range, while ``%lower_bound == %upper_bound`` and ``%wraps``
+  being true implies a full range (i.e. nothing).
 
 ``"separate_storage"(ptr %p1, ptr %p2)``
   This indicates that no pointer :ref:`based <pointeraliasing>` on one of its

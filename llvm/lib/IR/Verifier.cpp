@@ -6136,19 +6136,22 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               "noundef assumptions should have 1 argument", Call);
         break;
       case BundleAttr::Range:
-        Check(OBU.Inputs.size() == 3,
-              "range assumptions should have 3 arguments", Call);
+        Check(OBU.Inputs.size() == 4,
+              "range assumptions should have 4 arguments", Call);
         Check(GetTypeAt(0)->isIntegerTy(),
               "first argument should be an integer", Call);
-        Check(isa<ConstantInt>(OBU.Inputs[1]),
-              "second argument should be a constant integer", Call);
-        Check(isa<ConstantInt>(OBU.Inputs[2]),
-              "third argument should be a constant integer", Call);
+        Check(GetTypeAt(1)->isIntegerTy(),
+              "second argument should be an integer", Call);
+        Check(GetTypeAt(2)->isIntegerTy(),
+              "third argument should be an integer", Call);
+        Check(isa<ConstantInt>(OBU.Inputs[3]) &&
+                  cast<ConstantInt>(OBU.Inputs[3])->getBitWidth() == 1,
+              "fourth argument should be a constant bool", Call);
         Check(GetTypeAt(0)->getIntegerBitWidth() ==
                       GetTypeAt(1)->getIntegerBitWidth() &&
                   GetTypeAt(1)->getIntegerBitWidth() ==
                       GetTypeAt(2)->getIntegerBitWidth(),
-              "all integers should have the same bit width", Call);
+              "first three integers should have the same bit width", Call);
         break;
       case BundleAttr::SeparateStorage:
         Check(OBU.Inputs.size() == 2,

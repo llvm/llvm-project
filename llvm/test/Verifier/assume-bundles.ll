@@ -82,26 +82,28 @@ define void @func(ptr %P, i32 %P1, ptr %P2, ptr %P3, i1 %cond) {
 
 ; Range checks
 ;
-; CHECK: range assumptions should have 3 arguments
+; CHECK: range assumptions should have 4 arguments
   call void @llvm.assume(i1 true) ["range"()]
-; CHECK: range assumptions should have 3 arguments
+; CHECK: range assumptions should have 4 arguments
   call void @llvm.assume(i1 true) ["range"(i32 %P1)]
-; CHECK: range assumptions should have 3 arguments
+; CHECK: range assumptions should have 4 arguments
   call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 0)]
-; This one is valid
+; CHECK: range assumptions should have 4 arguments
   call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 0, i32 0)]
-; CHECK: range assumptions should have 3 arguments
-  call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 0, i32 0, i32 0)]
+; This one is valid
+  call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 %P1, i32 0, i1 true)]
+; CHECK: range assumptions should have 4 arguments
+  call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 0, i32 0, i32 0, i32 0)]
 ; CHECK: first argument should be an integer
-  call void @llvm.assume(i1 true) ["range"(ptr %P, i32 0, i32 0)]
-; CHECK: second argument should be a constant integer
-  call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 %P1, i32 0)]
-; CHECK: third argument should be a constant integer
-  call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 0, i32 %P1)]
-; CHECK: all integers should have the same bit width
-  call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 0, i33 0)]
-; CHECK: all integers should have the same bit width
-  call void @llvm.assume(i1 true) ["range"(i32 %P1, i33 0, i32 0)]
+  call void @llvm.assume(i1 true) ["range"(ptr %P, i32 0, i32 0, i1 true)]
+; CHECK: first three integers should have the same bit width
+  call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 0, i33 0, i1 true)]
+; CHECK: first three integers should have the same bit width
+  call void @llvm.assume(i1 true) ["range"(i32 %P1, i33 0, i32 0, i1 true)]
+; CHECK: fourth argument should be a constant bool
+  call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 0, i32 0, i2 0)]
+; CHECK: fourth argument should be a constant bool
+  call void @llvm.assume(i1 true) ["range"(i32 %P1, i32 0, i32 0, i1 %cond)]
 
 ; SeparateStorage checks
 ;
