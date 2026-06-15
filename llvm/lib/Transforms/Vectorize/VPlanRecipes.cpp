@@ -527,8 +527,10 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
   }
   case Instruction::InsertElement:
     // The inserted scalar (operand 1) must match the vector element type;
-    // operand 2 is the index and may have a different type.
+    // operand 2 must be an integer.
     AssertOperandType(1, Op0Ty);
+    assert(Operands[2]->getScalarType()->isIntegerTy() &&
+           "expected integer operand");
     return Op0Ty;
   case VPInstruction::ReductionStartVector:
     // The start value and the identity value (operands 0 and 1) fill the same
@@ -547,6 +549,8 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
   }
   case VPInstruction::PtrAdd:
   case VPInstruction::WidePtrAdd:
+    assert(Operands[0]->getScalarType()->isPointerTy() &&
+           "expected pointer operand");
     assert(Operands[1]->getScalarType()->isIntegerTy() &&
            "expected integer operand");
     return Op0Ty;
