@@ -284,9 +284,18 @@ Error lto::DTLTO::addObjectFilesToLink() {
             createStringError(inconvertibleErrorCode(),
                               "Cannot get a cache file stream: %s",
                               Job.NativeObjectPath.data()));
-      // Store a file buffer into the cache stream.
+
       auto &CacheStream = *(CachedFileStreamOrErr->get());
-      *(CacheStream.OS) << ObjFileMbRef.getBuffer();
+
+      // Store a file path into the cache stream. This file later will be
+      // renamed into cache file.
+      *(CacheStream.OS) << Job.NativeObjectPath;
+      if (Error Err = CacheStream.commit())
+        return Err;
+
+      AddBufferFn AddBuffer = CacheStream.GetAddBuffer();
+      AddBuffer(Job.Task, Job.ModuleID, std::move(ObjFileMbOrErr.get()));
+
       if (Error Err = CacheStream.commit())
         return Err;
     } else {
