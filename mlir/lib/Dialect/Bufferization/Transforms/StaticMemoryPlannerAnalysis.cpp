@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
@@ -199,44 +200,40 @@ public:
     // Step 4: Find the first allocation's location to place arena
     mlir::Operation *firstAlloc = candidates.front().alloc;
     mlir::OpBuilder builder(firstAlloc);
-
-    // Get element type from first allocation (assume all same type for now)
-    mlir::Type elementType = candidates.front().alloc.getType().getElementType();
-    unsigned elementSizeInBits = elementType.getIntOrFloatBitWidth();
-    unsigned elementSizeInBytes = (elementSizeInBits + 7) / 8;
     
-    // Step 5: Create arena allocation with maximum alignment
-    // Convert total size from bytes to elements
-    int64_t arenaSizeInElements = (totalSize + elementSizeInBytes - 1) / elementSizeInBytes;
-    auto arenaType = mlir::MemRefType::get({arenaSizeInElements}, elementType);
+    // Step 5: Create arena allocation as i8 byte buffer
+    // This allows the same arena to hold multiple data types (f32, i64, etc.)
+    auto i8Type = builder.getI8Type();
+    auto arenaType = mlir::MemRefType::get({totalSize}, i8Type);
     auto arenaAlloc = mlir::memref::AllocOp::create(builder, firstAlloc->getLoc(), arenaType);
     arenaAlloc.setAlignmentAttr(builder.getI64IntegerAttr(maxAlignment));
 
     LLVM_DEBUG(llvm::dbgs() << "[static-memory-planner] created arena: size="
-                            << arenaSizeInElements << " elements (" << totalSize 
-                            << " bytes), alignment=" << maxAlignment << " bytes\n");
+                            << totalSize << " bytes, alignment="
+                            << maxAlignment << " bytes\n");
 
-    // Step 6: Replace each alloc with a subview and remove deallocs
+    // Step 6: Replace each alloc with memref.view directly on arena
     for (auto &candidate : candidates) {
-      mlir::OpBuilder subviewBuilder(candidate.alloc);
+      mlir::OpBuilder viewBuilder(candidate.alloc);
+      mlir::Location loc = candidate.alloc.getLoc();
       
-      // Create subview into arena
-      llvm::SmallVector<mlir::OpFoldResult> offsets, sizes, strides;
+      // Get the original memref type that we need to recreate
+      mlir::MemRefType originalType = candidate.alloc.getType();
       
-      // Convert byte offsets/sizes back to element indices for the arena
-      int64_t offsetInElements = candidate.offset / elementSizeInBytes;
-      int64_t sizeInElements = candidate.sizeInBytes / elementSizeInBytes;
+      // Create a constant for the byte offset into the arena
+      mlir::Value offsetIndex = mlir::arith::ConstantIndexOp::create(
+          viewBuilder, loc, candidate.offset);
       
-      offsets.push_back(subviewBuilder.getIndexAttr(offsetInElements));
-      sizes.push_back(subviewBuilder.getIndexAttr(sizeInElements));
-      strides.push_back(subviewBuilder.getIndexAttr(1));
+      // Use memref.view to create a typed view directly on the i8 arena
+      // memref.view: memref<...xi8>, offset -> memref<shape x type>
+      llvm::SmallVector<mlir::Value> dynamicSizes; // Empty for static shapes
       
-      auto subview = mlir::memref::SubViewOp::create(
-          subviewBuilder, candidate.alloc.getLoc(), arenaAlloc.getResult(),
-          offsets, sizes, strides);
+      auto view = mlir::memref::ViewOp::create(
+          viewBuilder, loc, originalType, arenaAlloc.getResult(), 
+          offsetIndex, dynamicSizes);
 
-      // Replace all uses of the original alloc
-      candidate.alloc.getResult().replaceAllUsesWith(subview.getResult());
+      // Replace all uses of the original alloc with the viewed memref
+      candidate.alloc.getResult().replaceAllUsesWith(view.getResult());
       
       // Remove the original alloc and dealloc
       candidate.alloc.erase();
