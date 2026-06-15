@@ -3528,14 +3528,16 @@ ItaniumCXXABI::getOrCreateVirtualFunctionPointerThunk(const CXXMethodDecl *MD) {
                /*IsMustTail=*/true, SourceLocation(), true);
   auto *Call = cast<llvm::CallInst>(CallOrInvoke);
   Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
-  if (Call->getType()->isVoidTy())
-    CGF.Builder.CreateRetVoid();
-  else
-    CGF.Builder.CreateRet(Call);
+  // EmitCall already emits the return and clears the insertion point for the
+  // musttail call; only emit one here if it left a valid insertion point.
+  if (CGF.HaveInsertPoint()) {
+    if (Call->getType()->isVoidTy())
+      CGF.Builder.CreateRetVoid();
+    else
+      CGF.Builder.CreateRet(Call);
+    CGF.Builder.ClearInsertionPoint();
+  }
 
-  // Finish the function to maintain CodeGenFunction invariants.
-  // FIXME: Don't emit unreachable code.
-  CGF.EmitBlock(CGF.createBasicBlock());
   CGF.FinishFunction();
   return ThunkFn;
 }
