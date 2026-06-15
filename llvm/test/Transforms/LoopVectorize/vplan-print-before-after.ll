@@ -1,28 +1,21 @@
 ; RUN: opt -passes=loop-vectorize -disable-output  -force-vector-width=4  < %s \
-; RUN:   -vplan-print-after=simplify -vplan-print-after=printFinalVPlan \
-; RUN:   2>&1 | FileCheck %s --check-prefix=CHECK-AFTER --implicit-check-not "VPlan after"
-; RUN: opt -passes=loop-vectorize -disable-output  -force-vector-width=4  < %s \
 ; RUN:   -vplan-print-before=simplify -vplan-print-before=printFinalVPlan \
-; RUN:   2>&1 | FileCheck %s --check-prefix=CHECK-BEFORE --implicit-check-not "VPlan after"
+; RUN:   2>&1 | FileCheck %s -DBEFORE_OR_AFTER=before  --check-prefix=CHECK \
+; RUN:           --implicit-check-not "VPlan before"
+; RUN: opt -passes=loop-vectorize -disable-output  -force-vector-width=4  < %s \
+; RUN:   -vplan-print-after=simplify -vplan-print-after=printFinalVPlan \
+; RUN:   2>&1 | FileCheck %s -DBEFORE_OR_AFTER=after --check-prefix=CHECK \
+; RUN:           --implicit-check-not "VPlan after"
 ; REQUIRES: asserts
 
-; CHECK-BEFORE:      VPlan for loop in 'foo' before simplifyRecipes
-; CHECK-BEFORE-NEXT: VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK-BEFORE:      VPlan for loop in 'foo' before simplifyBlends
-; CHECK-BEFORE-NEXT: VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK-BEFORE:      VPlan for loop in 'foo' before simplifyRecipes
-; CHECK-BEFORE-NEXT: VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK-BEFORE:      VPlan for loop in 'foo' before printFinalVPlan
-; CHECK-BEFORE-NEXT: VPlan 'Final VPlan for VF={4},UF={1}' {
-
-; CHECK-AFTER:      VPlan for loop in 'foo' after simplifyRecipes
-; CHECK-AFTER-NEXT: VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK-AFTER:      VPlan for loop in 'foo' after simplifyBlends
-; CHECK-AFTER-NEXT: VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK-AFTER:      VPlan for loop in 'foo' after simplifyRecipes
-; CHECK-AFTER-NEXT: VPlan 'Initial VPlan for VF={4},UF>=1' {
-; CHECK-AFTER:      VPlan for loop in 'foo' after printFinalVPlan
-; CHECK-AFTER-NEXT: VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK:      VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] simplifyRecipes
+; CHECK-NEXT: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:      VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] simplifyBlends
+; CHECK-NEXT: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:      VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] simplifyRecipes
+; CHECK-NEXT: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK:      VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] printFinalVPlan
+; CHECK-NEXT: VPlan 'Final VPlan for VF={4},UF={1}' {
 
 define void @foo(ptr %ptr, i64 %n) {
 entry:

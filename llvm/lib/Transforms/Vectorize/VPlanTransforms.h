@@ -42,6 +42,7 @@ LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintBeforeAll;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintAfterAll;
 LLVM_ABI_FOR_TEST extern cl::list<std::string> VPlanPrintBeforePasses;
 LLVM_ABI_FOR_TEST extern cl::list<std::string> VPlanPrintAfterPasses;
@@ -56,11 +57,11 @@ struct VPlanTransforms {
   static decltype(auto) runPass(StringRef PassName, PassTy &&Pass, VPlan &Plan,
                                 ArgsTy &&...Args) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    auto PrintPlan = [&](bool IsBeforePass = false) {
+    auto PrintPlan = [&](StringRef BeforeOrAfterStr) {
       dbgs()
           << "VPlan for loop in '"
           << Plan.getScalarHeader()->getIRBasicBlock()->getParent()->getName()
-          << "' " << (IsBeforePass ? "before" : "after") << " " << PassName
+          << "' " << BeforeOrAfterStr << " " << PassName
           << '\n';
       if (VPlanPrintVectorRegionScope && Plan.getVectorLoopRegion())
         Plan.getVectorLoopRegion()->print(dbgs());
@@ -75,8 +76,8 @@ struct VPlanTransforms {
               }));
     };
 
-    if (MatchesPassListOption(VPlanPrintBeforePasses))
-      PrintPlan(/*IsBeforePass=*/true);
+    if (VPlanPrintBeforeAll || MatchesPassListOption(VPlanPrintBeforePasses))
+      PrintPlan("before");
 #endif
 
     scope_exit PostTransformActions{[&]() {
@@ -84,7 +85,7 @@ struct VPlanTransforms {
       // Make sure to print before verification, so that output is more useful
       // in case of failures:
       if (VPlanPrintAfterAll || MatchesPassListOption(VPlanPrintAfterPasses))
-        PrintPlan();
+        PrintPlan("after");
 #endif
       if (VerifyEachVPlan && EnableVerify) {
         if (!verifyVPlanIsValid(Plan))
