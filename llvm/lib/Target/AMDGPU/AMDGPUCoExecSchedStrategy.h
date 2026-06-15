@@ -127,6 +127,8 @@ inline FlavorGroup all() {
 /// than the generic CandReason enum for debugging purposes.
 enum class AMDGPUSchedReason : uint8_t {
   None,
+  Stall,
+  MemoryPipeline,
   CritResourceBalance, // tryCriticalResource chose based on resource pressure
   CritResourceDep,     // tryCriticalResourceDependency chose based on enabling
   NUM_REASONS
@@ -136,6 +138,10 @@ inline StringRef getReasonName(AMDGPUSchedReason R) {
   switch (R) {
   case AMDGPUSchedReason::None:
     return "None";
+  case AMDGPUSchedReason::Stall:
+    return "Stall";
+  case AMDGPUSchedReason::MemoryPipeline:
+    return "MemoryPipeline";
   case AMDGPUSchedReason::CritResourceBalance:
     return "CritResource";
   case AMDGPUSchedReason::CritResourceDep:
@@ -234,6 +240,15 @@ public:
 
     return BufferCycles +
            ScheduledSUs[ScheduledSUs.size() - BufferSize]->TopReadyCycle;
+  }
+
+  /// \returns the most recently scheduled SU for this HardwareUnit.
+  SUnit *getLastScheduledSU() {
+    unsigned ScheduledCount = ScheduledSUs.size();
+    if (!ScheduledCount)
+      return nullptr;
+
+    return ScheduledSUs[ScheduledCount - 1];
   }
 
   /// \returns the SUnit with higher priority or nullptr if they are the same.
@@ -348,6 +363,17 @@ public:
   bool tryEffectiveStall(GenericSchedulerBase::SchedCandidate &TryCand,
                          GenericSchedulerBase::SchedCandidate &Cand,
                          SchedBoundary &Zone);
+
+  /// Prioritize instructions involved the memory pipeline. Currently we don't
+  /// have any modelling of pipelined loads, so we control the layout of the
+  /// pipeline per iteration by giving the user some control over the stalls
+  /// (e.g. between s_barrier_signal and s_barrier_wait) and scheduling the
+  /// pipeline instructions as soon as they are ready.
+  ///
+  /// TODO -- add better modelling and heuristics for pipelining based
+  /// scheduling.
+  bool tryMemoryPipeline(GenericSchedulerBase::SchedCandidate &TryCand,
+                         GenericSchedulerBase::SchedCandidate &Cand);
 
   /// Check for critical resource consumption. Prefer the candidate that uses
   /// the most prioritized HardwareUnit. If both candidates use the same
