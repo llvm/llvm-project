@@ -4354,7 +4354,7 @@ static void FixMisparsedFunctionReference(
   if (auto *func{
           std::get_if<common::Indirection<parser::FunctionReference>>(&u)}) {
     parser::FunctionReference &funcRef{func->value()};
-    if (semantics::IsMisparsedArrayElement(context, funcRef)) {
+    if (semantics::CheckMisparsedArrayElement(context, funcRef)) {
       if constexpr (common::HasMember<common::Indirection<parser::Designator>,
                         uType>) {
         u = common::Indirection{funcRef.ConvertToArrayElementRef()};
@@ -5596,7 +5596,7 @@ void NoteUsedSymbols(
       evaluate::CollectUsedSymbolValues(context, expr, isDefinition));
 }
 
-bool IsMisparsedArrayElement(
+bool CheckMisparsedArrayElement(
     SemanticsContext &context, const parser::FunctionReference &funcRef) {
   // Ensure that there are no argument keywords
   for (const auto &arg :
