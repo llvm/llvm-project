@@ -430,7 +430,7 @@ static OffsetResult collectOffsets(GEPOperator &GEP, const DataLayout &DL) {
     Result.BasePtr = InnerGEP->getPointerOperand();
     Result.ConstantOffset += ConstantOffset2;
     if (Result.VariableOffsets.size() == 0 && VariableOffsets2.size() == 1)
-      Result.VariableOffsets = VariableOffsets2;
+      Result.VariableOffsets = std::move(VariableOffsets2);
     Result.NW &= InnerGEP->getNoWrapFlags();
   }
   return Result;
@@ -956,9 +956,9 @@ void State::addInfoForInductions(BasicBlock &BB) {
 
   BasicBlock *InLoopSucc = nullptr;
   if (Pred == CmpInst::ICMP_NE)
-    InLoopSucc = cast<BranchInst>(BB.getTerminator())->getSuccessor(0);
+    InLoopSucc = cast<CondBrInst>(BB.getTerminator())->getSuccessor(0);
   else if (Pred == CmpInst::ICMP_EQ)
-    InLoopSucc = cast<BranchInst>(BB.getTerminator())->getSuccessor(1);
+    InLoopSucc = cast<CondBrInst>(BB.getTerminator())->getSuccessor(1);
   else
     return;
 
@@ -1129,6 +1129,8 @@ void State::addInfoFor(BasicBlock &BB) {
   addInfoForInductions(BB);
   auto &DL = BB.getDataLayout();
 
+  Value *A, *B;
+  CmpPredicate Pred;
   // True as long as the current instruction is guaranteed to execute.
   bool GuaranteedToExecute = true;
   // Queue conditions and assumes.
@@ -1152,8 +1154,6 @@ void State::addInfoFor(BasicBlock &BB) {
       if (!AccessSize.isFixed())
         return;
       if (GuaranteedToExecute) {
-        CmpPredicate Pred;
-        Value *A, *B;
         if (getConstraintFromMemoryAccess(*GEP, AccessSize.getFixedValue(),
                                           Pred, A, B, DL, TLI)) {
           // The memory access is guaranteed to execute when BB is entered,
@@ -1180,9 +1180,7 @@ void State::addInfoFor(BasicBlock &BB) {
     Intrinsic::ID ID = II ? II->getIntrinsicID() : Intrinsic::not_intrinsic;
     switch (ID) {
     case Intrinsic::assume: {
-      Value *A, *B;
-      CmpPredicate Pred;
-      if (!match(I.getOperand(0), m_ICmp(Pred, m_Value(A), m_Value(B))))
+      if (!match(I.getOperand(0), m_ICmpLike(Pred, m_Value(A), m_Value(B))))
         break;
       if (GuaranteedToExecute) {
         // The assume is guaranteed to execute when BB is entered, hence Cond
@@ -1223,6 +1221,16 @@ void State::addInfoFor(BasicBlock &BB) {
       break;
     }
 
+    // Add facts from unsigned division and remainder.
+    //   urem x, n: result < n  and  result <= x
+    //   udiv x, n: result <= x
+    if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
+      if ((BO->getOpcode() == Instruction::URem ||
+           BO->getOpcode() == Instruction::UDiv) &&
+          isGuaranteedNotToBePoison(BO))
+        WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), BO));
+    }
+
     GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
   }
 
@@ -1238,8 +1246,8 @@ void State::addInfoFor(BasicBlock &BB) {
     return;
   }
 
-  auto *Br = dyn_cast<BranchInst>(BB.getTerminator());
-  if (!Br || !Br->isConditional())
+  auto *Br = dyn_cast<CondBrInst>(BB.getTerminator());
+  if (!Br)
     return;
 
   Value *Cond = Br->getCondition();
@@ -1268,11 +1276,10 @@ void State::addInfoFor(BasicBlock &BB) {
       QueueValue(Op0);
       while (!CondWorkList.empty()) {
         Value *Cur = CondWorkList.pop_back_val();
-        if (auto *Cmp = dyn_cast<ICmpInst>(Cur)) {
+        if (match(Cur, m_ICmpLike(Pred, m_Value(A), m_Value(B)))) {
           WorkList.emplace_back(FactOrCheck::getConditionFact(
               DT.getNode(Successor),
-              IsOr ? Cmp->getInverseCmpPredicate() : Cmp->getCmpPredicate(),
-              Cmp->getOperand(0), Cmp->getOperand(1)));
+              IsOr ? CmpPredicate::getInverse(Pred) : Pred, A, B));
           continue;
         }
         if (IsOr && match(Cur, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
@@ -1290,17 +1297,14 @@ void State::addInfoFor(BasicBlock &BB) {
     return;
   }
 
-  auto *CmpI = dyn_cast<ICmpInst>(Br->getCondition());
-  if (!CmpI)
+  if (!match(Br->getCondition(), m_ICmpLike(Pred, m_Value(A), m_Value(B))))
     return;
   if (canAddSuccessor(BB, Br->getSuccessor(0)))
     WorkList.emplace_back(FactOrCheck::getConditionFact(
-        DT.getNode(Br->getSuccessor(0)), CmpI->getCmpPredicate(),
-        CmpI->getOperand(0), CmpI->getOperand(1)));
+        DT.getNode(Br->getSuccessor(0)), Pred, A, B));
   if (canAddSuccessor(BB, Br->getSuccessor(1)))
     WorkList.emplace_back(FactOrCheck::getConditionFact(
-        DT.getNode(Br->getSuccessor(1)), CmpI->getInverseCmpPredicate(),
-        CmpI->getOperand(0), CmpI->getOperand(1)));
+        DT.getNode(Br->getSuccessor(1)), CmpPredicate::getInverse(Pred), A, B));
 }
 
 #ifndef NDEBUG
@@ -1502,9 +1506,7 @@ static bool checkAndReplaceCondition(
     generateReproducer(Cmp, ReproducerModule, ReproducerCondStack, Info, DT);
     Constant *ConstantC = ConstantInt::getBool(
         CmpInst::makeCmpResultType(Cmp->getType()), IsTrue);
-    bool Changed = false;
-    Cmp->replaceUsesWithIf(ConstantC, [&DT, NumIn, NumOut, ContextInst,
-                                       &Changed](Use &U) {
+    bool Changed = Cmp->replaceUsesWithIf(ConstantC, [&](Use &U) {
       auto *UserI = getContextInstForUse(U);
       auto *DTN = DT.getNode(UserI->getParent());
       if (!DTN || DTN->getDFSNumIn() < NumIn || DTN->getDFSNumOut() > NumOut)
@@ -1516,9 +1518,7 @@ static bool checkAndReplaceCondition(
       // Conditions in an assume trivially simplify to true. Skip uses
       // in assume calls to not destroy the available information.
       auto *II = dyn_cast<IntrinsicInst>(U.getUser());
-      bool ShouldReplace = !II || II->getIntrinsicID() != Intrinsic::assume;
-      Changed |= ShouldReplace;
-      return ShouldReplace;
+      return !II || II->getIntrinsicID() != Intrinsic::assume;
     });
     NumCondsRemoved++;
 
@@ -2000,6 +2000,21 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         continue;
       }
 
+      if (auto *BO = dyn_cast<BinaryOperator>(CB.Inst)) {
+        if (BO->getOpcode() == Instruction::URem) {
+          // urem x, n: result < n (remainder is always less than divisor)
+          AddFact(CmpInst::ICMP_ULT, BO, BO->getOperand(1));
+          // urem x, n: result <= x (remainder is at most the dividend)
+          AddFact(CmpInst::ICMP_ULE, BO, BO->getOperand(0));
+          continue;
+        }
+        if (BO->getOpcode() == Instruction::UDiv) {
+          // udiv x, n: result <= x (quotient is at most the dividend)
+          AddFact(CmpInst::ICMP_ULE, BO, BO->getOperand(0));
+          continue;
+        }
+      }
+
       auto &DL = F.getDataLayout();
       auto AddFactsAboutIndices = [&](Value *Ptr, Type *AccessType) {
         CmpPredicate Pred;
@@ -2039,10 +2054,11 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         continue;
       }
     } else {
-      bool Matched = match(CB.Inst, m_Intrinsic<Intrinsic::assume>(
-                                        m_ICmp(Pred, m_Value(A), m_Value(B))));
+      bool Matched = match(CB.Inst, m_Intrinsic<Intrinsic::assume>(m_ICmpLike(
+                                        Pred, m_Value(A), m_Value(B))));
       (void)Matched;
-      assert(Matched && "Must have an assume intrinsic with a icmp operand");
+      assert(Matched &&
+             "Must have an assume intrinsic with a icmp like operand");
     }
     AddFact(Pred, A, B);
   }

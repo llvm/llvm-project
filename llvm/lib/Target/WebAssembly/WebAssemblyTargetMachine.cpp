@@ -20,6 +20,10 @@
 #include "WebAssemblyTargetObjectFile.h"
 #include "WebAssemblyTargetTransformInfo.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
@@ -45,12 +49,6 @@ static cl::opt<bool> WasmDisableExplicitLocals(
     "wasm-disable-explicit-locals", cl::Hidden,
     cl::desc("WebAssembly: output implicit locals in"
              " instruction output for test purposes only."),
-    cl::init(false));
-
-static cl::opt<bool> WasmDisableFixIrreducibleControlFlowPass(
-    "wasm-disable-fix-irreducible-control-flow-pass", cl::Hidden,
-    cl::desc("webassembly: disables the fix "
-             " irreducible control flow optimization pass"),
     cl::init(false));
 
 // Exception handling & setjmp-longjmp handling related options.
@@ -92,6 +90,9 @@ LLVMInitializeWebAssemblyTarget() {
 
   // Register backend passes
   auto &PR = *PassRegistry::getPassRegistry();
+  initializeGlobalISel(PR);
+  initializeWebAssemblyPreLegalizerCombinerPass(PR);
+  initializeWebAssemblyPostLegalizerCombinerPass(PR);
   initializeWebAssemblyAddMissingPrototypesPass(PR);
   initializeWebAssemblyLowerEmscriptenEHSjLjPass(PR);
   initializeLowerGlobalDtorsLegacyPassPass(PR);
@@ -214,6 +215,9 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
 
   basicCheckForEHAndSjLj(this);
   initAsmInfo();
+
+  LLT::setUseExtended(true);
+
   // Note that we don't use setRequiresStructuredCFG(true). It disables
   // optimizations than we're ok with, and want, such as critical edge
   // splitting and tail merging.
@@ -245,11 +249,6 @@ WebAssemblyTargetMachine::getSubtargetImpl(const Function &F) const {
       CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
-
-  // This needs to be done before we create a new subtarget since any
-  // creation will depend on the TM and the code generation flags on the
-  // function that reside in TargetOptions.
-  resetTargetOptions(F);
 
   return getSubtargetImpl(CPU, FS);
 }
@@ -406,7 +405,7 @@ private:
     // Code compiled without atomics or bulk-memory may have had its atomics or
     // thread-local data lowered to nonatomic operations or non-thread-local
     // data. In that case, we mark the pseudo-feature "shared-mem" as disallowed
-    // to tell the linker that it would be unsafe to allow this code ot be used
+    // to tell the linker that it would be unsafe to allow this code to be used
     // in a module with shared memory.
     if (Stripped) {
       M.addModuleFlag(Module::ModFlagBehavior::Error, "wasm-feature-shared-mem",
@@ -442,6 +441,13 @@ public:
 
   // No reg alloc
   bool addRegAssignAndRewriteOptimized() override { return false; }
+
+  bool addIRTranslator() override;
+  void addPreLegalizeMachineIR() override;
+  bool addLegalizeMachineIR() override;
+  void addPreRegBankSelect() override;
+  bool addRegBankSelect() override;
+  bool addGlobalInstructionSelect() override;
 };
 } // end anonymous namespace
 
@@ -508,6 +514,9 @@ void WebAssemblyPassConfig::addIRPasses() {
 
   // Expand indirectbr instructions to switches.
   addPass(createIndirectBrExpandPass());
+
+  // Try to expand `vecreduce_{and, or}` into `{any, all}_true`.
+  addPass(createWebAssemblyReduceToAnyAllTrue(getWebAssemblyTargetMachine()));
 
   TargetPassConfig::addIRPasses();
 }
@@ -590,9 +599,12 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   // Nullify DBG_VALUE_LISTs that we cannot handle.
   addPass(createWebAssemblyNullifyDebugValueLists());
 
+  // Remove any unreachable blocks that may be left floating around.
+  // Rare, but possible. Needed for WebAssemblyFixIrreducibleControlFlow.
+  addPass(&UnreachableMachineBlockElimID);
+
   // Eliminate multiple-entry loops.
-  if (!WasmDisableFixIrreducibleControlFlowPass)
-    addPass(createWebAssemblyFixIrreducibleControlFlow());
+  addPass(createWebAssemblyFixIrreducibleControlFlow());
 
   // Do various transformations for exception handling.
   // Every CFG-changing optimizations should come before this.
@@ -659,6 +671,46 @@ void WebAssemblyPassConfig::addPreEmitPass() {
 bool WebAssemblyPassConfig::addPreISel() {
   TargetPassConfig::addPreISel();
   addPass(createWebAssemblyLowerRefTypesIntPtrConv());
+  return false;
+}
+
+bool WebAssemblyPassConfig::addIRTranslator() {
+  addPass(new IRTranslator());
+  return false;
+}
+
+void WebAssemblyPassConfig::addPreLegalizeMachineIR() {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createWebAssemblyPreLegalizerCombiner());
+  }
+}
+bool WebAssemblyPassConfig::addLegalizeMachineIR() {
+  addPass(new Legalizer());
+  return false;
+}
+
+void WebAssemblyPassConfig::addPreRegBankSelect() {
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createWebAssemblyPostLegalizerCombiner());
+  }
+}
+
+bool WebAssemblyPassConfig::addRegBankSelect() {
+  addPass(new RegBankSelect());
+  return false;
+}
+
+bool WebAssemblyPassConfig::addGlobalInstructionSelect() {
+  addPass(new InstructionSelect(getOptLevel()));
+
+  // We insert only if ISelDAG won't insert these at a later point.
+  if (isGlobalISelAbortEnabled()) {
+    addPass(createWebAssemblyArgumentMove());
+    addPass(createWebAssemblySetP2AlignOperands());
+    addPass(createWebAssemblyFixBrTableDefaults());
+    addPass(createWebAssemblyCleanCodeAfterTrap());
+  }
+
   return false;
 }
 

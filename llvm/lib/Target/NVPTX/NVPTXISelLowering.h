@@ -36,28 +36,9 @@ public:
                           const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
-  Align getFunctionArgumentAlignment(const Function *F, Type *Ty, unsigned Idx,
-                                     const DataLayout &DL) const;
-
-  /// getFunctionParamOptimizedAlign - since function arguments are passed via
-  /// .param space, we may want to increase their alignment in a way that
-  /// ensures that we can effectively vectorize their loads & stores. We can
-  /// increase alignment only if the function has internal or has private
-  /// linkage as for other linkage types callers may already rely on default
-  /// alignment. To allow using 128-bit vectorized loads/stores, this function
-  /// ensures that alignment is 16 or greater.
-  Align getFunctionParamOptimizedAlign(const Function *F, Type *ArgTy,
-                                       const DataLayout &DL) const;
-
-  /// Helper for computing alignment of a device function byval parameter.
-  Align getFunctionByValParamAlign(const Function *F, Type *ArgTy,
-                                   Align InitialAlign,
-                                   const DataLayout &DL) const;
-
   // Helper for getting a function parameter name. Name is composed from
-  // its index and the function name. Negative index corresponds to special
-  // parameter (unsized array) used for passing variable arguments.
-  std::string getParamName(const Function *F, int Idx) const;
+  // its index and the function name.
+  std::string getParamName(const Function *F, unsigned Idx) const;
 
   /// isLegalAddressingMode - Return true if the addressing mode represented
   /// by AM is legal for this target, for a load/store of the specified type
@@ -103,7 +84,6 @@ public:
 
   std::string getPrototype(const DataLayout &DL, Type *, const ArgListTy &,
                            const SmallVectorImpl<ISD::OutputArg> &,
-                           std::optional<unsigned> FirstVAArg,
                            const CallBase &CB, unsigned UniqueCallSite) const;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
@@ -124,6 +104,10 @@ public:
 
   TargetLoweringBase::LegalizeTypeAction
   getPreferredVectorAction(MVT VT) const override;
+
+  bool isShuffleMaskLegal(ArrayRef<int>, EVT VT) const override {
+    return isTypeLegal(VT);
+  }
 
   // Get the degree of precision we want from 32-bit floating point division
   // operations.
@@ -208,8 +192,8 @@ private:
   const NVPTXSubtarget &STI; // cache the subtarget here
   mutable unsigned GlobalUniqueCallSite;
 
-  SDValue getParamSymbol(SelectionDAG &DAG, int I, EVT T) const;
-  SDValue getCallParamSymbol(SelectionDAG &DAG, int I, EVT T) const;
+  SDValue getParamSymbol(SelectionDAG &DAG, unsigned I, EVT T) const;
+  SDValue getCallParamSymbol(SelectionDAG &DAG, unsigned I, EVT T) const;
   SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
 
@@ -242,9 +226,6 @@ private:
   SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
-
   SDValue LowerCopyToReg_128(SDValue Op, SelectionDAG &DAG) const;
   unsigned getNumRegisters(LLVMContext &Context, EVT VT,
                            std::optional<MVT> RegisterVT) const override;
@@ -257,8 +238,15 @@ private:
                           SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
-  Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
-                             const DataLayout &DL) const;
+  bool mayFoldFMULIntoFMA(SDNode *N, MachineFunction &MF,
+                          CodeGenOptLevel OptLevel) const;
+  SDValue performScalarizeV2F32Op(SDNode *N, DAGCombinerInfo &DCI,
+                                  CodeGenOptLevel OptLevel) const;
+  SDValue performFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
+                                         DAGCombinerInfo &DCI,
+                                         CodeGenOptLevel OptLevel) const;
+  SDValue performFADDCombine(SDNode *N, DAGCombinerInfo &DCI,
+                             CodeGenOptLevel OptLevel) const;
 };
 
 } // namespace llvm

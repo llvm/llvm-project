@@ -124,8 +124,8 @@ public:
       SubRegRange &ARange = A->Range.get(M);
       SubRegRange &BRange = B->Range.get(M);
 
-      if (Range.Offset != (uint16_t)-1 && ARange.Offset != (uint16_t)-1 &&
-          BRange.Offset == (uint16_t)-1) {
+      if (Range.Offset != (uint32_t)-1 && ARange.Offset != (uint32_t)-1 &&
+          BRange.Offset == (uint32_t)-1) {
         BRange.Offset = Range.Offset + ARange.Offset;
         BRange.Size = ARange.Size;
       }
@@ -135,8 +135,8 @@ public:
     SubRegRange &Range = this->Range.get(DefaultMode);
     SubRegRange &ARange = A->Range.get(DefaultMode);
     SubRegRange &BRange = B->Range.get(DefaultMode);
-    if (Range.Offset != (uint16_t)-1 && ARange.Offset != (uint16_t)-1 &&
-        BRange.Offset == (uint16_t)-1) {
+    if (Range.Offset != (uint32_t)-1 && ARange.Offset != (uint32_t)-1 &&
+        BRange.Offset == (uint32_t)-1) {
       BRange.Offset = Range.Offset + ARange.Offset;
       BRange.Size = ARange.Size;
     }
@@ -318,6 +318,10 @@ inline bool operator==(const CodeGenRegister &A, const CodeGenRegister &B) {
   return A.EnumValue == B.EnumValue;
 }
 
+inline bool operator!=(const CodeGenRegister &A, const CodeGenRegister &B) {
+  return !(A == B);
+}
+
 class CodeGenRegisterClass {
   CodeGenRegister::Vec Members;
   // Bit mask of members, indexed by getRegIndex.
@@ -370,6 +374,7 @@ public:
   uint8_t AllocationPriority;
   bool GlobalPriority;
   uint8_t TSFlags;
+  uint8_t SpillStackID;
   /// Contains the combination of the lane masks of all subregisters.
   LaneBitmask LaneMask;
   /// True if there are at least 2 subregisters which do not interfere.
@@ -503,11 +508,20 @@ public:
     const CodeGenRegister::Vec *Members;
     RegSizeInfoByHwMode RSI;
 
-    Key(const CodeGenRegister::Vec *M, const RegSizeInfoByHwMode &I)
-        : Members(M), RSI(I) {}
+    // Ignore artificial registers when comparing classes. We use this
+    // to find existing classes that contain the same non-artificial
+    // members, but may differ in presence of artificial ones, thus
+    // avoiding creating extra register classes for codegen needs.
+    bool IgnoreArtificialMembers;
 
-    Key(const CodeGenRegisterClass &RC)
-        : Members(&RC.getMembers()), RSI(RC.RSI) {}
+    Key(const CodeGenRegister::Vec *M, const RegSizeInfoByHwMode &I,
+        bool IgnoreArtificialMembers = false)
+        : Members(M), RSI(I), IgnoreArtificialMembers(IgnoreArtificialMembers) {
+    }
+
+    Key(const CodeGenRegisterClass &RC, bool IgnoreArtificialMembers = false)
+        : Members(&RC.getMembers()), RSI(RC.RSI),
+          IgnoreArtificialMembers(IgnoreArtificialMembers) {}
 
     // Lexicographical order of (Members, RegSizeInfoByHwMode).
     bool operator<(const Key &) const;
@@ -836,6 +850,13 @@ public:
   /// classes have a superset-subset relationship and the same set of types,
   /// return the superclass.  Otherwise return null.
   const CodeGenRegisterClass *getRegClassForRegister(const Record *R);
+
+  /// Returns whether \p RegClass contains register \p Reg, handling
+  /// RegClassByHwMode and RegisterByHwMode correctly.
+  /// This should be preferred instead of
+  /// `RegBank.getRegClass(RC).contains(RegBank.getReg(R))`.
+  bool regClassContainsReg(const Record *RegClass, const Record *RegDef,
+                           ArrayRef<SMLoc> Loc = {});
 
   // Analog of TargetRegisterInfo::getMinimalPhysRegClass. Unlike
   // getRegClassForRegister, this tries to find the smallest class containing

@@ -445,14 +445,19 @@ Code Generation Options
     take longer to perform or that may generate larger code (in an attempt to
     make the program run faster).
 
-    :option:`-Ofast` Enables all the optimizations from :option:`-O3` along
-    with other aggressive optimizations that may violate strict compliance with
-    language standards. This is deprecated in Clang 19 and a warning is emitted
-    that :option:`-O3` in combination with :option:`-ffast-math` should be used
-    instead if the request for non-standard math behavior is intended. There
-    is no timeline yet for removal; the aim is to discourage use of
-    :option:`-Ofast` due to the surprising behavior of an optimization flag
-    changing the observable behavior of correct code.
+    :option:`-Ofast` Enables all the optimizations from :option:`-O3` along with
+    other aggressive optimizations that may violate strict compliance with
+    language standards. This has been deprecated since Clang 19. There is no
+    timeline yet for removal; the aim is to discourage use of :option:`-Ofast`
+    due to the surprising behavior of an optimization flag changing the
+    observable behavior of correct code.
+
+    If :option:`-Ofast` has been specified and is the effective optimization
+    level (i.e. there is no later `-O` option specified), then the option can be
+    replaced in the option string with `-O3 -ffast-math -fstrict-aliasing`.
+    (:option:`-fstrict-aliasing` is the default on non-Windows, non-UEFI
+    platforms). If :option:`-Ofast` has been specified but is not the effective
+    optimization level, then it can be removed or replaced with :option:`-O3`.
 
     :option:`-Os` Like :option:`-O2` with extra optimizations to reduce code
     size.

@@ -17,7 +17,6 @@ define float @frsqrt_f32(float %a) nounwind {
 ; LA32F-FRECIPE-LABEL: frsqrt_f32:
 ; LA32F-FRECIPE:       # %bb.0:
 ; LA32F-FRECIPE-NEXT:    frsqrte.s $fa1, $fa0
-; LA32F-FRECIPE-NEXT:    fmul.s $fa1, $fa0, $fa1
 ; LA32F-FRECIPE-NEXT:    fmul.s $fa0, $fa0, $fa1
 ; LA32F-FRECIPE-NEXT:    lu12i.w $a0, -261120
 ; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa2, $a0
@@ -36,7 +35,6 @@ define float @frsqrt_f32(float %a) nounwind {
 ; LA64D-FRECIPE-LABEL: frsqrt_f32:
 ; LA64D-FRECIPE:       # %bb.0:
 ; LA64D-FRECIPE-NEXT:    frsqrte.s $fa1, $fa0
-; LA64D-FRECIPE-NEXT:    fmul.s $fa1, $fa0, $fa1
 ; LA64D-FRECIPE-NEXT:    fmul.s $fa0, $fa0, $fa1
 ; LA64D-FRECIPE-NEXT:    vldi $vr2, -1144
 ; LA64D-FRECIPE-NEXT:    fmadd.s $fa0, $fa0, $fa1, $fa2
@@ -87,7 +85,6 @@ define double @frsqrt_f64(double %a) nounwind {
 ; LA64D-FRECIPE-LABEL: frsqrt_f64:
 ; LA64D-FRECIPE:       # %bb.0:
 ; LA64D-FRECIPE-NEXT:    frsqrte.d $fa1, $fa0
-; LA64D-FRECIPE-NEXT:    fmul.d $fa1, $fa0, $fa1
 ; LA64D-FRECIPE-NEXT:    fmul.d $fa2, $fa0, $fa1
 ; LA64D-FRECIPE-NEXT:    vldi $vr3, -888
 ; LA64D-FRECIPE-NEXT:    fmadd.d $fa2, $fa2, $fa1, $fa3
@@ -206,7 +203,6 @@ define double @sqrt_simplify_before_recip_3_uses_f64(double %x, ptr %p1, ptr %p2
 ; LA64D-FRECIPE-LABEL: sqrt_simplify_before_recip_3_uses_f64:
 ; LA64D-FRECIPE:       # %bb.0:
 ; LA64D-FRECIPE-NEXT:    frsqrte.d $fa1, $fa0
-; LA64D-FRECIPE-NEXT:    fmul.d $fa1, $fa0, $fa1
 ; LA64D-FRECIPE-NEXT:    fmul.d $fa2, $fa0, $fa1
 ; LA64D-FRECIPE-NEXT:    vldi $vr3, -888
 ; LA64D-FRECIPE-NEXT:    fmadd.d $fa2, $fa2, $fa1, $fa3
@@ -337,7 +333,6 @@ define double @sqrt_simplify_before_recip_3_uses_order_f64(double %x, ptr %p1, p
 ; LA64D-FRECIPE-LABEL: sqrt_simplify_before_recip_3_uses_order_f64:
 ; LA64D-FRECIPE:       # %bb.0:
 ; LA64D-FRECIPE-NEXT:    frsqrte.d $fa1, $fa0
-; LA64D-FRECIPE-NEXT:    fmul.d $fa1, $fa0, $fa1
 ; LA64D-FRECIPE-NEXT:    fmul.d $fa2, $fa0, $fa1
 ; LA64D-FRECIPE-NEXT:    vldi $vr3, -888
 ; LA64D-FRECIPE-NEXT:    fmadd.d $fa2, $fa2, $fa1, $fa3
@@ -505,7 +500,6 @@ define double @sqrt_simplify_before_recip_4_uses_f64(double %x, ptr %p1, ptr %p2
 ; LA64D-FRECIPE-LABEL: sqrt_simplify_before_recip_4_uses_f64:
 ; LA64D-FRECIPE:       # %bb.0:
 ; LA64D-FRECIPE-NEXT:    frsqrte.d $fa1, $fa0
-; LA64D-FRECIPE-NEXT:    fmul.d $fa1, $fa0, $fa1
 ; LA64D-FRECIPE-NEXT:    fmul.d $fa2, $fa0, $fa1
 ; LA64D-FRECIPE-NEXT:    vldi $vr3, -888
 ; LA64D-FRECIPE-NEXT:    fmadd.d $fa2, $fa2, $fa1, $fa3
@@ -554,7 +548,6 @@ define float @sqrt_simplify_before_recip_3_uses_f32(float %x, ptr %p1, ptr %p2) 
 ; LA32F-FRECIPE-LABEL: sqrt_simplify_before_recip_3_uses_f32:
 ; LA32F-FRECIPE:       # %bb.0:
 ; LA32F-FRECIPE-NEXT:    frsqrte.s $fa1, $fa0
-; LA32F-FRECIPE-NEXT:    fmul.s $fa1, $fa0, $fa1
 ; LA32F-FRECIPE-NEXT:    fmul.s $fa2, $fa0, $fa1
 ; LA32F-FRECIPE-NEXT:    lu12i.w $a2, -261120
 ; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa3, $a2
@@ -586,7 +579,6 @@ define float @sqrt_simplify_before_recip_3_uses_f32(float %x, ptr %p1, ptr %p2) 
 ; LA64D-FRECIPE-LABEL: sqrt_simplify_before_recip_3_uses_f32:
 ; LA64D-FRECIPE:       # %bb.0:
 ; LA64D-FRECIPE-NEXT:    frsqrte.s $fa1, $fa0
-; LA64D-FRECIPE-NEXT:    fmul.s $fa1, $fa0, $fa1
 ; LA64D-FRECIPE-NEXT:    fmul.s $fa2, $fa0, $fa1
 ; LA64D-FRECIPE-NEXT:    vldi $vr3, -1144
 ; LA64D-FRECIPE-NEXT:    fmadd.s $fa2, $fa2, $fa1, $fa3
@@ -629,7 +621,6 @@ define float @sqrt_simplify_before_recip_4_uses_f32(float %x, ptr %p1, ptr %p2, 
 ; LA32F-FRECIPE-LABEL: sqrt_simplify_before_recip_4_uses_f32:
 ; LA32F-FRECIPE:       # %bb.0:
 ; LA32F-FRECIPE-NEXT:    frsqrte.s $fa1, $fa0
-; LA32F-FRECIPE-NEXT:    fmul.s $fa1, $fa0, $fa1
 ; LA32F-FRECIPE-NEXT:    fmul.s $fa2, $fa0, $fa1
 ; LA32F-FRECIPE-NEXT:    lu12i.w $a3, -261120
 ; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa3, $a3
@@ -669,7 +660,6 @@ define float @sqrt_simplify_before_recip_4_uses_f32(float %x, ptr %p1, ptr %p2, 
 ; LA64D-FRECIPE-LABEL: sqrt_simplify_before_recip_4_uses_f32:
 ; LA64D-FRECIPE:       # %bb.0:
 ; LA64D-FRECIPE-NEXT:    frsqrte.s $fa1, $fa0
-; LA64D-FRECIPE-NEXT:    fmul.s $fa1, $fa0, $fa1
 ; LA64D-FRECIPE-NEXT:    fmul.s $fa2, $fa0, $fa1
 ; LA64D-FRECIPE-NEXT:    vldi $vr3, -1144
 ; LA64D-FRECIPE-NEXT:    fmadd.s $fa2, $fa2, $fa1, $fa3
@@ -715,7 +705,6 @@ define float @sqrt_simplify_before_recip_3_uses_order_f32(float %x, ptr %p1, ptr
 ; LA32F-FRECIPE-LABEL: sqrt_simplify_before_recip_3_uses_order_f32:
 ; LA32F-FRECIPE:       # %bb.0:
 ; LA32F-FRECIPE-NEXT:    frsqrte.s $fa1, $fa0
-; LA32F-FRECIPE-NEXT:    fmul.s $fa1, $fa0, $fa1
 ; LA32F-FRECIPE-NEXT:    fmul.s $fa2, $fa0, $fa1
 ; LA32F-FRECIPE-NEXT:    lu12i.w $a2, -261120
 ; LA32F-FRECIPE-NEXT:    movgr2fr.w $fa3, $a2
@@ -751,7 +740,6 @@ define float @sqrt_simplify_before_recip_3_uses_order_f32(float %x, ptr %p1, ptr
 ; LA64D-FRECIPE-LABEL: sqrt_simplify_before_recip_3_uses_order_f32:
 ; LA64D-FRECIPE:       # %bb.0:
 ; LA64D-FRECIPE-NEXT:    frsqrte.s $fa1, $fa0
-; LA64D-FRECIPE-NEXT:    fmul.s $fa1, $fa0, $fa1
 ; LA64D-FRECIPE-NEXT:    fmul.s $fa2, $fa0, $fa1
 ; LA64D-FRECIPE-NEXT:    vldi $vr3, -1144
 ; LA64D-FRECIPE-NEXT:    fmadd.s $fa2, $fa2, $fa1, $fa3

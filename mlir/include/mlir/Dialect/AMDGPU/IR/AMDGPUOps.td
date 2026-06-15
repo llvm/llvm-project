@@ -33,6 +33,17 @@ def AnyIntegerOrFloat : AnyTypeOf<[AnySignlessInteger, AnyFloat], "Integer or Fl
 def AnyIntegerOrFloatOr1DVector :
   AnyTypeOf<[AnyIntegerOrFloat, FixedVectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
 
+// Types with element width up to 64 bits, used to keep dpp operands legal.
+def AMDGPU_IntOrFloatWidthLeq64 : Type<
+  CPred<"$_self.isIntOrFloat() && $_self.getIntOrFloatBitWidth() <= 64">,
+  "integer or float with element bitwidth <= 64">;
+
+def AMDGPU_IntOrFloatOr1DVectorWidthLeq64 :
+  AnyTypeOf<[
+    AMDGPU_IntOrFloatWidthLeq64,
+    FixedVectorOfRankAndType<[1], [AMDGPU_IntOrFloatWidthLeq64]>
+  ]>;
+
 //===----------------------------------------------------------------------===//
 // AMDGPU Op definitions
 //===----------------------------------------------------------------------===//
@@ -489,14 +500,17 @@ def AMDGPU_RawBufferAtomicCmpswapOp :
 
 // Raw buffer atomic floating point add
 def AMDGPU_RawBufferAtomicFaddOp :
-    AMDGPU_Op<"raw_buffer_atomic_fadd", [AllElementTypesMatch<["value", "memref"]>,
+    AMDGPU_Op<"raw_buffer_atomic_fadd", [
+      AllElementTypesMatch<["value", "memref"]>,
+      AllTypesMatch<["oldValue", "value"]>,
       AttrSizedOperandSegments]>,
     Arguments<(ins AnyTypeOf<[F32, VectorOfLengthAndType<[2], [F16, BF16]>]>:$value,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
-                   Optional<I32>:$sgprOffset)> {
+                   Optional<I32>:$sgprOffset)>,
+    Results<(outs AnyTypeOf<[F32, VectorOfLengthAndType<[2], [F16, BF16]>]>:$oldValue)> {
 
   let summary = "Raw Buffer Floating-point Atomic Add (MI-* only)";
   let description = [{
@@ -512,7 +526,7 @@ def AMDGPU_RawBufferAtomicFaddOp :
     All indexing components are given in terms of the memref's element size, not
     the byte lengths required by the intrinsic.
 
-    Out of bounds atomic operations are ignored in hardware.
+    The op returns the value observed before the atomic update.
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
@@ -528,14 +542,17 @@ def AMDGPU_RawBufferAtomicFaddOp :
 
 // Raw buffer atomic floating point max
 def AMDGPU_RawBufferAtomicFmaxOp :
-    AMDGPU_Op<"raw_buffer_atomic_fmax", [AllElementTypesMatch<["value", "memref"]>,
+    AMDGPU_Op<"raw_buffer_atomic_fmax", [
+      AllElementTypesMatch<["value", "memref"]>,
+      AllTypesMatch<["oldValue", "value"]>,
       AttrSizedOperandSegments]>,
     Arguments<(ins AnyTypeOf<[F32, F64]>:$value,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
-                   Optional<I32>:$sgprOffset)> {
+                   Optional<I32>:$sgprOffset)>,
+    Results<(outs AnyTypeOf<[F32, F64]>:$oldValue)> {
 
   let summary = "Raw Buffer Floating-point Atomic Max (non-GFX9)";
   let description = [{
@@ -550,7 +567,8 @@ def AMDGPU_RawBufferAtomicFmaxOp :
     All indexing components are given in terms of the memref's element size, not
     the byte lengths required by the intrinsic.
 
-    Out of bounds atomic operations are ignored in hardware.
+    The op returns the value observed before the atomic update. Out of bounds
+    atomic operations are ignored in hardware.
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
@@ -567,13 +585,15 @@ def AMDGPU_RawBufferAtomicFmaxOp :
 // Raw buffer atomic signed integer max
 def AMDGPU_RawBufferAtomicSmaxOp :
     AMDGPU_Op<"raw_buffer_atomic_smax", [
+      AllTypesMatch<["oldValue", "value"]>,
       AttrSizedOperandSegments]>,
     Arguments<(ins I32:$value,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
-                   Optional<I32>:$sgprOffset)> {
+                   Optional<I32>:$sgprOffset)>,
+    Results<(outs I32:$oldValue)> {
 
   let summary = "Raw Buffer Signed Integer Atomic Max";
   let description = [{
@@ -588,7 +608,8 @@ def AMDGPU_RawBufferAtomicSmaxOp :
     All indexing components are given in terms of the memref's element size, not
     the byte lengths required by the intrinsic.
 
-    Out of bounds atomic operations are ignored in hardware.
+    The op returns the value observed before the atomic update. Out of bounds
+    atomic operations are ignored in hardware.
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
@@ -605,13 +626,15 @@ def AMDGPU_RawBufferAtomicSmaxOp :
 // Raw buffer atomic unsigned integer min
 def AMDGPU_RawBufferAtomicUminOp :
     AMDGPU_Op<"raw_buffer_atomic_umin", [
+      AllTypesMatch<["oldValue", "value"]>,
       AttrSizedOperandSegments]>,
     Arguments<(ins I32:$value,
                    Arg<AnyMemRef, "buffer to operate on", [MemRead, MemWrite]>:$memref,
                    Variadic<I32>:$indices,
                    DefaultValuedAttr<BoolAttr, "true">:$boundsCheck,
                    OptionalAttr<I32Attr>:$indexOffset,
-                   Optional<I32>:$sgprOffset)> {
+                   Optional<I32>:$sgprOffset)>,
+    Results<(outs I32:$oldValue)> {
 
   let summary = "Raw Buffer Unsigned Integer Atomic Min";
   let description = [{
@@ -626,7 +649,8 @@ def AMDGPU_RawBufferAtomicUminOp :
     All indexing components are given in terms of the memref's element size, not
     the byte lengths required by the intrinsic.
 
-    Out of bounds atomic operations are ignored in hardware.
+    The op returns the value observed before the atomic update. Out of bounds
+    atomic operations are ignored in hardware.
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
@@ -643,8 +667,8 @@ def AMDGPU_RawBufferAtomicUminOp :
 
 def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
     [Pure, SameTypeOperands, AllTypesMatch<["result", "old", "src"]>]>,
-  Arguments<(ins AnyType:$old,
-                 AnyType:$src,
+  Arguments<(ins AMDGPU_IntOrFloatOr1DVectorWidthLeq64:$old,
+                 AMDGPU_IntOrFloatOr1DVectorWidthLeq64:$src,
                  AMDGPU_DPPPermAttr:$kind,
                  OptionalAttr<AnyAttrOf<[I32Attr, ArrayAttr, UnitAttr]>>:$permArgument,
                  DefaultValuedAttr<I32Attr, "0xf">:$row_mask,
@@ -652,20 +676,97 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
                  DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl)> {
   let summary = "AMDGPU DPP operation";
   let description = [{
-    This operation represents DPP functionality in a GPU program.
-     DPP provides the following operations:
-    - Full crossbar in a group of four (`quad_perm`)
-    - Wavefront shift left by one lane (`wave_shl`)
-    - Wavefront shift right by one lane (`wave_shr`)
-    - Wavefront rotate right by one lane (`wave_ror`)
-    - Wavefront rotate left by one lane (`wave_rol`)
-    - Row shift left by 1–15 lanes (`row_shl`)
-    - Row shift right by 1–15 lanes (`row_shr`)
-    - Row rotate right by 1–15 lanes (`row_ror`)
-    - Reverse within a row (`row_mirror`)
-    - Reverse within a half-row (`row_half_mirror`)
-    - Broadcast the 15th lane of each row to the next row (`row_bcast`)
-    - Broadcast lane 31 to rows 2 and 3 (`row_bcast`)
+    The `amdgpu.dpp` op performs a Data Parallel Primitives (DPP) lane
+    permutation on a source value within a wavefront. Each lane reads its
+    source data from another lane according to the permutation mode specified
+    by `kind`. DPP operates at dword (32-bit) granularity: sub-32-bit types
+    (e.g., f16, i16) are packed into an i32 during lowering, permuted, and
+    extracted back.
+
+    - Lanes are organized into rows of 16.
+    - A Wave64 wavefront has 4 rows of 16 lanes each: row 0 = lanes 0-15,
+      row 1 = lanes 16-31, row 2 = lanes 32-47, row 3 = lanes 48-63.
+    - Similarly, a Wave32 wavefront has two rows of 16 lanes each, organized
+      in the same fashion.
+    - Each row is divided into 4 banks of 4 consecutive lanes: bank 0 =
+      lanes 0-3, bank 1 = lanes 4-7, bank 2 = lanes 8-11, bank 3 =
+      lanes 12-15 (lane numbers shown for row 0; add 16/32/48 for other rows).
+
+    The `kind` attribute selects the permutation. Some modes require a
+    `permArgument`; others take no argument.
+
+    Quad permutation:
+    - `quad_perm([a, b, c, d])`: Full permute within each group of 4
+      consecutive lanes (a quad). Each element is in [0, 3] and selects which
+      lane within the quad to read from. Lane 4k+i reads from lane 4k+perm[i].
+      For example, `quad_perm([1, 0, 3, 2])` swaps adjacent pairs within
+      every quad.
+
+    Row shifts and rotates (operate within each 16-lane row independently):
+    - `row_shl(N)`: Shift left by N (1-15) within the row. Lane n reads from
+      lane (n % 16) + N in the same row. Lanes where the source index exceeds
+      15 are out of bounds (see `bound_ctrl`).
+    - `row_shr(N)`: Shift right by N (1-15) within the row. Lane n reads from
+      lane (n % 16) - N in the same row. Lanes where the source index is
+      negative are out of bounds.
+    - `row_ror(N)`: Rotate right by N (1-15) within the row. Lane n reads from
+      lane ((n % 16) - N) mod 16 in the same row. Always in bounds.
+
+    Wavefront shifts and rotates (not available on RDNA):
+    - `wave_shl`: Shift left by 1. Lane n reads from lane n + 1. The last lane
+      in the wavefront is out of bounds.
+    - `wave_shr`: Shift right by 1. Lane n reads from lane n - 1. Lane 0 is
+      out of bounds.
+    - `wave_rol`: Rotate left by 1. Lane n reads from lane (n + 1) mod W, where
+      W is the wavefront size.
+    - `wave_ror`: Rotate right by 1. Lane n reads from lane (n - 1) mod W, where
+      W is the wavefront size.
+
+    Row mirrors:
+    - `row_mirror`: Reverse lanes within each 16-lane row. Lane n reads from
+      lane 15 - (n % 16) within its row.
+    - `row_half_mirror`: Reverse within each 8-lane half-row. Lane n reads
+      from lane 7 - (n % 8) within its half-row.
+
+    Row broadcasts (not available on RDNA):
+    - `row_bcast_15`: Lane 15 of each row broadcasts to all lanes of the next
+      row. Lanes in row 0 are not affected (retain `old`).
+    - `row_bcast_31`: Lane 31 broadcasts to all lanes in rows 2 and 3.
+      Lanes in rows 0 and 1 are not affected (retain `old`).
+
+    Example:
+    ```mlir
+    // Swap adjacent pairs within each quad (lanes 0<->1, 2<->3, etc.)
+    %0 = amdgpu.dpp %old %src quad_perm( [1, 0, 3, 2] ) : i32
+
+    // Shift right by 1 lane within each 16-lane row.
+    // bound_ctrl=true -> lanes that would read past the row return 0.
+    // row_mask=0x5 (0b0101) -> only rows 0 and 2 apply the shift;
+    // rows 1 and 3 pass through %old unchanged.
+    %1 = amdgpu.dpp %old %src row_shr( 0x1 : i32 )
+      { row_mask = 0x5 : i32, bound_ctrl = true } : f32
+
+    // Rotate left across the full wavefront by 1 lane
+    %2 = amdgpu.dpp %old %src wave_rol : i32
+    ```
+
+    Operands:
+    * `$old`: Fallback value. Lanes that are masked off by `row_mask` /
+      `bank_mask` retain `old`. For lanes with an out-of-bounds source, behavior
+      depends on `bound_ctrl`.
+    * `$src`: Source value to be permuted across lanes.
+    * `$kind`: A `#amdgpu.dpp_perm` enum selecting the permutation mode.
+    * `$permArgument`: Mode-specific argument. Required for `quad_perm`
+      (array of 4 integers in [0, 3]) and `row_shl`/`row_shr`/`row_ror`
+      (integer in [1, 15]). Absent for all other modes.
+    * `$row_mask` (default 0xf): 4-bit mask controlling which rows write
+      results. Bit i enables row i (bit 0 = lanes 0-15, bit 1 = lanes
+      16-31, etc.). Disabled lanes retain `old`.
+    * `$bank_mask` (default 0xf): 4-bit mask controlling which banks write
+      results. Bit i enables bank i (bit 0 = lanes 0-3, 16-19, etc. across all rows).
+      Disabled lanes retain `old`.
+    * `$bound_ctrl` (default false): When false, out of bounds lanes retain
+      `old`. When true, out-of-bounds lanes receive zero.
   }];
   let results = (outs AnyType:$result);
   let assemblyFormat = [{
@@ -737,6 +838,43 @@ def AMDGPU_PermlaneSwapOp : AMDGPU_Op<"permlane_swap", [Pure, AllTypesMatch<["re
   let hasVerifier = 1;
 }
 
+def AMDGPU_PermlaneVarOp : AMDGPU_Op<"permlane_var",
+    [Pure, AllTypesMatch<["result", "src"]>]> {
+  let summary = "AMDGPU variable-selector permlane op (GFX12+)";
+  let description = [{
+    High-level wrapper on `rocdl.permlane16.var` and `rocdl.permlanex16.var`
+    for per-lane variable-selector permutations within a wave32 subgroup.
+
+    Supports arbitrary int/float/vector types, which will be repacked to i32
+    and one or more ROCDL intrinsic calls during lowering.
+
+    - `cross = false`: intra-row permutation (each lane in a 16-lane row reads
+      from a lane in the same row, selected by `$selector`). Maps to
+      `rocdl.permlane16.var`.
+    - `cross = true`: cross-row permutation (each lane reads from the opposite
+      16-lane row, selected by `$selector`). Maps to `rocdl.permlanex16.var`.
+
+    `$selector` is an i32 VGPR providing the per-lane source-lane index.
+
+    Example:
+    ```mlir
+    %0 = amdgpu.permlane_var %src, %sel { cross = false } : f16
+    %1 = amdgpu.permlane_var %src, %sel { cross = true } : f32
+    ```
+
+    Note: Lowering is only supported on GFX12+.
+  }];
+  let arguments = (ins AnyIntegerOrFloatOr1DVector:$src,
+                       I32:$selector,
+                       DefaultValuedAttr<BoolAttr, "false">:$cross,
+                       DefaultValuedAttr<BoolAttr, "false">:$fetch_inactive,
+                       DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl);
+  let results = (outs AnyIntegerOrFloatOr1DVector:$result);
+  let assemblyFormat = [{
+    $src `,` $selector attr-dict `:` type($result)
+  }];
+}
+
 def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
   let summary = "Barrier that includes a wait for LDS memory operations.";
   let description = [{
@@ -772,13 +910,13 @@ def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
 
 def AMDGPU_SchedBarrierOp :
   AMDGPU_Op<"sched_barrier">,
-  Arguments<(ins  AMDGPU_SchedBarrierOpOptAttr:$opts)>
+  Arguments<(ins ROCDL_SchedGroupMaskAttr:$opts)>
   {
   let summary = "Barrier that limits the backend scheduler of instruction movement";
   let description = [{
     `amdgpu.sched_barrier` serves as a barrier that could be
     configured to restrict movements of instructions through it as
-    defined by sched_barrier_opts.
+    defined by the ROCDL scheduling group mask enum.
   }];
   let assemblyFormat = [{
     `allow` `=` $opts attr-dict
@@ -850,7 +988,8 @@ def SMFMACOutTypes : AnyTypeOf<[
 
 def SMFMACIdxTypes : AnyTypeOf<[
     FixedVectorOfLengthAndType<[4], [I8]>,
-    FixedVectorOfLengthAndType<[2], [I16]>
+    FixedVectorOfLengthAndType<[2], [I16]>,
+    I32
 ]>;
 
 // scaled_mfma
@@ -888,8 +1027,8 @@ def AMDGPU_MFMAOp :
                    MFMAOutTypes:$destC,
                    DefaultValuedAttr<I32Attr, "0">:$cbsz,
                    DefaultValuedAttr<I32Attr, "0">:$abid,
-                   DefaultValuedAttr<AMDGPU_MFMAPermBAttr,
-                    "::mlir::amdgpu::MFMAPermB::none">:$blgp,
+                   DefaultValuedAttr<ROCDL_MFMAPermBAttr,
+                    "::mlir::ROCDL::MFMAPermB::none">:$blgp,
                    UnitAttr:$reducePrecision,
                    UnitAttr:$negateA,
                    UnitAttr:$negateB,
@@ -982,6 +1121,8 @@ def AMDGPU_WMMAOp :
     The `clamp` flag is used to saturate the output of type T to `numeric_limits<T>::max()`
     in case of overflow.
 
+    The `wave64`attribute indicates whether an op is designed for 64 threads wavefont.
+
     Example:
     ```mlir
       %0 = amdgpu.wmma 16x16x16 %matA * %matB + %matC : vector<8xf16>, vector<8xf16>, vector<8xf16>
@@ -997,6 +1138,63 @@ def AMDGPU_WMMAOp :
     custom<MNKDimensionList>($m, $n, $k) $sourceA `*` $sourceB `+` $destC
     attr-dict
     `:` type($sourceA) `,` type($sourceB) `,` type($destC)
+  }];
+  let hasVerifier = 1;
+}
+
+def DotInTypes : AnyTypeOf<[VectorOfLengthAndType<[2], [F16, BF16, I16]>,
+                            VectorOfLengthAndType<[4], [I8, F8E4M3FN, F8E5M2]>,
+                            VectorOfLengthAndType<[8], [I<4>]>]>;
+
+def DotOutTypes : AnyTypeOf<[F32, F16, BF16, I32]>;
+
+def AMDGPU_DotOp :
+    AMDGPU_Op<"dot", [AllTypesMatch<["destC", "destD"]>, Pure]>,
+    Arguments<(ins DotInTypes:$sourceA,
+                   DotInTypes:$sourceB,
+                   DotOutTypes:$destC,
+                   UnitAttr:$unsignedA,
+                   UnitAttr:$unsignedB,
+                   UnitAttr:$clamp)>,
+    Results<(outs DotOutTypes:$destD)> {
+  let summary = "MLIR wrapper for AMDGPU v_dot* intrinsics";
+  let description = [{
+    The `amdgpu.dot` op is an MLIR wrapper over the `v_dot*` family of intrinsics,
+    which compute `D = sum_i A[i] * B[i] + C`.
+
+    Variants (source, dest, signedness, chipset -> intrinsic).
+
+    ```text
+    | A elem   | B elem   | destC | signedness | chipset                   | ROCDL op                     |
+    |----------|----------|-------|------------|---------------------------|------------------------------|
+    | f16      | f16      | f32   | n/a        | gfx906+                   | fdot2                        |
+    | f16      | f16      | f16   | n/a        | gfx11+                    | fdot2.f16.f16                |
+    | bf16     | bf16     | f32   | n/a        | gfx11+, gfx950+           | fdot2.f32.bf16               |
+    | bf16     | bf16     | bf16  | n/a        | gfx11+                    | fdot2.bf16.bf16              |
+    | i16      | i16      | i32   | s / u      | gfx906+, no gfx11+/gfx12+ | sdot2 / udot2                |
+    | i8       | i8       | i32   | s / u      | gfx906+                   | sdot4 / udot4                |
+    | i8       | i8       | i32   | mixed      | gfx11+                    | sudot4                       |
+    | i4       | i4       | i32   | s / u      | gfx906+                   | sdot8 / udot8                |
+    | i4       | i4       | i32   | mixed      | gfx11+                    | sudot8                       |
+    | fp8/bf8  | fp8/bf8  | f32   | n/a        | gfx11.7, gfx12+           | dot4.f32.{fp8,bf8}.{fp8,bf8} |
+    ```
+
+    Example:
+    ```mlir
+    %r0 = amdgpu.dot %a * %b + %c : vector<4xi8>, vector<4xi8>, i32
+    %r1 = amdgpu.dot %a * %b + %c {unsignedA, unsignedB, clamp}
+        : vector<8xi4>, vector<8xi4>, i32
+    %r2 = amdgpu.dot %a * %b + %c {unsignedB}
+        : vector<4xi8>, vector<4xi8>, i32
+    %r3 = amdgpu.dot %a * %b + %c : vector<2xf16>, vector<2xf16>, f32
+    %r4 = amdgpu.dot %a * %b + %c : vector<2xf16>, vector<2xf16>, f16
+    %r5 = amdgpu.dot %a * %b + %c
+        : vector<4xf8E4M3FN>, vector<4xf8E5M2>, f32
+    ```
+  }];
+  let assemblyFormat = [{
+    $sourceA `*` $sourceB `+` $destC attr-dict
+      `:` type($sourceA) `,` type($sourceB) `,` type($destC)
   }];
   let hasVerifier = 1;
 }
@@ -1030,14 +1228,24 @@ def AMDGPU_SparseMFMAOp :
       - M=N=16, K=64 and M=N=32, K=32 for f16 and bf16 sources
       - M=N=16, K=128 and M=N=32, K=64 for i8 and fp8 sources
 
-    The `sparseIdx` parameter contains packed indices identifying the positions
-    of non-zero elements in the 2:4 sparse matrix A. For 16-bit source data,
-    use `vector<4xi8>` (four 8-bit indices). For 8-bit source data, use
-    `vector<2xi16>` (two 16-bit indices).
+    The `sparseIdx` parameter contains packed 2-bit indices identifying which
+    of every 4 dense-K positions are non-zero in the 2:4 sparse matrix A.
+    The required `sparseIdx` type depends on the variant:
+      - gfx942 16-bit (`(m,k)` in `{(16,32), (32,16)}`): 8 bits per lane,
+        carried as `vector<4xi8>` (one 8-bit set per i8 element).
+      - gfx942 8-bit (`(m,k)` in `{(16,64), (32,32)}`) and gfx950 16-bit
+        (`(m,k)` in `{(16,64), (32,32)}`): 16 bits per lane, carried as
+        `vector<2xi16>` (one 16-bit set per i16 element).
+      - gfx950 8-bit (`(m,k)` in `{(16,128), (32,64)}`): 32 bits per lane (a
+        full VGPR with no internal set structure), carried as `i32`.
 
-    The `cbsz` and `abid` parameters are repurposed to select the index set.
-    If `cbsz == 0`, then `abid[1:0]` selects which index set to use.
-    If `cbsz != 0`, then the very first is selected.
+    The `cbsz` and `abid` parameters select which index set within the VGPR is
+    used:
+      - gfx942 16-bit: `cbsz == 0` selects one of four 8-bit sets via
+        `abid[1:0]` (range `[0, 3]`); `cbsz != 0` selects the first set.
+      - gfx942 8-bit and gfx950 16-bit: `cbsz == 0` selects one of two 16-bit
+        sets via `abid[0]` (range `[0, 1]`); `cbsz != 0` selects the first set.
+      - gfx950 8-bit: hardware ignores both `cbsz` and `abid`; both must be 0.
 
     Example:
     ```mlir
@@ -1050,6 +1258,9 @@ def AMDGPU_SparseMFMAOp :
       %2 = amdgpu.sparse_mfma 16x16x64 %matA * %matB + %matC sparse(%idx : vector<2xi16>)
         { cbsz = 0 : i32, abid = 1 : i32 }
         : vector<8xf8E4M3FNUZ>, vector<16xf8E4M3FNUZ>, vector<4xf32>
+
+      %3 = amdgpu.sparse_mfma 16x16x128 %matA * %matB + %matC sparse(%idx : i32)
+        : vector<16xf8E4M3FN>, vector<32xf8E4M3FN>, vector<4xf32>
     ```
   }];
   let assemblyFormat = [{
@@ -1061,6 +1272,103 @@ def AMDGPU_SparseMFMAOp :
   let hasVerifier = 1;
 }
 
+// sparse_wmma (swmmac)
+def SWMMACSparseInTypes : AnyTypeOf<[
+    VectorOfLengthAndType<[4, 8, 16], [F16]>,
+    VectorOfLengthAndType<[4, 8, 16], [BF16]>,
+    VectorOfLengthAndType<[4, 8, 32], [I8]>,
+    VectorOfLengthAndType<[8, 16], [I<4>]>,
+    VectorOfLengthAndType<[4, 8, 16, 32], [F8E4M3FN, F8E5M2]>,
+    VectorOfLengthAndType<[4, 8, 16, 32], [F8E4M3FNUZ, F8E5M2FNUZ]>
+]>;
+
+def SWMMACDenseInTypes : AnyTypeOf<[
+    VectorOfLengthAndType<[8, 16, 32], [F16]>,
+    VectorOfLengthAndType<[8, 16, 32], [BF16]>,
+    VectorOfLengthAndType<[4, 8, 16, 64], [I8]>,
+    VectorOfLengthAndType<[8, 16, 32], [I<4>]>,
+    VectorOfLengthAndType<[4, 8, 16, 64], [F8E4M3FN, F8E5M2]>,
+    VectorOfLengthAndType<[4, 8, 16, 64], [F8E4M3FNUZ, F8E5M2FNUZ]>
+]>;
+
+def SWMMACOutTypes : AnyTypeOf<[
+    VectorOfLengthAndType<[4, 8, 16], [F32]>,
+    VectorOfLengthAndType<[4, 8], [F16]>,
+    VectorOfLengthAndType<[4, 8], [BF16]>,
+    VectorOfLengthAndType<[4, 8], [I32]>
+]>;
+
+def SWMMACIdxTypes : AnyTypeOf<[
+    FixedVectorOfLengthAndType<[4], [I8]>,
+]>;
+
+
+def AMDGPU_SparseWMMAOp :
+    AMDGPU_Op<"sparse_wmma", [AllTypesMatch<["destC", "destD"]>,
+                              Pure]>,
+    Arguments<(ins
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16]>]>:$m,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[16]>]>:$n,
+                   ConfinedAttr<I32Attr, [IntIsOneOf<[32, 64, 128]>]>:$k,
+                   SWMMACSparseInTypes:$sourceA,
+                   SWMMACDenseInTypes:$sourceB,
+                   SWMMACOutTypes:$destC,
+                   SWMMACIdxTypes:$sparseIdx,
+                   UnitAttr:$unsignedA,
+                   UnitAttr:$unsignedB,
+                   UnitAttr:$reuseA,
+                   UnitAttr:$reuseB,
+                   UnitAttr:$clamp,
+                   UnitAttr:$wave64)>,
+    Results<(outs SWMMACOutTypes: $destD)> {
+  let summary = "MLIR wrapper for gfx12+ sparse wmma instructions";
+  let description = [{
+    The `amdgpu.sparse_wmma` op is an MLIR wrapper around intrinsics for various
+    `swmmac` instructions in the AMDGPU architecture, which perform matrix
+    multiply-accumulate operations using 2:4 structured sparsity on matrix A
+    with dense matrices B, C, and D.
+
+    On gfx12, swmmac intrinsics support:
+      - M=N=16, K=32 and M=N=32, K=16 for f16, bf16, i8 and i4 sources
+      - M=N=16, K=64 for i4 sources
+
+    On gfx1250, swmmac intrinsics additionally support:
+      - M=N=16, K=64 for f16 and bf16 sources
+      - M=N=16, K=128 for f16, bf16 and i8 sources
+
+    The `sparseIdx` parameter contains packed indices identifying the positions
+    of non-zero elements in the 2:4 sparse matrix A. For 16-bit source data,
+    use `vector<4xi8>` (four 8-bit indices). For 8-bit source data, use
+    `vector<2xi16>` (two 16-bit indices).
+
+    `unsignedA` and `unsignedB` flag that the `int8` LLVM inputs are unsigned.
+
+    The `clamp` flag is used to saturate the output of type T to `numeric_limits<T>::max()`
+    in case of overflow.
+
+    Example:
+    ```mlir
+      %0 = amdgpu.sparse_wmma 16x16x32 %matA * %matB + %matC sparse(%idx : vector<4xi8>)
+        : vector<4xf16>, vector<8xf16>, vector<4xf32>
+
+      %1 = amdgpu.sparse_wmma 16x16x64 %matA * %matB + %matC sparse(%idx : vector<2xi16>)
+        : vector<8xi8>, vector<16xi8>, vector<4xi32>
+
+      %2 = amdgpu.sparse_wmma 16x16x64 %matA * %matB + %matC sparse(%idx : vector<2xi16>)
+        { unsignedA = 0 : i1, unsignedB = 1 : i1, clamp = 0 : i1 }
+        : vector<8xf8E4M3FNUZ>, vector<16xf8E4M3FNUZ>, vector<4xf32>
+    ```
+  }];
+  let assemblyFormat = [{
+    custom<MNKDimensionList>($m, $n, $k) $sourceA `*` $sourceB `+` $destC
+    `sparse` `(` $sparseIdx `:` type($sparseIdx) `)`
+    attr-dict
+    `:` type($sourceA) `,` type($sourceB) `,` type($destC)
+  }];
+  let hasVerifier = 1;
+}
+
+// Promises IndexedMemCopyOpInterface.
 def AMDGPU_GatherToLDSOp :
     AMDGPU_Op<"gather_to_lds", [AttrSizedOperandSegments]>,
     Arguments<(ins
@@ -1068,7 +1376,8 @@ def AMDGPU_GatherToLDSOp :
                    Variadic<Index>:$srcIndices,
                    Arg<AnyMemRef, "buffer to write to", [MemWrite]>:$dst,
                    Variadic<Index>:$dstIndices,
-                   TypeAttr:$transferType
+                   TypeAttr:$transferType,
+                   UnitAttr:$async
                    )>,
     Results<(outs)> {
   let summary = "MLIR wrapper for CDNA Gather to LDS instructions";
@@ -1078,8 +1387,12 @@ def AMDGPU_GatherToLDSOp :
     Operands:
     * `$src`: global memory (including fat buffer) memref to read from.
     * `$srcIndices`: indices into `$src` to read from for this thread.
+      These indices must be non-negative and in-bounds when `$src` is not a
+      fat raw buffer. Fat raw buffer sources permit out-of-bounds indices with
+      raw buffer semantics.
     * `$dst`: LDS memory memref to write to.
     * `$dstIndices`: base indices into `$dst` to write to for the subgroup of this thread.
+      These indices must be non-negative and in-bounds.
       The elements gathered by the subgroup will be written contiguously in order of lane ID
       starting at `$dst[$dstIndices]`. Byte-sized (ex. i8) or short-sized (ex. i16)
       types will be zero-padded/extended to 32 bits before being written. 96-bit types
@@ -1088,6 +1401,13 @@ def AMDGPU_GatherToLDSOp :
     * `$transferType`: type of the data to be transferred by each thread. This is used to determine
       the size of the data to be transferred and the number of threads in the subgroup.
       The transfer type must be a scalar type or a vector type with a single element type.
+    * If `$async` is set, the compiler will not attempt to infer the
+      memory waits needed to ensure that the DMA operation has succeeded
+      before a load that might access the stored-to LDS is performed.
+      Instead, the `rocdl.asyncmark` and `rocdl.wait.asyncmark N`
+      operations must be used to explicitly indicate the desired completion
+      behavior. This enables more precise calculation of these waits at the
+      cost of requiring user management of asynchrony.
 
     The `$dst`, along with its indices, points to the memory location the subgroup of this thread
     will write to.
@@ -1095,19 +1415,78 @@ def AMDGPU_GatherToLDSOp :
     Note: only supported on gfx9 and gfx10.
   }];
   let assemblyFormat = [{
-    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` $transferType `,` type($src) `,` type($dst)
+    (`async` $async^)? $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` $transferType `,` type($src) `,` type($dst)
   }];
   let hasVerifier = 1;
   let hasCanonicalizer = 1;
 }
 
+// Promises IndexedMemCopyOpInterface.
+def AMDGPU_GlobalLoadAsyncToLDSOp :
+    AMDGPU_Op<"global_load_async_to_lds", [AttrSizedOperandSegments]>,
+    Arguments<(ins
+                   Arg<AnyMemRef, "global memory to load from", [MemRead]>:$src,
+                   Variadic<Index>:$srcIndices,
+                   Arg<AnyMemRef, "LDS memory to write to", [MemWrite]>:$dst,
+                   Variadic<Index>:$dstIndices,
+                   TypeAttr:$transferType,
+                   Optional<I1>: $mask
+                   )>,
+    Results<(outs)> {
+  let summary = "MLIR wrapper for async global load to lds instructions";
+  let description = [{
+    AMDGPU wrapper for `global.load.async.to.lds` instructions, which performs
+    asynchronous load of data from global memory into LDS while bypassing VGPRs.
+
+    * `$src`: global memory memref to read from (global addrspace only, no fat buffer).
+    * `$srcIndices`: indices into `$src` for this thread's global read location.
+      These indices must be non-negative and in-bounds.
+    * `$dst`: LDS memref to write to (workgroup addrspace).
+    * `$dstIndices`: indices into `$dst` for this thread's LDS write location.
+      These indices must be non-negative and in-bounds when `$mask` is not
+      provided. When `$mask` is provided, the destination indices are not
+      guaranteed to be in-bounds because masked-off lanes may carry invalid
+      destination indices.
+    * `$transferType`: type of data to be transferred. Must be 8, 32, 64 or 128 bit scalar
+     or vector type.
+    * `$mask`: optional per-thread mask. When false, the thread's LDS write
+      is masked off. The global read still occurs for all threads regardless of mask.
+
+    Note: only supported on gfx1250 and later.
+
+    Examples:
+    ```mlir
+      amdgpu.global_load_async_to_lds %src[%i, %j], %dst[%k, %l]
+        : f32, memref<128x64xf32, #gpu.address_space<global>>,
+          memref<64x64xf32, #gpu.address_space<workgroup>>
+
+      amdgpu.global_load_async_to_lds %src[%i, %j], %dst[%k, %l]
+        : vector<4xf32>, memref<128x64xf32, #gpu.address_space<global>>,
+          memref<64x64xf32, #gpu.address_space<workgroup>>
+
+      amdgpu.global_load_async_to_lds %src[%i], %dst[%j]
+        : i8, memref<512xi8, #gpu.address_space<global>>,
+          memref<256xi8, #gpu.address_space<workgroup>>
+    ```
+  }];
+  let assemblyFormat = [{
+    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]`  (`,` $mask^)?
+    attr-dict `:` $transferType `,` type($src) `,` type($dst)
+  }];
+  let hasVerifier = 1;
+  let hasCanonicalizer = 1;
+}
+
+// Promises IndexedAccessOpInterface.
 def AMDGPU_TransposeLoadOp :
     AMDGPU_Op<"transpose_load", [SameVariadicOperandSize]>,
     Arguments<(ins Arg<AnyMemRef, "buffer to transpose load from", [MemRead]>:$src, Variadic<Index>:$srcIndices)>,
     Results<(outs AnyTypeOf<[AnyVectorOfNonZeroRank]>:$result)> {
-  let summary = "MLIR wrapper for CDNA Transpose Load instructions";
+  let summary = "MLIR wrapper for CDNA transpose Load instructions";
   let description = [{
-    The `amdgpu.transpose_load` op is a wrapper around the `ds_read_tr` instructions.
+    The `amdgpu.transpose_load` op is a wrapper around the `ds_read_tr` instructions
+    on gfx9 and the `ds_load_tr` family of instructions on gfx1250.
+
     The transpose load op represents a subgroup load from LDS memory,
     where the subgroup of threads collectively reads a matrix from the source
     memref, with each thread reading a vector of the matrix, and gets a transposed matrix
@@ -1115,8 +1494,9 @@ def AMDGPU_TransposeLoadOp :
     indices, and the thread's read result is a vector of the corresponding row of the transposed
     matrix.
 
-    This op is a direct wrapper around the ROCDL `ds_read_tr` family intrinsics. Please refer
-    to the CDNA4 ISA documentation for more details about its exact semantics.
+    This op is a direct wrapper around the ROCDL `ds_read_tr` family intrinsics on
+    gfx950 and the `ds_load_tr` family of instructions on gfx1250. Please refer
+    to the respective ISA documentation for more details about its exact semantics.
 
     Format example:
     ```
@@ -1124,10 +1504,63 @@ def AMDGPU_TransposeLoadOp :
     ```
     Operands:
     * `$src`: LDS memref to read from.
-    * `$srcIndices`: indices into `$src` to read from for this thread.
+    * `$srcIndices`: indices into `$src` to read from for this thread. Indices
+      must be non-negative and in-bounds for the corresponding dimension of
+      `$src`, matching the constraints of `memref.load`.
     * `$result`: target register this transpose load instruction will write to.
 
-    Note: Lowering is only supported on gfx950 and up.
+    Note: Lowering is only supported on gfx950 and gfx1250, with different
+    permitted load types.
+  }];
+  let assemblyFormat = [{
+    $src `[` $srcIndices `]` attr-dict `:` type($src) `->` type($result)
+  }];
+  let hasVerifier = 1;
+}
+
+// Promises IndexedAccessOpInterface.
+def AMDGPU_GlobalTransposeLoadOp :
+    AMDGPU_Op<"global_transpose_load", [SameVariadicOperandSize]>,
+    Arguments<(ins Arg<AnyMemRef, "buffer to transpose load from", [MemRead]>:$src,
+                      Variadic<Index>:$srcIndices)>,
+    Results<(outs AnyTypeOf<[
+      FixedVectorOfLengthAndType<[8], [I8, F8E5M2FNUZ, F8E4M3FNUZ, F8E5M2,
+                                       F8E4M3FN, F16, BF16, I16]>,
+      FixedVectorOfLengthAndType<[16], [I<4>, F4E2M1FN, I<6>, F6E2M3FN, F6E3M2FN]>
+    ]>:$result)> {
+  let summary = "MLIR wrapper for global memory transpose load instructions";
+  let description = [{
+    The `amdgpu.global_transpose_load` op is a wrapper around the
+    `global_load_tr` family of instructions introduced in gfx1200.
+
+    Each thread reads a column of a matrix stored in global memory and receives
+    the corresponding row of the transposed matrix in its result register.
+    The subgroup collectively performs a transpose of the tile.
+
+    This op is a direct wrapper around the ROCDL `global.load.tr` family
+    intrinsics. Refer to the ISA manual for exact semantics.
+
+    Format example:
+    ```mlir
+    %0 = amdgpu.global_transpose_load %src[%i, %j]
+           : memref<128x256xf16, #gpu.address_space<global>> -> vector<8xf16>
+    ```
+
+    Operands:
+    * `$src`: Global address space memref to read from.
+    * `$srcIndices`: indices into `$src` for this thread. Indices must be
+      non-negative and in-bounds for the corresponding dimension of `$src`,
+      matching the constraints of `memref.load`.
+    * `$result`: register this transpose load instruction writes to.
+
+    Valid (element bits, num elements) pairs:
+    * (4, 16)  -> global_load_tr4_b64  (gfx1250+)
+    * (6, 16)  -> global_load_tr6_b96  (gfx1250+)
+    * (8, 8)   -> global_load_tr_b64   (gfx1200+)
+    * (16, 8)  -> global_load_tr_b128  (gfx1200+)
+
+    Note: 8-bit and 16-bit element lowering requires gfx1200+.
+          4-bit and 6-bit element lowering requires gfx1250+.
   }];
   let assemblyFormat = [{
     $src `[` $srcIndices `]` attr-dict `:` type($src) `->` type($result)
@@ -1274,20 +1707,21 @@ class AMDGPU_DmaBaseOp<string mnemonic, Type outType> :
                    Variadic<Index>:$lds_indices)>,
     Results<(outs outType: $base)> {
 
-  // TODO:
-  // * Add verifiers to make sure that the number of indices do not exceed the number of dimensions.
-
   let assemblyFormat = [{
     $global `[` $global_indices `]` `,` $lds `[` $lds_indices `]` attr-dict `:` type($global) `,` type($lds) `->` type(results)
   }];
 }
 
+// Promises IndexedMemCopyOpInterface.
 def AMDGPU_MakeGatherDmaBaseOp : AMDGPU_DmaBaseOp<"make_gather_dma_base", AMDGPU_TDMGatherBaseType> {
   let summary = "Pair of based addresses used when moving tiles between LDS and global memory.";
 
   let description = [{
     This operation creates a pair of addresses that will be used by `tensor_load_to_lds`
     and `tensor_store_from_lds`.
+
+    The global and LDS indices must be non-negative and in-bounds for the
+    corresponding dimensions of their memrefs.
 
     This operation creates a value corresponding to the tensor descriptor (D#) group 0
     found in TensorLoadToLDSOp and TensorStoreFromLDSOp in the rocdl dialect.
@@ -1313,13 +1747,16 @@ def AMDGPU_MakeGatherDmaBaseOp : AMDGPU_DmaBaseOp<"make_gather_dma_base", AMDGPU
   }];
 }
 
-
+// Promises IndexedMemCopyOpInterface.
 def AMDGPU_MakeDmaBaseOp : AMDGPU_DmaBaseOp<"make_dma_base", AMDGPU_TDMBaseType> {
 
   let summary = "Pair of based addresses used when moving tiles between LDS and global memory.";
   let description = [{
     This operation creates a pair of addresses that will be used by tensor_load_to_lds
     and tensor_store_from_lds.
+
+    The global and LDS indices must be non-negative and in-bounds for the
+    corresponding dimensions of their memrefs.
 
     This operation creates a value corresponding to the tensor descriptor (D#) group 0
     found in TensorLoadToLDSOp and TensorStoreFromLDSOp in the rocdl dialect.
@@ -1379,7 +1816,7 @@ class AMDGPU_MakeDescriptorOp<string mnemonic> :
     Optional<I1>: $early_timeout,
     Optional<I32>: $pad_amount,
     Optional<I32>: $pad_interval,
-    Optional<AnyMemRef>: $atomic_barrier_address,
+    Optional<MemRefOf<[AMDGPU_DsBarrierStateType]>>: $atomic_barrier_address,
     Variadic<Index>: $atomic_barrier_indices,
     Optional<Index>: $global_increment,
     Optional<I32>: $lds_increment,
@@ -1410,12 +1847,20 @@ class AMDGPU_MakeDescriptorOp<string mnemonic> :
 
 }
 
+// Promises IndexedAccessOpInterface for the optional atomic barrier address.
 def AMDGPU_MakeGatherDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_gather_dma_descriptor"> {
   dag args = (ins AMDGPU_TDMGatherBaseType: $base,
                   AnyTypeOf<[VectorOfMinMaxLengthAndType<1, 8, [I32]>,
                              VectorOfMinMaxLengthAndType<1, 16, [I16]>]>: $indices);
   let arguments = !con(args, baseArgs);
   let summary = "Make all descriptor groups needed by TensorLoadToLDS/TensorStoreFromLDS.";
+  let description = [{
+    Make all descriptor groups needed by tensor memory operations in gather
+    mode.
+
+    If an atomic barrier is provided, its indices must be non-negative and
+    in-bounds for the corresponding dimensions of the barrier memref.
+  }];
 
   let assemblyFormat = [{
     $base `[` $indices `]`
@@ -1440,6 +1885,7 @@ def AMDGPU_MakeGatherDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_gather_dma_
   }];
 }
 
+// Promises IndexedAccessOpInterface for the optional atomic barrier address.
 def AMDGPU_MakeDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_dma_descriptor"> {
   dag args = (ins AMDGPU_TDMBaseType: $base);
   let arguments = !con(args, baseArgs);
@@ -1466,7 +1912,10 @@ def AMDGPU_MakeDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_dma_descriptor"> 
      $pad_interval must be a power of two contained in [2, 256].
      $pad_amount must be a value contained in [1, 128].
 
-     $atomic_barrier_address must be aligned to 8 bytes.
+     If an atomic barrier is provided, it will be arrived at **once** after
+     each load/store using this descriptor is completed.
+     Its indices must be non-negative and in-bounds for the corresponding
+     dimensions of the barrier memref.
 
      2D and 3D tensors may be iterated over by setting $global_increment, $lds_increment, and $iteration_count.
      $global_increment determines how much to increment the starting global memory address per iteration in units of the $base's element type.
@@ -1539,6 +1988,270 @@ def AMDGPU_TensorStoreFromLDSOp :
   let assemblyFormat = [{
     $desc attr-dict `:` qualified(type($desc))
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// In-LDS Barrier Operations
+//
+// General note: any of these operations that impact memory have read and write
+// effects as a crude model of their atomic nature - we don't want "reads"
+// being hoisted out of loops.
+//===----------------------------------------------------------------------===//
+
+// Promises IndexedAccessOpInterface.
+def AMDGPU_DsBarrierInitOp :
+    AMDGPU_Op<"ds_barrier_init">,
+    Arguments<(ins Arg<MemRefOf<[AMDGPU_DsBarrierStateType]>, "barrier(s)",
+                       [MemRead, MemWrite]>:$base,
+                   Variadic<Index>:$indices,
+                   I32:$participants)> {
+  let summary = "Initialize an in-LDS barrier.";
+  let description = [{
+    Given the location `!amdgpu.ds_barrier_state` in LDS (as specified by `base` and `indices`),
+    initialize the barrier structure so that the pending and init counts are equal to
+    `participants - 1`, which will have its high bits masked off, and its phase is equal to 0.
+
+    The indices must be non-negative and in-bounds for the corresponding
+    dimensions of `base`.
+
+    Note that we subtract 1 from `participants` when constructing the barrier state
+    to provide clearer high-level semantics.
+
+    The subtraction means that, when the `participant`th arrival occurs, the phase will change.
+    In practical terms, this means that you can use (for example) the number of subgroups or
+    waves per workgroup as `participants`, instead of manually needing to remove one.
+
+    While the write of the initial state will be performed atomically, no synchronization
+    between waves will be performed by this operation.
+
+    Example:
+    ```mlir
+    amdgpu.ds_barrier_init %barrier[], %c32 : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, i32
+    ```
+
+    This operation is only available on gfx1250+.
+  }];
+
+  let assemblyFormat = [{
+    $base `[` $indices `]` `,` $participants attr-dict `:` type($base) `,` type($participants)
+  }];
+
+  let hasVerifier = 1;
+}
+
+// Promises IndexedAccessOpInterface.
+def AMDGPU_DsBarrierPollStateOp :
+    AMDGPU_Op<"ds_barrier_poll_state">,
+    Arguments<(ins Arg<MemRefOf<[AMDGPU_DsBarrierStateType]>, "barrier(s)",
+                       [MemRead, MemWrite]>:$base,
+                 Variadic<Index>:$indices)>,
+    Results<(outs AMDGPU_DsBarrierStateType:$out)> {
+  let summary = "Atomically read the state of an in-LDS barrier.";
+  let description = [{
+    Atomically read and return the state of the barrier at `base[indices...]`.
+
+    This will ultimately act like a `memref.load`, but this operation will ensure
+    that appropriate atomic orderings and syncscopes are set.
+    The indices must be non-negative and in-bounds for the corresponding
+    dimensions of `base`.
+
+    Example:
+    ```mlir
+    %state = amdgpu.ds_barrier_poll_state %barrier[] : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>> -> !amdgpu.ds_barrier_state
+    ```
+
+    This operation is only available on gfx1250+.
+  }];
+
+  let assemblyFormat = [{
+    $base `[` $indices `]` attr-dict `:` type($base) `->` type($out)
+  }];
+
+  let hasVerifier = 1;
+}
+
+// Promises IndexedAccessOpInterface.
+def AMDGPU_DsAsyncBarrierArriveOp :
+    AMDGPU_Op<"ds_async_barrier_arrive">,
+    Arguments<(ins Arg<MemRefOf<[AMDGPU_DsBarrierStateType]>, "barrier(s)",
+                       [MemRead, MemWrite]>:$base,
+                 Variadic<Index>:$indices)> {
+  let summary = "Asynchronously arrive at an in-LDS barrier.";
+  let description = [{
+    Add a arrival to the LDS barrier at `base[indices]` to the sequence of pending
+    asynchronous memory operations.
+
+    The indices must be non-negative and in-bounds for the corresponding
+    dimensions of `base`.
+
+    This will add an "asynchronous memory operation" to the in-order list of pending
+    asynchronous loads from global memory to LDS. When the queue of such operations
+    issued before this operation is complete, the specified barrier will be arrived at,
+    decrementing the pending count by 1 **per lane that executes it** and rolling
+    over the phase if applicable.
+
+    This operation does not return the old barrier state.
+
+    Example:
+    ```mlir
+    amdgpu.ds_async_barrier_arrive %barrier[] : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>
+    ```
+
+    This operation is only available on gfx1250+.
+  }];
+
+  let assemblyFormat = [{
+    $base `[` $indices `]` attr-dict `:` type($base)
+  }];
+
+  let hasVerifier = 1;
+}
+
+// Promises IndexedAccessOpInterface.
+def AMDGPU_DsBarrierArriveOp :
+    AMDGPU_Op<"ds_barrier_arrive">,
+    Arguments<(ins Arg<MemRefOf<[AMDGPU_DsBarrierStateType]>, "barrier(s)",
+                       [MemRead, MemWrite]>:$base,
+                 Variadic<Index>:$indices,
+                 I64:$count)>,
+    Results<(outs AMDGPU_DsBarrierStateType:$out)> {
+  let summary = "Arrive at an in-LDS barrier and return old state.";
+  let description = [{
+    Atomically arrive at the LDS barrier at `base[indices]` and decrement it by `count`,
+    rolling over the phase if needed and returning the old barrier state.
+
+    The indices must be non-negative and in-bounds for the corresponding
+    dimensions of `base`.
+
+    `count` is the number of participants that should be subtracted from the barrier's
+    pending count **per lane that executes the operation**.
+
+    Example:
+    ```mlir
+    %old_state = amdgpu.ds_barrier_arrive %barrier[], %c1 : memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, i64 -> !amdgpu.ds_barrier_state
+    ```
+
+    This operation is only available on gfx1250+.
+  }];
+
+  let assemblyFormat = [{
+    $base `[` $indices `]` `,` $count attr-dict `:` type($base) `,` type($count) `->` type($out)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def AMDGPU_DsBarrierStatePhaseOp :
+    AMDGPU_Op<"ds_barrier_state_phase", [Pure]>,
+    Arguments<(ins AMDGPU_DsBarrierStateType:$state)>,
+    Results<(outs I32:$res)> {
+  let summary = "Extract the phase of a barrier state.";
+  let description = [{
+    Extract the phase of the `!amdgpu.ds_barrier_state` `state` as a 32-bit value.
+
+    Example:
+    ```mlir
+    %phase = amdgpu.ds_barrier_state_phase %state : !amdgpu.ds_barrier_state -> i32
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $state attr-dict `:` type($state) `->` type($res)
+  }];
+}
+
+def AMDGPU_DsBarrierStatePendingCountOp :
+    AMDGPU_Op<"ds_barrier_state_pending_count", [Pure]>,
+    Arguments<(ins AMDGPU_DsBarrierStateType:$state)>,
+    Results<(outs I32:$res)> {
+  let summary = "Extract the pending count of a barrier state.";
+  let description = [{
+    Extract the pending count of the `!amdgpu.ds_barrier_state` `state` as a 32-bit value.
+
+    Example:
+    ```mlir
+    %pending = amdgpu.ds_barrier_state_pending_count %state : !amdgpu.ds_barrier_state -> i32
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $state attr-dict `:` type($state) `->` type($res)
+  }];
+}
+
+def AMDGPU_DsBarrierStateInitCountOp :
+    AMDGPU_Op<"ds_barrier_state_init_count", [Pure]>,
+    Arguments<(ins AMDGPU_DsBarrierStateType:$state)>,
+    Results<(outs I32:$res)> {
+  let summary = "Extract the init count of a barrier state.";
+  let description = [{
+    Extract the init count of the `!amdgpu.ds_barrier_state` `state` as a 32-bit value.
+
+    Example:
+    ```mlir
+    %init = amdgpu.ds_barrier_state_init_count %state : !amdgpu.ds_barrier_state -> i32
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $state attr-dict `:` type($state) `->` type($res)
+  }];
+}
+
+def AMDGPU_DsBarrierStatePhaseParity :
+    AMDGPU_Op<"ds_barrier_state_phase_parity", [Pure]>,
+    Arguments<(ins AMDGPU_DsBarrierStateType:$state)>,
+    Results<(outs I1:$res)> {
+  let summary = "Extract the phase parity of a barrier state.";
+  let description = [{
+    Return the parity of the phase of the `!amdgpu.ds_barrier_state` `state`.
+
+    This is intended to simplify the case where the barrier is being used to repeatedly
+    track completion of a task where the precise value of the phase won't mater, only that
+    it changed since (or as a result of) the arrival.
+
+    Example:
+    ```mlir
+    %parity = amdgpu.ds_barrier_state_phase_parity %state : !amdgpu.ds_barrier_state -> i1
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $state attr-dict `:` type($state) `->` type($res)
+  }];
+}
+
+def AMDGPU_GlobalPrefetchOp :
+    AMDGPU_Op<"global_prefetch", [MemoryEffects<[MemWrite, MemRead]>]>,
+    Arguments<(ins AnyMemRef:$src,
+               Variadic<I64>:$indices,
+               AMDGPU_LoadTemporalHintAttr:$temporalHint,
+               AMDGPU_CacheScopeAttr:$cacheScope,
+               UnitAttr:$speculative)>,
+    Results<(outs)> {
+
+  let summary = "Prefetch data to caches.";
+  let description = [{
+    Prefetches a cache line to high-level caches using the aligned address of
+    the source `memref` and an offset provided by the indices of the element
+    containing the cache line. This provides temporal hints (e.g., regular
+    or high-priority). Note that out-of-bounds access is allowed in
+    speculative mode. The provided memref must be in the global address space
+    (`#gpu.address_space<global>` or 1).
+
+    This operation was introduced in gfx1250.
+
+    Example:
+    ```mlir
+    amdgpu.global_prefetch %src[%i, %j] RT SE speculative : memref<64x64xf16, #gpu.address_space<global>>
+    ```
+  }];
+
+  let assemblyFormat = [{
+    $src `[` $indices `]` $temporalHint $cacheScope (`speculative` $speculative^)? attr-dict `:` qualified(type($src))
+  }];
+
+  let hasVerifier = 1;
 }
 
 #endif // MLIR_DIALECT_AMDGPU_IR_AMDGPUOPS_TD

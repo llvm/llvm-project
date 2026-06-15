@@ -18,7 +18,7 @@ declare nofpclass(qnan inf norm sub zero) float @returns_snan()
 define nofpclass(inf norm sub zero) float @ret_only_nan_sqrt(float %x) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret_only_nan_sqrt(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %result = call float @llvm.sqrt.f32(float %x)
   ret float %result
@@ -34,6 +34,18 @@ define nofpclass(inf nan norm sub) float @ret_only_zero_sqrt(float %x) {
 ;
   %result = call float @llvm.sqrt.f32(float %x)
   ret float %result
+}
+
+define nofpclass(inf nan norm sub) float @ret_only_zero_sqrt_insert_point(float %x) {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_only_zero_sqrt_insert_point(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[X]])
+; CHECK-NEXT:    [[BARRIER:%.*]] = call float @llvm.arithmetic.fence.f32(float [[RESULT]])
+; CHECK-NEXT:    ret float [[BARRIER]]
+;
+  %result = call float @llvm.sqrt.f32(float %x)
+  %barrier = call float @llvm.arithmetic.fence.f32(float %result)
+  ret float %barrier
 }
 
 define nofpclass(inf nan norm sub) float @ret_only_zero_sqrt_preserve_flags(float %x) {
@@ -69,7 +81,7 @@ define nofpclass(inf nan norm sub) <2 x float> @ret_only_zero_sqrt_vec(<2 x floa
 define nofpclass(nan norm sub zero) float @ret_only_inf_sqrt(float %x) {
 ; CHECK-LABEL: define nofpclass(nan zero sub norm) float @ret_only_inf_sqrt(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    ret float 0x7FF0000000000000
+; CHECK-NEXT:    ret float +inf
 ;
   %result = call float @llvm.sqrt.f32(float %x)
   ret float %result
@@ -101,7 +113,7 @@ define nofpclass(ninf) float @ret_only_ninf__sqrt__known_negative() {
 define nofpclass(ninf) float @ret_only_ninf__sqrt__known_negative_nonzero() {
 ; CHECK-LABEL: define nofpclass(ninf) float @ret_only_ninf__sqrt__known_negative_nonzero() {
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE_NONZERO:%.*]] = call float @returns_negative_nonzero()
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %known.negative.nonzero = call float @returns_negative_nonzero()
   %result = call float @llvm.sqrt.f32(float %known.negative.nonzero)
@@ -112,7 +124,7 @@ define nofpclass(ninf) float @ret_only_ninf__sqrt__known_negative_nonzero() {
 define nofpclass(ninf) <2 x float> @ret_only_ninf__sqrt__known_negative_nonzero_vec() {
 ; CHECK-LABEL: define nofpclass(ninf) <2 x float> @ret_only_ninf__sqrt__known_negative_nonzero_vec() {
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE_NONZERO:%.*]] = call <2 x float> @returns_negative_nonzero_vec()
-; CHECK-NEXT:    ret <2 x float> splat (float 0x7FF8000000000000)
+; CHECK-NEXT:    ret <2 x float> splat (float +qnan)
 ;
   %known.negative.nonzero = call <2 x float> @returns_negative_nonzero_vec()
   %result = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %known.negative.nonzero)
@@ -150,7 +162,7 @@ define nofpclass(inf norm zero) float @ret_only_nan_or_sub__sqrt__select_unknown
 ; CHECK-LABEL: define nofpclass(inf zero norm) float @ret_only_nan_or_sub__sqrt__select_unknown_or_known_neg_nonzero(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[X:%.*]]) {
 ; CHECK-NEXT:    [[KNOWN_NEGATIVE_NONZERO:%.*]] = call float @returns_negative_nonzero()
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %known.negative.nonzero = call float @returns_negative_nonzero()
   %select = select i1 %cond, float %x, float %known.negative.nonzero
@@ -163,7 +175,7 @@ define nofpclass(inf norm zero) float @ret_only_nan_or_sub__sqrt__select_unknown
 ; CHECK-LABEL: define nofpclass(inf zero norm) float @ret_only_nan_or_sub__sqrt__select_unknown_or_maybe_ninf(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan) [[X:%.*]]) {
 ; CHECK-NEXT:    [[MAYBE_NINF:%.*]] = call nofpclass(nan pinf sub norm) float @func()
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %maybe.ninf = call nofpclass(pinf norm sub nan) float @func()
   %select = select i1 %cond, float %x, float %maybe.ninf
@@ -176,7 +188,7 @@ define nofpclass(inf norm zero) float @ret_only_nan_or_sub__sqrt__select_unknown
 ; CHECK-LABEL: define nofpclass(inf zero norm) float @ret_only_nan_or_sub__sqrt__select_unknown_or_maybe_nnorm(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan) [[X:%.*]]) {
 ; CHECK-NEXT:    [[MAYBE_NNORM:%.*]] = call nofpclass(nan inf sub pnorm) float @func()
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %maybe.nnorm = call nofpclass(inf pnorm sub nan) float @func()
   %select = select i1 %cond, float %x, float %maybe.nnorm
@@ -189,7 +201,7 @@ define nofpclass(inf norm zero) float @ret_only_nan_or_sub__sqrt__select_unknown
 ; CHECK-LABEL: define nofpclass(inf zero norm) float @ret_only_nan_or_sub__sqrt__select_unknown_or_maybe_nsub(
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan) [[X:%.*]]) {
 ; CHECK-NEXT:    [[MAYBE_NSUB:%.*]] = call nofpclass(nan inf psub norm) float @func()
-; CHECK-NEXT:    ret float 0x7FF8000000000000
+; CHECK-NEXT:    ret float +qnan
 ;
   %maybe.nsub = call nofpclass(inf norm psub nan) float @func()
   %select = select i1 %cond, float %x, float %maybe.nsub
@@ -359,5 +371,5 @@ define nofpclass(snan) float @qnan_result_demands_snan_src(i1 %cond, float %unkn
   ret float %result
 }
 
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #1 = { "denormal-fp-math"="dynamic,dynamic" }
+attributes #0 = { denormal_fpenv(preservesign) }
+attributes #1 = { denormal_fpenv(dynamic) }

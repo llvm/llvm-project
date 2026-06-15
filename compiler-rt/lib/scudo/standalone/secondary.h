@@ -177,11 +177,14 @@ bool mapSecondary(const Options &Options, uptr CommitBase, uptr CommitSize,
     }
   }
 
-  const uptr MaxUnreleasedCacheBytes = MaxUnreleasedCachePages * PageSize;
-  if (useMemoryTagging<Config>(Options) &&
-      CommitSize > MaxUnreleasedCacheBytes) {
-    const uptr UntaggedPos =
-        Max(AllocPos, CommitBase + MaxUnreleasedCacheBytes);
+  const uptr MaxMteMappedBytes = 2 * PageSize;
+  if (useMemoryTagging<Config>(Options) && CommitSize > MaxMteMappedBytes) {
+    // If the headers cross page boundary then two pages need to be mapped with
+    // PROT_MTE, otherwise a single page is sufficient. We could do the math and
+    // apply PROT_MTE to only one page (likely enough in most scenarios), but if
+    // the chunk is cached then this might not be true for the new allocation
+    // while reusing the chunk. Hence, PROT_MTE is used on two pages always.
+    const uptr UntaggedPos = Max(AllocPos, CommitBase + MaxMteMappedBytes);
     return MemMap.remap(CommitBase, UntaggedPos - CommitBase, "scudo:secondary",
                         MAP_MEMTAG | Flags) &&
            MemMap.remap(UntaggedPos, CommitBase + CommitSize - UntaggedPos,
@@ -214,6 +217,8 @@ class MapAllocatorCache {
 public:
   void getStats(ScopedString *Str) {
     ScopedLock L(Mutex);
+    Str->append("Config Stats Secondary: ");
+    Config::getConfigValues(Str);
     uptr Integral;
     uptr Fractional;
     computePercentage(SuccessfulRetrieves, CallsToRetrieve, &Integral,
@@ -233,17 +238,18 @@ public:
 
     for (CachedBlock &Entry : LRUEntries) {
       Str->append("  StartBlockAddress: 0x%zx, EndBlockAddress: 0x%zx, "
-                  "BlockSize: %zu%s",
+                  "BlockSize: %zu%s, Flags: %s",
                   Entry.CommitBase, Entry.CommitBase + Entry.CommitSize,
-                  Entry.CommitSize, Entry.Time == 0 ? " [R]" : "");
-#if SCUDO_LINUX
-      // getResidentPages only works on linux systems currently.
-      Str->append(", Resident Pages: %" PRId64 "/%zu\n",
-                  getResidentPages(Entry.CommitBase, Entry.CommitSize),
-                  Entry.CommitSize / getPageSizeCached());
-#else
+                  Entry.CommitSize, Entry.Time == 0 ? " [R]" : "",
+                  Entry.Flags & CachedBlock::NoAccess ? "NoAccess" : "None");
+      const s64 ResidentPages =
+          Entry.MemMap.getResidentPages(Entry.CommitBase, Entry.CommitSize);
+
+      if (ResidentPages >= 0) {
+        Str->append(", Resident Pages: %" PRId64 "/%zu", ResidentPages,
+                    Entry.CommitSize / getPageSizeCached());
+      }
       Str->append("\n");
-#endif
     }
   }
 
@@ -300,8 +306,13 @@ public:
         // Fuchsia does not support replacing mappings by creating a new mapping
         // on top so we just do the two syscalls there.
         Entry.Time = 0;
-        mapSecondary<Config>(Options, Entry.CommitBase, Entry.CommitSize,
-                             Entry.CommitBase, MAP_NOACCESS, Entry.MemMap);
+        if (!mapSecondary<Config>(Options, Entry.CommitBase, Entry.CommitSize,
+                                  Entry.CommitBase, MAP_NOACCESS,
+                                  Entry.MemMap)) {
+          // A mmap failed, unmap and return.
+          unmapCallBack(Entry.MemMap);
+          return;
+        }
       } else {
         Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize,
                                          MAP_NOACCESS);
@@ -523,10 +534,19 @@ public:
   void releaseToOS([[maybe_unused]] ReleaseToOS ReleaseType) EXCLUDES(Mutex) {
     SCUDO_SCOPED_TRACE(GetSecondaryReleaseToOSTraceName(ReleaseType));
 
-    // Since this is a request to release everything, always wait for the
-    // lock so that we guarantee all entries are released after this call.
-    ScopedLock L(Mutex);
-    releaseOlderThan(UINT64_MAX);
+    if (ReleaseType == ReleaseToOS::ForceFast) {
+      // Never wait for the lock, always move on if there is already
+      // a release operation in progress.
+      if (Mutex.tryLock()) {
+        releaseOlderThan(UINT64_MAX);
+        Mutex.unlock();
+      }
+    } else {
+      // Since this is a request to release everything, always wait for the
+      // lock so that we guarantee all entries are released after this call.
+      ScopedLock L(Mutex);
+      releaseOlderThan(UINT64_MAX);
+    }
   }
 
   void disableMemoryTagging() EXCLUDES(Mutex) {
@@ -769,13 +789,11 @@ MapAllocator<Config>::tryAllocateFromCache(const Options &Options, uptr Size,
 
   if (useMemoryTagging<Config>(Options)) {
     uptr NewBlockBegin = reinterpret_cast<uptr>(H + 1);
-    if (Zeroed) {
-      storeTags(LargeBlock::addHeaderTag<Config>(Entry.CommitBase),
-                NewBlockBegin);
-    } else if (Entry.BlockBegin < NewBlockBegin) {
-      storeTags(Entry.BlockBegin, NewBlockBegin);
+    if (Zeroed || (Entry.BlockBegin < NewBlockBegin)) {
+      storeTags(reinterpret_cast<uptr>(H), NewBlockBegin);
     } else {
       storeTags(untagPointer(NewBlockBegin), untagPointer(Entry.BlockBegin));
+      storeTags(reinterpret_cast<uptr>(H), NewBlockBegin);
     }
   }
 
@@ -897,8 +915,7 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
   LargeBlock::Header *H = reinterpret_cast<LargeBlock::Header *>(
       LargeBlock::addHeaderTag<Config>(HeaderPos));
   if (useMemoryTagging<Config>(Options))
-    storeTags(LargeBlock::addHeaderTag<Config>(CommitBase),
-              reinterpret_cast<uptr>(H + 1));
+    storeTags(reinterpret_cast<uptr>(H), reinterpret_cast<uptr>(H + 1));
   H->CommitBase = CommitBase;
   H->CommitSize = CommitSize;
   H->MemMap = MemMap;

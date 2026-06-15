@@ -168,6 +168,16 @@ static cl::list<unsigned> DumpInputContexts(
              "this option, the largest specified <N> has precedence.  The\n"
              "default is 5.\n"));
 
+static cl::opt<unsigned> DumpInputLabelWidth(
+    "dump-input-label-width", cl::value_desc("N"), cl::init(0), cl::Hidden,
+    cl::desc("In the dump requested by -dump-input, set <N> as the minimum\n"
+             "width for the initial label column.  When there are multiple\n"
+             "occurrences of this option, the last specified has precedence.\n"
+             "The default is 0, meaning that the actual labels fully\n"
+             "determine the width.  FileCheck's own test suite uses this\n"
+             "option to avoid a fluctuating column width when checking input\n"
+             "dumps.  This option is not expected to be useful elsewhere.\n"));
+
 typedef cl::list<std::string>::const_iterator prefix_iterator;
 
 
@@ -184,55 +194,90 @@ static void DumpCommandLine(int argc, char **argv) {
 }
 
 struct MarkerStyle {
-  /// The starting char (before tildes) for marking the line.
-  char Lead;
+  /// The first char for marking the input line.
+  char Head;
+  /// Every character for marking the input line between \c Head and \c Tail.
+  /// Normally it is a tilde.
+  char Mid;
+  /// The final char for marking the input line.  Normally it is a tilde.
+  char Tail;
   /// What color to use for this annotation.
   raw_ostream::Colors Color;
   /// A note to follow the marker, or empty string if none.
   std::string Note;
   /// Does this marker indicate inclusion by -dump-input-filter=error?
   bool FiltersAsError;
-  MarkerStyle() = default;
-  MarkerStyle(char Lead, raw_ostream::Colors Color,
-              const std::string &Note = "", bool FiltersAsError = false)
-      : Lead(Lead), Color(Color), Note(Note), FiltersAsError(FiltersAsError) {
-    assert((!FiltersAsError || !Note.empty()) &&
-           "expected error diagnostic to have note");
-  }
 };
 
-static MarkerStyle GetMarker(FileCheckDiag::MatchType MatchTy) {
-  switch (MatchTy) {
-  case FileCheckDiag::MatchFoundAndExpected:
-    return MarkerStyle('^', raw_ostream::GREEN);
-  case FileCheckDiag::MatchFoundButExcluded:
-    return MarkerStyle('!', raw_ostream::RED, "error: no match expected",
-                       /*FiltersAsError=*/true);
-  case FileCheckDiag::MatchFoundButWrongLine:
-    return MarkerStyle('!', raw_ostream::RED, "error: match on wrong line",
-                       /*FiltersAsError=*/true);
-  case FileCheckDiag::MatchFoundButDiscarded:
-    return MarkerStyle('!', raw_ostream::CYAN,
-                       "discard: overlaps earlier match");
-  case FileCheckDiag::MatchFoundErrorNote:
-    // Note should always be overridden within the FileCheckDiag.
-    return MarkerStyle('!', raw_ostream::RED,
-                       "error: unknown error after match",
-                       /*FiltersAsError=*/true);
-  case FileCheckDiag::MatchNoneAndExcluded:
-    return MarkerStyle('X', raw_ostream::GREEN);
-  case FileCheckDiag::MatchNoneButExpected:
-    return MarkerStyle('X', raw_ostream::RED, "error: no match found",
-                       /*FiltersAsError=*/true);
-  case FileCheckDiag::MatchNoneForInvalidPattern:
-    return MarkerStyle('X', raw_ostream::RED,
-                       "error: match failed for invalid pattern",
-                       /*FiltersAsError=*/true);
-  case FileCheckDiag::MatchFuzzy:
-    return MarkerStyle('?', raw_ostream::MAGENTA, "possible intended match",
-                       /*FiltersAsError=*/true);
+static MarkerStyle getMarker(const FileCheckDiag &Diag) {
+  // By default, the marker is based on whether the diagnostic is an error or is
+  // a MatchNoteDiag on a MatchResultDiag that is an error.
+  //
+  // It's less confusing if diagnostics that don't actually have match ranges
+  // don't have markers.  For example, a marker for the MatchNoteDiag
+  // 'with "VAR" equal to "5"' would seem to indicate where "VAR" matches, but
+  // we don't actually have that location.  Instead, we just place the note
+  // after the start of the associated MatchResultDiag.  This decision is
+  // overriden below for the case of MatchNoneDiag because the search range is
+  // used instead.
+  MarkerStyle Res;
+  bool IsError = Diag.isError() || Diag.getMatchResultDiag().isError();
+  if (Diag.getMatchRange()) {
+    Res.Head = IsError ? '!' : '^';
+    Res.Mid = Res.Tail = '~';
+  } else {
+    Res.Head = Res.Mid = Res.Tail = ' ';
   }
-  llvm_unreachable_internal("unexpected match type");
+  Res.Color = IsError ? raw_ostream::RED : raw_ostream::GREEN;
+  Res.FiltersAsError = IsError;
+
+  // Add Note.  Override the default Lead and Color for some diagnostic kinds.
+  switch (Diag.getKind()) {
+  case FileCheckDiag::MatchFoundDiag:
+    switch (cast<MatchFoundDiag>(Diag).getStatus()) {
+    case MatchFoundDiag::Success:
+      break;
+    case MatchFoundDiag::Excluded:
+      Res.Note = "no match expected";
+      break;
+    case MatchFoundDiag::WrongLine:
+      Res.Note = "match on wrong line";
+      break;
+    case MatchFoundDiag::Discarded:
+      Res.Head = '!'; // Not an error, but not a successful match either.
+      Res.Color = raw_ostream::CYAN;
+      Res.Note = "discard: overlaps earlier match";
+      break;
+    }
+    break;
+  case FileCheckDiag::MatchNoneDiag:
+    Res.Head = 'X';
+    Res.Mid = Res.Tail = '~';
+    switch (cast<MatchNoneDiag>(Diag).getStatus()) {
+    case MatchNoneDiag::Success:
+      break;
+    case MatchNoneDiag::InvalidPattern:
+      Res.Note = "match failed for invalid pattern";
+      break;
+    case MatchNoneDiag::Expected:
+      Res.Note = "no match found";
+      break;
+    }
+    break;
+  case FileCheckDiag::MatchFuzzyDiag:
+    Res.Head = '?';
+    Res.Color = raw_ostream::MAGENTA;
+    Res.Note = "possible intended match";
+    break;
+  case FileCheckDiag::MatchCustomNoteDiag:
+    Res.Note = cast<MatchCustomNoteDiag>(Diag).getNote();
+    break;
+  }
+  if (Diag.isError()) {
+    assert(!Res.Note.empty() && "expected error diagnostic to have note");
+    Res.Note = "error: " + Res.Note;
+  }
+  return Res;
 }
 
 static void DumpInputAnnotationHelp(raw_ostream &OS) {
@@ -320,21 +365,24 @@ static void DumpInputAnnotationHelp(raw_ostream &OS) {
 
 /// An annotation for a single input line.
 struct InputAnnotation {
-  /// The index of the match result across all checks
-  unsigned DiagIndex;
-  /// The label for this annotation.
+  /// A globally unique index for this annotation before it was broken into
+  /// multiple lines.
+  unsigned LabelIndexGlobal;
+  /// The globally unique label for this annotation before it was broken into
+  /// multiple lines.  There is one \c Label per \c LabelIndexGlobal and
+  /// vice-versa.
   std::string Label;
-  /// Is this the initial fragment of a diagnostic that has been broken across
-  /// multiple lines?
+  /// Is this the initial (possibly only) fragment of an annotation, which has
+  /// been broken across multiple lines if necessary?
   bool IsFirstLine;
   /// What input line (one-origin indexing) this annotation marks.  This might
   /// be different from the starting line of the original diagnostic if
   /// !IsFirstLine.
   unsigned InputLine;
-  /// The column range (one-origin indexing, open end) in which to mark the
-  /// input line.  If InputEndCol is UINT_MAX, treat it as the last column
-  /// before the newline.
-  unsigned InputStartCol, InputEndCol;
+  /// The column range (one-origin indexing, inclusive boundaries) in which to
+  /// mark the input line.  If \c InputLastCol is \c UINT_MAX, the rest of the
+  /// input line should be marked.
+  unsigned InputFirstCol, InputLastCol;
   /// The marker to use.
   MarkerStyle Marker;
   /// Whether this annotation represents a good match for an expected pattern.
@@ -376,107 +424,224 @@ static std::string GetCheckTypeAbbreviation(Check::FileCheckType Ty) {
   llvm_unreachable("unknown FileCheckType");
 }
 
+namespace {
+/// Stores all information needed to generate \c InputAnnotation labels for a
+/// particular check pattern.  Multiple labelers might be constructed for the
+/// same pattern if the pattern has more than one \c MatchResultDiag (e.g., for
+/// a \c CHECK-COUNT-<N> directive or implicit pattern).
+class InputAnnotationLabeler {
+private:
+  unsigned *LabelWidthGlobal;
+  unsigned *LabelIndexPerPattern;
+  std::string LabelPrefix;
+
+public:
+  /// Make an invalid labeler to be overwritten by a valid one before calling
+  /// \c generateLabel.
+  InputAnnotationLabeler()
+      : LabelWidthGlobal(nullptr), LabelIndexPerPattern(nullptr) {}
+  /// - \p CheckFileBufferID is the buffer ID for the check file.
+  /// - \p ImpPatBufferIDRange is the buffer ID range for all implicit patterns.
+  /// - \p LabelWidthGlobal is the widest label generated so far over all
+  ///   patterns.  It will be updated by each call to \c generateLabel.
+  /// - \p CheckTy and \p CheckLoc identify the pattern that produced all
+  ///   diagnostics for which this labeler will generate labels.
+  /// - \p LabelIndexPerPattern is either \c nullptr if only one label is
+  ///   required for the pattern for which this labeler will generate labels, or
+  ///   it points to the per-pattern index of the next label to be generated for
+  ///   that pattern.  In the latter case, the index will be incremented by each
+  ///   call to \c generateLabel.
+  InputAnnotationLabeler(const SourceMgr &SM, unsigned CheckFileBufferID,
+                         std::pair<unsigned, unsigned> ImpPatBufferIDRange,
+                         unsigned &LabelWidthGlobal,
+                         Check::FileCheckType CheckTy, SMLoc CheckLoc,
+                         unsigned *LabelIndexPerPattern)
+      : LabelWidthGlobal(&LabelWidthGlobal),
+        LabelIndexPerPattern(LabelIndexPerPattern) {
+    llvm::raw_string_ostream LabelStrm(LabelPrefix);
+    LabelStrm << GetCheckTypeAbbreviation(CheckTy) << ":";
+    unsigned CheckBufferID = SM.FindBufferContainingLoc(CheckLoc);
+    if (CheckBufferID == CheckFileBufferID)
+      LabelStrm << SM.getLineAndColumn(CheckLoc, CheckBufferID).first;
+    else if (ImpPatBufferIDRange.first <= CheckBufferID &&
+             CheckBufferID < ImpPatBufferIDRange.second)
+      LabelStrm << "imp" << (CheckBufferID - ImpPatBufferIDRange.first + 1);
+    else
+      llvm_unreachable("expected check location to be either in the check file "
+                       "or for an implicit pattern");
+  }
+  /// Write a globally unique label into \p Label.
+  void generateLabel(std::string &Label) {
+    assert(!LabelPrefix.empty() &&
+           "unexpected generateLabel call on invalid labeler");
+    assert(Label.empty() && "expected empty string for writing label");
+    llvm::raw_string_ostream LabelStrm(Label);
+    LabelStrm << LabelPrefix;
+    if (LabelIndexPerPattern)
+      LabelStrm << "'" << (*LabelIndexPerPattern)++;
+    *LabelWidthGlobal =
+        std::max((std::string::size_type)*LabelWidthGlobal, Label.size());
+  }
+};
+
+/// A range specifying where annotation markers are physically \a drawn in the
+/// input dump.
+struct MarkerRange {
+public:
+  /// An inclusive \c MarkerRange boundary.  Both line and column use a 1-based
+  /// index origin.
+  struct Loc {
+    unsigned Line;
+    unsigned Col;
+    /// Make an invalid location to be overwritten before being used.
+    Loc() : Line(0), Col(0) {}
+    /// Make a valid location.
+    Loc(const std::pair<unsigned, unsigned> &LineAndCol)
+        : Line(LineAndCol.first), Col(LineAndCol.second) {}
+  };
+
+private:
+  /// Location of the first marked character.
+  Loc First;
+  /// Location of the last marked character.
+  Loc Last;
+  MarkerRange(Loc First, Loc Last) : First(First), Last(Last) {}
+
+public:
+  /// Make an invalid range to be overwritten before being used.
+  MarkerRange() = default;
+  /// \p Range specifies the \a logical input range to be depicted by annotation
+  /// markers \a drawn at the resulting \c MarkerRange.
+  ///
+  /// If \p Range is an empty range, then the resulting \c MarkerRange is
+  /// expanded to a single character.  This avoids a missing marker for an empty
+  /// range, but it means the markers for a single-character range are
+  /// indistinguishable from markers for an empty range.
+  MarkerRange(const SourceMgr &SM, SMRange Range) {
+    // Range has an inclusive start as MarkerRange requires.
+    First = SM.getLineAndColumn(Range.Start);
+    // Range has an exclusive end, but MarkerRange requires an inclusive end.
+    if (Range.Start == Range.End) {
+      // Convert the empty range to a one-character range.
+      Last = First;
+    } else {
+      // We cannot simply subtract one from the end column number because that
+      // might result in column 0, which does not exist and is thus incorrect
+      // for an inclusive boundary.
+      SMLoc EndLoc = SMLoc::getFromPointer(Range.End.getPointer() - 1);
+      Last = SM.getLineAndColumn(EndLoc);
+    }
+  }
+  /// Is the marker range contained on a single line?
+  bool isSingleLine() const { return First.Line == Last.Line; }
+  /// Get the location of the first marked character.
+  Loc getFirstLoc() const { return First; }
+  /// Get the location of the last marked character.
+  Loc getLastLoc() const { return Last; }
+  /// Return a range marking only the first character.
+  MarkerRange truncate() const { return {First, First}; }
+};
+} // namespace
+
 static void
-BuildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
+buildInputAnnotations(const SourceMgr &SM, unsigned CheckFileBufferID,
                       const std::pair<unsigned, unsigned> &ImpPatBufferIDRange,
-                      const std::vector<FileCheckDiag> &Diags,
+                      const FileCheckDiagList &Diags,
                       std::vector<InputAnnotation> &Annotations,
-                      unsigned &LabelWidth) {
+                      unsigned &LabelWidthGlobal) {
   struct CompareSMLoc {
     bool operator()(SMLoc LHS, SMLoc RHS) const {
       return LHS.getPointer() < RHS.getPointer();
     }
   };
-  // How many diagnostics does each pattern have?
-  std::map<SMLoc, unsigned, CompareSMLoc> DiagCountPerPattern;
+
+  // How many unique input annotation labels does each check pattern need?  Each
+  // check pattern can have multiple MatchResultDiag's, each followed by a
+  // series of zero or more MatchNoteDiag's.  Each such MatchResultDiag and its
+  // MatchNoteDiag series can require multiple labels.
+  std::map<SMLoc, unsigned, CompareSMLoc> LabelCountPerPattern;
   for (const FileCheckDiag &Diag : Diags)
-    ++DiagCountPerPattern[Diag.CheckLoc];
-  // How many diagnostics have we seen so far per pattern?
-  std::map<SMLoc, unsigned, CompareSMLoc> DiagIndexPerPattern;
-  // How many total diagnostics have we seen so far?
-  unsigned DiagIndex = 0;
-  // What's the widest label?
-  LabelWidth = 0;
-  for (auto DiagItr = Diags.begin(), DiagEnd = Diags.end(); DiagItr != DiagEnd;
-       ++DiagItr) {
+    ++LabelCountPerPattern[Diag.getMatchResultDiag().getCheckLoc()];
+  // How many labels have we generated so far per check pattern?
+  std::map<SMLoc, unsigned, CompareSMLoc> LabelIndexPerPattern;
+  // How many total labels have we generated so far?
+  unsigned LabelIndexGlobal = 0;
+  // What's the widest label we've generated so far?
+  LabelWidthGlobal = 0;
+  // The labeler for the current MatchResultDiag and its MatchNoteDiag series.
+  InputAnnotationLabeler CurLabeler;
+  for (const FileCheckDiag &Diag : Diags) {
+    if (const MatchResultDiag *MRD = dyn_cast<MatchResultDiag>(&Diag)) {
+      CurLabeler = InputAnnotationLabeler(
+          SM, CheckFileBufferID, ImpPatBufferIDRange, LabelWidthGlobal,
+          MRD->getCheckTy(), MRD->getCheckLoc(),
+          LabelCountPerPattern[MRD->getCheckLoc()] > 1
+              ? &LabelIndexPerPattern[MRD->getCheckLoc()]
+              : nullptr);
+    }
+
+    // Build label that is unique for this input annotation before it is
+    // potentially broken across multiple lines.
     InputAnnotation A;
-    A.DiagIndex = DiagIndex++;
+    A.LabelIndexGlobal = LabelIndexGlobal++;
+    CurLabeler.generateLabel(A.Label);
 
-    // Build label, which uniquely identifies this check result.
-    unsigned CheckBufferID = SM.FindBufferContainingLoc(DiagItr->CheckLoc);
-    auto CheckLineAndCol =
-        SM.getLineAndColumn(DiagItr->CheckLoc, CheckBufferID);
-    llvm::raw_string_ostream Label(A.Label);
-    Label << GetCheckTypeAbbreviation(DiagItr->CheckTy) << ":";
-    if (CheckBufferID == CheckFileBufferID)
-      Label << CheckLineAndCol.first;
-    else if (ImpPatBufferIDRange.first <= CheckBufferID &&
-             CheckBufferID < ImpPatBufferIDRange.second)
-      Label << "imp" << (CheckBufferID - ImpPatBufferIDRange.first + 1);
-    else
-      llvm_unreachable("expected diagnostic's check location to be either in "
-                       "the check file or for an implicit pattern");
-    if (DiagCountPerPattern[DiagItr->CheckLoc] > 1)
-      Label << "'" << DiagIndexPerPattern[DiagItr->CheckLoc]++;
-    LabelWidth = std::max((std::string::size_type)LabelWidth, A.Label.size());
+    // Build the input marker.
+    A.Marker = getMarker(Diag);
 
-    A.Marker = GetMarker(DiagItr->MatchTy);
-    if (!DiagItr->Note.empty()) {
-      A.Marker.Note = DiagItr->Note;
-      // It's less confusing if notes that don't actually have ranges don't have
-      // markers.  For example, a marker for 'with "VAR" equal to "5"' would
-      // seem to indicate where "VAR" matches, but the location we actually have
-      // for the marker simply points to the start of the match/search range for
-      // the full pattern of which the substitution is potentially just one
-      // component.
-      if (DiagItr->InputStartLine == DiagItr->InputEndLine &&
-          DiagItr->InputStartCol == DiagItr->InputEndCol)
-        A.Marker.Lead = ' ';
+    // Does this diagnostic mark text that has been successfully matched?
+    A.FoundAndExpectedMatch = false;
+    if (const MatchFoundDiag *Found = dyn_cast<MatchFoundDiag>(&Diag)) {
+      if (Found->getStatus() == MatchFoundDiag::Success)
+        A.FoundAndExpectedMatch = true;
     }
-    if (DiagItr->MatchTy == FileCheckDiag::MatchFoundErrorNote) {
-      assert(!DiagItr->Note.empty() &&
-             "expected custom note for MatchFoundErrorNote");
-      A.Marker.Note = "error: " + A.Marker.Note;
-    }
-    A.FoundAndExpectedMatch =
-        DiagItr->MatchTy == FileCheckDiag::MatchFoundAndExpected;
 
-    // Compute the mark location, and break annotation into multiple
+    // If Diag has a match range, position the marker there.  If it is a
+    // MatchNoneDiag, position the marker at its search range.  Otherwise,
+    // position the marker at the start of the most recent MatchResultDiag, with
+    // which it is associated.
+    MarkerRange InputRange;
+    if (Diag.getMatchRange()) {
+      InputRange = MarkerRange(SM, *Diag.getMatchRange());
+    } else if (const MatchNoneDiag *MND = dyn_cast<MatchNoneDiag>(&Diag)) {
+      InputRange = MarkerRange(SM, MND->getSearchRange());
+    } else {
+      assert(isa<MatchNoteDiag>(Diag) &&
+             "expected only MatchNoteDiag to have no input range");
+      const MatchResultDiag &MRD = Diag.getMatchResultDiag();
+      InputRange = MRD.getMatchRange() ? MarkerRange(SM, *MRD.getMatchRange())
+                                       : MarkerRange(SM, MRD.getSearchRange());
+      InputRange = InputRange.truncate();
+      assert(A.Marker.Head == ' ' && "expected no marker for no match range");
+    }
+
+    // Compute the marker location, and break annotation into multiple
     // annotations if it spans multiple lines.
     A.IsFirstLine = true;
-    A.InputLine = DiagItr->InputStartLine;
-    A.InputStartCol = DiagItr->InputStartCol;
-    if (DiagItr->InputStartLine == DiagItr->InputEndLine) {
-      // Sometimes ranges are empty in order to indicate a specific point, but
-      // that would mean nothing would be marked, so adjust the range to
-      // include the following character.
-      A.InputEndCol =
-          std::max(DiagItr->InputStartCol + 1, DiagItr->InputEndCol);
+    A.InputLine = InputRange.getFirstLoc().Line;
+    A.InputFirstCol = InputRange.getFirstLoc().Col;
+    if (InputRange.isSingleLine()) {
+      A.InputLastCol = InputRange.getLastLoc().Col;
       Annotations.push_back(A);
     } else {
-      assert(DiagItr->InputStartLine < DiagItr->InputEndLine &&
-             "expected input range not to be inverted");
-      A.InputEndCol = UINT_MAX;
+      A.InputLastCol = UINT_MAX;
+      char MarkerTail = A.Marker.Tail;
+      A.Marker.Tail = A.Marker.Mid;
       Annotations.push_back(A);
-      for (unsigned L = DiagItr->InputStartLine + 1, E = DiagItr->InputEndLine;
+      for (unsigned L = InputRange.getFirstLoc().Line + 1,
+                    E = InputRange.getLastLoc().Line;
            L <= E; ++L) {
-        // If a range ends before the first column on a line, then it has no
-        // characters on that line, so there's nothing to render.
-        if (DiagItr->InputEndCol == 1 && L == E)
-          break;
         InputAnnotation B;
-        B.DiagIndex = A.DiagIndex;
+        B.LabelIndexGlobal = A.LabelIndexGlobal;
         B.Label = A.Label;
         B.IsFirstLine = false;
         B.InputLine = L;
         B.Marker = A.Marker;
-        B.Marker.Lead = '~';
+        B.Marker.Head = B.Marker.Mid = A.Marker.Mid;
+        B.Marker.Tail = L != E ? A.Marker.Mid : MarkerTail;
         B.Marker.Note = "";
-        B.InputStartCol = 1;
-        if (L != E)
-          B.InputEndCol = UINT_MAX;
-        else
-          B.InputEndCol = DiagItr->InputEndCol;
+        B.InputFirstCol = 1;
+        B.InputLastCol = L != E ? UINT_MAX : InputRange.getLastLoc().Col;
         B.FoundAndExpectedMatch = A.FoundAndExpectedMatch;
         Annotations.push_back(B);
       }
@@ -511,18 +676,18 @@ static unsigned FindInputLineInFilter(
   return UINT_MAX;
 }
 
-/// To OS, print a vertical ellipsis (right-justified at LabelWidth) if it would
-/// occupy less lines than ElidedLines, but print ElidedLines otherwise.  Either
-/// way, clear ElidedLines.  Thus, if ElidedLines is empty, do nothing.
+/// To OS, print a vertical ellipsis (right-justified at LabelWidthGlobal) if it
+/// would occupy less lines than ElidedLines, but print ElidedLines otherwise.
+/// Either way, clear ElidedLines.  Thus, if ElidedLines is empty, do nothing.
 static void DumpEllipsisOrElidedLines(raw_ostream &OS, std::string &ElidedLines,
-                                      unsigned LabelWidth) {
+                                      unsigned LabelWidthGlobal) {
   if (ElidedLines.empty())
     return;
   unsigned EllipsisLines = 3;
   if (EllipsisLines < StringRef(ElidedLines).count('\n')) {
     for (unsigned i = 0; i < EllipsisLines; ++i) {
       WithColor(OS, raw_ostream::BLACK, /*Bold=*/true)
-          << right_justify(".", LabelWidth);
+          << right_justify(".", LabelWidthGlobal);
       OS << '\n';
     }
   } else
@@ -535,7 +700,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
                                unsigned DumpInputContext,
                                StringRef InputFileText,
                                std::vector<InputAnnotation> &Annotations,
-                               unsigned LabelWidth) {
+                               unsigned LabelWidthGlobal) {
   OS << "Input was:\n<<<<<<\n";
 
   // Sort annotations.
@@ -585,7 +750,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
                //    following: when comparing any two input lines, a
                //    diagnostic's annotations are sorted in the same position
                //    relative to all other diagnostics' annotations.
-               return A.DiagIndex < B.DiagIndex;
+               return A.LabelIndexGlobal < B.LabelIndexGlobal;
              });
 
   // Compute the width of the label column.
@@ -594,7 +759,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
   unsigned LineCount = InputFileText.count('\n');
   if (InputFileEnd[-1] != '\n')
     ++LineCount;
-  unsigned LineNoWidth = std::log10(LineCount) + 1;
+  unsigned LineNoWidth = NumDigitsBase10(LineCount);
   // +3 below adds spaces (1) to the left of the (right-aligned) line numbers
   // on input lines and (2) to the right of the (left-aligned) labels on
   // annotation lines so that input lines and annotation lines are more
@@ -603,7 +768,8 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
   // horizontally.  Those line numbers might not even be for the same file.
   // One space would be enough to achieve that, but more makes it even easier
   // to see.
-  LabelWidth = std::max(LabelWidth, LineNoWidth) + 3;
+  LabelWidthGlobal = std::max(LabelWidthGlobal, LineNoWidth) + 3;
+  LabelWidthGlobal = std::max(LabelWidthGlobal, DumpInputLabelWidth.getValue());
 
   // Print annotated input lines.
   unsigned PrevLineInFilter = 0; // 0 means none so far
@@ -640,13 +806,13 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
       LineOS = &ElidedLinesOS;
     else {
       LineOS = &OS;
-      DumpEllipsisOrElidedLines(OS, ElidedLines, LabelWidth);
+      DumpEllipsisOrElidedLines(OS, ElidedLines, LabelWidthGlobal);
     }
 
     // Print right-aligned line number.
     WithColor(*LineOS, raw_ostream::BLACK, /*Bold=*/true, /*BF=*/false,
               TheColorMode)
-        << format_decimal(Line, LabelWidth) << ": ";
+        << format_decimal(Line, LabelWidthGlobal) << ": ";
 
     // For the case where -v and colors are enabled, find the annotations for
     // good matches for expected patterns in order to highlight everything
@@ -673,7 +839,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
         bool WasInMatch = InMatch;
         InMatch = false;
         for (const InputAnnotation &M : FoundAndExpectedMatches) {
-          if (M.InputStartCol <= Col && Col < M.InputEndCol) {
+          if (M.InputFirstCol <= Col && Col <= M.InputLastCol) {
             InMatch = true;
             break;
           }
@@ -699,15 +865,19 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
       WithColor COS(*LineOS, AnnotationItr->Marker.Color, /*Bold=*/true,
                     /*BG=*/false, TheColorMode);
       // The two spaces below are where the ": " appears on input lines.
-      COS << left_justify(AnnotationItr->Label, LabelWidth) << "  ";
+      COS << left_justify(AnnotationItr->Label, LabelWidthGlobal) << "  ";
       unsigned Col;
-      for (Col = 1; Col < AnnotationItr->InputStartCol; ++Col)
+      for (Col = 1; Col < AnnotationItr->InputFirstCol; ++Col)
         COS << ' ';
-      COS << AnnotationItr->Marker.Lead;
-      // If InputEndCol=UINT_MAX, stop at InputLineWidth.
-      for (++Col; Col < AnnotationItr->InputEndCol && Col <= InputLineWidth;
+      COS << AnnotationItr->Marker.Head;
+      // If InputLastCol==UINT_MAX, stop at InputLineWidth.
+      for (++Col; Col < AnnotationItr->InputLastCol && Col <= InputLineWidth;
            ++Col)
-        COS << '~';
+        COS << AnnotationItr->Marker.Mid;
+      if (Col <= AnnotationItr->InputLastCol && Col <= InputLineWidth) {
+        COS << AnnotationItr->Marker.Tail;
+        ++Col;
+      }
       const std::string &Note = AnnotationItr->Marker.Note;
       if (!Note.empty()) {
         // Put the note at the end of the input line.  If we were to instead
@@ -722,7 +892,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
       ++AnnotationItr;
     }
   }
-  DumpEllipsisOrElidedLines(OS, ElidedLines, LabelWidth);
+  DumpEllipsisOrElidedLines(OS, ElidedLines, LabelWidthGlobal);
 
   OS << ">>>>>>\n";
 }
@@ -853,7 +1023,7 @@ int main(int argc, char **argv) {
                             InputFileText, InputFile.getBufferIdentifier()),
                         SMLoc());
 
-  std::vector<FileCheckDiag> Diags;
+  FileCheckDiagList Diags;
   int ExitCode = FC.checkInput(SM, InputFileText,
                                DumpInput == DumpInputNever ? nullptr : &Diags)
                      ? EXIT_SUCCESS
@@ -867,11 +1037,11 @@ int main(int argc, char **argv) {
            << "-dump-input=help explains the following input dump.\n"
            << "\n";
     std::vector<InputAnnotation> Annotations;
-    unsigned LabelWidth;
-    BuildInputAnnotations(SM, CheckFileBufferID, ImpPatBufferIDRange, Diags,
-                          Annotations, LabelWidth);
+    unsigned LabelWidthGlobal;
+    buildInputAnnotations(SM, CheckFileBufferID, ImpPatBufferIDRange, Diags,
+                          Annotations, LabelWidthGlobal);
     DumpAnnotatedInput(errs(), Req, DumpInputFilter, DumpInputContext,
-                       InputFileText, Annotations, LabelWidth);
+                       InputFileText, Annotations, LabelWidthGlobal);
   }
 
   return ExitCode;

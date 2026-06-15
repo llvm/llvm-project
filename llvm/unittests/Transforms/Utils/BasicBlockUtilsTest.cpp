@@ -354,6 +354,37 @@ bb3:
 }
 #endif
 
+TEST(BasicBlockUtils, splitBlockBefore2) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+define void @split-block-before-test(i1 %flag) {
+entry:
+  br label %loop
+
+loop:
+  br i1 %flag, label %loop, label %exit
+
+exit:
+  ret void
+}
+)IR");
+  Function *F = M->getFunction("split-block-before-test");
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+
+  EXPECT_TRUE(DT.verify());
+  LI.verify(DT);
+  auto *LoopBB = getBasicBlockByName(*F, "loop");
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+  auto *New = splitBlockBefore(LoopBB, LoopBB->getFirstInsertionPt(), &DTU, &LI,
+                               /* MemorySSAUpdater */ nullptr,
+                               LoopBB->getName() + ".split");
+
+  EXPECT_TRUE(DT.verify());
+  LI.verify(DT);
+  EXPECT_EQ(LI.getLoopFor(New)->getHeader(), New);
+}
+
 TEST(BasicBlockUtils, NoUnreachableBlocksToEliminate) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
@@ -423,6 +454,98 @@ bb1:
   // entry block.
   SplitBlockPredecessors(&F->getEntryBlock(), {}, "split.entry", &DT);
   EXPECT_TRUE(DT.verify());
+}
+
+TEST(BasicBlockUtils, SplitLandingPadPredecessors) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+declare void @foo()
+
+define void @split-lp-predecessors-test() personality ptr null {
+entry:
+  invoke void @foo()
+          to label %loop unwind label %catch_dest
+
+loop:
+  invoke void @foo()
+          to label %latch unwind label %catch_dest
+
+latch:
+  br label %loop
+
+catch_dest:
+  %lp = landingpad i32
+          cleanup
+  invoke void @foo()
+          to label %exit unwind label %catch_dest
+
+exit:
+  ret void
+}
+)IR");
+  Function *F = M->getFunction("split-lp-predecessors-test");
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+
+  EXPECT_TRUE(DT.verify());
+  LI.verify(DT);
+  SplitBlockPredecessors(getBasicBlockByName(*F, "catch_dest"),
+                         {getBasicBlockByName(*F, "loop")}, "", &DT, &LI);
+
+  EXPECT_TRUE(DT.verify());
+  LI.verify(DT);
+  EXPECT_EQ(LI.getLoopFor(getBasicBlockByName(*F, "catch_dest")), nullptr);
+}
+
+TEST(BasicBlockUtils, SplitLandingPadPredecessorsLoopStruct) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+declare void @foo()
+
+define void @split-lp-predecessors-test(i1 %flag) personality ptr null {
+entry:
+  br label %superloop
+
+superloop:
+  invoke void @foo()
+          to label %loop unwind label %catch_dest
+
+loop:
+  invoke void @foo()
+          to label %latch unwind label %catch_dest
+
+latch:
+  br label %loop
+
+catch_dest:
+  %lp = landingpad i32
+          cleanup
+  br label %loop2
+
+loop2:
+  br i1 %flag, label %loop2, label %loop2_exit
+
+loop2_exit:
+  invoke void @foo()
+          to label %exit unwind label %catch_dest
+
+exit:
+  br label %superloop
+}
+)IR");
+  Function *F = M->getFunction("split-lp-predecessors-test");
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+
+  EXPECT_TRUE(DT.verify());
+  LI.verify(DT);
+  SplitBlockPredecessors(getBasicBlockByName(*F, "catch_dest"),
+                         {getBasicBlockByName(*F, "loop")}, "", &DT, &LI);
+
+  EXPECT_TRUE(DT.verify());
+  LI.verify(DT);
+  EXPECT_EQ(LI.getLoopFor(getBasicBlockByName(*F, "catch_dest")),
+            LI.getLoopFor(getBasicBlockByName(*F, "superloop")));
 }
 
 TEST(BasicBlockUtils, SplitCriticalEdge) {

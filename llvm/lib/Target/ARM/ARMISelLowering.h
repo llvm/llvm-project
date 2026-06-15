@@ -307,6 +307,8 @@ class VectorType;
       return V.getValueType().isScalarInteger();
     }
 
+    bool hasAndNot(SDValue Y) const override;
+
     bool
     isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const override;
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
@@ -400,9 +402,12 @@ class VectorType;
     bool canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
                                    unsigned &Cost) const override;
 
-    bool canCreateUndefOrPoisonForTargetNode(
-        SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-        bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const override;
+    bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
+                                             const APInt &DemandedElts,
+                                             const SelectionDAG &DAG,
+                                             UndefPoisonKind Kind,
+                                             bool ConsiderFlags,
+                                             unsigned Depth) const override;
 
     bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
                           const MachineFunction &MF) const override {
@@ -567,8 +572,7 @@ class VectorType;
     SDValue LowerGlobalTLSAddressDarwin(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalTLSAddressWindows(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerSignedALUO(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerUnsignedALUO(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerALUO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;

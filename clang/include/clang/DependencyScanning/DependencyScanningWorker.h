@@ -27,54 +27,14 @@ namespace clang {
 
 class DependencyOutputOptions;
 
+namespace tooling {
+class CompilerInstanceWithContext;
+}
+
 namespace dependencies {
 
+class DependencyConsumer;
 class DependencyScanningWorkerFilesystem;
-class CompilerInstanceWithContext;
-
-/// A command-line tool invocation that is part of building a TU.
-///
-/// \see TranslationUnitDeps::Commands.
-struct Command {
-  std::string Executable;
-  std::vector<std::string> Arguments;
-};
-
-class DependencyConsumer {
-public:
-  virtual ~DependencyConsumer() {}
-
-  virtual void handleProvidedAndRequiredStdCXXModules(
-      std::optional<P1689ModuleInfo> Provided,
-      std::vector<P1689ModuleInfo> Requires) {}
-
-  virtual void handleBuildCommand(Command Cmd) {}
-
-  virtual void
-  handleDependencyOutputOpts(const DependencyOutputOptions &Opts) = 0;
-
-  virtual void handleFileDependency(StringRef Filename) = 0;
-
-  virtual void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) = 0;
-
-  virtual void handleModuleDependency(ModuleDeps MD) = 0;
-
-  virtual void handleDirectModuleDependency(ModuleID MD) = 0;
-
-  virtual void handleVisibleModule(std::string ModuleName) = 0;
-
-  virtual void handleContextHash(std::string Hash) = 0;
-};
-
-/// Dependency scanner callbacks that are used during scanning to influence the
-/// behaviour of the scan - for example, to customize the scanned invocations.
-class DependencyActionController {
-public:
-  virtual ~DependencyActionController();
-
-  virtual std::string lookupModuleOutput(const ModuleDeps &MD,
-                                         ModuleOutputKind Kind) = 0;
-};
 
 /// An individual dependency scanning worker that is able to run on its own
 /// thread.
@@ -87,36 +47,13 @@ public:
   /// Construct a dependency scanning worker.
   ///
   /// @param Service The parent service. Must outlive the worker.
-  /// @param BaseFS The filesystem for the worker to use.
-  DependencyScanningWorker(DependencyScanningService &Service,
-                           IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS);
+  DependencyScanningWorker(DependencyScanningService &Service);
 
   ~DependencyScanningWorker();
 
-  /// Run the dependency scanning worker for the given frontend command-line,
-  /// and report the discovered dependencies to the provided consumer.
-  ///
-  /// OverlayFS should be based on the Worker's dependency scanning file-system
-  /// and can be used to provide any input specified on the command-line as
-  /// in-memory file. If no overlay file-system is provided, the Worker's
-  /// dependency scanning file-system is used instead.
-  ///
-  /// \returns false if any errors occurred (with diagnostics reported to
-  /// \c DiagConsumer), true otherwise.
-  bool computeDependencies(
-      StringRef WorkingDirectory, ArrayRef<std::string> CommandLine,
-      DependencyConsumer &DepConsumer, DependencyActionController &Controller,
-      DiagnosticConsumer &DiagConsumer,
-      llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS =
-          nullptr);
-
   /// Run the dependency scanning tool for all given frontend command-lines,
-  /// and report the discovered dependencies to the provided consumer.
-  ///
-  /// OverlayFS should be based on the Worker's dependency scanning file-system
-  /// and can be used to provide any input specified on the command-line as
-  /// in-memory file. If no overlay file-system is provided, the Worker's
-  /// dependency scanning file-system is used instead.
+  /// and report the discovered dependencies to the provided consumer. The
+  /// \c OverlayFS will be used to call \c makeEffectiveVFS().
   ///
   /// \returns false if any errors occurred (with diagnostics reported to
   /// \c DiagConsumer), true otherwise.
@@ -124,79 +61,35 @@ public:
       StringRef WorkingDirectory, ArrayRef<ArrayRef<std::string>> CommandLines,
       DependencyConsumer &DepConsumer, DependencyActionController &Controller,
       DiagnosticConsumer &DiagConsumer,
-      llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS =
-          nullptr);
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
 
-  /// The three method below implements a new interface for by name
-  /// dependency scanning. They together enable the dependency scanning worker
-  /// to more effectively perform scanning for a sequence of modules
-  /// by name when the CWD and CommandLine do not change across the queries.
-  /// The initialization function asks the client for a DiagnosticsConsumer
-  /// that it direct the diagnostics to.
+  /// Creates the effective VFS that will be used for the scan.
+  ///
+  /// If provided, OverlayFS will be overlaid on top of the Worker's dependency
+  /// scanning file-system and can be used to provide any input specified on the
+  /// command-line as in-memory file. If no overlay file-system is provided, the
+  /// Worker's dependency scanning file-system is used directly.
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> makeEffectiveVFS(
+      StringRef WorkingDirectory,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr) const;
 
-  /// @brief Initializing the context and the compiler instance.
-  /// @param CWD The current working directory used during the scan.
-  /// @param CommandLine The commandline used for the scan.
-  /// @return False if the initializaiton fails.
-  bool initializeCompilerInstanceWithContext(StringRef CWD,
-                                             ArrayRef<std::string> CommandLine,
-                                             DiagnosticConsumer &DC);
-
-  /// @brief Initializing the context and the compiler instance.
-  /// @param CWD The current working directory used during the scan.
-  /// @param CommandLine The commandline used for the scan.
-  /// @param DiagEngineWithCmdAndOpts Preconfigured diagnostics engine and
-  /// options associated with the cc1 command line.
-  /// @param FS The overlay file system to use for this compiler instance.
-  /// @return False if the initializaiton fails.
-  bool initializeCompilerInstanceWithContext(
-      StringRef CWD, ArrayRef<std::string> CommandLine,
-      std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithCmdAndOpts,
-      IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS);
-
-  /// @brief Performaces dependency scanning for the module whose name is
-  ///        specified.
-  /// @param ModuleName  The name of the module whose dependency will be
-  ///                    scanned.
-  /// @param Consumer The dependency consumer that stores the results.
-  /// @param Controller The controller for the dependency scanning action.
-  /// @return False if the scanner incurs errors.
-  bool
-  computeDependenciesByNameWithContext(StringRef ModuleName,
-                                       DependencyConsumer &Consumer,
-                                       DependencyActionController &Controller);
-
-  /// @brief Finalizes the diagnostics engine and deletes the compiler instance.
-  /// @return False if errors occur during finalization.
-  bool finalizeCompilerInstanceWithContext();
-
-  llvm::vfs::FileSystem &getVFS() const { return *DepFS; }
+  /// Returns the worker tracing VFS, if it was requested via the service.
+  llvm::vfs::TracingFileSystem *getTracingVFS() const {
+    return TracingFS.get();
+  }
 
 private:
   /// The parent dependency scanning service.
   DependencyScanningService &Service;
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
   /// This is the caching (and optionally dependency-directives-providing) VFS
-  /// overlaid on top of the base VFS passed in the constructor.
+  /// overlaid on top of the base VFS.
   IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
+  /// The tracing VFS overlaid on top of the base VFS.
+  IntrusiveRefCntPtr<llvm::vfs::TracingFileSystem> TracingFS;
 
-  friend CompilerInstanceWithContext;
-  std::unique_ptr<CompilerInstanceWithContext> CIWithContext;
+  friend tooling::CompilerInstanceWithContext;
 };
-
-std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
-          std::vector<std::string>>
-initVFSForTUBufferScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                           ArrayRef<std::string> CommandLine,
-                           StringRef WorkingDirectory,
-                           llvm::MemoryBufferRef TUBuffer);
-
-std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
-          std::vector<std::string>>
-initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-                         ArrayRef<std::string> CommandLine,
-                         StringRef WorkingDirectory, StringRef ModuleName);
-
 } // end namespace dependencies
 } // end namespace clang
 

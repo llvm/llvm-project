@@ -17,4 +17,12 @@
 #define RR3_RED 1
 #define RR3_GREEN 2
 #define RR3_BLUE 3
+// CHECK-MESSAGES: :[[@LINE-2]]:1: warning: replace macro with enum
+// CHECK-MESSAGES: :[[@LINE-3]]:9: warning: macro 'RR3_GREEN' defines an integral constant; prefer an enum instead
+// CHECK-MESSAGES: :[[@LINE-3]]:9: warning: macro 'RR3_BLUE' defines an integral constant; prefer an enum instead
+// CHECK-FIXES: #define RR3_RED 1
+// CHECK-FIXES-NEXT: enum {
+// CHECK-FIXES-NEXT: RR3_GREEN = 2,
+// CHECK-FIXES-NEXT: RR3_BLUE = 3
+// CHECK-FIXES-NEXT: };
 #endif

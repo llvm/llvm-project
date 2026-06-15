@@ -159,8 +159,8 @@ enum FusedCompareType {
 } // end namespace SystemZII
 
 namespace SystemZ {
-int getTwoOperandOpcode(uint16_t Opcode);
-int getTargetMemOpcode(uint16_t Opcode);
+int32_t getTwoOperandOpcode(uint32_t Opcode);
+int32_t getTargetMemOpcode(uint32_t Opcode);
 
 // Return a version of comparison CC mask CCMask in which the LT and GT
 // actions are swapped.
@@ -193,8 +193,7 @@ class SystemZInstrInfo : public SystemZGenInstrInfo {
                        unsigned HighOpcode) const;
   void expandZExtPseudo(MachineInstr &MI, unsigned LowOpcode,
                         unsigned Size) const;
-  void expandLoadStackGuard(MachineInstr *MI) const;
-
+  void expandStackGuardPseudo(MachineInstr &MI, unsigned Opcode) const;
   MachineInstrBuilder
   emitGRX32Move(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
@@ -292,16 +291,17 @@ public:
                                    bool Invert) const override;
   std::optional<unsigned> getInverseOpcode(unsigned Opcode) const override;
 
-  MachineInstr *
-  foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                        ArrayRef<unsigned> Ops,
-                        MachineBasicBlock::iterator InsertPt, int FrameIndex,
-                        LiveIntervals *LIS = nullptr,
-                        VirtRegMap *VRM = nullptr) const override;
-  MachineInstr *foldMemoryOperandImpl(
-      MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-      MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-      LiveIntervals *LIS = nullptr) const override;
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops, int FrameIndex,
+                                      MachineInstr *&CopyMI,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops,
+                                      MachineInstr &LoadMI,
+                                      MachineInstr *&CopyMI,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
   bool expandPostRAPseudo(MachineInstr &MBBI) const override;
   bool reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const
     override;
@@ -351,6 +351,17 @@ public:
   unsigned getFusedCompare(unsigned Opcode,
                            SystemZII::FusedCompareType Type,
                            const MachineInstr *MI = nullptr) const;
+
+  // Return true if this is a load and test which can be optimized the
+  // same way as compare instruction.
+  bool isLoadAndTestAsCmp(const MachineInstr &MI) const;
+
+  // Return true if Compare is a comparison against zero.
+  bool isCompareZero(const MachineInstr &Compare) const;
+
+  // Return the source register of Compare, which is the unknown value
+  // being tested.
+  Register getCompareSourceReg(const MachineInstr &Compare) const;
 
   // Try to find all CC users of the compare instruction (MBBI) and update
   // all of them to maintain equivalent behavior after swapping the compare

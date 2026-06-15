@@ -130,6 +130,20 @@ namespace test6_3 {
     v.f();
   }
 }
+namespace test6_4 {
+  template<class T> struct vector {
+    constexpr vector(int i) {}
+    constexpr int f(const T& t = T()) const { return T().v; }
+  };
+  class A {
+    friend constexpr int vector<A>::f(const A&) const;
+    static constexpr int v = 2;
+  };
+  void f() {
+    constexpr vector<A> v(1);
+    static_assert(v.f() == 2, "");
+  }
+} // namespace test6_4
 
 namespace test7 {
   extern "C" {

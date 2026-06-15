@@ -7,7 +7,7 @@ define void @f() personality ptr @g {
 bb0:
   call void asm ".Lfunc_end0:", ""()
 ; CHECK: #APP
-; CHECK-NEXT: .Lfunc_end0:
+; CHECK-NEXT: .Lfunc_end0{{.*}}:
 ; CHECK-NEXT: #NO_APP
 
   invoke void @g() to label %bb2 unwind label %bb1

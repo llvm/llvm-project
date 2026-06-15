@@ -1,5 +1,4 @@
 header: elf.h
-header_template: elf.h.def
 standards:
   - svid
 macros:
@@ -267,6 +266,18 @@ macros:
     macro_value: '0x70000000'
   - macro_name: PT_HIPROC
     macro_value: '0x7fffffff'
+  - macro_name: PT_GNU_EH_FRAME
+    macro_value: '0x6474e550'
+    standards:
+      - gnu
+  - macro_name: PT_GNU_STACK
+    macro_value: '0x6474e551'
+    standards:
+      - gnu
+  - macro_name: PT_GNU_RELRO
+    macro_value: '0x6474e552'
+    standards:
+      - gnu
   - macro_name: PT_GNU_PROPERTY
     macro_value: '0x6474e553'
   - macro_name: PF_X
@@ -358,6 +369,42 @@ macros:
     macro_value: '0x70000000'
   - macro_name: DT_HIPROC
     macro_value: '0x7fffffff'
+  - macro_name: DT_ADDRRNGLO
+    macro_value: '0x6ffffe00'
+  - macro_name: DT_GNU_HASH
+    macro_value: '0x6ffffef5'
+    standards:
+      - gnu
+  - macro_name: DT_TLSDESC_PLT
+    macro_value: '0x6ffffef6'
+    standards:
+      - gnu
+  - macro_name: DT_TLSDESC_GOT
+    macro_value: '0x6ffffef7'
+    standards:
+      - gnu
+  - macro_name: DT_GNU_CONFLICT
+    macro_value: '0x6ffffef8'
+    standards:
+      - gnu
+  - macro_name: DT_GNU_LIBLIST
+    macro_value: '0x6ffffef9'
+    standards:
+      - gnu
+  - macro_name: DT_CONFIG
+    macro_value: '0x6ffffefa'
+  - macro_name: DT_DEPAUDIT
+    macro_value: '0x6ffffefb'
+  - macro_name: DT_AUDIT
+    macro_value: '0x6ffffefc'
+  - macro_name: DT_PLTPAD
+    macro_value: '0x6ffffefd'
+  - macro_name: DT_MOVETAB
+    macro_value: '0x6ffffefe'
+  - macro_name: DT_SYMINFO
+    macro_value: '0x6ffffeff'
+  - macro_name: DT_ADDRRNGHI
+    macro_value: '0x6ffffeff'
   - macro_name: DT_VERSYM
     macro_value: '0x6ffffff0'
   - macro_name: DT_RELACOUNT
@@ -440,6 +487,43 @@ macros:
     macro_value: '0xc0000002'
   - macro_name: GNU_PROPERTY_X86_FEATURE_1_SHSTK
     macro_value: '0x00000002'
+  # Architecture-specific IRELATIVE relocation types
+  - macro_name: R_AARCH64_IRELATIVE
+    macro_value: 1032
+  - macro_name: R_ARM_IRELATIVE
+    macro_value: 160
+  - macro_name: R_RISCV_IRELATIVE
+    macro_value: 58
+  - macro_name: R_X86_64_IRELATIVE
+    macro_value: 37
+  - macro_name: ELF32_ST_BIND
+    macro_header: elf-macros.h
+  - macro_name: ELF32_ST_TYPE
+    macro_header: elf-macros.h
+  - macro_name: ELF32_ST_INFO
+    macro_header: elf-macros.h
+  - macro_name: ELF64_ST_BIND
+    macro_header: elf-macros.h
+  - macro_name: ELF64_ST_TYPE
+    macro_header: elf-macros.h
+  - macro_name: ELF64_ST_INFO
+    macro_header: elf-macros.h
+  - macro_name: ELF32_ST_VISIBILITY
+    macro_header: elf-macros.h
+  - macro_name: ELF64_ST_VISIBILITY
+    macro_header: elf-macros.h
+  - macro_name: ELF32_R_SYM
+    macro_header: elf-macros.h
+  - macro_name: ELF32_R_TYPE
+    macro_header: elf-macros.h
+  - macro_name: ELF32_R_INFO
+    macro_header: elf-macros.h
+  - macro_name: ELF64_R_SYM
+    macro_header: elf-macros.h
+  - macro_name: ELF64_R_TYPE
+    macro_header: elf-macros.h
+  - macro_name: ELF64_R_INFO
+    macro_header: elf-macros.h
 types:
   - type_name: Elf32_Addr
   - type_name: Elf32_Chdr
@@ -462,6 +546,7 @@ types:
   - type_name: Elf32_Versym
   - type_name: Elf32_Word
   - type_name: Elf32_Xword
+  - type_name: Elf32_auxv_t
   - type_name: Elf64_Addr
   - type_name: Elf64_Chdr
   - type_name: Elf64_Dyn
@@ -484,6 +569,7 @@ types:
   - type_name: Elf64_Versym
   - type_name: Elf64_Word
   - type_name: Elf64_Xword
+  - type_name: Elf64_auxv_t
 enums: []
 objects: []
 functions: []

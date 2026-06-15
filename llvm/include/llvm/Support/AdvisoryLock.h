@@ -48,7 +48,7 @@ public:
   /// For a lock owned by someone else, unlock it. A permitted side-effect is
   /// that another thread/process may acquire ownership of the lock before the
   /// existing owner unlocks it. This is an unsafe operation.
-  virtual std::error_code unsafeMaybeUnlock() = 0;
+  virtual std::error_code unsafeUnlock() = 0;
 
   /// Unlocks the lock if its ownership was previously acquired by \c tryLock().
   virtual ~AdvisoryLock() = default;

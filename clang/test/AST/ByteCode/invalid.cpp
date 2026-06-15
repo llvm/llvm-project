@@ -151,3 +151,61 @@ namespace NullRecord {
   };
   S2 s = S2();
 }
+
+namespace NamedLoops {
+  constexpr int foo() {
+  bar: // both-note {{previous definition is here}} \
+       // both-warning {{use of this statement in a constexpr function is a C++23 extension}}
+    return 0;
+
+  bar: // both-error {{redefinition of label 'bar'}}
+    do {
+      break bar; // both-error {{named 'break' is only supported in C2y}}
+    } while (0);
+  }
+}
+
+constexpr int invalidUnaryOrTypeTrait() {
+  return __builtin_vectorelements * 10; // both-error {{indirection requires pointer operand}}
+}
+
+static_assert(invalidUnaryOrTypeTrait() == 11, ""); // both-error {{not an integral constant expression}}
+
+constexpr int invalidUnaryOrTypeTrait2() {
+  return alignof * 10; // both-error {{indirection requires pointer operand}} \
+                       // both-warning {{'alignof' applied to an expression is a GNU extension}}
+}
+
+/// Pointer::toRValue() of a function type.
+void foo() { *(void (*)()) ""; } // both-warning {{expression result unused}}
+
+namespace InvalidCallExpr {
+  constexpr bool foo() {
+    struct A {};
+    A a;
+    a.~A(__builtin_popcountg == 0, ""); // both-error {{builtin functions must be directly called}}
+
+    return true;
+  }
+}
+
+namespace InvalidUnaryOperator {
+  typedef struct {} S;
+  void foo() {
+    S *s = (S *)malloc(sizeof(*s)); // both-error {{use of undeclared identifier 'malloc'}}
+    S *&sref = s;
+    for (int i = 0; i < 2; sref++)
+      ;
+  }
+}
+
+namespace IncNonDereferencable {
+  struct S {};
+
+  void foo() {
+    S *s = (foo *)malloc(sizeof(*s)); // both-error {{expected expression}}
+    S *&sref = s;
+    for (int i = 0; i < 2; sref++)
+      ;
+  }
+}

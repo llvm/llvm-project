@@ -216,8 +216,8 @@ static Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
   assert(AddressPointOffset < VTable->getGlobalSize(M.getDataLayout()) &&
          "Out-of-bound access");
 
-  return ConstantExpr::getInBoundsGetElementPtr(
-      Type::getInt8Ty(Context), VTable,
+  return ConstantExpr::getInBoundsPtrAdd(
+      VTable,
       llvm::ConstantInt::get(Type::getInt32Ty(Context), AddressPointOffset));
 }
 
@@ -641,9 +641,9 @@ Instruction *IndirectCallPromoter::computeVTableInfos(
       continue;
 
     auto &Candidate = Candidates[CalleeIndexIter->second];
-    // There shouldn't be duplicate GUIDs in one !prof metadata (except
-    // duplicated zeros), so assign counters directly won't cause overwrite or
-    // counter loss.
+    // There should never be duplicate GUIDs in one !prof metdata, as this is
+    // an IR invariant enforced by the verifier. Assigning counters directly
+    // won't cause overwrite or counter loss.
     Candidate.VTableGUIDAndCounts[VTableVal] = V.Count;
     Candidate.AddressPoints.push_back(
         getOrCreateVTableAddressPointVar(VTableVar, AddressPointOffset));

@@ -48,10 +48,10 @@ void test_half_builtins(half h0, half h1, half h2, int i0) {
   // CHECK: call half @llvm.fma.f16(half %h0, half %h1, half %h2)
   res = __builtin_fmaf16(h0, h1 ,h2);
 
-  // CHECK: call half @llvm.maxnum.f16(half %h0, half %h1)
+  // CHECK: call nsz half @llvm.maxnum.f16(half %h0, half %h1)
   res = __builtin_fmaxf16(h0, h1);
 
-  // CHECK: call half @llvm.minnum.f16(half %h0, half %h1)
+  // CHECK: call nsz half @llvm.minnum.f16(half %h0, half %h1)
   res = __builtin_fminf16(h0, h1);
 
   // CHECK: frem half %h0, %h1

@@ -12,6 +12,7 @@
 
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/LangStandard.h"
+#include "clang/Config/config.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang;
@@ -129,6 +130,7 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.WChar = Std.isCPlusPlus();
   Opts.Digraphs = Std.hasDigraphs();
   Opts.RawStringLiterals = Std.hasRawStringLiterals();
+  Opts.AllowLiteralDigitSeparator = Std.allowLiteralDigitSeparator();
   Opts.NamedLoops = Std.isC2y();
 
   Opts.HLSL = Lang == Language::HLSL;

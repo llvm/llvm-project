@@ -55,6 +55,13 @@ class ShTestLldb(ShTest):
         super().__init__(execute_external, extra_substitutions, preamble_commands)
 
     def execute(self, test, litConfig):
+        exec_path = test.getExecPath()
+        if platform.system() == "Windows" and len(exec_path) > 256:
+            litConfig.warning(
+                "Test path exceeds 256 characters (Windows MAX_PATH limit): "
+                + exec_path
+            )
+
         # Run each Shell test in a separate directory (on remote).
 
         # Find directory change command in %lldb substitution.
@@ -118,24 +125,28 @@ def use_lldb_substitutions(config):
         build_script_args.append("--sysroot={0}".format(config.cmake_sysroot))
 
     lldb_init = _get_lldb_init_path(config)
+    launcher = getattr(config, "lldb_launcher", None)
 
     primary_tools = [
         ToolSubst(
             "%lldb",
             command=FindTool("lldb"),
             extra_args=get_lldb_args(config),
+            launcher=launcher,
             unresolved="fatal",
         ),
         ToolSubst(
             "%lldb-init",
             command=FindTool("lldb"),
             extra_args=["-S", lldb_init],
+            launcher=launcher,
             unresolved="fatal",
         ),
         ToolSubst(
             "%lldb-noinit",
             command=FindTool("lldb"),
             extra_args=["--no-lldbinit"],
+            launcher=launcher,
             unresolved="fatal",
         ),
         ToolSubst(
@@ -167,9 +178,7 @@ def use_lldb_substitutions(config):
             unresolved="ignore",
         ),
         "lldb-test",
-        ToolSubst(
-            "%lldb-dap", command=FindTool("lldb-dap"), extra_args=[], unresolved="fatal"
-        ),
+        "lldb-dap",
         ToolSubst(
             "%build", command="'" + sys.executable + "'", extra_args=build_script_args
         ),

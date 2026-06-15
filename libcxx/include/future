@@ -420,6 +420,7 @@ _LIBCPP_PUSH_MACROS
 #    include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 // enum class future_errc
 _LIBCPP_DECLARE_STRONG_ENUM(future_errc){
@@ -1749,7 +1750,7 @@ public:
 template <class _Rp, class... _Args>
 packaged_task(_Rp (*)(_Args...)) -> packaged_task<_Rp(_Args...)>;
 
-template <class _Fp, class _Stripped = typename __strip_signature<decltype(&_Fp::operator())>::type>
+template <class _Fp, class _Stripped = __strip_signature_t<decltype(&_Fp::operator())>>
 packaged_task(_Fp) -> packaged_task<_Stripped>;
 
 #    endif
@@ -2057,17 +2058,18 @@ inline shared_future<_Rp&> future<_Rp&>::share() _NOEXCEPT {
 
 inline shared_future<void> future<void>::share() _NOEXCEPT { return shared_future<void>(std::move(*this)); }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
 #  endif // _LIBCPP_HAS_THREADS
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 17
 #    include <chrono>
 #  endif
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <atomic>
 #    include <cstdlib>
 #    include <exception>

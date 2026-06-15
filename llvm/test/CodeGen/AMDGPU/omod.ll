@@ -1319,13 +1319,13 @@ declare half @llvm.minnum.f16(half, half) #1
 declare half @llvm.maxnum.f16(half, half) #1
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { nounwind denormal_fpenv(float: preservesign) }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
-attributes #3 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #2 = { nounwind denormal_fpenv(float: ieee) }
+attributes #3 = { nounwind denormal_fpenv(preservesign) }
 attributes #4 = { nounwind "no-signed-zeros-fp-math"="false" }
-attributes #5 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #6 = { nounwind "denormal-fp-math"="ieee,ieee" }
+attributes #5 = { nounwind denormal_fpenv(preservesign) }
+attributes #6 = { nounwind denormal_fpenv(ieee) }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}

@@ -56,6 +56,7 @@ define float @global_agent_atomic_fsub_ret_f32(ptr addrspace(1) %ptr, float %val
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -287,6 +288,7 @@ define float @global_agent_atomic_fsub_ret_f32__offset12b_pos(ptr addrspace(1) %
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2044 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -520,6 +522,7 @@ define float @global_agent_atomic_fsub_ret_f32__offset12b_neg(ptr addrspace(1) %
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:-2048 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -653,9 +656,9 @@ define float @global_agent_atomic_fsub_ret_f32__offset12b_neg(ptr addrspace(1) %
 ; GFX7-LABEL: global_agent_atomic_fsub_ret_f32__offset12b_neg:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    s_movk_i32 s4, 0xf800
 ; GFX7-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX7-NEXT:    v_mov_b32_e32 v3, v0
+; GFX7-NEXT:    s_movk_i32 s4, 0xf800
 ; GFX7-NEXT:    s_mov_b32 s5, -1
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s6, 0
@@ -686,9 +689,9 @@ define float @global_agent_atomic_fsub_ret_f32__offset12b_neg(ptr addrspace(1) %
 ; GFX6-LABEL: global_agent_atomic_fsub_ret_f32__offset12b_neg:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    s_movk_i32 s4, 0xf800
 ; GFX6-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX6-NEXT:    v_mov_b32_e32 v3, v0
+; GFX6-NEXT:    s_movk_i32 s4, 0xf800
 ; GFX6-NEXT:    s_mov_b32 s5, -1
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s6, 0
@@ -761,6 +764,7 @@ define void @global_agent_atomic_fsub_noret_f32(ptr addrspace(1) %ptr, float %va
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -981,6 +985,7 @@ define void @global_agent_atomic_fsub_noret_f32__offset12b_pos(ptr addrspace(1) 
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2044 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -1204,6 +1209,7 @@ define void @global_agent_atomic_fsub_noret_f32__offset12b_neg(ptr addrspace(1) 
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:-2048 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -1438,6 +1444,7 @@ define float @global_system_atomic_fsub_ret_f32__offset12b_pos(ptr addrspace(1) 
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2044 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -1511,6 +1518,7 @@ define float @global_system_atomic_fsub_ret_f32__offset12b_pos(ptr addrspace(1) 
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2044 glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -1672,6 +1680,7 @@ define void @global_system_atomic_fsub_noret_f32__offset12b_pos(ptr addrspace(1)
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2044 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -1741,6 +1750,7 @@ define void @global_system_atomic_fsub_noret_f32__offset12b_pos(ptr addrspace(1)
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2044 glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -1903,6 +1913,7 @@ define float @global_agent_atomic_fsub_ret_f32__ftz(ptr addrspace(1) %ptr, float
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -2134,6 +2145,7 @@ define float @global_agent_atomic_fsub_ret_f32__offset12b_pos__ftz(ptr addrspace
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2044 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -2367,6 +2379,7 @@ define float @global_agent_atomic_fsub_ret_f32__offset12b_neg__ftz(ptr addrspace
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:-2048 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -2500,9 +2513,9 @@ define float @global_agent_atomic_fsub_ret_f32__offset12b_neg__ftz(ptr addrspace
 ; GFX7-LABEL: global_agent_atomic_fsub_ret_f32__offset12b_neg__ftz:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    s_movk_i32 s4, 0xf800
 ; GFX7-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX7-NEXT:    v_mov_b32_e32 v3, v0
+; GFX7-NEXT:    s_movk_i32 s4, 0xf800
 ; GFX7-NEXT:    s_mov_b32 s5, -1
 ; GFX7-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s6, 0
@@ -2533,9 +2546,9 @@ define float @global_agent_atomic_fsub_ret_f32__offset12b_neg__ftz(ptr addrspace
 ; GFX6-LABEL: global_agent_atomic_fsub_ret_f32__offset12b_neg__ftz:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    s_movk_i32 s4, 0xf800
 ; GFX6-NEXT:    v_mov_b32_e32 v4, v1
 ; GFX6-NEXT:    v_mov_b32_e32 v3, v0
+; GFX6-NEXT:    s_movk_i32 s4, 0xf800
 ; GFX6-NEXT:    s_mov_b32 s5, -1
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s6, 0
@@ -2608,6 +2621,7 @@ define void @global_agent_atomic_fsub_noret_f32__ftz(ptr addrspace(1) %ptr, floa
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -2828,6 +2842,7 @@ define void @global_agent_atomic_fsub_noret_f32__offset12b_pos__ftz(ptr addrspac
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2044 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -3051,6 +3066,7 @@ define void @global_agent_atomic_fsub_noret_f32__offset12b_neg__ftz(ptr addrspac
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:-2048 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -3285,6 +3301,7 @@ define float @global_system_atomic_fsub_ret_f32__offset12b_pos__ftz(ptr addrspac
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2044 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -3358,6 +3375,7 @@ define float @global_system_atomic_fsub_ret_f32__offset12b_pos__ftz(ptr addrspac
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2044 glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -3519,6 +3537,7 @@ define void @global_system_atomic_fsub_noret_f32__offset12b_pos__ftz(ptr addrspa
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2044 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -3588,6 +3607,7 @@ define void @global_system_atomic_fsub_noret_f32__offset12b_pos__ftz(ptr addrspa
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_sub_f32_e32 v4, v5, v2
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2044 glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -3750,6 +3770,7 @@ define double @global_agent_atomic_fsub_ret_f64(ptr addrspace(1) %ptr, double %v
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_add_f64 v[4:5], v[6:7], -v[2:3]
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -4001,6 +4022,7 @@ define double @global_agent_atomic_fsub_ret_f64__offset12b_pos(ptr addrspace(1) 
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_add_f64 v[4:5], v[6:7], -v[2:3]
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off offset:2040 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -4253,6 +4275,7 @@ define double @global_agent_atomic_fsub_ret_f64__offset12b_neg(ptr addrspace(1) 
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_add_f64 v[4:5], v[6:7], -v[2:3]
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off offset:-2048 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -4507,6 +4530,7 @@ define void @global_agent_atomic_fsub_noret_f64(ptr addrspace(1) %ptr, double %v
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_add_f64 v[4:5], v[6:7], -v[2:3]
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -4736,6 +4760,7 @@ define void @global_agent_atomic_fsub_noret_f64__offset12b_pos(ptr addrspace(1) 
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_add_f64 v[4:5], v[6:7], -v[2:3]
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off offset:2040 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -4968,6 +4993,7 @@ define void @global_agent_atomic_fsub_noret_f64__offset12b_neg(ptr addrspace(1) 
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_add_f64 v[4:5], v[6:7], -v[2:3]
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap_x2 v[4:5], v[0:1], v[4:7], off offset:-2048 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -5281,6 +5307,7 @@ define half @global_agent_atomic_fsub_ret_f16(ptr addrspace(1) %ptr, half %val) 
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v4, v3, v4
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, v6, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v4, v[0:1], v[4:5], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -5701,6 +5728,7 @@ define half @global_agent_atomic_fsub_ret_f16__offset12b_pos(ptr addrspace(1) %p
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v4, v3, v4
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, v6, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v4, v[0:1], v[4:5], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -6132,6 +6160,7 @@ define half @global_agent_atomic_fsub_ret_f16__offset12b_neg(ptr addrspace(1) %p
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v4, v3, v4
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, v6, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v4, v[0:1], v[4:5], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -6555,6 +6584,7 @@ define void @global_agent_atomic_fsub_noret_f16(ptr addrspace(1) %ptr, half %val
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v4, v3, v4
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, v6, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v4, v[0:1], v[4:5], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -6963,6 +6993,7 @@ define void @global_agent_atomic_fsub_noret_f16__offset12b_pos(ptr addrspace(1) 
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v4, v3, v4
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, v6, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v4, v[0:1], v[4:5], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -7381,6 +7412,7 @@ define void @global_agent_atomic_fsub_noret_f16__offset12b_neg(ptr addrspace(1) 
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v4, v3, v4
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, v6, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v4, v[0:1], v[4:5], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -7767,6 +7799,7 @@ define half @global_agent_atomic_fsub_ret_f16__offset12b_pos__align4(ptr addrspa
 ; GFX942-NEXT:    v_sub_f16_e32 v3, v5, v2
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, s2, v3
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2046 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -8083,6 +8116,7 @@ define void @global_agent_atomic_fsub_noret_f16__offset12b__align4_pos(ptr addrs
 ; GFX942-NEXT:    v_sub_f16_e32 v3, v5, v2
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, s2, v3
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2046 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -8429,6 +8463,7 @@ define half @global_system_atomic_fsub_ret_f16__offset12b_pos(ptr addrspace(1) %
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v4, v3, v4
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, v6, v4
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v4, v[0:1], v[4:5], off sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -8578,6 +8613,7 @@ define half @global_system_atomic_fsub_ret_f16__offset12b_pos(ptr addrspace(1) %
 ; GFX90A-NEXT:    v_lshlrev_b32_e32 v4, v3, v4
 ; GFX90A-NEXT:    v_and_or_b32 v4, v5, v6, v4
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    global_atomic_cmpswap v4, v[0:1], v[4:5], off glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -8860,6 +8896,7 @@ define void @global_system_atomic_fsub_noret_f16__offset12b_pos(ptr addrspace(1)
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v4, v3, v4
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, v6, v4
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v4, v[0:1], v[4:5], off sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -9004,6 +9041,7 @@ define void @global_system_atomic_fsub_noret_f16__offset12b_pos(ptr addrspace(1)
 ; GFX90A-NEXT:    v_lshlrev_b32_e32 v4, v3, v4
 ; GFX90A-NEXT:    v_and_or_b32 v4, v5, v6, v4
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    global_atomic_cmpswap v4, v[0:1], v[4:5], off glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -9182,7 +9220,7 @@ define bfloat @global_agent_atomic_fsub_ret_bf16(ptr addrspace(1) %ptr, bfloat %
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v3, v0
+; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_lshlrev_b32 v2, 16, v2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v3
@@ -9196,22 +9234,20 @@ define bfloat @global_agent_atomic_fsub_ret_bf16(ptr addrspace(1) %ptr, bfloat %
 ; GFX12-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v6, v5
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, 0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v2.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, v3, v6
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v7
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v7.l
-; GFX12-TRUE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v5
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v2
+; GFX12-TRUE16-NEXT:    v_bfe_u32 v7, v5, 16, 1
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v5
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
+; GFX12-TRUE16-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v8, v9, vcc_lo
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v7, v8, vcc_lo
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, 0
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v5.h
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, v3, v7
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -9313,6 +9349,7 @@ define bfloat @global_agent_atomic_fsub_ret_bf16(ptr addrspace(1) %ptr, bfloat %
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v4, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, v6, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v4, v[0:1], v[4:5], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -9329,7 +9366,7 @@ define bfloat @global_agent_atomic_fsub_ret_bf16(ptr addrspace(1) %ptr, bfloat %
 ; GFX11-TRUE16-LABEL: global_agent_atomic_fsub_ret_bf16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, v0
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_lshlrev_b32 v2, 16, v2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v3
@@ -9344,21 +9381,19 @@ define bfloat @global_agent_atomic_fsub_ret_bf16(ptr addrspace(1) %ptr, bfloat %
 ; GFX11-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v6, v5
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, 0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v2.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, v3, v6
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v7
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v7.l
-; GFX11-TRUE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v5
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v2
+; GFX11-TRUE16-NEXT:    v_bfe_u32 v7, v5, 16, 1
+; GFX11-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v5
 ; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v8, v9, vcc_lo
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v7, v8, vcc_lo
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, 0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v5.h
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, v3, v7
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -9685,34 +9720,34 @@ define bfloat @global_agent_atomic_fsub_ret_bf16__offset12b_pos(ptr addrspace(1)
 ; GFX12-TRUE16-NEXT:    v_add_co_u32 v3, vcc_lo, 0x7fe, v0
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX12-TRUE16-NEXT:    s_mov_b32 s0, 0
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v3
 ; GFX12-TRUE16-NEXT:    v_and_b32_e32 v3, 3, v3
+; GFX12-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX12-TRUE16-NEXT:    global_load_b32 v5, v[0:1], off
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 3, v3
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e64 v4, v3, 0xffff
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_not_b32_e32 v4, v4
 ; GFX12-TRUE16-NEXT:  .LBB33_1: ; %atomicrmw.start
 ; GFX12-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v6, v5
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, 0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v2.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, v3, v6
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v7
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v7.l
-; GFX12-TRUE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v5
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v2
+; GFX12-TRUE16-NEXT:    v_bfe_u32 v7, v5, 16, 1
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v5
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
+; GFX12-TRUE16-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v8, v9, vcc_lo
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v7, v8, vcc_lo
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, 0
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v5.h
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, v3, v7
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -9819,6 +9854,7 @@ define bfloat @global_agent_atomic_fsub_ret_bf16__offset12b_pos(ptr addrspace(1)
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -9836,11 +9872,12 @@ define bfloat @global_agent_atomic_fsub_ret_bf16__offset12b_pos(ptr addrspace(1)
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_add_co_u32 v3, vcc_lo, 0x7fe, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v3
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v3, 3, v3
+; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX11-TRUE16-NEXT:    global_load_b32 v5, v[0:1], off
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 3, v3
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -9851,21 +9888,19 @@ define bfloat @global_agent_atomic_fsub_ret_bf16__offset12b_pos(ptr addrspace(1)
 ; GFX11-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v6, v5
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, 0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v2.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, v3, v6
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v7
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v7.l
-; GFX11-TRUE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v5
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v2
+; GFX11-TRUE16-NEXT:    v_bfe_u32 v7, v5, 16, 1
+; GFX11-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v5
 ; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v8, v9, vcc_lo
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v7, v8, vcc_lo
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, 0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v5.h
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, v3, v7
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -10202,34 +10237,34 @@ define bfloat @global_agent_atomic_fsub_ret_bf16__offset12b_neg(ptr addrspace(1)
 ; GFX12-TRUE16-NEXT:    v_add_co_u32 v3, vcc_lo, 0xfffff800, v0
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX12-TRUE16-NEXT:    s_mov_b32 s0, 0
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v3
 ; GFX12-TRUE16-NEXT:    v_and_b32_e32 v3, 3, v3
+; GFX12-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX12-TRUE16-NEXT:    global_load_b32 v5, v[0:1], off
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 3, v3
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e64 v4, v3, 0xffff
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_not_b32_e32 v4, v4
 ; GFX12-TRUE16-NEXT:  .LBB34_1: ; %atomicrmw.start
 ; GFX12-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v6, v5
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, 0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v2.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, v3, v6
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v7
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v7.l
-; GFX12-TRUE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v5
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v2
+; GFX12-TRUE16-NEXT:    v_bfe_u32 v7, v5, 16, 1
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v5
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
+; GFX12-TRUE16-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v8, v9, vcc_lo
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v7, v8, vcc_lo
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, 0
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v5.h
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, v3, v7
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -10337,6 +10372,7 @@ define bfloat @global_agent_atomic_fsub_ret_bf16__offset12b_neg(ptr addrspace(1)
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -10354,11 +10390,12 @@ define bfloat @global_agent_atomic_fsub_ret_bf16__offset12b_neg(ptr addrspace(1)
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_add_co_u32 v3, vcc_lo, 0xfffff800, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
-; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v3
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v3, 3, v3
+; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX11-TRUE16-NEXT:    global_load_b32 v5, v[0:1], off
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 3, v3
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -10369,21 +10406,19 @@ define bfloat @global_agent_atomic_fsub_ret_bf16__offset12b_neg(ptr addrspace(1)
 ; GFX11-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v6, v5
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, 0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v2.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, v3, v6
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v7
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v7.l
-; GFX11-TRUE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v5
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v2
+; GFX11-TRUE16-NEXT:    v_bfe_u32 v7, v5, 16, 1
+; GFX11-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v5
 ; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v8, v9, vcc_lo
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v7, v8, vcc_lo
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, 0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v5.h
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, v3, v7
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -10717,7 +10752,7 @@ define void @global_agent_atomic_fsub_noret_bf16(ptr addrspace(1) %ptr, bfloat %
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v3, v0
+; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_lshlrev_b32 v2, 16, v2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v3
@@ -10731,20 +10766,18 @@ define void @global_agent_atomic_fsub_noret_bf16(ptr addrspace(1) %ptr, bfloat %
 ; GFX12-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, v5, v4
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, 0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v2.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v3, v3, v7
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v7.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX12-TRUE16-NEXT:    v_bfe_u32 v8, v3, 16, 1
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v3
-; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
-; GFX12-TRUE16-NEXT:    v_add3_u32 v8, v8, v3, 0x7fff
-; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v8, v9, vcc_lo
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v3, v3, v2
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX12-TRUE16-NEXT:    v_bfe_u32 v7, v3, 16, 1
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v3
+; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
+; GFX12-TRUE16-NEXT:    v_add3_u32 v7, v7, v3, 0x7fff
+; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v7, v8, vcc_lo
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, 0
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v3.h
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, v5, v7
@@ -10844,6 +10877,7 @@ define void @global_agent_atomic_fsub_noret_bf16(ptr addrspace(1) %ptr, bfloat %
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v4, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, v6, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v4, v[0:1], v[4:5], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -10859,7 +10893,7 @@ define void @global_agent_atomic_fsub_noret_bf16(ptr addrspace(1) %ptr, bfloat %
 ; GFX11-TRUE16-LABEL: global_agent_atomic_fsub_noret_bf16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, v0
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v3, v0 :: v_dual_lshlrev_b32 v2, 16, v2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v3
@@ -10874,19 +10908,17 @@ define void @global_agent_atomic_fsub_noret_bf16(ptr addrspace(1) %ptr, bfloat %
 ; GFX11-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, v5, v4
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, 0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v2.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v3, v3, v7
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v7.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_bfe_u32 v8, v3, 16, 1
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v3
-; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
-; GFX11-TRUE16-NEXT:    v_add3_u32 v8, v8, v3, 0x7fff
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v8, v9, vcc_lo
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v3, v3, v2
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    v_bfe_u32 v7, v3, 16, 1
+; GFX11-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v3
+; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
+; GFX11-TRUE16-NEXT:    v_add3_u32 v7, v7, v3, 0x7fff
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v7, v8, vcc_lo
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, 0
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v3.h
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, v5, v7
@@ -11203,45 +11235,45 @@ define void @global_agent_atomic_fsub_noret_bf16__offset12b_pos(ptr addrspace(1)
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_add_co_u32 v3, vcc_lo, 0x7fe, v0
+; GFX12-TRUE16-NEXT:    v_add_co_u32 v4, vcc_lo, 0x7fe, v0
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v6, 16, v2
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v4
+; GFX12-TRUE16-NEXT:    v_and_b32_e32 v4, 3, v4
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v3
-; GFX12-TRUE16-NEXT:    v_and_b32_e32 v3, 3, v3
-; GFX12-TRUE16-NEXT:    global_load_b32 v4, v[0:1], off
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 3, v3
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e64 v3, v5, 0xffff
-; GFX12-TRUE16-NEXT:    v_not_b32_e32 v6, v3
+; GFX12-TRUE16-NEXT:    global_load_b32 v3, v[0:1], off
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v4, 3, v4
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e64 v5, v4, 0xffff
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_not_b32_e32 v5, v5
 ; GFX12-TRUE16-NEXT:  .LBB36_1: ; %atomicrmw.start
 ; GFX12-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, v5, v4
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, 0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v2.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v3, v3, v7
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v7.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX12-TRUE16-NEXT:    v_bfe_u32 v8, v3, 16, 1
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v3
-; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
-; GFX12-TRUE16-NEXT:    v_add3_u32 v8, v8, v3, 0x7fff
+; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, v4, v3
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v2, v2, v6
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX12-TRUE16-NEXT:    v_bfe_u32 v7, v2, 16, 1
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v2
+; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v2, v2
+; GFX12-TRUE16-NEXT:    v_add3_u32 v7, v7, v2, 0x7fff
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v2, v7, v8, vcc_lo
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, 0
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v2.h
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v8, v9, vcc_lo
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v3.h
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, v5, v7
-; GFX12-TRUE16-NEXT:    v_and_or_b32 v3, v4, v6, v3
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, v4, v7
+; GFX12-TRUE16-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX12-TRUE16-NEXT:    s_wait_storecnt 0x0
-; GFX12-TRUE16-NEXT:    global_atomic_cmpswap_b32 v3, v[0:1], v[3:4], off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-TRUE16-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v4, v3
+; GFX12-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
+; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-TRUE16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -11336,6 +11368,7 @@ define void @global_agent_atomic_fsub_noret_bf16__offset12b_pos(ptr addrspace(1)
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -11351,46 +11384,45 @@ define void @global_agent_atomic_fsub_noret_bf16__offset12b_pos(ptr addrspace(1)
 ; GFX11-TRUE16-LABEL: global_agent_atomic_fsub_noret_bf16__offset12b_pos:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_add_co_u32 v3, vcc_lo, 0x7fe, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_add_co_u32 v4, vcc_lo, 0x7fe, v0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v6, 16, v2
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v4
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v4, 3, v4
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v3
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v3, 3, v3
-; GFX11-TRUE16-NEXT:    global_load_b32 v4, v[0:1], off
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 3, v3
+; GFX11-TRUE16-NEXT:    global_load_b32 v3, v[0:1], off
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v4, 3, v4
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e64 v3, v5, 0xffff
-; GFX11-TRUE16-NEXT:    v_not_b32_e32 v6, v3
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e64 v5, v4, 0xffff
+; GFX11-TRUE16-NEXT:    v_not_b32_e32 v5, v5
 ; GFX11-TRUE16-NEXT:    .p2align 6
 ; GFX11-TRUE16-NEXT:  .LBB36_1: ; %atomicrmw.start
 ; GFX11-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, v5, v4
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, 0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v2.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v3, v3, v7
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v7.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_bfe_u32 v8, v3, 16, 1
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v3
-; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
-; GFX11-TRUE16-NEXT:    v_add3_u32 v8, v8, v3, 0x7fff
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, v4, v3
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v8, v9, vcc_lo
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v3.h
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v2, v2, v6
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    v_bfe_u32 v7, v2, 16, 1
+; GFX11-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v2
+; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v2, v2
+; GFX11-TRUE16-NEXT:    v_add3_u32 v7, v7, v2, 0x7fff
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v2, v7, v8, vcc_lo
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, 0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v2.h
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, v5, v7
-; GFX11-TRUE16-NEXT:    v_and_or_b32 v3, v4, v6, v3
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, v4, v7
+; GFX11-TRUE16-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    global_atomic_cmpswap_b32 v3, v[0:1], v[3:4], off glc
+; GFX11-TRUE16-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    buffer_gl1_inv
 ; GFX11-TRUE16-NEXT:    buffer_gl0_inv
-; GFX11-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v4, v3
+; GFX11-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX11-TRUE16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
@@ -11705,45 +11737,45 @@ define void @global_agent_atomic_fsub_noret_bf16__offset12b_neg(ptr addrspace(1)
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_add_co_u32 v3, vcc_lo, 0xfffff800, v0
+; GFX12-TRUE16-NEXT:    v_add_co_u32 v4, vcc_lo, 0xfffff800, v0
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v6, 16, v2
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v4
+; GFX12-TRUE16-NEXT:    v_and_b32_e32 v4, 3, v4
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v3
-; GFX12-TRUE16-NEXT:    v_and_b32_e32 v3, 3, v3
-; GFX12-TRUE16-NEXT:    global_load_b32 v4, v[0:1], off
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 3, v3
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e64 v3, v5, 0xffff
-; GFX12-TRUE16-NEXT:    v_not_b32_e32 v6, v3
+; GFX12-TRUE16-NEXT:    global_load_b32 v3, v[0:1], off
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v4, 3, v4
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e64 v5, v4, 0xffff
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_not_b32_e32 v5, v5
 ; GFX12-TRUE16-NEXT:  .LBB37_1: ; %atomicrmw.start
 ; GFX12-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, v5, v4
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, 0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v2.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v3, v3, v7
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v7.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX12-TRUE16-NEXT:    v_bfe_u32 v8, v3, 16, 1
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v3
-; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
-; GFX12-TRUE16-NEXT:    v_add3_u32 v8, v8, v3, 0x7fff
+; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, v4, v3
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v2, v2, v6
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX12-TRUE16-NEXT:    v_bfe_u32 v7, v2, 16, 1
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v2
+; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v2, v2
+; GFX12-TRUE16-NEXT:    v_add3_u32 v7, v7, v2, 0x7fff
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v2, v7, v8, vcc_lo
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, 0
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v2.h
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v8, v9, vcc_lo
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v3.h
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, v5, v7
-; GFX12-TRUE16-NEXT:    v_and_or_b32 v3, v4, v6, v3
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, v4, v7
+; GFX12-TRUE16-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX12-TRUE16-NEXT:    s_wait_storecnt 0x0
-; GFX12-TRUE16-NEXT:    global_atomic_cmpswap_b32 v3, v[0:1], v[3:4], off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-TRUE16-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v4, v3
+; GFX12-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
+; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-TRUE16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -11839,6 +11871,7 @@ define void @global_agent_atomic_fsub_noret_bf16__offset12b_neg(ptr addrspace(1)
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -11854,46 +11887,45 @@ define void @global_agent_atomic_fsub_noret_bf16__offset12b_neg(ptr addrspace(1)
 ; GFX11-TRUE16-LABEL: global_agent_atomic_fsub_noret_bf16__offset12b_neg:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_add_co_u32 v3, vcc_lo, 0xfffff800, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_add_co_u32 v4, vcc_lo, 0xfffff800, v0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v6, 16, v2
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v4
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v4, 3, v4
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v3
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v3, 3, v3
-; GFX11-TRUE16-NEXT:    global_load_b32 v4, v[0:1], off
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 3, v3
+; GFX11-TRUE16-NEXT:    global_load_b32 v3, v[0:1], off
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v4, 3, v4
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e64 v3, v5, 0xffff
-; GFX11-TRUE16-NEXT:    v_not_b32_e32 v6, v3
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e64 v5, v4, 0xffff
+; GFX11-TRUE16-NEXT:    v_not_b32_e32 v5, v5
 ; GFX11-TRUE16-NEXT:    .p2align 6
 ; GFX11-TRUE16-NEXT:  .LBB37_1: ; %atomicrmw.start
 ; GFX11-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, v5, v4
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, 0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v2.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v3, v3, v7
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v7.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_bfe_u32 v8, v3, 16, 1
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v3
-; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
-; GFX11-TRUE16-NEXT:    v_add3_u32 v8, v8, v3, 0x7fff
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, v4, v3
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v8, v9, vcc_lo
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v3.h
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v2, v2, v6
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    v_bfe_u32 v7, v2, 16, 1
+; GFX11-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v2
+; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v2, v2
+; GFX11-TRUE16-NEXT:    v_add3_u32 v7, v7, v2, 0x7fff
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v2, v7, v8, vcc_lo
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, 0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v2.h
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, v5, v7
-; GFX11-TRUE16-NEXT:    v_and_or_b32 v3, v4, v6, v3
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, v4, v7
+; GFX11-TRUE16-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    global_atomic_cmpswap_b32 v3, v[0:1], v[3:4], off glc
+; GFX11-TRUE16-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    buffer_gl1_inv
 ; GFX11-TRUE16-NEXT:    buffer_gl0_inv
-; GFX11-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v4, v3
+; GFX11-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX11-TRUE16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
@@ -12209,28 +12241,27 @@ define bfloat @global_agent_atomic_fsub_ret_bf16__offset12b_pos__align4(ptr addr
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    global_load_b32 v3, v[0:1], off offset:2046
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX12-TRUE16-NEXT:  .LBB38_1: ; %atomicrmw.start
 ; GFX12-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v4, v3
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v3.l, 0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v3.h, v2.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 16, v4
-; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v3
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v3.h, v3.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX12-TRUE16-NEXT:    v_bfe_u32 v6, v5, 16, 1
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v7, 0x400000, v5
-; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
-; GFX12-TRUE16-NEXT:    v_add3_u32 v6, v6, v5, 0x7fff
-; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v6, v7, vcc_lo
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v5.h
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v3, v3, v2
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX12-TRUE16-NEXT:    v_bfe_u32 v5, v3, 16, 1
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v6, 0x400000, v3
+; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
+; GFX12-TRUE16-NEXT:    v_add3_u32 v5, v5, v3, 0x7fff
+; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v5, v6, vcc_lo
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.h, 0
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v3.h
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_and_or_b32 v3, 0xffff0000, v4, v3
+; GFX12-TRUE16-NEXT:    v_and_or_b32 v3, 0xffff0000, v4, v5
 ; GFX12-TRUE16-NEXT:    s_wait_storecnt 0x0
 ; GFX12-TRUE16-NEXT:    global_atomic_cmpswap_b32 v3, v[0:1], v[3:4], off offset:2046 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
@@ -12311,6 +12342,7 @@ define bfloat @global_agent_atomic_fsub_ret_bf16__offset12b_pos__align4(ptr addr
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, s3, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off offset:2046 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -12328,28 +12360,27 @@ define bfloat @global_agent_atomic_fsub_ret_bf16__offset12b_pos__align4(ptr addr
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_b32 v3, v[0:1], off offset:2046
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX11-TRUE16-NEXT:    .p2align 6
 ; GFX11-TRUE16-NEXT:  .LBB38_1: ; %atomicrmw.start
 ; GFX11-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v4, v3
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, 0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.h, v2.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 16, v4
-; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v3
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.h, v3.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_bfe_u32 v6, v5, 16, 1
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v7, 0x400000, v5
-; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
-; GFX11-TRUE16-NEXT:    v_add3_u32 v6, v6, v5, 0x7fff
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v6, v7, vcc_lo
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v5.h
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v4
+; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v3, v3, v2
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    v_bfe_u32 v5, v3, 16, 1
+; GFX11-TRUE16-NEXT:    v_or_b32_e32 v6, 0x400000, v3
+; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
+; GFX11-TRUE16-NEXT:    v_add3_u32 v5, v5, v3, 0x7fff
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v5, v6, vcc_lo
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.h, 0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v3.h
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_and_or_b32 v3, 0xffff0000, v4, v3
+; GFX11-TRUE16-NEXT:    v_and_or_b32 v3, 0xffff0000, v4, v5
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-TRUE16-NEXT:    global_atomic_cmpswap_b32 v3, v[0:1], v[3:4], off offset:2046 glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
@@ -12620,33 +12651,32 @@ define void @global_agent_atomic_fsub_noret_bf16__offset12b__align4_pos(ptr addr
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    global_load_b32 v4, v[0:1], off offset:2046
+; GFX12-TRUE16-NEXT:    global_load_b32 v3, v[0:1], off offset:2046
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v4, 16, v2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX12-TRUE16-NEXT:  .LBB39_1: ; %atomicrmw.start
 ; GFX12-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v3.l, 0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v3.h, v2.l
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 16, v4
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v3
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v3.h, v3.l
-; GFX12-TRUE16-NEXT:    v_bfe_u32 v6, v5, 16, 1
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v7, 0x400000, v5
-; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_add3_u32 v6, v6, v5, 0x7fff
-; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v6, v7, vcc_lo
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v5.h
-; GFX12-TRUE16-NEXT:    v_and_or_b32 v3, 0xffff0000, v4, v3
+; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v2, v2, v4
+; GFX12-TRUE16-NEXT:    v_bfe_u32 v5, v2, 16, 1
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v6, 0x400000, v2
+; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v2, v2
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_add3_u32 v5, v5, v2, 0x7fff
+; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v2, v5, v6, vcc_lo
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.h, 0
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v2.h
+; GFX12-TRUE16-NEXT:    v_and_or_b32 v2, 0xffff0000, v3, v5
 ; GFX12-TRUE16-NEXT:    s_wait_storecnt 0x0
-; GFX12-TRUE16-NEXT:    global_atomic_cmpswap_b32 v3, v[0:1], v[3:4], off offset:2046 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
+; GFX12-TRUE16-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off offset:2046 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v4, v3
+; GFX12-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
+; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-TRUE16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -12719,6 +12749,7 @@ define void @global_agent_atomic_fsub_noret_bf16__offset12b__align4_pos(ptr addr
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, s3, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off offset:2046 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -12734,34 +12765,33 @@ define void @global_agent_atomic_fsub_noret_bf16__offset12b__align4_pos(ptr addr
 ; GFX11-TRUE16-LABEL: global_agent_atomic_fsub_noret_bf16__offset12b__align4_pos:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_b32 v4, v[0:1], off offset:2046
+; GFX11-TRUE16-NEXT:    global_load_b32 v3, v[0:1], off offset:2046
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v4, 16, v2
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX11-TRUE16-NEXT:    .p2align 6
 ; GFX11-TRUE16-NEXT:  .LBB39_1: ; %atomicrmw.start
 ; GFX11-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, 0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.h, v2.l
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 16, v4
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v3
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.h, v3.l
-; GFX11-TRUE16-NEXT:    v_bfe_u32 v6, v5, 16, 1
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v7, 0x400000, v5
-; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_add3_u32 v6, v6, v5, 0x7fff
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v6, v7, vcc_lo
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v3
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v5.h
-; GFX11-TRUE16-NEXT:    v_and_or_b32 v3, 0xffff0000, v4, v3
+; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v2, v2, v4
+; GFX11-TRUE16-NEXT:    v_bfe_u32 v5, v2, 16, 1
+; GFX11-TRUE16-NEXT:    v_or_b32_e32 v6, 0x400000, v2
+; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v2, v2
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_add3_u32 v5, v5, v2, 0x7fff
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v2, v5, v6, vcc_lo
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.h, 0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v2.h
+; GFX11-TRUE16-NEXT:    v_and_or_b32 v2, 0xffff0000, v3, v5
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    global_atomic_cmpswap_b32 v3, v[0:1], v[3:4], off offset:2046 glc
+; GFX11-TRUE16-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off offset:2046 glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    buffer_gl1_inv
 ; GFX11-TRUE16-NEXT:    buffer_gl0_inv
-; GFX11-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v4, v3
+; GFX11-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX11-TRUE16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
@@ -13021,34 +13051,34 @@ define bfloat @global_system_atomic_fsub_ret_bf16__offset12b_pos(ptr addrspace(1
 ; GFX12-TRUE16-NEXT:    v_add_co_u32 v3, vcc_lo, 0x7fe, v0
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX12-TRUE16-NEXT:    s_mov_b32 s0, 0
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v3
 ; GFX12-TRUE16-NEXT:    v_and_b32_e32 v3, 3, v3
+; GFX12-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX12-TRUE16-NEXT:    global_load_b32 v5, v[0:1], off
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 3, v3
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e64 v4, v3, 0xffff
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_not_b32_e32 v4, v4
 ; GFX12-TRUE16-NEXT:  .LBB40_1: ; %atomicrmw.start
 ; GFX12-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v6, v5
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, 0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v2.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, v3, v6
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v7
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v7.l
-; GFX12-TRUE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v5
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v2
+; GFX12-TRUE16-NEXT:    v_bfe_u32 v7, v5, 16, 1
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v5
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
+; GFX12-TRUE16-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v8, v9, vcc_lo
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v7, v8, vcc_lo
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, 0
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v5.h
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, v3, v7
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -13157,6 +13187,7 @@ define bfloat @global_system_atomic_fsub_ret_bf16__offset12b_pos(ptr addrspace(1
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -13174,11 +13205,12 @@ define bfloat @global_system_atomic_fsub_ret_bf16__offset12b_pos(ptr addrspace(1
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_add_co_u32 v3, vcc_lo, 0x7fe, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v3
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v3, 3, v3
+; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
 ; GFX11-TRUE16-NEXT:    global_load_b32 v5, v[0:1], off
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 3, v3
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -13189,21 +13221,19 @@ define bfloat @global_system_atomic_fsub_ret_bf16__offset12b_pos(ptr addrspace(1
 ; GFX11-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v6, v5
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, 0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v2.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, v3, v6
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v7
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v7.l
-; GFX11-TRUE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v5
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v2
+; GFX11-TRUE16-NEXT:    v_bfe_u32 v7, v5, 16, 1
+; GFX11-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v5
 ; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v8, v9, vcc_lo
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_add3_u32 v7, v7, v5, 0x7fff
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v7, v8, vcc_lo
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, 0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v5.h
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, v3, v7
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -13342,6 +13372,7 @@ define bfloat @global_system_atomic_fsub_ret_bf16__offset12b_pos(ptr addrspace(1
 ; GFX90A-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX90A-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -13539,46 +13570,46 @@ define void @global_system_atomic_fsub_noret_bf16__offset12b_pos(ptr addrspace(1
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_add_co_u32 v3, vcc_lo, 0x7fe, v0
+; GFX12-TRUE16-NEXT:    v_add_co_u32 v4, vcc_lo, 0x7fe, v0
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v6, 16, v2
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v4
+; GFX12-TRUE16-NEXT:    v_and_b32_e32 v4, 3, v4
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX12-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v3
-; GFX12-TRUE16-NEXT:    v_and_b32_e32 v3, 3, v3
-; GFX12-TRUE16-NEXT:    global_load_b32 v4, v[0:1], off
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 3, v3
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e64 v3, v5, 0xffff
-; GFX12-TRUE16-NEXT:    v_not_b32_e32 v6, v3
+; GFX12-TRUE16-NEXT:    global_load_b32 v3, v[0:1], off
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v4, 3, v4
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e64 v5, v4, 0xffff
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_not_b32_e32 v5, v5
 ; GFX12-TRUE16-NEXT:  .LBB41_1: ; %atomicrmw.start
 ; GFX12-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, v5, v4
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, 0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v2.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v3, v3, v7
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v7.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX12-TRUE16-NEXT:    v_bfe_u32 v8, v3, 16, 1
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v3
-; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
-; GFX12-TRUE16-NEXT:    v_add3_u32 v8, v8, v3, 0x7fff
+; GFX12-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, v4, v3
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v2, v2, v6
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX12-TRUE16-NEXT:    v_bfe_u32 v7, v2, 16, 1
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v2
+; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v2, v2
+; GFX12-TRUE16-NEXT:    v_add3_u32 v7, v7, v2, 0x7fff
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v2, v7, v8, vcc_lo
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.h, 0
+; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v2.h
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v8, v9, vcc_lo
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v3.h
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, v5, v7
-; GFX12-TRUE16-NEXT:    v_and_or_b32 v3, v4, v6, v3
+; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, v4, v7
+; GFX12-TRUE16-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX12-TRUE16-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_storecnt 0x0
-; GFX12-TRUE16-NEXT:    global_atomic_cmpswap_b32 v3, v[0:1], v[3:4], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX12-TRUE16-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    global_inv scope:SCOPE_SYS
-; GFX12-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v4, v3
+; GFX12-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
+; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-TRUE16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -13674,6 +13705,7 @@ define void @global_system_atomic_fsub_noret_bf16__offset12b_pos(ptr addrspace(1
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -13689,46 +13721,45 @@ define void @global_system_atomic_fsub_noret_bf16__offset12b_pos(ptr addrspace(1
 ; GFX11-TRUE16-LABEL: global_system_atomic_fsub_noret_bf16__offset12b_pos:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_add_co_u32 v3, vcc_lo, 0x7fe, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_add_co_u32 v4, vcc_lo, 0x7fe, v0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v6, 16, v2
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v4
+; GFX11-TRUE16-NEXT:    v_and_b32_e32 v4, 3, v4
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, -4, v3
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v3, 3, v3
-; GFX11-TRUE16-NEXT:    global_load_b32 v4, v[0:1], off
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v5, 3, v3
+; GFX11-TRUE16-NEXT:    global_load_b32 v3, v[0:1], off
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v4, 3, v4
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e64 v3, v5, 0xffff
-; GFX11-TRUE16-NEXT:    v_not_b32_e32 v6, v3
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e64 v5, v4, 0xffff
+; GFX11-TRUE16-NEXT:    v_not_b32_e32 v5, v5
 ; GFX11-TRUE16-NEXT:    .p2align 6
 ; GFX11-TRUE16-NEXT:  .LBB41_1: ; %atomicrmw.start
 ; GFX11-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, v5, v4
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, 0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v2.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v3, v3, v7
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, v7.l
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_bfe_u32 v8, v3, 16, 1
-; GFX11-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v3
-; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
-; GFX11-TRUE16-NEXT:    v_add3_u32 v8, v8, v3, 0x7fff
+; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, v4, v3
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v8, v9, vcc_lo
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v3.h
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX11-TRUE16-NEXT:    v_sub_f32_e32 v2, v2, v6
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
+; GFX11-TRUE16-NEXT:    v_bfe_u32 v7, v2, 16, 1
+; GFX11-TRUE16-NEXT:    v_or_b32_e32 v8, 0x400000, v2
+; GFX11-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v2, v2
+; GFX11-TRUE16-NEXT:    v_add3_u32 v7, v7, v2, 0x7fff
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v2, v7, v8, vcc_lo
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.h, 0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v7.l, v2.h
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, v5, v7
-; GFX11-TRUE16-NEXT:    v_and_or_b32 v3, v4, v6, v3
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v2, v4, v7
+; GFX11-TRUE16-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    global_atomic_cmpswap_b32 v3, v[0:1], v[3:4], off glc
+; GFX11-TRUE16-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off glc
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    buffer_gl1_inv
 ; GFX11-TRUE16-NEXT:    buffer_gl0_inv
-; GFX11-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v4, v3
+; GFX11-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX11-TRUE16-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
@@ -13853,6 +13884,7 @@ define void @global_system_atomic_fsub_noret_bf16__offset12b_pos(ptr addrspace(1
 ; GFX90A-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX90A-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -14082,6 +14114,7 @@ define <2 x half> @global_agent_atomic_fsub_ret_v2f16(ptr addrspace(1) %ptr, <2 
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_pk_add_f16 v4, v5, v2 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -14346,6 +14379,7 @@ define <2 x half> @global_agent_atomic_fsub_ret_v2f16__offset12b_pos(ptr addrspa
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_pk_add_f16 v4, v5, v2 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2044 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -14612,6 +14646,7 @@ define <2 x half> @global_agent_atomic_fsub_ret_v2f16__offset12b_neg(ptr addrspa
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_pk_add_f16 v4, v5, v2 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:-2048 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -14884,6 +14919,7 @@ define void @global_agent_atomic_fsub_noret_v2f16(ptr addrspace(1) %ptr, <2 x ha
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_pk_add_f16 v4, v5, v2 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -15133,6 +15169,7 @@ define void @global_agent_atomic_fsub_noret_v2f16__offset12b_pos(ptr addrspace(1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_pk_add_f16 v4, v5, v2 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2044 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -15385,6 +15422,7 @@ define void @global_agent_atomic_fsub_noret_v2f16__offset12b_neg(ptr addrspace(1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_pk_add_f16 v4, v5, v2 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:-2048 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -15648,6 +15686,7 @@ define <2 x half> @global_system_atomic_fsub_ret_v2f16__offset12b_pos(ptr addrsp
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_pk_add_f16 v4, v5, v2 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2044 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -15721,6 +15760,7 @@ define <2 x half> @global_system_atomic_fsub_ret_v2f16__offset12b_pos(ptr addrsp
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_pk_add_f16 v4, v5, v2 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2044 glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -15915,6 +15955,7 @@ define void @global_system_atomic_fsub_noret_v2f16__offset12b_pos(ptr addrspace(
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_pk_add_f16 v4, v5, v2 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2044 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -15984,6 +16025,7 @@ define void @global_system_atomic_fsub_noret_v2f16__offset12b_pos(ptr addrspace(
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    v_pk_add_f16 v4, v5, v2 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    global_atomic_cmpswap v3, v[0:1], v[4:5], off offset:2044 glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -16151,26 +16193,26 @@ define <2 x bfloat> @global_agent_atomic_fsub_ret_v2bf16(ptr addrspace(1) %ptr, 
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v6, v3
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_and_b32_e32 v5, 0xffff0000, v6
-; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v4
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v6
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-TRUE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
 ; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v3, v3, v2
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v10, 0x400000, v5
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX12-TRUE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
+; GFX12-TRUE16-NEXT:    v_and_b32_e32 v5, 0xffff0000, v6
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_bfe_u32 v7, v3, 16, 1
+; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v4
 ; GFX12-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v3
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-TRUE16-NEXT:    v_add3_u32 v7, v7, v3, 0x7fff
+; GFX12-TRUE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v10, 0x400000, v5
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v7, v9, vcc_lo
+; GFX12-TRUE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v8, v10, vcc_lo
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v3.h
 ; GFX12-TRUE16-NEXT:    s_wait_storecnt 0x0
 ; GFX12-TRUE16-NEXT:    global_atomic_cmpswap_b32 v3, v[0:1], v[5:6], off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
@@ -16203,25 +16245,25 @@ define <2 x bfloat> @global_agent_atomic_fsub_ret_v2bf16(ptr addrspace(1) %ptr, 
 ; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v6, v3
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-FAKE16-NEXT:    v_and_b32_e32 v5, 0xffff0000, v6
-; GFX12-FAKE16-NEXT:    v_sub_f32_e32 v5, v5, v2
 ; GFX12-FAKE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v6
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-FAKE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
 ; GFX12-FAKE16-NEXT:    v_sub_f32_e32 v3, v3, v4
-; GFX12-FAKE16-NEXT:    v_or_b32_e32 v10, 0x400000, v5
-; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX12-FAKE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
+; GFX12-FAKE16-NEXT:    v_and_b32_e32 v5, 0xffff0000, v6
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-FAKE16-NEXT:    v_bfe_u32 v7, v3, 16, 1
+; GFX12-FAKE16-NEXT:    v_sub_f32_e32 v5, v5, v2
 ; GFX12-FAKE16-NEXT:    v_or_b32_e32 v9, 0x400000, v3
 ; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e64 s0, v3, v3
-; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v5, v8, v10, vcc_lo
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-FAKE16-NEXT:    v_add3_u32 v7, v7, v3, 0x7fff
+; GFX12-FAKE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
+; GFX12-FAKE16-NEXT:    v_or_b32_e32 v10, 0x400000, v5
+; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e64 v3, v7, v9, s0
+; GFX12-FAKE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
+; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v5, v8, v10, vcc_lo
 ; GFX12-FAKE16-NEXT:    v_perm_b32 v5, v5, v3, 0x7060302
 ; GFX12-FAKE16-NEXT:    s_wait_storecnt 0x0
 ; GFX12-FAKE16-NEXT:    global_atomic_cmpswap_b32 v3, v[0:1], v[5:6], off th:TH_ATOMIC_RETURN scope:SCOPE_DEV
@@ -16267,6 +16309,7 @@ define <2 x bfloat> @global_agent_atomic_fsub_ret_v2bf16(ptr addrspace(1) %ptr, 
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -16657,26 +16700,26 @@ define <2 x bfloat> @global_agent_atomic_fsub_ret_v2bf16__offset12b_pos(ptr addr
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v6, v3
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_and_b32_e32 v5, 0xffff0000, v6
-; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v4
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v6
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-TRUE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
 ; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v3, v3, v2
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v10, 0x400000, v5
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX12-TRUE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
+; GFX12-TRUE16-NEXT:    v_and_b32_e32 v5, 0xffff0000, v6
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_bfe_u32 v7, v3, 16, 1
+; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v4
 ; GFX12-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v3
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-TRUE16-NEXT:    v_add3_u32 v7, v7, v3, 0x7fff
+; GFX12-TRUE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v10, 0x400000, v5
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v7, v9, vcc_lo
+; GFX12-TRUE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v8, v10, vcc_lo
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v3.h
 ; GFX12-TRUE16-NEXT:    s_wait_storecnt 0x0
 ; GFX12-TRUE16-NEXT:    global_atomic_cmpswap_b32 v3, v[0:1], v[5:6], off offset:2044 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
@@ -16709,25 +16752,25 @@ define <2 x bfloat> @global_agent_atomic_fsub_ret_v2bf16__offset12b_pos(ptr addr
 ; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v6, v3
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-FAKE16-NEXT:    v_and_b32_e32 v5, 0xffff0000, v6
-; GFX12-FAKE16-NEXT:    v_sub_f32_e32 v5, v5, v2
 ; GFX12-FAKE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v6
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-FAKE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
 ; GFX12-FAKE16-NEXT:    v_sub_f32_e32 v3, v3, v4
-; GFX12-FAKE16-NEXT:    v_or_b32_e32 v10, 0x400000, v5
-; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX12-FAKE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
+; GFX12-FAKE16-NEXT:    v_and_b32_e32 v5, 0xffff0000, v6
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-FAKE16-NEXT:    v_bfe_u32 v7, v3, 16, 1
+; GFX12-FAKE16-NEXT:    v_sub_f32_e32 v5, v5, v2
 ; GFX12-FAKE16-NEXT:    v_or_b32_e32 v9, 0x400000, v3
 ; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e64 s0, v3, v3
-; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v5, v8, v10, vcc_lo
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-FAKE16-NEXT:    v_add3_u32 v7, v7, v3, 0x7fff
+; GFX12-FAKE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
+; GFX12-FAKE16-NEXT:    v_or_b32_e32 v10, 0x400000, v5
+; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e64 v3, v7, v9, s0
+; GFX12-FAKE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
+; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v5, v8, v10, vcc_lo
 ; GFX12-FAKE16-NEXT:    v_perm_b32 v5, v5, v3, 0x7060302
 ; GFX12-FAKE16-NEXT:    s_wait_storecnt 0x0
 ; GFX12-FAKE16-NEXT:    global_atomic_cmpswap_b32 v3, v[0:1], v[5:6], off offset:2044 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
@@ -16773,6 +16816,7 @@ define <2 x bfloat> @global_agent_atomic_fsub_ret_v2bf16__offset12b_pos(ptr addr
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off offset:2044 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -17165,26 +17209,26 @@ define <2 x bfloat> @global_agent_atomic_fsub_ret_v2bf16__offset12b_neg(ptr addr
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v6, v3
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_and_b32_e32 v5, 0xffff0000, v6
-; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v4
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v6
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-TRUE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
 ; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v3, v3, v2
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v10, 0x400000, v5
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX12-TRUE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
+; GFX12-TRUE16-NEXT:    v_and_b32_e32 v5, 0xffff0000, v6
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_bfe_u32 v7, v3, 16, 1
+; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v4
 ; GFX12-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v3
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-TRUE16-NEXT:    v_add3_u32 v7, v7, v3, 0x7fff
+; GFX12-TRUE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v10, 0x400000, v5
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v7, v9, vcc_lo
+; GFX12-TRUE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v8, v10, vcc_lo
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v3.h
 ; GFX12-TRUE16-NEXT:    s_wait_storecnt 0x0
 ; GFX12-TRUE16-NEXT:    global_atomic_cmpswap_b32 v3, v[0:1], v[5:6], off offset:-2048 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
@@ -17217,25 +17261,25 @@ define <2 x bfloat> @global_agent_atomic_fsub_ret_v2bf16__offset12b_neg(ptr addr
 ; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v6, v3
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-FAKE16-NEXT:    v_and_b32_e32 v5, 0xffff0000, v6
-; GFX12-FAKE16-NEXT:    v_sub_f32_e32 v5, v5, v2
 ; GFX12-FAKE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v6
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-FAKE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
 ; GFX12-FAKE16-NEXT:    v_sub_f32_e32 v3, v3, v4
-; GFX12-FAKE16-NEXT:    v_or_b32_e32 v10, 0x400000, v5
-; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX12-FAKE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
+; GFX12-FAKE16-NEXT:    v_and_b32_e32 v5, 0xffff0000, v6
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-FAKE16-NEXT:    v_bfe_u32 v7, v3, 16, 1
+; GFX12-FAKE16-NEXT:    v_sub_f32_e32 v5, v5, v2
 ; GFX12-FAKE16-NEXT:    v_or_b32_e32 v9, 0x400000, v3
 ; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e64 s0, v3, v3
-; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v5, v8, v10, vcc_lo
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-FAKE16-NEXT:    v_add3_u32 v7, v7, v3, 0x7fff
+; GFX12-FAKE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
+; GFX12-FAKE16-NEXT:    v_or_b32_e32 v10, 0x400000, v5
+; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e64 v3, v7, v9, s0
+; GFX12-FAKE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
+; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v5, v8, v10, vcc_lo
 ; GFX12-FAKE16-NEXT:    v_perm_b32 v5, v5, v3, 0x7060302
 ; GFX12-FAKE16-NEXT:    s_wait_storecnt 0x0
 ; GFX12-FAKE16-NEXT:    global_atomic_cmpswap_b32 v3, v[0:1], v[5:6], off offset:-2048 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
@@ -17281,6 +17325,7 @@ define <2 x bfloat> @global_agent_atomic_fsub_ret_v2bf16__offset12b_neg(ptr addr
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off offset:-2048 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -17793,6 +17838,7 @@ define void @global_agent_atomic_fsub_noret_v2bf16(ptr addrspace(1) %ptr, <2 x b
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -18278,6 +18324,7 @@ define void @global_agent_atomic_fsub_noret_v2bf16__offset12b_pos(ptr addrspace(
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off offset:2044 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -18766,6 +18813,7 @@ define void @global_agent_atomic_fsub_noret_v2bf16__offset12b_neg(ptr addrspace(
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off offset:-2048 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -19150,26 +19198,26 @@ define <2 x bfloat> @global_system_atomic_fsub_ret_v2bf16__offset12b_pos(ptr add
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v6, v3
 ; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_and_b32_e32 v5, 0xffff0000, v6
-; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v4
 ; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v6
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-TRUE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
 ; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v3, v3, v2
-; GFX12-TRUE16-NEXT:    v_or_b32_e32 v10, 0x400000, v5
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX12-TRUE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
+; GFX12-TRUE16-NEXT:    v_and_b32_e32 v5, 0xffff0000, v6
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_bfe_u32 v7, v3, 16, 1
+; GFX12-TRUE16-NEXT:    v_sub_f32_e32 v5, v5, v4
 ; GFX12-TRUE16-NEXT:    v_or_b32_e32 v9, 0x400000, v3
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_1)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-TRUE16-NEXT:    v_add3_u32 v7, v7, v3, 0x7fff
+; GFX12-TRUE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
+; GFX12-TRUE16-NEXT:    v_or_b32_e32 v10, 0x400000, v5
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v3, v7, v9, vcc_lo
+; GFX12-TRUE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
 ; GFX12-TRUE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b32_e32 v5, v8, v10, vcc_lo
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v5.l, v3.h
 ; GFX12-TRUE16-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-TRUE16-NEXT:    s_wait_storecnt 0x0
@@ -19203,25 +19251,25 @@ define <2 x bfloat> @global_system_atomic_fsub_ret_v2bf16__offset12b_pos(ptr add
 ; GFX12-FAKE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v6, v3
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-FAKE16-NEXT:    v_and_b32_e32 v5, 0xffff0000, v6
-; GFX12-FAKE16-NEXT:    v_sub_f32_e32 v5, v5, v2
 ; GFX12-FAKE16-NEXT:    v_lshlrev_b32_e32 v3, 16, v6
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-FAKE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
 ; GFX12-FAKE16-NEXT:    v_sub_f32_e32 v3, v3, v4
-; GFX12-FAKE16-NEXT:    v_or_b32_e32 v10, 0x400000, v5
-; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX12-FAKE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
+; GFX12-FAKE16-NEXT:    v_and_b32_e32 v5, 0xffff0000, v6
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-FAKE16-NEXT:    v_bfe_u32 v7, v3, 16, 1
+; GFX12-FAKE16-NEXT:    v_sub_f32_e32 v5, v5, v2
 ; GFX12-FAKE16-NEXT:    v_or_b32_e32 v9, 0x400000, v3
 ; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e64 s0, v3, v3
-; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v5, v8, v10, vcc_lo
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-FAKE16-NEXT:    v_add3_u32 v7, v7, v3, 0x7fff
+; GFX12-FAKE16-NEXT:    v_bfe_u32 v8, v5, 16, 1
+; GFX12-FAKE16-NEXT:    v_or_b32_e32 v10, 0x400000, v5
+; GFX12-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v5, v5
 ; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_sdst(0)
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_cndmask_b32_e64 v3, v7, v9, s0
+; GFX12-FAKE16-NEXT:    v_add3_u32 v8, v8, v5, 0x7fff
+; GFX12-FAKE16-NEXT:    s_wait_alu depctr_va_vcc(0)
+; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-FAKE16-NEXT:    v_cndmask_b32_e32 v5, v8, v10, vcc_lo
 ; GFX12-FAKE16-NEXT:    v_perm_b32 v5, v5, v3, 0x7060302
 ; GFX12-FAKE16-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-FAKE16-NEXT:    s_wait_storecnt 0x0
@@ -19268,6 +19316,7 @@ define <2 x bfloat> @global_system_atomic_fsub_ret_v2bf16__offset12b_pos(ptr add
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off offset:2044 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -19445,6 +19494,7 @@ define <2 x bfloat> @global_system_atomic_fsub_ret_v2bf16__offset12b_pos(ptr add
 ; GFX90A-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX90A-NEXT:    v_perm_b32 v2, v6, v2, s9
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off offset:2044 glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -19776,6 +19826,7 @@ define void @global_system_atomic_fsub_noret_v2bf16__offset12b_pos(ptr addrspace
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off offset:2044 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -19947,6 +19998,7 @@ define void @global_system_atomic_fsub_noret_v2bf16__offset12b_pos(ptr addrspace
 ; GFX90A-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX90A-NEXT:    v_perm_b32 v2, v6, v2, s9
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    global_atomic_cmpswap v2, v[0:1], v[2:3], off offset:2044 glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -20138,4 +20190,4 @@ define void @global_system_atomic_fsub_noret_v2bf16__offset12b_pos(ptr addrspace
 }
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #1 = { nounwind denormal_fpenv(float: preservesign) }

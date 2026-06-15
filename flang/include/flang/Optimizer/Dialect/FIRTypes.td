@@ -14,6 +14,7 @@
 #define FIR_DIALECT_FIR_TYPES
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/BuiltinTypeInterfaces.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
 
 //===----------------------------------------------------------------------===//
@@ -313,7 +314,7 @@ def fir_PointerType : FIR_Type<"Pointer", "ptr"> {
   }];
 }
 
-def fir_RecordType : FIR_Type<"Record", "type"> {
+def fir_RecordType : FIR_Type<"Record", "type", [MemRefElementTypeInterface]> {
   let summary = "FIR derived type";
 
   let description = [{
@@ -356,6 +357,10 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
     // array fields.
     bool isPacked() const;
     void pack(bool);
+
+    // The presence of SEQUENCE attribute.
+    bool isSequence() const;
+    void setSequence(bool);
 
     detail::RecordTypeStorage const *uniqueKey() const;
   }];
@@ -598,6 +603,9 @@ def AnyLogicalLike : TypeConstraint<Or<[BoolLike.predicate,
 def AnyRealLike : TypeConstraint<FloatLike.predicate, "any real">;
 def AnyIntegerType : Type<AnyIntegerLike.predicate, "any integer">;
 def AnyLogicalType : Type<AnyLogicalLike.predicate, "any logical">;
+def AnyLogicalOrIntegerLike : TypeConstraint<Or<[
+    fir_LogicalType.predicate,
+    SignlessIntegerLike.predicate]>, "fir.logical or signless integer">;
 
 def AnyFirComplexLike :  TypeConstraint<CPred<"::fir::isa_complex($_self)">,
   "any floating point complex type">;

@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "inline-asm-lowering"
@@ -24,6 +25,16 @@
 using namespace llvm;
 
 void InlineAsmLowering::anchor() {}
+
+/// Emit an inline asm error diagnostic and materialize undef values for the
+/// call results so that the rest of the function remains well-formed.
+static void emitInlineAsmError(MachineIRBuilder &MIRBuilder,
+                               const CallBase &Call, const Twine &Message,
+                               ArrayRef<Register> ResRegs) {
+  Call.getContext().diagnose(DiagnosticInfoInlineAsm(Call, Message));
+  for (Register Reg : ResRegs)
+    MIRBuilder.buildUndef(Reg);
+}
 
 namespace {
 
@@ -347,9 +358,12 @@ bool InlineAsmLowering::lowerInlineAsm(
 
         // Find a register that we can use.
         if (OpInfo.Regs.empty()) {
-          LLVM_DEBUG(dbgs()
-                     << "Couldn't allocate output register for constraint\n");
-          return false;
+          emitInlineAsmError(MIRBuilder, Call,
+                             "could not allocate output register for "
+                             "constraint '" +
+                                 Twine(OpInfo.ConstraintCode) + "'",
+                             GetOrCreateVRegs(Call));
+          return true;
         }
 
         // Add information to the INLINEASM instruction to know that this
@@ -408,14 +422,23 @@ bool InlineAsmLowering::lowerInlineAsm(
         ArrayRef<Register> SrcRegs = GetOrCreateVRegs(*OpInfo.CallOperandVal);
         assert(SrcRegs.size() == 1 && "Single register is expected here");
 
-        // When Def is physreg: use given input.
-        Register In = SrcRegs[0];
-        // When Def is vreg: copy input to new vreg with same reg class as Def.
-        if (Def.isVirtual()) {
-          In = MRI->createVirtualRegister(MRI->getRegClass(Def));
-          if (!buildAnyextOrCopy(In, SrcRegs[0], MIRBuilder))
-            return false;
-        }
+        // We need the tied input to live in the same register class as the def.
+        //
+        // - if Def is a vreg, we can just use its regclass.
+        // - if Def is a physreg, create a vreg in the minimal regclass for that
+        //   physreg.
+        //
+        // Otherwise RegBankSelect may leave it in the wrong bank (e.g. GPR even
+        // though it's tied to an FP physreg).
+        const TargetRegisterClass *RC = Def.isVirtual()
+                                            ? MRI->getRegClass(Def)
+                                            : TRI->getMinimalPhysRegClass(Def);
+
+        // Materialize `In` in a new vreg that has a register class that matches
+        // the register class of `Def`.
+        Register In = MRI->createVirtualRegister(RC);
+        if (!buildAnyextOrCopy(In, SrcRegs[0], MIRBuilder))
+          return false;
 
         // Add Flag and input register operand (In) to Inst. Tie In to Def.
         InlineAsm::Flag UseFlag(InlineAsm::Kind::RegUse, 1);
@@ -519,10 +542,11 @@ bool InlineAsmLowering::lowerInlineAsm(
 
       // Copy the input into the appropriate registers.
       if (OpInfo.Regs.empty()) {
-        LLVM_DEBUG(
-            dbgs()
-            << "Couldn't allocate input register for register constraint\n");
-        return false;
+        emitInlineAsmError(MIRBuilder, Call,
+                           "could not allocate input reg for constraint '" +
+                               Twine(OpInfo.ConstraintCode) + "'",
+                           GetOrCreateVRegs(Call));
+        return true;
       }
 
       unsigned NumRegs = OpInfo.Regs.size();

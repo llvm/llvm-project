@@ -194,7 +194,7 @@ what to add to your calendar invite.
      - `Minutes/docs <https://docs.google.com/document/d/1GahxppHJ7o1O_fn1Mbidu1DHEg7V2aOr92LXCtNV1_o/edit?usp=sharing>`__
    * - Clang C and C++ Language Working Group
      - 1st and 3rd Wednesday of the month
-     - `gcal <https://calendar.google.com/calendar/u/0?cid=cW1lZGg0ZXNpMnIyZDN2aTVydGVrdWF1YzRAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ>`__
+     -
      - `Minutes/docs <https://docs.google.com/document/d/1x5-RbOC6-jnI_NcJ9Dp4pSmGhhNe7lUevuWUIB46TeM/edit?usp=sharing>`__
    * - LLVM SPIR-V Backend Working Group
      - Every week on Monday
@@ -204,14 +204,18 @@ what to add to your calendar invite.
      - Every 2 weeks on Mondays
      - `gcal <https://calendar.google.com/calendar/u/0?cid=c3ljbC5sbHZtLndnQGdtYWlsLmNvbQ>`__
      - `Meeting details/agenda <https://docs.google.com/document/d/1ivYDSn_5ChTeiZ7TiO64WC_jYJnGwAUiT9Ngi9cAdFU/edit?usp=sharing>`__
+   * - Formal Semantics Working Group
+     - Every 2 weeks on Mondays
+     - `gcal <https://calendar.google.com/calendar/event?eid=aHJpNnNzb3Zia3FtNzNuYjdpbmJtZG5nZGVfMjAyNjA1MDRUMTUzMDAwWiBjYWxlbmRhckBsbHZtLm9yZw>`__
+     - `Meeting notes <https://docs.google.com/document/d/1muS2gZ7PUhbypbl0bmjb2J-UUzY7K8AO9a8RHVw_Mjo/edit?tab=t.0>`__
    * - Vectorizer Improvement Working Group
      - 3rd Tuesday of the month
-     - `ics <https://drive.google.com/file/d/1ten-u-4yjOcCoONUtR4_AxsFxRDTUp1b/view?usp=sharing>`__
+     - `ics <https://www.icloud.com/iclouddrive/032PeZzdN6U4uRMwJRJPrS2Lw#Vectorizer_Improvements>`__
      - `Meeting details/agenda: <https://docs.google.com/document/d/1Glzy2JiWuysbD-HBWGUOkZqT09GJ4_Ljodr0lXD5XfQ/edit>`__
    * - `LLVM Qualification Working Group <https://llvm.org/docs/QualGroup.html>`__
-     - 1st Tuesday of the month
-     - `ics <https://calendar.google.com/calendar/ical/c_fe5774fa2769c5085d6b87e8fac272e8940e7d0089bc0e0a58dc3ead7978504b%40group.calendar.google.com/public/basic.ics>`__
-       `gcal <https://calendar.google.com/calendar/embed?src=c_fe5774fa2769c5085d6b87e8fac272e8940e7d0089bc0e0a58dc3ead7978504b%40group.calendar.google.com&ctz=Asia%2FTokyo>`__
+     - Monthly: 2nd Tuesday (EU/Asia) and 2nd Friday JST / Thursday (Americas)
+     - `ics <https://calendar.google.com/calendar/ical/f731f5b57956a132f6c553ed30f496b16e1018f831be13eb6c4b896c108a6626%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/embed?src=f731f5b57956a132f6c553ed30f496b16e1018f831be13eb6c4b896c108a6626%40group.calendar.google.com&ctz=Asia%2FTokyo>`__
      - `Minutes/docs <https://discourse.llvm.org/t/llvm-qualification-wg-sync-ups-meeting-minutes/87148>`__
    * - MLIR C/C++ Frontend Working Group
      - Monthly, usually 1st Monday of the month
@@ -227,7 +231,21 @@ what to add to your calendar invite.
      - Every 2nd Tuesday of the month
      - `gcal <https://calendar.google.com/calendar/u/0?cid=YWZjNzhmMzE4MDNlNTAyNGY1NmE1MDIyODY0YTYwZmJmYzRjYTEwNTE1NmUxODA2NzBkYTliY2ZhYTVkNjk0NUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
      - `Meeting details/agenda <https://docs.google.com/document/d/1Ry8O4-Tm5BFj9AMjr8qTQFU80z-ptiNQ62687NaIvLs/edit?usp=sharing>`__
-
+   * - Clang Static Analysis Working Group
+     - Every 2 weeks on Tuesdays
+     - `ics <https://calendar.google.com/calendar/ical/9c23f3a54dbb4fbac3801c50094fc43118a37c186f5c65b2898cd0fc251c8610%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/u/0?cid=OWMyM2YzYTU0ZGJiNGZiYWMzODAxYzUwMDk0ZmM0MzExOGEzN2MxODZmNWM2NWIyODk4Y2QwZmMyNTFjODYxMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
+     - `Meeting notes <https://docs.google.com/document/d/1ijI8pWeyidmhFOd5Ndgvr5AziZwrMCbt2oUehv8qHmw/edit?usp=sharing>`__
+   * - LLVM Memory Safety Working Group
+     - Every 4 weeks on Thursdays
+     - `ics <https://calendar.google.com/calendar/ical/2d77f9a2624d18cd46e5299d15cc0fa0c90dca53fd68802261d52121d21a0573%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/u/0?cid=MmQ3N2Y5YTI2MjRkMThjZDQ2ZTUyOTlkMTVjYzBmYTBjOTBkY2E1M2ZkNjg4MDIyNjFkNTIxMjFkMjFhMDU3M0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
+     - `Meeting notes <https://docs.google.com/document/d/1DkCik6BTnO-cox_9y_BTKzPaJJOo_hBxiNFP3lInvOM/edit?usp=sharing>`__
+   * - `Lifetime Safety Breakout Group <https://github.com/orgs/llvm/projects/39>`__
+     - Every 2 weeks on Wednesdays
+     - `ics <https://calendar.google.com/calendar/ical/2d77f9a2624d18cd46e5299d15cc0fa0c90dca53fd68802261d52121d21a0573%40group.calendar.google.com/public/basic.ics>`__
+       `gcal <https://calendar.google.com/calendar/u/0?cid=MmQ3N2Y5YTI2MjRkMThjZDQ2ZTUyOTlkMTVjYzBmYTBjOTBkY2E1M2ZkNjg4MDIyNjFkNTIxMjFkMjFhMDU3M0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
+     - `Meeting notes <https://docs.google.com/document/d/1DkCik6BTnO-cox_9y_BTKzPaJJOo_hBxiNFP3lInvOM/edit?tab=t.nvvd6cfloi81>`__
 
 For event owners, our Discord bot also supports sending automated announcements
 of upcoming sync-ups. Please see the :ref:`discord-bot-event-pings` section for

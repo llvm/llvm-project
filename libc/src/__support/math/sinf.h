@@ -29,7 +29,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static float sinf(float x) {
+LIBC_INLINE float sinf(float x) {
   return math::sincosf_float_eval::sincosf_eval</*IS_SIN*/ true>(x);
 }
 
@@ -51,7 +51,8 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static float sinf(float x) {
+LIBC_INLINE float sinf(float x) {
+  using namespace sincosf_utils_internal;
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
 
@@ -151,10 +152,12 @@ LIBC_INLINE static float sinf(float x) {
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   if (LIBC_UNLIKELY(x_abs == 0x4619'9998U)) { // x = 0x1.33333p13
     float r = -0x1.63f4bap-2f;
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     int rounding = fputil::quick_get_round();
     if ((rounding == FE_DOWNWARD && xbits.is_pos()) ||
         (rounding == FE_UPWARD && xbits.is_neg()))
       r = -0x1.63f4bcp-2f;
+#endif // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     return xbits.is_neg() ? -r : r;
   }
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS

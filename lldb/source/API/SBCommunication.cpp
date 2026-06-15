@@ -171,5 +171,5 @@ const char *SBCommunication::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
   return ConstString(ThreadedCommunication::GetStaticBroadcasterClass())
-      .AsCString();
+      .AsCString(nullptr);
 }

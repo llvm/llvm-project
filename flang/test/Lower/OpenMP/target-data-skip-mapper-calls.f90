@@ -23,8 +23,14 @@ contains
 
 subroutine f(x, y)
   integer :: x, y
+  type :: t
+    integer, pointer :: p(:)
+  end type
+  type(t) :: d
   !$omp target data map(tofrom: x, y)
   x = x + y
   !$omp end target data
+  !$omp target enter data map(to: d)
+  !$omp target exit data map(release: d)
 end subroutine
 end

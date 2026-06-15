@@ -37,6 +37,7 @@ option(LIBSYCL_ENABLE_PEDANTIC "Compile with pedantic enabled." OFF)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBSYCL_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
   if(LIBSYCL_LIBDIR_SUBDIR)
@@ -60,6 +61,7 @@ endif()
 set(LIBSYCL_INCLUDE_DIR include)
 set(LIBSYCL_BUILD_INCLUDE_DIR ${LLVM_BINARY_DIR}/${LIBSYCL_INCLUDE_DIR})
 set(LIBSYCL_SOURCE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(LIBSYCL_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
@@ -115,7 +117,7 @@ add_custom_command(
 install(DIRECTORY "${LIBSYCL_SOURCE_INCLUDE_DIR}/sycl" DESTINATION ${LIBSYCL_INCLUDE_DIR} COMPONENT sycl-headers)
 install(DIRECTORY "${LIBSYCL_SOURCE_INCLUDE_DIR}/CL" DESTINATION ${LIBSYCL_INCLUDE_DIR} COMPONENT sycl-headers)
 
-set(LIBSYCL_LIB_NAME "sycl")
+set(LIBSYCL_LIB_NAME "LLVMSYCL")
 set(LIBSYCL_SHARED_OUTPUT_NAME "${LIBSYCL_LIB_NAME}")
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
   if (CMAKE_MSVC_RUNTIME_LIBRARY AND (NOT CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL$"))
@@ -132,6 +134,28 @@ add_custom_target(libsycl-runtime-libraries
   DEPENDS ${LIBSYCL_RT_LIBS}
 )
 
-add_subdirectory(src)
+# Shared object-library target name used by libsycl and unit tests.
+set(LIBSYCL_OBJ_TARGET sycl_object)
 
+add_subdirectory(src)
 add_subdirectory(tools)
+
+if(LLVM_INCLUDE_TESTS)
+  add_subdirectory(test)
+endif()
+
+add_custom_target(libsycl-toolchain ALL
+  DEPENDS libsycl-runtime-libraries
+          sycl-ls
+  COMMENT "Building libsycl toolchain..."
+)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
+
+if(LLVM_INCLUDE_TESTS)
+  add_subdirectory(unittests)
+
+  if(TARGET check-sycl AND TARGET check-sycl-unittests)
+    add_dependencies(check-sycl check-sycl-unittests)
+  endif()
+endif()

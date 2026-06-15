@@ -71,6 +71,8 @@ public:
 
   bool preferScalarizeSplat(SDNode *N) const override;
 
+  void finalizeLowering(MachineFunction &MF) const override;
+
   /// Customize the preferred legalization strategy for certain types.
   LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
 
@@ -144,6 +146,12 @@ public:
                                      const APInt &DemandedElts,
                                      const SelectionDAG &DAG,
                                      unsigned Depth) const override;
+
+  void computeKnownBitsForTargetInstr(GISelValueTracking &Analysis, Register R,
+                                      KnownBits &Known,
+                                      const APInt &DemandedElts,
+                                      const MachineRegisterInfo &MRI,
+                                      unsigned Depth = 0) const override;
   unsigned ComputeNumSignBitsForTargetNode(SDValue Op,
                                            const APInt &DemandedElts,
                                            const SelectionDAG &DAG,
@@ -155,11 +163,9 @@ public:
                                          TargetLoweringOpt &TLO,
                                          unsigned Depth) const override;
 
-  bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
-                                           const APInt &DemandedElts,
-                                           const SelectionDAG &DAG,
-                                           bool PoisonOnly, bool ConsiderFlags,
-                                           unsigned Depth) const override;
+  bool canCreateUndefOrPoisonForTargetNode(
+      SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+      UndefPoisonKind Kind, bool ConsiderFlags, unsigned Depth) const override;
 
   const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const override;
 
@@ -390,8 +396,6 @@ public:
                                           unsigned uid,
                                           MCContext &Ctx) const override;
 
-  bool isVScaleKnownToBeAPowerOfTwo() const override;
-
   bool getIndexedAddressParts(SDNode *Op, SDValue &Base, SDValue &Offset,
                               ISD::MemIndexedMode &AM, SelectionDAG &DAG) const;
   bool getPreIndexedAddressParts(SDNode *N, SDValue &Base, SDValue &Offset,
@@ -440,7 +444,8 @@ public:
                              const APInt &GapMask) const override;
 
   bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
-                                        IntrinsicInst *DI) const override;
+                                        IntrinsicInst *DI,
+                                        const APInt &GapMask) const override;
 
   bool lowerInterleaveIntrinsicToStore(
       Instruction *Store, Value *Mask,
@@ -479,14 +484,6 @@ public:
                            unsigned &Index);
 
 private:
-  void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
-                        const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
-                        RISCVCCAssignFn Fn) const;
-  void analyzeOutputArgs(MachineFunction &MF, CCState &CCInfo,
-                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                         bool IsRet, CallLoweringInfo *CLI,
-                         RISCVCCAssignFn Fn) const;
-
   template <class NodeTy>
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, bool IsLocal = true,
                   bool IsExternWeak = false) const;
@@ -512,9 +509,9 @@ private:
   SDValue lowerVectorMaskSplat(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
                              int64_t ExtTrueVal) const;
-  SDValue lowerVectorMaskTruncLike(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVectorTruncLike(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVectorFPExtendOrRoundLike(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVectorMaskTrunc(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVectorTrunc(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVectorFPExtendOrRound(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
@@ -546,13 +543,9 @@ private:
   SDValue lowerToScalableOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPOp(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerLogicVPOp(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPExtMaskOp(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPSetCCMaskOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPMergeMask(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPSpliceExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPReverseExperimental(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPStridedLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPStridedStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPCttzElements(SDValue Op, SelectionDAG &DAG) const;
@@ -566,7 +559,7 @@ private:
   SDValue lowerRESET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerCTLZ_CTTZ_ZERO_POISON(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerStrictFPExtendOrRoundLike(SDValue Op, SelectionDAG &DAG) const;
 
@@ -583,6 +576,7 @@ private:
   SDValue lowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerPARTIAL_REDUCE_MLA(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerXAndesBfHCvtBFloat16Load(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXAndesBfHCvtBFloat16Store(SDValue Op, SelectionDAG &DAG) const;
