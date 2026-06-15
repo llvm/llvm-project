@@ -49,10 +49,10 @@ llvm.func @llvm_nvvm_barrier(%barId : i32, %numberOfThreads : i32) {
   nvvm.barrier id = %barId number_of_threads = %numberOfThreads
   // CHECK: nvvm.barrier number_of_threads = %[[numberOfThreads]]
   nvvm.barrier number_of_threads = %numberOfThreads
-  // CHECK: nvvm.barrier {aligned = true}
-  nvvm.barrier {aligned = true}
-  // CHECK: nvvm.barrier id = %[[barId]] number_of_threads = %[[numberOfThreads]] {aligned = true}
-  nvvm.barrier id = %barId number_of_threads = %numberOfThreads {aligned = true}
+  // CHECK: nvvm.barrier {aligned = false}
+  nvvm.barrier {aligned = false}
+  // CHECK: nvvm.barrier id = %[[barId]] number_of_threads = %[[numberOfThreads]] {aligned = false}
+  nvvm.barrier id = %barId number_of_threads = %numberOfThreads {aligned = false}
   llvm.return
 }
 
@@ -67,8 +67,8 @@ llvm.func @llvm_nvvm_barrier_reduction(%barId : i32, %pred : i32) {
   %2 = nvvm.barrier.reduction #nvvm.reduction<popc> %pred -> i32
   // CHECK: nvvm.barrier.reduction #nvvm.reduction<and> %[[pred]] id = %[[barId]] -> i32
   %3 = nvvm.barrier.reduction #nvvm.reduction<and> %pred id = %barId -> i32
-  // CHECK: nvvm.barrier.reduction #nvvm.reduction<and> %[[pred]] -> i32 {aligned = true}
-  %4 = nvvm.barrier.reduction #nvvm.reduction<and> %pred -> i32 {aligned = true}
+  // CHECK: nvvm.barrier.reduction #nvvm.reduction<and> %[[pred]] -> i32 {aligned = false}
+  %4 = nvvm.barrier.reduction #nvvm.reduction<and> %pred -> i32 {aligned = false}
   llvm.return
 }
 
