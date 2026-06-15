@@ -70,7 +70,7 @@ def LLVMByteType : LLVMType<"LLVMByte", "byte", [
     VectorElementTypeInterface]> {
   let summary = "LLVM byte type";
   let description = [{
-    The ``!llvm.byte` type represents raw memory data in SSA registers, mirroring
+    The `!llvm.byte` type represents raw memory data in SSA registers, mirroring
     LLVM's builtin byte type.
     It should be used when it cannot be determined whether a value holds a
     pointer or another type at run time, or if the value contains uninitialized
