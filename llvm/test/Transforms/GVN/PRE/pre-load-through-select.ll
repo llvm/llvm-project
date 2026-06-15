@@ -1148,3 +1148,53 @@ for.body:
   %res.0.lcssa = phi i32 [ 0, %entry ], [ %spec.select, %for.body ]
   ret i32 %res.0.lcssa
 }
+
+; The indvars-canonicalized form of a min-index loop: the induction variable is
+; an i64 `%iv`, `arr[i]` is addressed directly with `%iv`, while the select's
+; true value is `trunc nuw nsw %iv` and the running index is zero-extended back
+; for `arr[minloc]`.  The load through the select index should still be
+; eliminated: translating the true side yields `zext nneg (trunc nuw %iv)` which
+; folds back to `%iv`, matching the existing `arr[i]` address.
+define i32 @test_phi_select_index_loop_trunc(ptr %arr, i64 %n) {
+; CHECK-LABEL: @test_phi_select_index_loop_trunc(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[MINLOC:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SEL:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext nneg i32 [[MINLOC]] to i64
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [4 x i8], ptr [[ARR]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw nsw i64 [[IV]] to i32
+; CHECK-NEXT:    [[SEL]] = select i1 [[CMP]], i32 [[TMP2]], i32 [[MINLOC]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[FOR_BODY]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %minloc = phi i32 [ 0, %entry ], [ %sel, %for.body ]
+  %arrayidx = getelementptr inbounds [4 x i8], ptr %arr, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %idxprom = zext nneg i32 %minloc to i64
+  %arrayidx2 = getelementptr inbounds [4 x i8], ptr %arr, i64 %idxprom
+  %1 = load i32, ptr %arrayidx2, align 4
+  %cmp = icmp slt i32 %0, %1
+  %2 = trunc nuw nsw i64 %iv to i32
+  %sel = select i1 %cmp, i32 %2, i32 %minloc
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %for.body
+
+exit:
+  %r = phi i32 [ %sel, %for.body ]
+  ret i32 %r
+}
