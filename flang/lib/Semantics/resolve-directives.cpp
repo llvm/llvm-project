@@ -1907,24 +1907,33 @@ void AccAttributeVisitor::ResolveAccObject(
   common::visit(
       common::visitors{
           [&](const parser::Designator &designator) {
-            if (const auto *name{
-                    parser::GetDesignatorNameIfDataRef(designator)}) {
-              if (auto *symbol{ResolveAcc(*name, accFlag, currScope())}) {
-                AddToContextObjectWithDSA(*symbol, accFlag);
-                if (dataSharingAttributeFlags.test(accFlag)) {
-                  CheckMultipleAppearances(*name, *symbol, accFlag, &accObject);
-                }
-              }
-            } else {
-              // Array sections to be changed to substrings as needed
+            const bool isDataRef{
+                parser::GetDesignatorNameIfDataRef(designator) != nullptr};
+            if (!isDataRef) {
+              // Subscripted designator: evaluate subscripts and detect
+              // the substring case that is disallowed in OpenACC clauses.
               if (AnalyzeExpr(context_, designator)) {
                 if (std::holds_alternative<parser::Substring>(designator.u)) {
                   context_.Say(designator.source,
                       "Substrings are not allowed on OpenACC "
                       "directives or clauses"_err_en_US);
+                  return;
                 }
               }
-              // other checks, more TBD
+            }
+            // GetFirstName extracts the base symbol from both bare data
+            // references and array sections, unifying DSA registration so
+            // that DEFAULT(NONE) checking does not spuriously flag variables
+            // that are explicitly listed in a data clause as array sections.
+            // TODO: Multiple array sections of the same array with different
+            // data sharing attributes is not currently supported.
+            const parser::Name &baseName{parser::GetFirstName(designator)};
+            if (auto *symbol{ResolveAcc(baseName, accFlag, currScope())}) {
+              AddToContextObjectWithDSA(*symbol, accFlag);
+              if (isDataRef && dataSharingAttributeFlags.test(accFlag)) {
+                CheckMultipleAppearances(
+                    baseName, *symbol, accFlag, &accObject);
+              }
             }
           },
           [&](const parser::Name &name) { // common block
