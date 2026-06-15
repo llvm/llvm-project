@@ -732,6 +732,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     S32, S64, S16, V2S16
   };
 
+  const std::initializer_list<LLT> FPTypesPK16_64 = {S32, S64, S16, V2S16,
+                                                     V2S64};
+
   const LLT MinScalarFPTy = ST.has16BitInsts() ? S16 : S32;
 
   getActionDefinitionsBuilder(G_BR).alwaysLegal();
@@ -757,7 +760,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   if (ST.hasVOP3PInsts() && ST.hasAddNoCarryInsts() && ST.hasIntClamp()) {
     // Full set of gfx9 features.
-    if (ST.hasScalarAddSub64()) {
+    if (ST.hasPackedU64Ops()) {
+      getActionDefinitionsBuilder({G_ADD, G_SUB})
+          .legalFor({S64, S32, S16, V2S16, V2S64})
+          .clampMaxNumElementsStrict(0, S16, 2)
+          .clampMaxNumElementsStrict(0, S64, 2)
+          .scalarize(0)
+          .minScalar(0, S16)
+          .widenScalarToNextMultipleOf(0, 32)
+          .maxScalar(0, S32);
+    } else if (ST.hasScalarAddSub64()) {
       getActionDefinitionsBuilder({G_ADD, G_SUB})
           .legalFor({S64, S32, S16, V2S16})
           .clampMaxNumElementsStrict(0, S16, 2)
@@ -981,6 +993,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     FPOpActions.clampMaxNumElementsStrict(0, S32, 2);
   }
 
+  if (ST.hasPackedFP64Ops()) {
+    FPOpActions.legalFor({V2S64});
+    FPOpActions.clampMaxNumElementsStrict(0, S64, 2);
+  }
+
+  if (ST.hasPackedFP64Ops()) {
+    FPOpActions.legalFor({V2S64});
+    FPOpActions.clampMaxNumElementsStrict(0, S64, 2);
+  }
+
   auto &MinNumMaxNumIeee =
       getActionDefinitionsBuilder({G_FMINNUM_IEEE, G_FMAXNUM_IEEE});
 
@@ -1001,7 +1023,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   auto &MinNumMaxNum = getActionDefinitionsBuilder(
       {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM});
 
-  if (ST.hasVOP3PInsts()) {
+  if (ST.hasPackedFP64Ops()) {
+    MinNumMaxNum.customFor(FPTypesPK16_64)
+        .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
+        .clampMaxNumElements(0, S16, 2)
+        .clampMaxNumElements(0, S64, 2)
+        .clampScalar(0, S16, S64)
+        .scalarize(0);
+  } else if (ST.hasVOP3PInsts()) {
     MinNumMaxNum.customFor(FPTypesPK16)
       .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
       .clampMaxNumElements(0, S16, 2)

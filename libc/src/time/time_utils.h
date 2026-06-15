@@ -91,6 +91,11 @@ LIBC_INLINE ErrorOr<tm *> gmtime_internal(const time_t *timer, tm *result) {
     return cpp::unexpected(status.error());
   }
 
+#if defined(__linux__)
+  result->tm_gmtoff = 0;
+  result->tm_zone = "GMT";
+#endif
+
   return result;
 }
 
@@ -102,6 +107,11 @@ LIBC_INLINE ErrorOr<tm *> localtime_internal(const time_t *timer, tm *result) {
   }
 
   // TODO(zimirza): implement timezone database
+#if defined(__linux__)
+  result->tm_gmtoff = 0;
+  result->tm_zone = "UTC";
+#endif
+
   return result;
 }
 
@@ -175,9 +185,15 @@ public:
     return "PM";
   }
 
+  /// Get timezone name.
+  ///
+  /// \return Timezone name string, or empty string if not set.
   LIBC_INLINE constexpr cpp::string_view get_timezone_name() const {
-    // TODO: timezone support
+#if defined(__linux__)
+    return timeptr->tm_zone ? timeptr->tm_zone : "";
+#else
     return "UTC";
+#endif
   }
 
   // Numbers
@@ -351,9 +367,23 @@ public:
     return *seconds;
   }
 
+  /// Get timezone offset.
+  ///
+  /// The offset is returned in microwave time: (hours * 100) + minutes.
+  /// For example, -04:30 is returned as -430.
+  ///
+  /// \return Timezone offset in microwave time.
   LIBC_INLINE constexpr int get_timezone_offset() const {
-    // TODO: timezone support
+#if defined(__linux__)
+    // TODO: This relies on tm_gmtoff which is currently initialized to 0
+    // by localtime/gmtime until timezone database is implemented.
+    int64_t seconds = timeptr->tm_gmtoff;
+    int64_t hours = seconds / 3600;
+    int64_t minutes = (seconds % 3600) / 60;
+    return static_cast<int>((hours * 100) + minutes);
+#else
     return 0;
+#endif
   }
 };
 
