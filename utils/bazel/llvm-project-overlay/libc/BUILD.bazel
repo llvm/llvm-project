@@ -4649,6 +4649,7 @@ libc_support_library(
         ":__support_fputil_rounding_mode",
         ":__support_macros_config",
         ":__support_macros_optimization",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 
