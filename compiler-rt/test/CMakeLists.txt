@@ -60,7 +60,7 @@ umbrella_lit_testsuite_begin(check-compiler-rt)
 set(COMPILER_RT_KNOWN_TEST_SUITES
     builtins;ctx_profile;fuzzer;interception;lsan;memprof;metadata
     ;orc;profile;sanitizer_common;shadowcallstack
-    ;ubsan;xray)
+    ;ubsan;xray;instrumentor-tools)
 list(APPEND COMPILER_RT_KNOWN_TEST_SUITES ${ALL_SANITIZERS})
 list(REMOVE_DUPLICATES COMPILER_RT_KNOWN_TEST_SUITES)
 # Sort the list so that's easier to read when emitting errors.
@@ -170,6 +170,10 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
   # ShadowCallStack does not yet provide a runtime with compiler-rt, the tests
   # include their own minimal runtime
   compiler_rt_test_runtime(shadowcallstack NO_COMPILER_RT_HAS_GUARD)
+
+  if(COMPILER_RT_BUILD_INSTRUMENTOR_TOOLS)
+    compiler_rt_test_runtime(instrumentor-tools NO_COMPILER_RT_HAS_GUARD)
+  endif()
 endif()
 
 # Now that we've traversed all the directories and know all the lit testsuites,
