@@ -829,6 +829,56 @@ bool DwarfLinkerForBinary::linkImpl(
         MaxDWARFVersion = std::max(Unit.getVersion(), MaxDWARFVersion);
       };
 
+  if (Options.ResourceDir) {
+    // Collect .cas-config files. The build system might put these
+    // anywhere in the build directory, so dsymutil scans all parent
+    // paths of each object file. Their contents is a JSON dictionary,
+    // so this loop aggregates them in a JSON array.
+    llvm::StringSet<> VisitedPaths;
+    std::string CASConfigs = "[\n";
+    raw_string_ostream CASConfigStream(CASConfigs);
+    bool First = true;
+    for (const auto &Obj : Map.objects()) {
+      StringRef ObjPath = Obj->getObjectFilename();
+      for (StringRef Dir = sys::path::parent_path(ObjPath); !Dir.empty();
+           Dir = sys::path::parent_path(Dir)) {
+        if (!VisitedPaths.insert(Dir).second)
+          break;
+
+        SmallString<256> CASConfigPath(Dir);
+        sys::path::append(CASConfigPath, ".cas-config");
+        auto BufferOrErr = MemoryBuffer::getFile(CASConfigPath);
+        if (!BufferOrErr)
+          continue;
+
+        if (!First)
+          CASConfigStream << ",\n";
+        First = false;
+        CASConfigStream << (*BufferOrErr)->getBuffer().rtrim('\n');
+      }
+    }
+    CASConfigStream << "\n]\n";
+    if (!First) {
+      std::error_code EC;
+      SmallString<128> CASConfigsPath;
+      sys::path::append(CASConfigsPath, *Options.ResourceDir);
+      EC = sys::fs::create_directories(CASConfigsPath.str(), true,
+                                       sys::fs::perms::all_all);
+      if (EC) {
+        reportWarning("could not create directory '" + CASConfigsPath +
+                      "': " + EC.message());
+      } else {
+        sys::path::append(CASConfigsPath, "CASConfigs.json");
+        raw_fd_ostream OS(CASConfigsPath.str(), EC, sys::fs::OF_Text);
+        if (EC)
+          reportWarning("could not open '" + CASConfigsPath +
+                        "': " + EC.message());
+        else
+          OS << CASConfigs;
+      }
+    }
+  }
+
   llvm::StringSet<> SwiftModules;
   for (const auto &Obj : Map.objects()) {
     // N_AST objects (swiftmodule files) should get dumped directly into the
@@ -843,13 +893,13 @@ bool DwarfLinkerForBinary::linkImpl(
 
       auto ErrorOrMem = MemoryBuffer::getFile(File);
       if (!ErrorOrMem) {
-        reportWarning("Could not open '" + File + "'");
+        reportWarning("could not open '" + File + "'");
         continue;
       }
       auto FromInterfaceOrErr =
           IsBuiltFromSwiftInterface((*ErrorOrMem)->getBuffer());
       if (!FromInterfaceOrErr) {
-        reportWarning("Could not parse binary Swift module: " +
+        reportWarning("could not parse binary Swift module: " +
                           toString(FromInterfaceOrErr.takeError()),
                       Obj->getObjectFilename());
         // Only skip swiftmodules that could be parsed and are positively
@@ -963,7 +1013,7 @@ void DwarfLinkerForBinary::AddressManager::findValidRelocsMachO(
     Linker.reportWarning("error reading section", DMO.getObjectFilename());
     return;
   }
-  DataExtractor Data(*ContentsOrErr, Obj.isLittleEndian(), 0);
+  DataExtractor Data(*ContentsOrErr, Obj.isLittleEndian());
   bool SkipNext = false;
 
   for (const object::RelocationRef &Reloc : Section.relocations()) {

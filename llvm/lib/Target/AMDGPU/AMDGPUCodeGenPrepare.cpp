@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIModeRegisterDefaults.h"
 #include "llvm/ADT/SetVector.h"
@@ -181,14 +182,15 @@ public:
   unsigned getDivNumBits(BinaryOperator &I, Value *Num, Value *Den,
                          unsigned MaxDivBits, bool Signed) const;
 
-  /// Expands 24 bit div or rem.
-  Value* expandDivRem24(IRBuilder<> &Builder, BinaryOperator &I,
-                        Value *Num, Value *Den,
-                        bool IsDiv, bool IsSigned) const;
+  /// Expands div or rem by using floating-point operations.
+  /// Operands must be in the range [-0x400000,0x3FFFFF]
+  Value *expandDivRemToFloat(IRBuilder<> &Builder, BinaryOperator &I,
+                             Value *Num, Value *Den, bool IsDiv,
+                             bool IsSigned) const;
 
-  Value *expandDivRem24Impl(IRBuilder<> &Builder, BinaryOperator &I,
-                            Value *Num, Value *Den, unsigned NumBits,
-                            bool IsDiv, bool IsSigned) const;
+  Value *expandDivRemToFloatImpl(IRBuilder<> &Builder, BinaryOperator &I,
+                                 Value *Num, Value *Den, unsigned NumBits,
+                                 bool IsDiv, bool IsSigned) const;
 
   /// Expands 32 bit div or rem.
   Value* expandDivRem32(IRBuilder<> &Builder, BinaryOperator &I,
@@ -264,6 +266,8 @@ public:
   bool visitLog(FPMathOperator &Log, Intrinsic::ID IID);
   bool visitMbcntLo(IntrinsicInst &I) const;
   bool visitMbcntHi(IntrinsicInst &I) const;
+  bool visitVectorReduceAdd(IntrinsicInst &I);
+  bool visitSaturatingAdd(IntrinsicInst &I);
   bool run();
 };
 
@@ -318,7 +322,7 @@ bool AMDGPUCodeGenPrepareImpl::canWidenScalarExtLoad(LoadInst &I) const {
   int TySize = DL.getTypeSizeInBits(Ty);
   Align Alignment = DL.getValueOrABITypeAlignment(I.getAlign(), Ty);
 
-  return I.isSimple() && TySize < 32 && Alignment >= 4 && UA.isUniform(&I);
+  return I.isSimple() && TySize < 32 && Alignment >= 4 && UA.isUniformAtDef(&I);
 }
 
 unsigned
@@ -370,7 +374,7 @@ bool AMDGPUCodeGenPrepareImpl::replaceMulWithMul24(BinaryOperator &I) const {
     return false;
 
   // Prefer scalar if this could be s_mul_i32
-  if (UA.isUniform(&I))
+  if (UA.isUniformAtDef(&I))
     return false;
 
   Value *LHS = I.getOperand(0);
@@ -1041,38 +1045,50 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
   // All bits are used for unsigned division for Num or Den in range
   // (SignedMax, UnsignedMax].
   KnownBits Known = computeKnownBits(Den, SQ.getWithInstruction(&I));
-  if (Known.isNegative() || !Known.isNonNegative())
-    return SSBits;
-  unsigned RHSSignBits = Known.countMinLeadingZeros();
-  unsigned DivBits = SSBits - RHSSignBits;
-  if (DivBits > MaxDivBits)
+  unsigned RHSBits = Known.countMaxActiveBits();
+  if (RHSBits > MaxDivBits)
     return SSBits;
 
   Known = computeKnownBits(Num, SQ.getWithInstruction(&I));
-  if (Known.isNegative() || !Known.isNonNegative())
-    return SSBits;
-  unsigned LHSSignBits = Known.countMinLeadingZeros();
+  unsigned LHSBits = Known.countMaxActiveBits();
 
-  unsigned SignBits = std::min(LHSSignBits, RHSSignBits);
-  DivBits = SSBits - SignBits;
+  unsigned DivBits = std::max(LHSBits, RHSBits);
   return DivBits;
 }
 
-// The fractional part of a float is enough to accurately represent up to
-// a 24-bit signed integer.
-Value *AMDGPUCodeGenPrepareImpl::expandDivRem24(IRBuilder<> &Builder,
-                                                BinaryOperator &I, Value *Num,
-                                                Value *Den, bool IsDiv,
-                                                bool IsSigned) const {
-  unsigned DivBits = getDivNumBits(I, Num, Den, 24, IsSigned);
-  if (DivBits > 24)
+Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloat(IRBuilder<> &Builder,
+                                                     BinaryOperator &I,
+                                                     Value *Num, Value *Den,
+                                                     bool IsDiv,
+                                                     bool IsSigned) const {
+  unsigned DivBits = getDivNumBits(I, Num, Den, 23, IsSigned);
+
+  if (DivBits > (IsSigned ? 23 : 22))
     return nullptr;
-  return expandDivRem24Impl(Builder, I, Num, Den, DivBits, IsDiv, IsSigned);
+  return expandDivRemToFloatImpl(Builder, I, Num, Den, DivBits, IsDiv,
+                                 IsSigned);
 }
 
-Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
+Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
     IRBuilder<> &Builder, BinaryOperator &I, Value *Num, Value *Den,
     unsigned DivBits, bool IsDiv, bool IsSigned) const {
+
+  // v_rcp_f32(float(X)) can have an error of 1 ulp.
+  // This would cause incorrect calculation of Y/X if:
+  //   Y = (0x7FFFFF/X)*(X-0)-1
+  // were allowed.
+  //
+  // For example,
+  // (0x7FF6D3/0x000FE7) would erroneously produce 2060 instead of 2059.
+  // (0x7FF8F5/0x007EFB) would erroneously produce 258 instead of 257.
+  //
+  // Thus, we conservatively restrict expandDivRemToFloatImpl to
+  // [-0x40000,0x3FFFFF] for IsSigned
+  // [0x000000,0x3FFFFF] for !IsSigned.
+  assert(DivBits <= (IsSigned ? 23 : 22) &&
+         "abs(Num) must be <= than 0x40000 for expandDivRemToFloatImpl to work "
+         "correctly");
+
   Type *I32Ty = Builder.getInt32Ty();
   Num = Builder.CreateTrunc(Num, I32Ty);
   Den = Builder.CreateTrunc(Den, I32Ty);
@@ -1111,8 +1127,10 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
   Value *FQM = Builder.CreateFMul(FA, RCP);
 
   // fq = trunc(fqm);
-  CallInst *FQ = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, FQM);
-  FQ->copyFastMathFlags(Builder.getFastMathFlags());
+  Value *FQ = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, FQM);
+  auto *FQI = dyn_cast<Instruction>(FQ);
+  if (FQI)
+    FQI->copyFastMathFlags(Builder.getFastMathFlags());
 
   // float fqneg = -fq;
   Value *FQNeg = Builder.CreateFNeg(FQ);
@@ -1121,18 +1139,18 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
   auto FMAD = !ST.hasMadMacF32Insts()
                   ? Intrinsic::fma
                   : (Intrinsic::ID)Intrinsic::amdgcn_fmad_ftz;
-  Value *FR = Builder.CreateIntrinsic(FMAD,
-                                      {FQNeg->getType()}, {FQNeg, FB, FA}, FQ);
+  Value *FR =
+      Builder.CreateIntrinsic(FMAD, {FQNeg->getType()}, {FQNeg, FB, FA}, FQI);
 
   // int iq = (int)fq;
   Value *IQ = IsSigned ? Builder.CreateFPToSI(FQ, I32Ty)
                        : Builder.CreateFPToUI(FQ, I32Ty);
 
   // fr = fabs(fr);
-  FR = Builder.CreateFAbs(FR, FQ);
+  FR = Builder.CreateFAbs(FR, FQI);
 
   // fb = fabs(fb);
-  FB = Builder.CreateFAbs(FB, FQ);
+  FB = Builder.CreateFAbs(FB, FQI);
 
   // int cv = fr >= fb;
   Value *CV = Builder.CreateFCmpOGE(FR, FB);
@@ -1245,7 +1263,7 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem32(IRBuilder<> &Builder,
     }
   }
 
-  if (Value *Res = expandDivRem24(Builder, I, X, Y, IsDiv, IsSigned)) {
+  if (Value *Res = expandDivRemToFloat(Builder, I, X, Y, IsDiv, IsSigned)) {
     return IsSigned ? Builder.CreateSExtOrTrunc(Res, Ty) :
                       Builder.CreateZExtOrTrunc(Res, Ty);
   }
@@ -1354,9 +1372,9 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
     return nullptr;
 
   Value *Narrowed = nullptr;
-  if (NumDivBits <= 24) {
-    Narrowed = expandDivRem24Impl(Builder, I, Num, Den, NumDivBits,
-                                  IsDiv, IsSigned);
+  if (NumDivBits <= (IsSigned ? 23 : 22)) {
+    Narrowed = expandDivRemToFloatImpl(Builder, I, Num, Den, NumDivBits, IsDiv,
+                                       IsSigned);
   } else if (NumDivBits <= 32) {
     Narrowed = expandDivRem32(Builder, I, Num, Den);
   }
@@ -1557,17 +1575,15 @@ bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
 
     Type *I32Ty = Builder.getInt32Ty();
     LoadInst *WidenLoad = Builder.CreateLoad(I32Ty, I.getPointerOperand());
-    WidenLoad->copyMetadata(I);
+    AMDGPU::copyMetadataForWidenedLoad(*WidenLoad, I);
 
-    // If we have range metadata, we need to convert the type, and not make
+    // The widened load reads the original bytes in the low bits, so a !range
+    // lower bound still holds. Convert it to the new type and don't make
     // assumptions about the high bits.
-    if (auto *Range = WidenLoad->getMetadata(LLVMContext::MD_range)) {
-      ConstantInt *Lower =
-        mdconst::extract<ConstantInt>(Range->getOperand(0));
+    if (auto *Range = I.getMetadata(LLVMContext::MD_range)) {
+      ConstantInt *Lower = mdconst::extract<ConstantInt>(Range->getOperand(0));
 
-      if (Lower->isNullValue()) {
-        WidenLoad->setMetadata(LLVMContext::MD_range, nullptr);
-      } else {
+      if (!Lower->isNullValue()) {
         Metadata *LowAndHigh[] = {
           ConstantAsMetadata::get(ConstantInt::get(I32Ty, Lower->getValue().zext(32))),
           // Don't make assumptions about the high bits.
@@ -2066,6 +2082,11 @@ bool AMDGPUCodeGenPrepareImpl::visitIntrinsicInst(IntrinsicInst &I) {
     return visitMbcntLo(I);
   case Intrinsic::amdgcn_mbcnt_hi:
     return visitMbcntHi(I);
+  case Intrinsic::vector_reduce_add:
+    return visitVectorReduceAdd(I);
+  case Intrinsic::uadd_sat:
+  case Intrinsic::sadd_sat:
+    return visitSaturatingAdd(I);
   default:
     return false;
   }
@@ -2403,6 +2424,148 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) const {
     return false;
 
   return tryReplaceWithWorkitemId(I, Wave);
+}
+
+/// Check if type is <4 x i8>.
+static bool isV4I8(Type *Ty) {
+  FixedVectorType *VTy = dyn_cast<FixedVectorType>(Ty);
+  return VTy && VTy->getNumElements() == 4 &&
+         VTy->getElementType()->isIntegerTy(8);
+}
+
+/// Helper to match the dot4 pattern: mul(zext/sext <4 x i8>, zext/sext <4 x
+/// i8>) Returns true if pattern matches and signedness matches IsSigned.
+/// Sets A, B to the <4 x i8> sources.
+static bool matchDot4Pattern(Value *MulOp, Value *&A, Value *&B,
+                             bool IsSigned) {
+  Value *Src0, *Src1;
+  if (!match(MulOp, m_Mul(m_Value(Src0), m_Value(Src1))))
+    return false;
+
+  // Check that result type is <4 x i32>
+  FixedVectorType *MulTy = dyn_cast<FixedVectorType>(MulOp->getType());
+  if (!MulTy || MulTy->getNumElements() != 4 ||
+      !MulTy->getElementType()->isIntegerTy(32))
+    return false;
+
+  // Match zext or sext based on IsSigned
+  Value *ExtSrc0, *ExtSrc1;
+  if (IsSigned) {
+    if (!match(Src0, m_SExt(m_Value(ExtSrc0))) || !isV4I8(ExtSrc0->getType()))
+      return false;
+    if (!match(Src1, m_SExt(m_Value(ExtSrc1))) || !isV4I8(ExtSrc1->getType()))
+      return false;
+  } else {
+    if (!match(Src0, m_ZExt(m_Value(ExtSrc0))) || !isV4I8(ExtSrc0->getType()))
+      return false;
+    if (!match(Src1, m_ZExt(m_Value(ExtSrc1))) || !isV4I8(ExtSrc1->getType()))
+      return false;
+  }
+
+  A = ExtSrc0;
+  B = ExtSrc1;
+  return true;
+}
+
+/// Try to convert vector.reduce.add(mul(zext/sext <4 x i8>, zext/sext <4 x
+/// i8>)) to a dot4 intrinsic call (non-saturating case only).
+bool AMDGPUCodeGenPrepareImpl::visitVectorReduceAdd(IntrinsicInst &I) {
+  // Check if we have dot4 instructions available
+  if (!ST.hasDot7Insts() || (!ST.hasDot1Insts() && !ST.hasDot8Insts()))
+    return false;
+
+  Value *A = nullptr, *B = nullptr;
+
+  // Try unsigned first, then signed
+  bool IsSigned = false;
+  if (!matchDot4Pattern(I.getArgOperand(0), A, B, /*IsSigned=*/false)) {
+    if (!matchDot4Pattern(I.getArgOperand(0), A, B, /*IsSigned=*/true))
+      return false;
+    IsSigned = true;
+  }
+
+  LLVMContext &Ctx = I.getContext();
+  Type *I32Ty = Type::getInt32Ty(Ctx);
+  IRBuilder<> Builder(&I);
+
+  // Bitcast <4 x i8> to i32
+  Value *ASrc = Builder.CreateBitCast(A, I32Ty);
+  Value *BSrc = Builder.CreateBitCast(B, I32Ty);
+
+  // Non-saturating case: accumulator is 0, clamp is false
+  Value *Acc = ConstantInt::get(I32Ty, 0);
+  Value *Clamp = ConstantInt::getFalse(Ctx);
+
+  Intrinsic::ID DotIID =
+      IsSigned ? Intrinsic::amdgcn_sdot4 : Intrinsic::amdgcn_udot4;
+
+  Value *Dot = Builder.CreateIntrinsic(DotIID, {}, {ASrc, BSrc, Acc, Clamp});
+  Dot->takeName(&I);
+
+  I.replaceAllUsesWith(Dot);
+  DeadVals.push_back(&I);
+
+  return true;
+}
+
+/// Try to convert uadd.sat/sadd.sat(vector.reduce.add(mul(...)), c) to a
+/// saturating dot4 intrinsic. This combine starts at the root (saturating add)
+/// and looks at its operands.
+bool AMDGPUCodeGenPrepareImpl::visitSaturatingAdd(IntrinsicInst &I) {
+  // Check if we have dot4 instructions available
+  if (!ST.hasDot7Insts() || (!ST.hasDot1Insts() && !ST.hasDot8Insts()))
+    return false;
+
+  Intrinsic::ID IID = I.getIntrinsicID();
+  bool IsSigned = (IID == Intrinsic::sadd_sat);
+
+  // Look for vector.reduce.add as one of the operands (commutative match)
+  Value *Op0 = I.getArgOperand(0);
+  Value *Op1 = I.getArgOperand(1);
+  Value *MulOp = nullptr;
+  Value *Accum = nullptr;
+  IntrinsicInst *ReduceInst = nullptr;
+
+  if (match(Op0, m_Intrinsic<Intrinsic::vector_reduce_add>(m_Value(MulOp)))) {
+    ReduceInst = cast<IntrinsicInst>(Op0);
+    Accum = Op1;
+  } else if (match(Op1,
+                   m_Intrinsic<Intrinsic::vector_reduce_add>(m_Value(MulOp)))) {
+    ReduceInst = cast<IntrinsicInst>(Op1);
+    Accum = Op0;
+  } else {
+    return false;
+  }
+
+  Value *A = nullptr, *B = nullptr;
+
+  if (!matchDot4Pattern(MulOp, A, B, IsSigned))
+    return false;
+
+  LLVMContext &Ctx = I.getContext();
+  Type *I32Ty = Type::getInt32Ty(Ctx);
+  IRBuilder<> Builder(&I);
+
+  // Bitcast <4 x i8> to i32
+  Value *ASrc = Builder.CreateBitCast(A, I32Ty);
+  Value *BSrc = Builder.CreateBitCast(B, I32Ty);
+
+  // Saturating case: use the accumulator and set clamp to true
+  Value *Clamp = ConstantInt::getTrue(Ctx);
+
+  Intrinsic::ID DotIID =
+      IsSigned ? Intrinsic::amdgcn_sdot4 : Intrinsic::amdgcn_udot4;
+
+  Value *Dot = Builder.CreateIntrinsic(DotIID, {}, {ASrc, BSrc, Accum, Clamp});
+  Dot->takeName(&I);
+
+  I.replaceAllUsesWith(Dot);
+  DeadVals.push_back(&I);
+  // The reduce.add will be dead after this and cleaned up later
+  if (ReduceInst->use_empty())
+    DeadVals.push_back(ReduceInst);
+
+  return true;
 }
 
 char AMDGPUCodeGenPrepare::ID = 0;

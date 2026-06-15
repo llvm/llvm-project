@@ -16,8 +16,20 @@ kAvoidDevNull = kIsWindows
 kDevNull = "/dev/null"
 
 
-class ShellCommandResult(object):
+class ShellCommandResult:
     """Captures the result of an individual command."""
+
+    # TODO(prasoon054): Replace __slots__ with @dataclass(slots=True)
+    # once the minimum Python version is bumped to 3.10.
+    # https://github.com/llvm/llvm-project/issues/200531
+    __slots__ = (
+        "command",
+        "stdout",
+        "stderr",
+        "exitCode",
+        "timeoutReached",
+        "outputFiles",
+    )
 
     def __init__(
         self, command, stdout, stderr, exitCode, timeoutReached, outputFiles=[]
@@ -36,13 +48,18 @@ class InternalShellError(Exception):
         self.message = message
 
 
-class ShellEnvironment(object):
+class ShellEnvironment:
 
     """Mutable shell environment containing things like CWD and env vars.
 
     Environment variables are not implemented, but cwd tracking is. In addition,
     we maintain a dir stack for pushd/popd.
     """
+
+    # TODO(prasoon054): Replace __slots__ with @dataclass(slots=True)
+    # once the minimum Python version is bumped to 3.10.
+    # https://github.com/llvm/llvm-project/issues/200531
+    __slots__ = ("cwd", "env", "umask", "dirStack", "ulimit", "normalize_slashes")
 
     def __init__(self, cwd, env, umask=-1, ulimit=None, normalize_slashes=False):
         self.cwd = cwd
@@ -108,19 +125,19 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
     redirects = [(0,), (1,), (2,)]
     for op, filename in cmd.redirects:
         if op == (">", 2):
-            redirects[2] = [filename, "wb", None]
+            redirects[2] = [filename, "w", None]
         elif op == (">>", 2):
-            redirects[2] = [filename, "ab", None]
+            redirects[2] = [filename, "a", None]
         elif op == (">&", 2) and filename in "012":
             redirects[2] = redirects[int(filename)]
         elif op == (">&",) or op == ("&>",):
-            redirects[1] = redirects[2] = [filename, "wb", None]
+            redirects[1] = redirects[2] = [filename, "w", None]
         elif op == (">",):
-            redirects[1] = [filename, "wb", None]
+            redirects[1] = [filename, "w", None]
         elif op == (">>",):
-            redirects[1] = [filename, "ab", None]
+            redirects[1] = [filename, "a", None]
         elif op == ("<",):
-            redirects[0] = [filename, "rb", None]
+            redirects[0] = [filename, "r", None]
         else:
             raise InternalShellError(
                 cmd, "Unsupported redirect: %r" % ((op, filename),)
@@ -173,12 +190,11 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
         else:
             # Make sure relative paths are relative to the cwd.
             redir_filename = os.path.join(cmd_shenv.cwd, name)
-            fd = open(redir_filename, mode)
-
+            fd = open(redir_filename, mode, encoding="utf-8")
         # Workaround a Win32 and/or subprocess bug when appending.
         #
         # FIXME: Actually, this is probably an instance of PR6753.
-        if mode == "ab":
+        if mode == "a":
             fd.seek(0, 2)
         # Mutate the underlying redirect list so that we can redirect stdout
         # and stderr to the same place without opening the file twice.

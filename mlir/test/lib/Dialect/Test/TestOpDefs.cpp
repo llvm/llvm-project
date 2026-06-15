@@ -1062,11 +1062,15 @@ LogicalResult ReifyBoundOp::verify() {
   if (isa<ShapedType>(getVar().getType())) {
     if (!getDim().has_value())
       return emitOpError("expected 'dim' attribute for shaped type variable");
-  } else if (getVar().getType().isIndex()) {
+  } else if (getVar().getType().isIndex() || getVar().getType().isInteger()) {
+    if (getVar().getType().isInteger() && !getAllowIntegerType())
+      return emitOpError("integer variable requires 'allow_integer_type'");
     if (getDim().has_value())
-      return emitOpError("unexpected 'dim' attribute for index variable");
+      return emitOpError(
+          "unexpected 'dim' attribute for index/integer variable");
   } else {
-    return emitOpError("expected index-typed variable or shape type variable");
+    return emitOpError(
+        "expected index-typed/integer-typed variable or shape type variable");
   }
   if (getConstant() && getScalable())
     return emitOpError("'scalable' and 'constant' are mutually exlusive");
@@ -1546,6 +1550,30 @@ bool TestLoopTypesCompatOp::areTypesCompatible(Type lhs, Type rhs) {
   return lhs == rhs || (isa<IntegerType>(lhs) && isa<IntegerType>(rhs));
 }
 
+void TestRegionTypeChangerOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (point.isParent())
+    regions.emplace_back(&getBody());
+  else
+    regions.push_back(RegionSuccessor::parent());
+}
+
+OperandRange
+TestRegionTypeChangerOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return getEntries();
+}
+
+ValueRange
+TestRegionTypeChangerOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  return getBody().getArguments();
+}
+
+bool TestRegionTypeChangerOp::areTypesCompatible(Type lhs, Type rhs) {
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // TestVersionedOpA
 //===----------------------------------------------------------------------===//
@@ -1741,38 +1769,214 @@ TestMultiSlotAlloca::handleDestructuringComplete(
   return createNewMultiAllocaWithoutSlot(slot, builder, *this);
 }
 
-namespace {
-/// Returns test dialect's memref layout for test dialect's tensor encoding when
-/// applicable.
-MemRefLayoutAttrInterface
-getMemRefLayoutForTensorEncoding(RankedTensorType tensorType) {
-  if (auto encoding =
-          dyn_cast<test::TestTensorEncodingAttr>(tensorType.getEncoding())) {
-    return cast<MemRefLayoutAttrInterface>(test::TestMemRefLayoutAttr::get(
-        tensorType.getContext(), encoding.getDummy()));
-  }
-  return {};
+//===----------------------------------------------------------------------===//
+// TestTransparentAlias
+//===----------------------------------------------------------------------===//
+
+void TestTransparentAlias::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot & /*parentSlot*/,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  if (aliasedSlotPointerOperand.get() != getSource())
+    return;
+  Type elemType = cast<MemRefType>(getResult().getType()).getElementType();
+  newMemorySlots.push_back(MemorySlot{getResult(), elemType});
 }
 
-/// Auxiliary bufferization function for test and builtin tensors.
-bufferization::BufferLikeType
-convertTensorToBuffer(mlir::Operation *op,
-                      const bufferization::BufferizationOptions &options,
-                      bufferization::TensorLikeType tensorLike) {
-  auto buffer =
-      *tensorLike.getBufferType(options, [&]() { return op->emitError(); });
-  if (auto memref = dyn_cast<MemRefType>(buffer)) {
-    // Note: For the sake of testing, we want to ensure that encoding -> layout
-    // bufferization happens. This is currently achieved manually.
-    auto layout =
-        getMemRefLayoutForTensorEncoding(cast<RankedTensorType>(tensorLike));
-    return cast<bufferization::BufferLikeType>(
-        MemRefType::get(memref.getShape(), memref.getElementType(), layout,
-                        memref.getMemorySpace()));
-  }
-  return buffer;
+bool TestTransparentAlias::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  for (OpOperand &use : getResult().getUses())
+    newBlockingUses.push_back(&use);
+  return true;
 }
-} // namespace
+
+DeletionKind TestTransparentAlias::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+//===----------------------------------------------------------------------===//
+// TestTransparentCastAlias
+//===----------------------------------------------------------------------===//
+
+void TestTransparentCastAlias::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot & /*parentSlot*/,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  if (aliasedSlotPointerOperand.get() != getSource())
+    return;
+  Type elemType = cast<MemRefType>(getResult().getType()).getElementType();
+  newMemorySlots.push_back(MemorySlot{getResult(), elemType});
+}
+
+bool TestTransparentCastAlias::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  for (OpOperand &use : getResult().getUses())
+    newBlockingUses.push_back(&use);
+  return true;
+}
+
+DeletionKind TestTransparentCastAlias::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+Value TestTransparentCastAlias::projectSlotValueToAliasValue(
+    OpOperand & /*aliasedSlotPointerOperand*/,
+    const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
+    Value slotValue, OpBuilder &builder) {
+  if (slotValue.getType() == aliasSlot.elemType)
+    return slotValue;
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            aliasSlot.elemType, slotValue)
+      .getResult(0);
+}
+
+Value TestTransparentCastAlias::projectAliasValueToSlotValue(
+    OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
+    const MemorySlot & /*aliasSlot*/, Value aliasValue, Value /*reachingDef*/,
+    OpBuilder &builder) {
+  if (aliasValue.getType() == parentSlot.elemType)
+    return aliasValue;
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            parentSlot.elemType, aliasValue)
+      .getResult(0);
+}
+
+//===----------------------------------------------------------------------===//
+// TestTransparentDualAlias
+//===----------------------------------------------------------------------===//
+
+void TestTransparentDualAlias::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot & /*parentSlot*/,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  if (aliasedSlotPointerOperand.get() != getSource())
+    return;
+  // Expose both results as aliases of the same parent at their own
+  // signedness (same bit width as the parent's signless i32).
+  newMemorySlots.push_back(MemorySlot{
+      getResultSigned(),
+      cast<MemRefType>(getResultSigned().getType()).getElementType()});
+  newMemorySlots.push_back(MemorySlot{
+      getResultUnsigned(),
+      cast<MemRefType>(getResultUnsigned().getType()).getElementType()});
+}
+
+bool TestTransparentDualAlias::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  for (Value result : getResults())
+    for (OpOperand &use : result.getUses())
+      newBlockingUses.push_back(&use);
+  return true;
+}
+
+DeletionKind TestTransparentDualAlias::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+Value TestTransparentDualAlias::projectSlotValueToAliasValue(
+    OpOperand & /*aliasedSlotPointerOperand*/,
+    const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
+    Value slotValue, OpBuilder &builder) {
+  if (slotValue.getType() == aliasSlot.elemType)
+    return slotValue;
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            aliasSlot.elemType, slotValue)
+      .getResult(0);
+}
+
+Value TestTransparentDualAlias::projectAliasValueToSlotValue(
+    OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
+    const MemorySlot & /*aliasSlot*/, Value aliasValue, Value /*reachingDef*/,
+    OpBuilder &builder) {
+  if (aliasValue.getType() == parentSlot.elemType)
+    return aliasValue;
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            parentSlot.elemType, aliasValue)
+      .getResult(0);
+}
+
+//===----------------------------------------------------------------------===//
+// TestPartialAlias
+//===----------------------------------------------------------------------===//
+
+void TestPartialAlias::getPromotableSlotAliases(
+    OpOperand &aliasedSlotPointerOperand, const MemorySlot & /*parentSlot*/,
+    SmallVectorImpl<MemorySlot> &newMemorySlots) {
+  if (aliasedSlotPointerOperand.get() != getSource())
+    return;
+  newMemorySlots.push_back(MemorySlot{
+      getResult(), cast<MemRefType>(getResult().getType()).getElementType()});
+}
+
+bool TestPartialAlias::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  for (OpOperand &use : getResult().getUses())
+    newBlockingUses.push_back(&use);
+  return true;
+}
+
+DeletionKind TestPartialAlias::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+Value TestPartialAlias::projectSlotValueToAliasValue(
+    OpOperand & /*aliasedSlotPointerOperand*/,
+    const MemorySlot & /*parentSlot*/, const MemorySlot &aliasSlot,
+    Value slotValue, OpBuilder &builder) {
+  // Sub-value extraction: 1-input cast.
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            aliasSlot.elemType, slotValue)
+      .getResult(0);
+}
+
+Value TestPartialAlias::projectAliasValueToSlotValue(
+    OpOperand & /*aliasedSlotPointerOperand*/, const MemorySlot &parentSlot,
+    const MemorySlot & /*aliasSlot*/, Value aliasValue, Value reachingDef,
+    OpBuilder &builder) {
+  // Sub-value insertion into the current reaching definition: emit a 2-input
+  // cast taking both the new alias value and the existing parent value.
+  return UnrealizedConversionCastOp::create(builder, getLoc(),
+                                            parentSlot.elemType,
+                                            ValueRange{aliasValue, reachingDef})
+      .getResult(0);
+}
+
+//===----------------------------------------------------------------------===//
+// TestSlotTracker
+//===----------------------------------------------------------------------===//
+
+bool TestSlotTracker::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  if (blockingUses.size() != 1)
+    return false;
+  return (*blockingUses.begin())->get() == getSource();
+}
+
+DeletionKind TestSlotTracker::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+bool TestSlotTracker::requiresReplacedValues() { return true; }
+
+void TestSlotTracker::visitReplacedValues(
+    ArrayRef<std::pair<Operation *, Value>> definitions, OpBuilder &builder) {
+  for (auto [op, value] : definitions) {
+    builder.setInsertionPointAfter(op);
+    TestTrackedValue::create(builder, getLoc(), value, getNameAttr());
+  }
+}
 
 ::mlir::LogicalResult test::TestDummyTensorOp::bufferize(
     ::mlir::RewriterBase &rewriter,
@@ -1783,12 +1987,14 @@ convertTensorToBuffer(mlir::Operation *op,
   if (mlir::failed(buffer))
     return failure();
 
-  const auto outType = getOutput().getType();
   const auto bufferizedOutType =
-      convertTensorToBuffer(getOperation(), options, outType);
+      mlir::bufferization::getBufferType(getOutput(), options, state);
+  if (mlir::failed(bufferizedOutType))
+    return failure();
+
   // replace op with memref analogy
   auto dummyMemrefOp = test::TestDummyMemrefOp::create(
-      rewriter, getLoc(), bufferizedOutType, *buffer);
+      rewriter, getLoc(), *bufferizedOutType, *buffer);
 
   mlir::bufferization::replaceOpWithBufferizedValues(rewriter, getOperation(),
                                                      dummyMemrefOp.getResult());
@@ -1798,15 +2004,14 @@ convertTensorToBuffer(mlir::Operation *op,
 
 mlir::FailureOr<mlir::bufferization::BufferLikeType>
 test::TestDummyTensorOp::getBufferType(
-    mlir::Value value, const mlir::bufferization::BufferizationOptions &,
+    mlir::Value value, const mlir::bufferization::BufferizationOptions &options,
     const mlir::bufferization::BufferizationState &,
     llvm::SmallVector<::mlir::Value> &) {
-  const auto type = dyn_cast<test::TestTensorType>(value.getType());
-  if (type == nullptr)
-    return failure();
-
-  return cast<mlir::bufferization::BufferLikeType>(test::TestMemrefType::get(
-      getContext(), type.getShape(), type.getElementType(), nullptr));
+  // let unknown type converter handle the types - assume test operations work
+  // with test-one-shot-module-bufferize pass.
+  return options.unknownTypeConverterFn(
+      cast<mlir::bufferization::TensorLikeType>(value.getType()), nullptr,
+      options);
 }
 
 ::mlir::LogicalResult test::TestCreateTensorOp::bufferize(
@@ -1835,11 +2040,11 @@ test::TestCreateTensorOp::getBufferType(
     mlir::Value value, const mlir::bufferization::BufferizationOptions &options,
     const mlir::bufferization::BufferizationState &,
     llvm::SmallVector<::mlir::Value> &) {
-  const auto type = dyn_cast<bufferization::TensorLikeType>(value.getType());
-  if (type == nullptr)
-    return failure();
-
-  return convertTensorToBuffer(getOperation(), options, type);
+  // let unknown type converter handle the types - assume test operations work
+  // with test-one-shot-module-bufferize pass.
+  return options.unknownTypeConverterFn(
+      cast<mlir::bufferization::TensorLikeType>(value.getType()), nullptr,
+      options);
 }
 
 // Define a custom builder for ManyRegionsOp declared in TestOps.td.

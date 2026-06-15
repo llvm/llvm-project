@@ -118,6 +118,8 @@ cl::opt<bool>
 cl::opt<std::string>
     LTOCSIRProfile("cs-profile-path",
                    cl::desc("Context sensitive profile file path"));
+
+extern cl::opt<std::string> SampleProfileFile;
 } // namespace llvm
 
 LTOCodeGenerator::LTOCodeGenerator(LLVMContext &Context)
@@ -560,6 +562,7 @@ bool LTOCodeGenerator::optimize() {
   Config.StatsFile = LTOStatsFile;
   Config.RunCSIRInstr = LTORunCSIRInstr;
   Config.CSIRProfile = LTOCSIRProfile;
+  Config.SampleProfile = SampleProfileFile;
 
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
       Context, RemarksFilename, RemarksPasses, RemarksFormat,
@@ -617,7 +620,7 @@ bool LTOCodeGenerator::optimize() {
   TargetMach = createTargetMachine();
   if (!opt(Config, TargetMach.get(), 0, *MergedModule, /*IsThinLTO=*/false,
            /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr,
-           /*CmdArgs*/ std::vector<uint8_t>())) {
+           /*CmdArgs*/ std::vector<uint8_t>(), /*BitcodeLibFuncs=*/{})) {
     emitError("LTO middle-end optimizations failed");
     return false;
   }
@@ -642,7 +645,7 @@ bool LTOCodeGenerator::compileOptimized(AddStreamFn AddStream,
 
   Config.CodeGenOnly = true;
   Error Err = backend(Config, AddStream, ParallelismLevel, *MergedModule,
-                      CombinedIndex);
+                      CombinedIndex, /*BitcodeLibFuncs=*/{});
   assert(!Err && "unexpected code-generation failure");
   (void)Err;
 

@@ -255,7 +255,6 @@ public:
       break;
     case llvm::Triple::loongarch64:
     case llvm::Triple::riscv64:
-    case llvm::Triple::riscv64be:
       break;
     }
   }
@@ -520,7 +519,6 @@ public:
       break;
     case llvm::Triple::loongarch64:
     case llvm::Triple::riscv64:
-    case llvm::Triple::riscv64be:
       break;
     }
   }
@@ -672,7 +670,6 @@ protected:
     DefineStd(Builder, "unix", Opts);
     Builder.defineMacro("__svr4__");
     Builder.defineMacro("__SVR4");
-    Builder.defineMacro("_XOPEN_SOURCE", "600");
     if (Opts.CPlusPlus) {
       Builder.defineMacro("__C99FEATURES__");
       Builder.defineMacro("_FILE_OFFSET_BITS", "64");
@@ -1095,6 +1092,19 @@ protected:
   void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
                     MacroBuilder &Builder) const override {
     Builder.defineMacro("__qurt__");
+  }
+
+public:
+  using OSTargetInfo<Target>::OSTargetInfo;
+};
+
+// H2 Target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY H2TargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    Builder.defineMacro("__h2__");
   }
 
 public:

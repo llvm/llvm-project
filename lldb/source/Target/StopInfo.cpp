@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <array>
+#include <cstdint>
 #include <string>
 
 #include "lldb/Breakpoint/Breakpoint.h"
@@ -25,6 +27,7 @@
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/ValueObject/ValueObject.h"
 
@@ -80,6 +83,41 @@ bool StopInfo::HasTargetRunSinceMe() {
     }
   }
   return false;
+}
+
+void StopInfo::SkipOverTrapInstruction() {
+  Status error;
+  Log *log = GetLog(LLDBLog::Process);
+
+  // We don't expect to see byte sequences longer than four bytes long for
+  // any breakpoint instructions known to LLDB.
+  std::array<uint8_t, 4> bytes_at_pc = {0, 0, 0, 0};
+  auto reg_ctx_sp = GetThread()->GetRegisterContext();
+  auto process_sp = GetThread()->GetProcess();
+  addr_t pc = reg_ctx_sp->GetPC();
+  if (!process_sp->ReadMemory(pc, bytes_at_pc.data(), bytes_at_pc.size(),
+                              error)) {
+    // If this fails, we simply don't handle the step-over-break logic.
+    LLDB_LOG(log, "failed to read program bytes at pc address {}, error {}", pc,
+             error);
+    return;
+  }
+
+  auto &target = process_sp->GetTarget();
+  auto platform_sp = target.GetPlatform();
+  size_t size_hint =
+      platform_sp->GetTrapOpcodeSizeHint(target, Address(pc), bytes_at_pc);
+  llvm::ArrayRef<uint8_t> platform_opcode =
+      platform_sp->SoftwareTrapOpcodeBytes(target.GetArchitecture(), size_hint);
+
+  Architecture *arch_plugin = target.GetArchitecturePlugin();
+  llvm::ArrayRef<uint8_t> inst_bytes(bytes_at_pc.data(), bytes_at_pc.size());
+  if (arch_plugin &&
+      arch_plugin->IsValidTrapInstruction(platform_opcode, inst_bytes)) {
+    LLDB_LOG(log, "stepping over breakpoint in inferior to new pc: {}",
+             pc + platform_opcode.size());
+    reg_ctx_sp->SetPC(pc + platform_opcode.size());
+  }
 }
 
 // StopInfoBreakpoint
@@ -153,6 +191,10 @@ public:
   StopReason GetStopReason() const override { return eStopReasonBreakpoint; }
 
   bool ShouldStopSynchronous(Event *event_ptr) override {
+    // Breakpoint callbacks run on the PST during stop processing. Push
+    // private state context so callback code sees the private reality.
+    PolicyStack::Guard policy_guard(Policy::PrivateState());
+
     ThreadSP thread_sp(m_thread_wp.lock());
     if (thread_sp) {
       if (!m_should_stop_is_valid) {
@@ -393,7 +435,9 @@ protected:
 
           ExecutionContext exe_ctx(thread_sp->GetStackFrameAtIndex(0));
           Process *process = exe_ctx.GetProcessPtr();
-          if (process->GetModIDRef().IsRunningExpression()) {
+          Policy policy = PolicyStack::Get().Current();
+          if (!policy.capabilities.can_run_breakpoint_actions ||
+              process->GetModIDRef().IsRunningExpression()) {
             // If we are in the middle of evaluating an expression, don't run
             // asynchronous breakpoint commands or expressions.  That could
             // lead to infinite recursion if the command or condition re-calls
@@ -857,6 +901,10 @@ protected:
   };
 
   bool ShouldStopSynchronous(Event *event_ptr) override {
+    // Watchpoint callbacks run on the PST during stop processing. Push
+    // private state context so callback code sees the private reality.
+    PolicyStack::Guard policy_guard(Policy::PrivateState());
+
     // If we are running our step-over the watchpoint plan, stop if it's done
     // and continue if it's not:
     if (m_should_stop_is_valid)
@@ -965,6 +1013,17 @@ protected:
 
   void PerformAction(Event *event_ptr) override {
     Log *log = GetLog(LLDBLog::Watchpoints);
+
+    Policy policy = PolicyStack::Get().Current();
+    if (!policy.capabilities.can_run_breakpoint_actions) {
+      m_should_stop = false;
+      m_should_stop_is_valid = true;
+      LLDB_LOGF(log, "StopInfoWatchpoint::PerformAction - Hit a "
+                     "watchpoint while running an expression,"
+                     " not running commands to avoid recursion.");
+      return;
+    }
+
     // We're going to calculate if we should stop or not in some way during the
     // course of this code.  Also by default we're going to stop, so set that
     // here.
@@ -1153,6 +1212,12 @@ public:
     if (thread_sp)
       return thread_sp->GetProcess()->GetUnixSignals()->GetShouldStop(m_value);
     return false;
+  }
+
+  void PerformAction([[maybe_unused]] Event *event_ptr) override {
+    // A signal of SIGTRAP indicates that a trap instruction has been hit.
+    if (m_value == SIGTRAP)
+      SkipOverTrapInstruction();
   }
 
   bool ShouldStop(Event *event_ptr) override { return IsShouldStopSignal(); }

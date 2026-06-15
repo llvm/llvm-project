@@ -53,8 +53,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TC]], [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TC]], [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[TC]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vscale.i32()
@@ -168,8 +167,7 @@ define void @second_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TC]], [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TC]], [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[TC]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vscale.i32()
@@ -303,8 +301,7 @@ define void @third_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TC]], [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TC]], [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[TC]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vscale.i32()
@@ -443,8 +440,7 @@ define i32 @FOR_reduction(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TC]], [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TC]], [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[TC]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vscale.i32()
@@ -544,7 +540,7 @@ define void @first_order_recurrence_indvar(ptr noalias %A, i64 %TC) {
 ; IF-EVL-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP15]], ptr align 8 [[TMP9]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP11]])
 ; IF-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP7]], [[EVL_BASED_IV]]
 ; IF-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP7]]
-; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; IF-EVL-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; IF-EVL-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; IF-EVL-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; IF-EVL:       [[MIDDLE_BLOCK]]:
@@ -560,8 +556,7 @@ define void @first_order_recurrence_indvar(ptr noalias %A, i64 %TC) {
 ; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TC]], [[TMP1]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NO-VP:       [[VECTOR_PH]]:
-; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 1
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TC]], [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[TC]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()

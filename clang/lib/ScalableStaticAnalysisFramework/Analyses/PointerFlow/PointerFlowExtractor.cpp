@@ -17,7 +17,6 @@
 #include "clang/AST/TypeBase.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/PointerFlow/PointerFlow.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
@@ -26,6 +25,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include <memory>
 #include <optional>
@@ -42,10 +42,10 @@ class PointerFlowMatcher {
 public:
   EdgeSet Results;
   ASTContext &Ctx;
+  TUSummaryExtractor &Extractor;
 
-  PointerFlowMatcher(ASTContext &Ctx,
-                     std::function<EntityId(const EntityName &)> AddEntity)
-      : Ctx(Ctx), AddEntity(std::move(AddEntity)) {}
+  PointerFlowMatcher(ASTContext &Ctx, TUSummaryExtractor &Extractor)
+      : Ctx(Ctx), Extractor(Extractor) {}
 
   llvm::Error matches(const DynTypedNode &DynNode, const NamedDecl *RootDecl);
 
@@ -88,7 +88,7 @@ private:
 
 Expected<EntityPointerLevelSet> PointerFlowMatcher::toEPL(const NamedDecl *N,
                                                           bool IsRet) const {
-  auto Ret = createEntityPointerLevel(N, AddEntity, IsRet);
+  auto Ret = createEntityPointerLevel(N, Extractor, IsRet);
 
   if (Ret)
     return EntityPointerLevelSet{*Ret};
@@ -96,7 +96,7 @@ Expected<EntityPointerLevelSet> PointerFlowMatcher::toEPL(const NamedDecl *N,
 }
 
 Expected<EntityPointerLevelSet> PointerFlowMatcher::toEPL(const Expr *N) const {
-  return translateEntityPointerLevel(N, Ctx, AddEntity);
+  return translateEntityPointerLevel(N, Ctx, Extractor);
 }
 
 llvm::Error
@@ -108,6 +108,8 @@ PointerFlowMatcher::addEdges(Expected<EntityPointerLevelSet> &&LHS,
     return LHS.takeError();
   if (!RHS)
     return RHS.takeError();
+  if (RHS->empty())
+    return llvm::Error::success();
   for (auto L : *LHS)
     Results[L].insert(RHS->begin(), RHS->end());
   return llvm::Error::success();
@@ -223,9 +225,8 @@ llvm::Error matchInitializerListForRecordDecl(PointerFlowMatcher &Matcher,
   if (RecordTy->isUnion()) {
     auto *InitField = ILE->getInitializedFieldInUnion();
 
-    if (!InitField)
+    if (!InitField || ILE->inits().empty())
       return llvm::Error::success();
-    assert(!ILE->inits().empty());
     return Matcher.matchesInitializerList(InitField, ILE->getInit(0));
   }
   // Handle struct/class:
@@ -300,7 +301,11 @@ PointerFlowMatcher::matchesInitializerList(const ValueDecl *Base,
   if (Type->isArrayType())
     return matchInitializerListForArray(*this, Base, ILE,
                                         ArrayElementIndirectLevel);
-  // Must be the case of using a initializer-list for a scalar:
+
+  // Must be the case of using a initializer-list for a scalar.
+  // The initializer-list can be either singleton or empty:
+  if (ILE->getNumInits() == 0)
+    return llvm::Error::success();
   return matchesInitializerList(Base, ILE->getInit(0));
 }
 
@@ -309,19 +314,16 @@ public:
   PointerFlowTUSummaryExtractor(TUSummaryBuilder &Builder)
       : TUSummaryExtractor(Builder) {}
 
-  EntityId addEntity(const EntityName &EN) {
-    return SummaryBuilder.addEntity(EN);
-  }
-
-  Expected<std::unique_ptr<PointerFlowEntitySummary>>
-  extractEntitySummary(const NamedDecl *Contributor, ASTContext &Ctx) {
-    PointerFlowMatcher Matcher(
-        Ctx, [this](const EntityName &EN) { return addEntity(EN); });
+  /// \return a non-null unique pointer to a PointerFlowEntitySummary
+  std::unique_ptr<PointerFlowEntitySummary>
+  extractEntitySummary(const NamedDecl *Contributor, ASTContext &Ctx,
+                       TUSummaryExtractor &Extractor) {
+    PointerFlowMatcher Matcher(Ctx, Extractor);
     auto MatchAction = [&Matcher, &Contributor](const DynTypedNode &Node) {
       auto Err = Matcher.matches(Node, Contributor);
 
       if (Err)
-        llvm::report_fatal_error(std::move(Err));
+        logWarningFromError(std::move(Err));
     };
 
     findMatchesIn(Contributor, MatchAction);
@@ -334,21 +336,20 @@ public:
 
     findContributors(Ctx, Contributors);
     for (auto *CD : Contributors) {
-      auto EntitySummary = extractEntitySummary(CD, Ctx);
+      auto EntitySummary = extractEntitySummary(CD, Ctx, *this);
 
-      if (!EntitySummary)
-        llvm::reportFatalInternalError(EntitySummary.takeError());
-      assert(*EntitySummary);
-      if ((*EntitySummary)->empty())
+      assert(EntitySummary);
+      if (EntitySummary->empty())
         continue;
 
-      auto ContributorName = getEntityName(CD);
+      std::optional<EntityId> ContributorId = addEntity(CD);
+      if (!ContributorId) {
+        logWarningFromError(makeEntityNameErr(Ctx, CD));
+        continue;
+      }
 
-      if (!ContributorName)
-        llvm::reportFatalInternalError(makeEntityNameErr(Ctx, CD));
-
-      [[maybe_unused]] auto [_, InsertionSucceeded] = SummaryBuilder.addSummary(
-          addEntity(*ContributorName), std::move(*EntitySummary));
+      [[maybe_unused]] auto [_, InsertionSucceeded] =
+          SummaryBuilder.addSummary(*ContributorId, std::move(EntitySummary));
 
       assert(InsertionSucceeded && "duplicated contributor extraction");
     }
@@ -356,8 +357,10 @@ public:
 };
 } // namespace
 
+namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int PointerFlowTUSummaryExtractorAnchorSource = 0;
+volatile int PointerFlowExtractorAnchorSource = 0;
+} // namespace clang::ssaf
 
 static TUSummaryExtractorRegistry::Add<PointerFlowTUSummaryExtractor>
     RegisterExtractor(PointerFlowEntitySummary::Name,

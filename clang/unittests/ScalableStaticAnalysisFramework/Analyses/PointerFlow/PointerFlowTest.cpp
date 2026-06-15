@@ -13,14 +13,14 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Frontend/ASTUnit.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -183,15 +183,15 @@ protected:
       return nullptr;
     }
 
-    std::optional<EntityName> EN = getEntityName(ContributorDefn);
+    std::optional<EntityId> ContributorEntityId =
+        Extractor->addEntity(ContributorDefn);
 
-    if (!EN) {
+    if (!ContributorEntityId) {
       ADD_FAILURE() << "failed to get EntityName for contributor \""
                     << toStringRef(Name) << "\"";
       return nullptr;
     }
 
-    EntityId ContributorEntityId = Builder.addEntity(*EN);
     auto &TUSumData = getData(TUSum);
     auto EntitiesSumIter =
         TUSumData.find(PointerFlowEntitySummary::summaryName());
@@ -201,7 +201,7 @@ protected:
     if (EntitiesSumIter == TUSumData.end())
       return nullptr;
 
-    auto EntitySumIter = EntitiesSumIter->second.find(ContributorEntityId);
+    auto EntitySumIter = EntitiesSumIter->second.find(*ContributorEntityId);
 
     // If entity summary is empty, it may not exist:
     if (EntitySumIter == EntitiesSumIter->second.end())
@@ -213,16 +213,14 @@ protected:
 public:
   std::optional<EntityId> getEntityId(FindEntityByName Name) {
     if (const auto *D = findEntityByName(Name, AST->getASTContext())) {
-      if (auto EntityName = getEntityName(D))
-        return Builder.addEntity(*EntityName);
+      return Extractor->addEntity(D);
     }
     return std::nullopt;
   }
 
   std::optional<EntityId> getEntityIdForReturn(FindEntityByName FunName) {
     if (const auto *D = findFnByName(FunName, AST->getASTContext())) {
-      if (auto EntityName = getEntityNameForReturn(D))
-        return Builder.addEntity(*EntityName);
+      return Extractor->addEntityForReturn(D);
     }
     return std::nullopt;
   }
@@ -969,6 +967,76 @@ TEST_F(PointerFlowTest, ArrayOfStructInitList) {
                                       }));
 }
 
+TEST_F(PointerFlowTest, ScalarPointerBraceInit) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int *q;
+    void foo() {
+      int *p{q};
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"p", 1U}, {"q", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, EmptyInitsScalarInt) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo() {
+      int x{};
+      int y = {};
+      int *p{};
+      int *q = {};
+    }
+  )cpp"));
+
+  // No pointer-flow edge for 0-initialized scalar.
+  ASSERT_FALSE(getEntitySummary("foo"));
+}
+
+TEST_F(PointerFlowTest, EmptyInitsUnion) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    union U { int x; int *p; };
+    void foo() {
+      U u{};
+      U uu = {};
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_EQ(Sum, nullptr);
+}
+
+TEST_F(PointerFlowTest, EmptyInitsStruct) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    struct S { int x; int *p; };
+    void foo() {
+      S s{};
+      S ss = {};
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_EQ(Sum, nullptr);
+}
+
+TEST_F(PointerFlowTest, EmptyInitsClass) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    class C { public: int x; int *p; };
+    void foo() {
+      C c{};
+      C cc = {};
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_EQ(Sum, nullptr);
+}
+
 //////////////////////////////////////////////////////////////
 //              Return Tests.                               //
 //////////////////////////////////////////////////////////////
@@ -1128,4 +1196,114 @@ TEST_F(PointerFlowTest, NestedLambdaAssign) {
   ASSERT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"y", 1U}, {"x", 1U}}}));
 }
+
+TEST_F(PointerFlowTest, ImplicitValueInit) {
+  ASSERT_EQ(setUpTest(R"cpp(
+    struct S { int *a; int *b; };
+    void foo(int *p) {
+      S s = {p};  // ImplicitValueInit inits 'b'
+    }
+  )cpp"),
+            true);
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"a", 1U}, {"p", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, InitListExpr) {
+  ASSERT_EQ(setUpTest(R"cpp(
+    void foo(int *p) {
+      int *q = {p};
+      int *r = {};
+    }
+  )cpp"),
+            true);
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"q", 1U}, {"p", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, CXXDefaultInitExpr) {
+  ASSERT_EQ(setUpTest(R"cpp(
+    int *g;
+    struct S {
+      int *field = g;
+    };
+    void foo(int *p) {
+      S s;
+      s.field = p;
+    }
+  )cpp"),
+            true);
+
+  auto *Sum = getEntitySummary<RecordDecl>("S");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"field", 1U}, {"g", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, CXXConstructExprArrayInit) {
+  ASSERT_EQ(setUpTest(
+                R"cpp(
+    struct S {};
+    void foo(S *q) {
+      S arr[3]; // -VarDecl <...> arr 'S[3]' callinit
+                //   `-CXXConstructExpr <...> 'S[3]' 'void () noexcept'
+      q = arr;
+    }
+  )cpp"),
+            true);
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"q", 1U}, {"arr", 1U}}}));
+}
+
+//////////////////////////////////////////////////////////////
+//          Robustness Tests (No Crash Tests)               //
+//////////////////////////////////////////////////////////////
+
+#ifndef NDEBUG
+TEST_F(PointerFlowTest, StructuredBindingWithPointers) {
+  StringRef Code = R"cpp(
+    void foo() {
+      int *a[2];
+      auto [ptr1, ptr2] = a;
+      ptr1[5];
+      ptr2[3];
+    }
+  )cpp";
+
+  // BindingDecl may not be fully supported, but should not crash.
+  llvm::SaveAndRestore<bool> DebugFlag(llvm::DebugFlag, true);
+  llvm::setCurrentDebugType("ssaf-analyses");
+  testing::internal::CaptureStderr();
+
+  ASSERT_TRUE(setUpTest(Code));
+  // Verify the warning was logged
+  ASSERT_TRUE(StringRef(testing::internal::GetCapturedStderr())
+                  .contains("failed to create EntityId for Decomposition"));
+}
+#endif
+
+TEST_F(PointerFlowTest, RHSResultsInNoEntityPointerLevel) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void f() {
+      int *p = new int[10];
+      const char *q = "hello";
+    }
+    struct S {
+      int *p;
+      void g() { p = (int *)this; }
+    };
+  )cpp"));
+  ASSERT_FALSE(getEntitySummary<FunctionDecl>("f"));
+  ASSERT_FALSE(getEntitySummary<CXXMethodDecl>("g"));
+}
+
 } // namespace

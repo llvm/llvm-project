@@ -72,3 +72,14 @@ void instantiate() {
   // CHECK-FIXES: int *const p_local0[4] = {nullptr, nullptr, nullptr, nullptr};
   EmitProtocolMethodList(p_local0);
 }
+
+struct Mutating {
+  void mutating_method();
+};
+
+void pointer_member_call_not_pointer_mutation() {
+  Mutating *p = nullptr;
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p' of type 'Mutating *' can be declared 'const'
+  // CHECK-FIXES: Mutating *const p = nullptr;
+  p->mutating_method();
+}

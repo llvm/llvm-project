@@ -486,7 +486,7 @@ emitc.func @expression_with_load_and_call(%arg0: !emitc.ptr<i32>) -> i1 {
 emitc.func @expression_with_call_opaque_with_args_array(%0 : i32, %1 : i32) {
   %2 = expression %0, %1 : (i32, i32) -> i1 {
     %3 = cmp lt, %0, %1 : (i32, i32) -> i1
-    %4 = emitc.call_opaque "f"(%3) {"args" = [0: index]} : (i1) -> i1
+    %4 = emitc.call_opaque "f"(%3) {args = [0: index]} : (i1) -> i1
     yield %4 : i1
   }
   return

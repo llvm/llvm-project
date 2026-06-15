@@ -146,6 +146,12 @@ public:
                                      const APInt &DemandedElts,
                                      const SelectionDAG &DAG,
                                      unsigned Depth) const override;
+
+  void computeKnownBitsForTargetInstr(GISelValueTracking &Analysis, Register R,
+                                      KnownBits &Known,
+                                      const APInt &DemandedElts,
+                                      const MachineRegisterInfo &MRI,
+                                      unsigned Depth = 0) const override;
   unsigned ComputeNumSignBitsForTargetNode(SDValue Op,
                                            const APInt &DemandedElts,
                                            const SelectionDAG &DAG,
@@ -157,11 +163,9 @@ public:
                                          TargetLoweringOpt &TLO,
                                          unsigned Depth) const override;
 
-  bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
-                                           const APInt &DemandedElts,
-                                           const SelectionDAG &DAG,
-                                           bool PoisonOnly, bool ConsiderFlags,
-                                           unsigned Depth) const override;
+  bool canCreateUndefOrPoisonForTargetNode(
+      SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+      UndefPoisonKind Kind, bool ConsiderFlags, unsigned Depth) const override;
 
   const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const override;
 
@@ -440,7 +444,8 @@ public:
                              const APInt &GapMask) const override;
 
   bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
-                                        IntrinsicInst *DI) const override;
+                                        IntrinsicInst *DI,
+                                        const APInt &GapMask) const override;
 
   bool lowerInterleaveIntrinsicToStore(
       Instruction *Store, Value *Mask,
@@ -554,7 +559,7 @@ private:
   SDValue lowerRESET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerCTLZ_CTTZ_ZERO_POISON(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerStrictFPExtendOrRoundLike(SDValue Op, SelectionDAG &DAG) const;
 

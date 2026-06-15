@@ -887,6 +887,13 @@ func.func @test_reverse(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
 }
 
 // -----
+// CHECK-LABEL: reverse_unranked
+func.func @test_reverse_unranked(%arg0: tensor<*xf32>) -> tensor<*xf32> {
+  %0 = tosa.reverse %arg0 {axis = 0 : i32} : (tensor<*xf32>) -> tensor<*xf32>
+  return %0 : tensor<*xf32>
+}
+
+// -----
 // CHECK-LABEL: slice
 func.func @test_slice(%arg0: tensor<13x21x3xf32>) -> tensor<4x11x1xf32> {
   %size = tosa.const_shape {values = dense<[4, 11, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
@@ -1605,9 +1612,16 @@ func.func @test_cast_to_block_scaled_mxint8(%arg0: tensor<4x32xf32>) -> (tensor<
 }
 
 // -----
-// CHECK-LABEL: test_const_mxint8
-func.func @test_const_mxint8(%arg0 : index) -> tensor<2x!tosa.mxint8> {
+// CHECK-LABEL: test_const_mxint8_hex
+func.func @test_const_mxint8_hex() -> tensor<2x!tosa.mxint8> {
     %0 = "tosa.const"() {values = dense<"0x007F"> : tensor<2x!tosa.mxint8>} : () -> tensor<2x!tosa.mxint8>
+    return %0 : tensor<2x!tosa.mxint8>
+}
+
+// -----
+// CHECK-LABEL: test_const_mxint8
+func.func @test_const_mxint8() -> tensor<2x!tosa.mxint8> {
+    %0 = "tosa.const"() {values = dense<tensor<2x!tosa.mxint8> : [127 : i8, -128 : i8]>} : () -> tensor<2x!tosa.mxint8>
     return %0 : tensor<2x!tosa.mxint8>
 }
 

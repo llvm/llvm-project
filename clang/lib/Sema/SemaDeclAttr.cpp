@@ -5885,12 +5885,28 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     if (A == TargetInfo::CCCR_OK && CheckDevice && DeviceTI)
       A = DeviceTI->checkCallingConvention(CC);
   } else if (LangOpts.SYCLIsDevice) {
-    // In SYCL we may meet unsupported calling conventions in host code,
-    // especially inside of included headers. Now we don't know if they will be
-    // emitted, so we just defer any diagnostics. Check for the host triple if
-    // we have one, since everything is still emitted for the host.
-    if (Aux)
+    // During device compilation, calling conventions that are valid for the
+    // host, for the device, and for both the host and the device may be
+    // encountered. Diagnostics are desired for cases where the calling
+    // convention is not supported by either the host or the device. If Aux is
+    // null (which should rarely be the case), it isn't possible to check
+    // whether the calling convention is supported by the host, so just assume
+    // that it is. If the calling convention is supported for the device, there
+    // is no need to check the host; the device target gets priority since this
+    // check is only performed during device compilation.
+    A = TI.checkCallingConvention(CC);
+    if (Aux && A == TargetInfo::CCCR_Warning) {
+      // If the calling convention would provoke a warning for the device, check
+      // the host and preserve the warning only if the calling convention would
+      // provoke an error for the host. Otherwise, assume this calling
+      // convention is only used for host only functions.
       A = Aux->checkCallingConvention(CC);
+      if (A == TargetInfo::CCCR_Error)
+        A = TargetInfo::CCCR_Warning;
+    } else if (Aux && A == TargetInfo::CCCR_Error) {
+      // Assume this calling convention is only used for host only functions.
+      A = Aux->checkCallingConvention(CC);
+    }
   } else {
     A = TI.checkCallingConvention(CC);
   }
@@ -6017,7 +6033,8 @@ static Expr *makeLaunchBoundsArgExpr(Sema &S, Expr *E,
 
 CUDALaunchBoundsAttr *
 Sema::CreateLaunchBoundsAttr(const AttributeCommonInfo &CI, Expr *MaxThreads,
-                             Expr *MinBlocks, Expr *MaxBlocks) {
+                             Expr *MinBlocks, Expr *MaxBlocks,
+                             bool IgnoreArch) {
   CUDALaunchBoundsAttr TmpAttr(Context, CI, MaxThreads, MinBlocks, MaxBlocks);
   MaxThreads = makeLaunchBoundsArgExpr(*this, MaxThreads, TmpAttr, 0);
   if (!MaxThreads)
@@ -6030,14 +6047,20 @@ Sema::CreateLaunchBoundsAttr(const AttributeCommonInfo &CI, Expr *MaxThreads,
   }
 
   if (MaxBlocks) {
-    // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
-    auto SM = getOffloadArch(Context.getTargetInfo());
-    if (SM == OffloadArch::Unknown || SM < OffloadArch::SM_90) {
-      Diag(MaxBlocks->getBeginLoc(), diag::warn_cuda_maxclusterrank_sm_90)
-          << OffloadArchToString(SM) << CI << MaxBlocks->getSourceRange();
-      // Ignore it by setting MaxBlocks to null;
-      MaxBlocks = nullptr;
-    } else {
+    // We might want to ignore the nvptx arch check, e.g., when processing the
+    // launch bounds attribute within ompx_attribute to support other archs.
+    if (!IgnoreArch) {
+      // '.maxclusterrank' ptx directive requires .target sm_90 or higher.
+      auto SM = getOffloadArch(Context.getTargetInfo());
+      if (SM == OffloadArch::Unknown || SM < OffloadArch::SM_90) {
+        Diag(MaxBlocks->getBeginLoc(), diag::warn_cuda_maxclusterrank_sm_90)
+            << OffloadArchToString(SM) << CI << MaxBlocks->getSourceRange();
+        // Ignore it by setting MaxBlocks to null;
+        MaxBlocks = nullptr;
+      }
+    }
+
+    if (MaxBlocks) {
       MaxBlocks = makeLaunchBoundsArgExpr(*this, MaxBlocks, TmpAttr, 2);
       if (!MaxBlocks)
         return nullptr;
@@ -6962,9 +6985,6 @@ static void handleNoPFPAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
 }
 
 static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
-  auto *FD = dyn_cast<FieldDecl>(D);
-  assert(FD);
-
   auto *CountExpr = AL.getArgAsExpr(0);
   if (!CountExpr)
     return;
@@ -6992,6 +7012,7 @@ static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
     llvm_unreachable("unexpected counted_by family attribute");
   }
 
+  FieldDecl *FD = cast<FieldDecl>(D);
   if (S.CheckCountedByAttrOnField(FD, CountExpr, CountInBytes, OrNull))
     return;
 
@@ -8172,9 +8193,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLParamModifier:
     S.HLSL().handleParamModifierAttr(D, AL);
     break;
-  case ParsedAttr::AT_HLSLMatrixLayout:
-    S.HLSL().handleMatrixLayoutAttr(D, AL);
-    break;
   case ParsedAttr::AT_HLSLUnparsedSemantic:
     S.HLSL().handleSemanticAttr(D, AL);
     break;
@@ -8914,8 +8932,10 @@ void Sema::ActOnCleanupAttr(Decl *D, const Attr *A) {
   // If this ever proves to be a problem it should be easy to fix.
   QualType Ty = this->Context.getPointerType(VD->getType());
   QualType ParamTy = FD->getParamDecl(0)->getType();
-  if (!this->IsAssignConvertCompatible(this->CheckAssignmentConstraints(
-          FD->getParamDecl(0)->getLocation(), ParamTy, Ty))) {
+  if (QualType ConvertedTy;
+      !this->IsAssignConvertCompatible(this->CheckAssignmentConstraints(
+          FD->getParamDecl(0)->getLocation(), ParamTy, Ty)) &&
+      !ObjC().isObjCWritebackConversion(Ty, ParamTy, ConvertedTy)) {
     this->Diag(Attr->getArgLoc(),
                diag::err_attribute_cleanup_func_arg_incompatible_type)
         << NI.getName() << ParamTy << Ty;

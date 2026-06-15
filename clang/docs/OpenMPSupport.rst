@@ -595,7 +595,8 @@ implementation.
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | Message and severity clauses                                | :good:`done`              | :none:`unclaimed`         |  https://github.com/llvm/llvm-project/pull/146093                        |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| Local clause on declare target                              | :part:`In Progress`       | :none:`unclaimed`         |                                                                          |
+| Local clause on declare target                              | :good:`done`              | :none:`unclaimed`         | clang Parse/Sema: https://github.com/llvm/llvm-project/pull/186281       |
+|                                                             |                           |                           | clang Codegen   : https://github.com/llvm/llvm-project/pull/196431       |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | groupprivate directive                                      | :part:`In Progress`       | :part:`partial`           | Flang: kparzysz, mjklemm                                                 |
 |                                                             |                           |                           |                                                                          |
@@ -620,6 +621,7 @@ implementation.
 | OMPT: ompt_target_data_transfer(_async)                     | :part:`partial`           | :good:`N/A`               | Enum: https://github.com/llvm/llvm-project/pull/195829                   |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | OMPT: ompt_target_data_memset(_async)                       | :part:`partial`           | :good:`N/A`               | Enum: https://github.com/llvm/llvm-project/pull/195829                   |
+|                                                             |                           |                           | Callbacks: https://github.com/llvm/llvm-project/pull/194168              |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | OMPT: workdistribute work callback enum                     | :part:`partial`           | :good:`N/A`               | Enum: https://github.com/llvm/llvm-project/pull/195829                   |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+

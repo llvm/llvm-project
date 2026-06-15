@@ -90,18 +90,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED NO)
 set(CMAKE_CXX_EXTENSIONS NO)
 
 # Set the path of all resulting libraries to a unified location so that it can
-# be used for testing.
-# TODO: Use common runtimes infrastructure for output and install paths
-set(LIBOMPTARGET_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+# be used for testing and found in the build tree.
+if(LLVM_LIBRARY_OUTPUT_INTDIR)
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+    set(LIBOMPTARGET_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${OFFLOAD_TARGET_SUBDIR})
+  else()
+    set(LIBOMPTARGET_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+  endif()
+else()
+  set(LIBOMPTARGET_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+endif()
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
-
-if(NOT LLVM_LIBRARY_OUTPUT_INTDIR)
-  set(LIBOMPTARGET_INTDIR ${LIBOMPTARGET_LIBRARY_DIR})
-else()
-  set(LIBOMPTARGET_INTDIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
-endif()
 
 # Get dependencies for the different components of the project.
 include(LibomptargetGetDependencies)
@@ -286,7 +287,7 @@ endif()
 # TODO: Use RUNTIMES_OUTPUT_RESOURCE_LIB_DIR instead
 set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
   "Path to folder containing llvm library libomptarget.so")
-set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_INTDIR}" CACHE STRING
+set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_LIBRARY_DIR}" CACHE STRING
   "Path to folder where intermediate libraries will be output")
 
 add_subdirectory(tools/offload-tblgen)
@@ -318,4 +319,18 @@ if(TARGET omptarget)
 endif()
 if(TARGET LLVMOffload)
   add_dependencies(offload LLVMOffload)
+endif()
+
+add_custom_target(install-offload
+  COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload)
+add_custom_target(install-offload-stripped
+  COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload --strip)
+
+if(TARGET omptarget)
+  add_dependencies(install-offload omptarget)
+  add_dependencies(install-offload-stripped omptarget)
+endif()
+if(TARGET LLVMOffload)
+  add_dependencies(install-offload LLVMOffload)
+  add_dependencies(install-offload-stripped LLVMOffload)
 endif()

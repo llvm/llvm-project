@@ -92,6 +92,8 @@ class TargetRegisterClass;
     /// depending on the indices in the shuffle.
     SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
 
     MachineBasicBlock *emitBPOSGE32(MachineInstr &MI,
                                     MachineBasicBlock *BB) const;

@@ -682,6 +682,10 @@ VendorSignatures getVendorSignature(unsigned *MaxLeaf) {
   if (EBX == 0x68747541 && EDX == 0x69746e65 && ECX == 0x444d4163)
     return VendorSignatures::AUTHENTIC_AMD;
 
+  // "Hygo nGen uine"
+  if (EBX == 0x6f677948 && EDX == 0x6e65476e && ECX == 0x656e6975)
+    return VendorSignatures::HYGON_GENUINE;
+
   return VendorSignatures::UNKNOWN;
 }
 
@@ -1355,6 +1359,40 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
   return CPU;
 }
 
+static StringRef getHygonProcessorTypeAndSubtype(unsigned Family,
+                                                 unsigned Model,
+                                                 const unsigned *Features,
+                                                 unsigned *Type,
+                                                 unsigned *Subtype) {
+  StringRef CPU;
+
+  switch (Family) {
+  case 24:
+    switch (Model) {
+    case 4:
+      CPU = "c86-4g-m4";
+      *Type = X86::HYGONFAM18H;
+      *Subtype = X86::HYGONFAM18H_C86_4G_M4;
+      break; // c86-4g-m4
+    case 6:
+      CPU = "c86-4g-m6";
+      *Type = X86::HYGONFAM18H;
+      *Subtype = X86::HYGONFAM18H_C86_4G_M6;
+      break; // c86-4g-m6
+    case 7:
+      CPU = "c86-4g-m7";
+      *Type = X86::HYGONFAM18H;
+      *Subtype = X86::HYGONFAM18H_C86_4G_M7;
+      break; // c86-4g-m7
+    }
+    break; // Hygon Family 18H
+  default:
+    break; // Unknown Hygon CPU.
+  }
+
+  return CPU;
+}
+
 #undef testFeature
 
 static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
@@ -1517,6 +1555,9 @@ StringRef sys::getHostCPUName() {
   } else if (Vendor == VendorSignatures::AUTHENTIC_AMD) {
     CPU = getAMDProcessorTypeAndSubtype(Family, Model, Features, &Type,
                                         &Subtype);
+  } else if (Vendor == VendorSignatures::HYGON_GENUINE) {
+    CPU = getHygonProcessorTypeAndSubtype(Family, Model, Features, &Type,
+                                          &Subtype);
   }
 
   if (!CPU.empty())
@@ -1711,6 +1752,10 @@ StringRef sys::getHostCPUName() {
 #define CPUFAMILY_ARM_BRAVA 0x17d5b93a
 #define CPUFAMILY_ARM_TAHITI 0x75d4acb9
 #define CPUFAMILY_ARM_TUPAI 0x204526d0
+#define CPUFAMILY_ARM_HIDRA 0x1d5a87e8
+#define CPUFAMILY_ARM_SOTRA 0xf76c5b1a
+#define CPUFAMILY_ARM_THERA 0xab345f09
+#define CPUFAMILY_ARM_TILOS 0x01d7a72b
 
 StringRef sys::getHostCPUName() {
   uint32_t Family;
@@ -1771,13 +1816,18 @@ StringRef sys::getHostCPUName() {
   case CPUFAMILY_ARM_COLL: // A17 Pro
     return "apple-a17";
   case CPUFAMILY_ARM_DONAN:  // M4
-  case CPUFAMILY_ARM_BRAVA:  // M4 Max
+  case CPUFAMILY_ARM_BRAVA:  // M4 Pro/Max
   case CPUFAMILY_ARM_TAHITI: // A18 Pro
   case CPUFAMILY_ARM_TUPAI:  // A18
     return "apple-m4";
+  case CPUFAMILY_ARM_HIDRA: // M5
+  case CPUFAMILY_ARM_SOTRA: // M5 Pro/Max
+  case CPUFAMILY_ARM_THERA: // A19 Pro
+  case CPUFAMILY_ARM_TILOS: // A19
+    return "apple-m5";
   default:
     // Default to the newest CPU we know about.
-    return "apple-m4";
+    return "apple-m5";
   }
 }
 #elif defined(_AIX)
@@ -2173,12 +2223,10 @@ StringMap<bool> sys::getHostCPUFeatures() {
   bool HasAVX10 = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
   bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1) && HasAPXSave;
   Features["egpr"] = HasAPXF;
-#ifndef _WIN32
   // TODO: We may need to check OS or MSVC version once unwinder opcodes
   // support PUSH2/POP2/PPX.
   Features["push2pop2"] = HasAPXF;
   Features["ppx"] = HasAPXF;
-#endif
   Features["ndd"] = HasAPXF;
   Features["ccmp"] = HasAPXF;
   Features["nf"] = HasAPXF;
@@ -2515,18 +2563,32 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["zicond"] = ExtMask & (1ULL << 35);  // RISCV_HWPROBE_EXT_ZICOND
   Features["zihintpause"] =
       ExtMask & (1ULL << 36); // RISCV_HWPROBE_EXT_ZIHINTPAUSE
-  Features["zve32x"] = ExtMask & (1ULL << 37); // RISCV_HWPROBE_EXT_ZVE32X
-  Features["zve32f"] = ExtMask & (1ULL << 38); // RISCV_HWPROBE_EXT_ZVE32F
-  Features["zve64x"] = ExtMask & (1ULL << 39); // RISCV_HWPROBE_EXT_ZVE64X
-  Features["zve64f"] = ExtMask & (1ULL << 40); // RISCV_HWPROBE_EXT_ZVE64F
-  Features["zve64d"] = ExtMask & (1ULL << 41); // RISCV_HWPROBE_EXT_ZVE64D
-  Features["zimop"] = ExtMask & (1ULL << 42);  // RISCV_HWPROBE_EXT_ZIMOP
-  Features["zca"] = ExtMask & (1ULL << 43);    // RISCV_HWPROBE_EXT_ZCA
-  Features["zcb"] = ExtMask & (1ULL << 44);    // RISCV_HWPROBE_EXT_ZCB
-  Features["zcd"] = ExtMask & (1ULL << 45);    // RISCV_HWPROBE_EXT_ZCD
-  Features["zcf"] = ExtMask & (1ULL << 46);    // RISCV_HWPROBE_EXT_ZCF
-  Features["zcmop"] = ExtMask & (1ULL << 47);  // RISCV_HWPROBE_EXT_ZCMOP
-  Features["zawrs"] = ExtMask & (1ULL << 48);  // RISCV_HWPROBE_EXT_ZAWRS
+  Features["zve32x"] = ExtMask & (1ULL << 37);   // RISCV_HWPROBE_EXT_ZVE32X
+  Features["zve32f"] = ExtMask & (1ULL << 38);   // RISCV_HWPROBE_EXT_ZVE32F
+  Features["zve64x"] = ExtMask & (1ULL << 39);   // RISCV_HWPROBE_EXT_ZVE64X
+  Features["zve64f"] = ExtMask & (1ULL << 40);   // RISCV_HWPROBE_EXT_ZVE64F
+  Features["zve64d"] = ExtMask & (1ULL << 41);   // RISCV_HWPROBE_EXT_ZVE64D
+  Features["zimop"] = ExtMask & (1ULL << 42);    // RISCV_HWPROBE_EXT_ZIMOP
+  Features["zca"] = ExtMask & (1ULL << 43);      // RISCV_HWPROBE_EXT_ZCA
+  Features["zcb"] = ExtMask & (1ULL << 44);      // RISCV_HWPROBE_EXT_ZCB
+  Features["zcd"] = ExtMask & (1ULL << 45);      // RISCV_HWPROBE_EXT_ZCD
+  Features["zcf"] = ExtMask & (1ULL << 46);      // RISCV_HWPROBE_EXT_ZCF
+  Features["zcmop"] = ExtMask & (1ULL << 47);    // RISCV_HWPROBE_EXT_ZCMOP
+  Features["zawrs"] = ExtMask & (1ULL << 48);    // RISCV_HWPROBE_EXT_ZAWRS
+  Features["supm"] = ExtMask & (1ULL << 49);     // RISCV_HWPROBE_EXT_SUPM
+  Features["zicntr"] = ExtMask & (1ULL << 50);   // RISCV_HWPROBE_EXT_ZICNTR
+  Features["zihpm"] = ExtMask & (1ULL << 51);    // RISCV_HWPROBE_EXT_ZIHPM
+  Features["zfbfmin"] = ExtMask & (1ULL << 52);  // RISCV_HWPROBE_EXT_ZFBFMIN
+  Features["zvfbfmin"] = ExtMask & (1ULL << 53); // RISCV_HWPROBE_EXT_ZVFBFMIN
+  Features["zvfbfwma"] = ExtMask & (1ULL << 54); // RISCV_HWPROBE_EXT_ZVFBFWMA
+  Features["zicbom"] = ExtMask & (1ULL << 55);   // RISCV_HWPROBE_EXT_ZICBOM
+  Features["zaamo"] = ExtMask & (1ULL << 56);    // RISCV_HWPROBE_EXT_ZAAMO
+  Features["zalrsc"] = ExtMask & (1ULL << 57);   // RISCV_HWPROBE_EXT_ZALRSC
+  Features["zabha"] = ExtMask & (1ULL << 58);    // RISCV_HWPROBE_EXT_ZABHA
+  Features["zalasr"] = ExtMask & (1ULL << 59);   // RISCV_HWPROBE_EXT_ZALASR
+  Features["zicbop"] = ExtMask & (1ULL << 60);   // RISCV_HWPROBE_EXT_ZICBOP
+  Features["zilsd"] = ExtMask & (1ULL << 61);    // RISCV_HWPROBE_EXT_ZILSD
+  Features["zclsd"] = ExtMask & (1ULL << 62);    // RISCV_HWPROBE_EXT_ZCLSD
 
   // Check whether the processor supports fast misaligned scalar memory access.
   // NOTE: RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF is only available on

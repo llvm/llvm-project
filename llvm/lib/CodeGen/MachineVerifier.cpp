@@ -99,6 +99,20 @@ namespace {
 /// at one time.
 static ManagedStatic<sys::SmartMutex<true>> ReportedErrorsLock;
 
+static bool hasPhysRegClassForType(const TargetRegisterInfo &TRI,
+                                   MCRegister Reg, LLT Ty) {
+  assert(Reg.isPhysical() && "reg must be a physical register");
+  assert(Ty.isValid() && "expected a valid type");
+
+  const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
+  if (TRI.isTypeLegalForClass(*RC, Ty))
+    return true;
+
+  return llvm::any_of(TRI.regclasses(), [&](const TargetRegisterClass *RC) {
+    return RC->contains(Reg) && TRI.isTypeLegalForClass(*RC, Ty);
+  });
+}
+
 struct MachineVerifier {
   MachineVerifier(MachineFunctionAnalysisManager &MFAM, const char *b,
                   raw_ostream *OS, bool AbortOnError = true)
@@ -1348,6 +1362,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
 
     if (SameType && SrcTy.isVector())
       SameType &= SrcTy.getElementCount() == DstTy.getElementCount();
+    if (SameType && SrcTy.isFloatOrFloatVector())
+      SameType &= SrcTy.getFpSemantics() == DstTy.getFpSemantics();
 
     if (SameType)
       report("bitcast must change the type", MI);
@@ -1830,12 +1846,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    if (Src1Ty.isScalable() != DstTy.isScalable()) {
-      report("Vector types must both be fixed or both be scalable", MI);
+    if (!DstTy.isScalable() && Src1Ty.isScalable()) {
+      report("Cannot insert a scalable vector into a fixed length vector", MI);
       break;
     }
 
-    if (ElementCount::isKnownGT(Src1Ty.getElementCount(),
+    bool IsMixedFixedIntoScalable =
+        DstTy.isScalableVector() && Src1Ty.isFixedVector();
+
+    if (!IsMixedFixedIntoScalable &&
+        ElementCount::isKnownGT(Src1Ty.getElementCount(),
                                 DstTy.getElementCount())) {
       report("Second source must be smaller than destination vector", MI);
       break;
@@ -1851,7 +1871,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     uint64_t DstMinLen = DstTy.getElementCount().getKnownMinValue();
-    if (Idx >= DstMinLen || Idx + Src1MinLen > DstMinLen) {
+    if (Idx >= DstMinLen ||
+        (!IsMixedFixedIntoScalable && Idx + Src1MinLen > DstMinLen)) {
       report("Subvector type and index must not cause insert to overrun the "
              "vector being inserted into",
              MI);
@@ -1891,8 +1912,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    if (SrcTy.isScalable() != DstTy.isScalable()) {
-      report("Vector types must both be fixed or both be scalable", MI);
+    if (DstTy.isScalable() && !SrcTy.isScalable()) {
+      report("Cannot extract a scalable vector from a fixed length vector", MI);
       break;
     }
 
@@ -1911,8 +1932,11 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
+    bool IsMixedFixedFromScalable =
+        DstTy.isFixedVector() && SrcTy.isScalableVector();
     uint64_t SrcMinLen = SrcTy.getElementCount().getKnownMinValue();
-    if (Idx >= SrcMinLen || Idx + DstMinLen > SrcMinLen) {
+    if (Idx >= SrcMinLen ||
+        (!IsMixedFixedFromScalable && Idx + DstMinLen > SrcMinLen)) {
       report("Destination type and index must not cause extract to overrun the "
              "source vector",
              MI);
@@ -2410,18 +2434,14 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     TypeSize SrcSize = TypeSize::getZero();
     TypeSize DstSize = TypeSize::getZero();
     if (SrcReg.isPhysical() && DstTy.isValid()) {
-      const TargetRegisterClass *SrcRC =
-          TRI->getMinimalPhysRegClassLLT(SrcReg, DstTy);
-      if (!SrcRC)
+      if (!hasPhysRegClassForType(*TRI, SrcReg, DstTy))
         SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
     } else {
       SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
     }
 
     if (DstReg.isPhysical() && SrcTy.isValid()) {
-      const TargetRegisterClass *DstRC =
-          TRI->getMinimalPhysRegClassLLT(DstReg, SrcTy);
-      if (!DstRC)
+      if (!hasPhysRegClassForType(*TRI, DstReg, SrcTy))
         DstSize = TRI->getRegSizeInBits(DstReg, *MRI);
     } else {
       DstSize = TRI->getRegSizeInBits(DstReg, *MRI);

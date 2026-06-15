@@ -202,7 +202,7 @@ def G_CTLZ : GenericInstruction {
   let hasSideEffects = false;
 }
 
-def G_CTLZ_ZERO_UNDEF : GenericInstruction {
+def G_CTLZ_ZERO_POISON : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
   let hasSideEffects = false;
@@ -214,7 +214,7 @@ def G_CTTZ : GenericInstruction {
   let hasSideEffects = false;
 }
 
-def G_CTTZ_ZERO_UNDEF : GenericInstruction {
+def G_CTTZ_ZERO_POISON : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src);
   let hasSideEffects = false;
@@ -583,6 +583,15 @@ def G_ABS : GenericInstruction {
   let InOperandList = (ins type0:$src);
   let hasSideEffects = false;
 }
+
+// Generic carry-less multiplication
+def G_CLMUL : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+  let isCommutable = true;
+}
+
 
 //------------------------------------------------------------------------------
 // Overflow ops

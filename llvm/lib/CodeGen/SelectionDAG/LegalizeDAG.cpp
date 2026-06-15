@@ -1283,7 +1283,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::CTTZ_ELTS:
   case ISD::CTTZ_ELTS_ZERO_POISON:
   case ISD::VP_CTTZ_ELTS:
-  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ELTS_ZERO_POISON:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
@@ -3241,6 +3241,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   bool NeedInvert;
   switch (Node->getOpcode()) {
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
     if ((Tmp1 = TLI.expandABS(Node, DAG)))
       Results.push_back(Tmp1);
     break;
@@ -3261,7 +3262,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Results.push_back(Tmp1);
     break;
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
     if ((Tmp1 = TLI.expandCTLZ(Node, DAG)))
       Results.push_back(Tmp1);
     break;
@@ -3270,7 +3271,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Results.push_back(Tmp1);
     break;
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
     if ((Tmp1 = TLI.expandCTTZ(Node, DAG)))
       Results.push_back(Tmp1);
     break;
@@ -3555,231 +3556,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     // Float8E3M4, Float8E5M2FNUZ, Float8E4M3FNUZ, Float8E4M3B11FNUZ,
     // Float8E8M0FNU.
     EVT DstVT = Node->getValueType(0);
-
-    SDValue IntVal = Node->getOperand(0);
-    const uint64_t SemEnum = Node->getConstantOperandVal(1);
-    const auto Sem = static_cast<APFloatBase::Semantics>(SemEnum);
-
-    // Supported source formats.
-    switch (Sem) {
-    case APFloatBase::S_Float8E5M2:
-    case APFloatBase::S_Float8E4M3FN:
-    case APFloatBase::S_Float6E3M2FN:
-    case APFloatBase::S_Float6E2M3FN:
-    case APFloatBase::S_Float4E2M1FN:
-      break;
-    default:
-      DAG.getContext()->emitError("CONVERT_FROM_ARBITRARY_FP: not implemented "
-                                  "source format (semantics enum " +
-                                  Twine(SemEnum) + ")");
+    if (SDValue Expanded = TLI.expandCONVERT_FROM_ARBITRARY_FP(Node, DAG))
+      Results.push_back(Expanded);
+    else
       Results.push_back(DAG.getPOISON(DstVT));
-      break;
-    }
-    if (!Results.empty())
-      break;
-
-    const fltSemantics &SrcSem = APFloatBase::EnumToSemantics(Sem);
-
-    const unsigned SrcBits = APFloat::getSizeInBits(SrcSem);
-    const unsigned SrcPrecision = APFloat::semanticsPrecision(SrcSem);
-    const unsigned SrcMant = SrcPrecision - 1;
-    const unsigned SrcExp = SrcBits - SrcMant - 1;
-    const int SrcBias = 1 - APFloat::semanticsMinExponent(SrcSem);
-
-    const fltNonfiniteBehavior NFBehavior = SrcSem.nonFiniteBehavior;
-
-    // Destination format parameters.
-    const fltSemantics &DstSem = DstVT.getFltSemantics();
-
-    const unsigned DstBits = APFloat::getSizeInBits(DstSem);
-    const unsigned DstMant = APFloat::semanticsPrecision(DstSem) - 1;
-    const unsigned DstExpBits = DstBits - DstMant - 1;
-    const int DstMinExp = APFloat::semanticsMinExponent(DstSem);
-    const int DstBias = 1 - DstMinExp;
-    const uint64_t DstExpAllOnes = (1ULL << DstExpBits) - 1;
-
-    // Work in an integer type matching the destination float width.
-    // Use zero-extend to preserve the raw bit-pattern.
-    EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), DstBits);
-    SDValue Src = DAG.getZExtOrTrunc(IntVal, dl, IntVT);
-
-    EVT SetCCVT = getSetCCResultType(IntVT);
-
-    SDValue Zero = DAG.getConstant(0, dl, IntVT);
-    SDValue One = DAG.getConstant(1, dl, IntVT);
-
-    // Extract bit fields.
-    const uint64_t MantMask = (SrcMant > 0) ? ((1ULL << SrcMant) - 1) : 0;
-    const uint64_t ExpMask = (1ULL << SrcExp) - 1;
-
-    SDValue MantField = DAG.getNode(ISD::AND, dl, IntVT, Src,
-                                    DAG.getConstant(MantMask, dl, IntVT));
-
-    SDValue ExpField =
-        DAG.getNode(ISD::AND, dl, IntVT,
-                    DAG.getNode(ISD::SRL, dl, IntVT, Src,
-                                DAG.getShiftAmountConstant(SrcMant, IntVT, dl)),
-                    DAG.getConstant(ExpMask, dl, IntVT));
-
-    SDValue SignBit =
-        DAG.getNode(ISD::SRL, dl, IntVT, Src,
-                    DAG.getShiftAmountConstant(SrcBits - 1, IntVT, dl));
-
-    // Precompute sign shifted to MSB of destination.
-    SDValue SignShifted =
-        DAG.getNode(ISD::SHL, dl, IntVT, SignBit,
-                    DAG.getShiftAmountConstant(DstBits - 1, IntVT, dl));
-
-    // Classify the input value based on compile-time format properties.
-    SDValue ExpAllOnes = DAG.getConstant(ExpMask, dl, IntVT);
-    SDValue IsExpAllOnes =
-        DAG.getSetCC(dl, SetCCVT, ExpField, ExpAllOnes, ISD::SETEQ);
-    SDValue IsExpZero = DAG.getSetCC(dl, SetCCVT, ExpField, Zero, ISD::SETEQ);
-    SDValue IsMantZero = DAG.getSetCC(dl, SetCCVT, MantField, Zero, ISD::SETEQ);
-    SDValue IsMantNonZero =
-        DAG.getSetCC(dl, SetCCVT, MantField, Zero, ISD::SETNE);
-
-    // NaN detection.
-    SDValue IsNaN;
-    if (NFBehavior == fltNonfiniteBehavior::FiniteOnly) {
-      // FiniteOnly formats (E2M1FN, E3M2FN, E2M3FN) never produce NaN.
-      IsNaN = DAG.getBoolConstant(false, dl, SetCCVT, IntVT);
-    } else if (NFBehavior == fltNonfiniteBehavior::IEEE754) {
-      // E5M2 produces NaN when exp == all-ones AND mantissa != 0.
-      IsNaN = DAG.getNode(ISD::AND, dl, SetCCVT, IsExpAllOnes, IsMantNonZero);
-    } else {
-      // NanOnly + AllOnes (E4M3FN): NaN when all exp and mantissa bits are 1.
-      assert(SrcSem.nanEncoding == fltNanEncoding::AllOnes);
-      SDValue MantAllOnes = DAG.getConstant(MantMask, dl, IntVT);
-      SDValue IsMantAllOnes =
-          DAG.getSetCC(dl, SetCCVT, MantField, MantAllOnes, ISD::SETEQ);
-      IsNaN = DAG.getNode(ISD::AND, dl, SetCCVT, IsExpAllOnes, IsMantAllOnes);
-    }
-
-    // Inf detection.
-    SDValue IsInf;
-    if (NFBehavior == fltNonfiniteBehavior::IEEE754) {
-      // E5M2: Inf when exp == all-ones AND mantissa == 0.
-      IsInf = DAG.getNode(ISD::AND, dl, SetCCVT, IsExpAllOnes, IsMantZero);
-    } else {
-      // NanOnly and FiniteOnly formats have no Inf representation.
-      IsInf = DAG.getBoolConstant(false, dl, SetCCVT, IntVT);
-    }
-
-    // Zero detection.
-    SDValue IsZero = DAG.getNode(ISD::AND, dl, SetCCVT, IsExpZero, IsMantZero);
-
-    // Denorm detection: exp == 0 AND mant != 0.
-    SDValue IsDenorm =
-        DAG.getNode(ISD::AND, dl, SetCCVT, IsExpZero, IsMantNonZero);
-
-    // Normal value conversion.
-    // dst_exp = exp_field + (DstBias - SrcBias)
-    // dst_mant = mant << (DstMant - SrcMant)
-    const int BiasAdjust = DstBias - SrcBias;
-    SDValue NormDstExp = DAG.getNode(
-        ISD::ADD, dl, IntVT, ExpField,
-        DAG.getConstant(APInt(DstBits, BiasAdjust, true), dl, IntVT));
-
-    SDValue NormDstMant;
-    if (DstMant > SrcMant) {
-      SDValue NormDstMantShift =
-          DAG.getShiftAmountConstant(DstMant - SrcMant, IntVT, dl);
-      NormDstMant =
-          DAG.getNode(ISD::SHL, dl, IntVT, MantField, NormDstMantShift);
-    } else {
-      NormDstMant = MantField;
-    }
-
-    // Assemble normal result.
-    SDValue DstMantShift = DAG.getShiftAmountConstant(DstMant, IntVT, dl);
-    SDValue NormExpShifted =
-        DAG.getNode(ISD::SHL, dl, IntVT, NormDstExp, DstMantShift);
-    SDValue NormResult = DAG.getNode(
-        ISD::OR, dl, IntVT,
-        DAG.getNode(ISD::OR, dl, IntVT, SignShifted, NormExpShifted),
-        NormDstMant);
-
-    // Denormal value conversion.
-    // For a denormal source (exp_field == 0, mant != 0), normalize by finding
-    // the MSB position of mant using CTLZ, then compute the correct
-    // exponent and mantissa for the destination format.
-    SDValue DenormResult;
-    {
-      const unsigned IntVTBits = DstBits;
-      SDValue LeadingZeros =
-          DAG.getNode(ISD::CTLZ_ZERO_UNDEF, dl, IntVT, MantField);
-
-      // dst_exp_denorm = (IntVTBits + DstBias - SrcBias - SrcMant) -
-      // LeadingZeros
-      const int DenormExpConst =
-          (int)IntVTBits + DstBias - SrcBias - (int)SrcMant;
-      SDValue DenormDstExp = DAG.getNode(
-          ISD::SUB, dl, IntVT,
-          DAG.getConstant(APInt(DstBits, DenormExpConst, true), dl, IntVT),
-          LeadingZeros);
-
-      // MSB position of the mantissa (0-indexed from LSB).
-      SDValue MantMSB =
-          DAG.getNode(ISD::SUB, dl, IntVT,
-                      DAG.getConstant(IntVTBits - 1, dl, IntVT), LeadingZeros);
-
-      // leading_one = 1 << MantMSB
-      SDValue LeadingOne = DAG.getNode(ISD::SHL, dl, IntVT, One, MantMSB);
-
-      // frac = mant XOR leading_one (strip the implicit 1)
-      SDValue Frac = DAG.getNode(ISD::XOR, dl, IntVT, MantField, LeadingOne);
-
-      // shift_amount = DstMant - MantMSB
-      //              = DstMant - (IntVTBits - 1 - LeadingZeros)
-      //              = LeadingZeros - (IntVTBits - 1 - DstMant)
-      const unsigned ShiftSub = IntVTBits - 1 - DstMant; // always >= 0
-      SDValue ShiftAmount = DAG.getNode(ISD::SUB, dl, IntVT, LeadingZeros,
-                                        DAG.getConstant(ShiftSub, dl, IntVT));
-
-      SDValue DenormDstMant =
-          DAG.getNode(ISD::SHL, dl, IntVT, Frac, ShiftAmount);
-
-      // Assemble denorm as sign | (denorm_dst_exp << DstMant) | denorm_dst_mant
-      SDValue DenormExpShifted =
-          DAG.getNode(ISD::SHL, dl, IntVT, DenormDstExp, DstMantShift);
-      DenormResult = DAG.getNode(
-          ISD::OR, dl, IntVT,
-          DAG.getNode(ISD::OR, dl, IntVT, SignShifted, DenormExpShifted),
-          DenormDstMant);
-    }
-
-    // Select between normal and denorm paths.
-    SDValue FiniteResult =
-        DAG.getSelect(dl, IntVT, IsDenorm, DenormResult, NormResult);
-
-    // Build special-value results.
-    // NaN -> canonical quiet NaN: sign=0, exp=all-ones, qNaN bit set.
-    // Encoding: (DstExpAllOnes << DstMant) | (1 << (DstMant - 1))
-    const uint64_t QNaNBit = (DstMant > 0) ? (1ULL << (DstMant - 1)) : 0;
-    SDValue NaNResult =
-        DAG.getConstant((DstExpAllOnes << DstMant) | QNaNBit, dl, IntVT);
-
-    // Inf -> destination Inf.
-    // sign | (DstExpAllOnes << DstMant)
-    SDValue InfResult =
-        DAG.getNode(ISD::OR, dl, IntVT, SignShifted,
-                    DAG.getConstant(DstExpAllOnes << DstMant, dl, IntVT));
-
-    // Zero -> signed zero.
-    // Sign bit only.
-    SDValue ZeroResult = SignShifted;
-
-    // Final selection goes in order: NaN takes priority, then Inf, then Zero.
-    SDValue Result = FiniteResult;
-    Result = DAG.getSelect(dl, IntVT, IsZero, ZeroResult, Result);
-    Result = DAG.getSelect(dl, IntVT, IsInf, InfResult, Result);
-    Result = DAG.getSelect(dl, IntVT, IsNaN, NaNResult, Result);
-
-    // Bitcast integer result to destination float type.
-    Result = DAG.getNode(ISD::BITCAST, dl, DstVT, Result);
-
-    Results.push_back(Result);
     break;
   }
   case ISD::FCANONICALIZE: {
@@ -4844,7 +4624,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(TLI.expandVecReduce(Node, DAG));
     break;
   case ISD::VP_CTTZ_ELTS:
-  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ELTS_ZERO_POISON:
     Results.push_back(TLI.expandVPCTTZElements(Node, DAG));
     break;
   case ISD::CLEAR_CACHE:
@@ -4857,9 +4637,11 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SDValue Arg = Node->getOperand(0);
     EVT ArgVT = Arg.getValueType();
     EVT ResVT = Node->getValueType(0);
-    SDLoc dl(Node);
-    SDValue RoundNode = DAG.getNode(ISD::FRINT, dl, ArgVT, Arg);
-    Results.push_back(DAG.getNode(ISD::FP_TO_SINT, dl, ResVT, RoundNode));
+    SDLoc DL(Node);
+    SDValue RoundNode = DAG.getNode(ISD::FRINT, DL, ArgVT, Arg);
+    SDValue ConvertNode = DAG.getNode(ISD::FP_TO_SINT, DL, ResVT, RoundNode);
+    // Non-deterministic results are equivalent to freeze poison.
+    Results.push_back(DAG.getFreeze(ConvertNode));
     break;
   }
   case ISD::ADDRSPACECAST:
@@ -5594,7 +5376,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                                        RTLIB::MUL_I16, RTLIB::MUL_I32,
                                        RTLIB::MUL_I64, RTLIB::MUL_I128));
     break;
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
     Results.push_back(ExpandBitCountingLibCall(
         Node, RTLIB::CTLZ_I32, RTLIB::CTLZ_I64, RTLIB::CTLZ_I128));
     break;
@@ -5731,12 +5513,12 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   SDValue Tmp1, Tmp2, Tmp3, Tmp4;
   switch (Node->getOpcode()) {
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
   case ISD::CTLZ:
   case ISD::CTPOP: {
     // Zero extend the argument unless its cttz, then use any_extend.
     if (Node->getOpcode() == ISD::CTTZ ||
-        Node->getOpcode() == ISD::CTTZ_ZERO_UNDEF)
+        Node->getOpcode() == ISD::CTTZ_ZERO_POISON)
       Tmp1 = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Node->getOperand(0));
     else
       Tmp1 = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Node->getOperand(0));
@@ -5750,9 +5532,9 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                                         OVT.getSizeInBits());
       Tmp1 = DAG.getNode(ISD::OR, dl, NVT, Tmp1,
                          DAG.getConstant(TopBit, dl, NVT));
-      NewOpc = ISD::CTTZ_ZERO_UNDEF;
+      NewOpc = ISD::CTTZ_ZERO_POISON;
     }
-    // Perform the larger operation. For CTPOP and CTTZ_ZERO_UNDEF, this is
+    // Perform the larger operation. For CTPOP and CTTZ_ZERO_POISON, this is
     // already the correct result.
     Tmp1 = DAG.getNode(NewOpc, dl, NVT, Tmp1);
     if (NewOpc == ISD::CTLZ) {
@@ -5765,7 +5547,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
         DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1, SDNodeFlags::NoWrap));
     break;
   }
-  case ISD::CTLZ_ZERO_UNDEF: {
+  case ISD::CTLZ_ZERO_POISON: {
     // We know that the argument is unlikely to be zero, hence we can take a
     // different approach as compared to ISD::CTLZ
 
@@ -5840,6 +5622,21 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
       UpdatedNodes->insert(Chain.getNode());
     }
     ReplacedNode(Node);
+    break;
+  }
+  case ISD::SCMP:
+  case ISD::UCMP: {
+    unsigned ExtOp =
+        Node->getOpcode() == ISD::UCMP ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
+    MVT OpVT = Node->getOperand(0).getSimpleValueType();
+    // Compare at least at operand width; NVT is the legal type for the op
+    // result.
+    MVT ResVT = OpVT.bitsGT(NVT) ? OpVT : NVT;
+    Tmp1 = DAG.getNode(ExtOp, dl, ResVT, Node->getOperand(0));
+    Tmp2 = DAG.getNode(ExtOp, dl, ResVT, Node->getOperand(1));
+    Tmp1 = DAG.getNode(Node->getOpcode(), dl, ResVT, Tmp1, Tmp2);
+    // Result is -1/0/1; truncate to the original result type.
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
     break;
   }
   case ISD::MUL:

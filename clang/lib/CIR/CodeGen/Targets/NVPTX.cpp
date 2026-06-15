@@ -29,7 +29,7 @@ class NVPTXTargetCIRGenInfo : public TargetCIRGenInfo {
 public:
   NVPTXTargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<NVPTXABIInfo>(cgt)) {}
-      
+
   void setTargetAttributes(const clang::Decl *decl, mlir::Operation *global,
                            CIRGenModule &cgm) const override {
     auto globalValue = mlir::dyn_cast<cir::CIRGlobalValueInterface>(global);

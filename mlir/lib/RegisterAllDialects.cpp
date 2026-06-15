@@ -14,6 +14,7 @@
 #include "mlir/InitAllDialects.h"
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
+#include "mlir/Dialect/AMDGPU/Transforms/MemoryAccessOpInterfacesImpl.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -95,6 +96,7 @@
 #include "mlir/Dialect/Vector/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/BufferizableOpInterfaceImpl.h"
+#include "mlir/Dialect/Vector/Transforms/IndexedAccessOpInterfaceImpl.h"
 #include "mlir/Dialect/Vector/Transforms/SubsetOpInterfaceImpl.h"
 #include "mlir/Dialect/WasmSSA/IR/WasmSSA.h"
 #include "mlir/Dialect/X86/X86Dialect.h"
@@ -159,6 +161,7 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
 
   // Register all external models.
   affine::registerValueBoundsOpInterfaceExternalModels(registry);
+  amdgpu::registerMemoryAccessOpInterfacesExternalModels(registry);
   arith::registerBufferDeallocationOpInterfaceExternalModels(registry);
   arith::registerBufferizableOpInterfaceExternalModels(registry);
   arith::registerBufferViewFlowOpInterfaceExternalModels(registry);
@@ -197,6 +200,7 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   tensor::registerValueBoundsOpInterfaceExternalModels(registry);
   tosa::registerShardingInterfaceExternalModels(registry);
   vector::registerBufferizableOpInterfaceExternalModels(registry);
+  vector::registerIndexedAccessOpInterfaceExternalModels(registry);
   vector::registerSubsetOpInterfaceExternalModels(registry);
   vector::registerValueBoundsOpInterfaceExternalModels(registry);
   NVVM::registerNVVMTargetInterfaceExternalModels(registry);
