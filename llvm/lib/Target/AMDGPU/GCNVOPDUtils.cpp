@@ -296,14 +296,10 @@ static void collectLoads(SmallVector<SUnit *> &Loads, BitVector &Visited,
 /// \p J to complete before loads depending on \p I.
 static bool loadsMayOverlap(ScheduleDAGInstrs *DAG, [[maybe_unused]] SUnit &I,
                             const BitVector &IVisited,
-                            const SmallVector<SUnit *> &ILoadSuccs, SUnit &J,
-                            BitVector &JVisited,
-                            SmallVector<SUnit *> &JLoadPreds) {
-  if (ILoadSuccs.empty())
-    return false;
-  JVisited = IVisited;
-  JLoadPreds.clear();
-  collectLoads(JLoadPreds, JVisited, J, /*Forward=*/false);
+                            const SmallVector<SUnit *> &ILoadSuccs,
+                            [[maybe_unused]] SUnit &J,
+                            const BitVector &JVisited,
+                            const SmallVector<SUnit *> &JLoadPreds) {
   if (JLoadPreds.empty())
     return false;
 
@@ -381,9 +377,14 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
             !shouldScheduleAdjacent(TII, ST, IMI, *JMI))
           continue;
 
-        if (loadsMayOverlap(DAG, *ISUI, IVisited, ILoadSuccs, *JSUI, JVisited,
-                            JLoadPreds))
-          continue;
+        if (!ILoadSuccs.empty()) {
+          JVisited = IVisited;
+          JLoadPreds.clear();
+          collectLoads(JLoadPreds, JVisited, *JSUI, /*Forward=*/false);
+          if (loadsMayOverlap(DAG, *ISUI, IVisited, ILoadSuccs, *JSUI, JVisited,
+                              JLoadPreds))
+            continue;
+        }
 
         if (fuseInstructionPair(*DAG, *ISUI, *JSUI)) {
           // Clear to prevent future checks/fusing
