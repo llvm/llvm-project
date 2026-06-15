@@ -2021,8 +2021,8 @@ define void @mscatter_baseidx_and_nxv8i16_nxv8i16(<vscale x 8 x i16> %val, ptr %
 ; CHECK-NEXT:    li a1, 255
 ; CHECK-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vand.vx v10, v10, a1
-; CHECK-NEXT:    vwaddu.vv v12, v10, v10
-; CHECK-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
+; CHECK-NEXT:    vadd.vv v10, v10, v10
+; CHECK-NEXT:    vsoxei16.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    ret
   %eidxs = and <vscale x 8 x i16> %idxs, splat (i16 255)
   %ptrs = getelementptr inbounds i16, ptr %base, <vscale x 8 x i16> %eidxs

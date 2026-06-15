@@ -2593,8 +2593,8 @@ define <vscale x 8 x i16> @vpgather_baseidx_and_nxv8i16_nxv8i16(ptr %base, <vsca
 ; RV32-NEXT:    li a2, 255
 ; RV32-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; RV32-NEXT:    vand.vx v8, v8, a2
-; RV32-NEXT:    vwaddu.vv v12, v8, v8
-; RV32-NEXT:    vluxei32.v v8, (a0), v12, v0.t
+; RV32-NEXT:    vadd.vv v8, v8, v8
+; RV32-NEXT:    vluxei16.v v8, (a0), v8, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpgather_baseidx_and_nxv8i16_nxv8i16:
@@ -2602,8 +2602,8 @@ define <vscale x 8 x i16> @vpgather_baseidx_and_nxv8i16_nxv8i16(ptr %base, <vsca
 ; RV64-NEXT:    li a2, 255
 ; RV64-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; RV64-NEXT:    vand.vx v8, v8, a2
-; RV64-NEXT:    vwaddu.vv v12, v8, v8
-; RV64-NEXT:    vluxei32.v v8, (a0), v12, v0.t
+; RV64-NEXT:    vadd.vv v8, v8, v8
+; RV64-NEXT:    vluxei16.v v8, (a0), v8, v0.t
 ; RV64-NEXT:    ret
   %eidxs = and <vscale x 8 x i16> %idxs, splat (i16 255)
   %ptrs = getelementptr inbounds i16, ptr %base, <vscale x 8 x i16> %eidxs

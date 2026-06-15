@@ -2543,14 +2543,10 @@ define <4 x i32> @diagonal_i32(ptr %base, <4 x i32> %vecidx) {
 define <vscale x 8 x i32> @mgather_baseidx_and_nxv8i16_nxv8i32(ptr %base, <vscale x 8 x i16> %idxs, <vscale x 8 x i1> %m, <vscale x 8 x i32> %passthru) {
 ; CHECK-LABEL: mgather_baseidx_and_nxv8i16_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 4
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    vsetvli a2, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vand.vx v16, v8, a1
-; CHECK-NEXT:    li a1, 4
-; CHECK-NEXT:    vwmulu.vx v8, v16, a1
+; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vsll.vi v8, v8, 2
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
-; CHECK-NEXT:    vluxei32.v v12, (a0), v8, v0.t
+; CHECK-NEXT:    vluxei16.v v12, (a0), v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
   %eidxs = and <vscale x 8 x i16> %idxs, splat (i16 u0x3fff)

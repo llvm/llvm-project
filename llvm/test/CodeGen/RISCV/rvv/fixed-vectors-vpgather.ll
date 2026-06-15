@@ -2623,22 +2623,20 @@ define <8 x i32> @vpgather_baseidx_and_v8i16_v8i32(ptr %base, <8 x i16> %idxs, <
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    li a2, 255
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV32-NEXT:    vand.vx v10, v8, a2
-; RV32-NEXT:    li a2, 4
-; RV32-NEXT:    vwmulu.vx v8, v10, a2
+; RV32-NEXT:    vand.vx v8, v8, a2
+; RV32-NEXT:    vsll.vi v10, v8, 2
 ; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; RV32-NEXT:    vluxei32.v v8, (a0), v8, v0.t
+; RV32-NEXT:    vluxei16.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpgather_baseidx_and_v8i16_v8i32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a2, 255
 ; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; RV64-NEXT:    vand.vx v10, v8, a2
-; RV64-NEXT:    li a2, 4
-; RV64-NEXT:    vwmulu.vx v8, v10, a2
+; RV64-NEXT:    vand.vx v8, v8, a2
+; RV64-NEXT:    vsll.vi v10, v8, 2
 ; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
-; RV64-NEXT:    vluxei32.v v8, (a0), v8, v0.t
+; RV64-NEXT:    vluxei16.v v8, (a0), v10, v0.t
 ; RV64-NEXT:    ret
   %eidxs = and <8 x i16> %idxs, splat (i16 255)
   %ptrs = getelementptr inbounds i32, ptr %base, <8 x i16> %eidxs
