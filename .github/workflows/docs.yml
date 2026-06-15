@@ -129,7 +129,7 @@ jobs:
           cmake -B bolt-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="bolt" -DLLVM_ENABLE_SPHINX=ON ./llvm
           TZ=UTC ninja -C bolt-build docs-bolt-html
           mkdir built-docs/bolt
-          cp -r bolt-build/docs/* build-docs/bolt/
+          cp -r bolt-build/docs/* built-docs/bolt/
       - name: Build Clang docs
         if: |
           steps.docs-changed-subprojects.outputs.clang_any_changed == 'true' ||
