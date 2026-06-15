@@ -806,11 +806,9 @@ static xegpu::LayoutAttr buildInstDataLayoutWithLane(
     return DenseI32ArrayAttr::get(context, v);
   };
   return xegpu::LayoutAttr::get(context, /*sg_layout=*/nullptr,
-                                /*sg_data=*/nullptr,
-                                /*inst_data=*/toI32Attr(instData),
-                                /*lane_layout=*/toI32Attr(laneLayout),
-                                /*lane_data=*/toI32Attr(laneData),
-                                /*order=*/orderAttr);
+                                /*sg_data=*/nullptr, toI32Attr(instData),
+                                toI32Attr(laneLayout), toI32Attr(laneData),
+                                orderAttr);
 }
 
 static xegpu::LayoutAttr
@@ -823,10 +821,25 @@ buildLaneLayout(mlir::MLIRContext *context, ArrayRef<int64_t> laneLayout,
   };
   return xegpu::LayoutAttr::get(context, /*sg_layout=*/nullptr,
                                 /*sg_data=*/nullptr,
-                                /*inst_data=*/nullptr,
-                                /*lane_layout=*/toI32Attr(laneLayout),
-                                /*lane_data=*/toI32Attr(laneData),
-                                /*order=*/orderAttr);
+                                /*inst_data=*/nullptr, toI32Attr(laneLayout),
+                                toI32Attr(laneData), orderAttr);
+}
+
+static xegpu::LayoutAttr
+buildLayout(mlir::MLIRContext *context, ArrayRef<int64_t> sgLayout,
+            ArrayRef<int64_t> sgData, ArrayRef<int64_t> instData,
+            ArrayRef<int64_t> laneLayout, ArrayRef<int64_t> laneData,
+            DenseI32ArrayAttr orderAttr = nullptr) {
+  auto toI32Attr = [&](auto range) {
+    SmallVector<int32_t> v(range.begin(), range.end());
+    return DenseI32ArrayAttr::get(context, v);
+  };
+  return xegpu::LayoutAttr::get(
+      context, sgLayout.empty() ? nullptr : toI32Attr(sgLayout),
+      sgData.empty() ? nullptr : toI32Attr(sgData),
+      instData.empty() ? nullptr : toI32Attr(instData),
+      laneLayout.empty() ? nullptr : toI32Attr(laneLayout),
+      laneData.empty() ? nullptr : toI32Attr(laneData), orderAttr);
 }
 
 /// Computes the lane_layout and lane_data for a multi-reduction's source
@@ -852,6 +865,7 @@ buildLaneLayout(mlir::MLIRContext *context, ArrayRef<int64_t> laneLayout,
 static std::pair<SmallVector<int64_t>, SmallVector<int64_t>>
 computeReductionLaneLayoutAndData(ArrayRef<int64_t> srcShape,
                                   ArrayRef<int64_t> reductionDims,
+                                  ArrayRef<int64_t> consumerReductionDims,
                                   int subgroupSize,
                                   int64_t maxReduceVectorSize) {
   int srcRank = srcShape.size();
@@ -863,6 +877,10 @@ computeReductionLaneLayoutAndData(ArrayRef<int64_t> srcShape,
   // `laneDim` carries the subgroupSize lanes; `vectorDim` packs the reduced
   // elements into lane_data. Default: lanes on the innermost dim, reduced
   // vector on the second-to-innermost dim.
+  if (secondInnermost >= 0 && llvm::is_contained(reductionDims, innermost) &&
+      reductionDims.size() == 1 && consumerReductionDims.empty()) {
+    std::swap(innermost, secondInnermost);
+  }
   int laneDim = innermost;
   int vectorDim = secondInnermost; // negative for rank 1
 
@@ -916,7 +934,7 @@ computeReductionLaneLayoutAndData(ArrayRef<int64_t> srcShape,
 ///      * Consumer Layout:
 ///        #xegpu.layout<sgLayout=[32], sgData=[1]>
 ///      * Result Layout:
-///        #xegpu.slice<#xegpu.layout<sgLayout=[32,1], sgData=[1, 64]>, dims =
+///        #xegpu.slice<#xegpu.layout<sgLayout=[32,1], sgData=[1, 128]>, dims =
 ///        [1]>}
 ///      * Consumer Layout:
 ///        #xegpu.slice<#xegpu.layout<sgLayout=[8, 2, 4], sgData=[4, 64, 32]>,
@@ -1026,12 +1044,12 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
   } else if (layoutKind == xegpu::LayoutKind::InstData) {
     xegpu::SliceAttr consumerSliceLayout =
         dyn_cast_if_present<xegpu::SliceAttr>(consumerLayout);
-    auto reductionDimsOverrideConsumer =
+    auto consumerReductionDims =
         consumerSliceLayout
             ? SmallVector<int64_t>(consumerSliceLayout.getDims().asArrayRef())
-            : reductionDims;
+            : SmallVector<int64_t>({});
     auto [laneLayout, laneData] = computeReductionLaneLayoutAndData(
-        srcShape, reductionDimsOverrideConsumer, subgroupSize,
+        srcShape, reductionDims, consumerReductionDims, subgroupSize,
         maxReduceVectorSize);
     // inst_data is the per-instruction data, i.e. the element-wise product of
     // lane_layout and lane_data.
@@ -1048,12 +1066,12 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
            "dimensions are unit dimensions");
     xegpu::SliceAttr consumerSliceLayout =
         dyn_cast_if_present<xegpu::SliceAttr>(consumerLayout);
-    auto reductionDimsOverrideConsumer =
+    auto consumerReductionDims =
         consumerSliceLayout
             ? SmallVector<int64_t>(consumerSliceLayout.getDims().asArrayRef())
-            : reductionDims;
+            : SmallVector<int64_t>({});
     auto [laneLayout, laneData] = computeReductionLaneLayoutAndData(
-        srcShape, reductionDimsOverrideConsumer, subgroupSize,
+        srcShape, reductionDims, consumerReductionDims, subgroupSize,
         maxReduceVectorSize);
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(laneLayout),
                                        toInt32Attr(laneData));
@@ -2158,8 +2176,8 @@ createScaleLayout(mlir::MLIRContext *context, VectorType matrixTy,
   SmallVector<int64_t> laneData = matrixLayout.getEffectiveLaneDataAsInt();
   auto order = matrixLayout.getOrder();
 
-  SmallVector<int> scaleSgLayout;
-  SmallVector<int> scaleSgData;
+  SmallVector<int64_t> scaleSgLayout;
+  SmallVector<int64_t> scaleSgData;
   if (!sgLayout.empty() && !sgData.empty()) {
     scaleSgLayout.assign(sgLayout.begin(), sgLayout.end());
     scaleSgData.assign(sgData.begin(), sgData.end());
@@ -2172,7 +2190,7 @@ createScaleLayout(mlir::MLIRContext *context, VectorType matrixTy,
   // For DPAS_MX scales: if matrix has inst_data, scale needs adjusted
   // inst_data. Scale inst_data is derived from matrix inst_data divided by
   // scale factor.
-  SmallVector<int> scaleInstData;
+  SmallVector<int64_t> scaleInstData;
   if (!instData.empty()) {
     scaleInstData.assign(instData.begin(), instData.end());
     if (isBScale)
@@ -2185,11 +2203,12 @@ createScaleLayout(mlir::MLIRContext *context, VectorType matrixTy,
           1);
   }
 
-  SmallVector<int> scaleLaneLayout;
-  SmallVector<int> scaleLaneData;
+  SmallVector<int64_t> scaleLaneLayout;
+  SmallVector<int64_t> scaleLaneData;
   if (!laneLayout.empty() && !laneData.empty()) {
     scaleLaneLayout.assign(laneLayout.begin(), laneLayout.end());
-    scaleLaneData.assign(laneData.begin(), laneData.end());
+    scaleLaneData.assign(laneData.size(), 1);
+
     bool isRowMajor = uArchInstruction->isLaneLayoutRowMajorOrder();
     if (isBScale ^ isRowMajor)
       std::swap(scaleLaneLayout[rank - 2], scaleLaneLayout[rank - 1]);
@@ -2197,38 +2216,12 @@ createScaleLayout(mlir::MLIRContext *context, VectorType matrixTy,
     // Then derive lane_data = inst_data / lane_layout so the Category A
     // invariant inst_data = lane_layout * lane_data * k (with k = 1) holds
     // for the scale operand's load_nd consumer.
-    if (!scaleInstData.empty()) {
-      for (int64_t d = rank - 2; d < rank; ++d) {
-        scaleLaneLayout[d] =
-            std::min<int64_t>(scaleInstData[d], scaleLaneLayout[d]);
-        scaleLaneData[d] = std::max<int64_t>(
-            scaleInstData[d] / std::max<int64_t>(scaleLaneLayout[d], 1), 1);
-      }
-    } else {
-      // No inst_data on the matrix layout; fall back to capping by scale
-      // shape and deriving lane_data from it (legacy behavior).
-      scaleLaneLayout[rank - 2] =
-          std::min<int64_t>(scaleShape[rank - 2], scaleLaneLayout[rank - 2]);
-      scaleLaneData[rank - 2] = std::max<int64_t>(
-          scaleShape[rank - 2] / scaleLaneLayout[rank - 2], 1);
-      scaleLaneData[rank - 1] = std::max<int64_t>(
-          scaleShape[rank - 1] / scaleLaneLayout[rank - 1], 1);
-    }
+    auto layoutCap = scaleInstData.empty() ? scaleShape : scaleInstData;
+    for (int64_t d = rank - 2; d < rank; ++d)
+      scaleLaneLayout[d] = std::min<int64_t>(layoutCap[d], scaleLaneLayout[d]);
   }
-  return xegpu::LayoutAttr::get(
-      context,
-      scaleSgLayout.empty() ? nullptr
-                            : DenseI32ArrayAttr::get(context, scaleSgLayout),
-      scaleSgData.empty() ? nullptr
-                          : DenseI32ArrayAttr::get(context, scaleSgData),
-      scaleInstData.empty() ? nullptr
-                            : DenseI32ArrayAttr::get(context, scaleInstData),
-      scaleLaneLayout.empty()
-          ? nullptr
-          : DenseI32ArrayAttr::get(context, scaleLaneLayout),
-      scaleLaneData.empty() ? nullptr
-                            : DenseI32ArrayAttr::get(context, scaleLaneData),
-      order);
+  return buildLayout(context, scaleSgLayout, scaleSgData, scaleInstData,
+                     scaleLaneLayout, scaleLaneData, order);
 }
 
 /// Sets up the anchor layouts for dpas_mx operands (A, B, C/D, A_scale, and
