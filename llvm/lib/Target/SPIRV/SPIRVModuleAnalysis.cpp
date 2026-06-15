@@ -1003,7 +1003,6 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
 
   // Core in Vulkan 1.1 and earlier.
   addAvailableCaps({Capability::Int64,
-                    Capability::Int64Atomics,
                     Capability::Float16,
                     Capability::Float64,
                     Capability::GroupNonUniform,
@@ -1027,7 +1026,8 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
     addAvailableCaps(
-        {Capability::ShaderNonUniformEXT, Capability::RuntimeDescriptorArrayEXT,
+        {Capability::Int64Atomics, Capability::ShaderNonUniformEXT,
+         Capability::RuntimeDescriptorArrayEXT,
          Capability::InputAttachmentArrayDynamicIndexingEXT,
          Capability::UniformTexelBufferArrayDynamicIndexingEXT,
          Capability::StorageTexelBufferArrayDynamicIndexingEXT,
