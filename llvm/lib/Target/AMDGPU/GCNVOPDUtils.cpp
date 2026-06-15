@@ -265,27 +265,30 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
 }
 
 /// Collect all load (dependents if \p Forward else dependencies) that connect
-/// to \p SU.
+/// to the \p Head SU.
 static void collectLoads(SmallVector<SUnit *> &Loads, BitVector &Visited,
-                         const SUnit &SU, bool Forward) {
-  if (SU.isBoundaryNode() || Visited.test(SU.NodeNum))
+                         SUnit &Head, bool Forward) {
+  if (Head.isBoundaryNode() || Visited.test(Head.NodeNum))
     return;
 
-  const SmallVector<SDep, 4> &Deps = Forward ? SU.Succs : SU.Preds;
-  for (const SDep &Edge : Deps) {
-    if (Edge.getKind() != SDep::Data)
-      continue;
-    SUnit *Dep = Edge.getSUnit();
-    if (Dep->isBoundaryNode() || Visited.test(Dep->NodeNum))
-      continue;
+  SmallVector<SUnit *> Stack;
+  Stack.push_back(&Head);
+  while (!Stack.empty()) {
+    SUnit *SU = Stack.pop_back_val();
+    const SmallVector<SDep, 4> &Deps = Forward ? SU->Succs : SU->Preds;
+    for (const SDep &Edge : Deps) {
+      if (Edge.getKind() != SDep::Data)
+        continue;
+      SUnit *Dep = Edge.getSUnit();
+      if (Dep->isBoundaryNode() || Visited.test(Dep->NodeNum))
+        continue;
+      if (Dep->isInstr() && Dep->getInstr()->mayLoad())
+        Loads.push_back(Dep);
+      else
+        Stack.push_back(Dep);
 
-    if (Dep->isInstr() && Dep->getInstr()->mayLoad()) {
-      Loads.push_back(Dep);
-    } else {
-      collectLoads(Loads, Visited, *Dep, Forward);
+      Visited.set(Dep->NodeNum);
     }
-
-    Visited.set(Dep->NodeNum);
   }
 }
 
@@ -343,7 +346,8 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
           continue;
 
         bool LoadsMayOverlap = !ILoadSuccs.empty() && [&] {
-          JVisited = IVisited; // No need to collect from nodes reachable from ISUI
+          JVisited =
+              IVisited; // No need to collect from nodes reachable from ISUI
           JLoadPreds.clear();
           collectLoads(JLoadPreds, JVisited, *JSUI, /*Forward=*/false);
           if (JLoadPreds.empty())
