@@ -6,32 +6,35 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../common/Fixtures.hpp"
+#include "../common/Properties.hpp"
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
 using olMemAllocAlignedTest = OffloadDeviceTest;
-
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olMemAllocAlignedTest);
 
+using olMemAllocAlignedTypesTest = olMemAllocHostOrDeviceTest;
+
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE_WITH_PARAM(
+    olMemAllocAlignedTypesTest, AllocTypes,
+    defaultPrinterWithParam<ol_alloc_type_t>);
+
 constexpr size_t DefaultAlignment = 16;
-constexpr size_t TestAllocsNum = 1000;
 
 TEST_P(olMemAllocAlignedTest, SuccessAllocMany) {
   std::vector<void *> Allocs;
-  Allocs.reserve(1000);
-
-  constexpr ol_alloc_type_t TYPES[2] = {OL_ALLOC_TYPE_DEVICE,
-                                        OL_ALLOC_TYPE_MANAGED};
+  Allocs.reserve(TestAllocsNum);
 
   for (size_t I = 1; I < TestAllocsNum; I++) {
     void *Alloc = nullptr;
-    if (I % 3 == 2)
+    ol_alloc_type_t AllocType = AllocTypes[I % 3];
+    if (AllocType == OL_ALLOC_TYPE_HOST) {
       ASSERT_SUCCESS(
           olMemAllocAlignedHost(Device, 1024 * I, DefaultAlignment, &Alloc));
-    else
-      ASSERT_SUCCESS(olMemAllocAligned(Device, TYPES[I % 2], 1024 * I,
+    } else {
+      ASSERT_SUCCESS(olMemAllocAligned(Device, AllocType, 1024 * I,
                                        DefaultAlignment, &Alloc));
+    }
     ASSERT_NE(Alloc, nullptr);
 
     Allocs.push_back(Alloc);
@@ -91,55 +94,23 @@ TEST_P(olMemAllocAlignedTest, CudaExceedDefaultAlignment) {
   ASSERT_EQ(Alloc, nullptr);
 }
 
-TEST_P(olMemAllocAlignedTest, SuccessAllocManagedDifferentAlignments) {
+TEST_P(olMemAllocAlignedTypesTest, SuccessAllocDifferentAlignments) {
   void *Alloc = nullptr;
-  size_t NumAlignments = 6;
   size_t Alignments[] = {8, 16, 32, 64, 128, 256};
+  size_t NumAlignments = sizeof(Alignments) / sizeof(Alignments[0]);
   size_t Alignment;
 
   for (size_t i = 0; i < NumAlignments; i++) {
     Alignment = Alignments[i];
     SCOPED_TRACE("alignment: " + std::to_string(Alignment));
-    ASSERT_SUCCESS(olMemAllocAligned(Device, OL_ALLOC_TYPE_MANAGED, 1024,
-                                     Alignment, &Alloc));
+    ASSERT_SUCCESS(allocateDeviceOrHost(1024, Alignment, &Alloc));
+    ASSERT_SUCCESS(allocateDeviceOrHost(1024, Alignment, &Alloc));
     ASSERT_NE(Alloc, nullptr);
     olMemFree(Alloc);
   }
 }
 
-TEST_P(olMemAllocAlignedTest, SuccessAllocHostDifferentAlignments) {
-  void *Alloc = nullptr;
-  size_t NumAlignments = 6;
-  size_t Alignments[] = {8, 16, 32, 64, 128, 256};
-  size_t Alignment;
-
-  for (size_t i = 0; i < NumAlignments; i++) {
-    Alignment = Alignments[i];
-    SCOPED_TRACE("alignment: " + std::to_string(Alignment));
-    ASSERT_SUCCESS(olMemAllocAlignedHost(Device, 1024, Alignment, &Alloc));
-    ASSERT_NE(Alloc, nullptr);
-    olMemFree(Alloc);
-  }
-}
-
-TEST_P(olMemAllocAlignedTest, SuccessAllocDeviceDifferentAlignments) {
-  void *Alloc = nullptr;
-  size_t NumAlignments = 6;
-  size_t Alignments[] = {8, 16, 32, 64, 128, 256};
-  size_t Alignment;
-
-  for (size_t i = 0; i < NumAlignments; i++) {
-    Alignment = Alignments[i];
-    SCOPED_TRACE("alignment: " + std::to_string(Alignment));
-    ASSERT_SUCCESS(olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE, 1024,
-                                     Alignment, &Alloc));
-    ASSERT_NE(Alloc, nullptr);
-
-    olMemFree(Alloc);
-  }
-}
-
-TEST_P(olMemAllocAlignedTest, SuccessMemcpyManagedDiferentAlignments) {
+TEST_P(olMemAllocAlignedTypesTest, SuccessMemcpyDiferentAlignments) {
   constexpr size_t Size = 1024;
   void *Alloc;
   std::vector<uint8_t> Input(Size, 42);
@@ -151,62 +122,7 @@ TEST_P(olMemAllocAlignedTest, SuccessMemcpyManagedDiferentAlignments) {
   for (size_t i = 0; i < NumAlignments; i++) {
     Alignment = Alignments[i];
     SCOPED_TRACE("alignment: " + std::to_string(Alignment));
-
-    ASSERT_SUCCESS(olMemAllocAligned(Device, OL_ALLOC_TYPE_MANAGED, Size,
-                                     Alignment, &Alloc));
-    // memcpy is synchronous when queue is unspecified.
-    ASSERT_SUCCESS(olMemcpy(nullptr, Alloc, Device, Input.data(), Host, Size));
-    ASSERT_SUCCESS(olMemcpy(nullptr, Output.data(), Host, Alloc, Device, Size));
-
-    for (uint8_t Val : Output) {
-      ASSERT_EQ(Val, 42);
-    }
-
-    ASSERT_SUCCESS(olMemFree(Alloc));
-  }
-}
-
-TEST_P(olMemAllocAlignedTest, SuccessMemcpyDeviceDiferentAlignments) {
-  constexpr size_t Size = 1024;
-  void *Alloc;
-  std::vector<uint8_t> Input(Size, 42);
-  std::vector<uint8_t> Output(Size, 0);
-
-  size_t NumAlignments = 6;
-  size_t Alignments[] = {8, 16, 32, 64, 128, 256};
-  size_t Alignment;
-  for (size_t i = 0; i < NumAlignments; i++) {
-    Alignment = Alignments[i];
-    SCOPED_TRACE("alignment: " + std::to_string(Alignment));
-
-    ASSERT_SUCCESS(olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE, Size,
-                                     Alignment, &Alloc));
-    // memcpy is synchronous when queue is unspecified.
-    ASSERT_SUCCESS(olMemcpy(nullptr, Alloc, Device, Input.data(), Host, Size));
-    ASSERT_SUCCESS(olMemcpy(nullptr, Output.data(), Host, Alloc, Device, Size));
-
-    for (uint8_t Val : Output) {
-      ASSERT_EQ(Val, 42);
-    }
-
-    ASSERT_SUCCESS(olMemFree(Alloc));
-  }
-}
-
-TEST_P(olMemAllocAlignedTest, SuccessMemcpyHostDiferentAlignments) {
-  constexpr size_t Size = 1024;
-  void *Alloc;
-  std::vector<uint8_t> Input(Size, 42);
-  std::vector<uint8_t> Output(Size, 0);
-
-  size_t NumAlignments = 6;
-  size_t Alignments[] = {8, 16, 32, 64, 128, 256};
-  size_t Alignment;
-  for (size_t i = 0; i < NumAlignments; i++) {
-    Alignment = Alignments[i];
-    SCOPED_TRACE("alignment: " + std::to_string(Alignment));
-
-    ASSERT_SUCCESS(olMemAllocAlignedHost(Device, Size, Alignment, &Alloc));
+    ASSERT_SUCCESS(allocateDeviceOrHost(Size, Alignment, &Alloc));
     // memcpy is synchronous when queue is unspecified.
     ASSERT_SUCCESS(olMemcpy(nullptr, Alloc, Device, Input.data(), Host, Size));
     ASSERT_SUCCESS(olMemcpy(nullptr, Output.data(), Host, Alloc, Device, Size));
