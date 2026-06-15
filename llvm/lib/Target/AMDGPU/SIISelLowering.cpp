@@ -947,17 +947,31 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     }
     if (Subtarget->hasPackedFP64Ops()) {
       setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG,
-                          ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE,
                           ISD::FCANONICALIZE},
                          MVT::v2f64, Legal);
       setOperationAction(
-          {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
-          MVT::v2f64, Custom);
-      setOperationAction(
-          {ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FMINNUM_IEEE,
-           ISD::FMAXNUM_IEEE, ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM,
-           ISD::FMAXIMUMNUM, ISD::FCANONICALIZE},
+          {ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FCANONICALIZE},
           {MVT::v4f64, MVT::v8f64, MVT::v16f64, MVT::v32f64}, Custom);
+
+      if (Subtarget->hasIEEEMinimumMaximumInsts()) {
+        setOperationAction(
+            {ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+            MVT::v2f64, Legal);
+
+        setOperationAction(
+            {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+            {MVT::v4f64, MVT::v8f64, MVT::v16f64, MVT::v32f64}, Custom);
+      } else {
+        setOperationAction({ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE}, MVT::v2f64,
+                           Legal);
+        setOperationAction(
+            {ISD::FMAXNUM, ISD::FMINNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+            MVT::v2f64, Custom);
+        setOperationAction({ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE, ISD::FMINNUM,
+                            ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+                           {MVT::v4f64, MVT::v8f64, MVT::v16f64, MVT::v32f64},
+                           Custom);
+      }
     }
 
     if (Subtarget->hasPackedU64Ops()) {
@@ -8756,7 +8770,8 @@ SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
 
   if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16 ||
       VT == MVT::v32f16 || VT == MVT::v4bf16 || VT == MVT::v8bf16 ||
-      VT == MVT::v16bf16 || VT == MVT::v32bf16)
+      VT == MVT::v16bf16 || VT == MVT::v32bf16 || VT == MVT::v4f64 ||
+      VT == MVT::v8f64 || VT == MVT::v16f64 || VT == MVT::v32f64)
     return splitBinaryVectorOp(Op, DAG);
   return Op;
 }
@@ -8777,7 +8792,8 @@ SITargetLowering::lowerFMINIMUMNUM_FMAXIMUMNUM(SDValue Op,
 
   if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16 ||
       VT == MVT::v32f16 || VT == MVT::v4bf16 || VT == MVT::v8bf16 ||
-      VT == MVT::v16bf16 || VT == MVT::v32bf16)
+      VT == MVT::v16bf16 || VT == MVT::v32bf16 || VT == MVT::v4f64 ||
+      VT == MVT::v8f64 || VT == MVT::v16f64 || VT == MVT::v32f64)
     return splitBinaryVectorOp(Op, DAG);
   return Op;
 }
