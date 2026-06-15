@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// OpenMP clause emitter implementation. See CIRGenOpenMPClause.h.
+// OpenMP clause emitter implementation.
 //
 //===----------------------------------------------------------------------===//
 

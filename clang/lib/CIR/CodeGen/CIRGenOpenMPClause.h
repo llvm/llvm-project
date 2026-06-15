@@ -23,9 +23,7 @@ namespace clang::CIRGen {
 class CIRGenFunction;
 
 /// A type-only list of OpenMP clause AST node types.
-/// Note: The clause AST classes do not have a default constructor, so a
-/// std::tuple is not practical.
-template <typename... Clauses> struct OpenMPClauseList {};
+template <typename... Clauses> struct OpenMPNYIClauseList {};
 
 /// Emits OpenMP clauses for a directive, writing results into the
 /// auto-generated ClauseOps from the OMP dialect.
@@ -50,10 +48,11 @@ public:
                llvm::SmallVectorImpl<const VarDecl *> *mapSyms = nullptr) const;
 
   /// Verify the clauses of a directive to make sure all legal cases are either
-  /// implemented or give a NYI error. If the clause is neither, then
-  /// an unknown clause error will be emitted.
+  /// implemented or give a NYI error. The \p SupportedClauses and \p
+  /// NYIClauses type lists must be disjoint and cover all clauses eligible for
+  /// the directive being processed.
   template <typename... SupportedClauses, typename... NYIClauses>
-  void emitNYI(OpenMPClauseList<NYIClauses...> nyi,
+  void emitNYI(OpenMPNYIClauseList<NYIClauses...> nyi,
                llvm::omp::Directive directive) const;
 
 private:
@@ -63,7 +62,7 @@ private:
 };
 
 template <typename... SupportedClauses, typename... NYIClauses>
-void OpenMPClauseEmitter::emitNYI(OpenMPClauseList<NYIClauses...>,
+void OpenMPClauseEmitter::emitNYI(OpenMPNYIClauseList<NYIClauses...>,
                                   llvm::omp::Directive directive) const {
   static_assert(
       (!isAnyOf<NYIClauses, SupportedClauses...> && ...),
@@ -78,7 +77,7 @@ void OpenMPClauseEmitter::emitNYI(OpenMPClauseList<NYIClauses...>,
               .str();
       cgm.errorNYI(c->getBeginLoc(), msg);
     } else if (!(isa<SupportedClauses>(c) || ...)) {
-      // Unknown/illegal clause encountered
+      // Unknown/illegal clause encountered.
       llvm_unreachable("unexpected OpenMP clause");
     }
   }

@@ -40,7 +40,7 @@ CIRGenFunction::emitOMPParallelDirective(const OMPParallelDirective &s) {
   OpenMPClauseEmitter ce(*this, getCIRGenModule(), builder, begin, s.clauses());
   ce.emitProcBind(clauseOps);
   ce.emitNYI</*supported=*/OMPProcBindClause>(
-      /*nyi=*/OpenMPClauseList<
+      /*nyi=*/OpenMPNYIClauseList<
           OMPAllocateClause, OMPCopyinClause, OMPDefaultClause,
           OMPFirstprivateClause, OMPIfClause, OMPNumThreadsClause,
           OMPPrivateClause, OMPReductionClause, OMPSharedClause>{},
@@ -299,7 +299,7 @@ CIRGenFunction::emitOMPTargetDirective(const OMPTargetDirective &s) {
   OpenMPClauseEmitter ce(*this, getCIRGenModule(), builder, begin, s.clauses());
   ce.emitMap(clauseOps, &mapSyms);
   ce.emitNYI</*supported=*/OMPMapClause>(
-      /*nyi=*/OpenMPClauseList<
+      /*nyi=*/OpenMPNYIClauseList<
           OMPAllocateClause, OMPDefaultClause, OMPDefaultmapClause,
           OMPDependClause, OMPDeviceClause, OMPFirstprivateClause,
           OMPHasDeviceAddrClause, OMPIfClause, OMPInReductionClause,
