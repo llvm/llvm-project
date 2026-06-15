@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype=obj -triple x86_64 %s -o - --x86-pad-max-prefix-size=5 \
+# RUN: llvm-mc -filetype=obj -triple x86_64 %s --x86-pad-max-prefix-size=5 \
 # RUN:   | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
 
   .text

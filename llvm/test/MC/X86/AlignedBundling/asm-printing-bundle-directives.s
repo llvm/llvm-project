@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype=asm -triple x86_64 %s -o - 2>&1 | FileCheck %s
+# RUN: llvm-mc -filetype=asm -triple x86_64 %s | FileCheck %s
 
 ## Just a simple test for the assembly emitter - making sure it emits back the
 ## bundling directives.

@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype=obj -triple x86_64 --mattr=+fast-15bytenop %s -o - \
+# RUN: llvm-mc -filetype=obj -triple x86_64 --mattr=+fast-15bytenop %s \
 # RUN:   | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
 
 ## Test that long nops are generated for padding where possible while each respects the bundle align boundary.

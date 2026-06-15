@@ -499,18 +499,15 @@ void X86AsmBackend::emitInstructionBeginBundle(MCObjectStreamer &OS) {
 /// fragment and start a new empty fragment.
 void X86AsmBackend::emitInstructionEndBundle(MCObjectStreamer &OS) {
   assert(Asm->isBundlingEnabled());
-
   MCFragment *CF = OS.getCurrentFragment();
 
-  if (OS.getCurrentSectionOnly()->isBundleLocked()) {
-    // We're still inside the lock, do not close the current fragment with BA.
+  // We're still inside the lock, do not close the current fragment with BA.
+  if (OS.getCurrentSectionOnly()->isBundleLocked())
     return;
-  }
   assert(PendingBA && "MCBoundaryAlignFragment is expected for every "
                       "instruction if it is not bundle-locked");
 
   PendingBA = nullptr;
-
   CF->getParent()->ensureMinAlignment(Align(Asm->getBundleAlignSize()));
 }
 
@@ -1024,9 +1021,7 @@ bool X86AsmBackend::optimizeBundleNops(const MCAssembler &Asm) const {
       continue;
 
     SmallVector<MCFragment *, 4> Bundle;
-    for (MCSection::iterator I = Sec.begin(), IE = Sec.end(); I != IE; ++I) {
-      MCFragment &F = *I;
-
+    for (MCFragment &F : Sec) {
       if (F.getKind() == llvm::MCFragment::FT_BoundaryAlign) {
         unsigned RemainingSize = Asm.computeFragmentSize(F) - F.getFixedSize();
         if (RemainingSize > 0) {
