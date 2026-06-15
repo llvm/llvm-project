@@ -2785,6 +2785,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                        ISD::FMINNUM,
                        ISD::FMAXNUM,
                        ISD::SUB,
+                       ISD::ATOMIC_LOAD,
                        ISD::LOAD,
                        ISD::LRINT,
                        ISD::LLRINT,
@@ -33097,13 +33098,6 @@ X86TargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   }
 }
 
-TargetLowering::AtomicExpansionKind
-X86TargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
-  if (LI->getType()->getScalarType()->isFloatingPointTy())
-    return AtomicExpansionKind::CastToInteger;
-  return AtomicExpansionKind::None;
-}
-
 LoadInst *
 X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   unsigned NativeWidth = Subtarget.is64Bit() ? 64 : 32;
@@ -54242,6 +54236,29 @@ static SDValue combineConstantPoolLoads(SDNode *N, const SDLoc &dl,
   return SDValue();
 }
 
+static SDValue combineAtomicLoad(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI) {
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  auto *AN = cast<AtomicSDNode>(N);
+  EVT VT = AN->getValueType(0);
+  if (!VT.getScalarType().isFloatingPoint())
+    return SDValue();
+
+  unsigned BitWidth = VT.getStoreSizeInBits();
+  if (BitWidth != VT.getSizeInBits())
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), BitWidth);
+  SDValue IntLoad = DAG.getAtomic(
+      ISD::ATOMIC_LOAD, DL, IntVT, DAG.getVTList(IntVT, MVT::Other),
+      {AN->getChain(), AN->getBasePtr()}, AN->getMemOperand());
+  SDValue Cast = DAG.getBitcast(VT, IntLoad);
+  return DAG.getMergeValues({Cast, IntLoad.getValue(1)}, DL);
+}
+
 static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
                            TargetLowering::DAGCombinerInfo &DCI,
                            const X86Subtarget &Subtarget) {
@@ -56508,32 +56525,49 @@ static SDValue combineXorWithGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
                      DAG.getTargetConstant(NewImm, DL, MVT::i8));
 }
 
-// Fold: vgf2p8affineqb(x, m1, i1) ^ vgf2p8affineqb(x, m2, i2)
-//   =>  vgf2p8affineqb(x, m1 ^ m2, i1 ^ i2)
-// The matrix in vgf2p8affineqb determines which bits of the input are XORed
-// together. XORing two affine transformations of the same input can be folded
-// by XORing both their matrices and immediates together.
+// Given that vgf2p8affineqb performs a XOR permutation, two affines that share
+// a operand can be reassociated through a standalone XOR.
 static SDValue combineXorWithTwoGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
                                               SelectionDAG &DAG, EVT VT) {
   using namespace SDPatternMatch;
 
-  SDValue X0, Y0, Y1;
+  SDValue X0, X1, M0, M1;
   APInt Imm0, Imm1;
   // Use sd_match for structure matching - m_Xor handles commutation
-  // Match: GF2P8AFFINEQB(x, m1, i1) ^ GF2P8AFFINEQB(x, m2, i2)
-  if (!sd_match(
-          N, m_Xor(m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(X0),
-                                        m_Value(Y0), m_ConstInt(Imm0))),
-                   m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Deferred(X0),
-                                        m_Value(Y1), m_ConstInt(Imm1))))))
+  if (!sd_match(N,
+                m_Xor(m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(X0),
+                                           m_Value(M0), m_ConstInt(Imm0))),
+                      m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(X1),
+                                           m_Value(M1), m_ConstInt(Imm1))))))
     return SDValue();
 
   assert((VT == MVT::v16i8 || VT == MVT::v32i8 || VT == MVT::v64i8) &&
          "Unsupported GFNI type");
 
+  // Fold: GF2P8AFFINEQB(x0, m, i1) ^ GF2P8AFFINEQB(x1, m, i2)
+  //   =>  GF2P8AFFINEQB(x0 ^ x1, m, i1 ^ i2)
+  // This instruction performs an XOR permutation of the input, which is
+  // associative. Therefore XORing before permuting is equivalent.
+  if (M0 == M1) {
+    uint64_t NewImm = Imm0.getZExtValue() ^ Imm1.getZExtValue();
+
+    SDValue NewSrc = DAG.getNode(ISD::XOR, DL, VT, X0, X1);
+
+    return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, NewSrc, M0,
+                       DAG.getTargetConstant(NewImm, DL, MVT::i8));
+  }
+
+  // Fold: vgf2p8affineqb(x, m0, i1) ^ vgf2p8affineqb(x, m1, i2)
+  //   =>  vgf2p8affineqb(x, m0 ^ m1, i1 ^ i2)
+  // The matrix in vgf2p8affineqb determines which bits of the input are XORed
+  // together. XORing two affine transformations of the same input can be folded
+  // by XORing both their matrices and immediates together.
+  if (X0 != X1)
+    return SDValue();
+
   uint64_t NewImm = Imm0.getZExtValue() ^ Imm1.getZExtValue();
 
-  SDValue NewMatrix = DAG.getNode(ISD::XOR, DL, VT, Y0, Y1);
+  SDValue NewMatrix = DAG.getNode(ISD::XOR, DL, VT, M0, M1);
 
   return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, X0, NewMatrix,
                      DAG.getTargetConstant(NewImm, DL, MVT::i8));
@@ -63104,6 +63138,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::AVGCEILU:
   case ISD::AVGFLOORS:
   case ISD::AVGFLOORU:      return combineAVG(N, DAG, DCI, Subtarget);
+  case ISD::ATOMIC_LOAD:    return combineAtomicLoad(N, DAG, DCI);
   case ISD::LOAD:           return combineLoad(N, DAG, DCI, Subtarget);
   case ISD::MLOAD:          return combineMaskedLoad(N, DAG, DCI, Subtarget);
   case ISD::STORE:          return combineStore(N, DAG, DCI, Subtarget);

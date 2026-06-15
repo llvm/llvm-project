@@ -1478,6 +1478,23 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
       PredPHI->replaceAllUsesWith(Op);
   }
 
+  // Drop the mask of a predicated store masked by the header mask (which is
+  // guaranteed to be true at least for the first lane) and both the stored
+  // value and the address are uniform across VF and UF.
+  if (auto *RepR = dyn_cast<VPReplicateRecipe>(Def);
+      RepR && RepR->isPredicated() && RepR->getOpcode() == Instruction::Store &&
+      all_of(RepR->operandsWithoutMask(), vputils::isUniformAcrossVFsAndUFs) &&
+      vputils::isHeaderMask(RepR->getMask(), *Plan)) {
+    auto *Unmasked = new VPReplicateRecipe(
+        RepR->getUnderlyingInstr(), RepR->operandsWithoutMask(),
+        RepR->isSingleScalar(), /*Mask=*/nullptr, *RepR, *RepR,
+        RepR->getDebugLoc());
+    Unmasked->insertBefore(RepR);
+    RepR->replaceAllUsesWith(Unmasked);
+    RepR->eraseFromParent();
+    return;
+  }
+
   VPBuilder Builder(Def);
 
   // Avoid replacing VPInstructions with underlying values with new
@@ -2718,7 +2735,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   }
 }
 
-void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
+bool VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
   std::optional<VPDominatorTree> VPDT;
   if (OnlyLatches)
     VPDT.emplace(Plan);
@@ -2727,6 +2744,7 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
   // ones after constant branch removal.
   SmallVector<VPBlockBase *> AllBlocks(vp_depth_first_shallow(Plan.getEntry()));
 
+  bool SimplifiedPhi = false;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(AllBlocks)) {
     VPValue *Cond;
     // Skip blocks that are not terminated by BranchOnCond.
@@ -2752,8 +2770,10 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
            "There must be a single edge between VPBB and its successor");
     // Values coming from VPBB into phi recipes of RemovedSucc are removed from
     // these recipes.
-    for (VPRecipeBase &R : RemovedSucc->phis())
+    auto Phis = RemovedSucc->phis();
+    for (VPRecipeBase &R : Phis)
       cast<VPPhiAccessors>(&R)->removeIncomingValueFor(VPBB);
+    SimplifiedPhi |= !std::empty(Phis);
 
     // Disconnect blocks and remove the terminator.
     VPBlockUtils::disconnectBlocks(VPBB, RemovedSucc);
@@ -2786,6 +2806,7 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
       }
     }
   }
+  return SimplifiedPhi;
 }
 
 void VPlanTransforms::optimize(VPlan &Plan) {
