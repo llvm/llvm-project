@@ -2329,7 +2329,8 @@ OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
 }
 
 static LogicalResult verifyTileIsBroadcast(tosa::TileOp tileOp) {
-  const auto inputType = dyn_cast<RankedTensorType>(tileOp.getInput1().getType());
+  const auto inputType =
+      dyn_cast<RankedTensorType>(tileOp.getInput1().getType());
   const auto outputType = dyn_cast<RankedTensorType>(tileOp.getType());
   if (!inputType || !outputType)
     return failure();
