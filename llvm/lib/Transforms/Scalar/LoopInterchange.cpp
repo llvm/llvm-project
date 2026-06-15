@@ -1517,6 +1517,24 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
       if (isa<LoadInst, StoreInst, PseudoProbeInst>(&I))
         continue;
 
+      // We currently do not support interchanging loops with indirectbr
+      // instructions. This is because indirectbr can prevent inserting new loop
+      // preheaders, which is required in the transformation phase.
+      //
+      // TODO: This is conservative, we may be able to support some cases, e.g.,
+      // when the indirectbr is in the inner loop body, not in the outer/inner
+      // loop header.
+      if (isa<IndirectBrInst>(&I)) {
+        LLVM_DEBUG(dbgs() << "Loops contain indirect branch instructions.\n");
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "IndirectBranch",
+                                          I.getDebugLoc(), I.getParent())
+                 << "Cannot interchange loops due to indirect branch "
+                    "instruction.";
+        });
+        return false;
+      }
+
       // We cannot ignore potential memory reads, e.g., loads inside the called
       // function.
       if (!I.mayHaveSideEffects() && !I.mayReadFromMemory())
