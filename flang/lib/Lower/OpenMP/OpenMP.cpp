@@ -4662,21 +4662,6 @@ struct MetadirectiveCandidate {
 };
 } // namespace
 
-static void appendConstructTraits(
-    mlir::Operation *op,
-    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
-  if (mlir::isa<mlir::omp::WsloopOp>(op))
-    constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
-  if (mlir::isa<mlir::omp::ParallelOp>(op))
-    constructTraits.push_back(
-        llvm::omp::TraitProperty::construct_parallel_parallel);
-  if (mlir::isa<mlir::omp::TeamsOp>(op))
-    constructTraits.push_back(llvm::omp::TraitProperty::construct_teams_teams);
-  if (mlir::isa<mlir::omp::TargetOp>(op))
-    constructTraits.push_back(
-        llvm::omp::TraitProperty::construct_target_target);
-}
-
 static void genMetadirective(lower::AbstractConverter &converter,
                              lower::SymMap &symTable,
                              semantics::SemanticsContext &semaCtx,
@@ -4685,15 +4670,8 @@ static void genMetadirective(lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
-  // Collect enclosing OpenMP operations so variants chosen by an outer
-  // metadirective are part of this metadirective's context. For example, an
-  // inner metadirective inside `target` and an outer-selected `parallel` must
-  // be able to match construct={target, parallel}.
-  for (mlir::Operation *op = builder.getInsertionBlock()->getParentOp(); op;
-       op = op->getParentOp())
-    appendConstructTraits(op, constructTraits);
-
-  std::reverse(constructTraits.begin(), constructTraits.end());
+  collectEnclosingConstructTraits(builder.getInsertionBlock()->getParentOp(),
+                                  constructTraits);
   FlangOMPContext ompCtx(builder.getModule(), constructTraits);
 
   llvm::SmallVector<MetadirectiveCandidate, 4> candidates;
