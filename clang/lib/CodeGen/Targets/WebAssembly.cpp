@@ -140,8 +140,23 @@ public:
                                                 ->getPointeeType()
                                                 ->getAs<FunctionProtoType>();
 
-    // This should only work for different number of arguments
-    if (DstProtoType->getNumParams() <= SrcProtoType->getNumParams())
+    // Check parameter counts: source must have same or fewer params than destination
+    unsigned SrcParams = SrcProtoType->getNumParams();
+    unsigned DstParams = DstProtoType->getNumParams();
+
+    if (SrcParams > DstParams)
+      return nullptr;  // Can't remove parameters
+
+    // Check return types: we can discard a return value but cannot invent one
+    QualType SrcRetTy = SrcProtoType->getReturnType();
+    QualType DstRetTy = DstProtoType->getReturnType();
+    bool sameReturnType = CGM.getContext().hasSameType(SrcRetTy, DstRetTy);
+
+    if (!DstRetTy->isVoidType() && !sameReturnType)
+      return nullptr;  // Can't invent return values
+
+    // Reject if signatures are identical (no adaptation needed)
+    if (SrcParams == DstParams && sameReturnType)
       return nullptr;
 
     // Get the llvm function types
@@ -193,7 +208,7 @@ public:
     } else {
       llvm::Value *Ret = Call;
       if (Ret->getType() != ThunkRetTy)
-        Ret = Builder.CreateBitCast(Ret, ThunkRetTy);
+        Ret = Builder.CreateBitOrPointerCast(Ret, ThunkRetTy);
       Builder.CreateRet(Ret);
     }
     LLVM_DEBUG(llvm::dbgs() << "getOrCreateWasmFunctionPointerThunk:"
