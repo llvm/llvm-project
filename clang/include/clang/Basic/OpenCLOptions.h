@@ -27,12 +27,13 @@ namespace {
 // a mask to indicate in which OpenCL version(s) extension is a core or
 // optional core feature.
 enum OpenCLVersionID : unsigned int {
-#define OPENCL_VERSION(VersionCode, Enumerator, BitValue) Enumerator = BitValue,
-#include "clang/Basic/OpenCLVersions.def"
-  OCL_C_ALL = 0
-#define OPENCL_VERSION(VersionCode, Enumerator, BitValue) | (Enumerator)
-#include "clang/Basic/OpenCLVersions.def"
-  ,
+  OCL_C_10 = 0x1,
+  OCL_C_11 = 0x2,
+  OCL_C_12 = 0x4,
+  OCL_C_20 = 0x8,
+  OCL_C_30 = 0x10,
+  OCL_C_31 = 0x20,
+  OCL_C_ALL = 0x3f,
   OCL_C_11P = OCL_C_ALL ^ OCL_C_10,              // OpenCL C 1.1+
   OCL_C_12P = OCL_C_ALL ^ (OCL_C_10 | OCL_C_11), // OpenCL C 1.2+
 };
@@ -41,10 +42,18 @@ static inline OpenCLVersionID encodeOpenCLVersion(unsigned OpenCLVersion) {
   switch (OpenCLVersion) {
   default:
     llvm_unreachable("Unknown OpenCL version code");
-#define OPENCL_VERSION(VersionCode, Enumerator, BitValue)                      \
-  case VersionCode:                                                            \
-    return Enumerator;
-#include "clang/Basic/OpenCLVersions.def"
+  case 100:
+    return OCL_C_10;
+  case 110:
+    return OCL_C_11;
+  case 120:
+    return OCL_C_12;
+  case 200:
+    return OCL_C_20;
+  case 300:
+    return OCL_C_30;
+  case 310:
+    return OCL_C_31;
   }
 }
 
