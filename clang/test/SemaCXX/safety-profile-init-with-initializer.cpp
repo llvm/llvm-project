@@ -44,6 +44,17 @@ void test_class_synthesized_init() {
   (void)x; (void)y;
 }
 
+struct MarkedMemberAgg { int x [[uninitialized]]; };
+
+void test_marked_member_agg() {
+  // R4 stays factual: MarkedMemberAgg's default-initialization is a genuine
+  // no-op that leaves x indeterminate, so marking the variable too is
+  // consistent rather than a contradiction. (Honoring the member marker here
+  // would wrongly fire uninit_with_initializer.)
+  MarkedMemberAgg a [[uninitialized]];
+  (void)a;
+}
+
 struct NoDefaultCtor { NoDefaultCtor() = delete; }; // expected-note {{'NoDefaultCtor' has been explicitly marked deleted here}} \
                                                     // no-profiles-note {{'NoDefaultCtor' has been explicitly marked deleted here}}
 

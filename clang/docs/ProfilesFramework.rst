@@ -703,9 +703,13 @@ constructor is trusted; static / thread storage duration is excluded
   with no initializer (so braced or value initialization such as
   ``S s = {1};`` and ``S s{};`` is unaffected -- omitted aggregate members
   are value-initialized).
-- The aggregate case uses ``Sema::defaultInitLeavesScalarIndeterminate``,
-  which recurses through bases and members, trusts user-provided default
-  constructors, and excludes unions.
+- The aggregate case uses ``Sema::defaultInitLeavesScalarIndeterminate``
+  with ``HonorUninitMarkers=true``, which recurses through bases and members,
+  trusts user-provided default constructors, excludes unions, and skips data
+  members marked ``[[uninitialized]]`` (acknowledged uninitialized, paper
+  §6.2). So a type whose only indeterminate scalars are all marked is trusted
+  (e.g. ``struct A { int x [[uninitialized]]; }; A a;`` is accepted), while a
+  mixed type still fires for its unmarked scalars.
 
 R3. ``static_runtime_init`` -- pattern 1
 .........................................
@@ -738,6 +742,11 @@ contradiction (the marker means "no initialization here").
   that actually runs (e.g. ``WithCtor x [[uninitialized]];``), but *not* a
   no-op trivial/aggregate default-initialization, where the marker is
   consistent with the object being left uninitialized.
+- Unlike R2/R5, this "no-op?" test calls
+  ``defaultInitLeavesScalarIndeterminate`` with ``HonorUninitMarkers=false``
+  (the *factual* answer): a type whose members are themselves marked still
+  default-initializes to a no-op, so the variable marker stays consistent and
+  the rule must not fire (e.g. ``A a [[uninitialized]];`` for the ``A`` above).
 
 R5. ``ctor_uninit_member`` -- pattern 4
 .......................................
@@ -745,8 +754,11 @@ R5. ``ctor_uninit_member`` -- pattern 4
 A user-provided constructor must initialize every non-static data member
 via its member-initializer list or an NSDMI, unless the member is marked
 ``[[uninitialized]]`` (paper §6.1).  A plain assignment in the constructor
-body does not count.  A member whose own default-initialization leaves a
-scalar subobject indeterminate (a nested aggregate) is flagged as well.
+body does not count.  A member whose own default-initialization leaves an
+*unacknowledged* scalar subobject indeterminate (a nested aggregate) is
+flagged as well; a member whose type's indeterminate scalars are all
+themselves marked ``[[uninitialized]]`` is trusted (the same
+``HonorUninitMarkers`` walk as R2, paper §6.2).
 
 - Diagnostic: ``err_init_ctor_uninit_member`` (with a
   ``note_init_uninit_member_here`` note at the member).
