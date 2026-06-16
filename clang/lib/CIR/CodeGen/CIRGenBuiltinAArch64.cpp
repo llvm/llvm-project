@@ -837,15 +837,15 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vcvtx_f32_v:
   case NEON::BI__builtin_neon_vext_v:
   case NEON::BI__builtin_neon_vextq_v:
-  case NEON::BI__builtin_neon_vfma_v:
     cgf.cgm.errorNYI(expr->getSourceRange(),
                      std::string("unimplemented AArch64 builtin call: ") +
                          ctx.BuiltinInfo.getName(builtinID));
     return mlir::Value{};
+  case NEON::BI__builtin_neon_vfma_v:
   case NEON::BI__builtin_neon_vfmaq_v: {
-    // NEON intrinsic: vfmaq(accumulator, multiplicand1, multiplicand2)
+    // NEON intrinsic: vfma(q)(accumulator, multiplicand1, multiplicand2)
     // LLVM intrinsic: fma(multiplicand1, multiplicand2, accumulator)
-    // Reorder arguments to match LLVM fma signature
+    // Reorder arguments to match LLVM fma signature.
     mlir::Value op0 = cgf.getBuilder().createBitcast(ops[0], ty);
     mlir::Value op1 = cgf.getBuilder().createBitcast(ops[1], ty);
     mlir::Value op2 = cgf.getBuilder().createBitcast(ops[2], ty);

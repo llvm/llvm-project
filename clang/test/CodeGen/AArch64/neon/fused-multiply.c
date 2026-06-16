@@ -29,6 +29,28 @@
 // 2.1.1.2.5 Fused multiply-accumulate, vector quad forms
 //===------------------------------------------------------===//
 
+// LLVM-LABEL: @test_vfma_f32(
+// CIR-LABEL: @vfma_f32(
+float32x2_t test_vfma_f32(float32x2_t a, float32x2_t b, float32x2_t c) {
+// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>) -> !cir.vector<2 x !cir.float>
+
+// LLVM-SAME: <2 x float> {{.*}} [[A:%.*]], <2 x float> {{.*}} [[B:%.*]], <2 x float> {{.*}} [[C:%.*]]) {{.*}} {
+// LLVM:      [[FMA:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[B_CAST:%.*]], <2 x float> [[C_CAST:%.*]], <2 x float> [[A_CAST:%.*]])
+// LLVM:      ret <2 x float> [[FMA]]
+  return vfma_f32(a, b, c);
+}
+
+// LLVM-LABEL: @test_vfma_f64(
+// CIR-LABEL: @vfma_f64(
+float64x1_t test_vfma_f64(float64x1_t a, float64x1_t b, float64x1_t c) {
+// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>) -> !cir.vector<1 x !cir.double>
+
+// LLVM-SAME: <1 x double> {{.*}} [[A:%.*]], <1 x double> {{.*}} [[B:%.*]], <1 x double> {{.*}} [[C:%.*]]) {{.*}} {
+// LLVM:      [[FMA:%.*]] = call <1 x double> @llvm.fma.v1f64(<1 x double> [[B_CAST:%.*]], <1 x double> [[C_CAST:%.*]], <1 x double> [[A_CAST:%.*]])
+// LLVM:      ret <1 x double> [[FMA]]
+  return vfma_f64(a, b, c);
+}
+
 // LLVM-LABEL: @test_vfmaq_f32(
 // CIR-LABEL: @vfmaq_f32(
 float32x4_t test_vfmaq_f32(float32x4_t a, float32x4_t b, float32x4_t c) {

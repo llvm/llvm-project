@@ -27,6 +27,17 @@
 // 2.6.1.9.3 Fused multiply-accumulate, vector quad forms
 //===------------------------------------------------------===//
 
+// LLVM-LABEL: @test_vfma_f16(
+// CIR-LABEL: @vfma_f16(
+float16x4_t test_vfma_f16(float16x4_t a, float16x4_t b, float16x4_t c) {
+// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>, !cir.vector<4 x !cir.f16>) -> !cir.vector<4 x !cir.f16>
+
+// LLVM-SAME: <4 x half> {{.*}} [[A:%.*]], <4 x half> {{.*}} [[B:%.*]], <4 x half> {{.*}} [[C:%.*]]) {{.*}} {
+// LLVM:      [[FMA:%.*]] = call <4 x half> @llvm.fma.v4f16(<4 x half> [[B_CAST:%.*]], <4 x half> [[C_CAST:%.*]], <4 x half> [[A_CAST:%.*]])
+// LLVM:      ret <4 x half> [[FMA]]
+  return vfma_f16(a, b, c);
+}
+
 // LLVM-LABEL: @test_vfmaq_f16(
 // CIR-LABEL: @vfmaq_f16(
 float16x8_t test_vfmaq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
