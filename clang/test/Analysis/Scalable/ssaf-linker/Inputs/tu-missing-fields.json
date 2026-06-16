@@ -2,5 +2,6 @@
   "tu_namespace": {
     "kind": "CompilationUnit",
     "name": "missing-fields.cpp"
-  }
+  },
+  "target_triple": "arm64-apple-macosx"
 }

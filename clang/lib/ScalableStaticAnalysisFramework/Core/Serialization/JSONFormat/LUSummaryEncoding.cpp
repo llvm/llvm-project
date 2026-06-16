@@ -9,6 +9,7 @@
 #include "JSONFormatImpl.h"
 
 #include "clang/ScalableStaticAnalysisFramework/Core/EntityLinker/LUSummaryEncoding.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <set>
 
@@ -38,6 +39,25 @@ JSONFormat::readLUSummaryEncoding(llvm::StringRef Path) {
 
   const Object &RootObject = *RootObjectPtr;
 
+  auto OptTargetTriple = RootObject.getString("target_triple");
+  if (!OptTargetTriple) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::FailedToReadObjectAtField,
+                                "TargetTriple", "target_triple", "string")
+        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
+        .build();
+  }
+
+  if (auto Err = validateNormalizedTargetTriple(*OptTargetTriple)) {
+    return ErrorBuilder::wrap(std::move(Err))
+        .context(ErrorMessages::ReadingFromField, "TargetTriple",
+                 "target_triple")
+        .context(ErrorMessages::ReadingFromFile, "LUSummary", Path)
+        .build();
+  }
+
+  llvm::Triple T(*OptTargetTriple);
+
   const Array *LUNamespaceArray = RootObject.getArray("lu_namespace");
   if (!LUNamespaceArray) {
     return ErrorBuilder::create(std::errc::invalid_argument,
@@ -56,7 +76,7 @@ JSONFormat::readLUSummaryEncoding(llvm::StringRef Path) {
         .build();
   }
 
-  LUSummaryEncoding Encoding(std::move(*ExpectedLUNamespace));
+  LUSummaryEncoding Encoding(std::move(T), std::move(*ExpectedLUNamespace));
 
   {
     const Array *IdTableArray = RootObject.getArray("id_table");
@@ -139,6 +159,9 @@ llvm::Error
 JSONFormat::writeLUSummaryEncoding(const LUSummaryEncoding &SummaryEncoding,
                                    llvm::StringRef Path) {
   Object RootObject;
+
+  RootObject["target_triple"] =
+      llvm::Triple::normalize(getTargetTriple(SummaryEncoding).str());
 
   RootObject["lu_namespace"] =
       nestedBuildNamespaceToJSON(getLUNamespace(SummaryEncoding));
