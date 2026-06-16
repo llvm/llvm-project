@@ -17,7 +17,8 @@ define <4 x float> @test_x86_vcvtph2ps_128(<8 x i16> %a0) #0 {
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> [[TMP1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[A0]], <8 x i16> [[A0]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i16> [[TMP2]] to <4 x half>
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i16> [[_MSPROP]] to <4 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i16> [[_MSPROP]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <4 x i1> [[TMP5]] to <4 x i32>
 ; CHECK-NEXT:    [[CVTPH2PS:%.*]] = fpext <4 x half> [[TMP3]] to <4 x float>
 ; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[CVTPH2PS]]
@@ -46,7 +47,8 @@ define <4 x float> @test_x86_vcvtph2ps_128_m(ptr nocapture %a) #0 {
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <8 x i16> [[_MSLD]], <8 x i16> [[_MSLD]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i16> [[LOAD]], <8 x i16> [[LOAD]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <4 x i16> [[TMP7]] to <4 x half>
-; CHECK-NEXT:    [[TMP9:%.*]] = zext <4 x i16> [[_MSPROP]] to <4 x i32>
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ne <4 x i16> [[_MSPROP]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i1> [[TMP10]] to <4 x i32>
 ; CHECK-NEXT:    [[CVTPH2PS:%.*]] = fpext <4 x half> [[TMP8]] to <4 x float>
 ; CHECK-NEXT:    store <4 x i32> [[TMP9]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[CVTPH2PS]]
@@ -62,7 +64,8 @@ define <8 x float> @test_x86_vcvtph2ps_256(<8 x i16> %a0) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i16> [[A0]] to <8 x half>
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i16> [[TMP1]] to <8 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <8 x i16> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <8 x i1> [[TMP4]] to <8 x i32>
 ; CHECK-NEXT:    [[CVTPH2PS:%.*]] = fpext <8 x half> [[TMP2]] to <8 x float>
 ; CHECK-NEXT:    store <8 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x float> [[CVTPH2PS]]
@@ -89,7 +92,8 @@ define <8 x float> @test_x86_vcvtph2ps_256_m(ptr nocapture %a) nounwind #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <8 x i16>, ptr [[TMP6]], align 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i16> [[LOAD]] to <8 x half>
-; CHECK-NEXT:    [[TMP8:%.*]] = zext <8 x i16> [[_MSLD]] to <8 x i32>
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne <8 x i16> [[_MSLD]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = sext <8 x i1> [[TMP9]] to <8 x i32>
 ; CHECK-NEXT:    [[CVTPH2PS:%.*]] = fpext <8 x half> [[TMP7]] to <8 x float>
 ; CHECK-NEXT:    store <8 x i32> [[TMP8]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x float> [[CVTPH2PS]]
@@ -124,7 +128,8 @@ define <4 x float> @test_x86_vcvtph2ps_128_scalar(ptr %ptr) #0 {
 ; CHECK-NEXT:    [[_MSPROP2:%.*]] = shufflevector <8 x i16> [[TMP7]], <8 x i16> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i16> [[BC]], <8 x i16> [[BC]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <4 x i16> [[TMP8]] to <4 x half>
-; CHECK-NEXT:    [[TMP10:%.*]] = zext <4 x i16> [[_MSPROP2]] to <4 x i32>
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne <4 x i16> [[_MSPROP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = sext <4 x i1> [[TMP11]] to <4 x i32>
 ; CHECK-NEXT:    [[CVTPH2PS:%.*]] = fpext <4 x half> [[TMP9]] to <4 x float>
 ; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[CVTPH2PS]]
@@ -160,7 +165,8 @@ define <4 x float> @test_x86_vcvtph2ps_128_scalar2(ptr %ptr) #0 {
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = shufflevector <8 x i16> [[TMP7]], <8 x i16> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <8 x i16> [[BC]], <8 x i16> [[BC]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <4 x i16> [[TMP8]] to <4 x half>
-; CHECK-NEXT:    [[TMP10:%.*]] = zext <4 x i16> [[_MSPROP1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne <4 x i16> [[_MSPROP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = sext <4 x i1> [[TMP11]] to <4 x i32>
 ; CHECK-NEXT:    [[CVTPH2PS:%.*]] = fpext <4 x half> [[TMP9]] to <4 x float>
 ; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[CVTPH2PS]]
@@ -173,3 +179,6 @@ define <4 x float> @test_x86_vcvtph2ps_128_scalar2(ptr %ptr) #0 {
 }
 
 attributes #0 = { sanitize_memory }
+;.
+; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
+;.
