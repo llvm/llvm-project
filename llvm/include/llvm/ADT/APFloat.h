@@ -22,6 +22,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/float128.h"
 #include <memory>
+#include <optional>
 
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
   do {                                                                         \
@@ -677,6 +678,8 @@ public:
 
   LLVM_ABI cmpResult compareAbsoluteValue(const IEEEFloat &) const;
 
+  LLVM_ABI APInt getNaNPayload() const;
+
 private:
   /// \name Simple Queries
   /// @{
@@ -922,6 +925,8 @@ public:
   LLVM_ABI bool isSmallestNormalized() const;
   LLVM_ABI bool isLargest() const;
   LLVM_ABI bool isInteger() const;
+
+  LLVM_ABI APInt getNaNPayload() const;
 
   LLVM_ABI void toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
                          unsigned FormatMaxPadding,
@@ -1422,7 +1427,7 @@ public:
   ///
   /// If a floating-point exception occurs during conversion, then no error is
   /// returned, and the exception is indicated via opStatus.
-  Expected<opStatus> convertFromString(StringRef, roundingMode);
+  LLVM_ABI Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(bitcastToAPInt());
   }
@@ -1552,6 +1557,14 @@ public:
 
   bool isSmallestNormalized() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(isSmallestNormalized());
+  }
+
+  /// If the value is a NaN value, return an integer containing the payload of
+  /// this value. This payload will include the quiet bit as part of the
+  /// returned integer.
+  APInt getNaNPayload() const {
+    assert(isNaN() && "Can only call this on a NaN value");
+    APFLOAT_DISPATCH_ON_SEMANTICS(getNaNPayload());
   }
 
   /// Return the FPClassTest which will return true for the value.
@@ -1747,6 +1760,12 @@ inline APFloat maximumnum(const APFloat &A, const APFloat &B) {
     return A.isNegative() ? B : A;
   return A < B ? B : A;
 }
+
+/// Implement IEEE 754-2019 exp functions
+LLVM_READONLY
+LLVM_ABI std::optional<APFloat>
+exp(const APFloat &X, RoundingMode RM = APFloat::rmNearestTiesToEven,
+    APFloat::opStatus *Status = nullptr);
 
 inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
   V.print(OS);

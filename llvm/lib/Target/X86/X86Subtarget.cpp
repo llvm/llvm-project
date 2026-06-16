@@ -241,7 +241,7 @@ bool X86Subtarget::isLegalToCallImmediateAddr() const {
   // FIXME: I386 PE/COFF supports PC relative calls using IMAGE_REL_I386_REL32
   // but WinCOFFObjectWriter::RecordRelocation cannot emit them.  Once it does,
   // the following check for Win32 should be removed.
-  if (Is64Bit || isTargetWin32())
+  if (Is64Bit || isTargetWin32() || isPositionIndependent())
     return false;
   return isTargetELF() || TM.getRelocationModel() == Reloc::Static;
 }
@@ -256,9 +256,6 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
 
   std::string FullFS = X86_MC::ParseX86Triple(TargetTriple);
   assert(!FullFS.empty() && "Failed to parse X86 triple");
-
-  if (TargetTriple.isOSWindows())
-    FullFS += ",-push2pop2,-ppx";
 
   if (!FS.empty())
     FullFS = (Twine(FullFS) + "," + FS).str();
@@ -286,6 +283,9 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   if (Is64Bit && !HasX86_64)
     reportFatalUsageError("64-bit code requested on a subtarget that doesn't "
                           "support it!");
+
+  if (HasEGPR && !hasSSE1() && isTargetWin64())
+    reportFatalUsageError("EGPR on Windows x64 requires SSE");
 
   // Stack alignment is 16 bytes on Darwin, Linux, kFreeBSD, Hurd and for all
   // 64-bit targets.  On Solaris (32-bit), stack alignment is 4 bytes

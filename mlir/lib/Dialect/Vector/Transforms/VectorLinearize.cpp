@@ -861,6 +861,68 @@ struct LinearizeVectorBroadcast final
   }
 };
 
+/// Linearize `vector.interleave` to operate on flattened 1D operands and
+/// result. The flattening is commutative here, the order of flatten and
+/// interleave ops does not matter, so this transform is valid for
+/// any ND shape.
+///
+/// Example:
+///   vector.interleave %a, %b : vector<4x1xT> -> vector<4x2xT>
+/// becomes:
+///   vector.interleave %a_flat, %b_flat : vector<4xT> -> vector<8xT>
+struct LinearizeVectorInterleave final
+    : public OpConversionPattern<vector::InterleaveOp> {
+  using Base::Base;
+  LinearizeVectorInterleave(const TypeConverter &typeConverter,
+                            MLIRContext *context, PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::InterleaveOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType flatResultTy =
+        getTypeConverter()->convertType<VectorType>(op.getResultVectorType());
+    if (!flatResultTy)
+      return rewriter.notifyMatchFailure(op, "failed to linearize result type");
+    rewriter.replaceOpWithNewOp<vector::InterleaveOp>(
+        op, flatResultTy, adaptor.getLhs(), adaptor.getRhs());
+    return success();
+  }
+};
+
+/// Linearize `vector.deinterleave` to operate on a flattened 1D source.
+/// The flattening is commutative here, the order of flatten and deinterleave
+/// ops does not matter, so this transform is valid for any ND shape.
+///
+/// Example:
+///   %even, %odd = vector.deinterleave %src : vector<4x2xT> -> vector<4x1xT>
+/// becomes:
+///   %even, %odd = vector.deinterleave %src_flat : vector<8xT> -> vector<4xT>
+/// This linearization only works if the innermost dimension is even.
+/// Consider vector<2x5xT>:
+/// [[0,1,2,3,4],
+///  [5,6,7,8,9]]
+/// Non-linearized deinterleave returns the odd part: [[1, 3], [6, 8]]
+/// Linearized deinterleave would the odd part: [1, 3, 5, 7, 9]
+struct LinearizeVectorDeinterleave final
+    : public OpConversionPattern<vector::DeinterleaveOp> {
+  using Base::Base;
+  LinearizeVectorDeinterleave(const TypeConverter &typeConverter,
+                              MLIRContext *context, PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::DeinterleaveOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (op.getSource().getType().getShape().back() % 2)
+      return failure();
+    auto newOp = vector::DeinterleaveOp::create(rewriter, op.getLoc(),
+                                                adaptor.getSource());
+    rewriter.replaceOp(op, newOp.getResults());
+    return success();
+  }
+};
+
 } // namespace
 
 /// This method defines the set of operations that are linearizable, and hence
@@ -952,7 +1014,8 @@ void mlir::vector::populateVectorLinearizeBasePatterns(
       .add<LinearizeConstantLike, LinearizeVectorizable, LinearizeVectorBitCast,
            LinearizeVectorCreateMask, LinearizeVectorLoad, LinearizeVectorStore,
            LinearizeVectorBroadcast, LinearizeVectorFromElements,
-           LinearizeVectorToElements>(typeConverter, patterns.getContext());
+           LinearizeVectorToElements, LinearizeVectorInterleave,
+           LinearizeVectorDeinterleave>(typeConverter, patterns.getContext());
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(

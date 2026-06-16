@@ -486,6 +486,23 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = builder.getVoidPtrTy();
       break;
 
+#define AMDGPU_OPAQUE_PTR_TYPE(Name, Id, SingletonId, Width, Align, AS)        \
+  case BuiltinType::Id: {                                                      \
+    if (BuiltinType::Id == BuiltinType::AMDGPUTexture) {                       \
+      resultType = cir::VectorType::get(builder.getSInt32Ty(), 8);             \
+    } else {                                                                   \
+      resultType = builder.getPointerTo(cgm.voidTy);                           \
+    }                                                                          \
+    break;                                                                     \
+  }
+#define AMDGPU_NAMED_BARRIER_TYPE(Name, Id, SingletonId, Width, Align, Scope)  \
+  case BuiltinType::Id:                                                        \
+    llvm_unreachable("NYI");
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
+  case BuiltinType::Id:                                                        \
+    llvm_unreachable("NYI");
+#include "clang/Basic/AMDGPUTypes.def"
+
     default:
       cgm.errorNYI(SourceLocation(), "processing of built-in type", type);
       resultType = cgm.sInt32Ty;
@@ -622,7 +639,13 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     uint64_t valueSize = astContext.getTypeSize(valueType);
     uint64_t atomicSize = astContext.getTypeSize(ty);
     if (valueSize != atomicSize) {
-      cgm.errorNYI("convertType: atomic type value size != atomic size");
+      assert(valueSize < atomicSize);
+      auto paddingArray =
+          cir::ArrayType::get(cgm.sInt8Ty, (atomicSize - valueSize) / 8);
+      mlir::Type elements[] = {resultType, paddingArray};
+      resultType = cir::StructType::get(&getMLIRContext(), /*members=*/elements,
+                                        /*packed=*/false, /*padded=*/false,
+                                        /*is_class=*/false);
     }
 
     break;

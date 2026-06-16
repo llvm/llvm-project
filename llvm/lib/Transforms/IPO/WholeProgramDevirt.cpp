@@ -383,14 +383,6 @@ struct VTableSlot {
 } // end anonymous namespace
 
 template <> struct llvm::DenseMapInfo<VTableSlot> {
-  static VTableSlot getEmptyKey() {
-    return {DenseMapInfo<Metadata *>::getEmptyKey(),
-            DenseMapInfo<uint64_t>::getEmptyKey()};
-  }
-  static VTableSlot getTombstoneKey() {
-    return {DenseMapInfo<Metadata *>::getTombstoneKey(),
-            DenseMapInfo<uint64_t>::getTombstoneKey()};
-  }
   static unsigned getHashValue(const VTableSlot &I) {
     return DenseMapInfo<Metadata *>::getHashValue(I.TypeID) ^
            DenseMapInfo<uint64_t>::getHashValue(I.ByteOffset);
@@ -402,14 +394,6 @@ template <> struct llvm::DenseMapInfo<VTableSlot> {
 };
 
 template <> struct llvm::DenseMapInfo<VTableSlotSummary> {
-  static VTableSlotSummary getEmptyKey() {
-    return {DenseMapInfo<StringRef>::getEmptyKey(),
-            DenseMapInfo<uint64_t>::getEmptyKey()};
-  }
-  static VTableSlotSummary getTombstoneKey() {
-    return {DenseMapInfo<StringRef>::getTombstoneKey(),
-            DenseMapInfo<uint64_t>::getTombstoneKey()};
-  }
   static unsigned getHashValue(const VTableSlotSummary &I) {
     return DenseMapInfo<StringRef>::getHashValue(I.TypeID) ^
            DenseMapInfo<uint64_t>::getHashValue(I.ByteOffset);

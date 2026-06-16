@@ -155,7 +155,8 @@ public:
           dependencies::DependencyScanningServiceOptions Opts;
           Opts.MakeVFS = [&] { return TFS.view(std::nullopt); };
           Opts.Mode = dependencies::ScanningMode::CanonicalPreprocessing;
-          Opts.Format = dependencies::ScanningOutputFormat::P1689;
+          Opts.EmitWarnings = false;
+          Opts.ReportAbsolutePaths = false;
           return Opts;
         }()) {}
 
@@ -246,7 +247,8 @@ ModuleDependencyScanner::scan(PathRef FilePath,
     auto [Iter, Inserted] = ModuleNameToSource.try_emplace(
         ScanningResult->Provides->ModuleName, FilePath);
 
-    if (!Inserted && Iter->second != FilePath) {
+    if (!Inserted &&
+        !pathEqual(normalizePath(Iter->second), normalizePath(FilePath))) {
       elog("Detected multiple source files ({0}, {1}) declaring the same "
            "module: '{2}'. "
            "Now clangd may find the wrong source in such case.",

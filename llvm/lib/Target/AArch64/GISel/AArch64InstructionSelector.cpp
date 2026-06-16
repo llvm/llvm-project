@@ -1053,7 +1053,11 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
 
     const TypeSize SrcSize = TRI.getRegSizeInBits(*SrcRC);
     const TypeSize DstSize = TRI.getRegSizeInBits(*DstRC);
+    unsigned SrcSubReg = I.getOperand(1).getSubReg();
     unsigned SubReg;
+
+    if (SrcSubReg)
+      return RBI.constrainGenericRegister(DstReg, *DstRC, MRI);
 
     // If the source bank doesn't support a subregister copy small enough,
     // then we first need to copy to the destination bank.
@@ -3599,6 +3603,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_MEMCPY_INLINE:
   case TargetOpcode::G_MEMMOVE:
   case TargetOpcode::G_MEMSET:
+  case TargetOpcode::G_MEMSET_INLINE:
     assert(STI.hasMOPS() && "Shouldn't get here without +mops feature");
     return selectMOPS(I, MRI);
   }
@@ -3625,6 +3630,7 @@ bool AArch64InstructionSelector::selectMOPS(MachineInstr &GI,
     Mopcode = AArch64::MOPSMemoryMovePseudo;
     break;
   case TargetOpcode::G_MEMSET:
+  case TargetOpcode::G_MEMSET_INLINE:
     // For tagged memset see llvm.aarch64.mops.memset.tag
     Mopcode = AArch64::MOPSMemorySetPseudo;
     break;
@@ -7846,19 +7852,28 @@ AArch64InstructionSelector::selectExtractHigh(MachineOperand &Root) const {
   if (!Extract)
     return std::nullopt;
 
-  if (Extract->MI->getOpcode() == TargetOpcode::G_UNMERGE_VALUES) {
-    if (Extract->Reg == Extract->MI->getOperand(1).getReg()) {
-      Register ExtReg = Extract->MI->getOperand(2).getReg();
+  if (auto *Unmerge = dyn_cast<GUnmerge>(Extract->MI)) {
+    if (Unmerge->getNumDefs() == 2 &&
+        Extract->Reg == Unmerge->getOperand(1).getReg()) {
+      Register ExtReg = Unmerge->getSourceReg();
       return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(ExtReg); }}};
     }
   }
-  if (Extract->MI->getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT) {
-    LLT SrcTy = MRI.getType(Extract->MI->getOperand(1).getReg());
-    auto LaneIdx = getIConstantVRegValWithLookThrough(
-        Extract->MI->getOperand(2).getReg(), MRI);
+  if (auto *ExtElt = dyn_cast<GExtractVectorElement>(Extract->MI)) {
+    LLT SrcTy = MRI.getType(ExtElt->getVectorReg());
+    auto LaneIdx =
+        getIConstantVRegValWithLookThrough(ExtElt->getIndexReg(), MRI);
     if (LaneIdx && SrcTy == LLT::fixed_vector(2, 64) &&
         LaneIdx->Value.getSExtValue() == 1) {
-      Register ExtReg = Extract->MI->getOperand(1).getReg();
+      Register ExtReg = ExtElt->getVectorReg();
+      return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(ExtReg); }}};
+    }
+  }
+  if (auto *Subvec = dyn_cast<GExtractSubvector>(Extract->MI)) {
+    LLT SrcTy = MRI.getType(Subvec->getSrcVec());
+    auto LaneIdx = Subvec->getIndexImm();
+    if (LaneIdx == SrcTy.getNumElements() / 2) {
+      Register ExtReg = Subvec->getSrcVec();
       return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(ExtReg); }}};
     }
   }

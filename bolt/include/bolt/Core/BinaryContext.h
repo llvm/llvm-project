@@ -48,6 +48,7 @@
 #include <functional>
 #include <list>
 #include <map>
+#include <mutex>
 #include <optional>
 #include <set>
 #include <string>
@@ -284,11 +285,17 @@ class BinaryContext {
   /// Internal helper for removing section name from a lookup table.
   void deregisterSectionName(const BinarySection &Section);
 
+  /// Mutex used for parallel processing of DWP type units.
+  std::mutex DWPUnitsMutex;
+
 public:
   static Expected<std::unique_ptr<BinaryContext>> createBinaryContext(
       Triple TheTriple, std::shared_ptr<orc::SymbolStringPool> SSP,
       StringRef InputFileName, SubtargetFeatures *Features, bool IsPIC,
       std::unique_ptr<DWARFContext> DwCtx, JournalingStreams Logger);
+
+  /// Returns the mutex guarding concurrent access to DWP units.
+  std::mutex &getUnitsMutex() { return DWPUnitsMutex; }
 
   /// Superset of compiler units that will contain overwritten code that needs
   /// new debug info. In a few cases, functions may end up not being
@@ -892,7 +899,7 @@ public:
            TheTriple->getArch() == llvm::Triple::x86_64;
   }
 
-  bool isRISCV() const { return TheTriple->getArch() == llvm::Triple::riscv64; }
+  bool isRISCV() const { return TheTriple->isRISCV(); }
 
   // AArch64/RISC-V functions to check if symbol is used to delimit
   // code/data in .text. Code is marked by $x, data by $d.
@@ -1545,8 +1552,7 @@ public:
   /// won't be used in the main code emitter.
   IndependentCodeEmitter createIndependentMCCodeEmitter() const {
     IndependentCodeEmitter MCEInstance;
-    MCEInstance.LocalCtx.reset(
-        new MCContext(*TheTriple, *AsmInfo, MRI.get(), STI.get()));
+    MCEInstance.LocalCtx.reset(new MCContext(*TheTriple, *AsmInfo, *MRI, *STI));
     MCEInstance.LocalMOFI.reset(
         TheTarget->createMCObjectFileInfo(*MCEInstance.LocalCtx,
                                           /*PIC=*/!HasFixedLoadAddress));

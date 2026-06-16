@@ -1,9 +1,9 @@
 Checks: "
   -*
   ,
-  hicpp-uppercase-literal-suffix
-  ,hicpp-use-auto
+  modernize-use-auto
+  ,modernize-use-emplace
 
 
-  ,  hicpp-use-emplace
+  ,  modernize-use-nullptr
 "

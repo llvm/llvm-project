@@ -1765,8 +1765,9 @@ DEF_TRAVERSE_DECL(ExplicitInstantiationDecl, {
     TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));
   if (TypeSourceInfo *TSI = D->getTypeAsWritten())
     TRY_TO(TraverseTypeLoc(TSI->getTypeLoc()));
-  for (unsigned I = 0, E = D->getNumTemplateArgs(); I != E; ++I)
-    TRY_TO(TraverseTemplateArgumentLoc(D->getTemplateArg(I)));
+  if (auto NumArgs = D->getNumTemplateArgs())
+    for (unsigned I = 0; I != *NumArgs; ++I)
+      TRY_TO(TraverseTemplateArgumentLoc(D->getTemplateArg(I)));
 })
 
 DEF_TRAVERSE_DECL(TranslationUnitDecl, {
@@ -1976,10 +1977,8 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateParameterListHelper(
 template <typename Derived>
 template <typename T>
 bool RecursiveASTVisitor<Derived>::TraverseDeclTemplateParameterLists(T *D) {
-  for (unsigned i = 0; i < D->getNumTemplateParameterLists(); i++) {
-    TemplateParameterList *TPL = D->getTemplateParameterList(i);
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
     TraverseTemplateParameterListHelper(TPL);
-  }
   return true;
 }
 
@@ -3799,6 +3798,10 @@ bool RecursiveASTVisitor<Derived>::VisitOMPNogroupClause(OMPNogroupClause *) {
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPInitClause(OMPInitClause *C) {
   TRY_TO(VisitOMPClauseList(C));
+  // VisitOMPClauseList covers the interop var and the per-pref-spec fr exprs
+  // (the varlist); the prefer_type attr() exprs live outside it.
+  for (Expr *A : C->attrs())
+    TRY_TO(TraverseStmt(A));
   return true;
 }
 

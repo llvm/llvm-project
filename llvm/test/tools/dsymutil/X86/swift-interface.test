@@ -3,11 +3,20 @@
 # RUN: mkdir -p %t.dir/Foo/x86_64
 # RUN: llvm-mc -triple x86_64-apple-macos -filetype=obj -o %t.dir/obj/1.o \
 # RUN:    %p/../Inputs/swift-interface.s
-# RUN: dsymutil -oso-prepend-path %t.dir -y %s \
+# RUN: dsymutil --linker classic -oso-prepend-path %t.dir -y %s \
+# RUN:    -o %t.dir/swift-interface.dSYM 2>&1 \
+# RUN:    | FileCheck %s --check-prefix=WARNINGS
+# RUN: rm -rf %t.dir/swift-interface.dSYM
+# RUN: dsymutil --linker parallel -oso-prepend-path %t.dir -y %s \
 # RUN:    -o %t.dir/swift-interface.dSYM 2>&1 \
 # RUN:    | FileCheck %s --check-prefix=WARNINGS
 # RUN: echo "// module Foo" >%t.dir/Foo/x86_64.swiftinterface
-# RUN: dsymutil -oso-prepend-path %t.dir -y %s \
+# RUN: dsymutil --linker classic -oso-prepend-path %t.dir -y %s \
+# RUN:    -o %t.dir/swift-interface.dSYM
+# RUN: cat %t.dir/swift-interface.dSYM/Contents/Resources/Swift/x86_64/Foo.swiftinterface \
+# RUN:   | FileCheck %s --check-prefix=INTERFACE
+# RUN: rm -rf %t.dir/swift-interface.dSYM
+# RUN: dsymutil --linker parallel -oso-prepend-path %t.dir -y %s \
 # RUN:    -o %t.dir/swift-interface.dSYM
 # RUN: cat %t.dir/swift-interface.dSYM/Contents/Resources/Swift/x86_64/Foo.swiftinterface \
 # RUN:   | FileCheck %s --check-prefix=INTERFACE

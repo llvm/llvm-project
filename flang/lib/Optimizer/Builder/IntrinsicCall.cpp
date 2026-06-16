@@ -368,6 +368,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genGetTeam,
      {{{"level", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"getarg",
+     &I::genGetarg,
+     {{{"pos", asValue}, {"value", asBox}}},
+     /*isElemental=*/false},
     {"getcwd",
      &I::genGetCwd,
      {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
@@ -393,6 +397,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"dim", asValue},
        {"mask", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"iargc", &I::genIargc},
     {"ibclr", &I::genIbclr},
     {"ibits", &I::genIbits},
     {"ibset", &I::genIbset},
@@ -808,6 +813,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"team", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"time", &I::genTime, {}, /*isElemental=*/false},
+    {"timef", &I::genTimef, {}, /*isElemental=*/false},
     {"tokenize",
      &I::genTokenize,
      {{{"string", asAddr},
@@ -3107,15 +3113,12 @@ static void clocDeviceArgRewrite(fir::ExtendedValue arg) {
 static fir::ExtendedValue
 genCLocOrCFunLoc(fir::FirOpBuilder &builder, mlir::Location loc,
                  mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args,
-                 bool isFunc = false, bool isDevLoc = false) {
+                 bool isFunc = false) {
   assert(args.size() == 1);
   clocDeviceArgRewrite(args[0]);
   mlir::Value res = fir::AllocaOp::create(builder, loc, resultType);
-  mlir::Value resAddr;
-  if (isDevLoc)
-    resAddr = fir::factory::genCDevPtrAddr(builder, loc, res, resultType);
-  else
-    resAddr = fir::factory::genCPtrOrCFunptrAddr(builder, loc, res, resultType);
+  mlir::Value resAddr =
+      fir::factory::genCPtrOrCFunptrAddr(builder, loc, res, resultType);
   assert(fir::isa_box_type(fir::getBase(args[0]).getType()) &&
          "argument must have been lowered to box type");
   mlir::Value argAddr = getAddrFromBox(builder, loc, args[0], isFunc);
@@ -3177,8 +3180,7 @@ IntrinsicLibrary::genCAssociatedCPtr(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genCDevLoc(mlir::Type resultType,
                              llvm::ArrayRef<fir::ExtendedValue> args) {
-  return genCLocOrCFunLoc(builder, loc, resultType, args, /*isFunc=*/false,
-                          /*isDevLoc=*/true);
+  return genCLocOrCFunLoc(builder, loc, resultType, args);
 }
 
 // C_F_POINTER
@@ -4367,6 +4369,24 @@ void IntrinsicLibrary::genGetCommandArgument(
   }
 }
 
+// GETARG
+void IntrinsicLibrary::genGetarg(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+
+  mlir::Value pos = fir::getBase(args[0]);
+  mlir::Value value = fir::getBase(args[1]);
+
+  if (!pos)
+    fir::emitFatalError(loc, "expected POS parameter");
+
+  mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
+  mlir::Value absentBox =
+      fir::AbsentOp::create(builder, loc, boxNoneTy).getResult();
+
+  fir::runtime::genGetCommandArgument(builder, loc, pos, value, absentBox,
+                                      absentBox);
+}
+
 // GET_ENVIRONMENT_VARIABLE
 void IntrinsicLibrary::genGetEnvironmentVariable(
     llvm::ArrayRef<fir::ExtendedValue> args) {
@@ -4557,6 +4577,15 @@ IntrinsicLibrary::genIany(mlir::Type resultType,
                           llvm::ArrayRef<fir::ExtendedValue> args) {
   return genReduction(fir::runtime::genIAny, fir::runtime::genIAnyDim, "IANY",
                       resultType, args);
+}
+
+// IARGC
+fir::ExtendedValue
+IntrinsicLibrary::genIargc(mlir::Type resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 0);
+  return builder.createConvert(
+      loc, resultType, fir::runtime::genCommandArgumentCount(builder, loc));
 }
 
 // IBCLR
@@ -8265,6 +8294,13 @@ IntrinsicLibrary::genThisImage(mlir::Type resultType,
     TODO(loc, "this_image with coarray argument.");
   mlir::Value res = mif::ThisImageOp::create(builder, loc, team);
   return builder.createConvert(loc, resultType, res);
+}
+
+// TIMEF
+mlir::Value IntrinsicLibrary::genTimef(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.empty() && "timef does not accept any args");
+  return fir::runtime::genTimef(builder, loc);
 }
 
 // TRAILZ

@@ -985,6 +985,8 @@ static MachineOperand getMovOperand(const MachineOperand &MO,
   }
   case MachineOperand::MO_ExternalSymbol:
     return MachineOperand::CreateES(MO.getSymbolName(), TF);
+  case MachineOperand::MO_MCSymbol:
+    return MachineOperand::CreateMCSymbol(MO.getMCSymbol(), TF);
   case MachineOperand::MO_JumpTableIndex:
     return MachineOperand::CreateJTI(MO.getIndex(), TF);
   default:
@@ -2242,6 +2244,14 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       return true;
     }
 
+    case ARM::CLEANUPRET:
+    case ARM::CATCHRET: {
+      unsigned RetOpcode = STI->isThumb() ? ARM::tBX_RET : ARM::BX_RET;
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(RetOpcode))
+          .add(predOps(ARMCC::AL));
+      MI.eraseFromParent();
+      return true;
+    }
     case ARM::TCRETURNdi:
     case ARM::TCRETURNri:
     case ARM::TCRETURNrinotr12: {
