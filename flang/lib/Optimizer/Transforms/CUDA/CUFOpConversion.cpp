@@ -263,6 +263,31 @@ struct CUFDataTransferOpConversion
         return mlir::success();
       }
 
+      mlir::Type i64Ty = builder.getI64Type();
+      mlir::Value nbElement =
+          cuf::computeElementCount(rewriter, loc, op.getShape(), dstTy, i64Ty);
+      unsigned width = 0;
+      if (fir::isa_derived(fir::unwrapSequenceType(dstTy))) {
+        mlir::Type structTy =
+            typeConverter->convertType(fir::unwrapSequenceType(dstTy));
+        width = dl->getTypeSizeInBits(structTy) / 8;
+      } else {
+        width = cuf::computeElementByteSize(loc, dstTy, kindMap);
+      }
+      mlir::Value widthValue = mlir::arith::ConstantOp::create(
+          rewriter, loc, i64Ty, rewriter.getIntegerAttr(i64Ty, width));
+      mlir::Value bytes = nbElement ? mlir::arith::MulIOp::create(
+                                          rewriter, loc, nbElement, widthValue)
+                                    : widthValue;
+
+      mlir::func::FuncOp func =
+          fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferPtrPtr)>(loc,
+                                                                       builder);
+      auto fTy = func.getFunctionType();
+      mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+      mlir::Value sourceLine =
+          fir::factory::locationToLineNo(builder, loc, fTy.getInput(5));
+
       mlir::Value dst = op.getDst();
       mlir::Value src = op.getSrc();
       // Scalar CUDA constants keep a host shadow for host reads. Host-to-device
@@ -303,32 +328,6 @@ struct CUFDataTransferOpConversion
           }
         }
       }
-
-      mlir::Type i64Ty = builder.getI64Type();
-      mlir::Value nbElement =
-          cuf::computeElementCount(rewriter, loc, op.getShape(), dstTy, i64Ty);
-      unsigned width = 0;
-      if (fir::isa_derived(fir::unwrapSequenceType(dstTy))) {
-        mlir::Type structTy =
-            typeConverter->convertType(fir::unwrapSequenceType(dstTy));
-        width = dl->getTypeSizeInBits(structTy) / 8;
-      } else {
-        width = cuf::computeElementByteSize(loc, dstTy, kindMap);
-      }
-      mlir::Value widthValue = mlir::arith::ConstantOp::create(
-          rewriter, loc, i64Ty, rewriter.getIntegerAttr(i64Ty, width));
-      mlir::Value bytes = nbElement ? mlir::arith::MulIOp::create(
-                                          rewriter, loc, nbElement, widthValue)
-                                    : widthValue;
-
-      mlir::func::FuncOp func =
-          fir::runtime::getRuntimeFunc<mkRTKey(CUFDataTransferPtrPtr)>(loc,
-                                                                       builder);
-      auto fTy = func.getFunctionType();
-      mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-      mlir::Value sourceLine =
-          fir::factory::locationToLineNo(builder, loc, fTy.getInput(5));
-
       // Materialize the src if constant.
       if (matchPattern(src.getDefiningOp(), mlir::m_Constant())) {
         mlir::Value temp = builder.createTemporary(loc, srcTy);
