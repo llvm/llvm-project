@@ -16,7 +16,9 @@ define void @slsr_gep_xor_signmask_no_rewrite(ptr %p, i32 %n, float %r) {
 ; CHECK-NEXT:    [[I1:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr float, ptr [[P]], i64 [[I1]]
 ; CHECK-NEXT:    store float [[R]], ptr [[G1]], align 4
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr i8, ptr [[G1]], i64 -8589934592
+; CHECK-NEXT:    [[X:%.*]] = xor i32 [[N]], -2147483648
+; CHECK-NEXT:    [[I2:%.*]] = sext i32 [[X]] to i64
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr float, ptr [[P]], i64 [[I2]]
 ; CHECK-NEXT:    store float [[R]], ptr [[G2]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -40,9 +42,9 @@ define void @slsr_gep_add_no_rewrite(ptr %p, i32 %m, i32 %n, float %r) {
 ; CHECK-NEXT:    [[I1:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr float, ptr [[P]], i64 [[I1]]
 ; CHECK-NEXT:    store float [[R]], ptr [[G1]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[M]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 2
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr i8, ptr [[G1]], i64 [[TMP2]]
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[M]], [[N]]
+; CHECK-NEXT:    [[I2:%.*]] = sext i32 [[X]] to i64
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr float, ptr [[P]], i64 [[I2]]
 ; CHECK-NEXT:    store float [[R]], ptr [[G2]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -92,7 +94,8 @@ define void @slsr_gep_xor_signmask_as_basis(ptr %p, i32 %n, float %r) {
 ; CHECK-NEXT:    [[I1:%.*]] = sext i32 [[X]] to i64
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr float, ptr [[P]], i64 [[I1]]
 ; CHECK-NEXT:    store float [[R]], ptr [[G1]], align 4
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr i8, ptr [[G1]], i64 -8589934592
+; CHECK-NEXT:    [[I2:%.*]] = sext i32 [[N]] to i64
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr float, ptr [[P]], i64 [[I2]]
 ; CHECK-NEXT:    store float [[R]], ptr [[G2]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -118,7 +121,8 @@ define void @slsr_gep_add_const_as_basis(ptr %p, i32 %n, float %r) {
 ; CHECK-NEXT:    [[I1:%.*]] = sext i32 [[X]] to i64
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr float, ptr [[P]], i64 [[I1]]
 ; CHECK-NEXT:    store float [[R]], ptr [[G1]], align 4
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr i8, ptr [[G1]], i64 -400
+; CHECK-NEXT:    [[I2:%.*]] = sext i32 [[N]] to i64
+; CHECK-NEXT:    [[G2:%.*]] = getelementptr float, ptr [[P]], i64 [[I2]]
 ; CHECK-NEXT:    store float [[R]], ptr [[G2]], align 4
 ; CHECK-NEXT:    ret void
 ;
