@@ -433,7 +433,8 @@ TEST(raw_ostreamTest, flush_tied_to_stream_on_write) {
 
   SmallString<64> Path;
   int FD;
-  ASSERT_FALSE(sys::fs::createTemporaryFile("tietest", "", FD, Path, sys::fs::OF_Text));
+  ASSERT_FALSE(
+      sys::fs::createTemporaryFile("tietest", "", FD, Path, sys::fs::OF_Text));
   FileRemover Cleanup(Path);
   raw_fd_ostream TiedStream(FD, /*ShouldClose=*/false);
   TiedStream.SetUnbuffered();
@@ -558,7 +559,8 @@ TEST(raw_ostreamTest, reserve_stream) {
 TEST(raw_ostreamTest, writeToOutputFile) {
   SmallString<64> Path;
   int FD;
-  ASSERT_FALSE(sys::fs::createTemporaryFile("foo", "bar", FD, Path, sys::fs::OF_Text));
+  ASSERT_FALSE(
+      sys::fs::createTemporaryFile("foo", "bar", FD, Path, sys::fs::OF_Text));
   FileRemover Cleanup(Path);
 
   ASSERT_THAT_ERROR(writeToOutput(Path,
@@ -579,7 +581,8 @@ TEST(raw_ostreamTest, writeToOutputFileEncoding) {
   // the tag on the file.
   SmallString<64> Path;
   int FD=0;
-  ASSERT_FALSE(sys::fs::createTemporaryFile("foo", "bar", FD, Path, sys::fs::OF_Text));
+  ASSERT_FALSE(
+      sys::fs::createTemporaryFile("foo", "bar", FD, Path, sys::fs::OF_Text));
   setzOSFileTag(FD,819, true);
   FileRemover Cleanup(Path);
 
