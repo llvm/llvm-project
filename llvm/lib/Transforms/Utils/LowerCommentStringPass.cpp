@@ -15,9 +15,8 @@
 // For each module (translation unit), the pass performs the following:
 //
 //   1. Creates a null-terminated, internal constant string global
-//      (`__loadtime_comment_str`) containing the copyright text with
-//      section attribute "__loadtime_comment". The backend places this
-//      in the .text section of the object file.
+//      (`__loadtime_comment_str`) containing the copyright text. The backend
+//      places this in the .text section of the object file.
 //
 //   2. Marks the string in `llvm.compiler.used` so it cannot be dropped by
 //      optimization or LTO.
@@ -31,8 +30,7 @@
 //  Input IR:
 //     !comment_string.loadtime = !{!"Copyright"}
 //  Output IR:
-//     @__loadtime_comment_str = internal constant [N x i8] c"Copyright\00",
-//                          section "__loadtime_comment"
+//     @__loadtime_comment_str = internal constant [N x i8] c"Copyright\00"
 //     @llvm.compiler.used = appending global [1 x ptr] [ptr
 //     @__loadtime_comment_str]
 //
@@ -115,9 +113,6 @@ PreservedAnalyses LowerCommentStringPass::run(Module &M,
   // Set unnamed_addr to allow the linker to merge identical strings.
   StrGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   StrGV->setAlignment(Align(1));
-  // Place in the "__loadtime_comment" section.
-  // The GV is constant, so we expect a read-only section.
-  StrGV->setSection("__loadtime_comment");
 
   // 2. Add the string to llvm.compiler.used to prevent LLVM optimization/LTO
   // passes from removing it.
