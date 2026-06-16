@@ -17,15 +17,12 @@ entry:
   ret i32 0
 }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"wchar_size", i32 2}
-
-!comment_string.loadtime = !{!1}
-!1 = !{!"@(#) Copyright IBM 2025"}
+!comment_string.loadtime = !{!0}
+!0 = !{!"@(#) Copyright IBM 2025"}
 
 
 ; ---- Globals--------------------------------------------
-; CHECK: @__loadtime_comment_str = internal unnamed_addr constant [24 x i8] c"@(#) Copyright IBM 2025\00", section "__loadtime_comment", align 1
+; CHECK: @__loadtime_comment_str = internal unnamed_addr constant [24 x i8] c"@(#) Copyright IBM 2025\00", align 1
 ; Preservation in llvm.compiler.used sets
 ; CHECK-NEXT: @llvm.compiler.used = appending global [1 x ptr] [ptr @__loadtime_comment_str], section "llvm.metadata"
 ; CHECK-NOT: ![[copyright:[0-9]+]] = !{!"@(#) Copyright IBM 2025"}

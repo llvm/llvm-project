@@ -1753,9 +1753,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   }
 
   // Lower !comment_string.loadtime metadata to a concrete TU-local string
-  // global and attach !implicit.ref to all defined functions. Running late
-  // ensures compiler-generated functions (e.g. from inlining, coroutines)
-  // are also anchored to the copyright string via .ref directives.
+  // global and attach !implicit.ref to all defined functions.
   MPM.addPass(LowerCommentStringPass());
 
   return MPM;
@@ -1927,7 +1925,8 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
-  // Lower !comment_string.loadtime metadata.
+  // Lower !comment_string.loadtime metadata to a concrete TU-local string
+  // global and attach !implicit.ref to all defined functions.
   MPM.addPass(LowerCommentStringPass());
 
   addRequiredLTOPreLinkPasses(MPM);
@@ -2511,8 +2510,7 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
     MPM.addPass(InstrumentorPass(FS));
 
   // Lower !comment_string.loadtime metadata to a concrete TU-local string
-  // global. Running at the end of the O0 pipeline ensures all functions
-  // including AlwaysInliner-generated ones are captured.
+  // global and attach !implicit.ref to all defined functions.
   MPM.addPass(LowerCommentStringPass());
 
   if (isLTOPreLink(Phase))

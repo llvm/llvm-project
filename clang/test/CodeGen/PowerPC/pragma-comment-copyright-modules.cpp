@@ -8,7 +8,7 @@
 
 // RUN: %clang_cc1 -std=c++20 -triple powerpc-ibm-aix -emit-llvm %t/copymod.cppm -o - \
 // RUN:   | FileCheck %s --check-prefix=CHECK-MOD
-// CHECK-MOD: @__loadtime_comment_str = internal unnamed_addr constant [10 x i8] c"module me\00", section "__loadtime_comment", align 1
+// CHECK-MOD: @__loadtime_comment_str = internal unnamed_addr constant [10 x i8] c"module me\00", align 1
 // CHECK-MOD: @llvm.compiler.used = appending global {{.*}} @__loadtime_comment_str
 
 // Compile an importing TU that uses the prebuilt module and verify that it
