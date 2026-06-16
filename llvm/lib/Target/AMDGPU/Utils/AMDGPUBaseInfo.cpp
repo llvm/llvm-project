@@ -1100,13 +1100,23 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
 namespace IsaInfo {
 
 AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI)
-    : STI(STI), XnackSetting(TargetIDSetting::Any),
-      SramEccSetting(TargetIDSetting::Any) {
-  if (!STI.getFeatureBits().test(FeatureSupportsXNACK))
-    XnackSetting = TargetIDSetting::Unsupported;
-  if (!STI.getFeatureBits().test(FeatureSupportsSRAMECC))
-    SramEccSetting = TargetIDSetting::Unsupported;
-}
+    : Arch(parseArchAMDGCN(STI.getCPU())),
+      TargetTripleString(
+          STI.getTargetTriple().normalize(Triple::CanonicalForm::FOUR_IDENT)),
+      XnackSetting(STI.getFeatureBits().test(FeatureSupportsXNACK)
+                       ? TargetIDSetting::Any
+                       : TargetIDSetting::Unsupported),
+      SramEccSetting(STI.getFeatureBits().test(FeatureSupportsSRAMECC)
+                         ? TargetIDSetting::Any
+                         : TargetIDSetting::Unsupported),
+      IsAMDHSA(STI.getTargetTriple().getOS() == Triple::AMDHSA) {}
+
+AMDGPUTargetID::AMDGPUTargetID(GPUKind Arch, StringRef TargetTripleString,
+                               TargetIDSetting XnackSetting,
+                               TargetIDSetting SramEccSetting, bool IsAMDHSA)
+    : Arch(Arch), TargetTripleString(TargetTripleString),
+      XnackSetting(XnackSetting), SramEccSetting(SramEccSetting),
+      IsAMDHSA(IsAMDHSA) {}
 
 void AMDGPUTargetID::setTargetIDFromFeaturesString(StringRef FS) {
   // Check if xnack or sramecc is explicitly enabled or disabled.  In the
@@ -1188,40 +1198,67 @@ void AMDGPUTargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
   }
 }
 
-void AMDGPUTargetID::print(raw_ostream &StreamRep) const {
-  const Triple &TargetTriple = STI.getTargetTriple();
-  auto Version = getIsaVersion(STI.getCPU());
+std::optional<AMDGPUTargetID>
+AMDGPUTargetID::parseTargetIDString(StringRef TargetIDDirective) {
+  // Split on '-' to get arch-vendor-os-environment-processor:features
+  // There is a single dash separator after the 4-component triple
+  SmallVector<StringRef, 5> Parts;
+  TargetIDDirective.split(Parts, '-', /*MaxSplit=*/4);
+  if (Parts.size() < 4)
+    return std::nullopt;
 
-  StreamRep << TargetTriple.getArchName() << '-' << TargetTriple.getVendorName()
-            << '-' << TargetTriple.getOSName() << '-'
-            << TargetTriple.getEnvironmentName() << '-';
+  Triple TT(Parts[0], Parts[1], Parts[2], Parts[3]);
+  if (!TT.isAMDGCN())
+    return std::nullopt;
 
-  std::string Processor;
-  // TODO: Following else statement is present here because we used various
-  // alias names for GPUs up until GFX9 (e.g. 'fiji' is same as 'gfx803').
-  // Remove once all aliases are removed from GCNProcessors.td.
-  if (Version.Major >= 9)
-    Processor = STI.getCPU().str();
-  else
-    Processor = (Twine("gfx") + Twine(Version.Major) + Twine(Version.Minor) +
-                 Twine(Version.Stepping))
-                    .str();
+  SmallVector<StringRef, 3> FeatureSplit;
+  Parts[4].split(FeatureSplit, ':');
+  if (FeatureSplit.empty())
+    return std::nullopt;
 
-  std::string Features;
-  if (TargetTriple.getOS() == Triple::AMDHSA) {
-    // sramecc.
-    if (getSramEccSetting() == TargetIDSetting::Off)
-      Features += ":sramecc-";
-    else if (getSramEccSetting() == TargetIDSetting::On)
-      Features += ":sramecc+";
-    // xnack.
-    if (getXnackSetting() == TargetIDSetting::Off)
-      Features += ":xnack-";
-    else if (getXnackSetting() == TargetIDSetting::On)
-      Features += ":xnack+";
+  StringRef CPUName = FeatureSplit[0];
+
+  // Determine xnack/sramecc support based on the architecture attributes
+  GPUKind Arch = parseArchAMDGCN(CPUName);
+  unsigned ArchAttr = getArchAttrAMDGCN(Arch);
+
+  TargetIDSetting XnackSetting =
+      (ArchAttr & (FEATURE_XNACK | FEATURE_XNACK_ALWAYS))
+          ? TargetIDSetting::Any
+          : TargetIDSetting::Unsupported;
+  TargetIDSetting SramEccSetting = (ArchAttr & FEATURE_SRAMECC)
+                                       ? TargetIDSetting::Any
+                                       : TargetIDSetting::Unsupported;
+
+  for (StringRef FeatureString :
+       ArrayRef<StringRef>(FeatureSplit).drop_front(1)) {
+    if (FeatureString.starts_with("xnack"))
+      XnackSetting = getTargetIDSettingFromFeatureString(FeatureString);
+    else if (FeatureString.starts_with("sramecc"))
+      SramEccSetting = getTargetIDSettingFromFeatureString(FeatureString);
   }
 
-  StreamRep << Processor << Features;
+  return AMDGPUTargetID(Arch, TT.normalize(Triple::CanonicalForm::FOUR_IDENT),
+                        XnackSetting, SramEccSetting,
+                        TT.getOS() == Triple::AMDHSA);
+}
+
+void AMDGPUTargetID::print(raw_ostream &StreamRep) const {
+  StreamRep << TargetTripleString << '-' << getArchNameAMDGCN(Arch);
+
+  if (IsAMDHSA) {
+    // sramecc.
+    if (getSramEccSetting() == TargetIDSetting::Off)
+      StreamRep << ":sramecc-";
+    else if (getSramEccSetting() == TargetIDSetting::On)
+      StreamRep << ":sramecc+";
+
+    // xnack.
+    if (getXnackSetting() == TargetIDSetting::Off)
+      StreamRep << ":xnack-";
+    else if (getXnackSetting() == TargetIDSetting::On)
+      StreamRep << ":xnack+";
+  }
 }
 
 std::string AMDGPUTargetID::toString() const {
@@ -1229,6 +1266,12 @@ std::string AMDGPUTargetID::toString() const {
   raw_string_ostream OS(Str);
   OS << *this;
   return Str;
+}
+
+bool AMDGPUTargetID::operator==(const AMDGPUTargetID &Other) const {
+  return Arch == Other.Arch && XnackSetting == Other.XnackSetting &&
+         SramEccSetting == Other.SramEccSetting && IsAMDHSA == Other.IsAMDHSA &&
+         TargetTripleString == Other.TargetTripleString;
 }
 
 unsigned getInstCacheLineSize(const MCSubtargetInfo &STI) {
