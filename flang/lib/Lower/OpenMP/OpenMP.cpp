@@ -702,12 +702,12 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
     return;
   }
 
-  fir::FirOpBuilder &firOpBuilder{converter.getFirOpBuilder()};
-  const mlir::Location loc{converter.getCurrentLocation()};
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  const mlir::Location loc = converter.getCurrentLocation();
 
   // Get the enclosing omp.loop_nest to access induction variables and bounds.
-  auto loopNestOp{mlir::dyn_cast<mlir::omp::LoopNestOp>(
-      firOpBuilder.getInsertionBlock()->getParentOp())};
+  auto loopNestOp = mlir::dyn_cast<mlir::omp::LoopNestOp>(
+      firOpBuilder.getInsertionBlock()->getParentOp());
   assert(loopNestOp && "expected to be inside omp.loop_nest");
 
   // Collect before/after evaluations at each intermediate level.
@@ -717,11 +717,11 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
   };
   llvm::SmallVector<LevelInfo> levels;
 
-  lower::pft::Evaluation *curEval{&outerEval};
-  for (int i{0}; i < collapseValue - 1; ++i) {
-    lower::pft::Evaluation *const doEval{getNestedDoConstruct(*curEval)};
+  lower::pft::Evaluation *curEval = &outerEval;
+  for (int i = 0; i < collapseValue - 1; ++i) {
+    lower::pft::Evaluation *doEval = getNestedDoConstruct(*curEval);
     LevelInfo level;
-    bool pastDo{false};
+    bool pastDo = false;
     for (lower::pft::Evaluation &e : doEval->getNestedEvaluations()) {
       if (e.getIf<parser::NonLabelDoStmt>() || e.getIf<parser::EndDoStmt>())
         continue;
@@ -748,31 +748,31 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
   // steps where the IV may never exactly equal the upper bound.
   auto buildGuard = [&](const int startLevel, const int endLevel,
                         const bool useLowerBound) -> mlir::Value {
-    mlir::Value cond{};
-    const auto lbs{loopNestOp.getLoopLowerBounds()};
-    const auto ubs{loopNestOp.getLoopUpperBounds()};
-    const auto steps{loopNestOp.getLoopSteps()};
-    for (int lvl{startLevel}; lvl < endLevel; ++lvl) {
-      const mlir::Value iv{loopNestOp.getRegion().getArgument(lvl)};
+    mlir::Value cond;
+    const auto lbs = loopNestOp.getLoopLowerBounds();
+    const auto ubs = loopNestOp.getLoopUpperBounds();
+    const auto steps = loopNestOp.getLoopSteps();
+    for (int lvl = startLevel; lvl < endLevel; ++lvl) {
+      const mlir::Value iv = loopNestOp.getRegion().getArgument(lvl);
       mlir::Value target;
       if (useLowerBound) {
         target = lbs[lvl];
       } else {
         // For unit steps, the last induction variable always equals ub.
-        const auto constStep{fir::getIntIfConstant(steps[lvl])};
+        const auto constStep = fir::getIntIfConstant(steps[lvl]);
         if (constStep && (*constStep == 1 || *constStep == -1)) {
           target = ubs[lvl];
         } else {
           // Compute last_iv = lb + ((ub - lb) / step) * step.
-          const mlir::Value lb{lbs[lvl]};
-          const mlir::Value ub{ubs[lvl]};
-          const mlir::Value step{steps[lvl]};
-          const mlir::Value range{
-              mlir::arith::SubIOp::create(firOpBuilder, loc, ub, lb)};
-          const mlir::Value tripMinus1{
-              mlir::arith::DivSIOp::create(firOpBuilder, loc, range, step)};
-          const mlir::Value lastOffset{
-              mlir::arith::MulIOp::create(firOpBuilder, loc, tripMinus1, step)};
+          const mlir::Value lb = lbs[lvl];
+          const mlir::Value ub = ubs[lvl];
+          const mlir::Value step = steps[lvl];
+          const mlir::Value range =
+              mlir::arith::SubIOp::create(firOpBuilder, loc, ub, lb);
+          const mlir::Value tripMinus1 =
+              mlir::arith::DivSIOp::create(firOpBuilder, loc, range, step);
+          const mlir::Value lastOffset =
+              mlir::arith::MulIOp::create(firOpBuilder, loc, tripMinus1, step);
           target =
               mlir::arith::AddIOp::create(firOpBuilder, loc, lb, lastOffset);
         }
@@ -788,12 +788,12 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
   };
 
   // Emit "before" code at each level, guarded by inner IVs == lower bounds.
-  for (int i{0}; i < static_cast<int>(levels.size()); ++i) {
+  for (int i = 0; i < static_cast<int>(levels.size()); ++i) {
     if (levels[i].before.empty())
       continue;
-    const mlir::Value guard{
-        buildGuard(i + 1, collapseValue, /*useLowerBound=*/true)};
-    auto ifOp{fir::IfOp::create(firOpBuilder, loc, guard, /*else*/ false)};
+    const mlir::Value guard =
+        buildGuard(i + 1, collapseValue, /*useLowerBound=*/true);
+    auto ifOp = fir::IfOp::create(firOpBuilder, loc, guard, /*else*/ false);
     firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     for (auto *e : levels[i].before)
       converter.genEval(*e);
@@ -805,12 +805,12 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
 
   // Emit "after" code at each level (innermost first), guarded by
   // inner IVs == last iteration values (accounts for non-unit steps).
-  for (int i{static_cast<int>(levels.size()) - 1}; i >= 0; --i) {
+  for (int i = static_cast<int>(levels.size()) - 1; i >= 0; --i) {
     if (levels[i].after.empty())
       continue;
-    const mlir::Value guard{
-        buildGuard(i + 1, collapseValue, /*useLowerBound=*/false)};
-    auto ifOp{fir::IfOp::create(firOpBuilder, loc, guard, /*else*/ false)};
+    const mlir::Value guard =
+        buildGuard(i + 1, collapseValue, /*useLowerBound=*/false);
+    auto ifOp = fir::IfOp::create(firOpBuilder, loc, guard, /*else*/ false);
     firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
     for (auto *e : levels[i].after)
       converter.genEval(*e);
@@ -1410,8 +1410,8 @@ struct OpWithBodyGenInfo {
   bool privatize = true;
   /// [in] if set, outermost evaluation and collapse depth for emitting
   /// intervening code from imperfect collapsed loop nests.
-  lower::pft::Evaluation *outerCollapseEval{nullptr};
-  int collapseValue{0};
+  lower::pft::Evaluation *outerCollapseEval = nullptr;
+  int collapseValue = 0;
 };
 
 /// Create the body (block) for an OpenMP Operation.
@@ -2438,7 +2438,7 @@ static void genCanonicalLoopNest(
   // Step 1: Loop prologues
   // Computing the trip count must happen before entering the outermost loop
   lower::pft::Evaluation *innermostEval = nestedEval;
-  for (std::size_t i{0}; i < ivs.size(); ++i) {
+  for (std::size_t i = 0; i < ivs.size(); ++i) {
     if (innermostEval->getIf<parser::DoConstruct>()->IsDoConcurrent()) {
       // OpenMP specifies DO CONCURRENT only with the `!omp loop` construct.
       // Will need to add special cases for this combination.
