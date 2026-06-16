@@ -68,9 +68,9 @@ template <class = int>
 #endif
 
 #if defined(__BITINT_MAXWIDTH__)
-// Narrower widths (e.g. _BitInt(7)) stay unsupported, like signed types narrower
-// than int with no same-type abs. The gate is on sizeof, not bit width.
-template <int _Np, __enable_if_t<(sizeof(signed _BitInt(_Np)) >= sizeof(int)), int> = 0>
+// _BitInt does not integer-promote, so without a same-type overload a narrow
+// signed _BitInt would be an ambiguous call against abs(int/long/long long).
+template <int _Np>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI signed _BitInt(_Np) abs(signed _BitInt(_Np) __x) _NOEXCEPT {
   return __x < 0 ? -__x : __x;
 }

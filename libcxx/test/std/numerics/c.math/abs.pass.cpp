@@ -47,12 +47,14 @@ static_assert(!unpromoted_abs<signed char>);
 static_assert(!unpromoted_abs<short>);
 
 #  ifdef __BITINT_MAXWIDTH__
-// Gate is sizeof, not bit width: sizeof(_BitInt(31)) == sizeof(int) on x86_64.
+// Every signed _BitInt(N) gets a same-type abs, including widths narrower than
+// int. unsigned _BitInt is excluded by the signed-only contract.
 template <class T, class = void>
 constexpr bool has_abs = false;
 template <class T>
 constexpr bool has_abs<T, decltype((void)std::abs(T(0)))> = true;
-static_assert(!has_abs<signed _BitInt(7)>);
+static_assert(has_abs<signed _BitInt(2)>);
+static_assert(has_abs<signed _BitInt(7)>);
 static_assert(has_abs<signed _BitInt(32)>);
 static_assert(has_abs<signed _BitInt(64)>);
 static_assert(!has_abs<unsigned _BitInt(32)>); // signed-only contract
@@ -133,9 +135,12 @@ int main(int, char**) {
   // Non-byte-aligned _BitInt(N) has uninitialized padding bits; passing such a
   // value to std::abs trips a false-positive MSan report (#204217). Gate those
   // widths out under MSan; byte-aligned widths still run.
+  test_signed_bitint<8>();
+  test_signed_bitint<16>();
   test_signed_bitint<32>();
   test_signed_bitint<64>();
 #    if !TEST_HAS_FEATURE(memory_sanitizer)
+  test_signed_bitint<7>();
   test_signed_bitint<33>();
   test_signed_bitint<63>();
   test_signed_bitint<65>();
