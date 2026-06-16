@@ -20,6 +20,15 @@ inline __attribute__((device)) const struct {
   }
 } warpSize{};
 
+// Make sure nobody can create instances of the coordinate types, take their
+// address, copy, or assign them.
+#pragma push_macro("__HIP_DISALLOW_BUILTINVAR_ACCESS")
+#define __HIP_DISALLOW_BUILTINVAR_ACCESS(__tag)                                \
+  __attribute__((device)) __tag() = delete;                                    \
+  __attribute__((device)) __tag(const __tag &) = delete;                       \
+  __attribute__((device)) void operator=(const __tag &) const = delete;        \
+  __attribute__((device)) __tag *operator&() const = delete
+
 #pragma push_macro("__HIP_COORD_BUILTIN")
 #define __HIP_COORD_BUILTIN(__tag, __fx, __fy, __fz)                           \
   struct __tag {                                                               \
@@ -35,6 +44,9 @@ inline __attribute__((device)) const struct {
     __attribute__((device, always_inline)) unsigned int __get_z() const {      \
       return __fz;                                                             \
     }                                                                          \
+                                                                               \
+  private:                                                                     \
+    __HIP_DISALLOW_BUILTINVAR_ACCESS(__tag);                                   \
   }
 
 __HIP_COORD_BUILTIN(__hip_builtin_threadIdx_t, __gpu_thread_id_x(),
@@ -47,11 +59,12 @@ __HIP_COORD_BUILTIN(__hip_builtin_gridDim_t, __gpu_num_blocks_x(),
                     __gpu_num_blocks_y(), __gpu_num_blocks_z());
 
 #pragma pop_macro("__HIP_COORD_BUILTIN")
+#pragma pop_macro("__HIP_DISALLOW_BUILTINVAR_ACCESS")
 
 extern const __attribute__((device, weak)) __hip_builtin_threadIdx_t threadIdx;
 extern const __attribute__((device, weak)) __hip_builtin_blockIdx_t blockIdx;
 extern const __attribute__((device, weak)) __hip_builtin_blockDim_t blockDim;
 extern const __attribute__((device, weak)) __hip_builtin_gridDim_t gridDim;
 
-#endif // __HIP__ && (defined(__AMDGPU__) || defined(__SPIRV__))
+#endif // __HIP__ && (defined(__HIP_DEVICE_COMPILE__))
 #endif // __CLANG_HIP_BUILTIN_VARS_H__
