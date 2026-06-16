@@ -284,11 +284,21 @@ BTFTypeDerived::BTFTypeDerived(const DIDerivedType *DTy, unsigned Tag,
   BTFType.Info = Kind << 24;
 }
 
-/// Used by DW_TAG_pointer_type only.
+/// Used by DW_TAG_pointer_type and DW_TAG_typedef only.
 BTFTypeDerived::BTFTypeDerived(unsigned NextTypeId, unsigned Tag,
                                StringRef Name)
     : DTy(nullptr), NeedsFixup(false), Name(Name) {
-  Kind = BTF::BTF_KIND_PTR;
+  switch (Tag) {
+  case dwarf::DW_TAG_pointer_type:
+    Kind = BTF::BTF_KIND_PTR;
+    break;
+  case dwarf::DW_TAG_typedef:
+    Kind = BTF::BTF_KIND_TYPEDEF;
+    break;
+  default:
+    llvm_unreachable("Tag must be pointer or typedef");
+  }
+
   BTFType.Info = Kind << 24;
   BTFType.Type = NextTypeId;
 }
@@ -1167,7 +1177,7 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
     }
   }
 
-  if (Tag == dwarf::DW_TAG_pointer_type) {
+  if (Tag == dwarf::DW_TAG_pointer_type || Tag == dwarf::DW_TAG_typedef) {
     int TmpTypeId = genBTFTypeTags(DTy, -1);
     if (TmpTypeId >= 0) {
       auto TypeDEntry =
@@ -1177,13 +1187,13 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
       auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);
       TypeId = addType(std::move(TypeEntry), DTy);
     }
-  } else if (Tag == dwarf::DW_TAG_typedef || Tag == dwarf::DW_TAG_const_type ||
+    if (Tag == dwarf::DW_TAG_typedef)
+      processDeclAnnotations(DTy->getAnnotations(), TypeId, -1);
+  } else if (Tag == dwarf::DW_TAG_const_type ||
              Tag == dwarf::DW_TAG_volatile_type ||
              Tag == dwarf::DW_TAG_restrict_type) {
     auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);
     TypeId = addType(std::move(TypeEntry), DTy);
-    if (Tag == dwarf::DW_TAG_typedef)
-      processDeclAnnotations(DTy->getAnnotations(), TypeId, -1);
   } else if (Tag != dwarf::DW_TAG_member) {
     return;
   }

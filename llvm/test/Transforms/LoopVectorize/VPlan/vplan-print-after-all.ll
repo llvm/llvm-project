@@ -45,6 +45,7 @@
 ; CHECK: VPlan for loop in 'foo' after reassociateHeaderMask
 ; CHECK: VPlan for loop in 'foo' after simplifyRecipes
 ; CHECK: VPlan for loop in 'foo' after removeBranchOnConst
+; CHECK: VPlan for loop in 'foo' after simplifyReverses
 ; CHECK: VPlan for loop in 'foo' after removeDeadRecipes
 ; CHECK: VPlan for loop in 'foo' after createAndOptimizeReplicateRegions
 ; CHECK: VPlan for loop in 'foo' after mergeBlocksIntoPredecessors
@@ -65,6 +66,9 @@
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::removeDeadRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::convertToConcreteRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::convertEVLExitCond
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::dissolveLoopRegions
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::expandBranchOnTwoConds
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::convertToVariableLengthStep
 ; CHECK: VPlan for loop in 'foo' after printFinalVPlan
 
 ; Also verify that VPlans are actually printed (we aren't interested in the

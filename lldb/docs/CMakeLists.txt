@@ -1,11 +1,8 @@
-include(FindDoxygen)
-
 if(DOXYGEN_FOUND)
   set(abs_top_srcdir ${CMAKE_CURRENT_SOURCE_DIR}/..)
   set(DOT dot)
   set(PACKAGE_VERSION mainline)
   set(abs_top_builddir ..)
-  include(HandleDoxygen)
   llvm_configure_doxygen()
 
   add_custom_target(lldb-cpp-doc
