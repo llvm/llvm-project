@@ -1367,21 +1367,23 @@ Synthetic Apertures
 *Synthetic apertures* are defined that enable safe roundtrips of pointers
 from special address spaces through the generic address space. Attempting to
 dereference generic pointers obtained in this way (using e.g. `load` or
-`store`) has undefined behavior. The following synthetic apertures are defined:
+`store`) has undefined behavior.
+
+The address size of an address spaces that use synthetic apertures can only be 32 bits
+wide or less. The full width of the source pointer is usable and preserved when converting it
+from/to the generic address space.
+
+The following synthetic apertures are defined:
 
 .. table:: AMDGPU Synthetic Apertures
-   :name: amdgpu-synthetic-apertures-table
-   :widths: 40 20 40
+    :name: amdgpu-synthetic-apertures-table
+    :widths: 30 10 30 30
 
-    ============ ====== ===============================================================
-    Name         Number Corresponding :ref:`Address Space<amdgpu-address-spaces-table>`
-    ============ ====== ===============================================================
-    BARRIER      1      Barrier
-    ============ ====== ===============================================================
-
-Note that the address size of an address spaces implemented via synthetic apertures
-can only be 32 bits wide or less. The full width of the source pointer is usable and
-preserved when converting it from/to the generic address space.
+    ============ ======= ============== ================================================================
+    Name         Number  Mask           Corresponding :ref:`Address Space<amdgpu-address-spaces-table>`
+    ============ ======= ============== ================================================================
+    BARRIER      1       ``0x00000001`` Barrier
+    ============ ======= ============== ================================================================
 
 Converting a pointer to generic (64 bits) using synthetic apertures is done as follows:
 
@@ -1389,7 +1391,12 @@ Converting a pointer to generic (64 bits) using synthetic apertures is done as f
   * The upper 32 bits are a bitwise ``OR`` of:
 
     * The upper 32 bits of the LDS segment aperture.
-    * The synthetic aperture number.
+
+      * **NOTE:** The lower 48 bits of the LDS segment aperture are expected to be zeroes.
+
+    * The relevant mask in the :ref:`above table<amdgpu-synthetic-apertures-table>`.
+
+      * **NOTE:** The upper 16 bits of the mask are expected to be zeroes.
 
 The conversion back to the original address space can simply be done by discarding the
 upper 32 bits of the generic pointer.
