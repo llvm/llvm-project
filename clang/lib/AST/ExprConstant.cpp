@@ -19398,7 +19398,8 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
       CurrentType = AT->getElementType();
       CharUnits ElementSize = Info.Ctx.getTypeSizeInChars(CurrentType);
       Result += (IdxResult.isUnsigned() ? (int64_t)IdxResult.getZExtValue()
-                                        : IdxResult.getSExtValue()) * ElementSize;
+                                        : IdxResult.getSExtValue()) *
+                ElementSize;
       break;
     }
 
