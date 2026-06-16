@@ -53,7 +53,8 @@ IncrementalAction::IncrementalAction(CompilerInstance &Instance,
         }
         return Act;
       }()),
-      Interp(I), CI(Instance), Consumer(std::move(Consumer)) {}
+      Interp(I), CI(Instance), LLVMCtx(LLVMCtx), Consumer(std::move(Consumer)) {
+}
 
 std::unique_ptr<ASTConsumer>
 IncrementalAction::CreateASTConsumer(CompilerInstance & /*CI*/,
@@ -114,7 +115,8 @@ std::unique_ptr<llvm::Module> IncrementalAction::GenModule() {
              CachedInCodeGenModule->ifunc_empty())) &&
            "CodeGen wrote to a readonly module");
     std::unique_ptr<llvm::Module> M(CG->ReleaseModule());
-    CG->StartModule("incr_module_" + std::to_string(ID++), M->getContext());
+    CG->StartModule("incr_module_" + std::to_string(ID++),
+                    M ? M->getContext() : LLVMCtx);
     return M;
   }
   return nullptr;
