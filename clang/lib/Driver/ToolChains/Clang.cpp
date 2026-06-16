@@ -2138,8 +2138,15 @@ void Clang::AddSystemZTargetArgs(const ArgList &Args,
   systemz::FloatABI FloatABI =
       systemz::getSystemZFloatABI(getToolChain().getDriver(), Args);
   bool HasSoftFloat = (FloatABI == systemz::FloatABI::Soft);
+
+  // Only hard float ABI (-mhard-float) is supported on z/OS.
+  const Driver &D = getToolChain().getDriver();
+  const llvm::Triple &Triple = getToolChain().getTriple();
+  if (HasSoftFloat && Triple.isOSzOS()) {
+    D.Diag(diag::err_drv_unsupported_opt_for_target)
+        << "-msoft-float" << Triple.str();
+  }
   if (HasBackchain && HasPackedStack && !HasSoftFloat) {
-    const Driver &D = getToolChain().getDriver();
     D.Diag(diag::err_drv_unsupported_opt)
       << "-mpacked-stack -mbackchain -mhard-float";
   }
