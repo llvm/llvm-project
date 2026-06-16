@@ -1178,9 +1178,8 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
   case Instruction::Xor: {
     // Certain instructions can be cheaper if they have a constant second
     // operand. One example of this are shifts on x86.
-    TargetTransformInfo::OperandValueInfo RHSInfo = {
-        TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None};
-    if (Opcode != Instruction::FNeg) {
+    TargetTransformInfo::OperandValueInfo RHSInfo;
+    if (getNumOperands() == 2) {
       RHSInfo = Ctx.getOperandInfo(getOperand(1));
       if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
           getOperand(1)->isDefinedOutsideLoopRegions())
