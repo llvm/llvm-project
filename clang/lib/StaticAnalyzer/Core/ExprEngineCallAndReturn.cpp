@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/InvalidationCause.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -786,9 +787,10 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     RegionAndSymbolInvalidationTraits ITraits;
     ITraits.setTrait(TargetR,
         RegionAndSymbolInvalidationTraits::TK_DoNotInvalidateSuperRegion);
-    State = State->invalidateRegions(TargetR, Elem, Count, SF,
-                                     /* CausesPointerEscape=*/false, nullptr,
-                                     &Call, &ITraits);
+    State = State->invalidateRegions(
+        TargetR, Elem, Count, SF,
+        /* CausesPointerEscape=*/false, /*InvalidatedSymbols=*/nullptr, &Call,
+        &ITraits, Call.tryCreateInvalidationCause<PartiallyModeledCall>());
 
     R = State->getSVal(Target.castAs<Loc>(), E->getType());
   } else {

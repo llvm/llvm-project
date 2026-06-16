@@ -100,7 +100,7 @@ public:
 
 void test_6() {
   clang_analyzer_explain(conjure_S()); // expected-warning-re{{{{^lazily frozen compound value of 1st parameter of function 'clang_analyzer_explain\(\)'$}}}}
-  clang_analyzer_explain(conjure_S().z); // expected-warning-re{{{{^value derived from \(symbol of type 'int' conjured at CFG element 'conjure_S\(\) \(CXXRecordTypedCall, \)'\) for field 'z' of temporary object constructed at statement 'conjure_S\(\)'$}}}}
+  clang_analyzer_explain(conjure_S().z); // expected-warning-re{{{{^value derived from \(invalidation artifact \(partial-call\) of type 'int' at CFG element 'conjure_S\(\) \(CXXRecordTypedCall, \)'\) for field 'z' of temporary object constructed at statement 'conjure_S\(\)'$}}}}
 }
 
 class C_top_level {

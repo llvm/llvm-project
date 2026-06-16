@@ -76,6 +76,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/InvalidationCause.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
@@ -2478,10 +2479,11 @@ MallocChecker::FreeMemAux(CheckerContext &C, const Expr *ArgExpr,
   // Assume that after memory is freed, it contains unknown values. This
   // conforts languages standards, since reading from freed memory is considered
   // UB and may result in arbitrary value.
-  State = State->invalidateRegions({location}, Call.getCFGElementRef(),
-                                   C.blockCount(), C.getStackFrame(),
-                                   /*CausesPointerEscape=*/false,
-                                   /*InvalidatedSymbols=*/nullptr);
+  State = State->invalidateRegions(
+      {location}, Call.getCFGElementRef(), C.blockCount(), C.getStackFrame(),
+      /*CausesPointerEscape=*/false,
+      /*InvalidatedSymbols=*/nullptr, /*Call=*/nullptr, /*ITraits=*/nullptr,
+      Call.tryCreateInvalidationCause<PartiallyModeledCall>());
 
   // Normal free.
   if (Hold)

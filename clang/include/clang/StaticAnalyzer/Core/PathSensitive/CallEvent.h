@@ -29,6 +29,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/InvalidationCause.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
@@ -261,6 +262,14 @@ public:
   /// Null if and only if 'this' is a CXXDestructorCall.
   virtual const Expr *getOriginExpr() const {
     return Origin.dyn_cast<const Expr *>();
+  }
+
+  template <class CauseT> const CauseT *tryCreateInvalidationCause() const {
+    static_assert(std::is_base_of_v<UnmodeledCall, CauseT>,
+                  "forInvalidation<T> requires T : UnmodeledCall");
+    const auto *CE = dyn_cast_or_null<CallExpr>(getOriginExpr());
+    auto &SymMgr = State->getStateManager().getSymbolManager();
+    return SymMgr.acquireCause<CauseT>(CE);
   }
 
   /// Returns the number of arguments (explicit and implicit).

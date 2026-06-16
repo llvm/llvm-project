@@ -141,8 +141,8 @@ void test_getline_null_buffer() {
     clang_analyzer_warnIfReached(); // must not happen
   } else {
     // The buffer could be allocated both on failure and success
-    clang_analyzer_dump_int(n);      // expected-warning {{conj_$}}
-    clang_analyzer_dump_ptr(buffer); // expected-warning {{conj_$}}
+    clang_analyzer_dump_int(n);      // expected-warning {{inv_$}}
+    clang_analyzer_dump_ptr(buffer); // expected-warning {{inv_$}}
   }
   free(buffer);
   fclose(F1);
@@ -203,8 +203,8 @@ void test_getdelim_null_buffer() {
   }
   else {
     // The buffer could be allocated both on failure and success
-    clang_analyzer_dump_int(n);      // expected-warning {{conj_$}}
-    clang_analyzer_dump_ptr(buffer); // expected-warning {{conj_$}}
+    clang_analyzer_dump_int(n);      // expected-warning {{inv_$}}
+    clang_analyzer_dump_ptr(buffer); // expected-warning {{inv_$}}
   }
   free(buffer);
   fclose(F1);
