@@ -30,17 +30,25 @@ Expected<uint32_t> COFFCxxModuleMetadataReader::readModuleID() {
   switch (ModuleIndexWidth) {
   case 1: {
     uint8_t V = static_cast<uint8_t>(ModuleData[0]);
-    if (V != std::numeric_limits<uint8_t>::max())
+    // Extend the end sentinel to 32 bit, so it's the same regardless of module
+    // width.
+    if (V == std::numeric_limits<uint8_t>::max())
+      ID = std::numeric_limits<uint32_t>::max();
+    else
       ID = V;
   } break;
   case 2: {
     uint16_t V =
         support::endian::read<uint16_t>(ModuleData.data(), endianness::little);
-    if (V != std::numeric_limits<uint16_t>::max())
+    // Extend the end sentinel to 32 bit.
+    if (V == std::numeric_limits<uint16_t>::max())
+      ID = std::numeric_limits<uint32_t>::max();
+    else
       ID = V;
   } break;
   case 4: {
     ID = support::endian::read<uint32_t>(ModuleData.data(), endianness::little);
+    // No need to extend, it's already 32 bit.
   } break;
   default:
     return createStringError("unsupported index width: %d", ModuleIndexWidth);
