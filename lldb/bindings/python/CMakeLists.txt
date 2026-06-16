@@ -285,7 +285,7 @@ function(add_python_wrapper target)
   endif()
 
   if(Python3_RPATH)
-    lldb_setup_rpaths(liblldb
+    lldb_setup_rpaths(${target}
       BUILD_RPATH
         "${Python3_RPATH}"
       INSTALL_RPATH
