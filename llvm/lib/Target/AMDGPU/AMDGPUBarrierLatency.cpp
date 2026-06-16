@@ -50,7 +50,9 @@ public:
     IgnoredScopes.insert(Context.getOrInsertSyncScopeID("singlethread-one-as"));
 
     const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-    if (!ST.requiresWaitOnWorkgroupReleaseFence()) {
+    bool TgSplit =
+        ST.hasTgSplitSupport() && AMDGPU::isTgSplitEnabled(MF->getFunction());
+    if (!ST.requiresWaitOnWorkgroupReleaseFence(TgSplit)) {
       // Prior to GFX10 workgroup scope does not normally require waitcnts
       IgnoredScopes.insert(Context.getOrInsertSyncScopeID("workgroup"));
     }

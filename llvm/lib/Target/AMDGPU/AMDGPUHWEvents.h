@@ -166,7 +166,7 @@ private:
 
 /// \returns A bitmask of HWEvent triggered by \p Inst
 HWEvents getEventsFor(const MachineInstr &Inst, const GCNSubtarget &ST,
-                      bool IsExpertMode);
+                      bool IsExpertMode, bool TgSplit);
 
 } // namespace AMDGPU
 
