@@ -123,6 +123,7 @@ class X86AsmBackend : public MCAsmBackend {
   Align AlignBoundary;
   unsigned TargetPrefixMax = 0;
 
+  bool ReuseBA;
   MCInst PrevInst;
   unsigned PrevInstOpcode = 0;
   MCBoundaryAlignFragment *PendingBA = nullptr;
@@ -473,12 +474,18 @@ void X86_MC::emitInstruction(MCObjectStreamer &S, const MCInst &Inst,
 
 /// If the upcoming instruction is inside the bundle lock, do nothing so that
 /// the ObjectStreamer emits the instruction to the current fragment. If not, it
-/// creates a new BA to group bundled fragments.
+/// creates a new BA to group bundled fragments. If PrevInst is just a prefix,
+/// we can reuse old BA.
 void X86AsmBackend::emitInstructionBeginBundle(MCObjectStreamer &OS) {
   assert(Asm->isBundlingEnabled());
 
-  if (OS.getCurrentSectionOnly()->isBundleLocked()) {
-    OS.getCurrentFragment()->setAllowAutoPadding(true);
+  if (OS.getCurrentSectionOnly()->isBundleLocked())
+    return;
+  // when there is a prefix MCInst not locked, we need an implicit lock between
+  // the prefix and the next MCInst.
+  if (ReuseBA && PendingBA &&
+      PendingBA->getLastFragment()->getParent() == OS.getCurrentSectionOnly()) {
+    PendingBA->setLastFragment(OS.getCurrentFragment());
     return;
   }
   PendingBA = OS.newSpecialFragment<MCBoundaryAlignFragment>(
@@ -489,14 +496,13 @@ void X86AsmBackend::emitInstructionBeginBundle(MCObjectStreamer &OS) {
   // emitCodeAlignment repurposes in-place to FT_Align, corrupting the BA's
   // boundary range.
   PendingBA->setLastFragment(OS.getCurrentFragment());
-
-  OS.getCurrentFragment()->setAllowAutoPadding(true);
 }
 
 /// If the just-emitted instruction is inside the bundle lock, check the current
-/// fragment is non-zero to ensure the instruction is placed as expected. If it
-/// is not locked, finalize pending BA Fragment. emitBundleUnlock will close the
-/// fragment and start a new empty fragment.
+/// fragment is non-zero to ensure the instruction is placed as expected.
+/// emitBundleUnlock will close the fragment and start a new empty fragment. If
+/// it is not locked, finalize pending BA Fragment. If it is a prefix, let the
+/// next instruction reuse the same BA.
 void X86AsmBackend::emitInstructionEndBundle(MCObjectStreamer &OS) {
   assert(Asm->isBundlingEnabled());
   MCFragment *CF = OS.getCurrentFragment();
@@ -507,17 +513,25 @@ void X86AsmBackend::emitInstructionEndBundle(MCObjectStreamer &OS) {
   assert(PendingBA && "MCBoundaryAlignFragment is expected for every "
                       "instruction if it is not bundle-locked");
 
-  PendingBA = nullptr;
   CF->getParent()->ensureMinAlignment(Align(Asm->getBundleAlignSize()));
+
+  // Update ReuseBA for the next BeginBundle.
+  ReuseBA = isPrefix(PrevInstOpcode, *MCII);
+  if (ReuseBA)
+    return;
+  PendingBA = nullptr;
 }
 
 /// Insert BoundaryAlignFragment before instructions to align branches.
 void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
                                          const MCInst &Inst,
                                          const MCSubtargetInfo &STI) {
-  if (Asm->isBundlingEnabled())
-    return emitInstructionBeginBundle(OS);
   bool CanPadInst = canPadInst(Inst, OS);
+  if (Asm->isBundlingEnabled()) {
+    emitInstructionBeginBundle(OS);
+    OS.getCurrentFragment()->setAllowAutoPadding(CanPadInst);
+    return;
+  }
   if (CanPadInst)
     OS.getCurrentFragment()->setAllowAutoPadding(true);
 
@@ -579,12 +593,12 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
 /// Set the last fragment to be aligned for the BoundaryAlignFragment.
 void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS,
                                        const MCInst &Inst) {
-  if (Asm->isBundlingEnabled())
-    return emitInstructionEndBundle(OS);
   // Update PrevInstOpcode here, canPadInst() reads that.
   MCFragment *CF = OS.getCurrentFragment();
   PrevInstOpcode = Inst.getOpcode();
   PrevInstPosition = std::make_pair(CF, OS.getCurFragSize());
+  if (Asm->isBundlingEnabled())
+    return emitInstructionEndBundle(OS);
 
   if (!canPadBranches(OS))
     return;

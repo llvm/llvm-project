@@ -1,6 +1,10 @@
-# RUN: llvm-mc -filetype=obj -triple x86_64 %s --x86-pad-max-prefix-size=5 \
-# RUN:   | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
+# RUN: split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple x86_64 %t/prefix-pad.s --x86-pad-max-prefix-size=5 \
+# RUN:   | llvm-objdump -d --no-show-raw-insn - | FileCheck %t/prefix-pad.s
+# RUN: llvm-mc -filetype=obj -triple x86_64 %t/no-prefix-pad.s --x86-pad-max-prefix-size=1 \
+# RUN:   | llvm-objdump -d - | FileCheck %t/no-prefix-pad.s
 
+#--- prefix-pad.s
   .section text1, "x"
 add_prefix_prev:
   .bundle_align_mode 5
@@ -90,3 +94,33 @@ ensure_bundle_boundary:
 # CHECK-NEXT:   2a: call
 # CHECK-NEXT:   34: call
 # CHECK-NEXT:   3b: call
+
+## This test contains instructions that must not be padded.
+#--- no-prefix-pad.s
+  .text
+  .bundle_align_mode 5
+prefix_cmpxchg_in_a_bundle:
+  movl	48(%rbx), %r12d
+  movl	__thread_list_lock(%rip), %eax
+  cmpl	%r12d, %eax
+  jne	.LBB4_7
+  incl	tl_lock_count(%rip)
+  jmp	.LBB4_10
+  .LBB4_7:
+  xorl	%eax, %eax
+  lock
+  cmpxchgl	%r12d, __thread_list_lock(%rip)
+# CHECK:        1c: 2e 31 c0                    xorl
+# CHECK-NEXT:   1f: 90                          nop
+## lock must start the new bundle, not replacing the nop right above
+# CHECK-NEXT:   20: f0                          lock
+# CHECK-NEXT:   21: 44 0f b1 25 00 00 00 00     cmpxchgl %r12d, (%rip)
+  .LBB4_10:
+  xor %rax, %rax
+
+no_pad_before_after_prefix:
+  .p2align 5
+  lock
+  cmpxchgl	%r12d, __thread_list_lock(%rip)
+# CHECK:        40: f0                           lock
+# CHECK-NEXT:   41: 44 0f b1 25 00 00 00 00      cmpxchgl %r12d, (%rip)
