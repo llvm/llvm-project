@@ -10,6 +10,7 @@
 #define LLVM_TOOLS_LLVM_PROFGEN_PERFREADER_H
 #include "ErrorHandling.h"
 #include "ProfiledBinary.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -747,7 +748,7 @@ private:
   void readSampleCounters(TraceStream &TraceIt, SampleCounter &SCounters);
   void readUnsymbolizedProfile(StringRef Filename);
 
-  std::unordered_set<std::string> ContextStrSet;
+  StringSet<> ContextStrSet;
 };
 
 class ETMReader {
