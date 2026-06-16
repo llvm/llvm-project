@@ -1,4 +1,4 @@
-# RUN: llc --passes=machine-sink %s -o -| FileCheck %s
+# RUN: llc --passes=machine-sink %s -o - | FileCheck %s
 
 ## The instructions `ADD64rm` `MOVSX64rr32` and `SHL64ri` are sunk from bb.1
 ## into bb.2 before the DBG_VALUE. Check that the debug instruction's debug
