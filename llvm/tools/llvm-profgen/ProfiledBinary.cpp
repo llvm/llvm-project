@@ -1248,7 +1248,7 @@ void ProfiledBinary::loadSymbolsFromPseudoProbe() {
                "Top level pseudo probe does not match function range");
 
         const auto *ProbeDesc = getFuncDescForGUID(InlineTreeNode->Guid);
-        auto Ret = PseudoProbeNames.emplace(Func, ProbeDesc->FuncName);
+        auto Ret = PseudoProbeNames.try_emplace(Func, ProbeDesc->FuncName);
         if (!Ret.second && Ret.first->second != ProbeDesc->FuncName &&
             ShowDetailedWarning)
           WithColor::warning()
