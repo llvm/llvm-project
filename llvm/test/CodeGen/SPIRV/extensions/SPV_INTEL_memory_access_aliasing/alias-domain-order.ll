@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown -verify-machineinstrs --spirv-ext=+SPV_INTEL_memory_access_aliasing %s -o - | FileCheck %s
-; TODO: add spirv-val once SPV_INTEL_memory_access_aliasing is supported by it.
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_memory_access_aliasing %s -o - -filetype=obj | spirv-val %}
 
 ; Two noalias scopes sharing a single alias domain. Check order correctness.
 
