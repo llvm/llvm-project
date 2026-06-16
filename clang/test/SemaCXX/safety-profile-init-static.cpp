@@ -56,3 +56,10 @@ int g_suppressed_all = runtime();
 // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
 [[profiles::suppress(test::other)]]
 int g_wrong_suppress = runtime();       // expected-error {{non-local variable 'g_wrong_suppress' requires constant initialization under profile 'std::init'}}
+
+// A suppress on the enclosing namespace covers its variables (found by the
+// declaration's lexical-parent walk).
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+namespace [[profiles::suppress(std::init)]] suppressed_ns {
+int n_ok = runtime(); // OK: suppressed by the namespace-level attribute
+}

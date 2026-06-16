@@ -4226,16 +4226,16 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
 
   FD->setInClassInitializer(InitExpr.get());
 
-  // The parse-time [[profiles::suppress]] scope set up while parsing the
-  // initializer is gone by the time this finalization runs (a late-parsed
-  // NSDMI finishes parsing before this point), so re-establish it from the
-  // field for the post-initialization profile checks below.
-  ProfileSuppressScope SuppressScope(*this, FD, /*WalkLexicalParents=*/true);
-
+  // Pass the field to the post-initialization profile checks so the Decl-aware
+  // shouldEmitProfileViolation overload resolves [[profiles::suppress]] from
+  // the field and its lexical parents. This does not depend on a parse-time
+  // suppress scope still being active (the late-parsed NSDMI finishes parsing
+  // before this finalization runs).
   checkInitProfileUninitWithInitializer(FD->getLocation(), FD->getDeclName(),
                                         FD->getType(),
                                         FD->getInClassInitializer(),
-                                        FD->hasAttr<CXX11UninitializedAttr>());
+                                        FD->hasAttr<CXX11UninitializedAttr>(),
+                                        FD);
 
   // std::init / ref_to_uninit (paper §5): a pointer or reference data member
   // with a default member initializer must be bound consistently with its
@@ -4243,7 +4243,8 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
   if (QualType FT = FD->getType(); !FT->isDependentType() &&
       (FT->isPointerType() || FT->isReferenceType()))
     checkRefToUninitInit(FD->getLocation(), FD->hasAttr<RefToUninitAttr>(),
-                         FT->isReferenceType(), FD->getInClassInitializer());
+                         FT->isReferenceType(), FD->getInClassInitializer(),
+                         FD);
 }
 
 /// Find the direct and/or virtual base specifiers that

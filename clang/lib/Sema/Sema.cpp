@@ -3113,6 +3113,19 @@ bool Sema::isProfileSuppressed(StringRef ProfileName,
 }
 
 bool Sema::isProfileSuppressed(StringRef ProfileName, StringRef RuleName,
+                               const Decl *D) const {
+  for (; D;) {
+    for (const auto *PSA : D->specific_attrs<ProfilesSuppressAttr>())
+      if (profileSuppressMatches(PSA->getProfileName(), PSA->getRule(),
+                                 ProfileName, RuleName))
+        return true;
+    const DeclContext *DC = D->getLexicalDeclContext();
+    D = DC ? dyn_cast<Decl>(DC) : nullptr;
+  }
+  return false;
+}
+
+bool Sema::isProfileSuppressed(StringRef ProfileName, StringRef RuleName,
                                const Stmt *S,
                                AnalysisDeclContext &AC) const {
   ParentMap &PM = AC.getParentMap();
@@ -3133,22 +3146,24 @@ bool Sema::isProfileSuppressed(StringRef ProfileName, StringRef RuleName,
                                      ProfileName, RuleName))
             return true;
   }
-  for (const Decl *D = AC.getDecl(); D;) {
-    for (const auto *PSA : D->specific_attrs<ProfilesSuppressAttr>())
-      if (profileSuppressMatches(PSA->getProfileName(), PSA->getRule(),
-                                 ProfileName, RuleName))
-        return true;
-    const DeclContext *DC = D->getLexicalDeclContext();
-    D = DC ? dyn_cast<Decl>(DC) : nullptr;
-  }
-  return false;
+  return isProfileSuppressed(ProfileName, RuleName, AC.getDecl());
 }
 
 bool Sema::shouldEmitProfileViolation(StringRef ProfileName, StringRef RuleName,
                                       SourceLocation Loc) {
+  return shouldEmitProfileViolation(ProfileName, RuleName, Loc, /*D=*/nullptr);
+}
+
+bool Sema::shouldEmitProfileViolation(StringRef ProfileName, StringRef RuleName,
+                                      SourceLocation Loc, const Decl *D) {
   if (!isProfileEnforced(ProfileName))
     return false;
-  if (isProfileSuppressed(ProfileName, RuleName))
+  // Honor [[profiles::suppress]] from the parse-time stack and, when a Decl is
+  // available, from the declaration and its lexical parents. The latter does
+  // not depend on a parse-time scope still being active, so finalization checks
+  // that run after the parse scope is torn down still respect suppression.
+  if (isProfileSuppressed(ProfileName, RuleName) ||
+      isProfileSuppressed(ProfileName, RuleName, D))
     return false;
   // P3589R2 Section 1.1: "its static semantic effects are as-if applied only
   // after translation phase 7. It is not possible for a profile to change the

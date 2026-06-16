@@ -14727,7 +14727,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     if (!Var->isInvalidDecl() &&
         Var->getStorageDuration() == SD_Automatic &&
         !Var->hasAttr<CXX11UninitializedAttr>() &&
-        shouldEmitProfileViolation(Profile, Rule, Var->getLocation()) &&
+        shouldEmitProfileViolation(Profile, Rule, Var->getLocation(), Var) &&
         // A definition with no initializer (scalar / pointer / enum, or an
         // array of them), or a class/aggregate type whose default-init leaves
         // a scalar subobject indeterminate (its synthesized constructor call
@@ -14887,7 +14887,8 @@ void Sema::checkInitProfileUninitWithInitializer(SourceLocation Loc,
                                                  DeclarationName Name,
                                                  QualType DeclType,
                                                  const Expr *Init,
-                                                 bool HasMarker) {
+                                                 bool HasMarker,
+                                                 const Decl *D) {
   // [[uninitialized]] documents that the entity is intentionally left
   // uninitialized, so it contradicts an explicit initializer. A RecoveryExpr
   // is a placeholder for an initialization that already failed (e.g.
@@ -14898,7 +14899,7 @@ void Sema::checkInitProfileUninitWithInitializer(SourceLocation Loc,
   static constexpr StringRef Profile = "std::init";
   static constexpr StringRef Rule = "uninit_with_initializer";
   // Gate the (possibly recursive) type walk below on enforcement.
-  if (!shouldEmitProfileViolation(Profile, Rule, Loc))
+  if (!shouldEmitProfileViolation(Profile, Rule, Loc, D))
     return;
   // A synthesized default-initialization that leaves the object indeterminate
   // (a trivial or aggregate type, no user-written initializer) is consistent
@@ -14977,14 +14978,15 @@ bool Sema::refersToUninitializedMemory(const Expr *E, bool IsReference) const {
 }
 
 void Sema::checkRefToUninitInit(SourceLocation Loc, bool TargetIsRefToUninit,
-                                bool IsReference, const Expr *Src) {
+                                bool IsReference, const Expr *Src,
+                                const Decl *D) {
   // A RecoveryExpr is a placeholder for an initialization that already failed,
   // not a source the user wrote, so it must not drive this rule.
   if (!Src || isa<RecoveryExpr>(Src->IgnoreParens()))
     return;
   static constexpr StringRef Profile = "std::init";
   static constexpr StringRef Rule = "ref_to_uninit";
-  if (!shouldEmitProfileViolation(Profile, Rule, Loc))
+  if (!shouldEmitProfileViolation(Profile, Rule, Loc, D))
     return;
   bool SrcUninit = refersToUninitializedMemory(Src, IsReference);
   unsigned IsRef = IsReference ? 1 : 0;
@@ -14999,7 +15001,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
 
   checkInitProfileUninitWithInitializer(
       var->getLocation(), var->getDeclName(), var->getType(), var->getInit(),
-      var->hasAttr<CXX11UninitializedAttr>());
+      var->hasAttr<CXX11UninitializedAttr>(), var);
 
   // std::init / ref_to_uninit (paper §5): a pointer or reference variable must
   // be bound consistently with its [[ref_to_uninit]] marking. A dependent type
@@ -15007,7 +15009,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   if (QualType VT = var->getType(); !VT->isDependentType() &&
       (VT->isPointerType() || VT->isReferenceType()))
     checkRefToUninitInit(var->getLocation(), var->hasAttr<RefToUninitAttr>(),
-                         VT->isReferenceType(), var->getInit());
+                         VT->isReferenceType(), var->getInit(), var);
 
   CUDA().MaybeAddConstantAttr(var);
 
@@ -15259,7 +15261,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
                  if (checkConstInit())
                    return false;
                  if (!shouldEmitProfileViolation(Profile, Rule,
-                                                 var->getLocation()))
+                                                 var->getLocation(), var))
                    return false;
                  Diag(var->getLocation(), diag::err_init_static_runtime_init)
                      << Profile << var->getDeclName();
