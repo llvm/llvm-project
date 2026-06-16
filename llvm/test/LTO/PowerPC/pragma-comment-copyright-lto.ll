@@ -77,12 +77,11 @@ entry:
 ; CHECK:       li 3, 3
 
 ;; Both copyright strings in the read-only __loadtime_comment csect.
-; CHECK:       .csect __loadtime_comment[RO]
-; CHECK-NEXT:  .lglobl [[TU1_STR]]
-; CHECK:       [[TU1_STR]]:
+; CHECK:       .csect [[TU1_STR]][RO],2
+; CHECK-NEXT:  .lglobl [[TU1_STR]][RO]
 ; CHECK-NEXT:  .string "Copyright TU1"
-; CHECK-NEXT:  .lglobl [[TU2_STR]]
-; CHECK:       [[TU2_STR]]:
+; CHECK:       .csect [[TU2_STR]][RO],2
+; CHECK-NEXT:  .lglobl [[TU2_STR]][RO]
 ; CHECK-NEXT:  .string "Copyright TU2"
 
 ;; f_unused is DCE'd -- must not appear in assembly.

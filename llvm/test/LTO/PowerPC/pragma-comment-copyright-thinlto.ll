@@ -53,8 +53,8 @@ entry:
 !1 = !{i32 8, !"PIC Level", i32 2}
 !2 = !{i32 1, !"EnableSplitLTOUnit", i32 0}
 
-; CHECK-TU2-IMPORTED: @[[TU2_STR:__loadtime_comment_str_[0-9a-f]+]] = weak_odr hidden unnamed_addr constant [19 x i8] c"@(#) Copyright TU2\00", section "__loadtime_comment", align 1
-; CHECK-TU2-IMPORTED-NEXT: @[[TU1_STR:__loadtime_comment_str_[0-9a-f]+]] = available_externally hidden unnamed_addr constant [19 x i8] c"@(#) Copyright TU1\00", section "__loadtime_comment", align 1
+; CHECK-TU2-IMPORTED: @[[TU2_STR:__loadtime_comment_str_[0-9a-f]+]] = weak_odr hidden unnamed_addr constant [19 x i8] c"@(#) Copyright TU2\00", align 1
+; CHECK-TU2-IMPORTED-NEXT: @[[TU1_STR:__loadtime_comment_str_[0-9a-f]+]] = available_externally hidden unnamed_addr constant [19 x i8] c"@(#) Copyright TU1\00", align 1
 ; CHECK-TU2-IMPORTED-NEXT: @llvm.compiler.used = appending global [2 x ptr] [ptr @[[TU2_STR]], ptr @[[TU1_STR]]], section "llvm.metadata"
 
 ; CHECK-TU2-IMPORTED-LABEL: define i32 @main()
