@@ -2,6 +2,11 @@
 // RUN:   -fexperimental-lifetime-safety-tu-analysis \
 // RUN:   -Wlifetime-safety-suggestions -Wlifetime-safety-annotation-placement -Wno-dangling \
 // RUN:   -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -std=c++17 -flifetime-safety-inference \
+// RUN:   -fexperimental-lifetime-safety-tu-analysis \
+// RUN:   -Wlifetime-safety-suggestions -Wlifetime-safety-annotation-placement -Wno-dangling \
+// RUN:   -lifetime-safety-lifetimebound-macro=LIFETIMEBOUND_MACRO \
+// RUN:   -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s --check-prefix=CHECK-MACRO
 // RUN: cp %s %t.cpp
 // RUN: %clang_cc1 -std=c++17 -flifetime-safety-inference \
 // RUN:   -fexperimental-lifetime-safety-tu-analysis \
@@ -30,6 +35,8 @@ struct [[gsl::Pointer()]] View {
 View return_view(View a) {
   // CHECK: :[[@LINE-1]]:18: warning: parameter in intra-TU function should be marked {{\[\[}}clang::lifetimebound]] [-Wlifetime-safety-intra-tu-suggestions]
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:24-[[@LINE-2]]:24}:" {{\[\[}}clang::lifetimebound]]"
+  // CHECK-MACRO: :[[@LINE-3]]:18: warning: parameter in intra-TU function should be marked
+  // CHECK-MACRO: fix-it:"{{.*}}":{[[@LINE-4]]:24-[[@LINE-4]]:24}:" LIFETIMEBOUND_MACRO"
   return a;
 }
 
@@ -196,6 +203,8 @@ View return_view_with_macro(View a) {
 View return_view_with_latest_macro(View a) {
   // CHECK: :[[@LINE-1]]:36: warning: parameter in intra-TU function should be marked
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:42-[[@LINE-2]]:42}:" SECOND_LIFETIMEBOUND_MACRO"
+  // CHECK-MACRO: :[[@LINE-3]]:36: warning: parameter in intra-TU function should be marked
+  // CHECK-MACRO: fix-it:"{{.*}}":{[[@LINE-4]]:42-[[@LINE-4]]:42}:" LIFETIMEBOUND_MACRO"
   return a;
 }
 
@@ -205,6 +214,8 @@ struct MacroMember {
   View get_view() {
     // CHECK: :[[@LINE-1]]:18: warning: implicit this in intra-TU function should be marked
     // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:18-[[@LINE-2]]:18}:" SECOND_LIFETIMEBOUND_MACRO"
+    // CHECK-MACRO: :[[@LINE-3]]:18: warning: implicit this in intra-TU function should be marked
+    // CHECK-MACRO: fix-it:"{{.*}}":{[[@LINE-4]]:18-[[@LINE-4]]:18}:" LIFETIMEBOUND_MACRO"
     return data;
   }
 };
