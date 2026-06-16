@@ -1608,15 +1608,20 @@ struct TestInitSizeTSDExclusiveConfig : public TestInitSizeConfig {
   template <class A> using TSDRegistryT = scudo::TSDRegistryExT<A>;
 };
 
+struct TestInitSizeLargeTSDSharedConfig : public TestInitSizeConfig {
+  template <class A>
+  using TSDRegistryT = scudo::TSDRegistrySharedT<A, 512U, 1U>;
+};
+
 template <class AllocatorT> void RunStress() {
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
   // This test is designed to try and have many threads trying to initialize
   // the TSD at the same time. Make sure this doesn't crash.
   std::atomic_bool StartRunning = false;
-  std::vector<std::thread *> threads;
+  std::vector<std::thread *> Threads;
   for (size_t I = 0; I < 16; I++) {
-    threads.emplace_back(new std::thread([&Allocator, &StartRunning]() {
+    Threads.emplace_back(new std::thread([&Allocator, &StartRunning]() {
       while (!StartRunning.load())
         ;
 
@@ -1630,10 +1635,11 @@ template <class AllocatorT> void RunStress() {
 
   StartRunning = true;
 
-  for (auto *thread : threads) {
-    thread->join();
-    delete thread;
+  for (auto *Thread : Threads) {
+    Thread->join();
+    delete Thread;
   }
+  Allocator->unmapTestOnly();
 }
 
 TEST(ScudoCombinedTest, StressThreadInitTSDShared) {
@@ -1648,6 +1654,105 @@ TEST(ScudoCombinedTest, StressThreadInitTSDExclusive) {
   // Run the stress test a few times.
   for (size_t I = 0; I < 10; I++)
     RunStress<AllocatorT>();
+}
+
+TEST(ScudoCombinedTest, StressThreadTSDSharedSetTSDs) {
+  using AllocatorT = scudo::Allocator<TestInitSizeLargeTSDSharedConfig>;
+  for (size_t Runs = 0; Runs < 100; Runs++) {
+    auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+    // Try to have many threads being created and allocating while increasing
+    // the number of TSDs.
+    const size_t kNumThreads = 4;
+    std::atomic_size_t NumRunning = 0;
+    std::atomic_bool StopRunning = false;
+    std::vector<std::thread *> Threads;
+    for (size_t I = 0; I < kNumThreads; I++) {
+      Threads.emplace_back(
+          new std::thread([&Allocator, &NumRunning, &StopRunning]() {
+            NumRunning++;
+            while (!StopRunning.load()) {
+              std::thread Thread([&Allocator]() {
+                void *Ptr = Allocator->allocate(10, Origin);
+                EXPECT_TRUE(Ptr != nullptr);
+                // Make sure this value is not optimized away.
+                asm volatile("" : : "r,m"(Ptr) : "memory");
+                Allocator->deallocate(Ptr, Origin);
+              });
+              Thread.join();
+            }
+          }));
+    }
+
+    while (NumRunning.load() != kNumThreads)
+      ;
+
+    // Increase the number of TSDs while threads are being created and
+    // allocating.
+    for (scudo::sptr I = 2; I < 512; I++) {
+      EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxTSDsCount, I));
+    }
+    StopRunning = true;
+
+    for (auto *Thread : Threads) {
+      Thread->join();
+      delete Thread;
+    }
+    Allocator->unmapTestOnly();
+  }
+}
+
+TEST(ScudoCombinedTest, StressThreadTSDSharedMultiThreadSetTSDs) {
+  using AllocatorT = scudo::Allocator<TestInitSizeLargeTSDSharedConfig>;
+  for (size_t Runs = 0; Runs < 10; Runs++) {
+    auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+    // Try to have many threads being created and allocating while increasing
+    // the number of TSDs.
+    const size_t kNumThreads = 4;
+    std::atomic_size_t NumRunning = 0;
+    std::atomic_bool StopRunning = false;
+    std::vector<std::thread *> Threads;
+    for (size_t I = 0; I < kNumThreads; I++) {
+      Threads.emplace_back(
+          new std::thread([&Allocator, &NumRunning, &StopRunning]() {
+            NumRunning++;
+            while (!StopRunning.load()) {
+              std::thread Thread([&Allocator]() {
+                void *Ptr = Allocator->allocate(10, Origin);
+                EXPECT_TRUE(Ptr != nullptr);
+                // Make sure this value is not optimized away.
+                asm volatile("" : : "r,m"(Ptr) : "memory");
+                Allocator->deallocate(Ptr, Origin);
+              });
+              Thread.join();
+            }
+          }));
+    }
+
+    while (NumRunning.load() != kNumThreads)
+      ;
+
+    std::vector<std::thread *> SetThreads;
+    // Create 10 threads running at once to keep the total threads from
+    // getting too high and causing problems.
+    for (scudo::sptr I = 2; I < 12; I++) {
+      SetThreads.emplace_back(new std::thread([&Allocator, I]() {
+        Allocator->setOption(scudo::Option::MaxTSDsCount, I);
+      }));
+    }
+    StopRunning = true;
+    for (auto *Thread : SetThreads) {
+      Thread->join();
+      delete Thread;
+    }
+
+    for (auto *Thread : Threads) {
+      Thread->join();
+      delete Thread;
+    }
+    Allocator->unmapTestOnly();
+  }
 }
 
 struct TestMatchConfig {

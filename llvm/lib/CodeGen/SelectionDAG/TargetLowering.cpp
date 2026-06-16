@@ -218,21 +218,26 @@ bool TargetLowering::findOptimalMemOpLowering(
     LLVMContext &Context, std::vector<EVT> &MemOps, unsigned Limit,
     const MemOp &Op, unsigned DstAS, unsigned SrcAS,
     const AttributeList &FuncAttributes, EVT *LargestVT) const {
-  if (Limit != ~unsigned(0) && Op.isMemcpyWithFixedDstAlign() &&
-      Op.getSrcAlign() < Op.getDstAlign())
-    return false;
-
   EVT VT = getOptimalMemOpType(Context, Op, FuncAttributes);
 
   if (VT == MVT::Other) {
     // Use the largest integer type whose alignment constraints are satisfied.
-    // We only need to check DstAlign here as SrcAlign is always greater or
-    // equal to DstAlign (or zero).
     VT = MVT::LAST_INTEGER_VALUETYPE;
-    if (Op.isFixedDstAlign())
-      while (Op.getDstAlign() < (VT.getSizeInBits() / 8) &&
-             !allowsMisalignedMemoryAccesses(VT, DstAS, Op.getDstAlign()))
+    if (Op.isFixedDstAlign()) {
+      bool LoadsFromSrc = Op.isMemcpy() && !Op.isMemcpyStrSrc();
+      while (VT != MVT::i8) {
+        unsigned VTSize = VT.getSizeInBits() / 8;
+        bool DstOk =
+            Op.getDstAlign() >= VTSize ||
+            allowsMisalignedMemoryAccesses(VT, DstAS, Op.getDstAlign());
+        bool SrcOk =
+            !LoadsFromSrc || Op.getSrcAlign() >= VTSize ||
+            allowsMisalignedMemoryAccesses(VT, SrcAS, Op.getSrcAlign());
+        if (DstOk && SrcOk)
+          break;
         VT = (MVT::SimpleValueType)(VT.getSimpleVT().SimpleTy - 1);
+      }
+    }
     assert(VT.isInteger());
 
     // Find the largest legal integer type.
@@ -242,7 +247,7 @@ bool TargetLowering::findOptimalMemOpLowering(
     assert(LVT.isInteger());
 
     // If the type we've chosen is larger than the largest legal integer type
-    // then use that instead.
+    // then use the largest legal type.
     if (VT.bitsGT(LVT))
       VT = LVT;
   }
@@ -3732,7 +3737,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
         // If we're after type legalization and SrcSVT is not legal, use the
         // promoted type for creating constants to avoid creating nodes with
         // illegal types.
-        if (AfterLegalizeTypes)
+        if (TLO.LegalTypes())
           SrcSVT = getLegalTypeToTransformTo(*TLO.DAG.getContext(), SrcSVT);
 
         SmallVector<SDValue> MaskElts;
@@ -8972,6 +8977,89 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   }
   }
   llvm_unreachable("Expected CLMUL, CLMULR, or CLMULH");
+}
+
+SDValue TargetLowering::expandPEXT(SDNode *Node, SelectionDAG &DAG) const {
+  SDLoc DL(Node);
+  EVT VT = Node->getValueType(0);
+  SDValue Val = Node->getOperand(0);
+  SDValue Msk = Node->getOperand(1);
+  unsigned BW = VT.getScalarSizeInBits();
+
+  // Hacker's Delight §7-4: Compress, or Generalized Extract
+  SDValue X = DAG.getNode(ISD::AND, DL, VT, Val, Msk);
+  SDValue M = Msk;
+  SDValue One = DAG.getShiftAmountConstant(1, VT, DL);
+  SDValue Mk = DAG.getNode(ISD::SHL, DL, VT, DAG.getNOT(DL, M, VT), One);
+
+  // Repeatedly compute which bits would shift to the right by an odd amount,
+  // shift all such bits in parallel using a mask, and double the shift amount.
+  for (unsigned I = 1; I < BW; I *= 2) {
+    // This expands the "parallel prefix" operation to clmul(Mk, ~0).
+    SDValue Mp =
+        DAG.getNode(ISD::CLMUL, DL, VT, Mk, DAG.getAllOnesConstant(DL, VT));
+    SDValue Mv = DAG.getNode(ISD::AND, DL, VT, Mp, M);
+    SDValue ShiftI = DAG.getShiftAmountConstant(I, VT, DL);
+    SDValue MvS = DAG.getNode(ISD::SRL, DL, VT, Mv, ShiftI);
+    M = DAG.getNode(ISD::OR, DL, VT, DAG.getNode(ISD::XOR, DL, VT, M, Mv), MvS,
+                    SDNodeFlags::Disjoint);
+    SDValue T = DAG.getNode(ISD::AND, DL, VT, X, Mv);
+    SDValue TS = DAG.getNode(ISD::SRL, DL, VT, T, ShiftI);
+    X = DAG.getNode(ISD::OR, DL, VT, DAG.getNode(ISD::XOR, DL, VT, X, T), TS,
+                    SDNodeFlags::Disjoint);
+    if (I * 2 < BW)
+      Mk = DAG.getNode(ISD::AND, DL, VT, Mk, DAG.getNOT(DL, Mp, VT));
+  }
+
+  return X;
+}
+
+SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG) const {
+  SDLoc DL(Node);
+  EVT VT = Node->getValueType(0);
+  SDValue Val = Node->getOperand(0);
+  SDValue Msk = Node->getOperand(1);
+  unsigned BW = VT.getScalarSizeInBits();
+
+  // Hacker's Delight §7-5: Expand, or Generalized Insert.
+  unsigned LogBW = Log2_32_Ceil(BW);
+  SmallVector<SDValue, 8> MvArray(LogBW);
+  SDValue One = DAG.getShiftAmountConstant(1, VT, DL);
+  SDValue Mc = Msk;
+  SDValue Mk = DAG.getNode(ISD::SHL, DL, VT, DAG.getNOT(DL, Msk, VT), One);
+
+  // First pass: compute move masks for each power of two that a bit moves by.
+  for (unsigned S = 0; S < LogBW; ++S) {
+    unsigned ShiftS = 1u << S;
+    // This expands the "parallel prefix" operation to clmul(Mk, ~0).
+    SDValue Mp =
+        DAG.getNode(ISD::CLMUL, DL, VT, Mk, DAG.getAllOnesConstant(DL, VT));
+    SDValue Mv = DAG.getNode(ISD::AND, DL, VT, Mp, Mc);
+    MvArray[S] = Mv;
+    if (S + 1 < LogBW) {
+      SDValue McXorMv = DAG.getNode(ISD::XOR, DL, VT, Mc, Mv);
+      SDValue MvShifted = DAG.getNode(
+          ISD::SRL, DL, VT, Mv, DAG.getShiftAmountConstant(ShiftS, VT, DL));
+      Mc = DAG.getNode(ISD::OR, DL, VT, McXorMv, MvShifted,
+                       SDNodeFlags::Disjoint);
+      Mk = DAG.getNode(ISD::AND, DL, VT, Mk, DAG.getNOT(DL, Mp, VT));
+    }
+  }
+
+  // Second pass: move bits by 32, 16, 8, 4, 2, 1, using masks, in parallel.
+  // Each pass handles half the shift amount of the previous pass.
+  SDValue X = Val;
+  for (int S = (int)LogBW - 1; S >= 0; --S) {
+    SDValue ShiftSv = DAG.getShiftAmountConstant(1u << S, VT, DL);
+    SDValue T = DAG.getNode(ISD::SHL, DL, VT, X, ShiftSv);
+    SDValue UnshiftedBits =
+        DAG.getNode(ISD::AND, DL, VT, X, DAG.getNOT(DL, MvArray[S], VT));
+    SDValue ShiftedBits = DAG.getNode(ISD::AND, DL, VT, T, MvArray[S]);
+    X = DAG.getNode(ISD::OR, DL, VT, UnshiftedBits, ShiftedBits,
+                    SDNodeFlags::Disjoint);
+  }
+
+  return DAG.getNode(ISD::AND, DL, VT, X, Msk);
 }
 
 void TargetLowering::expandShiftParts(SDNode *Node, SDValue &Lo, SDValue &Hi,

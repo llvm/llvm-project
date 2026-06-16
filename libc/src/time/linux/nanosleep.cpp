@@ -19,14 +19,16 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, nanosleep, (const timespec *req, timespec *rem)) {
-#if SYS_nanosleep
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_nanosleep, req, rem);
-#elif defined(SYS_clock_nanosleep_time64)
-  static_assert(
-      sizeof(time_t) == sizeof(int64_t),
-      "SYS_clock_gettime64 requires struct timespec with 64-bit members.");
+#if defined(SYS_clock_nanosleep_time64)
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_nanosleep_time64,
                                               CLOCK_REALTIME, 0, req, rem);
+#elif defined(SYS_nanosleep)
+  static_assert(
+      sizeof(timespec::tv_nsec) == sizeof(long),
+      "This legacy syscall fallback is only safe on platforms where tv_nsec "
+      "matches the register size (long). It is unsafe on 32-bit platforms "
+      "with 64-bit tv_nsec.");
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_nanosleep, req, rem);
 #else
 #error "SYS_nanosleep and SYS_clock_nanosleep_time64 syscalls not available."
 #endif

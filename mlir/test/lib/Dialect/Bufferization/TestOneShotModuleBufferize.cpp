@@ -58,13 +58,38 @@ struct TestOneShotModuleBufferizePass
     opt.bufferizeFunctionBoundaries = true;
     opt.functionArgTypeConverterFn =
         [&](bufferization::TensorLikeType tensor, Attribute memSpace,
-            func::FuncOp, const bufferization::BufferizationOptions &) {
-          assert(isa<RankedTensorType>(tensor) && "tests only builtin tensors");
-          auto tensorType = cast<RankedTensorType>(tensor);
-          auto layout = getMemRefLayoutForTensorEncoding(tensorType);
-          return cast<bufferization::BufferLikeType>(
-              MemRefType::get(tensorType.getShape(),
-                              tensorType.getElementType(), layout, memSpace));
+            func::FuncOp, const bufferization::BufferizationOptions &options) {
+          return options.unknownTypeConverterFn(tensor, memSpace, options);
+        };
+    opt.unknownTypeConverterFn =
+        [&](bufferization::TensorLikeType tensor, Attribute memSpace,
+            const bufferization::BufferizationOptions &) {
+          return llvm::TypeSwitch<bufferization::TensorLikeType,
+                                  bufferization::BufferLikeType>(tensor)
+              .Case([&](UnrankedTensorType unrankedTensorType) {
+                return cast<bufferization::BufferLikeType>(
+                    UnrankedMemRefType::get(unrankedTensorType.getElementType(),
+                                            memSpace));
+              })
+              .Case([&](RankedTensorType rankedTensorType) {
+                // Note: builtin ranked tensor with custom encoding to layout
+                // conversion.
+                auto layout =
+                    getMemRefLayoutForTensorEncoding(rankedTensorType);
+                return cast<bufferization::BufferLikeType>(MemRefType::get(
+                    rankedTensorType.getShape(),
+                    rankedTensorType.getElementType(), layout, memSpace));
+              })
+              .Case([&](test::TestTensorType testTensorType)
+                        -> bufferization::BufferLikeType {
+                return test::TestMemrefType::get(
+                    testTensorType.getContext(), testTensorType.getShape(),
+                    testTensorType.getElementType(), memSpace);
+              })
+              .Default([&](bufferization::TensorLikeType tensor) {
+                llvm_unreachable("unexpected tensor type");
+                return bufferization::BufferLikeType{};
+              });
         };
 
     bufferization::BufferizationState bufferizationState;

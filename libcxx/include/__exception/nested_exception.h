@@ -14,7 +14,6 @@
 #include <__memory/addressof.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_base_of.h>
 #include <__type_traits/is_class.h>
 #include <__type_traits/is_constructible.h>
@@ -82,18 +81,17 @@ template <class _Tp>
 }
 
 template <class _From, class _To>
-struct __can_dynamic_cast
-    : _BoolConstant< is_polymorphic<_From>::value &&
-                     (!is_base_of<_To, _From>::value || is_convertible<const _From*, const _To*>::value)> {};
+inline const bool __can_dynamic_cast_v =
+    is_polymorphic<_From>::value && (!is_base_of<_To, _From>::value || is_convertible<const _From*, const _To*>::value);
 
-template <class _Ep, __enable_if_t< __can_dynamic_cast<_Ep, nested_exception>::value, int> = 0>
+template <class _Ep, __enable_if_t<__can_dynamic_cast_v<_Ep, nested_exception>, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI void rethrow_if_nested(const _Ep& __e) {
   const nested_exception* __nep = dynamic_cast<const nested_exception*>(std::addressof(__e));
   if (__nep)
     __nep->rethrow_nested();
 }
 
-template <class _Ep, __enable_if_t<!__can_dynamic_cast<_Ep, nested_exception>::value, int> = 0>
+template <class _Ep, __enable_if_t<!__can_dynamic_cast_v<_Ep, nested_exception>, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI void rethrow_if_nested(const _Ep&) {}
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS

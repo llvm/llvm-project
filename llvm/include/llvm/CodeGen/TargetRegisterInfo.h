@@ -21,6 +21,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/RegisterBank.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -61,6 +62,7 @@ public:
 
   /// Configurable target specific flags.
   const uint8_t TSFlags;
+  const uint8_t SpillStackID;
   /// Whether the class supports two (or more) disjunct subregister indices.
   const bool HasDisjunctSubRegs;
   /// Whether a combination of subregisters can cover every register in the
@@ -251,8 +253,8 @@ public:
   /// SubRegCoveredBits - Emitted by tablegen: bit range covered by a subreg
   /// index, -1 in any being invalid.
   struct SubRegCoveredBits {
-    uint16_t Offset;
-    uint16_t Size;
+    uint32_t Offset;
+    uint32_t Size;
   };
 
 private:
@@ -317,6 +319,12 @@ public:
   /// a register of this class.
   Align getSpillAlign(const TargetRegisterClass &RC) const {
     return Align(getRegClassInfo(RC).SpillAlignment / 8);
+  }
+
+  /// Return the stack ID for spill slots holding a spilled copy of a register
+  /// from this class.
+  TargetStackID::Value getSpillStackID(const TargetRegisterClass &RC) const {
+    return static_cast<TargetStackID::Value>(RC.SpillStackID);
   }
 
   /// Return true if the given TargetRegisterClass has the ValueType T.
