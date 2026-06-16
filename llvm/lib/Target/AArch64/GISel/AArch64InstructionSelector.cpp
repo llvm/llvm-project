@@ -3603,6 +3603,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_MEMCPY_INLINE:
   case TargetOpcode::G_MEMMOVE:
   case TargetOpcode::G_MEMSET:
+  case TargetOpcode::G_MEMSET_INLINE:
     assert(STI.hasMOPS() && "Shouldn't get here without +mops feature");
     return selectMOPS(I, MRI);
   }
@@ -3629,6 +3630,7 @@ bool AArch64InstructionSelector::selectMOPS(MachineInstr &GI,
     Mopcode = AArch64::MOPSMemoryMovePseudo;
     break;
   case TargetOpcode::G_MEMSET:
+  case TargetOpcode::G_MEMSET_INLINE:
     // For tagged memset see llvm.aarch64.mops.memset.tag
     Mopcode = AArch64::MOPSMemorySetPseudo;
     break;

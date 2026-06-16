@@ -143,6 +143,7 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
   if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
     # The SWIG wrapper lives in the plugin library in this mode.
     set(liblldb_filename "liblldbPluginScriptInterpreterPython${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    add_dependencies(${swig_target} lldbPluginScriptInterpreterPython)
   elseif (LLDB_BUILD_FRAMEWORK)
     set(liblldb_filename "LLDB")
   else()
@@ -157,8 +158,17 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
   create_relative_symlink(${swig_target} ${LIBLLDB_SYMLINK_DEST}
                           ${lldb_python_target_dir}/native/ ${LIBLLDB_SYMLINK_OUTPUT_FILE})
 
-  if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
-    add_dependencies(${swig_target} lldbPluginScriptInterpreterPython)
+  # On Windows, DLLs must reside alongside the .pyd extension so the loader finds them.
+  # Without this, importing _lldb fails at runtime when vcpkg-provided DLLs are not on PATH.
+  if(WIN32 AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+    file(GLOB _lldb_vcpkg_runtime_dlls
+      "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/*.dll")
+    if(_lldb_vcpkg_runtime_dlls)
+      add_custom_command(TARGET ${swig_target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          ${_lldb_vcpkg_runtime_dlls} "${lldb_python_target_dir}/native/"
+        COMMENT "Staging vcpkg runtime DLLs next to _lldb.pyd")
+    endif()
   endif()
 
   if (NOT WIN32)
@@ -172,6 +182,9 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
   endif()
 
   add_dependencies(${swig_target} swig_wrapper_python liblldb lldb-argdumper)
+  if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+    add_dependencies(${swig_target} lldbPluginScriptInterpreterPython)
+  endif()
   set_target_properties(${swig_target} swig_wrapper_python PROPERTIES FOLDER "lldb misc")
 
   # Ensure we do the python post-build step when building lldb.

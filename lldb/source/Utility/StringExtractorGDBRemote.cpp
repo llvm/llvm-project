@@ -120,6 +120,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_QSetSTDOUT;
       if (PACKET_STARTS_WITH("QSetSTDERR:"))
         return eServerPacketType_QSetSTDERR;
+      if (PACKET_STARTS_WITH("QSetSTDIOWindowSize:"))
+        return eServerPacketType_QSetSTDIOWindowSize;
       if (PACKET_STARTS_WITH("QSetWorkingDir:"))
         return eServerPacketType_QSetWorkingDir;
       if (PACKET_STARTS_WITH("QSetLogging:"))
@@ -334,6 +336,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
       return eServerPacketType_jMultiBreakpoint;
     if (PACKET_MATCHES("jAcceleratorPluginInitialize"))
       return eServerPacketType_jAcceleratorPluginInitialize;
+    if (PACKET_STARTS_WITH("jAcceleratorPluginBreakpointHit:"))
+      return eServerPacketType_jAcceleratorPluginBreakpointHit;
     break;
 
   case 'v':

@@ -13,43 +13,6 @@
 
 // NOTE: NO INCLUDE GUARD DESIRED!
 
-#ifndef MODULE_ANALYSIS
-#define MODULE_ANALYSIS(NAME, CREATE_PASS)
-#endif
-MODULE_ANALYSIS("collector-metadata", CollectorMetadataAnalysis())
-MODULE_ANALYSIS("machine-module-info", MachineModuleAnalysis())
-MODULE_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
-#undef MODULE_ANALYSIS
-
-#ifndef MODULE_PASS
-#define MODULE_PASS(NAME, CREATE_PASS)
-#endif
-MODULE_PASS("global-merge", GlobalMergePass(TM, GlobalMergeOptions()))
-MODULE_PASS("jmc-instrumenter", JMCInstrumenterPass())
-MODULE_PASS("lower-emutls", LowerEmuTLSPass())
-MODULE_PASS("mir-strip-debug", StripDebugMachineModulePass())
-MODULE_PASS("pre-isel-intrinsic-lowering", PreISelIntrinsicLoweringPass())
-MODULE_PASS("print<regusage>", PhysicalRegisterUsageInfoPrinterPass(errs()))
-MODULE_PASS("shadow-stack-gc-lowering", ShadowStackGCLoweringPass())
-MODULE_PASS("global-merge-func", GlobalMergeFuncPass())
-#undef MODULE_PASS
-
-#ifndef FUNCTION_ANALYSIS
-#define FUNCTION_ANALYSIS(NAME, CREATE_PASS)
-#endif
-FUNCTION_ANALYSIS("gc-function", GCFunctionAnalysis())
-FUNCTION_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
-FUNCTION_ANALYSIS("ssp-layout", SSPLayoutAnalysis())
-FUNCTION_ANALYSIS("target-ir", TargetIRAnalysis(std::move(TM.getTargetIRAnalysis())))
-#undef FUNCTION_ANALYSIS
-
-#ifndef LOOP_PASS
-#define LOOP_PASS(NAME, CREATE_PASS)
-#endif
-LOOP_PASS("loop-reduce", LoopStrengthReducePass())
-LOOP_PASS("loop-term-fold", LoopTermFoldPass())
-#undef LOOP_PASS
-
 #ifndef MACHINE_MODULE_PASS
 #define MACHINE_MODULE_PASS(NAME, CREATE_PASS)
 #endif
@@ -92,11 +55,6 @@ MACHINE_FUNCTION_ANALYSIS("regalloc-priority", RegAllocPriorityAdvisorAnalysis()
 MACHINE_FUNCTION_ANALYSIS("slot-indexes", SlotIndexesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("spill-code-placement", SpillPlacementAnalysis())
 MACHINE_FUNCTION_ANALYSIS("virtregmap", VirtRegMapAnalysis())
-// MACHINE_FUNCTION_ANALYSIS("lazy-machine-bfi",
-// LazyMachineBlockFrequencyInfoAnalysis())
-// MACHINE_FUNCTION_ANALYSIS("machine-loops", MachineLoopInfoAnalysis())
-// MACHINE_FUNCTION_ANALYSIS("machine-post-dom-tree",
-// MachinePostDominatorTreeAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("machine-region-info",
 // MachineRegionInfoPassAnalysis())
 // MACHINE_FUNCTION_ANALYSIS("gc-analysis",
@@ -108,6 +66,8 @@ MACHINE_FUNCTION_ANALYSIS("virtregmap", VirtRegMapAnalysis())
 #endif
 MACHINE_FUNCTION_PASS("block-placement-stats", MachineBlockPlacementStatsPass())
 MACHINE_FUNCTION_PASS("branch-relaxation", BranchRelaxationPass())
+MACHINE_FUNCTION_PASS("break-false-deps", BreakFalseDepsPass())
+MACHINE_FUNCTION_PASS("cfi-fixup", CFIFixupPass())
 MACHINE_FUNCTION_PASS("dead-mi-elimination", DeadMachineInstructionElimPass())
 MACHINE_FUNCTION_PASS("detect-dead-lanes", DetectDeadLanesPass())
 MACHINE_FUNCTION_PASS("dot-machine-cfg", MachineCFGPrinterPass())
@@ -273,9 +233,7 @@ DUMMY_MACHINE_MODULE_PASS("mir-check-debugify", CheckDebugMachineModulePass)
 #endif
 DUMMY_MACHINE_FUNCTION_PASS("bbsections-prepare", BasicBlockSectionsPass)
 DUMMY_MACHINE_FUNCTION_PASS("bbsections-profile-reader", BasicBlockSectionsProfileReaderPass)
-DUMMY_MACHINE_FUNCTION_PASS("break-false-deps", BreakFalseDepsPass)
 DUMMY_MACHINE_FUNCTION_PASS("cfguard-longjmp", CFGuardLongjmpPass)
-DUMMY_MACHINE_FUNCTION_PASS("cfi-fixup", CFIFixupPass)
 DUMMY_MACHINE_FUNCTION_PASS("cfi-instr-inserter", CFIInstrInserterPass)
 DUMMY_MACHINE_FUNCTION_PASS("eh-cont-guard-targets", EHContGuardTargetsPass)
 DUMMY_MACHINE_FUNCTION_PASS("fs-profile-loader", MIRProfileLoaderNewPass)

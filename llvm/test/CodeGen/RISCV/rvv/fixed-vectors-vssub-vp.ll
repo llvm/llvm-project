@@ -10,10 +10,10 @@ define <8 x i7> @vssub_vv_v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 zeroe
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vadd.vv v9, v9, v9
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
-; CHECK-NEXT:    li a0, 63
 ; CHECK-NEXT:    vsra.vi v9, v9, 1
 ; CHECK-NEXT:    vsra.vi v8, v8, 1
 ; CHECK-NEXT:    vsub.vv v8, v8, v9
+; CHECK-NEXT:    li a0, 63
 ; CHECK-NEXT:    vmin.vx v8, v8, a0
 ; CHECK-NEXT:    li a0, 192
 ; CHECK-NEXT:    vmax.vx v8, v8, a0

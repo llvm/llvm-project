@@ -83,80 +83,10 @@ Error L0KernelTy::initImpl(GenericDeviceTy &GenericDevice,
   return Plugin::success();
 }
 
-using AppendLaunchFnTy = llvm::function_ref<Error(
-    ze_command_list_handle_t CmdList, ze_event_handle_t Event,
-    uint32_t NumWaitEvents, ze_event_handle_t *WaitEvents)>;
-
-static Error launchKernelWithImmCmdList(L0DeviceTy &l0Device,
-                                        ze_kernel_handle_t zeKernel,
-                                        L0LaunchEnvTy &KEnv,
-                                        CommandModeTy CommandMode,
-                                        AppendLaunchFnTy AppendLaunch) {
-  const auto DeviceId = l0Device.getDeviceId();
-  auto *IdStr = l0Device.getZeIdCStr();
-  auto CmdListOrErr = l0Device.getImmCmdList();
-  if (!CmdListOrErr)
-    return CmdListOrErr.takeError();
-  const ze_command_list_handle_t CmdList = *CmdListOrErr;
-
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Using immediate command list for kernel submission.\n");
-  auto EventOrError = l0Device.getEvent();
-  if (!EventOrError)
-    return EventOrError.takeError();
-  ze_event_handle_t Event = *EventOrError;
-  size_t NumWaitEvents = 0;
-  ze_event_handle_t *WaitEvents = nullptr;
-  auto *AsyncQueue = KEnv.AsyncQueue;
-  if (KEnv.IsAsync && !AsyncQueue->WaitEvents.empty()) {
-    if (CommandMode == CommandModeTy::AsyncOrdered) {
-      NumWaitEvents = 1;
-      WaitEvents = &AsyncQueue->WaitEvents.back();
-    } else {
-      NumWaitEvents = AsyncQueue->WaitEvents.size();
-      WaitEvents = AsyncQueue->WaitEvents.data();
-    }
-  }
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Kernel depends on %zu data copying events.\n", NumWaitEvents);
-
-  Error AllErrors = Error::success();
-
-  if (auto Err = AppendLaunch(CmdList, Event, NumWaitEvents, WaitEvents))
-    AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
-
-  KEnv.Lock.unlock();
-  if (AllErrors) {
-    if (auto Err = l0Device.releaseEvent(Event))
-      AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
-    return AllErrors;
-  }
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
-
-  if (KEnv.IsAsync) {
-    AsyncQueue->WaitEvents.push_back(Event);
-    AsyncQueue->KernelEvent = Event;
-  } else {
-    CALL_ZE_ACCUM_ERROR(AllErrors, zeEventHostSynchronize, Event,
-                        L0DefaultTimeout);
-    if (auto Err = l0Device.releaseEvent(Event))
-      AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
-    if (AllErrors)
-      return AllErrors;
-  }
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "Executed kernel entry " DPxMOD " on device %s\n", DPxPTR(zeKernel),
-       IdStr);
-
-  return Plugin::success();
-}
-
 ze_group_size_t L0KernelTy::createKernelGroups(L0DeviceTy &l0Device,
                                                L0LaunchEnvTy &KEnv,
                                                uint32_t NumThreads[3],
                                                uint32_t NumBlocks[3]) const {
-  ze_group_size_t GroupSizes;
   assert(NumThreads[0] > 0 && NumThreads[1] > 0 && NumThreads[2] > 0 &&
          "Pre-computed ThreadLimit values must be non-zero");
   assert(NumBlocks[0] > 0 && NumBlocks[1] > 0 && NumBlocks[2] > 0 &&
@@ -165,20 +95,21 @@ ze_group_size_t L0KernelTy::createKernelGroups(L0DeviceTy &l0Device,
   KEnv.GroupCounts = {NumBlocks[0], NumBlocks[1], NumBlocks[2]};
   // Respect max group size attribute in the kernel.
   uint32_t MaxGroupSize = KEnv.KernelPR.MaxThreadGroupSize;
-  GroupSizes.groupSizeX = std::min<uint32_t>(MaxGroupSize, NumThreads[0]);
-  GroupSizes.groupSizeY = std::min<uint32_t>(MaxGroupSize, NumThreads[1]);
-  GroupSizes.groupSizeZ = std::min<uint32_t>(MaxGroupSize, NumThreads[2]);
+  KEnv.GroupSizes.groupSizeX = std::min<uint32_t>(MaxGroupSize, NumThreads[0]);
+  KEnv.GroupSizes.groupSizeY = std::min<uint32_t>(MaxGroupSize, NumThreads[1]);
+  KEnv.GroupSizes.groupSizeZ = std::min<uint32_t>(MaxGroupSize, NumThreads[2]);
 
   auto DeviceId = l0Device.getDeviceId();
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Team sizes = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n",
-       GroupSizes.groupSizeX, GroupSizes.groupSizeY, GroupSizes.groupSizeZ);
+       KEnv.GroupSizes.groupSizeX, KEnv.GroupSizes.groupSizeY,
+       KEnv.GroupSizes.groupSizeZ);
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
        "Number of teams = {%" PRIu32 ", %" PRIu32 ", %" PRIu32 "}\n",
        KEnv.GroupCounts.groupCountX, KEnv.GroupCounts.groupCountY,
        KEnv.GroupCounts.groupCountZ);
 
-  return GroupSizes;
+  return KEnv.GroupSizes;
 }
 
 Error L0KernelTy::setIndirectFlags(L0DeviceTy &l0Device,
@@ -211,16 +142,14 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   auto &l0Device = L0DeviceTy::makeL0Device(GenericDevice);
   __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
+  assert(AsyncInfo && "AsyncInfo must be provided for L0 kernel launch");
 
   auto zeKernel = getZeKernel();
   auto DeviceId = l0Device.getDeviceId();
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId, "Launching kernel " DPxMOD "...\n",
        DPxPTR(zeKernel));
 
-  auto &Plugin = l0Device.getPlugin();
   auto *IdStr = l0Device.getZeIdCStr();
-  auto &Options = Plugin.getOptions();
-  bool IsAsync = AsyncInfo && l0Device.asyncEnabled();
   bool IsCooperative = KernelArgs.Flags.Cooperative;
 
   if (IsCooperative && !l0Device.supportsCooperativeKernels()) {
@@ -228,16 +157,13 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
         ErrorCode::UNSUPPORTED,
         "cooperative kernel launch is not supported by the device");
   }
-  if (IsAsync && !AsyncInfo->Queue) {
-    AsyncInfo->Queue = reinterpret_cast<void *>(Plugin.getAsyncQueue());
-    if (!AsyncInfo->Queue)
-      IsAsync = false; // Couldn't get a queue, revert to sync.
-  }
-  auto *AsyncQueue =
-      IsAsync ? static_cast<AsyncQueueTy *>(AsyncInfo->Queue) : nullptr;
+  auto QueueOrErr = l0Device.getOrCreateQueue(AsyncInfo);
+  if (!QueueOrErr)
+    return QueueOrErr.takeError();
+  auto *Queue = *QueueOrErr;
   auto &KernelPR = getProperties();
 
-  L0LaunchEnvTy KEnv(IsAsync, IsCooperative, AsyncQueue, KernelPR);
+  L0LaunchEnvTy KEnv(KernelPR, KernelArgs);
 
   // Protect from kernel preparation to submission as kernels are shared.
   KEnv.Lock.lock();
@@ -310,33 +236,13 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = setIndirectFlags(l0Device, KEnv))
     return Err;
 
-  auto AppendLaunch = [&](ze_command_list_handle_t CmdList,
-                          ze_event_handle_t Event, uint32_t NumWaitEvents,
-                          ze_event_handle_t *WaitEvents) -> Error {
-    if (IsPtrArgs) {
-      ze_command_list_append_launch_kernel_param_cooperative_desc_t CoopDesc = {
-          ZE_STRUCTURE_TYPE_COMMAND_LIST_APPEND_PARAM_COOPERATIVE_DESC, nullptr,
-          static_cast<ze_bool_t>(IsCooperative)};
-      CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernelWithArguments, CmdList,
-                        zeKernel, KEnv.GroupCounts, GroupSizes,
-                        KernelArgs.ArgPtrs, IsCooperative ? &CoopDesc : nullptr,
-                        Event, NumWaitEvents, WaitEvents);
-    } else if (IsCooperative) {
-      INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-           "Launching cooperative kernel " DPxMOD "\n", DPxPTR(zeKernel));
-      CALL_ZE_RET_ERROR(zeCommandListAppendLaunchCooperativeKernel, CmdList,
-                        zeKernel, &KEnv.GroupCounts, Event, NumWaitEvents,
-                        WaitEvents);
-    } else {
-      CALL_ZE_RET_ERROR(zeCommandListAppendLaunchKernel, CmdList, zeKernel,
-                        &KEnv.GroupCounts, Event, NumWaitEvents, WaitEvents);
-    }
-    return Plugin::success();
-  };
-
   // The next call should unlock the KernelLock internally.
-  return launchKernelWithImmCmdList(l0Device, zeKernel, KEnv,
-                                    Options.CommandMode, AppendLaunch);
+  if (auto Err = Queue->launchKernel(zeKernel, KEnv))
+    return Err;
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
+       "Submitted kernel " DPxMOD " to device %s\n", DPxPTR(zeKernel), IdStr);
+
+  return Plugin::success();
 }
 
 Expected<uint32_t>

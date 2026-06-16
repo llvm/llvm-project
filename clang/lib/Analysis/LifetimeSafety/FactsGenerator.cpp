@@ -566,8 +566,13 @@ void FactsGenerator::VisitInitListExpr(const InitListExpr *ILE) {
     return;
   // For list initialization with a single element, like `View{...}`, the
   // origin of the list itself is the origin of its single element.
-  if (ILE->getNumInits() == 1)
+  if (ILE->getNumInits() == 1) {
+    // A type with origins may be list-initialized from an element with none
+    // (e.g., an int). Only flow if the element carries any.
+    if (!hasOrigins(ILE->getInit(0)))
+      return;
     killAndFlowOrigin(*ILE, *ILE->getInit(0));
+  }
 }
 
 void FactsGenerator::VisitCXXBindTemporaryExpr(
@@ -631,23 +636,23 @@ void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
       Dst->getOuterOriginID(), Src->getOuterOriginID(), /*Kill=*/true));
 }
 
-void FactsGenerator::handlePlacementNew(const CXXNewExpr *NE,
+bool FactsGenerator::handlePlacementNew(const CXXNewExpr *NE,
                                         OriginList *NewList) {
   // Model only the standard single-argument placement new form, where the
   // placement argument corresponds to a void* allocation-function parameter.
   // Other placement forms, such as std::nothrow, are not modeled as providing
   // storage for the returned pointer.
   if (NE->getNumPlacementArgs() != 1)
-    return;
+    return false;
 
   const FunctionDecl *OperatorNew = NE->getOperatorNew();
   if (OperatorNew->getNumParams() <= 1)
-    return;
+    return false;
 
   const auto *Arg =
       OperatorNew->getParamDecl(1)->getType()->getAs<PointerType>();
   if (!Arg || !Arg->isVoidPointerType())
-    return;
+    return false;
 
   // Use the placement argument before the implicit conversion to void*, so
   // inner origins are still available.
@@ -665,15 +670,23 @@ void FactsGenerator::handlePlacementNew(const CXXNewExpr *NE,
   if (PlacementList)
     CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
         NewList->getOuterOriginID(), PlacementList->getOuterOriginID(), true));
+  return true;
 }
 
 void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
   OriginList *NewList = getOriginsList(*NE);
   const Expr *Init = NE->getInitializer();
 
-  if (NE->getNumPlacementArgs() == 1) {
-    handlePlacementNew(NE, NewList);
-  } else {
+  bool HandledAsPlacementNew = false;
+  if (NE->getNumPlacementArgs() == 1)
+    HandledAsPlacementNew = handlePlacementNew(NE, NewList);
+
+  // Treat ordinary new and replaceable global allocation forms as heap
+  // allocations.
+  const FunctionDecl *OperatorNew = NE->getOperatorNew();
+  if (!HandledAsPlacementNew &&
+      (NE->getNumPlacementArgs() == 0 ||
+       (OperatorNew && OperatorNew->isReplaceableGlobalAllocationFunction()))) {
     const Loan *L = createLoan(FactMgr, NE);
     CurrentBlockFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), NewList->getOuterOriginID()));
@@ -726,8 +739,8 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
 void FactsGenerator::handleFullExprCleanup(
     const CFGFullExprCleanup &FullExprCleanup) {
   for (const auto *MTE : FullExprCleanup.getExpiringMTEs())
-    CurrentBlockFacts.push_back(
-        FactMgr.createFact<ExpireFact>(AccessPath(MTE), MTE->getEndLoc()));
+    CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
+        AccessPath(MTE), FullExprCleanup.getCleanupLoc()));
 }
 
 void FactsGenerator::handleExitBlock() {
