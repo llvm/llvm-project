@@ -831,8 +831,8 @@ static void __kmp_stg_parse_wait_policy(char const *name, char const *value,
         __kmp_dflt_blocktime = KMP_MAX_BLOCKTIME;
       }
       if (use_yield_str == NULL) {
-        // KMP_USE_YIELD not specified, so set default to 0.
-        __kmp_use_yield = 0;
+        // KMP_USE_YIELD not specified, so set default to 2.
+        __kmp_use_yield = 2;
       }
     } else if (__kmp_str_match("PASSIVE", 1, value)) {
       __kmp_library = library_throughput;
