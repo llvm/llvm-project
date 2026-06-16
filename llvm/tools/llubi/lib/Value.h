@@ -30,11 +30,21 @@ class AnyValue;
 /// stores the concrete bit value. The tag mask bit indicates whether it is a
 /// pointer bit, and the tag value bit is used for provenance tracking of
 /// pointers.
+///
+/// Note that the idealized interpreter would store a full pointer tag for every
+/// single pointer bit, as well as the position of that bit in the pointer. The
+/// provenance is preserved as the bit is copied around, and when a sequence of
+/// bytes is eventually converted back to a pointer, all bits must be in the
+/// original order and have the same provenance. However, that would be
+/// prohibitively expensive. So instead, we rely on randomized ptr-sized tags.
+/// This means that if bits get reordered, or if bits from different pointers
+/// get mixed, then the result is unlikely to be a valid tag.
 struct Byte {
   uint8_t ConcreteMask;
   uint8_t Value;
   uint8_t TagMask;  // A mask to indicate which bits are pointer bits.
-  uint8_t TagValue; // Part of the tag for provenance tracking of pointers.
+  uint8_t TagValue; // For each pointer bit, the corresponding bit of the tag
+                    // for provenance tracking.
 
   static Byte poison() { return Byte{0, 0, 0, 0}; }
   static Byte undef() { return Byte{0, 255, 0, 0}; }
@@ -104,15 +114,56 @@ enum class StorageKind {
 /// Tri-state boolean value.
 enum class BooleanKind { False, True, Poison };
 
+/// A set of previously exposed provenances. It is originally yielded by
+/// inttoptr, and shared by pointers derived from the result.
+///
+/// Each capability check may invalidate some provenances. If we cannot
+/// pick one, it is UB. That is, from the angelic non-determinism view,
+/// we cannot pick a provenance to make the program reach this point.
+///
+/// For efficiency, this class has different forms in two stages:
+/// 1. Before any memory access is performed, ActiveMask is set to zero and
+/// Generation represents the global generation number of the snapshot.
+/// 2. After a memory access is performed, we can determine exactly one memory
+/// object to be accessed (address ranges are distinct). In this case,
+/// BaseAddress is set and ActiveMask is non-zero. ActiveMask represents the
+/// validity of the first N exposed provenances associated with the memory
+/// object. The bitwidth N is the number of provenances in the list with
+/// List[I].Generation <= WildcardProvenance::Generation (The generation field
+/// in the list is monotonically increasing). That is, we can only access
+/// through exposed provenances before inttoptr executes. Note that if
+/// ActiveMask becomes zero again, UB must be triggered.
+class WildcardProvenance : public RefCountedBase<WildcardProvenance> {
+  APInt ActiveMask;
+  union {
+    uint64_t Generation;
+    uint64_t BaseAddress;
+  };
+
+  friend class Context;
+
+public:
+  explicit WildcardProvenance(uint64_t Generation)
+      : ActiveMask(), Generation(Generation) {}
+};
+
 /// Components of a pointer excluding address. They are shared between pointer
 /// values, as most of operations don't change the provenance.
 /// Each node will be assigned a unique, pointer-sized tag, which is used to
 /// represent the pointer in the memory.
+/// The provenance can be either concrete or wildcard, as determined by the
+/// cases below:
+///  Obj        Wildcard      State
+///  Null       Null          Invalid
+///  Null       NonNull       Wildcard
+///  NonNull    Null          Concrete
+///  NonNull    NonNull       Wildcard (associated with a specific MO)
 class Provenance : public RefCountedBase<Provenance> {
   // TODO: store reference to the provenance of the pointer it is derived from
 
   // The underlying memory object. It can be null for invalid or dangling
-  // pointers.
+  // pointers. Besides, for pointers with wildcard provenance, it can be null
+  // until the memory object is resolved by gep inbounds.
   IntrusiveRefCntPtr<MemoryObject> Obj;
 
   // A tag is a randomly generated unique identifier to recover the provenance
@@ -120,9 +171,10 @@ class Provenance : public RefCountedBase<Provenance> {
   // type, in bits. It may produce false negatives in some corner cases. But in
   // real practice the false negative rate should be negligible.
   // A zero tag is invalid.
-  // TODO: we need a special tag for wildcard provenance, which is introduced by
-  // inttoptr.
   APInt Tag;
+
+  // Null if it is concrete.
+  IntrusiveRefCntPtr<WildcardProvenance> Wildcard;
 
   // TODO: modeling nofree
   // TODO: modeling captures
@@ -136,7 +188,9 @@ class Provenance : public RefCountedBase<Provenance> {
 public:
   Provenance(IntrusiveRefCntPtr<MemoryObject> Obj) : Obj(std::move(Obj)) {}
   static IntrusiveRefCntPtr<Provenance> nullary();
+  IntrusiveRefCntPtr<Provenance> getWithKnownMemoryObject(MemoryObject &Obj);
   MemoryObject *getMemoryObject() const { return Obj.get(); }
+  bool isWildcard() const { return Wildcard != nullptr; }
 };
 
 class Pointer {
@@ -156,12 +210,14 @@ public:
   Pointer getWithNewAddr(const APInt &NewAddr) const {
     return Pointer(Prov, NewAddr);
   }
+  Pointer getWithNewProvenance(IntrusiveRefCntPtr<Provenance> NewProv) const {
+    return Pointer(NewProv, Address);
+  }
   static AnyValue null(unsigned AS, const DataLayout &DL);
   bool isNullPtr(unsigned AS, const DataLayout &DL) const;
   void print(raw_ostream &OS) const;
   const APInt &address() const { return Address; }
   Provenance &provenance() const { return *Prov; }
-  MemoryObject *getMemoryObject() const { return Prov->getMemoryObject(); }
 };
 
 // Value representation for actual values of LLVM values.
@@ -276,6 +332,42 @@ inline raw_ostream &operator<<(raw_ostream &OS, const AnyValue &V) {
 inline raw_ostream &operator<<(raw_ostream &OS, const Pointer &P) {
   P.print(OS);
   return OS;
+}
+
+inline AnyValue addNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
+                          bool HasNUW) {
+  APInt Res = LHS + RHS;
+  if (HasNUW && Res.ult(RHS))
+    return AnyValue::poison();
+  if (HasNSW && LHS.isNonNegative() == RHS.isNonNegative() &&
+      LHS.isNonNegative() != Res.isNonNegative())
+    return AnyValue::poison();
+  return Res;
+}
+
+inline AnyValue subNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
+                          bool HasNUW) {
+  APInt Res = LHS - RHS;
+  if (HasNUW && Res.ugt(LHS))
+    return AnyValue::poison();
+  if (HasNSW && LHS.isNonNegative() != RHS.isNonNegative() &&
+      LHS.isNonNegative() != Res.isNonNegative())
+    return AnyValue::poison();
+  return Res;
+}
+
+inline AnyValue mulNoWrap(const APInt &LHS, const APInt &RHS, bool HasNSW,
+                          bool HasNUW) {
+  bool Overflow = false;
+  APInt Res = LHS.smul_ov(RHS, Overflow);
+  if (HasNSW && Overflow)
+    return AnyValue::poison();
+  if (HasNUW) {
+    (void)LHS.umul_ov(RHS, Overflow);
+    if (Overflow)
+      return AnyValue::poison();
+  }
+  return Res;
 }
 
 } // namespace llvm::ubi

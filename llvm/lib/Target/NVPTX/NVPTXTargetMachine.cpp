@@ -359,6 +359,9 @@ void NVPTXPassConfig::addIRPasses() {
   addPass(createNVPTXAssignValidGlobalNamesPass());
   addPass(createGenericToNVVMLegacyPass());
 
+  // Lower variadic calls before address space inference.
+  addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
+
   // NVPTXLowerArgs is required for correctness and should be run right
   // before the address space inference passes.
   if (getNVPTXTargetMachine().getDrvInterface() == NVPTX::CUDA)
@@ -371,7 +374,6 @@ void NVPTXPassConfig::addIRPasses() {
   }
 
   addPass(createAtomicExpandLegacyPass());
-  addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
   addPass(createNVPTXCtorDtorLoweringLegacyPass());
 
   // === LSR and other generic IR passes ===

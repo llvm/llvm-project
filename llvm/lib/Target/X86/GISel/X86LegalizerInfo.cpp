@@ -314,6 +314,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampScalar(1, s16, sMaxScalar)
       .scalarSameSizeAs(0, 1);
 
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
 
   // pointer handling
@@ -424,6 +425,9 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(1, /*Min=*/8)
       .clampScalar(1, s8, sMaxScalar)
       .scalarize(0);
+
+  getActionDefinitionsBuilder(G_TRUNC).legalForCartesianProduct(
+      {s1, s8, s16, s32, s64}, {s8, s16, s32, s64, s128});
 
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
@@ -615,6 +619,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .scalarize(0)
       .minScalar(0, LLT::scalar(32))
       .libcall();
+
+  getActionDefinitionsBuilder({G_INTRINSIC, G_INTRINSIC_W_SIDE_EFFECTS})
+      .alwaysLegal();
+  getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
 
   getLegacyLegalizerInfo().computeTables();
   verify(*STI.getInstrInfo());

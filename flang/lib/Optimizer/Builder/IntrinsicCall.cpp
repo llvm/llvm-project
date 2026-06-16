@@ -368,6 +368,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genGetTeam,
      {{{"level", asValue, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"getarg",
+     &I::genGetarg,
+     {{{"pos", asValue}, {"value", asBox}}},
+     /*isElemental=*/false},
     {"getcwd",
      &I::genGetCwd,
      {{{"c", asBox}, {"status", asAddr, handleDynamicOptional}}},
@@ -393,6 +397,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"dim", asValue},
        {"mask", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"iargc", &I::genIargc},
     {"ibclr", &I::genIbclr},
     {"ibits", &I::genIbits},
     {"ibset", &I::genIbset},
@@ -4364,6 +4369,24 @@ void IntrinsicLibrary::genGetCommandArgument(
   }
 }
 
+// GETARG
+void IntrinsicLibrary::genGetarg(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+
+  mlir::Value pos = fir::getBase(args[0]);
+  mlir::Value value = fir::getBase(args[1]);
+
+  if (!pos)
+    fir::emitFatalError(loc, "expected POS parameter");
+
+  mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
+  mlir::Value absentBox =
+      fir::AbsentOp::create(builder, loc, boxNoneTy).getResult();
+
+  fir::runtime::genGetCommandArgument(builder, loc, pos, value, absentBox,
+                                      absentBox);
+}
+
 // GET_ENVIRONMENT_VARIABLE
 void IntrinsicLibrary::genGetEnvironmentVariable(
     llvm::ArrayRef<fir::ExtendedValue> args) {
@@ -4554,6 +4577,15 @@ IntrinsicLibrary::genIany(mlir::Type resultType,
                           llvm::ArrayRef<fir::ExtendedValue> args) {
   return genReduction(fir::runtime::genIAny, fir::runtime::genIAnyDim, "IANY",
                       resultType, args);
+}
+
+// IARGC
+fir::ExtendedValue
+IntrinsicLibrary::genIargc(mlir::Type resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 0);
+  return builder.createConvert(
+      loc, resultType, fir::runtime::genCommandArgumentCount(builder, loc));
 }
 
 // IBCLR

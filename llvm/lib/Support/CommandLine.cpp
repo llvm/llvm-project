@@ -450,6 +450,13 @@ extrahelp::extrahelp(StringRef Help) : morehelp(Help) {
   GlobalParser->MoreHelp.push_back(Help);
 }
 
+Option::Option(NumOccurrencesFlag OccurrencesFlag, OptionHidden Hidden)
+    : NumOccurrences(0), Occurrences(OccurrencesFlag), Value(0),
+      HiddenFlag(Hidden), Formatting(NormalFormatting), Misc(0),
+      FullyInitialized(false), Position(0), AdditionalVals(0) {
+  Categories.push_back(&getGeneralCategory());
+}
+
 void Option::addArgument() {
   GlobalParser->addOption(this);
   FullyInitialized = true;
@@ -2800,6 +2807,9 @@ ArrayRef<StringRef> cl::getCompilerBuildConfig() {
 #endif
 #if __has_feature(undefined_behavior_sanitizer)
       "+ubsan",
+#endif
+#ifdef LLVM_INTEGRATED_CRT_ALLOC
+      "+alloc:" LLVM_INTEGRATED_CRT_ALLOC,
 #endif
   };
   return ArrayRef(Config).drop_front(1);

@@ -491,11 +491,21 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::SALU;
   }
 
-  static bool isVALU(const MachineInstr &MI) {
+  static bool isVALU(const MachineInstr &MI, bool AllowLDSDMA) {
+    if (!AllowLDSDMA && isLDSDMA(MI))
+      return false;
+
     return MI.getDesc().TSFlags & SIInstrFlags::VALU;
   }
 
-  bool isVALU(uint32_t Opcode) const {
+  /// LDSDMA instructions act as both VALU and memory instructions, thus
+  /// we also tag them as VALU. However, in many places, we do not actually want
+  /// to include LDSDMA instructions in this query. By setting \p AllowLDSDMA to
+  /// false, this will return false for LDSDMA instructions.
+  bool isVALU(uint32_t Opcode, bool AllowLDSDMA) const {
+    if (!AllowLDSDMA && isLDSDMA(Opcode))
+      return false;
+
     return get(Opcode).TSFlags & SIInstrFlags::VALU;
   }
 
@@ -646,12 +656,14 @@ public:
   }
 
   static bool isLDSDMA(const MachineInstr &MI) {
-    return (isVALU(MI) && (isMUBUF(MI) || isFLAT(MI))) ||
+    return ((MI.getDesc().TSFlags & SIInstrFlags::VALU) &&
+            (isMUBUF(MI) || isFLAT(MI))) ||
            (MI.getDesc().TSFlags & SIInstrFlags::TENSOR_CNT);
   }
 
-  bool isLDSDMA(uint32_t Opcode) {
-    return (isVALU(Opcode) && (isMUBUF(Opcode) || isFLAT(Opcode))) ||
+  bool isLDSDMA(uint32_t Opcode) const {
+    return ((get(Opcode).TSFlags & SIInstrFlags::VALU) &&
+            (isMUBUF(Opcode) || isFLAT(Opcode))) ||
            (get(Opcode).TSFlags & SIInstrFlags::TENSOR_CNT);
   }
 
@@ -893,13 +905,13 @@ public:
   static bool isVGPRSpill(const MachineInstr &MI) {
     return MI.getOpcode() != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            MI.getOpcode() != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           (isSpill(MI) && isVALU(MI));
+           (isSpill(MI) && isVALU(MI, /*AllowLDSDMA=*/true));
   }
 
   bool isVGPRSpill(uint32_t Opcode) const {
     return Opcode != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            Opcode != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           (isSpill(Opcode) && isVALU(Opcode));
+           (isSpill(Opcode) && isVALU(Opcode, /*AllowLDSDMA=*/true));
   }
 
   static bool isSGPRSpill(const MachineInstr &MI) {
@@ -1170,6 +1182,23 @@ public:
            Opcode == AMDGPU::S_BARRIER_JOIN_IMM ||
            Opcode == AMDGPU::S_BARRIER_LEAVE || Opcode == AMDGPU::DS_GWS_INIT ||
            Opcode == AMDGPU::DS_GWS_BARRIER;
+  }
+
+  static bool isLoadMonitor(unsigned Opc) {
+    switch (Opc) {
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B32:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B32_SADDR:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B64:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B64_SADDR:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B128:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B128_SADDR:
+    case AMDGPU::FLAT_LOAD_MONITOR_B32:
+    case AMDGPU::FLAT_LOAD_MONITOR_B64:
+    case AMDGPU::FLAT_LOAD_MONITOR_B128:
+      return true;
+    default:
+      return false;
+    }
   }
 
   static bool isGFX12CacheInvOrWBInst(unsigned Opc) {
@@ -1490,15 +1519,15 @@ public:
   bool isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
                          const MachineOperand &MO) const;
 
-  /// Check if \p MO would be a legal operand for gfx12+ packed math FP32
-  /// instructions. Packed math FP32 instructions typically accept SGPRs or
-  /// VGPRs as source operands. On gfx12+, if a source operand uses SGPRs, the
-  /// HW can only read the first SGPR and use it for both the low and high
-  /// operations.
+  /// Check if \p MO would be a legal operand for gfx12+ packed math FP32 or
+  /// 64 instructions. Packed math FP32/FP64/U64 instructions typically accept
+  /// SGPRs or VGPRs as source operands. On gfx12+, if a source operand uses
+  /// SGPRs, the HW can only read the first SGPR and use it for both the low and
+  /// high operations.
   /// \p SrcN can be 0, 1, or 2, representing src0, src1, and src2,
   /// respectively. If \p MO is nullptr, the operand corresponding to SrcN will
   /// be used.
-  bool isLegalGFX12PlusPackedMathFP32Operand(
+  bool isLegalGFX12PlusPackedMathFP32or64BitOperand(
       const MachineRegisterInfo &MRI, const MachineInstr &MI, unsigned SrcN,
       const MachineOperand *MO = nullptr) const;
 

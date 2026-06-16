@@ -3032,6 +3032,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  isnanf128
+  SRCS
+    isnanf128.cpp
+  HDRS
+    ../isnanf128.h
+  DEPENDS
+    libc.src.__support.math.isnanf128
+)
+
+add_entrypoint_object(
   isnanl
   SRCS
     isnanl.cpp
@@ -3851,6 +3861,16 @@ add_entrypoint_object(
     ../asin.h
   DEPENDS
     libc.src.__support.math.asin
+)
+
+add_entrypoint_object(
+  acosbf16
+  SRCS
+    acosbf16.cpp
+  HDRS
+    ../acosbf16.h
+  DEPENDS
+    libc.src.__support.math.acosbf16
 )
 
 add_entrypoint_object(
@@ -4707,6 +4727,16 @@ add_entrypoint_object (
     ../cbrtbf16.h
   DEPENDS
     libc.src.__support.math.cbrtbf16
+)
+
+add_entrypoint_object(
+  cbrtf16
+  SRCS
+    cbrtf16.cpp
+  HDRS
+    ../cbrtf16.h
+  DEPENDS
+    libc.src.__support.math.cbrtf16
 )
 
 add_entrypoint_object(

@@ -318,14 +318,6 @@ public:
   ///     concatenated.
   std::string GetPath(bool denormalize = true) const;
 
-  /// Get the full path as a ConstString.
-  ///
-  /// This method should only be used when you need a ConstString or the
-  /// const char * from a ConstString to ensure permanent lifetime of C string.
-  /// Anyone needing the path temporarily should use the GetPath() method that
-  /// returns a std:string.
-  ConstString GetPathAsConstString(bool denormalize = true) const;
-
   /// Extract the full path to the file.
   ///
   /// Extract the directory and path into an llvm::SmallVectorImpl<>
@@ -470,9 +462,6 @@ template <> struct format_provider<lldb_private::FileSpec> {
 /// DenseMapInfo implementation.
 /// \{
 template <> struct DenseMapInfo<lldb_private::FileSpec> {
-  static inline lldb_private::FileSpec getEmptyKey() {
-    return lldb_private::FileSpec();
-  }
   static unsigned getHashValue(lldb_private::FileSpec file_spec) {
     return llvm::hash_combine(
         DenseMapInfo<lldb_private::ConstString>::getHashValue(
