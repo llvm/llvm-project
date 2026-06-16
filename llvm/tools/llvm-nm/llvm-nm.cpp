@@ -2480,15 +2480,17 @@ int llvm_nm_main(int argc, char **argv, const llvm::ToolContext &) {
   // Get BitMode from enviornment variable "OBJECT_MODE" for AIX OS, if
   // specified.
   Triple HostTriple(sys::getProcessTriple());
+  BitMode = BitModeTy::Any;
   if (HostTriple.isOSAIX()) {
-    BitMode = StringSwitch<BitModeTy>(getenv("OBJECT_MODE"))
-                  .Case("32", BitModeTy::Bit32)
-                  .Case("64", BitModeTy::Bit64)
-                  .Case("32_64", BitModeTy::Bit32_64)
-                  .Case("any", BitModeTy::Any)
-                  .Default(BitModeTy::Bit32);
-  } else
-    BitMode = BitModeTy::Any;
+    if (char *ObjMode = getenv("OBJECT_MODE")) {
+      BitMode = StringSwitch<BitModeTy>(ObjMode)
+                    .Case("32", BitModeTy::Bit32)
+                    .Case("64", BitModeTy::Bit64)
+                    .Case("32_64", BitModeTy::Bit32_64)
+                    .Case("any", BitModeTy::Any)
+                    .Default(BitModeTy::Any);
+    }
+  }
 
   if (Arg *A = Args.getLastArg(OPT_X)) {
     StringRef Mode = A->getValue();

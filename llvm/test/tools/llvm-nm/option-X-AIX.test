@@ -8,7 +8,7 @@
 
 ## Test default "-X" option.
 # RUN: env -u OBJECT_MODE llvm-nm --format=just-symbols %t_xcoff32.o %t_xcoff64.o | \
-# RUN:   FileCheck -DFILE32=%t_xcoff32.o --check-prefixes=XCOFF32 %s --implicit-check-not={{.}}
+# RUN:   FileCheck -DFILE32=%t_xcoff32.o -DFILE64=%t_xcoff64.o --check-prefixes=XCOFF32,XCOFF64 %s --implicit-check-not={{.}}
 
 ## Test environment variable "OBJECT_MODE".
 # RUN: env OBJECT_MODE=32 llvm-nm --format=just-symbols %t_xcoff32.o %t_xcoff64.o | \
