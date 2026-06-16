@@ -182,8 +182,8 @@ class AutomapToTargetDataPass
             builder.getAttr<omp::VariableCaptureKindAttr>(
                 omp::VariableCaptureKind::ByRef),
             /*var_ptr_ptr=*/memOp.getMemref(),
-            /*var_ptr_ptr_type=*/TypeAttr::get(
-                fir::unwrapRefType(memOp.getMemref().getType())),
+            /*var_ptr_ptr_type=*/
+            TypeAttr::get(fir::unwrapRefType(memOp.getMemref().getType())),
             /*members=*/SmallVector<Value>{},
             /*members_index=*/ArrayAttr{},
             /*bounds=*/SmallVector<Value>{},
