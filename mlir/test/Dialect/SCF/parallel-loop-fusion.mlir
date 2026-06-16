@@ -1249,3 +1249,397 @@ func.func @test_fuse_interchanged_loops(%arg0: memref<1x64xf32>) {
 // CHECK-LABEL: func @test_fuse_interchanged_loops
 // CHECK:      scf.parallel
 // CHECK-NOT:      scf.parallel
+
+// -----
+
+func.func @fuse_three_cycle_permutation(
+   %out: memref<2x3x5xf32>) {
+  %A = memref.alloc() : memref<2x3x5xf32>
+  %tmp = memref.alloc() : memref<2x3x5xf32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c5 = arith.constant 5 : index
+  %cst = arith.constant 1.0 : f32
+
+  scf.parallel (%i, %j, %k) = (%c0, %c0, %c0) to (%c2, %c3, %c5) step (%c1, %c1, %c1) {
+    %a = memref.load %A[%i, %j, %k] : memref<2x3x5xf32>
+    %b = arith.addf %a, %cst : f32
+    memref.store %b, %tmp[%i, %j, %k] : memref<2x3x5xf32>
+    scf.reduce
+  }
+
+  scf.parallel (%k2, %i2, %j2) = (%c0, %c0, %c0) to (%c5, %c2, %c3) step (%c1, %c1, %c1) {
+    %t = memref.load %tmp[%i2, %j2, %k2] : memref<2x3x5xf32>
+    memref.store %t, %out[%i2, %j2, %k2] : memref<2x3x5xf32>
+    scf.reduce
+  }
+  return
+}
+
+// CHECK-LABEL: func @fuse_three_cycle_permutation
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: %[[C2:.*]] = arith.constant 2 : index
+// CHECK: %[[C3:.*]] = arith.constant 3 : index
+// CHECK: %[[C5:.*]] = arith.constant 5 : index
+// CHECK: %[[CST:.*]] = arith.constant 1.
+
+// CHECK: scf.parallel (%[[I:.*]], %[[J:.*]], %[[K:.*]]) = (%[[C0]], %[[C0]], %[[C0]])
+// CHECK-SAME: to (%[[C2]], %[[C3]], %[[C5]]) step (%[[C1]], %[[C1]], %[[C1]]) {
+// CHECK: %[[A_ELT:.*]] = memref.load %{{.*}}%[[I]], %[[J]], %[[K]]] : memref<2x3x5xf32>
+// CHECK: %[[B_ELT:.*]] = arith.addf %[[A_ELT]], %[[CST]] : f32
+// CHECK: memref.store %[[B_ELT]], %{{.*}}%[[I]], %[[J]], %[[K]]] : memref<2x3x5xf32>
+// CHECK-NOT: scf.parallel
+// CHECK: %[[T:.*]] = memref.load %{{.*}}%[[I]], %[[J]], %[[K]]] : memref<2x3x5xf32>
+// CHECK: memref.store %[[T]], %{{.*}}%[[I]], %[[J]], %[[K]]] : memref<2x3x5xf32>
+// CHECK: scf.reduce
+// CHECK: }
+// CHECK-NOT: scf.parallel
+
+// -----
+
+func.func @fuse_duplicate_axes_permutation(
+%out : memref<2x2x3x3xf32>) {
+  %tmp = memref.alloc() : memref<2x2x3x3xf32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %v = arith.constant 1.0 : f32
+
+  // First loop: canonical order (i, j, k, l)
+  scf.parallel (%i, %j, %k, %l) = (%c0, %c0, %c0, %c0)
+      to (%c2, %c2, %c3, %c3) step (%c1, %c1, %c1, %c1) {
+    memref.store %v, %tmp[%i, %j, %k, %l] : memref<2x2x3x3xf32>
+    scf.reduce
+  }
+
+  // Second loop iteration space is a permutation of the first:
+  // positions are (k2, l2, j2, i2) with extents (3, 3, 2, 2).
+  //
+  // The body is written so that the "right" correspondence is:
+  //   i -> i2 (pos 3)
+  //   j -> j2 (pos 2)
+  //   k -> k2 (pos 0)
+  //   l -> l2 (pos 1)
+  //
+  // i.e. permutation [3, 2, 0, 1] if interpreted as newPos -> oldPos.
+  scf.parallel (%k2, %l2, %j2, %i2) = (%c0, %c0, %c0, %c0)
+      to (%c3, %c3, %c2, %c2) step (%c1, %c1, %c1, %c1) {
+    %t = memref.load %tmp[%i2, %j2, %k2, %l2] : memref<2x2x3x3xf32>
+    memref.store %t, %out[%i2, %j2, %k2, %l2] : memref<2x2x3x3xf32>
+    scf.reduce
+  }
+  return
+}
+
+// CHECK-LABEL: func @fuse_duplicate_axes_permutation
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: %[[C2:.*]] = arith.constant 2 : index
+// CHECK: %[[C3:.*]] = arith.constant 3 : index
+// CHECK: %[[CST:.*]] = arith.constant 1.
+
+// CHECK: scf.parallel (%[[I:.*]], %[[J:.*]], %[[K:.*]], %[[L:.*]]) = (%[[C0]], %[[C0]], %[[C0]], %[[C0]])
+// CHECK-SAME: to (%[[C2]], %[[C2]], %[[C3]], %[[C3]]) step (%[[C1]], %[[C1]], %[[C1]], %[[C1]]) {
+
+// CHECK: memref.store %[[CST]], %{{.*}}{{\[}}%[[I]], %[[J]], %[[K]], %[[L]]{{\]}} : memref<2x2x3x3xf32>
+
+// CHECK-NOT: scf.parallel
+// CHECK: %[[T:.*]] = memref.load %{{.*}}{{\[}}%[[I]], %[[J]], %[[K]], %[[L]]{{\]}} : memref<2x2x3x3xf32>
+// CHECK: memref.store %[[T]], %{{.*}}{{\[}}%[[I]], %[[J]], %[[K]], %[[L]]{{\]}} : memref<2x2x3x3xf32>
+
+// CHECK: scf.reduce
+// CHECK: }
+// CHECK-NOT: scf.parallel
+
+// -----
+
+func.func @fuse_interchanged_reductions(%A: memref<2x3xf32>,
+                                        %B: memref<2x3xf32>) -> (f32, f32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %init1 = arith.constant 1.0 : f32
+  %init2 = arith.constant 2.0 : f32
+  %res1 = scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c3)
+      step (%c1, %c1) init(%init1) -> f32 {
+    %A_elem = memref.load %A[%i, %j] : memref<2x3xf32>
+    scf.reduce(%A_elem : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %1 = arith.addf %lhs, %rhs : f32
+      scf.reduce.return %1 : f32
+    }
+  }
+  %res2 = scf.parallel (%j2, %i2) = (%c0, %c0) to (%c3, %c2)
+      step (%c1, %c1) init(%init2) -> f32 {
+    %B_elem = memref.load %B[%i2, %j2] : memref<2x3xf32>
+    scf.reduce(%B_elem : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %1 = arith.mulf %lhs, %rhs : f32
+      scf.reduce.return %1 : f32
+    }
+  }
+  return %res1, %res2 : f32, f32
+}
+
+// CHECK-LABEL: func @fuse_interchanged_reductions
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: %[[C2:.*]] = arith.constant 2 : index
+// CHECK: %[[C3:.*]] = arith.constant 3 : index
+// CHECK: %[[INIT1:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK: %[[INIT2:.*]] = arith.constant 2.000000e+00 : f32
+// CHECK: %[[RES:.*]]:2 = scf.parallel (%[[I:.*]], %[[J:.*]]) = (%[[C0]], %[[C0]])
+// CHECK-SAME: to (%[[C2]], %[[C3]]) step (%[[C1]], %[[C1]])
+// CHECK-SAME: init (%[[INIT1]], %[[INIT2]]) -> (f32, f32) {
+// CHECK:  %[[AELT:.*]] = memref.load %{{.*}}{{\[}}%[[I]], %[[J]]{{\]}} : memref<2x3xf32>
+// CHECK:  %[[BELT:.*]] = memref.load %{{.*}}{{\[}}%[[I]], %[[J]]{{\]}} : memref<2x3xf32>
+// CHECK:      scf.reduce(%[[AELT]], %[[BELT]] : f32, f32) {
+// CHECK:      ^bb0
+// CHECK:      ^bb0
+// CHECK:    return %[[RES]]#0, %[[RES]]#1 : f32, f32
+
+// -----
+
+func.func @fuse_three_cycle_reductions(%A: memref<2x3x5xf32>,
+                                       %B: memref<2x3x5xf32>) -> (f32, f32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %c5 = arith.constant 5 : index
+  %init1 = arith.constant 1.0 : f32
+  %init2 = arith.constant 2.0 : f32
+
+  %res1 = scf.parallel (%i, %j, %k) = (%c0, %c0, %c0)
+      to (%c2, %c3, %c5) step (%c1, %c1, %c1) init(%init1) -> f32 {
+    %a = memref.load %A[%i, %j, %k] : memref<2x3x5xf32>
+    scf.reduce(%a : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %sum = arith.addf %lhs, %rhs : f32
+      scf.reduce.return %sum : f32
+    }
+  }
+
+  %res2 = scf.parallel (%k2, %i2, %j2) = (%c0, %c0, %c0)
+      to (%c5, %c2, %c3) step (%c1, %c1, %c1) init(%init2) -> f32 {
+    %b = memref.load %B[%i2, %j2, %k2] : memref<2x3x5xf32>
+    scf.reduce(%b : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %prod = arith.mulf %lhs, %rhs : f32
+      scf.reduce.return %prod : f32
+    }
+  }
+
+  return %res1, %res2 : f32, f32
+}
+
+// CHECK-LABEL: func @fuse_three_cycle_reductions
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: %[[C2:.*]] = arith.constant 2 : index
+// CHECK: %[[C3:.*]] = arith.constant 3 : index
+// CHECK: %[[C5:.*]] = arith.constant 5 : index
+// CHECK: %[[INIT1:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK: %[[INIT2:.*]] = arith.constant 2.000000e+00 : f32
+// CHECK: %[[RES:.*]]:2 = scf.parallel (%[[I:.*]], %[[J:.*]], %[[K:.*]]) = (%[[C0]], %[[C0]], %[[C0]])
+// CHECK-SAME: to (%[[C2]], %[[C3]], %[[C5]]) step (%[[C1]], %[[C1]], %[[C1]])
+// CHECK-SAME: init (%[[INIT1]], %[[INIT2]]) -> (f32, f32)
+// CHECK: %[[AELT:.*]] = memref.load %{{.*}}{{\[}}%[[I]], %[[J]], %[[K]]{{\]}} : memref<2x3x5xf32>
+// CHECK: %[[BELT:.*]] = memref.load %{{.*}}{{\[}}%[[I]], %[[J]], %[[K]]{{\]}} : memref<2x3x5xf32>
+// CHECK: scf.reduce(%[[AELT]], %[[BELT]] : f32, f32) {
+// CHECK: ^bb0
+// CHECK: ^bb0
+// CHECK: return %[[RES]]#0, %[[RES]]#1 : f32, f32
+
+// -----
+
+// Two duplicate axis groups are interleaved: the first loop has iteration
+// extents (2, 3, 2, 3), while the second loop visits the same space as
+// (3, 2, 3, 2). Fusion should find the permutation that maps the second loop
+// back to the first loop order and then fold both bodies into one loop.
+func.func @fuse_interleaved_duplicate_axes_permutation(
+    %out: memref<2x3x2x3xf32>) {
+  %tmp = memref.alloc() : memref<2x3x2x3xf32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %v = arith.constant 1.0 : f32
+
+  scf.parallel (%a, %b, %c, %d) = (%c0, %c0, %c0, %c0)
+      to (%c2, %c3, %c2, %c3) step (%c1, %c1, %c1, %c1) {
+    memref.store %v, %tmp[%a, %b, %c, %d] : memref<2x3x2x3xf32>
+    scf.reduce
+  }
+
+  scf.parallel (%b2, %a2, %d2, %c2v) = (%c0, %c0, %c0, %c0)
+      to (%c3, %c2, %c3, %c2) step (%c1, %c1, %c1, %c1) {
+    %x = memref.load %tmp[%a2, %b2, %c2v, %d2] : memref<2x3x2x3xf32>
+    memref.store %x, %out[%a2, %b2, %c2v, %d2] : memref<2x3x2x3xf32>
+    scf.reduce
+  }
+  return
+}
+
+// CHECK-LABEL: func @fuse_interleaved_duplicate_axes_permutation
+// CHECK: %[[TMP:.*]] = memref.alloc() : memref<2x3x2x3xf32>
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: %[[C2:.*]] = arith.constant 2 : index
+// CHECK: %[[C3:.*]] = arith.constant 3 : index
+// CHECK: %[[CST:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK: scf.parallel (%[[A:.*]], %[[B:.*]], %[[C:.*]], %[[D:.*]]) = (%[[C0]], %[[C0]], %[[C0]], %[[C0]])
+// CHECK-SAME: to (%[[C2]], %[[C3]], %[[C2]], %[[C3]])
+// CHECK-SAME: step (%[[C1]], %[[C1]], %[[C1]], %[[C1]])
+// CHECK:   memref.store %[[CST]], %[[TMP]]{{\[}}%[[A]], %[[B]], %[[C]], %[[D]]{{\]}} : memref<2x3x2x3xf32>
+// CHECK:   %[[V0:.*]] = memref.load %[[TMP]]{{\[}}%[[A]], %[[B]], %[[C]], %[[D]]{{\]}} : memref<2x3x2x3xf32>
+// CHECK:   memref.store %[[V0]], %{{.*}}{{\[}}%[[A]], %[[B]], %[[C]], %[[D]]{{\]}} : memref<2x3x2x3xf32>
+// CHECK:   scf.reduce
+// CHECK-NOT: scf.parallel
+
+// -----
+
+// The first fusion candidate needs loop interchange to pass dependency checks,
+// but fusion must still be abandoned because the first loop result is used by
+// an operation between the loops.
+func.func @permuted_dominance_bail_chain(%a: memref<2x3xf32>,
+                                         %out: memref<2x3xf32>) -> f32 {
+  %tmp = memref.alloc() : memref<2x3xf32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %init = arith.constant 1.0 : f32
+  %res = scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c3)
+      step (%c1, %c1) init(%init) -> f32 {
+    %elt = memref.load %a[%i, %j] : memref<2x3xf32>
+    scf.reduce(%elt : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %sum = arith.addf %lhs, %rhs : f32
+      scf.reduce.return %sum : f32
+    }
+  }
+  %between = arith.addf %res, %init : f32
+  scf.parallel (%j2, %i2) = (%c0, %c0) to (%c3, %c2)
+      step (%c1, %c1) {
+    memref.store %between, %tmp[%i2, %j2] : memref<2x3xf32>
+    scf.reduce
+  }
+  scf.parallel (%i3, %j3) = (%c0, %c0) to (%c2, %c3)
+      step (%c1, %c1) {
+    %x = memref.load %tmp[%i3, %j3] : memref<2x3xf32>
+    memref.store %x, %out[%i3, %j3] : memref<2x3xf32>
+    scf.reduce
+  }
+  return %between : f32
+}
+
+// CHECK-LABEL: func @permuted_dominance_bail_chain
+// CHECK: %[[TMP:.*]] = memref.alloc() : memref<2x3xf32>
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: %[[C2:.*]] = arith.constant 2 : index
+// CHECK: %[[C3:.*]] = arith.constant 3 : index
+// CHECK: %[[CST:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK: %[[RES:.*]] = scf.parallel (%[[A:.*]], %[[B:.*]]) = (%[[C0]], %[[C0]])
+// CHECK-SAME: to (%[[C2]], %[[C3]])
+// CHECK-SAME: step (%[[C1]], %[[C1]]) init (%[[CST]]) -> f32 {
+// CHECK: %[[V2:.*]] = memref.load %arg0{{\[}}%[[A]], %[[B]]{{\]}} : memref<2x3xf32>
+// CHECK: scf.reduce(%[[V2]] : f32) {
+// CHECK: ^bb0
+// CHECK:   arith.addf
+// CHECK:   scf.reduce.return
+// CHECK:   }
+// CHECK: }
+// CHECK: %[[BETWEEN:.*]] = arith.addf %[[RES]], %[[CST]] : f32
+// CHECK: scf.parallel (%[[I:.*]], %[[J:.*]]) = (%[[C0]], %[[C0]])
+// CHECK-SAME: to (%[[C3]], %[[C2]]) step (%[[C1]], %[[C1]]) {
+// CHECK:   memref.store %[[BETWEEN]], %[[TMP]]{{\[}}%[[J]], %[[I]]{{\]}} : memref<2x3xf32>
+// CHECK:   %[[V0:.*]] = memref.load %[[TMP]]{{\[}}%[[J]], %[[I]]{{\]}} : memref<2x3xf32>
+// CHECK:   memref.store %[[V0]], %{{.*}}{{\[}}%[[J]], %[[I]]{{\]}} : memref<2x3xf32>
+// CHECK:   scf.reduce
+// CHECK: }
+// CHECK-NOT: scf.parallel
+// CHECK:  return %[[BETWEEN]]
+
+// -----
+
+// The first pair only fuses after the second loop is interchanged.
+func.func @fuse_chain_after_interchanged_reduction(
+    %a: memref<2x3xf32>, %out: memref<2x3xf32>) -> (f32, f32) {
+  %tmp = memref.alloc() : memref<2x3xf32>
+  %mid = memref.alloc() : memref<2x3xf32>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c3 = arith.constant 3 : index
+  %init1 = arith.constant 1.0 : f32
+  %init2 = arith.constant 2.0 : f32
+
+  %r1 = scf.parallel (%i, %j) = (%c0, %c0) to (%c2, %c3)
+      step (%c1, %c1) init(%init1) -> f32 {
+    %x = memref.load %a[%i, %j] : memref<2x3xf32>
+    memref.store %x, %tmp[%i, %j] : memref<2x3xf32>
+    scf.reduce(%x : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %sum = arith.addf %lhs, %rhs : f32
+      scf.reduce.return %sum : f32
+    }
+  }
+  %r2 = scf.parallel (%j2, %i2) = (%c0, %c0) to (%c3, %c2)
+      step (%c1, %c1) init(%init2) -> f32 {
+    %x = memref.load %tmp[%i2, %j2] : memref<2x3xf32>
+    memref.store %x, %mid[%i2, %j2] : memref<2x3xf32>
+    scf.reduce(%x : f32) {
+    ^bb0(%lhs: f32, %rhs: f32):
+      %prod = arith.mulf %lhs, %rhs : f32
+      scf.reduce.return %prod : f32
+    }
+  }
+  scf.parallel (%i3, %j3) = (%c0, %c0) to (%c2, %c3)
+      step (%c1, %c1) {
+    %y = memref.load %mid[%i3, %j3] : memref<2x3xf32>
+    memref.store %y, %out[%i3, %j3] : memref<2x3xf32>
+    scf.reduce
+  }
+  return %r1, %r2 : f32, f32
+}
+
+// CHECK-LABEL: func @fuse_chain_after_interchanged_reduction
+// CHECK: %[[TMP:.*]] = memref.alloc() : memref<2x3xf32>
+// CHECK: %[[MID:.*]] = memref.alloc() : memref<2x3xf32>
+// CHECK: %[[C0:.*]] = arith.constant 0 : index
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: %[[C2:.*]] = arith.constant 2 : index
+// CHECK: %[[C3:.*]] = arith.constant 3 : index
+// CHECK: %[[INIT1:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK: %[[INIT2:.*]] = arith.constant 2.000000e+00 : f32
+
+// CHECK: %[[RES:.*]]:2 = scf.parallel (%[[I:.*]], %[[J:.*]]) = (%[[C0]], %[[C0]]) to (%[[C2]], %[[C3]])
+// CHECK-SAME: step (%[[C1]], %[[C1]]) init (%[[INIT1]], %[[INIT2]]) -> (f32, f32) {
+// CHECK:      %[[X1:.*]] = memref.load %{{.*}}{{\[}}%[[I]], %[[J]]{{\]}} : memref<2x3xf32>
+// CHECK:      memref.store %[[X1]], %[[TMP]]{{\[}}%[[I]], %[[J]]{{\]}} : memref<2x3xf32>
+// CHECK:      %[[X2:.*]] = memref.load %[[TMP]]{{\[}}%[[I]], %[[J]]{{\]}} : memref<2x3xf32>
+// CHECK:      memref.store %[[X2]], %[[MID]]{{\[}}%[[I]], %[[J]]{{\]}} : memref<2x3xf32>
+// CHECK:      scf.reduce
+// CHECK:      ^bb0
+// CHECK:        arith.addf
+// CHECK:        scf.reduce.return
+// CHECK:      }, {
+// CHECK:      ^bb0
+// CHECK:        arith.mulf
+// CHECK:        scf.reduce.return
+// CHECK:      }
+// CHECK:    }
+// CHECK: scf.parallel (%[[I3:.*]], %[[J3:.*]]) = (%[[C0]], %[[C0]]) to (%[[C2]], %[[C3]]) step (%[[C1]], %[[C1]]) {
+// CHECK:   %[[Y1:.*]] = memref.load %[[MID]]{{\[}}%[[I3]], %[[J3]]{{\]}} : memref<2x3xf32>
+// CHECK:   memref.store %[[Y1]], %{{.*}}{{\[}}%[[I3]], %[[J3]]{{\]}} : memref<2x3xf32>
+// CHECK:   scf.reduce
+// CHECK: }
+// CHECK-NOT: scf.parallel
+// CHECK: return

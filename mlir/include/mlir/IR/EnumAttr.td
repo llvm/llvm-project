@@ -503,6 +503,7 @@ class I64BitEnumAttr<string name, string summary,
 class EnumParameter<EnumInfo enumInfo>
     : AttrParameter<enumInfo.cppNamespace # "::" # enumInfo.className,
                     "an enum of type " # enumInfo.className> {
+  EnumInfo enum = enumInfo;
   let parser = !if(!isa<EnumAttrInfo>(enumInfo),
     !cast<EnumAttrInfo>(enumInfo).parameterParser, ?);
   let printer = !if(!isa<EnumAttrInfo>(enumInfo),
