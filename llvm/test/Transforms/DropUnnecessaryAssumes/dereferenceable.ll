@@ -52,3 +52,67 @@ define i8 @test_dereferenceable_with_align_ptr_used(ptr %p, i64 %size) {
   %val = load i8, ptr %p
   ret i8 %val
 }
+
+; Make sure newly created assumes are handled properly.
+define i8 @test_dereferenceable_with_align_cache_realloc(ptr %p, ptr %q, i1 %c) {
+; CHECK-LABEL: define i8 @test_dereferenceable_with_align_cache_realloc(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[Q]], i64 8), "align"(ptr [[P]], i64 8) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[Q]], i64 8), "align"(ptr [[P]], i64 8) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[Q]], i64 8), "align"(ptr [[P]], i64 8) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[Q]], i64 8), "align"(ptr [[P]], i64 8) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[Q]], i64 8), "align"(ptr [[P]], i64 8) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[Q]], i64 8), "align"(ptr [[P]], i64 8) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[Q]], i64 8), "align"(ptr [[P]], i64 8) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[Q]], i64 8), "align"(ptr [[P]], i64 8) ]
+; CHECK-NEXT:    ret i8 [[V]]
+;
+; DROP-DEREF-LABEL: define i8 @test_dereferenceable_with_align_cache_realloc(
+; DROP-DEREF-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C:%.*]]) {
+; DROP-DEREF-NEXT:    [[V:%.*]] = load i8, ptr [[P]], align 1
+; DROP-DEREF-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
+; DROP-DEREF-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
+; DROP-DEREF-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
+; DROP-DEREF-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
+; DROP-DEREF-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
+; DROP-DEREF-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
+; DROP-DEREF-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
+; DROP-DEREF-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
+; DROP-DEREF-NEXT:    ret i8 [[V]]
+;
+  %v = load i8, ptr %p
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %q, i64 8), "align"(ptr %p, i64 8) ]
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %q, i64 8), "align"(ptr %p, i64 8) ]
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %q, i64 8), "align"(ptr %p, i64 8) ]
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %q, i64 8), "align"(ptr %p, i64 8) ]
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %q, i64 8), "align"(ptr %p, i64 8) ]
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %q, i64 8), "align"(ptr %p, i64 8) ]
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %q, i64 8), "align"(ptr %p, i64 8) ]
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %q, i64 8), "align"(ptr %p, i64 8) ]
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  call void @llvm.assume(i1 %c)
+  ret i8 %v
+}
