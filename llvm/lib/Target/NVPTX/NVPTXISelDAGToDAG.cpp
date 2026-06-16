@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
@@ -1114,7 +1115,8 @@ bool NVPTXDAGToDAGISel::SelectADDR(SDValue Addr, SDValue &Base,
 }
 
 static void emitInvalidMemCacheHint(LLVMContext &Ctx, const Twine &Msg) {
-  Ctx.emitError(Twine("invalid NVPTX !mem.cache_hint metadata: ") + Msg);
+  Ctx.diagnose(DiagnosticInfoGeneric(
+      Twine("invalid NVPTX !mem.cache_hint metadata: ") + Msg, DS_Warning));
 }
 
 static std::optional<NVPTX::L1Eviction> parseL1Eviction(StringRef Str) {
