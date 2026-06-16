@@ -70,7 +70,6 @@ public:
                         llvm::opt::ArgStringList &CC1Args,
                         llvm::StringRef BoundArch,
                         Action::OffloadKind DeviceOffloadKind) const override;
-  void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
   CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
@@ -96,7 +95,8 @@ public:
   LTOKind getDefaultLTOMode() const override { return LTOK_Full; }
 
   const ToolChain &HostTC;
-  void checkTargetID(const llvm::opt::ArgList &DriverArgs) const override;
+  ParsedTargetIDType
+  checkTargetID(const llvm::opt::ArgList &DriverArgs) const override;
 
 protected:
   Tool *buildLinker() const override;

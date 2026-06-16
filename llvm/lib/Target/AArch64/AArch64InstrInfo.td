@@ -227,9 +227,9 @@ def HasSVE_B16MM     : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasS
                                  AssemblerPredicateWithAll<(all_of FeatureSVE_B16MM), "sve-b16mm">;
 def HasF16MM         : Predicate<"Subtarget->hasF16MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureF16MM), "f16mm">;
-def HasSVE2p3        : Predicate<"Subtarget->hasSVE2p3()">,
+def HasSVE2p3        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p3()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2p3), "sve2p3">;
-def HasSME2p3        : Predicate<"Subtarget->hasSME2p3()">,
+def HasSME2p3        : Predicate<"Subtarget->isStreaming() && Subtarget->hasSME2p3()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2p3), "sme2p3">;
 def HasF16F32DOT     : Predicate<"Subtarget->hasF16F32DOT()">,
                                  AssemblerPredicateWithAll<(all_of FeatureF16F32DOT), "f16f32dot">;
@@ -1614,16 +1614,6 @@ def WFET : RegInputSystemI<0b0000, 0b000, "wfet">;
 def WFIT : RegInputSystemI<0b0000, 0b001, "wfit">;
 }
 
-// Branch Record Buffer two-word mnemonic instructions
-class BRBEI<bits<3> op2, string keyword>
-    : SimpleSystemI<0, (ins), "brb", keyword>, Sched<[WriteSys]> {
-  let Inst{31-8} = 0b110101010000100101110010;
-  let Inst{7-5} = op2;
-  let Predicates = [HasBRBE];
-}
-def BRB_IALL: BRBEI<0b100, "\tiall">;
-def BRB_INJ:  BRBEI<0b101, "\tinj">;
-
 }
 
 // Allow uppercase and lowercase keyword arguments for BRB IALL and BRB INJ
@@ -2552,6 +2542,14 @@ def SYSLxt : SystemLXtI<1, "sysl">;
 def : InstAlias<"sys $op1, $Cn, $Cm, $op2",
                 (SYSxt timm32_0_7:$op1, sys_cr_op:$Cn,
                  sys_cr_op:$Cm, timm32_0_7:$op2, XZR)>;
+def : InstAlias<"apas $Xt",
+                (SYSxt 6, 7, 0, 0, GPR64:$Xt), 2>;
+def : InstAlias<"brb\tiall",
+                (SYSxt 1, 7, 2, 4, XZR), 2>, Requires<[HasBRBE]>;
+def : InstAlias<"brb\tinj",
+                (SYSxt 1, 7, 2, 5, XZR), 2>, Requires<[HasBRBE]>;
+def : InstAlias<"trcit $Rt",
+                (SYSxt 3, 7, 2, 7, GPR64:$Rt), 2>, Requires<[HasITE]>;
 
 
 //===----------------------------------------------------------------------===//
@@ -3080,9 +3078,6 @@ let Predicates = [HasLSUI] in {
   defm : STOPregisterLSUI<"sttclr","LDTCLR">; // STTCLRx
   defm : STOPregisterLSUI<"sttset","LDTSET">; // STTSETx
 }
-
-// v9.6-a FEAT_RME_GPC3
-def APAS : APASI;
 
 // v8.1 atomic LD<OP>(register). Performs load and then ST<OP>(register)
 defm LDADD   : LDOPregister<0b000, "add", 0, 0, "">;
@@ -5871,16 +5866,11 @@ defm FCVTXN : SIMDFPInexactCvtTwoVector<1, 0, 0b10110, "fcvtxn",
 defm FCVTZS : SIMDTwoVectorFPToInt<0, 1, 0b11011, "fcvtzs", any_fp_to_sint>;
 defm FCVTZU : SIMDTwoVectorFPToInt<1, 1, 0b11011, "fcvtzu", any_fp_to_uint>;
 // AArch64's FCVT instructions saturate when out of range.
-multiclass SIMDTwoVectorFPToIntSatPats<SDNode to_int_sat, SDNode to_int_sat_gi, string INST> {
+multiclass SIMDTwoVectorFPToIntSatPats<SDNode to_int_sat, string INST> {
   let Predicates = [HasNEONandIsFPRCVTStreamingSafe, HasFullFP16] in {
   def : Pat<(v4i16 (to_int_sat v4f16:$Rn, i16)),
             (!cast<Instruction>(INST # v4f16) v4f16:$Rn)>;
   def : Pat<(v8i16 (to_int_sat v8f16:$Rn, i16)),
-            (!cast<Instruction>(INST # v8f16) v8f16:$Rn)>;
-
-  def : Pat<(v4i16 (to_int_sat_gi v4f16:$Rn)),
-            (!cast<Instruction>(INST # v4f16) v4f16:$Rn)>;
-  def : Pat<(v8i16 (to_int_sat_gi v8f16:$Rn)),
             (!cast<Instruction>(INST # v8f16) v8f16:$Rn)>;
   }
   let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
@@ -5890,21 +5880,14 @@ multiclass SIMDTwoVectorFPToIntSatPats<SDNode to_int_sat, SDNode to_int_sat_gi, 
             (!cast<Instruction>(INST # v4f32) v4f32:$Rn)>;
   def : Pat<(v2i64 (to_int_sat v2f64:$Rn, i64)),
             (!cast<Instruction>(INST # v2f64) v2f64:$Rn)>;
-
-  def : Pat<(v2i32 (to_int_sat_gi v2f32:$Rn)),
-            (!cast<Instruction>(INST # v2f32) v2f32:$Rn)>;
-  def : Pat<(v4i32 (to_int_sat_gi v4f32:$Rn)),
-            (!cast<Instruction>(INST # v4f32) v4f32:$Rn)>;
-  def : Pat<(v2i64 (to_int_sat_gi v2f64:$Rn)),
-            (!cast<Instruction>(INST # v2f64) v2f64:$Rn)>;
   }
 }
 
-defm : SIMDTwoVectorFPToIntSatPats<fp_to_sint_sat, fp_to_sint_sat_gi, "FCVTZS">;
-defm : SIMDTwoVectorFPToIntSatPats<fp_to_uint_sat, fp_to_uint_sat_gi, "FCVTZU">;
+defm : SIMDTwoVectorFPToIntSatPats<fp_to_sint_sat, "FCVTZS">;
+defm : SIMDTwoVectorFPToIntSatPats<fp_to_uint_sat, "FCVTZU">;
 
 // Fused round + convert to int patterns for vectors
-multiclass SIMDTwoVectorFPToIntRoundPats<SDNode to_int, SDNode to_int_sat, SDNode to_int_sat_gi, SDNode round, string INST> {
+multiclass SIMDTwoVectorFPToIntRoundPats<SDNode to_int, SDNode to_int_sat, SDNode round, string INST> {
   let Predicates = [HasFullFP16] in {
     def : Pat<(v4i16 (to_int (round v4f16:$Rn))),
               (!cast<Instruction>(INST # v4f16) v4f16:$Rn)>;
@@ -5914,11 +5897,6 @@ multiclass SIMDTwoVectorFPToIntRoundPats<SDNode to_int, SDNode to_int_sat, SDNod
     def : Pat<(v4i16 (to_int_sat (round v4f16:$Rn), i16)),
               (!cast<Instruction>(INST # v4f16) v4f16:$Rn)>;
     def : Pat<(v8i16 (to_int_sat (round v8f16:$Rn), i16)),
-              (!cast<Instruction>(INST # v8f16) v8f16:$Rn)>;
-
-    def : Pat<(v4i16 (to_int_sat_gi (round v4f16:$Rn))),
-              (!cast<Instruction>(INST # v4f16) v4f16:$Rn)>;
-    def : Pat<(v8i16 (to_int_sat_gi (round v8f16:$Rn))),
               (!cast<Instruction>(INST # v8f16) v8f16:$Rn)>;
   }
   def : Pat<(v2i32 (to_int (round v2f32:$Rn))),
@@ -5934,25 +5912,18 @@ multiclass SIMDTwoVectorFPToIntRoundPats<SDNode to_int, SDNode to_int_sat, SDNod
             (!cast<Instruction>(INST # v4f32) v4f32:$Rn)>;
   def : Pat<(v2i64 (to_int_sat (round v2f64:$Rn), i64)),
             (!cast<Instruction>(INST # v2f64) v2f64:$Rn)>;
-
-  def : Pat<(v2i32 (to_int_sat_gi (round v2f32:$Rn))),
-            (!cast<Instruction>(INST # v2f32) v2f32:$Rn)>;
-  def : Pat<(v4i32 (to_int_sat_gi (round v4f32:$Rn))),
-            (!cast<Instruction>(INST # v4f32) v4f32:$Rn)>;
-  def : Pat<(v2i64 (to_int_sat_gi (round v2f64:$Rn))),
-            (!cast<Instruction>(INST # v2f64) v2f64:$Rn)>;
 }
 
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fceil,      "FCVTPS">;
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fceil,      "FCVTPU">;
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ffloor,     "FCVTMS">;
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ffloor,     "FCVTMU">;
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ftrunc,     "FCVTZS">;
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ftrunc,     "FCVTZU">;
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fround,     "FCVTAS">;
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fround,     "FCVTAU">;
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, froundeven, "FCVTNS">;
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, froundeven, "FCVTNU">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fceil,      "FCVTPS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fceil,      "FCVTPU">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, ffloor,     "FCVTMS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, ffloor,     "FCVTMU">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, ftrunc,     "FCVTZS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, ftrunc,     "FCVTZU">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fround,     "FCVTAS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fround,     "FCVTAU">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, froundeven, "FCVTNS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, froundeven, "FCVTNU">;
 
 let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
 def : Pat<(v4i16 (int_aarch64_neon_fcvtzs v4f16:$Rn)), (FCVTZSv4f16 $Rn)>;
@@ -6834,7 +6805,7 @@ defm : FPToIntegerIntPats<int_aarch64_neon_fcvtzs, "FCVTZS">;
 defm : FPToIntegerIntPats<int_aarch64_neon_fcvtzu, "FCVTZU">;
 
 // AArch64's FCVT instructions saturate when out of range.
-multiclass FPToIntegerSatPats<SDNode to_int_sat, SDNode to_int_sat_gi, string INST> {
+multiclass FPToIntegerSatPats<SDNode to_int_sat, string INST> {
   let Predicates = [HasFullFP16] in {
   def : Pat<(i32 (to_int_sat f16:$Rn, i32)),
             (!cast<Instruction>(INST # UWHr) f16:$Rn)>;
@@ -6850,38 +6821,23 @@ multiclass FPToIntegerSatPats<SDNode to_int_sat, SDNode to_int_sat_gi, string IN
   def : Pat<(i64 (to_int_sat f64:$Rn, i64)),
             (!cast<Instruction>(INST # UXDr) f64:$Rn)>;
 
-  let Predicates = [HasFullFP16] in {
-  def : Pat<(i32 (to_int_sat_gi f16:$Rn)),
-            (!cast<Instruction>(INST # UWHr) f16:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi f16:$Rn)),
-            (!cast<Instruction>(INST # UXHr) f16:$Rn)>;
-  }
-  def : Pat<(i32 (to_int_sat_gi f32:$Rn)),
-            (!cast<Instruction>(INST # UWSr) f32:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi f32:$Rn)),
-            (!cast<Instruction>(INST # UXSr) f32:$Rn)>;
-  def : Pat<(i32 (to_int_sat_gi f64:$Rn)),
-            (!cast<Instruction>(INST # UWDr) f64:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi f64:$Rn)),
-            (!cast<Instruction>(INST # UXDr) f64:$Rn)>;
-
   // For global-isel we can use register classes to determine
   // which FCVT instruction to use.
   let Predicates = [HasFPRCVT] in {
-  def : Pat<(i32 (to_int_sat_gi f16:$Rn)),
+  def : Pat<(i32 (to_int_sat f16:$Rn, i32)),
             (!cast<Instruction>(INST # SHr) f16:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi f16:$Rn)),
+  def : Pat<(i64 (to_int_sat f16:$Rn, i64)),
             (!cast<Instruction>(INST # DHr) f16:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi f32:$Rn)),
+  def : Pat<(i64 (to_int_sat f32:$Rn, i64)),
             (!cast<Instruction>(INST # DSr) f32:$Rn)>;
-  def : Pat<(i32 (to_int_sat_gi f64:$Rn)),
+  def : Pat<(i32 (to_int_sat f64:$Rn, i32)),
             (!cast<Instruction>(INST # SDr) f64:$Rn)>;
   }
 
   let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
-  def : Pat<(i32 (to_int_sat_gi f32:$Rn)),
+  def : Pat<(i32 (to_int_sat f32:$Rn, i32)),
             (!cast<Instruction>(INST # v1i32) f32:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi f64:$Rn)),
+  def : Pat<(i64 (to_int_sat f64:$Rn, i64)),
             (!cast<Instruction>(INST # v1i64) f64:$Rn)>;
   }
 
@@ -6917,27 +6873,12 @@ multiclass FPToIntegerSatPats<SDNode to_int_sat, SDNode to_int_sat_gi, string IN
             (!cast<Instruction>(INST # SWDri) $Rn, $scale)>;
   def : Pat<(i64 (to_int_sat (fmul f64:$Rn, fixedpoint_f64_i64:$scale), i64)),
             (!cast<Instruction>(INST # SXDri) $Rn, $scale)>;
-
-  let Predicates = [HasFullFP16] in {
-  def : Pat<(i32 (to_int_sat_gi (fmul f16:$Rn, fixedpoint_f16_i32:$scale))),
-            (!cast<Instruction>(INST # SWHri) $Rn, $scale)>;
-  def : Pat<(i64 (to_int_sat_gi (fmul f16:$Rn, fixedpoint_f16_i64:$scale))),
-            (!cast<Instruction>(INST # SXHri) $Rn, $scale)>;
-  }
-  def : Pat<(i32 (to_int_sat_gi (fmul f32:$Rn, fixedpoint_f32_i32:$scale))),
-            (!cast<Instruction>(INST # SWSri) $Rn, $scale)>;
-  def : Pat<(i64 (to_int_sat_gi (fmul f32:$Rn, fixedpoint_f32_i64:$scale))),
-            (!cast<Instruction>(INST # SXSri) $Rn, $scale)>;
-  def : Pat<(i32 (to_int_sat_gi (fmul f64:$Rn, fixedpoint_f64_i32:$scale))),
-            (!cast<Instruction>(INST # SWDri) $Rn, $scale)>;
-  def : Pat<(i64 (to_int_sat_gi (fmul f64:$Rn, fixedpoint_f64_i64:$scale))),
-            (!cast<Instruction>(INST # SXDri) $Rn, $scale)>;
 }
 
-defm : FPToIntegerSatPats<fp_to_sint_sat, fp_to_sint_sat_gi, "FCVTZS">;
-defm : FPToIntegerSatPats<fp_to_uint_sat, fp_to_uint_sat_gi, "FCVTZU">;
+defm : FPToIntegerSatPats<fp_to_sint_sat, "FCVTZS">;
+defm : FPToIntegerSatPats<fp_to_uint_sat, "FCVTZU">;
 
-multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode to_int_sat_gi, SDNode round, string INST> {
+multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode round, string INST> {
   def : Pat<(i32 (to_int (round f32:$Rn))),
             (!cast<Instruction>(INST # UWSr) f32:$Rn)>;
   def : Pat<(i64 (to_int (round f32:$Rn))),
@@ -6990,41 +6931,26 @@ multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode to_int_sat_g
   def : Pat<(i64 (to_int_sat (round f64:$Rn), i64)),
             (!cast<Instruction>(INST # UXDr) f64:$Rn)>;
 
-  let Predicates = [HasFullFP16] in {
-  def : Pat<(i32 (to_int_sat_gi (round f16:$Rn))),
-            (!cast<Instruction>(INST # UWHr) f16:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi (round f16:$Rn))),
-            (!cast<Instruction>(INST # UXHr) f16:$Rn)>;
-  }
-  def : Pat<(i32 (to_int_sat_gi (round f32:$Rn))),
-            (!cast<Instruction>(INST # UWSr) f32:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi (round f32:$Rn))),
-            (!cast<Instruction>(INST # UXSr) f32:$Rn)>;
-  def : Pat<(i32 (to_int_sat_gi (round f64:$Rn))),
-            (!cast<Instruction>(INST # UWDr) f64:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi (round f64:$Rn))),
-            (!cast<Instruction>(INST # UXDr) f64:$Rn)>;
-
   // For global-isel we can use register classes to determine
   // which FCVT instruction to use.
   let Predicates = [HasFPRCVT] in {
-  def : Pat<(i32 (to_int_sat_gi (round f16:$Rn))),
+  def : Pat<(i32 (to_int_sat (round f16:$Rn), i32)),
             (!cast<Instruction>(INST # SHr) f16:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi (round f16:$Rn))),
+  def : Pat<(i64 (to_int_sat (round f16:$Rn), i64)),
             (!cast<Instruction>(INST # DHr) f16:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi (round f32:$Rn))),
+  def : Pat<(i64 (to_int_sat (round f32:$Rn), i64)),
             (!cast<Instruction>(INST # DSr) f32:$Rn)>;
-  def : Pat<(i32 (to_int_sat_gi (round f64:$Rn))),
+  def : Pat<(i32 (to_int_sat (round f64:$Rn), i32)),
             (!cast<Instruction>(INST # SDr) f64:$Rn)>;
   }
 
   let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
-  def : Pat<(i32 (to_int_sat_gi (round f32:$Rn))),
+  def : Pat<(i32 (to_int_sat (round f32:$Rn), i32)),
             (!cast<Instruction>(INST # v1i32) f32:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi (round f64:$Rn))),
+  def : Pat<(i64 (to_int_sat (round f64:$Rn), i64)),
             (!cast<Instruction>(INST # v1i64) f64:$Rn)>;
   }
-            
+
   let Predicates = [HasFPRCVT] in {
   def : Pat<(f32 (bitconvert (i32 (to_int_sat (round f16:$Rn), i32)))),
             (!cast<Instruction>(INST # SHr) f16:$Rn)>;
@@ -7043,16 +6969,16 @@ multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode to_int_sat_g
   }
 }
 
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fceil,      "FCVTPS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fceil,      "FCVTPU">;
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ffloor,     "FCVTMS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ffloor,     "FCVTMU">;
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ftrunc,     "FCVTZS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ftrunc,     "FCVTZU">;
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fround,     "FCVTAS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fround,     "FCVTAU">;
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, froundeven, "FCVTNS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, froundeven, "FCVTNU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fceil,      "FCVTPS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fceil,      "FCVTPU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, ffloor,     "FCVTMS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, ffloor,     "FCVTMU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, ftrunc,     "FCVTZS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, ftrunc,     "FCVTZU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fround,     "FCVTAS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fround,     "FCVTAU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, froundeven, "FCVTNS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, froundeven, "FCVTNU">;
 
 // For global-isel we can use register classes to determine
 // which FCVT instruction to use.
@@ -7145,8 +7071,8 @@ def : Pat<(f64 (bitconvert (i64 (any_llrint f64:$Rn)))),
 
 // f16 -> s16 conversions
 let Predicates = [HasFullFP16, HasNEONandIsFPRCVTStreamingSafe] in {
-def : Pat<(i16(fp_to_sint_sat_gi f16:$Rn)), (FCVTZSv1f16 f16:$Rn)>;
-def : Pat<(i16(fp_to_uint_sat_gi f16:$Rn)), (FCVTZUv1f16 f16:$Rn)>;
+def : Pat<(i16(fp_to_sint_sat f16:$Rn, i16)), (FCVTZSv1f16 f16:$Rn)>;
+def : Pat<(i16(fp_to_uint_sat f16:$Rn, i16)), (FCVTZUv1f16 f16:$Rn)>;
 }
 
 def : Pat<(v1i64 (AArch64vashr (v1i64 V64:$Rn), (i32 63))),
@@ -9348,15 +9274,11 @@ multiclass FCVTPat<ValueType FVT, ValueType IVT, ValueType ScalarVT, RegisterOpe
             (!cast<Instruction>("FCVTZS"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
   def : Pat<(IVT (fp_to_sint_sat (FVT (fadd RC:$Vn, RC:$Vn)), ScalarVT)),
             (!cast<Instruction>("FCVTZS"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
-  def : Pat<(IVT (fp_to_sint_sat_gi (FVT (fadd RC:$Vn, RC:$Vn)))),
-            (!cast<Instruction>("FCVTZS"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
 
   // fptoui(fadd(x, x)) -> FCVTZU_shift x, 1
   def : Pat<(IVT (fp_to_uint (FVT (fadd RC:$Vn, RC:$Vn)))),
             (!cast<Instruction>("FCVTZU"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
   def : Pat<(IVT (fp_to_uint_sat (FVT (fadd RC:$Vn, RC:$Vn)), ScalarVT)),
-            (!cast<Instruction>("FCVTZU"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
-  def : Pat<(IVT (fp_to_uint_sat_gi (FVT (fadd RC:$Vn, RC:$Vn)))),
             (!cast<Instruction>("FCVTZU"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
 
   // fptosi(fmul(x, power2)) -> FCVTZS_shift x, log2(power2)
@@ -9364,15 +9286,11 @@ multiclass FCVTPat<ValueType FVT, ValueType IVT, ValueType ScalarVT, RegisterOpe
             (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
   def : Pat<(IVT (fp_to_sint_sat (FVT (fmul FVT:$Vn, fixedpoint:$scale)), ScalarVT)),
             (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
-  def : Pat<(IVT (fp_to_sint_sat_gi (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
-            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
 
   // fptoui(fmul(x, power2)) -> FCVTZU_shift x, log2(power2)
   def : Pat<(IVT (fp_to_uint (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
             (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
   def : Pat<(IVT (fp_to_uint_sat (FVT (fmul FVT:$Vn, fixedpoint:$scale)), ScalarVT)),
-            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
-  def : Pat<(IVT (fp_to_uint_sat_gi (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
             (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
 }
 

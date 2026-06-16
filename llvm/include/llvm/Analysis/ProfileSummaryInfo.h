@@ -309,7 +309,7 @@ private:
   bool isHotOrColdBlockNthPercentile(int PercentileCutoff, const BBType *BB,
                                      BFIT *BFI) const {
     auto Count = BFI->getBlockProfileCount(BB);
-    if (isHot)
+    if constexpr (isHot)
       return Count && isHotCountNthPercentile(PercentileCutoff, *Count);
     else
       return Count && isColdCountNthPercentile(PercentileCutoff, *Count);
@@ -320,7 +320,7 @@ private:
                                      BlockFrequency BlockFreq,
                                      BFIT *BFI) const {
     auto Count = BFI->getProfileCountFromFreq(BlockFreq);
-    if (isHot)
+    if constexpr (isHot)
       return Count && isHotCountNthPercentile(PercentileCutoff, *Count);
     else
       return Count && isColdCountNthPercentile(PercentileCutoff, *Count);
