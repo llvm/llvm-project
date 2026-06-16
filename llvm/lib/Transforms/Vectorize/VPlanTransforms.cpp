@@ -4333,28 +4333,29 @@ struct EarlyExitInfo {
 ///   EMIT ir<%arrayidx> = getelementptr inbounds nuw ir<@c>, ir<%indvars.iv>
 ///   EMIT-SCALAR ir<%0> = load ir<%arrayidx>
 ///   EMIT ir<%cmp1> = icmp sgt ir<%0>, ir<5>
-///   EMIT branch-on-cond ir<%cmp1>
-/// Successor(s): ir-bb<cleanup>, if.end
+///   EMIT vp<%1> = masked-cond ir<%cmp1>
+/// Successor(s): if.end
 ///
 /// if.end:
 ///   EMIT ir<%arrayidx3> = getelementptr inbounds nuw ir<@src>, ir<%indvars.iv>
-///   EMIT-SCALAR ir<%1> = load ir<%arrayidx3>
-///   EMIT ir<%add> = add nsw ir<%1>, ir<42>
+///   EMIT-SCALAR ir<%2> = load ir<%arrayidx3>
+///   EMIT ir<%add> = add nsw ir<%2>, ir<42>
 ///   EMIT ir<%arrayidx5> = getelementptr inbounds nuw ir<@dst>, ir<%indvars.iv>
 ///   EMIT store ir<%add>, ir<%arrayidx5>
 ///   EMIT ir<%indvars.iv.next> = add nuw nsw ir<%indvars.iv>, ir<1>
+///   EMIT vp<%3> = any-of ir<%1>
 ///   EMIT ir<%exitcond.not> = icmp eq ir<%indvars.iv.next>, ir<10000>
-///   EMIT branch-on-cond ir<%exitcond.not>
-/// Successor(s): middle.block, for.body
+///   EMIT branch-on-two-conds vp<%3>, ir<%exitcond.not>
+/// Successor(s): middle.block, middle.block, for.body
 ///
-/// The loop must have a single unconditional load contributing to the
-/// uncountable exit comparison, and the other term must be loop-invariant.
-/// There must also be a counted exit. Other memory operations in the loop can
-/// take place before or after the uncountable exit, but must also be
-/// unconditional. All potential accesses to the memory used for the load for
-/// the exit condition must be guaranteed to be dereferenceable. Any stores
-/// within the loop must not alias with any other memory operations.
-///
+/// We currently expect LoopVectorizationLegality to ensure that:
+/// * The loop must have a single unconditional load contributing to the
+///   uncountable exit comparison, and the other term must be loop-invariant.
+/// * There must also be a counted exit.
+/// * Other memory operations in the loop can take place before or after the
+///   uncountable exit, but must also be unconditional.
+/// * Any stores within the loop must not alias with any other memory
+///   operations.
 static bool handleUncountableExitsWithSideEffects(
     VPlan &Plan, SmallVectorImpl<EarlyExitInfo> &Exits,
     VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB, VPBasicBlock *MiddleVPBB,
@@ -4395,7 +4396,7 @@ static bool handleUncountableExitsWithSideEffects(
                    ? I
                    : nullptr;
       });
-  assert(Load && "Couldn't find load");
+  assert(Load && "Couldn't find exactly one load");
   // TODO: Support conditional loads for uncountable exits.
   assert(VPDT.dominates(Load->getParent(), LatchVPBB) &&
          "Uncountable exit condition load is conditional.");
