@@ -10,6 +10,9 @@
 
 // <inplace_vector>
 
+// No member named 'regex'.
+// XFAIL: LLVM-LIBC-FIXME
+
 #include <inplace_vector>
 #include <utility>
 
