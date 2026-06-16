@@ -175,6 +175,9 @@ public:
 
   unsigned getMaxInterleaveFactor(ElementCount VF) const override;
 
+  bool supportsVectorInterleaveDeinterleaveIntrinsics(
+      unsigned Factor, VectorType *VecTy) const override;
+
   bool prefersVectorizedAddressing() const override;
 
   /// Check whether Opcode1 has less throughput according to the scheduling

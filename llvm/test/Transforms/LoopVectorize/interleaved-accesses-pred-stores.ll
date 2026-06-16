@@ -30,12 +30,13 @@ define void @interleaved_with_cond_store_0(ptr %p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [16 x i8], ptr [[P:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 8
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.vector.deinterleave2.v4i64(<4 x i64> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i64> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[WIDE_VEC]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[STRIDED_VEC]], i64 0
 ; CHECK-NEXT:    store i64 [[TMP4]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
@@ -44,7 +45,7 @@ define void @interleaved_with_cond_store_0(ptr %p, i64 %x, i64 %n) {
 ; CHECK:       pred.store.if1:
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr [16 x i8], ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i64 24
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[WIDE_VEC]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[STRIDED_VEC]], i64 1
 ; CHECK-NEXT:    store i64 [[TMP8]], ptr [[TMP7]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.continue2:
@@ -127,12 +128,13 @@ define void @interleaved_with_cond_store_1(ptr %p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    [[DOTSPLIT5:%.*]] = getelementptr inbounds [16 x i8], ptr [[P]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT5]], i64 8
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.vector.deinterleave2.v4i64(<4 x i64> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <2 x i64> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[WIDE_VEC]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[STRIDED_VEC]], i64 0
 ; CHECK-NEXT:    store i64 [[TMP7]], ptr [[TMP1]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
@@ -140,13 +142,15 @@ define void @interleaved_with_cond_store_1(ptr %p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.if1:
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [16 x i8], ptr [[P]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[WIDE_VEC]], i64 2
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[STRIDED_VEC]], i64 1
 ; CHECK-NEXT:    store i64 [[TMP10]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.continue2:
 ; CHECK-NEXT:    [[WIDE_VEC3:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[WIDE_VEC3]], i64 0
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[WIDE_VEC3]], i64 2
+; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.vector.deinterleave2.v4i64(<4 x i64> [[WIDE_VEC3]])
+; CHECK-NEXT:    [[TMP17:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC4]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[TMP17]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i64> [[TMP17]], i64 1
 ; CHECK-NEXT:    store i64 [[TMP11]], ptr [[TMP2]], align 8
 ; CHECK-NEXT:    store i64 [[TMP12]], ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -232,14 +236,15 @@ define void @interleaved_with_cond_store_2(ptr %p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [16 x i8], ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 8
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.vector.deinterleave2.v4i64(<4 x i64> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    store i64 [[X]], ptr [[TMP1]], align 8
 ; CHECK-NEXT:    store i64 [[X]], ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <2 x i64> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[WIDE_VEC]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i64> [[STRIDED_VEC]], i64 0
 ; CHECK-NEXT:    store i64 [[TMP7]], ptr [[TMP3]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
@@ -248,7 +253,7 @@ define void @interleaved_with_cond_store_2(ptr %p, i64 %x, i64 %n) {
 ; CHECK:       pred.store.if1:
 ; CHECK-NEXT:    [[DOTSPLIT4:%.*]] = getelementptr inbounds [16 x i8], ptr [[P]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT4]], i64 8
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[WIDE_VEC]], i64 2
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[STRIDED_VEC]], i64 1
 ; CHECK-NEXT:    store i64 [[TMP10]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.continue2:

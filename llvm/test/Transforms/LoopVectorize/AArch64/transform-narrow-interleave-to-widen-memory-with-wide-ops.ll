@@ -38,12 +38,12 @@ define void @test_2xi64_unary_op_load_interleave_group(ptr noalias %data, ptr no
 ; VF4-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[DATA]], i64 [[TMP1]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x double>, ptr [[TMP2]], align 8
-; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x double> [[WIDE_VEC]], <8 x double> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; VF4-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x double> [[WIDE_VEC]], <8 x double> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; VF4-NEXT:    [[STRIDED_VEC2:%.*]] = call { <4 x double>, <4 x double> } @llvm.vector.deinterleave2.v8f64(<8 x double> [[WIDE_VEC]])
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x double>, <4 x double> } [[STRIDED_VEC2]], 0
+; VF4-NEXT:    [[STRIDED_VEC1:%.*]] = extractvalue { <4 x double>, <4 x double> } [[STRIDED_VEC2]], 1
 ; VF4-NEXT:    [[TMP3:%.*]] = fneg <4 x double> [[STRIDED_VEC]]
 ; VF4-NEXT:    [[TMP4:%.*]] = fneg <4 x double> [[STRIDED_VEC1]]
-; VF4-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x double> [[TMP5]], <8 x double> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <8 x double> @llvm.vector.interleave2.v8f64(<4 x double> [[TMP3]], <4 x double> [[TMP4]])
 ; VF4-NEXT:    store <8 x double> [[INTERLEAVED_VEC]], ptr [[TMP2]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -93,8 +93,7 @@ define void @test_2xi64_unary_op_wide_load(ptr noalias %data, ptr noalias %A, pt
 ; VF2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[TMP14]]
 ; VF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
 ; VF2-NEXT:    [[TMP9:%.*]] = fneg <2 x double> [[WIDE_LOAD1]]
-; VF2-NEXT:    [[TMP17:%.*]] = shufflevector <2 x double> [[TMP15]], <2 x double> [[TMP9]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[INTERLEAVED_VEC4:%.*]] = shufflevector <4 x double> [[TMP17]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC4:%.*]] = call <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> [[TMP15]], <2 x double> [[TMP9]])
 ; VF2-NEXT:    store <4 x double> [[INTERLEAVED_VEC4]], ptr [[TMP20]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP14]], 2
 ; VF2-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -120,8 +119,7 @@ define void @test_2xi64_unary_op_wide_load(ptr noalias %data, ptr noalias %A, pt
 ; VF4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[INDEX]]
 ; VF4-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x double>, ptr [[TMP6]], align 8
 ; VF4-NEXT:    [[TMP8:%.*]] = fneg <4 x double> [[WIDE_LOAD1]]
-; VF4-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x double> [[TMP9]], <8 x double> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <8 x double> @llvm.vector.interleave2.v8f64(<4 x double> [[TMP4]], <4 x double> [[TMP8]])
 ; VF4-NEXT:    store <8 x double> [[INTERLEAVED_VEC]], ptr [[TMP5]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -195,12 +193,12 @@ define void @test_2xi64(ptr noalias %data, ptr noalias %factor) {
 ; VF4-NEXT:    [[TMP10:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF4-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP10]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP11]], align 8
-; VF4-NEXT:    [[TMP19:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; VF4-NEXT:    [[TMP41:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = call { <4 x i64>, <4 x i64> } @llvm.vector.deinterleave2.v8i64(<8 x i64> [[WIDE_VEC]])
+; VF4-NEXT:    [[TMP19:%.*]] = extractvalue { <4 x i64>, <4 x i64> } [[STRIDED_VEC]], 0
+; VF4-NEXT:    [[TMP41:%.*]] = extractvalue { <4 x i64>, <4 x i64> } [[STRIDED_VEC]], 1
 ; VF4-NEXT:    [[TMP20:%.*]] = mul <4 x i64> [[WIDE_LOAD]], [[TMP19]]
 ; VF4-NEXT:    [[TMP42:%.*]] = mul <4 x i64> [[WIDE_LOAD]], [[TMP41]]
-; VF4-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[TMP20]], <4 x i64> [[TMP42]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i64> [[TMP7]], <8 x i64> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <8 x i64> @llvm.vector.interleave2.v8i64(<4 x i64> [[TMP20]], <4 x i64> [[TMP42]])
 ; VF4-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP11]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -249,12 +247,12 @@ define void @test_2xi64_different_opcodes(ptr noalias %data, ptr noalias %factor
 ; VF2-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[TMP0]], 1
 ; VF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP3]]
 ; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
-; VF2-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
-; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
+; VF2-NEXT:    [[STRIDED_VEC2:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.vector.deinterleave2.v4i64(<4 x i64> [[WIDE_VEC]])
+; VF2-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC2]], 0
+; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC2]], 1
 ; VF2-NEXT:    [[TMP5:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[STRIDED_VEC]]
 ; VF2-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[WIDE_LOAD]], [[STRIDED_VEC1]]
-; VF2-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP7]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> [[TMP5]], <2 x i64> [[TMP6]])
 ; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP4]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 2
 ; VF2-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -277,12 +275,12 @@ define void @test_2xi64_different_opcodes(ptr noalias %data, ptr noalias %factor
 ; VF4-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[TMP0]], 1
 ; VF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP3]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP4]], align 8
-; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; VF4-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; VF4-NEXT:    [[STRIDED_VEC2:%.*]] = call { <4 x i64>, <4 x i64> } @llvm.vector.deinterleave2.v8i64(<8 x i64> [[WIDE_VEC]])
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x i64>, <4 x i64> } [[STRIDED_VEC2]], 0
+; VF4-NEXT:    [[STRIDED_VEC1:%.*]] = extractvalue { <4 x i64>, <4 x i64> } [[STRIDED_VEC2]], 1
 ; VF4-NEXT:    [[TMP5:%.*]] = mul <4 x i64> [[WIDE_LOAD]], [[STRIDED_VEC]]
 ; VF4-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[WIDE_LOAD]], [[STRIDED_VEC1]]
-; VF4-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i64> [[TMP7]], <8 x i64> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <8 x i64> @llvm.vector.interleave2.v8i64(<4 x i64> [[TMP5]], <4 x i64> [[TMP6]])
 ; VF4-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP4]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
 ; VF4-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -331,12 +329,12 @@ define void @test_2xi64_interleave_loads_order_flipped(ptr noalias %data, ptr no
 ; VF2-NEXT:    [[TMP15:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP15]]
 ; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP16]], align 8
-; VF2-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
-; VF2-NEXT:    [[TMP20:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
+; VF2-NEXT:    [[STRIDED_VEC:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.vector.deinterleave2.v4i64(<4 x i64> [[WIDE_VEC]])
+; VF2-NEXT:    [[TMP11:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC]], 0
+; VF2-NEXT:    [[TMP20:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC]], 1
 ; VF2-NEXT:    [[TMP21:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[TMP20]]
 ; VF2-NEXT:    [[TMP24:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[TMP11]]
-; VF2-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP21]], <2 x i64> [[TMP24]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP7]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> [[TMP21]], <2 x i64> [[TMP24]])
 ; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP16]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -359,12 +357,12 @@ define void @test_2xi64_interleave_loads_order_flipped(ptr noalias %data, ptr no
 ; VF4-NEXT:    [[TMP27:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF4-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP27]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP28]], align 8
-; VF4-NEXT:    [[TMP19:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; VF4-NEXT:    [[TMP36:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = call { <4 x i64>, <4 x i64> } @llvm.vector.deinterleave2.v8i64(<8 x i64> [[WIDE_VEC]])
+; VF4-NEXT:    [[TMP19:%.*]] = extractvalue { <4 x i64>, <4 x i64> } [[STRIDED_VEC]], 0
+; VF4-NEXT:    [[TMP36:%.*]] = extractvalue { <4 x i64>, <4 x i64> } [[STRIDED_VEC]], 1
 ; VF4-NEXT:    [[TMP37:%.*]] = mul <4 x i64> [[WIDE_LOAD]], [[TMP36]]
 ; VF4-NEXT:    [[TMP42:%.*]] = mul <4 x i64> [[WIDE_LOAD]], [[TMP19]]
-; VF4-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[TMP37]], <4 x i64> [[TMP42]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i64> [[TMP7]], <8 x i64> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <8 x i64> @llvm.vector.interleave2.v8i64(<4 x i64> [[TMP37]], <4 x i64> [[TMP42]])
 ; VF4-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP28]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -413,12 +411,12 @@ define void @test_2xi64_store_order_flipped_1(ptr noalias %data, ptr noalias %fa
 ; VF2-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP6]]
 ; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP7]], align 8
-; VF2-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
-; VF2-NEXT:    [[TMP21:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
+; VF2-NEXT:    [[STRIDED_VEC:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.vector.deinterleave2.v4i64(<4 x i64> [[WIDE_VEC]])
+; VF2-NEXT:    [[TMP11:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC]], 0
+; VF2-NEXT:    [[TMP21:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC]], 1
 ; VF2-NEXT:    [[TMP12:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[TMP11]]
 ; VF2-NEXT:    [[TMP22:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[TMP21]]
-; VF2-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP22]], <2 x i64> [[TMP12]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP8]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> [[TMP22]], <2 x i64> [[TMP12]])
 ; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP7]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -441,12 +439,12 @@ define void @test_2xi64_store_order_flipped_1(ptr noalias %data, ptr noalias %fa
 ; VF4-NEXT:    [[TMP10:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF4-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP10]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP11]], align 8
-; VF4-NEXT:    [[TMP19:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; VF4-NEXT:    [[TMP37:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = call { <4 x i64>, <4 x i64> } @llvm.vector.deinterleave2.v8i64(<8 x i64> [[WIDE_VEC]])
+; VF4-NEXT:    [[TMP19:%.*]] = extractvalue { <4 x i64>, <4 x i64> } [[STRIDED_VEC]], 0
+; VF4-NEXT:    [[TMP37:%.*]] = extractvalue { <4 x i64>, <4 x i64> } [[STRIDED_VEC]], 1
 ; VF4-NEXT:    [[TMP20:%.*]] = mul <4 x i64> [[WIDE_LOAD]], [[TMP19]]
 ; VF4-NEXT:    [[TMP38:%.*]] = mul <4 x i64> [[WIDE_LOAD]], [[TMP37]]
-; VF4-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[TMP38]], <4 x i64> [[TMP20]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i64> [[TMP7]], <8 x i64> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <8 x i64> @llvm.vector.interleave2.v8i64(<4 x i64> [[TMP38]], <4 x i64> [[TMP20]])
 ; VF4-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP11]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -495,12 +493,12 @@ define void @test_2xi64_store_order_flipped_2(ptr noalias %data, ptr noalias %fa
 ; VF2-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP6]]
 ; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP7]], align 8
-; VF2-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
-; VF2-NEXT:    [[TMP21:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
+; VF2-NEXT:    [[STRIDED_VEC:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.vector.deinterleave2.v4i64(<4 x i64> [[WIDE_VEC]])
+; VF2-NEXT:    [[TMP11:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC]], 0
+; VF2-NEXT:    [[TMP21:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC]], 1
 ; VF2-NEXT:    [[TMP12:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[TMP11]]
 ; VF2-NEXT:    [[TMP22:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[TMP21]]
-; VF2-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP22]], <2 x i64> [[TMP12]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP8]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> [[TMP22]], <2 x i64> [[TMP12]])
 ; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP7]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -523,12 +521,12 @@ define void @test_2xi64_store_order_flipped_2(ptr noalias %data, ptr noalias %fa
 ; VF4-NEXT:    [[TMP10:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF4-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP10]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP11]], align 8
-; VF4-NEXT:    [[TMP19:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; VF4-NEXT:    [[TMP37:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = call { <4 x i64>, <4 x i64> } @llvm.vector.deinterleave2.v8i64(<8 x i64> [[WIDE_VEC]])
+; VF4-NEXT:    [[TMP19:%.*]] = extractvalue { <4 x i64>, <4 x i64> } [[STRIDED_VEC]], 0
+; VF4-NEXT:    [[TMP37:%.*]] = extractvalue { <4 x i64>, <4 x i64> } [[STRIDED_VEC]], 1
 ; VF4-NEXT:    [[TMP20:%.*]] = mul <4 x i64> [[WIDE_LOAD]], [[TMP19]]
 ; VF4-NEXT:    [[TMP38:%.*]] = mul <4 x i64> [[WIDE_LOAD]], [[TMP37]]
-; VF4-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[TMP38]], <4 x i64> [[TMP20]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i64> [[TMP7]], <8 x i64> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <8 x i64> @llvm.vector.interleave2.v8i64(<4 x i64> [[TMP38]], <4 x i64> [[TMP20]])
 ; VF4-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP11]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -581,12 +579,12 @@ define void @test_2xi64_different_loads_feeding_fmul(ptr noalias %data, ptr noal
 ; VF2-NEXT:    [[TMP14:%.*]] = or disjoint i64 [[TMP6]], 1
 ; VF2-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP14]]
 ; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP15]], align 8
-; VF2-NEXT:    [[TMP19:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
+; VF2-NEXT:    [[STRIDED_VEC:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.vector.deinterleave2.v4i64(<4 x i64> [[WIDE_VEC]])
+; VF2-NEXT:    [[TMP19:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC]], 0
 ; VF2-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i64, ptr [[SRC_1]], i64 [[INDEX]]
 ; VF2-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i64>, ptr [[TMP20]], align 8
 ; VF2-NEXT:    [[TMP22:%.*]] = mul <2 x i64> [[WIDE_LOAD2]], [[TMP19]]
-; VF2-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i64> [[TMP8]], <2 x i64> [[TMP22]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP13]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> [[TMP8]], <2 x i64> [[TMP22]])
 ; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP7]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 98
@@ -612,12 +610,12 @@ define void @test_2xi64_different_loads_feeding_fmul(ptr noalias %data, ptr noal
 ; VF4-NEXT:    [[TMP24:%.*]] = or disjoint i64 [[TMP10]], 1
 ; VF4-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP24]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP25]], align 8
-; VF4-NEXT:    [[TMP33:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = call { <4 x i64>, <4 x i64> } @llvm.vector.deinterleave2.v8i64(<8 x i64> [[WIDE_VEC]])
+; VF4-NEXT:    [[TMP33:%.*]] = extractvalue { <4 x i64>, <4 x i64> } [[STRIDED_VEC]], 0
 ; VF4-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i64, ptr [[SRC_1]], i64 [[INDEX]]
 ; VF4-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i64>, ptr [[TMP34]], align 8
 ; VF4-NEXT:    [[TMP36:%.*]] = mul <4 x i64> [[WIDE_LOAD2]], [[TMP33]]
-; VF4-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i64> [[TMP12]], <4 x i64> [[TMP36]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i64> [[TMP13]], <8 x i64> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <8 x i64> @llvm.vector.interleave2.v8i64(<4 x i64> [[TMP12]], <4 x i64> [[TMP36]])
 ; VF4-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP11]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
@@ -666,16 +664,14 @@ define void @test_3xi64(ptr noalias %data, ptr noalias %factor) {
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
 ; VF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds { i64, i64, i64 }, ptr [[DATA]], i64 [[INDEX]], i32 0
 ; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <6 x i64>, ptr [[TMP4]], align 8
-; VF2-NEXT:    [[TMP9:%.*]] = shufflevector <6 x i64> [[WIDE_VEC]], <6 x i64> poison, <2 x i32> <i32 0, i32 3>
-; VF2-NEXT:    [[TMP18:%.*]] = shufflevector <6 x i64> [[WIDE_VEC]], <6 x i64> poison, <2 x i32> <i32 1, i32 4>
-; VF2-NEXT:    [[TMP27:%.*]] = shufflevector <6 x i64> [[WIDE_VEC]], <6 x i64> poison, <2 x i32> <i32 2, i32 5>
+; VF2-NEXT:    [[STRIDED_VEC:%.*]] = call { <2 x i64>, <2 x i64>, <2 x i64> } @llvm.vector.deinterleave3.v6i64(<6 x i64> [[WIDE_VEC]])
+; VF2-NEXT:    [[TMP9:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64> } [[STRIDED_VEC]], 0
+; VF2-NEXT:    [[TMP18:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64> } [[STRIDED_VEC]], 1
+; VF2-NEXT:    [[TMP27:%.*]] = extractvalue { <2 x i64>, <2 x i64>, <2 x i64> } [[STRIDED_VEC]], 2
 ; VF2-NEXT:    [[TMP10:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[TMP9]]
 ; VF2-NEXT:    [[TMP19:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[TMP18]]
 ; VF2-NEXT:    [[TMP28:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[TMP27]]
-; VF2-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP10]], <2 x i64> [[TMP19]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i64> [[TMP28]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; VF2-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i64> [[TMP7]], <4 x i64> [[TMP8]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <6 x i64> [[TMP11]], <6 x i64> poison, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
+; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <6 x i64> @llvm.vector.interleave3.v6i64(<2 x i64> [[TMP10]], <2 x i64> [[TMP19]], <2 x i64> [[TMP28]])
 ; VF2-NEXT:    store <6 x i64> [[INTERLEAVED_VEC]], ptr [[TMP4]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -697,16 +693,14 @@ define void @test_3xi64(ptr noalias %data, ptr noalias %factor) {
 ; VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP4]], align 8
 ; VF4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds { i64, i64, i64 }, ptr [[DATA]], i64 [[INDEX]], i32 0
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <12 x i64>, ptr [[TMP6]], align 8
-; VF4-NEXT:    [[TMP17:%.*]] = shufflevector <12 x i64> [[WIDE_VEC]], <12 x i64> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
-; VF4-NEXT:    [[TMP34:%.*]] = shufflevector <12 x i64> [[WIDE_VEC]], <12 x i64> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
-; VF4-NEXT:    [[TMP51:%.*]] = shufflevector <12 x i64> [[WIDE_VEC]], <12 x i64> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = call { <4 x i64>, <4 x i64>, <4 x i64> } @llvm.vector.deinterleave3.v12i64(<12 x i64> [[WIDE_VEC]])
+; VF4-NEXT:    [[TMP17:%.*]] = extractvalue { <4 x i64>, <4 x i64>, <4 x i64> } [[STRIDED_VEC]], 0
+; VF4-NEXT:    [[TMP34:%.*]] = extractvalue { <4 x i64>, <4 x i64>, <4 x i64> } [[STRIDED_VEC]], 1
+; VF4-NEXT:    [[TMP51:%.*]] = extractvalue { <4 x i64>, <4 x i64>, <4 x i64> } [[STRIDED_VEC]], 2
 ; VF4-NEXT:    [[TMP18:%.*]] = mul <4 x i64> [[WIDE_LOAD]], [[TMP17]]
 ; VF4-NEXT:    [[TMP35:%.*]] = mul <4 x i64> [[WIDE_LOAD]], [[TMP34]]
 ; VF4-NEXT:    [[TMP52:%.*]] = mul <4 x i64> [[WIDE_LOAD]], [[TMP51]]
-; VF4-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i64> [[TMP18]], <4 x i64> [[TMP35]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VF4-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i64> [[TMP52]], <4 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; VF4-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i64> [[TMP7]], <8 x i64> [[TMP8]], <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <12 x i64> [[TMP9]], <12 x i64> poison, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <12 x i64> @llvm.vector.interleave3.v12i64(<4 x i64> [[TMP18]], <4 x i64> [[TMP35]], <4 x i64> [[TMP52]])
 ; VF4-NEXT:    store <12 x i64> [[INTERLEAVED_VEC]], ptr [[TMP6]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -755,12 +749,14 @@ define void @test_2xi32(ptr noalias %data, ptr noalias %factor) {
 ; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[INDEX]]
 ; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i32>, ptr [[TMP2]], align 8
-; VF2-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[WIDE_VEC]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+; VF2-NEXT:    [[STRIDED_VEC:%.*]] = call { <2 x i32>, <2 x i32> } @llvm.vector.deinterleave2.v4i32(<4 x i32> [[WIDE_VEC]])
+; VF2-NEXT:    [[TMP7:%.*]] = extractvalue { <2 x i32>, <2 x i32> } [[STRIDED_VEC]], 0
 ; VF2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[INDEX]], i32 0
 ; VF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP1]], i32 0
 ; VF2-NEXT:    [[WIDE_VEC1:%.*]] = load <6 x i32>, ptr [[TMP8]], align 8
-; VF2-NEXT:    [[TMP13:%.*]] = shufflevector <6 x i32> [[WIDE_VEC1]], <6 x i32> poison, <2 x i32> <i32 0, i32 3>
-; VF2-NEXT:    [[TMP22:%.*]] = shufflevector <6 x i32> [[WIDE_VEC1]], <6 x i32> poison, <2 x i32> <i32 1, i32 4>
+; VF2-NEXT:    [[STRIDED_VEC2:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.vector.deinterleave3.v6i32(<6 x i32> [[WIDE_VEC1]])
+; VF2-NEXT:    [[TMP13:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[STRIDED_VEC2]], 0
+; VF2-NEXT:    [[TMP22:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[STRIDED_VEC2]], 1
 ; VF2-NEXT:    [[TMP14:%.*]] = mul <2 x i32> [[TMP7]], [[TMP13]]
 ; VF2-NEXT:    [[TMP15:%.*]] = extractelement <2 x i32> [[TMP14]], i64 0
 ; VF2-NEXT:    [[TMP16:%.*]] = extractelement <2 x i32> [[TMP14]], i64 1
@@ -793,14 +789,16 @@ define void @test_2xi32(ptr noalias %data, ptr noalias %factor) {
 ; VF4-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 3
 ; VF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[INDEX]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP4]], align 8
-; VF4-NEXT:    [[TMP15:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[WIDE_VEC]])
+; VF4-NEXT:    [[TMP15:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[STRIDED_VEC]], 0
 ; VF4-NEXT:    [[TMP16:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[INDEX]], i32 0
 ; VF4-NEXT:    [[TMP17:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP1]], i32 0
 ; VF4-NEXT:    [[TMP18:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP2]], i32 0
 ; VF4-NEXT:    [[TMP19:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[TMP3]], i32 0
 ; VF4-NEXT:    [[WIDE_VEC1:%.*]] = load <12 x i32>, ptr [[TMP16]], align 8
-; VF4-NEXT:    [[TMP27:%.*]] = shufflevector <12 x i32> [[WIDE_VEC1]], <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
-; VF4-NEXT:    [[TMP44:%.*]] = shufflevector <12 x i32> [[WIDE_VEC1]], <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
+; VF4-NEXT:    [[STRIDED_VEC2:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave3.v12i32(<12 x i32> [[WIDE_VEC1]])
+; VF4-NEXT:    [[TMP27:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[STRIDED_VEC2]], 0
+; VF4-NEXT:    [[TMP44:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[STRIDED_VEC2]], 1
 ; VF4-NEXT:    [[TMP28:%.*]] = mul <4 x i32> [[TMP15]], [[TMP27]]
 ; VF4-NEXT:    [[TMP29:%.*]] = extractelement <4 x i32> [[TMP28]], i64 0
 ; VF4-NEXT:    [[TMP30:%.*]] = extractelement <4 x i32> [[TMP28]], i64 1
@@ -864,19 +862,18 @@ define void @test_3xi32(ptr noalias %data, ptr noalias %factor) {
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[INDEX]]
 ; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i32>, ptr [[TMP3]], align 8
-; VF2-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[WIDE_VEC]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+; VF2-NEXT:    [[STRIDED_VEC:%.*]] = call { <2 x i32>, <2 x i32> } @llvm.vector.deinterleave2.v4i32(<4 x i32> [[WIDE_VEC]])
+; VF2-NEXT:    [[TMP7:%.*]] = extractvalue { <2 x i32>, <2 x i32> } [[STRIDED_VEC]], 0
 ; VF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[INDEX]], i32 0
 ; VF2-NEXT:    [[WIDE_VEC1:%.*]] = load <6 x i32>, ptr [[TMP9]], align 8
-; VF2-NEXT:    [[TMP13:%.*]] = shufflevector <6 x i32> [[WIDE_VEC1]], <6 x i32> poison, <2 x i32> <i32 0, i32 3>
-; VF2-NEXT:    [[TMP22:%.*]] = shufflevector <6 x i32> [[WIDE_VEC1]], <6 x i32> poison, <2 x i32> <i32 1, i32 4>
-; VF2-NEXT:    [[TMP31:%.*]] = shufflevector <6 x i32> [[WIDE_VEC1]], <6 x i32> poison, <2 x i32> <i32 2, i32 5>
+; VF2-NEXT:    [[STRIDED_VEC2:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.vector.deinterleave3.v6i32(<6 x i32> [[WIDE_VEC1]])
+; VF2-NEXT:    [[TMP13:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[STRIDED_VEC2]], 0
+; VF2-NEXT:    [[TMP22:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[STRIDED_VEC2]], 1
+; VF2-NEXT:    [[TMP31:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[STRIDED_VEC2]], 2
 ; VF2-NEXT:    [[TMP14:%.*]] = mul <2 x i32> [[TMP7]], [[TMP13]]
 ; VF2-NEXT:    [[TMP23:%.*]] = mul <2 x i32> [[TMP7]], [[TMP22]]
 ; VF2-NEXT:    [[TMP32:%.*]] = mul <2 x i32> [[TMP7]], [[TMP31]]
-; VF2-NEXT:    [[TMP8:%.*]] = shufflevector <2 x i32> [[TMP14]], <2 x i32> [[TMP23]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i32> [[TMP32]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; VF2-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> [[TMP11]], <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
-; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <6 x i32> [[TMP10]], <6 x i32> poison, <6 x i32> <i32 0, i32 2, i32 4, i32 1, i32 3, i32 5>
+; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <6 x i32> @llvm.vector.interleave3.v6i32(<2 x i32> [[TMP14]], <2 x i32> [[TMP23]], <2 x i32> [[TMP32]])
 ; VF2-NEXT:    store <6 x i32> [[INTERLEAVED_VEC]], ptr [[TMP9]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 98
@@ -895,19 +892,18 @@ define void @test_3xi32(ptr noalias %data, ptr noalias %factor) {
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[INDEX]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP7]], align 8
-; VF4-NEXT:    [[TMP15:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[WIDE_VEC]])
+; VF4-NEXT:    [[TMP15:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[STRIDED_VEC]], 0
 ; VF4-NEXT:    [[TMP19:%.*]] = getelementptr inbounds { i32, i32, i32 }, ptr [[DATA]], i64 [[INDEX]], i32 0
 ; VF4-NEXT:    [[WIDE_VEC1:%.*]] = load <12 x i32>, ptr [[TMP19]], align 8
-; VF4-NEXT:    [[TMP27:%.*]] = shufflevector <12 x i32> [[WIDE_VEC1]], <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
-; VF4-NEXT:    [[TMP44:%.*]] = shufflevector <12 x i32> [[WIDE_VEC1]], <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
-; VF4-NEXT:    [[TMP61:%.*]] = shufflevector <12 x i32> [[WIDE_VEC1]], <12 x i32> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
+; VF4-NEXT:    [[STRIDED_VEC2:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave3.v12i32(<12 x i32> [[WIDE_VEC1]])
+; VF4-NEXT:    [[TMP27:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[STRIDED_VEC2]], 0
+; VF4-NEXT:    [[TMP44:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[STRIDED_VEC2]], 1
+; VF4-NEXT:    [[TMP61:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[STRIDED_VEC2]], 2
 ; VF4-NEXT:    [[TMP28:%.*]] = mul <4 x i32> [[TMP15]], [[TMP27]]
 ; VF4-NEXT:    [[TMP45:%.*]] = mul <4 x i32> [[TMP15]], [[TMP44]]
 ; VF4-NEXT:    [[TMP62:%.*]] = mul <4 x i32> [[TMP15]], [[TMP61]]
-; VF4-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP28]], <4 x i32> [[TMP45]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VF4-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP62]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; VF4-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> [[TMP9]], <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
-; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <12 x i32> [[TMP10]], <12 x i32> poison, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <12 x i32> @llvm.vector.interleave3.v12i32(<4 x i32> [[TMP28]], <4 x i32> [[TMP45]], <4 x i32> [[TMP62]])
 ; VF4-NEXT:    store <12 x i32> [[INTERLEAVED_VEC]], ptr [[TMP19]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
@@ -987,8 +983,7 @@ define void @test_2xi64_sub_of_wide_loads(ptr noalias %data, ptr noalias %A, ptr
 ; VF4-NEXT:    [[TMP5:%.*]] = sub <4 x i64> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; VF4-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[TMP0]], 1
 ; VF4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP6]]
-; VF4-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i64> [[TMP9]], <8 x i64> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <8 x i64> @llvm.vector.interleave2.v8i64(<4 x i64> [[TMP5]], <4 x i64> [[TMP5]])
 ; VF4-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP7]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
 ; VF4-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -1040,8 +1035,7 @@ define void @test_2xi64_sub_of_wide_loads_ops_swapped(ptr noalias %data, ptr noa
 ; VF2-NEXT:    [[TMP20:%.*]] = shl nsw i64 [[TMP0]], 1
 ; VF2-NEXT:    [[DATA_1:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP20]]
 ; VF2-NEXT:    [[TMP15:%.*]] = sub <2 x i64> [[WIDE_LOAD1]], [[BROADCAST_SPLAT6]]
-; VF2-NEXT:    [[TMP17:%.*]] = shufflevector <2 x i64> [[TMP13]], <2 x i64> [[TMP15]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[INTERLEAVED_VEC4:%.*]] = shufflevector <4 x i64> [[TMP17]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC4:%.*]] = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> [[TMP13]], <2 x i64> [[TMP15]])
 ; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC4]], ptr [[DATA_1]], align 8
 ; VF2-NEXT:    [[IV_NEXT]] = add nuw i64 [[TMP0]], 2
 ; VF2-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 100
@@ -1067,8 +1061,7 @@ define void @test_2xi64_sub_of_wide_loads_ops_swapped(ptr noalias %data, ptr noa
 ; VF4-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[TMP0]], 1
 ; VF4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP6]]
 ; VF4-NEXT:    [[TMP8:%.*]] = sub <4 x i64> [[WIDE_LOAD1]], [[WIDE_LOAD]]
-; VF4-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> [[TMP8]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i64> [[TMP9]], <8 x i64> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <8 x i64> @llvm.vector.interleave2.v8i64(<4 x i64> [[TMP5]], <4 x i64> [[TMP8]])
 ; VF4-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP7]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
 ; VF4-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -1122,8 +1115,7 @@ define void @test_2xi64_sub_of_wide_loads_with_different_base_ptrs(ptr noalias %
 ; VF2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[C]], i64 [[TMP0]]
 ; VF2-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i64>, ptr [[TMP8]], align 8
 ; VF2-NEXT:    [[TMP10:%.*]] = sub <2 x i64> [[WIDE_LOAD]], [[WIDE_LOAD2]]
-; VF2-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP11]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> [[TMP5]], <2 x i64> [[TMP10]])
 ; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP7]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 2
 ; VF2-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -1151,8 +1143,7 @@ define void @test_2xi64_sub_of_wide_loads_with_different_base_ptrs(ptr noalias %
 ; VF4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[C]], i64 [[TMP0]]
 ; VF4-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i64>, ptr [[TMP8]], align 8
 ; VF4-NEXT:    [[TMP10:%.*]] = sub <4 x i64> [[WIDE_LOAD]], [[WIDE_LOAD2]]
-; VF4-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> [[TMP10]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i64> [[TMP11]], <8 x i64> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <8 x i64> @llvm.vector.interleave2.v8i64(<4 x i64> [[TMP5]], <4 x i64> [[TMP10]])
 ; VF4-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP7]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 4
 ; VF4-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -1225,16 +1216,17 @@ define void @multiple_store_groups_storing_same_wide_bin_op(ptr noalias %A, ptr 
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[TMP0:%.*]] = getelementptr { double, double }, ptr [[A]], i64 [[INDEX]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x double>, ptr [[TMP0]], align 8
-; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x double> [[WIDE_VEC]], <8 x double> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; VF4-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x double> [[WIDE_VEC]], <8 x double> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; VF4-NEXT:    [[STRIDED_VEC2:%.*]] = call { <4 x double>, <4 x double> } @llvm.vector.deinterleave2.v8f64(<8 x double> [[WIDE_VEC]])
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x double>, <4 x double> } [[STRIDED_VEC2]], 0
+; VF4-NEXT:    [[STRIDED_VEC1:%.*]] = extractvalue { <4 x double>, <4 x double> } [[STRIDED_VEC2]], 1
 ; VF4-NEXT:    [[TMP1:%.*]] = fadd contract <4 x double> [[STRIDED_VEC]], splat (double 2.000000e+01)
 ; VF4-NEXT:    [[TMP2:%.*]] = fadd contract <4 x double> [[STRIDED_VEC1]], splat (double 2.000000e+01)
 ; VF4-NEXT:    [[TMP3:%.*]] = getelementptr { double, double }, ptr [[B]], i64 [[INDEX]]
-; VF4-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> [[TMP2]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x double> [[TMP4]], <8 x double> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <8 x double> @llvm.vector.interleave2.v8f64(<4 x double> [[TMP1]], <4 x double> [[TMP2]])
 ; VF4-NEXT:    store <8 x double> [[INTERLEAVED_VEC]], ptr [[TMP3]], align 8
 ; VF4-NEXT:    [[TMP5:%.*]] = getelementptr { double, double }, ptr [[C]], i64 [[INDEX]]
-; VF4-NEXT:    store <8 x double> [[INTERLEAVED_VEC]], ptr [[TMP5]], align 8
+; VF4-NEXT:    [[INTERLEAVED_VEC1:%.*]] = call <8 x double> @llvm.vector.interleave2.v8f64(<4 x double> [[TMP1]], <4 x double> [[TMP2]])
+; VF4-NEXT:    store <8 x double> [[INTERLEAVED_VEC1]], ptr [[TMP5]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; VF4-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
@@ -1305,13 +1297,13 @@ define void @flag_mismatch_disjoint(ptr noalias %dst, ptr noalias %src) {
 ; VF4-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[INDEX]], 1
 ; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[TMP0]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP1]], align 8
-; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; VF4-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; VF4-NEXT:    [[TMP2:%.*]] = or disjoint <4 x i64> [[STRIDED_VEC]], splat (i64 1)
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = call { <4 x i64>, <4 x i64> } @llvm.vector.deinterleave2.v8i64(<8 x i64> [[WIDE_VEC]]) 
+; VF4-NEXT:    [[STRIDED_VEC0:%.*]] = extractvalue { <4 x i64>, <4 x i64> } [[STRIDED_VEC]], 0 
+; VF4-NEXT:    [[STRIDED_VEC1:%.*]] = extractvalue { <4 x i64>, <4 x i64> } [[STRIDED_VEC]], 1 
+; VF4-NEXT:    [[TMP2:%.*]] = or disjoint <4 x i64> [[STRIDED_VEC0]], splat (i64 1)
 ; VF4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP0]]
 ; VF4-NEXT:    [[TMP4:%.*]] = or <4 x i64> [[STRIDED_VEC1]], splat (i64 1)
-; VF4-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> [[TMP4]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i64> [[TMP5]], <8 x i64> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <8 x i64> @llvm.vector.interleave2.v8i64(<4 x i64> [[TMP2]], <4 x i64> [[TMP4]]) 
 ; VF4-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP3]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100

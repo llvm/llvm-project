@@ -930,6 +930,11 @@ unsigned TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF) const {
   return TTIImpl->getMaxInterleaveFactor(VF);
 }
 
+bool TargetTransformInfo::supportsVectorInterleaveDeinterleaveIntrinsics(
+    unsigned Factor, VectorType *VecTy) const {
+  return TTIImpl->supportsVectorInterleaveDeinterleaveIntrinsics(Factor, VecTy);
+}
+
 TargetTransformInfo::OperandValueInfo
 TargetTransformInfo::getOperandInfo(const Value *V) {
   OperandValueKind OpInfo = OK_AnyValue;

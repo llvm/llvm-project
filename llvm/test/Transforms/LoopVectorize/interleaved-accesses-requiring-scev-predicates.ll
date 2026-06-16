@@ -60,7 +60,8 @@ define void @wrap_around_scev_check(ptr noalias %a, ptr noalias %b, i8 %x, i8 %y
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i8 [[OFFSET_IDX]] to i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP12]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = shl <4 x i32> [[STRIDED_VEC]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP13]], ptr [[TMP14]], align 4
@@ -136,7 +137,8 @@ define void @wrap_predicate_for_interleave_group_wraps_for_known_trip_count(ptr 
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 15
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i32, ptr [[X]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <20 x i32>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <20 x i32> [[WIDE_VEC]], <20 x i32> poison, <4 x i32> <i32 0, i32 5, i32 10, i32 15>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave5.v20i32(<20 x i32> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i32, ptr [[OUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[STRIDED_VEC]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -208,7 +210,8 @@ define void @wrap_predicate_for_interleave_group_unknown_trip_count(ptr noalias 
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP8]], 15
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i32, ptr [[X]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <12 x i32>, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <12 x i32> [[WIDE_VEC]], <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave3.v12i32(<12 x i32> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i32, ptr [[OUT]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[STRIDED_VEC]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

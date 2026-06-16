@@ -587,9 +587,10 @@ define double @test_scalarization_cost_for_load_of_address(ptr %src.0, ptr %src.
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <6 x double>, ptr [[SRC_0]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <6 x double> [[WIDE_VEC]], <6 x double> poison, <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <6 x double> [[WIDE_VEC]], <6 x double> poison, <2 x i32> <i32 1, i32 4>
-; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <6 x double> [[WIDE_VEC]], <6 x double> poison, <2 x i32> <i32 2, i32 5>
+; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = call { <2 x double>, <2 x double>, <2 x double> } @llvm.vector.deinterleave3.v6f64(<6 x double> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <2 x double>, <2 x double>, <2 x double> } [[STRIDED_VEC3]], 0
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = extractvalue { <2 x double>, <2 x double>, <2 x double> } [[STRIDED_VEC3]], 1
+; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = extractvalue { <2 x double>, <2 x double>, <2 x double> } [[STRIDED_VEC3]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[STRIDED_VEC]], splat (double 3.000000e+00)
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[STRIDED_VEC1]], splat (double 3.000000e+00)
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[STRIDED_VEC2]], splat (double 3.000000e+00)

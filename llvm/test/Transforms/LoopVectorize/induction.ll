@@ -1149,15 +1149,19 @@ define float @scalarize_induction_variable_02(ptr %a, ptr %b, i64 %n) {
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [4 x i8], ptr [[A:%.*]], i64 [[OFFSET_IDX]]
 ; INTERLEAVE-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i64 [[TMP5]]
 ; INTERLEAVE-NEXT:    [[WIDE_VEC:%.*]] = load <32 x float>, ptr [[TMP6]], align 4
-; INTERLEAVE-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x float> [[WIDE_VEC]], <32 x float> poison, <4 x i32> <i32 0, i32 8, i32 16, i32 24>
+; INTERLEAVE-NEXT:    [[STRIDED_VEC1:%.*]] = call { <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave8.v32f32(<32 x float> [[WIDE_VEC]])
+; INTERLEAVE-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC1]], 0
 ; INTERLEAVE-NEXT:    [[WIDE_VEC2:%.*]] = load <32 x float>, ptr [[TMP7]], align 4
-; INTERLEAVE-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <32 x float> [[WIDE_VEC2]], <32 x float> poison, <4 x i32> <i32 0, i32 8, i32 16, i32 24>
+; INTERLEAVE-NEXT:    [[STRIDED_VEC4:%.*]] = call { <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave8.v32f32(<32 x float> [[WIDE_VEC2]])
+; INTERLEAVE-NEXT:    [[STRIDED_VEC3:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC4]], 0
 ; INTERLEAVE-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [4 x i8], ptr [[B:%.*]], i64 [[OFFSET_IDX]]
 ; INTERLEAVE-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [4 x i8], ptr [[B]], i64 [[TMP5]]
 ; INTERLEAVE-NEXT:    [[WIDE_VEC4:%.*]] = load <32 x float>, ptr [[TMP8]], align 4
-; INTERLEAVE-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <32 x float> [[WIDE_VEC4]], <32 x float> poison, <4 x i32> <i32 0, i32 8, i32 16, i32 24>
+; INTERLEAVE-NEXT:    [[STRIDED_VEC6:%.*]] = call { <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave8.v32f32(<32 x float> [[WIDE_VEC4]])
+; INTERLEAVE-NEXT:    [[STRIDED_VEC5:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC6]], 0
 ; INTERLEAVE-NEXT:    [[WIDE_VEC6:%.*]] = load <32 x float>, ptr [[TMP9]], align 4
-; INTERLEAVE-NEXT:    [[STRIDED_VEC7:%.*]] = shufflevector <32 x float> [[WIDE_VEC6]], <32 x float> poison, <4 x i32> <i32 0, i32 8, i32 16, i32 24>
+; INTERLEAVE-NEXT:    [[STRIDED_VEC8:%.*]] = call { <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave8.v32f32(<32 x float> [[WIDE_VEC6]])
+; INTERLEAVE-NEXT:    [[STRIDED_VEC7:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC8]], 0
 ; INTERLEAVE-NEXT:    [[TMP10:%.*]] = fadd fast <4 x float> [[VEC_PHI]], splat (float 1.000000e+00)
 ; INTERLEAVE-NEXT:    [[TMP11:%.*]] = fadd fast <4 x float> [[VEC_PHI1]], splat (float 1.000000e+00)
 ; INTERLEAVE-NEXT:    [[TMP12:%.*]] = fadd fast <4 x float> [[TMP10]], [[STRIDED_VEC]]
@@ -1465,9 +1469,11 @@ define void @scalarize_induction_variable_03(ptr %p, i32 %y, i64 %n) {
 ; INTERLEAVE-NEXT:    [[TMP33:%.*]] = getelementptr [8 x i8], ptr [[P]], i64 [[INDEX]]
 ; INTERLEAVE-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP33]], i64 60
 ; INTERLEAVE-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP9]], align 8
-; INTERLEAVE-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i32> [[WIDE_VEC]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; INTERLEAVE-NEXT:    [[STRIDED_VEC1:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[WIDE_VEC]])
+; INTERLEAVE-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[STRIDED_VEC1]], 0
 ; INTERLEAVE-NEXT:    [[WIDE_VEC1:%.*]] = load <8 x i32>, ptr [[TMP13]], align 8
-; INTERLEAVE-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <8 x i32> [[WIDE_VEC1]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; INTERLEAVE-NEXT:    [[STRIDED_VEC3:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[WIDE_VEC1]])
+; INTERLEAVE-NEXT:    [[STRIDED_VEC2:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[STRIDED_VEC3]], 0
 ; INTERLEAVE-NEXT:    [[TMP17:%.*]] = xor <4 x i32> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; INTERLEAVE-NEXT:    [[TMP19:%.*]] = extractelement <4 x i32> [[TMP17]], i64 0
 ; INTERLEAVE-NEXT:    [[TMP20:%.*]] = extractelement <4 x i32> [[TMP17]], i64 1
@@ -1853,15 +1859,19 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; INTERLEAVE-NEXT:    [[DOTIDX5:%.*]] = shl nsw i64 [[TMP14]], 4
 ; INTERLEAVE-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[DOTIDX5]]
 ; INTERLEAVE-NEXT:    [[WIDE_VEC:%.*]] = load <16 x i32>, ptr [[TMP18]], align 1, !alias.scope [[META17:![0-9]+]]
-; INTERLEAVE-NEXT:    [[TMP28:%.*]] = extractelement <16 x i32> [[WIDE_VEC]], i64 0
-; INTERLEAVE-NEXT:    [[TMP29:%.*]] = extractelement <16 x i32> [[WIDE_VEC]], i64 4
-; INTERLEAVE-NEXT:    [[TMP30:%.*]] = extractelement <16 x i32> [[WIDE_VEC]], i64 8
-; INTERLEAVE-NEXT:    [[TMP31:%.*]] = extractelement <16 x i32> [[WIDE_VEC]], i64 12
+; INTERLEAVE-NEXT:    [[STRIDED_VEC:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave4.v16i32(<16 x i32> [[WIDE_VEC]])
+; INTERLEAVE-NEXT:    [[TMP28:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[STRIDED_VEC]], 0
+; INTERLEAVE-NEXT:    [[TMP29:%.*]] = extractelement <4 x i32> [[TMP28]], i64 0
+; INTERLEAVE-NEXT:    [[TMP30:%.*]] = extractelement <4 x i32> [[TMP28]], i64 1
+; INTERLEAVE-NEXT:    [[TMP31:%.*]] = extractelement <4 x i32> [[TMP28]], i64 2
+; INTERLEAVE-NEXT:    [[TMP32:%.*]] = extractelement <4 x i32> [[TMP28]], i64 3
 ; INTERLEAVE-NEXT:    [[WIDE_VEC3:%.*]] = load <16 x i32>, ptr [[TMP19]], align 1, !alias.scope [[META17]]
-; INTERLEAVE-NEXT:    [[TMP32:%.*]] = extractelement <16 x i32> [[WIDE_VEC3]], i64 0
-; INTERLEAVE-NEXT:    [[TMP33:%.*]] = extractelement <16 x i32> [[WIDE_VEC3]], i64 4
-; INTERLEAVE-NEXT:    [[TMP34:%.*]] = extractelement <16 x i32> [[WIDE_VEC3]], i64 8
-; INTERLEAVE-NEXT:    [[TMP35:%.*]] = extractelement <16 x i32> [[WIDE_VEC3]], i64 12
+; INTERLEAVE-NEXT:    [[STRIDED_VEC4:%.*]] = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave4.v16i32(<16 x i32> [[WIDE_VEC3]])
+; INTERLEAVE-NEXT:    [[TMP33:%.*]] = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } [[STRIDED_VEC4]], 0
+; INTERLEAVE-NEXT:    [[TMP34:%.*]] = extractelement <4 x i32> [[TMP33]], i64 0
+; INTERLEAVE-NEXT:    [[TMP35:%.*]] = extractelement <4 x i32> [[TMP33]], i64 1
+; INTERLEAVE-NEXT:    [[TMP44:%.*]] = extractelement <4 x i32> [[TMP33]], i64 2
+; INTERLEAVE-NEXT:    [[TMP45:%.*]] = extractelement <4 x i32> [[TMP33]], i64 3
 ; INTERLEAVE-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [8 x i8], ptr [[P]], i64 [[INDEX]]
 ; INTERLEAVE-NEXT:    [[TMP41:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 4
 ; INTERLEAVE-NEXT:    [[TMP15:%.*]] = getelementptr [8 x i8], ptr [[P]], i64 [[INDEX]]
@@ -1878,14 +1888,14 @@ define void @scalarize_induction_variable_04(ptr %a, ptr %p, i32 %n) {
 ; INTERLEAVE-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP24]], i64 52
 ; INTERLEAVE-NEXT:    [[TMP26:%.*]] = getelementptr [8 x i8], ptr [[P]], i64 [[INDEX]]
 ; INTERLEAVE-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[TMP26]], i64 60
-; INTERLEAVE-NEXT:    store i32 [[TMP28]], ptr [[TMP41]], align 1, !alias.scope [[META20:![0-9]+]], !noalias [[META17]]
-; INTERLEAVE-NEXT:    store i32 [[TMP29]], ptr [[TMP16]], align 1, !alias.scope [[META20]], !noalias [[META17]]
-; INTERLEAVE-NEXT:    store i32 [[TMP30]], ptr [[TMP42]], align 1, !alias.scope [[META20]], !noalias [[META17]]
-; INTERLEAVE-NEXT:    store i32 [[TMP31]], ptr [[TMP20]], align 1, !alias.scope [[META20]], !noalias [[META17]]
-; INTERLEAVE-NEXT:    store i32 [[TMP32]], ptr [[TMP21]], align 1, !alias.scope [[META20]], !noalias [[META17]]
-; INTERLEAVE-NEXT:    store i32 [[TMP33]], ptr [[TMP23]], align 1, !alias.scope [[META20]], !noalias [[META17]]
-; INTERLEAVE-NEXT:    store i32 [[TMP34]], ptr [[TMP25]], align 1, !alias.scope [[META20]], !noalias [[META17]]
-; INTERLEAVE-NEXT:    store i32 [[TMP35]], ptr [[TMP27]], align 1, !alias.scope [[META20]], !noalias [[META17]]
+; INTERLEAVE-NEXT:    store i32 [[TMP29]], ptr [[TMP41]], align 1, !alias.scope [[META20:![0-9]+]], !noalias [[META17]]
+; INTERLEAVE-NEXT:    store i32 [[TMP30]], ptr [[TMP16]], align 1, !alias.scope [[META20]], !noalias [[META17]]
+; INTERLEAVE-NEXT:    store i32 [[TMP31]], ptr [[TMP42]], align 1, !alias.scope [[META20]], !noalias [[META17]]
+; INTERLEAVE-NEXT:    store i32 [[TMP32]], ptr [[TMP20]], align 1, !alias.scope [[META20]], !noalias [[META17]]
+; INTERLEAVE-NEXT:    store i32 [[TMP34]], ptr [[TMP21]], align 1, !alias.scope [[META20]], !noalias [[META17]]
+; INTERLEAVE-NEXT:    store i32 [[TMP35]], ptr [[TMP23]], align 1, !alias.scope [[META20]], !noalias [[META17]]
+; INTERLEAVE-NEXT:    store i32 [[TMP44]], ptr [[TMP25]], align 1, !alias.scope [[META20]], !noalias [[META17]]
+; INTERLEAVE-NEXT:    store i32 [[TMP45]], ptr [[TMP27]], align 1, !alias.scope [[META20]], !noalias [[META17]]
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; INTERLEAVE-NEXT:    [[TMP36:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[TMP36]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]

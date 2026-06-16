@@ -723,6 +723,11 @@ public:
   }
 
   virtual unsigned getMaxInterleaveFactor(ElementCount VF) const { return 1; }
+  virtual bool
+  supportsVectorInterleaveDeinterleaveIntrinsics(unsigned Factor,
+                                                 VectorType *VecTy) const {
+    return Factor <= 8; // VecTy->isScalableTy();
+  }
 
   virtual InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
