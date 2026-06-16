@@ -2009,8 +2009,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     // FIXME: Update printAttributedBefore to print these once we generate
     // AttributedType nodes for them.
     llvm_unreachable("Address space attributes handled separately");
-    ;
-
   case attr::CountedBy:
   case attr::CountedByOrNull:
   case attr::SizedBy:
