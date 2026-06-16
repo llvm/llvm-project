@@ -687,14 +687,25 @@ Expected<std::unique_ptr<LinkGraph>> createLinkGraphFromELFObject_aarch64(
   if (!Features)
     return Features.takeError();
 
-  assert((*ELFObj)->getArch() == Triple::aarch64 &&
-         "Only AArch64 (little endian) is supported for now");
+  assert(((*ELFObj)->getArch() == Triple::aarch64 ||
+           (*ELFObj)->getArch() == Triple::aarch64_be) &&
+         "Object is not an AArch64 ELF file");
 
-  auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64LE>>(**ELFObj);
-  return ELFLinkGraphBuilder_aarch64<object::ELF64LE>(
-             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(), std::move(SSP),
-             (*ELFObj)->makeTriple(), std::move(*Features))
-      .buildGraph();
+  if (auto *E = dyn_cast<object::ELFObjectFile<object::ELF64LE>>(&**ELFObj))
+    return ELFLinkGraphBuilder_aarch64<object::ELF64LE>(
+               (*ELFObj)->getFileName(), E->getELFFile(), std::move(SSP),
+               (*ELFObj)->makeTriple(), std::move(*Features))
+        .buildGraph();
+
+  if (auto *E = dyn_cast<object::ELFObjectFile<object::ELF64BE>>(&**ELFObj))
+    return ELFLinkGraphBuilder_aarch64<object::ELF64BE>(
+               (*ELFObj)->getFileName(), E->getELFFile(), std::move(SSP),
+               (*ELFObj)->makeTriple(), std::move(*Features))
+        .buildGraph();
+
+  return make_error<JITLinkError>(
+      "Unsupported AArch64 ELF format in " +
+      ObjectBuffer.getBufferIdentifier());
 }
 
 void link_ELF_aarch64(std::unique_ptr<LinkGraph> G,
