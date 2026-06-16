@@ -309,8 +309,6 @@ class ProfiledBinary {
   std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
 
   // String table owning function name strings created from the symbolizer.
-  // StringRefs into the stored names are retained by symbolization results,
-  // which is fine: StringSet entry storage is stable.
   StringSet<> NameStrings;
 
   // MMap events for PT_LOAD segments without 'x' memory protection flag.

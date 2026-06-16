@@ -73,8 +73,8 @@ class PartialOrderingVisitor {
   DomTreeBuilder::BBDomTree DT;
   LoopInfo LI;
 
-  SmallPtrSet<BasicBlock *, 0> Queued = {};
-  std::queue<BasicBlock *> ToVisit = {};
+  SmallPtrSet<BasicBlock *, 0> Queued;
+  std::queue<BasicBlock *> ToVisit;
 
   struct OrderInfo {
     size_t Rank;
@@ -83,7 +83,7 @@ class PartialOrderingVisitor {
 
   using BlockToOrderInfoMap = DenseMap<BasicBlock *, OrderInfo>;
   BlockToOrderInfoMap BlockToOrder;
-  std::vector<BasicBlock *> Order = {};
+  std::vector<BasicBlock *> Order;
 
   // Get all basic-blocks reachable from Start.
   SmallPtrSet<BasicBlock *, 0> getReachableFrom(BasicBlock *Start);
@@ -200,23 +200,19 @@ void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
 // Add an OpDecorate instruction for the given Reg.
 void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs,
-                     StringRef StrImm = "");
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs,
-                     StringRef StrImm = "");
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 
 // Add an OpDecorate instruction for the given Reg.
 void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm = "");
+                           ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 void buildOpMemberDecorate(Register Reg, MachineInstr &I,
                            const SPIRVInstrInfo &TII,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm = "");
+                           ArrayRef<uint32_t> DecArgs, StringRef StrImm = "");
 
 // Add an OpDecorate instruction by "spirv.Decorations" metadata node.
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,

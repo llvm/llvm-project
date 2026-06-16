@@ -1478,6 +1478,23 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
       PredPHI->replaceAllUsesWith(Op);
   }
 
+  // Drop the mask of a predicated store masked by the header mask (which is
+  // guaranteed to be true at least for the first lane) and both the stored
+  // value and the address are uniform across VF and UF.
+  if (auto *RepR = dyn_cast<VPReplicateRecipe>(Def);
+      RepR && RepR->isPredicated() && RepR->getOpcode() == Instruction::Store &&
+      all_of(RepR->operandsWithoutMask(), vputils::isUniformAcrossVFsAndUFs) &&
+      vputils::isHeaderMask(RepR->getMask(), *Plan)) {
+    auto *Unmasked = new VPReplicateRecipe(
+        RepR->getUnderlyingInstr(), RepR->operandsWithoutMask(),
+        RepR->isSingleScalar(), /*Mask=*/nullptr, *RepR, *RepR,
+        RepR->getDebugLoc());
+    Unmasked->insertBefore(RepR);
+    RepR->replaceAllUsesWith(Unmasked);
+    RepR->eraseFromParent();
+    return;
+  }
+
   VPBuilder Builder(Def);
 
   // Avoid replacing VPInstructions with underlying values with new
@@ -2718,7 +2735,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
   }
 }
 
-void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
+bool VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
   std::optional<VPDominatorTree> VPDT;
   if (OnlyLatches)
     VPDT.emplace(Plan);
@@ -2727,6 +2744,7 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
   // ones after constant branch removal.
   SmallVector<VPBlockBase *> AllBlocks(vp_depth_first_shallow(Plan.getEntry()));
 
+  bool SimplifiedPhi = false;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(AllBlocks)) {
     VPValue *Cond;
     // Skip blocks that are not terminated by BranchOnCond.
@@ -2752,8 +2770,10 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
            "There must be a single edge between VPBB and its successor");
     // Values coming from VPBB into phi recipes of RemovedSucc are removed from
     // these recipes.
-    for (VPRecipeBase &R : RemovedSucc->phis())
+    auto Phis = RemovedSucc->phis();
+    for (VPRecipeBase &R : Phis)
       cast<VPPhiAccessors>(&R)->removeIncomingValueFor(VPBB);
+    SimplifiedPhi |= !std::empty(Phis);
 
     // Disconnect blocks and remove the terminator.
     VPBlockUtils::disconnectBlocks(VPBB, RemovedSucc);
@@ -2786,6 +2806,7 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan, bool OnlyLatches) {
       }
     }
   }
+  return SimplifiedPhi;
 }
 
 void VPlanTransforms::optimize(VPlan &Plan) {
@@ -3004,8 +3025,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     auto *LoadR = new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe),
                                            Addr, EVL, Mask);
     LoadR->insertBefore(&CurRecipe);
-    VPValue *Poison =
-        Plan->getOrAddLiveIn(PoisonValue::get(LoadR->getScalarType()));
+    VPValue *Poison = Plan->getPoison(LoadR->getScalarType());
     return new VPWidenIntrinsicRecipe(Intrinsic::vector_splice_left,
                                       {Poison, LoadR, &EVL},
                                       LoadR->getScalarType(), {}, {}, DL);
@@ -3036,8 +3056,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
       match(EndPtr, m_VecEndPtr(m_VPValue(), m_Specific(&Plan->getVF())))) {
     Mask = GetVPReverse(Mask);
     Addr = AdjustEndPtr(EndPtr);
-    VPValue *Poison =
-        Plan->getOrAddLiveIn(PoisonValue::get(StoredVal->getScalarType()));
+    VPValue *Poison = Plan->getPoison(StoredVal->getScalarType());
     auto *SpliceR = new VPWidenIntrinsicRecipe(
         Intrinsic::vector_splice_right, {StoredVal, Poison, &EVL},
         StoredVal->getScalarType(), {}, {}, DL);
@@ -3057,8 +3076,8 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
       return new VPInterleaveEVLRecipe(*Interleave, EVL, Mask);
 
   VPValue *LHS, *RHS;
-  if (match(&CurRecipe, m_Select(m_RemoveMask(HeaderMask, Mask), m_VPValue(LHS),
-                                 m_VPValue(RHS))))
+  if (match(&CurRecipe, m_SelectLike(m_RemoveMask(HeaderMask, Mask),
+                                     m_VPValue(LHS), m_VPValue(RHS))))
     return new VPWidenIntrinsicRecipe(
         Intrinsic::vp_merge, {Mask ? Mask : Plan->getTrue(), LHS, RHS, &EVL},
         LHS->getScalarType(), {}, {}, DL);
@@ -4235,7 +4254,7 @@ static bool handleUncountableExitsWithSideEffects(
     VPlan &Plan, SmallVectorImpl<EarlyExitInfo> &Exits,
     VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB, VPBasicBlock *MiddleVPBB,
     Loop *TheLoop, PredicatedScalarEvolution &PSE, DominatorTree &DT,
-    AssumptionCache *AC, VPDominatorTree &VPDT) {
+    AssumptionCache *AC) {
 
   // Disconnect early exiting blocks from successors, remove branches. We
   // currently don't support multiple uses for recipes involved in creating
@@ -4250,7 +4269,7 @@ static bool handleUncountableExitsWithSideEffects(
     VPBlockUtils::disconnectBlocks(Exit.EarlyExitingVPBB, Exit.EarlyExitVPBB);
   }
 
-  VPDT.recalculate(Plan);
+  VPDominatorTree VPDT(Plan);
 
   // We can abandon a VPlan entirely if we return false here, so we shouldn't
   // crash if some earlier assumptions on scalar IR don't hold for the vplan
@@ -4391,7 +4410,9 @@ bool VPlanTransforms::handleUncountableEarlyExits(
     VPlan &Plan, VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB,
     VPBasicBlock *MiddleVPBB, Loop *TheLoop, PredicatedScalarEvolution &PSE,
     DominatorTree &DT, AssumptionCache *AC, UncountableExitStyle Style) {
+#ifndef NDEBUG
   VPDominatorTree VPDT(Plan);
+#endif
   VPBuilder LatchBuilder(LatchVPBB->getTerminator());
   SmallVector<EarlyExitInfo> Exits;
   for (VPIRBasicBlock *ExitBlock : Plan.getExitBlocks()) {
@@ -4483,9 +4504,8 @@ bool VPlanTransforms::handleUncountableEarlyExits(
     LatchVPBB->setSuccessors({MiddleVPBB, MiddleVPBB, HeaderVPBB});
     MiddleVPBB->clearPredecessors();
     MiddleVPBB->setPredecessors({LatchVPBB, LatchVPBB});
-    return handleUncountableExitsWithSideEffects(Plan, Exits, HeaderVPBB,
-                                                 LatchVPBB, MiddleVPBB, TheLoop,
-                                                 PSE, DT, AC, VPDT);
+    return handleUncountableExitsWithSideEffects(
+        Plan, Exits, HeaderVPBB, LatchVPBB, MiddleVPBB, TheLoop, PSE, DT, AC);
   }
 
   // Create the vector.early.exit blocks.
@@ -5274,7 +5294,7 @@ void VPlanTransforms::materializeVectorTripCount(
   // and the vector trip count equals TC directly.
   const APInt *TCVal;
   if (!RequiresScalarEpilogue && match(TC, m_APInt(TCVal)) && MaxRuntimeStep &&
-      TCVal->getZExtValue() % *MaxRuntimeStep == 0) {
+      TCVal->urem(*MaxRuntimeStep) == 0) {
     VectorTC.replaceAllUsesWith(TC);
     return;
   }
@@ -5500,8 +5520,7 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
     // TripCount should not be used after expansion to VPInstructions. Reset to
     // poison to avoid dangling references.
     if (Plan.getTripCount() == ExpSCEV)
-      Plan.resetTripCount(
-          Plan.getOrAddLiveIn(PoisonValue::get(ExpSCEV->getScalarType())));
+      Plan.resetTripCount(Plan.getPoison(ExpSCEV->getScalarType()));
     ExpSCEV->eraseFromParent();
   }
 }
@@ -6119,11 +6138,11 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     // phi. The find-last select should be a select between the phi and the
     // find-last expression.
     VPValue *Cond, *FindLastExpression;
-    if (!match(FindLastSelect, m_Select(m_VPValue(Cond), m_Specific(PhiR),
-                                        m_VPValue(FindLastExpression))) &&
+    if (!match(FindLastSelect, m_SelectLike(m_VPValue(Cond), m_Specific(PhiR),
+                                            m_VPValue(FindLastExpression))) &&
         !match(FindLastSelect,
-               m_Select(m_VPValue(Cond), m_VPValue(FindLastExpression),
-                        m_Specific(PhiR))))
+               m_SelectLike(m_VPValue(Cond), m_VPValue(FindLastExpression),
+                            m_Specific(PhiR))))
       continue;
 
     // Check if FindLastExpression is a simple expression of a widened IV. If

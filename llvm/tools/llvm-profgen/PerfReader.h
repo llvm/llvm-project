@@ -747,8 +747,6 @@ private:
   void readSampleCounters(TraceStream &TraceIt, SampleCounter &SCounters);
   void readUnsymbolizedProfile(StringRef Filename);
 
-  // Owns the context strings; context frames hold StringRefs into them, which
-  // is fine: StringSet entry storage is stable.
   StringSet<> ContextStrSet;
 };
 

@@ -938,9 +938,8 @@ public:
   };
 
   void print(raw_ostream &OS) const override {
-    for (const auto &E : UnsignedValues) {
+    for (const auto &E : UnsignedValues)
       OS << E.first() << ": " << E.second << '\n';
-    }
     for (const auto &E : DoubleValues) {
       write_double(OS << E.first() << ": ", E.second, FloatStyle::Fixed);
       OS << '\n';
