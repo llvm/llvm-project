@@ -15,7 +15,6 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityLinkage.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/SummaryName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/EntitySummary.h"
-#include "llvm/TargetParser/Triple.h"
 #include <map>
 #include <memory>
 
@@ -23,9 +22,6 @@ namespace clang::ssaf {
 
 /// Data extracted for a given translation unit and for a given set of analyses.
 class TUSummary {
-  /// Target triple of the translation unit.
-  llvm::Triple TargetTriple;
-
   /// Identifies the translation unit.
   BuildNamespace TUNamespace;
 
@@ -37,9 +33,8 @@ class TUSummary {
       Data;
 
 public:
-  TUSummary(llvm::Triple TargetTriple, BuildNamespace TUNamespace)
-      : TargetTriple(std::move(TargetTriple)),
-        TUNamespace(std::move(TUNamespace)) {}
+  explicit TUSummary(BuildNamespace TUNamespace)
+      : TUNamespace(std::move(TUNamespace)) {}
 
   friend class SerializationFormat;
   friend class TestFixture;

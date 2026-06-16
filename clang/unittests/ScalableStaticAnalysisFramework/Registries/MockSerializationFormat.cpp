@@ -53,7 +53,7 @@ void MockSerializationFormat::forEachRegisteredAnalysis(
 llvm::Expected<TUSummary>
 MockSerializationFormat::readTUSummary(llvm::StringRef Path) {
   BuildNamespace NS(BuildNamespaceKind::CompilationUnit, "Mock.cpp");
-  TUSummary Summary(llvm::Triple("arm64-apple-macosx"), NS);
+  TUSummary Summary(NS);
 
   auto ManifestFile = llvm::MemoryBuffer::getFile(Path + "/analyses.txt");
   if (!ManifestFile) {
