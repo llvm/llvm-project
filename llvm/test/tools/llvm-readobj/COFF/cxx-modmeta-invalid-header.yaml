@@ -1,0 +1,118 @@
+# Header too short
+
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: llvm-readobj --coff-cxx-module-metadata %t 2>&1 | FileCheck --check-prefix=HEADER-SIZE %s
+
+# HEADER-SIZE: warning: {{.*}} insufficient size: got 5, expected more than 8
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .modmeta
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     '0100010118'
+    SizeOfRawData:   5
+symbols:
+...
+
+# Module data too long
+
+# RUN: yaml2obj --docnum=2 %s -o %t
+# RUN: llvm-readobj --coff-cxx-module-metadata %t 2>&1 | FileCheck --check-prefix=MODULE-TOO-LONG %s
+
+# MODULE-TOO-LONG: module data size too big: got 10, section size is 10
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .modmeta
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     '010001010A0000001234'
+    SizeOfRawData:   10
+symbols:
+...
+
+# Module data too short
+
+# RUN: yaml2obj --docnum=3 %s -o %t
+# RUN: llvm-readobj --coff-cxx-module-metadata %t 2>&1 | FileCheck --check-prefix=MODULE-TOO-SHORT %s
+
+# MODULE-TOO-SHORT: warning: {{.*}} module data size too small: got 1, expected more than 8
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .modmeta
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     '01000101010000001234'
+    SizeOfRawData:   10
+symbols:
+...
+
+# Invalid module index width
+
+# RUN: yaml2obj --docnum=4 %s -o %t
+# RUN: llvm-readobj --coff-cxx-module-metadata %t 2>&1 | FileCheck --check-prefix=INVALID-MODULE-WIDTH %s
+
+# INVALID-MODULE-WIDTH: warning: {{.*}} unsupported module index width: 3
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .modmeta
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     0100030118000000FF0103FF090CFF0D0FFF03FFFF0EFFFF006D006F00
+    SizeOfRawData:   29
+symbols:
+...
+
+# Invalid symbol index width
+
+# RUN: yaml2obj --docnum=5 %s -o %t
+# RUN: llvm-readobj --coff-cxx-module-metadata %t 2>&1 | FileCheck --check-prefix=INVALID-SYMBOL-WIDTH %s
+
+# INVALID-SYMBOL-WIDTH: warning: {{.*}} unsupported symbol index width: 3
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .modmeta
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     0100010318000000FF0103FF090CFF0D0FFF03FFFF0EFFFF006D006F00
+    SizeOfRawData:   29
+symbols:
+...
+
+# Invalid version (2)
+
+# RUN: yaml2obj --docnum=6 %s -o %t
+# RUN: llvm-readobj --coff-cxx-module-metadata %t 2>&1 | FileCheck --check-prefix=VERSION2 %s
+
+# VERSION2: warning: {{.*}} unsupported version: 2
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .modmeta
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     0200030118000000FF0103FF090CFF0D0FFF03FFFF0EFFFF006D006F00
+    SizeOfRawData:   29
+symbols:
+...
+

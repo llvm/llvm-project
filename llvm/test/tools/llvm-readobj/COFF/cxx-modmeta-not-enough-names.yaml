@@ -26,7 +26,9 @@ sections:
   - Name:            .modmeta
     Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
     Alignment:       1
+    #                             Second module: v------v
     SectionData:     0100010113000000FF01FFFF00FF02FFFFFFFF006F00
+    #                                         List of names: ^--^ 
     SizeOfRawData:   22
 symbols:
   - Name:            '?fn@@YAXXZ::<!o>'

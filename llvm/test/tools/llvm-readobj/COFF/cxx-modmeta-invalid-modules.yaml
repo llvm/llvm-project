@@ -1,0 +1,85 @@
+# Unterminated list
+
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: llvm-readobj --coff-cxx-module-metadata %t 2>&1 | FileCheck --check-prefix=UNTERMINATED-LIST %s
+
+# UNTERMINATED-LIST:      CxxModuleMetadata {
+# UNTERMINATED-LIST-NEXT:   Version: 1
+# UNTERMINATED-LIST-NEXT:   Reserved: 0
+# UNTERMINATED-LIST-NEXT:   ModuleIndexWidth: 1
+# UNTERMINATED-LIST-NEXT:   SymbolIndexWidth: 1
+# UNTERMINATED-LIST-NEXT:   Modules [
+# UNTERMINATED-LIST-NEXT:     CxxModule {
+# UNTERMINATED-LIST-NEXT:       ID: 0x1
+# UNTERMINATED-LIST-NEXT:       Name: o
+# UNTERMINATED-LIST-NEXT:       IsHeaderUnit: No
+# UNTERMINATED-LIST-NEXT:       Dependents: []
+# UNTERMINATED-LIST-NEXT:       Symbols: []
+# UNTERMINATED-LIST-NEXT: warning: {{.*}} missing end sentinel
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .modmeta
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    #                                v------------v  Module data.
+    SectionData:     010001010F000000FF01FFFF000000006F00
+    #                                        ^^^^^^ Remaining part when parsing exported symbols.
+    SizeOfRawData:   18
+symbols:
+  - Name:            '?fn@@YAXXZ::<!o>'
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...
+
+# Unaligned end sentinel. This shouldn't terminate the list parsing.
+
+# RUN: yaml2obj --docnum=2 %s -o %t
+# RUN: llvm-readobj --coff-cxx-module-metadata %t 2>err.txt | FileCheck --check-prefix=UNALIGNED %s
+# RUN: cat err.txt | FileCheck --check-prefix=UNALIGNED-ERR %s
+
+# UNALIGNED:      CxxModuleMetadata {
+# UNALIGNED-NEXT:   Version: 1
+# UNALIGNED-NEXT:   Reserved: 0
+# UNALIGNED-NEXT:   ModuleIndexWidth: 1
+# UNALIGNED-NEXT:   SymbolIndexWidth: 2
+# UNALIGNED-NEXT:   Modules [
+# UNALIGNED-NEXT:     CxxModule {
+# UNALIGNED-NEXT:       ID: 0x1
+# UNALIGNED-NEXT:       Name: o
+# UNALIGNED-NEXT:       IsHeaderUnit: No
+# UNALIGNED-NEXT:       Dependents: []
+# UNALIGNED-NEXT:       Symbols: []
+# UNALIGNED-NEXT:       Exports: [?fn@@YAXXZ::<!o> (0), <error> (65298), <error> (13567)]
+# UNALIGNED-NEXT:     }
+# UNALIGNED-NEXT:   ]
+# UNALIGNED-NEXT: }
+
+# UNALIGNED-ERR: warning: {{.*}} Invalid data was encountered while parsing the file
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .modmeta
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    #                        List of exports:  |..||..||..|..| (each entry is 2 Bytes)
+    SectionData:     0100010216000000FF01FFFFFF000012FFFF34FFFFFF006F00
+    SizeOfRawData:   25
+symbols:
+  - Name:            '?fn@@YAXXZ::<!o>'
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...
+
