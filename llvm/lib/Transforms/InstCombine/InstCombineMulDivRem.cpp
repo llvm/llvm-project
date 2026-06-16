@@ -1520,11 +1520,11 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
                             !C->isAllOnes())
                          : isKnownNonZero(DivY, SQ.getWithInstruction(&I));
       if (Ok) {
-        Value *Divisor = IsSigned ? ConstantInt::get(Ty, *C) : DivY;
-        Value *NewDiv = Builder.CreateBinOp(I.getOpcode(), Op0, Divisor);
-        if (auto *NewDivInst = dyn_cast<BinaryOperator>(NewDiv))
-          NewDivInst->setIsExact(I.isExact());
-        return createSelectInstWithUnknownProfile(Cond, Op0, NewDiv);
+        Value *NewDiv =
+            Builder.CreateExactBinOp(I.getOpcode(), Op0, DivY, I.isExact());
+        SelectInst *SI =
+            ProfcheckDisableMetadataFixes ? nullptr : cast<SelectInst>(Op1);
+        return SelectInst::Create(Cond, Op0, NewDiv, "", nullptr, SI);
       }
     }
     if (match(Op1, m_OneUse(m_Select(m_Value(Cond), m_Value(DivY), m_One())))) {
@@ -1532,11 +1532,11 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
                             !C->isAllOnes())
                          : isKnownNonZero(DivY, SQ.getWithInstruction(&I));
       if (Ok) {
-        Value *Divisor = IsSigned ? ConstantInt::get(Ty, *C) : DivY;
-        Value *NewDiv = Builder.CreateBinOp(I.getOpcode(), Op0, Divisor);
-        if (auto *NewDivInst = dyn_cast<BinaryOperator>(NewDiv))
-          NewDivInst->setIsExact(I.isExact());
-        return createSelectInstWithUnknownProfile(Cond, NewDiv, Op0);
+        Value *NewDiv =
+            Builder.CreateExactBinOp(I.getOpcode(), Op0, DivY, I.isExact());
+        SelectInst *SI =
+            ProfcheckDisableMetadataFixes ? nullptr : cast<SelectInst>(Op1);
+        return SelectInst::Create(Cond, NewDiv, Op0, "", nullptr, SI);
       }
     }
   }

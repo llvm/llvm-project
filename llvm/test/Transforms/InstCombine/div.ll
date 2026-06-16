@@ -1964,6 +1964,47 @@ define i32 @sdiv_select_one_false_neg1(i32 %a, i1 %b) {
   ret i32 %div
 }
 
+; sdiv X, (select Cond, 1, C) --> select Cond, X, (sdiv X, C) -- vector splat
+
+define <2 x i32> @sdiv_select_one_false_vec(<2 x i32> %a, i1 %b) {
+; CHECK-LABEL: @sdiv_select_one_false_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <2 x i32> [[A:%.*]], splat (i32 2)
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[B:%.*]], <2 x i32> [[A]], <2 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <2 x i32> [[DIV]]
+;
+  %sub = select i1 %b, <2 x i32> <i32 1, i32 1>, <2 x i32> <i32 2, i32 2>
+  %div = sdiv <2 x i32> %a, %sub
+  ret <2 x i32> %div
+}
+
+; sdiv X, (select Cond, C, 1) --> select Cond, (sdiv X, C), X -- vector splat
+
+define <2 x i32> @sdiv_select_one_true_vec(<2 x i32> %a, i1 %b) {
+; CHECK-LABEL: @sdiv_select_one_true_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <2 x i32> [[A:%.*]], splat (i32 2)
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[B:%.*]], <2 x i32> [[TMP1]], <2 x i32> [[A]]
+; CHECK-NEXT:    ret <2 x i32> [[DIV]]
+;
+  %sub = select i1 %b, <2 x i32> <i32 2, i32 2>, <2 x i32> <i32 1, i32 1>
+  %div = sdiv <2 x i32> %a, %sub
+  ret <2 x i32> %div
+}
+
+; udiv X, (select Cond, 1, Y) --> select Cond, X, (udiv X, Y) for known-non-zero variable -- vector splat
+
+define <2 x i32> @udiv_select_one_false_nonnull_var_vec(<2 x i32> %a, i1 %b, <2 x i32> %y) {
+; CHECK-LABEL: @udiv_select_one_false_nonnull_var_vec(
+; CHECK-NEXT:    [[YNZ:%.*]] = add nuw <2 x i32> [[Y:%.*]], splat (i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv <2 x i32> [[A:%.*]], [[YNZ]]
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[B:%.*]], <2 x i32> [[A]], <2 x i32> [[TMP1]]
+; CHECK-NEXT:    ret <2 x i32> [[DIV]]
+;
+  %ynz = add nuw <2 x i32> %y, <i32 1, i32 1>
+  %sub = select i1 %b, <2 x i32> <i32 1, i32 1>, <2 x i32> %ynz
+  %div = udiv <2 x i32> %a, %sub
+  ret <2 x i32> %div
+}
+
 !0 = !{!"function_entry_count", i64 1000}
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
