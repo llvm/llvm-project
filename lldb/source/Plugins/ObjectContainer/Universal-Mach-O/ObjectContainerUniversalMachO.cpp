@@ -207,7 +207,12 @@ ModuleSpecList ObjectContainerUniversalMachO::GetModuleSpecifications(
       for (const FatArch &fat_arch : fat_archs) {
         const lldb::offset_t slice_file_offset =
             fat_arch.GetOffset() + file_offset;
-        if (fat_arch.GetOffset() < file_size && file_size > slice_file_offset) {
+        // The slice must start strictly past the current offset.  A slice whose
+        // offset is 0 (or otherwise does not advance) is self-referential: the
+        // recursive call below would re-parse the same range and recurse
+        // without bound.  Skip such slices instead of overflowing the stack.
+        if (slice_file_offset > file_offset &&
+            fat_arch.GetOffset() < file_size && file_size > slice_file_offset) {
           ModuleSpecList arch_specs = ObjectFile::GetModuleSpecifications(
               file, slice_file_offset, file_size - slice_file_offset);
           specs.Append(arch_specs);
