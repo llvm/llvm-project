@@ -740,11 +740,20 @@ static bool isFusionLegal(ParallelOp firstPloop, ParallelOp secondPloop,
                           const IRMapping &firstToSecondPloopIndices,
                           llvm::function_ref<bool(Value, Value)> mayAlias,
                           OpBuilder &b) {
-  return !hasNestedParallelOp(firstPloop) &&
-         !hasNestedParallelOp(secondPloop) &&
-         equalIterationSpaces(firstPloop, secondPloop) &&
-         noIncompatibleDataDependencies(firstPloop, secondPloop,
-                                        firstToSecondPloopIndices, mayAlias, b);
+  if (hasNestedParallelOp(firstPloop) || hasNestedParallelOp(secondPloop) ||
+      !equalIterationSpaces(firstPloop, secondPloop) ||
+      !noIncompatibleDataDependencies(firstPloop, secondPloop,
+                                      firstToSecondPloopIndices, mayAlias, b))
+    return false;
+
+  // We are fusing first loop into second, make sure there are no users of the
+  // first loop results between loops.
+  DominanceInfo dom;
+  for (Operation *user : firstPloop->getUsers()) {
+    if (!dom.properlyDominates(secondPloop, user, /*enclosingOpOk*/ false))
+      return false;
+  }
+  return true;
 }
 
 // Returns new parallel loop where two loops matching indices param are
@@ -939,15 +948,8 @@ computeCandidateInterchangePermutations(ParallelOp &firstPloop,
 /// Update secondPloop with new loop.
 static void applyLoopFusion(ParallelOp &firstPloop, ParallelOp &secondPloop,
                             OpBuilder &builder) {
-  DominanceInfo dom;
   Block *block1 = firstPloop.getBody();
   Block *block2 = secondPloop.getBody();
-  // We are fusing first loop into second, make sure there are no users of the
-  // first loop results between loops.
-  for (Operation *user : firstPloop->getUsers())
-    if (!dom.properlyDominates(secondPloop, user, /*enclosingOpOk*/ false))
-      return;
-
   ValueRange inits1 = firstPloop.getInitVals();
   ValueRange inits2 = secondPloop.getInitVals();
 
