@@ -7328,6 +7328,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         "llvm.amdgcn.s.prefetch.data only supports global or constant memory");
     break;
   }
+  case Intrinsic::amdgcn_internal_vgpr_pin: {
+    // A lane mask cannot be made VGPR-resident, so reject (vector-)i1 here
+    // rather than scattering the check across the backend lowering.
+    Check(!Call.getArgOperand(0)->getType()->getScalarType()->isIntegerTy(1),
+          "llvm.amdgcn.internal.vgpr.pin does not support i1 operands", &Call);
+    break;
+  }
   case Intrinsic::amdgcn_load_to_lds:
   case Intrinsic::amdgcn_load_async_to_lds:
   case Intrinsic::amdgcn_global_load_lds:

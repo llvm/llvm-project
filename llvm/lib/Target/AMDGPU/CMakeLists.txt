@@ -183,6 +183,7 @@ add_llvm_target(AMDGPUCodeGen
   SIOptimizeExecMaskingPreRA.cpp
   SIOptimizeVGPRLiveRange.cpp
   SIPeepholeSDWA.cpp
+  SIPinVGPR.cpp
   SIPostRABundler.cpp
   SIPreAllocateWWMRegs.cpp
   SIPreEmitPeephole.cpp

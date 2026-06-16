@@ -86,6 +86,7 @@ private:
                                  unsigned SubIdx) const;
 
   bool constrainCopyLikeIntrin(MachineInstr &MI, unsigned NewOpc) const;
+  bool selectVGPRPin(MachineInstr &I) const;
   bool selectCOPY(MachineInstr &I) const;
   bool selectCOPY_SCC_VCC(MachineInstr &I) const;
   bool selectCOPY_VCC_SCC(MachineInstr &I) const;

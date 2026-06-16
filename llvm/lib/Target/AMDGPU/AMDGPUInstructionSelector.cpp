@@ -132,6 +132,22 @@ bool AMDGPUInstructionSelector::constrainCopyLikeIntrin(MachineInstr &MI,
   return true;
 }
 
+bool AMDGPUInstructionSelector::selectVGPRPin(MachineInstr &I) const {
+  // Lower the void `llvm.amdgcn.internal.vgpr.pin` marker to the use-only
+  // SI_VGPR_PIN pseudo (consumed pre-RA by SIPinVGPR). The IR verifier
+  // guarantees the argument is not (vector-)i1, so a lane mask never reaches
+  // here.
+  I.setDesc(TII.get(AMDGPU::SI_VGPR_PIN));
+  I.removeOperand(0); // Remove the intrinsic ID; operand 0 is now the source.
+
+  MachineOperand &Src = I.getOperand(0);
+  const TargetRegisterClass *SrcRC =
+      TRI.getConstrainedRegClassForOperand(Src, *MRI);
+  if (!SrcRC || !RBI.constrainGenericRegister(Src.getReg(), *SrcRC, *MRI))
+    return false;
+  return true;
+}
+
 bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
   const DebugLoc &DL = I.getDebugLoc();
   MachineBasicBlock *BB = I.getParent();
@@ -2455,6 +2471,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     MachineInstr &I) const {
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(I).getIntrinsicID();
   switch (IntrinsicID) {
+  case Intrinsic::amdgcn_internal_vgpr_pin:
+    return selectVGPRPin(I);
   case Intrinsic::amdgcn_end_cf:
     return selectEndCfIntrinsic(I);
   case Intrinsic::amdgcn_ds_ordered_add:

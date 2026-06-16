@@ -63,6 +63,7 @@
 #include "SIOptimizeExecMaskingPreRA.h"
 #include "SIOptimizeVGPRLiveRange.h"
 #include "SIPeepholeSDWA.h"
+#include "SIPinVGPR.h"
 #include "SIPostRABundler.h"
 #include "SIPreAllocateWWMRegs.h"
 #include "SIShrinkInstructions.h"
@@ -664,6 +665,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUAsmPrinterPass(*PR);
   initializeAMDGPUDAGToDAGISelLegacyPass(*PR);
   initializeAMDGPUPrepareAGPRAllocLegacyPass(*PR);
+  initializeSIPinVGPRLegacyPass(*PR);
   initializeGCNDPPCombineLegacyPass(*PR);
   initializeSILowerI1CopiesLegacyPass(*PR);
   initializeAMDGPUGlobalISelDivergenceLoweringPass(*PR);
@@ -1765,6 +1767,9 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   if (OptExecMaskPreRA)
     insertPass(&MachineSchedulerID, &SIOptimizeExecMaskingPreRAID);
 
+  // Mark VGPRs pinned by llvm.amdgcn.internal.vgpr.pin not-spillable before RA.
+  insertPass(&MachineSchedulerID, &SIPinVGPRLegacyID);
+
   // This is not an essential optimization and it has a noticeable impact on
   // compilation time, so we only enable it from O2.
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
@@ -2536,6 +2541,8 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
 
   if (OptExecMaskPreRA)
     insertPass<MachineSchedulerPass>(SIOptimizeExecMaskingPreRAPass());
+
+  insertPass<MachineSchedulerPass>(SIPinVGPRPass());
 
   // This is not an essential optimization and it has a noticeable impact on
   // compilation time, so we only enable it from O2.

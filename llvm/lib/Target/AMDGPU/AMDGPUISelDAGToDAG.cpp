@@ -3362,6 +3362,15 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {
   case Intrinsic::amdgcn_tensor_store_from_lds:
     SelectTensorLoadStore(N, IntrID);
     return;
+  case Intrinsic::amdgcn_internal_vgpr_pin: {
+    // Lower the void pin marker to SI_VGPR_PIN (a use-only meta pseudo consumed
+    // pre-RA by SIPinVGPR). The IR verifier guarantees the argument is not
+    // (vector-)i1, so a lane mask never reaches here.
+    SDValue Chain = N->getOperand(0);
+    SDValue Src = N->getOperand(2);
+    CurDAG->SelectNodeTo(N, AMDGPU::SI_VGPR_PIN, MVT::Other, {Src, Chain});
+    return;
+  }
   default:
     break;
   }

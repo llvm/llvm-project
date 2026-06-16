@@ -563,6 +563,23 @@ def IGLP_OPT : SPseudoInstSI<(outs), (ins i32imm:$mask),
   let isMeta = 1;
 }
 
+// Use-only marker pseudo for `llvm.amdgcn.internal.vgpr.pin`. It has no def and
+// just references its operand; SIPinVGPR marks that vreg's LiveInterval
+// not-spillable before RA, then expandPostRAPseudo erases the marker (for both
+// -O0 and the optimized pipeline). hasSideEffects=1 keeps it from being deleted
+// as dead before it is consumed. It is a meta instruction that emits no code and
+// does not read exec (shouldReadExec() returns false for it), so it carries no
+// implicit exec use.
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
+def SI_VGPR_PIN : PseudoInstSI <(outs), (ins unknown:$src)> {
+  let SchedRW = [];
+  let hasNoSchedulingInfo = 1;
+  let FixedSize = 1;
+  let Size = 0;
+  let isMeta = 1;
+}
+}
+
 // SI pseudo instructions. These are used by the CFG structurizer pass
 // and should be lowered to ISA instructions prior to codegen.
 

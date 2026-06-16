@@ -233,6 +233,7 @@
 ; GCN-O2-NEXT:       amdgpu-pre-ra-optimizations
 ; GCN-O2-NEXT:       si-wqm
 ; GCN-O2-NEXT:       si-optimize-exec-masking-pre-ra
+; GCN-O2-NEXT:       si-pin-vgpr
 ; GCN-O2-NEXT:       si-form-memory-clauses
 ; GCN-O2-NEXT:       amdgpu-pre-ra-long-branch-reg
 ; GCN-O2-NEXT:       greedy<sgpr>
@@ -419,6 +420,7 @@
 ; GCN-O3-NEXT:       amdgpu-pre-ra-optimizations
 ; GCN-O3-NEXT:       si-wqm
 ; GCN-O3-NEXT:       si-optimize-exec-masking-pre-ra
+; GCN-O3-NEXT:       si-pin-vgpr
 ; GCN-O3-NEXT:       si-form-memory-clauses
 ; GCN-O3-NEXT:       amdgpu-pre-ra-long-branch-reg
 ; GCN-O3-NEXT:       greedy<sgpr>

@@ -2090,6 +2090,12 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
   switch (MI.getOpcode()) {
   default: return TargetInstrInfo::expandPostRAPseudo(MI);
+  case AMDGPU::SI_VGPR_PIN:
+    // The pin marker is use-only and emits no code; erase it. At -O0 SIPinVGPR
+    // doesn't run, so this is also where it gets consumed there. By this point
+    // (post-RA) it has done its job of keeping the value VGPR-resident.
+    MI.eraseFromParent();
+    return true;
   case AMDGPU::S_MOV_B64_term:
     // This is only a terminator to get the correct spill code placement during
     // register allocation.
@@ -5171,6 +5177,11 @@ static Register findImplicitSGPRRead(const MachineInstr &MI) {
 }
 
 static bool shouldReadExec(const MachineInstr &MI) {
+  // The VGPR pin marker is a use-only meta pseudo that emits no code and does
+  // not read the exec mask.
+  if (MI.getOpcode() == AMDGPU::SI_VGPR_PIN)
+    return false;
+
   if (SIInstrInfo::isVALU(MI)) {
     switch (MI.getOpcode()) {
     case AMDGPU::V_READLANE_B32:
