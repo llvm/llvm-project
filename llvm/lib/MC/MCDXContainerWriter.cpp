@@ -19,10 +19,22 @@ using namespace llvm;
 
 cl::opt<bool> EmbedDebug("dx-embed-debug",
                          cl::desc("Embed PDB in shader container"));
+cl::opt<bool> SlimDebug("dx-Zs",
+                        cl::desc("Generate slim PDB without ILDB part"));
 
 MCDXContainerTargetWriter::~MCDXContainerTargetWriter() = default;
 
 MCDXContainerBaseWriter::~MCDXContainerBaseWriter() = default;
+
+bool MCDXContainerBaseWriter::shouldSkipSection(StringRef SectionName,
+                                                size_t SectionSize) {
+  // Skip empty and auxiliary sections.
+  if (SectionSize == 0 || SectionName == PdbFileNameSectionName ||
+      SectionName == ModuleHashSectionName)
+    return true;
+  // Slim debug omits ILDB from all DXContainer outputs.
+  return SlimDebug && SectionName == "ILDB";
+}
 
 void MCDXContainerBaseWriter::write(raw_ostream &OS, const Triple &TT) {
   ArrayRef<MCDXContainerPart> Parts = collectParts();
