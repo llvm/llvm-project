@@ -45,9 +45,12 @@ set(check_format_depends)
 set(i 0)
 foreach(file IN LISTS files)
   add_custom_command(OUTPUT check_format_depend_${i}
-    COMMAND clang-format ${file} | diff -u ${file} -
+    COMMAND clang-format ${file} | diff -u ${file} - &&
+            touch check_format_depend_${i}
     VERBATIM
     COMMENT "Checking format of ${file}"
+    DEPENDS clang-format
+            ${file}
     )
   list(APPEND check_format_depends check_format_depend_${i})
   math(EXPR i ${i}+1)
