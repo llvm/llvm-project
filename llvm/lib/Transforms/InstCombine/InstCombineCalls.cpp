@@ -2660,6 +2660,64 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return &CI;
     break;
   }
+  case Intrinsic::pdep:
+    if (auto *MaskC = dyn_cast<ConstantInt>(II->getArgOperand(1))) {
+      if (MaskC->isNullValue())
+        return replaceInstUsesWith(*II, ConstantInt::get(II->getType(), 0));
+
+      if (MaskC->isAllOnesValue())
+        return replaceInstUsesWith(*II, II->getArgOperand(0));
+
+      unsigned MaskIdx, MaskLen;
+      if (MaskC->getValue().isShiftedMask(MaskIdx, MaskLen)) {
+        // any single contingous sequence of 1s anywhere in the mask simply
+        // describes a subset of the input bits shifted to the appropriate
+        // position.  Replace with the straight forward IR.
+        Value *Input = II->getArgOperand(0);
+        Value *ShiftAmt = ConstantInt::get(II->getType(), MaskIdx);
+        Value *Shifted = Builder.CreateShl(Input, ShiftAmt);
+        Value *Masked = Builder.CreateAnd(Shifted, II->getArgOperand(1));
+        return replaceInstUsesWith(*II, Masked);
+      }
+
+      if (auto *SrcC = dyn_cast<ConstantInt>(II->getArgOperand(0))) {
+        // constant folding.
+        APInt Result =
+            llvm::APIntOps::expandBits(SrcC->getValue(), MaskC->getValue());
+        return replaceInstUsesWith(*II,
+                                   ConstantInt::get(II->getType(), Result));
+      }
+    }
+    break;
+  case Intrinsic::pext:
+    if (auto *MaskC = dyn_cast<ConstantInt>(II->getArgOperand(1))) {
+      if (MaskC->isNullValue())
+        return replaceInstUsesWith(*II, ConstantInt::get(II->getType(), 0));
+
+      if (MaskC->isAllOnesValue())
+        return replaceInstUsesWith(*II, II->getArgOperand(0));
+
+      unsigned MaskIdx, MaskLen;
+      if (MaskC->getValue().isShiftedMask(MaskIdx, MaskLen)) {
+        // any single contingous sequence of 1s anywhere in the mask simply
+        // describes a subset of the input bits shifted to the appropriate
+        // position.  Replace with the straight forward IR.
+        Value *Input = II->getArgOperand(0);
+        Value *Masked = Builder.CreateAnd(Input, II->getArgOperand(1));
+        Value *ShiftAmt = ConstantInt::get(II->getType(), MaskIdx);
+        Value *Shifted = Builder.CreateLShr(Masked, ShiftAmt);
+        return replaceInstUsesWith(*II, Shifted);
+      }
+
+      if (auto *SrcC = dyn_cast<ConstantInt>(II->getArgOperand(0))) {
+        // constant folding.
+        APInt Result =
+            llvm::APIntOps::compressBits(SrcC->getValue(), MaskC->getValue());
+        return replaceInstUsesWith(*II,
+                                   ConstantInt::get(II->getType(), Result));
+      }
+    }
+    break;
   case Intrinsic::ptrmask: {
     unsigned BitWidth = DL.getPointerTypeSizeInBits(II->getType());
     KnownBits Known(BitWidth);
