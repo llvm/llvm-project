@@ -1109,11 +1109,20 @@ public:
 
   /// True if default-initialization of \p T would leave at least one scalar
   /// subobject with an indeterminate value. Shared by the std::init rules
-  /// uninit_decl (R5, at the variable declaration) and ctor_uninit_member
-  /// (R6, for a class-typed member). A class with a user-provided default
-  /// constructor is trusted (that constructor is checked by R6 at its own
-  /// definition). Dependent and incomplete types are treated as determinate.
-  bool defaultInitLeavesScalarIndeterminate(QualType T);
+  /// uninit_decl (at the variable declaration), ctor_uninit_member (for a
+  /// class-typed member), and uninit_with_initializer. A class with a
+  /// user-provided default constructor is trusted (that constructor is checked
+  /// at its own definition). Dependent and incomplete types are treated as
+  /// determinate.
+  ///
+  /// When \p HonorUninitMarkers is true, a data member marked [[uninitialized]]
+  /// is treated as acknowledged and skipped, so a type whose only indeterminate
+  /// scalars are all marked is reported as determinate. uninit_decl and
+  /// ctor_uninit_member pass true (the marker excuses the member, paper §6.2);
+  /// uninit_with_initializer passes false because it needs the factual answer
+  /// (whether the default-initialization is genuinely a no-op).
+  bool defaultInitLeavesScalarIndeterminate(QualType T,
+                                            bool HonorUninitMarkers = false);
 
   /// std::init / ref_to_uninit (paper §5): true if \p E refers to (for a
   /// pointer source) or, when \p IsReference, denotes (for a glvalue source)

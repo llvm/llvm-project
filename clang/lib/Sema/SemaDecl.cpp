@@ -14843,13 +14843,13 @@ void Sema::addLifetimeBoundToImplicitThis(CXXMethodDecl *MD) {
 }
 
 static bool defaultInitLeavesScalarIndeterminateImpl(
-    ASTContext &Ctx, QualType T,
+    ASTContext &Ctx, QualType T, bool HonorUninitMarkers,
     llvm::SmallPtrSetImpl<const CXXRecordDecl *> &Visited) {
   if (T->isDependentType() || T->isIncompleteType())
     return false;
   if (const ArrayType *AT = Ctx.getAsArrayType(T))
-    return defaultInitLeavesScalarIndeterminateImpl(Ctx, AT->getElementType(),
-                                                    Visited);
+    return defaultInitLeavesScalarIndeterminateImpl(
+        Ctx, AT->getElementType(), HonorUninitMarkers, Visited);
   if (T->isReferenceType())
     return false;
   const auto *RD = T->getAsCXXRecordDecl();
@@ -14863,24 +14863,34 @@ static bool defaultInitLeavesScalarIndeterminateImpl(
   // Break cycles from ill-formed self-containing types (e.g. struct S { S x; }).
   if (!Visited.insert(RD->getCanonicalDecl()).second)
     return false;
-  // Trust a user-provided default constructor: R6 checks at its definition.
+  // Trust a user-provided default constructor: ctor_uninit_member checks at its
+  // definition.
   if (RD->hasUserProvidedDefaultConstructor())
     return false;
   for (const CXXBaseSpecifier &Base : RD->bases())
-    if (defaultInitLeavesScalarIndeterminateImpl(Ctx, Base.getType(), Visited))
+    if (defaultInitLeavesScalarIndeterminateImpl(Ctx, Base.getType(),
+                                                 HonorUninitMarkers, Visited))
       return true;
   for (const FieldDecl *F : RD->fields()) {
     if (F->isUnnamedBitField() || F->hasInClassInitializer())
       continue;
-    if (defaultInitLeavesScalarIndeterminateImpl(Ctx, F->getType(), Visited))
+    // A member the type's author marked [[uninitialized]] is acknowledged as
+    // intentionally uninitialized, so it does not leave an unacknowledged
+    // scalar indeterminate (paper §6.2).
+    if (HonorUninitMarkers && F->hasAttr<CXX11UninitializedAttr>())
+      continue;
+    if (defaultInitLeavesScalarIndeterminateImpl(Ctx, F->getType(),
+                                                 HonorUninitMarkers, Visited))
       return true;
   }
   return false;
 }
 
-bool Sema::defaultInitLeavesScalarIndeterminate(QualType T) {
+bool Sema::defaultInitLeavesScalarIndeterminate(QualType T,
+                                                bool HonorUninitMarkers) {
   llvm::SmallPtrSet<const CXXRecordDecl *, 8> Visited;
-  return defaultInitLeavesScalarIndeterminateImpl(Context, T, Visited);
+  return defaultInitLeavesScalarIndeterminateImpl(Context, T,
+                                                  HonorUninitMarkers, Visited);
 }
 
 void Sema::checkInitProfileUninitWithInitializer(SourceLocation Loc,
