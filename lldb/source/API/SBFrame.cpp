@@ -672,6 +672,9 @@ SBValueList SBFrame::GetVariables(bool arguments, bool locals, bool statics,
     options.SetIncludeRuntimeSupportValues(include_runtime_support_values);
     options.SetUseDynamic(use_dynamic);
 
+    // Assume that if we have any synthetic variables, they should be included.
+    options.SetIncludeSynthetic(true);
+
     value_list = GetVariables(options);
   }
   return value_list;
@@ -700,6 +703,10 @@ lldb::SBValueList SBFrame::GetVariables(bool arguments, bool locals,
   options.SetInScopeOnly(in_scope_only);
   options.SetIncludeRuntimeSupportValues(include_runtime_support_values);
   options.SetUseDynamic(use_dynamic);
+
+  // Assume that if we have any synthetic variables, they should be included.
+  options.SetIncludeSynthetic(true);
+
   return GetVariables(options);
 }
 
