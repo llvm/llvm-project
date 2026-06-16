@@ -16,8 +16,18 @@
 # RUN: llvm-readelf -l out3 | FileCheck --check-prefixes=SEG,PRE %s
 # RUN: llvm-readelf -S out3 | FileCheck %s --check-prefix=CHECK-PRE
 
-# RUN: not ld.lld -T x.lds a.o 2>&1 | FileCheck %s
-# CHECK: error: section: .relro_padding is not contiguous with other relro sections
+## Without -z keep-data-section-prefix, .data.rel.ro.hot and .data.rel.ro.unlikely
+## are not relro, splitting the relro region into two PT_GNU_RELRO segments.
+# RUN: ld.lld -T x.lds a.o -o out4
+# RUN: llvm-readelf -l out4 | FileCheck %s --check-prefix=SEG2
+
+#            Type      Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# SEG2:      GNU_RELRO 0x000248 0x0000000000202248 0x0000000000202248 0x000260 0x000260 R   0x1
+# SEG2-NEXT: GNU_RELRO 0x0014a8 0x00000000002044a8 0x00000000002044a8 0x000000 0x000b58 R   0x1
+
+# SEG2:      Section to Segment mapping:
+# SEG2:      06     .data.rel.ro {{$}}
+# SEG2-NEXT: 07     .relro_padding {{$}}
 
 ## The first RW PT_LOAD segment has FileSiz 0x126f (0x1000 + 0x200 + 0x60 + 0xf),
 ## and its p_offset p_vaddr p_paddr p_filesz should match PT_GNU_RELRO.
