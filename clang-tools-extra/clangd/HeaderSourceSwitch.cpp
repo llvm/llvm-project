@@ -82,26 +82,39 @@ std::optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
       Request.IDs.insert(ID);
   }
   llvm::StringMap<int> Candidates; // Target path => score.
-  auto AwardTarget = [&](const char *TargetURI) {
-    if (auto TargetPath = URI::resolve(TargetURI, OriginalFile)) {
-      if (!pathEqual(*TargetPath, OriginalFile)) // exclude the original file.
-        ++Candidates[*TargetPath];
-    } else {
-      elog("Failed to resolve URI {0}: {1}", TargetURI, TargetPath.takeError());
-    }
-  };
-  // If we switch from a header, we are looking for the implementation
-  // file, so we use the definition loc; otherwise we look for the header file,
-  // we use the decl loc;
+  // When in the implementation file, we always search for the header file,
+  // using the decl loc. When we are in a header, this usually implies searching
+  // for implementation, for which we use the definition loc. For templates, we
+  // can have separate implementation headers, which behave as an implementation
+  // file. As such, we always have to add the decl loc and conditionally
+  // definition loc.
   //
   // For each symbol in the original file, we get its target location (decl or
   // def) from the index, then award that target file.
-  const bool IsHeader = isHeaderFile(OriginalFile, AST.getLangOpts());
+#ifdef CLANGD_PATH_CASE_INSENSITIVE
+  auto pathEqual = [](llvm::StringRef l, llvm::StringRef r) {
+    return l.equals_insensitive(r);
+  };
+#else
+  auto pathEqual = [](llvm::StringRef l, llvm::StringRef r) { return l == r; };
+#endif
   Index->lookup(Request, [&](const Symbol &Sym) {
-    if (IsHeader)
-      AwardTarget(Sym.Definition.FileURI);
-    else
-      AwardTarget(Sym.CanonicalDeclaration.FileURI);
+    if (llvm::StringRef{Sym.Definition.FileURI}.empty() ||
+        llvm::StringRef{Sym.CanonicalDeclaration.FileURI}.empty())
+      return;
+    auto TargetPathDefinition =
+        URI::resolve(Sym.Definition.FileURI, OriginalFile);
+    if (!TargetPathDefinition)
+      return;
+    auto TargetPathDeclaration =
+        URI::resolve(Sym.CanonicalDeclaration.FileURI, OriginalFile);
+    if (!TargetPathDeclaration)
+      return;
+    if (pathEqual(*TargetPathDefinition, OriginalFile)) {
+      if (!pathEqual(*TargetPathDeclaration, OriginalFile))
+        ++Candidates[*TargetPathDeclaration];
+    } else if (pathEqual(*TargetPathDeclaration, OriginalFile))
+      ++Candidates[*TargetPathDefinition];
   });
   // FIXME: our index doesn't have any interesting information (this could be
   // that the background-index is not finished), we should use the decl/def
@@ -137,6 +150,11 @@ std::vector<const Decl *> getIndexableLocalDecls(ParsedAST &AST) {
       // in the function body.
       if (auto *Scope = llvm::dyn_cast<DeclContext>(ND)) {
         for (auto *D : Scope->decls())
+          TraverseDecl(D);
+      }
+      // ClassTemplateDecl does not inherit from DeclContext
+      if (auto *Scope = llvm::dyn_cast<ClassTemplateDecl>(ND)) {
+        for (auto *D : Scope->getTemplatedDecl()->decls())
           TraverseDecl(D);
       }
     }
