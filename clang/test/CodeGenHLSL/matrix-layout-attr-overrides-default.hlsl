@@ -106,13 +106,13 @@ export float2x2 mat_mat_cm_rm(column_major float2x3 a, row_major float3x2 b) { r
 // CHECK: [[T:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[BMat]], i32 2, i32 3)
 // CHECK: call {{.*}} <4 x float> @llvm.matrix.multiply.v4f32.v6f32.v6f32(<6 x float> [[AMat]], <6 x float> [[T]], i32 2, i32 3, i32 2)
 
-// Column-major return: result transform tracks the TU default, not the keyword.
+// Destination layout: the result is column-major, so no transpose is needed.
 export column_major float2x2 mat_mat_dst_cm(column_major float2x3 a, column_major float3x2 b) { return mul(a, b); }
 // CHECK-LABEL: define {{.*}} <4 x float> @_Z14mat_mat_dst_cm
 // CHECK: [[MUL:%.*]] = call {{.*}} <4 x float> @llvm.matrix.multiply.v4f32.v6f32.v6f32(<6 x float> %{{.*}}, <6 x float> %{{.*}}, i32 2, i32 3, i32 2)
 // CHECK-NOT: @llvm.matrix.transpose
 
-// Row-major return: same result as above; the keyword does not force a transform.
+// Destination layout: the result is row-major, so a transpose is needed.
 export row_major float2x2 mat_mat_dst_rm(column_major float2x3 a, column_major float3x2 b) { return mul(a, b); }
 // CHECK-LABEL: define {{.*}} <4 x float> @_Z14mat_mat_dst_rm
 // CHECK: [[MUL:%.*]] = call {{.*}} <4 x float> @llvm.matrix.multiply.v4f32.v6f32.v6f32(<6 x float> %{{.*}}, <6 x float> %{{.*}}, i32 2, i32 3, i32 2)
