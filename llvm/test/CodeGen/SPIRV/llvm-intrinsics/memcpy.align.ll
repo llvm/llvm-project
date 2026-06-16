@@ -52,3 +52,12 @@ entry:
   call void @llvm.lifetime.end.p0(i64 16, ptr %4)
   ret void
 }
+
+; CHECK: OpFunction
+; CHECK-NOT: OpCopyMemorySized
+; CHECK: OpFunctionEnd
+define spir_func void @zero(ptr %dst, ptr addrspace(2) %src) {
+entry:
+  call void @llvm.memcpy.p0.p2.i32(ptr align 4 %dst, ptr addrspace(2) align 4 %src, i32 0, i1 false)
+  ret void
+}

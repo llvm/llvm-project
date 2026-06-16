@@ -474,9 +474,21 @@ LLVM::InlineAsmOp PtxBuilder::build() {
     ptxInstruction = predicateStr + " " + ptxInstruction;
   }
 
-  // Tablegen doesn't accept $, so we use %, but inline assembly uses $.
-  // Replace all % with $
-  llvm::replace(ptxInstruction, '%', '$');
+  // Operand placeholders are written as %0, %1, ... (and the predicate as
+  // @%N), because TableGen string attributes cannot contain '$', which inline
+  // assembly uses for operand substitution. Convert only a '%' that is
+  // immediately followed by a digit; this leaves literal PTX special-register
+  // names such as %tid.x, %laneid or %dynamic_smem_size intact.
+  std::string mapped;
+  mapped.reserve(ptxInstruction.size());
+  for (size_t i = 0, e = ptxInstruction.size(); i < e; ++i) {
+    if (ptxInstruction[i] == '%' && i + 1 < e &&
+        llvm::isDigit(ptxInstruction[i + 1]))
+      mapped.push_back('$');
+    else
+      mapped.push_back(ptxInstruction[i]);
+  }
+  ptxInstruction = std::move(mapped);
 
   return LLVM::InlineAsmOp::create(
       rewriter, interfaceOp->getLoc(),

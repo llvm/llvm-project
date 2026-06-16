@@ -131,12 +131,8 @@ if(APPLE AND CMAKE_GENERATOR STREQUAL Xcode)
   endif()
 endif()
 
-set(LLDB_EXPORT_ALL_SYMBOLS ${LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS} CACHE BOOL
-  "Causes lldb to export some private symbols when building liblldb. See lldb/source/API/liblldb-private.exports for the full list of symbols that get exported.")
-
-if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS AND NOT LLDB_EXPORT_ALL_SYMBOLS)
-  message(FATAL_ERROR "LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS requires LLDB_EXPORT_ALL_SYMBOLS")
-endif()
+set(LLDB_EXPORT_ALL_SYMBOLS OFF CACHE BOOL
+  "Causes lldb to export all private symbols when building liblldb. See lldb/source/API/liblldb-private.exports for the full list of symbols that get exported.")
 
 set(LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE "" CACHE PATH
   "When `LLDB_EXPORT_ALL_SYMBOLS` is enabled, this specifies the exports file to use when building liblldb.")
