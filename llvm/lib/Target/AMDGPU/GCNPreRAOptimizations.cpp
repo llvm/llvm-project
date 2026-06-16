@@ -34,6 +34,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -55,6 +56,9 @@ private:
   bool processReg(Register Reg);
   void hintTrue16Copy(const MachineInstr &MI);
   bool optimizeBVHStack(MachineInstr &MI);
+
+  bool reconstrainRegClass(Register Reg, const TargetRegisterClass *NewRC,
+                           const GCNSubtarget &ST) const;
 
 public:
   GCNPreRAOptimizationsImpl(LiveIntervals *LS) : LIS(LS) {}
@@ -225,6 +229,38 @@ bool GCNPreRAOptimizationsImpl::processReg(Register Reg) {
   return true;
 }
 
+bool GCNPreRAOptimizationsImpl::reconstrainRegClass(
+    Register Reg, const TargetRegisterClass *NewRC,
+    const GCNSubtarget &ST) const {
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const TargetRegisterClass *OldRC = MRI->getRegClass(Reg);
+  const TargetRegisterClass *ConstrainRC = NewRC;
+
+  // Stop early if there is nothing to do.
+  if (!NewRC || NewRC == OldRC)
+    return false;
+
+  // Accumulate constraints from all uses.
+  for (MachineOperand &MO : MRI->reg_nodbg_operands(Reg)) {
+    // Apply the effect of the given operand to ConstrainRC.
+    MachineInstr *MI = MO.getParent();
+    unsigned OpNo = &MO - &MI->getOperand(0);
+    ConstrainRC = MI->getRegClassConstraintEffect(OpNo, ConstrainRC, TII, TRI);
+    if (!ConstrainRC)
+      return false;
+    if (MI->isCopy()) {
+      MachineOperand &OtherOp = MI->getOperand(1 - OpNo);
+      if (!OtherOp.isReg())
+        continue;
+
+      if (!TRI->isVGPR(*MRI, OtherOp.getReg()))
+        return false;
+    }
+  }
+  MRI->setRegClass(Reg, ConstrainRC);
+  return true;
+}
+
 bool GCNPreRAOptimizationsLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -304,6 +340,10 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
   TII = ST.getInstrInfo();
   MRI = &MF.getRegInfo();
   TRI = ST.getRegisterInfo();
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  bool ContrainAVGPRs =
+      ST.hasGFX90AInsts() && MFI->getMaxArchVGPRPressure() &&
+      (MFI->getMaxArchVGPRPressure() < ST.getAddressableNumArchVGPRs());
 
   bool Changed = false;
 
@@ -312,6 +352,15 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
     if (!LIS->hasInterval(Reg))
       continue;
     const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+
+    // If we do not need to use AGPRs to assign AVRegs, it is beneficial
+    // to contrain them to VGPR as this allows for better initial assignment
+    // (based on register bitwidth).
+    if (ContrainAVGPRs && TRI->isVectorSuperClass(RC)) {
+      reconstrainRegClass(Reg, TRI->getEquivalentVGPRClass(RC), ST);
+      continue;
+    }
+
     if ((RC->MC->getSizeInBits() != 64 || !TRI->isSGPRClass(RC)) &&
         (ST.hasGFX90AInsts() || !TRI->isAGPRClass(RC)))
       continue;
