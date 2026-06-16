@@ -580,20 +580,62 @@ void RecordType::removeABIConversionNamePrefix() {
 // Data Layout information for types
 //===----------------------------------------------------------------------===//
 
+// A CIR-native pointer data-layout entry stores {size-in-bits,
+// abi-align-in-bits} as a dense i32 array keyed on a cir.ptr type (see
+// setMLIRDataLayout in CIRGenerator).
+namespace {
+constexpr static uint64_t kBitsInByte = 8;
+
+// Defaults used only when the module carries no cir.ptr data-layout entry
+// (e.g. CIR parsed from text without a data layout). These mirror the MLIR LLVM
+// dialect's pointer defaults.
+constexpr static uint64_t kDefaultPointerSizeBits = 64;
+constexpr static uint64_t kDefaultPointerAlignment = 8;
+
+enum class CIRPtrDLPos { Size = 0, AbiAlign = 1 };
+
+// Returns the requested field of the cir.ptr data-layout entry.
+std::optional<uint64_t> getPointerSpecValue(mlir::DataLayoutEntryListRef params,
+                                            CIRPtrDLPos pos) {
+  for (mlir::DataLayoutEntryInterface entry : params) {
+    if (!entry.isTypeEntry())
+      continue;
+    auto spec = mlir::dyn_cast<mlir::DenseI32ArrayAttr>(entry.getValue());
+    assert(spec && spec.size() == 2 &&
+           "malformed cir.ptr data layout entry: expected a pair of i32 "
+           "{size-in-bits, abi-align-in-bits}");
+    return static_cast<uint64_t>(spec[static_cast<int>(pos)]);
+  }
+  return std::nullopt;
+}
+} // namespace
+
 llvm::TypeSize
 PointerType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                                ::mlir::DataLayoutEntryListRef params) const {
+  // The pointer width comes from the CIR-native data-layout entry keyed on
+  // cir.ptr, which records the width for the default address space; fall back
+  // to 64 bits if the module carries no such entry.
   // FIXME: improve this in face of address spaces
   assert(!cir::MissingFeatures::dataLayoutPtrHandlingBasedOnLangAS());
-  return llvm::TypeSize::getFixed(64);
+  if (std::optional<uint64_t> size =
+          getPointerSpecValue(params, CIRPtrDLPos::Size))
+    return llvm::TypeSize::getFixed(*size);
+  return llvm::TypeSize::getFixed(kDefaultPointerSizeBits);
 }
 
 uint64_t
 PointerType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                              ::mlir::DataLayoutEntryListRef params) const {
+  // As with the size, the alignment is taken from the default-address-space
+  // cir.ptr data-layout entry. Address-space-dependent alignments are not yet
+  // modeled.
   // FIXME: improve this in face of address spaces
   assert(!cir::MissingFeatures::dataLayoutPtrHandlingBasedOnLangAS());
-  return 8;
+  if (std::optional<uint64_t> align =
+          getPointerSpecValue(params, CIRPtrDLPos::AbiAlign))
+    return *align / kBitsInByte;
+  return kDefaultPointerAlignment;
 }
 
 llvm::TypeSize
@@ -1112,14 +1154,16 @@ DataMemberType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
 llvm::TypeSize
 VPtrType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                             mlir::DataLayoutEntryListRef params) const {
-  // FIXME: consider size differences under different ABIs
-  return llvm::TypeSize::getFixed(64);
+  // The vtable pointer is an ordinary data pointer; route the query through a
+  // cir.ptr so it picks up the same data-layout-driven width.
+  return dataLayout.getTypeSizeInBits(
+      cir::PointerType::get(cir::VoidType::get(getContext())));
 }
 
 uint64_t VPtrType::getABIAlignment(const mlir::DataLayout &dataLayout,
                                    mlir::DataLayoutEntryListRef params) const {
-  // FIXME: consider alignment differences under different ABIs
-  return 8;
+  return dataLayout.getTypeABIAlignment(
+      cir::PointerType::get(cir::VoidType::get(getContext())));
 }
 
 //===----------------------------------------------------------------------===//
