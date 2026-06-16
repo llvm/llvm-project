@@ -193,6 +193,20 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::FMINIMUM, MVT::f16, Promote);
     setOperationAction(ISD::FMAXIMUM, MVT::f16, Promote);
 
+    // Integer <-> Float conversions are keyed on the integer type. Make these
+    // custom so that we can handle the f16 case. Other float types use their
+    // default expansion.
+    setOperationAction(ISD::SINT_TO_FP, MVT::i32, Custom);
+    if (Subtarget.isGP64bit())
+      setOperationAction(ISD::SINT_TO_FP, MVT::i64, Custom);
+
+    setOperationAction(ISD::FP_TO_SINT, MVT::i32, Custom);
+    setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT, MVT::i64, Custom);
+    setOperationAction(ISD::FP_TO_UINT, MVT::i64, Custom);
+    setOperationAction(ISD::FP_TO_SINT, MVT::i128, Custom);
+    setOperationAction(ISD::FP_TO_UINT, MVT::i128, Custom);
+
     setTargetDAGCombine({ISD::AND, ISD::OR, ISD::SRA, ISD::VSELECT, ISD::XOR});
   }
 
@@ -515,6 +529,47 @@ SDValue MipsSETargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
                      Op->getOperand(2));
 }
 
+SDValue MipsSETargetLowering::lowerINT_TO_FP(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  // The f32/f64 case is already legal.
+  if (Op.getValueType() != MVT::f16)
+    return Op;
+
+  // For f16, first convert the integer to f32, then convert to f16.
+  SDLoc DL(Op);
+  SDValue FP = DAG.getNode(Op.getOpcode(), DL, MVT::f32, Op.getOperand(0));
+  return DAG.getFPExtendOrRound(FP, DL, MVT::f16);
+}
+
+SDValue MipsSETargetLowering::lowerFP_TO_INT(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDValue InOp = Op.getOperand(0);
+
+  // For f16, first convert to f32 and go from there.
+  if (InOp.getValueType() == MVT::f16) {
+    EVT VT = Op.getValueType();
+
+    assert((VT == MVT::i32 || VT == MVT::i64 || VT == MVT::i128) &&
+           "Unexpected result type for f16 -> integer conversion");
+
+    SDLoc DL(Op);
+    SDValue FP = DAG.getFPExtendOrRound(InOp, DL, MVT::f32);
+
+    // Use a trick from TargetLowering::expandFP_TO_UINT: we know that every
+    // integer value that can be represented by f16 is representable by i32, so
+    // fptoui and fptosi are equivalent.
+    //
+    // NOTE: the result of fptoui is poison when the value does not fit in the
+    // destination type (e.g. because it is negative).
+    return DAG.getNode(ISD::FP_TO_SINT, DL, VT, FP);
+  }
+
+  // Use the default lowering for f32/f64.
+  if (!isTypeLegal(Op.getValueType()))
+    return SDValue();
+  return MipsTargetLowering::LowerOperation(Op, DAG);
+}
+
 bool MipsSETargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned, Align, MachineMemOperand::Flags, unsigned *Fast) const {
   MVT::SimpleValueType SVT = VT.getSimpleVT().SimpleTy;
@@ -561,7 +616,13 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::EXTRACT_VECTOR_ELT: return lowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::BUILD_VECTOR:       return lowerBUILD_VECTOR(Op, DAG);
   case ISD::VECTOR_SHUFFLE:     return lowerVECTOR_SHUFFLE(Op, DAG);
-  case ISD::SELECT:             return lowerSELECT(Op, DAG);
+  case ISD::SELECT:
+    return lowerSELECT(Op, DAG);
+  case ISD::SINT_TO_FP:
+    return lowerINT_TO_FP(Op, DAG);
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:
+    return lowerFP_TO_INT(Op, DAG);
   case ISD::BITCAST:            return lowerBITCAST(Op, DAG);
   case ISD::FADD:
     return lowerR5900FPOp(Op, DAG, RTLIB::ADD_F32);
@@ -3642,7 +3703,7 @@ MipsSETargetLowering::emitFILL_FD(MachineInstr &MI,
 // space.
 MachineBasicBlock *
 MipsSETargetLowering::emitST_F16_PSEUDO(MachineInstr &MI,
-                                       MachineBasicBlock *BB) const {
+                                        MachineBasicBlock *BB) const {
 
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
@@ -3663,7 +3724,7 @@ MipsSETargetLowering::emitST_F16_PSEUDO(MachineInstr &MI,
   Register Rs = RegInfo.createVirtualRegister(&Mips::GPR32RegClass);
 
   BuildMI(*BB, MI, DL, TII->get(Mips::COPY_U_H), Rs).addReg(Ws).addImm(0);
-  if(!UsingMips32) {
+  if (!UsingMips32) {
     Register Tmp = RegInfo.createVirtualRegister(&Mips::GPR64RegClass);
     BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Tmp)
         .addReg(Rs)
@@ -3696,7 +3757,7 @@ MipsSETargetLowering::emitST_F16_PSEUDO(MachineInstr &MI,
 //     intervention.
 MachineBasicBlock *
 MipsSETargetLowering::emitLD_F16_PSEUDO(MachineInstr &MI,
-                                       MachineBasicBlock *BB) const {
+                                        MachineBasicBlock *BB) const {
 
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
@@ -3719,7 +3780,7 @@ MipsSETargetLowering::emitLD_F16_PSEUDO(MachineInstr &MI,
   for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
     MIB.add(MO);
 
-  if(!UsingMips32) {
+  if (!UsingMips32) {
     Register Tmp = RegInfo.createVirtualRegister(&Mips::GPR32RegClass);
     BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Tmp)
         .addReg(Rt, {}, Mips::sub_32);
@@ -3781,10 +3842,8 @@ MipsSETargetLowering::emitLD_F16_PSEUDO(MachineInstr &MI,
 //              insert.w for one element, we avoid that potiential case. If
 //              fexdo.[hw] causes an exception in, the exception is valid and it
 //              occurs for all elements.
-MachineBasicBlock *
-MipsSETargetLowering::emitFPROUND_PSEUDO(MachineInstr &MI,
-                                         MachineBasicBlock *BB,
-                                         bool IsFGR64) const {
+MachineBasicBlock *MipsSETargetLowering::emitFPROUND_PSEUDO(
+    MachineInstr &MI, MachineBasicBlock *BB, bool IsFGR64) const {
 
   // Strictly speaking, we need MIPS32R5 to support MSA. We'll be generous
   // here. It's technically doable to support MIPS32 here, but the ISA forbids
@@ -3886,10 +3945,8 @@ MipsSETargetLowering::emitFPROUND_PSEUDO(MachineInstr &MI,
 //  mtc1 $rtemp, $ftemp
 //  copy_s.w $rtemp2, $wtemp2[1]
 //  $fd = mthc1 $rtemp2, $ftemp
-MachineBasicBlock *
-MipsSETargetLowering::emitFPEXTEND_PSEUDO(MachineInstr &MI,
-                                          MachineBasicBlock *BB,
-                                          bool IsFGR64) const {
+MachineBasicBlock *MipsSETargetLowering::emitFPEXTEND_PSEUDO(
+    MachineInstr &MI, MachineBasicBlock *BB, bool IsFGR64) const {
 
   // Strictly speaking, we need MIPS32R5 to support MSA. We'll be generous
   // here. It's technically doable to support MIPS32 here, but the ISA forbids

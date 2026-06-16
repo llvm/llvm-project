@@ -6,7 +6,7 @@ name: signal_isfirst_imm_same_barrier_wait
 body: |
   bb.0:
     ; GCN-LABEL: name: signal_isfirst_imm_same_barrier_wait
-    ; GCN: S_WAIT_LOADCNT_DSCNT 0
+    ; GCN: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GCN-NEXT: S_WAIT_EXPCNT 0
     ; GCN-NEXT: S_WAIT_SAMPLECNT 0
     ; GCN-NEXT: S_WAIT_BVHCNT 0
@@ -30,7 +30,7 @@ name: signal_isfirst_imm_different_barrier_wait
 body: |
   bb.0:
     ; GCN-LABEL: name: signal_isfirst_imm_different_barrier_wait
-    ; GCN: S_WAIT_LOADCNT_DSCNT 0
+    ; GCN: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GCN-NEXT: S_WAIT_EXPCNT 0
     ; GCN-NEXT: S_WAIT_SAMPLECNT 0
     ; GCN-NEXT: S_WAIT_BVHCNT 0
@@ -55,7 +55,7 @@ name: signal_isfirst_m0_same_barrier_wait
 body: |
   bb.0:
     ; GCN-LABEL: name: signal_isfirst_m0_same_barrier_wait
-    ; GCN: S_WAIT_LOADCNT_DSCNT 0
+    ; GCN: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GCN-NEXT: S_WAIT_EXPCNT 0
     ; GCN-NEXT: S_WAIT_SAMPLECNT 0
     ; GCN-NEXT: S_WAIT_BVHCNT 0
@@ -82,7 +82,7 @@ name: signal_isfirst_m0_different_barrier_wait
 body: |
   bb.0:
     ; GCN-LABEL: name: signal_isfirst_m0_different_barrier_wait
-    ; GCN: S_WAIT_LOADCNT_DSCNT 0
+    ; GCN: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GCN-NEXT: S_WAIT_EXPCNT 0
     ; GCN-NEXT: S_WAIT_SAMPLECNT 0
     ; GCN-NEXT: S_WAIT_BVHCNT 0

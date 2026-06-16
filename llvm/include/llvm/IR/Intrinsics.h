@@ -20,6 +20,7 @@
 #include "llvm/Support/TypeSize.h"
 #include <optional>
 #include <string>
+#include <tuple>
 
 namespace llvm {
 
@@ -181,6 +182,7 @@ struct IITDescriptor {
     Overloaded, // AnyKind and overload index in OverloadInfo.
 
     // Fully dependent types. Overload index in OverloadInfo.
+    Match,
     Extend,
     Trunc,
     OneNthEltsVec,
@@ -204,25 +206,30 @@ struct IITDescriptor {
     ElementCount VectorWidth;
   };
 
-  // AK_% : Defined in Intrinsics.td
-  enum AnyKind {
-#define GET_INTRINSIC_ANYKIND
+  // AnyKindVectorConstraint and AnyKindElementConstraint defined in
+  // Intrinsics.td
+#define GET_INTRINSIC_ANYKIND_ENUMS
 #include "llvm/IR/IntrinsicEnums.inc"
-  };
 
   unsigned getOverloadIndex() const {
-    assert(Kind == Overloaded || Kind == Extend || Kind == Trunc ||
-           Kind == SameVecWidth || Kind == VecElement || Kind == Subdivide2 ||
-           Kind == Subdivide4 || Kind == VecOfBitcastsToInt ||
-           Kind == VecOfAnyPtrsToElt || Kind == OneNthEltsVec);
-    // Overload index is packed into lower 5 bits.
-    return OverloadInfo & 0x1f;
+    assert(Kind == Overloaded || Kind == Match || Kind == Extend ||
+           Kind == Trunc || Kind == SameVecWidth || Kind == VecElement ||
+           Kind == Subdivide2 || Kind == Subdivide4 ||
+           Kind == VecOfBitcastsToInt || Kind == VecOfAnyPtrsToElt ||
+           Kind == OneNthEltsVec);
+    // Overload index is packed into byte[0] of OverloadInfo.
+    return OverloadInfo & 0xf;
   }
 
-  AnyKind getOverloadKind() const {
-    // Overload kind is packed into upper 3 bits.
+  std::pair<AnyKindVectorConstraint, AnyKindElementConstraint>
+  getOverloadConstraints() const {
+    // Overload constraints are packed into byte[1] of OverloadInfo.
     assert(Kind == Overloaded);
-    return (AnyKind)((OverloadInfo >> 5) & 0x7);
+    uint8_t AKEnumsPacked = OverloadInfo >> 8;
+    AnyKindVectorConstraint VC = (AnyKindVectorConstraint)(AKEnumsPacked >> 4);
+    AnyKindElementConstraint EC =
+        (AnyKindElementConstraint)(AKEnumsPacked & 0xf);
+    return {VC, EC};
   }
 
   // OneNthEltsVecArguments uses both a divisor N and a reference argument for
@@ -259,10 +266,16 @@ struct IITDescriptor {
 /// Returns true if \p id has a struct return type.
 LLVM_ABI bool hasStructReturnType(ID id);
 
-/// Return the IIT table descriptor for the specified intrinsic into an array
-/// of IITDescriptors.
-LLVM_ABI void getIntrinsicInfoTableEntries(ID id,
-                                           SmallVectorImpl<IITDescriptor> &T);
+/// Fill the IIT table descriptor for the intrinsic \p id into an array
+/// of IITDescriptors. Returns a tuple of 3 values:
+///  - ArrayRef for the descriptor table (for convenience).
+///  - Number of arguments.
+///  - if it's a variable argument intrinsic.
+///
+/// Note that for VarArg intrinsics, the last IIT `VarArg` token will be
+/// consumed and not a part of the returned ArrayRef.
+LLVM_ABI std::tuple<ArrayRef<IITDescriptor>, unsigned, bool>
+getIntrinsicInfoTableEntries(ID id, SmallVectorImpl<IITDescriptor> &T);
 
 /// Returns true if \p FT is a valid function type for intrinsic \p ID. If
 /// `ID` is an overloaded intrinsic, the overload types are pushed into the

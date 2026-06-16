@@ -48,5 +48,6 @@ unittest("ClangScalableAnalysisTests") {
     "TUSummaryBuilderTest.cpp",
     "TestFixture.cpp",
     "WholeProgramAnalysis/AnalysisDriverTest.cpp",
+    "WholeProgramAnalysis/UnsafeBufferReachableAnalysisTest.cpp",
   ]
 }

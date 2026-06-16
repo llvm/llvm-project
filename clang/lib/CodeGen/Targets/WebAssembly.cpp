@@ -115,16 +115,20 @@ ABIArgInfo WebAssemblyABIInfo::classifyArgumentType(QualType Ty) const {
       return ABIArgInfo::getDirect(CGT.ConvertType(QualType(SeltTy, 0)));
     // For the experimental multivalue ABI, fully expand all other aggregates
     if (Kind == WebAssemblyABIKind::ExperimentalMV) {
-      const auto *RD = Ty->castAsRecordDecl();
-      bool HasBitField = false;
-      for (auto *Field : RD->fields()) {
-        if (Field->isBitField()) {
-          HasBitField = true;
-          break;
+      if (Ty->getAs<ComplexType>())
+        return ABIArgInfo::getDirect();
+      const auto *RD = Ty->getAsRecordDecl();
+      if (RD) {
+        bool HasBitField = false;
+        for (auto *Field : RD->fields()) {
+          if (Field->isBitField()) {
+            HasBitField = true;
+            break;
+          }
         }
+        if (!HasBitField)
+          return ABIArgInfo::getExpand();
       }
-      if (!HasBitField)
-        return ABIArgInfo::getExpand();
     }
   }
 

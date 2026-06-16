@@ -17,6 +17,6 @@
 
 #include <sys/mman.h>
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_SYS_MMAN_MACROS_H

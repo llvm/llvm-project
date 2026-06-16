@@ -530,7 +530,7 @@ Block *SymbolContext::GetFunctionBlock() {
   return nullptr;
 }
 
-llvm::StringRef SymbolContext::GetInstanceVariableName() {
+llvm::StringRef SymbolContext::GetInstanceName() {
   LanguageType lang_type = eLanguageTypeUnknown;
 
   if (Block *function_block = GetFunctionBlock())
@@ -541,7 +541,7 @@ llvm::StringRef SymbolContext::GetInstanceVariableName() {
     lang_type = GetLanguage();
 
   if (auto *lang = Language::FindPlugin(lang_type))
-    return lang->GetInstanceVariableName();
+    return lang->GetInstanceName();
 
   return {};
 }
@@ -1082,7 +1082,7 @@ bool SymbolContextSpecifier::SymbolContextMatches(const SymbolContext &sc) {
     // First check the current block, and if it is inlined, get the inlined
     // function name:
     bool was_inlined = false;
-    ConstString func_name(m_function_spec.c_str());
+    ConstString func_name(m_function_spec);
 
     if (sc.block != nullptr) {
       const InlineFunctionInfo *inline_info =

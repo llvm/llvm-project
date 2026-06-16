@@ -18,11 +18,11 @@
 
 using namespace lldb_private;
 
-typedef HRESULT(WINAPI *CreatePseudoConsole_t)(COORD size, HANDLE hInput,
-                                               HANDLE hOutput, DWORD dwFlags,
-                                               HPCON *phPC);
+using CreatePseudoConsole_t = HRESULT(WINAPI *)(COORD size, HANDLE hInput,
+                                                HANDLE hOutput, DWORD dwFlags,
+                                                HPCON *phPC);
 
-typedef VOID(WINAPI *ClosePseudoConsole_t)(HPCON hPC);
+using ClosePseudoConsole_t = VOID(WINAPI *)(HPCON hPC);
 
 static constexpr DWORD PSEUDOCONSOLE_INHERIT_CURSOR = 0x1;
 
@@ -57,10 +57,10 @@ struct Kernel32 {
   bool IsConPTYAvailable() { return isAvailable; }
 
 private:
-  HMODULE hModule;
-  CreatePseudoConsole_t CreatePseudoConsole_;
-  ClosePseudoConsole_t ClosePseudoConsole_;
-  bool isAvailable;
+  HMODULE hModule = nullptr;
+  CreatePseudoConsole_t CreatePseudoConsole_ = nullptr;
+  ClosePseudoConsole_t ClosePseudoConsole_ = nullptr;
+  bool isAvailable = false;
 };
 
 static Kernel32 kernel32;
@@ -73,14 +73,14 @@ llvm::Error PseudoConsole::CreateOverlappedPipePair(HANDLE &out_read,
            GetCurrentProcessId(), this);
   out_read =
       CreateNamedPipeW(pipe_name, PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
-                       PIPE_TYPE_BYTE | PIPE_WAIT, 1, 4096, 4096, 0, NULL);
+                       PIPE_TYPE_BYTE | PIPE_WAIT, 1, 4096, 4096, 0, nullptr);
   if (out_read == INVALID_HANDLE_VALUE)
     return llvm::errorCodeToError(
         std::error_code(GetLastError(), std::system_category()));
-  SECURITY_ATTRIBUTES write_sa = {sizeof(SECURITY_ATTRIBUTES), NULL, TRUE};
-  out_write =
-      CreateFileW(pipe_name, GENERIC_WRITE, 0, inheritable ? &write_sa : NULL,
-                  OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+  SECURITY_ATTRIBUTES write_sa = {sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE};
+  out_write = CreateFileW(pipe_name, GENERIC_WRITE, 0,
+                          inheritable ? &write_sa : nullptr, OPEN_EXISTING,
+                          FILE_ATTRIBUTE_NORMAL, nullptr);
   if (out_write == INVALID_HANDLE_VALUE) {
     CloseHandle(out_read);
     out_read = INVALID_HANDLE_VALUE;
@@ -91,23 +91,15 @@ llvm::Error PseudoConsole::CreateOverlappedPipePair(HANDLE &out_read,
   return llvm::Error::success();
 }
 
-PseudoConsole::~PseudoConsole() {
-  Close();
-  ClosePseudoConsolePipes();
-  CloseAnonymousPipes();
-}
+PseudoConsole::~PseudoConsole() { Reset(); }
 
-llvm::Error PseudoConsole::OpenPseudoConsole() {
-  assert(m_mode == Mode::None &&
-         "Attempted to open a PseudoConsole in a different mode than None");
+llvm::Error PseudoConsole::OpenPseudoConsole(uint16_t req_cols,
+                                             uint16_t req_rows) {
+  Reset();
 
   if (!kernel32.IsConPTYAvailable())
     return llvm::make_error<llvm::StringError>("ConPTY is not available",
                                                llvm::errc::io_error);
-
-  assert(m_conpty_handle == INVALID_HANDLE_VALUE &&
-         "ConPTY has already been opened");
-
   // A 4096 bytes buffer should be large enough for the majority of console
   // burst outputs.
   wchar_t pipe_name[MAX_PATH];
@@ -120,7 +112,7 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
 
   HANDLE hInputRead = INVALID_HANDLE_VALUE;
   HANDLE hInputWrite = INVALID_HANDLE_VALUE;
-  if (!CreatePipe(&hInputRead, &hInputWrite, NULL, 0)) {
+  if (!CreatePipe(&hInputRead, &hInputWrite, nullptr, 0)) {
     CloseHandle(hOutputRead);
     CloseHandle(hOutputWrite);
     return llvm::errorCodeToError(
@@ -133,13 +125,19 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
   // if we can't query the real console.
   int cursorRow = consoleSize.Y;
   int cursorCol = 1;
-  CONSOLE_SCREEN_BUFFER_INFO csbi;
-  if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
-    consoleSize = {
-        static_cast<SHORT>(csbi.srWindow.Right - csbi.srWindow.Left + 1),
-        static_cast<SHORT>(csbi.srWindow.Bottom - csbi.srWindow.Top + 1)};
-    cursorRow = csbi.dwCursorPosition.Y - csbi.srWindow.Top + 1;
-    cursorCol = csbi.dwCursorPosition.X + 1;
+  if (req_cols != 0 && req_rows != 0) {
+    consoleSize = {static_cast<SHORT>(req_cols), static_cast<SHORT>(req_rows)};
+    cursorRow = consoleSize.Y;
+    cursorCol = 1;
+  } else {
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
+      consoleSize = {
+          static_cast<SHORT>(csbi.srWindow.Right - csbi.srWindow.Left + 1),
+          static_cast<SHORT>(csbi.srWindow.Bottom - csbi.srWindow.Top + 1)};
+      cursorRow = csbi.dwCursorPosition.Y - csbi.srWindow.Top + 1;
+      cursorCol = csbi.dwCursorPosition.X + 1;
+    }
   }
   HPCON hPC = INVALID_HANDLE_VALUE;
   HRESULT hr =
@@ -170,7 +168,7 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
         llvm::formatv("\x1b[{0};{1}R", cursorRow, cursorCol).sstr<32>();
     DWORD nwritten = 0;
     WriteFile(m_conpty_input, response.data(), response.size(), &nwritten,
-              NULL);
+              nullptr);
   }
 
   return llvm::Error::success();
@@ -215,11 +213,17 @@ void PseudoConsole::CloseAnonymousPipes() {
   m_pipe_child_stdout = INVALID_HANDLE_VALUE;
 }
 
-llvm::Error PseudoConsole::OpenAnonymousPipes() {
-  assert(m_mode == Mode::None &&
-         "Attempted to open a AnonymousPipes in a different mode than None");
+void PseudoConsole::Reset() {
+  Close();
+  ClosePseudoConsolePipes();
+  CloseAnonymousPipes();
+  m_mode = Mode::None;
+}
 
-  SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES), NULL, TRUE};
+llvm::Error PseudoConsole::OpenAnonymousPipes() {
+  Reset();
+
+  SECURITY_ATTRIBUTES sa = {sizeof(SECURITY_ATTRIBUTES), nullptr, TRUE};
   HANDLE hStdinRead = INVALID_HANDLE_VALUE;
   HANDLE hStdinWrite = INVALID_HANDLE_VALUE;
   if (!CreatePipe(&hStdinRead, &hStdinWrite, &sa, 0))

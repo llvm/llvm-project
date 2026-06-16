@@ -5,7 +5,7 @@
 ; FUNC-LABEL: {{^}}sdiv24_i8:
 ; SI: v_cvt_f32_i32
 ; SI: v_cvt_f32_i32
-; SI: v_rcp_iflag_f32
+; SI: v_rcp_f32
 ; SI: v_cvt_i32_f32
 
 ; EG: INT_TO_FLT
@@ -24,7 +24,7 @@ define amdgpu_kernel void @sdiv24_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; FUNC-LABEL: {{^}}sdiv24_i16:
 ; SI: v_cvt_f32_i32
 ; SI: v_cvt_f32_i32
-; SI: v_rcp_iflag_f32
+; SI: v_rcp_f32
 ; SI: v_cvt_i32_f32
 
 ; EG: INT_TO_FLT
@@ -41,10 +41,7 @@ define amdgpu_kernel void @sdiv24_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 }
 
 ; FUNC-LABEL: {{^}}sdiv24_i32:
-; SI: v_cvt_f32_i32
-; SI: v_cvt_f32_i32
-; SI: v_rcp_iflag_f32
-; SI: v_cvt_i32_f32
+; SI-NOT: v_cvt_i32_f32
 
 ; EG: INT_TO_FLT
 ; EG-DAG: INT_TO_FLT
@@ -65,7 +62,6 @@ define amdgpu_kernel void @sdiv24_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 
 ; FUNC-LABEL: {{^}}sdiv25_i32:
 ; SI-NOT: v_cvt_f32_i32
-; SI-NOT: v_rcp_f32
 
 ; EG-NOT: INT_TO_FLT
 ; EG-NOT: RECIP_IEEE
@@ -84,7 +80,6 @@ define amdgpu_kernel void @sdiv25_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 
 ; FUNC-LABEL: {{^}}test_no_sdiv24_i32_1:
 ; SI-NOT: v_cvt_f32_i32
-; SI-NOT: v_rcp_f32
 
 ; EG-NOT: INT_TO_FLT
 ; EG-NOT: RECIP_IEEE
@@ -103,7 +98,6 @@ define amdgpu_kernel void @test_no_sdiv24_i32_1(ptr addrspace(1) %out, ptr addrs
 
 ; FUNC-LABEL: {{^}}test_no_sdiv24_i32_2:
 ; SI-NOT: v_cvt_f32_i32
-; SI-NOT: v_rcp_f32
 
 ; EG-NOT: INT_TO_FLT
 ; EG-NOT: RECIP_IEEE
@@ -123,7 +117,7 @@ define amdgpu_kernel void @test_no_sdiv24_i32_2(ptr addrspace(1) %out, ptr addrs
 ; FUNC-LABEL: {{^}}srem24_i8:
 ; SI: v_cvt_f32_i32
 ; SI: v_cvt_f32_i32
-; SI: v_rcp_iflag_f32
+; SI: v_rcp_f32
 ; SI: v_cvt_i32_f32
 
 ; EG: INT_TO_FLT
@@ -142,7 +136,7 @@ define amdgpu_kernel void @srem24_i8(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; FUNC-LABEL: {{^}}srem24_i16:
 ; SI: v_cvt_f32_i32
 ; SI: v_cvt_f32_i32
-; SI: v_rcp_iflag_f32
+; SI: v_rcp_f32
 ; SI: v_cvt_i32_f32
 
 ; EG: INT_TO_FLT
@@ -159,10 +153,7 @@ define amdgpu_kernel void @srem24_i16(ptr addrspace(1) %out, ptr addrspace(1) %i
 }
 
 ; FUNC-LABEL: {{^}}srem24_i32:
-; SI: v_cvt_f32_i32
-; SI: v_cvt_f32_i32
-; SI: v_rcp_iflag_f32
-; SI: v_cvt_i32_f32
+; SI-NOT: v_cvt_i32_f32
 
 ; EG: INT_TO_FLT
 ; EG-DAG: INT_TO_FLT
@@ -183,7 +174,6 @@ define amdgpu_kernel void @srem24_i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 
 ; FUNC-LABEL: {{^}}no_srem25_i32:
 ; SI-NOT: v_cvt_f32_i32
-; SI-NOT: v_rcp_f32
 
 ; EG-NOT: INT_TO_FLT
 ; EG-NOT: RECIP_IEEE
@@ -202,7 +192,6 @@ define amdgpu_kernel void @no_srem25_i32(ptr addrspace(1) %out, ptr addrspace(1)
 
 ; FUNC-LABEL: {{^}}no_sdiv25_i24_i25_i32:
 ; SI-NOT: v_cvt_f32_i32
-; SI-NOT: v_rcp_f32
 
 ; EG-NOT: INT_TO_FLT
 ; EG-NOT: RECIP_IEEE
@@ -221,7 +210,6 @@ define amdgpu_kernel void @no_sdiv25_i24_i25_i32(ptr addrspace(1) %out, ptr addr
 
 ; FUNC-LABEL: {{^}}no_sdiv25_i25_i24_i32:
 ; SI-NOT: v_cvt_f32_i32
-; SI-NOT: v_rcp_f32
 
 ; EG-NOT: INT_TO_FLT
 ; EG-NOT: RECIP_IEEE
@@ -240,7 +228,6 @@ define amdgpu_kernel void @no_sdiv25_i25_i24_i32(ptr addrspace(1) %out, ptr addr
 
 ; FUNC-LABEL: {{^}}no_srem25_i24_i25_i32:
 ; SI-NOT: v_cvt_f32_i32
-; SI-NOT: v_rcp_f32
 
 ; EG-NOT: INT_TO_FLT
 ; EG-NOT: RECIP_IEEE
@@ -259,7 +246,6 @@ define amdgpu_kernel void @no_srem25_i24_i25_i32(ptr addrspace(1) %out, ptr addr
 
 ; FUNC-LABEL: {{^}}no_srem25_i25_i24_i32:
 ; SI-NOT: v_cvt_f32_i32
-; SI-NOT: v_rcp_f32
 
 ; EG-NOT: INT_TO_FLT
 ; EG-NOT: RECIP_IEEE
@@ -277,9 +263,7 @@ define amdgpu_kernel void @no_srem25_i25_i24_i32(ptr addrspace(1) %out, ptr addr
 }
 
 ; FUNC-LABEL: {{^}}srem25_i24_i11_i32:
-; SI: v_cvt_f32_i32
-; SI: v_rcp_iflag_f32
-; SI: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 24
+; SI-NOT: v_cvt_f32_i32
 
 ; EG: INT_TO_FLT
 ; EG: RECIP_IEEE
@@ -297,9 +281,7 @@ define amdgpu_kernel void @srem25_i24_i11_i32(ptr addrspace(1) %out, ptr addrspa
 }
 
 ; FUNC-LABEL: {{^}}srem25_i11_i24_i32:
-; SI: v_cvt_f32_i32
-; SI: v_rcp_iflag_f32
-; SI: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 24
+; SI-NOT: v_cvt_f32_i32
 
 ; EG: INT_TO_FLT
 ; EG: RECIP_IEEE
@@ -318,7 +300,7 @@ define amdgpu_kernel void @srem25_i11_i24_i32(ptr addrspace(1) %out, ptr addrspa
 
 ; FUNC-LABEL: {{^}}srem25_i17_i12_i32:
 ; SI: v_cvt_f32_i32
-; SI: v_rcp_iflag_f32
+; SI: v_rcp_f32
 ; SI: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 17
 
 ; EG: INT_TO_FLT

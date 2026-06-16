@@ -197,7 +197,7 @@ define void @main() {
 ; CHECK-NEXT: Exiting function: identity_nofpclass_agg
 ; CHECK-NEXT:   %nofpclass_agg = call { <2 x half>, <2 x half> } @identity_nofpclass_agg({ <2 x half>, <2 x half> } { <2 x half> <half 1.000000e+00, half poison>, <2 x half> <half +inf, half +qnan> }) => { { half 1.000000e+00, poison }, { poison, poison } }
 ; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
-; CHECK-NEXT:   %ptr_one = getelementptr i8, ptr null, i32 1 => ptr 0x1 [dangling]
+; CHECK-NEXT:   %ptr_one = getelementptr i8, ptr null, i32 1 => ptr 0x1 [nullary]
 ; CHECK-NEXT: Entering function: gep_nonnull
 ; CHECK-NEXT:   ptr %p = ptr 0x8 [alloc]
 ; CHECK-NEXT:   %gep = getelementptr i8, ptr %p, i32 -1 => ptr 0x7 [alloc + -1]
@@ -211,8 +211,8 @@ define void @main() {
 ; CHECK-NEXT: Exiting function: gep_nonnull
 ; CHECK-NEXT:   %nonnull_invalid_input = call ptr @gep_nonnull(ptr null) => poison
 ; CHECK-NEXT: Entering function: gep_nonnull
-; CHECK-NEXT:   ptr %p = ptr 0x1 [dangling]
-; CHECK-NEXT:   %gep = getelementptr i8, ptr %p, i32 -1 => ptr 0x0 [dangling]
+; CHECK-NEXT:   ptr %p = ptr 0x1 [nullary]
+; CHECK-NEXT:   %gep = getelementptr i8, ptr %p, i32 -1 => ptr 0x0 [nullary]
 ; CHECK-NEXT:   ret ptr %gep
 ; CHECK-NEXT: Exiting function: gep_nonnull
 ; CHECK-NEXT:   %nonnull_invalid_output = call ptr @gep_nonnull(ptr %ptr_one) => poison
@@ -229,8 +229,8 @@ define void @main() {
 ; CHECK-NEXT: Exiting function: gep
 ; CHECK-NEXT:   %nonnull_callsite_invalid_input = call ptr @gep(ptr nonnull null) => poison
 ; CHECK-NEXT: Entering function: gep
-; CHECK-NEXT:   ptr %p = ptr 0x1 [dangling]
-; CHECK-NEXT:   %gep = getelementptr i8, ptr %p, i32 -1 => ptr 0x0 [dangling]
+; CHECK-NEXT:   ptr %p = ptr 0x1 [nullary]
+; CHECK-NEXT:   %gep = getelementptr i8, ptr %p, i32 -1 => ptr 0x0 [nullary]
 ; CHECK-NEXT:   ret ptr %gep
 ; CHECK-NEXT: Exiting function: gep
 ; CHECK-NEXT:   %nonnull_callsite_invalid_output = call nonnull ptr @gep(ptr %ptr_one) => poison
@@ -247,17 +247,17 @@ define void @main() {
 ; CHECK-NEXT: Exiting function: gep_align
 ; CHECK-NEXT:   %align_invalid_input = call ptr @gep_align(ptr %ptr_one) => poison
 ; CHECK-NEXT: Entering function: gep_align
-; CHECK-NEXT:   ptr %p = ptr 0x0 [dangling]
-; CHECK-NEXT:   %gep = getelementptr i8, ptr %p, i32 8 => ptr 0x8 [dangling]
+; CHECK-NEXT:   ptr %p = ptr 0x0 [nullary]
+; CHECK-NEXT:   %gep = getelementptr i8, ptr %p, i32 8 => ptr 0x8 [nullary]
 ; CHECK-NEXT:   ret ptr %gep
 ; CHECK-NEXT: Exiting function: gep_align
 ; CHECK-NEXT:   %align_invalid_output = call ptr @gep_align(ptr null) => poison
 ; CHECK-NEXT:   %ptr_vec_1 = insertelement <4 x ptr> poison, ptr %alloc, i32 0 => { ptr 0x8 [alloc], poison, poison, poison }
-; CHECK-NEXT:   %ptr_vec_2 = insertelement <4 x ptr> %ptr_vec_1, ptr %ptr_one, i32 1 => { ptr 0x8 [alloc], ptr 0x1 [dangling], poison, poison }
-; CHECK-NEXT:   %ptr_vec_3 = insertelement <4 x ptr> %ptr_vec_2, ptr null, i32 2 => { ptr 0x8 [alloc], ptr 0x1 [dangling], ptr 0x0 [dangling], poison }
+; CHECK-NEXT:   %ptr_vec_2 = insertelement <4 x ptr> %ptr_vec_1, ptr %ptr_one, i32 1 => { ptr 0x8 [alloc], ptr 0x1 [nullary], poison, poison }
+; CHECK-NEXT:   %ptr_vec_3 = insertelement <4 x ptr> %ptr_vec_2, ptr null, i32 2 => { ptr 0x8 [alloc], ptr 0x1 [nullary], ptr 0x0 [nullary], poison }
 ; CHECK-NEXT: Entering function: gep_align_vec
-; CHECK-NEXT:   <4 x ptr> %p = { ptr 0x8 [alloc], poison, ptr 0x0 [dangling], poison }
-; CHECK-NEXT:   %gep = getelementptr i8, <4 x ptr> %p, i32 8 => { ptr 0x10 [alloc + 8], poison, ptr 0x8 [dangling], poison }
+; CHECK-NEXT:   <4 x ptr> %p = { ptr 0x8 [alloc], poison, ptr 0x0 [nullary], poison }
+; CHECK-NEXT:   %gep = getelementptr i8, <4 x ptr> %p, i32 8 => { ptr 0x10 [alloc + 8], poison, ptr 0x8 [nullary], poison }
 ; CHECK-NEXT:   ret <4 x ptr> %gep
 ; CHECK-NEXT: Exiting function: gep_align_vec
 ; CHECK-NEXT:   %align_vec = call <4 x ptr> @gep_align_vec(<4 x ptr> %ptr_vec_3) => { ptr 0x10 [alloc + 8], poison, poison, poison }
@@ -311,16 +311,16 @@ define void @main() {
 ; CHECK-NEXT: Exiting function: identity_dereferenceable_or_null
 ; CHECK-NEXT:   %deref_or_null_valid1 = call ptr @identity_dereferenceable_or_null(ptr %alloc) => ptr 0x8 [alloc]
 ; CHECK-NEXT: Entering function: identity_dereferenceable_or_null
-; CHECK-NEXT:   ptr %p = ptr 0x0 [dangling]
+; CHECK-NEXT:   ptr %p = ptr 0x0 [nullary]
 ; CHECK-NEXT:   ret ptr %p
 ; CHECK-NEXT: Exiting function: identity_dereferenceable_or_null
-; CHECK-NEXT:   %deref_or_null_valid2 = call ptr @identity_dereferenceable_or_null(ptr null) => ptr 0x0 [dangling]
+; CHECK-NEXT:   %deref_or_null_valid2 = call ptr @identity_dereferenceable_or_null(ptr null) => ptr 0x0 [nullary]
 ; CHECK-NEXT: Entering function: identity_dereferenceable_or_null
 ; CHECK-NEXT:   ptr %p = ptr 0x8 [alloc]
 ; CHECK-NEXT:   ret ptr %p
 ; CHECK-NEXT: Exiting function: identity_dereferenceable_or_null
 ; CHECK-NEXT:   %deref_or_null_mixed = call dereferenceable(1) dereferenceable_or_null(1) ptr @identity_dereferenceable_or_null(ptr dereferenceable(1) dereferenceable_or_null(1) %alloc) => ptr 0x8 [alloc]
-; CHECK-NEXT:   %fmt_n_out = alloca [6 x i8], align 1 => ptr 0xC [fmt_n_out]
+; CHECK-NEXT:   %fmt_n_out = alloca [6 x i8], align 1 => ptr 0xD [fmt_n_out]
 ; CHECK-NEXT:   store [6 x i8] c"N=%d\0A\00", ptr %fmt_n_out, align 1
 ; CHECK-NEXT: N=6
 ; CHECK-NEXT:   %res = call noundef range(i32 0, 15) i32 (ptr, ...) @printf(ptr noundef nonnull %fmt_n_out, i32 noundef range(i32 0, 15) 6) => i32 4

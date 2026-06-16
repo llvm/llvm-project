@@ -535,7 +535,6 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.demangle = args.hasFlag(OPT_demangle, OPT_no_demangle, true);
   ctx.arg.disableVerify = args.hasArg(OPT_disable_verify);
   ctx.arg.emitRelocs = args.hasArg(OPT_emit_relocs);
-  ctx.arg.experimentalPic = args.hasArg(OPT_experimental_pic);
   ctx.arg.entry = getEntry(args);
   ctx.arg.exportAll = args.hasArg(OPT_export_all);
   ctx.arg.exportTable = args.hasArg(OPT_export_table);
@@ -562,6 +561,7 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.soName = args.getLastArgValue(OPT_soname);
   ctx.arg.importTable = args.hasArg(OPT_import_table);
   ctx.arg.importUndefined = args.hasArg(OPT_import_undefined);
+  ctx.arg.libcallThreadContext = args.hasArg(OPT_libcall_thread_context);
   ctx.arg.ltoo = args::getInteger(args, OPT_lto_O, 2);
   if (ctx.arg.ltoo > 3)
     error("invalid optimization level for LTO: " + Twine(ctx.arg.ltoo));
@@ -795,28 +795,6 @@ static void checkOptions(opt::InputArgList &args) {
       error("-r and --global-base may not by used together");
   }
 
-  // To begin to prepare for Module Linking-style shared libraries, start
-  // warning about uses of `-shared` and related flags outside of Experimental
-  // mode, to give anyone using them a heads-up that they will be changing.
-  //
-  // Also, warn about flags which request explicit exports.
-  if (!ctx.arg.experimentalPic) {
-    // -shared will change meaning when Module Linking is implemented.
-    if (ctx.arg.shared) {
-      warn("creating shared libraries, with -shared, is not yet stable");
-    }
-
-    // -pie will change meaning when Module Linking is implemented.
-    if (ctx.arg.pie) {
-      warn("creating PIEs, with -pie, is not yet stable");
-    }
-
-    if (ctx.arg.unresolvedSymbols == UnresolvedPolicy::ImportDynamic) {
-      warn("dynamic imports are not yet stable "
-           "(--unresolved-symbols=import-dynamic)");
-    }
-  }
-
   if (ctx.arg.bsymbolic && !ctx.arg.shared) {
     warn("-Bsymbolic is only meaningful when combined with -shared");
   }
@@ -906,6 +884,16 @@ createUndefinedGlobal(StringRef name, llvm::wasm::WasmGlobalType *type) {
   return sym;
 }
 
+static UndefinedFunction *createUndefinedFunction(StringRef name,
+                                                  WasmSignature *signature) {
+  auto *sym = cast<UndefinedFunction>(symtab->addUndefinedFunction(
+      name, std::nullopt, std::nullopt, WASM_SYMBOL_UNDEFINED, nullptr,
+      signature, true));
+  ctx.arg.allowUndefinedSymbols.insert(sym->getName());
+  sym->isUsedInRegularObj = true;
+  return sym;
+}
+
 static InputGlobal *createGlobal(StringRef name, bool isMutable) {
   llvm::wasm::WasmGlobal wasmGlobal;
   bool is64 = ctx.arg.is64.value_or(false);
@@ -940,17 +928,26 @@ static void createSyntheticSymbols() {
                                                             true};
   static llvm::wasm::WasmGlobalType mutableGlobalTypeI64 = {WASM_TYPE_I64,
                                                             true};
+
   ctx.sym.callCtors = symtab->addSyntheticFunction(
       "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
       make<SyntheticFunction>(nullSignature, "__wasm_call_ctors"));
 
   bool is64 = ctx.arg.is64.value_or(false);
 
+  auto stack_pointer_name =
+      ctx.arg.libcallThreadContext ? "__init_stack_pointer" : "__stack_pointer";
   if (ctx.isPic) {
-    ctx.sym.stackPointer =
-        createUndefinedGlobal("__stack_pointer", ctx.arg.is64.value_or(false)
-                                                     ? &mutableGlobalTypeI64
-                                                     : &mutableGlobalTypeI32);
+    if (ctx.arg.libcallThreadContext) {
+      ctx.sym.stackPointer = createUndefinedGlobal(
+          stack_pointer_name,
+          ctx.arg.is64.value_or(false) ? &globalTypeI64 : &globalTypeI32);
+    } else {
+      ctx.sym.stackPointer = createUndefinedGlobal(stack_pointer_name,
+                                                   ctx.arg.is64.value_or(false)
+                                                       ? &mutableGlobalTypeI64
+                                                       : &mutableGlobalTypeI32);
+    }
     // For PIC code, we import two global variables (__memory_base and
     // __table_base) from the environment and use these as the offset at
     // which to load our static data and function table.
@@ -963,14 +960,17 @@ static void createSyntheticSymbols() {
     ctx.sym.tableBase->markLive();
   } else {
     // For non-PIC code
-    ctx.sym.stackPointer = createGlobalVariable("__stack_pointer", true);
-    ctx.sym.stackPointer->markLive();
+    ctx.sym.stackPointer =
+        createGlobalVariable(stack_pointer_name, !ctx.arg.libcallThreadContext);
   }
 
   if (ctx.arg.sharedMemory) {
     // TLS symbols are all hidden/dso-local
+    auto tls_base_name =
+        ctx.arg.libcallThreadContext ? "__init_tls_base" : "__tls_base";
     ctx.sym.tlsBase =
-        createGlobalVariable("__tls_base", true, WASM_SYMBOL_VISIBILITY_HIDDEN);
+        createGlobalVariable(tls_base_name, !ctx.arg.libcallThreadContext,
+                             WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.tlsSize = createGlobalVariable("__tls_size", false,
                                            WASM_SYMBOL_VISIBILITY_HIDDEN);
     ctx.sym.tlsAlign = createGlobalVariable("__tls_align", false,
@@ -979,6 +979,17 @@ static void createSyntheticSymbols() {
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(is64 ? i64ArgSignature : i32ArgSignature,
                                 "__wasm_init_tls"));
+    if (ctx.arg.libcallThreadContext) {
+      ctx.sym.tlsBase->markLive();
+      ctx.sym.tlsSize->markLive();
+      ctx.sym.tlsAlign->markLive();
+      static WasmSignature setTLSBaseSignature{{}, {ValType::I32}};
+      ctx.sym.setTLSBase =
+          createUndefinedFunction("__wasm_set_tls_base", &setTLSBaseSignature);
+      static WasmSignature getTLSBaseSignature{{ValType::I32}, {}};
+      ctx.sym.getTLSBase =
+          createUndefinedFunction("__wasm_get_tls_base", &getTLSBaseSignature);
+    }
   }
 }
 
