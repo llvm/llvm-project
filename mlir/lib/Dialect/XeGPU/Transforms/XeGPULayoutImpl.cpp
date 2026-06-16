@@ -1040,6 +1040,826 @@ computeReductionLaneLayoutAndData(ArrayRef<int64_t> srcShape,
   return {laneLayout, laneData};
 }
 
+//===----------------------------------------------------------------------===//
+// Result/anchor-layout setup. Each op category derives lane_layout/lane_data
+// (and inst_data / sgData) differently. Two things vary across ops:
+//
+//   * Consumer dependence: consumer-driven ops prefer the layout requested by
+//     their downstream uses and fall back to uArch defaults only when it is
+//     absent/invalid; sinks (StoreNd, PrefetchNd) have no consumer and always
+//     pick their own layout from uArch.
+//
+//   * Derivation direction between inst_data and lane_layout/lane_data. Both
+//     obey the Category-A invariant inst_data = k * lane_layout * lane_data
+//     (k >= 1, per dim), but ops solve it from opposite ends:
+//       - Rigid-lane ops (Nd block IO, DPAS): hardware fixes lane_layout /
+//         lane_data first, then inst_data is built as a multiple of their
+//         product (get2DBlockIOInstDataLayout / getDpasInstDataLayouts).
+//       - inst_data-first ops (scatter load): take inst_data from the consumer
+//         and derive lane_layout/lane_data underneath it.
+//
+//   - DPAS (+DPAS_MX)   : rigid lanes — inst_data from HW block dims; A/B/C/D
+//                         lanes/data follow each operand's matmul role; DPAS_MX
+//                         additionally lays out the scale operand.
+//   - LoadNd            : consumer-driven, rigid lanes — honors the consumer's
+//                         inst_data / lane / sg_layout (incl. transpose & VNNI
+//                         packing) when it satisfies uArch block constraints,
+//                         else falls back to the default 2D-block scheme (lanes
+//                         on the last dim, rank-2 if transposed). The fallback
+//                         picks the LARGEST uArch block that divides the data
+//                         shape, so the resulting inst_data block can be bigger
+//                         than what the consumer asked for (fewer, wider
+//                         loads).
+//   - StoreNd/PrefetchNd: data sinks, no consumer, rigid lanes — pick the
+//                         2D-block layout directly from uArch (no VNNI
+//                         packing).
+//   - Load  (scatter)   : load_gather / load_matrix, consumer-driven,
+//                         inst_data-first — reuse the consumer's inst_data and
+//                         derive lane_layout/lane_data, else default to lanes +
+//                         per-lane chunk on the innermost dim (chunk capped by
+//                         maxChunkSize).
+//   - Store (scatter)   : store_scatter / store_matrix — same scatter scheme,
+//                         but always self-derived from the scatter default.
+//   - Reduction         : (multi_)reduction, consumer-driven — distribute the
+//                         inner two dims. Default: lanes stay on the innermost
+//                         dim, even when it is reduced. They only switch to a
+//                         non-reduction dim (to keep the reduction within a
+//                         lane) when the innermost is the sole reduction dim
+//                         AND the consumer has nowhere to broadcast the result
+//                         back (i.e. not a 2D reduction-to-scalar and the
+//                         consumer is not a slice over this reduction dim).
+//                         Reuses the consumer's slice layout when it slices
+//                         exactly the reduction dims, otherwise re-derives.
+//   - BitCast/Interleave: scale the innermost data field by the bitwidth /
+//                         interleave ratio so the source layout divides back
+//                         out.
+//   - InsertStridedSlice: clamp lane_data per dim to fit the inserted slice
+//                         (Lane kind only; sg/inst layouts unsupported).
+//===----------------------------------------------------------------------===//
+
+/// Helper function to compute inst_data vectors for DPAS operands A, B, and
+/// C/D.
+static std::optional<std::tuple<SmallVector<int64_t>, SmallVector<int64_t>,
+                                SmallVector<int64_t>>>
+getDpasInstDataLayouts(
+    VectorType aTy, VectorType bTy, VectorType cdTy,
+    const xegpu::uArch::MMAInstructionInterface *uArchInstruction,
+    const int subgroupSize, bool isDpasMx = false) {
+
+  // M dimension is the second-to-last dim of A (handles batch dims).
+  const unsigned dataALen = aTy.getShape()[aTy.getRank() - 2];
+  auto supportedALen = uArchInstruction->getSupportedM(aTy.getElementType());
+  const int maxALen =
+      xegpu::getLargestDivisor(dataALen, ArrayRef<unsigned>(supportedALen));
+
+  // N dimension is the last dim of B.
+  const unsigned dataBLen = bTy.getShape().back();
+  auto supportedBLen = uArchInstruction->getSupportedN(bTy.getElementType());
+  const int maxBLen =
+      xegpu::getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedBLen));
+
+  auto supportedCLen = uArchInstruction->getSupportedN(cdTy.getElementType());
+  const int maxCLen =
+      xegpu::getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedCLen));
+  if (maxALen == -1 || maxBLen == -1 || maxCLen == -1)
+    return std::nullopt;
+
+  // For DPAS_MX, use getSupportedK to get the scaled K dimension.
+  // assume single element in the returned vector.
+  int kDimSize = subgroupSize;
+  if (isDpasMx) {
+    auto supportedKLen = uArchInstruction->getSupportedK(aTy.getElementType());
+    if (supportedKLen.empty())
+      return std::nullopt;
+    kDimSize = supportedKLen[0];
+  }
+
+  SmallVector<int64_t> instDataA(aTy.getRank(), 1);
+  instDataA[aTy.getRank() - 2] = maxALen;
+  instDataA[aTy.getRank() - 1] = kDimSize;
+  SmallVector<int64_t> instDataB(bTy.getRank(), 1);
+  instDataB[bTy.getRank() - 2] = kDimSize;
+  instDataB[bTy.getRank() - 1] = maxBLen;
+  SmallVector<int64_t> instDataCD(cdTy.getRank(), 1);
+  instDataCD[cdTy.getRank() - 2] = maxALen;
+  instDataCD[cdTy.getRank() - 1] = maxCLen;
+  return std::make_tuple(instDataA, instDataB, instDataCD);
+}
+
+/// Helper function to set up subgroup layouts for DPAS operands A, B, and
+/// C/D. Returns the three layouts if successful, nullopt otherwise.
+static std::optional<
+    std::tuple<xegpu::DistributeLayoutAttr, xegpu::DistributeLayoutAttr,
+               xegpu::DistributeLayoutAttr>>
+getDpasSubgroupLayouts(
+    mlir::MLIRContext *context, VectorType aTy, VectorType bTy, VectorType cdTy,
+    xegpu::DistributeLayoutAttr consumerLayout, int numSg,
+    std::tuple<SmallVector<int64_t>, SmallVector<int64_t>, SmallVector<int64_t>>
+        instDataVecs) {
+  auto [instDataA, instDataB, instDataCD] = instDataVecs;
+
+  std::optional<LayoutRepresentation> consumerSgLayout = std::nullopt;
+  if (consumerLayout && consumerLayout.isForWorkgroup()) {
+    consumerSgLayout = consumerLayout.getEffectiveSgLayoutAsInt();
+  }
+
+  // Get all valid layouts for A, B and C/D operands
+  auto layoutsA = getSgLayoutCandidates(aTy.getShape(), instDataA, numSg);
+  auto layoutsB = getSgLayoutCandidates(bTy.getShape(), instDataB, numSg);
+  auto layoutsCD = getSgLayoutCandidates(cdTy.getShape(), instDataCD, numSg);
+  if (layoutsA.empty() || layoutsB.empty() || layoutsCD.empty())
+    return std::nullopt;
+
+  // Pick the best subgroup layout
+  std::optional<LayoutRepresentation> bestPick;
+  auto checkAlignedSgDataAB = [&](const LayoutRepresentation &sgLayout) {
+    return aTy.getShape().back() / sgLayout[1] ==
+           bTy.getShape().front() / sgLayout[0];
+  };
+  for (auto &sgLayout : layoutsB) {
+    if (llvm::is_contained(layoutsA, sgLayout) &&
+        llvm::is_contained(layoutsCD, sgLayout)) {
+      if (!checkAlignedSgDataAB(sgLayout))
+        continue;
+      // Is in (A and B and CD) and matches consumer -> best pick
+      if (consumerSgLayout.has_value() && sgLayout == *consumerSgLayout) {
+        bestPick = sgLayout;
+        break;
+      }
+      // Is in (A and B and CD) layoutsB is ordered from most
+      // balanced to least. So the first one we see is the most balanced one,
+      // remember it and later only update if there is one that matches the
+      // consumer.
+      if (!bestPick)
+        bestPick = sgLayout;
+    }
+  }
+  if (!bestPick)
+    return std::nullopt;
+
+  const auto &picked = *bestPick;
+
+  auto dpasALayout = buildSgLayout(context, aTy.getShape(), picked,
+                                   /*dimK=*/aTy.getRank() - 1);
+  auto dpasBLayout = buildSgLayout(context, bTy.getShape(), picked,
+                                   /*dimK=*/bTy.getRank() - 2);
+  auto dpasCDLayout = buildSgLayout(context, cdTy.getShape(), picked);
+  return std::make_tuple(dpasALayout, dpasBLayout, dpasCDLayout);
+}
+
+/// Sets up the anchor layouts for dpas operands (A, B, and C/D).
+/// The numSg and consumerLayout (optional) are only used by sg layout
+/// creation.
+std::optional<
+    std::tuple<xegpu::DistributeLayoutAttr, xegpu::DistributeLayoutAttr,
+               xegpu::DistributeLayoutAttr>>
+xegpu::setupDpasLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
+                       VectorType bTy, VectorType cdTy,
+                       xegpu::DistributeLayoutAttr consumerLayout, int numSg,
+                       const xegpu::uArch::uArch *uArch) {
+  auto context = aTy.getContext();
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(uArch->getInstruction(
+          xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
+  if (!uArchInstruction)
+    return std::nullopt;
+  auto subgroupSize = uArch->getSubgroupSize();
+
+  auto [laneLayoutA, laneDataA] = compute2DBlockIOLaneLayoutAndData(
+      aTy.getShape(), subgroupSize,
+      aTy.getElementType().getIntOrFloatBitWidth(),
+      uArchInstruction->getPackedFormatBitSizeA());
+  auto [laneLayoutB, laneDataB] = compute2DBlockIOLaneLayoutAndData(
+      bTy.getShape(), subgroupSize,
+      bTy.getElementType().getIntOrFloatBitWidth(),
+      uArchInstruction->getPackedFormatBitSizeB(), /*vnni=*/true);
+  auto [laneLayoutCD, laneDataCD] = compute2DBlockIOLaneLayoutAndData(
+      cdTy.getShape(), subgroupSize,
+      cdTy.getElementType().getIntOrFloatBitWidth(),
+      cdTy.getElementType().getIntOrFloatBitWidth());
+
+  auto instDataVecs =
+      getDpasInstDataLayouts(aTy, bTy, cdTy, uArchInstruction, subgroupSize);
+  if (!instDataVecs)
+    return std::nullopt;
+
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    assert(numSg > 0 &&
+           "Number of subgroups must be provided for sg layout creation.");
+    return getDpasSubgroupLayouts(context, aTy, bTy, cdTy, consumerLayout,
+                                  numSg, *instDataVecs);
+  } else if (layoutKind == xegpu::LayoutKind::InstData) {
+    auto [instDataA, instDataB, instDataCD] = *instDataVecs;
+    return std::make_tuple(
+        buildInstDataLayoutWithLane(context, instDataA, laneLayoutA, laneDataA),
+        buildInstDataLayoutWithLane(context, instDataB, laneLayoutB, laneDataB),
+        buildInstDataLayoutWithLane(context, instDataCD, laneLayoutCD,
+                                    laneDataCD));
+  } else if (layoutKind == xegpu::LayoutKind::Lane) {
+    auto aLayout = buildLaneLayout(context, laneLayoutA, laneDataA);
+    auto bLayout = buildLaneLayout(context, laneLayoutB, laneDataB);
+    auto cdLayout = buildLaneLayout(context, laneLayoutCD, laneDataCD);
+    return std::make_tuple(aLayout, bLayout, cdLayout);
+  }
+  return std::nullopt;
+}
+
+/// Helper to create a scale layout derived from a matrix operand layout.
+/// The scale layout is computed by mapping each dimension of the matrix
+/// layout to the corresponding scale tensor dimension using the ratio
+/// between the matrix and scale shapes.
+static xegpu::DistributeLayoutAttr
+createScaleLayout(mlir::MLIRContext *context, VectorType matrixTy,
+                  VectorType scaleTy, xegpu::DistributeLayoutAttr matrixLayout,
+                  bool isBScale, const xegpu::uArch::uArch *uArch) {
+  if (!scaleTy || !matrixLayout)
+    return nullptr;
+
+  // Calculate scaling factor by dividing matrix shape by scale shape
+  ArrayRef<int64_t> matrixShape = matrixTy.getShape();
+  ArrayRef<int64_t> scaleShape = scaleTy.getShape();
+
+  // Scale shapes can be 1D or 2D, handle both cases
+  if (scaleShape.empty())
+    return nullptr;
+
+  auto uArchInstruction =
+      dyn_cast<xegpu::uArch::SubgroupScaledMatrixMultiplyAcc>(
+          uArch->getInstruction(
+              xegpu::uArch::InstructionKind::SubgroupScaledMatrixMultiplyAcc));
+
+  int64_t rank = matrixLayout.getRank();
+  assert(rank >= 2 && "dpas layouts must be at least two dimensions");
+
+  SmallVector<int64_t> sgLayout = matrixLayout.getEffectiveSgLayoutAsInt();
+  SmallVector<int64_t> sgData = matrixLayout.getEffectiveSgDataAsInt();
+  SmallVector<int64_t> instData = matrixLayout.getEffectiveInstDataAsInt();
+  SmallVector<int64_t> laneLayout = matrixLayout.getEffectiveLaneLayoutAsInt();
+  SmallVector<int64_t> laneData = matrixLayout.getEffectiveLaneDataAsInt();
+  auto order = matrixLayout.getOrder();
+
+  SmallVector<int64_t> scaleSgLayout;
+  SmallVector<int64_t> scaleSgData;
+  if (!sgLayout.empty() && !sgData.empty()) {
+    scaleSgLayout.assign(sgLayout.begin(), sgLayout.end());
+    scaleSgData.assign(sgData.begin(), sgData.end());
+    scaleSgData[rank - 2] = std::max<int64_t>(
+        scaleShape[rank - 2] / (matrixShape[rank - 2] / sgData[rank - 2]), 1);
+    scaleSgData[rank - 1] = std::max<int64_t>(
+        scaleShape[rank - 1] / (matrixShape[rank - 1] / sgData[rank - 1]), 1);
+  }
+
+  // For DPAS_MX scales: if matrix has inst_data, scale needs adjusted
+  // inst_data. Scale inst_data is derived from matrix inst_data divided by
+  // scale factor.
+  SmallVector<int64_t> scaleInstData;
+  if (!instData.empty()) {
+    scaleInstData.assign(instData.begin(), instData.end());
+    if (isBScale)
+      scaleInstData[rank - 2] = std::max<int64_t>(
+          scaleShape[rank - 2] / (matrixShape[rank - 2] / instData[rank - 2]),
+          1);
+    else
+      scaleInstData[rank - 1] = std::max<int64_t>(
+          scaleShape[rank - 1] / (matrixShape[rank - 1] / instData[rank - 1]),
+          1);
+  }
+
+  SmallVector<int64_t> scaleLaneLayout;
+  SmallVector<int64_t> scaleLaneData;
+  if (!laneLayout.empty() && !laneData.empty()) {
+    scaleLaneLayout.assign(laneLayout.begin(), laneLayout.end());
+    scaleLaneData.assign(laneData.size(), 1);
+
+    bool isRowMajor = uArchInstruction->isLaneLayoutRowMajorOrder();
+    if (isBScale ^ isRowMajor)
+      std::swap(scaleLaneLayout[rank - 2], scaleLaneLayout[rank - 1]);
+    // Cap lane_layout by the per-instruction tile (inst_data) on each dim.
+    // Then derive lane_data = inst_data / lane_layout so the Category A
+    // invariant inst_data = lane_layout * lane_data * k (with k = 1) holds
+    // for the scale operand's load_nd consumer.
+    auto layoutCap = scaleInstData.empty() ? scaleShape : scaleInstData;
+    for (int64_t d = rank - 2; d < rank; ++d)
+      scaleLaneLayout[d] = std::min<int64_t>(layoutCap[d], scaleLaneLayout[d]);
+  }
+  return buildLayout(context, scaleSgLayout, scaleSgData, scaleInstData,
+                     scaleLaneLayout, scaleLaneData, order);
+}
+
+/// Sets up the anchor layouts for dpas_mx operands (A, B, C/D, A_scale, and
+/// B_scale). The numSg and consumerLayout (optional) are only used by sg
+/// layout creation.
+std::optional<
+    std::tuple<xegpu::DistributeLayoutAttr, xegpu::DistributeLayoutAttr,
+               xegpu::DistributeLayoutAttr, xegpu::DistributeLayoutAttr,
+               xegpu::DistributeLayoutAttr>>
+xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
+                         VectorType bTy, VectorType cdTy, VectorType aScaleTy,
+                         VectorType bScaleTy,
+                         xegpu::DistributeLayoutAttr consumerLayout, int numSg,
+                         const xegpu::uArch::uArch *uArch) {
+  auto context = aTy.getContext();
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(uArch->getInstruction(
+          xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
+  if (!uArchInstruction)
+    return std::nullopt;
+  auto subgroupSize = uArch->getSubgroupSize();
+
+  auto [laneLayoutA, laneDataA] = compute2DBlockIOLaneLayoutAndData(
+      aTy.getShape(), subgroupSize,
+      aTy.getElementType().getIntOrFloatBitWidth(),
+      uArchInstruction->getPackedFormatBitSizeA());
+  auto [laneLayoutB, laneDataB] = compute2DBlockIOLaneLayoutAndData(
+      bTy.getShape(), subgroupSize,
+      bTy.getElementType().getIntOrFloatBitWidth(),
+      uArchInstruction->getPackedFormatBitSizeB(), /*vnni=*/true);
+  auto [laneLayoutCD, laneDataCD] = compute2DBlockIOLaneLayoutAndData(
+      cdTy.getShape(), subgroupSize,
+      cdTy.getElementType().getIntOrFloatBitWidth(),
+      cdTy.getElementType().getIntOrFloatBitWidth());
+  auto instDataVecs = getDpasInstDataLayouts(aTy, bTy, cdTy, uArchInstruction,
+                                             subgroupSize, /*isDpasMx=*/true);
+  if (!instDataVecs)
+    return std::nullopt;
+
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    assert(numSg > 0 &&
+           "Number of subgroups must be provided for sg layout creation.");
+    auto dpasLayouts = getDpasSubgroupLayouts(
+        context, aTy, bTy, cdTy, consumerLayout, numSg, *instDataVecs);
+    if (!dpasLayouts)
+      return std::nullopt;
+
+    auto [dpasALayout, dpasBLayout, dpasCDLayout] = *dpasLayouts;
+
+    // Create scale layouts
+    auto aScaleLayout =
+        createScaleLayout(context, aTy, aScaleTy, dpasALayout, false, uArch);
+
+    auto bScaleLayout =
+        createScaleLayout(context, bTy, bScaleTy, dpasBLayout, true, uArch);
+
+    return std::make_tuple(dpasALayout, dpasBLayout, dpasCDLayout, aScaleLayout,
+                           bScaleLayout);
+  } else if (layoutKind == xegpu::LayoutKind::InstData) {
+
+    auto [instDataA, instDataB, instDataCD] = *instDataVecs;
+
+    auto dpasALayout =
+        buildInstDataLayoutWithLane(context, instDataA, laneLayoutA, laneDataA);
+    auto dpasBLayout =
+        buildInstDataLayoutWithLane(context, instDataB, laneLayoutB, laneDataB);
+    auto dpasCDLayout = buildInstDataLayoutWithLane(context, instDataCD,
+                                                    laneLayoutCD, laneDataCD);
+
+    auto aScaleLayout =
+        createScaleLayout(context, aTy, aScaleTy, dpasALayout, false, uArch);
+    auto bScaleLayout =
+        createScaleLayout(context, bTy, bScaleTy, dpasBLayout, true, uArch);
+
+    return std::make_tuple(dpasALayout, dpasBLayout, dpasCDLayout, aScaleLayout,
+                           bScaleLayout);
+  } else if (layoutKind == xegpu::LayoutKind::Lane) {
+    auto dpasALayout = buildLaneLayout(context, laneLayoutA, laneDataA);
+    auto dpasBLayout = buildLaneLayout(context, laneLayoutB, laneDataB);
+    auto dpasCDLayout = buildLaneLayout(context, laneLayoutCD, laneDataCD);
+
+    auto aScaleLayout =
+        createScaleLayout(context, aTy, aScaleTy, dpasALayout, false, uArch);
+    auto bScaleLayout =
+        createScaleLayout(context, bTy, bScaleTy, dpasBLayout, true, uArch);
+
+    return std::make_tuple(dpasALayout, dpasBLayout, dpasCDLayout, aScaleLayout,
+                           bScaleLayout);
+  }
+  return std::nullopt;
+}
+
+/// Generic anchor-layout setup for ND ops (load_nd, store_nd, prefetch_nd).
+///
+/// Given hardware-supported block widths/heights, picks the largest divisor
+/// of the trailing two dims of `dataShape` as the default `inst_data`. The
+/// lane layout is the standard 2D-block-IO default (subgroupSize lanes on the
+/// innermost dim, optional packing on the innermost dim).
+///
+/// `consumerLayout` (optional) is honored when its parameters are valid w.r.t.
+/// the uArch constraints; otherwise the helper falls back to defaults.
+///
+/// For Lane kind: returns just the lane layout / lane data (consumer ignored;
+///   lane layout is fully determined by hardware).
+/// For InstData kind: returns inst_data + lane_layout/lane_data (Category A:
+///   inst_data = k * lane_layout * lane_data, k >= 1). Honors consumer's
+///   inst_data when it is uArch-valid.
+/// For Subgroup kind: if the consumer specifies a workgroup-level layout,
+///   reuses it directly; otherwise picks the most balanced sg_layout via
+///   `getSgLayoutCandidates` (requires `numSg`).
+static xegpu::DistributeLayoutAttr setupGenericNdAnchorLayout(
+    xegpu::LayoutKind layoutKind, mlir::MLIRContext *context,
+    ArrayRef<int64_t> dataShape, Type elemTy, ArrayRef<int> bWidths,
+    ArrayRef<int> bHeights, unsigned packingSize, int numSg,
+    const xegpu::uArch::uArch *uArch) {
+  int rank = dataShape.size();
+  assert(rank >= 1 && "Expected at least 1D shape for ND op");
+
+  // Compute the default 2D block IO lane layout / lane data.
+  unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
+  auto [laneLayout, laneData] =
+      compute2DBlockIOLaneLayoutAndData(dataShape, uArch->getSubgroupSize(),
+                                        bitwidth, packingSize, /*vnni=*/false);
+
+  if (layoutKind == xegpu::LayoutKind::Lane)
+    return buildLaneLayout(context, laneLayout, laneData);
+
+  auto instData = get2DBlockIOInstDataLayout(dataShape, bWidths, bHeights,
+                                             laneLayout, laneData);
+
+  if (layoutKind == xegpu::LayoutKind::InstData)
+    return buildInstDataLayoutWithLane(context, *instData, laneLayout,
+                                       laneData);
+
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    assert(numSg > 0 &&
+           "Number of subgroups must be provided for sg layout creation.");
+    auto sgLayouts = getSgLayoutCandidates(dataShape, *instData, numSg);
+    if (sgLayouts.empty())
+      return nullptr;
+    return buildSgLayout(context, dataShape, sgLayouts.front(), /*dimK=*/-1);
+  }
+
+  return nullptr;
+}
+
+/// Sets up the anchor layout for a store_nd operation. StoreNd picks its
+/// own layout based on uArch block parameters (it does not take a consumer
+/// layout, since it is a data sink).
+xegpu::DistributeLayoutAttr
+xegpu::setupStoreNdAnchorLayout(xegpu::LayoutKind layoutKind,
+                                VectorType srcVecTy, int numSg,
+                                const xegpu::uArch::uArch *uArch) {
+  auto context = srcVecTy.getContext();
+  Type elemTy = srcVecTy.getElementType();
+
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::Subgroup2DBlockStoreInstruction>(
+          uArch->getInstruction(
+              xegpu::uArch::InstructionKind::Subgroup2DBlockStore));
+  if (!uArchInstruction)
+    return nullptr;
+  auto blockWHC = uArchInstruction->getBlockWidthHeightCount(elemTy);
+  if (!blockWHC)
+    return nullptr;
+  auto [bWidths, bHeights, bCounts] = blockWHC.value();
+  unsigned packingSize = uArchInstruction->getPackedFormatBitSize();
+
+  return setupGenericNdAnchorLayout(layoutKind, context, srcVecTy.getShape(),
+                                    elemTy, bWidths, bHeights, packingSize,
+                                    numSg, uArch);
+}
+
+/// Sets up the anchor layout for a prefetch_nd operation. PrefetchNd has no
+/// consumer (it produces no value), so it picks its own layout from uArch
+/// block parameters.
+xegpu::DistributeLayoutAttr
+xegpu::setupPrefetchNdAnchorLayout(xegpu::LayoutKind layoutKind,
+                                   xegpu::TensorDescType tdescTy, int numSg,
+                                   const xegpu::uArch::uArch *uArch) {
+  auto context = tdescTy.getContext();
+  Type elemTy = tdescTy.getElementType();
+
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::Subgroup2DBlockPrefetchInstruction>(
+          uArch->getInstruction(
+              xegpu::uArch::InstructionKind::Subgroup2DBlockPrefetch));
+  if (!uArchInstruction)
+    return nullptr;
+  auto blockWHC = uArchInstruction->getBlockWidthHeightCount(elemTy);
+  if (!blockWHC)
+    return nullptr;
+  auto [bWidths, bHeights, bCounts] = blockWHC.value();
+  unsigned packingSize = uArchInstruction->getPackedFormatBitSize();
+
+  return setupGenericNdAnchorLayout(layoutKind, context, tdescTy.getShape(),
+                                    elemTy, bWidths, bHeights, packingSize,
+                                    numSg, uArch);
+}
+
+/// Sets up the anchor layout for a load_nd operation. LoadNd takes a
+/// consumer layout (from its result's downstream uses) and validates it
+/// against uArch constraints; if valid, the consumer's `inst_data` /
+/// `sg_layout` are honored. Otherwise the helper falls back to defaults
+/// derived from uArch block parameters.
+xegpu::DistributeLayoutAttr
+xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
+                               VectorType resVecTy,
+                               xegpu::DistributeLayoutAttr consumerLayout,
+                               int numSg, const xegpu::uArch::uArch *uArch) {
+
+  assert(consumerLayout && "Expected a valid consumer layout");
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    assert(consumerLayout.isForWorkgroup() &&
+           "Expected consumer layout to be a complete workgroup-level layout");
+    return consumerLayout;
+  }
+
+  auto context = resVecTy.getContext();
+  Type elemTy = resVecTy.getElementType();
+  auto subgroupSize = uArch->getSubgroupSize();
+  auto dataShape = resVecTy.getShape();
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::Subgroup2DBlockLoadInstruction>(
+          uArch->getInstruction(
+              xegpu::uArch::InstructionKind::Subgroup2DBlockLoad));
+  if (!uArchInstruction)
+    return nullptr;
+
+  int rank = resVecTy.getRank();
+  SmallVector<int64_t> consumerInstData =
+      consumerLayout.getEffectiveInstDataAsInt();
+  SmallVector<int64_t> consumerLaneLayout =
+      consumerLayout.getEffectiveLaneLayoutAsInt();
+  SmallVector<int64_t> consumerLaneData =
+      consumerLayout.getEffectiveLaneDataAsInt();
+  SmallVector<int64_t> consumerOrder = consumerLayout.getEffectiveOrderAsInt();
+
+  assert(!consumerLaneLayout.empty() && !consumerLaneData.empty() &&
+         "Expected consumer layout to have lane_layout and lane_data");
+
+  bool hasTransform = consumerLaneData[rank - 2] != 1;
+  bool hasTranspose = consumerLaneLayout[rank - 2] != 1;
+  unsigned packingFactor =
+      hasTransform ? consumerLaneData[rank - 2] : consumerLaneData[rank - 1];
+  unsigned packingSize = packingFactor * elemTy.getIntOrFloatBitWidth();
+
+  auto blockWHC = uArchInstruction->getBlockWidthHeightCount(
+      elemTy, hasTransform, hasTranspose,
+      /*upConv=*/false);
+  if (!blockWHC)
+    return nullptr;
+  auto [bWidths, bHeights, bCounts] = blockWHC.value();
+
+  if (layoutKind == xegpu::LayoutKind::InstData) {
+    int64_t height = consumerInstData[rank - 2];
+    int64_t width = consumerInstData[rank - 1];
+    auto maxBlockCount = *llvm::max_element(bCounts);
+    auto maxWidth = *llvm::max_element(bWidths);
+    if (llvm::is_contained(bWidths, static_cast<int>(width)) ||
+        (width % maxWidth == 0 && width / maxWidth < maxBlockCount)) {
+      if (llvm::is_contained(bHeights, static_cast<int>(height))) {
+        return buildInstDataLayoutWithLane(context, consumerInstData,
+                                           consumerLaneLayout, consumerLaneData,
+                                           consumerLayout.getOrder());
+      }
+    }
+
+    auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
+        dataShape, subgroupSize, elemTy.getIntOrFloatBitWidth(), packingSize,
+        hasTransform, hasTranspose);
+    auto instData = get2DBlockIOInstDataLayout(dataShape, bWidths, bHeights,
+                                               laneLayout, laneData);
+
+    return buildInstDataLayoutWithLane(context, *instData, laneLayout,
+                                       laneData);
+  }
+  if (layoutKind == xegpu::LayoutKind::Lane) {
+    bool validLaneLayout = true;
+    for (int dim = 0; dim < rank; ++dim) {
+      int64_t laneProduct = consumerLaneLayout[dim] * consumerLaneData[dim];
+      if (dataShape[dim] % laneProduct != 0)
+        validLaneLayout = false;
+    }
+    if (validLaneLayout) {
+      return consumerLayout;
+    } else {
+      auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
+          dataShape, subgroupSize, elemTy.getIntOrFloatBitWidth(), packingSize,
+          hasTransform, hasTranspose);
+      return buildLaneLayout(context, laneLayout, laneData);
+    }
+  }
+  return nullptr;
+}
+
+/// Sets up the anchor layout for load gather and load matrix operation.
+/// load matrix lowers to load gather and 1d block load. All of them share the
+/// same layout setup logic.
+///
+/// For Subgroup layout, uses the consumer layout directly.
+///
+/// For InstData layout, takes consumer's inst_data as-is. lane_layout and
+/// lane_data are taken from the consumer when present; otherwise the helper
+/// derives the standard scatter-style default (subgroupSize lanes on the
+/// innermost dim, per-lane vector capped by maxChunkSize).
+///
+/// For Lane layout, lane_layout/lane_data are taken from the consumer when
+/// present; otherwise derived from the same default.
+static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
+    xegpu::LayoutKind layoutKind, mlir::MLIRContext *context,
+    xegpu::DistributeLayoutAttr consumerLayout, int maxChunkSize,
+    ArrayRef<int64_t> resShape, int subgroupSize) {
+
+  if (layoutKind == xegpu::LayoutKind::Subgroup)
+    return consumerLayout;
+
+  SmallVector<int64_t> consumerInstData =
+      consumerLayout.getEffectiveInstDataAsInt();
+  SmallVector<int64_t> consumerLaneLayout =
+      consumerLayout.getEffectiveLaneLayoutAsInt();
+  SmallVector<int64_t> consumerLaneData =
+      consumerLayout.getEffectiveLaneDataAsInt();
+
+  // Pick lane_layout / lane_data: prefer consumer's, fall back to the
+  // scatter-store default (subgroupSize lanes on innermost dim, per-lane
+  // vector capped by maxChunkSize).
+  SmallVector<int64_t> laneLayout;
+  SmallVector<int64_t> laneData;
+  if (!consumerLaneLayout.empty() && !consumerLaneData.empty()) {
+    laneLayout.assign(consumerLaneLayout.begin(), consumerLaneLayout.end());
+    laneData.assign(consumerLaneData.begin(), consumerLaneData.end());
+  } else {
+    auto [LaneLayout, LaneData] =
+        computeScatterIOLaneLayoutAndData(resShape, subgroupSize, maxChunkSize);
+  }
+
+  if (layoutKind == xegpu::LayoutKind::InstData) {
+    // Take consumer's inst_data as-is. If the consumer doesn't have one,
+    // fall back to lane_layout * lane_data per dim.
+    SmallVector<int64_t> instData;
+    if (!consumerInstData.empty()) {
+      instData.assign(consumerInstData.begin(), consumerInstData.end());
+    } else {
+      instData.resize(resShape.size());
+      for (size_t i = 0; i < resShape.size(); ++i)
+        instData[i] = laneLayout[i] * laneData[i];
+    }
+    return buildInstDataLayoutWithLane(context, instData, laneLayout, laneData);
+  }
+  if (layoutKind == xegpu::LayoutKind::Lane)
+    return buildLaneLayout(context, laneLayout, laneData);
+  return nullptr;
+}
+
+/// Sets up the anchor layout for a load gather operation.
+xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
+    xegpu::LayoutKind layoutKind, VectorType resVecTy, int contigChunkSize,
+    xegpu::DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch) {
+
+  const int subgroupSize = uArch->getSubgroupSize();
+  ArrayRef<int64_t> resShape = resVecTy.getShape();
+  auto context = resVecTy.getContext();
+  auto elemBitWidth = resVecTy.getElementType().getIntOrFloatBitWidth();
+
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
+          uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
+  int maxChunkSize = std::min(
+      uArchInstruction->getMaxLaneLoadSize(elemBitWidth), contigChunkSize);
+
+  return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
+                                      maxChunkSize, resShape, subgroupSize);
+}
+
+/// Sets up the anchor layout for load matrix operation.
+/// TODO: enhance load matrix to indicate lowering to chunked load or not.
+xegpu::DistributeLayoutAttr
+xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
+                                   VectorType resVecTy, int contigChunkSize,
+                                   xegpu::DistributeLayoutAttr consumerLayout,
+                                   const xegpu::uArch::uArch *uArch) {
+
+  const int subgroupSize = uArch->getSubgroupSize();
+  ArrayRef<int64_t> resShape = resVecTy.getShape();
+  auto context = resVecTy.getContext();
+  auto elemBitWidth = resVecTy.getElementType().getIntOrFloatBitWidth();
+
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
+          uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
+  int maxChunkSize = std::min(
+      uArchInstruction->getMaxLaneLoadSize(elemBitWidth), contigChunkSize);
+  return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
+                                      maxChunkSize, resShape, subgroupSize);
+}
+
+/// Sets up the anchor layout for store scatter and store matrix operation.
+/// store matrix lowers to store scatter and 1d block store. All of them
+/// share the same layout setup logic. For Subgroup layout, not supported
+/// yet.
+///
+/// Lane layout is derived first via `computeScatterIOLaneLayoutAndData`;
+/// inst_data is then the element-wise product lane_layout * lane_data.
+static xegpu::DistributeLayoutAttr
+setupGenericStoreAnchorLayout(xegpu::LayoutKind layoutKind,
+                              mlir::MLIRContext *context, int maxChunkSize,
+                              ArrayRef<int64_t> srcShape, int subgroupSize) {
+
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    assert(true &&
+           "subgroup layout assignment not supported for storeScatter.");
+    return nullptr;
+  }
+
+  auto [laneLayout, laneData] =
+      computeScatterIOLaneLayoutAndData(srcShape, subgroupSize, maxChunkSize);
+
+  if (layoutKind == xegpu::LayoutKind::InstData) {
+    SmallVector<int64_t> instData(srcShape.size());
+    for (size_t i = 0; i < srcShape.size(); ++i)
+      instData[i] = laneLayout[i] * laneData[i];
+    return buildInstDataLayoutWithLane(context, instData, laneLayout, laneData);
+  }
+  if (layoutKind == xegpu::LayoutKind::Lane) {
+    return buildLaneLayout(context, laneLayout, laneData);
+  }
+  return nullptr;
+}
+
+/// Sets up the anchor layout for a store scatter operation.
+xegpu::DistributeLayoutAttr
+xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
+                                     VectorType srcVecTy, int contigChunkSize,
+                                     const uArch::uArch *uArch) {
+
+  const int subgroupSize = uArch->getSubgroupSize();
+  ArrayRef<int64_t> srcShape = srcVecTy.getShape();
+  auto context = srcVecTy.getContext();
+  auto elemBitWidth = srcVecTy.getElementType().getIntOrFloatBitWidth();
+
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
+          uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
+  int maxChunkSize = std::min(
+      uArchInstruction->getMaxLaneStoreSize(elemBitWidth), contigChunkSize);
+  return setupGenericStoreAnchorLayout(layoutKind, context, maxChunkSize,
+                                       srcShape, subgroupSize);
+}
+
+/// Sets up the anchor layout for a store matrix operation.
+xegpu::DistributeLayoutAttr
+xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
+                                    VectorType srcVecTy, int contigChunkSize,
+                                    const xegpu::uArch::uArch *uArch) {
+
+  const int subgroupSize = uArch->getSubgroupSize();
+  ArrayRef<int64_t> srcShape = srcVecTy.getShape();
+  auto context = srcVecTy.getContext();
+  auto elemBitWidth = srcVecTy.getElementType().getIntOrFloatBitWidth();
+
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
+          uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
+  int maxChunkSize = std::min(
+      uArchInstruction->getMaxLaneStoreSize(elemBitWidth), contigChunkSize);
+
+  return setupGenericStoreAnchorLayout(layoutKind, context, maxChunkSize,
+                                       srcShape, subgroupSize);
+}
+
+/// Completes a scatter IO layout by deriving lane_layout and lane_data from
+/// inst_data when they are missing. If `consumerLayout` already has both
+/// lane_layout and lane_data, or has no inst_data, the layout is returned
+/// unchanged.
+///
+/// When lane info is absent, this function uses inst_data as the effective
+/// shape and computes the standard scatter-style lane factorization:
+///   - laneLayout[innermost] = min(subgroupSize, inst_data[innermost])
+///   - laneData[innermost]   = min(inst_data[innermost] /
+///   laneLayout[innermost],
+///                                 maxChunkSize)
+///
+/// The returned layout carries inst_data + lane_layout + lane_data, ensuring
+/// the lane factorization is consistent with what the downstream load/store
+/// scatter anchor setup would produce.
+xegpu::DistributeLayoutAttr xegpu::completeScatterIOLaneLayoutFromInstData(
+    xegpu::DistributeLayoutAttr consumerLayout, Type elemTy,
+    const xegpu::uArch::uArch *uArch) {
+  if (!consumerLayout)
+    return consumerLayout;
+  SmallVector<int64_t> instData = consumerLayout.getEffectiveInstDataAsInt();
+  if (instData.empty())
+    return consumerLayout;
+  if (!consumerLayout.getEffectiveLaneLayoutAsInt().empty() &&
+      !consumerLayout.getEffectiveLaneDataAsInt().empty())
+    return consumerLayout;
+
+  // Reuse the load-side setup with inst_data as the destination shape.
+  const int subgroupSize = uArch->getSubgroupSize();
+  auto *context = consumerLayout.getContext();
+  auto elemBitWidth = elemTy.getIntOrFloatBitWidth();
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
+          uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
+  if (!uArchInstruction)
+    return consumerLayout;
+  int maxChunkSize = uArchInstruction->getMaxLaneLoadSize(elemBitWidth);
+
+  auto [defLaneLayout, defLaneData] =
+      computeScatterIOLaneLayoutAndData(instData, subgroupSize, maxChunkSize);
+
+  return buildInstDataLayoutWithLane(context, instData, defLaneLayout,
+                                     defLaneData);
+}
+
 /// Sets up layout for reduction operations by creating a SliceAttr for the
 /// result.
 ///
@@ -1446,769 +2266,12 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
   return requiredResLayout;
 }
 
-/// Sets up the anchor layout for load gather and load matrix operation.
-/// load matrix lowers to load gather and 1d block load. All of them share the
-/// same layout setup logic.
-///
-/// For Subgroup layout, uses the consumer layout directly.
-///
-/// For InstData layout, takes consumer's inst_data as-is. lane_layout and
-/// lane_data are taken from the consumer when present; otherwise the helper
-/// derives the standard scatter-style default (subgroupSize lanes on the
-/// innermost dim, per-lane vector capped by maxChunkSize).
-///
-/// For Lane layout, lane_layout/lane_data are taken from the consumer when
-/// present; otherwise derived from the same default.
-static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
-    xegpu::LayoutKind layoutKind, mlir::MLIRContext *context,
-    xegpu::DistributeLayoutAttr consumerLayout, int maxChunkSize,
-    ArrayRef<int64_t> resShape, int subgroupSize) {
-
-  if (layoutKind == xegpu::LayoutKind::Subgroup)
-    return consumerLayout;
-
-  SmallVector<int64_t> consumerInstData =
-      consumerLayout.getEffectiveInstDataAsInt();
-  SmallVector<int64_t> consumerLaneLayout =
-      consumerLayout.getEffectiveLaneLayoutAsInt();
-  SmallVector<int64_t> consumerLaneData =
-      consumerLayout.getEffectiveLaneDataAsInt();
-
-  // Pick lane_layout / lane_data: prefer consumer's, fall back to the
-  // scatter-store default (subgroupSize lanes on innermost dim, per-lane
-  // vector capped by maxChunkSize).
-  SmallVector<int64_t> laneLayout;
-  SmallVector<int64_t> laneData;
-  if (!consumerLaneLayout.empty() && !consumerLaneData.empty()) {
-    laneLayout.assign(consumerLaneLayout.begin(), consumerLaneLayout.end());
-    laneData.assign(consumerLaneData.begin(), consumerLaneData.end());
-  } else {
-    auto [LaneLayout, LaneData] =
-        computeScatterIOLaneLayoutAndData(resShape, subgroupSize, maxChunkSize);
-  }
-
-  if (layoutKind == xegpu::LayoutKind::InstData) {
-    // Take consumer's inst_data as-is. If the consumer doesn't have one,
-    // fall back to lane_layout * lane_data per dim.
-    SmallVector<int64_t> instData;
-    if (!consumerInstData.empty()) {
-      instData.assign(consumerInstData.begin(), consumerInstData.end());
-    } else {
-      instData.resize(resShape.size());
-      for (size_t i = 0; i < resShape.size(); ++i)
-        instData[i] = laneLayout[i] * laneData[i];
-    }
-    return buildInstDataLayoutWithLane(context, instData, laneLayout, laneData);
-  }
-  if (layoutKind == xegpu::LayoutKind::Lane)
-    return buildLaneLayout(context, laneLayout, laneData);
-  return nullptr;
-}
-
-/// Sets up the anchor layout for a load gather operation.
-xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
-    xegpu::LayoutKind layoutKind, VectorType resVecTy, int contigChunkSize,
-    xegpu::DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch) {
-
-  const int subgroupSize = uArch->getSubgroupSize();
-  ArrayRef<int64_t> resShape = resVecTy.getShape();
-  auto context = resVecTy.getContext();
-  auto elemBitWidth = resVecTy.getElementType().getIntOrFloatBitWidth();
-
-  const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
-          uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
-  int maxChunkSize = std::min(
-      uArchInstruction->getMaxLaneLoadSize(elemBitWidth), contigChunkSize);
-
-  return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
-                                      maxChunkSize, resShape, subgroupSize);
-}
-
-/// Sets up the anchor layout for load matrix operation.
-/// TODO: enhance load matrix to indicate lowering to chunked load or not.
-xegpu::DistributeLayoutAttr
-xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
-                                   VectorType resVecTy, int contigChunkSize,
-                                   xegpu::DistributeLayoutAttr consumerLayout,
-                                   const xegpu::uArch::uArch *uArch) {
-
-  const int subgroupSize = uArch->getSubgroupSize();
-  ArrayRef<int64_t> resShape = resVecTy.getShape();
-  auto context = resVecTy.getContext();
-  auto elemBitWidth = resVecTy.getElementType().getIntOrFloatBitWidth();
-
-  const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
-          uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
-  int maxChunkSize = std::min(
-      uArchInstruction->getMaxLaneLoadSize(elemBitWidth), contigChunkSize);
-  return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
-                                      maxChunkSize, resShape, subgroupSize);
-}
-
-/// Sets up the anchor layout for store scatter and store matrix operation.
-/// store matrix lowers to store scatter and 1d block store. All of them
-/// share the same layout setup logic. For Subgroup layout, not supported
-/// yet.
-///
-/// Lane layout is derived first via `computeScatterIOLaneLayoutAndData`;
-/// inst_data is then the element-wise product lane_layout * lane_data.
-static xegpu::DistributeLayoutAttr
-setupGenericStoreAnchorLayout(xegpu::LayoutKind layoutKind,
-                              mlir::MLIRContext *context, int maxChunkSize,
-                              ArrayRef<int64_t> srcShape, int subgroupSize) {
-
-  if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    assert(true &&
-           "subgroup layout assignment not supported for storeScatter.");
-    return nullptr;
-  }
-
-  auto [laneLayout, laneData] =
-      computeScatterIOLaneLayoutAndData(srcShape, subgroupSize, maxChunkSize);
-
-  if (layoutKind == xegpu::LayoutKind::InstData) {
-    SmallVector<int64_t> instData(srcShape.size());
-    for (size_t i = 0; i < srcShape.size(); ++i)
-      instData[i] = laneLayout[i] * laneData[i];
-    return buildInstDataLayoutWithLane(context, instData, laneLayout, laneData);
-  }
-  if (layoutKind == xegpu::LayoutKind::Lane) {
-    return buildLaneLayout(context, laneLayout, laneData);
-  }
-  return nullptr;
-}
-
-/// Sets up the anchor layout for a store scatter operation.
-xegpu::DistributeLayoutAttr
-xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
-                                     VectorType srcVecTy, int contigChunkSize,
-                                     const uArch::uArch *uArch) {
-
-  const int subgroupSize = uArch->getSubgroupSize();
-  ArrayRef<int64_t> srcShape = srcVecTy.getShape();
-  auto context = srcVecTy.getContext();
-  auto elemBitWidth = srcVecTy.getElementType().getIntOrFloatBitWidth();
-
-  const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
-          uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
-  int maxChunkSize = std::min(
-      uArchInstruction->getMaxLaneStoreSize(elemBitWidth), contigChunkSize);
-  return setupGenericStoreAnchorLayout(layoutKind, context, maxChunkSize,
-                                       srcShape, subgroupSize);
-}
-
-/// Sets up the anchor layout for a store matrix operation.
-xegpu::DistributeLayoutAttr
-xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
-                                    VectorType srcVecTy, int contigChunkSize,
-                                    const xegpu::uArch::uArch *uArch) {
-
-  const int subgroupSize = uArch->getSubgroupSize();
-  ArrayRef<int64_t> srcShape = srcVecTy.getShape();
-  auto context = srcVecTy.getContext();
-  auto elemBitWidth = srcVecTy.getElementType().getIntOrFloatBitWidth();
-
-  const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
-          uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
-  int maxChunkSize = std::min(
-      uArchInstruction->getMaxLaneStoreSize(elemBitWidth), contigChunkSize);
-
-  return setupGenericStoreAnchorLayout(layoutKind, context, maxChunkSize,
-                                       srcShape, subgroupSize);
-}
-
-/// Completes a scatter IO layout by deriving lane_layout and lane_data from
-/// inst_data when they are missing. If `consumerLayout` already has both
-/// lane_layout and lane_data, or has no inst_data, the layout is returned
-/// unchanged.
-///
-/// When lane info is absent, this function uses inst_data as the effective
-/// shape and computes the standard scatter-style lane factorization:
-///   - laneLayout[innermost] = min(subgroupSize, inst_data[innermost])
-///   - laneData[innermost]   = min(inst_data[innermost] /
-///   laneLayout[innermost],
-///                                 maxChunkSize)
-///
-/// The returned layout carries inst_data + lane_layout + lane_data, ensuring
-/// the lane factorization is consistent with what the downstream load/store
-/// scatter anchor setup would produce.
-xegpu::DistributeLayoutAttr xegpu::completeScatterIOLaneLayoutFromInstData(
-    xegpu::DistributeLayoutAttr consumerLayout, Type elemTy,
-    const xegpu::uArch::uArch *uArch) {
-  if (!consumerLayout)
-    return consumerLayout;
-  SmallVector<int64_t> instData = consumerLayout.getEffectiveInstDataAsInt();
-  if (instData.empty())
-    return consumerLayout;
-  if (!consumerLayout.getEffectiveLaneLayoutAsInt().empty() &&
-      !consumerLayout.getEffectiveLaneDataAsInt().empty())
-    return consumerLayout;
-
-  // Reuse the load-side setup with inst_data as the destination shape.
-  const int subgroupSize = uArch->getSubgroupSize();
-  auto *context = consumerLayout.getContext();
-  auto elemBitWidth = elemTy.getIntOrFloatBitWidth();
-  const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
-          uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
-  if (!uArchInstruction)
-    return consumerLayout;
-  int maxChunkSize = uArchInstruction->getMaxLaneLoadSize(elemBitWidth);
-
-  auto [defLaneLayout, defLaneData] =
-      computeScatterIOLaneLayoutAndData(instData, subgroupSize, maxChunkSize);
-
-  return buildInstDataLayoutWithLane(context, instData, defLaneLayout,
-                                     defLaneData);
-}
-
-/// Generic anchor-layout setup for ND ops (load_nd, store_nd, prefetch_nd).
-///
-/// Given hardware-supported block widths/heights, picks the largest divisor
-/// of the trailing two dims of `dataShape` as the default `inst_data`. The
-/// lane layout is the standard 2D-block-IO default (subgroupSize lanes on the
-/// innermost dim, optional packing on the innermost dim).
-///
-/// `consumerLayout` (optional) is honored when its parameters are valid w.r.t.
-/// the uArch constraints; otherwise the helper falls back to defaults.
-///
-/// For Lane kind: returns just the lane layout / lane data (consumer ignored;
-///   lane layout is fully determined by hardware).
-/// For InstData kind: returns inst_data + lane_layout/lane_data (Category A:
-///   inst_data = k * lane_layout * lane_data, k >= 1). Honors consumer's
-///   inst_data when it is uArch-valid.
-/// For Subgroup kind: if the consumer specifies a workgroup-level layout,
-///   reuses it directly; otherwise picks the most balanced sg_layout via
-///   `getSgLayoutCandidates` (requires `numSg`).
-static xegpu::DistributeLayoutAttr setupGenericNdAnchorLayout(
-    xegpu::LayoutKind layoutKind, mlir::MLIRContext *context,
-    ArrayRef<int64_t> dataShape, Type elemTy, ArrayRef<int> bWidths,
-    ArrayRef<int> bHeights, unsigned packingSize, int numSg,
-    const xegpu::uArch::uArch *uArch) {
-  int rank = dataShape.size();
-  assert(rank >= 1 && "Expected at least 1D shape for ND op");
-
-  // Compute the default 2D block IO lane layout / lane data.
-  unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
-  auto [laneLayout, laneData] =
-      compute2DBlockIOLaneLayoutAndData(dataShape, uArch->getSubgroupSize(),
-                                        bitwidth, packingSize, /*vnni=*/false);
-
-  if (layoutKind == xegpu::LayoutKind::Lane)
-    return buildLaneLayout(context, laneLayout, laneData);
-
-  auto instData = get2DBlockIOInstDataLayout(dataShape, bWidths, bHeights,
-                                             laneLayout, laneData);
-
-  if (layoutKind == xegpu::LayoutKind::InstData)
-    return buildInstDataLayoutWithLane(context, *instData, laneLayout,
-                                       laneData);
-
-  if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    assert(numSg > 0 &&
-           "Number of subgroups must be provided for sg layout creation.");
-    auto sgLayouts = getSgLayoutCandidates(dataShape, *instData, numSg);
-    if (sgLayouts.empty())
-      return nullptr;
-    return buildSgLayout(context, dataShape, sgLayouts.front(), /*dimK=*/-1);
-  }
-
-  return nullptr;
-}
-
-/// Sets up the anchor layout for a store_nd operation. StoreNd picks its
-/// own layout based on uArch block parameters (it does not take a consumer
-/// layout, since it is a data sink).
-xegpu::DistributeLayoutAttr
-xegpu::setupStoreNdAnchorLayout(xegpu::LayoutKind layoutKind,
-                                VectorType srcVecTy, int numSg,
-                                const xegpu::uArch::uArch *uArch) {
-  auto context = srcVecTy.getContext();
-  Type elemTy = srcVecTy.getElementType();
-
-  const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::Subgroup2DBlockStoreInstruction>(
-          uArch->getInstruction(
-              xegpu::uArch::InstructionKind::Subgroup2DBlockStore));
-  if (!uArchInstruction)
-    return nullptr;
-  auto blockWHC = uArchInstruction->getBlockWidthHeightCount(elemTy);
-  if (!blockWHC)
-    return nullptr;
-  auto [bWidths, bHeights, bCounts] = blockWHC.value();
-  unsigned packingSize = uArchInstruction->getPackedFormatBitSize();
-
-  return setupGenericNdAnchorLayout(layoutKind, context, srcVecTy.getShape(),
-                                    elemTy, bWidths, bHeights, packingSize,
-                                    numSg, uArch);
-}
-
-/// Sets up the anchor layout for a prefetch_nd operation. PrefetchNd has no
-/// consumer (it produces no value), so it picks its own layout from uArch
-/// block parameters.
-xegpu::DistributeLayoutAttr
-xegpu::setupPrefetchNdAnchorLayout(xegpu::LayoutKind layoutKind,
-                                   xegpu::TensorDescType tdescTy, int numSg,
-                                   const xegpu::uArch::uArch *uArch) {
-  auto context = tdescTy.getContext();
-  Type elemTy = tdescTy.getElementType();
-
-  const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::Subgroup2DBlockPrefetchInstruction>(
-          uArch->getInstruction(
-              xegpu::uArch::InstructionKind::Subgroup2DBlockPrefetch));
-  if (!uArchInstruction)
-    return nullptr;
-  auto blockWHC = uArchInstruction->getBlockWidthHeightCount(elemTy);
-  if (!blockWHC)
-    return nullptr;
-  auto [bWidths, bHeights, bCounts] = blockWHC.value();
-  unsigned packingSize = uArchInstruction->getPackedFormatBitSize();
-
-  return setupGenericNdAnchorLayout(layoutKind, context, tdescTy.getShape(),
-                                    elemTy, bWidths, bHeights, packingSize,
-                                    numSg, uArch);
-}
-
-/// Sets up the anchor layout for a load_nd operation. LoadNd takes a
-/// consumer layout (from its result's downstream uses) and validates it
-/// against uArch constraints; if valid, the consumer's `inst_data` /
-/// `sg_layout` are honored. Otherwise the helper falls back to defaults
-/// derived from uArch block parameters.
-xegpu::DistributeLayoutAttr
-xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
-                               VectorType resVecTy,
-                               xegpu::DistributeLayoutAttr consumerLayout,
-                               int numSg, const xegpu::uArch::uArch *uArch) {
-
-  assert(consumerLayout && "Expected a valid consumer layout");
-  if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    assert(consumerLayout.isForWorkgroup() &&
-           "Expected consumer layout to be a complete workgroup-level layout");
-    return consumerLayout;
-  }
-
-  auto context = resVecTy.getContext();
-  Type elemTy = resVecTy.getElementType();
-  auto subgroupSize = uArch->getSubgroupSize();
-  auto dataShape = resVecTy.getShape();
-  const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::Subgroup2DBlockLoadInstruction>(
-          uArch->getInstruction(
-              xegpu::uArch::InstructionKind::Subgroup2DBlockLoad));
-  if (!uArchInstruction)
-    return nullptr;
-
-  int rank = resVecTy.getRank();
-  SmallVector<int64_t> consumerInstData =
-      consumerLayout.getEffectiveInstDataAsInt();
-  SmallVector<int64_t> consumerLaneLayout =
-      consumerLayout.getEffectiveLaneLayoutAsInt();
-  SmallVector<int64_t> consumerLaneData =
-      consumerLayout.getEffectiveLaneDataAsInt();
-  SmallVector<int64_t> consumerOrder = consumerLayout.getEffectiveOrderAsInt();
-
-  assert(!consumerLaneLayout.empty() && !consumerLaneData.empty() &&
-         "Expected consumer layout to have lane_layout and lane_data");
-
-  bool hasTransform = consumerLaneData[rank - 2] != 1;
-  bool hasTranspose = consumerLaneLayout[rank - 2] != 1;
-  unsigned packingFactor =
-      hasTransform ? consumerLaneData[rank - 2] : consumerLaneData[rank - 1];
-  unsigned packingSize = packingFactor * elemTy.getIntOrFloatBitWidth();
-
-  auto blockWHC = uArchInstruction->getBlockWidthHeightCount(
-      elemTy, hasTransform, hasTranspose,
-      /*upConv=*/false);
-  if (!blockWHC)
-    return nullptr;
-  auto [bWidths, bHeights, bCounts] = blockWHC.value();
-
-  if (layoutKind == xegpu::LayoutKind::InstData) {
-    int64_t height = consumerInstData[rank - 2];
-    int64_t width = consumerInstData[rank - 1];
-    auto maxBlockCount = *llvm::max_element(bCounts);
-    auto maxWidth = *llvm::max_element(bWidths);
-    if (llvm::is_contained(bWidths, static_cast<int>(width)) ||
-        (width % maxWidth == 0 && width / maxWidth < maxBlockCount)) {
-      if (llvm::is_contained(bHeights, static_cast<int>(height))) {
-        return buildInstDataLayoutWithLane(context, consumerInstData,
-                                           consumerLaneLayout, consumerLaneData,
-                                           consumerLayout.getOrder());
-      }
-    }
-
-    auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
-        dataShape, subgroupSize, elemTy.getIntOrFloatBitWidth(), packingSize,
-        hasTransform, hasTranspose);
-    auto instData = get2DBlockIOInstDataLayout(dataShape, bWidths, bHeights,
-                                               laneLayout, laneData);
-
-    return buildInstDataLayoutWithLane(context, *instData, laneLayout,
-                                       laneData);
-  }
-  if (layoutKind == xegpu::LayoutKind::Lane) {
-    bool validLaneLayout = true;
-    for (int dim = 0; dim < rank; ++dim) {
-      int64_t laneProduct = consumerLaneLayout[dim] * consumerLaneData[dim];
-      if (dataShape[dim] % laneProduct != 0)
-        validLaneLayout = false;
-    }
-    if (validLaneLayout) {
-      return consumerLayout;
-    } else {
-      auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
-          dataShape, subgroupSize, elemTy.getIntOrFloatBitWidth(), packingSize,
-          hasTransform, hasTranspose);
-      return buildLaneLayout(context, laneLayout, laneData);
-    }
-  }
-  return nullptr;
-}
-
-/// Helper function to compute inst_data vectors for DPAS operands A, B, and
-/// C/D.
-static std::optional<std::tuple<SmallVector<int64_t>, SmallVector<int64_t>,
-                                SmallVector<int64_t>>>
-getDpasInstDataLayouts(
-    VectorType aTy, VectorType bTy, VectorType cdTy,
-    const xegpu::uArch::MMAInstructionInterface *uArchInstruction,
-    const int subgroupSize, bool isDpasMx = false) {
-
-  // M dimension is the second-to-last dim of A (handles batch dims).
-  const unsigned dataALen = aTy.getShape()[aTy.getRank() - 2];
-  auto supportedALen = uArchInstruction->getSupportedM(aTy.getElementType());
-  const int maxALen =
-      xegpu::getLargestDivisor(dataALen, ArrayRef<unsigned>(supportedALen));
-
-  // N dimension is the last dim of B.
-  const unsigned dataBLen = bTy.getShape().back();
-  auto supportedBLen = uArchInstruction->getSupportedN(bTy.getElementType());
-  const int maxBLen =
-      xegpu::getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedBLen));
-
-  auto supportedCLen = uArchInstruction->getSupportedN(cdTy.getElementType());
-  const int maxCLen =
-      xegpu::getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedCLen));
-  if (maxALen == -1 || maxBLen == -1 || maxCLen == -1)
-    return std::nullopt;
-
-  // For DPAS_MX, use getSupportedK to get the scaled K dimension.
-  // assume single element in the returned vector.
-  int kDimSize = subgroupSize;
-  if (isDpasMx) {
-    auto supportedKLen = uArchInstruction->getSupportedK(aTy.getElementType());
-    if (supportedKLen.empty())
-      return std::nullopt;
-    kDimSize = supportedKLen[0];
-  }
-
-  SmallVector<int64_t> instDataA(aTy.getRank(), 1);
-  instDataA[aTy.getRank() - 2] = maxALen;
-  instDataA[aTy.getRank() - 1] = kDimSize;
-  SmallVector<int64_t> instDataB(bTy.getRank(), 1);
-  instDataB[bTy.getRank() - 2] = kDimSize;
-  instDataB[bTy.getRank() - 1] = maxBLen;
-  SmallVector<int64_t> instDataCD(cdTy.getRank(), 1);
-  instDataCD[cdTy.getRank() - 2] = maxALen;
-  instDataCD[cdTy.getRank() - 1] = maxCLen;
-  return std::make_tuple(instDataA, instDataB, instDataCD);
-}
-
-/// Helper function to set up subgroup layouts for DPAS operands A, B, and
-/// C/D. Returns the three layouts if successful, nullopt otherwise.
-static std::optional<
-    std::tuple<xegpu::DistributeLayoutAttr, xegpu::DistributeLayoutAttr,
-               xegpu::DistributeLayoutAttr>>
-getDpasSubgroupLayouts(
-    mlir::MLIRContext *context, VectorType aTy, VectorType bTy, VectorType cdTy,
-    xegpu::DistributeLayoutAttr consumerLayout, int numSg,
-    std::tuple<SmallVector<int64_t>, SmallVector<int64_t>, SmallVector<int64_t>>
-        instDataVecs) {
-  auto [instDataA, instDataB, instDataCD] = instDataVecs;
-
-  std::optional<LayoutRepresentation> consumerSgLayout = std::nullopt;
-  if (consumerLayout && consumerLayout.isForWorkgroup()) {
-    consumerSgLayout = consumerLayout.getEffectiveSgLayoutAsInt();
-  }
-
-  // Get all valid layouts for A, B and C/D operands
-  auto layoutsA = getSgLayoutCandidates(aTy.getShape(), instDataA, numSg);
-  auto layoutsB = getSgLayoutCandidates(bTy.getShape(), instDataB, numSg);
-  auto layoutsCD = getSgLayoutCandidates(cdTy.getShape(), instDataCD, numSg);
-  if (layoutsA.empty() || layoutsB.empty() || layoutsCD.empty())
-    return std::nullopt;
-
-  // Pick the best subgroup layout
-  std::optional<LayoutRepresentation> bestPick;
-  auto checkAlignedSgDataAB = [&](const LayoutRepresentation &sgLayout) {
-    return aTy.getShape().back() / sgLayout[1] ==
-           bTy.getShape().front() / sgLayout[0];
-  };
-  for (auto &sgLayout : layoutsB) {
-    if (llvm::is_contained(layoutsA, sgLayout) &&
-        llvm::is_contained(layoutsCD, sgLayout)) {
-      if (!checkAlignedSgDataAB(sgLayout))
-        continue;
-      // Is in (A and B and CD) and matches consumer -> best pick
-      if (consumerSgLayout.has_value() && sgLayout == *consumerSgLayout) {
-        bestPick = sgLayout;
-        break;
-      }
-      // Is in (A and B and CD) layoutsB is ordered from most
-      // balanced to least. So the first one we see is the most balanced one,
-      // remember it and later only update if there is one that matches the
-      // consumer.
-      if (!bestPick)
-        bestPick = sgLayout;
-    }
-  }
-  if (!bestPick)
-    return std::nullopt;
-
-  const auto &picked = *bestPick;
-
-  auto dpasALayout = buildSgLayout(context, aTy.getShape(), picked,
-                                   /*dimK=*/aTy.getRank() - 1);
-  auto dpasBLayout = buildSgLayout(context, bTy.getShape(), picked,
-                                   /*dimK=*/bTy.getRank() - 2);
-  auto dpasCDLayout = buildSgLayout(context, cdTy.getShape(), picked);
-  return std::make_tuple(dpasALayout, dpasBLayout, dpasCDLayout);
-}
-
-/// Sets up the anchor layouts for dpas operands (A, B, and C/D).
-/// The numSg and consumerLayout (optional) are only used by sg layout
-/// creation.
-std::optional<
-    std::tuple<xegpu::DistributeLayoutAttr, xegpu::DistributeLayoutAttr,
-               xegpu::DistributeLayoutAttr>>
-xegpu::setupDpasLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
-                       VectorType bTy, VectorType cdTy,
-                       xegpu::DistributeLayoutAttr consumerLayout, int numSg,
-                       const xegpu::uArch::uArch *uArch) {
-  auto context = aTy.getContext();
-  const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(uArch->getInstruction(
-          xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
-  if (!uArchInstruction)
-    return std::nullopt;
-  auto subgroupSize = uArch->getSubgroupSize();
-
-  auto [laneLayoutA, laneDataA] = compute2DBlockIOLaneLayoutAndData(
-      aTy.getShape(), subgroupSize,
-      aTy.getElementType().getIntOrFloatBitWidth(),
-      uArchInstruction->getPackedFormatBitSizeA());
-  auto [laneLayoutB, laneDataB] = compute2DBlockIOLaneLayoutAndData(
-      bTy.getShape(), subgroupSize,
-      bTy.getElementType().getIntOrFloatBitWidth(),
-      uArchInstruction->getPackedFormatBitSizeB(), /*vnni=*/true);
-  auto [laneLayoutCD, laneDataCD] = compute2DBlockIOLaneLayoutAndData(
-      cdTy.getShape(), subgroupSize,
-      cdTy.getElementType().getIntOrFloatBitWidth(),
-      cdTy.getElementType().getIntOrFloatBitWidth());
-
-  auto instDataVecs =
-      getDpasInstDataLayouts(aTy, bTy, cdTy, uArchInstruction, subgroupSize);
-  if (!instDataVecs)
-    return std::nullopt;
-
-  if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    assert(numSg > 0 &&
-           "Number of subgroups must be provided for sg layout creation.");
-    return getDpasSubgroupLayouts(context, aTy, bTy, cdTy, consumerLayout,
-                                  numSg, *instDataVecs);
-  } else if (layoutKind == xegpu::LayoutKind::InstData) {
-    auto [instDataA, instDataB, instDataCD] = *instDataVecs;
-    return std::make_tuple(
-        buildInstDataLayoutWithLane(context, instDataA, laneLayoutA, laneDataA),
-        buildInstDataLayoutWithLane(context, instDataB, laneLayoutB, laneDataB),
-        buildInstDataLayoutWithLane(context, instDataCD, laneLayoutCD,
-                                    laneDataCD));
-  } else if (layoutKind == xegpu::LayoutKind::Lane) {
-    auto aLayout = buildLaneLayout(context, laneLayoutA, laneDataA);
-    auto bLayout = buildLaneLayout(context, laneLayoutB, laneDataB);
-    auto cdLayout = buildLaneLayout(context, laneLayoutCD, laneDataCD);
-    return std::make_tuple(aLayout, bLayout, cdLayout);
-  }
-  return std::nullopt;
-}
-
-/// Helper to create a scale layout derived from a matrix operand layout.
-/// The scale layout is computed by mapping each dimension of the matrix
-/// layout to the corresponding scale tensor dimension using the ratio
-/// between the matrix and scale shapes.
-static xegpu::DistributeLayoutAttr
-createScaleLayout(mlir::MLIRContext *context, VectorType matrixTy,
-                  VectorType scaleTy, xegpu::DistributeLayoutAttr matrixLayout,
-                  bool isBScale, const xegpu::uArch::uArch *uArch) {
-  if (!scaleTy || !matrixLayout)
-    return nullptr;
-
-  // Calculate scaling factor by dividing matrix shape by scale shape
-  ArrayRef<int64_t> matrixShape = matrixTy.getShape();
-  ArrayRef<int64_t> scaleShape = scaleTy.getShape();
-
-  // Scale shapes can be 1D or 2D, handle both cases
-  if (scaleShape.empty())
-    return nullptr;
-
-  auto uArchInstruction =
-      dyn_cast<xegpu::uArch::SubgroupScaledMatrixMultiplyAcc>(
-          uArch->getInstruction(
-              xegpu::uArch::InstructionKind::SubgroupScaledMatrixMultiplyAcc));
-
-  int64_t rank = matrixLayout.getRank();
-  assert(rank >= 2 && "dpas layouts must be at least two dimensions");
-
-  SmallVector<int64_t> sgLayout = matrixLayout.getEffectiveSgLayoutAsInt();
-  SmallVector<int64_t> sgData = matrixLayout.getEffectiveSgDataAsInt();
-  SmallVector<int64_t> instData = matrixLayout.getEffectiveInstDataAsInt();
-  SmallVector<int64_t> laneLayout = matrixLayout.getEffectiveLaneLayoutAsInt();
-  SmallVector<int64_t> laneData = matrixLayout.getEffectiveLaneDataAsInt();
-  auto order = matrixLayout.getOrder();
-
-  SmallVector<int64_t> scaleSgLayout;
-  SmallVector<int64_t> scaleSgData;
-  if (!sgLayout.empty() && !sgData.empty()) {
-    scaleSgLayout.assign(sgLayout.begin(), sgLayout.end());
-    scaleSgData.assign(sgData.begin(), sgData.end());
-    scaleSgData[rank - 2] = std::max<int64_t>(
-        scaleShape[rank - 2] / (matrixShape[rank - 2] / sgData[rank - 2]), 1);
-    scaleSgData[rank - 1] = std::max<int64_t>(
-        scaleShape[rank - 1] / (matrixShape[rank - 1] / sgData[rank - 1]), 1);
-  }
-
-  // For DPAS_MX scales: if matrix has inst_data, scale needs adjusted
-  // inst_data. Scale inst_data is derived from matrix inst_data divided by
-  // scale factor.
-  SmallVector<int64_t> scaleInstData;
-  if (!instData.empty()) {
-    scaleInstData.assign(instData.begin(), instData.end());
-    if (isBScale)
-      scaleInstData[rank - 2] = std::max<int64_t>(
-          scaleShape[rank - 2] / (matrixShape[rank - 2] / instData[rank - 2]),
-          1);
-    else
-      scaleInstData[rank - 1] = std::max<int64_t>(
-          scaleShape[rank - 1] / (matrixShape[rank - 1] / instData[rank - 1]),
-          1);
-  }
-
-  SmallVector<int64_t> scaleLaneLayout;
-  SmallVector<int64_t> scaleLaneData;
-  if (!laneLayout.empty() && !laneData.empty()) {
-    scaleLaneLayout.assign(laneLayout.begin(), laneLayout.end());
-    scaleLaneData.assign(laneData.size(), 1);
-
-    bool isRowMajor = uArchInstruction->isLaneLayoutRowMajorOrder();
-    if (isBScale ^ isRowMajor)
-      std::swap(scaleLaneLayout[rank - 2], scaleLaneLayout[rank - 1]);
-    // Cap lane_layout by the per-instruction tile (inst_data) on each dim.
-    // Then derive lane_data = inst_data / lane_layout so the Category A
-    // invariant inst_data = lane_layout * lane_data * k (with k = 1) holds
-    // for the scale operand's load_nd consumer.
-    auto layoutCap = scaleInstData.empty() ? scaleShape : scaleInstData;
-    for (int64_t d = rank - 2; d < rank; ++d)
-      scaleLaneLayout[d] = std::min<int64_t>(layoutCap[d], scaleLaneLayout[d]);
-  }
-  return buildLayout(context, scaleSgLayout, scaleSgData, scaleInstData,
-                     scaleLaneLayout, scaleLaneData, order);
-}
-
-/// Sets up the anchor layouts for dpas_mx operands (A, B, C/D, A_scale, and
-/// B_scale). The numSg and consumerLayout (optional) are only used by sg
-/// layout creation.
-std::optional<
-    std::tuple<xegpu::DistributeLayoutAttr, xegpu::DistributeLayoutAttr,
-               xegpu::DistributeLayoutAttr, xegpu::DistributeLayoutAttr,
-               xegpu::DistributeLayoutAttr>>
-xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
-                         VectorType bTy, VectorType cdTy, VectorType aScaleTy,
-                         VectorType bScaleTy,
-                         xegpu::DistributeLayoutAttr consumerLayout, int numSg,
-                         const xegpu::uArch::uArch *uArch) {
-  auto context = aTy.getContext();
-  const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(uArch->getInstruction(
-          xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
-  if (!uArchInstruction)
-    return std::nullopt;
-  auto subgroupSize = uArch->getSubgroupSize();
-
-  auto [laneLayoutA, laneDataA] = compute2DBlockIOLaneLayoutAndData(
-      aTy.getShape(), subgroupSize,
-      aTy.getElementType().getIntOrFloatBitWidth(),
-      uArchInstruction->getPackedFormatBitSizeA());
-  auto [laneLayoutB, laneDataB] = compute2DBlockIOLaneLayoutAndData(
-      bTy.getShape(), subgroupSize,
-      bTy.getElementType().getIntOrFloatBitWidth(),
-      uArchInstruction->getPackedFormatBitSizeB(), /*vnni=*/true);
-  auto [laneLayoutCD, laneDataCD] = compute2DBlockIOLaneLayoutAndData(
-      cdTy.getShape(), subgroupSize,
-      cdTy.getElementType().getIntOrFloatBitWidth(),
-      cdTy.getElementType().getIntOrFloatBitWidth());
-  auto instDataVecs = getDpasInstDataLayouts(aTy, bTy, cdTy, uArchInstruction,
-                                             subgroupSize, /*isDpasMx=*/true);
-  if (!instDataVecs)
-    return std::nullopt;
-
-  if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    assert(numSg > 0 &&
-           "Number of subgroups must be provided for sg layout creation.");
-    auto dpasLayouts = getDpasSubgroupLayouts(
-        context, aTy, bTy, cdTy, consumerLayout, numSg, *instDataVecs);
-    if (!dpasLayouts)
-      return std::nullopt;
-
-    auto [dpasALayout, dpasBLayout, dpasCDLayout] = *dpasLayouts;
-
-    // Create scale layouts
-    auto aScaleLayout =
-        createScaleLayout(context, aTy, aScaleTy, dpasALayout, false, uArch);
-
-    auto bScaleLayout =
-        createScaleLayout(context, bTy, bScaleTy, dpasBLayout, true, uArch);
-
-    return std::make_tuple(dpasALayout, dpasBLayout, dpasCDLayout, aScaleLayout,
-                           bScaleLayout);
-  } else if (layoutKind == xegpu::LayoutKind::InstData) {
-
-    auto [instDataA, instDataB, instDataCD] = *instDataVecs;
-
-    auto dpasALayout =
-        buildInstDataLayoutWithLane(context, instDataA, laneLayoutA, laneDataA);
-    auto dpasBLayout =
-        buildInstDataLayoutWithLane(context, instDataB, laneLayoutB, laneDataB);
-    auto dpasCDLayout = buildInstDataLayoutWithLane(context, instDataCD,
-                                                    laneLayoutCD, laneDataCD);
-
-    auto aScaleLayout =
-        createScaleLayout(context, aTy, aScaleTy, dpasALayout, false, uArch);
-    auto bScaleLayout =
-        createScaleLayout(context, bTy, bScaleTy, dpasBLayout, true, uArch);
-
-    return std::make_tuple(dpasALayout, dpasBLayout, dpasCDLayout, aScaleLayout,
-                           bScaleLayout);
-  } else if (layoutKind == xegpu::LayoutKind::Lane) {
-    auto dpasALayout = buildLaneLayout(context, laneLayoutA, laneDataA);
-    auto dpasBLayout = buildLaneLayout(context, laneLayoutB, laneDataB);
-    auto dpasCDLayout = buildLaneLayout(context, laneLayoutCD, laneDataCD);
-
-    auto aScaleLayout =
-        createScaleLayout(context, aTy, aScaleTy, dpasALayout, false, uArch);
-    auto bScaleLayout =
-        createScaleLayout(context, bTy, bScaleTy, dpasBLayout, true, uArch);
-
-    return std::make_tuple(dpasALayout, dpasBLayout, dpasCDLayout, aScaleLayout,
-                           bScaleLayout);
-  }
-  return std::nullopt;
-}
-
+/// Back-propagates a known result layout to the layout required on `operand`
+/// for a non-anchor (layout-propagating) vector op. Dispatches on the op kind —
+/// broadcast, (multi)reduction, bitcast, shape/transpose, insert/extract,
+/// interleave, etc. — applying the shape/permutation/bitwidth transform to
+/// derive the source layout; elementwise and pass-through ops reuse resLayout
+/// as-is. Returns nullptr for unknown ops or an absent result layout.
 xegpu::DistributeLayoutAttr xegpu::inferSourceLayoutFromResultForNonAnchorOp(
     OpOperand &operand, xegpu::DistributeLayoutAttr resLayout) {
   if (!resLayout)
@@ -2338,6 +2401,9 @@ xegpu::DistributeLayoutAttr xegpu::inferSourceLayoutFromResultForNonAnchorOp(
   return nullptr;
 }
 
+/// Returns the layout required on `operand`: anchor ops report their declared
+/// per-operand layout directly; non-anchor ops back-derive it from their result
+/// layout via inferSourceLayoutFromResultForNonAnchorOp.
 xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
   Operation *op = operand.getOwner();
   // Anchor ops declare the layout they
