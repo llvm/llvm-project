@@ -9461,7 +9461,8 @@ getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
         Store = DAG.getStore(
             Chain, dl, Value,
             DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
-            DstPtrInfo.getWithOffset(DstOff), DstAlign, MMOFlags, NewAAInfo, DstMemCacheHint);
+            DstPtrInfo.getWithOffset(DstOff), DstAlign, MMOFlags, NewAAInfo,
+            DstMemCacheHint);
         OutChains.push_back(Store);
       }
     }
@@ -9487,13 +9488,15 @@ getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
           ISD::EXTLOAD, dl, NVT, Chain,
           DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SrcOff)),
           SrcPtrInfo.getWithOffset(SrcOff), VT,
-          commonAlignment(SrcAlign, SrcOff), SrcMMOFlags, NewAAInfo, SrcMemCacheHint);
+          commonAlignment(SrcAlign, SrcOff), SrcMMOFlags, NewAAInfo,
+          SrcMemCacheHint);
       OutLoadChains.push_back(Value.getValue(1));
 
       Store = DAG.getTruncStore(
           Chain, dl, Value,
           DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
-          DstPtrInfo.getWithOffset(DstOff), VT, DstAlign, MMOFlags, NewAAInfo, DstMemCacheHint);
+          DstPtrInfo.getWithOffset(DstOff), VT, DstAlign, MMOFlags, NewAAInfo,
+          DstMemCacheHint);
       OutStoreChains.push_back(Store);
     }
     SrcOff += VTSize;
@@ -10579,14 +10582,11 @@ static MachinePointerInfo InferPointerInfo(const MachinePointerInfo &Info,
   return Info;
 }
 
-SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
-                              EVT VT, const SDLoc &dl, SDValue Chain,
-                              SDValue Ptr, SDValue Offset,
-                              MachinePointerInfo PtrInfo, EVT MemVT,
-                              Align Alignment,
-                              MachineMemOperand::Flags MMOFlags,
-                              const AAMDNodes &AAInfo, const MDNode *Ranges,
-                              const MDNode *MemCacheHint) {
+SDValue SelectionDAG::getLoad(
+    ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT, const SDLoc &dl,
+    SDValue Chain, SDValue Ptr, SDValue Offset, MachinePointerInfo PtrInfo,
+    EVT MemVT, Align Alignment, MachineMemOperand::Flags MMOFlags,
+    const AAMDNodes &AAInfo, const MDNode *Ranges, const MDNode *MemCacheHint) {
   assert(Chain.getValueType() == MVT::Other &&
         "Invalid chain type");
 
@@ -10809,9 +10809,9 @@ SDValue SelectionDAG::getTruncStore(SDValue Chain, const SDLoc &dl, SDValue Val,
     PtrInfo = InferPointerInfo(PtrInfo, *this, Ptr);
 
   MachineFunction &MF = getMachineFunction();
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      PtrInfo, MMOFlags, SVT.getStoreSize(), Alignment, AAInfo, nullptr,
-      MemCacheHint);
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(PtrInfo, MMOFlags, SVT.getStoreSize(), Alignment,
+                              AAInfo, nullptr, MemCacheHint);
   return getTruncStore(Chain, dl, Val, Ptr, SVT, MMO);
 }
 

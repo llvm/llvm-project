@@ -1149,8 +1149,7 @@ static void parseMemCacheHintStringValue(LLVMContext &Ctx, StringRef Key,
                                          ParseFn Parse) {
   const auto *Val = dyn_cast<MDString>(Value);
   if (!Val) {
-    emitInvalidMemCacheHint(Ctx,
-                            Twine("'") + Key + "' expects a string value");
+    emitInvalidMemCacheHint(Ctx, Twine("'") + Key + "' expects a string value");
     return;
   }
 
@@ -1158,8 +1157,8 @@ static void parseMemCacheHintStringValue(LLVMContext &Ctx, StringRef Key,
   if (auto Parsed = Parse(ValStr))
     Result = *Parsed;
   else
-    emitInvalidMemCacheHint(Ctx, Twine("unknown value '") + ValStr +
-                                     "' for '" + Key + "'");
+    emitInvalidMemCacheHint(Ctx, Twine("unknown value '") + ValStr + "' for '" +
+                                     Key + "'");
 }
 
 static bool isL2PrefetchSupported(const NVPTXSubtarget &Subtarget,
@@ -1177,10 +1176,8 @@ static bool isL2PrefetchSupported(const NVPTXSubtarget &Subtarget,
   llvm_unreachable("Unexpected L2 prefetch hint");
 }
 
-std::pair<unsigned, SDValue>
-NVPTXDAGToDAGISel::getMemCacheHintOperands(const MemSDNode *N,
-                                           unsigned CodeAddrSpace,
-                                           const SDLoc &DL) {
+std::pair<unsigned, SDValue> NVPTXDAGToDAGISel::getMemCacheHintOperands(
+    const MemSDNode *N, unsigned CodeAddrSpace, const SDLoc &DL) {
   LLVMContext &Ctx = *CurDAG->getContext();
   const MDNode *Node = N->getMemCacheHint();
   SDValue PolicyReg = CurDAG->getRegister(NVPTX::NoRegister, MVT::i64);
@@ -1203,22 +1200,20 @@ NVPTXDAGToDAGISel::getMemCacheHintOperands(const MemSDNode *N,
 
     if (KeyStr == "nvvm.l1_eviction") {
       if (Subtarget->hasL1EvictionHint())
-        parseMemCacheHintStringValue(Ctx, KeyStr, Value, L1,
-                                     parseL1Eviction);
+        parseMemCacheHintStringValue(Ctx, KeyStr, Value, L1, parseL1Eviction);
       continue;
     }
 
     if (KeyStr == "nvvm.l2_eviction") {
       if (Subtarget->hasL2EvictionHint())
-        parseMemCacheHintStringValue(Ctx, KeyStr, Value, L2,
-                                     parseL2Eviction);
+        parseMemCacheHintStringValue(Ctx, KeyStr, Value, L2, parseL2Eviction);
       continue;
     }
 
     if (KeyStr == "nvvm.l2_prefetch_size") {
       NVPTX::L2Prefetch ParsedPrefetch = NVPTX::L2Prefetch::None;
       parseMemCacheHintStringValue(Ctx, KeyStr, Value, ParsedPrefetch,
-                                    parseL2Prefetch);
+                                   parseL2Prefetch);
       if (isL2PrefetchSupported(*Subtarget, ParsedPrefetch))
         Prefetch = ParsedPrefetch;
       continue;
@@ -1244,8 +1239,7 @@ NVPTXDAGToDAGISel::getMemCacheHintOperands(const MemSDNode *N,
   if (CachePolicy) {
     SDValue PolicyConst = CurDAG->getTargetConstant(*CachePolicy, DL, MVT::i64);
     PolicyReg = SDValue(
-        CurDAG->getMachineNode(NVPTX::MOV_B64_i, DL, MVT::i64, PolicyConst),
-        0);
+        CurDAG->getMachineNode(NVPTX::MOV_B64_i, DL, MVT::i64, PolicyConst), 0);
     Bitfield::set<NVPTX::L2CacheHintBit>(EvictionAndPrefetchHint, true);
   }
 

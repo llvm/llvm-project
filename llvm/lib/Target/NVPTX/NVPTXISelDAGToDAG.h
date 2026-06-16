@@ -110,8 +110,9 @@ private:
   // dropped. If L2::cache_hint is active, returns the hint with
   // L2CacheHintBit set and a register containing the 64-bit cache policy
   // value. Otherwise returns NOREG for the policy operand.
-  std::pair<unsigned, SDValue> getMemCacheHintOperands(
-      const MemSDNode *N, unsigned CodeAddrSpace, const SDLoc &DL);
+  std::pair<unsigned, SDValue> getMemCacheHintOperands(const MemSDNode *N,
+                                                       unsigned CodeAddrSpace,
+                                                       const SDLoc &DL);
 
   // Returns the Memory Order and Scope that the PTX memory instruction should
   // use, and inserts appropriate fence instruction before the memory

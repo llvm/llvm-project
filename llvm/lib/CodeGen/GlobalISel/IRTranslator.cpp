@@ -1436,8 +1436,8 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
     Align BaseAlign = getMemOpAlign(LI);
     auto *MMO = MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Regs[i]),
                                          commonAlignment(BaseAlign, Offsets[i]),
-                                         AAInfo, nullptr, nullptr, LI.getSyncScopeID(),
-                                         LI.getOrdering());
+                                         AAInfo, nullptr, nullptr,
+                                         LI.getSyncScopeID(), LI.getOrdering());
     MIRBuilder.buildLoad(Regs[i], Addr, *MMO);
   }
 
@@ -3576,8 +3576,7 @@ bool IRTranslator::translateAtomicCmpXchg(const User &U,
       *MF->getMachineMemOperand(
           MachinePointerInfo(I.getPointerOperand()), Flags, MRI->getType(Cmp),
           getMemOpAlign(I), I.getAAMetadata(), nullptr, nullptr,
-          I.getSyncScopeID(), I.getSuccessOrdering(),
-          I.getFailureOrdering()));
+          I.getSyncScopeID(), I.getSuccessOrdering(), I.getFailureOrdering()));
   return true;
 }
 
@@ -3672,8 +3671,8 @@ bool IRTranslator::translateAtomicRMW(const User &U,
       Opcode, Res, Addr, Val,
       *MF->getMachineMemOperand(MachinePointerInfo(I.getPointerOperand()),
                                 Flags, MRI->getType(Val), getMemOpAlign(I),
-                                I.getAAMetadata(), nullptr, nullptr, I.getSyncScopeID(),
-                                I.getOrdering()));
+                                I.getAAMetadata(), nullptr, nullptr,
+                                I.getSyncScopeID(), I.getOrdering()));
   return true;
 }
 

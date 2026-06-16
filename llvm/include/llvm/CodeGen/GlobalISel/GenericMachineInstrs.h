@@ -195,9 +195,7 @@ public:
   }
 
   /// Returns the cache hint metadata for this load.
-  const MDNode *getMemCacheHint() const {
-    return getMMO().getMemCacheHint();
-  }
+  const MDNode *getMemCacheHint() const { return getMMO().getMemCacheHint(); }
 
   static bool classof(const MachineInstr *MI) {
     switch (MI->getOpcode()) {

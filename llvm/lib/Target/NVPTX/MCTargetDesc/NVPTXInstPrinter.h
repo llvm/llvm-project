@@ -47,8 +47,8 @@ public:
   void printEvictionAndPrefetchHint(const MCInst *MI, int OpNum,
                                     const MCSubtargetInfo &STI, raw_ostream &O,
                                     StringRef Modifier = {});
-  void printCachePolicy(const MCInst *MI, int OpNum,
-                        const MCSubtargetInfo &STI, raw_ostream &O);
+  void printCachePolicy(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
+                        raw_ostream &O);
   void printMmaCode(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                     raw_ostream &O, StringRef Modifier = {});
   void printMemOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
