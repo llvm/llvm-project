@@ -103,6 +103,33 @@ static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
     "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
     cl::desc("Disable rewrite mfma rewrite scheduling stage"), cl::init(true));
 
+namespace {
+
+struct VGPRThresholdParser : public cl::parser<unsigned> {
+  VGPRThresholdParser(cl::Option &O) : cl::parser<unsigned>(O) {}
+
+  bool parse(cl::Option &O, StringRef ArgName, StringRef Arg, unsigned &Value) {
+    if (Arg.getAsInteger(0, Value))
+      return O.error("'" + Arg + "' value invalid for uint argument!");
+
+    if (Value > 100)
+      return O.error("'" + Arg + "' value must be in the range [0, 100]!");
+
+    return false;
+  }
+};
+
+} // end anonymous namespace
+
+static cl::opt<unsigned, false, VGPRThresholdParser> VGPRThresholdPercentOpt(
+    "amdgpu-vgpr-threshold-percent", cl::Hidden,
+    cl::desc("Percent of VGPR limits that we should use as RP threshold "
+             "during scheduling. We have two limits relevant to scheduling: "
+             "Critical (avoid decreasing occupancy), Excess (avoid spilling). "
+             "This flag scales both limits back by an equal percent: (0 = use "
+             " default calculation, 1-100 = use percentage), default: 0"),
+    cl::init(0));
+
 const unsigned ScheduleMetrics::ScaleFactor = 100;
 
 GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
@@ -154,12 +181,27 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
     VGPRBudget = std::max(VGPRBudget, Granule);
     VGPRCriticalLimit = std::min(VGPRBudget, VGPRExcessLimit);
   }
+  // Apply VGPR excess threshold percentage if specified.
+  if (VGPRThresholdPercentOpt > 0) {
+    [[maybe_unused]] unsigned OriginalVGPRExcessLimit = VGPRExcessLimit;
+    [[maybe_unused]] unsigned OriginalVGPRCriticalLimit = VGPRCriticalLimit;
+    VGPRExcessLimit = (VGPRThresholdPercentOpt * VGPRExcessLimit + 99) / 100;
+    VGPRCriticalLimit =
+        (VGPRThresholdPercentOpt * VGPRCriticalLimit + 99) / 100;
+    LLVM_DEBUG(dbgs() << "Applied VGPR excess threshold "
+                      << VGPRThresholdPercentOpt << "%, VGPRExcessLimit: "
+                      << OriginalVGPRExcessLimit << " -> " << VGPRExcessLimit
+                      << ". VGPRCriticalLimit: " << OriginalVGPRCriticalLimit
+                      << " -> " << VGPRCriticalLimit << '\n');
+  } else {
+    VGPRExcessLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRExcessLimit);
+    VGPRCriticalLimit -=
+        std::min(VGPRLimitBias + ErrorMargin, VGPRCriticalLimit);
+  }
 
   // Subtract error margin and bias from register limits and avoid overflow.
   SGPRCriticalLimit -= std::min(SGPRLimitBias + ErrorMargin, SGPRCriticalLimit);
-  VGPRCriticalLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRCriticalLimit);
   SGPRExcessLimit -= std::min(SGPRLimitBias + ErrorMargin, SGPRExcessLimit);
-  VGPRExcessLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRExcessLimit);
   LLVM_DEBUG(dbgs() << "VGPRCriticalLimit = " << VGPRCriticalLimit
                     << ", VGPRExcessLimit = " << VGPRExcessLimit
                     << ", SGPRCriticalLimit = " << SGPRCriticalLimit
