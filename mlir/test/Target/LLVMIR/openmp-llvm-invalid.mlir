@@ -116,6 +116,20 @@ llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 // -----
 
+omp.private {type = private} @i_private_i32 : i32
+llvm.func @simd_linear_private(%lb : i32, %ub : i32, %step : i32, %i : !llvm.ptr) {
+  // expected-error @below {{linear variables cannot appear in other data-sharing clauses}}
+  omp.simd linear(%i : !llvm.ptr = %step : i32)
+           private(@i_private_i32 %i -> %priv_i : !llvm.ptr) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  } {linear_var_types = [i32]}
+  llvm.return
+}
+
+// -----
+
 module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
   llvm.func @host_op_in_device(%arg0 : !llvm.ptr) {
     // expected-error @below {{unsupported host op found in device}}
