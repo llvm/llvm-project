@@ -45,7 +45,7 @@ struct MCDXContainerPart {
 
 class MCDXContainerBaseWriter {
 protected:
-  virtual ArrayRef<MCDXContainerPart> getParts() {
+  virtual ArrayRef<MCDXContainerPart> collectParts() {
     llvm_unreachable("Unimplemented");
   }
 
@@ -72,7 +72,7 @@ class LLVM_ABI DXContainerObjectWriter final : public MCDXContainerBaseWriter,
   void clearParts();
 
 protected:
-  ArrayRef<MCDXContainerPart> getParts() override;
+  ArrayRef<MCDXContainerPart> collectParts() override;
 
 public:
   DXContainerObjectWriter(std::unique_ptr<MCDXContainerTargetWriter> MOTW,

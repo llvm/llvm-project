@@ -44,7 +44,7 @@ public:
   }
 
   bool shouldSkipSection(StringRef SectionName, size_t SectionSize) override;
-  ArrayRef<MCDXContainerPart> getParts() override;
+  ArrayRef<MCDXContainerPart> collectParts() override;
 };
 
 } // namespace
@@ -68,7 +68,7 @@ static StringRef getGlobalData(const GlobalVariable &GV) {
   return {};
 }
 
-ArrayRef<MCDXContainerPart> DXContainerPDB::getParts() {
+ArrayRef<MCDXContainerPart> DXContainerPDB::collectParts() {
   Parts.clear();
   for (const GlobalVariable &GV : M->globals()) {
     StringRef Name = GV.getSection();

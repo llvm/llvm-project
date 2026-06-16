@@ -21,7 +21,7 @@ MCDXContainerTargetWriter::~MCDXContainerTargetWriter() = default;
 MCDXContainerBaseWriter::~MCDXContainerBaseWriter() = default;
 
 void MCDXContainerBaseWriter::write(raw_ostream &OS, const Triple &TT) {
-  ArrayRef<MCDXContainerPart> Parts = getParts();
+  ArrayRef<MCDXContainerPart> Parts = collectParts();
 
   support::endian::Writer W(OS, llvm::endianness::little);
 
@@ -118,7 +118,7 @@ void DXContainerObjectWriter::clearParts() {
   SectionBuffers.clear();
 }
 
-ArrayRef<MCDXContainerPart> DXContainerObjectWriter::getParts() {
+ArrayRef<MCDXContainerPart> DXContainerObjectWriter::collectParts() {
   clearParts();
   for (const MCSection &Sec : *Asm) {
     if (shouldSkipSection(Sec.getName(), Asm->getSectionAddressSize(Sec)))
