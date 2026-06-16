@@ -2190,6 +2190,37 @@ bool OmpAttributeVisitor::Pre(const parser::OmpGroupprivateDirective &x) {
       ResolveOmpObject(*object, Symbol::Flag::OmpGroupPrivate);
     }
   }
+
+  // groupprivate carries an optional device_type clause (OpenMP 6.0). Always
+  // record it, like declare_target's enter clause, so a clause-less directive
+  // still round-trips through symbol dumps and .mod files; an absent clause
+  // means the spec default (any).
+  common::OmpDeviceType device{common::OmpDeviceType::Any};
+  if (auto *devClause{
+          parser::omp::FindClause(x.v, llvm::omp::Clause::OMPC_device_type)}) {
+    device = parser::UnwrapRef<common::OmpDeviceType>(*devClause);
+  }
+
+  unsigned version{context_.langOptions().OpenMPVersion};
+  WithOmpDeclarative::OmpClauseSet clauses;
+  clauses.set(llvm::omp::Clause::OMPC_device_type);
+  for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+    if (const parser::OmpObject *object{parser::omp::GetArgumentObject(arg)}) {
+      if (const Symbol *sym{omp::GetObjectSymbol(*object)}) {
+        common::visit(
+            [&](auto &d) {
+              using TypeD = llvm::remove_cvref_t<decltype(d)>;
+              if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
+                d.set_version(version);
+                d.set_ompGroupprivate(clauses);
+                d.set_ompGroupprivate(device);
+              }
+            },
+            const_cast<Symbol &>(sym->GetUltimate()).details());
+      }
+    }
+  }
+
   return true;
 }
 
@@ -2285,7 +2316,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
             if (device) {
               clauseSet.set(llvm::omp::Clause::OMPC_device_type);
               auto &deviceType{
-                  const_cast<decltype(device) &>(d.ompDeviceType())};
+                  const_cast<decltype(device) &>(d.ompDeclTargetDeviceType())};
               deviceType = device;
             }
           } else if constexpr (std::is_same_v<GenericDetails, TypeD> ||
