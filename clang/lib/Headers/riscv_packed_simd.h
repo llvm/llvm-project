@@ -92,15 +92,15 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return (rty)(__rs1 op __rs2);                                              \
   }
 
-#define __packed_unary_builtin_cast(name, ty, rty, builtin)                     \
-  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {           \
-    return (rty)builtin(__rs1);                                                   \
+#define __packed_unary_builtin_cast(name, ty, rty, builtin)                    \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
+    return (rty)builtin(__rs1);                                                \
   }
 
-#define __packed_binary_builtin_cast(name, ty, rty, builtin)                    \
-  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,             \
-                                                          ty __rs2) {           \
-    return (rty)builtin(__rs1, __rs2);                                            \
+#define __packed_binary_builtin_cast(name, ty, rty, builtin)                   \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,            \
+                                                          ty __rs2) {          \
+    return (rty)builtin(__rs1, __rs2);                                         \
   }
 
 // clang-format off: macro call sites have no trailing semicolons, which
