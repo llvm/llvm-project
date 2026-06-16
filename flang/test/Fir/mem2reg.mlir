@@ -303,8 +303,8 @@ func.func @declare_then_convert(%arg0: f32) -> f32 {
 // CHECK-SAME: %[[ARG0:.*]]: f32) -> f32
 // CHECK-NOT: fir.alloca
 // CHECK-NOT: fir.declare {{.*}} : (!fir.ref<f32>)
-// CHECK: fir.declare_value %[[ARG0]] {{.*}} : f32
 // CHECK: %[[I32:.*]] = fir.bitcast %[[ARG0]] : (f32) -> i32
+// CHECK: fir.declare_value %[[ARG0]] {{.*}} : f32
 // CHECK: %[[F32:.*]] = fir.bitcast %[[I32]] : (i32) -> f32
 // CHECK: return %[[F32]] : f32
 func.func @convert_then_declare(%arg0: f32) -> f32 {
