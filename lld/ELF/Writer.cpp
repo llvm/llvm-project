@@ -2284,18 +2284,18 @@ SmallVector<std::unique_ptr<PhdrEntry>, 0> Writer<ELFT>::createPhdrs() {
   // only honor one PT_GNU_RELRO.
   SmallVector<std::unique_ptr<PhdrEntry>, 0> relRos;
   SmallPtrSet<OutputSection *, 1> relroEnds;
-  PhdrEntry *relRo = nullptr;
+  PhdrEntry *activeRelRo = nullptr;
   for (OutputSection *sec : ctx.outputSections) {
     if (!needsPtLoad(sec))
       continue;
     if (isRelroSection(ctx, sec)) {
-      if (!relRo) {
+      if (!activeRelRo) {
         relRos.push_back(std::make_unique<PhdrEntry>(ctx, PT_GNU_RELRO, PF_R));
-        relRo = relRos.back().get();
+        activeRelRo = relRos.back().get();
       }
-      relRo->add(sec);
-    } else if (relRo) {
-      relRo = nullptr;
+      activeRelRo->add(sec);
+    } else if (activeRelRo) {
+      activeRelRo = nullptr;
       relroEnds.insert(sec);
     }
   }
