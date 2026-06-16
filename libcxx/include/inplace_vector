@@ -231,7 +231,7 @@ private:
       return static_cast<std::size_t>(0);
   }
 
-  using __size_type = decltype(__get_size_type());
+  using __size_type _LIBCPP_NODEBUG = decltype(__get_size_type());
 
   union {
     _Tp __elems_[_Cap];
@@ -254,7 +254,6 @@ private:
 #    endif
       }
     }
-    // std::start_lifetime_as_array?
   }
 
 public:
