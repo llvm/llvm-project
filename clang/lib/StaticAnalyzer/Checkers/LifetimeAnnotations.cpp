@@ -25,7 +25,7 @@ public:
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
   void analyzerLifetimeBound(const CallEvent &Call, CheckerContext &C) const;
   ProgramStateRef bindValues(ProgramStateRef State, SVal RetVal, const MemRegion *Source) const;
-  bool isSourceDangle(const MemRegion *Source, ProgramStateRef State,
+  bool hasDanglingSource(const MemRegion *Source, ProgramStateRef State,
                       CheckerContext &C) const;
   void reportDanglingSource(const MemRegion *Region, ExplodedNode *N,
                             CheckerContext &C) const;
@@ -104,7 +104,7 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
   C.addTransition(State);
 }
 
-bool LifetimeAnnotations::isSourceDangle(const MemRegion *Source,
+bool LifetimeAnnotations::hasDanglingSource(const MemRegion *Source,
                                          ProgramStateRef State,
                                          CheckerContext &C) const {
   // FIXME: Currently the checker only focuses on stack MemRegions only since
@@ -129,7 +129,7 @@ void LifetimeAnnotations::checkReturnedBorrower(const MapTy &Map,
   for (auto &&[Origin, SourceSet] : Map) {
     if (Origin == RetKey) {
       for (const MemRegion *Region : SourceSet) {
-        if (isSourceDangle(Region, State, C))
+        if (hasDanglingSource(Region, State, C))
           reportDanglingSource(Region, N, C);
       }
     }
@@ -194,9 +194,8 @@ void LifetimeAnnotations::checkDeadSymbols(SymbolReaper &SymReaper,
 
   for (auto &Entry : LBMap) {
     const SymExpr *Sym = Entry.first;
-    bool IsSymbolLive = SymReaper.isLive(Sym);
 
-    if (!IsSymbolLive) {
+    if (!SymReaper.isLive(Sym)) {
       State = State->remove<LifetimeBoundMap>(Sym);
       StateChanged = true;
     }
@@ -204,9 +203,8 @@ void LifetimeAnnotations::checkDeadSymbols(SymbolReaper &SymReaper,
 
   for (auto &Entry : LBMapVal) {
     const MemRegion *Region = Entry.first;
-    bool IsRegionLive = SymReaper.isLiveRegion(Region);
 
-    if (!IsRegionLive) {
+    if (!SymReaper.isLiveRegion(Region)) {
       State = State->remove<LifetimeBoundMapVal>(Region);
       StateChanged = true;
     }
