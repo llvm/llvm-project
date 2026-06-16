@@ -646,6 +646,503 @@ define ptr @bitcast_b64_to_p0(b64 %b) {
   ret ptr %r
 }
 
+; FIXME: Illegal bitcast from <2 x b32> to ptr.
+define ptr @bitcast_v2b32_to_ptr(<2 x b32> %v) {
+  ; AARCH64-LABEL: name: bitcast_v2b32_to_ptr
+  ; AARCH64: bb.1 (%ir-block.0):
+  ; AARCH64-NEXT:   liveins: $d0
+  ; AARCH64-NEXT: {{  $}}
+  ; AARCH64-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
+  ; AARCH64-NEXT:   [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[COPY]](<2 x i32>)
+  ; AARCH64-NEXT:   $x0 = COPY [[BITCAST]](p0)
+  ; AARCH64-NEXT:   RET_ReallyLR implicit $x0
+  ;
+  ; AMDGPU-LABEL: name: bitcast_v2b32_to_ptr
+  ; AMDGPU: bb.1 (%ir-block.0):
+  ; AMDGPU-NEXT:   liveins: $vgpr0, $vgpr1
+  ; AMDGPU-NEXT: {{  $}}
+  ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; AMDGPU-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; AMDGPU-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
+  ; AMDGPU-NEXT:   [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[BUILD_VECTOR]](<2 x s32>)
+  ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](p0)
+  ; AMDGPU-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; AMDGPU-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
+  ;
+  ; X86-LABEL: name: bitcast_v2b32_to_ptr
+  ; X86: bb.1 (%ir-block.0):
+  ; X86-NEXT:   liveins: $xmm0
+  ; X86-NEXT: {{  $}}
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
+  ; X86-NEXT:   [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
+  ; X86-NEXT:   [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[UV]](<2 x s32>)
+  ; X86-NEXT:   $rax = COPY [[BITCAST]](p0)
+  ; X86-NEXT:   RET 0, implicit $rax
+  %p = bitcast <2 x b32> %v to ptr
+  ret ptr %p
+}
+
+; FIXME: Illegal bitcast from ptr to <2 x b32>.
+define <2 x b32> @bitcast_ptr_to_v2b32(ptr %p) {
+  ; AARCH64-LABEL: name: bitcast_ptr_to_v2b32
+  ; AARCH64: bb.1 (%ir-block.0):
+  ; AARCH64-NEXT:   liveins: $x0
+  ; AARCH64-NEXT: {{  $}}
+  ; AARCH64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+  ; AARCH64-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY]](p0)
+  ; AARCH64-NEXT:   $d0 = COPY [[BITCAST]](<2 x i32>)
+  ; AARCH64-NEXT:   RET_ReallyLR implicit $d0
+  ;
+  ; AMDGPU-LABEL: name: bitcast_ptr_to_v2b32
+  ; AMDGPU: bb.1 (%ir-block.0):
+  ; AMDGPU-NEXT:   liveins: $vgpr0, $vgpr1
+  ; AMDGPU-NEXT: {{  $}}
+  ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; AMDGPU-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; AMDGPU-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; AMDGPU-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[MV]](p0)
+  ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](<2 x s32>)
+  ; AMDGPU-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; AMDGPU-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
+  ;
+  ; X86-LABEL: name: bitcast_ptr_to_v2b32
+  ; X86: bb.1 (%ir-block.0):
+  ; X86-NEXT:   liveins: $rdi
+  ; X86-NEXT: {{  $}}
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
+  ; X86-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[COPY]](p0)
+  ; X86-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](<2 x s32>)
+  ; X86-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; X86-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[DEF]](s32), [[DEF]](s32)
+  ; X86-NEXT:   $xmm0 = COPY [[BUILD_VECTOR]](<4 x s32>)
+  ; X86-NEXT:   RET 0, implicit $xmm0
+  %v = bitcast ptr %p to <2 x b32>
+  ret <2 x b32> %v
+}
+
+define b32 @bitcast_float_to_b32(float %f) {
+  ; AARCH64-LABEL: name: bitcast_float_to_b32
+  ; AARCH64: bb.1 (%ir-block.0):
+  ; AARCH64-NEXT:   liveins: $s0
+  ; AARCH64-NEXT: {{  $}}
+  ; AARCH64-NEXT:   [[COPY:%[0-9]+]]:_(f32) = COPY $s0
+  ; AARCH64-NEXT:   [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](f32)
+  ; AARCH64-NEXT:   $w0 = COPY [[BITCAST]](i32)
+  ; AARCH64-NEXT:   RET_ReallyLR implicit $w0
+  ;
+  ; AMDGPU-LABEL: name: bitcast_float_to_b32
+  ; AMDGPU: bb.1 (%ir-block.0):
+  ; AMDGPU-NEXT:   liveins: $vgpr0
+  ; AMDGPU-NEXT: {{  $}}
+  ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; AMDGPU-NEXT:   $vgpr0 = COPY [[COPY]](s32)
+  ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0
+  ;
+  ; X86-LABEL: name: bitcast_float_to_b32
+  ; X86: bb.1 (%ir-block.0):
+  ; X86-NEXT:   liveins: $xmm0
+  ; X86-NEXT: {{  $}}
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $xmm0
+  ; X86-NEXT:   $eax = COPY [[COPY]](s32)
+  ; X86-NEXT:   RET 0, implicit $eax
+  %r = bitcast float %f to b32
+  ret b32 %r
+}
+
+define b16 @bitcast_half_to_b16(half %h) {
+  ; AARCH64-LABEL: name: bitcast_half_to_b16
+  ; AARCH64: bb.1 (%ir-block.0):
+  ; AARCH64-NEXT:   liveins: $h0
+  ; AARCH64-NEXT: {{  $}}
+  ; AARCH64-NEXT:   [[COPY:%[0-9]+]]:_(f16) = COPY $h0
+  ; AARCH64-NEXT:   [[BITCAST:%[0-9]+]]:_(i16) = G_BITCAST [[COPY]](f16)
+  ; AARCH64-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST]](i16)
+  ; AARCH64-NEXT:   $w0 = COPY [[ANYEXT]](i32)
+  ; AARCH64-NEXT:   RET_ReallyLR implicit $w0
+  ;
+  ; AMDGPU-LABEL: name: bitcast_half_to_b16
+  ; AMDGPU: bb.1 (%ir-block.0):
+  ; AMDGPU-NEXT:   liveins: $vgpr0
+  ; AMDGPU-NEXT: {{  $}}
+  ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; AMDGPU-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+  ; AMDGPU-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC]](s16)
+  ; AMDGPU-NEXT:   $vgpr0 = COPY [[ANYEXT]](s32)
+  ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0
+  ;
+  ; X86-LABEL: name: bitcast_half_to_b16
+  ; X86: bb.1 (%ir-block.0):
+  ; X86-NEXT:   liveins: $xmm0
+  ; X86-NEXT: {{  $}}
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(s16) = COPY $xmm0
+  ; X86-NEXT:   $ax = COPY [[COPY]](s16)
+  ; X86-NEXT:   RET 0, implicit $ax
+  %r = bitcast half %h to b16
+  ret b16 %r
+}
+
+define b64 @bitcast_double_to_b64(double %d) {
+  ; AARCH64-LABEL: name: bitcast_double_to_b64
+  ; AARCH64: bb.1 (%ir-block.0):
+  ; AARCH64-NEXT:   liveins: $d0
+  ; AARCH64-NEXT: {{  $}}
+  ; AARCH64-NEXT:   [[COPY:%[0-9]+]]:_(f64) = COPY $d0
+  ; AARCH64-NEXT:   [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY]](f64)
+  ; AARCH64-NEXT:   $x0 = COPY [[BITCAST]](i64)
+  ; AARCH64-NEXT:   RET_ReallyLR implicit $x0
+  ;
+  ; AMDGPU-LABEL: name: bitcast_double_to_b64
+  ; AMDGPU: bb.1 (%ir-block.0):
+  ; AMDGPU-NEXT:   liveins: $vgpr0, $vgpr1
+  ; AMDGPU-NEXT: {{  $}}
+  ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; AMDGPU-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; AMDGPU-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
+  ; AMDGPU-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; AMDGPU-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
+  ;
+  ; X86-LABEL: name: bitcast_double_to_b64
+  ; X86: bb.1 (%ir-block.0):
+  ; X86-NEXT:   liveins: $xmm0
+  ; X86-NEXT: {{  $}}
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $xmm0
+  ; X86-NEXT:   $rax = COPY [[COPY]](s64)
+  ; X86-NEXT:   RET 0, implicit $rax
+  %r = bitcast double %d to b64
+  ret b64 %r
+}
+
+define double @bitcast_b64_to_double(b64 %b) {
+  ; AARCH64-LABEL: name: bitcast_b64_to_double
+  ; AARCH64: bb.1 (%ir-block.0):
+  ; AARCH64-NEXT:   liveins: $x0
+  ; AARCH64-NEXT: {{  $}}
+  ; AARCH64-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+  ; AARCH64-NEXT:   [[BITCAST:%[0-9]+]]:_(f64) = G_BITCAST [[COPY]](i64)
+  ; AARCH64-NEXT:   $d0 = COPY [[BITCAST]](f64)
+  ; AARCH64-NEXT:   RET_ReallyLR implicit $d0
+  ;
+  ; AMDGPU-LABEL: name: bitcast_b64_to_double
+  ; AMDGPU: bb.1 (%ir-block.0):
+  ; AMDGPU-NEXT:   liveins: $vgpr0, $vgpr1
+  ; AMDGPU-NEXT: {{  $}}
+  ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; AMDGPU-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; AMDGPU-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
+  ; AMDGPU-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; AMDGPU-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
+  ;
+  ; X86-LABEL: name: bitcast_b64_to_double
+  ; X86: bb.1 (%ir-block.0):
+  ; X86-NEXT:   liveins: $rdi
+  ; X86-NEXT: {{  $}}
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $rdi
+  ; X86-NEXT:   $xmm0 = COPY [[COPY]](s64)
+  ; X86-NEXT:   RET 0, implicit $xmm0
+  %r = bitcast b64 %b to double
+  ret double %r
+}
+
+define i64 @bitcast_b64_to_i64(b64 %b) {
+  ; AARCH64-LABEL: name: bitcast_b64_to_i64
+  ; AARCH64: bb.1 (%ir-block.0):
+  ; AARCH64-NEXT:   liveins: $x0
+  ; AARCH64-NEXT: {{  $}}
+  ; AARCH64-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+  ; AARCH64-NEXT:   $x0 = COPY [[COPY]](i64)
+  ; AARCH64-NEXT:   RET_ReallyLR implicit $x0
+  ;
+  ; AMDGPU-LABEL: name: bitcast_b64_to_i64
+  ; AMDGPU: bb.1 (%ir-block.0):
+  ; AMDGPU-NEXT:   liveins: $vgpr0, $vgpr1
+  ; AMDGPU-NEXT: {{  $}}
+  ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; AMDGPU-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; AMDGPU-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
+  ; AMDGPU-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; AMDGPU-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
+  ;
+  ; X86-LABEL: name: bitcast_b64_to_i64
+  ; X86: bb.1 (%ir-block.0):
+  ; X86-NEXT:   liveins: $rdi
+  ; X86-NEXT: {{  $}}
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $rdi
+  ; X86-NEXT:   $rax = COPY [[COPY]](s64)
+  ; X86-NEXT:   RET 0, implicit $rax
+  %r = bitcast b64 %b to i64
+  ret i64 %r
+}
+
+define b64 @bitcast_i64_to_b64(i64 %i) {
+  ; AARCH64-LABEL: name: bitcast_i64_to_b64
+  ; AARCH64: bb.1 (%ir-block.0):
+  ; AARCH64-NEXT:   liveins: $x0
+  ; AARCH64-NEXT: {{  $}}
+  ; AARCH64-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+  ; AARCH64-NEXT:   $x0 = COPY [[COPY]](i64)
+  ; AARCH64-NEXT:   RET_ReallyLR implicit $x0
+  ;
+  ; AMDGPU-LABEL: name: bitcast_i64_to_b64
+  ; AMDGPU: bb.1 (%ir-block.0):
+  ; AMDGPU-NEXT:   liveins: $vgpr0, $vgpr1
+  ; AMDGPU-NEXT: {{  $}}
+  ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; AMDGPU-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; AMDGPU-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
+  ; AMDGPU-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; AMDGPU-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
+  ;
+  ; X86-LABEL: name: bitcast_i64_to_b64
+  ; X86: bb.1 (%ir-block.0):
+  ; X86-NEXT:   liveins: $rdi
+  ; X86-NEXT: {{  $}}
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $rdi
+  ; X86-NEXT:   $rax = COPY [[COPY]](s64)
+  ; X86-NEXT:   RET 0, implicit $rax
+  %r = bitcast i64 %i to b64
+  ret b64 %r
+}
+
+; Vector pack / unpack (64 bits total).
+define i64 @bitcast_v2b32_to_i64(<2 x b32> %v) {
+  ; AARCH64-LABEL: name: bitcast_v2b32_to_i64
+  ; AARCH64: bb.1 (%ir-block.0):
+  ; AARCH64-NEXT:   liveins: $d0
+  ; AARCH64-NEXT: {{  $}}
+  ; AARCH64-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
+  ; AARCH64-NEXT:   [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY]](<2 x i32>)
+  ; AARCH64-NEXT:   $x0 = COPY [[BITCAST]](i64)
+  ; AARCH64-NEXT:   RET_ReallyLR implicit $x0
+  ;
+  ; AMDGPU-LABEL: name: bitcast_v2b32_to_i64
+  ; AMDGPU: bb.1 (%ir-block.0):
+  ; AMDGPU-NEXT:   liveins: $vgpr0, $vgpr1
+  ; AMDGPU-NEXT: {{  $}}
+  ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; AMDGPU-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; AMDGPU-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
+  ; AMDGPU-NEXT:   [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[BUILD_VECTOR]](<2 x s32>)
+  ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](s64)
+  ; AMDGPU-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; AMDGPU-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
+  ;
+  ; X86-LABEL: name: bitcast_v2b32_to_i64
+  ; X86: bb.1 (%ir-block.0):
+  ; X86-NEXT:   liveins: $xmm0
+  ; X86-NEXT: {{  $}}
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
+  ; X86-NEXT:   [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
+  ; X86-NEXT:   [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[UV]](<2 x s32>)
+  ; X86-NEXT:   $rax = COPY [[BITCAST]](s64)
+  ; X86-NEXT:   RET 0, implicit $rax
+  %r = bitcast <2 x b32> %v to i64
+  ret i64 %r
+}
+
+define <2 x b32> @bitcast_i64_to_v2b32(i64 %i) {
+  ; AARCH64-LABEL: name: bitcast_i64_to_v2b32
+  ; AARCH64: bb.1 (%ir-block.0):
+  ; AARCH64-NEXT:   liveins: $x0
+  ; AARCH64-NEXT: {{  $}}
+  ; AARCH64-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+  ; AARCH64-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY]](i64)
+  ; AARCH64-NEXT:   $d0 = COPY [[BITCAST]](<2 x i32>)
+  ; AARCH64-NEXT:   RET_ReallyLR implicit $d0
+  ;
+  ; AMDGPU-LABEL: name: bitcast_i64_to_v2b32
+  ; AMDGPU: bb.1 (%ir-block.0):
+  ; AMDGPU-NEXT:   liveins: $vgpr0, $vgpr1
+  ; AMDGPU-NEXT: {{  $}}
+  ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; AMDGPU-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; AMDGPU-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; AMDGPU-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[MV]](s64)
+  ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](<2 x s32>)
+  ; AMDGPU-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; AMDGPU-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
+  ;
+  ; X86-LABEL: name: bitcast_i64_to_v2b32
+  ; X86: bb.1 (%ir-block.0):
+  ; X86-NEXT:   liveins: $rdi
+  ; X86-NEXT: {{  $}}
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $rdi
+  ; X86-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[COPY]](s64)
+  ; X86-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](<2 x s32>)
+  ; X86-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; X86-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[DEF]](s32), [[DEF]](s32)
+  ; X86-NEXT:   $xmm0 = COPY [[BUILD_VECTOR]](<4 x s32>)
+  ; X86-NEXT:   RET 0, implicit $xmm0
+  %r = bitcast i64 %i to <2 x b32>
+  ret <2 x b32> %r
+}
+
+define <4 x i16> @bitcast_v2b32_to_v4i16(<2 x b32> %v) {
+  ; AARCH64-LABEL: name: bitcast_v2b32_to_v4i16
+  ; AARCH64: bb.1 (%ir-block.0):
+  ; AARCH64-NEXT:   liveins: $d0
+  ; AARCH64-NEXT: {{  $}}
+  ; AARCH64-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
+  ; AARCH64-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x i16>) = G_BITCAST [[COPY]](<2 x i32>)
+  ; AARCH64-NEXT:   $d0 = COPY [[BITCAST]](<4 x i16>)
+  ; AARCH64-NEXT:   RET_ReallyLR implicit $d0
+  ;
+  ; AMDGPU-LABEL: name: bitcast_v2b32_to_v4i16
+  ; AMDGPU: bb.1 (%ir-block.0):
+  ; AMDGPU-NEXT:   liveins: $vgpr0, $vgpr1
+  ; AMDGPU-NEXT: {{  $}}
+  ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; AMDGPU-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; AMDGPU-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
+  ; AMDGPU-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x s16>) = G_BITCAST [[BUILD_VECTOR]](<2 x s32>)
+  ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](<4 x s16>)
+  ; AMDGPU-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; AMDGPU-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
+  ;
+  ; X86-LABEL: name: bitcast_v2b32_to_v4i16
+  ; X86: bb.1 (%ir-block.0):
+  ; X86-NEXT:   liveins: $xmm0
+  ; X86-NEXT: {{  $}}
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $xmm0
+  ; X86-NEXT:   [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
+  ; X86-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x s16>) = G_BITCAST [[UV]](<2 x s32>)
+  ; X86-NEXT:   [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[BITCAST]](<4 x s16>)
+  ; X86-NEXT:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+  ; X86-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[UV2]](s16), [[UV3]](s16), [[UV4]](s16), [[UV5]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16), [[DEF]](s16)
+  ; X86-NEXT:   $xmm0 = COPY [[BUILD_VECTOR]](<8 x s16>)
+  ; X86-NEXT:   RET 0, implicit $xmm0
+  %r = bitcast <2 x b32> %v to <4 x i16>
+  ret <4 x i16> %r
+}
+
+define <2 x b32> @bitcast_v4i16_to_v2b32(<4 x i16> %v) {
+  ; AARCH64-LABEL: name: bitcast_v4i16_to_v2b32
+  ; AARCH64: bb.1 (%ir-block.0):
+  ; AARCH64-NEXT:   liveins: $d0
+  ; AARCH64-NEXT: {{  $}}
+  ; AARCH64-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $d0
+  ; AARCH64-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY]](<4 x i16>)
+  ; AARCH64-NEXT:   $d0 = COPY [[BITCAST]](<2 x i32>)
+  ; AARCH64-NEXT:   RET_ReallyLR implicit $d0
+  ;
+  ; AMDGPU-LABEL: name: bitcast_v4i16_to_v2b32
+  ; AMDGPU: bb.1 (%ir-block.0):
+  ; AMDGPU-NEXT:   liveins: $vgpr0, $vgpr1
+  ; AMDGPU-NEXT: {{  $}}
+  ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; AMDGPU-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](s32)
+  ; AMDGPU-NEXT:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
+  ; AMDGPU-NEXT:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
+  ; AMDGPU-NEXT:   [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY1]](s32)
+  ; AMDGPU-NEXT:   [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
+  ; AMDGPU-NEXT:   [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s16)
+  ; AMDGPU-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32), [[ANYEXT3]](s32)
+  ; AMDGPU-NEXT:   [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[BUILD_VECTOR]](<4 x s32>)
+  ; AMDGPU-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[TRUNC]](<4 x s16>)
+  ; AMDGPU-NEXT:   [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](<2 x s32>)
+  ; AMDGPU-NEXT:   $vgpr0 = COPY [[UV4]](s32)
+  ; AMDGPU-NEXT:   $vgpr1 = COPY [[UV5]](s32)
+  ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
+  ;
+  ; X86-LABEL: name: bitcast_v4i16_to_v2b32
+  ; X86: bb.1 (%ir-block.0):
+  ; X86-NEXT:   liveins: $xmm0
+  ; X86-NEXT: {{  $}}
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $xmm0
+  ; X86-NEXT:   [[UV:%[0-9]+]]:_(<4 x s16>), [[UV1:%[0-9]+]]:_(<4 x s16>) = G_UNMERGE_VALUES [[COPY]](<8 x s16>)
+  ; X86-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[UV]](<4 x s16>)
+  ; X86-NEXT:   [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](<2 x s32>)
+  ; X86-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; X86-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[UV2]](s32), [[UV3]](s32), [[DEF]](s32), [[DEF]](s32)
+  ; X86-NEXT:   $xmm0 = COPY [[BUILD_VECTOR]](<4 x s32>)
+  ; X86-NEXT:   RET 0, implicit $xmm0
+  %r = bitcast <4 x i16> %v to <2 x b32>
+  ret <2 x b32> %r
+}
+
+define b64 @bitcast_v1ptr_to_b64(<1 x ptr> %p) {
+  ; AARCH64-LABEL: name: bitcast_v1ptr_to_b64
+  ; AARCH64: bb.1 (%ir-block.0):
+  ; AARCH64-NEXT:   liveins: $d0
+  ; AARCH64-NEXT: {{  $}}
+  ; AARCH64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $d0
+  ; AARCH64-NEXT:   [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY]](p0)
+  ; AARCH64-NEXT:   $x0 = COPY [[BITCAST]](i64)
+  ; AARCH64-NEXT:   RET_ReallyLR implicit $x0
+  ;
+  ; AMDGPU-LABEL: name: bitcast_v1ptr_to_b64
+  ; AMDGPU: bb.1 (%ir-block.0):
+  ; AMDGPU-NEXT:   liveins: $vgpr0, $vgpr1
+  ; AMDGPU-NEXT: {{  $}}
+  ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; AMDGPU-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; AMDGPU-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; AMDGPU-NEXT:   [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[MV]](p0)
+  ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](s64)
+  ; AMDGPU-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; AMDGPU-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
+  ;
+  ; X86-LABEL: name: bitcast_v1ptr_to_b64
+  ; X86: bb.1 (%ir-block.0):
+  ; X86-NEXT:   liveins: $rdi
+  ; X86-NEXT: {{  $}}
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
+  ; X86-NEXT:   [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[COPY]](p0)
+  ; X86-NEXT:   $rax = COPY [[BITCAST]](s64)
+  ; X86-NEXT:   RET 0, implicit $rax
+  %r = bitcast <1 x ptr> %p to b64
+  ret b64 %r
+}
+
+define <1 x ptr> @bitcast_b64_to_v1ptr(b64 %b) {
+  ; AARCH64-LABEL: name: bitcast_b64_to_v1ptr
+  ; AARCH64: bb.1 (%ir-block.0):
+  ; AARCH64-NEXT:   liveins: $x0
+  ; AARCH64-NEXT: {{  $}}
+  ; AARCH64-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+  ; AARCH64-NEXT:   [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[COPY]](i64)
+  ; AARCH64-NEXT:   $d0 = COPY [[BITCAST]](p0)
+  ; AARCH64-NEXT:   RET_ReallyLR implicit $d0
+  ;
+  ; AMDGPU-LABEL: name: bitcast_b64_to_v1ptr
+  ; AMDGPU: bb.1 (%ir-block.0):
+  ; AMDGPU-NEXT:   liveins: $vgpr0, $vgpr1
+  ; AMDGPU-NEXT: {{  $}}
+  ; AMDGPU-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; AMDGPU-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; AMDGPU-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; AMDGPU-NEXT:   [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[MV]](s64)
+  ; AMDGPU-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BITCAST]](p0)
+  ; AMDGPU-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; AMDGPU-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; AMDGPU-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
+  ;
+  ; X86-LABEL: name: bitcast_b64_to_v1ptr
+  ; X86: bb.1 (%ir-block.0):
+  ; X86-NEXT:   liveins: $rdi
+  ; X86-NEXT: {{  $}}
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $rdi
+  ; X86-NEXT:   [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[COPY]](s64)
+  ; X86-NEXT:   $rax = COPY [[BITCAST]](p0)
+  ; X86-NEXT:   RET 0, implicit $rax
+  %r = bitcast b64 %b to <1 x ptr>
+  ret <1 x ptr> %r
+}
+
 ;;
 ;; The "bytecast" surface: bitcast is the only IR cast that may produce or
 ;; consume a byte type. The cases below correspond to LangRef's
