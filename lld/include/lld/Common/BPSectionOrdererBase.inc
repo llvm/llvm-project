@@ -179,7 +179,7 @@ auto BPOrderer<D>::computeOrder(
     auto readerOrErr = InstrProfReader::create(profilePath, *fs);
     if (!readerOrErr) {
       lld::error(toString(readerOrErr.takeError()));
-      return {};
+      return DenseMap<const Section *, int>{};
     }
 
     reader = std::move(readerOrErr.get());
