@@ -10,6 +10,9 @@ struct WithCtor { WithCtor(); int x; };
 struct PartlyInit { int x; struct Inner { Inner(); } s; };
 struct Nested { Trivial t; };
 struct WithBase : Trivial {};
+struct MarkedMember { int x [[uninitialized]]; };
+struct MixedMarked { int a [[uninitialized]]; int b; };
+struct NestedMarked { MarkedMember m; };
 
 void test_aggregate() {
   Trivial a;                   // expected-error {{variable 'a' must be initialized or marked '[[uninitialized]]' under profile 'std::init'}}
@@ -34,6 +37,16 @@ void test_trusted() {
   WithCtor a;
   AllInit b;
   (void)a; (void)b;
+}
+
+void test_marked_members() {
+  // A type whose only indeterminate scalars are [[uninitialized]] is trusted;
+  // those members are acknowledged uninitialized (paper §6.2), even through a
+  // nesting level. A mixed type still fires for its unmarked scalar.
+  MarkedMember a;
+  NestedMarked b;
+  MixedMarked c; // expected-error {{variable 'c' must be initialized or marked '[[uninitialized]]' under profile 'std::init'}}
+  (void)a; (void)b; (void)c;
 }
 
 void test_suppress() {
