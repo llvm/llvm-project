@@ -22,6 +22,7 @@
       "opcode": true,
       "left": true,
       "right": true,
+      "result_type_id": true,
       "result_size": true,
       "result": true,
       "result.replace": true,

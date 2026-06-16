@@ -1801,6 +1801,13 @@ enum CompareFlags : uint64_t {
   COMPARE_FLAG_HAS_NO_SIGNED_ZEROS = 1 << 3,
 };
 
+Value *CompareIO::getOperandTypeId(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  return getCI(&Ty, I.getOperand(0)->getType()->getTypeID());
+}
+
 Value *CompareIO::getOperandSize(Value &V, Type &Ty,
                                  InstrumentationConfig &IConf,
                                  InstrumentorIRBuilderTy &IIRB) {
@@ -1853,7 +1860,8 @@ void CompareIO::init(InstrumentationConfig &IConf,
       (Config.has(PassOpSize) ? IRTArg::INDIRECT_HAS_SIZE : IRTArg::NONE);
   if (Config.has(PassOpTypeId))
     IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "operand_type_id",
-                             "The operand type id.", IRTArg::NONE, getTypeId));
+                             "The operand type id.", IRTArg::NONE,
+                             getOperandTypeId));
   if (Config.has(PassOpSize))
     IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "operand_size",
                              "The operand type size.", IRTArg::NONE,
@@ -1873,6 +1881,10 @@ void CompareIO::init(InstrumentationConfig &IConf,
     IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "right",
                              "The comparison's right operand.", OperandArgOpts,
                              getRight));
+  if (!IsPRE && Config.has(PassResultSize))
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "result_type_id",
+                             "The result value's type ID.", IRTArg::NONE,
+                             getTypeId));
   if (!IsPRE && Config.has(PassResultSize))
     IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "result_size",
                              "Size of the result value.", IRTArg::NONE,

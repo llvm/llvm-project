@@ -395,6 +395,8 @@
       "left.description": "The comparison's left operand.",
       "right": true,
       "right.description": "The comparison's right operand.",
+      "result_type_id": true,
+      "result_type_id.description": "The result value's type ID.",
       "result_size": true,
       "result_size.description": "Size of the result value.",
       "result": true,

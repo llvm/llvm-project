@@ -1197,6 +1197,7 @@ struct CompareIO final
     PassPredicate,
     PassLeft,
     PassRight,
+    PassResultTypeId,
     PassResultSize,
     PassResult,
     ReplaceResult,
@@ -1214,6 +1215,9 @@ struct CompareIO final
                      InstrumentorIRBuilderTy &IIRB,
                      ConfigTy *UserConfig = nullptr);
 
+  LLVM_ABI static Value *getOperandTypeId(Value &V, Type &Ty,
+                                          InstrumentationConfig &IConf,
+                                          InstrumentorIRBuilderTy &IIRB);
   LLVM_ABI static Value *getOperandSize(Value &V, Type &Ty,
                                         InstrumentationConfig &IConf,
                                         InstrumentorIRBuilderTy &IIRB);
