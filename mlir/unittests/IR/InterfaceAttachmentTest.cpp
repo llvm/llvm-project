@@ -111,9 +111,9 @@ struct OverloadModel
   }
 };
 
-// An external model must be able to override an overloaded interface method by
-// its source name; the generated forwarders must dispatch there rather than
-// fall back to the inherited default.
+// Verify that an external model is able to override an overloaded interface
+// method by its source name and the generated forwarders dispatch there rather
+// than fall back to the inherited default.
 TEST(InterfaceAttachment, OverloadedExternalModel) {
   MLIRContext context;
   IntegerType i8 = IntegerType::get(&context, 8);
@@ -122,6 +122,7 @@ TEST(InterfaceAttachment, OverloadedExternalModel) {
   ASSERT_TRUE(iface != nullptr);
 
   // First overload (unique name == source name): dispatched to the override.
+  // The default implementation would have returned 1000 + 7 = 1007 instead.
   EXPECT_EQ(iface.getOverloadedValue(7u), 7u);
 
   // Second overload: overridden by source name. If the forwarder dispatches by
@@ -129,7 +130,8 @@ TEST(InterfaceAttachment, OverloadedExternalModel) {
   // default (2000 + 6 + 7 == 2013) runs.
   EXPECT_EQ(iface.getOverloadedValue(6u, 7u), 42u);
 
-  // Third overload: not overridden, dispatched to the base implementation.
+  // Third overload: not overridden, should be dispatched to the base
+  // implementation. The default implementation returns 3000 + 6 + 7 + 8 = 3021.
   EXPECT_EQ(iface.getOverloadedValue(6u, 7u, 8u), 3021u);
 }
 

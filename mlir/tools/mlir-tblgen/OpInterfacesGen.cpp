@@ -326,6 +326,8 @@ void InterfaceGenerator::emitModelDecl(const Interface &interface) {
     if (method.isStatic())
       os << "static ";
     emitCPPType(method.getReturnType(), os);
+    // External models declare methods by their non-unique source names so that
+    // overloaded methods can be overridden by implementers.
     os << method.getName() << "(";
     if (!method.isStatic()) {
       emitCPPType(valueType, os);
@@ -420,7 +422,8 @@ void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
     os << "detail::" << interface.getName()
        << "InterfaceTraits::ExternalModel<ConcreteModel, " << valueTemplate
        << ">::";
-
+    // External models expose (possibly overloaded) methods by their original
+    // source names, hiding the internal name mangling from implementers.
     os << method.getName() << "(";
     if (!method.isStatic()) {
       emitCPPType(valueType, os);
