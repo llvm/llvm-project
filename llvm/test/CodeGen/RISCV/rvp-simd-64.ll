@@ -2423,11 +2423,11 @@ define <2 x i32> @test_pmulhu_w(<2 x i32> %a, <2 x i32> %b) {
 define <8 x i8> @test_pmulhsu_b(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-LABEL: test_pmulhsu_b:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pwcvt.b a4, a1
-; RV32-NEXT:    pwcvtu.b a6, a3
-; RV32-NEXT:    pwcvt.b a0, a0
+; RV32-NEXT:    pwcvt.b a4, a0
+; RV32-NEXT:    pwcvtu.b a6, a2
+; RV32-NEXT:    pwcvt.b a0, a1
 ; RV32-NEXT:    pwmul.h t1, a5, a7
-; RV32-NEXT:    pwcvtu.b a2, a2
+; RV32-NEXT:    pwcvtu.b a2, a3
 ; RV32-NEXT:    pncvt.h a5, t1
 ; RV32-NEXT:    pwmul.h a6, a4, a6
 ; RV32-NEXT:    pwmul.h t1, a1, a3
@@ -2435,10 +2435,8 @@ define <8 x i8> @test_pmulhsu_b(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-NEXT:    pwmul.h a2, a0, a2
 ; RV32-NEXT:    pncvt.h a4, a6
 ; RV32-NEXT:    pncvt.h a0, a2
-; RV32-NEXT:    psrli.dh a2, a0, 8
-; RV32-NEXT:    psrli.dh a0, a4, 8
-; RV32-NEXT:    pncvt.b a1, a0
-; RV32-NEXT:    pncvt.b a0, a2
+; RV32-NEXT:    pncvth.b a1, a0
+; RV32-NEXT:    pncvth.b a0, a4
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pmulhsu_b:
@@ -2496,11 +2494,11 @@ define <8 x i8> @test_pmulhsu_b(<8 x i8> %a, <8 x i8> %b) {
 define <8 x i8> @test_pmulhsu_b_commuted(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-LABEL: test_pmulhsu_b_commuted:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    pwcvtu.b a4, a1
-; RV32-NEXT:    pwcvt.b a6, a3
-; RV32-NEXT:    pwcvtu.b a0, a0
+; RV32-NEXT:    pwcvtu.b a4, a0
+; RV32-NEXT:    pwcvt.b a6, a2
+; RV32-NEXT:    pwcvtu.b a0, a1
 ; RV32-NEXT:    pwmul.h t1, a5, a7
-; RV32-NEXT:    pwcvt.b a2, a2
+; RV32-NEXT:    pwcvt.b a2, a3
 ; RV32-NEXT:    pncvt.h a5, t1
 ; RV32-NEXT:    pwmul.h a6, a4, a6
 ; RV32-NEXT:    pwmul.h t1, a1, a3
@@ -2508,10 +2506,8 @@ define <8 x i8> @test_pmulhsu_b_commuted(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-NEXT:    pwmul.h a2, a0, a2
 ; RV32-NEXT:    pncvt.h a4, a6
 ; RV32-NEXT:    pncvt.h a0, a2
-; RV32-NEXT:    psrli.dh a2, a0, 8
-; RV32-NEXT:    psrli.dh a0, a4, 8
-; RV32-NEXT:    pncvt.b a1, a0
-; RV32-NEXT:    pncvt.b a0, a2
+; RV32-NEXT:    pncvth.b a1, a0
+; RV32-NEXT:    pncvth.b a0, a4
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pmulhsu_b_commuted:
@@ -4892,8 +4888,7 @@ define <2 x i32> @test_pasubu_v2i32(<2 x i32> %a, <2 x i32> %b) {
 define <2 x i16> @test_pnsrai_h(<2 x i32> %a) {
 ; RV32-LABEL: test_pnsrai_h:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    psrai.dw a0, a0, 23
-; RV32-NEXT:    pncvt.h a0, a0
+; RV32-NEXT:    pnsrai.h a0, a0, 23
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pnsrai_h:
@@ -4910,8 +4905,7 @@ define <2 x i16> @test_pnsrai_h(<2 x i32> %a) {
 define <4 x i8> @test_pnsrai_b(<4 x i16> %a) {
 ; RV32-LABEL: test_pnsrai_b:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    psrai.dh a0, a0, 9
-; RV32-NEXT:    pncvt.b a0, a0
+; RV32-NEXT:    pnsrai.b a0, a0, 9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pnsrai_b:
@@ -4932,8 +4926,7 @@ define <4 x i8> @test_pnsrai_b(<4 x i16> %a) {
 define <4 x i8> @test_pnsrl_bs(<4 x i16> %a, i16 %shamt) {
 ; RV32-LABEL: test_pnsrl_bs:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    psrl.dhs a0, a0, a2
-; RV32-NEXT:    pncvt.b a0, a0
+; RV32-NEXT:    pnsrl.bs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pnsrl_bs:
@@ -4956,8 +4949,7 @@ define <4 x i8> @test_pnsrl_bs(<4 x i16> %a, i16 %shamt) {
 define <4 x i8> @test_pnsrl_bs_mask(<4 x i16> %a, i16 %shamt) {
 ; RV32-LABEL: test_pnsrl_bs_mask:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    psrl.dhs a0, a0, a2
-; RV32-NEXT:    pncvt.b a0, a0
+; RV32-NEXT:    pnsrl.bs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pnsrl_bs_mask:
@@ -4981,8 +4973,7 @@ define <4 x i8> @test_pnsrl_bs_mask(<4 x i16> %a, i16 %shamt) {
 define <2 x i16> @test_pnsrl_hs(<2 x i32> %a, i32 %shamt) {
 ; RV32-LABEL: test_pnsrl_hs:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    psrl.dws a0, a0, a2
-; RV32-NEXT:    pncvt.h a0, a0
+; RV32-NEXT:    pnsrl.hs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pnsrl_hs:
@@ -5001,8 +4992,7 @@ define <2 x i16> @test_pnsrl_hs(<2 x i32> %a, i32 %shamt) {
 define <2 x i16> @test_pnsrl_hs_mask(<2 x i32> %a, i32 %shamt) {
 ; RV32-LABEL: test_pnsrl_hs_mask:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    psrl.dws a0, a0, a2
-; RV32-NEXT:    pncvt.h a0, a0
+; RV32-NEXT:    pnsrl.hs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pnsrl_hs_mask:
@@ -5022,8 +5012,7 @@ define <2 x i16> @test_pnsrl_hs_mask(<2 x i32> %a, i32 %shamt) {
 define <4 x i8> @test_pnsra_bs(<4 x i16> %a, i16 %shamt) {
 ; RV32-LABEL: test_pnsra_bs:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    psra.dhs a0, a0, a2
-; RV32-NEXT:    pncvt.b a0, a0
+; RV32-NEXT:    pnsra.bs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pnsra_bs:
@@ -5046,8 +5035,7 @@ define <4 x i8> @test_pnsra_bs(<4 x i16> %a, i16 %shamt) {
 define <4 x i8> @test_pnsra_bs_mask(<4 x i16> %a, i16 %shamt) {
 ; RV32-LABEL: test_pnsra_bs_mask:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    psra.dhs a0, a0, a2
-; RV32-NEXT:    pncvt.b a0, a0
+; RV32-NEXT:    pnsra.bs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pnsra_bs_mask:
@@ -5071,8 +5059,7 @@ define <4 x i8> @test_pnsra_bs_mask(<4 x i16> %a, i16 %shamt) {
 define <2 x i16> @test_pnsra_hs(<2 x i32> %a, i32 %shamt) {
 ; RV32-LABEL: test_pnsra_hs:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    psra.dws a0, a0, a2
-; RV32-NEXT:    pncvt.h a0, a0
+; RV32-NEXT:    pnsra.hs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pnsra_hs:
@@ -5091,8 +5078,7 @@ define <2 x i16> @test_pnsra_hs(<2 x i32> %a, i32 %shamt) {
 define <2 x i16> @test_pnsra_hs_mask(<2 x i32> %a, i32 %shamt) {
 ; RV32-LABEL: test_pnsra_hs_mask:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    psra.dws a0, a0, a2
-; RV32-NEXT:    pncvt.h a0, a0
+; RV32-NEXT:    pnsra.hs a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pnsra_hs_mask:
