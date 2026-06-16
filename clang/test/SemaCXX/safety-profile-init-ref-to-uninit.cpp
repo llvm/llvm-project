@@ -102,6 +102,23 @@ struct WithFields {
   int &r2 = g_uninit;                     // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
 };
 
+// [[profiles::suppress]] on a data member must cover its initializer's
+// finalization checks, not just the initializer's parsing.
+struct WithSuppressedFields {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "ref_to_uninit")]] int *p1 = &g_uninit;        // OK: rule-targeted suppress
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] int *p2 = &g_uninit;                                // OK: whole-profile suppress
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] int *p3 [[ref_to_uninit]] = &g_init;                // OK: suppressed (marked target, initialized source)
+};
+
+// A suppress on the enclosing record covers its members' initializers.
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(std::init)]] WithClassLevelSuppress {
+  int *p = &g_uninit; // OK: suppressed by the class-level attribute
+};
+
 [[ref_to_uninit]] int *ret_uninit_ptr_ok() { return &g_uninit; }      // OK
 [[ref_to_uninit]] int *ret_uninit_ptr_bad() {
   return &g_init; // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}

@@ -75,6 +75,21 @@ void test_suppress_block() {
   }
 }
 
+// [[profiles::suppress]] on a data member covers the uninit_with_initializer
+// check that runs when its NSDMI is finalized, not just its parsing.
+struct WithSuppressedNSDMI {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "uninit_with_initializer")]] int m [[uninitialized]] = 0; // OK: rule-targeted suppress
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] int n [[uninitialized]] = 1;                                  // OK: whole-profile suppress
+};
+
+// A suppress on the enclosing record covers its members' NSDMIs.
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+struct [[profiles::suppress(std::init)]] WithClassLevelSuppressedNSDMI {
+  int m [[uninitialized]] = 0; // OK: suppressed by the class-level attribute
+};
+
 template <typename T>
 void template_marker_with_init() {
   T x [[uninitialized]] = T{}; // expected-error 2 {{variable 'x' cannot be both '[[uninitialized]]' and have an initializer under profile 'std::init'}}

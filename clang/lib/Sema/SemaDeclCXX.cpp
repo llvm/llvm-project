@@ -4226,6 +4226,12 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
 
   FD->setInClassInitializer(InitExpr.get());
 
+  // The parse-time [[profiles::suppress]] scope set up while parsing the
+  // initializer is gone by the time this finalization runs (a late-parsed
+  // NSDMI finishes parsing before this point), so re-establish it from the
+  // field for the post-initialization profile checks below.
+  ProfileSuppressScope SuppressScope(*this, FD, /*WalkLexicalParents=*/true);
+
   checkInitProfileUninitWithInitializer(FD->getLocation(), FD->getDeclName(),
                                         FD->getType(),
                                         FD->getInClassInitializer(),
