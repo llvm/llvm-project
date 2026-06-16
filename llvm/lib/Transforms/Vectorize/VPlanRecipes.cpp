@@ -1134,9 +1134,8 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
   case Instruction::Xor: {
     // Certain instructions can be cheaper if they have a constant second
     // operand. One example of this are shifts on x86.
-    TargetTransformInfo::OperandValueInfo RHSInfo = {
-        TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None};
-    if (Opcode != Instruction::FNeg) {
+    TargetTransformInfo::OperandValueInfo RHSInfo;
+    if (getNumOperands() == 2) {
       RHSInfo = Ctx.getOperandInfo(getOperand(1));
       if (RHSInfo.Kind == TargetTransformInfo::OK_AnyValue &&
           getOperand(1)->isDefinedOutsideLoopRegions())
@@ -1933,10 +1932,8 @@ void VPInstructionWithType::execute(VPTransformState &State) {
 
 InstructionCost VPInstructionWithType::computeCost(ElementCount VF,
                                                    VPCostContext &Ctx) const {
-  // NOTE: At the moment it seems only possible to expose this path for
-  // the trunc, zext and sext opcodes. However, isScalarCast also covers
-  // int<>fp conversions, bitcasts, ptr<>int conversions, etc.
-  if (Instruction::isCast(getOpcode()))
+  // Always compute costs for scalar VF and casts.
+  if (VF.isScalar() || Instruction::isCast(getOpcode()))
     return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                       Ctx);
 
@@ -1954,12 +1951,6 @@ InstructionCost VPInstructionWithType::computeCost(ElementCount VF,
     // licm transform we can add the cost here so that it doesn't incorrectly
     // affect the choice of VF.
     return 0;
-/*  assert((Instruction::isCast(getOpcode()) || VF.isScalar()) &&*/
-         /*"only expected scalar VF or casts");*/
-  /*// The recipes handled here are always single-scalar, so compute their cost at*/
-  /*// a scalar VF.*/
-  /*return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),*/
-                                    /*Ctx);*/
   default:
     // Although VPInstructionWithType is also used for
     // VPInstruction::WideIVStep it isn't currently possible to expose cases
