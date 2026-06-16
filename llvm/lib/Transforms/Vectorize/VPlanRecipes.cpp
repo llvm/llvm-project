@@ -468,37 +468,92 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
   LLVMContext &Ctx = Op0Ty->getContext();
   switch (Opcode) {
   case VPInstruction::BranchOnCond:
+    assert(Op0Ty->isIntegerTy(1) && "expected bool condition");
+    return Type::getVoidTy(Ctx);
   case VPInstruction::BranchOnTwoConds:
+    assert(Op0Ty->isIntegerTy(1) && "expected bool condition");
+    AssertOperandType(1, IntegerType::get(Ctx, 1));
+    return Type::getVoidTy(Ctx);
   case VPInstruction::BranchOnCount:
-  case Instruction::Store:
+    assert(Op0Ty->isIntegerTy() && "expected integer operand");
+    AssertOperandType(1, Op0Ty);
+    return Type::getVoidTy(Ctx);
+  case VPInstruction::CalculateTripCountMinusVF:
+  case VPInstruction::CanonicalIVIncrementForPart:
+    assert(Op0Ty->isIntegerTy() && "expected integer operand");
+    for (unsigned Idx = 1; Idx != Operands.size(); ++Idx)
+      AssertOperandType(Idx, Op0Ty);
+    return Op0Ty;
   case Instruction::Switch:
+    for (unsigned Idx = 1; Idx != Operands.size(); ++Idx)
+      AssertOperandType(Idx, Op0Ty);
+    return Type::getVoidTy(Ctx);
+  case Instruction::Store:
     return Type::getVoidTy(Ctx);
   case Instruction::ICmp:
-  case Instruction::FCmp:
-  case VPInstruction::ActiveLaneMask:
+    assert(Op0Ty->isIntOrPtrTy() && "expected integer or pointer operand");
     AssertOperandType(1, Op0Ty);
+    return IntegerType::get(Ctx, 1);
+  case Instruction::FCmp:
+    assert(Op0Ty->isFloatingPointTy() && "expected floating-point operand");
+    AssertOperandType(1, Op0Ty);
+    return IntegerType::get(Ctx, 1);
+  case VPInstruction::ActiveLaneMask:
+    assert(Op0Ty->isIntegerTy() && "expected integer operand");
+    AssertOperandType(1, Op0Ty);
+    return IntegerType::get(Ctx, 1);
+  case VPInstruction::MaskedCond:
+    assert(Op0Ty->isIntegerTy(1) && "expected bool operand");
     return IntegerType::get(Ctx, 1);
   case VPInstruction::LogicalAnd:
   case VPInstruction::LogicalOr:
-  case VPInstruction::MaskedCond:
-    assert((!Op0Ty || Op0Ty->isIntegerTy(1)) && "expected bool operand");
+    assert(Op0Ty->isIntegerTy(1) && "expected bool operand");
     AssertOperandType(1, Op0Ty);
     return IntegerType::get(Ctx, 1);
+  case VPInstruction::AnyOf:
+    assert(Op0Ty->isIntegerTy(1) && "expected bool operand");
+    for (unsigned Idx = 1; Idx != Operands.size(); ++Idx)
+      AssertOperandType(Idx, Op0Ty);
+    return IntegerType::get(Ctx, 1);
   case VPInstruction::ExplicitVectorLength:
+    assert(Op0Ty->isIntegerTy() && "expected integer operand");
     return IntegerType::get(Ctx, 32);
   case Instruction::Select: {
+    assert((!Op0Ty || Op0Ty->isIntegerTy(1)) &&
+           "select condition must be bool");
     Type *Op1Ty = Operands[1]->getScalarType();
     AssertOperandType(2, Op1Ty);
     return Op1Ty;
   }
+  case Instruction::InsertElement:
+    // The inserted scalar (operand 1) must match the vector element type;
+    // operand 2 must be an integer.
+    AssertOperandType(1, Op0Ty);
+    assert(Operands[2]->getScalarType()->isIntegerTy() &&
+           "expected integer operand");
+    return Op0Ty;
+  case VPInstruction::ReductionStartVector:
+    // The start value and the identity value (operands 0 and 1) fill the same
+    // vector and must match in type; operand 2 is the scaling factor.
+    AssertOperandType(1, Op0Ty);
+    return Op0Ty;
   case VPInstruction::ExtractLane: {
     assert(Operands.size() >= 2 && "ExtractLane requires a lane operand and "
                                    "at least one source vector operand");
+    // Operand 0 is the lane index, used for integer arithmetic.
+    assert(Op0Ty->isIntegerTy() && "expected integer operand");
     Type *Op1Ty = Operands[1]->getScalarType();
     for (unsigned Idx = 2; Idx != Operands.size(); ++Idx)
       AssertOperandType(Idx, Op1Ty);
     return Op1Ty;
   }
+  case VPInstruction::PtrAdd:
+  case VPInstruction::WidePtrAdd:
+    assert(Operands[0]->getScalarType()->isPointerTy() &&
+           "expected pointer operand");
+    assert(Operands[1]->getScalarType()->isIntegerTy() &&
+           "expected integer operand");
+    return Op0Ty;
   case Instruction::ExtractValue: {
     assert(Operands.size() == 2 && "expected single level extractvalue");
     auto *StructTy = cast<StructType>(Op0Ty);
@@ -523,9 +578,7 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
   bool AllOperandsSameType =
       Instruction::isBinaryOp(Opcode) ||
       is_contained({VPInstruction::FirstOrderRecurrenceSplice,
-                    VPInstruction::CalculateTripCountMinusVF,
-                    VPInstruction::CanonicalIVIncrementForPart,
-                    VPInstruction::AnyOf, VPInstruction::BuildVector,
+                    VPInstruction::BuildVector,
                     VPInstruction::BuildStructVector},
                    Opcode);
   if (AllOperandsSameType)
@@ -1167,18 +1220,14 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
     bool IsReverse = false;
     // For Trunc/FPTrunc, get the context from the only user.
     if (Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) {
-      auto GetOnlyUser = [](const VPSingleDefRecipe *R) -> VPRecipeBase * {
-        if (R->getNumUsers() == 0 || R->hasMoreThanOneUniqueUser())
-          return nullptr;
-        return dyn_cast<VPRecipeBase>(*R->user_begin());
-      };
-      if (VPRecipeBase *Recipe = GetOnlyUser(this)) {
+      if (auto *Recipe = cast_or_null<VPRecipeBase>(getSingleUser())) {
         if (match(Recipe,
                   m_CombineOr(
                       m_Reverse(m_VPValue()),
                       m_Intrinsic<Intrinsic::experimental_vp_reverse>()))) {
-          Recipe = GetOnlyUser(cast<VPSingleDefRecipe>(Recipe));
           IsReverse = true;
+          Recipe = cast_or_null<VPRecipeBase>(
+              Recipe->getVPSingleValue()->getSingleUser());
         }
         if (Recipe)
           CCH = ComputeCCH(Recipe);

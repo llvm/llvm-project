@@ -333,8 +333,8 @@ public:
   void addSubCommand(SubCommand &S) { Subs.insert(&S); }
 
 protected:
-  LLVM_ABI explicit Option(enum NumOccurrencesFlag OccurrencesFlag,
-                           enum OptionHidden Hidden);
+  explicit Option(enum NumOccurrencesFlag OccurrencesFlag,
+                  enum OptionHidden Hidden);
 
   inline void setNumAdditionalVals(unsigned n) { AdditionalVals = n; }
 

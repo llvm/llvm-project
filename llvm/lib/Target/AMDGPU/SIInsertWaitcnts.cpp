@@ -1683,7 +1683,7 @@ MCPhysReg WaitcntBrackets::determineVGPR16Dependency(const MachineInstr &MI,
   if (!Wait.hasWait())
     return Reg;
 
-  if (Context->TII.isVALU(MI))
+  if (Context->TII.isVALU(MI, /*AllowLDSDMA=*/true))
     return Reg32;
 
   // If hi/lo16 mixed events
@@ -2778,8 +2778,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   // waits on VA_VDST if the instruction it would precede is not a VALU
   // instruction, since hardware handles VALU->VGPR->VALU hazards in
   // expert scheduling mode.
-  // TODO: LDSDMA are marked as VALU but we need to treat them as vmem
-  if (TII.isVALU(MI) && !SIInstrInfo::isLDSDMA(MI))
+  if (TII.isVALU(MI, /*AllowLDSDMA=*/true) && !SIInstrInfo::isLDSDMA(MI))
     Wait.set(AMDGPU::VA_VDST, ~0u);
 
   // Since the translation for VMEM addresses occur in-order, we can apply the
@@ -2859,8 +2858,7 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
 
 std::optional<WaitEventType>
 SIInsertWaitcnts::getExpertSchedulingEventType(const MachineInstr &Inst) const {
-  // TODO: LDSDMA are marked as VALU but we need to treat them as vmem
-  if (TII.isVALU(Inst) && !SIInstrInfo::isLDSDMA(Inst)) {
+  if (TII.isVALU(Inst, /*AllowLDSDMA=*/true) && !SIInstrInfo::isLDSDMA(Inst)) {
     // Core/Side-, DP-, XDL- and TRANS-MACC VALU instructions complete
     // out-of-order with respect to each other, so each of these classes
     // has its own event.
