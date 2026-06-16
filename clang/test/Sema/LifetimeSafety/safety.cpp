@@ -3632,7 +3632,7 @@ void test_reference_to_pointer() {
 
 struct [[gsl::Pointer]] MyContainer {
   View stored;
-  void set(View s [[clang::lifetime_capture_by(this)]]);
+  void set(View s [[clang::lifetime_capture_by_this]]);
 };
 
 void member_capture() {
@@ -3647,7 +3647,7 @@ void member_capture() {
 // FIXME: Add support for simple containers without annotations.
 struct SimpleContainer {
   View stored;
-  void set(View s [[clang::lifetime_capture_by(this)]]);
+  void set(View s [[clang::lifetime_capture_by_this]]);
 };
 
 void member_capture_simple_container() {

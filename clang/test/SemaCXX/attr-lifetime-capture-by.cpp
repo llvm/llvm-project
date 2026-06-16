@@ -2,7 +2,7 @@
 
 struct S {
   const int *x;
-  void captureInt(const int&x [[clang::lifetime_capture_by(this)]]) { this->x = &x; }
+  void captureInt(const int&x [[clang::lifetime_capture_by_this]]) { this->x = &x; }
 };
 
 ///////////////////////////
@@ -16,12 +16,13 @@ void nonMember(
     const int &x2 [[clang::lifetime_capture_by(12345 + 12)]], // expected-error {{'lifetime_capture_by' attribute argument '12345 + 12' is not a known function parameter; must be a function parameter, 'this', 'global' or 'unknown'}}
     const int &x3 [[clang::lifetime_capture_by(abcdefgh)]],   // expected-error {{'lifetime_capture_by' attribute argument 'abcdefgh' is not a known function parameter; must be a function parameter, 'this', 'global' or 'unknown'}}
     const int &x4 [[clang::lifetime_capture_by("abcdefgh")]], // expected-error {{'lifetime_capture_by' attribute argument '"abcdefgh"' is not a known function parameter; must be a function parameter, 'this', 'global' or 'unknown'}}
-    const int &x5 [[clang::lifetime_capture_by(this)]], // expected-error {{'lifetime_capture_by' argument references unavailable implicit 'this'}}
+    const int &x5 [[clang::lifetime_capture_by_this]], // expected-error {{'lifetime_capture_by_this' attribute requires an implicit object parameter}}
     const int &x6 [[clang::lifetime_capture_by()]], // expected-error {{'lifetime_capture_by' attribute specifies no capturing entity}}
     const int& x7 [[clang::lifetime_capture_by(u,
-                                               x7)]], // expected-error {{'lifetime_capture_by' argument references itself}}
-    const int &x8 [[clang::lifetime_capture_by(global)]],
-    const int &x9 [[clang::lifetime_capture_by(unknown)]],
+                                                x7)]], // expected-error {{'lifetime_capture_by' argument references itself}}
+    const int &x8 [[clang::lifetime_capture_by(global)]], // expected-warning {{'lifetime_capture_by(global)' is deprecated; use 'lifetime_capture_by_global' instead}}
+    const int &x9 [[clang::lifetime_capture_by(unknown)]], // expected-warning {{'lifetime_capture_by(unknown)' is deprecated; use 'lifetime_capture_by_unknown' instead}}
+    const int &x10 [[clang::lifetime_capture_by_global(s)]], // expected-error {{'clang::lifetime_capture_by_global' attribute takes no arguments}}
     const int &test_memory_leak[[clang::lifetime_capture_by(x1,x2, x3, x4, x5, x6, x7, x8, x9)]],
     const S& u
   )
@@ -30,9 +31,9 @@ void nonMember(
 }
 
 void unknown_param_name(const int& unknown, // expected-error {{parameter cannot be named 'unknown' while using 'lifetime_capture_by(unknown)'}}
-                        const int& s [[clang::lifetime_capture_by(unknown)]]);
+                        const int& s [[clang::lifetime_capture_by(unknown)]]); // expected-warning {{'lifetime_capture_by(unknown)' is deprecated; use 'lifetime_capture_by_unknown' instead}}
 void global_param_name(const int& global, // expected-error {{parameter cannot be named 'global' while using 'lifetime_capture_by(global)'}}
-                       const int& s [[clang::lifetime_capture_by(global)]]);
+                       const int& s [[clang::lifetime_capture_by(global)]]); // expected-warning {{'lifetime_capture_by(global)' is deprecated; use 'lifetime_capture_by_global' instead}}
 void no_such_param(int i [[clang::lifetime_capture_by(no_such_param)]]); // expected-error {{'lifetime_capture_by' attribute argument 'no_such_param' is not a known function parameter; must be a function parameter, 'this', 'global' or 'unknown'}}
 void use_no_such_param() { no_such_param(0); }
 struct T {
@@ -41,12 +42,12 @@ struct T {
     S &s,
     S &t,
     const int &y [[clang::lifetime_capture_by(s)]],
-    const int &z [[clang::lifetime_capture_by(this, x, y)]],
-    const int &u [[clang::lifetime_capture_by(global, unknown, x, s)]])
+    const int &z [[clang::lifetime_capture_by(x, y), clang::lifetime_capture_by_this]],
+    const int &u [[clang::lifetime_capture_by(global, unknown, x, s)]]) // expected-warning 2 {{deprecated}}
   {
     s.captureInt(x);
   }
 
   void explicit_this1(this T& self, const int &x [[clang::lifetime_capture_by(self)]]);
-  void explicit_this2(this T& self, const int &x [[clang::lifetime_capture_by(this)]]); // expected-error {{argument references unavailable implicit 'this'}}
+  void explicit_this2(this T& self, const int &x [[clang::lifetime_capture_by(this)]]); // expected-warning {{'lifetime_capture_by(this)' is deprecated; use 'lifetime_capture_by_this' instead}} expected-error {{argument references unavailable implicit 'this'}}
 };

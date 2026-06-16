@@ -4329,8 +4329,9 @@ void Sema::checkLifetimeCaptureBy(FunctionDecl *FD, bool IsMemberFunction,
     }
   };
   for (unsigned I = 0; I < FD->getNumParams(); ++I)
-    HandleCaptureByAttr(FD->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>(),
-                        I + IsMemberFunction);
+    for (const auto *A :
+         FD->getParamDecl(I)->specific_attrs<LifetimeCaptureByAttr>())
+      HandleCaptureByAttr(A, I + IsMemberFunction);
   // Check when the implicit object param is captured.
   if (IsMemberFunction) {
     TypeSourceInfo *TSI = FD->getTypeSourceInfo();
