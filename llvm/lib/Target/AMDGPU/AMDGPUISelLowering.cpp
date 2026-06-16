@@ -3941,6 +3941,19 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
   uint64_t SatWidth = SatVT.getScalarSizeInBits();
   assert(SatWidth <= DstWidth && "Saturation width cannot exceed result width");
 
+  if (DstVT.isVector()) {
+    // Select v2f32 -> v2i16 natively to v_cvt_pk_[iu]16_f32.
+    if (DstVT == MVT::v2i16 && SatWidth == 16 && SrcVT == MVT::v2f32)
+      return Op;
+
+    // Split wider vectors down to the v2f32 -> v2i16 case.
+    auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
+    auto [LoVT, HiVT] = DAG.GetSplitDestVTs(DstVT);
+    SDValue LoOp = DAG.getNode(OpOpcode, DL, LoVT, Lo, SatVTOp);
+    SDValue HiOp = DAG.getNode(OpOpcode, DL, HiVT, Hi, SatVTOp);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, LoOp, HiOp);
+  }
+
   // Will be selected natively
   if (DstVT == MVT::i32 && SatWidth == DstWidth &&
       (SrcVT == MVT::f32 || SrcVT == MVT::f64))

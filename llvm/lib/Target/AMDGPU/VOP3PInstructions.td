@@ -3153,12 +3153,6 @@ multiclass FPToIntSatI16Pat<dag lhs, dag rhs> {
 
 // Packed f32 -> i16 saturated conversion.
 multiclass CvtPkF32ToI16Pat<SDPatternOperator dagOp, Instruction inst> {
-  // Needed for SDAG as it uses build_vector.
-  def : GCNPat<(v2i16 (build_vector
-                  (i16 (dagOp (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)), i16)),
-                  (i16 (dagOp (f32 (VOP3Mods f32:$src1, i32:$src1_modifiers)), i16)))),
-               (inst $src0_modifiers, $src0, $src1_modifiers, $src1)>;
-  // Needed for GISel as ut legalizes V2S32 for both divergent and uniform cases.
   def : GCNPat<(v2i16 (dagOp (v2f32 VReg_64:$src), i16)),
                (inst 0, (EXTRACT_SUBREG VReg_64:$src, sub0),
                      0, (EXTRACT_SUBREG VReg_64:$src, sub1))>;
