@@ -2737,9 +2737,33 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return emitCallMaybeConstrainedBuiltin(builder, loc, "fma", ty, fmaOps);
   }
   case NEON::BI__builtin_neon_vfmah_lane_f16:
-  case NEON::BI__builtin_neon_vfmas_lane_f32:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  case NEON::BI__builtin_neon_vfmas_lane_f32: {
+    // Scalar lane/laneq forms use one selected element from the lane source.
+    mlir::Value laneSource = builder.createExtractElement(
+        loc, ops[2], static_cast<uint64_t>(getIntValueFromConstOp(ops[3])));
+
+    llvm::SmallVector<mlir::Value> fmaOps = {ops[1], laneSource, ops[0]};
+    return emitCallMaybeConstrainedBuiltin(
+        builder, loc, "fma", convertType(expr->getType()), fmaOps);
+  }
   case NEON::BI__builtin_neon_vfmah_laneq_f16:
-  case NEON::BI__builtin_neon_vfmas_laneq_f32:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  case NEON::BI__builtin_neon_vfmas_laneq_f32: {
+    // Scalar lane/laneq forms use one selected element from the lane source.
+    mlir::Value laneSource = builder.createExtractElement(
+        loc, ops[2], static_cast<uint64_t>(getIntValueFromConstOp(ops[3])));
+
+    llvm::SmallVector<mlir::Value> fmaOps = {ops[1], laneSource, ops[0]};
+    return emitCallMaybeConstrainedBuiltin(
+        builder, loc, "fma", convertType(expr->getType()), fmaOps);
+  }
   case NEON::BI__builtin_neon_vfmad_lane_f64:
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +

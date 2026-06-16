@@ -310,6 +310,30 @@ float64x2_t test_vfmaq_laneq_f64_0(float64x2_t a, float64x2_t b,
   return vfmaq_laneq_f64(a, b, v, 0);
 }
 
+// ALL-LABEL: @test_vfmas_lane_f32(
+float32_t test_vfmas_lane_f32(float32_t a, float32_t b, float32x2_t c) {
+// CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u64i] : !cir.vector<2 x !cir.float>
+// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.float, !cir.float, !cir.float) -> !cir.float
+
+// LLVM-SAME: float {{.*}} [[A:%.*]], float {{.*}} [[B:%.*]], <2 x float> {{.*}} [[C:%.*]]) {{.*}} {
+// LLVM:      [[LANE:%.*]] = extractelement <2 x float> [[C]], i{{32|64}} 1
+// LLVM:      [[FMA:%.*]] = call float @llvm.fma.f32(float [[B]], float [[LANE]], float [[A]])
+// LLVM:      ret float [[FMA]]
+  return vfmas_lane_f32(a, b, c, 1);
+}
+
+// ALL-LABEL: @test_vfmas_laneq_f32(
+float32_t test_vfmas_laneq_f32(float32_t a, float32_t b, float32x4_t c) {
+// CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u64i] : !cir.vector<4 x !cir.float>
+// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.float, !cir.float, !cir.float) -> !cir.float
+
+// LLVM-SAME: float {{.*}} [[A:%.*]], float {{.*}} [[B:%.*]], <4 x float> {{.*}} [[C:%.*]]) {{.*}} {
+// LLVM:      [[LANE:%.*]] = extractelement <4 x float> [[C]], i{{32|64}} 3
+// LLVM:      [[FMA:%.*]] = call float @llvm.fma.f32(float [[B]], float [[LANE]], float [[A]])
+// LLVM:      ret float [[FMA]]
+  return vfmas_laneq_f32(a, b, c, 3);
+}
+
 // ALL-LABEL: @test_vfmad_laneq_f64(
 float64_t test_vfmad_laneq_f64(float64_t a, float64_t b, float64x2_t c) {
 // CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u64i] : !cir.vector<2 x !cir.double>
