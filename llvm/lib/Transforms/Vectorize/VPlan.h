@@ -762,12 +762,14 @@ private:
     // TODO: Derive order/in-loop from plan and remove here.
     unsigned char IsOrdered : 1;
     unsigned char IsInLoop : 1;
+    unsigned char IsComplexRealPart : 1;
     FastMathFlagsTy FMFs;
 
     ReductionFlagsTy(RecurKind Kind, bool IsOrdered, bool IsInLoop,
-                     FastMathFlags FMFs)
+                     FastMathFlags FMFs, bool IsComplexRealPart = false)
         : Kind(static_cast<unsigned char>(Kind)), IsOrdered(IsOrdered),
-          IsInLoop(IsInLoop), FMFs(FMFs) {}
+          IsInLoop(IsInLoop), IsComplexRealPart(IsComplexRealPart), FMFs(FMFs) {
+    }
   };
 
   OperationType OpType;
@@ -873,9 +875,11 @@ public:
     GEPFlagsStorage = GEPFlags.getRaw();
   }
 
-  VPIRFlags(RecurKind Kind, bool IsOrdered, bool IsInLoop, FastMathFlags FMFs)
+  VPIRFlags(RecurKind Kind, bool IsOrdered, bool IsInLoop, FastMathFlags FMFs,
+            bool IsComplexRealPart = false)
       : OpType(OperationType::ReductionOp), AllFlags() {
-    ReductionFlags = ReductionFlagsTy(Kind, IsOrdered, IsInLoop, FMFs);
+    ReductionFlags =
+        ReductionFlagsTy(Kind, IsOrdered, IsInLoop, FMFs, IsComplexRealPart);
   }
 
   void transferFlags(VPIRFlags &Other) {
@@ -1073,6 +1077,12 @@ public:
     return ReductionFlags.IsInLoop;
   }
 
+  bool isReductionRealPart() const {
+    assert(OpType == OperationType::ReductionOp &&
+           "recipe doesn't have reduction flags");
+    return ReductionFlags.IsComplexRealPart;
+  }
+
 private:
   /// Get a reference to the fast-math flags for FPMathOp, FCmp or ReductionOp.
   FastMathFlagsTy &getFMFsRef() {
@@ -1110,7 +1120,7 @@ public:
 };
 LLVM_PACKED_END
 
-static_assert(sizeof(VPIRFlags) <= 3, "VPIRFlags should not grow");
+static_assert(sizeof(VPIRFlags) <= 4, "VPIRFlags should not grow");
 
 /// A pure-virtual common base class for recipes defining a single VPValue and
 /// using IR flags.
@@ -1270,6 +1280,7 @@ public:
     /// Reduce the operands to the final reduction result using the operation
     /// specified via the operation's VPIRFlags.
     ComputeReductionResult,
+    ComputeComplexReductionResult,
     // Extracts the last part of its operand. Removed during unrolling.
     ExtractLastPart,
     // Extracts the last lane of its vector operand, per part.

@@ -1248,6 +1248,8 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
     return Instruction::FAdd;
   case RecurKind::FSub:
     return Instruction::FSub;
+  case RecurKind::ComplexFMul:
+    return Instruction::FMul;
   case RecurKind::SMax:
   case RecurKind::SMin:
   case RecurKind::UMax:
@@ -1379,6 +1381,83 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
 
   ReductionOperations.push_back(Cur);
   return ReductionOperations;
+}
+
+// A complex multiply recurrence is going to have 2 incoming phi nodes, one for
+// the real part and one for the imaginary part, and the calculation is going to
+// look something like
+//   next.real = (X.real * incoming.real) - (X.imag * incoming.imag)
+//   next.imag = (X.real * incoming.imag) + (X.imag * incoming.real)
+// If we see a pattern like this, we create 2 descriptors linked to each other.
+bool RecurrenceDescriptor::isComplexMultiplyReduction(
+    PHINode *PhiA, PHINode *PhiB, Loop *TheLoop, RecurrenceDescriptor &RdxDescA,
+    RecurrenceDescriptor &RdxDescB) {
+  if (!PhiA->getType()->isFloatingPointTy() ||
+      !PhiB->getType()->isFloatingPointTy())
+    return false;
+  if (PhiA->getType() != PhiB->getType())
+    return false;
+
+  BasicBlock *Header = TheLoop->getHeader();
+  if (PhiA->getParent() != Header || PhiB->getParent() != Header)
+    return false;
+  if (PhiA->getNumIncomingValues() != 2 || PhiB->getNumIncomingValues() != 2)
+    return false;
+
+  BasicBlock *Latch = TheLoop->getLoopLatch();
+  if (!Latch)
+    return false;
+
+  Value *BackA = PhiA->getIncomingValueForBlock(Latch);
+  Value *BackB = PhiB->getIncomingValueForBlock(Latch);
+  if (!BackA || !BackB)
+    return false;
+
+  auto *OpA = dyn_cast<BinaryOperator>(BackA);
+  auto *OpB = dyn_cast<BinaryOperator>(BackB);
+  if (!OpA || !OpB)
+    return false;
+  PHINode *PhiReal;
+  if (OpA->getOpcode() == Instruction::FSub &&
+      OpB->getOpcode() == Instruction::FAdd)
+    PhiReal = PhiA;
+  else if (OpA->getOpcode() == Instruction::FAdd &&
+           OpB->getOpcode() == Instruction::FSub)
+    PhiReal = PhiB;
+  else
+    return false;
+  if (!OpA->hasAllowReassoc() || !OpB->hasAllowReassoc())
+    return false;
+
+  Value *ABExt, *BAExt, *AAExt, *BBExt;
+  if (!match(OpA,
+             m_c_BinOp(
+                 m_AllowReassoc(m_c_FMul(m_Value(ABExt), m_Specific(PhiB))),
+                 m_AllowReassoc(m_c_FMul(m_Value(AAExt), m_Specific(PhiA))))))
+    return false;
+  if (!match(OpB,
+             m_c_BinOp(
+                 m_AllowReassoc(m_c_FMul(m_Value(BAExt), m_Specific(PhiA))),
+                 m_AllowReassoc(m_c_FMul(m_Value(BBExt), m_Specific(PhiB))))))
+    return false;
+  if (ABExt != BAExt || AAExt != BBExt)
+    return false;
+
+  Type *Ty = PhiA->getType();
+  FastMathFlags FMF = OpA->getFastMathFlags() & OpB->getFastMathFlags();
+
+  SmallPtrSet<Instruction *, 8> CastInsts;
+
+  RdxDescA = RecurrenceDescriptor(
+      PhiA->getIncomingValueForBlock(TheLoop->getLoopPredecessor()),
+      cast<Instruction>(BackA), nullptr, RecurKind::ComplexFMul, FMF, nullptr,
+      Ty, false, false, CastInsts, 0, false, PhiB, PhiReal == PhiA);
+  RdxDescB = RecurrenceDescriptor(
+      PhiB->getIncomingValueForBlock(TheLoop->getLoopPredecessor()),
+      cast<Instruction>(BackB), nullptr, RecurKind::ComplexFMul, FMF, nullptr,
+      Ty, false, false, CastInsts, 0, false, PhiA, PhiReal == PhiB);
+
+  return true;
 }
 
 InductionDescriptor::InductionDescriptor(

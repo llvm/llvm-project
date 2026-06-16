@@ -432,6 +432,19 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
         VPI->addOperand(getValueForPart(Op1, Part));
       continue;
     }
+    // ComputeComplexReductionResult has 2 operands that need expansion.
+    if (auto *VPI = dyn_cast<VPInstruction>(&R);
+        VPI &&
+        VPI->getOpcode() == VPInstruction::ComputeComplexReductionResult) {
+      addUniformForAllParts(VPI);
+      VPValue *OwnOp = VPI->getOperand(0);
+      VPValue *PartnerOp = VPI->getOperand(1);
+      for (unsigned Part = 1; Part != UF; ++Part) {
+        VPI->addOperand(getValueForPart(OwnOp, Part));
+        VPI->addOperand(getValueForPart(PartnerOp, Part));
+      }
+      continue;
+    }
     VPValue *Op0;
     if (match(&R, m_ExtractLane(m_VPValue(Op0), m_VPValue(Op1)))) {
       auto *VPI = cast<VPInstruction>(&R);

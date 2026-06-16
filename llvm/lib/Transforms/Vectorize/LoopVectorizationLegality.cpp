@@ -883,6 +883,36 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
       return true;
     }
 
+    // Check if this PHI is part of a complex multiply reduction pair.
+    if (Phi->getType()->isFloatingPointTy()) {
+      bool Found = false;
+      for (PHINode &OtherPhi : Phi->getParent()->phis()) {
+        if (&OtherPhi == Phi || !OtherPhi.getType()->isFloatingPointTy())
+          continue;
+        if (Inductions.count(&OtherPhi) ||
+            FixedOrderRecurrences.count(&OtherPhi))
+          continue;
+        if (Reductions.count(&OtherPhi) &&
+            Reductions[&OtherPhi].getRecurrenceKind() ==
+                RecurKind::ComplexFMul &&
+            Reductions[&OtherPhi].getPartnerPhi() == Phi) {
+          Found = true;
+          break;
+        }
+        RecurrenceDescriptor RdxDescA, RdxDescB;
+        if (RecurrenceDescriptor::isComplexMultiplyReduction(
+                Phi, &OtherPhi, TheLoop, RdxDescA, RdxDescB)) {
+          Reductions[Phi] = RdxDescA;
+          if (!Reductions.count(&OtherPhi))
+            Reductions[&OtherPhi] = RdxDescB;
+          Found = true;
+          break;
+        }
+      }
+      if (Found)
+        return true;
+    }
+
     reportVectorizationFailure("Found an unidentified PHI",
                                "value that could not be identified as "
                                "reduction is used outside the loop",

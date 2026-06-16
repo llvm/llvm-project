@@ -1541,6 +1541,9 @@ Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
 }
 
 Value *llvm::getRecurrenceIdentity(RecurKind K, Type *Tp, FastMathFlags FMF) {
+  // ComplexFMul: real part identity is 1.0 (caller handles imag = 0.0)
+  if (K == RecurKind::ComplexFMul)
+    return ConstantFP::get(Tp, 1.0);
   assert((!(K == RecurKind::FMin || K == RecurKind::FMax) ||
           (FMF.noNaNs() && FMF.noSignedZeros())) &&
          "nnan, nsz is expected to be set for FP min/max reduction.");
@@ -1550,6 +1553,8 @@ Value *llvm::getRecurrenceIdentity(RecurKind K, Type *Tp, FastMathFlags FMF) {
 
 Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
                                    RecurKind RdxKind) {
+  assert(RdxKind != RecurKind::ComplexFMul &&
+         "ComplexFMul uses createComplexReduction instead");
   auto *SrcVecEltTy = cast<VectorType>(Src->getType())->getElementType();
   auto getIdentity = [&]() {
     return getRecurrenceIdentity(RdxKind, SrcVecEltTy,
@@ -1601,6 +1606,41 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   Value *Iden = getRecurrenceIdentity(Kind, EltTy, Builder.getFastMathFlags());
   Value *Ops[] = {Iden, Src, Mask, EVL};
   return Builder.CreateIntrinsic(EltTy, VPID, Ops);
+}
+
+std::pair<Value *, Value *> llvm::createComplexReduction(IRBuilderBase &Builder,
+                                                         Value *ReVec,
+                                                         Value *ImVec) {
+  auto *VecTy = cast<FixedVectorType>(ReVec->getType());
+  unsigned VF = VecTy->getNumElements();
+  assert(VF > 0 && (VF & (VF - 1)) == 0 && "VF must be a power of 2");
+
+  Value *Re = ReVec;
+  Value *Im = ImVec;
+
+  for (unsigned Width = VF; Width > 1; Width >>= 1) {
+    unsigned Half = Width / 2;
+    SmallVector<int, 16> LoMask(Half), HiMask(Half);
+    for (unsigned i = 0; i < Half; ++i) {
+      LoMask[i] = i;
+      HiMask[i] = i + Half;
+    }
+    Value *LoRe = Builder.CreateShuffleVector(Re, LoMask, "lo.re");
+    Value *HiRe = Builder.CreateShuffleVector(Re, HiMask, "hi.re");
+    Value *LoIm = Builder.CreateShuffleVector(Im, LoMask, "lo.im");
+    Value *HiIm = Builder.CreateShuffleVector(Im, HiMask, "hi.im");
+
+    Value *ReRe = Builder.CreateFMul(LoRe, HiRe);
+    Value *ImIm = Builder.CreateFMul(LoIm, HiIm);
+    Value *ReIm = Builder.CreateFMul(LoRe, HiIm);
+    Value *ImRe = Builder.CreateFMul(LoIm, HiRe);
+    Re = Builder.CreateFSub(ReRe, ImIm, "red.re");
+    Im = Builder.CreateFAdd(ReIm, ImRe, "red.im");
+  }
+
+  Value *ScalarRe = Builder.CreateExtractElement(Re, uint64_t(0), "final.re");
+  Value *ScalarIm = Builder.CreateExtractElement(Im, uint64_t(0), "final.im");
+  return {ScalarRe, ScalarIm};
 }
 
 Value *llvm::createOrderedReduction(IRBuilderBase &B, RecurKind Kind,

@@ -535,6 +535,11 @@ LLVM_ABI Value *getShuffleReduction(IRBuilderBase &Builder, Value *Src,
 /// Fast-math-flags are propagated using the IRBuilder's setting.
 LLVM_ABI Value *createSimpleReduction(IRBuilderBase &B, Value *Src,
                                       RecurKind RdxKind);
+
+/// Create a horizontal complex multiply reduction from two vectors
+/// (real and imaginary parts). Returns {scalar_re, scalar_im}.
+LLVM_ABI std::pair<Value *, Value *>
+createComplexReduction(IRBuilderBase &Builder, Value *ReVec, Value *ImVec);
 /// Overloaded function to generate vector-predication intrinsics for
 /// reduction.
 LLVM_ABI Value *createSimpleReduction(IRBuilderBase &B, Value *Src,
