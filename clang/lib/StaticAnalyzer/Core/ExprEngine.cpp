@@ -3430,7 +3430,6 @@ void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
   // FIXME: Ideally we should model the behavior of the atomics precisely here.
 
   ExplodedNodeSet AfterInvalidateSet;
-  NodeBuilder Bldr(AfterPreSet, AfterInvalidateSet, *currBldrCtx);
 
   for (const auto I : AfterPreSet) {
     ProgramStateRef State = I->getState();
@@ -3448,10 +3447,8 @@ void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
                                      /*CausedByPointerEscape*/ true,
                                      /*Symbols=*/nullptr);
 
-    SVal ResultVal = UnknownVal();
-    State = State->BindExpr(AE, SF, ResultVal);
-    Bldr.generateNode(AE, I, State, nullptr,
-                      ProgramPoint::PostStmtKind);
+    AfterInvalidateSet.insert(
+        Engine.makeNodeWithBinding(I, AE, UnknownVal(), State));
   }
 
   getCheckerManager().runCheckersForPostStmt(Dst, AfterInvalidateSet, AE, *this);
