@@ -546,7 +546,7 @@ bool MCPlusBuilder::hasDefOfPhysReg(const MCInst &MI, unsigned Reg) const {
 
 bool MCPlusBuilder::hasUseOfPhysReg(const MCInst &MI, unsigned Reg) const {
   const MCInstrDesc &InstInfo = Info->get(MI.getOpcode());
-  for (int I = InstInfo.NumDefs; I < InstInfo.NumOperands; ++I)
+  for (unsigned I = InstInfo.getNumDefs(); I < InstInfo.getNumOperands(); ++I)
     if (MI.getOperand(I).isReg() && MI.getOperand(I).getReg() &&
         RegInfo->isSubRegisterEq(Reg, MI.getOperand(I).getReg()))
       return true;

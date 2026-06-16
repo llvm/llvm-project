@@ -178,10 +178,10 @@ static const char *isInvalidMemoryInstr(const Instruction &Instr) {
   case X86II::RawFrmImm8:
     return nullptr;
   case X86II::AddRegFrm:
-    return (Instr.Description.Opcode == X86::POP16r ||
-            Instr.Description.Opcode == X86::POP32r ||
-            Instr.Description.Opcode == X86::PUSH16r ||
-            Instr.Description.Opcode == X86::PUSH32r)
+    return (Instr.getOpcode() == X86::POP16r ||
+            Instr.getOpcode() == X86::POP32r ||
+            Instr.getOpcode() == X86::PUSH16r ||
+            Instr.getOpcode() == X86::PUSH32r)
                ? "unsupported opcode: unsupported memory access"
                : nullptr;
   // These access memory and are handled.
@@ -221,7 +221,7 @@ static const char *isInvalidOpcode(const Instruction &Instr) {
       OpcodeName.starts_with("PUSH") ||
       OpcodeName.starts_with("ADJCALLSTACK") || OpcodeName.starts_with("LEAVE"))
     return "unsupported opcode: Push/Pop/AdjCallStack/Leave";
-  switch (Instr.Description.Opcode) {
+  switch (Instr.getOpcode()) {
   case X86::LFS16rm:
   case X86::LFS32rm:
   case X86::LFS64rm:
@@ -786,7 +786,7 @@ private:
   }
 
   bool allowAsBackToBack(const Instruction &Instr) const override {
-    const unsigned Opcode = Instr.Description.Opcode;
+    const unsigned Opcode = Instr.getOpcode();
     return !isInvalidOpcode(Instr) && Opcode != X86::LEA64r &&
            Opcode != X86::LEA64_32r && Opcode != X86::LEA16r;
   }

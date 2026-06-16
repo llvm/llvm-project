@@ -257,8 +257,8 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
     // getNamedOperandIdx returns the index for MachineInstrs.  Since they
     // include the output in the operand list, but SDNodes don't, we need to
     // subtract the index by one.
-    Offset0Idx -= get(Opc0).NumDefs;
-    Offset1Idx -= get(Opc1).NumDefs;
+    Offset0Idx -= get(Opc0).getNumDefs();
+    Offset1Idx -= get(Opc1).getNumDefs();
     Offset0 = Load0->getConstantOperandVal(Offset0Idx);
     Offset1 = Load1->getConstantOperandVal(Offset1Idx);
     return true;
@@ -314,8 +314,8 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
     // getNamedOperandIdx returns the index for MachineInstrs.  Since they
     // include the output in the operand list, but SDNodes don't, we need to
     // subtract the index by one.
-    OffIdx0 -= get(Opc0).NumDefs;
-    OffIdx1 -= get(Opc1).NumDefs;
+    OffIdx0 -= get(Opc0).getNumDefs();
+    OffIdx1 -= get(Opc1).getNumDefs();
 
     SDValue Off0 = Load0->getOperand(OffIdx0);
     SDValue Off1 = Load1->getOperand(OffIdx1);

@@ -1388,7 +1388,7 @@ class AMDGPUAsmParser : public MCTargetAsmParser {
 
   /// Get size of register operand
   unsigned getRegOperandSize(const MCInstrDesc &Desc, unsigned OpNo) const {
-    assert(OpNo < Desc.NumOperands);
+    assert(OpNo < Desc.getNumOperands());
     int16_t RCID = MII.getOpRegClassID(Desc.operands()[OpNo], HwMode);
     return getRegBitWidth(RCID) / 8;
   }
@@ -9497,7 +9497,7 @@ static bool isRegOrImmWithInputMods(const MCInstrDesc &Desc, unsigned OpNum) {
       // 1. This operand is input modifiers
       Desc.operands()[OpNum].OperandType == AMDGPU::OPERAND_INPUT_MODS
       // 2. This is not last operand
-      && Desc.NumOperands > (OpNum + 1)
+      && Desc.getNumOperands() > (OpNum + 1)
       // 3. Next operand is register class
       && Desc.operands()[OpNum + 1].RegClass != -1
       // 4. Next register is not tied to any other operand

@@ -280,7 +280,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 
     // Annotate any control flow label references.
 
-    unsigned NumFixedOperands = Desc.NumOperands;
+    unsigned NumFixedOperands = Desc.getNumOperands();
     SmallSet<uint64_t, 8> Printed;
     for (unsigned I = 0, E = MI->getNumOperands(); I < E; ++I) {
       // See if this operand denotes a basic block target.

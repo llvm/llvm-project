@@ -8764,7 +8764,7 @@ bool X86InstrInfo::unfoldMemoryOperand(
   MachineFunction &MF = DAG.getMachineFunction();
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   const TargetRegisterClass *RC = getRegClass(MCID, Index);
-  unsigned NumDefs = MCID.NumDefs;
+  unsigned NumDefs = MCID.getNumDefs();
   std::vector<SDValue> AddrOps;
   std::vector<SDValue> BeforeOps;
   std::vector<SDValue> AfterOps;

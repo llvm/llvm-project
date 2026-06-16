@@ -20,8 +20,8 @@ add_llvm_unittest(MCTests
   DwarfLineTables.cpp
   DwarfLineTableHeaders.cpp
   MCInstPrinter.cpp
+  MCInstrDescTest.cpp
   StringTableBuilderTest.cpp
   TargetRegistry.cpp
   MCDisassemblerTest.cpp
   )
-

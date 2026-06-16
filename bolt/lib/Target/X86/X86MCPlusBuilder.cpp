@@ -105,7 +105,7 @@ public:
   unsigned getCondCode(const MCInst &Inst) const override {
     unsigned Opcode = Inst.getOpcode();
     if (X86::isJCC(Opcode))
-      return Inst.getOperand(Info->get(Opcode).NumOperands - 1).getImm();
+      return Inst.getOperand(Info->get(Opcode).getNumOperands() - 1).getImm();
     return X86::COND_INVALID;
   }
 
@@ -2810,7 +2810,8 @@ public:
                               MCContext *Ctx) const override {
     unsigned InvCC = getInvertedCondCode(getCondCode(Inst));
     assert(InvCC != X86::COND_INVALID && "invalid branch instruction");
-    Inst.getOperand(Info->get(Inst.getOpcode()).NumOperands - 1).setImm(InvCC);
+    Inst.getOperand(Info->get(Inst.getOpcode()).getNumOperands() - 1)
+        .setImm(InvCC);
     Inst.getOperand(0) =
         MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
   }
@@ -2819,7 +2820,8 @@ public:
                               unsigned CC) const override {
     if (CC == X86::COND_INVALID)
       return false;
-    Inst.getOperand(Info->get(Inst.getOpcode()).NumOperands - 1).setImm(CC);
+    Inst.getOperand(Info->get(Inst.getOpcode()).getNumOperands() - 1)
+        .setImm(CC);
     Inst.getOperand(0) =
         MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
     return true;

@@ -7636,7 +7636,7 @@ bool ARMAsmParser::validateLDRDSTRD(MCInst &Inst, const OperandVector &Operands,
 }
 
 static int findFirstVectorPredOperandIdx(const MCInstrDesc &MCID) {
-  for (unsigned i = 0; i < MCID.NumOperands; ++i) {
+  for (unsigned i = 0; i < MCID.getNumOperands(); ++i) {
     if (ARM::isVpred(MCID.operands()[i].OperandType))
       return i;
   }
@@ -11199,11 +11199,11 @@ unsigned ARMAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   if (MCID.TSFlags & ARMII::ThumbArithFlagSetting) {
     assert(MCID.hasOptionalDef() &&
            "optionally flag setting instruction missing optional def operand");
-    assert(MCID.NumOperands == Inst.getNumOperands() &&
+    assert(MCID.getNumOperands() == Inst.getNumOperands() &&
            "operand count mismatch!");
     bool IsCPSR = false;
     // Check if the instruction has CPSR set.
-    for (unsigned OpNo = 0; OpNo < MCID.NumOperands; ++OpNo) {
+    for (unsigned OpNo = 0; OpNo < MCID.getNumOperands(); ++OpNo) {
       if (MCID.operands()[OpNo].isOptionalDef() &&
           Inst.getOperand(OpNo).isReg() &&
           Inst.getOperand(OpNo).getReg() == ARM::CPSR)
@@ -11290,7 +11290,7 @@ unsigned ARMAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
     break;
   }
 
-  for (unsigned I = 0; I < MCID.NumOperands; ++I)
+  for (unsigned I = 0; I < MCID.getNumOperands(); ++I)
     if (MCID.operands()[I].RegClass == ARM::rGPRRegClassID) {
       // rGPRRegClass excludes PC, and also excluded SP before ARMv8
       const auto &Op = Inst.getOperand(I);

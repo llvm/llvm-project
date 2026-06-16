@@ -56,15 +56,14 @@ TEST(IsIdenticalToTest, DifferentDefs) {
   Module Mod("Module", Ctx);
   auto MF = createMachineFunction(Ctx, Mod);
 
-  unsigned short NumOps = 2;
+  unsigned char NumOps = 2;
   unsigned char NumDefs = 1;
   struct {
     MCInstrDesc MCID;
     MCOperandInfo OpInfo[2];
-  } Table = {
-      {0, NumOps, NumDefs, 0, 0, 0, 0, 0, 0, 1ULL << MCID::HasOptionalDef, 0},
-      {{0, 0, MCOI::OPERAND_REGISTER, 0},
-       {0, 1 << MCOI::OptionalDef, MCOI::OPERAND_REGISTER, 0}}};
+  } Table = {{0, NumOps, NumDefs, 0, 0, 1ULL << MCID::HasOptionalDef},
+             {{0, 0, MCOI::OPERAND_REGISTER, 0},
+              {0, 1 << MCOI::OptionalDef, MCOI::OPERAND_REGISTER, 0}}};
 
   // Create two MIs with different virtual reg defs and the same uses.
   unsigned VirtualDef1 = -42; // The value doesn't matter, but the sign does.
@@ -128,15 +127,14 @@ TEST(MachineInstrExpressionTraitTest, IsEqualAgreesWithGetHashValue) {
   Module Mod("Module", Ctx);
   auto MF = createMachineFunction(Ctx, Mod);
 
-  unsigned short NumOps = 2;
+  unsigned char NumOps = 2;
   unsigned char NumDefs = 1;
   struct {
     MCInstrDesc MCID;
     MCOperandInfo OpInfo[2];
-  } Table = {
-      {0, NumOps, NumDefs, 0, 0, 0, 0, 0, 0, 1ULL << MCID::HasOptionalDef, 0},
-      {{0, 0, MCOI::OPERAND_REGISTER, 0},
-       {0, 1 << MCOI::OptionalDef, MCOI::OPERAND_REGISTER, 0}}};
+  } Table = {{0, NumOps, NumDefs, 0, 0, 1ULL << MCID::HasOptionalDef},
+             {{0, 0, MCOI::OPERAND_REGISTER, 0},
+              {0, 1 << MCOI::OptionalDef, MCOI::OPERAND_REGISTER, 0}}};
 
   // Define a series of instructions with different kinds of operands and make
   // sure that the hash function is consistent with isEqual for various
@@ -212,8 +210,7 @@ TEST(MachineInstrPrintingTest, DebugLocPrinting) {
   struct {
     MCInstrDesc MCID;
     MCOperandInfo OpInfo;
-  } Table = {{0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-             {0, 0, MCOI::OPERAND_REGISTER, 0}};
+  } Table = {{0, 1, 1}, {0, 0, MCOI::OPERAND_REGISTER, 0}};
 
   DIFile *DIF = DIFile::getDistinct(Ctx, "filename", "");
   DISubprogram *DIS = DISubprogram::getDistinct(
@@ -238,7 +235,7 @@ TEST(MachineInstrSpan, DistanceBegin) {
   auto MF = createMachineFunction(Ctx, Mod);
   auto MBB = MF->CreateMachineBasicBlock();
 
-  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  MCInstrDesc MCID;
 
   auto MII = MBB->begin();
   MachineInstrSpan MIS(MII, MBB);
@@ -255,7 +252,7 @@ TEST(MachineInstrSpan, DistanceEnd) {
   auto MF = createMachineFunction(Ctx, Mod);
   auto MBB = MF->CreateMachineBasicBlock();
 
-  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  MCInstrDesc MCID;
 
   auto MII = MBB->end();
   MachineInstrSpan MIS(MII, MBB);
@@ -270,7 +267,7 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   LLVMContext Ctx;
   Module Mod("Module", Ctx);
   auto MF = createMachineFunction(Ctx, Mod);
-  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  MCInstrDesc MCID;
 
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
   auto MAI = MCAsmInfo(MCOptions);
@@ -351,7 +348,7 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
   LLVMContext Ctx;
   Module Mod("Module", Ctx);
   auto MF = createMachineFunction(Ctx, Mod);
-  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  MCInstrDesc MCID;
 
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
   auto MAI = MCAsmInfo(MCOptions);
@@ -406,7 +403,7 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   LLVMContext Ctx;
   Module Mod("Module", Ctx);
   auto MF = createMachineFunction(Ctx, Mod);
-  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  MCInstrDesc MCID;
 
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
   auto MAI = MCAsmInfo(MCOptions);
@@ -488,10 +485,8 @@ TEST(MachineInstrDebugValue, AddDebugValueOperand) {
        {TargetOpcode::DBG_VALUE, TargetOpcode::DBG_VALUE_LIST,
         TargetOpcode::DBG_INSTR_REF, TargetOpcode::DBG_PHI,
         TargetOpcode::DBG_LABEL}) {
-    const MCInstrDesc MCID = {
-        Opcode, 0, 0, 0, 0,
-        0,      0, 0, 0, (1ULL << MCID::Pseudo) | (1ULL << MCID::Variadic),
-        0};
+    const MCInstrDesc MCID(Opcode, 0, 0, 0, 0,
+                           (1ULL << MCID::Pseudo) | (1ULL << MCID::Variadic));
 
     auto *MI = MF->CreateMachineInstr(MCID, DebugLoc());
     MI->addOperand(*MF, MachineOperand::CreateReg(0, /*isDef*/ false));
@@ -525,7 +520,7 @@ TEST(MachineInstrBuilder, BuildMI) {
   Module Mod("Module", Ctx);
   auto MF = createMachineFunction(Ctx, Mod);
   auto MBB = MF->CreateMachineBasicBlock();
-  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  MCInstrDesc MCID;
   EXPECT_THAT(BuildMI(*MF, MIMD, MCID), HasMIMetadata(MIMD));
   EXPECT_THAT(BuildMI(*MF, MIMD, MCID), HasMIMetadata(MIMD));
   EXPECT_THAT(BuildMI(*MBB, MBB->end(), MIMD, MCID), HasMIMetadata(MIMD));
@@ -543,17 +538,8 @@ TEST(MachineInstrTest, SpliceOperands) {
   Module Mod("Module", Ctx);
   std::unique_ptr<MachineFunction> MF = createMachineFunction(Ctx, Mod);
   MachineBasicBlock *MBB = MF->CreateMachineBasicBlock();
-  MCInstrDesc MCID = {TargetOpcode::INLINEASM,
-                      0,
-                      0,
-                      0,
-                      0,
-                      0,
-                      0,
-                      0,
-                      0,
-                      (1ULL << MCID::Pseudo) | (1ULL << MCID::Variadic),
-                      0};
+  MCInstrDesc MCID(TargetOpcode::INLINEASM, 0, 0, 0, 0,
+                   (1ULL << MCID::Pseudo) | (1ULL << MCID::Variadic));
   MachineInstr *MI = MF->CreateMachineInstr(MCID, DebugLoc());
   MBB->insert(MBB->begin(), MI);
   MI->addOperand(MachineOperand::CreateImm(0));
@@ -629,7 +615,7 @@ TEST(MachineInstr, EraseFromParentReturnedIterator) {
   auto MF = createMachineFunction(Ctx, Mod);
   auto MBB = MF->CreateMachineBasicBlock();
 
-  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  MCInstrDesc MCID;
   MachineInstr *MI1 = MF->CreateMachineInstr(MCID, DebugLoc());
   MBB->insert(MBB->end(), MI1);
   MachineInstr *MI2 = MF->CreateMachineInstr(MCID, DebugLoc());
@@ -648,7 +634,7 @@ TEST(MachineInstr, EraseFromParentReturnedIteratorBundle) {
   Module Mod("Module", Ctx);
   auto MF = createMachineFunction(Ctx, Mod);
   auto MBB = MF->CreateMachineBasicBlock();
-  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  MCInstrDesc MCID;
 
   // Bundle1 {
   //   MI1B1

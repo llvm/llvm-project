@@ -2868,14 +2868,14 @@ bool isInlineValue(MCRegister Reg) {
 #undef MAP_REG2REG
 
 bool isKImmOperand(const MCInstrDesc &Desc, unsigned OpNo) {
-  assert(OpNo < Desc.NumOperands);
+  assert(OpNo < Desc.getNumOperands());
   unsigned OpType = Desc.operands()[OpNo].OperandType;
   return OpType >= AMDGPU::OPERAND_KIMM_FIRST &&
          OpType <= AMDGPU::OPERAND_KIMM_LAST;
 }
 
 bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
-  assert(OpNo < Desc.NumOperands);
+  assert(OpNo < Desc.getNumOperands());
   unsigned OpType = Desc.operands()[OpNo].OperandType;
   switch (OpType) {
   case AMDGPU::OPERAND_REG_IMM_FP32:
@@ -2898,7 +2898,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
 }
 
 bool isSISrcInlinableOperand(const MCInstrDesc &Desc, unsigned OpNo) {
-  assert(OpNo < Desc.NumOperands);
+  assert(OpNo < Desc.getNumOperands());
   unsigned OpType = Desc.operands()[OpNo].OperandType;
   return (OpType >= AMDGPU::OPERAND_REG_INLINE_C_FIRST &&
           OpType <= AMDGPU::OPERAND_REG_INLINE_C_LAST) ||

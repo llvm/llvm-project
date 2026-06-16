@@ -772,7 +772,7 @@ std::pair<bool, bool>
 MipsSEInstrInfo::compareOpndSize(unsigned Opc,
                                  const MachineFunction &MF) const {
   const MCInstrDesc &Desc = get(Opc);
-  assert(Desc.NumOperands == 2 && "Unary instruction expected.");
+  assert(Desc.getNumOperands() == 2 && "Unary instruction expected.");
   const MipsRegisterInfo *RI = &getRegisterInfo();
   unsigned DstRegSize = RI->getRegSizeInBits(*getRegClass(Desc, 0));
   unsigned SrcRegSize = RI->getRegSizeInBits(*getRegClass(Desc, 1));
