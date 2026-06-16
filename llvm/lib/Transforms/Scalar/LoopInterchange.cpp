@@ -721,6 +721,10 @@ struct LoopInterchange {
 
   bool run(LoopNest &LN) {
     SmallVector<SmallVector<Loop *, 8>, 4> LoopLists = collectPerfectNests(LN);
+    if(LoopLists.empty()){
+      LLVM_DEBUG(dbgs() << "No Valid candidates for loop interchange.\n");
+      return false;
+    }
     bool Changed = false;
     for (SmallVector<Loop *, 8> &LoopList : LoopLists) {
       // Ensure minimum depth of the loop nest to do the interchange.
