@@ -24,8 +24,7 @@ public:
                   const char *Sep) const override;
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
   void analyzerLifetimeBound(const CallEvent &Call, CheckerContext &C) const;
-  ProgramStateRef bindValues(ProgramStateRef State, SymbolRef RetValSym,
-                             SVal RetVal, const MemRegion *Source) const;
+  ProgramStateRef bindValues(ProgramStateRef State, SVal RetVal, const MemRegion *Source) const;
   bool isSourceDangle(const MemRegion *Source, ProgramStateRef State,
                       CheckerContext &C) const;
   void reportDanglingSource(const MemRegion *Region, ExplodedNode *N,
@@ -52,13 +51,12 @@ public:
 } // namespace
 
 ProgramStateRef LifetimeAnnotations::bindValues(ProgramStateRef State,
-                                                SymbolRef RetValSym,
                                                 SVal RetVal,
                                                 const MemRegion *Source) const {
   LifetimeSourceSet::Factory &F =
       State->getStateManager().get_context<LifetimeSourceSet>();
 
-  if (RetValSym) {
+  if (SymbolRef RetValSym = RetVal.getAsSymbol(/*IncludeBaseRegions=*/true)) {
     const LifetimeSourceSet *LBSet = State->get<LifetimeBoundMap>(RetValSym);
     LifetimeSourceSet Set = LBSet ? *LBSet : F.getEmptySet();
     Set = F.add(Set, Source);
@@ -86,21 +84,20 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
     return;
 
   SVal RetVal = Call.getReturnValue();
-  SymbolRef RetValSym = RetVal.getAsSymbol(/*IncludeBaseRegions=*/true);
 
   for (const ParmVarDecl *PVD : FD->parameters()) {
     if (PVD->hasAttr<LifetimeBoundAttr>()) {
       unsigned Idx = PVD->getFunctionScopeIndex();
       SVal Arg = Call.getArgSVal(Idx);
       if (const MemRegion *ArgValRegion = Arg.getAsRegion())
-        State = bindValues(State, RetValSym, RetVal, ArgValRegion);
+        State = bindValues(State, RetVal, ArgValRegion);
     }
   }
 
   if (const auto *IC = dyn_cast<CXXInstanceCall>(&Call)) {
     if (lifetimes::implicitObjectParamIsLifetimeBound(FD)) {
       if (const MemRegion *AttrRegion = IC->getCXXThisVal().getAsRegion()) {
-        State = bindValues(State, RetValSym, RetVal, AttrRegion);
+        State = bindValues(State, RetVal, AttrRegion);
       }
     }
   }
