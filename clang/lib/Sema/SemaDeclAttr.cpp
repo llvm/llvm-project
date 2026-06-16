@@ -6985,6 +6985,10 @@ static void handleCXX11UninitializedAttr(Sema &S, Decl *D,
   D->addAttr(::new (S.Context) CXX11UninitializedAttr(S.Context, AL));
 }
 
+static void handleRefToUninitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  D->addAttr(::new (S.Context) RefToUninitAttr(S.Context, AL));
+}
+
 static void handleMIGServerRoutineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Check that the return type is a `typedef int kern_return_t` or a typedef
   // around it, because otherwise MIG convention checks make no sense.
@@ -8253,6 +8257,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_CXX11Uninitialized:
     handleCXX11UninitializedAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_RefToUninit:
+    handleRefToUninitAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_ObjCExternallyRetained:

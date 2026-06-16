@@ -1727,6 +1727,12 @@ def CXX11Uninitialized : InheritableAttr {
   let Documentation = [CXX11UninitializedDocs];
 }
 
+def RefToUninit : InheritableAttr {
+  let Spellings = [CXX11<"", "ref_to_uninit", 202602>];
+  let Subjects = SubjectList<[Var, Field, Function], ErrorDiag>;
+  let Documentation = [RefToUninitDocs];
+}
+
 def NonBlocking : TypeAttr {
   let Spellings = [Clang<"nonblocking">];
   let Args = [ExprArgument<"Cond", /*optional*/1>];

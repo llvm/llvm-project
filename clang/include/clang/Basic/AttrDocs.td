@@ -919,6 +919,33 @@ uninitialized.
   }];
 }
 
+def RefToUninitDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "ref_to_uninit";
+  let Content = [{
+The ``[[ref_to_uninit]]`` attribute marks a pointer, reference, or
+pointer-returning function as referring to *uninitialized* memory. It is
+purely informational: it has no effect on code generation.
+
+The attribute exists to support the initialization profile (see
+:doc:`ProfilesFramework`). That profile bans forming an ordinary pointer or
+reference to uninitialized storage; ``[[ref_to_uninit]]`` is the opt-in that
+lets a program thread uninitialized memory (for example, an input buffer or
+a memory-pool allocation) through pointers and references. Under the profile
+a ``[[ref_to_uninit]]`` pointer or reference may only be bound to
+uninitialized memory, and a pointer or reference that is *not* marked may
+only be bound to initialized memory.
+
+The attribute applies to a variable, non-static data member, function
+parameter, or function (for its return value) whose type is a pointer or
+reference; applying it elsewhere is diagnosed regardless of ``-fprofiles``.
+
+Outside the initialization profile the attribute is otherwise silently
+accepted and has no effect, so code that uses it remains valid when compiled
+without ``-fprofiles``.
+  }];
+}
+
 def NoMergeDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{
