@@ -2660,8 +2660,8 @@ public:
   /// Returns the ScalarEvolution analysis used.
   ScalarEvolution *getSE() const { return &SE; }
 
-  /// We need to explicitly define the copy constructor because of the unique
-  /// SCEVUnionPredicate owned by Preds.
+  /// We need to explicitly define the copy constructor due to the ownership of
+  /// the SCEVUnionPredicate Preds.
   LLVM_ABI PredicatedScalarEvolution(const PredicatedScalarEvolution &);
 
   /// Print the SCEV mappings done by the Predicated Scalar Evolution.
