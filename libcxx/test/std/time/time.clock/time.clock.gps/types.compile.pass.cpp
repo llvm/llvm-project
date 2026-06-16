@@ -42,7 +42,7 @@ using period     = std::chrono::gps_clock::period;
 using duration   = std::chrono::gps_clock::duration;
 using time_point = std::chrono::gps_clock::time_point;
 
-[[maybe_unused]] constexpr std::same_as<const bool> decltype(auto) is_steady = std::chrono::gps_clock::is_steady;
+[[maybe_unused]] constexpr std::same_as<const bool> decltype(auto) _ = std::chrono::gps_clock::is_steady;
 
 // Tests the values. part of them are implementation defined.
 LIBCPP_STATIC_ASSERT(std::same_as<rep, std::chrono::utc_clock::rep>);
@@ -54,7 +54,7 @@ static_assert(std::same_as<period, std::ratio<period::num, period::den>>);
 
 static_assert(std::same_as<duration, std::chrono::duration<rep, period>>);
 static_assert(std::same_as<time_point, std::chrono::time_point<std::chrono::gps_clock>>);
-LIBCPP_STATIC_ASSERT(is_steady == false);
+LIBCPP_STATIC_ASSERT(!std::chrono::gps_clock::is_steady);
 
 // typedefs
 static_assert(std::same_as<std::chrono::gps_time<int>, std::chrono::time_point<std::chrono::gps_clock, int>>);
