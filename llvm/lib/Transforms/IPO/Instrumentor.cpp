@@ -109,7 +109,7 @@ Value *tryToCast(IRBTy &IRB, Value *V, Type *Ty, const DataLayout &DL,
   Type *VTy = V->getType();
   if (VTy == Ty)
     return V;
-  if (VTy->isAggregateType())
+  if (VTy->isAggregateType() || VTy->isVectorTy())
     return V;
   TypeSize RequestedSize = DL.getTypeSizeInBits(Ty);
   TypeSize ValueSize = DL.getTypeSizeInBits(VTy);
@@ -1822,11 +1822,6 @@ Value *CompareIO::getPredicate(Value &V, Type &Ty, InstrumentationConfig &IConf,
   return getCI(&Ty, CI->getPredicate());
 }
 
-Value *CompareIO::getResult(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                            InstrumentorIRBuilderTy &IIRB) {
-  return &V;
-}
-
 Value *CompareIO::getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,
                            InstrumentorIRBuilderTy &IIRB) {
   auto &I = cast<Instruction>(V);
@@ -1863,7 +1858,7 @@ void CompareIO::init(InstrumentationConfig &IConf,
                              "The operand type id.", IRTArg::NONE,
                              getOperandTypeId));
   if (Config.has(PassOpSize))
-    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "operand_size",
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "operand_size",
                              "The operand type size.", IRTArg::NONE,
                              getOperandSize));
   if (Config.has(PassOpcode))
@@ -1882,7 +1877,7 @@ void CompareIO::init(InstrumentationConfig &IConf,
                              "The comparison's right operand.", OperandArgOpts,
                              getRight));
   if (!IsPRE && Config.has(PassResultSize))
-    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "result_type_id",
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "result_type_id",
                              "The result value's type ID.", IRTArg::NONE,
                              getTypeId));
   if (!IsPRE && Config.has(PassResultSize))
@@ -1895,7 +1890,7 @@ void CompareIO::init(InstrumentationConfig &IConf,
                IRTArg::REPLACABLE | IRTArg::POTENTIALLY_INDIRECT |
                    (Config.has(PassResultSize) ? IRTArg::INDIRECT_HAS_SIZE
                                                : IRTArg::NONE),
-               getResult, Config.has(ReplaceResult) ? replaceValue : nullptr));
+               getValue, Config.has(ReplaceResult) ? replaceValue : nullptr));
   if (Config.has(PassFlags))
     IRTArgs.push_back(
         IRTArg(IIRB.Int64Ty, "flags",

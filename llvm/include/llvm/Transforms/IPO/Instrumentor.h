@@ -1224,9 +1224,6 @@ struct CompareIO final
   LLVM_ABI static Value *getPredicate(Value &V, Type &Ty,
                                       InstrumentationConfig &IConf,
                                       InstrumentorIRBuilderTy &IIRB);
-  LLVM_ABI static Value *getResult(Value &V, Type &Ty,
-                                   InstrumentationConfig &IConf,
-                                   InstrumentorIRBuilderTy &IIRB);
   LLVM_ABI static Value *getFlags(Value &V, Type &Ty,
                                   InstrumentationConfig &IConf,
                                   InstrumentorIRBuilderTy &IIRB);
