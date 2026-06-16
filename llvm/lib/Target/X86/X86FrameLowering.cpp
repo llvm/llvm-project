@@ -62,15 +62,10 @@ static bool hasConstantSP(const MachineFunction &MF) {
 
 static bool hasWin64MSVCDynAllocaCallFrame(const MachineFunction &MF) {
   const auto &STI = MF.getSubtarget<X86Subtarget>();
-  if (!STI.isTargetWin64() || !STI.isTargetWindowsMSVC())
+  if (STI.getFrameLowering()->getWin64MSVCDynAllocaCallFrameSize(MF) == 0)
     return false;
-
-  const auto *X86FI = MF.getInfo<X86MachineFunctionInfo>();
-  if (!X86FI->hasWin64MSVCDynAllocaCallFrame())
-    return false;
-
-  assert(!X86FI->getHasPushSequences());
-  assert(!X86FI->hasPreallocatedCall());
+  assert(!MF.getInfo<X86MachineFunctionInfo>()->getHasPushSequences());
+  assert(!MF.getInfo<X86MachineFunctionInfo>()->hasPreallocatedCall());
   return true;
 }
 
@@ -116,6 +111,16 @@ bool X86FrameLowering::needsFrameIndexResolution(
     const MachineFunction &MF) const {
   return MF.getFrameInfo().hasStackObjects() ||
          MF.getInfo<X86MachineFunctionInfo>()->getHasPushSequences();
+}
+
+unsigned X86FrameLowering::getWin64MSVCDynAllocaCallFrameSize(
+    const MachineFunction &MF) const {
+  if (!STI.isTargetWin64() || !STI.isTargetWindowsMSVC())
+    return 0;
+  if (!MF.getInfo<X86MachineFunctionInfo>()->hasDynAlloca())
+    return 0;
+  return static_cast<unsigned>(
+      alignTo(MF.getFrameInfo().getMaxCallFrameSize(), getStackAlign()));
 }
 
 /// hasFPImpl - Return true if the specified function should have a dedicated

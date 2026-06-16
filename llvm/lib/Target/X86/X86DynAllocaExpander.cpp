@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
+#include "X86FrameLowering.h"
 #include "X86InstrBuilder.h"
 #include "X86InstrInfo.h"
 #include "X86MachineFunctionInfo.h"
@@ -194,7 +195,7 @@ void X86DynAllocaExpander::computeLowerings(MachineFunction &MF,
   // Compute the reverse post-order.
   ReversePostOrderTraversal<MachineFunction*> RPO(&MF);
   bool HasStableWin64MSVCCallFrame =
-      MF.getInfo<X86MachineFunctionInfo>()->hasWin64MSVCDynAllocaCallFrame();
+      STI->getFrameLowering()->getWin64MSVCDynAllocaCallFrameSize(MF) != 0;
 
   for (MachineBasicBlock *MBB : RPO) {
     int64_t Offset = -1;
@@ -280,10 +281,9 @@ Register X86DynAllocaExpander::materializeWinAllocaAmount(
 void X86DynAllocaExpander::lower(MachineInstr *MI, Lowering L) {
   const DebugLoc &DL = MI->getDebugLoc();
   MachineBasicBlock *MBB = MI->getParent();
+  MachineFunction &MF = *MBB->getParent();
   unsigned Win64MSVCDynAllocaCallFrameSize =
-      MBB->getParent()
-          ->getInfo<X86MachineFunctionInfo>()
-          ->getWin64MSVCDynAllocaCallFrameSize();
+      STI->getFrameLowering()->getWin64MSVCDynAllocaCallFrameSize(MF);
   MachineBasicBlock::iterator I = *MI;
 
   bool IsWinAlloca = MI->getOpcode() == X86::WIN_ALLOCA_64;
@@ -402,7 +402,8 @@ void X86DynAllocaExpander::lower(MachineInstr *MI, Lowering L) {
 }
 
 bool X86DynAllocaExpander::run(MachineFunction &MF) {
-  if (!MF.getInfo<X86MachineFunctionInfo>()->hasDynAlloca())
+  auto *X86FI = MF.getInfo<X86MachineFunctionInfo>();
+  if (!X86FI->hasDynAlloca())
     return false;
 
   MRI = &MF.getRegInfo();
@@ -413,21 +414,17 @@ bool X86DynAllocaExpander::run(MachineFunction &MF) {
   SlotSize = TRI->getSlotSize();
   StackProbeSize = STI->getTargetLowering()->getStackProbeSize(MF);
   NoStackArgProbe = MF.getFunction().hasFnAttribute("no-stack-arg-probe");
-  auto *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   auto &MFI = MF.getFrameInfo();
 
-  unsigned Win64MSVCDynAllocaCallFrameSize = 0;
   if (STI->isTargetWin64() && STI->isTargetWindowsMSVC()) {
     MFI.computeMaxCallFrameSize(MF);
-    Align StackAlign = STI->getFrameLowering()->getStackAlign();
-    Win64MSVCDynAllocaCallFrameSize =
-        static_cast<unsigned>(alignTo(MFI.getMaxCallFrameSize(), StackAlign));
-    assert(Win64MSVCDynAllocaCallFrameSize == 0 ||
+    assert(STI->getFrameLowering()->getWin64MSVCDynAllocaCallFrameSize(MF) ==
+               0 ||
            !X86FI->getHasPushSequences());
-    assert(Win64MSVCDynAllocaCallFrameSize == 0 ||
+    assert(STI->getFrameLowering()->getWin64MSVCDynAllocaCallFrameSize(MF) ==
+               0 ||
            !X86FI->hasPreallocatedCall());
   }
-  X86FI->setWin64MSVCDynAllocaCallFrameSize(Win64MSVCDynAllocaCallFrameSize);
 
   if (NoStackArgProbe)
     StackProbeSize = INT64_MAX;
