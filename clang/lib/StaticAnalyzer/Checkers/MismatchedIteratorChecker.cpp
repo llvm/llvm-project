@@ -204,7 +204,7 @@ void MismatchedIteratorChecker::verifyMatch(CheckerContext &C, SVal Iter,
   Cont = Cont->getMostDerivedObjectRegion();
 
   if (const auto *ContSym = Cont->getSymbolicBase()) {
-    if (isa<SymbolConjured>(ContSym->getSymbol()))
+    if (isa<SymbolConjured, SymbolInvalidationArtifact>(ContSym->getSymbol()))
       return;
   }
 
@@ -220,7 +220,7 @@ void MismatchedIteratorChecker::verifyMatch(CheckerContext &C, SVal Iter,
   // the same or a different container but we get different conjured symbols
   // for each call. This may cause false positives so omit them from the check.
   if (const auto *ContSym = IterCont->getSymbolicBase()) {
-    if (isa<SymbolConjured>(ContSym->getSymbol()))
+    if (isa<SymbolConjured, SymbolInvalidationArtifact>(ContSym->getSymbol()))
       return;
   }
 
@@ -249,7 +249,7 @@ void MismatchedIteratorChecker::verifyMatch(CheckerContext &C, SVal Iter1,
   // the same or a different container but we get different conjured symbols
   // for each call. This may cause false positives so omit them from the check.
   if (const auto *ContSym = IterCont1->getSymbolicBase()) {
-    if (isa<SymbolConjured>(ContSym->getSymbol()))
+    if (isa<SymbolConjured, SymbolInvalidationArtifact>(ContSym->getSymbol()))
       return;
   }
 
@@ -259,7 +259,7 @@ void MismatchedIteratorChecker::verifyMatch(CheckerContext &C, SVal Iter1,
 
   const auto *IterCont2 = Pos2->getContainer();
   if (const auto *ContSym = IterCont2->getSymbolicBase()) {
-    if (isa<SymbolConjured>(ContSym->getSymbol()))
+    if (isa<SymbolConjured, SymbolInvalidationArtifact>(ContSym->getSymbol()))
       return;
   }
 

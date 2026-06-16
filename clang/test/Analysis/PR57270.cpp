@@ -24,7 +24,7 @@ void foo()
     S *arr = new S[x];
     delete[] arr;
 
-    clang_analyzer_dump(S::a); // expected-warning-re{{{{derived_\$[0-9]+{conj_\$[0-9]+{int, LC[0-9]+, S[0-9]+, #[0-9]+},a}}}}}
+    clang_analyzer_dump(S::a); // expected-warning-re{{{{derived_\$[0-9]+{inv_\$[0-9]+{int, LC[0-9]+, conservative-call, #[0-9]+},a}}}}}
 
-    clang_analyzer_explain(S::a); // expected-warning-re{{{{value derived from \(symbol of type 'int' conjured at CFG element '->~S\(\) \(Implicit destructor\)'\) for global variable 'S::a'}}}}
+    clang_analyzer_explain(S::a); // expected-warning-re{{{{value derived from \(invalidation artifact \(conservative-call\) of type 'int' at CFG element '->~S\(\) \(Implicit destructor\)'\) for global variable 'S::a'}}}}
 }

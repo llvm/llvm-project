@@ -183,7 +183,7 @@ void test_vfscanf() {
   int r = test_vfscanf_inner("%d", &i);
   if (r != EOF) {
     // i gets invalidated by the call to test_vfscanf_inner, not by vfscanf.
-    clang_analyzer_dump(i); // expected-warning {{conj_$}}
+    clang_analyzer_dump(i); // expected-warning {{inv_$}}
     clang_analyzer_dump(j); // expected-warning {{43 S32b}}
   }
 }

@@ -34,6 +34,7 @@ add_clang_library(clangStaticAnalyzerCore
   ExprEngineObjC.cpp
   FunctionSummary.cpp
   HTMLDiagnostics.cpp
+  InvalidationCause.cpp
   LoopUnrolling.cpp
   LoopWidening.cpp
   MemRegion.cpp
