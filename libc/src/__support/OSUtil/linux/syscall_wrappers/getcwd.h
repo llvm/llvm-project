@@ -26,7 +26,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
-ErrorOr<ssize_t> getcwd(char *buf, size_t size) {
+LIBC_INLINE ErrorOr<ssize_t> getcwd(char *buf, size_t size) {
   ssize_t ret = syscall_impl<ssize_t>(SYS_getcwd, buf, size);
   if (ret < 0) {
     return Error(static_cast<int>(-ret));
