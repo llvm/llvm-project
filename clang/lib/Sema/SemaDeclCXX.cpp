@@ -7059,7 +7059,7 @@ template <class Node> struct FinalizationProfile {
 
 void runTestClassFinalCallback(Sema &S, CXXRecordDecl *RD) {
   if (!S.shouldEmitProfileViolation("test::class_final", /*Rule=*/"",
-                                    RD->getLocation()))
+                                    RD->getLocation(), RD))
     return;
   S.Diag(RD->getLocation(), diag::err_profile_class_final_test)
       << "test::class_final" << RD;
@@ -7067,7 +7067,7 @@ void runTestClassFinalCallback(Sema &S, CXXRecordDecl *RD) {
 
 void runTestCtorFinalCallback(Sema &S, CXXConstructorDecl *Ctor) {
   if (!S.shouldEmitProfileViolation("test::ctor_final", /*Rule=*/"",
-                                    Ctor->getLocation()))
+                                    Ctor->getLocation(), Ctor))
     return;
   S.Diag(Ctor->getLocation(), diag::err_profile_ctor_final_test)
       << "test::ctor_final" << Ctor->getParent();
@@ -7101,7 +7101,7 @@ void runStdInitCtorUninitMemberCallback(Sema &S, CXXConstructorDecl *Ctor) {
     if (!S.defaultInitLeavesScalarIndeterminate(F->getType()))
       continue;
     if (!S.shouldEmitProfileViolation("std::init", "ctor_uninit_member",
-                                      Ctor->getLocation()))
+                                      Ctor->getLocation(), Ctor))
       continue;
     S.Diag(Ctor->getLocation(), diag::err_init_ctor_uninit_member)
         << "std::init" << F->getDeclName();
@@ -7122,22 +7122,20 @@ constexpr FinalizationProfile<CXXConstructorDecl>
         {"std::init", &runStdInitCtorUninitMemberCallback},
 };
 
-// Run the enforced finalization-profile callbacks in Table for D, setting up a
-// suppress scope so [[profiles::suppress]] on D or a lexical parent is honored.
-// Merges the former per-node dispatchers; the per-node filter (dependent,
-// lambda, delegating, ...) stays at each call site. The table is taken by
-// reference-to-array, not ArrayRef: deducing Node from a C array against an
-// ArrayRef<FinalizationProfile<Node>> parameter is not possible (no
-// array-to-ArrayRef conversion happens during template argument deduction).
+// Run the enforced finalization-profile callbacks in Table for D. Merges the
+// former per-node dispatchers; the per-node filter (dependent, lambda,
+// delegating, ...) stays at each call site. Each callback passes D to the
+// Decl-aware Sema::shouldEmitProfileViolation, which honors [[profiles::suppress]]
+// on D or a lexical parent, so the dispatcher needs no suppress scope of its
+// own. The table is taken by reference-to-array, not ArrayRef: deducing Node
+// from a C array against an ArrayRef<FinalizationProfile<Node>> parameter is not
+// possible (no array-to-ArrayRef conversion happens during template argument
+// deduction).
 template <class Node, std::size_t N>
 void dispatchFinalizationProfiles(Sema &S, Node *D,
                                   const FinalizationProfile<Node> (&Table)[N]) {
   if (!S.anyProfileEnforced(Table))
     return;
-  // ProfileSuppressScope is profile-agnostic (it pushes every
-  // [[profiles::suppress]] entry it finds and isProfileSuppressed filters by
-  // name later), so set it up once for all callbacks.
-  Sema::ProfileSuppressScope Scope(S, D, /*WalkLexicalParents=*/true);
   for (const auto &E : Table)
     if (S.isProfileEnforced(E.Name))
       E.Callback(S, D);
