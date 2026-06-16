@@ -19,7 +19,7 @@
 
 void test() {
   {
-    std::vector<int> vec{94, 82};
+    std::vector<int> vec(94, 82);
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::accumulate(vec.begin(), vec.end(), 49);
@@ -28,7 +28,7 @@ void test() {
   }
 
   {
-    std::vector<int> vec{94, 82};
+    std::vector<int> vec(94, 82);
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::inner_product(vec.begin(), vec.end(), vec.begin(), 49);
@@ -78,6 +78,7 @@ void test() {
   }
 #endif
 
+#if TEST_STD_VER >= 17
   {
     std::initializer_list<int> il{94, 82};
 
@@ -99,6 +100,7 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     std::reduce(il.begin(), il.end(), 49, std::multiplies<>());
   }
+#endif
 
 #if TEST_STD_VER >= 26
   // [numeric.sat]
