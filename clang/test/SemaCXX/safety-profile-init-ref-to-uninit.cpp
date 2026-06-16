@@ -43,6 +43,19 @@ void test_reference_target() {
   (void)r1; (void)r2; (void)r3; (void)r4; (void)r5; (void)p;
 }
 
+void test_assignment() {
+  int *p [[ref_to_uninit]] = &g_uninit;
+  p = &g_uninit; // OK
+  p = &g_init;   // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  int *q = &g_init;
+  q = &g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  q = &g_init;   // OK
+  q = nullptr;   // OK
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] { q = &g_uninit; } // OK: suppressed
+  (void)p; (void)q;
+}
+
 void test_suppress() {
   // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
   [[profiles::suppress(std::init, rule: "ref_to_uninit")]] int *s = &g_uninit; // OK: suppressed

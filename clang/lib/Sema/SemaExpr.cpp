@@ -15483,6 +15483,23 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
       DiagnoseSelfAssignment(*this, LHS.get(), RHS.get(), OpLoc, true);
       DiagnoseSelfMove(LHS.get(), RHS.get(), OpLoc);
 
+      // std::init / ref_to_uninit (paper §5): assigning a pointer must respect
+      // the [[ref_to_uninit]] marking of the assigned-to pointer named on the
+      // LHS. References cannot be reseated, so only pointer assignment applies;
+      // the check is limited to an LHS that directly names a pointer entity (so
+      // its marker can be read locally).
+      if (getLangOpts().Profiles && LHS.get()->getType()->isPointerType()) {
+        const Expr *L = LHS.get()->IgnoreParenImpCasts();
+        const ValueDecl *VD = nullptr;
+        if (const auto *DRE = dyn_cast<DeclRefExpr>(L))
+          VD = DRE->getDecl();
+        else if (const auto *ME = dyn_cast<MemberExpr>(L))
+          VD = ME->getMemberDecl();
+        if (VD)
+          checkRefToUninitInit(OpLoc, VD->hasAttr<RefToUninitAttr>(),
+                               /*IsReference=*/false, RHS.get());
+      }
+
       // Avoid copying a block to the heap if the block is assigned to a local
       // auto variable that is declared in the same scope as the block. This
       // optimization is unsafe if the local variable is declared in an outer
