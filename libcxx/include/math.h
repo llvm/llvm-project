@@ -472,6 +472,8 @@ using std::__math::exp;
 using std::__math::exp2;
 using std::__math::expm1;
 using std::__math::fabs;
+using std::__math::fabsf;
+using std::__math::fabsl;
 using std::__math::fdim;
 using std::__math::floor;
 using std::__math::fma;

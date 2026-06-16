@@ -37,6 +37,19 @@ void test_big() {
   assert(std::abs(negative_big_value) == big_value); // make sure it doesn't get casted to a smaller type
 }
 
+template <class Source, class Result>
+constexpr bool test_constexpr_abs() {
+  Source neg_val = -5;
+  Source pos_val = 5;
+  Result res = 5;
+
+  ASSERT_SAME_TYPE(decltype(std::abs(neg_val)), Result);
+
+  assert(std::abs(neg_val) == res);
+  assert(std::abs(pos_val) == res);
+  return true;
+}
+
 // The following is helpful to keep in mind:
 // 1byte == char <= short <= int <= long <= long long
 
@@ -67,6 +80,29 @@ int main(int, char**) {
   test_abs<float, float>();
 
   test_big();
+
+#if TEST_STD_VER > 23
+  // All types less than or equal to and not greater than int are promoted to int.
+  static_assert(test_constexpr_abs<short int, int>());
+  static_assert(test_constexpr_abs<SignedChar, int>());
+  static_assert(test_constexpr_abs<signed char, int>());
+
+  // These three calls have specific overloads:
+  static_assert(test_constexpr_abs<int, int>());
+  static_assert(test_constexpr_abs<long int, long int>());
+  static_assert(test_constexpr_abs<long long int, long long int>());
+
+  // Here there is no guarantee that int is larger than int8_t so we
+  // use a helper type trait to conditional test against int.
+  static_assert(test_constexpr_abs<std::int8_t, correct_size_int<std::int8_t>::type>());
+  static_assert(test_constexpr_abs<std::int16_t, correct_size_int<std::int16_t>::type>());
+  static_assert(test_constexpr_abs<std::int32_t, correct_size_int<std::int32_t>::type>());
+  static_assert(test_constexpr_abs<std::int64_t, correct_size_int<std::int64_t>::type>());
+
+  static_assert(test_constexpr_abs<long double, long double>());
+  static_assert(test_constexpr_abs<double, double>());
+  static_assert(test_constexpr_abs<float, float>());
+#endif
 
   return 0;
 }

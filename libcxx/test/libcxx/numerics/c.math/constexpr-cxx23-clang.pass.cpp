@@ -43,15 +43,15 @@ int main(int, char**) {
   double DummyDouble;
   long double DummyLongDouble;
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1L) == 1L);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1LL) == 1LL);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1.0) == 1.0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1.0L) == 1.0L);
+  ASSERT_CONSTEXPR_CXX23(std::abs(-1) == 1);
+  ASSERT_CONSTEXPR_CXX23(std::abs(-1L) == 1L);
+  ASSERT_CONSTEXPR_CXX23(std::abs(-1LL) == 1LL);
+  ASSERT_CONSTEXPR_CXX23(std::abs(-1.0f) == 1.0f);
+  ASSERT_CONSTEXPR_CXX23(std::abs(-1.0) == 1.0);
+  ASSERT_CONSTEXPR_CXX23(std::abs(-1.0L) == 1.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::labs(-1L) == 1L);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::llabs(-1LL) == 1LL);
+  ASSERT_CONSTEXPR_CXX23(std::labs(-1L) == 1L);
+  ASSERT_CONSTEXPR_CXX23(std::llabs(-1LL) == 1LL);
 
   ASSERT_NOT_CONSTEXPR_CXX23(std::div(13, 5).rem == 3);
   ASSERT_NOT_CONSTEXPR_CXX23(std::div(13L, 5L).rem == 3L);
@@ -101,11 +101,11 @@ int main(int, char**) {
   ASSERT_NOT_CONSTEXPR_CXX23(std::scalblnf(1.0f, 1L) == 2.0f);
   ASSERT_NOT_CONSTEXPR_CXX23(std::scalblnl(1.0L, 1L) == 2.0L);
 
-  ASSERT_NOT_CONSTEXPR_CXX23(std::fabs(-1.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::fabs(-1.0) == 1.0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::fabs(-1.0L) == 1.0L);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::fabsf(-1.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::fabsl(-1.0L) == 1.0L);
+  ASSERT_CONSTEXPR_CXX23(std::fabs(-1.0f) == 1.0f);
+  ASSERT_CONSTEXPR_CXX23(std::fabs(-1.0) == 1.0);
+  ASSERT_CONSTEXPR_CXX23(std::fabs(-1.0L) == 1.0L);
+  ASSERT_CONSTEXPR_CXX23(std::fabsf(-1.0f) == 1.0f);
+  ASSERT_CONSTEXPR_CXX23(std::fabsl(-1.0L) == 1.0L);
 
   ASSERT_NOT_CONSTEXPR_CXX23(std::ceil(0.0f) == 0.0f);
   ASSERT_NOT_CONSTEXPR_CXX23(std::ceil(0.0) == 0.0);

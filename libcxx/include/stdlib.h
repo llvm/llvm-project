@@ -108,6 +108,8 @@ extern "C++" {
 
 #      include <__math/abs.h>
 using std::__math::abs;
+using std::__math::labs;
+using std::__math::llabs;
 
 // div
 
