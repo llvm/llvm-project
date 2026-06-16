@@ -65,16 +65,10 @@ template <class = int>
   return __builtin_llabs(__x);
 }
 
-// Overload for __int128 and signed _BitInt(N) where sizeof(_Tp) >=
-// sizeof(int). The sizeof check excludes shorter signed types (signed
-// short, signed _BitInt(16)). The standard overloads catch the standard
-// types via integer promotion. _BitInt narrower than int does not
-// promote and is intentionally unsupported by std::abs.
-//
-// The explicit !is_same exclusions for int/long/long long are
-// load-bearing: signed _BitInt(33..64) shares sizeof with long long, so
-// a sizeof-only gate would let those types compete with the existing
-// builtin-based overloads.
+// Covers __int128 and signed _BitInt(N) with sizeof >= sizeof(int).
+// The int/long/long long exclusions are load-bearing: _BitInt(33..64)
+// shares sizeof with long long and would otherwise compete with the
+// builtin overload.
 template <class _Tp,
           __enable_if_t<__is_signed_integer_v<_Tp> && !is_same<_Tp, int>::value && !is_same<_Tp, long>::value &&
                             !is_same<_Tp, long long>::value && (sizeof(_Tp) >= sizeof(int)),
