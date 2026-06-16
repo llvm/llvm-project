@@ -27,4 +27,4 @@ static_assert((std::is_same<C::duration, C::time_point::duration>::value), "");
 static_assert((std::is_same<C::time_point::clock, C>::value), "");
 
 [[maybe_unused]] constexpr std::same_as<const bool> decltype(auto) _ = C::is_steady;
-LIBCPP_STATIC_ASSERT(C::is_steady == false);
+LIBCPP_STATIC_ASSERT(!C::is_steady);
