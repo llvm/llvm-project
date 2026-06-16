@@ -4642,6 +4642,45 @@ void Fortran::lower::genOpenACCRoutineConstruct(
       workerDeviceTypes, vectorDeviceTypes);
 }
 
+void Fortran::lower::materializeOpenACCRoutineBindTargets(
+    Fortran::lower::AbstractConverter &converter, mlir::ModuleOp module) {
+  // There is only one module today; recurse in case submodules are added.
+  for (mlir::ModuleOp nested : module.getOps<mlir::ModuleOp>())
+    materializeOpenACCRoutineBindTargets(converter, nested);
+
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  // The converter's symbol table tracks only the top module.
+  mlir::SymbolTable *symbolTable =
+      module.getOperation() == converter.getModuleOp().getOperation()
+          ? converter.getMLIRSymbolTable()
+          : nullptr;
+
+  for (mlir::acc::RoutineOp routineOp : module.getOps<mlir::acc::RoutineOp>()) {
+    // bind renames the same callable, so clone the decorated routine's type.
+    mlir::func::FuncOp decorated = fir::FirOpBuilder::getNamedFunction(
+        module, symbolTable, routineOp.getFuncName());
+    mlir::FunctionType type =
+        decorated ? decorated.getFunctionType()
+                  : mlir::FunctionType::get(builder.getContext(), {}, {});
+
+    auto declare = [&](llvm::StringRef name) {
+      if (!fir::FirOpBuilder::getNamedFunction(module, symbolTable, name))
+        fir::FirOpBuilder::createFunction(builder.getUnknownLoc(), module, name,
+                                          type, symbolTable);
+    };
+
+    // bind(identifier) is mangled; bind("string") is a verbatim asm name.
+    if (mlir::ArrayAttr binds = routineOp.getBindIdNameAttr())
+      for (mlir::Attribute bind : binds)
+        if (auto symRef = mlir::dyn_cast<mlir::SymbolRefAttr>(bind))
+          declare(symRef.getLeafReference());
+    if (mlir::ArrayAttr binds = routineOp.getBindStrNameAttr())
+      for (mlir::Attribute bind : binds)
+        if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(bind))
+          declare(strAttr.getValue());
+  }
+}
+
 static void
 genACC(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::pft::Evaluation &eval,

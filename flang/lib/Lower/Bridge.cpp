@@ -597,6 +597,16 @@ public:
           u);
     }
 
+    // Declare any `acc routine` bind(name) targets not otherwise declared, so a
+    // live symbol exists for later passes. No-op for targets already lowered in
+    // this unit.
+    if (getFoldingContext().languageFeatures().IsEnabled(
+            Fortran::common::LanguageFeature::OpenACC))
+      createBuilderOutsideOfFuncOpAndDo([&]() {
+        Fortran::lower::materializeOpenACCRoutineBindTargets(*this,
+                                                             getModuleOp());
+      });
+
     // Once all the code has been translated, create global runtime type info
     // data structures for the derived types that have been processed, as well
     // as fir.type_info operations for the dispatch tables.
