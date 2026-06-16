@@ -1145,12 +1145,15 @@ this packet specifies the initial terminal dimensions:
 ```
 QSetSTDIOWindowSize:cols=<N>;rows=<N>
 ```
-Both `cols` and `rows` must be non-zero unsigned 16-bit integers. If sent,
-this packet must be sent _prior_ to the launch args (`A`) packet; sending it
-after the inferior has been launched has no effect. On the server side, the
-dimensions are stored and later applied to the PTY when the inferior is
-launched, via `TIOCSWINSZ` (POSIX) or the equivalent platform mechanism (e.g.
-`ConPTY` resize on Windows).
+Both `cols` and `rows` must be unsigned 16-bit integers. They must either both
+be non-zero, or both be zero. Any other combination (e.g. `cols=80;rows=0`) is
+treated as a malformed packet. This packet must be sent _prior_ to the launch
+args (`A`) packet; sending it after the inferior has been launched has no
+effect.
+
+On the server side, the dimensions are stored and applied to the PTY at launch
+time. On POSIX this is done via `TIOCSWINSZ`; on Windows via `ConPTY` resize.
+If both dimensions are zero, the server uses pipes instead of a PTY on all platforms.
 
 The response is either:
 * `OK`: dimensions accepted; they will be applied to the PTY when the
