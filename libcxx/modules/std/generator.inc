@@ -8,7 +8,12 @@
 //===----------------------------------------------------------------------===//
 
 export namespace std {
-#if 0
+#if _LIBCPP_STD_VER >= 23
+  // [coro.generator], class template generator
   using std::generator;
+
+  namespace pmr {
+    using std::pmr::generator;
+  }
 #endif
 } // namespace std

@@ -412,6 +412,10 @@
 #    error "__cpp_lib_generate_random should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_generator
+#    error "__cpp_lib_generator should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should not be defined before c++14"
 #  endif
@@ -1349,6 +1353,10 @@
 
 #  ifdef __cpp_lib_generate_random
 #    error "__cpp_lib_generate_random should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_generator
+#    error "__cpp_lib_generator should not be defined before c++23"
 #  endif
 
 #  ifndef __cpp_lib_generic_associative_lookup
@@ -2411,6 +2419,10 @@
 
 #  ifdef __cpp_lib_generate_random
 #    error "__cpp_lib_generate_random should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_generator
+#    error "__cpp_lib_generator should not be defined before c++23"
 #  endif
 
 #  ifndef __cpp_lib_generic_associative_lookup
@@ -3740,6 +3752,10 @@
 
 #  ifdef __cpp_lib_generate_random
 #    error "__cpp_lib_generate_random should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_generator
+#    error "__cpp_lib_generator should not be defined before c++23"
 #  endif
 
 #  ifndef __cpp_lib_generic_associative_lookup
@@ -5264,6 +5280,13 @@
 
 #  ifdef __cpp_lib_generate_random
 #    error "__cpp_lib_generate_random should not be defined before c++26"
+#  endif
+
+#  ifndef __cpp_lib_generator
+#    error "__cpp_lib_generator should be defined in c++23"
+#  endif
+#  if __cpp_lib_generator != 202207L
+#    error "__cpp_lib_generator should have the value 202207L in c++23"
 #  endif
 
 #  ifndef __cpp_lib_generic_associative_lookup
@@ -7142,6 +7165,13 @@
 #    ifdef __cpp_lib_generate_random
 #      error "__cpp_lib_generate_random should not be defined because it is unimplemented in libc++!"
 #    endif
+#  endif
+
+#  ifndef __cpp_lib_generator
+#    error "__cpp_lib_generator should be defined in c++26"
+#  endif
+#  if __cpp_lib_generator != 202207L
+#    error "__cpp_lib_generator should have the value 202207L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_generic_associative_lookup

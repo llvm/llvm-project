@@ -164,7 +164,6 @@ module_c_headers = [h for h in all_headers if h.has_cxx20_module() and h.is_cstd
 # modules will fail to build if a header is added but this list is not updated.
 headers_not_available = list(map(Header, [
     "debugging",
-    "generator",
     "hazard_pointer",
     "inplace_vector",
     "linalg",

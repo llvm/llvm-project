@@ -52,6 +52,8 @@ Implemented Papers
 - P3383R3: ``mdspan.at()`` (`Github <https://llvm.org/PR175213>`__)
 - P3369R0: constexpr for ``uninitialized_default_construct`` (`Github <https://llvm.org/PR118380>`__)
 - P3508R0: Wording for "constexpr for specialized memory algorithms" (`Github <https://llvm.org/PR118379>`__)
+- P2502R2: ``std::generator``: Synchronous Coroutine Generator for Ranges (`Github <https://llvm.org/PR105226>`__)
+- P2787R1: ``pmr::generator`` - Promise Types are not Values (`Github <https://llvm.org/PR105263>`__)
 
 Improvements and New Features
 -----------------------------
