@@ -448,9 +448,10 @@ void GCNHazardRecognizer::AdvanceCycle() {
   // Keep track of emitted instructions
   EmittedInstrs.push_front(CurrCycleInstr);
 
-  bool IsVALUOrWMMA = SIInstrInfo::isVALU(*CurrCycleInstr, /*AllowLDSDMA=*/true) ||
-                      SIInstrInfo::isWMMA(*CurrCycleInstr) ||
-                      SIInstrInfo::isSWMMAC(*CurrCycleInstr);
+  bool IsVALUOrWMMA =
+      SIInstrInfo::isVALU(*CurrCycleInstr, /*AllowLDSDMA=*/true) ||
+      SIInstrInfo::isWMMA(*CurrCycleInstr) ||
+      SIInstrInfo::isSWMMAC(*CurrCycleInstr);
   if (IsVALUOrWMMA) {
     EmittedVALUInstrs.push_front(CurrCycleInstr);
   } else {
