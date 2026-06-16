@@ -1397,6 +1397,13 @@ bool LoopInterchangeLegality::currentLimitations() {
     }
   }
 
+  // Currently, we do not support loops where the inner loop header has
+  // duplicate successors.
+  SmallPtrSet<BasicBlock *, 2> InnerLoopHeaderSuccs;
+  for (BasicBlock *Succ : successors(InnerLoop->getHeader()))
+    if (!InnerLoopHeaderSuccs.insert(Succ).second)
+      return true;
+
   return false;
 }
 
