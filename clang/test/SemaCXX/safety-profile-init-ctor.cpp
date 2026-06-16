@@ -6,6 +6,8 @@
 
 struct WithCtor { WithCtor(); };
 struct Inner { int y; };
+struct InnerMarked { int y [[uninitialized]]; };
+struct InnerMixed { int a [[uninitialized]]; int b; };
 
 struct MissingMember {
   int x; // expected-note {{member 'x' declared here}}
@@ -36,6 +38,19 @@ struct BodyAssignment {
 struct NestedAggregate {
   Inner m; // expected-note {{member 'm' declared here}}
   NestedAggregate() {} // expected-error {{constructor does not initialize member 'm' under profile 'std::init'}}
+};
+
+// A member whose type's only indeterminate scalar is [[uninitialized]] is
+// acknowledged (paper §6.2), so the constructor need not initialize it.
+struct NestedMarkedMember {
+  InnerMarked m;
+  NestedMarkedMember() {}
+};
+
+// A member whose type still leaves an unacknowledged scalar indeterminate fires.
+struct NestedMixedMember {
+  InnerMixed m; // expected-note {{member 'm' declared here}}
+  NestedMixedMember() {} // expected-error {{constructor does not initialize member 'm' under profile 'std::init'}}
 };
 
 struct TrustedMemberCtor {

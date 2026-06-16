@@ -7098,7 +7098,8 @@ void runStdInitCtorUninitMemberCallback(Sema &S, CXXConstructorDecl *Ctor) {
     if (F->hasAttr<CXX11UninitializedAttr>() || F->hasInClassInitializer() ||
         Written.count(F))
       continue;
-    if (!S.defaultInitLeavesScalarIndeterminate(F->getType()))
+    if (!S.defaultInitLeavesScalarIndeterminate(F->getType(),
+                                                /*HonorUninitMarkers=*/true))
       continue;
     if (!S.shouldEmitProfileViolation("std::init", "ctor_uninit_member",
                                       Ctor->getLocation(), Ctor))
