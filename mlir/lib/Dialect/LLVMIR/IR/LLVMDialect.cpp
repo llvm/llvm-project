@@ -3868,10 +3868,16 @@ OpFoldResult LLVM::BitcastOp::fold(FoldAdaptor adaptor) {
 }
 
 LogicalResult LLVM::BitcastOp::verify() {
-  auto resultType = llvm::dyn_cast<LLVMPointerType>(
-      extractVectorElementType(getResult().getType()));
-  auto sourceType = llvm::dyn_cast<LLVMPointerType>(
-      extractVectorElementType(getArg().getType()));
+  Type srcElemType = extractVectorElementType(getArg().getType());
+  Type dstElemType = extractVectorElementType(getResult().getType());
+
+  // TODO: 'bitcast' requires result and operand type to be identical in size.
+  // Byte types may be cast from/to any type pointer constraints.
+  if (isa<LLVMByteType>(srcElemType) || isa<LLVMByteType>(dstElemType))
+    return success();
+
+  auto resultType = llvm::dyn_cast<LLVMPointerType>(dstElemType);
+  auto sourceType = llvm::dyn_cast<LLVMPointerType>(srcElemType);
 
   // If one of the types is a pointer (or vector of pointers), then
   // both source and result type have to be pointers.

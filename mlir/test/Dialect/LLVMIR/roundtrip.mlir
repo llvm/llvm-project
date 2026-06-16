@@ -402,6 +402,20 @@ func.func @casts(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
   %10 = llvm.addrspacecast %arg4 : !llvm.ptr to !llvm.ptr<2>
 // CHECK:  = llvm.bitcast %[[I64]] : i64 to f64
   %11 = llvm.bitcast %arg1 : i64 to f64
+// CHECK:  = llvm.bitcast %[[I64]] : i64 to !llvm.byte<64>
+  %12 = llvm.bitcast %arg1 : i64 to !llvm.byte<64>
+// CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to i64
+  %13 = llvm.bitcast %12 : !llvm.byte<64> to i64
+// CHECK:  = llvm.bitcast %[[I64]] : i64 to !llvm.byte<8>
+  %14 = llvm.bitcast %arg1 : i64 to !llvm.byte<8>
+// CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to i32
+  %15 = llvm.bitcast %12 : !llvm.byte<64> to i32
+// CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to !llvm.byte<8>
+  %16 = llvm.bitcast %12 : !llvm.byte<64> to !llvm.byte<8>
+// CHECK:  = llvm.bitcast %12 : !llvm.byte<64> to !llvm.ptr
+  %17 = llvm.bitcast %12 : !llvm.byte<64> to !llvm.ptr
+// CHECK:  = llvm.bitcast %[[PTR]] : !llvm.ptr to !llvm.byte<8>
+  %18 = llvm.bitcast %arg4 : !llvm.ptr to !llvm.byte<8>
   llvm.return
 }
 
