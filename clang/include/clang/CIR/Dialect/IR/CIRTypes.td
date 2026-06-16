@@ -620,6 +620,19 @@ def CIR_VoidType : CIR_Type<"Void", "void"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MetadataType
+//===----------------------------------------------------------------------===//
+
+def CIR_MetadataType : CIR_Type<"Metadata", "metadata"> {
+  let summary = "CIR metadata type";
+  let description = [{
+    The `!cir.metadata` type mirrors the LLVM dialect's `!llvm.metadata`. It
+    wraps a metadata node so it can be used as an operand of intrinsic calls
+    that take `metadata` arguments.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // StructType
 //
 // The CIR type for C/C++ struct and class declarations.
@@ -957,7 +970,7 @@ def CIR_AnyType : AnyTypeOf<[
   CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_StructType,
   CIR_UnionType,
   CIR_ComplexType, CIR_VPtrType, CIR_DataMemberType, CIR_MethodType,
-  CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType
+  CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType, CIR_MetadataType
 ]>;
 
 #endif // CLANG_CIR_DIALECT_IR_CIRTYPES_TD

@@ -1692,6 +1692,47 @@ def CIR_AnnotationArrayAttr
     : CIR_TypedArrayAttrBase<CIR_AnnotationAttr,
                              "array of cir.annotation attributes">;
 
+//===----------------------------------------------------------------------===//
+// Metadata attributes
+//===----------------------------------------------------------------------===//
+
+def CIR_MDStringAttr : CIR_Attr<"MDString", "md_string"> {
+  let summary = "CIR metadata string";
+  let description = [{
+    Wraps a string as a metadata node, mirroring the LLVM dialect's
+    `#llvm.md_string`.
+
+    Example:
+    ```mlir
+    #cir.md_string<"agent-one-as">
+    ```
+  }];
+  let parameters = (ins "::mlir::StringAttr":$value);
+  let assemblyFormat = "`<` $value `>`";
+  let canHaveIllegalCXXABIType = 0;
+}
+
+def CIR_MDNodeAttr : CIR_Attr<"MDNode", "md_node"> {
+  let summary = "CIR metadata node";
+  let description = [{
+    Represents a metadata node, mirroring the LLVM dialect's `#llvm.md_node`.
+    Its operands can be any combination of metadata attributes, including
+    nested `#cir.md_node`.
+
+    Example:
+    ```mlir
+    #cir.md_node<#cir.md_string<"agent-one-as">>
+    #cir.md_node<>
+    ```
+  }];
+  let parameters = (ins OptionalArrayRefParameter<"mlir::Attribute">:$operands);
+  let assemblyFormat = "`<` (`>`) : ($operands^ `>`)?";
+  let canHaveIllegalCXXABIType = 0;
+}
+
+def CIR_AnyMDAttr : AnyAttrOf<[CIR_MDStringAttr, CIR_MDNodeAttr],
+    "CIR metadata attribute (md_string or md_node)">;
+
 include "clang/CIR/Dialect/IR/CIROpenCLAttrs.td"
 include "clang/CIR/Dialect/IR/CIRCUDAAttrs.td"
 

@@ -1,0 +1,37 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s
+
+// Lowering test for CIRToLLVMMetadataAsValueOpLowering and the
+// !cir.metadata -> !llvm.metadata type conversion.
+
+module {
+  // md_string operand.
+  // CHECK-LABEL: llvm.func @md_string
+  // CHECK:         %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"foo">
+  // CHECK:         llvm.call_intrinsic "llvm.test.md.string"(%[[MD]]) : (!llvm.metadata) -> ()
+  // CHECK:         llvm.return
+  cir.func @md_string() {
+    %0 = cir.metadata_as_value #cir.md_string<"foo">
+    cir.call_llvm_intrinsic "test.md.string" %0 : (!cir.metadata) -> ()
+    cir.return
+  }
+
+  // Nested md_node<md_string>.
+  // CHECK-LABEL: llvm.func @md_node_nested
+  // CHECK:         %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"bar">>
+  // CHECK:         llvm.call_intrinsic "llvm.test.md.node"(%[[MD]]) : (!llvm.metadata) -> ()
+  cir.func @md_node_nested() {
+    %0 = cir.metadata_as_value #cir.md_node<#cir.md_string<"bar">>
+    cir.call_llvm_intrinsic "test.md.node" %0 : (!cir.metadata) -> ()
+    cir.return
+  }
+
+  // Empty md_node.
+  // CHECK-LABEL: llvm.func @md_node_empty
+  // CHECK:         %[[MD:.*]] = llvm.mlir.metadata_as_value #llvm.md_node<>
+  // CHECK:         llvm.call_intrinsic "llvm.test.md.empty"(%[[MD]]) : (!llvm.metadata) -> ()
+  cir.func @md_node_empty() {
+    %0 = cir.metadata_as_value #cir.md_node<>
+    cir.call_llvm_intrinsic "test.md.empty" %0 : (!cir.metadata) -> ()
+    cir.return
+  }
+}

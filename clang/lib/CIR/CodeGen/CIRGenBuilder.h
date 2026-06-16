@@ -465,6 +465,21 @@ public:
   }
 
   //===--------------------------------------------------------------------===//
+  // Metadata creation helpers
+  //===--------------------------------------------------------------------===//
+  cir::MDStringAttr getMDStringAttr(llvm::StringRef str) {
+    return cir::MDStringAttr::get(getContext(), getStringAttr(str));
+  }
+
+  cir::MDNodeAttr getMDNodeAttr(llvm::ArrayRef<mlir::Attribute> operands) {
+    return cir::MDNodeAttr::get(getContext(), operands);
+  }
+
+  mlir::Value createMetadataAsValue(mlir::Location loc, mlir::Attribute md) {
+    return cir::MetadataAsValueOp::create(*this, loc, md);
+  }
+
+  //===--------------------------------------------------------------------===//
   // UnaryOp creation helpers
   //===--------------------------------------------------------------------===//
   mlir::Value createNeg(mlir::Location loc, mlir::Value value,

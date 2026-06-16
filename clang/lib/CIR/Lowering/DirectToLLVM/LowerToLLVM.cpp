@@ -404,6 +404,43 @@ mlir::LogicalResult CIRToLLVMLLVMIntrinsicCallOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+/// Translate a CIR metadata attribute into the matching LLVM dialect metadata
+/// attribute, recursing through md_node operands. Returns null on an
+/// unsupported attribute.
+static mlir::Attribute convertCirMetadataAttr(mlir::Attribute attr) {
+  mlir::MLIRContext *ctx = attr.getContext();
+  if (auto str = mlir::dyn_cast<cir::MDStringAttr>(attr))
+    return mlir::LLVM::MDStringAttr::get(ctx, str.getValue());
+  if (auto node = mlir::dyn_cast<cir::MDNodeAttr>(attr)) {
+    llvm::SmallVector<mlir::Attribute> operands;
+    operands.reserve(node.getOperands().size());
+    for (mlir::Attribute operand : node.getOperands()) {
+      mlir::Attribute converted = convertCirMetadataAttr(operand);
+      if (!converted)
+        return {};
+      operands.push_back(converted);
+    }
+    return mlir::LLVM::MDNodeAttr::get(ctx, operands);
+  }
+  return {};
+}
+
+mlir::LogicalResult CIRToLLVMMetadataAsValueOpLowering::matchAndRewrite(
+    cir::MetadataAsValueOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Attribute llvmMetadata = convertCirMetadataAttr(op.getMetadata());
+  if (!llvmMetadata)
+    return op.emitError("unsupported CIR metadata attribute");
+
+  mlir::Type resTy = typeConverter->convertType(op.getType());
+  if (!resTy)
+    return op.emitError("expected LLVM metadata result type");
+
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MetadataAsValueOp>(op, resTy,
+                                                             llvmMetadata);
+  return mlir::success();
+}
+
 /// BoolAttr visitor.
 mlir::Value CIRAttrToValue::visitCirAttr(cir::BoolAttr boolAttr) {
   mlir::Location loc = parentOp->getLoc();
@@ -3291,6 +3328,9 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
   converter.addConversion([&](cir::VoidType type) -> mlir::Type {
     return mlir::LLVM::LLVMVoidType::get(type.getContext());
+  });
+  converter.addConversion([&](cir::MetadataType type) -> mlir::Type {
+    return mlir::LLVM::LLVMMetadataType::get(type.getContext());
   });
 }
 

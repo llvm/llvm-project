@@ -4093,6 +4093,36 @@ def CIR_LocalInitOp : CIR_Op<"local_init", [
 }
 
 //===----------------------------------------------------------------------===//
+// MetadataAsValueOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MetadataAsValueOp
+    : CIR_Op<"metadata_as_value", [Pure, ConstantLike]> {
+  let summary = "Wrap a metadata node so it can be used as an SSA value";
+  let description = [{
+    Materializes a `!cir.metadata` SSA value from a metadata attribute,
+    mirroring the LLVM dialect's `llvm.mlir.metadata_as_value`. This lifts a
+    metadata node into the value domain so it can be passed as an operand to
+    intrinsic calls that take `metadata` arguments.
+
+    The wrapped metadata is described by the `metadata` attribute, which must
+    be one of the CIR metadata attributes.
+
+    ```mlir
+    %0 = cir.metadata_as_value #cir.md_string<"agent-one-as">
+    %1 = cir.metadata_as_value #cir.md_node<#cir.md_string<"sp">>
+    ```
+  }];
+
+  let arguments = (ins CIR_AnyMDAttr:$metadata);
+  let results = (outs CIR_MetadataType:$result);
+
+  let assemblyFormat = "$metadata attr-dict";
+
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // LLVMIntrinsicCallOp
 //===----------------------------------------------------------------------===//
 

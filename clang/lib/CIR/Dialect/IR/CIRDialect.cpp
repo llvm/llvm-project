@@ -105,6 +105,11 @@ Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
                                                 mlir::Attribute value,
                                                 mlir::Type type,
                                                 mlir::Location loc) {
+  // Metadata folds to its wrapped attribute, so rematerialize the wrapper
+  // rather than a cir.const (the attribute is not a TypedAttr).
+  if (mlir::isa<cir::MDStringAttr, cir::MDNodeAttr>(value) &&
+      mlir::isa<cir::MetadataType>(type))
+    return cir::MetadataAsValueOp::create(builder, loc, type, value);
   return cir::ConstantOp::create(builder, loc, type,
                                  mlir::cast<mlir::TypedAttr>(value));
 }
@@ -602,6 +607,14 @@ LogicalResult cir::ConstantOp::verify() {
 
 OpFoldResult cir::ConstantOp::fold(FoldAdaptor /*adaptor*/) {
   return getValue();
+}
+
+//===----------------------------------------------------------------------===//
+// MetadataAsValueOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::MetadataAsValueOp::fold(FoldAdaptor /*adaptor*/) {
+  return getMetadataAttr();
 }
 
 //===----------------------------------------------------------------------===//
