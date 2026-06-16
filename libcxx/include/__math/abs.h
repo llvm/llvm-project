@@ -71,7 +71,7 @@ template <class = int>
 // _BitInt does not integer-promote, so without a same-type overload a narrow
 // signed _BitInt would be an ambiguous call against abs(int/long/long long).
 template <int _Np>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI signed _BitInt(_Np) abs(signed _BitInt(_Np) __x) _NOEXCEPT {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _BitInt(_Np) abs(_BitInt(_Np) __x) _NOEXCEPT {
   return __x < 0 ? -__x : __x;
 }
 #endif
