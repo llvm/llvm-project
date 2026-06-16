@@ -532,12 +532,12 @@ void PipelineSolver::EdgeSetBuilder::computeReachable(
 
 void PipelineSolver::EdgeSetBuilder::computePreds(DenseSet<SUnit *> &Preds,
                                                   SUnit *Start) {
-  computeReachable<true>(Preds, Start);
+  computeReachable</*ComputePreds*/ true>(Preds, Start);
 }
 
 void PipelineSolver::EdgeSetBuilder::computeSuccs(DenseSet<SUnit *> &Succs,
                                                   SUnit *Start) {
-  computeReachable<false>(Succs, Start);
+  computeReachable</*ComputePreds*/ false>(Succs, Start);
 }
 
 int PipelineSolver::EdgeSetBuilder::build(
@@ -584,7 +584,7 @@ int PipelineSolver::EdgeSetBuilder::buildImpl(
       continue;
     }
 
-    for (auto *A : SG.Collection) {
+    for (SUnit *A : SG.Collection) {
       if (A->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
         continue;
 
@@ -597,15 +597,16 @@ int PipelineSolver::EdgeSetBuilder::buildImpl(
         // Succs does not need to be updated, since it will not be
         // queried after entering the MakePred case.
         NewEdges.emplace_back(SU, A);
-      } else {
-        // Try add Pred -> SU.
-        if (Succs.contains(A)) { // Would add cycle since SU ~> A.
-          ++MissedEdges;
-          continue;
-        }
-        NewEdges.emplace_back(A, SU);
-        computePreds(Preds, A);
+        continue;
       }
+
+      // Try add A -> SU.
+      if (Succs.contains(A)) { // Would add cycle since SU ~> A.
+        ++MissedEdges;
+        continue;
+      }
+      NewEdges.emplace_back(A, SU);
+      computePreds(Preds, A);
     }
   }
 
