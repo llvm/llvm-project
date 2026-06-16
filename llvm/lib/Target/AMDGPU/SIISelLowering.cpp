@@ -905,6 +905,27 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                          {MVT::v4f32, MVT::v8f32, MVT::v16f32, MVT::v32f32},
                          Custom);
     }
+    if (Subtarget->hasPackedFP64Ops()) {
+      setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG,
+                          ISD::FMINNUM_IEEE, ISD::FMAXNUM_IEEE,
+                          ISD::FCANONICALIZE},
+                         MVT::v2f64, Legal);
+      setOperationAction(
+          {ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM, ISD::FMAXIMUMNUM},
+          MVT::v2f64, Custom);
+      setOperationAction(
+          {ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG, ISD::FMINNUM_IEEE,
+           ISD::FMAXNUM_IEEE, ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUMNUM,
+           ISD::FMAXIMUMNUM, ISD::FCANONICALIZE},
+          {MVT::v4f64, MVT::v8f64, MVT::v16f64, MVT::v32f64}, Custom);
+    }
+
+    if (Subtarget->hasPackedU64Ops()) {
+      setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL}, MVT::v2i64, Legal);
+      setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL},
+                         {MVT::v4i64, MVT::v8i64, MVT::v16i64, MVT::v32i64},
+                         Custom);
+    }
   }
 
   setOperationAction({ISD::FNEG, ISD::FABS}, MVT::v4f16, Custom);
@@ -4730,17 +4751,18 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
         DAG.getTargetConstant(Intrinsic::amdgcn_wave_reduce_umax, dl, MVT::i32);
     Size = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32, WaveReduction,
                        Size, DAG.getTargetConstant(0, dl, MVT::i32));
-    SDValue ReadFirstLaneID =
-        DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, dl, MVT::i32);
-    Size = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32, ReadFirstLaneID,
-                       Size);
     SDValue ScaledSize = Size;
     if (!HasFlatScratch) {
       ScaledSize =
           DAG.getNode(ISD::SHL, dl, VT, Size,
                       DAG.getConstant(WavefrontSizeLog2, dl, MVT::i32));
     }
-    NewSP = DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize);
+    NewSP =
+        DAG.getNode(ISD::ADD, dl, VT, BaseAddr, ScaledSize); // Value in vgpr.
+    SDValue ReadFirstLaneID =
+        DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, dl, MVT::i32);
+    NewSP = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, MVT::i32, ReadFirstLaneID,
+                        NewSP);
   }
 
   Chain = DAG.getCopyToReg(Chain, dl, SPReg, NewSP); // Output chain
@@ -7458,7 +7480,8 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
          VT == MVT::v8bf16 || VT == MVT::v16i16 || VT == MVT::v16f16 ||
          VT == MVT::v16bf16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
          VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16 ||
-         VT == MVT::v32bf16);
+         VT == MVT::v32bf16 || VT == MVT::v4f64 || VT == MVT::v8f64 ||
+         VT == MVT::v16f64 || VT == MVT::v32f64);
 
   auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
 
@@ -7494,7 +7517,9 @@ SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
          VT == MVT::v8bf16 || VT == MVT::v16i16 || VT == MVT::v16f16 ||
          VT == MVT::v16bf16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
          VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16 ||
-         VT == MVT::v32bf16);
+         VT == MVT::v32bf16 || VT == MVT::v4f64 || VT == MVT::v8f64 ||
+         VT == MVT::v16f64 || VT == MVT::v32f64 || VT == MVT::v4i64 ||
+         VT == MVT::v8i64 || VT == MVT::v16i64 || VT == MVT::v32i64);
 
   auto [Lo0, Hi0] = DAG.SplitVectorOperand(Op.getNode(), 0);
   auto [Lo1, Hi1] = DAG.SplitVectorOperand(Op.getNode(), 1);
@@ -7513,12 +7538,7 @@ SDValue SITargetLowering::splitTernaryVectorOp(SDValue Op,
                                                SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
   EVT VT = Op.getValueType();
-  assert(VT == MVT::v4i16 || VT == MVT::v4f16 || VT == MVT::v8i16 ||
-         VT == MVT::v8f16 || VT == MVT::v4f32 || VT == MVT::v16i16 ||
-         VT == MVT::v16f16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
-         VT == MVT::v32f32 || VT == MVT::v32f16 || VT == MVT::v32i16 ||
-         VT == MVT::v4bf16 || VT == MVT::v8bf16 || VT == MVT::v16bf16 ||
-         VT == MVT::v32bf16);
+  assert(VT.isVector() && VT.getVectorElementCount().isKnownEven());
 
   SDValue Op0 = Op.getOperand(0);
   auto [Lo0, Hi0] = Op0.getValueType().isVector()
@@ -8889,11 +8909,15 @@ SDValue SITargetLowering::lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const {
     return Op;
 
   // fcopysign v2f16:mag, v2f32:sign ->
-  //   fcopysign v2f16:mag, bitcast (trunc (bitcast sign to v2i32) to v2i16)
+  //   fcopysign v2f16:mag,
+  //     bitcast (trunc (srl (bitcast sign to v2i32), 16) to v2i16)
 
   SDLoc SL(Op);
   SDValue SignAsInt32 = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Sign);
-  SDValue SignAsInt16 = DAG.getNode(ISD::TRUNCATE, SL, MVT::v2i16, SignAsInt32);
+  SDValue ShiftAmt = DAG.getShiftAmountConstant(16, MVT::v2i32, SL);
+  SDValue SignShifted =
+      DAG.getNode(ISD::SRL, SL, MVT::v2i32, SignAsInt32, ShiftAmt);
+  SDValue SignAsInt16 = DAG.getNode(ISD::TRUNCATE, SL, MVT::v2i16, SignShifted);
 
   SDValue SignAsHalf16 = DAG.getNode(ISD::BITCAST, SL, MagVT, SignAsInt16);
 
@@ -11329,6 +11353,21 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                        {Op.getOperand(0), Op.getOperand(1), Op.getOperand(2),
                         Op.getOperand(3), Op.getOperand(4), Op.getOperand(5),
                         IndexKeyi32, Op.getOperand(7)});
+  }
+  case Intrinsic::amdgcn_wmma_scale_f32_16x16x128_f8f6f4:
+  case Intrinsic::amdgcn_wmma_scale16_f32_16x16x128_f8f6f4: {
+    unsigned AFmt = (unsigned)Op.getConstantOperandVal(1);
+    unsigned BFmt = (unsigned)Op.getConstantOperandVal(3);
+    unsigned AScaleFmt = (unsigned)Op.getConstantOperandVal(8);
+    unsigned BScaleFmt = (unsigned)Op.getConstantOperandVal(11);
+    if (!AMDGPU::isValidWMMAScaleFmtCombination(AFmt, AScaleFmt, BFmt,
+                                                BScaleFmt)) {
+      DAG.getMachineFunction().getFunction().getContext().emitError(
+          "invalid matrix and scale format combination in wmma call");
+      Op->print(errs());
+      errs() << '\n';
+    }
+    return SDValue();
   }
   case Intrinsic::amdgcn_addrspacecast_nonnull:
     return lowerADDRSPACECAST(Op, DAG);
@@ -15137,7 +15176,7 @@ static bool hasNon16BitAccesses(uint64_t PermMask, SDValue &Op,
   auto TempOtherOp = peekThroughBitcasts(OtherOp);
 
   auto OpIs16Bit =
-      TempOtherOp.getValueSizeInBits() == 16 || isExtendedFrom16Bits(TempOp);
+      TempOp.getValueSizeInBits() == 16 || isExtendedFrom16Bits(TempOp);
   if (!OpIs16Bit)
     return true;
 

@@ -3699,9 +3699,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (!Count)
           break;
 
-        if (*Count == 0 || isDereferenceableAndAlignedPointer(
-                               Ptr, Align(1), APInt(64, *Count),
-                               getSimplifyQuery().getWithInstruction(II)))
+        if (*Count == 0 ||
+            isDereferenceablePointer(Ptr, APInt(64, *Count),
+                                     getSimplifyQuery().getWithInstruction(II)))
           return RemoveBundle();
 
         break;
@@ -3744,6 +3744,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
         if (isGuaranteedNotToBeUndefOrPoison(Val, &AC, II, &DT))
           return RemoveBundle();
+
+        if (auto *LI = dyn_cast<LoadInst>(Val);
+            LI &&
+            isValidAssumeForContext(II, LI, &DT, /*AllowEphemerals=*/true)) {
+          LI->setMetadata(LLVMContext::MD_noundef,
+                          MDNode::get(II->getContext(), {}));
+          return RemoveBundle();
+        }
+
       } break;
 
       case BundleAttr::SeparateStorage: {
@@ -4451,7 +4460,8 @@ static Bitset<256> parseFormatStringSpecifiers(StringRef FormatStr) {
   return Specifiers;
 }
 
-static bool isAspectNeeded(StringRef Aspect, CallInst *CI, unsigned FirstArgIdx,
+static bool isAspectNeeded(StringRef Aspect, CallInst *CI,
+                           std::optional<unsigned> FirstArgIdx,
                            const std::optional<Bitset<256>> &Specifiers) {
   if (Aspect == "float") {
     if (Specifiers) {
@@ -4460,8 +4470,10 @@ static bool isAspectNeeded(StringRef Aspect, CallInst *CI, unsigned FirstArgIdx,
       return (*Specifiers & FloatSpecifiers).any();
     }
     // Fallback to type-based check for dynamic format string.
+    if (!FirstArgIdx)
+      return true;
     return llvm::any_of(
-        llvm::make_range(std::next(CI->arg_begin(), FirstArgIdx),
+        llvm::make_range(std::next(CI->arg_begin(), *FirstArgIdx),
                          CI->arg_end()),
         [](Value *V) { return V->getType()->isFloatingPointTy(); });
   }
@@ -4505,17 +4517,19 @@ static Value *optimizeModularFormat(CallInst *CI, IRBuilderBase &B) {
   ArrayRef<StringRef> AllAspects = ArrayRef<StringRef>(Args).drop_front(5);
 
   unsigned FormatIdx;
-  unsigned FirstArgIdx;
+  std::optional<unsigned> FirstArgIdx;
   [[maybe_unused]] bool Error;
   Error = FormatIdxStr.getAsInteger(10, FormatIdx);
   assert(!Error && "invalid format arg index");
   --FormatIdx; // 1-based to 0-based
 
-  Error = FirstArgIdxStr.getAsInteger(10, FirstArgIdx);
+  FirstArgIdx.emplace();
+  Error = FirstArgIdxStr.getAsInteger(10, *FirstArgIdx);
   assert(!Error && "invalid first arg index");
-  if (FirstArgIdx == 0)
-    return nullptr;
-  --FirstArgIdx; // 1-based to 0-based
+  if (*FirstArgIdx > 0)
+    --*FirstArgIdx; // 1-based to 0-based
+  else
+    FirstArgIdx.reset();
 
   if (AllAspects.empty())
     return nullptr;

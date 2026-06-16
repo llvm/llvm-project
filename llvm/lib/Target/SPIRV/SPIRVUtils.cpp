@@ -241,7 +241,7 @@ void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
 }
 
 static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
-                                  const std::vector<uint32_t> &DecArgs,
+                                  ArrayRef<uint32_t> DecArgs,
                                   StringRef StrImm) {
   if (!StrImm.empty())
     addStringImm(StrImm, MIB);
@@ -251,7 +251,7 @@ static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
 
 void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs, StringRef StrImm) {
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                  .addUse(Reg)
                  .addImm(static_cast<uint32_t>(Dec));
@@ -260,7 +260,7 @@ void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
 
 void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs, StringRef StrImm) {
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   MachineBasicBlock &MBB = *I.getParent();
   auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpDecorate))
                  .addUse(Reg)
@@ -270,8 +270,7 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
 
 void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm) {
+                           ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpMemberDecorate)
                  .addUse(Reg)
                  .addImm(Member)
@@ -282,8 +281,7 @@ void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
 void buildOpMemberDecorate(Register Reg, MachineInstr &I,
                            const SPIRVInstrInfo &TII,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm) {
+                           ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   MachineBasicBlock &MBB = *I.getParent();
   auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemberDecorate))
                  .addUse(Reg)
@@ -678,12 +676,12 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx) {
   return nullptr;
 }
 
-std::unordered_set<BasicBlock *>
+SmallPtrSet<BasicBlock *, 0>
 PartialOrderingVisitor::getReachableFrom(BasicBlock *Start) {
   std::queue<BasicBlock *> ToVisit;
   ToVisit.push(Start);
 
-  std::unordered_set<BasicBlock *> Output;
+  SmallPtrSet<BasicBlock *, 0> Output;
   while (ToVisit.size() != 0) {
     BasicBlock *BB = ToVisit.front();
     ToVisit.pop();
@@ -792,7 +790,7 @@ size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Unused) {
     QueueIndex = 0;
     size_t Rank = GetNodeRank(BB);
     OrderInfo Info = {Rank, BlockToOrder.size()};
-    BlockToOrder.emplace(BB, Info);
+    BlockToOrder.try_emplace(BB, Info);
 
     for (BasicBlock *S : successors(BB)) {
       if (Queued.count(S) != 0)
@@ -831,7 +829,7 @@ bool PartialOrderingVisitor::compare(const BasicBlock *LHS,
 
 void PartialOrderingVisitor::partialOrderVisit(
     BasicBlock &Start, std::function<bool(BasicBlock *)> Op) {
-  std::unordered_set<BasicBlock *> Reachable = getReachableFrom(&Start);
+  SmallPtrSet<BasicBlock *, 0> Reachable = getReachableFrom(&Start);
   assert(BlockToOrder.count(&Start) != 0);
 
   // Skipping blocks with a rank inferior to |Start|'s rank.

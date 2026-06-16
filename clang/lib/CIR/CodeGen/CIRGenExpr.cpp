@@ -2145,6 +2145,14 @@ CIRGenFunction::emitCXXBindTemporaryLValue(const CXXBindTemporaryExpr *e) {
   return makeAddrLValue(slot.getAddress(), e->getType(), AlignmentSource::Decl);
 }
 
+LValue CIRGenFunction::emitCXXConstructLValue(const CXXConstructExpr *e) {
+  assert(e->getType()->getAsCXXRecordDecl()->hasTrivialDestructor() &&
+         "binding l-value to type which needs a temporary");
+  AggValueSlot slot = createAggTemp(e->getType(), getLoc(e->getSourceRange()));
+  emitCXXConstructExpr(e, slot);
+  return makeAddrLValue(slot.getAddress(), e->getType(), AlignmentSource::Decl);
+}
+
 LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
   // Comma expressions just emit their LHS then their RHS as an l-value.
   if (e->getOpcode() == BO_Comma) {
