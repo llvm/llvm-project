@@ -179,10 +179,14 @@ std::error_code IndexError::convertToErrorCode() const {
 ///
 /// @param[in]  LineRef     The input CTU index item in format
 ///                         "<USR-Length>:<USR> <File-Path>".
-/// @param[out] LookupName  The lookup name in format "<USR-Length>:<USR>".
+///                         <USR> may contain a '-' at the start which indicates
+///                         that the symbol is weak.
+/// @param[out] IsWeak      The weakness status of the symbol.
+/// @param[out] LookupName  The lookup name in format "<USR-Length>:<USR>". The
+///                         optional '-' is removed from it.
 /// @param[out] FilePath    The file path "<File-Path>".
-static bool parseCrossTUIndexItem(StringRef LineRef, StringRef &LookupName,
-                                  StringRef &FilePath) {
+static bool parseCrossTUIndexItem(StringRef LineRef, bool &IsWeak,
+                                  StringRef &LookupName, StringRef &FilePath) {
   // `LineRef` is "<USR-Length>:<USR> <File-Path>" now.
 
   size_t USRLength = 0;
@@ -199,6 +203,16 @@ static bool parseCrossTUIndexItem(StringRef LineRef, StringRef &LookupName,
   if (USRLength >= LineRef.size() || ' ' != LineRef[USRLength])
     return false;
 
+  // The first character of this USR can be a '-' to indicate weakness of the
+  // symbol. The input USR-length includes this character, it is removed from
+  // the result.
+  char MaybeWeak = LineRef.front();
+  IsWeak = MaybeWeak == '-';
+  if (IsWeak) {
+    LineRef.consume_front(MaybeWeak);
+    --USRLength;
+  }
+
   LookupName = LineRef.substr(0, USRLength);
   FilePath = LineRef.substr(USRLength + 1);
   return true;
@@ -212,12 +226,14 @@ parseCrossTUIndex(StringRef IndexPath) {
                                         IndexPath.str());
 
   llvm::StringMap<std::string> Result;
+  llvm::StringSet<> WeakSyms;
   std::string Line;
   unsigned LineNo = 1;
   while (std::getline(ExternalMapFile, Line)) {
     // Split lookup name and file path
     StringRef LookupName, FilePathInIndex;
-    if (!parseCrossTUIndexItem(Line, LookupName, FilePathInIndex))
+    bool IsWeak;
+    if (!parseCrossTUIndexItem(Line, IsWeak, LookupName, FilePathInIndex))
       return llvm::make_error<IndexError>(
           index_error_code::invalid_index_format, IndexPath.str(), LineNo);
 
@@ -228,9 +244,20 @@ parseCrossTUIndex(StringRef IndexPath) {
     bool InsertionOccurred;
     std::tie(std::ignore, InsertionOccurred) =
         Result.try_emplace(LookupName, FilePath.begin(), FilePath.end());
-    if (!InsertionOccurred)
-      return llvm::make_error<IndexError>(
-          index_error_code::multiple_definitions, IndexPath.str(), LineNo);
+    if (!InsertionOccurred) {
+      if (!IsWeak) {
+        if (!WeakSyms.contains(LookupName)) {
+          return llvm::make_error<IndexError>(
+              index_error_code::multiple_definitions, IndexPath.str(), LineNo);
+        } else {
+          Result[LookupName].assign(FilePath.begin(), FilePath.end());
+          WeakSyms.erase(LookupName);
+        }
+      }
+    } else {
+      if (IsWeak)
+        WeakSyms.insert(LookupName);
+    }
 
     ++LineNo;
   }
@@ -279,6 +306,8 @@ CrossTranslationUnitContext::~CrossTranslationUnitContext() {}
 std::optional<std::string>
 CrossTranslationUnitContext::getLookupName(const Decl *D) {
   SmallString<128> DeclUSR;
+  if (D->hasAttr<WeakAttr>())
+    DeclUSR.push_back('-');
   bool Ret = index::generateUSRForDecl(D, DeclUSR);
   if (Ret)
     return {};
