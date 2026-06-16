@@ -243,7 +243,9 @@ def create_parser():
         "--build-dir",
         dest="test_build_dir",
         metavar="Test build directory",
-        default="lldb-test-build.noindex",
+        default=(
+            "lldb-test-build.noindex" if sys.platform == "darwin" else "lldb-test-build"
+        ),
         help="The root build directory for the tests. It will be removed before running.",
     )
     group.add_argument(
