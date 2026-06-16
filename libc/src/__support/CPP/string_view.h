@@ -21,8 +21,9 @@ namespace cpp {
 template <typename CharT> class basic_string_view;
 
 using string_view = basic_string_view<char>;
+using wstring_view = basic_string_view<wchar_t>;
 
-// This is very simple alternate of the std::basic_string_view class template.
+// This is a very simple alternate of the std::basic_string_view class template.
 // There is no bounds check performed in any of the methods. The callers are
 // expected to do the checks before invoking the methods.
 //
