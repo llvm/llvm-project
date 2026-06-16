@@ -37,28 +37,28 @@ void test_big() {
   assert(std::abs(negative_big_value) == big_value); // make sure it doesn't get casted to a smaller type
 }
 
-// std::abs has __int128/_BitInt(N) overloads as a libc++ extension. The SFINAE
-// probes below need C++17+ (variable templates, decltype-SFINAE).
-#if TEST_STD_VER >= 17
+// std::abs has __int128/_BitInt(N) overloads as a libc++ extension. The
+// decltype-SFINAE probes below need C++11.
+#if TEST_STD_VER >= 11
 // Narrow signed types stay on the abs(int) promotion path.
 template <class T>
-constexpr bool unpromoted_abs = std::is_same<decltype(std::abs(T(0))), T>::value;
-static_assert(!unpromoted_abs<signed char>);
-static_assert(!unpromoted_abs<short>);
+struct unpromoted_abs : std::is_same<decltype(std::abs(T(0))), T> {};
+static_assert(!unpromoted_abs<signed char>::value, "");
+static_assert(!unpromoted_abs<short>::value, "");
 
 #  ifdef __BITINT_MAXWIDTH__
 // Every signed _BitInt(N) gets a same-type abs, including widths narrower than
 // int. unsigned _BitInt is excluded by the signed-only contract.
 template <class T, class = void>
-constexpr bool has_abs = false;
+struct has_abs : std::false_type {};
 template <class T>
-constexpr bool has_abs<T, decltype((void)std::abs(T(0)))> = true;
-static_assert(has_abs<signed _BitInt(2)>);
-static_assert(has_abs<signed _BitInt(7)>);
-static_assert(has_abs<signed _BitInt(32)>);
-static_assert(has_abs<signed _BitInt(64)>);
-static_assert(!has_abs<unsigned _BitInt(32)>); // signed-only contract
-static_assert(!has_abs<unsigned _BitInt(64)>);
+struct has_abs<T, decltype((void)std::abs(T(0)))> : std::true_type {};
+static_assert(has_abs<signed _BitInt(2)>::value, "");
+static_assert(has_abs<signed _BitInt(7)>::value, "");
+static_assert(has_abs<signed _BitInt(32)>::value, "");
+static_assert(has_abs<signed _BitInt(64)>::value, "");
+static_assert(!has_abs<unsigned _BitInt(32)>::value, ""); // signed-only contract
+static_assert(!has_abs<unsigned _BitInt(64)>::value, "");
 
 template <int N>
 void test_signed_bitint() {
@@ -97,7 +97,7 @@ void test_int128() {
   assert(std::abs(int128_min_plus1) == int128_max);
 }
 #  endif // TEST_HAS_NO_INT128
-#endif   // TEST_STD_VER >= 17
+#endif   // TEST_STD_VER >= 11
 
 // The following is helpful to keep in mind:
 // 1byte == char <= short <= int <= long <= long long
@@ -130,7 +130,7 @@ int main(int, char**) {
 
   test_big();
 
-#if TEST_STD_VER >= 17
+#if TEST_STD_VER >= 11
 #  ifdef __BITINT_MAXWIDTH__
   // Non-byte-aligned _BitInt(N) has uninitialized padding bits; passing such a
   // value to std::abs trips a false-positive MSan report (#204217). Gate those
@@ -168,7 +168,7 @@ int main(int, char**) {
 #  ifndef TEST_HAS_NO_INT128
   test_int128();
 #  endif
-#endif // TEST_STD_VER >= 17
+#endif // TEST_STD_VER >= 11
 
   return 0;
 }
