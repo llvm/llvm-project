@@ -36,28 +36,36 @@ class SCEVPredicate;
 template <typename T> class SmallVectorImpl;
 class TargetLibraryInfo;
 
-/// Return true if this is always a dereferenceable pointer. If the context
-/// instruction is specified perform context-sensitive analysis and return true
-/// if the pointer is dereferenceable at the specified instruction.
-LLVM_ABI bool isDereferenceablePointer(const Value *V, Type *Ty,
-                                       const SimplifyQuery &Q);
-
 /// Returns true if V is always a dereferenceable pointer with alignment
 /// greater or equal than requested. If the context instruction is specified
 /// performs context-sensitive analysis and returns true if the pointer is
 /// dereferenceable at the specified instruction.
+/// If \p IgnoreFree is set, ignore potential frees of the object.
 LLVM_ABI bool isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
                                                  Align Alignment,
-                                                 const SimplifyQuery &Q);
+                                                 const SimplifyQuery &Q,
+                                                 bool IgnoreFree = false);
 
 /// Returns true if V is always dereferenceable for Size byte with alignment
 /// greater or equal than requested. If the context instruction is specified
 /// performs context-sensitive analysis and returns true if the pointer is
 /// dereferenceable at the specified instruction.
+/// If \p IgnoreFree is set, ignore potential frees of the object.
 LLVM_ABI bool isDereferenceableAndAlignedPointer(const Value *V,
                                                  Align Alignment,
                                                  const APInt &Size,
-                                                 const SimplifyQuery &Q);
+                                                 const SimplifyQuery &Q,
+                                                 bool IgnoreFree = false);
+
+/// Equivalent to isDereferenceableAndAlignedPointer with an alignment of 1.
+LLVM_ABI bool isDereferenceablePointer(const Value *V, Type *Ty,
+                                       const SimplifyQuery &Q,
+                                       bool IgnoreFree = false);
+
+/// Equivalent to isDereferenceableAndAlignedPointer with an alignment of 1.
+LLVM_ABI bool isDereferenceablePointer(const Value *V, const APInt &Size,
+                                       const SimplifyQuery &Q,
+                                       bool IgnoreFree = false);
 
 /// Return true if we know that executing a load from this value cannot trap.
 ///

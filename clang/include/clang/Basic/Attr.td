@@ -3904,7 +3904,7 @@ def VecReturn : InheritableAttr {
 def WarnUnused : InheritableAttr {
   let Spellings = [GCC<"warn_unused">];
   let Subjects = SubjectList<[Record]>;
-  let Documentation = [Undocumented];
+  let Documentation = [WarnUnusedDocs];
   let SimpleHandler = 1;
 }
 
@@ -5178,6 +5178,12 @@ def HLSLShader : InheritableAttr {
 }];
 }
 
+def HLSLIsArray : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_array">];
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
 def HLSLROV : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_rov">];
   let LangOpts = [HLSL];
@@ -5477,7 +5483,7 @@ def OverflowBehavior : TypeAttr {
   let Args = [IdentifierArgument<"BehaviorKind">];
   let Subjects = SubjectList<[Var, TypedefName, Field], WarnDiag,
                              "variables, typedefs, and data members">;
-  let Documentation = [Undocumented];
+  let Documentation = [OverflowBehaviorDocs];
 }
 
 def Personality : InheritableAttr {
