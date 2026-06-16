@@ -20,22 +20,20 @@ Sections:
   - Type:         SHT_PROGBITS
     Name:         .debug_info
     Flags:        [ SHF_COMPRESSED ]
-    AddressAlign: 8
     Content:      "010000000000000001000000000000000100000000000000789c63040000020002"
 
-# The compressed ELF above was generated from the following uncompressed input:
-# --- !ELF
-# FileHeader:
-#   Class:   ELFCLASS64
-#   Data:    ELFDATA2LSB
-#   Type:    ET_REL
-#   Machine: EM_X86_64
-# Sections:
-#   - Type:         SHT_PROGBITS
-#     Name:         .debug_info
-#     AddressAlign: 0x1
-#     Content:      '01'
-#
+## The compressed ELF above was generated from the following uncompressed input:
+## --- !ELF
+## FileHeader:
+##   Class:   ELFCLASS64
+##   Data:    ELFDATA2LSB
+##   Type:    ET_REL
+##   Machine: EM_X86_64
+## Sections:
+##   - Type:         SHT_PROGBITS
+##     Name:         .debug_info
+##     Content:      '01'
+##
 ## Regenerate via:
 ##   yaml2obj uncompressed.yaml -o uncompressed.o
 ##   llvm-objcopy --compress-sections .debug_info=zlib uncompressed.o compressed.o
