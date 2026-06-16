@@ -226,8 +226,7 @@ int main(int argc, char **argv) {
   }
 
   if (!NoVerify && verifyModule(*Mod, &errs())) {
-    WithColor::error() << argv[0] << ": " << InputFile
-                       << " error: input module is broken!\n";
+    WithColor::error() << InputFile << ": input module is broken!\n";
     return 1;
   }
 

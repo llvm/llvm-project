@@ -11,7 +11,7 @@ next:
 }
 
 ; VERIFY: PHINode should have one entry for each predecessor of its parent basic block!
-; VERIFY: error: {{.*}} error: input module is broken!
+; VERIFY: error: {{.*}}: input module is broken!
 
 ; NO-VERIFY-NOT: input module is broken!
 ; NO-VERIFY: Entering function: main
