@@ -975,6 +975,11 @@ static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
                                         ArrayRef<uint8_t> Ids,
                                         const GCNSubtarget &ST,
                                         const DataLayout &DL) {
+  // Identity shuffle (every lane reads itself) folds to the source value.
+  if (all_of(enumerate(Ids),
+             [](const auto &E) { return E.value() == E.index(); }))
+    return Src;
+
   // Uniform shuffle (all lanes read the same value) is handled by cheaper
   // broadcast/readlane intrinsics.
   if (all_equal(Ids))
