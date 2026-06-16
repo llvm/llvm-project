@@ -1814,11 +1814,41 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
   } else
     LIS->removeVRegDefAt(DstLI, RegIndex);
 
-  // Mark uses as undef.
+  // CopyMI is about to be erased. Mark its defs undef before scanning DstReg
+  // operands, so they are ignored by this scan and by shrinkToUses().
+  for (MachineOperand &MO : CopyMI->all_defs())
+    if (MO.getReg() == DstReg)
+      MO.setIsUndef(true);
+
+  // Mark uexposed uses as undef.
   for (MachineOperand &MO : MRI->reg_nodbg_operands(DstReg)) {
-    if (MO.isDef() /*|| MO.isUndef()*/)
+    if (MO.isUndef())
       continue;
-    const MachineInstr &MI = *MO.getParent();
+
+    MachineInstr &MI = *MO.getParent();
+
+    // A subregister def without the <read-undef> flag also reads the lanes it
+    // does not write. After deleting a copy from an undefined value, that
+    // implicit read may be exposed as having no incoming value. Preserve it as
+    // a read-undef partial def so JoinVals::analyzeValue() does not treat it
+    // as a read-modify-write with a missing value-in.
+    if (MO.isDef()) {
+      unsigned SubReg = MO.getSubReg();
+      if (SubReg == 0 || !MO.readsReg())
+        continue;
+
+      SlotIndex ReadIdx =
+          LIS->getInstructionIndex(MI).getRegSlot(true);
+      if (DstLI.hasSubRanges()) {
+        addUndefFlag(DstLI, ReadIdx, MO, SubReg);
+      } else if (!DstLI.Query(ReadIdx).valueIn()) {
+        MO.setIsUndef(true);
+        LLVM_DEBUG(dbgs() << "\tnew read-undef: " << ReadIdx << '\t' << MI);
+      }
+      continue;
+    }
+
+    // Regular uses read at the instruction's use slot.
     SlotIndex UseIdx = LIS->getInstructionIndex(MI);
     LaneBitmask UseMask = TRI->getSubRegIndexLaneMask(MO.getSubReg());
     bool isLive;
@@ -1840,14 +1870,6 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
     LLVM_DEBUG(dbgs() << "\tnew undef: " << UseIdx << '\t' << MI);
   }
 
-  // A def of a subregister may be a use of the other subregisters, so
-  // deleting a def of a subregister may also remove uses. Since CopyMI
-  // is still part of the function (but about to be erased), mark all
-  // defs of DstReg in it as <undef>, so that shrinkToUses would
-  // ignore them.
-  for (MachineOperand &MO : CopyMI->all_defs())
-    if (MO.getReg() == DstReg)
-      MO.setIsUndef(true);
   LIS->shrinkToUses(&DstLI);
 
   return CopyMI;
