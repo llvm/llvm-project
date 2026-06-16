@@ -1,12 +1,15 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx74 | FileCheck %s
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_80 -mattr=+ptx74 | %ptxas-verify %}
 
-; Test !mem.cache_hint metadata on llvm.memcpy intrinsic
+; Test !mem.cache_hint metadata on LLVM memory intrinsics.
+;
 ; For memcpy:
 ;   operand_no = 0 applies to destination (store side)
 ;   operand_no = 1 applies to source (load side)
 
 declare void @llvm.memcpy.p1.p1.i64(ptr addrspace(1), ptr addrspace(1), i64, i1)
+declare <2 x i16> @llvm.masked.load.v2i16.p1(ptr addrspace(1), <2 x i1>, <2 x i16>)
+declare <4 x i32> @llvm.masked.load.v4i32.p1(ptr addrspace(1), <4 x i1>, <4 x i32>)
 
 ;-----------------------------------------------------------------------------
 ; Test memcpy with cache hints on both source and destination
@@ -255,6 +258,83 @@ define void @test_memcpy_all_hints_both(ptr addrspace(1) %dest, ptr addrspace(1)
 }
 
 ;-----------------------------------------------------------------------------
+; TODO: Preserve cache hints on llvm.masked.load.
+; Masked load pointer operand is operand 0. SelectionDAGBuilder::visitMaskedLoad
+; does not currently thread !mem.cache_hint into the MachineMemOperand, so the
+; generated loads are plain today.
+;-----------------------------------------------------------------------------
+
+; TODO: This should eventually lower to ld.global.L1::evict_first.b32.
+; CHECK-LABEL: test_masked_load_l1_hint_v2i16
+; CHECK-NOT: L1::
+; CHECK-NOT: L2::
+; CHECK: ld.global.b32
+define <2 x i16> @test_masked_load_l1_hint_v2i16(ptr addrspace(1) %p) {
+  %v = call <2 x i16> @llvm.masked.load.v2i16.p1(ptr addrspace(1) align 4 %p, <2 x i1> <i1 true, i1 false>, <2 x i16> poison), !mem.cache_hint !101
+  ret <2 x i16> %v
+}
+
+; TODO: This should eventually lower to ld.global.L2::cache_hint.v4.b32.
+; CHECK-LABEL: test_masked_load_l2_cache_policy_v4i32
+; CHECK-NOT: mov.b64
+; CHECK-NOT: L1::
+; CHECK-NOT: L2::
+; CHECK: ld.global.v4.b32
+define <4 x i32> @test_masked_load_l2_cache_policy_v4i32(ptr addrspace(1) %p) {
+  %v = call <4 x i32> @llvm.masked.load.v4i32.p1(ptr addrspace(1) align 16 %p, <4 x i1> <i1 true, i1 false, i1 true, i1 true>, <4 x i32> poison), !mem.cache_hint !102
+  ret <4 x i32> %v
+}
+
+;-----------------------------------------------------------------------------
+; Large memcpy tests - verify hints propagate to all expanded load/stores
+; LLVM expands memcpy to multiple load/store pairs. Each pair should
+; get the appropriate cache hints from the original memcpy metadata.
+; The expansion may use various sizes (b8, b16, b32, v2, v4, etc.)
+;-----------------------------------------------------------------------------
+
+; 16-byte memcpy: verify hints are applied to expanded loads/stores
+; CHECK-LABEL: test_memcpy_16bytes
+; CHECK: ld.global.L1::evict_first.b
+; CHECK: st.global.L1::evict_last.b
+define void @test_memcpy_16bytes(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
+  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 16, i1 false), !mem.cache_hint !97
+  ret void
+}
+
+; 32-byte memcpy: all loads should have L1::evict_unchanged, all stores L2::evict_first
+; CHECK-LABEL: test_memcpy_32bytes
+; CHECK: ld.global.L1::evict_unchanged.b
+; CHECK: st.global.L2::evict_first.b
+define void @test_memcpy_32bytes(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
+  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 32, i1 false), !mem.cache_hint !98
+  ret void
+}
+
+; 64-byte memcpy with L2::cache_hint
+; All loads and stores should get the L2::cache_hint with their respective policies
+; CHECK-LABEL: test_memcpy_64bytes_cache_hint
+; CHECK-DAG: mov.b64 {{%rd[0-9]+}}, 11111
+; CHECK-DAG: mov.b64 {{%rd[0-9]+}}, 22222
+; CHECK: ld.global.L2::cache_hint.b
+; CHECK: st.global.L2::cache_hint.b
+define void @test_memcpy_64bytes_cache_hint(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
+  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 64, i1 false), !mem.cache_hint !99
+  ret void
+}
+
+; 128-byte memcpy with combined hints
+; Note: Large memcpy (>64 bytes) is expanded to a loop in the backend.
+; Cache hints are not preserved for loop-based expansion.
+; This test verifies the code compiles correctly.
+; CHECK-LABEL: test_memcpy_128bytes_combined
+; CHECK: ld.global.b
+; CHECK: st.global.b
+define void @test_memcpy_128bytes_combined(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
+  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 128, i1 false), !mem.cache_hint !100
+  ret void
+}
+
+;-----------------------------------------------------------------------------
 ; Metadata definitions
 ;-----------------------------------------------------------------------------
 
@@ -339,55 +419,6 @@ define void @test_memcpy_all_hints_both(ptr addrspace(1) %dest, ptr addrspace(1)
 !206 = !{!"nvvm.l2_cache_hint", i64 12345, !"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"first", !"nvvm.l2_prefetch_size", !"256B"}
 !207 = !{!"nvvm.l2_cache_hint", i64 67890, !"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"last", !"nvvm.l2_prefetch_size", !"128B"}
 
-;-----------------------------------------------------------------------------
-; Large memcpy tests - verify hints propagate to all expanded load/stores
-; LLVM expands memcpy to multiple load/store pairs. Each pair should
-; get the appropriate cache hints from the original memcpy metadata.
-; The expansion may use various sizes (b8, b16, b32, v2, v4, etc.)
-;-----------------------------------------------------------------------------
-
-; 16-byte memcpy: verify hints are applied to expanded loads/stores
-; CHECK-LABEL: test_memcpy_16bytes
-; CHECK: ld.global.L1::evict_first.b
-; CHECK: st.global.L1::evict_last.b
-define void @test_memcpy_16bytes(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
-  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 16, i1 false), !mem.cache_hint !97
-  ret void
-}
-
-; 32-byte memcpy: all loads should have L1::evict_unchanged, all stores L2::evict_first
-; CHECK-LABEL: test_memcpy_32bytes
-; CHECK: ld.global.L1::evict_unchanged.b
-; CHECK: st.global.L2::evict_first.b
-define void @test_memcpy_32bytes(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
-  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 32, i1 false), !mem.cache_hint !98
-  ret void
-}
-
-; 64-byte memcpy with L2::cache_hint
-; All loads and stores should get the L2::cache_hint with their respective policies
-; CHECK-LABEL: test_memcpy_64bytes_cache_hint
-; CHECK-DAG: mov.b64 {{%rd[0-9]+}}, 11111
-; CHECK-DAG: mov.b64 {{%rd[0-9]+}}, 22222
-; CHECK: ld.global.L2::cache_hint.b
-; CHECK: st.global.L2::cache_hint.b
-define void @test_memcpy_64bytes_cache_hint(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
-  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 64, i1 false), !mem.cache_hint !99
-  ret void
-}
-
-; 128-byte memcpy with combined hints
-; Note: Large memcpy (>64 bytes) is expanded to a loop in the backend.
-; Cache hints are not preserved for loop-based expansion.
-; This test verifies the code compiles correctly.
-; CHECK-LABEL: test_memcpy_128bytes_combined
-; CHECK: ld.global.b
-; CHECK: st.global.b
-define void @test_memcpy_128bytes_combined(ptr addrspace(1) %dest, ptr addrspace(1) %src) {
-  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %dest, ptr addrspace(1) %src, i64 128, i1 false), !mem.cache_hint !100
-  ret void
-}
-
 ; Large memcpy metadata
 !97 = !{i32 0, !209, i32 1, !208}
 !208 = !{!"nvvm.l1_eviction", !"first"}
@@ -404,3 +435,10 @@ define void @test_memcpy_128bytes_combined(ptr addrspace(1) %dest, ptr addrspace
 !100 = !{i32 0, !215, i32 1, !214}
 !214 = !{!"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"last", !"nvvm.l2_prefetch_size", !"256B"}
 !215 = !{!"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first"}
+
+; Masked load metadata
+!101 = !{i32 0, !216}
+!216 = !{!"nvvm.l1_eviction", !"first"}
+
+!102 = !{i32 0, !217}
+!217 = !{!"nvvm.l2_cache_hint", i64 24680}
