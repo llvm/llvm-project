@@ -24,6 +24,8 @@
 
 #include "test_macros.h"
 
+void odr_use(const bool &) {}
+
 int main(int, char**)
 {
     typedef std::chrono::high_resolution_clock C;
@@ -35,6 +37,7 @@ int main(int, char**)
     TEST_CONSTEXPR_CXX14 const bool is_steady = C::is_steady;
     (void)is_steady;
     LIBCPP_ASSERT(C::is_steady);
+    odr_use(C::is_steady);
 
   return 0;
 }
