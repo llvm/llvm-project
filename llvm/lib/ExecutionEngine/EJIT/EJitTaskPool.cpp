@@ -18,6 +18,16 @@
 using namespace llvm;
 using namespace llvm::ejit;
 
+// Lightweight, default-empty trace hook for taskpool key paths. Expands to
+// nothing unless EJIT_TASKPOOL_TRACE is predefined for on-target bring-up
+// (for example, -D'EJIT_TASKPOOL_TRACE(...)=SRE_printf(__VA_ARGS__)').
+// Arguments are restricted to integers, pointers, and C strings.
+#ifndef EJIT_TASKPOOL_TRACE
+#define EJIT_TASKPOOL_TRACE(...)                                               \
+  do {                                                                         \
+  } while (0)
+#endif
+
 namespace {
 constexpr uint32_t kCacheEmpty =
     static_cast<uint32_t>(EJitCacheEntryState::Empty);
@@ -268,6 +278,8 @@ uint32_t EJitTaskPoolCache::readyCount() const {
 void *EJitTaskPool::runCompile(const EJitCompileRequest &req,
                                EJitCompileOrGetStatus &outStatus,
                                bool fromWorker) {
+  EJIT_TASKPOOL_TRACE("runCompile:begin", req.funcIndex,
+                      (unsigned long long)req.cacheKey, (unsigned)fromWorker);
   // Drop requests whose version no longer matches (logically invalidated).
   if (req.version != switch_.getVersion()) {
     dedup_.clear(req.funcIndex, req.cacheKey, req.version);
@@ -286,6 +298,7 @@ void *EJitTaskPool::runCompile(const EJitCompileRequest &req,
 
   void *fn = nullptr;
   bool ok = compileFn_ && compileFn_(compileCtx_, req, &fn);
+  EJIT_TASKPOOL_TRACE("runCompile:compiled", req.funcIndex, fn, (unsigned)ok);
 
   // A version bump during compilation invalidates this result. Force the slot
   // Empty (cancel) regardless of its current committed state.
@@ -321,6 +334,8 @@ void *EJitTaskPool::runCompile(const EJitCompileRequest &req,
   // Write the result into the fixed cache. publish() returns false only when
   // the bucket is full of other keys — it never silently overwrites.
   bool published = cache_.publish(req.funcIndex, req.cacheKey, req.version, fn);
+  EJIT_TASKPOOL_TRACE("runCompile:published", req.funcIndex,
+                      (unsigned)published);
   if (!published) {
     // Cache bucket full: release the dedup slot and report it explicitly so the
     // caller does not mistake this for a successful compile. Nothing is cached,
@@ -353,10 +368,13 @@ EJitTaskPool::CompileOrGetResult
 EJitTaskPool::compileOrGet(uint32_t funcIndex, uint64_t cacheKey,
                            void *fallback, uintptr_t userData) {
   const uint32_t version = switch_.getVersion();
+  EJIT_TASKPOOL_TRACE("compileOrGet:enter", funcIndex,
+                      (unsigned long long)cacheKey, version);
 
   // 1. Cache hit.
   if (void *p = cache_.lookup(funcIndex, cacheKey, version)) {
     counters_.cacheHits.fetchAdd(1);
+    EJIT_TASKPOOL_TRACE("compileOrGet:cacheHit", funcIndex, p);
     return {EJitCompileOrGetStatus::CacheHit, p};
   }
 
@@ -366,6 +384,7 @@ EJitTaskPool::compileOrGet(uint32_t funcIndex, uint64_t cacheKey,
 
   // 3. Dedup reservation (shared by sync and async).
   EJitDedupResult d = dedup_.tryMarkPending(funcIndex, cacheKey, version);
+  EJIT_TASKPOOL_TRACE("compileOrGet:dedup", funcIndex, (unsigned)d);
   if (d == EJitDedupResult::AlreadyPending) {
     counters_.alreadyPending.fetchAdd(1);
     return {EJitCompileOrGetStatus::AlreadyPending, fallback};
@@ -394,9 +413,11 @@ EJitTaskPool::compileOrGet(uint32_t funcIndex, uint64_t cacheKey,
   if (!queue_.push(req)) {
     dedup_.clear(funcIndex, cacheKey, version);
     counters_.queueFull.fetchAdd(1);
+    EJIT_TASKPOOL_TRACE("compileOrGet:queuePush", funcIndex, (unsigned)0);
     return {EJitCompileOrGetStatus::QueueFullFallback, fallback};
   }
   counters_.asyncEnqueues.fetchAdd(1);
+  EJIT_TASKPOOL_TRACE("compileOrGet:queuePush", funcIndex, (unsigned)1);
   return {EJitCompileOrGetStatus::EnqueuedPending, fallback};
 }
 
@@ -430,8 +451,11 @@ EJitTaskPool::syncCompile(const EJitCompileRequest &reqIn) {
 
 bool EJitTaskPool::pollOne() {
   EJitCompileRequest req;
-  if (!queue_.pop(req))
+  if (!queue_.pop(req)) {
+    EJIT_TASKPOOL_TRACE("pollOne:empty");
     return false;
+  }
+  EJIT_TASKPOOL_TRACE("pollOne:dequeued", req.funcIndex);
   EJitCompileOrGetStatus st;
   runCompile(req, st, /*fromWorker=*/true);
   return true;
@@ -453,6 +477,8 @@ bool EJitTaskPool::freeCode(uint32_t funcIndex, uint64_t cacheKey) {
   // This is a LOGICAL free: the SRE code-pool physical memory is not released.
   bool cancelled = dedup_.cancel(funcIndex, cacheKey);
   bool freed = cache_.freeCode(funcIndex, cacheKey);
+  EJIT_TASKPOOL_TRACE("freeCode", funcIndex, (unsigned)cancelled,
+                      (unsigned)freed);
   return cancelled || freed;
 }
 

@@ -14,8 +14,9 @@
 //  A real SRE deployment can replace the backing with the platform queue
 //  primitives by building with EJIT_SRE_TASKPOOL_PLATFORM_QUEUE defined; the
 //  SRE QueueCreate/QueueWrite/QueueRead entry points are confined to the
-//  clearly delimited section at the bottom of this file (with link-only weak
-//  host fallbacks, mirroring EJitSrePlatform.cpp).
+//  clearly delimited section at the bottom of this file. Those platform symbols
+//  are only declared (never defined, no weak fallback): the platform must
+//  provide them, mirroring EJitSrePlatform.cpp.
 //
 //===----------------------------------------------------------------------===//
 
@@ -45,8 +46,13 @@ uint32_t roundUpPow2(uint32_t v) {
 // SRE platform queue entry points (reserved接入点)
 //
 // These are only referenced when EJIT_SRE_TASKPOOL_PLATFORM_QUEUE is defined.
-// The generic C++ identifiers are asm-labeled to the real SRE symbol names so
-// the platform's strong definitions override the weak host fallbacks below.
+// The generic C++ identifiers are asm-labeled to the real SRE symbol names.
+// They are ONLY declared here — never defined and never given weak fallbacks:
+// in static-pack / partial-link scenarios a weak local definition could shadow
+// or collide with the real platform symbol. When this macro is defined the
+// platform must supply strong QueueCreate/QueueWrite/QueueRead. The default
+// host taskpool build does NOT define this macro and uses the ring backing
+// above, so it needs none of these symbols.
 //===----------------------------------------------------------------------===//
 #ifdef EJIT_SRE_TASKPOOL_PLATFORM_QUEUE
 extern "C" void *ejit_sre_queue_create(uint32_t capacity) __asm__("QueueCreate");
@@ -54,23 +60,6 @@ extern "C" int ejit_sre_queue_write(void *q, const void *item,
                                     uint32_t size) __asm__("QueueWrite");
 extern "C" int ejit_sre_queue_read(void *q, void *item,
                                    uint32_t size) __asm__("QueueRead");
-
-// Weak host fallbacks: present only so a host build links. They do not provide
-// a functional queue (the real platform supplies strong overrides); host tests
-// use the ring backing instead and never define this macro.
-__attribute__((weak)) void *ejit_sre_queue_create(uint32_t /*capacity*/) {
-  static int token = 0;
-  return &token;
-}
-__attribute__((weak)) int ejit_sre_queue_write(void * /*q*/,
-                                               const void * /*item*/,
-                                               uint32_t /*size*/) {
-  return -1;
-}
-__attribute__((weak)) int ejit_sre_queue_read(void * /*q*/, void * /*item*/,
-                                              uint32_t /*size*/) {
-  return -1;
-}
 
 namespace {
 // Single taskpool queue handle (one queue per process in the SRE deployment).
