@@ -72,7 +72,9 @@ set(environ_internal_gcc12_workaround "")
 if((${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU") AND
    (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "12") AND
    (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "13"))
-  set(environ_internal_gcc12_workaround "-Wno-stringop-overflow")
+  set(environ_internal_gcc12_workaround "-Wno-stringop-overflow"
+      "-fdisable-tree-waccess1" "-fdisable-tree-waccess2"
+      "-fdisable-tree-waccess3")
 endif()
 
 add_object_library(
@@ -398,6 +400,23 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mkstemp
+  SRCS
+    mkstemp.cpp
+  HDRS
+    mkstemp.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
   mbtowc
   SRCS
     mbtowc.cpp
@@ -406,6 +425,21 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.size_t
     libc.hdr.types.wchar_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.mbrtowc
+    libc.src.__support.wchar.mbstate
+)
+
+add_entrypoint_object(
+  mblen
+  SRCS
+    mblen.cpp
+  HDRS
+    mblen.h
+  DEPENDS
+    libc.hdr.types.size_t
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.libc_errno

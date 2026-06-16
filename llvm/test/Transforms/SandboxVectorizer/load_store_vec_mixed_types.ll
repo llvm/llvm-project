@@ -5,11 +5,8 @@
 define void @mixed_int_float(ptr %ptr0) {
 ; CHECK-LABEL: define void @mixed_int_float(
 ; CHECK-SAME: ptr [[PTR0:%.*]]) {
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr inbounds i8, ptr [[PTR0]], i64 4
-; CHECK-NEXT:    [[LD0:%.*]] = load i32, ptr [[PTR0]], align 4
-; CHECK-NEXT:    [[LD1:%.*]] = load float, ptr [[PTR1]], align 4
-; CHECK-NEXT:    store i32 [[LD0]], ptr [[PTR0]], align 4, !sandboxvec [[META0:![0-9]+]]
-; CHECK-NEXT:    store float [[LD1]], ptr [[PTR1]], align 4, !sandboxvec [[META0]]
+; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x i32>, ptr [[PTR0]], align 1, !sandboxvec [[META0:![0-9]+]]
+; CHECK-NEXT:    store <2 x i32> [[VECIINITL]], ptr [[PTR0]], align 1, !sandboxvec [[META0]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr1 = getelementptr inbounds i8, ptr %ptr0, i64 4
@@ -26,11 +23,8 @@ define void @mixed_int_float(ptr %ptr0) {
 define void @mixed_int_vector_float(ptr %ptr) {
 ; CHECK-LABEL: define void @mixed_int_vector_float(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[PTR_4:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 4
-; CHECK-NEXT:    [[LD_0_3:%.*]] = load i32, ptr [[PTR]], align 4
-; CHECK-NEXT:    [[LD_4_LOAD:%.*]] = load <2 x half>, ptr [[PTR_4]], align 4
-; CHECK-NEXT:    store i32 [[LD_0_3]], ptr [[PTR]], align 4, !sandboxvec [[META1:![0-9]+]]
-; CHECK-NEXT:    store <2 x half> [[LD_4_LOAD]], ptr [[PTR_4]], align 4, !sandboxvec [[META1]]
+; CHECK-NEXT:    [[VECIINITL:%.*]] = load <4 x half>, ptr [[PTR]], align 1, !sandboxvec [[META1:![0-9]+]]
+; CHECK-NEXT:    store <4 x half> [[VECIINITL]], ptr [[PTR]], align 1, !sandboxvec [[META1]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr_4 = getelementptr inbounds i8, ptr %ptr, i64 4
@@ -65,11 +59,8 @@ define void @mixed_int_pointer(ptr %ptr) {
 define void @mixed_dboule_pointer(ptr %ptr) {
 ; CHECK-LABEL: define void @mixed_dboule_pointer(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[PTR_8:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 8
-; CHECK-NEXT:    [[LD_0_7:%.*]] = load double, ptr [[PTR]], align 8
-; CHECK-NEXT:    [[LD_8_15:%.*]] = load ptr, ptr [[PTR_8]], align 8
-; CHECK-NEXT:    store double [[LD_0_7]], ptr [[PTR]], align 8, !sandboxvec [[META3:![0-9]+]]
-; CHECK-NEXT:    store ptr [[LD_8_15]], ptr [[PTR_8]], align 8, !sandboxvec [[META3]]
+; CHECK-NEXT:    [[VECIINITL:%.*]] = load <2 x double>, ptr [[PTR]], align 1, !sandboxvec [[META3:![0-9]+]]
+; CHECK-NEXT:    store <2 x double> [[VECIINITL]], ptr [[PTR]], align 1, !sandboxvec [[META3]]
 ; CHECK-NEXT:    ret void
 ;
   %ptr_8 = getelementptr inbounds i8, ptr %ptr, i64 8

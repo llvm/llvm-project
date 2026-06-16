@@ -772,45 +772,60 @@ tryToMergePartialOverlappingStores(StoreInst *KillingI, StoreInst *DeadI,
                                    int64_t KillingOffset, int64_t DeadOffset,
                                    const DataLayout &DL, BatchAAResults &AA,
                                    DominatorTree *DT) {
+  assert(KillingI);
+  assert(DeadI);
 
-  if (DeadI && isa<ConstantInt>(DeadI->getValueOperand()) &&
-      DL.typeSizeEqualsStoreSize(DeadI->getValueOperand()->getType()) &&
-      KillingI && isa<ConstantInt>(KillingI->getValueOperand()) &&
-      DL.typeSizeEqualsStoreSize(KillingI->getValueOperand()->getType()) &&
-      memoryIsNotModifiedBetween(DeadI, KillingI, AA, DL, DT)) {
-    // If the store we find is:
-    //   a) partially overwritten by the store to 'Loc'
-    //   b) the killing store is fully contained in the dead one and
-    //   c) they both have a constant value
-    //   d) none of the two stores need padding
-    // Merge the two stores, replacing the dead store's value with a
-    // merge of both values.
-    // TODO: Deal with other constant types (vectors, etc), and probably
-    // some mem intrinsics (if needed)
+  // If the store we find is:
+  //   a) partially overwritten by the store to 'Loc'
+  //   b) the killing store is fully contained in the dead one and
+  //   c) they both have a constant value
+  //   d) none of the two stores need padding
+  // Merge the two stores, replacing the dead store's value with a
+  // merge of both values.
+  //
+  // TODO: Deal with other constant types (vectors, etc), and probably
+  // some mem intrinsics (if needed)
+  if (!isa<ConstantInt>(DeadI->getValueOperand()) ||
+      !DL.typeSizeEqualsStoreSize(DeadI->getValueOperand()->getType()) ||
+      !isa<ConstantInt>(KillingI->getValueOperand()) ||
+      !DL.typeSizeEqualsStoreSize(KillingI->getValueOperand()->getType()) ||
+      !memoryIsNotModifiedBetween(DeadI, KillingI, AA, DL, DT))
+    return nullptr;
 
-    APInt DeadValue = cast<ConstantInt>(DeadI->getValueOperand())->getValue();
-    APInt KillingValue =
-        cast<ConstantInt>(KillingI->getValueOperand())->getValue();
-    unsigned KillingBits = KillingValue.getBitWidth();
-    assert(DeadValue.getBitWidth() > KillingValue.getBitWidth());
-    KillingValue = KillingValue.zext(DeadValue.getBitWidth());
+  // The merge erases KillingI and writes its bytes via DeadI. For that to be
+  // safe:
+  //   - KillingI must be deletable (not volatile, ordering at most unordered),
+  //   - DeadI must be safe to rewrite, and
+  //   - their orderings must match, so the bytes originally written by
+  //     KillingI keep the same atomicity after they are folded into DeadI.
+  // This allows merging two simple stores or two unordered-atomic stores with
+  // matching ordering, while leaving volatile and ordered-atomic stores in
+  // place.
+  if (!KillingI->isUnordered() || !DeadI->isUnordered() ||
+      KillingI->getOrdering() != DeadI->getOrdering())
+    return nullptr;
 
-    // Offset of the smaller store inside the larger store
-    unsigned BitOffsetDiff = (KillingOffset - DeadOffset) * 8;
-    unsigned LShiftAmount =
-        DL.isBigEndian() ? DeadValue.getBitWidth() - BitOffsetDiff - KillingBits
-                         : BitOffsetDiff;
-    APInt Mask = APInt::getBitsSet(DeadValue.getBitWidth(), LShiftAmount,
-                                   LShiftAmount + KillingBits);
-    // Clear the bits we'll be replacing, then OR with the smaller
-    // store, shifted appropriately.
-    APInt Merged = (DeadValue & ~Mask) | (KillingValue << LShiftAmount);
-    LLVM_DEBUG(dbgs() << "DSE: Merge Stores:\n  Dead: " << *DeadI
-                      << "\n  Killing: " << *KillingI
-                      << "\n  Merged Value: " << Merged << '\n');
-    return ConstantInt::get(DeadI->getValueOperand()->getType(), Merged);
-  }
-  return nullptr;
+  APInt DeadValue = cast<ConstantInt>(DeadI->getValueOperand())->getValue();
+  APInt KillingValue =
+      cast<ConstantInt>(KillingI->getValueOperand())->getValue();
+  unsigned KillingBits = KillingValue.getBitWidth();
+  assert(DeadValue.getBitWidth() > KillingValue.getBitWidth());
+  KillingValue = KillingValue.zext(DeadValue.getBitWidth());
+
+  // Offset of the smaller store inside the larger store
+  unsigned BitOffsetDiff = (KillingOffset - DeadOffset) * 8;
+  unsigned LShiftAmount =
+      DL.isBigEndian() ? DeadValue.getBitWidth() - BitOffsetDiff - KillingBits
+                       : BitOffsetDiff;
+  APInt Mask = APInt::getBitsSet(DeadValue.getBitWidth(), LShiftAmount,
+                                 LShiftAmount + KillingBits);
+  // Clear the bits we'll be replacing, then OR with the smaller
+  // store, shifted appropriately.
+  APInt Merged = (DeadValue & ~Mask) | (KillingValue << LShiftAmount);
+  LLVM_DEBUG(dbgs() << "DSE: Merge Stores:\n  Dead: " << *DeadI
+                    << "\n  Killing: " << *KillingI
+                    << "\n  Merged Value: " << Merged << '\n');
+  return ConstantInt::get(DeadI->getValueOperand()->getType(), Merged);
 }
 
 // Returns true if \p I is an intrinsic that does not read or write memory.

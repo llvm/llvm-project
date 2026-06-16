@@ -17,8 +17,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; NONE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[UMAX]], [[TMP1]]
 ; NONE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; NONE:       vector.ph:
-; NONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; NONE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
+; NONE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
 ; NONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[UMAX]], [[TMP3]]
 ; NONE-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX]], [[N_MOD_VF]]
 ; NONE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
@@ -101,7 +100,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_NO_LANEMASK-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[PTR:%.*]], i64 [[INDEX1]]
 ; DATA_NO_LANEMASK-NEXT:    call void @llvm.masked.store.nxv4i32.p0(<vscale x 4 x i32> [[BROADCAST_SPLAT5]], ptr align 4 [[TMP13]], <vscale x 4 x i1> [[TMP12]])
 ; DATA_NO_LANEMASK-NEXT:    [[INDEX_NEXT6]] = add i64 [[INDEX1]], [[TMP5]]
-; DATA_NO_LANEMASK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT4]]
+; DATA_NO_LANEMASK-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 4 x i64> [[VEC_IV]], [[BROADCAST_SPLAT4]]
 ; DATA_NO_LANEMASK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC]]
 ; DATA_NO_LANEMASK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; DATA_NO_LANEMASK:       middle.block:

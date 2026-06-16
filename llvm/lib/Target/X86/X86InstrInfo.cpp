@@ -4364,7 +4364,7 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // anyone.
   else if (X86::VK16RegClass.contains(DestReg, SrcReg))
     Opc = Subtarget.hasBWI() ? (HasEGPR ? X86::KMOVQkk_EVEX : X86::KMOVQkk)
-                             : (HasEGPR ? X86::KMOVQkk_EVEX : X86::KMOVWkk);
+                             : (HasEGPR ? X86::KMOVWkk_EVEX : X86::KMOVWkk);
 
   if (!Opc)
     Opc = CopyToFromAsymmetricReg(DestReg, SrcReg, Subtarget);
@@ -5699,7 +5699,7 @@ static bool canConvert2Copy(unsigned Opc) {
 
 /// Convert an ALUrr opcode to corresponding ALUri opcode. Such as
 ///     ADD32rr  ==>  ADD32ri
-static unsigned convertALUrr2ALUri(unsigned Opc, bool HasNDDI) {
+static unsigned convertALUrr2ALUri(unsigned Opc) {
   switch (Opc) {
   default:
     return 0;
@@ -5750,9 +5750,9 @@ static unsigned convertALUrr2ALUri(unsigned Opc, bool HasNDDI) {
     FROM_TO(CCMP32rr, CCMP32ri)
 #undef FROM_TO
   case X86::ADD64rr_ND:
-    return HasNDDI ? X86::ADD64ri32_ND : 0;
+    return X86::ADD64ri32_ND;
   case X86::SUB64rr_ND:
-    return HasNDDI ? X86::SUB64ri32_ND : 0;
+    return X86::SUB64ri32_ND;
   }
 }
 
@@ -5839,7 +5839,7 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
     else
       return false;
   } else
-    NewOpc = convertALUrr2ALUri(Opc, Subtarget.hasNDDI());
+    NewOpc = convertALUrr2ALUri(Opc);
 
   if (!NewOpc)
     return false;

@@ -235,7 +235,7 @@ void VAListChecker::checkDeadSymbols(SymbolReaper &SR,
 const ExplodedNode *
 VAListChecker::getStartCallSite(const ExplodedNode *N,
                                 const MemRegion *Reg) const {
-  const LocationContext *LeakContext = N->getLocationContext();
+  const StackFrame *LeakSF = N->getStackFrame();
   const ExplodedNode *StartCallNode = N;
 
   bool SeenInitializedState = false;
@@ -247,8 +247,7 @@ VAListChecker::getStartCallSite(const ExplodedNode *N,
     } else if (SeenInitializedState) {
       break;
     }
-    const LocationContext *NContext = N->getLocationContext();
-    if (NContext == LeakContext || NContext->isParentOf(LeakContext))
+    if (N->getStackFrame() == LeakSF || N->getStackFrame()->isParentOf(LeakSF))
       StartCallNode = N;
     N = N->pred_empty() ? nullptr : *(N->pred_begin());
   }
@@ -276,7 +275,7 @@ void VAListChecker::reportLeaked(const RegionVector &Leaked, StringRef Msg1,
 
     if (const Stmt *StartCallStmt = StartNode->getStmtForDiagnostics())
       LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
-          StartCallStmt, C.getSourceManager(), StartNode->getLocationContext());
+          StartCallStmt, C.getSourceManager(), StartNode->getStackFrame());
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream OS(Buf);
@@ -288,7 +287,7 @@ void VAListChecker::reportLeaked(const RegionVector &Leaked, StringRef Msg1,
 
     auto R = std::make_unique<PathSensitiveBugReport>(
         LeakBug, OS.str(), N, LocUsedForUniqueing,
-        StartNode->getLocationContext()->getDecl());
+        StartNode->getStackFrame()->getDecl());
     R->markInteresting(Reg);
     R->addVisitor(std::make_unique<VAListBugVisitor>(Reg, true));
     C.emitReport(std::move(R));
@@ -413,8 +412,7 @@ PathDiagnosticPieceRef VAListChecker::VAListBugVisitor::VisitNode(
   if (Msg.empty())
     return nullptr;
 
-  PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                             N->getLocationContext());
+  PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(Pos, Msg, true);
 }
 

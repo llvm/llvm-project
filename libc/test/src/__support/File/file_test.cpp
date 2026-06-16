@@ -560,7 +560,9 @@ TEST(LlvmLibcFileTest, Ungetwc) {
   EXPECT_EQ(static_cast<uint32_t>(ws_out[0]), static_cast<uint32_t>(L'A'));
 
   auto unget_res = f->ungetwc(L'B');
-  EXPECT_EQ(static_cast<uint32_t>(unget_res), static_cast<uint32_t>(L'B'));
+  ASSERT_TRUE(unget_res.has_value());
+  EXPECT_EQ(static_cast<uint32_t>(unget_res.value()),
+            static_cast<uint32_t>(L'B'));
   auto read_res2 = f->read(ws_out, 1);
 
   ASSERT_EQ(read_res2.value, size_t(1));
@@ -640,7 +642,9 @@ TEST(LlvmLibcFileTest, UngetwcMultiByte) {
   EXPECT_EQ(static_cast<uint32_t>(ws_out[0]), static_cast<uint32_t>(L'€'));
 
   auto unget_res = f->ungetwc(L'¢');
-  EXPECT_EQ(static_cast<uint32_t>(unget_res), static_cast<uint32_t>(L'¢'));
+  ASSERT_TRUE(unget_res.has_value());
+  EXPECT_EQ(static_cast<uint32_t>(unget_res.value()),
+            static_cast<uint32_t>(L'¢'));
 
   auto read_res2 = f->read(ws_out, 1);
   ASSERT_EQ(read_res2.value, size_t(1));
@@ -662,7 +666,9 @@ TEST(LlvmLibcFileTest, UngetwcUnbufferedMultiByte) {
   EXPECT_EQ(static_cast<uint32_t>(ws_out[0]), static_cast<uint32_t>(L'€'));
 
   auto unget_res = f->ungetwc(L'¢');
-  EXPECT_EQ(static_cast<uint32_t>(unget_res), static_cast<uint32_t>(L'¢'));
+  ASSERT_TRUE(unget_res.has_value());
+  EXPECT_EQ(static_cast<uint32_t>(unget_res.value()),
+            static_cast<uint32_t>(L'¢'));
 
   auto read_res2 = f->read(ws_out, 1);
   ASSERT_EQ(read_res2.value, size_t(1));
@@ -765,7 +771,9 @@ TEST(LlvmLibcFileTest, UngetwcWEOF) {
             static_cast<uint32_t>(File::Orientation::UNORIENTED));
 
   auto unget_res = f->ungetwc(WEOF);
-  EXPECT_EQ(static_cast<uint32_t>(unget_res), static_cast<uint32_t>(WEOF));
+  ASSERT_TRUE(unget_res.has_value());
+  EXPECT_EQ(static_cast<uint32_t>(unget_res.value()),
+            static_cast<uint32_t>(WEOF));
 
   EXPECT_EQ(static_cast<uint32_t>(f->get_orientation()),
             static_cast<uint32_t>(File::Orientation::UNORIENTED));

@@ -15,14 +15,14 @@ define { <16 x i8>, <16 x i8> } @foo_ld2_v16i8(<16 x i1> %mask, ptr %p) {
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v3.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    zip1 v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    zip1 v0.16b, v0.16b, v3.16b
-; CHECK-NEXT:    addv h1, v1.8h
-; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    fmov w9, s1
-; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v1.16b, v1.16b, v1.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    umov w9, v1.h[0]
+; CHECK-NEXT:    umov w8, v0.h[0]
 ; CHECK-NEXT:    bfi w8, w9, #16, #16
 ; CHECK-NEXT:    tbz w8, #0, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %cond.load
@@ -236,10 +236,10 @@ define { <8 x i16>, <8 x i16> } @foo_ld2_v8i16(<8 x i1> %mask, ptr %p) {
 ; CHECK-NEXT:    shl v0.16b, v0.16b, #7
 ; CHECK-NEXT:    cmlt v0.16b, v0.16b, #0
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    zip1 v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    addv h0, v0.8h
-; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    addp v0.16b, v0.16b, v0.16b
+; CHECK-NEXT:    umov w8, v0.h[0]
 ; CHECK-NEXT:    tbz w8, #0, .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %cond.load
 ; CHECK-NEXT:    ldr h1, [x0]

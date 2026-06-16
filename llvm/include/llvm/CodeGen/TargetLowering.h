@@ -3342,8 +3342,11 @@ public:
   /// \p Load is the accompanying load instruction.  Can be either a plain load
   /// instruction or a vp.load intrinsic.
   /// \p DI represents the deinterleaveN intrinsic.
+  /// \p GapMask is a mask with zeros for components / fields that may not be
+  /// accessed.
   virtual bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
-                                                IntrinsicInst *DI) const {
+                                                IntrinsicInst *DI,
+                                                const APInt &GapMask) const {
     return false;
   }
 
@@ -5568,6 +5571,16 @@ public:
   /// \param N Node to expand
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandCLMUL(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand parallel bit extract (compress).
+  /// \param N Node to expand
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandPEXT(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand parallel bit deposit (expand).
+  /// \param N Node to expand
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandPDEP(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand rotations.
   /// \param N Node to expand

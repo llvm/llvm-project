@@ -1231,6 +1231,7 @@ void SIWholeQuadMode::toExact(MachineBasicBlock &MBB,
   }
 
   LIS->InsertMachineInstrInMaps(*MI);
+  LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
   StateTransition[MI] = StateExact;
 }
 
@@ -1468,7 +1469,7 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, BlockInfo &BI,
             assert(!SavedWQMReg);
             SavedWQMReg = MRI->createVirtualRegister(BoolRC);
           }
-
+          Before = skipDebugInstructionsForward(Before, MBB.end());
           toExact(MBB, Before, SavedWQMReg);
           State = StateExact;
         } else if (ExactToWQM) {

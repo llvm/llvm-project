@@ -5137,7 +5137,7 @@ class EmbedExpr final : public Expr {
 public:
   EmbedExpr(const ASTContext &Ctx, SourceLocation Loc, EmbedDataStorage *Data,
             unsigned Begin, unsigned NumOfElements);
-  explicit EmbedExpr(EmptyShell Empty) : Expr(SourceLocExprClass, Empty) {}
+  explicit EmbedExpr(EmptyShell Empty) : Expr(EmbedExprClass, Empty) {}
 
   SourceLocation getLocation() const { return EmbedKeywordLoc; }
   SourceLocation getBeginLoc() const { return EmbedKeywordLoc; }
@@ -7547,6 +7547,22 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
   DB.AddTaggedVal(reinterpret_cast<uint64_t>(E), DiagnosticsEngine::ak_expr);
   return DB;
 }
+
+/// Walk @p E through parens, implicit casts, unary &/*, array subscripts and
+/// comma operators to find the head of a struct-field access -- typically a
+/// MemberExpr, or an LValueToRValue ImplicitCastExpr over a pointer-typed
+/// field. Returns nullptr for shapes we don't handle (multiple subscripts,
+/// non-comma binary ops, or '&fam' on an array lvalue which designates the
+/// array-as-a-whole rather than an element pointer).
+///
+/// If @p OutArrayIndex / @p OutArrayElementTy are non-null, they receive the
+/// index expression and base array type for forms like '&p->fam[idx]'.
+///
+/// Shared by CGBuiltin's __builtin_*_object_size lowering and the AST
+/// constant evaluator so they recognize the same 'counted_by' access shapes.
+const Expr *findStructFieldAccess(const Expr *E,
+                                  const Expr **OutArrayIndex = nullptr,
+                                  QualType *OutArrayElementTy = nullptr);
 
 } // end namespace clang
 
