@@ -3,14 +3,18 @@
 
 define void @main() {
   %alloc = alloca i32
+  %ptr = inttoptr i64 -8 to ptr
   call void @llvm.assume(i1 true) ["align"(ptr %alloc, i32 16, i32 8)]
-  call void @llvm.assume(i1 true) ["align"(ptr %alloc, i32 16, i32 4)]
+  call void @llvm.assume(i1 true) ["align"(ptr %ptr, i32 512, i8 -8)]
+  call void @llvm.assume(i1 true) ["align"(ptr %alloc, i8 16, i128 4)]
   ret void
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
+; CHECK-NEXT:   %ptr = inttoptr i64 -8 to ptr => ptr 0xFFFFFFFFFFFFFFF8 [nullary]
 ; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr %alloc, i32 16, i32 8) ]
+; CHECK-NEXT:   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i32 512, i8 -8) ]
 ; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   call void @llvm.assume(i1 true) [ "align"(ptr %alloc, i32 16, i32 4) ] at @main <stdin>:7
+; CHECK-NEXT: #0   call void @llvm.assume(i1 true) [ "align"(ptr %alloc, i8 16, i128 4) ] at @main <stdin>:9
 ; CHECK-NEXT: Immediate UB detected: The pointer ptr 0x8 [alloc] violates align(16) assumption.
 ; CHECK-NEXT: error: Execution of function 'main' failed.
