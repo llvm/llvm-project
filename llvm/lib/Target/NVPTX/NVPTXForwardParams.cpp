@@ -98,11 +98,18 @@ static bool eliminateMove(MachineInstr &Mov, const MachineRegisterInfo &MRI,
 
   constexpr unsigned LDInstBasePtrOpIdx = 6;
   constexpr unsigned LDInstAddrSpaceOpIdx = 2;
+  constexpr unsigned LDInstEvictionAndPrefetchHintOpIdx = 8;
+  constexpr unsigned LDInstCachePolicyOpIdx = 9;
   for (auto *LI : LoadInsts) {
     (LI->uses().begin() + LDInstBasePtrOpIdx)
         ->ChangeToES(ParamSymbol->getSymbolName());
     (LI->uses().begin() + LDInstAddrSpaceOpIdx)
         ->ChangeToImmediate(NVPTX::AddressSpace::DeviceParam);
+    // PTX cache modifiers are not allowed on ld.param.
+    (LI->uses().begin() + LDInstEvictionAndPrefetchHintOpIdx)
+        ->ChangeToImmediate(0);
+    (LI->uses().begin() + LDInstCachePolicyOpIdx)
+        ->ChangeToRegister(NVPTX::NoRegister, false);
   }
   return true;
 }

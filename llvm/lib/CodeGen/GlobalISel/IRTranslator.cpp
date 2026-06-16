@@ -1419,7 +1419,7 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
     auto *MMO = MF->getMachineMemOperand(
         MachinePointerInfo(LI.getPointerOperand()), Flags,
         MRI->getType(Regs[0]), getMemOpAlign(LI), AAInfo,
-        LI.getMetadata(LLVMContext::MD_range), LI.getSyncScopeID(),
+        LI.getMetadata(LLVMContext::MD_range), nullptr, LI.getSyncScopeID(),
         LI.getOrdering());
     MIRBuilder.buildLoad(Regs[0], Base, *MMO);
     return true;
@@ -1436,7 +1436,7 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
     Align BaseAlign = getMemOpAlign(LI);
     auto *MMO = MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Regs[i]),
                                          commonAlignment(BaseAlign, Offsets[i]),
-                                         AAInfo, nullptr, LI.getSyncScopeID(),
+                                         AAInfo, nullptr, nullptr, LI.getSyncScopeID(),
                                          LI.getOrdering());
     MIRBuilder.buildLoad(Regs[i], Addr, *MMO);
   }
@@ -1467,7 +1467,7 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
     auto *MMO = MF->getMachineMemOperand(
         MachinePointerInfo(SI.getPointerOperand()), Flags,
         MRI->getType(Vals[0]), getMemOpAlign(SI), SI.getAAMetadata(), nullptr,
-        SI.getSyncScopeID(), SI.getOrdering());
+        nullptr, SI.getSyncScopeID(), SI.getOrdering());
     MIRBuilder.buildStore(Vals[0], Base, *MMO);
     return true;
   }
@@ -1483,7 +1483,7 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
     Align BaseAlign = getMemOpAlign(SI);
     auto *MMO = MF->getMachineMemOperand(Ptr, Flags, MRI->getType(Vals[i]),
                                          commonAlignment(BaseAlign, Offsets[i]),
-                                         SI.getAAMetadata(), nullptr,
+                                         SI.getAAMetadata(), nullptr, nullptr,
                                          SI.getSyncScopeID(), SI.getOrdering());
     MIRBuilder.buildStore(Vals[i], Addr, *MMO);
   }
@@ -2949,7 +2949,8 @@ bool IRTranslator::translateIntrinsic(
     }
     MIB.addMemOperand(MF->getMachineMemOperand(
         MPI, Info.flags, MemTy, Alignment, CB.getAAMetadata(),
-        /*Ranges=*/nullptr, Info.ssid, Info.order, Info.failureOrder));
+        /*Ranges=*/nullptr, /*MemCacheHint=*/nullptr, Info.ssid, Info.order,
+        Info.failureOrder));
   }
 
   if (CB.isConvergent()) {
@@ -3574,8 +3575,9 @@ bool IRTranslator::translateAtomicCmpXchg(const User &U,
       OldValRes, SuccessRes, Addr, Cmp, NewVal,
       *MF->getMachineMemOperand(
           MachinePointerInfo(I.getPointerOperand()), Flags, MRI->getType(Cmp),
-          getMemOpAlign(I), I.getAAMetadata(), nullptr, I.getSyncScopeID(),
-          I.getSuccessOrdering(), I.getFailureOrdering()));
+          getMemOpAlign(I), I.getAAMetadata(), nullptr, nullptr,
+          I.getSyncScopeID(), I.getSuccessOrdering(),
+          I.getFailureOrdering()));
   return true;
 }
 
@@ -3670,7 +3672,7 @@ bool IRTranslator::translateAtomicRMW(const User &U,
       Opcode, Res, Addr, Val,
       *MF->getMachineMemOperand(MachinePointerInfo(I.getPointerOperand()),
                                 Flags, MRI->getType(Val), getMemOpAlign(I),
-                                I.getAAMetadata(), nullptr, I.getSyncScopeID(),
+                                I.getAAMetadata(), nullptr, nullptr, I.getSyncScopeID(),
                                 I.getOrdering()));
   return true;
 }

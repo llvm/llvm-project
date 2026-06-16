@@ -15956,7 +15956,7 @@ SDValue convertTwoLoadsAndCmpToVCMPEQUB(SelectionDAG &DAG, SDNode *N,
     MachineFunction &MF = DAG.getMachineFunction();
     MachineMemOperand *NewMMO = MF.getMachineMemOperand(
         MMO->getPointerInfo(), MMO->getFlags(), MMO->getSize(), MMO->getAlign(),
-        MMO->getAAInfo(), nullptr, MMO->getSyncScopeID(),
+        MMO->getAAInfo(), nullptr, nullptr, MMO->getSyncScopeID(),
         MMO->getSuccessOrdering(), MMO->getFailureOrdering());
     SDValue NewLoad = DAG.getLoad(MVT::v16i8, DL, LoadNode->getChain(),
                                   LoadNode->getBasePtr(), NewMMO);

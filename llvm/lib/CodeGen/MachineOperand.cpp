@@ -1173,9 +1173,10 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
                                      LLT type, Align a, const AAMDNodes &AAInfo,
                                      const MDNode *Ranges, SyncScope::ID SSID,
                                      AtomicOrdering Ordering,
-                                     AtomicOrdering FailureOrdering)
+                                     AtomicOrdering FailureOrdering,
+                                     const MDNode *MemCacheHint)
     : PtrInfo(ptrinfo), MemoryType(type), FlagVals(f), BaseAlign(a),
-      AAInfo(AAInfo), Ranges(Ranges) {
+      AAInfo(AAInfo), Ranges(Ranges), MemCacheHint(MemCacheHint) {
   assert((PtrInfo.V.isNull() || isa<const PseudoSourceValue *>(PtrInfo.V) ||
           isa<PointerType>(cast<const Value *>(PtrInfo.V)->getType())) &&
          "invalid pointer value");
@@ -1194,14 +1195,16 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags F,
                                      const AAMDNodes &AAInfo,
                                      const MDNode *Ranges, SyncScope::ID SSID,
                                      AtomicOrdering Ordering,
-                                     AtomicOrdering FailureOrdering)
+                                     AtomicOrdering FailureOrdering,
+                                     const MDNode *MemCacheHint)
     : MachineMemOperand(
           ptrinfo, F,
           !TS.isPrecise() ? LLT()
           : TS.isScalable()
               ? LLT::scalable_vector(1, 8 * TS.getValue().getKnownMinValue())
               : LLT::scalar(8 * TS.getValue().getKnownMinValue()),
-          BaseAlignment, AAInfo, Ranges, SSID, Ordering, FailureOrdering) {}
+          BaseAlignment, AAInfo, Ranges, SSID, Ordering, FailureOrdering,
+          MemCacheHint) {}
 
 void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
   // The Value and Offset may differ due to CSE. But the flags and size
@@ -1366,6 +1369,10 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   if (getRanges()) {
     OS << ", !range ";
     getRanges()->printAsOperand(OS, MST);
+  }
+  if (getMemCacheHint()) {
+    OS << ", !mem.cache_hint ";
+    getMemCacheHint()->printAsOperand(OS, MST);
   }
   // FIXME: Implement addrspace printing/parsing in MIR.
   // For now, print this even though parsing it is not available in MIR.

@@ -4732,6 +4732,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   Align Alignment = I.getAlign();
   AAMDNodes AAInfo = I.getAAMetadata();
   const MDNode *Ranges = getRangeMetadata(I);
+  const MDNode *MemCacheHint = getMemCacheHintMetadata(I);
   bool isVolatile = I.isVolatile();
   MachineMemOperand::Flags MMOFlags =
       TLI.getLoadMemOperandFlags(I, DAG.getDataLayout(), AC, LibInfo);
@@ -4789,7 +4790,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
 
     SDValue A = DAG.getObjectPtrOffset(dl, Ptr, Offsets[i]);
     SDValue L = DAG.getLoad(MemVTs[i], dl, Root, A, PtrInfo, Alignment,
-                            MMOFlags, AAInfo, Ranges);
+                            MMOFlags, AAInfo, Ranges, MemCacheHint);
     Chains[ChainI] = L.getValue(1);
 
     if (MemVTs[i] != ValueVTs[i])
@@ -4920,6 +4921,8 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   SDLoc dl = getCurSDLoc();
   Align Alignment = I.getAlign();
   AAMDNodes AAInfo = I.getAAMetadata();
+  const MDNode *MemCacheHint =
+      getMemCacheHintMetadata(I, I.getPointerOperandIndex());
 
   auto MMOFlags = TLI.getStoreMemOperandFlags(I, DAG.getDataLayout());
 
@@ -4943,8 +4946,8 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
     SDValue Val = SDValue(Src.getNode(), Src.getResNo() + i);
     if (MemVTs[i] != ValueVTs[i])
       Val = DAG.getPtrExtOrTrunc(Val, dl, MemVTs[i]);
-    SDValue St =
-        DAG.getStore(Root, dl, Val, Add, PtrInfo, Alignment, MMOFlags, AAInfo);
+    SDValue St = DAG.getStore(Root, dl, Val, Add, PtrInfo, Alignment, MMOFlags,
+                              AAInfo, MemCacheHint);
     Chains[ChainI] = St;
   }
 
@@ -5224,7 +5227,7 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
   MachineMemOperand *MMO =
       MF.getMachineMemOperand(MachinePointerInfo(I.getPointerOperand()), Flags,
                               MemVT.getStoreSize(), I.getAlign(), AAMDNodes(),
-                              nullptr, SSID, SuccessOrdering, FailureOrdering);
+                              nullptr, nullptr, SSID, SuccessOrdering, FailureOrdering);
 
   SDValue L = DAG.getAtomicCmpSwap(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS,
                                    dl, MemVT, VTs, InChain,
@@ -5295,7 +5298,7 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      I.getAlign(), AAMDNodes(), nullptr, SSID, Ordering);
+      I.getAlign(), AAMDNodes(), nullptr, nullptr, SSID, Ordering);
 
   SDValue L =
     DAG.getAtomic(NT, dl, MemVT, InChain,
@@ -5342,7 +5345,7 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
   const MDNode *Ranges = getRangeMetadata(I);
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      I.getAlign(), AAMDNodes(), Ranges, SSID, Order);
+      I.getAlign(), AAMDNodes(), Ranges, nullptr, SSID, Order);
 
   InChain = TLI.prepareVolatileOrAtomicLoad(InChain, dl, DAG);
 
@@ -5379,7 +5382,7 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      I.getAlign(), AAMDNodes(), nullptr, SSID, Ordering);
+      I.getAlign(), AAMDNodes(), nullptr, nullptr, SSID, Ordering);
 
   SDValue Val = getValue(I.getValueOperand());
   if (Val.getValueType() != MemVT)
@@ -5570,7 +5573,8 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
       Align Alignment = Info.align.value_or(DAG.getEVTAlign(MemVT));
       MachineMemOperand *MMO = MF.getMachineMemOperand(
           MPI, Info.flags, Size, Alignment, I.getAAMetadata(),
-          /*Ranges=*/nullptr, Info.ssid, Info.order, Info.failureOrder);
+          /*Ranges=*/nullptr, /*MemCacheHint=*/nullptr, Info.ssid, Info.order,
+          Info.failureOrder);
       MMOs.push_back(MMO);
     }
 
