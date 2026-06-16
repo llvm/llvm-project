@@ -5821,6 +5821,8 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
 
   // If the last instruction in any candidate is a terminator, then we should
   // tail call all of the candidates.
+  Register LastInstrReg =
+      RepeatedSequenceLocs[0].back().getOperand(2).getReg();
   if (RepeatedSequenceLocs[0].back().isTerminator()) {
     FrameID = MachineOutlinerTailCall;
     NumBytesToCreateFrame = Costs.FrameTailCall;
@@ -5830,8 +5832,7 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
              LastInstrOpcode == ARM::tBLXi ||
              ((LastInstrOpcode == ARM::tBLXr ||
                LastInstrOpcode == ARM::tBLXr_noip) &&
-              ARM::tcGPRRegClass.contains(
-                  RepeatedSequenceLocs[0].back().getOperand(2).getReg()))) {
+              ARM::tcGPRRegClass.contains(LastInstrReg))) {
     FrameID = MachineOutlinerThunk;
     NumBytesToCreateFrame = Costs.FrameThunk;
     SetCandidateCallInfo(MachineOutlinerThunk, Costs.CallThunk);
