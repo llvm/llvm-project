@@ -325,7 +325,8 @@ struct FoldConstantElementwise
 
     // The lambda's lifetime is bounded by the caller which holds the LinalgOp
     // owning this block.
-    return [&body, yieldedVal](const APIntOrFloatArray &inputs) -> APIntOrFloat {
+    return [&body,
+            yieldedVal](const APIntOrFloatArray &inputs) -> APIntOrFloat {
       llvm::SmallDenseMap<Value, Attribute, 8> valueMap;
 
       // Seed block arguments with input constant attributes.
