@@ -34,6 +34,7 @@ if(LLDB_BUILT_STANDALONE)
   set(CMAKE_CXX_EXTENSIONS NO)
 
   include(LLDBStandalone)
+  include(HandleDoxygen)
 endif()
 
 include(LLDBConfig)
@@ -99,10 +100,10 @@ if (LLDB_ENABLE_PYTHON)
   endif()
   if(WIN32)
     # On Windows, FindPython3 doesn't reliably expose the runtime DLL path,
-    # only the import library. CPython's DLL naming is standard, though:
-    # python3.dll for the limited API, otherwise python<MAJOR><MINOR>.dll.
-    if(LLDB_ENABLE_PYTHON_LIMITED_API)
-      set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME "python${Python3_VERSION_MAJOR}.dll")
+    # only the import library. CPython's DLL naming is standard.
+    if(MINGW)
+      set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+          "libpython${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}.dll")
     else()
       set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
           "python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}.dll")
@@ -158,7 +159,7 @@ if (LLDB_ENABLE_PYTHON)
   if(LLDB_BUILD_FRAMEWORK)
     set(lldb_python_target_dir "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/Resources/Python/lldb")
   else()
-    set(lldb_python_target_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/${LLDB_PYTHON_RELATIVE_PATH}/lldb")
+    set(lldb_python_target_dir "${LLVM_RUNTIME_OUTPUT_INTDIR}/../${LLDB_PYTHON_RELATIVE_PATH}/lldb")
   endif()
   get_target_property(lldb_python_bindings_dir swig_wrapper_python BINARY_DIR)
   finish_swig_python("lldb-python" "${lldb_python_bindings_dir}" "${lldb_python_target_dir}")

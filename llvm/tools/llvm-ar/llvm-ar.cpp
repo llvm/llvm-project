@@ -713,8 +713,11 @@ static void performReadOperation(ArchiveOperation Operation,
         });
         if (I == Members.end())
           continue;
-        if (CountParam && ++MemberCount[Name] != CountParam)
-          continue;
+        if (CountParam) {
+          std::string CountKey = normalizePath(*I);
+          if (++MemberCount[CountKey] != CountParam)
+            continue;
+        }
         Members.erase(I);
       }
 
@@ -854,14 +857,19 @@ static InsertAction computeInsertAction(ArchiveOperation Operation,
   if (Operation == QuickAppend || Members.empty())
     return IA_AddOldMember;
 
-  auto MI = find_if(Members, [Name](StringRef Path) {
+  std::string CountKey;
+  auto MI = find_if(Members, [Name, &CountKey](StringRef Path) {
+    SmallString<128> MatchPath(Path);
     if (Thin && !sys::path::is_absolute(Path)) {
       Expected<std::string> PathOrErr =
           computeArchiveRelativePath(ArchiveName, Path);
-      return comparePaths(Name, PathOrErr ? *PathOrErr : Path);
-    } else {
-      return comparePaths(Name, Path);
+      if (PathOrErr)
+        MatchPath = *PathOrErr;
     }
+    if (!comparePaths(Name, MatchPath))
+      return false;
+    CountKey = normalizePath(MatchPath);
+    return true;
   });
 
   if (MI == Members.end())
@@ -870,7 +878,7 @@ static InsertAction computeInsertAction(ArchiveOperation Operation,
   Pos = MI;
 
   if (Operation == Delete) {
-    if (CountParam && ++MemberCount[Name] != CountParam)
+    if (CountParam && ++MemberCount[CountKey] != CountParam)
       return IA_AddOldMember;
     return IA_Delete;
   }

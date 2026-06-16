@@ -91,8 +91,8 @@ void HeaderSearch::PrintStats() {
   llvm::errs() << "\n*** HeaderSearch Stats:\n"
                << FileInfo.size() << " files tracked.\n";
   unsigned NumOnceOnlyFiles = 0;
-  for (unsigned i = 0, e = FileInfo.size(); i != e; ++i)
-    NumOnceOnlyFiles += (FileInfo[i].isPragmaOnce || FileInfo[i].isImport);
+  for (const auto &[FE, HFI] : FileInfo)
+    NumOnceOnlyFiles += (HFI.isPragmaOnce || HFI.isImport);
   llvm::errs() << "  " << NumOnceOnlyFiles << " #import/#pragma once files.\n";
 
   llvm::errs() << "  " << NumIncluded << " #include/#include_next/#import.\n"
@@ -1376,10 +1376,7 @@ static void mergeHeaderFileInfo(HeaderFileInfo &HFI,
 }
 
 HeaderFileInfo &HeaderSearch::getFileInfo(FileEntryRef FE) {
-  if (FE.getUID() >= FileInfo.size())
-    FileInfo.resize(FE.getUID() + 1);
-
-  HeaderFileInfo *HFI = &FileInfo[FE.getUID()];
+  HeaderFileInfo *HFI = &FileInfo[FE];
   // FIXME: Use a generation count to check whether this is really up to date.
   if (ExternalSource && !HFI->Resolved) {
     auto ExternalHFI = ExternalSource->GetHeaderFileInfo(FE);
@@ -1400,10 +1397,7 @@ HeaderFileInfo &HeaderSearch::getFileInfo(FileEntryRef FE) {
 const HeaderFileInfo *HeaderSearch::getExistingFileInfo(FileEntryRef FE) const {
   HeaderFileInfo *HFI;
   if (ExternalSource) {
-    if (FE.getUID() >= FileInfo.size())
-      FileInfo.resize(FE.getUID() + 1);
-
-    HFI = &FileInfo[FE.getUID()];
+    HFI = &FileInfo[FE];
     // FIXME: Use a generation count to check whether this is really up to date.
     if (!HFI->Resolved) {
       auto ExternalHFI = ExternalSource->GetHeaderFileInfo(FE);
@@ -1413,8 +1407,8 @@ const HeaderFileInfo *HeaderSearch::getExistingFileInfo(FileEntryRef FE) const {
           mergeHeaderFileInfo(*HFI, ExternalHFI);
       }
     }
-  } else if (FE.getUID() < FileInfo.size()) {
-    HFI = &FileInfo[FE.getUID()];
+  } else if (auto It = FileInfo.find(FE); It != FileInfo.end()) {
+    HFI = &It->second;
   } else {
     HFI = nullptr;
   }
@@ -1422,16 +1416,11 @@ const HeaderFileInfo *HeaderSearch::getExistingFileInfo(FileEntryRef FE) const {
   return (HFI && HFI->IsValid) ? HFI : nullptr;
 }
 
-const HeaderFileInfo *
-HeaderSearch::getExistingLocalFileInfo(FileEntryRef FE) const {
-  HeaderFileInfo *HFI;
-  if (FE.getUID() < FileInfo.size()) {
-    HFI = &FileInfo[FE.getUID()];
-  } else {
-    HFI = nullptr;
-  }
-
-  return (HFI && HFI->IsValid && !HFI->External) ? HFI : nullptr;
+void HeaderSearch::forEachExistingLocalFileInfo(
+    llvm::function_ref<void(FileEntryRef, const HeaderFileInfo &)> Fn) const {
+  for (const auto &[FE, HFI] : FileInfo)
+    if (HFI.IsValid && !HFI.External)
+      Fn(FE, HFI);
 }
 
 bool HeaderSearch::isFileMultipleIncludeGuarded(FileEntryRef File) const {

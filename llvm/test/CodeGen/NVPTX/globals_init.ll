@@ -44,3 +44,12 @@
 
 ; CHECK-DAG: .b8 globalint_Gbli100[13] = {186, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15};
 @globalint_Gbli100 = global i100 u0xF000000000000000000000ABA
+
+; Non-power-of-2 vector (<3 x i32> store=12 alloc=16) in the middle of the
+; struct must keep its tail padding.
+; CHECK-DAG: .b8 nonpow2vec_field_pad[32] = {1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 254, 255, 255, 255};
+%struct.nonpow2vec_pad = type { <3 x i32>, i32 }
+@nonpow2vec_field_pad = global %struct.nonpow2vec_pad { <3 x i32> <i32 1, i32 2, i32 3>, i32 -2 }
+
+; CHECK-DAG: .b8 nonpow2vec_arr_pad[32] = {1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 5, 0, 0, 0, 6};
+@nonpow2vec_arr_pad = global [2 x <3 x i32>] [<3 x i32> <i32 1, i32 2, i32 3>, <3 x i32> <i32 4, i32 5, i32 6>]

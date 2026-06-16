@@ -25,7 +25,6 @@
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
-#include "flang/Support/Flags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
@@ -169,6 +168,8 @@ protected:
   const parser::DoConstruct *GetDoConstructIf(
       const parser::ExecutionPartConstruct &);
   Symbol *DeclareNewAccessEntity(const Symbol &, Symbol::Flag, Scope &);
+  Symbol *DeclareNewAccessEntity(
+      const SourceName &, const Symbol &, Symbol::Flag, Scope &);
   Symbol *DeclareAccessEntity(const parser::Name &, Symbol::Flag, Scope &);
   Symbol *DeclareAccessEntity(Symbol &, Symbol::Flag, Scope &);
 
@@ -990,7 +991,8 @@ private:
       Symbol::Flag::OmpIsDevicePtr, Symbol::Flag::OmpHasDeviceAddr};
 
   Symbol::Flags privateDataSharingAttributeFlags{Symbol::Flag::OmpPrivate,
-      Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate};
+      Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate,
+      Symbol::Flag::OmpLinear};
 
   Symbol::Flags ompFlagsRequireNewSymbol{Symbol::Flag::OmpPrivate,
       Symbol::Flag::OmpLinear, Symbol::Flag::OmpFirstPrivate,
@@ -1127,15 +1129,21 @@ const parser::DoConstruct *DirectiveAttributeVisitor<T>::GetDoConstructIf(
 
 template <typename T>
 Symbol *DirectiveAttributeVisitor<T>::DeclareNewAccessEntity(
-    const Symbol &object, Symbol::Flag flag, Scope &scope) {
-  assert(object.owner() != currScope());
-  auto &symbol{MakeAssocSymbol(object.name(), object, scope)};
+    const SourceName &name, const Symbol &object, Symbol::Flag flag,
+    Scope &scope) {
+  auto &symbol{MakeAssocSymbol(name, object, scope)};
   symbol.set(flag);
   if (flag == Symbol::Flag::OmpCopyIn) {
     // The symbol in copyin clause must be threadprivate entity.
     symbol.set(Symbol::Flag::OmpThreadprivate);
   }
   return &symbol;
+}
+
+template <typename T>
+Symbol *DirectiveAttributeVisitor<T>::DeclareNewAccessEntity(
+    const Symbol &object, Symbol::Flag flag, Scope &scope) {
+  return DeclareNewAccessEntity(object.name(), object, flag, scope);
 }
 
 template <typename T>
@@ -1955,6 +1963,8 @@ Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
     if (GetContext().directive == llvm::acc::ACCD_declare) {
       object.set(Symbol::Flag::AccDeclare);
       object.set(accFlag);
+      if (IsAllocatableOrObjectPointer(&object))
+        object.set(Symbol::Flag::AccDeclareAction);
     }
   }
   return &object;
@@ -2180,6 +2190,37 @@ bool OmpAttributeVisitor::Pre(const parser::OmpGroupprivateDirective &x) {
       ResolveOmpObject(*object, Symbol::Flag::OmpGroupPrivate);
     }
   }
+
+  // groupprivate carries an optional device_type clause (OpenMP 6.0). Always
+  // record it, like declare_target's enter clause, so a clause-less directive
+  // still round-trips through symbol dumps and .mod files; an absent clause
+  // means the spec default (any).
+  common::OmpDeviceType device{common::OmpDeviceType::Any};
+  if (auto *devClause{
+          parser::omp::FindClause(x.v, llvm::omp::Clause::OMPC_device_type)}) {
+    device = parser::UnwrapRef<common::OmpDeviceType>(*devClause);
+  }
+
+  unsigned version{context_.langOptions().OpenMPVersion};
+  WithOmpDeclarative::OmpClauseSet clauses;
+  clauses.set(llvm::omp::Clause::OMPC_device_type);
+  for (const parser::OmpArgument &arg : x.v.Arguments().v) {
+    if (const parser::OmpObject *object{parser::omp::GetArgumentObject(arg)}) {
+      if (const Symbol *sym{omp::GetObjectSymbol(*object)}) {
+        common::visit(
+            [&](auto &d) {
+              using TypeD = llvm::remove_cvref_t<decltype(d)>;
+              if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
+                d.set_version(version);
+                d.set_ompGroupprivate(clauses);
+                d.set_ompGroupprivate(device);
+              }
+            },
+            const_cast<Symbol &>(sym->GetUltimate()).details());
+      }
+    }
+  }
+
   return true;
 }
 
@@ -2275,7 +2316,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
             if (device) {
               clauseSet.set(llvm::omp::Clause::OMPC_device_type);
               auto &deviceType{
-                  const_cast<decltype(device) &>(d.ompDeviceType())};
+                  const_cast<decltype(device) &>(d.ompDeclTargetDeviceType())};
               deviceType = device;
             }
           } else if constexpr (std::is_same_v<GenericDetails, TypeD> ||
@@ -2564,8 +2605,8 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
           lastDeclSymbol ? lastDeclSymbol : &symbol->GetUltimate();
       assert(flags.LeastElement());
       Symbol::Flag flag = *flags.LeastElement();
-      lastDeclSymbol = DeclareNewAccessEntity(
-          *hostSymbol, flag, context_.FindScope(dirContext.directiveSource));
+      lastDeclSymbol = DeclareNewAccessEntity(symbol->name(), *hostSymbol, flag,
+          context_.FindScope(dirContext.directiveSource));
       lastDeclSymbol->flags() |= flags;
       return lastDeclSymbol;
     };
@@ -2573,7 +2614,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
       if (lastDeclSymbol) {
         const Symbol *hostSymbol =
             lastDeclSymbol ? lastDeclSymbol : &symbol->GetUltimate();
-        MakeAssocSymbol(symbol->name(), *hostSymbol,
+        MakeAssocSymbol(hostSymbol->name(), *hostSymbol,
             context_.FindScope(dirContext.directiveSource));
       }
     };
@@ -2687,8 +2728,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
       // 4) not mapped target variable  -> firstprivate
       //    - i.e. implicit, but meets OpenMP specification rules for
       //    firstprivate "promotion"
-      if (enableDelayedPrivatizationStaging &&
-          IsTargetCaptureImplicitlyFirstprivatizeable(*symbol, prevDSA,
+      if (IsTargetCaptureImplicitlyFirstprivatizeable(*symbol, prevDSA,
               dataSharingAttributeFlags, dataMappingAttributeFlags,
               dirContext.defaultMap)) {
         prevDSA.set(Symbol::Flag::OmpImplicit);
@@ -2929,14 +2969,6 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
 
   const auto *name{parser::GetDesignatorNameIfDataRef(designator)};
   if (!name) {
-    // Array sections to be changed to substrings as needed
-    if (AnalyzeExpr(context_, designator)) {
-      if (std::holds_alternative<parser::Substring>(designator.u)) {
-        context_.Say(designator.source,
-            "Substrings are not allowed on OpenMP directives or clauses"_err_en_US);
-      }
-    }
-    // other checks, more TBD
     return;
   }
 
@@ -3073,7 +3105,19 @@ void OmpAttributeVisitor::PropagateOmpFlagToEquivalenceSet(
 
 void OmpAttributeVisitor::ResolveOmpCommonBlock(
     const parser::Name &name, Symbol::Flag ompFlag) {
-  if (auto *symbol{ResolveOmpCommonBlockName(&name)}) {
+  bool cbResolved{false};
+  if (name.symbol) {
+    if (auto *details{name.symbol->detailsIf<CommonBlockDetails>()}) {
+      if (!details->objects().empty()) {
+        // Common block already resolved
+        cbResolved = true;
+      }
+    }
+  }
+
+  parser::Name cbName{name};
+  Symbol *originalCB{ResolveOmpCommonBlockName(&cbName)};
+  if (auto *symbol{cbResolved ? name.symbol : originalCB}) {
     if (!dataCopyingAttributeFlags.test(ompFlag)) {
       CheckMultipleAppearances(name, *symbol, Symbol::Flag::OmpCommonBlock);
     }
@@ -3081,6 +3125,9 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
     // same meaning as if every explicit member of the common block
     // appeared in the list
     auto &details{symbol->get<CommonBlockDetails>()};
+    bool cbCloned{cbResolved && name.symbol != originalCB};
+    bool cloneCommonBlock{dataSharingAttributeFlags.test(ompFlag) && !cbCloned};
+    CommonBlockDetails cloneDetails{symbol->name()};
     for (auto [index, object] : llvm::enumerate(details.objects())) {
       if (auto *resolvedObject{ResolveOmp(*object, ompFlag, currScope())}) {
         if (dataCopyingAttributeFlags.test(ompFlag)) {
@@ -3088,13 +3135,23 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
         } else {
           AddToContextObjectWithExplicitDSA(*resolvedObject, ompFlag);
         }
-        details.replace_object(*resolvedObject, index);
+        if (cloneCommonBlock) {
+          cloneDetails.add_object(*resolvedObject);
+        } else {
+          details.replace_object(*resolvedObject, index);
+        }
 
         // Propagate the flag to symbols in the equivalence set
         if (ompFlag == Symbol::Flag::OmpThreadprivate) {
           PropagateOmpFlagToEquivalenceSet(*resolvedObject, ompFlag);
         }
       }
+    }
+    if (cloneCommonBlock) {
+      name.symbol = &currScope().MakeSymbol(
+          symbol->name(), symbol->attrs(), std::move(cloneDetails));
+    } else {
+      name.symbol = symbol;
     }
   } else {
     context_.Say(name.source, // 2.15.3
@@ -3262,6 +3319,8 @@ void OmpAttributeVisitor::CheckObjectIsPrivatizable(
     clauseName = "FIRSTPRIVATE";
   } else if (ompFlag == Symbol::Flag::OmpLastPrivate) {
     clauseName = "LASTPRIVATE";
+  } else if (ompFlag == Symbol::Flag::OmpLinear) {
+    clauseName = "LINEAR";
   }
 
   if (SymbolOrEquivalentIsInNamelist(symbol)) {
