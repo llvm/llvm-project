@@ -92,45 +92,6 @@ static bool areBinOpsSwapped(GenericOp genericOp) {
 // It is not possible to represent above as named op.
 // e.g. linalg.batch_matmul(%A, %B :  tensor<20x20x20xf32>, ...) is
 // not  the same as linalg.generic above.
-namespace {
-enum class IndexMatchResult {
-  Match = 0,  // identity map.
-  Transposed, // transposed map.
-  Mismatch    // none of the above.
-};
-
-// Checks whether the input Affine `map` contains two consecutive dims that
-// can be interpreted as accessing a 2D matrix. It is assumed that the row
-// column dimension are adjacent axis (in this order) and start at
-// `rowDimIdx` in the input map.
-//
-//  e.g. consider A matrix in `C[M,N] = A[M,K] * B[K,N]`. We will check
-//  whether the map of A is identity (match), transposed, or something
-//  completely different (mis-match). Similar for B and C.
-static IndexMatchResult matchOperandMap(AffineMap map, unsigned rowDimIdx,
-                                        unsigned expectedPosOfRowDim,
-                                        unsigned expectedPosOfColDim) {
-  // Get the matrix multiply indices. They are past the batch indices.
-  auto exprOfRowDim = map.getResults()[rowDimIdx];
-  auto exprOfColDim = map.getResults()[rowDimIdx + 1];
-
-  // They should be pure dimension ids.
-  if (exprOfRowDim.getKind() != AffineExprKind::DimId ||
-      exprOfColDim.getKind() != AffineExprKind::DimId)
-    return IndexMatchResult::Mismatch;
-
-  auto posRowDim = cast<AffineDimExpr>(exprOfRowDim).getPosition();
-  auto posColDim = cast<AffineDimExpr>(exprOfColDim).getPosition();
-
-  if (expectedPosOfRowDim == posRowDim && expectedPosOfColDim == posColDim)
-    return IndexMatchResult::Match;
-
-  if (expectedPosOfRowDim == posColDim && expectedPosOfColDim == posRowDim)
-    return IndexMatchResult::Transposed;
-
-  return IndexMatchResult::Mismatch;
-}
-
 // Replaces genericOp with `NamedOpTy` op, supplied as a template arg.
 // All the variants expressed as pseudo regular expression:
 // `linalg.{batch_}?matmul` have same number of ins/out, so it's easy to
@@ -152,12 +113,8 @@ static LinalgOp replaceWithMatmulVariant(RewriterBase &rewriter, GenericOp op,
 
   // Set the original generic's maps to preserve operand indexing semantics like
   // transposition.
-  SmallVector<Attribute, 3> indexingMapsAttrVal =
-      llvm::map_to_vector(indexingMaps, [](AffineMap map) -> Attribute {
-        return AffineMapAttr::get(map);
-      });
   auto indexingMapsAttr = rewriter.getNamedAttr(
-      "indexing_maps", rewriter.getArrayAttr(indexingMapsAttrVal));
+      "indexing_maps", rewriter.getAffineMapArrayAttr(indexingMaps));
   attributes.push_back(indexingMapsAttr);
 
   LinalgOp namedOp = rewriter.replaceOpWithNewOp<NamedOpTy>(
@@ -252,104 +209,18 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
     return replaceWithMatmulVariant<ContractOp>(
         rewriter, genericOp, castTy, genericOp.getIndexingMapsArray());
 
-  // Further checks for named variants.
-  //
-  // Linalg generic contraction can be across multiple axis e.g.
-  // ```
-  //      linalg.generic
-  //           {indexing_maps = [affine_map<(m, n, k1, k2) -> (m, k1, k2)>,
-  //                             affine_map<(m, n, k1, k2) -> (k2, k1, n)>,
-  //                             affine_map<(m, n, k1, k2) -> (m, n)>],
-  //           iterator_types = ["parallel", "parallel",
-  //                             "reduction", "reduction"]}
-  //           ins(%A, %B : tensor<10x20x30xf32>, tensor<30x20x40xf32>)
-  //           outs(%C : tensor<10x40xf32>) {
-  //           ^bb0(%a: f32, %b: f32, %c: f32):
-  //                 %1 = arith.mulf %a, %b : f32
-  //                 %2 = arith.addf %c, %1 : f32
-  //                 linalg.yield %2 : f32
-  //      } -> tensor<10x40xf32>
-  //  ```
-  //  In above contraction, there are two reduction dimensions {k1, k2}
-  //  and although a valid linalg contraction, it is not a named-op
-  //  matrix multiply kind. Therefore, reject multi-dim reduction.
-  auto res = inferContractionDims(genericOp);
-  if (!succeeded(res))
+  FailureOr<SmallVector<AffineMap, 3>> namedOpMaps =
+      inferMatmulLikeIndexingMaps(genericOp);
+  if (failed(namedOpMaps))
     return failure();
-  auto dims = *res;
-  if (dims.m.size() != 1 || dims.n.size() != 1 || dims.k.size() != 1)
-    return failure();
-
-  // Check rank of operands
-  auto indexingMaps = genericOp.getIndexingMapsArray();
-  if (llvm::any_of(indexingMaps, [&dims](AffineMap m) {
-        return m.getResults().size() !=
-               dims.batch.size() + 2 /* any two of {m,n,k} */;
-      }))
-    return failure();
-
-  auto numOfBatchDims = dims.batch.size();
-  if (indexingMaps[0].getNumDims() != numOfBatchDims + 3)
-    return failure();
-
-  if (numOfBatchDims) {
-    // Each operand in a linalg generic contraction  could express different
-    // permutations for its batch dimension. But for named op it must be
-    // identity since separate maps are not specified.
-    if (llvm::any_of(indexingMaps, [numOfBatchDims](AffineMap m) {
-          for (unsigned i = 0; i < numOfBatchDims; ++i) {
-            auto expr = m.getResults()[i];
-            if (expr.getKind() != AffineExprKind::DimId ||
-                cast<AffineDimExpr>(expr).getPosition() != i)
-              return true;
-          }
-          return false;
-        }))
-      return failure();
-  }
-
-  auto a =
-      matchOperandMap(indexingMaps[0], numOfBatchDims, dims.m[0], dims.k[0]);
-  auto b =
-      matchOperandMap(indexingMaps[1], numOfBatchDims, dims.k[0], dims.n[0]);
-  auto c =
-      matchOperandMap(indexingMaps[2], numOfBatchDims, dims.m[0], dims.n[0]);
-
-  if (llvm::is_contained({a, b, c}, IndexMatchResult::Mismatch))
-    return failure();
-
-  // Build indexing maps for the named op in its canonical dimension ordering
-  auto *ctx = genericOp.getContext();
-  unsigned numLoopDims = numOfBatchDims + 3;
-  unsigned mIdx = numOfBatchDims;
-  unsigned nIdx = mIdx + 1;
-  unsigned kIdx = mIdx + 2;
-
-  // TODO: add support for indexing_maps with broadcasts.
-  auto makeMap = [&](IndexMatchResult match, unsigned rowIdx, unsigned colIdx) {
-    SmallVector<unsigned> tensorDims;
-    for (unsigned i = 0; i < numOfBatchDims; ++i)
-      tensorDims.push_back(i);
-    if (match == IndexMatchResult::Transposed)
-      llvm::append_values(tensorDims, colIdx, rowIdx);
-    else
-      llvm::append_values(tensorDims, rowIdx, colIdx);
-    return AffineMap::getMultiDimMapWithTargets(numLoopDims, tensorDims, ctx);
-  };
-
-  auto mapA = makeMap(a, mIdx, kIdx);
-  auto mapB = makeMap(b, kIdx, nIdx);
-  auto mapC = makeMap(c, mIdx, nIdx);
-
-  SmallVector<AffineMap> namedOpMaps = {mapA, mapB, mapC};
 
   // Codegen the different matmul variants.
-  if (numOfBatchDims) {
+  if ((*namedOpMaps)[0].getNumDims() > 3) {
     return replaceWithMatmulVariant<BatchMatmulOp>(rewriter, genericOp, castTy,
-                                                   namedOpMaps);
+                                                   *namedOpMaps);
   }
   return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp, castTy,
-                                            namedOpMaps);
+                                            *namedOpMaps);
 }
 
 /// Utility to specialize a `genericOp` with a convolution op of type `ConvOpTy`
@@ -446,8 +317,6 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
 #undef CONV_OP_SPECIALIZER
   return failure();
 }
-
-} // namespace
 
 //===----------------------------------------------------------------------===//
 // Categorize linalg generic to named op where possible.

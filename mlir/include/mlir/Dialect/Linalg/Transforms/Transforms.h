@@ -45,6 +45,12 @@ enum class WinogradConv2DFmr : uint32_t;
 /// Return vector::CombiningKind for the given op.
 std::optional<vector::CombiningKind> getCombinerOpKind(Operation *combinerOp);
 
+/// Return the canonical matmul-like indexing maps for `linalgOp` if it has the
+/// operand count, projected-permutation maps, and contraction dimensions needed
+/// to represent it as `linalg.matmul` or `linalg.batch_matmul`.
+FailureOr<SmallVector<AffineMap, 3>>
+inferMatmulLikeIndexingMaps(LinalgOp linalgOp);
+
 //===----------------------------------------------------------------------===//
 // Bufferization-related transforms.
 //===----------------------------------------------------------------------===//

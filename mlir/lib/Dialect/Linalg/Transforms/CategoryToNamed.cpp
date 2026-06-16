@@ -23,30 +23,6 @@ using namespace mlir::linalg;
 
 #define DEBUG_TYPE "linalg-category-to-named"
 
-namespace {
-
-enum class IndexMatchResult { Match = 0, Transposed, Mismatch };
-
-static IndexMatchResult matchOperandMap(AffineMap map, unsigned rowDimIdx,
-                                        unsigned expectedPosOfRowDim,
-                                        unsigned expectedPosOfColDim) {
-  auto exprOfRowDim = map.getResults()[rowDimIdx];
-  auto exprOfColDim = map.getResults()[rowDimIdx + 1];
-
-  if (exprOfRowDim.getKind() != AffineExprKind::DimId ||
-      exprOfColDim.getKind() != AffineExprKind::DimId)
-    return IndexMatchResult::Mismatch;
-
-  auto posRowDim = cast<AffineDimExpr>(exprOfRowDim).getPosition();
-  auto posColDim = cast<AffineDimExpr>(exprOfColDim).getPosition();
-
-  if (expectedPosOfRowDim == posRowDim && expectedPosOfColDim == posColDim)
-    return IndexMatchResult::Match;
-  if (expectedPosOfRowDim == posColDim && expectedPosOfColDim == posRowDim)
-    return IndexMatchResult::Transposed;
-  return IndexMatchResult::Mismatch;
-}
-
 template <typename NamedOpTy>
 static LogicalResult replaceElementwiseOp(ElementwiseOp op,
                                           PatternRewriter &rewriter) {
@@ -73,11 +49,7 @@ static LogicalResult replaceContractOp(ContractOp op, PatternRewriter &rewriter,
         "cast", TypeFnAttr::get(rewriter.getContext(), op.getCast())));
   }
 
-  SmallVector<Attribute> indexingMapsAttrVal =
-      llvm::map_to_vector(indexingMaps, [](AffineMap map) -> Attribute {
-        return AffineMapAttr::get(map);
-      });
-  auto indexingMapsAttr = rewriter.getArrayAttr(indexingMapsAttrVal);
+  auto indexingMapsAttr = rewriter.getAffineMapArrayAttr(indexingMaps);
   if (!NamedOpTy::isDefaultIndexingMaps(indexingMapsAttr)) {
     attrs.push_back(rewriter.getNamedAttr("indexing_maps", indexingMapsAttr));
   }
@@ -150,80 +122,17 @@ static LogicalResult specializeElementwiseOp(ElementwiseOp op,
 
 static LogicalResult specializeContractOp(ContractOp op,
                                           PatternRewriter &rewriter) {
-  if (op.getNumDpsInputs() != 2 || op.getNumDpsInits() != 1)
+  FailureOr<SmallVector<AffineMap, 3>> namedOpMaps =
+      inferMatmulLikeIndexingMaps(op);
+  if (failed(namedOpMaps))
     return failure();
 
-  // Named matmul-like ops only admit permutation-style indexing maps.
-  auto indexingMaps = op.getIndexingMapsArray();
-  if (llvm::any_of(indexingMaps,
-                   [](AffineMap map) { return !map.isProjectedPermutation(); }))
-    return failure();
-
-  // Restrict the contraction to the matmul family shape: one M, one N, one K,
-  // plus an optional prefix of batch dimensions.
-  auto res = inferContractionDims(op);
-  if (failed(res))
-    return failure();
-  auto dims = *res;
-  if (dims.m.size() != 1 || dims.n.size() != 1 || dims.k.size() != 1)
-    return failure();
-
-  if (llvm::any_of(indexingMaps, [&dims](AffineMap map) {
-        return map.getResults().size() !=
-               dims.batch.size() + 2 /* any two of {m, n, k} */;
-      }))
-    return failure();
-
-  auto numBatchDims = dims.batch.size();
-  if (indexingMaps[0].getNumDims() != numBatchDims + 3)
-    return failure();
-
-  // Batch dimensions must stay in canonical order for named batch_matmul.
-  if (numBatchDims && llvm::any_of(indexingMaps, [numBatchDims](AffineMap map) {
-        for (unsigned i = 0; i < numBatchDims; ++i) {
-          auto expr = map.getResults()[i];
-          if (expr.getKind() != AffineExprKind::DimId ||
-              cast<AffineDimExpr>(expr).getPosition() != i)
-            return true;
-        }
-        return false;
-      }))
-    return failure();
-
-  auto a = matchOperandMap(indexingMaps[0], numBatchDims, dims.m[0], dims.k[0]);
-  auto b = matchOperandMap(indexingMaps[1], numBatchDims, dims.k[0], dims.n[0]);
-  auto c = matchOperandMap(indexingMaps[2], numBatchDims, dims.m[0], dims.n[0]);
-  if (llvm::is_contained({a, b, c}, IndexMatchResult::Mismatch))
-    return failure();
-
-  auto *ctx = op.getContext();
-  unsigned numLoopDims = numBatchDims + 3;
-  unsigned mIdx = numBatchDims;
-  unsigned nIdx = mIdx + 1;
-  unsigned kIdx = mIdx + 2;
-
-  // Rebuild indexing maps in the named op's canonical loop order while
-  // preserving legal operand transpositions.
-  auto makeMap = [&](IndexMatchResult match, unsigned rowIdx, unsigned colIdx) {
-    SmallVector<unsigned> tensorDims;
-    for (unsigned i = 0; i < numBatchDims; ++i)
-      tensorDims.push_back(i);
-    if (match == IndexMatchResult::Transposed)
-      llvm::append_values(tensorDims, colIdx, rowIdx);
-    else
-      llvm::append_values(tensorDims, rowIdx, colIdx);
-    return AffineMap::getMultiDimMapWithTargets(numLoopDims, tensorDims, ctx);
-  };
-
-  auto mapA = makeMap(a, mIdx, kIdx);
-  auto mapB = makeMap(b, kIdx, nIdx);
-  auto mapC = makeMap(c, mIdx, nIdx);
-  SmallVector<AffineMap, 3> namedOpMaps = {mapA, mapB, mapC};
-
-  if (numBatchDims)
-    return replaceContractOp<BatchMatmulOp>(op, rewriter, namedOpMaps);
-  return replaceContractOp<MatmulOp>(op, rewriter, namedOpMaps);
+  if ((*namedOpMaps)[0].getNumDims() > 3)
+    return replaceContractOp<BatchMatmulOp>(op, rewriter, *namedOpMaps);
+  return replaceContractOp<MatmulOp>(op, rewriter, *namedOpMaps);
 }
+
+namespace {
 
 struct ElementwiseToNamedPattern : public OpRewritePattern<ElementwiseOp> {
   using OpRewritePattern<ElementwiseOp>::OpRewritePattern;

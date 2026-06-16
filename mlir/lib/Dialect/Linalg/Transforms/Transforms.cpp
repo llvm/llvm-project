@@ -43,6 +43,109 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
+namespace {
+enum class IndexMatchResult {
+  Match = 0,  // identity map.
+  Transposed, // transposed map.
+  Mismatch    // none of the above.
+};
+} // namespace
+
+// Checks whether the input Affine `map` contains two consecutive dims that
+// can be interpreted as accessing a 2D matrix. It is assumed that the row and
+// column dimensions are adjacent axes (in this order) and start at `rowDimIdx`
+// in the input map.
+static IndexMatchResult matchOperandMap(AffineMap map, unsigned rowDimIdx,
+                                        unsigned expectedPosOfRowDim,
+                                        unsigned expectedPosOfColDim) {
+  auto exprOfRowDim = map.getResults()[rowDimIdx];
+  auto exprOfColDim = map.getResults()[rowDimIdx + 1];
+
+  if (exprOfRowDim.getKind() != AffineExprKind::DimId ||
+      exprOfColDim.getKind() != AffineExprKind::DimId)
+    return IndexMatchResult::Mismatch;
+
+  auto posRowDim = cast<AffineDimExpr>(exprOfRowDim).getPosition();
+  auto posColDim = cast<AffineDimExpr>(exprOfColDim).getPosition();
+
+  if (expectedPosOfRowDim == posRowDim && expectedPosOfColDim == posColDim)
+    return IndexMatchResult::Match;
+
+  if (expectedPosOfRowDim == posColDim && expectedPosOfColDim == posRowDim)
+    return IndexMatchResult::Transposed;
+
+  return IndexMatchResult::Mismatch;
+}
+
+FailureOr<SmallVector<AffineMap, 3>>
+mlir::linalg::inferMatmulLikeIndexingMaps(LinalgOp linalgOp) {
+  if (linalgOp.getNumDpsInputs() != 2 || linalgOp.getNumDpsInits() != 1)
+    return failure();
+
+  auto indexingMaps = linalgOp.getIndexingMapsArray();
+  if (llvm::any_of(indexingMaps,
+                   [](AffineMap map) { return !map.isProjectedPermutation(); }))
+    return failure();
+
+  auto res = inferContractionDims(linalgOp);
+  if (failed(res))
+    return failure();
+  auto dims = *res;
+  if (dims.m.size() != 1 || dims.n.size() != 1 || dims.k.size() != 1)
+    return failure();
+
+  if (llvm::any_of(indexingMaps, [&dims](AffineMap map) {
+        return map.getResults().size() !=
+               dims.batch.size() + 2 /* any two of {m, n, k} */;
+      }))
+    return failure();
+
+  unsigned numBatchDims = dims.batch.size();
+  if (indexingMaps[0].getNumDims() != numBatchDims + 3)
+    return failure();
+
+  // Batch dimensions must stay in canonical order for named batch_matmul.
+  if (numBatchDims && llvm::any_of(indexingMaps, [numBatchDims](AffineMap map) {
+        for (unsigned i = 0; i < numBatchDims; ++i) {
+          auto expr = map.getResults()[i];
+          if (expr.getKind() != AffineExprKind::DimId ||
+              cast<AffineDimExpr>(expr).getPosition() != i)
+            return true;
+        }
+        return false;
+      }))
+    return failure();
+
+  auto a = matchOperandMap(indexingMaps[0], numBatchDims, dims.m[0], dims.k[0]);
+  auto b = matchOperandMap(indexingMaps[1], numBatchDims, dims.k[0], dims.n[0]);
+  auto c = matchOperandMap(indexingMaps[2], numBatchDims, dims.m[0], dims.n[0]);
+  if (llvm::is_contained({a, b, c}, IndexMatchResult::Mismatch))
+    return failure();
+
+  auto *ctx = linalgOp.getContext();
+  unsigned numLoopDims = numBatchDims + 3;
+  unsigned mIdx = numBatchDims;
+  unsigned nIdx = mIdx + 1;
+  unsigned kIdx = mIdx + 2;
+
+  // Rebuild indexing maps in the named op's canonical loop order while
+  // preserving legal operand transpositions.
+  auto makeMap = [&](IndexMatchResult match, unsigned rowIdx, unsigned colIdx) {
+    SmallVector<unsigned> tensorDims;
+    for (unsigned i = 0; i < numBatchDims; ++i)
+      tensorDims.push_back(i);
+    if (match == IndexMatchResult::Transposed)
+      llvm::append_values(tensorDims, colIdx, rowIdx);
+    else
+      llvm::append_values(tensorDims, rowIdx, colIdx);
+    return AffineMap::getMultiDimMapWithTargets(numLoopDims, tensorDims, ctx);
+  };
+
+  return SmallVector<AffineMap, 3>{makeMap(a, mIdx, kIdx),
+                                   makeMap(b, kIdx, nIdx),
+                                   makeMap(c, mIdx, nIdx)};
+}
+
 //===----------------------------------------------------------------------===//
 // Transformations exposed as functional-style API calls.
 //===----------------------------------------------------------------------===//

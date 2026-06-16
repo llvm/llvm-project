@@ -42,7 +42,7 @@ func.func @elementwise_binary(%arg0: tensor<?x?xf32>,
 
 // This stays as `linalg.elementwise` because named elementwise ops do not
 // support user-defined indexing maps.
-func.func @elementwise_non_default_maps(%arg0: tensor<?x?xf32>,
+func.func @negative_elementwise_non_default_maps(%arg0: tensor<?x?xf32>,
     %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.elementwise
       kind = #linalg.elementwise_kind<exp>
@@ -54,7 +54,7 @@ func.func @elementwise_non_default_maps(%arg0: tensor<?x?xf32>,
 
 // CHECK-DAG: #[[$ELT_MAP_IN:.+]] = affine_map<(d0, d1) -> (d1, d0)>
 // CHECK-DAG: #[[$ELT_MAP_OUT:.+]] = affine_map<(d0, d1) -> (d0, d1)>
-// CHECK-LABEL: @elementwise_non_default_maps
+// CHECK-LABEL: @negative_elementwise_non_default_maps
 // CHECK: linalg.elementwise
 // CHECK-SAME: indexing_maps = [#[[$ELT_MAP_IN]], #[[$ELT_MAP_OUT]]]
 // CHECK-NOT: linalg.exp
@@ -191,7 +191,7 @@ func.func @contract_to_batch_matmul_transpose_a(%arg0: tensor<2x8x16xf32>,
 // this stays as `linalg.contract` because the batch dimension is
 // not in identity position across the operand/result maps. Named
 // `linalg.batch_matmul` does not model such non-identity batch permutations.
-func.func @contract_non_identity_batch(%arg0: tensor<4x2x8xf32>,
+func.func @negative_contract_non_identity_batch(%arg0: tensor<4x2x8xf32>,
     %arg1: tensor<2x8x16xf32>, %arg2: tensor<2x4x16xf32>)
     -> tensor<2x4x16xf32> {
   %0 = linalg.contract indexing_maps = [#non_identity_batch_a, #non_identity_batch_b, #non_identity_batch_c]
@@ -204,7 +204,7 @@ func.func @contract_non_identity_batch(%arg0: tensor<4x2x8xf32>,
 // CHECK-DAG: #[[$NON_ID_BATCH_B:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
 // CHECK-DAG: #[[$NON_ID_BATCH_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
 
-// CHECK-LABEL: @contract_non_identity_batch
+// CHECK-LABEL: @negative_contract_non_identity_batch
 // CHECK-SAME: %[[A:.+]]: tensor<4x2x8xf32>, %[[B:.+]]: tensor<2x8x16xf32>,
 // CHECK-SAME: %[[OUT:.+]]: tensor<2x4x16xf32>) -> tensor<2x4x16xf32>
 // CHECK: linalg.contract
@@ -220,7 +220,7 @@ func.func @contract_non_identity_batch(%arg0: tensor<4x2x8xf32>,
 // this stays as `linalg.contract` because it has two reduction
 // dimensions. Named matmul-like ops require exactly one M dim, one N dim, and
 // one K dim.
-func.func @contract_multi_reduction(%arg0: tensor<10x20x30xf32>,
+func.func @negative_contract_multi_reduction(%arg0: tensor<10x20x30xf32>,
     %arg1: tensor<30x20x40xf32>,
     %arg2: tensor<10x40xf32>) -> tensor<10x40xf32> {
   %0 = linalg.contract indexing_maps = [#map_d, #map_e, #map_f]
@@ -229,7 +229,7 @@ func.func @contract_multi_reduction(%arg0: tensor<10x20x30xf32>,
   return %0 : tensor<10x40xf32>
 }
 
-// CHECK-LABEL: @contract_multi_reduction
+// CHECK-LABEL: @negative_contract_multi_reduction
 // CHECK-NOT: linalg.matmul
 // CHECK: linalg.contract
 // CHECK-SAME: indexing_maps = [#{{.+}}, #{{.+}}, #{{.+}}]

@@ -70,7 +70,7 @@ def LinalgMorphOpsPass : Pass<"linalg-morph-ops"> {
 
     // Specialization path is not guaranteed.
     Option<"categoryToNamed", "category-to-named", "bool", /*default=*/"false",
-           "convert category ops to equivalent named ops where possible">,
+           "convert category ops to equivalent named ops">,
     Option<"genericToNamed", "generic-to-named", "bool", /*default=*/"false",
            "convert linalg.generic to equivalent named ops">,
     Option<"genericToCategory", "generic-to-category", "bool", /*default=*/"false",
