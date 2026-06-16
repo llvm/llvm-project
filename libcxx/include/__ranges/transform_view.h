@@ -258,14 +258,14 @@ public:
     return __tmp;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator+=(difference_type __n)
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator+=(difference_type __n)
     requires random_access_range<_Base>
   {
     __current_ += __n;
     return *this;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator-=(difference_type __n)
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator-=(difference_type __n)
     requires random_access_range<_Base>
   {
     __current_ -= __n;
