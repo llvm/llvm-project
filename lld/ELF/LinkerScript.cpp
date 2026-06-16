@@ -421,6 +421,15 @@ void LinkerScript::assignSymbol(SymbolAssignment *cmd, bool inSec) {
   cmd->sym->type = v.type;
 }
 
+bool LinkerScript::matchesFile(const InputSectionDescription *desc,
+                               InputSectionBase *sec) const {
+  if (StringRef filename = sec->name.split("^^").second; !filename.empty()) {
+    if (const InputFile *file = ltoInputFileMapping.lookup(filename))
+      return desc->matchesFile(*file);
+  }
+  return desc->matchesFile(*sec->file);
+}
+
 bool InputSectionDescription::matchesFile(const InputFile &file) const {
   if (filePat.isTrivialMatchAll())
     return true;
@@ -437,6 +446,15 @@ bool InputSectionDescription::matchesFile(const InputFile &file) const {
   }
 
   return matchesFileCache->second;
+}
+
+bool LinkerScript::excludesFile(const SectionPattern *pat,
+                                InputSectionBase *sec) const {
+  if (StringRef filename = sec->name.split("^^").second; !filename.empty()) {
+    if (const InputFile *file = ltoInputFileMapping.lookup(filename))
+      return pat->excludesFile(*file);
+  }
+  return pat->excludesFile(*sec->file);
 }
 
 bool SectionPattern::excludesFile(const InputFile &file) const {
@@ -458,6 +476,20 @@ bool LinkerScript::shouldKeep(InputSectionBase *s) {
             (s->flags & id->withFlags) == id->withFlags &&
             (s->flags & id->withoutFlags) == 0)
           return true;
+  return false;
+}
+
+bool LinkerScript::shouldKeep(StringRef name, InputFile *file) {
+  for (InputSectionDescription *id : keptSections) {
+    if (id->matchesFile(*file)) {
+      for (SectionPattern &p : id->sectionPatterns) {
+        if (p.sectionPat.match(name)) {
+          // FIXME: Also check flags?  Need to synthesize.
+          return true;
+        }
+      }
+    }
+  }
   return false;
 }
 
@@ -528,6 +560,28 @@ static void sortInputSections(Ctx &ctx, MutableArrayRef<InputSectionBase *> vec,
   sortSections(vec, outer);
 }
 
+StringRef LinkerScript::mapLTOSectionName(StringRef inputSection,
+                                          InputFile *file) {
+  for (auto *cmd : sectionCommands) {
+    if (auto *os = dyn_cast<OutputDesc>(cmd)) {
+      for (auto *innercmd : os->osec.commands) {
+        if (auto *isd = dyn_cast<InputSectionDescription>(innercmd)) {
+          for (const SectionPattern &pat : isd->sectionPatterns) {
+            if (!pat.sectionPat.match(inputSection))
+              continue;
+
+            if (!isd->matchesFile(*file) || pat.excludesFile(*file))
+              continue;
+
+            return os->osec.name;
+          }
+        }
+      }
+    }
+  }
+  return "";
+}
+
 // Compute and remember which sections the InputSectionDescription matches.
 SmallVector<InputSectionBase *, 0>
 LinkerScript::computeInputSections(const InputSectionDescription *cmd,
@@ -581,10 +635,10 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
           continue;
 
         // Check the name early to improve performance in the common case.
-        if (!pat.sectionPat.match(sec->name))
+        if (!pat.sectionPat.match(sec->name.split("^^").first))
           continue;
 
-        if (!cmd->matchesFile(*sec->file) || pat.excludesFile(*sec->file) ||
+        if (!matchesFile(cmd, sec) || excludesFile(&pat, sec) ||
             !flagsMatch(sec))
           continue;
 

@@ -362,6 +362,7 @@ struct Config {
   bool ltoPGOWarnMismatch;
   bool ltoDebugPassManager;
   bool ltoEmitAsm;
+  bool ltoLinkerScripts;
   bool ltoUniqueBasicBlockSectionNames;
   bool ltoValidateAllVtablesHaveTypeInfos;
   bool ltoWholeProgramVisibility;

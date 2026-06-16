@@ -9754,3 +9754,10 @@ def wasm_opt : Flag<["--"], "wasm-opt">,
   Group<m_Group>,
   HelpText<"Enable the wasm-opt optimizer (default)">,
   MarshallingInfoNegativeFlag<LangOpts<"NoWasmOpt">>;
+
+defm lto_linker_scripts : BoolFOption<"lto-linker-scripts",
+  CodeGenOpts<"LTOLinkerScripts">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Emit bitcode annotations to preserve linker script semantics "
+          "during LTO.">,
+  NegFlag<SetFalse, [], [ClangOption]>>;

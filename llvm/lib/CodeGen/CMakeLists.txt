@@ -27,6 +27,7 @@ add_llvm_component_library(LLVMCodeGen
   AllocationOrder.cpp
   Analysis.cpp
   AssignmentTrackingAnalysis.cpp
+  AssignSectionsToGlobals.cpp
   AtomicExpandPass.cpp
   BasicTargetTransformInfo.cpp
   BranchFolding.cpp

@@ -1470,6 +1470,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
                                             OPT_no_lto_pgo_warn_mismatch, true);
   ctx.arg.ltoDebugPassManager = args.hasArg(OPT_lto_debug_pass_manager);
   ctx.arg.ltoEmitAsm = args.hasArg(OPT_lto_emit_asm);
+  ctx.arg.ltoLinkerScripts =
+      args.hasFlag(OPT_lto_linker_scripts, OPT_no_lto_linker_scripts, false);
   ctx.arg.ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
   ctx.arg.ltoWholeProgramVisibility =
       args.hasFlag(OPT_lto_whole_program_visibility,

@@ -1,0 +1,107 @@
+# REQUIRES: aarch64
+
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-as %t/1.ll -o %t/1.o
+# RUN: mkdir -p %t/archive
+# RUN: llvm-as %t/2.ll -o %t/archive/2.o
+# RUN: llvm-ar cr %t/lib1.a %t/archive/2.o
+# RUN: not ld.lld -m aarch64elf %t/1.o -T %t/script.t %t/lib1.a -e main \
+# RUN:   -plugin-opt=-function-sections -o %t/1.out --error-limit 0 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=REGULAR
+# RUN: ld.lld -m aarch64elf %t/1.o -T %t/script.gc %t/lib1.a --gc-sections -o %t/2.out --entry=main
+# RUN: not ld.lld -m aarch64elf %t/1.o -T %t/script.dbg %t/lib1.a -e main -o %t/3.out 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=DBG
+
+# Test normal cross-reference prohibition between commons and sections.
+# REGULAR: .text.main{{.*}}: prohibited cross reference from '.text' to '.text.baz' in '.baz'
+
+# Test a cross reference between debug and text. The script keeps .debug_info as orphan,
+# which also checks orphan accounting for NOCROSSREFS.
+# DBG: .debug_info{{.*}}: prohibited cross reference from '.debug_info' to '.text.main' in '.text'
+
+#--- 1.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "aarch64-unknown-linux-gnu"
+
+@common = common global i32 0, align 4
+@another_common = external global [100 x i32], align 16
+@z = external global i32, align 4
+@x = global ptr @z, section ".data.x", align 8
+
+define i32 @baz() noinline optnone section ".text.baz" !dbg !8 {
+entry:
+  %v = load i32, ptr @z, align 4, !dbg !10
+  ret i32 %v, !dbg !11
+}
+
+define i32 @main() noinline optnone section ".text.main" !dbg !12 {
+entry:
+  store i32 1, ptr @common, align 4, !dbg !13
+  %p = getelementptr inbounds [100 x i32], ptr @another_common, i64 0, i64 0, !dbg !14
+  store i32 1, ptr %p, align 4, !dbg !14
+  %a = load i32, ptr @common, align 4, !dbg !15
+  %b = load i32, ptr %p, align 4, !dbg !16
+  %c = add i32 %a, %b, !dbg !17
+  %d = call i32 @baz(), !dbg !18
+  %e = add i32 %c, %d, !dbg !19
+  ret i32 %e, !dbg !20
+}
+
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!4, !5}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C11, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
+!1 = !DIFile(filename: "1.c", directory: "/")
+!2 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+!3 = !DISubroutineType(types: !{!2})
+!4 = !{i32 2, !"Dwarf Version", i32 4}
+!5 = !{i32 2, !"Debug Info Version", i32 3}
+!8 = distinct !DISubprogram(name: "baz", scope: !1, file: !1, line: 6, type: !3, scopeLine: 6, spFlags: DISPFlagDefinition, unit: !0)
+!10 = !DILocation(line: 6, column: 24, scope: !8)
+!11 = !DILocation(line: 6, column: 17, scope: !8)
+!12 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 8, type: !3, scopeLine: 8, spFlags: DISPFlagDefinition, unit: !0)
+!13 = !DILocation(line: 9, column: 3, scope: !12)
+!14 = !DILocation(line: 10, column: 3, scope: !12)
+!15 = !DILocation(line: 11, column: 10, scope: !12)
+!16 = !DILocation(line: 11, column: 19, scope: !12)
+!17 = !DILocation(line: 11, column: 17, scope: !12)
+!18 = !DILocation(line: 11, column: 36, scope: !12)
+!19 = !DILocation(line: 11, column: 28, scope: !12)
+!20 = !DILocation(line: 11, column: 3, scope: !12)
+
+#--- 2.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "aarch64-unknown-linux-gnu"
+
+@z = global i32 1, section ".data.z", align 4
+@another_common = global [100 x i32] zeroinitializer, section ".sdata.another_common", align 16
+
+#--- script.t
+NOCROSSREFS(  .baz .text .bss .data .xsection .zsection)
+SECTIONS {
+  .zsection : { *(.data.z) }
+  .xsection : { *(.data.x) }
+  .baz : { *(.text.baz) }
+  .text : { *(.text.*) }
+  .bss : { *(.sdata*) }
+}
+
+#--- script.gc
+NOCROSSREFS(.text .xsection)
+SECTIONS {
+  .zsection : { *(.data.z) }
+  .xsection : { *(.data.x) }
+  .baz : { *(.text.baz) }
+  .text : { *(.text.*) }
+  .bss : { *(.sdata*) }
+}
+
+#--- script.dbg
+NOCROSSREFS(.text .debug_info)
+SECTIONS {
+  .zsection : { *(.data.z) }
+  .xsection : { *(.data.x) }
+  .baz : { *(.text.baz) }
+  .text : { *(.text.*) }
+  .bss : { *(.sdata*) }
+}

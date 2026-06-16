@@ -1,0 +1,46 @@
+# REQUIRES: aarch64
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-as %t/1.ll -o %t/1.o
+# RUN: llvm-as %t/2.ll -o %t/2.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux-gnu %t/3.s -o %t/3.o
+# RUN: ld.lld -m aarch64elf --lto-linker-scripts %t/1.o %t/2.o %t/3.o -T %t/script.t -o %t/out
+# RUN: llvm-readelf -S -W %t/out | FileCheck %s
+
+# CHECK: .myfoo
+# CHECK: .mybar
+
+#--- 1.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "aarch64-unknown-linux-gnu"
+
+define i32 @foo() section ".foo" {
+  ret i32 0
+}
+
+#--- 2.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "aarch64-unknown-linux-gnu"
+
+define i32 @bar() section ".foo" {
+  ret i32 0
+}
+
+#--- 3.s
+.text
+.section .text,"ax",@progbits
+.globl main
+.type main,@function
+main:
+  bl foo
+  mov x0, xzr
+  bl bar
+  mov x0, xzr
+  ret
+.size main, .-main
+
+#--- script.t
+SECTIONS {
+.myfoo : { *1.o*(.foo) }
+.mybar : { *2.o*(.foo) }
+.main : { *(.text) }
+}
