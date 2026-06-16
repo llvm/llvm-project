@@ -22,7 +22,7 @@ class SymbolContextTwoFilesTestCase(TestBase):
         self.assertTrue(module.IsValid())
         for symbol_name in ["struct1::f()", "struct2::f()"]:
             sc_list = module.FindFunctions(symbol_name, lldb.eSymbolTypeCode)
-            self.assertTrue(1, sc_list.GetSize())
+            self.assertEqual(1, sc_list.GetSize())
             symbol_address = sc_list.GetContextAtIndex(0).GetSymbol().GetStartAddress()
             self.assertTrue(symbol_address.IsValid())
             sc_by_address = module.ResolveSymbolContextForAddress(

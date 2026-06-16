@@ -54,7 +54,7 @@ class ProcessAttachTestCase(TestBase):
 
         process = target.GetProcess()
         self.assertTrue(process, PROCESS_IS_VALID)
-        self.assertTrue(process.GetState(), lldb.eStateRunning)
+        self.assertEqual(process.GetState(), lldb.eStateRunning)
 
     @skipIfWindows  # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr48806
     def test_attach_to_process_from_different_dir_by_id(self):

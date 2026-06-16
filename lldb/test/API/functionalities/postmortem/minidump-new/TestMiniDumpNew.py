@@ -503,13 +503,13 @@ class MiniDumpNewTestCase(TestBase):
         region = lldb.SBMemoryRegionInfo()
         self.assertTrue(region_info_list.GetMemoryRegionAtIndex(0, region))
         self.assertEqual(region.GetRegionBase(), 0x7FFF12A84030)
-        self.assertTrue(region.GetRegionEnd(), 0x7FFF12A84030 + 0x2FD0)
+        self.assertEqual(region.GetRegionEnd(), 0x7FFF12A84030 + 0x2FD0)
         self.assertTrue(region_info_list.GetMemoryRegionAtIndex(1, region))
         self.assertEqual(region.GetRegionBase(), 0x00007FFF12A87000)
-        self.assertTrue(region.GetRegionEnd(), 0x00007FFF12A87000 + 0x00000018)
+        self.assertEqual(region.GetRegionEnd(), 0x00007FFF12A87000 + 0x00000018)
         self.assertTrue(region_info_list.GetMemoryRegionAtIndex(2, region))
         self.assertEqual(region.GetRegionBase(), 0x00007FFF12A87018)
-        self.assertTrue(region.GetRegionEnd(), 0x00007FFF12A87018 + 0x00000400)
+        self.assertEqual(region.GetRegionEnd(), 0x00007FFF12A87018 + 0x00000400)
 
     def test_multiple_exceptions_or_signals(self):
         """Test that lldb can read the exception information from the Minidump."""
