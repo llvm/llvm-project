@@ -2412,7 +2412,7 @@ Instruction *SPIRVEmitIntrinsics::visitExtractValueInst(ExtractValueInst &I) {
   // If the aggregate result feeds a callsite whose aggregate params were
   // rewritten to i32 value-ids by SPIRVPrepareFunctions, mutate it to match.
   if (NewI->getType()->isAggregateType()) {
-    for (Use &U : NewI->uses()) {
+    for (const Use &U : NewI->uses()) {
       auto *CB = dyn_cast<CallBase>(U.getUser());
       if (!CB || !CB->isArgOperand(&U))
         continue;
