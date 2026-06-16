@@ -10,9 +10,9 @@ body:             |
   bb.0.entry:
     liveins: $r0
   
-    %4:gpr = COPY killed $r0
-    %7:dpr = VSETLNi32 undef %7, killed %4, 0, 14 /* CC::al */, $noreg
-    undef %9.dsub_0:qpr = COPY undef %10:dpr
-    %9.dsub_1:qpr = COPY killed %7
-    %12:dpr = COPY %9.dsub_0
+    %0:gpr = COPY killed $r0
+    %1:dpr = VSETLNi32 undef %1, killed %0, 0, 14 /* CC::al */, $noreg
+    undef %2.dsub_0:qpr = COPY undef %3:dpr
+    %2.dsub_1:qpr = COPY killed %1
+    %4:dpr = COPY %2.dsub_0
 ...
