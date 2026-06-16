@@ -6598,7 +6598,7 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
                 dyn_cast_or_null<VarDecl>(E->getReferencedDeclOfCallee())) {
           GD = GlobalDecl(VD);
         }
-        CGCalleeInfo CalleeInfo(FunctionType->getAs<FunctionProtoType>(), GD);
+        CGCalleeInfo CalleeInfo(FunctionType->getAs<clang::FunctionType>(), GD);
         CGCallee Callee(CalleeInfo, Result.first, Result.second);
         return Callee;
       }
@@ -6641,7 +6641,7 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
           dyn_cast_or_null<VarDecl>(E->getReferencedDeclOfCallee()))
     GD = GlobalDecl(VD);
 
-  CGCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(), GD);
+  CGCalleeInfo calleeInfo(functionType->getAs<FunctionType>(), GD);
   CGPointerAuthInfo pointerAuth = CGM.getFunctionPointerAuthInfo(functionType);
   CGCallee callee(calleeInfo, calleePtr, pointerAuth);
   return callee;

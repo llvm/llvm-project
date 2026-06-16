@@ -3405,6 +3405,7 @@ void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
       F->getFunction().hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true,
                                        /*IgnoreAssumeLikeCalls=*/true,
                                        /*IgnoreLLVMUsed=*/false))
+    // TODO: discriminate if it is from call graph logic or not                                       
     F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(FD->getType()));
 }
 
