@@ -30,7 +30,10 @@ entry:
   indirectbr ptr %ptrA, [label %loop]
 
 loop:
-  br i1 false, label %bb, label %loop
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ], [ %iv.next, %bb ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %self.latch = icmp ult i64 %iv.next, 16
+  br i1 %self.latch, label %loop, label %bb
 
 bb:
   br label %loop
@@ -57,17 +60,17 @@ side:
   br label %loop
 
 loop:
+  %iv = phi i64 [ 0, %entry ], [ 0, %side ], [ %iv.next, %loop ], [ %iv.next, %back ]
   %x = load i64, ptr %ptrB, align 8
-  br i1 false, label %back, label %loop
+  %iv.next = add nuw nsw i64 %iv, 1
+  %self.latch = icmp ult i64 %iv.next, 16
+  br i1 %self.latch, label %loop, label %back
 
 back:
   br label %loop
 }
 
 ; REMARKS:      Name:            CFGNotUnderstood
-; REMARKS-NEXT: Function:        multiple_predecessors_cond_block
-
-; REMARKS:      Name:            UnsupportedUncountableLoop
 ; REMARKS-NEXT: Function:        multiple_predecessors_cond_block
 
 ; REMARKS: --- !Missed
@@ -85,6 +88,7 @@ side:
   br label %loop
 
 loop:
+  %iv = phi i64 [ 0, %entry ], [ 0, %side ], [ %iv.next, %if.end ]
   %x = load i64, ptr %ptrB, align 8
   br i1 %cond.load, label %if.then, label %if.end
 
@@ -93,7 +97,9 @@ if.then:
   br label %if.end
 
 if.end:
-  br i1 false, label %exit, label %loop
+  %iv.next = add nuw nsw i64 %iv, 1
+  %loop.next = icmp ult i64 %iv.next, 32
+  br i1 %loop.next, label %loop, label %exit
 
 exit:
   ret void
