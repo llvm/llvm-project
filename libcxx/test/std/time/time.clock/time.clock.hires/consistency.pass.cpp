@@ -33,8 +33,9 @@ int main(int, char**)
     static_assert((std::is_same<C::period, C::duration::period>::value), "");
     static_assert((std::is_same<C::duration, C::time_point::duration>::value), "");
 
-    static_assert(std::is_same<decltype(C::is_steady), const bool>::value, "");
-    TEST_CONSTEXPR_CXX14 const bool is_steady = C::is_steady;
+    static_assert(std::is_same<decltype(C::is_steady), const bool>::value, "is_steady must be bool");
+    static_assert(!std::is_member_pointer<decltype(&C::is_steady)>::value, "is_steady must be static");
+    TEST_CONSTEXPR_CXX14 const bool is_steady = C::is_steady; // "is_steady must be constexpr"
     (void)is_steady;
     LIBCPP_ASSERT(C::is_steady);
     odr_use(C::is_steady);
