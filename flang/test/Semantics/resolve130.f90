@@ -50,3 +50,27 @@ subroutine s5
   parameter(mm=4096)
   real mm
 end
+
+! A later declaration must also match the kind of the would-be-implicit type
+! (F2023 8.6.11 p2: the declared type and type parameters must match).  'kn'
+! would be default INTEGER(4), so a later INTEGER(8) declaration is rejected.
+!CHECK: warning: 'kn' was used without (or before) being explicitly typed
+subroutine s6
+  implicit none
+  parameter(kn=4)
+!CHECK: error: The type of 'kn' has already been implicitly declared as INTEGER(4)
+  integer(8) kn
+end
+
+! When the PARAMETER initializer is incompatible with the would-be-implicit
+! type, the constant is first given that implicit type ('c' would be default
+! REAL), so the initializer conversion fails and the later CHARACTER
+! declaration additionally conflicts with the implicit type.
+!CHECK: warning: 'c' was used without (or before) being explicitly typed
+subroutine s7
+  implicit none
+!CHECK: error: Initialization expression cannot be converted to declared type of 'c' from CHARACTER(KIND=1,LEN=2_8)
+  parameter(c='hi')
+!CHECK: error: The type of 'c' has already been implicitly declared as REAL(4)
+  character(2) c
+end
