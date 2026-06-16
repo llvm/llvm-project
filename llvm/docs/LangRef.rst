@@ -2395,9 +2395,9 @@ For example:
     function. This attribute is equivalent to moving this function definition to
     a separate, optimizer-opaque, module. Any attributes on the function are
     still respected (as they would be if they remained on a function declaration
-    in this module). This attribute does *not* control inlining, which is
-    treated as a separate dimension. Add the ``noinline`` attribute as well in
-    cases where inlining should additionally be disabled.
+    in this module). This attribute does *not* control inlining or outlining.
+    Add the ``noinline`` and ``nooutline`` attributes as well in cases where
+    inlining and outlining should additionally be disabled.
 ``nomerge``
     This attribute indicates that calls to this function should never be merged
     during optimization. For example, it will prevent tail merging otherwise
