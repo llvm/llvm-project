@@ -443,14 +443,13 @@ func.func private @collapse_multiple_non_unit_dims(
     %src : memref<2x1x1x100xf32>) {
   // CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
   // CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
-  // CHECK-DAG:   %[[C0_0:.*]] = arith.constant 0 : index
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   // CHECK-NOT:   memref.reinterpret_cast
   %reinterpret_cast = memref.reinterpret_cast %src
     to offset: [0], sizes: [2, 100], strides: [100, 1]
     : memref<2x1x1x100xf32> to memref<2x100xf32>
-  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C0]], %[[C0_0]], %[[C0_0]], %[[C1]]] : memref<2x1x1x100xf32>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C0]], %[[C0]], %[[C0]], %[[C1]]] : memref<2x1x1x100xf32>
   %0 = memref.load %reinterpret_cast[%c0, %c1] : memref<2x100xf32>
   return
 }

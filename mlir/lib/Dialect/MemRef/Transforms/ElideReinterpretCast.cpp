@@ -362,16 +362,19 @@ public:
         getNonUnitDimMapping(rcInputTy, rcOutputTy);
     assert(dimMapping && "expected matching non-unit dims");
 
-    // Ensures c0 defined only once.
-    auto getZeroIndex = [&]() -> Value {
-      for (auto [dim, size] : llvm::enumerate(rcOutputTy.getShape()))
-        if (size == 1)
-          return oldIdxs[dim];
-      return arith::ConstantIndexOp::create(rewriter, op.getLoc(), 0);
-    };
+    // Prefer reusing an explicit constant-zero index from the old load.
+    Value zeroIndex;
+    for (Value idx : oldIdxs) {
+      std::optional<int64_t> idxVal = getConstantIndex(idx);
+      if (idxVal && *idxVal == 0) {
+        zeroIndex = idx;
+        break;
+      }
+    }
+    if (!zeroIndex)
+      zeroIndex = arith::ConstantIndexOp::create(rewriter, op.getLoc(), 0);
 
     // Initialize new load indices to all 0s.
-    Value zeroIndex = getZeroIndex();
     SmallVector<Value> rcInputIdxs(rcInputRank, zeroIndex);
     for (auto [inputDim, outputDim] : *dimMapping)
       rcInputIdxs[inputDim] = oldIdxs[outputDim];
