@@ -5842,6 +5842,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    options::OPT_fno_merge_all_constants, false))
     CmdArgs.push_back("-fmerge-all-constants");
 
+  Args.addOptOutFlag(CmdArgs, options::OPT_fstore_merging,
+                     options::OPT_fno_store_merging);
+
   Args.addOptOutFlag(CmdArgs, options::OPT_fdelete_null_pointer_checks,
                      options::OPT_fno_delete_null_pointer_checks);
 

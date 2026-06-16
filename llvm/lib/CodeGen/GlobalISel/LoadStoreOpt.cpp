@@ -35,6 +35,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 
 #define DEBUG_TYPE "loadstore-opt"
@@ -919,6 +920,11 @@ bool LoadStoreOpt::mergeTruncStoresBlock(MachineBasicBlock &BB) {
 }
 
 bool LoadStoreOpt::mergeFunctionStores(MachineFunction &MF) {
+  // Respect the target option for disabling store merging (e.g. clang's
+  // -fno-store-merging).
+  if (!MF.getTarget().Options.EnableStoreMerging)
+    return false;
+
   bool Changed = false;
   for (auto &BB : MF){
     Changed |= mergeBlockStores(BB);

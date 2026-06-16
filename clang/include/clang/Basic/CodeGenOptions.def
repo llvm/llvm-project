@@ -187,6 +187,7 @@ CODEGENOPT(IncrementalLinkerCompatible, 1, 0, Benign) ///< Emit an object file w
                                                       ///< be used with an incremental
                                                       ///< linker.
 CODEGENOPT(MergeAllConstants , 1, 1, Benign) ///< Merge identical constants.
+CODEGENOPT(StoreMerging      , 1, 1, Benign) ///< Set when store merging is enabled (-fstore-merging).
 CODEGENOPT(MergeFunctions    , 1, 0, Benign) ///< Set when -fmerge-functions is enabled.
 CODEGENOPT(NoCommon          , 1, 0, Benign) ///< Set when -fno-common or C++ is enabled.
 CODEGENOPT(NoExecStack       , 1, 0, Benign) ///< Set when -Wa,--noexecstack is enabled.

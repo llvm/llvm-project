@@ -83,6 +83,8 @@ LLVM_ABI bool getDisableTailCalls();
 
 LLVM_ABI bool getStackSymbolOrdering();
 
+LLVM_ABI bool getStoreMerging();
+
 LLVM_ABI bool getStackRealign();
 
 LLVM_ABI std::string getTrapFuncName();

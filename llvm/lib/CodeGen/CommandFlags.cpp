@@ -87,6 +87,7 @@ CGOPT(bool, DontPlaceZerosInBSS)
 CGOPT(bool, EnableGuaranteedTailCallOpt)
 CGOPT(bool, DisableTailCalls)
 CGOPT(bool, StackSymbolOrdering)
+CGOPT(bool, StoreMerging)
 CGOPT(bool, StackRealign)
 CGOPT(std::string, TrapFuncName)
 CGOPT(bool, UseCtors)
@@ -329,6 +330,12 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       "stack-symbol-ordering", cl::desc("Order local stack symbols."),
       cl::init(true));
   CGBINDOPT(StackSymbolOrdering);
+
+  static cl::opt<bool> StoreMerging(
+      "store-merging",
+      cl::desc("Enable merging of adjacent stores into a wider store."),
+      cl::init(true));
+  CGBINDOPT(StoreMerging);
 
   static cl::opt<bool> StackRealign(
       "stackrealign",
@@ -594,6 +601,7 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.NoZerosInBSS = getDontPlaceZerosInBSS();
   Options.GuaranteedTailCallOpt = getEnableGuaranteedTailCallOpt();
   Options.StackSymbolOrdering = getStackSymbolOrdering();
+  Options.EnableStoreMerging = getStoreMerging();
   Options.UseInitArray = !getUseCtors();
   Options.DisableIntegratedAS = getDisableIntegratedAS();
   Options.DataSections =

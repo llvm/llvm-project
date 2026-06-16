@@ -122,7 +122,8 @@ public:
       : NoTrappingFPMath(true), EnableAIXExtendedAltivecABI(false),
         HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
         GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
-        EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
+        EnableStoreMerging(true), EnableFastISel(false),
+        EnableGlobalISel(false), UseInitArray(false),
         DisableIntegratedAS(false), FunctionSections(false),
         DataSections(false), IgnoreXCOFFVisibility(false),
         XCOFFTracebackTable(true), UniqueSectionNames(true),
@@ -193,6 +194,11 @@ public:
   /// heuristics). When false, the local symbols are left in whatever order
   /// they were generated. Default is true.
   unsigned StackSymbolOrdering : 1;
+
+  /// EnableStoreMerging - This flag enables merging of multiple adjacent
+  /// stores into a single wider store in the code generator. Default is true.
+  /// It can be disabled (e.g. via clang's -fno-store-merging).
+  unsigned EnableStoreMerging : 1;
 
   /// EnableFastISel - This flag enables fast-path instruction selection
   /// which trades away generated code quality in favor of reducing

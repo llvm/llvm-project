@@ -3459,6 +3459,11 @@ defm merge_all_constants : BoolFOption<"merge-all-constants",
   PosFlag<SetTrue, [], [ClangOption, CC1Option, CLOption], "Allow">,
   NegFlag<SetFalse, [], [ClangOption], "Disallow">,
   BothFlags<[], [ClangOption], " merging of constants">>;
+defm store_merging : BoolFOption<"store-merging",
+  CodeGenOpts<"StoreMerging">, DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption], "Enable">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Disable">,
+  BothFlags<[], [ClangOption], " merging of adjacent stores into a wider store">>;
 def fmessage_length_EQ : Joined<["-"], "fmessage-length=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Format message diagnostics so that they fit within N columns">,
