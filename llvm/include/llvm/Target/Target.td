@@ -1847,6 +1847,13 @@ class AsmParser {
   // messages.
   bit ReportMultipleNearMisses = false;
 
+  // ReportMissingFeatureAlternatives -
+  // When 1 (and ReportMultipleNearMisses is 0), the assembly matcher also
+  // collects every equally-close candidate that failed only on missing
+  // features, so a target can report all extensions that share a mnemonic.
+  // Has no effect when left at 0.
+  bit ReportMissingFeatureAlternatives = false;
+
   // OperandParserMethod - If non-empty, this is the name of a custom
   // member function of the AsmParser class to call for every custom instruction
   // operand to be parsed. If unset, this defaults to calling the generated

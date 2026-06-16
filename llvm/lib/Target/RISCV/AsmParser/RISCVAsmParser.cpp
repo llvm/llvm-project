@@ -1468,9 +1468,11 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                              bool MatchingInlineAsm) {
   MCInst Inst;
   FeatureBitset MissingFeatures;
+  SmallVector<FeatureBitset, 4> MissingFeatureAlternatives;
 
-  auto Result = MatchInstructionImpl(Operands, Inst, ErrorInfo, MissingFeatures,
-                                     MatchingInlineAsm);
+  auto Result =
+      MatchInstructionImpl(Operands, Inst, ErrorInfo, MissingFeatures,
+                           MissingFeatureAlternatives, MatchingInlineAsm);
   switch (Result) {
   default:
     break;
@@ -1480,6 +1482,24 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return processInstruction(Inst, IDLoc, Operands, Out);
   case Match_MissingFeature: {
     assert(MissingFeatures.any() && "Unknown missing features!");
+    // List every equally-close candidate when a mnemonic is shared by several
+    // mutually exclusive extensions.
+    if (MissingFeatureAlternatives.size() > 1) {
+      std::string Msg = "instruction requires one of the following:";
+      bool FirstAlt = true;
+      for (const FeatureBitset &Alt : MissingFeatureAlternatives) {
+        Msg += FirstAlt ? " " : ", ";
+        FirstAlt = false;
+        bool FirstFeature = true;
+        for (unsigned i = 0, e = Alt.size(); i != e; ++i)
+          if (Alt[i]) {
+            Msg += FirstFeature ? "" : ", ";
+            Msg += getSubtargetFeatureName(i);
+            FirstFeature = false;
+          }
+      }
+      return Error(IDLoc, Msg);
+    }
     bool FirstFeature = true;
     std::string Msg = "instruction requires the following:";
     for (unsigned i = 0, e = MissingFeatures.size(); i != e; ++i) {

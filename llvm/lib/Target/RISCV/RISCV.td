@@ -91,6 +91,7 @@ def RISCVInstrInfo : InstrInfo {
 def RISCVAsmParser : AsmParser {
   let ShouldEmitMatchRegisterAltName = 1;
   let AllowDuplicateRegisterNames = 1;
+  let ReportMissingFeatureAlternatives = 1;
 }
 
 def RISCVAsmWriter : AsmWriter {

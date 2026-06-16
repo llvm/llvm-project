@@ -3415,6 +3415,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   bool HasOptionalOperands = Info.hasOptionalOperands();
   bool ReportMultipleNearMisses =
       AsmParser->getValueAsBit("ReportMultipleNearMisses");
+  bool ReportMissingFeatureAlternatives =
+      AsmParser->getValueAsBit("ReportMissingFeatureAlternatives");
 
   // Write the output.
 
@@ -3444,22 +3446,35 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   if (ReportMultipleNearMisses)
     OS << "                                SmallVectorImpl<NearMissInfo> "
           "*NearMisses,\n";
-  else
+  else {
     OS << "                                uint64_t &ErrorInfo,\n"
        << "                                FeatureBitset &MissingFeatures,\n";
+    if (ReportMissingFeatureAlternatives)
+      OS << "                                SmallVectorImpl<FeatureBitset> "
+            "&MissingFeatureAlternatives,\n";
+  }
   OS << "                                bool matchingInlineAsm,\n"
      << "                                unsigned VariantID = 0);\n";
-  if (!ReportMultipleNearMisses)
+  if (!ReportMultipleNearMisses) {
     OS << "  unsigned MatchInstructionImpl(const OperandVector &Operands,\n"
        << "                                MCInst &Inst,\n"
        << "                                uint64_t &ErrorInfo,\n"
        << "                                bool matchingInlineAsm,\n"
        << "                                unsigned VariantID = 0) {\n"
-       << "    FeatureBitset MissingFeatures;\n"
-       << "    return MatchInstructionImpl(Operands, Inst, ErrorInfo, "
-          "MissingFeatures,\n"
-       << "                                matchingInlineAsm, VariantID);\n"
-       << "  }\n\n";
+       << "    FeatureBitset MissingFeatures;\n";
+    if (ReportMissingFeatureAlternatives)
+      OS << "    SmallVector<FeatureBitset, 4> MissingFeatureAlternatives;\n"
+         << "    return MatchInstructionImpl(Operands, Inst, ErrorInfo, "
+            "MissingFeatures,\n"
+         << "                                MissingFeatureAlternatives,\n"
+         << "                                matchingInlineAsm, VariantID);\n"
+         << "  }\n\n";
+    else
+      OS << "    return MatchInstructionImpl(Operands, Inst, ErrorInfo, "
+            "MissingFeatures,\n"
+         << "                                matchingInlineAsm, VariantID);\n"
+         << "  }\n\n";
+  }
 
   if (!Info.OperandMatchInfo.empty()) {
     OS << "  ParseStatus MatchOperandParserImpl(\n";
@@ -3699,9 +3714,13 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "                     MCInst &Inst,\n";
   if (ReportMultipleNearMisses)
     OS << "                     SmallVectorImpl<NearMissInfo> *NearMisses,\n";
-  else
+  else {
     OS << "                     uint64_t &ErrorInfo,\n"
        << "                     FeatureBitset &MissingFeatures,\n";
+    if (ReportMissingFeatureAlternatives)
+      OS << "                     SmallVectorImpl<FeatureBitset> "
+            "&MissingFeatureAlternatives,\n";
+  }
   OS << "                     bool matchingInlineAsm, unsigned VariantID) {\n";
 
   if (!ReportMultipleNearMisses) {
@@ -4004,6 +4023,19 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   if (ReportMultipleNearMisses) {
     OS << "      FeaturesNearMiss = "
           "NearMissInfo::getMissedFeature(NewMissingFeatures);\n";
+  } else if (ReportMissingFeatureAlternatives) {
+    // Collect every equally-close candidate: a strictly closer one resets the
+    // list, ties accumulate (deduplicated).
+    OS << "      if (NewMissingFeatures.count() < MissingFeatures.count()) {\n";
+    OS << "        MissingFeatures = NewMissingFeatures;\n";
+    OS << "        MissingFeatureAlternatives.assign(1, NewMissingFeatures);\n";
+    OS << "      } else if (NewMissingFeatures.count() ==\n"
+          "                 MissingFeatures.count() &&\n";
+    OS << "                 !llvm::is_contained(MissingFeatureAlternatives,\n"
+          "                                     NewMissingFeatures)) {\n";
+    OS << "        MissingFeatureAlternatives.push_back(NewMissingFeatures);\n";
+    OS << "      }\n";
+    OS << "      continue;\n";
   } else {
     OS << "      if (NewMissingFeatures.count() <=\n"
           "          MissingFeatures.count())\n";
