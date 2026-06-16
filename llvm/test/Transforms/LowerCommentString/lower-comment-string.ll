@@ -8,6 +8,9 @@
 
 target triple = "powerpc-ibm-aix"
 
+@__loadtime_comment_str_f20696a95b638f0b = weak_odr hidden unnamed_addr constant [24 x i8] c"@(#) Copyright TU1 v1.0\00", align 1, !loadtime_comment !0
+@llvm.compiler.used = appending global [1 x ptr] [ptr @__loadtime_comment_str_f20696a95b638f0b], section "llvm.metadata"
+
 define void @f0() {
 entry:
   ret void    
@@ -17,17 +20,11 @@ entry:
   ret i32 0
 }
 
-!comment_string.loadtime = !{!0}
-!0 = !{!"@(#) Copyright String 2025"}
-
+!0 = !{}
 ; ---- Globals --------------------------------------------
-; CHECK: @[[LOADTIME_COMMENT_STR:__loadtime_comment_str_[0-9a-f]+]] = weak_odr hidden unnamed_addr constant [27 x i8] c"@(#) Copyright String 2025\00", align 1
-
-; Preservation in llvm.compiler.used sets
+; CHECK: @[[LOADTIME_COMMENT_STR:__loadtime_comment_str_[0-9a-f]+]] = weak_odr hidden unnamed_addr constant [24 x i8] c"@(#) Copyright TU1 v1.0\00", align 1, !loadtime_comment !0
 ; CHECK-NEXT: @llvm.compiler.used = appending global [1 x ptr] [ptr @[[LOADTIME_COMMENT_STR]]], section "llvm.metadata"
 
-; Make sure the old string metadata form is gone
-; CHECK-NOT: !{{[0-9]+}} = !{!"@(#) Copyright String 2025"}
 
 ; Function has an implicit ref MD pointing at the string:
 ; CHECK-O0: define void @f0() !implicit.ref ![[MD:[0-9]+]]

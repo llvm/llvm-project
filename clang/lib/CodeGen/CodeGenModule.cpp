@@ -79,6 +79,7 @@
 #include "llvm/Transforms/Instrumentation/KCFI.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/KCFIHash.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <optional>
 #include <set>
 
@@ -1756,8 +1757,6 @@ void CodeGenModule::Release() {
   getTargetCodeGenInfo().emitTargetMetadata(*this, MangledDeclNames);
 
   EmitBackendOptionsMetadata(getCodeGenOpts());
-
-  EmitLoadTimeComment();
 
   // If there is device offloading code embed it in the host now.
   EmbedObject(&getModule(), CodeGenOpts, *getFileSystem(), getDiags());
@@ -3703,7 +3702,7 @@ void CodeGenModule::AddDependentLib(StringRef Lib) {
   LinkerOptionsMetadata.push_back(llvm::MDNode::get(C, MDOpts));
 }
 
-/// Process copyright pragma and create LLVM metadata.
+/// Process copyright pragma and and create a global variable with metadata.
 ///
 /// Only one copyright pragma is allowed per translation unit. Subsequent
 /// pragmas in the same TU are ignored with a warning at the parse level.
@@ -3723,13 +3722,37 @@ void CodeGenModule::ProcessPragmaCommentCopyright(StringRef Comment,
   if (isFromASTFile)
     return;
 
-  assert(!LoadTimeComment &&
+  assert(!LoadTimeCommentGlobal &&
          "Only one copyright pragma allowed per translation unit.");
 
-  // Create LLVM metadata with the comment string.
+  // Create a weak_odr hidden global variable containing the copyright string.
+  // Hash the content to generate a stable, unique name across TUs.
   auto &C = getLLVMContext();
-  llvm::Metadata *Ops[] = {llvm::MDString::get(C, Comment)};
-  LoadTimeComment = llvm::MDNode::get(C, Ops);
+  uint64_t Hash = xxh3_64bits(Comment);
+  std::string GlobalName =
+      ("__loadtime_comment_str_" + Twine::utohexstr(Hash)).str();
+
+  // Create null-terminated string constant
+  llvm::Constant *StrInit =
+      llvm::ConstantDataArray::getString(C, Comment, /*AddNull=*/true);
+
+  // Create weak_odr linkage so multiple TUs with identical strings merge
+  auto *GV = new llvm::GlobalVariable(getModule(), StrInit->getType(),
+                                      /*isConstant=*/true,
+                                      llvm::GlobalValue::WeakODRLinkage,
+                                      StrInit, GlobalName);
+
+  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  GV->setAlignment(llvm::Align(1));
+
+  // Mark with loadtime_comment metadata for LowerCommentStringPass
+  GV->setMetadata("loadtime_comment", llvm::MDNode::get(C, {}));
+
+  // Prevent optimizer from removing the Global Var.
+  llvm::appendToCompilerUsed(getModule(), {GV});
+
+  LoadTimeCommentGlobal = GV;
 }
 
 /// Add link options implied by the given module, including modules
@@ -4250,13 +4273,6 @@ bool CodeGenModule::MustBeEmitted(const ValueDecl *Global) {
     return true;
 
   return getContext().DeclMustBeEmitted(Global);
-}
-
-void CodeGenModule::EmitLoadTimeComment() {
-  if (LoadTimeComment) {
-    auto *NMD = getModule().getOrInsertNamedMetadata("comment_string.loadtime");
-    NMD->addOperand(LoadTimeComment);
-  }
 }
 
 bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {

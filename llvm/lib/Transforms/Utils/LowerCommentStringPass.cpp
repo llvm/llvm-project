@@ -45,7 +45,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -58,10 +57,8 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/xxhash.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
-#include <string>
 
 #define DEBUG_TYPE "lower-comment-string"
 
@@ -84,68 +81,35 @@ PreservedAnalyses LowerCommentStringPass::run(Module &M,
 
   LLVMContext &Ctx = M.getContext();
 
-  // Single-metadata: !comment_string.loadtime = !{!0}
-  // Each operand node is expected to have one MDString operand.
-  NamedMDNode *MD = M.getNamedMetadata("comment_string.loadtime");
-  if (!MD || MD->getNumOperands() == 0)
+  // Collect all globals marked with !loadtime_comment metadata.
+  SmallVector<GlobalValue *, 4> LoadTimeCommentGlobals;
+  for (GlobalVariable &GV : M.globals()) {
+    if (GV.hasMetadata("loadtime_comment"))
+      LoadTimeCommentGlobals.push_back(&GV);
+  }
+
+  if (LoadTimeCommentGlobals.empty())
     return PreservedAnalyses::all();
 
-  // At this point we are guaranteed that one TU contains a single copyright
-  // metadata entry. Create TU-local string global for that metadata entry.
-  MDNode *MdNode = MD->getOperand(0);
-  if (!MdNode || MdNode->getNumOperands() == 0)
-    return PreservedAnalyses::all();
+  // Add implicit.ref from every function to each loadtime comment global.
+  for (GlobalValue *GV : LoadTimeCommentGlobals) {
+    for (Function &F : M) {
+      if (F.isDeclaration())
+        continue;
 
-  auto *MdString = dyn_cast_or_null<MDString>(MdNode->getOperand(0));
-  if (!MdString)
-    return PreservedAnalyses::all();
+      Metadata *Ops[] = {ConstantAsMetadata::get(GV)};
+      MDNode *NewMD = MDNode::get(Ctx, Ops);
+      F.addMetadata(LLVMContext::MD_implicit_ref, *NewMD);
 
-  StringRef Text = MdString->getString();
-  if (Text.empty())
-    return PreservedAnalyses::all();
+      LLVM_DEBUG(
+          dbgs() << "[loadtime-comment] attached implicit.ref to function: "
+                 << F.getName() << " for global: " << GV->getName() << "\n");
+    }
+  }
 
-  uint64_t Hash = xxh3_64bits(Text);
-  std::string GlobalName =
-      ("__loadtime_comment_str_" + Twine::utohexstr(Hash)).str();
-
-  // 1. Create a single null-terminated string global.
-  Constant *StrInit = ConstantDataArray::getString(Ctx, Text, /*AddNull=*/true);
-
-  // The global variable should be weak_odr, constant, and TU-hidden.
-  auto *StrGV = new GlobalVariable(
-      M, StrInit->getType(),
-      /*isConstant=*/true, GlobalValue::WeakODRLinkage, StrInit, GlobalName);
-  StrGV->setVisibility(GlobalValue::HiddenVisibility);
-  // Set unnamed_addr to allow the linker to merge identical strings.
-  StrGV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  StrGV->setAlignment(Align(1));
-
-  // 2. Add the string to llvm.compiler.used to prevent LLVM optimization/LTO
-  // passes from removing it.
-  appendToCompilerUsed(M, {StrGV});
-
-  // 3. Attach !implicit.ref metadata to every defined function.
-  // Create a metadata node pointing to the copyright string:
-  //   !N = !{ptr @__loadtime_comment_str}
-  Metadata *Ops[] = {ConstantAsMetadata::get(StrGV)};
-  MDNode *ImplicitRefMD = MDNode::get(Ctx, Ops);
-
-  auto AddImplicitRef = [&](Function &F) {
-    if (F.isDeclaration())
-      return;
-    // Attach the !implicit.ref metadata to the function.
-    F.setMetadata(LLVMContext::MD_implicit_ref, ImplicitRefMD);
-    LLVM_DEBUG(dbgs() << "[copyright] attached implicit.ref to function:  "
-                      << F.getName() << "\n");
-  };
-
-  // Process all functions in the module and add !implicit.ref to the function.
-  for (Function &F : M)
-    AddImplicitRef(F);
-
-  // Cleanup the processed metadata.
-  MD->eraseFromParent();
-  LLVM_DEBUG(dbgs() << "[copyright] created string and anchor for module\n");
+  LLVM_DEBUG(dbgs() << "[loadtime-comment] processed "
+                    << LoadTimeCommentGlobals.size()
+                    << " loadtime comment globals\n");
 
   return PreservedAnalyses::all();
 }

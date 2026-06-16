@@ -619,8 +619,8 @@ private:
   /// A vector of metadata strings for dependent libraries for ELF.
   SmallVector<llvm::MDNode *, 16> ELFDependentLibraries;
 
-  /// Metadata for copyright pragma comment (if present).
-  llvm::MDNode *LoadTimeComment = nullptr;
+  /// Global variable for copyright pragma comment (if present).
+  llvm::GlobalVariable *LoadTimeCommentGlobal = nullptr;
 
   /// @name Cache for Objective-C runtime types
   /// @{
@@ -2171,10 +2171,6 @@ private:
   /// Emit deactivation symbols for any PFP fields whose offset is taken with
   /// offsetof.
   void emitPFPFieldsWithEvaluatedOffset();
-
-  /// Emit the load-time comment metadata (e.g., from
-  /// #pragma comment(copyright, ...)) for the translation unit.
-  void EmitLoadTimeComment();
 };
 
 }  // end namespace CodeGen

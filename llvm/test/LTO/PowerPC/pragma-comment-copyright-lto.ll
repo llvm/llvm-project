@@ -28,6 +28,9 @@
 target datalayout = "E-m:a-p:32:32-Fi32-i64:64-n32-f64:32:64"
 target triple = "powerpc-ibm-aix7.3.0.0"
 
+@__loadtime_comment_str_43ac0464497b8531 = weak_odr hidden unnamed_addr constant [14 x i8] c"Copyright TU1\00", align 1, !loadtime_comment !0
+@llvm.compiler.used = appending global [1 x ptr] [ptr @__loadtime_comment_str_43ac0464497b8531], section "llvm.metadata"
+
 define i32 @f_add(i32 noundef %a, i32 noundef %b) {
 entry:
   %add = add nsw i32 %a, %b
@@ -40,15 +43,14 @@ entry:
   ret void
 }
 
-!comment_string.loadtime = !{!0}
-!llvm.module.flags = !{!1, !2}
-!0 = !{!"Copyright TU1"}
-!1 = !{i32 8, !"PIC Level", i32 2}
-!2 = !{i32 1, !"EnableSplitLTOUnit", i32 1}
+!0 = !{}
 
 ;--- tu2.ll
 target datalayout = "E-m:a-p:32:32-Fi32-i64:64-n32-f64:32:64"
 target triple = "powerpc-ibm-aix7.3.0.0"
+
+@__loadtime_comment_str_645206960c47d270 = weak_odr hidden unnamed_addr constant [14 x i8] c"Copyright TU2\00", align 1, !loadtime_comment !0
+@llvm.compiler.used = appending global [1 x ptr] [ptr @__loadtime_comment_str_645206960c47d270], section "llvm.metadata"
 
 declare i32 @f_add(i32 noundef, i32 noundef)
 
@@ -58,11 +60,7 @@ entry:
   ret i32 %call
 }
 
-!comment_string.loadtime = !{!0}
-!llvm.module.flags = !{!1, !2}
-!0 = !{!"Copyright TU2"}
-!1 = !{i32 8, !"PIC Level", i32 2}
-!2 = !{i32 1, !"EnableSplitLTOUnit", i32 1}
+!0 = !{}
 
 ;; f_add csect anchors TU1 copyright string.
 ; CHECK-LABEL: .f_add:
@@ -77,10 +75,10 @@ entry:
 ; CHECK:       li 3, 3
 
 ;; Both copyright strings in the read-only __loadtime_comment csect.
-; CHECK:       .csect [[TU1_STR]][RO],2
+; CHECK-DAG:   .csect [[TU1_STR]][RO],2
 ; CHECK-NEXT:  .lglobl [[TU1_STR]][RO]
 ; CHECK-NEXT:  .string "Copyright TU1"
-; CHECK:       .csect [[TU2_STR]][RO],2
+; CHECK-DAG:   .csect [[TU2_STR]][RO],2
 ; CHECK-NEXT:  .lglobl [[TU2_STR]][RO]
 ; CHECK-NEXT:  .string "Copyright TU2"
 
