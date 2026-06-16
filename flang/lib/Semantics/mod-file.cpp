@@ -387,7 +387,7 @@ static void PutOpenMPRequirements(
       os << "!$omp "
          << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
                 llvm::omp::Directive::OMPD_requires, version));
-      decls->printClauseSet(os, reqs);
+      decls->printClauseSet(os, reqs, llvm::omp::Directive::OMPD_requires);
       os << "\n";
     }
   }
@@ -405,7 +405,24 @@ static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
            << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
                   llvm::omp::Directive::OMPD_declare_target, version))
            << " ";
-        decls->printClauseSet(os, dtgt, symbol.name());
+        decls->printClauseSet(
+            os, dtgt, llvm::omp::Directive::OMPD_declare_target, symbol.name());
+        os << "\n";
+      }
+      // Re-emit `!$omp groupprivate` (and its device_type) so a TU that `use`s
+      // this module recovers the directive from the .mod file. Common-block
+      // names must be wrapped in slashes when reparsed.
+      if (const OmpClauseSet &gp{decls->ompGroupprivate()}; gp.count()) {
+        os << "!$omp "
+           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                  llvm::omp::Directive::OMPD_groupprivate, version))
+           << "(";
+        if (symbol.detailsIf<CommonBlockDetails>())
+          os << '/' << symbol.name() << '/';
+        else
+          os << symbol.name();
+        os << ") ";
+        decls->printClauseSet(os, gp, llvm::omp::Directive::OMPD_groupprivate);
         os << "\n";
       }
     }

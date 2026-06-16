@@ -47,6 +47,15 @@ using VectorParts = SmallVector<Value *, 2>;
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+// It is sometimes necessary to disable printing of metadata in tests in order
+// to avoid non-deterministic behaviour due to metadata introduced by VPlan
+// that wasn't present in the original scalar IR.
+static cl::opt<bool> VPlanPrintMetadata(
+    "vplan-print-metadata", cl::init(true), cl::Hidden,
+    cl::desc("Controls the printing of recipe metadata when debugging."));
+#endif
+
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPRecipeID()) {
   case VPExpressionSC:
@@ -581,7 +590,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::MaskedCond:
   case VPInstruction::Not:
-  case VPInstruction::ResumeForEpilogue:
   case VPInstruction::Reverse:
   case VPInstruction::Unpack:
   case VPInstruction::NumActiveLanes:
@@ -599,6 +607,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::WidePtrAdd:
   case VPInstruction::WideIVStep:
   case VPInstruction::CalculateTripCountMinusVF:
+  case VPInstruction::ResumeForEpilogue:
     return 2;
   case Instruction::InsertElement:
   case Instruction::Select:
@@ -1524,9 +1533,11 @@ void VPInstruction::execute(VPTransformState &State) {
          "scalar value but not only first lane defined");
   State.set(this, GeneratedValue,
             /*IsScalar*/ GeneratesPerFirstLaneOnly);
-  if (getOpcode() == VPInstruction::ResumeForEpilogue) {
+  if (getOpcode() == VPInstruction::ResumeForEpilogue ||
+      getOpcode() == Instruction::Freeze) {
     // FIXME: This is a workaround to enable reliable updates of the scalar loop
-    // resume phis, when vectorizing the epilogue. Must be removed once epilogue
+    // resume phis, and to let epilogue vectorization recover the frozen
+    // reduction start from the main plan. Must be removed once epilogue
     // vectorization explicitly connects VPlans.
     setUnderlyingValue(GeneratedValue);
   }
@@ -1621,6 +1632,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::Broadcast:
   case VPInstruction::ReductionStartVector:
+  case VPInstruction::ResumeForEpilogue:
     return true;
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
@@ -2038,7 +2050,7 @@ void VPIRMetadata::intersect(const VPIRMetadata &Other) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
   const Module *M = SlotTracker.getModule();
-  if (Metadata.empty() || !M)
+  if (Metadata.empty() || !M || !VPlanPrintMetadata)
     return;
 
   ArrayRef<StringRef> MDNames = SlotTracker.getMDNames();
