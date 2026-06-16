@@ -644,8 +644,16 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         return LT.first;
 
       // Scalar i8 lowers through scalar/vector moves around PMUL.
-      if (TLI->getValueType(DL, RetTy, true) == MVT::i8)
-        return 4;
+      if (TLI->getValueType(DL, RetTy, true) == MVT::i8) {
+        auto *VecTy =
+            FixedVectorType::get(Type::getInt8Ty(RetTy->getContext()), 8);
+        return 1 +
+               getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind,
+                                  -1, nullptr, nullptr) *
+                   2 +
+               getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind,
+                                  -1, nullptr, nullptr);
+      }
     }
 
     if (LT.second.SimpleTy == MVT::nxv2i64)
@@ -676,7 +684,6 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       case MVT::i16:
       case MVT::i32:
       case MVT::i64:
-        return LT.first * 2;
       case MVT::i128:
         return LT.first * 4;
       case MVT::v1i64:
