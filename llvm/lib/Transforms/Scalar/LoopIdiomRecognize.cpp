@@ -2605,9 +2605,8 @@ static Value *createPopcntIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
   Value *Ops[] = {Val};
   Type *Tys[] = {Val->getType()};
 
-  return IRBuilder.CreateIntrinsic(
-      Intrinsic::ctpop, Tys, Ops, {}, "", {},
-      [&DL](CallInst *CI) { CI->setDebugLoc(DL); });
+  IRBuilder.SetCurrentDebugLocation(DL);
+  return IRBuilder.CreateIntrinsic(Intrinsic::ctpop, Tys, Ops);
 }
 
 static Value *createFFSIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
@@ -2616,8 +2615,8 @@ static Value *createFFSIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
   Value *Ops[] = {Val, IRBuilder.getInt1(ZeroCheck)};
   Type *Tys[] = {Val->getType()};
 
-  return IRBuilder.CreateIntrinsic(
-      IID, Tys, Ops, {}, "", {}, [&DL](CallInst *CI) { CI->setDebugLoc(DL); });
+  IRBuilder.SetCurrentDebugLocation(DL);
+  return IRBuilder.CreateIntrinsic(IID, Tys, Ops);
 }
 
 /// Transform the following loop (Using CTLZ, CTTZ is similar):

@@ -4250,9 +4250,8 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     Value *Identity = ConstantExpr::getBinOpIdentity(
         *CommonBinOp, ReduceVecTy->getElementType(), /*AllowRHSConstant=*/false,
         CommonFMF.noSignedZeros());
-    ReducedResult = Builder.CreateIntrinsic(
-        ReducedOp, {ReduceVecTy}, {Identity, ReduceInput}, {}, "", {},
-        [&CommonFMF](CallInst *CI) { CI->setFastMathFlags(CommonFMF); });
+    ReducedResult = Builder.CreateIntrinsic(ReducedOp, {ReduceVecTy},
+                                            {Identity, ReduceInput}, CommonFMF);
   } else {
     ReducedResult =
         Builder.CreateIntrinsic(ReducedOp, {ReduceVecTy}, {ReduceInput});
