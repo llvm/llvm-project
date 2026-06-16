@@ -40,6 +40,10 @@ ELF Improvements
   beats positional last-match-wins; default: positional). In ELF, the glob
   matches input section names (e.g. ``.text.unlikely.code1``).
 
+* When a ``SECTIONS`` command interleaves relro and non-relro sections, lld now
+  emits one ``PT_GNU_RELRO`` segment per contiguous run of relro sections
+  instead of reporting a ``not contiguous with other relro sections`` error.
+
 Breaking changes
 ----------------
 
@@ -72,6 +76,8 @@ MachO Improvements
   concatenated segment+section name (e.g. ``__TEXT__text``).
 * Restructure thunk generation algorithm to be more efficiently create thunks
   (`#193367 <https://github.com/llvm/llvm-project/pull/193367>`_)
+* Alphabetically sort LC_LINKER_OPTIONS before processing to match Apple linker behavior
+  (`#201604 https://github.com/llvm/llvm-project/pull/201604`)
 
 WebAssembly Improvements
 ------------------------

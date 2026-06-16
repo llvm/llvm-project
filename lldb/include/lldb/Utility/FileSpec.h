@@ -318,14 +318,6 @@ public:
   ///     concatenated.
   std::string GetPath(bool denormalize = true) const;
 
-  /// Get the full path as a ConstString.
-  ///
-  /// This method should only be used when you need a ConstString or the
-  /// const char * from a ConstString to ensure permanent lifetime of C string.
-  /// Anyone needing the path temporarily should use the GetPath() method that
-  /// returns a std:string.
-  ConstString GetPathAsConstString(bool denormalize = true) const;
-
   /// Extract the full path to the file.
   ///
   /// Extract the directory and path into an llvm::SmallVectorImpl<>

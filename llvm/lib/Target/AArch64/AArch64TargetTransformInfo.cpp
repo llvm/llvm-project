@@ -2155,15 +2155,12 @@ static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
     if ((PredicateBits & (1 << I)) == 0)
       return std::nullopt;
 
-  auto *PTruePat =
-      ConstantInt::get(Type::getInt32Ty(Ctx), AArch64SVEPredPattern::all);
-  auto *PTrue = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_ptrue,
-                                           {PredType}, {PTruePat});
-  auto *ConvertToSVBool = IC.Builder.CreateIntrinsic(
-      Intrinsic::aarch64_sve_convert_to_svbool, {PredType}, {PTrue});
+  auto *ConvertToSVBool =
+      IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool,
+                                 PredType, ConstantInt::getTrue(PredType));
   auto *ConvertFromSVBool =
       IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool,
-                                 {II.getType()}, {ConvertToSVBool});
+                                 II.getType(), ConvertToSVBool);
 
   ConvertFromSVBool->takeName(&II);
   return IC.replaceInstUsesWith(II, ConvertFromSVBool);
@@ -2287,15 +2284,10 @@ static std::optional<Instruction *> instCombineSVECondLast(InstCombiner &IC,
 
 static std::optional<Instruction *> instCombineRDFFR(InstCombiner &IC,
                                                      IntrinsicInst &II) {
-  LLVMContext &Ctx = II.getContext();
   // Replace rdffr with predicated rdffr.z intrinsic, so that optimizePTestInstr
   // can work with RDFFR_PP for ptest elimination.
-  auto *AllPat =
-      ConstantInt::get(Type::getInt32Ty(Ctx), AArch64SVEPredPattern::all);
-  auto *PTrue = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_ptrue,
-                                           {II.getType()}, {AllPat});
-  auto *RDFFR =
-      IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_rdffr_z, {PTrue});
+  auto *RDFFR = IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_rdffr_z,
+                                           ConstantInt::getTrue(II.getType()));
   RDFFR->takeName(&II);
   return IC.replaceInstUsesWith(II, RDFFR);
 }
@@ -2509,6 +2501,29 @@ instCombineSVEVectorBinOp(InstCombiner &IC, IntrinsicInst &II) {
   auto BinOp = IC.Builder.CreateBinOpFMF(
       BinOpCode, II.getOperand(1), II.getOperand(2), II.getFastMathFlags());
   return IC.replaceInstUsesWith(II, BinOp);
+}
+
+static std::optional<Instruction *>
+instCombineSVEVectorMlaU(InstCombiner &IC, IntrinsicInst &II) {
+  assert(II.getIntrinsicID() == Intrinsic::aarch64_sve_mla_u &&
+         "Expected MLA_U intrinsic");
+  Value *Acc = II.getArgOperand(1);
+  Value *MulOp0 = II.getArgOperand(2);
+  Value *MulOp1 = II.getArgOperand(3);
+
+  // For mla_u, inactive lanes are undefined, so it is valid to drop the
+  // predicate when replacing mla_u(acc, x, 1) with add(acc, x) or
+  // mla_u(acc, x, -1) with sub(acc, x).
+  if (match(MulOp0, m_One()))
+    return IC.replaceInstUsesWith(II, IC.Builder.CreateAdd(Acc, MulOp1));
+  if (match(MulOp1, m_One()))
+    return IC.replaceInstUsesWith(II, IC.Builder.CreateAdd(Acc, MulOp0));
+  if (match(MulOp0, m_AllOnes()))
+    return IC.replaceInstUsesWith(II, IC.Builder.CreateSub(Acc, MulOp1));
+  if (match(MulOp1, m_AllOnes()))
+    return IC.replaceInstUsesWith(II, IC.Builder.CreateSub(Acc, MulOp0));
+
+  return std::nullopt;
 }
 
 static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
@@ -2975,8 +2990,11 @@ static std::optional<Instruction *> instCombineWhilelo(InstCombiner &IC,
 
 static std::optional<Instruction *> instCombinePTrue(InstCombiner &IC,
                                                      IntrinsicInst &II) {
-  if (match(II.getOperand(0), m_ConstantInt<AArch64SVEPredPattern::all>()))
-    return IC.replaceInstUsesWith(II, Constant::getAllOnesValue(II.getType()));
+  unsigned PredPattern = cast<ConstantInt>(II.getOperand(0))->getZExtValue();
+  // SVE vector length is a power-of-two, thus pow2 is synonymous with all.
+  if (PredPattern == AArch64SVEPredPattern::all ||
+      PredPattern == AArch64SVEPredPattern::pow2)
+    return IC.replaceInstUsesWith(II, ConstantInt::getTrue(II.getType()));
   return std::nullopt;
 }
 
@@ -3073,6 +3091,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul_u,
                                              Intrinsic::aarch64_sve_mla_u>(
         IC, II, true);
+  case Intrinsic::aarch64_sve_mla_u:
+    return instCombineSVEVectorMlaU(IC, II);
   case Intrinsic::aarch64_sve_sub:
     return instCombineSVEVectorSub(IC, II);
   case Intrinsic::aarch64_sve_sub_u:
@@ -4378,7 +4398,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   // Increase the cost for half and bfloat types if not architecturally
   // supported.
   if (ISD == ISD::FADD || ISD == ISD::FSUB || ISD == ISD::FMUL ||
-      ISD == ISD::FDIV || ISD == ISD::FREM)
+      ISD == ISD::FDIV || ISD == ISD::FREM) {
     if (auto PromotedCost = getFP16BF16PromoteCost(
             Ty, CostKind, Op1Info, Op2Info, /*IncludeTrunc=*/true,
             // There is not native support for fdiv/frem even with +sve-b16b16.
@@ -4388,6 +4408,11 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
                                             Op1Info, Op2Info);
             }))
       return *PromotedCost;
+
+    // fp128 all go via libcalls
+    if (Ty->getScalarType()->isFP128Ty())
+      return (CostKind == TTI::TCK_CodeSize ? 1 : 10) * LT.first;
+  }
 
   // If the operation is a widening instruction (smull or umull) and both
   // operands are extends the cost can be cheaper by considering that the
@@ -4405,6 +4430,35 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   default:
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info);
+  case ISD::ADD:
+  case ISD::SUB:
+    return LT.first; // Also works for i128
+  case ISD::MUL:
+    if (LT.second == MVT::v2i64) {
+      // When SVE is available, then we can lower the v2i64 operation using
+      // the SVE mul instruction, which has a lower cost.
+      if (ST->hasSVE())
+        return LT.first;
+
+      // When SVE is not available, there is no MUL.2d instruction,
+      // which means mul <2 x i64> is expensive as elements are extracted
+      // from the vectors and the muls scalarized.
+      // As getScalarizationOverhead is a bit too pessimistic, we
+      // estimate the cost for a i64 vector directly here, which is:
+      // - four 2-cost i64 extracts,
+      // - two 2-cost i64 inserts, and
+      // - two 1-cost muls.
+      // So, for a v2i64 with LT.First = 1 the cost is 14, and for a v4i64 with
+      // LT.first = 2 the cost is 28.
+      return cast<VectorType>(Ty)->getElementCount().getKnownMinValue() *
+             (getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind) +
+              getVectorInstrCost(Instruction::ExtractElement, Ty, CostKind, -1,
+                                 nullptr, nullptr) *
+                  2 +
+              getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, -1,
+                                 nullptr, nullptr));
+    }
+    return LT.first;
   case ISD::SREM:
   case ISD::SDIV:
     /*
@@ -4619,32 +4673,6 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     }
     return Cost;
   }
-  case ISD::MUL:
-    // When SVE is available, then we can lower the v2i64 operation using
-    // the SVE mul instruction, which has a lower cost.
-    if (LT.second == MVT::v2i64 && ST->hasSVE())
-      return LT.first;
-
-    // When SVE is not available, there is no MUL.2d instruction,
-    // which means mul <2 x i64> is expensive as elements are extracted
-    // from the vectors and the muls scalarized.
-    // As getScalarizationOverhead is a bit too pessimistic, we
-    // estimate the cost for a i64 vector directly here, which is:
-    // - four 2-cost i64 extracts,
-    // - two 2-cost i64 inserts, and
-    // - two 1-cost muls.
-    // So, for a v2i64 with LT.First = 1 the cost is 14, and for a v4i64 with
-    // LT.first = 2 the cost is 28.
-    if (LT.second != MVT::v2i64)
-      return LT.first;
-    return cast<VectorType>(Ty)->getElementCount().getKnownMinValue() *
-           (getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind) +
-            getVectorInstrCost(Instruction::ExtractElement, Ty, CostKind, -1,
-                               nullptr, nullptr) *
-                2 +
-            getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, -1,
-                               nullptr, nullptr));
-  case ISD::ADD:
   case ISD::XOR:
   case ISD::OR:
   case ISD::AND:
@@ -5189,6 +5217,8 @@ bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
 }
 
 unsigned AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+  if (VF.isScalar())
+    return 4;
   return ST->getMaxInterleaveFactor();
 }
 
@@ -5789,7 +5819,7 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
       return BaseCost + FixedVTy->getNumElements();
     }
 
-    if (Opcode != Instruction::FAdd)
+    if (Opcode != Instruction::FAdd || ValTy->getElementType()->isBFloatTy())
       return InstructionCost::getInvalid();
 
     auto *VTy = cast<ScalableVectorType>(ValTy);
