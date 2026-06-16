@@ -4279,6 +4279,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
+  case Intrinsic::vector_splice_right: {
+    Value *X = nullptr, *Offset = nullptr;
+    if (match(&CI, m_Intrinsic<Intrinsic::vector_splice_right>(
+                       m_Intrinsic<Intrinsic::vector_splice_left>(
+                           m_Poison(), m_Value(X), m_Value(Offset)),
+                       m_Poison(), m_Deferred(Offset))))
+      return replaceInstUsesWith(CI, X);
+    break;
+  }
   case Intrinsic::is_fpclass: {
     if (Instruction *I = foldIntrinsicIsFPClass(*II))
       return I;
