@@ -1737,58 +1737,32 @@ def Vector_LoadOp : Vector_Op<"load", [
     load operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
     triggers immediate undefined behavior.
-
-    Out-of-bounds behavior is implementation-defined at the `vector` level: both
-    out-of-bounds start indices and the out-of-bounds tail of an in-bounds start
-    (e.g. `%memref[%c0] : memref<7xf32>, vector<8xf32>`) have target-specific
-    behavior (e.g. SPIR-V robust buffer access or AMDGPU buffer fat pointers may
-    define them to read zeros). The optional `inbounds` and `nneg` unit
-    attributes let a producer opt in to stronger assumptions used by lowerings:
-    *   `inbounds` asserts the access is in-bounds, i.e. `0 <= idx < dim_size`
-        for every dimension. When set, the LLVM lowering may emit
-        `llvm.getelementptr inbounds`.
-    *   `nneg` asserts that every index is non-negative. When set (and the
-        memref has non-negative strides), the LLVM lowering may additionally
-        emit the `nuw` flag.
-
-    Both default to unset, in which case no flag is emitted and the
-    target-defined out-of-bounds behavior above is preserved. Setting either
-    attribute when it does not hold is undefined behavior under the LLVM
-    lowering.
   }];
 
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
       [MemRead]>:$base,
       Variadic<Index>:$indices,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
-      OptionalAttr<IntValidAlignment<I64Attr>>: $alignment,
-      UnitAttr:$inbounds,
-      UnitAttr:$nneg);
+      OptionalAttr<IntValidAlignment<I64Attr>>: $alignment);
 
   let builders = [
     OpBuilder<(ins "VectorType":$resultType,
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment,
-                   CArg<"bool", "false">:$inbounds,
-                   CArg<"bool", "false">:$nneg), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultType, base, indices, nontemporal,
                    alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
-                                    nullptr,
-                   inbounds, nneg);
+                                    nullptr);
     }]>,
     OpBuilder<(ins "TypeRange":$resultTypes,
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment,
-                   CArg<"bool", "false">:$inbounds,
-                   CArg<"bool", "false">:$nneg), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultTypes, base, indices, nontemporal,
                    alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
-                                    nullptr,
-                   inbounds, nneg);
+                                    nullptr);
     }]>
   ];
 
@@ -1880,24 +1854,6 @@ def Vector_StoreOp : Vector_Op<"store", [
     store operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
     triggers immediate undefined behavior.
-
-    Out-of-bounds behavior is implementation-defined at the `vector` level: both
-    out-of-bounds start indices and the out-of-bounds tail of an in-bounds start
-    (e.g. `%memref[%c0] : memref<7xf32>, vector<8xf32>`) have target-specific
-    behavior (e.g. SPIR-V robust buffer access or AMDGPU buffer fat pointers may
-    define them to drop the write). The optional `inbounds` and `nneg` unit
-    attributes let a producer opt in to stronger assumptions used by lowerings:
-    *   `inbounds` asserts the access is in-bounds, i.e. `0 <= idx < dim_size`
-        for every dimension. When set, the LLVM lowering may emit
-        `llvm.getelementptr inbounds`.
-    *   `nneg` asserts that every index is non-negative. When set (and the
-        memref has non-negative strides), the LLVM lowering may additionally
-        emit the `nuw` flag.
-
-    Both default to unset, in which case no flag is emitted and the
-    target-defined out-of-bounds behavior above is preserved. Setting either
-    attribute when it does not hold is undefined behavior under the LLVM
-    lowering.
   }];
 
   let arguments = (ins
@@ -1906,22 +1862,17 @@ def Vector_StoreOp : Vector_Op<"store", [
       [MemWrite]>:$base,
       Variadic<Index>:$indices,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
-      OptionalAttr<IntValidAlignment<I64Attr>>: $alignment,
-      UnitAttr:$inbounds,
-      UnitAttr:$nneg);
+      OptionalAttr<IntValidAlignment<I64Attr>>: $alignment);
 
   let builders = [
     OpBuilder<(ins "Value":$valueToStore,
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment,
-                   CArg<"bool", "false">:$inbounds,
-                   CArg<"bool", "false">:$nneg), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, valueToStore, base, indices, nontemporal,
                    alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
-                                    nullptr,
-                   inbounds, nneg);
+                                    nullptr);
     }]>
   ];
 

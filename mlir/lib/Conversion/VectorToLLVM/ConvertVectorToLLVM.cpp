@@ -239,10 +239,11 @@ template <class LoadOrStoreOp>
 class VectorLoadStoreConversion : public ConvertOpToLLVMPattern<LoadOrStoreOp> {
 public:
   explicit VectorLoadStoreConversion(const LLVMTypeConverter &typeConv,
-                                     bool useVectorAlign)
+                                     bool useVectorAlign,
+                                     bool enableGEPInboundsNuw)
       : ConvertOpToLLVMPattern<LoadOrStoreOp>(typeConv),
-        useVectorAlignment(useVectorAlign) {}
-  using ConvertOpToLLVMPattern<LoadOrStoreOp>::ConvertOpToLLVMPattern;
+        useVectorAlignment(useVectorAlign),
+        enableGEPInboundsNuw(enableGEPInboundsNuw) {}
 
   LogicalResult
   matchAndRewrite(LoadOrStoreOp loadOrStoreOp,
@@ -266,21 +267,21 @@ public:
                                          "could not resolve alignment");
 
     // Resolve address.
-    // `vector.load`/`vector.store` may carry `inbounds`/`nneg` assertions about
-    // their indices (see the op docs). Translate them into GEP no-wrap flags so
-    // LLVM can apply no-wrap optimizations on the generated index arithmetic
-    // and GEP. When the attributes are absent (and for the masked variants,
-    // which target near-boundary access) no flag is emitted, preserving any
-    // target-defined out-of-bounds behavior.
+    // When --enable-gep-inbounds-nuw is set, emit inbounds|nuw on the GEP so
+    // LLVM can apply no-wrap optimizations on the index arithmetic. This
+    // assumes 0 <= idx < dim_size and non-negative strides; the caller is
+    // responsible for ensuring those conditions hold. Masked variants are
+    // designed for near-boundary access and never receive these flags.
     LLVM::GEPNoWrapFlags noWrapFlags = LLVM::GEPNoWrapFlags::none;
     if constexpr (std::is_same_v<LoadOrStoreOp, vector::LoadOp> ||
                   std::is_same_v<LoadOrStoreOp, vector::StoreOp>) {
-      if (loadOrStoreOp.getInbounds())
+      if (enableGEPInboundsNuw) {
         noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::inbounds;
-      // `nuw` additionally requires the whole offset computation to be
-      // non-negative: non-negative indices (nneg) *and* non-negative strides.
-      if (loadOrStoreOp.getNneg() && hasNonNegativeStrides(memRefTy))
-        noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::nuw;
+        // `nuw` additionally requires non-negative strides; skip it when the
+        // memref has dynamic or negative strides to avoid emitting poison.
+        if (hasNonNegativeStrides(memRefTy))
+          noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::nuw;
+      }
     }
     auto vtype = cast<VectorType>(
         this->typeConverter->convertType(loadOrStoreOp.getVectorType()));
@@ -298,6 +299,7 @@ private:
   // of the memref. This flag is intended for use with hardware
   // backends that require alignment of vector operations.
   const bool useVectorAlignment;
+  const bool enableGEPInboundsNuw;
 };
 
 /// Conversion pattern for a vector.gather.
@@ -2245,7 +2247,7 @@ void mlir::vector::populateVectorTransposeToFlatTranspose(
 void mlir::populateVectorToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
     bool reassociateFPReductions, bool force32BitVectorIndices,
-    bool useVectorAlignment) {
+    bool useVectorAlignment, bool enableGEPInboundsNuw) {
   // This function populates only ConversionPatterns, not RewritePatterns.
   MLIRContext *ctx = converter.getDialect()->getContext();
   patterns.add<VectorReductionOpConversion>(converter, reassociateFPReductions);
@@ -2253,8 +2255,9 @@ void mlir::populateVectorToLLVMConversionPatterns(
   patterns.add<VectorLoadStoreConversion<vector::LoadOp>,
                VectorLoadStoreConversion<vector::MaskedLoadOp>,
                VectorLoadStoreConversion<vector::StoreOp>,
-               VectorLoadStoreConversion<vector::MaskedStoreOp>,
-               VectorGatherOpConversion, VectorScatterOpConversion>(
+               VectorLoadStoreConversion<vector::MaskedStoreOp>>(
+      converter, useVectorAlignment, enableGEPInboundsNuw);
+  patterns.add<VectorGatherOpConversion, VectorScatterOpConversion>(
       converter, useVectorAlignment);
   patterns.add<VectorBitCastOpConversion, VectorShuffleOpConversion,
                VectorExtractOpConversion, VectorFMAOp1DConversion,

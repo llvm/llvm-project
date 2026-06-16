@@ -293,9 +293,9 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
         if (isa<MemRefType>(base.getType())) {
           // `vector.load` does not support scalar result; emit a vector load
           // and extract the single result instead.
-          Value load = vector::LoadOp::create(
-              b, loc, elemVecTy, base, loadOffsets, nontemporalAttr,
-              alignmentAttr, /*inbounds=*/nullptr, /*nneg=*/nullptr);
+          Value load =
+              vector::LoadOp::create(b, loc, elemVecTy, base, loadOffsets,
+                                     nontemporalAttr, alignmentAttr);
           int64_t zeroIdx[1] = {0};
           extracted = vector::ExtractOp::create(b, loc, load, zeroIdx);
         } else {

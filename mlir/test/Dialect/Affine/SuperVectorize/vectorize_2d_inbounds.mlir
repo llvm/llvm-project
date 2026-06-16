@@ -8,7 +8,7 @@
 // RUN:   | FileCheck %s --check-prefix=MATMUL
 // RUN: mlir-opt %s \
 // RUN:   --affine-super-vectorize="virtual-vector-size=4" \
-// RUN:   --convert-vector-to-llvm \
+// RUN:   --convert-vector-to-llvm='enable-gep-inbounds-nuw=1' \
 // RUN:   --finalize-memref-to-llvm \
 // RUN:   --convert-func-to-llvm \
 // RUN:   | FileCheck %s --check-prefix=LLVM

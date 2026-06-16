@@ -1806,83 +1806,19 @@ func.func @store_with_alignment(%memref : memref<200x100xf32>, %i : index, %j : 
 // -----
 
 //===----------------------------------------------------------------------===//
-// vector.load / vector.store inbounds / nneg flags
+// vector.load / vector.store with --enable-gep-inbounds-nuw pass option
 //===----------------------------------------------------------------------===//
 
-// `inbounds` alone lowers to `getelementptr inbounds` (which implies nusw, hence
-// `nsw` on the index arithmetic). No `nuw` without `nneg`.
-func.func @load_inbounds(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
-  %0 = vector.load %memref[%i, %j] {inbounds} : memref<200x100xf32>, vector<8xf32>
+// RUN: mlir-opt %s -convert-vector-to-llvm='enable-gep-inbounds-nuw=1' -split-input-file | FileCheck %s --check-prefix=CHECK-INBOUNDS
+
+// CHECK-INBOUNDS-LABEL: func @load_enable_gep_inbounds_nuw
+// CHECK-INBOUNDS: %[[MUL:.*]] = llvm.mul %{{.*}}, %{{.*}} overflow<nsw, nuw>  : i64
+// CHECK-INBOUNDS: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} overflow<nsw, nuw>  : i64
+// CHECK-INBOUNDS: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+func.func @load_enable_gep_inbounds_nuw(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
+  %0 = vector.load %memref[%i, %j] : memref<200x100xf32>, vector<8xf32>
   return %0 : vector<8xf32>
 }
-
-// CHECK-LABEL: func @load_inbounds
-// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %{{.*}} overflow<nsw> : i64
-// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} overflow<nsw> : i64
-// CHECK: %[[GEP:.*]] = llvm.getelementptr inbounds %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// CHECK: llvm.load %[[GEP]] {alignment = 4 : i64} : !llvm.ptr -> vector<8xf32>
-
-// -----
-
-// `inbounds` + `nneg` on a non-negative-strided memref lowers to
-// `getelementptr inbounds|nuw` and `overflow<nsw, nuw>`.
-func.func @load_inbounds_nneg(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
-  %0 = vector.load %memref[%i, %j] {inbounds, nneg} : memref<200x100xf32>, vector<8xf32>
-  return %0 : vector<8xf32>
-}
-
-// CHECK-LABEL: func @load_inbounds_nneg
-// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %{{.*}} overflow<nsw, nuw> : i64
-// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} overflow<nsw, nuw> : i64
-// CHECK: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// CHECK: llvm.load %[[GEP]] {alignment = 4 : i64} : !llvm.ptr -> vector<8xf32>
-
-// -----
-
-// `nneg` alone (no `inbounds`) lowers to `getelementptr nuw` / `overflow<nuw>`.
-// This is the out-of-bounds-but-non-negative case (e.g. AMDGPU buffer fat
-// pointers), where we must not claim `inbounds`.
-func.func @load_nneg(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
-  %0 = vector.load %memref[%i, %j] {nneg} : memref<200x100xf32>, vector<8xf32>
-  return %0 : vector<8xf32>
-}
-
-// CHECK-LABEL: func @load_nneg
-// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %{{.*}} overflow<nuw> : i64
-// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} overflow<nuw> : i64
-// CHECK: %[[GEP:.*]] = llvm.getelementptr nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// CHECK: llvm.load %[[GEP]] {alignment = 4 : i64} : !llvm.ptr -> vector<8xf32>
-
-// -----
-
-// `nneg` must not produce `nuw` when a stride is negative: `mul nuw idx, stride`
-// would wrap. The negative major stride here disables `nuw` (and `inbounds` is
-// not requested), so a plain GEP is emitted.
-func.func @load_nneg_negative_stride(%memref : memref<200x100xf32, strided<[-100, 1], offset: ?>>, %i : index, %j : index) -> vector<8xf32> {
-  %0 = vector.load %memref[%i, %j] {nneg} : memref<200x100xf32, strided<[-100, 1], offset: ?>>, vector<8xf32>
-  return %0 : vector<8xf32>
-}
-
-// CHECK-LABEL: func @load_nneg_negative_stride
-// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %{{.*}} : i64
-// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} : i64
-// CHECK: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// CHECK: llvm.load %[[GEP]] {alignment = 4 : i64} : !llvm.ptr -> vector<8xf32>
-
-// -----
-
-// Store side: `inbounds` + `nneg` lowers to `getelementptr inbounds|nuw`.
-func.func @store_inbounds_nneg(%memref : memref<200x100xf32>, %i : index, %j : index) {
-  %val = arith.constant dense<11.0> : vector<4xf32>
-  vector.store %val, %memref[%i, %j] {inbounds, nneg} : memref<200x100xf32>, vector<4xf32>
-  return
-}
-
-// CHECK-LABEL: func @store_inbounds_nneg
-// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %{{.*}} overflow<nsw, nuw> : i64
-// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}} overflow<nsw, nuw> : i64
-// CHECK: %[[GEP:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// CHECK: llvm.store %{{.*}}, %[[GEP]] {alignment = 4 : i64} :  vector<4xf32>, !llvm.ptr
 
 // -----
 
