@@ -47,7 +47,7 @@ public:
     EXPECT_FP_EQ(FPT(M_PI), func(CFPT{neg_inf, 1.0}));
     EXPECT_FP_EQ(FPT(M_PI), func(CFPT{neg_inf, 64.0}));
     // carg(-inf - yi) = -pi for finite y > 0
-    EXPECT_FP_EQ(FPT(-M_PI), func(CFPT{neg_inf,-1.0}));
+    EXPECT_FP_EQ(FPT(-M_PI), func(CFPT{neg_inf, -1.0}));
     EXPECT_FP_EQ(FPT(-M_PI), func(CFPT{neg_inf, -512.0}));
     // carg(-inf + 0i) = +pi
     EXPECT_FP_EQ(FPT(M_PI), func(CFPT{neg_inf, 0.0}));
