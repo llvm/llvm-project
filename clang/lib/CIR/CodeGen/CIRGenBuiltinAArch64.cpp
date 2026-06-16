@@ -2692,6 +2692,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vcvt_bf16_f32:
   case NEON::BI__builtin_neon_vcvtq_low_bf16_f32:
   case NEON::BI__builtin_neon_vcvtq_high_bf16_f32:
+  case NEON::BI__builtin_neon_vcvt_f16_f32:
+  case NEON::BI__builtin_neon_vcvt_f32_f16:
   case clang::AArch64::BI_InterlockedAdd:
   case clang::AArch64::BI_InterlockedAdd_acq:
   case clang::AArch64::BI_InterlockedAdd_rel:

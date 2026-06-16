@@ -3330,12 +3330,10 @@ int64x1_t test_vcreate_s64(uint64_t a) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
-// CHECK-NEXT:    [[VCVT_F16_F32_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
-// CHECK-NEXT:    [[VCVT_F16_F321_I:%.*]] = call <4 x i16> @llvm.arm.neon.vcvtfp2hf(<4 x float> [[VCVT_F16_F32_I]])
-// CHECK-NEXT:    [[VCVT_F16_F322_I:%.*]] = bitcast <4 x i16> [[VCVT_F16_F321_I]] to <8 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[VCVT_F16_F322_I]] to <4 x i16>
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i16> [[TMP2]] to <4 x half>
-// CHECK-NEXT:    ret <4 x half> [[TMP3]]
+// CHECK-NEXT:    [[VCVTFP2HF_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
+// CHECK-NEXT:    [[VCVTFP2HF1_I:%.*]] = call <4 x i16> @llvm.arm.neon.vcvtfp2hf(<4 x float> [[VCVTFP2HF_I]])
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[VCVTFP2HF1_I]] to <4 x half>
+// CHECK-NEXT:    ret <4 x half> [[TMP2]]
 //
 float16x4_t test_vcvt_f16_f32(float32x4_t a) {
   return vcvt_f16_f32(a);
@@ -3394,12 +3392,9 @@ float32x4_t test_vcvtq_f32_u32(uint32x4_t a) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <4 x i16>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
-// CHECK-NEXT:    [[VCVT_F32_F16_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
-// CHECK-NEXT:    [[VCVT_F32_F161_I:%.*]] = call <4 x float> @llvm.arm.neon.vcvthf2fp(<4 x i16> [[VCVT_F32_F16_I]])
-// CHECK-NEXT:    [[VCVT_F32_F162_I:%.*]] = bitcast <4 x float> [[VCVT_F32_F161_I]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[VCVT_F32_F162_I]] to <4 x i32>
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP2]] to <4 x float>
-// CHECK-NEXT:    ret <4 x float> [[TMP3]]
+// CHECK-NEXT:    [[VCVTHF2FP_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <4 x i16>
+// CHECK-NEXT:    [[VCVTHF2FP1_I:%.*]] = call <4 x float> @llvm.arm.neon.vcvthf2fp(<4 x i16> [[VCVTHF2FP_I]])
+// CHECK-NEXT:    ret <4 x float> [[VCVTHF2FP1_I]]
 //
 float32x4_t test_vcvt_f32_f16(float16x4_t a) {
   return vcvt_f32_f16(a);
