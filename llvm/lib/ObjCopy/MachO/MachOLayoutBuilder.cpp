@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "MachOLayoutBuilder.h"
-#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 using namespace llvm::objcopy::macho;
@@ -179,11 +179,11 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
     if (IsObjectFile) {
       Offset += SegFileSize;
     } else {
-      Offset = alignTo(Offset + SegFileSize, PageSize);
-      SegFileSize = alignTo(SegFileSize, PageSize);
+      Offset = alignToPowerOf2(Offset + SegFileSize, PageSize);
+      SegFileSize = alignToPowerOf2(SegFileSize, PageSize);
       // Use the original vmsize if the segment is __PAGEZERO.
       VMSize =
-          Segname == "__PAGEZERO" ? SegmentVmSize : alignTo(VMSize, PageSize);
+          Segname == "__PAGEZERO" ? SegmentVmSize : alignToPowerOf2(VMSize, PageSize);
     }
 
     switch (MLC.load_command_data.cmd) {
@@ -289,18 +289,18 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
   uint64_t StartOfCodeSignature = Offset;
   uint32_t CodeSignatureSize = 0;
   if (O.CodeSignatureCommandIndex) {
-    StartOfCodeSignature = alignTo(StartOfCodeSignature, 16);
+    StartOfCodeSignature = alignToPowerOf2(StartOfCodeSignature, 16);
 
     // Note: These calculations are to be kept in sync with the same
     // calculations performed in LLD's CodeSignatureSection.
     const uint32_t AllHeadersSize =
-        alignTo(CodeSignature.FixedHeadersSize + OutputFileName.size() + 1,
+        alignToPowerOf2(CodeSignature.FixedHeadersSize + OutputFileName.size() + 1,
                 CodeSignature.Align);
     const uint32_t BlockCount =
         (StartOfCodeSignature + CodeSignature.BlockSize - 1) /
         CodeSignature.BlockSize;
     const uint32_t Size =
-        alignTo(AllHeadersSize + BlockCount * CodeSignature.HashSize,
+        alignToPowerOf2(AllHeadersSize + BlockCount * CodeSignature.HashSize,
                 CodeSignature.Align);
 
     CodeSignature.StartOffset = StartOfCodeSignature;
@@ -321,13 +321,13 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     case MachO::LC_SEGMENT:
       MLC->segment_command_data.cmdsize = sizeof(MachO::segment_command);
       MLC->segment_command_data.fileoff = StartOfLinkEdit;
-      MLC->segment_command_data.vmsize = alignTo(LinkEditSize, PageSize);
+      MLC->segment_command_data.vmsize = alignToPowerOf2(LinkEditSize, PageSize);
       MLC->segment_command_data.filesize = LinkEditSize;
       break;
     case MachO::LC_SEGMENT_64:
       MLC->segment_command_64_data.cmdsize = sizeof(MachO::segment_command_64);
       MLC->segment_command_64_data.fileoff = StartOfLinkEdit;
-      MLC->segment_command_64_data.vmsize = alignTo(LinkEditSize, PageSize);
+      MLC->segment_command_64_data.vmsize = alignToPowerOf2(LinkEditSize, PageSize);
       MLC->segment_command_64_data.filesize = LinkEditSize;
       break;
     }
