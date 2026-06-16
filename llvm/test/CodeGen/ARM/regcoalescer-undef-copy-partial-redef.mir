@@ -1,0 +1,19 @@
+# RUN: llc -mtriple=armv8a-unknown-linux -run-pass=register-coalescer \
+# RUN:   -verify-machineinstrs -o /dev/null %s
+#
+# Eliminating the undef COPY for dsub_0 must mark the following dsub_1
+# partial def as a read-undef def.  Otherwise dsub_1 implicitly reads a
+# nonexistent incoming value and RegisterCoalescer asserts.
+
+---
+name:            undef_copy_partial_redef
+tracksRegLiveness: true
+isSSA:           false
+body:             |
+  bb.0:
+    %0:dpr = VMOVv2i32 0, 14 /* CC::al */, $noreg
+    undef %1.dsub_0:qpr = COPY undef %2:dpr
+    %1.dsub_1:qpr = COPY killed %0
+    %3:dpr = COPY %1.dsub_0
+    VST1d64 $noreg, 0, killed %3, 14 /* CC::al */, $noreg
+...
