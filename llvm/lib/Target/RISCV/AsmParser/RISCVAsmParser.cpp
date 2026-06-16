@@ -499,12 +499,6 @@ public:
            RISCVMCRegisterClasses[RISCV::YGPRRegClassID].contains(Reg.Reg);
   }
 
-  bool isStackPtr() const {
-    return isReg() &&
-           (RISCVMCRegisterClasses[RISCV::SP_XRegClassID].contains(Reg.Reg) ||
-            RISCVMCRegisterClasses[RISCV::SP_YRegClassID].contains(Reg.Reg));
-  }
-
   bool isGPRPair() const {
     return Kind == KindTy::Register &&
            RISCVMCRegisterClasses[RISCV::GPRPairRegClassID].contains(Reg.Reg);
@@ -895,10 +889,6 @@ public:
   bool isUImm8Lsb000() const { return isUImmShifted<5, 3>(); }
 
   bool isUImm9Lsb000() const { return isUImmShifted<6, 3>(); }
-
-  bool isUImm9Lsb0000() const { return isUImmShifted<5, 4>(); }
-
-  bool isUImm10Lsb0000() const { return isUImmShifted<6, 4>(); }
 
   bool isUImm14Lsb00() const { return isUImmShifted<12, 2>(); }
 
@@ -1390,29 +1380,8 @@ static MCRegister convertFPR64ToFPR256(MCRegister Reg) {
   return Reg - RISCV::F0_D + RISCV::F0_Q2;
 }
 
-static bool regClassIsYGPR(const MCRegisterClass &RC) {
-  assert(RC.getNumRegs() > 0);
-  return RISCVMCRegisterClasses[RISCV::YGPRRegClassID].contains(*RC.begin());
-}
-
-static MatchClassKind remapRegClassByHwMode(MatchClassKind Kind, bool Purecap) {
-  // TODO: Generate this mapping automatically from TableGen.
-  switch (Kind) {
-  case MCK_RegByHwMode_BasePtrRegClass:
-    return Purecap ? MCK_YGPRNoX0 : MCK_GPR;
-  case MCK_RegByHwMode_BasePtrCRegClass:
-    return Purecap ? MCK_YGPRC : MCK_GPRC;
-  case MCK_RegByHwMode_SP:
-    return Purecap ? MCK_SP_Y : MCK_SP_X;
-  default:
-    llvm_unreachable("Unhandled RegClassByHwMode");
-  }
-}
-
 unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
-                                                    unsigned MatchKind) {
-  // Convert to enum for improved debugger output.
-  MatchClassKind Kind = static_cast<MatchClassKind>(MatchKind);
+                                                    unsigned Kind) {
   RISCVOperand &Op = static_cast<RISCVOperand &>(AsmOp);
   if (!Op.isReg())
     return Match_InvalidOperand;
@@ -1424,30 +1393,10 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
       RISCVMCRegisterClasses[RISCV::FPR64CRegClassID].contains(Reg);
   bool IsRegVR = RISCVMCRegisterClasses[RISCV::VRRegClassID].contains(Reg);
 
-  // In RVY mode, classes such as BasePtrRC register class should select
-  // capability registers for the base pointer operands, otherwise we use GPRs.
-  // This is not currently handled automatically by tablegen so we have to
-  // manually remap the MCK_ values and also manually handle the register
-  // restrictions (such as NoX0) for ByHwMode classes.
-  // TODO: Is there any way we could do this in tablegen automatically?
-  bool NeedManualRegClassCheck = false;
-  if (Kind > MCK_LAST_REGISTER && Kind <= MCK_LAST_REGCLASS_BY_HWMODE) {
-    bool Purecap = STI->hasFeature(RISCV::FeatureStdExtY) &&
-                   !STI->hasFeature(RISCV::FeatureVendorXLLVMRVYIPM);
-    Kind = remapRegClassByHwMode(Kind, Purecap);
-  }
-  const MCRegisterClass *CheckRC = getRegClassFromMatchKind(Kind);
-  // YGPR and GPR use the same names, remap and check them if necessary.
-  if (!Op.isYGPR() && CheckRC && regClassIsYGPR(*CheckRC)) {
-    assert(Op.isGPR() && "Can only convert GPR to YGPR");
+  if (Op.isGPR() && Kind == MCK_YGPR) {
+    // GPR and capability GPR use the same register names, convert if required.
     Op.Reg.Reg = convertGPRToYGPR(Reg);
-    NeedManualRegClassCheck = true;
-  }
-  if (NeedManualRegClassCheck) {
-    assert(CheckRC && "Must have a valid register class for validation");
-    if (CheckRC->contains(Op.getReg()))
-      return Match_Success;
-    return getDiagKindFromRegisterClass(Kind);
+    return Match_Success;
   }
   if (IsRegFPR64 && Kind == MCK_FPR256) {
     Op.Reg.Reg = convertFPR64ToFPR256(Reg);
@@ -1688,10 +1637,6 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 9) - 8,
         "immediate must be a multiple of 8 bytes in the range");
-  case Match_InvalidUImm9Lsb0000:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, 0, (1 << 9) - 16,
-        "immediate must be a multiple of 16 bytes in the range");
   case Match_InvalidSImm8PLI_B:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 7),
                                       (1 << 8) - 1);
@@ -1707,10 +1652,6 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 4, (1 << 10) - 4,
         "immediate must be a multiple of 4 bytes in the range");
-  case Match_InvalidUImm10Lsb0000:
-    return generateImmOutOfRangeError(
-        Operands, ErrorInfo, 0, (1 << 10) - 16,
-        "immediate must be a multiple of 16 bytes in the range");
   case Match_InvalidSImm10Lsb0000NonZero:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 9), (1 << 9) - 16,

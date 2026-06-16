@@ -3584,7 +3584,6 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
 
   OS << "\n#ifdef GET_MATCHER_IMPLEMENTATION\n";
   OS << "#undef GET_MATCHER_IMPLEMENTATION\n\n";
-  OS << "#include \"llvm/MC/MCRegisterInfo.h\"\n\n";
 
   // Generate the function that remaps for mnemonic aliases.
   bool HasMnemonicAliases = emitMnemonicAliases(OS, Info, Target);

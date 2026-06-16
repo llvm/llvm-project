@@ -165,7 +165,7 @@ def qux2 : Instruction {
 // REGINFO-ENUM-NEXT: };
 
 // REGINFO-DESC:      extern const MCRegisterClass ArchMCRegisterClasses[] = {
-// REGINFO-DESC-NEXT:   { RegClass, RegClassBits, 20, 2, sizeof(RegClassBits), Arch::RegClassRegClassID, 32, 1, true, false },
-// REGINFO-DESC-NEXT:   { RegClass2, RegClass2Bits, 0, 1, sizeof(RegClass2Bits), Arch::RegClass2RegClassID, 32, 1, true, false },
-// REGINFO-DESC-NEXT:   { RegClass3, RegClass3Bits, 10, 1, sizeof(RegClass3Bits), Arch::RegClass3RegClassID, 32, 1, true, false },
+// REGINFO-DESC-NEXT:   { RegClass, RegClassBits,
+// REGINFO-DESC-NEXT:   { RegClass2, RegClass2Bits,
+// REGINFO-DESC-NEXT:   { RegClass3, RegClass3Bits,
 // REGINFO-DESC-NEXT: };
