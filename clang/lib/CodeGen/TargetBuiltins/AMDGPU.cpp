@@ -1009,6 +1009,22 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {Args[0]->getType()});
     return Builder.CreateCall(F, {Args});
   }
+  case AMDGPU::BI__builtin_amdgcn_av_load_b128:
+  case AMDGPU::BI__builtin_amdgcn_av_store_b128: {
+    const bool IsStore = BuiltinID == AMDGPU::BI__builtin_amdgcn_av_store_b128;
+    SmallVector<Value *, 5> Args = {EmitScalarExpr(E->getArg(0))}; // addr
+    if (IsStore)
+      Args.push_back(EmitScalarExpr(E->getArg(1))); // data
+    const unsigned ScopeIdx = E->getNumArgs() - 1;
+    auto *ScopeExpr =
+        cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(ScopeIdx)));
+    Args.push_back(emitScopeMD(*this, ScopeExpr->getZExtValue()));
+    llvm::Function *F =
+        CGM.getIntrinsic(IsStore ? Intrinsic::amdgcn_av_store_b128
+                                 : Intrinsic::amdgcn_av_load_b128,
+                         {Args[0]->getType()});
+    return Builder.CreateCall(F, Args);
+  }
   case AMDGPU::BI__builtin_amdgcn_get_fpenv: {
     Function *F = CGM.getIntrinsic(Intrinsic::get_fpenv,
                                    {llvm::Type::getInt64Ty(getLLVMContext())});
@@ -1427,6 +1443,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w32:
   case AMDGPU::BI__builtin_amdgcn_swmmac_f32_16x16x32_bf8_bf8_w64:
   // GFX1250 WMMA builtins
+  case AMDGPU::BI__builtin_amdgcn_wmma_f64_16x16x4_f64:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x4_f32:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x32_bf16:
   case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x32_f16:
@@ -1627,6 +1644,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       BuiltinWMMAOp = Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8;
       break;
     // GFX1250 WMMA builtins
+    case AMDGPU::BI__builtin_amdgcn_wmma_f64_16x16x4_f64:
+      ArgsForMatchingMatrixTypes = {5, 1};
+      BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f64_16x16x4_f64;
+      break;
     case AMDGPU::BI__builtin_amdgcn_wmma_f32_16x16x4_f32:
       ArgsForMatchingMatrixTypes = {3, 0};
       BuiltinWMMAOp = Intrinsic::amdgcn_wmma_f32_16x16x4_f32;

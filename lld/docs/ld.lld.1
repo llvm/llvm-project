@@ -96,7 +96,8 @@ Write a Big Endian ELF File using BE8 format(AArch32 only)
 .It Fl -branch-to-branch
 Enable the branch-to-branch optimizations: a branch whose target is
 another branch instruction is rewritten to point to the latter branch
-target (AArch64 and X86_64 only). Enabled by default at
+target (AArch64 and X86_64 only), and CFI jump table entries are replaced
+with the function body where possible (X86_64 only). Enabled by default at
 .Fl O2 Ns .
 .It Fl -build-id Ns = Ns Ar value
 Generate a build ID note.

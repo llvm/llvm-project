@@ -22,12 +22,12 @@ struct DebugName {
   dxbc::DebugNameHeader Parameters;
   StringRef Filename;
 
-  DebugName() { Parameters.Flags = 0; }
+  DebugName() : Parameters{0, 0} {}
   DebugName(dxbc::DebugNameHeader &Parameters, StringRef Filename)
       : Parameters(Parameters), Filename(Filename) {}
 
-  void setFilename(StringRef DebugFilename);
-  void write(raw_ostream &OS) const;
+  LLVM_ABI void setFilename(StringRef DebugFilename);
+  LLVM_ABI void write(raw_ostream &OS) const;
 };
 
 struct CompilerVersion {
@@ -35,11 +35,11 @@ struct CompilerVersion {
   StringRef CommitSha;
   StringRef CustomVersionString;
 
-  CompilerVersion();
+  LLVM_ABI CompilerVersion();
 
-  void setCommitSha(StringRef CommitSha);
-  void setVersionString(StringRef VersionString);
-  void write(raw_ostream &OS) const;
+  LLVM_ABI void setCommitSha(StringRef CommitSha);
+  LLVM_ABI void setVersionString(StringRef VersionString);
+  LLVM_ABI void write(raw_ostream &OS) const;
 
 private:
   void updateContentSize();
@@ -49,8 +49,8 @@ struct SourceInfo {
   struct Section {
     dxbc::SourceInfo::SectionHeader GenericHeader;
 
-    void computeGenericHeader(uint32_t ContentSize,
-                              dxbc::SourceInfo::SectionType Type);
+    LLVM_ABI void computeGenericHeader(uint32_t ContentSize,
+                                       dxbc::SourceInfo::SectionType Type);
   };
 
   struct SourceContents : public Section {
@@ -59,7 +59,7 @@ struct SourceInfo {
       std::string FileContent;
 
       /// Compute Parameters based on FileContent.
-      void compute();
+      LLVM_ABI void compute();
     };
 
     dxbc::SourceInfo::Contents::Header Parameters;
@@ -67,9 +67,10 @@ struct SourceInfo {
 
     /// Compute Parameters based on the content of Args.
     /// Sizes are computed assuming CompressionType == None.
-    void computeUncompressed(dxbc::SourceInfo::Contents::CompressionType Type);
+    LLVM_ABI void
+    computeUncompressed(dxbc::SourceInfo::Contents::CompressionType Type);
     /// Update Parameters based on the compressed size of section content.
-    void computeFinalSize(uint32_t CompressedSize);
+    LLVM_ABI void computeFinalSize(uint32_t CompressedSize);
   };
 
   struct SourceNames : public Section {
@@ -79,7 +80,7 @@ struct SourceInfo {
       uint16_t EntriesSizeInBytes;
 
       Header() {}
-      Header(const dxbc::SourceInfo::Names::HeaderOnDisk &H);
+      LLVM_ABI Header(const dxbc::SourceInfo::Names::HeaderOnDisk &H);
 
       void swapBytes() {
         sys::swapByteOrder(Flags);
@@ -93,14 +94,14 @@ struct SourceInfo {
       StringRef FileName;
 
       /// Compute Parameters based on FileName and FileContent.
-      void compute(uint32_t ContentSize);
+      LLVM_ABI void compute(uint32_t ContentSize);
     };
 
     Header Parameters;
     SmallVector<Entry> Entries;
 
     /// Compute headers based on the content of entries.
-    void compute();
+    LLVM_ABI void compute();
   };
 
   struct ProgramArgs : public Section {
@@ -110,7 +111,7 @@ struct SourceInfo {
     SmallVector<Entry> Args;
 
     /// Compute Parameters based on Args.
-    void compute();
+    LLVM_ABI void compute();
   };
 
   dxbc::SourceInfo::Header Parameters;
@@ -119,7 +120,7 @@ struct SourceInfo {
   ProgramArgs Args;
 
   /// Compute Parameters based on the content of sections.
-  void compute();
+  LLVM_ABI void compute();
 };
 
 /// This data structure is a helper for reading and writing SourceInfo data.
@@ -143,9 +144,9 @@ struct SourceInfoBuilder {
     Args.emplace_back(Name, Value);
   }
 
-  void computeEntries();
-  void finalize();
-  void write(raw_ostream &OS) const;
+  LLVM_ABI void computeEntries();
+  LLVM_ABI void finalize();
+  LLVM_ABI void write(raw_ostream &OS) const;
 
 private:
   std::optional<dxbc::SourceInfo::Contents::CompressionType> CompressionType;

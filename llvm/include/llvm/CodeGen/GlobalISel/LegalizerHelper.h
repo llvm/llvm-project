@@ -305,16 +305,13 @@ private:
   // Memcpy family legalization helpers.
   LegalizeResult lowerMemset(MachineInstr &MI, Register Dst, Register Val,
                              uint64_t KnownLen, Align Alignment,
-                             bool IsVolatile, bool DstAlignCanChange,
-                             ArrayRef<LLT> MemOps);
+                             bool DstAlignCanChange, ArrayRef<LLT> MemOps);
   LegalizeResult lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
-                             uint64_t KnownLen, Align DstAlign, Align SrcAlign,
-                             bool IsVolatile, bool DstAlignCanChange,
-                             ArrayRef<LLT> MemOps);
+                             uint64_t KnownLen, Align Alignment,
+                             bool DstAlignCanChange, ArrayRef<LLT> MemOps);
   LegalizeResult lowerMemmove(MachineInstr &MI, Register Dst, Register Src,
-                              uint64_t KnownLen, Align DstAlign, Align SrcAlign,
-                              bool IsVolatile, bool DstAlignCanChange,
-                              ArrayRef<LLT> MemOps);
+                              uint64_t KnownLen, Align Alignment,
+                              bool DstAlignCanChange, ArrayRef<LLT> MemOps);
 
   // Implements floating-point environment read/write via library function call.
   LegalizeResult createGetStateLibcall(MachineInstr &MI,
@@ -575,8 +572,7 @@ public:
   LLVM_ABI LegalizeResult lowerVectorReduction(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerMemCpyFamily(MachineInstr &MI, Register Dst,
                                             Register Src, uint64_t KnownLen,
-                                            Align DstAlign, Align SrcAlign,
-                                            bool IsVolatile,
+                                            Align Alignment,
                                             bool DstAlignCanChange,
                                             ArrayRef<LLT> MemOps);
   LLVM_ABI LegalizeResult lowerMemCpyFamily(MachineInstr &MI,

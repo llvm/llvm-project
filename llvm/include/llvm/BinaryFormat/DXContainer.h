@@ -205,7 +205,7 @@ LLVM_ABI ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
 
 LLVM_ABI_FOR_TEST bool isValidParameterType(uint32_t V);
 
-bool isValidRangeType(uint32_t V);
+LLVM_ABI bool isValidRangeType(uint32_t V);
 
 #define SHADER_VISIBILITY(Val, Enum) Enum = Val,
 enum class ShaderVisibility : uint32_t {
@@ -214,14 +214,14 @@ enum class ShaderVisibility : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<ShaderVisibility>> getShaderVisibility();
 
-bool isValidShaderVisibility(uint32_t V);
+LLVM_ABI bool isValidShaderVisibility(uint32_t V);
 
 #define FILTER(Val, Enum) Enum = Val,
 enum class SamplerFilter : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-bool isValidSamplerFilter(uint32_t V);
+LLVM_ABI bool isValidSamplerFilter(uint32_t V);
 
 LLVM_ABI ArrayRef<EnumEntry<SamplerFilter>> getSamplerFilters();
 
@@ -232,7 +232,7 @@ enum class TextureAddressMode : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<TextureAddressMode>> getTextureAddressModes();
 
-bool isValidAddress(uint32_t V);
+LLVM_ABI bool isValidAddress(uint32_t V);
 
 #define COMPARISON_FUNC(Val, Enum) Enum = Val,
 enum class ComparisonFunc : uint32_t {
@@ -241,28 +241,29 @@ enum class ComparisonFunc : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<ComparisonFunc>> getComparisonFuncs();
 
-bool isValidComparisonFunc(uint32_t V);
+LLVM_ABI bool isValidComparisonFunc(uint32_t V);
 
 #define STATIC_BORDER_COLOR(Val, Enum) Enum = Val,
 enum class StaticBorderColor : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-bool isValidBorderColor(uint32_t V);
+LLVM_ABI bool isValidBorderColor(uint32_t V);
 
-bool isValidRootDesciptorFlags(uint32_t V);
+LLVM_ABI bool isValidRootDesciptorFlags(uint32_t V);
 
-bool isValidDescriptorRangeFlags(uint32_t V);
+LLVM_ABI bool isValidDescriptorRangeFlags(uint32_t V);
 
-bool isValidStaticSamplerFlags(uint32_t V);
+LLVM_ABI bool isValidStaticSamplerFlags(uint32_t V);
 
 LLVM_ABI ArrayRef<EnumEntry<StaticBorderColor>> getStaticBorderColors();
 
 LLVM_ABI PartType parsePartType(StringRef S);
 
-bool isDebugProgramPart(PartType PT);
+LLVM_ABI bool isDebugProgramPart(PartType PT);
 
-const char *getProgramPartName(bool IsDebug);
+LLVM_ABI const char *getProgramPartName(bool IsDebug);
+LLVM_ABI bool isProgramPart(StringRef PartName);
 
 struct VertexPSVInfo {
   uint8_t OutputPositionPresent;
@@ -831,7 +832,7 @@ enum class CompilerVersionFlags : uint32_t {
   LLVM_MARK_AS_BITMASK_ENUM(Internal)
 };
 
-bool isValidCompilerVersionFlags(uint32_t V);
+LLVM_ABI bool isValidCompilerVersionFlags(uint32_t V);
 
 struct CompilerVersionHeader {
   uint16_t Major;
@@ -896,6 +897,11 @@ struct SectionHeader {
     sys::swapByteOrder(Flags);
     sys::swapByteOrder(Type);
   }
+
+  void updateSize(uint32_t ContentSize) {
+    AlignedSizeInBytes =
+        alignTo(sizeof(*this) + ContentSize, DXCONTAINER_STRUCT_ALIGNMENT);
+  }
 };
 
 static_assert(sizeof(SectionHeader) == 8,
@@ -950,7 +956,7 @@ enum class CompressionType : uint16_t {
 };
 
 LLVM_ABI ArrayRef<EnumEntry<CompressionType>> getCompressionTypes();
-bool isValidCompressionType(uint16_t V);
+LLVM_ABI bool isValidCompressionType(uint16_t V);
 
 struct Header {
   /// Size of the section including this header. Aligned to a 4-byte boundary.

@@ -11,7 +11,6 @@
 #include "X86/TestBase.h"
 #include "gtest/gtest.h"
 #include <string>
-#include <unordered_map>
 
 #ifdef __linux__
 #include <endian.h>
@@ -40,9 +39,8 @@ protected:
     return getpid() * TestCount + TestNumber;
   }
 
-  void
-  testCommon(std::unordered_map<std::string, MemoryValue> MemoryDefinitions,
-             const unsigned TestNumber) {
+  void testCommon(StringMap<MemoryValue> MemoryDefinitions,
+                  const unsigned TestNumber) {
     EXPECT_FALSE(
         SM.initializeSubprocessMemory(getSharedMemoryNumber(TestNumber)));
     EXPECT_FALSE(SM.addMemoryDefinition(MemoryDefinitions,

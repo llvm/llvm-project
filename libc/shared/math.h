@@ -12,6 +12,7 @@
 #include "libc_common.h"
 
 #include "math/acos.h"
+#include "math/acosbf16.h"
 #include "math/acosf.h"
 #include "math/acosf16.h"
 #include "math/acoshf.h"
@@ -67,6 +68,7 @@
 #include "math/cbrt.h"
 #include "math/cbrtbf16.h"
 #include "math/cbrtf.h"
+#include "math/cbrtf16.h"
 #include "math/ceil.h"
 #include "math/ceilbf16.h"
 #include "math/ceilf.h"
@@ -291,6 +293,7 @@
 // TODO: isnan is a macro in <math.h>
 // #include "math/isnan.h"
 #include "math/isnanf.h"
+#include "math/isnanf128.h"
 #include "math/isnanf16.h"
 #include "math/isnanl.h"
 // TODO: issignaling is a macro in <math.h>

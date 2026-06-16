@@ -75,6 +75,7 @@ public:
     eServerPacketType_QSetSTDIN,
     eServerPacketType_QSetSTDOUT,
     eServerPacketType_QSetSTDERR,
+    eServerPacketType_QSetSTDIOWindowSize,
     eServerPacketType_QSetWorkingDir,
     eServerPacketType_QStartNoAckMode,
     eServerPacketType_qPathComplete,
