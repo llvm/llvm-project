@@ -39,6 +39,7 @@ add_llvm_target(HexagonCodeGen
   HexagonGenMux.cpp
   HexagonGenPredicate.cpp
   HexagonGlobalRegion.cpp
+  HexagonGlobalScheduler.cpp
   HexagonLiveVariables.cpp
   HexagonHardwareLoops.cpp
   HexagonHazardRecognizer.cpp
@@ -75,6 +76,7 @@ add_llvm_target(HexagonCodeGen
   HexagonVExtract.cpp
   HexagonVLIWPacketizer.cpp
   RDFCopy.cpp
+  HexagonAggressiveRDFCopy.cpp
   RDFDeadCode.cpp
 
   LINK_COMPONENTS
@@ -88,6 +90,7 @@ add_llvm_target(HexagonCodeGen
   HexagonInfo
   IPO
   MC
+  MIRParser
   Scalar
   SelectionDAG
   Support

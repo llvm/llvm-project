@@ -173,7 +173,12 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
 
   // Check other allowed types.
   if (auto t = dyn_cast<FloatType>(type)) {
-    // TODO: All float types are allowed for now, but this should be fixed.
+    if (!ScalarType::isValid(t)) {
+      parser.emitError(typeLoc,
+                       "only 8/16/32/64-bit float type allowed but found ")
+          << type;
+      return Type();
+    }
   } else if (auto t = dyn_cast<IntegerType>(type)) {
     if (!ScalarType::isValid(t)) {
       parser.emitError(typeLoc,
@@ -774,6 +779,11 @@ static Type parseStructType(SPIRVDialect const &dialect,
     Type memberType;
     if (parser.parseType(memberType))
       return Type();
+    if (!isa<SPIRVType>(memberType)) {
+      parser.emitError(parser.getNameLoc(),
+                       "member type must be a valid SPIR-V type");
+      return Type();
+    }
     memberTypes.push_back(memberType);
 
     if (succeeded(parser.parseOptionalLSquare()))
@@ -856,6 +866,10 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
     return parseRuntimeArrayType(*this, parser);
   if (keyword == "sampled_image")
     return parseSampledImageType(*this, parser);
+  if (keyword == "sampler")
+    return SamplerType::get(getContext());
+  if (keyword == "named_barrier")
+    return NamedBarrierType::get(getContext());
   if (keyword == "struct")
     return parseStructType(*this, parser);
   if (keyword == "matrix")
@@ -900,6 +914,12 @@ static void print(ImageType type, DialectAsmPrinter &os) {
 
 static void print(SampledImageType type, DialectAsmPrinter &os) {
   os << "sampled_image<" << type.getImageType() << ">";
+}
+
+static void print(SamplerType type, DialectAsmPrinter &os) { os << "sampler"; }
+
+static void print(NamedBarrierType type, DialectAsmPrinter &os) {
+  os << "named_barrier";
 }
 
 static void print(StructType type, DialectAsmPrinter &os) {
@@ -996,7 +1016,8 @@ static void print(TensorArmType type, DialectAsmPrinter &os) {
 void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
       .Case<ArrayType, CooperativeMatrixType, PointerType, RuntimeArrayType,
-            ImageType, SampledImageType, StructType, MatrixType, TensorArmType>(
+            ImageType, SampledImageType, SamplerType, NamedBarrierType,
+            StructType, MatrixType, TensorArmType>(
           [&](auto type) { print(type, os); })
       .DefaultUnreachable("Unhandled SPIR-V type");
 }
@@ -1034,6 +1055,14 @@ LogicalResult SPIRVDialect::verifyOperationAttribute(Operation *op,
   } else if (symbol == spirv::getTargetEnvAttrName()) {
     if (!isa<spirv::TargetEnvAttr>(attr))
       return op->emitError("'") << symbol << "' must be a spirv::TargetEnvAttr";
+  } else if (symbol == spirv::getLoopControlAttrName()) {
+    if (!isa<spirv::LoopControlAttr>(attr))
+      return op->emitError("'")
+             << symbol << "' must be a spirv::LoopControlAttr";
+  } else if (symbol == spirv::getSelectionControlAttrName()) {
+    if (!isa<spirv::SelectionControlAttr>(attr))
+      return op->emitError("'")
+             << symbol << "' must be a spirv::SelectionControlAttr";
   } else {
     return op->emitError("found unsupported '")
            << symbol << "' attribute on operation";

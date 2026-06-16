@@ -37,6 +37,10 @@
 // RUN: not %clang --target=mips-unknown-linux -fsanitize=cfi-icall %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-ICALL-MIPS
 // CHECK-CFI-ICALL-MIPS: error: unsupported option '-fsanitize=cfi-icall' for target 'mips-unknown-linux'
 
+// RUN: %clang --target=hexagon-unknown-linux-musl -fsanitize=cfi-icall -fvisibility=hidden -flto -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-ICALL-HEXAGON
+// CHECK-CFI-ICALL-HEXAGON: "-emit-llvm-bc"
+// CHECK-CFI-ICALL-HEXAGON-NOT: error: unsupported option
+
 // RUN: not %clang --target=x86_64-apple-darwin10 -mmacos-version-min=10.7 -flto -fsanitize=cfi-vcall -fno-sanitize-trap=cfi -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-OLD-MACOS
 // CHECK-CFI-NOTRAP-OLD-MACOS: error: unsupported option '-fno-sanitize-trap=cfi-vcall' for target 'x86_64-apple-darwin10'
 

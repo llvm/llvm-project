@@ -14,12 +14,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/LowerInvoke.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "lower-invoke"
@@ -46,21 +46,13 @@ static bool runImpl(Function &F) {
   bool Changed = false;
   for (BasicBlock &BB : F)
     if (InvokeInst *II = dyn_cast<InvokeInst>(BB.getTerminator())) {
-      SmallVector<Value *, 16> CallArgs(II->args());
-      SmallVector<OperandBundleDef, 1> OpBundles;
-      II->getOperandBundlesAsDefs(OpBundles);
-      // Insert a normal call instruction...
-      CallInst *NewCall =
-          CallInst::Create(II->getFunctionType(), II->getCalledOperand(),
-                           CallArgs, OpBundles, "", II->getIterator());
+      CallInst *NewCall = createCallMatchingInvoke(II);
       NewCall->takeName(II);
-      NewCall->setCallingConv(II->getCallingConv());
-      NewCall->setAttributes(II->getAttributes());
-      NewCall->setDebugLoc(II->getDebugLoc());
+      NewCall->insertBefore(II->getIterator());
       II->replaceAllUsesWith(NewCall);
 
       // Insert an unconditional branch to the normal destination.
-      BranchInst::Create(II->getNormalDest(), II->getIterator());
+      UncondBrInst::Create(II->getNormalDest(), II->getIterator());
 
       // Remove any PHI node entries from the exception destination.
       II->getUnwindDest()->removePredecessor(&BB);

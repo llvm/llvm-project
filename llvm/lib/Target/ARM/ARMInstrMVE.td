@@ -3280,27 +3280,27 @@ def MVE_VSLIimm32 : MVE_VSxI_imm<"vsli", "32", 0b1,imm0_31, 0b10> {
   let Inst{21} = 0b1;
 }
 
-multiclass MVE_VSxI_patterns<MVE_VSxI_imm inst, string name,
-                              MVEVectorVTInfo VTI> {
+multiclass MVE_VSxI_patterns<MVE_VSxI_imm inst, SDPatternOperator Node,
+                             SDPatternOperator PredIntr, MVEVectorVTInfo VTI> {
   defvar inparams = (? (VTI.Vec MQPR:$QdSrc), (VTI.Vec MQPR:$Qm),
                        (inst.immediateType:$imm));
   defvar outparams = (inst (VTI.Vec MQPR:$QdSrc), (VTI.Vec MQPR:$Qm),
                            (inst.immediateType:$imm));
-  defvar unpred_int = !cast<Intrinsic>("int_arm_mve_" # name);
-  defvar pred_int = !cast<Intrinsic>("int_arm_mve_" # name # "_predicated");
 
-  def : Pat<(VTI.Vec !setdagop(inparams, unpred_int)),
+  def : Pat<(VTI.Vec !setdagop(inparams, Node)),
             (VTI.Vec outparams)>;
-  def : Pat<(VTI.Vec !con(inparams, (pred_int (VTI.Pred VCCR:$pred)))),
+  def : Pat<(VTI.Vec !con(inparams, (PredIntr (VTI.Pred VCCR:$pred)))),
             (VTI.Vec !con(outparams, (? ARMVCCThen, VCCR:$pred, zero_reg)))>;
 }
 
-defm : MVE_VSxI_patterns<MVE_VSLIimm8,  "vsli", MVE_v16i8>;
-defm : MVE_VSxI_patterns<MVE_VSLIimm16, "vsli", MVE_v8i16>;
-defm : MVE_VSxI_patterns<MVE_VSLIimm32, "vsli", MVE_v4i32>;
-defm : MVE_VSxI_patterns<MVE_VSRIimm8,  "vsri", MVE_v16i8>;
-defm : MVE_VSxI_patterns<MVE_VSRIimm16, "vsri", MVE_v8i16>;
-defm : MVE_VSxI_patterns<MVE_VSRIimm32, "vsri", MVE_v4i32>;
+let Predicates = [HasMVEInt] in {
+defm : MVE_VSxI_patterns<MVE_VSLIimm8,  NEONvsliImm, int_arm_mve_vsli_predicated, MVE_v16i8>;
+defm : MVE_VSxI_patterns<MVE_VSLIimm16, NEONvsliImm, int_arm_mve_vsli_predicated, MVE_v8i16>;
+defm : MVE_VSxI_patterns<MVE_VSLIimm32, NEONvsliImm, int_arm_mve_vsli_predicated, MVE_v4i32>;
+defm : MVE_VSxI_patterns<MVE_VSRIimm8,  NEONvsriImm, int_arm_mve_vsri_predicated, MVE_v16i8>;
+defm : MVE_VSxI_patterns<MVE_VSRIimm16, NEONvsriImm, int_arm_mve_vsri_predicated, MVE_v8i16>;
+defm : MVE_VSxI_patterns<MVE_VSRIimm32, NEONvsriImm, int_arm_mve_vsri_predicated, MVE_v4i32>;
+}
 
 class MVE_VQSHL_imm<MVEVectorVTInfo VTI_, Operand immType>
   : MVE_shift_with_imm<"vqshl", VTI_.Suffix, (outs MQPR:$Qd),
@@ -3605,12 +3605,12 @@ multiclass MVE_VRINT_m<MVEVectorVTInfo VTI, string suffix, bits<3> opcode,
 }
 
 multiclass MVE_VRINT_ops<MVEVectorVTInfo VTI> {
-  defm N : MVE_VRINT_m<VTI, "n", 0b000, froundeven>;
-  defm X : MVE_VRINT_m<VTI, "x", 0b001, frint>;
-  defm A : MVE_VRINT_m<VTI, "a", 0b010, fround>;
-  defm Z : MVE_VRINT_m<VTI, "z", 0b011, ftrunc>;
-  defm M : MVE_VRINT_m<VTI, "m", 0b101, ffloor>;
-  defm P : MVE_VRINT_m<VTI, "p", 0b111, fceil>;
+  defm N : MVE_VRINT_m<VTI, "n", 0b000, any_froundeven>;
+  defm X : MVE_VRINT_m<VTI, "x", 0b001, any_frint>;
+  defm A : MVE_VRINT_m<VTI, "a", 0b010, any_fround>;
+  defm Z : MVE_VRINT_m<VTI, "z", 0b011, any_ftrunc>;
+  defm M : MVE_VRINT_m<VTI, "m", 0b101, any_ffloor>;
+  defm P : MVE_VRINT_m<VTI, "p", 0b111, any_fceil>;
 }
 
 defm MVE_VRINTf16 : MVE_VRINT_ops<MVE_v8f16>;

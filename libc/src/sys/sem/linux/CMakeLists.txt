@@ -1,0 +1,46 @@
+add_entrypoint_object(
+  semget
+  SRCS
+    semget.cpp
+  HDRS
+    ../semget.h
+  DEPENDS
+    libc.hdr.types.key_t
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  semctl
+  SRCS
+    semctl.cpp
+  HDRS
+    ../semctl.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.sys_ipc_macros
+    libc.hdr.sys_sem_macros
+    libc.hdr.types.struct_semid_ds
+    libc.hdr.types.struct_seminfo
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  semop
+  SRCS
+    semop.cpp
+  HDRS
+    ../semop.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_sembuf
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.errno.errno
+)

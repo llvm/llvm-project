@@ -274,12 +274,12 @@ void ExecuteRegionOp::getSuccessorRegions(
   }
 
   // Otherwise, the region branches back to the parent operation.
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange ExecuteRegionOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange();
+  return successor.isOperation() ? ValueRange(getOperation()->getResults())
+                                 : ValueRange();
 }
 
 //===----------------------------------------------------------------------===//
@@ -288,10 +288,10 @@ ValueRange ExecuteRegionOp::getSuccessorInputs(RegionSuccessor successor) {
 
 MutableOperandRange
 ConditionOp::getMutableSuccessorOperands(RegionSuccessor point) {
-  assert(
-      (point.isParent() || point.getSuccessor() == &getParentOp().getAfter()) &&
-      "condition op can only exit the loop or branch to the after"
-      "region");
+  assert((point.isOperation() ||
+          point.getSuccessor() == &getParentOp().getAfter()) &&
+         "condition op can only exit the loop or branch to the after"
+         "region");
   // Pass all operands except the condition to the successor region.
   return getArgsMutable();
 }
@@ -308,7 +308,7 @@ void ConditionOp::getSuccessorRegions(
   if (!boolAttr || boolAttr.getValue())
     regions.emplace_back(&whileOp.getAfter());
   if (!boolAttr || !boolAttr.getValue())
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(whileOp.getOperation()));
 }
 
 //===----------------------------------------------------------------------===//
@@ -348,6 +348,16 @@ void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
 }
 
 LogicalResult ForOp::verify() {
+  // Check that the body block has at least the induction variable argument.
+  // This must be checked before verifyRegions() and before any region trait
+  // verifiers (e.g. LoopLikeOpInterface) that call getRegionIterArgs(), to
+  // avoid crashing with an out-of-bounds drop_front on an empty arg list.
+  if (getBody()->getNumArguments() < getNumInductionVars())
+    return emitOpError("expected body to have at least ")
+           << getNumInductionVars()
+           << " argument(s) for the induction variable, but got "
+           << getBody()->getNumArguments();
+
   // Check that the number of init args and op results is the same.
   if (getInitArgs().size() != getNumResults())
     return emitOpError(
@@ -357,6 +367,12 @@ LogicalResult ForOp::verify() {
 }
 
 LogicalResult ForOp::verifyRegions() {
+  // Check that the body block has at least the induction variable argument.
+  if (getBody()->getNumArguments() < getNumInductionVars())
+    return emitOpError("expected body to have at least ")
+           << getNumInductionVars() << " argument(s) for the induction "
+           << "variable, but got " << getBody()->getNumArguments();
+
   // Check that the body defines as single block argument for the induction
   // variable.
   if (getInductionVar().getType() != getLowerBound().getType())
@@ -677,7 +693,7 @@ void ForOp::getSuccessorRegions(RegionBranchPoint point,
       if (*tripCount == 0) {
         // The loop has zero iterations. It branches directly back to the
         // parent.
-        regions.push_back(RegionSuccessor::parent());
+        regions.push_back(RegionSuccessor(getOperation()));
       } else {
         // The loop has at least one iteration. It branches into the body.
         regions.push_back(RegionSuccessor(&getRegion()));
@@ -686,7 +702,7 @@ void ForOp::getSuccessorRegions(RegionBranchPoint point,
     } else if (*tripCount == 1) {
       // The loop has exactly 1 iteration. Therefore, it branches from the
       // region to the parent. (No further iteration.)
-      regions.push_back(RegionSuccessor::parent());
+      regions.push_back(RegionSuccessor(getOperation()));
       return;
     }
   }
@@ -695,12 +711,12 @@ void ForOp::getSuccessorRegions(RegionBranchPoint point,
   // back into the operation itself. It is possible for loop not to enter the
   // body.
   regions.push_back(RegionSuccessor(&getRegion()));
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange ForOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getResults())
-                              : ValueRange(getRegionIterArgs());
+  return successor.isOperation() ? ValueRange(getResults())
+                                 : ValueRange(getRegionIterArgs());
 }
 
 SmallVector<Region *> ForallOp::getLoopRegions() { return {&getRegion()}; }
@@ -1740,15 +1756,27 @@ struct FoldTensorCastOfOutputIntoForallOp
                                bbArgs.front().getParentBlock(), ivsBlockArgs);
         });
 
-    // After `mergeBlocks` happened, the destinations in the terminator were
-    // mapped to the tensor.cast old-typed results of the output bbArgs. The
-    // destination have to be updated to point to the output bbArgs directly.
+    // After `mergeBlocks` happened, the destinations in the terminator may be
+    // mapped to tensor.cast values wrapping the new output bbArgs (introduced
+    // for indices in `tensorCastProducers`). Update those destinations to
+    // point directly to the output bbArgs, bypassing the casts.
+    //
+    // Note: we cannot zip yieldingOps with regionIterArgs by position because
+    // a parallel_insert_slice inside in_parallel may write to any shared
+    // output, not necessarily the one at the same position.
+    llvm::SmallDenseSet<Value> newIterArgSet(
+        newForallOp.getRegionIterArgs().begin(),
+        newForallOp.getRegionIterArgs().end());
     auto terminator = newForallOp.getTerminator();
-    for (auto [yieldingOp, outputBlockArg] : llvm::zip(
-             terminator.getYieldingOps(), newForallOp.getRegionIterArgs())) {
-      if (auto parallelCombingingOp =
-              dyn_cast<ParallelCombiningOpInterface>(yieldingOp)) {
-        parallelCombingingOp.getUpdatedDestinations().assign(outputBlockArg);
+    for (auto &yieldingOp : terminator.getYieldingOps()) {
+      auto parallelCombiningOp =
+          dyn_cast<ParallelCombiningOpInterface>(&yieldingOp);
+      if (!parallelCombiningOp)
+        continue;
+      for (OpOperand &dest : parallelCombiningOp.getUpdatedDestinations()) {
+        auto castOp = dest.get().getDefiningOp<tensor::CastOp>();
+        if (castOp && newIterArgSet.contains(castOp.getSource()))
+          dest.set(castOp.getSource());
       }
     }
 
@@ -1786,12 +1814,12 @@ void ForallOp::getSuccessorRegions(RegionBranchPoint point,
     regions.push_back(RegionSuccessor(&getRegion()));
     // However, when there are 0 threads, the control flow may branch back to
     // the parent immediately.
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
   } else {
     // In accordance with the semantics of forall, its body is executed in
     // parallel by multiple threads. We should not expect to branch back into
     // the forall body after the region's execution is complete.
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
   }
 }
 
@@ -1997,7 +2025,7 @@ void IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
   MLIRContext *ctx = builder.getContext();
   auto attrDict = DictionaryAttr::get(ctx, result.attributes);
   if (succeeded(inferReturnTypes(ctx, std::nullopt, result.operands, attrDict,
-                                 /*properties=*/nullptr, result.regions,
+                                 /*properties=*/PropertyRef{}, result.regions,
                                  inferredReturnTypes))) {
     result.addTypes(inferredReturnTypes);
   }
@@ -2073,7 +2101,7 @@ void IfOp::getSuccessorRegions(RegionBranchPoint point,
   // The `then` and the `else` region branch back to the parent operation or one
   // of the recursive parent operations (early exit case).
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
     return;
   }
 
@@ -2082,14 +2110,14 @@ void IfOp::getSuccessorRegions(RegionBranchPoint point,
   // Don't consider the else region if it is empty.
   Region *elseRegion = &this->getElseRegion();
   if (elseRegion->empty())
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
   else
     regions.push_back(RegionSuccessor(elseRegion));
 }
 
 ValueRange IfOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange();
+  return successor.isOperation() ? ValueRange(getOperation()->getResults())
+                                 : ValueRange();
 }
 
 void IfOp::getEntrySuccessorRegions(ArrayRef<Attribute> operands,
@@ -2104,7 +2132,7 @@ void IfOp::getEntrySuccessorRegions(ArrayRef<Attribute> operands,
     if (!getElseRegion().empty())
       regions.emplace_back(&getElseRegion());
     else
-      regions.emplace_back(RegionSuccessor::parent());
+      regions.emplace_back(RegionSuccessor(getOperation()));
   }
 }
 
@@ -3100,7 +3128,7 @@ void ParallelOp::getSuccessorRegions(
   // back into the operation itself. It is possible for loop not to enter the
   // body.
   regions.push_back(RegionSuccessor(&getRegion()));
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 //===----------------------------------------------------------------------===//
@@ -3259,12 +3287,12 @@ void WhileOp::getSuccessorRegions(RegionBranchPoint point,
     return;
   }
 
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
   regions.emplace_back(&getAfter());
 }
 
 ValueRange WhileOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getOperation()->getResults();
   if (successor == &getBefore())
     return getBefore().getArguments();
@@ -3802,7 +3830,7 @@ void IndexSwitchOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &successors) {
   // All regions branch back to the parent op.
   if (!point.isParent()) {
-    successors.push_back(RegionSuccessor::parent());
+    successors.push_back(RegionSuccessor(getOperation()));
     return;
   }
 
@@ -3810,8 +3838,8 @@ void IndexSwitchOp::getSuccessorRegions(
 }
 
 ValueRange IndexSwitchOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getOperation()->getResults())
-                              : ValueRange();
+  return successor.isOperation() ? ValueRange(getOperation()->getResults())
+                                 : ValueRange();
 }
 
 void IndexSwitchOp::getEntrySuccessorRegions(

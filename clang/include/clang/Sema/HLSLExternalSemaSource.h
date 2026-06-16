@@ -46,6 +46,7 @@ private:
   void defineHLSLVectorAlias();
   void defineHLSLMatrixAlias();
   void defineHLSLTypesWithForwardDeclarations();
+  void defineHLSLAtomicIntrinsics();
   void onCompletion(CXXRecordDecl *Record, CompletionFunction Fn);
 };
 

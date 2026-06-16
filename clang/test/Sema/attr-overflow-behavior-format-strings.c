@@ -11,9 +11,6 @@ int snprintf(char *restrict, __SIZE_TYPE__, const char *restrict, ...);
 int scanf(const char *restrict, ...);
 int sscanf(const char *restrict, const char *restrict, ...);
 
-#define __wrap __attribute__((overflow_behavior(wrap)))
-#define __trap __attribute__((overflow_behavior(trap)))
-
 typedef int __ob_wrap wrap_int;
 typedef int __ob_trap no_trap_int;
 typedef unsigned int __ob_wrap wrap_uint;

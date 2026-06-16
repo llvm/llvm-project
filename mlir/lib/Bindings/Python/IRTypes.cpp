@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // clang-format off
+#include "mlir-c/ExtensibleDialect.h"
 #include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/IRTypes.h"
 // clang-format on
@@ -464,7 +465,7 @@ void PyVectorType::bindDerived(ClassTy &c) {
 
 PyVectorType
 PyVectorType::getChecked(std::vector<int64_t> shape, PyType &elementType,
-                         std::optional<nb::list> scalable,
+                         std::optional<nb::sequence> scalable,
                          std::optional<std::vector<int64_t>> scalableDims,
                          DefaultingPyLocation loc) {
   if (scalable && scalableDims) {
@@ -475,11 +476,11 @@ PyVectorType::getChecked(std::vector<int64_t> shape, PyType &elementType,
   PyMlirContext::ErrorCapture errors(loc->getContext());
   MlirType type;
   if (scalable) {
-    if (scalable->size() != shape.size())
+    if (nb::len(*scalable) != shape.size())
       throw nb::value_error("Expected len(scalable) == len(shape).");
 
     std::vector<char> scalableDimFlags;
-    scalableDimFlags.reserve(scalable->size());
+    scalableDimFlags.reserve(nb::len(*scalable));
     for (const nb::handle &h : *scalable) {
       scalableDimFlags.push_back(nb::cast<bool>(h) ? 1 : 0);
     }
@@ -506,7 +507,7 @@ PyVectorType::getChecked(std::vector<int64_t> shape, PyType &elementType,
 }
 
 PyVectorType PyVectorType::get(std::vector<int64_t> shape, PyType &elementType,
-                               std::optional<nb::list> scalable,
+                               std::optional<nb::sequence> scalable,
                                std::optional<std::vector<int64_t>> scalableDims,
                                DefaultingPyMlirContext context) {
   if (scalable && scalableDims) {
@@ -517,11 +518,11 @@ PyVectorType PyVectorType::get(std::vector<int64_t> shape, PyType &elementType,
   PyMlirContext::ErrorCapture errors(context->getRef());
   MlirType type;
   if (scalable) {
-    if (scalable->size() != shape.size())
+    if (nb::len(*scalable) != shape.size())
       throw nb::value_error("Expected len(scalable) == len(shape).");
 
     std::vector<char> scalableDimFlags;
-    scalableDimFlags.reserve(scalable->size());
+    scalableDimFlags.reserve(nb::len(*scalable));
     for (const nb::handle &h : *scalable) {
       scalableDimFlags.push_back(nb::cast<bool>(h) ? 1 : 0);
     }
@@ -751,20 +752,6 @@ void PyTupleType::bindDerived(ClassTy &c) {
       },
       nb::arg("elements"), nb::arg("context") = nb::none(),
       "Create a tuple type");
-  c.def_static(
-      "get_tuple",
-      [](std::vector<PyType> elements, DefaultingPyMlirContext context) {
-        std::vector<MlirType> elements_(elements.size());
-        std::copy(elements.begin(), elements.end(), elements_.begin());
-        MlirType t = mlirTupleTypeGet(context->get(), elements_.size(),
-                                      elements_.data());
-        return PyTupleType(context->getRef(), t);
-      },
-      nb::arg("elements"), nb::arg("context") = nb::none(),
-      // clang-format off
-        nb::sig("def get_tuple(elements: Sequence[Type], context: Context | None = None) -> TupleType"),
-      // clang-format on
-      "Create a tuple type");
   c.def(
       "get_type",
       [](PyTupleType &self, intptr_t pos) -> nb::typed<nb::object, PyType> {
@@ -801,27 +788,9 @@ void PyFunctionType::bindDerived(ClassTy &c) {
       },
       nb::arg("inputs"), nb::arg("results"), nb::arg("context") = nb::none(),
       "Gets a FunctionType from a list of input and result types");
-  c.def_static(
-      "get",
-      [](std::vector<PyType> inputs, std::vector<PyType> results,
-         DefaultingPyMlirContext context) {
-        std::vector<MlirType> inputs_(inputs.size());
-        std::copy(inputs.begin(), inputs.end(), inputs_.begin());
-        std::vector<MlirType> results_(results.size());
-        std::copy(results.begin(), results.end(), results_.begin());
-        MlirType t =
-            mlirFunctionTypeGet(context->get(), inputs_.size(), inputs_.data(),
-                                results_.size(), results_.data());
-        return PyFunctionType(context->getRef(), t);
-      },
-      nb::arg("inputs"), nb::arg("results"), nb::arg("context") = nb::none(),
-      // clang-format off
-        nb::sig("def get(inputs: Sequence[Type], results: Sequence[Type], context: Context | None = None) -> FunctionType"),
-      // clang-format on
-      "Gets a FunctionType from a list of input and result types");
   c.def_prop_ro(
       "inputs",
-      [](PyFunctionType &self) {
+      [](PyFunctionType &self) -> nb::typed<nb::list, PyType> {
         MlirType t = self;
         nb::list types;
         for (intptr_t i = 0, e = mlirFunctionTypeGetNumInputs(self); i < e;
@@ -833,7 +802,7 @@ void PyFunctionType::bindDerived(ClassTy &c) {
       "Returns the list of input types in the FunctionType.");
   c.def_prop_ro(
       "results",
-      [](PyFunctionType &self) {
+      [](PyFunctionType &self) -> nb::typed<nb::list, PyType> {
         nb::list types;
         for (intptr_t i = 0, e = mlirFunctionTypeGetNumResults(self); i < e;
              ++i) {
@@ -873,6 +842,85 @@ void PyOpaqueType::bindDerived(ClassTy &c) {
       "Returns the data for the Opaque type as a string.");
 }
 
+static MlirDynamicTypeDefinition
+getDynamicTypeDef(const std::string &fullTypeName,
+                  DefaultingPyMlirContext context) {
+  size_t dotPos = fullTypeName.find('.');
+  if (dotPos == std::string::npos) {
+    throw nb::value_error("Expected full type name to be in the format "
+                          "'<dialectName>.<typeName>'.");
+  }
+
+  std::string dialectName = fullTypeName.substr(0, dotPos);
+  std::string typeName = fullTypeName.substr(dotPos + 1);
+  PyDialects dialects(context->getRef());
+  MlirDialect dialect = dialects.getDialectForKey(dialectName, false);
+  if (!mlirDialectIsAExtensibleDialect(dialect))
+    throw nb::value_error(
+        ("Dialect '" + dialectName + "' is not an extensible dialect.")
+            .c_str());
+
+  MlirDynamicTypeDefinition typeDef = mlirExtensibleDialectLookupTypeDefinition(
+      dialect, toMlirStringRef(typeName));
+  if (typeDef.ptr == nullptr) {
+    throw nb::value_error(("Dialect '" + dialectName +
+                           "' does not contain a type named '" + typeName +
+                           "'.")
+                              .c_str());
+  }
+
+  return typeDef;
+}
+
+void PyDynamicType::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](const std::string &fullTypeName, const std::vector<PyAttribute> &attrs,
+         DefaultingPyMlirContext context) {
+        MlirDynamicTypeDefinition typeDef =
+            getDynamicTypeDef(fullTypeName, context);
+
+        std::vector<MlirAttribute> mlirAttrs;
+        mlirAttrs.reserve(attrs.size());
+        for (const auto &attr : attrs)
+          mlirAttrs.push_back(attr.get());
+        MlirType t =
+            mlirDynamicTypeGet(typeDef, mlirAttrs.data(), mlirAttrs.size());
+        return PyDynamicType(context->getRef(), t);
+      },
+      nb::arg("full_type_name"), nb::arg("attributes"),
+      nb::arg("context") = nb::none(), "Create a dynamic type.");
+  c.def_prop_ro(
+      "params",
+      [](PyDynamicType &self) {
+        size_t numParams = mlirDynamicTypeGetNumParams(self);
+        std::vector<PyAttribute> params;
+        params.reserve(numParams);
+        for (size_t i = 0; i < numParams; ++i)
+          params.emplace_back(self.getContext(),
+                              mlirDynamicTypeGetParam(self, i));
+        return params;
+      },
+      "Returns the parameters of the dynamic type as a list of attributes.");
+  c.def_prop_ro("type_name", [](PyDynamicType &self) {
+    MlirDynamicTypeDefinition typeDef = mlirDynamicTypeGetTypeDef(self);
+    MlirStringRef name = mlirDynamicTypeDefinitionGetName(typeDef);
+    MlirDialect dialect = mlirDynamicTypeDefinitionGetDialect(typeDef);
+    MlirStringRef dialectNamespace = mlirDialectGetNamespace(dialect);
+    return std::string(dialectNamespace.data, dialectNamespace.length) + "." +
+           std::string(name.data, name.length);
+  });
+  c.def_static(
+      "lookup_typeid",
+      [](const std::string &fullTypeName, DefaultingPyMlirContext context) {
+        MlirDynamicTypeDefinition typeDef =
+            getDynamicTypeDef(fullTypeName, context);
+        return PyTypeID(mlirDynamicTypeDefinitionGetTypeID(typeDef));
+      },
+      nb::arg("full_type_name"), nb::arg("context") = nb::none(),
+      "Look up the TypeID for the given dynamic type name.");
+}
+
 void populateIRTypes(nb::module_ &m) {
   PyIntegerType::bind(m);
   PyFloatType::bind(m);
@@ -904,6 +952,7 @@ void populateIRTypes(nb::module_ &m) {
   PyTupleType::bind(m);
   PyFunctionType::bind(m);
   PyOpaqueType::bind(m);
+  PyDynamicType::bind(m);
 }
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python

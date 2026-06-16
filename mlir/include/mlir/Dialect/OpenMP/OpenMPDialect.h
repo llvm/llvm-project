@@ -17,6 +17,7 @@
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
+#include "mlir/Dialect/OpenMP/OpenMPOffloadUtils.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
@@ -40,7 +41,7 @@
 /// Operations implementing LoopWrapperInterface.
 #define OMP_LOOP_WRAPPER_OPS                                                   \
   mlir::omp::WorkshareLoopWrapperOp, mlir::omp::LoopOp, mlir::omp::WsloopOp,   \
-      mlir::omp::SimdOp, mlir::omp::DistributeOp, mlir::omp::TaskloopOp
+      mlir::omp::SimdOp, mlir::omp::DistributeOp, mlir::omp::TaskloopWrapperOp
 
 /// Operations implementing OutlineableOpenMPOpInterface.
 #define OMP_OUTLINEABLE_OPS                                                    \

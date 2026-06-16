@@ -154,15 +154,15 @@ define void @smax() {
 define void @minnum() {
 ; CHECK-LABEL: 'minnum'
 ; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %V1f32 = call <vscale x 1 x float> @llvm.minnum.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V2f32 = call <vscale x 2 x float> @llvm.minnum.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4f32 = call <vscale x 4 x float> @llvm.minnum.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V8f32 = call <vscale x 8 x float> @llvm.minnum.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V2f64 = call <vscale x 2 x double> @llvm.minnum.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V4f64 = call <vscale x 4 x double> @llvm.minnum.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V2f16 = call <vscale x 2 x half> @llvm.minnum.nxv2f16(<vscale x 2 x half> undef, <vscale x 2 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4f16 = call <vscale x 4 x half> @llvm.minnum.nxv4f16(<vscale x 4 x half> undef, <vscale x 4 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V8f16 = call <vscale x 8 x half> @llvm.minnum.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V16f16 = call <vscale x 16 x half> @llvm.minnum.nxv16f16(<vscale x 16 x half> undef, <vscale x 16 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2f32 = call <vscale x 2 x float> @llvm.minnum.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4f32 = call <vscale x 4 x float> @llvm.minnum.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V8f32 = call <vscale x 8 x float> @llvm.minnum.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2f64 = call <vscale x 2 x double> @llvm.minnum.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4f64 = call <vscale x 4 x double> @llvm.minnum.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2f16 = call <vscale x 2 x half> @llvm.minnum.nxv2f16(<vscale x 2 x half> undef, <vscale x 2 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4f16 = call <vscale x 4 x half> @llvm.minnum.nxv4f16(<vscale x 4 x half> undef, <vscale x 4 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V8f16 = call <vscale x 8 x half> @llvm.minnum.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V16f16 = call <vscale x 16 x half> @llvm.minnum.nxv16f16(<vscale x 16 x half> undef, <vscale x 16 x half> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %V1f32 = call <vscale x 1 x float> @llvm.minnum.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x float> undef)
@@ -181,15 +181,15 @@ define void @minnum() {
 define void @maxnum() {
 ; CHECK-LABEL: 'maxnum'
 ; CHECK-NEXT:  Cost Model: Found costs of Invalid for: %V1f32 = call <vscale x 1 x float> @llvm.maxnum.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V2f32 = call <vscale x 2 x float> @llvm.maxnum.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4f32 = call <vscale x 4 x float> @llvm.maxnum.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V8f32 = call <vscale x 8 x float> @llvm.maxnum.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V2f64 = call <vscale x 2 x double> @llvm.maxnum.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V4f64 = call <vscale x 4 x double> @llvm.maxnum.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V2f16 = call <vscale x 2 x half> @llvm.maxnum.nxv2f16(<vscale x 2 x half> undef, <vscale x 2 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4f16 = call <vscale x 4 x half> @llvm.maxnum.nxv4f16(<vscale x 4 x half> undef, <vscale x 4 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V8f16 = call <vscale x 8 x half> @llvm.maxnum.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V16f16 = call <vscale x 16 x half> @llvm.maxnum.nxv16f16(<vscale x 16 x half> undef, <vscale x 16 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2f32 = call <vscale x 2 x float> @llvm.maxnum.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4f32 = call <vscale x 4 x float> @llvm.maxnum.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V8f32 = call <vscale x 8 x float> @llvm.maxnum.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2f64 = call <vscale x 2 x double> @llvm.maxnum.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4f64 = call <vscale x 4 x double> @llvm.maxnum.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2f16 = call <vscale x 2 x half> @llvm.maxnum.nxv2f16(<vscale x 2 x half> undef, <vscale x 2 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4f16 = call <vscale x 4 x half> @llvm.maxnum.nxv4f16(<vscale x 4 x half> undef, <vscale x 4 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V8f16 = call <vscale x 8 x half> @llvm.maxnum.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V16f16 = call <vscale x 16 x half> @llvm.maxnum.nxv16f16(<vscale x 16 x half> undef, <vscale x 16 x half> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %V1f32 = call <vscale x 1 x float> @llvm.maxnum.nxv1f32(<vscale x 1 x float> undef, <vscale x 1 x float> undef)
@@ -207,15 +207,15 @@ define void @maxnum() {
 
 define void @minimum() {
 ; CHECK-LABEL: 'minimum'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V2f32 = call <vscale x 2 x float> @llvm.minimum.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4f32 = call <vscale x 4 x float> @llvm.minimum.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V8f32 = call <vscale x 8 x float> @llvm.minimum.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V2f64 = call <vscale x 2 x double> @llvm.minimum.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V4f64 = call <vscale x 4 x double> @llvm.minimum.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V2f16 = call <vscale x 2 x half> @llvm.minimum.nxv2f16(<vscale x 2 x half> undef, <vscale x 2 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4f16 = call <vscale x 4 x half> @llvm.minimum.nxv4f16(<vscale x 4 x half> undef, <vscale x 4 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V8f16 = call <vscale x 8 x half> @llvm.minimum.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V16f16 = call <vscale x 16 x half> @llvm.minimum.nxv16f16(<vscale x 16 x half> undef, <vscale x 16 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2f32 = call <vscale x 2 x float> @llvm.minimum.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4f32 = call <vscale x 4 x float> @llvm.minimum.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V8f32 = call <vscale x 8 x float> @llvm.minimum.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2f64 = call <vscale x 2 x double> @llvm.minimum.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4f64 = call <vscale x 4 x double> @llvm.minimum.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2f16 = call <vscale x 2 x half> @llvm.minimum.nxv2f16(<vscale x 2 x half> undef, <vscale x 2 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4f16 = call <vscale x 4 x half> @llvm.minimum.nxv4f16(<vscale x 4 x half> undef, <vscale x 4 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V8f16 = call <vscale x 8 x half> @llvm.minimum.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V16f16 = call <vscale x 16 x half> @llvm.minimum.nxv16f16(<vscale x 16 x half> undef, <vscale x 16 x half> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %V2f32 = call <vscale x 2 x float> @llvm.minimum.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef)
@@ -232,15 +232,15 @@ define void @minimum() {
 
 define void @maximum() {
 ; CHECK-LABEL: 'maximum'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V2f32 = call <vscale x 2 x float> @llvm.maximum.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4f32 = call <vscale x 4 x float> @llvm.maximum.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V8f32 = call <vscale x 8 x float> @llvm.maximum.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V2f64 = call <vscale x 2 x double> @llvm.maximum.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V4f64 = call <vscale x 4 x double> @llvm.maximum.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V2f16 = call <vscale x 2 x half> @llvm.maximum.nxv2f16(<vscale x 2 x half> undef, <vscale x 2 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4f16 = call <vscale x 4 x half> @llvm.maximum.nxv4f16(<vscale x 4 x half> undef, <vscale x 4 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V8f16 = call <vscale x 8 x half> @llvm.maximum.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 4 for: %V16f16 = call <vscale x 16 x half> @llvm.maximum.nxv16f16(<vscale x 16 x half> undef, <vscale x 16 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2f32 = call <vscale x 2 x float> @llvm.maximum.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4f32 = call <vscale x 4 x float> @llvm.maximum.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V8f32 = call <vscale x 8 x float> @llvm.maximum.nxv8f32(<vscale x 8 x float> undef, <vscale x 8 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2f64 = call <vscale x 2 x double> @llvm.maximum.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x double> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V4f64 = call <vscale x 4 x double> @llvm.maximum.nxv4f64(<vscale x 4 x double> undef, <vscale x 4 x double> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V2f16 = call <vscale x 2 x half> @llvm.maximum.nxv2f16(<vscale x 2 x half> undef, <vscale x 2 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V4f16 = call <vscale x 4 x half> @llvm.maximum.nxv4f16(<vscale x 4 x half> undef, <vscale x 4 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 1 for: %V8f16 = call <vscale x 8 x half> @llvm.maximum.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 2 for: %V16f16 = call <vscale x 16 x half> @llvm.maximum.nxv16f16(<vscale x 16 x half> undef, <vscale x 16 x half> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %V2f32 = call <vscale x 2 x float> @llvm.maximum.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> undef)

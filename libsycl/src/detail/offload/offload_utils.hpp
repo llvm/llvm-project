@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of helpers for libsycl-to-liboffload
+/// communication and data conversion.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_OFFLOAD_UTILS
 #define _LIBSYCL_OFFLOAD_UTILS
@@ -13,6 +19,7 @@
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/exception.hpp>
 #include <sycl/__impl/info/device_type.hpp>
+#include <sycl/__impl/usm_alloc_type.hpp>
 
 #include <OffloadAPI.h>
 
@@ -37,6 +44,8 @@ inline std::string formatCodeString(ol_result_t Result) {
          std::string(stringifyErrorCode(Result->Code)) + ") " + Result->Details;
 }
 
+inline bool isFailed(const ol_result_t &Result) { return Result != OL_SUCCESS; }
+
 /// Checks liboffload API call result.
 ///
 /// Used after calling the API without check.
@@ -48,7 +57,7 @@ inline std::string formatCodeString(ol_result_t Result) {
 /// \throw sycl::runtime_exception if the call was not successful.
 template <sycl::errc errc = sycl::errc::runtime>
 void checkAndThrow(ol_result_t Result) {
-  if (Result != OL_SUCCESS) {
+  if (isFailed(Result)) {
     throw sycl::exception(sycl::make_error_code(errc),
                           detail::formatCodeString(Result));
   }
@@ -99,6 +108,13 @@ ol_device_type_t convertDeviceTypeToOL(info::device_type DeviceType);
 ///
 /// \returns SYCL device type matching specified liboffload device type.
 info::device_type convertDeviceTypeToSYCL(ol_device_type_t DeviceType);
+
+/// Converts a SYCL USM kind to a liboffload type.
+///
+/// \param USMKind a SYCL USM kind.
+///
+/// \returns ol_alloc_type_t matching the specified SYCL USM kind.
+ol_alloc_type_t getOlAllocType(usm::alloc USMKind);
 
 /// Helper to map SYCL information descriptors to OL_<HANDLE>_INFO_<SMTH>.
 ///

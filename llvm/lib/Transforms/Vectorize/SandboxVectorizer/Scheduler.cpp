@@ -79,10 +79,10 @@ void Scheduler::scheduleAndUpdateReadyList(SchedBundle &Bndl) {
   for (DGNode *N : Bndl) {
     for (auto *DepN : N->preds(DAG)) {
       DepN->decrUnscheduledSuccs();
-      if (DepN->ready() && !DepN->scheduled())
+      if (DepN->readyBottomUp() && !DepN->scheduled())
         ReadyList.insert(DepN);
     }
-    N->setScheduled(true);
+    N->setScheduled();
   }
 }
 
@@ -99,7 +99,7 @@ void Scheduler::notifyCreateInstr(Instruction *I) {
                      *ScheduleTopItOpt != I->getParent()->end() &&
                      (*ScheduleTopItOpt.value()).comesBefore(I);
   if (IsScheduled)
-    N->setScheduled(true);
+    N->setScheduled();
   // If the new instruction is above the top of schedule we need to remove its
   // dependency predecessors from the ready list and increment their
   // `UnscheduledSuccs` counters.
@@ -282,7 +282,7 @@ void Scheduler::trimSchedule(ArrayRef<Instruction *> Instrs) {
   Interval<Instruction> RefillIntvl(DAG.getInterval().top(), LowestI);
   for (Instruction &I : RefillIntvl) {
     auto *N = DAG.getNode(&I);
-    if (N->ready())
+    if (N->readyBottomUp())
       ReadyList.insert(N);
   }
 }
@@ -333,7 +333,7 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
     // Add nodes to ready list.
     for (auto &I : Extension) {
       auto *N = DAG.getNode(&I);
-      if (N->ready())
+      if (N->readyBottomUp())
         ReadyList.insert(N);
     }
     // Try schedule all nodes until we can schedule Instrs back-to-back.

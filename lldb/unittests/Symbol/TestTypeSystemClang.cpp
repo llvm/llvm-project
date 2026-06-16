@@ -40,7 +40,6 @@ public:
   }
 
 protected:
-  
   TypeSystemClang *m_ast = nullptr;
   std::unique_ptr<clang_utils::TypeSystemClangHolder> m_holder;
 
@@ -348,16 +347,33 @@ TEST_F(TestTypeSystemClang, TestBuiltinTypeForEmptyTriple) {
                    .IsValid());
   EXPECT_FALSE(ast.GetPointerSizedIntType(/*is_signed=*/false));
   EXPECT_FALSE(ast.GetIntTypeFromBitSize(8, /*is_signed=*/false));
+  EXPECT_FALSE(ast.GetPointerDiffType(/*is_signed=*/true));
+  EXPECT_FALSE(ast.GetPointerDiffType(/*is_signed=*/false));
 
-  CompilerType record_type = ast.CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "Record",
-      llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, std::nullopt);
+  CompilerType record_type =
+      ast.CreateRecordType(nullptr, OptionalClangModuleID(), "Record",
+                           llvm::to_underlying(clang::TagTypeKind::Struct),
+                           lldb::eLanguageTypeC_plus_plus, std::nullopt);
   TypeSystemClang::StartTagDeclarationDefinition(record_type);
   EXPECT_EQ(ast.AddFieldToRecordType(record_type, "field", record_type,
-                                     eAccessPublic, /*bitfield_bit_size=*/8),
+                                     /*bitfield_bit_size=*/8),
             nullptr);
   TypeSystemClang::CompleteTagDeclarationDefinition(record_type);
+}
+
+TEST_F(TestTypeSystemClang, TestGetPointerDiffType) {
+  CompilerType ptrdiff_t = m_ast->GetPointerDiffType(/*is_signed=*/true);
+  EXPECT_EQ(ptrdiff_t.GetDisplayTypeName(), "__ptrdiff_t");
+  EXPECT_TRUE(ptrdiff_t.IsSigned());
+  EXPECT_EQ(
+      llvm::expectedToOptional(ptrdiff_t.GetByteSize(nullptr)).value_or(0),
+      m_ast->GetPointerByteSize());
+
+  CompilerType uptrdiff_t = m_ast->GetPointerDiffType(/*is_signed=*/false);
+  EXPECT_FALSE(uptrdiff_t.IsSigned());
+  EXPECT_EQ(
+      llvm::expectedToOptional(uptrdiff_t.GetByteSize(nullptr)).value_or(0),
+      m_ast->GetPointerByteSize());
 }
 
 TEST_F(TestTypeSystemClang, TestGetBuiltinTypeByName_BitInt) {
@@ -544,10 +560,10 @@ TEST_F(TestTypeSystemClang, TestOwningModule) {
   EXPECT_FALSE(!ed);
   EXPECT_EQ(ed->getOwningModuleID(), 100u);
 
-  CompilerType record_type = ast.CreateRecordType(
-      nullptr, OptionalClangModuleID(200), lldb::eAccessPublic, "FooRecord",
-      llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, std::nullopt);
+  CompilerType record_type =
+      ast.CreateRecordType(nullptr, OptionalClangModuleID(200), "FooRecord",
+                           llvm::to_underlying(clang::TagTypeKind::Struct),
+                           lldb::eLanguageTypeC_plus_plus, std::nullopt);
   auto *rd = TypeSystemClang::GetAsRecordDecl(record_type);
   EXPECT_FALSE(!rd);
   EXPECT_EQ(rd->getOwningModuleID(), 200u);
@@ -565,10 +581,10 @@ TEST_F(TestTypeSystemClang, TestIsClangType) {
   lldb::opaque_compiler_type_t bool_ctype =
       TypeSystemClang::GetOpaqueCompilerType(&context, lldb::eBasicTypeBool);
   CompilerType bool_type(m_ast->weak_from_this(), bool_ctype);
-  CompilerType record_type = m_ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(100), lldb::eAccessPublic, "FooRecord",
-      llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, std::nullopt);
+  CompilerType record_type =
+      m_ast->CreateRecordType(nullptr, OptionalClangModuleID(100), "FooRecord",
+                              llvm::to_underlying(clang::TagTypeKind::Struct),
+                              lldb::eLanguageTypeC_plus_plus, std::nullopt);
   // Clang builtin type and record type should pass
   EXPECT_TRUE(ClangUtil::IsClangType(bool_type));
   EXPECT_TRUE(ClangUtil::IsClangType(record_type));
@@ -578,10 +594,10 @@ TEST_F(TestTypeSystemClang, TestIsClangType) {
 }
 
 TEST_F(TestTypeSystemClang, TestRemoveFastQualifiers) {
-  CompilerType record_type = m_ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "FooRecord",
-      llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, std::nullopt);
+  CompilerType record_type =
+      m_ast->CreateRecordType(nullptr, OptionalClangModuleID(), "FooRecord",
+                              llvm::to_underlying(clang::TagTypeKind::Struct),
+                              lldb::eLanguageTypeC_plus_plus, std::nullopt);
   QualType qt;
 
   qt = ClangUtil::GetQualType(record_type);
@@ -609,52 +625,14 @@ TEST_F(TestTypeSystemClang, TestConvertAccessTypeToAccessSpecifier) {
                               eAccessProtected));
 }
 
-TEST_F(TestTypeSystemClang, TestUnifyAccessSpecifiers) {
-  // Unifying two of the same type should return the same type
-  EXPECT_EQ(AS_public,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_public, AS_public));
-  EXPECT_EQ(AS_private,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_private, AS_private));
-  EXPECT_EQ(AS_protected,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_protected, AS_protected));
-
-  // Otherwise the result should be the strictest of the two.
-  EXPECT_EQ(AS_private,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_private, AS_public));
-  EXPECT_EQ(AS_private,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_private, AS_protected));
-  EXPECT_EQ(AS_private,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_public, AS_private));
-  EXPECT_EQ(AS_private,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_protected, AS_private));
-  EXPECT_EQ(AS_protected,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_protected, AS_public));
-  EXPECT_EQ(AS_protected,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_public, AS_protected));
-
-  // None is stricter than everything (by convention)
-  EXPECT_EQ(AS_none,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_none, AS_public));
-  EXPECT_EQ(AS_none,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_none, AS_protected));
-  EXPECT_EQ(AS_none,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_none, AS_private));
-  EXPECT_EQ(AS_none,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_public, AS_none));
-  EXPECT_EQ(AS_none,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_protected, AS_none));
-  EXPECT_EQ(AS_none,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_private, AS_none));
-}
-
 TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   CompilerType int_type = m_ast->GetBasicType(eBasicTypeInt);
 
   // Test that a record with no fields returns false
-  CompilerType empty_base = m_ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "EmptyBase",
-      llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, std::nullopt);
+  CompilerType empty_base =
+      m_ast->CreateRecordType(nullptr, OptionalClangModuleID(), "EmptyBase",
+                              llvm::to_underlying(clang::TagTypeKind::Struct),
+                              lldb::eLanguageTypeC_plus_plus, std::nullopt);
   TypeSystemClang::StartTagDeclarationDefinition(empty_base);
   TypeSystemClang::CompleteTagDeclarationDefinition(empty_base);
 
@@ -663,13 +641,13 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   EXPECT_FALSE(m_ast->RecordHasFields(empty_base_decl));
 
   // Test that a record with direct fields returns true
-  CompilerType non_empty_base = m_ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "NonEmptyBase",
-      llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, std::nullopt);
+  CompilerType non_empty_base =
+      m_ast->CreateRecordType(nullptr, OptionalClangModuleID(), "NonEmptyBase",
+                              llvm::to_underlying(clang::TagTypeKind::Struct),
+                              lldb::eLanguageTypeC_plus_plus, std::nullopt);
   TypeSystemClang::StartTagDeclarationDefinition(non_empty_base);
-  FieldDecl *non_empty_base_field_decl = m_ast->AddFieldToRecordType(
-      non_empty_base, "MyField", int_type, eAccessPublic, 0);
+  FieldDecl *non_empty_base_field_decl =
+      m_ast->AddFieldToRecordType(non_empty_base, "MyField", int_type, 0);
   TypeSystemClang::CompleteTagDeclarationDefinition(non_empty_base);
   RecordDecl *non_empty_base_decl =
       TypeSystemClang::GetAsRecordDecl(non_empty_base);
@@ -680,10 +658,10 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases;
 
   // Test that a record with no direct fields, but fields in a base returns true
-  CompilerType empty_derived = m_ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "EmptyDerived",
-      llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, std::nullopt);
+  CompilerType empty_derived =
+      m_ast->CreateRecordType(nullptr, OptionalClangModuleID(), "EmptyDerived",
+                              llvm::to_underlying(clang::TagTypeKind::Struct),
+                              lldb::eLanguageTypeC_plus_plus, std::nullopt);
   TypeSystemClang::StartTagDeclarationDefinition(empty_derived);
   std::unique_ptr<clang::CXXBaseSpecifier> non_empty_base_spec =
       m_ast->CreateBaseClassSpecifier(non_empty_base.GetOpaqueQualType(),
@@ -703,10 +681,10 @@ TEST_F(TestTypeSystemClang, TestRecordHasFields) {
 
   // Test that a record with no direct fields, but fields in a virtual base
   // returns true
-  CompilerType empty_derived2 = m_ast->CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, "EmptyDerived2",
-      llvm::to_underlying(clang::TagTypeKind::Struct),
-      lldb::eLanguageTypeC_plus_plus, std::nullopt);
+  CompilerType empty_derived2 =
+      m_ast->CreateRecordType(nullptr, OptionalClangModuleID(), "EmptyDerived2",
+                              llvm::to_underlying(clang::TagTypeKind::Struct),
+                              lldb::eLanguageTypeC_plus_plus, std::nullopt);
   TypeSystemClang::StartTagDeclarationDefinition(empty_derived2);
   std::unique_ptr<CXXBaseSpecifier> non_empty_vbase_spec =
       m_ast->CreateBaseClassSpecifier(non_empty_base.GetOpaqueQualType(),
@@ -746,8 +724,8 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
 
   // template<typename T, int I, float F, double D> struct foo;
   ClassTemplateDecl *decl = m_ast->CreateClassTemplateDecl(
-      m_ast->GetTranslationUnitDecl(), OptionalClangModuleID(), eAccessPublic,
-      "foo", llvm::to_underlying(clang::TagTypeKind::Struct), infos);
+      m_ast->GetTranslationUnitDecl(), OptionalClangModuleID(), "foo",
+      llvm::to_underlying(clang::TagTypeKind::Struct), infos);
   ASSERT_NE(decl, nullptr);
 
   // foo<int, 47>
@@ -768,8 +746,9 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
   CompilerType auto_type(
       m_ast->weak_from_this(),
       m_ast->getASTContext()
-          .getAutoType(ClangUtil::GetCanonicalQualType(typedef_type),
-                       clang::AutoTypeKeyword::Auto, false)
+          .getAutoType(clang::DeducedKind::Deduced,
+                       ClangUtil::GetCanonicalQualType(typedef_type),
+                       clang::AutoTypeKeyword::Auto)
           .getAsOpaquePtr());
 
   CompilerType int_type(m_ast->weak_from_this(),
@@ -779,7 +758,7 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
   CompilerType double_type(m_ast->weak_from_this(),
                            m_ast->getASTContext().DoubleTy.getAsOpaquePtr());
   for (CompilerType t : {type, typedef_type, auto_type}) {
-    SCOPED_TRACE(t.GetTypeName().AsCString());
+    SCOPED_TRACE(t.GetTypeName().GetString());
 
     const bool expand_pack = false;
     EXPECT_EQ(
@@ -838,8 +817,8 @@ protected:
   ClassTemplateDecl *
   CreateClassTemplate(const TypeSystemClang::TemplateParameterInfos &infos) {
     ClassTemplateDecl *decl = m_ast->CreateClassTemplateDecl(
-        m_ast->GetTranslationUnitDecl(), OptionalClangModuleID(), eAccessPublic,
-        "foo", llvm::to_underlying(clang::TagTypeKind::Struct), infos);
+        m_ast->GetTranslationUnitDecl(), OptionalClangModuleID(), "foo",
+        llvm::to_underlying(clang::TagTypeKind::Struct), infos);
     return decl;
   }
 
@@ -1088,7 +1067,7 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateConstruction) {
 
   EXPECT_EQ(TU, func_template->getDeclContext());
   EXPECT_EQ("foo", func_template->getName());
-  EXPECT_EQ(clang::AccessSpecifier::AS_none, func_template->getAccess());
+  EXPECT_EQ(clang::AccessSpecifier::AS_public, func_template->getAccess());
 }
 
 TEST_F(TestTypeSystemClang, TestFunctionTemplateInRecordConstruction) {
@@ -1146,10 +1125,10 @@ TEST_F(TestTypeSystemClang, TestDeletingImplicitCopyCstrDueToMoveCStr) {
   bool is_explicit = true;
   bool is_attr_used = false;
   bool is_artificial = false;
-  m_ast->AddMethodToCXXRecordType(
-      t.GetOpaqueQualType(), class_name, /*asm_label=*/{}, function_type,
-      lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
-      is_explicit, is_attr_used, is_artificial);
+  m_ast->AddMethodToCXXRecordType(t.GetOpaqueQualType(), class_name,
+                                  /*asm_label=*/{}, function_type, is_virtual,
+                                  is_static, is_inline, is_explicit,
+                                  is_attr_used, is_artificial);
 
   // Complete the definition and check the created record.
   m_ast->CompleteTagDeclarationDefinition(t);
@@ -1183,10 +1162,10 @@ TEST_F(TestTypeSystemClang, TestNotDeletingUserCopyCstrDueToMoveCStr) {
     std::array<CompilerType, 1> args{t.GetRValueReferenceType()};
     CompilerType function_type = m_ast->CreateFunctionType(
         return_type, args, /*variadic=*/false, /*quals*/ 0U);
-    m_ast->AddMethodToCXXRecordType(
-        t.GetOpaqueQualType(), class_name, /*asm_label=*/{}, function_type,
-        lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
-        is_explicit, is_attr_used, is_artificial);
+    m_ast->AddMethodToCXXRecordType(t.GetOpaqueQualType(), class_name,
+                                    /*asm_label=*/{}, function_type, is_virtual,
+                                    is_static, is_inline, is_explicit,
+                                    is_attr_used, is_artificial);
   }
   // Create a copy constructor.
   {
@@ -1195,10 +1174,10 @@ TEST_F(TestTypeSystemClang, TestNotDeletingUserCopyCstrDueToMoveCStr) {
     CompilerType function_type =
         m_ast->CreateFunctionType(return_type, args,
                                   /*variadic=*/false, /*quals*/ 0U);
-    m_ast->AddMethodToCXXRecordType(
-        t.GetOpaqueQualType(), class_name, /*asm_label=*/{}, function_type,
-        lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
-        is_explicit, is_attr_used, is_artificial);
+    m_ast->AddMethodToCXXRecordType(t.GetOpaqueQualType(), class_name,
+                                    /*asm_label=*/{}, function_type, is_virtual,
+                                    is_static, is_inline, is_explicit,
+                                    is_attr_used, is_artificial);
   }
 
   // Complete the definition and check the created record.
@@ -1306,10 +1285,10 @@ TEST_F(TestTypeSystemClang, AddMethodToCXXRecordType_ParmVarDecls) {
   CompilerType function_type =
       m_ast->CreateFunctionType(return_type, param_types,
                                 /*variadic=*/false, /*quals*/ 0U);
-  m_ast->AddMethodToCXXRecordType(
-      t.GetOpaqueQualType(), "myFunc", /*asm_label=*/{}, function_type,
-      lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
-      is_explicit, is_attr_used, is_artificial);
+  m_ast->AddMethodToCXXRecordType(t.GetOpaqueQualType(), "myFunc",
+                                  /*asm_label=*/{}, function_type, is_virtual,
+                                  is_static, is_inline, is_explicit,
+                                  is_attr_used, is_artificial);
 
   // Complete the definition and check the created record.
   m_ast->CompleteTagDeclarationDefinition(t);
@@ -1435,24 +1414,22 @@ TEST_F(TestTypeSystemClang, AsmLabel_CtorDtor) {
       m_ast->CreateFunctionType(return_type, {},
                                 /*variadic=*/false, /*quals*/ 0U);
   auto *ctor_nolabel = m_ast->AddMethodToCXXRecordType(
-      t.GetOpaqueQualType(), "S", /*asm_label=*/{}, function_type,
-      lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
-      is_explicit, is_attr_used, is_artificial);
+      t.GetOpaqueQualType(), "S", /*asm_label=*/{}, function_type, is_virtual,
+      is_static, is_inline, is_explicit, is_attr_used, is_artificial);
 
   auto *dtor_nolabel = m_ast->AddMethodToCXXRecordType(
-      t.GetOpaqueQualType(), "~S", /*asm_label=*/{}, function_type,
-      lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
-      is_explicit, is_attr_used, is_artificial);
+      t.GetOpaqueQualType(), "~S", /*asm_label=*/{}, function_type, is_virtual,
+      is_static, is_inline, is_explicit, is_attr_used, is_artificial);
 
   auto *ctor = m_ast->AddMethodToCXXRecordType(
       t.GetOpaqueQualType(), "S", /*asm_label=*/"$__lldb_func::0x0:0x0:S",
-      function_type, lldb::AccessType::eAccessPublic, is_virtual, is_static,
-      is_inline, is_explicit, is_attr_used, is_artificial);
+      function_type, is_virtual, is_static, is_inline, is_explicit,
+      is_attr_used, is_artificial);
 
   auto *dtor = m_ast->AddMethodToCXXRecordType(
       t.GetOpaqueQualType(), "~S", /*asm_label=*/"$__lldb_func::0x0:0x0:~S",
-      function_type, lldb::AccessType::eAccessPublic, is_virtual, is_static,
-      is_inline, is_explicit, is_attr_used, is_artificial);
+      function_type, is_virtual, is_static, is_inline, is_explicit,
+      is_attr_used, is_artificial);
 
   m_ast->CompleteTagDeclarationDefinition(t);
 
@@ -1541,3 +1518,32 @@ TEST_P(TestTypeSystemClangAsmLabel, DeclGetMangledName) {
 
 INSTANTIATE_TEST_SUITE_P(AsmLabelTests, TestTypeSystemClangAsmLabel,
                          testing::ValuesIn(g_asm_label_test_cases));
+
+TEST_F(TestTypeSystemClang, TestIsMemberDataPointerType) {
+  // Create struct S { int x; void foo(); };
+  CompilerType int_type = m_ast->GetBasicType(lldb::eBasicTypeInt);
+  CompilerType record_type = clang_utils::createRecord(*m_ast, "S");
+
+  // int S::* — member data pointer
+  CompilerType member_data_ptr =
+      TypeSystemClang::CreateMemberPointerType(record_type, int_type);
+  EXPECT_TRUE(member_data_ptr.IsMemberDataPointerType());
+  EXPECT_FALSE(member_data_ptr.IsMemberFunctionPointerType());
+
+  // void (S::*)() — member function pointer
+  CompilerType void_type = m_ast->GetBasicType(lldb::eBasicTypeVoid);
+  CompilerType func_type = m_ast->CreateFunctionType(void_type, {}, false, 0U);
+  CompilerType member_func_ptr =
+      TypeSystemClang::CreateMemberPointerType(record_type, func_type);
+  EXPECT_FALSE(member_func_ptr.IsMemberDataPointerType());
+  EXPECT_TRUE(member_func_ptr.IsMemberFunctionPointerType());
+
+  // int* — regular pointer, neither member data nor member function
+  CompilerType regular_ptr = int_type.GetPointerType();
+  EXPECT_FALSE(regular_ptr.IsMemberDataPointerType());
+  EXPECT_FALSE(regular_ptr.IsMemberFunctionPointerType());
+
+  // int — not a pointer at all
+  EXPECT_FALSE(int_type.IsMemberDataPointerType());
+  EXPECT_FALSE(int_type.IsMemberFunctionPointerType());
+}

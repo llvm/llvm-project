@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define DOUBLE_PRECISION
 #include "int_lib.h"
 #include "int_math.h"
 

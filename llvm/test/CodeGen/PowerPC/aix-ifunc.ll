@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff %s -o - | FileCheck %s --check-prefixes=COMMON,NO-FUNCSECT -DALIGN=3 -DPTR_SIZE=8 -DLOAD=ld -DOFF=16
+; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff --code-model=small %s -o - | FileCheck %s --check-prefixes=COMMON,NO-FUNCSECT -DALIGN=3 -DPTR_SIZE=8 -DLOAD=ld -DOFF=16
 ; RUN: llc -mtriple=powerpc-ibm-aix-xcoff %s -o - | FileCheck %s --check-prefixes=COMMON,NO-FUNCSECT -DALIGN=2 -DPTR_SIZE=4 -DLOAD=lwz -DOFF=8
 
-; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff --function-sections %s -o - | FileCheck %s --check-prefixes=COMMON,FUNCSECT -DALIGN=3 -DPTR_SIZE=8 -DLOAD=ld -DOFF=16
+; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff --code-model=small --function-sections %s -o - | FileCheck %s --check-prefixes=COMMON,FUNCSECT -DALIGN=3 -DPTR_SIZE=8 -DLOAD=ld -DOFF=16
 ; RUN: llc -mtriple=powerpc-ibm-aix-xcoff --function-sections %s -o - | FileCheck %s --check-prefixes=COMMON,FUNCSECT -DALIGN=2 -DPTR_SIZE=4 -DLOAD=lwz -DOFF=8
 
 ; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff --function-sections --code-model=large %s -o - | FileCheck %s --check-prefixes=LARGE -DALIGN=3 -DPTR_SIZE=8 -DLOAD=ld -DOFF=16

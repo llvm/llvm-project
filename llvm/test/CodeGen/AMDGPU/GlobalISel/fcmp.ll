@@ -284,56 +284,56 @@ define void @fcmp_f16_divergent(half %a, half %b, ptr %p) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_cmp_eq_f16_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    v_cmp_eq_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
-; GFX12-NEXT:    v_cmp_gt_f16_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    v_cmp_gt_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
-; GFX12-NEXT:    v_cmp_ge_f16_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    v_cmp_ge_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_nc_u32_e32 v4, v4, v5
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
-; GFX12-NEXT:    v_cmp_lt_f16_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    v_cmp_lt_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
-; GFX12-NEXT:    v_cmp_le_f16_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    v_cmp_le_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add3_u32 v4, v4, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
-; GFX12-NEXT:    v_cmp_lg_f16_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    v_cmp_lg_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
-; GFX12-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    v_cmp_o_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add3_u32 v4, v4, v5, v8
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
-; GFX12-NEXT:    v_cmp_nlg_f16_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    v_cmp_nlg_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
-; GFX12-NEXT:    v_cmp_nle_f16_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    v_cmp_nle_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add3_u32 v4, v4, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
-; GFX12-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc_lo
-; GFX12-NEXT:    v_cmp_nge_f16_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    v_cmp_nge_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add3_u32 v4, v4, v5, v8
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc_lo
-; GFX12-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
-; GFX12-NEXT:    v_cmp_neq_f16_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    v_cmp_neq_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
-; GFX12-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0, v1
+; GFX12-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0.l, v1.l
 ; GFX12-NEXT:    v_add3_u32 v1, v4, v6, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo

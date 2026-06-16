@@ -18,7 +18,9 @@ from hdrgen.yaml_to_classes import load_yaml_file, fill_public_api
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate header files from YAML")
+    parser = argparse.ArgumentParser(
+        description="Generate header files from YAML", fromfile_prefix_chars="@"
+    )
     parser.add_argument(
         "yaml_file",
         help="Path to the YAML file containing header specification",
@@ -111,6 +113,7 @@ def main():
                 return 2
             header.merge(merge_from_header)
 
+        header.validate()
         assert header.name, f"`header: name.h` line is required in {yaml_file}"
         return header
 

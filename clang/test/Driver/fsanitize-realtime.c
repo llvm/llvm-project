@@ -32,6 +32,9 @@
 // RUN: not %clang --target=i386-pc-openbsd -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-OPENBSD
 // CHECK-RTSAN-OPENBSD: unsupported option '-fsanitize=realtime' for target 'i386-pc-openbsd'
 
+// RUN: %clang --target=hexagon-unknown-linux-musl -fsanitize=realtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-RTSAN-HEXAGON
+// CHECK-RTSAN-HEXAGON-NOT: unsupported option
+
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=realtime,thread  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-TSAN
 // CHECK-REALTIME-TSAN: error: invalid argument '-fsanitize=realtime' not allowed with '-fsanitize=thread'
 
@@ -43,3 +46,8 @@
 
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=realtime,undefined  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-UBSAN
 // CHECK-REALTIME-UBSAN: error: invalid argument '-fsanitize=realtime' not allowed with '-fsanitize=undefined'
+
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=type,realtime  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-TYSAN
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=realtime,type  %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-REALTIME-TYSAN
+// CHECK-REALTIME-TYSAN: error: invalid argument '-fsanitize=realtime' not allowed with '-fsanitize=type'
+

@@ -67,6 +67,8 @@
 // CHECK-SAME: {{^}}, gfx1152
 // CHECK-SAME: {{^}}, gfx1153
 // CHECK-SAME: {{^}}, gfx1170
+// CHECK-SAME: {{^}}, gfx1171
+// CHECK-SAME: {{^}}, gfx1172
 // CHECK-SAME: {{^}}, gfx1200
 // CHECK-SAME: {{^}}, gfx1201
 // CHECK-SAME: {{^}}, gfx1250
@@ -78,4 +80,5 @@
 // CHECK-SAME: {{^}}, gfx11-generic
 // CHECK-SAME: {{^}}, gfx12-generic
 // CHECK-SAME: {{^}}, gfx9-4-generic
+// CHECK-SAME: {{^}}, gfx12-5-generic
 // CHECK-SAME: {{$}}

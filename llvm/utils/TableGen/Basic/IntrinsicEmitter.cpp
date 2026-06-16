@@ -54,13 +54,15 @@ public:
   void run(raw_ostream &OS, bool Enums);
 
   void EmitEnumInfo(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
-  void EmitArgKind(raw_ostream &OS);
+  void EmitAnyKindEnums(raw_ostream &OS);
   void EmitIITInfo(raw_ostream &OS);
   void EmitTargetInfo(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
   void EmitIntrinsicToNameTable(const CodeGenIntrinsicTable &Ints,
                                 raw_ostream &OS);
   void EmitIntrinsicToOverloadTable(const CodeGenIntrinsicTable &Ints,
                                     raw_ostream &OS);
+  void EmitIntrinsicToScalarizableTable(const CodeGenIntrinsicTable &Ints,
+                                        raw_ostream &OS);
   void EmitIntrinsicToPrettyPrintTable(const CodeGenIntrinsicTable &Ints,
                                        raw_ostream &OS);
   void EmitIntrinsicBitTable(
@@ -97,8 +99,8 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
     // Emit the enum information.
     EmitEnumInfo(Ints, OS);
 
-    // Emit ArgKind for Intrinsics.h.
-    EmitArgKind(OS);
+    // Emit AnyKind enums for Intrinsics.h.
+    EmitAnyKindEnums(OS);
   } else {
     // Emit IIT_Info constants.
     EmitIITInfo(OS);
@@ -111,6 +113,9 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
 
     // Emit the intrinsic ID -> overload table.
     EmitIntrinsicToOverloadTable(Ints, OS);
+
+    // Emit the intrinsic ID -> trivially scalarizable table.
+    EmitIntrinsicToScalarizableTable(Ints, OS);
 
     // Emit the intrinsic declaration generator.
     EmitGenerator(Ints, OS);
@@ -199,17 +204,26 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
     OS << "}; // enum\n";
 }
 
-void IntrinsicEmitter::EmitArgKind(raw_ostream &OS) {
+void IntrinsicEmitter::EmitAnyKindEnums(raw_ostream &OS) {
   if (!IntrinsicPrefix.empty())
     return;
-  IfDefEmitter IfDef(OS, "GET_INTRINSIC_ARGKIND");
-  OS << "// llvm::Intrinsic::IITDescriptor::ArgKind.\n";
-  if (const auto RecArgKind = Records.getDef("ArgKind")) {
-    for (const auto &RV : RecArgKind->getValues())
-      OS << "    AK_" << RV.getName() << " = " << *RV.getValue() << ",\n";
-  } else {
-    OS << "#error \"ArgKind is not defined\"\n";
-  }
+  IfDefEmitter IfDef(OS, "GET_INTRINSIC_ANYKIND_ENUMS");
+
+  auto GenerateAnyKindEnums = [&OS, this](StringRef EnumName,
+                                          StringRef Prefix) {
+    OS << "// llvm::Intrinsic::IITDescriptor::" << EnumName << "\n";
+    if (const Record *EnumDef = Records.getDef(EnumName)) {
+      OS << "enum " << EnumName << " {\n";
+      for (const auto &RV : EnumDef->getValues())
+        OS << "  " << Prefix << RV.getName() << " = " << *RV.getValue()
+           << ",\n";
+      OS << "}; // " << EnumName << "\n\n";
+    } else {
+      OS << "#error \"" << EnumName << " is not defined\"\n";
+    }
+  };
+  GenerateAnyKindEnums("AnyKindVectorConstraint", "VC_");
+  GenerateAnyKindEnums("AnyKindElementConstraint", "EC_");
 }
 
 void IntrinsicEmitter::EmitIITInfo(raw_ostream &OS) {
@@ -224,6 +238,8 @@ void IntrinsicEmitter::EmitIITInfo(raw_ostream &OS) {
     RecsByNumber[Number] = Rec->getName();
   }
   if (IIT_Base.size() > 0) {
+    if (RecsByNumber[0] != "IIT_Done")
+      PrintFatalError("IIT_Done expected to have value 0");
     for (unsigned I = 0, E = RecsByNumber.size(); I < E; ++I)
       if (!RecsByNumber[I].empty())
         OS << "  " << RecsByNumber[I] << " = " << I << ",\n";
@@ -307,6 +323,14 @@ void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
       [](const CodeGenIntrinsic &Int) { return Int.isOverloaded; });
 }
 
+void IntrinsicEmitter::EmitIntrinsicToScalarizableTable(
+    const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
+  EmitIntrinsicBitTable(
+      Ints, OS, "GET_INTRINSIC_SCALARIZABLE_TABLE", "STable",
+      "Intrinsic ID to trivially scalarizable bitset.",
+      [](const CodeGenIntrinsic &Int) { return Int.isTriviallyScalarizable; });
+}
+
 using TypeSigTy = SmallVector<unsigned char>;
 
 /// Computes type signature of the intrinsic \p Int.
@@ -315,17 +339,29 @@ static TypeSigTy ComputeTypeSignature(const CodeGenIntrinsic &Int) {
   const Record *TypeInfo = Int.TheDef->getValueAsDef("TypeInfo");
   const ListInit *TypeList = TypeInfo->getValueAsListInit("TypeSig");
 
-  for (const auto *TypeListEntry : TypeList->getElements())
-    TypeSig.emplace_back(cast<IntInit>(TypeListEntry)->getValue());
+  for (const auto *TypeListEntry : TypeList->getElements()) {
+    int64_t Value = cast<IntInit>(TypeListEntry)->getValue();
+    if (Value < 0 || Value > 255)
+      PrintFatalError(Int.TheDef, "Unresolved type signature");
+    TypeSig.emplace_back(Value);
+  }
   return TypeSig;
 }
 
-// Pack the type signature into 32-bit fixed encoding word.
-static std::optional<uint32_t> encodePacked(const TypeSigTy &TypeSig) {
-  if (TypeSig.size() > 8)
+// Note: the code below can be switched to use 32-bit fixed encoding by
+// flipping the flag below.
+constexpr bool Use16BitFixedEncoding = true;
+using FixedEncodingTy =
+    std::conditional_t<Use16BitFixedEncoding, uint16_t, uint32_t>;
+
+// Pack the type signature into 16/32-bit fixed encoding word, where each byte
+// in the type signature is packed into a nibble (4 bits) if possible.
+static std::optional<FixedEncodingTy> encodePacked(const TypeSigTy &TypeSig) {
+  constexpr size_t NUM_NIBBLES = sizeof(FixedEncodingTy) * 2;
+  if (TypeSig.size() > NUM_NIBBLES)
     return std::nullopt;
 
-  uint32_t Result = 0;
+  FixedEncodingTy Result = 0;
   for (unsigned char C : reverse(TypeSig)) {
     if (C > 15)
       return std::nullopt;
@@ -336,22 +372,21 @@ static std::optional<uint32_t> encodePacked(const TypeSigTy &TypeSig) {
 
 void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
                                      raw_ostream &OS) {
-  // Note: the code below can be switched to use 32-bit fixed encoding by
-  // flipping the flag below.
-  constexpr bool Use16BitFixedEncoding = true;
-  using FixedEncodingTy =
-      std::conditional_t<Use16BitFixedEncoding, uint16_t, uint32_t>;
   constexpr unsigned FixedEncodingBits = sizeof(FixedEncodingTy) * CHAR_BIT;
   constexpr unsigned MSBPosition = FixedEncodingBits - 1;
   // Mask with all bits 1 except the most significant bit.
-  constexpr unsigned Mask = (1U << MSBPosition) - 1;
+  constexpr FixedEncodingTy Mask = (1U << MSBPosition) - 1;
   StringRef FixedEncodingTypeName =
       Use16BitFixedEncoding ? "uint16_t" : "uint32_t";
 
   // If we can compute a 16/32-bit fixed encoding for this intrinsic, do so and
   // capture it in this vector, otherwise store a ~0U.
   std::vector<FixedEncodingTy> FixedEncodings;
-  SequenceToOffsetTable<TypeSigTy> LongEncodingTable;
+
+  // Each IIT encoding sequence in the long encoding table is terminated by
+  // IIT_Done(=0) token.
+  constexpr unsigned char IIT_Done = 0;
+  SequenceToOffsetTable<TypeSigTy> LongEncodingTable(IIT_Done);
 
   FixedEncodings.reserve(Ints.size());
 
@@ -361,9 +396,9 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
     TypeSigTy TypeSig = ComputeTypeSignature(Int);
 
     // Check to see if we can encode it into a 16/32 bit word.
-    std::optional<uint32_t> Result = encodePacked(TypeSig);
+    std::optional<FixedEncodingTy> Result = encodePacked(TypeSig);
     if (Result && (*Result & Mask) == *Result) {
-      FixedEncodings.push_back(static_cast<FixedEncodingTy>(*Result));
+      FixedEncodings.push_back(*Result);
       continue;
     }
 

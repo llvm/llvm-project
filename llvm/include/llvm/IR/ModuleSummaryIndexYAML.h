@@ -142,6 +142,7 @@ struct GlobalValueSummaryYaml {
   unsigned Linkage, Visibility;
   bool NotEligibleToImport, Live, IsLocal, CanAutoHide;
   unsigned ImportType;
+  bool NoRenameOnPromotion;
   // Fields for AliasSummary
   std::optional<uint64_t> Aliasee;
   // Fields for FunctionSummary
@@ -191,6 +192,7 @@ template <> struct MappingTraits<GlobalValueSummaryYaml> {
     io.mapOptional("Local", summary.IsLocal);
     io.mapOptional("CanAutoHide", summary.CanAutoHide);
     io.mapOptional("ImportType", summary.ImportType);
+    io.mapOptional("NoRenameOnPromotion", summary.NoRenameOnPromotion);
     io.mapOptional("Aliasee", summary.Aliasee);
     io.mapOptional("Refs", summary.Refs);
     io.mapOptional("TypeTests", summary.TypeTests);
@@ -228,7 +230,8 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
           static_cast<GlobalValue::VisibilityTypes>(GVSum.Visibility),
           GVSum.NotEligibleToImport, GVSum.Live, GVSum.IsLocal,
           GVSum.CanAutoHide,
-          static_cast<GlobalValueSummary::ImportKind>(GVSum.ImportType));
+          static_cast<GlobalValueSummary::ImportKind>(GVSum.ImportType),
+          GVSum.NoRenameOnPromotion);
       if (GVSum.Aliasee) {
         auto ASum = std::make_unique<AliasSummary>(GVFlags);
         V.try_emplace(*GVSum.Aliasee, /*IsAnalysis=*/false);
@@ -272,9 +275,10 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
               static_cast<bool>(FSum->flags().Live),
               static_cast<bool>(FSum->flags().DSOLocal),
               static_cast<bool>(FSum->flags().CanAutoHide),
-              FSum->flags().ImportType, /*Aliasee=*/std::nullopt, Refs,
-              FSum->type_tests(), FSum->type_test_assume_vcalls(),
-              FSum->type_checked_load_vcalls(),
+              FSum->flags().ImportType,
+              static_cast<bool>(FSum->flags().NoRenameOnPromotion),
+              /*Aliasee=*/std::nullopt, Refs, FSum->type_tests(),
+              FSum->type_test_assume_vcalls(), FSum->type_checked_load_vcalls(),
               FSum->type_test_assume_const_vcalls(),
               FSum->type_checked_load_const_vcalls()});
         } else if (auto *ASum = dyn_cast<AliasSummary>(Sum.get());
@@ -286,6 +290,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
               static_cast<bool>(ASum->flags().DSOLocal),
               static_cast<bool>(ASum->flags().CanAutoHide),
               ASum->flags().ImportType,
+              static_cast<bool>(ASum->flags().NoRenameOnPromotion),
               /*Aliasee=*/ASum->getAliaseeGUID()});
         }
       }
@@ -322,6 +327,24 @@ template <> struct CustomMappingTraits<TypeIdSummaryMapTy> {
   }
 };
 
+template <> struct MappingTraits<std::pair<StringRef, GlobalValue::GUID>> {
+  static void mapping(IO &io,
+                      std::pair<StringRef, GlobalValue::GUID> &NameAndGUID) {
+    io.mapRequired("Name", NameAndGUID.first);
+    io.mapRequired("GUID", NameAndGUID.second);
+  }
+};
+
+using StringAndGUID = std::pair<llvm::StringRef, llvm::GlobalValue::GUID>;
+
+} // namespace yaml
+} // namespace llvm
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::StringAndGUID)
+
+namespace llvm {
+namespace yaml {
+
 template <> struct MappingTraits<ModuleSummaryIndex> {
   static void mapping(IO &io, ModuleSummaryIndex& index) {
     io.mapOptional("GlobalValueMap", index.GlobalValueMap);
@@ -347,25 +370,24 @@ template <> struct MappingTraits<ModuleSummaryIndex> {
                    index.WithGlobalValueDeadStripping);
 
     if (io.outputting()) {
-      auto CfiFunctionDefs = index.CfiFunctionDefs.symbols();
-      llvm::sort(CfiFunctionDefs);
+      auto CfiFunctionDefs = index.CfiFunctionDefs.getSortedSymbols();
       io.mapOptional("CfiFunctionDefs", CfiFunctionDefs);
-      auto CfiFunctionDecls(index.CfiFunctionDecls.symbols());
-      llvm::sort(CfiFunctionDecls);
+      auto CfiFunctionDecls(index.CfiFunctionDecls.getSortedSymbols());
       io.mapOptional("CfiFunctionDecls", CfiFunctionDecls);
     } else {
-      std::vector<std::string> CfiFunctionDefs;
+      std::vector<std::pair<StringRef, GlobalValue::GUID>> CfiFunctionDefs;
       io.mapOptional("CfiFunctionDefs", CfiFunctionDefs);
-      index.CfiFunctionDefs = {CfiFunctionDefs.begin(), CfiFunctionDefs.end()};
-      std::vector<std::string> CfiFunctionDecls;
+      for (auto &[S, G] : CfiFunctionDefs)
+        index.CfiFunctionDefs.addSymbolWithThinLTOGUID(S, G);
+      std::vector<std::pair<StringRef, GlobalValue::GUID>> CfiFunctionDecls;
       io.mapOptional("CfiFunctionDecls", CfiFunctionDecls);
-      index.CfiFunctionDecls = {CfiFunctionDecls.begin(),
-                                CfiFunctionDecls.end()};
+      for (auto &[S, G] : CfiFunctionDecls)
+        index.CfiFunctionDecls.addSymbolWithThinLTOGUID(S, G);
     }
   }
 };
 
-} // End yaml namespace
-} // End llvm namespace
+} // namespace yaml
+} // namespace llvm
 
 #endif

@@ -81,6 +81,17 @@ End-user Options
 
    llvm-as < /dev/null | llc -march=xyz -mcpu=help
 
+.. option:: -mtune=<cpuname>
+
+ Specify a specific chip microarchitecture in the current architecture
+ to tune code for. By default this is inferred from the target triple and
+ autodetected to the current architecture.  For a list of available tuning
+ CPUs, use:
+
+ .. code-block:: none
+
+   llvm-as < /dev/null | llc -march=xyz -mtune=help
+
 .. option:: -filetype=<output file type>
 
  Specify what kind of output ``llc`` should generated.  Options are: ``asm``
@@ -139,6 +150,12 @@ End-user Options
 
  Record the amount of time needed for each pass and print a report to standard
  error.
+
+.. option:: --load=<dso_path>
+
+ Dynamically load ``dso_path`` (a path to a dynamically shared object) that
+ implements an LLVM target.  This will permit the target name to be used with
+ the :option:`-march` option so that code can be generated for that target.
 
 .. option:: -meabi=[default|gnu|4|5]
 
