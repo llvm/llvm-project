@@ -19399,8 +19399,9 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
       CharUnits ElementSize = Info.Ctx.getTypeSizeInChars(CurrentType);
       // Reject negative indices and indices too large to fit in int64_t,
       // to avoid sign-extension issues or crashes in getZExtValue().
+      APSInt MaxIdx = APSInt::getMaxValue(64, /*Unsigned=*/false);
       if (IdxResult.isSigned() ? IdxResult.isNegative()
-                               : IdxResult.ugt(APSInt::getMaxValue(64, /*Unsigned=*/false)))
+                               : IdxResult.ugt(MaxIdx))
         return Error(OOE);
       Result += (IdxResult.isUnsigned() ? (int64_t)IdxResult.getZExtValue()
                                         : IdxResult.getSExtValue()) *
