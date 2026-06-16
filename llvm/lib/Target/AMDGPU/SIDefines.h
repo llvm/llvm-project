@@ -10,7 +10,9 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 #define LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
 namespace llvm {
@@ -182,15 +184,22 @@ enum : uint64_t {
   IsSWMMAC = UINT64_C(1) << 63,
 };
 
-// Inline predicates for TSFlags — the single place where raw TSFlags bit
-// tests are written. All callers (SIInstrInfo methods, MC-level code) go
-// through these functions to make bit layout changes easier.
+// Predicate functions over TSFlags — the single place where raw TSFlags bit
+// tests are written. All callers (SIInstrInfo methods, MC-layer code) go
+// through these so that bit-layout changes require updating only this file.
 //
-// getTSFlags extracts the TSFlags value from different argument types.
-// SIInstrInfo.h adds a MachineInstr overload in namespace llvm (found via ADL
-// when predicates are instantiated with MachineInstr).
+// getTSFlags is overloaded for MCInstrDesc, (MCInstrInfo, Opcode), and
+// (MCInstrInfo, MCInst) here; SIInstrInfo.h adds a MachineInstr overload in
+// namespace llvm so ADL finds it when predicates are instantiated with
+// MachineInstr.
 
 constexpr uint64_t getTSFlags(const MCInstrDesc &Desc) { return Desc.TSFlags; }
+inline uint64_t getTSFlags(const MCInstrInfo &MII, unsigned Opcode) {
+  return MII.get(Opcode).TSFlags;
+}
+inline uint64_t getTSFlags(const MCInstrInfo &MII, const MCInst &Inst) {
+  return MII.get(Inst.getOpcode()).TSFlags;
+}
 
 template <typename... T> constexpr bool isSALU(const T &...O) {
   return getTSFlags(O...) & SALU;
