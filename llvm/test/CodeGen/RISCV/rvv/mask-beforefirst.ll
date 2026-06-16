@@ -91,3 +91,22 @@ define <vscale x 3 x i1> @nxv3i1(<vscale x 3 x i1> %m) {
   %x = call <vscale x 3 x i1> @llvm.mask.beforefirst(<vscale x 3 x i1> %m)
   ret <vscale x 3 x i1> %x
 }
+
+; Splitting
+
+define <vscale x 128 x i1> @nxv128i1(<vscale x 128 x i1> %m) {
+; CHECK-LABEL: nxv128i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmsbf.m v9, v0
+; CHECK-NEXT:    vcpop.m a0, v9
+; CHECK-NEXT:    snez a0, a0
+; CHECK-NEXT:    vmv.v.x v16, a0
+; CHECK-NEXT:    vmsne.vi v10, v16, 0
+; CHECK-NEXT:    vmsbf.m v11, v8
+; CHECK-NEXT:    vmandn.mm v8, v11, v10
+; CHECK-NEXT:    vmv1r.v v0, v9
+; CHECK-NEXT:    ret
+  %x = call <vscale x 128 x i1> @llvm.mask.beforefirst(<vscale x 128 x i1> %m)
+  ret <vscale x 128 x i1> %x
+}
