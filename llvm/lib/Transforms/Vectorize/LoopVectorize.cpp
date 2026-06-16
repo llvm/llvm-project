@@ -361,9 +361,17 @@ cl::opt<bool>
                           cl::desc("Verify VPlans after VPlan transforms."));
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+cl::opt<bool> llvm::VPlanPrintBeforeAll(
+    "vplan-print-before-all", cl::init(false), cl::Hidden,
+    cl::desc("Print VPlans before all VPlan transformations."));
+
 cl::opt<bool> llvm::VPlanPrintAfterAll(
     "vplan-print-after-all", cl::init(false), cl::Hidden,
     cl::desc("Print VPlans after all VPlan transformations."));
+
+cl::list<std::string> llvm::VPlanPrintBeforePasses(
+    "vplan-print-before", cl::Hidden,
+    cl::desc("Print VPlans before specified VPlan transformations (regexp)."));
 
 cl::list<std::string> llvm::VPlanPrintAfterPasses(
     "vplan-print-after", cl::Hidden,
@@ -7005,8 +7013,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
         NewExiting = Substitutions.lookup(OrigExitingVPV);
       }
       NewPhiR->setOperand(1, NewExiting);
-      PhiR->replaceAllUsesWith(
-          Plan->getOrAddLiveIn(PoisonValue::get(PhiR->getScalarType())));
+      PhiR->replaceAllUsesWith(Plan->getPoison(PhiR->getScalarType()));
 
       Builder.setInsertPoint(MiddleVPBB, IP);
       FinalReductionResult =
