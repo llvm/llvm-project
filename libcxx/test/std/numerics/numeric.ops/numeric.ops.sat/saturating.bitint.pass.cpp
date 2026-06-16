@@ -11,7 +11,8 @@
 // Clang <= 22 mis-evaluates std::saturating_mul on non-byte-aligned _BitInt at
 // compile time (constexpr eval gives the wrong product), so static_assert(test())
 // fires. Android NDK toolchains exhibit the same constexpr failure path.
-// UNSUPPORTED: clang-19, clang-20, clang-21, clang-22, apple-clang-17, apple-clang-21
+// UNSUPPORTED: clang-19, clang-20, clang-21, clang-22
+// UNSUPPORTED: apple-clang-17, apple-clang-18, apple-clang-19, apple-clang-20, apple-clang-21
 // UNSUPPORTED: target={{.+}}-android{{.*}}
 
 // <numeric>
