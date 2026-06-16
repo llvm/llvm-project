@@ -12,6 +12,7 @@
 #include "ErrorHandling.h"
 #include "PerfReader.h"
 #include "ProfiledBinary.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include <memory>
@@ -128,11 +129,11 @@ protected:
   void collectProfiledFunctions();
 
   bool collectFunctionsFromRawProfile(
-      std::unordered_set<const BinaryFunction *> &ProfiledFunctions);
+      SmallPtrSetImpl<const BinaryFunction *> &ProfiledFunctions);
 
   // Collect profiled Functions for llvm sample profile input.
   virtual bool collectFunctionsFromLLVMProfile(
-      std::unordered_set<const BinaryFunction *> &ProfiledFunctions) = 0;
+      SmallPtrSetImpl<const BinaryFunction *> &ProfiledFunctions) = 0;
 
   // List of function prefix to filter out.
   static constexpr const char *FuncPrefixsToFilter[] = {"__cxx_global_var_init",
@@ -186,7 +187,7 @@ private:
   void postProcessProfiles();
   void trimColdProfiles(uint64_t ColdCntThreshold);
   bool collectFunctionsFromLLVMProfile(
-      std::unordered_set<const BinaryFunction *> &ProfiledFunctions) override;
+      SmallPtrSetImpl<const BinaryFunction *> &ProfiledFunctions) override;
 };
 
 class CSProfileGenerator : public ProfileGeneratorBase {
@@ -367,7 +368,7 @@ private:
   void computeSummaryAndThreshold();
 
   bool collectFunctionsFromLLVMProfile(
-      std::unordered_set<const BinaryFunction *> &ProfiledFunctions) override;
+      SmallPtrSetImpl<const BinaryFunction *> &ProfiledFunctions) override;
 
   void initializeMissingFrameInferrer();
 
