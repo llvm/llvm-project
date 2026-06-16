@@ -378,10 +378,14 @@ Constant *Constant::getNullValue(Type *Ty) {
   case Type::PointerTyID:
     return ConstantPointerNull::get(cast<PointerType>(Ty));
   case Type::FixedVectorTyID:
-  case Type::ScalableVectorTyID:
-    if (cast<VectorType>(Ty)->getElementType()->isPointerTy())
+  case Type::ScalableVectorTyID: {
+    Type *EltTy = cast<VectorType>(Ty)->getElementType();
+    if (EltTy->isFloatingPointTy())
+      return ConstantFP::get(Ty, APFloat::getZero(EltTy->getFltSemantics()));
+    if (EltTy->isPointerTy())
       return ConstantPointerNull::get(Ty);
     return ConstantAggregateZero::get(Ty);
+  }
   case Type::StructTyID:
   case Type::ArrayTyID:
     return ConstantAggregateZero::get(Ty);

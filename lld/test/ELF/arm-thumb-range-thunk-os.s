@@ -13,6 +13,7 @@
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x1e00000 --stop-address=0x1e00006 | FileCheck --check-prefix=CHECK8 %s
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x2200000 --stop-address=0x220000a | FileCheck --check-prefix=CHECK9 %s
 // RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x2300000 --stop-address=0x230000a | FileCheck --check-prefix=CHECK10 %s
+// RUN: rm %t %t2
 
 // Test the Range extension Thunks for Thumb when all the code is in a single
 // OutputSection. The Thumb unconditional branch b.w and branch and link bl

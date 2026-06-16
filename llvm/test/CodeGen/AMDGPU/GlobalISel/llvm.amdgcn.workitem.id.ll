@@ -141,7 +141,7 @@ define void @test_workitem_id_z_func(ptr addrspace(1) %out) #1 {
 
 ; ALL: flat_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]]
 ; ALL: flat_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]]
-define amdgpu_kernel void @test_reqd_workgroup_size_x_only(ptr %out) !reqd_work_group_size !0 {
+define amdgpu_kernel void @test_reqd_workgroup_size_x_only(ptr %out) "amdgpu-flat-work-group-size"="64,64" !reqd_work_group_size !0 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   %id.y = call i32 @llvm.amdgcn.workitem.id.y()
   %id.z = call i32 @llvm.amdgcn.workitem.id.z()
@@ -163,7 +163,7 @@ define amdgpu_kernel void @test_reqd_workgroup_size_x_only(ptr %out) !reqd_work_
 ; PACKED: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[MASKED]]
 
 ; ALL: flat_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]]
-define amdgpu_kernel void @test_reqd_workgroup_size_y_only(ptr %out) !reqd_work_group_size !1 {
+define amdgpu_kernel void @test_reqd_workgroup_size_y_only(ptr %out) "amdgpu-flat-work-group-size"="64,64" !reqd_work_group_size !1 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   %id.y = call i32 @llvm.amdgcn.workitem.id.y()
   %id.z = call i32 @llvm.amdgcn.workitem.id.z()
@@ -184,7 +184,7 @@ define amdgpu_kernel void @test_reqd_workgroup_size_y_only(ptr %out) !reqd_work_
 
 ; PACKED: v_bfe_u32 [[MASKED:v[0-9]+]], v0, 10, 20
 ; PACKED: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[MASKED]]
-define amdgpu_kernel void @test_reqd_workgroup_size_z_only(ptr %out) !reqd_work_group_size !2 {
+define amdgpu_kernel void @test_reqd_workgroup_size_z_only(ptr %out) "amdgpu-flat-work-group-size"="64,64" !reqd_work_group_size !2 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   %id.y = call i32 @llvm.amdgcn.workitem.id.y()
   %id.z = call i32 @llvm.amdgcn.workitem.id.z()

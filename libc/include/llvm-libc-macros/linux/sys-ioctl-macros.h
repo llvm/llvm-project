@@ -16,5 +16,6 @@
 // think is worth digging into right now.
 #define TIOCGETD 0x5424
 #define FIONREAD 0x541B
+#define TIOCGWINSZ 0x5413
 
 #endif // LLVM_LIBC_MACROS_LINUX_SYS_IOCTL_MACROS_H

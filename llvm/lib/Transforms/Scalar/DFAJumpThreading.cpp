@@ -60,6 +60,7 @@
 #include "llvm/Transforms/Scalar/DFAJumpThreading.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -756,6 +757,7 @@ private:
   /// PHI nodes in those blocks that define the state.
   StateDefMap getStateDefMap() const {
     StateDefMap Res;
+    DenseSet<const BasicBlock *> MultipleDefBBs;
     PHINode *FirstDef = dyn_cast<PHINode>(Switch->getOperand(0));
     assert(FirstDef && "The first definition must be a phi.");
 
@@ -765,8 +767,12 @@ private:
 
     while (!Stack.empty()) {
       PHINode *CurPhi = Stack.pop_back_val();
+      BasicBlock *CurDefBlock = CurPhi->getParent();
 
-      Res[CurPhi->getParent()] = CurPhi;
+      auto [_, Inserted] = Res.try_emplace(CurDefBlock, CurPhi);
+      if (!Inserted)
+        MultipleDefBBs.insert(CurDefBlock);
+
       SeenValues.insert(CurPhi);
 
       for (BasicBlock *IncomingBB : CurPhi->blocks()) {
@@ -782,6 +788,17 @@ private:
       }
     }
 
+    // NOTE: If multiple phi definitions exist in a block, we cannot
+    // thread the paths with such block by simple cloning. For example:
+    // < then, det, lbl_entry, switch_bb > [ 0, det ]
+    // < then, det, switch_bb > [ 1, det ]
+    // In this case, it is impossible to diverge then->det into then->det.0 and
+    // then->det.1 by simple path cloning.
+    for (auto *BB : MultipleDefBBs) {
+      LLVM_DEBUG(dbgs() << "Not a state-defining block: Multiple defs in "
+                        << BB->getNameOrAsOperand() << "\n");
+      Res.erase(BB);
+    }
     return Res;
   }
 

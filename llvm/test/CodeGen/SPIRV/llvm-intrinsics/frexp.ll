@@ -45,7 +45,7 @@ define i32 @frexp_frexp_get_int(float %x) {
 
 ; CHECK: %[[#var3:]] = OpVariable %[[#fn_ptr_type_vec2_i32]] Function
 ; CHECK: %[[#extinst3:]] = OpExtInst %[[#vec2_float_type]] %[[#extinst_id]] frexp %[[#vec2_null]] %[[#var3]]
-; CHECK: %[[#f_part_var2:]] = OpLoad %[[#vec2_int_type]] %[[#var3]]
+; CHECK-NOT: OpLoad %[[#vec2_int_type]] %[[#var3]]
 ; CHECK: OpReturnValue %[[#extinst3]]
 define <2 x float> @frexp_zero_vector() {
   %ret = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> zeroinitializer)
@@ -56,7 +56,7 @@ define <2 x float> @frexp_zero_vector() {
 
 ; CHECK: %[[#var4:]] = OpVariable %[[#fn_ptr_type_vec2_i32]] Function
 ; CHECK: %[[#extinst4:]] = OpExtInst %[[#vec2_float_type]] %[[#extinst_id]] frexp %[[#const_composite1]] %[[#var4]]
-; CHECK: %[[#f_part_var3:]] = OpLoad %[[#vec2_int_type]] %[[#var4]]
+; CHECK-NOT: OpLoad %[[#vec2_int_type]] %[[#var4]]
 ; CHECK: OpReturnValue %[[#extinst4]]
 define <2 x float> @frexp_zero_negzero_vector() {
   %ret = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> <float 0.0, float -0.0>)
@@ -67,7 +67,7 @@ define <2 x float> @frexp_zero_negzero_vector() {
 
 ; CHECK: %[[#var5:]] = OpVariable %[[#fn_ptr_type_vec4_i32]] Function
 ; CHECK: %[[#extinst5:]] = OpExtInst %[[#vec4_float_type]] %[[#extinst_id]] frexp %[[#const_composite2]] %[[#var5]]
-; CHECK: %[[#f_part_var4:]] = OpLoad %[[#vec4_int_type]] %[[#var5]]
+; CHECK-NOT: OpLoad %[[#vec4_int_type]] %[[#var5]]
 ; CHECK: OpReturnValue %[[#extinst5]]
 define <4 x float> @frexp_nonsplat_vector() {
     %ret = call { <4 x float>, <4 x i32> } @llvm.frexp.v4f32.v4i32(<4 x float> <float 16.0, float -32.0, float 0.0, float 9999.0>)
@@ -80,9 +80,9 @@ define <4 x float> @frexp_nonsplat_vector() {
 ; CHECK: %[[#var6:]] = OpVariable %[[#fn_ptr_type_i32]] Function
 ; CHECK: %[[#var7:]] = OpVariable %[[#fn_ptr_type_i32]] Function
 ; CHECK: %[[#extinst6:]] = OpExtInst %[[#float_32_type]] %[[#extinst_id]] frexp %[[#x_var2]] %[[#var6]]
-; CHECK: %[[#load1:]] = OpLoad %[[#int_32_type]] %[[#var6]]
+; CHECK-NOT: OpLoad %[[#int_32_type]] %[[#var6]]
 ; CHECK: %[[#extinst7:]] = OpExtInst %[[#float_32_type]] %[[#extinst_id]] frexp %[[#extinst6]] %[[#var7]]
-; CHECK: %[[#f_part_var5:]] = OpLoad %[[#int_32_type]] %[[#var7]]
+; CHECK-NOT: OpLoad %[[#int_32_type]] %[[#var7]]
 ; CHECK: OpReturnValue %[[#extinst7]]
 define float @frexp_frexp(float %x) {
   %frexp0 = call { float, i32 } @llvm.frexp.f32.i32(float %x)
@@ -97,7 +97,7 @@ define float @frexp_frexp(float %x) {
 ; CHECK: %[[#x_var3:]] = OpFunctionParameter %[[#vec2_double_type]]
 ; CHECK: %[[#var9:]] = OpVariable %[[#fn_ptr_type_vec2_i32]] Function
 ; CHECK: %[[#extinst9:]] = OpExtInst %[[#vec2_double_type]] %[[#extinst_id]] frexp %[[#x_var3]] %[[#var9]]
-; CHECK: %[[#f_part_var6:]] = OpLoad %[[#vec2_int_type]] %[[#var9]]
+; CHECK-NOT: OpLoad %[[#vec2_int_type]] %[[#var9]]
 ; CHECK: OpReturnValue %[[#extinst9]]
 define <2 x double> @frexp_frexp_vector(<2 x double> %x) {
   %frexp0 = call { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double> %x)

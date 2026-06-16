@@ -646,6 +646,16 @@ bool Symbol::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
   return true;
 }
 
+// If the size of Symbol has changed, the Encode and
+// Decode methods also likely need to be updated and
+// the DataFileCache version number in Symtab::Encode
+// will need to be incremented as well.
+#if __SIZEOF_POINTER__ == 8
+static_assert(sizeof(lldb_private::Symbol) == 80,
+              "Symbol size has changed, Symbol::Encode and Decode likely need "
+              "to be updated");
+#endif
+
 /// The encoding format for the symbol is as follows:
 ///
 /// uint32_t m_uid;

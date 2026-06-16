@@ -108,32 +108,21 @@ KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &LHS_,
     Known.knownNot(fcNan);
 
   if (Kind == MinMaxKind::maxnum || Kind == MinMaxKind::maximumnum) {
-    // If at least one operand is known to be positive, the result must be
-    // positive.
-    if ((KnownLHS.cannotBeOrderedLessThanZero() &&
-         KnownLHS.isKnownNeverNaN()) ||
-        (KnownRHS.cannotBeOrderedLessThanZero() && KnownRHS.isKnownNeverNaN()))
-      Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+    if (KnownLHS.isKnownNeverNaN())
+      Known.knownNot(orderedStrictlyLess(KnownLHS.KnownFPClasses));
+    if (KnownRHS.isKnownNeverNaN())
+      Known.knownNot(orderedStrictlyLess(KnownRHS.KnownFPClasses));
   } else if (Kind == MinMaxKind::maximum) {
-    // If at least one operand is known to be positive, the result must be
-    // positive.
-    if (KnownLHS.cannotBeOrderedLessThanZero() ||
-        KnownRHS.cannotBeOrderedLessThanZero())
-      Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+    Known.knownNot(orderedStrictlyLess(KnownLHS.KnownFPClasses) |
+                   orderedStrictlyLess(KnownRHS.KnownFPClasses));
   } else if (Kind == MinMaxKind::minnum || Kind == MinMaxKind::minimumnum) {
-    // If at least one operand is known to be negative, the result must be
-    // negative.
-    if ((KnownLHS.cannotBeOrderedGreaterThanZero() &&
-         KnownLHS.isKnownNeverNaN()) ||
-        (KnownRHS.cannotBeOrderedGreaterThanZero() &&
-         KnownRHS.isKnownNeverNaN()))
-      Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
+    if (KnownLHS.isKnownNeverNaN())
+      Known.knownNot(orderedStrictlyGreater(KnownLHS.KnownFPClasses));
+    if (KnownRHS.isKnownNeverNaN())
+      Known.knownNot(orderedStrictlyGreater(KnownRHS.KnownFPClasses));
   } else if (Kind == MinMaxKind::minimum) {
-    // If at least one operand is known to be negative, the result must be
-    // negative.
-    if (KnownLHS.cannotBeOrderedGreaterThanZero() ||
-        KnownRHS.cannotBeOrderedGreaterThanZero())
-      Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
+    Known.knownNot(orderedStrictlyGreater(KnownLHS.KnownFPClasses) |
+                   orderedStrictlyGreater(KnownRHS.KnownFPClasses));
   } else
     llvm_unreachable("unhandled intrinsic");
 

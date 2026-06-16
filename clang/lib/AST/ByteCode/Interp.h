@@ -143,7 +143,8 @@ bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
 bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I);
 bool isConstexprUnknown(const Pointer &P);
 bool isConstexprUnknown(const Block *B);
-bool CheckDynamicCast(InterpState &S, CodePtr OpPC);
+bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestType,
+                 bool IsReferenceCast);
 
 enum class ShiftDir { Left, Right };
 
@@ -3664,12 +3665,12 @@ inline bool StartSpeculation(InterpState &S, CodePtr OpPC) {
 
 inline bool StartInit(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
-  S.InitializingBlocks.push_back(Ptr.block());
+  S.InitializingPtrs.push_back(Ptr.view());
   return true;
 }
 
 inline bool EndInit(InterpState &S, CodePtr OpPC) {
-  S.InitializingBlocks.pop_back();
+  S.InitializingPtrs.pop_back();
   return true;
 }
 

@@ -68,6 +68,7 @@
 #include "math/cbrt.h"
 #include "math/cbrtbf16.h"
 #include "math/cbrtf.h"
+#include "math/cbrtf16.h"
 #include "math/ceil.h"
 #include "math/ceilbf16.h"
 #include "math/ceilf.h"

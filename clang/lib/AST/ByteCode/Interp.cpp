@@ -580,7 +580,7 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
   // The This pointer is writable in constructors and destructors,
   // even if isConst() returns true.
-  if (llvm::is_contained(S.InitializingBlocks, Ptr.block()))
+  if (S.initializingBlock(Ptr.block()))
     return true;
 
   if (!S.checkingPotentialConstantExpression()) {
@@ -619,7 +619,7 @@ static bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return Invalid(S, OpPC);
 
   // Volatile object can be written-to and read if they are being constructed.
-  if (llvm::is_contained(S.InitializingBlocks, Ptr.block()))
+  if (S.initializingBlock(Ptr.block()))
     return true;
 
   // The reason why Ptr is volatile might be further up the hierarchy.
@@ -1774,9 +1774,7 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame;
 
-  // Note that we cannot assert(CallResult.hasValue()) here since
-  // Ret() above only sets the APValue if the curent frame doesn't
-  // have a caller set.
+  InterpStateCCOverride CCOverride(S, Func->isImmediate());
   if (Interpret(S)) {
     assert(S.Current == FrameBefore);
     return true;
@@ -1844,7 +1842,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
       return false;
 
     if (Func->isConstructor() || Func->isDestructor())
-      S.InitializingBlocks.push_back(ThisPtr.block());
+      S.InitializingPtrs.push_back(ThisPtr.view());
   }
 
   if (!Func->isFullyCompiled())
@@ -1868,13 +1866,10 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   S.Current = NewFrame;
 
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
-  // Note that we cannot assert(CallResult.hasValue()) here since
-  // Ret() above only sets the APValue if the curent frame doesn't
-  // have a caller set.
   bool Success = Interpret(S);
   // Remove initializing  block again.
   if (Func->isConstructor() || Func->isDestructor())
-    S.InitializingBlocks.pop_back();
+    S.InitializingPtrs.pop_back();
 
   if (!Success) {
     InterpFrame::free(NewFrame);
@@ -1917,19 +1912,205 @@ static bool getDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
   return DynamicDecl != nullptr;
 }
 
-bool CheckDynamicCast(InterpState &S, CodePtr OpPC) {
-  const auto &Ptr = S.Stk.peek<Pointer>();
+struct DynamicCastResult {
+  UnsignedOrNone Offset = std::nullopt;
+  bool Ambiguous = false;
 
-  if (!Ptr.isConstexprUnknown())
+  bool valid() const { return !Ambiguous && Offset; }
+
+  void setOffset(unsigned O) {
+    if (!Offset)
+      Offset = O;
+    else {
+      Ambiguous = true;
+    }
+  }
+
+  void merge(DynamicCastResult C) {
+    Ambiguous |= C.Ambiguous;
+    if (C.Offset) {
+      if (!Offset)
+        Offset = C.Offset;
+      else
+        Ambiguous = true;
+    }
+  }
+};
+
+// Walk UP the type hierarchy, starting at the decl of R to find Needle.
+static DynamicCastResult findRecordBase(const ASTContext &Ctx, const Record *R,
+                                        QualType Needle) {
+  DynamicCastResult Res;
+
+  if (Ctx.hasSimilarType(Needle, Ctx.getCanonicalTagType(R->getDecl())))
+    Res.setOffset(0);
+
+  for (const Record::Base &B : R->bases()) {
+    auto N = findRecordBase(Ctx, B.R, Needle);
+    if (N.Offset)
+      N.Offset = *N.Offset + B.Offset;
+    Res.merge(N);
+  }
+
+  return Res;
+}
+
+bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
+                 bool IsReferenceCast) {
+  const auto &Ptr = S.Stk.pop<Pointer>();
+  QualType TargetType = QualType(DestTypePtr, 0);
+
+  if (Ptr.isConstexprUnknown()) {
+    QualType T = Ptr.getType();
+    const Expr *E = S.Current->getExpr(OpPC);
+    APValue V = Ptr.toAPValue(S.getASTContext());
+    QualType TT = S.getASTContext().getLValueReferenceType(T);
+    S.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
+        << AK_DynamicCast << V.getAsString(S.getASTContext(), TT);
+    return false;
+  }
+
+  // TODO: Other checks?
+  if (!Ptr.isBlockPointer())
+    return false;
+
+  // Our given pointer, limited by the base that's currently being initialized,
+  // if any.
+  PtrView LimitedPtr;
+  if (S.InitializingPtrs.empty()) {
+    LimitedPtr = Ptr.stripBaseCasts().view();
+  } else {
+    // FIXME: Is this always the correct block?
+    LimitedPtr = S.InitializingPtrs.back();
+    assert(LimitedPtr.block() == Ptr.block());
+  }
+  assert(LimitedPtr.getRecord());
+
+  // C++ [expr.dynamic.cast]p7:
+  //   If T is "pointer to cv void", then the result is a pointer to the most
+  //   derived object
+  if (TargetType->isVoidType()) {
+    S.Stk.push<Pointer>(LimitedPtr);
     return true;
+  }
 
-  QualType T = Ptr.getType();
-  const Expr *E = S.Current->getExpr(OpPC);
-  APValue V = Ptr.toAPValue(S.getASTContext());
-  QualType TT = S.getASTContext().getLValueReferenceType(T);
-  S.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
-      << AK_DynamicCast << V.getAsString(S.getASTContext(), TT);
-  return false;
+  assert(!TargetType.isNull());
+  assert(!TargetType->isVoidType());
+  assert(TargetType->isRecordType());
+
+  // Helper lambdas.
+  auto typesMatch = [&](QualType A, QualType B) -> bool {
+    return S.getASTContext().hasSimilarType(A, B);
+  };
+  auto getRecord = [](PtrView P) -> const CXXRecordDecl * {
+    assert(P.getRecord());
+    return cast<CXXRecordDecl>(P.getRecord()->getDecl());
+  };
+
+  auto baseIsPrivate = [&](PtrView P) -> bool {
+    if (P.isRoot() || !P.isBaseClass())
+      return false;
+
+    CXXBasePaths Paths;
+    getRecord(P.getBase())->isDerivedFrom(getRecord(P), Paths);
+    assert(std::distance(Paths.begin(), Paths.end()) == 1);
+
+    return Paths.front().Access == AS_private;
+  };
+
+  enum {
+    DiagPrivateBase = 0,
+    DiagNoBase = 1,
+    DiagAmbiguous = 2,
+    DiagPrivateSibling = 3
+  };
+
+  auto diag = [&](int DiagKind, QualType ResultType) -> bool {
+    // Pointer casts return nullptr on failure.
+    if (!IsReferenceCast) {
+      S.Stk.push<Pointer>(0, DestTypePtr);
+      return true;
+    }
+    QualType DynamicType = LimitedPtr.getType()->getCanonicalTypeUnqualified();
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_dynamic_cast_to_reference_failed)
+        << DiagKind << ResultType << DynamicType << TargetType;
+    return false;
+  };
+
+  // Check if Ptr's dynamic type is derived from our target type at all.
+  // If it isn't, diagnose this as "operand does not have base class of type
+  // [...]".
+  {
+    CXXBasePaths Paths;
+    getRecord(LimitedPtr)
+        ->isDerivedFrom(TargetType->getAsCXXRecordDecl(), Paths);
+    if (std::distance(Paths.begin(), Paths.end()) == 0 &&
+        !typesMatch(LimitedPtr.getType(), TargetType)) {
+      return diag(DiagNoBase, TargetType);
+    }
+  }
+
+  // Current base is already private.
+  if (baseIsPrivate(Ptr.view()))
+    return diag(DiagPrivateBase, Ptr.getType());
+
+  std::optional<PtrView> Result;
+  // First, check simple downcasts without ambiguities.
+  for (PtrView Iter = Ptr.view();;) {
+    if (typesMatch(TargetType, Iter.getType())) {
+      Result = Iter;
+      break;
+    }
+    // Moving DOWN the type hierarchy.
+    Iter = Iter.getBase();
+    if (Iter.isRoot() || !Iter.isBaseClass())
+      break;
+  }
+
+  // Simply walking down the type hierarchy has produced a valid result, use
+  // that.
+  if (Result) {
+    if (baseIsPrivate(*Result))
+      return diag(DiagPrivateBase, Result->getType());
+    S.Stk.push<Pointer>(*Result);
+    return true;
+  }
+
+  // Otherwise, we need to do a deep hierarchy check.
+  bool Ambiguous = false;
+  for (PtrView Iter = LimitedPtr;;) {
+    // If we can move up the hierarchy from this level and reach the target type
+    // unambiguously, we're fine.
+    auto R = findRecordBase(S.getASTContext(), Iter.getRecord(), TargetType);
+
+    if (R.valid()) {
+      Result = Iter.atField(*R.Offset);
+      break;
+    } else if (R.Ambiguous) {
+      Ambiguous = true;
+      break;
+    }
+
+    // This moves us DOWN the type hierarchy.
+    Iter = Iter.getBase();
+    if (Iter.isRoot() || !Iter.isBaseClass())
+      break;
+  }
+
+  if (Ambiguous)
+    return diag(DiagAmbiguous, TargetType);
+
+  if (Result) {
+    // Might still be invalid due to resulting in a private base though.
+    if (baseIsPrivate(*Result))
+      return diag(DiagPrivateSibling, TargetType);
+    S.Stk.push<Pointer>(*Result);
+    return true;
+  }
+
+  // We couldn't find the requested base.
+  return diag(DiagNoBase, TargetType);
 }
 
 bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
@@ -1954,8 +2135,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   const auto *InitialFunction = cast<CXXMethodDecl>(Callee);
   const CXXMethodDecl *Overrider;
 
-  if (StaticDecl != DynamicDecl &&
-      !llvm::is_contained(S.InitializingBlocks, ThisPtr.block())) {
+  if (StaticDecl != DynamicDecl && !S.initializingBlock(ThisPtr.block())) {
     if (!DynamicDecl->isDerivedFrom(StaticDecl))
       return false;
     Overrider = S.getContext().getOverridingFunction(DynamicDecl, StaticDecl,

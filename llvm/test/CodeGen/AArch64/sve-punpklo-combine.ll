@@ -216,12 +216,10 @@ define <vscale x 2 x i1> @masked_load_sext_i8i64_ptrue_all(ptr %ap, <vscale x 16
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    ret
-  %p0 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1> %p0, <vscale x 16 x i8> %b, <vscale x 16 x i8> zeroinitializer)
+  %cmp = call <vscale x 16 x i1> @llvm.aarch64.sve.cmpeq.nxv16i8(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> %b, <vscale x 16 x i8> zeroinitializer)
   %extract = call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv16i1(<vscale x 16 x i1> %cmp, i64 0)
   %ext1 = sext <vscale x 2 x i1> %extract to <vscale x 2 x i64>
-  %p1 = call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 31)
-  %cmp1 = call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> %p1, <vscale x 2 x i64> %ext1, <vscale x 2 x i64> zeroinitializer)
+  %cmp1 = call <vscale x 2 x i1> @llvm.aarch64.sve.cmpne.nxv2i64(<vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> %ext1, <vscale x 2 x i64> zeroinitializer)
   ret <vscale x 2 x i1> %cmp1
 }
 

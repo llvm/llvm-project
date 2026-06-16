@@ -25,6 +25,7 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
 #include "flang/Optimizer/Support/Utils.h"
+#include "flang/Optimizer/Transforms/FIRToMemRefTypeConverter.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -1602,6 +1603,35 @@ template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::genStore(
     mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::Value valueToStore,
     mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
+
+template <typename Ty>
+mlir::MemRefType
+OpenACCPointerLikeModel<Ty>::getAsMemRefType(mlir::Type pointer,
+                                             mlir::ModuleOp module) const {
+  if (auto memrefTy = mlir::dyn_cast<mlir::MemRefType>(pointer))
+    return memrefTy;
+  fir::FIRToMemRefTypeConverter converter(module);
+  converter.setConvertComplexTypes(true);
+  if (!converter.convertibleMemrefType(pointer))
+    return {};
+  return converter.convertMemrefType(pointer);
+}
+
+template mlir::MemRefType
+OpenACCPointerLikeModel<fir::ReferenceType>::getAsMemRefType(
+    mlir::Type pointer, mlir::ModuleOp module) const;
+
+template mlir::MemRefType
+OpenACCPointerLikeModel<fir::PointerType>::getAsMemRefType(
+    mlir::Type pointer, mlir::ModuleOp module) const;
+
+template mlir::MemRefType
+OpenACCPointerLikeModel<fir::HeapType>::getAsMemRefType(
+    mlir::Type pointer, mlir::ModuleOp module) const;
+
+template mlir::MemRefType
+OpenACCPointerLikeModel<fir::LLVMPointerType>::getAsMemRefType(
+    mlir::Type pointer, mlir::ModuleOp module) const;
 
 template <typename Ty>
 mlir::Value OpenACCPointerLikeModel<Ty>::genCast(mlir::Type pointer,

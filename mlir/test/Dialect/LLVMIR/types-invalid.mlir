@@ -154,3 +154,19 @@ func.func private @target_ext_no_name() {
   // expected-error@below {{failed to parse LLVMTargetExtType parameter 'extTypeName' which is to be a `::llvm::StringRef`}}
   "some.op"() : () -> !llvm.target<i32, 42>
 }
+
+// -----
+
+func.func @byte_invalid_bitwidth() {
+    // expected-error@below {{bitwidth must be less than 8388608, but got 8388608}}
+    %0 = "some.op"() : () -> !llvm.byte<8388608>
+    llvm.return
+}
+
+// -----
+
+llvm.func @byte_zero_bitwidth() {
+    // expected-error@below {{bitwidth must be greater than 0}}
+    %0 = "some.op"() : () -> !llvm.byte<0>
+    llvm.return
+}

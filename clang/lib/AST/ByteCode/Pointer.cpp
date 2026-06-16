@@ -392,8 +392,7 @@ Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
     }
 
     if (P.isBaseClass()) {
-      if (P.getRecord()->getNumVirtualBases() > 0)
-        Result += P.getInlineDesc()->Offset;
+      Result += P.getInlineDesc()->Offset - sizeof(InlineDescriptor);
       P = P.getBase();
       continue;
     }
@@ -909,7 +908,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
     if (Ty->isAnyComplexType()) {
       const Descriptor *Desc = Ptr.getFieldDesc();
       // Can happen via C casts.
-      if (!Desc->isPrimitiveArray())
+      if (!Desc->getType()->isAnyComplexType())
         return false;
 
       PrimType ElemT = Desc->getPrimType();

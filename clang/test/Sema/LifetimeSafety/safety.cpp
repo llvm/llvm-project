@@ -3714,3 +3714,8 @@ void capturing_multiple_locals() {
     }                               // expected-note 2 {{destroyed here}} 
     (void)v;                        // expected-note 2 {{later used here}}
 }
+
+struct [[gsl::Pointer()]] PtrWithInt { int x; };
+PtrWithInt f() {
+  return PtrWithInt{10};
+}

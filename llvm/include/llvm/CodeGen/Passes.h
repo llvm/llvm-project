@@ -562,7 +562,7 @@ LLVM_ABI FunctionPass *createBreakFalseDepsLegacyPass();
 LLVM_ABI FunctionPass *createIndirectBrExpandPass();
 
 /// Creates CFI Fixup pass. \see CFIFixup.cpp
-LLVM_ABI FunctionPass *createCFIFixup();
+LLVM_ABI FunctionPass *createCFIFixupLegacy();
 
 /// Creates CFI Instruction Inserter pass. \see CFIInstrInserter.cpp
 LLVM_ABI FunctionPass *createCFIInstrInserter();

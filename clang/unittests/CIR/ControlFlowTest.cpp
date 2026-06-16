@@ -248,7 +248,7 @@ TEST_F(CIRControlFlowTest, ScopeOpWithResult) {
 
   // getSuccessorInputs(parent) should return the scope's result.
   ValueRange parentInputs =
-      scopeOp.getSuccessorInputs(RegionSuccessor::parent());
+      scopeOp.getSuccessorInputs(mlir::RegionSuccessor(scopeOp));
   EXPECT_EQ(parentInputs.size(), 1u);
 
   // The yield's operands are forwarded to the parent result.
@@ -256,7 +256,7 @@ TEST_F(CIRControlFlowTest, ScopeOpWithResult) {
       getTerminator(scopeOp.getScopeRegion());
   ASSERT_TRUE(term);
   OperandRange yieldOperands =
-      term.getSuccessorOperands(RegionSuccessor::parent());
+      term.getSuccessorOperands(mlir::RegionSuccessor(scopeOp));
   EXPECT_EQ(yieldOperands.size(), 1u);
 
   verifyControlFlowInterfaceConsistency(scopeOp);

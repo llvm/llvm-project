@@ -19,6 +19,8 @@
 #include "hdr/netinet_in_macros.h"
 #include "hdr/types/struct_in6_addr.h"
 #include "hdr/types/struct_sockaddr_in6.h"
+#include "src/netinet/in6addr_any.h"
+#include "src/netinet/in6addr_loopback.h"
 
 TEST(LlvmLibcNetinetInTest, In6AddrLayout) {
   EXPECT_EQ(sizeof(struct in6_addr), static_cast<size_t>(16));
@@ -66,6 +68,18 @@ TEST(LlvmLibcNetinetInTest, IN6AddrInitMacros) {
                                         0, 0, 0, 0, 0, 0, 0, 1};
   EXPECT_EQ(LIBC_NAMESPACE::memcmp(&loopback, LOOPBACK_CONTENT, 16), 0);
   EXPECT_TRUE(IN6_IS_ADDR_LOOPBACK(&loopback));
+}
+
+TEST(LlvmLibcNetinetInTest, IN6AddrConstants) {
+  const uint8_t ANY_CONTENT[16] = {0};
+  EXPECT_EQ(
+      LIBC_NAMESPACE::memcmp(&LIBC_NAMESPACE::in6addr_any, ANY_CONTENT, 16), 0);
+
+  const uint8_t LOOPBACK_CONTENT[16] = {0, 0, 0, 0, 0, 0, 0, 0,
+                                        0, 0, 0, 0, 0, 0, 0, 1};
+  EXPECT_EQ(LIBC_NAMESPACE::memcmp(&LIBC_NAMESPACE::in6addr_loopback,
+                                   LOOPBACK_CONTENT, 16),
+            0);
 }
 
 TEST(LlvmLibcNetinetInTest, SockaddrIn6Layout) {

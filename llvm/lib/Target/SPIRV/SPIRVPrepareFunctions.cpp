@@ -28,6 +28,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -117,6 +118,22 @@ static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic,
   if (auto *MSI = dyn_cast<MemSetInst>(Intrinsic))
     if (isa<Constant>(MSI->getValue()) && isa<ConstantInt>(MSI->getLength()))
       return false; // It is handled later using OpCopyMemorySized.
+
+  // An intrinsic with a metadata argument has no SPIR-V lowering and can't be
+  // turned into a function.
+  if (any_of(Intrinsic->args(), IsaPred<MetadataAsValue>)) {
+    const Function *F = Intrinsic->getFunction();
+    F->getContext().diagnose(DiagnosticInfoUnsupported(
+        *F,
+        "cannot lower the intrinsic '" +
+            Intrinsic->getCalledFunction()->getName() +
+            "' that takes a metadata argument",
+        Intrinsic->getDebugLoc()));
+    if (!Intrinsic->getType()->isVoidTy())
+      Intrinsic->replaceAllUsesWith(PoisonValue::get(Intrinsic->getType()));
+    Intrinsic->eraseFromParent();
+    return true;
+  }
 
   Module *M = Intrinsic->getModule();
   std::string FuncName = lowerLLVMIntrinsicName(Intrinsic);
@@ -502,6 +519,14 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
         Changed = true;
         break;
       default:
+        // Drop assume-like intrinsics that have no SPIR-V representation.
+        if (II->isAssumeLikeIntrinsic()) {
+          if (!II->getType()->isVoidTy())
+            II->replaceAllUsesWith(PoisonValue::get(II->getType()));
+          II->eraseFromParent();
+          Changed = true;
+          break;
+        }
         if (TM.getTargetTriple().getVendor() == Triple::AMD ||
             any_of(SPVAllowUnknownIntrinsics, [II](auto &&Prefix) {
               if (Prefix.empty())

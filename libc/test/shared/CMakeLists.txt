@@ -75,6 +75,7 @@ add_fp_unittest(
     libc.src.__support.math.cbrt
     libc.src.__support.math.cbrtbf16
     libc.src.__support.math.cbrtf
+    libc.src.__support.math.cbrtf16
     libc.src.__support.math.ceil
     libc.src.__support.math.ceilbf16
     libc.src.__support.math.ceilf

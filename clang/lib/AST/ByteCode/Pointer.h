@@ -53,6 +53,7 @@ struct PtrView {
   bool inUnion() const { return getInlineDesc()->InUnion; };
   bool inArray() const { return getFieldDesc()->IsArray; }
   bool inPrimitiveArray() const { return getFieldDesc()->isPrimitiveArray(); }
+  const Block *block() const { return Pointee; }
 
   unsigned getEvalID() { return Pointee->getEvalID(); }
 
@@ -670,7 +671,11 @@ public:
   bool isTypeidPointer() const { return StorageKind == Storage::Typeid; }
 
   /// Returns the record descriptor of a class.
-  const Record *getRecord() const { return view().getRecord(); }
+  const Record *getRecord() const {
+    if (!isBlockPointer())
+      return nullptr;
+    return view().getRecord();
+  }
   /// Returns the element record type, if this is a non-primive array.
   const Record *getElemRecord() const { return view().getElemRecord(); }
   /// Returns the field information.

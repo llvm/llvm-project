@@ -76,7 +76,7 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
   auto Memory =
       std::make_unique<std::byte[]>(sizeof(Block) + D->getAllocSize());
   auto *B = new (Memory.get()) Block(EvalID, D, /*isStatic=*/false);
-  B->invokeCtor();
+  B->invokeCtorNoMemset();
 
   assert(D->getMetadataSize() == sizeof(InlineDescriptor));
   InlineDescriptor *ID = reinterpret_cast<InlineDescriptor *>(B->rawData());

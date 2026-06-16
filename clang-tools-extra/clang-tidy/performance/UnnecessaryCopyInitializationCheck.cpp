@@ -29,7 +29,7 @@ static constexpr StringRef FunctionDeclId = "functionDecl";
 static constexpr StringRef OldVarDeclId = "oldVarDecl";
 
 static void recordFixes(const VarDecl &Var, ASTContext &Context,
-                        DiagnosticBuilder &Diagnostic) {
+                        const DiagnosticBuilder &Diagnostic) {
   Diagnostic << utils::fixit::changeVarDeclToReference(Var, Context);
   if (!Var.getType().isLocalConstQualified()) {
     if (std::optional<FixItHint> Fix = utils::fixit::addQualifierToVarDecl(
@@ -38,8 +38,8 @@ static void recordFixes(const VarDecl &Var, ASTContext &Context,
   }
 }
 
-static std::optional<SourceLocation> firstLocAfterNewLine(SourceLocation Loc,
-                                                          SourceManager &SM) {
+static std::optional<SourceLocation>
+firstLocAfterNewLine(SourceLocation Loc, const SourceManager &SM) {
   bool Invalid = false;
   const char *TextAfter = SM.getCharacterData(Loc, &Invalid);
   if (Invalid)
@@ -49,7 +49,7 @@ static std::optional<SourceLocation> firstLocAfterNewLine(SourceLocation Loc,
 }
 
 static void recordRemoval(const DeclStmt &Stmt, ASTContext &Context,
-                          DiagnosticBuilder &Diagnostic) {
+                          const DiagnosticBuilder &Diagnostic) {
   auto &SM = Context.getSourceManager();
   // Attempt to remove trailing comments as well.
   auto Tok = utils::lexer::findNextTokenSkippingComments(Stmt.getEndLoc(), SM,

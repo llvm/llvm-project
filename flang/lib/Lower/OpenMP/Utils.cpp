@@ -1437,6 +1437,30 @@ bool FlangOMPContext::matchesISATrait(llvm::StringRef rawString) const {
   return targetFeatures.contains(("+" + rawString).str());
 }
 
+void collectEnclosingConstructTraits(
+    mlir::Operation *op,
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
+  // Collect enclosing OpenMP operations so variants chosen by an outer
+  // metadirective are part of this metadirective's context. For example, an
+  // inner metadirective inside `target` and an outer-selected `parallel` must
+  // be able to match construct={target, parallel}. The final reverse yields
+  // outermost-to-innermost order as required by OMPContext.
+  for (; op; op = op->getParentOp()) {
+    if (mlir::isa<mlir::omp::WsloopOp>(op))
+      constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
+    if (mlir::isa<mlir::omp::ParallelOp>(op))
+      constructTraits.push_back(
+          llvm::omp::TraitProperty::construct_parallel_parallel);
+    if (mlir::isa<mlir::omp::TeamsOp>(op))
+      constructTraits.push_back(
+          llvm::omp::TraitProperty::construct_teams_teams);
+    if (mlir::isa<mlir::omp::TargetOp>(op))
+      constructTraits.push_back(
+          llvm::omp::TraitProperty::construct_target_target);
+  }
+  std::reverse(constructTraits.begin(), constructTraits.end());
+}
+
 } // namespace omp
 } // namespace lower
 } // namespace Fortran

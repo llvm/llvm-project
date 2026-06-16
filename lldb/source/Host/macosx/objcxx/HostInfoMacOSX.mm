@@ -237,7 +237,7 @@ bool HostInfoMacOSX::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
 bool HostInfoMacOSX::ComputeUserPluginsDirectory(FileSpec &file_spec) {
   FileSpec home_dir_spec = GetUserHomeDir();
   home_dir_spec.AppendPathComponent("Library/Application Support/LLDB/PlugIns");
-  file_spec.SetDirectory(home_dir_spec.GetPathAsConstString());
+  file_spec.SetDirectory(home_dir_spec.GetPath());
   return true;
 }
 
