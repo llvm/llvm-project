@@ -2250,6 +2250,18 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(MainFPM),
                                                 PTO.EagerlyInvalidateAnalyses));
 
+  if (EnableModuleInliner) {
+    MPM.addPass(ModuleInlinerPass(::getInlineParamsFromOptLevel(Level),
+                                  UseInlineAdvisor,
+                                  ThinOrFullLTOPhase::FullLTOPostLink));
+  } else {
+    MPM.addPass(ModuleInlinerWrapperPass(
+        ::getInlineParamsFromOptLevel(Level),
+        /* MandatoryFirst */ true,
+        InlineContext{ThinOrFullLTOPhase::FullLTOPostLink,
+                      InlinePass::CGSCCInliner}));
+  }
+
   // Lower type metadata and the type.test intrinsic. This pass supports
   // clang's control flow integrity mechanisms (-fsanitize=cfi*) and needs
   // to be run at link time if CFI is enabled. This pass does nothing if
@@ -2265,6 +2277,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
 
   // Add late LTO optimization passes.
   FunctionPassManager LateFPM;
+
+  LateFPM.addPass(SROAPass(SROAOptions::ModifyCFG));
 
   // Delete basic blocks, which optimization passes may have killed.
   LateFPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
@@ -2295,7 +2309,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
                                       .convertSwitchToArithmetic(true)
                                       .hoistCommonInsts(true)
                                       .speculateUnpredictables(true)));
-
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(LateFPM)));
 
   // Drop bodies of available eternally objects to improve GlobalDCE.
