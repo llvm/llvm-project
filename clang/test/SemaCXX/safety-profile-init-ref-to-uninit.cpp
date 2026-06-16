@@ -64,6 +64,34 @@ void test_suppress() {
   (void)s; (void)s2;
 }
 
+void take_uninit_ptr(int *p [[ref_to_uninit]]);
+void take_uninit_ref(int &r [[ref_to_uninit]]);
+void take_ptr(int *p);
+void take_ref(const int &r);
+void uninitialized_fill(int *r [[ref_to_uninit]], int val);
+
+void test_call_arguments() {
+  take_uninit_ptr(&g_uninit);    // OK
+  take_uninit_ptr(&g_init);      // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  take_uninit_ptr(g_uninit_arr); // OK: array-to-pointer decay
+  take_uninit_ref(g_uninit);     // OK
+  take_uninit_ref(g_init);       // expected-error {{reference marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+
+  take_ptr(&g_uninit);           // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  take_ptr(&g_init);             // OK
+  take_ref(g_uninit);            // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  take_ref(g_init);              // OK
+
+  // The worked example from paper §5.
+  int a1[] = {1, 2, 3};
+  [[uninitialized]] int a2[3];
+  uninitialized_fill(a1, 10); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  uninitialized_fill(a2, 10); // OK
+
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] { take_ptr(&g_uninit); } // OK: suppressed
+}
+
 struct WithFields {
   int *p1 [[ref_to_uninit]] = &g_uninit; // OK
   int *p2 [[ref_to_uninit]] = &g_init;   // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
