@@ -30,6 +30,9 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool reference_converts_from_tempora
 
 #endif
 
+template <class _Tp, class _Up>
+inline const bool __reference_converts_from_temporary_v = __reference_converts_from_temporary(_Tp, _Up);
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___TYPE_TRAITS_REFERENCE_CONVERTS_FROM_TEMPORARY_H
