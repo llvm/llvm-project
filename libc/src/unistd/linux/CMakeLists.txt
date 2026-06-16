@@ -224,12 +224,12 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.size_t
     libc.hdr.types.ssize_t
-    libc.include.sys_syscall
-    libc.include.unistd
+    libc.src.__support.common
     libc.src.__support.CPP.optional
+    libc.src.__support.macros.config
     libc.src.__support.OSUtil.linux.syscall_wrappers.getcwd
-    libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+    libc.src.string.allocating_string_utils
 )
 
 add_entrypoint_object(
