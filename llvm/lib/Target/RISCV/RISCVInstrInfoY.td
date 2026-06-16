@@ -209,10 +209,10 @@ def C_SYSP_RV32 : CStackStore<0b111, "c.sysp", YGPR, uimm9_lsb000>,
   let Inst{9-7} = imm{8-6};
 }
 } // let DecoderNamespace = "RVY32Only"
-def : CompressPat<(LY YGPRC:$rd, GPRCMem:$rs1, uimm8_lsb000:$imm),
-                  (C_LY_RV32 YGPRC:$rd, GPRCMem:$rs1, uimm8_lsb000:$imm)>;
-def : CompressPat<(SY YGPRC:$rs2, GPRCMem:$rs1, uimm8_lsb000:$imm),
-                  (C_SY_RV32 YGPRC:$rs2, GPRCMem:$rs1, uimm8_lsb000:$imm)>;
+def : CompressPat<(LY YGPRC:$rd, BasePtrC:$rs1, uimm8_lsb000:$imm),
+                  (C_LY_RV32 YGPRC:$rd, BasePtrC:$rs1, uimm8_lsb000:$imm)>;
+def : CompressPat<(SY YGPRC:$rs2, BasePtrC:$rs1, uimm8_lsb000:$imm),
+                  (C_SY_RV32 YGPRC:$rs2, BasePtrC:$rs1, uimm8_lsb000:$imm)>;
 def : CompressPat<(LY YGPRNoX0:$rd, SPMem:$rs1,  uimm9_lsb000:$imm),
                   (C_LYSP_RV32 YGPRNoX0:$rd, SPMem:$rs1, uimm9_lsb000:$imm)>;
 def : CompressPat<(SY YGPR:$rs2, SPMem:$rs1, uimm9_lsb000:$imm),
@@ -245,10 +245,10 @@ def C_SYSP_RV64 : CStackStore<0b101, "c.sysp", YGPR, uimm10_lsb0000>,
   let Inst{10-7} = imm{9-6};
 }
 } // let DecoderNamespace = "RVY64Only"
-def : CompressPat<(LY YGPRC:$rd, GPRCMem:$rs1, uimm9_lsb0000:$imm),
-                  (C_LY_RV64 YGPRC:$rd, GPRCMem:$rs1, uimm9_lsb0000:$imm)>;
-def : CompressPat<(SY YGPRC:$rs2, GPRCMem:$rs1, uimm9_lsb0000:$imm),
-                  (C_SY_RV64 YGPRC:$rs2, GPRCMem:$rs1, uimm9_lsb0000:$imm)>;
+def : CompressPat<(LY YGPRC:$rd, BasePtrC:$rs1, uimm9_lsb0000:$imm),
+                  (C_LY_RV64 YGPRC:$rd, BasePtrC:$rs1, uimm9_lsb0000:$imm)>;
+def : CompressPat<(SY YGPRC:$rs2, BasePtrC:$rs1, uimm9_lsb0000:$imm),
+                  (C_SY_RV64 YGPRC:$rs2, BasePtrC:$rs1, uimm9_lsb0000:$imm)>;
 def : CompressPat<(LY YGPRNoX0:$rd, SPMem:$rs1,  uimm10_lsb0000:$imm),
                   (C_LYSP_RV64 YGPRNoX0:$rd, SPMem:$rs1, uimm10_lsb0000:$imm)>;
 def : CompressPat<(SY YGPR:$rs2, SPMem:$rs1, uimm10_lsb0000:$imm),
