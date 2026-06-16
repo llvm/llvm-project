@@ -19,10 +19,7 @@
 
 extern const char *argv0;
 
-// When SANITIZER_AMDHSA is enabled, CMake defines this macro and does not build
-// Sanitizer-*-Test-Nolibc (see tests/CMakeLists.txt).
-#if SANITIZER_LINUX && defined(__x86_64__) && \
-    !defined(COMPILER_RT_SKIP_NOLIBC_SUBPROCESS_TEST)
+#if SANITIZER_LINUX && defined(__x86_64__)
 TEST(SanitizerCommon, NolibcMain) {
   std::string NolibcTestPath = argv0;
   NolibcTestPath += "-Nolibc";

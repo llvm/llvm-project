@@ -78,12 +78,15 @@ class DeviceAllocatorT {
   using PtrArrayT = DefaultLargeMmapAllocatorPtrArray;
   using MapUnmapCallback = typename PrimaryAllocator::MapUnmapCallback;
 
-  void Init(uptr kMetadataSize) {
+  // Metadata layout mirrors the primary allocator so device-tier chunks carry
+  // the same per-chunk metadata size. Sourced from the primary template arg so
+  // callers (and any wrapper) need not thread it in.
+  void Init() {
     internal_memset(this, 0, sizeof(*this));
     if (!DeviceBackend::kEnableDeviceBackend)
       return;
     enabled_ = true;
-    kMetadataSize_ = kMetadataSize;
+    kMetadataSize_ = PrimaryAllocator::kMetadataSize;
     chunks_ = reinterpret_cast<uptr*>(ptr_array_.Init());
     InitMemFuncs();
   }
@@ -394,9 +397,10 @@ class DeviceAllocatorT {
   mutable StaticSpinMutex mutex_;
 };
 
-// Default CombinedAllocator device leg: DeviceAllocatorT<PrimaryAllocator,
-// NoOpDeviceAllocator> (same MapUnmapCallback as primary; no device
-// allocations).
+// Inert device tier: DeviceAllocatorT<PrimaryAllocator, NoOpDeviceAllocator>
+// (same MapUnmapCallback as primary; no device allocations). Usable as the
+// device backend for DeviceCombinedAllocator when no real device heap is
+// wired up.
 template <class PrimaryAllocator>
 using DefaultDeviceAllocator =
     DeviceAllocatorT<PrimaryAllocator, NoOpDeviceAllocator>;
