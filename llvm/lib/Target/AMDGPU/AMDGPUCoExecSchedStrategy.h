@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUCOEXECSCHEDSTRATEGY_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUCOEXECSCHEDSTRATEGY_H
 
+#include "AMDGPUCoExecInfo.h"
 #include "GCNSchedStrategy.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 
@@ -25,99 +26,11 @@ namespace AMDGPU {
 // Instruction Flavor Classification
 //===----------------------------------------------------------------------===//
 
-enum class InstructionFlavor : uint8_t {
-  WMMA,            // WMMA/MFMA matrix operations
-  SingleCycleVALU, // Single-cycle VALU (not TRANS32, not multi-cycle CVT)
-  TRANS,           // Transcendental ops (v_exp, v_log, etc.)
-  MultiCycleVALU,  // VALU instructions with repeat rate > 1
-  VMEM,            // FLAT/GLOBAL memory operations
-  DS,              // LDS/GDS operations
-  SALU,            // Scalar ALU
-  DMA,             // Tensor DMA operations
-  Fence,           // Fences and waits
-  Other,           // Everything else
-  NUM_FLAVORS
-};
-
-inline StringRef getFlavorName(InstructionFlavor F) {
-  switch (F) {
-  case InstructionFlavor::WMMA:
-    return "WMMA";
-  case InstructionFlavor::SingleCycleVALU:
-    return "VALU(1c)";
-  case InstructionFlavor::TRANS:
-    return "TRANS";
-  case InstructionFlavor::MultiCycleVALU:
-    return "VALU(Nc)";
-  case InstructionFlavor::VMEM:
-    return "VMEM";
-  case InstructionFlavor::DS:
-    return "DS";
-  case InstructionFlavor::SALU:
-    return "SALU";
-  case InstructionFlavor::DMA:
-    return "DMA";
-  case InstructionFlavor::Fence:
-    return "Fence";
-  case InstructionFlavor::Other:
-    return "Other";
-  case InstructionFlavor::NUM_FLAVORS:
-    llvm_unreachable("Unknown InstructionFlavor");
-  }
-  llvm_unreachable("Unknown InstructionFlavor");
-}
-
-inline StringRef getFlavorShortName(InstructionFlavor F) {
-  switch (F) {
-  case InstructionFlavor::WMMA:
-    return "W";
-  case InstructionFlavor::SingleCycleVALU:
-    return "V";
-  case InstructionFlavor::TRANS:
-    return "T";
-  case InstructionFlavor::MultiCycleVALU:
-    return "C";
-  case InstructionFlavor::VMEM:
-    return "M";
-  case InstructionFlavor::DS:
-    return "D";
-  case InstructionFlavor::SALU:
-    return "S";
-  case InstructionFlavor::DMA:
-    return "X";
-  case InstructionFlavor::Fence:
-    return "F";
-  case InstructionFlavor::Other:
-    return "O";
-  case InstructionFlavor::NUM_FLAVORS:
-    llvm_unreachable("Unknown InstructionFlavor");
-  }
-  llvm_unreachable("Unknown InstructionFlavor");
-}
-
+// InstructionFlavor and its helpers (getFlavorName, getFlavorShortName,
+// FlavorGroup, FlavorGroups) live in AMDGPUCoExecInfo.h so they can be shared
+// with the hazard recognizer and static simulator.
 InstructionFlavor classifyFlavor(const MachineInstr &MI,
                                  const SIInstrInfo &SII);
-
-using FlavorGroup = SmallVector<InstructionFlavor, 4>;
-
-namespace FlavorGroups {
-inline FlavorGroup allVALU() {
-  return {InstructionFlavor::SingleCycleVALU, InstructionFlavor::TRANS,
-          InstructionFlavor::MultiCycleVALU};
-}
-inline FlavorGroup allMem() {
-  return {InstructionFlavor::VMEM, InstructionFlavor::DS,
-          InstructionFlavor::DMA};
-}
-inline FlavorGroup individual(InstructionFlavor F) { return {F}; }
-inline FlavorGroup all() {
-  FlavorGroup G;
-  for (unsigned I = 0;
-       I < static_cast<unsigned>(InstructionFlavor::NUM_FLAVORS); ++I)
-    G.push_back(static_cast<InstructionFlavor>(I));
-  return G;
-}
-} // namespace FlavorGroups
 
 /// AMDGPU-specific scheduling decision reasons. These provide more granularity
 /// than the generic CandReason enum for debugging purposes.

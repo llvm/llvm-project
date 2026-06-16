@@ -13,12 +13,15 @@
 #ifndef LLVM_LIB_TARGET_AMDGPUHAZARDRECOGNIZERS_H
 #define LLVM_LIB_TARGET_AMDGPUHAZARDRECOGNIZERS_H
 
+#include "AMDGPUCoExecInfo.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/TargetSchedule.h"
+#include <array>
 #include <list>
+#include <optional>
 
 namespace llvm {
 
@@ -36,9 +39,18 @@ public:
   typedef function_ref<bool(const MachineInstr &, int WaitStates)> IsExpiredFn;
   typedef function_ref<unsigned int(const MachineInstr &)> GetNumWaitStatesFn;
 
+  /// Operating mode for the hazard recognizer.
+  /// - PreRA: Used during pre-RA scheduling (virtual regs, co-exec slot
+  /// tracking)
+  /// - PostRA: Used during post-RA scheduling (physical regs, full hazard
+  /// checking)
+  /// - HazardRecognizerMode: Used by standalone hazard recognizer pass (inserts
+  /// NOPs)
+  enum class OperatingMode { PreRA, PostRA, HazardRecognizerMode };
+
 private:
-  // Distinguish if we are called from scheduler or hazard recognizer
-  bool IsHazardRecognizerMode;
+  // Operating mode determines which hazards are checked.
+  OperatingMode Mode;
 
   // This variable stores the instruction that has been emitted this cycle. It
   // will be added to EmittedInstrs, when AdvanceCycle() or RecedeCycle() is
@@ -55,6 +67,67 @@ private:
   MachineLoopInfo *MLI = nullptr;
 
   bool RunLdsBranchVmemWARHazardFixup;
+
+  //===--------------------------------------------------------------------===//
+  // Pre-RA WMMA Co-execution Window State
+  //===--------------------------------------------------------------------===//
+
+  /// Active WMMA co-execution info (slot masks, preferences).
+  AMDGPU::CoExecInfo ActiveCoExecInfo;
+
+  /// Current stage within the WMMA co-execution window (0-based).
+  /// nullopt when not in a WMMA window.
+  std::optional<unsigned> CurrentCoExecStage;
+
+  /// Cycle when the current WMMA window started.
+  unsigned CoExecWindowStartCycle = 0;
+
+  /// Tracks cycles until TRANS can be issued again (back-to-back TRANS hazard).
+  unsigned CyclesUntilTRANS = 0;
+
+  /// Tracks cycles until next VALU after multi-cycle VALU (CVT hazard).
+  unsigned CyclesUntilVALU = 0;
+
+  /// Debug: log of what was scheduled at each stage of the co-exec window.
+  /// '.' = not yet reached, '-' = stall, else CoExecMask short char.
+  std::array<char, AMDGPU::MaxCoExecStages> CoExecWindowLog;
+
+  /// Debug: print the co-exec window visual summary.
+  void dumpCoExecWindow() const;
+
+  /// Check WMMA co-execution slot hazard for pre-RA scheduling.
+  /// Returns stall cycles needed before MI can be issued in the current slot.
+  unsigned checkWMMACoexecSlot(const MachineInstr &MI) const;
+
+  /// Check TRANS-after-TRANS hazard. Returns stall cycles if MI is TRANS
+  /// or multi-cycle VALU and a previous TRANS shadow is still active.
+  unsigned checkTRANSHazard(const MachineInstr &MI) const;
+
+  /// Check multi-cycle VALU hazard. Returns stall cycles if MI is a VALU
+  /// that would conflict with an active multi-cycle VALU pipeline.
+  unsigned checkMultiCycleVALUHazard(const MachineInstr &MI) const;
+
+  /// Check if we have both a TRANS and WMMA window active. If so, for VALU
+  /// instructions, return the number of stall cycles until one shadow clears.
+  unsigned checkMultiShadowHazard(const MachineInstr &MI) const;
+
+  /// Update WMMA window state when a WMMA instruction is emitted.
+  void updateWMMAWindowState(const MachineInstr &MI);
+
+  /// Update TRANS state when an instruction is emitted.
+  void updateTRANSState(const MachineInstr &MI);
+
+  /// Update multi-cycle VALU state when an instruction is emitted.
+  void updateMultiCycleVALUState(const MachineInstr &MI);
+
+  /// Pre-RA wrapper for EmitInstruction - updates pre-RA specific state.
+  void preRAEmitInstruction(MachineInstr *MI);
+
+  /// Pre-RA wrapper for AdvanceCycle - advances pipeline state.
+  void preRAAdvanceCycle();
+
+  /// Pre-RA wrapper for Reset - clears pre-RA specific state.
+  void preRAReset();
 
   /// RegUnits of uses in the current soft memory clause.
   mutable BitVector ClauseUses;
@@ -164,8 +237,53 @@ private:
   int checkPermlaneHazards(MachineInstr *MI) const;
 
 public:
+  /// Construct with explicit operating mode.
+  GCNHazardRecognizer(const MachineFunction &MF, OperatingMode Mode,
+                      MachineLoopInfo *MLI = nullptr);
+
+  /// Legacy constructor - defaults to PostRA mode.
   GCNHazardRecognizer(const MachineFunction &MF,
                       MachineLoopInfo *MLI = nullptr);
+
+  ~GCNHazardRecognizer();
+
+  /// Returns the current operating mode.
+  OperatingMode getOperatingMode() const { return Mode; }
+
+  /// Returns true if running in pre-RA scheduling mode.
+  bool isPreRA() const { return Mode == OperatingMode::PreRA; }
+
+  /// Returns true if running in post-RA scheduling mode.
+  bool isPostRA() const { return Mode == OperatingMode::PostRA; }
+
+  /// Returns true if running as a scheduler (pre-RA or post-RA).
+  bool isSchedulerMode() const { return isPreRA() || isPostRA(); }
+
+  /// Returns true if running as the standalone hazard recognizer pass.
+  bool isHazardRecognizerMode() const {
+    return Mode == OperatingMode::HazardRecognizerMode;
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Pre-RA Co-execution Window Queries
+  //===--------------------------------------------------------------------===//
+
+  /// Returns true if currently inside a WMMA co-execution window.
+  bool inCoExecWindow() const { return CurrentCoExecStage.has_value(); }
+
+  /// Returns the current stage within the co-execution window, or nullopt.
+  std::optional<unsigned> getCurrentCoExecStage() const {
+    return CurrentCoExecStage;
+  }
+
+  /// Returns the active co-execution info (slot masks, preferences).
+  const AMDGPU::CoExecInfo &getActiveCoExecInfo() const {
+    return ActiveCoExecInfo;
+  }
+
+  /// Get the CoExecMask for a given instruction.
+  static AMDGPU::CoExecMaskT getCoExecMaskForMI(const MachineInstr &MI,
+                                                const SIInstrInfo &TII);
   // We can only issue one instruction per cycle.
   bool atIssueLimit() const override { return true; }
   void EmitInstruction(SUnit *SU) override;

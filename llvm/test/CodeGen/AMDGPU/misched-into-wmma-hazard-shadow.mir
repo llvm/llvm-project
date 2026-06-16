@@ -18,8 +18,8 @@ body:             |
     ; GCN-NEXT: early-clobber $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, 8, killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39, 0, 0, 1, 2, 1, 1, 0, 0, 0, 0, 0, 0, implicit $exec
     ; GCN-NEXT: $vgpr46 = V_LSHL_ADD_U32_e64 killed $vgpr43, 1, $vgpr43, implicit $exec
     ; GCN-NEXT: $vgpr47 = V_LSHL_ADD_U32_e64 killed $vgpr42, 1, $vgpr42, implicit $exec
-    ; GCN-NEXT: $vgpr48 = V_LSHL_ADD_U32_e64 killed $vgpr41, 1, $vgpr41, implicit $exec
-    ; GCN-NEXT: $vgpr49 = V_LSHL_ADD_U32_e64 killed $vgpr40, 1, $vgpr40, implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
+    ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: V_NOP_e32 implicit $exec
@@ -32,6 +32,8 @@ body:             |
     ; GCN-NEXT: $vgpr9 = V_ADD_F32_e32 1065353216, killed $vgpr9, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr10 = V_ADD_F32_e32 1065353216, killed $vgpr10, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr11 = V_ADD_F32_e32 1065353216, killed $vgpr11, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr48 = V_LSHL_ADD_U32_e64 killed $vgpr41, 1, $vgpr41, implicit $exec
+    ; GCN-NEXT: $vgpr49 = V_LSHL_ADD_U32_e64 killed $vgpr40, 1, $vgpr40, implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORDX4 renamable $vgpr44_vgpr45, killed renamable $vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORDX4 renamable $vgpr44_vgpr45, killed renamable $vgpr8_vgpr9_vgpr10_vgpr11, 32, 0, implicit $exec
     ; GCN-NEXT: GLOBAL_STORE_DWORDX4 killed renamable $vgpr44_vgpr45, killed renamable $vgpr46_vgpr47_vgpr48_vgpr49, 64, 0, implicit $exec
