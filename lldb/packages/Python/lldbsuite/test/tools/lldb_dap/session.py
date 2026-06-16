@@ -110,7 +110,7 @@ class PendingResponse(Generic[AnyResponse]):
 
         if isinstance(response, ErrorResponse):
             return response
-        detail = f"expected '{self.response_class.__name__}' got {response}."
+        detail = f"expected 'ErrorResponse' got {response}."
         raise DAPError(f"{msg}\n\t{detail}" if msg else detail)
 
     def result_or_error(self) -> AnyResponse | ErrorResponse:
