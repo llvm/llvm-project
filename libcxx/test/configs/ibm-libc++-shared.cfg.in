@@ -28,6 +28,12 @@ config.substitutions.append(('%{exec}',
 # using this feature. (Also see llvm.org/PR52188)
 config.available_features.add('LIBCXX-AIX-FIXME')
 
+# Add AIX target triple without version (e.g. 7.2, 7.3) to make it easier to match in tests.
+if 'powerpc64' in config.target_triple:
+    config.available_features.add('target=powerpc64-ibm-aix')
+else:
+    config.available_features.add('target=powerpc-ibm-aix')
+
 import os, site
 site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
 import libcxx.test.params, libcxx.test.config
