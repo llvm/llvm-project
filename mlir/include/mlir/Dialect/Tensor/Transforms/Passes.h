@@ -18,7 +18,8 @@ namespace tensor {
 // Passes
 //===----------------------------------------------------------------------===//
 
-/// Creates an instance of the `tensor` subset folding pass.
+/// Create instances of `tensor` transformation passes.
+#define GEN_PASS_DECL_SCALARIZESINGLEELEMENTTENSORRETURNPASS
 #define GEN_PASS_DECL_FOLDTENSORSUBSETOPSPASS
 #include "mlir/Dialect/Tensor/Transforms/Passes.h.inc"
 

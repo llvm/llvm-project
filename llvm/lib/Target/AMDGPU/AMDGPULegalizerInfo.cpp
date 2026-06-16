@@ -2267,7 +2267,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .lower();
   }
 
-  getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET})
+  getActionDefinitionsBuilder(
+      {G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET, G_MEMSET_INLINE})
       .lower();
 
   getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP}).custom();

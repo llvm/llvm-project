@@ -300,8 +300,9 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
     // values correspond to the "Part number" in the CP15/c0 register. The
     // contents are specified in the various processor manuals.
     return StringSwitch<const char *>(Part)
-      .Case("0xd01", "tsv110")
-      .Default("generic");
+        .Case("0xd01", "tsv110")
+        .Case("0xd06", "hip12")
+        .Default("generic");
 
   if (Implementer == "0x51") // Qualcomm Technologies, Inc.
     // The CPU part is a 3 digit hexadecimal number with a 0x prefix. The
