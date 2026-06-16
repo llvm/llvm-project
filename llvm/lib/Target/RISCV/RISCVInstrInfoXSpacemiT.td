@@ -49,8 +49,8 @@ let DecoderNamespace = "XSMT" in {
 
   class VFWMADTSLIDE_INSN<bits<3> funct3, string opcodestr>
       : SMTVFWMADOT<funct3, (outs VRM2:$vd_wb),
-                    (ins VRM2:$vd, VRM2:$vs1, VR:$vs2, SMT_FP:$vtype),
-                    opcodestr, "$vd, $vs1, $vs2$vtype">, Sched<[]>;
+                    (ins VRM2:$vd, VRM2:$vs1, VR:$vs2),
+                    opcodestr, "$vd, $vs1, $vs2">, Sched<[]>;
 
   class VNPACK_INSN<bits<7> funct7, bit funct1, string opcodestr>
       : SMTVPACK<funct7, funct1, (outs VR:$vd),
@@ -92,8 +92,8 @@ let DecoderNamespace = "XSMT" in {
         // VFWMADOT
         def VFWMADOT :
             SMTVFWMADOT<0b100, (outs VRM2:$vd_wb),
-                        (ins VRM2:$vd, VR:$vs1, VR:$vs2, SMT_FP:$vtype),
-                        "smt.vfwmadot", "$vd, $vs1, $vs2$vtype">, Sched<[]>;
+                        (ins VRM2:$vd, VR:$vs1, VR:$vs2),
+                        "smt.vfwmadot", "$vd, $vs1, $vs2">, Sched<[]>;
         // VFWMADOT Slide
         def VFWMADOT1 : VFWMADTSLIDE_INSN<0b101, "smt.vfwmadot1">;
         def VFWMADOT2 : VFWMADTSLIDE_INSN<0b110, "smt.vfwmadot2">;

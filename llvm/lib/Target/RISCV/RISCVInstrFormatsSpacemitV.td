@@ -63,32 +63,25 @@ defvar HPEncodes = [HPEncode<0b011, "u">,
                     HPEncode<0b101, "su">,
                     HPEncode<0b100, "">];
 
-// The SpacemiT support element Type
-class SMTVType<bit isFP> : AsmOperandClass {
-  let Name = "SMTVType"#isFP;
+def SMTVType : AsmOperandClass {
+  let Name = "SMTVType";
   let RenderMethod = "addSMTVTypeOperand";
   let ParserMethod = "parseSMTVType";
-  let DiagnosticType = "InvalidSMTType"#isFP;
-  let DiagnosticString = !if(isFP,
-      "This Inst only supports bfp16 and fp16",
-      "This Inst only supports i4 and i8, i8 is the default type"
-  );
+  let DiagnosticType = "InvalidSMTType";
+  let DiagnosticString =
+      "This Inst only supports i4 and i8, i8 is the default type";
   let IsOptional = 1;
   let DefaultMethod = "defaultSMTVType";
 }
 
-class SMT_VTYPE<bit isFP> : Operand<XLenVT> {
-  let ParserMatchClass = SMTVType<isFP>;
+// SpacemiT's Integer Matrix only supports i4 and i8
+def SMT_INT : Operand<XLenVT> {
+  let ParserMatchClass = SMTVType;
   let PrintMethod = "printSMTVType";
   let DecoderMethod = "decodeUImmOperand<2>";
   let OperandType = "OPERAND_SMTVType";
   let OperandNamespace = "RISCVOp";
 }
-
-// Supports i4 and i8
-def SMT_INT : SMT_VTYPE<0>;
-// Supports bfp16 and fp16
-def SMT_FP  : SMT_VTYPE<1>;
 
 def SMTI8 : AsmOperandClass {
   let Name = "SMTI8";
@@ -266,10 +259,9 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
     bits<5> vd;
     bits<5> vs1;
     bits<5> vs2;
-    bits<2> vtype;
 
     let Inst{31} = 0b1;
-    let Inst{30-29} = vtype;
+    let Inst{30-29} = 0b00;
     let Inst{28-25} = 0b1111;
     let Inst{24-20} = vs2;
     let Inst{19-15} = vs1;

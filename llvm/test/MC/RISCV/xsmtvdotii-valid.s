@@ -85,23 +85,13 @@ smt.vmadot.hp v16, v2, v8, v1, 4
 
 // CHECK-ENC:   encoding: [0x2b,0x41,0x62,0x9e]
 // CHECK-ERROR: instruction requires the following: 'XSMTVDotII' (SpacemiT Vector Extension for Matrix(2.0)){{$}}
-// CHECK-INST:  smt.vfwmadot	v2, v4, v6, fp16
-smt.vfwmadot v2, v4, v6, fp16
-
-// CHECK-ENC:   encoding: [0x2b,0x41,0x62,0x9e]
-// CHECK-ERROR: instruction requires the following: 'XSMTVDotII' (SpacemiT Vector Extension for Matrix(2.0)){{$}}
-// CHECK-INST:  smt.vfwmadot	v2, v4, v6, fp16
-smt.vfwmadot v2, v4, v6, bfp16
+// CHECK-INST:  smt.vfwmadot	v2, v4, v6
+smt.vfwmadot v2, v4, v6
 
 // CHECK-ENC:   encoding: [0x2b,0x51,0x62,0x9e]
 // CHECK-ERROR: instruction requires the following: 'XSMTVDotII' (SpacemiT Vector Extension for Matrix(2.0)){{$}}
-// CHECK-INST:  smt.vfwmadot1	v2, v4, v6, fp16
-smt.vfwmadot1 v2, v4, v6, fp16
-
-// CHECK-ENC:   encoding: [0x2b,0x51,0x62,0x9e]
-// CHECK-ERROR: instruction requires the following: 'XSMTVDotII' (SpacemiT Vector Extension for Matrix(2.0)){{$}}
-// CHECK-INST:  smt.vfwmadot1 v2, v4, v6, fp16
-smt.vfwmadot1 v2, v4, v6, bfp16
+// CHECK-INST:  smt.vfwmadot1	v2, v4, v6
+smt.vfwmadot1 v2, v4, v6
 
 // CHECK-ENC:   encoding: [0xab,0x90,0x51,0x62]
 // CHECK-ERROR: instruction requires the following: 'XSMTVDotII' (SpacemiT Vector Extension for Matrix(2.0)){{$}}

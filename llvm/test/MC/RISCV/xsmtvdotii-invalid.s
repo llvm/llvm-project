@@ -15,7 +15,7 @@ smt.vmadot v2, v3, v0, i4
 // CHECK-ERROR: :[[@LINE-1]]:12: error: the destination vector register group cannot overlap the source vector register group{{$}}
 
 smt.vmadot v2, v4, v0, fp16
-// CHECK-ERROR: :[[@LINE-1]]:24: error: This Inst only supports i4 and i8, i8 is the default type
+// CHECK-ERROR: :[[@LINE-1]]:24: error: SpacemiT's Integer Matrix only supports [i4|i8] mode{{$}}
 
 smt.vmadot1 v3, v2, v4, i8
 // CHECK-ERROR: :[[@LINE-1]]:13: error: invalid operand for instruction{{$}}
@@ -33,7 +33,7 @@ smt.vmadot1 v0, v2, v4, i4
 // CHECK-ERROR: :[[@LINE-1]]:25: error: smt.vmadot with slide only supports i8 type{{$}}
 
 smt.vmadot1 v0, v2, v4, fp16
-// CHECK-ERROR: :[[@LINE-1]]:25: error: smt.vmadot with slide only supports i8 type{{$}}
+// CHECK-ERROR: :[[@LINE-1]]:25: error: SpacemiT's Integer Matrix only supports [i4|i8] mode{{$}}
 
 smt.vmadot.sp v3, v2, v8, v0, 3, i4
 // CHECK-ERROR: :[[@LINE-1]]:15: error: invalid operand for instruction{{$}}
@@ -84,46 +84,46 @@ smt.vmadot.hp v2, v4, v8, v2, 3, i4
 // CHECK-ERROR: :[[@LINE-1]]:27: error: invalid operand for instruction{{$}}
 
 smt.vmadot.hp v2, v2, v8, v0, 8, i4
-// CHECK-ERROR: :[[@LINE-1]]:31: error: immediate must be an integer in the range [0, 7]
+// CHECK-ERROR: :[[@LINE-1]]:31: error: immediate must be an integer in the range [0, 7]{{$}}
 
-smt.vfwmadot v3, v4, v2, fp16
+smt.vfwmadot v3, v4, v2
 // CHECK-ERROR: :[[@LINE-1]]:14: error: invalid operand for instruction{{$}}
 
-smt.vfwmadot v4, v4, v2, fp16
+smt.vfwmadot v4, v4, v2
 // CHECK-ERROR: :[[@LINE-1]]:14: error: the destination vector register group cannot overlap the source vector register group{{$}}
 
-smt.vfwmadot v2, v4, v2, fp16
+smt.vfwmadot v2, v4, v2
 // CHECK-ERROR: :[[@LINE-1]]:14: error: the destination vector register group cannot overlap the source vector register group{{$}}
 
-smt.vfwmadot v2, v3, v4, fp16
+smt.vfwmadot v2, v3, v4
 // CHECK-ERROR: :[[@LINE-1]]:14: error: the destination vector register group cannot overlap the source vector register group{{$}}
 
-smt.vfwmadot v2, v4, v3, fp16
+smt.vfwmadot v2, v4, v3
 // CHECK-ERROR: :[[@LINE-1]]:14: error: the destination vector register group cannot overlap the source vector register group{{$}}
 
 smt.vfwmadot v4, v2, v3, i8
-// CHECK-ERROR: :[[@LINE-1]]:26: error: This Inst only supports bfp16 and fp16
+// CHECK-ERROR: :[[@LINE-1]]:26: error: invalid operand for instruction{{$}}
 
-smt.vfwmadot1 v3, v2, v4, fp16
+smt.vfwmadot1 v3, v2, v4
 // CHECK-ERROR: :[[@LINE-1]]:15: error: invalid operand for instruction{{$}}
 
-smt.vfwmadot1 v2, v3, v4, fp16
+smt.vfwmadot1 v2, v3, v4
 // CHECK-ERROR: :[[@LINE-1]]:19: error: invalid operand for instruction{{$}}
 
-smt.vfwmadot1 v2, v2, v4, fp16
+smt.vfwmadot1 v2, v2, v4
 // CHECK-ERROR: :[[@LINE-1]]:15: error: the destination vector register group cannot overlap the source vector register group{{$}}
 
-smt.vfwmadot1 v4, v2, v4, fp16
+smt.vfwmadot1 v4, v2, v4
 // CHECK-ERROR: :[[@LINE-1]]:15: error: the destination vector register group cannot overlap the source vector register group{{$}}
 
-smt.vfwmadot1 v2, v3, v4, fp16
+smt.vfwmadot1 v2, v3, v4
 // CHECK-ERROR: :[[@LINE-1]]:19: error: invalid operand for instruction{{$}}
 
-smt.vfwmadot1 v2, v4, v3, fp16
+smt.vfwmadot1 v2, v4, v3
 // CHECK-ERROR: :[[@LINE-1]]:15: error: the destination vector register group cannot overlap the source vector register group{{$}}
 
 smt.vfwmadot1 v0, v2, v4, i8
-// CHECK-ERROR: :[[@LINE-1]]:27: error: This Inst only supports bfp16 and fp16
+// CHECK-ERROR: :[[@LINE-1]]:27: error: invalid operand for instruction{{$}}
 
 smt.vnpack.vv v3, v3, v5, 1
 // CHECK-ERROR: :[[@LINE-1]]:15: error: the destination vector register group cannot overlap the source vector register group{{$}}
@@ -152,14 +152,14 @@ smt.vnpack4.vv v5, v3, v5, 1
 smt.vnpack4.vv v1, v3, v5, 4
 // CHECK-ERROR: :[[@LINE-1]]:28: error: immediate must be an integer in the range [0, 3]{{$}}
 
-smt.vnspack.vv v3, v3, v5, 1
-// CHECK-ERROR: :[[@LINE-1]]:16: error: the destination vector register group cannot overlap the source vector register group{{$}}
+smt.vnspack4.vv v3, v3, v5, 1
+// CHECK-ERROR: :[[@LINE-1]]:17: error: the destination vector register group cannot overlap the source vector register group{{$}}
 
-smt.vnspack.vv v5, v3, v5, 1
-// CHECK-ERROR: :[[@LINE-1]]:16: error: the destination vector register group cannot overlap the source vector register group{{$}}
+smt.vnspack4.vv v5, v3, v5, 1
+// CHECK-ERROR: :[[@LINE-1]]:17: error: the destination vector register group cannot overlap the source vector register group{{$}}
 
-smt.vnspack.vv v1, v3, v5, 4
-// CHECK-ERROR: :[[@LINE-1]]:28: error: immediate must be an integer in the range [0, 3]{{$}}
+smt.vnspack4.vv v1, v3, v5, 4
+// CHECK-ERROR: :[[@LINE-1]]:29: error: immediate must be an integer in the range [0, 3]{{$}}
 
 smt.vpack.vv v3, v2, v4, 1
 // CHECK-ERROR: :[[@LINE-1]]:14: error: invalid operand for instruction{{$}}

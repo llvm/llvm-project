@@ -694,20 +694,14 @@ public:
   bool isFRMArgLegacy() const { return Kind == KindTy::FRM; }
   bool isRTZArg() const { return isFRMArg() && FRM.FRM == RISCVFPRndMode::RTZ; }
 
-  // Return true if the operand is a SpacemiT AI Inst support i4/i8
-  bool isSMTVType0() const {
+  // Return true if the operand is a valid SpacemiT's Integer Matrix VType(i4/i8)
+  bool isSMTVType() const {
     return Kind == KindTy::SMTVType &&
-           XSMTVTypeMode::isValidSMTVTypeInt(SMTVType.SMTVType);
-  }
-
-  // Return true if the operand is a SpacemiT AI Inst support bfp16/fp16
-  bool isSMTVType1() const {
-    return Kind == KindTy::SMTVType &&
-           XSMTVTypeMode::isValidSMTVTypeFP(SMTVType.SMTVType);
+           XSMTVTypeMode::isValidSMTVTypeMode(SMTVType.SMTVType);
   }
 
   bool isSMTI8() const {
-    return isSMTVType0() && SMTVType.SMTVType == XSMTVTypeMode::SMT_I8;
+    return isSMTVType() && SMTVType.SMTVType == XSMTVTypeMode::SMT_I8;
   }
 
   /// Return true if the operand is a valid fli.s floating-point immediate.
@@ -1170,7 +1164,7 @@ public:
       break;
     case KindTy::SMTVType:
       OS << "<smtvtype: ";
-      SMTVTypeModeToString(getSMTVType());
+      OS << SMTVTypeModeToString(getSMTVType());
       OS << '>';
       break;
     case KindTy::Fence:
@@ -2790,19 +2784,15 @@ ParseStatus RISCVAsmParser::parseGPRPair(OperandVector &Operands,
 
 ParseStatus RISCVAsmParser::parseSMTVType(OperandVector &Operands) {
   if (getLexer().isNot(AsmToken::Identifier))
-    return TokError("operand must be a valid SpacemiT VType mnemonic");
+    return TokError(
+        "operand must be a valid SpacemiT's Integer Matrix VType mnemonic");
 
   StringRef Str = getLexer().getTok().getIdentifier();
   XSMTVTypeMode::SMTVTypeMode VType = XSMTVTypeMode::stringToSMTVTypeMode(Str);
 
   if (!isValidSMTVTypeMode(VType))
-    return TokError("SpacemiT AI only supports [i4|i8|bfp16|fp16] Mode");
+    return TokError("SpacemiT's Integer Matrix only supports [i4|i8] mode");
 
-  // bfp16 and fp16 has the same encoding in SpacemiT AI
-  // In AsmParser, need to consider bfp16 as fp16
-  if (VType == XSMTVTypeMode::SMTVTypeMode::SMT_BFP16) {
-    VType = XSMTVTypeMode::SMTVTypeMode::SMT_FP16;
-  }
   Operands.push_back(RISCVOperand::createSMTVType(VType, getLoc()));
   Lex(); // Eat identifier token.
   return ParseStatus::Success;
@@ -2827,7 +2817,7 @@ ParseStatus RISCVAsmParser::parseFRMArg(OperandVector &Operands) {
 
 std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultSMTVType() {
   return RISCVOperand::createSMTVType(XSMTVTypeMode::SMTVTypeMode::SMT_I8,
-                                      llvm::SMLoc());
+                                      SMLoc());
 }
 
 ParseStatus RISCVAsmParser::parseFenceArg(OperandVector &Operands) {
