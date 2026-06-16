@@ -37,9 +37,8 @@ void test_big() {
   assert(std::abs(negative_big_value) == big_value); // make sure it doesn't get casted to a smaller type
 }
 
-// The _BitInt/__int128 extensions and their SFINAE probes require C++17+
-// (variable templates, decltype-SFINAE) and the new abs.h template's
-// __is_signed_integer_v trait.
+// std::abs has __int128/_BitInt(N) overloads as a libc++ extension. The SFINAE
+// probes below need C++17+ (variable templates, decltype-SFINAE).
 #if TEST_STD_VER >= 17
 // Narrow signed types stay on the abs(int) promotion path.
 template <class T>
@@ -131,8 +130,9 @@ int main(int, char**) {
 
 #if TEST_STD_VER >= 17
 #  ifdef __BITINT_MAXWIDTH__
-  // MSan does not track _BitInt padding bits; non-byte-aligned widths trigger
-  // false-positive use-of-uninitialized-value reports through numeric_limits.
+  // Non-byte-aligned _BitInt(N) has uninitialized padding bits; passing such a
+  // value to std::abs trips a false-positive MSan report (#204217). Gate those
+  // widths out under MSan; byte-aligned widths still run.
   test_signed_bitint<32>();
   test_signed_bitint<64>();
 #    if !TEST_HAS_FEATURE(memory_sanitizer)
