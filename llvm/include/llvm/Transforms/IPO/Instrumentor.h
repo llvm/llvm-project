@@ -1171,12 +1171,6 @@ struct NumericIO final
                      InstrumentorIRBuilderTy &IIRB,
                      ConfigTy *UserConfig = nullptr);
 
-  LLVM_ABI static Value *getLeft(Value &V, Type &Ty,
-                                 InstrumentationConfig &IConf,
-                                 InstrumentorIRBuilderTy &IIRB);
-  LLVM_ABI static Value *getRight(Value &V, Type &Ty,
-                                  InstrumentationConfig &IConf,
-                                  InstrumentorIRBuilderTy &IIRB);
   LLVM_ABI static Value *getFlags(Value &V, Type &Ty,
                                   InstrumentationConfig &IConf,
                                   InstrumentorIRBuilderTy &IIRB);
@@ -1188,6 +1182,58 @@ struct NumericIO final
     PreIO->init(IConf, IIRB);
     auto *PostIO =
         IConf.allocate<NumericIO>(InstrumentationLocation::INSTRUCTION_POST);
+    PostIO->init(IConf, IIRB);
+  }
+};
+
+struct CompareIO final
+    : public InstructionIO<Instruction::ICmp, Instruction::FCmp> {
+  CompareIO(InstrumentationLocation::KindTy Kind) : InstructionIO(Kind) {}
+
+  enum ConfigKind {
+    PassOpTypeId,
+    PassOpSize,
+    PassOpcode,
+    PassPredicate,
+    PassLeft,
+    PassRight,
+    PassResultSize,
+    PassResult,
+    ReplaceResult,
+    PassFlags,
+    PassId,
+    NumConfig,
+  };
+
+  using ConfigTy = BaseConfigTy<ConfigKind>;
+  ConfigTy Config;
+
+  StringRef getName() const override { return "compare"; }
+
+  LLVM_ABI void init(InstrumentationConfig &IConf,
+                     InstrumentorIRBuilderTy &IIRB,
+                     ConfigTy *UserConfig = nullptr);
+
+  LLVM_ABI static Value *getOperandSize(Value &V, Type &Ty,
+                                        InstrumentationConfig &IConf,
+                                        InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getPredicate(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getResult(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getFlags(Value &V, Type &Ty,
+                                  InstrumentationConfig &IConf,
+                                  InstrumentorIRBuilderTy &IIRB);
+
+  static void populate(InstrumentationConfig &IConf,
+                       InstrumentorIRBuilderTy &IIRB) {
+    auto *PreIO =
+        IConf.allocate<CompareIO>(InstrumentationLocation::INSTRUCTION_PRE);
+    PreIO->init(IConf, IIRB);
+    auto *PostIO =
+        IConf.allocate<CompareIO>(InstrumentationLocation::INSTRUCTION_POST);
     PostIO->init(IConf, IIRB);
   }
 };
