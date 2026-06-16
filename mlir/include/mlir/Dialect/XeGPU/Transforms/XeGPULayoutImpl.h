@@ -234,9 +234,10 @@ DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
 /// rule with inst_data as the destination shape. The resulting lane info is
 /// merged with the consumer's inst_data so downstream setup* paths see a
 /// fully-populated layout.
-DistributeLayoutAttr
-completeScatterIOLaneLayoutFromInstData(DistributeLayoutAttr consumerLayout,
-                                        Type elemTy, const uArch::uArch *uArch);
+DistributeLayoutAttr completeScatterIOLaneLayoutFromInstData(
+    DistributeLayoutAttr userSpecifiedLayout,
+    DistributeLayoutAttr consumerLayout, Type elemTy,
+    const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a store_nd operation. StoreNd does not
 /// consider a consumer layout (it is a data sink), and picks its layout from

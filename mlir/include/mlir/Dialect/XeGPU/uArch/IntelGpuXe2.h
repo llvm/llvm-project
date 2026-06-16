@@ -45,7 +45,8 @@ protected:
 //===----------------------------------------------------------------------===//
 // uArch instructions
 //===----------------------------------------------------------------------===//
-struct Subgroup2DBlockStoreInstruction : public Instruction {
+struct Subgroup2DBlockStoreInstruction : public Instruction,
+                                         public BlockIOInstructionInterface {
   Subgroup2DBlockStoreInstruction()
       : Instruction(InstructionKind::Subgroup2DBlockStore,
                     InstructionScope::Subgroup) {}
@@ -54,9 +55,12 @@ struct Subgroup2DBlockStoreInstruction : public Instruction {
   }
   // Source :
   // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_2d_block_io.html#_add_a_new_section_5_2_x_cl_intel_subgroup_2d_block_io
+  // Stores ignore the transform / transpose / upConv flags.
   std::optional<
       std::tuple<llvm::ArrayRef<int>, llvm::ArrayRef<int>, llvm::ArrayRef<int>>>
-  getBlockWidthHeightCount(Type elemTy) const {
+  getBlockWidthHeightCount(Type elemTy, bool /*hasTransform*/ = false,
+                           bool /*hasTranspose*/ = false,
+                           bool /*upConv*/ = false) const override {
     const static int kHeight[] = {1, 2, 4, 8};
     const static int kWidth16[] = {16};
     const static int kWidth32[] = {16};
@@ -73,10 +77,11 @@ struct Subgroup2DBlockStoreInstruction : public Instruction {
     return std::nullopt;
   }
 
-  int32_t getPackedFormatBitSize() const { return 16; }
+  int32_t getPackedFormatBitSize() const override { return 16; }
 };
 
-struct Subgroup2DBlockLoadInstruction : public Instruction {
+struct Subgroup2DBlockLoadInstruction : public Instruction,
+                                        public BlockIOInstructionInterface {
   Subgroup2DBlockLoadInstruction()
       : Instruction(InstructionKind::Subgroup2DBlockLoad,
                     InstructionScope::Subgroup) {}
@@ -88,8 +93,9 @@ struct Subgroup2DBlockLoadInstruction : public Instruction {
   // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_2d_block_io.html#_add_a_new_section_5_2_x_cl_intel_subgroup_2d_block_io
   std::optional<
       std::tuple<llvm::ArrayRef<int>, llvm::ArrayRef<int>, llvm::ArrayRef<int>>>
-  getBlockWidthHeightCount(Type elemTy, bool hasTransform, bool hasTranspose,
-                           bool upConv = false) const {
+  getBlockWidthHeightCount(Type elemTy, bool hasTransform = false,
+                           bool hasTranspose = false,
+                           bool upConv = false) const override {
     static const int kHeightAtLeast1[] = {1, 2, 4, 8, 16, 32};
     static const int kHeightAtLeast8[] = {8, 16, 32};
     static const int kHeightAtLeast16[] = {16, 32};
@@ -151,10 +157,11 @@ struct Subgroup2DBlockLoadInstruction : public Instruction {
     return std::nullopt;
   }
 
-  int32_t getPackedFormatBitSize() const { return 16; }
+  int32_t getPackedFormatBitSize() const override { return 16; }
 };
 
-struct Subgroup2DBlockPrefetchInstruction : public Instruction {
+struct Subgroup2DBlockPrefetchInstruction : public Instruction,
+                                            public BlockIOInstructionInterface {
   Subgroup2DBlockPrefetchInstruction()
       : Instruction(InstructionKind::Subgroup2DBlockPrefetch,
                     InstructionScope::Subgroup) {}
@@ -163,9 +170,12 @@ struct Subgroup2DBlockPrefetchInstruction : public Instruction {
   }
   // Source :
   // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_buffer_prefetch.html#_add_a_new_section_6_15_x_sub_group_prefetch_functions
+  // Prefetches ignore the transform / transpose / upConv flags.
   std::optional<
       std::tuple<llvm::ArrayRef<int>, llvm::ArrayRef<int>, llvm::ArrayRef<int>>>
-  getBlockWidthHeightCount(Type elemTy) const {
+  getBlockWidthHeightCount(Type elemTy, bool /*hasTransform*/ = false,
+                           bool /*hasTranspose*/ = false,
+                           bool /*upConv*/ = false) const override {
     static const int kHeightAtLeast1[] = {1, 2, 4, 8, 16, 32};
 
     static const int kWidth32[] = {32};
@@ -189,7 +199,7 @@ struct Subgroup2DBlockPrefetchInstruction : public Instruction {
       return it->second;
     return std::nullopt;
   }
-  int32_t getPackedFormatBitSize() const { return 16; }
+  int32_t getPackedFormatBitSize() const override { return 16; }
 };
 
 struct SubgroupMatrixMultiplyAcc : public Instruction,

@@ -394,6 +394,17 @@ static xegpu::LayoutAttr buildInstDataLayoutWithLane(
                                 orderAttr);
 }
 
+bool isValidLaneLayout(ArrayRef<int64_t> laneLayout, ArrayRef<int64_t> laneData,
+                       ArrayRef<int64_t> dataShape) {
+  int rank = dataShape.size();
+  for (int dim = 0; dim < rank; ++dim) {
+    int64_t laneProduct = laneLayout[dim] * laneData[dim];
+    if (dataShape[dim] % laneProduct != 0)
+      return false;
+  }
+  return true;
+}
+
 static xegpu::LayoutAttr
 buildLaneLayout(mlir::MLIRContext *context, ArrayRef<int64_t> laneLayout,
                 ArrayRef<int64_t> laneData,
@@ -1608,13 +1619,7 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
                                        laneData);
   }
   if (layoutKind == xegpu::LayoutKind::Lane) {
-    bool validLaneLayout = true;
-    for (int dim = 0; dim < rank; ++dim) {
-      int64_t laneProduct = consumerLaneLayout[dim] * consumerLaneData[dim];
-      if (dataShape[dim] % laneProduct != 0)
-        validLaneLayout = false;
-    }
-    if (validLaneLayout) {
+    if (isValidLaneLayout(consumerLaneLayout, consumerLaneData, dataShape)) {
       return consumerLayout;
     } else {
       auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
@@ -1659,13 +1664,10 @@ static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
   // vector capped by maxChunkSize).
   SmallVector<int64_t> laneLayout;
   SmallVector<int64_t> laneData;
-  if (!consumerLaneLayout.empty() && !consumerLaneData.empty()) {
-    laneLayout.assign(consumerLaneLayout.begin(), consumerLaneLayout.end());
-    laneData.assign(consumerLaneData.begin(), consumerLaneData.end());
-  } else {
-    auto [LaneLayout, LaneData] =
-        computeScatterIOLaneLayoutAndData(resShape, subgroupSize, maxChunkSize);
-  }
+  assert(!consumerLaneLayout.empty() && !consumerLaneData.empty() &&
+         "Expected consumer layout to have lane_layout and lane_data");
+  laneLayout.assign(consumerLaneLayout.begin(), consumerLaneLayout.end());
+  laneData.assign(consumerLaneData.begin(), consumerLaneData.end());
 
   if (layoutKind == xegpu::LayoutKind::InstData) {
     // Take consumer's inst_data as-is. If the consumer doesn't have one,
@@ -1802,47 +1804,56 @@ xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
 }
 
 /// Completes a scatter IO layout by deriving lane_layout and lane_data from
-/// inst_data when they are missing. If `consumerLayout` already has both
-/// lane_layout and lane_data, or has no inst_data, the layout is returned
-/// unchanged.
+/// `specifiedLayout`'s inst_data when they are missing. The layout is returned
+/// unchanged if `specifiedLayout` is null, carries no inst_data, or already has
+/// both lane_layout and lane_data.
 ///
-/// When lane info is absent, this function uses inst_data as the effective
-/// shape and computes the standard scatter-style lane factorization:
-///   - laneLayout[innermost] = min(subgroupSize, inst_data[innermost])
-///   - laneData[innermost]   = min(inst_data[innermost] /
-///   laneLayout[innermost],
-///                                 maxChunkSize)
+/// When lane info is absent, inst_data is treated as the effective shape and
+/// the lane factorization is filled in as follows:
+///   - If `consumerLayout` is present and its lane_layout / lane_data are a
+///     valid factorization of inst_data, that consumer lane info is reused so
+///     the completed layout matches the consumer (avoiding a relayout).
+///   - Otherwise a standard scatter-style factorization is computed via
+///     `computeScatterIOLaneLayoutAndData`, bounded by `maxChunkSize` — the
+///     per-lane load width reported by the uArch's LoadGather instruction
+///     (`getMaxLaneLoadSize`).
 ///
-/// The returned layout carries inst_data + lane_layout + lane_data, ensuring
-/// the lane factorization is consistent with what the downstream load/store
-/// scatter anchor setup would produce.
 xegpu::DistributeLayoutAttr xegpu::completeScatterIOLaneLayoutFromInstData(
+    xegpu::DistributeLayoutAttr specifiedLayout,
     xegpu::DistributeLayoutAttr consumerLayout, Type elemTy,
     const xegpu::uArch::uArch *uArch) {
-  if (!consumerLayout)
-    return consumerLayout;
-  SmallVector<int64_t> instData = consumerLayout.getEffectiveInstDataAsInt();
-  if (instData.empty())
-    return consumerLayout;
-  if (!consumerLayout.getEffectiveLaneLayoutAsInt().empty() &&
-      !consumerLayout.getEffectiveLaneDataAsInt().empty())
-    return consumerLayout;
+  if (!specifiedLayout)
+    return specifiedLayout;
+  SmallVector<int64_t> specifiedInstData =
+      specifiedLayout.getEffectiveInstDataAsInt();
+  if (specifiedInstData.empty())
+    return specifiedLayout;
+  if (!specifiedLayout.getEffectiveLaneLayoutAsInt().empty() &&
+      !specifiedLayout.getEffectiveLaneDataAsInt().empty())
+    return specifiedLayout;
 
   // Reuse the load-side setup with inst_data as the destination shape.
   const int subgroupSize = uArch->getSubgroupSize();
-  auto *context = consumerLayout.getContext();
+  auto *context = specifiedLayout.getContext();
   auto elemBitWidth = elemTy.getIntOrFloatBitWidth();
   const auto *uArchInstruction =
       dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
   if (!uArchInstruction)
-    return consumerLayout;
+    return specifiedLayout;
   int maxChunkSize = uArchInstruction->getMaxLaneLoadSize(elemBitWidth);
-
-  auto [defLaneLayout, defLaneData] =
-      computeScatterIOLaneLayoutAndData(instData, subgroupSize, maxChunkSize);
-
-  return buildInstDataLayoutWithLane(context, instData, defLaneLayout,
+  if (consumerLayout) {
+    auto consumerLaneLayout = consumerLayout.getEffectiveLaneLayoutAsInt();
+    auto consumerLaneData = consumerLayout.getEffectiveLaneDataAsInt();
+    if (!consumerLaneLayout.empty() && !consumerLaneData.empty() &&
+        isValidLaneLayout(consumerLaneLayout, consumerLaneData,
+                          specifiedInstData))
+      return buildInstDataLayoutWithLane(context, specifiedInstData,
+                                         consumerLaneLayout, consumerLaneData);
+  }
+  auto [defLaneLayout, defLaneData] = computeScatterIOLaneLayoutAndData(
+      specifiedInstData, subgroupSize, maxChunkSize);
+  return buildInstDataLayoutWithLane(context, specifiedInstData, defLaneLayout,
                                      defLaneData);
 }
 

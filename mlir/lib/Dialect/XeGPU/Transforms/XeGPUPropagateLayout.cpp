@@ -1156,7 +1156,8 @@ void LayoutInfoPropagation::visitLoadGatherOp(
     requiredAnchorLayoutAttr = anchorLayoutAttr;
     if (layoutKind == xegpu::LayoutKind::InstData) {
       requiredAnchorLayoutAttr = xegpu::completeScatterIOLaneLayoutFromInstData(
-          anchorLayoutAttr, resVecTy.getElementType(), uArch);
+          anchorLayoutAttr, consumerLayoutAttr, resVecTy.getElementType(),
+          uArch);
       load.setLayoutAttr(requiredAnchorLayoutAttr);
     }
   } else {
@@ -1201,7 +1202,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     requiredAnchorLayoutAttr = anchorLayoutAttr;
     if (layoutKind == xegpu::LayoutKind::InstData) {
       requiredAnchorLayoutAttr = xegpu::completeScatterIOLaneLayoutFromInstData(
-          anchorLayoutAttr, srcVecTy.getElementType(), uArch);
+          anchorLayoutAttr, nullptr, srcVecTy.getElementType(), uArch);
       storeScatter.setLayoutAttr(requiredAnchorLayoutAttr);
     }
   } else {
@@ -1273,7 +1274,7 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
     requiredAnchorLayoutAttr = anchorLayoutAttr;
     if (layoutKind == xegpu::LayoutKind::InstData) {
       requiredAnchorLayoutAttr = xegpu::completeScatterIOLaneLayoutFromInstData(
-          anchorLayoutAttr, srcVecTy.getElementType(), uArch);
+          anchorLayoutAttr, nullptr, srcVecTy.getElementType(), uArch);
       storeMatrix.setLayoutAttr(requiredAnchorLayoutAttr);
     }
   } else {
