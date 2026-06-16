@@ -102,6 +102,25 @@ struct WithFields {
   int &r2 = g_uninit;                     // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
 };
 
+[[ref_to_uninit]] int *ret_uninit_ptr_ok() { return &g_uninit; }      // OK
+[[ref_to_uninit]] int *ret_uninit_ptr_bad() {
+  return &g_init; // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+}
+int *ret_ptr_bad() {
+  return &g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+int *ret_ptr_ok() { return &g_init; } // OK
+
+[[ref_to_uninit]] int &ret_uninit_ref_ok() { return g_uninit; } // OK
+int &ret_ref_bad() {
+  return g_uninit; // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+
+int *ret_suppressed() {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] return &g_uninit; // OK: suppressed
+}
+
 template <typename T>
 void template_bad() {
   T *p = &g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
