@@ -123,12 +123,6 @@ llvm::getKnowledgeFromBundle(AssumeInst &Assume,
   return Result;
 }
 
-RetainedKnowledge llvm::getKnowledgeFromOperandInAssume(AssumeInst &Assume,
-                                                        unsigned Idx) {
-  CallBase::BundleOpInfo BOI = Assume.getBundleOpInfoForOperand(Idx);
-  return getKnowledgeFromBundle(Assume, BOI);
-}
-
 bool llvm::isAssumeWithEmptyBundle(const AssumeInst &Assume) {
   return none_of(Assume.bundle_op_infos(),
                  [](const CallBase::BundleOpInfo &BOI) {
