@@ -147,7 +147,7 @@ public:
 
     constexpr node_type extract(const_iterator position);                                       // C++17
     constexpr node_type extract(const key_type& x);                                             // C++17
-    template <typename K>
+    template <class K>
       constexpr node_type extract(K&& k);                                                       // C++23
 
     constexpr insert_return_type insert(node_type&& nh);                                        // C++17
@@ -173,7 +173,7 @@ public:
     constexpr iterator  erase(const_iterator position);
     constexpr iterator  erase(iterator position);                         // C++14
     constexpr size_type erase(const key_type& k);
-    template <typename K>
+    template <class K>
       constexpr size_type erase(K&& k);                                   // C++23
     constexpr iterator  erase(const_iterator first, const_iterator last);
 
@@ -1049,7 +1049,8 @@ public:
 
 #  if _LIBCPP_STD_VER >= 14
   template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX26
   map(_InputIterator __f, _InputIterator __l, const allocator_type& __a)
       : map(__f, __l, key_compare(), __a) {}
 #  endif
@@ -1377,7 +1378,7 @@ public:
     return __tree_.template __node_handle_extract<node_type>(__key);
   }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 node_type extract(const_iterator __it) {
-    return __tree_.template __node_handle_extract_iterator_from_iterator<node_type>(__it.__i_);
+    return __tree_.template __node_handle_extract_from_iterator<node_type>(__it.__i_);
   }
 
 #    if _LIBCPP_STD_VER >= 23

@@ -2122,7 +2122,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_handle_insert_unique(const_iterator __
 template <class _Tp, class _Compare, class _Allocator>
 template <class _NodeHandle, class _Key>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _NodeHandle
-__tree<_Tp, _Compare, _Allocator>::__node_handle_extract(const& _Key __key) {
+__tree<_Tp, _Compare, _Allocator>::__node_handle_extract(const _Key& __key) {
   iterator __it = __lower_bound_multi(__key);
   if (__it == end() || __value_comp_(__key, *__it))
     return _NodeHandle();
