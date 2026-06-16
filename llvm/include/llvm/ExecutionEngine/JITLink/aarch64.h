@@ -501,17 +501,34 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   char *FixupPtr = BlockWorkingMem + E.getOffset();
   orc::ExecutorAddr FixupAddress = B.getAddress() + E.getOffset();
 
+  // AArch64 BE8: data values follow target endianness, but instructions are
+  // always encoded in LE byte order (the A64 ISA is word-invariant).
+  bool IsBE = !G.getTargetTriple().isLittleEndian();
+
+  auto writeData64 = [IsBE](char *Ptr, uint64_t Val) {
+    if (IsBE) *(ubig64_t *)Ptr = Val; else *(ulittle64_t *)Ptr = Val;
+  };
+  auto writeData32 = [IsBE](char *Ptr, uint32_t Val) {
+    if (IsBE) *(ubig32_t *)Ptr = Val; else *(ulittle32_t *)Ptr = Val;
+  };
+  auto writeDataS32 = [IsBE](char *Ptr, int32_t Val) {
+    if (IsBE) *(big32_t *)Ptr = Val; else *(little32_t *)Ptr = Val;
+  };
+  auto writeDataS64 = [IsBE](char *Ptr, int64_t Val) {
+    if (IsBE) *(big64_t *)Ptr = Val; else *(little64_t *)Ptr = Val;
+  };
+
   switch (E.getKind()) {
   case Pointer64: {
     uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
-    *(ulittle64_t *)FixupPtr = Value;
+    writeData64(FixupPtr, Value);
     break;
   }
   case Pointer32: {
     uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
     if (Value > std::numeric_limits<uint32_t>::max())
       return makeTargetOutOfRangeError(G, B, E);
-    *(ulittle32_t *)FixupPtr = Value;
+    writeData32(FixupPtr, Value);
     break;
   }
   case Delta32:
@@ -528,9 +545,9 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
       if (Value < std::numeric_limits<int32_t>::min() ||
           Value > std::numeric_limits<int32_t>::max())
         return makeTargetOutOfRangeError(G, B, E);
-      *(little32_t *)FixupPtr = Value;
+      writeDataS32(FixupPtr, Value);
     } else
-      *(little64_t *)FixupPtr = Value;
+      writeDataS64(FixupPtr, Value);
     break;
   }
   case Branch26PCRel: {
