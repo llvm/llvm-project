@@ -1275,21 +1275,21 @@ let EmitPriority = 0 in {
 let Predicates = [HasVendorXqcilo, IsRV32] in {
 let EmitPriority = 0 in {
   def  : InstAlias<"qc.e.lb  $rd, (${rs1})",
-                   (QC_E_LB  GPR:$rd, BasePtr:$rs1, 0)>;
+                   (QC_E_LB  GPR:$rd, GPR:$rs1, 0)>;
   def  : InstAlias<"qc.e.lbu $rd, (${rs1})",
-                   (QC_E_LBU GPR:$rd, BasePtr:$rs1, 0)>;
+                   (QC_E_LBU GPR:$rd, GPR:$rs1, 0)>;
   def  : InstAlias<"qc.e.lh  $rd, (${rs1})",
-                   (QC_E_LH  GPR:$rd, BasePtr:$rs1, 0)>;
+                   (QC_E_LH  GPR:$rd, GPR:$rs1, 0)>;
   def  : InstAlias<"qc.e.lhu $rd, (${rs1})",
-                   (QC_E_LHU GPR:$rd, BasePtr:$rs1, 0)>;
+                   (QC_E_LHU GPR:$rd, GPR:$rs1, 0)>;
   def  : InstAlias<"qc.e.lw  $rd, (${rs1})",
-                   (QC_E_LW  GPR:$rd, BasePtr:$rs1, 0)>;
+                   (QC_E_LW  GPR:$rd, GPR:$rs1, 0)>;
   def  : InstAlias<"qc.e.sb  $rs2, (${rs1})",
-                   (QC_E_SB GPR:$rs2, BasePtr:$rs1, 0)>;
+                   (QC_E_SB GPR:$rs2, GPR:$rs1, 0)>;
   def  : InstAlias<"qc.e.sh  $rs2, (${rs1})",
-                   (QC_E_SH GPR:$rs2, BasePtr:$rs1, 0)>;
+                   (QC_E_SH GPR:$rs2, GPR:$rs1, 0)>;
   def  : InstAlias<"qc.e.sw  $rs2, (${rs1})",
-                   (QC_E_SW GPR:$rs2, BasePtr:$rs1, 0)>;
+                   (QC_E_SW GPR:$rs2, GPR:$rs1, 0)>;
 } // EmitPriority = 0
 } // Predicates = [HasVendorXqcilo, IsRV32]
 
