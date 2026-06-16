@@ -22921,8 +22921,8 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
         SDValue IsNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETUO);
 
         if (CCVT != SelCCVT) {
-          PosOvf = DAG.getNode(ISD::TRUNCATE, dl, SelCCVT, PosOvf);
-          IsNaN = DAG.getNode(ISD::TRUNCATE, dl, SelCCVT, IsNaN);
+          PosOvf = DAG.getSExtOrTrunc(PosOvf, dl, SelCCVT);
+          IsNaN = DAG.getSExtOrTrunc(IsNaN, dl, SelCCVT);
         }
 
         SDValue IntMax =
@@ -22943,7 +22943,7 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
         EVT SelCCVT =
             getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
         if (CCVT != SelCCVT)
-          IsOvf = DAG.getNode(ISD::TRUNCATE, dl, SelCCVT, IsOvf);
+          IsOvf = DAG.getSExtOrTrunc(IsOvf, dl, SelCCVT);
         // v16i32 (512-bit, AVX512): use X86ISD::CVTTP2UI (VCVTTPS2UDQZ).
         // v4i32 (128-bit, SSE) and v8i32 (256-bit, AVX) are already covered
         // by CVTTPS2DQ/VCVTTPS2DQ via expandFP_TO_UINT_SSE
