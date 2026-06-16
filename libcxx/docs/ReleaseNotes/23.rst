@@ -66,6 +66,9 @@ Improvements and New Features
   ``"std::get: wrong alternative for variant"``. The standard only requires ``what()`` to return an
   unspecified non-null string, so user code that does not match on the exact message remains correct.
 
+- The ``_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS`` macro has been added to make the declarations in ``<memory>``
+  available.
+
 Deprecations and Removals
 -------------------------
 
