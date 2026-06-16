@@ -122,6 +122,11 @@ bool ObjectContainerUniversalMachO::ParseHeader(
           arch.align = extractor.GetU32(&offset);
           fat_archs.emplace_back(arch);
         }
+      } else {
+        // nfat_arch is read from the file and is untrusted (up to 0xFFFFFFFF).
+        // Once the data is exhausted the offset can no longer advance, so the
+        // remaining iterations would spin uselessly; stop here.
+        break;
       }
     }
     return true;
