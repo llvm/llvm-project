@@ -696,7 +696,7 @@ define double @flat_system_atomic_fadd_f64(ptr %ptr, double %val) {
 ; GFX1250-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1250-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cmpx_ne_u32_e64 s1, v5
+; GFX1250-NEXT:    v_cmpx_ne_u32_e32 s1, v5
 ; GFX1250-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX1250-NEXT:    s_cbranch_execnz .LBB34_3
 ; GFX1250-NEXT:  ; %bb.1: ; %Flow2
@@ -761,7 +761,7 @@ define double @flat_one_as_atomic_fadd_f64(ptr %ptr, double %val) {
 ; GFX1250-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX1250-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_cmpx_ne_u32_e64 s1, v5
+; GFX1250-NEXT:    v_cmpx_ne_u32_e32 s1, v5
 ; GFX1250-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX1250-NEXT:    s_cbranch_execnz .LBB35_3
 ; GFX1250-NEXT:  ; %bb.1: ; %Flow2

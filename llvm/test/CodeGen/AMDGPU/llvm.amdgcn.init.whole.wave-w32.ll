@@ -374,7 +374,7 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; GISEL12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL12-NEXT:    s_mov_b32 s4, exec_lo
 ; GISEL12-NEXT:    ; implicit-def: $sgpr3
-; GISEL12-NEXT:    v_cmpx_lt_i32_e64 v12, v13
+; GISEL12-NEXT:    v_cmpx_lt_i32_e32 v12, v13
 ; GISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GISEL12-NEXT:    s_xor_b32 s4, exec_lo, s4
 ; GISEL12-NEXT:  ; %bb.5: ; %tail.else
@@ -435,7 +435,7 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; DAGISEL12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; DAGISEL12-NEXT:    s_mov_b32 s3, exec_lo
 ; DAGISEL12-NEXT:    ; implicit-def: $vgpr8
-; DAGISEL12-NEXT:    v_cmpx_lt_i32_e64 v12, v13
+; DAGISEL12-NEXT:    v_cmpx_lt_i32_e32 v12, v13
 ; DAGISEL12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; DAGISEL12-NEXT:    s_xor_b32 s3, exec_lo, s3
 ; DAGISEL12-NEXT:  ; %bb.5: ; %tail.else
@@ -483,7 +483,7 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; GISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; GISEL10-NEXT:    s_mov_b32 s4, exec_lo
 ; GISEL10-NEXT:    ; implicit-def: $sgpr3
-; GISEL10-NEXT:    v_cmpx_lt_i32_e64 v12, v13
+; GISEL10-NEXT:    v_cmpx_lt_i32_e32 v12, v13
 ; GISEL10-NEXT:    s_xor_b32 s4, exec_lo, s4
 ; GISEL10-NEXT:  ; %bb.5: ; %tail.else
 ; GISEL10-NEXT:    s_mov_b32 s3, 15
@@ -529,7 +529,7 @@ define amdgpu_cs_chain void @control_flow(<3 x i32> inreg %sgpr, ptr inreg %call
 ; DAGISEL10-NEXT:    s_or_b32 exec_lo, exec_lo, s3
 ; DAGISEL10-NEXT:    s_mov_b32 s3, exec_lo
 ; DAGISEL10-NEXT:    ; implicit-def: $vgpr8
-; DAGISEL10-NEXT:    v_cmpx_lt_i32_e64 v12, v13
+; DAGISEL10-NEXT:    v_cmpx_lt_i32_e32 v12, v13
 ; DAGISEL10-NEXT:    s_xor_b32 s3, exec_lo, s3
 ; DAGISEL10-NEXT:  ; %bb.5: ; %tail.else
 ; DAGISEL10-NEXT:    s_mov_b32 s4, 15
