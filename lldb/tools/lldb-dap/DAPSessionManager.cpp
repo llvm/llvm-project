@@ -142,22 +142,11 @@ DAPSessionManager::GetEventThreadForDebugger(lldb::SBDebugger debugger,
 DAP *DAPSessionManager::FindDAPForTarget(lldb::SBTarget target) {
   std::lock_guard<std::mutex> lock(m_sessions_mutex);
 
-  for (const auto &[loop, dap] : m_active_sessions)
-    if (dap && dap->target.IsValid() && dap->target == target)
-      return dap;
-
-  // Fallback for events that fire before SetTarget binds the target.
-  // Route to the unique DAP for this target's debugger if there is one.
   const lldb::user_id_t debugger_id = target.GetDebugger().GetID();
-  DAP *unique_dap = nullptr;
-  for (const auto &[loop, dap] : m_active_sessions) {
-    if (!dap || dap->debugger.GetID() != debugger_id)
-      continue;
-    if (unique_dap)
-      return nullptr;
-    unique_dap = dap;
-  }
-  return unique_dap;
+  for (const auto &[loop, dap] : m_active_sessions)
+    if (dap && dap->debugger.GetID() == debugger_id)
+      return dap;
+  return nullptr;
 }
 
 void DAPSessionManager::ReleaseExpiredEventThreads() {
