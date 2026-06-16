@@ -156,3 +156,4 @@ define i32 @test11(i32 %a) #0 {
 
 attributes #0 = { nounwind uwtable }
 attributes #1 = { nounwind }
+
