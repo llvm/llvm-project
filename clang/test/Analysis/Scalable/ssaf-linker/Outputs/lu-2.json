@@ -366,6 +366,5 @@
       "kind": "LinkUnit",
       "name": "lu-2"
     }
-  ],
-  "target_triple": "arm64-apple-macosx"
+  ]
 }

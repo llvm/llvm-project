@@ -20,7 +20,6 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityLinkage.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/SummaryName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/EntitySummary.h"
-#include "llvm/TargetParser/Triple.h"
 #include <map>
 #include <memory>
 
@@ -37,9 +36,6 @@ class LUSummary {
   friend class SerializationFormat;
   friend class TestFixture;
 
-  /// Target triple of the link unit.
-  llvm::Triple TargetTriple;
-
   NestedBuildNamespace LUNamespace;
 
   EntityIdTable IdTable;
@@ -50,9 +46,8 @@ class LUSummary {
       Data;
 
 public:
-  LUSummary(llvm::Triple TargetTriple, NestedBuildNamespace LUNamespace)
-      : TargetTriple(std::move(TargetTriple)),
-        LUNamespace(std::move(LUNamespace)) {}
+  explicit LUSummary(NestedBuildNamespace LUNamespace)
+      : LUNamespace(std::move(LUNamespace)) {}
 
   const NestedBuildNamespace &getNamespace() const { return LUNamespace; }
 };
