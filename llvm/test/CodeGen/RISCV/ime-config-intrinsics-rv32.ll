@@ -955,11 +955,20 @@ define i32 @vsetlambda_nonzero_runtime_rv32(i32 %x) {
 ; RV32-ZBB-LABEL: vsetlambda_nonzero_runtime_rv32:
 ; RV32-ZBB:       # %bb.0:
 ; RV32-ZBB-NEXT:    csrr a1, vtype
+; RV32-ZBB-NEXT:    sltiu a2, a0, 65
+; RV32-ZBB-NEXT:    addi a3, a0, -1
+; RV32-ZBB-NEXT:    snez a4, a0
+; RV32-ZBB-NEXT:    and a3, a0, a3
+; RV32-ZBB-NEXT:    and a2, a4, a2
+; RV32-ZBB-NEXT:    seqz a3, a3
+; RV32-ZBB-NEXT:    and a2, a2, a3
 ; RV32-ZBB-NEXT:    ctz a0, a0
-; RV32-ZBB-NEXT:    lui a2, 458752
+; RV32-ZBB-NEXT:    neg a2, a2
 ; RV32-ZBB-NEXT:    addi a0, a0, 1
-; RV32-ZBB-NEXT:    andn a1, a1, a2
+; RV32-ZBB-NEXT:    and a0, a2, a0
+; RV32-ZBB-NEXT:    lui a2, 458752
 ; RV32-ZBB-NEXT:    slli a0, a0, 28
+; RV32-ZBB-NEXT:    andn a1, a1, a2
 ; RV32-ZBB-NEXT:    or a0, a1, a0
 ; RV32-ZBB-NEXT:    vsetvl zero, zero, a0
 ; RV32-ZBB-NEXT:    csrr a0, vtype
@@ -1180,12 +1189,21 @@ define i32 @vsetlambda_runtime_split_rv32(i32 %x) {
 ; RV32-ZBB:       # %bb.0: # %entry
 ; RV32-ZBB-NEXT:    beqz a0, .LBB11_2
 ; RV32-ZBB-NEXT:  # %bb.1: # %set
-; RV32-ZBB-NEXT:    csrr a1, vtype
+; RV32-ZBB-NEXT:    sltiu a1, a0, 65
+; RV32-ZBB-NEXT:    addi a2, a0, -1
+; RV32-ZBB-NEXT:    snez a3, a0
+; RV32-ZBB-NEXT:    and a2, a0, a2
+; RV32-ZBB-NEXT:    and a1, a3, a1
+; RV32-ZBB-NEXT:    seqz a2, a2
 ; RV32-ZBB-NEXT:    ctz a0, a0
-; RV32-ZBB-NEXT:    lui a2, 458752
+; RV32-ZBB-NEXT:    and a1, a1, a2
 ; RV32-ZBB-NEXT:    addi a0, a0, 1
-; RV32-ZBB-NEXT:    andn a1, a1, a2
+; RV32-ZBB-NEXT:    neg a1, a1
+; RV32-ZBB-NEXT:    and a0, a1, a0
+; RV32-ZBB-NEXT:    csrr a1, vtype
+; RV32-ZBB-NEXT:    lui a2, 458752
 ; RV32-ZBB-NEXT:    slli a0, a0, 28
+; RV32-ZBB-NEXT:    andn a1, a1, a2
 ; RV32-ZBB-NEXT:    or a0, a1, a0
 ; RV32-ZBB-NEXT:    vsetvl zero, zero, a0
 ; RV32-ZBB-NEXT:  .LBB11_2: # %cont

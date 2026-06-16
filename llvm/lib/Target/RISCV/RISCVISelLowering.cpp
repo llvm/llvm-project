@@ -11748,9 +11748,33 @@ static SDValue encodeRuntimeIMELambda(SDValue Requested, const SDLoc &DL,
   // lowering. Valid runtime inputs are {1,2,4,8,16,32,64}. On targets with
   // Zbb, ctz(x) + 1 maps directly to the 3-bit vtype.lambda encoding.
   if (Subtarget.hasStdExtZbb()) {
-    SDValue Encoded = DAG.getNode(ISD::CTTZ_ZERO_POISON, DL, XLenVT, Requested);
-    return DAG.getNode(ISD::ADD, DL, XLenVT, Encoded,
-                       DAG.getConstant(1, DL, XLenVT));
+    SDValue Zero = DAG.getConstant(0, DL, XLenVT);
+    SDValue One = DAG.getConstant(1, DL, XLenVT);
+
+    // Direct IR users can still pass zero or another invalid runtime value to this
+    // nonzero primitive. Use the defined ctz operation, guard the runtime value,
+    // and map invalid runtime values to encoding 0. The later read-modify-write
+    // sequence preserves all non-lambda vtype fields and clears lambda[2:0] for
+    // invalid runtime values, avoiding poison and avoiding out-of-range encodings.
+    SDValue Ctz = DAG.getNode(ISD::CTTZ, DL, XLenVT, Requested);
+    SDValue Encoded =
+        DAG.getNode(ISD::ADD, DL, XLenVT, Ctz, DAG.getConstant(1, DL, XLenVT));
+
+    SDValue NonZero =
+        DAG.getSetCC(DL, XLenVT, Requested, Zero, ISD::SETNE);
+    SDValue IsInRange =
+        DAG.getSetCC(DL, XLenVT, Requested, DAG.getConstant(64, DL, XLenVT),
+                     ISD::SZETULE);
+    SDValue MinusOne = DAG.getNode(ISD::SUB, DL, XLenVT, Requested, One);
+    SDValue PowerOf2Bits = DAG.getNode(ISD::AND, DL, XLenVT, Requested,
+                                       MinusOne);
+    SDValue IsPowerOf2 =
+        DAG.getSetCC(DL, XLenVT, PowerOf2Bits, Zero, ISD::SETEQ);
+
+    SDValue IsValid = DAG.getNode(ISD::AND, DL, XLenVT, NonZero, IsInRange);
+    IsValid = DAG.getNode(ISD::AND, DL, XLenVT, IsValid, IsPowerOf2);
+
+    return DAG.getSelect(DL, XLenVT, IsValid, Encoded, Zero);
   }
 
   // Without Zbb, generic cttz can expand to libcalls. Build the 3-bit

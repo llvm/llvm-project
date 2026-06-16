@@ -997,13 +997,22 @@ define i64 @vsetlambda_nonzero_runtime_rv64(i64 %x) {
 ;
 ; RV64-ZBB-LABEL: vsetlambda_nonzero_runtime_rv64:
 ; RV64-ZBB:       # %bb.0:
-; RV64-ZBB-NEXT:    csrr a1, vtype
-; RV64-ZBB-NEXT:    li a2, -8
+; RV64-ZBB-NEXT:    li a1, -8
+; RV64-ZBB-NEXT:    sltiu a2, a0, 65
+; RV64-ZBB-NEXT:    addi a3, a0, -1
+; RV64-ZBB-NEXT:    snez a4, a0
+; RV64-ZBB-NEXT:    and a3, a0, a3
+; RV64-ZBB-NEXT:    and a2, a4, a2
+; RV64-ZBB-NEXT:    seqz a3, a3
+; RV64-ZBB-NEXT:    and a2, a2, a3
 ; RV64-ZBB-NEXT:    ctz a0, a0
-; RV64-ZBB-NEXT:    rori a2, a2, 4
 ; RV64-ZBB-NEXT:    addi a0, a0, 1
-; RV64-ZBB-NEXT:    and a1, a1, a2
+; RV64-ZBB-NEXT:    neg a2, a2
+; RV64-ZBB-NEXT:    and a0, a2, a0
+; RV64-ZBB-NEXT:    csrr a2, vtype
+; RV64-ZBB-NEXT:    rori a1, a1, 4
 ; RV64-ZBB-NEXT:    slli a0, a0, 60
+; RV64-ZBB-NEXT:    and a1, a2, a1
 ; RV64-ZBB-NEXT:    or a0, a1, a0
 ; RV64-ZBB-NEXT:    vsetvl zero, zero, a0
 ; RV64-ZBB-NEXT:    csrr a0, vtype
@@ -1227,13 +1236,22 @@ define i64 @vsetlambda_runtime_split_rv64(i64 %x) {
 ; RV64-ZBB:       # %bb.0: # %entry
 ; RV64-ZBB-NEXT:    beqz a0, .LBB11_2
 ; RV64-ZBB-NEXT:  # %bb.1: # %set
-; RV64-ZBB-NEXT:    csrr a1, vtype
-; RV64-ZBB-NEXT:    li a2, -8
+; RV64-ZBB-NEXT:    sltiu a1, a0, 65
+; RV64-ZBB-NEXT:    addi a2, a0, -1
+; RV64-ZBB-NEXT:    snez a3, a0
+; RV64-ZBB-NEXT:    and a2, a0, a2
+; RV64-ZBB-NEXT:    and a1, a3, a1
+; RV64-ZBB-NEXT:    seqz a2, a2
 ; RV64-ZBB-NEXT:    ctz a0, a0
-; RV64-ZBB-NEXT:    rori a2, a2, 4
-; RV64-ZBB-NEXT:    addi a0, a0, 1
 ; RV64-ZBB-NEXT:    and a1, a1, a2
+; RV64-ZBB-NEXT:    addi a0, a0, 1
+; RV64-ZBB-NEXT:    neg a1, a1
+; RV64-ZBB-NEXT:    li a2, -8
+; RV64-ZBB-NEXT:    and a0, a1, a0
+; RV64-ZBB-NEXT:    csrr a1, vtype
+; RV64-ZBB-NEXT:    rori a2, a2, 4
 ; RV64-ZBB-NEXT:    slli a0, a0, 60
+; RV64-ZBB-NEXT:    and a1, a1, a2
 ; RV64-ZBB-NEXT:    or a0, a1, a0
 ; RV64-ZBB-NEXT:    vsetvl zero, zero, a0
 ; RV64-ZBB-NEXT:  .LBB11_2: # %cont
