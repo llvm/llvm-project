@@ -1040,16 +1040,15 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
     if (EltSize < 32) {
       if (EltSize == 16 && Index == 0 && ST->has16BitInsts())
         return 0;
-      // Some i8 inserts and extracts are free so we want to reduce the
-      // cost to avoid scalarization. We limit the zero cost cases to avoid
-      // adversely impacting all i8 vectorizing.
-      if (EltSize == 8) {
-        unsigned NumElts = cast<FixedVectorType>(ValTy)->getNumElements();
-        if (NumElts >= 4 && isPowerOf2_32(NumElts)) {
-          // Extracts at indices aligned to 32-bit boundaries (0, 4, 8, 12 for
-          // v16i8) are free as they access the low byte of each VGPR. Other
-          // indices require bit manipulation (shifts/byte selects) and cost 1.
-          return Index % 4 == 0 ? 0 : 1;
+      // Extract element sequences of consecutive i8 values that match a
+      // register size are free most likely. It is not possible to know
+      // if this extract is part of a consecutive sequence so this may
+      // apply more generally.
+      if (Opcode == Instruction::ExtractElement && EltSize == 8) {
+        if (auto *FVTy = dyn_cast<FixedVectorType>(ValTy)) {
+          unsigned NumElts = FVTy->getNumElements();
+          if (NumElts >= 4 && isPowerOf2_32(NumElts))
+            return 0;
         }
       }
       return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,

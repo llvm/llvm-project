@@ -235,11 +235,10 @@ def GPRMemZeroOffset : MemOperand<GPR> {
 }
 
 def BasePtr : MemOperand<BasePtrRegClass>;
+
 def SPMem : MemOperand<SP>;
 
-// Note: GPRCMem is a YGPRC in RVY mode. We could rename it but
-// that would result in a lot of code churn for no good reason.
-def GPRCMem : MemOperand<BasePtrCRegClass>;
+def BasePtrC : MemOperand<BasePtrCRegClass>;
 
 class SImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"S", width, suffix> {
