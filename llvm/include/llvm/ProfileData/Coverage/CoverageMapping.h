@@ -1080,7 +1080,7 @@ public:
        std::optional<StringRef> ProfileFilename, vfs::FileSystem &FS,
        ArrayRef<StringRef> Arches = {}, StringRef CompilationDir = "",
        const object::BuildIDFetcher *BIDFetcher = nullptr,
-       bool CheckBinaryIDs = false);
+       bool CheckBinaryIDs = false, unsigned MaxLoadThreads = 1);
 
   /// The number of functions that couldn't have their profiles mapped.
   ///

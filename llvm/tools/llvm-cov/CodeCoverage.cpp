@@ -190,6 +190,7 @@ private:
   std::unique_ptr<object::BuildIDFetcher> BIDFetcher;
 
   bool CheckBinaryIDs;
+  unsigned MaxLoadThreads;
 };
 }
 
@@ -462,9 +463,10 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
                 ObjectFilename);
   }
   auto FS = vfs::getRealFileSystem();
-  auto CoverageOrErr = CoverageMapping::load(
-      ObjectFilenames, PGOFilename, *FS, CoverageArches,
-      ViewOpts.CompilationDirectory, BIDFetcher.get(), CheckBinaryIDs);
+  auto CoverageOrErr =
+      CoverageMapping::load(ObjectFilenames, PGOFilename, *FS, CoverageArches,
+                            ViewOpts.CompilationDirectory, BIDFetcher.get(),
+                            CheckBinaryIDs, MaxLoadThreads);
   if (Error E = CoverageOrErr.takeError()) {
     error("failed to load coverage: " + toString(std::move(E)));
     return nullptr;
@@ -803,6 +805,10 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
   cl::alias NumThreadsA("j", cl::desc("Alias for --num-threads"),
                         cl::aliasopt(NumThreads));
 
+  cl::opt<unsigned> MaxLoadThreads(
+      "max-load-threads", cl::init(1),
+      cl::desc("Maximum threads to use for loading object files (default: 1)"));
+
   cl::opt<std::string> CompilationDirectory(
       "compilation-dir", cl::init(""),
       cl::desc("Directory used as a base for relative coverage mapping paths"));
@@ -821,6 +827,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       BIDFetcher = std::make_unique<object::BuildIDFetcher>(DebugFileDirectory);
     }
     this->CheckBinaryIDs = CheckBinaryIDs;
+    this->MaxLoadThreads = MaxLoadThreads;
 
     if (!PGOFilename.empty() == EmptyProfile) {
       error(
