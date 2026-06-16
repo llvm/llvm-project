@@ -98,7 +98,10 @@ emitc.class union @unionClass {
 // CHECK-NEXT:    float asFloat;
 // CHECK-NEXT:  };
 
-// Test that get_field is supported inside an expression
+// Test that get_field is supported inside an expression.
+// When translating operations inlined inside emitc.expression,
+// the C++ emitter queries getOperatorPrecedence() and
+// operations without a defined precedence fail translation.
 emitc.class @expressionClass {
   emitc.field @x : i32
   emitc.func @test_precedence() -> i32 {
