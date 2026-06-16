@@ -834,24 +834,9 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
            "Got assumption for the wrong function!");
 
     if (Elem.Index != AssumptionCache::ExprResultIdx) {
-      bool AssumeImpliesNonNull = [&]() {
-        auto OBU = I->getOperandBundleAt(Elem.Index);
-        switch (getBundleAttrFromOBU(OBU)) {
-        case BundleAttr::Dereferenceable: {
-          auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
-          return Ptr == V && Count && *Count != 0 &&
-                 !NullPointerIsDefined(Q.CxtI->getFunction(),
-                                       V->getType()->getPointerAddressSpace());
-        }
-
-        case BundleAttr::NonNull:
-          return getAssumeNonNullInfo(OBU).Ptr == V;
-
-        default:
-          return false;
-        }
-      }();
-      if (AssumeImpliesNonNull && isValidAssumeForContext(I, Q))
+      if (assumeBundleImpliesNonNull(V, Q.CxtI->getFunction(),
+                                     I->getOperandBundleAt(Elem.Index)) &&
+          isValidAssumeForContext(I, Q))
         return true;
       continue;
     }
@@ -1091,11 +1076,11 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
       if (auto OBU = I->getOperandBundleAt(Elem.Index);
           getBundleAttrFromOBU(OBU) == BundleAttr::Align) {
         auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
-        if (Ptr != V || !Alignment || !Offset || !isPowerOf2_64(*Alignment))
-          continue;
-        auto AlignVal = MinAlign(*Offset, *Alignment);
-        if (isValidAssumeForContext(I, Q))
-          Known.Zero.setLowBits(Log2_64(AlignVal));
+        if (Ptr == V && Alignment && Offset && isPowerOf2_64(*Alignment) &&
+            isValidAssumeForContext(I, Q)) {
+          Known.Zero |= (*Alignment - 1) & ~*Offset;
+          Known.One |= (*Alignment - 1) & *Offset;
+        }
       }
       continue;
     }
