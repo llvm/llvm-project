@@ -34,8 +34,19 @@ enum PatchOpcodes : uint32_t {
                                 // ICLASS 0x7 - S2-type A-type
   PO_IMMEXT = 0x00000000,       // constant extender
   PO_ALLOCFRAME_0 = 0xa09dc000, // allocframe(#0)
+  PO_ALLOCFRAME_8 = 0xa09dc001, // allocframe(#8)
   PO_DEALLOCFRAME = 0x901ec01e, // deallocframe
+  PO_STORE_R7_SP0 = 0xa19dc700, // memw(r29+#0) = r7
+  PO_LOAD_R7_SP0 = 0x919dc007,  // r7 = memw(r29+#0)
+  PO_CALL = 0x5a00c000, // call #0 (J2_call, packet end); offset added in
 };
+
+// Encode a J2_call to a PC-relative byte offset.  The offset (divided by 4) is
+// a 22-bit signed value split across instruction bits [24:16] and [13:1].
+inline static uint32_t encodeCall(int32_t ByteOffset) XRAY_NEVER_INSTRUMENT {
+  const int32_t Imm = ByteOffset >> 2;
+  return PO_CALL | ((Imm & 0x1fff) << 1) | (((Imm >> 13) & 0x1ff) << 16);
+}
 
 enum PacketWordParseBits : uint32_t {
   PP_DUPLEX = 0x00 << 14,
@@ -108,18 +119,24 @@ inline static bool patchSled(const bool Enable, const uint32_t FuncId,
   // With the following runtime patch:
   //
   // <xray_sled_n>:
-  // { allocframe(#0) }
-  // { immext(#...) // upper 26-bits of func id
-  //   r7 = ##...   // lower  6-bits of func id
-  //   immext(#...) // upper 26-bits of trampoline
-  //   r6 = ##... } // lower  6-bits of trampoline
-  // { callr r6 }
+  // { allocframe(#8) }       // save r31:30, reserve an 8-byte spill slot
+  // { memw(sp+#0) = r7 }     // preserve r7 (the only reg this sled clobbers)
+  // { immext(#...)           // upper 26-bits of func id
+  //   r7 = ##... }           // lower  6-bits of func id
+  // { call ##trampoline }    // direct PC-relative call (does NOT clobber r6)
+  // { r7 = memw(sp+#0) }     // restore r7
   // { deallocframe }
   //
-  // allocframe(#0) saves the caller's r31:30 (LR:FP) before the callr
-  // clobbers r31, and deallocframe restores them afterward.  This ensures
-  // the instrumented function's allocframe later saves the correct return
-  // address.
+  // An XRay sled is inserted post-register-allocation and is treated by the
+  // compiler as clobbering nothing, yet a function-exit sled can land in the
+  // middle of a loop (a conditional early return) where r6/r7 hold live
+  // loop-carried values.  Earlier code loaded the trampoline address into r6
+  // and used `callr r6`, clobbering both r6 and r7 with no way to recover the
+  // originals (the clobber precedes the trampoline's register save).  Use a
+  // direct `call` so r6 is never touched (the trampoline preserves the rest of
+  // the caller-saved set, including r6), and have the sled itself spill/reload
+  // r7 around the funcid setup.  allocframe(#8)/deallocframe save the caller's
+  // r31:30 (LR:FP) and provide the spill slot.
   //
   // Replacement of the first 4-byte instruction should be the last and
   // atomic operation, so that user code reaching the sled concurrently
@@ -132,28 +149,28 @@ inline static bool patchSled(const bool Enable, const uint32_t FuncId,
   uint32_t *FirstAddress = reinterpret_cast<uint32_t *>(Sled.address());
   if (Enable) {
     uint32_t *CurAddress = FirstAddress + 1;
-    // Word 1: immext for r7 = FuncId
+    // Word 1: memw(sp+#0) = r7  -- spill r7 before clobbering it below.
+    *CurAddress = uint32_t(PO_STORE_R7_SP0);
+    CurAddress++;
+    // Word 2: immext for r7 = FuncId
     *CurAddress = encodeConstantExtender(FuncId);
     CurAddress++;
-    // Word 2: r7 = ##FuncId (low 6 bits)
-    *CurAddress = encodeExtendedTransferImmediate(FuncId, RN_R7);
+    // Word 3: r7 = ##FuncId (low 6 bits), packet end
+    *CurAddress = encodeExtendedTransferImmediate(FuncId, RN_R7, true);
     CurAddress++;
-    // Word 3: immext for r6 = TracingHook
-    *CurAddress =
-        encodeConstantExtender(reinterpret_cast<uint32_t>(TracingHook));
+    // Word 4: call ##TracingHook -- PC-relative from this instruction.
+    *CurAddress = encodeCall(
+        static_cast<int32_t>(reinterpret_cast<intptr_t>(TracingHook) -
+                             reinterpret_cast<intptr_t>(CurAddress)));
     CurAddress++;
-    // Word 4: r6 = ##TracingHook (low 6 bits), packet end
-    *CurAddress = encodeExtendedTransferImmediate(
-        reinterpret_cast<uint32_t>(TracingHook), RN_R6, true);
-    CurAddress++;
-    // Word 5: callr r6
-    *CurAddress = uint32_t(PO_CALLR_R6);
+    // Word 5: r7 = memw(sp+#0)  -- restore r7.
+    *CurAddress = uint32_t(PO_LOAD_R7_SP0);
     CurAddress++;
     // Word 6: deallocframe
     *CurAddress = uint32_t(PO_DEALLOCFRAME);
 
-    // Word 0 (written last, atomically): allocframe(#0) replaces jump
-    WriteInstFlushCache(FirstAddress, uint32_t(PO_ALLOCFRAME_0));
+    // Word 0 (written last, atomically): allocframe(#8) replaces jump
+    WriteInstFlushCache(FirstAddress, uint32_t(PO_ALLOCFRAME_8));
   } else {
     WriteInstFlushCache(FirstAddress, uint32_t(PO_JUMPI_1C));
   }
