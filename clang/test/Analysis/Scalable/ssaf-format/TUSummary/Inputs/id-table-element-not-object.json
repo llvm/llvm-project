@@ -5,6 +5,5 @@
   },
   "id_table": [123],
   "linkage_table": [],
-  "data": [],
-  "target_triple": "arm64-apple-macosx"
+  "data": []
 }

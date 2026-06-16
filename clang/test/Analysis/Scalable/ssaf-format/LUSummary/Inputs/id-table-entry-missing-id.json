@@ -24,6 +24,5 @@
     }
   ],
   "linkage_table": [],
-  "data": [],
-  "target_triple": "arm64-apple-macosx"
+  "data": []
 }

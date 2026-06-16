@@ -20,7 +20,6 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityIdTable.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityLinkage.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/SummaryName.h"
-#include "llvm/TargetParser/Triple.h"
 #include <map>
 #include <memory>
 
@@ -35,9 +34,6 @@ class LUSummaryEncoding {
   friend class EntityLinker;
   friend class SerializationFormat;
   friend class TestFixture;
-
-  // Target triple of the link unit.
-  llvm::Triple TargetTriple;
 
   // The namespace identifying this link unit.
   NestedBuildNamespace LUNamespace;
@@ -54,9 +50,8 @@ class LUSummaryEncoding {
       Data;
 
 public:
-  LUSummaryEncoding(llvm::Triple TargetTriple, NestedBuildNamespace LUNamespace)
-      : TargetTriple(std::move(TargetTriple)),
-        LUNamespace(std::move(LUNamespace)) {}
+  explicit LUSummaryEncoding(NestedBuildNamespace LUNamespace)
+      : LUNamespace(std::move(LUNamespace)) {}
 };
 
 } // namespace clang::ssaf
