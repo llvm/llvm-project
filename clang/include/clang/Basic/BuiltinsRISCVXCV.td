@@ -19,6 +19,21 @@ class RISCVXCVBuiltin<string prototype, string features = ""> : TargetBuiltin {
 
 let Attributes = [NoThrow, Const] in {
 //===----------------------------------------------------------------------===//
+// XCVbitmanip extension.
+//===----------------------------------------------------------------------===//
+def bitmanip_extract  : RISCVXCVBuiltin<"int(unsigned int, unsigned short)", "xcvbitmanip">;
+def bitmanip_extractu : RISCVXCVBuiltin<"unsigned int(unsigned int, unsigned short)", "xcvbitmanip">;
+def bitmanip_insert   : RISCVXCVBuiltin<"unsigned int(unsigned int, unsigned short, unsigned int)", "xcvbitmanip">;
+def bitmanip_bclr     : RISCVXCVBuiltin<"unsigned int(unsigned int, unsigned short)", "xcvbitmanip">;
+def bitmanip_bset     : RISCVXCVBuiltin<"unsigned int(unsigned int, unsigned short)", "xcvbitmanip">;
+def bitmanip_ff1      : RISCVXCVBuiltin<"unsigned char(unsigned int)", "xcvbitmanip">;
+def bitmanip_fl1      : RISCVXCVBuiltin<"unsigned char(unsigned int)", "xcvbitmanip">;
+def bitmanip_clb      : RISCVXCVBuiltin<"unsigned char(unsigned int)", "xcvbitmanip">;
+def bitmanip_cnt      : RISCVXCVBuiltin<"unsigned char(unsigned int)", "xcvbitmanip">;
+def bitmanip_ror      : RISCVXCVBuiltin<"unsigned int(unsigned int, unsigned int)", "xcvbitmanip">;
+def bitmanip_bitrev   : RISCVXCVBuiltin<"unsigned int(unsigned int, _Constant unsigned char, _Constant unsigned char)", "xcvbitmanip">;
+
+//===----------------------------------------------------------------------===//
 // XCValu extension.
 //===----------------------------------------------------------------------===//
 def alu_sle   : RISCVXCVBuiltin<"int(int, int)", "xcvalu">;

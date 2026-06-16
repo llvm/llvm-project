@@ -688,6 +688,9 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_sf_vsettk:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 3) ||
            SemaRef.BuiltinConstantArgRange(TheCall, 2, 1, 3);
+  case RISCV::BI__builtin_riscv_cv_bitmanip_bitrev:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 31) ||
+           SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 3);
   case RISCVVector::BI__builtin_rvv_sf_mm_f_f_w1:
   case RISCVVector::BI__builtin_rvv_sf_mm_f_f_w2:
   case RISCVVector::BI__builtin_rvv_sf_mm_e5m2_e4m3_w4:
