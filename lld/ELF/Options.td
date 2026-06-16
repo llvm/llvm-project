@@ -737,6 +737,11 @@ defm thinlto_remote_compiler_arg: EEq<"thinlto-remote-compiler-arg",
 defm fat_lto_objects: BB<"fat-lto-objects",
     "Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.",
     "Ignore the .llvm.lto section in relocatable object files (default).">;
+defm lto_linker_scripts
+    : BB<"lto-linker-scripts",
+         "Make LTO respect section mappings specified in linker scripts",
+         "Ignore section mappings specified in linker scripts during LTO "
+         "(default)">;
 
 def: J<"plugin-opt=O">, Alias<lto_O>, HelpText<"Alias for --lto-O">;
 def: F<"plugin-opt=debug-pass-manager">,
