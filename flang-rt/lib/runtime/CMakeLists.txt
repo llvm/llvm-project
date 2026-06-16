@@ -299,16 +299,18 @@ if (FLANG_RT_FORTRAN_MODULES)
   add_flangrt_library(flang_rt.mod.fortran.builtins OBJECT
     __fortran_builtins.f90
   )
+  set_property(SOURCE __fortran_builtins.f90 PROPERTY OBJECT_OUTPUTS "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/__fortran_builtins${CMAKE_Fortran_OUTPUT_EXTENSION}")
   flang_module_target(flang_rt.mod.fortran.builtins PUBLIC)
   add_module_barrier(flang_rt.mod.fortran.builtins.barrier flang_rt.mod.fortran.builtins)
 
   add_flangrt_library(flang_rt.mod.cuda.builtins OBJECT
     __cuda_builtins.f90
   )
+  set_property(SOURCE __cuda_builtins.f90 PROPERTY OBJECT_OUTPUTS "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/__cuda_builtins${CMAKE_Fortran_OUTPUT_EXTENSION}")
   add_dependencies(flang_rt.mod.cuda.builtins flang_rt.mod.fortran.builtins.barrier)
   set_property(SOURCE __cuda_builtins.f90
     APPEND PROPERTY OBJECT_DEPENDS
-      "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/flang_rt.mod.builtins.dir/${CMAKE_CFG_INTDIR}/__fortran_builtins.f90${CMAKE_Fortran_OUTPUT_EXTENSION}"
+      "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/__fortran_builtins${CMAKE_Fortran_OUTPUT_EXTENSION}"
   )
   flang_module_target(flang_rt.mod.cuda.builtins PUBLIC)
   add_module_barrier(flang_rt.mod.cuda.builtins.barrier flang_rt.mod.cuda.builtins)
@@ -321,7 +323,8 @@ if (FLANG_RT_FORTRAN_MODULES)
   foreach(_srcfile IN LISTS module_sources)
     set_property(SOURCE ${_srcfile}
       APPEND PROPERTY OBJECT_DEPENDS
-        "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/flang_rt.mod.builtins.dir/${CMAKE_CFG_INTDIR}/__fortran_builtins.f90${CMAKE_Fortran_OUTPUT_EXTENSION}"
+        "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/__fortran_builtins${CMAKE_Fortran_OUTPUT_EXTENSION}"
+        "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/__cuda_builtins${CMAKE_Fortran_OUTPUT_EXTENSION}"
     )
   endforeach()
 
