@@ -130,6 +130,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       v8s16, v8s32, v8s64, v16s8, v16s16, v16s32, v16s64};
 
   auto allBoolScalarsAndVectors = {s1, v2s1, v3s1, v4s1, v8s1, v16s1};
+  auto allBoolVectors = {v2s1, v3s1, v4s1, v8s1, v16s1};
 
   auto allIntScalars = {s8, s16, s32, s64, s128};
 
@@ -164,10 +165,11 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
           SPIRV::Extension::SPV_ALTERA_arbitrary_precision_integers) ||
       ST.canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions) ||
       ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4);
-  auto extendedScalarsAndVectors =
+  auto extendedIntScalarsAndVectors =
       [IsExtendedInts](const LegalityQuery &Query) {
         const LLT Ty = Query.Types[0];
-        return IsExtendedInts && Ty.isValid() && !Ty.isPointerOrPointerVector();
+        return IsExtendedInts && Ty.isValid() &&
+               !Ty.isPointerOrPointerVector() && Ty.getScalarSizeInBits() > 1;
       };
   auto extendedScalarsAndVectorsProduct = [IsExtendedInts](
                                               const LegalityQuery &Query) {
@@ -327,7 +329,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_BITREVERSE, G_SADDSAT, G_UADDSAT, G_SSUBSAT,
                                G_USUBSAT, G_SCMP, G_UCMP})
       .legalFor(allIntScalarsAndVectors)
-      .legalIf(extendedScalarsAndVectors);
+      .legalIf(extendedIntScalarsAndVectors)
+      // LLVM i1 maps to OpTypeBool, not OpTypeInt.
+      .scalarizeIf(typeInSet(0, allBoolVectors), 0)
+      .minScalar(0, s32);
 
   getActionDefinitionsBuilder(G_STRICT_FLDEXP)
       .legalForCartesianProduct(allFloatScalarsAndVectors, allIntScalars);
