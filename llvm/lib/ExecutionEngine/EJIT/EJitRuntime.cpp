@@ -7,6 +7,9 @@
 #include "llvm/ExecutionEngine/EJIT/EJitOptions.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRegistrationStore.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRuntimeState.h"
+#ifdef EJIT_SRE_TASKPOOL
+#include "llvm/ExecutionEngine/EJIT/EJitTaskPool.h"
+#endif
 
 using namespace llvm;
 using namespace llvm::ejit;
@@ -247,5 +250,120 @@ ejit_compile_mode_t ejit_get_compile_mode(void) {
   return gEJIT->getCompileMode() == CompileMode::Async ? EJIT_COMPILE_ASYNC
                                                         : EJIT_COMPILE_SYNC;
 }
+
+#ifdef EJIT_SRE_TASKPOOL
+//===-- SRE taskpool black-box API ----------------------------------------===//
+
+static ejit_status_t taskpoolStatus(EJitCompileOrGetStatus s) {
+  switch (s) {
+  case EJitCompileOrGetStatus::CacheHit:
+  case EJitCompileOrGetStatus::SyncCompiled:
+    return EJIT_OK;
+  case EJitCompileOrGetStatus::EnqueuedPending:
+  case EJitCompileOrGetStatus::AlreadyPending:
+    return EJIT_PENDING;
+  case EJitCompileOrGetStatus::QueueFullFallback:
+    return EJIT_ERR_QUEUE_FULL;
+  case EJitCompileOrGetStatus::DedupFullFallback:
+    return EJIT_ERR_DEDUP_FULL;
+  case EJitCompileOrGetStatus::CacheFullFallback:
+    return EJIT_ERR_CACHE_FULL;
+  case EJitCompileOrGetStatus::DisabledFallback:
+    return EJIT_ERR_DISABLED;
+  case EJitCompileOrGetStatus::CompileFailed:
+  default:
+    return EJIT_ERR_COMPILE_FAILED;
+  }
+}
+
+ejit_status_t ejit_taskpool_sync_compile(uint32_t funcIndex, uint64_t cacheKey,
+                                         void **outFn) {
+  if (outFn)
+    *outFn = nullptr;
+  if (!gEJIT)
+    return EJIT_ERR_NOT_ACTIVE;
+  EJitTaskPool *tp = gEJIT->taskPool();
+  if (!tp)
+    return EJIT_ERR_NOT_ACTIVE;
+
+  EJitCompileRequest req;
+  req.funcIndex = funcIndex;
+  req.version = tp->switchController().getVersion();
+  req.cacheKey = cacheKey;
+  req.fallbackPtr = 0;
+  req.userData = 0;
+  EJitTaskPool::CompileOrGetResult r = tp->syncCompile(req);
+  if (outFn)
+    *outFn = r.fnPtr;
+  EJIT_DIAG("taskpool_sync_compile(func=%u key=0x%016lx) status=%u", funcIndex,
+            cacheKey, (unsigned)r.status);
+  return taskpoolStatus(r.status);
+}
+
+ejit_status_t ejit_taskpool_free_code(uint32_t funcIndex, uint64_t cacheKey) {
+  if (!gEJIT)
+    return EJIT_ERR_NOT_ACTIVE;
+  EJitTaskPool *tp = gEJIT->taskPool();
+  if (!tp)
+    return EJIT_ERR_NOT_ACTIVE;
+  tp->freeCode(funcIndex, cacheKey);
+  return EJIT_OK;
+}
+
+unsigned ejit_taskpool_poll_one(void) {
+  if (!gEJIT)
+    return 0;
+  EJitTaskPool *tp = gEJIT->taskPool();
+  if (!tp)
+    return 0;
+  return tp->pollOne() ? 1u : 0u;
+}
+
+unsigned ejit_taskpool_poll_budget(unsigned maxItems) {
+  if (!gEJIT)
+    return 0;
+  EJitTaskPool *tp = gEJIT->taskPool();
+  if (!tp)
+    return 0;
+  return tp->pollBudget(maxItems);
+}
+
+unsigned ejit_taskpool_pending_count(void) {
+  if (!gEJIT)
+    return 0;
+  EJitTaskPool *tp = gEJIT->taskPool();
+  if (!tp)
+    return 0;
+  return tp->pendingCount();
+}
+
+ejit_status_t ejit_taskpool_get_stats(ejit_taskpool_stats_t *out) {
+  if (!out)
+    return EJIT_ERR_INVALID_PARAM;
+  if (!gEJIT)
+    return EJIT_ERR_NOT_ACTIVE;
+  EJitTaskPool *tp = gEJIT->taskPool();
+  if (!tp)
+    return EJIT_ERR_NOT_ACTIVE;
+
+  EJitTaskPoolStatsSnapshot s;
+  tp->getStats(s);
+  out->cacheHits = s.cacheHits;
+  out->syncCompiles = s.syncCompiles;
+  out->asyncCompiles = s.asyncCompiles;
+  out->asyncEnqueues = s.asyncEnqueues;
+  out->alreadyPending = s.alreadyPending;
+  out->queueFull = s.queueFull;
+  out->dedupFull = s.dedupFull;
+  out->compileFailed = s.compileFailed;
+  out->publishFailed = s.publishFailed;
+  out->freeCodeCalls = s.freeCodeCalls;
+  out->readyEntries = s.readyEntries;
+  out->pendingEntries = s.pendingEntries;
+  out->queueApproxSize = s.queueApproxSize;
+  out->reserved = 0;
+  return EJIT_OK;
+}
+#endif // EJIT_SRE_TASKPOOL
 
 } // extern "C"

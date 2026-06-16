@@ -14,6 +14,21 @@
 using namespace llvm;
 using namespace llvm::ejit;
 
+#ifdef EJIT_SRE_TASKPOOL
+namespace {
+/// Adapter so the taskpool can call back into the driver's cold compile path
+/// through a plain function pointer (never std::function). The produced JIT
+/// pointer still comes from the OrcJIT engine (SRE code pool when enabled).
+bool taskpoolCompileThunk(void *ctx, const EJitCompileRequest &req,
+                          void **outFn) {
+  auto *drv = static_cast<EJitCompileDriver *>(ctx);
+  void *fn = drv->compileNow(req.cacheKey);
+  *outFn = fn;
+  return fn != nullptr;
+}
+} // namespace
+#endif
+
 EJitCompileDriver::EJitCompileDriver(const Config &config,
                                      EJitCache &cache,
                                      EJitRuntimeState &runtimeState,
@@ -24,7 +39,16 @@ EJitCompileDriver::EJitCompileDriver(const Config &config,
 #ifndef EJIT_FREESTANDING
   , logger_(logger)
 #endif
-{}
+{
+#ifdef EJIT_SRE_TASKPOOL
+  // Build the unified scheduler and point its compile callback at this driver.
+  taskPool_ = std::make_unique<EJitTaskPool>();
+  taskPool_->setCompiler(&taskpoolCompileThunk, this);
+  taskPool_->switchController().setMode(
+      config_.compileMode == CompileMode::Async ? EJitCompileMode::Async
+                                                : EJitCompileMode::Sync);
+#endif
+}
 
 EJitCompileDriver::~EJitCompileDriver() = default;
 
@@ -38,13 +62,28 @@ void EJitCompileDriver::registerSymbol(const std::string &name, void *addr) {
 }
 
 void *EJitCompileDriver::getOrCompile(uint64_t cacheKey) {
+#ifdef EJIT_SRE_TASKPOOL
+  // When the taskpool is built, all compile_or_get traffic flows through the
+  // unified scheduler (cache + dedup + sync/async). It owns its own fixed
+  // cache, so the LRU EJitCache hot path below is bypassed in this build.
+  if (taskPool_) {
+    uint32_t funcIndex = static_cast<uint32_t>(cacheKey >> 32);
+    EJitTaskPool::CompileOrGetResult r =
+        taskPool_->compileOrGet(funcIndex, cacheKey, /*fallback=*/nullptr);
+    return r.fnPtr;
+  }
+#endif
 
-  // ── Hot path: single hash find ──────────────────────────────────────────
+  // ── Hot path: single hash find ───────────────────────────────────────────
   if (void *cached = cache_.getOrNull(cacheKey)) {
     EJIT_DIAG("cache HIT key=0x%016lx", cacheKey);
     return cached;
   }
 
+  return compileCold(cacheKey, /*storeLru=*/true);
+}
+
+void *EJitCompileDriver::compileCold(uint64_t cacheKey, bool storeLru) {
   // ── Cold path: decode cacheKey, verify, compile ────────────────────────
   uint32_t funcIdx = static_cast<uint32_t>(cacheKey >> 32);
   uint8_t dims[4] = {
@@ -151,11 +190,15 @@ void *EJitCompileDriver::getOrCompile(uint64_t cacheKey) {
 
   void *funcPtr = *addrOrErr;
 
-  SmallVector<std::string, 4> periodDeps;
-  for (unsigned i = 0; i < dimCount; ++i)
-    periodDeps.push_back(periodNames[i] + "=" + std::to_string(dims[i]));
+  // storeLru is false on the taskpool path: the taskpool publishes to its own
+  // fixed cache and the LRU EJitCache is bypassed in that configuration.
+  if (storeLru) {
+    SmallVector<std::string, 4> periodDeps;
+    for (unsigned i = 0; i < dimCount; ++i)
+      periodDeps.push_back(periodNames[i] + "=" + std::to_string(dims[i]));
 
-  cache_.put(cacheKey, funcPtr, bitcode.size(), periodDeps);
+    cache_.put(cacheKey, funcPtr, bitcode.size(), periodDeps);
+  }
 
   EJIT_DIAG("compile OK key=0x%016lx func=%s → pfn=%p", cacheKey, funcName.c_str(), funcPtr);
   return funcPtr;

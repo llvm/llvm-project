@@ -260,6 +260,12 @@ void EJit::registerStaticVar(const std::string &varName, void *varAddr) {
 
 void EJit::setCompileMode(CompileMode mode) {
   config_.compileMode = mode;
+#ifdef EJIT_SRE_TASKPOOL
+  if (EJitTaskPool *tp = taskPool())
+    tp->switchController().setMode(mode == CompileMode::Async
+                                       ? EJitCompileMode::Async
+                                       : EJitCompileMode::Sync);
+#endif
 }
 
 CompileMode EJit::getCompileMode() const {
@@ -292,3 +298,9 @@ const EJitError *EJit::getLastError() const {
   return nullptr;
 #endif
 }
+
+#ifdef EJIT_SRE_TASKPOOL
+EJitTaskPool *EJit::taskPool() {
+  return compileDriver_ ? compileDriver_->taskPool() : nullptr;
+}
+#endif

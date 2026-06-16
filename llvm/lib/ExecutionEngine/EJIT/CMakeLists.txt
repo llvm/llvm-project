@@ -74,6 +74,15 @@ list(APPEND EJIT_SOURCES
   EJitLogger.cpp
 )
 
+# SRE taskpool compile scheduler — only compiled into the library when enabled.
+# It uses no C++ threading facilities, so it is compatible with EJIT_FREESTANDING.
+if(EJIT_SRE_TASKPOOL)
+  list(APPEND EJIT_SOURCES
+    EJitTaskPool.cpp
+    EJitSreQueue.cpp
+  )
+endif()
+
 # Async/sync compiler — excluded in freestanding mode (single-threaded, no std::thread)
 if(NOT EJIT_FREESTANDING)
   list(APPEND EJIT_SOURCES

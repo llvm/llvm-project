@@ -622,6 +622,38 @@ if(EJIT_SRE_CODE_POOL AND EJIT_CODE_POOL_4K_SEAL)
   message(STATUS "EmbeddedJIT: SRE code pool uses 4K-granular page sealing")
 endif()
 
+#===-- EmbeddedJIT SRE taskpool compile scheduler -------------------------===#
+# Route ejit_compile_or_get through a unified taskpool (cache + dedup + queue)
+# instead of calling the synchronous compile driver directly. Sync and async
+# share the same cache/dedup pipeline; async means "producer + explicit poll
+# worker", never an EJIT-owned thread (the target aarch64_be SRE platform has
+# no C++ thread library). Default OFF: upstream default behavior is unchanged.
+option(EJIT_SRE_TASKPOOL
+  "Enable the EmbeddedJIT SRE taskpool compile scheduler for ejit_compile_or_get" OFF)
+if(EJIT_SRE_TASKPOOL)
+  add_definitions(-DEJIT_SRE_TASKPOOL)
+endif()
+
+# Number of dedup/cache buckets (bucket = funcIndex % N). 32 spreads contention
+# instead of degenerating to a single funcIndex%32 flag.
+set(EJIT_SRE_TASKPOOL_BUCKETS "32" CACHE STRING
+  "EmbeddedJIT SRE taskpool dedup/cache bucket count")
+# Slots per bucket (fixed; bounds collisions per bucket).
+set(EJIT_SRE_TASKPOOL_BUCKET_SLOTS "8" CACHE STRING
+  "EmbeddedJIT SRE taskpool dedup/cache slots per bucket")
+# Async work-queue capacity (rounded up to a power of two).
+set(EJIT_SRE_TASKPOOL_QUEUE_CAPACITY "1024" CACHE STRING
+  "EmbeddedJIT SRE taskpool async queue capacity (power of two)")
+if(EJIT_SRE_TASKPOOL)
+  add_definitions(-DEJIT_SRE_TASKPOOL_BUCKETS=${EJIT_SRE_TASKPOOL_BUCKETS})
+  add_definitions(-DEJIT_SRE_TASKPOOL_BUCKET_SLOTS=${EJIT_SRE_TASKPOOL_BUCKET_SLOTS})
+  add_definitions(-DEJIT_SRE_TASKPOOL_QUEUE_CAPACITY=${EJIT_SRE_TASKPOOL_QUEUE_CAPACITY})
+  message(STATUS "EmbeddedJIT: SRE taskpool enabled "
+                 "(buckets=${EJIT_SRE_TASKPOOL_BUCKETS}, "
+                 "slots=${EJIT_SRE_TASKPOOL_BUCKET_SLOTS}, "
+                 "queue=${EJIT_SRE_TASKPOOL_QUEUE_CAPACITY})")
+endif()
+
 set(LLVM_TARGETS_TO_BUILD "all"
     CACHE STRING "Semicolon-separated list of targets to build, or \"all\".")
 

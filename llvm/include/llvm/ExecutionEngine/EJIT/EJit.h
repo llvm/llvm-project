@@ -22,6 +22,7 @@ namespace ejit {
 
 class EJitCompileDriver;
 class EJitLogger;
+class EJitTaskPool;
 
 /// Main user-facing class for EmbeddedJIT. Owns all runtime components.
 class EJit {
@@ -79,6 +80,12 @@ public:
 
   // Error
   const EJitError *getLastError() const;
+
+#ifdef EJIT_SRE_TASKPOOL
+  /// Access the SRE taskpool scheduler (used by the taskpool C ABI). May be
+  /// null if the compile driver was not constructed.
+  EJitTaskPool *taskPool();
+#endif
 
 private:
   Config config_;

@@ -13,6 +13,9 @@
 #include "llvm/ExecutionEngine/EJIT/EJitModuleLoader.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOptions.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRuntimeState.h"
+#ifdef EJIT_SRE_TASKPOOL
+#include "llvm/ExecutionEngine/EJIT/EJitTaskPool.h"
+#endif
 #include <memory>
 #include <string>
 
@@ -47,6 +50,18 @@ public:
   /// active, no bitcode, or compile failure).
   void *getOrCompile(uint64_t cacheKey);
 
+#ifdef EJIT_SRE_TASKPOOL
+  /// Cold compile path WITHOUT storing into the LRU EJitCache. Used as the
+  /// taskpool's compile callback (the taskpool owns its own fixed cache).
+  /// Returns the JIT function pointer or nullptr.
+  void *compileNow(uint64_t cacheKey) {
+    return compileCold(cacheKey, /*storeLru=*/false);
+  }
+
+  /// The SRE taskpool scheduler (non-null when EJIT_SRE_TASKPOOL is built).
+  EJitTaskPool *taskPool() { return taskPool_.get(); }
+#endif
+
   EJitCache &getCache() { return cache_; }
   EJitRuntimeState &getRuntimeState() { return runtimeState_; }
   EJitModuleLoader &getLoader() { return loader_; }
@@ -71,7 +86,14 @@ private:
 #endif
 
   std::unique_ptr<EJitOrcEngine> syncEngine_;
+#ifdef EJIT_SRE_TASKPOOL
+  std::unique_ptr<EJitTaskPool> taskPool_;
+#endif
   // Async compiler will be added in EJitAsyncCompiler phase
+
+  /// Cold compile path (decode → verify active → load bitcode → JIT compile).
+  /// When \p storeLru is true the result is inserted into the LRU EJitCache.
+  void *compileCold(uint64_t cacheKey, bool storeLru);
 };
 
 } // namespace ejit
