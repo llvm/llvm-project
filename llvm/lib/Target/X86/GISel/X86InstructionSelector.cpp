@@ -121,6 +121,11 @@ private:
                        MachineFunction &MF) const;
   bool selectSelect(MachineInstr &I, MachineRegisterInfo &MRI,
                     MachineFunction &MF) const;
+  bool selectInsertVectorElt(MachineInstr &I, MachineRegisterInfo &MRI,
+                             MachineFunction &MF);
+
+  unsigned getMachineOpcodeForInsert(unsigned EltSizeInBits) const;
+  unsigned getScalarToVecOpcode(unsigned EltSizeInBits) const;
 
   ComplexRendererFns selectAddr(MachineOperand &Root) const;
 
@@ -491,6 +496,8 @@ bool X86InstructionSelector::select(MachineInstr &I) {
     return selectMulDivRem(I, MRI, MF);
   case TargetOpcode::G_SELECT:
     return selectSelect(I, MRI, MF);
+  case TargetOpcode::G_INSERT_VECTOR_ELT:
+    return selectInsertVectorElt(I, MRI, MF);
   }
 
   return false;
@@ -1968,6 +1975,107 @@ bool X86InstructionSelector::selectSelect(MachineInstr &I,
   }
 
   Sel.eraseFromParent();
+  return true;
+}
+
+unsigned X86InstructionSelector::getMachineOpcodeForInsert(
+    unsigned EltSizeInBits) const {
+  bool HasAVX = STI.hasAVX();
+  bool HasAVX512 = STI.hasAVX512();
+  bool HasBWI = STI.hasBWI();
+  bool HasDQI = STI.hasDQI();
+  bool HasVLX = STI.hasVLX();
+  bool HasSSE41 = STI.hasSSE41();
+
+  // {SSE, AVX, AVX512} opcodes per element size.
+  static constexpr unsigned PinsrOpcodes[][3] = {
+      {X86::PINSRBrri, X86::VPINSRBrri, X86::VPINSRBZrri}, // 8-bit
+      {X86::PINSRWrri, X86::VPINSRWrri, X86::VPINSRWZrri}, // 16-bit
+      {X86::PINSRDrri, X86::VPINSRDrri, X86::VPINSRDZrri}, // 32-bit
+      {X86::PINSRQrri, X86::VPINSRQrri, X86::VPINSRQZrri}, // 64-bit
+  };
+  assert(EltSizeInBits % 8 == 0 && EltSizeInBits <= 64);
+  unsigned Row = EltSizeInBits / 8 - 1;
+  if (EltSizeInBits == 8) {
+    if (HasBWI)
+      return PinsrOpcodes[Row][2];
+    if (HasAVX)
+      return PinsrOpcodes[Row][1];
+    if (HasSSE41)
+      return PinsrOpcodes[Row][0];
+    return 0;
+  }
+  if (EltSizeInBits == 16) {
+    if (HasBWI)
+      return PinsrOpcodes[Row][2];
+    if (HasAVX)
+      return PinsrOpcodes[Row][1];
+    return PinsrOpcodes[Row][0];
+  }
+  // 32/64-bit
+  if (HasAVX512 && (HasDQI || HasVLX))
+    return PinsrOpcodes[Row][2];
+  if (HasAVX)
+    return PinsrOpcodes[Row][1];
+  if (HasSSE41)
+    return PinsrOpcodes[Row][0];
+  return 0;
+}
+
+unsigned
+X86InstructionSelector::getScalarToVecOpcode(unsigned EltSizeInBits) const {
+  bool HasAVX = STI.hasAVX();
+  bool HasAVX512 = STI.hasAVX512();
+  switch (EltSizeInBits) {
+  case 32:
+    return HasAVX512 ? X86::VMOVDI2PDIZrr
+           : HasAVX  ? X86::VMOVDI2PDIrr
+                     : X86::MOVDI2PDIrr;
+  case 64:
+    return HasAVX512 ? X86::VMOV64toPQIZrr
+           : HasAVX  ? X86::VMOV64toPQIrr
+                     : X86::MOV64toPQIrr;
+  default:
+    llvm_unreachable("Unsupported element size");
+  }
+  return 0;
+}
+
+bool X86InstructionSelector::selectInsertVectorElt(MachineInstr &I,
+                                                   MachineRegisterInfo &MRI,
+                                                   MachineFunction &MF) {
+  assert(I.getOpcode() == TargetOpcode::G_INSERT_VECTOR_ELT);
+
+  Register DstReg = I.getOperand(0).getReg();
+  Register VecReg = I.getOperand(1).getReg();
+  Register EltReg = I.getOperand(2).getReg();
+  Register IdxReg = I.getOperand(3).getReg();
+
+  LLT VecTy = MRI.getType(DstReg);
+  unsigned EltSize = VecTy.getScalarSizeInBits();
+  unsigned NumElts = VecTy.getNumElements();
+  unsigned VecSize = VecTy.getSizeInBits();
+
+  auto IdxVal = getIConstantVRegValWithLookThrough(IdxReg, MRI);
+  if (!IdxVal)
+    return false;
+  uint64_t Idx = IdxVal->Value.getZExtValue();
+  if (Idx >= NumElts)
+    return false;
+
+  // TODO: use movd/vmovd/movq at idx 0 to avoid false dependency.
+
+  unsigned Opc = getMachineOpcodeForInsert(EltSize);
+  if (!Opc)
+    return false;
+
+  auto &MIB = *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opc), DstReg)
+                   .addReg(VecReg)
+                   .addReg(EltReg)
+                   .addImm(Idx);
+
+  constrainSelectedInstRegOperands(MIB, TII, TRI, RBI);
+  I.eraseFromParent();
   return true;
 }
 
