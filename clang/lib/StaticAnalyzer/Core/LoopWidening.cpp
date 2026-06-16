@@ -16,6 +16,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/LoopWidening.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/InvalidationCause.h"
 
 using namespace clang;
 using namespace ento;
@@ -26,7 +27,8 @@ const auto MatchRef = "matchref";
 namespace clang {
 namespace ento {
 
-ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
+ProgramStateRef getWidenedLoopState(const Stmt *LoopStmt,
+                                    ProgramStateRef PrevState,
                                     const StackFrame *SF, unsigned BlockCount,
                                     ConstCFGElementRef Elem) {
   // Invalidate values in the current state.
@@ -36,6 +38,7 @@ ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
   //      being so inprecise. When the invalidation is improved, the handling
   //      of nested loops will also need to be improved.
   ASTContext &ASTCtx = SF->getAnalysisDeclContext()->getASTContext();
+  SymbolManager &SymMgr = PrevState->getStateManager().getSymbolManager();
   MemRegionManager &MRMgr = PrevState->getStateManager().getRegionManager();
   const MemRegion *Regions[] = {MRMgr.getStackLocalsRegion(SF),
                                 MRMgr.getStackArgumentsRegion(SF),
@@ -59,7 +62,6 @@ ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
                      RegionAndSymbolInvalidationTraits::TK_PreserveContents);
   }
 
-
   // 'this' pointer is not an lvalue, we should not invalidate it. If the loop
   // is located in a method, constructor or destructor, the value of 'this'
   // pointer should remain unchanged.  Ignore static methods, since they do not
@@ -72,8 +74,10 @@ ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
                      RegionAndSymbolInvalidationTraits::TK_PreserveContents);
   }
 
-  return PrevState->invalidateRegions(Regions, Elem, BlockCount, SF, true,
-                                      nullptr, nullptr, &ITraits);
+  return PrevState->invalidateRegions(
+      Regions, Elem, BlockCount, SF, /*CausesPointerEscape=*/true,
+      /*InvalidatedSymbols=*/nullptr, /*Call=*/nullptr, &ITraits,
+      SymMgr.acquireCause<LoopWidening>(LoopStmt));
 }
 
 } // end namespace ento
