@@ -9065,15 +9065,33 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
     case TargetOpcode::G_LSHR:
       Known = KnownBits::lshr(SrcKnown, AmtKnown);
       break;
-    case TargetOpcode::G_ASHR:
+    case TargetOpcode::G_ASHR: {
       // If none of the sign-fill result bits [BW-ShAmt, BW) are demanded, or
       // the sign bit is known zero, an unsigned shift computes the same
-      // demanded bits (SDAG's SRA-case rewrite).
-      if (Demanded.countLeadingZeros() >= ShAmt || SrcKnown.isNonNegative()) {
+      // demanded bits (SDAG's SRA-case rewrite). Only do this when the G_LSHR
+      // we would synthesise is legal: this rule runs post-legalization, and the
+      // legality check must gate the dry run and the rewrite identically so the
+      // matcher never reports a change the apply phase declines to make.
+      // (isLegal asserts on a null LegalizerInfo, so consult it only when we
+      // have one; without it we cannot prove illegality and allow the rewrite.)
+      LLT AmtTy = MRI.getType(DefMI->getOperand(2).getReg());
+      bool LShrLegal = isPreLegalize() || !LI ||
+                       isLegal({TargetOpcode::G_LSHR, {OpTy, AmtTy}});
+      if ((Demanded.countLeadingZeros() >= ShAmt || SrcKnown.isNonNegative()) &&
+          LShrLegal) {
         if (DoRewrite) {
+          // The walk shares the combiner's builder; save and restore its
+          // insertion point so emitting the replacement here has no observable
+          // side effect for the caller (e.g. applyCombineTruncOfShift, which
+          // keeps building at the root after this returns).
+          MachineBasicBlock &SaveMBB = Builder.getMBB();
+          MachineBasicBlock::iterator SavePt = Builder.getInsertPt();
+          DebugLoc SaveDL = Builder.getDL();
           Builder.setInstrAndDebugLoc(*DefMI);
           auto Lshr = Builder.buildLShr(OpTy, DefMI->getOperand(1).getReg(),
                                         DefMI->getOperand(2).getReg());
+          Builder.setInsertPt(SaveMBB, SavePt);
+          Builder.setDebugLoc(SaveDL);
           Rewrite(Lshr.getReg(0));
           Known = KnownBits::lshr(SrcKnown, AmtKnown);
         }
@@ -9082,6 +9100,7 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
       }
       Known = KnownBits::ashr(SrcKnown, AmtKnown);
       break;
+    }
     }
     return Changed;
   }

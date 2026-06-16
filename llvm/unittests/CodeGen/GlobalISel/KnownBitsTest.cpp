@@ -2371,6 +2371,50 @@ TEST_F(AArch64GISelMITest, SimplifyDemandedBitsAshrToLshr) {
   EXPECT_NE(findOpcode(*MF, TargetOpcode::G_LSHR), nullptr);
 }
 
+// The G_ASHR->G_LSHR rewrite emits a new shift, which moves the shared
+// MachineIRBuilder's insertion point internally. The walk must restore it so
+// callers that keep building afterwards (e.g. applyCombineTruncOfShift) are not
+// left emitting at a stale point. Verify the insertion state is unchanged.
+TEST_F(AArch64GISelMITest, SimplifyDemandedBitsPreservesBuilderInsertPt) {
+  StringRef MIRString = R"(
+    %x:_(s32) = G_TRUNC %0
+    %amt:_(s32) = G_CONSTANT i32 8
+    %ashr:_(s32) = G_ASHR %x, %amt
+    %lowmask:_(s32) = G_CONSTANT i32 65535
+    %use:_(s32) = G_AND %ashr, %lowmask
+    %out:_(s32) = COPY %use
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  MachineInstr *Use = findOpcode(*MF, TargetOpcode::G_AND);
+  ASSERT_NE(Use, nullptr);
+
+  // Anchor the builder at the final COPY (an instruction the rewrite never
+  // touches) and record its insertion state.
+  MachineInstr *Anchor = MRI->getVRegDef(Copies[Copies.size() - 1]);
+  ASSERT_NE(Anchor, nullptr);
+  B.setInsertPt(*Anchor->getParent(), Anchor->getIterator());
+  MachineBasicBlock *SavedMBB = &B.getMBB();
+  MachineBasicBlock::iterator SavedPt = B.getInsertPt();
+
+  GISelValueTracking VT(*MF);
+  CombinerHelper Helper(VT, B, /*IsPreLegalize=*/false, &VT);
+  KnownBits Known(32);
+  EXPECT_TRUE(
+      Helper.simplifyDemandedBits(*Use, /*OpNo=*/1, APInt(32, 0xFFFF), Known));
+
+  // The rewrite must have fired (otherwise the builder is never moved and this
+  // test would pass vacuously).
+  EXPECT_EQ(findOpcode(*MF, TargetOpcode::G_ASHR), nullptr);
+  EXPECT_NE(findOpcode(*MF, TargetOpcode::G_LSHR), nullptr);
+
+  // ...and the builder must be back exactly where the caller left it.
+  EXPECT_EQ(&B.getMBB(), SavedMBB);
+  EXPECT_EQ(B.getInsertPt(), SavedPt);
+}
+
 TEST_F(AArch64GISelMITest, SimplifyDemandedBitsMultiUseDefNoDescend) {
   StringRef MIRString = R"(
    %z:_(s32) = G_TRUNC %0
