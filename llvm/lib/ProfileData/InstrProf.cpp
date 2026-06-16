@@ -1393,7 +1393,11 @@ void annotateValueSite(Module &M, Instruction &Inst,
     Vals.push_back(MDHelper.createConstant(
         ConstantInt::get(Type::getInt64Ty(Ctx), ZeroCount)));
   }
-  Inst.setMetadata(LLVMContext::MD_prof, MDNode::get(Ctx, Vals));
+  // Only add metadata if we have at least one value. Otherwise we will end
+  // up adding invalid metadata in the case where the profile only has a
+  // zero value with a zero count.
+  if (Vals.size() >= 5)
+    Inst.setMetadata(LLVMContext::MD_prof, MDNode::get(Ctx, Vals));
 }
 
 MDNode *mayHaveValueProfileOfKind(const Instruction &Inst,

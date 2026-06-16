@@ -6,10 +6,10 @@ static_library("ABI") {
     "//llvm/lib/Support",
   ]
   sources = [
-    "Types.cpp",
     "FunctionInfo.cpp",
-    "TargetInfo.cpp",
     "IRTypeMapper.cpp",
+    "TargetInfo.cpp",
     "Targets/BPF.cpp",
+    "Types.cpp",
   ]
 }

@@ -58,6 +58,27 @@ extern cl::opt<bool> PreferInLoopReductions;
 std::optional<unsigned> getMaxVScale(const Function &F,
                                      const TargetTransformInfo &TTI);
 
+// Utility functions that are used by different vectorization classes
+namespace LoopVectorizationUtils {
+
+/// Reports a vectorization failure: print \p DebugMsg for debugging
+/// purposes along with the corresponding optimization remark \p RemarkName.
+/// If \p I is passed, it is an instruction that prevents vectorization.
+/// Otherwise, the loop \p TheLoop is used for the location of the remark.
+void reportVectorizationFailure(const StringRef DebugMsg,
+                                const StringRef OREMsg, const StringRef ORETag,
+                                OptimizationRemarkEmitter *ORE,
+                                const Loop *TheLoop, Instruction *I = nullptr);
+
+/// Same as above, but the debug message and optimization remark are identical
+inline void reportVectorizationFailure(const StringRef DebugMsg,
+                                       const StringRef ORETag,
+                                       OptimizationRemarkEmitter *ORE,
+                                       const Loop *TheLoop,
+                                       Instruction *I = nullptr) {
+  reportVectorizationFailure(DebugMsg, DebugMsg, ORETag, ORE, TheLoop, I);
+}
+
 /// Reports an informative message: print \p Msg for debugging purposes as well
 /// as an optimization remark. Uses either \p I as location of the remark, or
 /// otherwise \p TheLoop. If \p DL is passed, use it as debug location for the
@@ -67,27 +88,17 @@ void reportVectorizationInfo(const StringRef Msg, const StringRef ORETag,
                              const Loop *TheLoop, Instruction *I = nullptr,
                              DebugLoc DL = {});
 
+/// Report successful vectorization of the loop. In case an outer loop is
+/// vectorized, prepend "outer" to the vectorization remark.
+void reportVectorization(OptimizationRemarkEmitter *ORE, Loop *TheLoop,
+                         ElementCount VFWidth, unsigned IC);
+
+} // namespace LoopVectorizationUtils
+
 /// VPlan-based builder utility analogous to IRBuilder.
 class VPBuilder {
   VPBasicBlock *BB = nullptr;
   VPBasicBlock::iterator InsertPt = VPBasicBlock::iterator();
-
-  /// Lightweight SCEV-to-VPlan expander. Converts SCEVConstant, SCEVUnknown,
-  /// SCEVVScale and SCEVMulExpr into VPInstructions. Other SCEV expressions are
-  /// unsupported.
-  class VPSCEVExpander {
-    VPBuilder &Builder;
-    VPlan &Plan;
-    DebugLoc DL;
-
-  public:
-    VPSCEVExpander(VPBuilder &Builder, VPlan &Plan, DebugLoc DL)
-        : Builder(Builder), Plan(Plan), DL(DL) {}
-
-    /// Expand \p S into recipes and live-ins using the builder. Returns nullptr
-    /// if \p S cannot be expanded yet.
-    VPValue *expand(const SCEV *S);
-  };
 
   /// Insert \p VPI in BB at InsertPt if BB is set.
   template <typename T> T *tryInsertInstruction(T *R) {
@@ -104,12 +115,12 @@ class VPBuilder {
         new VPInstruction(Opcode, Operands, {}, MD, DL, Name));
   }
 
+public:
   VPlan &getPlan() const {
     assert(getInsertBlock() && "Insert block must be set");
     return *getInsertBlock()->getPlan();
   }
 
-public:
   VPBuilder() = default;
   VPBuilder(VPBasicBlock *InsertBB) { setInsertPoint(InsertBB); }
   VPBuilder(VPRecipeBase *InsertPt) { setInsertPoint(InsertPt); }
@@ -197,9 +208,10 @@ public:
                               const VPIRFlags &Flags = {},
                               const VPIRMetadata &MD = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
-                              const Twine &Name = "") {
+                              const Twine &Name = "",
+                              Type *ResultTy = nullptr) {
     VPInstruction *NewVPInst = tryInsertInstruction(
-        new VPInstruction(Opcode, Operands, Flags, MD, DL, Name));
+        new VPInstruction(Opcode, Operands, Flags, MD, DL, Name, ResultTy));
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
@@ -226,15 +238,23 @@ public:
   VPInstruction *createFirstActiveLane(ArrayRef<VPValue *> Masks,
                                        DebugLoc DL = DebugLoc::getUnknown(),
                                        const Twine &Name = "") {
+    // Assume that the maximum possible number of elements in a vector fits
+    // within the index type for the default address space.
+    VPlan &Plan = getPlan();
+    Type *IndexTy = Plan.getDataLayout().getIndexType(Plan.getContext(), 0);
     return tryInsertInstruction(new VPInstruction(
-        VPInstruction::FirstActiveLane, Masks, {}, {}, DL, Name));
+        VPInstruction::FirstActiveLane, Masks, {}, {}, DL, Name, IndexTy));
   }
 
   VPInstruction *createLastActiveLane(ArrayRef<VPValue *> Masks,
                                       DebugLoc DL = DebugLoc::getUnknown(),
                                       const Twine &Name = "") {
-    return tryInsertInstruction(new VPInstruction(VPInstruction::LastActiveLane,
-                                                  Masks, {}, {}, DL, Name));
+    // Assume that the maximum possible number of elements in a vector fits
+    // within the index type for the default address space.
+    VPlan &Plan = getPlan();
+    Type *IndexTy = Plan.getDataLayout().getIndexType(Plan.getContext(), 0);
+    return tryInsertInstruction(new VPInstruction(
+        VPInstruction::LastActiveLane, Masks, {}, {}, DL, Name, IndexTy));
   }
 
   VPInstruction *createOverflowingOp(
@@ -359,8 +379,10 @@ public:
 
   VPPhi *createScalarPhi(ArrayRef<VPValue *> IncomingValues,
                          DebugLoc DL = DebugLoc::getUnknown(),
-                         const Twine &Name = "", const VPIRFlags &Flags = {}) {
-    return tryInsertInstruction(new VPPhi(IncomingValues, Flags, DL, Name));
+                         const Twine &Name = "", const VPIRFlags &Flags = {},
+                         Type *ResultTy = nullptr) {
+    return tryInsertInstruction(
+        new VPPhi(IncomingValues, Flags, DL, Name, ResultTy));
   }
 
   VPWidenPHIRecipe *createWidenPhi(ArrayRef<VPValue *> IncomingValues,
@@ -437,10 +459,32 @@ public:
     return createScalarCast(CastOp, Op, ResultTy, DL);
   }
 
+  VPValue *createScalarFreeze(VPValue *Op, Type *ResultTy, DebugLoc DL) {
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::Freeze, Op, {}, {}, DL));
+  }
+
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
                                      Type *ResultTy) {
     return tryInsertInstruction(new VPWidenCastRecipe(
         Opcode, Op, ResultTy, nullptr, VPIRFlags::getDefaultFlags(Opcode)));
+  }
+
+  /// Create a single-scalar recipe with \p Opcode and \p Operands without
+  /// inserting it.
+  static VPSingleDefRecipe *createSingleScalarOp(unsigned Opcode,
+                                                 ArrayRef<VPValue *> Operands,
+                                                 VPValue *Mask,
+                                                 const VPIRFlags &Flags,
+                                                 const VPIRMetadata &Metadata,
+                                                 DebugLoc DL, Instruction *UV) {
+    if (Instruction::isCast(Opcode)) {
+      assert(!Mask && "Cast cannot be predicated");
+      return new VPInstructionWithType(Opcode, Operands, UV->getType(), Flags,
+                                       Metadata, DL, UV->getName(), UV);
+    }
+    return new VPReplicateRecipe(UV, Operands, /*IsSingleScalar=*/true, Mask,
+                                 Flags, Metadata, DL);
   }
 
   VPScalarIVStepsRecipe *
@@ -450,12 +494,6 @@ public:
     return tryInsertInstruction(new VPScalarIVStepsRecipe(
         IV, Step, VF, InductionOpcode,
         FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags(), DL));
-  }
-
-  /// Expand \p Expr using VPSCEVExpander. Returns nullptr if \p S cannot be
-  /// expanded yet.
-  VPValue *expandSCEV(const SCEV *Expr, DebugLoc DL) {
-    return VPSCEVExpander(*this, getPlan(), DL).expand(Expr);
   }
 
   VPExpandSCEVRecipe *createExpandSCEV(const SCEV *Expr) {
@@ -925,6 +963,11 @@ public:
       bool DisableRuntimeUnroll);
 
 private:
+  /// Build an initial VPlan, with HCFG wrapping the original scalar loop and
+  /// scalar transformations applied. Returns null if an initial VPlan cannot
+  /// be built.
+  VPlanPtr tryToBuildVPlan1();
+
   /// Build a VPlan using VPRecipes according to the information gathered by
   /// Legal and VPlan-based analysis. For outer loops, performs basic recipe
   /// conversion only. For inner loops, \p Range's largest included VF is
@@ -936,9 +979,9 @@ private:
   VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
-  /// according to the information gathered by Legal when it checked if it is
-  /// legal to vectorize the loop.
-  void buildVPlans(ElementCount MinVF, ElementCount MaxVF);
+  /// based on \p VPlan1 and according to the information gathered by Legal
+  /// when it checked if it is legal to vectorize the loop.
+  void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF);
 
   /// Add ComputeReductionResult recipes to the middle block to compute the
   /// final reduction results. Add Select recipes to the latch block when

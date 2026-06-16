@@ -29,6 +29,20 @@
 #include <cstring>
 #include <limits.h>
 
+/// Shared headers from LLVM libc
+/// Make sure to add ${LLVM_SOURCE_DIR}/../libc to include directories.
+///
+/// Notes: So far it looks like APFloat does not check errnos or floating-point
+/// exceptions after calling the math functions, so we will configure LLVM libc
+/// math functions to skip setting errnos and floating-point exceptions
+/// explicitly.  We also put them in a separate namespace so that the symbols
+/// do not clash with other libc math builds just in case.
+#define LIBC_NAMESPACE __llvm_libc_apfloat
+#define LIBC_MATH (LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT)
+
+#include "shared/math.h"
+#include "shared/math_check_exceptions.h"
+
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
   do {                                                                         \
     if (usesLayout<IEEEFloat>(getSemantics()))                                 \
@@ -6078,6 +6092,55 @@ APFloat::Storage &APFloat::Storage::operator=(APFloat::Storage &&RHS) {
     new (this) Storage(std::move(RHS));
   }
   return *this;
+}
+
+namespace {
+
+APFloat::opStatus getOpStatusFromLibc(int libc_exceptions) {
+  APFloat::opStatus status = APFloat::opOK;
+  if (libc_exceptions & FE_INVALID)
+    status = static_cast<APFloat::opStatus>(status | APFloat::opInvalidOp);
+  if (libc_exceptions & FE_DIVBYZERO)
+    status = static_cast<APFloat::opStatus>(status | APFloat::opDivByZero);
+  if (libc_exceptions & FE_OVERFLOW)
+    status = static_cast<APFloat::opStatus>(status | APFloat::opOverflow);
+  if (libc_exceptions & FE_UNDERFLOW)
+    status = static_cast<APFloat::opStatus>(status | APFloat::opUnderflow);
+  if (libc_exceptions & FE_INEXACT)
+    status = static_cast<APFloat::opStatus>(status | APFloat::opInexact);
+  return status;
+}
+
+} // namespace
+
+// TODO: Support other rounding modes when LLVM libc math implement static
+// roundings.
+std::optional<APFloat> exp(const APFloat &x, RoundingMode rounding_mode,
+                           APFloat::opStatus *status) {
+
+  if (rounding_mode == APFloatBase::rmNearestTiesToEven) {
+    if (APFloat::SemanticsToEnum(x.getSemantics()) ==
+        APFloatBase::S_IEEEsingle) {
+      float x_val = x.convertToFloat();
+      int exc =
+          LIBC_NAMESPACE::shared::check::exp_exceptions(x_val, FE_TONEAREST);
+      if (status)
+        *status = getOpStatusFromLibc(exc);
+      float result = LIBC_NAMESPACE::shared::expf(x_val);
+      return APFloat(result);
+    }
+    if (APFloat::SemanticsToEnum(x.getSemantics()) ==
+        APFloatBase::S_IEEEdouble) {
+      double x_val = x.convertToDouble();
+      int exc =
+          LIBC_NAMESPACE::shared::check::exp_exceptions(x_val, FE_TONEAREST);
+      if (status)
+        *status = getOpStatusFromLibc(exc);
+      double result = LIBC_NAMESPACE::shared::exp(x_val);
+      return APFloat(result);
+    }
+  }
+  return std::nullopt;
 }
 
 } // namespace llvm

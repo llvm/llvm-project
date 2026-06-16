@@ -83,6 +83,8 @@ GCNHazardRecognizer::GCNHazardRecognizer(const MachineFunction &MF,
 
 void GCNHazardRecognizer::Reset() {
   EmittedInstrs.clear();
+  EmittedVALUInstrs.clear();
+  HasPendingWMMACoexecHazard = false;
 }
 
 void GCNHazardRecognizer::EmitInstruction(SUnit *SU) {
@@ -208,8 +210,10 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
 
   // Hazards which cannot be mitigated with S_NOPs.
   if (!IsHazardRecognizerMode) {
-    if (checkWMMACoexecutionHazards(MI) > 0)
+    if (checkWMMACoexecutionHazards(MI) > 0) {
+      HasPendingWMMACoexecHazard = true;
       return Hazard;
+    }
   }
 
   if (ST.hasNoDataDepHazard())
@@ -419,8 +423,13 @@ void GCNHazardRecognizer::AdvanceCycle() {
   // emitting any instructions.
   if (!CurrCycleInstr) {
     EmittedInstrs.push_front(nullptr);
+
+    if (HasPendingWMMACoexecHazard)
+      EmittedVALUInstrs.push_front(nullptr);
     return;
   }
+
+  HasPendingWMMACoexecHazard = false;
 
   if (CurrCycleInstr->isBundle()) {
     processBundle();
@@ -436,6 +445,20 @@ void GCNHazardRecognizer::AdvanceCycle() {
   // Keep track of emitted instructions
   EmittedInstrs.push_front(CurrCycleInstr);
 
+  bool IsVALUOrWMMA = SIInstrInfo::isVALU(*CurrCycleInstr) ||
+                      SIInstrInfo::isWMMA(*CurrCycleInstr) ||
+                      SIInstrInfo::isSWMMAC(*CurrCycleInstr);
+  if (IsVALUOrWMMA) {
+    EmittedVALUInstrs.push_front(CurrCycleInstr);
+  } else {
+    // A pending WMMA co-execution hazard optimistically records stall cycles as
+    // future V_NOPs. If the scheduler instead stalls for a different
+    // (S_NOP-resolvable) hazard and schedules a non-VALU into those cycles,
+    // they will not resolve the VALU-pipe hazard, so drop them here.
+    while (!EmittedVALUInstrs.empty() && EmittedVALUInstrs.front() == nullptr)
+      EmittedVALUInstrs.pop_front();
+  }
+
   // Add a nullptr for each additional wait state after the first.  Make sure
   // not to add more than getMaxLookAhead() items to the list, since we
   // truncate the list to that size right after this loop.
@@ -448,6 +471,8 @@ void GCNHazardRecognizer::AdvanceCycle() {
   // to insert, so there is no point in keeping track of more than that many
   // wait states.
   EmittedInstrs.resize(getMaxLookAhead());
+  if (EmittedVALUInstrs.size() > MaxVALULookAhead)
+    EmittedVALUInstrs.resize(MaxVALULookAhead);
 
   CurrCycleInstr = nullptr;
 }
@@ -479,16 +504,6 @@ hasHazard(StateT InitialState,
     }
   };
   struct StateMapKeyTraits : DenseMapInfo<StateMapKey> {
-    static inline StateMapKey getEmptyKey() {
-      return {static_cast<SmallVectorImpl<StateT> *>(
-                  DenseMapInfo<void *>::getEmptyKey()),
-              DenseMapInfo<unsigned>::getEmptyKey()};
-    }
-    static inline StateMapKey getTombstoneKey() {
-      return {static_cast<SmallVectorImpl<StateT> *>(
-                  DenseMapInfo<void *>::getTombstoneKey()),
-              DenseMapInfo<unsigned>::getTombstoneKey()};
-    }
     static unsigned getHashValue(const StateMapKey &Key) {
       return StateT::getHashValue((*Key.States)[Key.Idx]);
     }
@@ -496,17 +511,9 @@ hasHazard(StateT InitialState,
       return StateT::getHashValue(State);
     }
     static bool isEqual(const StateMapKey &LHS, const StateMapKey &RHS) {
-      const auto EKey = getEmptyKey();
-      const auto TKey = getTombstoneKey();
-      if (StateMapKey::isEqual(LHS, EKey) || StateMapKey::isEqual(RHS, EKey) ||
-          StateMapKey::isEqual(LHS, TKey) || StateMapKey::isEqual(RHS, TKey))
-        return StateMapKey::isEqual(LHS, RHS);
       return StateT::isEqual((*LHS.States)[LHS.Idx], (*RHS.States)[RHS.Idx]);
     }
     static bool isEqual(const StateT &LHS, const StateMapKey &RHS) {
-      if (StateMapKey::isEqual(RHS, getEmptyKey()) ||
-          StateMapKey::isEqual(RHS, getTombstoneKey()))
-        return false;
       return StateT::isEqual(LHS, (*RHS.States)[RHS.Idx]);
     }
   };
@@ -650,6 +657,35 @@ int GCNHazardRecognizer::getWaitStatesSince(
 int GCNHazardRecognizer::getWaitStatesSince(IsHazardFn IsHazard,
                                             int Limit) const {
   return getWaitStatesSince(IsHazard, Limit, SIInstrInfo::getNumWaitStates);
+}
+
+int GCNHazardRecognizer::getWaitStatesSinceVALU(IsHazardFn IsHazard,
+                                                int Limit) const {
+  if (IsHazardRecognizerMode) {
+    auto GetVALUWaitStates = [](const MachineInstr &MI) -> unsigned {
+      return SIInstrInfo::isVALU(MI) ? 1 : 0;
+    };
+    return getWaitStatesSince(IsHazard, Limit, GetVALUWaitStates);
+  }
+
+  // EmittedVALUInstrs is capped at MaxVALULookAhead, so a Limit beyond that
+  // window could miss a hazard. Keep the cap in sync with the wait-state
+  // tables.
+  assert(Limit <= (int)MaxVALULookAhead &&
+         "Limit exceeds the EmittedVALUInstrs lookahead window");
+  int WaitStates = 0;
+  for (MachineInstr *MI : EmittedVALUInstrs) {
+    if (MI) {
+      if (IsHazard(*MI))
+        return WaitStates;
+    }
+
+    ++WaitStates;
+
+    if (WaitStates >= Limit)
+      break;
+  }
+  return std::numeric_limits<int>::max();
 }
 
 int GCNHazardRecognizer::getWaitStatesSinceDef(unsigned Reg,
@@ -913,15 +949,18 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) const {
     // (like wbinvl1)
     if (VDataIdx == -1)
       return -1;
-    // For MUBUF/MTBUF instructions this hazard only exists if the
-    // instruction is not using a register in the soffset field.
-    const MachineOperand *SOffset =
-        TII->getNamedOperand(MI, AMDGPU::OpName::soffset);
-    // If we have no soffset operand, then assume this field has been
-    // hardcoded to zero.
-    if (AMDGPU::getRegBitWidth(VDataRCID) > 64 &&
-        (!SOffset || !SOffset->isReg()))
-      return VDataIdx;
+    if (AMDGPU::getRegBitWidth(VDataRCID) > 64) {
+      // On gfx940-family the BUFFER_STORE source-vgpr WAR hazard exists for
+      // every SOFFSET shape; the wait-state count differs by SOFFSET, and is
+      // computed in checkVALUHazardsHelper. Pre-gfx940 the hazard only exists
+      // if soffset is not an SGPR.
+      if (ST.hasGFX940Insts())
+        return VDataIdx;
+      const MachineOperand *SOffset =
+          TII->getNamedOperand(MI, AMDGPU::OpName::soffset);
+      if (!SOffset || !SOffset->isReg())
+        return VDataIdx;
+    }
   }
 
   // MIMG instructions create a hazard if they don't use a 256-bit T# and
@@ -949,25 +988,59 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) const {
 
 int GCNHazardRecognizer::checkVALUHazardsHelper(
     const MachineOperand &Def, const MachineRegisterInfo &MRI) const {
-  // Helper to check for the hazard where VMEM instructions that store more than
-  // 8 bytes can have there store data over written by the next instruction.
+  // Helper to check for the hazard where VMEM instructions that store more
+  // than 8 bytes can have their store data overwritten by the next
+  // instruction. On gfx940-family the window depends on the producer's
+  // SOFFSET shape:
+  //   - MUBUF/MTBUF wide store with sgpr SOFFSET: 1 wait state.
+  //   - MUBUF/MTBUF wide store with literal/absent SOFFSET, and FLAT wide
+  //     store: 2 wait states.
+  // Pre-gfx940 keeps a single 1-wait-state window. The 1-cycle sgpr-SOFFSET
+  // window was measured on gfx950 (MI350X); the same gate is applied to the
+  // rest of the gfx940 family to match the existing rule's granularity.
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
 
-  const int VALUWaitStates = ST.hasGFX940Insts() ? 2 : 1;
   int WaitStatesNeeded = 0;
-
   if (!TRI->isVectorRegister(MRI, Def.getReg()))
     return WaitStatesNeeded;
-  Register Reg = Def.getReg();
-  auto IsHazardFn = [this, Reg, TRI](const MachineInstr &MI) {
-    int DataIdx = createsVALUHazard(MI);
-    return DataIdx >= 0 &&
-           TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg);
+  const Register Reg = Def.getReg();
+
+  const int MaxWaitStates = ST.hasGFX940Insts() ? 2 : 1;
+
+  // Per-producer required wait-state window. On pre-gfx940 every producer
+  // uses 1; on gfx940-family MUBUF/MTBUF stores with an SGPR SOFFSET use 1
+  // and everything else (literal/absent SOFFSET, FLAT) uses 2.
+  auto WindowFor = [this, TII](const MachineInstr &MI) -> int {
+    if (!ST.hasGFX940Insts())
+      return 1;
+    if (TII->isBUF(MI)) {
+      const MachineOperand *SOffset =
+          TII->getNamedOperand(MI, AMDGPU::OpName::soffset);
+      if (SOffset && SOffset->isReg())
+        return 1;
+    }
+    return 2;
   };
 
-  int WaitStatesNeededForDef =
-    VALUWaitStates - getWaitStatesSince(IsHazardFn, VALUWaitStates);
-  WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
+  // For each hazard producer reached, accumulate the wait states still
+  // needed using that producer's own window. The predicate always returns
+  // false so the walk runs to MaxWaitStates.
+  int Distance = 0;
+  auto Counter = [&](const MachineInstr &MI) {
+    int DataIdx = createsVALUHazard(MI);
+    if (DataIdx >= 0 &&
+        TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg)) {
+      int Need = WindowFor(MI) - Distance;
+      WaitStatesNeeded = std::max(WaitStatesNeeded, Need);
+    }
+    // Mirror getWaitStatesSince's accounting, which does not count inline asm
+    // towards the wait-state distance.
+    if (!MI.isInlineAsm())
+      Distance += SIInstrInfo::getNumWaitStates(MI);
+    return false;
+  };
+  getWaitStatesSince(Counter, MaxWaitStates);
 
   return WaitStatesNeeded;
 }
@@ -2048,45 +2121,70 @@ static bool isCoexecutableVALUInst(const MachineInstr &MI) {
          !SIInstrInfo::isSWMMAC(MI) && !SIInstrInfo::isLDSDMA(MI);
 }
 
-static bool IsWMMAHazardInstInCategory(const MachineInstr &MI,
-                                       const SIInstrInfo *TII, unsigned Latency,
-                                       unsigned Category) {
-  assert(TII->isXDLWMMA(MI) && (Latency == 8 || Latency == 16) &&
-         "Handle me if the xdl wmma instruction latency changes");
+// Classify XDL WMMA instructions into co-execution hazard categories
+// (Refer to SPG 4.6.12.1), mainly based on instruction latency.
+//
+// Category 0: WMMA with Latency 8
+//   WMMA_*F16, WMMA_*BF16
+//   WMMA_*FP8FP8
+//   WMMA_*FP8BF8
+//   WMMA_*BF8FP8
+//   WMMA_*BF8BF8
+//   WMMA_*F8F6F4 if SRCA & SRCB != F8
+//
+// Category 1: WMMA Latency 16
+//   WMMA_IU8
+//   WMMA_*F8F6F4 if SRCA OR SRCB == F8
+//
+// Category 2: SWMMAC with Latency 8
+//   SWMMAC_*F16, SWMMAC_*BF16,
+//   SWMMAC_*FP8FP8
+//   SWMMAC_*BF8FP8
+//   SWMMAC_*FP8BF8
+//   SWMMAC_*BF8BF8
+//
+// Category 3: SWMMAC with Latency 16
+//   SWMMAC_IU8
+//
+// Category 4: 16 Pass GFX1251 WMMA with latency 16
+//   V_WMMA_*_16X16X32_{F16,BF16}
+//   V_WMMA_{F32,F16}_16X16X64_{FP8,BF8}*
+//   V_WMMA_F32_16x16x128_F8F6F4 (F4 only)
+//   V_SWMMAC_*_16X16X64_{F16,BF16}
+//   V_SWMMAC_{F32,F16}_16X16X128_{FP8,BF8}*
+//
+// Category 5: 32 Pass GFX1251 WMMA with latency 32
+//   V_WMMA_F32_16x16x128_F8F6F4 (not all F4)
+//   V_WMMA_{F32,F16}_16X16X128_{FP8,BF8}*
+//   V_WMMA_F32_32X16X128_F4
+//   V_WMMA_I32_16X16X64_IU8
+//   V_WMMA_I32_16X16X64_IU8
+static unsigned getWMMAHazardInstInCategory(const MachineInstr &MI,
+                                            const SIInstrInfo *TII,
+                                            const TargetSchedModel &SchedModel,
+                                            const GCNSubtarget &ST) {
+  assert(TII->isXDLWMMA(MI) && "must be xdl wmma");
+  bool IsSWMMAC = SIInstrInfo::isSWMMAC(MI);
+  bool IsLowestRateWMMA = ST.hasGFX125xLowestRateWMMA();
+  unsigned Category = 0;
 
-  switch (Category) {
-  case 0: // Dense WMMA Instructions:
-          //   WMMA_*F16, WMMA_*BF16
-          //   WMMA_*FP8FP8
-          //   WMMA_*FP8BF8
-          //   WMMA_*BF8FP8
-          //   WMMA_*BF8BF8
-          //   WMMA_*F8F6F4 if SRCA & SRCB != F8
-    return Latency == 8 && SIInstrInfo::isWMMA(MI);
-
-  case 1: // Dense WMMA Instructions:
-          //   WMMA_IU8
-          //   WMMA_IU4
-          //   WMMA_*F8F6F4 if SRCA OR SRCB == F8
-    return Latency == 16 && SIInstrInfo::isWMMA(MI);
-
-  case 2: // Dense SWMMAC Instructions
-          //   SWMMAC_*F16, SWMMAC_*BF16,
-          //   SWMMAC_*FP8FP8
-          //   SWMMAC_*BF8FP8
-          //   SWMMAC_*FP8BF8
-          //   SWMMAC_*BF8BF8
-    return Latency == 8 && SIInstrInfo::isSWMMAC(MI);
-
-  case 3: // Sparse WMMA Instructions:
-          //   SWMMAC_IU8
-          //   SWMMAC_IU4
-    return Latency == 16 && SIInstrInfo::isSWMMAC(MI);
-  default:
+  unsigned Latency = SchedModel.computeInstrLatency(&MI);
+  switch (Latency) {
+  case 8:
+    Category = IsSWMMAC ? 2 : 0;
     break;
+  case 16:
+    Category = IsLowestRateWMMA ? 4 : (IsSWMMAC ? 3 : 1);
+    break;
+  case 32:
+    assert(IsLowestRateWMMA && "latency 32 is not expected");
+    Category = 5;
+    break;
+  default:
+    llvm_unreachable("unexpected xdl wmma latency");
   } // end switch.
 
-  return false;
+  return Category;
 }
 
 int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
@@ -2102,18 +2200,15 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
   // (WMMAWaitStates if the second is also a WMMA, VALUWaitStates if the second
   // is a VALU). Refer to SPG 4.6.12.1. "Requirements for WMMA data hazards" for
   // numbers, which depends on the category of the first WMMA.
-  const int WMMAWaitStates[] = {5, 9, 3, 5};
-  const int VALUWaitStates[] = {4, 8, 2, 4};
+  const int WMMAWaitStates[] = {5, 9, 3, 5, 9, 17};
+  const int VALUWaitStates[] = {4, 8, 2, 4, 8, 16};
   unsigned Category = 0;
 
   auto IsWMMAHazardFn = [MI, TII, &Category, this](const MachineInstr &I) {
     if (!TII->isXDLWMMA(I))
       return false;
 
-    unsigned Latency = TSchedModel.computeInstrLatency(&I);
-    if (!IsWMMAHazardInstInCategory(I, TII, Latency, Category))
-      return false;
-
+    Category = getWMMAHazardInstInCategory(I, TII, TSchedModel, ST);
     return hasWMMAToWMMARegOverlap(I, *MI);
   };
 
@@ -2121,40 +2216,30 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
     if (!TII->isXDLWMMA(I))
       return false;
 
-    unsigned Latency = TSchedModel.computeInstrLatency(&I);
-    if (!IsWMMAHazardInstInCategory(I, TII, Latency, Category))
-      return false;
-
+    Category = getWMMAHazardInstInCategory(I, TII, TSchedModel, ST);
     return hasWMMAToVALURegOverlap(I, *MI);
   };
 
-  int Limit = 0;
-
-  auto GetWaitStatesFn = [](const MachineInstr &I) {
-    return SIInstrInfo::isVALU(I) ? 1 : 0;
-  };
-
   int WaitStatesNeeded = -1;
+  int ExistingVALUs = 0; // Existing number of VALU ops in between.
+  bool IsLowestRateWMMA = ST.hasGFX125xLowestRateWMMA();
+
+  // getWaitStatesSinceVALU checks for a hazard between instruction 'I' and
+  // 'MI':
+  // - If a hazard exists: returns the number of VALUs in between and sets
+  //   'Category' via IsWMMAHazardFn/IsVALUHazardFn for instruction 'I'.
+  // - If no hazard exists: returns INT_MAX, making WaitStatesNeeded negative,
+  //   so no V_NOP insertion is needed.
   if (TII->isXDLWMMA(*MI)) {
-    for (Category = 0; WaitStatesNeeded < 0 && Category < 4; Category++) {
-      Limit = WMMAWaitStates[Category]; // for IsExpiredFn.
-      // 'getWaitStatesSince' returns the number of VALUs in between if hazard
-      // exists, and INT_MAX if there is no hazard. As a result, a negative
-      // WaitStatesNeeded here means no hazard, and we will continue to search
-      // for other categories.
-      WaitStatesNeeded =
-          Limit - getWaitStatesSince(IsWMMAHazardFn, Limit, GetWaitStatesFn);
-    }
+    // Maximum of MMAWaitStates.
+    const int WMMAWaitsLimit = IsLowestRateWMMA ? 17 : 9;
+    ExistingVALUs = getWaitStatesSinceVALU(IsWMMAHazardFn, WMMAWaitsLimit);
+    WaitStatesNeeded = WMMAWaitStates[Category] - ExistingVALUs;
   } else { // Must be a co-executable VALU.
-    for (Category = 0; WaitStatesNeeded < 0 && Category < 4; Category++) {
-      Limit = VALUWaitStates[Category]; // for IsExpiredFn.
-      // 'getWaitStatesSince' returns the number of VALUs in between if hazard
-      // exists, and INT_MAX if there is no hazard. As a result, a negative
-      // WaitStatesNeeded here means no hazard, and we will continue to search
-      // for other categories.
-      WaitStatesNeeded =
-          Limit - getWaitStatesSince(IsVALUHazardFn, Limit, GetWaitStatesFn);
-    }
+           // Maximum of VALUWaitStates.
+    const int VALUWaitsLimit = IsLowestRateWMMA ? 16 : 8;
+    ExistingVALUs = getWaitStatesSinceVALU(IsVALUHazardFn, VALUWaitsLimit);
+    WaitStatesNeeded = VALUWaitStates[Category] - ExistingVALUs;
   }
 
   return WaitStatesNeeded;

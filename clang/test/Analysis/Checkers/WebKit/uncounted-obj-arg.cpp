@@ -480,14 +480,14 @@ public:
 
   int nonTrivial13() { return ~otherFunction(); }
   int nonTrivial14() { int r = 0xff; r |= otherFunction(); return r; }
-  void nonTrivial15() { ++complex; }
-  void nonTrivial16() { complex++; }
+  void nonTrivial15() { ++complex; } // expected-warning{{Call argument for 'this' parameter is uncounted and unsafe}}
+  void nonTrivial16() { complex++; } // expected-warning{{Call argument for 'this' parameter is uncounted and unsafe}}
   ComplexNumber nonTrivial17() {
-    return complex << 2;
+    return complex << 2; // expected-warning{{Call argument for 'this' parameter is uncounted and unsafe}}
     // expected-warning@-1{{Call argument is uncounted and unsafe}}
   }
   ComplexNumber nonTrivial18() {
-    return +complex;
+    return +complex; // expected-warning{{Call argument for 'this' parameter is uncounted and unsafe}}
     // expected-warning@-1{{Call argument is uncounted and unsafe}}
   }
   ComplexNumber* nonTrivial19() {

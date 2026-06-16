@@ -219,7 +219,8 @@ IntegerAttr Builder::getUI32IntegerAttr(uint32_t value) {
 }
 
 IntegerAttr Builder::getI16IntegerAttr(int16_t value) {
-  return IntegerAttr::get(getIntegerType(16), APInt(16, value));
+  return IntegerAttr::get(getIntegerType(16),
+                          APInt(16, value, /*isSigned=*/true));
 }
 
 IntegerAttr Builder::getI8IntegerAttr(int8_t value) {

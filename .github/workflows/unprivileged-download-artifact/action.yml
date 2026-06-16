@@ -28,11 +28,14 @@ runs:
   using: "composite"
   steps:
     - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+      env:
+        INPUTS_ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        INPUTS_RUN_ID: ${{ inputs.run-id }}
       id: artifact-url
       with:
         script: |
           var response;
-          if (!"${{ inputs.run-id }}") {
+          if (!process.env.INPUTS_RUN_ID) {
             response = await github.rest.actions.listArtifactsForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -41,7 +44,7 @@ runs:
             response = await github.rest.actions.listWorkflowRunArtifacts({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              run_id: "${{ inputs.run-id }}",
+              run_id: process.env.INPUTS_RUN_ID,
             })
           }
 
@@ -51,7 +54,7 @@ runs:
           // same name, keep only the newest per name so downloads don't clobber.
           latest_by_name = new Map()
           for (artifact of response.data.artifacts) {
-            if (!artifact.name.startsWith("${{ inputs.artifact-name }}")) {
+            if (!artifact.name.startsWith(process.env.INPUTS_ARTIFACT_NAME)) {
               continue
             }
             existing = latest_by_name.get(artifact.name)
@@ -66,7 +69,7 @@ runs:
           }
 
           if (artifacts_to_download.length == 0) {
-            console.log("Could not find artifacts starting with name ${{ inputs.artifact-name }} for workflow run ${{ inputs.run-id }}")
+            console.log(`Could not find artifacts starting with name ${process.env.INPUTS_ARTIFACT_NAME} for workflow run ${process.env.INPUTS_RUN_ID}`)
             return;
           }
 
@@ -82,8 +85,8 @@ runs:
             })
 
             artifact_ids.push(artifact_to_download.id)
-            artifact_urls.push('"' + url_response.url + '"')
-            artifact_names.push('"' + artifact_to_download.name + '"')
+            artifact_urls.push(url_response.url)
+            artifact_names.push(artifact_to_download.name)
           }
 
           core.setOutput("urls", artifact_urls.join(" "));
@@ -93,17 +96,22 @@ runs:
     - shell: bash
       if: steps.artifact-url.outputs.urls != ''
       id: download-artifact
+      env:
+        ARTIFACT_URLS: ${{ steps.artifact-url.outputs.urls }}
+        ARTIFACT_NAMES: ${{ steps.artifact-url.outputs.names }}
       run: |
-        artifact_urls=(${{ steps.artifact-url.outputs.urls }})
-        artifact_names=(${{ steps.artifact-url.outputs.names }})
+        artifact_urls=($ARTIFACT_URLS)
+        artifact_names=($ARTIFACT_NAMES)
         for i in "${!artifact_urls[@]}"; do
           curl -L -o "${artifact_names[$i]}.zip" "${artifact_urls[$i]}"
         done
 
     - shell: bash
       if: steps.artifact-url.outputs.names != ''
+      env:
+        ARTIFACT_NAMES: ${{ steps.artifact-url.outputs.names }}
       run: |
-        artifact_names=(${{ steps.artifact-url.outputs.names }})
+        artifact_names=($ARTIFACT_NAMES)
         for name in "${artifact_names[@]}"; do
           unzip "${name}.zip"
         done

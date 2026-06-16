@@ -28,7 +28,8 @@ ScriptedThreadPlanPythonInterface::ScriptedThreadPlanPythonInterface(
 llvm::Expected<StructuredData::GenericSP>
 ScriptedThreadPlanPythonInterface::CreatePluginObject(
     const ScriptedMetadata &scripted_metadata,
-    lldb::ThreadPlanSP thread_plan_sp, const StructuredDataImpl &args_sp) {
+    lldb::ThreadPlanSP thread_plan_sp) {
+  StructuredDataImpl args_sp(scripted_metadata.GetArgsSP());
   return ScriptedPythonInterface::CreatePluginObject(scripted_metadata, nullptr,
                                                      thread_plan_sp, args_sp);
 }

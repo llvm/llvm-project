@@ -728,9 +728,13 @@ void AArch64FrameLowering::resetCFIToInitialState(
   CFIBuilder.buildDefCFA(AArch64::SP, 0);
 
   // Flip the RA sign state.
-  if (MFI.shouldSignReturnAddress(MF))
-    MFI.branchProtectionPAuthLR() ? CFIBuilder.buildNegateRAStateWithPC()
-                                  : CFIBuilder.buildNegateRAState();
+  if (MFI.shouldSignReturnAddress(MF)) {
+    if (MFI.branchProtectionPAuthLR()) {
+      CFIBuilder.buildNegateRAStateWithPC();
+    } else if (!MF.getTarget().getTargetTriple().isOSBinFormatMachO()) {
+      CFIBuilder.buildNegateRAState();
+    }
+  }
 
   // Shadow call stack uses X18, reset it.
   if (MFI.needsShadowCallStackPrologueEpilogue(MF))
