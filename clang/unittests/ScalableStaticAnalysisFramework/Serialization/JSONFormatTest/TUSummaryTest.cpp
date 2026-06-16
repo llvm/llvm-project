@@ -40,7 +40,7 @@ SummaryOps TUSummaryOps{
     },
     [](llvm::StringRef FilePath) -> llvm::Error {
       BuildNamespace BN(BuildNamespaceKind::CompilationUnit, "test.cpp");
-      TUSummary S(std::move(BN));
+      TUSummary S(llvm::Triple("arm64-apple-macosx"), std::move(BN));
       return JSONFormat().writeTUSummary(S, FilePath);
     },
     [](llvm::StringRef InputFilePath,
@@ -60,7 +60,7 @@ SummaryOps TUSummaryEncodingOps{
     },
     [](llvm::StringRef FilePath) -> llvm::Error {
       BuildNamespace BN(BuildNamespaceKind::CompilationUnit, "test.cpp");
-      TUSummaryEncoding E(std::move(BN));
+      TUSummaryEncoding E(llvm::Triple("arm64-apple-macosx"), std::move(BN));
       return JSONFormat().writeTUSummaryEncoding(E, FilePath);
     },
     [](llvm::StringRef InputFilePath,
@@ -219,6 +219,7 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMissingData) {
       "kind": "CompilationUnit",
       "name": "test.cpp"
     },
+    "target_triple": "arm64-apple-macosx",
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -253,6 +254,7 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
       "kind": "CompilationUnit",
       "name": "test.cpp"
     },
+    "target_triple": "arm64-apple-macosx",
     "id_table": [],
     "linkage_table": [],
     "data": [
@@ -292,6 +294,7 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
 
 TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMissingData) {
   TUSummary Summary(
+      llvm::Triple("arm64-apple-macosx"),
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
 
   NestedBuildNamespace Namespace =
@@ -310,6 +313,7 @@ TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMissingData) {
 
 TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMismatchedSummaryName) {
   TUSummary Summary(
+      llvm::Triple("arm64-apple-macosx"),
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
 
   NestedBuildNamespace Namespace =
@@ -407,6 +411,7 @@ TEST_P(TUSummaryTest, WriteStreamOpenFailure) {
 
 TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryNoFormatInfo) {
   TUSummary Summary(
+      llvm::Triple("arm64-apple-macosx"),
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
 
   NestedBuildNamespace Namespace =

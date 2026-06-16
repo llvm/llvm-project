@@ -2,7 +2,7 @@
   "data": [],
   "id_table": [],
   "linkage_table": [],
-  "target_triple": "arm64-apple-macosx",
+  "target_triple": "arm64-macosx-apple",
   "tu_namespace": {
     "kind": "CompilationUnit",
     "name": "test.cpp"
