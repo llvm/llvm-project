@@ -82,8 +82,8 @@ class APINotesWriter::Implementation {
 
   /// Information about C++ methods.
   ///
-  /// Indexed by the context ID and name ID.
-  llvm::DenseMap<SingleDeclTableKey,
+  /// Indexed by the context ID, name ID, and optional parameter selector.
+  llvm::DenseMap<FunctionTableKey,
                  llvm::SmallVector<std::pair<VersionTuple, CXXMethodInfo>, 1>>
       CXXMethods;
 
@@ -100,9 +100,9 @@ class APINotesWriter::Implementation {
 
   /// Information about global functions.
   ///
-  /// Indexed by the context ID, identifier ID.
+  /// Indexed by the context ID, identifier ID, and optional parameter selector.
   llvm::DenseMap<
-      SingleDeclTableKey,
+      FunctionTableKey,
       llvm::SmallVector<std::pair<VersionTuple, GlobalFunctionInfo>, 1>>
       GlobalFunctions;
 
@@ -135,6 +135,29 @@ class APINotesWriter::Implementation {
     // Add to the identifier table if missing.
     return IdentifierIDs.try_emplace(Identifier, IdentifierIDs.size() + 1)
         .first->second;
+  }
+
+  FunctionTableKey
+  getFunctionKey(uint32_t ParentContextID, StringRef Name,
+                 std::optional<ArrayRef<StringRef>> Parameters = std::nullopt) {
+    IdentifierID NameID = getIdentifier(Name);
+    if (!Parameters)
+      return FunctionTableKey(ParentContextID, NameID);
+
+    llvm::SmallVector<IdentifierID, 2> ParameterTypeIDs;
+    ParameterTypeIDs.reserve(Parameters->size());
+    for (StringRef Parameter : *Parameters)
+      ParameterTypeIDs.push_back(getIdentifier(Parameter));
+    return FunctionTableKey(ParentContextID, NameID,
+                            std::move(ParameterTypeIDs));
+  }
+
+  FunctionTableKey
+  getFunctionKey(std::optional<Context> ParentContext, StringRef Name,
+                 std::optional<ArrayRef<StringRef>> Parameters = std::nullopt) {
+    uint32_t ParentContextID =
+        ParentContext ? ParentContext->id.Value : static_cast<uint32_t>(-1);
+    return getFunctionKey(ParentContextID, Name, Parameters);
   }
 
   /// Retrieve the ID for the given selector.
@@ -387,7 +410,9 @@ public:
 
 /// Localized helper to make a type dependent, thwarting template argument
 /// deduction.
-template <typename T> struct MakeDependent { typedef T Type; };
+template <typename T> struct MakeDependent {
+  typedef T Type;
+};
 
 /// Retrieve the serialized size of the given VersionTuple, for use in
 /// on-disk hash tables.
@@ -463,6 +488,25 @@ void emitVersionedInfo(
     emitVersionTuple(OS, E.first);
     emitInfo(OS, E.second);
   }
+}
+
+static unsigned getFunctionTableKeyLength(const FunctionTableKey &Key) {
+  return FunctionTableKeyBaseLength +
+         (Key.parameterTypeIDs ? Key.parameterTypeIDs->size() * sizeof(uint32_t)
+                               : 0);
+}
+
+static void emitFunctionTableKey(raw_ostream &OS, const FunctionTableKey &Key) {
+  llvm::support::endian::Writer writer(OS, llvm::endianness::little);
+  writer.write<uint32_t>(Key.parentContextID);
+  writer.write<uint32_t>(Key.nameID);
+  writer.write<uint8_t>(Key.parameterTypeIDs ? FunctionKeyHasParameterSelector
+                                             : 0);
+  writer.write<uint16_t>(Key.parameterTypeIDs ? Key.parameterTypeIDs->size()
+                                              : 0);
+  if (Key.parameterTypeIDs)
+    for (IdentifierID TypeID : *Key.parameterTypeIDs)
+      writer.write<uint32_t>(TypeID);
 }
 
 /// On-disk hash table info key base for handling versioned data.
@@ -801,17 +845,15 @@ public:
 
 /// Used to serialize the on-disk C++ method table.
 class CXXMethodTableInfo
-    : public VersionedTableInfo<CXXMethodTableInfo, SingleDeclTableKey,
+    : public VersionedTableInfo<CXXMethodTableInfo, FunctionTableKey,
                                 CXXMethodInfo> {
 public:
-  unsigned getKeyLength(key_type_ref) {
-    return sizeof(uint32_t) + sizeof(uint32_t);
+  unsigned getKeyLength(key_type_ref Key) {
+    return getFunctionTableKeyLength(Key);
   }
 
   void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) {
-    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
-    writer.write<uint32_t>(Key.parentContextID);
-    writer.write<uint32_t>(Key.nameID);
+    emitFunctionTableKey(OS, Key);
   }
 
   hash_value_type ComputeHash(key_type_ref key) {
@@ -1176,17 +1218,15 @@ void emitFunctionInfo(raw_ostream &OS, const FunctionInfo &FI) {
 
 /// Used to serialize the on-disk global function table.
 class GlobalFunctionTableInfo
-    : public VersionedTableInfo<GlobalFunctionTableInfo, SingleDeclTableKey,
+    : public VersionedTableInfo<GlobalFunctionTableInfo, FunctionTableKey,
                                 GlobalFunctionInfo> {
 public:
-  unsigned getKeyLength(key_type_ref) {
-    return sizeof(uint32_t) + sizeof(uint32_t);
+  unsigned getKeyLength(key_type_ref Key) {
+    return getFunctionTableKeyLength(Key);
   }
 
   void EmitKey(raw_ostream &OS, key_type_ref Key, unsigned) {
-    llvm::support::endian::Writer writer(OS, llvm::endianness::little);
-    writer.write<uint32_t>(Key.parentContextID);
-    writer.write<uint32_t>(Key.nameID);
+    emitFunctionTableKey(OS, Key);
   }
 
   hash_value_type ComputeHash(key_type_ref Key) {
@@ -1567,8 +1607,15 @@ void APINotesWriter::addObjCMethod(ContextID CtxID, ObjCSelectorRef Selector,
 void APINotesWriter::addCXXMethod(ContextID CtxID, llvm::StringRef Name,
                                   const CXXMethodInfo &Info,
                                   VersionTuple SwiftVersion) {
-  IdentifierID NameID = Implementation->getIdentifier(Name);
-  SingleDeclTableKey Key(CtxID.Value, NameID);
+  addCXXMethod(CtxID, Name, std::nullopt, Info, SwiftVersion);
+}
+
+void APINotesWriter::addCXXMethod(
+    ContextID CtxID, llvm::StringRef Name,
+    std::optional<llvm::ArrayRef<llvm::StringRef>> Parameters,
+    const CXXMethodInfo &Info, VersionTuple SwiftVersion) {
+  FunctionTableKey Key =
+      Implementation->getFunctionKey(CtxID.Value, Name, Parameters);
   Implementation->CXXMethods[Key].push_back({SwiftVersion, Info});
 }
 
@@ -1593,8 +1640,14 @@ void APINotesWriter::addGlobalFunction(std::optional<Context> Ctx,
                                        llvm::StringRef Name,
                                        const GlobalFunctionInfo &Info,
                                        VersionTuple SwiftVersion) {
-  IdentifierID NameID = Implementation->getIdentifier(Name);
-  SingleDeclTableKey Key(Ctx, NameID);
+  addGlobalFunction(Ctx, Name, std::nullopt, Info, SwiftVersion);
+}
+
+void APINotesWriter::addGlobalFunction(
+    std::optional<Context> Ctx, llvm::StringRef Name,
+    std::optional<llvm::ArrayRef<llvm::StringRef>> Parameters,
+    const GlobalFunctionInfo &Info, VersionTuple SwiftVersion) {
+  FunctionTableKey Key = Implementation->getFunctionKey(Ctx, Name, Parameters);
   Implementation->GlobalFunctions[Key].push_back({SwiftVersion, Info});
 }
 

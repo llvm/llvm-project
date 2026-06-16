@@ -16,11 +16,13 @@
 #define LLVM_CLANG_APINOTES_WRITER_H
 
 #include "clang/APINotes/Types.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <memory>
+#include <optional>
 
 namespace clang {
 class FileEntry;
@@ -86,6 +88,14 @@ public:
   void addCXXMethod(ContextID CtxID, llvm::StringRef Name,
                     const CXXMethodInfo &Info, llvm::VersionTuple SwiftVersion);
 
+  /// Add information about a C++ method with an optional parameter selector.
+  /// Passing std::nullopt uses the name-only key, an empty parameter list uses
+  /// an exact zero-parameter key, and a non-empty list uses an exact ordered
+  /// parameter key.
+  void addCXXMethod(ContextID CtxID, llvm::StringRef Name,
+                    std::optional<llvm::ArrayRef<llvm::StringRef>> Parameters,
+                    const CXXMethodInfo &Info, llvm::VersionTuple SwiftVersion);
+
   /// Add information about a specific C record field.
   ///
   /// \param CtxID The context in which this field resides, i.e. a C/C++ tag.
@@ -109,6 +119,16 @@ public:
   void addGlobalFunction(std::optional<Context> Ctx, llvm::StringRef Name,
                          const GlobalFunctionInfo &Info,
                          llvm::VersionTuple SwiftVersion);
+
+  /// Add information about a global function with an optional parameter
+  /// selector. Passing std::nullopt uses the name-only key, an empty parameter
+  /// list uses an exact zero-parameter key, and a non-empty list uses an exact
+  /// ordered parameter key.
+  void
+  addGlobalFunction(std::optional<Context> Ctx, llvm::StringRef Name,
+                    std::optional<llvm::ArrayRef<llvm::StringRef>> Parameters,
+                    const GlobalFunctionInfo &Info,
+                    llvm::VersionTuple SwiftVersion);
 
   /// Add information about an enumerator.
   ///
