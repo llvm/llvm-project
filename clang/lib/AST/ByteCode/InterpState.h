@@ -125,6 +125,13 @@ public:
   /// diagnoses and returns \c false.
   bool noteStep(CodePtr OpPC);
 
+  bool initializingBlock(const Block *B) const {
+    for (PtrView V : InitializingPtrs)
+      if (V.block() == B)
+        return true;
+    return false;
+  }
+
 private:
   friend class EvaluationResult;
   friend class InterpStateCCOverride;
@@ -174,8 +181,6 @@ public:
 
   /// List of blocks we're currently running either constructors or destructors
   /// for.
-  llvm::SmallVector<const Block *> InitializingBlocks;
-  // FIXME: We clearly dont' need two lists here, just one is enough.
   llvm::SmallVector<PtrView> InitializingPtrs;
 };
 
