@@ -9,8 +9,10 @@
 #ifndef LLVM_IR_PRINTPASSES_H
 #define LLVM_IR_PRINTPASSES_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/CommandLine.h"
+#include <system_error>
 #include <vector>
 
 namespace llvm {
@@ -27,7 +29,17 @@ enum class ChangePrinter {
   DotCfgQuiet
 };
 
-extern LLVM_ABI cl::opt<ChangePrinter> PrintChanged;
+enum class ChangePrinterHashMode { None, Function, BasicBlock };
+
+extern LLVM_ABI ChangePrinter PrintChanged;
+
+// Returns true if -print-changed should print only function attribute changes
+// when only function attributes changed.
+LLVM_ABI bool shouldPrintChangedAttributeDiffs();
+
+// Returns true if -print-changed should use hashes for change detection.
+LLVM_ABI bool shouldUsePrintChangedHash();
+LLVM_ABI ChangePrinterHashMode getPrintChangedHashMode();
 
 // Returns true if printing before/after some pass is enabled, whether all
 // passes or a specific pass.

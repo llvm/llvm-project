@@ -17,9 +17,12 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StableHashing.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DroppedVariableStatsIR.h"
@@ -33,6 +36,7 @@
 
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace llvm {
 
@@ -297,6 +301,90 @@ protected:
   void handleAfter(StringRef PassID, std::string &Name,
                    const std::string &Before, const std::string &After,
                    Any) override;
+};
+
+struct FunctionChangeAttributes {
+  std::string Name;
+  AttributeList Attributes;
+  unsigned ArgCount = 0;
+
+  bool operator==(const FunctionChangeAttributes &That) const {
+    return Name == That.Name && Attributes == That.Attributes &&
+           ArgCount == That.ArgCount;
+  }
+};
+
+struct BasicBlockChangeHash {
+  std::string Key;
+  stable_hash Hash = 0;
+
+  bool operator==(const BasicBlockChangeHash &That) const {
+    return Key == That.Key && Hash == That.Hash;
+  }
+};
+
+struct FunctionChangeHash {
+  std::string Name;
+  stable_hash Hash = 0;
+  SmallVector<BasicBlockChangeHash> Blocks;
+
+  bool operator==(const FunctionChangeHash &That) const {
+    return Name == That.Name && Hash == That.Hash;
+  }
+};
+
+struct IRChangeHash {
+  bool operator==(const IRChangeHash &That) const {
+    if (UseTextComparison || That.UseTextComparison)
+      return Text == That.Text;
+    return Hash == That.Hash && FunctionAttrs == That.FunctionAttrs;
+  }
+
+  bool UseTextComparison = false;
+  stable_hash Hash = 0;
+  SmallVector<FunctionChangeHash> Functions;
+  SmallVector<FunctionChangeAttributes> FunctionAttrs;
+  std::string Text;
+};
+
+class LLVM_ABI IRChangedHashPrinter : public TextChangeReporter<IRChangeHash> {
+public:
+  IRChangedHashPrinter(bool VerboseMode)
+      : TextChangeReporter<IRChangeHash>(VerboseMode) {}
+  ~IRChangedHashPrinter() override;
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+
+protected:
+  void generateIRRepresentation(Any IR, StringRef PassID,
+                                IRChangeHash &Output) override;
+  void handleAfter(StringRef PassID, std::string &Name,
+                   const IRChangeHash &Before, const IRChangeHash &After,
+                   Any IR) override;
+
+private:
+  struct StatefulHashFrame {
+    bool IsInteresting = false;
+    bool IsIR = true;
+    bool UseBeforeOverride = false;
+    SmallVector<std::string> FunctionNames;
+    IRChangeHash BeforeOverride;
+  };
+
+  void registerStatefulHashCallbacks(PassInstrumentationCallbacks &PIC);
+  void saveStatefulBeforePass(Any IR, StringRef PassID, StringRef PassName);
+  void handleStatefulAfterPass(Any IR, StringRef PassID, StringRef PassName);
+  void handleStatefulInvalidatedPass(StringRef PassID);
+
+  // Cache the last known hash state for each function so hash-based
+  // print-changed does not need to recompute the full "before" snapshot before
+  // every pass. The after-pass callback recomputes the current hash, compares
+  // it with the cached before state, then updates the cache for the next pass.
+  // Loop passes still take an explicit before snapshot because they only cover
+  // a subset of a function.
+  StringMap<FunctionChangeHash> StatefulFunctionHashes;
+  StringMap<FunctionChangeHash> StatefulMachineFunctionHashes;
+  StringMap<FunctionChangeAttributes> StatefulFunctionAttrs;
+  std::vector<StatefulHashFrame> StatefulHashStack;
 };
 
 class LLVM_ABI IRChangedTester : public IRChangedPrinter {
@@ -605,6 +693,7 @@ class StandardInstrumentations {
   OptPassGateInstrumentation OptPassGate;
   PreservedCFGCheckerInstrumentation PreservedCFGChecker;
   IRChangedPrinter PrintChangedIR;
+  IRChangedHashPrinter PrintChangedHashIR;
   PseudoProbeVerifier PseudoProbeVerification;
   InLineChangePrinter PrintChangedDiff;
   DotCfgChangeReporter WebsiteChangeReporter;

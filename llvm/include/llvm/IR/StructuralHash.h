@@ -15,6 +15,7 @@
 #define LLVM_IR_STRUCTURALHASH_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StableHashing.h"
 #include "llvm/IR/Instruction.h"
@@ -27,18 +28,12 @@ class BasicBlock;
 class Function;
 class Module;
 
-struct InstructionStructuralHashInfo {
-  const Instruction *Inst = nullptr;
-  stable_hash InstructionHash = 0;
-};
-
 struct BasicBlockStructuralHashInfo {
   BasicBlockStructuralHashInfo() = default;
   BasicBlockStructuralHashInfo(const BasicBlock *BB) : BB(BB) {}
 
   const BasicBlock *BB = nullptr;
   stable_hash BlockHash = 0;
-  SmallVector<InstructionStructuralHashInfo, 0> Instructions;
 };
 
 struct FunctionStructuralHashInfo {
@@ -54,10 +49,20 @@ struct FunctionStructuralHashInfo {
 LLVM_ABI stable_hash StructuralHash(const Function &F,
                                     bool DetailedHash = false);
 
-/// Returns structural hash details for \p F, including the function hash and
-/// the block/instruction hashes computed while building it.
+/// Returns structural hash details for \p F for users that need to know which
+/// basic blocks changed after the function hash changes. For example,
+/// -print-changed=hash-bb compares these per-block hashes so it can print only
+/// changed blocks instead of dumping the whole function.
 LLVM_ABI FunctionStructuralHashInfo
 StructuralHashWithDetails(const Function &F, bool DetailedHash = false);
+
+/// Like StructuralHashWithDetails(), but only records block details accepted by
+/// \p ShouldCollectBlock. This is used when the interesting IR unit is a subset
+/// of a function, such as a loop pass; the function hash still covers the whole
+/// function.
+LLVM_ABI FunctionStructuralHashInfo StructuralHashWithDetails(
+    const Function &F, bool DetailedHash,
+    function_ref<bool(const BasicBlock &)> ShouldCollectBlock);
 
 /// Returns a hash of the global variable \p G.
 LLVM_ABI stable_hash StructuralHash(const GlobalVariable &G);

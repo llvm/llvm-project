@@ -19,6 +19,8 @@ using namespace llvm;
 
 namespace {
 
+static bool shouldCollectAllBlocks(const BasicBlock &) { return true; }
+
 // Basic hashing mechanism to detect structural change to the IR, used to verify
 // pass return status consistency with actual change. In addition to being used
 // by the MergeFunctions pass.
@@ -50,7 +52,7 @@ class StructuralHashImpl {
   DenseMap<const Value *, int> ValueToId;
 
   static stable_hash hashType(Type *ValueType) {
-    SmallVector<stable_hash> Hashes;
+    SmallVector<stable_hash, 4> Hashes;
     Hashes.emplace_back(ValueType->getTypeID());
     if (ValueType->isIntegerTy())
       Hashes.emplace_back(ValueType->getIntegerBitWidth());
@@ -71,7 +73,7 @@ public:
   }
 
   static stable_hash hashAPInt(const APInt &I) {
-    SmallVector<stable_hash> Hashes;
+    SmallVector<stable_hash, 8> Hashes;
     Hashes.emplace_back(I.getBitWidth());
     auto RawVals = ArrayRef<uint64_t>(I.getRawData(), I.getNumWords());
     Hashes.append(RawVals.begin(), RawVals.end());
@@ -121,7 +123,7 @@ public:
   // we're interested in computing a hash rather than comparing two Constants.
   // Some of the logic is simplified, e.g, we don't expand GEPOperator.
   static stable_hash hashConstant(const Constant *C) {
-    SmallVector<stable_hash> Hashes;
+    SmallVector<stable_hash, 2> Hashes;
 
     Type *Ty = C->getType();
     Hashes.emplace_back(hashType(Ty));
@@ -194,7 +196,7 @@ public:
       return hashConstant(C);
 
     // Hash argument number.
-    SmallVector<stable_hash> Hashes;
+    SmallVector<stable_hash, 2> Hashes;
     if (Argument *Arg = dyn_cast<Argument>(V))
       Hashes.emplace_back(Arg->getArgNo());
 
@@ -206,14 +208,14 @@ public:
   }
 
   stable_hash hashOperand(Value *Operand) {
-    SmallVector<stable_hash> Hashes;
+    SmallVector<stable_hash, 8> Hashes;
     Hashes.emplace_back(hashType(Operand->getType()));
     Hashes.emplace_back(hashValue(Operand));
     return stable_hash_combine(Hashes);
   }
 
   stable_hash hashInstruction(const Instruction &Inst) {
-    SmallVector<stable_hash> Hashes;
+    SmallVector<stable_hash, 16> Hashes;
     Hashes.emplace_back(Inst.getOpcode());
 
     if (!DetailedHash)
@@ -263,7 +265,10 @@ public:
   // expensive checks for pass modification status). When modifying this
   // function, most changes should be gated behind an option and enabled
   // selectively.
-  void update(const Function &F) {
+  void update(const Function &F) { update(F, shouldCollectAllBlocks); }
+
+  void update(const Function &F,
+              function_ref<bool(const BasicBlock &)> ShouldCollectBlock) {
     // Declarations don't affect analyses.
     if (F.isDeclaration()) {
       if (CollectDetails)
@@ -271,7 +276,7 @@ public:
       return;
     }
 
-    SmallVector<stable_hash> Hashes;
+    SmallVector<stable_hash, 128> Hashes;
     Hashes.emplace_back(Hash);
     Hashes.emplace_back(FunctionHeaderHash);
 
@@ -280,6 +285,8 @@ public:
 
     SmallVector<const BasicBlock *, 8> BBs;
     SmallPtrSet<const BasicBlock *, 16> VisitedBBs;
+    if (CollectDetails)
+      Details.Blocks.reserve(F.size());
 
     // Walk the blocks in the same order as
     // FunctionComparator::cmpBasicBlocks(), accumulating the hash of the
@@ -289,11 +296,11 @@ public:
     while (!BBs.empty()) {
       const BasicBlock *BB = BBs.pop_back_val();
 
+      size_t BlockHashStart = Hashes.size();
       Hashes.emplace_back(BlockHeaderHash);
-      SmallVector<stable_hash> BlockHashes;
       BasicBlockStructuralHashInfo *BlockDetails = nullptr;
-      if (CollectDetails) {
-        BlockHashes.emplace_back(BlockHeaderHash);
+      bool CollectBlockDetails = CollectDetails && ShouldCollectBlock(*BB);
+      if (CollectBlockDetails) {
         Details.Blocks.emplace_back(BB);
         BlockDetails = &Details.Blocks.back();
       }
@@ -301,13 +308,10 @@ public:
       for (auto &Inst : *BB) {
         stable_hash InstHash = hashInstruction(Inst);
         Hashes.emplace_back(InstHash);
-        if (CollectDetails) {
-          BlockHashes.emplace_back(InstHash);
-          BlockDetails->Instructions.push_back({&Inst, InstHash});
-        }
       }
-      if (CollectDetails)
-        BlockDetails->BlockHash = stable_hash_combine(BlockHashes);
+      if (CollectBlockDetails)
+        BlockDetails->BlockHash =
+            stable_hash_combine(ArrayRef(Hashes).drop_front(BlockHashStart));
 
       for (const BasicBlock *Succ : successors(BB))
         if (VisitedBBs.insert(Succ).second)
@@ -326,7 +330,7 @@ public:
     // we ignore anything with the `.llvm` prefix
     if (GV.isDeclaration() || GV.getName().starts_with("llvm."))
       return;
-    SmallVector<stable_hash> Hashes;
+    SmallVector<stable_hash, 8> Hashes;
     Hashes.emplace_back(Hash);
     Hashes.emplace_back(GlobalHeaderHash);
     Hashes.emplace_back(GV.getValueType()->getTypeID());
@@ -365,9 +369,15 @@ stable_hash llvm::StructuralHash(const Function &F, bool DetailedHash) {
 
 FunctionStructuralHashInfo llvm::StructuralHashWithDetails(const Function &F,
                                                            bool DetailedHash) {
+  return StructuralHashWithDetails(F, DetailedHash, shouldCollectAllBlocks);
+}
+
+FunctionStructuralHashInfo llvm::StructuralHashWithDetails(
+    const Function &F, bool DetailedHash,
+    function_ref<bool(const BasicBlock &)> ShouldCollectBlock) {
   StructuralHashImpl H(DetailedHash, /*IgnoreOp=*/nullptr,
                        /*CollectDetails=*/true);
-  H.update(F);
+  H.update(F, ShouldCollectBlock);
   return H.getDetails();
 }
 

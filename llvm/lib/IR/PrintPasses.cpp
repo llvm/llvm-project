@@ -8,6 +8,7 @@
 
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
@@ -18,6 +19,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -54,33 +56,149 @@ static cl::opt<bool> PrintAfterAll("print-after-all",
 // with the rest being reported as filtered out.  The -print-before-changed
 // option will print the IR as it was before each pass that changed it. The
 // optional value of quiet will only report when the IR changes, suppressing all
-// other messages, including the initial IR. The values "diff" and "diff-quiet"
+// other messages, including the initial IR. The optional values are separated
+// by commas. The value "attrs-only" will only print function attribute changes
+// when only function attributes changed. Without "attrs-only", attribute-only
+// changes keep the historical behavior: -print-changed reports the change by
+// printing the changed IR. With "attrs-only", passes that only change function
+// attributes print a compact before/after attribute report instead. Other IR
+// changes still use the normal print-changed output.
+// The hash modes use structural hashes to avoid printing and comparing the full
+// IR after every pass. This is faster, but it reports changes according to what
+// the hash encodes. The default text mode remains the reference mode for
+// faithfully detecting changes in the printed IR. The "hash-func" mode reports
+// changed functions, while "hash-bb" can narrow reports to changed basic
+// blocks when block hashes are available. This avoids printing unchanged basic
+// blocks, which has been effective in empirical measurements when most blocks
+// are unchanged.
+// The values "diff" and "diff-quiet"
 // will present the changes in a form similar to a patch, in either verbose or
 // quiet mode, respectively. The lines that are removed and added are prefixed
 // with '-' and '+', respectively. The -filter-print-funcs and -filter-passes
-// can be used to filter the output.  This reporter relies on the linux diff
+// can be used to filter the output. This reporter relies on the linux diff
 // utility to do comparisons and insert the prefixes. For systems that do not
 // have the necessary facilities, the error message will be shown in place of
 // the expected output.
-cl::opt<ChangePrinter> llvm::PrintChanged(
-    "print-changed", cl::desc("Print changed IRs"), cl::Hidden,
-    cl::ValueOptional, cl::init(ChangePrinter::None),
-    cl::values(
-        clEnumValN(ChangePrinter::Quiet, "quiet", "Run in quiet mode"),
-        clEnumValN(ChangePrinter::DiffVerbose, "diff",
-                   "Display patch-like changes"),
-        clEnumValN(ChangePrinter::DiffQuiet, "diff-quiet",
-                   "Display patch-like changes in quiet mode"),
-        clEnumValN(ChangePrinter::ColourDiffVerbose, "cdiff",
-                   "Display patch-like changes with color"),
-        clEnumValN(ChangePrinter::ColourDiffQuiet, "cdiff-quiet",
-                   "Display patch-like changes in quiet mode with color"),
-        clEnumValN(ChangePrinter::DotCfgVerbose, "dot-cfg",
-                   "Create a website with graphical changes"),
-        clEnumValN(ChangePrinter::DotCfgQuiet, "dot-cfg-quiet",
-                   "Create a website with graphical changes in quiet mode"),
-        // Sentinel value for unspecified option.
-        clEnumValN(ChangePrinter::Verbose, "", "")));
+ChangePrinter llvm::PrintChanged = ChangePrinter::None;
+static bool PrintChangedAttributeDiffs = false;
+static ChangePrinterHashMode PrintChangedHashMode = ChangePrinterHashMode::None;
+
+namespace {
+enum class ChangePrinterFormat { Text, Diff, ColourDiff, DotCfg };
+
+struct PrintChangedOption {
+  void reportError(StringRef Value) const {
+    reportFatalUsageError(
+        Twine("invalid argument '") + Value +
+        "' to -print-changed=; expected a comma-separated list of quiet, "
+        "hash, hash-func, hash-bb, attrs-only, diff, diff-quiet, cdiff, "
+        "cdiff-quiet, dot-cfg, or dot-cfg-quiet");
+  }
+
+  void operator=(const std::string &Value) const {
+    PrintChanged = ChangePrinter::Verbose;
+    PrintChangedAttributeDiffs = false;
+    PrintChangedHashMode = ChangePrinterHashMode::None;
+
+    bool Quiet = false;
+    std::optional<ChangePrinterFormat> Format;
+    std::optional<std::string> HashModeValue;
+
+    SmallVector<StringRef> Values;
+    StringRef(Value).split(Values, ',', -1, false);
+    if (Values.empty())
+      Values.push_back("");
+
+    auto SetFormat = [&](StringRef V, ChangePrinterFormat F) {
+      if (Format && *Format != F)
+        reportError(V);
+      Format = F;
+    };
+    auto SetHashMode = [&](StringRef V, ChangePrinterHashMode H) {
+      if (PrintChangedHashMode != ChangePrinterHashMode::None &&
+          PrintChangedHashMode != H)
+        reportError(V);
+      PrintChangedHashMode = H;
+      if (!HashModeValue)
+        HashModeValue = V.str();
+    };
+
+    for (StringRef V : Values) {
+      if (V.empty())
+        continue;
+      if (V == "quiet") {
+        Quiet = true;
+      } else if (V == "hash" || V == "hash-func") {
+        SetHashMode(V, ChangePrinterHashMode::Function);
+      } else if (V == "hash-bb") {
+        SetHashMode(V, ChangePrinterHashMode::BasicBlock);
+      } else if (V == "attrs-only") {
+        PrintChangedAttributeDiffs = true;
+      } else if (V == "diff") {
+        SetFormat(V, ChangePrinterFormat::Diff);
+      } else if (V == "diff-quiet") {
+        SetFormat(V, ChangePrinterFormat::Diff);
+        Quiet = true;
+      } else if (V == "cdiff") {
+        SetFormat(V, ChangePrinterFormat::ColourDiff);
+      } else if (V == "cdiff-quiet") {
+        SetFormat(V, ChangePrinterFormat::ColourDiff);
+        Quiet = true;
+      } else if (V == "dot-cfg") {
+        SetFormat(V, ChangePrinterFormat::DotCfg);
+      } else if (V == "dot-cfg-quiet") {
+        SetFormat(V, ChangePrinterFormat::DotCfg);
+        Quiet = true;
+      } else {
+        reportError(V);
+      }
+    }
+
+    switch (Format.value_or(ChangePrinterFormat::Text)) {
+    case ChangePrinterFormat::Text:
+      PrintChanged = Quiet ? ChangePrinter::Quiet : ChangePrinter::Verbose;
+      break;
+    case ChangePrinterFormat::Diff:
+      PrintChanged =
+          Quiet ? ChangePrinter::DiffQuiet : ChangePrinter::DiffVerbose;
+      break;
+    case ChangePrinterFormat::ColourDiff:
+      PrintChanged = Quiet ? ChangePrinter::ColourDiffQuiet
+                           : ChangePrinter::ColourDiffVerbose;
+      break;
+    case ChangePrinterFormat::DotCfg:
+      PrintChanged =
+          Quiet ? ChangePrinter::DotCfgQuiet : ChangePrinter::DotCfgVerbose;
+      break;
+    }
+
+    if (PrintChangedAttributeDiffs && Format &&
+        *Format != ChangePrinterFormat::Text)
+      reportError("attrs-only");
+    if (PrintChangedHashMode != ChangePrinterHashMode::None && Format &&
+        *Format != ChangePrinterFormat::Text)
+      reportError(*HashModeValue);
+  }
+};
+} // namespace
+
+static PrintChangedOption PrintChangedOptionLoc;
+
+static cl::opt<PrintChangedOption, true, cl::parser<std::string>>
+    PrintChangedOpt("print-changed", cl::desc("Print changed IRs"), cl::Hidden,
+                    cl::ValueOptional, cl::location(PrintChangedOptionLoc));
+
+bool llvm::shouldPrintChangedAttributeDiffs() {
+  return PrintChangedAttributeDiffs;
+}
+
+bool llvm::shouldUsePrintChangedHash() {
+  return PrintChangedHashMode != ChangePrinterHashMode::None;
+}
+
+ChangePrinterHashMode llvm::getPrintChangedHashMode() {
+  return PrintChangedHashMode;
+}
 
 // An option for specifying the diff used by print-changed=[diff | diff-quiet]
 static cl::opt<std::string>
@@ -281,7 +399,7 @@ void llvm::reportChangedIR(StringRef Before, StringRef After,
     case ChangePrinter::ColourDiffVerbose: {
       bool Color = llvm::is_contained(
           {ChangePrinter::ColourDiffQuiet, ChangePrinter::ColourDiffVerbose},
-          PrintChanged.getValue());
+          PrintChanged);
       StringRef Removed = Color ? "\033[31m-%l\033[0m\n" : "-%l\n";
       StringRef Added = Color ? "\033[32m+%l\033[0m\n" : "+%l\n";
       StringRef NoChange = " %l\n";
@@ -292,7 +410,7 @@ void llvm::reportChangedIR(StringRef Before, StringRef After,
   } else if (llvm::is_contained({ChangePrinter::Verbose,
                                  ChangePrinter::DiffVerbose,
                                  ChangePrinter::ColourDiffVerbose},
-                                PrintChanged.getValue())) {
+                                PrintChanged)) {
     const char *Reason =
         IsInteresting ? " omitted because no change" : " filtered out";
     errs() << "*** IR Dump After " << PassName;
