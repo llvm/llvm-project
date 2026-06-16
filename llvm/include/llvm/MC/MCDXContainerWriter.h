@@ -43,7 +43,7 @@ struct MCDXContainerPart {
   StringRef Data;
 };
 
-class MCDXContainerBaseWriter {
+class LLVM_ABI MCDXContainerBaseWriter {
 protected:
   virtual ArrayRef<MCDXContainerPart> collectParts() {
     llvm_unreachable("Unimplemented");
