@@ -424,6 +424,10 @@ public:
 
 private:
   std::string getLifetimeBoundFixItText(SourceLocation Loc, bool LeadingSpace) {
+    if (Loc.isInvalid())
+      return LeadingSpace ? " [[clang::lifetimebound]]"
+                          : "[[clang::lifetimebound]] ";
+
     const Preprocessor &PP = S.getPreprocessor();
     const StringRef Spelling = PP.getLastMacroWithSpelling(
         Loc, {tok::l_square, tok::l_square, PP.getIdentifierInfo("clang"),
