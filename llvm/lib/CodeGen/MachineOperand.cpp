@@ -1171,10 +1171,11 @@ MachinePointerInfo MachinePointerInfo::getUnknownStack(MachineFunction &MF) {
 
 MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
                                      LLT type, Align a, const AAMDNodes &AAInfo,
-                                     const MDNode *Ranges, SyncScope::ID SSID,
+                                     const MDNode *Ranges,
+                                     const MDNode *MemCacheHint,
+                                     SyncScope::ID SSID,
                                      AtomicOrdering Ordering,
-                                     AtomicOrdering FailureOrdering,
-                                     const MDNode *MemCacheHint)
+                                     AtomicOrdering FailureOrdering)
     : PtrInfo(ptrinfo), MemoryType(type), FlagVals(f), BaseAlign(a),
       AAInfo(AAInfo), Ranges(Ranges), MemCacheHint(MemCacheHint) {
   assert((PtrInfo.V.isNull() || isa<const PseudoSourceValue *>(PtrInfo.V) ||
@@ -1193,18 +1194,19 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
 MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags F,
                                      LocationSize TS, Align BaseAlignment,
                                      const AAMDNodes &AAInfo,
-                                     const MDNode *Ranges, SyncScope::ID SSID,
+                                     const MDNode *Ranges,
+                                     const MDNode *MemCacheHint,
+                                     SyncScope::ID SSID,
                                      AtomicOrdering Ordering,
-                                     AtomicOrdering FailureOrdering,
-                                     const MDNode *MemCacheHint)
+                                     AtomicOrdering FailureOrdering)
     : MachineMemOperand(
           ptrinfo, F,
           !TS.isPrecise() ? LLT()
           : TS.isScalable()
               ? LLT::scalable_vector(1, 8 * TS.getValue().getKnownMinValue())
               : LLT::scalar(8 * TS.getValue().getKnownMinValue()),
-          BaseAlignment, AAInfo, Ranges, SSID, Ordering, FailureOrdering,
-          MemCacheHint) {}
+          BaseAlignment, AAInfo, Ranges, MemCacheHint, SSID, Ordering,
+          FailureOrdering) {}
 
 void MachineMemOperand::refineAlignment(const MachineMemOperand *MMO) {
   // The Value and Offset may differ due to CSE. But the flags and size

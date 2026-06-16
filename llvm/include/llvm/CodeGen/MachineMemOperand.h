@@ -194,18 +194,18 @@ public:
   MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, LocationSize TS,
                     Align a, const AAMDNodes &AAInfo = AAMDNodes(),
                     const MDNode *Ranges = nullptr,
+                    const MDNode *MemCacheHint = nullptr,
                     SyncScope::ID SSID = SyncScope::System,
                     AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
-                    AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic,
-                    const MDNode *MemCacheHint = nullptr);
+                    AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
   LLVM_ABI
   MachineMemOperand(MachinePointerInfo PtrInfo, Flags flags, LLT type, Align a,
                     const AAMDNodes &AAInfo = AAMDNodes(),
                     const MDNode *Ranges = nullptr,
+                    const MDNode *MemCacheHint = nullptr,
                     SyncScope::ID SSID = SyncScope::System,
                     AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
-                    AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic,
-                    const MDNode *MemCacheHint = nullptr);
+                    AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic);
 
   const MachinePointerInfo &getPointerInfo() const { return PtrInfo; }
 
