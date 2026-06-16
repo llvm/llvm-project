@@ -539,6 +539,9 @@ CODEGENOPT(DisableOutlining, 1, 0, Benign)
 /// Controlls the emission of function name in PPA1 on z/OS.
 CODEGENOPT(ZOSPPA1Name, 1, 1, Benign)
 
+/// Emit section annotations in bitcode files for LTO.
+CODEGENOPT(LTOLinkerScripts, 1, 0, Benign)
+
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"
 

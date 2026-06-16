@@ -26,6 +26,7 @@
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/AssignSectionsToGlobals.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
@@ -1153,6 +1154,11 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   // might even not run the analysis, if previous passes caused no changes.
   if (!actionRequiresCodeGen(Action) && CodeGenOpts.VerifyModule)
     MPM.addPass(VerifierPass());
+
+  if ((Action == Backend_EmitBC || Action == Backend_EmitLL) &&
+      CodeGenOpts.LTOLinkerScripts && TM) {
+    MPM.addPass(AssignSectionsToGlobalsPass(TM.get()));
+  }
 
   if (Action == Backend_EmitBC || Action == Backend_EmitLL ||
       CodeGenOpts.FatLTO) {

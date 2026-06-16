@@ -1,0 +1,63 @@
+# REQUIRES: aarch64
+# RUN: rm -rf %t && split-file %s %t
+# RUN: opt -module-summary %t/1.ll -o %t/1.1.o
+# RUN: opt -module-summary %t/2.ll -o %t/1.2.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux-gnu %t/3.s -o %t/1.3.o
+# RUN: ld.lld -m aarch64elf --lto-linker-scripts --gc-sections -save-temps -e main \
+# RUN:   -T %t/script.t %t/1.1.o %t/1.2.o %t/1.3.o -o %t/1.out
+# RUN: llvm-readelf -S -W %t/1.out | FileCheck --check-prefix=SECTIONS %s
+# RUN: llvm-as %t/1.ll -o %t/2.1.o
+# RUN: llvm-as %t/2.ll -o %t/2.2.o
+# RUN: ld.lld -m aarch64elf --lto-linker-scripts --gc-sections -save-temps -e main \
+# RUN:   -T %t/script.t %t/2.1.o %t/2.2.o %t/1.3.o -o %t/2.out
+# RUN: llvm-readelf -S -W %t/2.out | FileCheck --check-prefix=REGSECTIONS %s
+
+# With thin LTO, IPSCCP propagates the constant return value of otherfun2, so .special gets GC'd.
+# SECTIONS: .alltext
+# SECTIONS-NOT: ] .text
+
+# With regular LTO, IPSCCP propagates the constant return value of otherfun2, so .special gets GC'd.
+# REGSECTIONS: .alltext
+# REGSECTIONS-NOT: ] .text
+
+#--- 1.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "aarch64-unknown-linux-gnu"
+
+declare i32 @otherfun()
+declare i32 @otherfun2()
+
+define i32 @myfun() section ".text.myfun" {
+  %a = call i32 @otherfun()
+  %b = call i32 @otherfun2()
+  %c = add i32 %a, %b
+  ret i32 %c
+}
+
+#--- 2.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "aarch64-unknown-linux-gnu"
+
+define i32 @otherfun() section ".text.otherfun" {
+  ret i32 23
+}
+
+define i32 @otherfun2() section ".text.otherfun2" {
+  ret i32 42
+}
+
+#--- 3.s
+.text
+.section .text.main,"ax",@progbits
+.globl main
+.type main,@function
+main:
+  bl myfun
+  ret
+.size main, .-main
+
+#--- script.t
+SECTIONS {
+  .special : { *.2.o(.text.otherfun2) }
+  .alltext : { *(.text.*) }
+}
