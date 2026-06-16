@@ -198,9 +198,10 @@ static void collectBlocks(PtrView Ptr, llvm::SetVector<const Block *> &Blocks) {
   }
 }
 
-bool EvaluationResult::checkReturnValue(InterpState &S, const Context &Ctx,
-                                        const Pointer &Ptr,
-                                        const SourceInfo &Info) {
+bool EvaluationResult::checkDynamicAllocations(InterpState &S,
+                                               const Context &Ctx,
+                                               const Pointer &Ptr,
+                                               SourceInfo Info) {
   if (!Ptr.isBlockPointer())
     return true;
   // Collect all blocks that this pointer (transitively) points to and
