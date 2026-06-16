@@ -6831,7 +6831,8 @@ static Value *simplifySVEIntReduction(Intrinsic::ID IID, Type *ReturnType,
   case Intrinsic::aarch64_sve_eorv:
     // sve_reduce_xor(all, splat(X)) ==> 0
     if (C0 && C0->isAllOnesValue())
-      return ConstantInt::get(ReturnType, 0);
+      if (getSplatValue(Op1))
+        return ConstantInt::get(ReturnType, 0);
     break;
   }
 

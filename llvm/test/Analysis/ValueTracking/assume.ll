@@ -259,3 +259,24 @@ define i1 @test_align_with_variable_offset(ptr %ptr, i64 %offset) {
   %is_aligned = icmp eq i64 %and, 0
   ret i1 %is_aligned
 }
+
+define i1 @align_with_non_zero_offset_is_nonnull(ptr %ptr) {
+; CHECK-LABEL: @align_with_non_zero_offset_is_nonnull(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 4, i64 1) ]
+; CHECK-NEXT:    ret i1 false
+;
+  call void @llvm.assume(i1 true) ["align"(ptr %ptr, i64 4, i64 1)]
+  %is_null = icmp eq ptr %ptr, null
+  ret i1 %is_null
+}
+
+define i1 @align_with_zero_offset_might_be_null(ptr %ptr) {
+; CHECK-LABEL: @align_with_zero_offset_might_be_null(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 4, i64 0) ]
+; CHECK-NEXT:    [[IS_NULL:%.*]] = icmp eq ptr [[PTR]], null
+; CHECK-NEXT:    ret i1 [[IS_NULL]]
+;
+  call void @llvm.assume(i1 true) ["align"(ptr %ptr, i64 4, i64 0)]
+  %is_null = icmp eq ptr %ptr, null
+  ret i1 %is_null
+}

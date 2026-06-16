@@ -12,6 +12,7 @@
 #include "CallContext.h"
 #include "ErrorHandling.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -236,14 +237,14 @@ class ProfiledBinary {
   std::set<std::pair<uint64_t, uint64_t>> TextSections;
 
   // A map of mapping function name to BinaryFunction info.
-  std::unordered_map<std::string, BinaryFunction> BinaryFunctions;
+  StringMap<BinaryFunction> BinaryFunctions;
 
   // Lookup BinaryFunctions using the function name's MD5 hash. Needed if the
   // profile is using MD5.
   std::unordered_map<uint64_t, BinaryFunction *> HashBinaryFunctions;
 
   // A list of binary functions that have samples.
-  std::unordered_set<const BinaryFunction *> ProfiledFunctions;
+  SmallPtrSet<const BinaryFunction *, 0> ProfiledFunctions;
 
   // GUID to symbol start address map
   DenseMap<uint64_t, uint64_t> SymbolStartAddrs;
@@ -304,7 +305,7 @@ class ProfiledBinary {
   std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
 
   // String table owning function name strings created from the symbolizer.
-  std::unordered_set<std::string> NameStrings;
+  StringSet<> NameStrings;
 
   // MMap events for PT_LOAD segments without 'x' memory protection flag.
   std::map<uint64_t, MMapEvent, std::greater<uint64_t>> NonTextMMapEvents;
@@ -571,22 +572,22 @@ public:
     return FRange->Func->Ranges;
   }
 
-  const std::unordered_map<std::string, BinaryFunction> &
-  getAllBinaryFunctions() {
+  const StringMap<BinaryFunction> &getAllBinaryFunctions() {
     return BinaryFunctions;
   }
 
-  std::unordered_set<const BinaryFunction *> &getProfiledFunctions() {
+  SmallPtrSetImpl<const BinaryFunction *> &getProfiledFunctions() {
     return ProfiledFunctions;
   }
 
-  void setProfiledFunctions(std::unordered_set<const BinaryFunction *> &Funcs) {
-    ProfiledFunctions = Funcs;
+  void setProfiledFunctions(SmallPtrSetImpl<const BinaryFunction *> &Funcs) {
+    ProfiledFunctions.clear();
+    ProfiledFunctions.insert_range(Funcs);
   }
 
   BinaryFunction *getBinaryFunction(FunctionId FName) {
     if (FName.isStringRef()) {
-      auto I = BinaryFunctions.find(FName.str());
+      auto I = BinaryFunctions.find(FName.stringRef());
       if (I == BinaryFunctions.end())
         return nullptr;
       return &I->second;

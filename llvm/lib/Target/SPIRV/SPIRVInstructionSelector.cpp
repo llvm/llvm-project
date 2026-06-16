@@ -149,7 +149,7 @@ private:
                          const MachineInstr *Init = nullptr) const;
 
   bool selectOpWithSrcs(Register ResVReg, SPIRVTypeInst ResType,
-                        MachineInstr &I, std::vector<Register> SrcRegs,
+                        MachineInstr &I, ArrayRef<Register> SrcRegs,
                         unsigned Opcode) const;
 
   bool selectUnOp(Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
@@ -1530,20 +1530,23 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
         .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function))
         .constrainAllUses(TII, TRI, RBI);
 
+    SPIRVTypeInst MantissaTy = GR.getSPIRVTypeForVReg(I.getOperand(2).getReg());
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
         .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(GR.getSPIRVTypeID(MantissaTy))
         .addImm(static_cast<uint32_t>(Ex.first))
         .addImm(Opcode)
         .add(I.getOperand(2))
         .addUse(PointerVReg)
         .constrainAllUses(TII, TRI, RBI);
 
-    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
-        .addDef(I.getOperand(1).getReg())
-        .addUse(GR.getSPIRVTypeID(PointeeTy))
-        .addUse(PointerVReg)
-        .constrainAllUses(TII, TRI, RBI);
+    Register ExpResReg = I.getOperand(1).getReg();
+    if (!MRI->use_nodbg_empty(ExpResReg))
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
+          .addDef(ExpResReg)
+          .addUse(GR.getSPIRVTypeID(PointeeTy))
+          .addUse(PointerVReg)
+          .constrainAllUses(TII, TRI, RBI);
     return true;
   }
   return false;
@@ -1608,7 +1611,7 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
 bool SPIRVInstructionSelector::selectOpWithSrcs(Register ResVReg,
                                                 SPIRVTypeInst ResType,
                                                 MachineInstr &I,
-                                                std::vector<Register> Srcs,
+                                                ArrayRef<Register> Srcs,
                                                 unsigned Opcode) const {
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
                  .addDef(ResVReg)
@@ -1966,10 +1969,10 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
   unsigned OpOffset = isa<GIntrinsic>(I) ? 1 : 0;
   Register Ptr = I.getOperand(1 + OpOffset).getReg();
 
-  if (!ResType.isTypeIntOrFloat())
-    return diagnoseUnsupported(I,
-                               "Lowering to SPIR-V of atomic load is only "
-                               "allowed for integer or floating point types");
+  if (!ResType.isTypeIntOrFloat() && !ResType.isTypePtr())
+    return diagnoseUnsupported(
+        I, "Lowering to SPIR-V of atomic load is only "
+           "allowed for integer, floating point or pointer types");
 
   assert(I.getNumMemOperands());
   const MachineMemOperand &MemOp = **I.memoperands_begin();
@@ -1988,6 +1991,54 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
   Register MemSemReg = buildI32Constant(MemSem | StorageClass, I);
 
   MachineIRBuilder MIRBuilder(I);
+
+  if (ResType.isTypePtr()) {
+    if (!STI.isPhysicalSPIRV())
+      return diagnoseUnsupported(
+          I, "Lowering to SPIR-V of atomic load is only "
+             "allowed for pointer types for physical addressing model");
+    // If data to load is a pointer type we bitcast the Ptr parameter to pointer
+    // to an integer type of the same size as the pointer size and then generate
+    // OpAtomicLoad the return value of that OpAtomicLoad is an integet that is
+    // converted back to a pointer type using OpConvertUToPtr.
+
+    unsigned PtrSize = GR.getPointerSize();
+    SPIRVTypeInst PtrAsIntSpirvType =
+        GR.getOrCreateSPIRVIntegerType(PtrSize, MIRBuilder);
+    Register PtrToUVal =
+        MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
+    MRI->setRegClass(PtrToUVal, GR.getRegClass(PtrAsIntSpirvType));
+    GR.assignSPIRVTypeToVReg(PtrAsIntSpirvType, PtrToUVal, MIRBuilder.getMF());
+
+    Register PtrCastedToMatchValReg =
+        MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
+    MRI->setRegClass(PtrCastedToMatchValReg, MRI->getRegClassOrNull(Ptr));
+    SPIRVTypeInst PtrType = GR.getOrCreateSPIRVPointerType(
+        PtrAsIntSpirvType, MIRBuilder,
+        addressSpaceToStorageClass(MemOp.getAddrSpace(), STI));
+    GR.assignSPIRVTypeToVReg(PtrType, PtrCastedToMatchValReg,
+                             MIRBuilder.getMF());
+
+    MIRBuilder.buildInstr(SPIRV::OpBitcast)
+        .addDef(PtrCastedToMatchValReg)
+        .addUse(GR.getSPIRVTypeID(PtrType))
+        .addUse(Ptr)
+        .constrainAllUses(TII, TRI, RBI);
+
+    MIRBuilder.buildInstr(SPIRV::OpAtomicLoad)
+        .addDef(PtrToUVal)
+        .addUse(GR.getSPIRVTypeID(PtrAsIntSpirvType))
+        .addUse(PtrCastedToMatchValReg)
+        .addUse(ScopeReg)
+        .addUse(MemSemReg)
+        .constrainAllUses(TII, TRI, RBI);
+    MIRBuilder.buildInstr(SPIRV::OpConvertUToPtr)
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(PtrToUVal)
+        .constrainAllUses(TII, TRI, RBI);
+    return true;
+  }
   auto AtomicLoad = MIRBuilder.buildInstr(SPIRV::OpAtomicLoad)
                         .addDef(ResVReg)
                         .addUse(GR.getSPIRVTypeID(ResType))
@@ -1995,6 +2046,7 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
                         .addUse(ScopeReg)
                         .addUse(MemSemReg);
   AtomicLoad.constrainAllUses(TII, TRI, RBI);
+
   return true;
 }
 
@@ -2097,7 +2149,7 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
 
     Register PtrToUVal =
         MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
-    MRI->setRegClass(PtrToUVal, MRI->getRegClassOrNull(StoreVal));
+    MRI->setRegClass(PtrToUVal, GR.getRegClass(PtrAsIntSpirvType));
     GR.assignSPIRVTypeToVReg(PtrAsIntSpirvType, PtrToUVal, MIRBuilder.getMF());
     MIRBuilder.buildInstr(SPIRV::OpConvertPtrToU)
         .addDef(PtrToUVal)
@@ -3836,7 +3888,7 @@ bool SPIRVInstructionSelector::handle64BitOverflow(
   }
   // Join all the resulting registers back into the return type in order
   // (ie i32x2, i32x2, i32x1 -> i32x5)
-  return selectOpWithSrcs(ResVReg, ResType, I, std::move(PartialRegs),
+  return selectOpWithSrcs(ResVReg, ResType, I, PartialRegs,
                           SPIRV::OpCompositeConstruct);
 }
 
@@ -5671,6 +5723,7 @@ bool SPIRVInstructionSelector::generateSampleImage(
     else {
       Pos.emitGenericError(
           "Non-constant offsets are not supported in sample instructions.");
+      return false;
     }
   }
   if (ImOps.MinLod)
@@ -7019,9 +7072,11 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
   // from I.getDefs() or I.getOperands().
   if (STI.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std)) {
     MachineIRBuilder MIRBuilder(I);
+    SPIRVTypeInst FloatType =
+        GR.getSPIRVTypeForVReg(I.getOperand(I.getNumExplicitDefs()).getReg());
     // Get pointer type for alloca variable.
     const SPIRVTypeInst PtrType = GR.getOrCreateSPIRVPointerType(
-        ResType, MIRBuilder, SPIRV::StorageClass::Function);
+        FloatType, MIRBuilder, SPIRV::StorageClass::Function);
     // Create new register for the pointer type of alloca variable.
     Register PtrTyReg =
         MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::iIDRegClass);
@@ -7047,7 +7102,7 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
     auto MIB =
         BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
             .addDef(ResVReg)
-            .addUse(GR.getSPIRVTypeID(ResType))
+            .addUse(GR.getSPIRVTypeID(FloatType))
             .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::OpenCL_std))
             .addImm(CL::modf)
             .setMIFlags(I.getFlags())
@@ -7056,11 +7111,11 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
     // Assign the integral part stored in the ptr to the second element of the
     // result.
     Register IntegralPartReg = I.getOperand(1).getReg();
-    if (IntegralPartReg.isValid()) {
+    if (IntegralPartReg.isValid() && !MRI->use_nodbg_empty(IntegralPartReg)) {
       // Load the value from the pointer to integral part.
       auto LoadMIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
                          .addDef(IntegralPartReg)
-                         .addUse(GR.getSPIRVTypeID(ResType))
+                         .addUse(GR.getSPIRVTypeID(FloatType))
                          .addUse(Variable);
       LoadMIB.constrainAllUses(TII, TRI, RBI);
       return true;

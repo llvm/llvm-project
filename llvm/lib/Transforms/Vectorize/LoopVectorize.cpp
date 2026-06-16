@@ -4810,7 +4810,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
     return;
 
   // Start with all scalar pointer uses.
-  SmallPtrSet<Instruction *, 8> AddrDefs;
+  SmallSetVector<Instruction *, 8> AddrDefs;
   for (BasicBlock *BB : TheLoop->blocks())
     for (Instruction &I : *BB) {
       Instruction *PtrDef =
@@ -4828,7 +4828,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
     for (auto &Op : I->operands())
       if (auto *InstOp = dyn_cast<Instruction>(Op))
         if (TheLoop->contains(InstOp) && !isa<PHINode>(InstOp) &&
-            AddrDefs.insert(InstOp).second)
+            AddrDefs.insert(InstOp))
           Worklist.push_back(InstOp);
   }
 
@@ -5764,8 +5764,17 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
   LLVM_DEBUG(dbgs() << "Cost for VF " << VF << ": " << Cost
                     << " (Estimated cost per lane: ");
   if (Cost.isValid()) {
-    double CostPerLane = double(Cost.getValue()) / EstimatedWidth;
-    LLVM_DEBUG(dbgs() << format("%.1f", CostPerLane));
+    APFloat CostPerLane(APFloat::IEEEdouble());
+    APFloat EstimatedWidthAsAPFloat(APFloat::IEEEdouble());
+    (void)CostPerLane.convertFromAPInt(APInt(64, (uint64_t)Cost.getValue()),
+                                       false, APFloat::rmTowardZero);
+    (void)EstimatedWidthAsAPFloat.convertFromAPInt(
+        APInt(64, (uint64_t)EstimatedWidth), false, APFloat::rmTowardZero);
+    (void)CostPerLane.divide(EstimatedWidthAsAPFloat, APFloat::rmTowardZero);
+
+    SmallString<16> Str;
+    CostPerLane.toString(Str, 3);
+    LLVM_DEBUG(dbgs() << Str);
   } else /* No point dividing an invalid cost - it will still be invalid */
     LLVM_DEBUG(dbgs() << "Invalid");
   LLVM_DEBUG(dbgs() << ")\n");
@@ -6569,8 +6578,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   // loop with an in-loop mask, then the middle check has already been
   // created to compare against the actual number of lanes executed.
   if (EEStyle != UncountableExitStyle::MaskedHandleExitInScalarLoop)
-    RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0,
-                   CM.foldTailByMasking());
+    RUN_VPLAN_PASS(VPlanTransforms::addMiddleCheck, *VPlan0);
   RUN_VPLAN_PASS(VPlanTransforms::createLoopRegions, *VPlan0,
                  getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
   if (CM.foldTailByMasking())
@@ -6997,8 +7005,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
         NewExiting = Substitutions.lookup(OrigExitingVPV);
       }
       NewPhiR->setOperand(1, NewExiting);
-      PhiR->replaceAllUsesWith(
-          Plan->getOrAddLiveIn(PoisonValue::get(PhiR->getScalarType())));
+      PhiR->replaceAllUsesWith(Plan->getPoison(PhiR->getScalarType()));
 
       Builder.setInsertPoint(MiddleVPBB, IP);
       FinalReductionResult =
@@ -7474,20 +7481,24 @@ preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
       ResumePhi->moveBefore(*MainScalarPH, MainScalarPH->begin());
   }
 
-  // Create a ResumeForEpilogue for the canonical IV resume as the
-  // first non-phi, to keep it alive for the epilogue.
+  // Create a ResumeForEpilogue for the canonical IV resume and its bypass value
+  // as the first non-phi, to keep them alive for the epilogue.
   VPBuilder ResumeBuilder(MainScalarPH);
-  ResumeBuilder.createNaryOp(VPInstruction::ResumeForEpilogue, ResumePhi);
+  ResumeBuilder.createNaryOp(VPInstruction::ResumeForEpilogue,
+                             {ResumePhi, ResumePhi->getOperand(1)});
 
   // Create ResumeForEpilogue instructions for the resume phis of the
-  // VPIRPhis in the scalar header of the main plan and return them so they can
-  // be used as resume values when vectorizing the epilogue.
+  // VPIRPhis and their bypass values in the scalar header of the main plan and
+  // return them so they can be used as resume values when vectorizing the
+  // epilogue.
   return to_vector(
       map_range(MainPlan.getScalarHeader()->phis(), [&](VPRecipeBase &R) {
         assert(isa<VPIRPhi>(R) &&
                "only VPIRPhis expected in the scalar header");
+        VPValue *MainResumePhi = R.getOperand(0);
+        VPValue *Bypass = MainResumePhi->getDefiningRecipe()->getOperand(1);
         return ResumeBuilder.createNaryOp(VPInstruction::ResumeForEpilogue,
-                                          R.getOperand(0));
+                                          {MainResumePhi, Bypass});
       }));
 }
 
@@ -7583,9 +7594,9 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
           vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
       assert(RdxResult && "expected to find reduction result");
 
-      ResumeV = IRPhiToResumeForEpi
-                    .at(cast<PHINode>(ReductionPhi->getUnderlyingInstr()))
-                    ->getUnderlyingValue();
+      VPInstruction *ResumeForEpi = IRPhiToResumeForEpi.at(
+          cast<PHINode>(ReductionPhi->getUnderlyingInstr()));
+      ResumeV = ResumeForEpi->getUnderlyingValue();
 
       // Check for FindIV pattern by looking for icmp user of RdxResult.
       // The pattern is: select(icmp ne RdxResult, Sentinel), RdxResult, Start
@@ -7600,8 +7611,13 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
       RecurKind RK = ReductionPhi->getRecurrenceKind();
       if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) || IsFindIV) {
         auto *ResumePhi = cast<PHINode>(ResumeV);
-        Value *StartV = ResumePhi->getIncomingValueForBlock(
-            EPI.MainLoopIterationCountCheck);
+        VPValue *BypassOp = ResumeForEpi->getOperand(1);
+        assert((isa<VPIRValue>(BypassOp) ||
+                VPlanPatternMatch::match(
+                    BypassOp,
+                    m_VPInstruction<Instruction::Freeze>(m_VPValue()))) &&
+               "expected live-in or Freeze");
+        Value *StartV = BypassOp->getUnderlyingValue();
         IRBuilder<> Builder(ResumePhi->getParent(),
                             ResumePhi->getParent()->getFirstNonPHIIt());
 

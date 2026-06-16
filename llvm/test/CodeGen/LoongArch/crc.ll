@@ -4,7 +4,6 @@
 define i32 @crc_w_b_w(i8 signext %a, i32 signext %b) nounwind {
 ; CHECK-LABEL: crc_w_b_w:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi $a0, $a0, 255
 ; CHECK-NEXT:    crc.w.b.w $a0, $a0, $a1
 ; CHECK-NEXT:    ret
 entry:
@@ -16,7 +15,6 @@ entry:
 define i32 @crc_w_h_w(i16 signext %a, i32 signext %b) nounwind {
 ; CHECK-LABEL: crc_w_h_w:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 15, 0
 ; CHECK-NEXT:    crc.w.h.w $a0, $a0, $a1
 ; CHECK-NEXT:    ret
 entry:
@@ -28,7 +26,6 @@ entry:
 define i32 @crcc_w_b_w(i8 signext %a, i32 signext %b) nounwind {
 ; CHECK-LABEL: crcc_w_b_w:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi $a0, $a0, 255
 ; CHECK-NEXT:    crcc.w.b.w $a0, $a0, $a1
 ; CHECK-NEXT:    ret
 entry:
@@ -40,7 +37,6 @@ entry:
 define i32 @crcc_w_h_w(i16 signext %a, i32 signext %b) nounwind {
 ; CHECK-LABEL: crcc_w_h_w:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 15, 0
 ; CHECK-NEXT:    crcc.w.h.w $a0, $a0, $a1
 ; CHECK-NEXT:    ret
 entry:

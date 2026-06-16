@@ -996,8 +996,8 @@ void UnsymbolizedProfileReader::readUnsymbolizedProfile(StringRef FileName) {
     // Read context stack for CS profile.
     if (Line.starts_with("[")) {
       ProfileIsCS = true;
-      auto I = ContextStrSet.insert(Line.str());
-      SampleContext::createCtxVectorFromStr(*I.first, Key->Context);
+      auto I = ContextStrSet.insert(Line);
+      SampleContext::createCtxVectorFromStr(I.first->getKey(), Key->Context);
       TraceIt.advance();
     }
     auto Ret =

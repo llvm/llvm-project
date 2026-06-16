@@ -79,7 +79,58 @@ define <2 x double> @masked_load_passthru_v2f64(ptr %src, <2 x i1> %mask, <2 x d
   ret <2 x double> %load
 }
 
-declare <16 x i8> @llvm.masked.load.v16i8(ptr, i32, <16 x i1>, <16 x i8>)
-declare <8 x half> @llvm.masked.load.v8f16(ptr, i32, <8 x i1>, <8 x half>)
-declare <4 x float> @llvm.masked.load.v4f32(ptr, i32, <4 x i1>, <4 x float>)
-declare <2 x double> @llvm.masked.load.v2f64(ptr, i32, <2 x i1>, <2 x double>)
+;
+; 64-bit Masked Loads
+;
+
+define <8 x i8> @masked_load_v8i8(ptr %ap, ptr %bp) {
+; CHECK-LABEL: masked_load_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    ld1b { z0.b }, p1/z, [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
+  %a = load <8 x i8>, ptr %ap
+  %b = load <8 x i8>, ptr %bp
+  %mask = icmp eq <8 x i8> %a, %b
+  %load = call <8 x i8> @llvm.masked.load.v8i8(ptr %ap, i32 1, <8 x i1> %mask, <8 x i8> zeroinitializer)
+  ret <8 x i8> %load
+}
+
+define <4 x i16> @masked_load_v4i16(ptr %ap, ptr %bp) {
+; CHECK-LABEL: masked_load_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
+  %a = load <4 x i16>, ptr %ap
+  %b = load <4 x i16>, ptr %bp
+  %mask = icmp eq <4 x i16> %a, %b
+  %load = call <4 x i16> @llvm.masked.load.v4i16(ptr %ap, i32 2, <4 x i1> %mask, <4 x i16> zeroinitializer)
+  ret <4 x i16> %load
+}
+
+define <4 x half> @masked_load_v4f16(ptr %ap, ptr %bp) {
+; CHECK-LABEL: masked_load_v4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr d0, [x0]
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    fcmeq v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    ret
+  %a = load <4 x half>, ptr %ap
+  %b = load <4 x half>, ptr %bp
+  %mask = fcmp oeq <4 x half> %a, %b
+  %load = call <4 x half> @llvm.masked.load.v4f16(ptr %ap, i32 2, <4 x i1> %mask, <4 x half> zeroinitializer)
+  ret <4 x half> %load
+}

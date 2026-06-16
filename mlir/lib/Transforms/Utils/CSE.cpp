@@ -125,37 +125,6 @@ private:
 void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
                                      Operation *existing,
                                      bool hasSSADominance) {
-  // If we find one then replace all uses of the current operation with the
-  // existing one and mark it for deletion. We can only replace an operand in
-  // an operation if it has not been visited yet.
-  if (hasSSADominance) {
-    // If the region has SSA dominance, then we are guaranteed to have not
-    // visited any use of the current operation.
-    // Replace all uses, but do not remove the operation yet.
-    rewriter.replaceAllOpUsesWith(op, existing->getResults());
-    eraseDeadOp(op);
-  } else {
-    // When the region does not have SSA dominance, we need to check if we
-    // have visited a use before replacing any use.
-    auto wasVisited = [&](OpOperand &operand) {
-      return !knownValues.count(operand.getOwner());
-    };
-    if (auto *rewriteListener =
-            dyn_cast_if_present<RewriterBase::Listener>(rewriter.getListener()))
-      for (Value v : op->getResults())
-        if (all_of(v.getUses(), wasVisited))
-          rewriteListener->notifyOperationReplaced(op, existing);
-
-    // Replace all uses, but do not remove the operation yet. This does not
-    // notify the listener because the original op is not erased.
-    rewriter.replaceUsesWithIf(op->getResults(), existing->getResults(),
-                               wasVisited);
-
-    // There may be some remaining uses of the operation.
-    if (op->use_empty())
-      eraseDeadOp(op);
-  }
-
   // If the existing operation has an unknown location and the current
   // operation doesn't, then set the existing op's location to that of the
   // current op.
@@ -163,6 +132,37 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
     existing->setLoc(op->getLoc());
 
   ++numCSE;
+
+  // If we find one then replace all uses of the current operation with the
+  // existing one and delete it.
+  if (hasSSADominance) {
+    // If the region has SSA dominance, then we are guaranteed to have not
+    // visited any use of the current operation.
+    // Replace all uses, but do not remove the operation yet.
+    rewriter.replaceAllOpUsesWith(op, existing->getResults());
+    eraseDeadOp(op);
+    return;
+  }
+
+  // When the region does not have SSA dominance, we need to check if we
+  // have visited a use before replacing any use.
+  auto wasVisited = [&](OpOperand &operand) {
+    return !knownValues.count(operand.getOwner());
+  };
+  if (auto *rewriteListener =
+          dyn_cast_if_present<RewriterBase::Listener>(rewriter.getListener()))
+    for (Value v : op->getResults())
+      if (all_of(v.getUses(), wasVisited))
+        rewriteListener->notifyOperationReplaced(op, existing);
+
+  // Replace all uses, but do not remove the operation yet. This does not
+  // notify the listener because the original op is not erased.
+  rewriter.replaceUsesWithIf(op->getResults(), existing->getResults(),
+                             wasVisited);
+
+  // There may be some remaining uses of the operation.
+  if (op->use_empty())
+    eraseDeadOp(op);
 }
 
 bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
