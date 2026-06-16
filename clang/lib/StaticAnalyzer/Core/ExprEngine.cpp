@@ -2433,7 +2433,7 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
     // block, but the terminator cannot be referred as a CFG element.
     // Here we just pass the the first CFG element in the block.
     ProgramStateRef WidenedState = getWidenedLoopState(
-        Pred->getState(), SF, BlockCount, *getCurrBlock()->ref_begin());
+        Term, Pred->getState(), SF, BlockCount, *getCurrBlock()->ref_begin());
     Builder.generateNode(BE, WidenedState, Pred);
     return;
   }
