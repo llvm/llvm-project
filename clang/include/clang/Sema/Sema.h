@@ -1110,6 +1110,24 @@ public:
   /// definition). Dependent and incomplete types are treated as determinate.
   bool defaultInitLeavesScalarIndeterminate(QualType T);
 
+  /// std::init / ref_to_uninit (paper §5): true if \p E refers to (for a
+  /// pointer source) or, when \p IsReference, denotes (for a glvalue source)
+  /// uninitialized storage. Recognized purely locally from the expression's
+  /// syntactic form -- the address of, or a subobject of, a [[uninitialized]]
+  /// entity; a value of a [[ref_to_uninit]] pointer/reference or array; a
+  /// dereference of such a pointer; or a call to a [[ref_to_uninit]]-returning
+  /// function. Anything else is treated as initialized (the trust model; no
+  /// flow analysis).
+  bool refersToUninitializedMemory(const Expr *E, bool IsReference) const;
+
+  /// std::init / ref_to_uninit (paper §5): check that the initialization of a
+  /// pointer or reference is consistent with its [[ref_to_uninit]] marking --
+  /// a marked target must refer to uninitialized memory, and an unmarked
+  /// target must not. Shared by the variable, data-member, assignment,
+  /// argument, and return check sites; gated by shouldEmitProfileViolation.
+  void checkRefToUninitInit(SourceLocation Loc, bool TargetIsRefToUninit,
+                            bool IsReference, const Expr *Src);
+
   class ProfileSuppressScope {
     Sema &S;
     unsigned Count = 0;

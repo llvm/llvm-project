@@ -14913,12 +14913,101 @@ void Sema::checkInitProfileUninitWithInitializer(SourceLocation Loc,
   Diag(Loc, diag::err_init_uninit_with_initializer) << Profile << Name;
 }
 
+// std::init / ref_to_uninit (paper §5). Two mutually-recursive local
+// recognizers over the syntactic form of a source expression -- no flow
+// analysis and no type-system tracking. Uninitialized storage is only ever
+// introduced by an explicit [[uninitialized]] / [[ref_to_uninit]] marker;
+// anything unrecognized is treated as initialized (the trust model).
+static bool glvalueDenotesUninitStorage(const Expr *E);
+
+// \p E is a pointer prvalue. True if it points to uninitialized storage.
+static bool pointerRefersToUninitStorage(const Expr *E) {
+  if (!E)
+    return false;
+  E = E->IgnoreParenImpCasts();
+
+  // Array-to-pointer decay has been stripped above, leaving the array glvalue.
+  if (E->getType()->isArrayType())
+    return glvalueDenotesUninitStorage(E);
+
+  // &G, where G denotes uninitialized storage.
+  if (const auto *UO = dyn_cast<UnaryOperator>(E))
+    if (UO->getOpcode() == UO_AddrOf)
+      return glvalueDenotesUninitStorage(UO->getSubExpr());
+
+  // A value of a [[ref_to_uninit]] pointer, or a call to a
+  // [[ref_to_uninit]]-returning function.
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return DRE->getDecl()->hasAttr<RefToUninitAttr>();
+  if (const auto *ME = dyn_cast<MemberExpr>(E))
+    return ME->getMemberDecl()->hasAttr<RefToUninitAttr>();
+  if (const auto *CE = dyn_cast<CallExpr>(E))
+    if (const FunctionDecl *FD = CE->getDirectCallee())
+      return FD->hasAttr<RefToUninitAttr>();
+
+  return false;
+}
+
+// \p E is a glvalue. True if it denotes uninitialized storage.
+static bool glvalueDenotesUninitStorage(const Expr *E) {
+  if (!E)
+    return false;
+  E = E->IgnoreParenImpCasts();
+
+  // A [[uninitialized]] variable / data member, or a subobject of one.
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    return DRE->getDecl()->hasAttr<CXX11UninitializedAttr>();
+  if (const auto *ME = dyn_cast<MemberExpr>(E))
+    return ME->getMemberDecl()->hasAttr<CXX11UninitializedAttr>() ||
+           glvalueDenotesUninitStorage(ME->getBase());
+  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
+    return pointerRefersToUninitStorage(ASE->getBase());
+
+  // *p, where p points to uninitialized storage.
+  if (const auto *UO = dyn_cast<UnaryOperator>(E))
+    if (UO->getOpcode() == UO_Deref)
+      return pointerRefersToUninitStorage(UO->getSubExpr());
+
+  return false;
+}
+
+bool Sema::refersToUninitializedMemory(const Expr *E, bool IsReference) const {
+  return IsReference ? glvalueDenotesUninitStorage(E)
+                     : pointerRefersToUninitStorage(E);
+}
+
+void Sema::checkRefToUninitInit(SourceLocation Loc, bool TargetIsRefToUninit,
+                                bool IsReference, const Expr *Src) {
+  // A RecoveryExpr is a placeholder for an initialization that already failed,
+  // not a source the user wrote, so it must not drive this rule.
+  if (!Src || isa<RecoveryExpr>(Src->IgnoreParens()))
+    return;
+  static constexpr StringRef Profile = "std::init";
+  static constexpr StringRef Rule = "ref_to_uninit";
+  if (!shouldEmitProfileViolation(Profile, Rule, Loc))
+    return;
+  bool SrcUninit = refersToUninitializedMemory(Src, IsReference);
+  unsigned IsRef = IsReference ? 1 : 0;
+  if (TargetIsRefToUninit && !SrcUninit)
+    Diag(Loc, diag::err_init_ref_to_uninit_requires_uninit) << Profile << IsRef;
+  else if (!TargetIsRefToUninit && SrcUninit)
+    Diag(Loc, diag::err_init_uninit_requires_ref_to_uninit) << Profile << IsRef;
+}
+
 void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   if (var->isInvalidDecl()) return;
 
   checkInitProfileUninitWithInitializer(
       var->getLocation(), var->getDeclName(), var->getType(), var->getInit(),
       var->hasAttr<CXX11UninitializedAttr>());
+
+  // std::init / ref_to_uninit (paper §5): a pointer or reference variable must
+  // be bound consistently with its [[ref_to_uninit]] marking. A dependent type
+  // is deferred to instantiation, where the rule re-runs on the concrete type.
+  if (QualType VT = var->getType(); !VT->isDependentType() &&
+      (VT->isPointerType() || VT->isReferenceType()))
+    checkRefToUninitInit(var->getLocation(), var->hasAttr<RefToUninitAttr>(),
+                         VT->isReferenceType(), var->getInit());
 
   CUDA().MaybeAddConstantAttr(var);
 

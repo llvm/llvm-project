@@ -14167,4 +14167,10 @@ def err_init_ctor_uninit_member : ProfileRuleError<
   "constructor does not initialize member %1 under profile '%0'">;
 def note_init_uninit_member_here : Note<
   "member %0 declared here">;
+def err_init_ref_to_uninit_requires_uninit : ProfileRuleError<
+  "%select{pointer|reference}1 marked '[[ref_to_uninit]]' must refer to "
+  "uninitialized memory under profile '%0'">;
+def err_init_uninit_requires_ref_to_uninit : ProfileRuleError<
+  "%select{pointer|reference}1 to uninitialized memory must be marked "
+  "'[[ref_to_uninit]]' under profile '%0'">;
 } // end of sema component.
