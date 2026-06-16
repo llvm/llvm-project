@@ -558,8 +558,15 @@ bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return true;
 
   const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
-  QualType TargetQT = E->getType()->getPointeeType();
+  QualType ExprTy = E->getType();
+  if (ExprTy->isPointerOrReferenceType())
+    ExprTy = ExprTy->getPointeeType();
+
+  QualType TargetQT = ExprTy;
   QualType MostDerivedQT = Ptr.getDeclPtr().getType();
+
+  if (MostDerivedQT->isPointerOrReferenceType())
+    MostDerivedQT = MostDerivedQT->getPointeeType();
 
   S.CCEDiag(E, diag::note_constexpr_invalid_downcast)
       << MostDerivedQT << TargetQT;
@@ -1577,9 +1584,6 @@ bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
     S.Stk.push<Pointer>(Ptr);
     return true;
   }
-
-  if (isConstexprUnknown(Ptr))
-    return false;
 
   if (!Ptr.getFieldDesc()->isRecord()) {
     S.Stk.push<Pointer>(Ptr);
