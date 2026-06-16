@@ -135,13 +135,22 @@ void SpillCandidate::generateSpillRestoreInstrs(
   SpillInstruction = &*(std::prev(WhereToSpill));
   LIS->InsertMachineInstrInMaps(*SpillInstruction);
 
-  assert(SpillInstruction && "There is not a spill instruction");
-  LLVM_DEBUG(dbgs() << "High register pressure point = " << *CurMI);
+  MachineBasicBlock *SpillBlock = SpillInstruction->getParent();
+  MachineBasicBlock *CurMBB = CurMI->getParent();
+  LLVM_DEBUG(dbgs() << "------------------------------------------------\n");
+  LLVM_DEBUG(dbgs() << "The high register pressure point is " << *CurMI);
+  LLVM_DEBUG(dbgs() << "The high register pressure block is bb."
+                    << CurMBB->getNumber() << "\n");
+  if (MLI->getLoopFor(CurMBB)) {
+    LLVM_DEBUG(dbgs() << "The high register pressure point is in a loop\n");
+  } else {
+    LLVM_DEBUG(dbgs() << "The high register pressure point is not in a loop\n");
+  }
   LLVM_DEBUG(dbgs() << "Register to spill = " << printReg(RegToSpill, TRI)
                     << "\n");
   LLVM_DEBUG(dbgs() << "Spill instruction = " << *SpillInstruction);
-  LLVM_DEBUG(dbgs() << "Spill block = "
-                    << SpillInstruction->getParent()->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Spill block = " << "bb." << SpillBlock->getNumber()
+                    << "\n");
 
   // For each group emit one restore for the group header in the parent block
   // of the group header or the common dominator. The rest of the uses in the
@@ -179,6 +188,8 @@ void SpillCandidate::generateSpillRestoreInstrs(
         RestoreDstRegs.insert(Restore->getOperand(0).getReg());
       }
     } else if (Head->isPHI()) {
+      LLVM_DEBUG(dbgs() << "Head is phi node: " << *Head);
+      LLVM_DEBUG(dbgs() << "The group has " << G1.size() << " use(s). \n");
       Restore = emitRestore(RegToSpill, *HeadMBB, FI);
       for (unsigned i = 1; i < Head->getNumOperands(); i += 2) {
         if (Head->getOperand(i).getReg() == RegToSpill &&
@@ -188,11 +199,17 @@ void SpillCandidate::generateSpillRestoreInstrs(
       }
       RestoreDstRegs.insert(Restore->getOperand(0).getReg());
     } else if (Head->getParent() != HeadMBB) {
+      LLVM_DEBUG(dbgs() << "Restore in loop preheader.\n");
+      LLVM_DEBUG(dbgs() << "The group has " << G1.size() << " use(s). \n");
+      LLVM_DEBUG(dbgs() << "The head is " << *Head);
       Restore = emitRestore(RegToSpill, *HeadMBB, FI);
       Head->substituteRegister(RegToSpill, Restore->getOperand(0).getReg(), 0,
                                *TRI);
       RestoreDstRegs.insert(Restore->getOperand(0).getReg());
     } else {
+      LLVM_DEBUG(dbgs() << "Common case.\n");
+      LLVM_DEBUG(dbgs() << "The group has " << G1.size() << " use(s). \n");
+      LLVM_DEBUG(dbgs() << "The head is " << *Head);
       Restore = emitRestore(RegToSpill, Head, FI);
       RestoreDstRegs.insert(Restore->getOperand(0).getReg());
     }
@@ -206,6 +223,15 @@ void SpillCandidate::generateSpillRestoreInstrs(
       if (U == Head)
         continue;
 
+      MachineBasicBlock *UBB = U->getParent();
+      LLVM_DEBUG(dbgs() << "Updated use: " << *U);
+      LLVM_DEBUG(dbgs() << "Use block = " << "bb." << UBB->getNumber() << "\n");
+      if (MLI->getLoopFor(UBB)) {
+        LLVM_DEBUG(dbgs() << "The use block is in a loop\n");
+      } else {
+        LLVM_DEBUG(dbgs() << "The use block is not in a loop\n");
+      }
+
       if (U->isPHI()) {
         for (unsigned i = 1; i < U->getNumOperands(); i += 2) {
           if (U->getOperand(i).getReg() == RegToSpill &&
@@ -218,10 +244,6 @@ void SpillCandidate::generateSpillRestoreInstrs(
                               *TRI);
       }
       RestoreUses.push_back(U);
-      LLVM_DEBUG(dbgs() << "Updated use: " << *U);
-      LLVM_DEBUG(dbgs() << "With register = "
-                        << printReg(Restore->getOperand(0).getReg(), TRI)
-                        << "\n");
     }
   }
 
@@ -288,12 +310,18 @@ MachineInstr *SpillCandidate::emitRestore(Register RegToSpill,
   Restore = DefRegUseInstr->getPrevNode();
   DefRegUseInstr->substituteRegister(RegToSpill, NewReg, 0, *TRI);
   LIS->InsertMachineInstrInMaps(*Restore);
-  LLVM_DEBUG(dbgs() << "Emit restore before use: " << *DefRegUseInstr);
+  MachineBasicBlock *RestoreBlock = Restore->getParent();
   LLVM_DEBUG(dbgs() << "Restore instruction = " << *Restore);
-  LLVM_DEBUG(dbgs() << "Restore block = " << Restore->getParent()->getName()
-                    << "\n");
   LLVM_DEBUG(dbgs() << "Register to replace spilled register = "
                     << printReg(NewReg, TRI) << "\n");
+  LLVM_DEBUG(dbgs() << "Restore block = " << "bb." << RestoreBlock->getNumber()
+                    << "\n");
+  if (MLI->getLoopFor(RestoreBlock)) {
+    LLVM_DEBUG(dbgs() << "The restore block is in a loop\n");
+  } else {
+    LLVM_DEBUG(dbgs() << "The restore block is not in a loop\n");
+  }
+
   return Restore;
 }
 
@@ -308,10 +336,17 @@ MachineInstr *SpillCandidate::emitRestore(Register RegToSpill,
   MachineInstr *Restore = &*(std::prev(It));
   LIS->InsertMachineInstrInMaps(*Restore);
   LLVM_DEBUG(dbgs() << "Restore instruction = " << *Restore);
-  LLVM_DEBUG(dbgs() << "Emit restore at the end of basic block: = "
-                    << Restore->getParent()->getName() << "\n");
   LLVM_DEBUG(dbgs() << "Register to replace spilled register = "
                     << printReg(NewReg, TRI) << "\n");
+  LLVM_DEBUG(dbgs() << "Emit restore at the end of a basic block.\n");
+  LLVM_DEBUG(dbgs() << "Restore block = " << "bb." << InsertBB.getNumber()
+                    << "\n");
+  if (MLI->getLoopFor(&InsertBB)) {
+    LLVM_DEBUG(dbgs() << "The restore block is in a loop\n");
+  } else {
+    LLVM_DEBUG(dbgs() << "The restore block is not in a loop\n");
+  }
+
   return Restore;
 }
 
@@ -499,7 +534,6 @@ bool AMDGPUEarlyRegisterSpilling::shouldEmitRestoreInCommonDominator(
 void AMDGPUEarlyRegisterSpilling::groupUses(
     Register RegToSpill, MachineBasicBlock *SpillBlock, MachineInstr *CurMI,
     SetVectorType &DominatedUses, SmallVector<DomGroup> &GroupOfUses) {
-  // MachineBasicBlock *SpillBlock = SpillInstruction->getParent();
   MachineBasicBlock *CurMBB = CurMI->getParent();
   MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
   MachineLoop *SpillLoop = MLI->getLoopFor(SpillBlock);
@@ -889,6 +923,7 @@ static void normalizeCosts(SmallVector<SpillCandidate> &AllCandidates,
   int64_t StdDevNextUseDist = std::sqrt(SumSqDiffNextUseDist / NumCandidates);
   int64_t StdDevRestoreCost = std::sqrt(SumSqDiffRestoreCost / NumCandidates);
 
+  LLVM_DEBUG(dbgs() << "------------------------------------------------\n");
   LLVM_DEBUG(dbgs() << "RestoreCost (min=" << MinRestoreCost << ", max="
                     << MaxRestoreCost << ", mean=" << MeanRestoreCost
                     << ", stddev=" << StdDevRestoreCost << ")\n");
@@ -1041,8 +1076,9 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
     Candidate.calculateRestoreCost();
     Candidate.setNextUseDistance(NextUseDist);
     AllCandidates.push_back(Candidate);
-    LLVM_DEBUG(dbgs() << "Register to spill " << printReg(RegToSpill, TRI)
-                      << " = " << Candidate.getRestoreCost() << "\n");
+    LLVM_DEBUG(dbgs() << "Restore cost for register = "
+                      << printReg(RegToSpill, TRI) << " = "
+                      << Candidate.getRestoreCost() << "\n");
   }
 
   // Normalize restore costs and next-use distances.
@@ -1146,6 +1182,8 @@ bool AMDGPUEarlyRegisterSpilling::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "===========================================\n");
   LLVM_DEBUG(dbgs() << MF.getName() << "\n");
   LLVM_DEBUG(dbgs() << "MaxVGPRs = " << MaxVGPRs << "\n");
+  LLVM_DEBUG(dbgs() << "Live Ranges before ERS\n");
+  LLVM_DEBUG(LIS->dump());
 
   GCNDownwardRPTracker RPTracker(*LIS);
   ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
@@ -1216,6 +1254,11 @@ bool AMDGPUEarlyRegisterSpilling::runOnMachineFunction(MachineFunction &MF) {
       RPTracker.advance();
     }
   }
+
+  LLVM_DEBUG(dbgs() << "===========================================\n");
+  LLVM_DEBUG(dbgs() << "Live Ranges after ERS\n");
+  LLVM_DEBUG(LIS->dump());
+  LLVM_DEBUG(dbgs() << "===========================================\n");
 
   clearTables();
   return true;
