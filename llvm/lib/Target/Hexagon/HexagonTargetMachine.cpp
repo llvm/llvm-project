@@ -464,6 +464,7 @@ void HexagonPassConfig::addPreRegAlloc() {
   }
   if (TM->getOptLevel() >= CodeGenOptLevel::Default)
     addPass(&MachinePipelinerID);
+  addPass(createHexagonHVXSaveRemark());
 }
 
 void HexagonPassConfig::addPostRegAlloc() {
@@ -521,8 +522,6 @@ void HexagonPassConfig::addPreEmitPass() {
 
   if (EnableVectorPrint)
     addPass(createHexagonVectorPrint());
-
-  addPass(createHexagonHVXSaveRemark());
 
   // Add CFI instructions if necessary.
   addPass(createHexagonCallFrameInformation());
