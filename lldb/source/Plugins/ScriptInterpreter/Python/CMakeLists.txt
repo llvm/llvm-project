@@ -73,6 +73,14 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
     endif()
     target_link_directories(lldbPluginScriptInterpreterPython PRIVATE
       ${PYTHON_SABI_LIBRARY_DIRS})
+    if(NOT MINGW)
+      # Windows doesn't have "lib" as CMAKE_SHARED_LIBRARY_PREFIX. To be
+      # consistent with Unix, the output is still prefixed with "lib".
+      set_target_properties(lldbPluginScriptInterpreterPython
+        PROPERTIES
+        OUTPUT_NAME liblldbPluginScriptInterpreterPython
+      )
+    endif()
   endif()
 
   if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
@@ -85,8 +93,6 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
   # shared between the test binary and the plugin code.
   add_lldb_library(lldbStaticScriptInterpreterPython
     ${python_plugin_sources}
-    LINK_COMPONENTS
-      Support
     LINK_LIBS
       lldbBreakpoint
       lldbCore
