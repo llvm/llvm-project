@@ -31626,8 +31626,8 @@ AArch64TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
   if (BaseCost >= 0)
     BaseCost += BrMergingCcmpBias;
 
-  // Withdraw the CCMP discount when either unmerged condition would already be a
-  // single CBZ/CBNZ or TBZ/TBNZ: the split form needs no separate compare, so
+  // Withdraw the CCMP discount when either unmerged condition would already be
+  // a single CBZ/CBNZ or TBZ/TBNZ: the split form needs no separate compare, so
   // merging into a CMP/CCMP chain tends to add instructions rather than save
   // them.
   if (BaseCost >= 0 && BrMergingCbzTbnzBias > 0 &&
