@@ -12353,6 +12353,12 @@ QualType ASTContext::mergeObjCGCQualifiers(QualType LHS, QualType RHS) {
   // If the qualifiers are different, the types can still be merged.
   Qualifiers LQuals = LHSCan.getLocalQualifiers();
   Qualifiers RQuals = RHSCan.getLocalQualifiers();
+
+  if (LQuals.withoutObjCGCAttr() != RQuals.withoutObjCGCAttr()) {
+    // Reject immediately, if anything but the GC qualifiers is different. 
+    return {};
+  }
+
   if (LQuals != RQuals) {
     // Exactly one GC qualifier difference is allowed: __strong is
     // okay if the other type has no GC qualifier but is an Objective
@@ -12361,10 +12367,6 @@ QualType ASTContext::mergeObjCGCQualifiers(QualType LHS, QualType RHS) {
     // qualified __strong.
     Qualifiers::GC GC_L = LQuals.getObjCGCAttr();
     Qualifiers::GC GC_R = RQuals.getObjCGCAttr();
-    if (GC_L == GC_R) {
-      // Some non-GC qualifiers differ, so merging fails.
-      return {};
-    }
 
     if (GC_L == Qualifiers::Weak || GC_R == Qualifiers::Weak)
       return {};
