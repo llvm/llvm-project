@@ -26,5 +26,7 @@ static_assert((std::is_same<C::period, C::duration::period>::value), "");
 static_assert((std::is_same<C::duration, C::time_point::duration>::value), "");
 static_assert((std::is_same<C::time_point::clock, C>::value), "");
 
-[[maybe_unused]] constexpr std::same_as<const bool> decltype(auto) _ = C::is_steady;
+static_assert(std::is_same<decltype(C::is_steady), const bool>::value, "is_steady must be bool");
+static_assert(!std::is_member_pointer<decltype(&C::is_steady)>::value, "is_steady must be static");
+static_assert(C::is_steady || true, "is_steady must be constexpr"); // NOLINT(readability-simplify-boolean-expr)
 LIBCPP_STATIC_ASSERT(!C::is_steady);
