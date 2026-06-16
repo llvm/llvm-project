@@ -509,8 +509,8 @@ static void checkFileData(StringRef FileName, StringRef GoldenData) {
 TEST(raw_ostreamTest, raw_fd_ostream_mutual_ties) {
   SmallString<64> PathTiedTo;
   int FDTiedTo;
-  ASSERT_FALSE(
-      sys::fs::createTemporaryFile("tietest1", "", FDTiedTo, PathTiedTo, sys::fs::OF_Text));
+  ASSERT_FALSE(sys::fs::createTemporaryFile("tietest1", "", FDTiedTo,
+                                            PathTiedTo, sys::fs::OF_Text));
   FileRemover CleanupTiedTo(PathTiedTo);
   raw_fd_ostream TiedTo(FDTiedTo, /*ShouldClose=*/false);
 
@@ -580,10 +580,10 @@ TEST(raw_ostreamTest, writeToOutputFileEncoding) {
   // check to make sure that the encoding used in the file matches
   // the tag on the file.
   SmallString<64> Path;
-  int FD=0;
+  int FD = 0;
   ASSERT_FALSE(
       sys::fs::createTemporaryFile("foo", "bar", FD, Path, sys::fs::OF_Text));
-  setzOSFileTag(FD,819, true);
+  setzOSFileTag(FD, 819, true);
   FileRemover Cleanup(Path);
 
   {
