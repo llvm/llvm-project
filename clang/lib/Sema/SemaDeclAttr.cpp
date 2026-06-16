@@ -6986,6 +6986,23 @@ static void handleCXX11UninitializedAttr(Sema &S, Decl *D,
 }
 
 static void handleRefToUninitAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  // The SubjectList restricts D to a variable, non-static data member, or
+  // function. "Refers to uninitialized memory" is only meaningful for a
+  // pointer or reference (for a function, its return value), so reject any
+  // other type. Like the [[uninitialized]] subject checks, this is not
+  // profile policy and so fires regardless of -fprofiles.
+  QualType T;
+  if (const auto *FD = dyn_cast<FunctionDecl>(D))
+    T = FD->getReturnType();
+  else
+    T = cast<ValueDecl>(D)->getType();
+
+  if (!T->isPointerType() && !T->isReferenceType()) {
+    S.Diag(AL.getLoc(), diag::err_ref_to_uninit_attr_invalid_type);
+    AL.setInvalid();
+    return;
+  }
+
   D->addAttr(::new (S.Context) RefToUninitAttr(S.Context, AL));
 }
 

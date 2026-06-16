@@ -14157,6 +14157,9 @@ def err_init_uninit_with_initializer : ProfileRuleError<
 def err_uninitialized_attr_invalid_subject : Error<
   "'uninitialized' attribute cannot be applied to %select{a reference|"
   "a function parameter|a structured binding}0">;
+def err_ref_to_uninit_attr_invalid_type : Error<
+  "'ref_to_uninit' attribute only applies to pointers, references, and "
+  "functions returning them">;
 def err_init_union_marker : ProfileRuleError<
   "'[[uninitialized]]' cannot be applied to %select{a variable of union type|"
   "a union member}1 under profile '%0'">;
