@@ -69,8 +69,10 @@ struct NoOpMapUnmapCallback {
 
 // clang-format off
 // Include order is load-bearing (MemoryMapper, AllocatorStats, secondary
-// typedefs, then DeviceAllocatorT, then CombinedAllocator). Select device 
-// tier via CombinedAllocator's third template from asan_allocator.h.
+// typedefs, then DeviceAllocatorT, then CombinedAllocator). The base
+// CombinedAllocator is host-only (primary + secondary); an optional device heap
+// tier is layered on top via DeviceCombinedAllocator (opt-in from
+// asan_allocator.h), so the shared base stays untouched.
 // Do not sort.
 #include "sanitizer_allocator_size_class_map.h"
 #include "sanitizer_allocator_stats.h"
@@ -80,6 +82,7 @@ struct NoOpMapUnmapCallback {
 #include "sanitizer_allocator_secondary.h"
 #include "sanitizer_allocator_device.h"
 #include "sanitizer_allocator_combined.h"
+#include "sanitizer_allocator_combined_device.h"
 // clang-format on
 
 bool IsRssLimitExceeded();

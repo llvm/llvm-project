@@ -35,6 +35,7 @@ DEFINE_REAL(hsa_status_t, hsa_amd_memory_pool_allocate,
             hsa_amd_memory_pool_t memory_pool, size_t size, uint32_t flags,
             void** ptr)
 DEFINE_REAL(hsa_status_t, hsa_amd_memory_pool_free, void* ptr)
+DEFINE_REAL(hsa_status_t, hsa_memory_free, void* ptr)
 DEFINE_REAL(hsa_status_t, hsa_amd_memory_async_copy, void*, hsa_agent_t,
             const void*, hsa_agent_t, size_t, uint32_t, const hsa_signal_t*,
             hsa_signal_t)
@@ -77,6 +78,13 @@ INTERCEPTOR(hsa_status_t, hsa_amd_memory_pool_allocate,
 }
 
 INTERCEPTOR(hsa_status_t, hsa_amd_memory_pool_free, void* ptr) {
+  AsanInitFromRtl();
+  ENSURE_HSA_INITED();
+  GET_STACK_TRACE_FREE;
+  return asan_hsa_amd_memory_pool_free(ptr, &stack);
+}
+
+INTERCEPTOR(hsa_status_t, hsa_memory_free, void* ptr) {
   AsanInitFromRtl();
   ENSURE_HSA_INITED();
   GET_STACK_TRACE_FREE;

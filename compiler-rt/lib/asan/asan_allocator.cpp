@@ -537,6 +537,20 @@ struct Allocator {
     return true;
   }
 
+  // Route the raw block allocation to the underlying allocator. The device
+  // heap tier (da_info) only exists for SANITIZER_AMDHSA, where `allocator` is
+  // a DeviceCombinedAllocator; other builds use a plain CombinedAllocator whose
+  // Allocate() has no device parameter.
+  void* AllocateBlock(AllocatorCache* cache, uptr needed_size,
+                      DeviceAllocationInfo* da_info) {
+#if SANITIZER_AMDHSA
+    return allocator.Allocate(cache, needed_size, 8, da_info);
+#else
+    (void)da_info;
+    return allocator.Allocate(cache, needed_size, 8);
+#endif
+  }
+
   // -------------------- Allocation/Deallocation routines ---------------
   // may_return_null tells AllocateImpl() whether OOM should produce a nullptr
   // (true) or a fatal Report*+Die() (false).
@@ -597,11 +611,11 @@ struct Allocator {
     void* allocated;
     if (t) {
       AllocatorCache* cache = GetAllocatorCache(&t->malloc_storage());
-      allocated = allocator.Allocate(cache, needed_size, 8, da_info);
+      allocated = AllocateBlock(cache, needed_size, da_info);
     } else {
       SpinMutexLock l(&fallback_mutex);
       AllocatorCache* cache = &fallback_allocator_cache;
-      allocated = allocator.Allocate(cache, needed_size, 8, da_info);
+      allocated = AllocateBlock(cache, needed_size, da_info);
     }
     if (UNLIKELY(!allocated)) {
       SetAllocatorOutOfMemory();

@@ -3,7 +3,6 @@
 
 set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_allocator.cpp
-  sanitizer_allocator_amdgpu.cpp
   sanitizer_common.cpp
   sanitizer_deadlock_detector1.cpp
   sanitizer_deadlock_detector2.cpp
@@ -62,6 +61,7 @@ set(SANITIZER_NOLIBC_SOURCES
 
 set(SANITIZER_LIBCDEP_SOURCES
   sanitizer_common_libcdep.cpp
+  sanitizer_allocator_amdgpu.cpp
   sanitizer_allocator_checks.cpp
   sanitizer_dl.cpp
   sanitizer_linux_libcdep.cpp
@@ -114,6 +114,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_allocator.h
   sanitizer_allocator_checks.h
   sanitizer_allocator_combined.h
+  sanitizer_allocator_combined_device.h
   sanitizer_allocator_dlsym.h
   sanitizer_allocator_interface.h
   sanitizer_allocator_internal.h

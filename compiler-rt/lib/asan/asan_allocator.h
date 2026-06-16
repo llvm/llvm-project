@@ -275,10 +275,10 @@ static const uptr kNumberOfSizeClasses = SizeClassMap::kNumClasses;
 template <typename AddressSpaceView>
 using AsanAllocatorASVT =
 #if SANITIZER_AMDHSA
-    CombinedAllocator<PrimaryAllocatorASVT<AddressSpaceView>,
-                      DefaultLargeMmapAllocatorPtrArray,
-                      __sanitizer::AmdgpuDeviceAllocatorT<
-                          PrimaryAllocatorASVT<AddressSpaceView>>>;
+    DeviceCombinedAllocator<
+        CombinedAllocator<PrimaryAllocatorASVT<AddressSpaceView>>,
+        __sanitizer::AmdgpuDeviceAllocatorT<
+            PrimaryAllocatorASVT<AddressSpaceView>>>;
 #else
     CombinedAllocator<PrimaryAllocatorASVT<AddressSpaceView>>;
 #endif

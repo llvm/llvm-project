@@ -13,18 +13,14 @@
 #error This file must be included inside sanitizer_allocator.h
 #endif
 
-// This class implements a complete memory allocator by using two internal
-// allocators:
+// This class implements a complete memory allocator by using two
+// internal allocators:
 // PrimaryAllocator is efficient, but may not allocate some sizes (alignments).
 //  When allocating 2^x bytes it should return 2^x aligned chunk.
 // PrimaryAllocator is used via a local AllocatorCache.
 // SecondaryAllocator can allocate anything, but is not efficient.
-// DeviceAllocator as optional device heap tier: implemented as
-// DeviceAllocatorT<PrimaryAllocator, DeviceBackend>. Default:
-// DefaultDeviceAllocator<PrimaryAllocator>.
 template <class PrimaryAllocator,
-          class LargeMmapAllocatorPtrArray = DefaultLargeMmapAllocatorPtrArray,
-          class DeviceAllocator = DefaultDeviceAllocator<PrimaryAllocator>>
+          class LargeMmapAllocatorPtrArray = DefaultLargeMmapAllocatorPtrArray>
 class CombinedAllocator {
  public:
   using AllocatorCache = typename PrimaryAllocator::AllocatorCache;
@@ -37,18 +33,15 @@ class CombinedAllocator {
                              uptr heap_start = 0) {
     primary_.Init(release_to_os_interval_ms, heap_start);
     secondary_.InitLinkerInitialized();
-    device_.Init(primary_.kMetadataSize);
   }
 
   void Init(s32 release_to_os_interval_ms, uptr heap_start = 0) {
     stats_.Init();
     primary_.Init(release_to_os_interval_ms, heap_start);
     secondary_.Init();
-    device_.Init(primary_.kMetadataSize);
   }
 
-  void* Allocate(AllocatorCache* cache, uptr size, uptr alignment,
-                 DeviceAllocationInfo* da_info = nullptr) {
+  void* Allocate(AllocatorCache* cache, uptr size, uptr alignment) {
     // Returning 0 on malloc(0) may break a lot of code.
     if (size == 0)
       size = 1;
@@ -72,9 +65,7 @@ class CombinedAllocator {
     // alignment without such requirement, and allocating 'size' would use
     // extraneous memory, so we employ 'original_size'.
     void* res;
-    if (da_info)
-      res = device_.Allocate(&stats_, original_size, alignment, da_info);
-    else if (primary_.CanAllocate(size, alignment))
+    if (primary_.CanAllocate(size, alignment))
       res = cache->Allocate(&primary_, primary_.ClassID(size));
     else
       res = secondary_.Allocate(&stats_, original_size, alignment);
@@ -99,10 +90,8 @@ class CombinedAllocator {
     if (!p) return;
     if (primary_.PointerIsMine(p))
       cache->Deallocate(&primary_, primary_.GetSizeClass(p), p);
-    else if (secondary_.PointerIsMine(p))
+    else
       secondary_.Deallocate(&stats_, p);
-    else if (device_.PointerIsMine(p))
-      device_.Deallocate(&stats_, p);
   }
 
   void *Reallocate(AllocatorCache *cache, void *p, uptr new_size,
@@ -126,11 +115,7 @@ class CombinedAllocator {
   bool PointerIsMine(const void *p) const {
     if (primary_.PointerIsMine(p))
       return true;
-    if (secondary_.PointerIsMine(p))
-      return true;
-    if (device_.PointerIsMine(p))
-      return true;
-    return false;
+    return secondary_.PointerIsMine(p);
   }
 
   bool FromPrimary(const void *p) const { return primary_.PointerIsMine(p); }
@@ -138,62 +123,42 @@ class CombinedAllocator {
   void *GetMetaData(const void *p) {
     if (primary_.PointerIsMine(p))
       return primary_.GetMetaData(p);
-    if (secondary_.PointerIsMine(p))
-      return secondary_.GetMetaData(p);
-    if (device_.PointerIsMine(p))
-      return device_.GetMetaData(p);
-    return nullptr;
+    return secondary_.GetMetaData(p);
   }
 
   // Same as GetMetaData, but must be called with the allocator locked
-  // (via ForceLock). Uses GetBlockBeginFastLocked for secondary/device checks
-  // to avoid re-acquiring the mutex already held by the caller.
+  // (via ForceLock). Uses GetBlockBeginFastLocked for the secondary check to
+  // avoid re-acquiring the mutex already held by the caller.
   void* GetMetaDataFastLocked(const void* p) {
     if (primary_.PointerIsMine(p))
       return primary_.GetMetaData(p);
     if (secondary_.GetBlockBeginFastLocked(p))
       return secondary_.GetMetaData(p);
-    if (device_.GetBlockBeginFastLocked(p))
-      return device_.GetMetaData(p);
     return nullptr;
   }
 
   void *GetBlockBegin(const void *p) {
     if (primary_.PointerIsMine(p))
       return primary_.GetBlockBegin(p);
-    if (secondary_.PointerIsMine(p))
-      return secondary_.GetBlockBegin(p);
-    if (device_.PointerIsMine(p))
-      return device_.GetBlockBegin(p);
-    return nullptr;
+    return secondary_.GetBlockBegin(p);
   }
 
   // This function does the same as GetBlockBegin, but is much faster.
   // Must be called with the allocator locked.
-  void *GetBlockBeginFastLocked(const void *p) {
-    void* beg;
+  void* GetBlockBeginFastLocked(const void* p) {
     if (primary_.PointerIsMine(p))
       return primary_.GetBlockBegin(p);
-    if ((beg = secondary_.GetBlockBeginFastLocked(p)))
-      return beg;
-    if ((beg = device_.GetBlockBeginFastLocked(p)))
-      return beg;
-    return nullptr;
+    return secondary_.GetBlockBeginFastLocked(p);
   }
 
   uptr GetActuallyAllocatedSize(void *p) {
     if (primary_.PointerIsMine(p))
       return primary_.GetActuallyAllocatedSize(p);
-    if (secondary_.PointerIsMine(p))
-      return secondary_.GetActuallyAllocatedSize(p);
-    if (device_.PointerIsMine(p))
-      return device_.GetActuallyAllocatedSize(p);
-    return 0;
+    return secondary_.GetActuallyAllocatedSize(p);
   }
 
   uptr TotalMemoryUsed() {
-    return primary_.TotalMemoryUsed() + secondary_.TotalMemoryUsed() +
-           device_.TotalMemoryUsed();
+    return primary_.TotalMemoryUsed() + secondary_.TotalMemoryUsed();
   }
 
   void TestOnlyUnmap() { primary_.TestOnlyUnmap(); }
@@ -217,13 +182,11 @@ class CombinedAllocator {
   void PrintStats() {
     primary_.PrintStats();
     secondary_.PrintStats();
-    device_.PrintStats();
   }
 
   // ForceLock() and ForceUnlock() are needed to implement Darwin malloc zone
   // introspection API.
   void ForceLock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
-    device_.ForceLock();
     primary_.ForceLock();
     secondary_.ForceLock();
   }
@@ -231,7 +194,6 @@ class CombinedAllocator {
   void ForceUnlock() SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
     secondary_.ForceUnlock();
     primary_.ForceUnlock();
-    device_.ForceUnlock();
   }
 
   // Iterate over all existing chunks.
@@ -239,12 +201,10 @@ class CombinedAllocator {
   void ForEachChunk(ForEachChunkCallback callback, void *arg) {
     primary_.ForEachChunk(callback, arg);
     secondary_.ForEachChunk(callback, arg);
-    device_.ForEachChunk(callback, arg);
   }
 
  private:
   PrimaryAllocator primary_;
   SecondaryAllocator secondary_;
-  DeviceAllocator device_;
   AllocatorGlobalStats stats_;
 };
