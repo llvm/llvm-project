@@ -1054,6 +1054,31 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, StackDepot) {
   EXPECT_EQ(Depot->at(RingPosPtr + 2), 3u);
 }
 
+TEST(ScudoCombinedTest, StackDepotSpecifics) {
+  alignas(scudo::StackDepot) char Buf[sizeof(scudo::StackDepot) +
+                                      1024 * sizeof(scudo::atomic_u64) +
+                                      1024 * sizeof(scudo::atomic_u32)] = {};
+  auto *Depot = reinterpret_cast<scudo::StackDepot *>(Buf);
+  Depot->init(1024, 1024);
+
+  scudo::uptr TabBytes = sizeof(scudo::atomic_u32) * 1024;
+
+  // Test buffer too small for the base structure
+  EXPECT_FALSE(Depot->isValid(sizeof(scudo::StackDepot) - 1));
+  // Test buffer too small for the hash table
+  EXPECT_FALSE(Depot->isValid(sizeof(scudo::StackDepot) + TabBytes - 1));
+
+  // Test duplicate insert
+  scudo::uptr Stack[] = {1, 2, 3};
+  scudo::u32 Hash1 = Depot->insert(&Stack[0], &Stack[3]);
+  scudo::u32 Hash2 = Depot->insert(&Stack[0], &Stack[3]);
+  EXPECT_EQ(Hash1, Hash2);
+
+  // Test disable/enable
+  Depot->disable();
+  Depot->enable();
+}
+
 #if SCUDO_CAN_USE_PRIMARY64
 #if SCUDO_TRUSTY
 
@@ -1583,15 +1608,20 @@ struct TestInitSizeTSDExclusiveConfig : public TestInitSizeConfig {
   template <class A> using TSDRegistryT = scudo::TSDRegistryExT<A>;
 };
 
+struct TestInitSizeLargeTSDSharedConfig : public TestInitSizeConfig {
+  template <class A>
+  using TSDRegistryT = scudo::TSDRegistrySharedT<A, 512U, 1U>;
+};
+
 template <class AllocatorT> void RunStress() {
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
   // This test is designed to try and have many threads trying to initialize
   // the TSD at the same time. Make sure this doesn't crash.
   std::atomic_bool StartRunning = false;
-  std::vector<std::thread *> threads;
+  std::vector<std::thread *> Threads;
   for (size_t I = 0; I < 16; I++) {
-    threads.emplace_back(new std::thread([&Allocator, &StartRunning]() {
+    Threads.emplace_back(new std::thread([&Allocator, &StartRunning]() {
       while (!StartRunning.load())
         ;
 
@@ -1605,10 +1635,11 @@ template <class AllocatorT> void RunStress() {
 
   StartRunning = true;
 
-  for (auto *thread : threads) {
-    thread->join();
-    delete thread;
+  for (auto *Thread : Threads) {
+    Thread->join();
+    delete Thread;
   }
+  Allocator->unmapTestOnly();
 }
 
 TEST(ScudoCombinedTest, StressThreadInitTSDShared) {
@@ -1623,6 +1654,105 @@ TEST(ScudoCombinedTest, StressThreadInitTSDExclusive) {
   // Run the stress test a few times.
   for (size_t I = 0; I < 10; I++)
     RunStress<AllocatorT>();
+}
+
+TEST(ScudoCombinedTest, StressThreadTSDSharedSetTSDs) {
+  using AllocatorT = scudo::Allocator<TestInitSizeLargeTSDSharedConfig>;
+  for (size_t Runs = 0; Runs < 100; Runs++) {
+    auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+    // Try to have many threads being created and allocating while increasing
+    // the number of TSDs.
+    const size_t kNumThreads = 4;
+    std::atomic_size_t NumRunning = 0;
+    std::atomic_bool StopRunning = false;
+    std::vector<std::thread *> Threads;
+    for (size_t I = 0; I < kNumThreads; I++) {
+      Threads.emplace_back(
+          new std::thread([&Allocator, &NumRunning, &StopRunning]() {
+            NumRunning++;
+            while (!StopRunning.load()) {
+              std::thread Thread([&Allocator]() {
+                void *Ptr = Allocator->allocate(10, Origin);
+                EXPECT_TRUE(Ptr != nullptr);
+                // Make sure this value is not optimized away.
+                asm volatile("" : : "r,m"(Ptr) : "memory");
+                Allocator->deallocate(Ptr, Origin);
+              });
+              Thread.join();
+            }
+          }));
+    }
+
+    while (NumRunning.load() != kNumThreads)
+      ;
+
+    // Increase the number of TSDs while threads are being created and
+    // allocating.
+    for (scudo::sptr I = 2; I < 512; I++) {
+      EXPECT_TRUE(Allocator->setOption(scudo::Option::MaxTSDsCount, I));
+    }
+    StopRunning = true;
+
+    for (auto *Thread : Threads) {
+      Thread->join();
+      delete Thread;
+    }
+    Allocator->unmapTestOnly();
+  }
+}
+
+TEST(ScudoCombinedTest, StressThreadTSDSharedMultiThreadSetTSDs) {
+  using AllocatorT = scudo::Allocator<TestInitSizeLargeTSDSharedConfig>;
+  for (size_t Runs = 0; Runs < 10; Runs++) {
+    auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+    // Try to have many threads being created and allocating while increasing
+    // the number of TSDs.
+    const size_t kNumThreads = 4;
+    std::atomic_size_t NumRunning = 0;
+    std::atomic_bool StopRunning = false;
+    std::vector<std::thread *> Threads;
+    for (size_t I = 0; I < kNumThreads; I++) {
+      Threads.emplace_back(
+          new std::thread([&Allocator, &NumRunning, &StopRunning]() {
+            NumRunning++;
+            while (!StopRunning.load()) {
+              std::thread Thread([&Allocator]() {
+                void *Ptr = Allocator->allocate(10, Origin);
+                EXPECT_TRUE(Ptr != nullptr);
+                // Make sure this value is not optimized away.
+                asm volatile("" : : "r,m"(Ptr) : "memory");
+                Allocator->deallocate(Ptr, Origin);
+              });
+              Thread.join();
+            }
+          }));
+    }
+
+    while (NumRunning.load() != kNumThreads)
+      ;
+
+    std::vector<std::thread *> SetThreads;
+    // Create 10 threads running at once to keep the total threads from
+    // getting too high and causing problems.
+    for (scudo::sptr I = 2; I < 12; I++) {
+      SetThreads.emplace_back(new std::thread([&Allocator, I]() {
+        Allocator->setOption(scudo::Option::MaxTSDsCount, I);
+      }));
+    }
+    StopRunning = true;
+    for (auto *Thread : SetThreads) {
+      Thread->join();
+      delete Thread;
+    }
+
+    for (auto *Thread : Threads) {
+      Thread->join();
+      delete Thread;
+    }
+    Allocator->unmapTestOnly();
+  }
 }
 
 struct TestMatchConfig {
@@ -1892,4 +2022,157 @@ TEST(ScudoCombinedTest, VerifyConfigOverrideMatchChecks) {
   if (Ptr != nullptr) {
     Allocator->deallocateAligned(Ptr, scudo::Chunk::Origin::Malloc, Alignment);
   }
+}
+
+struct TestNumericValuesConfig {
+  template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 8U, 4U>;
+
+  struct Primary {
+    using SizeClassMap = scudo::AndroidSizeClassMap;
+    static const scudo::uptr RegionSizeLog = 18U;
+    static const scudo::uptr GroupSizeLog = 18U;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const scudo::s32 DefaultReleaseToOsIntervalMs = INT32_MIN;
+#if SCUDO_CAN_USE_PRIMARY64
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+#endif
+  };
+
+#if SCUDO_CAN_USE_PRIMARY64
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+#else
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator32<Config>;
+#endif
+
+  struct Secondary {
+    template <typename Config> using CacheT = scudo::MapAllocatorCache<Config>;
+    struct Cache {
+      static const scudo::u32 EntriesArraySize = 128;
+      static const scudo::u32 QuarantineSize = 0;
+      static const scudo::u32 DefaultMaxEntriesCount = 64;
+      static const scudo::uptr DefaultMaxEntrySize = 1UL << 20;
+      static const scudo::s32 MinReleaseToOsIntervalMs = 1000;
+      static const scudo::s32 MaxReleaseToOsIntervalMs = 2000;
+      static const scudo::s32 DefaultReleaseToOsIntervalMs = 1500;
+    };
+  };
+
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+};
+
+TEST(ScudoCombinedTest, VerifyNumericValuesConfig) {
+  using AllocatorT = scudo::Allocator<TestNumericValuesConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  std::string Stats(10000, '\0');
+  Allocator->getStats(Stats.data(), Stats.size());
+  EXPECT_NE(Stats.find("CompactPtrScale: 0"), std::string::npos);
+  EXPECT_NE(Stats.find("EntriesArraySize: 128"), std::string::npos);
+  EXPECT_NE(Stats.find("QuarantineSize: 0"), std::string::npos);
+  EXPECT_NE(Stats.find("DefaultMaxEntriesCount: 64"), std::string::npos);
+  EXPECT_NE(Stats.find("DefaultMaxEntrySize: 1048576"), std::string::npos);
+  EXPECT_NE(Stats.find("MinReleaseToOsIntervalMs: 1000"), std::string::npos);
+  EXPECT_NE(Stats.find("MaxReleaseToOsIntervalMs: 2000"), std::string::npos);
+  EXPECT_NE(Stats.find("DefaultReleaseToOsIntervalMs: 1500"),
+            std::string::npos);
+}
+
+struct TestAllBoolFalseConfig {
+  static const bool MaySupportMemoryTagging = false;
+  static const bool QuarantineDisabled = false;
+  static const bool ExactUsableSize = false;
+  template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 8U, 4U>;
+
+  struct Primary {
+    using SizeClassMap = scudo::AndroidSizeClassMap;
+    static const scudo::uptr RegionSizeLog = 18U;
+    static const scudo::uptr GroupSizeLog = 18U;
+#if SCUDO_CAN_USE_PRIMARY64
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+#endif
+    static const bool EnableBlockCache = false;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableRandomOffset = false;
+    static const bool EnableContiguousRegions = false;
+  };
+
+#if SCUDO_CAN_USE_PRIMARY64
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+#else
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator32<Config>;
+#endif
+
+  struct Secondary {
+    template <typename Config>
+    using CacheT = scudo::MapAllocatorNoCache<Config>;
+  };
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+};
+
+TEST(ScudoCombinedTest, VerifyAllBoolFalseConfig) {
+  using AllocatorT = scudo::Allocator<TestAllBoolFalseConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  std::string Stats(10000, '\0');
+  Allocator->getStats(Stats.data(), Stats.size());
+  EXPECT_NE(Stats.find("MaySupportMemoryTagging: false"), std::string::npos);
+  EXPECT_NE(Stats.find("QuarantineDisabled: false"), std::string::npos);
+  EXPECT_NE(Stats.find("ExactUsableSize: false"), std::string::npos);
+  EXPECT_NE(Stats.find("EnableBlockCache: false"), std::string::npos);
+  EXPECT_NE(Stats.find("CompactPtrScale: 0"), std::string::npos);
+  EXPECT_NE(Stats.find("EnableRandomOffset: false"), std::string::npos);
+  EXPECT_NE(Stats.find("EnableContiguousRegions: false"), std::string::npos);
+}
+
+struct TestAllBoolTrueConfig {
+  static const bool MaySupportMemoryTagging = true;
+  static const bool QuarantineDisabled = true;
+  static const bool ExactUsableSize = true;
+  template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 8U, 4U>;
+
+  struct Primary {
+    using SizeClassMap = scudo::AndroidSizeClassMap;
+    static const scudo::uptr RegionSizeLog = 18U;
+    static const scudo::uptr GroupSizeLog = 18U;
+#if SCUDO_CAN_USE_PRIMARY64
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+#endif
+    static const bool EnableBlockCache = true;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableRandomOffset = true;
+    static const bool EnableContiguousRegions = true;
+  };
+
+#if SCUDO_CAN_USE_PRIMARY64
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator64<Config>;
+#else
+  template <typename Config>
+  using PrimaryT = scudo::SizeClassAllocator32<Config>;
+#endif
+
+  struct Secondary {
+    template <typename Config>
+    using CacheT = scudo::MapAllocatorNoCache<Config>;
+  };
+  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+};
+
+TEST(ScudoCombinedTest, VerifyAllBoolTrueConfig) {
+  using AllocatorT = scudo::Allocator<TestAllBoolTrueConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  std::string Stats(10000, '\0');
+  Allocator->getStats(Stats.data(), Stats.size());
+  EXPECT_NE(Stats.find("MaySupportMemoryTagging: true"), std::string::npos);
+  EXPECT_NE(Stats.find("QuarantineDisabled: true"), std::string::npos);
+  EXPECT_NE(Stats.find("ExactUsableSize: true"), std::string::npos);
+  EXPECT_NE(Stats.find("EnableBlockCache: true"), std::string::npos);
+  EXPECT_NE(Stats.find("CompactPtrScale: 0"), std::string::npos);
+  EXPECT_NE(Stats.find("EnableRandomOffset: true"), std::string::npos);
+  EXPECT_NE(Stats.find("EnableContiguousRegions: true"), std::string::npos);
 }

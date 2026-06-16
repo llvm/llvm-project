@@ -301,10 +301,16 @@ private:
   SizeArgument size_pos = SizeArgument::finished;
 };
 
+// The format strings were already checked and warned on the device side.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+#pragma GCC diagnostic ignored "-Wmissing-format-attribute"
+
 // Dispatch helper that passes dynamic '*' width/precision values to fprintf.
 template <typename T>
-inline int fprintf_with_stars(FILE *file, const char *fmt, int num_stars,
-                              int *star_vals, T val) {
+[[gnu::format(printf, 2, 0)]] inline int
+fprintf_with_stars(FILE *file, const char *fmt, int num_stars, int *star_vals,
+                   T val) {
   if (num_stars == 2)
     return ::fprintf(file, fmt, star_vals[0], star_vals[1], val);
   if (num_stars == 1)
@@ -409,6 +415,8 @@ inline int print_format(FILE *file, const char *fmt, StructArgList<packed> args,
 
   return ret;
 }
+
+#pragma GCC diagnostic pop
 
 template <bool packed, uint32_t num_lanes>
 inline void handle_printf(Server::Port &port, TempStorage &temp_storage) {
@@ -595,7 +603,7 @@ inline RPCStatus handle_port_impl(Server::Port &port) {
   case LIBC_CLOSE_FILE: {
     port.recv_and_send([&](Buffer *buffer, uint32_t) {
       FILE *file = reinterpret_cast<FILE *>(buffer->data[0]);
-      buffer->data[0] = ::fclose(file);
+      buffer->data[0] = static_cast<uint64_t>(::fclose(file));
     });
     break;
   }
@@ -632,13 +640,15 @@ inline RPCStatus handle_port_impl(Server::Port &port) {
   }
   case LIBC_FEOF: {
     port.recv_and_send([](Buffer *buffer, uint32_t) {
-      buffer->data[0] = ::feof(to_stream(buffer->data[0]));
+      buffer->data[0] =
+          static_cast<uint64_t>(::feof(to_stream(buffer->data[0])));
     });
     break;
   }
   case LIBC_FERROR: {
     port.recv_and_send([](Buffer *buffer, uint32_t) {
-      buffer->data[0] = ::ferror(to_stream(buffer->data[0]));
+      buffer->data[0] =
+          static_cast<uint64_t>(::ferror(to_stream(buffer->data[0])));
     });
     break;
   }
@@ -650,28 +660,30 @@ inline RPCStatus handle_port_impl(Server::Port &port) {
   }
   case LIBC_FSEEK: {
     port.recv_and_send([](Buffer *buffer, uint32_t) {
-      buffer->data[0] = ::fseek(to_stream(buffer->data[0]),
-                                static_cast<long>(buffer->data[1]),
-                                static_cast<int>(buffer->data[2]));
+      buffer->data[0] = static_cast<uint64_t>(::fseek(
+          to_stream(buffer->data[0]), static_cast<long>(buffer->data[1]),
+          static_cast<int>(buffer->data[2])));
     });
     break;
   }
   case LIBC_FTELL: {
     port.recv_and_send([](Buffer *buffer, uint32_t) {
-      buffer->data[0] = ::ftell(to_stream(buffer->data[0]));
+      buffer->data[0] =
+          static_cast<uint64_t>(::ftell(to_stream(buffer->data[0])));
     });
     break;
   }
   case LIBC_FFLUSH: {
     port.recv_and_send([](Buffer *buffer, uint32_t) {
-      buffer->data[0] = ::fflush(to_stream(buffer->data[0]));
+      buffer->data[0] =
+          static_cast<uint64_t>(::fflush(to_stream(buffer->data[0])));
     });
     break;
   }
   case LIBC_UNGETC: {
     port.recv_and_send([](Buffer *buffer, uint32_t) {
-      buffer->data[0] = ::ungetc(static_cast<int>(buffer->data[0]),
-                                 to_stream(buffer->data[1]));
+      buffer->data[0] = static_cast<uint64_t>(::ungetc(
+          static_cast<int>(buffer->data[0]), to_stream(buffer->data[1])));
     });
     break;
   }

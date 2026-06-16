@@ -309,7 +309,7 @@ private:
   bool isHotOrColdBlockNthPercentile(int PercentileCutoff, const BBType *BB,
                                      BFIT *BFI) const {
     auto Count = BFI->getBlockProfileCount(BB);
-    if (isHot)
+    if constexpr (isHot)
       return Count && isHotCountNthPercentile(PercentileCutoff, *Count);
     else
       return Count && isColdCountNthPercentile(PercentileCutoff, *Count);
@@ -320,7 +320,7 @@ private:
                                      BlockFrequency BlockFreq,
                                      BFIT *BFI) const {
     auto Count = BFI->getProfileCountFromFreq(BlockFreq);
-    if (isHot)
+    if constexpr (isHot)
       return Count && isHotCountNthPercentile(PercentileCutoff, *Count);
     else
       return Count && isColdCountNthPercentile(PercentileCutoff, *Count);
@@ -387,13 +387,12 @@ private:
 
 /// Printer pass that uses \c ProfileSummaryAnalysis.
 class ProfileSummaryPrinterPass
-    : public PassInfoMixin<ProfileSummaryPrinterPass> {
+    : public RequiredPassInfoMixin<ProfileSummaryPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit ProfileSummaryPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

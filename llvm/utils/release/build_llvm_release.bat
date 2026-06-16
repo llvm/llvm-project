@@ -246,6 +246,7 @@ set cmake_flags=^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
   -DZLIB_INCLUDE_DIR=%zlibdir%/include ^
   -DZLIB_LIBRARY=%zlibdir%/lib/zs.lib ^
+  -DZLIB_LIBRARY_RELEASE=%zlibdir%/lib/zs.lib ^
   -Dzstd_INCLUDE_DIR=%zstddir%/include ^
   -Dzstd_LIBRARY=%zstddir%/lib/zstd_static.lib
 
@@ -312,6 +313,7 @@ set cmake_flags=^
   -DLIBXML2_LIBRARIES=%libxmldir%/lib/libxml2s.lib ^
   -DZLIB_INCLUDE_DIR=%zlibdir%/include ^
   -DZLIB_LIBRARY=%zlibdir%/lib/zs.lib ^
+  -DZLIB_LIBRARY_RELEASE=%zlibdir%/lib/zs.lib ^
   -Dzstd_INCLUDE_DIR=%zstddir%/include ^
   -Dzstd_LIBRARY=%zstddir%/lib/zstd_static.lib ^
   -DCLANG_DEFAULT_LINKER=lld
@@ -475,7 +477,7 @@ exit /b 0
 mkdir zstdbuild
 cd zstdbuild
 cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=install ^
-  -DZSTD_BUILD_PROGRAMS=OFF -DZSTD_BUILD_TESTS=OFF -DZSTD_BUILD_STATIC=ON ^
+  -DZSTD_BUILD_PROGRAMS=ON -DZSTD_BUILD_TESTS=OFF -DZSTD_BUILD_STATIC=ON ^
   -DZSTD_BUILD_SHARED=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
   ../../zstd-%zstd_version%/build/cmake || exit /b 1
 ninja install || exit /b 1

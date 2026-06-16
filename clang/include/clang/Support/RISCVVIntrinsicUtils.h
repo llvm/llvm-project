@@ -35,6 +35,7 @@ enum class VectorTypeModifier : uint8_t {
   Widening2XVector,
   Widening4XVector,
   Widening8XVector,
+  DoubleLMULVector,
   MaskVector,
   Log2EEW3,
   Log2EEW4,
@@ -406,6 +407,7 @@ private:
   // InputTypes. -1 means the return type.
   std::vector<int64_t> IntrinsicTypes;
   unsigned NF = 1;
+  bool HasSegInstSEW = false;
   Policy PolicyAttrs;
   unsigned TWiden = 0;
 
@@ -417,8 +419,8 @@ public:
                bool HasBuiltinAlias, llvm::StringRef ManualCodegen,
                const RVVTypes &Types,
                const std::vector<int64_t> &IntrinsicTypes, unsigned NF,
-               Policy PolicyAttrs, bool HasFRMRoundModeOp, unsigned TWiden,
-               bool AltFmt);
+               bool HasSegInstSEW, Policy PolicyAttrs, bool HasFRMRoundModeOp,
+               unsigned TWiden, bool AltFmt);
   ~RVVIntrinsic() = default;
 
   RVVTypePtr getOutputType() const { return OutputType; }
@@ -442,6 +444,7 @@ public:
   llvm::StringRef getManualCodegen() const { return ManualCodegen; }
   PolicyScheme getPolicyScheme() const { return Scheme; }
   unsigned getNF() const { return NF; }
+  bool hasSegInstSEW() const { return HasSegInstSEW; }
   unsigned getTWiden() const { return TWiden; }
   const std::vector<int64_t> &getIntrinsicTypes() const {
     return IntrinsicTypes;

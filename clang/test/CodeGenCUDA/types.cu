@@ -3,7 +3,7 @@
 
 #include "Inputs/cuda.h"
 
-// HOST: @ld_host ={{.*}} global x86_fp80 0xK00000000000000000000
+// HOST: @ld_host ={{.*}} global x86_fp80 0.000000e+00
 long double ld_host;
 
 // DEV: @ld_device ={{.*}} addrspace(1) externally_initialized global double 0.000000e+00

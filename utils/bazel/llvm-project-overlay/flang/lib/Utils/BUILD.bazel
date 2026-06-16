@@ -1,0 +1,41 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+cc_library(
+    name = "FortranUtils",
+    srcs = ["OpenMP.cpp"],
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:EvaluateHeaders",
+        "//flang:LowerHeaders",
+        "//flang:SupportHeaders",
+        "//flang:UtilsHeaders",
+        "//flang/include/flang/Optimizer/Builder:BuilderHeaders",
+        "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
+        "//flang/include/flang/Optimizer/HLFIR:HLFIRHeaders",
+        "//flang/lib/Evaluate:FortranEvaluate",
+        "//flang/lib/Optimizer/Builder:FIRBuilder",
+        "//flang/lib/Optimizer/Dialect:FIRDialect",
+        "//flang/lib/Optimizer/HLFIR/IR:HLFIRDialect",
+        "//flang/lib/Support:FortranSupport",
+        "//llvm:FrontendOpenMP",
+        "//llvm:Support",
+        "//mlir:ArithDialect",
+        "//mlir:IR",
+        "//mlir:OpenMPDialect",
+        "//mlir:Support",
+        "//mlir:TransformUtils",
+    ],
+)

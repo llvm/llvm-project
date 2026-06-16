@@ -713,10 +713,8 @@ void SampleProfileMatcher::findFunctionsWithoutProfile() {
   if (FunctionSamples::UseMD5)
     return;
   StringSet<> NamesInProfile;
-  if (auto NameTable = Reader.getNameTable()) {
-    for (auto Name : *NameTable)
-      NamesInProfile.insert(Name.stringRef());
-  }
+  for (FunctionId Name : Reader.getNameTable())
+    NamesInProfile.insert(Name.stringRef());
 
   for (auto &F : M) {
     // Skip declarations, as even if the function can be matched, we have
@@ -772,8 +770,8 @@ static std::string getDemangledBaseName(ItaniumPartialDemangler &Demangler,
 void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
   if (FunctionsWithoutProfile.empty() || !LoadFuncProfileforCGMatching)
     return;
-  auto *NameTable = Reader.getNameTable();
-  if (!NameTable)
+  auto NameTable = Reader.getNameTable();
+  if (NameTable.empty())
     return;
 
   ItaniumPartialDemangler Demangler;
@@ -798,31 +796,31 @@ void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
     return;
 
   // Scan the profile NameTable for candidates whose demangled basename matches
-  // a unique orphan. Use a quick substring check to avoid demangling every
-  // entry. Only keep 1:1 basename matches (exactly one profile candidate).
-  // Maps basename -> profile FunctionId; entries with multiple candidates are
-  // removed.
+  // a unique orphan. Use a map to track exactly one candidate per basename.
   StringMap<FunctionId> CandidateByBaseName;
-  for (auto &ProfileFuncId : *NameTable) {
+  for (FunctionId ProfileFuncId : NameTable) {
     StringRef ProfName = ProfileFuncId.stringRef();
     if (ProfName.empty())
       continue;
-    for (auto &[BaseName, _] : OrphansByBaseName) {
-      if (AmbiguousBaseNames.count(BaseName) || !ProfName.contains(BaseName))
+
+    std::string ProfBaseName = getDemangledBaseName(Demangler, ProfName);
+    if (ProfBaseName.empty())
+      continue;
+
+    if (OrphansByBaseName.count(ProfBaseName)) {
+      if (AmbiguousBaseNames.count(ProfBaseName))
         continue;
-      std::string ProfBaseName = getDemangledBaseName(Demangler, ProfName);
-      if (ProfBaseName != BaseName)
-        continue;
+
       auto [It, Inserted] =
-          CandidateByBaseName.try_emplace(BaseName, ProfileFuncId);
+          CandidateByBaseName.try_emplace(ProfBaseName, ProfileFuncId);
       if (!Inserted) {
         // More than one profile entry shares this basename — mark ambiguous.
         CandidateByBaseName.erase(It);
-        AmbiguousBaseNames.insert(BaseName);
+        AmbiguousBaseNames.insert(ProfBaseName);
       }
-      break;
     }
   }
+
   if (CandidateByBaseName.empty())
     return;
 

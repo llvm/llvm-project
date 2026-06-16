@@ -22,9 +22,9 @@ module @gemm attributes {gpu.container_module} {
       // %load_a_K = arith.muli %K, %load_a_pack_ratio : i32
       // %load_b_K = arith.muli %K, %mx_pack_ratio : i32
 
-      %base_width_a = arith.constant 16 : i32
+      %base_width_a = arith.constant 64 : i32
       %base_height_a = arith.constant 8 : i32
-      %base_pitch_a = arith.constant 16 : i32
+      %base_pitch_a = arith.constant 64 : i32
       %x = arith.constant 0 : i32
       %y = arith.constant 0 : i32
       // A is loaded as fp16, but it will be truncated to bf8 before MMA.
@@ -64,9 +64,9 @@ module @gemm attributes {gpu.container_module} {
           : (vector<8xi16>, vector<8xi32>, i8, i8, vector<8xf32>) -> vector<8xf32>
       %c_result_casted = vector.bitcast %c_result : vector<8xf32> to vector<8xi32>
 
-      %base_width_c = arith.constant 16 : i32
+      %base_width_c = arith.constant 64 : i32
       %base_height_c = arith.constant 8 : i32
-      %base_pitch_c = arith.constant 16 : i32
+      %base_pitch_c = arith.constant 64 : i32
       xevm.blockstore2d %c, %base_width_c, %base_height_c, %base_pitch_c, %x, %y, %c_result_casted
           <{elem_size_in_bits=32 : i32, tile_width=16 : i32, tile_height=8 : i32}>
           : (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xi32>)
@@ -122,7 +122,7 @@ module @gemm attributes {gpu.container_module} {
 
     %A = memref.alloc() : memref<8x32xf16>
     scf.for %i = %c0 to %c8 step %c1 {
-      scf.for %j = %c0 to %c16 step %c1 {
+      scf.for %j = %c0 to %c32 step %c1 {
         memref.store %c1f16, %A[%i, %j] : memref<8x32xf16>
       }
     }
@@ -145,6 +145,8 @@ module @gemm attributes {gpu.container_module} {
     %C_cast = memref.cast %C_res : memref<8x16xf32> to memref<*xf32>
     call @printMemrefF32(%C_cast) : (memref<*xf32>) -> ()
 
+    // CHECK: Unranked Memref base@ = 0x{{[0-9a-f]+}}
+    // CHECK-COUNT-8: [32,   32,   32,   32,   32,   32,   32,   32,   32,   32,   32,   32,   32,   32,   32,   32]
     memref.dealloc %A : memref<8x32xf16>
     memref.dealloc %B : memref<32x16xf8E5M2>
     memref.dealloc %C : memref<8x16xf32>

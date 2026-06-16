@@ -25,6 +25,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/iterator.h"
 #include <cassert>
 #include <cstddef>
@@ -32,7 +33,6 @@
 #include <queue>
 #include <set>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -165,8 +165,7 @@ void scc_iterator<GraphT, GT>::DFSVisitChildren() {
   while (VisitStack.back().NextChild != GT::child_end(VisitStack.back().Node)) {
     // TOS has at least one more child so continue DFS
     NodeRef childN = *VisitStack.back().NextChild++;
-    typename DenseMap<NodeRef, unsigned>::iterator Visited =
-        nodeVisitNumbers.find(childN);
+    auto Visited = nodeVisitNumbers.find(childN);
     if (Visited == nodeVisitNumbers.end()) {
       // this node has never been seen.
       DFSVisitOne(childN);
@@ -336,7 +335,7 @@ scc_member_iterator<GraphT, GT>::scc_member_iterator(
 
   // Traverse all the edges and compute the Maximum Weight Spanning Tree
   // using Kruskal's algorithm.
-  std::unordered_set<const EdgeType *> MSTEdges;
+  SmallPtrSet<const EdgeType *, 0> MSTEdges;
   for (auto *Edge : SortedEdges) {
     if (unionGroups(Edge))
       MSTEdges.insert(Edge);

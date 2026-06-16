@@ -101,8 +101,7 @@ entry:
 define <4 x bfloat> @test_vget_high_bf16(<8 x bfloat> %a) nounwind {
 ; CHECK-LABEL: test_vget_high_bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    mov d0, v0.d[1]
 ; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x bfloat> %a, <8 x bfloat> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>

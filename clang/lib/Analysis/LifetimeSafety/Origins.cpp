@@ -68,6 +68,7 @@ public:
   }
 
   bool shouldVisitLambdaBody() const { return false; }
+  bool shouldVisitTemplateInstantiations() const { return true; }
 
   const llvm::SmallVector<QualType> &getCollectedTypes() const {
     return CollectedTypes;
@@ -99,20 +100,25 @@ private:
 
 } // namespace
 
-bool OriginManager::hasOrigins(QualType QT) const {
+bool OriginManager::hasOrigins(QualType QT, bool IntrinsicOnly) const {
   if (QT->isPointerOrReferenceType() || isGslPointerType(QT))
     return true;
-  if (LifetimeAnnotatedOriginTypes.contains(QT.getCanonicalType().getTypePtr()))
+  if (!IntrinsicOnly &&
+      LifetimeAnnotatedOriginTypes.contains(QT.getCanonicalType().getTypePtr()))
     return true;
   const auto *RD = QT->getAsCXXRecordDecl();
   if (!RD)
     return false;
+  // Standard library callable wrappers (e.g., std::function) can propagate the
+  // stored lambda's origins.
+  if (isStdCallableWrapperType(RD))
+    return true;
   // TODO: Limit to lambdas for now. This will be extended to user-defined
   // structs with pointer-like fields.
   if (!RD->isLambda())
     return false;
   for (const auto *FD : RD->fields())
-    if (hasOrigins(FD->getType()))
+    if (hasOrigins(FD->getType(), IntrinsicOnly))
       return true;
   return false;
 }
@@ -236,7 +242,7 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
     ReferencedDecl = DRE->getDecl();
   else if (auto *ME = dyn_cast<MemberExpr>(E))
     if (auto *Field = dyn_cast<FieldDecl>(ME->getMemberDecl());
-        Field && isa<CXXThisExpr>(ME->getBase()))
+        Field && isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
       ReferencedDecl = Field;
   if (ReferencedDecl) {
     OriginList *Head = nullptr;

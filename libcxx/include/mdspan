@@ -237,7 +237,7 @@ namespace std {
       constexpr index_type operator()(Indices...) const noexcept;
 
     static constexpr bool is_always_unique() noexcept { return true; }
-    static constexpr bool is_always_exhaustive() noexcept { return false; }
+    static constexpr bool is_always_exhaustive() noexcept;
     static constexpr bool is_always_strided() noexcept { return true; }
 
     static constexpr bool is_unique() noexcept { return true; }
@@ -361,6 +361,13 @@ namespace std {
     template<class OtherIndexType>
       constexpr reference operator[](const array<OtherIndexType, rank()>& indices) const;
 
+    template<class... OtherIndexTypes>
+      constexpr reference at(OtherIndexTypes... indices) const;
+    template<class OtherIndexType>
+      constexpr reference at(span<OtherIndexType, rank()> indices) const;
+    template<class OtherIndexType>
+      constexpr reference at(const array<OtherIndexType, rank()>& indices) const;
+
     constexpr size_type size() const noexcept;
     constexpr bool empty() const noexcept;
 
@@ -431,7 +438,7 @@ namespace std {
                 typename MappingType::layout_type>;
 
   template<class MappingType, class AccessorType>
-    mdspan(const typename AccessorType::data_handle_type&, const MappingType&,
+    mdspan(typename AccessorType::data_handle_type, const MappingType&,
            const AccessorType&)
       -> mdspan<typename AccessorType::element_type, typename MappingType::extents_type,
                 typename MappingType::layout_type, AccessorType>;

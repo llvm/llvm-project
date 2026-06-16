@@ -970,6 +970,8 @@ public:
       : WindowsX86_64TargetInfo(Triple, Opts) {
     LongDoubleWidth = LongDoubleAlign = 64;
     LongDoubleFormat = &llvm::APFloat::IEEEdouble();
+    LargeArrayMinWidth = 0;
+    LargeArrayAlign = 0;
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -983,6 +985,9 @@ public:
   getCallingConvKind(bool ClangABICompat4) const override {
     return CCK_MicrosoftWin64;
   }
+
+  unsigned getMinGlobalAlign(uint64_t TypeSize,
+                             bool HasNonWeakDef) const override;
 };
 
 // x86-64 MinGW target

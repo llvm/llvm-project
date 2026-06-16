@@ -501,6 +501,8 @@ protected:
   // know if this address used to have a valid section.
   bool SectionWasDeletedPrivate() const;
 };
+static_assert(sizeof(Address) <= sizeof(lldb::addr_t) + sizeof(lldb::SectionWP),
+              "High-volume object, size of object must be increased with care");
 
 // NOTE: Be careful using this operator. It can correctly compare two
 // addresses from the same Module correctly. It can't compare two addresses

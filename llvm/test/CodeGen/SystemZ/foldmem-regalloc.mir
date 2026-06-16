@@ -1,0 +1,123 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z17 -start-before=greedy %s -o - \
+# RUN:   -verify-machineinstrs | FileCheck %s
+#
+# Test that folding of a memop does not happen during regalloc in a case that
+# would cause tied registers to be different.
+
+--- |
+  define void @fun() { ret void }
+
+...
+
+# CHECK-LABEL: fun:
+---
+name:            fun
+alignment:       2
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         false
+hasFakeUses:     false
+registers:
+  - { id: 0, class: vr64bit }
+  - { id: 1, class: vr64bit }
+  - { id: 2, class: vr64bit }
+  - { id: 3, class: fp64bit }
+  - { id: 4, class: fp64bit }
+  - { id: 5, class: fp64bit }
+  - { id: 6, class: fp64bit }
+  - { id: 7, class: gr32bit }
+  - { id: 8, class: vr64bit }
+  - { id: 9, class: vr64bit }
+  - { id: 10, class: vr64bit }
+  - { id: 11, class: grx32bit }
+  - { id: 12, class: fp64bit }
+  - { id: 13, class: addr64bit }
+  - { id: 14, class: vr64bit }
+  - { id: 15, class: fp64bit }
+  - { id: 16, class: grx32bit }
+  - { id: 17, class: fp64bit }
+  - { id: 18, class: fp64bit }
+  - { id: 19, class: vr64bit }
+  - { id: 20, class: fp64bit }
+  - { id: 21, class: vr64bit }
+  - { id: 22, class: addr64bit }
+  - { id: 23, class: vr64bit }
+  - { id: 24, class: vr64bit }
+  - { id: 25, class: fp64bit }
+  - { id: 26, class: fp64bit }
+  - { id: 27, class: vr64bit }
+liveins:
+  - { reg: '$f0d', virtual-reg: '%3' }
+  - { reg: '$f2d', virtual-reg: '%4' }
+  - { reg: '$f4d', virtual-reg: '%5' }
+  - { reg: '$f6d', virtual-reg: '%6' }
+  - { reg: '$r2l', virtual-reg: '%7' }
+frameInfo:
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  framePointerPolicy: none
+fixedStack:
+  - { id: 0, offset: 16, size: 8, alignment: 8, isImmutable: true }
+  - { id: 1, offset: 8, size: 8, alignment: 8, isImmutable: true }
+  - { id: 2, size: 8, alignment: 8, isImmutable: true }
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $f0d, $f2d, $f4d, $f6d, $r2l
+  
+    %7:gr32bit = COPY $r2l
+    %6:fp64bit = COPY $f6d
+    %5:fp64bit = COPY $f4d
+    %4:fp64bit = COPY $f2d
+    %3:fp64bit = COPY $f0d
+    %10:vr64bit = VL64 %fixed-stack.0, 0, $noreg :: (load (s64) from %fixed-stack.0)
+    %9:vr64bit = VL64 %fixed-stack.1, 0, $noreg :: (load (s64) from %fixed-stack.1)
+    %8:vr64bit = VL64 %fixed-stack.2, 0, $noreg :: (load (s64) from %fixed-stack.2)
+    %13:addr64bit = LGHI 0
+  
+  bb.1:
+    successors: %bb.2(0x7c000000), %bb.5(0x04000000)
+  
+    %12:fp64bit = LZDR
+    $f0d = COPY %12
+    $f2d = COPY %4
+    $f4d = COPY %12
+    CallBASR %13, $f0d, $f2d, $f4d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def dead $f0d
+    %15:fp64bit = nofpexcept WFMDB %8, %12, implicit $fpc
+    dead %25:fp64bit = nofpexcept LTDBR %15, implicit-def $cc, implicit $fpc
+    BRC 15, 11, %bb.5, implicit killed $cc
+    J %bb.2
+  
+  bb.2:
+    %26:fp64bit = LZDR
+    %27:vr64bit = COPY %6
+  
+  bb.3:
+    successors: %bb.1(0x04000000), %bb.4(0x7c000000)
+  
+    TMLMux %7, 1, implicit-def $cc
+    BRC 15, 7, %bb.1, implicit killed $cc
+    J %bb.4
+  
+  bb.4:
+    %19:vr64bit = nofpexcept WFSDB %26, %27, implicit $fpc
+    %20:fp64bit = LZDR
+    %21:vr64bit = nofpexcept WFMADB %9, %19, %20, implicit $fpc
+    $f0d = COPY %21
+    $f2d = COPY %20
+    $f4d = COPY %20
+    CallBASR %13, $f0d, $f2d, $f4d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def dead $f0d
+    %26:fp64bit = nofpexcept WFMADB %10, %20, %3, implicit $fpc
+    $f0d = COPY %20
+    $f2d = COPY %20
+    $f4d = COPY %20
+    CallBASR %13, $f0d, $f2d, $f4d, csr_systemz_elf, implicit-def dead $r14d, implicit-def dead $cc, implicit $fpc, implicit-def dead $f0d
+    %27:vr64bit = COPY %5
+    J %bb.3
+  
+  bb.5:
+    $r2l = LHIMux 0
+    Return implicit $r2l
+...

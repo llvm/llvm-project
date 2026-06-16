@@ -7,14 +7,13 @@ define ptr @test(ptr %d, i64 %v) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[D]], align 1
 ; CHECK-NEXT:    [[CMP4_2:%.*]] = icmp eq i8 [[TMP0]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP4_2]], i64 0, i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 0, [[V]]
-; CHECK-NEXT:    [[TMP3:%.*]] = udiv i64 [[TMP2]], 3
-; CHECK-NEXT:    [[TMP4:%.*]] = udiv i64 1, [[V]]
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <6 x i64> poison, i64 [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <6 x i64> [[TMP5]], i64 [[TMP3]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <6 x i64> [[TMP6]], i64 [[TMP4]], i32 4
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <6 x i64> [[TMP7]], <6 x i64> poison, <6 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 4>
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[CMP4_2]], i64 0, i64 4
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x i64> <i64 poison, i64 poison, i64 1>, i64 [[TMP7]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <3 x i64> [[TMP3]], i64 [[TMP2]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <3 x i64> <i64 1, i64 3, i64 poison>, i64 [[V]], i32 2
+; CHECK-NEXT:    [[TMP6:%.*]] = udiv <3 x i64> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <3 x i64> [[TMP6]], <3 x i64> poison, <6 x i32> <i32 0, i32 1, i32 0, i32 1, i32 2, i32 2>
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul <6 x i64> [[TMP8]], <i64 2, i64 6, i64 4, i64 3, i64 5, i64 4>
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <6 x i64> [[TMP9]], i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[D]], i64 [[TMP10]]
