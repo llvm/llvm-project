@@ -19,6 +19,7 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntPtr.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/InvalidationCause.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/StoreRef.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
@@ -128,6 +129,84 @@ public:
 
   // Implement isa<T> support.
   static constexpr Kind ClassKind = SymbolConjuredKind;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) { return K == ClassKind; }
+};
+
+/// A symbol representing a value bound to a memory region as a side effect of
+/// an invalidation event (escape into an opaque function, loop widening,
+/// unmodeled atomic, etc.). Behaves like SymbolConjured but additionally
+/// carries an InvalidationCause describing why the invalidation happened, and
+/// (when known) the symbol that was bound to the region just before the
+/// invalidation. The previous symbol lets bug-report visitors reason about
+/// constraints attached to a value before it was invalidated.
+class SymbolInvalidationArtifact : public SymbolData {
+  ConstCFGElementRef Elem;
+  QualType T;
+  unsigned Count;
+  const StackFrame *SF;
+  const void *SymbolTag;
+  const InvalidationCause *Cause;
+  SymbolRef PreviousSym;
+
+  friend class SymExprAllocator;
+  SymbolInvalidationArtifact(SymbolID sym, ConstCFGElementRef elem,
+                             const StackFrame *SF, QualType t, unsigned count,
+                             const void *symbolTag,
+                             const InvalidationCause *cause,
+                             SymbolRef previousSym)
+      : SymbolData(ClassKind, sym), Elem(elem), T(t), Count(count), SF(SF),
+        SymbolTag(symbolTag), Cause(cause), PreviousSym(previousSym) {
+    assert(SF);
+    assert(cause);
+    assert(isValidTypeForSymbol(t));
+  }
+
+public:
+  ConstCFGElementRef getCFGElementRef() const { return Elem; }
+
+  unsigned getCount() const { return Count; }
+
+  /// May be null.
+  const void *getTag() const { return SymbolTag; }
+
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
+  const InvalidationCause *getCause() const { return Cause; }
+
+  LLVM_ATTRIBUTE_RETURNS_NONNULL
+  const StackFrame *getStackFrame() const { return SF; }
+
+  /// The symbol that was bound to the invalidated region immediately before
+  /// the invalidation event, or null if the region had no symbolic binding
+  /// (e.g. a concrete value, or no prior binding at all).
+  SymbolRef getPreviousSymbol() const { return PreviousSym; }
+
+  QualType getType() const override;
+
+  StringRef getKindStr() const override;
+
+  void dumpToStream(raw_ostream &os) const override;
+
+  static void Profile(llvm::FoldingSetNodeID &profile, ConstCFGElementRef Elem,
+                      const StackFrame *SF, QualType T, unsigned Count,
+                      const void *SymbolTag, const InvalidationCause *Cause,
+                      SymbolRef PreviousSym) {
+    profile.AddInteger((unsigned)ClassKind);
+    profile.Add(Elem);
+    profile.AddPointer(SF);
+    profile.Add(T);
+    profile.AddInteger(Count);
+    profile.AddPointer(SymbolTag);
+    profile.AddPointer(Cause);
+    profile.AddPointer(PreviousSym);
+  }
+
+  void Profile(llvm::FoldingSetNodeID &profile) override {
+    Profile(profile, Elem, SF, T, Count, SymbolTag, Cause, PreviousSym);
+  }
+
+  // Implement isa<T> support.
+  static constexpr Kind ClassKind = SymbolInvalidationArtifactKind;
   static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
   static constexpr bool classof(Kind K) { return K == ClassKind; }
 };
@@ -501,16 +580,20 @@ public:
     return new (Alloc) SymT(nextID(), std::forward<ArgsT>(Args)...);
   }
 
+  llvm::BumpPtrAllocator &getAllocator() { return Alloc; }
+
 private:
   SymbolID nextID() { return NextSymbolID++; }
 };
 
 class SymbolManager {
   using DataSetTy = llvm::FoldingSet<SymExpr>;
+  using CauseSetTy = llvm::FoldingSet<InvalidationCause>;
   using SymbolDependTy =
       llvm::DenseMap<SymbolRef, std::unique_ptr<SymbolRefSmallVectorTy>>;
 
   DataSetTy DataSet;
+  CauseSetTy CauseSet;
 
   /// Stores the extra dependencies between symbols: the data should be kept
   /// alive as long as the key is live.
@@ -533,12 +616,27 @@ public:
   template <typename SymExprT, typename... Args>
   const SymExprT *acquire(Args &&...args);
 
+  /// Create or retrieve a uniqued InvalidationCause of type \p CauseT.
+  /// Causes are interned so that they can participate in symbol uniquing
+  /// via stable pointer identity.
+  template <typename CauseT, typename... Args>
+  const CauseT *acquireCause(Args &&...args);
+
   const SymbolConjured *conjureSymbol(ConstCFGElementRef Elem,
                                       const StackFrame *SF, QualType T,
                                       unsigned VisitCount,
                                       const void *SymbolTag = nullptr) {
 
     return acquire<SymbolConjured>(Elem, SF, T, VisitCount, SymbolTag);
+  }
+
+  const SymbolInvalidationArtifact *conjureInvalidationArtifact(
+      ConstCFGElementRef Elem, const StackFrame *SF, QualType T,
+      unsigned VisitCount, const void *SymbolTag,
+      const InvalidationCause *Cause, SymbolRef PreviousSym) {
+    assert(Cause);
+    return acquire<SymbolInvalidationArtifact>(Elem, SF, T, VisitCount,
+                                               SymbolTag, Cause, PreviousSym);
   }
 
   QualType getType(const SymExpr *SE) const {
@@ -682,6 +780,21 @@ const T *SymbolManager::acquire(Args &&...args) {
     DataSet.InsertNode(SD, InsertPos);
   }
   return cast<T>(SD);
+}
+
+template <typename CauseT, typename... Args>
+const CauseT *SymbolManager::acquireCause(Args &&...args) {
+  static_assert(std::is_base_of_v<InvalidationCause, CauseT>,
+                "acquireCause<T> requires T : InvalidationCause");
+  llvm::FoldingSetNodeID profile;
+  CauseT::Profile(profile, args...);
+  void *InsertPos;
+  InvalidationCause *C = CauseSet.FindNodeOrInsertPos(profile, InsertPos);
+  if (!C) {
+    C = new (Alloc.getAllocator()) CauseT(std::forward<Args>(args)...);
+    CauseSet.InsertNode(C, InsertPos);
+  }
+  return cast<CauseT>(C);
 }
 
 } // namespace ento

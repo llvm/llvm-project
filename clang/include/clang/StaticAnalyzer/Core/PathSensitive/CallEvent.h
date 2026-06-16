@@ -263,6 +263,15 @@ public:
     return Origin.dyn_cast<const Expr *>();
   }
 
+  /// Returns the desired \c UnmodeledCall wrapping this call.
+  template <class CauseT> const CauseT *tryCreateInvalidationCause() const {
+    static_assert(std::is_base_of_v<UnmodeledCall, CauseT>,
+                  "forInvalidation<T> requires T : UnmodeledCall");
+    const auto *CE = dyn_cast_or_null<CallExpr>(getOriginExpr());
+    auto &SymMgr = State->getStateManager().getSymbolManager();
+    return SymMgr.acquireCause<CauseT>(CE);
+  }
+
   /// Returns the number of arguments (explicit and implicit).
   ///
   /// Note that this may be greater than the number of parameters in the

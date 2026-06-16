@@ -337,7 +337,7 @@ void nonConstantRegionExtent(){
   memset(&x, 1, sizeof(x));
 
   InlineDtor *arr = new InlineDtor[x];
-  clang_analyzer_dumpElementCount(arr); // expected-warning {{conj_$0}}
+  clang_analyzer_dumpElementCount(arr); // expected-warning {{inv_$0}}
   delete [] arr;
 
   //FIXME: This should be TRUE but memset also sets this

@@ -499,11 +499,11 @@ void complex_taint_queries(const int *p) {
   tmp += p[0] + p[0];
   tmp += p[1] + p[1];
   tmp += p[2] + p[2];
-  clang_analyzer_dump_int(tmp); // expected-warning{{((((conj_}} symbol complexity: 8
+  clang_analyzer_dump_int(tmp); // expected-warning{{((((inv_}} symbol complexity: 8
   clang_analyzer_isTainted_int(tmp); // expected-warning{{YES}}
 
   tmp += p[3] + p[3];
-  clang_analyzer_dump_int(tmp); // expected-warning{{(((((conj_}} symbol complexity: 10
+  clang_analyzer_dump_int(tmp); // expected-warning{{(((((inv_}} symbol complexity: 10
   clang_analyzer_isTainted_int(tmp); // expected-warning{{NO}} 10 is already too complex to be traversed
 
   tmp += p[4] + p[4];
@@ -521,7 +521,7 @@ void complex_taint_queries(const int *p) {
 
   // The SymExpr still holds the full history of the computation, yet, "isTainted" doesn't traverse the tree as the complexity is over the threshold.
   clang_analyzer_dump_int(tmp);
-  // expected-warning@-1{{(((((((((((((((((conj_}} symbol complexity: 34
+  // expected-warning@-1{{(((((((((((((((((inv_}} symbol complexity: 34
   clang_analyzer_isTainted_int(tmp); // expected-warning{{NO}} FIXME: Ideally, this should still result in "tainted".
 
   // By making it even one step more complex, then it would hit the "max-symbol-complexity"
