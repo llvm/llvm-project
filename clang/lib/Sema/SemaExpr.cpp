@@ -19408,9 +19408,16 @@ static bool isVariableCapturable(CapturingScopeInfo *CSI, ValueDecl *Var,
     return false;
   }
 
-  if (isa<BindingDecl>(Var)) {
+  if (auto *BD = dyn_cast<BindingDecl>(Var)) {
     if (auto *RSI = dyn_cast<CapturedRegionScopeInfo>(CSI)) {
       if (RSI->CapRegionKind == CR_OpenMP) {
+        if (BD->getHoldingVar()) {
+          if (Diagnose) {
+            S.Diag(Loc, diag::err_capture_tuple_binding_openmp) << Var;
+            S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
+          }
+          return false;
+        }
         if (Diagnose && S.getLangOpts().CPlusPlus) {
           S.Diag(Loc, S.LangOpts.CPlusPlus20
                           ? diag::warn_cxx17_compat_capture_binding

@@ -1223,13 +1223,12 @@ public:
     OMPMapVars MappedVars;
     OMPPrivateScope(const OMPPrivateScope &) = delete;
     void operator=(const OMPPrivateScope &) = delete;
-    llvm::DenseMap<const BindingDecl *, Address> SavedBindings;
+    llvm::SmallVector<std::pair<const BindingDecl *, std::optional<Address>>, 4>
+        BindingChanges;
 
   public:
     /// Enter a new OpenMP private scope.
-    explicit OMPPrivateScope(CodeGenFunction &CGF) : RunCleanupsScope(CGF) {
-      SavedBindings = CGF.OMPPrivatizedBindings;
-    }
+    explicit OMPPrivateScope(CodeGenFunction &CGF) : RunCleanupsScope(CGF) {}
 
     /// Registers \p LocalVD variable as a private with \p Addr as the address
     /// of the corresponding private variable. \p
@@ -1238,6 +1237,14 @@ public:
     /// been privatized already.
     bool addPrivate(const ValueDecl *LocalVD, Address Addr) {
       assert(PerformCleanup && "adding private to dead scope");
+      if (const auto *BD = dyn_cast<BindingDecl>(LocalVD->getCanonicalDecl())) {
+        auto It = CGF.OMPPrivatizedBindings.find(BD);
+        if (It != CGF.OMPPrivatizedBindings.end()) {
+          BindingChanges.emplace_back(BD, It->second);
+        } else {
+          BindingChanges.emplace_back(BD, std::nullopt);
+        }
+      }
       return MappedVars.setVarAddr(CGF, LocalVD, Addr);
     }
 
@@ -1260,7 +1267,16 @@ public:
     ~OMPPrivateScope() {
       if (PerformCleanup)
         ForceCleanup();
-      CGF.OMPPrivatizedBindings = std::move(SavedBindings);
+      for (auto &Change : BindingChanges) {
+        if (Change.second.has_value()) {
+          auto It = CGF.OMPPrivatizedBindings.find(Change.first);
+          assert(It != CGF.OMPPrivatizedBindings.end() &&
+              "Entry should exist when restoring previous value");
+          It->second = *Change.second;
+        } else {
+          CGF.OMPPrivatizedBindings.erase(Change.first);
+        }
+      }
     }
 
     /// Checks if the global variable is captured in current function.

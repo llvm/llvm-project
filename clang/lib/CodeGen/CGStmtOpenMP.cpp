@@ -1189,7 +1189,7 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
       // Original VarDecl logic.
       assert(OrigVD && "Expected VarDecl for non-BindingDecl firstprivate");
       bool ThisFirstprivateIsLastprivate =
-          OrigVD && Lastprivates.count(OrigVD->getCanonicalDecl()) > 0;
+          Lastprivates.count(OrigVD->getCanonicalDecl()) > 0;
       const FieldDecl *FD = CapturedStmtInfo->lookup(OrigVD);
       if (!MustEmitFirstprivateCopy && !ThisFirstprivateIsLastprivate && FD &&
           !FD->getType()->isReferenceType() &&
@@ -1546,14 +1546,9 @@ void CodeGenFunction::EmitOMPLastprivateClauseFinal(
         QualType Type = BD->getType();
         const auto *CanonicalBD = cast<ValueDecl>(BD->getCanonicalDecl());
         if (AlreadyEmittedVars.insert(CanonicalBD).second) {
-          // Get the private address. The BindingDecl was registered in
-          // PrivateScope during initialization, so look it up in LocalDeclMap.
-          auto It = LocalDeclMap.find(CanonicalBD);
-          if (It == LocalDeclMap.end()) {
-            It = LocalDeclMap.find(BD);
-          }
-          assert(It != LocalDeclMap.end() &&
-                 "lastprivate BindingDecl not found in LocalDeclMap");
+          auto It = OMPPrivatizedBindings.find(BD);
+          assert(It != OMPPrivatizedBindings.end() &&
+                 "lastprivate BindingDecl not found in OMPPrivatizedBindings");
           Address PrivateAddr = It->second;
 
           // Get the original binding address.
@@ -2720,16 +2715,15 @@ void CodeGenFunction::EmitOMPLinearClauseFinal(
       }
       const auto *OrigDecl = cast<DeclRefExpr>(*IC)->getDecl();
       Address OrigAddr = [&]() -> Address {
-        if (dyn_cast<BindingDecl>(OrigDecl)) {
+        if (isa<BindingDecl>(OrigDecl)) {
           // BindingDecl: use the original expression directly.
           return EmitLValue(*IC).getAddress();
-        } else {
-          const auto *OrigVD = cast<VarDecl>(OrigDecl);
-          DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(OrigVD),
-                          CapturedStmtInfo->lookup(OrigVD) != nullptr,
-                          (*IC)->getType(), VK_LValue, (*IC)->getExprLoc());
-          return EmitLValue(&DRE).getAddress();
         }
+        const auto *OrigVD = cast<VarDecl>(OrigDecl);
+        DeclRefExpr DRE(getContext(), const_cast<VarDecl *>(OrigVD),
+                        CapturedStmtInfo->lookup(OrigVD) != nullptr,
+                        (*IC)->getType(), VK_LValue, (*IC)->getExprLoc());
+        return EmitLValue(&DRE).getAddress();
       }();
       CodeGenFunction::OMPPrivateScope VarScope(*this);
       VarScope.addPrivate(OrigDecl, OrigAddr);
