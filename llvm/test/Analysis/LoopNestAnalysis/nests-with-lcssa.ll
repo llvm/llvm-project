@@ -10,7 +10,7 @@
 
 define i32 @f(i32 %N, i32 %M) #0 {
 ; CHECK: IsPerfect=true, Depth=1, OutermostLoop: for.j, Loops: ( for.j )
-; CHECK: IsPerfect=true, Depth=2, OutermostLoop: for.i, Loops: ( for.i for.j )
+; CHECK: IsPerfect=false, Depth=2, OutermostLoop: for.i, Loops: ( for.i for.j )
 entry:
   %cmp4 = icmp slt i32 0, %N
   br i1 %cmp4, label %for.i.ph, label %for.i.end
@@ -45,6 +45,66 @@ for.j.end_crit_edge:                              ; preds = %for.j.inc
 
 for.j.end:                                        ; preds = %for.j.end_crit_edge, %for.i
   %res.1.lcssa = phi i32 [ %split, %for.j.end_crit_edge ], [ %res.05, %for.i ]
+  br label %for.i.inc
+
+for.i.inc:                                        ; preds = %for.j.end
+  %inc5 = add nsw i32 %i.06, 1
+  %cmp = icmp slt i32 %inc5, %N
+  br i1 %cmp, label %for.i, label %for.i.end_crit_edge
+
+for.i.end_crit_edge:                              ; preds = %for.i.inc
+  %split7 = phi i32 [ %res.1.lcssa, %for.i.inc ]
+  br label %for.i.end
+
+for.i.end:                                        ; preds = %for.i.end_crit_edge, %entry
+  %res.0.lcssa = phi i32 [ %split7, %for.i.end_crit_edge ], [ 0, %entry ]
+  ret i32 %res.0.lcssa
+}
+
+; Same as @f, but the inner loop has no guard: the outer loop header
+; branches unconditionally into the inner loop preheader instead of
+; testing whether M > 0 first. Unlike @f, the inner loop exit also leads
+; directly (single hop) into the outer loop latch, with no intervening
+; critical-edge/LCSSA block, so this nest is perfectly nested.
+; int f_no_inner_guard(int N, int M) {
+;   int res = 0;
+;   for (int i = 0; i < N; ++i) {
+;     for (int j = 0; j < M; ++j) res += i * j;
+;   }
+;   return res;
+; }
+define i32 @f_no_inner_guard(i32 %N, i32 %M) #0 {
+; CHECK: IsPerfect=true, Depth=1, OutermostLoop: for.j, Loops: ( for.j )
+; CHECK: IsPerfect=true, Depth=2, OutermostLoop: for.i, Loops: ( for.i for.j )
+entry:
+  %cmp4 = icmp slt i32 0, %N
+  br i1 %cmp4, label %for.i.ph, label %for.i.end
+
+for.i.ph:                                         ; preds = %entry
+  br label %for.i
+
+for.i:                                            ; preds = %for.i.ph, %for.i.inc
+  %i.06 = phi i32 [ 0, %for.i.ph ], [ %inc5, %for.i.inc ]
+  %res.05 = phi i32 [ 0, %for.i.ph ], [ %res.1.lcssa, %for.i.inc ]
+  br label %for.j.ph
+
+for.j.ph:                                         ; preds = %for.i
+  br label %for.j
+
+for.j:                                            ; preds = %for.j.ph, %for.j.inc
+  %j.03 = phi i32 [ 0, %for.j.ph ], [ %inc, %for.j.inc ]
+  %res.12 = phi i32 [ %res.05, %for.j.ph ], [ %add, %for.j.inc ]
+  %mul = mul nsw i32 %i.06, %j.03
+  %add = add nsw i32 %res.12, %mul
+  br label %for.j.inc
+
+for.j.inc:                                        ; preds = %for.j
+  %inc = add nsw i32 %j.03, 1
+  %cmp2 = icmp slt i32 %inc, %M
+  br i1 %cmp2, label %for.j, label %for.j.end
+
+for.j.end:                                        ; preds = %for.j.inc
+  %res.1.lcssa = phi i32 [ %add, %for.j.inc ]
   br label %for.i.inc
 
 for.i.inc:                                        ; preds = %for.j.end
@@ -159,6 +219,7 @@ for.i.end:                                        ; preds = %for.i.end_crit_edge
   ret i32 %add16
 }
 
+
 ; int h(int N, int M, int K) {
 ;   int sum = 0;
 ;   for (int i = 0; i < N; ++i) {
@@ -172,8 +233,8 @@ for.i.end:                                        ; preds = %for.i.end_crit_edge
 ; }
 define i32 @h(i32 %N, i32 %M, i32 %K) #0 {
 ; CHECK: IsPerfect=true, Depth=1, OutermostLoop: for.k, Loops: ( for.k )
-; CHECK: IsPerfect=true, Depth=2, OutermostLoop: for.j, Loops: ( for.j for.k )
-; CHECK: IsPerfect=true, Depth=3, OutermostLoop: for.i, Loops: ( for.i for.j for.k )
+; CHECK: IsPerfect=false, Depth=2, OutermostLoop: for.j, Loops: ( for.j for.k )
+; CHECK: IsPerfect=false, Depth=3, OutermostLoop: for.i, Loops: ( for.i for.j for.k )
 entry:
   %cmp8 = icmp slt i32 0, %N
   br i1 %cmp8, label %for.i.ph, label %for.i.end

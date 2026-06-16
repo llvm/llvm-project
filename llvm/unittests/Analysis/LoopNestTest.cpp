@@ -57,8 +57,7 @@ TEST(LoopNestTest, PerfectLoopNest) {
     "  br label %for.outer\n"
     "for.outer:\n"
     "  %i = phi i64 [ 0, %entry ], [ %inc13, %for.outer.latch ]\n"
-    "  %cmp21 = icmp slt i64 0, %ny\n"
-    "  br i1 %cmp21, label %for.inner.preheader, label %for.outer.latch\n"
+    "  br label %for.inner.preheader\n"
     "for.inner.preheader:\n"
     "  br label %for.inner\n"
     "for.inner:\n"
@@ -205,15 +204,19 @@ TEST(LoopNestTest, ImperfectLoopNest) {
     const ArrayRef<Loop*> Loops = LN.getLoops();
     EXPECT_EQ(Loops.size(), 3ull);
 
-    // Ensure the loop nest is recognized as having 2 separate perfect loops groups.
+    // With guard-handling removed from LoopNestAnalysis, the guarded outer
+    // loop header (loop.i branches to loop.j.preheader or for.inci via an
+    // invariant condition) is no longer treated as a perfect nest boundary.
+    // Each loop is its own singleton group.
     const SmallVector<LoopVectorTy, 4> &PLV = LN.getPerfectLoops(SE);
-    EXPECT_EQ(PLV.size(), 2ull);
-    EXPECT_EQ(PLV.front().size(), 2ull);
-    EXPECT_EQ(PLV.back().size(), 1ull);
+    EXPECT_EQ(PLV.size(), 3ull);
+    EXPECT_EQ(PLV[0].size(), 1ull);
+    EXPECT_EQ(PLV[1].size(), 1ull);
+    EXPECT_EQ(PLV[2].size(), 1ull);
 
     // Ensure the nest depth and perfect nest depth are computed correctly.
     EXPECT_EQ(LN.getNestDepth(), 3u);
-    EXPECT_EQ(LN.getMaxPerfectDepth(), 2u);
+    EXPECT_EQ(LN.getMaxPerfectDepth(), 1u);
 
     EXPECT_TRUE(LN.getInterveningInstructions(OL, *IL, SE).empty());
   });
@@ -228,9 +231,8 @@ TEST(LoopNestTest, InterveningInstrLoopNest) {
       "  br label %for.outer\n"
       "for.outer:\n"
       "  %i = phi i64 [ 0, %entry ], [ %inc13, %for.outer.latch ]\n"
-      "  %cmp21 = icmp slt i64 0, %ny\n"
       "  call void @outerheader()\n"
-      "  br i1 %cmp21, label %for.inner.preheader, label %for.outer.latch\n"
+      "  br label %for.inner.preheader\n"
       "for.inner.preheader:\n"
       "  %varr = getelementptr inbounds i32, ptr %A, i64 5\n"
       "  store i32 5, ptr %varr, align 4\n"
@@ -306,8 +308,7 @@ TEST(LoopNestTest, InterveningInstrLoopNest) {
 
     Instruction *SI = getInstructionByName(F, "varr")->getNextNode();
     Instruction *CI = SI->getNextNode();
-    Instruction *OLH =
-        getInstructionByName(F, "i")->getNextNode()->getNextNode();
+    Instruction *OLH = getInstructionByName(F, "i")->getNextNode();
     Instruction *OLL = getInstructionByName(F, "inc13")->getNextNode();
     Instruction *IE = getInstructionByName(F, "varr1")->getNextNode();
 
