@@ -42,8 +42,6 @@ void ExprEngine::CreateCXXTemporaryObject(const MaterializeTemporaryExpr *ME,
   Bldr.generateNode(ME, Pred, state);
 }
 
-// FIXME: This is the sort of code that should eventually live in a Core
-// checker rather than as a special case in ExprEngine.
 void ExprEngine::performTrivialCopy(ExplodedNodeSet &Dst, ExplodedNode *Pred,
                                     const CallEvent &Call) {
   SVal ThisVal;
