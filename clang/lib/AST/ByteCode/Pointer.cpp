@@ -908,7 +908,7 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
     if (Ty->isAnyComplexType()) {
       const Descriptor *Desc = Ptr.getFieldDesc();
       // Can happen via C casts.
-      if (!Desc->isPrimitiveArray())
+      if (!Desc->getType()->isAnyComplexType())
         return false;
 
       PrimType ElemT = Desc->getPrimType();
