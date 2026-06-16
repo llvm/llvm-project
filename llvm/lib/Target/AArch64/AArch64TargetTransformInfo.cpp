@@ -5936,6 +5936,30 @@ bool AArch64TTIImpl::useNeonVector(const Type *Ty) const {
   return isa<FixedVectorType>(Ty) && !ST->useSVEForFixedLengthVectors();
 }
 
+// Get the latency of NumInst of Inst according to the scheduling model. If the
+// model has no information for this instruction then we assume the reciprocal
+// throughput is 1 and use DefaultLatency for the latency.
+InstructionCost getLatencyFromSchedModel(const AArch64Subtarget *ST,
+                                         unsigned Inst, unsigned NumInst,
+                                         InstructionCost DefaultLatency) {
+  const MCSchedModel &Sched = ST->getSchedModel();
+  const TargetInstrInfo *TII = ST->getInstrInfo();
+  unsigned SchedClass = TII->get(Inst).getSchedClass();
+  const MCSchedClassDesc *SCD = Sched.hasInstrSchedModel()
+                                    ? Sched.getSchedClassDesc(SchedClass)
+                                    : nullptr;
+  // If the cpu has no scheduling model, or it doesn't describe the
+  // instruction, then fall back to the default latency. Variant
+  // scheduling classes can't be resolved without a MachineInstr, so
+  // treat them the same way.
+  if (!SCD || !SCD->isValid() || SCD->isVariant())
+    return (NumInst - 1) + DefaultLatency;
+  // We need to convert the number of instructions before the last to a float
+  // here, as the reciprocal throughput may be fractional.
+  return (float)(NumInst - 1) * Sched.getReciprocalThroughput(*ST, *SCD) +
+         Sched.computeInstrLatency(*ST, *SCD);
+}
+
 InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                                 Align Alignment,
                                                 unsigned AddressSpace,
@@ -6032,22 +6056,8 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
         llvm_unreachable("Unexpected integer type");
       }
     }
-    const MCSchedModel &Sched = ST->getSchedModel();
-    const TargetInstrInfo *TII = ST->getInstrInfo();
-    unsigned SchedClass = TII->get(Inst).getSchedClass();
-    const MCSchedClassDesc *SCD = Sched.hasInstrSchedModel()
-                                      ? Sched.getSchedClassDesc(SchedClass)
-                                      : nullptr;
-    // If the cpu has no scheduling model, or it doesn't describe the load, then
-    // fall back to the default load latency. Variant scheduling classes can't
-    // be resolved without a MachineInstr, so treat them the same way.
-    if (!SCD || !SCD->isValid() || SCD->isVariant())
-      return (LT.first - 1) + ST->getLoadLatency();
-    // We need to convert the number of loads before the last to a float here,
-    // as the reciprocal throughput may be fractional.
-    float NumLoads = (LT.first - 1).getValue();
-    return NumLoads * Sched.getReciprocalThroughput(*ST, *SCD) +
-           Sched.computeInstrLatency(*ST, *SCD);
+    return getLatencyFromSchedModel(ST, Inst, LT.first.getValue(),
+                                    ST->getLoadLatency());
   }
 
   if (ST->isMisaligned128StoreSlow() && Opcode == Instruction::Store &&
@@ -6153,9 +6163,30 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
     // Accesses having vector types that are a multiple of 128 bits can be
     // matched to more than one ldN/stN instruction.
     bool UseScalable;
+
     if (EC.isKnownMultipleOf(Factor) &&
-        TLI->isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
-      return Factor * TLI->getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
+        TLI->isLegalInterleavedAccessType(SubVecTy, DL, UseScalable)) {
+      unsigned Num = TLI->getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
+      if (CostKind == TTI::TCK_Latency) {
+        // Latency doesn't make much sense for stores, so just return 1
+        if (Opcode == Instruction::Store)
+          return 1;
+        // Lookup the load opcode based on interleaving factor and element size
+        const unsigned Opcodes[4][4] = {
+            {AArch64::LD1i8, AArch64::LD1i16, AArch64::LD1i32, AArch64::LD1i64},
+            {AArch64::LD2i8, AArch64::LD2i16, AArch64::LD2i32, AArch64::LD2i64},
+            {AArch64::LD3i8, AArch64::LD3i16, AArch64::LD3i32, AArch64::LD3i64},
+            {AArch64::LD4i8, AArch64::LD4i16, AArch64::LD4i32, AArch64::LD4i64},
+        };
+        unsigned LogElemSize = Log2_32(SubVecTy->getScalarSizeInBits());
+        assert(LogElemSize >= 3 && LogElemSize <= 6 &&
+               "Unexpected element size");
+        assert(Factor <= 4 && "Unexpected interleaving factor");
+        unsigned Inst = Opcodes[Factor - 1][LogElemSize - 3];
+        return getLatencyFromSchedModel(ST, Inst, Num, ST->getLoadLatency());
+      }
+      return Factor * Num;
+    }
 
     // Cost the alternative approach for scalable vectors where the interleave
     // factor is larger than the VF: use a contiguous load/store of the full
