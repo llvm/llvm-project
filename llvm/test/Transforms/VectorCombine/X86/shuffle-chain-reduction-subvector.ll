@@ -165,8 +165,8 @@ define i32 @test_multishuffle_accumulator_v8i32(<8 x i32> %a0) {
   ret i32 %e
 }
 
-define i32 @test_multisource_full_plus_scalar_v4i32(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: define i32 @test_multisource_full_plus_scalar_v4i32(
+define i32 @negative_test_multisource_full_plus_scalar_v4i32(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: define i32 @negative_test_multisource_full_plus_scalar_v4i32(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[XS1:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[A1:%.*]] = add <4 x i32> [[X]], [[XS1]]

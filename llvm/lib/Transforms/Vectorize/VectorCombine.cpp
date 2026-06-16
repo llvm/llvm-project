@@ -4049,21 +4049,21 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     APInt Duplicates;
   };
   DenseMap<Value *, Demand> Demands;
-  auto demandOf = [&](Value *V) -> Demand & {
+  auto DemandOf = [&](Value *V) -> Demand & {
     unsigned N = cast<FixedVectorType>(V->getType())->getNumElements();
     Demand &D = Demands[V];
     if (D.Lanes.getBitWidth() != N)
       D.Lanes = D.Duplicates = APInt::getZero(N);
     return D;
   };
-  demandOf(VecOpEE).Lanes.setBit(0);
+  DemandOf(VecOpEE).Lanes.setBit(0);
   for (Value *V : reverse(Nodes)) {
     Demand DV = Demands.lookup(V);
     if (DV.Lanes.isZero())
       continue;
     if (auto *SVI = dyn_cast<ShuffleVectorInst>(V)) {
       ArrayRef<int> Mask = SVI->getShuffleMask();
-      Demand &DS = demandOf(SVI->getOperand(0));
+      Demand &DS = DemandOf(SVI->getOperand(0));
       for (unsigned I = 0, E = Mask.size(); I != E; ++I) {
         // Skip lanes that are undemanded or map to poison.
         if (!DV.Lanes[I] || Mask[I] < 0 ||
@@ -4076,7 +4076,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     } else {
       auto *U = cast<User>(V);
       for (Value *Op : {U->getOperand(0), U->getOperand(1)}) {
-        Demand &DOp = demandOf(Op);
+        Demand &DOp = DemandOf(Op);
         // Lanes demanded through more than one path accumulate in Duplicates.
         DOp.Duplicates |= DV.Duplicates | (DOp.Lanes & DV.Lanes);
         DOp.Lanes |= DV.Lanes;
