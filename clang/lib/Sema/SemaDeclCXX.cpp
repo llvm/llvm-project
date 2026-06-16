@@ -4230,6 +4230,14 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
                                         FD->getType(),
                                         FD->getInClassInitializer(),
                                         FD->hasAttr<CXX11UninitializedAttr>());
+
+  // std::init / ref_to_uninit (paper §5): a pointer or reference data member
+  // with a default member initializer must be bound consistently with its
+  // [[ref_to_uninit]] marking.
+  if (QualType FT = FD->getType(); !FT->isDependentType() &&
+      (FT->isPointerType() || FT->isReferenceType()))
+    checkRefToUninitInit(FD->getLocation(), FD->hasAttr<RefToUninitAttr>(),
+                         FT->isReferenceType(), FD->getInClassInitializer());
 }
 
 /// Find the direct and/or virtual base specifiers that

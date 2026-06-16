@@ -51,6 +51,16 @@ void test_suppress() {
   (void)s; (void)s2;
 }
 
+struct WithFields {
+  int *p1 [[ref_to_uninit]] = &g_uninit; // OK
+  int *p2 [[ref_to_uninit]] = &g_init;   // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  int *p3 = &g_uninit;                    // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  int *p4 = &g_init;                      // OK
+  int *p5 = nullptr;                      // OK
+  int &r1 [[ref_to_uninit]] = g_uninit;  // OK
+  int &r2 = g_uninit;                     // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+};
+
 template <typename T>
 void template_bad() {
   T *p = &g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
