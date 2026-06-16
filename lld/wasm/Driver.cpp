@@ -992,9 +992,11 @@ static void createSyntheticSymbols() {
       static WasmSignature setTLSBaseSignature{{}, {ValType::I32}};
       ctx.sym.setTLSBase =
           createUndefinedFunction("__wasm_set_tls_base", &setTLSBaseSignature);
+      ctx.sym.setTLSBase->markLive();
       static WasmSignature getTLSBaseSignature{{ValType::I32}, {}};
       ctx.sym.getTLSBase =
           createUndefinedFunction("__wasm_get_tls_base", &getTLSBaseSignature);
+      ctx.sym.getTLSBase->markLive();
     }
   }
 }
