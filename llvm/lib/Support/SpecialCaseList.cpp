@@ -415,7 +415,7 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   bool UseGlobs = MinVersion(2);
   bool RemoveDotSlash = MinVersion(3);
   bool WarnDotSlash = MinVersion(4) && !MinVersion(5);
-  // FIXME: Improve efficiency on Windows.
+  // TODO: Improve efficiency on Windows.
   // `SlashAgnostic` makes `GlobMatcher` lookup inefficient by reducing the part
   // of the pattern handled by the RadixTree. This was already the case even
   // before `SlashAgnostic` because `GlobMatcher` pessimizes on escape sequences

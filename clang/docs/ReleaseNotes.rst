@@ -1029,7 +1029,6 @@ Sanitizers
   warning for deprecated matches. Version 5 drops backward compatibility and
   requires rules to match canonicalized paths (without leading ``./``).
 
-
 - Sanitizer Special Case Lists (``-fsanitize-ignorelist``) and warning
   suppression mappings (``--warning-suppression-mappings``) now recognize version
   4 of the Special Case List format (indicated by ``#!special-case-list-v4``).
