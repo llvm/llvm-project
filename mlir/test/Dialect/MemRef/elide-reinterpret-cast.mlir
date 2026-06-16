@@ -246,7 +246,7 @@ func.func private @expand_scalar(%src : memref<1xi64>) {
 // CHECK-LABEL: func.func private @collapse_scalar(
 // CHECK-SAME:    %[[SRC:.*]]: memref<1x1x1xi64>) {
 func.func private @collapse_scalar(%src : memref<1x1x1xi64>) {
-  // CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+  // CHECK:   %[[C0:.*]] = arith.constant 0 : index
   %c0 = arith.constant 0 : index
   // CHECK-NOT:   memref.reinterpret_cast
   %reinterpret_cast = memref.reinterpret_cast %src
@@ -257,10 +257,24 @@ func.func private @collapse_scalar(%src : memref<1x1x1xi64>) {
   return
 }
 
-// CHECK-LABEL: func.func private @expand_1d_dynamic_index(
+// CHECK-LABEL: func.func private @expand_left_vector(
+// CHECK-SAME:    %[[SRC:.*]]: memref<999xi64>) {
+func.func private @expand_left_vector(%src : memref<999xi64>) {
+  // CHECK:       %[[C0:.*]] = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [0], sizes: [1, 1, 999], strides: [999, 999, 1]
+    : memref<999xi64> to memref<1x1x999xi64>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C0]]] : memref<999xi64>
+  %0 = memref.load %reinterpret_cast[%c0, %c0, %c0] : memref<1x1x999xi64>
+  return
+}
+
+// CHECK-LABEL: func.func private @expand_left_vector_dynamic_index(
 // CHECK-SAME:    %[[I:.*]]: index
 // CHECK-SAME:    %[[SRC:.*]]: memref<999xi64>) {
-func.func private @expand_1d_dynamic_index(%i : index,
+func.func private @expand_left_vector_dynamic_index(%i : index,
     %src : memref<999xi64>) {
   // CHECK:       %[[C0:.*]] = arith.constant 0 : index
   %c0 = arith.constant 0 : index
@@ -273,12 +287,234 @@ func.func private @expand_1d_dynamic_index(%i : index,
   return
 }
 
-// CHECK-LABEL: func.func private @collapse_1d(
-// CHECK-SAME:    %[[SRC:.*]]: memref<1x1x1x100xf32>) {
-func.func private @collapse_1d(
-    %src : memref<1x1x1x100xf32>) {
+// CHECK-LABEL: func.func private @collapse_left_vector(
+// CHECK-SAME:    %[[SRC:.*]]: memref<1x1x999xi64>) {
+func.func private @collapse_left_vector(%src : memref<1x1x999xi64>) {
+  // CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+  %c1 = arith.constant 1 : index
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [0], sizes: [999], strides: [1]
+    : memref<1x1x999xi64> to memref<999xi64>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C0]], %[[C0]], %[[C1]]] : memref<1x1x999xi64>
+  %0 = memref.load %reinterpret_cast[%c1] : memref<999xi64>
+  return
+}
+
+// CHECK-LABEL: func.func private @partial_expand_left_vector(
+// CHECK-SAME:    %[[SRC:.*]]: memref<1x999xf32>) {
+func.func private @partial_expand_left_vector(
+    %src : memref<1x999xf32>) {
+  // CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [0], sizes: [1, 1, 999], strides: [999, 999, 1]
+    : memref<1x999xf32> to memref<1x1x999xf32>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C0]], %[[C1]]] : memref<1x999xf32>
+  %0 = memref.load %reinterpret_cast[%c0, %c0, %c1]
+    : memref<1x1x999xf32>
+  return
+}
+
+// CHECK-LABEL: func.func private @partial_collapse_left_vector(
+// CHECK-SAME:    %[[SRC:.*]]: memref<1x1x999xf32>) {
+func.func private @partial_collapse_left_vector(
+    %src : memref<1x1x999xf32>) {
+  // CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [0], sizes: [1, 999], strides: [999, 1]
+    : memref<1x1x999xf32> to memref<1x999xf32>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C0]], %[[C0]], %[[C1]]] : memref<1x1x999xf32>
+  %0 = memref.load %reinterpret_cast[%c0, %c1] : memref<1x999xf32>
+  return
+}
+
+// CHECK-LABEL: func.func private @expand_right_vector(
+// CHECK-SAME:    %[[SRC:.*]]: memref<999xi64>) {
+func.func private @expand_right_vector(%src : memref<999xi64>) {
   // CHECK:       %[[C0:.*]] = arith.constant 0 : index
-  // CHECK:       %[[C1:.*]] = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [0], sizes: [999, 1, 1], strides: [1, 999, 999]
+    : memref<999xi64> to memref<999x1x1xi64, strided<[1, 999, 999]>>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C0]]] : memref<999xi64>
+  %0 = memref.load %reinterpret_cast[%c0, %c0, %c0] : memref<999x1x1xi64,
+    strided<[1, 999, 999]>>
+  return
+}
+
+// CHECK-LABEL: func.func private @collapse_right_vector(
+// CHECK-SAME:    %[[SRC:.*]]: memref<999x1x1xi64>) {
+func.func private @collapse_right_vector(%src : memref<999x1x1xi64>) {
+  // CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+  %c1 = arith.constant 1 : index
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [0], sizes: [999], strides: [1]
+      : memref<999x1x1xi64> to memref<999xi64>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C1]], %[[C0]], %[[C0]]] : memref<999x1x1xi64>
+  %0 = memref.load %reinterpret_cast[%c1] : memref<999xi64>
+  return
+}
+
+// CHECK-LABEL: func.func private @collapse_right_vector_dynamic_index(
+// CHECK-SAME:    %[[I:.*]]: index
+// CHECK-SAME:    %[[SRC:.*]]: memref<999x1x1xi64>) {
+func.func private @collapse_right_vector_dynamic_index(%i : index,
+    %src : memref<999x1x1xi64>) {
+  // CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [0], sizes: [999], strides: [1]
+    : memref<999x1x1xi64> to memref<999xi64>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[I]], %[[C0]], %[[C0]]] : memref<999x1x1xi64>
+  %0 = memref.load %reinterpret_cast[%i] : memref<999xi64>
+  return
+}
+
+// CHECK-LABEL: func.func private @partial_expand_right_vector(
+// CHECK-SAME:    %[[SRC:.*]]: memref<999x1xf32>) {
+func.func private @partial_expand_right_vector(
+    %src : memref<999x1xf32>) {
+  // CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [0], sizes: [999, 1, 1], strides: [1, 999, 999]
+    : memref<999x1xf32> to memref<999x1x1xf32, strided<[1, 999, 999]>>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C1]], %[[C0]]] : memref<999x1xf32>
+  %0 = memref.load %reinterpret_cast[%c1, %c0, %c0]
+    : memref<999x1x1xf32, strided<[1, 999, 999]>>
+  return
+}
+
+// CHECK-LABEL: func.func private @partial_collapse_right_vector(
+// CHECK-SAME:    %[[SRC:.*]]: memref<999x1x1xf32>) {
+func.func private @partial_collapse_right_vector(
+    %src : memref<999x1x1xf32>) {
+  // CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [0], sizes: [999, 1], strides: [1, 999]
+    : memref<999x1x1xf32> to memref<999x1xf32, strided<[1, 999]>>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C1]], %[[C0]], %[[C0]]] : memref<999x1x1xf32>
+  %0 = memref.load %reinterpret_cast[%c1, %c0] : memref<999x1xf32,
+    strided<[1, 999]>>
+  return
+}
+
+// CHECK-LABEL: func.func private @expand_multiple_non_unit_dims(
+// CHECK-SAME:    %[[SRC:.*]]: memref<2x100xf32>) {
+func.func private @expand_multiple_non_unit_dims(
+    %src : memref<2x100xf32>) {
+  // CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [0], sizes: [2, 1, 1, 100], strides: [100, 100, 100, 1]
+    : memref<2x100xf32> to memref<2x1x1x100xf32,
+      strided<[100, 100, 100, 1]>>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C0]], %[[C1]]] : memref<2x100xf32>
+  %0 = memref.load %reinterpret_cast[%c0, %c0, %c0, %c1]
+    : memref<2x1x1x100xf32, strided<[100, 100, 100, 1]>>
+  return
+}
+
+// CHECK-LABEL: func.func private @collapse_multiple_non_unit_dims(
+// CHECK-SAME:    %[[SRC:.*]]: memref<2x1x1x100xf32>) {
+func.func private @collapse_multiple_non_unit_dims(
+    %src : memref<2x1x1x100xf32>) {
+  // CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+  // CHECK-DAG:   %[[C0_0:.*]] = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [0], sizes: [2, 100], strides: [100, 1]
+    : memref<2x1x1x100xf32> to memref<2x100xf32>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C0]], %[[C0_0]], %[[C0_0]], %[[C1]]] : memref<2x1x1x100xf32>
+  %0 = memref.load %reinterpret_cast[%c0, %c1] : memref<2x100xf32>
+  return
+}
+
+// CHECK-LABEL: func.func private @expand_inner_non_unit_dims(
+// CHECK-SAME:    %[[I:.*]]: index
+// CHECK-SAME:    %[[SRC:.*]]: memref<1x33xf32>) {
+func.func private @expand_inner_non_unit_dims(%i : index,
+    %src : memref<1x33xf32>) {
+  // CHECK:       %[[C0:.*]] = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [0], sizes: [1, 33, 1, 1], strides: [33, 1, 1, 1]
+    : memref<1x33xf32> to memref<1x33x1x1xf32>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C0]], %[[I]]] : memref<1x33xf32>
+  %0 = memref.load %reinterpret_cast[%c0, %i, %c0, %c0]
+    : memref<1x33x1x1xf32>
+  return
+}
+
+// CHECK-LABEL: func.func private @collapse_inner_non_unit_dims(
+// CHECK-SAME:    %[[SRC:.*]]: memref<1x1x1x100xf32>) {
+func.func private @collapse_inner_non_unit_dims(
+    %src : memref<1x1x1x100xf32>) {
+  // CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [0], sizes: [1, 100, 1], strides: [100, 1, 100]
+    : memref<1x1x1x100xf32> to memref<1x100x1xf32, strided<[100, 1, 100]>>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C0]], %[[C0]], %[[C0]], %[[C1]]] : memref<1x1x1x100xf32>
+  %0 = memref.load %reinterpret_cast[%c0, %c1, %c0] : memref<1x100x1xf32,
+    strided<[100, 1, 100]>>
+  return
+}
+
+// CHECK-LABEL: func.func private @expand_diff_non_unit_boundary(
+// CHECK-SAME:    %[[I:.*]]: index
+// CHECK-SAME:    %[[SRC:.*]]: memref<1x33xf32>) {
+func.func private @expand_diff_non_unit_boundary(%i : index,
+    %src : memref<1x33xf32>) {
+  // CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK-NOT:   memref.reinterpret_cast
+  %reinterpret_cast = memref.reinterpret_cast %src
+    to offset: [0], sizes: [33, 1, 1], strides: [1, 33, 33]
+    : memref<1x33xf32> to memref<33x1x1xf32, strided<[1, 33, 33]>>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C0]], %[[C1]]] : memref<1x33xf32>
+  %0 = memref.load %reinterpret_cast[%c1, %c0, %c0]
+    : memref<33x1x1xf32, strided<[1, 33, 33]>>
+  return
+}
+
+// CHECK-LABEL: func.func private @collapse_diff_non_unit_boundary(
+// CHECK-SAME:    %[[SRC:.*]]: memref<1x1x1x100xf32>) {
+func.func private @collapse_diff_non_unit_boundary(
+    %src : memref<1x1x1x100xf32>) {
+  // CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   // CHECK-NOT:   memref.reinterpret_cast
@@ -291,20 +527,24 @@ func.func private @collapse_1d(
   return
 }
 
-// CHECK-LABEL: func.func private @collapse_1d_moved_unit_dims(
-// CHECK-SAME:    %[[I:.*]]: index
-// CHECK-SAME:    %[[SRC:.*]]: memref<33x1x1x1xf32>) {
-func.func private @collapse_1d_moved_unit_dims(%i : index,
-    %src : memref<33x1x1x1xf32>) {
+// CHECK-LABEL: func.func private @expand_3d_moved_unit_dims(
+// CHECK-SAME:    %[[I:[A-Za-z0-9_]+]]: index
+// CHECK-SAME:    %[[J:[A-Za-z0-9_]+]]: index
+// CHECK-SAME:    %[[K:[A-Za-z0-9_]+]]: index
+// CHECK-SAME:    %[[SRC:.*]]: memref<1x33x40x33xf32>) {
+func.func private @expand_3d_moved_unit_dims(%i : index, %j : index,
+    %k : index, %src : memref<1x33x40x33xf32>) {
   // CHECK:       %[[C0:.*]] = arith.constant 0 : index
   %c0 = arith.constant 0 : index
   // CHECK-NOT:   memref.reinterpret_cast
   %reinterpret_cast = memref.reinterpret_cast %src
-    to offset: [0], sizes: [1, 33], strides: [33, 1]
-    : memref<33x1x1x1xf32> to memref<1x33xf32, strided<[33, 1]>>
-  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[I]], %[[C0]], %[[C0]], %[[C0]]] : memref<33x1x1x1xf32>
-  %0 = memref.load %reinterpret_cast[%c0, %i]
-    : memref<1x33xf32, strided<[33, 1]>>
+    to offset: [0], sizes: [33, 1, 1, 40, 1, 33],
+    strides: [1320, 1320, 1320, 33, 33, 1]
+    : memref<1x33x40x33xf32> to memref<33x1x1x40x1x33xf32,
+      strided<[1320, 1320, 1320, 33, 33, 1]>>
+  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C0]], %[[I]], %[[J]], %[[K]]] : memref<1x33x40x33xf32>
+  %0 = memref.load %reinterpret_cast[%i, %c0, %c0, %j, %c0, %k]
+    : memref<33x1x1x40x1x33xf32, strided<[1320, 1320, 1320, 33, 33, 1]>>
   return
 }
 
@@ -326,59 +566,6 @@ func.func private @collapse_3d_moved_unit_dims(%i : index, %j : index,
   // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C0]], %[[I]], %[[C0]], %[[C0]], %[[J]], %[[C0]], %[[K]]] : memref<1x33x1x1x40x1x33xf32>
   %0 = memref.load %reinterpret_cast[%i, %c0, %j, %k, %c0, %c0]
     : memref<33x1x40x33x1x1xf32, strided<[1320, 1320, 33, 1, 1, 1]>>
-  return
-}
-
-// CHECK-LABEL: func.func private @expand_1d(
-// CHECK-SAME:    %[[I:.*]]: index
-// CHECK-SAME:    %[[SRC:.*]]: memref<1x33xf32>) {
-func.func private @expand_1d(%i : index,
-    %src : memref<1x33xf32>) {
-  // CHECK:       %[[C0:.*]] = arith.constant 0 : index
-  %c0 = arith.constant 0 : index
-  // CHECK-NOT:   memref.reinterpret_cast
-  %reinterpret_cast = memref.reinterpret_cast %src
-    to offset: [0], sizes: [1, 33, 1, 1], strides: [33, 1, 1, 1]
-    : memref<1x33xf32> to memref<1x33x1x1xf32>
-  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C0]], %[[I]]] : memref<1x33xf32>
-  %0 = memref.load %reinterpret_cast[%c0, %i, %c0, %c0]
-    : memref<1x33x1x1xf32>
-  return
-}
-
-// CHECK-LABEL: func.func private @expand_1d_moved_unit_dims(
-// CHECK-SAME:    %[[I:.*]]: index
-// CHECK-SAME:    %[[SRC:.*]]: memref<1x33xf32>) {
-func.func private @expand_1d_moved_unit_dims(%i : index,
-    %src : memref<1x33xf32>) {
-  // CHECK:       %[[C0:.*]] = arith.constant 0 : index
-  %c0 = arith.constant 0 : index
-  // CHECK-NOT:   memref.reinterpret_cast
-  %reinterpret_cast = memref.reinterpret_cast %src
-    to offset: [0], sizes: [33, 1, 1], strides: [1, 33, 33]
-    : memref<1x33xf32> to memref<33x1x1xf32, strided<[1, 33, 33]>>
-  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C0]], %[[I]]] : memref<1x33xf32>
-  %0 = memref.load %reinterpret_cast[%i, %c0, %c0]
-    : memref<33x1x1xf32, strided<[1, 33, 33]>>
-  return
-}
-
-// CHECK-LABEL: func.func private @expand_2d_moved_unit_dims(
-// CHECK-SAME:    %[[I:[A-Za-z0-9_]+]]: index
-// CHECK-SAME:    %[[J:[A-Za-z0-9_]+]]: index
-// CHECK-SAME:    %[[SRC:.*]]: memref<1x33x40xf32>) {
-func.func private @expand_2d_moved_unit_dims(%i : index, %j : index,
-    %src : memref<1x33x40xf32>) {
-  // CHECK:       %[[C0:.*]] = arith.constant 0 : index
-  %c0 = arith.constant 0 : index
-  // CHECK-NOT:   memref.reinterpret_cast
-  %reinterpret_cast = memref.reinterpret_cast %src
-    to offset: [0], sizes: [33, 1, 1, 40], strides: [40, 40, 40, 1]
-    : memref<1x33x40xf32> to memref<33x1x1x40xf32,
-      strided<[40, 40, 40, 1]>>
-  // CHECK:       %[[LOAD:.*]] = memref.load %[[SRC]][%[[C0]], %[[I]], %[[J]]] : memref<1x33x40xf32>
-  %0 = memref.load %reinterpret_cast[%i, %c0, %c0, %j]
-    : memref<33x1x1x40xf32, strided<[40, 40, 40, 1]>>
   return
 }
 
@@ -432,9 +619,9 @@ func.func private @negative_dynamic_stride(%stride0: index,
   return
 }
 
-// CHECK-LABEL: func.func private @negative_reordered_non_unit_dims(
+// CHECK-LABEL: func.func private @negative_diff_non_unit_dims_order(
 // CHECK-SAME:    %[[SRC:.*]]: memref<2x1x1x100xf32>) {
-func.func private @negative_reordered_non_unit_dims(
+func.func private @negative_diff_non_unit_dims_order(
   %src : memref<2x1x1x100xf32>) {
   %c1 = arith.constant 1 : index
   // CHECK:       %[[RC:.*]] = memref.reinterpret_cast %[[SRC]]
