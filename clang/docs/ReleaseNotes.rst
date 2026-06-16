@@ -496,6 +496,9 @@ Attribute Changes in Clang
   about pointer lifetimes. It may be used to power optimizations in the future,
   however there are no concrete plans to do so at the moment.
 
+* The ``modular_format`` attribute now supports the ``fixed`` aspect for C
+  ISO 18037 fixed-point ``printf`` specifiers.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Fixed bug in ``-Wdocumentation`` so that it correctly handles explicit
@@ -702,6 +705,7 @@ Bug Fixes in This Version
 - Fixed crash when checking for overflow for unary operator that can't overflow (#GH170072)
 - Clang no longer handles a `" q-char-sequence "` header name as a string literal (#GH132643).
 - Fixed an assertion when ``__attribute__((alloc_size))`` is used with an argument type wider than the target's pointer width. (#GH190445)
+- Fixed an assertion where we improperly handled implicit conversions to integral types from an atomic-type with a conversion function. (#GH201770)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -998,6 +1002,12 @@ Crash and bug fixes
 - Fixed ``security.VAList`` checker producing false positives when analyzing
   C23 code where ``va_start`` expands to ``__builtin_c23_va_start``.
 
+Improvements
+^^^^^^^^^^^^
+
+- ``alpha.unix.PthreadLock`` now emits path notes on lock, unlock, destroy,
+  and init operations.
+
 .. comment:
   This is for the Static Analyzer.
   Using the caret `^^^` underlining for subsections:
@@ -1019,6 +1029,11 @@ Sanitizers
   warning for deprecated matches. Version 5 drops backward compatibility and
   requires rules to match canonicalized paths (without leading ``./``).
 
+- Sanitizer Special Case Lists (``-fsanitize-ignorelist``) and warning
+  suppression mappings (``--warning-suppression-mappings``) now recognize version
+  4 of the Special Case List format (indicated by ``#!special-case-list-v4``).
+  On Windows hosts, path matching is slash-agnostic (both forward slashes (``/``)
+  and backslashes (``\``) match either path separator in both patterns and paths).
 
 Python Binding Changes
 ----------------------

@@ -7131,6 +7131,10 @@ TEST_F(FormatTest, LayoutNestedBlocks) {
   verifyFormat("SomeFunction({MACRO({ return output; }), b});");
 
   verifyNoCrash("^{v^{a}}");
+  // Verify no crash on malformed input with unbalanced braces where angle
+  // bracket parsing resets the token stream and a brace is consumed twice
+  // through parseConditional(), leaving Scopes empty.
+  verifyNoCrash("{{ < ? } a} b");
 }
 
 TEST_F(FormatTest, FormatNestedBlocksInMacros) {
@@ -15419,6 +15423,15 @@ TEST_F(FormatTest, PullInlineOnlyFunctionDefinitionsIntoSingleLine) {
                MergeInlineOnly);
   verifyFormat("int f() {\n"
                "}",
+               MergeInlineOnly);
+
+  MergeInlineOnly.NamespaceIndentation = FormatStyle::NI_All;
+  verifyFormat("namespace {\n"
+               "  class Class {\n"
+               "#define MACRO 1\n"
+               "    int f() { return 1; }\n"
+               "  };\n"
+               "} // namespace",
                MergeInlineOnly);
 
   MergeInlineOnly.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
