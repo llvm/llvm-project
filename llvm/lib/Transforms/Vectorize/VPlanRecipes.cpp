@@ -47,6 +47,15 @@ using VectorParts = SmallVector<Value *, 2>;
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+// It is sometimes necessary to disable printing of metadata in tests in order
+// to avoid non-deterministic behaviour due to metadata introduced by VPlan
+// that wasn't present in the original scalar IR.
+static cl::opt<bool> VPlanPrintMetadata(
+    "vplan-print-metadata", cl::init(true), cl::Hidden,
+    cl::desc("Controls the printing of recipe metadata when debugging."));
+#endif
+
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPRecipeID()) {
   case VPExpressionSC:
@@ -388,12 +397,8 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
 }
 
 FastMathFlags VPIRFlags::getFastMathFlagsOrNone() const {
-  assert((OpType == OperationType::FPMathOp || OpType == OperationType::FCmp ||
-          OpType == OperationType::ReductionOp ||
-          OpType == OperationType::Other) &&
-         "recipe doesn't have fast math flags");
-  if (OpType == OperationType::Other)
-    return FastMathFlags();
+  if (!hasFastMathFlags())
+    return {};
   const FastMathFlagsTy &F = getFMFsRef();
   FastMathFlags Res;
   Res.setAllowReassoc(F.AllowReassoc);
@@ -585,7 +590,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::MaskedCond:
   case VPInstruction::Not:
-  case VPInstruction::ResumeForEpilogue:
   case VPInstruction::Reverse:
   case VPInstruction::Unpack:
   case VPInstruction::NumActiveLanes:
@@ -603,6 +607,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::WidePtrAdd:
   case VPInstruction::WideIVStep:
   case VPInstruction::CalculateTripCountMinusVF:
+  case VPInstruction::ResumeForEpilogue:
     return 2;
   case Instruction::InsertElement:
   case Instruction::Select:
@@ -1513,8 +1518,7 @@ void VPInstruction::execute(VPTransformState &State) {
          "Set flags not supported for the provided opcode");
   assert(hasRequiredFlagsForOpcode(getOpcode()) &&
          "Opcode requires specific flags to be set");
-  if (hasFastMathFlags())
-    State.Builder.setFastMathFlags(getFastMathFlagsOrNone());
+  State.Builder.setFastMathFlags(getFastMathFlagsOrNone());
   Value *GeneratedValue = generate(State);
   if (!hasResult())
     return;
@@ -1529,9 +1533,11 @@ void VPInstruction::execute(VPTransformState &State) {
          "scalar value but not only first lane defined");
   State.set(this, GeneratedValue,
             /*IsScalar*/ GeneratesPerFirstLaneOnly);
-  if (getOpcode() == VPInstruction::ResumeForEpilogue) {
+  if (getOpcode() == VPInstruction::ResumeForEpilogue ||
+      getOpcode() == Instruction::Freeze) {
     // FIXME: This is a workaround to enable reliable updates of the scalar loop
-    // resume phis, when vectorizing the epilogue. Must be removed once epilogue
+    // resume phis, and to let epilogue vectorization recover the frozen
+    // reduction start from the main plan. Must be removed once epilogue
     // vectorization explicitly connects VPlans.
     setUnderlyingValue(GeneratedValue);
   }
@@ -1626,6 +1632,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::Broadcast:
   case VPInstruction::ReductionStartVector:
+  case VPInstruction::ResumeForEpilogue:
     return true;
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
@@ -1823,13 +1830,34 @@ void VPInstructionWithType::execute(VPTransformState &State) {
 
 InstructionCost VPInstructionWithType::computeCost(ElementCount VF,
                                                    VPCostContext &Ctx) const {
-  // TODO: Compute cost for VPInstructions without underlying values.
-  if (!getUnderlyingValue())
+  // NOTE: At the moment it seems only possible to expose this path for
+  // the trunc, zext and sext opcodes. However, isScalarCast also covers
+  // int<>fp conversions, bitcasts, ptr<>int conversions, etc.
+  if (Instruction::isCast(getOpcode()))
+    return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
+                                      Ctx);
+
+  switch (getOpcode()) {
+  case VPInstruction::VScale: {
+    Type *Ty = this->getScalarType();
+    ArrayRef<Type *> Tys;
+    IntrinsicCostAttributes Attrs(Intrinsic::vscale, Ty, Tys);
+    return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
+  }
+  case VPInstruction::StepVector:
+    // TODO: This isn't quite right since even if the step-vector is hoisted
+    // out of the loop it has a non-zero cost in the middle block, etc.
+    // Once the stepvector is correctly hoisted out of the vector loop by the
+    // licm transform we can add the cost here so that it doesn't incorrectly
+    // affect the choice of VF.
     return 0;
-  assert(Instruction::isCast(getOpcode()) &&
-         "only casts have underlying values currently");
-  return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
-                                    Ctx);
+  default:
+    // Although VPInstructionWithType is also used for
+    // VPInstruction::WideIVStep it isn't currently possible to expose cases
+    // where the cost is queried.
+    llvm_unreachable("Unhandled opcode");
+  }
+  return 0;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2022,7 +2050,7 @@ void VPIRMetadata::intersect(const VPIRMetadata &Other) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
   const Module *M = SlotTracker.getModule();
-  if (Metadata.empty() || !M)
+  if (Metadata.empty() || !M || !VPlanPrintMetadata)
     return;
 
   ArrayRef<StringRef> MDNames = SlotTracker.getMDNames();
