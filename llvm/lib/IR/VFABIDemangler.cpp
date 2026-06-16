@@ -534,12 +534,19 @@ VFParamKind VFABI::getVFParamKindFromString(const StringRef Token) {
 
 void VFABI::getVectorVariantNames(
     const CallInst &CI, SmallVectorImpl<std::string> &VariantMappings) {
-  const StringRef S = CI.getFnAttr(VFABI::MappingsAttrName).getValueAsString();
-  if (S.empty())
-    return;
-
   SmallVector<StringRef, 8> ListAttr;
-  S.split(ListAttr, ",");
+  StringRef CallMappings =
+      CI.getFnAttr(VFABI::MappingsAttrName).getValueAsString();
+  if (!CallMappings.empty())
+    CallMappings.split(ListAttr, ",");
+  if (const Function *F = CI.getCalledFunction()) {
+    StringRef FuncMappings =
+        F->getFnAttribute(VFABI::MappingsAttrName).getValueAsString();
+    if (!FuncMappings.empty())
+      FuncMappings.split(ListAttr, ",");
+  }
+  if (ListAttr.empty())
+    return;
 
   for (const auto &S : SetVector<StringRef>(llvm::from_range, ListAttr)) {
     std::optional<VFInfo> Info =
