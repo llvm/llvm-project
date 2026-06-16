@@ -64,6 +64,9 @@ set(EJIT_SOURCES
   EJitStructFieldPass.cpp
   EJitOptimizer.cpp
   EJitPassBuilder.cpp
+  EJitCodePool.cpp
+  EJitCodePoolMemoryManager.cpp
+  EJitSrePlatform.cpp
 )
 
 # EJitLogger has its own #ifndef EJIT_FREESTANDING no-op stubs, so always include it.
@@ -105,6 +108,12 @@ add_llvm_component_library(LLVMEJIT
 if(EJIT_DEFAULT_TARGET_TRIPLE)
   target_compile_definitions(LLVMEJIT PUBLIC
     EJIT_DEFAULT_TRIPLE="${EJIT_DEFAULT_TARGET_TRIPLE}")
+endif()
+
+# EJIT_FREESTANDING must be visible in LLVMJITLink headers so that
+# std::promise / std::future usage is guarded (bare-metal has no <future>).
+if(EJIT_FREESTANDING)
+  target_compile_definitions(LLVMJITLink PUBLIC EJIT_FREESTANDING)
 endif()
 
 #===-- Minimal embedded runtime target -----------------------------------===#

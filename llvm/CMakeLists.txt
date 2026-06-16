@@ -570,6 +570,33 @@ if(EJIT_FREESTANDING)
   add_definitions(-DEJIT_FREESTANDING)
 endif()
 
+#===-- EmbeddedJIT SRE dedicated JIT code memory pool ----------------------===#
+# Route JIT machine-code memory through EmbeddedJIT's own 2MiB-aligned code
+# pools (instead of the default JITLink mmap/mprotect path), and seal each pool
+# to RX via the platform enable_ex primitive before a JIT function pointer is
+# handed back. Default OFF: upstream default behavior is unchanged.
+option(EJIT_SRE_CODE_POOL
+  "Use the EmbeddedJIT SRE 2MiB code pool + enable_ex sealing for JIT code memory" OFF)
+if(EJIT_SRE_CODE_POOL)
+  add_definitions(-DEJIT_SRE_CODE_POOL)
+  # enable_ex sealing is implied by the code pool; allow turning just the seal
+  # call off for bring-up/measurement while still routing code through pools.
+  add_definitions(-DEJIT_SRE_ENABLE_EX)
+endif()
+
+# Per-pool size in bytes (must be a multiple of the 2MiB enable_ex granularity).
+set(EJIT_SRE_CODE_POOL_SIZE "2097152" CACHE STRING
+  "EmbeddedJIT SRE code pool size in bytes (default 2MiB)")
+# SRE memory partition number (ptNo) handed to SRE_MemDbgAlloc.
+set(EJIT_SRE_CODE_POOL_PTNO "8" CACHE STRING
+  "EmbeddedJIT SRE code pool partition number (ptNo) for SRE_MemDbgAlloc")
+if(EJIT_SRE_CODE_POOL)
+  add_definitions(-DEJIT_SRE_CODE_POOL_SIZE=${EJIT_SRE_CODE_POOL_SIZE})
+  add_definitions(-DEJIT_SRE_CODE_POOL_PTNO=${EJIT_SRE_CODE_POOL_PTNO})
+  message(STATUS "EmbeddedJIT: SRE code pool enabled "
+                 "(size=${EJIT_SRE_CODE_POOL_SIZE}, ptNo=${EJIT_SRE_CODE_POOL_PTNO})")
+endif()
+
 set(LLVM_TARGETS_TO_BUILD "all"
     CACHE STRING "Semicolon-separated list of targets to build, or \"all\".")
 

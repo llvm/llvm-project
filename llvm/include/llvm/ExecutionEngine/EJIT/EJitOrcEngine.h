@@ -15,6 +15,10 @@
 #include <memory>
 #include <string>
 
+#ifdef EJIT_SRE_CODE_POOL
+#include "llvm/ExecutionEngine/EJIT/EJitCodePool.h"
+#endif
+
 namespace llvm {
 namespace ejit {
 
@@ -64,6 +68,14 @@ public:
   /// JIT can resolve when compiling bitcode modules. Required for bare-metal
   /// environments where dynamic symbol lookup is unavailable.
   void addUserSymbol(const std::string &name, void *addr);
+
+#ifdef EJIT_SRE_CODE_POOL
+  /// Snapshot of the SRE code-pool statistics (pool / sealed counts, used /
+  /// wasted bytes, enable_ex invocations) for diagnostics and tests. Returns a
+  /// zeroed snapshot if no pool is active. Available only with
+  /// EJIT_SRE_CODE_POOL.
+  EJitCodePoolManager::Stats getCodePoolStats() const;
+#endif
 
 private:
   struct Impl;

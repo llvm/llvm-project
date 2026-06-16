@@ -30,7 +30,9 @@
 
 #include <cassert>
 #include <cstdint>
+#ifndef EJIT_FREESTANDING
 #include <future>
+#endif
 #include <mutex>
 
 namespace llvm {
@@ -134,12 +136,20 @@ public:
 
     /// Synchronous convenience version of finalize.
     Expected<FinalizedAlloc> finalize() {
+#ifndef EJIT_FREESTANDING
       std::promise<MSVCPExpected<FinalizedAlloc>> FinalizeResultP;
       auto FinalizeResultF = FinalizeResultP.get_future();
       finalize([&](Expected<FinalizedAlloc> Result) {
         FinalizeResultP.set_value(std::move(Result));
       });
       return FinalizeResultF.get();
+#else
+      Expected<FinalizedAlloc> FinalizeResult = FinalizedAlloc();
+      finalize([&](Expected<FinalizedAlloc> Result) {
+        FinalizeResult = std::move(Result);
+      });
+      return FinalizeResult;
+#endif
     }
   };
 
@@ -165,12 +175,21 @@ public:
 
   /// Convenience function for blocking allocation.
   AllocResult allocate(const JITLinkDylib *JD, LinkGraph &G) {
+#ifndef EJIT_FREESTANDING
     std::promise<MSVCPExpected<std::unique_ptr<InFlightAlloc>>> AllocResultP;
     auto AllocResultF = AllocResultP.get_future();
     allocate(JD, G, [&](AllocResult Alloc) {
       AllocResultP.set_value(std::move(Alloc));
     });
     return AllocResultF.get();
+#else
+    AllocResult Result = make_error<StringError>(
+        "Allocation not implemented", inconvertibleErrorCode());
+    allocate(JD, G, [&](AllocResult Alloc) {
+      Result = std::move(Alloc);
+    });
+    return Result;
+#endif
   }
 
   /// Deallocate a list of allocation objects.
@@ -189,11 +208,20 @@ public:
 
   /// Convenience function for blocking deallocation.
   Error deallocate(std::vector<FinalizedAlloc> Allocs) {
+#ifndef EJIT_FREESTANDING
     std::promise<MSVCPError> DeallocResultP;
     auto DeallocResultF = DeallocResultP.get_future();
     deallocate(std::move(Allocs),
                [&](Error Err) { DeallocResultP.set_value(std::move(Err)); });
     return DeallocResultF.get();
+#else
+    // Bare-metal: single-threaded, deallocate completes synchronously before
+    // the callback returns. No std::promise needed.
+    Error DeallocResult = Error::success();
+    deallocate(std::move(Allocs),
+               [&](Error Err) { DeallocResult = std::move(Err); });
+    return DeallocResult;
+#endif
   }
 
   /// Convenience function for blocking deallocation of a single alloc.

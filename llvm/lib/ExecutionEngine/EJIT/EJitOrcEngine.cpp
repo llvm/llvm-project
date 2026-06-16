@@ -15,12 +15,24 @@
 #include "llvm/TargetParser/Triple.h"
 #include <map>
 
+#ifdef EJIT_SRE_CODE_POOL
+#include "llvm/ExecutionEngine/EJIT/EJitCodePoolMemoryManager.h"
+#include "llvm/ExecutionEngine/EJIT/EJitSrePlatform.h"
+#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#endif
+
 using namespace llvm;
 using namespace llvm::ejit;
 
 #define DEBUG_TYPE "ejit-orc-engine"
 
 struct EJitOrcEngine::Impl {
+#ifdef EJIT_SRE_CODE_POOL
+  /// Dedicated 2MiB code pools backing all JIT machine code. Declared before
+  /// J so it outlives the LLJIT (and the memory manager the object linking
+  /// layer owns, which references it).
+  std::unique_ptr<EJitCodePoolManager> codePool;
+#endif
   std::unique_ptr<orc::LLJIT> J;
   PeriodArrayRegistry *periodReg = nullptr;
   EJitRuntimeState *runtimeState = nullptr;
@@ -76,6 +88,29 @@ EJitOrcEngine::Create(const Config &config,
 #ifdef EJIT_FREESTANDING
   Builder.setLinkProcessSymbolsByDefault(false);
   Builder.setPlatformSetUp(orc::setUpInactivePlatform);
+#endif
+
+#ifdef EJIT_SRE_CODE_POOL
+  // Route JIT machine-code memory through EmbeddedJIT's own 2MiB pools instead
+  // of the default JITLink mmap/mprotect path. The pool manager is owned by the
+  // engine (so it outlives the LLJIT); the object linking layer owns a memory
+  // manager that references it. Pages are kept RW here and sealed to RX later,
+  // at lookup time, by the pool manager's enable_ex sealing.
+  engine->P->codePool = makeSreCodePoolManager();
+  {
+    EJitCodePoolManager *Pool = engine->P->codePool.get();
+    Builder.setObjectLinkingLayerCreator(
+        [Pool](orc::ExecutionSession &ES)
+            -> Expected<std::unique_ptr<orc::ObjectLayer>> {
+          // Page size only affects per-segment layout padding; we never apply
+          // per-segment protections (sealing is done per 2MiB pool), so a
+          // conservative 4KiB is sufficient and portable.
+          constexpr size_t JitPageSize = 4096;
+          return std::make_unique<orc::ObjectLinkingLayer>(
+              ES, std::make_unique<EJitCodePoolMemoryManager>(*Pool,
+                                                              JitPageSize));
+        });
+  }
 #endif
 
   auto J = Builder.create();
@@ -270,7 +305,23 @@ Expected<void *> EJitOrcEngine::lookup(uint64_t cacheKey,
   auto addr = P->J->lookup(*it->second, name);
   if (!addr)
     return addr.takeError();
-  return reinterpret_cast<void *>(addr->getValue());
+  void *Ptr = reinterpret_cast<void *>(addr->getValue());
+
+#ifdef EJIT_SRE_CODE_POOL
+  // Seal the 2MiB pool that contains the resolved function before it is handed
+  // back, so the page is RX (executable) at the call site. This is the only
+  // point a JIT pool transitions RW->RX. Idempotent: a pool already sealed
+  // (e.g. on allocation rollover) is not re-flipped, so repeated lookups of the
+  // same function do not re-invoke enable_ex. Only pool-backed code is sealed;
+  // an address resolved outside the pools (e.g. a process/absolute symbol) is
+  // left untouched. If sealing fails we must not return a callable pointer.
+  if (P->codePool && P->codePool->contains(Ptr)) {
+    if (auto Err = P->codePool->sealPoolContaining(Ptr))
+      return std::move(Err);
+  }
+#endif
+
+  return Ptr;
 }
 
 void EJitOrcEngine::setActiveContext(const SpecializationContext *ctx) {
@@ -285,3 +336,11 @@ const SpecializationContext *EJitOrcEngine::getActiveContext() const {
 void EJitOrcEngine::addUserSymbol(const std::string &name, void *addr) {
   P->userSymbols[name] = addr;
 }
+
+#ifdef EJIT_SRE_CODE_POOL
+EJitCodePoolManager::Stats EJitOrcEngine::getCodePoolStats() const {
+  if (P->codePool)
+    return P->codePool->getStats();
+  return EJitCodePoolManager::Stats{};
+}
+#endif
