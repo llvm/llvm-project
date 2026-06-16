@@ -16,11 +16,11 @@ define void @copy_undef_propogate(i32 %in, ptr %out) {
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r2:128]
 ; CHECK-NEXT:    b .LBB0_1
 entry:
-  %1 = insertelement <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 poison, i32 poison, i32 poison, i32 undef>, i32 %in, i64 6
+  %1 = insertelement <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>, i32 %in, i64 6
   br label %for.cond
 
 for.cond:
-  %i.0 = phi i32 [ undef, %entry ], [ %inc, %for.cond ]
+  %i.0 = phi i32 [ poison, %entry ], [ %inc, %for.cond ]
   %2 = insertelement <8 x i32> %1, i32 %i.0, i64 4
   %3 = insertelement <8 x i32> %2, i32 %i.0, i64 5
   store <8 x i32> %3, ptr %out
