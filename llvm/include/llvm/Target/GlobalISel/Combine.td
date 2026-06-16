@@ -2221,8 +2221,8 @@ def integer_reassoc_combines: GICombineGroup<[
 def max_min_combines: GICombineGroup<[
   SubSmaxSub, 
   SubUmaxSub,
-  SubSminSub, 
-  SubUminSub
+  NegSminNeg, 
+  NegUminNeg
 ]>;
 
 // fold (A+(shl (0-B), C)) -> (A-(shl B, C))
