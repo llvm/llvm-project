@@ -364,54 +364,31 @@ TEST_F(FormatTestMacroExpansion, NestedMacrosInLambdas) {
   // clang-format on
 }
 
-TEST_F(FormatTestMacroExpansion, PredefinedGoogleMacros) {
-  // clang-format off
-  verifyFormat(
-      "void f() {\n"
-      "  ASSIGN_OR_RETURN(MySomewhatLongType* variable,\n"
-      "                   MySomewhatLongFunction(SomethingElse()));\n"
-      "  ASSIGN_OR_RETURN(MySomewhatLongType* variable,\n"
-      "                   MySomewhatLongFunction(SomethingElse()), RetMe());\n"
-      "}",
-      getGoogleStyle());
+// Verify that the predefined Google macros cause `*` to be treated as a
+// pointer declaration rather than multiplication.
+TEST_F(FormatTestMacroExpansion, GoogleMacrosFormatsAsPtrDecl) {
+  verifyFormat("void f() { ASSIGN_OR_RETURN(Type* x, F()); }",
+               getGoogleStyle());
+  verifyFormat("void f() { ABSL_ASSIGN_OR_RETURN(Type* x, F()); }",
+               getGoogleStyle());
+  verifyFormat("void f() { ASSERT_OK_AND_ASSIGN(Type* x, F()); }",
+               getGoogleStyle());
+  verifyFormat("void f() { ABSL_ASSERT_OK_AND_ASSIGN(Type* x, F()); }",
+               getGoogleStyle());
+}
 
-  verifyFormat(
-      "void f() {\n"
-      "  ABSL_ASSIGN_OR_RETURN(MySomewhatLongType* variable,\n"
-      "                        MySomewhatLongFunction(SomethingElse()));\n"
-      "  ABSL_ASSIGN_OR_RETURN(MySomewhatLongType* variable,\n"
-      "                        MySomewhatLongFunction(SomethingElse()), RetMe());\n"
-      "}",
-      getGoogleStyle());
-
-  verifyFormat(
-      "void f() {\n"
-      "  RETURN_IF_ERROR(\n"
-      "      MySomewhatLongFunction(SomethingElse(WithManyArguments, AndSomeMore)));\n"
-      "}",
-      getGoogleStyle());
-
-  verifyFormat(
-      "void f() {\n"
-      "  ABSL_RETURN_IF_ERROR(\n"
-      "      MySomewhatLongFunction(SomethingElse(WithManyArguments, AndSomeMore)));\n"
-      "}",
-      getGoogleStyle());
-
-  verifyFormat(
-      "void f() {\n"
-      "  ASSERT_OK_AND_ASSIGN(MySomewhatLongType* variable,\n"
-      "                       MySomewhatLongFunction(SomethingElse()));\n"
-      "}",
-      getGoogleStyle());
-
-  verifyFormat(
-      "void f() {\n"
-      "  ABSL_ASSERT_OK_AND_ASSIGN(MySomewhatLongType* variable,\n"
-      "                            MySomewhatLongFunction(SomethingElse()));\n"
-      "}",
-      getGoogleStyle());
-  // clang-format on
+// Macros whose expansion contains multiple statements or control flow (e.g.,
+// `if`) prevent short function merging but don't force `{` to a new line,
+// resulting in `{ code\n}` instead of `{ code }` or `{\n  code\n}`.
+TEST_F(FormatTestMacroExpansion, GoogleMacrosShortFunctionFormattingIsBroken) {
+  // RETURN_IF_ERROR expands to `if (x) return expr`.
+  verifyFormat("void f() { RETURN_IF_ERROR(F());\n}", getGoogleStyle());
+  verifyFormat("void f() { ABSL_RETURN_IF_ERROR(F());\n}", getGoogleStyle());
+  // 3-arg ASSIGN_OR_RETURN expands to `a = (b); if (x) return c`.
+  verifyFormat("void f() { ASSIGN_OR_RETURN(auto x, F(), R());\n}",
+               getGoogleStyle());
+  verifyFormat("void f() { ABSL_ASSIGN_OR_RETURN(auto x, F(), R());\n}",
+               getGoogleStyle());
 }
 
 } // namespace
