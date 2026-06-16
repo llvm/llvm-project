@@ -20,9 +20,9 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstdlib>
 
 static constexpr char kIntegerPrefix[] = "i_0x";
 static constexpr char kDoublePrefix[] = "f_";
@@ -167,8 +167,7 @@ private:
 
       size_t CandidateSize = Candidate.size();
       size_t InstrSize = InstrName.size();
-      size_t AbsDiff = CandidateSize > InstrSize ? CandidateSize - InstrSize
-                                                 : InstrSize - CandidateSize;
+      size_t AbsDiff = llvm::AbsoluteDifference(CandidateSize, InstrSize);
 
       if (AbsDiff >= BestDistance)
         continue;
