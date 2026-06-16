@@ -1,10 +1,19 @@
+; RUN: rm -f %t.pdb
 ; RUN: opt %s -dxil-embed -dxil-globals -S -o - | FileCheck %s
-; RUN: llc %s --filetype=obj -o %t.bc
+; RUN: llc %s --filetype=obj -o %t.bc --dx-pdb-file=%t.pdb
 ; RUN: obj2yaml %t.bc | FileCheck %s --check-prefix=YAML
 ; RUN: llvm-objcopy --dump-section=ILDB=%t.ildb %t.bc
 ; RUN: llvm-objcopy --dump-section=DXIL=%t.dxil %t.bc
 ; RUN: llvm-dis %t.ildb -o - | FileCheck %s --check-prefix=ILDB-DIS
 ; RUN: llvm-dis %t.dxil -o - | FileCheck %s --check-prefix=DXIL-DIS
+
+; Check that a companion PDB file is emitted and that it keeps ILDB but not DXIL.
+; RUN: llvm-pdbutil pdb2yaml --dxcontainer %t.pdb | FileCheck %s --check-prefix=PDB
+
+; Check that ILDB is written to PDB.
+; RUN: llvm-pdbutil export --stream=5 --out=%t.pdb.dxbc %t.pdb
+; RUN: llvm-objcopy --dump-section=ILDB=%t.pdb.ildb %t.pdb.dxbc
+; RUN: diff %t.ildb %t.pdb.ildb
 
 target triple = "dxil-unknown-shadermodel6.5-library"
 ; CHECK: target triple = "dxil-unknown-shadermodel6.5-library"
@@ -100,3 +109,7 @@ define i32 @add(i32 %a, i32 %b) {
 ; DXIL-DIS-NOT: !"Dwarf Version"
 ; DXIL-DIS-NOT: !"Debug Info Version"
 ; DXIL-DIS-NOT: "hlsl.hlsl"
+
+; PDB:     Parts:
+; PDB:       - Name:            ILDB
+; PDB-NOT:   - Name:            DXIL

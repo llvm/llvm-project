@@ -121,6 +121,12 @@ void initializeDXContainerGlobalsPass(PassRegistry &);
 /// Pass for generating DXContainer part globals.
 ModulePass *createDXContainerGlobalsPass();
 
+/// Initializer for DXContainerPDB pass.
+void initializeDXContainerPDBPass(PassRegistry &);
+
+/// Pass for emitting DirectX PDB files.
+ModulePass *createDXContainerPDBPass();
+
 /// Initializer for DXILFinalizeLinkage pass.
 void initializeDXILFinalizeLinkageLegacyPass(PassRegistry &);
 
