@@ -487,11 +487,11 @@ public:
         Addr = Builder.CreateIntToPtr(BiasInst,
                                       PointerType::getUnqual(Ty->getContext()));
       }
+      auto *TargetLoop =
+          IterativeCounterPromotion ? LI.getLoopFor(ExitBlock) : nullptr;
       // Generate the relaxed atomic RMW if we've asked for it and no more
       // promotion is possible.
-      if (AtomicCounterUpdatePromoted ||
-          (IsAtomic &&
-           (!IterativeCounterPromotion || !LI.getLoopFor(ExitBlock))))
+      if ((IsAtomic && !TargetLoop) || AtomicCounterUpdatePromoted)
         Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, LiveInValue,
                                 MaybeAlign(), AtomicOrdering::Monotonic);
       else {
@@ -500,11 +500,8 @@ public:
         auto *NewStore = Builder.CreateStore(NewVal, Addr);
 
         // Now update the parent loop's candidate list:
-        if (IterativeCounterPromotion) {
-          auto *TargetLoop = LI.getLoopFor(ExitBlock);
-          if (TargetLoop)
-            LoopToCandidates[TargetLoop].emplace_back(OldVal, NewStore);
-        }
+        if (TargetLoop)
+          LoopToCandidates[TargetLoop].emplace_back(OldVal, NewStore);
       }
     }
   }
