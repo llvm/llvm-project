@@ -177,12 +177,13 @@ static cl::opt<int> BrMergingCcmpBias(
 
 static cl::opt<int> BrMergingCbzTbnzBias(
     "aarch64-br-merging-cbz-tbnz-bias", cl::init(6),
-    cl::desc("Decreases 'aarch64-br-merging-base-cost' when a condition can be "
-             "lowered to a single CBZ/CBNZ or TBZ/TBNZ compare-and-branch. The "
-             "split form needs no separate compare, so the CCMP merging "
-             "discount does not apply; the default cancels it. Set to 0 to "
-             "disable, or higher than 'aarch64-br-merging-ccmp-bias' to make "
-             "such conditions never merge."),
+    cl::desc(
+        "Adjusts 'aarch64-br-merging-base-cost' for conditions that lower "
+        "to a single CBZ/CBNZ or TBZ/TBNZ compare-and-branch, which need "
+        "no separate compare. When both conditions are such candidates the "
+        "split form is two fused branches and they are never merged; when "
+        "only one is, the base cost is decreased by this amount to bias "
+        "toward splitting. Set to 0 to disable."),
     cl::Hidden);
 
 static cl::opt<int> BrMergingLikelyBias(
@@ -31620,19 +31621,32 @@ AArch64TargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
   // MispredictPenalty (~10 cycles on modern Arm cores) weighted by the branch's
   // misprediction probability. With no profile, a branch is ~50/50, so the
   // budget is ~MispredictPenalty/2; the default of 6 sits in the
-  // MispredictPenalty * [1/2 .. 3/4] band used elsewhere for this same tradeoff
-  // (see EarlyIfConversion and AArch64ConditionalCompares). The likely/unlikely
-  // biases below refine the misprediction estimate from BranchProbabilityInfo.
+  // MispredictPenalty * [1/2 .. 1] band used elsewhere for this same tradeoff
+  // (EarlyIfConversion uses /2 or full, AArch64ConditionalCompares uses 3/4).
+  // The comparison is approximate -- those passes count scheduler cycles while
+  // this sums TTI latency units. The likely/unlikely biases below refine the
+  // misprediction estimate from BranchProbabilityInfo.
   if (BaseCost >= 0)
     BaseCost += BrMergingCcmpBias;
 
-  // Withdraw the CCMP discount when either unmerged condition would already be
-  // a single CBZ/CBNZ or TBZ/TBNZ: the split form needs no separate compare, so
-  // merging into a CMP/CCMP chain tends to add instructions rather than save
-  // them.
-  if (BaseCost >= 0 && BrMergingCbzTbnzBias > 0 &&
-      (IsCbzTbnzCandidate(Lhs) || IsCbzTbnzCandidate(Rhs)))
-    BaseCost -= BrMergingCbzTbnzBias;
+  if (BaseCost >= 0 && BrMergingCbzTbnzBias > 0) {
+    bool LhsIsFusedBranch = IsCbzTbnzCandidate(Lhs);
+    bool RhsIsFusedBranch = IsCbzTbnzCandidate(Rhs);
+    // If both conditions would each lower to a single CBZ/CBNZ or TBZ/TBNZ, the
+    // split form is two fused compare-and-branches with no separate compares --
+    // at worst code-size-neutral versus a CMP/CCMP chain, and it keeps the
+    // short-circuit. The dependency-chain cost below would price each compare
+    // as a real instruction (cost ~1) and merge them anyway, so force the
+    // split.
+    if (LhsIsFusedBranch && RhsIsFusedBranch)
+      return {-1, -1, -1};
+    // If only one side is a fused branch, merging still costs it its fused
+    // form, so withdraw the CCMP discount to bias toward splitting; the other
+    // side may still be worth a CMP/CCMP, so leave that to the dependency-chain
+    // cost.
+    if (LhsIsFusedBranch || RhsIsFusedBranch)
+      BaseCost -= BrMergingCbzTbnzBias;
+  }
 
   return {BaseCost, BrMergingLikelyBias.getValue(),
           BrMergingUnlikelyBias.getValue()};

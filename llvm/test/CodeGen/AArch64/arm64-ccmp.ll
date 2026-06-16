@@ -423,31 +423,18 @@ if.end:
 
 ; Convert a cbz in the second block.
 define i32 @cbz_second(i32 %a, i32 %b) nounwind ssp {
-; CHECK-SD-LABEL: cbz_second:
-; CHECK-SD:       ; %bb.0: ; %entry
-; CHECK-SD-NEXT:    cmp w1, #0
-; CHECK-SD-NEXT:    ccmp w0, #0, #4, eq
-; CHECK-SD-NEXT:    b.ne LBB9_2
-; CHECK-SD-NEXT:  ; %bb.1: ; %if.then
-; CHECK-SD-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
-; CHECK-SD-NEXT:    bl _foo
-; CHECK-SD-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; CHECK-SD-NEXT:  LBB9_2: ; %if.end
-; CHECK-SD-NEXT:    mov w0, #7 ; =0x7
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: cbz_second:
-; CHECK-GI:       ; %bb.0: ; %entry
-; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    ccmp w1, #0, #0, ne
-; CHECK-GI-NEXT:    b.eq LBB9_2
-; CHECK-GI-NEXT:  ; %bb.1: ; %if.then
-; CHECK-GI-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
-; CHECK-GI-NEXT:    bl _foo
-; CHECK-GI-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; CHECK-GI-NEXT:  LBB9_2: ; %if.end
-; CHECK-GI-NEXT:    mov w0, #7 ; =0x7
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: cbz_second:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ccmp w1, #0, #0, ne
+; CHECK-NEXT:    b.eq LBB9_2
+; CHECK-NEXT:  ; %bb.1: ; %if.then
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-NEXT:    bl _foo
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-NEXT:  LBB9_2: ; %if.end
+; CHECK-NEXT:    mov w0, #7 ; =0x7
+; CHECK-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, 0
   %cmp1 = icmp ne i32 %b, 0
@@ -464,31 +451,18 @@ if.end:
 
 ; Convert a cbnz in the second block.
 define i32 @cbnz_second(i32 %a, i32 %b) nounwind ssp {
-; CHECK-SD-LABEL: cbnz_second:
-; CHECK-SD:       ; %bb.0: ; %entry
-; CHECK-SD-NEXT:    cmp w1, #0
-; CHECK-SD-NEXT:    ccmp w0, #0, #4, ne
-; CHECK-SD-NEXT:    b.ne LBB10_2
-; CHECK-SD-NEXT:  ; %bb.1: ; %if.then
-; CHECK-SD-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
-; CHECK-SD-NEXT:    bl _foo
-; CHECK-SD-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; CHECK-SD-NEXT:  LBB10_2: ; %if.end
-; CHECK-SD-NEXT:    mov w0, #7 ; =0x7
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: cbnz_second:
-; CHECK-GI:       ; %bb.0: ; %entry
-; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    ccmp w1, #0, #4, ne
-; CHECK-GI-NEXT:    b.ne LBB10_2
-; CHECK-GI-NEXT:  ; %bb.1: ; %if.then
-; CHECK-GI-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
-; CHECK-GI-NEXT:    bl _foo
-; CHECK-GI-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
-; CHECK-GI-NEXT:  LBB10_2: ; %if.end
-; CHECK-GI-NEXT:    mov w0, #7 ; =0x7
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: cbnz_second:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ccmp w1, #0, #4, ne
+; CHECK-NEXT:    b.ne LBB10_2
+; CHECK-NEXT:  ; %bb.1: ; %if.then
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; CHECK-NEXT:    bl _foo
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; CHECK-NEXT:  LBB10_2: ; %if.end
+; CHECK-NEXT:    mov w0, #7 ; =0x7
+; CHECK-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, 0
   %cmp1 = icmp eq i32 %b, 0
