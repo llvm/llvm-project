@@ -2573,6 +2573,16 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// See GenericDeviceTy::getComputeUnitKind().
   std::string getComputeUnitKind() const override { return ComputeUnitKind; }
 
+  /// See GenericDeviceTy::getBlockLimit(uint32_t).
+  uint32_t getBlockLimit(uint32_t NumThreads) const override {
+    if (NumThreads == 0)
+      return GridValues.GV_Max_Teams;
+    uint64_t MaxGridItems =
+        uint64_t(GridValues.GV_Max_Teams) * getThreadLimit();
+    uint64_t MaxBlocks = MaxGridItems / NumThreads;
+    return std::min<uint64_t>(MaxBlocks, UINT32_MAX);
+  }
+
   /// Returns the clock frequency for the given AMDGPU device.
   uint64_t getClockFrequency() const override { return ClockFrequency; }
 
