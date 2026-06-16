@@ -14,7 +14,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-
     @skipIfWindows
     @expectedFailureAll
     def test(self):
