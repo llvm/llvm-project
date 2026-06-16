@@ -174,3 +174,37 @@ struct TrailingReturn {
     return data;
   }
 };
+
+#define MY_LIFETIMEBOUND_MACRO [[clang::lifetimebound]]
+
+View unnamed_macro(View);
+// CHECK: :[[@LINE-1]]:20: warning: parameter in intra-TU function should be marked
+// CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:20-[[@LINE-2]]:20}:"MY_LIFETIMEBOUND_MACRO "
+View unnamed_macro(View a) {
+  return a;
+}
+
+View return_view_with_macro(View a) {
+  // CHECK: :[[@LINE-1]]:29: warning: parameter in intra-TU function should be marked
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:35-[[@LINE-2]]:35}:" MY_LIFETIMEBOUND_MACRO"
+  return a;
+}
+
+#define FIRST_LIFETIMEBOUND_MACRO [[clang::lifetimebound]]
+#define SECOND_LIFETIMEBOUND_MACRO [[clang::lifetimebound]]
+
+View return_view_with_latest_macro(View a) {
+  // CHECK: :[[@LINE-1]]:36: warning: parameter in intra-TU function should be marked
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:42-[[@LINE-2]]:42}:" SECOND_LIFETIMEBOUND_MACRO"
+  return a;
+}
+
+struct MacroMember {
+  MyObj data;
+
+  View get_view() {
+    // CHECK: :[[@LINE-1]]:18: warning: implicit this in intra-TU function should be marked
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:18-[[@LINE-2]]:18}:" SECOND_LIFETIMEBOUND_MACRO"
+    return data;
+  }
+};
