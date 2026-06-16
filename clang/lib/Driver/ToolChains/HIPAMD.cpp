@@ -332,7 +332,9 @@ void HIPAMDToolChain::AddIAMCUIncludeArgs(const ArgList &Args,
 void HIPAMDToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args) const {
   if (getTriple().getEnvironment() == llvm::Triple::LLVM) {
-    if (!DriverArgs.hasArg(options::OPT_nohipwrapperinc) &&
+    if (DriverArgs.hasFlag(options::OPT_offload_inc,
+                           options::OPT_no_offload_inc, true) &&
+        !DriverArgs.hasArg(options::OPT_nohipwrapperinc) &&
         !DriverArgs.hasArg(options::OPT_nobuiltininc))
       CC1Args.append({"-include", "__clang_hip_device_functions.h"});
     return;

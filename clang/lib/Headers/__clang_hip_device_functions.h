@@ -351,5 +351,5 @@ __HIP_DEVICE__ long long wall_clock64(void) {
 #pragma pop_macro("MAYBE_UNDEF")
 #pragma pop_macro("__HIP_DEVICE__")
 
-#endif // __HIP__ && defined(__AMDGPU__)
+#endif // __HIP__ && (defined(__HIP_DEVICE_COMPILE__))
 #endif // __CLANG_HIP_DEVICE_FUNCTIONS_H__

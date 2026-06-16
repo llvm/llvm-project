@@ -235,5 +235,5 @@ __funnelshift_rc(unsigned int __lo, unsigned int __hi, unsigned int __shift) {
   return (unsigned int)(((unsigned long long)__hi << 32 | __lo) >> __s);
 }
 
-#endif // __HIP__ && defined(__AMDGPU__)
+#endif // __HIP__ && (defined(__HIP_DEVICE_COMPILE__))
 #endif // __CLANG_HIP_INTRINSICS_H__
