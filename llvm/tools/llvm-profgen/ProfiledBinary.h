@@ -12,6 +12,7 @@
 #include "CallContext.h"
 #include "ErrorHandling.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -243,7 +244,7 @@ class ProfiledBinary {
   std::unordered_map<uint64_t, BinaryFunction *> HashBinaryFunctions;
 
   // A list of binary functions that have samples.
-  std::unordered_set<const BinaryFunction *> ProfiledFunctions;
+  SmallPtrSet<const BinaryFunction *, 0> ProfiledFunctions;
 
   // GUID to symbol start address map
   DenseMap<uint64_t, uint64_t> SymbolStartAddrs;
@@ -575,12 +576,13 @@ public:
     return BinaryFunctions;
   }
 
-  std::unordered_set<const BinaryFunction *> &getProfiledFunctions() {
+  SmallPtrSetImpl<const BinaryFunction *> &getProfiledFunctions() {
     return ProfiledFunctions;
   }
 
-  void setProfiledFunctions(std::unordered_set<const BinaryFunction *> &Funcs) {
-    ProfiledFunctions = Funcs;
+  void setProfiledFunctions(SmallPtrSetImpl<const BinaryFunction *> &Funcs) {
+    ProfiledFunctions.clear();
+    ProfiledFunctions.insert_range(Funcs);
   }
 
   BinaryFunction *getBinaryFunction(FunctionId FName) {
