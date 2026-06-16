@@ -27,6 +27,8 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -1109,11 +1111,84 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
   };
 
   SmallVector<object::BuildID> FoundBinaryIDs;
-  for (const auto &File : llvm::enumerate(ObjectFilenames)) {
-    if (Error E = loadFromFile(File.value(), GetArch(File.index()),
-                               CompilationDir, ProfileReaderRef, *Coverage,
-                               DataFound, &FoundBinaryIDs))
-      return std::move(E);
+  unsigned NumFiles = ObjectFilenames.size();
+  constexpr unsigned MaxExportThreads = 32;
+  unsigned NumThreads = std::min(
+      {hardware_concurrency(NumFiles).compute_thread_count(),
+       NumFiles, MaxExportThreads});
+
+  if (NumThreads <= 1) {
+    for (const auto &File : llvm::enumerate(ObjectFilenames)) {
+      if (Error E = loadFromFile(File.value(), GetArch(File.index()),
+                                 CompilationDir, ProfileReaderRef, *Coverage,
+                                 DataFound, &FoundBinaryIDs))
+        return std::move(E);
+    }
+  } else {
+    std::vector<std::unique_ptr<IndexedInstrProfReader>> Readers(NumThreads);
+    if (ProfileFilename) {
+      for (unsigned T = 0; T < NumThreads; ++T) {
+        auto ReaderOrErr =
+            IndexedInstrProfReader::create(ProfileFilename.value(), FS);
+        if (Error E = ReaderOrErr.takeError())
+          return createFileError(ProfileFilename.value(), std::move(E));
+        Readers[T] = std::move(ReaderOrErr.get());
+      }
+    }
+
+    struct ShardData {
+      std::unique_ptr<CoverageMapping> Cov =
+          std::unique_ptr<CoverageMapping>(new CoverageMapping());
+      SmallVector<object::BuildID> BIDs;
+      bool Found = false;
+      std::optional<Error> Err;
+    };
+
+    std::vector<ShardData> Shards(NumThreads);
+
+    {
+      DefaultThreadPool Pool(hardware_concurrency(NumFiles));
+      unsigned ChunkSize = (NumFiles + NumThreads - 1) / NumThreads;
+      for (unsigned T = 0; T < NumThreads; ++T) {
+        unsigned Begin = T * ChunkSize;
+        unsigned End = std::min(Begin + ChunkSize, NumFiles);
+        Pool.async([&, T, Begin, End] {
+          auto &S = Shards[T];
+          auto ProfileReaderRef =
+              Readers[T] ? std::optional<
+                               std::reference_wrapper<IndexedInstrProfReader>>(
+                               *Readers[T])
+                         : std::nullopt;
+          for (unsigned I = Begin; I < End; ++I) {
+            if (Error E =
+                    loadFromFile(ObjectFilenames[I], GetArch(I), CompilationDir,
+                                 ProfileReaderRef, *S.Cov, S.Found, &S.BIDs)) {
+              S.Err = std::move(E);
+              return;
+            }
+          }
+        });
+      }
+    }
+
+    // All shard errors must be consumed; unchecked Errors assert in debug builds.
+    Error FirstErr = Error::success();
+    for (auto &S : Shards) {
+      if (S.Err) {
+        if (!FirstErr)
+          FirstErr = std::move(*S.Err);
+        else
+          consumeError(std::move(*S.Err));
+        continue;
+      }
+      if (!FirstErr) {
+        DataFound |= S.Found;
+        FoundBinaryIDs.append(S.BIDs.begin(), S.BIDs.end());
+        Coverage->mergeFrom(std::move(*S.Cov));
+      }
+    }
+    if (FirstErr)
+      return std::move(FirstErr);
   }
 
   if (BIDFetcher) {
