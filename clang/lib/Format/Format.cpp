@@ -2101,6 +2101,20 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.IncludeStyle.IncludeIsMainRegex = "([-_](test|unittest))?$";
   GoogleStyle.IndentCaseLabels = true;
   GoogleStyle.KeepEmptyLines.AtStartOfBlock = false;
+
+  GoogleStyle.Macros.push_back("ASSIGN_OR_RETURN(a, b)=a = (b)");
+  GoogleStyle.Macros.push_back(
+      "ASSIGN_OR_RETURN(a, b, c)=a = (b); if (x) return c");
+  GoogleStyle.Macros.push_back("RETURN_IF_ERROR(expr)=if (x) return expr");
+  GoogleStyle.Macros.push_back(
+      "ASSERT_OK_AND_ASSIGN(lhs, rexpr)=lhs = (rexpr)");
+  GoogleStyle.Macros.push_back("ABSL_ASSIGN_OR_RETURN(a, b)=a = (b)");
+  GoogleStyle.Macros.push_back(
+      "ABSL_ASSIGN_OR_RETURN(a, b, c)=a = (b); if (x) return c");
+  GoogleStyle.Macros.push_back("ABSL_RETURN_IF_ERROR(expr)=if (x) return expr");
+  GoogleStyle.Macros.push_back(
+      "ABSL_ASSERT_OK_AND_ASSIGN(lhs, rexpr)=lhs = (rexpr)");
+
   GoogleStyle.ObjCBinPackProtocolList = FormatStyle::BPS_Never;
   GoogleStyle.ObjCSpaceAfterProperty = false;
   GoogleStyle.ObjCSpaceBeforeProtocolList = true;

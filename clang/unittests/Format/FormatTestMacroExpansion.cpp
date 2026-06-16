@@ -58,10 +58,18 @@ TEST_F(FormatTestMacroExpansion, UnexpandConfiguredMacros) {
   verifyFormat("ASSIGN_OR_RETURN(MySomewhatLongType *variable,\n"
                "                 MySomewhatLongFunction(SomethingElse()));",
                Style);
-  verifyFormat("ASSIGN_OR_RETURN(MySomewhatLongType *variable,\n"
-               "                 MySomewhatLongFunction(SomethingElse()), "
-               "ReturnMe());",
-               Style);
+  verifyFormat(
+      "ASSIGN_OR_RETURN(MySomewhatLongType *variable,\n"
+      "                 MySomewhatLongFunction(SomethingElse()), RetMe());",
+      Style);
+
+  verifyFormat(
+      "void f() {\n"
+      "  ASSIGN_OR_RETURN(MySomewhatLongType* variable,\n"
+      "                   MySomewhatLongFunction(SomethingElse()));\n"
+      "  ASSIGN_OR_RETURN(MySomewhatLongType* variable,\n"
+      "                   MySomewhatLongFunction(SomethingElse()), RetMe());",
+      getGoogleStyle());
 
   verifyFormat(R"(
 #define MACRO(a, b) ID(a + b)
@@ -300,6 +308,109 @@ TEST_F(FormatTestMacroExpansion, IndentChildrenWithinMacroCall) {
                "}",
                Style);
 }
+
+// clang-format off
+TEST_F(FormatTestMacroExpansion, NestedMacrosInLambdas) {
+  // These are tests for regressions reported in
+  // https://github.com/llvm/llvm-project/pull/169037#issuecomment-4056423543
+  verifyFormat(
+      "void f() {\n"
+      "  RETURN_IF_ERROR(Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
+      "      a,\n"
+      "      []() {\n"
+      "        if (z()) {\n"
+      "          ASSIGN_OR_RETURN(w, Wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww());\n"
+      "        }\n"
+      "      }));\n"
+      "}",
+      getGoogleStyle());
+
+  verifyFormat(
+      "void g() {\n"
+      "  RETURN_IF_ERROR(q(\n"
+      "      w,\n"
+      "      []() {\n"
+      "        if (z()) {\n"
+      "          ASSIGN_OR_RETURN(w, Wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww());\n"
+      "        }\n"
+      "      }));\n"
+      "}",
+      getGoogleStyle());
+
+  verifyFormat(
+      "void f() {\n"
+      "  ABSL_RETURN_IF_ERROR(\n"
+      "      Aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
+      "          a,\n"
+      "          []() {\n"
+      "            if (z()) {\n"
+      "              ABSL_ASSIGN_OR_RETURN(w, Wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww());\n"
+      "            }\n"
+      "          }));\n"
+      "}",
+      getGoogleStyle());
+
+  verifyFormat(
+      "void g() {\n"
+      "  ABSL_RETURN_IF_ERROR(q(\n"
+      "      w,\n"
+      "      []() {\n"
+      "        if (z()) {\n"
+      "          ABSL_ASSIGN_OR_RETURN(w, Wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww());\n"
+      "        }\n"
+      "      }));\n"
+      "}",
+      getGoogleStyle());
+}
+
+TEST_F(FormatTestMacroExpansion, PredefinedGoogleMacros) {
+  verifyFormat(
+      "void f() {\n"
+      "  ASSIGN_OR_RETURN(MySomewhatLongType* variable,\n"
+      "                   MySomewhatLongFunction(SomethingElse()));\n"
+      "  ASSIGN_OR_RETURN(MySomewhatLongType* variable,\n"
+      "                   MySomewhatLongFunction(SomethingElse()), RetMe());\n"
+      "}",
+      getGoogleStyle());
+
+  verifyFormat(
+      "void f() {\n"
+      "  ABSL_ASSIGN_OR_RETURN(MySomewhatLongType* variable,\n"
+      "                        MySomewhatLongFunction(SomethingElse()));\n"
+      "  ABSL_ASSIGN_OR_RETURN(MySomewhatLongType* variable,\n"
+      "                        MySomewhatLongFunction(SomethingElse()), RetMe());\n"
+      "}",
+      getGoogleStyle());
+
+  verifyFormat(
+      "void f() {\n"
+      "  RETURN_IF_ERROR(\n"
+      "      MySomewhatLongFunction(SomethingElse(WithManyArguments, AndSomeMore)));\n"
+      "}",
+      getGoogleStyle());
+
+  verifyFormat(
+      "void f() {\n"
+      "  ABSL_RETURN_IF_ERROR(\n"
+      "      MySomewhatLongFunction(SomethingElse(WithManyArguments, AndSomeMore)));\n"
+      "}",
+      getGoogleStyle());
+
+  verifyFormat(
+      "void f() {\n"
+      "  ASSERT_OK_AND_ASSIGN(MySomewhatLongType* variable,\n"
+      "                       MySomewhatLongFunction(SomethingElse()));\n"
+      "}",
+      getGoogleStyle());
+
+  verifyFormat(
+      "void f() {\n"
+      "  ABSL_ASSERT_OK_AND_ASSIGN(MySomewhatLongType* variable,\n"
+      "                            MySomewhatLongFunction(SomethingElse()));\n"
+      "}",
+      getGoogleStyle());
+}
+// clang-format on
 
 } // namespace
 } // namespace test

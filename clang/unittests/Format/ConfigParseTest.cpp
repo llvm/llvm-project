@@ -1099,6 +1099,20 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               StatementAttributeLikeMacros,
               std::vector<std::string>({"emit", "Q_EMIT"}));
 
+  Style.Macros.clear();
+  CHECK_PARSE("{Macros: [foo]}", Macros, std::vector<std::string>({"foo"}));
+  std::vector<std::string> GoogleMacros;
+  GoogleMacros.push_back("ASSIGN_OR_RETURN(a, b)=a = (b)");
+  GoogleMacros.push_back("ASSIGN_OR_RETURN(a, b, c)=a = (b); if (x) return c");
+  GoogleMacros.push_back("RETURN_IF_ERROR(expr)=if (x) return expr");
+  GoogleMacros.push_back("ASSERT_OK_AND_ASSIGN(lhs, rexpr)=lhs = (rexpr)");
+  GoogleMacros.push_back("ABSL_ASSIGN_OR_RETURN(a, b)=a = (b)");
+  GoogleMacros.push_back(
+      "ABSL_ASSIGN_OR_RETURN(a, b, c)=a = (b); if (x) return c");
+  GoogleMacros.push_back("ABSL_RETURN_IF_ERROR(expr)=if (x) return expr");
+  GoogleMacros.push_back("ABSL_ASSERT_OK_AND_ASSIGN(lhs, rexpr)=lhs = (rexpr)");
+  CHECK_PARSE("BasedOnStyle: Google", Macros, GoogleMacros);
+
   Style.StatementMacros.clear();
   CHECK_PARSE("StatementMacros: [QUNUSED]", StatementMacros,
               std::vector<std::string>{"QUNUSED"});
@@ -1106,7 +1120,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               std::vector<std::string>({"QUNUSED", "QT_REQUIRE_VERSION"}));
 
   CHECK_PARSE_LIST(JavaImportGroups);
-  CHECK_PARSE_LIST(Macros);
   CHECK_PARSE_LIST(MacrosSkippedByRemoveParentheses);
   CHECK_PARSE_LIST(NamespaceMacros);
   CHECK_PARSE_LIST(ObjCPropertyAttributeOrder);
