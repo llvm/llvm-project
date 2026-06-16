@@ -173,6 +173,13 @@ static void collectBlocks(PtrView Ptr, llvm::SetVector<const Block *> &Blocks) {
 
   if (const Record *R = Desc->ElemRecord; R && R->hasPtrField()) {
 
+    for (const Record::Base &B : R->bases()) {
+      if (!B.R->hasPtrField())
+        continue;
+      PtrView BasePtr = Ptr.atField(B.Offset);
+      collectBlocks(BasePtr, Blocks);
+    }
+
     for (const Record::Field &F : R->fields()) {
       if (!isOrHasPtr(F.Desc))
         continue;
