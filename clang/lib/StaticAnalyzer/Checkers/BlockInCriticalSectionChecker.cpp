@@ -212,7 +212,8 @@ public:
   }
 };
 
-class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
+class BlockInCriticalSectionChecker
+    : public Checker<check::PostCall, eval::Call> {
 private:
   const std::array<MutexDescriptor, 9> MutexDescriptors{
       // NOTE: There are standard library implementations where some methods
@@ -276,6 +277,9 @@ public:
   /// Process lock.
   /// Process blocking functions (sleep, getc, fgets, read, recv)
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
+
+  // Process RAII lock guard object ctors/dtors.
+  bool evalCall(const CallEvent &Call, CheckerContext &C) const;
 };
 
 } // end anonymous namespace
@@ -373,13 +377,31 @@ void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,
                                                   CheckerContext &C) const {
   if (isBlockingInCritSection(Call, C)) {
     reportBlockInCritSection(Call, C);
-  } else if (std::optional<MutexDescriptor> LockDesc =
-                 checkDescriptorMatch(Call, C, /*IsLock=*/true)) {
-    handleLock(*LockDesc, Call, C);
-  } else if (std::optional<MutexDescriptor> UnlockDesc =
-                 checkDescriptorMatch(Call, C, /*IsLock=*/false)) {
+    return;
+  }
+
+  if (std::optional<MutexDescriptor> LockDesc =
+          checkDescriptorMatch(Call, C, /*IsLock=*/true)) {
+    if (!std::holds_alternative<RAIIMutexDescriptor>(*LockDesc))
+      handleLock(*LockDesc, Call, C);
+    return;
+  }
+  if (std::optional<MutexDescriptor> UnlockDesc =
+          checkDescriptorMatch(Call, C, /*IsLock=*/false)) {
     handleUnlock(*UnlockDesc, Call, C);
   }
+}
+
+bool BlockInCriticalSectionChecker::evalCall(const CallEvent &Call,
+                                             CheckerContext &C) const {
+  if (std::optional<MutexDescriptor> LockDesc =
+          checkDescriptorMatch(Call, C, /*IsLock=*/true)) {
+    if (std::holds_alternative<RAIIMutexDescriptor>(*LockDesc)) {
+      handleLock(*LockDesc, Call, C);
+      return true;
+    }
+  }
+  return false;
 }
 
 void BlockInCriticalSectionChecker::reportBlockInCritSection(
