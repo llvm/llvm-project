@@ -241,37 +241,33 @@ define void @main() {
 ; CHECK-NEXT:   %load_struct_noundef = load { i8, i32 }, ptr %alloc_struct_padding, align 4, !noundef !0 => { i8 0, i32 0 }
 ; CHECK-NEXT:   %alloc_ptr = alloca ptr, align 8 => ptr 0xC0 [alloc_ptr]
 ; CHECK-NEXT:   store ptr %alloc_ptr, ptr %alloc_ptr, align 8
+; CHECK-NEXT:   %bytes = load b64, ptr %alloc_ptr, align 8 => b64 00000000(00100110) 00000000(01110001) 00000000(00111100) 00000000(00111001) 00000000(10001010) 00000000(10010101) 00000000(00001000) 11000000(00101100) 
 ; CHECK-NEXT:   %ptr_with_provenance = load ptr, ptr %alloc_ptr, align 8 => ptr 0xC0 [alloc_ptr]
 ; CHECK-NEXT:   %addr_bits = load i8, ptr %alloc_ptr, align 1 => i8 0
 ; CHECK-NEXT:   store i8 %addr_bits, ptr %alloc_ptr, align 1
 ; CHECK-NEXT:   %ptr_without_provenance = load ptr, ptr %alloc_ptr, align 8 => ptr 0xC0 [nullary]
-; CHECK-NEXT:   %bytes = load b64, ptr %alloc_ptr, align 8 => b64 00000000(00100110) 00000000(01110001) 00000000(00111100) 00000000(00111001) 00000000(10001010) 00000000(10010101) 00000000(00001000) 10010000(00101100) 
-; CHECK-NEXT:   %ptr_with_provenance = load ptr, ptr %alloc_ptr, align 8 => ptr 0x90 [alloc_ptr]
-; CHECK-NEXT:   %addr_bits = load i8, ptr %alloc_ptr, align 1 => i8 0
-; CHECK-NEXT:   store i8 %addr_bits, ptr %alloc_ptr, align 1
-; CHECK-NEXT:   %ptr_without_provenance = load ptr, ptr %alloc_ptr, align 8 => ptr 0x90 [nullary]
 ; CHECK-NEXT:   store b64 %bytes, ptr %alloc_ptr, align 8
-; CHECK-NEXT:   %ptr_with_provenance2 = load ptr, ptr %alloc_ptr, align 8 => ptr 0x90 [alloc_ptr]
-; CHECK-NEXT:   %bv64b1 = bitcast b64 %bytes to <64 x b1> => { b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 1(0) , b1 0(0) , b1 0(1) , b1 1(0) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0)  }
-; CHECK-NEXT:   %bv64b1_reversed = call <64 x b1> @llvm.vector.reverse.v64b1(<64 x b1> %bv64b1) => { b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 1(0) , b1 0(1) , b1 0(0) , b1 1(0) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0)  }
+; CHECK-NEXT:   %ptr_with_provenance2 = load ptr, ptr %alloc_ptr, align 8 => ptr 0xC0 [alloc_ptr]
+; CHECK-NEXT:   %bv64b1 = bitcast b64 %bytes to <64 x b1> => { b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 1(0) , b1 1(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0)  }
+; CHECK-NEXT:   %bv64b1_reversed = call <64 x b1> @llvm.vector.reverse.v64b1(<64 x b1> %bv64b1) => { b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(1) , b1 1(0) , b1 1(0) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0)  }
 ; CHECK-NEXT:   store <64 x b1> %bv64b1_reversed, ptr %alloc_ptr, align 8
-; CHECK-NEXT:   %ptr_without_provenance2 = load ptr, ptr %alloc_ptr, align 8 => ptr 0x900000000000000 [nullary]
+; CHECK-NEXT:   %ptr_without_provenance2 = load ptr, ptr %alloc_ptr, align 8 => ptr 0x300000000000000 [nullary]
 ; CHECK-NEXT:   store b64 %bytes, ptr %alloc_ptr, align 8
 ; CHECK-NEXT:   store <2 x b4> <b4 0, b4 poison>, ptr %alloc_ptr, align 1
-; CHECK-NEXT:   %bytes_tainted = load b64, ptr %alloc_ptr, align 8 => b64 0000!!!! 00000000(01110001) 00000000(00111100) 00000000(00111001) 00000000(10001010) 00000000(10010101) 00000000(00001000) 10010000(00101100) 
+; CHECK-NEXT:   %bytes_tainted = load b64, ptr %alloc_ptr, align 8 => b64 0000!!!! 00000000(01110001) 00000000(00111100) 00000000(00111001) 00000000(10001010) 00000000(10010101) 00000000(00001000) 11000000(00101100) 
 ; CHECK-NEXT:   %ptr_without_provenance3 = load ptr, ptr %alloc_ptr, align 8 => poison
-; CHECK-NEXT:   %bv8b8_reversed = bitcast <64 x b1> %bv64b1_reversed to <8 x b8> => { b8 00001001(00110100) , b8 00000000(00010000) , b8 00000000(10101001) , b8 00000000(01010001) , b8 00000000(10011100) , b8 00000000(00111100) , b8 00000000(10001110) , b8 00000000(01100100)  }
+; CHECK-NEXT:   %bv8b8_reversed = bitcast <64 x b1> %bv64b1_reversed to <8 x b8> => { b8 00000011(00110100) , b8 00000000(00010000) , b8 00000000(10101001) , b8 00000000(01010001) , b8 00000000(10011100) , b8 00000000(00111100) , b8 00000000(10001110) , b8 00000000(01100100)  }
 ; CHECK-NEXT:   %first_byte_with_provenance_reversed = extractelement <8 x b8> %bv8b8_reversed, i32 7 => b8 00000000(01100100) 
 ; CHECK-NEXT:   %first_byte_with_provenance_reversed_v8b1 = bitcast b8 %first_byte_with_provenance_reversed to <8 x b1> => { b1 0(0) , b1 0(1) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0)  }
 ; CHECK-NEXT:   %first_byte_with_provenance_v8b1 = call <8 x b1> @llvm.vector.reverse.v8b1(<8 x b1> %first_byte_with_provenance_reversed_v8b1) => { b1 0(0) , b1 0(0) , b1 0(1) , b1 0(0) , b1 0(0) , b1 0(1) , b1 0(1) , b1 0(0)  }
 ; CHECK-NEXT:   store <8 x b1> %first_byte_with_provenance_v8b1, ptr %alloc_ptr, align 1
-; CHECK-NEXT:   %bytes_recovered = load b64, ptr %alloc_ptr, align 8 => b64 00000000(00100110) 00000000(01110001) 00000000(00111100) 00000000(00111001) 00000000(10001010) 00000000(10010101) 00000000(00001000) 10010000(00101100) 
-; CHECK-NEXT:   %ptr_with_provenance3 = load ptr, ptr %alloc_ptr, align 8 => ptr 0x90 [alloc_ptr]
-; CHECK-NEXT:   %alloc_byte = alloca b32, align 4 => ptr 0x98 [alloc_byte]
+; CHECK-NEXT:   %bytes_recovered = load b64, ptr %alloc_ptr, align 8 => b64 00000000(00100110) 00000000(01110001) 00000000(00111100) 00000000(00111001) 00000000(10001010) 00000000(10010101) 00000000(00001000) 11000000(00101100) 
+; CHECK-NEXT:   %ptr_with_provenance3 = load ptr, ptr %alloc_ptr, align 8 => ptr 0xC0 [alloc_ptr]
+; CHECK-NEXT:   %alloc_byte = alloca b32, align 4 => ptr 0xCC [alloc_byte]
 ; CHECK-NEXT:   store b8 127, ptr %alloc_byte, align 1
-; CHECK-NEXT:   %gep_second_byte = getelementptr i8, ptr %alloc_byte, i64 1 => ptr 0x99 [alloc_byte + 1]
+; CHECK-NEXT:   %gep_second_byte = getelementptr i8, ptr %alloc_byte, i64 1 => ptr 0xCD [alloc_byte + 1]
 ; CHECK-NEXT:   store <8 x b1> %first_byte_with_provenance_v8b1, ptr %gep_second_byte, align 1
-; CHECK-NEXT:   %gep_third_byte = getelementptr i8, ptr %alloc_byte, i64 2 => ptr 0x9A [alloc_byte + 2]
+; CHECK-NEXT:   %gep_third_byte = getelementptr i8, ptr %alloc_byte, i64 2 => ptr 0xCE [alloc_byte + 2]
 ; CHECK-NEXT:   store b8 poison, ptr %gep_third_byte, align 1
 ; CHECK-NEXT:   %bytes_mixed = load b32, ptr %alloc_byte, align 4 => b32 0x7F 00000000(00100110) 0x!! 0x?? 
 ; CHECK-NEXT:   store b32 -559038737, ptr %alloc_byte, align 4
