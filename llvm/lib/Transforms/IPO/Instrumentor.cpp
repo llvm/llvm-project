@@ -1858,7 +1858,7 @@ void CompareIO::init(InstrumentationConfig &IConf,
                              "The operand type id.", IRTArg::NONE,
                              getOperandTypeId));
   if (Config.has(PassOpSize))
-    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "operand_size",
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "operand_size",
                              "The operand type size.", IRTArg::NONE,
                              getOperandSize));
   if (Config.has(PassOpcode))
@@ -1881,7 +1881,7 @@ void CompareIO::init(InstrumentationConfig &IConf,
                              "The result value's type ID.", IRTArg::NONE,
                              getTypeId));
   if (!IsPRE && Config.has(PassResultSize))
-    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "result_size",
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "result_size",
                              "Size of the result value.", IRTArg::NONE,
                              getSize));
   if (!IsPRE && Config.has(PassResult))
