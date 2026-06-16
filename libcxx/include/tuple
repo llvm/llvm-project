@@ -320,22 +320,29 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Ret __tuple_compare_three_way(const _Tp& __x, c
 template <class _Tp>
 concept __tuple_like_no_tuple = __tuple_like<_Tp> && !__is_tuple_v<_Tp>;
 
-template <class _Tp, class _Up, class _IndexSeq>
-struct __tuple_common_comparison_category_impl {};
+template <class _Tuple1, class _Tuple2>
+struct __tuple_common_comparison_category;
 
-template <class _Tp, class _Up, size_t... _Is>
-  requires requires {
-    typename common_comparison_category_t<
-        __synth_three_way_result<tuple_element_t<_Is, _Tp>, tuple_element_t<_Is, _Up>>...>;
-  }
-struct __tuple_common_comparison_category_impl<_Tp, _Up, index_sequence<_Is...>> {
-  using type _LIBCPP_NODEBUG =
-      common_comparison_category_t<__synth_three_way_result<tuple_element_t<_Is, _Tp>, tuple_element_t<_Is, _Up>>...>;
+template <class... _Tp, class... _Up>
+  requires requires { typename common_comparison_category_t<__synth_three_way_result<_Tp, _Up>...>; }
+struct __tuple_common_comparison_category<tuple<_Tp...>, tuple<_Up...>> {
+  using type _LIBCPP_NODEBUG = common_comparison_category_t<__synth_three_way_result<_Tp, _Up>...>;
 };
 
-template <__tuple_like _Tp, __tuple_like _Up>
-using __tuple_common_comparison_category _LIBCPP_NODEBUG =
-    __tuple_common_comparison_category_impl<_Tp, _Up, make_index_sequence<tuple_size_v<_Tp>>>::type;
+template <class _Tuple1, class _Tuple2>
+using __tuple_common_comparison_category_t _LIBCPP_NODEBUG =
+    typename __tuple_common_comparison_category<_Tuple1, _Tuple2>::type;
+
+template <__tuple_like _Tp, class _IndexSequence = make_index_sequence<tuple_size_v<_Tp>>>
+struct __to_tuple;
+
+template <__tuple_like _Tp, size_t... _Index>
+struct __to_tuple<_Tp, index_sequence<_Index...>> {
+  using type _LIBCPP_NODEBUG = tuple<tuple_element_t<_Index, _Tp>...>;
+};
+
+template <__tuple_like _Tp>
+using __to_tuple_t _LIBCPP_NODEBUG = typename __to_tuple<_Tp>::type;
 #    endif // _LIBCPP_STD_VER >= 23
 
 // __tuple_leaf
@@ -1010,9 +1017,9 @@ public:
 
   template <__tuple_like_no_tuple _UTuple>
     requires(sizeof...(_Tp) == tuple_size_v<_UTuple>)
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __tuple_common_comparison_category<tuple, _UTuple>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr __tuple_common_comparison_category_t<tuple, __to_tuple_t<_UTuple>>
   operator<=>(const tuple& __x, const _UTuple& __y) {
-    return std::__tuple_compare_three_way<__tuple_common_comparison_category<tuple, _UTuple>>(
+    return std::__tuple_compare_three_way< __tuple_common_comparison_category_t<tuple, __to_tuple_t<_UTuple>>>(
         __x, __y, index_sequence_for<_Tp...>{});
   }
 #    endif   // _LIBCPP_STD_VER >= 23
