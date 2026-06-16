@@ -1637,7 +1637,6 @@ void ExprEngine::VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
     Dst = PreVisit;
     return;
   }
-  NodeBuilder Builder(PreVisit, Dst, *currBldrCtx);
   for (ExplodedNode *Node : PreVisit) {
     ProgramStateRef State = Node->getState();
     const StackFrame *SF = Node->getStackFrame();
@@ -1648,7 +1647,7 @@ void ExprEngine::VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
       // temporary destructor nodes.
       State = addObjectUnderConstruction(State, BTE, SF, UnknownVal());
     }
-    Builder.generateNode(BTE, Node, State);
+    Dst.insert(Engine.makePostStmtNode(BTE, State, Node));
   }
 }
 
