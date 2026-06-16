@@ -133,7 +133,7 @@ namespace {
     }
 
     llvm::Constant *GetAddrOfVTable(BaseSubobject subobject,
-                                    CXXRecordDecl *decl) {
+                                    const CXXRecordDecl *decl) {
       return Builder->getCXXABI().getVTableAddressPoint(subobject, decl);
     }
 

@@ -106,7 +106,7 @@ public:
   ///   definition has been registered with this code generator.
   llvm::Constant *GetAddrOfGlobal(GlobalDecl decl, bool isForDefinition);
 
-  llvm::Constant *GetAddrOfVTable(BaseSubobject base, CXXRecordDecl *decl);
+  llvm::Constant *GetAddrOfVTable(BaseSubobject base, const CXXRecordDecl *decl);
 
   /// Create a new \c llvm::Module after calling HandleTranslationUnit. This
   /// enable codegen in interactive processing environments.
