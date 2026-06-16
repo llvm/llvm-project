@@ -541,7 +541,8 @@ Value *StoreFatPtrsAsIntsAndExpandMemcpyVisitor::intsToFatPtrs(
   return Ret;
 }
 
-bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::processFunction(Function &F, ScalarEvolution *SE) {
+bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::processFunction(
+    Function &F, ScalarEvolution *SE) {
   this->SE = SE;
   bool Changed = false;
   // Process memcpy-like instructions after the main iteration because they can
@@ -624,9 +625,8 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitMemCpyInst(
   if (MCI.getSourceAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER &&
       MCI.getDestAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
     return false;
-  llvm::expandMemCpyAsLoop(&MCI,
-                           TM->getTargetTransformInfo(*MCI.getFunction()),
-                          SE);
+  llvm::expandMemCpyAsLoop(&MCI, TM->getTargetTransformInfo(*MCI.getFunction()),
+                           SE);
   MCI.eraseFromParent();
   return true;
 }
@@ -678,10 +678,10 @@ namespace {
 /// the aggregate load splitter from SROA could be refactored to allow for that
 /// case.
 ///
-/// Note that, if we can prove that the initial value of the pointer offset is 0 and
-/// that the load/store won't wrap from the left or won't have bounds checks that
-/// straddle a word boundary, we can emit some of the strict bounds checking pessimizations even in strict OOB mode,
-/// and we attempt to do so.
+/// Note that, if we can prove that the initial value of the pointer offset is 0
+/// and that the load/store won't wrap from the left or won't have bounds checks
+/// that straddle a word boundary, we can emit some of the strict bounds
+/// checking pessimizations even in strict OOB mode, and we attempt to do so.
 class LegalizeBufferContentTypesVisitor
     : public InstVisitor<LegalizeBufferContentTypesVisitor, bool> {
   friend class InstVisitor<LegalizeBufferContentTypesVisitor, bool>;
@@ -694,9 +694,9 @@ class LegalizeBufferContentTypesVisitor
 
   // Map base (non-GEP'd) pointers to the number of records they have, if known.
   // If a pointer is known to have a starting offset of 0 but it wasn't known to
-  // have a number of records (ex. it was `addrspacecast` from a buffer resource),
-  // it will be present in this map, but the key will be null. Otherwise, there will
-  // be no map entry.
+  // have a number of records (ex. it was `addrspacecast` from a buffer
+  // resource), it will be present in this map, but the key will be null.
+  // Otherwise, there will be no map entry.
   ValueToValueMapTy ZeroBasePointerToNumRecords;
 
   // Subtarget info, needed for determining what cache control bits to set.
@@ -719,9 +719,10 @@ class LegalizeBufferContentTypesVisitor
 
     OobProperties() = delete;
     // Needed for some Clangs.
-    OobProperties(bool NoWrapFromMax, bool NoPartialOOB) : NoWrapFromMax(NoWrapFromMax), NoPartialOOB(NoPartialOOB) {}
+    OobProperties(bool NoWrapFromMax, bool NoPartialOOB)
+        : NoWrapFromMax(NoWrapFromMax), NoPartialOOB(NoPartialOOB) {}
   };
-  OobProperties analyzeOobProperties(Value* Ptr, Type* Ty, uint64_t ByteOffset);
+  OobProperties analyzeOobProperties(Value *Ptr, Type *Ty, uint64_t ByteOffset);
 
   /// Break up the loads of a struct into the loads of its components
 
@@ -739,14 +740,16 @@ class LegalizeBufferContentTypesVisitor
   /// i32>, and if we load from an align(2) address, that address might be 2
   /// bytes from the end of the buffer. The hardware will, when performing the
   /// <2 x i32> load, mask off the entire first word, causing the two in-bounds
-  /// bytes to be masked off. However,if we know the offset can't be too close to
-  /// the number of records in the buffer (if known), we can skip this expansion.
+  /// bytes to be masked off. However,if we know the offset can't be too close
+  /// to the number of records in the buffer (if known), we can skip this
+  /// expansion.
   ///
   /// Unlike the complete disablement of unaligned accesses from point 1,
   /// this does not apply to unaligned scalars, but will apply to cases like
   /// `load <2 x i32>, align 4` since the left elemenvt might be out of bounds.
   /// Note that if the we know that the base offset is known to be
-  /// less than `uint32_max - byte_size(Ty)`, we can skip these alignment checks.
+  /// less than `uint32_max - byte_size(Ty)`, we can skip these alignment
+  /// checks.
   uint64_t maxIntrinsicWidth(Type *Ty, Align A, OobProperties OobProps);
 
   /// Convert a vector or scalar type that can't be operated on by buffer
@@ -799,7 +802,7 @@ class LegalizeBufferContentTypesVisitor
 
   // Record base pointer data and num_records (if known).
   bool visitIntrinsicInst(IntrinsicInst &II);
-  bool visitAddrSpaceCastInst(AddrSpaceCastInst& ASCI);
+  bool visitAddrSpaceCastInst(AddrSpaceCastInst &ASCI);
 
 public:
   LegalizeBufferContentTypesVisitor(const DataLayout &DL, LLVMContext &Ctx,
@@ -851,7 +854,9 @@ Value *LegalizeBufferContentTypesVisitor::vectorToArray(Value *V,
   return ArrayRes;
 }
 
-LegalizeBufferContentTypesVisitor::OobProperties LegalizeBufferContentTypesVisitor::analyzeOobProperties(Value* Ptr, Type* Ty, uint64_t ByteOffset) {
+LegalizeBufferContentTypesVisitor::OobProperties
+LegalizeBufferContentTypesVisitor::analyzeOobProperties(Value *Ptr, Type *Ty,
+                                                        uint64_t ByteOffset) {
   OobProperties Result(false, false);
 
   if (ST->hasRelaxedBufferOOBMode())
@@ -861,16 +866,19 @@ LegalizeBufferContentTypesVisitor::OobProperties LegalizeBufferContentTypesVisit
     return Result;
   if (!SE->isSCEVable(Ptr->getType()))
     return Result;
-  const SCEV* PtrOp = SE->getSCEV(Ptr);
+  const SCEV *PtrOp = SE->getSCEV(Ptr);
   if (ByteOffset > 0)
     PtrOp = SE->getAddExpr(PtrOp, SE->getConstant(IRB.getInt32(ByteOffset)));
-  const auto* PtrBase = dyn_cast<SCEVUnknown>(SE->getPointerBase(PtrOp));
+  const auto *PtrBase = dyn_cast<SCEVUnknown>(SE->getPointerBase(PtrOp));
   if (!PtrBase)
     return Result;
-  Value* PtrBaseVal = PtrBase->getValue();
-  // We don't know if the offset field started at 0, so there's no safe analysis we can do.
-  // If it weren't for the fact that nuw / inbounds / ... are properties of the pointer,
-  // we might be able to use hem, but loads where the address computation for sub-parts of the loaded type wraps the address space are explicitly in scope here so there's not much we can do inside functions that can't "see" the fat pointer creation.
+  Value *PtrBaseVal = PtrBase->getValue();
+  // We don't know if the offset field started at 0, so there's no safe analysis
+  // we can do. If it weren't for the fact that nuw / inbounds / ... are
+  // properties of the pointer, we might be able to use hem, but loads where the
+  // address computation for sub-parts of the loaded type wraps the address
+  // space are explicitly in scope here so there's not much we can do inside
+  // functions that can't "see" the fat pointer creation.
   auto NumRecordsIfKnown = ZeroBasePointerToNumRecords.find(PtrBaseVal);
   if (NumRecordsIfKnown == ZeroBasePointerToNumRecords.end())
     return Result;
@@ -878,7 +886,8 @@ LegalizeBufferContentTypesVisitor::OobProperties LegalizeBufferContentTypesVisit
   unsigned TypeSize = DL.getTypeStoreSize(Ty).getKnownMinValue();
   const SCEV *PtrDiff = SE->getMinusSCEV(PtrOp, PtrBase);
   APInt MaxNoWrapOffset = APInt::getAllOnes(BufferOffsetWidth) - TypeSize;
-  if (SE->isKnownNonNegative(PtrDiff) || SE->getUnsignedRangeMax(PtrDiff).ule(MaxNoWrapOffset))
+  if (SE->isKnownNonNegative(PtrDiff) ||
+      SE->getUnsignedRangeMax(PtrDiff).ule(MaxNoWrapOffset))
     Result.NoWrapFromMax = true;
 
   // If we know that the pointer is zero-based but not what its upper bound is,
@@ -886,26 +895,31 @@ LegalizeBufferContentTypesVisitor::OobProperties LegalizeBufferContentTypesVisit
   if (!NumRecordsIfKnown->second)
     return Result;
   const SCEV *NumRecords = SE->getSCEV(NumRecordsIfKnown->second);
-  // All-1s is (per ISA or as a consequence of the bonud)check rules, depending on arcihtecture) no bounds check.
+  // All-1s is (per ISA or as a consequence of the bonud)check rules, depending
+  // on arcihtecture) no bounds check.
   if (NumRecords->isAllOnesValue())
     Result.NoPartialOOB = true;
 
   const SCEV *BoundsDiff;
   if (ST->has45BitNumRecordsBufferResource()) {
-    const SCEV *PtrDiffExt = SE->getNoopOrZeroExtend(PtrDiff, NumRecords->getType());
+    const SCEV *PtrDiffExt =
+        SE->getNoopOrZeroExtend(PtrDiff, NumRecords->getType());
     BoundsDiff = SE->getMinusSCEV(NumRecords, PtrDiffExt);
   } else {
-    const SCEV *NumRecordsI32 = SE->getTruncateOrNoop(NumRecords, IRB.getInt32Ty());
+    const SCEV *NumRecordsI32 =
+        SE->getTruncateOrNoop(NumRecords, IRB.getInt32Ty());
     BoundsDiff = SE->getMinusSCEV(NumRecordsI32, PtrDiff);
   }
 
-  if (SE->getSignedRangeMin(BoundsDiff).sge(TypeSize) || SE->isKnownNonPositive(BoundsDiff))
+  if (SE->getSignedRangeMin(BoundsDiff).sge(TypeSize) ||
+      SE->isKnownNonPositive(BoundsDiff))
     Result.NoPartialOOB = true;
   return Result;
 }
 
-uint64_t LegalizeBufferContentTypesVisitor::maxIntrinsicWidth(Type *T,
-                                                              Align A, OobProperties OobProps) {
+uint64_t
+LegalizeBufferContentTypesVisitor::maxIntrinsicWidth(Type *T, Align A,
+                                                     OobProperties OobProps) {
   Align Result(16);
   if (!ST->hasUnalignedBufferAccessEnabled() && A < Align(4))
     Result = A;
@@ -921,7 +935,7 @@ uint64_t LegalizeBufferContentTypesVisitor::maxIntrinsicWidth(Type *T,
       if (!OobProps.NoWrapFromMax)
         Result = std::min(Result, std::max(A, Align(4)));
     } else if ((ElemBits.isKnownMultipleOf(8) ||
-               isPowerOf2_64(ElemBits.getKnownMinValue()))) {
+                isPowerOf2_64(ElemBits.getKnownMinValue()))) {
       // To ensure correct behavior for sub-word types, we must always scalarize
       // unaligned loads of sub-word types. For example, if you load
       // a <4 x i8> from offset 7 in an 8-byte buffer, expecting the vector
@@ -929,8 +943,10 @@ uint64_t LegalizeBufferContentTypesVisitor::maxIntrinsicWidth(Type *T,
       // instead. To prevent this behavior when not requested, de-vectorize such
       // loads.
       //
-      // If we knew that the value that triggers bounds checks was a multiple of 4
-      // along with the access being word-aligned, we could avoid the scalarization here, as the bitcast wouldn't change any check behavior, but we don't currently try to analyze this.
+      // If we knew that the value that triggers bounds checks was a multiple of
+      // 4 along with the access being word-aligned, we could avoid the
+      // scalarization here, as the bitcast wouldn't change any check behavior,
+      // but we don't currently try to analyze this.
       //
       // Strict OOB checking isn't supported if the size of each element is a
       // non-power-of-2 value less than 8, since there's no feasible way to
@@ -1160,7 +1176,8 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
 
   Align PartAlign = commonAlignment(OrigLI.getAlign(), AggByteOff);
   Type *ArrayAsVecType = scalarArrayTypeAsVector(PartType);
-  OobProperties OobProps = analyzeOobProperties(OrigLI.getPointerOperand(), PartType, AggByteOff);
+  OobProperties OobProps =
+      analyzeOobProperties(OrigLI.getPointerOperand(), PartType, AggByteOff);
   uint64_t MaxWidth = maxIntrinsicWidth(ArrayAsVecType, PartAlign, OobProps);
   Type *LegalType = legalNonAggregateForMemOp(ArrayAsVecType, MaxWidth);
 
@@ -1293,7 +1310,8 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
   }
 
   Align PartAlign = commonAlignment(OrigSI.getAlign(), AggByteOff);
-  OobProperties OobProps = analyzeOobProperties(OrigSI.getPointerOperand(), PartType, AggByteOff);
+  OobProperties OobProps =
+      analyzeOobProperties(OrigSI.getPointerOperand(), PartType, AggByteOff);
   uint64_t MaxWidth = maxIntrinsicWidth(ArrayAsVecType, PartAlign, OobProps);
   Type *LegalType = legalNonAggregateForMemOp(ArrayAsVecType, MaxWidth);
   if (LegalType != ArrayAsVecType) {
@@ -1354,8 +1372,10 @@ bool LegalizeBufferContentTypesVisitor::visitStoreInst(StoreInst &SI) {
   return Changed;
 }
 
-bool LegalizeBufferContentTypesVisitor::visitAddrSpaceCastInst(AddrSpaceCastInst& AI) {
-  if (AI.getSrcAddressSpace() != AMDGPUAS::BUFFER_RESOURCE || AI.getDestAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
+bool LegalizeBufferContentTypesVisitor::visitAddrSpaceCastInst(
+    AddrSpaceCastInst &AI) {
+  if (AI.getSrcAddressSpace() != AMDGPUAS::BUFFER_RESOURCE ||
+      AI.getDestAddressSpace() != AMDGPUAS::BUFFER_FAT_POINTER)
     return false;
   Value *Src = AI.getPointerOperand();
   auto Record = ZeroBasePointerToNumRecords.find(Src);
@@ -1373,7 +1393,8 @@ bool LegalizeBufferContentTypesVisitor::visitIntrinsicInst(IntrinsicInst &II) {
   return false;
 }
 
-bool LegalizeBufferContentTypesVisitor::processFunction(Function &F, ScalarEvolution *SE) {
+bool LegalizeBufferContentTypesVisitor::processFunction(Function &F,
+                                                        ScalarEvolution *SE) {
   this->SE = SE;
   ST = &TM->getSubtarget<GCNSubtarget>(F);
   bool Changed = false;
@@ -2571,7 +2592,8 @@ public:
 
   AMDGPULowerBufferFatPointers() : ModulePass(ID) {}
 
-  bool run(Module &M, const TargetMachine &TM, llvm::function_ref<ScalarEvolution*(Function&)> GetSE);
+  bool run(Module &M, const TargetMachine &TM,
+           llvm::function_ref<ScalarEvolution *(Function &)> GetSE);
   bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -2663,7 +2685,9 @@ static void makeCloneInPraceMap(Function *F, ValueToValueMapTy &CloneMap) {
   }
 }
 
-bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM, llvm::function_ref<ScalarEvolution*(Function&)> GetSE) {
+bool AMDGPULowerBufferFatPointers::run(
+    Module &M, const TargetMachine &TM,
+    llvm::function_ref<ScalarEvolution *(Function &)> GetSE) {
   bool Changed = false;
   const DataLayout &DL = M.getDataLayout();
   // Record the functions which need to be remapped.
@@ -2796,7 +2820,7 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM, llvm:
 bool AMDGPULowerBufferFatPointers::runOnModule(Module &M) {
   TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
   const TargetMachine &TM = TPC.getTM<TargetMachine>();
-  auto GetSE = [&](Function &F) -> ScalarEvolution* {
+  auto GetSE = [&](Function &F) -> ScalarEvolution * {
     if (F.isDeclaration())
       return nullptr;
     return &getAnalysis<ScalarEvolutionWrapperPass>(F).getSE();
@@ -2829,11 +2853,12 @@ ModulePass *llvm::createAMDGPULowerBufferFatPointersPass() {
 PreservedAnalyses
 AMDGPULowerBufferFatPointersPass::run(Module &M, ModuleAnalysisManager &MA) {
   auto &FA = MA.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  auto GetSE = [&](Function &F) -> ScalarEvolution* {
+  auto GetSE = [&](Function &F) -> ScalarEvolution * {
     if (F.isDeclaration())
       return nullptr;
     return &FA.getResult<ScalarEvolutionAnalysis>(F);
   };
-  return AMDGPULowerBufferFatPointers().run(M, TM, GetSE) ? PreservedAnalyses::none()
-                                                   : PreservedAnalyses::all();
+  return AMDGPULowerBufferFatPointers().run(M, TM, GetSE)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
 }

@@ -1234,7 +1234,7 @@
 ; GCN-O3-NEXT:      Scalar Evolution Analysis
 ; GCN-O3-NEXT:      GPU Load and Store Vectorizer
 ; GCN-O3-NEXT:    Lower buffer fat pointer operations to buffer resources
-; GCN-30-NEXT:      FunctionPass Manager
+; GCN-O3-NEXT:      FunctionPass Manager
 ; GCN-O3-NEXT:        Dominator Tree Construction
 ; GCN-O3-NEXT:        Natural Loop Information
 ; GCN-O3-NEXT:        Scalar Evolution Analysis
