@@ -306,6 +306,19 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
        emitc::isSupportedFloatType(output) || isa<emitc::PointerType>(output)));
 }
 
+Speculation::Speculatability emitc::CastOp::getSpeculatability() {
+  return getPure() ? Speculation::Speculatable : Speculation::NotSpeculatable;
+}
+
+void emitc::CastOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  if (getPure())
+    return;
+
+  effects.emplace_back(MemoryEffects::Read::get());
+  effects.emplace_back(MemoryEffects::Write::get());
+}
+
 //===----------------------------------------------------------------------===//
 // CallOpaqueOp
 //===----------------------------------------------------------------------===//
