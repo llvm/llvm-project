@@ -2110,6 +2110,18 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
+    // Map generic PEXT/PDEP to SVE2 bitperm BEXT/BDEP instructions.
+    if (Subtarget->hasSVEBitPerm() &&
+        (Subtarget->isSVEAvailable() ||
+         (Subtarget->isSVEorStreamingSVEAvailable() &&
+          Subtarget->hasSSVE_BitPerm()))) {
+      for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64}) {
+        setOperationAction({ISD::PEXT, ISD::PDEP}, VT, Custom);
+      }
+      setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i32, Custom);
+      setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i64, Custom);
+    }
+
     if (Subtarget->hasBF16())
       setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, MVT::nxv4f32,
                                 MVT::nxv8bf16, Legal);
@@ -8633,6 +8645,32 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerPARTIAL_REDUCE_MLA(Op, DAG);
   case ISD::CLMUL:
     return LowerCLMUL(Op, DAG);
+  case ISD::PEXT:
+  case ISD::PDEP: {
+    // Lower generic PEXT/PDEP to SVE2 intrinsics.
+    SDLoc DL(Op);
+    EVT VT = Op.getValueType();
+    unsigned IntrID = Op.getOpcode() == ISD::PEXT
+                          ? Intrinsic::aarch64_sve_bext_x
+                          : Intrinsic::aarch64_sve_bdep_x;
+
+    if (VT.isScalarInteger()) {
+      assert((VT == MVT::i32 || VT == MVT::i64) && "Unexpected scalar type");
+      EVT SveVT = VT == MVT::i64 ? MVT::nxv2i64 : MVT::nxv4i32;
+      SDValue Z0 =
+          DAG.getInsertVectorElt(DL, DAG.getPOISON(SveVT), Op.getOperand(0), 0);
+      SDValue Z1 =
+          DAG.getInsertVectorElt(DL, DAG.getPOISON(SveVT), Op.getOperand(1), 0);
+      SDValue R =
+          DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, SveVT,
+                      DAG.getTargetConstant(IntrID, DL, MVT::i32), Z0, Z1);
+      return DAG.getExtractVectorElt(DL, VT, R, 0);
+    }
+
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT,
+                       DAG.getTargetConstant(IntrID, DL, MVT::i32),
+                       Op.getOperand(0), Op.getOperand(1));
+  }
   case ISD::FCANONICALIZE:
     return LowerFCANONICALIZE(Op, DAG);
   case ISD::CTTZ_ELTS:
