@@ -162,7 +162,8 @@ static void collectBlocks(PtrView Ptr, llvm::SetVector<const Block *> &Blocks) {
            P.isDereferencable() && !P.isUnknownSizeArray() && !P.isOnePastEnd();
   };
 
-  if (!isUsefulPtr(Pointer(Ptr)))
+  if (!Ptr.isLive() || Ptr.isZero() || Ptr.isDummy() ||
+      Ptr.isUnknownSizeArray() || Ptr.isOnePastEnd())
     return;
 
   Blocks.insert(Ptr.Pointee);
@@ -171,7 +172,9 @@ static void collectBlocks(PtrView Ptr, llvm::SetVector<const Block *> &Blocks) {
   if (!Desc)
     return;
 
-  if (const Record *R = Desc->ElemRecord; R && R->hasPtrField()) {
+  if (const Record *R = Desc->ElemRecord) {
+    if (!R->hasPtrField())
+      return;
 
     for (const Record::Field &F : R->fields()) {
       if (!isOrHasPtr(F.Desc))
@@ -179,18 +182,27 @@ static void collectBlocks(PtrView Ptr, llvm::SetVector<const Block *> &Blocks) {
       PtrView FieldPtr = Ptr.atField(F.Offset);
       collectBlocks(FieldPtr, Blocks);
     }
-  } else if (Desc->isPrimitive() && Desc->getPrimType() == PT_Ptr) {
+    return;
+  }
+
+  if (Desc->isPrimitive() && Desc->getPrimType() == PT_Ptr) {
     Pointer Pointee = Ptr.deref<Pointer>();
     if (isUsefulPtr(Pointee) && !Blocks.contains(Pointee.block()))
       collectBlocks(Pointee.view(), Blocks);
 
-  } else if (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) {
+    return;
+  }
+
+  if (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) {
     for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
       Pointer ElemPointee = Ptr.elem<Pointer>(I);
       if (isUsefulPtr(ElemPointee) && !Blocks.contains(ElemPointee.block()))
         collectBlocks(ElemPointee.view(), Blocks);
     }
-  } else if (Desc->isCompositeArray() && isOrHasPtr(Desc->ElemDesc)) {
+    return;
+  }
+
+  if (Desc->isCompositeArray() && isOrHasPtr(Desc->ElemDesc)) {
     for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
       PtrView ElemPtr = Ptr.atIndex(I).narrow();
       collectBlocks(ElemPtr, Blocks);
