@@ -13,9 +13,9 @@ define void @main() {
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %undef = alloca b8, align 1 => ptr 0x8 [undef]
-; CHECK-NEXT:   %load_undef1 = load b8, ptr %undef, align 1 => b8 0x?? 
-; CHECK-NEXT:   %load_undef2 = load b8, ptr %undef, align 1 => b8 0x?? 
+; CHECK-NEXT:   %load_undef1 = load b8, ptr %undef, align 1 => b8 0x3E 
+; CHECK-NEXT:   %load_undef2 = load b8, ptr %undef, align 1 => b8 0x8B 
 ; CHECK-NEXT:   %bitcast_undef1 = bitcast b8 %load_undef1 to i8 => i8 62
-; CHECK-NEXT:   %bitcast_undef2 = bitcast b8 %load_undef1 to i8 => i8 -117
+; CHECK-NEXT:   %bitcast_undef2 = bitcast b8 %load_undef1 to i8 => i8 62
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

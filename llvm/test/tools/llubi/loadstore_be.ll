@@ -269,7 +269,7 @@ define void @main() {
 ; CHECK-NEXT:   store <8 x b1> %first_byte_with_provenance_v8b1, ptr %gep_second_byte, align 1
 ; CHECK-NEXT:   %gep_third_byte = getelementptr i8, ptr %alloc_byte, i64 2 => ptr 0xCE [alloc_byte + 2]
 ; CHECK-NEXT:   store b8 poison, ptr %gep_third_byte, align 1
-; CHECK-NEXT:   %bytes_mixed = load b32, ptr %alloc_byte, align 4 => b32 0x7F 00000000(00100110) 0x!! 0x?? 
+; CHECK-NEXT:   %bytes_mixed = load b32, ptr %alloc_byte, align 4 => b32 0x7F 00000000(00100110) 0x!! 0x2F 
 ; CHECK-NEXT:   store b32 -559038737, ptr %alloc_byte, align 4
 ; CHECK-NEXT:   %bytes_endianness = load b32, ptr %alloc_byte, align 4 => b32 0xDE 0xAD 0xBE 0xEF 
 ; CHECK-NEXT:   %bytes_non_pow2 = load b28, ptr %alloc_byte, align 4 => b28 !!!! 0x!! 0x!! 0x!! 

@@ -414,8 +414,8 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
       if (ContainsUndefinedBits)
         *ContainsUndefinedBits = true;
 
-      if (!IsByteType && getEffectiveUndefValueBehavior() ==
-                             UndefValueBehavior::NonDeterministic) {
+      if (getEffectiveUndefValueBehavior() ==
+          UndefValueBehavior::NonDeterministic) {
         // We don't use std::uniform_int_distribution here because it produces
         // different results across different library implementations. Instead,
         // we directly use the low bits from Rng.
@@ -424,6 +424,8 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
     }
 
     if (IsByteType) {
+      LogicalByte.writeBits(~LogicalByte.ConcreteMask & LogicalByte.Value,
+                            RandomBits);
       LogicalBytes[I / 8] = LogicalByte;
       continue;
     }
@@ -492,20 +494,31 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
     return fromBytes(ConstBytesView(Bytes, DL), Ty, /*OffsetInBits=*/0,
                      /*CheckPaddingBits=*/true, ContainsUndefinedBits);
   if (Ty->isByteTy()) {
-    if (ContainsUndefinedBits) {
-      for (const Byte &V : Bytes)
-        if (V.ConcreteMask != 255) {
-          *ContainsUndefinedBits = true;
-          break;
-        }
-    }
     unsigned BitWidth = Ty->getByteBitWidth();
     if (BitWidth & 7) {
       if (!(DL.isLittleEndian() ? Bytes.back() : Bytes.front())
-               .AreHighBitsZExtd(BitWidth & 7))
+               .AreHighBitsZExtd(BitWidth & 7)) {
+        if (ContainsUndefinedBits)
+          *ContainsUndefinedBits = true;
         return ByteValue::poison(BitWidth, DL.isLittleEndian());
+      }
     }
     ByteValue Res(BitWidth, Bytes, DL.isLittleEndian());
+    bool HasUndefinedBits = false;
+    for (Byte &V : Res.mutableBytes()) {
+      if (V.ConcreteMask != 255)
+        HasUndefinedBits = true;
+      uint8_t UndefBits = ~V.ConcreteMask & V.Value;
+      if (UndefBits == 0)
+        continue;
+      uint8_t RandomBits = 0;
+      if (getEffectiveUndefValueBehavior() ==
+          UndefValueBehavior::NonDeterministic)
+        RandomBits = static_cast<uint8_t>(Rng());
+      V.writeBits(UndefBits, RandomBits);
+    }
+    if (ContainsUndefinedBits)
+      *ContainsUndefinedBits = HasUndefinedBits;
     return AnyValue(std::move(Res));
   }
 

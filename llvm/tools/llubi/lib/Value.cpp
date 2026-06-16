@@ -353,18 +353,21 @@ void ByteValue::print(raw_ostream &OS) const {
     if (IsFullByte && V.ConcreteMask == 255 && V.TagMask == 0) {
       // Concrete value without provenance.
       OS << "0x" << hexdigit(V.Value >> 4) << hexdigit(V.Value & 15);
-    } else if (IsFullByte && V.ConcreteMask == 0 &&
-               (V.Value == 0 || V.Value == 255)) {
-      // Poison/undef bytes.
-      OS << (V.Value == 0 ? "0x!!" : "0x??");
+    } else if (IsFullByte && V.ConcreteMask == 0) {
+      assert(V.Value == 0 && "Byte values don't contain undef bits.");
+      // Poison bytes.
+      OS << "0x!!";
     } else {
       uint32_t BitEnd = IsFullByte ? 8 : BitWidth & 7;
       for (uint32_t I = 0; I != BitEnd; ++I) {
         uint32_t Mask = 1U << (BitEnd - 1 - I);
         if (V.ConcreteMask & Mask)
           OS << (V.Value & Mask ? '1' : '0');
-        else
-          OS << (V.Value & Mask ? '?' : '!');
+        else {
+          assert((V.Value & Mask) == 0 &&
+                 "Byte values don't contain undef bits.");
+          OS << '!';
+        }
       }
       if (uint32_t TagMask = V.ConcreteMask & V.TagMask) {
         // Print tags if available.

@@ -40,12 +40,12 @@ define void @main() {
 ; CHECK-NEXT:   %struct_freeze = freeze { i32, float } { i32 10, float poison } => { i32 10, float 0x042AE12F }
 ; CHECK-NEXT:   %struct_freeze_nested = freeze { i32, { float, ptr } } { i32 poison, { float, ptr } { float 1.000000e+01, ptr poison } } => { i32 1166165736, { float 1.000000e+01, ptr 0xD79E62976F604366 [nullary] } }
 ; CHECK-NEXT:   %alloca = alloca ptr, align 8 => ptr 0x8 [alloca]
-; CHECK-NEXT:   %byte_undef = load b8, ptr %alloca, align 1 => b8 0x?? 
+; CHECK-NEXT:   %byte_undef = load b8, ptr %alloca, align 1 => b8 0x19 
 ; CHECK-NEXT:   store ptr %alloca, ptr %alloca, align 8
-; CHECK-NEXT:   %byte_with_provenance = load b8, ptr %alloca, align 1 => b8 00001000(00011001) 
-; CHECK-NEXT:   %vec_bytes1 = insertelement <4 x b8> <b8 0, b8 poison, b8 poison, b8 poison>, b8 %byte_undef, i32 2 => { b8 0x00 , b8 0x!! , b8 0x?? , b8 0x!!  }
-; CHECK-NEXT:   %vec_bytes2 = insertelement <4 x b8> %vec_bytes1, b8 %byte_with_provenance, i32 3 => { b8 0x00 , b8 0x!! , b8 0x?? , b8 00001000(00011001)  }
-; CHECK-NEXT:   %bytes = bitcast <4 x b8> %vec_bytes2 to b32 => b32 0x00 0x!! 0x?? 00001000(00011001) 
-; CHECK-NEXT:   %bytes_freeze = freeze b32 %bytes => b32 0x00 0x13 0xF8 00001000(00011001) 
+; CHECK-NEXT:   %byte_with_provenance = load b8, ptr %alloca, align 1 => b8 00001000(00010011) 
+; CHECK-NEXT:   %vec_bytes1 = insertelement <4 x b8> <b8 0, b8 poison, b8 poison, b8 poison>, b8 %byte_undef, i32 2 => { b8 0x00 , b8 0x!! , b8 0x19 , b8 0x!!  }
+; CHECK-NEXT:   %vec_bytes2 = insertelement <4 x b8> %vec_bytes1, b8 %byte_with_provenance, i32 3 => { b8 0x00 , b8 0x!! , b8 0x19 , b8 00001000(00010011)  }
+; CHECK-NEXT:   %bytes = bitcast <4 x b8> %vec_bytes2 to b32 => b32 0x00 0x!! 0x19 00001000(00010011) 
+; CHECK-NEXT:   %bytes_freeze = freeze b32 %bytes => b32 0x00 0xF8 0x19 00001000(00010011) 
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main
