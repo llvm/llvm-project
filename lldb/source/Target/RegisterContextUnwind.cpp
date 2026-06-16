@@ -80,7 +80,7 @@ RegisterContextUnwind::RegisterContextUnwind(Thread &thread,
       m_fallback_unwind_plan_sp(), m_all_registers_available(false),
       m_frame_type(-1), m_cfa(LLDB_INVALID_ADDRESS),
       m_afa(LLDB_INVALID_ADDRESS), m_start_pc(), m_current_pc(),
-      m_current_offset(0), m_current_offset_backed_up_one(0),
+      m_current_offset(), m_current_offset_backed_up_one(),
       m_behaves_like_zeroth_frame(false), m_sym_ctx(sym_ctx),
       m_sym_ctx_valid(false), m_frame_number(frame_number), m_registers(),
       m_parent_unwind(unwind_lldb) {
@@ -442,6 +442,12 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
     if (abi_sp) {
       m_fast_unwind_plan_sp.reset();
       m_full_unwind_plan_sp = abi_sp->CreateDefaultUnwindPlan();
+      assert(((!m_full_unwind_plan_sp ||
+               m_full_unwind_plan_sp->GetRowCount() == 0 ||
+               m_full_unwind_plan_sp->GetRowAtIndex(0)
+                   ->GetUnspecifiedRegistersAreUndefined())) &&
+             "Default UnwindPlan must set "
+             "UnspecifiedRegistersAreUndefined to true");
       if (m_frame_type != eSkipFrame) // don't override eSkipFrame
       {
         m_frame_type = eNormalFrame;
@@ -810,6 +816,12 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
   ABI *abi = process ? process->GetABI().get() : nullptr;
   if (abi) {
     arch_default_unwind_plan_sp = abi->CreateDefaultUnwindPlan();
+    assert(((!arch_default_unwind_plan_sp ||
+             arch_default_unwind_plan_sp->GetRowCount() == 0 ||
+             arch_default_unwind_plan_sp->GetRowAtIndex(0)
+                 ->GetUnspecifiedRegistersAreUndefined())) &&
+           "Default UnwindPlan must set "
+           "UnspecifiedRegistersAreUndefined to true");
   } else {
     UNWIND_LOG(
         log, "unable to get architectural default UnwindPlan from ABI plugin");
@@ -1386,6 +1398,15 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
                    "could not convert lldb regnum {0} ({1}) into {2} "
                    "RegisterKind reg numbering scheme",
                    regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB), kind);
+      if (active_row && active_row->GetUnspecifiedRegistersAreUndefined()) {
+        UNWIND_LOG(
+            log,
+            "marking register {0} ({1}) as Undefined (volatile) in this "
+            "stack frame because this row is UnspecifiedRegistersAreUndefined.",
+            regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+        unwindplan_regloc.SetUndefined();
+        return unwindplan_regloc;
+      }
       return {};
     }
 
@@ -1480,6 +1501,15 @@ RegisterContextUnwind::GetAbstractRegisterLocation(uint32_t lldb_regnum,
           }
         }
       }
+    }
+    if (active_row && active_row->GetUnspecifiedRegistersAreUndefined()) {
+      UNWIND_LOG(
+          log,
+          "marking register {0} ({1}) as Undefined (volatile) in this "
+          "stack frame because this row is UnspecifiedRegistersAreUndefined.",
+          regnum.GetName(), regnum.GetAsKind(eRegisterKindLLDB));
+      unwindplan_regloc.SetUndefined();
+      return unwindplan_regloc;
     }
   }
 

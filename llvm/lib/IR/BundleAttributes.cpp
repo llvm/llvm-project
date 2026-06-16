@@ -72,3 +72,27 @@ llvm::getAssumeDereferenceableInfo(OperandBundleUse OBU) {
     Ret.CountVal = Size->getZExtValue();
   return Ret;
 }
+
+bool llvm::assumeBundleImpliesNonNull(const Value *Val, const Function *Context,
+                                      OperandBundleUse OBU) {
+  switch (getBundleAttrFromOBU(OBU)) {
+  case BundleAttr::Align: {
+    auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
+    return Ptr == Val && Alignment && Offset && isPowerOf2_64(*Alignment) &&
+           *Offset % *Alignment != 0;
+  }
+
+  case BundleAttr::Dereferenceable: {
+    auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
+    return Ptr == Val && Count && *Count != 0 &&
+           !NullPointerIsDefined(Context,
+                                 Val->getType()->getPointerAddressSpace());
+  }
+
+  case BundleAttr::NonNull:
+    return getAssumeNonNullInfo(OBU).Ptr == Val;
+
+  default:
+    return false;
+  }
+}

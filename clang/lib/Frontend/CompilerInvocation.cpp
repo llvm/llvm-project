@@ -2327,6 +2327,16 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
 
   Opts.StaticClosure = Args.hasArg(options::OPT_static_libclosure);
 
+  if (!Opts.HLSLRecordCommandLine.empty()) {
+    auto ParsedArgs =
+        clang::parseEscapedCommandLine(Opts.HLSLRecordCommandLine.c_str());
+    if (!ParsedArgs)
+      Diags.Report(diag::err_drv_invalid_escaped_command_line)
+          << llvm::toString(ParsedArgs.takeError());
+    else
+      Opts.HLSLParsedCommandLine = std::move(*ParsedArgs);
+  }
+
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
