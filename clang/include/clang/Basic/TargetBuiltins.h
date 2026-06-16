@@ -478,13 +478,13 @@ namespace clang {
 
   /// AVR builtins
   namespace AVR {
-    enum {
-      LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
 #define BUILTIN(ID, TYPE, ATTRS) BI##ID,
 #include "clang/Basic/BuiltinsAVR.def"
-      LastTSBuiltin
-    };
-  }
+    LastTSBuiltin
+  };
+  } // namespace AVR
 
   static constexpr uint64_t LargestBuiltinID = std::max<uint64_t>(
       {ARM::LastTSBuiltin, AArch64::LastTSBuiltin, BPF::LastTSBuiltin,
