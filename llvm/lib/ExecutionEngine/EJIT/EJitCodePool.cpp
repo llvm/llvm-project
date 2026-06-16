@@ -12,6 +12,16 @@
 using namespace llvm;
 using namespace llvm::ejit;
 
+// Lightweight, default-empty trace hook for code-pool key paths. Expands to
+// nothing unless EJIT_CODE_POOL_TRACE is predefined for on-target bring-up
+// (for example, -D'EJIT_CODE_POOL_TRACE(...)=SRE_printf(__VA_ARGS__)').
+// Arguments are restricted to integers, pointers, and C strings.
+#ifndef EJIT_CODE_POOL_TRACE
+#define EJIT_CODE_POOL_TRACE(...)                                              \
+  do {                                                                         \
+  } while (0)
+#endif
+
 namespace {
 
 inline size_t alignUp(size_t V, size_t A) { return (V + (A - 1)) & ~(A - 1); }
@@ -65,7 +75,13 @@ Error EJitCodePoolManager::newActivePoolLocked() {
   // poolAlign - 1.
   size_t RawSize = Opts_.fourKSeal ? (Opts_.poolSize + Opts_.poolAlign)
                                    : (Opts_.poolSize + Opts_.poolAlign - 1);
+  EJIT_CODE_POOL_TRACE("newActivePool:enter",
+                       (unsigned long long)Opts_.poolSize,
+                       (unsigned)Opts_.fourKSeal,
+                       (unsigned long long)RawSize);
   void *Raw = Alloc_ ? Alloc_(RawSize) : nullptr;
+  EJIT_CODE_POOL_TRACE("newActivePool:rawAlloc", Raw,
+                       (unsigned long long)RawSize);
   if (!Raw)
     return make_error<StringError>(
         "EJitCodePool: raw allocation of " + Twine(RawSize) + " bytes failed",
@@ -74,6 +90,7 @@ Error EJitCodePoolManager::newActivePoolLocked() {
   auto *RawBytes = static_cast<uint8_t *>(Raw);
   auto *Base = reinterpret_cast<uint8_t *>(
       alignUp(addr(RawBytes), Opts_.poolAlign));
+  EJIT_CODE_POOL_TRACE("newActivePool:alignedBase", Base);
 
   if (Opts_.fourKSeal) {
     // The 2MiB-aligned usable window must stay inside the raw allocation.
@@ -84,6 +101,8 @@ Error EJitCodePoolManager::newActivePoolLocked() {
     // Split the 2MiB-aligned region into 4K mappings before any enable_ex. One
     // split per pool; per-page enable_ex happens later at seal time.
     unsigned Rc = Split_ ? Split_(Base, Opts_.poolSize) : 1;
+    EJIT_CODE_POOL_TRACE("newActivePool:splitRc", Base,
+                         (unsigned long long)Opts_.poolSize, Rc);
     if (Rc != 0)
       return make_error<StringError>(
           "EJitCodePool: split_2m_to_4k failed (rc=" + Twine(Rc) +
@@ -124,6 +143,9 @@ Expected<void *> EJitCodePoolManager::allocateCode(size_t Size, size_t Align) {
     return make_error<StringError>("EJitCodePool: zero-size allocation",
                                    inconvertibleErrorCode());
 
+  EJIT_CODE_POOL_TRACE("allocateCode:req", (unsigned long long)Size,
+                       (unsigned long long)Align);
+
   size_t EffAlign = std::max(Align, Opts_.minCodeAlign);
   if (!isPowerOf2_64(EffAlign))
     EffAlign = alignUp(EffAlign, Opts_.minCodeAlign);
@@ -157,6 +179,7 @@ Expected<void *> EJitCodePoolManager::allocateCode(size_t Size, size_t Align) {
     // Round the bump cursor up to a whole seal page so the next allocation
     // starts on a page this one does not share.
     Active_->used = alignUp(Off + Size, Opts_.sealPageSize);
+    EJIT_CODE_POOL_TRACE("allocateCode:res4k", Ptr, (unsigned long long)Size);
     return static_cast<void *>(Ptr);
   }
 
@@ -178,6 +201,7 @@ Expected<void *> EJitCodePoolManager::allocateCode(size_t Size, size_t Align) {
   size_t Off = alignUp(Active_->used, EffAlign);
   uint8_t *Ptr = Active_->base + Off;
   Active_->used = Off + Size;
+  EJIT_CODE_POOL_TRACE("allocateCode:res", Ptr, (unsigned long long)Size);
   return static_cast<void *>(Ptr);
 }
 
@@ -201,6 +225,7 @@ Error EJitCodePoolManager::sealPoolContaining(const void *Ptr) {
   // the whole pool) prevents the easy misuse of marking a 2MiB pool executable
   // off a single address.
   if (Opts_.fourKSeal) {
+    EJIT_CODE_POOL_TRACE("sealPoolContaining:unsupported4k", Ptr);
     return make_error<StringError>(
         "EJitCodePool: sealPoolContaining is not supported in 4K page-seal "
         "mode; use sealCodeRange to seal the written code range",
@@ -254,8 +279,12 @@ Error EJitCodePoolManager::sealCodeRange(const void *Start, size_t Size) {
   size_t Page = Opts_.sealPageSize;
   uintptr_t PageStart = alignDownAddr(addr(Start), Page);
   uintptr_t PageEnd = alignUp(addr(Start) + Size, Page);
+  EJIT_CODE_POOL_TRACE("sealCodeRange", Start, (unsigned long long)Size,
+                       (unsigned long long)PageStart,
+                       (unsigned long long)PageEnd);
   for (uintptr_t VA = PageStart; VA < PageEnd; VA += Page) {
     unsigned Rc = Seal_ ? Seal_(reinterpret_cast<void *>(VA)) : 1;
+    EJIT_CODE_POOL_TRACE("sealCodeRange:pageRc", (unsigned long long)VA, Rc);
     if (Rc != 0)
       return make_error<StringError>(
           "EJitCodePool: enable_ex failed (rc=" + Twine(Rc) + ") for page " +

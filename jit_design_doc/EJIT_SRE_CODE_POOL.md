@@ -407,3 +407,24 @@ finalize 的函数塞进同一个 4K 页（那样会在某页 RX 后还要写它
 
 `EJitOrcEngine::lookup` 已对 `sealPoolContaining` 用 `!usesPageSeal()` 守卫，因此 4K 模式
 下不会触发这两个 Error 路径；它们的 Error 仅为防止外部误用。
+
+### 13.8 可定位性 trace（默认无输出）
+
+code pool 与 taskpool 关键路径埋了**默认空展开**的 trace 宏，便于上板时改成 `SRE_printf`：
+
+```cpp
+#ifndef EJIT_CODE_POOL_TRACE
+#define EJIT_CODE_POOL_TRACE(...) do {} while (0)
+#endif
+#ifndef EJIT_TASKPOOL_TRACE
+#define EJIT_TASKPOOL_TRACE(...) do {} while (0)
+#endif
+```
+
+- 默认展开为空，**不产生任何输出、不改变任何行为**。
+- 上板时可用 `-D'EJIT_CODE_POOL_TRACE(...)=SRE_printf(__VA_ARGS__)'` 之类重定义。
+- 参数只用**整数 / 指针 / C 字符串**，不构造 `std::string`、不使用 `raw_ostream`。
+- 埋点：code pool 的 `newActivePoolLocked`（enter / rawAlloc / alignedBase / splitRc）、
+  `allocateCode`（req / res）、`sealCodeRange`（范围 / 每页 rc）、`sealPoolContaining` 的
+  4K 误用；taskpool 的 `compileOrGet`（enter / cacheHit / dedup / queuePush）、`runCompile`
+  （begin / compiled / published）、`pollOne`（empty / dequeued）、`freeCode`（cancel/free）。
