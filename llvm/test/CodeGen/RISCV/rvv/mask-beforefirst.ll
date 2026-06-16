@@ -78,3 +78,16 @@ define <vscale x 64 x i1> @nxv64i1(<vscale x 64 x i1> %m) {
   %x = call <vscale x 64 x i1> @llvm.mask.beforefirst(<vscale x 64 x i1> %m)
   ret <vscale x 64 x i1> %x
 }
+
+; Widening
+
+define <vscale x 3 x i1> @nxv3i1(<vscale x 3 x i1> %m) {
+; CHECK-LABEL: nxv3i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vmsbf.m v8, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    ret
+  %x = call <vscale x 3 x i1> @llvm.mask.beforefirst(<vscale x 3 x i1> %m)
+  ret <vscale x 3 x i1> %x
+}

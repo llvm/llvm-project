@@ -5478,6 +5478,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::ARITH_FENCE:
   case ISD::FCANONICALIZE:
   case ISD::AssertNoFPClass:
+  case ISD::MASK_BEFOREFIRST:
     Res = WidenVecRes_Unary(N);
     break;
   case ISD::FMA: case ISD::VP_FMA:

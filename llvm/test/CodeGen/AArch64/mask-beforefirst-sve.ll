@@ -119,3 +119,15 @@ define <2 x i1> @v2i1(<2 x i1> %m) {
   %x = call <2 x i1> @llvm.mask.beforefirst(<2 x i1> %m)
   ret <2 x i1> %x
 }
+
+; Widening
+
+define <vscale x 3 x i1> @nxv3i1(<vscale x 3 x i1> %m) {
+; CHECK-LABEL: nxv3i1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
+; CHECK-NEXT:    ret
+  %x = call <vscale x 3 x i1> @llvm.mask.beforefirst(<vscale x 3 x i1> %m)
+  ret <vscale x 3 x i1> %x
+}
