@@ -131,10 +131,10 @@ class TargetRegisterClass;
                                      MachineBasicBlock *BB) const;
     /// Emit the FILL_FW pseudo instruction
     MachineBasicBlock *emitLD_F16_PSEUDO(MachineInstr &MI,
-                                   MachineBasicBlock *BB) const;
+                                         MachineBasicBlock *BB) const;
     /// Emit the FILL_FD pseudo instruction
     MachineBasicBlock *emitST_F16_PSEUDO(MachineInstr &MI,
-                                   MachineBasicBlock *BB) const;
+                                         MachineBasicBlock *BB) const;
     /// Emit the FEXP2_W_1 pseudo instructions.
     MachineBasicBlock *emitFPEXTEND_PSEUDO(MachineInstr &MI,
                                            MachineBasicBlock *BB,
