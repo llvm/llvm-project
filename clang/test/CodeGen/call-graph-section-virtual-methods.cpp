@@ -12,13 +12,13 @@
 class Base {
   public:
     // FT-LABEL: define {{.*}} @_ZN4Base2vfEPc(
-    // FT-SAME: {{.*}} !type [[F_TVF:![0-9]+]]
+    // FT-SAME: {{.*}} !callgraph [[F_TVF:![0-9]+]]
     virtual int vf(char *a) { return 0; };
   };
   
   class Derived : public Base {
   public:
-    // FT: define {{.*}} @_ZN7Derived2vfEPc({{.*}} !type [[F_TVF]]
+    // FT: define {{.*}} @_ZN7Derived2vfEPc({{.*}} !callgraph [[F_TVF]]
     int vf(char *a) override { return 1; };
   };
   

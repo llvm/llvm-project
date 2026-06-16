@@ -7,12 +7,12 @@
 // RUN: -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,MS %s
 
 // CHECK-LABEL: define {{(dso_local)?}} void @foo(
-// CHECK-SAME: {{.*}} !type [[F_TVOID:![0-9]+]]
+// CHECK-SAME: {{.*}} !callgraph [[F_TVOID:![0-9]+]]
 void foo() {
 }
 
 // CHECK-LABEL: define {{(dso_local)?}} void @bar(
-// CHECK-SAME: {{.*}} !type [[F_TVOID]]
+// CHECK-SAME: {{.*}} !callgraph [[F_TVOID]]
 void bar() {
   void (*fp)() = foo;
   // ITANIUM: call {{.*}}, !callee_type [[F_TVOID_CT:![0-9]+]]
@@ -21,19 +21,19 @@ void bar() {
 }
 
 // CHECK-LABEL: define {{(dso_local)?}} i32 @baz(
-// CHECK-SAME: {{.*}} !type [[F_TPRIMITIVE:![0-9]+]]
+// CHECK-SAME: {{.*}} !callgraph [[F_TPRIMITIVE:![0-9]+]]
 int baz(char a, float b, double c) {
   return 1;
 }
 
 // CHECK-LABEL: define {{(dso_local)?}} ptr @qux(
-// CHECK-SAME: {{.*}} !type [[F_TPTR:![0-9]+]]
+// CHECK-SAME: {{.*}} !callgraph [[F_TPTR:![0-9]+]]
 int *qux(char *a, float *b, double *c) {
   return 0;
 }
 
 // CHECK-LABEL: define {{(dso_local)?}} void @corge(
-// CHECK-SAME: {{.*}} !type [[F_TVOID]]
+// CHECK-SAME: {{.*}} !callgraph [[F_TVOID]]
 void corge() {
   int (*fp_baz)(char, float, double) = baz;  
   // CHECK: call i32 {{.*}}, !callee_type [[F_TPRIMITIVE_CT:![0-9]+]]
@@ -53,11 +53,11 @@ struct st2 {
 };
 
 // CHECK-LABEL: define {{(dso_local)?}} void @stparam(
-// CHECK-SAME: {{.*}} !type [[F_TSTRUCT:![0-9]+]]
+// CHECK-SAME: {{.*}} !callgraph [[F_TSTRUCT:![0-9]+]]
 void stparam(struct st2 a, struct st2 *b) {}
 
 // CHECK-LABEL: define {{(dso_local)?}} void @stf(
-// CHECK-SAME: {{.*}} !type [[F_TVOID]]
+// CHECK-SAME: {{.*}} !callgraph [[F_TVOID]]
 void stf() {
   struct st1 St1;
   St1.fp = qux;  

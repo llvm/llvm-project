@@ -3395,17 +3395,19 @@ static bool hasExistingGeneralizedTypeMD(llvm::Function *F) {
 
 void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
                                                  llvm::Function *F) {
-  // Return if generalized type metadata is already attached.
-  if (hasExistingGeneralizedTypeMD(F))
-    return;
-
   // All functions which are not internal linkage could be indirect targets.
   // Address taken functions with internal linkage could be indirect targets.
   if (!F->hasLocalLinkage() ||
       F->getFunction().hasAddressTaken(nullptr, /*IgnoreCallbackUses=*/true,
                                        /*IgnoreAssumeLikeCalls=*/true,
-                                       /*IgnoreLLVMUsed=*/false))
-    F->addTypeMetadata(0, CreateMetadataIdentifierGeneralized(FD->getType()));
+                                       /*IgnoreLLVMUsed=*/false)) {
+    F->addMetadata(llvm::LLVMContext::MD_callgraph,
+                   *llvm::MDTuple::get(
+                       getLLVMContext(),
+                       {llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                            llvm::Type::getInt64Ty(getLLVMContext()), 0)),
+                        CreateMetadataIdentifierGeneralized(FD->getType())}));
+  }
 }
 
 void CodeGenModule::createFunctionTypeMetadataForIcall(const FunctionDecl *FD,

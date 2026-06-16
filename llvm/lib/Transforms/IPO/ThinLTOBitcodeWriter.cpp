@@ -169,6 +169,21 @@ void promoteTypeIds(Module &M, StringRef ModuleId) {
           LLVMContext::MD_type,
           *MDNode::get(M.getContext(), {MD->getOperand(0), I->second}));
     }
+
+    SmallVector<MDNode *, 1> CGMDs;
+    GO.getMetadata(LLVMContext::MD_callgraph, CGMDs);
+
+    GO.eraseMetadata(LLVMContext::MD_callgraph);
+    for (auto *MD : CGMDs) {
+      auto I = LocalToGlobal.find(MD->getOperand(1));
+      if (I == LocalToGlobal.end()) {
+        GO.addMetadata(LLVMContext::MD_callgraph, *MD);
+        continue;
+      }
+      GO.addMetadata(
+          LLVMContext::MD_callgraph,
+          *MDNode::get(M.getContext(), {MD->getOperand(0), I->second}));
+    }
   }
 }
 

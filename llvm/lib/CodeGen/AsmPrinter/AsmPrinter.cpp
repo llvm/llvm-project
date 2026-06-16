@@ -1756,7 +1756,7 @@ void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
 /// type metadata. Returns null if metadata cannot be found.
 static ConstantInt *extractNumericCGTypeId(const Function &F) {
   SmallVector<MDNode *, 2> Types;
-  F.getMetadata(LLVMContext::MD_type, Types);
+  F.getMetadata(LLVMContext::MD_callgraph, Types);
   for (const auto &Type : Types) {
     if (Type->hasGeneralizedMDString()) {
       MDString *MDGeneralizedTypeId = cast<MDString>(Type->getOperand(1));
