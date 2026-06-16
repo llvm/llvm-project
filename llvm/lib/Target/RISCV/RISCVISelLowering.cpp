@@ -11751,23 +11751,22 @@ static SDValue encodeRuntimeIMELambda(SDValue Requested, const SDLoc &DL,
     SDValue Zero = DAG.getConstant(0, DL, XLenVT);
     SDValue One = DAG.getConstant(1, DL, XLenVT);
 
-    // Direct IR users can still pass zero or another invalid runtime value to this
-    // nonzero primitive. Use the defined ctz operation, guard the runtime value,
-    // and map invalid runtime values to encoding 0. The later read-modify-write
-    // sequence preserves all non-lambda vtype fields and clears lambda[2:0] for
-    // invalid runtime values, avoiding poison and avoiding out-of-range encodings.
+    // Direct IR users can still pass zero or another invalid runtime value to
+    // this nonzero primitive. Use the defined ctz operation, guard the runtime
+    // value, and map invalid runtime values to encoding 0. The later
+    // read-modify-write sequence preserves all non-lambda vtype fields and
+    // clears lambda[2:0] for invalid runtime values, avoiding poison and
+    // avoiding out-of-range encodings.
     SDValue Ctz = DAG.getNode(ISD::CTTZ, DL, XLenVT, Requested);
     SDValue Encoded =
         DAG.getNode(ISD::ADD, DL, XLenVT, Ctz, DAG.getConstant(1, DL, XLenVT));
 
-    SDValue NonZero =
-        DAG.getSetCC(DL, XLenVT, Requested, Zero, ISD::SETNE);
-    SDValue IsInRange =
-        DAG.getSetCC(DL, XLenVT, Requested, DAG.getConstant(64, DL, XLenVT),
-                     ISD::SZETULE);
+    SDValue NonZero = DAG.getSetCC(DL, XLenVT, Requested, Zero, ISD::SETNE);
+    SDValue IsInRange = DAG.getSetCC(
+        DL, XLenVT, Requested, DAG.getConstant(64, DL, XLenVT), ISD::SZETULE);
     SDValue MinusOne = DAG.getNode(ISD::SUB, DL, XLenVT, Requested, One);
-    SDValue PowerOf2Bits = DAG.getNode(ISD::AND, DL, XLenVT, Requested,
-                                       MinusOne);
+    SDValue PowerOf2Bits =
+        DAG.getNode(ISD::AND, DL, XLenVT, Requested, MinusOne);
     SDValue IsPowerOf2 =
         DAG.getSetCC(DL, XLenVT, PowerOf2Bits, Zero, ISD::SETEQ);
 
