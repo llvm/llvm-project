@@ -556,6 +556,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       // widen for those operations that will be unrolled.
       setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA},
                          {MVT::v2i16, MVT::v4i8}, Custom);
+      setOperationAction(ISD::INTRINSIC_WO_CHAIN, {MVT::v2i16, MVT::v4i8},
+                         Custom);
     } else {
       VTs = P32VecVTs;
     }
@@ -633,6 +635,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(
           {ISD::UADDSAT, ISD::SADDSAT, ISD::USUBSAT, ISD::SSUBSAT}, P64VecVTs,
           Legal);
+      setOperationAction(ISD::INTRINSIC_WO_CHAIN, P64VecVTs, Legal);
       setOperationAction({ISD::AVGFLOORS, ISD::AVGFLOORU}, P64VecVTs, Legal);
       setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX},
                          P64VecVTs, Legal);
@@ -11733,6 +11736,29 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     unsigned Opc = IntNo == Intrinsic::riscv_clmulh ? ISD::CLMULH : ISD::CLMULR;
     return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1), Op.getOperand(2));
   }
+  case Intrinsic::riscv_paadd:
+  case Intrinsic::riscv_paaddu:
+  case Intrinsic::riscv_pasub:
+  case Intrinsic::riscv_pasubu: {
+    unsigned Opc;
+    switch (IntNo) {
+    case Intrinsic::riscv_paadd:
+      Opc = ISD::AVGFLOORS;
+      break;
+    case Intrinsic::riscv_paaddu:
+      Opc = ISD::AVGFLOORU;
+      break;
+    case Intrinsic::riscv_pasub:
+      Opc = RISCVISD::ASUB;
+      break;
+    case Intrinsic::riscv_pasubu:
+      Opc = RISCVISD::ASUBU;
+      break;
+    }
+
+    return DAG.getNode(Opc, DL, Op.getValueType(), Op.getOperand(1),
+                       Op.getOperand(2));
+  }
   case Intrinsic::experimental_get_vector_length:
     return lowerGetVectorLength(Op.getNode(), DAG, Subtarget);
   case Intrinsic::riscv_vmv_x_s: {
@@ -15637,6 +15663,41 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
     }
+    case Intrinsic::riscv_paadd:
+    case Intrinsic::riscv_paaddu:
+    case Intrinsic::riscv_pasub:
+    case Intrinsic::riscv_pasubu: {
+      EVT VT = N->getValueType(0);
+      if (!Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
+        return;
+
+      unsigned Opc;
+      switch (IntNo) {
+      case Intrinsic::riscv_paadd:
+        Opc = ISD::AVGFLOORS;
+        break;
+      case Intrinsic::riscv_paaddu:
+        Opc = ISD::AVGFLOORU;
+        break;
+      case Intrinsic::riscv_pasub:
+        Opc = RISCVISD::ASUB;
+        break;
+      case Intrinsic::riscv_pasubu:
+        Opc = RISCVISD::ASUBU;
+        break;
+      }
+
+      EVT WideVT = VT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;
+      SDValue Undef = DAG.getUNDEF(VT);
+      SDValue Op0 =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(1), Undef);
+      SDValue Op1 =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(2), Undef);
+      SDValue Res = DAG.getNode(Opc, DL, WideVT, Op0, Op1);
+      Results.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
+                                    DAG.getVectorIdxConstant(0, DL)));
+      return;
+    }
     case Intrinsic::riscv_orc_b:
     case Intrinsic::riscv_brev8:
     case Intrinsic::riscv_sha256sig0:
@@ -17692,9 +17753,15 @@ static bool narrowIndex(SDValue &N, ISD::MemIndexType IndexType, SelectionDAG &D
   SDValue Src = N0.getOperand(0);
   EVT SrcVT = Src.getValueType();
   unsigned SrcElen = SrcVT.getScalarSizeInBits();
+
+  // Consider any leading zeros in the source.
+  SrcElen -= DAG.computeKnownBits(Src).countMinLeadingZeros();
+
   unsigned ShAmtV = ShAmt.getZExtValue();
   unsigned NewElen = PowerOf2Ceil(SrcElen + ShAmtV);
   NewElen = std::max(NewElen, 8U);
+  // Make sure the new elen is at least as large as the original elen.
+  NewElen = std::max<unsigned>(NewElen, SrcVT.getScalarSizeInBits());
 
   // Skip if NewElen is not narrower than the original extended type.
   if (NewElen >= N0.getValueType().getScalarSizeInBits())

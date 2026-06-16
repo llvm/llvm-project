@@ -7131,6 +7131,10 @@ TEST_F(FormatTest, LayoutNestedBlocks) {
   verifyFormat("SomeFunction({MACRO({ return output; }), b});");
 
   verifyNoCrash("^{v^{a}}");
+  // Verify no crash on malformed input with unbalanced braces where angle
+  // bracket parsing resets the token stream and a brace is consumed twice
+  // through parseConditional(), leaving Scopes empty.
+  verifyNoCrash("{{ < ? } a} b");
 }
 
 TEST_F(FormatTest, FormatNestedBlocksInMacros) {
@@ -15421,6 +15425,15 @@ TEST_F(FormatTest, PullInlineOnlyFunctionDefinitionsIntoSingleLine) {
                "}",
                MergeInlineOnly);
 
+  MergeInlineOnly.NamespaceIndentation = FormatStyle::NI_All;
+  verifyFormat("namespace {\n"
+               "  class Class {\n"
+               "#define MACRO 1\n"
+               "    int f() { return 1; }\n"
+               "  };\n"
+               "} // namespace",
+               MergeInlineOnly);
+
   MergeInlineOnly.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
   verifyFormat("class Foo\n"
                "  {\n"
@@ -22495,6 +22508,12 @@ TEST_F(FormatTest, OneLineFormatOffRegex) {
                  "   MACRO_TEST2( );",
                  Style);
 
+  Style.OneLineFormatOffRegex = "//(< clang-format off| NO_TRANSLATION)$";
+  verifyNoChange(
+      " int i ;  //< clang-format off\n"
+      " msg = sprintf(\"Long string with placeholders.\"); // NO_TRANSLATION",
+      Style);
+
   Style.ColumnLimit = 50;
   Style.OneLineFormatOffRegex = "^LogErrorPrint$";
   verifyFormat(" myproject::LogErrorPrint(logger, \"Don't split me!\");\n"
@@ -22504,11 +22523,31 @@ TEST_F(FormatTest, OneLineFormatOffRegex) {
                " myproject::MyLogErrorPrinter(myLogger, \"Split me!\");",
                Style);
 
-  Style.OneLineFormatOffRegex = "//(< clang-format off| NO_TRANSLATION)$";
-  verifyNoChange(
-      " int i ;  //< clang-format off\n"
-      " msg = sprintf(\"Long string with placeholders.\"); // NO_TRANSLATION",
-      Style);
+  Style.ColumnLimit = 20;
+  Style.OneLineFormatOffRegex = "^pragma$";
+  verifyFormat("void pragmas() {\n"
+               "  // a comment\n"
+               "  // that's too long\n"
+               "  #pragma omp\n"
+               "  _pragma();\n"
+               "}",
+               "void pragmas () {\n"
+               "  // a comment that's\n"
+               "  // too long\n"
+               "  #pragma omp\n"
+               " _pragma();\n"
+               "}",
+               Style);
+
+  Style.OneLineFormatOffRegex = "// FormatOff$";
+  verifyFormat("  // comment too\n"
+               "  // long\n"
+               "  tm t; // FormatOff\n"
+               "int i;",
+               "  // comment too long\n"
+               "  tm t; // FormatOff\n"
+               " int i;",
+               Style);
 }
 
 TEST_F(FormatTest, DoNotCrashOnInvalidInput) {

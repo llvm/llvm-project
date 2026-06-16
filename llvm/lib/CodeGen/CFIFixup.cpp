@@ -88,11 +88,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "cfi-fixup"
 
-char CFIFixup::ID = 0;
+char CFIFixupLegacy::ID = 0;
 
-INITIALIZE_PASS(CFIFixup, "cfi-fixup",
+INITIALIZE_PASS(CFIFixupLegacy, "cfi-fixup",
                 "Insert CFI remember/restore state instructions", false, false)
-FunctionPass *llvm::createCFIFixup() { return new CFIFixup(); }
+FunctionPass *llvm::createCFIFixupLegacy() { return new CFIFixupLegacy(); }
 
 static bool isPrologueCFIInstruction(const MachineInstr &MI) {
   return MI.getOpcode() == TargetOpcode::CFI_INSTRUCTION &&
@@ -301,7 +301,7 @@ fixupBlock(MachineBasicBlock &CurrBB, const BlockFlagsVector &BlockInfo,
   return true;
 }
 
-bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
+static bool runImpl(MachineFunction &MF) {
   if (!MF.getSubtarget().getFrameLowering()->enableCFIFixup(MF))
     return false;
 
@@ -341,4 +341,14 @@ bool CFIFixup::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return Change;
+}
+
+PreservedAnalyses CFIFixupPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &) {
+  runImpl(MF);
+  return PreservedAnalyses::all();
+}
+
+bool CFIFixupLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runImpl(MF);
 }
