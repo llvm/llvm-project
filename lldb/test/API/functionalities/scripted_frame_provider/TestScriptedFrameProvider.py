@@ -840,10 +840,12 @@ class ScriptedFrameProviderTestCase(TestBase):
         self.assertTrue(variables.IsValid())
         self.assertTrue(variables.GetValueAtIndex(0).name == "_handler_one")
 
-        # FIXME: Synthetic variables are never in scope.
+        # Synthetic variables are always in scope.
         variables = frame0.GetVariables(False, False, False, True)
-        self.assertFalse(variables.IsValid())
-        self.assertEqual(variables.GetSize(), 0)
+        self.assertTrue(variables.IsValid())
+        # FIXME: This should also include `variable_in_main` like `frame var`.
+        self.assertEqual(variables.GetSize(), 1)
+        self.assertEqual(variables.GetValueAtIndex(0).name, "_handler_one")
 
         # Check the `frame variable` command(s) handle synthetic variables the
         # way we expect by printing them.
