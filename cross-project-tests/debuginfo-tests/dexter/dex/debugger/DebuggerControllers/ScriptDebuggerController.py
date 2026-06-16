@@ -68,7 +68,7 @@ class ScriptDebuggerController(DebuggerControllerBase):
             file = where.file or default_file
             assert file, "Cannot set line breakpoints without a valid file!"
             # If this Where covers a range of lines, we breakpoint each of them to ensure that we don't miss any lines.
-            for line in where.get_lines():
+            for line in where.get_lines(self.script.get_labels(file)):
                 added_ids.append(self.debugger.add_breakpoint(file, line))
         self._where_bps[where] = added_ids
         for id in added_ids:

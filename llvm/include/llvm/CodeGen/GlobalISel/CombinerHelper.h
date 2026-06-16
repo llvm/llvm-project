@@ -861,10 +861,10 @@ public:
   LLVM_ABI bool tryCombine(MachineInstr &MI) const;
 
   /// Emit loads and stores that perform the given memcpy.
-  /// Assumes \p MI is a G_MEMCPY_INLINE
+  /// Assumes \p MI is a G_MEMCPY_INLINE or a G_MEMSET_INLINE
   /// TODO: implement dynamically sized inline memcpy,
   ///       and rename: s/bool tryEmit/void emit/
-  LLVM_ABI bool tryEmitMemcpyInline(MachineInstr &MI) const;
+  LLVM_ABI bool tryEmitMemcpyInlineFamily(MachineInstr &MI) const;
 
   /// Match:
   ///   (G_UMULO x, 2) -> (G_UADDO x, x)

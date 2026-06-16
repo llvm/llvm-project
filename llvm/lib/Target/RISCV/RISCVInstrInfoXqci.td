@@ -435,7 +435,7 @@ def : InstAlias<".insn_qc.es $opcode, $func3, $func2, $rs2, (${rs1})",
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class QCILoad_ScaleIdx<bits<4> funct4, string opcodestr>
     : RVInstRBase<0b111, OPC_CUSTOM_0,
-                  (outs GPR:$rd), (ins GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt),
+                  (outs GPR:$rd), (ins BasePtr:$rs1, GPRNoX0:$rs2, uimm3:$shamt),
                   opcodestr, "$rd, $rs1, $rs2, $shamt"> {
   bits<3> shamt;
   let Inst{31-28} = funct4;
@@ -447,7 +447,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 // rd corresponds to the source for the store 'rs3' described in the spec.
 class QCIStore_ScaleIdx<bits<4> funct4, string opcodestr>
     : RVInstRBase<0b110, OPC_CUSTOM_1, (outs),
-                  (ins GPR:$rd, GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt),
+                  (ins GPR:$rd, BasePtr:$rs1, GPRNoX0:$rs2, uimm3:$shamt),
                   opcodestr, "$rd, $rs1, $rs2, $shamt"> {
   bits<3> shamt;
   let Inst{31-28} = funct4;
@@ -757,7 +757,7 @@ class QCIRVInstEIBase<bits<3> funct3, bits<2> funct2, dag outs,
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, canFoldAsLoad = 1 in
 class QCIRVInstEILoad<bits<3> funct3, bits<2> funct2, string opcodestr>
     : QCIRVInstEIBase<funct3, funct2, (outs GPR:$rd),
-                      (ins GPRMem:$rs1, simm26:$imm), opcodestr,
+                      (ins BasePtr:$rs1, simm26:$imm), opcodestr,
                       "$rd, ${imm}(${rs1})">;
 
 class QCIRVInstESBase<bits<3> funct3, bits<2> funct2, dag outs,
@@ -780,7 +780,7 @@ class QCIRVInstESBase<bits<3> funct3, bits<2> funct2, dag outs,
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class QCIRVInstESStore<bits<3> funct3, bits<2> funct2, string opcodestr>
     : QCIRVInstESBase<funct3, funct2, (outs),
-                      (ins GPR:$rs2, GPRMem:$rs1, simm26:$imm),
+                      (ins GPR:$rs2, BasePtr:$rs1, simm26:$imm),
                       opcodestr, "$rs2, ${imm}(${rs1})">;
 
 class QCIRVInstEAI<bits<3> funct3, bits<1> funct1, string opcodestr>
@@ -1389,13 +1389,13 @@ let hasSideEffects = false, mayLoad = true, mayStore = false, Size = 4,
     isCodeGenOnly = false in
 class PseudoQCAccessLoad_ri<string opcodestr>
   : Pseudo<(outs GPR:$rd),
-           (ins GPRMem:$rs1, simm12:$imm12, qc_access_symbol:$expr), [],
+           (ins BasePtr:$rs1, simm12:$imm12, qc_access_symbol:$expr), [],
            opcodestr, "$rd, ${imm12}(${rs1}), $expr">;
 
 let hasSideEffects = false, mayLoad = false, mayStore = true, Size = 4,
     isCodeGenOnly = false in
 class PseudoQCAccessStore_rri<string opcodestr>
-  : Pseudo<(outs), (ins GPR:$rs2, GPRMem:$rs1, simm12:$imm12, qc_access_symbol:$expr),
+  : Pseudo<(outs), (ins GPR:$rs2, BasePtr:$rs1, simm12:$imm12, qc_access_symbol:$expr),
            [], opcodestr, "$rs2, ${imm12}(${rs1}), $expr">;
 
 
@@ -1408,15 +1408,15 @@ def PseudoQCAccessLW  : PseudoQCAccessLoad_ri<"lw">;
 
 let EmitPriority = 0 in {
 def : InstAlias<"lb $rd, (${rs1}), $expr",
-                (PseudoQCAccessLB GPR:$rd, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
+                (PseudoQCAccessLB GPR:$rd, BasePtr:$rs1, 0, qc_access_symbol:$expr)>;
 def : InstAlias<"lbu $rd, (${rs1}), $expr",
-                (PseudoQCAccessLB GPR:$rd, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
+                (PseudoQCAccessLB GPR:$rd, BasePtr:$rs1, 0, qc_access_symbol:$expr)>;
 def : InstAlias<"lh $rd, (${rs1}), $expr",
-                (PseudoQCAccessLH GPR:$rd, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
+                (PseudoQCAccessLH GPR:$rd, BasePtr:$rs1, 0, qc_access_symbol:$expr)>;
 def : InstAlias<"lhu $rd, (${rs1}), $expr",
-                (PseudoQCAccessLHU GPR:$rd, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
+                (PseudoQCAccessLHU GPR:$rd, BasePtr:$rs1, 0, qc_access_symbol:$expr)>;
 def : InstAlias<"lw $rd, (${rs1}), $expr",
-                (PseudoQCAccessLW GPR:$rd, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
+                (PseudoQCAccessLW GPR:$rd, BasePtr:$rs1, 0, qc_access_symbol:$expr)>;
 }
 
 def PseudoQCAccessSW : PseudoQCAccessStore_rri<"sw">;
@@ -1425,11 +1425,11 @@ def PseudoQCAccessSB : PseudoQCAccessStore_rri<"sb">;
 
 let EmitPriority = 0 in {
 def : InstAlias<"sb $rs2, (${rs1}), $expr",
-                (PseudoQCAccessSB GPR:$rs2, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
+                (PseudoQCAccessSB GPR:$rs2, BasePtr:$rs1, 0, qc_access_symbol:$expr)>;
 def : InstAlias<"sh $rs2, (${rs1}), $expr",
-                (PseudoQCAccessSH GPR:$rs2, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
+                (PseudoQCAccessSH GPR:$rs2, BasePtr:$rs1, 0, qc_access_symbol:$expr)>;
 def : InstAlias<"sw $rs2, (${rs1}), $expr",
-                (PseudoQCAccessSW GPR:$rs2, GPRMem:$rs1, 0, qc_access_symbol:$expr)>;
+                (PseudoQCAccessSW GPR:$rs2, BasePtr:$rs1, 0, qc_access_symbol:$expr)>;
 }
 }
 
@@ -1522,12 +1522,12 @@ class QC48StPat<PatFrag StoreOp, RVInst48 Inst>
 def AddrRegRegScale7 : AddrRegRegScale<7>;
 
 class QCScaledLdPat<PatFrag LoadOp, RVInst Inst>
-    : Pat<(i32 (LoadOp (AddrRegRegScale7 (i32 GPRMem:$rs1), (i32 GPRNoX0:$rs2), uimm3:$shamt))),
-          (Inst GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt)>;
+    : Pat<(i32 (LoadOp (AddrRegRegScale7 (i32 BasePtr:$rs1), (i32 GPRNoX0:$rs2), uimm3:$shamt))),
+          (Inst BasePtr:$rs1, GPRNoX0:$rs2, uimm3:$shamt)>;
 
 class QCScaledStPat<PatFrag StoreOp, RVInst Inst>
-    : Pat<(StoreOp (i32 GPR:$rd), (AddrRegRegScale7 (i32 GPRMem:$rs1), (i32 GPRNoX0:$rs2), uimm3:$shamt)),
-          (Inst GPR:$rd, GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt)>;
+    : Pat<(StoreOp (i32 GPR:$rd), (AddrRegRegScale7 (i32 BasePtr:$rs1), (i32 GPRNoX0:$rs2), uimm3:$shamt)),
+          (Inst GPR:$rd, BasePtr:$rs1, GPRNoX0:$rs2, uimm3:$shamt)>;
 
 class QCIMVCCPat<CondCode Cond, QCIMVCC Inst>
     : Pat<(i32 (riscv_selectcc (i32 GPRNoX0:$rs1), (i32 GPRNoX0:$rs2), Cond, (i32 GPRNoX0:$rs3), (i32 GPRNoX0:$rd))),
@@ -1912,27 +1912,27 @@ def : CompressPat<(QC_E_LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm),
                   (C_LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
 def : CompressPat<(QC_E_LW GPRNoX0:$rd, SPMem:$rs1,  uimm8_lsb00:$imm),
                   (C_LWSP GPRNoX0:$rd, SPMem:$rs1, uimm8_lsb00:$imm)>;
-def : CompressPat<(QC_E_LB GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12),
-                  (LB GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12)>;
-def : CompressPat<(QC_E_LBU GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12),
-                  (LBU GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12)>;
-def : CompressPat<(QC_E_LH GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12),
-                  (LH GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12)>;
-def : CompressPat<(QC_E_LHU GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12),
-                  (LHU GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12)>;
-def : CompressPat<(QC_E_LW GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12),
-                  (LW GPR:$rd, GPRMem:$rs1, simm12_lo:$imm12)>;
+def : CompressPat<(QC_E_LB GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12),
+                  (LB GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12)>;
+def : CompressPat<(QC_E_LBU GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12),
+                  (LBU GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12)>;
+def : CompressPat<(QC_E_LH GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12),
+                  (LH GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12)>;
+def : CompressPat<(QC_E_LHU GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12),
+                  (LHU GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12)>;
+def : CompressPat<(QC_E_LW GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12),
+                  (LW GPR:$rd, BasePtr:$rs1, simm12_lo:$imm12)>;
 
 def : CompressPat<(QC_E_SW GPRC:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm),
                   (C_SW GPRC:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
 def : CompressPat<(QC_E_SW GPR:$rs2, SPMem:$rs1, uimm8_lsb00:$imm),
                   (C_SWSP GPR:$rs2, SPMem:$rs1, uimm8_lsb00:$imm)>;
-def : CompressPat<(QC_E_SB GPR:$rs2, GPRMem:$rs1, simm12_lo:$imm12),
-                  (SB GPR:$rs2, GPRMem:$rs1, simm12_lo:$imm12)>;
-def : CompressPat<(QC_E_SH GPR:$rs2, GPRMem:$rs1, simm12_lo:$imm12),
-                  (SH GPR:$rs2, GPRMem:$rs1, simm12_lo:$imm12)>;
-def : CompressPat<(QC_E_SW GPR:$rs2, GPRMem:$rs1, simm12_lo:$imm12),
-                  (SW GPR:$rs2, GPRMem:$rs1, simm12_lo:$imm12)>;
+def : CompressPat<(QC_E_SB GPR:$rs2, BasePtr:$rs1, simm12_lo:$imm12),
+                  (SB GPR:$rs2, BasePtr:$rs1, simm12_lo:$imm12)>;
+def : CompressPat<(QC_E_SH GPR:$rs2, BasePtr:$rs1, simm12_lo:$imm12),
+                  (SH GPR:$rs2, BasePtr:$rs1, simm12_lo:$imm12)>;
+def : CompressPat<(QC_E_SW GPR:$rs2, BasePtr:$rs1, simm12_lo:$imm12),
+                  (SW GPR:$rs2, BasePtr:$rs1, simm12_lo:$imm12)>;
 } // isCompressOnly = true, Predicates = [HasVendorXqcilo, IsRV32]
 
 let Predicates = [HasVendorXqcicm, IsRV32] in {

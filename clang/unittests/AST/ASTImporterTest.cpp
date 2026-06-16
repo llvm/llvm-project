@@ -1133,6 +1133,16 @@ TEST_P(ImportExpr, DependentSizedExtVectorType) {
                  has(typedefDecl(hasType(dependentSizedExtVectorType())))))));
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportFileScopeAsmDecl) {
+  Decl *FromTU = getTuDecl("__asm(\"nop\");", Lang_CXX03);
+  auto From =
+      FirstDeclMatcher<FileScopeAsmDecl>().match(FromTU, fileScopeAsmDecl());
+  ASSERT_TRUE(From);
+  FileScopeAsmDecl *To = Import(From, Lang_CXX03);
+  EXPECT_TRUE(To);
+  EXPECT_EQ(To->getAsmString(), "nop");
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase, ImportUsingPackDecl) {
   Decl *FromTU = getTuDecl(
       "struct A { int operator()() { return 1; } };"

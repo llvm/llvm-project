@@ -22,6 +22,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/float128.h"
 #include <memory>
+#include <optional>
 
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
   do {                                                                         \
@@ -1762,8 +1763,9 @@ inline APFloat maximumnum(const APFloat &A, const APFloat &B) {
 
 /// Implement IEEE 754-2019 exp functions
 LLVM_READONLY
-LLVM_ABI APFloat exp(const APFloat &X,
-                     RoundingMode RM = APFloat::rmNearestTiesToEven);
+LLVM_ABI std::optional<APFloat>
+exp(const APFloat &X, RoundingMode RM = APFloat::rmNearestTiesToEven,
+    APFloat::opStatus *Status = nullptr);
 
 inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
   V.print(OS);

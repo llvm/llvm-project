@@ -17,9 +17,9 @@ define amdgpu_kernel void @buffer_last_use_load_0(ptr addrspace(7) %in, ptr addr
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x20
 ; GFX12-NEXT:    s_load_b32 s7, s[4:5], 0x30
+; GFX12-NEXT:    buffer_load_b32 v0, v0, s[8:11], null offen th:TH_LOAD_LU
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v1, s0
-; GFX12-NEXT:    buffer_load_b32 v0, v0, s[8:11], null offen th:TH_LOAD_LU
 ; GFX12-NEXT:    s_mov_b32 s4, s1
 ; GFX12-NEXT:    s_mov_b32 s5, s2
 ; GFX12-NEXT:    s_mov_b32 s6, s3
@@ -79,10 +79,10 @@ define amdgpu_kernel void @buffer_last_use_and_volatile_load(ptr addrspace(7) %i
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x20
 ; GFX12-NEXT:    s_load_b32 s7, s[4:5], 0x30
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-NEXT:    buffer_load_b32 v0, v0, s[8:11], null offen th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-NEXT:    s_mov_b32 s4, s1
 ; GFX12-NEXT:    s_mov_b32 s5, s2
 ; GFX12-NEXT:    s_mov_b32 s6, s3
@@ -108,9 +108,9 @@ define amdgpu_kernel void @buffer_last_use_and_nontemporal_load(ptr addrspace(7)
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x20
 ; GFX12-NEXT:    s_load_b32 s7, s[4:5], 0x30
+; GFX12-NEXT:    buffer_load_b32 v0, v0, s[8:11], null offen th:TH_LOAD_LU
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v1, s0
-; GFX12-NEXT:    buffer_load_b32 v0, v0, s[8:11], null offen th:TH_LOAD_LU
 ; GFX12-NEXT:    s_mov_b32 s4, s1
 ; GFX12-NEXT:    s_mov_b32 s5, s2
 ; GFX12-NEXT:    s_mov_b32 s6, s3

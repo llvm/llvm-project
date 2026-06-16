@@ -1360,20 +1360,24 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
   const NVPTXMachineFunctionInfo *MFI =
       MF ? MF->getInfo<NVPTXMachineFunctionInfo>() : nullptr;
 
+  bool IsFirst = true;
   const bool IsKernelFunc = isKernelFunction(*F);
 
-  assert(!F->isVarArg() && "VarArg functions lowered in ExpandVariadics");
-
-  if (F->arg_empty()) {
+  if (F->arg_empty() && !F->isVarArg()) {
     O << "()";
     return;
   }
 
   O << "(\n";
 
-  auto EmitParam = [&](const Argument &Arg) {
+  for (const Argument &Arg : F->args()) {
     Type *Ty = Arg.getType();
     const std::string ParamSym = TLI->getParamName(F, Arg.getArgNo());
+
+    if (!IsFirst)
+      O << ",\n";
+
+    IsFirst = false;
 
     // Handle image/sampler parameters
     if (IsKernelFunc) {
@@ -1398,7 +1402,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
           llvm_unreachable("handled above");
         }
         O << ParamSym;
-        return;
+        continue;
       }
     }
 
@@ -1420,7 +1424,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
       O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
         << "[" << DL.getTypeAllocSize(ETy) << "]";
-      return;
+      continue;
     }
 
     if (shouldPassAsArray(Ty)) {
@@ -1434,7 +1438,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
         << "[" << DL.getTypeAllocSize(Ty) << "]";
 
-      return;
+      continue;
     }
     // Just a scalar
     auto *PTy = dyn_cast<PointerType>(Ty);
@@ -1468,7 +1472,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
         O << " .align " << Arg.getParamAlign().valueOrOne().value() << " "
           << ParamSym;
-        return;
+        continue;
       }
 
       // non-pointer scalar to kernel func
@@ -1479,7 +1483,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       else
         O << getPTXFundamentalTypeStr(Ty);
       O << " " << ParamSym;
-      return;
+      continue;
     }
     // Non-kernel function, just print .param .b<size> for ABI
     // and .reg .b<size> for non-ABI
@@ -1492,8 +1496,14 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
     } else
       Size = Ty->getPrimitiveSizeInBits();
     O << "\t.param .b" << Size << " " << ParamSym;
-  };
-  interleave(F->args(), O, EmitParam, ",\n");
+  }
+
+  if (F->isVarArg()) {
+    if (!IsFirst)
+      O << ",\n";
+    O << "\t.param .align " << STI.getMaxRequiredAlignment() << " .b8 "
+      << TLI->getParamName(F, /* vararg */ -1) << "[]";
+  }
 
   O << "\n)";
 }

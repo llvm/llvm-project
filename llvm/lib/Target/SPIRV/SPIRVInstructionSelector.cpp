@@ -1042,6 +1042,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_MEMCPY:
   case TargetOpcode::G_MEMCPY_INLINE:
   case TargetOpcode::G_MEMSET:
+  case TargetOpcode::G_MEMSET_INLINE:
     return selectMemOperation(ResVReg, I);
 
   case TargetOpcode::G_ICMP:
@@ -2381,7 +2382,8 @@ bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
     return true;
 
   Register SrcReg = I.getOperand(1).getReg();
-  if (I.getOpcode() == TargetOpcode::G_MEMSET) {
+  if (I.getOpcode() == TargetOpcode::G_MEMSET ||
+      I.getOpcode() == TargetOpcode::G_MEMSET_INLINE) {
     Register VarReg = getOrCreateMemSetGlobal(I);
     if (!VarReg.isValid())
       return false;
@@ -5386,6 +5388,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_quad_read_across_y: {
     return selectQuadSwap(ResVReg, ResType, I, /*Direction*/ 1);
   }
+  case Intrinsic::spv_quad_read_across_diagonal: {
+    return selectQuadSwap(ResVReg, ResType, I, /*Direction*/ 2);
+  }
   case Intrinsic::spv_step:
     return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
   case Intrinsic::spv_radians:
@@ -7118,7 +7123,6 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
                          .addUse(GR.getSPIRVTypeID(FloatType))
                          .addUse(Variable);
       LoadMIB.constrainAllUses(TII, TRI, RBI);
-      return true;
     }
 
     MIB.constrainAllUses(TII, TRI, RBI);

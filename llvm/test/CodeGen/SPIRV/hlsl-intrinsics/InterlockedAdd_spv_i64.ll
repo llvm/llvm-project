@@ -1,10 +1,6 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv1.6-vulkan1.3-compute %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-vulkan1.3-compute %s -o - -filetype=obj | spirv-val %}
 
-; XFAIL: *
-; Int64Atomics capability is not yet available for Vulkan targets.
-; See https://github.com/llvm/llvm-project/issues/202456
-
 ; Test lowering of llvm.spv.interlocked.add with i64 to OpAtomicIAdd.
 
 ; CHECK-DAG: %[[#ulong:]] = OpTypeInt 64 0

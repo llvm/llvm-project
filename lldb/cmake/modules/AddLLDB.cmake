@@ -347,10 +347,12 @@ function(add_lldb_library name)
     set_target_properties(${name} PROPERTIES FOLDER "LLDB/Libraries")
   endif()
 
-  # If we want to export all lldb symbols (i.e LLDB_EXPORT_ALL_SYMBOLS=ON), we
-  # need to use default visibility for all LLDB libraries even if a global
-  # `CMAKE_CXX_VISIBILITY_PRESET=hidden`is present.
-  if (LLDB_EXPORT_ALL_SYMBOLS)
+  # When liblldb re-exports private symbols (due to LLDB_EXPORT_ALL_SYMBOLS
+  # and/or LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS) those symbols must keep
+  # default visibility in the contributing libraries, even if a global
+  # `CMAKE_CXX_VISIBILITY_PRESET=hidden` is present. A linker version script
+  # cannot re-export a symbol that was hidden at compile time.
+  if (LLDB_EXPORT_ALL_SYMBOLS OR LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
     set_target_properties(${name} PROPERTIES CXX_VISIBILITY_PRESET default)
   endif()
 endfunction(add_lldb_library)

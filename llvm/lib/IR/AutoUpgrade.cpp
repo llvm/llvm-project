@@ -1000,6 +1000,12 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return true;
       }
 
+      // vcvtfp2hf and vcvthf2fp -> fpext and fptrunc
+      if (Name == "vcvtfp2hf" || Name == "vcvthf2fp") {
+        NewFn = nullptr;
+        return true;
+      }
+
       return false; // No other 'aarch64.neon.*'.
     }
     if (Name.consume_front("sve.")) {
@@ -4669,6 +4675,19 @@ static Value *upgradeAArch64IntrinsicCall(StringRef Name, CallBase *CI,
     return Builder.CreateIntrinsic(NewID, Args, /*FMFSource=*/nullptr,
                                    CI->getName());
   }
+
+  if (Name == "neon.vcvtfp2hf")
+    return Builder.CreateBitCast(
+        Builder.CreateFPTrunc(
+            CI->getOperand(0),
+            FixedVectorType::get(Type::getHalfTy(F->getContext()), 4)),
+        FixedVectorType::get(Type::getInt16Ty(F->getContext()), 4));
+  if (Name == "neon.vcvthf2fp")
+    return Builder.CreateFPExt(
+        Builder.CreateBitCast(
+            CI->getOperand(0),
+            FixedVectorType::get(Type::getHalfTy(F->getContext()), 4)),
+        FixedVectorType::get(Type::getFloatTy(F->getContext()), 4));
 
   llvm_unreachable("Unhandled Intrinsic!");
 }

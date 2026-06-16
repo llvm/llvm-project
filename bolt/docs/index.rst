@@ -1,6 +1,11 @@
 BOLT
 ====
 
+.. toctree::
+   :hidden:
+
+   BOLTAArch64OptimizationStatus
+
 BOLT is a post-link optimizer developed to speed up large applications.
 It achieves the improvements by optimizing application’s code layout
 based on execution profile gathered by sampling profiler, such as Linux

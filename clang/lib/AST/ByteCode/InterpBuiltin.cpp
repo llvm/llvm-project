@@ -2580,7 +2580,7 @@ static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
   }
 
   // Check if we're currently running an initializer.
-  if (llvm::is_contained(S.InitializingBlocks, Ptr.block()))
+  if (S.initializingBlock(Ptr.block()))
     return Error(2);
   if (S.EvaluatingDecl && Ptr.getDeclDesc()->asVarDecl() == S.EvaluatingDecl)
     return Error(2);

@@ -1853,6 +1853,15 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
   }
 }
 
+void VPlanTransforms::simplifyReverses(VPlan &Plan) {
+  VPValue *X;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry())))
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB))
+      if (match(&R, m_Reverse(m_Reverse(m_VPValue(X)))))
+        R.getVPSingleValue()->replaceAllUsesWith(X);
+}
+
 /// Reassociate (headermask && x) && y -> headermask && (x && y) to allow the
 /// header mask to be simplified further when tail folding, e.g. in
 /// optimizeEVLMasks.
@@ -2822,6 +2831,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   RUN_VPLAN_PASS(reassociateHeaderMask, Plan);
   RUN_VPLAN_PASS(simplifyRecipes, Plan);
   RUN_VPLAN_PASS(removeBranchOnConst, Plan, /*OnlyLatches=*/false);
+  RUN_VPLAN_PASS(simplifyReverses, Plan);
   RUN_VPLAN_PASS(removeDeadRecipes, Plan);
 
   RUN_VPLAN_PASS(createAndOptimizeReplicateRegions, Plan);
@@ -3025,8 +3035,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     auto *LoadR = new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe),
                                            Addr, EVL, Mask);
     LoadR->insertBefore(&CurRecipe);
-    VPValue *Poison =
-        Plan->getOrAddLiveIn(PoisonValue::get(LoadR->getScalarType()));
+    VPValue *Poison = Plan->getPoison(LoadR->getScalarType());
     return new VPWidenIntrinsicRecipe(Intrinsic::vector_splice_left,
                                       {Poison, LoadR, &EVL},
                                       LoadR->getScalarType(), {}, {}, DL);
@@ -3057,8 +3066,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
       match(EndPtr, m_VecEndPtr(m_VPValue(), m_Specific(&Plan->getVF())))) {
     Mask = GetVPReverse(Mask);
     Addr = AdjustEndPtr(EndPtr);
-    VPValue *Poison =
-        Plan->getOrAddLiveIn(PoisonValue::get(StoredVal->getScalarType()));
+    VPValue *Poison = Plan->getPoison(StoredVal->getScalarType());
     auto *SpliceR = new VPWidenIntrinsicRecipe(
         Intrinsic::vector_splice_right, {StoredVal, Poison, &EVL},
         StoredVal->getScalarType(), {}, {}, DL);
@@ -3157,11 +3165,22 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
     }
   }
 
-  // Fold the following splice patterns into vp.reverse for reverse accesses:
+  // Fold the following splice patterns:
+  //   splice.right(splice.left(poison, x, evl), poison, evl) -> x
   //   vector.reverse(splice.left(poison, x, evl))  -> vp.reverse(x, true, evl)
   //   splice.right(vector.reverse(x), poison, evl) -> vp.reverse(x, true, evl)
   for (VPUser *U : collectUsersRecursively(EVL)) {
+    auto *R = cast<VPRecipeBase>(U);
     VPValue *X;
+    if (match(U, m_Intrinsic<Intrinsic::vector_splice_right>(
+                     m_Intrinsic<Intrinsic::vector_splice_left>(
+                         m_Poison(), m_VPValue(X), m_Specific(EVL)),
+                     m_Poison(), m_Specific(EVL)))) {
+      R->getVPSingleValue()->replaceAllUsesWith(X);
+      OldRecipes.push_back(R);
+      continue;
+    }
+
     if (!match(U,
                m_CombineOr(
                    m_Reverse(m_Intrinsic<Intrinsic::vector_splice_left>(
@@ -3170,13 +3189,12 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
                        m_Reverse(m_VPValue(X)), m_Poison(), m_Specific(EVL)))))
       continue;
 
-    auto *Def = cast<VPSingleDefRecipe>(U);
     auto *VPReverse = new VPWidenIntrinsicRecipe(
         Intrinsic::experimental_vp_reverse, {X, Plan.getTrue(), EVL},
-        X->getScalarType(), {}, {}, Def->getDebugLoc());
-    VPReverse->insertBefore(Def);
-    Def->replaceAllUsesWith(VPReverse);
-    OldRecipes.push_back(Def);
+        X->getScalarType(), {}, {}, R->getDebugLoc());
+    VPReverse->insertBefore(R);
+    R->getVPSingleValue()->replaceAllUsesWith(VPReverse);
+    OldRecipes.push_back(R);
   }
 
   for (VPRecipeBase *R : reverse(OldRecipes)) {
@@ -5522,8 +5540,7 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
     // TripCount should not be used after expansion to VPInstructions. Reset to
     // poison to avoid dangling references.
     if (Plan.getTripCount() == ExpSCEV)
-      Plan.resetTripCount(
-          Plan.getOrAddLiveIn(PoisonValue::get(ExpSCEV->getScalarType())));
+      Plan.resetTripCount(Plan.getPoison(ExpSCEV->getScalarType()));
     ExpSCEV->eraseFromParent();
   }
 }

@@ -4394,6 +4394,7 @@ cc_library(
         ":ConversionPassIncGen",
         ":ConvertToEmitC",
         ":ConvertToLLVM",
+        ":EmitCCommon",
         ":FuncToEmitC",
         ":FuncToLLVM",
         ":FuncToSPIRV",
@@ -7378,6 +7379,7 @@ cc_library(
     deps = [
         ":ConversionPassIncGen",
         ":ConvertToEmitCInterface",
+        ":EmitCCommon",
         ":EmitCDialect",
         ":FuncDialect",
         ":IR",
@@ -7760,6 +7762,7 @@ cc_library(
         ":BufferizationInterfaces",
         ":ControlFlowDialect",
         ":DialectUtils",
+        ":FuncDialect",
         ":IR",
         ":LinalgDialect",
         ":MemRefDialect",
@@ -8217,6 +8220,7 @@ cc_library(
         ":ArithDialect",
         ":ConversionPassIncGen",
         ":ConvertToEmitCInterface",
+        ":EmitCCommon",
         ":EmitCDialect",
         ":EmitCTransforms",
         ":IR",
@@ -8398,6 +8402,7 @@ cc_library(
     deps = [
         ":ConversionPassIncGen",
         ":ConvertToEmitCInterface",
+        ":EmitCCommon",
         ":EmitCDialect",
         ":IR",
         ":LLVMCommonConversion",
@@ -8521,6 +8526,24 @@ cc_library(
 )
 
 cc_library(
+    name = "EmitCCommon",
+    srcs = glob([
+        "lib/Conversion/EmitCCommon/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/EmitCCommon/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":EmitCDialect",
+        ":IR",
+        ":Pass",
+        ":TransformUtils",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "MemRefToEmitC",
     srcs = glob([
         "lib/Conversion/MemRefToEmitC/*.cpp",
@@ -8535,6 +8558,7 @@ cc_library(
     deps = [
         ":ConversionPassIncGen",
         ":ConvertToEmitCInterface",
+        ":EmitCCommon",
         ":EmitCDialect",
         ":IR",
         ":LoopLikeInterface",
@@ -8688,6 +8712,7 @@ cc_library(
         ":ArithDialect",
         ":ConversionPassIncGen",
         ":ConvertToEmitCInterface",
+        ":EmitCCommon",
         ":EmitCDialect",
         ":EmitCTransforms",
         ":IR",
@@ -8788,6 +8813,7 @@ cc_library(
     ],
     deps = [
         ":ConversionPassIncGen",
+        ":EmitCCommon",
         ":EmitCDialect",
         ":MathDialect",
         ":Pass",

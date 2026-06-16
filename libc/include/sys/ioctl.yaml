@@ -4,7 +4,10 @@ standards:
 macros:
   - macro_name: FIONREAD
     macro_header: sys-ioctl-macros.h
-types: []
+  - macro_name: TIOCGWINSZ
+    macro_header: sys-ioctl-macros.h
+types:
+  - type_name: struct_winsize
 enums: []
 objects: []
 functions:

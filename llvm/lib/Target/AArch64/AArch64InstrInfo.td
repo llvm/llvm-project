@@ -1614,16 +1614,6 @@ def WFET : RegInputSystemI<0b0000, 0b000, "wfet">;
 def WFIT : RegInputSystemI<0b0000, 0b001, "wfit">;
 }
 
-// Branch Record Buffer two-word mnemonic instructions
-class BRBEI<bits<3> op2, string keyword>
-    : SimpleSystemI<0, (ins), "brb", keyword>, Sched<[WriteSys]> {
-  let Inst{31-8} = 0b110101010000100101110010;
-  let Inst{7-5} = op2;
-  let Predicates = [HasBRBE];
-}
-def BRB_IALL: BRBEI<0b100, "\tiall">;
-def BRB_INJ:  BRBEI<0b101, "\tinj">;
-
 }
 
 // Allow uppercase and lowercase keyword arguments for BRB IALL and BRB INJ
@@ -2552,6 +2542,14 @@ def SYSLxt : SystemLXtI<1, "sysl">;
 def : InstAlias<"sys $op1, $Cn, $Cm, $op2",
                 (SYSxt timm32_0_7:$op1, sys_cr_op:$Cn,
                  sys_cr_op:$Cm, timm32_0_7:$op2, XZR)>;
+def : InstAlias<"apas $Xt",
+                (SYSxt 6, 7, 0, 0, GPR64:$Xt), 2>;
+def : InstAlias<"brb\tiall",
+                (SYSxt 1, 7, 2, 4, XZR), 2>, Requires<[HasBRBE]>;
+def : InstAlias<"brb\tinj",
+                (SYSxt 1, 7, 2, 5, XZR), 2>, Requires<[HasBRBE]>;
+def : InstAlias<"trcit $Rt",
+                (SYSxt 3, 7, 2, 7, GPR64:$Rt), 2>, Requires<[HasITE]>;
 
 
 //===----------------------------------------------------------------------===//
@@ -3080,9 +3078,6 @@ let Predicates = [HasLSUI] in {
   defm : STOPregisterLSUI<"sttclr","LDTCLR">; // STTCLRx
   defm : STOPregisterLSUI<"sttset","LDTSET">; // STTSETx
 }
-
-// v9.6-a FEAT_RME_GPC3
-def APAS : APASI;
 
 // v8.1 atomic LD<OP>(register). Performs load and then ST<OP>(register)
 defm LDADD   : LDOPregister<0b000, "add", 0, 0, "">;
@@ -5833,11 +5828,6 @@ defm FCMLT  : SIMDFPCmpTwoVector<0, 1, 0b01110, "fcmlt", AArch64fcmltz>;
 defm FCVTAS : SIMDTwoVectorFPToInt<0,0,0b11100, "fcvtas",int_aarch64_neon_fcvtas>;
 defm FCVTAU : SIMDTwoVectorFPToInt<1,0,0b11100, "fcvtau",int_aarch64_neon_fcvtau>;
 defm FCVTL  : SIMDFPWidenTwoVector<0, 0, 0b10111, "fcvtl">;
-def : Pat<(v4f32 (int_aarch64_neon_vcvthf2fp (v4i16 V64:$Rn))),
-          (FCVTLv4i16 V64:$Rn)>;
-def : Pat<(v4f32 (int_aarch64_neon_vcvthf2fp (extract_subvector (v8i16 V128:$Rn),
-                                                                (i64 4)))),
-          (FCVTLv8i16 V128:$Rn)>;
 def : Pat<(v2f64 (any_fpextend (v2f32 V64:$Rn))),
           (FCVTLv2i32 V64:$Rn)>;
 def : Pat<(v2f64 (any_fpextend (v2f32 (extract_high_v4f32 (v4f32 V128:$Rn))))),
@@ -5851,11 +5841,6 @@ defm FCVTMU : SIMDTwoVectorFPToInt<1,0,0b11011, "fcvtmu",int_aarch64_neon_fcvtmu
 defm FCVTNS : SIMDTwoVectorFPToInt<0,0,0b11010, "fcvtns",int_aarch64_neon_fcvtns>;
 defm FCVTNU : SIMDTwoVectorFPToInt<1,0,0b11010, "fcvtnu",int_aarch64_neon_fcvtnu>;
 defm FCVTN  : SIMDFPNarrowTwoVector<0, 0, 0b10110, "fcvtn">;
-def : Pat<(v4i16 (int_aarch64_neon_vcvtfp2hf (v4f32 V128:$Rn))),
-          (FCVTNv4i16 V128:$Rn)>;
-def : Pat<(concat_vectors V64:$Rd,
-                          (v4i16 (int_aarch64_neon_vcvtfp2hf (v4f32 V128:$Rn)))),
-          (FCVTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub), V128:$Rn)>;
 def : Pat<(v2f32 (any_fpround (v2f64 V128:$Rn))),
           (FCVTNv2i32 V128:$Rn)>;
 def : Pat<(v4f16 (any_fpround (v4f32 V128:$Rn))),

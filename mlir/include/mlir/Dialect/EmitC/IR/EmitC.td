@@ -302,7 +302,7 @@ def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", [CExpressionInterface]> {
     Arg<StrAttr, "the C++ function to call">:$callee,
     Arg<OptionalAttr<ArrayAttr>, "the order of operands and further attributes">:$args,
     Arg<OptionalAttr<ArrayAttr>, "template arguments">:$template_args,
-    Variadic<EmitCType>:$arg_operands
+    Variadic<AnyTypeOf<[EmitCType, EmitC_LValueType]>>:$arg_operands
   );
   let results = (outs Variadic<EmitCType>);
   let builders = [
@@ -347,7 +347,7 @@ def EmitC_MemberCallOpaqueOp : EmitC_Op<"member_call_opaque", [CExpressionInterf
     StrAttr:$callee,
     OptionalAttr<ArrayAttr>:$args,
     OptionalAttr<ArrayAttr>:$template_args,
-    Variadic<EmitCType>:$arg_operands
+    Variadic<AnyTypeOf<[EmitCType, EmitC_LValueType]>>:$arg_operands
   );
   let results = (outs Variadic<EmitCType>);
 
@@ -359,7 +359,10 @@ def EmitC_MemberCallOpaqueOp : EmitC_Op<"member_call_opaque", [CExpressionInterf
 
 def EmitC_CastOp : EmitC_Op<"cast",
     [CExpressionInterface,
-     DeclareOpInterfaceMethods<CastOpInterface>]> {
+     DeclareOpInterfaceMethods<CastOpInterface>,
+     DeclareOpInterfaceMethods<ConditionallySpeculatable>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+    ]> {
   let summary = "Cast operation";
   let description = [{
     The `emitc.cast` operation performs an explicit type conversion and is emitted
@@ -376,15 +379,32 @@ def EmitC_CastOp : EmitC_Op<"cast",
     %1 = emitc.cast %arg1 :
         !emitc.ptr<!emitc.opaque<"void">> to !emitc.ptr<i32>
     ```
+
+    In general, C++ cast expressions cannot always be assumed to be pure:
+    they may invoke user-defined conversions or be affected by floating-point
+    environment settings. However, in many practical cases, such as integer
+    casts without operator overloading, the cast is pure and can be treated as
+    speculatable and side-effect-free. For such cases, the `pure` attribute
+    may be used.
+
+    When `pure` attribute is set, `getSpeculatability()` returns `Speculatable`
+    and `getEffects()` reports no effects. It is UB if the `pure` attribute is
+    set and the actual conversion is not pure, e.g. when the user-defined
+    conversion has memory effects.
   }];
 
-  let arguments = (ins EmitCType:$source);
+  let arguments = (ins EmitCType:$source,
+    UnitAttr:$pure
+  );
+
   let results = (outs EmitCType:$dest);
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
-      return false;
+      // Use the "pure" attribute to see whether this CastOp has side effects.
+      // Note that by default, `pure` is not set.
+      return getPure();
     }
   }];
 }

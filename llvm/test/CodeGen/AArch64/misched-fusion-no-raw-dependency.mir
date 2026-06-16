@@ -1,0 +1,37 @@
+# REQUIRES: asserts
+
+## Check that we don't fuse non-RAW dependent pairs.
+
+# RUN: llc -o /dev/null %s -mtriple=aarch64-unknown -mattr=+arith-cbz-fusion -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -mtriple=aarch64-unknown -mcpu=cyclone -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -mtriple=aarch64-unknown -mcpu=apple-m5 -passes=machine-scheduler -misched-print-dags -print-before=machine-scheduler 2>&1 | FileCheck %s
+
+## The arith op's def ($w0) is live-out via bb.1's livein,
+## so an Artificial edge from SU(ADDWri) to ExitSU is created by
+## addSchedBarrierDeps. The CBZ tests $w1, an unrelated register,
+## so there is no RAW between the candidate pair. MacroFusion must
+## not cluster them.
+
+# CHECK-LABEL: live_out_exit_su_no_raw
+# CHECK: SU({{[0-9]+}}): $w0 = ADDWri $w0, 13, 0
+# CHECK: Successors:
+# CHECK-NOT: Cluster
+# CHECK: ExitSU: CBZW
+---
+name: live_out_exit_su_no_raw
+tracksRegLiveness: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $w0, $w1
+    $w0 = ADDWri $w0, 13, 0
+    $w3 = ORRWri $w1, 4096
+    CBZW $w1, %bb.2
+  bb.1:
+    liveins: $w0
+    RET undef $lr, implicit $w0
+  bb.2:
+    RET undef $lr
+...

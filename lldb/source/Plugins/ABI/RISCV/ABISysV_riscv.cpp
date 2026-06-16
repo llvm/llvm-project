@@ -753,6 +753,7 @@ UnwindPlanSP ABISysV_riscv::CreateDefaultUnwindPlan() {
   // have been spilled to stack already.
   row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, reg_size * -2, true);
   row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, reg_size * -1, true);
+  row.SetUnspecifiedRegistersAreUndefined(true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindGeneric);
   plan_sp->AppendRow(std::move(row));

@@ -5572,6 +5572,16 @@ public:
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandCLMUL(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand parallel bit extract (compress).
+  /// \param N Node to expand
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandPEXT(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand parallel bit deposit (expand).
+  /// \param N Node to expand
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandPDEP(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand rotations.
   /// \param N Node to expand
   /// \param AllowVectorOps expand vector rotate, this should only be performed

@@ -1326,7 +1326,16 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
       Input.getInputArg().renderAsInput(Args, CmdArgs);
   }
 
-  const char *Exec = Args.MakeArgString(D.GetProgramPath("flang", TC));
+  // Handle "clang --driver-mode=flang" case
+  bool isClangDriverWithFlangMode = false;
+  if (D.Name.find("clang") != std::string_view::npos)
+    if (const Arg *A = Args.getLastArg(options::OPT_driver_mode))
+      if (StringRef(A->getValue()) == "flang")
+        isClangDriverWithFlangMode = true;
+
+  const char *Exec = isClangDriverWithFlangMode
+                         ? Args.MakeArgString(D.GetProgramPath("flang", TC))
+                         : D.getDriverProgramPath();
   C.addCommand(std::make_unique<Command>(JA, *this,
                                          ResponseFileSupport::AtFileUTF8(),
                                          Exec, CmdArgs, Inputs, Output));

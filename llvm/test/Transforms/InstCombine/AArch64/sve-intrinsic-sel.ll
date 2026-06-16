@@ -16,12 +16,10 @@ define <vscale x 4 x i32> @sel_ptrue(<vscale x 4 x i32> %a, <vscale x 4 x i32> %
 ; CHECK-LABEL: @sel_ptrue(
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[A:%.*]]
 ;
-  %pred = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
-  %res = call <vscale x 4 x i32> @llvm.aarch64.sve.sel.nxv4i32(<vscale x 4 x i1> %pred, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
+  %res = call <vscale x 4 x i32> @llvm.aarch64.sve.sel.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
   ret <vscale x 4 x i32> %res
 }
 
-declare <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32)
 declare <vscale x 4 x i32> @llvm.aarch64.sve.sel.nxv4i32(<vscale x 4 x i1>, <vscale x 4 x i32>, <vscale x 4 x i32>)
 
 attributes #0 = { "target-features"="+sve" }

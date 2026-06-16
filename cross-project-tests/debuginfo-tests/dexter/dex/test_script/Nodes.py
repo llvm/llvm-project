@@ -10,6 +10,7 @@ constructor/representer in `setup_yaml_parser` before loading or printing any sc
 
 import abc
 from dataclasses import dataclass
+import re
 from typing import Any, Dict, Optional, Union
 import yaml
 from dex.dextIR.ValueIR import ValueIR
@@ -21,6 +22,7 @@ def setup_yaml_parser(loader):
         Where,
         Value,
         DexRange,
+        Label,
     ]
     for c in reg_classes:
         c.register_yaml(loader)
@@ -38,6 +40,14 @@ class DexterNodeError(Error):
         return f"Error with node: {self.node}: {self.msg}"
 
 
+@dataclass
+class FileLabels:
+    """Small utility class for passing the set of labels associated with a particular file."""
+
+    file: str
+    labels: Dict[str, int]
+
+
 ###################
 ## Structural Nodes: These are used as keys in the Script, and collectively define Dexter's actions when running a test:
 ##                   how it steps and navigates through the debuggee program, and what information it collects from the
@@ -52,7 +62,10 @@ class Where:
     def __init__(self, attributes: dict, is_and: bool):
         self.file: Optional[str] = attributes.pop("file", None)
         self.function: Union[list[str], str, None] = attributes.pop("function", None)
-        self.lines: Union[int, DexRange, None] = attributes.pop("lines", None)
+        lines = attributes.pop("lines", None)
+        if isinstance(lines, (int, Label)):
+            lines = Line(lines)
+        self.lines: Union[Line, DexRange, None] = lines
         self.after_hit_count: Optional[int] = attributes.pop("after_hit_count", None)
         self.for_hit_count: Optional[int] = attributes.pop("for_hit_count", None)
         self.conditions: dict = attributes.pop("conditions", None)
@@ -83,7 +96,7 @@ class Where:
         return {
             "file": self.file,
             "function": self.function,
-            "lines": self.lines,
+            "lines": self.lines.value if isinstance(self.lines, Line) else self.lines,
             "for_hit_count": self.for_hit_count,
             "after_hit_count": self.after_hit_count,
             "conditions": self.conditions,
@@ -110,17 +123,18 @@ class Where:
         yaml.add_constructor("!and", Where.get_constructor(True), loader)
         yaml.add_representer(Where, Where.representer)
 
-    def get_lines(self) -> range:
+    def get_lines(self, labels: FileLabels) -> range:
         """Returns the range of line numbers that this Where references, returning an empty range if this Where does not
         refer to any lines."""
         if not self.lines:
             return range(-1)
-        if isinstance(self.lines, int):
-            return range(self.lines, self.lines + 1)
+        if isinstance(self.lines, Line):
+            line_num = self.lines.to_line(labels)
+            return range(line_num, line_num + 1)
         assert isinstance(
             self.lines, DexRange
         ), f"Invalid type for lines: {self.lines}: ({type(self.lines)})"
-        return self.lines.to_range()
+        return self.lines.to_range(labels)
 
 
 ###################
@@ -183,29 +197,82 @@ class Value(Expect):
 
 
 @dataclass(frozen=True)
+class Line:
+    """Union class between an int or a Label, used to represent lines inside of Nodes."""
+
+    value: Union[int, "Label"]
+
+    def to_line(self, labels: FileLabels) -> int:
+        if isinstance(self.value, int):
+            return self.value
+        return self.value.to_line(labels)
+
+    def __repr__(self):
+        return str(self.value)
+
+
+@dataclass(frozen=True)
 class DexRange:
-    start: int
-    stop: int
+    start: Line
+    stop: Line
 
     def __repr__(self) -> str:
         return f"[{self.start} - {self.stop}]"
 
     # We use an inclusive range in Dexter scripts, while python ranges are exclusive.
-    def to_range(self) -> range:
-        return range(self.start, self.stop + 1)
+    def to_range(self, labels: FileLabels) -> range:
+        return range(self.start.to_line(labels), self.stop.to_line(labels) + 1)
 
     @staticmethod
     def constructor(loader: yaml.Loader, node):
         range_seq = loader.construct_sequence(node)
-        if len(range_seq) != 2 or not all(isinstance(elt, int) for elt in range_seq):
+        if len(range_seq) != 2 or not all(
+            isinstance(elt, (int, Label)) for elt in range_seq
+        ):
             raise DexterNodeError(node, "range must have exactly 2 int elements")
-        return DexRange(range_seq[0], range_seq[1])
+        return DexRange(Line(range_seq[0]), Line(range_seq[1]))
 
     @staticmethod
     def representer(dumper, data: "DexRange"):
-        return dumper.represent_sequence("!range", [data.start, data.stop])
+        return dumper.represent_sequence("!range", [data.start.value, data.stop.value])
 
     @staticmethod
     def register_yaml(loader):
         yaml.add_constructor("!range", DexRange.constructor, loader)
         yaml.add_representer(DexRange, DexRange.representer)
+
+
+@dataclass(frozen=True)
+class Label:
+    name: str
+
+    def to_line(self, file_labels: FileLabels) -> int:
+        # Labels may contain offsets, which is accounted for here.
+        raw_label = self.name.strip()
+        label_str = raw_label
+        offset = 0
+        if match := re.match(r"^([a-zA-Z_]\w*)\s*([+-])\s*(\d+)$", raw_label):
+            identifier, sign, number = match.groups()
+            offset = int(number) if sign == "+" else -int(number)
+            label_str = identifier
+        if label_str not in file_labels.labels:
+            raise DexterNodeError(
+                self, f'Label "{label_str}" not found in file "{file_labels.file}"'
+            )
+        return file_labels.labels[label_str] + offset
+
+    def __repr__(self):
+        return f"Label({self.name})"
+
+    @staticmethod
+    def constructor(loader: yaml.Loader, node):
+        return Label(loader.construct_scalar(node))
+
+    @staticmethod
+    def representer(dumper, data: "Label"):
+        return dumper.represent_scalar("!label", data.name)
+
+    @staticmethod
+    def register_yaml(loader):
+        yaml.add_constructor("!label", Label.constructor, loader)
+        yaml.add_representer(Label, Label.representer)

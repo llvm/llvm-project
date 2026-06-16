@@ -25,15 +25,19 @@ StringRef llvm::getNameFromBundleAttr(BundleAttr BA) {
   llvm_unreachable("unknonwn bundle attribute");
 }
 
-BundleAttr llvm::getBundleAttrFromString(StringRef Str) {
-  return StringSwitch<BundleAttr>(Str)
-#define ATTR(Name, Str) .Case(#Str, BundleAttr::Name)
+BundleAttr llvm::getBundleAttrFromID(uint32_t ID) {
+  switch (ID) {
+#define ATTR(Name, Str)                                                        \
+  case LLVMContext::OB_##Name:                                                 \
+    return BundleAttr::Name;
 #include "llvm/IR/BundleAttributes.def"
-      .Default(BundleAttr::None);
+  default:
+    return BundleAttr::None;
+  }
 }
 
 AssumeAlignInfo llvm::getAssumeAlignInfo(OperandBundleUse OBU) {
-  assert(OBU.getTagName() == "align" && OBU.Inputs.size() >= 2 &&
+  assert(OBU.getTagID() == LLVMContext::OB_Align && OBU.Inputs.size() >= 2 &&
          OBU.Inputs.size() <= 3);
   AssumeAlignInfo Ret{OBU.Inputs[0], OBU.Inputs[1], std::nullopt, std::nullopt};
   if (auto *Align = dyn_cast<ConstantInt>(OBU.Inputs[1]))
@@ -48,24 +52,26 @@ AssumeAlignInfo llvm::getAssumeAlignInfo(OperandBundleUse OBU) {
 }
 
 AssumeNoUndefInfo llvm::getAssumeNoUndefInfo(OperandBundleUse OBU) {
-  assert(OBU.getTagName() == "noundef" && OBU.Inputs.size() == 1);
+  assert(OBU.getTagID() == LLVMContext::OB_NoUndef && OBU.Inputs.size() == 1);
   return {OBU.Inputs[0]};
 }
 
 AssumeSeparateStorageInfo
 llvm::getAssumeSeparateStorageInfo(OperandBundleUse OBU) {
-  assert(OBU.getTagName() == "separate_storage" && OBU.Inputs.size() == 2);
+  assert(OBU.getTagID() == LLVMContext::OB_SeparateStorage &&
+         OBU.Inputs.size() == 2);
   return {OBU.Inputs[0], OBU.Inputs[1]};
 }
 
 AssumeNonNullInfo llvm::getAssumeNonNullInfo(OperandBundleUse OBU) {
-  assert(OBU.getTagName() == "nonnull" && OBU.Inputs.size() == 1);
+  assert(OBU.getTagID() == LLVMContext::OB_NonNull && OBU.Inputs.size() == 1);
   return {OBU.Inputs[0]};
 }
 
 AssumeDereferenceableInfo
 llvm::getAssumeDereferenceableInfo(OperandBundleUse OBU) {
-  assert(OBU.getTagName() == "dereferenceable" && OBU.Inputs.size() == 2);
+  assert(OBU.getTagID() == LLVMContext::OB_Dereferenceable &&
+         OBU.Inputs.size() == 2);
   AssumeDereferenceableInfo Ret{OBU.Inputs[0], OBU.Inputs[1], std::nullopt};
 
   if (auto *Size = dyn_cast<ConstantInt>(OBU.Inputs[1]))
@@ -76,6 +82,12 @@ llvm::getAssumeDereferenceableInfo(OperandBundleUse OBU) {
 bool llvm::assumeBundleImpliesNonNull(const Value *Val, const Function *Context,
                                       OperandBundleUse OBU) {
   switch (getBundleAttrFromOBU(OBU)) {
+  case BundleAttr::Align: {
+    auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
+    return Ptr == Val && Alignment && Offset && isPowerOf2_64(*Alignment) &&
+           *Offset % *Alignment != 0;
+  }
+
   case BundleAttr::Dereferenceable: {
     auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
     return Ptr == Val && Count && *Count != 0 &&

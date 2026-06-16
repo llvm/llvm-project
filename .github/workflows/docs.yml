@@ -69,6 +69,8 @@ jobs:
           files_yaml: |
             llvm:
               - 'llvm/docs/**'
+            bolt:
+              - 'bolt/docs/**'
             clang:
               - 'clang/docs/**'
               - 'clang/include/clang/Basic/AttrDocs.td'
@@ -119,6 +121,15 @@ jobs:
           TZ=UTC ninja -C llvm-build docs-llvm-html docs-llvm-man
           mkdir built-docs/llvm
           cp -r llvm-build/docs/* built-docs/llvm/
+      - name: Build BOLT docs
+        if: |
+          steps.docs-changed-subprojects.outputs.bolt_any_changed == 'true' ||
+          steps.docs-changed-subprojects.outputs.workflow_any_changed == 'true'
+        run: |
+          cmake -B bolt-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="bolt" -DLLVM_ENABLE_SPHINX=ON ./llvm
+          TZ=UTC ninja -C bolt-build docs-bolt-html
+          mkdir built-docs/bolt
+          cp -r bolt-build/docs/* built-docs/bolt/
       - name: Build Clang docs
         if: |
           steps.docs-changed-subprojects.outputs.clang_any_changed == 'true' ||

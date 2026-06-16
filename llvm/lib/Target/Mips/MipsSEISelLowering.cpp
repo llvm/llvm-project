@@ -616,7 +616,8 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::EXTRACT_VECTOR_ELT: return lowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::BUILD_VECTOR:       return lowerBUILD_VECTOR(Op, DAG);
   case ISD::VECTOR_SHUFFLE:     return lowerVECTOR_SHUFFLE(Op, DAG);
-  case ISD::SELECT:             return lowerSELECT(Op, DAG);
+  case ISD::SELECT:
+    return lowerSELECT(Op, DAG);
   case ISD::SINT_TO_FP:
     return lowerINT_TO_FP(Op, DAG);
   case ISD::FP_TO_SINT:
@@ -3702,7 +3703,7 @@ MipsSETargetLowering::emitFILL_FD(MachineInstr &MI,
 // space.
 MachineBasicBlock *
 MipsSETargetLowering::emitST_F16_PSEUDO(MachineInstr &MI,
-                                       MachineBasicBlock *BB) const {
+                                        MachineBasicBlock *BB) const {
 
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
@@ -3723,7 +3724,7 @@ MipsSETargetLowering::emitST_F16_PSEUDO(MachineInstr &MI,
   Register Rs = RegInfo.createVirtualRegister(&Mips::GPR32RegClass);
 
   BuildMI(*BB, MI, DL, TII->get(Mips::COPY_U_H), Rs).addReg(Ws).addImm(0);
-  if(!UsingMips32) {
+  if (!UsingMips32) {
     Register Tmp = RegInfo.createVirtualRegister(&Mips::GPR64RegClass);
     BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Tmp)
         .addReg(Rs)
@@ -3756,7 +3757,7 @@ MipsSETargetLowering::emitST_F16_PSEUDO(MachineInstr &MI,
 //     intervention.
 MachineBasicBlock *
 MipsSETargetLowering::emitLD_F16_PSEUDO(MachineInstr &MI,
-                                       MachineBasicBlock *BB) const {
+                                        MachineBasicBlock *BB) const {
 
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
@@ -3779,7 +3780,7 @@ MipsSETargetLowering::emitLD_F16_PSEUDO(MachineInstr &MI,
   for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
     MIB.add(MO);
 
-  if(!UsingMips32) {
+  if (!UsingMips32) {
     Register Tmp = RegInfo.createVirtualRegister(&Mips::GPR32RegClass);
     BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Tmp)
         .addReg(Rt, {}, Mips::sub_32);
@@ -3841,10 +3842,8 @@ MipsSETargetLowering::emitLD_F16_PSEUDO(MachineInstr &MI,
 //              insert.w for one element, we avoid that potiential case. If
 //              fexdo.[hw] causes an exception in, the exception is valid and it
 //              occurs for all elements.
-MachineBasicBlock *
-MipsSETargetLowering::emitFPROUND_PSEUDO(MachineInstr &MI,
-                                         MachineBasicBlock *BB,
-                                         bool IsFGR64) const {
+MachineBasicBlock *MipsSETargetLowering::emitFPROUND_PSEUDO(
+    MachineInstr &MI, MachineBasicBlock *BB, bool IsFGR64) const {
 
   // Strictly speaking, we need MIPS32R5 to support MSA. We'll be generous
   // here. It's technically doable to support MIPS32 here, but the ISA forbids
@@ -3946,10 +3945,8 @@ MipsSETargetLowering::emitFPROUND_PSEUDO(MachineInstr &MI,
 //  mtc1 $rtemp, $ftemp
 //  copy_s.w $rtemp2, $wtemp2[1]
 //  $fd = mthc1 $rtemp2, $ftemp
-MachineBasicBlock *
-MipsSETargetLowering::emitFPEXTEND_PSEUDO(MachineInstr &MI,
-                                          MachineBasicBlock *BB,
-                                          bool IsFGR64) const {
+MachineBasicBlock *MipsSETargetLowering::emitFPEXTEND_PSEUDO(
+    MachineInstr &MI, MachineBasicBlock *BB, bool IsFGR64) const {
 
   // Strictly speaking, we need MIPS32R5 to support MSA. We'll be generous
   // here. It's technically doable to support MIPS32 here, but the ISA forbids

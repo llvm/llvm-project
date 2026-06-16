@@ -30,26 +30,18 @@ define amdgpu_kernel void @straightline_kernel(ptr addrspace(1) noalias %in, ptr
 ; GFX12-NEXT:    s_mov_b32 s7, 0
 ; GFX12-NEXT:  .LBB0_3: ; %main
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_lshlrev_b64_e32 v[8:9], 4, v[0:1]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_4)
 ; GFX12-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX12-NEXT:    v_mov_b32_e32 v5, v1
+; GFX12-NEXT:    v_lshlrev_b64_e32 v[8:9], 4, v[0:1]
+; GFX12-NEXT:    v_mov_b32_e32 v7, v1
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[10:11], 4, v[2:3]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_add_co_u32 v8, vcc_lo, s0, v8
-; GFX12-NEXT:    v_add_co_ci_u32_e64 v9, null, s1, v9, vcc_lo
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[12:13], 4, v[4:5]
-; GFX12-NEXT:    global_load_b128 v[2:5], v[8:9], off
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_dual_mov_b32 v7, v1 :: v_dual_add_nc_u32 v4, s6, v4
-; GFX12-NEXT:    v_add_nc_u32_e32 v5, s7, v5
-; GFX12-NEXT:    v_add_nc_u32_e32 v3, s5, v3
-; GFX12-NEXT:    v_add_nc_u32_e32 v2, s4, v2
+; GFX12-NEXT:    v_add_co_u32 v8, vcc_lo, s0, v8
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX12-NEXT:    v_lshlrev_b64_e32 v[14:15], 4, v[6:7]
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v9, null, s1, v9, vcc_lo
 ; GFX12-NEXT:    v_add_co_u32 v6, vcc_lo, s0, v10
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v7, null, s1, v11, vcc_lo
@@ -59,10 +51,18 @@ define amdgpu_kernel void @straightline_kernel(ptr addrspace(1) noalias %in, ptr
 ; GFX12-NEXT:    v_add_co_u32 v14, vcc_lo, s0, v14
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v15, null, s1, v15, vcc_lo
-; GFX12-NEXT:    s_clause 0x2
+; GFX12-NEXT:    s_clause 0x3
+; GFX12-NEXT:    global_load_b128 v[2:5], v[8:9], off
 ; GFX12-NEXT:    global_load_b128 v[6:9], v[6:7], off
 ; GFX12-NEXT:    global_load_b128 v[10:13], v[10:11], off
 ; GFX12-NEXT:    global_load_b128 v[14:17], v[14:15], off
+; GFX12-NEXT:    s_wait_loadcnt 0x3
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    v_add_nc_u32_e32 v5, s7, v5
+; GFX12-NEXT:    v_add_nc_u32_e32 v4, s6, v4
+; GFX12-NEXT:    v_add_nc_u32_e32 v3, s5, v3
+; GFX12-NEXT:    v_add_nc_u32_e32 v2, s4, v2
 ; GFX12-NEXT:    s_wait_loadcnt 0x2
 ; GFX12-NEXT:    v_add_nc_u32_e32 v9, s7, v9
 ; GFX12-NEXT:    v_add_nc_u32_e32 v8, s6, v8
