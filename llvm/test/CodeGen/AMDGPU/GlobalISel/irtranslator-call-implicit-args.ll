@@ -1234,7 +1234,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare i32 @llvm.amdgcn.workitem.id.y() #1
 declare i32 @llvm.amdgcn.workitem.id.z() #1
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "amdgpu-flat-work-group-size"="64,64" }
 attributes #1 = { nounwind readnone speculatable willreturn }
 
 !llvm.module.flags = !{!6}
