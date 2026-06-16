@@ -595,10 +595,8 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP1(vclzq_v, ctlz, Add1ArgType),
   NEONMAP1(vcnt_v, ctpop, Add1ArgType),
   NEONMAP1(vcntq_v, ctpop, Add1ArgType),
-  NEONMAP1(vcvt_f16_f32, arm_neon_vcvtfp2hf, 0),
   NEONMAP0(vcvt_f16_s16),
   NEONMAP0(vcvt_f16_u16),
-  NEONMAP1(vcvt_f32_f16, arm_neon_vcvthf2fp, 0),
   NEONMAP0(vcvt_f32_v),
   NEONMAP1(vcvt_n_f16_s16, arm_neon_vcvtfxs2fp, 0),
   NEONMAP1(vcvt_n_f16_u16, arm_neon_vcvtfxu2fp, 0),
@@ -2662,10 +2660,15 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
     return EmitNeonCall(CGM.getIntrinsic(Intrinsic::arm_neon_sha1m), Ops,
                         "vsha1h");
 
-  case NEON::BI__builtin_neon_vcvth_bf16_f32: {
+  case NEON::BI__builtin_neon_vcvth_bf16_f32:
     return EmitNeonCall(CGM.getIntrinsic(Intrinsic::arm_neon_vcvtbfp2bf), Ops,
                         "vcvtbfp2bf");
-  }
+  case NEON::BI__builtin_neon_vcvt_f16_f32:
+    return EmitNeonCall(CGM.getIntrinsic(Intrinsic::arm_neon_vcvtfp2hf), Ops,
+                        "vcvtfp2hf");
+  case NEON::BI__builtin_neon_vcvt_f32_f16:
+    return EmitNeonCall(CGM.getIntrinsic(Intrinsic::arm_neon_vcvthf2fp), Ops,
+                        "vcvthf2fp");
 
   // The ARM _MoveToCoprocessor builtins put the input register value as
   // the first argument, but the LLVM intrinsic expects it as the third one.
@@ -6049,6 +6052,16 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     llvm::Value *Trunc =
         Builder.CreateFPTrunc(Builder.CreateBitCast(Ops[1], V4F32), V4BF16);
     return Builder.CreateShuffleVector(Inactive, Trunc, ConcatMask);
+  }
+  case NEON::BI__builtin_neon_vcvt_f16_f32: {
+    llvm::Type *V4F32 = FixedVectorType::get(Builder.getFloatTy(), 4);
+    llvm::Type *V4F16 = FixedVectorType::get(Builder.getHalfTy(), 4);
+    return Builder.CreateFPTrunc(Builder.CreateBitCast(Ops[0], V4F32), V4F16);
+  }
+  case NEON::BI__builtin_neon_vcvt_f32_f16: {
+    llvm::Type *V4F32 = FixedVectorType::get(Builder.getFloatTy(), 4);
+    llvm::Type *V4F16 = FixedVectorType::get(Builder.getHalfTy(), 4);
+    return Builder.CreateFPExt(Builder.CreateBitCast(Ops[0], V4F16), V4F32);
   }
 
   case clang::AArch64::BI_InterlockedAdd:
