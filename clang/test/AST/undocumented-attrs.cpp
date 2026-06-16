@@ -13,6 +13,8 @@ CHECK-NEXT:	Aligned
 CHECK-NEXT:	AnalyzerNoReturn
 CHECK-NEXT:	Annotate
 CHECK-NEXT:	ArcWeakrefUnavailable
+CHECK-NEXT:	ArrayDecayDiscardsCountInParameters
+CHECK-NEXT:	AvailabilityDomain
 CHECK-NEXT:	AvailableOnlyInDefaultEvalMethod
 CHECK-NEXT:	Blocks
 CHECK-NEXT:	CDecl
@@ -57,6 +59,7 @@ CHECK-NEXT:	NoThreadSafetyAnalysis
 CHECK-NEXT:	ObjCBridge
 CHECK-NEXT:	ObjCBridgeMutable
 CHECK-NEXT:	ObjCBridgeRelated
+CHECK-NEXT:	ObjCCompleteDefinition
 CHECK-NEXT:	ObjCDesignatedInitializer
 CHECK-NEXT:	ObjCException
 CHECK-NEXT:	ObjCExplicitProtocolImpl
@@ -74,13 +77,21 @@ CHECK-NEXT:	Pascal
 CHECK-NEXT:	PointerFieldProtection
 CHECK-NEXT:	PtGuardedBy
 CHECK-NEXT:	PtGuardedVar
+CHECK-NEXT:	PtrBidiIndexable
+CHECK-NEXT:	PtrEndedBy
+CHECK-NEXT:	PtrIndexable
+CHECK-NEXT:	PtrSingle
+CHECK-NEXT:	PtrTerminatedBy
+CHECK-NEXT:	PtrUnsafeIndexable
 CHECK-NEXT:	Pure
 CHECK-NEXT:	ReentrantCapability
 CHECK-NEXT:	ReqdWorkGroupSize
 CHECK-NEXT:	RequiresCapability
 CHECK-NEXT:	ReturnsTwice
 CHECK-NEXT:	ScopedLockable
+CHECK-NEXT:	TypedMemory
 CHECK-NEXT:	Unavailable
+CHECK-NEXT:	UnsafeLateConst
 CHECK-NEXT:	Uuid
 CHECK-NEXT:	VTablePointerAuthentication
 CHECK-NEXT:	VecReturn
@@ -90,4 +101,4 @@ CHECK-NEXT:	Visibility
 CHECK-NEXT:	WeakImport
 CHECK-NEXT:	WeakRef
 CHECK-NEXT:	WorkGroupSizeHint
-CHECK-NEXT: Total: 84
+CHECK-NEXT: Total: 95
