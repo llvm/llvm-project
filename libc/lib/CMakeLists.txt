@@ -83,14 +83,14 @@ if(LLVM_LIBC_FULL_BUILD AND ${LIBC_TARGET_OS} STREQUAL "linux")
       COMMENT "Creating empty archive ${empty_archive_path}"
       VERBATIM
     )
-    list(APPEND added_empty_archives ${empty_archive_path})
+    install(
+      FILES ${empty_archive_path}
+      DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
+      COMPONENT libc
+    )
+    add_custom_target(empty-${archive} ALL DEPENDS ${empty_archive_path})
+    list(APPEND added_empty_archives empty-${archive})
   endforeach()
-
-  install(
-    FILES ${added_empty_archives}
-    DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
-    COMPONENT libc
-  )
 endif()
 
 set(startup_target "")
