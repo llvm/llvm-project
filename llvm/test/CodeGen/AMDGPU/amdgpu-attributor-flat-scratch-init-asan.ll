@@ -2,9 +2,11 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes='amdgpu-attributor' %s -o - | FileCheck %s
 
 @lds_1 = internal addrspace(3) global [1 x i8] poison, align 4
+@lds_2 = internal addrspace(3) global i32 poison, align 4
 
 ;.
 ; CHECK: @lds_1 = internal addrspace(3) global [1 x i8] poison, align 4
+; CHECK: @lds_2 = internal addrspace(3) global i32 poison, align 4
 ;.
 define amdgpu_kernel void @k0() #0 {
 ; CHECK: Function Attrs: sanitize_address
@@ -17,8 +19,42 @@ define amdgpu_kernel void @k0() #0 {
   ret void
 }
 
+; Without sanitizer: AAAddressSpace folds the addrspacecast away and
+; rewrites the load to use addrspace(3) directly. This confirms the
+; optimization is still active for non-sanitized functions.
+define i32 @load_via_flat_ptr() {
+; CHECK-LABEL: define i32 @load_via_flat_ptr(
+; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(3) @lds_2, align 4, !noalias.addrspace [[META0:![0-9]+]]
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+  %flat = addrspacecast ptr addrspace(3) @lds_2 to ptr
+  %val = load i32, ptr %flat, align 4
+  ret i32 %val
+}
+
+; AAAddressSpace must not rewrite the flat pointer to addrspace(3) in a
+; sanitized function. The flat pointer is what ASAN instrumentation
+; intercepts — narrowing it to addrspace(3) bypasses the shadow check
+; and produces silently wrong results.
+define i32 @load_via_flat_ptr_asan() #0 {
+; CHECK: Function Attrs: sanitize_address
+; CHECK-LABEL: define i32 @load_via_flat_ptr_asan(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[FLAT:%.*]] = addrspacecast ptr addrspace(3) @lds_2 to ptr
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[FLAT]], align 4
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+  %flat = addrspacecast ptr addrspace(3) @lds_2 to ptr
+  %val = load i32, ptr %flat, align 4
+  ret i32 %val
+}
+
 attributes #0 = { sanitize_address }
 ; "amdgpu-no-flat-scratch-init" attribute should not be present in attribute list
 ;.
 ; CHECK: attributes #[[ATTR0]] = { sanitize_address "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR1]] = { "amdgpu-agpr-alloc"="0" "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" "target-cpu"="gfx90a" }
+;.
+; CHECK: [[META0]] = !{i32 1, i32 3, i32 4, i32 10}
 ;.
