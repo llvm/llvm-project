@@ -2213,6 +2213,16 @@ public:
   }
   void Unparse(const OmpAppendArgsClause &x) { Walk(x.v, ","); }
   void Unparse(const OmpArgumentList &x) { Walk(x.v, ", "); }
+  void Unparse(const OmpLoopModifier &x) {
+    Word(llvm::omp::getOpenMPLoopModifierName(
+        std::get<llvm::omp::LoopModifier>(x.t)));
+    Walk("(", std::get<std::optional<std::list<ScalarIntConstantExpr>>>(x.t),
+        ")");
+  }
+  void Unparse(const OmpApplyClause &x) {
+    Walk(std::get<std::optional<OmpLoopModifier>>(x.t), ": ");
+    Walk(std::get<std::list<OmpDirectiveSpecification>>(x.t));
+  }
   void Unparse(const OmpAttachModifier &x) {
     Word("ATTACH(");
     Walk(x.v);
