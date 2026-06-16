@@ -43,6 +43,12 @@ These extensions require no flag.
   or module, but Flang permits it with a warning when the same clause is used.
 * The REDUCTION clause accepts a MINUS "-" operator which is not permitted in
   the OpenACC specification. A warning is issued for this use. 
+* The `collapse` clause may be applied to a `DO CONCURRENT` loop, which the
+  OpenACC specification does not permit. The collapse value must equal the
+  number of `DO CONCURRENT` controls; the construct then lowers like the
+  equivalent perfectly-nested `DO` loops. A portability warning is issued for
+  this use (`-Wportability`, also enabled by `-pedantic`; suppress with
+  `-Wno-portability`).
 
 ## Extensions enabled by default
 
