@@ -36,8 +36,9 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/InterleavedRange.h"
 
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include <numeric>
 #include <optional>
 #include <tuple>
@@ -57,15 +58,6 @@ static bool hasNestedParallelOp(ParallelOp ploop) {
       ploop.getBody()->walk([](ParallelOp) { return WalkResult::interrupt(); });
   return walkResult.wasInterrupted();
 }
-
-#ifndef NDEBUG
-template <class T>
-static inline std::string toString(T &cnt) {
-  std::stringstream ss;
-  std::copy(cnt.begin(), cnt.end(), std::ostream_iterator<int64_t>(ss, ""));
-  return ss.str();
-}
-#endif
 
 /// Verify equal iteration spaces.
 static bool equalIterationSpaces(ParallelOp firstPloop,
@@ -887,8 +879,8 @@ computeCandidateInterchangePermutations(ParallelOp &firstPloop,
       basic[from] = to;
     }
 
-    LLVM_DEBUG(llvm::dbgs()
-               << "Collected basic permutations: " << toString(basic) << "\n");
+    LDBG() << "Collected basic permutations: "
+           << llvm::interleaved_array(basic);
 
     // All axes are unique, no further permutatons needed
     if (unique.size() == firstIVs.size()) {
@@ -932,8 +924,8 @@ computeCandidateInterchangePermutations(ParallelOp &firstPloop,
           extra[from] = basic[to];
       }
       if (basic != extra) {
-        LLVM_DEBUG(llvm::dbgs() << "Collected extra permutations: "
-                                << toString(extra) << "\n");
+        LDBG() << "Collected extra permutations: "
+               << llvm::interleaved_array(extra);
 
         extraResults.push_back(std::move(extra));
         permBudget--;
@@ -1009,37 +1001,38 @@ static void fuseIfLegal(ParallelOp firstPloop, ParallelOp &secondPloop,
   IRMapping firstToSecondPloopIndices;
   firstToSecondPloopIndices.map(block1->getArguments(), block2->getArguments());
 
-  if (!isFusionLegal(firstPloop, secondPloop, firstToSecondPloopIndices,
-                     mayAlias, builder)) {
-    // If iteration space of the second parallel loop is a permutation of the
-    // first one then interchange iteration space of the second parallel loop
-    // and re-asses possibility of fusion.
-    for (auto &perms :
-         computeCandidateInterchangePermutations(firstPloop, secondPloop)) {
-      OpBuilder::InsertionGuard guard(builder);
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Applied permutation: " << toString(perms) << "\n");
-
-      auto newLoop = interchangeLoops(builder, secondPloop, perms);
-      firstToSecondPloopIndices.clear();
-      firstToSecondPloopIndices.map(block1->getArguments(),
-                                    newLoop->getBody()->getArguments());
-      if (!isFusionLegal(firstPloop, *newLoop, firstToSecondPloopIndices,
-                         mayAlias, builder)) {
-        LLVM_DEBUG(llvm::dbgs() << "Rejected: " << newLoop << "\n");
-
-        newLoop->erase();
-        continue;
-      }
-
-      secondPloop.replaceAllUsesWith(newLoop->getResults());
-      secondPloop->erase();
-      applyLoopFusion(firstPloop, *newLoop, builder);
-      break;
-    }
+  if (isFusionLegal(firstPloop, secondPloop, firstToSecondPloopIndices,
+                    mayAlias, builder)) {
+    applyLoopFusion(firstPloop, secondPloop, builder);
     return;
   }
-  applyLoopFusion(firstPloop, secondPloop, builder);
+
+  // If iteration space of the second parallel loop is a permutation of the
+  // first one then interchange iteration space of the second parallel loop
+  // and re-asses possibility of fusion.
+  for (auto &perms :
+       computeCandidateInterchangePermutations(firstPloop, secondPloop)) {
+    OpBuilder::InsertionGuard guard(builder);
+    LDBG() << "Applied permutation: " << llvm::interleaved_array(perms);
+
+    auto newLoop = interchangeLoops(builder, secondPloop, perms);
+    firstToSecondPloopIndices.clear();
+    firstToSecondPloopIndices.map(block1->getArguments(),
+                                  newLoop->getBody()->getArguments());
+    if (!isFusionLegal(firstPloop, *newLoop, firstToSecondPloopIndices,
+                       mayAlias, builder)) {
+      LDBG() << "Rejected: " << newLoop;
+
+      newLoop->erase();
+      continue;
+    }
+
+    secondPloop.replaceAllUsesWith(newLoop->getResults());
+    secondPloop->erase();
+    secondPloop = *newLoop;
+    applyLoopFusion(firstPloop, secondPloop, builder);
+    break;
+  }
 }
 
 void mlir::scf::naivelyFuseParallelOps(
