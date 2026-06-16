@@ -1169,13 +1169,10 @@ MachinePointerInfo MachinePointerInfo::getUnknownStack(MachineFunction &MF) {
   return MachinePointerInfo(MF.getDataLayout().getAllocaAddrSpace());
 }
 
-MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
-                                     LLT type, Align a, const AAMDNodes &AAInfo,
-                                     const MDNode *Ranges,
-                                     const MDNode *MemCacheHint,
-                                     SyncScope::ID SSID,
-                                     AtomicOrdering Ordering,
-                                     AtomicOrdering FailureOrdering)
+MachineMemOperand::MachineMemOperand(
+    MachinePointerInfo ptrinfo, Flags f, LLT type, Align a,
+    const AAMDNodes &AAInfo, const MDNode *Ranges, const MDNode *MemCacheHint,
+    SyncScope::ID SSID, AtomicOrdering Ordering, AtomicOrdering FailureOrdering)
     : PtrInfo(ptrinfo), MemoryType(type), FlagVals(f), BaseAlign(a),
       AAInfo(AAInfo), Ranges(Ranges), MemCacheHint(MemCacheHint) {
   assert((PtrInfo.V.isNull() || isa<const PseudoSourceValue *>(PtrInfo.V) ||
@@ -1191,14 +1188,10 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags f,
   assert(getFailureOrdering() == FailureOrdering && "Value truncated");
 }
 
-MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags F,
-                                     LocationSize TS, Align BaseAlignment,
-                                     const AAMDNodes &AAInfo,
-                                     const MDNode *Ranges,
-                                     const MDNode *MemCacheHint,
-                                     SyncScope::ID SSID,
-                                     AtomicOrdering Ordering,
-                                     AtomicOrdering FailureOrdering)
+MachineMemOperand::MachineMemOperand(
+    MachinePointerInfo ptrinfo, Flags F, LocationSize TS, Align BaseAlignment,
+    const AAMDNodes &AAInfo, const MDNode *Ranges, const MDNode *MemCacheHint,
+    SyncScope::ID SSID, AtomicOrdering Ordering, AtomicOrdering FailureOrdering)
     : MachineMemOperand(
           ptrinfo, F,
           !TS.isPrecise() ? LLT()

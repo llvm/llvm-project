@@ -598,16 +598,16 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
          "LocationSize::beforeOrAfter()");
   return new (Allocator) MachineMemOperand(
       PtrInfo, MMO->getFlags(), Size, MMO->getBaseAlign(), AAMDNodes(), nullptr,
-      MMO->getMemCacheHint(), MMO->getSyncScopeID(),
-      MMO->getSuccessOrdering(), MMO->getFailureOrdering());
+      MMO->getMemCacheHint(), MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
+      MMO->getFailureOrdering());
 }
 
 MachineMemOperand *MachineFunction::getMachineMemOperand(
     const MachineMemOperand *MMO, const MachinePointerInfo &PtrInfo, LLT Ty) {
   return new (Allocator) MachineMemOperand(
       PtrInfo, MMO->getFlags(), Ty, MMO->getBaseAlign(), AAMDNodes(), nullptr,
-      MMO->getMemCacheHint(), MMO->getSyncScopeID(),
-      MMO->getSuccessOrdering(), MMO->getFailureOrdering());
+      MMO->getMemCacheHint(), MMO->getSyncScopeID(), MMO->getSuccessOrdering(),
+      MMO->getFailureOrdering());
 }
 
 MachineMemOperand *
@@ -623,11 +623,10 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
 
   // Do not preserve ranges, since we don't necessarily know what the high bits
   // are anymore.
-  return new (Allocator)
-      MachineMemOperand(PtrInfo.getWithOffset(Offset), MMO->getFlags(), Ty,
-                        Alignment, MMO->getAAInfo(), nullptr,
-                        MMO->getMemCacheHint(), MMO->getSyncScopeID(),
-                        MMO->getSuccessOrdering(), MMO->getFailureOrdering());
+  return new (Allocator) MachineMemOperand(
+      PtrInfo.getWithOffset(Offset), MMO->getFlags(), Ty, Alignment,
+      MMO->getAAInfo(), nullptr, MMO->getMemCacheHint(), MMO->getSyncScopeID(),
+      MMO->getSuccessOrdering(), MMO->getFailureOrdering());
 }
 
 MachineMemOperand *
