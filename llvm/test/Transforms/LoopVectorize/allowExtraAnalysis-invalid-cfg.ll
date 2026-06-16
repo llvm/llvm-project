@@ -6,7 +6,7 @@
 ; A normal branch gets canonicalized to a unique latch before LV runs, so use
 ; indirectbr to keep the invalid CFG shape.
 
-; This files contains "tricky" CFG cases that can cause crashes with DoExtraAnalysis:
+; This files contains unsupported CFG cases that can cause crashes with DoExtraAnalysis:
 ; - A loop with multiple latches
 ; - A loop with multiple latches and predecessors
 ; - A loop with multiple predecessors and a conditional block

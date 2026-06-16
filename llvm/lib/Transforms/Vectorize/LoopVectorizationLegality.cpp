@@ -1360,9 +1360,9 @@ bool LoopVectorizationLegality::blockNeedsPredication(
     const BasicBlock *BB) const {
   BasicBlock *Latch = TheLoop->getLoopLatch();
 
-  // When doing extra analysis, we might not have a canonical loop form to work
-  // with. In that case, vectorisation will eventually be rejected due to
-  // previous checks, so return something that will not bloat opt remarks.
+  // Without a latch, we cannot properly answer blockNeedsPredication, so return
+  // something that will not bloat opt remarks. In any case, vectorisation will
+  // eventually be rejected due to previous CFG legality checks.
   if (!Latch) {
     assert(ORE->allowExtraAnalysis(DEBUG_TYPE) &&
            !canVectorizeLoopCFG(TheLoop, /*UseVPlanNativePath=*/true) &&
