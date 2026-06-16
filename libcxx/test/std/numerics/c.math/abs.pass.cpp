@@ -58,6 +58,10 @@ constexpr bool has_abs<T, decltype((void)std::abs(T(0)))> = true;
 static_assert(!has_abs<signed _BitInt(7)>);
 static_assert(has_abs<signed _BitInt(32)>);
 static_assert(has_abs<signed _BitInt(64)>);
+// Pin the signed-only contract of __is_signed_integer_v: a regression that
+// accepted unsigned _BitInt would otherwise slip past every other test here.
+static_assert(!has_abs<unsigned _BitInt(32)>);
+static_assert(!has_abs<unsigned _BitInt(64)>);
 
 template <int N>
 void test_signed_bitint() {
