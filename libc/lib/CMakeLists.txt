@@ -56,29 +56,6 @@ foreach(archive IN ZIP_LISTS
   endif()
 endforeach()
 
-# Add empty archive libraries for compatibility with systems expecting certain
-# bits of libc to be located in separate files (e.g. libpthread).
-if(LLVM_LIBC_FULL_BUILD)
-  set(dummy_source "${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp")
-  if(NOT EXISTS "${dummy_source}")
-    file(WRITE "${dummy_source}" "/* empty static library stub */\n")
-  endif()
-
-  list(APPEND libc_empty_archive_names pthread)
-  list(APPEND libc_empty_archive_targets libpthread)
-  foreach(archive IN ZIP_LISTS
-          libc_empty_archive_names libc_empty_archive_targets)
-    add_library(${archive_1} STATIC "${dummy_source}")
-    set_target_properties(
-      ${archive_1}
-      PROPERTIES
-        ARCHIVE_OUTPUT_NAME ${archive_0}
-        ARCHIVE_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR}
-    )
-    list(APPEND added_archive_targets ${archive_1})
-  endforeach()  
-endif()
-
 install(
   TARGETS ${added_archive_targets}
   ARCHIVE DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
@@ -92,6 +69,29 @@ foreach(file ${added_bitcode_targets})
           COMPONENT libc
   )
 endforeach()
+
+# Add empty archive libraries for compatibility with systems expecting certain
+# bits of libc to be located in separate files (e.g. libpthread).
+set(added_empty_archives "")
+if(LLVM_LIBC_FULL_BUILD AND ${LIBC_TARGET_OS} STREQUAL "linux")
+  list(APPEND libc_empty_archive_names pthread)
+  foreach(archive ${libc_empty_archive_names})
+    set(empty_archive_path ${LIBC_LIBRARY_DIR}/lib${archive}.a)
+    add_custom_command(
+      OUTPUT ${empty_archive_path}
+      COMMAND ${CMAKE_AR} cqs ${empty_archive_path}
+      COMMENT "Creating empty archive ${empty_archive_path}"
+      VERBATIM
+    )
+    list(APPEND added_empty_archives ${empty_archive_path})
+  endforeach()
+
+  install(
+    FILES ${added_empty_archives}
+    DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
+    COMPONENT libc
+  )
+endif()
 
 set(startup_target "")
 if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_BAREMETAL)
@@ -109,6 +109,7 @@ endif()
 add_custom_target(install-libc
                   DEPENDS ${added_archive_targets}
                           ${added_bitcode_targets}
+                          ${added_empty_archives}
                           ${startup_target}
                           ${header_install_target}
                   COMMAND "${CMAKE_COMMAND}"
@@ -117,6 +118,7 @@ add_custom_target(install-libc
 add_custom_target(install-libc-stripped
                   DEPENDS ${added_archive_targets}
                           ${added_bitcode_targets}
+                          ${added_empty_archives}
                           ${startup_target}
                           ${header_install_target}
                   COMMAND "${CMAKE_COMMAND}"
