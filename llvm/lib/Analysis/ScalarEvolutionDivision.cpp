@@ -56,6 +56,8 @@ void SCEVDivision::divide(ScalarEvolution &SE, const SCEV *Numerator,
                           const SCEV *Denominator, const SCEV **Quotient,
                           const SCEV **Remainder) {
   assert(Numerator && Denominator && "Uninitialized SCEV");
+  assert(Numerator->getType() == Denominator->getType() &&
+         "Numerator and Denominator must have the same type");
 
   SCEVDivision D(SE, Numerator, Denominator);
 
