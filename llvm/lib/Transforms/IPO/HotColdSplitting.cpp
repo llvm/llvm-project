@@ -703,8 +703,10 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
       if (Region.empty())
         continue;
 
-      if (Region.isEntireFunctionCold())
+      if (Region.isEntireFunctionCold()) {
+        LLVM_DEBUG(dbgs() << "Entire function is cold\n");
         return false;
+      }
 
       do {
         BlockSequence SubRegion = Region.takeSingleEntrySubRegion(*DT);
