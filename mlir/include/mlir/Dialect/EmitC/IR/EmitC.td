@@ -302,7 +302,7 @@ def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", [CExpressionInterface]> {
     Arg<StrAttr, "the C++ function to call">:$callee,
     Arg<OptionalAttr<ArrayAttr>, "the order of operands and further attributes">:$args,
     Arg<OptionalAttr<ArrayAttr>, "template arguments">:$template_args,
-    Variadic<EmitCType>:$arg_operands
+    Variadic<AnyTypeOf<[EmitCType, EmitC_LValueType]>>:$arg_operands
   );
   let results = (outs Variadic<EmitCType>);
   let builders = [
@@ -347,7 +347,7 @@ def EmitC_MemberCallOpaqueOp : EmitC_Op<"member_call_opaque", [CExpressionInterf
     StrAttr:$callee,
     OptionalAttr<ArrayAttr>:$args,
     OptionalAttr<ArrayAttr>:$template_args,
-    Variadic<EmitCType>:$arg_operands
+    Variadic<AnyTypeOf<[EmitCType, EmitC_LValueType]>>:$arg_operands
   );
   let results = (outs Variadic<EmitCType>);
 
