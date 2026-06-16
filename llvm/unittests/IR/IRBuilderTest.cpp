@@ -463,18 +463,18 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
   EXPECT_EQ(RoundingMode::Dynamic, CII->getRoundingMode());
 
   // Now override the defaults.
-  Call = cast<CallInst>(Builder.CreateConstrainedFPBinOp(
+  Call = Builder.CreateConstrainedFPBinOp(
       Intrinsic::experimental_constrained_fadd, V, V, nullptr, "", nullptr,
-      RoundingMode::TowardNegative, fp::ebMayTrap));
+      RoundingMode::TowardNegative, fp::ebMayTrap);
   CII = cast<ConstrainedFPIntrinsic>(Call);
   EXPECT_EQ(CII->getIntrinsicID(), Intrinsic::experimental_constrained_fadd);
   EXPECT_EQ(fp::ebMayTrap, CII->getExceptionBehavior());
   EXPECT_EQ(RoundingMode::TowardNegative, CII->getRoundingMode());
 
   // Same as previous test for CreateConstrainedFPIntrinsic
-  Call = cast<CallInst>(Builder.CreateConstrainedFPIntrinsic(
+  Call = Builder.CreateConstrainedFPIntrinsic(
       Intrinsic::experimental_constrained_fadd, {V->getType()}, {V, V}, nullptr,
-      "", nullptr, RoundingMode::TowardNegative, fp::ebMayTrap));
+      "", nullptr, RoundingMode::TowardNegative, fp::ebMayTrap);
   CII = cast<ConstrainedFPIntrinsic>(Call);
   EXPECT_EQ(CII->getIntrinsicID(), Intrinsic::experimental_constrained_fadd);
   EXPECT_EQ(fp::ebMayTrap, CII->getExceptionBehavior());

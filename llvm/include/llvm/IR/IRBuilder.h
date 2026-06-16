@@ -1053,7 +1053,7 @@ public:
       Intrinsic::ID ID, ArrayRef<Type *> OverloadTypes, ArrayRef<Value *> Args,
       FMFSource FMFSource = {}, const Twine &Name = "",
       ArrayRef<OperandBundleDef> OpBundles = {},
-      std::function<void(CallInst *)> SetFn = [](CallInst *) {});
+      function_ref<void(CallInst *)> SetFn = [](CallInst *) {});
 
   /// Variant to create a possibly constant-folded intrinsic. An optional \p
   /// SetFn is called if the intrinsic doesn't fold, and can be used to set
@@ -1061,7 +1061,7 @@ public:
   LLVM_ABI Value *CreateIntrinsic(
       Type *RetTy, Intrinsic::ID ID, ArrayRef<Value *> Args,
       FMFSource FMFSource = {}, const Twine &Name = "",
-      std::function<void(CallInst *)> SetFn = [](CallInst *) {});
+      function_ref<void(CallInst *)> SetFn = [](CallInst *) {});
 
   /// Variant to create a possibly constant-folded intrinsic. An optional \p
   /// SetFn is called if the intrinsic doesn't fold, and can be used to set
@@ -1069,7 +1069,7 @@ public:
   LLVM_ABI Value *CreateIntrinsic(
       Intrinsic::ID ID, ArrayRef<Value *> Args, FMFSource FMFSource = {},
       const Twine &Name = "",
-      std::function<void(CallInst *)> SetFn = [](CallInst *) {}) {
+      function_ref<void(CallInst *)> SetFn = [](CallInst *) {}) {
     return CreateIntrinsic(ID, /*Types=*/{}, Args, FMFSource, Name, {}, SetFn);
   }
 
@@ -1862,19 +1862,19 @@ public:
   /// the created intrinsic call according to \p Rounding and \p
   /// Except and it sets \p FPMathTag as the 'fpmath' metadata, using
   /// defaults if a value equals nullopt/null.
-  LLVM_ABI Value *CreateConstrainedFPIntrinsic(
+  LLVM_ABI CallInst *CreateConstrainedFPIntrinsic(
       Intrinsic::ID ID, ArrayRef<Type *> Types, ArrayRef<Value *> Args,
       FMFSource FMFSource, const Twine &Name, MDNode *FPMathTag = nullptr,
       std::optional<RoundingMode> Rounding = std::nullopt,
       std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 
-  LLVM_ABI Value *CreateConstrainedFPBinOp(
+  LLVM_ABI CallInst *CreateConstrainedFPBinOp(
       Intrinsic::ID ID, Value *L, Value *R, FMFSource FMFSource = {},
       const Twine &Name = "", MDNode *FPMathTag = nullptr,
       std::optional<RoundingMode> Rounding = std::nullopt,
       std::optional<fp::ExceptionBehavior> Except = std::nullopt);
 
-  LLVM_ABI Value *CreateConstrainedFPUnroundedBinOp(
+  LLVM_ABI CallInst *CreateConstrainedFPUnroundedBinOp(
       Intrinsic::ID ID, Value *L, Value *R, FMFSource FMFSource = {},
       const Twine &Name = "", MDNode *FPMathTag = nullptr,
       std::optional<fp::ExceptionBehavior> Except = std::nullopt);
@@ -2384,7 +2384,7 @@ public:
     return CreateCast(CastOp, V, DestTy, Name, FPMathTag);
   }
 
-  LLVM_ABI Value *CreateConstrainedFPCast(
+  LLVM_ABI CallInst *CreateConstrainedFPCast(
       Intrinsic::ID ID, Value *V, Type *DestTy, FMFSource FMFSource = {},
       const Twine &Name = "", MDNode *FPMathTag = nullptr,
       std::optional<RoundingMode> Rounding = std::nullopt,
@@ -2569,7 +2569,7 @@ private:
                                    FMFSource FMFSource, bool IsSignaling);
 
 public:
-  LLVM_ABI Value *CreateConstrainedFPCmp(
+  LLVM_ABI CallInst *CreateConstrainedFPCmp(
       Intrinsic::ID ID, CmpInst::Predicate P, Value *L, Value *R,
       const Twine &Name = "",
       std::optional<fp::ExceptionBehavior> Except = std::nullopt);

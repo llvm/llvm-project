@@ -965,7 +965,7 @@ Value *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
                                       ArrayRef<Value *> Args,
                                       FMFSource FMFSource, const Twine &Name,
                                       ArrayRef<OperandBundleDef> OpBundles,
-                                      std::function<void(CallInst *)> SetFn) {
+                                      function_ref<void(CallInst *)> SetFn) {
   // TODO: Try to constant-fold.
   CallInst *CI = CreateIntrinsicWithoutFolding(ID, OverloadTypes, Args,
                                                FMFSource, Name, OpBundles);
@@ -976,7 +976,7 @@ Value *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
 Value *IRBuilderBase::CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
                                       ArrayRef<Value *> Args,
                                       FMFSource FMFSource, const Twine &Name,
-                                      std::function<void(CallInst *)> SetFn) {
+                                      function_ref<void(CallInst *)> SetFn) {
   // TODO: Try to constant-fold.
   CallInst *CI =
       CreateIntrinsicWithoutFolding(RetTy, ID, Args, FMFSource, Name);
@@ -984,7 +984,7 @@ Value *IRBuilderBase::CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
   return CI;
 }
 
-Value *IRBuilderBase::CreateConstrainedFPBinOp(
+CallInst *IRBuilderBase::CreateConstrainedFPBinOp(
     Intrinsic::ID ID, Value *L, Value *R, FMFSource FMFSource,
     const Twine &Name, MDNode *FPMathTag, std::optional<RoundingMode> Rounding,
     std::optional<fp::ExceptionBehavior> Except) {
@@ -992,14 +992,14 @@ Value *IRBuilderBase::CreateConstrainedFPBinOp(
   Value *ExceptV = getConstrainedFPExcept(Except);
 
   FastMathFlags UseFMF = FMFSource.get(FMF);
-  return CreateIntrinsic(ID, {L->getType()}, {L, R, RoundingV, ExceptV},
-                         nullptr, Name, {}, [&](CallInst *C) {
-                           setConstrainedFPCallAttr(C);
-                           setFPAttrs(C, FPMathTag, UseFMF);
-                         });
+  CallInst *C = CreateIntrinsicWithoutFolding(
+      ID, {L->getType()}, {L, R, RoundingV, ExceptV}, nullptr, Name, {});
+  setConstrainedFPCallAttr(C);
+  setFPAttrs(C, FPMathTag, UseFMF);
+  return C;
 }
 
-Value *IRBuilderBase::CreateConstrainedFPIntrinsic(
+CallInst *IRBuilderBase::CreateConstrainedFPIntrinsic(
     Intrinsic::ID ID, ArrayRef<Type *> Types, ArrayRef<Value *> Args,
     FMFSource FMFSource, const Twine &Name, MDNode *FPMathTag,
     std::optional<RoundingMode> Rounding,
@@ -1012,25 +1012,25 @@ Value *IRBuilderBase::CreateConstrainedFPIntrinsic(
   llvm::SmallVector<Value *, 5> ExtArgs(Args);
   ExtArgs.push_back(RoundingV);
   ExtArgs.push_back(ExceptV);
-  return CreateIntrinsic(ID, Types, ExtArgs, nullptr, Name, {},
-                         [&](CallInst *C) {
-                           setConstrainedFPCallAttr(C);
-                           setFPAttrs(C, FPMathTag, UseFMF);
-                         });
+  CallInst *C =
+      CreateIntrinsicWithoutFolding(ID, Types, ExtArgs, nullptr, Name, {});
+  setConstrainedFPCallAttr(C);
+  setFPAttrs(C, FPMathTag, UseFMF);
+  return C;
 }
 
-Value *IRBuilderBase::CreateConstrainedFPUnroundedBinOp(
+CallInst *IRBuilderBase::CreateConstrainedFPUnroundedBinOp(
     Intrinsic::ID ID, Value *L, Value *R, FMFSource FMFSource,
     const Twine &Name, MDNode *FPMathTag,
     std::optional<fp::ExceptionBehavior> Except) {
   Value *ExceptV = getConstrainedFPExcept(Except);
 
   FastMathFlags UseFMF = FMFSource.get(FMF);
-  return CreateIntrinsic(ID, {L->getType()}, {L, R, ExceptV}, nullptr, Name, {},
-                         [&](CallInst *C) {
-                           setConstrainedFPCallAttr(C);
-                           setFPAttrs(C, FPMathTag, UseFMF);
-                         });
+  CallInst *C = CreateIntrinsicWithoutFolding(
+      ID, {L->getType()}, {L, R, ExceptV}, nullptr, Name, {});
+  setConstrainedFPCallAttr(C);
+  setFPAttrs(C, FPMathTag, UseFMF);
+  return C;
 }
 
 Value *IRBuilderBase::CreateNAryOp(unsigned Opc, ArrayRef<Value *> Ops,
@@ -1048,28 +1048,26 @@ Value *IRBuilderBase::CreateNAryOp(unsigned Opc, ArrayRef<Value *> Ops,
   llvm_unreachable("Unexpected opcode!");
 }
 
-Value *IRBuilderBase::CreateConstrainedFPCast(
+CallInst *IRBuilderBase::CreateConstrainedFPCast(
     Intrinsic::ID ID, Value *V, Type *DestTy, FMFSource FMFSource,
     const Twine &Name, MDNode *FPMathTag, std::optional<RoundingMode> Rounding,
     std::optional<fp::ExceptionBehavior> Except) {
   Value *ExceptV = getConstrainedFPExcept(Except);
 
   FastMathFlags UseFMF = FMFSource.get(FMF);
-  auto SetFn = [&](CallInst *C) {
-    setConstrainedFPCallAttr(C);
 
-    if (isa<FPMathOperator>(C))
-      setFPAttrs(C, FPMathTag, UseFMF);
-  };
-
-  Value *C;
+  CallInst *C;
   if (Intrinsic::hasConstrainedFPRoundingModeOperand(ID)) {
     Value *RoundingV = getConstrainedFPRounding(Rounding);
-    C = CreateIntrinsic(ID, {DestTy, V->getType()}, {V, RoundingV, ExceptV},
-                        nullptr, Name, {}, SetFn);
+    C = CreateIntrinsicWithoutFolding(
+        ID, {DestTy, V->getType()}, {V, RoundingV, ExceptV}, nullptr, Name, {});
   } else
-    C = CreateIntrinsic(ID, {DestTy, V->getType()}, {V, ExceptV}, nullptr, Name,
-                        {}, SetFn);
+    C = CreateIntrinsicWithoutFolding(ID, {DestTy, V->getType()}, {V, ExceptV},
+                                      nullptr, Name, {});
+  setConstrainedFPCallAttr(C);
+
+  if (isa<FPMathOperator>(C))
+    setFPAttrs(C, FPMathTag, UseFMF);
   return C;
 }
 
@@ -1090,15 +1088,16 @@ Value *IRBuilderBase::CreateFCmpHelper(CmpInst::Predicate P, Value *LHS,
       Name);
 }
 
-Value *IRBuilderBase::CreateConstrainedFPCmp(
+CallInst *IRBuilderBase::CreateConstrainedFPCmp(
     Intrinsic::ID ID, CmpInst::Predicate P, Value *L, Value *R,
     const Twine &Name, std::optional<fp::ExceptionBehavior> Except) {
   Value *PredicateV = getConstrainedFPPredicate(P);
   Value *ExceptV = getConstrainedFPExcept(Except);
 
-  return CreateIntrinsic(ID, {L->getType()}, {L, R, PredicateV, ExceptV},
-                         nullptr, Name, {},
-                         [&](CallInst *C) { setConstrainedFPCallAttr(C); });
+  CallInst *C = CreateIntrinsicWithoutFolding(
+      ID, {L->getType()}, {L, R, PredicateV, ExceptV}, nullptr, Name, {});
+  setConstrainedFPCallAttr(C);
+  return C;
 }
 
 CallInst *IRBuilderBase::CreateConstrainedFPCall(
