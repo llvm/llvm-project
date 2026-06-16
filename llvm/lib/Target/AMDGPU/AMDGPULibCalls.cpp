@@ -1333,7 +1333,7 @@ AMDGPULibCalls::insertSinCos(Value *Arg, FastMathFlags FMF, IRBuilder<> &B,
   // TODO: Is it worth trying to preserve the location for the cos calls for the
   // load?
 
-  LoadInst *LoadCos = B.CreateLoad(Alloc->getAllocatedType(), Alloc);
+  LoadInst *LoadCos = B.CreateLoad(Arg->getType(), Alloc);
   return {SinCos, LoadCos, SinCos};
 }
 

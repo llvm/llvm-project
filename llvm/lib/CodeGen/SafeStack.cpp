@@ -176,6 +176,8 @@ class SafeStack {
 
   bool IsMemIntrinsicSafe(const MemIntrinsic *MI, const Use &U,
                           const Value *AllocaPtr, uint64_t AllocaSize);
+  bool IsAccessSafe(Value *Addr, TypeSize Size, const Value *AllocaPtr,
+                    uint64_t AllocaSize);
   bool IsAccessSafe(Value *Addr, uint64_t Size, const Value *AllocaPtr,
                     uint64_t AllocaSize);
 
@@ -196,14 +198,20 @@ public:
 };
 
 uint64_t SafeStack::getStaticAllocaAllocationSize(const AllocaInst* AI) {
-  uint64_t Size = DL.getTypeAllocSize(AI->getAllocatedType());
-  if (AI->isArrayAllocation()) {
-    auto C = dyn_cast<ConstantInt>(AI->getArraySize());
-    if (!C)
-      return 0;
-    Size *= C->getZExtValue();
+  if (auto Size = AI->getAllocationSize(DL))
+    if (Size->isFixed())
+      return Size->getFixedValue();
+  return 0;
+}
+
+bool SafeStack::IsAccessSafe(Value *Addr, TypeSize AccessSize,
+                             const Value *AllocaPtr, uint64_t AllocaSize) {
+  if (AccessSize.isScalable()) {
+    // In case we don't know the size at compile time we cannot verify if the
+    // access is safe.
+    return false;
   }
-  return Size;
+  return IsAccessSafe(Addr, AccessSize.getFixedValue(), AllocaPtr, AllocaSize);
 }
 
 bool SafeStack::IsAccessSafe(Value *Addr, uint64_t AccessSize,
