@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: libcpp-has-no-incomplete-pstl
+
 // <numeric>
 
 // Check that functions are marked [[nodiscard]]
