@@ -118,14 +118,6 @@ private:
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
 
-  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
-                          const AttributeList &FuncAttributes) const override {
-    // Defer to the target-independent heuristic, which picks the largest
-    // integer type whose alignment constraints are satisfied (clamped to the
-    // largest legal integer type, i.e. i64 for BPF).
-    return MVT::Other;
-  }
-
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override {
     return false;
   }
