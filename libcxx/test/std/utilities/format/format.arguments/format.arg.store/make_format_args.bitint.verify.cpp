@@ -10,13 +10,9 @@
 
 // <format>
 
-// make_format_args with _BitInt(N) wider than __int128 is rejected. The
-// current rejection path cascades through overload-set ambiguity in
-// __determine_arg_t and a downstream "not formattable" static_assert. The
-// exact diagnostic shape is not a stable interface, and verify does not
-// support an "at least N matches" count modifier that would let this test
-// soak up the cascade cleanly. Keeping the file as a placeholder; redesign
-// is tracked separately when format gains a SFINAE-friendly rejection.
+// Placeholder for verify coverage of make_format_args with _BitInt(N > 128).
+// The current rejection cascades through unstable diagnostics; will be filled
+// in once format gains a SFINAE-friendly rejection path.
 
 #include <format>
 

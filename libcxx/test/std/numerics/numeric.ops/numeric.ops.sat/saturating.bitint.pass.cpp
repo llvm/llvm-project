@@ -8,34 +8,15 @@
 
 // REQUIRES: std-at-least-c++26
 
-// Clang <= 22 mis-evaluates saturating_mul on non-byte-aligned _BitInt at
-// compile time: clang-21 asserts in ExprConstant.cpp (IntExprEvaluator::
-// Success bitwidth mismatch), clang-22 produces the wrong value (the unsigned
-// product gets sign-extended, so the equality assert fires). Fixed in
-// clang-23.
+// Clang <= 22 mis-evaluates std::saturating_mul on non-byte-aligned _BitInt at
+// compile time (constexpr eval gives the wrong product), so static_assert(test())
+// fires. Android NDK toolchains exhibit the same constexpr failure path.
 // UNSUPPORTED: clang-19, clang-20, clang-21, clang-22, apple-clang-17, apple-clang-21
-//
-// Bionic's assert macro expands to (cond ? __assert_no_op : __assert2(...))
-// where __assert2 is non-constexpr; that reference fails constant evaluation
-// in test() even when the condition is true, so static_assert(test()) breaks.
 // UNSUPPORTED: target={{.+}}-android{{.*}}
 
 // <numeric>
 
-// saturating_add, saturating_sub, saturating_mul, saturating_div, saturating_cast applied to _BitInt(N).
-//
-// After [libc++] recognized _BitInt as an integer type in
-// __type_traits/integer_traits.h, these functions silently started
-// accepting _BitInt arguments. Saturation at min/max depends on
-// numeric_limits<_BitInt(N)>::min/max being correct, which requires the
-// digits10 fix from #193002 for odd widths.
-//
-// Widths covered:
-//   -  _BitInt(13):  odd narrow width, signed range -4096..4095.
-//                    Exercises fixed digits10 for saturation clamp.
-//   -  _BitInt(64):  equal to long long, integer_traits boundary.
-//   -  _BitInt(128): matches __int128 on targets that support it.
-//   -  _BitInt(200): beyond __int128 (optional via __BITINT_MAXWIDTH__).
+// std::saturating_{add,sub,mul,div,cast} applied to _BitInt(N).
 
 #include <cassert>
 #include <limits>

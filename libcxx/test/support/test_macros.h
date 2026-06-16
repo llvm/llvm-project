@@ -42,10 +42,9 @@
 #define TEST_HAS_EXTENSION(X) 0
 #endif
 
-// _BitInt(N) is a Clang extension in C and C++ and a C23 standard feature.
-// __BITINT_MAXWIDTH__ is the portable probe: defined by every compiler that
-// accepts the syntax. Note __has_extension(bit_int) is not a recognized
-// identifier and reads as 0 on Clang, so __BITINT_MAXWIDTH__ is the way.
+// _BitInt(N) is a C23 standard feature and a Clang extension in earlier C and C++.
+// __BITINT_MAXWIDTH__ is the portable probe: defined by every compiler that accepts _BitInt.
+// Note __has_extension(bit_int) is unusable because it is not recognized by Clang and produces 0.
 #ifdef __BITINT_MAXWIDTH__
 #  define TEST_HAS_BITINT 1
 #else

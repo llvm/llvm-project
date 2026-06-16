@@ -10,6 +10,8 @@
 
 // digits
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <limits>
 #include <cfloat>
 
@@ -55,10 +57,7 @@ int main(int, char**)
 
     // _BitInt(N): digits must equal N for unsigned and N-1 for signed,
     // regardless of padding bits for non-byte-aligned widths.
-    // _LIBCPP_USE_FROZEN_CXX03_HEADERS pins libc++ to the pre-PR #193002
-    // snapshot, which still computes digits as sizeof * CHAR_BIT. Skip until
-    // the fix is backported.
-#if TEST_HAS_BITINT && !defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#if TEST_HAS_BITINT
     // Byte-aligned widths.
     test<unsigned _BitInt(8), 8>();
     test<signed _BitInt(8), 7>();
@@ -92,7 +91,7 @@ int main(int, char**)
     test<unsigned _BitInt(4096), 4096>();
     test<signed _BitInt(4096), 4095>();
 #  endif
-#endif // TEST_HAS_BITINT && !_LIBCPP_USE_FROZEN_CXX03_HEADERS
+#endif // TEST_HAS_BITINT
 
     return 0;
 }

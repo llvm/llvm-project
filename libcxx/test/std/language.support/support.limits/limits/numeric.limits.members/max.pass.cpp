@@ -74,14 +74,14 @@ int main(int, char**)
 #if TEST_HAS_BITINT
     test<unsigned _BitInt(8)>((unsigned _BitInt(8)) ~(unsigned _BitInt(8))0);
     test<signed _BitInt(8)>((signed _BitInt(8))0x7F);
-#  if !__has_feature(memory_sanitizer)
+#  if !TEST_HAS_FEATURE(memory_sanitizer)
     test<unsigned _BitInt(13)>((unsigned _BitInt(13))0x1FFF);
     test<signed _BitInt(13)>((signed _BitInt(13))0x0FFF);
 #  endif
     test<unsigned _BitInt(64)>((unsigned _BitInt(64)) ~(unsigned _BitInt(64))0);
     test<signed _BitInt(64)>((signed _BitInt(64))0x7FFFFFFFFFFFFFFFLL);
 #  if __BITINT_MAXWIDTH__ >= 128
-#    if !__has_feature(memory_sanitizer)
+#    if !TEST_HAS_FEATURE(memory_sanitizer)
     test<unsigned _BitInt(77)>((unsigned _BitInt(77)) ~(unsigned _BitInt(77))0);
     test<signed _BitInt(77)>((signed _BitInt(77)) ~((signed _BitInt(77))1 << 76));
 #    endif

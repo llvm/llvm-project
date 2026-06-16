@@ -60,7 +60,7 @@ void test_signed_33() {
 // one, doubling the diagnostic count and breaking 1-to-1 directive matching.
 // Restrict 65/80/96/112 to platforms that have one path. TEST_HAS_NO_INT128
 // mirrors libc++'s _LIBCPP_HAS_INT128 (also false on _MSC_VER).
-#  if __has_builtin(__builtin_bswapg) || !defined(TEST_HAS_NO_INT128)
+#  if TEST_HAS_BUILTIN(__builtin_bswapg) || !defined(TEST_HAS_NO_INT128)
 void test_unsigned_65() {
   unsigned _BitInt(65) v = 0;
   // expected-error-re@*:* {{{{(std::byteswap requires T to have no padding bits|byteswap is unimplemented for integral types of this size)}}}}
@@ -103,7 +103,7 @@ void test_unsigned_56() {
 }
 
 // Same dispatch-availability guard as test_unsigned_65 above.
-#  if __has_builtin(__builtin_bswapg) || !defined(TEST_HAS_NO_INT128)
+#  if TEST_HAS_BUILTIN(__builtin_bswapg) || !defined(TEST_HAS_NO_INT128)
 #    if __BITINT_MAXWIDTH__ >= 80
 void test_unsigned_80() {
   // sizeof(_BitInt(80)) == 16 on x86_64; 48 padding bits. Width 80 is also

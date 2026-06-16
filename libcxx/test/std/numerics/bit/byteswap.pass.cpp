@@ -120,7 +120,7 @@ constexpr bool test() {
   test_num<unsigned _BitInt(64)>(0x0123456789ABCDEFULL, 0xEFCDAB8967452301ULL);
   test_num<signed _BitInt(64)>(0x0123456789ABCDEFLL, static_cast<signed _BitInt(64)>(0xEFCDAB8967452301ULL));
 
-#  if __BITINT_MAXWIDTH__ >= 128 && (__has_builtin(__builtin_bswapg) || !defined(TEST_HAS_NO_INT128))
+#  if __BITINT_MAXWIDTH__ >= 128 && (TEST_HAS_BUILTIN(__builtin_bswapg) || !defined(TEST_HAS_NO_INT128))
   // sizeof == 16: __builtin_bswap128 fallback or __builtin_bswapg. Targets
   // without libc++ __int128 (32-bit ARM, MSVC ABI on Windows clang-cl) and an
   // older compiler that lacks __builtin_bswapg cannot byteswap a 16-byte
@@ -136,7 +136,7 @@ constexpr bool test() {
   test_num<signed _BitInt(128)>(static_cast<signed _BitInt(128)>(v128), static_cast<signed _BitInt(128)>(v128_swapped));
 #  endif
 
-#  if __has_builtin(__builtin_bswapg) && __BITINT_MAXWIDTH__ >= 256
+#  if TEST_HAS_BUILTIN(__builtin_bswapg) && __BITINT_MAXWIDTH__ >= 256
   // sizeof > 16: only the __builtin_bswapg path supports widths beyond what
   // __builtin_bswap16/32/64/128 cover.
   unsigned _BitInt(256) v256 =
