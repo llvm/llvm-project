@@ -1731,7 +1731,7 @@ static unsigned estimateElementCount(ElementCount VF,
 static Function *getVectorLibraryVariantFor(const CallInst &CI, ElementCount VF,
                                             bool MaskRequired,
                                             const TargetLibraryInfo *TLI) {
-  if (!TLI || CI.isNoBuiltin())
+  if (!TLI)
     return nullptr;
   for (const VFInfo &Info : VFDatabase::getMappings(CI))
     if (Info.Shape.VF == VF && (!MaskRequired || Info.isMasked()))
