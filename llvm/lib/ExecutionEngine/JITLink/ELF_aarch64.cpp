@@ -237,6 +237,7 @@ private:
   Error addSingleRelocation(const typename ELFT::Rela &Rel,
                             const typename ELFT::Shdr &FixupSect,
                             Block &BlockToFix) {
+    // AArch64 BE8: instructions always LE-encoded regardless of ELF data endianness.
     using support::ulittle32_t;
     using Base = ELFLinkGraphBuilder<ELFT>;
 
