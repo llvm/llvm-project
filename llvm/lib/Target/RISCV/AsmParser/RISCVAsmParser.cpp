@@ -199,7 +199,6 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseRegister(OperandVector &Operands, bool AllowParens = false);
   ParseStatus parseMemOpBaseReg(OperandVector &Operands);
   ParseStatus parseZeroOffsetMemOp(OperandVector &Operands);
-  ParseStatus parseStackPtr(OperandVector &Operands);
   ParseStatus parseOperandWithSpecifier(OperandVector &Operands);
   ParseStatus parseBareSymbol(OperandVector &Operands);
   ParseStatus parseCallSymbol(OperandVector &Operands);
