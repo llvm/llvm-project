@@ -232,8 +232,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     Type *Ty = V->getScalarType();
     if (ShiftAmt < SE.getTypeSizeInBits(Ty))
       return CreateSCEV(LHSVal, [&](ArrayRef<SCEVUse> Ops) {
-        return SE.getUDivExpr(Ops[0],
-                              SE.getPowerOfTwo(Ops[0]->getType(), ShiftAmt));
+        return SE.getUDivExpr(Ops[0], SE.getPowerOfTwo(Ty, ShiftAmt));
       });
   }
   if (match(V, m_UDiv(m_VPValue(LHSVal), m_VPValue(RHSVal))))
