@@ -29,6 +29,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/CarolinesTimers.h"
 #include "lldb/Utility/ValueType.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
@@ -705,9 +706,20 @@ protected:
                 StackFrame::eExpressionPathOptionsInspectAnonymousUnions |
                 StackFrame::eExpressionPathOptionsAllowVarUpdates;
             lldb::VariableSP var_sp;
+            timespec start_time1;
+            timespec start_time2;
+            timespec end_time1;
+            timespec end_time2;
+
+            llvm::StringRef expr_ref = entry.ref();
+            std::string expr = expr_ref.str();
+            CarolineTimeStamp(eCarolineStartFrameVar, expr, &start_time1);
             valobj_sp = frame->GetValueForVariableExpressionPath(
                 entry.ref(), m_varobj_options.use_dynamic, expr_path_options,
                 var_sp, error);
+            CarolineTimeStamp(eCarolineEndFrameVar, expr, &end_time1);
+            CarolineTimeStamp(eCarolineStartExprEval, expr, &start_time2);
+            CarolineTimeStamp(eCarolineEndExprEval, expr, &end_time2);
             if (valobj_sp) {
               result.GetValueObjectList().Append(valobj_sp);
 
