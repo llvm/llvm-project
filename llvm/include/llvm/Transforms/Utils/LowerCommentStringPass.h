@@ -14,7 +14,7 @@
 namespace llvm {
 class LowerCommentStringPass : public PassInfoMixin<LowerCommentStringPass> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
   static bool isRequired() { return true; }
 };
