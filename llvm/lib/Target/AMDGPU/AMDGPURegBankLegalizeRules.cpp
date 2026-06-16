@@ -2662,6 +2662,13 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
             {{VgprOrAgprAnyTy},
              {IntrId, VgprAnyTy, VgprAnyTy, VgprOrAgprAnyTy, VgprAnyTy}}});
 
+  addRulesForIOpcs({amdgcn_mfma_scale_f32_32x32x64_f8f6f4,
+                    amdgcn_mfma_scale_f32_16x16x128_f8f6f4})
+      .Any({{DivAnyTy},
+            {{VgprOrAgprAnyTy},
+             {IntrId, VgprAnyTy, VgprAnyTy, VgprOrAgprAnyTy, Imm, Imm, Imm,
+              Vgpr32, Imm, Vgpr32}}});
+
   // WMMA/SWMMAC intrinsics: all register operands map to VGPR.
   addRulesForIOpcs(
       {// WMMA GFX11+
