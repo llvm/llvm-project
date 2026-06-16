@@ -11,9 +11,7 @@
 
 #include <__config>
 #include <__type_traits/enable_if.h>
-#include <__type_traits/integer_traits.h>
 #include <__type_traits/is_integral.h>
-#include <__type_traits/is_same.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -65,17 +63,18 @@ template <class = int>
   return __builtin_llabs(__x);
 }
 
-// Covers __int128 and signed _BitInt(N) with sizeof >= sizeof(int).
-// The int/long/long long exclusions are load-bearing: _BitInt(33..64)
-// shares sizeof with long long and would otherwise compete with the
-// builtin overload.
-template <class _Tp,
-          __enable_if_t<__is_signed_integer_v<_Tp> && !is_same<_Tp, int>::value && !is_same<_Tp, long>::value &&
-                            !is_same<_Tp, long long>::value && (sizeof(_Tp) >= sizeof(int)),
-                        int> = 0>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _Tp abs(_Tp __x) _NOEXCEPT {
+#if _LIBCPP_HAS_INT128
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI inline __int128_t abs(__int128_t __x) _NOEXCEPT { return __x < 0 ? -__x : __x; }
+#endif
+
+#if defined(__BITINT_MAXWIDTH__)
+// Narrower widths (e.g. _BitInt(7)) stay unsupported, like signed types narrower
+// than int with no same-type abs. The gate is on sizeof, not bit width.
+template <int _Np, __enable_if_t<(sizeof(signed _BitInt(_Np)) >= sizeof(int)), int> = 0>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI signed _BitInt(_Np) abs(signed _BitInt(_Np) __x) _NOEXCEPT {
   return __x < 0 ? -__x : __x;
 }
+#endif
 
 } // namespace __math
 
