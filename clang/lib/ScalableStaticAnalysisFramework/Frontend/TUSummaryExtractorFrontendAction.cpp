@@ -9,7 +9,6 @@
 #include "clang/ScalableStaticAnalysisFramework/Frontend/TUSummaryExtractorFrontendAction.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/DiagnosticFrontend.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
@@ -20,7 +19,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Path.h"
-#include "llvm/TargetParser/Triple.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -98,8 +96,7 @@ public:
   static std::unique_ptr<TUSummaryRunner> create(CompilerInstance &CI);
 
 private:
-  TUSummaryRunner(llvm::Triple TargetTriple,
-                  std::unique_ptr<SerializationFormat> Format,
+  TUSummaryRunner(std::unique_ptr<SerializationFormat> Format,
                   const FrontendOptions &Opts);
 
   void HandleTranslationUnit(ASTContext &Ctx) override;
@@ -129,16 +126,14 @@ std::unique_ptr<TUSummaryRunner> TUSummaryRunner::create(CompilerInstance &CI) {
   if (reportUnrecognizedExtractorNames(Diags, Opts.SSAFExtractSummaries))
     return nullptr;
 
-  return std::unique_ptr<TUSummaryRunner>{new TUSummaryRunner{
-      CI.getTarget().getTriple(), makeFormat(FormatName), Opts}};
+  return std::unique_ptr<TUSummaryRunner>{
+      new TUSummaryRunner{makeFormat(FormatName), Opts}};
 }
 
-TUSummaryRunner::TUSummaryRunner(llvm::Triple TargetTriple,
-                                 std::unique_ptr<SerializationFormat> Format,
+TUSummaryRunner::TUSummaryRunner(std::unique_ptr<SerializationFormat> Format,
                                  const FrontendOptions &Opts)
     : MultiplexConsumer(std::vector<std::unique_ptr<ASTConsumer>>{}),
-      Summary(std::move(TargetTriple),
-              BuildNamespace(BuildNamespaceKind::CompilationUnit,
+      Summary(BuildNamespace(BuildNamespaceKind::CompilationUnit,
                              Opts.SSAFCompilationUnitId)),
       Format(std::move(Format)), Opts(Opts) {
   assert(this->Format);
