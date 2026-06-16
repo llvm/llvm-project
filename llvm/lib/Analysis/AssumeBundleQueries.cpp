@@ -114,16 +114,13 @@ llvm::getKnowledgeFromBundle(AssumeInst &Assume,
   };
   if (BOI.End - BOI.Begin > ABA_Argument)
     Result.ArgValue = GetArgOr1(0);
+  Result.IRArgValue = bundleHasArgument(BOI, ABA_Argument)
+                          ? getValueFromBundleOpInfo(Assume, BOI, ABA_Argument)
+                          : nullptr;
   if (Result.AttrKind == Attribute::Alignment)
     if (BOI.End - BOI.Begin > ABA_Argument + 1)
       Result.ArgValue = MinAlign(Result.ArgValue, GetArgOr1(1));
   return Result;
-}
-
-RetainedKnowledge llvm::getKnowledgeFromOperandInAssume(AssumeInst &Assume,
-                                                        unsigned Idx) {
-  CallBase::BundleOpInfo BOI = Assume.getBundleOpInfoForOperand(Idx);
-  return getKnowledgeFromBundle(Assume, BOI);
 }
 
 bool llvm::isAssumeWithEmptyBundle(const AssumeInst &Assume) {

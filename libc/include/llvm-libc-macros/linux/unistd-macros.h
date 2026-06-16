@@ -1,9 +1,14 @@
-//===-- Definition of macros from unistd.h --------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Linux specific declarations of macros from unistd.h.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_MACROS_LINUX_UNISTD_MACROS_H
@@ -17,6 +22,9 @@
 
 #define _SC_PAGESIZE 1
 #define _SC_PAGE_SIZE _SC_PAGESIZE
+#define _SC_NPROCESSORS_CONF 83
+#define _SC_NPROCESSORS_ONLN 84
+#define _SC_THREADS 67
 
 #define _PC_FILESIZEBITS 0
 #define _PC_LINK_MAX 1
@@ -41,6 +49,7 @@
 
 // TODO: Move these limit macros to a separate file
 #define _POSIX_CHOWN_RESTRICTED 1
+#define _POSIX_THREADS 202405L
 #define _POSIX_PIPE_BUF 512
 #define _POSIX_NO_TRUNC 1
 #define _POSIX_VDISABLE '\0'

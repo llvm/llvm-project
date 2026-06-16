@@ -20,7 +20,7 @@ subroutine s(assumedRank, coarray, class, classStar, typeStar)
   real :: array(implicit01())  ! 15.4.2.2(2)
   !ERROR: Keyword 'keyword=' may not appear in a reference to a procedure with an implicit interface
   call implicit10(1, 2, keyword=3)  ! 15.4.2.2(1)
-  !ERROR: Assumed rank argument requires an explicit interface
+  !ERROR: Assumed rank argument 'assumedrank' requires an explicit interface
   call implicit11(assumedRank)  ! 15.4.2.2(3)(c)
   call implicit12(coarray)  ! ok
   call implicit12a(coarray[1]) ! ok

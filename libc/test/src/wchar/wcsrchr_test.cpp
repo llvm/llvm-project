@@ -60,9 +60,9 @@ TEST(LlvmLibcWCSRChrTest, EmptyStringShouldOnlyMatchNullTerminator) {
   ASSERT_EQ(LIBC_NAMESPACE::wcsrchr(src, L'*'), nullptr);
 }
 
-#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#if defined(LIBC_ADD_NULL_CHECKS)
 TEST(LlvmLibcWCSRChrTest, NullptrCrash) {
   // Passing in a nullptr should crash the program.
   EXPECT_DEATH([] { LIBC_NAMESPACE::wcsrchr(nullptr, L'a'); }, WITH_SIGNAL(-1));
 }
-#endif // LIBC_HAS_ADDRESS_SANITIZER
+#endif // LIBC_ADD_NULL_CHECKS

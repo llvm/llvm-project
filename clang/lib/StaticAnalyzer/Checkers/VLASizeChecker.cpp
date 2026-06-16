@@ -92,7 +92,7 @@ ProgramStateRef VLASizeChecker::checkVLA(CheckerContext &C,
 
   ASTContext &Ctx = C.getASTContext();
   SValBuilder &SVB = C.getSValBuilder();
-  CanQualType SizeTy = Ctx.getSizeType();
+  QualType SizeTy = Ctx.getSizeType();
   uint64_t SizeMax =
       SVB.getBasicValueFactory().getMaxValue(SizeTy)->getZExtValue();
 
@@ -296,9 +296,8 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
 
   // VLASizeChecker is responsible for defining the extent of the array.
   if (VD) {
-    State =
-        setDynamicExtent(State, State->getRegion(VD, C.getLocationContext()),
-                         ArraySize.castAs<NonLoc>());
+    State = setDynamicExtent(State, State->getRegion(VD, C.getStackFrame()),
+                             ArraySize.castAs<NonLoc>());
   }
 
   // Remember our assumptions!

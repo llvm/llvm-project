@@ -197,25 +197,12 @@ void SSAUpdater::RewriteUse(Use &U) {
 }
 
 void SSAUpdater::UpdateDebugValues(Instruction *I) {
-  SmallVector<DbgValueInst *, 4> DbgValues;
   SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
-  llvm::findDbgValues(DbgValues, I, &DbgVariableRecords);
-  for (auto &DbgValue : DbgValues) {
-    if (DbgValue->getParent() == I->getParent())
-      continue;
-    UpdateDebugValue(I, DbgValue);
-  }
+  llvm::findDbgValues(I, DbgVariableRecords);
   for (auto &DVR : DbgVariableRecords) {
     if (DVR->getParent() == I->getParent())
       continue;
     UpdateDebugValue(I, DVR);
-  }
-}
-
-void SSAUpdater::UpdateDebugValues(Instruction *I,
-                                   SmallVectorImpl<DbgValueInst *> &DbgValues) {
-  for (auto &DbgValue : DbgValues) {
-    UpdateDebugValue(I, DbgValue);
   }
 }
 
@@ -224,15 +211,6 @@ void SSAUpdater::UpdateDebugValues(
   for (auto &DVR : DbgVariableRecords) {
     UpdateDebugValue(I, DVR);
   }
-}
-
-void SSAUpdater::UpdateDebugValue(Instruction *I, DbgValueInst *DbgValue) {
-  BasicBlock *UserBB = DbgValue->getParent();
-  if (HasValueForBlock(UserBB)) {
-    Value *NewVal = GetValueAtEndOfBlock(UserBB);
-    DbgValue->replaceVariableLocationOp(I, NewVal);
-  } else
-    DbgValue->setKillLocation();
 }
 
 void SSAUpdater::UpdateDebugValue(Instruction *I, DbgVariableRecord *DVR) {
@@ -257,6 +235,12 @@ void SSAUpdater::RewriteUseAfterInsertions(Use &U) {
 }
 
 namespace llvm {
+
+cl::opt<unsigned> SSAUpdaterPhiSearchLimit(
+    "ssaupdater-phi-search-limit",
+    cl::desc("Limit number of phi-nodes to be searched when "
+             "looking for an existing duplicate."),
+    cl::init(80), cl::Hidden);
 
 template<>
 class SSAUpdaterTraits<SSAUpdater> {
@@ -521,7 +505,7 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
       // Propagate down to the ultimate replacee.  The intermediately loads
       // could theoretically already have been deleted, so we don't want to
       // dereference the Value*'s.
-      DenseMap<Value*, Value*>::iterator RLI = ReplacedLoads.find(NewVal);
+      auto RLI = ReplacedLoads.find(NewVal);
       while (RLI != ReplacedLoads.end()) {
         NewVal = RLI->second;
         RLI = ReplacedLoads.find(NewVal);

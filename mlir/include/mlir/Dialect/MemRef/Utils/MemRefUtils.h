@@ -31,6 +31,18 @@ namespace memref {
 /// contiguous chunk of memory.
 bool isStaticShapeAndContiguousRowMajor(MemRefType type);
 
+/// Controls how the per-dimension contribution to `linearizedSize` is divided
+/// by `dstBits / srcBits` when scaling down to the emulated type. The offset
+/// and intra-data offset are unaffected; they always use floor division and
+/// remainder respectively.
+/// - `Floor`: round each `stride * size / scaler` down. Suitable for indexing
+///   computations where a partial trailing byte is not included.
+/// - `Ceil`: round up, matching the result-shape size used by narrow-type
+///   memref type conversion (see `getLinearizedShape`). Use this when the
+///   caller needs the linearized size to cover all source elements, e.g. when
+///   building the size attribute of a converted `memref.reinterpret_cast`.
+enum class LinearizedDivKind { Floor, Ceil };
+
 /// For a `memref` with `offset`, `sizes` and `strides`, returns the
 /// offset, size, and potentially the size padded at the front to use for the
 /// linearized `memref`.
@@ -47,6 +59,8 @@ bool isStaticShapeAndContiguousRowMajor(MemRefType type);
 ///   load/store, the memory region emulated is larger than the actual memory
 ///   region needed. `intraDataOffset` returns the element offset of the data
 ///   relevant at the beginning.
+/// - `sizeDivKind` selects floor vs ceil rounding for the `linearizedSize`
+///   contribution from each dimension (see `LinearizedDivKind`).
 struct LinearizedMemRefInfo {
   OpFoldResult linearizedOffset;
   OpFoldResult linearizedSize;
@@ -55,7 +69,8 @@ struct LinearizedMemRefInfo {
 std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
     OpBuilder &builder, Location loc, int srcBits, int dstBits,
     OpFoldResult offset, ArrayRef<OpFoldResult> sizes,
-    ArrayRef<OpFoldResult> strides, ArrayRef<OpFoldResult> indices = {});
+    ArrayRef<OpFoldResult> strides, ArrayRef<OpFoldResult> indices = {},
+    LinearizedDivKind sizeDivKind = LinearizedDivKind::Floor);
 
 /// For a `memref` with `offset` and `sizes`, returns the
 /// offset and size to use for the linearized `memref`, assuming that
@@ -64,10 +79,12 @@ std::pair<LinearizedMemRefInfo, OpFoldResult> getLinearizedMemRefOffsetAndSize(
 ///   element type with bitwidth `srcBits` using element type with
 ///   bitwidth `dstBits`, the linearized offset and size are
 ///   scaled down by `dstBits`/`srcBits`.
-LinearizedMemRefInfo
-getLinearizedMemRefOffsetAndSize(OpBuilder &builder, Location loc, int srcBits,
-                                 int dstBits, OpFoldResult offset,
-                                 ArrayRef<OpFoldResult> sizes);
+/// - `sizeDivKind` selects floor vs ceil rounding for the `linearizedSize`
+///   contribution from each dimension (see `LinearizedDivKind`).
+LinearizedMemRefInfo getLinearizedMemRefOffsetAndSize(
+    OpBuilder &builder, Location loc, int srcBits, int dstBits,
+    OpFoldResult offset, ArrayRef<OpFoldResult> sizes,
+    LinearizedDivKind sizeDivKind = LinearizedDivKind::Floor);
 
 /// Track temporary allocations that are never read from. If this is the case
 /// it means both the allocations and associated stores can be removed.
@@ -115,6 +132,67 @@ inline bool isSameViewOrTrivialAlias(MemrefValue a, MemrefValue b) {
 /// Walk up the source chain until we find an operation that is not a view of
 /// the source memref (i.e. implements ViewLikeOpInterface).
 MemrefValue skipViewLikeOps(MemrefValue source);
+
+/// Given the 'indices' of a load/store operation where the memref is a result
+/// of a expand_shape op, returns the indices w.r.t to the source memref of the
+/// expand_shape op into `sourceIndices`. For example
+///
+/// %0 = ... : memref<12x42xf32>
+/// %1 = memref.expand_shape %0 [[0, 1], [2]]
+///    : memref<12x42xf32> into memref<2x6x42xf32>
+/// %2 = load %1[%i1, %i2, %i3] : memref<2x6x42xf32
+///
+/// could be folded into
+///
+/// %2 = load %0[6 * i1 + i2, %i3] :
+///          memref<12x42xf32>
+///
+/// If `startsInbounds` is true, optimizations that rely on all indices being
+/// non-negative and less than the corresponding memref dimension may be
+/// performed.
+void resolveSourceIndicesExpandShape(Location loc, PatternRewriter &rewriter,
+                                     memref::ExpandShapeOp expandShapeOp,
+                                     ValueRange indices,
+                                     SmallVectorImpl<Value> &sourceIndices,
+                                     bool startsInbounds);
+
+/// Given the 'indices' of a load/store operation where the memref is a result
+/// of a collapse_shape op, returns the indices w.r.t to the source memref of
+/// the collapse_shape op, returing them into `sourceIndices`. For example
+///
+/// %0 = ... : memref<2x6x42xf32>
+/// %1 = memref.collapse_shape %0 [[0, 1], [2]]
+///    : memref<2x6x42xf32> into memref<12x42xf32>
+/// %2 = load %1[%i1, %i2] : memref<12x42xf32>
+///
+/// could be folded into
+///
+/// %2 = load %0[%i1 / 6, %i1 % 6, %i2] :
+///          memref<2x6x42xf32>
+///
+/// If `startsInbounds` is true, optimizations that rely on all indices being
+/// non-negative and less than the corresponding memref dimension may be
+/// performed.
+void resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
+                                       memref::CollapseShapeOp collapseShapeOp,
+                                       ValueRange indices,
+                                       SmallVectorImpl<Value> &sourceIndices,
+                                       bool startsInbounds);
+
+/// Given the 'indices' of a load/store operation where the memref is a result
+/// of a rank-reducing full subview op, returns the indices w.r.t to the source
+/// memref of the memref.subview op. For example
+///
+///  %alias = memref.subview %src[0, 0, 0][1, 2, 2][1, 1, 1]: memref<1x2x2xf32>
+///                           to memref<2x2xf32>
+///  %val = memref.load %alias[%i, %j] : memref<2x2xf32>
+///
+/// could be folded into
+///
+///  %val = memref.load %src[0, %i, %j] : memref<1x2x2xf32>
+LogicalResult resolveSourceIndicesRankReducingSubview(
+    Location loc, OpBuilder &b, memref::SubViewOp subViewOp, ValueRange indices,
+    SmallVectorImpl<Value> &sourceIndices);
 
 } // namespace memref
 } // namespace mlir

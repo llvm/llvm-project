@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "PS4CPU.h"
+#include "Arch/X86.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -167,8 +168,8 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // LTO indeed occurs.
   if (Args.hasFlag(options::OPT_funified_lto, options::OPT_fno_unified_lto,
                    true))
-    CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
-                                                  : "--lto=full");
+    CmdArgs.push_back(TC.getLTOMode(Args) == LTOK_Thin ? "--lto=thin"
+                                                       : "--lto=full");
   if (UseJMC)
     AddLTOFlag("-enable-jmc-instrument");
 
@@ -343,10 +344,17 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // whether or not that will be the case at this point. So, unconditionally
   // pass LTO options to ensure proper codegen, metadata production, etc if
   // LTO indeed occurs.
+
+  tools::addDTLTOOptions(TC, Args, CmdArgs);
+
   if (Args.hasFlag(options::OPT_funified_lto, options::OPT_fno_unified_lto,
                    true))
-    CmdArgs.push_back(D.getLTOMode() == LTOK_Thin ? "--lto=thin"
-                                                  : "--lto=full");
+    CmdArgs.push_back(TC.getLTOMode(Args) == LTOK_Thin ? "--lto=thin"
+                                                       : "--lto=full");
+
+  if (Args.hasFlag(options::OPT_ffat_lto_objects,
+                   options::OPT_fno_fat_lto_objects, false))
+    CmdArgs.push_back("--fat-lto-objects");
 
   AddLTOFlag("-emit-jump-table-sizes-section");
 
@@ -362,6 +370,9 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (StringRef Jobs = getLTOParallelism(Args, D); !Jobs.empty())
     AddLTOFlag(Twine("jobs=") + Jobs);
+
+  std::string CPU = tools::x86::getX86TargetCPU(D, Args, TC.getTriple());
+  AddLTOFlag(Twine("mcpu=" + CPU));
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   TC.AddFilePathLibArgs(Args, CmdArgs);
@@ -379,8 +390,10 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       !Relocatable &&
       !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib);
 
-  auto AddCRTObject = [&](const char *Name) {
-    CmdArgs.push_back(Args.MakeArgString(TC.GetFilePath(Name)));
+  auto AddCRTObject = [&](StringRef Name) {
+    // CRT objects can be found on user supplied library paths. This is
+    // an entrenched expectation on PlayStation.
+    CmdArgs.push_back(Args.MakeArgString("-l:" + Name));
   };
 
   if (AddStartFiles) {
@@ -483,6 +496,9 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
   // control of header or library search. If we're not linking, don't check
   // for missing libraries.
   auto CheckSDKPartExists = [&](StringRef Dir, StringRef Desc) {
+    // In ThinLTO code generation mode SDK files are not required.
+    if (Args.hasArgNoClaim(options::OPT_fthinlto_index_EQ))
+      return true;
     if (llvm::sys::fs::exists(Dir))
       return true;
     D.Diag(clang::diag::warn_drv_unable_to_find_directory_expected)
@@ -548,8 +564,10 @@ Tool *toolchains::PS5CPU::buildLinker() const {
   return new tools::PS5cpu::Linker(*this);
 }
 
-SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers() const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers(
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
@@ -557,14 +575,16 @@ SanitizerMask toolchains::PS4PS5Base::getSupportedSanitizers() const {
   return Res;
 }
 
-SanitizerMask toolchains::PS5CPU::getSupportedSanitizers() const {
-  SanitizerMask Res = PS4PS5Base::getSupportedSanitizers();
+SanitizerMask toolchains::PS5CPU::getSupportedSanitizers(
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      PS4PS5Base::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Thread;
   return Res;
 }
 
 void toolchains::PS4PS5Base::addClangTargetOptions(
-    const ArgList &DriverArgs, ArgStringList &CC1Args,
+    const ArgList &DriverArgs, ArgStringList &CC1Args, StringRef BoundArch,
     Action::OffloadKind DeviceOffloadingKind) const {
   // PS4/PS5 do not use init arrays.
   if (DriverArgs.hasArg(options::OPT_fuse_init_array)) {
@@ -632,6 +652,12 @@ void toolchains::PS4PS5Base::addClangTargetOptions(
     CC1Args.push_back("-mllvm");
     CC1Args.push_back("-emit-jump-table-sizes-section");
   }
+}
+
+void toolchains::PS4PS5Base::addClangWarningOptions(
+    ArgStringList &CC1Args) const {
+  CC1Args.push_back("-Wnonportable-include-path-separator");
+  CC1Args.push_back("-Wnonportable-system-include-path");
 }
 
 // PS4 toolchain.

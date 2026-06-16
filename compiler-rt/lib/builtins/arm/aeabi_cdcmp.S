@@ -128,7 +128,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cdcmple)
         msr APSR_nzcvq, ip
 #if defined(__ARM_FEATURE_PAC_DEFAULT)
         pop {r0-r3, r12, lr}
-        bxaut r12, lr, sp
+        PAC_RETURN
 #else
         pop {r0-r3}
         POP_PC()
@@ -156,7 +156,13 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cdrcmple)
         mov r1, r3
         mov r3, ip
 
+#if defined(USE_THUMB_1)
+        push {r0, lr}
+        bl __aeabi_cdcmple
+        pop {r0, pc}
+#else
         b __aeabi_cdcmple
+#endif
 END_COMPILERRT_FUNCTION(__aeabi_cdrcmple)
 
 NO_EXEC_STACK_DIRECTIVE

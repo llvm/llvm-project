@@ -103,7 +103,7 @@ InstrumentationRuntimeMainThreadChecker::RetrieveReportData(
 
   std::string apiName;
   Status read_error;
-  target.ReadCStringFromMemory(apiname_ptr, apiName, read_error);
+  target.ReadCStringFromMemory(Address(apiname_ptr), apiName, read_error);
   if (read_error.Fail())
     return StructuredData::ObjectSP();
 
@@ -266,9 +266,9 @@ InstrumentationRuntimeMainThreadChecker::GetBacktracesFromExtendedStopInfo(
 
   // We gather symbolication addresses above, so no need for HistoryThread to
   // try to infer the call addresses.
-  bool pcs_are_call_addresses = true;
-  ThreadSP new_thread_sp = std::make_shared<HistoryThread>(
-      *process_sp, tid, PCs, pcs_are_call_addresses);
+  auto pc_type = HistoryPCType::Calls;
+  ThreadSP new_thread_sp =
+      std::make_shared<HistoryThread>(*process_sp, tid, PCs, pc_type);
 
   // Save this in the Process' ExtendedThreadList so a strong pointer retains
   // the object

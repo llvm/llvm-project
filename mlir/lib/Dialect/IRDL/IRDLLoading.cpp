@@ -20,9 +20,6 @@
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/OperationSupport.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/SMLoc.h"
-#include <numeric>
 
 using namespace mlir;
 using namespace mlir::irdl;
@@ -172,7 +169,7 @@ LogicalResult getSegmentSizes(Operation *op, StringRef elemName,
 LogicalResult getOperandSegmentSizes(Operation *op,
                                      ArrayRef<Variadicity> variadicities,
                                      SmallVectorImpl<int> &segmentSizes) {
-  return getSegmentSizes(op, "operand", "operand_segment_sizes",
+  return getSegmentSizes(op, "operand", "operandSegmentSizes",
                          op->getNumOperands(), variadicities, segmentSizes);
 }
 
@@ -183,7 +180,7 @@ LogicalResult getOperandSegmentSizes(Operation *op,
 LogicalResult getResultSegmentSizes(Operation *op,
                                     ArrayRef<Variadicity> variadicities,
                                     SmallVectorImpl<int> &segmentSizes) {
-  return getSegmentSizes(op, "result", "result_segment_sizes",
+  return getSegmentSizes(op, "result", "resultSegmentSizes",
                          op->getNumResults(), variadicities, segmentSizes);
 }
 
@@ -534,6 +531,41 @@ static bool getBases(Operation *op, SmallPtrSet<TypeID, 4> &paramIds,
     Attribute expected = is.getExpected();
     isIds.insert(expected.getTypeID());
     return false;
+  }
+
+  if (auto base = dyn_cast<BaseOp>(op)) {
+    if (base.getBaseName()) {
+      StringRef baseName = *base.getBaseName();
+      if (baseName[0] == '!') {
+        auto abstractType =
+            AbstractType::lookup(baseName.drop_front(1), op->getContext());
+        assert(abstractType && "type name should refer to an existing type");
+        paramIds.insert(abstractType->get().getTypeID());
+      } else if (baseName[0] == '#') {
+        auto abstractAttr =
+            AbstractAttribute::lookup(baseName.drop_front(1), op->getContext());
+        assert(abstractAttr && "attribute name should refer to an existing "
+                               "attribute");
+        paramIds.insert(abstractAttr->get().getTypeID());
+      } else {
+        llvm_unreachable(
+            "invalid `irdl.base` operation: base name should start "
+            "with '!' for types or '#' for attributes");
+      }
+      return false;
+    }
+
+    if (base.getBaseRef()) {
+      SymbolRefAttr symRef = *base.getBaseRef();
+      Operation *defOp = irdl::lookupSymbolNearDialect(op, symRef);
+      assert(defOp && "symbol reference should refer to an existing operation");
+      paramIrdlOps.insert(defOp);
+      return false;
+    }
+
+    llvm_unreachable(
+        "invalid `irdl.base` operation: expected either a base name "
+        "or a base symbol reference");
   }
 
   // For `irdl.any`, we return `false` since we can match any type or attribute

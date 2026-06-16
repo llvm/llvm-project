@@ -10,7 +10,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/DWARFLinker/Classic/DWARFLinkerDeclContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/FormatVariadic.h"
 
 namespace llvm {
@@ -88,9 +88,7 @@ void CompileUnit::markEverythingAsKept() {
 
     if (auto ExprLockBlock = Value->getAsBlock()) {
       // Parse 'exprloc' expression.
-      DataExtractor Data(toStringRef(*ExprLockBlock),
-                         U->getContext().isLittleEndian(),
-                         U->getAddressByteSize());
+      DataExtractor Data(*ExprLockBlock, U->getContext().isLittleEndian());
       DWARFExpression Expression(Data, U->getAddressByteSize(),
                                  U->getFormParams().Format);
 
@@ -107,7 +105,7 @@ void CompileUnit::markEverythingAsKept() {
         case dwarf::DW_OP_const4s:
         case dwarf::DW_OP_const8s:
           if (NextIt == Expression.end() ||
-              NextIt->getCode() != dwarf::DW_OP_form_tls_address)
+              !dwarf::isTlsAddressOp(NextIt->getCode()))
             break;
           [[fallthrough]];
         case dwarf::DW_OP_constx:

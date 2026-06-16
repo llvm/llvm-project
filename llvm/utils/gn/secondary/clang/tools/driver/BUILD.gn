@@ -57,10 +57,10 @@ driver_executable("clang") {
     "//clang/lib/Frontend",
     "//clang/lib/FrontendTool",
     "//clang/lib/Headers",
+    "//clang/lib/Options",
     "//clang/tools/clang-linker-wrapper",
     "//clang/tools/clang-nvlink-wrapper",
     "//clang/tools/clang-offload-bundler",
-    "//clang/tools/clang-offload-packager",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/Analysis",
     "//llvm/lib/CodeGen",
@@ -99,4 +99,5 @@ driver_executable("clang") {
     "cc1gen_reproducer_main.cpp",
     "driver.cpp",
   ]
+  needs_posix_utility_signal_handling = true
 }

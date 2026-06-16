@@ -12,10 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h"
-#include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
@@ -58,6 +55,9 @@ static bool createElementwiseOp(ConversionPatternRewriter &builder,
   case gpu::MMAElementwiseOp::SUBI:
     builder.replaceOpWithNewOp<spirv::ISubOp>(op, coopType, operands);
     return true;
+  case gpu::MMAElementwiseOp::MULF:
+    builder.replaceOpWithNewOp<spirv::FMulOp>(op, coopType, operands);
+    return true;
   case gpu::MMAElementwiseOp::DIVF:
     builder.replaceOpWithNewOp<spirv::FDivOp>(op, coopType, operands);
     return true;
@@ -74,6 +74,7 @@ static bool createElementwiseOp(ConversionPatternRewriter &builder,
     builder.replaceOpWithNewOp<spirv::SNegateOp>(op, coopType, operands);
     return true;
   case gpu::MMAElementwiseOp::EXTF:
+  case gpu::MMAElementwiseOp::TRUNCF:
     builder.replaceOpWithNewOp<spirv::FConvertOp>(op, coopType, operands);
     return true;
   default:
@@ -91,12 +92,36 @@ bool allOperandsHaveSameCoopMatrixType(ValueRange operands) {
   return isa<spirv::CooperativeMatrixType>(operands.front().getType());
 }
 
+static bool hasSignedIntegerElementType(spirv::CooperativeMatrixType type) {
+  auto elementType = dyn_cast<IntegerType>(type.getElementType());
+  return elementType && elementType.isSigned();
+}
+
+static spirv::CooperativeMatrixOperandsKHR
+getSignedCoopMatrixOperands(spirv::CooperativeMatrixType aType,
+                            spirv::CooperativeMatrixType bType,
+                            spirv::CooperativeMatrixType cType,
+                            spirv::CooperativeMatrixType resultType) {
+  using Operands = spirv::CooperativeMatrixOperandsKHR;
+
+  Operands operands = Operands::None;
+  if (hasSignedIntegerElementType(aType))
+    operands |= Operands::ASigned;
+  if (hasSignedIntegerElementType(bType))
+    operands |= Operands::BSigned;
+  if (hasSignedIntegerElementType(cType))
+    operands |= Operands::CSigned;
+  if (hasSignedIntegerElementType(resultType))
+    operands |= Operands::ResultSigned;
+  return operands;
+}
+
 namespace {
 /// Converts GPU MMA ConstantMatrixOp to constant SPIR-V KHR/NV cooperative
 /// matrix ops.
 struct WmmaConstantOpToSPIRVLowering final
     : OpConversionPattern<gpu::SubgroupMmaConstantMatrixOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaConstantMatrixOp op, OpAdaptor adaptor,
@@ -115,7 +140,7 @@ struct WmmaConstantOpToSPIRVLowering final
 /// matrix ops.
 struct WmmaExtractOpToSPIRVLowering final
     : OpConversionPattern<gpu::SubgroupMmaExtractThreadLocalOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaExtractThreadLocalOp op, OpAdaptor adaptor,
@@ -147,7 +172,7 @@ struct WmmaExtractOpToSPIRVLowering final
 /// matrix ops.
 struct WmmaInsertOpToSPIRVLowering final
     : OpConversionPattern<gpu::SubgroupMmaInsertThreadLocalOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaInsertThreadLocalOp op, OpAdaptor adaptor,
@@ -177,7 +202,7 @@ struct WmmaInsertOpToSPIRVLowering final
 /// the default case.
 struct WmmaElementwiseOpToSPIRVDefaultLowering final
     : OpConversionPattern<gpu::SubgroupMmaElementwiseOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaElementwiseOp op, OpAdaptor adaptor,
@@ -201,7 +226,7 @@ struct WmmaElementwiseOpToSPIRVDefaultLowering final
 /// matrix times scalar case.
 struct WmmaElementwiseOpToSPIRVScalarMulLowering final
     : OpConversionPattern<gpu::SubgroupMmaElementwiseOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaElementwiseOp op, OpAdaptor adaptor,
@@ -265,7 +290,7 @@ namespace {
 /// dialect.
 struct WmmaLoadOpToSPIRVLowering final
     : OpConversionPattern<gpu::SubgroupMmaLoadMatrixOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaLoadMatrixOp op, OpAdaptor adaptor,
@@ -286,8 +311,8 @@ struct WmmaLoadOpToSPIRVLowering final
 
     int64_t stride = op.getLeadDimension().getSExtValue();
     IntegerType i32Type = rewriter.getI32Type();
-    auto strideValue = rewriter.create<spirv::ConstantOp>(
-        loc, i32Type, IntegerAttr::get(i32Type, stride));
+    auto strideValue = spirv::ConstantOp::create(
+        rewriter, loc, i32Type, IntegerAttr::get(i32Type, stride));
 
     bool isColMajor = op.getTranspose().value_or(false);
     auto layout = isColMajor ? spirv::CooperativeMatrixLayoutKHR::ColumnMajor
@@ -303,7 +328,7 @@ struct WmmaLoadOpToSPIRVLowering final
 /// dialect.
 struct WmmaStoreOpToSPIRVLowering final
     : OpConversionPattern<gpu::SubgroupMmaStoreMatrixOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaStoreMatrixOp op, OpAdaptor adaptor,
@@ -318,8 +343,8 @@ struct WmmaStoreOpToSPIRVLowering final
 
     int64_t stride = op.getLeadDimension().getSExtValue();
     IntegerType i32Type = rewriter.getI32Type();
-    auto strideValue = rewriter.create<spirv::ConstantOp>(
-        loc, i32Type, IntegerAttr::get(i32Type, stride));
+    auto strideValue = spirv::ConstantOp::create(
+        rewriter, loc, i32Type, IntegerAttr::get(i32Type, stride));
 
     bool isColMajor = op.getTranspose().value_or(false);
     auto layout = isColMajor ? spirv::CooperativeMatrixLayoutKHR::ColumnMajor
@@ -335,15 +360,36 @@ struct WmmaStoreOpToSPIRVLowering final
 /// dialect.
 struct WmmaMmaOpToSPIRVLowering final
     : OpConversionPattern<gpu::SubgroupMmaComputeOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(gpu::SubgroupMmaComputeOp subgroupMmaComputeOp,
                   OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    auto aType =
+        dyn_cast<spirv::CooperativeMatrixType>(adaptor.getOpA().getType());
+    auto bType =
+        dyn_cast<spirv::CooperativeMatrixType>(adaptor.getOpB().getType());
+    auto cType =
+        dyn_cast<spirv::CooperativeMatrixType>(adaptor.getOpC().getType());
+    auto resultType =
+        getTypeConverter()->convertType<spirv::CooperativeMatrixType>(
+            subgroupMmaComputeOp.getResult().getType());
+    if (!aType || !bType || !cType || !resultType)
+      return rewriter.notifyMatchFailure(subgroupMmaComputeOp,
+                                         "type conversion failed");
+
+    using Operands = spirv::CooperativeMatrixOperandsKHR;
+    Operands operands =
+        getSignedCoopMatrixOperands(aType, bType, cType, resultType);
+    spirv::CooperativeMatrixOperandsKHRAttr operandsAttr;
+    if (operands != Operands::None)
+      operandsAttr = spirv::CooperativeMatrixOperandsKHRAttr::get(
+          rewriter.getContext(), operands);
+
     rewriter.replaceOpWithNewOp<spirv::KHRCooperativeMatrixMulAddOp>(
         subgroupMmaComputeOp, adaptor.getOpA(), adaptor.getOpB(),
-        adaptor.getOpC());
+        adaptor.getOpC(), operandsAttr);
     return success();
   }
 };

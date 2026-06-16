@@ -38,7 +38,7 @@ int main(void)
 
   obj_c_cat_p = obj_c_super_p; // ok.
   obj_c_cat_p = obj_c_super_p_q; // ok.
-  obj_c_super_p = obj_c_cat_p_q; // expected-warning {{incompatible pointer types}}
+  obj_c_super_p = obj_c_cat_p_q; // expected-error {{incompatible pointer types}}
   obj_c_cat_p_q = obj_c_super_p;
   return 0;
 }

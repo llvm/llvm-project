@@ -331,11 +331,15 @@ public:
   };
 
   Result run(Module &M, ModuleAnalysisManager &MAM) { return Result(M, MAM); }
+
+private:
+  static bool initializeIR2VecVocabIfRequested(Module &M,
+                                               ModuleAnalysisManager &MAM);
 };
 
 /// Printer pass for the InlineAdvisorAnalysis results.
 class InlineAdvisorAnalysisPrinterPass
-    : public PassInfoMixin<InlineAdvisorAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<InlineAdvisorAnalysisPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -346,7 +350,6 @@ public:
   LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &InitialC,
                                  CGSCCAnalysisManager &AM, LazyCallGraph &CG,
                                  CGSCCUpdateResult &UR);
-  static bool isRequired() { return true; }
 };
 
 LLVM_ABI std::unique_ptr<InlineAdvisor>

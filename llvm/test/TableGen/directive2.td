@@ -46,6 +46,8 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  #define LLVM_Tdl_INC
 // CHECK-EMPTY:
 // CHECK-NEXT:  #include "llvm/ADT/ArrayRef.h"
+// CHECK-NEXT:  #include "llvm/ADT/Sequence.h"
+// CHECK-NEXT:  #include "llvm/ADT/STLExtras.h"
 // CHECK-NEXT:  #include "llvm/ADT/StringRef.h"
 // CHECK-NEXT:  #include "llvm/Frontend/Directive/Spelling.h"
 // CHECK-NEXT:  #include "llvm/Support/Compiler.h"
@@ -53,26 +55,32 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  #include <utility>
 // CHECK-EMPTY:
 // CHECK-NEXT:  namespace llvm {
+// CHECK-EMPTY:
 // CHECK-NEXT:  namespace tdl {
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Association {
 // CHECK-NEXT:    Block,
+// CHECK-NEXT:    First_ = Block,
 // CHECK-NEXT:    Declaration,
 // CHECK-NEXT:    Delimited,
-// CHECK-NEXT:    Loop,
+// CHECK-NEXT:    LoopNest,
+// CHECK-NEXT:    LoopSeq,
 // CHECK-NEXT:    None,
 // CHECK-NEXT:    Separating,
+// CHECK-NEXT:    Last_ = Separating,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
-// CHECK-NEXT:  static constexpr std::size_t Association_enumSize = 6;
+// CHECK-NEXT:  static constexpr std::size_t Association_enumSize = 7;
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Category {
 // CHECK-NEXT:    Declarative,
+// CHECK-NEXT:    First_ = Declarative,
 // CHECK-NEXT:    Executable,
 // CHECK-NEXT:    Informational,
 // CHECK-NEXT:    Meta,
 // CHECK-NEXT:    Subsidiary,
 // CHECK-NEXT:    Utility,
+// CHECK-NEXT:    Last_ = Utility,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr std::size_t Category_enumSize = 6;
@@ -87,18 +95,54 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Directive {
 // CHECK-NEXT:    TDLD_dira,
+// CHECK-NEXT:    First_ = TDLD_dira,
+// CHECK-NEXT:    Last_ = TDLD_dira,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr std::size_t Directive_enumSize = 1;
 // CHECK-EMPTY:
 // CHECK-NEXT:  enum class Clause {
 // CHECK-NEXT:    TDLC_clausea,
+// CHECK-NEXT:    First_ = TDLC_clausea,
 // CHECK-NEXT:    TDLC_clauseb,
 // CHECK-NEXT:    TDLC_clausec,
 // CHECK-NEXT:    TDLC_claused,
+// CHECK-NEXT:    Last_ = TDLC_claused,
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  static constexpr std::size_t Clause_enumSize = 4;
+// CHECK-EMPTY:
+// CHECK-NEXT:  // Constexpr functions.
+// CHECK-EMPTY:
+// CHECK-NEXT:  constexpr Association getDirectiveAssociation(Directive Dir) {
+// CHECK-NEXT:    switch (Dir) {
+// CHECK-NEXT:    case TDLD_dira:
+// CHECK-NEXT:      return Association::Block;
+// CHECK-NEXT:    } // switch (Dir)
+// CHECK-NEXT:    assert(llvm::to_underlying(Dir) >= llvm::to_underlying(Directive::First_) &&
+// CHECK-NEXT:           llvm::to_underlying(Dir) <= llvm::to_underlying(Directive::Last_) &&
+// CHECK-NEXT:           "Unexpected directive");
+// CHECK-NEXT:  }
+// CHECK-EMPTY:
+// CHECK-NEXT:  constexpr Category getDirectiveCategory(Directive Dir) {
+// CHECK-NEXT:    switch (Dir) {
+// CHECK-NEXT:    case TDLD_dira:
+// CHECK-NEXT:      return Category::Declarative;
+// CHECK-NEXT:    } // switch (Dir)
+// CHECK-NEXT:    assert(llvm::to_underlying(Dir) >= llvm::to_underlying(Directive::First_) &&
+// CHECK-NEXT:           llvm::to_underlying(Dir) <= llvm::to_underlying(Directive::Last_) &&
+// CHECK-NEXT:           "Unexpected directive");
+// CHECK-NEXT:  }
+// CHECK-EMPTY:
+// CHECK-NEXT:  constexpr SourceLanguage getDirectiveLanguages(Directive D) {
+// CHECK-NEXT:    switch (D) {
+// CHECK-NEXT:    case TDLD_dira:
+// CHECK-NEXT:      return SourceLanguage::C | SourceLanguage::Fortran;
+// CHECK-NEXT:    } // switch(D)
+// CHECK-NEXT:    assert(llvm::to_underlying(D) >= llvm::to_underlying(Directive::First_) &&
+// CHECK-NEXT:           llvm::to_underlying(D) <= llvm::to_underlying(Directive::Last_) &&
+// CHECK-NEXT:           "Unexpected directive");
+// CHECK-NEXT:  }
 // CHECK-EMPTY:
 // CHECK-NEXT:  // Enumeration helper functions
 // CHECK-NEXT:  LLVM_ABI std::pair<Directive, directive::VersionRange> getTdlDirectiveKindAndVersions(StringRef Str);
@@ -120,18 +164,33 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  LLVM_ABI bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr std::size_t getMaxLeafCount() { return 0; }
-// CHECK-NEXT:  LLVM_ABI Association getDirectiveAssociation(Directive D);
-// CHECK-NEXT:  LLVM_ABI Category getDirectiveCategory(Directive D);
-// CHECK-NEXT:  LLVM_ABI SourceLanguage getDirectiveLanguages(Directive D);
+// CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace tdl
+// CHECK-EMPTY:
+// CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::Association> {
+// CHECK-NEXT:    static constexpr bool is_iterable = true;
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::Category> {
+// CHECK-NEXT:    static constexpr bool is_iterable = true;
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::Directive> {
+// CHECK-NEXT:    static constexpr bool is_iterable = true;
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::Clause> {
+// CHECK-NEXT:    static constexpr bool is_iterable = true;
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
 // CHECK-NEXT:  } // namespace llvm
+// CHECK-EMPTY:
 // CHECK-NEXT:  #endif // LLVM_Tdl_INC
 
 // IMPL:      #ifdef GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-NEXT: #undef GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-EMPTY:
-// IMPL-NEXT: namespace llvm {
-// IMPL-NEXT: namespace tdl {
+// IMPL-NEXT: namespace llvm::tdl {
 // IMPL-EMPTY:
 // IMPL-NEXT:   // Sets for dira
 // IMPL-EMPTY:
@@ -148,8 +207,8 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-EMPTY:
 // IMPL-NEXT:   static  requiredClauses_TDLD_dira {
 // IMPL-NEXT:   };
-// IMPL-NEXT: } // namespace tdl
-// IMPL-NEXT: } // namespace llvm
+// IMPL-EMPTY:
+// IMPL-NEXT: } // namespace llvm::tdl
 // IMPL-EMPTY:
 // IMPL-NEXT: #endif // GEN_FLANG_DIRECTIVE_CLAUSE_SETS
 // IMPL-EMPTY:
@@ -325,30 +384,6 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:        break;
 // IMPL-NEXT:    }
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Directive kind");
-// IMPL-NEXT:  }
-// IMPL-EMPTY:
-// IMPL-NEXT:  llvm::tdl::Association llvm::tdl::getDirectiveAssociation(llvm::tdl::Directive Dir) {
-// IMPL-NEXT:    switch (Dir) {
-// IMPL-NEXT:    case TDLD_dira:
-// IMPL-NEXT:      return Association::Block;
-// IMPL-NEXT:    } // switch (Dir)
-// IMPL-NEXT:    llvm_unreachable("Unexpected directive");
-// IMPL-NEXT:  }
-// IMPL-EMPTY:
-// IMPL-NEXT:  llvm::tdl::Category llvm::tdl::getDirectiveCategory(llvm::tdl::Directive Dir) {
-// IMPL-NEXT:    switch (Dir) {
-// IMPL-NEXT:    case TDLD_dira:
-// IMPL-NEXT:      return Category::Declarative;
-// IMPL-NEXT:    } // switch (Dir)
-// IMPL-NEXT:    llvm_unreachable("Unexpected directive");
-// IMPL-NEXT:  }
-// IMPL-EMPTY:
-// IMPL-NEXT:  llvm::tdl::SourceLanguage llvm::tdl::getDirectiveLanguages(llvm::tdl::Directive D) {
-// IMPL-NEXT:    switch (D) {
-// IMPL-NEXT:    case TDLD_dira:
-// IMPL-NEXT:      return SourceLanguage::C | SourceLanguage::Fortran;
-// IMPL-NEXT:    } // switch(D)
-// IMPL-NEXT:    llvm_unreachable("Unexpected directive");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
 // IMPL-NEXT:  static_assert(sizeof(llvm::tdl::Directive) == sizeof(int));

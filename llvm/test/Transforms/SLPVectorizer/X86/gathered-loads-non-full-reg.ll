@@ -21,55 +21,55 @@ define void @test(ptr noalias %0) {
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP0]], i64 504
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP0]], i64 632
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP0]], i64 720
-; CHECK-NEXT:    [[TMP15:%.*]] = load double, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP16:%.*]] = load double, ptr [[TMP2]], align 8
-; CHECK-NEXT:    [[TMP17:%.*]] = fadd double [[TMP16]], [[TMP15]]
-; CHECK-NEXT:    [[TMP18:%.*]] = load double, ptr [[TMP3]], align 8
-; CHECK-NEXT:    [[TMP19:%.*]] = load double, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = load double, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP21:%.*]] = load double, ptr [[TMP6]], align 8
-; CHECK-NEXT:    [[TMP22:%.*]] = fadd double [[TMP21]], [[TMP20]]
-; CHECK-NEXT:    [[TMP23:%.*]] = load double, ptr [[TMP7]], align 8
-; CHECK-NEXT:    [[TMP24:%.*]] = load double, ptr [[TMP8]], align 8
-; CHECK-NEXT:    [[TMP25:%.*]] = load double, ptr [[TMP9]], align 8
-; CHECK-NEXT:    [[TMP26:%.*]] = load double, ptr [[TMP10]], align 8
-; CHECK-NEXT:    [[TMP27:%.*]] = load double, ptr [[TMP11]], align 8
-; CHECK-NEXT:    [[TMP28:%.*]] = load double, ptr [[TMP12]], align 8
+; CHECK-NEXT:    [[TMP27:%.*]] = load double, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP28:%.*]] = load double, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP29:%.*]] = fadd double [[TMP28]], [[TMP27]]
-; CHECK-NEXT:    [[TMP30:%.*]] = fmul double [[TMP22]], [[TMP18]]
-; CHECK-NEXT:    [[TMP31:%.*]] = fmul double [[TMP30]], 0.000000e+00
-; CHECK-NEXT:    [[TMP32:%.*]] = fsub double 0.000000e+00, [[TMP25]]
-; CHECK-NEXT:    [[TMP33:%.*]] = fmul double [[TMP32]], 0.000000e+00
-; CHECK-NEXT:    [[TMP34:%.*]] = fadd double [[TMP33]], 0.000000e+00
+; CHECK-NEXT:    [[DOTNEG969:%.*]] = load double, ptr [[TMP3]], align 8
+; CHECK-NEXT:    [[TMP19:%.*]] = load double, ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[TMP24:%.*]] = load double, ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP26:%.*]] = load double, ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP22:%.*]] = fadd double [[TMP26]], [[TMP24]]
+; CHECK-NEXT:    [[TMP23:%.*]] = load double, ptr [[TMP7]], align 8
+; CHECK-NEXT:    [[TMP17:%.*]] = load double, ptr [[TMP8]], align 8
+; CHECK-NEXT:    [[TMP25:%.*]] = load double, ptr [[TMP9]], align 8
+; CHECK-NEXT:    [[TMP31:%.*]] = load double, ptr [[TMP10]], align 8
+; CHECK-NEXT:    [[TMP21:%.*]] = load double, ptr [[TMP11]], align 8
+; CHECK-NEXT:    [[TMP20:%.*]] = load double, ptr [[TMP12]], align 8
+; CHECK-NEXT:    [[TMP36:%.*]] = fadd double [[TMP20]], [[TMP21]]
+; CHECK-NEXT:    [[TMP34:%.*]] = fmul double [[TMP22]], [[DOTNEG969]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = fmul double [[TMP34]], 0.000000e+00
-; CHECK-NEXT:    [[TMP36:%.*]] = fmul double [[TMP29]], [[TMP26]]
-; CHECK-NEXT:    [[TMP37:%.*]] = fmul double [[TMP36]], 0.000000e+00
-; CHECK-NEXT:    [[TMP38:%.*]] = fadd double [[TMP37]], 0.000000e+00
-; CHECK-NEXT:    [[TMP39:%.*]] = fsub double [[TMP17]], [[TMP19]]
-; CHECK-NEXT:    [[TMP40:%.*]] = fmul double [[TMP39]], [[TMP23]]
-; CHECK-NEXT:    [[TMP41:%.*]] = fmul double [[TMP40]], 0.000000e+00
-; CHECK-NEXT:    [[TMP42:%.*]] = load double, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP43:%.*]] = load double, ptr [[TMP13]], align 8
-; CHECK-NEXT:    [[TMP44:%.*]] = fmul double [[TMP43]], [[TMP31]]
-; CHECK-NEXT:    [[TMP45:%.*]] = load double, ptr [[TMP14]], align 8
-; CHECK-NEXT:    [[TMP46:%.*]] = fmul double [[TMP35]], 0.000000e+00
-; CHECK-NEXT:    [[TMP47:%.*]] = fadd double [[TMP44]], 0.000000e+00
-; CHECK-NEXT:    [[TMP48:%.*]] = fmul double [[TMP45]], [[TMP38]]
-; CHECK-NEXT:    [[TMP49:%.*]] = fmul double [[TMP45]], [[TMP41]]
-; CHECK-NEXT:    store double [[TMP46]], ptr getelementptr inbounds (i8, ptr @solid_, i64 384), align 8
-; CHECK-NEXT:    store double [[TMP47]], ptr getelementptr inbounds (i8, ptr @solid_, i64 408), align 8
-; CHECK-NEXT:    store double [[TMP48]], ptr getelementptr inbounds (i8, ptr @solid_, i64 392), align 8
-; CHECK-NEXT:    store double [[TMP49]], ptr getelementptr inbounds (i8, ptr @solid_, i64 400), align 8
-; CHECK-NEXT:    [[DOTNEG965:%.*]] = fmul double [[TMP48]], [[TMP24]]
+; CHECK-NEXT:    [[TMP32:%.*]] = fsub double [[TMP29]], [[TMP19]]
+; CHECK-NEXT:    [[TMP37:%.*]] = fmul double [[TMP32]], [[TMP23]]
+; CHECK-NEXT:    [[TMP38:%.*]] = fmul double [[TMP37]], 0.000000e+00
+; CHECK-NEXT:    [[TMP30:%.*]] = load double, ptr [[TMP0]], align 8
+; CHECK-NEXT:    [[TMP40:%.*]] = load double, ptr [[TMP13]], align 8
+; CHECK-NEXT:    [[TMP47:%.*]] = fmul double [[TMP40]], [[TMP35]]
+; CHECK-NEXT:    [[TMP60:%.*]] = load double, ptr [[TMP14]], align 8
+; CHECK-NEXT:    [[TMP39:%.*]] = fadd double [[TMP47]], 0.000000e+00
+; CHECK-NEXT:    [[TMP61:%.*]] = fmul double [[TMP60]], [[TMP38]]
+; CHECK-NEXT:    store double [[TMP39]], ptr getelementptr inbounds (i8, ptr @solid_, i64 408), align 8
+; CHECK-NEXT:    [[TMP41:%.*]] = fmul double [[TMP36]], [[TMP31]]
+; CHECK-NEXT:    [[TMP42:%.*]] = fsub double 0.000000e+00, [[TMP25]]
+; CHECK-NEXT:    [[TMP49:%.*]] = insertelement <2 x double> poison, double [[TMP42]], i32 0
+; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <2 x double> [[TMP49]], double [[TMP41]], i32 1
+; CHECK-NEXT:    [[TMP50:%.*]] = fmul <2 x double> [[TMP44]], zeroinitializer
+; CHECK-NEXT:    [[TMP46:%.*]] = fadd <2 x double> [[TMP50]], zeroinitializer
+; CHECK-NEXT:    [[TMP45:%.*]] = fmul <2 x double> [[TMP46]], <double 0.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP56:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[TMP60]], i32 1
+; CHECK-NEXT:    [[TMP48:%.*]] = fmul <2 x double> [[TMP56]], [[TMP45]]
+; CHECK-NEXT:    store <2 x double> [[TMP48]], ptr getelementptr inbounds (i8, ptr @solid_, i64 384), align 8
+; CHECK-NEXT:    store double [[TMP61]], ptr getelementptr inbounds (i8, ptr @solid_, i64 400), align 8
+; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <2 x double> [[TMP48]], i32 1
+; CHECK-NEXT:    [[DOTNEG965:%.*]] = fmul double [[TMP43]], [[TMP17]]
 ; CHECK-NEXT:    [[REASS_ADD993:%.*]] = fadd double [[DOTNEG965]], 0.000000e+00
-; CHECK-NEXT:    [[TMP50:%.*]] = fadd double [[TMP42]], [[REASS_ADD993]]
-; CHECK-NEXT:    [[TMP51:%.*]] = fsub double 0.000000e+00, [[TMP50]]
-; CHECK-NEXT:    store double [[TMP51]], ptr getelementptr inbounds (i8, ptr @solid_, i64 296), align 8
-; CHECK-NEXT:    [[DOTNEG969:%.*]] = fmul double [[TMP49]], 0.000000e+00
-; CHECK-NEXT:    [[REASS_ADD996:%.*]] = fadd double [[DOTNEG969]], 0.000000e+00
-; CHECK-NEXT:    [[TMP52:%.*]] = fadd double [[TMP45]], [[REASS_ADD996]]
-; CHECK-NEXT:    [[TMP53:%.*]] = fsub double 0.000000e+00, [[TMP52]]
-; CHECK-NEXT:    store double [[TMP53]], ptr getelementptr inbounds (i8, ptr @solid_, i64 304), align 8
+; CHECK-NEXT:    [[TMP58:%.*]] = fadd double [[TMP30]], [[REASS_ADD993]]
+; CHECK-NEXT:    [[TMP59:%.*]] = fsub double 0.000000e+00, [[TMP58]]
+; CHECK-NEXT:    store double [[TMP59]], ptr getelementptr inbounds (i8, ptr @solid_, i64 296), align 8
+; CHECK-NEXT:    [[DOTNEG970:%.*]] = fmul double [[TMP61]], 0.000000e+00
+; CHECK-NEXT:    [[REASS_ADD996:%.*]] = fadd double [[DOTNEG970]], 0.000000e+00
+; CHECK-NEXT:    [[TMP53:%.*]] = fadd double [[TMP60]], [[REASS_ADD996]]
+; CHECK-NEXT:    [[TMP54:%.*]] = fsub double 0.000000e+00, [[TMP53]]
+; CHECK-NEXT:    store double [[TMP54]], ptr getelementptr inbounds (i8, ptr @solid_, i64 304), align 8
 ; CHECK-NEXT:    ret void
 ;
 .lr.ph1019:

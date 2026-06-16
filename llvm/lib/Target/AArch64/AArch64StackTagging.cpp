@@ -37,6 +37,7 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -46,7 +47,6 @@
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 #include <cassert>
 #include <memory>
-#include <utility>
 
 using namespace llvm;
 
@@ -67,12 +67,6 @@ static cl::opt<unsigned> ClScanLimit("stack-tagging-merge-init-scan-limit",
 static cl::opt<unsigned>
     ClMergeInitSizeLimit("stack-tagging-merge-init-size-limit", cl::init(272),
                          cl::Hidden);
-
-static cl::opt<size_t> ClMaxLifetimes(
-    "stack-tagging-max-lifetimes-for-alloca", cl::Hidden, cl::init(3),
-    cl::ReallyHidden,
-    cl::desc("How many lifetime ends to handle for a single alloca."),
-    cl::Optional);
 
 // Mode for selecting how to insert frame record info into the stack ring
 // buffer.
@@ -220,7 +214,7 @@ public:
     }
 
     // Look through 8-byte initializer list 16 bytes at a time;
-    // If one of the two 8-byte halfs is non-zero non-undef, emit STGP.
+    // If one of the two 8-byte halves is non-zero non-undef, emit STGP.
     // Otherwise, emit zeroes up to next available item.
     uint64_t LastOffset = 0;
     for (uint64_t Offset = 0; Offset < Size; Offset += 16) {
@@ -339,7 +333,7 @@ private:
       AU.addRequired<StackSafetyGlobalInfoWrapperPass>();
     if (MergeInit)
       AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
+    AU.addUsedIfAvailable<OptimizationRemarkEmitterWrapperPass>();
   }
 };
 
@@ -369,8 +363,7 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
 
   unsigned Count = 0;
   for (; Count < ClScanLimit && !BI->isTerminator(); ++BI) {
-    if (!isa<DbgInfoIntrinsic>(*BI))
-      ++Count;
+    ++Count;
 
     if (isNoModRef(AA->getModRefInfo(&*BI, AllocaLoc)))
       continue;
@@ -448,6 +441,24 @@ void AArch64StackTagging::untagAlloca(AllocaInst *AI, Instruction *InsertBefore,
                               ConstantInt::get(IRB.getInt64Ty(), Size)});
 }
 
+static Value *getSlotPtr(IRBuilder<> &IRB, const Triple &TargetTriple,
+                         bool HasInstrumentedAllocas) {
+  if (!HasInstrumentedAllocas)
+    return nullptr;
+
+  if (ClRecordStackHistory == instr ||
+      (!ClRecordStackHistory.getNumOccurrences() &&
+       TargetTriple.isOSDarwin())) {
+    if (TargetTriple.isAndroid() && TargetTriple.isAArch64() &&
+        !TargetTriple.isAndroidVersionLT(35))
+      return memtag::getAndroidSlotPtr(IRB, -3);
+    if (TargetTriple.isOSDarwin() && TargetTriple.isAArch64() &&
+        !TargetTriple.isSimulatorEnvironment())
+      return memtag::getDarwinSlotPtr(IRB, 231);
+  }
+  return nullptr;
+}
+
 Instruction *AArch64StackTagging::insertBaseTaggedPointer(
     const Module &M,
     const MapVector<AllocaInst *, memtag::AllocaInfo> &AllocasToInstrument,
@@ -474,14 +485,12 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
   // This ABI will make it into Android API level 35.
   // The ThreadLong format is the same as with HWASan, but the entries for
   // stack MTE take two slots (16 bytes).
-  if (ClRecordStackHistory == instr && TargetTriple.isAndroid() &&
-      TargetTriple.isAArch64() && !TargetTriple.isAndroidVersionLT(35) &&
-      !AllocasToInstrument.empty()) {
-    constexpr int StackMteSlot = -3;
+  //
+  // Stack history is recorded by default on Darwin.
+  if (Value *SlotPtr =
+          getSlotPtr(IRB, TargetTriple, !AllocasToInstrument.empty())) {
     constexpr uint64_t TagMask = 0xFULL << 56;
-
     auto *IntptrTy = IRB.getIntPtrTy(M.getDataLayout());
-    Value *SlotPtr = memtag::getAndroidSlotPtr(IRB, StackMteSlot);
     auto *ThreadLong = IRB.CreateLoad(IntptrTy, SlotPtr);
     Value *FP = memtag::getFP(IRB);
     Value *Tag = IRB.CreateAnd(IRB.CreatePtrToInt(Base, IntptrTy), TagMask);
@@ -491,7 +500,9 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
     IRB.CreateStore(PC, RecordPtr);
     IRB.CreateStore(TaggedFP, IRB.CreateConstGEP1_64(IntptrTy, RecordPtr, 1));
 
-    IRB.CreateStore(memtag::incrementThreadLong(IRB, ThreadLong, 16), SlotPtr);
+    IRB.CreateStore(memtag::incrementThreadLong(IRB, ThreadLong, 16,
+                                                TargetTriple.isOSDarwin()),
+                    SlotPtr);
   }
   return Base;
 }
@@ -507,12 +518,20 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
   DL = &Fn.getDataLayout();
   if (MergeInit)
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  OptimizationRemarkEmitter &ORE =
-      getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+
+  std::unique_ptr<OptimizationRemarkEmitter> DeleteORE;
+  OptimizationRemarkEmitter *ORE = nullptr;
+  if (auto *P = getAnalysisIfAvailable<OptimizationRemarkEmitterWrapperPass>())
+    ORE = &P->getORE();
+
+  if (ORE == nullptr) {
+    DeleteORE = std::make_unique<OptimizationRemarkEmitter>(F);
+    ORE = DeleteORE.get();
+  }
 
   memtag::StackInfoBuilder SIB(SSI, DEBUG_TYPE);
   for (Instruction &I : instructions(F))
-    SIB.visit(ORE, I);
+    SIB.visit(*ORE, I);
   memtag::StackInfo &SInfo = SIB.get();
 
   if (SInfo.AllocasToInstrument.empty())
@@ -581,24 +600,15 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
     bool StandardLifetime =
-        !SInfo.CallsReturnTwice &&
-        SInfo.UnrecognizedLifetimes.empty() &&
-        memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT, LI,
-                                   ClMaxLifetimes);
+        !SInfo.CallsReturnTwice && memtag::isSupportedLifetime(Info, DT, LI);
     if (StandardLifetime) {
-      IntrinsicInst *Start = Info.LifetimeStart[0];
-      uint64_t Size =
-          cast<ConstantInt>(Start->getArgOperand(0))->getZExtValue();
+      uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Size = alignTo(Size, kTagGranuleSize);
-      tagAlloca(AI, Start->getNextNode(), TagPCall, Size);
+      for (IntrinsicInst *Start : Info.LifetimeStart)
+        tagAlloca(AI, Start->getNextNode(), TagPCall, Size);
 
       auto TagEnd = [&](Instruction *Node) { untagAlloca(AI, Node, Size); };
-      if (!DT || !PDT ||
-          !memtag::forAllReachableExits(*DT, *PDT, *LI, Start, Info.LifetimeEnd,
-                                        SInfo.RetVec, TagEnd)) {
-        for (auto *End : Info.LifetimeEnd)
-          End->eraseFromParent();
-      }
+      memtag::forAllReachableExits(*DT, *PDT, *LI, Info, SInfo.RetVec, TagEnd);
     } else {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Value *Ptr = IRB.CreatePointerCast(TagPCall, IRB.getPtrTy());
@@ -616,11 +626,6 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
 
     memtag::annotateDebugRecords(Info, Tag);
   }
-
-  // If we have instrumented at least one alloca, all unrecognized lifetime
-  // intrinsics have to go.
-  for (auto *I : SInfo.UnrecognizedLifetimes)
-    I->eraseFromParent();
 
   return true;
 }

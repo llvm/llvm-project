@@ -27,6 +27,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -149,12 +150,6 @@ std::string ARM_MC::ParseARMTriple(const Triple &TT, StringRef CPU) {
     if (!ARMArchFeature.empty())
       ARMArchFeature += ",";
     ARMArchFeature += "+thumb-mode,+v4t";
-  }
-
-  if (TT.isOSNaCl()) {
-    if (!ARMArchFeature.empty())
-      ARMArchFeature += ",";
-    ARMArchFeature += "+nacl-trap";
   }
 
   if (TT.isOSWindows()) {
@@ -342,13 +337,13 @@ static MCAsmInfo *createARMMCAsmInfo(const MCRegisterInfo &MRI,
                                      const MCTargetOptions &Options) {
   MCAsmInfo *MAI;
   if (TheTriple.isOSDarwin() || TheTriple.isOSBinFormatMachO())
-    MAI = new ARMMCAsmInfoDarwin(TheTriple);
+    MAI = new ARMMCAsmInfoDarwin(TheTriple, Options);
   else if (TheTriple.isWindowsMSVCEnvironment())
-    MAI = new ARMCOFFMCAsmInfoMicrosoft();
+    MAI = new ARMCOFFMCAsmInfoMicrosoft(Options);
   else if (TheTriple.isOSWindows())
-    MAI = new ARMCOFFMCAsmInfoGNU();
+    MAI = new ARMCOFFMCAsmInfoGNU(Options);
   else
-    MAI = new ARMELFMCAsmInfo(TheTriple);
+    MAI = new ARMELFMCAsmInfo(TheTriple, Options);
 
   unsigned Reg = MRI.getDwarfRegNum(ARM::SP, true);
   MAI->addInitialFrameState(MCCFIInstruction::cfiDefCfa(nullptr, Reg, 0));
@@ -603,7 +598,7 @@ std::optional<uint64_t> ARMMCInstrAnalysis::evaluateMemoryOperandAddress(
     break;
   }
 
-  // Eveluate the address depending on the addressing mode
+  // Evaluate the address depending on the addressing mode
   unsigned AddrMode = (TSFlags & ARMII::AddrModeMask);
   switch (AddrMode) {
   default:
@@ -770,7 +765,7 @@ bool ARM::isCDECoproc(size_t Coproc, const MCSubtargetInfo &STI) {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTargetMC() {
   for (Target *T : {&getTheARMLETarget(), &getTheARMBETarget(),
                     &getTheThumbLETarget(), &getTheThumbBETarget()}) {
     // Register the MC asm info.

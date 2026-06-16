@@ -12,15 +12,15 @@
 
 @ch = extern_weak dso_local local_unnamed_addr global i8, section "abc", align 1, !dbg !0
 ; Function Attrs: nounwind
-define dso_local i32 @test() local_unnamed_addr #0 !dbg !16 {
+define dso_local i32 @test() local_unnamed_addr !dbg !16 {
 entry:
-  %call = tail call i32 @global_func(i8 signext 0) #2, !dbg !19
+  %call = tail call i32 @global_func(i8 signext 0), !dbg !19
   %0 = load i8, ptr @ch, align 1, !dbg !20, !tbaa !21
   %conv = sext i8 %0 to i32, !dbg !20
   %add = add nsw i32 %call, %conv, !dbg !24
   ret i32 %add, !dbg !25
 }
-declare !dbg !6 extern_weak dso_local i32 @global_func(i8 signext) local_unnamed_addr #1 section "abc"
+declare !dbg !6 extern_weak dso_local i32 @global_func(i8 signext) local_unnamed_addr section "abc"
 
 ; CHECK:             .section        .BTF,"",@progbits
 ; CHECK-NEXT:        .short  60319                   # 0xeb9f
@@ -83,10 +83,6 @@ declare !dbg !6 extern_weak dso_local i32 @global_func(i8 signext) local_unnamed
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .ascii  "abc"                   # string offset=75
 ; CHECK-NEXT:        .byte   0
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind }
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!12, !13, !14}

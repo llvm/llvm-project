@@ -10,6 +10,7 @@
 #define LLVM_MC_MCTARGETOPTIONS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include <string>
@@ -17,22 +18,18 @@
 
 namespace llvm {
 
-enum class ExceptionHandling {
-  None,     ///< No exception support
-  DwarfCFI, ///< DWARF-like instruction based exceptions
-  SjLj,     ///< setjmp/longjmp based exceptions
-  ARM,      ///< ARM EHABI
-  WinEH,    ///< Windows Exception Handling
-  Wasm,     ///< WebAssembly Exception Handling
-  AIX,      ///< AIX Exception Handling
-  ZOS,      ///< z/OS MVS Exception Handling. Very similar to DwarfCFI, but the PPA1
-            ///< is used instead of an .eh_frame section.
-};
-
 enum class EmitDwarfUnwindType {
   Always,          // Always emit dwarf unwind
   NoCompactUnwind, // Only emit if compact unwind isn't available
   Default,         // Default behavior is based on the target
+};
+
+// For ELF targets, whether to adjust relocations referencing eligible local
+// symbols to use section symbols.
+enum class RelocSectionSymType {
+  All,      // For all eligible local symbols (default)
+  Internal, // For .L symbols
+  None,     // Never use section symbols
 };
 
 class StringRef;
@@ -73,6 +70,9 @@ public:
 
   bool X86Sse2Avx = false;
 
+  // For ELF relocations, controls section symbol conversion.
+  RelocSectionSymType RelocSectionSym = RelocSectionSymType::All;
+
   std::optional<unsigned> OutputAsmVariant;
 
   EmitDwarfUnwindType EmitDwarfUnwind;
@@ -112,6 +112,9 @@ public:
   // Whether to emit compact-unwind for non-canonical personality
   // functions on Darwins.
   bool EmitCompactUnwindNonCanonical : 1;
+
+  // Whether to emit SFrame unwind sections.
+  bool EmitSFrameUnwind : 1;
 
   // Whether or not to use full register names on PowerPC.
   bool PPCUseFullRegisterNames : 1;

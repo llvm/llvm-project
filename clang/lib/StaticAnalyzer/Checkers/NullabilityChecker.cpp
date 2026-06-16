@@ -97,7 +97,8 @@ public:
   // libraries.
   bool NoDiagnoseCallsToSystemHeaders = false;
 
-  void checkBind(SVal L, SVal V, const Stmt *S, CheckerContext &C) const;
+  void checkBind(SVal L, SVal V, const Stmt *S, bool AtDeclInit,
+                 CheckerContext &C) const;
   void checkPostStmt(const ExplicitCastExpr *CE, CheckerContext &C) const;
   void checkPreStmt(const ReturnStmt *S, CheckerContext &C) const;
   void checkPostObjCMessage(const ObjCMethodCall &M, CheckerContext &C) const;
@@ -366,8 +367,7 @@ PathDiagnosticPieceRef NullabilityChecker::NullabilityBugVisitor::VisitNode(
           .str();
 
   // Generate the extra diagnostic.
-  PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                             N->getLocationContext());
+  PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(Pos, InfoText, true);
 }
 
@@ -398,15 +398,14 @@ static bool checkValueAtLValForInvariantViolation(ProgramStateRef State,
   return false;
 }
 
-static bool
-checkParamsForPreconditionViolation(ArrayRef<ParmVarDecl *> Params,
-                                    ProgramStateRef State,
-                                    const LocationContext *LocCtxt) {
+static bool checkParamsForPreconditionViolation(ArrayRef<ParmVarDecl *> Params,
+                                                ProgramStateRef State,
+                                                const StackFrame *SF) {
   for (const auto *ParamDecl : Params) {
     if (ParamDecl->isParameterPack())
       break;
 
-    SVal LV = State->getLValue(ParamDecl, LocCtxt);
+    SVal LV = State->getLValue(ParamDecl, SF);
     if (checkValueAtLValForInvariantViolation(State, LV,
                                               ParamDecl->getType())) {
       return true;
@@ -415,18 +414,17 @@ checkParamsForPreconditionViolation(ArrayRef<ParmVarDecl *> Params,
   return false;
 }
 
-static bool
-checkSelfIvarsForInvariantViolation(ProgramStateRef State,
-                                    const LocationContext *LocCtxt) {
-  auto *MD = dyn_cast<ObjCMethodDecl>(LocCtxt->getDecl());
+static bool checkSelfIvarsForInvariantViolation(ProgramStateRef State,
+                                                const StackFrame *SF) {
+  auto *MD = dyn_cast<ObjCMethodDecl>(SF->getDecl());
   if (!MD || !MD->isInstanceMethod())
     return false;
 
-  const ImplicitParamDecl *SelfDecl = LocCtxt->getSelfDecl();
+  const ImplicitParamDecl *SelfDecl = SF->getSelfDecl();
   if (!SelfDecl)
     return false;
 
-  SVal SelfVal = State->getSVal(State->getRegion(SelfDecl, LocCtxt));
+  SVal SelfVal = State->getSVal(State->getRegion(SelfDecl, SF));
 
   const ObjCObjectPointerType *SelfType =
       dyn_cast<ObjCObjectPointerType>(SelfDecl->getType());
@@ -451,8 +449,8 @@ static bool checkInvariantViolation(ProgramStateRef State, ExplodedNode *N,
   if (State->get<InvariantViolated>())
     return true;
 
-  const LocationContext *LocCtxt = C.getLocationContext();
-  const Decl *D = LocCtxt->getDecl();
+  const StackFrame *SF = C.getStackFrame();
+  const Decl *D = SF->getDecl();
   if (!D)
     return false;
 
@@ -466,8 +464,8 @@ static bool checkInvariantViolation(ProgramStateRef State, ExplodedNode *N,
   else
     return false;
 
-  if (checkParamsForPreconditionViolation(Params, State, LocCtxt) ||
-      checkSelfIvarsForInvariantViolation(State, LocCtxt)) {
+  if (checkParamsForPreconditionViolation(Params, State, SF) ||
+      checkSelfIvarsForInvariantViolation(State, SF)) {
     if (!N->isSink())
       C.addTransition(State->set<InvariantViolated>(true), N);
     return true;
@@ -564,8 +562,8 @@ void NullabilityChecker::checkBeginFunction(CheckerContext &C) const {
   if (!C.inTopFrame())
     return;
 
-  const LocationContext *LCtx = C.getLocationContext();
-  auto AbstractCall = AnyCall::forDecl(LCtx->getDecl());
+  const StackFrame *SF = C.getStackFrame();
+  auto AbstractCall = AnyCall::forDecl(SF->getDecl());
   if (!AbstractCall || AbstractCall->parameters().empty())
     return;
 
@@ -579,7 +577,7 @@ void NullabilityChecker::checkBeginFunction(CheckerContext &C) const {
     if (RequiredNullability != Nullability::Nullable)
       continue;
 
-    const VarRegion *ParamRegion = State->getRegion(Param, LCtx);
+    const VarRegion *ParamRegion = State->getRegion(Param, SF);
     const MemRegion *ParamPointeeRegion =
         State->getSVal(ParamRegion).getAsRegion();
     if (!ParamPointeeRegion)
@@ -660,15 +658,14 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
   if (State->get<InvariantViolated>())
     return;
 
-  auto RetSVal = C.getSVal(S).getAs<DefinedOrUnknownSVal>();
+  auto RetSVal = C.getSVal(RetExpr).getAs<DefinedOrUnknownSVal>();
   if (!RetSVal)
     return;
 
   bool InSuppressedMethodFamily = false;
 
   QualType RequiredRetType;
-  AnalysisDeclContext *DeclCtxt =
-      C.getLocationContext()->getAnalysisDeclContext();
+  AnalysisDeclContext *DeclCtxt = C.getStackFrame()->getAnalysisDeclContext();
   const Decl *D = DeclCtxt->getDecl();
   if (auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
     // HACK: This is a big hammer to avoid warning when there are defensive
@@ -689,7 +686,7 @@ void NullabilityChecker::checkPreStmt(const ReturnStmt *S,
   NullConstraint Nullness = getNullConstraint(*RetSVal, State);
 
   Nullability RequiredNullability = getNullabilityAnnotation(RequiredRetType);
-  if (const auto *FunDecl = C.getLocationContext()->getDecl();
+  if (const auto *FunDecl = C.getStackFrame()->getDecl();
       FunDecl && FunDecl->getAttr<ReturnsNonNullAttr>() &&
       (RequiredNullability == Nullability::Unspecified ||
        RequiredNullability == Nullability::Nullable)) {
@@ -1250,7 +1247,7 @@ static bool isARCNilInitializedLocal(CheckerContext &C, const Stmt *S) {
 /// Propagate the nullability information through binds and warn when nullable
 /// pointer or null symbol is assigned to a pointer with a nonnull type.
 void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
-                                   CheckerContext &C) const {
+                                   bool AtDeclInit, CheckerContext &C) const {
   const TypedValueRegion *TVR =
       dyn_cast_or_null<TypedValueRegion>(L.getAsRegion());
   if (!TVR)
@@ -1417,3 +1414,5 @@ REGISTER_CHECKER(NullReturnedFromNonnull, false)
 REGISTER_CHECKER(NullableDereferenced, true)
 REGISTER_CHECKER(NullablePassedToNonnull, true)
 REGISTER_CHECKER(NullableReturnedFromNonnull, true)
+
+#undef REGISTER_CHECKER

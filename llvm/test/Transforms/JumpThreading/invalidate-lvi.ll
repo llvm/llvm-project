@@ -20,7 +20,7 @@ define void @foo(i1 %0) {
 ; CHECK-NEXT:    store i64 0, ptr [[V]], align 8
 ; CHECK-NEXT:    br label [[BB4:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[L2:%.*]] = phi i64 [ [[L1]], [[BB0]] ], [ [[L1]], [[START:%.*]] ]
+; CHECK-NEXT:    [[L2:%.*]] = phi i64 [ [[L1]], [[START:%.*]] ], [ [[L1]], [[BB0]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[L2]], 2
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[BB3:%.*]], label [[BB4]]
 ; CHECK:       bb3:

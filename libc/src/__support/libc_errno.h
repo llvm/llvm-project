@@ -37,18 +37,11 @@
 // libc doesn't maintain any internal state, instead the embedder must define
 // `int *__llvm_libc_errno(void);` C function.
 #define LIBC_ERRNO_MODE_EXTERNAL 4
-// libc uses system `<errno.h>` `errno` macro directly in the overlay mode; in
-// fullbuild mode, effectively the same as `LIBC_ERRNO_MODE_EXTERNAL`.
-// In this mode, the public C++ symbol `LIBC_NAMESPACE::libc_errno ` is still
-// exported and get redirected to the system `errno` inside its implementation.
-
-// TODO: Investigate deprecating LIBC_ERRNO_MODE_SYSTEM in favor of
-//       LIBC_ERRNO_MODE_SYSTEM_INLINE.
-//       https://github.com/llvm/llvm-project/issues/143454
-#define LIBC_ERRNO_MODE_SYSTEM 5
+// DEPRECATED: #define LIBC_ERRNO_MODE_SYSTEM 5
 // In this mode, the libc_errno is simply a macro resolved to `errno` from the
 // system header <errno.h>.  There is no need to link against the
-// `libc.src.errno.errno` object.
+// `libc.src.errno.errno` object, and public C++ symbol
+// `LIBC_NAMESPACE::libc_errno` doesn't exist.
 #define LIBC_ERRNO_MODE_SYSTEM_INLINE 6
 
 #if !defined(LIBC_ERRNO_MODE) || LIBC_ERRNO_MODE == LIBC_ERRNO_MODE_DEFAULT
@@ -56,7 +49,7 @@
 #if defined(LIBC_FULL_BUILD) || !defined(LIBC_COPT_PUBLIC_PACKAGING)
 #define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_THREAD_LOCAL
 #else
-#define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_SYSTEM
+#define LIBC_ERRNO_MODE LIBC_ERRNO_MODE_SYSTEM_INLINE
 #endif
 #endif // LIBC_ERRNO_MODE
 
@@ -65,7 +58,6 @@
     LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_THREAD_LOCAL &&                         \
     LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SHARED &&                               \
     LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_EXTERNAL &&                             \
-    LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM &&                               \
     LIBC_ERRNO_MODE != LIBC_ERRNO_MODE_SYSTEM_INLINE
 #error LIBC_ERRNO_MODE must be one of the following values: \
 LIBC_ERRNO_MODE_DEFAULT, \
@@ -73,7 +65,6 @@ LIBC_ERRNO_MODE_UNDEFINED, \
 LIBC_ERRNO_MODE_THREAD_LOCAL, \
 LIBC_ERRNO_MODE_SHARED, \
 LIBC_ERRNO_MODE_EXTERNAL, \
-LIBC_ERRNO_MODE_SYSTEM, \
 LIBC_ERRNO_MODE_SYSTEM_INLINE.
 #endif
 

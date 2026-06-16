@@ -244,7 +244,6 @@
 #include <optional>
 #include <string>
 #include <system_error>
-#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -344,6 +343,30 @@ private:
 /// The reader supports two file formats: text and binary. The text format
 /// is useful for debugging and testing, while the binary format is more
 /// compact and I/O efficient. They can both be used interchangeably.
+
+/// NameTableIterator is a lightweight, self-contained input iterator designed
+/// to stream FunctionId symbols from an eagerly populated contiguous buffer
+/// of FunctionId objects.
+class NameTableIterator
+    : public llvm::iterator_facade_base<
+          NameTableIterator, std::input_iterator_tag, FunctionId,
+          std::ptrdiff_t, const FunctionId *, FunctionId> {
+  const FunctionId *Ptr = nullptr;
+
+public:
+  NameTableIterator() = default;
+  NameTableIterator(const FunctionId *P) : Ptr(P) {}
+
+  bool operator==(const NameTableIterator &RHS) const { return Ptr == RHS.Ptr; }
+
+  NameTableIterator &operator++() {
+    ++Ptr;
+    return *this;
+  }
+
+  FunctionId operator*() const { return *Ptr; }
+};
+
 class SampleProfileReader {
 public:
   SampleProfileReader(std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
@@ -497,7 +520,9 @@ public:
 
   /// It includes all the names that have samples either in outline instance
   /// or inline instance.
-  virtual std::vector<FunctionId> *getNameTable() { return nullptr; }
+  virtual llvm::iterator_range<NameTableIterator> getNameTable() const {
+    return {NameTableIterator(), NameTableIterator()};
+  }
   virtual bool dumpSectionInfo(raw_ostream &OS = dbgs()) { return false; };
 
   /// Return whether names in the profile are all MD5 numbers.
@@ -589,6 +614,10 @@ protected:
   /// Whether the function profiles use FS discriminators.
   bool ProfileIsFS = false;
 
+  /// If true, the profile has vtable profiles and reader should decode them
+  /// to parse profiles correctly.
+  bool ReadVTableProf = false;
+
   /// \brief The format of sample.
   SampleProfileFormat Format = SPF_None;
 
@@ -647,8 +676,9 @@ public:
 
   /// It includes all the names that have samples either in outline instance
   /// or inline instance.
-  std::vector<FunctionId> *getNameTable() override {
-    return &NameTable;
+  llvm::iterator_range<NameTableIterator> getNameTable() const override {
+    return {NameTableIterator(NameTable.data()),
+            NameTableIterator(NameTable.data() + NameTable.size())};
   }
 
 protected:
@@ -702,6 +732,14 @@ protected:
   /// Read a context indirectly via the CSNameTable if the profile has context,
   /// otherwise same as readStringFromTable, also return its hash value.
   ErrorOr<std::pair<SampleContext, uint64_t>> readSampleContextFromTable();
+
+  /// Read all virtual functions' vtable access counts for \p FProfile.
+  std::error_code readCallsiteVTableProf(FunctionSamples &FProfile);
+
+  /// Read bytes from the input buffer pointed by `Data` and decode them into
+  /// \p M. `Data` will be advanced to the end of the read bytes when this
+  /// function returns. Returns error if any.
+  std::error_code readVTableTypeCountMap(TypeCountMap &M);
 
   /// Points to the current location in the buffer.
   const uint8_t *Data = nullptr;

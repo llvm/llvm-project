@@ -1,7 +1,7 @@
-; RUN: opt -S -passes=lowertypetests -mtriple=i686-unknown-linux-gnu %s | FileCheck --check-prefixes=X86,X86-LINUX,NATIVE,JT8 %s
-; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-unknown-linux-gnu %s | FileCheck --check-prefixes=X86,X86-LINUX,NATIVE,JT8 %s
-; RUN: opt -S -passes=lowertypetests -mtriple=i686-pc-win32 %s | FileCheck --check-prefixes=X86,X86-WIN32,NATIVE,JT8 %s
-; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-pc-win32 %s | FileCheck --check-prefixes=X86,X86-WIN32,NATIVE,JT8 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=i686-unknown-linux-gnu %s | FileCheck --check-prefixes=X86,NATIVE,JT8 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-unknown-linux-gnu %s | FileCheck --check-prefixes=X86,NATIVE,JT8 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=i686-pc-win32 %s | FileCheck --check-prefixes=X86,NATIVE,JT8 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-pc-win32 %s | FileCheck --check-prefixes=X86,NATIVE,JT8 %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=riscv32-unknown-linux-gnu %s | FileCheck --check-prefixes=RISCV,NATIVE,JT8 %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=riscv64-unknown-linux-gnu %s | FileCheck --check-prefixes=RISCV,NATIVE,JT8 %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=wasm32-unknown-unknown %s | FileCheck --check-prefix=WASM32 %s
@@ -16,6 +16,7 @@
 ; RUN: %if arm-registered-target %{ opt -S -passes=lowertypetests -mtriple=thumbv6m-unknown-linux-gnu %s | FileCheck --check-prefixes=THUMBV6M,NATIVE,JT16 %s %}
 ; RUN: %if arm-registered-target %{ opt -S -passes=lowertypetests -mtriple=thumbv5-unknown-linux-gnu %s | FileCheck --check-prefixes=ARM,NATIVE,JT4 %s %}
 ; RUN: %if arm-registered-target %{ opt -S -passes=lowertypetests -mtriple=aarch64-unknown-linux-gnu %s | FileCheck --check-prefixes=ARM,NATIVE,JT4 %s %}
+; RUN: opt -S -passes=lowertypetests -mtriple=hexagon-unknown-linux-musl %s | FileCheck --check-prefixes=HEXAGON,NATIVE,JT4 %s
 
 ; Tests that we correctly handle bitsets containing 2 or more functions.
 
@@ -28,14 +29,13 @@ target datalayout = "e-p:64:64"
 ; NATIVE: private constant [0 x i8] zeroinitializer
 ; WASM32: private constant [0 x i8] zeroinitializer
 
-; NATIVE: @f = alias void (), ptr @[[JT:.*]]
+; JT4: @f = alias [4 x i8], ptr @[[JT:.*]]
+; JT8: @f = alias [8 x i8], ptr @[[JT:.*]]
+; JT16: @f = alias [16 x i8], ptr @[[JT:.*]]
 
-; X86: @g = internal alias void (), getelementptr inbounds ([2 x [8 x i8]], ptr @[[JT]], i64 0, i64 1)
-; ARM: @g = internal alias void (), getelementptr inbounds ([2 x [4 x i8]], ptr @[[JT]], i64 0, i64 1)
-; THUMB: @g = internal alias void (), getelementptr inbounds ([2 x [4 x i8]], ptr @[[JT]], i64 0, i64 1)
-; THUMBV6M: @g = internal alias void (), getelementptr inbounds ([2 x [16 x i8]], ptr @[[JT]], i64 0, i64 1)
-; RISCV: @g = internal alias void (), getelementptr inbounds ([2 x [8 x i8]], ptr @[[JT]], i64 0, i64 1)
-; LOONGARCH64: @g = internal alias void (), getelementptr inbounds ([2 x [8 x i8]], ptr @[[JT]], i64 0, i64 1)
+; JT4: @g = internal alias [4 x i8], getelementptr inbounds ([2 x [4 x i8]], ptr @[[JT]], i64 0, i64 1)
+; JT8: @g = internal alias [8 x i8], getelementptr inbounds ([2 x [8 x i8]], ptr @[[JT]], i64 0, i64 1)
+; JT16: @g = internal alias [16 x i8], getelementptr inbounds ([2 x [16 x i8]], ptr @[[JT]], i64 0, i64 1)
 
 ; NATIVE: define hidden void @f.cfi()
 ; WASM32: define void @f() !type !{{[0-9]+}} !wasm.index ![[I0:[0-9]+]]
@@ -63,9 +63,9 @@ define i1 @foo(ptr %p) {
   ret i1 %x
 }
 
-; JT4:  define private void @[[JT]]() #[[ATTR:.*]] align 4 {
-; JT8:  define private void @[[JT]]() #[[ATTR:.*]] align 8 {
-; JT16: define private void @[[JT]]() #[[ATTR:.*]] align 16 {
+; JT4:  define private void @[[JT]]() #[[ATTR:.*]] prefalign(4) !elf_section_properties ![[PROP:[0-9]*]] {
+; JT8:  define private void @[[JT]]() #[[ATTR:.*]] prefalign(8) !elf_section_properties ![[PROP:[0-9]*]] {
+; JT16: define private void @[[JT]]() #[[ATTR:.*]] prefalign(16) !elf_section_properties ![[PROP:[0-9]*]] {
 
 ; X86:      jmp ${0:c}@plt
 ; X86-SAME: int3
@@ -73,6 +73,8 @@ define i1 @foo(ptr %p) {
 ; X86-SAME: int3
 
 ; ARM:      b $0
+
+; HEXAGON:      jump $0
 
 ; THUMB:      b.w $0
 
@@ -98,6 +100,8 @@ define i1 @foo(ptr %p) {
 
 ; ARM-NEXT: b $0
 
+; HEXAGON-NEXT: jump $0
+
 ; THUMB-NEXT: b.w $0
 
 ; THUMBV6M-NEXT: push {r0,r1}
@@ -115,13 +119,17 @@ define i1 @foo(ptr %p) {
 
 ; NATIVE-SAME: "s"(ptr @g.cfi)
 
-; X86-LINUX: attributes #[[ATTR]] = { naked nocf_check noinline }
-; X86-WIN32: attributes #[[ATTR]] = { nocf_check noinline }
+; X86: attributes #[[ATTR]] = { naked nocf_check noinline }
 ; ARM: attributes #[[ATTR]] = { naked noinline
 ; THUMB: attributes #[[ATTR]] = { naked noinline "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }
 ; THUMBV6M: attributes #[[ATTR]] = { naked noinline "target-features"="+thumb-mode" }
 ; RISCV: attributes #[[ATTR]] = { naked noinline "target-features"="-c,-relax" }
 ; LOONGARCH64: attributes #[[ATTR]] = { naked noinline }
+; HEXAGON: attributes #[[ATTR]] = { naked noinline }
+
+; JT4: ![[PROP]] =  !{i64 1879002126, i64 4}
+; JT8: ![[PROP]] =  !{i64 1879002126, i64 8}
+; JT16: ![[PROP]] =  !{i64 1879002126, i64 16}
 
 ; WASM32: ![[I0]] = !{i64 1}
 ; WASM32: ![[I1]] = !{i64 2}

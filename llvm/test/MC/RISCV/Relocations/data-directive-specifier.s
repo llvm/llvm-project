@@ -28,21 +28,21 @@ data1:
 .word %gotpcrel(extern+4), %gotpcrel(extern-5)
 
 .ifdef ERR
-# ERR: [[#@LINE+1]]:7: error: %pltpcrel can only be used in a .word directive
+# ERR: [[#@LINE+1]]:8: error: %pltpcrel can only be used in a .word directive
 .quad %pltpcrel(g)
 
-# ERR: [[#@LINE+1]]:7: error: expected relocatable expression
+# ERR: [[#@LINE+1]]:8: error: expected relocatable expression
 .word %pltpcrel(g-.)
 
-# ERR: [[#@LINE+1]]:7: error: expected relocatable expression
+# ERR: [[#@LINE+1]]:8: error: expected relocatable expression
 .word %pltpcrel(extern - und)
 
-# ERR: [[#@LINE+1]]:7: error: %gotpcrel can only be used in a .word directive
+# ERR: [[#@LINE+1]]:8: error: %gotpcrel can only be used in a .word directive
 .quad %gotpcrel(g)
 
-# ERR: [[#@LINE+1]]:7: error: expected relocatable expression
+# ERR: [[#@LINE+1]]:8: error: expected relocatable expression
 .word %gotpcrel(extern - .)
 
-# ERR: [[#@LINE+1]]:7: error: expected relocatable expression
+# ERR: [[#@LINE+1]]:8: error: expected relocatable expression
 .word %gotpcrel(extern - und)
 .endif

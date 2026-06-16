@@ -18,9 +18,7 @@
 #include "test_macros.h"
 
 template <class T>
-constexpr bool has_type = requires {
-  typename T::type;
-};
+constexpr bool has_type = requires { typename T::type; };
 
 // A slightly simplified variation of std::tuple
 template <class...>
@@ -74,8 +72,10 @@ static_assert(std::is_same_v<std::common_reference_t<void (&&)()>, void (&&)()>)
 //  -- Otherwise, if sizeof...(T) is two, let T1 and T2 denote the two types in
 //     the pack T. Then
 // (6.3.1)
-//    -- If T1 and T2 are reference types and COMMON_REF(T1, T2) is well-formed,
-//       then the member typedef type denotes that type.
+//    -- Let R be COMMON-REF(T1, T2). If T1 and T2 are reference types, R is well-formed,
+//       and is_convertible_v<add_pointer_t<T1>, add_pointer_t<R>> && is_convertible_v<add_pointer_t<T2>, add_pointer_t<R>>
+//       is true, then the member typedef type denotes R.
+
 struct B {};
 struct D : B {};
 static_assert(std::is_same_v<std::common_reference_t<B&, D&>, B&>);
@@ -99,7 +99,19 @@ static_assert(std::is_same_v<std::common_reference_t<int const&, int volatile&>,
 static_assert(std::is_same_v<std::common_reference_t<int const volatile&&, int volatile&&>, int const volatile&&>);
 
 static_assert(std::is_same_v<std::common_reference_t<int (&)[10], int (&&)[10]>, int const (&)[10]>);
-static_assert(std::is_same_v<std::common_reference_t<int const (&)[10], int volatile (&)[10]>, int const volatile (&)[10]>);
+static_assert(
+    std::is_same_v<std::common_reference_t<int const (&)[10], int volatile (&)[10]>, int const volatile (&)[10]>);
+
+// when conversion from pointers are not true
+struct E {};
+struct F {
+  operator E&() const;
+};
+
+static_assert(!std::is_convertible_v<F*, E*>);
+
+// The following should not use 6.3.1, but fallback to 6.3.3
+static_assert(std::is_same_v<std::common_reference_t<E&, F>, E&>);
 
 // (6.3.2)
 //    -- Otherwise, if basic_common_reference<remove_cvref_t<T1>,
@@ -136,8 +148,8 @@ static_assert(std::is_same_v<std::common_reference_t<int&, MyIntRef>, MyIntRef>)
 //    -- Otherwise, if common_type_t<T1, T2> is well-formed, then the member
 //       typedef type denotes that type.
 struct moveonly {
-  moveonly() = default;
-  moveonly(moveonly&&) = default;
+  moveonly()                      = default;
+  moveonly(moveonly&&)            = default;
   moveonly& operator=(moveonly&&) = default;
 };
 struct moveonly2 : moveonly {};
@@ -169,14 +181,17 @@ static_assert(!has_type<std::common_reference<int, short, int, char*> >);
 
 #if TEST_STD_VER > 20
 static_assert(std::is_same_v<std::common_reference_t<std::tuple<int, int>>, std::tuple<int, int>>);
-static_assert(std::is_same_v<std::common_reference_t<std::tuple<int, long>, std::tuple<long, int>>, std::tuple<long, long>>);
+static_assert(
+    std::is_same_v<std::common_reference_t<std::tuple<int, long>, std::tuple<long, int>>, std::tuple<long, long>>);
 static_assert(std::is_same_v<std::common_reference_t<std::tuple<int&, const int&>, std::tuple<const int&, int>>,
                              std::tuple<const int&, int>>);
 static_assert(std::is_same_v<std::common_reference_t<std::tuple<int&, volatile int&>, std::tuple<volatile int&, int>>,
                              std::tuple<volatile int&, int>>);
-static_assert(std::is_same_v<std::common_reference_t<std::tuple<int&, const volatile int&>, std::tuple<const volatile int&, int>>,
-                             std::tuple<const volatile int&, int>>);
-static_assert(!has_type<std::common_reference_t<std::tuple<const int&, volatile int&>, std::tuple<volatile int&, const int&>>>);
+static_assert(
+    std::is_same_v<std::common_reference_t<std::tuple<int&, const volatile int&>, std::tuple<const volatile int&, int>>,
+                   std::tuple<const volatile int&, int>>);
+static_assert(
+    !has_type<std::common_reference_t<std::tuple<const int&, volatile int&>, std::tuple<volatile int&, const int&>>>);
 
 static_assert(std::is_same_v<std::common_reference_t<std::tuple<int, X2>, std::tuple<int, Y2>>, std::tuple<int, Z2>>);
 static_assert(std::is_same_v<std::common_reference_t<std::tuple<int, X2>, std::tuple<int, Y2>>, std::tuple<int, Z2>>);
@@ -185,26 +200,25 @@ static_assert(!has_type<std::common_reference<std::tuple<int, X2>, std::tuple<fl
 static_assert(!has_type<std::common_reference<std::tuple<int, X2>, int, X2>>);
 
 struct A {};
-template <template<class> class TQual, template<class> class UQual>
+template <template <class> class TQual, template <class> class UQual>
 struct std::basic_common_reference<A, std::tuple<B>, TQual, UQual> {
   using type = tuple<UQual<B>>;
 };
 
 static_assert(std::is_same_v<std::common_reference_t<A, std::tuple<B>, std::tuple<D>>, std::tuple<B>>);
 
-
-static_assert(std::is_same_v<std::common_reference_t<std::pair<int, int>>,
-                             std::pair<int, int>>);
-static_assert(std::is_same_v<std::common_reference_t<std::pair<int, long>, std::pair<long, int>>,
-                             std::pair<long, long>>);
+static_assert(std::is_same_v<std::common_reference_t<std::pair<int, int>>, std::pair<int, int>>);
+static_assert(
+    std::is_same_v<std::common_reference_t<std::pair<int, long>, std::pair<long, int>>, std::pair<long, long>>);
 static_assert(std::is_same_v<std::common_reference_t<std::pair<int&, const int&>, std::pair<const int&, int>>,
                              std::pair<const int&, int>>);
 static_assert(std::is_same_v<std::common_reference_t<std::pair<int&, volatile int&>, std::pair<volatile int&, int>>,
                              std::pair<volatile int&, int>>);
-static_assert(std::is_same_v<std::common_reference_t<std::pair<int&, const volatile int&>, std::pair<const volatile int&, int>>,
-                             std::pair<const volatile int&, int>>);
-static_assert(!has_type<std::common_reference_t<std::pair<const int&, volatile int&>,
-                        std::pair<volatile int&, const int&>>>);
+static_assert(
+    std::is_same_v<std::common_reference_t<std::pair<int&, const volatile int&>, std::pair<const volatile int&, int>>,
+                   std::pair<const volatile int&, int>>);
+static_assert(
+    !has_type<std::common_reference_t<std::pair<const int&, volatile int&>, std::pair<volatile int&, const int&>>>);
 
 static_assert(std::is_same_v<std::common_reference_t<std::pair<int, X2>, std::pair<int, Y2>>, std::pair<int, Z2>>);
 static_assert(std::is_same_v<std::common_reference_t<std::pair<int, X2>, std::pair<int, Y2>>, std::pair<int, Z2>>);

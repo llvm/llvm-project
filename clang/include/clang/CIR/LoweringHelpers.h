@@ -35,6 +35,21 @@ convertToDenseElementsAttr(cir::ConstArrayAttr attr,
 
 std::optional<mlir::Attribute>
 lowerConstArrayAttr(cir::ConstArrayAttr constArr,
-                    const mlir::TypeConverter *converter);
+                    const mlir::TypeConverter *converter,
+                    mlir::ModuleOp moduleOp = {});
 
+mlir::Value getConstAPInt(mlir::OpBuilder &bld, mlir::Location loc,
+                          mlir::Type typ, const llvm::APInt &val);
+
+mlir::Value getConst(mlir::OpBuilder &bld, mlir::Location loc, mlir::Type typ,
+                     unsigned val);
+
+mlir::Value createShL(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs);
+
+mlir::Value createAShR(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs);
+
+mlir::Value createAnd(mlir::OpBuilder &bld, mlir::Value lhs,
+                      const llvm::APInt &rhs);
+
+mlir::Value createLShR(mlir::OpBuilder &bld, mlir::Value lhs, unsigned rhs);
 #endif

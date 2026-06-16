@@ -23,10 +23,11 @@ namespace llvm {
 
 // This pass is responsible for removing optional traps, like llvm.ubsantrap
 // from the hot code.
-class LowerAllowCheckPass : public PassInfoMixin<LowerAllowCheckPass> {
+class LowerAllowCheckPass : public RequiredPassInfoMixin<LowerAllowCheckPass> {
 public:
   struct Options {
     std::vector<unsigned int> cutoffs;
+    unsigned int runtime_check = 0;
   };
 
   explicit LowerAllowCheckPass(LowerAllowCheckPass::Options Opts)

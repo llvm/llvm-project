@@ -95,9 +95,8 @@ bool clang::parseSanitizerWeightedValue(StringRef Value, bool AllowGroups,
     return false;
   auto [N, W] = Value.split('=');
   double A;
-  if (W.getAsDouble(A))
+  if (W.getAsDouble(A) || A < 0.0 || A > 1.0)
     return false;
-  A = std::clamp(A, 0.0, 1.0);
   // AllowGroups is already taken into account for ParsedKind,
   // hence we unconditionally expandSanitizerGroups.
   Cutoffs.set(expandSanitizerGroups(ParsedKind), A);

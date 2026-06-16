@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/libc_errno.h"
+#include "hdr/errno_macros.h"
 #include "src/math/asinhf16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -14,7 +14,6 @@
 using LlvmLibcAsinhf16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
 TEST_F(LlvmLibcAsinhf16Test, SpecialNumbers) {
-  libc_errno = 0;
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinhf16(aNaN));
   EXPECT_MATH_ERRNO(0);
 

@@ -30,7 +30,7 @@
 ; CHECK:       DW_TAG_variable
 ; CHECK:       NULL
 ; CHECK:     DW_TAG_imported_declaration
-; CHECK:       DW_AT_import ([[FOO]])
+; CHECK:       DW_AT_import ([[FOO]] "_ZN2ns3fooEv")
 ; CHECK:     NULL
 ; CHECK:   NULL
 

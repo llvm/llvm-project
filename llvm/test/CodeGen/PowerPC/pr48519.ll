@@ -12,26 +12,21 @@ define void @julia__typed_vcat_20() #0 {
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdu r1, -48(r1)
 ; CHECK-NEXT:    li r30, 0
-; CHECK-NEXT:    li r3, 1
+; CHECK-NEXT:    li r4, 1
 ; CHECK-NEXT:    std r0, 64(r1)
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb3
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    addi r3, r3, -1
+; CHECK-NEXT:    addi r3, r4, -1
 ; CHECK-NEXT:    mtfprd f0, r3
 ; CHECK-NEXT:    xscvsxdsp f1, f0
 ; CHECK-NEXT:    bl __truncsfhf2
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    clrldi r3, r3, 48
-; CHECK-NEXT:    bl __extendhfsf2
-; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r30, r30, -1
-; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    li r4, 0
 ; CHECK-NEXT:    cmpldi r30, 0
 ; CHECK-NEXT:    bc 12, gt, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %bb11
-; CHECK-NEXT:    bl __truncsfhf2
-; CHECK-NEXT:    nop
 ; CHECK-NEXT:    sth r3, 128(0)
 ;
 ; CHECK-P9-LABEL: julia__typed_vcat_20:
@@ -39,23 +34,18 @@ define void @julia__typed_vcat_20() #0 {
 ; CHECK-P9-NEXT:    li r3, 0
 ; CHECK-P9-NEXT:    mtctr r3
 ; CHECK-P9-NEXT:    li r3, 1
-; CHECK-P9-NEXT:    .p2align 4
+; CHECK-P9-NEXT:    .p2align 5
 ; CHECK-P9-NEXT:  .LBB0_1: # %bb3
 ; CHECK-P9-NEXT:    #
 ; CHECK-P9-NEXT:    addi r3, r3, -1
 ; CHECK-P9-NEXT:    mtfprd f0, r3
+; CHECK-P9-NEXT:    li r3, 0
 ; CHECK-P9-NEXT:    xscvsxdsp f0, f0
 ; CHECK-P9-NEXT:    xscvdphp f0, f0
-; CHECK-P9-NEXT:    mffprwz r3, f0
-; CHECK-P9-NEXT:    clrlwi r3, r3, 16
-; CHECK-P9-NEXT:    mtfprwz f0, r3
-; CHECK-P9-NEXT:    li r3, 0
-; CHECK-P9-NEXT:    xscvhpdp f0, f0
 ; CHECK-P9-NEXT:    bdnz .LBB0_1
 ; CHECK-P9-NEXT:  # %bb.2: # %bb11
-; CHECK-P9-NEXT:    xscvdphp f0, f0
-; CHECK-P9-NEXT:    li r3, 128
-; CHECK-P9-NEXT:    stxsihx f0, 0, r3
+; CHECK-P9-NEXT:    mffprwz r3, f0
+; CHECK-P9-NEXT:    sth r3, 128(0)
 bb:
   %i = load i64, ptr addrspace(11) null, align 8
   %i1 = call { i64, i1 } @llvm.ssub.with.overflow.i64(i64 %i, i64 0)
@@ -147,54 +137,33 @@ bb9:                                              ; preds = %bb3, %bb1
 define void @func_48786() #0 {
 ; CHECK-LABEL: func_48786:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    mfocrf r12, 32
-; CHECK-NEXT:    stw r12, 8(r1)
-; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    stdu r1, -48(r1)
-; CHECK-NEXT:    std r0, 64(r1)
-; CHECK-NEXT:    std r30, 32(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    # implicit-def: $x30
 ; CHECK-NEXT:    ld r3, 0(r3)
 ; CHECK-NEXT:    cmpdi r3, 0
-; CHECK-NEXT:    crnot 4*cr2+lt, eq
+; CHECK-NEXT:    mtctr r3
+; CHECK-NEXT:    crnot 4*cr5+lt, eq
 ; CHECK-NEXT:    b .LBB2_2
-; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB2_1: # %bb10
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    addi r30, r30, -1
-; CHECK-NEXT:    cmpldi r30, 0
-; CHECK-NEXT:    bc 4, gt, .LBB2_5
+; CHECK-NEXT:    bdzlr
 ; CHECK-NEXT:  .LBB2_2: # %bb2
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB2_1
 ; CHECK-NEXT:  # %bb.3: # %bb4
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lhz r3, 0(r3)
-; CHECK-NEXT:    bl __extendhfsf2
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    bc 4, 4*cr2+lt, .LBB2_6
+; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB2_5
 ; CHECK-NEXT:  # %bb.4: # %bb8
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    bl __truncsfhf2
-; CHECK-NEXT:    nop
+; CHECK-NEXT:    lhz r3, 0(r3)
 ; CHECK-NEXT:    sth r3, 0(0)
 ; CHECK-NEXT:    b .LBB2_1
-; CHECK-NEXT:  .LBB2_5: # %bb14
-; CHECK-NEXT:    ld r30, 32(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    addi r1, r1, 48
-; CHECK-NEXT:    ld r0, 16(r1)
-; CHECK-NEXT:    lwz r12, 8(r1)
-; CHECK-NEXT:    mtlr r0
-; CHECK-NEXT:    mtocrf 32, r12
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB2_6: # %bb15
+; CHECK-NEXT:  .LBB2_5: # %bb15
 ;
 ; CHECK-P9-LABEL: func_48786:
 ; CHECK-P9:       # %bb.0: # %bb
 ; CHECK-P9-NEXT:    ld r3, 0(r3)
 ; CHECK-P9-NEXT:    cmpdi r3, 0
 ; CHECK-P9-NEXT:    mtctr r3
-; CHECK-P9-NEXT:    li r3, 0
 ; CHECK-P9-NEXT:    crnot 4*cr5+lt, eq
 ; CHECK-P9-NEXT:    b .LBB2_2
 ; CHECK-P9-NEXT:    .p2align 5
@@ -206,13 +175,11 @@ define void @func_48786() #0 {
 ; CHECK-P9-NEXT:    bc 12, 4*cr5+lt, .LBB2_1
 ; CHECK-P9-NEXT:  # %bb.3: # %bb4
 ; CHECK-P9-NEXT:    #
-; CHECK-P9-NEXT:    lxsihzx f0, 0, r3
-; CHECK-P9-NEXT:    xscvhpdp f0, f0
 ; CHECK-P9-NEXT:    bc 4, 4*cr5+lt, .LBB2_5
 ; CHECK-P9-NEXT:  # %bb.4: # %bb8
 ; CHECK-P9-NEXT:    #
-; CHECK-P9-NEXT:    xscvdphp f0, f0
-; CHECK-P9-NEXT:    stxsihx f0, 0, r3
+; CHECK-P9-NEXT:    lhz r3, 0(r3)
+; CHECK-P9-NEXT:    sth r3, 0(0)
 ; CHECK-P9-NEXT:    b .LBB2_1
 ; CHECK-P9-NEXT:  .LBB2_5: # %bb15
 bb:
@@ -260,41 +227,29 @@ bb15:                                             ; preds = %bb5
 define void @func_48785(half %arg) #0 {
 ; CHECK-LABEL: func_48785:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r29, -32(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    std r30, -24(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    stfd f31, -8(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    stdu r1, -64(r1)
-; CHECK-NEXT:    fmr f31, f1
-; CHECK-NEXT:    li r3, 1
-; CHECK-NEXT:    li r29, 0
-; CHECK-NEXT:    std r0, 80(r1)
-; CHECK-NEXT:    rldic r30, r3, 62, 1
-; CHECK-NEXT:    .p2align 5
+; CHECK-NEXT:    li r4, 1
+; CHECK-NEXT:    rldic r4, r4, 62, 1
+; CHECK-NEXT:    mtctr r4
+; CHECK-NEXT:    li r4, 0
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB3_1: # %bb1
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    fmr f1, f31
-; CHECK-NEXT:    bl __truncsfhf2
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    addi r30, r30, -1
-; CHECK-NEXT:    sth r3, 0(r29)
-; CHECK-NEXT:    addi r29, r29, 24
-; CHECK-NEXT:    cmpldi r30, 0
-; CHECK-NEXT:    bc 12, gt, .LBB3_1
+; CHECK-NEXT:    sth r3, 0(r4)
+; CHECK-NEXT:    addi r4, r4, 24
+; CHECK-NEXT:    bdnz .LBB3_1
 ; CHECK-NEXT:  # %bb.2: # %bb5
 ;
 ; CHECK-P9-LABEL: func_48785:
 ; CHECK-P9:       # %bb.0: # %bb
-; CHECK-P9-NEXT:    li r3, 1
-; CHECK-P9-NEXT:    rldic r3, r3, 62, 1
-; CHECK-P9-NEXT:    mtctr r3
-; CHECK-P9-NEXT:    li r3, 0
+; CHECK-P9-NEXT:    li r4, 1
+; CHECK-P9-NEXT:    rldic r4, r4, 62, 1
+; CHECK-P9-NEXT:    mtctr r4
+; CHECK-P9-NEXT:    li r4, 0
 ; CHECK-P9-NEXT:    .p2align 4
 ; CHECK-P9-NEXT:  .LBB3_1: # %bb1
 ; CHECK-P9-NEXT:    #
-; CHECK-P9-NEXT:    xscvdphp f0, f1
-; CHECK-P9-NEXT:    stxsihx f0, 0, r3
-; CHECK-P9-NEXT:    addi r3, r3, 24
+; CHECK-P9-NEXT:    sth r3, 0(r4)
+; CHECK-P9-NEXT:    addi r4, r4, 24
 ; CHECK-P9-NEXT:    bdnz .LBB3_1
 ; CHECK-P9-NEXT:  # %bb.2: # %bb5
 bb:

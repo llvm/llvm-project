@@ -1,6 +1,7 @@
 add_llvm_component_library(LLVMObject
   Archive.cpp
   ArchiveWriter.cpp
+  BBAddrMap.cpp
   Binary.cpp
   BuildID.cpp
   COFFImportFile.cpp
@@ -25,6 +26,7 @@ add_llvm_component_library(LLVMObject
   OffloadBundle.cpp
   RecordStreamer.cpp
   RelocationResolver.cpp
+  SFrameParser.cpp
   SymbolicFile.cpp
   SymbolSize.cpp
   TapiFile.cpp

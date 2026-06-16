@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -arith-expand="include-bf16=true include-f8e8m0=true" -verify-diagnostics -split-input-file | FileCheck %s 
+// RUN: mlir-opt %s -arith-expand="include-bf16=true include-f8e8m0=true include-f4e2m1=true" -verify-diagnostics -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -arith-expand -split-input-file -verify-diagnostics | FileCheck %s --check-prefix=SCHECK
 
 // Test ceil divide with signed integer
@@ -381,16 +381,31 @@ func.func @extf_f8E8M0FNU_to_f32(%arg0 : f8E8M0FNU) -> f32 {
     return %0 : f32
 }
 
-// CHECK-LABLE: @extf_f8E8M0FNU_to_f32
+// CHECK-LABEL: @extf_f8E8M0FNU_to_f32
 // CHECK: %[[BITCAST:.+]] = arith.bitcast %arg0 : f8E8M0FNU to i8
-// CHECK-DAG: %[[CF8NAN:.+]] = arith.constant -1 : i8
-// CHECK-DAG: %[[CF32NAN:.+]] = arith.constant -1 : i32
-// CHECK-DAG: %[[C23_i32:.+]] = arith.constant 23 : i32
+// CHECK: %[[C23_i32:.+]] = arith.constant 23 : i32
 // CHECK: %[[EXTUI:.+]] = arith.extui %[[BITCAST]] : i8 to i32
 // CHECK: %[[SHLI:.+]] = arith.shli %[[EXTUI]], %[[C23_i32]] : i32
+// CHECK-DAG: %[[CF8NAN:.+]] = arith.constant -1 : i8
+// CHECK-DAG: %[[CF32NAN:.+]] = arith.constant -1 : i32
 // CHECK: %[[CMP_NAN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8NAN]] : i8
 // CHECK: %[[SELECT_NAN:.+]] = arith.select %[[CMP_NAN]], %[[CF32NAN]], %[[SHLI]] : i32
 // CHECK: %[[RESULT:.+]] = arith.bitcast %[[SELECT_NAN]] : i32 to f32
+// CHECK: return %[[RESULT]]
+
+// -----
+
+func.func @extf_f8E8M0FNU_to_f32_no_nan(%arg0 : f8E8M0FNU) -> f32 {
+    %0 = arith.extf %arg0 fastmath<nnan> : f8E8M0FNU to f32
+    return %0 : f32
+}
+
+// CHECK-LABEL: @extf_f8E8M0FNU_to_f32_no_nan
+// CHECK: %[[BITCAST:.+]] = arith.bitcast %arg0 : f8E8M0FNU to i8
+// CHECK: %[[C23_i32:.+]] = arith.constant 23 : i32
+// CHECK: %[[EXTUI:.+]] = arith.extui %[[BITCAST]] : i8 to i32
+// CHECK: %[[SHLI:.+]] = arith.shli %[[EXTUI]], %[[C23_i32]] : i32
+// CHECK: %[[RESULT:.+]] = arith.bitcast %[[SHLI]] : i32 to f32
 // CHECK: return %[[RESULT]]
 
 // -----
@@ -402,11 +417,11 @@ func.func @extf_f8E8M0FNU_to_f16(%arg0 : f8E8M0FNU) -> f16 {
 
 // CHECK-LABEL: @extf_f8E8M0FNU_to_f16
 // CHECK: %[[BITCAST:.+]] = arith.bitcast %arg0 : f8E8M0FNU to i8
-// CHECK-DAG: %[[CF8NAN:.+]] = arith.constant -1 : i8
-// CHECK-DAG: %[[CF32NAN:.+]] = arith.constant -1 : i32
 // CHECK-DAG: %[[C23_i32:.+]] = arith.constant 23 : i32
 // CHECK: %[[EXTUI:.+]] = arith.extui %[[BITCAST]] : i8 to i32
 // CHECK: %[[SHLI:.+]] = arith.shli %[[EXTUI]], %[[C23_i32]] : i32
+// CHECK-DAG: %[[CF8NAN:.+]] = arith.constant -1 : i8
+// CHECK-DAG: %[[CF32NAN:.+]] = arith.constant -1 : i32
 // CHECK: %[[CMP_NAN:.+]] = arith.cmpi eq, %[[BITCAST]], %[[CF8NAN]] : i8
 // CHECK: %[[SELECT_NAN:.+]] = arith.select %[[CMP_NAN]], %[[CF32NAN]], %[[SHLI]] : i32
 // CHECK: %[[F32_RESULT:.+]] = arith.bitcast %[[SELECT_NAN]] : i32 to f32
@@ -593,3 +608,43 @@ func.func @minui(%a: i32, %b: i32) -> i32 {
 // CHECK-NEXT: %[[CMP:.*]] = arith.cmpi ult, %[[LHS]], %[[RHS]] : i32
 // CHECK-NEXT: %[[RESULT:.*]] = arith.select %[[CMP]], %[[LHS]], %[[RHS]] : i32
 // CHECK-NEXT: return %[[RESULT]] : i32
+
+// -----
+
+func.func @truncf_f32_to_f4E2M1FN(%arg0 : f32) -> f4E2M1FN {
+    %0 = arith.truncf %arg0 : f32 to f4E2M1FN
+    return %0 : f4E2M1FN
+}
+
+// CHECK-LABEL: @truncf_f32_to_f4E2M1FN
+// CHECK-NOT: arith.truncf
+
+// -----
+
+func.func @truncf_vector_f32_to_f4E2M1FN(%arg0 : vector<4xf32>) -> vector<4xf4E2M1FN> {
+    %0 = arith.truncf %arg0 : vector<4xf32> to vector<4xf4E2M1FN>
+    return %0 : vector<4xf4E2M1FN>
+}
+
+// CHECK-LABEL: @truncf_vector_f32_to_f4E2M1FN
+// CHECK-NOT: arith.truncf
+
+// -----
+
+func.func @extf_f4E2M1FN_to_f32(%arg0 : f4E2M1FN) -> f32 {
+    %0 = arith.extf %arg0 : f4E2M1FN to f32
+    return %0 : f32
+}
+
+// CHECK-LABEL: @extf_f4E2M1FN_to_f32
+// CHECK-NOT: arith.extf
+
+// -----
+
+func.func @extf_vector_f4E2M1FN_to_f32(%arg0 : vector<4xf4E2M1FN>) -> vector<4xf32> {
+    %0 = arith.extf %arg0 : vector<4xf4E2M1FN> to vector<4xf32>
+    return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: @extf_vector_f4E2M1FN_to_f32
+// CHECK-NOT: arith.extf

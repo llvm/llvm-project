@@ -57,7 +57,7 @@ public:
   LSUnitBase(const MCSchedModel &SM, unsigned LoadQueueSize,
              unsigned StoreQueueSize, bool AssumeNoAlias);
 
-  virtual ~LSUnitBase();
+  ~LSUnitBase() override;
 
   /// Returns the total number of entries in the load queue.
   unsigned getLoadQueueSize() const { return LQSize; }
@@ -465,19 +465,19 @@ public:
   /// 6. A store has to wait until an older store barrier is fully executed.
   unsigned dispatch(const InstRef &IR) override;
 
-  virtual void onInstructionIssued(const InstRef &IR) override {
+  void onInstructionIssued(const InstRef &IR) override {
     unsigned GroupID = IR.getInstruction()->getLSUTokenID();
     Groups[GroupID]->onInstructionIssued(IR);
   }
 
-  virtual void onInstructionRetired(const InstRef &IR) override;
+  void onInstructionRetired(const InstRef &IR) override;
 
-  virtual void onInstructionExecuted(const InstRef &IR) override;
+  void onInstructionExecuted(const InstRef &IR) override;
 
-  virtual void cycleEvent() override;
+  void cycleEvent() override;
 
 #ifndef NDEBUG
-  virtual void dump() const override;
+  void dump() const override;
 #endif
 
 private:

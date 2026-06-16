@@ -11,14 +11,13 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssembly.h"
 #include "WebAssemblySubtarget.h"
+#include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetMachine.h"
@@ -117,7 +116,7 @@ bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
                        "********** Function: "
                     << MF.getName() << '\n');
 
-  if (MF.getTarget().getMCAsmInfo()->getExceptionHandlingType() !=
+  if (MF.getTarget().getMCAsmInfo().getExceptionHandlingType() !=
       ExceptionHandling::Wasm)
     return false;
 
@@ -312,7 +311,8 @@ bool WebAssemblyLateEHPrepare::addCatchRefsAndThrowRefs(MachineFunction &MF) {
   // caught exception is rethrown. And convert RETHROWs to THROW_REFs.
   for (auto &[EHPad, Rethrows] : EHPadToRethrows) {
     auto *Catch = WebAssembly::findCatch(EHPad);
-    auto *InsertPos = Catch->getIterator()->getNextNode();
+    assert(Catch && "CATCH not found in EHPad");
+    auto InsertPos = std::next(Catch->getIterator());
     auto ExnReg = MRI.createVirtualRegister(&WebAssembly::EXNREFRegClass);
     if (Catch->getOpcode() == WebAssembly::CATCH) {
       MachineInstrBuilder MIB = BuildMI(*EHPad, InsertPos, Catch->getDebugLoc(),
@@ -377,8 +377,8 @@ bool WebAssemblyLateEHPrepare::removeUnnecessaryUnreachables(
 }
 
 // After the stack is unwound due to a thrown exception, the __stack_pointer
-// global can point to an invalid address. This inserts instructions that
-// restore __stack_pointer global.
+// global/__wasm_get_stack_pointer() can point to an invalid address. This
+// inserts instructions that restore the stack pointer state.
 bool WebAssemblyLateEHPrepare::restoreStackPointer(MachineFunction &MF) {
   const auto *FrameLowering = static_cast<const WebAssemblyFrameLowering *>(
       MF.getSubtarget().getFrameLowering());
@@ -391,11 +391,11 @@ bool WebAssemblyLateEHPrepare::restoreStackPointer(MachineFunction &MF) {
       continue;
     Changed = true;
 
-    // Insert __stack_pointer restoring instructions at the beginning of each EH
+    // Insert stack pointer restoring instructions at the beginning of each EH
     // pad, after the catch instruction. Here it is safe to assume that SP32
-    // holds the latest value of __stack_pointer, because the only exception for
-    // this case is when a function uses the red zone, but that only happens
-    // with leaf functions, and we don't restore __stack_pointer in leaf
+    // holds the latest value of the stack pointer, because the only exception
+    // for this case is when a function uses the red zone, but that only happens
+    // with leaf functions, and we don't restore the stack pointer in leaf
     // functions anyway.
     auto InsertPos = MBB.begin();
     // Skip EH_LABELs in the beginning of an EH pad if present.
@@ -405,8 +405,8 @@ bool WebAssemblyLateEHPrepare::restoreStackPointer(MachineFunction &MF) {
            WebAssembly::isCatch(InsertPos->getOpcode()) &&
            "catch/catch_all should be present in every EH pad at this point");
     ++InsertPos; // Skip the catch instruction
-    FrameLowering->writeSPToGlobal(FrameLowering->getSPReg(MF), MF, MBB,
-                                   InsertPos, MBB.begin()->getDebugLoc());
+    FrameLowering->writeBackSP(FrameLowering->getSPReg(MF), MF, MBB, InsertPos,
+                               MBB.begin()->getDebugLoc());
   }
   return Changed;
 }

@@ -13,7 +13,7 @@ define void @test(ptr %a, i64 %0) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = or disjoint <2 x i64> [[TMP3]], <i64 1, i64 0>
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr double, <2 x ptr> [[TMP2]], <2 x i64> [[TMP5]]
 ; CHECK-NEXT:    [[ARRAYIDX17_I28_1:%.*]] = extractelement <2 x ptr> [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> [[TMP6]], i32 8, <2 x i1> splat (i1 true), <2 x double> poison)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> align 8 [[TMP6]], <2 x i1> splat (i1 true), <2 x double> poison)
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x double>, ptr [[A]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x double>, ptr [[A]], align 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = fsub <2 x double> [[TMP8]], [[TMP9]]

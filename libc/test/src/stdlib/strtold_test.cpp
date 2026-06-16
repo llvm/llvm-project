@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/uint128.h"
 #include "src/stdlib/strtold.h"
 
@@ -79,7 +78,7 @@ public:
     using FPBits = LIBC_NAMESPACE::fputil::FPBits<long double>;
     FPBits expected_fp =
         FPBits(static_cast<FPBits::StorageType>(expectedRawData));
-    const int expected_errno = expectedErrno;
+    [[maybe_unused]] const int expected_errno = expectedErrno;
 
     long double result = LIBC_NAMESPACE::strtold(inputString, &str_end);
 

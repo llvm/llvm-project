@@ -15,6 +15,7 @@
 #include "src/stdio/fread.h"
 #include "src/stdio/fseek.h"
 #include "src/stdio/fwrite.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -22,6 +23,7 @@
 #include "hdr/types/size_t.h"
 #include "src/__support/libc_errno.h"
 
+using LlvmLibcFOpenCookieTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using MemoryView = LIBC_NAMESPACE::testing::MemoryView;
 
 struct StringStream {
@@ -88,7 +90,7 @@ int close_ss(void *cookie) {
 constexpr cookie_io_functions_t STRING_STREAM_FUNCS = {&read_ss, &write_ss,
                                                        &seek_ss, &close_ss};
 
-TEST(LlvmLibcFOpenCookie, ReadOnlyCookieTest) {
+TEST_F(LlvmLibcFOpenCookieTest, ReadOnlyCookieTest) {
   constexpr char CONTENT[] = "Hello,readonly!";
   auto *ss = reinterpret_cast<StringStream *>(malloc(sizeof(StringStream)));
   ss->buf = reinterpret_cast<char *>(malloc(sizeof(CONTENT)));
@@ -115,7 +117,6 @@ TEST(LlvmLibcFOpenCookie, ReadOnlyCookieTest) {
   ASSERT_EQ(size_t(0), LIBC_NAMESPACE::fwrite(CONTENT, 1, sizeof(CONTENT), f));
   ASSERT_NE(LIBC_NAMESPACE::ferror(f), 0);
   ASSERT_ERRNO_FAILURE();
-  libc_errno = 0;
 
   LIBC_NAMESPACE::clearerr(f);
   ASSERT_EQ(LIBC_NAMESPACE::ferror(f), 0);
@@ -124,7 +125,7 @@ TEST(LlvmLibcFOpenCookie, ReadOnlyCookieTest) {
   free(ss);
 }
 
-TEST(LlvmLibcFOpenCookie, WriteOnlyCookieTest) {
+TEST_F(LlvmLibcFOpenCookieTest, WriteOnlyCookieTest) {
   size_t INIT_BUFSIZE = 32;
   auto *ss = reinterpret_cast<StringStream *>(malloc(sizeof(StringStream)));
   ss->buf = reinterpret_cast<char *>(malloc(INIT_BUFSIZE));
@@ -149,7 +150,6 @@ TEST(LlvmLibcFOpenCookie, WriteOnlyCookieTest) {
             LIBC_NAMESPACE::fread(read_data, 1, sizeof(WRITE_DATA), f));
   ASSERT_NE(LIBC_NAMESPACE::ferror(f), 0);
   ASSERT_ERRNO_EQ(EBADF);
-  libc_errno = 0;
 
   LIBC_NAMESPACE::clearerr(f);
   ASSERT_EQ(LIBC_NAMESPACE::ferror(f), 0);
@@ -158,7 +158,7 @@ TEST(LlvmLibcFOpenCookie, WriteOnlyCookieTest) {
   free(ss);
 }
 
-TEST(LlvmLibcFOpenCookie, AppendOnlyCookieTest) {
+TEST_F(LlvmLibcFOpenCookieTest, AppendOnlyCookieTest) {
   constexpr char INITIAL_CONTENT[] = "1234567890987654321";
   constexpr char WRITE_DATA[] = "append";
   auto *ss = reinterpret_cast<StringStream *>(malloc(sizeof(StringStream)));
@@ -178,7 +178,6 @@ TEST(LlvmLibcFOpenCookie, AppendOnlyCookieTest) {
   ASSERT_EQ(LIBC_NAMESPACE::fread(read_data, 1, READ_SIZE, f), size_t(0));
   ASSERT_NE(LIBC_NAMESPACE::ferror(f), 0);
   ASSERT_ERRNO_FAILURE();
-  libc_errno = 0;
 
   LIBC_NAMESPACE::clearerr(f);
   ASSERT_EQ(LIBC_NAMESPACE::ferror(f), 0);
@@ -192,7 +191,7 @@ TEST(LlvmLibcFOpenCookie, AppendOnlyCookieTest) {
   free(ss);
 }
 
-TEST(LlvmLibcFOpenCookie, ReadUpdateCookieTest) {
+TEST_F(LlvmLibcFOpenCookieTest, ReadUpdateCookieTest) {
   const char INITIAL_CONTENT[] = "1234567890987654321";
   auto *ss = reinterpret_cast<StringStream *>(malloc(sizeof(StringStream)));
   ss->buf = reinterpret_cast<char *>(malloc(sizeof(INITIAL_CONTENT)));
@@ -223,7 +222,7 @@ TEST(LlvmLibcFOpenCookie, ReadUpdateCookieTest) {
   free(ss);
 }
 
-TEST(LlvmLibcFOpenCookie, WriteUpdateCookieTest) {
+TEST_F(LlvmLibcFOpenCookieTest, WriteUpdateCookieTest) {
   constexpr char WRITE_DATA[] = "hello, file";
   auto *ss = reinterpret_cast<StringStream *>(malloc(sizeof(StringStream)));
   ss->buf = reinterpret_cast<char *>(malloc(sizeof(WRITE_DATA)));

@@ -5,7 +5,6 @@ define void @arm_cmplx_mag_squared_q15_mve(ptr %pSrc, ptr %pDst, i32 %blockSize)
 ; CHECK-LABEL: arm_cmplx_mag_squared_q15_mve:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    subs.w r3, r2, #8
 ; CHECK-NEXT:    dlstp.16 lr, r2
 ; CHECK-NEXT:  .LBB0_1: @ %do.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1

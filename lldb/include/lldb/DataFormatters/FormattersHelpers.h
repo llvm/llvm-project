@@ -55,6 +55,14 @@ void AddFilter(TypeCategoryImpl::SharedPointer category_sp,
 
 std::optional<size_t> ExtractIndexFromString(const char *item_name);
 
+/// Prints the summary for the pointer value of a C++
+/// std::unique_ptr/std::shared_ptr/std::weak_ptr.
+void DumpCxxSmartPtrPointerSummary(Stream &stream, ValueObject &ptr,
+                                   const TypeSummaryOptions &options);
+
+bool ContainerSizeSummaryProvider(ValueObject &valobj, Stream &stream,
+                                  const TypeSummaryOptions &options);
+
 Address GetArrayAddressOrPointerValue(ValueObject &valobj);
 
 time_t GetOSXEpoch();

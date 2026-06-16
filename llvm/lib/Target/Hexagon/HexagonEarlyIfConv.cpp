@@ -132,8 +132,7 @@ namespace {
     const TargetRegisterInfo &TRI;
     friend raw_ostream &operator<< (raw_ostream &OS, const PrintFP &P);
   };
-  raw_ostream &operator<<(raw_ostream &OS,
-                          const PrintFP &P) LLVM_ATTRIBUTE_UNUSED;
+  [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS, const PrintFP &P);
   raw_ostream &operator<<(raw_ostream &OS, const PrintFP &P) {
     OS << "{ SplitB:" << PrintMB(P.FP.SplitB)
        << ", PredR:" << printReg(P.FP.PredR, &P.TRI)
@@ -792,9 +791,9 @@ unsigned HexagonEarlyIfConversion::buildMux(MachineBasicBlock *B,
   DebugLoc DL = B->findBranchDebugLoc();
   Register MuxR = MRI->createVirtualRegister(DRC);
   BuildMI(*B, At, DL, D, MuxR)
-    .addReg(PredR)
-    .addReg(TR, 0, TSR)
-    .addReg(FR, 0, FSR);
+      .addReg(PredR)
+      .addReg(TR, {}, TSR)
+      .addReg(FR, {}, FSR);
   return MuxR;
 }
 
@@ -991,7 +990,7 @@ void HexagonEarlyIfConversion::eliminatePhis(MachineBasicBlock *B) {
       const TargetRegisterClass *RC = MRI->getRegClass(DefR);
       NewR = MRI->createVirtualRegister(RC);
       NonPHI = BuildMI(*B, NonPHI, DL, HII->get(TargetOpcode::COPY), NewR)
-        .addReg(UseR, 0, UseSR);
+                   .addReg(UseR, {}, UseSR);
     }
     MRI->replaceRegWith(DefR, NewR);
     B->erase(I);

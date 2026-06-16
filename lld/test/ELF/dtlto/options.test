@@ -1,0 +1,40 @@
+# REQUIRES: x86
+
+## Test that DTLTO options are passed correctly to the distributor and
+## remote compiler.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+RUN: opt -thinlto-bc foo.ll -o foo.o
+
+## Note: validate.py does not perform any compilation. Instead, it validates the
+## received JSON, pretty-prints the JSON and the supplied arguments, and then
+## exits with an error. This allows FileCheck directives to verify the
+## distributor inputs.
+RUN: not ld.lld foo.o \
+RUN:   -o my.elf \
+RUN:   --thinlto-distributor=%python \
+RUN:   --thinlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
+RUN:   --thinlto-distributor-arg=darg1=10 \
+RUN:   --thinlto-distributor-arg=darg2=20 \
+RUN:   --thinlto-remote-compiler=my_clang.exe \
+RUN:   --thinlto-remote-compiler-arg=carg1=20 \
+RUN:   --thinlto-remote-compiler-arg=carg2=30 2>&1 | FileCheck %s
+
+CHECK: distributor_args=['darg1=10', 'darg2=20']
+
+CHECK: "linker_output": "my.elf"
+
+CHECK: "my_clang.exe"
+CHECK: "carg1=20"
+CHECK: "carg2=30"
+
+CHECK: error: DTLTO backend compilation: cannot open native object file:
+
+#--- foo.ll
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+define void @foo() {
+  ret void
+}

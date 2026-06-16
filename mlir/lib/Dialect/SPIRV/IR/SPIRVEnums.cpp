@@ -15,8 +15,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 
-#include <iterator>
-
 using namespace mlir;
 
 // Pull in all enum utility function definitions
@@ -102,4 +100,8 @@ spirv::getRecursiveImpliedCapabilities(spirv::Capability cap) {
     allCaps.insert_range(getDirectImpliedCapabilities(allCaps[i]));
 
   return allCaps.takeVector();
+}
+
+std::string spirv::getDecorationString(spirv::Decoration decoration) {
+  return llvm::convertToSnakeFromCamelCase(stringifyDecoration(decoration));
 }

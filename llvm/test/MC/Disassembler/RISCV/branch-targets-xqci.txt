@@ -1,8 +1,8 @@
 # RUN: llvm-mc -assemble -triple riscv32 \
-# RUN:   -mattr=+experimental-xqcilb,+experimental-xqcibi \
+# RUN:   -mattr=+xqcilb,+xqcibi \
 # RUN:   %s -filetype=obj -o - \
 # RUN:   | llvm-objdump -d -M no-aliases - \
-# RUN:   --mattr=+experimental-xqcilb,+experimental-xqcibi \
+# RUN:   --mattr=+xqcilb,+xqcibi \
 # RUN:   | FileCheck %s
 
 .option exact

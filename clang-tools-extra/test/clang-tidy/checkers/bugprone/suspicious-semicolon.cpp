@@ -35,7 +35,7 @@ void fail2()
 	if(x == 5);
 		nop();
   // CHECK-MESSAGES: :[[@LINE-2]]:12: warning: potentially unintended semicolon [bugprone-suspicious-semicolon]
-  // CHECK-FIXES: if(x == 5){{$}}
+  // CHECK-FIXES: if(x == 5)
 }
 
 void fail3()
@@ -45,7 +45,7 @@ void fail3()
 		nop();
 	}
   // CHECK-MESSAGES: :[[@LINE-4]]:11: warning: potentially unintended semicolon
-  // CHECK-FIXES: if(x < 5){{$}}
+  // CHECK-FIXES: if(x < 5)
 }
 
 void correct4()
@@ -65,7 +65,7 @@ void fail4()
 	for(int i = 0; i < x; ++i);
 		nop();
   // CHECK-MESSAGES: :[[@LINE-2]]:28: warning: potentially unintended semicolon
-  // CHECK-FIXES: for(int i = 0; i < x; ++i){{$}}
+  // CHECK-FIXES: for(int i = 0; i < x; ++i)
 }
 
 void fail5()
@@ -73,7 +73,7 @@ void fail5()
 	if(x % 5 == 1);
 	  nop();
   // CHECK-MESSAGES: :[[@LINE-2]]:16: warning: potentially unintended semicolon
-  // CHECK-FIXES: if(x % 5 == 1){{$}}
+  // CHECK-FIXES: if(x % 5 == 1)
 }
 
 void fail6() {
@@ -82,7 +82,7 @@ void fail6() {
   } else if (a != 1);
     a = 2;
   // CHECK-MESSAGES: :[[@LINE-2]]:21: warning: potentially unintended semicolon
-  // CHECK-FIXES: } else if (a != 1){{$}}
+  // CHECK-FIXES: } else if (a != 1)
 }
 
 void fail7() {

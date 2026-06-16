@@ -10,11 +10,19 @@ set (FILES
   NativeProcessProtocolTest.cpp
   PipeTest.cpp
   ProcessLaunchInfoTest.cpp
+  ProcessRunLockTest.cpp
   SocketAddressTest.cpp
   SocketTest.cpp
+  StripConPTYSequencesTest.cpp
   ThreadLauncherTest.cpp
   XMLTest.cpp
 )
+
+if (LLDB_ENABLE_PYTHON)
+  list(APPEND FILES
+    PythonRuntimeLoaderTest.cpp
+  )
+endif()
 
 if (UNIX)
   list(APPEND FILES
@@ -31,13 +39,16 @@ endif()
 
 add_lldb_unittest(HostTests
   ${FILES}
+  PARTIAL_SOURCES_INTENDED
   LINK_LIBS
     lldbHost
     lldbCore
     lldbUtilityHelpers
     lldbHostHelpers
     LLVMTestingSupport
-    LLVMTargetParser
+
+  LINK_COMPONENTS
+    TargetParser
   )
 
 add_subdirectory(common)

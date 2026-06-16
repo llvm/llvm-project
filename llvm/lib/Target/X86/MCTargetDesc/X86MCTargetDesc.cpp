@@ -17,6 +17,7 @@
 #include "X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
 #include "X86TargetStreamer.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCDwarf.h"
@@ -47,18 +48,21 @@ std::string X86_MC::ParseX86Triple(const Triple &TT) {
   std::string FS;
   // SSE2 should default to enabled in 64-bit mode, but can be turned off
   // explicitly.
-  if (TT.isArch64Bit())
+  if (TT.isX86_64())
     FS = "+64bit-mode,-32bit-mode,-16bit-mode,+sse2";
   else if (TT.getEnvironment() != Triple::CODE16)
     FS = "-64bit-mode,+32bit-mode,-16bit-mode";
   else
     FS = "-64bit-mode,-32bit-mode,+16bit-mode";
 
+  if (TT.isX32())
+    FS += ",+x32";
+
   return FS;
 }
 
 unsigned X86_MC::getDwarfRegFlavour(const Triple &TT, bool isEH) {
-  if (TT.getArch() == Triple::x86_64)
+  if (TT.isX86_64())
     return DWARFFlavour::X86_64;
 
   if (TT.isOSDarwin())
@@ -268,6 +272,22 @@ void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
       {codeview::RegisterId::R13, X86::R13},
       {codeview::RegisterId::R14, X86::R14},
       {codeview::RegisterId::R15, X86::R15},
+      {codeview::RegisterId::R16, X86::R16},
+      {codeview::RegisterId::R17, X86::R17},
+      {codeview::RegisterId::R18, X86::R18},
+      {codeview::RegisterId::R19, X86::R19},
+      {codeview::RegisterId::R20, X86::R20},
+      {codeview::RegisterId::R21, X86::R21},
+      {codeview::RegisterId::R22, X86::R22},
+      {codeview::RegisterId::R23, X86::R23},
+      {codeview::RegisterId::R24, X86::R24},
+      {codeview::RegisterId::R25, X86::R25},
+      {codeview::RegisterId::R26, X86::R26},
+      {codeview::RegisterId::R27, X86::R27},
+      {codeview::RegisterId::R28, X86::R28},
+      {codeview::RegisterId::R29, X86::R29},
+      {codeview::RegisterId::R30, X86::R30},
+      {codeview::RegisterId::R31, X86::R31},
       {codeview::RegisterId::R8B, X86::R8B},
       {codeview::RegisterId::R9B, X86::R9B},
       {codeview::RegisterId::R10B, X86::R10B},
@@ -276,6 +296,22 @@ void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
       {codeview::RegisterId::R13B, X86::R13B},
       {codeview::RegisterId::R14B, X86::R14B},
       {codeview::RegisterId::R15B, X86::R15B},
+      {codeview::RegisterId::R16B, X86::R16B},
+      {codeview::RegisterId::R17B, X86::R17B},
+      {codeview::RegisterId::R18B, X86::R18B},
+      {codeview::RegisterId::R19B, X86::R19B},
+      {codeview::RegisterId::R20B, X86::R20B},
+      {codeview::RegisterId::R21B, X86::R21B},
+      {codeview::RegisterId::R22B, X86::R22B},
+      {codeview::RegisterId::R23B, X86::R23B},
+      {codeview::RegisterId::R24B, X86::R24B},
+      {codeview::RegisterId::R25B, X86::R25B},
+      {codeview::RegisterId::R26B, X86::R26B},
+      {codeview::RegisterId::R27B, X86::R27B},
+      {codeview::RegisterId::R28B, X86::R28B},
+      {codeview::RegisterId::R29B, X86::R29B},
+      {codeview::RegisterId::R30B, X86::R30B},
+      {codeview::RegisterId::R31B, X86::R31B},
       {codeview::RegisterId::R8W, X86::R8W},
       {codeview::RegisterId::R9W, X86::R9W},
       {codeview::RegisterId::R10W, X86::R10W},
@@ -284,6 +320,22 @@ void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
       {codeview::RegisterId::R13W, X86::R13W},
       {codeview::RegisterId::R14W, X86::R14W},
       {codeview::RegisterId::R15W, X86::R15W},
+      {codeview::RegisterId::R16W, X86::R16W},
+      {codeview::RegisterId::R17W, X86::R17W},
+      {codeview::RegisterId::R18W, X86::R18W},
+      {codeview::RegisterId::R19W, X86::R19W},
+      {codeview::RegisterId::R20W, X86::R20W},
+      {codeview::RegisterId::R21W, X86::R21W},
+      {codeview::RegisterId::R22W, X86::R22W},
+      {codeview::RegisterId::R23W, X86::R23W},
+      {codeview::RegisterId::R24W, X86::R24W},
+      {codeview::RegisterId::R25W, X86::R25W},
+      {codeview::RegisterId::R26W, X86::R26W},
+      {codeview::RegisterId::R27W, X86::R27W},
+      {codeview::RegisterId::R28W, X86::R28W},
+      {codeview::RegisterId::R29W, X86::R29W},
+      {codeview::RegisterId::R30W, X86::R30W},
+      {codeview::RegisterId::R31W, X86::R31W},
       {codeview::RegisterId::R8D, X86::R8D},
       {codeview::RegisterId::R9D, X86::R9D},
       {codeview::RegisterId::R10D, X86::R10D},
@@ -292,6 +344,22 @@ void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
       {codeview::RegisterId::R13D, X86::R13D},
       {codeview::RegisterId::R14D, X86::R14D},
       {codeview::RegisterId::R15D, X86::R15D},
+      {codeview::RegisterId::R16D, X86::R16D},
+      {codeview::RegisterId::R17D, X86::R17D},
+      {codeview::RegisterId::R18D, X86::R18D},
+      {codeview::RegisterId::R19D, X86::R19D},
+      {codeview::RegisterId::R20D, X86::R20D},
+      {codeview::RegisterId::R21D, X86::R21D},
+      {codeview::RegisterId::R22D, X86::R22D},
+      {codeview::RegisterId::R23D, X86::R23D},
+      {codeview::RegisterId::R24D, X86::R24D},
+      {codeview::RegisterId::R25D, X86::R25D},
+      {codeview::RegisterId::R26D, X86::R26D},
+      {codeview::RegisterId::R27D, X86::R27D},
+      {codeview::RegisterId::R28D, X86::R28D},
+      {codeview::RegisterId::R29D, X86::R29D},
+      {codeview::RegisterId::R30D, X86::R30D},
+      {codeview::RegisterId::R31D, X86::R31D},
       {codeview::RegisterId::AMD64_YMM0, X86::YMM0},
       {codeview::RegisterId::AMD64_YMM1, X86::YMM1},
       {codeview::RegisterId::AMD64_YMM2, X86::YMM2},
@@ -396,18 +464,6 @@ MCSubtargetInfo *X86_MC::createX86MCSubtargetInfo(const Triple &TT,
   if (CPU.empty())
     CPU = "generic";
 
-  size_t posNoEVEX512 = FS.rfind("-evex512");
-  // Make sure we won't be cheated by "-avx512fp16".
-  size_t posNoAVX512F =
-      FS.ends_with("-avx512f") ? FS.size() - 8 : FS.rfind("-avx512f,");
-  size_t posEVEX512 = FS.rfind("+evex512");
-  size_t posAVX512F = FS.rfind("+avx512"); // Any AVX512XXX will enable AVX512F.
-
-  if (posAVX512F != StringRef::npos &&
-      (posNoAVX512F == StringRef::npos || posNoAVX512F < posAVX512F))
-    if (posEVEX512 == StringRef::npos && posNoEVEX512 == StringRef::npos)
-      ArchFS += ",+evex512";
-
   return createX86MCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, ArchFS);
 }
 
@@ -418,9 +474,8 @@ static MCInstrInfo *createX86MCInstrInfo() {
 }
 
 static MCRegisterInfo *createX86MCRegisterInfo(const Triple &TT) {
-  unsigned RA = (TT.getArch() == Triple::x86_64)
-                    ? X86::RIP  // Should have dwarf #16.
-                    : X86::EIP; // Should have dwarf #8.
+  unsigned RA = TT.isX86_64() ? X86::RIP  // Should have dwarf #16.
+                              : X86::EIP; // Should have dwarf #8.
 
   MCRegisterInfo *X = new MCRegisterInfo();
   InitX86MCRegisterInfo(X, RA, X86_MC::getDwarfRegFlavour(TT, false),
@@ -429,33 +484,58 @@ static MCRegisterInfo *createX86MCRegisterInfo(const Triple &TT) {
   return X;
 }
 
+static void populateReservedIdentifiers(MCAsmInfo &MAI,
+                                        const MCRegisterInfo &MRI) {
+  auto &Set = MAI.getReservedIdentifiers();
+  // Register names: `call rsi` is misassembled as an indirect call. Use the
+  // Intel printer's table directly — it's the lowercase asm name in stable
+  // storage. MRI::getName() returns the uppercase enum name and would need
+  // an extra .lower() heap allocation per entry.
+  for (unsigned i = 1, e = MRI.getNumRegs(); i < e; ++i)
+    if (const char *Name = X86IntelInstPrinter::getRegisterName(i))
+      if (Name[0])
+        Set.insert(CachedHashStringRef(Name));
+  // Keywords that GAS Intel syntax misparses as constants, modifiers, or
+  // pseudo-registers instead of symbol references (e.g., `call byte` calls
+  // address 1, not symbol "byte"; `call flat` errors out).
+  for (StringRef KW : {"byte", "word", "dword", "fword", "qword", "mmword",
+                       "tbyte", "oword", "xmmword", "ymmword", "zmmword",
+                       "offset", "flat", "near", "far", "short"})
+    Set.insert(CachedHashStringRef(KW));
+  // Operator keywords parsed by GAS/X86AsmParser in Intel mode.
+  for (StringRef KW : {"and", "eq", "ge", "gt", "le", "lt", "mod", "ne", "not",
+                       "or", "shl", "shr", "xor"})
+    Set.insert(CachedHashStringRef(KW));
+}
+
 static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
                                      const Triple &TheTriple,
                                      const MCTargetOptions &Options) {
-  bool is64Bit = TheTriple.getArch() == Triple::x86_64;
+  bool is64Bit = TheTriple.isX86_64();
 
   MCAsmInfo *MAI;
   if (TheTriple.isOSBinFormatMachO()) {
     if (is64Bit)
-      MAI = new X86_64MCAsmInfoDarwin(TheTriple);
+      MAI = new X86_64MCAsmInfoDarwin(TheTriple, Options);
     else
-      MAI = new X86MCAsmInfoDarwin(TheTriple);
+      MAI = new X86MCAsmInfoDarwin(TheTriple, Options);
   } else if (TheTriple.isOSBinFormatELF()) {
     // Force the use of an ELF container.
-    MAI = new X86ELFMCAsmInfo(TheTriple);
+    MAI = new X86ELFMCAsmInfo(TheTriple, Options);
   } else if (TheTriple.isWindowsMSVCEnvironment() ||
              TheTriple.isWindowsCoreCLREnvironment() || TheTriple.isUEFI()) {
     if (Options.getAssemblyLanguage().equals_insensitive("masm"))
-      MAI = new X86MCAsmInfoMicrosoftMASM(TheTriple);
+      MAI = new X86MCAsmInfoMicrosoftMASM(TheTriple, Options);
     else
-      MAI = new X86MCAsmInfoMicrosoft(TheTriple);
+      MAI = new X86MCAsmInfoMicrosoft(TheTriple, Options);
   } else if (TheTriple.isOSCygMing() ||
              TheTriple.isWindowsItaniumEnvironment()) {
-    MAI = new X86MCAsmInfoGNUCOFF(TheTriple);
+    MAI = new X86MCAsmInfoGNUCOFF(TheTriple, Options);
   } else {
     // The default is ELF.
-    MAI = new X86ELFMCAsmInfo(TheTriple);
+    MAI = new X86ELFMCAsmInfo(TheTriple, Options);
   }
+  populateReservedIdentifiers(*MAI, MRI);
 
   // Initialize initial frame state.
   // Calculate amount of bytes used for return address storing
@@ -500,7 +580,7 @@ namespace X86_MC {
 class X86MCInstrAnalysis : public MCInstrAnalysis {
   X86MCInstrAnalysis(const X86MCInstrAnalysis &) = delete;
   X86MCInstrAnalysis &operator=(const X86MCInstrAnalysis &) = delete;
-  virtual ~X86MCInstrAnalysis() = default;
+  ~X86MCInstrAnalysis() override = default;
 
 public:
   X86MCInstrAnalysis(const MCInstrInfo *MCII) : MCInstrAnalysis(MCII) {}
@@ -544,7 +624,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
   const MCRegisterClass &VR128XRC = MRI.getRegClass(X86::VR128XRegClassID);
   const MCRegisterClass &VR256XRC = MRI.getRegClass(X86::VR256XRegClassID);
 
-  auto ClearsSuperReg = [=](unsigned RegID) {
+  auto ClearsSuperReg = [=](MCRegister RegID) {
     // On X86-64, a general purpose integer register is viewed as a 64-bit
     // register internal to the processor.
     // An update to the lower 32 bits of a 64 bit integer register is

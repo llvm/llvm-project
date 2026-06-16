@@ -11,24 +11,26 @@
 define i64 @cmovcc64(i32 signext %a, i64 %b, i64 %c) nounwind {
 ; RV32I-LABEL: cmovcc64:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    li a5, 123
-; RV32I-NEXT:    beq a0, a5, .LBB0_2
+; RV32I-NEXT:    mv a5, a0
+; RV32I-NEXT:    li a6, 123
+; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:    beq a5, a6, .LBB0_2
 ; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    mv a1, a3
+; RV32I-NEXT:    mv a0, a3
 ; RV32I-NEXT:    mv a2, a4
 ; RV32I-NEXT:  .LBB0_2: # %entry
-; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:    mv a1, a2
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: cmovcc64:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    li a3, 123
-; RV64I-NEXT:    beq a0, a3, .LBB0_2
-; RV64I-NEXT:  # %bb.1: # %entry
-; RV64I-NEXT:    mv a1, a2
-; RV64I-NEXT:  .LBB0_2: # %entry
+; RV64I-NEXT:    mv a3, a0
+; RV64I-NEXT:    li a4, 123
 ; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:    beq a3, a4, .LBB0_2
+; RV64I-NEXT:  # %bb.1: # %entry
+; RV64I-NEXT:    mv a0, a2
+; RV64I-NEXT:  .LBB0_2: # %entry
 ; RV64I-NEXT:    ret
 entry:
   %cmp = icmp eq i32 %a, 123
@@ -78,13 +80,14 @@ define i128 @cmovcc128(i64 signext %a, i128 %b, i128 %c) nounwind {
 ;
 ; RV64I-LABEL: cmovcc128:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    li a5, 123
-; RV64I-NEXT:    beq a0, a5, .LBB1_2
+; RV64I-NEXT:    mv a5, a0
+; RV64I-NEXT:    li a6, 123
+; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:    beq a5, a6, .LBB1_2
 ; RV64I-NEXT:  # %bb.1: # %entry
-; RV64I-NEXT:    mv a1, a3
+; RV64I-NEXT:    mv a0, a3
 ; RV64I-NEXT:    mv a2, a4
 ; RV64I-NEXT:  .LBB1_2: # %entry
-; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    mv a1, a2
 ; RV64I-NEXT:    ret
 entry:
@@ -337,46 +340,4 @@ entry:
   %cond2 = select i1 %b, i32 %e, i32 %f
   %ret = add i32 %cond1, %cond2
   ret i32 %ret
-}
-
-define float @CascadedSelect(float noundef %a) {
-; RV32I-LABEL: CascadedSelect:
-; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    fmv.w.x fa5, a0
-; RV32I-NEXT:    lui a0, 260096
-; RV32I-NEXT:    fmv.w.x fa4, a0
-; RV32I-NEXT:    flt.s a0, fa4, fa5
-; RV32I-NEXT:    bnez a0, .LBB8_3
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    fmv.w.x fa4, zero
-; RV32I-NEXT:    flt.s a0, fa5, fa4
-; RV32I-NEXT:    bnez a0, .LBB8_3
-; RV32I-NEXT:  # %bb.2: # %entry
-; RV32I-NEXT:    fmv.s fa4, fa5
-; RV32I-NEXT:  .LBB8_3: # %entry
-; RV32I-NEXT:    fmv.x.w a0, fa4
-; RV32I-NEXT:    ret
-;
-; RV64I-LABEL: CascadedSelect:
-; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    fmv.w.x fa5, a0
-; RV64I-NEXT:    lui a0, 260096
-; RV64I-NEXT:    fmv.w.x fa4, a0
-; RV64I-NEXT:    flt.s a0, fa4, fa5
-; RV64I-NEXT:    bnez a0, .LBB8_3
-; RV64I-NEXT:  # %bb.1: # %entry
-; RV64I-NEXT:    fmv.w.x fa4, zero
-; RV64I-NEXT:    flt.s a0, fa5, fa4
-; RV64I-NEXT:    bnez a0, .LBB8_3
-; RV64I-NEXT:  # %bb.2: # %entry
-; RV64I-NEXT:    fmv.s fa4, fa5
-; RV64I-NEXT:  .LBB8_3: # %entry
-; RV64I-NEXT:    fmv.x.w a0, fa4
-; RV64I-NEXT:    ret
-entry:
-  %cmp = fcmp ogt float %a, 1.000000e+00
-  %cmp1 = fcmp olt float %a, 0.000000e+00
-  %.a = select i1 %cmp1, float 0.000000e+00, float %a
-  %retval.0 = select i1 %cmp, float 1.000000e+00, float %.a
-  ret float %retval.0
 }

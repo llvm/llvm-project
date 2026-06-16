@@ -21,7 +21,6 @@ body:               |
     ; GCN-NEXT: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 killed [[DEF]], [[COPY]], implicit-def $vcc_lo, implicit $exec
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[DEF3]]
     ; GCN-NEXT: [[V_ADDC_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADDC_U32_e32 killed [[DEF2]], [[COPY1]], implicit-def $vcc_lo, implicit $vcc_lo, implicit $exec
-    ; GCN-NEXT: [[DEF4:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_2]]
     ; GCN-NEXT: [[V_ADDC_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADDC_U32_e32 [[V_MUL_HI_U32_U24_e64_]], [[COPY2]], implicit-def $vcc_lo, implicit $vcc_lo, implicit $exec
     %0:sreg_32 = S_MOV_B32 681
@@ -52,11 +51,9 @@ body:               |
     ; GCN-NEXT: [[DEF3:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF4:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF5:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GCN-NEXT: [[DEF6:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 killed [[DEF2]], [[DEF]], implicit-def $vcc_lo, implicit $exec
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY killed [[DEF4]]
     ; GCN-NEXT: [[V_ADDC_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADDC_U32_e32 killed [[DEF3]], [[COPY]], implicit-def $vcc_lo, implicit $vcc_lo, implicit $exec
-    ; GCN-NEXT: [[DEF7:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[DEF5]]
     ; GCN-NEXT: [[V_ADDC_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADDC_U32_e32 killed [[V_ADDC_U32_e32_1]], [[COPY1]], implicit-def $vcc_lo, implicit $vcc_lo, implicit $exec
     %0:vgpr_32 = IMPLICIT_DEF

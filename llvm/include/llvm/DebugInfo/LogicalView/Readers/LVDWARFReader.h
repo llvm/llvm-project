@@ -14,10 +14,10 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVDWARFREADER_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVDWARFREADER_H
 
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/LogicalView/Readers/LVBinaryReader.h"
-#include <unordered_set>
 
 namespace llvm {
 namespace logicalview {
@@ -30,7 +30,7 @@ class LVType;
 
 using AttributeSpec = DWARFAbbreviationDeclaration::AttributeSpec;
 
-class LVDWARFReader final : public LVBinaryReader {
+class LLVM_ABI LVDWARFReader final : public LVBinaryReader {
   object::ObjectFile &Obj;
 
   // Indicates if ranges data are available; in the case of split DWARF any
@@ -58,8 +58,11 @@ class LVDWARFReader final : public LVBinaryReader {
   bool FoundLowPC = false;
   bool FoundHighPC = false;
 
+  // The value is updated for each Compile Unit that is processed.
+  std::optional<LVAddress> TombstoneAddress;
+
   // Cross references (Elements).
-  using LVElementSet = std::unordered_set<LVElement *>;
+  using LVElementSet = SmallPtrSet<LVElement *, 0>;
   struct LVElementEntry {
     LVElement *Element;
     LVElementSet References;
@@ -120,12 +123,18 @@ public:
         Obj(Obj) {}
   LVDWARFReader(const LVDWARFReader &) = delete;
   LVDWARFReader &operator=(const LVDWARFReader &) = delete;
-  ~LVDWARFReader() = default;
+  ~LVDWARFReader() override = default;
 
   LVAddress getCUBaseAddress() const { return CUBaseAddress; }
   void setCUBaseAddress(LVAddress Address) { CUBaseAddress = Address; }
   LVAddress getCUHighAddress() const { return CUHighAddress; }
   void setCUHighAddress(LVAddress Address) { CUHighAddress = Address; }
+
+  void setTombstoneAddress(LVAddress Address) { TombstoneAddress = Address; }
+  LVAddress getTombstoneAddress() const {
+    assert(TombstoneAddress && "Unset tombstone value");
+    return TombstoneAddress.value();
+  }
 
   const LVSymbols &GetSymbolsWithLocations() const {
     return SymbolsWithLocations;

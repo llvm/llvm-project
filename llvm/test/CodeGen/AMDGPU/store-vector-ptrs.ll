@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs< %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs< %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s
 
 ; This tests for a bug that caused a crash in
 ; AMDGPUDAGToDAGISel::SelectMUBUFScratch() which is used for selecting

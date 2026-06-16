@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains defintions for M68k code emitter.
+/// This file contains definitions for M68k code emitter.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -68,6 +68,14 @@ class M68kMCCodeEmitter : public MCCodeEmitter {
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
 
+  void encodeScale(const MCInst &MI, unsigned OpIdx, unsigned InsertPos,
+                   APInt &Value, SmallVectorImpl<MCFixup> &Fixups,
+                   const MCSubtargetInfo &STI) const;
+
+  void encodeIndexSuppress(const MCInst &MI, unsigned OpIdx, unsigned InsertPos,
+                           APInt &Value, SmallVectorImpl<MCFixup> &Fixups,
+                           const MCSubtargetInfo &STI) const;
+
 public:
   M68kMCCodeEmitter(const MCInstrInfo &mcii, MCContext &ctx)
       : MCII(mcii), Ctx(ctx) {}
@@ -101,6 +109,11 @@ template <unsigned Size> static unsigned getBytePosition(unsigned BitPos) {
     assert(!(BitPos & 0b1111) && "Not aligned to word boundary?");
     return BitPos / 8;
   }
+}
+
+static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
+                     const MCExpr *Value, uint16_t Kind, bool PCRel = false) {
+  Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
 }
 
 // We need special handlings for relocatable & pc-relative operands that are
@@ -139,9 +152,7 @@ void M68kMCCodeEmitter::encodeRelocImm(const MCInst &MI, unsigned OpIdx,
 
     // Relocatable address
     unsigned InsertByte = getBytePosition<Size>(InsertPos);
-    Fixups.push_back(MCFixup::create(InsertByte, Expr,
-                                     getFixupForSize(Size, /*IsPCRel=*/false),
-                                     MI.getLoc()));
+    addFixup(Fixups, InsertByte, Expr, MCFixup::getDataKindForSize(Size / 8));
   }
 }
 
@@ -175,9 +186,8 @@ void M68kMCCodeEmitter::encodePCRelImm(const MCInst &MI, unsigned OpIdx,
             Expr, MCConstantExpr::create(LabelOffset, Ctx), Ctx);
     }
 
-    Fixups.push_back(MCFixup::create(InsertByte, Expr,
-                                     getFixupForSize(Size, /*IsPCRel=*/true),
-                                     MI.getLoc()));
+    addFixup(Fixups, InsertByte, Expr, MCFixup::getDataKindForSize(Size / 8),
+             true);
   }
 }
 
@@ -208,17 +218,44 @@ void M68kMCCodeEmitter::encodeInverseMoveMask(
   Value = llvm::reverseBits<uint16_t>((uint16_t)Op.getImm());
 }
 
+void M68kMCCodeEmitter::encodeScale(const MCInst &MI, unsigned OpIdx,
+                                    unsigned InsertPos, APInt &Value,
+                                    SmallVectorImpl<MCFixup> &Fixups,
+                                    const MCSubtargetInfo &STI) const {
+  const MCOperand &Op = MI.getOperand(OpIdx);
+  int64_t ScaleImm = Op.getImm();
+  assert(ScaleImm >= 1 && ScaleImm <= 8 && isPowerOf2_64(ScaleImm));
+  Value.clearAllBits();
+  Value |= Log2_64(ScaleImm);
+}
+
+void M68kMCCodeEmitter::encodeIndexSuppress(const MCInst &MI, unsigned OpIdx,
+                                            unsigned InsertPos, APInt &Value,
+                                            SmallVectorImpl<MCFixup> &Fixups,
+                                            const MCSubtargetInfo &STI) const {
+  // We suppress the index (i.e. IS = 1) if the index register is NoReg.
+  const MCOperand &Op = MI.getOperand(OpIdx);
+  MCRegister IndexReg = Op.getReg();
+  // We use a special 5-bit "register" binary for index register: the [0, 3]
+  // bits carry the actual index register encoding, while bit 4 goes to the
+  // index suppress bit in the instruction.
+  Value.setBitVal(/*Pos=*/4, !IndexReg.isValid());
+}
+
 void M68kMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &Op,
                                           unsigned InsertPos, APInt &Value,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI) const {
   // Register
   if (Op.isReg()) {
-    unsigned RegNum = Op.getReg();
+    MCRegister Reg = Op.getReg();
+    // NoReg means that we're ignoring it.
+    if (!Reg.isValid())
+      return;
     const auto *RI = Ctx.getRegisterInfo();
-    Value |= RI->getEncodingValue(RegNum);
+    Value |= RI->getEncodingValue(Reg);
     // Setup the D/A bit
-    if (M68kII::isAddressRegister(RegNum))
+    if (M68kII::isAddressRegister(Reg))
       Value |= 0b1000;
   } else if (Op.isImm()) {
     // Immediate

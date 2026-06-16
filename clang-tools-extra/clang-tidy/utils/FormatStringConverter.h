@@ -1,4 +1,4 @@
-//===--- FormatStringConverter.h - clang-tidy--------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -65,8 +65,7 @@ private:
   StringRef PrintfFormatString;
 
   /// Lazily-created c_str() call matcher
-  std::optional<clang::ast_matchers::StatementMatcher>
-      StringCStrCallExprMatcher;
+  std::optional<ast_matchers::StatementMatcher> StringCStrCallExprMatcher;
 
   const StringLiteral *FormatExpr;
   std::string StandardFormatString;
@@ -82,7 +81,7 @@ private:
   };
 
   std::vector<ArgumentFix> ArgFixes;
-  std::vector<clang::ast_matchers::BoundNodes> ArgCStrRemovals;
+  std::vector<ast_matchers::BoundNodes> ArgCStrRemovals;
 
   // Argument rotations to cope with the fact that std::print puts the value to
   // be formatted first and the width and precision afterwards whereas printf

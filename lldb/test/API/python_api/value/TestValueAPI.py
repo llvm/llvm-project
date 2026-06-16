@@ -9,6 +9,8 @@ from lldbsuite.test.lldbtest import *
 
 
 class ValueAPITestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -83,7 +85,7 @@ class ValueAPITestCase(TestBase):
 
         fmt = lldbutil.BasicFormatter()
         cvf = lldbutil.ChildVisitingFormatter(indent_child=2)
-        rdf = lldbutil.RecursiveDecentFormatter(indent_child=2)
+        rdf = lldbutil.RecursiveDescentFormatter(indent_child=2)
         if self.TraceOn():
             print(fmt.format(days_of_week))
             print(cvf.format(days_of_week))

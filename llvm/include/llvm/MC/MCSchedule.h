@@ -15,6 +15,7 @@
 #define LLVM_MC_MCSCHEDULE_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -30,6 +31,12 @@ class MCInstrInfo;
 class MCInst;
 class MCInstrDesc;
 class InstrItineraryData;
+
+namespace cl {
+class OptionCategory;
+}
+
+extern LLVM_ABI cl::OptionCategory MCScheduleOptions;
 
 /// Define a kind of processor resource that will be modeled by the scheduler.
 struct MCProcResourceDesc {
@@ -124,7 +131,7 @@ struct MCSchedClassDesc {
   static const unsigned short VariantNumMicroOps = InvalidNumMicroOps - 1;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  const char* Name;
+  uint32_t NameOff;
 #endif
   uint16_t NumMicroOps : 13;
   uint16_t BeginGroup : 1;
@@ -324,6 +331,7 @@ struct MCSchedModel {
   const MCSchedClassDesc *SchedClassTable;
   unsigned NumProcResourceKinds;
   unsigned NumSchedClasses;
+  const StringTable *SchedClassNames;
   // Instruction itinerary tables used by InstrItineraryData.
   friend class InstrItineraryData;
   const InstrItinerary *InstrItineraries;
@@ -368,6 +376,14 @@ struct MCSchedModel {
     return &SchedClassTable[SchedClassIdx];
   }
 
+  StringRef getSchedClassName(unsigned SchedClassIdx) const {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    return (*SchedClassNames)[SchedClassTable[SchedClassIdx].NameOff];
+#else
+    return "<unknown>";
+#endif
+  }
+
   /// Returns the latency value for the scheduling class.
   LLVM_ABI static int computeInstrLatency(const MCSubtargetInfo &STI,
                                           const MCSchedClassDesc &SCDesc);
@@ -409,6 +425,11 @@ struct MCSchedModel {
   /// Returns the bypass delay cycle for the maximum latency write cycle
   LLVM_ABI static unsigned getBypassDelayCycles(const MCSubtargetInfo &STI,
                                                 const MCSchedClassDesc &SCDesc);
+
+  /// Return the buffer size of the resource. If a positive scale factor
+  /// is provided and the original buffer size is > 1, the size is scaled
+  /// accordingly.
+  LLVM_ABI int getResourceBufferSize(unsigned ProcResourceIdx) const;
 
   /// Returns the default initialized model.
   LLVM_ABI static const MCSchedModel Default;

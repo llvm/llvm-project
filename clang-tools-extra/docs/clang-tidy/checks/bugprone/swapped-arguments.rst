@@ -34,8 +34,8 @@ dealing with floating-point arguments, implicit casts between different
 floating-point types are considered acceptable.
 
 To avoid confusion, swaps where both swapped arguments are of integral types or
-both are of floating-point types do not trigger the warning. In such cases, it's
-assumed that the developer intentionally used different integral or
+both are of floating-point types do not trigger the warning. In such cases,
+it's assumed that the developer intentionally used different integral or
 floating-point types and does not raise a warning. This approach prevents false
-positives and provides flexibility in handling situations where varying integral
-or floating-point types are intentionally utilized.
+positives and provides flexibility in handling situations where varying
+integral or floating-point types are intentionally utilized.

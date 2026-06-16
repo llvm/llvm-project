@@ -33,14 +33,20 @@ functions:
     return_type: float
     arguments:
       - type: float
-    name: acoshf16
+  - name: acoshf16
     standards:
       - stdc
     return_type: _Float16
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
-    name: acospif16
+  - name: acospif
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
+  - name: acospif16
     standards:
       - stdc
     return_type: _Float16
@@ -73,6 +79,25 @@ functions:
     arguments:
       - type: float
   - name: asinhf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: asinpi
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
+  - name: asinpif
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
+  - name: asinpif16
     standards:
       - stdc
     return_type: _Float16
@@ -114,6 +139,14 @@ functions:
       - type: float128
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
+  - name: atan2f16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: atanf
     standards:
       - stdc
@@ -134,6 +167,13 @@ functions:
     arguments:
       - type: float
   - name: atanhf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: atanpif16
     standards:
       - stdc
     return_type: _Float16
@@ -189,6 +229,12 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: cbrtf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
   - name: ceil
     standards:
       - stdc
@@ -283,6 +329,12 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: cospif
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
   - name: cospif16
     standards:
       - stdc
@@ -297,11 +349,51 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: daddf128
+    standards:
+      - llvm_libc_ext
+    return_type: double
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: daddl
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: long double
+      - type: long double
+  - name: ddivf128
+    standards:
+      - llvm_libc_ext
+    return_type: double
+    arguments:
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: ddivl
     standards:
       - stdc
-    return_type: long double
+    return_type: double
     arguments:
+      - type: long double
+      - type: long double
+  - name: dfmaf128
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: float128
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: dfmal
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: long double
       - type: long double
       - type: long double
   - name: dmulf128
@@ -319,13 +411,20 @@ functions:
     arguments:
       - type: long double
       - type: long double
+  - name: dsqrtf128
+    standards:
+      - llvm_libc_ext
+    return_type: double
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: dsqrtl
     standards:
       - stdc
     return_type: double
     arguments:
       - type: long double
-  - name: dsqrtf128
+  - name: dsubf128
     standards:
       - llvm_libc_ext
     return_type: double
@@ -333,12 +432,33 @@ functions:
       - type: float128
       - type: float128
     guard: LIBC_TYPES_HAS_FLOAT128
+  - name: dsubl
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: long double
+      - type: long double
   - name: erff
     standards:
       - stdc
     return_type: float
     arguments:
       - type: float
+  - name: erff16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: erfcf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: exp
     standards:
       - stdc
@@ -357,6 +477,13 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: exp10f16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: exp10m1f
     standards:
       - stdc
@@ -382,6 +509,13 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: exp2f16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: exp2m1f
     standards:
       - stdc
@@ -401,6 +535,13 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: expf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: expm1
     standards:
       - stdc
@@ -413,6 +554,13 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: expm1f16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: f16add
     standards:
       - llvm_libc_ext
@@ -654,7 +802,7 @@ functions:
     guard: LIBC_TYPES_HAS_FLOAT128
   - name: faddl
     standards:
-      - faddl
+      - stdc
     return_type: float
     arguments:
       - type: long double
@@ -1126,6 +1274,13 @@ functions:
       - type: _Float16
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: fminimum_numl
+    standards:
+      - stdc
+    return_type: long double
+    arguments:
+      - type: long double
+      - type: long double
   - name: fminimumf
     standards:
       - stdc
@@ -1472,22 +1627,36 @@ functions:
       - type: long double
   - name: isnan
     standards:
-      - BSDExtensions
+      - bsd
     return_type: int
     arguments:
       - type: double
   - name: isnanf
     standards:
-      - BSDExtensions
+      - bsd
     return_type: int
     arguments:
       - type: float
+  - name: isnanf128
+    standards:
+      - bsd
+    return_type: int
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: isnanl
     standards:
-      - BSDExtensions
+      - bsd
     return_type: int
     arguments:
       - type: long double
+  - name: isnanf16
+    standards:
+      - bsd
+    return_type: int
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: ldexp
     standards:
       - stdc
@@ -1679,6 +1848,20 @@ functions:
     arguments:
       - type: float
   - name: log10f16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: log10p1f16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
+  - name: log2p1f16
     standards:
       - stdc
     return_type: _Float16
@@ -2071,13 +2254,15 @@ functions:
       - type: float
       - type: float
   - name: powi
-    standards: llvm_libc_ext
+    standards:
+      - llvm_libc_ext
     return_type: double
     arguments:
       - type: double
       - type: int
   - name: powif
-    standards: llvm_libc_ext
+    standards:
+      - llvm_libc_ext
     return_type: float
     arguments:
       - type: float
@@ -2257,6 +2442,19 @@ functions:
     return_type: long double
     arguments:
       - type: long double
+  - name: rsqrtf
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
+  - name: rsqrtf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: scalbln
     standards:
       - stdc
@@ -2419,14 +2617,6 @@ functions:
     return_type: double
     arguments:
       - type: double
-  - name: sincosf
-    standards:
-      - gnu
-    return_type: void
-    arguments:
-      - type: float
-      - type: float *
-      - type: float *
   - name: sinf
     standards:
       - stdc
@@ -2440,6 +2630,22 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: sincos
+    standards:
+      - gnu
+    return_type: void
+    arguments:
+      - type: double
+      - type: double *
+      - type: double *
+  - name: sincosf
+    standards:
+      - gnu
+    return_type: void
+    arguments:
+      - type: float
+      - type: float *
+      - type: float *
   - name: sinhf
     standards:
       - stdc
@@ -2453,6 +2659,12 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: sinpif
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
   - name: sinpif16
     standards:
       - stdc
@@ -2524,6 +2736,12 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: tanpif
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
   - name: tanpif16
     standards:
       - stdc

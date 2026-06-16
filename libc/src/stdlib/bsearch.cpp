@@ -10,7 +10,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
-#include <stdint.h>
+#include "hdr/stdint_proxy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

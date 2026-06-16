@@ -17,7 +17,7 @@ body: |
   bb.0.entry:
     liveins: $rdi
 
-  ; CHECK: [[@LINE+1]]:78: expected tied-def or low-level type after '('
+  ; CHECK: [[@LINE+1]]:78: expected an integer literal after 'tied-def'
     INLINEASM &"$foo", 1, 2818058, def $rdi, 2147483657, killed $rdi(tied-def)
     $rax = COPY killed $rdi
     RET64 killed $rax

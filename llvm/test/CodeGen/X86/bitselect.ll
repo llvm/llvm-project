@@ -146,37 +146,40 @@ define i64 @bitselect_i64(i64 %a, i64 %b, i64 %m) nounwind {
 define i128 @bitselect_i128(i128 %a, i128 %b, i128 %m) nounwind {
 ; X86-LABEL: bitselect_i128:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    xorl %edi, %ecx
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    xorl %edi, %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    xorl %ebx, %edi
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    xorl %ebx, %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    xorl %esi, %ebx
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    xorl %esi, %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    xorl %edx, %esi
-; X86-NEXT:    andl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    xorl %edx, %esi
-; X86-NEXT:    movl %esi, 12(%eax)
-; X86-NEXT:    movl %ebx, 8(%eax)
-; X86-NEXT:    movl %edi, 4(%eax)
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    movl 32(%ebp), %edx
+; X86-NEXT:    movl 36(%ebp), %eax
+; X86-NEXT:    movl 24(%ebp), %esi
+; X86-NEXT:    movl 28(%ebp), %edi
+; X86-NEXT:    movl 40(%ebp), %ecx
+; X86-NEXT:    xorl %esi, %ecx
+; X86-NEXT:    andl 56(%ebp), %ecx
+; X86-NEXT:    xorl %esi, %ecx
+; X86-NEXT:    movl 44(%ebp), %esi
+; X86-NEXT:    xorl %edi, %esi
+; X86-NEXT:    andl 60(%ebp), %esi
+; X86-NEXT:    xorl %edi, %esi
+; X86-NEXT:    movl 48(%ebp), %edi
+; X86-NEXT:    xorl %edx, %edi
+; X86-NEXT:    andl 64(%ebp), %edi
+; X86-NEXT:    xorl %edx, %edi
+; X86-NEXT:    movl 52(%ebp), %edx
+; X86-NEXT:    xorl %eax, %edx
+; X86-NEXT:    andl 68(%ebp), %edx
+; X86-NEXT:    xorl %eax, %edx
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl %edx, 12(%eax)
+; X86-NEXT:    movl %edi, 8(%eax)
+; X86-NEXT:    movl %esi, 4(%eax)
 ; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    leal -8(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
 ;
 ; X64-NOBMI-LABEL: bitselect_i128:

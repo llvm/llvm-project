@@ -36,9 +36,11 @@ def Async_ExecuteOp :
   Async_Op<"execute", [SingleBlockImplicitTerminator<"YieldOp">,
                        DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                                  ["getEntrySuccessorOperands",
+                                                  "getSuccessorInputs",
                                                   "areTypesCompatible"]>,
                        AttrSizedOperandSegments,
-                       AutomaticAllocationScope]> {
+                       AutomaticAllocationScope,
+                       RecursiveMemoryEffects]> {
   let summary = "Asynchronous execute operation";
   let description = [{
     The `body` region attached to the `async.execute` operation semantically
@@ -172,7 +174,9 @@ def Async_FuncOp : Async_Op<"func",
     unsigned getNumResults() {return getResultTypes().size();}
 
     /// Is the async func stateful
-    bool isStateful() { return isa<TokenType>(getFunctionType().getResult(0));}
+    bool isStateful() {
+      return isa<async::TokenType>(getFunctionType().getResult(0));
+    }
 
     //===------------------------------------------------------------------===//
     // OpAsmOpInterface Methods
@@ -288,7 +292,7 @@ def Async_ReturnOp : Async_Op<"return",
 
   let arguments = (ins Variadic<AnyType>:$operands);
 
-  let builders = [OpBuilder<(ins), [{build($_builder, $_state, std::nullopt);}]>];
+  let builders = [OpBuilder<(ins), [{build($_builder, $_state, {});}]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
   let hasVerifier = 1;

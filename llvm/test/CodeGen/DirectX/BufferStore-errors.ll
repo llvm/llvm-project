@@ -9,7 +9,7 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 define void @storetoomany(<5 x float> %data, i32 %index) "hlsl.export" {
   %buffer = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_1_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   call void @llvm.dx.resource.store.typedbuffer.tdx.TypedBuffer_v4f32_1_0_0t.v5f32(
       target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %buffer,

@@ -50,13 +50,28 @@ public:
   }
 
   unsigned getFlatAddressSpace() const override {
-    if (ST->isShader())
-      return 0;
-    // FIXME: Clang has 2 distinct address space maps. One where
+    // Clang has 2 distinct address space maps. One where
     // default=4=Generic, and one with default=0=Function. This depends on the
-    // environment. For OpenCL, we don't need to run the InferAddrSpace pass, so
-    // we can return -1, but we might want to fix this.
-    return -1;
+    // environment.
+    return ST->isShader() ? 0 : 4;
+  }
+  bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
+                                  Intrinsic::ID IID) const override;
+  Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II, Value *OldV,
+                                          Value *NewV) const override;
+
+  bool allowVectorElementIndexingUsingGEP() const override { return false; }
+
+  bool isLegalMaskedGather(Type *DataType, Align Alignment) const override;
+  bool isLegalMaskedScatter(Type *DataType, Align Alignment) const override;
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
   }
 };
 

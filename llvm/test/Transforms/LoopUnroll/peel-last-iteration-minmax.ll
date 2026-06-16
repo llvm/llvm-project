@@ -41,16 +41,27 @@ define i32 @smin_unit_step() {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    call void @foo(i32 1)
+; CHECK-NEXT:    [[IV_NEXT1]] = add nuw nsw i32 [[IV1]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp ne i32 [[IV_NEXT1]], 1023
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT_PEEL_BEGIN:.*]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT1]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
+; CHECK:       [[LOOP_PEEL]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 1024, [[IV]]
 ; CHECK-NEXT:    [[MINMAX:%.*]] = call i32 @llvm.smin.i32(i32 [[SUB]], i32 1)
 ; CHECK-NEXT:    call void @foo(i32 [[MINMAX]])
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC_PEEL:%.*]] = icmp ne i32 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EC_PEEL]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[EC_PEEL]], label %[[EXIT_PEEL_NEXT:.*]], label %[[EXIT_PEEL_NEXT]]
+; CHECK:       [[EXIT_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[MINMAX_LCSSA:%.*]] = phi i32 [ [[MINMAX]], %[[LOOP]] ]
-; CHECK-NEXT:    ret i32 [[MINMAX_LCSSA]]
+; CHECK-NEXT:    ret i32 [[MINMAX]]
 ;
 entry:
   br label %loop
@@ -74,16 +85,28 @@ define i32 @smax_unit_step() {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SUB1:%.*]] = sub nuw nsw i32 1024, [[IV1]]
+; CHECK-NEXT:    call void @foo(i32 [[SUB1]])
+; CHECK-NEXT:    [[IV_NEXT1]] = add nuw nsw i32 [[IV1]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp ne i32 [[IV_NEXT1]], 1023
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT_PEEL_BEGIN:.*]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK:       [[EXIT_PEEL_BEGIN]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT1]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[LOOP_PEEL:.*]]
+; CHECK:       [[LOOP_PEEL]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 1024, [[IV]]
 ; CHECK-NEXT:    [[MINMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[SUB]], i32 1)
 ; CHECK-NEXT:    call void @foo(i32 [[MINMAX]])
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC_PEEL:%.*]] = icmp ne i32 [[IV_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[EC_PEEL]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[EC_PEEL]], label %[[EXIT_PEEL_NEXT:.*]], label %[[EXIT_PEEL_NEXT]]
+; CHECK:       [[EXIT_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[LOOP_PEEL_NEXT:.*]]
+; CHECK:       [[LOOP_PEEL_NEXT]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[MINMAX_LCSSA:%.*]] = phi i32 [ [[MINMAX]], %[[LOOP]] ]
-; CHECK-NEXT:    ret i32 [[MINMAX_LCSSA]]
+; CHECK-NEXT:    ret i32 [[MINMAX]]
 ;
 entry:
   br label %loop
@@ -135,3 +158,8 @@ exit:
   ret i32 %minmax.lcssa
 }
 
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.peeled.count", i32 1}
+; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META1]]}
+;.

@@ -29,7 +29,7 @@ class TestDAP_stackTraceMissingSourcePath(lldbdap_testcase.DAPTestCaseBase):
         """
         Build the program and run until the breakpoint is hit, and return the stack frames.
         """
-        other_source_file = "other.c"
+        other_source_file = self.getBuildArtifact("other.c")
         with delete_file_on_exit(other_source_file):
             with open(other_source_file, "w") as f:
                 f.write(OTHER_C_SOURCE_CODE)
@@ -169,3 +169,4 @@ class TestDAP_stackTraceMissingSourcePath(lldbdap_testcase.DAPTestCaseBase):
         self.verify_frames_source(
             frames, main_frame_assembly=False, other_frame_assembly=False
         )
+        self.continue_to_exit()

@@ -17,7 +17,7 @@ class NoOwnershipChangeVisitor : public NoStateChangeFuncVisitor {
 protected:
   // The symbol whose (lack of) ownership change we are interested in.
   SymbolRef Sym;
-  const CheckerBase &Checker;
+  const CheckerBackend &Checker;
 
   LLVM_DUMP_METHOD static std::string
   getFunctionName(const ExplodedNode *CallEnterN);
@@ -63,7 +63,7 @@ private:
   OwnerSet getOwnersAtNode(const ExplodedNode *N);
 
 public:
-  NoOwnershipChangeVisitor(SymbolRef Sym, const CheckerBase *Checker)
+  NoOwnershipChangeVisitor(SymbolRef Sym, const CheckerBackend *Checker)
       : NoStateChangeFuncVisitor(bugreporter::TrackingKind::Thorough), Sym(Sym),
         Checker(*Checker) {}
 

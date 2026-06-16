@@ -4,16 +4,7 @@
 # RUN: llvm-readobj -r %t | FileCheck %s
 # RUN: llvm-readelf -x .data %t | FileCheck --check-prefix=HEX %s
 
-# PRINT:      .reloc 2, R_386_NONE, .data
-# PRINT-NEXT: .reloc 1, R_386_NONE, foo+4
-# PRINT-NEXT: .reloc 0, R_386_NONE, 8
-# PRINT-NEXT: .reloc 0, R_386_32, .data+2
-# PRINT-NEXT: .reloc 0, R_386_IRELATIVE, foo+3
-# PRINT-NEXT: .reloc 0, R_386_GOT32X, 5
-# PRINT:      .reloc 0, BFD_RELOC_NONE, 9
-# PRINT-NEXT: .reloc 0, BFD_RELOC_8, 9
-# PRINT-NEXT: .reloc 0, BFD_RELOC_16, 9
-# PRINT-NEXT: .reloc 0, BFD_RELOC_32, 9
+# PRINT:      .reloc {{.*}}+2, R_386_NONE, .data
 
 # X86 relocations use the Elf32_Rel format. Addends are neither stored in the
 # relocation entries nor applied in the referenced locations.
@@ -31,20 +22,20 @@
 # HEX: 0x00000000 00000000 00000000
 
 .text
+  .reloc .+2, R_386_NONE, .data
+  .reloc .+1, R_386_NONE, foo+4
+  .reloc .+0, R_386_NONE, 8
+  .reloc .+0, R_386_32, .data+2
+  .reloc .+0, R_386_IRELATIVE, foo+3
+  .reloc .+0, R_386_GOT32X, 5
+
+  .reloc .+0, BFD_RELOC_NONE, 9
+  .reloc .+0, BFD_RELOC_8, 9
+  .reloc .+0, BFD_RELOC_16, 9
+  .reloc .+0, BFD_RELOC_32, 9
   ret
   nop
   nop
-  .reloc 2, R_386_NONE, .data
-  .reloc 1, R_386_NONE, foo+4
-  .reloc 0, R_386_NONE, 8
-  .reloc 0, R_386_32, .data+2
-  .reloc 0, R_386_IRELATIVE, foo+3
-  .reloc 0, R_386_GOT32X, 5
-
-  .reloc 0, BFD_RELOC_NONE, 9
-  .reloc 0, BFD_RELOC_8, 9
-  .reloc 0, BFD_RELOC_16, 9
-  .reloc 0, BFD_RELOC_32, 9
 
 .data
 .globl foo

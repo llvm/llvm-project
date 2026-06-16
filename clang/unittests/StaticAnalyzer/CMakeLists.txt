@@ -1,10 +1,12 @@
 add_clang_unittest(StaticAnalysisTests
+  AnalyzerFormattingTest.cpp
   AnalyzerOptionsTest.cpp
   APSIntTypeTest.cpp
   BlockEntranceCallbackTest.cpp
   BugReportInterestingnessTest.cpp
   CallDescriptionTest.cpp
   CallEventTest.cpp
+  CheckLifetimeEndTest.cpp
   ConflictingEvalCallsTest.cpp
   ExprEngineVisitTest.cpp
   FalsePositiveRefutationBRVisitorTest.cpp
@@ -20,6 +22,7 @@ add_clang_unittest(StaticAnalysisTests
   SValSimplifyerTest.cpp
   SValTest.cpp
   TestReturnValueUnderConstruction.cpp
+  UnsignedStatDemo.cpp
   Z3CrosscheckOracleTest.cpp
   CLANG_LIBS
   clangBasic

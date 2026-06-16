@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=print<polly-dependences>' -polly-dependences-analysis-type=value-based -polly-dependences-analysis-level=reference-wise -disable-output < %s | FileCheck %s --check-prefix=REF
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=print<polly-dependences>' -polly-dependences-analysis-type=value-based -polly-dependences-analysis-level=access-wise -disable-output < %s | FileCheck %s --check-prefix=ACC
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<deps>' -polly-print-deps -polly-dependences-analysis-type=value-based -polly-dependences-analysis-level=reference-wise -disable-output < %s | FileCheck %s --check-prefix=REF
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<deps>' -polly-print-deps -polly-dependences-analysis-type=value-based -polly-dependences-analysis-level=access-wise -disable-output < %s | FileCheck %s --check-prefix=ACC
 
 ; REF:      RAW dependences:
 ; REF-NEXT:     [N] -> { [Stmt_for_body[i0] -> MemRef_b[]] -> [Stmt_for_body[6 + i0] -> MemRef_b[]] : 0 <= i0 <= -13 + N; Stmt_for_body[i0] -> Stmt_for_body[6 + i0] : 0 <= i0 <= -13 + N; Stmt_for_body[i0] -> Stmt_for_body[4 + i0] : 0 <= i0 <= -11 + N; [Stmt_for_body[i0] -> MemRef_a[]] -> [Stmt_for_body[4 + i0] -> MemRef_a[]] : 0 <= i0 <= -11 + N }
@@ -31,7 +31,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind uwtable
-define void @test(ptr %a, ptr %b, i64 %N) #0 {
+define void @test(ptr %a, ptr %b, i64 %N) {
 entry:
   br label %for.cond
 
@@ -66,8 +66,6 @@ for.inc:                                          ; preds = %for.body
 for.end:                                          ; preds = %for.cond
   ret void
 }
-
-attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

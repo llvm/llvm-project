@@ -14,14 +14,14 @@
 #include "gtest/gtest.h"
 
 /// A base class for tests that need a pair of pipes for communication.
-class PipeTest : public testing::Test {
+class PipePairTest : public testing::Test {
 protected:
   lldb_private::Pipe input;
   lldb_private::Pipe output;
 
   void SetUp() override {
-    ASSERT_THAT_ERROR(input.CreateNew(false).ToError(), llvm::Succeeded());
-    ASSERT_THAT_ERROR(output.CreateNew(false).ToError(), llvm::Succeeded());
+    ASSERT_THAT_ERROR(input.CreateNew().ToError(), llvm::Succeeded());
+    ASSERT_THAT_ERROR(output.CreateNew().ToError(), llvm::Succeeded());
   }
 };
 

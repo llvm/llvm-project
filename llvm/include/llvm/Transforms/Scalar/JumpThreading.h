@@ -24,7 +24,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
-#include <optional>
 #include <utility>
 
 namespace llvm {
@@ -32,7 +31,7 @@ namespace llvm {
 class AAResults;
 class BasicBlock;
 class BinaryOperator;
-class BranchInst;
+class CondBrInst;
 class CmpInst;
 class Constant;
 class Function;
@@ -77,7 +76,7 @@ enum ConstantPreference { WantInteger, WantBlockAddress };
 ///
 /// In this case, the unconditional branch at the end of the first if can be
 /// revectored to the false side of the second if.
-class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
+class JumpThreadingPass : public OptionalPassInfoMixin<JumpThreadingPass> {
   Function *F = nullptr;
   FunctionAnalysisManager *FAM = nullptr;
   TargetLibraryInfo *TLI = nullptr;
@@ -85,8 +84,8 @@ class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
   LazyValueInfo *LVI = nullptr;
   AAResults *AA = nullptr;
   std::unique_ptr<DomTreeUpdater> DTU;
-  std::optional<BlockFrequencyInfo *> BFI;
-  std::optional<BranchProbabilityInfo *> BPI;
+  BlockFrequencyInfo *BFI = nullptr;
+  BranchProbabilityInfo *BPI = nullptr;
   bool ChangedSinceLastAnalysisUpdate = false;
   bool HasGuards = false;
 #ifndef LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -110,8 +109,7 @@ public:
                         TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
                         LazyValueInfo *LVI, AAResults *AA,
                         std::unique_ptr<DomTreeUpdater> DTU,
-                        std::optional<BlockFrequencyInfo *> BFI,
-                        std::optional<BranchProbabilityInfo *> BPI);
+                        BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI);
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
@@ -175,7 +173,7 @@ public:
 
   LLVM_ABI bool processGuards(BasicBlock *BB);
   LLVM_ABI bool threadGuard(BasicBlock *BB, IntrinsicInst *Guard,
-                            BranchInst *BI);
+                            CondBrInst *BI);
 
 private:
   BasicBlock *splitBlockPreds(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,

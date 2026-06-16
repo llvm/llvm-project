@@ -19,6 +19,7 @@
 #ifndef LLVM_BINARYFORMAT_DWARF_H
 #define LLVM_BINARYFORMAT_DWARF_H
 
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -205,6 +206,12 @@ enum EnumKindAttribute {
   DW_APPLE_ENUM_KIND_max = 0x01
 };
 
+enum LanguageDialectAttribute {
+#define HANDLE_DW_LLVM_LANG_DIALECT(ID, NAME) DW_LLVM_LANG_DIALECT_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
+  DW_LLVM_LANG_DIALECT_max = 0x02
+};
+
 enum DefaultedMemberAttribute {
 #define HANDLE_DW_DEFAULTED(ID, NAME) DW_DEFAULTED_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
@@ -300,8 +307,8 @@ inline std::optional<SourceLanguage> toDW_LANG(SourceLanguageName name,
     return DW_LANG_Go;
   case DW_LNAME_Haskell:
     return DW_LANG_Haskell;
-  // case DW_LNAME_HIP:
-  //   return DW_LANG_HIP;
+  case DW_LNAME_HIP:
+    return DW_LANG_HIP;
   case DW_LNAME_Java:
     return DW_LANG_Java;
   case DW_LNAME_Julia:
@@ -389,7 +396,7 @@ toDW_LNAME(SourceLanguage language) {
   case DW_LANG_C11:
     return {{DW_LNAME_C, 201112}};
   case DW_LANG_C17:
-    return {{DW_LNAME_C, 201712}};
+    return {{DW_LNAME_C, 201710}};
   case DW_LANG_C_plus_plus:
     return {{DW_LNAME_C_plus_plus, 0}};
   case DW_LANG_C_plus_plus_03:
@@ -429,7 +436,7 @@ toDW_LNAME(SourceLanguage language) {
   case DW_LANG_Haskell:
     return {{DW_LNAME_Haskell, 0}};
   case DW_LANG_HIP:
-    return {}; // return {{DW_LNAME_HIP, 0}};
+    return {{DW_LNAME_HIP, 0}};
   case DW_LANG_Java:
     return {{DW_LNAME_Java, 0}};
   case DW_LANG_Julia:
@@ -499,7 +506,14 @@ toDW_LNAME(SourceLanguage language) {
   return {};
 }
 
+/// Returns a version-independent language name.
 LLVM_ABI llvm::StringRef LanguageDescription(SourceLanguageName name);
+
+/// Returns a language name corresponding to the specified version.
+/// If the version is not recognized for the specified language, returns
+/// the version-independent name.
+LLVM_ABI llvm::StringRef LanguageDescription(SourceLanguageName Name,
+                                             uint32_t Version);
 
 inline bool isCPlusPlus(SourceLanguage S) {
   bool result = false;
@@ -757,6 +771,12 @@ enum CallingConvention {
   DW_CC_hi_user = 0xff
 };
 
+enum AddressSpace {
+#define HANDLE_DW_ASPACE(ID, NAME) DW_ASPACE_LLVM_##NAME = ID,
+#define HANDLE_DW_ASPACE_PRED(ID, NAME, PRED) DW_ASPACE_LLVM_##NAME = ID,
+#include "llvm/BinaryFormat/Dwarf.def"
+};
+
 enum InlineAttribute {
   // Inline codes
   DW_INL_not_inlined = 0x00,
@@ -990,6 +1010,8 @@ LLVM_ABI StringRef VisibilityString(unsigned Visibility);
 LLVM_ABI StringRef VirtualityString(unsigned Virtuality);
 LLVM_ABI StringRef EnumKindString(unsigned EnumKind);
 LLVM_ABI StringRef LanguageString(unsigned Language);
+LLVM_ABI StringRef SourceLanguageNameString(SourceLanguageName Lang);
+LLVM_ABI StringRef LanguageDialectString(unsigned LanguageDialect);
 LLVM_ABI StringRef CaseString(unsigned Case);
 LLVM_ABI StringRef ConventionString(unsigned Convention);
 LLVM_ABI StringRef InlineCodeString(unsigned Code);
@@ -1011,6 +1033,7 @@ LLVM_ABI StringRef IndexString(unsigned Idx);
 LLVM_ABI StringRef FormatString(DwarfFormat Format);
 LLVM_ABI StringRef FormatString(bool IsDWARF64);
 LLVM_ABI StringRef RLEString(unsigned RLE);
+LLVM_ABI StringRef AddressSpaceString(unsigned AS, const llvm::Triple &TT);
 /// @}
 
 /// \defgroup DwarfConstantsParsing Dwarf constants parsing functions
@@ -1030,6 +1053,8 @@ LLVM_ABI unsigned getSubOperationEncoding(unsigned OpEncoding,
 LLVM_ABI unsigned getVirtuality(StringRef VirtualityString);
 LLVM_ABI unsigned getEnumKind(StringRef EnumKindString);
 LLVM_ABI unsigned getLanguage(StringRef LanguageString);
+LLVM_ABI unsigned getSourceLanguageName(StringRef SourceLanguageNameString);
+LLVM_ABI unsigned getLanguageDialect(StringRef LanguageDialectString);
 LLVM_ABI unsigned getCallingConvention(StringRef LanguageString);
 LLVM_ABI unsigned getAttributeEncoding(StringRef EncodingString);
 LLVM_ABI unsigned getMacinfo(StringRef MacinfoString);
@@ -1074,6 +1099,10 @@ LLVM_ABI std::optional<unsigned> OperationOperands(LocationAtom O);
 /// depending on the argument) or unknown.
 LLVM_ABI std::optional<unsigned> OperationArity(LocationAtom O);
 
+inline bool isTlsAddressOp(uint8_t O) {
+  return O == DW_OP_form_tls_address || O == DW_OP_GNU_push_tls_address;
+}
+
 LLVM_ABI std::optional<unsigned> LanguageLowerBound(SourceLanguage L);
 
 /// The size of a reference determined by the DWARF 32/64-bit format.
@@ -1110,6 +1139,9 @@ struct FormParams {
   /// The size of a reference is determined by the DWARF 32/64-bit format.
   uint8_t getDwarfOffsetByteSize() const {
     return dwarf::getDwarfOffsetByteSize(Format);
+  }
+  inline uint64_t getDwarfMaxOffset() const {
+    return (getDwarfOffsetByteSize() == 4) ? UINT32_MAX : UINT64_MAX;
   }
 
   explicit operator bool() const { return Version && AddrSize; }
@@ -1191,32 +1223,32 @@ template <typename Enum> struct EnumTraits : public std::false_type {};
 
 template <> struct EnumTraits<Attribute> : public std::true_type {
   static constexpr char Type[3] = "AT";
-  static constexpr StringRef (*StringFn)(unsigned) = &AttributeString;
+  LLVM_ABI static StringRef (*const StringFn)(unsigned);
 };
 
 template <> struct EnumTraits<Form> : public std::true_type {
   static constexpr char Type[5] = "FORM";
-  static constexpr StringRef (*StringFn)(unsigned) = &FormEncodingString;
+  LLVM_ABI static StringRef (*const StringFn)(unsigned);
 };
 
 template <> struct EnumTraits<Index> : public std::true_type {
   static constexpr char Type[4] = "IDX";
-  static constexpr StringRef (*StringFn)(unsigned) = &IndexString;
+  LLVM_ABI static StringRef (*const StringFn)(unsigned);
 };
 
 template <> struct EnumTraits<Tag> : public std::true_type {
   static constexpr char Type[4] = "TAG";
-  static constexpr StringRef (*StringFn)(unsigned) = &TagString;
+  LLVM_ABI static StringRef (*const StringFn)(unsigned);
 };
 
 template <> struct EnumTraits<LineNumberOps> : public std::true_type {
   static constexpr char Type[4] = "LNS";
-  static constexpr StringRef (*StringFn)(unsigned) = &LNStandardString;
+  LLVM_ABI static StringRef (*const StringFn)(unsigned);
 };
 
 template <> struct EnumTraits<LocationAtom> : public std::true_type {
   static constexpr char Type[3] = "OP";
-  static constexpr StringRef (*StringFn)(unsigned) = &OperationEncodingString;
+  LLVM_ABI static StringRef (*const StringFn)(unsigned);
 };
 
 inline uint64_t computeTombstoneAddress(uint8_t AddressByteSize) {

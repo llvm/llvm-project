@@ -19,6 +19,7 @@
 namespace llvm {
 class Triple;
 class TargetLibraryInfoImpl;
+enum class VectorLibrary;
 } // namespace llvm
 
 namespace llvm::driver {
@@ -49,6 +50,9 @@ enum class VectorLibrary {
   AMDLIBM             // AMD vector math library.
 };
 
+LLVM_ABI llvm::VectorLibrary
+convertDriverVectorLibraryToVectorLibrary(llvm::driver::VectorLibrary VecLib);
+
 LLVM_ABI TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
                                            VectorLibrary Veclib);
 
@@ -63,7 +67,7 @@ enum ProfileInstrKind {
 };
 
 // Default filename used for profile generation.
-std::string getDefaultProfileGenName();
+LLVM_ABI std::string getDefaultProfileGenName();
 } // end namespace llvm::driver
 
 #endif

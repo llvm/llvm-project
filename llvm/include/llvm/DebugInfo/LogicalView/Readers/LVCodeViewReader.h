@@ -64,7 +64,7 @@ using LVNames = SmallVector<StringRef, 16>;
 // As the CodeView constants are different to the DWARF constants, the
 // CodeView reader will map them to the DWARF ones.
 
-class LVCodeViewReader final : public LVBinaryReader {
+class LLVM_ABI LVCodeViewReader final : public LVBinaryReader {
   friend class LVTypeVisitor;
   friend class LVSymbolVisitor;
   friend class LVSymbolVisitorDelegate;
@@ -200,7 +200,7 @@ public:
         Input(&Pdb), ExePath(ExePath), LogicalVisitor(this, W, Input) {}
   LVCodeViewReader(const LVCodeViewReader &) = delete;
   LVCodeViewReader &operator=(const LVCodeViewReader &) = delete;
-  ~LVCodeViewReader() = default;
+  ~LVCodeViewReader() override = default;
 
   void getLinkageName(const llvm::object::coff_section *CoffSection,
                       uint32_t RelocOffset, uint32_t Offset,

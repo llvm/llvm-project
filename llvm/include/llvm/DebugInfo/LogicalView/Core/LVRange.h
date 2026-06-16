@@ -62,7 +62,7 @@ public:
   LVRange() : LVObject(), RangesTree(Allocator) {}
   LVRange(const LVRange &) = delete;
   LVRange &operator=(const LVRange &) = delete;
-  ~LVRange() = default;
+  ~LVRange() override = default;
 
   void addEntry(LVScope *Scope, LVAddress LowerAddress, LVAddress UpperAddress);
   void addEntry(LVScope *Scope);

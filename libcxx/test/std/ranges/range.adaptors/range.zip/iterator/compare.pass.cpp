@@ -13,13 +13,14 @@
 // friend constexpr auto operator<=>(const iterator& x, const iterator& y)
 //   requires all-random-access<Const, Views...>;
 
-#include <ranges>
+#include <cassert>
 #include <compare>
+#include <ranges>
 
 #include "test_iterators.h"
 #include "test_range.h"
 
-#include "../types.h"
+#include "../../range_adaptor_types.h"
 
 // This is for testing that zip iterator never calls underlying iterator's >, >=, <=, !=.
 // The spec indicates that zip iterator's >= is negating zip iterator's < instead of calling underlying iterator's >=.

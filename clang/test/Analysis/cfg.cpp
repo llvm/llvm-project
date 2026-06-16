@@ -26,9 +26,9 @@
 // WARNINGS-NEXT: (CXXConstructExpr, struct standalone)
 // ANALYZER-NEXT: (CXXConstructExpr, [B1.9], struct standalone)
 // CHECK-NEXT:   9: struct standalone myStandalone;
-// WARNINGS-NEXT: (CXXConstructExpr, struct (unnamed struct at {{.*}}))
-// ANALYZER-NEXT: (CXXConstructExpr, [B1.11], struct (unnamed struct at {{.*}}))
-// CHECK-NEXT:  11: struct (unnamed struct at {{.*}}) myAnon;
+// WARNINGS-NEXT: (CXXConstructExpr, struct (unnamed at {{.*}}))
+// ANALYZER-NEXT: (CXXConstructExpr, [B1.11], struct (unnamed at {{.*}}))
+// CHECK-NEXT:  11: struct (unnamed at {{.*}}) myAnon;
 // WARNINGS-NEXT: (CXXConstructExpr, struct named)
 // ANALYZER-NEXT: (CXXConstructExpr, [B1.13], struct named)
 // CHECK-NEXT:  13: struct named myNamed;
@@ -70,7 +70,7 @@ void F(EmptyE e) {
 // CHECK-NEXT: Succs (1): B1
 // CHECK: [B1]
 // CHECK-NEXT:   1: __builtin_object_size
-// CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, BuiltinFnToFnPtr, unsigned long (*)(const void *, int) noexcept)
+// CHECK-NEXT:   2: [B1.1] (ImplicitCastExpr, BuiltinFnToFnPtr, __size_t (*)(const void *, int) noexcept)
 // CHECK-NEXT:   3: [B1.2](dummy(), 0)
 // CHECK-NEXT:   4: (void)[B1.3] (CStyleCastExpr, ToVoid, void)
 // CHECK-NEXT:   Preds (1): B2

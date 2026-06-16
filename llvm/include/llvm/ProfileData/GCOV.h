@@ -81,9 +81,9 @@ public:
     StringRef buf = Buffer->getBuffer();
     StringRef magic = buf.substr(0, 4);
     if (magic == "gcno") {
-      de = DataExtractor(buf.substr(4), false, 0);
+      de = DataExtractor(buf.substr(4), false);
     } else if (magic == "oncg") {
-      de = DataExtractor(buf.substr(4), true, 0);
+      de = DataExtractor(buf.substr(4), true);
     } else {
       errs() << "unexpected magic: " << magic << "\n";
       return false;
@@ -96,9 +96,9 @@ public:
     StringRef buf = Buffer->getBuffer();
     StringRef magic = buf.substr(0, 4);
     if (magic == "gcda") {
-      de = DataExtractor(buf.substr(4), false, 0);
+      de = DataExtractor(buf.substr(4), false);
     } else if (magic == "adcg") {
-      de = DataExtractor(buf.substr(4), true, 0);
+      de = DataExtractor(buf.substr(4), true);
     } else {
       return false;
     }
@@ -179,7 +179,7 @@ public:
     return bool(cursor);
   }
 
-  DataExtractor de{ArrayRef<uint8_t>{}, false, 0};
+  DataExtractor de{ArrayRef<uint8_t>{}, false};
   DataExtractor::Cursor cursor{0};
 
 private:
@@ -271,6 +271,14 @@ public:
   DenseSet<const GCOVBlock *> visited;
 };
 
+/// Represent file of lines same with block_location_info in gcc.
+struct GCOVBlockLocation {
+  GCOVBlockLocation(unsigned idx) : srcIdx(idx) {}
+
+  unsigned srcIdx;
+  SmallVector<uint32_t, 4> lines;
+};
+
 /// GCOVBlock - Collects block information.
 class GCOVBlock {
 public:
@@ -281,8 +289,13 @@ public:
 
   GCOVBlock(uint32_t N) : number(N) {}
 
-  void addLine(uint32_t N) { lines.push_back(N); }
-  uint32_t getLastLine() const { return lines.back(); }
+  void addLine(uint32_t N) {
+    locations.back().lines.push_back(N);
+    lastLine = N;
+  }
+  void addFile(unsigned fileIdx) { locations.emplace_back(fileIdx); }
+
+  uint32_t getLastLine() const { return lastLine; }
   uint64_t getCount() const { return count; }
 
   void addSrcEdge(GCOVArc *Edge) { pred.push_back(Edge); }
@@ -311,7 +324,8 @@ public:
   uint64_t count = 0;
   SmallVector<GCOVArc *, 2> pred;
   SmallVector<GCOVArc *, 2> succ;
-  SmallVector<uint32_t, 4> lines;
+  SmallVector<GCOVBlockLocation> locations;
+  uint32_t lastLine = 0;
   bool traversable = false;
   GCOVArc *incoming = nullptr;
 };

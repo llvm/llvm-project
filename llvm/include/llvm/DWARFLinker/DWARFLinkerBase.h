@@ -16,7 +16,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/Compiler.h"
 #include <map>
 namespace llvm {
@@ -119,9 +119,6 @@ public:
   virtual void setNoODR(bool NoODR) = 0;
   /// Update index tables only (do not modify rest of DWARF).
   virtual void setUpdateIndexTablesOnly(bool Update) = 0;
-  /// Allows generating non-deterministic output in exchange for more
-  /// parallelism.
-  virtual void setAllowNonDeterministicOutput(bool) = 0;
   /// Set whether to keep the enclosing function for a static variable.
   virtual void setKeepFunctionForStatic(bool KeepFunctionForStatic) = 0;
   /// Use specified number of threads for parallel files linking.

@@ -7,18 +7,19 @@
 
 // For LLVM IR checks, the structs are defined before the variables, so these
 // checks are at the top.
-// CIR-DAG: !rec_IncompleteS = !cir.record<struct "IncompleteS" incomplete>
-// CIR-DAG: !rec_CompleteS = !cir.record<struct "CompleteS" {!s32i, !s8i}>
-// CIR-DAG: !rec_OuterS = !cir.record<struct "OuterS" {!rec_InnerS, !s32i}>  
-// CIR-DAG: !rec_InnerS = !cir.record<struct "InnerS" {!s32i, !s8i}>
-// CIR-DAG: !rec_PackedS = !cir.record<struct "PackedS" packed {!s32i, !s8i}>
-// CIR-DAG: !rec_PackedAndPaddedS = !cir.record<struct "PackedAndPaddedS" packed padded {!s32i, !s8i, !u8i}>
-// CIR-DAG: !rec_NodeS = !cir.record<struct "NodeS" {!cir.ptr<!cir.record<struct "NodeS">>}>
-// CIR-DAG: !rec_RightS = !cir.record<struct "RightS" {!cir.ptr<!cir.record<struct "LeftS" {!cir.ptr<!cir.record<struct "RightS">>}>>}>
-// CIR-DAG: !rec_LeftS = !cir.record<struct "LeftS" {!cir.ptr<!rec_RightS>}>
-// CIR-DAG: !rec_CycleEnd = !cir.record<struct "CycleEnd" {!cir.ptr<!cir.record<struct "CycleStart" {!cir.ptr<!cir.record<struct "CycleMiddle" {!cir.ptr<!cir.record<struct "CycleEnd">>}>>}>>}>
-// CIR-DAG: !rec_CycleMiddle = !cir.record<struct "CycleMiddle" {!cir.ptr<!rec_CycleEnd>}>
-// CIR-DAG: !rec_CycleStart = !cir.record<struct "CycleStart" {!cir.ptr<!rec_CycleMiddle>}>
+// CIR-DAG: !rec_IncompleteS = !cir.struct<"IncompleteS" incomplete>
+// CIR-DAG: !rec_CompleteS = !cir.struct<"CompleteS" {!s32i, !s8i}>
+// CIR-DAG: !rec_OuterS = !cir.struct<"OuterS" {!rec_InnerS, !s32i}>  
+// CIR-DAG: !rec_InnerS = !cir.struct<"InnerS" {!s32i, !s8i}>
+// CIR-DAG: !rec_PackedS = !cir.struct<"PackedS" packed {!s32i, !s8i}>
+// CIR-DAG: !rec_PackedAndPaddedS = !cir.struct<"PackedAndPaddedS" packed padded {!s32i, !s8i, !u8i}>
+// CIR-DAG: !rec_NodeS = !cir.struct<"NodeS" {!cir.ptr<!cir.struct<"NodeS">>}>
+// CIR-DAG: !rec_RightS = !cir.struct<"RightS" {!cir.ptr<!cir.struct<"LeftS" {!cir.ptr<!cir.struct<"RightS">>}>>}>
+// CIR-DAG: !rec_LeftS = !cir.struct<"LeftS" {!cir.ptr<!rec_RightS>}>
+// CIR-DAG: !rec_CycleEnd = !cir.struct<"CycleEnd" {!cir.ptr<!cir.struct<"CycleStart" {!cir.ptr<!cir.struct<"CycleMiddle" {!cir.ptr<!cir.struct<"CycleEnd">>}>>}>>}>
+// CIR-DAG: !rec_CycleMiddle = !cir.struct<"CycleMiddle" {!cir.ptr<!rec_CycleEnd>}>
+// CIR-DAG: !rec_CycleStart = !cir.struct<"CycleStart" {!cir.ptr<!rec_CycleMiddle>}>
+// CIR-DAG: !rec_IncompleteArray = !cir.struct<"IncompleteArray" {!cir.array<!s32i x 0>}>
 // LLVM-DAG: %struct.CompleteS = type { i32, i8 }
 // LLVM-DAG: %struct.OuterS = type { %struct.InnerS, i32 }
 // LLVM-DAG: %struct.InnerS = type { i32, i8 }
@@ -30,6 +31,7 @@
 // LLVM-DAG: %struct.CycleStart = type { ptr }
 // LLVM-DAG: %struct.CycleMiddle = type { ptr }
 // LLVM-DAG: %struct.CycleEnd = type { ptr }
+// LLVM-DAG: %struct.IncompleteArray = type { [0 x i32] }
 // OGCG-DAG: %struct.CompleteS = type { i32, i8 }
 // OGCG-DAG: %struct.OuterS = type { %struct.InnerS, i32 }
 // OGCG-DAG: %struct.InnerS = type { i32, i8 }
@@ -41,6 +43,7 @@
 // OGCG-DAG: %struct.CycleStart = type { ptr }
 // OGCG-DAG: %struct.CycleMiddle = type { ptr }
 // OGCG-DAG: %struct.CycleEnd = type { ptr }
+// OGCG-DAG: %struct.IncompleteArray = type { [0 x i32] }
 
 struct CompleteS {
   int a;
@@ -149,15 +152,25 @@ struct CycleEnd {
 // LLVM-DAG:  @end = global %struct.CycleEnd zeroinitializer
 // OGCG-DAG:  @end = global %struct.CycleEnd zeroinitializer
 
+struct IncompleteArray {
+  int array[];
+} incomplete;
+
+// CIR: cir.global external @incomplete = #cir.zero : !rec_IncompleteArray
+
+// LLVM-DAG: global %struct.IncompleteArray zeroinitializer
+
+// OGCG-DAG: global %struct.IncompleteArray zeroinitializer
+
 void f(void) {
   struct IncompleteS *p;
 }
 
-// CIR:      cir.func @f()
-// CIR-NEXT:   cir.alloca !cir.ptr<!rec_IncompleteS>, !cir.ptr<!cir.ptr<!rec_IncompleteS>>, ["p"] {alignment = 8 : i64}
+// CIR:      cir.func{{.*}} @f()
+// CIR-NEXT:   cir.alloca "p" align(8) : !cir.ptr<!cir.ptr<!rec_IncompleteS>>
 // CIR-NEXT:   cir.return
 
-// LLVM:      define void @f()
+// LLVM:      define{{.*}} void @f()
 // LLVM-NEXT:   %[[P:.*]] = alloca ptr, i64 1, align 8
 // LLVM-NEXT:   ret void
 
@@ -170,11 +183,11 @@ void f2(void) {
   struct CompleteS s;
 }
 
-// CIR:      cir.func @f2()
-// CIR-NEXT:   cir.alloca !rec_CompleteS, !cir.ptr<!rec_CompleteS>, ["s"] {alignment = 4 : i64}
+// CIR:      cir.func{{.*}} @f2()
+// CIR-NEXT:   cir.alloca "s" align(4) : !cir.ptr<!rec_CompleteS>
 // CIR-NEXT:   cir.return
 
-// LLVM:      define void @f2()
+// LLVM:      define{{.*}} void @f2()
 // LLVM-NEXT:   %[[S:.*]] = alloca %struct.CompleteS, i64 1, align 4
 // LLVM-NEXT:   ret void
 
@@ -188,9 +201,9 @@ char f3(int a) {
   return cs.b;
 }
 
-// CIR:      cir.func @f3(%[[ARG_A:.*]]: !s32i
-// CIR-NEXT:   %[[A_ADDR:.*]] = cir.alloca {{.*}} ["a", init] {alignment = 4 : i64}
-// CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca {{.*}} ["__retval"] {alignment = 1 : i64}
+// CIR:      cir.func{{.*}} @f3(%[[ARG_A:.*]]: !s32i
+// CIR-NEXT:   %[[A_ADDR:.*]] = cir.alloca "a" align(4) init
+// CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" align(1)
 // CIR-NEXT:   cir.store{{.*}} %[[ARG_A]], %[[A_ADDR]]
 // CIR-NEXT:   %[[A_VAL:.*]] = cir.load{{.*}} %[[A_ADDR]]
 // CIR-NEXT:   %[[CS:.*]] = cir.get_global @cs
@@ -203,7 +216,7 @@ char f3(int a) {
 // CIR-NEXT:   %[[RETVAL:.*]] = cir.load{{.*}} %[[RETVAL_ADDR]]
 // CIR-NEXT:   cir.return %[[RETVAL]]
 
-// LLVM:      define i8 @f3(i32 %[[ARG_A:.*]])
+// LLVM:      define{{.*}} i8 @f3(i32{{.*}} %[[ARG_A:.*]])
 // LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, i64 1, align 1
 // LLVM-NEXT:   store i32 %[[ARG_A]], ptr %[[A_ADDR]], align 4
@@ -220,7 +233,7 @@ char f3(int a) {
 // OGCG-NEXT:   store i32 %[[ARG_A]], ptr %[[A_ADDR]], align 4
 // OGCG-NEXT:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
 // OGCG-NEXT:   store i32 %[[A_VAL]], ptr @cs, align 4
-// OGCG-NEXT:   %[[CS_B_VAL:.*]] = load i8, ptr getelementptr inbounds nuw (%struct.CompleteS, ptr @cs, i32 0, i32 1), align 4
+// OGCG-NEXT:   %[[CS_B_VAL:.*]] = load i8, ptr getelementptr inbounds nuw (i8, ptr @cs, i64 4), align 4
 // OGCG-NEXT:   ret i8 %[[CS_B_VAL]]
 
 char f4(int a, struct CompleteS *p) {
@@ -228,10 +241,10 @@ char f4(int a, struct CompleteS *p) {
   return p->b;
 }
 
-// CIR:      cir.func @f4(%[[ARG_A:.*]]: !s32i {{.*}}, %[[ARG_P:.*]]: !cir.ptr<!rec_CompleteS>
-// CIR-NEXT:   %[[A_ADDR:.*]] = cir.alloca {{.*}} ["a", init] {alignment = 4 : i64}
-// CIR-NEXT:   %[[P_ADDR:.*]] = cir.alloca {{.*}} ["p", init] {alignment = 8 : i64}
-// CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca {{.*}} ["__retval"] {alignment = 1 : i64}
+// CIR:      cir.func{{.*}} @f4(%[[ARG_A:.*]]: !s32i {{.*}}, %[[ARG_P:.*]]: !cir.ptr<!rec_CompleteS>
+// CIR-NEXT:   %[[A_ADDR:.*]] = cir.alloca "a" align(4) init
+// CIR-NEXT:   %[[P_ADDR:.*]] = cir.alloca "p" align(8) init
+// CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" align(1)
 // CIR-NEXT:   cir.store{{.*}} %[[ARG_A]], %[[A_ADDR]]
 // CIR-NEXT:   cir.store{{.*}} %[[ARG_P]], %[[P_ADDR]]
 // CIR-NEXT:   %[[A_VAL:.*]] = cir.load{{.*}} %[[A_ADDR]]
@@ -245,7 +258,7 @@ char f4(int a, struct CompleteS *p) {
 // CIR-NEXT:   %[[RETVAL:.*]] = cir.load{{.*}} %[[RETVAL_ADDR]]
 // CIR-NEXT:   cir.return %[[RETVAL]]
 
-// LLVM:      define i8 @f4(i32 %[[ARG_A:.*]], ptr %[[ARG_P:.*]])
+// LLVM:      define{{.*}} i8 @f4(i32{{.*}} %[[ARG_A:.*]], ptr{{.*}} %[[ARG_P:.*]])
 // LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM-NEXT:   %[[P_ADDR:.*]] = alloca ptr, i64 1, align 8
 // LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, i64 1, align 1
@@ -253,10 +266,10 @@ char f4(int a, struct CompleteS *p) {
 // LLVM-NEXT:   store ptr %[[ARG_P]], ptr %[[P_ADDR]], align 8
 // LLVM-NEXT:   %[[A_VAL:.*]] = load i32, ptr %[[A_ADDR]], align 4
 // LLVM-NEXT:   %[[P_VAL:.*]] = load ptr, ptr %[[P_ADDR]], align 8
-// LLVM-NEXT:   %[[P_A:.*]] = getelementptr %struct.CompleteS, ptr %[[P_VAL]], i32 0, i32 0
+// LLVM-NEXT:   %[[P_A:.*]] = getelementptr inbounds nuw %struct.CompleteS, ptr %[[P_VAL]], i32 0, i32 0
 // LLVM-NEXT:   store i32 %[[A_VAL]], ptr %[[P_A]], align 4
 // LLVM-NEXT:   %[[P_VAL2:.*]] = load ptr, ptr %[[P_ADDR]], align 8
-// LLVM-NEXT:   %[[P_B:.*]] = getelementptr %struct.CompleteS, ptr %[[P_VAL2]], i32 0, i32 1
+// LLVM-NEXT:   %[[P_B:.*]] = getelementptr inbounds nuw %struct.CompleteS, ptr %[[P_VAL2]], i32 0, i32 1
 // LLVM-NEXT:   %[[P_B_VAL:.*]] = load i8, ptr %[[P_B]], align 4
 // LLVM-NEXT:   store i8 %[[P_B_VAL]], ptr %[[RETVAL_ADDR]], align 1
 // LLVM-NEXT:   %[[RETVAL:.*]] = load i8, ptr %[[RETVAL_ADDR]], align 1
@@ -281,12 +294,12 @@ void f5(struct NodeS* a) {
   a->next = 0;
 }
 
-// CIR: cir.func @f5
+// CIR: cir.func{{.*}} @f5
 // CIR:   %[[NEXT:.*]] = cir.get_member {{%.}}[0] {name = "next"} : !cir.ptr<!rec_NodeS> -> !cir.ptr<!cir.ptr<!rec_NodeS>>
 // CIR:   cir.store {{.*}}, %[[NEXT]]
 
 // LLVM: define{{.*}} void @f5
-// LLVM:   %[[NEXT:.*]] = getelementptr %struct.NodeS, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   %[[NEXT:.*]] = getelementptr inbounds nuw %struct.NodeS, ptr %{{.*}}, i32 0, i32 0
 // LLVM:   store ptr null, ptr %[[NEXT]]
 
 // OGCG: define{{.*}} void @f5
@@ -299,17 +312,18 @@ void f6(struct CycleStart *start) {
   struct CycleStart *start2 = end->start;
 }
 
-// CIR: cir.func @f6
+// CIR: cir.func{{.*}} @f6
 // CIR:   %[[MIDDLE:.*]] = cir.get_member {{.*}}[0] {name = "middle"} : !cir.ptr<!rec_CycleStart> -> !cir.ptr<!cir.ptr<!rec_CycleMiddle>>
 // CIR:   %[[END:.*]] = cir.get_member %{{.*}}[0] {name = "end"} : !cir.ptr<!rec_CycleMiddle> -> !cir.ptr<!cir.ptr<!rec_CycleEnd>>
 // CIR:   %[[START2:.*]] = cir.get_member %{{.*}}[0] {name = "start"} : !cir.ptr<!rec_CycleEnd> -> !cir.ptr<!cir.ptr<!rec_CycleStart>>
 
 // LLVM: define{{.*}} void @f6
-// LLVM:   %[[MIDDLE:.*]] = getelementptr %struct.CycleStart, ptr %{{.*}}, i32 0, i32 0
-// LLVM:   %[[END:.*]] = getelementptr %struct.CycleMiddle, ptr %{{.*}}, i32 0, i32 0
-// LLVM:   %[[START2:.*]] = getelementptr %struct.CycleEnd, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   %[[MIDDLE:.*]] = getelementptr inbounds nuw %struct.CycleStart, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   %[[END:.*]] = getelementptr inbounds nuw %struct.CycleMiddle, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   %[[START2:.*]] = getelementptr inbounds nuw %struct.CycleEnd, ptr %{{.*}}, i32 0, i32 0
 
 // OGCG: define{{.*}} void @f6
 // OGCG:   %[[MIDDLE:.*]] = getelementptr inbounds nuw %struct.CycleStart, ptr %{{.*}}, i32 0, i32 0
 // OGCG:   %[[END:.*]] = getelementptr inbounds nuw %struct.CycleMiddle, ptr %{{.*}}, i32 0, i32 0
 // OGCG:   %[[START2:.*]] = getelementptr inbounds nuw %struct.CycleEnd, ptr %{{.*}}, i32 0, i32 0
+

@@ -287,6 +287,13 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "hypotf16",
+    hdrs = [
+        "HypotTest.h",
+    ],
+)
+
+math_mpfr_test(
     name = "llrint",
     hdrs = ["RoundToIntegerTest.h"],
 )
@@ -531,6 +538,14 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "tanpif",
+    hdrs = ["sdcomp26094.h"],
+    deps = [
+        "//libc:__support_cpp_array",
+    ],
+)
+
+math_mpfr_test(
     name = "sqrt",
     hdrs = ["SqrtTest.h"],
 )
@@ -591,6 +606,8 @@ math_mpfr_test(
     name = "truncf16",
     hdrs = ["TruncTest.h"],
 )
+
+math_mpfr_test(name = "cbrtf16")
 
 math_mpfr_test(name = "cosf16")
 

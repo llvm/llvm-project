@@ -21,12 +21,12 @@ struct MoveOnlyDeleter {
   MoveOnlyDeleter()                                  = default;
   MoveOnlyDeleter(const MoveOnlyDeleter&)            = delete;
   MoveOnlyDeleter& operator=(const MoveOnlyDeleter&) = delete;
-  MoveOnlyDeleter(MoveOnlyDeleter&&) : wasMoveInitilized{true} {}
+  MoveOnlyDeleter(MoveOnlyDeleter&&) : wasMoveInitialized{true} {}
   MoveOnlyDeleter& operator=(MoveOnlyDeleter&&) = default;
 
   void operator()(T* p) const { delete p; }
 
-  bool wasMoveInitilized = false;
+  bool wasMoveInitialized = false;
 };
 
 // Custom pointer types.

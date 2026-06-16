@@ -13,8 +13,10 @@
 #ifndef LLVM_BINARYFORMAT_DXCONTAINER_H
 #define LLVM_BINARYFORMAT_DXCONTAINER_H
 
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
@@ -40,8 +42,12 @@ template <typename T> struct EnumEntry;
 
 namespace dxbc {
 
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+
+constexpr static uint64_t DXCONTAINER_STRUCT_ALIGNMENT = 4;
+
 inline Triple::EnvironmentType getShaderStage(uint32_t Kind) {
-  assert(Kind <= Triple::Amplification - Triple::Pixel &&
+  assert(Kind <= Triple::RootSignature - Triple::Pixel &&
          "Shader kind out of expected range.");
   return static_cast<Triple::EnvironmentType>(Triple::Pixel + Kind);
 }
@@ -154,20 +160,41 @@ enum class FeatureFlags : uint64_t {
 static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
               "Shader flag bits exceed enum size.");
 
-#define ROOT_ELEMENT_FLAG(Num, Val) Val = 1ull << Num,
-enum class RootElementFlag : uint32_t {
+#define ROOT_SIGNATURE_FLAG(Num, Val) Val = Num,
+enum class RootFlags : uint32_t {
 #include "DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(SamplerHeapDirectlyIndexed)
 };
 
-#define ROOT_DESCRIPTOR_FLAG(Num, Val) Val = 1ull << Num,
-enum class RootDescriptorFlag : uint32_t {
+LLVM_ABI ArrayRef<EnumEntry<RootFlags>> getRootFlags();
+
+#define ROOT_DESCRIPTOR_FLAG(Num, Enum, Flag) Enum = Num,
+enum class RootDescriptorFlags : uint32_t {
 #include "DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(DataStatic)
 };
 
-#define DESCRIPTOR_RANGE_FLAG(Num, Val) Val = 1ull << Num,
-enum class DescriptorRangeFlag : uint32_t {
+LLVM_ABI ArrayRef<EnumEntry<RootDescriptorFlags>> getRootDescriptorFlags();
+
+#define DESCRIPTOR_RANGE_FLAG(Num, Enum, Flag) Enum = Num,
+enum class DescriptorRangeFlags : uint32_t {
 #include "DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(DescriptorsStaticKeepingBufferBoundsChecks)
 };
+
+LLVM_ABI ArrayRef<EnumEntry<DescriptorRangeFlags>> getDescriptorRangeFlags();
+
+#define STATIC_SAMPLER_FLAG(Num, Enum, Flag) Enum = Num,
+enum class StaticSamplerFlags : uint32_t {
+#include "DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(NonNormalizedCoordinates)
+};
+
+LLVM_ABI ArrayRef<EnumEntry<StaticSamplerFlags>> getStaticSamplerFlags();
 
 #define ROOT_PARAMETER(Val, Enum) Enum = Val,
 enum class RootParameterType : uint32_t {
@@ -176,22 +203,9 @@ enum class RootParameterType : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
 
-#define DESCRIPTOR_RANGE(Val, Enum) Enum = Val,
-enum class DescriptorRangeType : uint32_t {
-#include "DXContainerConstants.def"
-};
+LLVM_ABI_FOR_TEST bool isValidParameterType(uint32_t V);
 
-ArrayRef<EnumEntry<DescriptorRangeType>> getDescriptorRangeTypes();
-
-#define ROOT_PARAMETER(Val, Enum)                                              \
-  case Val:                                                                    \
-    return true;
-inline bool isValidParameterType(uint32_t V) {
-  switch (V) {
-#include "DXContainerConstants.def"
-  }
-  return false;
-}
+LLVM_ABI bool isValidRangeType(uint32_t V);
 
 #define SHADER_VISIBILITY(Val, Enum) Enum = Val,
 enum class ShaderVisibility : uint32_t {
@@ -200,37 +214,56 @@ enum class ShaderVisibility : uint32_t {
 
 LLVM_ABI ArrayRef<EnumEntry<ShaderVisibility>> getShaderVisibility();
 
-#define SHADER_VISIBILITY(Val, Enum)                                           \
-  case Val:                                                                    \
-    return true;
-inline bool isValidShaderVisibility(uint32_t V) {
-  switch (V) {
-#include "DXContainerConstants.def"
-  }
-  return false;
-}
+LLVM_ABI bool isValidShaderVisibility(uint32_t V);
 
-#define STATIC_SAMPLER_FILTER(Val, Enum) Enum = Val,
-enum class StaticSamplerFilter : uint32_t {
+#define FILTER(Val, Enum) Enum = Val,
+enum class SamplerFilter : uint32_t {
 #include "DXContainerConstants.def"
 };
+
+LLVM_ABI bool isValidSamplerFilter(uint32_t V);
+
+LLVM_ABI ArrayRef<EnumEntry<SamplerFilter>> getSamplerFilters();
 
 #define TEXTURE_ADDRESS_MODE(Val, Enum) Enum = Val,
 enum class TextureAddressMode : uint32_t {
 #include "DXContainerConstants.def"
 };
 
-#define COMPARISON_FUNCTION(Val, Enum) Enum = Val,
-enum class SamplersComparisonFunction : uint32_t {
+LLVM_ABI ArrayRef<EnumEntry<TextureAddressMode>> getTextureAddressModes();
+
+LLVM_ABI bool isValidAddress(uint32_t V);
+
+#define COMPARISON_FUNC(Val, Enum) Enum = Val,
+enum class ComparisonFunc : uint32_t {
 #include "DXContainerConstants.def"
 };
+
+LLVM_ABI ArrayRef<EnumEntry<ComparisonFunc>> getComparisonFuncs();
+
+LLVM_ABI bool isValidComparisonFunc(uint32_t V);
 
 #define STATIC_BORDER_COLOR(Val, Enum) Enum = Val,
-enum class SamplersBorderColor : uint32_t {
+enum class StaticBorderColor : uint32_t {
 #include "DXContainerConstants.def"
 };
 
+LLVM_ABI bool isValidBorderColor(uint32_t V);
+
+LLVM_ABI bool isValidRootDesciptorFlags(uint32_t V);
+
+LLVM_ABI bool isValidDescriptorRangeFlags(uint32_t V);
+
+LLVM_ABI bool isValidStaticSamplerFlags(uint32_t V);
+
+LLVM_ABI ArrayRef<EnumEntry<StaticBorderColor>> getStaticBorderColors();
+
 LLVM_ABI PartType parsePartType(StringRef S);
+
+LLVM_ABI bool isDebugProgramPart(PartType PT);
+
+LLVM_ABI const char *getProgramPartName(bool IsDebug);
+LLVM_ABI bool isProgramPart(StringRef PartName);
 
 struct VertexPSVInfo {
   uint8_t OutputPositionPresent;
@@ -536,6 +569,8 @@ struct ResourceBindInfo : public v0::ResourceBindInfo {
 
 namespace v3 {
 struct RuntimeInfo : public v2::RuntimeInfo {
+  // Offset into the string table, which is stored separately in the PSV0 part.
+  // The entry name string itself is not stored in the RuntimeInfo record.
   uint32_t EntryNameOffset;
 
   void swapBytes() {
@@ -735,15 +770,278 @@ struct RootDescriptor : public v1::RootDescriptor {
   }
 };
 
-struct DescriptorRange : public v1::DescriptorRange {
+struct DescriptorRange {
+  uint32_t RangeType;
+  uint32_t NumDescriptors;
+  uint32_t BaseShaderRegister;
+  uint32_t RegisterSpace;
   uint32_t Flags;
+  uint32_t OffsetInDescriptorsFromTableStart;
   void swapBytes() {
-    v1::DescriptorRange::swapBytes();
+    sys::swapByteOrder(RangeType);
+    sys::swapByteOrder(NumDescriptors);
+    sys::swapByteOrder(BaseShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(OffsetInDescriptorsFromTableStart);
     sys::swapByteOrder(Flags);
   }
 };
 } // namespace v2
+
+namespace v3 {
+struct StaticSampler : public v1::StaticSampler {
+  uint32_t Flags;
+
+  StaticSampler() = default;
+  explicit StaticSampler(v1::StaticSampler &Base)
+      : v1::StaticSampler(Base), Flags(0U) {}
+
+  void swapBytes() {
+    v1::StaticSampler::swapBytes();
+    sys::swapByteOrder(Flags);
+  }
+};
+
+} // namespace v3
 } // namespace RTS0
+
+// D3D_ROOT_SIGNATURE_VERSION
+enum class RootSignatureVersion {
+  V1_0 = 0x1,
+  V1_1 = 0x2,
+  V1_2 = 0x3,
+};
+
+struct DebugNameHeader {
+  uint16_t Flags;
+  /// Debug file name length, without null terminator.
+  uint16_t NameLength;
+
+  void swapBytes() {
+    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(NameLength);
+  }
+};
+
+static_assert(sizeof(DebugNameHeader) == 4, "DebugNameHeader size incorrect.");
+
+#define VERSION_INFO_FLAG(Num, Val, Str) Val = Num,
+enum class CompilerVersionFlags : uint32_t {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(Internal)
+};
+
+LLVM_ABI bool isValidCompilerVersionFlags(uint32_t V);
+
+struct CompilerVersionHeader {
+  uint16_t Major;
+  uint16_t Minor;
+  CompilerVersionFlags Flags;
+  /// The number outputted by `git rev-list --count HEAD` in the compiler repo.
+  uint32_t CommitCount;
+  /// Byte size of CommitSha and CustomVersionString, padding not included.
+  uint32_t ContentSizeInBytes;
+
+  void swapBytes() {
+    sys::swapByteOrder(Major);
+    sys::swapByteOrder(Minor);
+    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(CommitCount);
+    sys::swapByteOrder(ContentSizeInBytes);
+  }
+};
+
+static_assert(sizeof(CompilerVersionHeader) == 16,
+              "CompilerVersionHeader size incorrect.");
+
+namespace SourceInfo {
+
+struct Header {
+  /// Part size including this header. Aligned to a 4-byte boundary.
+  uint32_t AlignedSizeInBytes;
+  /// Reserved, must be zero.
+  uint16_t Flags;
+  /// Source info part must contain 3 sections. Each section is 4-byte aligned.
+  uint16_t SectionCount;
+
+  void swapBytes() {
+    sys::swapByteOrder(AlignedSizeInBytes);
+    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(SectionCount);
+  }
+};
+
+static_assert(sizeof(Header) == 8, "SourceInfo::Header size incorrect.");
+
+#define SOURCE_INFO_TYPE(Num, Val) Val = Num,
+enum class SectionType : uint16_t {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(Args)
+};
+
+LLVM_ABI ArrayRef<EnumEntry<SectionType>> getSectionTypes();
+LLVM_ABI bool isValidSectionType(uint16_t V);
+LLVM_ABI StringRef getSectionName(SectionType Type);
+
+struct SectionHeader {
+  /// Section size including this header. Aligned to a 4-byte boundary.
+  uint32_t AlignedSizeInBytes;
+  /// Reserved, must be zero.
+  uint16_t Flags;
+  SectionType Type;
+
+  void swapBytes() {
+    sys::swapByteOrder(AlignedSizeInBytes);
+    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(Type);
+  }
+
+  void updateSize(uint32_t ContentSize) {
+    AlignedSizeInBytes =
+        alignTo(sizeof(*this) + ContentSize, DXCONTAINER_STRUCT_ALIGNMENT);
+  }
+};
+
+static_assert(sizeof(SectionHeader) == 8,
+              "SourceInfo::SectionHeader size incorrect.");
+
+namespace Names {
+
+LLVM_PACKED(struct HeaderOnDisk {
+  /// Reserved, must be zero.
+  uint32_t Flags;
+  /// The number of data entries.
+  uint32_t Count;
+  /// The total size of the data entries following this header. Each entry is
+  /// 4-byte padded.
+  uint16_t EntriesSizeInBytes;
+});
+
+static_assert(sizeof(HeaderOnDisk) == 10,
+              "SourceInfo::Names::HeaderOnDisk size incorrect.");
+
+struct Entry {
+  /// Size of entry, including this header. Aligned to a 4-byte boundary.
+  uint32_t AlignedSizeInBytes;
+  /// Reserved, must be set to zero.
+  uint32_t Flags;
+  /// Size of the file name following this header, including the null
+  /// terminator, excluding entry padding.
+  uint32_t NameSizeInBytes;
+  /// Size of the file content, including the null terminator.
+  uint32_t ContentSizeInBytes;
+  /// Followed by a string of size NameSizeInBytes with HLSL source file name.
+
+  void swapBytes() {
+    sys::swapByteOrder(AlignedSizeInBytes);
+    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(NameSizeInBytes);
+    sys::swapByteOrder(ContentSizeInBytes);
+  }
+};
+
+static_assert(sizeof(Entry) == 16, "SourceInfo::Names::Entry size incorrect.");
+
+} // namespace Names
+
+namespace Contents {
+
+#define COMPRESSION_TYPE(Num, Val) Val = Num,
+enum class CompressionType : uint16_t {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(Zlib)
+};
+
+LLVM_ABI ArrayRef<EnumEntry<CompressionType>> getCompressionTypes();
+LLVM_ABI bool isValidCompressionType(uint16_t V);
+
+struct Header {
+  /// Size of the section including this header. Aligned to a 4-byte boundary.
+  /// In some implementations, it is unused and set to zero.
+  uint32_t AlignedSizeInBytes;
+  /// Reserved, must be zero.
+  uint16_t Flags;
+  /// Type of compression used to compress the whole section content.
+  CompressionType Type;
+  /// The size of the data entries following this header.
+  /// Aligned to a 4-byte boundary if Type is None.
+  /// Doesn’t have to be aligned otherwise.
+  uint32_t EntriesSizeInBytes;
+  /// Total size of the data entries when uncompressed. Aligned to a 4-byte
+  /// boundary.
+  uint32_t UncompressedEntriesSizeInBytes;
+  /// The number of data entries.
+  uint32_t Count;
+
+  void swapBytes() {
+    sys::swapByteOrder(AlignedSizeInBytes);
+    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(Type);
+    sys::swapByteOrder(EntriesSizeInBytes);
+    sys::swapByteOrder(UncompressedEntriesSizeInBytes);
+    sys::swapByteOrder(Count);
+  }
+};
+
+static_assert(sizeof(Header) == 20,
+              "SourceInfo::Contents::Header size incorrect.");
+
+struct Entry {
+  /// Size of entry, including this header. Aligned to a 4-byte boundary.
+  uint32_t AlignedSizeInBytes;
+  /// Reserved, must be zero.
+  uint32_t Flags;
+  /// Size of the file contents following this header, including the null
+  /// terminator, excluding entry padding.
+  uint32_t ContentSizeInBytes;
+  /// Followed by a string of length ContentSizeInBytes-1 with HLSL source file
+  /// content.
+  /// Entry is aligned to 4-bytes (in uncompressed form).
+  /// Entries of this section must be stored in the same order as the entries of
+  /// the Names section.
+
+  void swapBytes() {
+    sys::swapByteOrder(AlignedSizeInBytes);
+    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(ContentSizeInBytes);
+  }
+};
+
+static_assert(sizeof(Entry) == 12,
+              "SourceInfo::Contents::Entry size incorrect.");
+
+} // namespace Contents
+
+namespace Args {
+
+struct Header {
+  /// Reserved, must be zero.
+  uint32_t Flags;
+  /// Length of all argument pairs, including their null terminators, not
+  /// including this header.
+  uint32_t SizeInBytes;
+  /// Number of arguments.
+  uint32_t Count;
+  /// Followed by Count argument pairs, representing command line arguments of
+  /// the HLSL compiler invocation. Each pair consists of argument name and
+  /// argument value null-terminated strings. Padding is not applied to the
+  /// pairs.
+
+  void swapBytes() {
+    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(SizeInBytes);
+    sys::swapByteOrder(Count);
+  }
+};
+
+static_assert(sizeof(Header) == 12, "SourceInfo::Args::Header size incorrect.");
+
+} // namespace Args
+
+} // namespace SourceInfo
 
 } // namespace dxbc
 } // namespace llvm

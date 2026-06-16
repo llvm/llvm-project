@@ -34,7 +34,8 @@ PipeWindows::PipeWindows()
 }
 
 PipeWindows::PipeWindows(pipe_t read, pipe_t write)
-    : m_read((HANDLE)read), m_write((HANDLE)write),
+    : m_read(reinterpret_cast<HANDLE>(read)),
+      m_write(reinterpret_cast<HANDLE>(write)),
       m_read_fd(PipeWindows::kInvalidDescriptor),
       m_write_fd(PipeWindows::kInvalidDescriptor) {
   assert(read != LLDB_INVALID_PIPE || write != LLDB_INVALID_PIPE);
@@ -66,7 +67,7 @@ PipeWindows::PipeWindows(pipe_t read, pipe_t write)
 
 PipeWindows::~PipeWindows() { Close(); }
 
-Status PipeWindows::CreateNew(bool child_process_inherit) {
+Status PipeWindows::CreateNew() {
   // Even for anonymous pipes, we open a named pipe.  This is because you
   // cannot get overlapped i/o on Windows without using a named pipe.  So we
   // synthesize a unique name.
@@ -74,11 +75,10 @@ Status PipeWindows::CreateNew(bool child_process_inherit) {
   std::string pipe_name = llvm::formatv(
       "lldb.pipe.{0}.{1}.{2}", GetCurrentProcessId(), &g_pipe_serial, serial);
 
-  return CreateNew(pipe_name.c_str(), child_process_inherit);
+  return CreateNew(pipe_name.c_str());
 }
 
-Status PipeWindows::CreateNew(llvm::StringRef name,
-                              bool child_process_inherit) {
+Status PipeWindows::CreateNew(llvm::StringRef name) {
   if (name.empty())
     return Status(ERROR_INVALID_PARAMETER, eErrorTypeWin32);
 
@@ -104,12 +104,17 @@ Status PipeWindows::CreateNew(llvm::StringRef name,
   if (INVALID_HANDLE_VALUE == m_read)
     return Status(::GetLastError(), eErrorTypeWin32);
   m_read_fd = _open_osfhandle((intptr_t)m_read, _O_RDONLY);
+  if (m_read_fd < 0) {
+    ::CloseHandle(m_read);
+    m_read = INVALID_HANDLE_VALUE;
+    return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32);
+  }
   ZeroMemory(&m_read_overlapped, sizeof(m_read_overlapped));
   m_read_overlapped.hEvent = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
 
   // Open the write end of the pipe. Note that closing either the read or 
   // write end of the pipe could directly close the pipe itself.
-  Status result = OpenNamedPipe(name, child_process_inherit, false);
+  Status result = OpenNamedPipe(name, false);
   if (!result.Success()) {
     CloseReadFileDescriptor();
     return result;
@@ -119,7 +124,6 @@ Status PipeWindows::CreateNew(llvm::StringRef name,
 }
 
 Status PipeWindows::CreateWithUniqueName(llvm::StringRef prefix,
-                                         bool child_process_inherit,
                                          llvm::SmallVectorImpl<char> &name) {
   llvm::SmallString<128> pipe_name;
   Status error;
@@ -133,7 +137,7 @@ Status PipeWindows::CreateWithUniqueName(llvm::StringRef prefix,
     pipe_name += "-";
     pipe_name += reinterpret_cast<char *>(unique_string);
     ::RpcStringFreeA(&unique_string);
-    error = CreateNew(pipe_name, child_process_inherit);
+    error = CreateNew(pipe_name);
   } else {
     error = Status(status, eErrorTypeWin32);
   }
@@ -142,25 +146,22 @@ Status PipeWindows::CreateWithUniqueName(llvm::StringRef prefix,
   return error;
 }
 
-Status PipeWindows::OpenAsReader(llvm::StringRef name,
-                                 bool child_process_inherit) {
+Status PipeWindows::OpenAsReader(llvm::StringRef name) {
   if (CanRead())
     return Status(); // Note the name is ignored.
 
-  return OpenNamedPipe(name, child_process_inherit, true);
+  return OpenNamedPipe(name, true);
 }
 
 llvm::Error PipeWindows::OpenAsWriter(llvm::StringRef name,
-                                      bool child_process_inherit,
                                       const Timeout<std::micro> &timeout) {
   if (CanWrite())
     return llvm::Error::success(); // Note the name is ignored.
 
-  return OpenNamedPipe(name, child_process_inherit, false).takeError();
+  return OpenNamedPipe(name, false).takeError();
 }
 
-Status PipeWindows::OpenNamedPipe(llvm::StringRef name,
-                                  bool child_process_inherit, bool is_read) {
+Status PipeWindows::OpenNamedPipe(llvm::StringRef name, bool is_read) {
   if (name.empty())
     return Status(ERROR_INVALID_PARAMETER, eErrorTypeWin32);
 
@@ -175,21 +176,31 @@ Status PipeWindows::OpenNamedPipe(llvm::StringRef name,
 
   if (is_read) {
     m_read = ::CreateFileA(pipe_path.c_str(), GENERIC_READ, 0, &attributes,
-                           OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+                           OPEN_EXISTING, FILE_FLAG_OVERLAPPED, nullptr);
     if (INVALID_HANDLE_VALUE == m_read)
       return Status(::GetLastError(), eErrorTypeWin32);
 
     m_read_fd = _open_osfhandle((intptr_t)m_read, _O_RDONLY);
+    if (m_read_fd < 0) {
+      ::CloseHandle(m_read);
+      m_read = INVALID_HANDLE_VALUE;
+      return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32);
+    }
 
     ZeroMemory(&m_read_overlapped, sizeof(m_read_overlapped));
     m_read_overlapped.hEvent = ::CreateEvent(nullptr, TRUE, FALSE, nullptr);
   } else {
     m_write = ::CreateFileA(pipe_path.c_str(), GENERIC_WRITE, 0, &attributes,
-                            OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
+                            OPEN_EXISTING, FILE_FLAG_OVERLAPPED, nullptr);
     if (INVALID_HANDLE_VALUE == m_write)
       return Status(::GetLastError(), eErrorTypeWin32);
 
     m_write_fd = _open_osfhandle((intptr_t)m_write, _O_WRONLY);
+    if (m_write_fd < 0) {
+      ::CloseHandle(m_write);
+      m_write = INVALID_HANDLE_VALUE;
+      return Status(ERROR_INVALID_HANDLE, eErrorTypeWin32);
+    }
 
     ZeroMemory(&m_write_overlapped, sizeof(m_write_overlapped));
     m_write_overlapped.hEvent = ::CreateEventA(nullptr, TRUE, FALSE, nullptr);
@@ -284,7 +295,8 @@ llvm::Expected<size_t> PipeWindows::Read(void *buf, size_t size,
     return Status(failure_error, eErrorTypeWin32).takeError();
 
   DWORD timeout_msec =
-      timeout ? ceil<std::chrono::milliseconds>(*timeout).count() : INFINITE;
+      timeout ? std::chrono::ceil<std::chrono::milliseconds>(*timeout).count()
+              : INFINITE;
   DWORD wait_result =
       ::WaitForSingleObject(m_read_overlapped.hEvent, timeout_msec);
   if (wait_result != WAIT_OBJECT_0) {
@@ -329,7 +341,8 @@ llvm::Expected<size_t> PipeWindows::Write(const void *buf, size_t size,
     return Status(failure_error, eErrorTypeWin32).takeError();
 
   DWORD timeout_msec =
-      timeout ? ceil<std::chrono::milliseconds>(*timeout).count() : INFINITE;
+      timeout ? std::chrono::ceil<std::chrono::milliseconds>(*timeout).count()
+              : INFINITE;
   DWORD wait_result =
       ::WaitForSingleObject(m_write_overlapped.hEvent, timeout_msec);
   if (wait_result != WAIT_OBJECT_0) {

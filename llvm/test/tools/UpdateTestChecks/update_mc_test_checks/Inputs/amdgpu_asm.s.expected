@@ -3,3 +3,6 @@
 
 v_bfrev_b32 v5, v1
 // CHECK: v_bfrev_b32_e32 v5, v1                  ; encoding: [0x01,0x71,0x0a,0x7e]
+
+ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM, "01pip")
+// CHECK: ds_swizzle_b32 v8, v2 offset:swizzle(BITMASK_PERM,"01pip") ; encoding: [0x07,0x09,0xd4,0xd8,0x02,0x00,0x00,0x08]
