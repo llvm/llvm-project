@@ -1481,13 +1481,15 @@ void CodeGenModule::Release() {
       getModule().addModuleFlag(llvm::Module::Min,
                                 "sign-return-address-with-bkey", 2);
 
-    if (LangOpts.PointerAuthELFGOT)
-      getModule().addModuleFlag(llvm::Module::Error, "ptrauth-elf-got", 1);
+    getModule().addModuleFlag(
+        llvm::Module::Error, "ptrauth-elf-got",
+        static_cast<uint32_t>(LangOpts.PointerAuthELFGOT));
 
     if (getTriple().isOSLinux()) {
-      if (LangOpts.PointerAuthCalls)
-        getModule().addModuleFlag(llvm::Module::Error,
-                                  "ptrauth-sign-personality", 1);
+      getModule().addModuleFlag(
+          llvm::Module::Error, "ptrauth-sign-personality",
+          static_cast<uint32_t>(LangOpts.PointerAuthCalls));
+
       assert(getTriple().isOSBinFormatELF());
       using namespace llvm::ELF;
       uint64_t PAuthABIVersion =

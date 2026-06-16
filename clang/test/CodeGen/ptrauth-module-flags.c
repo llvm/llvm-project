@@ -4,10 +4,18 @@
 
 // ELFGOT:      !llvm.module.flags = !{
 // ELFGOT-SAME: !0
+// ELFGOT-SAME: !1
 // ELFGOT:      !0 = !{i32 1, !"ptrauth-elf-got", i32 1}
+// ELFGOT:      !1 = !{i32 1, !"ptrauth-sign-personality", i32 0}
 
 // PERSONALITY:      !llvm.module.flags = !{
 // PERSONALITY-SAME: !0
-// PERSONALITY:      !0 = !{i32 1, !"ptrauth-sign-personality", i32 1}
+// PERSONALITY-SAME: !1
+// PERSONALITY:      !0 = !{i32 1, !"ptrauth-elf-got", i32 0}
+// PERSONALITY:      !1 = !{i32 1, !"ptrauth-sign-personality", i32 1}
 
-// OFF-NOT: "ptrauth-
+// OFF:      !llvm.module.flags = !{
+// OFF-SAME: !0
+// OFF-SAME: !1
+// OFF:      !0 = !{i32 1, !"ptrauth-elf-got", i32 0}
+// OFF:      !1 = !{i32 1, !"ptrauth-sign-personality", i32 0}
