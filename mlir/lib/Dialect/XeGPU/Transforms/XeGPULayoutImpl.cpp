@@ -928,8 +928,7 @@ getSgLayoutCandidates(ArrayRef<int64_t> wgShape, ArrayRef<int64_t> instData,
 /// C/D.
 static std::optional<SmallVector<int64_t>>
 get2DBlockIOInstDataLayout(ArrayRef<int64_t> dataShape, ArrayRef<int> bWidths,
-                           ArrayRef<int> bHeights, ArrayRef<int64_t> laneLayout,
-                           ArrayRef<int64_t> laneData) {
+                           ArrayRef<int> bHeights) {
   int rank = dataShape.size();
   // Compute inst_data from hardware block params. For Nd ops, the lane
   // factorization above (laneLayout / laneData) is rigid; inst_data must be
@@ -944,14 +943,52 @@ get2DBlockIOInstDataLayout(ArrayRef<int64_t> dataShape, ArrayRef<int> bWidths,
   instData.back() = instWidth;
   instData[rank - 2] = instHeight;
 
-  if (instWidth == -1 || instHeight == -1) {
-    instData.back() = laneLayout.back() * laneData.back();
-    instData[rank - 2] = laneLayout[rank - 2] * laneData[rank - 2];
-  }
-  for (int dim = 0; dim < rank; ++dim)
-    assert(instData[dim] % (laneLayout[dim] * laneData[dim]) == 0 &&
-           "inst_data must be a multiple of lane_layout * lane_data for ND op");
   return instData;
+}
+
+/// Helper function to compute inst_data vectors for DPAS operands A, B, and
+/// C/D. Look up the uArch table and search for the largest supported block size
+/// that divides the data shape
+static std::optional<std::tuple<SmallVector<int64_t>, SmallVector<int64_t>,
+                                SmallVector<int64_t>>>
+getDpasInstDataLayouts(
+    VectorType aTy, VectorType bTy, VectorType cdTy,
+    const xegpu::uArch::MMAInstructionInterface *uArchInstruction,
+    const int subgroupSize, bool isDpasMx = false) {
+
+  // M dimension is the second-to-last dim of A (handles batch dims).
+  const unsigned dataALen = aTy.getShape()[aTy.getRank() - 2];
+  auto supportedALen = uArchInstruction->getSupportedM(aTy.getElementType());
+  const int maxALen =
+      xegpu::getLargestDivisor(dataALen, ArrayRef<unsigned>(supportedALen));
+
+  // N dimension is the last dim of B.
+  const unsigned dataBLen = bTy.getShape().back();
+  auto supportedBLen = uArchInstruction->getSupportedN(bTy.getElementType());
+  const int maxBLen =
+      xegpu::getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedBLen));
+
+  auto supportedCLen = uArchInstruction->getSupportedN(cdTy.getElementType());
+  const int maxCLen =
+      xegpu::getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedCLen));
+  if (maxALen == -1 || maxBLen == -1 || maxCLen == -1)
+    return std::nullopt;
+
+  auto supportedKLen = uArchInstruction->getSupportedK(aTy.getElementType());
+  if (supportedKLen.empty())
+    return std::nullopt;
+  auto kDimSize = supportedKLen[0];
+
+  SmallVector<int64_t> instDataA(aTy.getRank(), 1);
+  instDataA[aTy.getRank() - 2] = maxALen;
+  instDataA[aTy.getRank() - 1] = kDimSize;
+  SmallVector<int64_t> instDataB(bTy.getRank(), 1);
+  instDataB[bTy.getRank() - 2] = kDimSize;
+  instDataB[bTy.getRank() - 1] = maxBLen;
+  SmallVector<int64_t> instDataCD(cdTy.getRank(), 1);
+  instDataCD[cdTy.getRank() - 2] = maxALen;
+  instDataCD[cdTy.getRank() - 1] = maxCLen;
+  return std::make_tuple(instDataA, instDataB, instDataCD);
 }
 
 /// Computes lane_layout and lane_data for scatter-style store anchor layouts
@@ -1097,57 +1134,10 @@ computeReductionLaneLayoutAndData(ArrayRef<int64_t> srcShape,
 //                         (Lane kind only; sg/inst layouts unsupported).
 //===----------------------------------------------------------------------===//
 
-/// Helper function to compute inst_data vectors for DPAS operands A, B, and
-/// C/D.
-static std::optional<std::tuple<SmallVector<int64_t>, SmallVector<int64_t>,
-                                SmallVector<int64_t>>>
-getDpasInstDataLayouts(
-    VectorType aTy, VectorType bTy, VectorType cdTy,
-    const xegpu::uArch::MMAInstructionInterface *uArchInstruction,
-    const int subgroupSize, bool isDpasMx = false) {
-
-  // M dimension is the second-to-last dim of A (handles batch dims).
-  const unsigned dataALen = aTy.getShape()[aTy.getRank() - 2];
-  auto supportedALen = uArchInstruction->getSupportedM(aTy.getElementType());
-  const int maxALen =
-      xegpu::getLargestDivisor(dataALen, ArrayRef<unsigned>(supportedALen));
-
-  // N dimension is the last dim of B.
-  const unsigned dataBLen = bTy.getShape().back();
-  auto supportedBLen = uArchInstruction->getSupportedN(bTy.getElementType());
-  const int maxBLen =
-      xegpu::getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedBLen));
-
-  auto supportedCLen = uArchInstruction->getSupportedN(cdTy.getElementType());
-  const int maxCLen =
-      xegpu::getLargestDivisor(dataBLen, ArrayRef<unsigned>(supportedCLen));
-  if (maxALen == -1 || maxBLen == -1 || maxCLen == -1)
-    return std::nullopt;
-
-  // For DPAS_MX, use getSupportedK to get the scaled K dimension.
-  // assume single element in the returned vector.
-  int kDimSize = subgroupSize;
-  if (isDpasMx) {
-    auto supportedKLen = uArchInstruction->getSupportedK(aTy.getElementType());
-    if (supportedKLen.empty())
-      return std::nullopt;
-    kDimSize = supportedKLen[0];
-  }
-
-  SmallVector<int64_t> instDataA(aTy.getRank(), 1);
-  instDataA[aTy.getRank() - 2] = maxALen;
-  instDataA[aTy.getRank() - 1] = kDimSize;
-  SmallVector<int64_t> instDataB(bTy.getRank(), 1);
-  instDataB[bTy.getRank() - 2] = kDimSize;
-  instDataB[bTy.getRank() - 1] = maxBLen;
-  SmallVector<int64_t> instDataCD(cdTy.getRank(), 1);
-  instDataCD[cdTy.getRank() - 2] = maxALen;
-  instDataCD[cdTy.getRank() - 1] = maxCLen;
-  return std::make_tuple(instDataA, instDataB, instDataCD);
-}
-
 /// Helper function to set up subgroup layouts for DPAS operands A, B, and
-/// C/D. Returns the three layouts if successful, nullopt otherwise.
+/// C/D. Compute subgroup layout candidates based on wgtile and instData, and
+/// then pick the best one that satisfies all operands and the consumer (if
+/// specified).
 static std::optional<
     std::tuple<xegpu::DistributeLayoutAttr, xegpu::DistributeLayoutAttr,
                xegpu::DistributeLayoutAttr>>
@@ -1464,15 +1454,13 @@ static xegpu::DistributeLayoutAttr setupGenericNdAnchorLayout(
 
   // Compute the default 2D block IO lane layout / lane data.
   unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
-  auto [laneLayout, laneData] =
-      compute2DBlockIOLaneLayoutAndData(dataShape, uArch->getSubgroupSize(),
-                                        bitwidth, packingSize, /*vnni=*/false);
+  auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
+      dataShape, uArch->getSubgroupSize(), bitwidth, packingSize);
 
   if (layoutKind == xegpu::LayoutKind::Lane)
     return buildLaneLayout(context, laneLayout, laneData);
 
-  auto instData = get2DBlockIOInstDataLayout(dataShape, bWidths, bHeights,
-                                             laneLayout, laneData);
+  auto instData = get2DBlockIOInstDataLayout(dataShape, bWidths, bHeights);
 
   if (layoutKind == xegpu::LayoutKind::InstData)
     return buildInstDataLayoutWithLane(context, *instData, laneLayout,
@@ -1591,14 +1579,14 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
       hasTransform ? consumerLaneData[rank - 2] : consumerLaneData[rank - 1];
   unsigned packingSize = packingFactor * elemTy.getIntOrFloatBitWidth();
 
-  auto blockWHC = uArchInstruction->getBlockWidthHeightCount(
-      elemTy, hasTransform, hasTranspose,
-      /*upConv=*/false);
-  if (!blockWHC)
-    return nullptr;
-  auto [bWidths, bHeights, bCounts] = blockWHC.value();
-
   if (layoutKind == xegpu::LayoutKind::InstData) {
+    auto blockWHC = uArchInstruction->getBlockWidthHeightCount(
+        elemTy, hasTransform, hasTranspose,
+        /*upConv=*/false);
+    if (!blockWHC)
+      return nullptr;
+    auto [bWidths, bHeights, bCounts] = blockWHC.value();
+
     int64_t height = consumerInstData[rank - 2];
     int64_t width = consumerInstData[rank - 1];
     auto maxBlockCount = *llvm::max_element(bCounts);
@@ -1611,12 +1599,10 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
                                            consumerLayout.getOrder());
       }
     }
-
+    auto instData = get2DBlockIOInstDataLayout(dataShape, bWidths, bHeights);
     auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
-        dataShape, subgroupSize, elemTy.getIntOrFloatBitWidth(), packingSize,
+        *instData, subgroupSize, elemTy.getIntOrFloatBitWidth(), packingSize,
         hasTransform, hasTranspose);
-    auto instData = get2DBlockIOInstDataLayout(dataShape, bWidths, bHeights,
-                                               laneLayout, laneData);
 
     return buildInstDataLayoutWithLane(context, *instData, laneLayout,
                                        laneData);
