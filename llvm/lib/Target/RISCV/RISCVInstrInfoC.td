@@ -224,7 +224,7 @@ class CLoad_ri<bits<3> funct3, string OpcodeStr,
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class CStore_rri<bits<3> funct3, string OpcodeStr,
                  DAGOperand cls, DAGOperand opnd>
-    : RVInst16CS<funct3, OPC_C0, (outs), (ins cls:$rs2,BasePtrC:$rs1, opnd:$imm),
+    : RVInst16CS<funct3, OPC_C0, (outs), (ins cls:$rs2, BasePtrC:$rs1, opnd:$imm),
                  OpcodeStr, "$rs2, ${imm}(${rs1})">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
