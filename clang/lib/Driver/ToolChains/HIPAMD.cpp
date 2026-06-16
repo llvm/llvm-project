@@ -19,7 +19,6 @@
 #include "clang/Options/Options.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/TargetParser.h"
 
 using namespace clang::driver;
@@ -142,25 +141,6 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
                              TargetID, /*IsBitCodeSDL=*/true);
 
   LldArgs.push_back("--no-whole-archive");
-
-  // With PGO/coverage instrumentation, instrumented device code references the
-  // device profile runtime (__llvm_profile_instrument_gpu and the
-  // __llvm_profile_sections bounds table emitted by InstrProfilingPlatformGPU).
-  // The new-offload-driver path injects this in LinkerWrapper::ConstructJob,
-  // but HIP using the traditional offload path (e.g. on Windows, which does not
-  // route device linking through clang-linker-wrapper) reaches the device link
-  // here instead. Forward the static device profile runtime to this lld device
-  // link so the runtime is pulled in regardless of offload-driver/host OS. The
-  // archive is arch-suffixed, so pass its full path rather than a -l name.
-  if (ToolChain::needsProfileRT(Args)) {
-    std::string ProfileRT =
-        TC.getCompilerRT(Args, "profile", ToolChain::FT_Static);
-    // Use the ToolChain VFS (matches the new-offload-driver path in
-    // Clang.cpp) so overlay/virtual filesystems used by the driver are
-    // honored; llvm::sys::fs bypasses them and can wrongly skip the runtime.
-    if (TC.getVFS().exists(ProfileRT))
-      LldArgs.push_back(Args.MakeArgString(ProfileRT));
-  }
 
   const char *Lld = Args.MakeArgStringRef(getToolChain().GetProgramPath("lld"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
