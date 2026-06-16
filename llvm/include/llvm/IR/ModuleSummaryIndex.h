@@ -226,6 +226,19 @@ public:
   const_iterator end() const { return Storage.end(); }
   size_type size() const { return Storage.size(); }
   bool empty() const { return Storage.empty(); }
+
+  /// Return pointers to the entries sorted by key. Storage is in insertion
+  /// order; some serialization paths and tests rely on key-sorted iteration.
+  SmallVector<const value_type *, 0> sortedEntries() const {
+    SmallVector<const value_type *, 0> Sorted;
+    Sorted.reserve(Storage.size());
+    for (const auto &E : Storage)
+      Sorted.push_back(&E);
+    llvm::sort(Sorted, [](const auto *A, const auto *B) {
+      return A->first < B->first;
+    });
+    return Sorted;
+  }
 };
 
 using GlobalValueSummaryMapTy = GlobalValueSummaryMap;
@@ -1644,6 +1657,11 @@ public:
   gvsummary_iterator end() { return GlobalValueMap.end(); }
   const_gvsummary_iterator end() const { return GlobalValueMap.end(); }
   size_t size() const { return GlobalValueMap.size(); }
+
+  SmallVector<const GlobalValueSummaryMapTy::value_type *, 0>
+  sortedGlobalValueSummaries() const {
+    return GlobalValueMap.sortedEntries();
+  }
 
   const std::vector<uint64_t> &stackIds() const { return StackIds; }
 

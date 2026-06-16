@@ -231,14 +231,7 @@ public:
     if (!Index)
       return;
     // Sort by GUID for deterministic value ID assignment.
-    SmallVector<const GlobalValueSummaryMapTy::value_type *, 0> Sorted;
-    Sorted.reserve(Index->size());
-    for (const auto &E : *Index)
-      Sorted.push_back(&E);
-    llvm::sort(Sorted, [](const auto *A, const auto *B) {
-      return A->first < B->first;
-    });
-    for (const auto *GUIDSummaryLists : Sorted)
+    for (const auto *GUIDSummaryLists : Index->sortedGlobalValueSummaries())
       // Examine all summaries for this GUID.
       for (auto &Summary : GUIDSummaryLists->second.getSummaryList())
         if (auto *FS = dyn_cast<FunctionSummary>(Summary.get())) {
@@ -593,14 +586,7 @@ public:
         }
     } else {
       // Sort by GUID for deterministic output.
-      SmallVector<const GlobalValueSummaryMapTy::value_type *, 0> Sorted;
-      Sorted.reserve(Index.size());
-      for (const auto &E : Index)
-        Sorted.push_back(&E);
-      llvm::sort(Sorted, [](const auto *A, const auto *B) {
-        return A->first < B->first;
-      });
-      for (const auto *Entry : Sorted)
+      for (const auto *Entry : Index.sortedGlobalValueSummaries())
         for (auto &Summary : Entry->second.getSummaryList())
           Callback({Entry->first, Summary.get()}, false);
     }

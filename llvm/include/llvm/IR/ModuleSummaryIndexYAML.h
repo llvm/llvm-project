@@ -262,14 +262,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
   }
   static void output(IO &io, GlobalValueSummaryMapTy &V) {
     // Sort by GUID for deterministic output.
-    SmallVector<const GlobalValueSummaryMapTy::value_type *, 0> Sorted;
-    Sorted.reserve(V.size());
-    for (const auto &E : V)
-      Sorted.push_back(&E);
-    llvm::sort(Sorted, [](const auto *A, const auto *B) {
-      return A->first < B->first;
-    });
-    for (const auto *PP : Sorted) {
+    for (const auto *PP : V.sortedEntries()) {
       const auto &P = *PP;
       std::vector<GlobalValueSummaryYaml> GVSums;
       for (auto &Sum : P.second.getSummaryList()) {
