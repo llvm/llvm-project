@@ -304,7 +304,7 @@ class ProfiledBinary {
   std::unique_ptr<symbolize::LLVMSymbolizer> Symbolizer;
 
   // String table owning function name strings created from the symbolizer.
-  std::unordered_set<std::string> NameStrings;
+  StringSet<> NameStrings;
 
   // MMap events for PT_LOAD segments without 'x' memory protection flag.
   std::map<uint64_t, MMapEvent, std::greater<uint64_t>> NonTextMMapEvents;
