@@ -1137,6 +1137,18 @@ enum Type {
 };
 
 } // namespace Barrier
+
+namespace SyntheticAperture {
+/// Synthetic aperture numbers.
+///
+/// NOTE: This is also documented in AMDGPUUsage.
+enum SyntheticAperture {
+  None = 0,
+
+  BARRIER = 1,
+};
+} // namespace SyntheticAperture
+
 } // namespace AMDGPU
 
 // clang-format off

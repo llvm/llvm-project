@@ -35,6 +35,10 @@ using VariableFunctionMap = DenseMap<GlobalVariable *, DenseSet<Function *>>;
 
 Align getAlign(const DataLayout &DL, const GlobalVariable *GV);
 
+// Get the synthetic aperture number for the given address space, or None (0)
+// if the address space does not have one.
+unsigned tryGetSyntheticApertureNumber(unsigned AS);
+
 // Copy metadata onto a load widened to read a superset of Source's bytes. Only
 // value-independent metadata is copied; metadata describing the loaded value
 // (!range, !noundef, !nofpclass, !tbaa, ...) is dropped.

@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSelectionDAGInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
@@ -9200,6 +9201,23 @@ SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
                                              SelectionDAG &DAG) const {
+  unsigned BaseAS = AS;
+  unsigned SANum = AMDGPU::tryGetSyntheticApertureNumber(AS);
+  if (SANum != AMDGPU::SyntheticAperture::None)
+    BaseAS = AMDGPUAS::LOCAL_ADDRESS;
+
+  SDValue Aperture = getBaseSegmentAperture(BaseAS, DL, DAG);
+
+  if (SANum != AMDGPU::SyntheticAperture::None) {
+    SDValue Tag = DAG.getConstant(SANum, DL, MVT::i32);
+    return DAG.getNode(ISD::OR, DL, MVT::i32, Aperture, Tag);
+  }
+
+  return Aperture;
+}
+
+SDValue SITargetLowering::getBaseSegmentAperture(unsigned AS, const SDLoc &DL,
+                                                 SelectionDAG &DAG) const {
   const bool IsLDS = (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::BARRIER);
 
   if (Subtarget->hasApertureRegs()) {
@@ -9316,11 +9334,6 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
                 DAG.getRegister(AMDGPU::SRC_FLAT_SCRATCH_BASE_LO, MVT::i32)),
             0);
         Ptr = DAG.getNode(ISD::SUB, SL, MVT::i32, Ptr, FlatScratchBaseLo);
-      } else if (DestAS == AMDGPUAS::BARRIER) {
-        // flat -> barrier: sub the barrier AS offset.
-        Ptr = DAG.getNode(
-            ISD::SUB, SL, MVT::i32, Ptr,
-            DAG.getConstant(AMDGPUAS::BarrierAddrLDSOffset, SL, MVT::i32));
       }
 
       if (IsNonNull || isKnownNonNull(Op, DAG, TM, SrcAS))
@@ -9371,18 +9384,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
       } else {
         SDValue Aperture = getSegmentAperture(SrcAS, SL, DAG);
 
-        if (SrcAS == AMDGPUAS::BARRIER) {
-          // barrier -> flat: add the barrier AS offset.
-          SDValue SrcOffset = DAG.getNode(
-              ISD::ADD, SL, MVT::i32, Src,
-              DAG.getConstant(AMDGPUAS::BarrierAddrLDSOffset, SL, MVT::i32));
-          CvtPtr = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, SrcOffset,
-                               Aperture);
-        } else {
-          CvtPtr =
-              DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Src, Aperture);
-        }
-
+        CvtPtr = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32, Src, Aperture);
         CvtPtr = DAG.getNode(ISD::BITCAST, SL, MVT::i64, CvtPtr);
       }
 

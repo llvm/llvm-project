@@ -32,6 +32,15 @@ Align getAlign(const DataLayout &DL, const GlobalVariable *GV) {
                                        GV->getValueType());
 }
 
+unsigned tryGetSyntheticApertureNumber(unsigned AS) {
+  switch (AS) {
+  case AMDGPUAS::BARRIER:
+    return SyntheticAperture::BARRIER;
+  default:
+    return SyntheticAperture::None;
+  }
+}
+
 void copyMetadataForWidenedLoad(LoadInst &Dest, const LoadInst &Source) {
   SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
   Source.getAllMetadata(MD);
