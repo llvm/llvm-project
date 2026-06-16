@@ -552,11 +552,9 @@ static void setZosTargetVersion(const Driver &D, llvm::Triple &Target,
                                 StringRef ArgTarget) {
 
   static bool BeSilent = false;
-  auto IsTooOldToBeSupported = [](int v, int r) -> bool {
-    return ((v < 2) || ((v == 2) && (r < 4)));
-  };
+  auto IsTooOldToBeSupported = [](int v, int r) -> bool { return v < 3; };
 
-  /* expect CURRENT, zOSV2R[45], or 0xnnnnnnnn */
+  /* expect CURRENT, zOSVnRn, or 0xnnnnnnnn */
   if (ArgTarget.equals_insensitive("CURRENT")) {
     /* If the user gives CURRENT, then we rely on the LE to set   */
     /* __TARGET_LIB__.  There's nothing more we need to do.       */
@@ -2734,7 +2732,7 @@ bool Driver::HandleImmediateArgs(Compilation &C) {
     // FIXME: Remove when darwin's toolchain is initialized during construction.
     // FIXME: For some more esoteric targets the default toolchain is not the
     //        correct one.
-    C.getArgsForToolChain(&TC, Triple.getArchName(), Action::OFK_None);
+    C.getArgsForToolChain(&TC, Triple.getArchName(), Action::OFK_Host);
     RegisterEffectiveTriple TripleRAII(TC, Triple);
     switch (RLT) {
     case ToolChain::RLT_CompilerRT:
@@ -6060,7 +6058,7 @@ InputInfoList Driver::BuildJobsForActionNoCache(
     // computed. Get the default arguments for OFK_None to ensure that
     // initialization is performed before processing the offload action.
     // FIXME: Remove when darwin's toolchain is initialized during construction.
-    C.getArgsForToolChain(TC, BoundArch, Action::OFK_None);
+    C.getArgsForToolChain(TC, BoundArch, Action::OFK_Host);
 
     // The offload action is expected to be used in four different situations.
     //
