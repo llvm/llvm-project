@@ -5186,6 +5186,9 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     default:
       break;
     case Intrinsic::aarch64_gcsss: {
+      if (!Subtarget->hasGCS())
+        break;
+
       SDLoc DL(Node);
       SDValue Chain = Node->getOperand(0);
       SDValue Val = Node->getOperand(2);
