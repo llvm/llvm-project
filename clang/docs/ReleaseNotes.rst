@@ -341,7 +341,8 @@ Non-comprehensive list of changes in this release
   corresponding functions from ``<sanitizer/safestack_interface.h>`` instead.
 
 - Clang now implicitly includes ``stdc-predef.h`` for non-freestanding
-  compilations targeting musl-based Linux systems, matching GCC behavior.
+  compilations targeting musl Linux systems, and for glibc Linux sysroots
+  that provide the header, matching GCC behavior.
 
 New Compiler Flags
 ------------------
