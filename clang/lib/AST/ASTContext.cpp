@@ -12355,7 +12355,7 @@ QualType ASTContext::mergeObjCGCQualifiers(QualType LHS, QualType RHS) {
   Qualifiers RQuals = RHSCan.getLocalQualifiers();
 
   if (LQuals.withoutObjCGCAttr() != RQuals.withoutObjCGCAttr()) {
-    // Reject immediately, if anything but the GC qualifiers is different. 
+    // Reject immediately, if anything but the GC qualifiers is different.
     return {};
   }
 
