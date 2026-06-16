@@ -98,14 +98,32 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
       return true;
   }
 
-  // Treat all globals in explicit sections as small, except for the standard
-  // large sections of .lbss, .ldata, .lrodata. This reduces the risk of linking
-  // together small and large sections, resulting in small references to large
-  // data sections. The code model attribute overrides this above.
+  // Treat all globals in explicit/implicit sections as small, except for the
+  // standard large sections of .lbss, .ldata, .lrodata. This reduces the risk
+  // of linking together small and large sections, resulting in small
+  // references to large data sections. The code model attribute overrides this
+  // above.
+  StringRef SectionName;
   if (GV->hasSection()) {
-    StringRef Name = GV->getSection();
-    return IsPrefix(Name, ".lbss") || IsPrefix(Name, ".ldata") ||
-           IsPrefix(Name, ".lrodata");
+    SectionName = GV->getSection();
+  } else if (GV->hasImplicitSection()) {
+    SectionKind Kind = TargetLoweringObjectFile::getKindForGlobal(GV, *this);
+    auto Attrs = GV->getAttributes();
+    if (Attrs.hasAttribute("bss-section") && Kind.isBSS()) {
+      SectionName = Attrs.getAttribute("bss-section").getValueAsString();
+    } else if (Attrs.hasAttribute("rodata-section") && Kind.isReadOnly()) {
+      SectionName = Attrs.getAttribute("rodata-section").getValueAsString();
+    } else if (Attrs.hasAttribute("relro-section") &&
+               Kind.isReadOnlyWithRel()) {
+      SectionName = Attrs.getAttribute("relro-section").getValueAsString();
+    } else if (Attrs.hasAttribute("data-section") && Kind.isData()) {
+      SectionName = Attrs.getAttribute("data-section").getValueAsString();
+    }
+  }
+
+  if (!SectionName.empty()) {
+    return IsPrefix(SectionName, ".lbss") || IsPrefix(SectionName, ".ldata") ||
+           IsPrefix(SectionName, ".lrodata");
   }
 
   // Respect large data threshold for medium and large code models.
