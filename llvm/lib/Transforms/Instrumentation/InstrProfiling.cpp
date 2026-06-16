@@ -120,7 +120,8 @@ cl::opt<bool> AtomicCounterUpdateAll(
 
 cl::opt<bool> VerifyAtomicPromotion(
     "verify-atomic-counter-promoted",
-    cl::desc("Check that all profile counter updates were made atomic"),
+    cl::desc("Check that all profile counter updates were made atomic; no-op "
+             "if atomic updates are not requested (-fprofile-update=atomic)"),
     cl::init(false));
 
 cl::opt<bool> AtomicCounterUpdatePromoted(
@@ -927,7 +928,7 @@ static void doAtomicPromotionCheck(Function *F) {
     if (Addr && Addr->stripInBoundsOffsets()->getName().starts_with(
                     getInstrProfCountersVarPrefix())) {
       LLVM_DEBUG(dbgs() << "Missed candidate: "; I.dump());
-      assert(false && "Candidate load/store not converted to atomic");
+      report_fatal_error("Candidate load/store not converted to atomic");
     }
   }
 }
