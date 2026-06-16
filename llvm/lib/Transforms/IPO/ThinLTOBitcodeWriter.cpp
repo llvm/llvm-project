@@ -53,9 +53,8 @@ void promoteInternals(Module &ExportM, Module &ImportM, StringRef ModuleId,
       continue;
 
     auto Name = ExportGV.getName();
-    GlobalValue *ImportGV = nullptr;
+    GlobalValue *ImportGV = ImportM.getNamedValue(Name);
     if (!PromoteExtra.count(&ExportGV)) {
-      ImportGV = ImportM.getNamedValue(Name);
       if (!ImportGV)
         continue;
       ImportGV->removeDeadConstantUsers();
