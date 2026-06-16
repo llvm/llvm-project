@@ -60,13 +60,7 @@ define void @vhsubw_h_b(ptr %a, ptr %b, ptr %r) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vpickod.b $vr0, $vr0, $vr0
-; CHECK-NEXT:    vpickev.b $vr1, $vr1, $vr1
-; CHECK-NEXT:    vslti.b $vr2, $vr0, 0
-; CHECK-NEXT:    vilvl.b $vr0, $vr2, $vr0
-; CHECK-NEXT:    vslti.b $vr2, $vr1, 0
-; CHECK-NEXT:    vilvl.b $vr1, $vr2, $vr1
-; CHECK-NEXT:    vsub.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vhsubw.h.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a2, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -88,13 +82,7 @@ define void @vhsubw_w_h(ptr %a, ptr %b, ptr %r) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vpickod.h $vr0, $vr0, $vr0
-; CHECK-NEXT:    vpickev.h $vr1, $vr1, $vr1
-; CHECK-NEXT:    vslti.h $vr2, $vr0, 0
-; CHECK-NEXT:    vilvl.h $vr0, $vr2, $vr0
-; CHECK-NEXT:    vslti.h $vr2, $vr1, 0
-; CHECK-NEXT:    vilvl.h $vr1, $vr2, $vr1
-; CHECK-NEXT:    vsub.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vhsubw.w.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a2, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -116,13 +104,7 @@ define void @vhsubw_d_w(ptr %a, ptr %b, ptr %r) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 13
-; CHECK-NEXT:    vshuf4i.w $vr1, $vr1, 8
-; CHECK-NEXT:    vslti.w $vr2, $vr0, 0
-; CHECK-NEXT:    vilvl.w $vr0, $vr2, $vr0
-; CHECK-NEXT:    vslti.w $vr2, $vr1, 0
-; CHECK-NEXT:    vilvl.w $vr1, $vr2, $vr1
-; CHECK-NEXT:    vsub.d $vr0, $vr0, $vr1
+; CHECK-NEXT:    vhsubw.d.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a2, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -142,12 +124,7 @@ define void @vhsubw_hu_bu(ptr %a, ptr %b, ptr %r) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
-; CHECK-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI4_0)
-; CHECK-NEXT:    vrepli.b $vr3, 0
-; CHECK-NEXT:    vpackod.b $vr0, $vr3, $vr0
-; CHECK-NEXT:    vshuf.b $vr1, $vr3, $vr1, $vr2
-; CHECK-NEXT:    vsub.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vhsubw.hu.bu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a2, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -169,12 +146,7 @@ define void @vhsubw_wu_hu(ptr %a, ptr %b, ptr %r) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; CHECK-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI5_0)
-; CHECK-NEXT:    vrepli.b $vr3, 0
-; CHECK-NEXT:    vpackod.h $vr0, $vr3, $vr0
-; CHECK-NEXT:    vshuf.h $vr2, $vr3, $vr1
-; CHECK-NEXT:    vsub.w $vr0, $vr0, $vr2
+; CHECK-NEXT:    vhsubw.wu.hu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a2, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -196,12 +168,7 @@ define void @vhsubw_du_wu(ptr %a, ptr %b, ptr %r) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI6_0)
-; CHECK-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI6_0)
-; CHECK-NEXT:    vrepli.b $vr3, 0
-; CHECK-NEXT:    vpackod.w $vr0, $vr3, $vr0
-; CHECK-NEXT:    vshuf.w $vr2, $vr3, $vr1
-; CHECK-NEXT:    vsub.d $vr0, $vr0, $vr2
+; CHECK-NEXT:    vhsubw.du.wu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a2, 0
 ; CHECK-NEXT:    ret
 entry:

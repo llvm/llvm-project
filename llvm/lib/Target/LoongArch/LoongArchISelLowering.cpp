@@ -5998,7 +5998,10 @@ performHorizWideningCombine(SDNode *N, SelectionDAG &DAG,
   EVT SrcVT = LHSVec.getValueType();
   EVT SrcEltVT = SrcVT.getVectorElementType();
   EVT DstEltVT = VT.getVectorElementType();
+  auto &TLI = DAG.getTargetLoweringInfo();
 
+  if (!TLI.isTypeLegal(VT) || !TLI.isTypeLegal(SrcVT))
+    return SDValue();
   if (!SrcVT.isVector() || !VT.isVector())
     return SDValue();
   if (SrcVT.getSizeInBits() != VT.getSizeInBits())
