@@ -175,6 +175,8 @@ public:
   /// List of blocks we're currently running either constructors or destructors
   /// for.
   llvm::SmallVector<const Block *> InitializingBlocks;
+  // FIXME: We clearly dont' need two lists here, just one is enough.
+  llvm::SmallVector<PtrView> InitializingPtrs;
 };
 
 class InterpStateCCOverride final {
