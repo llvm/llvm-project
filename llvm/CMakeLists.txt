@@ -557,6 +557,11 @@ set(LLVM_TARGETS_WITH_JIT X86 PowerPC AArch64 ARM Mips SystemZ)
 option(EJIT_TRIM_LLVM_BACKEND "Trim LLVM backend pieces used by EJIT: disable heavyweight debug info, GlobalISel, and optional AArch64 SME/SVE passes" OFF)
 if(EJIT_TRIM_LLVM_BACKEND)
   add_definitions(-DEJIT_TRIM_LLVM_BACKEND)
+  # When trimming for AArch64, exclude non-AArch64 JITLink/ELF backends.
+  # On X86 builds keep the X86 ELF dispatch intact.
+  if(LLVM_TARGETS_TO_BUILD STREQUAL "AArch64")
+    add_definitions(-DEJIT_TRIM_JITLINK_AARCH64_ONLY)
+  endif()
 endif()
 
 option(EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL "Trim backend for bare-metal: exclude non-ELF formats, non-AArch64 targets, DWARF/CFI" OFF)
