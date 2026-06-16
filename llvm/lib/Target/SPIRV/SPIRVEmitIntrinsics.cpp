@@ -2412,6 +2412,22 @@ Instruction *SPIRVEmitIntrinsics::visitExtractValueInst(ExtractValueInst &I) {
   auto *NewI =
       B.CreateIntrinsic(Intrinsic::spv_extractv, {I.getType()}, {Args});
   replaceAllUsesWithAndErase(B, &I, NewI);
+  // If the aggregate result feeds a callsite whose aggregate params were
+  // rewritten to i32 value-ids by SPIRVPrepareFunctions, mutate it to match.
+  if (NewI->getType()->isAggregateType()) {
+    for (const Use &U : NewI->uses()) {
+      auto *CB = dyn_cast<CallBase>(U.getUser());
+      if (!CB || !CB->isArgOperand(&U))
+        continue;
+      unsigned ArgNo = CB->getArgOperandNo(&U);
+      FunctionType *FT = CB->getFunctionType();
+      if (ArgNo < FT->getNumParams() &&
+          !FT->getParamType(ArgNo)->isAggregateType()) {
+        NewI->mutateType(B.getInt32Ty());
+        break;
+      }
+    }
+  }
   return NewI;
 }
 
