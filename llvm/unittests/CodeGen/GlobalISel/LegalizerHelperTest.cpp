@@ -1435,7 +1435,6 @@ TEST_F(AArch64GISelMITest, MoreElementsAnd) {
   LI.getActionDefinitionsBuilder(TargetOpcode::G_AND)
     .legalFor({v6s32})
     .clampMinNumElements(0, s32, 6);
-  LI.getLegacyLegalizerInfo().computeTables();
 
   DummyGISelObserver Observer;
   LegalizerHelper Helper(*MF, LI, Observer, B);
@@ -1487,7 +1486,6 @@ TEST_F(AArch64GISelMITest, FewerElementsPhi) {
   LI.getActionDefinitionsBuilder(TargetOpcode::G_PHI)
     .legalFor({v2s32})
     .clampMinNumElements(0, s32, 2);
-  LI.getLegacyLegalizerInfo().computeTables();
 
   LLT PhiTy = v5s32;
   DummyGISelObserver Observer;

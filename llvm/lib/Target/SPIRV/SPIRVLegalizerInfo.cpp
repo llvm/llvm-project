@@ -545,7 +545,6 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_FENCE).alwaysLegal();
   getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP, G_UBSANTRAP}).alwaysLegal();
 
-  getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
 

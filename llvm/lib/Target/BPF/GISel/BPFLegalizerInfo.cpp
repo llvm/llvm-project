@@ -17,5 +17,4 @@ using namespace llvm;
 using namespace LegalizeActions;
 
 BPFLegalizerInfo::BPFLegalizerInfo(const BPFSubtarget &ST) {
-  getLegacyLegalizerInfo().computeTables();
 }
