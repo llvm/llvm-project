@@ -5,5 +5,7 @@ lldbinline.MakeInlineTest(
     __file__,
     globals(),
     [
-        decorators.skipIfWasm,decorators.expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")],
+        decorators.skipIfWasm,
+        decorators.expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764"),
+    ],
 )
