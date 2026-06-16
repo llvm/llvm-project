@@ -3436,9 +3436,8 @@ void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
     const StackFrame *SF = I->getStackFrame();
 
     SmallVector<SVal, 8> ValuesToInvalidate;
-    for (unsigned SI = 0, Count = AE->getNumSubExprs(); SI != Count; SI++) {
-      const Expr *SubExpr = AE->getSubExprs()[SI];
-      SVal SubExprVal = State->getSVal(SubExpr, SF);
+    for (const Stmt *SubExpr : AE->children()) {
+      SVal SubExprVal = State->getSVal(cast<Expr>(SubExpr), SF);
       ValuesToInvalidate.push_back(SubExprVal);
     }
 
