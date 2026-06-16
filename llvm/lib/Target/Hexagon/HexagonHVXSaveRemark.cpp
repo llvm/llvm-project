@@ -23,6 +23,7 @@
 
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -50,6 +51,17 @@ struct HexagonHVXSaveRemark : public MachineFunctionPass {
 
   HexagonHVXSaveRemark() : MachineFunctionPass(ID) {}
 
+  // Returns the number of HVX vectors represented by VReg: 2 for HvxWR
+  // (vector pair), 1 for HvxVR (single vector), 0 for non-HVX registers.
+  static unsigned hvxVecCount(Register VReg, const MachineRegisterInfo &MRI) {
+    const TargetRegisterClass *RC = MRI.getRegClass(VReg);
+    if (RC == &Hexagon::HvxWRRegClass)
+      return 2;
+    if (RC == &Hexagon::HvxVRRegClass)
+      return 1;
+    return 0;
+  }
+
   bool runOnMachineFunction(MachineFunction &MF) override {
     auto &MORE = getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
     if (!MORE.allowExtraAnalysis(DEBUG_TYPE))
@@ -62,26 +74,96 @@ struct HexagonHVXSaveRemark : public MachineFunctionPass {
     const MachineRegisterInfo &MRI = MF.getRegInfo();
     unsigned HVXLen = HST.getVectorLength();
 
+    // Compute LiveOut[B] for each block: the set of HVX virtual registers
+    // that are live on exit from B.  We use a standard backward dataflow
+    // fixed-point:
+    //
+    //   LiveIn[B]  = UEVar[B] union (LiveOut[B] - Def[B])
+    //   LiveOut[B] = union over successors S of LiveIn[S]
+    //
+    // where UEVar[B] is the set of HVX vregs that are used in B before any
+    // definition of that vreg in B (upward-exposed uses), and Def[B] is the
+    // set of HVX vregs defined in B.
+    //
+    // Because MachineBasicBlock::liveins() only contains physical registers,
+    // we cannot seed cross-block virtual register liveness from successor
+    // liveins -- we must compute it ourselves.
+
+    unsigned NumBlocks = MF.getNumBlockIDs();
+    using VRegSet = SmallSet<Register, 8>;
+
+    // Per-block UEVar and Def sets (HVX vregs only).
+    SmallVector<VRegSet, 16> UEVar(NumBlocks), BlockDef(NumBlocks);
+
+    for (const MachineBasicBlock &MBB : MF) {
+      unsigned BN = MBB.getNumber();
+      VRegSet Defs;
+      for (const MachineInstr &MI : MBB) {
+        for (const MachineOperand &MO : MI.operands()) {
+          if (!MO.isReg())
+            continue;
+          Register R = MO.getReg();
+          if (!R.isVirtual() || !hvxVecCount(R, MRI))
+            continue;
+          if (MO.isDef()) {
+            Defs.insert(R);
+          } else if (MO.isUse() && !Defs.count(R)) {
+            UEVar[BN].insert(R); // upward-exposed use
+          }
+        }
+      }
+      BlockDef[BN] = Defs;
+    }
+
+    // LiveOut[B] and LiveIn[B] maps.
+    SmallVector<VRegSet, 16> LiveOut(NumBlocks), LiveIn(NumBlocks);
+
+    // Seed LiveIn from UEVar and iterate until stable.
+    for (unsigned I = 0; I < NumBlocks; ++I)
+      LiveIn[I] = UEVar[I];
+
+    bool Changed = true;
+    while (Changed) {
+      Changed = false;
+      for (const MachineBasicBlock &MBB : MF) {
+        unsigned BN = MBB.getNumber();
+
+        // LiveOut[B] = union of LiveIn[S] for each successor S.
+        VRegSet NewLiveOut;
+        for (const MachineBasicBlock *Succ : MBB.successors())
+          for (Register R : LiveIn[Succ->getNumber()])
+            NewLiveOut.insert(R);
+
+        if (NewLiveOut != LiveOut[BN]) {
+          LiveOut[BN] = NewLiveOut;
+          Changed = true;
+        }
+
+        // LiveIn[B] = UEVar[B] union (LiveOut[B] - Def[B]).
+        VRegSet NewLiveIn = UEVar[BN];
+        for (Register R : LiveOut[BN])
+          if (!BlockDef[BN].count(R))
+            NewLiveIn.insert(R);
+
+        if (NewLiveIn != LiveIn[BN]) {
+          LiveIn[BN] = NewLiveIn;
+          Changed = true;
+        }
+      }
+    }
+
+    // Now do the backward scan over each block, seeded from LiveOut[B].
     for (const MachineBasicBlock &MBB : MF) {
       // Backward liveness scan over virtual registers.  We track which
       // virtual registers are live at each point, then at call instructions
       // count those with HVX register classes.
       //
-      // Use a SmallSet of virtual register numbers.  When walking backwards:
+      // When walking backwards:
       //   - a def removes a vreg from the live set
       //   - a use adds a vreg to the live set
-      // At each call, the live set holds vregs live AFTER the call (i.e., the
+      // At each call, the live set holds vregs live after the call (i.e., the
       // values that must survive across it and therefore need save/restore).
-      SmallSet<Register, 32> LiveVRegs;
-
-      // Seed with live-outs of the block (vregs used by successors).
-      for (const MachineBasicBlock *Succ : MBB.successors()) {
-        for (const auto &LI : Succ->liveins()) {
-          Register R = LI.PhysReg;
-          if (R.isVirtual())
-            LiveVRegs.insert(R);
-        }
-      }
+      VRegSet LiveVRegs = LiveOut[MBB.getNumber()];
 
       for (const MachineInstr &MI : llvm::reverse(MBB)) {
         if (MI.isCall()) {
@@ -89,15 +171,8 @@ struct HexagonHVXSaveRemark : public MachineFunctionPass {
           // call.  HvxVR holds one vector (HVXLen bytes); HvxWR holds two
           // (2 * HVXLen bytes).
           unsigned NumVecs = 0;
-          for (Register VReg : LiveVRegs) {
-            if (!VReg.isVirtual())
-              continue;
-            const TargetRegisterClass *RC = MRI.getRegClass(VReg);
-            if (RC == &Hexagon::HvxWRRegClass)
-              NumVecs += 2;
-            else if (RC == &Hexagon::HvxVRRegClass)
-              NumVecs += 1;
-          }
+          for (Register VReg : LiveVRegs)
+            NumVecs += hvxVecCount(VReg, MRI);
           unsigned TotalBytes = NumVecs * HVXLen;
 
           LLVM_DEBUG(dbgs() << "HVXSaveRemark: call in " << MF.getName()
