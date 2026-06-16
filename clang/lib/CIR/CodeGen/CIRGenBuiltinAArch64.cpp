@@ -2678,17 +2678,16 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return builder.createBitcast(ops[0], ty);
   }
   case NEON::BI__builtin_neon_vfma_lane_v:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AArch64 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
   case NEON::BI__builtin_neon_vfmaq_lane_v: {
     mlir::Value addend = builder.createBitcast(ops[0], ty);
     mlir::Value multiplicand = builder.createBitcast(ops[1], ty);
-    // The lane source operand is the non-quad vector, so it has half as many
-    // lanes as the quad result vector.
-    cir::VectorType sourceTy =
-        cir::VectorType::get(ty.getElementType(), ty.getSize() / 2);
+    // For vfmaq_lane, the lane source operand is the non-quad vector, so it has
+    // half as many lanes as the quad result vector. For vfma_lane, it has the
+    // same shape as the result vector.
+    cir::VectorType sourceTy = cir::VectorType::get(
+        ty.getElementType(), builtinID == NEON::BI__builtin_neon_vfmaq_lane_v
+                                 ? ty.getSize() / 2
+                                 : ty.getSize());
     mlir::Value laneSource = builder.createBitcast(ops[2], sourceTy);
     laneSource = emitNeonSplat(builder, loc, laneSource, ops[3], ty.getSize());
 

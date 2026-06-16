@@ -91,6 +91,30 @@ float64x2_t test_vfmaq_f64(float64x2_t a, float64x2_t b, float64x2_t c) {
   return vfmaq_f64(a, b, c);
 }
 
+// ALL-LABEL: @test_vfma_lane_f32(
+float32x2_t test_vfma_lane_f32(float32x2_t a, float32x2_t b, float32x2_t v) {
+// CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<2 x !cir.float>) [#cir.int<1> : !s32i, #cir.int<1> : !s32i] : !cir.vector<2 x !cir.float>
+// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>, !cir.vector<2 x !cir.float>) -> !cir.vector<2 x !cir.float>
+
+// LLVM-SAME: <2 x float> {{.*}} [[A:%.*]], <2 x float> {{.*}} [[B:%.*]], <2 x float> {{.*}} [[V:%.*]]) {{.*}} {
+// LLVM:      [[LANE:%.*]] = shufflevector <2 x float> {{.*}}, <2 x float> {{.*}}, <2 x i32> <i32 1, i32 1>
+// LLVM:      [[FMA:%.*]] = call <2 x float> @llvm.fma.v2f32(<2 x float> [[B_CAST:%.*]], <2 x float> [[LANE]], <2 x float> [[A_CAST:%.*]])
+// LLVM:      ret <2 x float> [[FMA]]
+  return vfma_lane_f32(a, b, v, 1);
+}
+
+// ALL-LABEL: @test_vfma_lane_f64(
+float64x1_t test_vfma_lane_f64(float64x1_t a, float64x1_t b, float64x1_t v) {
+// CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<1 x !cir.double>) [#cir.int<0> : !s32i] : !cir.vector<1 x !cir.double>
+// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>, !cir.vector<1 x !cir.double>) -> !cir.vector<1 x !cir.double>
+
+// LLVM-SAME: <1 x double> {{.*}} [[A:%.*]], <1 x double> {{.*}} [[B:%.*]], <1 x double> {{.*}} [[V:%.*]]) {{.*}} {
+// LLVM:      [[LANE:%.*]] = shufflevector <1 x double> {{.*}}, <1 x double> {{.*}}, <1 x i32> zeroinitializer
+// LLVM:      [[FMA:%.*]] = call <1 x double> @llvm.fma.v1f64(<1 x double> [[B_CAST:%.*]], <1 x double> [[LANE]], <1 x double> [[A_CAST:%.*]])
+// LLVM:      ret <1 x double> [[FMA]]
+  return vfma_lane_f64(a, b, v, 0);
+}
+
 // ALL-LABEL: @test_vfmaq_lane_f32(
 float32x4_t test_vfmaq_lane_f32(float32x4_t a, float32x4_t b, float32x2_t v) {
 // CIR: [[LANE:%.*]] = cir.vec.shuffle(%{{.*}}, %{{.*}} : !cir.vector<2 x !cir.float>) [#cir.int<1> : !s32i, #cir.int<1> : !s32i, #cir.int<1> : !s32i, #cir.int<1> : !s32i] : !cir.vector<4 x !cir.float>
