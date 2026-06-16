@@ -109,6 +109,15 @@ Error AttachRequestHandler::Run(const AttachRequestArguments &args) const {
       if (!dap.target.GetProcess().IsValid())
         return make_error<DAPError>(
             "attachCommands failed to attach to a process");
+
+      // If the attach commands produced a non-live session (e.g. a core file
+      // loaded via `target create --core`), report the session's stop reason
+      // instead of trying to resume it, matching the behavior of the
+      // `coreFile` attach key.
+      if (!dap.target.GetProcess().IsLiveDebugSession()) {
+        dap.stop_at_entry = true;
+        dap.is_live_session = false;
+      }
     } else if (!args.coreFile.empty()) {
       dap.target.LoadCore(args.coreFile.data(), error);
     } else if (args.gdbRemotePort != LLDB_DAP_INVALID_PORT) {

@@ -169,6 +169,7 @@ add_header(struct_tm HDR struct_tm.h)
 add_header(struct_utsname HDR struct_utsname.h)
 add_header(thrd_start_t HDR thrd_start_t.h)
 add_header(thrd_t HDR thrd_t.h DEPENDS .__thread_type)
+add_header(tm_gmtoff_t HDR tm_gmtoff_t.h)
 add_header(tss_t HDR tss_t.h)
 add_header(tss_dtor_t HDR tss_dtor_t.h)
 add_header(__atexithandler_t HDR __atexithandler_t.h)
@@ -198,6 +199,16 @@ add_header(sa_family_t HDR sa_family_t.h)
 add_header(socklen_t HDR socklen_t.h)
 add_header(struct_sockaddr HDR struct_sockaddr.h DEPENDS .sa_family_t)
 add_header(struct_sockaddr_in HDR struct_sockaddr_in.h DEPENDS .in_port_t .sa_family_t .struct_in_addr)
+add_header(
+    struct_sockaddr_in6
+  HDR
+    struct_sockaddr_in6.h
+  DEPENDS
+    .in_port_t
+    .sa_family_t
+    .struct_in6_addr
+    libc.include.llvm-libc-macros.stdint_macros
+)
 add_header(struct_sockaddr_storage HDR struct_sockaddr_storage.h DEPENDS .sa_family_t)
 add_header(struct_sockaddr_un HDR struct_sockaddr_un.h DEPENDS .sa_family_t)
 add_header(struct_iovec HDR struct_iovec.h DEPENDS .size_t)

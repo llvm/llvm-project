@@ -446,13 +446,13 @@ Status PlatformDarwin::GetModuleFromSharedCaches(
                                                        sc_uuid, sc_mode);
       else
         image_info = HostInfo::GetSharedCacheImageInfo(
-            module_spec.GetFileSpec().GetPathAsConstString(), sc_uuid, sc_mode);
+            ConstString(module_spec.GetFileSpec().GetPath()), sc_uuid, sc_mode);
     }
   }
   // Fall back to looking for the file in lldb's own shared cache.
   if (!image_info.GetUUID())
     image_info = HostInfo::GetSharedCacheImageInfo(
-        module_spec.GetFileSpec().GetPathAsConstString(), sc_mode);
+        ConstString(module_spec.GetFileSpec().GetPath()), sc_mode);
 
   // If we found it and it has the correct UUID, let's proceed with
   // creating a module from the memory contents.
@@ -1310,7 +1310,7 @@ lldb_private::FileSpec PlatformDarwin::LocateExecutable(const char *basename) {
       xcode_lldb_resources.AppendPathComponent("Resources");
       if (FileSystem::Instance().Exists(xcode_lldb_resources)) {
         FileSpec dir;
-        dir.SetDirectory(xcode_lldb_resources.GetPathAsConstString());
+        dir.SetDirectory(xcode_lldb_resources.GetPath());
         g_executable_dirs.push_back(dir);
       }
     }
@@ -1323,7 +1323,7 @@ lldb_private::FileSpec PlatformDarwin::LocateExecutable(const char *basename) {
       cmd_line_lldb_resources.AppendPathComponent("Resources");
       if (FileSystem::Instance().Exists(cmd_line_lldb_resources)) {
         FileSpec dir;
-        dir.SetDirectory(cmd_line_lldb_resources.GetPathAsConstString());
+        dir.SetDirectory(cmd_line_lldb_resources.GetPath());
         g_executable_dirs.push_back(dir);
       }
     }
