@@ -966,6 +966,36 @@ Error CoverageMapping::loadFunctionRecord(
   return Error::success();
 }
 
+void CoverageMapping::mergeFrom(CoverageMapping &&Other) {
+  // Shards are produced from the same profile, so this must agree.
+  assert(!SingleByteCoverage || !Other.SingleByteCoverage ||
+         *SingleByteCoverage == *Other.SingleByteCoverage);
+  if (!SingleByteCoverage)
+    SingleByteCoverage = Other.SingleByteCoverage;
+
+  for (auto &Func : Other.Functions) {
+    auto FilenamesHash = hash_combine_range(Func.Filenames);
+    if (!RecordProvenance[FilenamesHash]
+             .insert(hash_value(StringRef(Func.Name)))
+             .second)
+      continue;
+
+    unsigned RecordIndex = Functions.size();
+    Functions.push_back(std::move(Func));
+
+    for (StringRef Filename : Functions.back().Filenames) {
+      auto &RecordIndices = FilenameHash2RecordIndices[hash_value(Filename)];
+      if (RecordIndices.empty() || RecordIndices.back() != RecordIndex)
+        RecordIndices.push_back(RecordIndex);
+    }
+  }
+
+  FuncHashMismatches.insert(
+      FuncHashMismatches.end(),
+      std::make_move_iterator(Other.FuncHashMismatches.begin()),
+      std::make_move_iterator(Other.FuncHashMismatches.end()));
+}
+
 // This function is for memory optimization by shortening the lifetimes
 // of CoverageMappingReader instances.
 Error CoverageMapping::loadFromReaders(
