@@ -14955,11 +14955,18 @@ static bool glvalueDenotesUninitStorage(const Expr *E) {
     return false;
   E = E->IgnoreParenImpCasts();
 
-  // A [[uninitialized]] variable / data member, or a subobject of one.
+  // A named entity denotes uninitialized storage if it is [[uninitialized]], or
+  // if it is a reference marked [[ref_to_uninit]] (the glvalue is its referent,
+  // which is uninitialized). A [[ref_to_uninit]] *pointer* named here denotes
+  // the pointer object itself -- which is initialized -- so it does not count.
+  auto DeclDenotesUninit = [](const ValueDecl *VD) {
+    return VD->hasAttr<CXX11UninitializedAttr>() ||
+           (VD->getType()->isReferenceType() && VD->hasAttr<RefToUninitAttr>());
+  };
   if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
-    return DRE->getDecl()->hasAttr<CXX11UninitializedAttr>();
+    return DeclDenotesUninit(DRE->getDecl());
   if (const auto *ME = dyn_cast<MemberExpr>(E))
-    return ME->getMemberDecl()->hasAttr<CXX11UninitializedAttr>() ||
+    return DeclDenotesUninit(ME->getMemberDecl()) ||
            glvalueDenotesUninitStorage(ME->getBase());
   if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
     return pointerRefersToUninitStorage(ASE->getBase());

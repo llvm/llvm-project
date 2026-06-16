@@ -40,7 +40,11 @@ void test_reference_target() {
   int &r4 = g_init;                     // OK
   int *p [[ref_to_uninit]] = &g_uninit;
   int &r5 [[ref_to_uninit]] = *p;       // OK: *p denotes uninitialized storage
-  (void)r1; (void)r2; (void)r3; (void)r4; (void)r5; (void)p;
+  // A [[ref_to_uninit]] reference is itself a source of uninitialized storage,
+  // symmetric to the [[ref_to_uninit]] pointer-copy case.
+  int &r6 [[ref_to_uninit]] = r1;       // OK: r1 refers to uninitialized memory
+  int &r7 = r1;                         // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)r1; (void)r2; (void)r3; (void)r4; (void)r5; (void)r6; (void)r7; (void)p;
 }
 
 void test_assignment() {
@@ -81,6 +85,13 @@ void test_call_arguments() {
   take_ptr(&g_init);             // OK
   take_ref(g_uninit);            // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
   take_ref(g_init);              // OK
+
+  // A [[ref_to_uninit]] reference argument matches a [[ref_to_uninit]] reference
+  // parameter, and is rejected for an unmarked one.
+  int &ru [[ref_to_uninit]] = g_uninit;
+  take_uninit_ref(ru);           // OK
+  take_ref(ru);                  // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)ru;
 
   // The worked example from paper §5.
   int a1[] = {1, 2, 3};
