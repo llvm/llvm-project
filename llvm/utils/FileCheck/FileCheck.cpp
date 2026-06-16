@@ -381,8 +381,8 @@ struct InputAnnotation {
   unsigned InputLine;
   /// The column range (inclusive boundaries) in which to mark the input line.
   /// A value of one indicates the first column of the actual input, and a
-  /// value of zero indicates the left margin.  If \c InputLastCol is 
-  /// \c UINT_MAX, the rest of the input line should be marked, and another 
+  /// value of zero indicates the left margin.  If \c InputLastCol is
+  /// \c UINT_MAX, the rest of the input line should be marked, and another
   /// \c InputAnnotation will continue it on the next line.
   unsigned InputFirstCol, InputLastCol;
   /// The marker to use.
