@@ -593,8 +593,6 @@ void BuiltinNameEmitter::EmitSignatureTable() {
 
 // Encode a range MinVersion..MaxVersion into a single bit mask that can be
 // checked against LangOpts using isOpenCLVersionContainedInMask().
-// This must be kept in sync with OpenCLVersionID in OpenCLOptions.h.
-// (Including OpenCLOptions.h here would be a layering violation.)
 static unsigned short EncodeVersions(unsigned int MinVersion,
                                      unsigned int MaxVersion) {
   unsigned short Encoded = 0;
@@ -604,7 +602,10 @@ static unsigned short EncodeVersions(unsigned int MinVersion,
     MaxVersion = UINT_MAX;
   }
 
-  unsigned VersionIDs[] = {100, 110, 120, 200, 300};
+  unsigned VersionIDs[] = {
+#define OPENCL_VERSION(VersionCode, Enumerator, BitValue) VersionCode,
+#include "clang/Basic/OpenCLVersions.def"
+  };
   for (unsigned I = 0; I < std::size(VersionIDs); I++) {
     if (VersionIDs[I] >= MinVersion && VersionIDs[I] < MaxVersion) {
       Encoded |= 1 << I;

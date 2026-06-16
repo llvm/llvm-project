@@ -1,0 +1,29 @@
+//===--- OpenCLVersions.def - OpenCL version list ---------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the list of supported OpenCL C versions.
+//
+//   OPENCL_VERSION(VersionCode, Enumerator, BitValue)
+//
+//     VersionCode - integer representation (e.g., 100 for OpenCL C 1.0).
+//     Enumerator  - OpenCLVersionID enum name.
+//     BitValue    - bitmask value for OpenCLVersionID.
+//
+
+#ifndef OPENCL_VERSION
+#error "OPENCL_VERSION macro must be defined before including this file"
+#endif
+
+OPENCL_VERSION(100, OCL_C_10, 0x01)
+OPENCL_VERSION(110, OCL_C_11, 0x02)
+OPENCL_VERSION(120, OCL_C_12, 0x04)
+OPENCL_VERSION(200, OCL_C_20, 0x08)
+OPENCL_VERSION(300, OCL_C_30, 0x10)
+OPENCL_VERSION(310, OCL_C_31, 0x20)
+
+#undef OPENCL_VERSION
