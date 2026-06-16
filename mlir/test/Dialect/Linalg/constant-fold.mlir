@@ -245,3 +245,17 @@ func.func @elementwise_nofold_multi_use_cst(%init1: tensor<4xf32>, %init2: tenso
   return %1, %2 : tensor<4xf32>, tensor<4xf32>
 }
 
+// -----
+
+// CHECK-LABEL: @elementwise_nofold_select_mixed_types
+func.func @elementwise_nofold_select_mixed_types(%init: tensor<4xi32>) -> tensor<4xi32> {
+  %cond = arith.constant dense<[true, false, true, false]> : tensor<4xi1>
+  %lhs = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+  %rhs = arith.constant dense<[5, 6, 7, 8]> : tensor<4xi32>
+  // CHECK: linalg.elementwise kind=#linalg.elementwise_kind<select>
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<select>
+    ins(%cond, %lhs, %rhs : tensor<4xi1>, tensor<4xi32>, tensor<4xi32>)
+    outs(%init : tensor<4xi32>) -> tensor<4xi32>
+  return %1 : tensor<4xi32>
+}
+

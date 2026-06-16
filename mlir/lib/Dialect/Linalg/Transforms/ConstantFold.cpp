@@ -321,9 +321,12 @@ struct FoldConstantElementwise
     if (!yieldOp || yieldOp.getNumOperands() != 1)
       return nullptr;
 
-    return [&body](const APIntOrFloatArray &inputs) -> APIntOrFloat {
-      // Map Value -> folded constant Attribute.
-      DenseMap<Value, Attribute> valueMap;
+    Value yieldedVal = yieldOp.getOperand(0);
+
+    // The lambda's lifetime is bounded by the caller which holds the LinalgOp
+    // owning this block.
+    return [&body, yieldedVal](const APIntOrFloatArray &inputs) -> APIntOrFloat {
+      llvm::SmallDenseMap<Value, Attribute, 8> valueMap;
 
       // Seed block arguments with input constant attributes.
       bool isFloat = !inputs.apFloats.empty();
@@ -353,7 +356,7 @@ struct FoldConstantElementwise
           return APIntOrFloat{std::nullopt, std::nullopt};
 
         for (auto [result, foldResult] :
-             llvm::zip(op.getResults(), foldResults)) {
+             llvm::zip_equal(op.getResults(), foldResults)) {
           if (auto attr = dyn_cast<Attribute>(foldResult)) {
             valueMap[result] = attr;
           } else {
@@ -369,8 +372,6 @@ struct FoldConstantElementwise
       }
 
       // Extract the yielded result.
-      Value yieldedVal =
-          cast<linalg::YieldOp>(body.getTerminator()).getOperand(0);
       auto it = valueMap.find(yieldedVal);
       if (it == valueMap.end())
         return APIntOrFloat{std::nullopt, std::nullopt};
