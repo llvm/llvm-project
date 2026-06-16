@@ -1641,5 +1641,5 @@ func.func @fuse_chain_after_interchanged_reduction(
 // CHECK:   memref.store %[[Y1]], %{{.*}}{{\[}}%[[I3]], %[[J3]]{{\]}} : memref<2x3xf32>
 // CHECK:   scf.reduce
 // CHECK: }
-// CHECK-NOT: scf-parallel
+// CHECK-NOT: scf.parallel
 // CHECK: return
