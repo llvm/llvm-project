@@ -9,7 +9,7 @@
 #ifndef __CLANG_HIP_INTRINSICS_H__
 #define __CLANG_HIP_INTRINSICS_H__
 
-#if __HIP__ && (defined(__AMDGPU__))
+#if __HIP__ && (defined(__HIP_DEVICE_COMPILE__))
 
 #ifndef __HIP_DEVICE__
 #error                                                                         \
@@ -70,8 +70,7 @@ __HIP_DEVICE__ __T __shfl_xor(MAYBE_UNDEF __T __var, int __lane_mask,
 // Warp synchronization
 //===----------------------------------------------------------------------===//
 
-__HIP_DEVICE__ __attribute__((convergent)) void
-__syncwarp(unsigned long long __mask = -1) {
+__HIP_DEVICE__ void __syncwarp(unsigned long long __mask = -1) {
   __scoped_atomic_thread_fence(__ATOMIC_RELEASE, __MEMORY_SCOPE_WVFRNT);
   __gpu_sync_lane(__mask);
   __scoped_atomic_thread_fence(__ATOMIC_ACQUIRE, __MEMORY_SCOPE_WVFRNT);

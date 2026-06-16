@@ -252,10 +252,6 @@ void AMDGPUTargetInfo::getTargetDefines(const LangOptions &Opts,
   else
     Builder.defineMacro("__R600__");
 
-  // The 'llvm' environment selects the upstream headers.
-  if (getTriple().getEnvironment() == llvm::Triple::LLVM)
-    Builder.defineMacro("__AMDGCN_LLVM__");
-
   // TODO: __HAS_FMAF__, __HAS_LDEXPF__, __HAS_FP64__ are deprecated and will be
   // removed in the near future.
   if (hasFMAF())

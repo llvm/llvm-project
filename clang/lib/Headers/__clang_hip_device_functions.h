@@ -9,7 +9,7 @@
 #ifndef __CLANG_HIP_DEVICE_FUNCTIONS_H__
 #define __CLANG_HIP_DEVICE_FUNCTIONS_H__
 
-#if __HIP__ && (defined(__AMDGPU__))
+#if __HIP__ && (defined(__HIP_DEVICE_COMPILE__))
 
 #ifndef __device__
 #define __host__ __attribute__((host))
@@ -21,6 +21,8 @@
 #endif
 
 #include <gpuintrin.h>
+
+#define __HIP_LLVM__ 1
 
 #pragma push_macro("__HIP_DEVICE__")
 #define __HIP_DEVICE__ static __inline__ __attribute__((device, always_inline))
@@ -273,14 +275,11 @@ __HIP_DEVICE__ int __fns(unsigned int __mask, unsigned int __base,
 // Synchronization and fences
 //===----------------------------------------------------------------------===//
 
-__HIP_DEVICE__ __attribute__((convergent)) void __syncthreads(void) {
-  __gpu_sync_threads();
-}
+__HIP_DEVICE__ void __syncthreads(void) { __gpu_sync_threads(); }
 
 template <typename __Fn>
-__HIP_DEVICE__ __attribute__((convergent)) int
-__hip_block_reduce_impl(int __val, int __init, __Fn __op) {
-  static __shared__ int __scratch[32];
+__HIP_DEVICE__ int __hip_block_reduce_impl(int __val, int __init, __Fn __op) {
+  static __attribute__((shared)) int __scratch[32];
   unsigned int __lanes = __gpu_num_lanes();
   unsigned int __nthreads = __gpu_num_threads(__GPU_X_DIM) *
                             __gpu_num_threads(__GPU_Y_DIM) *
@@ -303,19 +302,19 @@ __hip_block_reduce_impl(int __val, int __init, __Fn __op) {
   return __acc;
 }
 
-__HIP_DEVICE__ __attribute__((convergent)) int __syncthreads_count(int __pred) {
+__HIP_DEVICE__ int __syncthreads_count(int __pred) {
   unsigned long long __mask = __gpu_lane_mask();
   int __val = __builtin_popcountg(__gpu_ballot(__mask, __pred));
   return __hip_block_reduce_impl(__val, 0,
                                  [](int __a, int __b) { return __a + __b; });
 }
-__HIP_DEVICE__ __attribute__((convergent)) int __syncthreads_and(int __pred) {
+__HIP_DEVICE__ int __syncthreads_and(int __pred) {
   unsigned long long __mask = __gpu_lane_mask();
   int __val = __gpu_ballot(__mask, __pred) == __mask;
   return __hip_block_reduce_impl(__val, 1,
                                  [](int __a, int __b) { return __a & __b; });
 }
-__HIP_DEVICE__ __attribute__((convergent)) int __syncthreads_or(int __pred) {
+__HIP_DEVICE__ int __syncthreads_or(int __pred) {
   unsigned long long __mask = __gpu_lane_mask();
   int __val = __gpu_ballot(__mask, __pred) != 0ull;
   return __hip_block_reduce_impl(__val, 0,

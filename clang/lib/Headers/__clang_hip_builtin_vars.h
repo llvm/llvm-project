@@ -9,7 +9,7 @@
 #ifndef __CLANG_HIP_BUILTIN_VARS_H__
 #define __CLANG_HIP_BUILTIN_VARS_H__
 
-#if __HIP__ && (defined(__AMDGPU__))
+#if __HIP__ && (defined(__HIP_DEVICE_COMPILE__))
 
 #include <gpuintrin.h>
 
