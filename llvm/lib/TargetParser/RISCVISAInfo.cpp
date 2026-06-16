@@ -815,7 +815,10 @@ Error RISCVISAInfo::checkDependency() {
   if (Exts.count("zclsd") != 0 && Exts.count("zcf") != 0)
     return getIncompatibleError("zclsd", "zcf");
 
-  if (Exts.count("y") != 0) {
+  // In the RVY base Zcf/Zcd encodings are repurposed for capability load/store.
+  // However, in compatibility mode (using the internal "xllvmrvyipm" extension
+  // until the final syntax has been defined), they use RVE/RVI instructions.
+  if (Exts.count("y") != 0 && Exts.count("xllvmrvyipm") == 0) {
     if (XLen == 32) {
       // On RVY32 systems the zclsd/zcf encodings are used for y load/stores.
       if (Exts.count("zclsd") != 0)

@@ -185,8 +185,8 @@ def FMV_D_X : FPUnaryOp_r<0b1111001, 0b00000, 0b000, FPR64, GPR, "fmv.d.x">,
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtD] in {
-def : InstAlias<"fld $rd, (${rs1})",  (FLD FPR64:$rd,  GPR:$rs1, 0), 0>;
-def : InstAlias<"fsd $rs2, (${rs1})", (FSD FPR64:$rs2, GPR:$rs1, 0), 0>;
+def : InstAlias<"fld $rd, (${rs1})",  (FLD FPR64:$rd,  BasePtr:$rs1, 0), 0>;
+def : InstAlias<"fsd $rs2, (${rs1})", (FSD FPR64:$rs2, BasePtr:$rs1, 0), 0>;
 
 def : InstAlias<"fmv.d $rd, $rs",  (FSGNJ_D  FPR64:$rd, FPR64:$rs, FPR64:$rs)>;
 def : InstAlias<"fabs.d $rd, $rs", (FSGNJX_D FPR64:$rd, FPR64:$rs, FPR64:$rs)>;
