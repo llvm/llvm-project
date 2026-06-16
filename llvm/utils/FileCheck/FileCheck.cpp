@@ -379,10 +379,11 @@ struct InputAnnotation {
   /// be different from the starting line of the original diagnostic if
   /// !IsFirstLine.
   unsigned InputLine;
-  /// The column range (one-origin indexing, inclusive boundaries) in which to
-  /// mark the input line.  If \c InputLastCol is \c UINT_MAX, the rest of the
-  /// input line should be marked, and another \c InputAnnotation will continue
-  /// it on the next line.
+  /// The column range (inclusive boundaries) in which to mark the input line.
+  /// A value of one indicates the first column of the actual input, and a
+  /// value of zero indicates the left margin.  If \c InputLastCol is 
+  /// \c UINT_MAX, the rest of the input line should be marked, and another 
+  /// \c InputAnnotation will continue it on the next line.
   unsigned InputFirstCol, InputLastCol;
   /// The marker to use.
   MarkerStyle Marker;
@@ -506,7 +507,6 @@ private:
   Loc First;
   /// Location of the last marked character.
   Loc Last;
-  MarkerRange(Loc First, Loc Last) : First(First), Last(Last) {}
 
 public:
   /// Make an invalid range to be overwritten before being used.
