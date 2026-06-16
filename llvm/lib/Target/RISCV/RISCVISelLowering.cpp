@@ -11807,8 +11807,8 @@ static SDValue lowerIMEVSetLambdaNonZero(SDValue Op, SelectionDAG &DAG,
   if (auto *C = dyn_cast<ConstantSDNode>(Requested)) {
     uint64_t Value = C->getZExtValue();
     if (!isValidIMELambdaValue(Value))
-      report_fatal_error("invalid constant requested lambda for "
-                         "llvm.riscv.ime.vsetlambda.nonzero");
+      reportFatalUsageError("invalid constant requested lambda for "
+                            "llvm.riscv.ime.vsetlambda.nonzero");
 
     Encoded = DAG.getConstant(Log2_64(Value) + 1, DL, XLenVT);
   } else {

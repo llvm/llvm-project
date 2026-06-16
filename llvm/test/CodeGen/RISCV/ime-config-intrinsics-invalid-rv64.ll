@@ -1,10 +1,10 @@
 ; REQUIRES: riscv-registered-target
 ; RUN: split-file %s %t
-; RUN: not --crash llc -mtriple=riscv64 -mattr=+experimental-zvvmm < %t/zero.ll 2>&1 \
+; RUN: not llc -mtriple=riscv64 -mattr=+experimental-zvvmm < %t/zero.ll 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=BAD-VALUE
-; RUN: not --crash llc -mtriple=riscv64 -mattr=+experimental-zvvmm < %t/three.ll 2>&1 \
+; RUN: not llc -mtriple=riscv64 -mattr=+experimental-zvvmm < %t/three.ll 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=BAD-VALUE
-; RUN: not --crash llc -mtriple=riscv64 -mattr=+experimental-zvvmm < %t/too-large.ll 2>&1 \
+; RUN: not llc -mtriple=riscv64 -mattr=+experimental-zvvmm < %t/too-large.ll 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=BAD-VALUE
 
 ; BAD-VALUE: invalid constant requested lambda for llvm.riscv.ime.vsetlambda.nonzero
