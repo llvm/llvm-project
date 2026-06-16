@@ -8,8 +8,10 @@
 
 ; CHECK-DAG: %[[#I32:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#V16:]] = OpTypeVector %[[#I32]] 16
-; CHECK: OpPhi %[[#V16]]
-; CHECK: OpPhi %[[#V16]]
+; CHECK: %[[#PHI_LO:]] = OpPhi %[[#V16]]
+; CHECK: %[[#PHI_HI:]] = OpPhi %[[#V16]]
+; CHECK: OpCompositeExtract %[[#I32]] %[[#PHI_HI]]
+; CHECK: OpIAdd %[[#V16]] %[[#PHI_LO]]
 
 define spir_kernel void @phi_v32(ptr addrspace(1) %out, i1 %cond,
                                  <16 x i32> %a, <16 x i32> %b) {
