@@ -492,7 +492,7 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
 
     const TargetRegisterClass *RC = LSS.getIntervalRegClass(Slot);
     if (TRI.hasVGPRs(RC))
-      StackIntervals.push_back(LI.get());
+      StackIntervals.push_back(&LI);
   }
 
   sort(StackIntervals, [](const LiveInterval *A, const LiveInterval *B) {

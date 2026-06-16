@@ -291,9 +291,6 @@ class scc_member_iterator {
     return true;
   }
 
-  // NodeInfo::Group is self-referential and unionGroups follows pointers into
-  // the map values, so the map must never relocate elements after the initial
-  // population: reserve() upfront and do not insert afterwards.
   DenseMap<NodeType *, NodeInfo> NodeInfoMap;
   NodesType Nodes;
 

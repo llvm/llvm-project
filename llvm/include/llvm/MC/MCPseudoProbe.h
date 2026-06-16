@@ -69,6 +69,7 @@
 #include <string>
 #include <tuple>
 #include <type_traits>
+#include <unordered_map>
 #include <vector>
 
 namespace llvm {
@@ -339,16 +340,12 @@ class MCPseudoProbeSections {
 public:
   void addPseudoProbe(MCSymbol *FuncSym, const MCPseudoProbe &Probe,
                       const MCPseudoProbeInlineStack &InlineStack) {
-    auto &Tree = MCProbeDivisions[FuncSym];
-    if (!Tree)
-      Tree = std::make_unique<MCPseudoProbeInlineTree>();
-    Tree->addPseudoProbe(Probe, InlineStack);
+    MCProbeDivisions[FuncSym].addPseudoProbe(Probe, InlineStack);
   }
 
-  // The addresses of MCPseudoProbeInlineTree are used by the tree structure
-  // and need to be stable, so the trees are heap-allocated.
-  using MCProbeDivisionMap =
-      DenseMap<MCSymbol *, std::unique_ptr<MCPseudoProbeInlineTree>>;
+  // The addresses of MCPseudoProbeInlineTree are used by the tree structure and
+  // need to be stable.
+  using MCProbeDivisionMap = std::unordered_map<MCSymbol *, MCPseudoProbeInlineTree>;
 
 private:
   // A collection of MCPseudoProbe for each function. The MCPseudoProbes are
