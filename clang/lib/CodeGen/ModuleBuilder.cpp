@@ -385,7 +385,7 @@ llvm::Constant *CodeGenerator::GetAddrOfGlobal(GlobalDecl global,
 }
 
 llvm::Constant *CodeGenerator::GetAddrOfVTable(BaseSubobject base,
-                                               CXXRecordDecl *decl) {
+                                               const CXXRecordDecl *decl) {
   return static_cast<CodeGeneratorImpl *>(this)->GetAddrOfVTable(base, decl);
 }
 
