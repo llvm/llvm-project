@@ -2174,8 +2174,8 @@ def SubUmaxSub: GICombineRule<
    (apply (G_SUB $sub1, 0, $A), 
           (G_UMIN $root, $A, $sub1))>;
           
-// (sub 0, (min X, (sub 0, X))) --> (max X, (sub 0, X))
-def SubSminSub: GICombineRule<
+// (sub 0, (smin X, (sub 0, X))) --> (smax X, (sub 0, X))
+def NegSminNeg: GICombineRule<
    (defs root:$root),
    (match (G_SUB $sub, 0, $A),
           (G_SMIN $max, $A, $sub),
