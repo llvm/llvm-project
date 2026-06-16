@@ -131,16 +131,22 @@ int main(int, char**) {
 
 #if TEST_STD_VER >= 17
 #  ifdef __BITINT_MAXWIDTH__
+  // MSan does not track _BitInt padding bits; non-byte-aligned widths trigger
+  // false-positive use-of-uninitialized-value reports through numeric_limits.
   test_signed_bitint<32>();
   test_signed_bitint<64>();
+#    if !TEST_HAS_FEATURE(memory_sanitizer)
   test_signed_bitint<33>();
   test_signed_bitint<63>();
   test_signed_bitint<65>();
+#    endif
 #    if __BITINT_MAXWIDTH__ >= 128
   test_signed_bitint<128>();
 #    endif
 #    if __BITINT_MAXWIDTH__ >= 256
+#      if !TEST_HAS_FEATURE(memory_sanitizer)
   test_signed_bitint<129>();
+#      endif
   test_signed_bitint<256>();
 
   // Large value: |-2^200| == 2^200.
