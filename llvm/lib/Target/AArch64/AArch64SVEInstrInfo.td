@@ -4539,6 +4539,15 @@ defm STNT1D_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1d", 0b11, 0b1, ZZZZ_d_mul_r>;
 
 multiclass store_pn_x2<ValueType Ty, SDPatternOperator Store,
                         Instruction RegImmInst> {
+  let AddedComplexity = 1 in {
+    // scalar + immediate (mul vl)
+    def : Pat<(Store Ty:$vec0, Ty:$vec1, aarch64svcount:$PNg,
+                (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset)),
+              (RegImmInst (REG_SEQUENCE ZPR2Mul2, Ty:$vec0, zsub0, Ty:$vec1, zsub1),
+                          PNR:$PNg, GPR64:$base, simm4s1:$offset)>;
+  }
+
+  // base
   def : Pat<(Store Ty:$vec0, Ty:$vec1, aarch64svcount:$PNg, GPR64:$base),
             (RegImmInst (REG_SEQUENCE ZPR2Mul2, Ty:$vec0, zsub0, Ty:$vec1, zsub1),
                          PNR:$PNg, GPR64:$base, (i64 0))>;
@@ -4564,6 +4573,16 @@ defm : store_pn_x2<nxv2f64, int_aarch64_sve_stnt1_pn_x2, STNT1D_2Z_IMM>;
 
 multiclass store_pn_x4<ValueType Ty, SDPatternOperator Store,
                         Instruction RegImmInst> {
+  let AddedComplexity = 1 in {
+    // scalar + immediate (mul vl)
+    def : Pat<(Store Ty:$vec0, Ty:$vec1, Ty:$vec2, Ty:$vec3, aarch64svcount:$PNg,
+                (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset)),
+              (RegImmInst (REG_SEQUENCE ZPR4Mul4, Ty:$vec0, zsub0, Ty:$vec1, zsub1,
+                                                  Ty:$vec2, zsub2, Ty:$vec3, zsub3),
+                          PNR:$PNg, GPR64:$base, simm4s1:$offset)>;
+  }
+
+  // base
   def : Pat<(Store Ty:$vec0, Ty:$vec1, Ty:$vec2, Ty:$vec3, aarch64svcount:$PNg, GPR64:$base),
             (RegImmInst (REG_SEQUENCE ZPR4Mul4, Ty:$vec0, zsub0, Ty:$vec1, zsub1,
                                                 Ty:$vec2, zsub2, Ty:$vec3, zsub3),
@@ -4878,14 +4897,14 @@ let Predicates = [HasSVE2p3_or_SME2p3] in {
   defm SQSHRN_Z2ZI_StoH   : sve_multi_vec_shift_narrow<"sqshrn",   0b000, int_aarch64_sve_sqshrn_x2>;
   defm UQSHRN_Z2ZI_StoH   : sve_multi_vec_shift_narrow<"uqshrn",   0b010, int_aarch64_sve_uqshrn_x2>;
 
-  defm LUTI6_Z2ZZI : sve2_luti6_vector_index<"luti6">;
+  defm LUTI6_Z2ZZI : sve2_luti6_vector_index<"luti6", int_aarch64_sve_luti6_lane_x2>;
 } // End HasSME2p3orSVE2p3
 
 //===----------------------------------------------------------------------===//
 // SVE2.3 instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasSVE2p3] in {
-  def LUTI6_Z2ZZ : sve2_luti6_vector<"luti6">;
+  defm LUTI6_Z2ZZ : sve2_luti6_vector<"luti6", int_aarch64_sve_luti6>;
 }
 
 //===----------------------------------------------------------------------===//

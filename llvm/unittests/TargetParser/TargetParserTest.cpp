@@ -1171,6 +1171,7 @@ INSTANTIATE_TEST_SUITE_P(
                       AArch64CPUTestParams("thunderxt83", "armv8-a"),
                       AArch64CPUTestParams("thunderxt88", "armv8-a"),
                       AArch64CPUTestParams("tsv110", "armv8.2-a"),
+                      AArch64CPUTestParams("hip12", "armv8.7-a"),
                       AArch64CPUTestParams("a64fx", "armv8.2-a"),
                       AArch64CPUTestParams("fujitsu-monaka", "armv9.3-a"),
                       AArch64CPUTestParams("carmel", "armv8.2-a"),

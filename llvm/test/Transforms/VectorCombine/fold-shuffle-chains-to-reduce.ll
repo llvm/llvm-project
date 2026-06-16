@@ -303,3 +303,137 @@ define i32 @test_no_partial_reduce_v6i32_add(<6 x i32> %a) {
   %r = extractelement <6 x i32> %a2, i64 0
   ret i32 %r
 }
+
+; FADD with reassoc - should fold to vector.reduce.fadd
+define float @test_reduce_v8f32_fadd(<8 x float> %a0) {
+; CHECK-LABEL: define float @test_reduce_v8f32_fadd(
+; CHECK-SAME: <8 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[A0]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %1 = shufflevector <8 x float> %a0, <8 x float> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+  %2 = fadd reassoc <8 x float> %a0, %1
+  %3 = shufflevector <8 x float> %2, <8 x float> poison, <8 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %4 = fadd reassoc <8 x float> %2, %3
+  %5 = shufflevector <8 x float> %4, <8 x float> poison, <8 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %6 = fadd reassoc <8 x float> %4, %5
+  %7 = extractelement <8 x float> %6, i64 0
+  ret float %7
+}
+
+; FADD with reassoc+nsz+nnan - should fold preserving flags
+define float @test_reduce_v4f32_fadd_flags(<4 x float> %a0) {
+; CHECK-LABEL: define float @test_reduce_v4f32_fadd_flags(
+; CHECK-SAME: <4 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nnan nsz float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[A0]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %1 = shufflevector <4 x float> %a0, <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+  %2 = fadd reassoc nnan nsz <4 x float> %a0, %1
+  %3 = shufflevector <4 x float> %2, <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %4 = fadd reassoc nnan nsz <4 x float> %2, %3
+  %5 = extractelement <4 x float> %4, i64 0
+  ret float %5
+}
+
+; FMUL with reassoc - should fold to vector.reduce.fmul
+define float @test_reduce_v4f32_fmul(<4 x float> %a0) {
+; CHECK-LABEL: define float @test_reduce_v4f32_fmul(
+; CHECK-SAME: <4 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc float @llvm.vector.reduce.fmul.v4f32(float 1.000000e+00, <4 x float> [[A0]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %1 = shufflevector <4 x float> %a0, <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+  %2 = fmul reassoc <4 x float> %a0, %1
+  %3 = shufflevector <4 x float> %2, <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %4 = fmul reassoc <4 x float> %2, %3
+  %5 = extractelement <4 x float> %4, i64 0
+  ret float %5
+}
+
+; Double type FADD with reassoc
+define double @test_reduce_v4f64_fadd(<4 x double> %a0) {
+; CHECK-LABEL: define double @test_reduce_v4f64_fadd(
+; CHECK-SAME: <4 x double> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[A0]])
+; CHECK-NEXT:    ret double [[TMP1]]
+;
+  %1 = shufflevector <4 x double> %a0, <4 x double> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+  %2 = fadd reassoc <4 x double> %a0, %1
+  %3 = shufflevector <4 x double> %2, <4 x double> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %4 = fadd reassoc <4 x double> %2, %3
+  %5 = extractelement <4 x double> %4, i64 0
+  ret double %5
+}
+
+; Negative test: FADD without reassoc - should NOT fold
+define float @test_no_reduce_v4f32_fadd_no_reassoc(<4 x float> %a0) {
+; CHECK-LABEL: define float @test_no_reduce_v4f32_fadd_no_reassoc(
+; CHECK-SAME: <4 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A0]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[A0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x float> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP4]], i64 0
+; CHECK-NEXT:    ret float [[TMP5]]
+;
+  %1 = shufflevector <4 x float> %a0, <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+  %2 = fadd <4 x float> %a0, %1
+  %3 = shufflevector <4 x float> %2, <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %4 = fadd <4 x float> %2, %3
+  %5 = extractelement <4 x float> %4, i64 0
+  ret float %5
+}
+
+; Negative test: FMUL without reassoc - should NOT fold
+define float @test_no_reduce_v4f32_fmul_no_reassoc(<4 x float> %a0) {
+; CHECK-LABEL: define float @test_no_reduce_v4f32_fmul_no_reassoc(
+; CHECK-SAME: <4 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A0]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x float> [[A0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <4 x float> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP4]], i64 0
+; CHECK-NEXT:    ret float [[TMP5]]
+;
+  %1 = shufflevector <4 x float> %a0, <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+  %2 = fmul <4 x float> %a0, %1
+  %3 = shufflevector <4 x float> %2, <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %4 = fmul <4 x float> %2, %3
+  %5 = extractelement <4 x float> %4, i64 0
+  ret float %5
+}
+
+; Negative test: FADD with partial reassoc (only on one binop) - should NOT fold
+define float @test_no_reduce_v4f32_fadd_partial_reassoc(<4 x float> %a0) {
+; CHECK-LABEL: define float @test_no_reduce_v4f32_fadd_partial_reassoc(
+; CHECK-SAME: <4 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[A0]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[A0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc <4 x float> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP4]], i64 0
+; CHECK-NEXT:    ret float [[TMP5]]
+;
+  %1 = shufflevector <4 x float> %a0, <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+  %2 = fadd <4 x float> %a0, %1
+  %3 = shufflevector <4 x float> %2, <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %4 = fadd reassoc <4 x float> %2, %3
+  %5 = extractelement <4 x float> %4, i64 0
+  ret float %5
+}
+
+; FADD with different FMF on each binop - output should have intersection
+define float @test_reduce_v4f32_fadd_fmf_intersect(<4 x float> %a0) {
+; CHECK-LABEL: define float @test_reduce_v4f32_fadd_fmf_intersect(
+; CHECK-SAME: <4 x float> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc nnan float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[A0]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %1 = shufflevector <4 x float> %a0, <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+  %2 = fadd reassoc nnan nsz <4 x float> %a0, %1
+  %3 = shufflevector <4 x float> %2, <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
+  %4 = fadd reassoc nnan <4 x float> %2, %3
+  %5 = extractelement <4 x float> %4, i64 0
+  ret float %5
+}

@@ -3370,7 +3370,8 @@ Error BitcodeReader::parseConstants() {
     case bitc::CST_CODE_BYTE: // BYTE: [byteval]
       if (!CurTy->isByteOrByteVectorTy() || Record.empty())
         return error("Invalid byte const record");
-      V = ConstantByte::get(CurTy, decodeSignRotatedValue(Record[0]));
+      V = ConstantByte::get(CurTy, decodeSignRotatedValue(Record[0]),
+                            /*isSigned=*/true);
       break;
     case bitc::CST_CODE_WIDE_BYTE: { // WIDE_BYTE: [n x byteval]
       if (!CurTy->isByteOrByteVectorTy() || Record.empty())
@@ -7152,6 +7153,17 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         auto It = UpgradedIntrinsics.find(OldFn);
         if (It != UpgradedIntrinsics.end())
           UpgradeIntrinsicCall(CI, It->second);
+      }
+    } else if (auto *BC = dyn_cast<BitCastInst>(&I);
+               BC && BC->getSrcTy() == BC->getDestTy() &&
+               isa_and_nonnull<ReturnInst>(BC->getNextNode())) {
+      // Old bitcode allowed an optional bitcast between a musttail call and its
+      // return. Under opaque pointers that cast is always a no-op, and the
+      // verifier no longer accepts it, so drop it.
+      if (auto *CI = dyn_cast<CallInst>(BC->getOperand(0));
+          CI && CI->isMustTailCall() && CI->getNextNode() == BC) {
+        BC->replaceAllUsesWith(CI);
+        BC->eraseFromParent();
       }
     }
   }

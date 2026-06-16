@@ -231,7 +231,6 @@ struct SlotWithTag {
 
 namespace llvm {
 template <> struct DenseMapInfo<SlotWithTag> {
-  static inline SlotWithTag getEmptyKey() { return {-2, -2}; }
   static unsigned getHashValue(const SlotWithTag &V) {
     return hash_combine(DenseMapInfo<int>::getHashValue(V.FI),
                         DenseMapInfo<int>::getHashValue(V.Tag));

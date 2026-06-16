@@ -918,7 +918,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
     MemOpsProcessed++;
 
     // Always add dependecy edge to BarrierChain if present.
-    if (BarrierChain)
+    if (BarrierChain && BarrierChain != SU)
       BarrierChain->addPredBarrier(SU);
 
     // Reduce maps if they grow huge.
