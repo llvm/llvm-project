@@ -392,8 +392,7 @@ Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
     }
 
     if (P.isBaseClass()) {
-      if (P.getRecord()->getNumVirtualBases() > 0)
-        Result += P.getInlineDesc()->Offset;
+      Result += P.getInlineDesc()->Offset - sizeof(InlineDescriptor);
       P = P.getBase();
       continue;
     }
