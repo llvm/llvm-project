@@ -2650,8 +2650,9 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case X86::JCC_1:
     // Two instruction prefixes (2EH for branch not-taken and 3EH for branch
-    // taken) are used as branch hints. Here we add branch taken prefix for
-    // jump instruction with higher probability than threshold.
+    // taken) are used as branch hints. Emit DS (taken) when the branch target
+    // edge probability exceeds the threshold, or CS (not-taken) when it falls
+    // below the complement of the threshold (i.e. fall-through is likely).
     if (getSubtarget().hasBranchHint() && EnableBranchHint) {
       const MachineBranchProbabilityInfo *MBPI =
           &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
@@ -2661,6 +2662,8 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
       BranchProbability Threshold(BranchHintProbabilityThreshold, 100);
       if (EdgeProb > Threshold)
         EmitAndCountInstruction(MCInstBuilder(X86::DS_PREFIX));
+      else if (EdgeProb < Threshold.getCompl())
+        EmitAndCountInstruction(MCInstBuilder(X86::CS_PREFIX));
     }
     break;
 

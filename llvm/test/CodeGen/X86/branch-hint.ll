@@ -3,10 +3,9 @@
 ; RUN: llc < %s -mtriple=x86_64 -mattr=+branch-hint -enable-branch-hint -branch-hint-probability-threshold=50 | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64 -mattr=+branch-hint -enable-branch-hint -branch-hint-probability-threshold=60 -tail-dup-placement=false | FileCheck --check-prefix=TH60 %s
 
-
-; Design: Add DS segment override prefix for condition branch who has high
-; probability to take (which is greater than the probability threshold of
-; enabling branch hint).
+; Design: Add DS segment override prefix for condition branch with high
+; probability to take (greater than threshold), or CS prefix when the
+; fall-through is the likely path (taken probability below 1-threshold).
 
 define void @p51(i32 %x, ptr %p) {
 ; CHECK-LABEL: p51:
@@ -39,10 +38,11 @@ if.end:
   ret void
 }
 
-define void @p61(i32 %x, ptr %p) {
-; CHECK-LABEL: p61:
+define void @p52(i32 %x, ptr %p) {
+; CHECK-LABEL: p52:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    cs
 ; CHECK-NEXT:    jne .LBB1_1
 ; CHECK-NEXT:  # %bb.2: # %if.end
 ; CHECK-NEXT:    retq
@@ -50,10 +50,9 @@ define void @p61(i32 %x, ptr %p) {
 ; CHECK-NEXT:    movl %edi, (%rsi)
 ; CHECK-NEXT:    retq
 ;
-; TH60-LABEL: p61:
+; TH60-LABEL: p52:
 ; TH60:       # %bb.0: # %entry
 ; TH60-NEXT:    testl %edi, %edi
-; TH60-NEXT:    ds
 ; TH60-NEXT:    je .LBB1_2
 ; TH60-NEXT:  # %bb.1: # %if.then
 ; TH60-NEXT:    movl %edi, (%rsi)
@@ -71,5 +70,39 @@ if.end:
   ret void
 }
 
+define void @p61(i32 %x, ptr %p) {
+; CHECK-LABEL: p61:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    cs
+; CHECK-NEXT:    jne .LBB2_1
+; CHECK-NEXT:  # %bb.2: # %if.end
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB2_1: # %if.then
+; CHECK-NEXT:    movl %edi, (%rsi)
+; CHECK-NEXT:    retq
+;
+; TH60-LABEL: p61:
+; TH60:       # %bb.0: # %entry
+; TH60-NEXT:    testl %edi, %edi
+; TH60-NEXT:    ds
+; TH60-NEXT:    je .LBB2_2
+; TH60-NEXT:  # %bb.1: # %if.then
+; TH60-NEXT:    movl %edi, (%rsi)
+; TH60-NEXT:  .LBB2_2: # %if.end
+; TH60-NEXT:    retq
+entry:
+  %tobool.not = icmp eq i32 %x, 0
+  br i1 %tobool.not, label %if.end, label %if.then, !prof !2
+
+if.then:
+  store i32 %x, ptr %p, align 4
+  br label %if.end
+
+if.end:
+  ret void
+}
+
 !0 = !{!"branch_weights", i32 51, i32 49}
-!1 = !{!"branch_weights", i32 61, i32 39}
+!1 = !{!"branch_weights", i32 52, i32 48}
+!2 = !{!"branch_weights", i32 61, i32 39}
