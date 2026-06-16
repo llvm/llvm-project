@@ -1404,3 +1404,22 @@ namespace InvalidOMPRequiredSimdAlign {
   typedef decltype(sizeof(int)) T;
   constexpr T foo(T x) { return __builtin_omp_required_simd_align * 42; } // both-error {{indirection requires pointer operand}}
 }
+
+namespace StoreCannotDeref {
+  constexpr void foo() { // both-error {{never produces a constant expression}}
+    int l = 10;
+    int *n = &l;
+    int *m = (int *)&n; // both-note {{cast that performs the conversions of a reinterpret_cast}}
+    *m = 42;
+  }
+}
+
+namespace FuncPtrRef {
+  const int &foo(int &&);
+  constexpr bool bullet_five_tests() {
+    using FooType = const int &(int &&);
+    FooType &fn = foo;
+    return true;
+  }
+  static_assert(bullet_five_tests());
+}

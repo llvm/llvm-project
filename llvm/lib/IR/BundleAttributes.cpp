@@ -22,6 +22,7 @@ StringRef llvm::getNameFromBundleAttr(BundleAttr BA) {
   case BundleAttr::None:
     return "none";
   }
+  llvm_unreachable("unknonwn bundle attribute");
 }
 
 BundleAttr llvm::getBundleAttrFromString(StringRef Str) {
@@ -46,6 +47,11 @@ AssumeAlignInfo llvm::getAssumeAlignInfo(OperandBundleUse OBU) {
   return Ret;
 }
 
+AssumeNoUndefInfo llvm::getAssumeNoUndefInfo(OperandBundleUse OBU) {
+  assert(OBU.getTagName() == "noundef" && OBU.Inputs.size() == 1);
+  return {OBU.Inputs[0]};
+}
+
 AssumeSeparateStorageInfo
 llvm::getAssumeSeparateStorageInfo(OperandBundleUse OBU) {
   assert(OBU.getTagName() == "separate_storage" && OBU.Inputs.size() == 2);
@@ -60,5 +66,33 @@ AssumeNonNullInfo llvm::getAssumeNonNullInfo(OperandBundleUse OBU) {
 AssumeDereferenceableInfo
 llvm::getAssumeDereferenceableInfo(OperandBundleUse OBU) {
   assert(OBU.getTagName() == "dereferenceable" && OBU.Inputs.size() == 2);
-  return {OBU.Inputs[0], OBU.Inputs[1]};
+  AssumeDereferenceableInfo Ret{OBU.Inputs[0], OBU.Inputs[1], std::nullopt};
+
+  if (auto *Size = dyn_cast<ConstantInt>(OBU.Inputs[1]))
+    Ret.CountVal = Size->getZExtValue();
+  return Ret;
+}
+
+bool llvm::assumeBundleImpliesNonNull(const Value *Val, const Function *Context,
+                                      OperandBundleUse OBU) {
+  switch (getBundleAttrFromOBU(OBU)) {
+  case BundleAttr::Align: {
+    auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
+    return Ptr == Val && Alignment && Offset && isPowerOf2_64(*Alignment) &&
+           *Offset % *Alignment != 0;
+  }
+
+  case BundleAttr::Dereferenceable: {
+    auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
+    return Ptr == Val && Count && *Count != 0 &&
+           !NullPointerIsDefined(Context,
+                                 Val->getType()->getPointerAddressSpace());
+  }
+
+  case BundleAttr::NonNull:
+    return getAssumeNonNullInfo(OBU).Ptr == Val;
+
+  default:
+    return false;
+  }
 }
