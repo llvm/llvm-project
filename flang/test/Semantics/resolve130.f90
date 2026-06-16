@@ -22,7 +22,9 @@ subroutine s2
 end
 
 ! A later declaration whose type differs from the would-be-implicit type is
-! rejected.
+! rejected.  'm' begins with a letter in I-N, so under implicit typing rules
+! its type would be default INTEGER (reported below as INTEGER(4), the default
+! integer kind on this target), which the later REAL declaration contradicts.
 !CHECK: warning: 'm' was used without (or before) being explicitly typed
 subroutine s3
   implicit none
@@ -38,4 +40,13 @@ end
 subroutine s4
   implicit none
   parameter(k=4096)
+end
+
+! Without IMPLICIT NONE(TYPE) this is not an extension: implicit typing is in
+! effect, so no forward-reference portability warning is emitted.  A later
+! declaration that contradicts the would-be-implicit type is still rejected.
+!CHECK: error: The type of 'mm' has already been implicitly declared as INTEGER(4)
+subroutine s5
+  parameter(mm=4096)
+  real mm
 end
