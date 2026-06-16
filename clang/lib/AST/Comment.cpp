@@ -233,13 +233,11 @@ void DeclInfo::fill() {
     Kind = FunctionKind;
     ParamVars = FD->parameters();
     ReturnType = FD->getReturnType();
-    TemplateParameters = FD->getTemplateSpecializationParameters();
-    if (ArrayRef<TemplateParameterList *> TPLs =
-            FD->getTemplateParameterLists();
-        !TemplateParameters && !TPLs.empty())
-      TemplateParameters = TPLs.back();
-    if (TemplateParameters)
+    ArrayRef<TemplateParameterList *> TPLs = FD->getTemplateParameterLists();
+    if (!TPLs.empty()) {
       TemplateKind = TemplateSpecialization;
+      TemplateParameters = TPLs.back();
+    }
 
     if (K == Decl::CXXMethod || K == Decl::CXXConstructor ||
         K == Decl::CXXDestructor || K == Decl::CXXConversion) {

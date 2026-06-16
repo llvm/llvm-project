@@ -134,7 +134,7 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   // Allocate memory for a local.
   auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize());
   auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, /*IsStatic=*/false);
-  B->invokeCtor();
+  B->invokeCtorNoMemset();
 
   // Initialize local variable inline descriptor.
   auto &Desc = B->getBlockDesc<InlineDescriptor>();
@@ -298,7 +298,7 @@ bool EvalEmitter::emitRetValue(SourceInfo Info) {
     return false;
 
   if (std::optional<APValue> APV =
-          Ptr.toRValue(S.getASTContext(), EvalResult.getSourceType())) {
+          Ptr.toRValue(Ctx, EvalResult.getSourceType())) {
     EvalResult.takeValue(std::move(*APV));
     return true;
   }

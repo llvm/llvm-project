@@ -2861,7 +2861,8 @@ For example:
 
     The following aspects are currently supported:
 
-    - ``float``: The call has a floating point argument
+    - ``fixed``: The call has a C ISO 18037 fixed-point argument.
+    - ``float``: The call has a floating-point argument.
 
 
 
@@ -13155,6 +13156,9 @@ the default rounding mode.
 If the ``nneg`` flag is set, and the ``uitofp`` argument is negative,
 the result is a poison value.
 
+If the '``nsz``' flag is set and the input value is 0, the sign bit of
+the result is non-deterministic.
+
 
 Example:
 """"""""
@@ -13201,6 +13205,9 @@ The '``sitofp``' instruction interprets its operand as a signed integer
 quantity and converts it to the corresponding floating-point value. If the
 value cannot be exactly represented, it is rounded using the default rounding
 mode.
+
+If the '``nsz``' flag is set and the input value is 0, the sign bit of
+the result is non-deterministic.
 
 Example:
 """"""""
@@ -14535,6 +14542,9 @@ does not define what this type is, so all transformations should be
 prepared to handle these functions regardless of the type used. The intrinsics
 are overloaded, and can be used for pointers to different address spaces.
 
+The underlying argument list is destroyed when a function returns, so
+a ``va_list`` must not outlive the function that created it.
+
 This example shows how the :ref:`va_arg <i_va_arg>` instruction and the
 variable argument handling intrinsic functions are used.
 
@@ -14631,10 +14641,13 @@ Semantics:
 
 The '``llvm.va_end``' intrinsic works just like the ``va_end`` macro
 available in C. In a target-dependent way, it destroys the ``va_list``
-element to which the argument points. Calls to
+element to which the argument points. Calls to ``llvm.va_end`` can be
+omitted when they are a no-op for the given target. ``llvm.va_end``
+is a no-op for all currently supported targets.
+
+When used, calls to ``llvm.va_end`` must be matched exactly with calls to
 :ref:`llvm.va_start <int_va_start>` and
-:ref:`llvm.va_copy <int_va_copy>` must be matched exactly with calls to
-``llvm.va_end``.
+:ref:`llvm.va_copy <int_va_copy>`.
 
 .. _int_va_copy:
 
@@ -14670,6 +14683,10 @@ available in C. In a target-dependent way, it copies the source
 ``va_list`` element into the destination ``va_list`` element. This
 intrinsic is necessary because the ``llvm.va_start`` intrinsic may be
 arbitrarily complex and require, for example, memory allocation.
+
+On targets where ``llvm.va_copy`` is equivalent to ``memcpy``, ``memcpy``
+can be used instead to duplicate a ``va_list``. ``llvm.va_copy`` is
+equivalent to ``memcpy`` on all currently supported targets.
 
 Accurate Garbage Collection Intrinsics
 --------------------------------------

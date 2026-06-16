@@ -57,7 +57,7 @@ void ppp() { B b; }
 // OGCG: @_ZTV1B = linkonce_odr constant { [3 x ptr] } { [3 x ptr] [ptr inttoptr (i64 12 to ptr), ptr null, ptr @_ZTI1B] }, comdat, align 8
 
 // CIR: cir.func {{.*}}@_Z1fv()
-// CIR:   %[[D:.+]] = cir.alloca !rec_Derived, !cir.ptr<!rec_Derived>, ["d", init]
+// CIR:   %[[D:.+]] = cir.alloca "d" {{.*}} init : !cir.ptr<!rec_Derived>
 // CIR:   cir.call @_ZN7DerivedC1Ev(%[[D]]) nothrow : (!cir.ptr<!rec_Derived> {{.*}}) -> ()
 // CIR:   %[[VPTR_PTR:.+]] = cir.vtable.get_vptr %[[D]] : !cir.ptr<!rec_Derived> -> !cir.ptr<!cir.vptr>
 // CIR:   %[[VPTR:.+]] = cir.load {{.*}} %[[VPTR_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
@@ -74,7 +74,7 @@ void ppp() { B b; }
 // CIR:   cir.return
 
 // CIR: cir.func {{.*}}@_Z1gv()
-// CIR:   %[[DF:.+]] = cir.alloca !rec_DerivedFinal, !cir.ptr<!rec_DerivedFinal>, ["df", init]
+// CIR:   %[[DF:.+]] = cir.alloca "df" {{.*}} init : !cir.ptr<!rec_DerivedFinal>
 // CIR:   cir.call @_ZN12DerivedFinalC1Ev(%[[DF]]) nothrow : (!cir.ptr<!rec_DerivedFinal> {{.*}}) -> ()
 // CIR:   %[[BASE_THIS_2:.+]] = cir.base_class_addr %[[DF]] : !cir.ptr<!rec_DerivedFinal> nonnull [0] -> !cir.ptr<!rec_Base>
 // CIR:   cir.call @_ZN4Base1fEv(%[[BASE_THIS_2]]) : (!cir.ptr<!rec_Base> {{.*}}) -> ()
@@ -114,7 +114,7 @@ void ppp() { B b; }
 
 // Constructor for B
 // CIR: cir.func {{.*}} @_ZN1BC1Ev(%arg0: !cir.ptr<!rec_B>
-// CIR:   %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!rec_B>>, ["this", init]
+// CIR:   %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_B>>
 // CIR:   cir.store %arg0, %[[THIS_ADDR]] : !cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!rec_B>>
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]] : !cir.ptr<!cir.ptr<!rec_B>>, !cir.ptr<!rec_B>
 // CIR:   %[[BASE_A_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_B> nonnull [12] -> !cir.ptr<!rec_A>
