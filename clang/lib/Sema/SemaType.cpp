@@ -6684,9 +6684,6 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
     if (S.getLangOpts().HLSL)
       ASIdx = Attr.asHLSLLangAS();
 
-    if (ASIdx == LangAS::sycl_constant)
-      S.Diag(Attr.getLoc(), diag::warn_deprecated_sycl_constant);
-
     if (ASIdx == LangAS::Default)
       llvm_unreachable("Invalid address space");
 

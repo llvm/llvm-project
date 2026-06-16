@@ -582,8 +582,9 @@ public:
     switch (getParsedKind()) {
     case ParsedAttr::AT_SYCLGlobalAddressSpace:
       return LangAS::sycl_global;
-    // TODO: OpenCLGlobalDeviceAddressSpace and OpenCLGlobalHostAddressSpace
-    // will be removed after deprecation.
+    // TODO: OpenCLGlobalDeviceAddressSpace, OpenCLGlobalHostAddressSpace,
+    // sycl_global_device, and sycl_global_host will be removed after
+    // deprecation.
     // https://discourse.llvm.org/t/rfc-remove-opencl-global-device-and-opencl-global-host-address-space-attributes/90677
     case ParsedAttr::AT_OpenCLGlobalDeviceAddressSpace:
       return LangAS::sycl_global_device;

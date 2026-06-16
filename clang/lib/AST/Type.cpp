@@ -89,9 +89,9 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
           (B == LangAS::sycl_private || B == LangAS::sycl_local ||
            B == LangAS::sycl_global || B == LangAS::sycl_global_device ||
            B == LangAS::sycl_global_host)) ||
-	 // Consider sycl_generic address space to be equivalent to default.
-	 (A == LangAS::Default && B == LangAS::sycl_generic) ||
-	 (B == LangAS::Default && A == LangAS::sycl_generic) ||
+         // Consider sycl_generic address space to be equivalent to default.
+         (A == LangAS::Default && B == LangAS::sycl_generic) ||
+         (B == LangAS::Default && A == LangAS::sycl_generic) ||
          // In HIP device compilation, any cuda address space is allowed
          // to implicitly cast into the default address space.
          (A == LangAS::Default &&

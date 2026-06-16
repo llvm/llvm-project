@@ -2007,7 +2007,8 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::SYCLGenericAddressSpace:
     // FIXME: Update printAttributedBefore to print these once we generate
     // AttributedType nodes for them.
-    break;
+    llvm_unreachable("Address space attributes handled separately");
+    ;
 
   case attr::CountedBy:
   case attr::CountedByOrNull:
@@ -2690,15 +2691,15 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
   case LangAS::sycl_global_host:
     return "__global_host";
   case LangAS::sycl_global:
-    return "sycl_global";
+    return "[[clang::sycl_global]]";
   case LangAS::sycl_local:
-    return "sycl_local";
+    return "[[clang::sycl_local]]";
   case LangAS::sycl_private:
-    return "sycl_private";
+    return "[[clang::sycl_private]]";
   case LangAS::sycl_generic:
-    return "sycl_generic";
+    return "[[clang::sycl_generic]]";
   case LangAS::sycl_constant:
-    return "sycl_constant";
+    return "[[clang::sycl_constant]]";
   case LangAS::cuda_device:
     return "__device__";
   case LangAS::cuda_constant:
