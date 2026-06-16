@@ -2416,10 +2416,27 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   llvm_unreachable("expected switch to return");
 }
 
-Register AMDGPULegalizerInfo::getSegmentAperture(
-  unsigned AS,
-  MachineRegisterInfo &MRI,
-  MachineIRBuilder &B) const {
+Register AMDGPULegalizerInfo::getSegmentAperture(unsigned AS,
+                                                 MachineRegisterInfo &MRI,
+                                                 MachineIRBuilder &B) const {
+  unsigned BaseAS = AS;
+  unsigned SANum = AMDGPU::tryGetSyntheticApertureNumber(AS);
+  if (SANum != AMDGPU::SyntheticAperture::None)
+    BaseAS = AMDGPUAS::LOCAL_ADDRESS;
+
+  Register Aperture = getBaseSegmentAperture(BaseAS, MRI, B);
+
+  if (SANum != AMDGPU::SyntheticAperture::None) {
+    const LLT S32 = LLT::scalar(32);
+    auto Tag = B.buildConstant(S32, SANum);
+    return B.buildOr(S32, Aperture, Tag).getReg(0);
+  }
+
+  return Aperture;
+}
+
+Register AMDGPULegalizerInfo::getBaseSegmentAperture(
+    unsigned AS, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
   MachineFunction &MF = B.getMF();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const LLT I32 = LLT::integer(32);
@@ -2574,17 +2591,6 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
         return B.buildIntToPtr(Dst, Sub).getReg(0);
       }
 
-      if (DestAS == AMDGPUAS::BARRIER) {
-        // flat -> barrier: extract the low 32 bits, then sub the barrier AS
-        // offset.
-        Register LoBits = B.buildExtract(S32, Src, 0).getReg(0);
-        Register Sub =
-            B.buildSub(S32, LoBits,
-                       B.buildConstant(S32, AMDGPUAS::BarrierAddrLDSOffset))
-                .getReg(0);
-        return B.buildIntToPtr(Dst, Sub).getReg(0);
-      }
-
       return B.buildExtract(Dst, Src, 0).getReg(0);
     };
 
@@ -2654,14 +2660,6 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
       Register ApertureReg = getSegmentAperture(SrcAS, MRI, B);
       if (!ApertureReg.isValid())
         return false;
-
-      if (SrcAS == AMDGPUAS::BARRIER) {
-        // barrier -> flat: add the barrier AS offset
-        SrcAsInt =
-            B.buildAdd(S32, SrcAsInt,
-                       B.buildConstant(S32, AMDGPUAS::BarrierAddrLDSOffset))
-                .getReg(0);
-      }
 
       // TODO: Should we allow mismatched types but matching sizes in merges to
       // avoid the ptrtoint?

@@ -1156,6 +1156,9 @@ supported for the ``amdgcn`` target.
   A global address space address has the same value when used as a flat address
   so no conversion is needed.
 
+  See also :ref:`synthetic apertures<amdgpu-synthetic-apertures>` which exist
+  in the generic address space.
+
 **Global and Constant**
   The global and constant address spaces both use global virtual addresses,
   which are the same virtual address space used by the CPU. However, some
@@ -1336,7 +1339,9 @@ supported for the ``amdgcn`` target.
 
 **Barrier**
   This address space represents barrier IDs (introduced in GFX12) as addresses.
-  It does not map directly to any addressable memory, thus pointers into this address space:
+  It does not map directly to any addressable memory and is implemented using
+  :ref:`synthetic apertures<amdgpu-synthetic-apertures>`, thus pointers into
+  this address space:
 
   * Never alias with any other pointers outside this address space.
   * Cannot be dereferenced.
@@ -1347,16 +1352,50 @@ supported for the ``amdgcn`` target.
   have a value corresponding to a valid barrier ID on the target.
   Otherwise, the behavior is undefined
 
-  These pointers do not have a corresponding hardware aperture but safe round-tripping
-  through the generic address space is still possible. Attempting to dereference a
-  generic pointer derived from a barrier pointer is undefined behavior.
-
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register
   file is modelled as a memory in a distinct address space because it is indexed
   by an address-like offset in place of named registers, and because register
   accesses affect LGKMcnt. This is an internal address space used only by the
   compiler. Do not use this address space for IR pointers.
+
+.. _amdgpu-synthetic-apertures:
+
+Synthetic Apertures
+~~~~~~~~~~~~~~~~~~~
+
+*Synthetic apertures* are defined that enable safe roundtrips of pointers
+from special address spaces through the generic address space. Attempting to
+dereference generic pointers obtained in this way (using e.g. `load` or
+`store`) has undefined behavior. The following synthetic apertures are defined:
+
+.. table:: AMDGPU Synthetic Apertures
+   :name: amdgpu-synthetic-apertures-table
+   :widths: 40 20 40
+
+    ============ ====== ===============================================================
+    Name         Number Corresponding :ref:`Address Space<amdgpu-address-spaces-table>`
+    ============ ====== ===============================================================
+    BARRIER      1      Barrier
+    ============ ====== ===============================================================
+
+Note that the address size of an address spaces implemented via synthetic apertures
+can only be 32 bits wide or less. The full width of the source pointer is usable and
+preserved when converting it from/to the generic address space.
+
+Converting a pointer to generic (64 bits) using synthetic apertures is done as follows:
+
+  * The value of the source pointer (32 bits) becomes the lower 32 bits of the generic pointer.
+  * The upper 32 bits are a bitwise ``OR`` of:
+
+    * The upper 32 bits of the LDS segment aperture.
+    * The synthetic aperture number.
+
+The conversion back to the original address space can simply be done by discarding the
+upper 32 bits of the generic pointer.
+
+As the LDS aperture is defined by its 16 most significant bits, we can theoretically
+support up to ``2 << 16`` synthetic apertures safely.
 
 .. _amdgpu-memory-scopes:
 
