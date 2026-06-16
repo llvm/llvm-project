@@ -64,11 +64,38 @@
 ! CHECK-TO-COMPS-SAME: -mreassociate
 ! CHECK-TO-COMPS-SAME: -freciprocal-math
 
+! Check if -ffast-math component flags can be disabled
+! RUN: %flang -ffast-math \
+! RUN:      -ffp-contract=off \
+! RUN:      -fhonor-infinities \
+! RUN:      -fhonor-nans \
+! RUN:      -fno-approx-func \
+! RUN:      -fsigned-zeros \
+! RUN:      -fno-associative-math \
+! RUN:      -fno-reciprocal-math \
+! RUN:      -fsyntax-only -### %s -o %t 2>&1 \
+! RUN:      | FileCheck --check-prefix=CHECK-TO-COMPS-DIS %s
+! CHECK-TO-COMPS-DIS: warning: overriding '-ffast-math' option with '-ffp-contract=off' [-Woverriding-option]
+! CHECK-TO-COMPS-DIS: -fc1
+! CHECK-TO-COMPS-DIS-SAME: -ffp-contract=off
+! CHECK-TO-COMPS-DIS-NOT: -menable-no-infs
+! CHECK-TO-COMPS-DIS-NOT: -menable-no-nans
+! CHECK-TO-COMPS-DIS-NOT: -fapprox-func
+! CHECK-TO-COMPS-DIS-NOT: -fno-signed-zeros
+! CHECK-TO-COMPS-DIS-NOT: -mreassociate
+! CHECK-TO-COMPS-DIS-NOT: -freciprocal-math
+
 ! Check that -fno-fast-math doesn't clobber -ffp-contract
 ! RUN: %flang -ffp-contract=off -fno-fast-math -fsyntax-only -### %s -o %t 2>&1 \
 ! RUN:     | FileCheck --check-prefix=CHECK-CONTRACT %s
 ! CHECK-CONTRACT: -fc1
 ! CHECK-CONTRACT-SAME: -ffp-contract=off
+
+! Check that -fno-fast-math only disables -ffast-math.
+! RUN: %flang -ffp-contract=off -ffast-math -fno-fast-math -fsyntax-only -### %s -o %t 2>&1 \
+! RUN:     | FileCheck --check-prefix=CHECK-CONTRACT-NOFAST %s
+! CHECK-CONTRACT-NOFAST: -fc1
+! CHECK-CONTRACT-NOFAST-SAME: -ffp-contract=off
 
 ! Check that -ffast-math causes us to link to crtfastmath.o
 ! UNSUPPORTED: system-windows
