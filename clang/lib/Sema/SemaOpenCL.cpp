@@ -12,7 +12,9 @@
 
 #include "clang/Sema/SemaOpenCL.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/Expr.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
@@ -574,6 +576,53 @@ bool SemaOpenCL::checkBuiltinToAddr(unsigned BuiltinID, CallExpr *Call) {
       getASTContext().getQualifiedType(RT.getUnqualifiedType(), Qual)));
 
   return false;
+}
+
+void SemaOpenCL::checkBuiltinReadImage(FunctionDecl *FDecl, CallExpr *Call) {
+  IdentifierInfo *II = FDecl->getIdentifier();
+  if (!II)
+    return;
+  StringRef Name = II->getName();
+  if (Name != "read_imagei" && Name != "read_imageui")
+    return;
+
+  // read_image{i|ui} take (image, sampler, coord); sampler is arg[1].
+  if (Call->getNumArgs() < 2)
+    return;
+  Expr *SamplerArg = Call->getArg(1);
+  QualType ArgTy = SamplerArg->getType().getCanonicalType();
+  if (!ArgTy->isSamplerT() && !ArgTy->isIntegerType())
+    return;
+
+  Expr *IntExpr = nullptr;
+  Expr *Inner = SamplerArg->IgnoreParenCasts();
+
+  if (auto *DRE = dyn_cast<DeclRefExpr>(Inner)) {
+    if (auto *Var = dyn_cast<VarDecl>(DRE->getDecl())) {
+      if (const Expr *Init = Var->getAnyInitializer()) {
+        Init = Init->IgnoreParenImpCasts();
+        if (Init->getType()->isIntegerType())
+          IntExpr = const_cast<Expr *>(Init);
+      }
+    }
+  } else if (Inner->getType()->isIntegerType()) {
+    IntExpr = Inner;
+  }
+
+  if (!IntExpr)
+    return;
+
+  Expr::EvalResult EVResult;
+  if (!IntExpr->EvaluateAsInt(EVResult, getASTContext()))
+    return;
+
+  uint64_t SamplerValue = EVResult.Val.getInt().getLimitedValue();
+  // Bit layout: |...|FilterMode[5:4]|AddressMode[3:1]|NormalizedCoords[0]|
+  // CLK_FILTER_LINEAR = 0x20 => FilterMode bits = 2
+  if (((SamplerValue & 0x30u) >> 4) == 2)
+    Diag(SamplerArg->getExprLoc(),
+         diag::warn_sampler_argument_invalid_filter)
+        << Name << SamplerArg->getSourceRange();
 }
 
 } // namespace clang
