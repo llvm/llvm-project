@@ -37,13 +37,17 @@ void test_big() {
   assert(std::abs(negative_big_value) == big_value); // make sure it doesn't get casted to a smaller type
 }
 
+// The _BitInt/__int128 extensions and their SFINAE probes require C++17+
+// (variable templates, decltype-SFINAE) and the new abs.h template's
+// __is_signed_integer_v trait.
+#if TEST_STD_VER >= 17
 // Narrow signed types stay on the abs(int) promotion path.
 template <class T>
 constexpr bool unpromoted_abs = std::is_same<decltype(std::abs(T(0))), T>::value;
 static_assert(!unpromoted_abs<signed char>);
 static_assert(!unpromoted_abs<short>);
 
-#ifdef __BITINT_MAXWIDTH__
+#  ifdef __BITINT_MAXWIDTH__
 // Gate is sizeof, not bit width: sizeof(_BitInt(31)) == sizeof(int) on x86_64.
 template <class T, class = void>
 constexpr bool has_abs = false;
@@ -71,9 +75,9 @@ void test_signed_bitint() {
   assert(std::abs(t_max) == t_max);
   assert(std::abs(t_min_plus1) == t_max);
 }
-#endif
+#  endif // __BITINT_MAXWIDTH__
 
-#ifndef TEST_HAS_NO_INT128
+#  ifndef TEST_HAS_NO_INT128
 void test_int128() {
   ASSERT_SAME_TYPE(decltype(std::abs(static_cast<__int128_t>(0))), __int128_t);
   assert(std::abs(static_cast<__int128_t>(0)) == 0);
@@ -91,7 +95,8 @@ void test_int128() {
   assert(std::abs(int128_max) == int128_max);
   assert(std::abs(int128_min_plus1) == int128_max);
 }
-#endif
+#  endif // TEST_HAS_NO_INT128
+#endif   // TEST_STD_VER >= 17
 
 // The following is helpful to keep in mind:
 // 1byte == char <= short <= int <= long <= long long
@@ -124,16 +129,17 @@ int main(int, char**) {
 
   test_big();
 
-#ifdef __BITINT_MAXWIDTH__
+#if TEST_STD_VER >= 17
+#  ifdef __BITINT_MAXWIDTH__
   test_signed_bitint<32>();
   test_signed_bitint<64>();
   test_signed_bitint<33>();
   test_signed_bitint<63>();
   test_signed_bitint<65>();
-#  if __BITINT_MAXWIDTH__ >= 128
+#    if __BITINT_MAXWIDTH__ >= 128
   test_signed_bitint<128>();
-#  endif
-#  if __BITINT_MAXWIDTH__ >= 256
+#    endif
+#    if __BITINT_MAXWIDTH__ >= 256
   test_signed_bitint<129>();
   test_signed_bitint<256>();
 
@@ -141,16 +147,17 @@ int main(int, char**) {
   signed _BitInt(256) v        = -(static_cast<signed _BitInt(256)>(1) << 200);
   signed _BitInt(256) expected = static_cast<signed _BitInt(256)>(1) << 200;
   assert(std::abs(v) == expected);
-#  endif
-#  if __BITINT_MAXWIDTH__ >= 1024
+#    endif
+#    if __BITINT_MAXWIDTH__ >= 1024
   test_signed_bitint<512>();
   test_signed_bitint<1024>();
-#  endif
-#endif
+#    endif
+#  endif // __BITINT_MAXWIDTH__
 
-#ifndef TEST_HAS_NO_INT128
+#  ifndef TEST_HAS_NO_INT128
   test_int128();
-#endif
+#  endif
+#endif // TEST_STD_VER >= 17
 
   return 0;
 }
