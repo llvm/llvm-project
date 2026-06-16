@@ -16,6 +16,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <array>
 #include <functional>
 #include <utility>
@@ -155,12 +156,19 @@ enum class TargetIDSetting { Unsupported, Any, Off, On };
 
 class AMDGPUTargetID {
 private:
-  const MCSubtargetInfo &STI;
+  GPUKind Arch;
+  std::string TargetTripleString;
   TargetIDSetting XnackSetting;
   TargetIDSetting SramEccSetting;
+  bool IsAMDHSA;
 
 public:
   explicit AMDGPUTargetID(const MCSubtargetInfo &STI, StringRef FeatureString);
+
+  AMDGPUTargetID(GPUKind Arch, StringRef TargetTripleString,
+                 TargetIDSetting XnackSetting, TargetIDSetting SramEccSetting,
+                 bool IsAMDHSA);
+
   ~AMDGPUTargetID() = default;
 
   /// \return True if the current xnack setting is not "Unsupported".
@@ -219,11 +227,29 @@ public:
 
   void setTargetIDFromTargetIDStream(StringRef TargetID);
 
+  GPUKind getGPUKind() const { return Arch; }
+
+  StringRef getTargetTripleString() const { return TargetTripleString; }
+
+  /// \returns True if this is an AMDHSA target.
+  bool isAMDHSA() const { return IsAMDHSA; }
+
+  /// Parse a target ID directive string (e.g.,
+  /// "amdgcn-amd-amdhsa--gfx1010:xnack-") and return an AMDGPUTargetID.
+  /// \returns AMDGPUTargetID or std::nullopt if malformed.
+  static std::optional<AMDGPUTargetID>
+  parseTargetIDString(StringRef TargetIDDirective);
+
   /// Write string representation to \p OS
   void print(raw_ostream &OS) const;
 
   /// \returns String representation of an object.
   std::string toString() const;
+
+  bool operator==(const AMDGPUTargetID &Other) const;
+  bool operator!=(const AMDGPUTargetID &Other) const {
+    return !(*this == Other);
+  }
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS,
