@@ -480,6 +480,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::CTPOP          , MVT::i64  , Custom);
   }
 
+  if (Subtarget.hasBMI2()) {
+    setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i8, Promote);
+    setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i16, Promote);
+    setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i32, Legal);
+    if (Subtarget.is64Bit())
+      setOperationAction({ISD::PEXT, ISD::PDEP}, MVT::i64, Legal);
+  }
+
   setOperationAction(ISD::READCYCLECOUNTER , MVT::i64  , Custom);
 
   if (!Subtarget.hasMOVBE())
