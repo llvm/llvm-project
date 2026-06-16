@@ -1250,6 +1250,8 @@ void conditional_operator_lifetimebound_nested_deep(bool cond) {
   (void)*p;  // expected-note 4 {{later used here}}
 }
 
+// FIXME: Ignore ParenExpr and treat it as `p = b`.
+// So that we can see {{local variable 'p' aliases the storage of local variable 'b'}}
 void simpleparen() {
   MyObj* p;
   {
