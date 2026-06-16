@@ -498,11 +498,10 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::VALU;
   }
 
-  /// According to LDSDMA instructions act as both VALU and memory instruction,
-  /// thus we tag them as VALU. However, in many places, we do not actually want
+  /// LDSDMA instructions act as both VALU and memory instructions, thus
+  /// we also tag them as VALU. However, in many places, we do not actually want
   /// to include LDSDMA instructions in this query. By setting \p AllowLDSDMA to
-  /// false, this will
-  // return false for LDSDMA instructions.
+  /// false, this will return false for LDSDMA instructions.
   bool isVALU(uint32_t Opcode, bool AllowLDSDMA) const {
     if (!AllowLDSDMA && isLDSDMA(Opcode))
       return false;
