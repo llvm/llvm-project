@@ -10,7 +10,7 @@
 ; This exercises the path that keeps each tail-relative EpilogOffset within the
 ; signed 16-bit field for large functions.
 
-declare i32 @c(i32) local_unnamed_addr
+declare i32 @c(i32)
 
 ; CHECK-LABEL: three_epilogs:
 ; CHECK:         .seh_endprologue
@@ -28,18 +28,69 @@ declare i32 @c(i32) local_unnamed_addr
 ; CHECK:         .seh_endepilogue
 ; CHECK:         .seh_endproc
 
-; Each fragment carries a single epilog with a small, in-range, tail-relative
-; (negative) EpilogOffset, and every chained fragment is marked CHAININFO.
-; OBJ:        Version: 3
-; OBJ:        NumberOfEpilogs: 1
-; OBJ:          EpilogOffset: -0x5
-; OBJ:      RuntimeFunction {
-; OBJ:        Version: 3
-; OBJ:          ChainInfo (0x4)
-; OBJ:        NumberOfEpilogs: 1
-; OBJ:          EpilogOffset: -0x5
+; Each epilog ends up in its own fragment with a small, in-range, tail-relative
+; (negative) EpilogOffset. The main fragment holds the prolog; each subsequent
+; fragment is an epilog-only chained fragment, and the trailing code after the
+; last epilog becomes a final epilog-free chained fragment.
+; OBJ:      UnwindInformation [
+; Main fragment: holds the prolog and the first epilog.
+; OBJ:        RuntimeFunction {
+; OBJ:          UnwindInfo {
+; OBJ-NEXT:       Version: 3
+; OBJ-NEXT:       Flags [ (0x0)
+; OBJ-NEXT:       ]
+; OBJ:            NumberOfOps: 1
+; OBJ-NEXT:       NumberOfEpilogs: 1
+; OBJ-NEXT:       Prolog [1 ops]:
+; OBJ-NEXT:         [0] IP +0x0000: ALLOC_SMALL Size=0x28
+; OBJ-NEXT:       Epilog [0] {
+; OBJ:              EpilogOffset: -0x5
+; OBJ-NEXT:         NumberOfOps: 1
+; OBJ-NEXT:         FirstOp: 0x0
+; OBJ-NEXT:         IpOffsetOfLastInstruction: 0x4
+; OBJ-NEXT:         [0] IP +0x0000: ALLOC_SMALL Size=0x28
+; OBJ-NEXT:       }
+; Second epilog: its own chained fragment (inherits the prolog from the parent).
+; OBJ:        RuntimeFunction {
+; OBJ:          UnwindInfo {
+; OBJ-NEXT:       Version: 3
+; OBJ-NEXT:       Flags [ (0x4)
+; OBJ-NEXT:         ChainInfo (0x4)
+; OBJ-NEXT:       ]
+; OBJ:            NumberOfOps: 0
+; OBJ-NEXT:       NumberOfEpilogs: 1
+; OBJ-NEXT:       Prolog [0 ops]:
+; OBJ-NEXT:       Epilog [0] {
+; OBJ:              EpilogOffset: -0x5
+; OBJ-NEXT:         NumberOfOps: 1
+; OBJ-NEXT:         FirstOp: 0x0
+; OBJ-NEXT:         IpOffsetOfLastInstruction: 0x4
+; OBJ-NEXT:         [0] IP +0x0000: ALLOC_SMALL Size=0x28
+; OBJ-NEXT:       }
+; OBJ:            Chained {
+; Third epilog: another chained fragment.
+; OBJ:        RuntimeFunction {
+; OBJ:          UnwindInfo {
+; OBJ-NEXT:       Version: 3
+; OBJ-NEXT:       Flags [ (0x4)
+; OBJ-NEXT:         ChainInfo (0x4)
+; OBJ-NEXT:       ]
+; OBJ:            NumberOfEpilogs: 1
+; OBJ:              EpilogOffset: -0x5
+; OBJ:            Chained {
+; Trailing code after the last epilog: an epilog-free chained fragment.
+; OBJ:        RuntimeFunction {
+; OBJ:          UnwindInfo {
+; OBJ-NEXT:       Version: 3
+; OBJ-NEXT:       Flags [ (0x4)
+; OBJ-NEXT:         ChainInfo (0x4)
+; OBJ-NEXT:       ]
+; OBJ:            NumberOfOps: 0
+; OBJ-NEXT:       NumberOfEpilogs: 0
+; OBJ-NEXT:       Prolog [0 ops]:
+; OBJ-NEXT:       Chained {
 
-define dso_local i32 @three_epilogs(i32 %x) #0 {
+define i32 @three_epilogs(i32 %x) #0 {
 entry:
   switch i32 %x, label %sw.default [
     i32 0, label %sw.0

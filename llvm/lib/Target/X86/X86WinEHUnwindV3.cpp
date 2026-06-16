@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// Implements the capacity-checking and sub-fragment splitting pass for
-/// Unwind v3 information. Unlike the V2 pass, V3 does not need to validate
-/// epilog structure (V3 can encode any prolog/epilog pattern). This pass
-/// only needs to:
+/// Unwind v3 information. V3 can encode any prolog/epilog pattern, so this
+/// pass does not validate epilog structure; it only needs to:
 ///   1. Count prolog/epilog operations and epilogs.
 ///   2. Check V3 capacity limits (<=31 prolog/epilog ops, <=7 epilogs).
 ///   3. Insert sub-fragment split points if limits are exceeded.
@@ -52,9 +51,9 @@ static constexpr unsigned MaxV3EpilogOps = 31;
 /// tail beyond which the funclet is split into a new chained sub-fragment.
 /// The V3 EpilogOffset field is a signed 16-bit byte offset measured from the
 /// fragment tail, so each fragment must span less than 32 KiB of code. The
-/// exact byte offsets aren't known until MC layout, so (like the V2 pass) the
-/// approximate instruction count is used as a proxy, with margin for the
-/// average emitted instruction size.
+/// exact byte offsets aren't known until MC layout, so the approximate
+/// instruction count is used as a proxy, with margin for the average emitted
+/// instruction size.
 static cl::opt<unsigned> EpilogDistanceThreshold(
     "x86-wineh-unwindv3-epilog-distance-threshold", cl::Hidden,
     cl::desc("Maximum approximate instruction distance between an epilog and "
@@ -167,9 +166,9 @@ FuncletInfo X86WinEHUnwindV3::analyzeFunclet(MachineFunction &MF,
       break;
 
     for (MachineInstr &MI : MBB) {
-      // Approximate the number of emitted instructions, mirroring the V2 pass.
-      // This estimates how far each epilog sits from its fragment tail; the
-      // exact byte offsets aren't available until MC layout.
+      // Approximate the number of emitted instructions. This estimates how
+      // far each epilog sits from its fragment tail; the exact byte offsets
+      // aren't available until MC layout.
       if (!MI.isPseudo() && !MI.isMetaInstruction())
         ApproxInstrPos++;
 
@@ -269,19 +268,16 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
     }
 
     // Split the funclet into chained sub-fragments so that each fragment's
-    // UNWIND_INFO stays within the V3 capacity limits:
-    //   * at most 7 epilogs per fragment, and
-    //   * every epilog close enough to its fragment tail that the tail-relative
-    //     EpilogOffset fits in the signed 16-bit field.
-    // The exact byte offsets aren't known until MC layout, so (like the V2
-    // pass) the distance bound uses an approximate instruction count as a
-    // proxy. A SEH_SplitChainedAtEndOfBlock is inserted at the start of an
-    // epilog's block; the AsmPrinter emits the actual .seh_splitchained at the
+    // UNWIND_INFO stays within the V3 capacity limits: at most 7 epilogs per
+    // fragment, and every epilog close enough to its fragment tail that the
+    // tail-relative EpilogOffset fits in the signed 16-bit field.
+    //
+    // A SEH_SplitChainedAtEndOfBlock inserted at the start of an epilog's
+    // block makes the AsmPrinter emit the actual .seh_splitchained at the
     // *end* of that block, so the epilog becomes the last epilog of the
-    // earlier fragment, immediately followed by the new chained fragment. This
-    // keeps every epilog close to its tail even when a single epilog is
-    // followed by a large amount of code (a long "tail" after the last
-    // epilog is pushed into its own epilog-free chained fragment).
+    // earlier fragment, immediately followed by the new chained fragment. A
+    // long tail after the last epilog is pushed into its own epilog-free
+    // chained fragment.
     const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
     auto SplitAfter = [&](const EpilogSplitPoint &Epilog) {
       MachineBasicBlock *MBB = Epilog.BeginEpilog->getParent();

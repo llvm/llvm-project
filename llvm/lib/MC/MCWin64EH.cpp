@@ -69,10 +69,12 @@ public:
 
 /// MCExpr representing a V3 epilog's tail-relative EpilogOffset field. The
 /// first epilog descriptor is encoded relative to the fragment end, and each
-/// subsequent descriptor relative to the previous epilog's start. The fragment
-/// end may not have a symbol yet when the unwind info is emitted (e.g. via
-/// .seh_handlerdata), so the value is resolved lazily through the FrameInfo
-/// reference.
+/// subsequent descriptor relative to the previous epilog's start. Measuring
+/// from the tail keeps the magnitude small (epilogs sit near the end of the
+/// function), avoiding overflow of the signed 16-bit field for large
+/// functions. The fragment end may not have a symbol yet when the unwind info
+/// is emitted (e.g. via .seh_handlerdata), so the value is resolved lazily
+/// through the FrameInfo reference.
 class MCUnwindV3EpilogOffsetTargetExpr final : public MCTargetExpr {
   const WinEH::FrameInfo &FrameInfo;
   const MCSymbol *EpilogStart;
@@ -790,16 +792,12 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
     uint8_t EpiNumOps = EI.Inherited ? 0 : EI.NumberOfOps;
     Streamer.emitInt8((EpiNumOps << 3) | EpiFlags);
 
-    // EpilogOffset: signed 16-bit, always tail-relative.
-    // The first epilog descriptor (closest to the fragment tail) holds the
-    // negative byte offset from the fragment end to the epilog start; each
-    // subsequent descriptor holds the delta from the previous epilog's start.
-    // Because descriptors are emitted in descending address order, every offset
-    // is non-positive, satisfying the V3 "all epilogs use the same sign" rule.
-    // Measuring from the tail keeps the magnitude small (epilogs sit near the
-    // end of the function), avoiding overflow of the signed 16-bit field for
-    // large functions. The fragment end may not have a symbol yet (e.g. when
-    // emitted via .seh_handlerdata), so the value is resolved lazily.
+    // EpilogOffset: signed 16-bit, always tail-relative (see
+    // MCUnwindV3EpilogOffsetTargetExpr). The first descriptor holds the
+    // negative byte offset from the fragment end; each subsequent descriptor
+    // holds the delta from the previous epilog's start. Emitted in descending
+    // address order, every offset is non-positive, satisfying the V3
+    // "all epilogs use the same sign" rule.
     {
       const MCExpr *EpilogOffsetExpr = MCUnwindV3EpilogOffsetTargetExpr::create(
           *Info, Epilog.Start, PrevEpilogStart, Epilog.Loc, Context);
