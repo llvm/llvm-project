@@ -24,6 +24,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/InvalidationCause.h"
 #include "llvm/ADT/StringSet.h"
 
 using namespace clang;
@@ -568,9 +569,11 @@ bool MoveChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
   SVal ReturnVal = SVB.conjureSymbolVal(Call, C.blockCount());
   State = State->BindExpr(CE, C.getStackFrame(), ReturnVal);
 
-  State = State->invalidateRegions({DestRegion}, Call.getCFGElementRef(),
-                                   C.blockCount(), C.getStackFrame(),
-                                   /*CausesPointerEscape=*/false);
+  State = State->invalidateRegions(
+      {DestRegion}, Call.getCFGElementRef(), C.blockCount(), C.getStackFrame(),
+      /*CausesPointerEscape=*/false, /*IS=*/nullptr, /*Call=*/nullptr,
+      /*ITraits=*/nullptr,
+      Call.tryCreateInvalidationCause<PartiallyModeledCall>());
 
   if (shouldBeTracked(OK))
     State = State->set<TrackedContentsMap>(ContainerRegion,

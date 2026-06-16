@@ -123,11 +123,11 @@ void random_access_read1(int index) {
       if (success) {
         // Unknown value but not garbage.
         clang_analyzer_isTainted(c[1]); // expected-warning {{YES}}
-        clang_analyzer_dump(c[1]); // expected-warning {{conj_}}
+        clang_analyzer_dump(c[1]); // expected-warning {{inv_}}
       } else {
         // Possibly indeterminate value but not modeled.
         clang_analyzer_isTainted(c[1]); // expected-warning {{YES}}
-        clang_analyzer_dump(c[1]); // expected-warning {{conj_}}
+        clang_analyzer_dump(c[1]); // expected-warning {{inv_}}
       }
       break;
 
@@ -136,11 +136,11 @@ void random_access_read1(int index) {
         long p = c[2]; // Unknown value but not garbage.
         // FIXME: Taint analysis only marks the first byte of a memory region. See getPointeeOf in GenericTaintChecker.cpp.
         clang_analyzer_isTainted(c[2]); // expected-warning {{NO}}
-        clang_analyzer_dump(c[2]); // expected-warning {{conj_}}
+        clang_analyzer_dump(c[2]); // expected-warning {{inv_}}
       } else {
         // Possibly indeterminate value but not modeled.
         clang_analyzer_isTainted(c[2]); // expected-warning {{NO}} // FIXME: See above.
-        clang_analyzer_dump(c[2]); // expected-warning {{conj_}}
+        clang_analyzer_dump(c[2]); // expected-warning {{inv_}}
       }
       break;
 
@@ -167,7 +167,7 @@ void random_access_read2(int b) {
       if (b) {
         int p = buffer[1]; // Unknown value but not garbage.
         clang_analyzer_isTainted(p); // expected-warning {{YES}}
-        clang_analyzer_dump(p); // expected-warning {{conj_}}
+        clang_analyzer_dump(p); // expected-warning {{inv_}}
       } else {
         int p = buffer[0]; // expected-warning {{Assigned value is uninitialized}}
       }
@@ -268,11 +268,11 @@ void compound_read1(void) {
     if (1 == fread(&s.b, sizeof(s.b), 1, fp)) {
       long p = s.b;
       clang_analyzer_isTainted(p); // expected-warning {{YES}}
-      clang_analyzer_dump(p); // expected-warning {{conj_}}
+      clang_analyzer_dump(p); // expected-warning {{inv_}}
     } else {
       long p = s.b;
       clang_analyzer_isTainted(p); // expected-warning {{YES}}
-      clang_analyzer_dump(p); // expected-warning {{conj_}}
+      clang_analyzer_dump(p); // expected-warning {{inv_}}
     }
     fclose(fp);
   }
@@ -353,14 +353,14 @@ void test_partial_elements_read(void) {
     // 3*5: 15 bytes read; which is not exactly 4 integers, but we still invalidate the first 4 ints.
     if (5 == fread(buffer + 1, 3, 5, fp)) {
       clang_analyzer_dump(buffer[0]); // expected-warning{{1 S32b}}
-      clang_analyzer_dump(buffer[1]); // expected-warning{{conj_}}
-      clang_analyzer_dump(buffer[2]); // expected-warning{{conj_}}
-      clang_analyzer_dump(buffer[3]); // expected-warning{{conj_}}
-      clang_analyzer_dump(buffer[4]); // expected-warning{{conj_}}
+      clang_analyzer_dump(buffer[1]); // expected-warning{{inv_}}
+      clang_analyzer_dump(buffer[2]); // expected-warning{{inv_}}
+      clang_analyzer_dump(buffer[3]); // expected-warning{{inv_}}
+      clang_analyzer_dump(buffer[4]); // expected-warning{{inv_}}
       clang_analyzer_dump(buffer[5]); // expected-warning{{6 S32b}}
 
       char *c = (char*)buffer;
-      clang_analyzer_dump(c[4+12]); // expected-warning{{conj_}} 16th byte of buffer, which is the beginning of the 4th 'int' in the buffer.
+      clang_analyzer_dump(c[4+12]); // expected-warning{{inv_}} 16th byte of buffer, which is the beginning of the 4th 'int' in the buffer.
 
       // FIXME: The store should have returned a partial binding for the 17th byte of the buffer, which is the 2nd byte of the previous int.
       // This byte should have been initialized by the 'fread' earlier. However, the Store lies to us and says it's uninitialized.
@@ -368,10 +368,10 @@ void test_partial_elements_read(void) {
       clang_analyzer_dump(c[4+16]); // This should be the first byte that 'fread' leaves uninitialized. This should raise the uninit read diag.
     } else {
       clang_analyzer_dump(buffer[0]); // expected-warning{{1 S32b}} ok
-      clang_analyzer_dump(buffer[1]); // expected-warning{{conj_}} ok
-      clang_analyzer_dump(buffer[2]); // expected-warning{{conj_}} ok
-      clang_analyzer_dump(buffer[3]); // expected-warning{{conj_}} ok
-      clang_analyzer_dump(buffer[4]); // expected-warning{{conj_}} ok, but an uninit warning would be also fine.
+      clang_analyzer_dump(buffer[1]); // expected-warning{{inv_}} ok
+      clang_analyzer_dump(buffer[2]); // expected-warning{{inv_}} ok
+      clang_analyzer_dump(buffer[3]); // expected-warning{{inv_}} ok
+      clang_analyzer_dump(buffer[4]); // expected-warning{{inv_}} ok, but an uninit warning would be also fine.
       clang_analyzer_dump(buffer[5]); // expected-warning{{6 S32b}} ok
       clang_analyzer_dump(buffer[6]); // expected-warning{{1st function call argument is an uninitialized value}} ok
     }
@@ -391,12 +391,12 @@ void test_whole_elements_read(void) {
     // 3*20: 60 bytes read; which is basically 15 integers.
     if (20 == fread(buffer + 1, 3, 20, fp)) {
       clang_analyzer_dump(buffer[0]);  // expected-warning{{1 S32b}}
-      clang_analyzer_dump(buffer[15]); // expected-warning{{conj_}}
+      clang_analyzer_dump(buffer[15]); // expected-warning{{inv_}}
       clang_analyzer_dump(buffer[16]); // expected-warning{{3 S32b}}
       clang_analyzer_dump(buffer[17]); // expected-warning{{1st function call argument is an uninitialized value}}
     } else {
       clang_analyzer_dump(buffer[0]);  // expected-warning{{1 S32b}}
-      clang_analyzer_dump(buffer[15]); // expected-warning{{conj_}}
+      clang_analyzer_dump(buffer[15]); // expected-warning{{inv_}}
       clang_analyzer_dump(buffer[16]); // expected-warning{{3 S32b}}
       clang_analyzer_dump(buffer[17]); // expected-warning{{1st function call argument is an uninitialized value}}
     }
@@ -419,25 +419,25 @@ void test_unaligned_start_read(void) {
     // We read 4 bytes at byte offset: 1,2,3,4.
     if (4 == fread(asChar + 1, 1, 4, fp)) {
       clang_analyzer_dump(buffer[0]); // expected-warning{{3 S32b}} FIXME: The int binding should have been partially overwritten by the read call. This definitely should not be 3.
-      clang_analyzer_dump(buffer[1]); // expected-warning{{conj_}}
+      clang_analyzer_dump(buffer[1]); // expected-warning{{inv_}}
       clang_analyzer_dump(buffer[2]); // expected-warning{{5 S32b}}
 
       clang_analyzer_dump_char(asChar[0]); // expected-warning{{3 S8b}} This is technically true assuming x86 (little-endian) architecture.
-      clang_analyzer_dump_char(asChar[1]); // expected-warning{{conj_}} 1
-      clang_analyzer_dump_char(asChar[2]); // expected-warning{{conj_}} 2
-      clang_analyzer_dump_char(asChar[3]); // expected-warning{{conj_}} 3
-      clang_analyzer_dump_char(asChar[4]); // expected-warning{{conj_}} 4
+      clang_analyzer_dump_char(asChar[1]); // expected-warning{{inv_}} 1
+      clang_analyzer_dump_char(asChar[2]); // expected-warning{{inv_}} 2
+      clang_analyzer_dump_char(asChar[3]); // expected-warning{{inv_}} 3
+      clang_analyzer_dump_char(asChar[4]); // expected-warning{{inv_}} 4
       clang_analyzer_dump_char(asChar[5]); // expected-warning{{1st function call argument is an uninitialized value}}
     } else {
       clang_analyzer_dump(buffer[0]); // expected-warning{{3 S32b}} FIXME: The int binding should have been partially overwritten by the read call. This definitely should not be 3.
-      clang_analyzer_dump(buffer[1]); // expected-warning{{conj_}}
+      clang_analyzer_dump(buffer[1]); // expected-warning{{inv_}}
       clang_analyzer_dump(buffer[2]); // expected-warning{{5 S32b}}
 
       clang_analyzer_dump_char(asChar[0]); // expected-warning{{3 S8b}} This is technically true assuming x86 (little-endian) architecture.
-      clang_analyzer_dump_char(asChar[1]); // expected-warning{{conj_}} 1
-      clang_analyzer_dump_char(asChar[2]); // expected-warning{{conj_}} 2
-      clang_analyzer_dump_char(asChar[3]); // expected-warning{{conj_}} 3
-      clang_analyzer_dump_char(asChar[4]); // expected-warning{{conj_}} 4
+      clang_analyzer_dump_char(asChar[1]); // expected-warning{{inv_}} 1
+      clang_analyzer_dump_char(asChar[2]); // expected-warning{{inv_}} 2
+      clang_analyzer_dump_char(asChar[3]); // expected-warning{{inv_}} 3
+      clang_analyzer_dump_char(asChar[4]); // expected-warning{{inv_}} 4
       clang_analyzer_dump_char(asChar[5]); // expected-warning{{1st function call argument is an uninitialized value}}
     }
     fclose(fp);

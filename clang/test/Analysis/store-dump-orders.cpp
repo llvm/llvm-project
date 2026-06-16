@@ -35,10 +35,10 @@ void test_output(int n) {
 
   // CHECK:       "store": { "pointer": "0x{{[0-9a-f]+}}", "items": [
   // CHECK-NEXT:    { "cluster": "GlobalInternalSpaceRegion", "pointer": "0x{{[0-9a-f]+}}", "items": [
-  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "conj_$
+  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "inv_$
   // CHECK-NEXT:    ]},
   // CHECK-NEXT:    { "cluster": "GlobalSystemSpaceRegion", "pointer": "0x{{[0-9a-f]+}}", "items": [
-  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "conj_$
+  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "inv_$
   // CHECK-NEXT:    ]},
   // CHECK-NEXT:    { "cluster": "objfirst", "pointer": "0x{{[0-9a-f]+}}", "items": [
   // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "lazyCompoundVal
