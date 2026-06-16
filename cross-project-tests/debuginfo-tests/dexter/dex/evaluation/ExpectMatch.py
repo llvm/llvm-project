@@ -193,9 +193,14 @@ class DebuggerExpectMatch:
                     None,
                 )
             )
-            sub_expect_results[sub_expect] = DebuggerExpectMatch(
-                self.expect, sub_expected, value, self.provisional_match_context
-            )
+            if value is None:
+                sub_expect_results[sub_expect] = DebuggerExpectMatch(
+                    self.expect, None, None, self.provisional_match_context
+                )
+            else:
+                sub_expect_results[sub_expect] = get_expect_match(
+                    self.expect, sub_expected, value, self.provisional_match_context
+                )
         match_result = MatchResult.from_bools(
             any(
                 result.match_result == MatchResult.TRUE
@@ -207,7 +212,6 @@ class DebuggerExpectMatch:
             ),
         )
         return sub_expect_results, match_result
-
 
     def _get_match_distance(self) -> float:
         if self.match_result == MatchResult.TRUE:
