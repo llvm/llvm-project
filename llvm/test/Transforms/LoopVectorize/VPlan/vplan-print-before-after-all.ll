@@ -1,4 +1,3 @@
-; DEFINE: %{before_or_after} = before
 ; RUN: opt -passes=loop-vectorize -disable-output -vplan-print-before-all -force-vector-width=4 -vplan-verify-each < %s 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-BEFORE -DBEFORE_OR_AFTER=before --implicit-check-not "VPlan for loop in 'foo' before"
 ; RUN: opt -passes=loop-vectorize -disable-output -vplan-print-before-all -force-vector-width=4 -vplan-verify-each < %s 2>&1 | FileCheck %s -DBEFORE_OR_AFTER=before --check-prefix CHECK-DUMP
 ; RUN: opt -passes=loop-vectorize -disable-output -vplan-print-after-all -force-vector-width=4 -vplan-verify-each < %s 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-AFTER -DBEFORE_OR_AFTER=after --implicit-check-not "VPlan for loop in 'foo' after"
