@@ -425,6 +425,23 @@ buildLayout(mlir::MLIRContext *context, ArrayRef<int64_t> sgLayout,
       laneData.empty() ? nullptr : toI32Attr(laneData), orderAttr);
 }
 
+static xegpu::LayoutAttr buildSgLayout(mlir::MLIRContext *context,
+                                       ArrayRef<int64_t> wgTileShape,
+                                       ArrayRef<int64_t> sgLayout,
+                                       int dimK = -1,
+                                       DenseI32ArrayAttr orderAttr = nullptr) {
+  SmallVector<int64_t> sgData(sgLayout.size());
+  for (int dim = 0; dim < (int)sgLayout.size(); ++dim) {
+    if (dim == dimK)
+      sgData[dim] = wgTileShape[dim];
+    else
+      sgData[dim] = wgTileShape[dim] / sgLayout[dim];
+  }
+  return buildLayout(context, sgLayout, sgData,
+                     /*inst_data=*/{}, /*lane_layout=*/{},
+                     /*lane_data=*/{}, /*order=*/nullptr);
+}
+
 /// Infers the source layout attribute for a broadcast operation given the
 /// result layout attribute, result shape, source shape.
 xegpu::DistributeLayoutAttr
@@ -808,6 +825,183 @@ xegpu::DistributeLayoutAttr xegpu::inferMaskOffsetLayoutForScatterIO(
   return payloadLayout;
 }
 
+//===----------------------------------------------------------------------===//
+// Layout derivation helpers: factorize sgCount into
+// sg_layout candidates, then
+// compute per-subgroup (sgData) and per-lane
+// (lane_layout/lane_data/inst_data).
+//===----------------------------------------------------------------------===//
+
+using LayoutRepresentation = SmallVector<int64_t>;
+
+/// Enumerates all ways to split `total` into `rank` factors whose product
+/// equals `total`. Returns the list of all such factorizations.
+static SmallVector<LayoutRepresentation> enumerateFactorizations(int64_t total,
+                                                                 int64_t rank) {
+  SmallVector<LayoutRepresentation> results;
+  SmallVector<int64_t> current(rank, 0);
+
+  // Returns all divisors of `n` in ascending order.
+  auto getDivisors = [](int64_t n) {
+    SmallVector<int64_t> divs;
+    for (int64_t i = 1; i * i <= n; ++i) {
+      if (n % i == 0) {
+        divs.push_back(i);
+        if (i != n / i)
+          divs.push_back(n / i);
+      }
+    }
+    llvm::sort(divs);
+    return divs;
+  };
+
+  std::function<void(int64_t, int64_t)> generate = [&](int64_t dim,
+                                                       int64_t remaining) {
+    if (dim == rank - 1) {
+      current[dim] = remaining;
+      results.push_back(LayoutRepresentation(current));
+      return;
+    }
+    for (int64_t factor : getDivisors(remaining)) {
+      current[dim] = factor;
+      generate(dim + 1, remaining / factor);
+    }
+  };
+
+  generate(0, total);
+  return results;
+}
+
+// Computes all valid N-dimensional sg_layout candidates for the given
+// sgCount, whose sgData (= wgShape / sgLayout):
+//   1. Evenly divides wgShape (i.e., wgShape[d] % sgLayout[d] == 0).
+//   2. Is a multiple of instData (i.e., sgData[d] % instData[d] == 0).
+// Results are sorted by balance (smallest max-min spread first), with
+// lexicographic order as a tiebreaker.
+//
+// Example (2D):
+//   wgShape = [128, 64], instData = [8, 16], sgCount = 32
+//   Returns: [[8,4], [16,2]], corresponding to sgData [16,16] and [8,32].
+static SmallVector<LayoutRepresentation>
+getSgLayoutCandidates(ArrayRef<int64_t> wgShape, ArrayRef<int64_t> instData,
+                      int64_t sgCount) {
+  int64_t rank = wgShape.size();
+  assert(rank > 0 && "wgShape must be non-empty");
+  assert(static_cast<int64_t>(instData.size()) == rank &&
+         "instData rank must match wgShape rank");
+
+  // Step 1: Get all N-D factorizations of sgCount.
+  auto allFactorizations = enumerateFactorizations(sgCount, rank);
+
+  // Step 2: Filter to keep only valid candidates.
+  SmallVector<LayoutRepresentation> candidates;
+  for (const auto &sgLayout : allFactorizations) {
+    bool valid = true;
+    for (int64_t dim = 0; dim < rank; ++dim) {
+      if (wgShape[dim] % sgLayout[dim] != 0) {
+        valid = false;
+        break;
+      }
+      int64_t sgData = wgShape[dim] / sgLayout[dim];
+      if (sgData % instData[dim] != 0) {
+        valid = false;
+        break;
+      }
+    }
+    if (valid)
+      candidates.push_back(sgLayout);
+  }
+
+  // Step 3: Sort by balance (smallest max-min spread), then lexicographic.
+  llvm::sort(candidates, [](const LayoutRepresentation &lhs,
+                            const LayoutRepresentation &rhs) {
+    int64_t spreadLhs = *llvm::max_element(lhs) - *llvm::min_element(lhs);
+    int64_t spreadRhs = *llvm::max_element(rhs) - *llvm::min_element(rhs);
+    if (spreadLhs != spreadRhs)
+      return spreadLhs < spreadRhs;
+    return lhs < rhs;
+  });
+  return candidates;
+}
+
+/// Helper function to compute inst_data vectors for DPAS operands A, B, and
+/// C/D.
+static std::optional<SmallVector<int64_t>>
+get2DBlockIOInstDataLayout(ArrayRef<int64_t> dataShape, ArrayRef<int> bWidths,
+                           ArrayRef<int> bHeights, ArrayRef<int64_t> laneLayout,
+                           ArrayRef<int64_t> laneData) {
+  int rank = dataShape.size();
+  // Compute inst_data from hardware block params. For Nd ops, the lane
+  // factorization above (laneLayout / laneData) is rigid; inst_data must be
+  // a multiple of lane_layout * lane_data on each dim (Category A
+  // invariant).
+  SmallVector<int64_t> instData(rank, 1);
+  assert(rank >= 2 && "dataShape must be at least 2D for 2D-block IO");
+  int instWidth =
+      xegpu::getLargestDivisor(static_cast<int>(dataShape.back()), bWidths);
+  int instHeight =
+      xegpu::getLargestDivisor(static_cast<int>(dataShape[rank - 2]), bHeights);
+  instData.back() = instWidth;
+  instData[rank - 2] = instHeight;
+
+  if (instWidth == -1 || instHeight == -1) {
+    instData.back() = laneLayout.back() * laneData.back();
+    instData[rank - 2] = laneLayout[rank - 2] * laneData[rank - 2];
+  }
+  for (int dim = 0; dim < rank; ++dim)
+    assert(instData[dim] % (laneLayout[dim] * laneData[dim]) == 0 &&
+           "inst_data must be a multiple of lane_layout * lane_data for ND op");
+  return instData;
+}
+
+/// Computes lane_layout and lane_data for scatter-style store anchor layouts
+/// (store scatter, store matrix). Lanes and the per-lane vector both live on
+/// the innermost dim:
+///   - laneLayout[innermost] = min(subgroupSize, srcShape[innermost])
+///   - laneData[innermost]   = min(srcShape[innermost] / laneLayout[innermost],
+///                                 maxChunkSize)
+/// All other entries are 1.
+static std::pair<SmallVector<int64_t>, SmallVector<int64_t>>
+computeScatterIOLaneLayoutAndData(ArrayRef<int64_t> instShape,
+                                  int64_t subgroupSize, int64_t maxChunkSize) {
+  int64_t rank = instShape.size();
+  SmallVector<int64_t> laneLayout(rank, 1), laneData(rank, 1);
+  int64_t innermost = rank - 1;
+  laneLayout[innermost] = std::min(subgroupSize, instShape[innermost]);
+  laneData[innermost] =
+      std::min(instShape[innermost] / laneLayout[innermost], maxChunkSize);
+  return {laneLayout, laneData};
+}
+
+// Computes the per-lane layout and data for a 2D block load/store/prefetch:
+// lanes are spread across the subgroup along the last dim (or rank-2 if
+// transposed), and laneData packs sub-bitwidth elements along the packing dim.
+static std::pair<SmallVector<int64_t>, SmallVector<int64_t>>
+compute2DBlockIOLaneLayoutAndData(ArrayRef<int64_t> instShape,
+                                  int64_t subgroupSize, int64_t bitwidth,
+                                  int64_t packingSize, bool vnni = false,
+                                  bool transpose = false) {
+  int64_t rank = instShape.size();
+  SmallVector<int64_t> laneLayout(rank, 1), laneData(rank, 1);
+  int64_t packingDim = vnni ? rank - 2 : rank - 1;
+  laneData[packingDim] = bitwidth < packingSize ? packingSize / bitwidth : 1;
+  assert(
+      !(vnni && transpose) &&
+      "transpose and VNNI cannot be enabled at the same time for 2D block IO");
+  if (transpose)
+    laneLayout[rank - 2] = subgroupSize;
+  else
+    laneLayout.back() = subgroupSize;
+  // assert that the lane layout and data fit in the inst shape
+  for (int64_t i = 0; i < rank; ++i) {
+    int64_t laneProduct = laneLayout[i] * laneData[i];
+    assert(instShape[i] % laneProduct == 0 &&
+           "lane_layout * lane_data must evenly divide the inst shape");
+    (void)laneProduct;
+  }
+  return {laneLayout, laneData};
+}
+
 /// Computes the (lane_layout, lane_data) for a multi-reduction's source layout.
 /// Only the innermost two dims are distributed; leading dims are assumed unit.
 /// `subgroupSize` lanes go on one dim; up to `maxReduceVectorSize` elements are
@@ -824,20 +1018,15 @@ xegpu::DistributeLayoutAttr xegpu::inferMaskOffsetLayoutForScatterIO(
 static std::pair<SmallVector<int64_t>, SmallVector<int64_t>>
 computeReductionLaneLayoutAndData(ArrayRef<int64_t> srcShape,
                                   ArrayRef<int64_t> reductionDims,
-                                  ArrayRef<int64_t> consumerReductionDims,
-                                  int subgroupSize,
-                                  int64_t maxReduceVectorSize) {
+                                  int subgroupSize, int64_t maxReduceVectorSize,
+                                  bool verticalLaneLayout = false) {
   int srcRank = srcShape.size();
   SmallVector<int64_t> laneLayout(srcRank, 1), laneData(srcRank, 1);
 
   int innermost = srcRank - 1;
   int secondInnermost = srcRank - 2;
 
-  // `laneDim` carries the subgroupSize lanes; `vectorDim` packs the reduced
-  // elements into lane_data. Default: lanes on the innermost dim, reduced
-  // vector on the second-to-innermost dim.
-  if (secondInnermost >= 0 && llvm::is_contained(reductionDims, innermost) &&
-      reductionDims.size() == 1 && consumerReductionDims.empty()) {
+  if (verticalLaneLayout && secondInnermost >= 0) {
     std::swap(innermost, secondInnermost);
   }
   int laneDim = innermost;
@@ -1006,9 +1195,14 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
         consumerSliceLayout
             ? SmallVector<int64_t>(consumerSliceLayout.getDims().asArrayRef())
             : SmallVector<int64_t>({});
+    // A[i] reduced from A[i, j] is stored out directly, use veritical Lane
+    // layout like [16, 1]
+    bool verticalLaneLayout = consumerReductionDims.empty() &&
+                              reductionDims.size() == 1 &&
+                              reductionDims[0] == (srcRank - 1);
     auto [laneLayout, laneData] = computeReductionLaneLayoutAndData(
-        srcShape, reductionDims, consumerReductionDims, subgroupSize,
-        maxReduceVectorSize);
+        srcShape, reductionDims, subgroupSize, maxReduceVectorSize,
+        verticalLaneLayout);
     // inst_data is the per-instruction data, i.e. the element-wise product of
     // lane_layout and lane_data.
     SmallVector<int64_t> instData(srcRank);
@@ -1035,9 +1229,12 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
       // the layout is not consistent
       srcLayout = consumerSliceLayout.getParent();
     } else {
+      bool verticalLaneLayout = consumerReductionDims.empty() &&
+                                reductionDims.size() == 1 &&
+                                reductionDims[0] == (srcRank - 1);
       auto [laneLayout, laneData] = computeReductionLaneLayoutAndData(
-          srcShape, reductionDims, consumerReductionDims, subgroupSize,
-          maxReduceVectorSize);
+          srcShape, reductionDims, subgroupSize, maxReduceVectorSize,
+          verticalLaneLayout);
       srcLayout = buildLaneLayout(context, laneLayout, laneData);
     }
   }
@@ -1247,25 +1444,6 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
     }
   }
   return requiredResLayout;
-}
-
-/// Computes lane_layout and lane_data for scatter-style store anchor layouts
-/// (store scatter, store matrix). Lanes and the per-lane vector both live on
-/// the innermost dim:
-///   - laneLayout[innermost] = min(subgroupSize, srcShape[innermost])
-///   - laneData[innermost]   = min(srcShape[innermost] / laneLayout[innermost],
-///                                 maxChunkSize)
-/// All other entries are 1.
-static std::pair<SmallVector<int64_t>, SmallVector<int64_t>>
-computeScatterIOLaneLayoutAndData(ArrayRef<int64_t> instShape,
-                                  int64_t subgroupSize, int64_t maxChunkSize) {
-  int64_t rank = instShape.size();
-  SmallVector<int64_t> laneLayout(rank, 1), laneData(rank, 1);
-  int64_t innermost = rank - 1;
-  laneLayout[innermost] = std::min(subgroupSize, instShape[innermost]);
-  laneData[innermost] =
-      std::min(instShape[innermost] / laneLayout[innermost], maxChunkSize);
-  return {laneLayout, laneData};
 }
 
 /// Sets up the anchor layout for load gather and load matrix operation.
@@ -1486,174 +1664,6 @@ xegpu::DistributeLayoutAttr xegpu::completeScatterIOLaneLayoutFromInstData(
 
   return buildInstDataLayoutWithLane(context, instData, defLaneLayout,
                                      defLaneData);
-}
-
-using LayoutRepresentation = SmallVector<int64_t>;
-
-/// Enumerates all ways to split `total` into `rank` factors whose product
-/// equals `total`. Returns the list of all such factorizations.
-static SmallVector<LayoutRepresentation> enumerateFactorizations(int64_t total,
-                                                                 int64_t rank) {
-  SmallVector<LayoutRepresentation> results;
-  SmallVector<int64_t> current(rank, 0);
-
-  // Returns all divisors of `n` in ascending order.
-  auto getDivisors = [](int64_t n) {
-    SmallVector<int64_t> divs;
-    for (int64_t i = 1; i * i <= n; ++i) {
-      if (n % i == 0) {
-        divs.push_back(i);
-        if (i != n / i)
-          divs.push_back(n / i);
-      }
-    }
-    llvm::sort(divs);
-    return divs;
-  };
-
-  std::function<void(int64_t, int64_t)> generate = [&](int64_t dim,
-                                                       int64_t remaining) {
-    if (dim == rank - 1) {
-      current[dim] = remaining;
-      results.push_back(LayoutRepresentation(current));
-      return;
-    }
-    for (int64_t factor : getDivisors(remaining)) {
-      current[dim] = factor;
-      generate(dim + 1, remaining / factor);
-    }
-  };
-
-  generate(0, total);
-  return results;
-}
-
-// Computes all valid N-dimensional sg_layout candidates for the given
-// sgCount, whose sgData (= wgShape / sgLayout):
-//   1. Evenly divides wgShape (i.e., wgShape[d] % sgLayout[d] == 0).
-//   2. Is a multiple of instData (i.e., sgData[d] % instData[d] == 0).
-// Results are sorted by balance (smallest max-min spread first), with
-// lexicographic order as a tiebreaker.
-//
-// Example (2D):
-//   wgShape = [128, 64], instData = [8, 16], sgCount = 32
-//   Returns: [[8,4], [16,2]], corresponding to sgData [16,16] and [8,32].
-static SmallVector<LayoutRepresentation>
-getSgLayoutCandidates(ArrayRef<int64_t> wgShape, ArrayRef<int64_t> instData,
-                      int64_t sgCount) {
-  int64_t rank = wgShape.size();
-  assert(rank > 0 && "wgShape must be non-empty");
-  assert(static_cast<int64_t>(instData.size()) == rank &&
-         "instData rank must match wgShape rank");
-
-  // Step 1: Get all N-D factorizations of sgCount.
-  auto allFactorizations = enumerateFactorizations(sgCount, rank);
-
-  // Step 2: Filter to keep only valid candidates.
-  SmallVector<LayoutRepresentation> candidates;
-  for (const auto &sgLayout : allFactorizations) {
-    bool valid = true;
-    for (int64_t dim = 0; dim < rank; ++dim) {
-      if (wgShape[dim] % sgLayout[dim] != 0) {
-        valid = false;
-        break;
-      }
-      int64_t sgData = wgShape[dim] / sgLayout[dim];
-      if (sgData % instData[dim] != 0) {
-        valid = false;
-        break;
-      }
-    }
-    if (valid)
-      candidates.push_back(sgLayout);
-  }
-
-  // Step 3: Sort by balance (smallest max-min spread), then lexicographic.
-  llvm::sort(candidates, [](const LayoutRepresentation &lhs,
-                            const LayoutRepresentation &rhs) {
-    int64_t spreadLhs = *llvm::max_element(lhs) - *llvm::min_element(lhs);
-    int64_t spreadRhs = *llvm::max_element(rhs) - *llvm::min_element(rhs);
-    if (spreadLhs != spreadRhs)
-      return spreadLhs < spreadRhs;
-    return lhs < rhs;
-  });
-  return candidates;
-}
-
-static xegpu::LayoutAttr buildSgLayout(mlir::MLIRContext *context,
-                                       ArrayRef<int64_t> wgTileShape,
-                                       ArrayRef<int64_t> sgLayout,
-                                       int dimK = -1,
-                                       DenseI32ArrayAttr orderAttr = nullptr) {
-  SmallVector<int64_t> sgData(sgLayout.size());
-  for (int dim = 0; dim < (int)sgLayout.size(); ++dim) {
-    if (dim == dimK)
-      sgData[dim] = wgTileShape[dim];
-    else
-      sgData[dim] = wgTileShape[dim] / sgLayout[dim];
-  }
-  return buildLayout(context, sgLayout, sgData,
-                     /*inst_data=*/{}, /*lane_layout=*/{},
-                     /*lane_data=*/{}, /*order=*/nullptr);
-}
-
-// Computes the per-lane layout and data for a 2D block load/store/prefetch:
-// lanes are spread across the subgroup along the last dim (or rank-2 if
-// transposed), and laneData packs sub-bitwidth elements along the packing dim.
-static std::pair<SmallVector<int64_t>, SmallVector<int64_t>>
-compute2DBlockIOLaneLayoutAndData(ArrayRef<int64_t> instShape,
-                                  int64_t subgroupSize, int64_t bitwidth,
-                                  int64_t packingSize, bool vnni = false,
-                                  bool transpose = false) {
-  int64_t rank = instShape.size();
-  SmallVector<int64_t> laneLayout(rank, 1), laneData(rank, 1);
-  int64_t packingDim = vnni ? rank - 2 : rank - 1;
-  laneData[packingDim] = bitwidth < packingSize ? packingSize / bitwidth : 1;
-  assert(
-      !(vnni && transpose) &&
-      "transpose and VNNI cannot be enabled at the same time for 2D block IO");
-  if (transpose)
-    laneLayout[rank - 2] = subgroupSize;
-  else
-    laneLayout.back() = subgroupSize;
-  // assert that the lane layout and data fit in the inst shape
-  for (int64_t i = 0; i < rank; ++i) {
-    int64_t laneProduct = laneLayout[i] * laneData[i];
-    assert(instShape[i] % laneProduct == 0 &&
-           "lane_layout * lane_data must evenly divide the inst shape");
-    (void)laneProduct;
-  }
-  return {laneLayout, laneData};
-}
-
-/// Helper function to compute inst_data vectors for DPAS operands A, B, and
-/// C/D.
-static std::optional<SmallVector<int64_t>>
-get2DBlockIOInstDataLayout(ArrayRef<int64_t> dataShape, ArrayRef<int> bWidths,
-                           ArrayRef<int> bHeights, ArrayRef<int64_t> laneLayout,
-                           ArrayRef<int64_t> laneData) {
-  int rank = dataShape.size();
-  // Compute inst_data from hardware block params. For Nd ops, the lane
-  // factorization above (laneLayout / laneData) is rigid; inst_data must be
-  // a multiple of lane_layout * lane_data on each dim (Category A
-  // invariant).
-  SmallVector<int64_t> instData(rank, 1);
-  assert(rank >= 2 && "dataShape must be at least 2D for 2D-block IO");
-  int instWidth =
-      xegpu::getLargestDivisor(static_cast<int>(dataShape.back()), bWidths);
-  int instHeight =
-      xegpu::getLargestDivisor(static_cast<int>(dataShape[rank - 2]), bHeights);
-  instData.back() = instWidth;
-  instData[rank - 2] = instHeight;
-
-  if (instWidth == -1 || instHeight == -1) {
-    instData.back() = laneLayout.back() * laneData.back();
-    instData[rank - 2] = laneLayout[rank - 2] * laneData[rank - 2];
-  }
-  for (int dim = 0; dim < rank; ++dim)
-    assert(instData[dim] % (laneLayout[dim] * laneData[dim]) == 0 &&
-           "inst_data must be a multiple of lane_layout * lane_data for ND op");
-  return instData;
 }
 
 /// Generic anchor-layout setup for ND ops (load_nd, store_nd, prefetch_nd).
