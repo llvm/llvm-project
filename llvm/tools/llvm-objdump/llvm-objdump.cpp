@@ -24,6 +24,7 @@
 #include "SourcePrinter.h"
 #include "WasmDump.h"
 #include "XCOFFDump.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/StringExtras.h"
@@ -83,7 +84,6 @@
 #include <optional>
 #include <set>
 #include <system_error>
-#include <unordered_map>
 #include <utility>
 
 using namespace llvm;
@@ -262,8 +262,8 @@ public:
   void AddFunctionEntry(BBAddrMap AddrMap, PGOAnalysisMap PGOMap) {
     uint64_t FunctionAddr = AddrMap.getFunctionAddress();
     for (size_t I = 1; I < AddrMap.BBRanges.size(); ++I)
-      RangeBaseAddrToFunctionAddr.emplace(AddrMap.BBRanges[I].BaseAddress,
-                                          FunctionAddr);
+      RangeBaseAddrToFunctionAddr.try_emplace(AddrMap.BBRanges[I].BaseAddress,
+                                              FunctionAddr);
     [[maybe_unused]] auto R = FunctionAddrToMap.try_emplace(
         FunctionAddr, std::move(AddrMap), std::move(PGOMap));
     assert(R.second && "duplicate function address");
@@ -285,8 +285,8 @@ public:
   }
 
 private:
-  std::unordered_map<uint64_t, BBAddrMapFunctionEntry> FunctionAddrToMap;
-  std::unordered_map<uint64_t, uint64_t> RangeBaseAddrToFunctionAddr;
+  DenseMap<uint64_t, BBAddrMapFunctionEntry> FunctionAddrToMap;
+  DenseMap<uint64_t, uint64_t> RangeBaseAddrToFunctionAddr;
 };
 
 } // namespace
@@ -1659,8 +1659,7 @@ static SymbolInfoTy createDummySymbolInfo(const ObjectFile &Obj,
 
 static void collectBBAddrMapLabels(
     const BBAddrMapInfo &FullAddrMap, uint64_t SectionAddr, uint64_t Start,
-    uint64_t End,
-    std::unordered_map<uint64_t, std::vector<BBAddrMapLabel>> &Labels) {
+    uint64_t End, DenseMap<uint64_t, std::vector<BBAddrMapLabel>> &Labels) {
   if (FullAddrMap.empty())
     return;
   Labels.clear();
@@ -1692,12 +1691,10 @@ static void collectBBAddrMapLabels(
   }
 }
 
-static void
-collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
-                          MCDisassembler *DisAsm, MCInstPrinter *IP,
-                          const MCSubtargetInfo *STI, uint64_t SectionAddr,
-                          uint64_t Start, uint64_t End,
-                          std::unordered_map<uint64_t, std::string> &Labels) {
+static void collectLocalBranchTargets(
+    ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA, MCDisassembler *DisAsm,
+    MCInstPrinter *IP, const MCSubtargetInfo *STI, uint64_t SectionAddr,
+    uint64_t Start, uint64_t End, DenseMap<uint64_t, std::string> &Labels) {
   // Supported by certain targets.
   const bool isPPC = STI->getTargetTriple().isPPC();
   const bool isX86 = STI->getTargetTriple().isX86();
@@ -2422,8 +2419,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           Symbols[SI - 1].XCOFFSymInfo.StorageMappingClass &&
           (*Symbols[SI - 1].XCOFFSymInfo.StorageMappingClass == XCOFF::XMC_PR);
 
-      std::unordered_map<uint64_t, std::string> AllLabels;
-      std::unordered_map<uint64_t, std::vector<BBAddrMapLabel>> BBAddrMapLabels;
+      DenseMap<uint64_t, std::string> AllLabels;
+      DenseMap<uint64_t, std::vector<BBAddrMapLabel>> BBAddrMapLabels;
       if (SymbolizeOperands) {
         collectLocalBranchTargets(Bytes, DT->InstrAnalysis.get(),
                                   DT->DisAsm.get(), DT->InstPrinter.get(),
