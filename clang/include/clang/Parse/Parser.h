@@ -5035,16 +5035,12 @@ private:
   /// present will be parsed and stored here, and a null result will be
   /// returned.
   ///
-  /// \param EnterForConditionScope If true, enter a continue/break scope at the
-  /// appropriate moment for a 'for' loop.
-  ///
   /// \returns The parsed condition.
   Sema::ConditionResult ParseCXXCondition(StmtResult *InitStmt,
                                           SourceLocation Loc,
                                           Sema::ConditionKind CK,
                                           bool MissingOK,
-                                          ForRangeInfo *FRI = nullptr,
-                                          bool EnterForConditionScope = false);
+                                          ForRangeInfo *FRI = nullptr);
   DeclGroupPtrTy ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
                                                       ParsedAttributes &Attrs);
 
@@ -7000,6 +6996,12 @@ private:
 
   /// Parses the 'interop' parts of the 'append_args' and 'init' clauses.
   bool ParseOMPInteropInfo(OMPInteropInfo &InteropInfo, OpenMPClauseKind Kind);
+
+  /// Parses 'fr(<foreign-runtime-id>)'.
+  ExprResult ParseOMPInteropFrSelector();
+
+  /// Parses 'attr(<string-literal>[, ...])', appending to \p Attrs.
+  bool ParseOMPInteropAttrSelector(SmallVectorImpl<Expr *> &Attrs);
 
   /// Parses clause with an interop variable of kind \a Kind.
   ///

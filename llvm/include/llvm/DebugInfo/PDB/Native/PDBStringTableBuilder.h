@@ -35,6 +35,7 @@ class PDBStringTableBuilder;
 struct StringTableHashTraits {
   PDBStringTableBuilder *Table;
 
+  LLVM_ABI StringTableHashTraits() = default;
   LLVM_ABI explicit StringTableHashTraits(PDBStringTableBuilder &Table);
   LLVM_ABI uint32_t hashLookupKey(StringRef S) const;
   LLVM_ABI StringRef storageKeyToLookupKey(uint32_t Offset) const;

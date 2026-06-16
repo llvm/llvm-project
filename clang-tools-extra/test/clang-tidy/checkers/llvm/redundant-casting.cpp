@@ -24,7 +24,7 @@ CAST_FUNCTION(cast_or_null)
 CAST_FUNCTION(cast_if_present)
 CAST_FUNCTION(dyn_cast_or_null)
 CAST_FUNCTION(dyn_cast_if_present)
-}
+} // namespace llvm
 
 struct A {};
 struct B : A {};
@@ -245,6 +245,17 @@ void testCastCRTPUpcast(L& value) {
   // CHECK-MESSAGES: :[[@LINE-2]]:32: note: source expression has type 'L', which is a subtype of 'K<L>'
   // CHECK-FIXES: K<L>& a24 = value;
   (void)a24;
+}
+
+namespace mlir {
+using llvm::cast;
+void testCastUsing(A& value) {
+  A& a30 = cast<A>(value);
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: redundant use of 'cast' [llvm-redundant-casting]
+  // CHECK-MESSAGES: :[[@LINE-2]]:20: note: source expression has type 'A'
+  // CHECK-FIXES: A& a30 = value;
+  (void)a30;
+}
 }
 
 CAST_FUNCTION(cast)

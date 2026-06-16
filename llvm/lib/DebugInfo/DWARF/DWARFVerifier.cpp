@@ -1990,6 +1990,12 @@ void DWARFVerifier::verifyNameIndexCompleteness(
   case DW_TAG_member:
     return;
 
+  // DW_TAG_LLVM_annotation DIEs attach metadata to other DIEs.
+  // Their DW_AT_name carries the annotation kind, not a globally visible
+  // symbol, so they should not be indexed.
+  case DW_TAG_LLVM_annotation:
+    return;
+
   // According to a strict reading of the specification, enumerators should not
   // be indexed (and LLVM currently does not do that). However, this causes
   // problems for the debuggers, so we may need to reconsider this.

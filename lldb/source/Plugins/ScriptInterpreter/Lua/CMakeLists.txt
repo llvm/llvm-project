@@ -14,6 +14,11 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
   )
   add_lua_wrapper(lldbPluginScriptInterpreterLua)
 
+  if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
+    lldb_record_dynamic_script_interpreter_exports(
+      lldbPluginScriptInterpreterLua)
+  endif()
+
   # Static variant linked directly by unit tests. Separate compilation is
   # required so llvm::Error RTTI (ErrorInfoBase::ID) has a single address
   # shared between the test binary and the plugin code.

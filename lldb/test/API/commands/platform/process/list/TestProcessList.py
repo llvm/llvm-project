@@ -26,5 +26,5 @@ class ProcessListTestCase(TestBase):
         popen = self.spawnSubprocess(exe, args=[sync_file, "arg1", "--arg2", "arg3"])
         lldbutil.wait_for_file_on_target(self, sync_file)
 
-        substrs = [str(popen.pid), "TestProcess", "arg1 --arg2 arg3"]
+        substrs = [str(popen.pid), "TestProcess", sync_file, "arg1 --arg2 arg3"]
         self.expect("platform process list -v", substrs=substrs)

@@ -51,7 +51,7 @@ cleanup.cont:
 ; VERIFY Resume Parts
 
 ; Verify that resume function does not contains both print calls appearing after coro.end
-; CHECK-LABEL: define internal fastcc void @f2.resume
+; CHECK-LABEL: define internal void @f2.resume
 ; CHECK: invoke void @print(i32 1)
 ; CHECK:   to label %CoroEnd unwind label %lpad
 

@@ -23,6 +23,8 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     %7 = spirv.GL.Asin %arg0 : f32
     // CHECK: {{%.*}} = spirv.GL.Atan {{%.*}} : f32
     %8 = spirv.GL.Atan %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Atan2 {{%.*}}, {{%.*}} : f32
+    %atan2 = spirv.GL.Atan2 %arg0, %arg1 : f32
     // CHECK: {{%.*}} = spirv.GL.Sinh {{%.*}} : f32
     %9 = spirv.GL.Sinh %arg0 : f32
     // CHECK: {{%.*}} = spirv.GL.Cosh {{%.*}} : f32
@@ -31,6 +33,8 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     %11 = spirv.GL.Pow %arg0, %arg1 : f32
     // CHECK: {{%.*}} = spirv.GL.Round {{%.*}} : f32
     %12 = spirv.GL.Round %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Trunc {{%.*}} : f32
+    %trunc = spirv.GL.Trunc %arg0 : f32
     // CHECK: {{%.*}} = spirv.GL.FrexpStruct {{%.*}} : f32 -> !spirv.struct<(f32, i32)>
     %13 = spirv.GL.FrexpStruct %arg0 : f32 -> !spirv.struct<(f32, i32)>
     // CHECK: {{%.*}} = spirv.GL.Ldexp {{%.*}} : f32, {{%.*}} : i32 -> f32

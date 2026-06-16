@@ -927,6 +927,15 @@ void CIRGenFunction::emitForwardingCallToLambda(
       callOperator->getType()->castAs<FunctionProtoType>();
   QualType resultType = fpt->getReturnType();
   ReturnValueSlot returnSlot;
+  // This should also be tracking volatile, unused, and externally destructed.
+  assert(!cir::MissingFeatures::returnValueSlotFeatures());
+  // For aggregate returns, write the callee's result directly into the
+  // static invoker's return slot.  Otherwise emitReturnOfRValue below would
+  // aggregate-copy a temporary into returnValue, which is incorrect for
+  // types without a trivial copy/move (e.g. std::string) -- and trips an
+  // assertion in emitAggregateCopy.
+  if (!resultType->isVoidType() && hasAggregateEvaluationKind(resultType))
+    returnSlot = ReturnValueSlot(returnValue);
 
   // We don't need to separately arrange the call arguments because
   // the call can't be variadic anyway --- it's impossible to forward
@@ -937,9 +946,10 @@ void CIRGenFunction::emitForwardingCallToLambda(
       CIRGenCallee::forDirect(calleePtr, GlobalDecl(callOperator));
   RValue rv = emitCall(calleeFnInfo, callee, returnSlot, callArgs);
 
-  // If necessary, copy the returned value into the slot.
-  if (!resultType->isVoidType() && returnSlot.isNull()) {
-    if (getLangOpts().ObjCAutoRefCount && resultType->isObjCRetainableType())
+  // Forward the returned value through the function's return slot.
+  if (!resultType->isVoidType()) {
+    if (returnSlot.isNull() && getLangOpts().ObjCAutoRefCount &&
+        resultType->isObjCRetainableType())
       cgm.errorNYI(callOperator->getSourceRange(),
                    "emitForwardingCallToLambda: ObjCAutoRefCount");
     emitReturnOfRValue(*currSrcLoc, rv, resultType);

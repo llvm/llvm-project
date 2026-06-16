@@ -85,6 +85,11 @@ public:
         return true;
       }
 
+      bool VisitCXXConstructExpr(CXXConstructExpr *CE) override {
+        Checker->visitConstructExpr(CE, DeclWithIssue);
+        return true;
+      }
+
       bool VisitTypedefDecl(TypedefDecl *TD) override {
         if (Checker->RTC)
           Checker->RTC->visitTypedef(TD);
@@ -103,11 +108,10 @@ public:
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
 
-  void visitCallExpr(const CallExpr *CE, const Decl *D) const {
-    if (shouldSkipCall(CE))
-      return;
-
-    if (auto *F = CE->getDirectCallee()) {
+  template <typename CallOrConstrcut>
+  void visitCallOrConstructExpr(const CallOrConstrcut *CE,
+                                const FunctionDecl *F, const Decl *D) const {
+    if (F) {
       // Skip the first argument for overloaded member operators (e. g. lambda
       // or std::function call operator).
       unsigned ArgIdx =
@@ -115,6 +119,14 @@ public:
 
       if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(CE))
         checkThisArg(MemberCallExpr, D);
+
+      if (ArgIdx) {
+        auto *Arg = CE->getArg(0);
+        QualType ArgType = Arg->getType().getCanonicalType();
+        std::optional<bool> IsUnsafe = isUnsafeType(ArgType);
+        if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(Arg))
+          reportBugOnThis(Arg, D);
+      }
 
       for (auto P = F->param_begin();
            P < F->param_end() && ArgIdx < CE->getNumArgs(); ++P, ++ArgIdx) {
@@ -127,7 +139,17 @@ public:
         auto *Arg = CE->getArg(ArgIdx);
         checkArg(Arg, Arg->getType(), nullptr, D);
       }
-    } else if (auto *Decl = CE->getCalleeDecl()) {
+    }
+  }
+
+  void visitCallExpr(const CallExpr *CE, const Decl *D) const {
+    auto *Callee = CE->getDirectCallee();
+    if (shouldSkipCall(CE, Callee))
+      return;
+
+    if (Callee)
+      visitCallOrConstructExpr(CE, Callee, D);
+    else if (auto *Decl = CE->getCalleeDecl()) {
       if (auto *FnType = Decl->getFunctionType()) {
         if (auto *ProtoType = dyn_cast<FunctionProtoType>(FnType)) {
           if (auto *MemberCallExpr = dyn_cast<CXXMemberCallExpr>(CE))
@@ -146,6 +168,14 @@ public:
     }
   }
 
+  void visitConstructExpr(const CXXConstructExpr *CE, const Decl *D) const {
+    auto *Constructor = CE->getConstructor();
+    if (shouldSkipCall(CE, Constructor))
+      return;
+    if (Constructor)
+      visitCallOrConstructExpr(CE, Constructor, D);
+  }
+
   void visitObjCMessageExpr(const ObjCMessageExpr *E, const Decl *D) const {
     if (BR->getSourceManager().isInSystemHeader(E->getExprLoc()))
       return;
@@ -154,6 +184,9 @@ public:
       std::optional<bool> IsUnsafe = isUnsafePtr(E->getReceiverType());
       if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(Receiver)) {
         if (isAllocInit(E))
+          return;
+        auto SelectorName = E->getSelector().getNameForSlot(0);
+        if (SelectorName == "isEqual" || SelectorName == "isEqualToString")
           return;
         reportBugOnReceiver(Receiver, D);
       }
@@ -237,17 +270,21 @@ public:
             return true;
           if (isASafeCallArg(ArgOrigin))
             return true;
-          if (EFA.isACallToEnsureFn(ArgOrigin))
-            return true;
+          if (EFA.isACallToEnsureFn(ArgOrigin)) {
+            auto *MCE = dyn_cast<CXXMemberCallExpr>(ArgOrigin);
+            assert(MCE);
+            if (isPtrOriginSafe(MCE->getImplicitObjectArgument()))
+              return true;
+          }
           if (isSafeExpr(ArgOrigin))
             return true;
           return false;
         });
   }
 
-  bool shouldSkipCall(const CallExpr *CE) const {
-    const auto *Callee = CE->getDirectCallee();
-
+  template <typename CallOrConstruct>
+  bool shouldSkipCall(const CallOrConstruct *CE,
+                      const FunctionDecl *Callee) const {
     if (BR->getSourceManager().isInSystemHeader(CE->getExprLoc()))
       return true;
 
@@ -479,11 +516,6 @@ public:
 
   bool isSafePtrType(const QualType type) const final {
     return isRetainPtrOrOSPtrType(type);
-  }
-
-  bool isSafeExpr(const Expr *E) const final {
-    return ento::cocoa::isCocoaObjectRef(E->getType()) &&
-           isa<ObjCMessageExpr>(E);
   }
 
   bool isSafeDecl(const Decl *D) const final {
