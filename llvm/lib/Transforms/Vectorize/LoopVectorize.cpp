@@ -1947,7 +1947,7 @@ static bool isIndvarOverflowCheckKnownFalse(
           /*ComputeUpperBoundOnly=*/true)) {
     unsigned MaxVF = VF.getKnownMinValue();
     unsigned MaxTC = TC->getKnownMinValue();
-    if (VF.isScalable()) {
+    if (VF.isScalable() || TC->isScalable()) {
       std::optional<unsigned> MaxVScale =
           getMaxVScale(*Cost->TheFunction, Cost->TTI);
       if (!MaxVScale)
