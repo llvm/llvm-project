@@ -279,9 +279,9 @@ body: |
     ; CHECK-NEXT: %b:_(s64) = COPY $x1
     ; CHECK-NEXT: %c:_(s64) = COPY $x2
     ; CHECK-NEXT: %mone:_(s64) = G_CONSTANT i64 -1
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD %b, %c
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[ADD]], %mone
-    ; CHECK-NEXT: %dst:_(s64) = G_AND %a, [[XOR]]
+    ; CHECK-NEXT: %neg_y:_(s64) = G_XOR %b, %mone
+    ; CHECK-NEXT: %sub:_(s64) = G_SUB %c, %neg_y
+    ; CHECK-NEXT: %dst:_(s64) = G_AND %a, %sub
     ; CHECK-NEXT: $x0 = COPY %dst(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %a:_(s64) = COPY $x0
