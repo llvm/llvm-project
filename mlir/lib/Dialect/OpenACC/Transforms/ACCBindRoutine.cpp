@@ -81,23 +81,18 @@ public:
   using acc::impl::ACCBindRoutineBase<ACCBindRoutine>::ACCBindRoutineBase;
 
   void runOnOperation() override {
-    func::FuncOp func = getOperation();
-    ModuleOp module = func->getParentOfType<ModuleOp>();
-    if (!module)
-      return;
-
+    ModuleOp module = getOperation();
+    OpenACCSupport &accSupport = getAnalysis<OpenACCSupport>();
     SymbolTable symTab(module);
-    auto cachedAnalysis =
-        getCachedParentAnalysis<OpenACCSupport>(func->getParentOp());
-    OpenACCSupport &accSupport =
-        cachedAnalysis ? cachedAnalysis->get() : getAnalysis<OpenACCSupport>();
 
     bool failed = false;
 
-    func.walk([&](acc::OffloadRegionOpInterface offload) {
-      Region &region = offload.getOffloadRegion();
-      region.walk([&](CallOpInterface callOp) {
+    module.walk([&](FunctionOpInterface func) {
+      func.walk([&](CallOpInterface callOp) {
         if (!callOp.getCallableForCallee())
+          return;
+        if (!callOp->getParentOfType<OffloadRegionOpInterface>() &&
+            !callOp->getParentOfType<gpu::GPUFuncOp>())
           return;
         SymbolRefAttr calleeSymbolRef =
             dyn_cast<SymbolRefAttr>(callOp.getCallableForCallee());
@@ -131,14 +126,26 @@ public:
           bindNameOpt = routine.getBindNameValue();
         if (!bindNameOpt)
           return;
-
         SymbolRefAttr calleeRef;
         if (auto *symRef = std::get_if<SymbolRefAttr>(&*bindNameOpt)) {
           calleeRef = *symRef;
         } else {
-          calleeRef = FlatSymbolRefAttr::get(
-              callOp.getContext(),
-              std::get<StringAttr>(*bindNameOpt).getValue());
+          StringRef bindName = std::get<StringAttr>(*bindNameOpt).getValue();
+          auto gpuMod = func->getParentOfType<gpu::GPUModuleOp>();
+          Operation *symbolTableOp =
+              gpuMod ? gpuMod.getOperation() : module.getOperation();
+          SymbolTable insertSymTab(symbolTableOp);
+          if (!insertSymTab.lookup(bindName)) {
+            OpBuilder builder(module.getContext());
+            Block *insertBlock = gpuMod ? gpuMod.getBody() : module.getBody();
+            builder.setInsertionPointToEnd(insertBlock);
+            auto funcType = cast<FunctionType>(callee.getFunctionType());
+            func::FuncOp bindFunc = func::FuncOp::create(
+                builder, callee.getLoc(), bindName, funcType);
+            bindFunc.setPrivate();
+            insertSymTab.insert(bindFunc);
+          }
+          calleeRef = FlatSymbolRefAttr::get(callOp.getContext(), bindName);
         }
         callOp.setCalleeFromCallable(calleeRef);
       });
