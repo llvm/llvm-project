@@ -15,9 +15,9 @@ void bind_base_ref_to_derived_temp() {
 }
 
 // CIR-LABEL: cir.func {{.*}}@_Z29bind_base_ref_to_derived_tempv
-// CIR:   %[[REF_TMP:.*]] = cir.alloca !rec_Derived, !cir.ptr<!rec_Derived>, ["ref.tmp0"]
-// CIR:   %[[R:.*]] = cir.alloca !cir.ptr<!rec_Base>, !cir.ptr<!cir.ptr<!rec_Base>>, ["r", init, const]
-// CIR:   %[[SPILL:.*]] = cir.alloca !cir.ptr<!rec_Base>, !cir.ptr<!cir.ptr<!rec_Base>>, ["tmp.exprcleanup"]
+// CIR:   %[[REF_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_Derived>
+// CIR:   %[[R:.*]] = cir.alloca "r" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Base>>
+// CIR:   %[[SPILL:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.ptr<!rec_Base>>
 // CIR:   cir.call @_Z12make_derivedv()
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[BASE:.*]] = cir.base_class_addr %[[REF_TMP]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>

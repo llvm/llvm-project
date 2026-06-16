@@ -194,6 +194,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.memalignment
+    libc.src.stdlib.mkstemp
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
@@ -302,6 +303,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.socket.socketpair
     # TODO: These functions are not compatible with 64-bit musl. They need to
     # be excluded if overlaying musl.
+    libc.src.sys.socket.recvmmsg
     libc.src.sys.socket.recvmsg
     libc.src.sys.socket.sendmmsg
     libc.src.sys.socket.sendmsg
@@ -722,6 +724,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.asinpif16
     libc.src.math.atan2f16
     libc.src.math.canonicalizef16
+    libc.src.math.cbrtf16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
     libc.src.math.cospif16
@@ -874,6 +877,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.getpayloadf128
     libc.src.math.ilogbf128
     libc.src.math.iscanonicalf128
+    libc.src.math.isnanf128
     libc.src.math.issignalingf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
@@ -909,6 +913,7 @@ endif()
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.atanbf16
+  libc.src.math.acosbf16
   libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
@@ -1015,6 +1020,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.arpa.inet.ntohl
     libc.src.arpa.inet.ntohs
 
+    # netinet/in.h entrypoints
+    libc.src.netinet.in6addr_any
+    libc.src.netinet.in6addr_loopback
+
     # pthread.h entrypoints
     libc.src.pthread.pthread_atfork
     libc.src.pthread.pthread_attr_destroy
@@ -1092,6 +1101,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_setspecific
 
     # sched.h entrypoints
+    libc.src.sched.__sched_cpualloc
+    libc.src.sched.__sched_cpufree
     libc.src.sched.__sched_getcpucount
     libc.src.sched.__sched_setcpuzero
     libc.src.sched.__sched_setcpuset
@@ -1282,8 +1293,12 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.regex.regexec
       libc.src.regex.regerror
       libc.src.regex.regfree
+
+      # sys/ptrace.h entrypoints
+      libc.src.sys.ptrace.ptrace
+
       # wchar.h entrypoints
-      libc.src.wchar.swprintf      
+      libc.src.wchar.swprintf
     )
   endif()
 endif()

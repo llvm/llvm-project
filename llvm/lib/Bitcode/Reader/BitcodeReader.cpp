@@ -3370,7 +3370,8 @@ Error BitcodeReader::parseConstants() {
     case bitc::CST_CODE_BYTE: // BYTE: [byteval]
       if (!CurTy->isByteOrByteVectorTy() || Record.empty())
         return error("Invalid byte const record");
-      V = ConstantByte::get(CurTy, decodeSignRotatedValue(Record[0]));
+      V = ConstantByte::get(CurTy, decodeSignRotatedValue(Record[0]),
+                            /*isSigned=*/true);
       break;
     case bitc::CST_CODE_WIDE_BYTE: { // WIDE_BYTE: [n x byteval]
       if (!CurTy->isByteOrByteVectorTy() || Record.empty())
@@ -3978,6 +3979,8 @@ Error BitcodeReader::materializeMetadata() {
         LinkerOpts->addOperand(cast<MDNode>(MDOptions));
     }
   }
+
+  UpgradeCFIFunctionsMetadata(*TheModule);
 
   DeferredMetadataInfo.clear();
   return Error::success();
@@ -5281,7 +5284,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
             cast<TruncInst>(I)->setHasNoSignedWrap(true);
         }
         if (isa<FPMathOperator>(I)) {
-          FastMathFlags FMF = getDecodedFastMathFlags(Record[OpNum]);
+          uint64_t Flags = Record[OpNum];
+          if (isa<UIToFPInst>(I))
+            Flags >>= 1;
+          FastMathFlags FMF = getDecodedFastMathFlags(Flags);
           if (FMF.any())
             I->setFastMathFlags(FMF);
         }
@@ -7148,14 +7154,12 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         if (It != UpgradedIntrinsics.end())
           UpgradeIntrinsicCall(CI, It->second);
       }
-    }
-
-    // Old bitcode allowed an optional bitcast between a musttail call and its
-    // return. Under opaque pointers that cast is always a no-op, and the
-    // verifier no longer accepts it, so drop it.
-    if (auto *BC = dyn_cast<BitCastInst>(&I);
-        BC && BC->getSrcTy() == BC->getDestTy() &&
-        isa_and_nonnull<ReturnInst>(BC->getNextNode())) {
+    } else if (auto *BC = dyn_cast<BitCastInst>(&I);
+               BC && BC->getSrcTy() == BC->getDestTy() &&
+               isa_and_nonnull<ReturnInst>(BC->getNextNode())) {
+      // Old bitcode allowed an optional bitcast between a musttail call and its
+      // return. Under opaque pointers that cast is always a no-op, and the
+      // verifier no longer accepts it, so drop it.
       if (auto *CI = dyn_cast<CallInst>(BC->getOperand(0));
           CI && CI->isMustTailCall() && CI->getNextNode() == BC) {
         BC->replaceAllUsesWith(CI);
@@ -8159,17 +8163,43 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
 
     case bitc::FS_CFI_FUNCTION_DEFS: {
       auto &CfiFunctionDefs = TheIndex.cfiFunctionDefs();
-      for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDefs.emplace(Strtab.data() + Record[I],
-                                static_cast<size_t>(Record[I + 1]));
+      if (Version < 14) {
+        for (unsigned I = 0; I != Record.size(); I += 2) {
+          StringRef Name(Strtab.data() + Record[I],
+                         static_cast<size_t>(Record[I + 1]));
+          GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+              GlobalValue::dropLLVMManglingEscape(Name));
+          CfiFunctionDefs.addSymbolWithThinLTOGUID(Name, GUID);
+        }
+      } else {
+        for (unsigned I = 0; I != Record.size(); I += 3) {
+          GlobalValue::GUID ThinLTOGUID = Record[I];
+          StringRef Name(Strtab.data() + Record[I + 1],
+                         static_cast<size_t>(Record[I + 2]));
+          CfiFunctionDefs.addSymbolWithThinLTOGUID(Name, ThinLTOGUID);
+        }
+      }
       break;
     }
 
     case bitc::FS_CFI_FUNCTION_DECLS: {
       auto &CfiFunctionDecls = TheIndex.cfiFunctionDecls();
-      for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDecls.emplace(Strtab.data() + Record[I],
-                                 static_cast<size_t>(Record[I + 1]));
+      if (Version < 14) {
+        for (unsigned I = 0; I != Record.size(); I += 2) {
+          StringRef Name(Strtab.data() + Record[I],
+                         static_cast<size_t>(Record[I + 1]));
+          GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+              GlobalValue::dropLLVMManglingEscape(Name));
+          CfiFunctionDecls.addSymbolWithThinLTOGUID(Name, GUID);
+        }
+      } else {
+        for (unsigned I = 0; I != Record.size(); I += 3) {
+          GlobalValue::GUID ThinLTOGUID = Record[I];
+          StringRef Name(Strtab.data() + Record[I + 1],
+                         static_cast<size_t>(Record[I + 2]));
+          CfiFunctionDecls.addSymbolWithThinLTOGUID(Name, ThinLTOGUID);
+        }
+      }
       break;
     }
 

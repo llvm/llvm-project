@@ -390,7 +390,7 @@ public:
                                 PatternRewriter &rewriter) const override {
     rewriter.setInsertionPoint(computeOp);
     auto kernelEnv =
-        KernelEnvironmentOp::createAndPopulate(computeOp, rewriter);
+        KernelEnvironmentOp::createAndPopulate(computeOp, deviceType, rewriter);
     auto launchArgs =
         assignKnownLaunchArgs(computeOp, deviceType, rewriter, policy);
     Region &region = computeOp.getRegion();

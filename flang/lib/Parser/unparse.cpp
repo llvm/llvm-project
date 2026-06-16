@@ -431,6 +431,20 @@ public:
   void Post(const EndEnumStmt &) { // R763
     Outdent(), Word("END ENUM");
   }
+  void Unparse(const EnumerationTypeStmt &x) { // F2023 R767
+    Word("ENUMERATION TYPE");
+    Walk(", ", std::get<std::optional<AccessSpec>>(x.t));
+    Word(" :: ");
+    Walk(std::get<Name>(x.t));
+    Indent();
+  }
+  void Unparse(const EnumerationEnumeratorStmt &x) { // F2023 R768
+    Word("ENUMERATOR :: "), Walk(x.v, ", ");
+  }
+  void Unparse(const EndEnumerationTypeStmt &x) { // F2023 R769
+    Outdent(), Word("END ENUMERATION TYPE");
+    Walk(" ", x.v);
+  }
   void Unparse(const BOZLiteralConstant &x) { // R764 - R767
     Put(x.v);
   }
@@ -577,6 +591,10 @@ public:
     common::visit(
         common::visitors{
             [&](const std::list<ExplicitShapeSpec> &y) { Walk(y, ","); },
+            [&](const ExplicitShapeBoundsSpec &y) {
+              llvm_unreachable(
+                  "Unparse for ExplicitShapeBoundsSpec should not be reached");
+            },
             [&](const std::list<AssumedShapeSpec> &y) { Walk(y, ","); },
             [&](const DeferredShapeSpecList &y) { Walk(y); },
             [&](const AssumedSizeSpec &y) { Walk(y); },
@@ -2899,6 +2917,9 @@ public:
     switch (x) {
     case ReductionOperator::Operator::Plus:
       Word("+");
+      break;
+    case ReductionOperator::Operator::Minus:
+      Word("-");
       break;
     case ReductionOperator::Operator::Multiply:
       Word("*");

@@ -154,7 +154,8 @@ func.func @test_result_box_addr(%x : !fir.box<!fir.array<?xi32>>) {
 }
 // CHECK-LABEL: func.func @test_result_box_addr(
 // CHECK-SAME: %[[X:.*]]: !fir.box<!fir.array<?xi32>>) {
-// CHECK:  %[[ADDR:.*]] = fir.box_addr %[[X]] : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
+// CHECK:  %[[REBOX:.*]] = fir.rebox %[[X]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:  %[[ADDR:.*]] = fir.box_addr %[[REBOX]] : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
 // CHECK: fir.call @bar(%[[ADDR]]) : (!fir.ref<!fir.array<?xi32>>) -> ()
 
 func.func private @bar2(!fir.ref<!fir.array<10xi32>>) -> ()

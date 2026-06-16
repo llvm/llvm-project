@@ -7186,9 +7186,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_fcvtzu:
     // Floating-point convert to lower precision narrow, rounding to odd
     case Intrinsic::aarch64_neon_fcvtxn:
-    // Vector Conversions Between Half-Precision and Single-Precision
-    case Intrinsic::aarch64_neon_vcvthf2fp:
-    case Intrinsic::aarch64_neon_vcvtfp2hf:
       handleGenericVectorConvertIntrinsic(I, /*FixedPoint=*/false);
       break;
 

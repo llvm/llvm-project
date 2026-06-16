@@ -10,14 +10,14 @@ void f0(int len) {
 }
 
 // CIR: cir.func{{.*}} @f0(%[[LEN_ARG:.*]]: !s32i {{.*}})
-// CIR:   %[[LEN_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["len", init]
-// CIR:   %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
+// CIR:   %[[LEN_ADDR:.*]] = cir.alloca "len" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[SAVED_STACK:.*]] = cir.alloca "saved_stack" {{.*}} : !cir.ptr<!cir.ptr<!u8i>>
 // CIR:   cir.store{{.*}} %[[LEN_ARG]], %[[LEN_ADDR]]
 // CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
 // CIR:   %[[LEN_SIZE_T:.*]] = cir.cast integral %[[LEN]] : !s32i -> !u64i
 // CIR:   %[[STACK_PTR:.*]] = cir.stacksave
 // CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
-// CIR:   %[[ARR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, %[[LEN_SIZE_T]] : !u64i, ["arr"]
+// CIR:   %[[ARR:.*]] = cir.alloca "arr" {{.*}} size(%[[LEN_SIZE_T]]) : !cir.ptr<!s32i>
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
 
@@ -54,13 +54,13 @@ void vla_bool_size(_Bool len) {
 }
 
 // CIR-LABEL: cir.func {{.*}}@vla_bool_size
-// CIR:   %[[LEN_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["len", init]
-// CIR:   %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
+// CIR:   %[[LEN_ADDR:.*]] = cir.alloca "len" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR:   %[[SAVED_STACK:.*]] = cir.alloca "saved_stack" {{.*}} : !cir.ptr<!cir.ptr<!u8i>>
 // CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
 // CIR:   %[[LEN_SIZE_T:.*]] = cir.cast bool_to_int %[[LEN]] : !cir.bool -> !u64i
 // CIR:   %[[STACK_PTR:.*]] = cir.stacksave
 // CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
-// CIR:   %[[ARR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, %[[LEN_SIZE_T]] : !u64i, ["arr"]
+// CIR:   %[[ARR:.*]] = cir.alloca "arr" {{.*}} size(%[[LEN_SIZE_T]]) : !cir.ptr<!s32i>
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
 //
@@ -95,8 +95,8 @@ void f1(int len) {
 }
 
 // CIR: cir.func{{.*}} @f1(%[[LEN_ARG:.*]]: !s32i {{.*}})
-// CIR:   %[[LEN_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["len", init]
-// CIR:   %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
+// CIR:   %[[LEN_ADDR:.*]] = cir.alloca "len" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[SAVED_STACK:.*]] = cir.alloca "saved_stack" {{.*}} : !cir.ptr<!cir.ptr<!u8i>>
 // CIR:   cir.store{{.*}} %[[LEN_ARG]], %[[LEN_ADDR]]
 // CIR:   %[[SIXTEEN:.*]] = cir.const #cir.int<16> : !u64i
 // CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
@@ -104,7 +104,7 @@ void f1(int len) {
 // CIR:   %[[STACK_PTR:.*]] = cir.stacksave
 // CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
 // CIR:   %[[TOTAL_LEN:.*]] = cir.mul nuw %[[SIXTEEN]], %[[LEN_SIZE_T]]
-// CIR:   %[[ARR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, %[[TOTAL_LEN]] : !u64i, ["arr"]
+// CIR:   %[[ARR:.*]] = cir.alloca "arr" {{.*}} size(%[[TOTAL_LEN]]) : !cir.ptr<!s32i>
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
 
@@ -143,8 +143,8 @@ void f2(int len) {
 }
   
 // CIR: cir.func{{.*}} @f2(%[[LEN_ARG:.*]]: !s32i {{.*}})
-// CIR:   %[[LEN_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["len", init]
-// CIR:   %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
+// CIR:   %[[LEN_ADDR:.*]] = cir.alloca "len" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[SAVED_STACK:.*]] = cir.alloca "saved_stack" {{.*}} : !cir.ptr<!cir.ptr<!u8i>>
 // CIR:   cir.store{{.*}} %[[LEN_ARG]], %[[LEN_ADDR]]
 // CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
 // CIR:   %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i
@@ -152,7 +152,7 @@ void f2(int len) {
 // CIR:   %[[TOTAL_LEN_SIZE_T:.*]] = cir.cast integral %[[TOTAL_LEN]] : !s32i -> !u64i
 // CIR:   %[[STACK_PTR:.*]] = cir.stacksave
 // CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
-// CIR:   %[[ARR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, %[[TOTAL_LEN_SIZE_T]] : !u64i, ["arr"]
+// CIR:   %[[ARR:.*]] = cir.alloca "arr" {{.*}} size(%[[TOTAL_LEN_SIZE_T]]) : !cir.ptr<!s32i>
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
   
@@ -195,15 +195,15 @@ void f3(unsigned len) {
 }
 
 // CIR: cir.func{{.*}} @f3(%[[LEN_ARG:.*]]: !u32i {{.*}})
-// CIR:   %[[LEN_ADDR:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["len", init]
-// CIR:   %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
-// CIR:   %[[I:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["i", init]
+// CIR:   %[[LEN_ADDR:.*]] = cir.alloca "len" {{.*}} init : !cir.ptr<!u32i>
+// CIR:   %[[SAVED_STACK:.*]] = cir.alloca "saved_stack" {{.*}} : !cir.ptr<!cir.ptr<!u8i>>
+// CIR:   %[[I:.*]] = cir.alloca "i" {{.*}} init : !cir.ptr<!u32i>
 // CIR:   cir.store{{.*}} %[[LEN_ARG]], %[[LEN_ADDR]]
 // CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
 // CIR:   %[[LEN_SIZE_T:.*]] = cir.cast integral %[[LEN]] : !u32i -> !u64i
 // CIR:   %[[STACK_PTR:.*]] = cir.stacksave
 // CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
-// CIR:   %[[S1:.*]] = cir.alloca !s8i, !cir.ptr<!s8i>, %[[LEN_SIZE_T]] : !u64i, ["s1"]
+// CIR:   %[[S1:.*]] = cir.alloca "s1" {{.*}} size(%[[LEN_SIZE_T]]) : !cir.ptr<!s8i>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
 // CIR:   cir.store{{.*}} %[[ZERO]], %[[I]]
 // CIR:   cir.scope {
@@ -216,12 +216,12 @@ void f3(unsigned len) {
 // CIR:     cir.condition(%[[CMP]])
 // CIR:   } do {
 // CIR:       cir.scope {
-// CIR:         %[[SAVED_STACK2:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
+// CIR:         %[[SAVED_STACK2:.*]] = cir.alloca "saved_stack" {{.*}} : !cir.ptr<!cir.ptr<!u8i>>
 // CIR:         %[[I_LEN:.*]] = cir.load{{.*}} %[[I]]
 // CIR:         %[[I_LEN_SIZE_T2:.*]] = cir.cast integral %[[I_LEN]] : !u32i -> !u64i
 // CIR:         %[[STACK_PTR2:.*]] = cir.stacksave
 // CIR:         cir.store{{.*}} %[[STACK_PTR2]], %[[SAVED_STACK2]]
-// CIR:         %[[S2:.*]] = cir.alloca !s8i, !cir.ptr<!s8i>, %[[I_LEN_SIZE_T2]] : !u64i, ["s2"]
+// CIR:         %[[S2:.*]] = cir.alloca "s2" {{.*}} size(%[[I_LEN_SIZE_T2]]) : !cir.ptr<!s8i>
 // CIR:         %[[SAVED_RESTORE_PTR2:.*]] = cir.load{{.*}} %[[SAVED_STACK2]]
 // CIR:         cir.stackrestore %[[SAVED_RESTORE_PTR2]]
 // CIR:       }
@@ -329,14 +329,14 @@ int f5(unsigned long len) {
 }
 
 // CIR: cir.func{{.*}} @f5(%[[LEN_ARG:.*]]: !u64i {{.*}}) -> !s32i
-// CIR:   %[[LEN_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["len", init]
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR:   %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
+// CIR:   %[[LEN_ADDR:.*]] = cir.alloca "len" {{.*}} init : !cir.ptr<!u64i>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[SAVED_STACK:.*]] = cir.alloca "saved_stack" {{.*}} : !cir.ptr<!cir.ptr<!u8i>>
 // CIR:   cir.store{{.*}} %[[LEN_ARG]], %[[LEN_ADDR]]
 // CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
 // CIR:   %[[STACK_PTR:.*]] = cir.stacksave
 // CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
-// CIR:   %[[ARR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, %[[LEN]] : !u64i, ["arr"]
+// CIR:   %[[ARR:.*]] = cir.alloca "arr" {{.*}} size(%[[LEN]]) : !cir.ptr<!s32i>
 // CIR:   %[[TWO:.*]] = cir.const #cir.int<2> : !s64i
 // CIR:   %[[ARR_2:.*]] = cir.ptr_stride %[[ARR]], %[[TWO]]
 // CIR:   %[[ARR_VAL:.*]] = cir.load{{.*}} %[[ARR_2]] : !cir.ptr<!s32i>, !s32i
@@ -387,9 +387,9 @@ void vla_subscript_expr() {
   (int (**)[n]){&a}[0][1][5] = 0;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, ["a"]
-// CIR: %[[N_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["n", init]
-// CIR: %[[COMPOUND_ADDR:.*]] = cir.alloca !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>, [".compoundliteral"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
+// CIR: %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init : !cir.ptr<!u64i>
+// CIR: %[[COMPOUND_ADDR:.*]] = cir.alloca ".compoundliteral" {{.*}} : !cir.ptr<!cir.ptr<!cir.ptr<!s32i>>>
 // CIR: %[[CONST_5:.*]] = cir.const #cir.int<5> : !u64i
 // CIR: cir.store {{.*}} %[[CONST_5]], %[[N_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR: %[[CONST_0_VAL:.*]] = cir.const #cir.int<0> : !s32i
@@ -440,10 +440,10 @@ double vla_param_2d(int n, double m[n][n], int i, int j) {
 }
 
 // CIR: cir.func{{.*}} @vla_param_2d(%[[N_ARG:.*]]: !s32i {{.*}}, %[[M_ARG:.*]]: !cir.ptr<!cir.double> {{.*}}, %[[I_ARG:.*]]: !s32i {{.*}}, %[[J_ARG:.*]]: !s32i {{.*}}) -> !cir.double
-// CIR:   %[[N_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init]
-// CIR:   %[[M_ADDR:.*]] = cir.alloca !cir.ptr<!cir.double>, !cir.ptr<!cir.ptr<!cir.double>>, ["m", init]
-// CIR:   %[[I_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
-// CIR:   %[[J_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["j", init]
+// CIR:   %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[M_ADDR:.*]] = cir.alloca "m" {{.*}} init : !cir.ptr<!cir.ptr<!cir.double>>
+// CIR:   %[[I_ADDR:.*]] = cir.alloca "i" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[J_ADDR:.*]] = cir.alloca "j" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   cir.store{{.*}} %[[N_ARG]], %[[N_ADDR]]
 // CIR:   cir.store{{.*}} %[[M_ARG]], %[[M_ADDR]]
 // CIR:   cir.store{{.*}} %[[I_ARG]], %[[I_ADDR]]
@@ -512,15 +512,15 @@ void complex_vla_cast(int n) {
 }
 
 // CIR: cir.func {{.*}} @complex_vla_cast
-// CIR:   %[[LEN_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["n", init]
-// CIR:   %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
+// CIR:   %[[LEN_ADDR:.*]] = cir.alloca "n" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[SAVED_STACK:.*]] = cir.alloca "saved_stack" {{.*}} : !cir.ptr<!cir.ptr<!u8i>>
 // CIR:   cir.store %{{.*}}, %[[LEN_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[LEN:.*]] = cir.load {{.*}} %[[LEN_ADDR]] : !cir.ptr<!s32i>, !s32i
 // CIR:   %[[LEN_SIZE_T:.*]] = cir.cast integral %[[LEN]] : !s32i -> !u64i
 // CIR:   %[[STACK_PTR:.*]] = cir.stacksave : !cir.ptr<!u8i>
 // CIR:   cir.store {{.*}} %[[STACK_PTR]], %[[SAVED_STACK]] : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
 // CIR:   cir.cleanup.scope {
-// CIR:     %[[ArR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, %3 : !u64i, ["arr"]
+// CIR:     %[[ArR:.*]] = cir.alloca "arr" {{.*}} size(%3) : !cir.ptr<!cir.complex<!cir.float>>
 // CIR:     cir.yield
 // CIR:   } cleanup normal {
 // CIR:     %[[STACK_RESTORE_PTR:.*]] = cir.load {{.*}} %[[SAVED_STACK]] : !cir.ptr<!cir.ptr<!u8i>>, !cir.ptr<!u8i>

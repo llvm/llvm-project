@@ -1200,6 +1200,12 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::PEXT:
+    Results.push_back(TLI.expandPEXT(Node, DAG));
+    return;
+  case ISD::PDEP:
+    Results.push_back(TLI.expandPDEP(Node, DAG));
+    return;
   case ISD::ROTL:
   case ISD::ROTR:
     if (SDValue Expanded = TLI.expandROT(Node, false /*AllowVectorOps*/, DAG)) {
@@ -1562,15 +1568,12 @@ SDValue VectorLegalizer::ExpandSIGN_EXTEND_VECTOR_INREG(SDNode *Node) {
   // recurse through it.
   SDValue Op = DAG.getNode(ISD::ANY_EXTEND_VECTOR_INREG, DL, VT, Src);
 
-  // Now we need sign extend. Do this by shifting the elements. Even if these
-  // aren't legal operations, they have a better chance of being legalized
-  // without full scalarization than the sign extension does.
-  unsigned EltWidth = VT.getScalarSizeInBits();
-  unsigned SrcEltWidth = SrcVT.getScalarSizeInBits();
-  SDValue ShiftAmount = DAG.getConstant(EltWidth - SrcEltWidth, DL, VT);
-  return DAG.getNode(ISD::SRA, DL, VT,
-                     DAG.getNode(ISD::SHL, DL, VT, Op, ShiftAmount),
-                     ShiftAmount);
+  // Now we need sign extend. This will be exanded to shifts if it isn't
+  // supported.
+  EVT ExtVT = EVT::getVectorVT(*DAG.getContext(), SrcVT.getVectorElementType(),
+                               VT.getVectorNumElements());
+  return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, Op,
+                     DAG.getValueType(ExtVT));
 }
 
 // Generically expand a vector zext in register to a shuffle of the relevant

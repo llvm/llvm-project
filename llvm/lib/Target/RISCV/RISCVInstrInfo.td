@@ -234,13 +234,11 @@ def GPRMemZeroOffset : MemOperand<GPR> {
   let PrintMethod = "printZeroOffsetMemOp";
 }
 
-def GPRMem : MemOperand<GPR>;
 def BasePtr : MemOperand<BasePtrRegClass>;
+
 def SPMem : MemOperand<SP>;
 
-// Note: despite the GPRC name, GPRCMem can be a YGPRC in RVY mode.
-// Alternatively, we could rename it to BasePtrC.
-def GPRCMem : MemOperand<BasePtrCRegClass>;
+def BasePtrC : MemOperand<BasePtrCRegClass>;
 
 class SImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"S", width, suffix> {
@@ -2012,8 +2010,8 @@ def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs
 
 class LdPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT,
             ValueType PtrVT = XLenVT>
-    : Pat<(vt (LoadOp (AddrRegImm (PtrVT GPRMem:$rs1), simm12_lo:$imm12))),
-          (Inst GPRMem:$rs1, simm12_lo:$imm12)>;
+    : Pat<(vt (LoadOp (AddrRegImm (PtrVT BasePtr:$rs1), simm12_lo:$imm12))),
+          (Inst BasePtr:$rs1, simm12_lo:$imm12)>;
 
 def : LdPat<sextloadi8, LB>;
 def : LdPat<extloadi8, LBU>; // Prefer unsigned due to no c.lb in Zcb.
@@ -2027,9 +2025,9 @@ def : LdPat<zextloadi16, LHU>;
 
 class StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
             ValueType vt, ValueType PtrVT = XLenVT>
-    : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm (PtrVT GPRMem:$rs1),
+    : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm (PtrVT BasePtr:$rs1),
                    simm12_lo:$imm12)),
-          (Inst StTy:$rs2, GPRMem:$rs1, simm12_lo:$imm12)>;
+          (Inst StTy:$rs2, BasePtr:$rs1, simm12_lo:$imm12)>;
 
 def : StPat<truncstorei8, SB, GPR, XLenVT>;
 def : StPat<truncstorei16, SH, GPR, XLenVT>;
@@ -2164,6 +2162,11 @@ def SetFCSRImm : SetSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
 }
 
 /// Other pseudo-instructions
+
+// Used by -fzero-call-used-regs to zero out registers.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def PseudoClearGPR : Pseudo<(outs GPR:$rd), (ins), []>,
+                     PseudoInstExpansion<(ADDI GPR:$rd, X0, 0)>;
 
 // Pessimistically assume the stack pointer will be clobbered
 let Defs = [X2], Uses = [X2] in {
@@ -2384,6 +2387,7 @@ include "RISCVInstrInfoZk.td"
 // Vector
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvabd.td"
+include "RISCVInstrInfoZvdota.td"
 include "RISCVInstrInfoZvk.td"
 include "RISCVInstrInfoZvdot4a8i.td"
 include "RISCVInstrInfoZvfofp8min.td"

@@ -69,6 +69,7 @@ LLVMInitializeDirectXTarget() {
   initializeEmbedDXILPassPass(*PR);
   initializeWriteDXILPassPass(*PR);
   initializeDXContainerGlobalsPass(*PR);
+  initializeDXContainerPDBPass(*PR);
   initializeGlobalDCELegacyPassPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
   initializeDXILResourceAccessLegacyPass(*PR);
@@ -171,7 +172,6 @@ bool DirectXTargetMachine::addPassesToEmitFile(
   switch (FileType) {
   case CodeGenFileType::AssemblyFile:
     PM.add(createDXILPrettyPrinterLegacyPass(Out));
-    PM.add(createPrintModulePass(Out, "", true));
     break;
   case CodeGenFileType::ObjectFile:
     if (TargetPassConfig::willCompleteCodeGenPipeline()) {
@@ -179,6 +179,7 @@ bool DirectXTargetMachine::addPassesToEmitFile(
       // We embed the other DXContainer globals after embedding DXIL so that the
       // globals don't pollute the DXIL.
       PM.add(createDXContainerGlobalsPass());
+      PM.add(createDXContainerPDBPass());
 
       if (!MMIWP)
         MMIWP = new MachineModuleInfoWrapperPass(this);
