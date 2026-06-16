@@ -612,17 +612,18 @@ The ``std::init`` Profile (initial slice)
 -----------------------------------------
 
 A slice of the proposed initialization profile.  It does not yet implement
-``[[ref_to_uninit]]`` (paper §5), classes that expose uninitialized memory to
-users (paper §6.2), or random-access initialization of uninitialized arrays
-(paper §6.4); and the constructor-body flow check that would let a
-``[[uninitialized]]`` member be initialized by assignment in the body (the
-dynamic half of paper §6.1) is deferred to a future CFG-based pass.  Until it
-lands, a ``[[uninitialized]]`` data member is trusted.
+classes that expose uninitialized memory to users (paper §6.2) or random-access
+initialization of uninitialized arrays (paper §6.4); and the constructor-body
+flow check that would let a ``[[uninitialized]]`` member be initialized by
+assignment in the body (the dynamic half of paper §6.1) is deferred to a future
+CFG-based pass.  Until it lands, a ``[[uninitialized]]`` data member is trusted,
+and writes *through* a ``[[ref_to_uninit]]`` pointer/reference are not yet
+verified (the paper relegates them to ``construct_at`` or suppression).
 
-The slice introduces one new attribute and the rules below.
+The slice introduces two marker attributes and the rules below.
 
-Marker attribute
-~~~~~~~~~~~~~~~~
+Marker attributes
+~~~~~~~~~~~~~~~~~
 
 ``[[uninitialized]]`` (a standard C++11 attribute, distinct from the Clang
 vendor attribute ``[[clang::uninitialized]]``) marks a ``VarDecl`` or
@@ -648,6 +649,19 @@ regardless of ``-fprofiles``; its profile rules carry weight only when
     default-initialization is a no-op is *not* such an initializer, so the
     marker is accepted there (the object is genuinely left uninitialized).
   - Is banned on a union object or union member by ``union_marker``.
+
+``[[ref_to_uninit]]`` (also a standard C++11 attribute) marks a pointer,
+reference, or pointer/reference-returning function as referring to
+*uninitialized* memory.  Recognised by Clang regardless of ``-fprofiles``; its
+profile rule carries weight only when ``std::init`` is enforced.
+
+- TableGen def: ``RefToUninit`` in ``clang/include/clang/Basic/Attr.td``, with a
+  custom handler in ``clang/lib/Sema/SemaDeclAttr.cpp``.
+- Subjects: ``Var``, ``Field``, and ``Function``.  The handler rejects any
+  subject whose type (or, for a function, return type) is not a pointer or
+  reference, via ``err_ref_to_uninit_attr_invalid_type`` -- regardless of
+  ``-fprofiles``.
+- Behaviour: drives the ``ref_to_uninit`` rule (below); has no other effect.
 
 Rules
 ~~~~~
@@ -754,6 +768,32 @@ assignment when compiled without the profile.
   enforcement -- a union may legitimately carry the marker without the
   profile.
 
+R7. ``ref_to_uninit`` -- pattern 1
+..................................
+
+A pointer or reference must be bound consistently with its
+``[[ref_to_uninit]]`` marking (paper §5): a marked pointer/reference may only
+refer to uninitialized memory, and an unmarked one may only refer to
+initialized memory.  "Refers to uninitialized memory" is recognised purely
+locally from the source expression's syntactic form (no flow analysis): the
+address of, or a subobject of, a ``[[uninitialized]]`` entity; a value of a
+``[[ref_to_uninit]]`` pointer/reference or array; a dereference of such a
+pointer; or a call to a ``[[ref_to_uninit]]``-returning function.  Anything
+else is treated as initialized (the trust model).
+
+- Diagnostics: ``err_init_ref_to_uninit_requires_uninit`` (marked target,
+  initialized source) and ``err_init_uninit_requires_ref_to_uninit`` (unmarked
+  target, uninitialized source).
+- Recognizer + shared check: ``Sema::refersToUninitializedMemory`` and
+  ``Sema::checkRefToUninitInit`` in ``clang/lib/Sema/SemaDecl.cpp``.
+- Check sites: variable initialization
+  (``Sema::CheckCompleteVariableDeclaration``), default member initializers
+  (``Sema::ActOnFinishCXXInClassMemberInitializer``), pointer assignment
+  (``Sema::CreateBuiltinBinOp``), call arguments
+  (``Sema::GatherArgumentsForCall``), and return statements
+  (``Sema::BuildReturnStmt``).  A dependent target type defers to
+  instantiation.
+
 Diagnostic suppression
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -841,5 +881,13 @@ profiles.  When changing the framework, run them all with
 - ``clang/test/SemaCXX/safety-profile-init-union.cpp`` -- the ``std::init``
   profile's ``union_marker`` rule banning the marker on a union object or
   union member.
+- ``clang/test/SemaCXX/safety-profile-ref-to-uninit-marker.cpp`` -- placement
+  of ``[[ref_to_uninit]]`` and rejection on subjects that are not pointers,
+  references, or pointer/reference-returning functions.
+- ``clang/test/SemaCXX/safety-profile-init-ref-to-uninit.cpp`` -- the
+  ``std::init`` profile's ``ref_to_uninit`` rule across every check site:
+  variable and data-member initialization, assignment, call arguments
+  (including the paper's ``uninitialized_fill`` example), and return
+  statements, plus suppression and template instantiation.
 - ``clang/test/PCH/cxx-profiles-enforce.cpp`` -- ``[[profiles::enforce]]``
   state survives PCH serialization round-trip.
