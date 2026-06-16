@@ -11763,7 +11763,7 @@ static SDValue encodeRuntimeIMELambda(SDValue Requested, const SDLoc &DL,
 
     SDValue NonZero = DAG.getSetCC(DL, XLenVT, Requested, Zero, ISD::SETNE);
     SDValue IsInRange = DAG.getSetCC(
-        DL, XLenVT, Requested, DAG.getConstant(64, DL, XLenVT), ISD::SZETULE);
+        DL, XLenVT, Requested, DAG.getConstant(64, DL, XLenVT), ISD::SETULE);
     SDValue MinusOne = DAG.getNode(ISD::SUB, DL, XLenVT, Requested, One);
     SDValue PowerOf2Bits =
         DAG.getNode(ISD::AND, DL, XLenVT, Requested, MinusOne);
