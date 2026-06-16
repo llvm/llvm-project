@@ -1495,11 +1495,6 @@ def CIR_BlockAddrInfoAttr
     }]>
   ];
 
-  // Block addresses require deferred basic-block resolution during the
-  // LowerToLLVM pass, so they are not handled by the generic attribute-to-value
-  // lowering.
-  let hasAttrToValueLowering = 0;
-
   let canHaveIllegalCXXABIType = 0;
 }
 

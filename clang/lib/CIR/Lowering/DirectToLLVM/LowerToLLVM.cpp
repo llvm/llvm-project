@@ -285,8 +285,10 @@ class CIRAttrToValue {
 public:
   CIRAttrToValue(mlir::Operation *parentOp,
                  mlir::ConversionPatternRewriter &rewriter,
-                 const mlir::TypeConverter *converter)
-      : parentOp(parentOp), rewriter(rewriter), converter(converter) {}
+                 const mlir::TypeConverter *converter,
+                 LLVMBlockAddressInfo *blockInfoAddr = nullptr)
+      : parentOp(parentOp), rewriter(rewriter), converter(converter),
+        blockInfoAddr(blockInfoAddr) {}
 
 #define GET_CIR_ATTR_TO_VALUE_VISITOR_DECLS
 #include "clang/CIR/Dialect/IR/CIRLowering.inc"
@@ -296,14 +298,18 @@ private:
   mlir::Operation *parentOp;
   mlir::ConversionPatternRewriter &rewriter;
   const mlir::TypeConverter *converter;
+  // Only available when lowering global initializers that may contain block
+  // address attributes. Used to resolve a BlockAddrInfoAttr to its block tag.
+  LLVMBlockAddressInfo *blockInfoAddr;
 };
 
 /// Switches on the type of attribute and calls the appropriate conversion.
 mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
                                 const mlir::Attribute attr,
                                 mlir::ConversionPatternRewriter &rewriter,
-                                const mlir::TypeConverter *converter) {
-  CIRAttrToValue valueConverter(parentOp, rewriter, converter);
+                                const mlir::TypeConverter *converter,
+                                LLVMBlockAddressInfo *blockInfoAddr) {
+  CIRAttrToValue valueConverter(parentOp, rewriter, converter, blockInfoAddr);
   mlir::Value value = valueConverter.visit(attr);
   if (!value)
     llvm_unreachable("unhandled attribute type");
@@ -473,6 +479,29 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstPtrAttr ptrAttr) {
       ptrAttr.getValue().getInt());
   return mlir::LLVM::IntToPtrOp::create(
       rewriter, loc, converter->convertType(ptrAttr.getType()), ptrVal);
+}
+
+/// BlockAddrInfoAttr visitor.
+mlir::Value CIRAttrToValue::visitCirAttr(cir::BlockAddrInfoAttr blockAddrInfo) {
+  assert(blockInfoAddr &&
+         "block address lowering requires LLVMBlockAddressInfo");
+  // A block address is lowered to an llvm.blockaddress op that references a
+  // block tag inside the target function. The matching block tag may not have
+  // been emitted yet, in which case the address is recorded as unresolved and
+  // patched up later in resolveBlockAddressOp.
+  mlir::Location loc = parentOp->getLoc();
+  mlir::LLVM::BlockTagOp matchLabel =
+      blockInfoAddr->lookupBlockTag(blockAddrInfo);
+  mlir::LLVM::BlockTagAttr tagAttr =
+      matchLabel ? matchLabel.getTag() : mlir::LLVM::BlockTagAttr{};
+  auto blkAddr = mlir::LLVM::BlockAddressAttr::get(
+      rewriter.getContext(), blockAddrInfo.getFunc(), tagAttr);
+  auto blockAddressOp = mlir::LLVM::BlockAddressOp::create(
+      rewriter, loc, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
+      blkAddr);
+  if (!matchLabel)
+    blockInfoAddr->addUnresolvedBlockAddress(blockAddressOp, blockAddrInfo);
+  return blockAddressOp;
 }
 
 // ConstArrayAttr visitor
@@ -2450,27 +2479,10 @@ CIRToLLVMGlobalOpLowering::matchAndRewriteRegionInitializedGlobal(
   const mlir::Location loc = op.getLoc();
   setupRegionInitializedLLVMGlobalOp(op, rewriter);
 
-  // A block address initializer is lowered to an llvm.blockaddress op that
-  // references a block tag inside the target function. The matching block tag
-  // may not have been emitted yet, in which case the address is recorded as
-  // unresolved and patched up later in resolveBlockAddressOp.
-  if (auto blockAddrInfo = mlir::dyn_cast<cir::BlockAddrInfoAttr>(init)) {
-    mlir::LLVM::BlockTagOp matchLabel =
-        blockInfoAddr.lookupBlockTag(blockAddrInfo);
-    mlir::LLVM::BlockTagAttr tagAttr =
-        matchLabel ? matchLabel.getTag() : mlir::LLVM::BlockTagAttr{};
-    auto blkAddr = mlir::LLVM::BlockAddressAttr::get(
-        rewriter.getContext(), blockAddrInfo.getFunc(), tagAttr);
-    auto blockAddressOp = mlir::LLVM::BlockAddressOp::create(
-        rewriter, loc, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
-        blkAddr);
-    if (!matchLabel)
-      blockInfoAddr.addUnresolvedBlockAddress(blockAddressOp, blockAddrInfo);
-    mlir::LLVM::ReturnOp::create(rewriter, loc, blockAddressOp);
-    return mlir::success();
-  }
-
-  CIRAttrToValue valueConverter(op, rewriter, typeConverter);
+  // Pass blockInfoAddr so that block address initializers (either as the whole
+  // initializer or nested inside an aggregate) can be resolved by the
+  // BlockAddrInfoAttr visitor.
+  CIRAttrToValue valueConverter(op, rewriter, typeConverter, &blockInfoAddr);
   mlir::Value value = valueConverter.visit(init);
   mlir::LLVM::ReturnOp::create(rewriter, loc, value);
   return mlir::success();
