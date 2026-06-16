@@ -36,8 +36,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %lhs:gpr(s32) = COPY $w0
     ; CHECK-NEXT: %rhs:gpr(s32) = COPY $w1
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(s32) = COPY %lhs(s32)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(s32) = COPY %rhs(s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(i32) = COPY %lhs(s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr(i32) = COPY %rhs(s32)
     ; CHECK-NEXT: %minnum:fpr(s32) = G_FMINNUM [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $s0 = COPY %minnum(s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $s0

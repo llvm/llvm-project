@@ -1,0 +1,117 @@
+# RUN: llc %s -mtriple=riscv64 --passes='print<reaching-def>'  -o - 2>&1 | FileCheck %s
+
+---
+name:            test0
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: Reaching definitions for for machine function: test0
+  ; CHECK-NEXT: %bb.0:
+  ; CHECK-NEXT: implicit $x10:{ }
+  ; CHECK-NEXT: 0: PseudoRET implicit $x10
+
+  bb.0.entry:
+    liveins: $x10
+    PseudoRET implicit $x10
+
+...
+
+---
+name:            test1
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: Reaching definitions for for machine function: test1
+  ; CHECK-NEXT: %bb.0:
+  ; CHECK-NEXT: $x10:{ }
+  ; CHECK-NEXT: 0: $x10 = ADDI $x10, 1
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: implicit $x10:{ 0 }
+  ; CHECK-NEXT: 1: PseudoRET implicit $x10
+  bb.0.entry:
+    liveins: $x10
+    $x10 = ADDI $x10, 1
+    PseudoRET implicit $x10
+
+...
+
+---
+name:            test2
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: Reaching definitions for for machine function: test2
+  ; CHECK-NEXT: %bb.0:
+  ; CHECK-NEXT: $x10:{ }
+  ; CHECK-NEXT: $x0:{ }
+  ; CHECK-NEXT: 0: BEQ $x10, $x0, %bb.2
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: %bb.1:
+  ; CHECK-NEXT: $x10:{ }
+  ; CHECK-NEXT: 1: $x10 = ADDI $x10, 1
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: implicit $x10:{ 1 }
+  ; CHECK-NEXT: 2: PseudoRET implicit $x10
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: %bb.2
+  ; CHECK-NEXT: implicit $x10:{ }
+  ; CHECK-NEXT: 3: PseudoRET implicit $x10
+  bb.0.entry:
+    liveins: $x10
+    BEQ $x10, $x0, %bb.2
+
+  bb.1:
+    liveins: $x10
+    $x10 = ADDI $x10, 1
+    PseudoRET implicit $x10
+
+  bb.2:
+    liveins: $x10
+    PseudoRET implicit $x10
+...
+
+---
+name:            test3
+tracksRegLiveness: true
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 8, alignment: 8,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+body:             |
+  ; CHECK-LABEL: Reaching definitions for for machine function: test3
+  ; CHECK-NEXT: %bb.0:
+  ; CHECK-NEXT: $x10:{ }
+  ; CHECK-NEXT: $x0:{ }
+  ; CHECK-NEXT: 0: BEQ $x10, $x0, %bb.2
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: %bb.1:
+  ; CHECK-NEXT: $x10:{ }
+  ; CHECK-NEXT: 1: $x10 = ADDI $x10, 1
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: 2: PseudoBR %bb.3
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: %bb.2:
+  ; CHECK-NEXT: $x10:{ }
+  ; CHECK-NEXT: %stack.0:{ }
+  ; CHECK-NEXT: 3: SD $x10, %stack.0, 0 :: (store (s64))
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: 4: PseudoBR %bb.3
+  ; CHECK-EMPTY: 
+  ; CHECK-NEXT: %bb.3:
+  ; CHECK-NEXT: implicit $x10:{ 1 }
+  ; CHECK-NEXT: 5: PseudoRET implicit $x10
+  bb.0.entry:
+    liveins: $x10
+    BEQ $x10, $x0, %bb.2
+
+  bb.1:
+    liveins: $x10
+    $x10 = ADDI $x10, 1
+    PseudoBR %bb.3
+
+  bb.2:
+    liveins: $x10
+    SD $x10, %stack.0, 0 :: (store (s64))
+    PseudoBR %bb.3
+
+  bb.3:
+    liveins: $x10
+    PseudoRET implicit $x10
+...

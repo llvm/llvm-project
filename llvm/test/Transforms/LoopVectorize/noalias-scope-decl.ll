@@ -33,7 +33,7 @@ entry:
   br label %for.body
 
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   %0 = load float, ptr %arrayidx, align 4
@@ -46,11 +46,10 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv, 1599
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
-declare void @llvm.experimental.noalias.scope.decl(metadata)
 
 %struct.data = type { ptr, ptr }
 
@@ -123,7 +122,7 @@ entry:
   br label %for.body
 
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   tail call void @llvm.experimental.noalias.scope.decl(metadata !0)
   %arrayidx = getelementptr inbounds float, ptr %0, i64 %indvars.iv
@@ -136,7 +135,7 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp eq i64 %indvars.iv, 1599
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret void
 }
 
@@ -158,7 +157,7 @@ define void @predicated_noalias_scope_decl(ptr noalias nocapture readonly %a, pt
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i64> [[VEC_IND]], splat (i64 495616)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <4 x i64> [[STEP_ADD]], splat (i64 495616)
 ; CHECK-NEXT:    tail call void @llvm.experimental.noalias.scope.decl(metadata [[META0]])
@@ -212,27 +211,27 @@ entry:
   %cmp15 = icmp eq i32 %n, 0
   br i1 %cmp15, label %for.cond.cleanup, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   %0 = zext i32 %n to i64
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %if.end5
+for.cond.cleanup.loopexit:
   br label %for.cond.cleanup
 
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+for.cond.cleanup:
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %if.end5
+for.body:
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %if.end5 ]
   %cmp1 = icmp ult i64 %indvars.iv, 495616
   br i1 %cmp1, label %if.end5, label %if.else
 
-if.else:                                          ; preds = %for.body
+if.else:
   %cmp2 = icmp ult i64 %indvars.iv, 991232
   tail call void @llvm.experimental.noalias.scope.decl(metadata !0)
   br label %if.end5
 
-if.end5:                                          ; preds = %for.body, %if.else
+if.end5:
   %x.0 = phi float [ 4.200000e+01, %if.else ], [ 2.300000e+01, %for.body ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
   %1 = load float, ptr %arrayidx, align 4

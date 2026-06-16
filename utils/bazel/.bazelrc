@@ -46,6 +46,21 @@ build --incompatible_no_implicit_file_export
 # eventually become the default
 common --incompatible_disallow_empty_glob
 
+# Ensure config settings appropriately set visibility
+common --incompatible_config_setting_private_default_visibility
+
+# Avoid the legacy use of `cfg = "host"`. `cfg = "exec"` should be used in all
+# of these cases.
+common --incompatible_disable_starlark_host_transitions
+
+# Avoid the use of native Bazel rules that are planned to be exported into
+# independent repositories.
+common --incompatible_disable_native_repo_rules
+common --incompatible_autoload_externally=
+
+# Disable network access in sandboxes by default.
+build --sandbox_default_allow_network=false
+
 # Disabling runfiles links drastically increases performance in slow disk IO
 # situations Do not build runfile trees by default. If an execution strategy
 # relies on runfile symlink tree, the tree is created on-demand. See:
@@ -57,14 +72,6 @@ build --build_runfile_links=false
 # self-contained (for sub-projects that enable "parse_headers" feature).
 # See https://bazel.build/docs/bazel-and-cpp#toolchain-features
 build --process_headers_in_dependencies
-
-###############################################################################
-# Options to select different strategies for linking potential dependent
-# libraries. The default leaves it disabled.
-###############################################################################
-
-build:zlib_external --repo_env=BAZEL_LLVM_ZLIB_STRATEGY=external
-build:zlib_system --repo_env=BAZEL_LLVM_ZLIB_STRATEGY=system
 
 ###############################################################################
 # Options for "generic_clang" builds: these options should generally apply to
@@ -182,6 +189,28 @@ build:clang-cl --copt=/clang:-Wno-unused-const-variable --host_copt=/clang:-Wno-
 # Disable some warnings hit even with `clang-cl` in Clang's own code.
 build:clang-cl --copt=/clang:-Wno-inconsistent-dllimport --host_copt=/clang:-Wno-inconsistent-dllimport
 build:clang-cl --cxxopt=/clang:-Wno-c++11-narrowing --host_cxxopt=/clang:-Wno-c++11-narrowing
+
+###############################################################################
+# Options for hermetic toolchain builds.
+###############################################################################
+
+# Disable default toolchains
+build:hermetic-toolchain --repo_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
+build:hermetic-toolchain --repo_env=BAZEL_NO_APPLE_CPP_TOOLCHAIN=1
+
+# Toolchain setup
+build:hermetic-toolchain --config=generic_clang
+build:hermetic-toolchain --repo_env=BAZEL_MACOS_FRAMEWORKS=CoreFoundation,CoreGraphics,CoreServices,DiskArbitration,CFNetwork,IOKit,Foundation,Security
+build:hermetic-toolchain --repo_env=BAZEL_MACOS_EXPERIMENTAL_INCLUDE_ALL_SDK_LIBS=1
+build:hermetic-toolchain --extra_toolchains=@llvm//toolchain:all
+
+# TODO: The hermetic toolchain doesn't support these deps
+build:hermetic-toolchain --@llvm-project//libc:mpc=disable
+build:hermetic-toolchain --@llvm-project//libc:mpfr=disable
+build:hermetic-toolchain --@llvm-project//llvm:pfm=disable
+
+# TODO: Remove once @llvm is updated >0.7.1
+build:hermetic-toolchain --copt=-Wno-modules-import-nested-redundant --host_copt=-Wno-modules-import-nested-redundant
 
 ###############################################################################
 # Options for continuous integration.

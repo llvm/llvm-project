@@ -562,3 +562,27 @@ func.func @vector_store_i2_const_index_one_partial_store(%arg0: vector<1xi2>) {
 // CHECK: %[[BITCAST2:.+]] = vector.bitcast %[[SELECT]] : vector<4xi2> to vector<1xi8>
 // CHECK: %[[EXTRACT2:.+]] = vector.extract %[[BITCAST2]][0] : i8 from vector<1xi8>
 // CHECK: memref.atomic_yield %[[EXTRACT2]] : i8
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/131528.
+// A vector.store with a non-zero constant column index on a 2D memref where the
+// trailing dimension matches the vector size must NOT be treated as
+// byte-aligned. Instead it must emit two partial (RMW) stores since the
+// 4-element i2 vector starting at column 1 crosses a byte boundary.
+func.func @vector_store_i2_2d_const_nonzero_col(%arg0: vector<4xi2>) {
+  %src = memref.alloc() : memref<3x4xi2>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  vector.store %arg0, %src[%c0, %c1] : memref<3x4xi2>, vector<4xi2>
+  return
+}
+
+// CHECK-LABEL: func @vector_store_i2_2d_const_nonzero_col(
+// CHECK-SAME: %[[ARG0:.+]]: vector<4xi2>)
+// CHECK: %[[ALLOC:.+]] = memref.alloc() : memref<3xi8>
+// CHECK: %[[C0:.+]] = arith.constant 0 : index
+// Emits two partial atomic RMWs: one for byte 0 (elements at positions [1..3])
+// and one for byte 1 (element at position [0]).
+// CHECK: memref.generic_atomic_rmw %[[ALLOC]][%[[C0]]]
+// CHECK: memref.generic_atomic_rmw %[[ALLOC]][{{.+}}]

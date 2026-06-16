@@ -14,6 +14,7 @@
 #define TOSA_TYPES_BASE
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/BuiltinTypeInterfaces.td"
 include "mlir/IR/OpBase.td"
 
 include "mlir/Dialect/Tosa/IR/TosaOpBase.td"
@@ -90,7 +91,12 @@ def Tosa_QuantizedInt : AnyTypeOf<[Tosa_QuantizedType<"uint8", [8], 0>,
 
 // MLIR doesn't have a builtin type for mxint8 yet. For now declared it as a
 // custom TOSA type. This may be changed in the future.
-def Tosa_MXInt8 : Tosa_Type<"mxint8", "mxint8"> {
+def Tosa_MXInt8
+    : Tosa_Type<"mxint8", "mxint8",
+                [DeclareTypeInterfaceMethods<
+                    DenseElementTypeInterface, ["getDenseElementBitSize",
+                                                "convertToAttribute",
+                                                "convertFromAttribute"]>]> {
   let summary = "INT8 type as defined by OCP-MX";
   let description = [{
     8-bit integer format with an implicit 1/64 scale defined by OCP-MX.
@@ -203,6 +209,8 @@ def Tosa_Tensor1Dto6D : AnyTypeOf<[
 def Tosa_TensorUpto4D : AnyTypeOf<[
   Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_AnyNumber], [0,1,2,3,4]>]>;
 
+def Tosa_IndexTensor1D : AnyTypeOf<[
+  Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_Int32, Tosa_Int64], [1]>]>;
 def Tosa_IndexTensor2D : AnyTypeOf<[
   Tosa_UnrankedTensor, TosaTensorRankOf<[Tosa_Int32, Tosa_Int64], [2]>]>;
 
@@ -216,6 +224,14 @@ def Tosa_MXFPDataTensor3D : AnyTypeOf<[
 def Tosa_MXFPScaleTensor3D : AnyTypeOf<[
   TosaUnrankedTensorOf<[Tosa_MXFPScaleNumber]>,
   TosaTensorRankOf<[Tosa_MXFPScaleNumber], [3]>
+]>;
+def Tosa_MXFPDataTensor4D : AnyTypeOf<[
+  TosaUnrankedTensorOf<[Tosa_MXFPNumber]>,
+  TosaTensorRankOf<[Tosa_MXFPNumber], [4]>
+]>;
+def Tosa_MXFPScaleTensor4D : AnyTypeOf<[
+  TosaUnrankedTensorOf<[Tosa_MXFPScaleNumber]>,
+  TosaTensorRankOf<[Tosa_MXFPScaleNumber], [4]>
 ]>;
 def Tosa_MXFPDataTensorAtLeast1D : AnyTypeOf<[
   TosaUnrankedTensorOf<[Tosa_MXFPNumber]>,

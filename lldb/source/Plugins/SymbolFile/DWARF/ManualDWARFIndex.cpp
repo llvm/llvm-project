@@ -311,7 +311,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
                   objc_method->GetClassNameWithCategory());
               ConstString objc_selector_name(objc_method->GetSelector());
               ConstString objc_fullname_no_category_name(
-                  objc_method->GetFullNameWithoutCategory().c_str());
+                  objc_method->GetFullNameWithoutCategory());
               ConstString class_name_no_category(objc_method->GetClassName());
               set.function_fullnames.Insert(ConstString(name), ref);
               if (class_name_with_category)

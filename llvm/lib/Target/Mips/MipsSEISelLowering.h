@@ -74,6 +74,8 @@ class TargetRegisterClass;
                 bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
                 SDValue Chain) const override;
 
+    SDValue lowerR5900FPOp(SDValue Op, SelectionDAG &DAG,
+                           RTLIB::Libcall LC) const;
     SDValue lowerLOAD(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSTORE(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
@@ -90,6 +92,8 @@ class TargetRegisterClass;
     /// depending on the indices in the shuffle.
     SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
 
     MachineBasicBlock *emitBPOSGE32(MachineInstr &MI,
                                     MachineBasicBlock *BB) const;

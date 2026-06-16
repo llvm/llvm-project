@@ -260,9 +260,7 @@ class ShrinkWrapLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  ShrinkWrapLegacy() : MachineFunctionPass(ID) {
-    initializeShrinkWrapLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  ShrinkWrapLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -386,6 +384,8 @@ bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
 template <typename ListOfBBs, typename DominanceAnalysis>
 static MachineBasicBlock *FindIDom(MachineBasicBlock &Block, ListOfBBs BBs,
                                    DominanceAnalysis &Dom, bool Strict = true) {
+  if (BBs.begin() == BBs.end())
+    return Strict ? nullptr : &Block;
   MachineBasicBlock *IDom = Dom.findNearestCommonDominator(iterator_range(BBs));
   if (Strict && IDom == &Block)
     return nullptr;
@@ -784,7 +784,11 @@ void ShrinkWrapImpl::updateSaveRestorePoints(MachineBasicBlock &MBB,
       if (MLI->getLoopDepth(Save) > MLI->getLoopDepth(Restore)) {
         // Push Save outside of this loop if immediate dominator is different
         // from save block. If immediate dominator is not different, bail out.
-        Save = FindIDom<>(*Save, Save->predecessors(), *MDT);
+        SmallVector<MachineBasicBlock *> Preds;
+        for (auto *PBB : Save->predecessors())
+          if (MDT->isReachableFromEntry(PBB))
+            Preds.push_back(PBB);
+        Save = FindIDom<>(*Save, Preds, *MDT);
         if (!Save)
           break;
       } else {
@@ -1034,7 +1038,7 @@ bool ShrinkWrapImpl::isShrinkWrapEnabled(const MachineFunction &MF) {
     return TFI->enableShrinkWrapping(MF) &&
            // Windows with CFI has some limitations that make it impossible
            // to use shrink-wrapping.
-           !MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+           !MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
            // Sanitizers look at the value of the stack at the location
            // of the crash. Since a crash can happen anywhere, the
            // frame must be lowered before anything else happen for the

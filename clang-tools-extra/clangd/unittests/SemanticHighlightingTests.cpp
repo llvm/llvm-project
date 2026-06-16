@@ -1100,7 +1100,13 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
         struct $Class_def[[Inner]] {};
       };
       using $Typedef_decl[[Alias]] = void ($Class[[Outer]]::$Class[[Inner]]:: *)();
-    )cpp"};
+    )cpp",
+      // Forwarded typedef
+      R"cpp(
+      using $Primitive_decl[[MyInt]] = int;
+      namespace $Namespace_decl[[N]] { using ::MyInt; }
+      using $Primitive_decl[[X]] = $Namespace[[N]]::$Primitive[[MyInt]];
+      )cpp"};
   for (const auto &TestCase : TestCases)
     // Mask off scope modifiers to keep the tests manageable.
     // They're tested separately.
@@ -1148,6 +1154,25 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
     @end
   )cpp"}},
                      ~ScopeModifierMask, {"-isystemSystemSDK/"});
+}
+
+TEST(SemanticHighlighting, NoCrash) {
+  // Testcases where we are just testing that computation of the
+  // semantic tokens does not trigger a crash.
+  const char *TestCases[] = {
+      R"cpp(
+      template < template <> class a > using b = a<>;  // error-ok
+      template <class c>
+      using e = b<c::template d>
+    )cpp"};
+  for (const auto &TestCase : TestCases) {
+    TestTU TU;
+    TU.Code = TestCase;
+    TU.ExtraArgs.push_back("-std=c++20");
+    TU.ExtraArgs.push_back("-xobjective-c++");
+    auto AST = TU.build();
+    getSemanticHighlightings(AST, /*IncludeInactiveRegionTokens=*/true);
+  }
 }
 
 TEST(SemanticHighlighting, ScopeModifiers) {

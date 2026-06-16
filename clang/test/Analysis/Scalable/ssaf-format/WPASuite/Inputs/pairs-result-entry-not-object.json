@@ -1,0 +1,33 @@
+{
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "namespace": [
+          {
+            "kind": "LinkUnit",
+            "name": "test.exe"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@foo"
+      }
+    }
+  ],
+  "results": [
+    {
+      "analysis_name": "PairsAnalysisResult",
+      "result": {
+        "pair_counts": [
+          {
+            "count": 1,
+            "entity_id": {
+              "@": 0
+            }
+          },
+          "not-an-object"
+        ]
+      }
+    }
+  ]
+}

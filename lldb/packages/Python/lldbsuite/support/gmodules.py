@@ -14,12 +14,7 @@ def is_compiler_clang_with_gmodules(compiler_path):
 
     def _gmodules_supported_internal():
         compiler = os.path.basename(compiler_path)
-        if "clang" not in compiler:
-            return False
-        else:
-            # Check the compiler help for the -gmodules option.
-            clang_help = os.popen("%s --help" % compiler_path).read()
-            return GMODULES_HELP_REGEX.search(clang_help, re.DOTALL) is not None
+        return "clang" in compiler
 
     GMODULES_SUPPORT_MAP[compiler_path] = _gmodules_supported_internal()
     return GMODULES_SUPPORT_MAP[compiler_path]

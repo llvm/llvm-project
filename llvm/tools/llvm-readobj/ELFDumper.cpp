@@ -37,6 +37,7 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
+#include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/RelocationResolver.h"
 #include "llvm/Object/SFrameParser.h"
@@ -187,7 +188,7 @@ struct FunctionCallgraphInfo {
   uint64_t FunctionAddress;
   uint8_t FormatVersionNumber;
   bool IsIndirectTarget;
-  uint64_t FunctionTypeId;
+  uint64_t FunctionTypeID;
   SmallSet<uint64_t, 4> DirectCallees;
   SmallSet<uint64_t, 4> IndirectTypeIDs;
 };
@@ -1622,79 +1623,9 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_MIPS_ARCH_64R6, "mips64r6")
 };
 
-// clang-format off
+#define X(NUM, ENUM, NAME) ENUM_ENT(ENUM, NAME),
 #define AMDGPU_MACH_ENUM_ENTS                                                  \
-  ENUM_ENT(EF_AMDGPU_MACH_NONE, "none"),                                       \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_R600, "r600"),                                  \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_R630, "r630"),                                  \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_RS880, "rs880"),                                \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_RV670, "rv670"),                                \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_RV710, "rv710"),                                \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_RV730, "rv730"),                                \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_RV770, "rv770"),                                \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_CEDAR, "cedar"),                                \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_CYPRESS, "cypress"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_JUNIPER, "juniper"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_REDWOOD, "redwood"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_SUMO, "sumo"),                                  \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_BARTS, "barts"),                                \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_CAICOS, "caicos"),                              \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_CAYMAN, "cayman"),                              \
-  ENUM_ENT(EF_AMDGPU_MACH_R600_TURKS, "turks"),                                \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX600, "gfx600"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX601, "gfx601"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX602, "gfx602"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX700, "gfx700"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX701, "gfx701"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX702, "gfx702"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX703, "gfx703"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX704, "gfx704"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX705, "gfx705"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX801, "gfx801"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX802, "gfx802"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX803, "gfx803"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX805, "gfx805"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX810, "gfx810"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX900, "gfx900"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX902, "gfx902"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX904, "gfx904"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX906, "gfx906"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX908, "gfx908"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX909, "gfx909"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX90A, "gfx90a"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX90C, "gfx90c"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX942, "gfx942"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX950, "gfx950"),                            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1010, "gfx1010"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1011, "gfx1011"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1012, "gfx1012"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1013, "gfx1013"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1030, "gfx1030"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1031, "gfx1031"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1032, "gfx1032"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1033, "gfx1033"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1034, "gfx1034"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1035, "gfx1035"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1036, "gfx1036"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1100, "gfx1100"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1101, "gfx1101"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1102, "gfx1102"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1103, "gfx1103"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1150, "gfx1150"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1151, "gfx1151"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1152, "gfx1152"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1153, "gfx1153"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1200, "gfx1200"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1250, "gfx1250"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1251, "gfx1251"),                          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic"),                \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic"),            \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic"),          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, "gfx10-3-generic"),          \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, "gfx11-generic"),              \
-  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC, "gfx12-generic")
-// clang-format on
+  AMDGPU_MACH_LIST(X) ENUM_ENT(EF_AMDGPU_MACH_NONE, "none")
 
 const EnumEntry<unsigned> ElfHeaderAMDGPUFlagsABIVersion3[] = {
     AMDGPU_MACH_ENUM_ENTS,
@@ -1999,11 +1930,11 @@ void ELFDumper<ELFT>::loadDynamicTable() {
     if (!IsSecTableValid)
       reportUniqueWarning(
           "SHT_DYNAMIC dynamic table is invalid: PT_DYNAMIC will be used");
-    DynamicTable = FromPhdr;
+    DynamicTable = std::move(FromPhdr);
   } else {
     reportUniqueWarning(
         "PT_DYNAMIC dynamic table is invalid: SHT_DYNAMIC will be used");
-    DynamicTable = FromSec;
+    DynamicTable = std::move(FromSec);
   }
 
   parseDynamicTable();
@@ -2282,7 +2213,7 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
   // without worrying about tag order.
   if (DynSymFromTable) {
     if (!DynSymRegion) {
-      DynSymRegion = DynSymFromTable;
+      DynSymRegion = std::move(DynSymFromTable);
     } else {
       DynSymRegion->Addr = DynSymFromTable->Addr;
       DynSymRegion->EntSize = DynSymFromTable->EntSize;
@@ -3346,6 +3277,7 @@ MipsGOTParser<ELFT>::getPltSym(const Entry *E) const {
   }
 }
 
+// clang-format off
 const EnumEntry<unsigned> ElfMipsISAExtType[] = {
   {"None",                    Mips::AFL_EXT_NONE},
   {"Broadcom SB-1",           Mips::AFL_EXT_SB1},
@@ -3358,7 +3290,6 @@ const EnumEntry<unsigned> ElfMipsISAExtType[] = {
   {"Loongson 2F",             Mips::AFL_EXT_LOONGSON_2F},
   {"Loongson 3A",             Mips::AFL_EXT_LOONGSON_3A},
   {"MIPS R4650",              Mips::AFL_EXT_4650},
-  {"MIPS R5900",              Mips::AFL_EXT_5900},
   {"MIPS R10000",             Mips::AFL_EXT_10000},
   {"NEC VR4100",              Mips::AFL_EXT_4100},
   {"NEC VR4111/VR4181",       Mips::AFL_EXT_4111},
@@ -3366,8 +3297,10 @@ const EnumEntry<unsigned> ElfMipsISAExtType[] = {
   {"NEC VR5400",              Mips::AFL_EXT_5400},
   {"NEC VR5500",              Mips::AFL_EXT_5500},
   {"RMI Xlr",                 Mips::AFL_EXT_XLR},
-  {"Toshiba R3900",           Mips::AFL_EXT_3900}
+  {"Toshiba R3900",           Mips::AFL_EXT_3900},
+  {"Toshiba R5900",           Mips::AFL_EXT_5900},
 };
+// clang-format on
 
 const EnumEntry<unsigned> ElfMipsASEFlags[] = {
   {"DSP",                Mips::AFL_ASE_DSP},
@@ -5337,41 +5270,16 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
   OS << "GNUStyle::printCGProfile not implemented\n";
 }
 
-namespace callgraph {
-LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
-enum Flags : uint8_t {
-  None = 0,
-  IsIndirectTarget = 1u << 0,
-  HasDirectCallees = 1u << 1,
-  HasIndirectCallees = 1u << 2,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ HasIndirectCallees)
-};
-} // namespace callgraph
-
 template <class ELFT>
 bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
-  Expected<ArrayRef<uint8_t>> SectionBytesOrErr =
-      Obj.getSectionContents(*CGSection);
-  if (!SectionBytesOrErr) {
-    reportWarning(
-        createError("unable to read the SHT_LLVM_CALL_GRAPH type section " +
-                    toString(SectionBytesOrErr.takeError())),
-        FileName);
-    return false;
-  }
-
-  DataExtractor Data(SectionBytesOrErr.get(), Obj.isLE(),
-                     ObjF.getBytesInAddress());
+  ArrayRef<uint8_t> Contents = cantFail(Obj.getSectionContents(*CGSection));
+  DataExtractor Data(Contents, Obj.isLE(), ObjF.getBytesInAddress());
   DataExtractor::Cursor C(0);
   uint64_t UnknownCount = 0;
   while (C && C.tell() < CGSection->sh_size) {
     uint8_t FormatVersionNumber = Data.getU8(C);
-    if (!C) {
-      reportWarning(createError("failed while reading FormatVersionNumber " +
-                                toString(C.takeError())),
-                    FileName);
-      return false;
-    }
+    assert(C && "always expect the one byte read to succeed when C.tell() < "
+                "CGSection->sh_size is true.");
     if (FormatVersionNumber != 0) {
       reportWarning(createError("unknown format version value [" +
                                 std::to_string(FormatVersionNumber) +
@@ -5383,7 +5291,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
     uint8_t FlagsVal = Data.getU8(C);
     if (!C) {
       reportWarning(
-          createError("failed while reading call graph info's Flags " +
+          createError("failed while reading call graph info's Flags: " +
                       toString(C.takeError())),
           FileName);
       return false;
@@ -5394,7 +5302,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
                                             callgraph::HasIndirectCallees;
     constexpr uint8_t ValidMask = static_cast<uint8_t>(ValidFlags);
     if ((FlagsVal & ~ValidMask) != 0) {
-      reportWarning(createError("unexpected Flags value [" +
+      reportWarning(createError("unsupported Flags value [" +
                                 std::to_string(FlagsVal) + "] "),
                     FileName);
       return false;
@@ -5406,7 +5314,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
     if (!C) {
       reportWarning(
           createError(
-              "failed while reading call graph info function entry PC " +
+              "failed while reading call graph info function entry PC: " +
               toString(C.takeError())),
           FileName);
       return false;
@@ -5420,15 +5328,15 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
     bool IsIndirectTarget =
         (CGFlags & callgraph::IsIndirectTarget) != callgraph::None;
     CGInfo.IsIndirectTarget = IsIndirectTarget;
-    uint64_t TypeId = Data.getU64(C);
+    uint64_t TypeID = Data.getU64(C);
     if (!C) {
-      reportWarning(createError("failed while reading function type ID " +
+      reportWarning(createError("failed while reading function type ID: " +
                                 toString(C.takeError())),
                     FileName);
       return false;
     }
-    CGInfo.FunctionTypeId = TypeId;
-    if (IsIndirectTarget && TypeId == 0)
+    CGInfo.FunctionTypeID = TypeID;
+    if (IsIndirectTarget && TypeID == 0)
       ++UnknownCount;
 
     if (CGFlags & callgraph::HasDirectCallees) {
@@ -5436,7 +5344,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
       uint64_t NumDirectCallees = Data.getULEB128(C);
       if (!C) {
         reportWarning(
-            createError("failed while reading number of direct callees " +
+            createError("failed while reading number of direct callees: " +
                         toString(C.takeError())),
             FileName);
         return false;
@@ -5447,7 +5355,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
         uint64_t Callee = static_cast<uint64_t>(
             Data.getUnsigned(C, sizeof(typename ELFT::uint)));
         if (!C) {
-          reportWarning(createError("failed while reading direct callee " +
+          reportWarning(createError("failed while reading direct callee: " +
                                     toString(C.takeError())),
                         FileName);
           return false;
@@ -5461,7 +5369,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
       if (!C) {
         reportWarning(
             createError(
-                "failed while reading number of indirect target type IDs " +
+                "failed while reading number of indirect target type IDs: " +
                 toString(C.takeError())),
             FileName);
         return false;
@@ -5471,7 +5379,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
         uint64_t TargetType = Data.getU64(C);
         if (!C) {
           reportWarning(
-              createError("failed while reading indirect target type ID " +
+              createError("failed while reading indirect target type ID: " +
                           toString(C.takeError())),
               FileName);
           return false;
@@ -5484,8 +5392,8 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
 
   if (UnknownCount)
     reportUniqueWarning(
-        "SHT_LLVM_CALL_GRAPH type section has unknown type id for " +
-        std::to_string(UnknownCount) + " indirect targets");
+        "SHT_LLVM_CALL_GRAPH type section has unknown type ID for " +
+        Twine(UnknownCount) + " indirect targets");
   return true;
 }
 
@@ -6160,7 +6068,8 @@ struct CoreNote {
   std::vector<CoreFileMapping> Mappings;
 };
 
-static Expected<CoreNote> readCoreNote(DataExtractor Desc) {
+static Expected<CoreNote> readCoreNote(DataExtractor Desc,
+                                       unsigned AddressSize) {
   // Expected format of the NT_FILE note description:
   // 1. # of file mappings (call it N)
   // 2. Page size
@@ -6169,28 +6078,28 @@ static Expected<CoreNote> readCoreNote(DataExtractor Desc) {
   // Each field is an Elf_Addr, except for filenames which are char* strings.
 
   CoreNote Ret;
-  const int Bytes = Desc.getAddressSize();
 
-  if (!Desc.isValidOffsetForAddress(2))
+  if (!Desc.isValidOffsetForDataOfSize(2, AddressSize))
     return createError("the note of size 0x" + Twine::utohexstr(Desc.size()) +
                        " is too short, expected at least 0x" +
-                       Twine::utohexstr(Bytes * 2));
+                       Twine::utohexstr(AddressSize * 2));
   if (Desc.getData().back() != 0)
     return createError("the note is not NUL terminated");
 
   uint64_t DescOffset = 0;
-  uint64_t FileCount = Desc.getAddress(&DescOffset);
-  Ret.PageSize = Desc.getAddress(&DescOffset);
+  uint64_t FileCount = Desc.getUnsigned(&DescOffset, AddressSize);
+  Ret.PageSize = Desc.getUnsigned(&DescOffset, AddressSize);
 
-  if (!Desc.isValidOffsetForAddress(3 * FileCount * Bytes))
+  if (!Desc.isValidOffsetForDataOfSize(3 * FileCount * AddressSize,
+                                       AddressSize))
     return createError("unable to read file mappings (found " +
                        Twine(FileCount) + "): the note of size 0x" +
                        Twine::utohexstr(Desc.size()) + " is too short");
 
   uint64_t FilenamesOffset = 0;
   DataExtractor Filenames(
-      Desc.getData().drop_front(DescOffset + 3 * FileCount * Bytes),
-      Desc.isLittleEndian(), Desc.getAddressSize());
+      Desc.getData().drop_front(DescOffset + 3 * FileCount * AddressSize),
+      Desc.isLittleEndian());
 
   Ret.Mappings.resize(FileCount);
   size_t I = 0;
@@ -6201,9 +6110,9 @@ static Expected<CoreNote> readCoreNote(DataExtractor Desc) {
           "unable to read the file name for the mapping with index " +
           Twine(I) + ": the note of size 0x" + Twine::utohexstr(Desc.size()) +
           " is truncated");
-    Mapping.Start = Desc.getAddress(&DescOffset);
-    Mapping.End = Desc.getAddress(&DescOffset);
-    Mapping.Offset = Desc.getAddress(&DescOffset);
+    Mapping.Start = Desc.getUnsigned(&DescOffset, AddressSize);
+    Mapping.End = Desc.getUnsigned(&DescOffset, AddressSize);
+    Mapping.Offset = Desc.getUnsigned(&DescOffset, AddressSize);
     Mapping.Filename = Filenames.getCStrRef(&FilenamesOffset);
   }
 
@@ -6377,6 +6286,8 @@ const NoteType CoreNoteTypes[] = {
     {ELF::NT_ARM_ZA, "NT_ARM_ZA (AArch64 SME ZA registers)"},
     {ELF::NT_ARM_ZT, "NT_ARM_ZT (AArch64 SME ZT registers)"},
     {ELF::NT_ARM_FPMR, "NT_ARM_FPMR (AArch64 Floating Point Mode Register)"},
+    {ELF::NT_ARM_POE,
+     "NT_ARM_POE (AArch64 Permission Overlay Extension Registers)"},
     {ELF::NT_ARM_GCS, "NT_ARM_GCS (AArch64 Guarded Control Stack state)"},
 
     {ELF::NT_FILE, "NT_FILE (mapped files)"},
@@ -6451,7 +6362,7 @@ static void processNotesHelper(
     for (const typename ELFT::Shdr &S : Sections) {
       if (S.sh_type != SHT_NOTE)
         continue;
-      StartNotesFn(expectedToStdOptional(Obj.getSectionName(S)), S.sh_offset,
+      StartNotesFn(expectedToOptional(Obj.getSectionName(S)), S.sh_offset,
                    S.sh_size, S.sh_addralign);
       Error Err = Error::success();
       size_t I = 0;
@@ -6573,10 +6484,10 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
         return Error::success();
     } else if (Name == "CORE") {
       if (Type == ELF::NT_FILE) {
-        DataExtractor DescExtractor(
-            Descriptor, ELFT::Endianness == llvm::endianness::little,
-            sizeof(Elf_Addr));
-        if (Expected<CoreNote> NoteOrErr = readCoreNote(DescExtractor)) {
+        DataExtractor DescExtractor(Descriptor, ELFT::Endianness ==
+                                                    llvm::endianness::little);
+        if (Expected<CoreNote> NoteOrErr =
+                readCoreNote(DescExtractor, sizeof(Elf_Addr))) {
           printCoreNote<ELFT>(OS, *NoteOrErr);
           return Error::success();
         } else {
@@ -7259,7 +7170,8 @@ void ELFDumper<ELFT>::printStackSize(const Relocation<ELFT> &R,
   }
 
   uint64_t SymValue = Resolver(R.Type, Offset, RelocSymValue,
-                               Data.getAddress(&Offset), R.Addend.value_or(0));
+                               Data.getUnsigned(&Offset, sizeof(Elf_Addr)),
+                               R.Addend.value_or(0));
   this->printFunctionStackSize(SymValue, FunctionSec, StackSizeSec, Data,
                                &Offset);
 }
@@ -7275,7 +7187,7 @@ void ELFDumper<ELFT>::printNonRelocatableStackSizes(
     PrintHeader();
     ArrayRef<uint8_t> Contents =
         unwrapOrError(this->FileName, Obj.getSectionContents(Sec));
-    DataExtractor Data(Contents, Obj.isLE(), sizeof(Elf_Addr));
+    DataExtractor Data(Contents, Obj.isLE());
     uint64_t Offset = 0;
     while (Offset < Contents.size()) {
       // The function address is followed by a ULEB representing the stack
@@ -7286,7 +7198,7 @@ void ELFDumper<ELFT>::printNonRelocatableStackSizes(
             " ended while trying to extract a stack size entry");
         break;
       }
-      uint64_t SymValue = Data.getAddress(&Offset);
+      uint64_t SymValue = Data.getUnsigned(&Offset, sizeof(Elf_Addr));
       if (!printFunctionStackSize(SymValue, /*FunctionSec=*/std::nullopt, Sec,
                                   Data, &Offset))
         break;
@@ -7352,7 +7264,7 @@ void ELFDumper<ELFT>::printRelocatableStackSizes(
     std::tie(IsSupportedFn, Resolver) = getRelocationResolver(this->ObjF);
     ArrayRef<uint8_t> Contents =
         unwrapOrError(this->FileName, Obj.getSectionContents(*StackSizesELFSec));
-    DataExtractor Data(Contents, Obj.isLE(), sizeof(Elf_Addr));
+    DataExtractor Data(Contents, Obj.isLE());
 
     forEachRelocationDo(
         *RelocSec, [&](const Relocation<ELFT> &R, unsigned Ndx,
@@ -8328,12 +8240,19 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       this->Obj.getSectionAndRelocations([](const Elf_Shdr &Sec) {
         return Sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH;
       });
-  if (!MapOrErr || MapOrErr->empty()) {
-    reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found " +
+  if (!MapOrErr) {
+    reportWarning(createError("unable to read SHT_LLVM_CALL_GRAPH section: " +
                               toString(MapOrErr.takeError())),
                   this->FileName);
     return;
   }
+  if (MapOrErr->empty()) {
+    reportWarning(createError("no SHT_LLVM_CALL_GRAPH section found"),
+                  this->FileName);
+    return;
+  }
+
+  // Process and print the first SHT_LLVM_CALL_GRAPH type section found.
   if (!this->processCallGraphSection(MapOrErr->begin()->first) ||
       this->FuncCGInfos.empty())
     return;
@@ -8343,12 +8262,18 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   if (this->Obj.getHeader().e_type == ELF::ET_REL) {
     const Elf_Shdr *CGRelSection = MapOrErr->front().second;
     if (CGRelSection) {
+      Expected<const typename ELFT::Shdr *> SymtabOrErr =
+          this->Obj.getSection(CGRelSection->sh_link);
+      if (!SymtabOrErr) {
+        reportWarning(createError("invalid section linked to " +
+                                  this->describe(*CGRelSection) + ": " +
+                                  toString(SymtabOrErr.takeError())),
+                      this->FileName);
+        return;
+      }
+      RelocSymTab = *SymtabOrErr;
       this->forEachRelocationDo(
-          *CGRelSection, [&](const Relocation<ELFT> &R, unsigned Ndx,
-                             const Elf_Shdr &Sec, const Elf_Shdr *SymTab) {
-            RelocSymTab = SymTab;
-            Relocations.push_back(R);
-          });
+          *CGRelSection, [&](const auto &R, ...) { Relocations.push_back(R); });
       llvm::stable_sort(Relocations, [](const auto &LHS, const auto &RHS) {
         return LHS.Offset < RHS.Offset;
       });
@@ -8377,7 +8302,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       return R.Offset == RelocOffset;
     });
     if (R == Relocations.end()) {
-      this->reportUniqueWarning("unknown relocation at offset " +
+      this->reportUniqueWarning("missing relocation for symbol at offset " +
                                 Twine(RelocOffset));
       return;
     }
@@ -8387,13 +8312,14 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       this->reportUniqueWarning(RelSymOrErr.takeError());
       return;
     }
-    if (!RelSymOrErr->Name.empty())
-      W.printString("Name", RelSymOrErr->Name);
+    W.printString("Name", RelSymOrErr->Name);
   };
 
   auto PrintFunc = [&](uint64_t FuncPC) {
     uint64_t FuncEntryPC = FuncPC;
-    // Clear Thumb bit if it was set before symbol lookup.
+    // In ARM thumb mode the LSB of the function pointer is set to 1. Since this
+    // detail is unncessary in call graph reconstruction, we are clearing this
+    // bit to facilate tooling.
     if (this->Obj.getHeader().e_machine == ELF::EM_ARM)
       FuncEntryPC = FuncPC & ~1;
     if (this->Obj.getHeader().e_type == ELF::ET_REL)
@@ -8403,24 +8329,24 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   };
 
   ListScope CGI(W, "CallGraph");
-  for (const auto &CGInfo : this->FuncCGInfos) {
+  for (const FunctionCallgraphInfo &CGInfo : this->FuncCGInfos) {
     DictScope D(W, "Function");
     PrintFunc(CGInfo.FunctionAddress);
     W.printNumber("Version", CGInfo.FormatVersionNumber);
     W.printBoolean("IsIndirectTarget", CGInfo.IsIndirectTarget);
-    W.printHex("TypeId", CGInfo.FunctionTypeId);
+    W.printHex("TypeID", CGInfo.FunctionTypeID);
     W.printNumber("NumDirectCallees", CGInfo.DirectCallees.size());
     {
       ListScope DCs(W, "DirectCallees");
-      for (auto CalleePC : CGInfo.DirectCallees) {
+      for (uint64_t CalleePC : CGInfo.DirectCallees) {
         DictScope D(W);
         PrintFunc(CalleePC);
       }
     }
     W.printNumber("NumIndirectTargetTypeIDs", CGInfo.IndirectTypeIDs.size());
-    SmallVector<uint64_t, 4> IndirectTypeIdsList(CGInfo.IndirectTypeIDs.begin(),
+    SmallVector<uint64_t, 4> IndirectTypeIDsList(CGInfo.IndirectTypeIDs.begin(),
                                                  CGInfo.IndirectTypeIDs.end());
-    W.printHexList("IndirectTypeIDs", ArrayRef(IndirectTypeIdsList));
+    W.printHexList("IndirectTypeIDs", ArrayRef(IndirectTypeIDsList));
   }
 }
 
@@ -8454,8 +8380,8 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
     Expected<std::vector<BBAddrMap>> BBAddrMapOrErr =
         this->Obj.decodeBBAddrMap(*Sec, RelocSec, &PGOAnalyses);
     if (!BBAddrMapOrErr) {
-      this->reportUniqueWarning("unable to dump " + this->describe(*Sec) +
-                                ": " + toString(BBAddrMapOrErr.takeError()));
+      this->reportUniqueWarning("unable to dump BB addr map section: " +
+                                toString(BBAddrMapOrErr.takeError()));
       continue;
     }
     for (const auto &[AM, PAM] : zip_equal(*BBAddrMapOrErr, PGOAnalyses)) {
@@ -8735,10 +8661,10 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
         return Error::success();
     } else if (Name == "CORE") {
       if (Type == ELF::NT_FILE) {
-        DataExtractor DescExtractor(
-            Descriptor, ELFT::Endianness == llvm::endianness::little,
-            sizeof(Elf_Addr));
-        if (Expected<CoreNote> N = readCoreNote(DescExtractor)) {
+        DataExtractor DescExtractor(Descriptor, ELFT::Endianness ==
+                                                    llvm::endianness::little);
+        if (Expected<CoreNote> N =
+                readCoreNote(DescExtractor, sizeof(Elf_Addr))) {
           printCoreNoteLLVMStyle(*N, W);
           return Error::success();
         } else {

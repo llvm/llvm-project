@@ -144,6 +144,7 @@ namespace clang {
     void VisitFriendDecl(FriendDecl *D);
     void VisitFriendTemplateDecl(FriendTemplateDecl *D);
     void VisitStaticAssertDecl(StaticAssertDecl *D);
+    void VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D);
     void VisitBlockDecl(BlockDecl *D);
     void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
     void VisitCapturedDecl(CapturedDecl *D);
@@ -194,30 +195,13 @@ namespace clang {
       Record.AddSourceLocation(typeParams->getRAngleLoc());
     }
 
-    /// Collect the first declaration from each module file that provides a
-    /// declaration of D.
-    void CollectFirstDeclFromEachModule(
-        const Decl *D, bool IncludeLocal,
-        llvm::MapVector<ModuleFile *, const Decl *> &Firsts) {
-
-      // FIXME: We can skip entries that we know are implied by others.
-      for (const Decl *R = D->getMostRecentDecl(); R; R = R->getPreviousDecl()) {
-        if (R->isFromASTFile())
-          Firsts[Writer.Chain->getOwningModuleFile(R)] = R;
-        else if (IncludeLocal)
-          Firsts[nullptr] = R;
-      }
-    }
-
     /// Add to the record the first declaration from each module file that
     /// provides a declaration of D. The intent is to provide a sufficient
     /// set such that reloading this set will load all current redeclarations.
     void AddFirstDeclFromEachModule(const Decl *D, bool IncludeLocal) {
-      llvm::MapVector<ModuleFile *, const Decl *> Firsts;
-      CollectFirstDeclFromEachModule(D, IncludeLocal, Firsts);
-
-      for (const auto &F : Firsts)
-        Record.AddDeclRef(F.second);
+      auto Firsts = Writer.CollectFirstDeclFromEachModule(D, IncludeLocal);
+      for (const auto &[_, First] : Firsts)
+        Record.AddDeclRef(First);
     }
 
     template <typename T> bool shouldSkipWritingSpecializations(T *Spec) {
@@ -272,18 +256,17 @@ namespace clang {
       assert((isa<ClassTemplateSpecializationDecl>(D) ||
               isa<VarTemplateSpecializationDecl>(D) || isa<FunctionDecl>(D)) &&
              "Must not be called with other decls");
-      llvm::MapVector<ModuleFile *, const Decl *> Firsts;
-      CollectFirstDeclFromEachModule(D, /*IncludeLocal*/ true, Firsts);
-
-      for (const auto &F : Firsts) {
-        if (shouldSkipWritingSpecializations(F.second))
+      auto Firsts =
+          Writer.CollectFirstDeclFromEachModule(D, /*IncludeLocal=*/true);
+      for (const auto &[_, First] : Firsts) {
+        if (shouldSkipWritingSpecializations(First))
           continue;
 
         if (isa<ClassTemplatePartialSpecializationDecl,
-                VarTemplatePartialSpecializationDecl>(F.second))
-          PartialSpecsInMap.push_back(F.second);
+                VarTemplatePartialSpecializationDecl>(First))
+          PartialSpecsInMap.push_back(First);
         else
-          SpecsInMap.push_back(F.second);
+          SpecsInMap.push_back(First);
       }
     }
 
@@ -379,7 +362,8 @@ namespace clang {
 // compilation of that unit, not by its users. (Inline variables are still
 // emitted in module users.)
 static bool shouldVarGenerateHereOnly(const VarDecl *VD) {
-  if (VD->getStorageDuration() != SD_Static)
+  if (VD->getStorageDuration() != SD_Static &&
+      VD->getStorageDuration() != SD_Thread)
     return false;
 
   if (VD->getDescribedVarTemplate())
@@ -934,6 +918,10 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
           Writer.GetDeclRef(D));
     }
   }
+
+  // Ensure associated ExplicitInstantiationDecls survive reduced BMI.
+  for (auto *EID : Record.getASTContext().getExplicitInstantiationDecls(D))
+    Writer.GetDeclRef(EID);
 
   Record.push_back(D->param_size());
   for (auto *P : D->parameters())
@@ -1983,6 +1971,10 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
       Writer.GetDeclRef(DG->getCanonicalDecl());
   }
 
+  // Ensure associated ExplicitInstantiationDecls survive reduced BMI.
+  for (auto *EID : Record.getASTContext().getExplicitInstantiationDecls(D))
+    Writer.GetDeclRef(EID);
+
   Code = serialization::DECL_CLASS_TEMPLATE_SPECIALIZATION;
 }
 
@@ -2051,6 +2043,10 @@ void ASTDeclWriter::VisitVarTemplateSpecializationDecl(
     // When reading, we'll add it to the folding set of the following template.
     Record.AddDeclRef(D->getSpecializedTemplate()->getCanonicalDecl());
   }
+
+  // Ensure associated ExplicitInstantiationDecls survive reduced BMI.
+  for (auto *EID : Record.getASTContext().getExplicitInstantiationDecls(D))
+    Writer.GetDeclRef(EID);
 
   Code = serialization::DECL_VAR_TEMPLATE_SPECIALIZATION;
 }
@@ -2191,6 +2187,31 @@ void ASTDeclWriter::VisitStaticAssertDecl(StaticAssertDecl *D) {
   Record.AddStmt(D->getMessage());
   Record.AddSourceLocation(D->getRParenLoc());
   Code = serialization::DECL_STATIC_ASSERT;
+}
+
+void ASTDeclWriter::VisitExplicitInstantiationDecl(
+    ExplicitInstantiationDecl *D) {
+  // Trailing-object flags must be the first thing written so the reader can
+  // allocate the right amount of trailing storage in CreateDeserialized.
+  unsigned Flags = 0;
+  if (D->hasTrailingQualifier())
+    Flags |= ExplicitInstantiationDecl::HasQualifierFlag;
+  if (D->hasTrailingArgsAsWritten())
+    Flags |= ExplicitInstantiationDecl::HasArgsAsWrittenFlag;
+  Record.push_back(Flags);
+
+  VisitDecl(D);
+  Record.AddDeclRef(D->getSpecialization());
+  Record.AddSourceLocation(D->getExternLoc());
+  Record.AddSourceLocation(D->getNameLoc());
+  Record.AddTypeSourceInfo(D->getRawTypeSourceInfo());
+  Record.push_back(D->getTemplateSpecializationKind());
+  // Trailing objects.
+  if (D->hasTrailingQualifier())
+    Record.AddNestedNameSpecifierLoc(D->getQualifierLoc());
+  if (const auto *Args = D->getTrailingArgsInfo())
+    Record.AddASTTemplateArgumentListInfo(Args);
+  Code = serialization::DECL_EXPLICIT_INSTANTIATION;
 }
 
 /// Emit the DeclContext part of a declaration context decl.
@@ -2940,6 +2961,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Source Location
   // CXXOperatorCallExpr
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Operator Kind
+  Abv->Add(BitCodeAbbrevOp(0));                       // IsReversed
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Source Location
   CXXOperatorCallExprAbbrev = Stream.EmitAbbrev(std::move(Abv));
 

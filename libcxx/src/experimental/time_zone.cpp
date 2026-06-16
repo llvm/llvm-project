@@ -55,6 +55,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #ifdef PRINT
 template <>
@@ -209,8 +210,6 @@ __format(const __tz::__continuation& __continuation, const string& __letters, se
                    return chrono::seconds{0};
                  else
                    static_assert(false);
-
-                 std::__libcpp_unreachable();
                },
                __continuation.__rules);
 
@@ -235,8 +234,6 @@ __format(const __tz::__continuation& __continuation, const string& __letters, se
           return __value(__year, __month);
         else
           static_assert(false);
-
-        std::__libcpp_unreachable();
       },
       __on);
 }
@@ -698,8 +695,6 @@ __get_sys_info(sys_seconds __time,
           return chrono::__get_sys_info_basic(__time, __continuation_begin, __continuation, __value.__time);
         else
           static_assert(false);
-
-        std::__libcpp_unreachable();
       },
       __continuation.__rules);
 }
@@ -1061,4 +1056,5 @@ time_zone::__get_info(local_seconds __local_time) const {
 
 } // namespace chrono
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

@@ -19,6 +19,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Alignment.h"
 
 namespace llvm {
@@ -28,6 +29,18 @@ class PostDominatorTree;
 class AllocaInst;
 class Instruction;
 namespace memtag {
+struct AllocaInfo {
+  struct BBInfo {
+    Intrinsic::ID First = Intrinsic::not_intrinsic;
+    Intrinsic::ID Last = Intrinsic::not_intrinsic;
+  };
+  AllocaInst *AI;
+  SmallVector<IntrinsicInst *, 2> LifetimeStart;
+  SmallVector<IntrinsicInst *, 2> LifetimeEnd;
+  SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
+  MapVector<BasicBlock *, struct BBInfo> BBInfos;
+};
+
 // For an alloca valid between lifetime markers Start and Ends, call the
 // Callback for all possible exits out of the lifetime in the containing
 // function, which can return from the instructions in RetVec.
@@ -35,25 +48,16 @@ namespace memtag {
 // Returns whether Ends covered all possible exits. If they did not,
 // the caller should remove Ends to ensure that work done at the other
 // exits does not happen outside of the lifetime.
-bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
-                          const LoopInfo &LI, const Instruction *Start,
-                          const SmallVectorImpl<IntrinsicInst *> &Ends,
-                          const SmallVectorImpl<Instruction *> &RetVec,
-                          llvm::function_ref<void(Instruction *)> Callback);
+LLVM_ABI void
+forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
+                     const LoopInfo &LI, const AllocaInfo &AInfo,
+                     const SmallVectorImpl<Instruction *> &RetVec,
+                     llvm::function_ref<void(Instruction *)> Callback);
 
-bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
-                        const SmallVectorImpl<IntrinsicInst *> &LifetimeEnd,
-                        const DominatorTree *DT, const LoopInfo *LI,
-                        size_t MaxLifetimes);
+LLVM_ABI bool isSupportedLifetime(const AllocaInfo &AInfo,
+                                  const DominatorTree *DT, const LoopInfo *LI);
 
-Instruction *getUntagLocationIfFunctionExit(Instruction &Inst);
-
-struct AllocaInfo {
-  AllocaInst *AI;
-  SmallVector<IntrinsicInst *, 2> LifetimeStart;
-  SmallVector<IntrinsicInst *, 2> LifetimeEnd;
-  SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
-};
+LLVM_ABI Instruction *getUntagLocationIfFunctionExit(Instruction &Inst);
 
 struct StackInfo {
   MapVector<AllocaInst *, AllocaInfo> AllocasToInstrument;
@@ -75,8 +79,8 @@ public:
   StackInfoBuilder(const StackSafetyGlobalInfo *SSI, const char *DebugType)
       : SSI(SSI), DebugType(DebugType) {}
 
-  void visit(OptimizationRemarkEmitter &ORE, Instruction &Inst);
-  AllocaInterestingness getAllocaInterestingness(const AllocaInst &AI);
+  LLVM_ABI void visit(OptimizationRemarkEmitter &ORE, Instruction &Inst);
+  LLVM_ABI AllocaInterestingness getAllocaInterestingness(const AllocaInst &AI);
   StackInfo &get() { return Info; };
 
 private:
@@ -85,17 +89,19 @@ private:
   const char *DebugType;
 };
 
-uint64_t getAllocaSizeInBytes(const AllocaInst &AI);
-void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Align);
+LLVM_ABI uint64_t getAllocaSizeInBytes(const AllocaInst &AI);
+LLVM_ABI void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Align);
 
-Value *readRegister(IRBuilder<> &IRB, StringRef Name);
-Value *getFP(IRBuilder<> &IRB);
-Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB);
-Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot);
+LLVM_ABI Value *readRegister(IRBuilder<> &IRB, StringRef Name);
+LLVM_ABI Value *getFP(IRBuilder<> &IRB);
+LLVM_ABI Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB);
+LLVM_ABI Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot);
+LLVM_ABI Value *getDarwinSlotPtr(IRBuilder<> &IRB, int Slot);
 
-void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag);
-Value *incrementThreadLong(IRBuilder<> &IRB, Value *ThreadLong,
-                           unsigned int Inc);
+LLVM_ABI void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag);
+LLVM_ABI Value *incrementThreadLong(IRBuilder<> &IRB, Value *ThreadLong,
+                                    unsigned int Inc,
+                                    bool IsMemtagDarwin = false);
 
 } // namespace memtag
 } // namespace llvm

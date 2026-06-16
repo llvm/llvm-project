@@ -120,7 +120,7 @@ define i32 @add_i32_ext_load(<1 x i32> %A, ptr %B) nounwind {
 define i64 @add_i64_ext_ext_test1(<1 x i64> %A, <2 x i64> %B) nounwind {
 ; CHECK-SD-LABEL: add_i64_ext_ext_test1:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
+; CHECK-SD-NEXT:    mov d2, v1.d[1]
 ; CHECK-SD-NEXT:    add d0, d0, d1
 ; CHECK-SD-NEXT:    add d0, d0, d2
 ; CHECK-SD-NEXT:    fmov x0, d0
@@ -145,7 +145,7 @@ define i64 @add_i64_ext_ext_test1(<1 x i64> %A, <2 x i64> %B) nounwind {
 define i64 @sub_i64_ext_ext_test1(<1 x i64> %A, <2 x i64> %B) nounwind {
 ; CHECK-SD-LABEL: sub_i64_ext_ext_test1:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ext v2.16b, v1.16b, v1.16b, #8
+; CHECK-SD-NEXT:    mov d2, v1.d[1]
 ; CHECK-SD-NEXT:    sub d0, d0, d1
 ; CHECK-SD-NEXT:    sub d0, d0, d2
 ; CHECK-SD-NEXT:    fmov x0, d0

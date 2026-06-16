@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=inline -S | FileCheck %s
-; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 
 ; 'bar' can be overridden at link-time, don't inline it.
 define weak void @bar() {

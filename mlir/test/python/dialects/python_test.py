@@ -14,6 +14,7 @@ from mlir._mlir_libs._mlirPythonTestNanobind import (
     TestType,
     TestTensorValue,
     TestIntegerRankedTensorType,
+    take_module_or_operation,
 )
 
 test.register_python_test_dialect(get_dialect_registry())
@@ -854,7 +855,7 @@ def testVariadicOperandAccess():
             variadic_operands = test.SameVariadicOperandSizeOp(
                 [zero, one], two, [three, four]
             )
-            # CHECK: Value(%{{.*}} = arith.constant 2 : i32)
+            # CHECK: OpResult(%{{.*}} = arith.constant 2 : i32)
             print(variadic_operands.non_variadic)
             assert (
                 typing.get_type_hints(test.SameVariadicOperandSizeOp.non_variadic.fget)[
@@ -862,9 +863,9 @@ def testVariadicOperandAccess():
                 ]
                 is Value
             )
-            assert type(variadic_operands.non_variadic) is Value
+            assert type(variadic_operands.non_variadic) is OpResult
 
-            # CHECK: ['Value(%{{.*}} = arith.constant 0 : i32)', 'Value(%{{.*}} = arith.constant 1 : i32)']
+            # CHECK: ['OpResult(%{{.*}} = arith.constant 0 : i32)', 'OpResult(%{{.*}} = arith.constant 1 : i32)']
             print(values(variadic_operands.variadic1))
             assert (
                 typing.get_type_hints(test.SameVariadicOperandSizeOp.variadic1.fget)[
@@ -874,7 +875,7 @@ def testVariadicOperandAccess():
             )
             assert type(variadic_operands.variadic1) is OpOperandList
 
-            # CHECK: ['Value(%{{.*}} = arith.constant 3 : i32)', 'Value(%{{.*}} = arith.constant 4 : i32)']
+            # CHECK: ['OpResult(%{{.*}} = arith.constant 3 : i32)', 'OpResult(%{{.*}} = arith.constant 4 : i32)']
             print(values(variadic_operands.variadic2))
             assert type(variadic_operands.variadic2) is OpOperandList
 
@@ -1033,3 +1034,37 @@ def testVariadicAndNormalRegionOp():
 
             assert isinstance(region_op.opview, OpView)
             assert isinstance(region_op.operation.opview, OpView)
+
+
+# Regression test for the dirty-error-state crash in `NanobindAdaptors.h`
+# `from_python` type casters (#191764).
+#
+# !!! This only fails with a debug version of Python. !!!
+#
+# Uses an overloaded function: overload 1 takes `MlirOperation`, overload 2
+# takes `MlirModule`. When called with an `ir.Module`:
+#
+#   1. `nanobind` tries overload 1 (`MlirOperation`). `from_python` gets the
+#      `Module`'s `_CAPIPtr` capsule, then `mlirPythonCapsuleToOperation` calls
+#      `PyCapsule_GetPointer` with `"mlir.ir.Operation._CAPIPtr"` — but the
+#      capsule is named `"mlir.ir.Module._CAPIPtr"`. `PyCapsule_GetPointer`
+#      returns `NULL` and sets `PyErr_Occurred()`. `from_python` returns `false`.
+#
+#   2. `nanobind` tries overload 2 (`MlirModule`). `from_python` calls
+#      `mlirApiObjectToCapsule` --> `nanobind::getattr(obj, "_CAPIPtr")` -->
+#      `_PyType_LookupRef`.
+#
+# Without the fix:
+#   `_PyType_LookupRef` asserts `!PyErr_Occurred()` --> `SIGABRT`.
+#
+# With the fix (`PyErr_Clear` in `from_python` after failed capsule conversion):
+#   Overload 2 succeeds and returns `"module"`.
+# CHECK-LABEL: testOverloadWithWrongPythonCapsule
+@run
+def testOverloadWithWrongPythonCapsule():
+    with Context():
+        module = Module.parse("module {}")
+
+    # CHECK: result = module
+    result = take_module_or_operation(module)
+    print(f"result = {result}")

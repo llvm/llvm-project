@@ -37,11 +37,16 @@ namespace {
 // Include helper functions to ease the manipulation of MachineFunctions.
 #include "MFCommon.inc"
 
-std::unique_ptr<MCContext> createMCContext(MCAsmInfo *AsmInfo) {
+MCTargetOptions MCOptions;
+
+std::unique_ptr<MCContext> createMCContext(const MCAsmInfo &AsmInfo) {
   Triple TheTriple(/*ArchStr=*/"", /*VendorStr=*/"", /*OSStr=*/"",
                    /*EnvironmentStr=*/"elf");
-  return std::make_unique<MCContext>(TheTriple, AsmInfo, nullptr, nullptr,
-                                     nullptr, nullptr, false);
+  static MCRegisterInfo MRI;
+  static const MCSubtargetInfo STI(TheTriple, "", "", "", {}, {}, {}, nullptr,
+                                   nullptr, nullptr, nullptr, nullptr, nullptr);
+  return std::make_unique<MCContext>(TheTriple, AsmInfo, MRI, STI, nullptr,
+                                     false);
 }
 
 // This test makes sure that MachineInstr::isIdenticalTo handles Defs correctly
@@ -268,8 +273,8 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
-  auto MAI = MCAsmInfo();
-  auto MC = createMCContext(&MAI);
+  auto MAI = MCAsmInfo(MCOptions);
+  auto MC = createMCContext(MAI);
   auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
                                       MachineMemOperand::MOLoad, 8, Align(8));
   SmallVector<MachineMemOperand *, 2> MMOs;
@@ -349,8 +354,8 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
   MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
-  auto MAI = MCAsmInfo();
-  auto MC = createMCContext(&MAI);
+  auto MAI = MCAsmInfo(MCOptions);
+  auto MC = createMCContext(MAI);
   auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
                                       MachineMemOperand::MOLoad, 8, Align(8));
   SmallVector<MachineMemOperand *, 2> MMOs;
@@ -404,8 +409,8 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
-  auto MAI = MCAsmInfo();
-  auto MC = createMCContext(&MAI);
+  auto MAI = MCAsmInfo(MCOptions);
+  auto MC = createMCContext(MAI);
   auto MMO = MF->getMachineMemOperand(MachinePointerInfo(),
                                       MachineMemOperand::MOLoad, 8, Align(8));
   SmallVector<MachineMemOperand *, 2> MMOs;
@@ -507,8 +512,12 @@ MATCHER_P(HasMIMetadata, MIMD, "") {
 TEST(MachineInstrBuilder, BuildMI) {
   LLVMContext Ctx;
   MDNode *PCS = MDNode::getDistinct(Ctx, {});
-  MDNode *DI = MDNode::getDistinct(Ctx, {});
-  DebugLoc DL(DI);
+  DIFile *DIF = DIFile::getDistinct(Ctx, "filename", "");
+  DISubprogram *DIS = DISubprogram::getDistinct(
+      Ctx, nullptr, "", "", DIF, 0, nullptr, 0, nullptr, 0, 0, DINode::FlagZero,
+      DISubprogram::SPFlagZero, nullptr);
+  DILocation *DIL = DILocation::get(Ctx, 1, 5, DIS);
+  DebugLoc DL(DIL);
   MIMetadata MIMD(DL, PCS);
   EXPECT_EQ(MIMD.getDL(), DL);
   EXPECT_EQ(MIMD.getPCSections(), PCS);
@@ -584,7 +593,7 @@ TEST(MachineInstrTest, SpliceOperands) {
   // test tied operands
   MCRegisterClass MRC{
       0, 0, 0, 0, 0, 0, 0, 0, /*Allocatable=*/true, /*BaseClass=*/true};
-  TargetRegisterClass RC{&MRC, 0, 0, {}, 0, 0, 0, 0, 0, 0, 0, 0};
+  TargetRegisterClass RC{&MRC, 0, 0, {}, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   // MachineRegisterInfo will be very upset if these registers aren't
   // allocatable.
   assert(RC.isAllocatable() && "unusable TargetRegisterClass");
@@ -611,6 +620,64 @@ TEST(MachineInstrTest, SpliceOperands) {
   EXPECT_EQ(MI->getNumOperands(), 10U);
   MI->insert(MI->operands_begin(), {});
   EXPECT_EQ(MI->getNumOperands(), 10U);
+}
+
+// Checks the iterator returned by MacineInstr::eraseFromParent().
+TEST(MachineInstr, EraseFromParentReturnedIterator) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+  auto MBB = MF->CreateMachineBasicBlock();
+
+  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  MachineInstr *MI1 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->end(), MI1);
+  MachineInstr *MI2 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->end(), MI2);
+
+  MachineBasicBlock::iterator It1 = MI1->eraseFromParent();
+  EXPECT_EQ(It1, MI2->getIterator());
+  MachineBasicBlock::iterator It2 = MI2->eraseFromParent();
+  EXPECT_EQ(It2, MBB->end());
+}
+
+// Checks the iterator returned by MacineInstr::eraseFromParent() when
+// instructions are in bundles.
+TEST(MachineInstr, EraseFromParentReturnedIteratorBundle) {
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+  auto MBB = MF->CreateMachineBasicBlock();
+  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+  // Bundle1 {
+  //   MI1B1
+  //   MI2B1
+  // }
+  // Bundle2 {
+  //   MI1B2
+  //   MI2B2
+  // }
+  MachineInstr *MI1B1 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->end(), MI1B1);
+  MachineInstr *MI2B1 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->end(), MI2B1);
+  MI2B1->bundleWithPred();
+
+  MachineInstr *MI1B2 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->end(), MI1B2);
+  MachineInstr *MI2B2 = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MBB->end(), MI2B2);
+  MI2B2->bundleWithPred();
+
+  // MI1B1->eraseFromParent() erases the whole Bundle1.
+  // The returned iterator matches the head of Bundle2.
+  MachineBasicBlock::iterator It1 = MI1B1->eraseFromParent();
+  EXPECT_EQ(It1, MI1B2->getIterator());
+
+  // Erasing MI1B2 erases the whole Bundle2.
+  MachineBasicBlock::iterator It2 = MI1B2->eraseFromParent();
+  EXPECT_EQ(It2, MBB->end());
 }
 
 } // end namespace

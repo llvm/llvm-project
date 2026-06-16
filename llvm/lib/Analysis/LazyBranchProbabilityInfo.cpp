@@ -33,9 +33,7 @@ INITIALIZE_PASS_END(LazyBranchProbabilityInfoPass, DEBUG_TYPE,
 char LazyBranchProbabilityInfoPass::ID = 0;
 
 LazyBranchProbabilityInfoPass::LazyBranchProbabilityInfoPass()
-    : FunctionPass(ID) {
-  initializeLazyBranchProbabilityInfoPassPass(*PassRegistry::getPassRegistry());
-}
+    : FunctionPass(ID) {}
 
 void LazyBranchProbabilityInfoPass::print(raw_ostream &OS,
                                           const Module *) const {

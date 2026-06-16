@@ -22,10 +22,11 @@ class LPMUpdater;
 
 /// A pass that canonicalizes freeze instructions in a loop.
 class CanonicalizeFreezeInLoopsPass
-    : public PassInfoMixin<CanonicalizeFreezeInLoopsPass> {
+    : public OptionalPassInfoMixin<CanonicalizeFreezeInLoopsPass> {
 public:
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 };
 
 } // end namespace llvm

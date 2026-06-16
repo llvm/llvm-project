@@ -657,8 +657,7 @@ LogicalResult VariableOp::verify() {
   }
 
   auto getDecorationAttr = [op = getOperation()](spirv::Decoration decoration) {
-    return op->getAttr(
-        llvm::convertToSnakeFromCamelCase(stringifyDecoration(decoration)));
+    return op->getAttr(spirv::getDecorationString(decoration));
   };
 
   // TODO: generate these strings using ODS.
@@ -667,39 +666,13 @@ LogicalResult VariableOp::verify() {
         spirv::Decoration::BuiltIn}) {
     if (auto attr = getDecorationAttr(decoration))
       return emitOpError("cannot have '")
-             << llvm::convertToSnakeFromCamelCase(
-                    stringifyDecoration(decoration))
+             << spirv::getDecorationString(decoration)
              << "' attribute (only allowed in spirv.GlobalVariable)";
   }
 
-  // From SPV_KHR_physical_storage_buffer:
-  // > If an OpVariable's pointee type is a pointer (or array of pointers) in
-  // > PhysicalStorageBuffer storage class, then the variable must be decorated
-  // > with exactly one of AliasedPointer or RestrictPointer.
-  auto pointeePtrType = dyn_cast<spirv::PointerType>(getPointeeType());
-  if (!pointeePtrType) {
-    if (auto pointeeArrayType = dyn_cast<spirv::ArrayType>(getPointeeType())) {
-      pointeePtrType =
-          dyn_cast<spirv::PointerType>(pointeeArrayType.getElementType());
-    }
-  }
-
-  if (pointeePtrType && pointeePtrType.getStorageClass() ==
-                            spirv::StorageClass::PhysicalStorageBuffer) {
-    bool hasAliasedPtr =
-        getDecorationAttr(spirv::Decoration::AliasedPointer) != nullptr;
-    bool hasRestrictPtr =
-        getDecorationAttr(spirv::Decoration::RestrictPointer) != nullptr;
-
-    if (!hasAliasedPtr && !hasRestrictPtr)
-      return emitOpError() << " with physical buffer pointer must be decorated "
-                              "either 'AliasedPointer' or 'RestrictPointer'";
-
-    if (hasAliasedPtr && hasRestrictPtr)
-      return emitOpError()
-             << " with physical buffer pointer must have exactly one "
-                "aliasing decoration";
-  }
+  if (failed(verifyPhysicalStorageBufferDecorations(getOperation(),
+                                                    getPointeeType())))
+    return failure();
 
   return success();
 }
