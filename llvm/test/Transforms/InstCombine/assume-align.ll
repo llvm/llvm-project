@@ -12,7 +12,7 @@ define void @f1(ptr %a) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 4) ]
 ; CHECK-NEXT:    store i32 4, ptr [[PTR]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
