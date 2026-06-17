@@ -18,7 +18,7 @@ define ptx_kernel void @kernel() {
 ; LOWERALLOCAONLY: [[GENERIC:%.*]] = addrspacecast ptr addrspace(5) [[A]] to ptr
 ; LOWERALLOCAONLY: store i32 0, ptr addrspace(5) [[A]], align 4
 ; LOWERALLOCAONLY: call void @callee(ptr [[GENERIC]])
-; PTX: st.local.b32 [{{.*}}], 0
+; PTX: st.local.b32 [%SPL], 0
   store i32 0, ptr %A
   call void @callee(ptr %A)
   ret void
@@ -29,7 +29,7 @@ define void @alloca_in_explicit_local_as() {
 ; PTX-LABEL: .visible .func alloca_in_explicit_local_as(
   %A = alloca i32, addrspace(5)
 ; CHECK: store i32 0, ptr addrspace(5) {{%.+}}
-; PTX: st.local.b32 [%SP], 0
+; PTX: st.local.b32 [%SPL], 0
 ; LOWERALLOCAONLY: [[V1:%.*]] = addrspacecast ptr addrspace(5) %A to ptr
 ; LOWERALLOCAONLY: store i32 0, ptr [[V1]], align 4
   store i32 0, ptr addrspace(5) %A

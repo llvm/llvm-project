@@ -28,6 +28,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -94,6 +95,13 @@ static void convertPointerUsersToLocal(Value *OldPtr, Value *LocalPtr,
   if (!Visited.insert(OldPtr).second)
     return;
 
+  // Debug records aren't on the use-list visited below, so retarget them here;
+  // otherwise the variable's location is lost when the old alloca is erased.
+  SmallVector<DbgVariableRecord *, 2> DbgUsers;
+  findDbgUsers(OldPtr, DbgUsers);
+  for (DbgVariableRecord *DVR : DbgUsers)
+    DVR->replaceVariableLocationOp(OldPtr, LocalPtr);
+
   for (Use &U : llvm::make_early_inc_range(OldPtr->uses())) {
     auto *UserInst = dyn_cast<Instruction>(U.getUser());
     if (!UserInst)
@@ -142,6 +150,19 @@ static void convertPointerUsersToLocal(Value *OldPtr, Value *LocalPtr,
       continue;
     }
 
+    if (auto *II = dyn_cast<IntrinsicInst>(UserInst);
+        II && (II->getIntrinsicID() == Intrinsic::lifetime_start ||
+               II->getIntrinsicID() == Intrinsic::lifetime_end) &&
+        isa<AllocaInst>(LocalPtr)) {
+      // Lifetime markers must reference an alloca directly, so retarget them
+      // to the local alloca and update the overloaded declaration.
+      U.set(LocalPtr);
+      Function *Decl = Intrinsic::getOrInsertDeclaration(
+          II->getModule(), II->getIntrinsicID(), {LocalPtr->getType()});
+      II->setCalledFunction(Decl);
+      continue;
+    }
+
     if (auto *MI = dyn_cast<MemIntrinsic>(UserInst)) {
       if (auto *MTI = dyn_cast<MemTransferInst>(MI)) {
         bool Changed = false;
@@ -173,9 +194,8 @@ static void convertPointerUsersToLocal(Value *OldPtr, Value *LocalPtr,
 // Main function for this pass.
 // =============================================================================
 bool NVPTXLowerAlloca::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
+  // Mandatory lowering: later stack lowering relies on local allocas, so run
+  // even for optnone functions (skipFunction is intentionally not called).
   bool Changed = false;
   SmallVector<AllocaInst *, 8> Allocas;
   for (auto &BB : F) {
