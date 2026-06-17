@@ -718,7 +718,7 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
       } else if (auto *PredPhi = dyn_cast<VPPredInstPHIRecipe>(&OldR)) {
         VPValue *PredOp = PredPhi->getOperand(0);
         Type *PredTy = PredOp->getScalarType();
-        VPValue *Poison = Plan.getOrAddLiveIn(PoisonValue::get(PredTy));
+        VPValue *Poison = Plan.getPoison(PredTy);
         VPPhi *NewPhi = Builder.createScalarPhi({Poison, PredOp}, OldDL);
         PredPhi->replaceAllUsesWith(NewPhi);
         PredPhi->eraseFromParent();
@@ -824,7 +824,7 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
 
     Type *ScalarTy = Phi->getScalarType();
     bool IsStruct = isa<StructType>(ScalarTy);
-    VPValue *Poison = Plan.getOrAddLiveIn(PoisonValue::get(ScalarTy));
+    VPValue *Poison = Plan.getPoison(ScalarTy);
     SmallVector<VPValue *> BVOps(NumLanes, Poison);
     auto *BV = new VPInstruction(IsStruct ? VPInstruction::BuildStructVector
                                           : VPInstruction::BuildVector,

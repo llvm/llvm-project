@@ -2129,14 +2129,14 @@ def ExplicitInit : InheritableAttr {
 }
 
 def LifetimeBound : DeclOrTypeAttr {
-  let Spellings = [Clang<"lifetimebound", 0>];
+  let Spellings = [Clang<"lifetimebound", 1>];
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
   let Documentation = [LifetimeBoundDocs];
   let SimpleHandler = 1;
 }
 
 def LifetimeCaptureBy : DeclOrTypeAttr {
-  let Spellings = [Clang<"lifetime_capture_by", 0>];
+  let Spellings = [Clang<"lifetime_capture_by", 1>];
   let Subjects = SubjectList<[ParmVar, ImplicitObjectParameter], ErrorDiag>;
   let Args = [VariadicParamOrParamIdxArgument<"Params">];
   let Documentation = [LifetimeCaptureByDocs];
@@ -5178,6 +5178,12 @@ def HLSLShader : InheritableAttr {
 }];
 }
 
+def HLSLIsArray : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "is_array">];
+  let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
 def HLSLROV : TypeAttr {
   let Spellings = [CXX11<"hlsl", "is_rov">];
   let LangOpts = [HLSL];
@@ -5477,7 +5483,7 @@ def OverflowBehavior : TypeAttr {
   let Args = [IdentifierArgument<"BehaviorKind">];
   let Subjects = SubjectList<[Var, TypedefName, Field], WarnDiag,
                              "variables, typedefs, and data members">;
-  let Documentation = [Undocumented];
+  let Documentation = [OverflowBehaviorDocs];
 }
 
 def Personality : InheritableAttr {

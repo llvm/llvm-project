@@ -75,6 +75,10 @@ int convert(printf_core::Writer<write_mode> *writer,
   case 'y': // Year of the Century [00-99]
   case 'Y': // Full year
     return convert_int(writer, to_conv, timeptr);
+  case 'z': // Timezone offset (+/-hhmm) (num conv)
+    if (timeptr->tm_isdst < 0)
+      return 0;
+    return convert_int(writer, to_conv, timeptr);
 
     // string conversions
   case 'a': // Abbreviated weekday name
@@ -83,6 +87,11 @@ int convert(printf_core::Writer<write_mode> *writer,
   case 'B': // Full month name
   case 'h': // same as %b
   case 'p': // AM/PM designation
+    return convert_str(writer, to_conv, timeptr);
+
+  case 'Z': // Timezone name (string conv)
+    if (timeptr->tm_isdst < 0)
+      return 0;
     return convert_str(writer, to_conv, timeptr);
 
     // composite conversions
@@ -95,13 +104,6 @@ int convert(printf_core::Writer<write_mode> *writer,
   case 'x': // locale specified date
   case 'X': // locale specified time
     return convert_composite(writer, to_conv, timeptr);
-
-    // timezone conversions
-  case 'z': // Timezone offset (+/-hhmm) (num conv)
-  case 'Z': // Timezone name (string conv)
-    // the standard says if no time zone is determinable, write no characters.
-    // Leave this here until time zones are implemented.
-    return 0;
   default:
     return writer->write(to_conv.raw_string);
   }

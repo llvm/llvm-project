@@ -17,47 +17,116 @@
 
 // The patched sled sets:
 //   r7 = function ID
-//   r6 = trampoline address (used by callr, then dead)
-//   r31 = return address back to sled (set by callr)
+//   r31 = return address back to the sled (set by the call)
 //
-// The sled wraps the callr with allocframe(#0)/deallocframe to preserve
-// the caller's original r31:30 across the trampoline call.
+// The sled wraps the call with allocframe(#8)/deallocframe: this preserves the
+// caller's original r31:30 (LR:FP) and provides an 8-byte slot in which the sled
+// spills and reloads r7 (the only register the sled itself clobbers).
+
+// 112-byte, 8-byte-aligned save area:
+//   sp+#0:  r1:0    sp+#8:  r3:2    sp+#16: r5:4    sp+#24: r7:6
+//   sp+#32: r9:8    sp+#40: r11:10  sp+#48: r13:12  sp+#56: r15:14
+//   sp+#64: r28     sp+#68: r31     sp+#72: p3:0    sp+#76: usr
+//   sp+#80: c1:0 (SA0,LC0)   sp+#88: c3:2 (SA1,LC1)   sp+#96: c7:6 (M0,M1)
+//   (sp+#104: pad)
+//
+// The trampoline must preserve every caller-saved register, not just the
+// argument registers: an XRay sled is inserted post-register-allocation and is
+// treated by the compiler as clobbering nothing, but a function-exit sled can
+// land in the middle of a loop (a conditional early return), where loop-carried
+// values live across it.  The C++ handler freely clobbers the whole caller-saved
+// set: GPRs r0-r15 and r28, predicates p0-p3, the hardware-loop registers
+// SA0/LC0/SA1/LC1, the modifier registers M0/M1, and USR.  In particular a
+// hardware loop (loop0/loop1) with an exit sled in its body needs SA0/LC0 (and
+// SA1/LC1 if nested) preserved or the loop's trip count is corrupted.  r16-r27
+// are callee-saved (preserved by the handler) and r29/r30 are managed by the
+// sled's allocframe/deallocframe.  (The sled spills/reloads r7 itself, since it
+// clobbers r7 with the funcid before this trampoline runs.)  GPRs are spilled as
+// pairs with memd, two memory ops per packet; r0/r1 are reused as scratch for
+// the control registers once their originals are on the stack.
 
 .macro SAVE_REGISTERS
-	// Allocate 32 bytes on the stack:
-	//   sp+#0:  r0     (parameter / return value)
-	//   sp+#4:  r1     (parameter / return value)
-	//   sp+#8:  r2     (parameter)
-	//   sp+#12: r3     (parameter)
-	//   sp+#16: r4     (parameter)
-	//   sp+#20: r5     (parameter)
-	//   sp+#24: r31    (return address back to sled's deallocframe)
-	//   sp+#28: (padding for 8-byte alignment)
-	sp = add(sp, #-32)
-	memw(sp+#0) = r0
-	memw(sp+#4) = r1
-	memw(sp+#8) = r2
-	memw(sp+#12) = r3
-	memw(sp+#16) = r4
-	memw(sp+#20) = r5
-	memw(sp+#24) = r31
+	// The paired memd reads the pre-packet r0/r1, so moving the predicates into
+	// r0 in this same packet is safe (r0's original value is already stored).
+	{
+		memd(sp+#-112) = r1:0
+		memd(sp+#-104) = r3:2
+		sp = add(sp, #-112)
+		r0 = p3:0
+	}
+	{
+		memd(sp+#16) = r5:4
+		memd(sp+#24) = r7:6
+	}
+	{
+		memd(sp+#32) = r9:8
+		memd(sp+#40) = r11:10
+	}
+	{
+		memd(sp+#48) = r13:12
+		memd(sp+#56) = r15:14
+	}
+	{
+		memw(sp+#64) = r28
+		memw(sp+#68) = r31
+	}
+	// Predicates (computed above) and the control registers.  r0/r1 are already
+	// saved, so they are free to use as scratch for the control-register reads.
+	// Each control-register transfer must be alone in its packet (slot 3 only).
+	memw(sp+#72) = r0
+	r1:0 = c1:0
+	memd(sp+#80) = r1:0
+	r1:0 = c3:2
+	memd(sp+#88) = r1:0
+	r1:0 = c7:6
+	memd(sp+#96) = r1:0
+	r0 = usr
+	memw(sp+#76) = r0
 .endm
 
 .macro RESTORE_REGISTERS
-	r0 = memw(sp+#0)
-	r1 = memw(sp+#4)
-	r2 = memw(sp+#8)
-	r3 = memw(sp+#12)
-	r4 = memw(sp+#16)
-	r5 = memw(sp+#20)
-	r31 = memw(sp+#24)
-	sp = add(sp, #32)
+	// Restore the control registers first (each transfer alone, slot 3 only),
+	// using r0/r1 as scratch before the real r0/r1 are reloaded below; then the
+	// predicates and GPRs.  All loads use the pre-update sp; sp is bumped last.
+	r0 = memw(sp+#76)
+	usr = r0
+	r1:0 = memd(sp+#96)
+	c7:6 = r1:0
+	r1:0 = memd(sp+#88)
+	c3:2 = r1:0
+	r1:0 = memd(sp+#80)
+	c1:0 = r1:0
+	{
+		r0 = memw(sp+#72)
+		r31 = memw(sp+#68)
+	}
+	{
+		p3:0 = r0
+		r1:0 = memd(sp+#0)
+		r3:2 = memd(sp+#8)
+	}
+	{
+		r5:4 = memd(sp+#16)
+		r7:6 = memd(sp+#24)
+	}
+	{
+		r9:8 = memd(sp+#32)
+		r11:10 = memd(sp+#40)
+	}
+	{
+		r13:12 = memd(sp+#48)
+		r15:14 = memd(sp+#56)
+	}
+	{
+		r28 = memw(sp+#64)
+		sp = add(sp, #112)
+	}
 .endm
 
 .macro CALL_PATCHED_FUNC entry_type
 	// Load the address of the global handler function pointer,
 	// then dereference it to get the actual handler.
-	r8 = ##ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)
+	r8 = add(pc,##ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)@PCREL)
 	r8 = memw(r8+#0)
 	// Skip if handler is not registered (null).
 	{
@@ -131,7 +200,7 @@ ASM_SYMBOL(__xray_CustomEvent):
 
 	// Arguments (r0=ptr, r1=size) are already set by the inline sled.
 	// Load the handler address.
-	r8 = ##ASM_SYMBOL(_ZN6__xray22XRayPatchedCustomEventE)
+	r8 = add(pc,##ASM_SYMBOL(_ZN6__xray22XRayPatchedCustomEventE)@PCREL)
 	r8 = memw(r8+#0)
 	{
 		p0 = cmp.eq(r8, #0)
@@ -153,7 +222,7 @@ ASM_SYMBOL(__xray_TypedEvent):
 
 	// Arguments (r0=type, r1=ptr, r2=size) are already set by the inline sled.
 	// Load the handler address.
-	r8 = ##ASM_SYMBOL(_ZN6__xray21XRayPatchedTypedEventE)
+	r8 = add(pc,##ASM_SYMBOL(_ZN6__xray21XRayPatchedTypedEventE)@PCREL)
 	r8 = memw(r8+#0)
 	{
 		p0 = cmp.eq(r8, #0)
