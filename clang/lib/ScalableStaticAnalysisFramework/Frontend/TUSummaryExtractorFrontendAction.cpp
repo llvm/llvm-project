@@ -15,6 +15,7 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractorOptions.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/IOSandbox.h"
@@ -74,12 +75,13 @@ reportUnrecognizedExtractorNames(DiagnosticsEngine &Diags,
 
 static std::vector<std::unique_ptr<ASTConsumer>>
 makeTUSummaryExtractors(TUSummaryBuilder &Builder,
-                        ArrayRef<std::string> SSAFExtractSummaries) {
+                        ArrayRef<std::string> SSAFExtractSummaries,
+                        const TUSummaryExtractorOptions &Options) {
   std::vector<std::unique_ptr<ASTConsumer>> Extractors;
   Extractors.reserve(SSAFExtractSummaries.size());
   for (StringRef Name : SSAFExtractSummaries) {
     assert(isTUSummaryExtractorRegistered(Name));
-    Extractors.push_back(makeTUSummaryExtractor(Name, Builder));
+    Extractors.push_back(makeTUSummaryExtractor(Name, Builder, Options));
   }
   return Extractors;
 }
@@ -95,6 +97,12 @@ class TUSummaryRunner final : public MultiplexConsumer {
 public:
   static std::unique_ptr<TUSummaryRunner> create(CompilerInstance &CI);
 
+  // Tear down the extractors owned by MultiplexConsumer::Consumers (base
+  // class) *before* derived-class members destruct, so that extractors which
+  // hold a `const TUSummaryExtractorOptions &` into ExtractorOpts never
+  // observe destructed storage.
+  ~TUSummaryRunner() override { MultiplexConsumer::Consumers.clear(); }
+
 private:
   TUSummaryRunner(std::unique_ptr<SerializationFormat> Format,
                   const FrontendOptions &Opts);
@@ -105,6 +113,9 @@ private:
   TUSummaryBuilder Builder = TUSummaryBuilder(Summary);
   std::unique_ptr<SerializationFormat> Format;
   const FrontendOptions &Opts;
+  // Held by-value because individual extractors store a reference to it.
+  // Destruction order is preserved by the dtor clearing Consumers first.
+  TUSummaryExtractorOptions ExtractorOpts;
 };
 } // namespace
 
@@ -135,13 +146,16 @@ TUSummaryRunner::TUSummaryRunner(std::unique_ptr<SerializationFormat> Format,
     : MultiplexConsumer(std::vector<std::unique_ptr<ASTConsumer>>{}),
       Summary(BuildNamespace(BuildNamespaceKind::CompilationUnit,
                              Opts.SSAFCompilationUnitId)),
-      Format(std::move(Format)), Opts(Opts) {
+      Format(std::move(Format)), Opts(Opts),
+      ExtractorOpts{/*ExtractFromSystemHeaders=*/static_cast<bool>(
+                        Opts.SSAFExtractFromSystemHeaders)} {
   assert(this->Format);
   assert(!Opts.SSAFCompilationUnitId.empty());
 
   // Now the Summary and the builders are constructed, we can also construct the
   // extractors.
-  auto Extractors = makeTUSummaryExtractors(Builder, Opts.SSAFExtractSummaries);
+  auto Extractors =
+      makeTUSummaryExtractors(Builder, Opts.SSAFExtractSummaries, ExtractorOpts);
   assert(!Extractors.empty());
 
   // We must initialize the Consumers here because our extractors need a

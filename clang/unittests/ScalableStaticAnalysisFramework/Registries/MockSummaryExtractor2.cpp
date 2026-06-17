@@ -17,8 +17,9 @@ using namespace ssaf;
 namespace {
 class MockSummaryExtractor2 : public TUSummaryExtractor {
 public:
-  MockSummaryExtractor2(TUSummaryBuilder &Builder)
-      : TUSummaryExtractor(Builder) {
+  MockSummaryExtractor2(TUSummaryBuilder &Builder,
+                        const TUSummaryExtractorOptions &Options)
+      : TUSummaryExtractor(Builder, Options) {
     getFakeBuilder().sendMessage(
         "MockSummaryExtractor2 constructor was invoked");
   }

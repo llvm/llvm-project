@@ -131,7 +131,8 @@ struct CallGraphExtractorTest : ssaf::TestFixture {
   /// This will update the \c AST \c Builder and \c Summary data members.
   void runExtractor(StringRef Code, ArrayRef<std::string> Args = {}) {
     AST = tooling::buildASTFromCodeWithArgs(Code, Args);
-    auto Consumer = makeTUSummaryExtractor(CallGraphName.str(), Builder);
+    auto Consumer = makeTUSummaryExtractor(CallGraphName.str(), Builder,
+                                            TUSummaryExtractorOptions{});
     Consumer->HandleTranslationUnit(AST->getASTContext());
   }
 

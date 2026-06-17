@@ -92,7 +92,7 @@ struct TUSummaryBuilderTest : ssaf::TestFixture {
   TUSummary Summary{
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")};
   TUSummaryBuilder Builder{Summary};
-  TUSummaryExtractor Extractor{Builder};
+  TUSummaryExtractor Extractor{Builder, ssaf::TUSummaryExtractorOptions{}};
 
   [[nodiscard]] EntityId addTestEntity(llvm::StringRef USR) {
     return getIdTable(Summary).getId(

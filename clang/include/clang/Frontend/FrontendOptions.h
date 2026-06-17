@@ -564,6 +564,14 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned SSAFShowFormats : 1;
 
+  /// Extract from system-header declarations during SSAF contributor
+  /// enumeration. Defaults to true to preserve the original behavior.
+  /// Cleared by `--ssaf-no-extract-from-system-headers` (negative-marshalled
+  /// flag) when the caller (typically the clang-ssaf-orchestrator) wants
+  /// to scope contributor enumeration to user-source decls.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned SSAFExtractFromSystemHeaders : 1;
+
 public:
   FrontendOptions()
       : DisableFree(false), RelocatablePCH(false), ShowHelp(false),
@@ -582,7 +590,8 @@ public:
         UseClangIRPipeline(false), ClangIRDisablePasses(false),
         ClangIRDisableCIRVerifier(false), ClangIREnableIdiomRecognizer(false),
         TimeTraceGranularity(500), TimeTraceVerbose(false),
-        SSAFShowExtractors(false), SSAFShowFormats(false) {}
+        SSAFShowExtractors(false), SSAFShowFormats(false),
+        SSAFExtractFromSystemHeaders(true) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.

@@ -25,8 +25,9 @@ using namespace ssaf;
 namespace clang::ssaf {
 class UnsafeBufferUsageTUSummaryExtractor : public TUSummaryExtractor {
 public:
-  UnsafeBufferUsageTUSummaryExtractor(TUSummaryBuilder &Builder)
-      : TUSummaryExtractor(Builder) {}
+  UnsafeBufferUsageTUSummaryExtractor(TUSummaryBuilder &Builder,
+                                      const TUSummaryExtractorOptions &Options)
+      : TUSummaryExtractor(Builder, Options) {}
 
   /// \return a non-null unique pointer to a UnsafeBufferUsageEntitySummary
   std::unique_ptr<UnsafeBufferUsageEntitySummary>
@@ -72,7 +73,7 @@ void clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
     ASTContext &Ctx) {
   std::vector<const NamedDecl *> Contributors;
 
-  findContributors(Ctx, Contributors);
+  findContributors(Ctx, getOptions(), Contributors);
   for (auto *CD : Contributors) {
     auto EntitySummary = extractEntitySummary(CD, Ctx);
 
