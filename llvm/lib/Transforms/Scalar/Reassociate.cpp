@@ -968,8 +968,8 @@ static BinaryOperator *convertOrWithNoCommonBitsToAdd(Instruction *Or) {
 static bool ShouldBreakUpDistribution(Instruction *Mul) {
   Value *A, *B;
   if (!match(Mul, m_Mul(m_OneUse(m_CombineOr(m_Add(m_Value(A), m_Value(B)),
-                                               m_Sub(m_Value(A), m_Value(B)))),
-                          m_ImmConstant())))
+                                             m_Sub(m_Value(A), m_Value(B)))),
+                        m_ImmConstant())))
     return false;
 
   if (!Mul->hasOneUse())
@@ -977,7 +977,7 @@ static bool ShouldBreakUpDistribution(Instruction *Mul) {
   auto *MulUser = cast<Instruction>(Mul->user_back());
   // The parent MUST be an Add or Sub to ensure the tree is flattened
   if (MulUser->getOpcode() != Instruction::Add &&
-                   MulUser->getOpcode() != Instruction::Sub)
+      MulUser->getOpcode() != Instruction::Sub)
     return false;
 
   for (Value *Sibling : MulUser->operands()) {
@@ -1000,15 +1000,15 @@ static BinaryOperator *BreakUpDistribute(Instruction *Mul,
                                          ReassociatePass::OrderedSet &ToRedo) {
   Instruction *AddSub = cast<Instruction>(Mul->getOperand(0));
   Constant *C = cast<Constant>(Mul->getOperand(1));
-  Constant *C2 = AddSub->getOpcode() == Instruction::Sub
-                     ? ConstantExpr::getNeg(C)
-                     : C;
+  Constant *C2 =
+      AddSub->getOpcode() == Instruction::Sub ? ConstantExpr::getNeg(C) : C;
 
-  BinaryOperator *M1 =
-      BinaryOperator::CreateMul(AddSub->getOperand(0), C, "Mul1", Mul->getIterator());
-  BinaryOperator *M2 =
-      BinaryOperator::CreateMul(AddSub->getOperand(1), C2, "Mul2", Mul->getIterator());
-  BinaryOperator *Result = BinaryOperator::CreateAdd(M1, M2, "DistAdd", Mul->getIterator());
+  BinaryOperator *M1 = BinaryOperator::CreateMul(AddSub->getOperand(0), C,
+                                                 "Mul1", Mul->getIterator());
+  BinaryOperator *M2 = BinaryOperator::CreateMul(AddSub->getOperand(1), C2,
+                                                 "Mul2", Mul->getIterator());
+  BinaryOperator *Result =
+      BinaryOperator::CreateAdd(M1, M2, "DistAdd", Mul->getIterator());
 
   Mul->replaceAllUsesWith(Result);
   Result->setDebugLoc(Mul->getDebugLoc());
