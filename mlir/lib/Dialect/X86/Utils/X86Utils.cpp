@@ -144,6 +144,25 @@ inline ShuffleMasks getShuffleMasks(int64_t nonUnitDimAcc, bool isInt8Avx2) {
   return {maskLo8, maskHi8};
 }
 
+// Recursively follows single-use values through scf.yield operations
+// and returns the first non-yield user result in the contraction chain.
+Value contractionUsersAfterYield(Value v) {
+  if (v.getNumUses() != 1)
+    return nullptr;
+
+  OpOperand &use = *v.use_begin();
+  Operation *user = use.getOwner();
+
+  if (!isa<scf::YieldOp>(user))
+    return v;
+
+  auto yield = cast<scf::YieldOp>(user);
+  Operation *parent = yield->getParentOp();
+  unsigned idx = use.getOperandNumber();
+
+  return contractionUsersAfterYield(parent->getResult(idx));
+}
+
 // This function walks backward from a value to locate its originating
 // vector read-like operation (`vector.transfer_read` or `vector.load`).
 // It follows simple forwarding through unary ops and across `scf.for`
@@ -155,8 +174,20 @@ Operation *traceToVectorReadLikeParentOperation(Value v) {
   while (true) {
     // Case 1: Value defined by an operation
     if (Operation *defOp = v.getDefiningOp()) {
-      if (isa<vector::TransferReadOp, vector::LoadOp>(defOp))
+      if (isa<vector::TransferReadOp, vector::LoadOp, arith::ConstantOp>(defOp))
         return defOp;
+
+      if (isa<arith::ConstantOp>(defOp)) {
+        Attribute value = (dyn_cast<arith::ConstantOp>(defOp)).getValue();
+
+        if ((dyn_cast<IntegerAttr>(value)).getValue().isZero())
+          return defOp;
+
+        if ((dyn_cast<FloatAttr>(value)).getValue().isZero())
+          return defOp;
+
+        return nullptr;
+      }
 
       return nullptr;
     }
@@ -289,27 +320,23 @@ LogicalResult shuffleAfterReadLikeOp(PatternRewriter &rewriter, Operation *opA,
 
 // This function shuffles the vectors written by vector.contract operation
 // as a flat layout structure before they are stored.
-LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter,
-                                       Operation *opA, Operation *opB,
-                                       int64_t nonUnitDimAcc,
+LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter, Value opA,
+                                       Value opB, int64_t nonUnitDimAcc,
                                        VectorType accTy) {
-  // Helper to extract vector operand from write-like ops
-  auto getWrittenVector = [](Operation *op) -> Value {
-    if (auto write = dyn_cast<vector::TransferWriteOp>(op))
-      return write.getVector();
-    if (auto store = dyn_cast<vector::StoreOp>(op))
-      return store.getValueToStore();
-    return nullptr;
-  };
 
-  Value vecA = getWrittenVector(opA);
-  Value vecB = getWrittenVector(opB);
+  Value vecA = contractionUsersAfterYield(opA);
+  Value vecB = contractionUsersAfterYield(opB);
 
   if (!vecA || !vecB)
     return failure();
 
+  Operation *resultWriteOpA = *vecA.getUsers().begin();
+  Operation *resultWriteOpB = *vecB.getUsers().begin();
+
   // Decide insertion point and location
-  Operation *insertBefore = opA->isBeforeInBlock(opB) ? opA : opB;
+  Operation *insertBefore = resultWriteOpA->isBeforeInBlock(resultWriteOpB)
+                                ? resultWriteOpA
+                                : resultWriteOpB;
 
   rewriter.setInsertionPoint(insertBefore);
   Location loc = insertBefore->getLoc();
@@ -335,10 +362,8 @@ LogicalResult shuffleBeforeWriteLikeOp(PatternRewriter &rewriter,
   auto newVecB = vector::ShapeCastOp::create(rewriter, loc, accTy, shuffledHi);
 
   // Update write operands in place via the rewriter to notify it of changes.
-  rewriter.modifyOpInPlace(opA,
-                           [&]() { opA->setOperand(0, newVecA.getResult()); });
-  rewriter.modifyOpInPlace(opB,
-                           [&]() { opB->setOperand(0, newVecB.getResult()); });
+  resultWriteOpA->replaceUsesOfWith(vecA, newVecA);
+  resultWriteOpB->replaceUsesOfWith(vecB, newVecB);
 
   return success();
 }

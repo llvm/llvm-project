@@ -415,25 +415,21 @@ struct VectorContractBF16ToFMA
       Operation *accReadOp1 =
           traceToVectorReadLikeParentOperation(pairContractOp.getAcc());
 
-      // Iterate down to find the users of contact operations until it is store
-      // or transfer_write.
-      Operation *resultWriteOp0 =
-          traceToVectorWriteLikeUserOperation(contractOp.getResult());
-      Operation *resultWriteOp1 =
-          traceToVectorWriteLikeUserOperation(pairContractOp.getResult());
+      if (!(dyn_cast<arith::ConstantOp>(accReadOp0))) {
+        // Shuffle the accumulators of the contract operations.
+        LogicalResult readShuffle =
+            shuffleAfterReadLikeOp(rewriter, accReadOp0, accReadOp1, contractOp,
+                                   pairContractOp, nonUnitDim, accTy);
 
-      // Shuffle the accumulators of the contract operations.
-      LogicalResult readShuffle =
-          shuffleAfterReadLikeOp(rewriter, accReadOp0, accReadOp1, contractOp,
-                                 pairContractOp, nonUnitDim, accTy);
-
-      if (failed(readShuffle))
-        return rewriter.notifyMatchFailure(
-            contractOp, "Accumulator read is not by transfer_read or load");
+        if (failed(readShuffle))
+          return rewriter.notifyMatchFailure(
+              contractOp, "Accumulator read is not by transfer_read or load");
+      }
 
       // Shuffle the output of contract operations before its use.
       LogicalResult writeShuffle = shuffleBeforeWriteLikeOp(
-          rewriter, resultWriteOp0, resultWriteOp1, nonUnitDim, accTy);
+          rewriter, contractOp.getResult(), pairContractOp.getResult(),
+          nonUnitDim, accTy);
 
       if (failed(writeShuffle))
         return rewriter.notifyMatchFailure(
