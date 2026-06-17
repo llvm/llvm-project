@@ -5,8 +5,8 @@ define i32 @store_both_arms(i1 %cond, ptr noalias %p1, ptr noalias %p2) {
 ; CHECK-LABEL: @store_both_arms(
 ; CHECK-NEXT:    store i32 10, ptr [[P1:%.*]], align 4
 ; CHECK-NEXT:    store i32 20, ptr [[P2:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i32 10, i32 20
-; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND]], ptr [[P1]], ptr [[P2]]
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND:%.*]], ptr [[P1]], ptr [[P2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND]], i32 10, i32 20
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   store i32 10, ptr %p1
@@ -20,8 +20,8 @@ define i32 @store_and_load(i1 %cond, ptr noalias %p1, ptr noalias %p2) {
 ; CHECK-LABEL: @store_and_load(
 ; CHECK-NEXT:    store i32 10, ptr [[P1:%.*]], align 4
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P2:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i32 10, i32 [[V1]]
-; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND]], ptr [[P1]], ptr [[P2]]
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND:%.*]], ptr [[P1]], ptr [[P2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND]], i32 10, i32 [[V1]]
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[TMP1]], [[V1]]
 ; CHECK-NEXT:    ret i32 [[SUM]]
 ;
@@ -37,8 +37,8 @@ define i32 @store_then_load(i1 %cond, ptr noalias %p1, ptr noalias %p2) {
 ; CHECK-LABEL: @store_then_load(
 ; CHECK-NEXT:    store i32 10, ptr [[P1:%.*]], align 4
 ; CHECK-NEXT:    store i32 20, ptr [[P2:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i32 10, i32 20
-; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND]], ptr [[P1]], ptr [[P2]]
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND:%.*]], ptr [[P1]], ptr [[P2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND]], i32 10, i32 20
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   store i32 10, ptr %p1
@@ -55,8 +55,8 @@ define i32 @store_in_pred(i1 %cond, ptr noalias %p1, ptr noalias %p2) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 10, ptr [[P1:%.*]], align 4
 ; CHECK-NEXT:    store i32 20, ptr [[P2:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[COND:%.*]], i32 10, i32 20
-; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND]], ptr [[P1]], ptr [[P2]]
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[COND:%.*]], ptr [[P1]], ptr [[P2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[COND]], i32 10, i32 20
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:

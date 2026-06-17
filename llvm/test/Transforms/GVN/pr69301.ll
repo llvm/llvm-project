@@ -24,8 +24,8 @@ define i64 @test(i1 %c, ptr %p) {
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[LOAD6:%.*]] = load i64, ptr [[P]], align 8
 ; CHECK-NEXT:    [[ICMP7:%.*]] = icmp ugt i64 [[RES_PRE1]], [[LOAD6]]
-; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[ICMP7]], i64 [[RES_PRE1]], i64 [[LOAD6]]
 ; CHECK-NEXT:    [[SELECT]] = select i1 [[ICMP7]], ptr [[PTR_IV]], ptr [[P]]
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[ICMP7]], i64 [[RES_PRE1]], i64 [[LOAD6]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exitsplit:
 ; CHECK-NEXT:    br label [[EXIT]]
