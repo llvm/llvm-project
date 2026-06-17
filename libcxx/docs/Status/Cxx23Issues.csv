@@ -157,7 +157,7 @@
 "`LWG3654 <https://wg21.link/LWG3654>`__","``basic_format_context::arg(size_t)`` should be ``noexcept`` ","2022-02 (Virtual)","|Complete|","15","`#104959 <https://github.com/llvm/llvm-project/issues/104959>`__",""
 "`LWG3657 <https://wg21.link/LWG3657>`__","``std::hash<std::filesystem::path>`` is not enabled","2022-02 (Virtual)","|Complete|","17","`#104960 <https://github.com/llvm/llvm-project/issues/104960>`__",""
 "`LWG3660 <https://wg21.link/LWG3660>`__","``iterator_traits<common_iterator>::pointer`` should conform to §[iterator.traits]","2022-02 (Virtual)","|Complete|","14","`#104961 <https://github.com/llvm/llvm-project/issues/104961>`__",""
-"`LWG3661 <https://wg21.link/LWG3661>`__","``constinit atomic<shared_ptr<T>> a(nullptr);`` should work","2022-02 (Virtual)","","","`#104962 <https://github.com/llvm/llvm-project/issues/104962>`__",""
+"`LWG3661 <https://wg21.link/LWG3661>`__","``constinit atomic<shared_ptr<T>> a(nullptr);`` should work","2022-02 (Virtual)","|Complete|","23","`#104962 <https://github.com/llvm/llvm-project/issues/104962>`__",""
 "","","","","","",""
 "`LWG3564 <https://wg21.link/LWG3564>`__","``transform_view::iterator<true>::value_type`` and ``iterator_category`` should use ``const F&``","2022-07 (Virtual)","|Complete|","20","`#104963 <https://github.com/llvm/llvm-project/issues/104963>`__",""
 "`LWG3617 <https://wg21.link/LWG3617>`__","``function``/``packaged_task`` deduction guides and deducing ``this``","2022-07 (Virtual)","","","`#104965 <https://github.com/llvm/llvm-project/issues/104965>`__",""

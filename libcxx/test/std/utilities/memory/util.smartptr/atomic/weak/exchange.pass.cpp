@@ -1,0 +1,60 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// REQUIRES: std-at-least-c++20
+// UNSUPPORTED: no-threads
+
+// weak_ptr<T> exchange(weak_ptr<T> desired, memory_order order = memory_order::seq_cst) noexcept;
+
+#include <atomic>
+#include <cassert>
+#include <concepts> // needed on Armv7/Armv8 with -fmodules
+#include <memory>
+
+#include "../atomic_smart_ptr_test_types.h"
+#include "test_macros.h"
+
+template <class T>
+void test_exchange_weak() {
+  auto sp1             = SpValues<T>::state_a();
+  auto sp2             = SpValues<T>::state_b();
+  std::weak_ptr<T> wp1 = sp1;
+  std::weak_ptr<T> wp2 = sp2;
+
+  std::atomic<std::weak_ptr<T>> a((std::weak_ptr<T>(wp1)));
+
+  std::same_as<std::weak_ptr<T>> decltype(auto) out = a.exchange(std::weak_ptr<T>(wp2));
+  {
+    auto locked = out.lock();
+    assert(locked && *locked == *sp1);
+  }
+  {
+    auto locked = a.load().lock();
+    assert(locked && *locked == *sp2);
+  }
+
+  std::weak_ptr<T> empty;
+  out = a.exchange(std::weak_ptr<T>(empty), std::memory_order_seq_cst);
+  {
+    auto locked = out.lock();
+    assert(locked && *locked == *sp2);
+  }
+  assert(a.load().expired());
+
+  static_assert(noexcept(a.exchange(std::weak_ptr<T>(wp1))));
+}
+
+template <class T>
+struct TestExchangeWeak {
+  void operator()() const { test_exchange_weak<T>(); }
+};
+
+int main(int, char**) {
+  ForEachSmartPtrType{}.template operator()<TestExchangeWeak>();
+  return 0;
+}

@@ -216,6 +216,7 @@ set(files
   __atomic/atomic_lock_free.h
   __atomic/atomic_ref.h
   __atomic/atomic_sync.h
+  __atomic/atomic_sync_lite.h
   __atomic/atomic_sync_timed.h
   __atomic/atomic_waitable_traits.h
   __atomic/check_memory_order.h
@@ -228,6 +229,7 @@ set(files
   __atomic/support.h
   __atomic/support/c11.h
   __atomic/support/gcc.h
+  __atomic/to_failure_order.h
   __atomic/to_gcc_order.h
   __bit/bit_cast.h
   __bit/bit_ceil.h
@@ -596,6 +598,9 @@ set(files
   __memory/allocator_traits.h
   __memory/array_cookie.h
   __memory/assume_aligned.h
+  __memory/atomic_shared_ptr.h
+  __memory/atomic_shared_ptr_lock_based.h
+  __memory/atomic_shared_ptr_lock_free.h
   __memory/auto_ptr.h
   __memory/compressed_pair.h
   __memory/concepts.h

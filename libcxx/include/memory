@@ -861,6 +861,14 @@ template<class T>
     atomic_compare_exchange_strong_explicit(shared_ptr<T>* p, shared_ptr<T>* v,
                                             shared_ptr<T> w, memory_order success,
                                             memory_order failure);
+
+// [util.smartptr.atomic.shared], partial specialization for shared_ptr
+template <class T>
+struct atomic<shared_ptr<T>>;
+// [util.smartptr.atomic.weak], partial specialization for weak_ptr
+template <class T>
+struct atomic<weak_ptr<T>>;
+
 // Hash support
 template <class T> struct hash;
 template <class T, class D> struct hash<unique_ptr<T, D> >;
