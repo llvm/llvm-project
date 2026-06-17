@@ -9,7 +9,7 @@
 // RUN: sed -e 's|\.c$|.c.ast|g' %t/externalDefMap.tmp1.txt > %t/externalDefMap.tmp2.txt
 // RUN: sed -e 's|%t\/||g' %t/externalDefMap.tmp2.txt > %t/externalDefMap.txt
 
-// RUN: %clang_cc1 -analyze \
+// RUN: %clang_cc1 -analyze -triple x86_64-pc-linux-gnu \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-config experimental-enable-naive-ctu-analysis=true \
 // RUN:   -analyzer-config display-ctu-progress=true \
