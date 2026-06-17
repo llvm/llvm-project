@@ -27699,8 +27699,6 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
         V.getValueType().isFixedLengthVector()) {
       uint64_t ExtEnd = ExtIdx + NumSubElts;
       uint64_t InsEnd = InsIdx + NumInsElts;
-      if (ExtEnd <= InsIdx || InsEnd <= ExtIdx)
-        return DAG.getExtractSubvector(DL, NVT, Src, ExtIdx);
 
       if (InsIdx <= ExtIdx && ExtEnd <= InsEnd &&
           TLI.isExtractSubvectorCheap(NVT, InsSubVT, ExtIdx - InsIdx))
