@@ -3021,6 +3021,46 @@ void VPDerivedIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+InstructionCost VPScalarIVStepsRecipe::computeCost(ElementCount VF,
+                                                   VPCostContext &Ctx) const {
+  // TODO: Add costs for floating point.
+  Type *BaseIVTy = getOperand(0)->getScalarType();
+  if (!BaseIVTy->isIntegerTy())
+    return 0;
+
+  // TODO: Add support for predicated regions. Requires scaling the cost by the
+  // probability of entering the block.
+  if (getRegion() && getRegion()->isReplicator())
+    return 0;
+
+  // If only the first lane is used, then there won't be any code that remains
+  // in the loop for the first unrolled part.
+  if (vputils::onlyFirstLaneUsed(this))
+    return 0;
+
+  // Typically the operations are:
+  //   1. Add the start index to each lane value.
+  //   2. Multiply the start index by the step.
+  //   3. Add the scaled start index to base IV.
+  // Any code generated for 1 and 2 should be loop invariant and therefore
+  // hoisted out of the loop. We only need to add on the cost of 3.
+
+  // Given the users of VPScalarIVStepsRecipe tend to be scalarized GEPs, i.e.
+  //  %add1 = add i32 %iv, 0
+  //  %add2 = add i32 %iv, 1
+  //  %gep1 = getelementptr i8, ptr %p, i32 %add1
+  //  %gep2 = getelementptr i8, ptr %p, i32 %add2
+  // it's very likely that these GEPs will all be rewritten to have a common
+  // base such that what's left is just
+  //  %base_gep = getelementptr i8, ptr %p, i32 %iv
+  //  %gep1 = getelementptr i8, ptr %base_gep, i32 0
+  //  %gep2 = getelementptr i8, ptr %base_gep, i32 1
+  // Therefore, in reality the cost is somewhere betwen 1*AddCost and
+  // (NumLanes - 1) * AddCost. For now, assume the cost of a single add.
+  return Ctx.TTI.getArithmeticInstrCost(Instruction::Add, BaseIVTy,
+                                        Ctx.CostKind);
+}
+
 void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   // Fast-math-flags propagate from the original induction instruction.
   IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
