@@ -2,10 +2,9 @@
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_50 | %ptxas-verify %}
 
 ; The expansion of small memcpy/memmove/memset can raise the alignment of
-; under-aligned stack objects. Verify this also works on NVPTX, which lowers
-; allocas to the local address space via addrspacecast instructions that hide
-; the frame index, both when the pointer is materialized in the same basic
-; block as the memory operation and when it is defined in a different one.
+; under-aligned stack objects. Verify this also works on NVPTX, where generic
+; allocas are lowered to local-address-space allocas before codegen, both for
+; direct uses and for uses in a different basic block.
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-v64:64:64-v128:128:128-n16:32:64"
 target triple = "nvptx64-nvidia-cuda"
@@ -54,7 +53,7 @@ exit:
 }
 
 ; The source object's alignment was raised when expanding the first memcpy;
-; the loads of the second copy can only learn about it through the frame index.
+; the loads of the second copy can only learn about it through the frame object.
 define void @memcpy_alloca_raised_src(i1 %c, ptr %p) {
 ; CHECK-LABEL: memcpy_alloca_raised_src(
 ; CHECK: .local .align 4 .b8 __local_depot{{[0-9]+}}[16];
@@ -115,8 +114,8 @@ define void @memset_alloca() {
   ret void
 }
 
-; InferPtrAlign also looks through the addrspacecast, letting DAGCombiner
-; refine the alignment of under-aligned plain loads and stores.
+; Local-address-space alloca lowering also lets DAGCombiner refine the alignment
+; of under-aligned plain loads and stores through the frame object.
 define i32 @underaligned_load_store(i32 %v) {
 ; CHECK-LABEL: underaligned_load_store(
 ; CHECK: ld.local.b32
