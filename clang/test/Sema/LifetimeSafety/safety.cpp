@@ -1250,6 +1250,43 @@ void conditional_operator_lifetimebound_nested_deep(bool cond) {
   (void)*p;  // expected-note 4 {{later used here}}
 }
 
+// Comma operator.
+int side();
+void comma_use_after_scope() {
+  MyObj* p;
+  {
+    MyObj temp;
+    p = (side(), &temp);  // expected-warning {{local variable 'temp' does not live long enough}}
+  }                       // expected-note {{destroyed here}}
+  (void)*p;               // expected-note {{later used here}}
+}
+
+void comma_nested() {
+  MyObj* p;
+  {
+    MyObj temp;
+    p = (side(), (side(), &temp));  // expected-warning {{local variable 'temp' does not live long enough}}
+  }                                 // expected-note {{destroyed here}}
+  (void)*p;                         // expected-note {{later used here}}
+}
+
+void comma_masked_by_conditional(bool cond) {
+  MyObj safe;
+  MyObj* keep = &safe;
+  MyObj* p;
+  {
+    MyObj temp;
+    p = cond ? keep : (side(), &temp);  // expected-warning {{local variable 'temp' does not live long enough}}
+  }                                     // expected-note {{destroyed here}}
+  (void)*p;                             // expected-note {{later used here}}
+}
+
+void comma_safe() {
+  MyObj safe;
+  MyObj* p = (side(), &safe);
+  (void)*p;  // no-warning
+}
+
 // FIXME: Diagnostic output does not handle ParenExpr correctly, causing alias
 // information to be missed (local variable 'p' aliases the storage of local variable 'b').
 void simpleparen() {

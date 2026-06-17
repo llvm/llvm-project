@@ -75,10 +75,10 @@ Create the Github tracking issues
 ==================================
 
 Once the CSV files are committed and any stray issues have been linked, the remaining missing
-Github issues can be created using ``libcxx/utils/conformance``. For each CSV row, it will
-create a Github issue (and ask for confirmation) if an issue does not already exist. The issue
-title, body and labels are all populated automatically, and they are appropriately linked to
-the libc++ conformance project. Run it once per CSV::
+Github issues can be created using ``libcxx/utils/conformance``. The script lists every issue
+it would create from the CSV (skipping rows that are already tracked) and asks for a confirmation
+before creating them. The issue title, body and labels are all populated automatically, and they
+are appropriately linked to the libc++ conformance project. Run it once per CSV::
 
    libcxx/utils/conformance github create libcxx/docs/Status/Cxx<NN>Papers.csv \
       --labels=wg21-paper --labels=c++<NN>

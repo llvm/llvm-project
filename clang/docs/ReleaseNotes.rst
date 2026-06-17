@@ -393,6 +393,17 @@ New Compiler Flags
   a hostname when generates the hashes. Known issues -- does not remap the
   source file pathes within PCH/PCM files.
 
+- New ``-cl`` option ``/experimental:deterministic`` added to match CL's option.
+  This enables warning emission on usage of non-deterministic macros __DATE__,
+  __TIME__ and __TIMESTAMP__ and provides reproducable COFF's timestamp for
+  the output object files.
+
+- New ``-cl`` option ``/d1nodatetime`` added to match CL's option. This option
+  undefines the standard macros __DATE__, __TIME__ and __TIMESTAMP__ to allow
+  reproducable builds. These macros can be redefined from the command line if
+  necessary. ``/d1nodatetime-`` can be used to turn this feature off if
+  necessary to override the common build settings.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -409,6 +420,10 @@ Modified Compiler Flags
   by ``-unique-internal-linkage-names`` option. Now it uses a path that
   normalized in favor of the target system (same as the preprocessor does
   for the file macros) and allows the reproducable IDs on any build system.
+
+- The ``-cl`` ``/Brepro`` option was modified to match the original CL's option
+  and now defines the standard macros __DATE__, __TIME__ and __TIMESTAMP__ to
+  "1". The previous functionality remains unchanged.
 
 Removed Compiler Flags
 ----------------------
