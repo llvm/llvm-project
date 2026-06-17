@@ -15,7 +15,6 @@ namespace clang::tidy::modernize {
 
 /// For the user-facing documentation see:
 /// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-shared-ptr-array.html
-
 class UseSharedPtrArrayCheck : public ClangTidyCheck {
 public:
   UseSharedPtrArrayCheck(StringRef Name, ClangTidyContext *Context)

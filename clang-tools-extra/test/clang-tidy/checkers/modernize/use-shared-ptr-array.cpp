@@ -33,6 +33,8 @@ public:
   void reset(Y *ptr, D d) {}
 
   shared_ptr &operator=(const shared_ptr &) { return *this; }
+
+  T *get() const noexcept { return nullptr; } 
 };
 
 } // namespace std
@@ -80,12 +82,18 @@ typedef std::default_delete<A[]> TDDelete;
 
 constexpr int kBufSize = 128;
 
+struct Wrapper {
+  explicit Wrapper(std::shared_ptr<A> p) {}
+};
 
-// Positive: default_delete<T[]> deleter forms
+std::shared_ptr<A> make_shared_from(std::shared_ptr<A> p) { return p; }
+
+
+// Positive:
 
 void positive_default_delete_basic() {
   std::shared_ptr<A> basicSp(new A[10], std::default_delete<A[]>());
-  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'std::shared_ptr<
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'std::shared_ptr<A[]>' instead of 'std::shared_ptr<A>' with explicit array deleter [modernize-use-shared-ptr-array]
   // CHECK-FIXES: std::shared_ptr<A[]> basicSp(new A[10]);
 }
 
@@ -139,9 +147,6 @@ void positive_using_declarations() {
   // CHECK-FIXES-NEXT:       new A[10]);
 }
 
-
-// Positive: lambda deleter forms
-
 void positive_lambda_basic() {
   std::shared_ptr<A> sp(new A[10], [](A *p) { delete[] p; });
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'std::shared_ptr<
@@ -172,17 +177,11 @@ void positive_lambda_paren_delete() {
   // CHECK-FIXES-NEXT:       new A[10]);
 }
 
-
-// Positive: free function deleter
-
 void positive_function_deleter() {
   std::shared_ptr<A> sp(new A[10], destroy_array);
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'std::shared_ptr<
   // CHECK-FIXES: std::shared_ptr<A[]> sp(new A[10]);
 }
-
-
-// Positive: element type variants
 
 void positive_primitive() {
   std::shared_ptr<int> sp(
@@ -256,7 +255,6 @@ void positive_const_volatile_element() {
   // CHECK-FIXES-NEXT:       new const volatile A[4]());
 }
 
-// Non-trivial destructor: default_delete<T> would silently call the wrong destructor on all but the first element.
 void positive_nontrivial_destructor_default_delete() {
   std::shared_ptr<WithDtor> sp(
       new WithDtor[10],
@@ -275,7 +273,6 @@ void positive_nontrivial_destructor_lambda() {
   // CHECK-FIXES-NEXT:       new WithDtor[5]);
 }
 
-// Nested template context exercises >> token splitting for fix-it insertion (tok:greatergreater).
 void positive_rangle_merge_context() {
   std::shared_ptr<std::shared_ptr<A>> sp(
       new std::shared_ptr<A>[4],
@@ -285,8 +282,42 @@ void positive_rangle_merge_context() {
   // CHECK-FIXES-NEXT:       new std::shared_ptr<A>[4]);
 }
 
+void positive_comment_before_type() {
+  std::shared_ptr</*before*/ A> sp(new A[10], std::default_delete<A[]>());
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'std::shared_ptr<
+  // CHECK-FIXES: std::shared_ptr</*before*/ A[]> sp(new A[10]);
+}
 
-// Positive: array size variants
+void positive_comment_after_type() {
+  std::shared_ptr<A /*after*/> sp(new A[10], std::default_delete<A[]>());
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'std::shared_ptr<
+  // CHECK-FIXES: std::shared_ptr<A[] /*after*/> sp(new A[10]);
+}
+
+void positive_comment_both_sides() {
+  std::shared_ptr</*before*/ A /*after*/> sp(new A[10], std::default_delete<A[]>());
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'std::shared_ptr<
+  // CHECK-FIXES: std::shared_ptr</*before*/ A[] /*after*/> sp(new A[10]);
+}
+
+void positive_comment_multiline() {
+  std::shared_ptr<
+      /*before*/ A /*after*/
+  > sp(new A[10], std::default_delete<A[]>());
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'std::shared_ptr<
+  // CHECK-FIXES: std::shared_ptr<
+  // CHECK-FIXES-NEXT:       /*before*/ A[] /*after*/
+  // CHECK-FIXES-NEXT:   > sp(new A[10]);
+}
+
+void positive_template_comments() {
+  std::shared_ptr</*a*/ A /*b*/> sp(
+      new A[10],
+      std::default_delete<A[]>());
+  // CHECK-MESSAGES: :[[@LINE-3]]:{{[0-9]+}}: warning: use 'std::shared_ptr<
+  // CHECK-FIXES: std::shared_ptr</*a*/ A[] /*b*/> sp(
+  // CHECK-FIXES-NEXT:       new A[10]);
+}
 
 void positive_runtime_size() {
   int n = 10;
@@ -316,9 +347,6 @@ void positive_zero_size() {
   // CHECK-FIXES-NEXT:       new A[0]);
 }
 
-
-// Positive: array initializer forms
-
 void positive_value_initialized_array() {
   std::shared_ptr<A> sp(
       new A[10](),
@@ -345,9 +373,6 @@ void positive_extra_parens() {
   // CHECK-FIXES: std::shared_ptr<A[]> sp(
   // CHECK-FIXES-NEXT:       (new A[10]));
 }
-
-
-// Positive: VarDecl constructor styles
 
 void positive_brace_init_ctor() {
   std::shared_ptr<A> sp{new A[10], std::default_delete<A[]>()};
@@ -376,9 +401,6 @@ void positive_copy_init() {
   // CHECK-FIXES-NEXT:           new A[10]);
 }
 
-
-// Positive: non-VarDecl contexts
-
 // auto direct-init: no VarDecl TypeLoc to patch; only the constructor is rewritten.
 void positive_auto_deduction() {
   auto sp =
@@ -391,31 +413,10 @@ void positive_auto_deduction() {
   // CHECK-FIXES-NEXT:           new A[10]);
 }
 
-// auto copy-init: same as direct-init — auto VarDecl has no written template-id.
 void positive_auto_copy_init() {
   auto sp = std::shared_ptr<A>(new A[10], std::default_delete<A[]>());
   // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'std::shared_ptr<
   // CHECK-FIXES: auto sp = std::shared_ptr<A[]>(new A[10]);
-}
-
-// Return statement: constructor is rewritten; the function's declared return
-// type is not updated and may require manual adjustment.
-std::shared_ptr<A> positive_return_stmt() {
-  return std::shared_ptr<A>(
-      new A[10],
-      std::default_delete<A[]>());
-  // CHECK-MESSAGES: :[[@LINE-3]]:{{[0-9]+}}: warning: use 'std::shared_ptr<
-  // CHECK-FIXES: return std::shared_ptr<A[]>(
-  // CHECK-FIXES-NEXT:       new A[10]);
-}
-
-std::shared_ptr<PairLike<int,int>> positive_return_nested_template() {
-  return std::shared_ptr<PairLike<int,int>>(
-      new PairLike<int,int>[4],
-      std::default_delete<PairLike<int,int>[]>());
-  // CHECK-MESSAGES: :[[@LINE-3]]:{{[0-9]+}}: warning: use 'std::shared_ptr<
-  // CHECK-FIXES: return std::shared_ptr<PairLike<int,int>[]>(
-  // CHECK-FIXES-NEXT:       new PairLike<int,int>[4]);
 }
 
 void positive_unqualified_using_namespace() {
@@ -425,8 +426,20 @@ void positive_unqualified_using_namespace() {
   // CHECK-FIXES: shared_ptr<A[]> sp(new A[10]);
 }
 
+// Member VarDecl with in-class initializer: both the member type and the
+// temporary constructor expression require independent insertions.
+struct Holder {
+  std::shared_ptr<A> member =
+      std::shared_ptr<A>(new A[10], std::default_delete<A[]>());
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'std::shared_ptr<
+  // CHECK-FIXES: std::shared_ptr<A[]> member =
+  // CHECK-FIXES-NEXT:       std::shared_ptr<A[]>(new A[10]);
 
-// Positive: formatting edge cases
+  // Constructor initializer list: member is already declared; warn only since
+  // the declaration site is not reachable for transformation here.
+  Holder() : member(new A[10], std::default_delete<A[]>()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'std::shared_ptr<
+};
 
 void positive_multiline_input() {
   std::shared_ptr<A>
@@ -448,18 +461,8 @@ void positive_inline_comment_preserve() {
   // CHECK-FIXES-NEXT:       new A[10]);
 }
 
-void positive_template_comments() {
-  std::shared_ptr</*a*/ A /*b*/> sp(
-      new A[10],
-      std::default_delete<A[]>());
-  // CHECK-MESSAGES: :[[@LINE-3]]:{{[0-9]+}}: warning: use 'std::shared_ptr<
-  // CHECK-FIXES: std::shared_ptr</*a*/ A /*b*/[]> sp(
-  // CHECK-FIXES-NEXT:       new A[10]);
-}
 
-
-
-// Warn only: diagnostic emitted, no fix-it
+// Warn only:
 
 // Multi-declarator: shared TypeLoc makes independent fix-its unsafe.
 void warn_only_multi_declarator() {
@@ -471,8 +474,6 @@ void warn_only_multi_declarator() {
   // CHECK-FIXES-NEXT:                  sp2(new A[8],  std::default_delete<A[]>());
 }
 
-// Pointer/reference declarators: rewriting both the declared type and
-// constructor expression independently is not safe. Warn only.
 void warn_only_pointer_declarator() {
   std::shared_ptr<A> *sp =
       new std::shared_ptr<A>(
@@ -489,7 +490,6 @@ void warn_only_reference_declarator() {
   // CHECK-MESSAGES: :[[@LINE-3]]:{{[0-9]+}}: warning: use 'std::shared_ptr
 }
 
-
 // Assignment: declaration site is not reachable for transformation.
 void warn_only_assignment_after_decl() {
   std::shared_ptr<A> sp;
@@ -497,21 +497,81 @@ void warn_only_assignment_after_decl() {
       new A[10],
       std::default_delete<A[]>());
   // CHECK-MESSAGES: :[[@LINE-3]]:{{[0-9]+}}: warning: use 'std::shared_ptr<
-  // CHECK-FIXES: sp = std::shared_ptr<A>(
 }
 
-// Chained assignment: same reasoning as single assignment.
 void warn_only_chained_assignment() {
   std::shared_ptr<A> sp, sp2;
   sp = sp2 = std::shared_ptr<A>(
       new A[10],
       std::default_delete<A[]>());
   // CHECK-MESSAGES: :[[@LINE-3]]:{{[0-9]+}}: warning: use 'std::shared_ptr<
-  // CHECK-FIXES: sp = sp2 = std::shared_ptr<A>(
+}
+
+std::shared_ptr<A> warn_only_return_stmt() {
+  return std::shared_ptr<A>(
+      new A[10],
+      std::default_delete<A[]>());
+  // CHECK-MESSAGES: :[[@LINE-3]]:{{[0-9]+}}: warning:
+}
+
+std::shared_ptr<PairLike<int,int>> warn_only_return_nested_template() {
+  return std::shared_ptr<PairLike<int,int>>(
+      new PairLike<int,int>[4],
+      std::default_delete<PairLike<int,int>[]>());
+  // CHECK-MESSAGES: :[[@LINE-3]]:{{[0-9]+}}: warning: use 'std::shared_ptr
 }
 
 
-// Negative: already correct
+using std::shared_ptr;    
+using std::default_delete;
+
+void warn_only_nested_as_get_arg() {
+  std::shared_ptr<A> outer(
+      std::shared_ptr<A>(
+          new A[10],
+          std::default_delete<A[]>())
+          .get(),
+      std::default_delete<A[]>());
+
+  // CHECK-MESSAGES: :[[@LINE-6]]:{{[0-9]+}}: warning:
+}
+
+void warn_only_passed_to_wrapper_ctor() {
+  Wrapper w(
+      std::shared_ptr<A>(
+          new A[10],
+          std::default_delete<A[]>()));
+
+  // CHECK-MESSAGES: :[[@LINE-4]]:{{[0-9]+}}: warning:
+}
+
+void warn_only_auto_wrapper_temporary() {
+  auto outer =
+      Wrapper(std::shared_ptr<A>(
+          new A[10],
+          std::default_delete<A[]>()));
+
+  // CHECK-MESSAGES: :[[@LINE-4]]:{{[0-9]+}}: warning:
+}
+
+void warn_only_passed_to_function_call() {
+  std::shared_ptr<A> outer =
+      make_shared_from(std::shared_ptr<A>(new A[10], std::default_delete<A[]>()));
+  // CHECK-MESSAGES: :[[@LINE-1]]:{{[0-9]+}}: warning: use 'std::shared_ptr
+ 
+}
+
+std::shared_ptr<A> make(std::shared_ptr<A>);
+void warn_only_passed_to_factory() {
+  std::shared_ptr<A> outer =
+      make(std::shared_ptr<A>(
+          new A[10],
+          std::default_delete<A[]>()));
+
+  // CHECK-MESSAGES: :[[@LINE-4]]:{{[0-9]+}}: warning:
+}
+
+// Negative:
 
 void negative_already_array_type() {
   std::shared_ptr<A[]> sp(new A[10]);
@@ -520,9 +580,6 @@ void negative_already_array_type() {
 void negative_already_array_with_default_delete() {
   std::shared_ptr<A[]> sp(new A[10], std::default_delete<A[]>());
 }
-
-
-// Negative: wrong new/delete combination
 
 void negative_single_object_no_deleter() {
   std::shared_ptr<A> sp(new A);
@@ -540,8 +597,6 @@ void negative_array_new_no_deleter() {
   std::shared_ptr<A> sp(new A[10]);
 }
 
-// Array new with non-array default_delete: would silently corrupt — not our
-// job to warn here since it's a separate bug, and the pattern doesn't match.
 void negative_array_new_single_deleter() {
   std::shared_ptr<A> sp(new A[10], std::default_delete<A>());
 }
@@ -549,9 +604,6 @@ void negative_array_new_single_deleter() {
 void negative_array_new_lambda_single_delete() {
   std::shared_ptr<A> sp(new A[10], [](A *p) { delete p; });
 }
-
-
-// Negative: type mismatches
 
 void negative_type_mismatch_allocated() {
   std::shared_ptr<A> sp(new B[10], std::default_delete<B[]>());
@@ -561,34 +613,18 @@ void negative_type_mismatch_deleter() {
   std::shared_ptr<A> sp(new A[10], std::default_delete<B[]>());
 }
 
-// Covariant array: Derived[] is not safely manageable via shared_ptr<Base[]>
-// without a virtual destructor and matching sizes — leave it alone.
 void negative_covariant_array() {
   std::shared_ptr<Base> sp(new Derived[10], std::default_delete<Derived[]>());
 }
 
-// Non-trivial destructor with the wrong (non-array) deleter: the existing code
-// is already a bug, but it's not our pattern — the deleter pointee won't match.
 void negative_nontrivial_destructor_wrong_deleter() {
   std::shared_ptr<WithDtor> sp(new WithDtor[5], std::default_delete<WithDtor>());
 }
 
-
-// Negative: unsupported deleter forms
-
-// Functor: operator() is not a directly inspectable function body from here.
 void negative_functor_deleter() {
   std::shared_ptr<A> sp(new A[10], ArrayFunctorDeleter{});
 }
 
-// Template-dependent: element type is dependent; can't canonically compare.
-template <typename T>
-void negative_template_context(int n) {
-  std::shared_ptr<T> sp(new T[n], std::default_delete<T[]>());
-}
-
-// Function pointer variable: declRefExpr targets a VarDecl, not a FunctionDecl.
-// The matcher binds only to functionDecl() refs; this silently falls through.
 void negative_function_pointer_variable() {
   auto fn = destroy_array;
   std::shared_ptr<A> sp(new A[10], fn);
@@ -625,8 +661,6 @@ void negative_lambda_no_delete() {
   std::shared_ptr<A> sp(new A[10], [](A *) {});
 }
 
-// Lambda casting to void* before delete[]: the DeclRefExpr inside the delete
-// refers to the cast result, not the original parameter.
 void negative_void_ptr_cast_lambda() {
   std::shared_ptr<void> sp(
       new A[10],
@@ -645,8 +679,6 @@ void negative_function_conditional_delete() {
   std::shared_ptr<A> sp(new A[10], destroy_conditional);
 }
 
-// Function deletes a global rather than its parameter: the DeclRefExpr inside
-// the delete doesn't refer to the param.
 void negative_function_global_delete() {
   std::shared_ptr<A> sp(new A[10], delete_global);
 }
@@ -655,11 +687,6 @@ void negative_function_delete_other() {
   std::shared_ptr<A> sp(new A[10], delete_other);
 }
 
-
-// Negative: unsupported contexts
-
-// reset() takes the same two-argument form but is a member function call, not
-// a constructor — the cxxConstructExpr matcher won't fire.
 void negative_reset() {
   std::shared_ptr<A> sp;
   sp.reset(new A[10], std::default_delete<A[]>());
@@ -670,10 +697,6 @@ void negative_reset_lambda() {
   sp.reset(new A[10], [](A *p) { delete[] p; });
 }
 
-// Negative: macros
-
-// Full expansion in macro: new-expression and deleter are both inside the macro
-// body; both source ranges are macro IDs, bail silently.
 #define MAKE_SHARED_PTR \
   std::shared_ptr<A>(new A[10], std::default_delete<A[]>())
 
@@ -681,11 +704,48 @@ void negative_macro_full_expansion() {
   std::shared_ptr<A> sp = MAKE_SHARED_PTR;
 }
 
-// Deleter-only macro: the deleter arg's end location is a macro ID; the
-// rewritten range would be unsafe to emit even though new A[10] is clean.
 #define ARR_DEL std::default_delete<A[]>()
 
 void negative_macro_deleter_only() {
   std::shared_ptr<A> sp(new A[10], ARR_DEL);
 }
 
+
+template <typename T>
+void negative_dependent_element(int n) {
+  std::shared_ptr<T> sp(
+      new T[n],
+      std::default_delete<T[]>());
+}
+
+template <typename T>
+struct Box {};
+
+template <typename T>
+void negative_dependent_template_element(int n) {
+  std::shared_ptr<Box<T>> sp(
+      new Box<T>[n],
+      std::default_delete<Box<T>[]>());
+}
+
+template <template <typename> class C, typename T>
+void negative_dependent_template_template_element(int n) {
+  std::shared_ptr<C<T>> sp(
+      new C<T>[n],
+      std::default_delete<C<T>[]>());
+}
+
+template <typename T>
+using Alias = Box<T>;
+
+template <typename T>
+void negative_dependent_alias_template_element(int n) {
+  std::shared_ptr<Alias<T>> sp(
+      new Alias<T>[n],
+      std::default_delete<Alias<T>[]>());
+}
+void instantiate_templates() {
+  negative_dependent_element<A>(10);
+  negative_dependent_template_element<A>(10);
+  negative_dependent_alias_template_element<A>(10);
+}

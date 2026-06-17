@@ -61,6 +61,7 @@ AST_MATCHER(LambdaExpr, lambdaHasSingleArrayDeleteBody) {
 void UseSharedPtrArrayCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxConstructExpr(
+          unless(isInTemplateInstantiation()),
           hasType(qualType(hasDeclaration(classTemplateSpecializationDecl(
               hasName("::std::shared_ptr"), templateArgumentCountIs(1))))),
 
@@ -88,37 +89,19 @@ void UseSharedPtrArrayCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-// Manual parent walk rather than a matcher because implicit
-// wrappers obscure assignment contexts.
-static const VarDecl *findParentVarDecl(ASTContext &Ctx, const Stmt *S) {
-  DynTypedNode Node = DynTypedNode::create(*S);
+// From bugprone-smart-ptr-array-mismatch-check
+// Same as SmartPtrArrayMismatchCheck::getConstructedVarOrField.
+static const DeclaratorDecl *
+getConstructedVarOrField(const Expr *FoundConstructExpr, ASTContext &Ctx) {
+  const DynTypedNodeList ConstructParents =
+      Ctx.getParentMapContext().getParents(*FoundConstructExpr);
+  if (ConstructParents.size() != 1)
+    return nullptr;
+  const auto *ParentDecl = ConstructParents.begin()->get<DeclaratorDecl>();
+  if (isa_and_nonnull<VarDecl, FieldDecl>(ParentDecl))
+    return ParentDecl;
 
-  for (;;) {
-    auto Parents = Ctx.getParents(Node);
-    if (Parents.empty())
-      return nullptr;
-
-    const Expr *NextExpr = nullptr;
-    const Stmt *NextStmt = nullptr;
-
-    for (const DynTypedNode &P : Parents) {
-      if (const auto *VD = P.get<VarDecl>())
-        return VD;
-
-      // Exprs first preserves semantic structure longer than bare Stmt.
-      if (!NextExpr)
-        NextExpr = P.get<Expr>();
-      if (!NextStmt)
-        NextStmt = P.get<Stmt>();
-    }
-
-    if (NextExpr)
-      Node = DynTypedNode::create(*NextExpr);
-    else if (NextStmt)
-      Node = DynTypedNode::create(*NextStmt);
-    else
-      return nullptr;
-  }
+  return nullptr;
 }
 
 // Returns a StringRef into the SourceManager-owned buffer; stable for lifetime
@@ -129,10 +112,10 @@ static StringRef extractWrittenElementType(const TypeSourceInfo *TSI,
   if (!TSI)
     return {};
   const TypeLoc TL = TSI->getTypeLoc().getUnqualifiedLoc();
-  auto TSTL = TL.getAsAdjusted<TemplateSpecializationTypeLoc>();
-  if (!TSTL || TSTL.getNumArgs() < 1)
+  auto TSTypeLoc = TL.getAsAdjusted<TemplateSpecializationTypeLoc>();
+  if (!TSTypeLoc || TSTypeLoc.getNumArgs() < 1)
     return {};
-  const TypeSourceInfo *ArgTSI = TSTL.getArgLoc(0).getTypeSourceInfo();
+  const TypeSourceInfo *ArgTSI = TSTypeLoc.getArgLoc(0).getTypeSourceInfo();
   if (!ArgTSI)
     return {};
   const TypeLoc ArgTL = ArgTSI->getTypeLoc();
@@ -141,8 +124,6 @@ static StringRef extractWrittenElementType(const TypeSourceInfo *TSI,
   return Lexer::getSourceText(R, SM, LO);
 }
 
-// Returns the QualType of the deleter's pointee, or null if the
-// deleter shape is not recognised.
 static QualType getDeleterParamPointee(const Expr *DeleterArg) {
   const Expr *E = DeleterArg->IgnoreParenImpCasts();
 
@@ -185,122 +166,20 @@ static QualType getDeleterParamPointee(const Expr *DeleterArg) {
   return {};
 }
 
-// Locates the closing '>' of the shared_ptr<T> template-id, RAngleLoc is the
-// '>' to patch in the constructor expression. Locates separately the '>' of the
-// VarDecl's declared type when different (copy-init, pointer/ref declarator).
-static void resolveRAngleLocs(const CXXConstructExpr *Ctor,
-                              const VarDecl *ParentVD, SourceManager &SM,
-                              const LangOptions &LO, SourceLocation &RAngleLoc,
-                              SourceLocation &VDRAngleLoc) {
-  auto FindRAngleLoc = [&](const TypeSourceInfo *TSI) -> SourceLocation {
-    if (!TSI)
-      return {};
-    TypeLoc TL = TSI->getTypeLoc();
-    if (auto QTL = TL.getAs<QualifiedTypeLoc>())
-      TL = QTL.getUnqualifiedLoc();
-    if (auto TSTL = TL.getAsAdjusted<TemplateSpecializationTypeLoc>())
-      return TSTL.getRAngleLoc();
-    return {};
-  };
-
-  if (ParentVD) {
-    // Pointer/reference declarators (e.g. shared_ptr<A> *sp = ...) wrap the
-    // template-id in a way that prevents safely rewriting both the declared
-    // type and constructor expression independently. Warn only.
-    const TypeLoc TL = ParentVD->getTypeSourceInfo()->getTypeLoc();
-    if (!TL.getAs<PointerTypeLoc>().isNull() ||
-        !TL.getAs<ReferenceTypeLoc>().isNull()) {
-      RAngleLoc = {};
-      VDRAngleLoc = {};
-      return;
-    }
-
-    RAngleLoc = FindRAngleLoc(ParentVD->getTypeSourceInfo());
-
-    if (RAngleLoc.isInvalid()) {
-      // Auto-declared VarDecl carry no written template-id in TypeSourceInfo.
-      // Try constructor TSI first, then fall back to token scanning between the
-      // constructor start and its paren/brace range.
-      SourceLocation CtorRAngleLoc;
-
-      if (const auto *TOE = dyn_cast<CXXTemporaryObjectExpr>(Ctor))
-        CtorRAngleLoc = FindRAngleLoc(TOE->getTypeSourceInfo());
-
-      if (CtorRAngleLoc.isInvalid()) {
-        const SourceLocation CtorLoc = Ctor->getBeginLoc();
-        const SourceLocation LParenLoc =
-            Ctor->getParenOrBraceRange().getBegin();
-
-        if (CtorLoc.isValid() && LParenLoc.isValid() && !CtorLoc.isMacroID() &&
-            !LParenLoc.isMacroID()) {
-          SourceLocation ScanLoc = CtorLoc;
-
-          // Fallback: when the VarDecl is declared with 'auto', the
-          // TypeSourceInfo carries no written template-id; scan tokens between
-          // the constructor's start and its paren/brace to locate the last '>'
-          // before the argument list.
-          for (;;) {
-            std::optional<Token> MaybeTok =
-                Lexer::findNextToken(ScanLoc, SM, LO);
-            if (!MaybeTok)
-              break;
-
-            const Token &T = *MaybeTok;
-
-            if (T.is(tok::l_paren) || T.is(tok::l_brace))
-              break;
-
-            if (T.is(tok::greater) || T.is(tok::greatergreater))
-              CtorRAngleLoc = T.getLocation();
-
-            const SourceLocation Next =
-                Lexer::getLocForEndOfToken(T.getLocation(), 0, SM, LO);
-
-            // Guard against Lexer::getLocForEndOfToken returning the same
-            // location on malformed tokens/infinite loop.
-            if (Next == ScanLoc)
-              break;
-
-            ScanLoc = Next;
-          }
-        }
-      }
-
-      RAngleLoc = CtorRAngleLoc;
-
-    } else if (ParentVD->getInitStyle() == VarDecl::CInit) {
-      // Copy-init: VarDecl and constructor expression have separate
-      // template-ids in source, both require independent insertions.
-      VDRAngleLoc = RAngleLoc;
-
-      if (const auto *TOE = dyn_cast<CXXTemporaryObjectExpr>(Ctor))
-        RAngleLoc = FindRAngleLoc(TOE->getTypeSourceInfo());
-
-      // Inserting twice into the same token would produce T[][].
-      if (RAngleLoc.isInvalid() || RAngleLoc == VDRAngleLoc)
-        RAngleLoc = {};
-    }
-
-  } else if (const auto *TOE = dyn_cast<CXXTemporaryObjectExpr>(Ctor)) {
-    // No VarDecl parent: standalone temporary or return expression.
-    RAngleLoc = FindRAngleLoc(TOE->getTypeSourceInfo());
-  }
-}
-
 // Manual parent walk rather than a matcher because implicit
 // wrappers obscure assignment contexts.
 static bool isInsideAssignment(ASTContext &Ctx, const CXXConstructExpr *Ctor) {
   DynTypedNode Node = DynTypedNode::create(*Ctor);
-  for (;;) {
+  while (true) {
     auto Parents = Ctx.getParents(Node);
     if (Parents.empty())
       return false;
 
     bool Advanced = false;
     for (const DynTypedNode &P : Parents) {
-      if (const auto *Op = P.get<CXXOperatorCallExpr>())
-        if (Op->getOperator() == OO_Equal)
-          return true;
+      if (const auto *Op = P.get<CXXOperatorCallExpr>();
+          Op && Op->getOperator() == OO_Equal)
+        return true;
 
       // VarDecl indicates initialization rather than assignment.
       if (P.get<VarDecl>())
@@ -316,19 +195,6 @@ static bool isInsideAssignment(ASTContext &Ctx, const CXXConstructExpr *Ctor) {
     if (!Advanced)
       return false;
   }
-}
-
-// FixIt 1: insert "[]" after the closing '>' of the shared_ptr<T> template-id.
-// ">>" tokens (merged with an enclosing template's '>') get a +1 offset to get
-// ">[]>" rather than "[]>>".
-static FixItHint makeArrayInsertionFix(SourceLocation Loc, SourceManager &SM,
-                                       const LangOptions &LO) {
-  Token AngleTok;
-  if (!Lexer::getRawToken(Loc, AngleTok, SM, LO))
-    if (AngleTok.is(tok::greatergreater))
-      Loc = Loc.getLocWithOffset(1);
-
-  return FixItHint::CreateInsertion(Loc, "[]");
 }
 
 // FixIt 2: remove ", deleter" — from the end of arg 0 to the end of arg 1.
@@ -401,7 +267,7 @@ void UseSharedPtrArrayCheck::check(const MatchFinder::MatchResult &Result) {
   // CanonicalFallbackBuff anchors the StringRef only in the canonical fallback;
   // extractWrittenElementType returns into SourceManager owned memory so needs
   // no buffer.
-  const VarDecl *ParentVD = findParentVarDecl(Ctx, Ctor);
+  const DeclaratorDecl *ParentVD = getConstructedVarOrField(Ctor, Ctx);
   std::string CanonicalFallbackBuff;
   StringRef WrittenType = [&]() -> StringRef {
     if (ParentVD)
@@ -427,13 +293,25 @@ void UseSharedPtrArrayCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Multi-declarator: one TypeLoc shared across all declarators. Warn only.
   if (ParentVD) {
-    const auto &VDParents = Ctx.getParents(*ParentVD);
-    if (!VDParents.empty())
-      if (const auto *DS = VDParents[0].get<DeclStmt>())
-        if (!DS->isSingleDecl()) {
-          Warn();
-          return;
-        }
+    const TypeLoc TL = ParentVD->getTypeSourceInfo()->getTypeLoc();
+    if (!TL.getAs<PointerTypeLoc>().isNull() ||
+        !TL.getAs<ReferenceTypeLoc>().isNull()) {
+      Warn();
+      return;
+    }
+    if (const auto &VDParents = Ctx.getParents(*ParentVD); !VDParents.empty())
+      if (const auto *DS = VDParents[0].get<DeclStmt>();
+          DS && !DS->isSingleDecl()) {
+        Warn();
+        return;
+      }
+    if (const auto *VD = dyn_cast<VarDecl>(ParentVD)) {
+      const Expr *Init = VD->getInit();
+      if (Init && Init->IgnoreImplicit() != Ctor) {
+        Warn();
+        return;
+      }
+    }
   }
 
   // Assignment targets may not have a rewritable written type at the
@@ -443,26 +321,58 @@ void UseSharedPtrArrayCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  SourceLocation RAngleLoc;
-  SourceLocation VDRAngleLoc;
-  resolveRAngleLocs(Ctor, ParentVD, SM, LO, RAngleLoc, VDRAngleLoc);
-
   // FixIt 1: Insert [] into the rewritten shared_ptr type.
-  FixItHint InsertArrayVarDecl;
-  if (VDRAngleLoc.isValid() && !VDRAngleLoc.isMacroID())
-    InsertArrayVarDecl = makeArrayInsertionFix(VDRAngleLoc, SM, LO);
+  //  Same inline logic as bugprone-smart-ptr-array-check.
+  auto GetInsertLoc = [&](const TypeSourceInfo *TSI) -> SourceLocation {
+    if (!TSI)
+      return {};
+    auto TSTypeLoc =
+        TSI->getTypeLoc().getAsAdjusted<TemplateSpecializationTypeLoc>();
+    if (!TSTypeLoc || TSTypeLoc.getNumArgs() < 1)
+      return {};
 
-  // FixIt 2: Remove the explicit deleter argument.
+    const TypeSourceInfo *ArgTSI = TSTypeLoc.getArgLoc(0).getTypeSourceInfo();
+
+    const SourceRange TemplateArgumentRange =
+        ArgTSI->getTypeLoc().getSourceRange();
+
+    return Lexer::getLocForEndOfToken(TemplateArgumentRange.getEnd(), 0, SM,
+                                      LO);
+  };
+
+  const TypeSourceInfo *VdTSI =
+      ParentVD ? ParentVD->getTypeSourceInfo() : nullptr;
+  const TypeSourceInfo *CtorTSI = nullptr;
+
+  if (const auto *TOE = dyn_cast<CXXTemporaryObjectExpr>(Ctor))
+    CtorTSI = TOE->getTypeSourceInfo();
+  if (!ParentVD && CtorTSI) {
+    const DynTypedNodeList CtorParents =
+        Ctx.getParentMapContext().getParents(*Ctor);
+    if (CtorParents.size() == 1 && CtorParents.begin()->get<Expr>()) {
+      Warn();
+      return;
+    }
+  }
+
+  const SourceLocation CtorInsertLoc = GetInsertLoc(CtorTSI ? CtorTSI : VdTSI);
+  if (CtorInsertLoc.isInvalid()) {
+    Warn();
+    return;
+  }
+
   auto RemoveDeleter = buildRemoveDeleterFix(Ctor, SM, LO);
   if (!RemoveDeleter)
     return;
 
   auto Diag = Warn();
-  if (RAngleLoc.isInvalid() || RAngleLoc.isMacroID())
-    return;
+  Diag << FixItHint::CreateInsertion(CtorInsertLoc, "[]") << *RemoveDeleter;
 
-  Diag << makeArrayInsertionFix(RAngleLoc, SM, LO) << *RemoveDeleter
-       << InsertArrayVarDecl;
+  if (VdTSI && CtorTSI) {
+    const SourceLocation VDInsertLoc = GetInsertLoc(VdTSI);
+    if (VDInsertLoc.isValid() && VDInsertLoc != CtorInsertLoc)
+      Diag << FixItHint::CreateInsertion(VDInsertLoc, "[]");
+  }
 }
 
 } // namespace clang::tidy::modernize
