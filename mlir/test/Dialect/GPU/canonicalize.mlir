@@ -67,6 +67,51 @@ func.func @erase_barriers_empty_memfence() {
   return
 }
 
+// CHECK-LABEL: func @erase_barriers_same_scope
+//       CHECK-NEXT: gpu.barrier scope <subgroup>
+//       CHECK-NEXT: return
+func.func @erase_barriers_same_scope() {
+  gpu.barrier scope <subgroup>
+  gpu.barrier scope <subgroup>
+  return
+}
+
+// CHECK-LABEL: func @no_fold_different_scope
+//       CHECK-NEXT: gpu.barrier scope <subgroup>
+//       CHECK-NEXT: gpu.barrier scope <cluster>
+//       CHECK-NEXT: return
+func.func @no_fold_different_scope() {
+  gpu.barrier scope <subgroup>
+  gpu.barrier scope <cluster>
+  return
+}
+
+// CHECK-LABEL: func @no_fold_different_named_barriers
+//       CHECK-NEXT: gpu.initialize_named_barrier
+//       CHECK-NEXT: gpu.initialize_named_barrier
+//       CHECK-NEXT: gpu.barrier named
+//       CHECK-NEXT: gpu.barrier named
+//       CHECK-NEXT: return
+func.func @no_fold_different_named_barriers(%member_count : i32) {
+  %nb1 = gpu.initialize_named_barrier %member_count : i32 -> !gpu.named_barrier
+  %nb2 = gpu.initialize_named_barrier %member_count : i32 -> !gpu.named_barrier
+  gpu.barrier named(%nb1 : !gpu.named_barrier)
+  gpu.barrier named(%nb2 : !gpu.named_barrier)
+  return
+}
+
+// CHECK-LABEL: func @fold_same_named_barrier
+//       CHECK-NEXT: gpu.initialize_named_barrier
+//       CHECK-NEXT: gpu.barrier named
+//       CHECK-NOT: gpu.barrier
+//       CHECK-NEXT: return
+func.func @fold_same_named_barrier(%member_count : i32) {
+  %nb = gpu.initialize_named_barrier %member_count : i32 -> !gpu.named_barrier
+  gpu.barrier named(%nb : !gpu.named_barrier)
+  gpu.barrier named(%nb : !gpu.named_barrier)
+  return
+}
+
 // -----
 
 // Replace uses of gpu.wait op with its async dependency.

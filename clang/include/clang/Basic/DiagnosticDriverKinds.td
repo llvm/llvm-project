@@ -33,6 +33,8 @@ def err_drv_invalid_riscv_arch_name : Error<
   "invalid arch name '%0', %1">;
 def err_drv_invalid_riscv_cpu_name_for_target : Error<
   "cpu '%0' does not support rv%select{32|64}1">;
+def err_drv_invalid_riscv_mtune_string : Error<
+  "invalid %select{-mtune|tune feature}0 string '%1': %2">;
 def warn_drv_invalid_arch_name_with_suggestion : Warning<
   "ignoring invalid /arch: argument '%0'; for %select{64|32}1-bit expected one of %2">,
   InGroup<UnusedCommandLineArgument>;
@@ -92,6 +94,11 @@ def err_drv_no_hipspv_device_lib : Error<
 def err_drv_hipspv_no_hip_path : Error<
   "'--hip-path' must be specified when offloading to SPIR-V unless '-nogpuinc' "
   "is given">;
+
+// SYCL Windows-specific diagnostics
+def err_drv_sycl_requires_dynamic_crt : Error<
+  "SYCL requires dynamic C++ runtime (/MD or /MDd); "
+  "static C++ runtime (/MT or /MTd) is not supported">;
 
 def err_drv_no_spv_tools : Error<"cannot find SPIR-V Tools binary '%0', which "
                                  "is required for SPIR-V compilation. "
@@ -167,10 +174,13 @@ def warn_drv_unsupported_option_for_runtime : Warning<
 def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
   InGroup<OptionIgnored>;
-def warn_openmp_incomplete : Warning<
+def warn_openmp_impl_incomplete : Warning<
   "OpenMP support for version %0 in flang is still incomplete">,
   InGroup<ExperimentalOption>;
-
+def warn_openmp_spec_incomplete : Warning<
+  "the specification for OpenMP version %0 is still under development; "
+  "the syntax and semantics of new features may be subject to change">,
+  InGroup<ExperimentalOption>;
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
 def err_drv_invalid_linker_name : Error<
@@ -342,6 +352,8 @@ def err_drv_too_many_actions: Error<
     "only one action option is allowed. Got %0">;
 def err_drv_invalid_value : Error<"invalid value '%1' in '%0'">;
 def err_drv_invalid_int_value : Error<"invalid integral value '%1' in '%0'">;
+def err_drv_invalid_escaped_command_line
+    : Error<"invalid escaped command line: %0">;
 def err_drv_invalid_value_with_suggestion : Error<
     "invalid value '%1' in '%0', expected one of: %2">;
 def err_drv_alignment_not_power_of_two : Error<"alignment is not a power of 2 in '%0'">;
@@ -869,6 +881,8 @@ def err_drv_dxc_missing_target_profile : Error<
   "target profile option (-T) is missing">;
 def err_drv_dxc_Fre_requires_Fo_metal
     : Error<"-Fre option requires -Fo option when targeting Metal">;
+def err_drv_dxc_invalid_shader_hash
+    : Error<"cannot specify both /Zss and /Zsb">;
 def err_drv_hlsl_unsupported_target : Error<
   "HLSL code generation is unsupported for target '%0'">;
 def err_drv_hlsl_bad_shader_required_in_target : Error<

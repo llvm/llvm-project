@@ -19,7 +19,7 @@
 
 namespace llvm {
 struct MetaRenamerPass : OptionalPassInfoMixin<MetaRenamerPass> {
-  PreservedAnalyses run(Module &, ModuleAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Module &, ModuleAnalysisManager &);
 };
 } // namespace llvm
 

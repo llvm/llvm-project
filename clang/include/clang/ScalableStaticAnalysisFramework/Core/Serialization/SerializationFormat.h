@@ -27,7 +27,20 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Registry.h"
 
+#include <variant>
+
 namespace clang::ssaf {
+
+/// Sum type returned by \c SerializationFormat::readArtifact, used when the
+/// caller does not know up-front which kind of top-level SSAF artifact a
+/// file contains. The active alternative is decided by the file's
+/// self-describing type field.
+using Artifact = std::variant<TUSummary, LUSummary, WPASuite>;
+
+/// Lazily-deserialized counterpart of \c Artifact: the same on-disk
+/// artifacts but with their per-entity summary payloads left as opaque
+/// format-specific encodings rather than fully resolved analysis results.
+using ArtifactEncoding = std::variant<TUSummaryEncoding, LUSummaryEncoding>;
 
 /// Abstract base class for serialization formats.
 class SerializationFormat {
@@ -50,6 +63,29 @@ public:
 
   virtual llvm::Error writeLUSummary(const LUSummary &Summary,
                                      llvm::StringRef Path) = 0;
+
+  /// Generic read entry point. Inspects the file's self-describing type
+  /// field and dispatches to \c readTUSummary or \c readLUSummary
+  /// accordingly. Returns an error if the type field is missing or names
+  /// an unrecognized artifact kind.
+  virtual llvm::Expected<Artifact> readArtifact(llvm::StringRef Path) = 0;
+
+  /// Generic write entry point. Dispatches to \c writeTUSummary or
+  /// \c writeLUSummary based on the active variant alternative.
+  virtual llvm::Error writeArtifact(const Artifact &A,
+                                    llvm::StringRef Path) = 0;
+
+  /// Encoding-flavored counterpart of \c readArtifact. Inspects the
+  /// self-describing type field and dispatches to
+  /// \c readTUSummaryEncoding or \c readLUSummaryEncoding accordingly.
+  virtual llvm::Expected<ArtifactEncoding>
+  readArtifactEncoding(llvm::StringRef Path) = 0;
+
+  /// Encoding-flavored counterpart of \c writeArtifact. Dispatches to
+  /// \c writeTUSummaryEncoding or \c writeLUSummaryEncoding based on the
+  /// active variant alternative.
+  virtual llvm::Error writeArtifactEncoding(const ArtifactEncoding &E,
+                                            llvm::StringRef Path) = 0;
 
   virtual llvm::Expected<LUSummaryEncoding>
   readLUSummaryEncoding(llvm::StringRef Path) = 0;
@@ -111,7 +147,7 @@ protected:
       FormatT, llvm::function_ref<SerRet(const AnalysisResult &, SerArgs...)>,
       llvm::function_ref<DesRet(DesArgs...)>> {
 
-    using DeserializerFn = llvm::function_ref<DesRet(DesArgs...)>;
+    using DeserializerFn = DesRet (*)(DesArgs...);
 
   public:
     /// Abstract base type stored in \c llvm::Registry<Codec>.
@@ -130,8 +166,10 @@ protected:
     };
 
     template <class AnalysisResultT> struct Add {
-      using TypedSerializerFn =
-          llvm::function_ref<SerRet(const AnalysisResultT &, SerArgs...)>;
+      using TypedSerializerFn = SerRet (*)(const AnalysisResultT &, SerArgs...);
+
+      static inline TypedSerializerFn SavedSerialize;
+      static inline DeserializerFn SavedDeserialize;
 
       /// Takes the plugin's typed serializer and the deserializer, and
       /// inserts them into \c llvm::Registry<Codec>.
@@ -147,15 +185,19 @@ protected:
         Registered = true;
 
         /// The plugin's serializer and deserializer are captured in
-        /// function-local statics so that the \c ConcreteCodec default
-        /// constructor (required by \c llvm::Registry) can read them.
-        /// They are stored as instance members of \c ConcreteCodec rather
-        /// than \c static \c inline class members to avoid symbol
-        /// visibility issues across shared library boundaries on Linux
-        /// (where \c dlopen with \c RTLD_LOCAL can give the host and
-        /// plugin separate copies of \c static \c inline members).
-        static TypedSerializerFn SavedSerialize = TypedSerialize;
-        static DeserializerFn SavedDeserialize = Deserialize;
+        /// static inline members of the Add template so that the
+        /// \c ConcreteCodec default constructor (required by \c llvm::Registry)
+        /// can read them. They use raw function pointers to prevent dangling
+        /// references to temporary stack variables during registration.
+        ///
+        /// Once read by the constructor, they are stored as instance members
+        /// of \c ConcreteCodec rather than directly executed from the \c static
+        /// \c inline class members. This prevents symbol visibility issues
+        /// across shared library boundaries on Linux (where \c dlopen with \c
+        /// RTLD_LOCAL can give the host and plugin separate copies of \c static
+        /// \c inline members).
+        SavedSerialize = TypedSerialize;
+        SavedDeserialize = Deserialize;
 
         /// Concrete subclass of \c Codec for \c AnalysisResultT.
         /// The \c serialize() override performs the downcast from

@@ -10,10 +10,10 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
-#include "VPlanPatternMatch.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
+class DominatorTree;
 class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
@@ -74,7 +74,32 @@ unsigned getVFScaleFactor(VPRecipeBase *R);
 
 /// Return true if we do not know how to (mechanically) hoist or sink \p R.
 /// When sinking, passing \p Sinking = true ensures that assumes aren't sunk.
+/// Returns true for recipes that access memory.
 bool cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking = false);
+
+/// Return the intrinsic ID underlying a call.
+template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
+  if (const auto *Intr = dyn_cast<VPWidenIntrinsicRecipe>(R))
+    return Intr->getVectorIntrinsicID();
+  if (const auto *Call = dyn_cast<VPWidenCallRecipe>(R))
+    return Call->getCalledScalarFunction()->getIntrinsicID();
+
+  auto GetCalleeIntrinsic = [&](VPValue *CalleeOp) -> Intrinsic::ID {
+    if (!isa<VPIRValue>(CalleeOp))
+      return Intrinsic::not_intrinsic;
+    auto *F = cast<Function>(CalleeOp->getLiveInIRValue());
+    return F->getIntrinsicID();
+  };
+  if (const auto *Rep = dyn_cast<VPReplicateRecipe>(R))
+    if (Rep->getOpcode() == Instruction::Call)
+      // The mask is always the last operand if predicated.
+      return GetCalleeIntrinsic(
+          Rep->getOperand(Rep->getNumOperands() - 1 - Rep->isPredicated()));
+  if (const auto *VPI = dyn_cast<VPInstruction>(R))
+    if (VPI->getOpcode() == Instruction::Call)
+      return GetCalleeIntrinsic(VPI->getOperand(VPI->getNumOperands() - 1));
+  return Intrinsic::not_intrinsic;
+}
 
 /// Returns the VPValue representing the uncountable exit comparison used by
 /// AnyOf if the recipes it depends on can be traced back to live-ins and
@@ -130,27 +155,6 @@ inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
   return nullptr;
 }
 
-/// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
-/// return nullptr;
-template <typename MatchT>
-static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
-  using namespace llvm::VPlanPatternMatch;
-  auto It = find_if(V->users(), match_fn(P));
-  return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
-}
-
-/// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
-/// return nullptr.
-template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
-  using namespace llvm::VPlanPatternMatch;
-  return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
-}
-
-template <typename RecipeTy> static RecipeTy *findUserOf(VPValue *V) {
-  using namespace llvm::VPlanPatternMatch;
-  return cast_or_null<RecipeTy>(findUserOf(V, m_Isa<RecipeTy>()));
-}
-
 /// Find the canonical IV increment of \p Plan's vector loop region. Returns
 /// nullptr if not found.
 VPInstruction *findCanonicalIVIncrement(VPlan &Plan);
@@ -159,18 +163,48 @@ VPInstruction *findCanonicalIVIncrement(VPlan &Plan);
 /// mirroring Value::stripPointerCasts.
 GEPNoWrapFlags getGEPFlagsForPtr(VPValue *Ptr);
 
+/// Returns true if \p V is used as part of the address of another load or
+/// store.
+bool isUsedByLoadStoreAddress(const VPValue *V);
+
 /// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
 /// inserted for predicated reductions or tail folding.
 VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 
 /// Collect the header mask with the pattern:
 /// (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
+/// Note: If alias masking is enabled this will find:
+/// (AND, HeaderMask, AliasMask)
 /// TODO: Introduce explicit recipe for header-mask instead of searching
 /// the header-mask pattern manually.
 VPSingleDefRecipe *findHeaderMask(VPlan &Plan);
 
+/// Finds the incoming alias-mask within the vector preheader.
+VPValue *findIncomingAliasMask(const VPlan &Plan);
+
 } // namespace vputils
 
+/// Lightweight SCEV-to-VPlan expander. Converts SCEV expressions into
+/// VPInstructions where possible, and returning nullptr for unsupported
+/// expressions (like adds, casts, min/max).
+class VPSCEVExpander {
+  VPBuilder &Builder;
+  ScalarEvolution &SE;
+  DebugLoc DL;
+
+  /// Try to find a loop-invariant IR value in the plan's entry block whose
+  /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
+  /// if none is found.
+  VPValue *tryToReuseIRValue(const SCEV *S);
+
+public:
+  VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL)
+      : Builder(Builder), SE(SE), DL(DL) {}
+
+  /// Try to expand \p S into recipes and live-ins using the builder. Returns
+  /// nullptr if \p S cannot be expanded yet.
+  VPValue *tryToExpand(const SCEV *S);
+};
 //===----------------------------------------------------------------------===//
 // Utilities for modifying predecessors and successors of VPlan blocks.
 //===----------------------------------------------------------------------===//
@@ -303,6 +337,17 @@ public:
     });
   }
 
+  /// Return an iterator range over \p Range with each block cast to \p
+  /// BlockTy. Unlike blocksOnly, all blocks in \p Range must be of type
+  /// \p BlockTy.
+  template <typename BlockTy, typename T> static auto blocksAs(T &&Range) {
+    // Create BaseTy with correct const-ness based on BlockTy.
+    using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
+                                      const VPBlockBase, VPBlockBase>;
+    return map_range(
+        Range, [](BaseTy *Block) -> BlockTy * { return cast<BlockTy>(Block); });
+  }
+
   /// Returns the blocks between \p FirstBB and \p LastBB, where FirstBB
   /// to LastBB forms a single-sucessor chain.
   static SmallVector<VPBasicBlock *>
@@ -328,6 +373,15 @@ public:
 
   /// Returns true if \p VPB is a loop latch, using isHeader().
   static bool isLatch(const VPBlockBase *VPB, const VPDominatorTree &VPDT);
+
+  /// Returns the header and latch of the outermost loop of \p Plan in plain
+  /// CFG form (before regions are formed).
+  static std::pair<VPBasicBlock *, VPBasicBlock *>
+  getPlainCFGHeaderAndLatch(const VPlan &Plan);
+
+  /// Returns the middle block of \p Plan in plain CFG form (before regions
+  /// are formed).
+  static VPBasicBlock *getPlainCFGMiddleBlock(const VPlan &Plan);
 };
 
 } // namespace llvm

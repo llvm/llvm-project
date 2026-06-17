@@ -21,7 +21,7 @@ define i32 @live_out(ptr noalias %p, i32 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = icmp ule vp<[[VP5]]>, vp<[[VP3]]>
 ; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP6]]>
 ; CHECK-NEXT:    Successor(s): vector.body.split, vector.latch
@@ -31,6 +31,8 @@ define i32 @live_out(ptr noalias %p, i32 %n) {
 ; CHECK-NEXT:      EMIT-SCALAR ir<%x> = load ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%y> = add ir<%x>, ir<1>
 ; CHECK-NEXT:      EMIT store ir<%y>, ir<%gep>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:    Successor(s): vector.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.latch:
@@ -45,6 +47,7 @@ define i32 @live_out(ptr noalias %p, i32 %n) {
 ; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-part vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-last-lane vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = last-active-lane vp<[[VP6]]>
 ; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = extract-lane vp<[[VP13]]>, vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT branch-on-cond ir<true>
@@ -106,7 +109,7 @@ define i32 @conditional_live_out(ptr noalias %p, i32 %n, i1 %c) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = icmp ule vp<[[VP5]]>, vp<[[VP3]]>
 ; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP6]]>
 ; CHECK-NEXT:    Successor(s): vector.body.split, vector.latch
@@ -124,6 +127,8 @@ define i32 @conditional_live_out(ptr noalias %p, i32 %n, i1 %c) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    latch:
 ; CHECK-NEXT:      EMIT-SCALAR ir<%phi> = phi [ ir<%y>, if ], [ ir<0>, vector.body.split ]
+; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:    Successor(s): vector.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.latch:
@@ -138,6 +143,7 @@ define i32 @conditional_live_out(ptr noalias %p, i32 %n, i1 %c) {
 ; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv>
 ; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = extract-last-part vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-last-lane vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = last-active-lane vp<[[VP6]]>
 ; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = extract-lane vp<[[VP13]]>, vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT branch-on-cond ir<true>
@@ -200,7 +206,7 @@ define void @header_unconditional_branch(ptr noalias %p, i32 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = icmp ule vp<[[VP5]]>, vp<[[VP3]]>
 ; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP6]]>
 ; CHECK-NEXT:    Successor(s): vector.body.split, vector.latch
@@ -209,6 +215,8 @@ define void @header_unconditional_branch(ptr noalias %p, i32 %n) {
 ; CHECK-NEXT:    Successor(s): latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    latch:
+; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:    Successor(s): vector.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.latch:
@@ -220,6 +228,7 @@ define void @header_unconditional_branch(ptr noalias %p, i32 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond ir<true>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
@@ -271,8 +280,8 @@ define i32 @reduction(ptr noalias %p, i32 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi ir<0>, vp<[[VP8:%[0-9]+]]>
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION vp<[[VP4]]>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%rdx> = phi (add) ir<0>, vp<[[VP8:%[0-9]+]]>
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = icmp ule vp<[[VP5]]>, vp<[[VP3]]>
 ; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP6]]>
 ; CHECK-NEXT:    Successor(s): vector.body.split, vector.latch
@@ -281,10 +290,12 @@ define i32 @reduction(ptr noalias %p, i32 %n) {
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%x> = load ir<%gep>
 ; CHECK-NEXT:      EMIT ir<%rdx.next> = add ir<%rdx>, ir<%x>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
 ; CHECK-NEXT:    Successor(s): vector.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.latch:
-; CHECK-NEXT:      EMIT-SCALAR vp<[[VP8]]> = phi [ ir<%rdx.next>, vector.body.split ], [ ir<poison>, vector.body ]
+; CHECK-NEXT:      EMIT-SCALAR vp<[[VP8]]> = phi [ ir<%rdx.next>, vector.body.split ], [ ir<%rdx>, vector.body ]
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -297,6 +308,7 @@ define i32 @reduction(ptr noalias %p, i32 %n) {
 ; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = extract-last-lane vp<[[VP11]]>
 ; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = extract-last-part vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = extract-last-lane vp<[[VP13]]>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = last-active-lane vp<[[VP6]]>
 ; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = extract-lane vp<[[VP15]]>, vp<[[VP8]]>
 ; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = last-active-lane vp<[[VP6]]>

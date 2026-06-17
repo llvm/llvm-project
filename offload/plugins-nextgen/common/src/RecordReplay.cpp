@@ -69,9 +69,9 @@ Error RecordReplayTy::init(uint64_t MemSize, void *VAddr) {
 
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device.getDeviceId(),
        "%s initialized with starting address %p, "
-       "memory size %lu bytes, and output directory in %s\n",
+       "memory size %" PRIu64 " bytes, and output directory in %s\n",
        Status == StatusTy::Recording ? "Record" : "Replay", StartAddr,
-       TotalSize, OutputDirectory.c_str());
+       TotalSize, OutputDirectory.string().c_str());
 
   return Plugin::success();
 }
@@ -253,15 +253,15 @@ Error NativeRecordReplayTy::recordDescImpl(
   // Add minimum and maximum for allowed number of teams. If zero, it means
   // there was no restriction provided by the program.
   json::Array JsonTeamsLimits;
-  JsonTeamsLimits.push_back(KernelArgs.NumTeams[0]);
-  JsonTeamsLimits.push_back(KernelArgs.NumTeams[0]);
+  JsonTeamsLimits.push_back(KernelArgs.UserNumBlocks[0]);
+  JsonTeamsLimits.push_back(KernelArgs.UserNumBlocks[0]);
   JsonKernelInfo["TeamsLimits"] = json::Value(std::move(JsonTeamsLimits));
 
   // Add minimum and maximum for allowed number of threads. If zero, it means
   // there was no restriction provided by the program.
   json::Array JsonThreadsLimits;
-  JsonThreadsLimits.push_back(uint32_t(KernelArgs.ThreadLimit[0] > 0));
-  JsonThreadsLimits.push_back(KernelArgs.ThreadLimit[0]);
+  JsonThreadsLimits.push_back(uint32_t(KernelArgs.UserThreadLimit[0] > 0));
+  JsonThreadsLimits.push_back(KernelArgs.UserThreadLimit[0]);
   JsonKernelInfo["ThreadsLimits"] = json::Value(std::move(JsonThreadsLimits));
 
   json::Array JsonArgPtrs;
@@ -308,7 +308,7 @@ NativeRecordReplayTy::getFilenameImpl(const InstanceTy &Instance,
   Filepath /= std::to_string(Instance.KernelHash) + "_" +
               std::to_string(Instance.LaunchConfigHash);
   Filepath.replace_extension(getExtension(FileType).data());
-  SmallString<128> Filename(Filepath.c_str());
+  SmallString<128> Filename(Filepath.string());
   return Filename;
 }
 

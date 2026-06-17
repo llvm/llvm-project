@@ -1,4 +1,4 @@
-; RUN: llc %s --filetype=asm -o - | FileCheck %s
+; RUN: llc %s -o - | FileCheck %s
 target triple = "dxil-unknown-shadermodel6.7-library"
 
 ; CHECK: Function Attrs: nounwind memory(none)

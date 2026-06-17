@@ -315,6 +315,27 @@ private:
       KernelData.WavefrontSize = V.second.getUInt();
     } else if (IsKey(V.first, ".max_flat_workgroup_size")) {
       KernelData.MaxFlatWorkgroupSize = V.second.getUInt();
+    } else if (IsKey(V.first, ".args")) {
+      auto ArgsArray = V.second.getArray();
+      for (auto ArgIt = ArgsArray.begin(), ArgEnd = ArgsArray.end();
+           ArgIt != ArgEnd; ++ArgIt) {
+        auto ArgMap = ArgIt->getMap();
+
+        auto OffsetIt = ArgMap.find(".offset");
+        if (OffsetIt == ArgMap.end())
+          return createStringError(
+              inconvertibleErrorCode(),
+              "Missing required .offset key in kernel argument metadata map");
+
+        auto SizeIt = ArgMap.find(".size");
+        if (SizeIt == ArgMap.end())
+          return createStringError(
+              inconvertibleErrorCode(),
+              "Missing required .size key in kernel argument metadata map");
+
+        KernelData.ArgMDs.emplace_back(OffsetIt->second.getUInt(),
+                                       SizeIt->second.getUInt());
+      }
     }
 
     return Error::success();
@@ -462,8 +483,12 @@ void sycl::writeSymbolTable(ArrayRef<StringRef> Names, SmallString<0> &Out) {
   uint32_t StringDataOffset =
       sizeof(SymbolTableHeader) + Count * sizeof(SymbolTableEntry);
 
-  // Pre-size the output to hold the header and entry array; string data is
-  // appended below.
+  // Compute total size and reserve to prevent reallocation while writing
+  // entries via pointer (append() could otherwise invalidate the pointer).
+  uint32_t TotalSize = StringDataOffset;
+  for (StringRef N : Names)
+    TotalSize += N.size() + 1;
+  Out.reserve(TotalSize);
   Out.resize(StringDataOffset);
 
   // Write the header.

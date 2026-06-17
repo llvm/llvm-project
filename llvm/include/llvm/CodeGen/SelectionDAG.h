@@ -42,6 +42,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/RecyclingAllocator.h"
+#include "llvm/Support/UndefPoison.h"
 #include <cassert>
 #include <cstdint>
 #include <functional>
@@ -1332,21 +1333,19 @@ public:
   /* \p CI if not null is the memset call being lowered.
    * \p OverrideTailCall is an optional parameter that can be used to override
    * the tail call optimization decision. */
-  LLVM_ABI SDValue getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst,
-                             SDValue Src, SDValue Size, Align Alignment,
-                             bool isVol, bool AlwaysInline, const CallInst *CI,
-                             std::optional<bool> OverrideTailCall,
-                             MachinePointerInfo DstPtrInfo,
-                             MachinePointerInfo SrcPtrInfo,
-                             const AAMDNodes &AAInfo = AAMDNodes(),
-                             BatchAAResults *BatchAA = nullptr);
+  LLVM_ABI SDValue getMemcpy(
+      SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src, SDValue Size,
+      Align DstAlign, Align SrcAlign, bool isVol, bool AlwaysInline,
+      const CallInst *CI, std::optional<bool> OverrideTailCall,
+      MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo,
+      const AAMDNodes &AAInfo = AAMDNodes(), BatchAAResults *BatchAA = nullptr);
 
   /* \p CI if not null is the memset call being lowered.
    * \p OverrideTailCall is an optional parameter that can be used to override
    * the tail call optimization decision. */
   LLVM_ABI SDValue getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
-                              SDValue Src, SDValue Size, Align Alignment,
-                              bool isVol, const CallInst *CI,
+                              SDValue Src, SDValue Size, Align DstAlign,
+                              Align SrcAlign, bool isVol, const CallInst *CI,
                               std::optional<bool> OverrideTailCall,
                               MachinePointerInfo DstPtrInfo,
                               MachinePointerInfo SrcPtrInfo,
@@ -1771,9 +1770,10 @@ public:
   LLVM_ABI SDValue getFreeze(SDValue V);
 
   /// Return a freeze of V if any of the demanded elts may be undef or poison.
-  /// If \p PoisonOnly is true, then only check for poison elements.
-  LLVM_ABI SDValue getFreeze(SDValue V, const APInt &DemandedElts,
-                             bool PoisonOnly = false);
+  /// \p Kind can be used to selectively freeze poison and/or undef bits only.
+  LLVM_ABI SDValue
+  getFreeze(SDValue V, const APInt &DemandedElts,
+            UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison);
 
   /// Return an AssertAlignSDNode.
   LLVM_ABI SDValue getAssertAlign(const SDLoc &DL, SDValue V, Align A);
@@ -2346,22 +2346,23 @@ public:
                                               unsigned Depth = 0) const;
 
   /// Return true if this function can prove that \p Op is never poison
-  /// and, if \p PoisonOnly is false, does not have undef bits.
-  LLVM_ABI bool isGuaranteedNotToBeUndefOrPoison(SDValue Op,
-                                                 bool PoisonOnly = false,
-                                                 unsigned Depth = 0) const;
+  /// and, \p Kind can be used to track poison and/or undef bits.
+  LLVM_ABI bool isGuaranteedNotToBeUndefOrPoison(
+      SDValue Op, UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison,
+      unsigned Depth = 0) const;
 
   /// Return true if this function can prove that \p Op is never poison
-  /// and, if \p PoisonOnly is false, does not have undef bits. The DemandedElts
-  /// argument limits the check to the requested vector elements.
-  LLVM_ABI bool isGuaranteedNotToBeUndefOrPoison(SDValue Op,
-                                                 const APInt &DemandedElts,
-                                                 bool PoisonOnly = false,
-                                                 unsigned Depth = 0) const;
+  /// and, \p Kind can be used to track poison and/or undef bits. The
+  /// DemandedElts argument limits the check to the requested vector elements.
+  LLVM_ABI bool isGuaranteedNotToBeUndefOrPoison(
+      SDValue Op, const APInt &DemandedElts,
+      UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison,
+      unsigned Depth = 0) const;
 
   /// Return true if this function can prove that \p Op is never poison.
   bool isGuaranteedNotToBePoison(SDValue Op, unsigned Depth = 0) const {
-    return isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly*/ true, Depth);
+    return isGuaranteedNotToBeUndefOrPoison(Op, UndefPoisonKind::PoisonOnly,
+                                            Depth);
   }
 
   /// Return true if this function can prove that \p Op is never poison. The
@@ -2369,7 +2370,7 @@ public:
   bool isGuaranteedNotToBePoison(SDValue Op, const APInt &DemandedElts,
                                  unsigned Depth = 0) const {
     return isGuaranteedNotToBeUndefOrPoison(Op, DemandedElts,
-                                            /*PoisonOnly*/ true, Depth);
+                                            UndefPoisonKind::PoisonOnly, Depth);
   }
 
   /// Return true if Op can create undef or poison from non-undef & non-poison
@@ -2381,10 +2382,10 @@ public:
   /// could still introduce undef or poison even without poison generating flags
   /// which might be on the instruction.  (i.e. could the result of
   /// Op->dropPoisonGeneratingFlags() still create poison or undef)
-  LLVM_ABI bool canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
-                                       bool PoisonOnly = false,
-                                       bool ConsiderFlags = true,
-                                       unsigned Depth = 0) const;
+  LLVM_ABI bool
+  canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
+                         UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison,
+                         bool ConsiderFlags = true, unsigned Depth = 0) const;
 
   /// Return true if Op can create undef or poison from non-undef & non-poison
   /// operands.
@@ -2394,9 +2395,10 @@ public:
   /// could still introduce undef or poison even without poison generating flags
   /// which might be on the instruction.  (i.e. could the result of
   /// Op->dropPoisonGeneratingFlags() still create poison or undef)
-  LLVM_ABI bool canCreateUndefOrPoison(SDValue Op, bool PoisonOnly = false,
-                                       bool ConsiderFlags = true,
-                                       unsigned Depth = 0) const;
+  LLVM_ABI bool
+  canCreateUndefOrPoison(SDValue Op,
+                         UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison,
+                         bool ConsiderFlags = true, unsigned Depth = 0) const;
 
   /// Return true if the specified operand is an ISD::OR or ISD::XOR node
   /// that can be treated as an ISD::ADD node.
@@ -2751,8 +2753,8 @@ public:
   ///
   ///      partial_reduce_umls acc, lhs, rhs
   /// <=> -partial_reduce_umla -acc, lhs, rhs
-  SDValue getPartialReduceMLS(unsigned Opc, const SDLoc &DL, SDValue Acc,
-                              SDValue LHS, SDValue RHS);
+  LLVM_ABI SDValue getPartialReduceMLS(unsigned Opc, const SDLoc &DL,
+                                       SDValue Acc, SDValue LHS, SDValue RHS);
 
   /// Some opcodes may create immediate undefined behavior when used with some
   /// values (integer division-by-zero for example). Therefore, these operations

@@ -314,7 +314,7 @@ define void @maskedgather(<16 x ptr> %va, <16 x i1> %vb, <16 x float> %vc) {
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; LATE-LABEL: 'maskedgather'
-; LATE-NEXT:  Cost Model: Found an estimated cost of 77 for instruction: %v = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> align 1 %va, <16 x i1> %vb, <16 x float> %vc)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 125 for instruction: %v = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> align 1 %va, <16 x i1> %vb, <16 x float> %vc)
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE-LABEL: 'maskedgather'

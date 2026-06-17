@@ -146,26 +146,26 @@ body: |
     ; CHECK-LABEL: name: sched_group_barrier_mask_2048_async_loads
     ; CHECK: $exec = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF1]], [[DEF]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF3]], [[DEF2]], 16, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: [[DEF3:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF4:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF5:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF1]], [[DEF3]], implicit $exec
-    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF5]], [[DEF4]], 32, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
-    ; CHECK-NEXT: [[DEF6:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF5:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF6:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF7:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF7]], [[DEF6]], 48, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
-    ; CHECK-NEXT: [[DEF8:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF8:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF9:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF5]], [[DEF7]], implicit $exec
-    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF9]], [[DEF8]], 64, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
-    ; CHECK-NEXT: [[DEF10:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF10:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF11:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF11]], [[DEF10]], 80, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
-    ; CHECK-NEXT: [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF9]], [[DEF11]], implicit $exec
+    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF6]], [[DEF]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF7]], [[DEF1]], 16, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF6]], [[DEF7]], implicit $exec
+    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF8]], [[DEF2]], 32, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF9]], [[DEF3]], 48, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF8]], [[DEF9]], implicit $exec
+    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF10]], [[DEF4]], 64, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF11]], [[DEF5]], 80, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF10]], [[DEF11]], implicit $exec
     ; CHECK-NEXT: SCHED_GROUP_BARRIER 2048, 2, 1
     ; CHECK-NEXT: SCHED_GROUP_BARRIER 2, 1, 1
     ; CHECK-NEXT: SCHED_GROUP_BARRIER 2048, 2, 1
@@ -213,27 +213,27 @@ body: |
     ; CHECK-LABEL: name: sched_group_barrier_mask_16_async_loads
     ; CHECK: $exec = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: $m0 = S_MOV_B32 1
-    ; CHECK-NEXT: CLUSTER_LOAD_ASYNC_TO_LDS_B32 [[DEF1]], [[DEF]], 0, 0, implicit-def dead $asynccnt, implicit $m0, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: CLUSTER_LOAD_ASYNC_TO_LDS_B32 [[DEF3]], [[DEF2]], 16, 0, implicit-def dead $asynccnt, implicit $m0, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: [[DEF3:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF4:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF5:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF1]], [[DEF5]], implicit $exec
-    ; CHECK-NEXT: CLUSTER_LOAD_ASYNC_TO_LDS_B32 [[DEF5]], [[DEF4]], 32, 0, implicit-def dead $asynccnt, implicit $m0, implicit $exec, implicit $asynccnt
-    ; CHECK-NEXT: [[DEF6:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF5:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF6:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF7:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: CLUSTER_LOAD_ASYNC_TO_LDS_B32 [[DEF7]], [[DEF6]], 48, 0, implicit-def dead $asynccnt, implicit $m0, implicit $exec, implicit $asynccnt
-    ; CHECK-NEXT: [[DEF8:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF8:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF9:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF9]], implicit $exec
-    ; CHECK-NEXT: CLUSTER_LOAD_ASYNC_TO_LDS_B32 [[DEF9]], [[DEF8]], 64, 0, implicit-def dead $asynccnt, implicit $m0, implicit $exec, implicit $asynccnt
-    ; CHECK-NEXT: [[DEF10:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF10:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF11:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: CLUSTER_LOAD_ASYNC_TO_LDS_B32 [[DEF11]], [[DEF10]], 80, 0, implicit-def dead $asynccnt, implicit $m0, implicit $exec, implicit $asynccnt
-    ; CHECK-NEXT: [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF7]], [[DEF11]], implicit $exec
+    ; CHECK-NEXT: $m0 = S_MOV_B32 1
+    ; CHECK-NEXT: CLUSTER_LOAD_ASYNC_TO_LDS_B32 [[DEF6]], [[DEF]], 0, 0, implicit-def dead $asynccnt, implicit $m0, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: CLUSTER_LOAD_ASYNC_TO_LDS_B32 [[DEF7]], [[DEF1]], 16, 0, implicit-def dead $asynccnt, implicit $m0, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF6]], [[DEF8]], implicit $exec
+    ; CHECK-NEXT: CLUSTER_LOAD_ASYNC_TO_LDS_B32 [[DEF8]], [[DEF2]], 32, 0, implicit-def dead $asynccnt, implicit $m0, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: CLUSTER_LOAD_ASYNC_TO_LDS_B32 [[DEF9]], [[DEF3]], 48, 0, implicit-def dead $asynccnt, implicit $m0, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF7]], [[DEF10]], implicit $exec
+    ; CHECK-NEXT: CLUSTER_LOAD_ASYNC_TO_LDS_B32 [[DEF10]], [[DEF4]], 64, 0, implicit-def dead $asynccnt, implicit $m0, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: CLUSTER_LOAD_ASYNC_TO_LDS_B32 [[DEF11]], [[DEF5]], 80, 0, implicit-def dead $asynccnt, implicit $m0, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF9]], [[DEF11]], implicit $exec
     ; CHECK-NEXT: SCHED_GROUP_BARRIER 16, 2, 3
     ; CHECK-NEXT: SCHED_GROUP_BARRIER 2, 1, 3
     ; CHECK-NEXT: SCHED_GROUP_BARRIER 16, 2, 3
@@ -282,26 +282,26 @@ body: |
     ; CHECK-LABEL: name: sched_group_barrier_mask_2048_interleave_2load_1valu
     ; CHECK: $exec = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF1]], [[DEF]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF3]], [[DEF2]], 16, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: [[DEF3:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF4:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF5:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF1]], [[DEF3]], implicit $exec
-    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF5]], [[DEF4]], 32, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
-    ; CHECK-NEXT: [[DEF6:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF5:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF6:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF7:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF7]], [[DEF6]], 48, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
-    ; CHECK-NEXT: [[DEF8:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF8:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF9:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF5]], [[DEF7]], implicit $exec
-    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF9]], [[DEF8]], 64, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
-    ; CHECK-NEXT: [[DEF10:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF10:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF11:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF11]], [[DEF10]], 80, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
-    ; CHECK-NEXT: [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF9]], [[DEF11]], implicit $exec
+    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF6]], [[DEF]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF7]], [[DEF1]], 16, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF6]], [[DEF7]], implicit $exec
+    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF8]], [[DEF2]], 32, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF9]], [[DEF3]], 48, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF8]], [[DEF9]], implicit $exec
+    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF10]], [[DEF4]], 64, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 [[DEF11]], [[DEF5]], 80, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; CHECK-NEXT: [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF10]], [[DEF11]], implicit $exec
     ; CHECK-NEXT: SCHED_GROUP_BARRIER 2048, 2, 4
     ; CHECK-NEXT: SCHED_GROUP_BARRIER 2, 1, 4
     ; CHECK-NEXT: SCHED_GROUP_BARRIER 2048, 2, 4

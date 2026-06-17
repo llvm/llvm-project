@@ -18,7 +18,7 @@ add_library(PluginCommon OBJECT
   src/OffloadError.cpp
   src/Utils/ELF.cpp
 )
-add_dependencies(PluginCommon intrinsics_gen PluginErrcodes)
+add_dependencies(PluginCommon intrinsics_gen PluginErrcodes OffloadAPI)
 
 # Only enable JIT for those targets that LLVM can support.
 set(supported_jit_targets AMDGPU NVPTX)
@@ -35,11 +35,6 @@ endif()
 # Include the RPC server from the `libc` project.
 include(FindLibcCommonUtils)
 target_link_libraries(PluginCommon PRIVATE llvm-libc-common-utilities)
-
-if (TARGET flang_rt.runtime.static)
-  target_link_libraries(PluginCommon PRIVATE flang_rt.runtime.static)
-  target_compile_definitions(PluginCommon PRIVATE OFFLOAD_HAS_FLANG_RT)
-endif()
 
 # Define the TARGET_NAME and DEBUG_PREFIX.
 target_compile_definitions(PluginCommon PRIVATE
