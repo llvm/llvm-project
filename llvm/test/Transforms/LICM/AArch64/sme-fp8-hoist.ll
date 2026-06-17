@@ -12,10 +12,10 @@ define void @fp8_fmopa_loop(ptr %lhs, ptr %rhs, i64 %fpmr, i64 %n) {
 ; CHECK-NEXT:    [[PTRUE:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
 ; CHECK-NEXT:    [[LHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8.p0(<vscale x 16 x i1> [[PTRUE]], ptr [[LHS]])
 ; CHECK-NEXT:    [[RHS_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.ld1.nxv16i8.p0(<vscale x 16 x i1> [[PTRUE]], ptr [[RHS]])
+; CHECK-NEXT:    call void @llvm.aarch64.set.fpmr(i64 [[FPMR]])
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    call void @llvm.aarch64.set.fpmr(i64 [[FPMR]])
 ; CHECK-NEXT:    call void @llvm.aarch64.sme.fp8.fmopa.za32(i32 0, <vscale x 16 x i1> [[PTRUE]], <vscale x 16 x i1> [[PTRUE]], <vscale x 16 x i8> [[LHS_LOAD]], <vscale x 16 x i8> [[RHS_LOAD]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i64 [[IV_NEXT]], [[N]]
