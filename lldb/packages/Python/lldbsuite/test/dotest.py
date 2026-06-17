@@ -477,6 +477,9 @@ def parseOptionsAndInitTestdirs():
     if args.print_lldb_version:
         configuration.print_lldb_version = True
 
+    if args.lldb_python_dir:
+        configuration.lldb_python_dir = args.lldb_python_dir
+
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
         configuration.testdirs = [
@@ -588,17 +591,32 @@ def setupSysPath():
 
     lldbPythonDir = None  # The directory that contains 'lldb/__init__.py'
 
-    # If our lldb supports the -P option, use it to find the python path:
-    lldb_dash_p_result = subprocess.check_output(
-        [lldbtest_config.lldbExec, "-P"], universal_newlines=True
-    )
-    if lldb_dash_p_result:
-        for line in lldb_dash_p_result.splitlines():
-            if os.path.isdir(line) and os.path.exists(
-                os.path.join(line, "lldb", "__init__.py")
-            ):
-                lldbPythonDir = line
-                break
+    if configuration.lldb_python_dir:
+        # The path was passed in (typically by LIT, which discovers it once for
+        # the whole test run). Trust it without spawning lldb.
+        candidate = configuration.lldb_python_dir
+        if os.path.isdir(candidate) and os.path.exists(
+            os.path.join(candidate, "lldb", "__init__.py")
+        ):
+            lldbPythonDir = candidate
+        else:
+            print(
+                "warning: --lldb-python-dir '%s' does not contain 'lldb/__init__.py'; "
+                "falling back to '%s -P'" % (candidate, lldbtest_config.lldbExec)
+            )
+
+    if not lldbPythonDir:
+        # If our lldb supports the -P option, use it to find the python path:
+        lldb_dash_p_result = subprocess.check_output(
+            [lldbtest_config.lldbExec, "-P"], universal_newlines=True
+        )
+        if lldb_dash_p_result:
+            for line in lldb_dash_p_result.splitlines():
+                if os.path.isdir(line) and os.path.exists(
+                    os.path.join(line, "lldb", "__init__.py")
+                ):
+                    lldbPythonDir = line
+                    break
 
     if not lldbPythonDir:
         print(
