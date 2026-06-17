@@ -595,6 +595,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                         ISD::CTPOP},
                        MVT::i16, Promote);
 
+    setOperationAction(ISD::ABS, MVT::i16, Custom);
+    setOperationAction(ISD::ABS_MIN_POISON, MVT::i16, Custom);
+
     setOperationAction(ISD::LOAD, MVT::i16, Custom);
 
     setTruncStoreAction(MVT::i64, MVT::i16, Expand);
@@ -7492,6 +7495,36 @@ SDValue SITargetLowering::lowerROTR(SDValue Op, SelectionDAG &DAG) const {
   return DAG.UnrollVectorOp(Op.getNode());
 }
 
+SDValue SITargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
+  assert(Subtarget->has16BitInsts() && "Requires 16-bit operations.");
+  [[maybe_unused]] EVT VT = Op.getValueType();
+
+  assert(VT == MVT::i16 && "Unexpected ValueType.");
+
+  // There is no integer v_abs instruction on AMDGPU, so divergent ABS needs to
+  // be expanded differently.
+  if (Op->isDivergent())
+    return SDValue();
+
+  SDLoc SL(Op);
+  // Expand plain abs by sign-extending to i32 and using the native s_abs
+  // instruction.
+  if (Op->getOpcode() == ISD::ABS) {
+    SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, SL, MVT::i32, Op.getOperand(0));
+    SDValue Abs = DAG.getNode(ISD::ABS, SL, MVT::i32, Ext);
+    return DAG.getNode(ISD::TRUNCATE, SL, MVT::i16, Abs);
+  }
+  assert(Op->getOpcode() == ISD::ABS_MIN_POISON);
+  // We also need to handle ABS_MIN_POISON here. This is the same expansion as
+  // in TargetLowering::expandABS, but since we marked ABS custom,
+  // TargetLowering::expandABS would expand ABS_MIN_POISON to ABS and lose the
+  // poison semantics. This instead expands abs(x) to max(x, 0 - x).
+  SDValue Zero = DAG.getConstant(0, SL, VT);
+  SDValue Frozen = DAG.getFreeze(Op.getOperand(0));
+  SDValue Sub = DAG.getNode(ISD::SUB, SL, VT, Zero, Frozen);
+  return DAG.getNode(ISD::SMAX, SL, VT, Frozen, Sub);
+}
+
 // Work around LegalizeDAG doing the wrong thing and fully scalarizing if the
 // wider vector type is legal.
 SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
@@ -7618,7 +7651,13 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerTRAP(Op, DAG);
   case ISD::DEBUGTRAP:
     return lowerDEBUGTRAP(Op, DAG);
-  case ISD::ABS:
+  case ISD::ABS: {
+    if (Op.getValueType() == MVT::i16)
+      return lowerABS(Op, DAG);
+    return splitUnaryVectorOp(Op, DAG);
+  }
+  case ISD::ABS_MIN_POISON:
+    return lowerABS(Op, DAG);
   case ISD::FABS:
   case ISD::FNEG:
   case ISD::FCANONICALIZE:
