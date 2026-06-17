@@ -24,6 +24,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
+#ifndef LIBC_TARGET_CPU_HAS_FPU_FLOAT
 namespace rsqrtf16_internal {
 
 using FPBits = fputil::FPBits<float16>;
@@ -254,6 +255,7 @@ LIBC_INLINE constexpr float16 rsqrtf16_no_float(uint16_t x_abs) {
 }
 
 } // namespace rsqrtf16_internal
+#endif // !LIBC_TARGET_CPU_HAS_FPU_FLOAT
 
 LIBC_INLINE constexpr float16 rsqrtf16(float16 x) {
   using FPBits = fputil::FPBits<float16>;
