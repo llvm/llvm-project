@@ -6733,33 +6733,21 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   }
 
   // Check if WidenRecipe is the final result of the reduction. If so look
-  // through selects for predicated reductions.
+  // through select-like recipes for predicated reductions.
   VPValue *Cond = nullptr;
-  VPValue *ExitValue = cast_or_null<VPInstruction>(
-      findUserOf(WidenRecipe, m_Select(m_VPValue(Cond), m_Specific(WidenRecipe),
-                                       m_Specific(RdxPhi))));
-
-  // Look for a VPBlendRecipe user of the WidenRecipe. When the reduction is
-  // gated by an `if` in the loop body, the blend merges the updated value
-  // (WidenRecipe) and the unchanged phi value (RdxPhi).
-  if (!ExitValue) {
-    for (VPUser *U : WidenRecipe->users()) {
-      auto *Blend = dyn_cast<VPBlendRecipe>(cast<VPRecipeBase>(U));
-      if (!Blend || Blend->getNumIncomingValues() != 2)
-        continue;
-      VPValue *V0 = Blend->getIncomingValue(0);
-      VPValue *V1 = Blend->getIncomingValue(1);
-
-      if ((V0 == WidenRecipe) && (V1 == RdxPhi) ||
-          (V1 == WidenRecipe) && (V0 == RdxPhi)) {
-        // Use the mask of the WidenRecipe incoming as the reduction condition.
-        unsigned maskIdx = (V0 == WidenRecipe) ? 0 : 1;
-        Cond = Blend->getMask(maskIdx);
-        ExitValue = Blend;
-        break;
-      }
+  VPRecipeBase *ExitRecipe = findUserOf(
+      WidenRecipe, m_SelectLike(m_VPValue(Cond), m_Specific(WidenRecipe),
+                                m_Specific(RdxPhi)));
+  if (!ExitRecipe) {
+    ExitRecipe = findUserOf(WidenRecipe,
+                            m_SelectLike(m_VPValue(Cond), m_Specific(RdxPhi),
+                                         m_Specific(WidenRecipe)));
+    if (ExitRecipe) {
+      VPBuilder Builder(WidenRecipe);
+      Cond = Builder.createNot(Cond, ExitRecipe->getDebugLoc());
     }
   }
+  VPValue *ExitValue = cast_or_null<VPSingleDefRecipe>(ExitRecipe);
 
   bool IsLastInChain = RdxPhi->getBackedgeValue() == WidenRecipe ||
                        RdxPhi->getBackedgeValue() == ExitValue;
@@ -6988,20 +6976,12 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
   if (!RdxResult)
     return std::nullopt;
   VPValue *ExitValue = RdxResult->getOperand(0);
-  match(ExitValue, m_Select(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
-
-  // Check for a reduction in the operand of a Blend.
-  if (auto *Blend = dyn_cast<VPBlendRecipe>(ExitValue)) {
-    if(Blend->getNumIncomingValues() == 2) {
-      VPValue *V0 = Blend->getIncomingValue(0);
-      VPValue *V1 = Blend->getIncomingValue(1);
-
-      if (V0 == RedPhiR)
-        ExitValue = V1;
-      if (V1 == RedPhiR)
-        ExitValue = V0;
-    }
-  }
+  VPValue *SelectedValue = nullptr;
+  if (match(ExitValue, m_SelectLike(m_VPValue(), m_VPValue(SelectedValue),
+                                    m_Specific(RedPhiR))) ||
+      match(ExitValue, m_SelectLike(m_VPValue(), m_Specific(RedPhiR),
+                                    m_VPValue(SelectedValue))))
+    ExitValue = SelectedValue;
 
   SmallVector<VPPartialReductionChain> Chain;
   RecurKind RK = RedPhiR->getRecurrenceKind();
