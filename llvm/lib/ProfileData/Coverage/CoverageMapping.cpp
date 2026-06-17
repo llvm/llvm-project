@@ -766,7 +766,7 @@ struct CountedRegionEmitter {
         Files.resize(Region.FileID + 1);
       }
       Files[Region.FileID].LastIndex = I + 1;
-      if (Region.Kind == CounterMappingRegion::ExpansionRegion) {
+      if (Region.isExpansion()) {
         if (Region.ExpandedFileID >= Files.size()) {
           // Extend (only possible in CoverageMappingTests)
           Files.resize(Region.ExpandedFileID + 1);
@@ -799,7 +799,7 @@ struct CountedRegionEmitter {
       if (Region.FileID != Idx)
         break;
 
-      if (Region.Kind == CounterMappingRegion::ExpansionRegion)
+      if (Region.isExpansion())
         if (auto E = walk(Region.ExpandedFileID))
           return E;
 
@@ -1454,7 +1454,7 @@ findMainViewFileID(const FunctionRecord &Function) {
     return std::nullopt;
   SmallBitVector IsNotExpandedFile(Function.Filenames.size(), true);
   for (const auto &CR : Function.CountedRegions)
-    if (CR.Kind == CounterMappingRegion::ExpansionRegion)
+    if (CR.isExpansion())
       IsNotExpandedFile[CR.ExpandedFileID] = false;
   int I = IsNotExpandedFile.find_first();
   if (I == -1)
@@ -1474,7 +1474,7 @@ findMainViewFileID(StringRef SourceFile, const FunctionRecord &Function) {
 }
 
 static bool isExpansion(const CountedRegion &R, unsigned FileID) {
-  return R.Kind == CounterMappingRegion::ExpansionRegion && R.FileID == FileID;
+  return R.isExpansion() && R.FileID == FileID;
 }
 
 CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {

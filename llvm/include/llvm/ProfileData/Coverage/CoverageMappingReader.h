@@ -135,17 +135,19 @@ class RawCoverageMappingReader : public RawCoverageReader {
   std::vector<StringRef> &Filenames;
   std::vector<CounterExpression> &Expressions;
   std::vector<CounterMappingRegion> &MappingRegions;
+  CovMapVersion Version;
 
 public:
-  RawCoverageMappingReader(StringRef MappingData,
-                           ArrayRef<std::string> &TranslationUnitFilenames,
-                           std::vector<StringRef> &Filenames,
-                           std::vector<CounterExpression> &Expressions,
-                           std::vector<CounterMappingRegion> &MappingRegions)
+  RawCoverageMappingReader(
+      StringRef MappingData, ArrayRef<std::string> &TranslationUnitFilenames,
+      std::vector<StringRef> &Filenames,
+      std::vector<CounterExpression> &Expressions,
+      std::vector<CounterMappingRegion> &MappingRegions,
+      CovMapVersion Version = CovMapVersion::CurrentVersion)
       : RawCoverageReader(MappingData),
         TranslationUnitFilenames(TranslationUnitFilenames),
         Filenames(Filenames), Expressions(Expressions),
-        MappingRegions(MappingRegions) {}
+        MappingRegions(MappingRegions), Version(Version) {}
   RawCoverageMappingReader(const RawCoverageMappingReader &) = delete;
   RawCoverageMappingReader &
   operator=(const RawCoverageMappingReader &) = delete;
