@@ -290,6 +290,8 @@ struct Data {
 
 private:
   mutable DenseMap<uint64_t, AbbrevTableInfo> AbbrevTableInfoMap;
+  // getAbbrevTableContentByIndex returns StringRefs into the values. DenseMap
+  // cannot be used.
   mutable std::unordered_map<uint64_t, std::string> AbbrevTableContents;
 };
 

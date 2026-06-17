@@ -19,7 +19,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/LongestCommonSequence.h"
 
-
 using namespace llvm;
 using namespace sampleprof;
 
