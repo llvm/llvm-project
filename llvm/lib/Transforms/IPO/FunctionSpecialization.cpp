@@ -1071,6 +1071,40 @@ Function *FunctionSpecializer::createSpecialization(Function *F,
                                                     const SpecSig &S) {
   Function *Clone = cloneCandidateFunction(F, Specializations.size() + 1);
 
+  // IPSCCP will rewrite indirect calls in the clone to direct calls when it
+  // propagates the substituted Function constants via replaceAllUsesWith,
+  // which does not touch operand bundles. The verifier rejects direct calls
+  // carrying a ptrauth bundle, so strip those bundles from any call whose
+  // callee is a formal being specialized to a Function constant.
+  DenseSet<Argument *> ArgsToFunction;
+  for (const ArgInfo &A : S.Args)
+    if (isa<Function>(A.Actual->stripPointerCasts()))
+      ArgsToFunction.insert(Clone->getArg(A.Formal->getArgNo()));
+
+  if (!ArgsToFunction.empty()) {
+    for (BasicBlock &BB : *Clone) {
+      for (Instruction &I : make_early_inc_range(BB)) {
+        auto *CB = dyn_cast<CallBase>(&I);
+        if (!CB)
+          continue;
+        auto *ArgCallee = dyn_cast<Argument>(CB->getCalledOperand());
+        if (!ArgCallee || !ArgsToFunction.contains(ArgCallee))
+          continue;
+        if (!CB->getOperandBundle(LLVMContext::OB_ptrauth))
+          continue;
+
+        SmallVector<OperandBundleDef, 2> NewBundles;
+        CB->getOperandBundlesAsDefs(NewBundles);
+        llvm::erase_if(NewBundles, [](const OperandBundleDef &D) {
+          return D.getTag() == "ptrauth";
+        });
+        CallBase *NewCB = CallBase::Create(CB, NewBundles, CB->getIterator());
+        CB->replaceAllUsesWith(NewCB);
+        CB->eraseFromParent();
+      }
+    }
+  }
+
   // The original function does not neccessarily have internal linkage, but the
   // clone must.
   Clone->setLinkage(GlobalValue::InternalLinkage);
