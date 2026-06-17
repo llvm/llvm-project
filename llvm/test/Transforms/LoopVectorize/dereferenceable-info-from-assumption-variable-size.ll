@@ -82,7 +82,7 @@ exit:
 }
 
 ; Adding an extra dereferenceable assume with constant size should not
-; intefere.
+; interfere.
 define void @deref_assumption_in_preheader_non_constant_trip_count_access_i8_extra_constant_assume(ptr noalias noundef %a, ptr noalias %b, ptr noalias %c, i64 %n) nofree nosync {
 ; CHECK-LABEL: define void @deref_assumption_in_preheader_non_constant_trip_count_access_i8_extra_constant_assume(
 ; CHECK-SAME: ptr noalias noundef [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {

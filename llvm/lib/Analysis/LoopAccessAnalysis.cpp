@@ -241,7 +241,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
       CtxI = LoopPred->getTerminator();
   }
   getKnowledgeForValue(
-      StartPtrV, {Attribute::Dereferenceable}, *AC,
+      StartPtrV, Attribute::Dereferenceable, *AC,
       [&](RetainedKnowledge RK, Instruction *Assume, auto) {
         if (!isValidAssumeForContext(Assume, CtxI, DT))
           return false;
