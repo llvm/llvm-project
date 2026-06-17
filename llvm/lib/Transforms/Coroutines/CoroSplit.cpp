@@ -2013,8 +2013,8 @@ void coro::AnyRetconABI::splitCoroutine(Function &F, coro::Shape &Shape,
         IRBuilder<> PoplessBuilder(PoplessReturnBB);
         auto &Context = F.getContext();
         auto *VoidTy = Type::getVoidTy(Context);
-        auto *RetPopless =
-            PoplessBuilder.CreateIntrinsic(VoidTy, Intrinsic::ret_popless, {});
+        auto *RetPopless = PoplessBuilder.CreateIntrinsicWithoutFolding(
+            VoidTy, Intrinsic::ret_popless, {});
         RetPopless->setTailCallKind(CallInst::TailCallKind::TCK_MustTail);
         PoplessBuilder.CreateRet(RetV);
         IRBuilder<> NormalBuilder(NormalReturnBB);
