@@ -45,19 +45,25 @@ void test() {
   //===---------------------------------===//
   //=== ADL-based begin() / end() ===//
 
-  using std::begin, std::end;
+  using std::begin, std::end, std::size;
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   begin(identity_view);
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  end(identity_view);
-
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   begin(transformed_range);
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  end(identity_view);
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   end(transformed_range);
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  size(identity_view);
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  size(transformed_range);
 
   //===---------------------------------===//
   //=== std::ranges CPO begin() / end() ===//
@@ -66,11 +72,17 @@ void test() {
   std::ranges::begin(identity_view);
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::ranges::end(identity_view);
-
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::ranges::begin(transformed_range);
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::end(identity_view);
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::ranges::end(transformed_range);
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::size(identity_view);
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::size(transformed_range);
 }
