@@ -432,8 +432,13 @@ public:
     }
 
     if (isConstant()) {
-      if (RHS.isConstant() && getConstant() == RHS.getConstant())
-        return false;
+      if (RHS.isConstant() && getConstant() == RHS.getConstant()) {
+        // Equal constants may still differ in provenance, propagate it when
+        // merging values.
+        bool Current = MayHaveDifferentProvenance;
+        MayHaveDifferentProvenance |= RHS.mayHaveDifferentProvenance();
+        return MayHaveDifferentProvenance != Current;
+      }
       if (RHS.isUndef())
         return false;
       // If the constant is a vector of integers, try to treat it as a range.

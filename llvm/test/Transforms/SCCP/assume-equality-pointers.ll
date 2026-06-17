@@ -83,6 +83,41 @@ exit:
   ret ptr %sel2
 }
 
+define i32 @assume_pointers_equality_maybe_different_provenance_4(ptr %x, i1 %cond) {
+; CHECK-LABEL: define i32 @assume_pointers_equality_maybe_different_provenance_4(
+; CHECK-SAME: ptr [[X:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[X]], inttoptr (i64 12345678 to ptr)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    br i1 [[COND]], label %[[BB_FIRST:.*]], label %[[BB_SECOND:.*]]
+; CHECK:       [[BB_FIRST]]:
+; CHECK-NEXT:    br label %[[MERGE:.*]]
+; CHECK:       [[BB_SECOND]]:
+; CHECK-NEXT:    br label %[[MERGE]]
+; CHECK:       [[MERGE]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ inttoptr (i64 12345678 to ptr), %[[BB_SECOND]] ], [ [[X]], %[[BB_FIRST]] ]
+; CHECK-NEXT:    store i32 0, ptr [[PHI]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[PHI]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+entry:
+  %cmp = icmp eq ptr %x, inttoptr (i64 12345678 to ptr)
+  call void @llvm.assume(i1 %cmp)
+  br i1 %cond, label %bb.first, label %bb.second
+
+bb.first:
+  br label %merge
+
+bb.second:
+  br label %merge
+
+merge:
+  %phi = phi ptr [ inttoptr (i64 12345678 to ptr), %bb.second ], [ %x, %bb.first ]
+  store i32 0, ptr %phi
+  %v = load i32, ptr %phi
+  ret i32 %v
+}
+
 define i1 @assume_pointers_equality_can_replace_valid(ptr %x, ptr %y) {
 ; CHECK-LABEL: define i1 @assume_pointers_equality_can_replace_valid(
 ; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) {
