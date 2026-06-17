@@ -346,12 +346,6 @@ protected:
   // Physical register liveness tracked at the register-unit level.
   // Each bit corresponds to a register unit. This avoids aliasing issues
   // since overlapping physical registers share the same underlying units.
-  //
-  // Known limitation:
-  // Physical register live-in/live-out is not modeled. reset()
-  // initializes CurPressure from virtual registers only and clears
-  // PhysLiveRegUnits. Physical registers that are live through a region
-  // without being used are invisible, leading to under-counted pressure.
   BitVector PhysLiveRegUnits;
 
   GCNRegPressure CurPressure, MaxPressure;
