@@ -173,6 +173,7 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
                              FilePath + " to " + ObjectPathName + ": " +
                              EC.message() + "\n");
       }
+      virtual Error commit() override { return Error::success(); }
       virtual AddBufferFn GetAddBuffer() override { return AddBuffer; }
     };
 
