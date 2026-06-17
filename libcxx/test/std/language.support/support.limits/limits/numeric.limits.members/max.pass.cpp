@@ -67,6 +67,7 @@ int main(int, char**)
 
     // _BitInt(N): max is 2^N - 1 for unsigned and 2^(N-1) - 1 for signed.
     // Exercises the digits fix through `__max = ~0 ^ __min`.
+    // TODO: Remove guards for MSan once https://llvm.org/PR204217 is fixed.
     // MSan does not track _BitInt padding bits, so non-byte-aligned widths
     // surface as false-positive use-of-uninitialized-value through the
     // numeric_limits::max() shift; restrict to byte-aligned widths under
