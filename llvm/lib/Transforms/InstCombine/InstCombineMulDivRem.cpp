@@ -331,6 +331,41 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (Value *FoldedMul = foldMulSelectToNegate(I, Builder))
     return replaceInstUsesWith(I, FoldedMul);
 
+  // (shl X, C1)*(select cond, C2, C3)--> X * (select cond, C2<<C1, C3<<C1)
+  // (mul X, C1)*(select cond, C2, C3)--> X * (select cond, C2*C1, C3*C1)
+  // (Includes commuted forms)
+
+  {
+    Value *NewOp, *Cond, *OtherValue;
+    Constant *C1, *C2, *C3;
+
+    if (match(&I, m_c_Mul(m_OneUse(m_Value(OtherValue)),
+                          m_OneUse(m_Select(m_Value(Cond), m_ImmConstant(C2),
+                                            m_ImmConstant(C3))))) &&
+        (match(OtherValue, m_Mul(m_Value(NewOp), m_ImmConstant(C1))) ||
+         match(OtherValue, m_Shl(m_Value(NewOp), m_ImmConstant(C1))))) {
+
+      auto *OtherInst = cast<OverflowingBinaryOperator>(OtherValue);
+      auto Opc = OtherInst->getOpcode();
+
+      Constant *NewTV = ConstantFoldBinaryOpOperands(Opc, C2, C1, DL);
+      Constant *NewFV = ConstantFoldBinaryOpOperands(Opc, C3, C1, DL);
+
+      if (NewTV && NewFV) {
+        Value *NewSel = Builder.CreateSelect(Cond, NewTV, NewFV);
+        BinaryOperator *BO = BinaryOperator::CreateMul(NewOp, NewSel);
+
+        if (HasNUW && OtherInst->hasNoUnsignedWrap())
+          BO->setHasNoUnsignedWrap();
+        if (HasNSW && OtherInst->hasNoSignedWrap() &&
+            NewTV->isNotMinSignedValue() && NewFV->isNotMinSignedValue())
+          BO->setHasNoSignedWrap();
+
+        return BO;
+      }
+    }
+  }
+
   // Simplify mul instructions with a constant RHS.
   Constant *MulC;
   if (match(Op1, m_ImmConstant(MulC))) {
@@ -1505,6 +1540,35 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
     if (NewDiv) {
       NewDiv->setIsExact(I.isExact() && InnerDiv->isExact());
       return NewDiv;
+    }
+  }
+
+  // X / (select Cond, 1, Y) --> select Cond, X, (X / Y)
+  // X / (select Cond, Y, 1) --> select Cond, (X / Y), X
+  // Division by 1 is a no-op, so we sink the division into the non-1 arm.
+  // For sdiv, limit Y to constant to avoid signed overflow concern.
+  {
+    Value *Cond, *DivY;
+    const APInt *C;
+    auto IsSafeDivisor = [&](Value *V) {
+      if (IsSigned)
+        return match(V, m_APInt(C)) && !C->isZero() && !C->isAllOnes();
+      return isKnownNonZero(V, SQ.getWithInstruction(&I)) &&
+             isGuaranteedNotToBePoison(V, SQ.AC, &I, SQ.DT);
+    };
+    if (match(Op1, m_OneUse(m_Select(m_Value(Cond), m_One(), m_Value(DivY)))) &&
+        IsSafeDivisor(DivY)) {
+      Value *NewDiv =
+          Builder.CreateExactBinOp(I.getOpcode(), Op0, DivY, I.isExact());
+      return SelectInst::Create(Cond, Op0, NewDiv, "", nullptr,
+                                cast<SelectInst>(Op1));
+    }
+    if (match(Op1, m_OneUse(m_Select(m_Value(Cond), m_Value(DivY), m_One()))) &&
+        IsSafeDivisor(DivY)) {
+      Value *NewDiv =
+          Builder.CreateExactBinOp(I.getOpcode(), Op0, DivY, I.isExact());
+      return SelectInst::Create(Cond, NewDiv, Op0, "", nullptr,
+                                cast<SelectInst>(Op1));
     }
   }
 
