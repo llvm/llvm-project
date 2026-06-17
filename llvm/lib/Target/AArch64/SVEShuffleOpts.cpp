@@ -104,10 +104,6 @@ static void evaluateDeinterleave(IntrinsicInst *I, DeinterleaveMap &Candidates,
   assert(IntId == Intrinsic::vector_deinterleave4 &&
          "Only deinterleave4 supported currently");
 
-  // If our user count doesn't match the interleave factor, bail out.
-  if (I->getNumUses() != 4)
-    return;
-
   // This pass currently only handles legal scalable vector types with an
   // element type that is at least 16 bits. TBL zeroes elements with an
   // out-of-bounds index, but for the largest possible SVE vector (2048b) a
@@ -115,8 +111,7 @@ static void evaluateDeinterleave(IntrinsicInst *I, DeinterleaveMap &Candidates,
   // 'out of bounds' value.
   // TODO: If we know vscale is 8 or less, then we could use tbls for bytes.
   EVT InputVT = TL.getValueType(DL, I->getOperand(0)->getType());
-  if (!InputVT.isScalableVector() ||
-      InputVT.getVectorElementType().getFixedSizeInBits() < 16 ||
+  if (!InputVT.isScalableVector() || InputVT.getScalarSizeInBits() < 16 ||
       TL.getTypeConversion(I->getContext(), InputVT).first !=
           TargetLoweringBase::TypeLegal)
     return;
@@ -126,18 +121,17 @@ static void evaluateDeinterleave(IntrinsicInst *I, DeinterleaveMap &Candidates,
   Type *DestTy = nullptr;
   for (User *U : I->users()) {
     auto *Extract = dyn_cast<ExtractValueInst>(U);
-    if (!Extract)
+    if (!Extract || !Extract->hasOneUse())
       return;
 
     // We expect only a single cast instruction as a user for the extract.
-    auto *Extend =
-        dyn_cast_if_present<CastInst>(Extract->getUniqueUndroppableUser());
+    auto *Extend = dyn_cast_if_present<CastInst>(*Extract->users().begin());
     if (!Extend || (!isa<ZExtInst>(Extend) && !isa<UIToFPInst>(Extend)))
       return;
 
     // We're only interested if the uses are in the loop. This is almost
     // certainly the case.
-    if (!L.contains(Extract) || !L.contains(Extend))
+    if (!L.contains(Extend))
       return;
 
     Opcode = Extend->getOpcode();
@@ -149,6 +143,11 @@ static void evaluateDeinterleave(IntrinsicInst *I, DeinterleaveMap &Candidates,
 
     Extends[Extract->getIndices().front()] = Extend;
   }
+
+  // If our extend count doesn't match the interleave factor, bail out.
+  // TODO: Allow gaps.
+  if (Extends.size() != 4)
+    return;
 
   // Check that all extracted values are being extended the same way, and that
   // we have the expected number of extensions.
@@ -174,7 +173,6 @@ static void optimizeSVEDeinterleavedExtends(DeinterleaveMap Deinterleaves) {
     unsigned SrcBits = SrcTy->getScalarSizeInBits();
     bool IsUIToFP = isa<UIToFPInst>(Extends[0]);
     VectorType *StepVecTy = VectorType::getInteger(DestTy);
-    Type *StepTy = StepVecTy->getScalarType();
     Value *Input = Deinterleave->getOperand(0);
     Type *InputTy = Input->getType();
 
@@ -196,10 +194,8 @@ static void optimizeSVEDeinterleavedExtends(DeinterleaveMap Deinterleaves) {
       Value *StepVector = Builder.CreateStepVector(StepVecTy);
       Value *ScaledSteps =
           Builder.CreateNUWMul(StepVector, ConstantInt::get(StepVecTy, 4));
-      Value *Start = ConstantInt::get(StepTy, StartIdx);
       Value *ZextTbl = Builder.CreateNUWAdd(
-          ScaledSteps,
-          Builder.CreateVectorSplat(StepVecTy->getElementCount(), Start));
+          ScaledSteps, ConstantInt::get(StepVecTy, StartIdx));
       Value *FinalMask = Builder.CreateBitCast(ZextTbl, InputTy);
 
       // Replace the deinterleave, extractvalue, and extension chain with
@@ -252,11 +248,8 @@ struct SVEShuffleOpts : public LoopPass {
     const AArch64Subtarget &ST =
         *TM.getSubtargetImpl(*L->getHeader()->getParent());
 
-    // If we don't have SVE, or if we're compiling for big endian (potentially
-    // requiring different shuffle masks), skip it.
-    if (skipLoop(L) || !L->isInnermost() ||
-        !ST.isSVEorStreamingSVEAvailable() ||
-        TM.createDataLayout().isBigEndian())
+    // If we don't have SVE skip it.
+    if (skipLoop(L) || !L->isInnermost() || !ST.isSVEorStreamingSVEAvailable())
       return false;
 
     return processLoop(*L, *ST.getTargetLowering(), TM.createDataLayout());
@@ -285,10 +278,8 @@ PreservedAnalyses SVEShuffleOptsPass::run(Loop &L, LoopAnalysisManager &AM,
   const AArch64Subtarget &ST =
       *TM.getSubtargetImpl(*L.getHeader()->getParent());
 
-  // If we don't have SVE, or if we're compiling for big endian (potentially
-  // requiring different shuffle masks), skip it.
-  if (!L.isInnermost() || !ST.isSVEorStreamingSVEAvailable() ||
-      TM.createDataLayout().isBigEndian())
+  // If we don't have SVE skip it.
+  if (!L.isInnermost() || !ST.isSVEorStreamingSVEAvailable())
     return PreservedAnalyses::all();
 
   if (processLoop(L, *ST.getTargetLowering(), TM.createDataLayout())) {

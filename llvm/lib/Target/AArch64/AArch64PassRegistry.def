@@ -19,6 +19,11 @@
 MODULE_PASS("aarch64-lower-homogeneous-prolog-epilog", AArch64LowerHomogeneousPrologEpilogPass())
 #undef MODULE_PASS
 
+#ifndef FUNCTION_PASS
+#define FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+#undef FUNCTION_PASS
+
 #ifndef LOOP_PASS
 #define LOOP_PASS(NAME, CREATE_PASS)
 #endif
