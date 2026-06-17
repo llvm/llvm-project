@@ -31588,7 +31588,7 @@ bool AArch64TargetLowering::functionArgumentNeedsConsecutiveRegisters(
   return all_equal(ValueVTs);
 }
 
-bool AArch64TargetLowering::shouldNormalizeToSelectSequence(LLVMContext &,
+bool AArch64TargetLowering::shouldNormalizeToSelectSequence(LLVMContext &, EVT,
                                                             EVT) const {
   return false;
 }
