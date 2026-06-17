@@ -1423,3 +1423,37 @@ namespace FuncPtrRef {
   }
   static_assert(bullet_five_tests());
 }
+
+namespace ConstWrites {
+  struct basic_string {
+    unsigned char a;
+    constexpr basic_string() {
+      a = false;
+    }
+  };
+  struct array {
+    basic_string str;
+  };
+
+  constexpr bool tests() {
+    const array right{};
+    return true;
+  }
+  static_assert(tests());
+
+  struct A {
+    int n;
+    constexpr A() : n(1) { n = 2; }
+  };
+  struct B {
+    const A a;
+    constexpr B(bool mutate) {
+      if (mutate)
+        const_cast<A &>(a).n = 3; // both-note {{modification of object of const-qualified type 'const int'}}
+    }
+  };
+  constexpr B b(false);
+  static_assert(b.a.n == 2, "");
+  constexpr B bad(true); // both-error {{must be initialized by a constant expression}} \
+                         // both-note {{in call to 'B(true)'}}
+}
