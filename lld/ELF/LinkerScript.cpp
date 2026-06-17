@@ -421,15 +421,6 @@ void LinkerScript::assignSymbol(SymbolAssignment *cmd, bool inSec) {
   cmd->sym->type = v.type;
 }
 
-bool LinkerScript::matchesFile(const InputSectionDescription *desc,
-                               InputSectionBase *sec) const {
-  if (StringRef filename = sec->name.split("^^").second; !filename.empty()) {
-    if (const InputFile *file = ltoInputFileMapping.lookup(filename))
-      return desc->matchesFile(*file);
-  }
-  return desc->matchesFile(*sec->file);
-}
-
 bool InputSectionDescription::matchesFile(const InputFile &file) const {
   if (filePat.isTrivialMatchAll())
     return true;
@@ -446,15 +437,6 @@ bool InputSectionDescription::matchesFile(const InputFile &file) const {
   }
 
   return matchesFileCache->second;
-}
-
-bool LinkerScript::excludesFile(const SectionPattern *pat,
-                                InputSectionBase *sec) const {
-  if (StringRef filename = sec->name.split("^^").second; !filename.empty()) {
-    if (const InputFile *file = ltoInputFileMapping.lookup(filename))
-      return pat->excludesFile(*file);
-  }
-  return pat->excludesFile(*sec->file);
 }
 
 bool SectionPattern::excludesFile(const InputFile &file) const {
@@ -634,11 +616,22 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
             cast<InputSection>(sec)->getRelocatedSection())
           continue;
 
+        StringRef sectionName = sec->name;
+        const InputFile *sectionFile = sec->file;
+        if (ctx.arg.ltoLinkerScripts) {
+          auto splitSectionName = sec->name.split("^^");
+          if (StringRef filename = splitSectionName.second; !filename.empty()) {
+            if (const InputFile *file = ltoInputFileMapping.lookup(filename)) {
+              sectionName = splitSectionName.first;
+              sectionFile = file;
+            }
+          }
+        }
         // Check the name early to improve performance in the common case.
-        if (!pat.sectionPat.match(sec->name.split("^^").first))
+        if (!pat.sectionPat.match(sectionName))
           continue;
 
-        if (!matchesFile(cmd, sec) || excludesFile(&pat, sec) ||
+        if (!cmd->matchesFile(*sectionFile) || pat.excludesFile(*sectionFile) ||
             !flagsMatch(sec))
           continue;
 
