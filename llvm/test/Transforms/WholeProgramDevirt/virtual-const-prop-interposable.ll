@@ -10,8 +10,8 @@
 @vt1_weak = constant [1 x ptr] [ptr @vf1_weak], !type !0
 @vt2_weak = constant [1 x ptr] [ptr @vf2_weak], !type !0
 
-@vt1_linkonce_adr = constant [1 x ptr] [ptr @vf1_linkonce_odr], !type !1
-@vt2_linkonce_adr = constant [1 x ptr] [ptr @vf2_linkonce_odr], !type !1
+@vt1_linkonce_odr = constant [1 x ptr] [ptr @vf1_linkonce_odr], !type !1
+@vt2_linkonce_odr = constant [1 x ptr] [ptr @vf2_linkonce_odr], !type !1
 
 define weak i32 @vf1_weak(ptr %this, i32 %arg) {
 ; CHECK-LABEL: define weak i32 @vf1_weak(
