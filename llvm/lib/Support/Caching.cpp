@@ -189,6 +189,7 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
         Committed = true;
         return Error::success();
       }
+      virtual Error commit() override { return Error::success(); }
       virtual AddBufferFn GetAddBuffer() override { return AddBuffer; }
     };
 
