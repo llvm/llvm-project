@@ -967,6 +967,76 @@ TEST_F(PointerFlowTest, ArrayOfStructInitList) {
                                       }));
 }
 
+TEST_F(PointerFlowTest, ScalarPointerBraceInit) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int *q;
+    void foo() {
+      int *p{q};
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"p", 1U}, {"q", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, EmptyInitsScalarInt) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo() {
+      int x{};
+      int y = {};
+      int *p{};
+      int *q = {};
+    }
+  )cpp"));
+
+  // No pointer-flow edge for 0-initialized scalar.
+  ASSERT_FALSE(getEntitySummary("foo"));
+}
+
+TEST_F(PointerFlowTest, EmptyInitsUnion) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    union U { int x; int *p; };
+    void foo() {
+      U u{};
+      U uu = {};
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_EQ(Sum, nullptr);
+}
+
+TEST_F(PointerFlowTest, EmptyInitsStruct) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    struct S { int x; int *p; };
+    void foo() {
+      S s{};
+      S ss = {};
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_EQ(Sum, nullptr);
+}
+
+TEST_F(PointerFlowTest, EmptyInitsClass) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    class C { public: int x; int *p; };
+    void foo() {
+      C c{};
+      C cc = {};
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_EQ(Sum, nullptr);
+}
+
 //////////////////////////////////////////////////////////////
 //              Return Tests.                               //
 //////////////////////////////////////////////////////////////
@@ -1125,5 +1195,72 @@ TEST_F(PointerFlowTest, NestedLambdaAssign) {
   Sum = getEntitySummary(LambdaOfVar{"inner_lambda"});
   ASSERT_NE(Sum, nullptr);
   EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"y", 1U}, {"x", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, ImplicitValueInit) {
+  ASSERT_EQ(setUpTest(R"cpp(
+    struct S { int *a; int *b; };
+    void foo(int *p) {
+      S s = {p};  // ImplicitValueInit inits 'b'
+    }
+  )cpp"),
+            true);
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"a", 1U}, {"p", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, InitListExpr) {
+  ASSERT_EQ(setUpTest(R"cpp(
+    void foo(int *p) {
+      int *q = {p};
+      int *r = {};
+    }
+  )cpp"),
+            true);
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"q", 1U}, {"p", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, CXXDefaultInitExpr) {
+  ASSERT_EQ(setUpTest(R"cpp(
+    int *g;
+    struct S {
+      int *field = g;
+    };
+    void foo(int *p) {
+      S s;
+      s.field = p;
+    }
+  )cpp"),
+            true);
+
+  auto *Sum = getEntitySummary<RecordDecl>("S");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"field", 1U}, {"g", 1U}}}));
+}
+
+TEST_F(PointerFlowTest, CXXConstructExprArrayInit) {
+  ASSERT_EQ(setUpTest(
+                R"cpp(
+    struct S {};
+    void foo(S *q) {
+      S arr[3]; // -VarDecl <...> arr 'S[3]' callinit
+                //   `-CXXConstructExpr <...> 'S[3]' 'void () noexcept'
+      q = arr;
+    }
+  )cpp"),
+            true);
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"q", 1U}, {"arr", 1U}}}));
 }
 } // namespace

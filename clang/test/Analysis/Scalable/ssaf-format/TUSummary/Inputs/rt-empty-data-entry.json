@@ -1,0 +1,14 @@
+{
+  "data": [
+    {
+      "summary_data": [],
+      "summary_name": "PairsEntitySummary"
+    }
+  ],
+  "id_table": [],
+  "linkage_table": [],
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "test.cpp"
+  }
+}
