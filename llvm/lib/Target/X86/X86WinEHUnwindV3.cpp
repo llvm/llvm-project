@@ -32,6 +32,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
@@ -191,6 +192,9 @@ FuncletInfo X86WinEHUnwindV3::analyzeFunclet(MachineFunction &MF,
       case X86::SEH_BeginEpilogue:
         InEpilog = true;
         CurrentEpilogOpCount = 0;
+        LLVM_DEBUG(dbgs() << "  epilog " << Info.Epilogs.size()
+                          << " begins at approx instruction position "
+                          << ApproxInstrPos << "\n");
         Info.Epilogs.push_back({&MI, ApproxInstrPos});
         break;
       case X86::SEH_EndEpilogue:
@@ -205,6 +209,9 @@ FuncletInfo X86WinEHUnwindV3::analyzeFunclet(MachineFunction &MF,
   }
 
   Info.EndInstrPos = ApproxInstrPos;
+  LLVM_DEBUG(dbgs() << "  funclet has " << Info.Epilogs.size()
+                    << " epilog(s); ends at approx instruction position "
+                    << ApproxInstrPos << "\n");
   return Info;
 }
 
@@ -237,6 +244,8 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   unsigned ApproxInstrPos = 0;
   MachineFunction::iterator Iter = MF.begin();
+
+  LLVM_DEBUG(dbgs() << "X86WinEHUnwindV3: processing " << MF.getName() << "\n");
 
   // Process each funclet (and the main function body) independently.
   // Each funclet gets its own UNWIND_INFO, so V3 limits apply per funclet.
@@ -290,19 +299,35 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
     unsigned FragmentFirstPos = 0;
     unsigned EpilogsInFragment = 0;
     const EpilogSplitPoint *LastEpilog = nullptr;
-    for (const EpilogSplitPoint &Epilog : Info.Epilogs) {
+    unsigned LastEpilogIdx = 0;
+    for (unsigned Idx = 0; Idx < Info.Epilogs.size(); ++Idx) {
+      const EpilogSplitPoint &Epilog = Info.Epilogs[Idx];
       // If adding this epilog would exceed a fragment limit, end the current
       // fragment after the previous epilog and start a new one here.
-      if (EpilogsInFragment > 0 && (EpilogsInFragment >= MaxV3Epilogs ||
-                                    Epilog.ApproxInstrPos - FragmentFirstPos >=
-                                        EpilogDistanceThreshold)) {
-        SplitAfter(*LastEpilog);
-        EpilogsInFragment = 0;
+      if (EpilogsInFragment > 0) {
+        bool ExceedsEpilogCount = EpilogsInFragment >= MaxV3Epilogs;
+        bool ExceedsDistance =
+            Epilog.ApproxInstrPos - FragmentFirstPos >= EpilogDistanceThreshold;
+        if (ExceedsEpilogCount || ExceedsDistance) {
+          LLVM_DEBUG({
+            dbgs() << "  splitting after epilog " << LastEpilogIdx
+                   << " because adding epilog " << Idx << " would exceed the ";
+            if (ExceedsEpilogCount)
+              dbgs() << "7-epilog-per-fragment limit\n";
+            else
+              dbgs() << "fragment distance threshold (epilog at "
+                     << Epilog.ApproxInstrPos << " vs fragment start "
+                     << FragmentFirstPos << ")\n";
+          });
+          SplitAfter(*LastEpilog);
+          EpilogsInFragment = 0;
+        }
       }
       if (EpilogsInFragment == 0)
         FragmentFirstPos = Epilog.ApproxInstrPos;
       EpilogsInFragment++;
       LastEpilog = &Epilog;
+      LastEpilogIdx = Idx;
     }
 
     // If the last fragment's first epilog is too far from the funclet end,
@@ -310,8 +335,13 @@ bool X86WinEHUnwindV3::runOnMachineFunction(MachineFunction &MF) {
     // epilog-free chained fragment, keeping the last fragment's epilogs close
     // to their tail.
     if (LastEpilog &&
-        Info.EndInstrPos - FragmentFirstPos >= EpilogDistanceThreshold)
+        Info.EndInstrPos - FragmentFirstPos >= EpilogDistanceThreshold) {
+      LLVM_DEBUG(dbgs() << "  splitting after last epilog " << LastEpilogIdx
+                        << " to isolate the trailing tail (funclet end "
+                        << Info.EndInstrPos << " vs fragment start "
+                        << FragmentFirstPos << ")\n");
       SplitAfter(*LastEpilog);
+    }
   }
 
   if (Changed)

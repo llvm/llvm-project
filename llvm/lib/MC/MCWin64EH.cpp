@@ -1115,7 +1115,8 @@ bool MCUnwindV3EpilogOffsetTargetExpr::evaluateAsRelocatableImpl(
   }
   if (*Offset < INT16_MIN || *Offset > INT16_MAX) {
     Asm->getContext().reportError(
-        Loc, "Epilog offset out of signed 16-bit range for V3 encoding in " +
+        Loc, "Epilog offset " + Twine(*Offset) +
+                 " out of signed 16-bit range for V3 encoding in " +
                  FrameInfo.Function->getName());
     return false;
   }
