@@ -91,11 +91,10 @@ PreservedAnalyses LowerCommentStringPass::run(Module &M,
     return PreservedAnalyses::all();
 
   // Add implicit.ref from every function to each loadtime comment global.
-  for (GlobalValue *GV : LoadTimeCommentGlobals) {
-    for (Function &F : M) {
-      if (F.isDeclaration())
-        continue;
-
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+    for (GlobalValue *GV : LoadTimeCommentGlobals) {
       Metadata *Ops[] = {ConstantAsMetadata::get(GV)};
       MDNode *NewMD = MDNode::get(Ctx, Ops);
       F.addMetadata(LLVMContext::MD_implicit_ref, *NewMD);
