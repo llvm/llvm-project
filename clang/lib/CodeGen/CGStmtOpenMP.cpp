@@ -1985,9 +1985,10 @@ checkForLastprivateConditionalUpdate(CodeGenFunction &CGF,
       const auto *DRE = dyn_cast<DeclRefExpr>(Ref->IgnoreParenImpCasts());
       if (!DRE)
         continue;
-      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
         PrivateDecls.insert(VD);
-      CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, Ref);
+        CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, Ref);
+      }
     }
   }
   // Privates should ne analyzed since they are not captured at all.

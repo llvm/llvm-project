@@ -19797,19 +19797,17 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
     if (!VD && !SemaRef.CurContext->isDependentContext()) {
       if (TopDVar.CKind == OMPC_lastprivate) {
         Ref = TopDVar.PrivateCopy;
-      } else {
-        if (!IsBindingDecl) {
-          auto *FD = dyn_cast<FieldDecl>(D);
-          VarDecl *VD = FD ? DSAStack->getImplicitFDCapExprDecl(FD) : nullptr;
-          if (VD)
-            Ref = buildDeclRefExpr(SemaRef, VD,
-                                   VD->getType().getNonReferenceType(),
-                                   RefExpr->getExprLoc());
-          else
-            Ref = buildCapture(SemaRef, D, SimpleRefExpr, /*WithInit=*/true);
-          if (VD || !isOpenMPCapturedDecl(D))
-            ExprCaptures.push_back(Ref->getDecl());
-        }
+      } else if (!IsBindingDecl) {
+        auto *FD = dyn_cast<FieldDecl>(D);
+        VarDecl *VD = FD ? DSAStack->getImplicitFDCapExprDecl(FD) : nullptr;
+        if (VD)
+          Ref =
+              buildDeclRefExpr(SemaRef, VD, VD->getType().getNonReferenceType(),
+                               RefExpr->getExprLoc());
+        else
+          Ref = buildCapture(SemaRef, D, SimpleRefExpr, /*WithInit=*/true);
+        if (VD || !isOpenMPCapturedDecl(D))
+          ExprCaptures.push_back(Ref->getDecl());
       }
     }
     if (!IsImplicitClause)

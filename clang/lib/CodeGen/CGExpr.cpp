@@ -3616,12 +3616,10 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
   // reference type. DeclRefExpr with VK_LValue requires a non-reference type
   // (AST invariant). EmitDeclRefLValue will load any reference for us.
   QualType DREType = DD->getType().getNonReferenceType();
-  DeclarationNameInfo NameInfo(DD->getDeclName(), SourceLocation());
-  DeclRefExpr *DRE = DeclRefExpr::Create(
-      getContext(), NestedNameSpecifierLoc(), SourceLocation(), DD,
-      /*RefersToEnclosingVariableOrCapture=*/true, NameInfo, DREType,
-      VK_LValue);
-  LValue BaseLVal = EmitDeclRefLValue(DRE);
+  DeclRefExpr DRE(getContext(), DD,
+                  /*RefersToEnclosingVariableOrCapture=*/true, DREType,
+                  VK_LValue, SourceLocation());
+  LValue BaseLVal = EmitDeclRefLValue(&DRE);
   QualType CanonType = DREType.getCanonicalType();
   Address Addr = BaseLVal.getAddress();
   llvm::Type *ExpectedTy = CGM.getTypes().ConvertTypeForMem(CanonType);
