@@ -2426,7 +2426,7 @@ instCombineSVEVectorFuseMulAddSub(InstCombiner &IC, IntrinsicInst &II,
     FMFSource = &II;
   }
 
-  CallInst *Res;
+  Value *Res;
   if (MergeIntoAddendOp)
     Res = IC.Builder.CreateIntrinsic(FuseOpc, {II.getType()},
                                      {P, AddendOp, MulOp0, MulOp1}, FMFSource);
@@ -2501,6 +2501,29 @@ instCombineSVEVectorBinOp(InstCombiner &IC, IntrinsicInst &II) {
   auto BinOp = IC.Builder.CreateBinOpFMF(
       BinOpCode, II.getOperand(1), II.getOperand(2), II.getFastMathFlags());
   return IC.replaceInstUsesWith(II, BinOp);
+}
+
+static std::optional<Instruction *>
+instCombineSVEVectorMlaU(InstCombiner &IC, IntrinsicInst &II) {
+  assert(II.getIntrinsicID() == Intrinsic::aarch64_sve_mla_u &&
+         "Expected MLA_U intrinsic");
+  Value *Acc = II.getArgOperand(1);
+  Value *MulOp0 = II.getArgOperand(2);
+  Value *MulOp1 = II.getArgOperand(3);
+
+  // For mla_u, inactive lanes are undefined, so it is valid to drop the
+  // predicate when replacing mla_u(acc, x, 1) with add(acc, x) or
+  // mla_u(acc, x, -1) with sub(acc, x).
+  if (match(MulOp0, m_One()))
+    return IC.replaceInstUsesWith(II, IC.Builder.CreateAdd(Acc, MulOp1));
+  if (match(MulOp1, m_One()))
+    return IC.replaceInstUsesWith(II, IC.Builder.CreateAdd(Acc, MulOp0));
+  if (match(MulOp0, m_AllOnes()))
+    return IC.replaceInstUsesWith(II, IC.Builder.CreateSub(Acc, MulOp1));
+  if (match(MulOp1, m_AllOnes()))
+    return IC.replaceInstUsesWith(II, IC.Builder.CreateSub(Acc, MulOp0));
+
+  return std::nullopt;
 }
 
 static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
@@ -3068,6 +3091,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul_u,
                                              Intrinsic::aarch64_sve_mla_u>(
         IC, II, true);
+  case Intrinsic::aarch64_sve_mla_u:
+    return instCombineSVEVectorMlaU(IC, II);
   case Intrinsic::aarch64_sve_sub:
     return instCombineSVEVectorSub(IC, II);
   case Intrinsic::aarch64_sve_sub_u:
