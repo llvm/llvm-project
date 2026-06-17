@@ -66,3 +66,17 @@ func.func @test_fir_llvm_ptr_to_index() {
   // CHECK: Generated: %{{.*}} = fir.convert %{{.*}} : (!fir.llvm_ptr<i8>) -> index
   return
 }
+
+// -----
+
+// !fir.alloca !fir.box<...> produces a !fir.ref<!fir.box<...>> — the
+// pointer-to-descriptor type used for assumed-shape dummy arguments and
+// allocatable reduction variables.  getAsMemRefType must yield the same
+// strided memref as the box itself rather than asserting.
+func.func @test_fir_ref_box_array_to_strided_memref() {
+  %0 = fir.alloca !fir.box<!fir.array<?xi32>> {test.cast, cast_dest = memref<?xi32, strided<[?], offset: ?>>}
+  // CHECK: Successfully generated cast for operation: %{{.*}} = fir.alloca !fir.box<!fir.array<?xi32>>{{.*}}
+  // CHECK: Cast result type: memref<?xi32, strided<[?], offset: ?>>
+  // CHECK: Generated: %{{.*}} = fir.convert %{{.*}} : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> memref<?xi32, strided<[?], offset: ?>>
+  return
+}
