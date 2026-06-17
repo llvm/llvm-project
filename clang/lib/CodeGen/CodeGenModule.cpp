@@ -8054,7 +8054,11 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     if (LangOpts.SYCLIsDevice)
       break;
     auto *AD = cast<FileScopeAsmDecl>(D);
-    getModule().appendModuleInlineAsm(AD->getAsmString());
+
+    const TargetOptions &TargetOpts = getTarget().getTargetOpts();
+    std::string Features = llvm::join(TargetOpts.Features, ",");
+    getModule().appendModuleInlineAsm(llvm::Module::GlobalAsmFragment(
+        AD->getAsmString(), Features, TargetOpts.CPU));
     break;
   }
 

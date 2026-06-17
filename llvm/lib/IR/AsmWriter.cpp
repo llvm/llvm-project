@@ -3125,21 +3125,42 @@ void AssemblyWriter::printModule(const Module *M) {
   if (!M->getTargetTriple().empty())
     Out << "target triple = \"" << M->getTargetTriple().str() << "\"\n";
 
-  if (!M->getModuleInlineAsm().empty()) {
+  if (M->hasModuleInlineAsm()) {
     Out << '\n';
 
-    // Split the string into lines, to make it easier to read the .ll file.
-    StringRef Asm = M->getModuleInlineAsm();
-    do {
-      StringRef Front;
-      std::tie(Front, Asm) = Asm.split('\n');
+    for (const Module::GlobalAsmFragment &Frag : M->getModuleInlineAsm()) {
+      Out << "module asm";
+      if (!Frag.TargetFeatures.empty() || !Frag.TargetCPU.empty()) {
+        ListSeparator LS;
+        Out << "(";
+        if (!Frag.TargetFeatures.empty()) {
+          Out << LS;
+          Out << "target_features=\"";
+          printEscapedString(Frag.TargetFeatures, Out);
+          Out << "\"";
+        }
+        if (!Frag.TargetCPU.empty()) {
+          Out << LS;
+          Out << "target_cpu=\"";
+          printEscapedString(Frag.TargetCPU, Out);
+          Out << "\"";
+        }
+        Out << ")";
+      }
+      Out << "\n";
+      // Split the string into lines, to make it easier to read the .ll file.
+      StringRef Asm = Frag.Asm;
+      do {
+        StringRef Front;
+        std::tie(Front, Asm) = Asm.split('\n');
 
-      // We found a newline, print the portion of the asm string from the
-      // last newline up to this newline.
-      Out << "module asm \"";
-      printEscapedString(Front, Out);
-      Out << "\"\n";
-    } while (!Asm.empty());
+        // We found a newline, print the portion of the asm string from the
+        // last newline up to this newline.
+        Out << "    \"";
+        printEscapedString(Front, Out);
+        Out << "\"\n";
+      } while (!Asm.empty());
+    }
   }
 
   printTypeIdentities();

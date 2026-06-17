@@ -32,17 +32,19 @@
 ; RUN:  -r %t4,foo@@VER1,px
 ; RUN: llvm-dis < %to3.0.0.preopt.bc | FileCheck %s --check-prefix=ASM3
 
-; ASM1:      module asm ".lto_discard foo"
-; ASM1-NEXT: module asm ".weak foo"
-; ASM1-NEXT: module asm ".equ foo,bar"
+; ASM1: module asm
+; ASM1-NEXT: ".lto_discard foo"
+; ASM1-NEXT: ".weak foo"
+; ASM1-NEXT: ".equ foo,bar"
 
-; ASM2:      module asm ".lto_discard foo"
-; ASM2-NEXT: module asm ".weak foo"
-; ASM2-NEXT: module asm ".equ foo,bar"
-; ASM2-NEXT: module asm ".lto_discard"
-; ASM2-NEXT: module asm " .global foo ; foo: leal    2(%rdi), %eax"
+; ASM2: module asm
+; ASM2-NEXT: ".lto_discard foo"
+; ASM2-NEXT: ".weak foo"
+; ASM2-NEXT: ".equ foo,bar"
+; ASM2-NEXT: ".lto_discard"
+; ASM2-NEXT: " .global foo ; foo: leal    2(%rdi), %eax"
 
-; ASM3-NOT:  module asm ".lto_discard foo"
+; ASM3-NOT:  ".lto_discard foo"
 
 ; SYM: T foo
 

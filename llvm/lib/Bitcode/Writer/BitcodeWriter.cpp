@@ -1548,9 +1548,16 @@ void ModuleBitcodeWriter::writeModuleInfo() {
   const std::string &DL = M.getDataLayoutStr();
   if (!DL.empty())
     writeStringRecord(Stream, bitc::MODULE_CODE_DATALAYOUT, DL, 0 /*TODO*/);
-  if (!M.getModuleInlineAsm().empty())
-    writeStringRecord(Stream, bitc::MODULE_CODE_ASM, M.getModuleInlineAsm(),
-                      0 /*TODO*/);
+
+  for (const Module::GlobalAsmFragment &Frag : M.getModuleInlineAsm()) {
+    if (!Frag.TargetFeatures.empty())
+      writeStringRecord(Stream, bitc::MODULE_CODE_ASM_TARGET_FEATURES,
+                        Frag.TargetFeatures, 0);
+    if (!Frag.TargetCPU.empty())
+      writeStringRecord(Stream, bitc::MODULE_CODE_ASM_TARGET_CPU,
+                        Frag.TargetCPU, 0);
+    writeStringRecord(Stream, bitc::MODULE_CODE_ASM, Frag.Asm, 0 /*TODO*/);
+  }
 
   // Emit information about sections and GC, computing how many there are. Also
   // compute the maximum alignment value.

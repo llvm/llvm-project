@@ -595,6 +595,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(tail);
   KEYWORD(musttail);
   KEYWORD(notail);
+  KEYWORD(target_cpu);
+  KEYWORD(target_features);
   KEYWORD(target);
   KEYWORD(triple);
   KEYWORD(source_filename);

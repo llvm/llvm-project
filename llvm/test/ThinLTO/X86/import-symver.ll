@@ -9,7 +9,8 @@
 ; RUN: llvm-dis %t1.bc.thinlto.imported.bc -o - | FileCheck --check-prefix=NOIMPORT %s
 
 ; When @bar gets imported, the symver must be imported too.
-; IMPORT: module asm ".symver bar, bar@BAR_1.2.3"
+; IMPORT: module asm
+; IMPORT-NEXT: ".symver bar, bar@BAR_1.2.3"
 ; IMPORT: declare dso_local i32 @bar()
 
 ; When @bar isn't imported, the symver is also not imported.
