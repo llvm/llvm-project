@@ -39,6 +39,8 @@ using namespace llvm;
 using namespace llvm::dxil;
 using namespace llvm::mcdxbc;
 
+static cl::opt<bool> ShaderHashDependsOnSource(
+    "dx-Zss", cl::desc("Compute Shader Hash considering source information"));
 static cl::opt<std::string>
     PdbFileName("dx-pdb-file",
                 cl::desc("Specify the PDB output file path for DirectX target"),
@@ -129,13 +131,24 @@ void DXContainerGlobals::addSection(Module &M,
 
 void DXContainerGlobals::computeShaderHashAndDebugName(
     Module &M, SmallVector<GlobalValue *> &Globals) {
-  // TODO: Add -Zss flag to enable/disable calculating shader hash from ILDB.
-  auto *DXILConstant =
-      cast<ConstantDataArray>(M.getNamedGlobal("dx.dxil")->getInitializer());
+  ConstantDataArray *DXILConstant;
   MD5 Digest;
+  dxbc::ShaderHash HashData = {0, {0}};
+
+  if (ShaderHashDependsOnSource) {
+    if (auto *ILDB = M.getNamedGlobal("dx.ildb")) {
+      DXILConstant = cast<ConstantDataArray>(ILDB->getInitializer());
+      HashData.Flags = static_cast<uint32_t>(dxbc::HashFlags::IncludesSource);
+    } else {
+      reportFatalUsageError("/Zss requires debug info (/Zi or /Zs)");
+    }
+  } else {
+    DXILConstant =
+        cast<ConstantDataArray>(M.getNamedGlobal("dx.dxil")->getInitializer());
+  }
+
   Digest.update(DXILConstant->getRawDataValues());
   MD5::MD5Result Result = Digest.final();
-  dxbc::ShaderHash HashData = {0, {0}};
 
   memcpy(reinterpret_cast<void *>(&HashData.Digest), Result.data(), 16);
   if (sys::IsBigEndianHost)
