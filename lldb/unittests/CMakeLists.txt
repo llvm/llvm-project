@@ -10,6 +10,12 @@ if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
   add_compile_options("-Wno-suggest-override")
 endif()
 
+if (MSVC)
+  option(LLDB_UNITTEST_STRIP_DEBUG_INFO
+    "Strip debug info from lldb unit-test binaries to cut link time and disk \
+  usage when building with MSVC. Turn OFF when you need to debug a unittest binary." OFF)
+endif()
+
 function(add_lldb_unittest test_name)
   cmake_parse_arguments(ARG
     "SBAPITEST"
@@ -47,6 +53,16 @@ function(add_lldb_unittest test_name)
     add_properties_for_swift_modules(${test_name} "../")
   endif()
 # END Swift Mods
+
+  if (MSVC)
+    if (LLDB_UNITTEST_STRIP_DEBUG_INFO)
+      target_link_options(${test_name} PRIVATE
+        "LINKER:/DEBUG:NONE"
+        "LINKER:/INCREMENTAL:NO"
+        "LINKER:/OPT:REF"
+        "LINKER:/OPT:ICF")
+    endif()
+  endif()
 endfunction()
 
 function(add_unittest_inputs test_name inputs)
