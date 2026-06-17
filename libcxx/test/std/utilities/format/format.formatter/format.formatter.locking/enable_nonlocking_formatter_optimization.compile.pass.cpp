@@ -93,6 +93,12 @@ void test_P0645() {
 #ifndef TEST_HAS_NO_INT128
   static_assert(std::enable_nonlocking_formatter_optimization<__uint128_t>);
 #endif
+#if defined(__BITINT_MAXWIDTH__) && __BITINT_MAXWIDTH__ >= 256
+  // A _BitInt wider than 128 bits formats through the handle path, which the
+  // optimization does not cover.
+  static_assert(!std::enable_nonlocking_formatter_optimization<signed _BitInt(256)>);
+  static_assert(!std::enable_nonlocking_formatter_optimization<unsigned _BitInt(256)>);
+#endif
 
   static_assert(std::enable_nonlocking_formatter_optimization<float>);
   static_assert(std::enable_nonlocking_formatter_optimization<double>);
