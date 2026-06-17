@@ -359,6 +359,8 @@ private:
   SDValue PromoteIntRes_FunnelShift(SDNode *N);
   SDValue PromoteIntRes_VPFunnelShift(SDNode *N);
   SDValue PromoteIntRes_CLMUL(SDNode *N);
+  SDValue PromoteIntRes_PEXT(SDNode *N);
+  SDValue PromoteIntRes_PDEP(SDNode *N);
   SDValue PromoteIntRes_IS_FPCLASS(SDNode *N);
   SDValue PromoteIntRes_PATCHPOINT(SDNode *N);
   SDValue PromoteIntRes_READ_REGISTER(SDNode *N);
@@ -502,6 +504,8 @@ private:
   void ExpandIntRes_Rotate            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_FunnelShift       (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_PEXT(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_PDEP(SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void ExpandIntRes_VSCALE            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_READ_REGISTER(SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -986,6 +990,7 @@ private:
   SDValue SplitVecOp_ExtVecInRegOp(SDNode *N);
   SDValue SplitVecOp_FAKE_USE(SDNode *N);
   SDValue SplitVecOp_STORE(StoreSDNode *N, unsigned OpNo);
+  SDValue SplitVecOp_ATOMIC_STORE(AtomicSDNode *N);
   SDValue SplitVecOp_VP_STORE(VPStoreSDNode *N, unsigned OpNo);
   SDValue SplitVecOp_VP_STRIDED_STORE(VPStridedStoreSDNode *N, unsigned OpNo);
   SDValue SplitVecOp_MSTORE(MaskedStoreSDNode *N, unsigned OpNo);
@@ -1104,6 +1109,7 @@ private:
   SDValue WidenVecOp_EXTEND_VECTOR_INREG(SDNode *N);
   SDValue WidenVecOp_FAKE_USE(SDNode *N);
   SDValue WidenVecOp_STORE(SDNode* N);
+  SDValue WidenVecOp_ATOMIC_STORE(AtomicSDNode *ST);
   SDValue WidenVecOp_VP_STORE(SDNode *N, unsigned OpNo);
   SDValue WidenVecOp_VP_STRIDED_STORE(SDNode *N, unsigned OpNo);
   SDValue WidenVecOp_MSTORE(SDNode* N, unsigned OpNo);

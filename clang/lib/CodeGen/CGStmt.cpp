@@ -609,7 +609,7 @@ CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
       // We can't return an RValue here because there might be cleanups at
       // the end of the StmtExpr.  Because of that, we have to emit the result
       // here into a temporary alloca.
-      RetAlloca = CreateMemTemp(ExprTy);
+      RetAlloca = CreateMemTempWithoutCast(ExprTy);
       EmitAnyExprToMem(E, RetAlloca, Qualifiers(),
                        /*IsInit*/ false);
     }

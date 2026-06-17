@@ -36,6 +36,9 @@ LLVM_LIBC_FUNCTION(long, sysconf, (int name)) {
     return static_cast<long>(
         sysinfo::parse_nproc_with_fallback_from(sysinfo::ONLINE_NPROC_PATH));
 
+  if (name == _SC_THREADS)
+    return _POSIX_THREADS;
+
   // TODO: Complete the rest of the sysconf options.
   libc_errno = EINVAL;
   return -1;
