@@ -814,22 +814,48 @@ static void expandWideIntegers(Module &M) {
   }
 }
 
-// The AGX JIT cannot legalize bool-vector <-> integer bitcasts (the
-// optimizer's mask-packing idiom, `bitcast <N x i1> to iN`); expand into
-// per-bit shifts.
+static bool isI1VecScalarBitcast(BitCastInst *BC) {
+  auto *SV = dyn_cast<FixedVectorType>(BC->getSrcTy());
+  auto *DV = dyn_cast<FixedVectorType>(BC->getDestTy());
+  return (SV && SV->getElementType()->isIntegerTy(1) &&
+          BC->getDestTy()->isIntegerTy(SV->getNumElements())) ||
+         (DV && DV->getElementType()->isIntegerTy(1) &&
+          BC->getSrcTy()->isIntegerTy(DV->getNumElements()));
+}
+
+static bool isI1VecToSubByteVecBitcast(BitCastInst *BC) {
+  auto *SV = dyn_cast<FixedVectorType>(BC->getSrcTy());
+  auto *DV = dyn_cast<FixedVectorType>(BC->getDestTy());
+  if (!SV || !DV || !SV->getElementType()->isIntegerTy(1) ||
+      !DV->getElementType()->isIntegerTy())
+    return false;
+  unsigned K = DV->getElementType()->getIntegerBitWidth();
+  return SV->getNumElements() == DV->getNumElements() * K;
+}
+
 static void scalarizeBoolVectorCasts(Module &M) {
   auto Casts = collectInsts<BitCastInst>(M, [](BitCastInst *BC) {
-    auto *SV = dyn_cast<FixedVectorType>(BC->getSrcTy());
-    auto *DV = dyn_cast<FixedVectorType>(BC->getDestTy());
-    return (SV && SV->getElementType()->isIntegerTy(1) &&
-            BC->getDestTy()->isIntegerTy(SV->getNumElements())) ||
-           (DV && DV->getElementType()->isIntegerTy(1) &&
-            BC->getSrcTy()->isIntegerTy(DV->getNumElements()));
+    return isI1VecScalarBitcast(BC) || isI1VecToSubByteVecBitcast(BC);
   });
   for (auto *BC : Casts) {
     IRBuilder<> B(BC);
     Value *R;
-    if (auto *SV = dyn_cast<FixedVectorType>(BC->getSrcTy())) {
+    if (isI1VecToSubByteVecBitcast(BC)) {
+      auto *DV = cast<FixedVectorType>(BC->getDestTy());
+      Type *ElemTy = DV->getElementType();
+      unsigned K = ElemTy->getIntegerBitWidth();
+      R = UndefValue::get(DV);
+      for (unsigned E = 0; E < DV->getNumElements(); ++E) {
+        Value *Packed = ConstantInt::get(ElemTy, 0);
+        for (unsigned K0 = 0; K0 < K; ++K0) {
+          Value *Bit = B.CreateZExt(
+              B.CreateExtractElement(BC->getOperand(0), B.getInt64(E * K + K0)),
+              ElemTy);
+          Packed = B.CreateOr(Packed, B.CreateShl(Bit, K0));
+        }
+        R = B.CreateInsertElement(R, Packed, B.getInt64(E));
+      }
+    } else if (auto *SV = dyn_cast<FixedVectorType>(BC->getSrcTy())) {
       R = ConstantInt::get(BC->getDestTy(), 0);
       for (unsigned L = 0; L < SV->getNumElements(); ++L) {
         Value *Bit = B.CreateZExt(
@@ -911,6 +937,39 @@ static void scalarizeAggregateLoads(Module &M) {
     }
     LI->replaceAllUsesWith(Agg);
     LI->eraseFromParent();
+  }
+}
+
+static void fixSelectPointerArms(Module &M, PointeeTypeMap &PTM) {
+  auto pointeeOf = [&](Value *V) -> Type * {
+    if (isa<ConstantPointerNull>(V))
+      return nullptr;
+    return effectivePointee(V, PTM);
+  };
+  auto Selects = collectInsts<SelectInst>(M, [&](SelectInst *S) {
+    if (!S->getType()->isPointerTy())
+      return false;
+    Value *T = S->getTrueValue(), *F = S->getFalseValue();
+    if (isa<ConstantPointerNull>(T) || isa<ConstantPointerNull>(F))
+      return true;
+    Type *Use = PointeeTypeMap::inferFromUsage(S);
+    return pointeeOf(T) != pointeeOf(F) ||
+           (Use && (pointeeOf(T) != Use || pointeeOf(F) != Use));
+  });
+  for (auto *S : Selects) {
+    Value *T = S->getTrueValue(), *F = S->getFalseValue();
+    Type *Pointee = PointeeTypeMap::inferFromUsage(S);
+    if (!Pointee)
+      Pointee = pointeeOf(T);
+    if (!Pointee)
+      Pointee = pointeeOf(F);
+    if (!Pointee)
+      continue;
+    if (pointeeOf(T) != Pointee || isa<ConstantPointerNull>(T))
+      S->setOperand(1, retypePointerVia(T, Pointee, S, PTM));
+    if (pointeeOf(F) != Pointee || isa<ConstantPointerNull>(F))
+      S->setOperand(2, retypePointerVia(F, Pointee, S, PTM));
+    PTM.set(S, Pointee);
   }
 }
 
@@ -1442,6 +1501,7 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
     // --- Stage C: pointer-pointee type agreement ---
     fixPhiIncomingTypes(M, PTM);
     fixMMAPointerSuffixMismatch(M, PTM);
+    fixSelectPointerArms(M, PTM);
     scalarizeAggregateLoads(M);
     fixAccessTypeMismatch(M, PTM);
 

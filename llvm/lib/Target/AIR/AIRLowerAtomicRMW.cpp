@@ -90,6 +90,8 @@ static bool lowerAtomicRMW(Module &M) {
 
     Type *ValTy = RMW->getValOperand()->getType();
     bool IsFloat = ValTy->isFloatTy();
+    if (!(ValTy->isFloatTy() || ValTy->isIntegerTy(32)))
+      continue;
     std::string Name = buildAtomicName(IsGlobal, RMW->getOperation(), IsFloat);
     if (Name.empty())
       continue;
