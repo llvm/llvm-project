@@ -392,6 +392,9 @@ uint32_t GenericKernelTy::getEffectiveNumBlocks(
     bool IsNumThreadsFromUser) const {
   assert(!isBareMode() && "bare kernel should not call this function");
 
+  // TODO: We need to honor any value and consequently allow more than the
+  // block limit. For this we might need to start multiple kernels or let the
+  // blocks start again until the requested number has been started.
   if (UserNumBlocks > 0)
     return std::min(UserNumBlocks,
                     GenericDevice.getBlockLimit(EffectiveNumThreads));
