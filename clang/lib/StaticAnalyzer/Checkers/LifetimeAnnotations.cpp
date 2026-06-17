@@ -188,10 +188,10 @@ void LifetimeAnnotations::checkLifetimeEnd(const VarDecl *VD, CheckerContext &C)
 
   for (auto &&[Origin, SourceSet] : LBMap) {
     for (const MemRegion *Region : SourceSet) {
-      if (const VarDecl *Variable = dyn_cast_if_present<VarRegion>(Region)->getDecl()) {
-        if (Variable == VD) {
+      if (const VarDecl *VDRegion = dyn_cast_if_present<VarRegion>(Region)->getDecl()) {
+        if (VDRegion == VD) {
           ExplodedNode *N = C.generateNonFatalErrorNode();
-          reportUseAfterScope(Variable, N, C);
+          reportUseAfterScope(VDRegion, N, C);
         }
       }
     }
