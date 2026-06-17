@@ -66,15 +66,27 @@ public:
   /// Return true if the given FIR type can be converted to a MemRef-typed
   /// descriptor (i.e. is a supported base element for MemRef converting).
   bool convertibleMemrefType(mlir::Type ty) {
-    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty))
-      return convertibleMemrefType(refTy.getElementType());
-    else if (auto pointerTy = mlir::dyn_cast<fir::PointerType>(ty))
-      return convertibleMemrefType(pointerTy.getElementType());
-    else if (auto heapTy = mlir::dyn_cast<fir::HeapType>(ty))
-      return convertibleMemrefType(heapTy.getElementType());
-    else if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
+    // !fir.box<T> is a descriptor value and maps to a strided memref:
+    //   !fir.box<!fir.array<?xi32>>  →  memref<?xi32, strided<[?], offset:?>>
+    // !fir.ref<!fir.box<T>> is a pointer-to-descriptor (e.g. an assumed-shape
+    // dummy argument or allocatable on entry). There is no memref equivalent:
+    // memref descriptors are SSA values, not addressable memory objects.
+    // Passing ref<box<T>> to convertBaseType would assert on the invalid
+    // element type.
+    mlir::Type indirectElTy;
+    if (auto t = mlir::dyn_cast<fir::ReferenceType>(ty))
+      indirectElTy = t.getElementType();
+    else if (auto t = mlir::dyn_cast<fir::PointerType>(ty))
+      indirectElTy = t.getElementType();
+    else if (auto t = mlir::dyn_cast<fir::HeapType>(ty))
+      indirectElTy = t.getElementType();
+    if (indirectElTy)
+      return !mlir::isa<fir::BoxType>(indirectElTy) &&
+             convertibleMemrefType(indirectElTy);
+
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
       return convertibleMemrefType(seqTy.getElementType());
-    else if (auto boxTy = mlir::dyn_cast<fir::BoxType>(ty))
+    if (auto boxTy = mlir::dyn_cast<fir::BoxType>(ty))
       return convertibleMemrefType(boxTy.getElementType());
 
     setConvertScalarTypesOnly(true);
