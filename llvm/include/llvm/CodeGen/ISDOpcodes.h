@@ -1033,7 +1033,7 @@ enum NodeType {
   /// The first operand is the source value.
   /// The second operand is a constant indicating the destination FP semantics.
   /// The third operand is a constant indication the rounding mode.
-  /// The last operand is a boolean consant indicating whether the result has
+  /// The last operand is a boolean constant indicating whether the result has
   /// to be saturated.
   CONVERT_TO_ARBITRARY_FP,
 
