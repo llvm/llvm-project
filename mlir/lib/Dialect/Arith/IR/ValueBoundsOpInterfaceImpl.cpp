@@ -276,7 +276,7 @@ struct MaxSIOpInterface
                                    ValueBoundsConstraintSet &cstr) const {
     auto maxOp = cast<arith::MaxSIOp>(op);
     assert(value == maxOp.getResult() && "invalid value");
-
+    
     AffineExpr lhs = cstr.getExpr(maxOp.getLhs());
     AffineExpr rhs = cstr.getExpr(maxOp.getRhs());
     cstr.bound(value) >= lhs;
