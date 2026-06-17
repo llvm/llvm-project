@@ -14,7 +14,6 @@
 
 #include "llvm/DTLTO/DTLTO.h"
 
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -205,22 +204,13 @@ lto::DTLTO::addInput(std::unique_ptr<InputFile> InputPtr) {
 // Save the contents of ThinLTO-enabled input files that must be serialized for
 // distribution.
 Error lto::DTLTO::serializeLTOInputs() {
-  DenseSet<StringRef> RequiredModuleIDs;
-  for (const Job &J : Jobs) {
-    if (J.Cached)
-      continue;
-    RequiredModuleIDs.insert(J.ModuleID);
-    for (StringRef ImportPath : J.ImportsFilesList)
-      RequiredModuleIDs.insert(ImportPath);
-  }
-
   for (auto &Input : InputFiles) {
     if (!Input->isThinLTO() || !Input->getSerializeForDistribution())
       continue;
 
     // Save the content of the input file to a file named after the module ID.
     StringRef ModuleID = Input->getName();
-    if (!RequiredModuleIDs.contains(ModuleID))
+    if (!InputModuleIDsToSerialize.contains(ModuleID))
       continue;
     TimeTraceScope TimeScope("Serialize bitcode input for DTLTO", ModuleID);
     MemoryBufferRef Buf = Input->getFileBuffer();

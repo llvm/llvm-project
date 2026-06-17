@@ -16,6 +16,7 @@
 #ifndef LLVM_DTLTO_DTLTO_H
 #define LLVM_DTLTO_DTLTO_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -164,6 +165,8 @@ public:
 private:
   // Backend compilation jobs, one per module.
   SmallVector<Job> Jobs;
+  // Input module IDs that must be serialized to individual files.
+  DenseSet<StringRef> InputModuleIDsToSerialize;
   // Task index offset for first ThinLTO job.
   unsigned ThinLTOTaskOffset;
   // Optional cache for native objects.
@@ -211,10 +214,13 @@ private:
   ///    distributor will skip this job. On a cache miss, J.CacheAddStream is
   ///    set for later use when storing the compiled object.
   ///
-  /// 4. Writes the per-module summary index to disk only on cache miss. The
+  /// 4. Records the module ID and imported module IDs that must be serialized
+  ///    to individual files.
+  ///
+  /// 5. Writes the per-module summary index to disk only on cache miss. The
   ///    remote compiler will read this via -fthinlto-index=.
   ///
-  /// 5. Registers the job's temporary files for removal on abnormal process
+  /// 6. Registers the job's temporary files for removal on abnormal process
   ///    exit when SaveTemps is false (only for files that will be created).
   ///
   /// \param ModulePath The module identifier (bitcode path) for the ThinLTO
