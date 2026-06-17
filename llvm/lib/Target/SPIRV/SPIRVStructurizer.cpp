@@ -1014,7 +1014,7 @@ class SPIRVStructurizer : public FunctionPass {
         // Find the target block that needs a new intermediate merge.
         BasicBlock *Target = nullptr;
 
-        // Check 1: Header must dominate merge.
+        // Header must dominate its merge block.
         if (!DT.dominates(&BB, Merge)) {
           // Find the convergence point of all successors.
           BasicBlock *Convergence = nullptr;
@@ -1029,18 +1029,18 @@ class SPIRVStructurizer : public FunctionPass {
 
           // Target is not used directly as the merge. The downstream code
           // creates a new intermediate block (NewMerge) intercepting only the
-          // header-dominated predecessors of Target. This works regardless of
-          // whether Header dominates Convergence: if it does, all predecessors
+          // BB-dominated predecessors of Target. This works regardless of
+          // whether BB dominates Convergence: if it does, all predecessors
           // get redirected; if not, only the dominated subset does, while
           // sibling paths continue directly to Convergence.
           Target = Convergence;
         }
 
-        // Check 2 is intentionally omitted. Branching to a merge block of
-        // an enclosing construct (selection or loop) is a valid structured
-        // exit. The invalid patterns are caught by Check 1 on the deeper
-        // headers that lose dominance over their merge blocks after routing
-        // blocks are created.
+        // Note: We do NOT check whether a successor escapes this construct
+        // by branching to the merge of an enclosing selection/loop. That is a
+        // valid structured exit in SPIR-V. The actual invalid patterns are
+        // caught above (header not dominating merge) on the deeper headers
+        // that lose dominance after routing blocks are created.
 
         if (!Target)
           continue;
@@ -1215,8 +1215,8 @@ class SPIRVStructurizer : public FunctionPass {
       }
 
       // Build fall-through edges among cases (excluding default).
-      // FallThrough[i] = j means case i's target block branches to case j's
-      // target block, so case i must immediately precede case j.
+      // FallThrough[I] = J means case I's target block branches to case J's
+      // target block, so case I must immediately precede case J.
       SmallDenseMap<unsigned, unsigned, 8> FallThrough;
       SmallDenseMap<unsigned, unsigned, 8> IncomingCount;
       for (unsigned I = 0; I < Cases.size(); I++) {
