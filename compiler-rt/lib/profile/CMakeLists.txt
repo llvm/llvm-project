@@ -233,7 +233,9 @@ if(COMPILER_RT_BUILD_PROFILE_ROCM AND NOT COMPILER_RT_PROFILE_BAREMETAL
    AND TARGET RTSanitizerCommon.${COMPILER_RT_DEFAULT_TARGET_ARCH}
    AND TARGET RTSanitizerCommonLibc.${COMPILER_RT_DEFAULT_TARGET_ARCH})
 
-  set(PROFILE_ROCM_SOURCES ${PROFILE_SOURCES} InstrProfilingPlatformROCm.cpp)
+  set(PROFILE_ROCM_SOURCES ${PROFILE_SOURCES}
+    InstrProfilingPlatformROCm.cpp
+    InstrProfilingPlatformROCmHSA.cpp)
 
   # Enables the device-collection call in InstrProfilingFile.c.
   set(PROFILE_ROCM_FLAGS ${EXTRA_FLAGS} -DCOMPILER_RT_BUILD_PROFILE_ROCM=1)
