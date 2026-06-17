@@ -41,8 +41,7 @@ define i32 @load_via_flat_ptr_asan() #0 {
 ; CHECK: Function Attrs: sanitize_address
 ; CHECK-LABEL: define i32 @load_via_flat_ptr_asan(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[FLAT:%.*]] = addrspacecast ptr addrspace(3) @lds_2 to ptr
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[FLAT]], align 4
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr addrspacecast (ptr addrspace(3) @lds_2 to ptr), align 4, !noalias.addrspace [[META0]]
 ; CHECK-NEXT:    ret i32 [[VAL]]
 ;
   %flat = addrspacecast ptr addrspace(3) @lds_2 to ptr
