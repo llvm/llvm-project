@@ -16,7 +16,7 @@
 // RUN: FileCheck --check-prefix=CHECKSH %s -input-file %t/crash-index-*.sh
 int foo() { return 0; }
 
-// CHECKMOD: Preprocessed source(s) and associated run script(s) are located at:
+// CHECKMOD: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // CHECKMOD-NEXT: note: diagnostic msg: {{.*}}.m
 // CHECKMOD-NEXT: note: diagnostic msg: {{.*}}.cache
 
@@ -27,7 +27,7 @@ int foo() { return 0; }
 // CHECKMOD_SH: "crash-index-{{[^ ]*}}.m"
 // CHECKMOD_SH: "-index-store-path" "crash-index-{{[^ ]*}}.cache/index-store"
 
-// CHECK: Preprocessed source(s) and associated run script(s) are located at:
+// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.m
 
 // CHECKSH: # Crash reproducer
