@@ -3193,17 +3193,16 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
 void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
                                         ExplodedNode *Pred,
                                         ExplodedNodeSet &Dst) {
+  const Expr *Arr = Ex->getCommonExpr()->getSourceExpr();
+
   ExplodedNodeSet CheckerPreStmt;
   getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, Ex, *this);
 
   ExplodedNodeSet EvalSet;
-  NodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
-
-  const Expr *Arr = Ex->getCommonExpr()->getSourceExpr();
-
   if (isa<CXXConstructExpr>(Ex->getSubExpr())) {
     // The constructor visitior has already taken care of everything, so let's
     // skip forward to the PostStmt handling after the 'for' loop.
+    EvalSet.insert(CheckerPreStmt);
     CheckerPreStmt.clear();
   }
 
@@ -3282,7 +3281,7 @@ void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
     else
       Base = UnknownVal();
 
-    Bldr.generateNode(Ex, Node, state->BindExpr(Ex, SF, Base));
+    EvalSet.insert(Engine.makeNodeWithBinding(Node, Ex, Base));
   }
 
   getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, Ex, *this);
