@@ -28,5 +28,6 @@
       "kind": "CompilationUnit",
       "name": "test.cpp"
     }
-  ]
+  ],
+  "target_triple": "arm64-apple-macosx"
 }
