@@ -4392,7 +4392,7 @@ define void @flat_agent_atomic_fmax_noret_f64__offset12b_pos__amdgpu_no_fine_gra
 ; GFX12-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX12-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_cmpx_ne_u32_e64 s1, v1
+; GFX12-NEXT:    v_cmpx_ne_u32_e32 s1, v1
 ; GFX12-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB22_3
 ; GFX12-NEXT:  ; %bb.1: ; %Flow2
@@ -4792,7 +4792,7 @@ define void @flat_agent_atomic_fmax_noret_f64__offset12b_neg__amdgpu_no_fine_gra
 ; GFX12-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX12-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_cmpx_ne_u32_e64 s1, v1
+; GFX12-NEXT:    v_cmpx_ne_u32_e32 s1, v1
 ; GFX12-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB23_3
 ; GFX12-NEXT:  ; %bb.1: ; %Flow2

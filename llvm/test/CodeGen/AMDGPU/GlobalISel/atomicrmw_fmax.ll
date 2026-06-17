@@ -1816,8 +1816,8 @@ define double @buffer_fat_ptr_agent_atomic_fmax_ret_f64__amdgpu_no_fine_grained_
 ; GFX12-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v5, v1
 ; GFX12-NEXT:    buffer_load_b64 v[0:1], v10, s[0:3], null offen
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX12-NEXT:    v_readfirstlane_b32 s5, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v9, s5 :: v_dual_mov_b32 v8, s4
