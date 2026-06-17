@@ -4,6 +4,13 @@
 ; RUN: opt < %s -p loop-vectorize -force-vector-width=4 -disable-output \
 ; RUN:     -vplan-print-vector-region-scope -vplan-print-after=makeMemOpWideningDecisions 2>&1 | FileCheck %s --check-prefix ALL-MEMOP-WIDEN
 
+; Irregular types are scalarized even in presence of `-force-target-supports-gather-scatter-ops`:
+
+; RUN: opt < %s -p loop-vectorize -force-vector-width=4 -disable-output -force-target-supports-gather-scatter-ops \
+; RUN:     -vplan-print-vector-region-scope -vplan-print-after=scalarizeMemOpsWithIrregularTypes 2>&1 | FileCheck %s
+; RUN: opt < %s -p loop-vectorize -force-vector-width=4 -disable-output -force-target-supports-gather-scatter-ops \
+; RUN:     -vplan-print-vector-region-scope -vplan-print-after=makeMemOpWideningDecisions 2>&1 | FileCheck %s --check-prefix ALL-MEMOP-WIDEN
+
 define void @scalarize_irregular_types(ptr noalias %p1, ptr noalias %p2) {
 ; CHECK-LABEL: VPlan for loop in 'scalarize_irregular_types'
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -64,6 +71,67 @@ header:
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 100
   br i1 %ec, label %exit, label %header
+
+exit:
+  ret void
+}
+
+define void @irregular_gather(ptr noalias %p, ptr noalias %idx, ptr noalias %out) {
+; CHECK-LABEL: VPlan for loop in 'irregular_gather'
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK-NEXT:      EMIT ir<%gep.idx> = getelementptr inbounds ir<%idx>, ir<%iv>
+; CHECK-NEXT:      EMIT-SCALAR ir<%offset> = load ir<%gep.idx>
+; CHECK-NEXT:      EMIT ir<%gep.p> = getelementptr inbounds ir<%p>, ir<%offset>
+; CHECK-NEXT:      REPLICATE ir<%v> = load ir<%gep.p>
+; CHECK-NEXT:      EMIT ir<%gep.out> = getelementptr inbounds ir<%out>, ir<%iv>
+; CHECK-NEXT:      REPLICATE store ir<%v>, ir<%gep.out>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<100>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+;
+; ALL-MEMOP-WIDEN-LABEL: VPlan for loop in 'irregular_gather'
+; ALL-MEMOP-WIDEN-NEXT:  <x1> vector loop: {
+; ALL-MEMOP-WIDEN-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; ALL-MEMOP-WIDEN-EMPTY:
+; ALL-MEMOP-WIDEN-NEXT:    vector.body:
+; ALL-MEMOP-WIDEN-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%gep.idx> = getelementptr inbounds ir<%idx>, ir<%iv>
+; ALL-MEMOP-WIDEN-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer inbounds ir<%gep.idx>, ir<1>
+; ALL-MEMOP-WIDEN-NEXT:      WIDEN ir<%offset> = load vp<[[VP4]]>
+; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%gep.p> = getelementptr inbounds ir<%p>, ir<%offset>
+; ALL-MEMOP-WIDEN-NEXT:      REPLICATE ir<%v> = load ir<%gep.p>
+; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%gep.out> = getelementptr inbounds ir<%out>, ir<%iv>
+; ALL-MEMOP-WIDEN-NEXT:      REPLICATE store ir<%v>, ir<%gep.out>
+; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; ALL-MEMOP-WIDEN-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<100>
+; ALL-MEMOP-WIDEN-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
+; ALL-MEMOP-WIDEN-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
+; ALL-MEMOP-WIDEN-NEXT:    No successors
+; ALL-MEMOP-WIDEN-NEXT:  }
+; ALL-MEMOP-WIDEN-NEXT:  Successor(s): middle.block
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.idx = getelementptr inbounds i64, ptr %idx, i64 %iv
+  %offset = load i64, ptr %gep.idx, align 8
+  %gep.p = getelementptr inbounds i62, ptr %p, i64 %offset
+  %v = load i62, ptr %gep.p, align 8
+  %gep.out = getelementptr inbounds i62, ptr %out, i64 %iv
+  store i62 %v, ptr %gep.out, align 8
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 100
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
