@@ -5601,7 +5601,7 @@ static bool canNarrowLoad(VPSingleDefRecipe *WideMember0, unsigned OpIdx,
     if (Member0Op == OpV)
       return true;
     // Otherwise distinct per-field live-ins are assembled into a BuildVector.
-    return !IsScalable && !OpV->getDefiningRecipe() &&
+    return !IsScalable && !OpV->hasDefiningRecipe() &&
            OpV->getScalarType() == Member0Op->getScalarType();
   }
   if (auto *W = dyn_cast<VPWidenLoadRecipe>(Member0OpR))
@@ -5702,8 +5702,8 @@ static bool isAlreadyNarrow(VPValue *VPV) {
 
 // Convert the wide recipes defining the VPValues in \p Members feeding an
 // interleave group to a single narrow variant. The first member is reused as
-// the narrowed recipe. Newly created loop-invariant recipes (e.g. a BuildVector
-// for distinct live-ins) are inserted into \p Preheader.
+// the narrowed recipe. BuildVectors for live-in operands are inserted into \p
+// Preheader.
 static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
                                         SmallPtrSetImpl<VPValue *> &NarrowedOps,
                                         VPBasicBlock *Preheader) {
@@ -5715,7 +5715,7 @@ static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
   if (!R) {
     assert(all_of(Members,
                   [V](VPValue *M) {
-                    return !M->getDefiningRecipe() &&
+                    return !M->hasDefiningRecipe() &&
                            M->getScalarType() == V->getScalarType();
                   }) &&
            "expected distinct live-ins of matching scalar type");
