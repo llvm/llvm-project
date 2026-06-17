@@ -19397,15 +19397,24 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
         return Error(OOE);
       CurrentType = AT->getElementType();
       CharUnits ElementSize = Info.Ctx.getTypeSizeInChars(CurrentType);
-      // Reject negative indices and indices too large to fit in int64_t,
-      // to avoid sign-extension issues or crashes in getZExtValue().
+      // Reject negative indices, indices too large to fit in int64_t,
+      // and overflow in the offset computation.
       APSInt MaxIdx = APSInt::getMaxValue(64, /*Unsigned=*/false);
-      if (IdxResult.isSigned() ? IdxResult.isNegative()
-                               : IdxResult.ugt(MaxIdx))
+      if (IdxResult.isSigned()
+              ? (IdxResult.isNegative() || IdxResult.sgt(MaxIdx))
+              : IdxResult.ugt(MaxIdx))
         return Error(OOE);
-      Result += (IdxResult.isUnsigned() ? (int64_t)IdxResult.getZExtValue()
-                                        : IdxResult.getSExtValue()) *
-                ElementSize;
+      int64_t IdxVal = IdxResult.isUnsigned()
+                           ? (int64_t)IdxResult.getZExtValue()
+                           : IdxResult.getSExtValue();
+      int64_t ElemSize = ElementSize.getQuantity();
+      if (IdxVal != 0 &&
+          ElemSize > std::numeric_limits<int64_t>::max() / IdxVal)
+        return Error(OOE);
+      int64_t Offset = IdxVal * ElemSize;
+      if (Result.getQuantity() > std::numeric_limits<int64_t>::max() - Offset)
+        return Error(OOE);
+      Result += CharUnits::fromQuantity(Offset);
       break;
     }
 

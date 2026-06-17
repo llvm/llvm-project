@@ -6670,11 +6670,7 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       break;
     }
     case OffsetOfNode::Array: {
-      // When generating bytecode, we put all the index expressions as Sint64 on
-      // the stack.
       int64_t Index = ArrayIndices[ArrayIndex];
-      // Reject negative indices and unsigned indices that wrapped to negative
-      // after the Uint64->Sint64 cast (e.g. __uint128_t >= 0x8000000000000000).
       if (Index < 0) {
         S.FFDiag(S.Current->getLocation(OpPC),
                  diag::note_invalid_subexpr_in_const_expr)
@@ -6686,7 +6682,13 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
         return false;
       CurrentType = AT->getElementType();
       CharUnits ElementSize = S.getASTContext().getTypeSizeInChars(CurrentType);
-      Result += Index * ElementSize;
+      int64_t ElemSize = ElementSize.getQuantity();
+      if (Index != 0 && ElemSize > llvm::maxIntN(64) / Index)
+        return false;
+      int64_t Offset = Index * ElemSize;
+      if (Result.getQuantity() > llvm::maxIntN(64) - Offset)
+        return false;
+      Result += CharUnits::fromQuantity(Offset);
       ++ArrayIndex;
       break;
     }
