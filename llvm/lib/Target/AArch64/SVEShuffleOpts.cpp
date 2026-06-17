@@ -144,11 +144,6 @@ static void evaluateDeinterleave(IntrinsicInst *I, DeinterleaveMap &Candidates,
     Extends[Extract->getIndices().front()] = Extend;
   }
 
-  // If our extend count doesn't match the interleave factor, bail out.
-  // TODO: Allow gaps.
-  if (Extends.size() != 4)
-    return;
-
   // Check that all extracted values are being extended the same way, and that
   // we have the expected number of extensions.
   if (!all_of(Extends, [DestTy, Opcode](CastInst *CI) {
@@ -224,6 +219,8 @@ static bool processLoop(Loop &L, const AArch64TargetLowering &TL,
   // TODO: Add more advanced cases, such as introducing shuffles so that
   //       the SVE odd/even BT narrowing instructions can be used.
   // TODO: Support other deinterleaves.
+  assert(DL.isLittleEndian() &&
+         "Shuffle optimizations unsupported for big endian targets.");
   DeinterleaveMap Candidates;
   for (auto *BB : L.blocks())
     for (auto &I : *BB)
