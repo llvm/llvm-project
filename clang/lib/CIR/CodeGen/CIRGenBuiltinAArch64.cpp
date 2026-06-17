@@ -882,7 +882,18 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vld3q_lane_v:
   case NEON::BI__builtin_neon_vld4_lane_v:
   case NEON::BI__builtin_neon_vld4q_lane_v:
-  case NEON::BI__builtin_neon_vmovl_v:
+    cgf.cgm.errorNYI(expr->getSourceRange(),
+                     std::string("Reached code-path for ARM builtin call ") +
+                         ctx.BuiltinInfo.getName(builtinID) +
+                         "(ARM builtins are not supported ATM)");
+    return mlir::Value{};
+  case NEON::BI__builtin_neon_vmovl_v: {
+    cir::VectorType dTy =
+        cgf.getBuilder().getExtendedOrTruncatedElementVectorType(
+            ty, /*isExtended=*/false, !usgn);
+    ops[0] = cgf.getBuilder().createBitcast(loc, ops[0], dTy);
+    return cgf.getBuilder().createIntCast(ops[0], ty);
+  }
   case NEON::BI__builtin_neon_vmovn_v:
   case NEON::BI__builtin_neon_vmull_v:
   case NEON::BI__builtin_neon_vpadal_v:
