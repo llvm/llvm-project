@@ -3696,6 +3696,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         // Compute known bits for the pointer and drop the assume if the
         // known alignment isn't increased by it.
         auto AlignBitCount = Log2_64(*Alignment);
+
+        if (AlignBitCount >
+            DL.getPointerSizeInBits(Ptr->getType()->getPointerAddressSpace()))
+          return RemoveBundle();
+
         if (KnownBits KB = computeKnownBits(Ptr, II);
             KB.Zero.getLoBits(AlignBitCount) == ((*Alignment - 1) & ~*Offset) &&
             KB.One.getLoBits(AlignBitCount) == ((*Alignment - 1) & *Offset))
