@@ -607,8 +607,9 @@ uint32_t Function::GetPrologueByteSize() {
           const uint32_t line_table_size = line_table->GetSize();
           for (uint32_t idx = 0; idx < line_table_size; ++idx) {
             LineEntry line_entry;
-            if (!line_table->GetLineEntryAtIndex(idx, line_entry))
-              continue;
+            bool success = line_table->GetLineEntryAtIndex(idx, line_entry);
+            assert(success && "idx is within the line table size");
+            UNUSED_IF_ASSERT_DISABLED(success);
             const addr_t entry_addr =
                 line_entry.range.GetBaseAddress().GetFileAddress();
             if (entry_addr >= func_start_addr && entry_addr < func_end_addr) {
