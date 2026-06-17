@@ -360,7 +360,7 @@ protected:
       : LIS(LIS), MRI(&MRI),
         SRI(static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo())),
         PhysLiveRegUnits(SRI->getNumRegUnits()) {
-    setPhysRegTracking();
+    updatePhysRegTracking();
   }
 
   void reset(const MachineInstr &MI, const LiveRegSet *VirtLiveRegsCopy,
@@ -400,7 +400,7 @@ protected:
 public:
   // Enable physical register tracking only if both GCNTrackers and
   // TrackPhysRegInTrackers are true.
-  void setPhysRegTracking();
+  void updatePhysRegTracking();
 
   // Reset tracker with both virtual and physical live register state.
   void reset(const MachineRegisterInfo &MRInfo,

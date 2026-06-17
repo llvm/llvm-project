@@ -169,7 +169,7 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
                     << ", SGPRExcessLimit = " << SGPRExcessLimit << "\n\n");
 }
 
-void GCNRPTracker::setPhysRegTracking() {
+void GCNRPTracker::updatePhysRegTracking() {
   if (!GCNTrackers || !TrackPhysRegInTrackers) {
     TrackPhysRegs = false;
     return;
