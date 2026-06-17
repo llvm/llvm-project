@@ -13,6 +13,8 @@
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
+class GCNSubtarget;
+class MachineInstr;
 class raw_ostream;
 
 namespace AMDGPU {
@@ -59,7 +61,7 @@ class HWEventSet {
 
 public:
   HWEventSet() = default;
-  explicit constexpr HWEventSet(HWEvent Event) {
+  constexpr HWEventSet(HWEvent Event) {
     static_assert(static_cast<unsigned>(HWEvent::NUM_WAIT_EVENTS) <=
                       sizeof(Mask) * 8,
                   "Not enough bits in Mask for all the events");
@@ -115,6 +117,10 @@ public:
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 };
+
+/// \returns all HWEvents triggered by \p Inst
+HWEventSet getEventsFor(const MachineInstr &Inst, const GCNSubtarget &ST,
+                        bool IsExpertMode);
 
 } // namespace AMDGPU
 } // namespace llvm
