@@ -279,21 +279,6 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
     if (!VPPDT.dominates(Phi->getParent(), InVPBB))
       return Edges;
 
-  // Given a list of edges, check if they all have the same value and return it.
-  auto GetAllEqual = [&Edges](ArrayRef<EdgeTy> OutEdges) -> VPValue * {
-    VPValue *Common = nullptr;
-    for (EdgeTy E : OutEdges) {
-      VPValue *V = Edges.lookup(E);
-      if (!V)
-        return nullptr;
-      if (!Common)
-        Common = V;
-      else if (Common != V)
-        return nullptr;
-    }
-    return Common;
-  };
-
   SetVector<const VPBlockBase *> Worklist(from_range, Phi->incoming_blocks());
   while (!Worklist.empty()) {
     auto *VPBB = cast<VPBasicBlock>(Worklist.pop_back_val());
@@ -302,8 +287,10 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
     SmallVector<EdgeTy> OutEdges;
     for (const VPBlockBase *Succ : VPBB->getSuccessors())
       OutEdges.emplace_back(VPBB, cast<VPBasicBlock>(Succ));
-    VPValue *Common = GetAllEqual(OutEdges);
-    if (!Common)
+    auto OutVals =
+        map_range(OutEdges, [&Edges](EdgeTy E) { return Edges.lookup(E); });
+    VPValue *Common = *OutVals.begin();
+    if (!Common || !all_equal(OutVals))
       continue;
 
     // They have the same value: we can move the edges up.
