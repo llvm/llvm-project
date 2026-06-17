@@ -152,10 +152,6 @@ define amdgpu_ps half @tanh_f16(half %src) {
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e32 v0, v0
 ; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
-; GFX13-SDAG-FAKE16-LABEL: tanh_f16:
-; GFX13-SDAG-FAKE16:       ; %bb.0:
-; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e32 v0, v0
-; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
   %tanh = call half @llvm.amdgcn.tanh.f16(half %src)
   ret half %tanh
 }
@@ -178,10 +174,6 @@ define amdgpu_ps half @tanh_f16_neg(half %src)  {
 ; GFX13-SDAG-REAL16-NEXT:    v_tanh_f16_e64 v0.l, -v0.l
 ; GFX13-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
-; GFX13-SDAG-FAKE16-LABEL: tanh_f16_neg:
-; GFX13-SDAG-FAKE16:       ; %bb.0:
-; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e64 v0, -v0
-; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ; GFX13-SDAG-FAKE16-LABEL: tanh_f16_neg:
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e64 v0, -v0
@@ -213,10 +205,6 @@ define amdgpu_ps half @tanh_f16_abs(half %src)  {
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e64 v0, |v0|
 ; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
-; GFX13-SDAG-FAKE16-LABEL: tanh_f16_abs:
-; GFX13-SDAG-FAKE16:       ; %bb.0:
-; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e64 v0, |v0|
-; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
   %fabs = call half @llvm.fabs.f16(half %src)
   %tanh = call half @llvm.amdgcn.tanh.f16(half %fabs)
   ret half %tanh
@@ -240,10 +228,6 @@ define amdgpu_ps half @tanh_f16_neg_abs(half %src)  {
 ; GFX13-SDAG-REAL16-NEXT:    v_tanh_f16_e64 v0.l, -|v0.l|
 ; GFX13-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
-; GFX13-SDAG-FAKE16-LABEL: tanh_f16_neg_abs:
-; GFX13-SDAG-FAKE16:       ; %bb.0:
-; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e64 v0, -|v0|
-; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ; GFX13-SDAG-FAKE16-LABEL: tanh_f16_neg_abs:
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e64 v0, -|v0|
@@ -276,10 +260,6 @@ define amdgpu_ps half @tanh_f16_scalar(half inreg %src) {
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e32 v0, s0
 ; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
-; GFX13-SDAG-FAKE16-LABEL: tanh_f16_scalar:
-; GFX13-SDAG-FAKE16:       ; %bb.0:
-; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e32 v0, s0
-; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
   %tanh = call half @llvm.amdgcn.tanh.f16(half %src)
   ret half %tanh
 }
@@ -306,10 +286,6 @@ define amdgpu_ps half @tanh_f16_constant_4.0() {
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e32 v0, 4.0
 ; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
-; GFX13-SDAG-FAKE16-LABEL: tanh_f16_constant_4.0:
-; GFX13-SDAG-FAKE16:       ; %bb.0:
-; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e32 v0, 4.0
-; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
   %tanh = call half @llvm.amdgcn.tanh.f16(half 4.0)
   ret half %tanh
 }
@@ -332,10 +308,6 @@ define amdgpu_ps half @tanh_f16_constant_100.0() {
 ; GFX13-SDAG-REAL16-NEXT:    v_tanh_f16_e32 v0.l, 0x5640
 ; GFX13-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
-; GFX13-SDAG-FAKE16-LABEL: tanh_f16_constant_100.0:
-; GFX13-SDAG-FAKE16:       ; %bb.0:
-; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e32 v0, 0x5640
-; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ; GFX13-SDAG-FAKE16-LABEL: tanh_f16_constant_100.0:
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e32 v0, 0x5640
@@ -379,10 +351,6 @@ define amdgpu_ps bfloat  @tanh_bf16(bfloat %src) {
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e32 v0, v0
 ; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
-; GFX13-SDAG-FAKE16-LABEL: tanh_bf16:
-; GFX13-SDAG-FAKE16:       ; %bb.0:
-; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e32 v0, v0
-; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
   %tanh = call bfloat @llvm.amdgcn.tanh.bf16(bfloat %src)
   ret bfloat %tanh
 }
@@ -405,10 +373,6 @@ define amdgpu_ps bfloat  @tanh_bf16_neg(bfloat %src)  {
 ; GFX13-SDAG-REAL16-NEXT:    v_tanh_bf16_e64 v0.l, -v0.l
 ; GFX13-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
-; GFX13-SDAG-FAKE16-LABEL: tanh_bf16_neg:
-; GFX13-SDAG-FAKE16:       ; %bb.0:
-; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v0, -v0
-; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ; GFX13-SDAG-FAKE16-LABEL: tanh_bf16_neg:
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v0, -v0
@@ -440,10 +404,6 @@ define amdgpu_ps bfloat  @tanh_bf16_abs(bfloat %src)  {
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v0, |v0|
 ; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
-; GFX13-SDAG-FAKE16-LABEL: tanh_bf16_abs:
-; GFX13-SDAG-FAKE16:       ; %bb.0:
-; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v0, |v0|
-; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
   %fabs = call bfloat @llvm.fabs.bf16(bfloat %src)
   %tanh = call bfloat @llvm.amdgcn.tanh.bf16(bfloat %fabs)
   ret bfloat %tanh
@@ -467,10 +427,6 @@ define amdgpu_ps bfloat  @tanh_bf16_neg_abs(bfloat %src)  {
 ; GFX13-SDAG-REAL16-NEXT:    v_tanh_bf16_e64 v0.l, -|v0.l|
 ; GFX13-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
-; GFX13-SDAG-FAKE16-LABEL: tanh_bf16_neg_abs:
-; GFX13-SDAG-FAKE16:       ; %bb.0:
-; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v0, -|v0|
-; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ; GFX13-SDAG-FAKE16-LABEL: tanh_bf16_neg_abs:
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v0, -|v0|
@@ -503,10 +459,6 @@ define amdgpu_ps bfloat  @tanh_bf16_scalar(bfloat inreg %src) {
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e32 v0, s0
 ; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
-; GFX13-SDAG-FAKE16-LABEL: tanh_bf16_scalar:
-; GFX13-SDAG-FAKE16:       ; %bb.0:
-; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e32 v0, s0
-; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
   %tanh = call bfloat @llvm.amdgcn.tanh.bf16(bfloat %src)
   ret bfloat %tanh
 }
@@ -533,10 +485,6 @@ define amdgpu_ps bfloat  @tanh_bf16_constant_4.0() {
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e32 v0, 4.0
 ; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
-; GFX13-SDAG-FAKE16-LABEL: tanh_bf16_constant_4.0:
-; GFX13-SDAG-FAKE16:       ; %bb.0:
-; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e32 v0, 4.0
-; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
   %tanh = call bfloat @llvm.amdgcn.tanh.bf16(bfloat 4.0)
   ret bfloat %tanh
 }
@@ -559,10 +507,6 @@ define amdgpu_ps bfloat  @tanh_bf16_constant_100.0() {
 ; GFX13-SDAG-REAL16-NEXT:    v_tanh_bf16_e32 v0.l, 0x42c8
 ; GFX13-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
-; GFX13-SDAG-FAKE16-LABEL: tanh_bf16_constant_100.0:
-; GFX13-SDAG-FAKE16:       ; %bb.0:
-; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e32 v0, 0x42c8
-; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ; GFX13-SDAG-FAKE16-LABEL: tanh_bf16_constant_100.0:
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
 ; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e32 v0, 0x42c8
