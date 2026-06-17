@@ -1,8 +1,8 @@
+; RUN: opt -passes=mergefunc -S < %s | FileCheck %s
+
 ; Test: MergeFunctions merging a noipa function with an identical one.
 ; If noipa is working, MergeFunctions should NOT merge @foo into @baz
 ; (or vice versa), because it inspects the function definitions.
-;
-; RUN: opt -passes=mergefunc -S < %s | FileCheck %s
 
 ; CHECK: define internal i32 @foo(
 define internal i32 @foo(i32 %x, i32 %y) noipa noinline {

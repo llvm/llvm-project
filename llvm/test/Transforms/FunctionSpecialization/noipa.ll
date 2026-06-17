@@ -1,6 +1,6 @@
-; Function specialisation should not activate for `noipa` functions.
-;
 ; RUN: opt -passes='ipsccp<func-spec>' -force-specialization -S < %s | FileCheck %s
+
+; Function specialisation should not activate for `noipa` functions.
 
 define i32 @foo(i32 %x, i32 %y) noipa {
   %r2 = add i32 %x, %y

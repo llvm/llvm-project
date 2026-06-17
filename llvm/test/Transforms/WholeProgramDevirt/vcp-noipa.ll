@@ -3,9 +3,6 @@
 ; The `noipa` attribute prevents interprocedural function body inspection,
 ; including this virtual constant propagation transformation.
 
-target datalayout = "e-p:64:64"
-target triple = "x86_64-unknown-linux-gnu"
-
 @vt1 = constant [1 x ptr] [ptr @vf1], !type !0
 @vt2 = constant [1 x ptr] [ptr @vf2], !type !0
 
