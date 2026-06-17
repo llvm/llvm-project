@@ -63,9 +63,8 @@ TEST(SummaryExtractorRegistryTest, InstantiatingExtractor2) {
   TUSummary Summary = makeFakeSummary();
   MockTUSummaryBuilder FakeBuilder(Summary);
   {
-    auto Consumer =
-        makeTUSummaryExtractor("MockSummaryExtractor2", FakeBuilder,
-                               TUSummaryExtractorOptions{});
+    auto Consumer = makeTUSummaryExtractor("MockSummaryExtractor2", FakeBuilder,
+                                           TUSummaryExtractorOptions{});
     EXPECT_TRUE(Consumer);
     EXPECT_EQ(FakeBuilder.consumeMessages(),
               "MockSummaryExtractor2 constructor was invoked\n");
