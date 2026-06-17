@@ -424,7 +424,9 @@ namespace {
 
 template <class T>
 typename std::enable_if_t<!USE_DEFAULT_PROFILE>
-profileAttrArg(llvm::FoldingSetNodeID &, const ASTContext &, T) {}
+profileAttrArg(llvm::FoldingSetNodeID &, const ASTContext &, T) {
+  llvm_unreachable("profile not implemented for this type");
+}
 
 template <class T>
 typename std::enable_if_t<USE_DEFAULT_PROFILE>
