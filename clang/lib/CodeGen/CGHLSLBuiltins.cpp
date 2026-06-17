@@ -125,7 +125,7 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
 
     auto *RetTy = llvm::StructType::get(RetElementTy, RetElementTy);
 
-    CallInst *CI = CGF->Builder.CreateIntrinsic(
+    Value *CI = CGF->Builder.CreateIntrinsic(
         RetTy, Intrinsic::dx_splitdouble, {Op0}, nullptr, "hlsl.splitdouble");
 
     LowBits = CGF->Builder.CreateExtractValue(CI, 0);

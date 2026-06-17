@@ -136,7 +136,8 @@ static std::optional<Instruction *> modifyIntrinsicCall(
   // Modify arguments and types
   Func(Args, OverloadTys);
 
-  CallInst *NewCall = IC.Builder.CreateIntrinsic(NewIntr, OverloadTys, Args);
+  CallInst *NewCall =
+      IC.Builder.CreateIntrinsicWithoutFolding(NewIntr, OverloadTys, Args);
   NewCall->takeName(&OldIntr);
   NewCall->copyMetadata(OldIntr);
   if (isa<FPMathOperator>(NewCall))
@@ -1778,7 +1779,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
       Value *Args[] = {SrcLHS, SrcRHS,
                        ConstantInt::get(CC->getType(), SrcPred)};
-      CallInst *NewCall = IC.Builder.CreateIntrinsic(
+      Value *NewCall = IC.Builder.CreateIntrinsic(
           NewIID, {II.getType(), SrcLHS->getType()}, Args);
       NewCall->takeName(&II);
       return IC.replaceInstUsesWith(II, NewCall);
@@ -2216,7 +2217,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Args[0] = Src0;
     Args[1] = Src1;
 
-    CallInst *NewII = IC.Builder.CreateIntrinsic(
+    Value *NewII = IC.Builder.CreateIntrinsic(
         IID, {Src0->getType(), Src1->getType()}, Args, &II);
     NewII->takeName(&II);
     return IC.replaceInstUsesWith(II, NewII);
@@ -2258,7 +2259,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Args[1] = Src0;
     Args[3] = Src1;
 
-    CallInst *NewII = IC.Builder.CreateIntrinsic(
+    Value *NewII = IC.Builder.CreateIntrinsic(
         IID, {II.getArgOperand(5)->getType(), Src0->getType(), Src1->getType()},
         Args, &II);
     NewII->takeName(&II);
@@ -2408,8 +2409,8 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       Args[0] = IC.Builder.CreateShuffleVector(II.getOperand(0), EltMask);
   }
 
-  CallInst *NewCall =
-      IC.Builder.CreateIntrinsic(II.getIntrinsicID(), OverloadTys, Args);
+  CallInst *NewCall = IC.Builder.CreateIntrinsicWithoutFolding(
+      II.getIntrinsicID(), OverloadTys, Args);
   NewCall->takeName(&II);
   NewCall->copyMetadata(II);
   AttributeList OldAttrList = II.getAttributes();
