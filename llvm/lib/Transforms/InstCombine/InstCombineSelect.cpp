@@ -5259,22 +5259,30 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     });
     SimplifyQuery Q = SQ.getWithInstruction(&SI).getWithCondContext(CC);
     if (!CC.AffectedValues.empty()) {
-      if (!isa<Constant>(TrueVal) &&
-          hasAffectedValue(TrueVal, CC.AffectedValues, /*Depth=*/0)) {
-        KnownBits Known = llvm::computeKnownBits(TrueVal, Q);
+      auto SimplifyArm = [&](Value *Arm, unsigned ArmIdx) -> Instruction * {
+        if (isa<Constant>(Arm) ||
+            !hasAffectedValue(Arm, CC.AffectedValues, /*Depth=*/0))
+          return nullptr;
+
+        if (auto *Cmp = dyn_cast<ICmpInst>(Arm))
+          if (Value *V =
+                  simplifyICmpInst(Cmp->getPredicate(), Cmp->getOperand(0),
+                                   Cmp->getOperand(1), Q))
+            return replaceOperand(SI, ArmIdx, V);
+
+        KnownBits Known = llvm::computeKnownBits(Arm, Q);
         if (Known.isConstant())
-          return replaceOperand(SI, 1,
+          return replaceOperand(SI, ArmIdx,
                                 ConstantInt::get(SelType, Known.getConstant()));
-      }
+        return nullptr;
+      };
+
+      if (Instruction *I = SimplifyArm(TrueVal, 1))
+        return I;
 
       CC.Invert = true;
-      if (!isa<Constant>(FalseVal) &&
-          hasAffectedValue(FalseVal, CC.AffectedValues, /*Depth=*/0)) {
-        KnownBits Known = llvm::computeKnownBits(FalseVal, Q);
-        if (Known.isConstant())
-          return replaceOperand(SI, 2,
-                                ConstantInt::get(SelType, Known.getConstant()));
-      }
+      if (Instruction *I = SimplifyArm(FalseVal, 2))
+        return I;
     }
   }
 
