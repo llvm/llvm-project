@@ -19,7 +19,7 @@ class AssignSectionsToGlobalsPass
 
 public:
   AssignSectionsToGlobalsPass(TargetMachine *tm) : TM(tm) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 } // end namespace llvm
 
