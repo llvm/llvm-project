@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 // <algorithm>
 
 // template<bidirectional_iterator I, sentinel_for<I> S, class Proj = identity,

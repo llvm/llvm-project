@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 // <algorithm>
 
 // template<BidirectionalIterator Iter, Predicate<auto, Iter::value_type> Pred>
