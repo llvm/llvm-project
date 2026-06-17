@@ -8924,7 +8924,7 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
                         .getTriple()
                         .isDefaultIncrementalLinkerCompatibleByDefault())) {
     // Redefine the date/time macros only if /d1nodatetime wasn't specified.
-    // This options does not allow the user redifinitions for these macros.
+    // This option does not allow the user redefinitions for these macros.
     if (!HasNoDateTime)
       CmdArgs.push_back("-init-datetime-macros=literalone");
   }
