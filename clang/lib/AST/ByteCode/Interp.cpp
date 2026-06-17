@@ -558,8 +558,15 @@ bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return true;
 
   const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
-  QualType TargetQT = E->getType()->getPointeeType();
+  QualType ExprTy = E->getType();
+  if (ExprTy->isPointerOrReferenceType())
+    ExprTy = ExprTy->getPointeeType();
+
+  QualType TargetQT = ExprTy;
   QualType MostDerivedQT = Ptr.getDeclPtr().getType();
+
+  if (MostDerivedQT->isPointerOrReferenceType())
+    MostDerivedQT = MostDerivedQT->getPointeeType();
 
   S.CCEDiag(E, diag::note_constexpr_invalid_downcast)
       << MostDerivedQT << TargetQT;
@@ -580,7 +587,7 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
   // The This pointer is writable in constructors and destructors,
   // even if isConst() returns true.
-  if (llvm::is_contained(S.InitializingBlocks, Ptr.block()))
+  if (S.initializingBlock(Ptr.block()))
     return true;
 
   if (!S.checkingPotentialConstantExpression()) {
@@ -619,7 +626,7 @@ static bool CheckVolatile(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return Invalid(S, OpPC);
 
   // Volatile object can be written-to and read if they are being constructed.
-  if (llvm::is_contained(S.InitializingBlocks, Ptr.block()))
+  if (S.initializingBlock(Ptr.block()))
     return true;
 
   // The reason why Ptr is volatile might be further up the hierarchy.
@@ -1578,9 +1585,6 @@ bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
     return true;
   }
 
-  if (isConstexprUnknown(Ptr))
-    return false;
-
   if (!Ptr.getFieldDesc()->isRecord()) {
     S.Stk.push<Pointer>(Ptr);
     return true;
@@ -1841,10 +1845,8 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     if (Func->isDestructor() && !CheckDestructor(S, OpPC, ThisPtr))
       return false;
 
-    if (Func->isConstructor() || Func->isDestructor()) {
+    if (Func->isConstructor() || Func->isDestructor())
       S.InitializingPtrs.push_back(ThisPtr.view());
-      S.InitializingBlocks.push_back(ThisPtr.block());
-    }
   }
 
   if (!Func->isFullyCompiled())
@@ -1870,10 +1872,8 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
   bool Success = Interpret(S);
   // Remove initializing  block again.
-  if (Func->isConstructor() || Func->isDestructor()) {
-    S.InitializingBlocks.pop_back();
+  if (Func->isConstructor() || Func->isDestructor())
     S.InitializingPtrs.pop_back();
-  }
 
   if (!Success) {
     InterpFrame::free(NewFrame);
@@ -2139,8 +2139,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
   const auto *InitialFunction = cast<CXXMethodDecl>(Callee);
   const CXXMethodDecl *Overrider;
 
-  if (StaticDecl != DynamicDecl &&
-      !llvm::is_contained(S.InitializingBlocks, ThisPtr.block())) {
+  if (StaticDecl != DynamicDecl && !S.initializingBlock(ThisPtr.block())) {
     if (!DynamicDecl->isDerivedFrom(StaticDecl))
       return false;
     Overrider = S.getContext().getOverridingFunction(DynamicDecl, StaticDecl,
