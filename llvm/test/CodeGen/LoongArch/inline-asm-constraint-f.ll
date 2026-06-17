@@ -9,8 +9,9 @@
 define double @constraint_f_double(double %a) nounwind {
 ; LA32-LABEL: constraint_f_double:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(gd)
-; LA32-NEXT:    fld.d $fa1, $a0, %pc_lo12(gd)
+; LA32-NEXT:  .Lpcadd_hi0:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(gd)
+; LA32-NEXT:    fld.d $fa1, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32-NEXT:    #APP
 ; LA32-NEXT:    fadd.d $fa0, $fa0, $fa1
 ; LA32-NEXT:    #NO_APP
@@ -32,7 +33,6 @@ define double @constraint_f_double(double %a) nounwind {
 define double @constraint_gpr(double %a) {
 ; LA32-LABEL: constraint_gpr:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    .cfi_def_cfa_offset 0
 ; LA32-NEXT:    movfr2gr.s $a7, $fa0
 ; LA32-NEXT:    movfrh2gr.s $t0, $fa0
 ; LA32-NEXT:    #APP
@@ -44,7 +44,6 @@ define double @constraint_gpr(double %a) {
 ;
 ; LA64-LABEL: constraint_gpr:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    .cfi_def_cfa_offset 0
 ; LA64-NEXT:    movfr2gr.d $a7, $fa0
 ; LA64-NEXT:    #APP
 ; LA64-NEXT:    move $a6, $a7

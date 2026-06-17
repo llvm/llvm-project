@@ -85,6 +85,10 @@ multiclass MxMoveOperandEncodings<string opnd_name> {
   def MxMove#NAME#OpEnc_e : MxEncAddrMode_e<opnd_name>;
   // (i,PC,Xn)
   def MxMove#NAME#OpEnc_k : MxEncAddrMode_k<opnd_name>;
+  // (bd,PC,Xn.L*SCALE)
+  def MxMove#NAME#OpEnc_l : MxEncAddrMode_l<opnd_name>;
+  // (bd,PC,Xn.W*SCALE)
+  def MxMove#NAME#OpEnc_L : MxEncAddrMode_L<opnd_name>;
   // (i,PC)
   def MxMove#NAME#OpEnc_q : MxEncAddrMode_q<opnd_name>;
   // (i,An,Xn)
@@ -220,14 +224,38 @@ class MxMove_MM<MxType TYPE, MxOpBundle DST, MxOpBundle SRC,
              MxMoveEncoding<!cast<MxMoveSize>("MxMoveSize"#TYPE.Size),
                             DST_ENC, SRC_ENC>>;
 
+// Use a store-load patfrag that can reject unsafe load chains (e.g. callseq).
+let mayLoad = 1, mayStore = 1 in
+class MxMove_MM_Safe<MxType TYPE, PatFrag StoreLoad,
+                     MxOpBundle DST, MxOpBundle SRC,
+                     MxEncMemOp DST_ENC, MxEncMemOp SRC_ENC>
+    : MxMove<TYPE.Prefix, (outs), (ins DST.Op:$dst, SRC.Op:$src),
+             [(StoreLoad DST.Pat:$dst, SRC.Pat:$src)],
+             MxMoveEncoding<!cast<MxMoveSize>("MxMoveSize"#TYPE.Size),
+                            DST_ENC, SRC_ENC>>;
+
 foreach DST_AM = MxMoveSupportedAMs in
 foreach SRC_AM = MxMoveSupportedAMs in {
-  foreach TYPE = [MxType8, MxType16, MxType32] in
-  def MOV # TYPE.Size # DST_AM # SRC_AM # TYPE.Postfix
-      : MxMove_MM<TYPE, !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#DST_AM),
-                  !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#SRC_AM),
-                  !cast<MxEncMemOp>("MxMoveDstOpEnc_"#DST_AM),
-                  !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#SRC_AM)>;
+  def MOV8 # DST_AM # SRC_AM # !cast<MxType>("MxType8").Postfix
+      : MxMove_MM_Safe<MxType8, Mxstoreloadi8_safe,
+                       !cast<MxOpBundle>("MxOp8AddrMode_"#DST_AM),
+                       !cast<MxOpBundle>("MxOp8AddrMode_"#SRC_AM),
+                       !cast<MxEncMemOp>("MxMoveDstOpEnc_"#DST_AM),
+                       !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#SRC_AM)>;
+
+  def MOV16 # DST_AM # SRC_AM # !cast<MxType>("MxType16").Postfix
+      : MxMove_MM_Safe<MxType16, Mxstoreloadi16_safe,
+                       !cast<MxOpBundle>("MxOp16AddrMode_"#DST_AM),
+                       !cast<MxOpBundle>("MxOp16AddrMode_"#SRC_AM),
+                       !cast<MxEncMemOp>("MxMoveDstOpEnc_"#DST_AM),
+                       !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#SRC_AM)>;
+
+  def MOV32 # DST_AM # SRC_AM # !cast<MxType>("MxType32").Postfix
+      : MxMove_MM_Safe<MxType32, Mxstoreloadi32_safe,
+                       !cast<MxOpBundle>("MxOp32AddrMode_"#DST_AM),
+                       !cast<MxOpBundle>("MxOp32AddrMode_"#SRC_AM),
+                       !cast<MxEncMemOp>("MxMoveDstOpEnc_"#DST_AM),
+                       !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#SRC_AM)>;
 } // foreach SRC_AM
 
 // Store ABS(basically pointer) as Immdiate to Mem
@@ -504,7 +532,7 @@ class MxLEA<MxOpBundle SRC, MxEncMemOp SRC_ENC>
   );
 }
 
-foreach AM = ["p", "f", "b", "q", "k"] in
+foreach AM = ["p", "f", "b", "q", "k", "l", "L"] in
 def LEA32 # AM : MxLEA<!cast<MxOpBundle>("MxOp32AddrMode_"#AM),
                        !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)>;
 

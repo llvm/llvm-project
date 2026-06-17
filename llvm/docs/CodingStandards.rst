@@ -278,11 +278,23 @@ Use the ``\file`` command to turn the standard file header into a file-level
 comment.
 
 Include descriptive paragraphs for all public interfaces (public classes,
-member and non-member functions).  Avoid restating the information that can
-be inferred from the API name.  The first sentence (or a paragraph beginning
-with ``\brief``) is used as an abstract. Try to use a single sentence as the
-``\brief`` adds visual clutter.  Put detailed discussion into separate
-paragraphs.
+member and non-member functions).  Avoid restating the information that can be
+inferred from the API name or signature.  The first sentence (or a paragraph
+beginning with ``\brief``) is used as an abstract.  Try to use a single
+sentence as the ``\brief`` adds visual clutter.  Put detailed discussion into
+separate paragraphs.
+
+A minimal documentation comment:
+
+.. code-block:: c++
+
+  /// Sets the xyzzy property to \p Baz.
+  void setXyzzy(bool Baz);
+
+Only include code examples, function parameters and return values when it
+provides additional information, such as intent, usage, or behavior that’s
+non-obvious.  Use descriptive function and argument names to
+eliminate the need for documentation comments when possible.
 
 To refer to parameter names inside a paragraph, use the ``\p name`` command.
 Don't use the ``\arg name`` command since it starts a new paragraph that
@@ -297,13 +309,6 @@ respectively.
 
 To describe function return value, start a new paragraph with the ``\returns``
 command.
-
-A minimal documentation comment:
-
-.. code-block:: c++
-
-  /// Sets the xyzzy property to \p Baz.
-  void setXyzzy(bool Baz);
 
 A documentation comment that uses all Doxygen features in a preferred way:
 
@@ -454,6 +459,18 @@ columns (for example) instead of 80 columns wouldn't add any significant value
 and would be detrimental to printing out code.  Also many other projects have
 standardized on 80 columns, so some people have already configured their editors
 for it (vs something else, like 90 columns).
+
+However, documentation files are not source code files, and instead of fitting into 80 columns, they must be formatted to one sentence per line.
+This way a change in the middle of a paragraph doesn't cause unnecessary changes in subsequent lines, making it easier for reviewers to see what has changed when documentation is updated.
+
+Another exception are TableGen files (.td).
+There are no tools that can parse, verify and edit them to match our coding style, including clang-format, so they are excluded from this limit.
+It is still good practice to try to fit them into 80 columns, but it is not a requirement.
+As with other changes, if you patch a TD file, do not reformat the entire file, but only the lines you are changing.
+
+If your reformatting is causing unnecessary changes in subsequent lines, please just follow the existing formatting.
+Unecessary changes in TD files cause unnecessary churn in the file history and force recompilation of many unnecessary files.
+It also causes unnecessary changes in forks working on the same TD files, which makes it harder to rebase and merge later.
 
 Whitespace
 ^^^^^^^^^^

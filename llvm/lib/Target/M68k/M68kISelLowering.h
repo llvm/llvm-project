@@ -102,7 +102,7 @@ public:
                             bool IsVarArg) const;
 
   AtomicExpansionKind
-  shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const override;
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const override;
 
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
@@ -253,8 +253,6 @@ private:
       const SmallVectorImpl<ISD::InputArg> &Ins, SelectionDAG &DAG) const;
 
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
-
-  bool softPromoteHalfType() const override { return true; }
 };
 } // namespace llvm
 

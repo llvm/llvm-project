@@ -451,8 +451,6 @@ bool M68kInstrInfo::ExpandMOVX_RR(MachineInstrBuilder &MIB, MVT MVTDst,
   unsigned SSrc = RI.getMatchingMegaReg(Src, RCDst);
   assert(SSrc && "No viable MEGA register available");
 
-  DebugLoc DL = MIB->getDebugLoc();
-
   // If it happens to that super source register is the destination register
   // we do nothing
   if (Dst == SSrc) {
@@ -841,7 +839,7 @@ void M68kInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MI,
                                          Register DstReg, int FrameIndex,
                                          const TargetRegisterClass *RC,
-                                         Register VReg,
+                                         Register VReg, unsigned SubReg,
                                          MachineInstr::MIFlag Flags) const {
   const MachineFrameInfo &MFI = MBB.getParent()->getFrameInfo();
   assert(MFI.getObjectSize(FrameIndex) >= TRI.getSpillSize(*RC) &&

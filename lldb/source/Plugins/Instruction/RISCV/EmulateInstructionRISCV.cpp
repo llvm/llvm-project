@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "EmulateInstructionRISCV.h"
+#include "Plugins/Process/Utility/RegisterInfoInterface.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv32.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv64.h"
 #include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
 #include "RISCVCInstructions.h"
@@ -22,6 +24,7 @@
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/MathExtras.h"
 #include <optional>
 
@@ -1837,10 +1840,23 @@ EmulateInstructionRISCV::GetRegisterInfo(RegisterKind reg_kind,
     }
   }
 
-  RegisterInfoPOSIX_riscv64 reg_info(m_arch,
-                                     RegisterInfoPOSIX_riscv64::eRegsetMaskAll);
-  const RegisterInfo *array = reg_info.GetRegisterInfo();
-  const uint32_t length = reg_info.GetRegisterCount();
+  std::unique_ptr<RegisterInfoInterface> reg_info;
+  switch (m_arch.GetTriple().getArch()) {
+  case llvm::Triple::riscv32:
+    reg_info = std::make_unique<RegisterInfoPOSIX_riscv32>(
+        m_arch, RegisterInfoPOSIX_riscv32::eRegsetMaskAll);
+    break;
+  case llvm::Triple::riscv64:
+    reg_info = std::make_unique<RegisterInfoPOSIX_riscv64>(
+        m_arch, RegisterInfoPOSIX_riscv64::eRegsetMaskAll);
+    break;
+  default:
+    assert(false && "unsupported triple");
+    return {};
+  }
+
+  const RegisterInfo *array = reg_info->GetRegisterInfo();
+  const uint32_t length = reg_info->GetRegisterCount();
 
   if (reg_index >= length || reg_kind != eRegisterKindLLDB)
     return {};
@@ -1936,27 +1952,23 @@ bool EmulateInstructionRISCV::SupportsThisArch(const ArchSpec &arch) {
   return arch.GetTriple().isRISCV();
 }
 
-BreakpointLocations
-RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointLocations(
-    Status &status) {
+llvm::Expected<BreakpointLocations>
+RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointLocations() {
   EmulateInstructionRISCV *riscv_emulator =
       static_cast<EmulateInstructionRISCV *>(m_emulator_up.get());
 
-  auto pc = riscv_emulator->ReadPC();
-  if (!pc) {
-    status = Status("Can't read PC");
-    return {};
-  }
+  std::optional<addr_t> pc = riscv_emulator->ReadPC();
+  if (!pc)
+    return llvm::createStringError("Can't read PC");
 
   auto inst = riscv_emulator->ReadInstructionAt(*pc);
   if (!inst) {
     // Can't read instruction. Try default handler.
-    return SingleStepBreakpointLocationsPredictor::GetBreakpointLocations(
-        status);
+    return SingleStepBreakpointLocationsPredictor::GetBreakpointLocations();
   }
 
   if (FoundLoadReserve(inst->decoded))
-    return HandleAtomicSequence(*pc, status);
+    return HandleAtomicSequence(*pc);
 
   if (FoundStoreConditional(inst->decoded)) {
     // Ill-formed atomic sequence (SC doesn't have corresponding LR
@@ -1967,10 +1979,10 @@ RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointLocations(
               "RISCVSingleStepBreakpointLocationsPredictor::%s: can't find "
               "corresponding load reserve instruction",
               __FUNCTION__);
-    return {*pc + (inst->is_rvc ? 2u : 4u)};
+    return BreakpointLocations{*pc + (inst->is_rvc ? 2u : 4u)};
   }
 
-  return SingleStepBreakpointLocationsPredictor::GetBreakpointLocations(status);
+  return SingleStepBreakpointLocationsPredictor::GetBreakpointLocations();
 }
 
 llvm::Expected<unsigned>
@@ -1991,9 +2003,9 @@ RISCVSingleStepBreakpointLocationsPredictor::GetBreakpointSize(
   return 4;
 }
 
-BreakpointLocations
+llvm::Expected<BreakpointLocations>
 RISCVSingleStepBreakpointLocationsPredictor::HandleAtomicSequence(
-    lldb::addr_t pc, Status &error) {
+    lldb::addr_t pc) {
   EmulateInstructionRISCV *riscv_emulator =
       static_cast<EmulateInstructionRISCV *>(m_emulator_up.get());
 
@@ -2009,10 +2021,8 @@ RISCVSingleStepBreakpointLocationsPredictor::HandleAtomicSequence(
   std::vector<lldb::addr_t> bp_addrs;
   do {
     inst = riscv_emulator->ReadInstructionAt(pc);
-    if (!inst) {
-      error = Status("Can't read instruction");
-      return {};
-    }
+    if (!inst)
+      return llvm::createStringError("Can't read instruction");
 
     if (B *branch = std::get_if<B>(&inst->decoded))
       bp_addrs.push_back(pc + SignExt(branch->imm));
@@ -2032,7 +2042,7 @@ RISCVSingleStepBreakpointLocationsPredictor::HandleAtomicSequence(
               "RISCVSingleStepBreakpointLocationsPredictor::%s: can't find "
               "corresponding store conditional instruction",
               __FUNCTION__);
-    return {entry_pc + (lr_inst->is_rvc ? 2u : 4u)};
+    return BreakpointLocations{entry_pc + (lr_inst->is_rvc ? 2u : 4u)};
   }
 
   lldb::addr_t exit_pc = pc;

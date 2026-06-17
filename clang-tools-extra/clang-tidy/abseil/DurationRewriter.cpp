@@ -30,10 +30,10 @@ truncateIfIntegral(const FloatingLiteral &FloatLiteral) {
   return std::nullopt;
 }
 
-const std::pair<llvm::StringRef, llvm::StringRef> &
+const std::pair<StringRef, StringRef> &
 getDurationInverseForScale(DurationScale Scale) {
-  static constexpr std::array<std::pair<llvm::StringRef, llvm::StringRef>, 6>
-      InverseMap = {{
+  static constexpr std::array<std::pair<StringRef, StringRef>, 6> InverseMap = {
+      {
           {"::absl::ToDoubleHours", "::absl::ToInt64Hours"},
           {"::absl::ToDoubleMinutes", "::absl::ToInt64Minutes"},
           {"::absl::ToDoubleSeconds", "::absl::ToInt64Seconds"},
@@ -50,7 +50,7 @@ getDurationInverseForScale(DurationScale Scale) {
 static std::optional<std::string>
 rewriteInverseDurationCall(const MatchFinder::MatchResult &Result,
                            DurationScale Scale, const Expr &Node) {
-  const std::pair<llvm::StringRef, llvm::StringRef> &InverseFunctions =
+  const std::pair<StringRef, StringRef> &InverseFunctions =
       getDurationInverseForScale(Scale);
   if (const auto *MaybeCallArg = selectFirst<const Expr>(
           "e",
@@ -69,7 +69,7 @@ rewriteInverseDurationCall(const MatchFinder::MatchResult &Result,
 static std::optional<std::string>
 rewriteInverseTimeCall(const MatchFinder::MatchResult &Result,
                        DurationScale Scale, const Expr &Node) {
-  const llvm::StringRef InverseFunction = getTimeInverseForScale(Scale);
+  const StringRef InverseFunction = getTimeInverseForScale(Scale);
   if (const auto *MaybeCallArg = selectFirst<const Expr>(
           "e", match(callExpr(callee(functionDecl(hasName(InverseFunction))),
                               hasArgument(0, expr().bind("e"))),
@@ -81,8 +81,8 @@ rewriteInverseTimeCall(const MatchFinder::MatchResult &Result,
 }
 
 /// Returns the factory function name for a given `Scale`.
-llvm::StringRef getDurationFactoryForScale(DurationScale Scale) {
-  static constexpr std::array<llvm::StringRef, 6> FactoryMap = {
+StringRef getDurationFactoryForScale(DurationScale Scale) {
+  static constexpr std::array<StringRef, 6> FactoryMap = {
       "absl::Hours",        "absl::Minutes",      "absl::Seconds",
       "absl::Milliseconds", "absl::Microseconds", "absl::Nanoseconds",
   };
@@ -90,8 +90,8 @@ llvm::StringRef getDurationFactoryForScale(DurationScale Scale) {
   return FactoryMap[llvm::to_underlying(Scale)];
 }
 
-llvm::StringRef getTimeFactoryForScale(DurationScale Scale) {
-  static constexpr std::array<llvm::StringRef, 6> FactoryMap = {
+StringRef getTimeFactoryForScale(DurationScale Scale) {
+  static constexpr std::array<StringRef, 6> FactoryMap = {
       "absl::FromUnixHours",  "absl::FromUnixMinutes", "absl::FromUnixSeconds",
       "absl::FromUnixMillis", "absl::FromUnixMicros",  "absl::FromUnixNanos",
   };
@@ -100,8 +100,8 @@ llvm::StringRef getTimeFactoryForScale(DurationScale Scale) {
 }
 
 /// Returns the Time factory function name for a given `Scale`.
-llvm::StringRef getTimeInverseForScale(DurationScale Scale) {
-  static constexpr std::array<llvm::StringRef, 6> InverseMap = {
+StringRef getTimeInverseForScale(DurationScale Scale) {
+  static constexpr std::array<StringRef, 6> InverseMap = {
       "absl::ToUnixHours",  "absl::ToUnixMinutes", "absl::ToUnixSeconds",
       "absl::ToUnixMillis", "absl::ToUnixMicros",  "absl::ToUnixNanos",
   };
@@ -115,14 +115,14 @@ bool isLiteralZero(const MatchFinder::MatchResult &Result, const Expr &Node) {
       anyOf(integerLiteral(equals(0)), floatLiteral(equals(0.0)));
 
   // Check to see if we're using a zero directly.
-  if (selectFirst<const clang::Expr>(
+  if (selectFirst<const Expr>(
           "val", match(expr(ignoringImpCasts(ZeroMatcher)).bind("val"), Node,
                        *Result.Context)) != nullptr)
     return true;
 
   // Now check to see if we're using a functional cast with a scalar
   // initializer expression, e.g. `int{0}`.
-  if (selectFirst<const clang::Expr>(
+  if (selectFirst<const Expr>(
           "val", match(cxxFunctionalCastExpr(
                            hasDestinationType(
                                anyOf(isInteger(), realFloatingPointType())),
@@ -158,7 +158,7 @@ stripFloatCast(const ast_matchers::MatchFinder::MatchResult &Result,
 std::optional<std::string>
 stripFloatLiteralFraction(const MatchFinder::MatchResult &Result,
                           const Expr &Node) {
-  if (const auto *LitFloat = llvm::dyn_cast<FloatingLiteral>(&Node))
+  if (const auto *LitFloat = dyn_cast<FloatingLiteral>(&Node))
     // Attempt to simplify a `Duration` factory call with a literal argument.
     if (std::optional<llvm::APSInt> IntValue = truncateIfIntegral(*LitFloat))
       return toString(*IntValue, /*radix=*/10);
@@ -181,7 +181,7 @@ std::string simplifyDurationFactoryArg(const MatchFinder::MatchResult &Result,
   return tooling::fixit::getText(Node, *Result.Context).str();
 }
 
-std::optional<DurationScale> getScaleForDurationInverse(llvm::StringRef Name) {
+std::optional<DurationScale> getScaleForDurationInverse(StringRef Name) {
   static const llvm::StringMap<DurationScale> ScaleMap(
       {{"ToDoubleHours", DurationScale::Hours},
        {"ToInt64Hours", DurationScale::Hours},
@@ -203,7 +203,7 @@ std::optional<DurationScale> getScaleForDurationInverse(llvm::StringRef Name) {
   return ScaleIter->second;
 }
 
-std::optional<DurationScale> getScaleForTimeInverse(llvm::StringRef Name) {
+std::optional<DurationScale> getScaleForTimeInverse(StringRef Name) {
   static const llvm::StringMap<DurationScale> ScaleMap(
       {{"ToUnixHours", DurationScale::Hours},
        {"ToUnixMinutes", DurationScale::Minutes},

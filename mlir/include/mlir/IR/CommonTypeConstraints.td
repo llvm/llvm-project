@@ -165,8 +165,17 @@ class SameBuildabilityAs<Type type, code builder> {
   code builderCall = !if(!empty(type.builderCall), "", builder);
 }
 
-// Any type at all.
-def AnyType : Type<CPred<"true">, "any type">;
+// Whether a type is the builtin `TokenType`.
+def IsTokenTypePred : CPred<"::llvm::isa<::mlir::TokenType>($_self)">;
+
+// Any non-token type. Tokens are excluded by default to prevent ops that
+// accept arbitrary types from accidentally accepting tokens as operands /
+// results, since a token must not be value-forwarded.
+def AnyType : Type<Neg<IsTokenTypePred>, "any non-token type">;
+
+// The builtin token type.
+def Token : Type<IsTokenTypePred, "token", "::mlir::TokenType">,
+            BuildableType<"$_builder.getType<::mlir::TokenType>()">;
 
 // None type
 def NoneType : Type<CPred<"::llvm::isa<::mlir::NoneType>($_self)">, "none type",
@@ -307,6 +316,17 @@ def Index : Type<CPred<"::llvm::isa<::mlir::IndexType>($_self)">, "index",
 // Any signless integer type or index type.
 def AnySignlessIntegerOrIndex : Type<CPred<"$_self.isSignlessIntOrIndex()">,
                                      "signless integer or index">;
+
+// A signless integer type with a non-zero bitwidth (excludes i0).
+def AnyNonZeroBitwidthSignlessInteger : ConfinedType<
+    AnySignlessInteger, [CPred<"!$_self.isInteger(0)">],
+    "non-zero-bitwidth signless integer">;
+
+// A non-zero-bitwidth signless integer or index type.
+def AnyNonZeroBitwidthSignlessIntegerOrIndex : Type<
+    Or<[AnyNonZeroBitwidthSignlessInteger.predicate,
+        Index.predicate]>,
+    "non-zero-bitwidth signless integer or index">;
 
 // Floating point types.
 
@@ -649,6 +669,16 @@ class VectorOfLengthAndType<list<int> allowedLengths,
    VectorOfNonZeroRankOf<allowedTypes>.summary # VectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
 
+// Any vector where the number of elements is from the given
+// `allowedLengths` list and the type is from the given `allowedTypes`
+// list and the rank is from the given `allowedRanks` list
+class VectorOfRankAndLengthAndType<list<int> allowedRanks,
+                                   list<int> allowedLengths,
+                                   list<Type> allowedTypes> : AllOfType<
+  [VectorOfRank<allowedRanks>, VectorOfNonZeroRankOf<allowedTypes>, VectorOfLength<allowedLengths>],
+   VectorOfNonZeroRankOf<allowedTypes>.summary # VectorOfLength<allowedLengths>.summary # VectorOfRank<allowedRanks>.summary,
+  "::mlir::VectorType">;
+
 // Any vector where the number of elements is between
 // `minLength` and `maxLength` (inclusive).
 class VectorOfMinMaxLengthAndType<int minLength, int maxLength,
@@ -672,6 +702,18 @@ class FixedVectorOfLengthAndType<list<int> allowedLengths,
   [FixedVectorOfAnyRank<allowedTypes>, FixedVectorOfLength<allowedLengths>],
   FixedVectorOfAnyRank<allowedTypes>.summary #
   FixedVectorOfLength<allowedLengths>.summary,
+  "::mlir::VectorType">;
+
+// Any fixed-length vector where the number of elements is from the given
+// `allowedLengths` list and the type is from the given `allowedTypes` list
+// as the rank is from the given `allowedRanks` list
+class FixedVectorOfRankAndLengthAndType<list<int> allowedRanks,
+                                        list<int> allowedLengths,
+                                        list<Type> allowedTypes> : AllOfType<
+  [VectorOfRank<allowedRanks>, FixedVectorOfAnyRank<allowedTypes>, FixedVectorOfLength<allowedLengths>],
+  FixedVectorOfAnyRank<allowedTypes>.summary #
+  FixedVectorOfLength<allowedLengths>.summary #
+  VectorOfRank<allowedRanks>.summary,
   "::mlir::VectorType">;
 
 // Any scalable vector where the number of elements is from the given

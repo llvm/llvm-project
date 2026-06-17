@@ -167,12 +167,13 @@ define void @cse_volatile_loads(ptr %src, ptr noalias %dst, i64 %N) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SRC_4:%.*]] = getelementptr i8, ptr [[SRC]], i64 4
 ; CHECK-NEXT:    [[SRC_12:%.*]] = getelementptr i8, ptr [[SRC]], i64 12
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], -1
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[N]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i64 [[N]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[TMP2]], -1
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 [[TMP0]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_EPIL_PREHEADER:%.*]], label [[ENTRY_NEW:%.*]]
 ; CHECK:       entry.new:
-; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[N]], [[XTRAITER]]
+; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i64 [[TMP2]], [[XTRAITER]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[IV_NEXT_1:%.*]], [[LOOP]] ]
@@ -419,7 +420,7 @@ define void @loop_body_with_dead_blocks(ptr %src) {
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[SRC]], align 8
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i32 [[L_2]], 1
-; CHECK-NEXT:    br i1 [[C_2]], label [[EXIT:%.*]], label [[LOOP_HEADER_1:%.*]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C_2]], label [[EXIT:%.*]], label [[LOOP_HEADER_1:%.*]]
 ; CHECK:       loop.header.1:
 ; CHECK-NEXT:    br label [[LOOP_BB_1:%.*]]
 ; CHECK:       loop.bb.1:
@@ -429,7 +430,7 @@ define void @loop_body_with_dead_blocks(ptr %src) {
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    [[L_2_1:%.*]] = load i32, ptr [[SRC]], align 8
 ; CHECK-NEXT:    [[C_2_1:%.*]] = icmp eq i32 [[L_2_1]], 1
-; CHECK-NEXT:    br i1 [[C_2_1]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP9:![0-9]+]]
+; CHECK-NEXT:    br i1 [[C_2_1]], label [[EXIT]], label [[LOOP_HEADER]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -471,7 +472,5 @@ exit:
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META8:![0-9]+]]}
-; CHECK: [[META8]] = !{!"llvm.loop.unroll.count", i32 2}
-; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
 ;.

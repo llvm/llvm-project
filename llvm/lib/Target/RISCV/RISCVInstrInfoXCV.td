@@ -272,14 +272,14 @@ class CVInstImmBranch<bits<3> funct3, dag outs, dag ins,
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class CVLoad_ri_inc<bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_CUSTOM_0, (outs GPR:$rd, GPR:$rs1_wb),
-              (ins GPRMem:$rs1, simm12_lo:$imm12),
+              (ins BasePtr:$rs1, simm12_lo:$imm12),
               opcodestr, "$rd, (${rs1}), ${imm12}"> {
   let Constraints = "$rs1_wb = $rs1";
 }
 
 class CVLoad_rr_inc<bits<7> funct7, bits<3> funct3, string opcodestr>
     : RVInstR<funct7, funct3, OPC_CUSTOM_1, (outs GPR:$rd, GPR:$rs1_wb),
-              (ins GPRMem:$rs1, GPR:$rs2),
+              (ins BasePtr:$rs1, GPR:$rs2),
               opcodestr, "$rd, (${rs1}), ${rs2}"> {
   let Constraints = "$rs1_wb = $rs1";
 }
@@ -333,7 +333,7 @@ class CVStore_rr<bits<3> funct3, bits<7> funct7, string opcodestr>
 
 class CVLoad_ri<bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_CUSTOM_0, (outs GPR:$rd),
-      (ins GPRMem:$rs1, simm12_lo:$imm12), opcodestr, "$rd, ${imm12}(${rs1})">;
+      (ins BasePtr:$rs1, simm12_lo:$imm12), opcodestr, "$rd, ${imm12}(${rs1})">;
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -806,10 +806,10 @@ let Predicates = [HasVendorXCVbi, IsRV32], AddedComplexity = 2 in {
   defm CC_SImm5_CV : SelectCC_GPR_riirr<GPR, simm5>;
 
   class Selectbi<CondCode Cond>
-      : Pat<(riscv_selectcc_frag:$cc (i32 GPR:$lhs), simm5:$Constant, Cond,
-                                     (i32 GPR:$truev), GPR:$falsev),
+      : Pat<(riscv_selectcc (i32 GPR:$lhs), simm5:$Constant, Cond:$cc,
+                            (i32 GPR:$truev), GPR:$falsev),
             (Select_GPR_Using_CC_SImm5_CV GPR:$lhs, simm5:$Constant,
-             (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
+             (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 
   def : Selectbi<SETEQ>;
   def : Selectbi<SETNE>;

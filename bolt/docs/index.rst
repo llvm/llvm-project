@@ -1,6 +1,11 @@
 BOLT
 ====
 
+.. toctree::
+   :hidden:
+
+   BOLTAArch64OptimizationStatus
+
 BOLT is a post-link optimizer developed to speed up large applications.
 It achieves the improvements by optimizing application’s code layout
 based on execution profile gathered by sampling profiler, such as Linux
@@ -249,6 +254,12 @@ contradict each other) you can use ``merge-fdata`` tool:
 
 Use ``combined.fdata`` for **Step 3** above to generate a universally
 optimized binary.
+
+Profile Formats
+---------------
+
+See `Profile Formats <profiles.md>`__ for comprehensive documentation of all
+profile formats accepted by BOLT: perf.data, fdata, YAML, and pre-aggregated.
 
 License
 -------

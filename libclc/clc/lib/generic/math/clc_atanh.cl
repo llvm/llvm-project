@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc_convert.h>
-#include <clc/float/definitions.h>
-#include <clc/internal/clc.h>
-#include <clc/math/clc_fabs.h>
-#include <clc/math/clc_fma.h>
-#include <clc/math/clc_log1p.h>
-#include <clc/math/clc_mad.h>
-#include <clc/math/math.h>
+#include "clc/clc_convert.h"
+#include "clc/float/definitions.h"
+#include "clc/math/clc_atanh.h"
+#include "clc/math/clc_copysign.h"
+#include "clc/math/clc_ep.h"
+#include "clc/math/clc_fabs.h"
+#include "clc/math/clc_log2_fast.h"
+#include "clc/math/clc_recip_fast.h"
+#include "clc/relational/clc_isnan.h"
 
-#define __CLC_BODY <clc_atanh.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_atanh.inc"
+#include "clc/math/gentype.inc"

@@ -75,7 +75,7 @@ define void @exceed(double %0, double %1) {
 ; AARCH64-NEXT:    [[TMP8:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP5]]
 ; AARCH64-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> [[TMP5]], <2 x i32> <i32 0, i32 2>
 ; AARCH64-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> <double poison, double 1.000000e+00>, <2 x i32> <i32 0, i32 3>
-; AARCH64-NEXT:    [[TMP11:%.*]] = fdiv fast <2 x double> [[TMP9]], [[TMP10]]
+; AARCH64-NEXT:    [[TMP11:%.*]] = fdiv reassoc nsz arcp contract afn <2 x double> [[TMP9]], [[TMP10]]
 ; AARCH64-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP6]], i32 1
 ; AARCH64-NEXT:    [[IX:%.*]] = fmul double [[TMP12]], undef
 ; AARCH64-NEXT:    [[IX1:%.*]] = fmul double [[TMP12]], undef

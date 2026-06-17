@@ -45,6 +45,7 @@ def color_diagnostics_eq: Joined<["--"], "color-diagnostics=">,
 def defaultlib : P<"defaultlib", "Add the library to the list of input files">;
 def delayload : P<"delayload", "Delay loaded DLL name">;
 def diasdkdir : P<"diasdkdir", "Set the location of the DIA SDK">;
+def discard_section : P<"discard-section", "Discard input sections by name">;
 def dwodir : P<"dwodir",
     "Directory to store .dwo files when LTO and debug fission are used">;
 def entry   : P<"entry", "Name of entry point symbol">;
@@ -353,6 +354,11 @@ defm build_id: B<
 
 def incl_glob : Joined<["/", "-", "/?", "-?"], "includeglob:">,
     HelpText<"Force symbol to be added to symbol table as undefined one using a glob pattern">;
+
+defm prefetch_inputs : B<"prefetch-inputs",
+                         "Request the OS to prefetch input files as early as "
+                         "possible, to improve link times",
+                         "Do not prefetch input files (default)">;
 
 // Flags for debugging
 def lldmap : F<"lldmap">;

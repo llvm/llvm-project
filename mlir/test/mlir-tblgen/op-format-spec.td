@@ -175,7 +175,7 @@ def StringValid : TestFormat_Op<[{ custom<Foo>("foo") attr-dict }]>;
 
 // CHECK-NOT: error:
 def VariableValidA : TestFormat_Op<[{
-  $attr `:` attr-dict
+  ($attr^)? `:` attr-dict
 }]>, Arguments<(ins OptionalAttr<I1Attr>:$attr)>;
 def VariableValidB : TestFormat_Op<[{
   (`foo` $attr^)? `:` attr-dict

@@ -1,4 +1,4 @@
-! RUN: bbc -hlfir=false %s -o - | tco | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | tco | FileCheck %s
 
 character(LEN=128, KIND=4), PARAMETER :: conarr(3) = &
      [ character(128,4) :: "now is the time", "for all good men to come", &
@@ -27,4 +27,6 @@ end subroutine sub1
 ! CHECK: call void @_QPaction_on_char4(ptr @_QFEarr, i64 10)
 
 ! CHECK-LABEL: define void @_QPsub1(
-! CHECK: call void @_QPsub2(ptr @_QQcl[[inline]], i64 63)
+! CHECK: %[[VAL_1:.*]] = alloca [63 x i32]
+! CHECK: call void @llvm.memmove.{{.*}}(ptr %[[VAL_1]], ptr @_QQcl[[inline]],
+! CHECK: call void @_QPsub2(ptr %{{.*}}, i64 {{.*}})

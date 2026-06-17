@@ -23,6 +23,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -76,15 +77,20 @@ cl::opt<unsigned> VAGroupCountLimit("hvc-va-group-count-limit", cl::Hidden,
                                     cl::init(~0));
 cl::opt<unsigned> VAGroupSizeLimit("hvc-va-group-size-limit", cl::Hidden,
                                    cl::init(~0));
+cl::opt<unsigned>
+    MinLoadGroupSizeForAlignment("hvc-ld-min-group-size-for-alignment",
+                                 cl::Hidden, cl::init(4));
 
 class HexagonVectorCombine {
 public:
   HexagonVectorCombine(Function &F_, AliasAnalysis &AA_, AssumptionCache &AC_,
                        DominatorTree &DT_, ScalarEvolution &SE_,
-                       TargetLibraryInfo &TLI_, const TargetMachine &TM_)
-      : F(F_), DL(F.getDataLayout()), AA(AA_), AC(AC_), DT(DT_),
-        SE(SE_), TLI(TLI_),
-        HST(static_cast<const HexagonSubtarget &>(*TM_.getSubtargetImpl(F))) {}
+                       TargetLibraryInfo &TLI_, const TargetMachine &TM_,
+                       OptimizationRemarkEmitter &ORE_)
+      : F(F_), DL(F.getDataLayout()), AA(AA_), AC(AC_), DT(DT_), SE(SE_),
+        TLI(TLI_),
+        HST(static_cast<const HexagonSubtarget &>(*TM_.getSubtargetImpl(F))),
+        ORE(ORE_) {}
 
   bool run();
 
@@ -178,6 +184,7 @@ public:
   ScalarEvolution &SE;
   TargetLibraryInfo &TLI;
   const HexagonSubtarget &HST;
+  OptimizationRemarkEmitter &ORE;
 
 private:
   Value *getElementRange(IRBuilderBase &Builder, Value *Lo, Value *Hi,
@@ -1000,8 +1007,15 @@ auto AlignVectors::createLoadGroups(const AddrList &Group) const -> MoveList {
 
   auto tryAddTo = [&](const AddrInfo &Info, MoveGroup &Move) {
     assert(!Move.Main.empty() && "Move group should have non-empty Main");
-    if (Move.Main.size() >= SizeLimit)
+    if (Move.Main.size() >= SizeLimit) {
+      HVC.ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "GroupSizeLimitExceeded",
+                                        Info.Inst->getDebugLoc(),
+                                        Info.Inst->getParent())
+               << "alignment group exceeds size limit";
+      });
       return false;
+    }
     // Don't mix HVX and non-HVX instructions.
     if (Move.IsHvx != isHvx(Info))
       return false;
@@ -1010,8 +1024,15 @@ auto AlignVectors::createLoadGroups(const AddrList &Group) const -> MoveList {
     if (Base->getParent() != Info.Inst->getParent())
       return false;
     // Check if it's safe to move the load.
-    if (!HVC.isSafeToMoveBeforeInBB(*Info.Inst, Base->getIterator()))
+    if (!HVC.isSafeToMoveBeforeInBB(*Info.Inst, Base->getIterator())) {
+      HVC.ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnsafeToRelocate",
+                                        Info.Inst->getDebugLoc(),
+                                        Info.Inst->getParent())
+               << "unsafe to relocate memory access for alignment";
+      });
       return false;
+    }
     // And if it's safe to clone the dependencies.
     auto isSafeToCopyAtBase = [&](const Instruction *I) {
       return HVC.isSafeToMoveBeforeInBB(*I, Base->getIterator()) &&
@@ -1035,12 +1056,25 @@ auto AlignVectors::createLoadGroups(const AddrList &Group) const -> MoveList {
       LoadGroups.emplace_back(Info, Group.front().Inst, isHvx(Info), true);
   }
 
-  // Erase singleton groups.
-  erase_if(LoadGroups, [](const MoveGroup &G) { return G.Main.size() <= 1; });
+  // Erase groups smaller than the minimum load group size.
+  unsigned LoadGroupSizeLimit = MinLoadGroupSizeForAlignment;
+  erase_if(LoadGroups, [LoadGroupSizeLimit](const MoveGroup &G) {
+    return G.Main.size() < LoadGroupSizeLimit;
+  });
 
   // Erase HVX groups on targets < HvxV62 (due to lack of predicated loads).
-  if (!HVC.HST.useHVXV62Ops())
+  if (!HVC.HST.useHVXV62Ops()) {
+    bool HadHvx =
+        llvm::any_of(LoadGroups, [](const MoveGroup &G) { return G.IsHvx; });
     erase_if(LoadGroups, [](const MoveGroup &G) { return G.IsHvx; });
+    if (HadHvx) {
+      HVC.ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "HvxVersionTooLow",
+                                        HVC.F.getSubprogram(), &HVC.F.front())
+               << "HVX version too low for predicated load operations";
+      });
+    }
+  }
 
   LLVM_DEBUG(dbgs() << "LoadGroups list: " << LoadGroups);
   return LoadGroups;
@@ -1056,8 +1090,15 @@ auto AlignVectors::createStoreGroups(const AddrList &Group) const -> MoveList {
 
   auto tryAddTo = [&](const AddrInfo &Info, MoveGroup &Move) {
     assert(!Move.Main.empty() && "Move group should have non-empty Main");
-    if (Move.Main.size() >= SizeLimit)
+    if (Move.Main.size() >= SizeLimit) {
+      HVC.ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "GroupSizeLimitExceeded",
+                                        Info.Inst->getDebugLoc(),
+                                        Info.Inst->getParent())
+               << "alignment group exceeds size limit";
+      });
       return false;
+    }
     // For stores with return values we'd have to collect downward dependencies.
     // There are no such stores that we handle at the moment, so omit that.
     assert(Info.Inst->getType()->isVoidTy() &&
@@ -1071,8 +1112,16 @@ auto AlignVectors::createStoreGroups(const AddrList &Group) const -> MoveList {
     Instruction *Base = Move.Main.front();
     if (Base->getParent() != Info.Inst->getParent())
       return false;
-    if (!HVC.isSafeToMoveBeforeInBB(*Info.Inst, Base->getIterator(), Move.Main))
+    if (!HVC.isSafeToMoveBeforeInBB(*Info.Inst, Base->getIterator(),
+                                    Move.Main)) {
+      HVC.ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnsafeToRelocate",
+                                        Info.Inst->getDebugLoc(),
+                                        Info.Inst->getParent())
+               << "unsafe to relocate memory access for alignment";
+      });
       return false;
+    }
     Move.Main.push_back(Info.Inst);
     return true;
   };
@@ -1091,8 +1140,18 @@ auto AlignVectors::createStoreGroups(const AddrList &Group) const -> MoveList {
   erase_if(StoreGroups, [](const MoveGroup &G) { return G.Main.size() <= 1; });
 
   // Erase HVX groups on targets < HvxV62 (due to lack of predicated loads).
-  if (!HVC.HST.useHVXV62Ops())
+  if (!HVC.HST.useHVXV62Ops()) {
+    bool HadHvx =
+        llvm::any_of(StoreGroups, [](const MoveGroup &G) { return G.IsHvx; });
     erase_if(StoreGroups, [](const MoveGroup &G) { return G.IsHvx; });
+    if (HadHvx) {
+      HVC.ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "HvxVersionTooLow",
+                                        HVC.F.getSubprogram(), &HVC.F.front())
+               << "HVX version too low for predicated store operations";
+      });
+    }
+  }
 
   // Erase groups where every store is a full HVX vector. The reason is that
   // aligning predicated stores generates complex code that may be less
@@ -1598,6 +1657,13 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) -> bool {
     realignLoadGroup(Builder, VSpan, ScLen, AlignVal, AlignAddr);
   else
     realignStoreGroup(Builder, VSpan, ScLen, AlignVal, AlignAddr);
+
+  Instruction *Front = Move.Main.front();
+  HVC.ORE.emit([&]() {
+    return OptimizationRemark(DEBUG_TYPE, "VectorsAligned",
+                              Front->getDebugLoc(), Front->getParent())
+           << "aligned vector memory operations";
+  });
 
   for (auto *Inst : Move.Main)
     Inst->eraseFromParent();
@@ -2233,13 +2299,13 @@ Value *HvxIdioms::processVScatter(Instruction &In) const {
   Value *CastIndex = nullptr;
   if (cstDataVector) {
     // Our indexes are represented as a constant. We need it in a reg.
-    AllocaInst *IndexesAlloca =
-        Builder.CreateAlloca(HVC.getHvxTy(HVC.getIntTy(32), false));
+    Type *IndexVectorType = HVC.getHvxTy(HVC.getIntTy(32), false);
+    AllocaInst *IndexesAlloca = Builder.CreateAlloca(IndexVectorType);
     [[maybe_unused]] auto *StoreIndexes =
         Builder.CreateStore(cstDataVector, IndexesAlloca);
     LLVM_DEBUG(dbgs() << "  StoreIndexes     : " << *StoreIndexes << "\n");
-    CastIndex = Builder.CreateLoad(IndexesAlloca->getAllocatedType(),
-                                   IndexesAlloca, "reload_index");
+    CastIndex =
+        Builder.CreateLoad(IndexVectorType, IndexesAlloca, "reload_index");
   } else {
     if (ElemWidth == 2)
       CastIndex = getReinterpretiveCast_i16_to_i32(HVC, Builder, Ctx, Indexes);
@@ -2377,7 +2443,7 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
     return nullptr;
   LLVM_DEBUG(dbgs() << "  Indexes        : " << *Indexes << "\n");
 
-  Instruction *Gather = nullptr;
+  Value *Gather = nullptr;
   Type *NT = HVC.getHvxTy(HVC.getIntTy(32), false);
   if (Qual == HvxIdioms::LdSt || Qual == HvxIdioms::Arithmetic) {
     // We fully assume the address space is in VTCM. We also assume that all
@@ -2616,8 +2682,8 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
         [[maybe_unused]] auto *StoreIndexes =
             Builder.CreateStore(cstDataVector, IndexesAlloca);
         LLVM_DEBUG(dbgs() << "  StoreIndexes   : " << *StoreIndexes << "\n");
-        Value *LoadedIndex = Builder.CreateLoad(
-            IndexesAlloca->getAllocatedType(), IndexesAlloca, "reload_index");
+        Value *LoadedIndex =
+            Builder.CreateLoad(NT, IndexesAlloca, "reload_index");
         AllocaInst *ResultAlloca = Builder.CreateAlloca(NT);
         LLVM_DEBUG(dbgs() << "  ResultAlloca   : " << *ResultAlloca << "\n");
 
@@ -2697,8 +2763,8 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
         [[maybe_unused]] auto *StoreIndexes =
             Builder.CreateStore(cstDataVector, IndexesAlloca);
         LLVM_DEBUG(dbgs() << "  StoreIndexes   : " << *StoreIndexes << "\n");
-        Value *LoadedIndex = Builder.CreateLoad(
-            IndexesAlloca->getAllocatedType(), IndexesAlloca, "reload_index");
+        Value *LoadedIndex =
+            Builder.CreateLoad(NT, IndexesAlloca, "reload_index");
         AllocaInst *ResultAlloca = Builder.CreateAlloca(NT);
         LLVM_DEBUG(dbgs() << "  ResultAlloca   : " << *ResultAlloca
                           << "\n  AddressSpace: "
@@ -3343,7 +3409,7 @@ auto HexagonVectorCombine::getConstInt(int Val, unsigned Width) const
 
 auto HexagonVectorCombine::isZero(const Value *Val) const -> bool {
   if (auto *C = dyn_cast<Constant>(Val))
-    return C->isZeroValue();
+    return C->isNullValue();
   return false;
 }
 
@@ -4064,6 +4130,7 @@ public:
     AU.addRequired<ScalarEvolutionWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
+    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 
@@ -4078,7 +4145,8 @@ public:
     TargetLibraryInfo &TLI =
         getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     auto &TM = getAnalysis<TargetPassConfig>().getTM<HexagonTargetMachine>();
-    HexagonVectorCombine HVC(F, AA, AC, DT, SE, TLI, TM);
+    auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+    HexagonVectorCombine HVC(F, AA, AC, DT, SE, TLI, TM, ORE);
     return HVC.run();
   }
 };
@@ -4094,6 +4162,7 @@ INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(HexagonVectorCombineLegacy, DEBUG_TYPE,
                     "Hexagon Vector Combine", false, false)
 

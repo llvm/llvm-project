@@ -23,9 +23,8 @@ using namespace lldb_private;
 using namespace llvm;
 using namespace llvm::object;
 
-static bool IsCOFFObjectFile(const DataBufferSP &data) {
-  return identify_magic(toStringRef(data->GetData())) ==
-         file_magic::coff_object;
+static bool IsCOFFObjectFile(const llvm::ArrayRef<uint8_t> data) {
+  return identify_magic(toStringRef(data)) == file_magic::coff_object;
 }
 
 LLDB_PLUGIN_DEFINE(ObjectFileCOFF)
@@ -66,10 +65,15 @@ ObjectFileCOFF::CreateInstance(const ModuleSP &module_sp,
   assert(extractor_sp && extractor_sp->HasData() &&
          "must have mapped file at this point");
 
-  if (!IsCOFFObjectFile(extractor_sp->GetSharedDataBuffer()))
+  // If this is operating on a VirtualDataExtractor, it can have
+  // gaps between valid bytes in the DataBuffer. We extract an
+  // ArrayRef of the raw bytes, and can segfault.
+  DataExtractorSP contiguous_extractor_sp =
+      extractor_sp->GetContiguousDataExtractorSP();
+  if (!IsCOFFObjectFile(contiguous_extractor_sp->GetData()))
     return nullptr;
 
-  if (extractor_sp->GetByteSize() < length) {
+  if (contiguous_extractor_sp->GetByteSize() < length) {
     DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp) {
       LLDB_LOG(log,
@@ -77,13 +81,13 @@ ObjectFileCOFF::CreateInstance(const ModuleSP &module_sp,
                file->GetPath());
       return nullptr;
     }
-    extractor_sp = std::make_shared<lldb_private::DataExtractor>(data_sp);
+    contiguous_extractor_sp =
+        std::make_shared<lldb_private::DataExtractor>(data_sp);
     data_offset = 0;
   }
 
-  MemoryBufferRef buffer{
-      toStringRef(extractor_sp->GetSharedDataBuffer()->GetData()),
-      file->GetFilename().GetStringRef()};
+  MemoryBufferRef buffer{toStringRef(contiguous_extractor_sp->GetData()),
+                         file->GetFilename().GetStringRef()};
 
   Expected<std::unique_ptr<Binary>> binary = createBinary(buffer);
   if (!binary) {
@@ -93,13 +97,13 @@ ObjectFileCOFF::CreateInstance(const ModuleSP &module_sp,
     return nullptr;
   }
 
-  LLDB_LOG(log, "ObjectFileCOFF::ObjectFileCOFF module = {1} ({2}), file = {3}",
+  LLDB_LOG(log, "ObjectFileCOFF::ObjectFileCOFF module = {0} ({1}), file = {2}",
            module_sp.get(), module_sp->GetSpecificationDescription(),
            file->GetPath());
 
   return new ObjectFileCOFF(unique_dyn_cast<COFFObjectFile>(std::move(*binary)),
-                            module_sp, extractor_sp, data_offset, file,
-                            file_offset, length);
+                            module_sp, contiguous_extractor_sp, data_offset,
+                            file, file_offset, length);
 }
 
 lldb_private::ObjectFile *ObjectFileCOFF::CreateMemoryInstance(
@@ -109,13 +113,24 @@ lldb_private::ObjectFile *ObjectFileCOFF::CreateMemoryInstance(
   return nullptr;
 }
 
-size_t ObjectFileCOFF::GetModuleSpecifications(
-    const FileSpec &file, DataBufferSP &data_sp, offset_t data_offset,
-    offset_t file_offset, offset_t length, ModuleSpecList &specs) {
-  if (!IsCOFFObjectFile(data_sp))
-    return 0;
+ModuleSpecList
+ObjectFileCOFF::GetModuleSpecifications(const FileSpec &file,
+                                        DataExtractorSP &extractor_sp,
+                                        offset_t file_offset, offset_t length) {
+  if (!extractor_sp || !extractor_sp->HasData())
+    return {};
 
-  MemoryBufferRef buffer{toStringRef(data_sp->GetData()),
+  // If this is opearting on a VirtualDataExtractor, it can have
+  // gaps between valid bytes in the DataBuffer. We extract an
+  // ArrayRef of the raw bytes, and can segfault.
+  DataExtractorSP contiguous_extractor_sp =
+      extractor_sp->GetContiguousDataExtractorSP();
+  if (!contiguous_extractor_sp)
+    return {};
+  if (!IsCOFFObjectFile(contiguous_extractor_sp->GetData()))
+    return {};
+
+  MemoryBufferRef buffer{toStringRef(contiguous_extractor_sp->GetData()),
                          file.GetFilename().GetStringRef()};
   Expected<std::unique_ptr<Binary>> binary = createBinary(buffer);
   if (!binary) {
@@ -123,27 +138,28 @@ size_t ObjectFileCOFF::GetModuleSpecifications(
     LLDB_LOG_ERROR(log, binary.takeError(),
                    "Failed to create binary for file ({1}): {0}",
                    file.GetFilename());
-    return 0;
+    return {};
   }
 
   std::unique_ptr<COFFObjectFile> object =
       unique_dyn_cast<COFFObjectFile>(std::move(*binary));
+  ModuleSpecList specs;
   switch (static_cast<COFF::MachineTypes>(object->getMachine())) {
-  case COFF::IMAGE_FILE_MACHINE_I386:
     specs.Append(ModuleSpec(file, ArchSpec("i686-unknown-windows-msvc")));
-    return 1;
+    return specs;
   case COFF::IMAGE_FILE_MACHINE_AMD64:
     specs.Append(ModuleSpec(file, ArchSpec("x86_64-unknown-windows-msvc")));
-    return 1;
+    return specs;
   case COFF::IMAGE_FILE_MACHINE_ARMNT:
     specs.Append(ModuleSpec(file, ArchSpec("armv7-unknown-windows-msvc")));
-    return 1;
+    return specs;
   case COFF::IMAGE_FILE_MACHINE_ARM64:
     specs.Append(ModuleSpec(file, ArchSpec("aarch64-unknown-windows-msvc")));
-    return 1;
+    return specs;
   default:
-    return 0;
+    break;
   }
+  return {};
 }
 
 void ObjectFileCOFF::Dump(Stream *stream) {

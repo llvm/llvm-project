@@ -128,7 +128,7 @@ static DWARFDie GetParentDeclContextDIE(DWARFDie &Die) {
 /// .debug_info. If we create a qualified name string in this function by
 /// combining multiple strings in the DWARF string table or info, we will make
 /// a copy of the string when we add it to the string table.
-static std::optional<uint32_t>
+static std::optional<gsym_strp_t>
 getQualifiedNameIndex(DWARFDie &Die, uint64_t Language, GsymCreator &Gsym) {
   // If the dwarf has mangled name, use mangled name
   if (auto LinkageName = Die.getLinkageName()) {
@@ -335,35 +335,52 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
 
   if (!CUI.LineTable->lookupAddressRange(SecAddress, RangeSize, RowVector,
                                          StmtSeqOffset)) {
-    // If we have a DW_TAG_subprogram but no line entries, fall back to using
-    // the DW_AT_decl_file an d DW_AT_decl_line if we have both attributes.
-    std::string FilePath = Die.getDeclFile(
-        DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath);
-    if (FilePath.empty()) {
-      // If we had a DW_AT_decl_file, but got no file then we need to emit a
-      // warning.
-      const uint64_t DwarfFileIdx = dwarf::toUnsigned(
-          Die.findRecursively(dwarf::DW_AT_decl_file), UINT32_MAX);
-      // Check if there is no DW_AT_decl_line attribute, and don't report an
-      // error if it isn't there.
-      if (DwarfFileIdx == UINT32_MAX)
+    // If StmtSeqOffset had a value but the lookup failed, try again without it.
+    // If the second lookup succeeds, we know the DW_AT_LLVM_stmt_sequence value
+    // was invalid, but we still have valid line entries.
+    if (StmtSeqOffset &&
+        CUI.LineTable->lookupAddressRange(SecAddress, RangeSize, RowVector)) {
+      Out.Report("Invalid DW_AT_LLVM_stmt_sequence value",
+                 [&](raw_ostream &OS) {
+                   OS << "error: function DIE at " << HEX32(Die.getOffset())
+                      << " has a DW_AT_LLVM_stmt_sequence value "
+                      << HEX32(*StmtSeqOffset)
+                      << " which doesn't match any line table "
+                      << "sequence offset but there are " << RowVector.size()
+                      << " matching line entries in other sequences.\n";
+                 });
+    } else {
+      // If we have a DW_TAG_subprogram but no line entries, fall back to using
+      // the DW_AT_decl_file an d DW_AT_decl_line if we have both attributes.
+      std::string FilePath = Die.getDeclFile(
+          DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath);
+      if (FilePath.empty()) {
+        // If we had a DW_AT_decl_file, but got no file then we need to emit a
+        // warning.
+        const uint64_t DwarfFileIdx = dwarf::toUnsigned(
+            Die.findRecursively(dwarf::DW_AT_decl_file), UINT32_MAX);
+        // Check if there is no DW_AT_decl_line attribute, and don't report an
+        // error if it isn't there.
+        if (DwarfFileIdx == UINT32_MAX)
+          return;
+        Out.Report("Invalid file index in DW_AT_decl_file", [&](raw_ostream
+                                                                    &OS) {
+          OS << "error: function DIE at " << HEX32(Die.getOffset())
+             << " has an invalid file index " << DwarfFileIdx
+             << " in its DW_AT_decl_file attribute, unable to create a single "
+             << "line entry from the DW_AT_decl_file/DW_AT_decl_line "
+             << "attributes.\n";
+        });
         return;
-      Out.Report("Invalid file index in DW_AT_decl_file", [&](raw_ostream &OS) {
-        OS << "error: function DIE at " << HEX32(Die.getOffset())
-           << " has an invalid file index " << DwarfFileIdx
-           << " in its DW_AT_decl_file attribute, unable to create a single "
-           << "line entry from the DW_AT_decl_file/DW_AT_decl_line "
-           << "attributes.\n";
-      });
+      }
+      if (auto Line = dwarf::toUnsigned(
+              Die.findRecursively({dwarf::DW_AT_decl_line}))) {
+        LineEntry LE(StartAddress, Gsym.insertFile(FilePath), *Line);
+        FI.OptLineTable = LineTable();
+        FI.OptLineTable->push(LE);
+      }
       return;
     }
-    if (auto Line =
-            dwarf::toUnsigned(Die.findRecursively({dwarf::DW_AT_decl_line}))) {
-      LineEntry LE(StartAddress, Gsym.insertFile(FilePath), *Line);
-      FI.OptLineTable = LineTable();
-      FI.OptLineTable->push(LE);
-    }
-    return;
   }
 
   FI.OptLineTable = LineTable();
@@ -610,10 +627,10 @@ void DwarfTransformer::parseCallSiteInfoFromDwarf(CUInfo &CUI, DWARFDie Die,
 
       // Include the full unmangled name if available, otherwise the short name.
       if (const char *LinkName = OriginDie.getLinkageName()) {
-        uint32_t LinkNameOff = Gsym.insertString(LinkName, /*Copy=*/false);
+        gsym_strp_t LinkNameOff = Gsym.insertString(LinkName, /*Copy=*/false);
         CSI.MatchRegex.push_back(LinkNameOff);
       } else if (const char *ShortName = OriginDie.getShortName()) {
-        uint32_t ShortNameOff = Gsym.insertString(ShortName, /*Copy=*/false);
+        gsym_strp_t ShortNameOff = Gsym.insertString(ShortName, /*Copy=*/false);
         CSI.MatchRegex.push_back(ShortNameOff);
       }
     }
@@ -718,9 +735,11 @@ llvm::Error DwarfTransformer::verify(StringRef GsymPath,
                                      OutputAggregator &Out) {
   Out << "Verifying GSYM file \"" << GsymPath << "\":\n";
 
-  auto Gsym = GsymReader::openFile(GsymPath);
-  if (!Gsym)
-    return Gsym.takeError();
+  llvm::Expected<std::unique_ptr<GsymReader>> GsymOrErr =
+      GsymReader::openFile(GsymPath);
+  if (!GsymOrErr)
+    return GsymOrErr.takeError();
+  std::unique_ptr<GsymReader> &Gsym = *GsymOrErr;
 
   auto NumAddrs = Gsym->getNumAddresses();
   DILineInfoSpecifier DLIS(

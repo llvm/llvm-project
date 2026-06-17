@@ -1184,6 +1184,8 @@ public:
     }
 
     if (HowManyGoodConversions == 1) {
+      assert(BestConversion &&
+             "BestConversion must be set if HowManyGoodConversions is 1");
       LLVM_DEBUG(llvm::dbgs()
                  << "--- selectUserDefinedConv. Unique result. Flags: "
                  << formatMixFlags(BestConversion->Flags) << '\n');
@@ -1196,7 +1198,7 @@ public:
   }
 
 private:
-  llvm::SmallVector<PreparedConversion, 2> FlaggedConversions;
+  SmallVector<PreparedConversion, 2> FlaggedConversions;
   const TheCheck &Check;
 };
 
@@ -1738,7 +1740,7 @@ public:
 /// Implements the heuristic that marks two parameters related if different
 /// ReturnStmts return them from the function.
 class Returned {
-  llvm::SmallVector<const ParmVarDecl *, SmallDataStructureSize> ReturnedParams;
+  SmallVector<const ParmVarDecl *, SmallDataStructureSize> ReturnedParams;
 
 public:
   void setup(const FunctionDecl *FD) {
