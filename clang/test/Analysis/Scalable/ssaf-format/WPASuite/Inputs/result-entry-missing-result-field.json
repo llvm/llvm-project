@@ -12,5 +12,6 @@
     {
       "analysis_name": "PairsAnalysisResult"
     }
-  ]
+  ],
+  "type": "WPASuite"
 }
