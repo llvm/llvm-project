@@ -24,8 +24,9 @@ void test() {
   int range[] = {1, 2, 3};
   auto f      = [](int i) { return i; };
 
-  auto identity_view = TestView{} | std::views::transform(std::identity{});
-    
+  auto identity_view     = TestView{} | std::views::transform(std::identity{});
+  auto transformed_range = range | std::views::transform(f);
+
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   identity_view.begin();
 
@@ -40,4 +41,36 @@ void test() {
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::all | std::views::transform(f);
+
+  //===---------------------------------===//
+  //=== ADL-based begin() / end() ===//
+
+  using std::begin, std::end;
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  begin(identity_view);
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  end(identity_view);
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  begin(transformed_range);
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  end(transformed_range);
+
+  //===---------------------------------===//
+  //=== std::ranges CPO begin() / end() ===//
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::begin(identity_view);
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::end(identity_view);
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::begin(transformed_range);
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::ranges::end(transformed_range);
 }
