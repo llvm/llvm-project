@@ -1508,6 +1508,35 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
     }
   }
 
+  // X / (select Cond, 1, Y) --> select Cond, X, (X / Y)
+  // X / (select Cond, Y, 1) --> select Cond, (X / Y), X
+  // Division by 1 is a no-op, so we sink the division into the non-1 arm.
+  // For sdiv, limit Y to constant to avoid signed overflow concern.
+  {
+    Value *Cond, *DivY;
+    const APInt *C;
+    auto IsSafeDivisor = [&](Value *V) {
+      if (IsSigned)
+        return match(V, m_APInt(C)) && !C->isZero() && !C->isAllOnes();
+      return isKnownNonZero(V, SQ.getWithInstruction(&I)) &&
+             isGuaranteedNotToBePoison(V, SQ.AC, &I, SQ.DT);
+    };
+    if (match(Op1, m_OneUse(m_Select(m_Value(Cond), m_One(), m_Value(DivY)))) &&
+        IsSafeDivisor(DivY)) {
+      Value *NewDiv =
+          Builder.CreateExactBinOp(I.getOpcode(), Op0, DivY, I.isExact());
+      return SelectInst::Create(Cond, Op0, NewDiv, "", nullptr,
+                                cast<SelectInst>(Op1));
+    }
+    if (match(Op1, m_OneUse(m_Select(m_Value(Cond), m_Value(DivY), m_One()))) &&
+        IsSafeDivisor(DivY)) {
+      Value *NewDiv =
+          Builder.CreateExactBinOp(I.getOpcode(), Op0, DivY, I.isExact());
+      return SelectInst::Create(Cond, NewDiv, Op0, "", nullptr,
+                                cast<SelectInst>(Op1));
+    }
+  }
+
   // (X * Y) / (X * Z) --> Y / Z (and commuted variants)
   if (match(Op0, m_Mul(m_Value(X), m_Value(Y)))) {
     auto OB0HasNSW = cast<OverflowingBinaryOperator>(Op0)->hasNoSignedWrap();

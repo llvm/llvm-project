@@ -9662,6 +9662,10 @@ def dxc_Fc : DXCJoinedOrSeparate<"Fc">,
   HelpText<"Output assembly listing file">;
 def dxc_Frs : DXCJoinedOrSeparate<"Frs">,
   HelpText<"Output additional root signature object file">;
+def dxc_Zss : DXCFlag<"Zss">,
+              HelpText<"Compute Shader Hash considering source information">;
+def dxc_Zsb : DXCFlag<"Zsb">,
+              HelpText<"Compute Shader Hash considering only output binary">;
 def dxil_validator_version : Option<["/", "-"], "validator-version", KIND_SEPARATE>,
   Group<dxc_Group>, Flags<[HelpHidden]>,
   Visibility<[DXCOption, ClangOption, CC1Option]>,
