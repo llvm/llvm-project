@@ -342,10 +342,10 @@
 #  define _LIBCPP_TRY_ACQUIRE_SHARED_CAPABILITY(...)
 #endif
 
-#if __has_cpp_attribute(_Clang::__release_capability__)
-#  define _LIBCPP_RELEASE_CAPABILITY [[_Clang::__release_capability__]]
+#if __has_attribute(__release_capability__)
+#  define _LIBCPP_RELEASE_CAPABILITY(...) __attribute__((__release_capability__(__VA_ARGS__)))
 #else
-#  define _LIBCPP_RELEASE_CAPABILITY
+#  define _LIBCPP_RELEASE_CAPABILITY(...)
 #endif
 
 #if __has_cpp_attribute(_Clang::__release_shared_capability__)
