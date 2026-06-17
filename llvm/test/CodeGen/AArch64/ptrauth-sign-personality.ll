@@ -1,5 +1,6 @@
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 ; RUN: cat common.ll authflag.ll   > auth.ll
+; RUN: cat common.ll authflag-bb.ll > auth-bb.ll
 ; RUN: cat common.ll noauthflag.ll > noauth1.ll
 ; RUN: cat common.ll               > noauth2.ll
 
@@ -43,6 +44,24 @@
 ; NOAUTH-RELOC:      Hex dump of section '.data.DW.ref.__gxx_personality_v0':
 ; NOAUTH-RELOC-NEXT: 0x00000000 00000000 00000000
 
+; RUN: llc -mtriple=aarch64-linux -filetype=asm auth-bb.ll -o - | \
+; RUN:   FileCheck --check-prefix=AUTH-ASM-BB %s
+; RUN: llc -mtriple=aarch64-linux -filetype=obj auth-bb.ll -o - | \
+; RUN:   llvm-readelf -r -x .data.DW.ref.__gxx_personality_v0 - | \
+; RUN:   FileCheck --check-prefix=AUTH-RELOC-BB %s
+
+; AUTH-ASM-BB:      DW.ref.__gxx_personality_v0:
+; AUTH-ASM-BB-NEXT:     .xword  __gxx_personality_v0@AUTH(ib,32429,addr)
+
+; AUTH-RELOC-BB:      Relocation section '.rela.data.DW.ref.__gxx_personality_v0' at offset 0x2a0 contains 1 entries:
+; AUTH-RELOC-BB-NEXT:     Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+; AUTH-RELOC-BB-NEXT: 0000000000000000  0000000f00000244 R_AARCH64_AUTH_ABS64   0000000000000000 __gxx_personality_v0 + 0
+
+; AUTH-RELOC-BB:      Hex dump of section '.data.DW.ref.__gxx_personality_v0':
+; AUTH-RELOC-BB-NEXT: 0x00000000 00000000 ad7e0090
+;                                      ^^^^ 0x7EAD = discriminator
+;                                            ^^ 0b10000000: bit 63 = 1 -> address diversity enabled, bits 61:60 = 0b00 -> key is IB
+
 ;--- common.ll
 @_ZTISt9exception = external constant ptr
 
@@ -71,3 +90,8 @@ declare void @foo()
 ;--- noauthflag.ll
 !llvm.module.flags = !{!0}
 !0 = !{i32 8, !"ptrauth-sign-personality", i32 0}
+
+;--- authflag-bb.ll
+!llvm.module.flags = !{!0, !1}
+!0 = !{i32 8, !"ptrauth-sign-personality", i32 1}
+!1 = !{i32 1, !"ptrauth-keys", !"ibdbibdb"}
