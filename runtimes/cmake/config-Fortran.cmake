@@ -11,18 +11,18 @@
 # compiled. Contains the build targets for intrinsic modules, if necessary.
 # Otherweise, it is empty.
 #
-# RUNTIMES_ENABLE_FLANG_MODULES - Whether to build Flang modules and emit them
+# RUNTIMES_FORTRAN_MODULES - Whether to build Flang modules and emit them
 # into Flang's search path. This is a CMake CACHE option defined in
 # config-Fortran.cmake and default to ON iff the Fortran compiler is detected
 # for be a (compatible) version of Flang. In the OFF setting, modules are still
 # built, but not installed or emitted into a default path.
 #
 # RUNTIMES_OUTPUT_RESOURCE_MOD_DIR - Where to emit intrinsic module files in
-# the build directory. Most relevant when RUNTIMES_ENABLE_FLANG_MODULES is ON.
+# the build directory. Most relevant when RUNTIMES_FORTRAN_MODULES is ON.
 #
 # RUNTIMES_INSTALL_RESOURCE_MOD_PATH - Where to install intrinsic module files
 # in the install prefix. Relative to CMAKE_INSTALL_PREFIX. Only used when
-# RUNTIMES_ENABLE_FLANG_MODULES is ON.
+# RUNTIMES_FORTRAN_MODULES is ON.
 
 
 # Check whether the Fortran compiler already has access to builtin modules. Sets
@@ -180,17 +180,14 @@ endif ()
 
 
 # Check whether modules files are compatible with our version of Flang.
-set(RUNTIMES_ENABLE_FLANG_MODULES_default OFF)
-if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
-  set(RUNTIMES_ENABLE_FLANG_MODULES_default ON)
-else ()
-  set(RUNTIMES_ENABLE_FLANG_MODULES_default OFF)
+set(RUNTIMES_FORTRAN_MODULES_default OFF)
+if (RUNTIMES_ENABLE_FORTRAN AND CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+  set(RUNTIMES_FORTRAN_MODULES_default ON)
 endif ()
-option(RUNTIMES_ENABLE_FLANG_MODULES "Make Fortran .mod files available to Flang; should only be enabled if compiling with a matching version of Flang" "${RUNTIMES_ENABLE_FLANG_MODULES_default}")
-
+option(RUNTIMES_FORTRAN_MODULES "Make Fortran .mod files available to Flang; should only be enabled if compiling with a matching version of Flang" "${RUNTIMES_FORTRAN_MODULES_default}")
 
 # Determine the paths for Fortran .mod files.
-if (RUNTIMES_ENABLE_FLANG_MODULES)
+if (RUNTIMES_FORTRAN_MODULES)
   # Flang expects its builtin modules in Clang's resource directory.
   get_toolchain_module_subdir(toolchain_mod_subdir)
   extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_mod_subdir}")
@@ -261,7 +258,15 @@ function (flang_module_target tgtname)
         Fortran_MODULE_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}"
     )
   else ()
-    # Keep non-public modules where CMake would put them normally;
-    # Modules of different target must not overwrite each other.
+    # Modules of different targets must not overwrite each other.
+    # Ideally, we would use $<TARGET_PROPERTY:${tgtname},BINARY_DIR> but
+    # Fortran_MODULE_DIRECTORY does not support generator expressions.
+    # Not defining Fortran_MODULE_DIRECTORY at all would but it into
+    # ${CMAKE_CURRENT_BINARY_DIR} where modules with the same name but compiled
+    # by different targets would clash.
+    set_target_properties(${tgtname}
+      PROPERTIES
+        Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${tgtname}.dir/${CMAKE_CFG_INTDIR}"
+    )
   endif ()
 endfunction ()

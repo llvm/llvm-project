@@ -21,7 +21,7 @@ define ptr @foo(ptr %p, ptr %p.last) #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 16
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 1024
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 10
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -81,7 +81,7 @@ define ptr @bar(ptr %p, ptr %p.last) #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 16
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 1024
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 10
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:

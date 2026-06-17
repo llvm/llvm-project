@@ -121,6 +121,22 @@ func.func @atomic_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i32) -> i32
 
 // -----
 
+func.func @atomic_exchange_bf16(%ptr: !spirv.ptr<bf16, Workgroup>, %value: bf16) -> bf16 {
+  // expected-error @+1 {{'spirv.AtomicExchange' op operand #1 must be 8/16/32/64-bit integer or 16/32/64-bit float, but got 'bf16'}}
+  %0 = spirv.AtomicExchange <Workgroup> <Release> %ptr, %value : !spirv.ptr<bf16, Workgroup>
+  return %0: bf16
+}
+
+// -----
+
+func.func @atomic_exchange_float8(%ptr: !spirv.ptr<f8E4M3FN, Workgroup>, %value: f8E4M3FN) -> f8E4M3FN {
+  // expected-error @+1 {{'spirv.AtomicExchange' op operand #1 must be 8/16/32/64-bit integer or 16/32/64-bit float, but got 'f8E4M3FN'}}
+  %0 = spirv.AtomicExchange <Workgroup> <Release> %ptr, %value : !spirv.ptr<f8E4M3FN, Workgroup>
+  return %0: f8E4M3FN
+}
+
+// -----
+
 func.func @atomic_exchange(%ptr: !spirv.ptr<i32, Workgroup>, %value: i64) -> i32 {
   // expected-error @+1 {{'spirv.AtomicExchange' op failed to verify that `value` type matches pointee type of `pointer`}}
   %0 = "spirv.AtomicExchange"(%ptr, %value) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<AcquireRelease>} : (!spirv.ptr<i32, Workgroup>, i64) -> (i32)
@@ -177,6 +193,36 @@ func.func @atomic_isub(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i
   return %0 : i32
 }
 
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.AtomicLoad
+//===----------------------------------------------------------------------===//
+
+func.func @atomic_load(%ptr : !spirv.ptr<i32, Workgroup>) -> i32 {
+  // CHECK: spirv.AtomicLoad <Workgroup> <Acquire> %{{.*}} : !spirv.ptr<i32, Workgroup>
+  %0 = spirv.AtomicLoad <Workgroup> <Acquire> %ptr : !spirv.ptr<i32, Workgroup>
+  return %0 : i32
+}
+
+// -----
+
+func.func @atomic_load_float(%ptr : !spirv.ptr<f32, StorageBuffer>) -> f32 {
+  // CHECK: spirv.AtomicLoad <Device> <None> %{{.*}} : !spirv.ptr<f32, StorageBuffer>
+  %0 = spirv.AtomicLoad <Device> <None> %ptr : !spirv.ptr<f32, StorageBuffer>
+  return %0 : f32
+}
+
+// -----
+
+func.func @atomic_load_mismatch(%ptr : !spirv.ptr<i32, Workgroup>) -> i64 {
+  // expected-error @+1 {{'spirv.AtomicLoad' op failed to verify that `result` type matches pointee type of `pointer`}}
+  %0 = "spirv.AtomicLoad"(%ptr) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<Acquire>} : (!spirv.ptr<i32, Workgroup>) -> (i64)
+  return %0 : i64
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.AtomicOr
 //===----------------------------------------------------------------------===//
@@ -206,6 +252,36 @@ func.func @atomic_smin(%ptr : !spirv.ptr<i32, StorageBuffer>, %value : i32) -> i
   %0 = spirv.AtomicSMin <Workgroup> <None> %ptr, %value : !spirv.ptr<i32, StorageBuffer>
   return %0 : i32
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.AtomicStore
+//===----------------------------------------------------------------------===//
+
+func.func @atomic_store(%ptr : !spirv.ptr<i32, Workgroup>, %value : i32) {
+  // CHECK: spirv.AtomicStore <Workgroup> <Release> %{{.*}}, %{{.*}} : !spirv.ptr<i32, Workgroup>
+  spirv.AtomicStore <Workgroup> <Release> %ptr, %value : !spirv.ptr<i32, Workgroup>
+  return
+}
+
+// -----
+
+func.func @atomic_store_float(%ptr : !spirv.ptr<f32, StorageBuffer>, %value : f32) {
+  // CHECK: spirv.AtomicStore <Device> <None> %{{.*}}, %{{.*}} : !spirv.ptr<f32, StorageBuffer>
+  spirv.AtomicStore <Device> <None> %ptr, %value : !spirv.ptr<f32, StorageBuffer>
+  return
+}
+
+// -----
+
+func.func @atomic_store_mismatch(%ptr : !spirv.ptr<i32, Workgroup>, %value : i64) {
+  // expected-error @+1 {{'spirv.AtomicStore' op failed to verify that `value` type matches pointee type of `pointer`}}
+  "spirv.AtomicStore"(%ptr, %value) {memory_scope = #spirv.scope<Workgroup>, semantics = #spirv.memory_semantics<Release>} : (!spirv.ptr<i32, Workgroup>, i64) -> ()
+  return
+}
+
+// -----
 
 //===----------------------------------------------------------------------===//
 // spirv.AtomicUMax

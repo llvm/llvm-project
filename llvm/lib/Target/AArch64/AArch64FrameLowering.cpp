@@ -384,7 +384,7 @@ static bool isLikelyToHaveSVEStack(const AArch64FrameLowering &AFL,
 }
 
 static bool isTargetWindows(const MachineFunction &MF) {
-  return MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
+  return MF.getTarget().getMCAsmInfo().usesWindowsCFI();
 }
 
 bool AArch64FrameLowering::hasSVECalleeSavesAboveFrameRecord(
@@ -728,9 +728,13 @@ void AArch64FrameLowering::resetCFIToInitialState(
   CFIBuilder.buildDefCFA(AArch64::SP, 0);
 
   // Flip the RA sign state.
-  if (MFI.shouldSignReturnAddress(MF))
-    MFI.branchProtectionPAuthLR() ? CFIBuilder.buildNegateRAStateWithPC()
-                                  : CFIBuilder.buildNegateRAState();
+  if (MFI.shouldSignReturnAddress(MF)) {
+    if (MFI.branchProtectionPAuthLR()) {
+      CFIBuilder.buildNegateRAStateWithPC();
+    } else if (!MF.getTarget().getTargetTriple().isOSBinFormatMachO()) {
+      CFIBuilder.buildNegateRAState();
+    }
+  }
 
   // Shadow call stack uses X18, reset it.
   if (MFI.needsShadowCallStackPrologueEpilogue(MF))
@@ -972,7 +976,7 @@ bool AArch64FrameLowering::canUseAsPrologue(
 
 bool AArch64FrameLowering::needsWinCFI(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
-  return MF.getTarget().getMCAsmInfo()->usesWindowsCFI() &&
+  return MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
          F.needsUnwindTableEntry();
 }
 
@@ -980,7 +984,7 @@ bool AArch64FrameLowering::shouldSignReturnAddressEverywhere(
     const MachineFunction &MF) const {
   // FIXME: With WinCFI, extra care should be taken to place SEH_PACSignLR
   //        and SEH_EpilogEnd instructions in the correct order.
-  if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI())
+  if (MF.getTarget().getMCAsmInfo().usesWindowsCFI())
     return false;
   const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   return AFI->getSignReturnAddressCondition() == SignReturnAddress::All;

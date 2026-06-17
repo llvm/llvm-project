@@ -19,6 +19,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -132,7 +133,41 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
   // Compute the object pointer.
   bool canUseVirtualCall = md->isVirtual() && !hasQualifier;
   const CXXMethodDecl *devirtualizedMethod = nullptr;
-  assert(!cir::MissingFeatures::devirtualizeMemberFunction());
+  // TODO: This devirtualization logic should be hoisted to the AST layer so it
+  // can be shared with classic codegen (see CGExprCXX.cpp).
+  if (canUseVirtualCall &&
+      md->getDevirtualizedMethod(base, getLangOpts().AppleKext)) {
+    const CXXRecordDecl *bestDynamicDecl = base->getBestDynamicClassType();
+    devirtualizedMethod = md->getCorrespondingMethodInClass(bestDynamicDecl);
+    assert(devirtualizedMethod);
+    const CXXRecordDecl *devirtualizedClass = devirtualizedMethod->getParent();
+    const Expr *inner = base->IgnoreParenBaseCasts();
+    auto getCXXRecord = [](const Expr *e) -> const CXXRecordDecl * {
+      QualType t = e->getType();
+      if (t->isRecordType())
+        return t->getAsCXXRecordDecl();
+      return t->getPointeeCXXRecordDecl();
+    };
+    if (devirtualizedMethod->getReturnType().getCanonicalType() !=
+        md->getReturnType().getCanonicalType())
+      // If the return types are not the same, this might be a case where more
+      // code needs to run to compensate for it. For example, the derived
+      // method might return a type that inherits from the return type of MD
+      // and has a prefix.
+      // For now we just avoid devirtualizing these covariant cases.
+      devirtualizedMethod = nullptr;
+    else if (getCXXRecord(inner) == devirtualizedClass)
+      // If the class of the Inner expression is where the dynamic method
+      // is defined, build the this pointer from it.
+      base = inner;
+    else if (getCXXRecord(base) != devirtualizedClass) {
+      // If the method is defined in a class that is not the best dynamic
+      // one or the one of the full expression, we would have to build
+      // a derived-to-base cast to compute the correct this pointer, but
+      // we don't have support for that yet, so do a virtual call.
+      devirtualizedMethod = nullptr;
+    }
+  }
 
   // Note on trivial assignment
   // --------------------------
@@ -214,8 +249,8 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
         callee = CIRGenCallee::forDirect(
             cgm.getAddrOfCXXStructor(globalDecl, fInfo, ty), globalDecl);
       } else {
-        cgm.errorNYI(ce->getSourceRange(), "devirtualized destructor call");
-        return RValue::get(nullptr);
+        callee = CIRGenCallee::forDirect(cgm.getAddrOfFunction(globalDecl, ty),
+                                         globalDecl);
       }
 
       QualType thisTy =
@@ -332,7 +367,7 @@ static void emitNullBaseClassInitialization(CIRGenFunction &cgf,
     assert(stores.size() == 1 && "Expected only one store");
     assert(stores[0].first == CharUnits::Zero() &&
            "Expected store to begin at offset zero");
-    CIRGenBuilderTy builder = cgf.getBuilder();
+    CIRGenBuilderTy &builder = cgf.getBuilder();
     mlir::Location loc = cgf.getLoc(base->getBeginLoc());
     builder.createStore(loc, builder.getConstant(loc, nullConstantForBase),
                         destPtr);
@@ -863,8 +898,12 @@ public:
     // is an enum whose underlying type is std::size_t.
     // FIXME: Use the right type as the parameter type. Note that in a call
     // to operator delete(size_t, ...), we may not have it available.
-    if (isAlignedAllocation(params.Alignment))
-      cgf.cgm.errorNYI("CallDeleteDuringNew: aligned allocation");
+    if (isAlignedAllocation(params.Alignment)) {
+      QualType sizeType = cgf.getContext().getSizeType();
+      cir::ConstantOp align = cgf.getBuilder().getAlignment(
+          *cgf.currSrcLoc, cgf.convertType(sizeType), allocAlign);
+      deleteArgs.add(RValue::get(align), sizeType);
+    }
 
     // Pass the rest of the arguments, which must match exactly.
     for (unsigned i = 0; i != numPlacementArgs; ++i) {
@@ -929,7 +968,13 @@ static void enterNewDeleteCleanup(CIRGenFunction &cgf, const CXXNewExpr *e,
     typedef mlir::Value ValueTy;
     typedef mlir::Value RValueTy;
     static RValue get(CIRGenFunction &cgf, ValueTy v) {
-      auto alloca = v.getDefiningOp<cir::AllocaOp>();
+      while (cir::CastOp castOp = v.getDefiningOp<cir::CastOp>()) {
+        if (castOp.getKind() != cir::CastKind::address_space &&
+            castOp.getKind() != cir::CastKind::bitcast)
+          break;
+        v = castOp.getSrc();
+      }
+      cir::AllocaOp alloca = v.getDefiningOp<cir::AllocaOp>();
       return RValue::get(cgf.getBuilder().createAlignedLoad(
           alloca.getLoc(), alloca.getAllocaType(), alloca,
           llvm::MaybeAlign(alloca.getAlignment())));
@@ -997,7 +1042,7 @@ void CIRGenFunction::emitNewArrayInitializer(
   const Expr *init = e->getInitializer();
   Address endOfInit = Address::invalid();
   QualType::DestructionKind dtorKind = elementType.isDestructedType();
-  assert(!cir::MissingFeatures::cleanupDeactivationScope());
+  CleanupDeactivationScope deactivation(*this);
 
   // Attempt to perform zero-initialization using memset.
   auto tryMemsetInitialization = [&]() -> bool {
@@ -1111,30 +1156,33 @@ void CIRGenFunction::emitNewArrayInitializer(
     }
 
     // Enter a partial-destruction Cleanup if necessary.
+    CharUnits elementSize = getContext().getTypeSizeInChars(elementType);
     if (dtorKind) {
-      cgm.errorNYI(ile->getSourceRange(),
-                   "emitNewArrayInitializer: init requires dtor");
-      return;
+      mlir::Location loc = cgm.getLoc(init->getSourceRange());
+      endOfInit = createTempAlloca(beginPtr.getType(), getPointerAlign(), loc,
+                                   "arrayinit.endOfInit");
+      pushIrregularPartialArrayCleanup(
+          beginPtr.getPointer(), endOfInit, elementType,
+          beginPtr.getAlignment().alignmentOfArrayElement(elementSize),
+          getDestroyer(dtorKind));
     }
 
-    CharUnits elementSize = getContext().getTypeSizeInChars(elementType);
     CharUnits startAlign = curPtr.getAlignment();
     unsigned i = 0;
     for (const Expr *ie : initExprs) {
+      mlir::Location loc = getLoc(ie->getExprLoc());
+
       // Tell the cleanup that it needs to destroy up to this
       // element.  TODO: some of these stores can be trivially
       // observed to be unnecessary.
-      if (endOfInit.isValid()) {
-        cgm.errorNYI(ie->getSourceRange(),
-                     "emitNewArrayInitializer: update dtor cleanup ptr");
-        return;
-      }
+      if (endOfInit.isValid())
+        builder.createStore(loc, curPtr.getPointer(), endOfInit);
+
       // FIXME: If the last initializer is an incomplete initializer list for
       // an array, and we have an array filler, we can fold together the two
       // initialization loops.
       storeAnyExprIntoOneUnit(*this, ie, ie->getType(), curPtr,
                               AggValueSlot::DoesNotOverlap);
-      mlir::Location loc = getLoc(ie->getExprLoc());
       mlir::Value castOp = builder.createPtrBitcast(
           curPtr.getPointer(), convertTypeForMem(allocType));
       mlir::Value offsetOp = builder.getSignedInt(loc, 1, /*width=*/32);
@@ -1228,7 +1276,7 @@ void CIRGenFunction::emitNewArrayInitializer(
     curPtr = curPtr.withElementType(builder, initType);
     emitCXXAggrConstructorCall(ctor, numElements, curPtr, cce,
                                /*newPointerIsChecked=*/true,
-                               cce->requiresZeroInitialization());
+                               cce->requiresZeroInitialization(), endOfInit);
     if (getContext().getTargetInfo().emitVectorDeletingDtors(
             getContext().getLangOpts())) {
       cgm.errorNYI(e->getSourceRange(),
@@ -1363,6 +1411,24 @@ struct CallObjectDelete final : EHScopeStack::Cleanup {
 };
 } // namespace
 
+/// Emit the code for deleting a single object via a destroying operator
+/// delete. If the element type has a non-virtual destructor, Ptr has already
+/// been converted to the type of the parameter of 'operator delete'. Otherwise
+/// Ptr points to an object of the static type.
+static void emitDestroyingObjectDelete(CIRGenFunction &cgf,
+                                       const CXXDeleteExpr *de, Address ptr,
+                                       QualType elementType) {
+  const CXXDestructorDecl *dtor =
+      elementType->getAsCXXRecordDecl()->getDestructor();
+  if (dtor && dtor->isVirtual()) {
+    cgf.cgm.getCXXABI().emitVirtualObjectDelete(cgf, de, ptr, elementType,
+                                                dtor);
+    return;
+  }
+
+  cgf.emitDeleteCall(de->getOperatorDelete(), ptr.getPointer(), elementType);
+}
+
 /// Emit the code for deleting a single object.
 static void emitObjectDelete(CIRGenFunction &cgf, const CXXDeleteExpr *de,
                              Address ptr, QualType elementType) {
@@ -1441,8 +1507,7 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   // A destroying operator delete overrides the entire operation of the
   // delete expression.
   if (e->getOperatorDelete()->isDestroyingOperatorDelete()) {
-    cgm.errorNYI(e->getSourceRange(),
-                 "emitCXXDeleteExpr: destroying operator delete");
+    emitDestroyingObjectDelete(*this, e, ptr, deleteTy);
     return;
   }
 
@@ -1468,12 +1533,12 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
         isTypeAwareAllocation(udp.TypeAwareDelete), udp.DestroyingDelete);
 
     mlir::FlatSymbolRefAttr elementDtor;
+    bool hasThrowingDtor = false;
     if (const auto *rd = deleteTy->getAsCXXRecordDecl()) {
       if (rd->hasDefinition() && !rd->hasTrivialDestructor()) {
         const CXXDestructorDecl *dtor = rd->getDestructor();
         if (dtor->getType()->castAs<FunctionProtoType>()->canThrow())
-          cgm.errorNYI(e->getSourceRange(),
-                       "emitCXXDeleteExpr: throwing destructor");
+          hasThrowingDtor = true;
         cir::FuncOp dtorFn =
             cgm.getAddrOfCXXStructor(GlobalDecl(dtor, Dtor_Complete));
         elementDtor = mlir::FlatSymbolRefAttr::get(builder.getContext(),
@@ -1483,7 +1548,7 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
 
     cir::DeleteArrayOp::create(builder, ptr.getPointer().getLoc(),
                                ptr.getPointer(), deleteFn, deleteParams,
-                               elementDtor);
+                               elementDtor, hasThrowingDtor);
   } else {
     emitObjectDelete(*this, e, ptr, deleteTy);
   }
@@ -1562,7 +1627,19 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
 
     // The allocation alignment may be passed as the second argument.
     if (e->passAlignment()) {
-      cgm.errorNYI(e->getSourceRange(), "emitCXXNewExpr: pass alignment");
+      // The alignment is always the second positional argument to a
+      // C++17 aligned allocation function -- right after the size.
+      constexpr unsigned indexOfAlignArg = 1;
+      // The corresponding parameter type, if the allocator declares one;
+      // otherwise fall back to size_t (the underlying type of
+      // std::align_val_t).
+      QualType alignValType = sizeType;
+      if (allocatorType->getNumParams() > indexOfAlignArg)
+        alignValType = allocatorType->getParamType(indexOfAlignArg);
+      cir::ConstantOp align = builder.getAlignment(
+          *currSrcLoc, convertType(alignValType), allocAlign);
+      allocatorArgs.add(RValue::get(align), alignValType);
+      ++paramsToSkip;
     }
 
     // FIXME: Why do we not pass a CalleeDecl here?
@@ -1600,9 +1677,6 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
   // interesting initializer will be running sanitizers on the initialization.
   bool nullCheck = e->shouldNullCheckAllocation() &&
                    (!allocType.isPODType(getContext()) || e->hasInitializer());
-  assert(!cir::MissingFeatures::exprNewNullCheck());
-  if (nullCheck)
-    cgm.errorNYI(e->getSourceRange(), "emitCXXNewExpr: null check");
 
   // If there's an operator delete, enter a cleanup to call it if an
   // exception is thrown. If we do this, we'll be creating the result pointer
@@ -1612,73 +1686,115 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
   bool useNewDeleteCleanup =
       e->getOperatorDelete() &&
       !e->getOperatorDelete()->isReservedGlobalPlacementOperator();
-  EHScopeStack::stable_iterator operatorDeleteCleanup;
-  mlir::Operation *cleanupDominator = nullptr;
-  if (useNewDeleteCleanup) {
-    assert(!cir::MissingFeatures::typeAwareAllocation());
-    enterNewDeleteCleanup(*this, e, allocation, allocSize, allocAlign,
-                          allocatorArgs);
-    operatorDeleteCleanup = ehStack.stable_begin();
-    cleanupDominator =
-        cir::UnreachableOp::create(builder, getLoc(e->getSourceRange()))
-            .getOperation();
-  }
-
-  if (allocSize != allocSizeWithoutCookie) {
-    assert(e->isArray());
-    allocation = cgm.getCXXABI().initializeArrayCookie(
-        *this, allocation, numElements, e, allocType);
-  }
 
   mlir::Type elementTy;
-  if (e->isArray()) {
-    // For array new, use the allocated type to handle multidimensional arrays
-    // correctly
+  // For array new, use the allocated type to handle multidimensional arrays
+  // correctly.
+  if (e->isArray())
     elementTy = convertTypeForMem(e->getAllocatedType());
-  } else {
+  else
     elementTy = convertTypeForMem(allocType);
-  }
-  Address result = builder.createElementBitCast(getLoc(e->getSourceRange()),
-                                                allocation, elementTy);
 
-  // If we're inside a new delete cleanup, store the result pointer.
+  // Lambda that emits the init sequence: cleanup setup, cookie init,
+  // bitcast + initializer, and cleanup deactivation.
+  Address result = Address::invalid();
   Address resultPtr = Address::invalid();
-  if (useNewDeleteCleanup) {
-    resultPtr =
-        createTempAlloca(builder.getPointerTo(elementTy), result.getAlignment(),
-                         getLoc(e->getSourceRange()), "__new_result");
-    builder.createStore(getLoc(e->getSourceRange()), result.getPointer(),
-                        resultPtr);
+  auto emitInit = [&]() {
+    EHScopeStack::stable_iterator operatorDeleteCleanup;
+    mlir::Operation *cleanupDominator = nullptr;
+    if (useNewDeleteCleanup) {
+      assert(!cir::MissingFeatures::typeAwareAllocation());
+      enterNewDeleteCleanup(*this, e, allocation, allocSize, allocAlign,
+                            allocatorArgs);
+      operatorDeleteCleanup = ehStack.stable_begin();
+      cleanupDominator =
+          cir::UnreachableOp::create(builder, getLoc(e->getSourceRange()))
+              .getOperation();
+      resultPtr = createTempAlloca(builder.getPointerTo(elementTy),
+                                   allocation.getAlignment(),
+                                   getLoc(e->getSourceRange()), "__new_result");
+    }
+
+    if (allocSize != allocSizeWithoutCookie) {
+      assert(e->isArray());
+      allocation = cgm.getCXXABI().initializeArrayCookie(
+          *this, allocation, numElements, e, allocType);
+    }
+
+    result = builder.createElementBitCast(getLoc(e->getSourceRange()),
+                                          allocation, elementTy);
+
+    // Store the result pointer before initialization so that it is available
+    // to the cleanup if the initializer throws.
+    if (resultPtr.isValid())
+      builder.createStore(getLoc(e->getSourceRange()), result.getPointer(),
+                          resultPtr);
+
+    // Passing pointer through launder.invariant.group to avoid propagation of
+    // vptrs information which may be included in previous type. To not break
+    // LTO with different optimizations levels, we do it regardless of
+    // optimization level.
+    if (cgm.getCodeGenOpts().StrictVTablePointers &&
+        allocator->isReservedGlobalPlacementOperator())
+      cgm.errorNYI(e->getSourceRange(),
+                   "emitCXXNewExpr: strict vtable pointers");
+
+    assert(!cir::MissingFeatures::sanitizers());
+
+    emitNewInitializer(*this, e, allocType, elementTy, result, numElements,
+                       allocSizeWithoutCookie);
+
+    // Deactivate the 'operator delete' cleanup if we finished
+    // initialization.
+    if (useNewDeleteCleanup) {
+      deactivateCleanupBlock(operatorDeleteCleanup, cleanupDominator);
+      cleanupDominator->erase();
+      cir::LoadOp loadResult =
+          builder.createLoad(getLoc(e->getSourceRange()), resultPtr);
+      result = result.withPointer(loadResult.getResult());
+    }
+  };
+
+  cir::IfOp nullCheckOp;
+  if (nullCheck) {
+    mlir::Value isNotNull = builder.createPtrIsNotNull(allocation.getPointer());
+    nullCheckOp =
+        cir::IfOp::create(builder, getLoc(e->getSourceRange()), isNotNull,
+                          /*withElseRegion=*/false,
+                          /*thenBuilder=*/
+                          [&](mlir::OpBuilder &, mlir::Location loc) {
+                            emitInit();
+                            builder.createYield(loc);
+                          });
+  } else {
+    emitInit();
   }
 
-  // Passing pointer through launder.invariant.group to avoid propagation of
-  // vptrs information which may be included in previous type.
-  // To not break LTO with different optimizations levels, we do it regardless
-  // of optimization level.
-  if (cgm.getCodeGenOpts().StrictVTablePointers &&
-      allocator->isReservedGlobalPlacementOperator())
-    cgm.errorNYI(e->getSourceRange(), "emitCXXNewExpr: strict vtable pointers");
+  mlir::Value resultValue = result.getPointer();
 
-  assert(!cir::MissingFeatures::sanitizers());
+  if (nullCheck) {
+    mlir::Type resultTy = resultValue.getType();
 
-  emitNewInitializer(*this, e, allocType, elementTy, result, numElements,
-                     allocSizeWithoutCookie);
-
-  // Deactivate the 'operator delete' cleanup if we finished
-  // initialization.
-  if (useNewDeleteCleanup) {
-    assert(operatorDeleteCleanup.isValid());
-    assert(resultPtr.isValid());
-    deactivateCleanupBlock(operatorDeleteCleanup, cleanupDominator);
-    cleanupDominator->erase();
-    cir::LoadOp loadResult =
-        builder.createLoad(getLoc(e->getSourceRange()), resultPtr);
-    result = result.withPointer(loadResult.getResult());
+    // If we needed a NewDeleteCleanup, allocation may have been modified
+    // inside the cir.if (e.g. by cookie adjustment). Use the result stored
+    // in the alloca instead, since the alloca dominates this point.
+    mlir::Value trueVal;
+    if (useNewDeleteCleanup) {
+      trueVal = builder.createLoad(getLoc(e->getSourceRange()), resultPtr)
+                    .getResult();
+    } else {
+      trueVal = allocation.getPointer();
+    }
+    if (trueVal.getType() != resultTy)
+      trueVal = builder.createBitcast(trueVal, resultTy);
+    mlir::Value nullPtr =
+        builder.getNullPtr(resultTy, getLoc(e->getSourceRange())).getResult();
+    resultValue =
+        builder.createSelect(getLoc(e->getSourceRange()),
+                             nullCheckOp.getCondition(), trueVal, nullPtr);
   }
 
-  assert(!cir::MissingFeatures::exprNewNullCheck());
-
-  return result.getPointer();
+  return resultValue;
 }
 
 void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
@@ -1689,7 +1805,7 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
   CallArgList deleteArgs;
 
   UsualDeleteParams params = deleteFD->getUsualDeleteParams();
-  auto paramTypeIt = deleteFTy->param_type_begin();
+  auto paramTypeIter = deleteFTy->param_type_begin();
 
   // Pass std::type_identity tag if present
   if (isTypeAwareAllocation(params.TypeAwareDelete))
@@ -1697,19 +1813,25 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
                  "emitDeleteCall: type aware delete");
 
   // Pass the pointer itself.
-  QualType argTy = *paramTypeIt++;
+  QualType argTy = *paramTypeIter;
+  std::advance(paramTypeIter, 1);
   mlir::Value deletePtr =
       builder.createBitcast(ptr.getLoc(), ptr, convertType(argTy));
   deleteArgs.add(RValue::get(deletePtr), argTy);
 
   // Pass the std::destroying_delete tag if present.
-  if (params.DestroyingDelete)
-    cgm.errorNYI(deleteFD->getSourceRange(),
-                 "emitDeleteCall: destroying delete");
+  if (params.DestroyingDelete) {
+    QualType tagType = *paramTypeIter;
+    std::advance(paramTypeIter, 1);
+    Address tagAddr =
+        createMemTemp(tagType, ptr.getLoc(), "destroying.delete.tag");
+    deleteArgs.add(RValue::getAggregate(tagAddr), tagType);
+  }
 
   // Pass the size if the delete function has a size_t parameter.
   if (params.Size) {
-    QualType sizeType = *paramTypeIt++;
+    QualType sizeType = *paramTypeIter;
+    std::advance(paramTypeIter, 1);
     CharUnits deleteTypeSize = getContext().getTypeSizeInChars(deleteTy);
     assert(mlir::isa<cir::IntType>(convertType(sizeType)) &&
            "expected cir::IntType");
@@ -1720,11 +1842,17 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
   }
 
   // Pass the alignment if the delete function has an align_val_t parameter.
-  if (isAlignedAllocation(params.Alignment))
-    cgm.errorNYI(deleteFD->getSourceRange(),
-                 "emitDeleteCall: aligned allocation");
+  if (isAlignedAllocation(params.Alignment)) {
+    QualType alignValType = *paramTypeIter++;
+    CharUnits deleteTypeAlign =
+        getContext().toCharUnitsFromBits(getContext().getTypeAlignIfKnown(
+            deleteTy, /*NeedsPreferredAlignment=*/true));
+    cir::ConstantOp align = builder.getAlignment(
+        *currSrcLoc, convertType(alignValType), deleteTypeAlign);
+    deleteArgs.add(RValue::get(align), alignValType);
+  }
 
-  assert(paramTypeIt == deleteFTy->param_type_end() &&
+  assert(paramTypeIter == deleteFTy->param_type_end() &&
          "unknown parameter to usual delete function");
 
   // Emit the call to delete.

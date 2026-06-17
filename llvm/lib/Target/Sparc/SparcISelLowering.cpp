@@ -884,11 +884,12 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
       SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
       SDValue SizeNode = DAG.getConstant(Size, dl, MVT::i32);
 
-      Chain = DAG.getMemcpy(Chain, dl, FIPtr, Arg, SizeNode, Alignment,
-                            false,        // isVolatile,
-                            (Size <= 32), // AlwaysInline if size <= 32,
-                            /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
-                            MachinePointerInfo());
+      Chain =
+          DAG.getMemcpy(Chain, dl, FIPtr, Arg, SizeNode, Alignment, Alignment,
+                        false,        // isVolatile,
+                        (Size <= 32), // AlwaysInline if size <= 32,
+                        /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
+                        MachinePointerInfo());
       ByValArgs.push_back(FIPtr);
     }
     else {
@@ -1990,38 +1991,38 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   if (Subtarget->isVIS3()) {
     setOperationAction(ISD::CTLZ, MVT::i32, Legal);
     setOperationAction(ISD::CTLZ, MVT::i64, Legal);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Legal);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Legal);
+    setOperationAction(ISD::CTLZ_ZERO_POISON, MVT::i32, Legal);
+    setOperationAction(ISD::CTLZ_ZERO_POISON, MVT::i64, Legal);
 
     setOperationAction(ISD::CTTZ, MVT::i32,
                        Subtarget->is64Bit() ? Promote : Expand);
     setOperationAction(ISD::CTTZ, MVT::i64, Expand);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32,
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::i32,
                        Subtarget->is64Bit() ? Promote : Expand);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i64, Expand);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::i64, Expand);
   } else if (Subtarget->usePopc()) {
     setOperationAction(ISD::CTLZ, MVT::i32, Expand);
     setOperationAction(ISD::CTLZ, MVT::i64, Expand);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Expand);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Expand);
+    setOperationAction(ISD::CTLZ_ZERO_POISON, MVT::i32, Expand);
+    setOperationAction(ISD::CTLZ_ZERO_POISON, MVT::i64, Expand);
 
     setOperationAction(ISD::CTTZ, MVT::i32, Expand);
     setOperationAction(ISD::CTTZ, MVT::i64, Expand);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Expand);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i64, Expand);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::i32, Expand);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::i64, Expand);
   } else {
     setOperationAction(ISD::CTLZ, MVT::i32, Expand);
     setOperationAction(ISD::CTLZ, MVT::i64, Expand);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32,
+    setOperationAction(ISD::CTLZ_ZERO_POISON, MVT::i32,
                        Subtarget->is64Bit() ? Promote : LibCall);
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, LibCall);
+    setOperationAction(ISD::CTLZ_ZERO_POISON, MVT::i64, LibCall);
 
     // FIXME here we don't have any ISA extensions that could help us, so to
     // prevent large expansions those should be made into LibCalls.
     setOperationAction(ISD::CTTZ, MVT::i32, Expand);
     setOperationAction(ISD::CTTZ, MVT::i64, Expand);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Expand);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i64, Expand);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::i32, Expand);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::i64, Expand);
   }
 
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);

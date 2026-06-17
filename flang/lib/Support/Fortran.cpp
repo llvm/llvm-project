@@ -8,6 +8,7 @@
 
 #include "flang/Support/Fortran.h"
 #include "flang/Support/Fortran-features.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::common {
 
@@ -117,6 +118,11 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
   if (ignoreTKR.test(common::IgnoreTKR::Device)) {
     return true;
   }
+  // A use_device(...) actual is compatible only with a Device dummy or a
+  // host dummy (no CUDA attribute); other attributes (Managed, Unified,
+  // Pinned, ...) require the actual to live in that specific kind of memory.
+  if (y && *y == CUDADataAttr::UseDevice)
+    return !x || *x == CUDADataAttr::Device;
   if (!y && isHostDeviceProcedure) {
     return true;
   }
@@ -143,11 +149,19 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
       }
     } else {
       if (*x == CUDADataAttr::Device) {
-        if ((y &&
-                (*y == CUDADataAttr::Managed || *y == CUDADataAttr::Unified ||
-                    *y == CUDADataAttr::Shared ||
-                    *y == CUDADataAttr::Constant)) ||
-            (!y && (isCudaUnified || isCudaManaged))) {
+        if (y &&
+            (*y == CUDADataAttr::Managed || *y == CUDADataAttr::Unified ||
+                *y == CUDADataAttr::Shared || *y == CUDADataAttr::Constant)) {
+          return true;
+        }
+        // A device dummy carrying !dir$ ignore_tkr(m) opts out of the
+        // -gpu=mem:{unified,managed} relaxation that would otherwise let
+        // an unattributed host actual bind to it. The (m) letter is used
+        // by host modules to mark device-typed dummies as overload
+        // discriminators that should only accept actuals with an explicit
+        // device/managed/unified attribute.
+        if (!y && (isCudaUnified || isCudaManaged) &&
+            !ignoreTKR.test(IgnoreTKR::Managed)) {
           return true;
         }
       } else if (*x == CUDADataAttr::Managed) {
@@ -166,6 +180,41 @@ bool AreCompatibleCUDADataAttrs(std::optional<CUDADataAttr> x,
   } else {
     return false;
   }
+}
+
+std::string FormatVectorTypeAsFortran(
+    int category, int64_t elementCategory, int64_t elementKind) {
+  std::string buf;
+  llvm::raw_string_ostream ss{buf};
+
+  switch (static_cast<VectorTypeCategory>(category)) {
+  case (VectorTypeCategory::IntrinsicVector): {
+    CHECK(elementCategory >= 0 && elementKind > 0);
+    ss << "vector(";
+    switch (static_cast<VectorElementCategory>(elementCategory)) {
+    case VectorElementCategory::Integer:
+      ss << "integer(" << elementKind << ")";
+      break;
+    case VectorElementCategory::Unsigned:
+      ss << "unsigned(" << elementKind << ")";
+      break;
+    case VectorElementCategory::Real:
+      ss << "real(" << elementKind << ")";
+      break;
+    }
+    ss << ")";
+    break;
+  }
+  case (VectorTypeCategory::PairVector):
+    ss << "__vector_pair";
+    break;
+  case (VectorTypeCategory::QuadVector):
+    ss << "__vector_quad";
+    break;
+  default:
+    CHECK(false && "Vector element type not implemented");
+  }
+  return buf;
 }
 
 } // namespace Fortran::common

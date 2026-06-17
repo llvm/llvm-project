@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRNVGPUDialect
 
   LINK_LIBS PUBLIC
   MLIRGPUDialect
+  MLIRNVVMDialect
   MLIRIR
   MLIRSideEffectInterfaces
   )

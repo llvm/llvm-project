@@ -15,7 +15,7 @@ define void @no_epilogue_when_narrowed_covers_all(ptr %p) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 6
@@ -79,3 +79,29 @@ loop:
 exit:
   ret i32 0
 }
+
+; Test that vectorization does not crash when narrowInterleaveGroups
+; materializes VFxUF and the canonical IV increment step is UF*vscale.
+%pair = type { i64, i64 }
+define void @test(ptr noalias %A, i64 %v, i64 %n) #0 {
+; CHECK-LABEL: define void @test(
+; CHECK:       vector.body:
+;
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %idx.0 = getelementptr inbounds %pair, ptr %A, i64 %iv, i32 0
+  %idx.1 = getelementptr inbounds %pair, ptr %A, i64 %iv, i32 1
+  store i64 %v, ptr %idx.0
+  store i64 %v, ptr %idx.1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+attributes #0 = { "target-features"="+sve" vscale_range(2,16) }

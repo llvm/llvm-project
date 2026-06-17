@@ -311,6 +311,19 @@ public:
                     MachineBasicBlock::iterator I, const DebugLoc &DL,
                     Register SrcReg, int Value)  const;
 
+private:
+  void storeRegToStackSlotImpl(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MI, Register SrcReg,
+                               bool isKill, int FrameIndex,
+                               const TargetRegisterClass *RC, Register VReg,
+                               MachineInstr::MIFlag Flags, bool NeedsCFI) const;
+
+public:
+  void storeRegToStackSlotCFI(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI, Register SrcReg,
+                              bool isKill, int FrameIndex,
+                              const TargetRegisterClass *RC) const;
+
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
 
@@ -319,7 +332,8 @@ public:
   unsigned getVectorRegSpillSaveOpcode(Register Reg,
                                        const TargetRegisterClass *RC,
                                        unsigned Size,
-                                       const SIMachineFunctionInfo &MFI) const;
+                                       const SIMachineFunctionInfo &MFI,
+                                       bool NeedsCFI) const;
   unsigned
   getVectorRegSpillRestoreOpcode(Register Reg, const TargetRegisterClass *RC,
                                  unsigned Size,
@@ -477,11 +491,21 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::SALU;
   }
 
-  static bool isVALU(const MachineInstr &MI) {
+  static bool isVALU(const MachineInstr &MI, bool AllowLDSDMA) {
+    if (!AllowLDSDMA && isLDSDMA(MI))
+      return false;
+
     return MI.getDesc().TSFlags & SIInstrFlags::VALU;
   }
 
-  bool isVALU(uint32_t Opcode) const {
+  /// LDSDMA instructions act as both VALU and memory instructions, thus
+  /// we also tag them as VALU. However, in many places, we do not actually want
+  /// to include LDSDMA instructions in this query. By setting \p AllowLDSDMA to
+  /// false, this will return false for LDSDMA instructions.
+  bool isVALU(uint32_t Opcode, bool AllowLDSDMA) const {
+    if (!AllowLDSDMA && isLDSDMA(Opcode))
+      return false;
+
     return get(Opcode).TSFlags & SIInstrFlags::VALU;
   }
 
@@ -501,6 +525,9 @@ public:
     return isMUBUF(Opcode) || isMTBUF(Opcode) || isImage(Opcode) ||
            isFLAT(Opcode);
   }
+
+  /// True if MI implicitly drains XCNT.
+  static bool isXcntDrain(const MachineInstr &MI);
 
   static bool isSOP1(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::SOP1;
@@ -629,12 +656,14 @@ public:
   }
 
   static bool isLDSDMA(const MachineInstr &MI) {
-    return (isVALU(MI) && (isMUBUF(MI) || isFLAT(MI))) ||
+    return ((MI.getDesc().TSFlags & SIInstrFlags::VALU) &&
+            (isMUBUF(MI) || isFLAT(MI))) ||
            (MI.getDesc().TSFlags & SIInstrFlags::TENSOR_CNT);
   }
 
-  bool isLDSDMA(uint32_t Opcode) {
-    return (isVALU(Opcode) && (isMUBUF(Opcode) || isFLAT(Opcode))) ||
+  bool isLDSDMA(uint32_t Opcode) const {
+    return ((get(Opcode).TSFlags & SIInstrFlags::VALU) &&
+            (isMUBUF(Opcode) || isFLAT(Opcode))) ||
            (get(Opcode).TSFlags & SIInstrFlags::TENSOR_CNT);
   }
 
@@ -732,6 +761,7 @@ public:
   static bool isBlockLoadStore(uint32_t Opcode) {
     switch (Opcode) {
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
+    case AMDGPU::SI_BLOCK_SPILL_V1024_CFI_SAVE:
     case AMDGPU::SI_BLOCK_SPILL_V1024_RESTORE:
     case AMDGPU::SCRATCH_STORE_BLOCK_SADDR:
     case AMDGPU::SCRATCH_LOAD_BLOCK_SADDR:
@@ -875,13 +905,13 @@ public:
   static bool isVGPRSpill(const MachineInstr &MI) {
     return MI.getOpcode() != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            MI.getOpcode() != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           (isSpill(MI) && isVALU(MI));
+           (isSpill(MI) && isVALU(MI, /*AllowLDSDMA=*/true));
   }
 
   bool isVGPRSpill(uint32_t Opcode) const {
     return Opcode != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            Opcode != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           (isSpill(Opcode) && isVALU(Opcode));
+           (isSpill(Opcode) && isVALU(Opcode, /*AllowLDSDMA=*/true));
   }
 
   static bool isSGPRSpill(const MachineInstr &MI) {
@@ -940,6 +970,24 @@ public:
 
   bool isVOP3P(uint32_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::VOP3P;
+  }
+
+  bool isVOP3PMix(const MachineInstr &MI) const {
+    return isVOP3PMix(MI.getOpcode());
+  }
+
+  bool isVOP3PMix(uint16_t Opcode) const {
+    switch (Opcode) {
+    case AMDGPU::V_FMA_MIXHI_F16:
+    case AMDGPU::V_FMA_MIXLO_F16:
+    case AMDGPU::V_FMA_MIX_F32:
+    case AMDGPU::V_MAD_MIXHI_F16:
+    case AMDGPU::V_MAD_MIXLO_F16:
+    case AMDGPU::V_MAD_MIX_F32:
+      return true;
+    default:
+      return false;
+    }
   }
 
   static bool isVINTRP(const MachineInstr &MI) {
@@ -1042,6 +1090,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::ASYNC_CNT;
   }
 
+  static bool usesTENSOR_CNT(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::TENSOR_CNT;
+  }
+
+  bool usesTENSOR_CNT(uint32_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::TENSOR_CNT;
+  }
+
   // Most sopk treat the immediate as a signed 16-bit, however some
   // use it as unsigned.
   static bool sopkIsZext(unsigned Opcode) {
@@ -1082,12 +1138,10 @@ public:
     return MI.getDesc().TSFlags & SIInstrFlags::IntClamp;
   }
 
-  uint64_t getClampMask(const MachineInstr &MI) const {
-    const uint64_t ClampFlags = SIInstrFlags::FPClamp |
-                                SIInstrFlags::IntClamp |
-                                SIInstrFlags::ClampLo |
-                                SIInstrFlags::ClampHi;
-      return MI.getDesc().TSFlags & ClampFlags;
+  static bool hasSameClamp(const MachineInstr &A, const MachineInstr &B) {
+    const uint64_t Mask = SIInstrFlags::FPClamp | SIInstrFlags::IntClamp |
+                          SIInstrFlags::ClampLo | SIInstrFlags::ClampHi;
+    return (A.getDesc().TSFlags & Mask) == (B.getDesc().TSFlags & Mask);
   }
 
   static bool usesFPDPRounding(const MachineInstr &MI) {
@@ -1128,6 +1182,23 @@ public:
            Opcode == AMDGPU::S_BARRIER_JOIN_IMM ||
            Opcode == AMDGPU::S_BARRIER_LEAVE || Opcode == AMDGPU::DS_GWS_INIT ||
            Opcode == AMDGPU::DS_GWS_BARRIER;
+  }
+
+  static bool isLoadMonitor(unsigned Opc) {
+    switch (Opc) {
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B32:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B32_SADDR:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B64:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B64_SADDR:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B128:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B128_SADDR:
+    case AMDGPU::FLAT_LOAD_MONITOR_B32:
+    case AMDGPU::FLAT_LOAD_MONITOR_B64:
+    case AMDGPU::FLAT_LOAD_MONITOR_B128:
+      return true;
+    default:
+      return false;
+    }
   }
 
   static bool isGFX12CacheInvOrWBInst(unsigned Opc) {
@@ -1448,15 +1519,15 @@ public:
   bool isLegalRegOperand(const MachineInstr &MI, unsigned OpIdx,
                          const MachineOperand &MO) const;
 
-  /// Check if \p MO would be a legal operand for gfx12+ packed math FP32
-  /// instructions. Packed math FP32 instructions typically accept SGPRs or
-  /// VGPRs as source operands. On gfx12+, if a source operand uses SGPRs, the
-  /// HW can only read the first SGPR and use it for both the low and high
-  /// operations.
+  /// Check if \p MO would be a legal operand for gfx12+ packed math FP32 or
+  /// 64 instructions. Packed math FP32/FP64/U64 instructions typically accept
+  /// SGPRs or VGPRs as source operands. On gfx12+, if a source operand uses
+  /// SGPRs, the HW can only read the first SGPR and use it for both the low and
+  /// high operations.
   /// \p SrcN can be 0, 1, or 2, representing src0, src1, and src2,
   /// respectively. If \p MO is nullptr, the operand corresponding to SrcN will
   /// be used.
-  bool isLegalGFX12PlusPackedMathFP32Operand(
+  bool isLegalGFX12PlusPackedMathFP32or64BitOperand(
       const MachineRegisterInfo &MRI, const MachineInstr &MI, unsigned SrcN,
       const MachineOperand *MO = nullptr) const;
 
@@ -1594,8 +1665,10 @@ public:
   Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
                               TypeSize &MemBytes) const override;
 
-  unsigned getInstBundleSize(const MachineInstr &MI) const;
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
+
+  InstSizeVerifyMode
+  getInstSizeVerifyMode(const MachineInstr &MI) const override;
 
   bool mayAccessFlatAddressSpace(const MachineInstr &MI) const;
 
@@ -1644,6 +1717,11 @@ public:
 
   bool isWave32() const;
 
+  bool isVOPDAntidependencyAllowed(const MachineInstr &MI) const;
+
+  bool hasRAWDependency(const MachineInstr &FirstMI,
+                        const MachineInstr &SecondMI) const;
+
   /// Return a partially built integer add instruction without carry.
   /// Caller must add source operands.
   /// For pre-GFX9 it will generate unused carry destination operand.
@@ -1672,16 +1750,16 @@ public:
   /// Returns if \p Offset is legal for the subtarget as the offset to a FLAT
   /// encoded instruction with the given \p FlatVariant.
   bool isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
-                         uint64_t FlatVariant) const;
+                         AMDGPU::FlatAddrSpace FlatVariant) const;
 
   /// Split \p COffsetVal into {immediate offset field, remainder offset}
   /// values.
-  std::pair<int64_t, int64_t> splitFlatOffset(int64_t COffsetVal,
-                                              unsigned AddrSpace,
-                                              uint64_t FlatVariant) const;
+  std::pair<int64_t, int64_t>
+  splitFlatOffset(int64_t COffsetVal, unsigned AddrSpace,
+                  AMDGPU::FlatAddrSpace FlatVariant) const;
 
   /// Returns true if negative offsets are allowed for the given \p FlatVariant.
-  bool allowNegativeFlatOffset(uint64_t FlatVariant) const;
+  bool allowNegativeFlatOffset(AMDGPU::FlatAddrSpace FlatVariant) const;
 
   /// \brief Return a target-specific opcode if Opcode is a pseudo instruction.
   /// Return -1 if the target-specific opcode for the pseudo instruction does

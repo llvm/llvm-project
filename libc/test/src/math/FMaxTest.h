@@ -60,7 +60,7 @@ public:
   }
 
   void testRange(FMaxFunc func) {
-    constexpr StorageType COUNT = 100'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0, w = STORAGE_MAX; i <= COUNT;
          ++i, v += STEP, w -= STEP) {

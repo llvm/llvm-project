@@ -129,6 +129,9 @@
   !ERROR: If ADVANCE appears, UNIT=internal-file must not appear
   read(internal_file, '(I4)', eor=9, advance='no') jj
 
+  !ERROR: If ADVANCE appears, REC must not appear
+  read(10, '(I4)', advance='no', rec=13) jj
+
   !ERROR: If ADVANCE appears, an explicit format must also appear
   !ERROR: If EOR appears, ADVANCE with value 'NO' must also appear
   read(10, eor=9, advance='yes')

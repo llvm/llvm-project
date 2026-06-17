@@ -10,17 +10,21 @@
 
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
 #include "llvm/Support/Registry.h"
+#include "llvm/TargetParser/Triple.h"
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int SSAFJSONFormatAnchorSource = 0;
-LLVM_INSTANTIATE_REGISTRY(llvm::Registry<clang::ssaf::JSONFormat::FormatInfo>)
-LLVM_INSTANTIATE_REGISTRY(
-    llvm::Registry<clang::ssaf::JSONFormat::AnalysisResultRegistry::Codec>)
+using namespace clang;
+using namespace ssaf;
 
-static clang::ssaf::SerializationFormatRegistry::Add<clang::ssaf::JSONFormat>
+LLVM_DEFINE_REGISTRY(llvm::Registry<JSONFormat::FormatInfo>)
+LLVM_DEFINE_REGISTRY(llvm::Registry<JSONFormat::AnalysisResultRegistry::Codec>)
+
+static SerializationFormatRegistry::Add<JSONFormat>
     RegisterJSONFormat("json", "JSON serialization format");
 
 namespace clang::ssaf {
+
+// NOLINTNEXTLINE(misc-use-internal-linkage)
+volatile int JSONFormatAnchorSource = 0;
 
 //----------------------------------------------------------------------------
 // JSON Reader and Writer
@@ -405,6 +409,21 @@ entityLinkageTypeFromJSON(llvm::StringRef EntityLinkageTypeStr) {
 // Provided for consistency with respect to rest of the codebase.
 llvm::StringRef entityLinkageTypeToJSON(EntityLinkageType LT) {
   return entityLinkageTypeToString(LT);
+}
+
+//----------------------------------------------------------------------------
+// TargetTriple
+//----------------------------------------------------------------------------
+
+llvm::Error validateNormalizedTargetTriple(llvm::StringRef Triple) {
+  std::string Normalized = llvm::Triple::normalize(Triple);
+  if (Normalized != Triple) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::TargetTripleNotNormalized,
+                                Triple, Normalized)
+        .build();
+  }
+  return llvm::Error::success();
 }
 
 //----------------------------------------------------------------------------
