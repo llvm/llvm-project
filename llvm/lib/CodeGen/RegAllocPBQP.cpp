@@ -90,9 +90,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
 
+#ifndef EJIT_TRIM_LLVM_BACKEND
 static RegisterRegAlloc
 RegisterPBQPRepAlloc("pbqp", "PBQP register allocator",
                        createDefaultPBQPRegisterAllocator);
+#endif // EJIT_TRIM_LLVM_BACKEND
 
 static cl::opt<bool>
 PBQPCoalescing("pbqp-coalescing",

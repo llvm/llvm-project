@@ -635,7 +635,11 @@ bool AArch64Subtarget::supportsAddressTopByteIgnored() const {
 
 std::unique_ptr<PBQPRAConstraint>
 AArch64Subtarget::getCustomPBQPConstraints() const {
+#ifndef EJIT_TRIM_LLVM_BACKEND
   return balanceFPOps() ? std::make_unique<A57ChainingConstraint>() : nullptr;
+#else
+  return nullptr;
+#endif
 }
 
 void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {

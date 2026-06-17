@@ -27,6 +27,7 @@
 
 using namespace llvm;
 
+#ifndef EJIT_TRIM_LLVM_BACKEND
 static cl::opt<RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode> Mode(
     "regalloc-enable-advisor", cl::Hidden,
     cl::init(RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default),
@@ -39,6 +40,7 @@ static cl::opt<RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode> Mode(
         clEnumValN(
             RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development,
             "development", "for training")));
+#endif // EJIT_TRIM_LLVM_BACKEND
 
 static cl::opt<bool> EnableLocalReassignment(
     "enable-local-reassign", cl::Hidden,
@@ -117,6 +119,9 @@ void RegAllocEvictionAdvisorAnalysis::initializeProvider(
     RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode Mode, LLVMContext &Ctx) {
   if (Provider)
     return;
+#ifdef EJIT_TRIM_LLVM_BACKEND
+  Provider.reset(new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/false, Ctx));
+#else
   switch (Mode) {
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default:
     Provider.reset(
@@ -134,18 +139,27 @@ void RegAllocEvictionAdvisorAnalysis::initializeProvider(
     Provider.reset(createReleaseModeAdvisorProvider(Ctx));
     return;
   }
+#endif // EJIT_TRIM_LLVM_BACKEND
 }
 
 RegAllocEvictionAdvisorAnalysis::Result
 RegAllocEvictionAdvisorAnalysis::run(MachineFunction &MF,
                                      MachineFunctionAnalysisManager &MFAM) {
   // Lazy initialization of the provider.
+#ifndef EJIT_TRIM_LLVM_BACKEND
   initializeProvider(::Mode, MF.getFunction().getContext());
+#else
+  initializeProvider(RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default,
+                     MF.getFunction().getContext());
+#endif
   return Result{Provider.get()};
 }
 
 template <>
 Pass *llvm::callDefaultCtor<RegAllocEvictionAdvisorAnalysisLegacy>() {
+#ifdef EJIT_TRIM_LLVM_BACKEND
+  return new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested=*/false);
+#else
   switch (Mode) {
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Default:
     return new DefaultEvictionAdvisorAnalysisLegacy(/*NotAsRequested=*/false);
@@ -164,6 +178,7 @@ Pass *llvm::callDefaultCtor<RegAllocEvictionAdvisorAnalysisLegacy>() {
 #endif
   }
   llvm_unreachable("unexpected advisor mode");
+#endif // EJIT_TRIM_LLVM_BACKEND
 }
 
 StringRef RegAllocEvictionAdvisorAnalysisLegacy::getPassName() const {

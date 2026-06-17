@@ -20,6 +20,7 @@
 
 using namespace llvm;
 
+#ifndef EJIT_TRIM_LLVM_BACKEND
 static cl::opt<RegAllocPriorityAdvisorProvider::AdvisorMode> Mode(
     "regalloc-enable-priority-advisor", cl::Hidden,
     cl::init(RegAllocPriorityAdvisorProvider::AdvisorMode::Default),
@@ -34,6 +35,7 @@ static cl::opt<RegAllocPriorityAdvisorProvider::AdvisorMode> Mode(
         clEnumValN(
             RegAllocPriorityAdvisorProvider::AdvisorMode::Dummy, "dummy",
             "prioritize low virtual register numbers for test and debug")));
+#endif // EJIT_TRIM_LLVM_BACKEND
 
 char RegAllocPriorityAdvisorAnalysisLegacy::ID = 0;
 INITIALIZE_PASS(RegAllocPriorityAdvisorAnalysisLegacy, "regalloc-priority",
@@ -136,6 +138,9 @@ private:
 void RegAllocPriorityAdvisorAnalysis::initializeProvider(LLVMContext &Ctx) {
   if (Provider)
     return;
+#ifdef EJIT_TRIM_LLVM_BACKEND
+  Provider.reset(new DefaultPriorityAdvisorProvider(/*NotAsRequested=*/false, Ctx));
+#else
   switch (Mode) {
   case RegAllocPriorityAdvisorProvider::AdvisorMode::Dummy:
     Provider.reset(new DummyPriorityAdvisorProvider());
@@ -156,6 +161,7 @@ void RegAllocPriorityAdvisorAnalysis::initializeProvider(LLVMContext &Ctx) {
     Provider.reset(createReleaseModePriorityAdvisorProvider());
     return;
   }
+#endif // EJIT_TRIM_LLVM_BACKEND
 }
 
 AnalysisKey RegAllocPriorityAdvisorAnalysis::Key;
@@ -171,6 +177,9 @@ RegAllocPriorityAdvisorAnalysis::run(MachineFunction &MF,
 
 template <>
 Pass *llvm::callDefaultCtor<RegAllocPriorityAdvisorAnalysisLegacy>() {
+#ifdef EJIT_TRIM_LLVM_BACKEND
+  return new DefaultPriorityAdvisorAnalysisLegacy(/*NotAsRequested=*/false);
+#else
   Pass *Ret = nullptr;
   switch (Mode) {
   case RegAllocPriorityAdvisorProvider::AdvisorMode::Default:
@@ -191,6 +200,7 @@ Pass *llvm::callDefaultCtor<RegAllocPriorityAdvisorAnalysisLegacy>() {
   if (Ret)
     return Ret;
   return new DefaultPriorityAdvisorAnalysisLegacy(/*NotAsRequested*/ true);
+#endif // EJIT_TRIM_LLVM_BACKEND
 }
 
 StringRef RegAllocPriorityAdvisorAnalysisLegacy::getPassName() const {

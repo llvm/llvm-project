@@ -39,8 +39,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
 
+#ifndef EJIT_TRIM_LLVM_BACKEND
 static RegisterRegAlloc basicRegAlloc("basic", "basic register allocator",
                                       createBasicRegisterAllocator);
+#endif // EJIT_TRIM_LLVM_BACKEND
 
 namespace {
   struct CompSpillWeight {
@@ -127,6 +129,7 @@ char RABasic::ID = 0;
 
 char &llvm::RABasicID = RABasic::ID;
 
+#ifndef EJIT_TRIM_LLVM_BACKEND
 INITIALIZE_PASS_BEGIN(RABasic, "regallocbasic", "Basic Register Allocator",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveDebugVariablesWrapperLegacy)
@@ -143,6 +146,7 @@ INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_END(RABasic, "regallocbasic", "Basic Register Allocator", false,
                     false)
+#endif // EJIT_TRIM_LLVM_BACKEND
 
 bool RABasic::LRE_CanEraseVirtReg(Register VirtReg) {
   LiveInterval &LI = LIS->getInterval(VirtReg);
