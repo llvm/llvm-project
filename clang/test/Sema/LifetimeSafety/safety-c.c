@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -Wno-varargs -Wno-non-pod-varargs -verify -fexperimental-lifetime-safety-c %s
+// RUN: %clang_cc1 -fsyntax-only -Werror=lifetime-safety -Wno-dangling -Wno-varargs -Wno-non-pod-varargs %s
 
 int *identity(int *p __attribute__((lifetimebound))) { return p; }
 
@@ -148,20 +149,20 @@ int vector_subscript_regression(void) {
 void va_arg_array_regression(int n, ...) {
   __builtin_va_list ap;
   __builtin_va_start(ap, n);
-  int *p = __builtin_va_arg(ap, int[4]); // expected-warning {{second argument to 'va_arg' is of array type 'int[4]'}}
+  int *p = __builtin_va_arg(ap, int[4]);
   (void)p;
 }
 
 void take(int* q);
 void va_arg_array_paren_regression(int n, ...) {
   __builtin_va_list ap;
-  take((__builtin_va_arg(ap, int[4]))); // expected-warning {{second argument to 'va_arg' is of array type 'int[4]'}}
+  take((__builtin_va_arg(ap, int[4])));
 }
 
 void va_arg_function_regression(int n, ...) {
   __builtin_va_list ap;
   __builtin_va_start(ap, n);
-  int (*p)(void) = __builtin_va_arg(ap, int(void)); // expected-error {{second argument to 'va_arg' is of non-POD type 'int (void)'}}
+  int (*p)(void) = __builtin_va_arg(ap, int(void));
   (void)p;
 }
 
