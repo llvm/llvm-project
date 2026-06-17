@@ -2266,7 +2266,8 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureSetregVGPRMSBFixup,
    FeatureRequiresCOV6,
    FeatureXNACKAnyOnly,
-   FeatureGFX125xLowestRateWMMA])>;
+   FeatureGFX125xLowestRateWMMA,
+   FeatureTransCoexecutionHazard])>;
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
@@ -2331,6 +2332,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
    FeatureSmemPrefetchInsts,
+   FeatureTransCoexecutionHazard
 ]>;
 
 //===----------------------------------------------------------------------===//
