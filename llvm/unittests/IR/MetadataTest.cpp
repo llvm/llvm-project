@@ -2919,6 +2919,7 @@ TEST_F(DICompileUnitTest, get) {
   EXPECT_EQ(DWOId, N->getDWOId());
   EXPECT_EQ(SysRoot, N->getSysRoot());
   EXPECT_EQ(SDK, N->getSDK());
+  EXPECT_EQ(0u, N->getDialect());
 
   TempDICompileUnit Temp = N->clone();
   EXPECT_EQ(dwarf::DW_TAG_compile_unit, Temp->getTag());
@@ -2937,11 +2938,43 @@ TEST_F(DICompileUnitTest, get) {
   EXPECT_EQ(Macros, Temp->getMacros().get());
   EXPECT_EQ(SysRoot, Temp->getSysRoot());
   EXPECT_EQ(SDK, Temp->getSDK());
+  EXPECT_EQ(0u, Temp->getDialect());
 
   auto *TempAddress = Temp.get();
   auto *Clone = MDNode::replaceWithPermanent(std::move(Temp));
   EXPECT_TRUE(Clone->isDistinct());
   EXPECT_EQ(TempAddress, Clone);
+}
+
+TEST_F(DICompileUnitTest, getWithDialect) {
+  unsigned SourceLanguage = 1;
+  DIFile *File = getFile();
+  StringRef Producer = "some producer";
+  bool IsOptimized = false;
+  StringRef Flags = "flag after flag";
+  unsigned RuntimeVersion = 2;
+  StringRef SplitDebugFilename = "another/file";
+  auto EmissionKind = DICompileUnit::FullDebug;
+  MDTuple *EnumTypes = getTuple();
+  MDTuple *RetainedTypes = getTuple();
+  MDTuple *GlobalVariables = getTuple();
+  MDTuple *ImportedEntities = getTuple();
+  uint64_t DWOId = 0x10000000c0ffee;
+  MDTuple *Macros = getTuple();
+  StringRef SysRoot = "/";
+  StringRef SDK = "TestSDK";
+  uint16_t Dialect = dwarf::DW_LLVM_LANG_DIALECT_simt;
+  auto *N = DICompileUnit::getDistinct(
+      Context, DISourceLanguageName(SourceLanguage, Dialect), File, Producer,
+      IsOptimized, Flags, RuntimeVersion, SplitDebugFilename, EmissionKind,
+      EnumTypes, RetainedTypes, GlobalVariables, ImportedEntities, Macros,
+      DWOId, true, false, DICompileUnit::DebugNameTableKind::Default, false,
+      SysRoot, SDK);
+
+  EXPECT_EQ(dwarf::DW_LLVM_LANG_DIALECT_simt, N->getDialect());
+
+  TempDICompileUnit Temp = N->clone();
+  EXPECT_EQ(dwarf::DW_LLVM_LANG_DIALECT_simt, Temp->getDialect());
 }
 
 TEST_F(DICompileUnitTest, replaceArrays) {

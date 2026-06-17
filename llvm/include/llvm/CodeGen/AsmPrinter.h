@@ -94,7 +94,7 @@ public:
   TargetMachine &TM;
 
   /// Target Asm Printer information.
-  const MCAsmInfo *MAI = nullptr;
+  const MCAsmInfo &MAI;
 
   /// This is the context for the output file that we are streaming. This owns
   /// all of the global MC-related objects for the generated translation unit.
@@ -359,9 +359,6 @@ public:
   const MCSubtargetInfo &getSubtargetInfo() const;
 
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
-
-  /// Emits inital debug location directive.
-  void emitInitialRawDwarfLocDirective(const MachineFunction &MF);
 
   /// Return the current section we are emitting to.
   const MCSection *getCurrentSection() const;
@@ -1013,12 +1010,12 @@ protected:
   }
 };
 
-void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
-                           AsmPrinter &AsmPrinter);
-
-void setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
-                                    MachineFunction &MF,
+LLVM_ABI void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
                                     AsmPrinter &AsmPrinter);
+
+LLVM_ABI void
+setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
+                               MachineFunction &MF, AsmPrinter &AsmPrinter);
 
 } // end namespace llvm
 

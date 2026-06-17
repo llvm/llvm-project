@@ -25,16 +25,22 @@ using namespace clang::interp;
 
 InterpFrame::InterpFrame(InterpState &S)
     : Caller(nullptr), S(S), Depth(0), Func(nullptr), RetPC(CodePtr()),
-      ArgSize(0), Args(nullptr), FrameOffset(0) {}
+      ArgSize(0), Args(nullptr) {}
 
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
     : Caller(Caller), S(S), Depth(Caller ? Caller->Depth + 1 : 0), Func(Func),
-      RetPC(RetPC), ArgSize(ArgSize), Args(static_cast<char *>(S.Stk.top())),
-      FrameOffset(S.Stk.size()) {
+      RetPC(RetPC), ArgSize(ArgSize), Args(static_cast<char *>(S.Stk.top())) {
+#ifndef NDEBUG
+  FrameOffset = S.Stk.size();
+#endif
 
   if (!Func)
     return;
+
+  FuncFlags |= Func->hasRVO() * HasRVOFlag;
+  FuncFlags |= Func->hasThisPointer() * HasThisFlag;
+
   // Initialize argument blocks.
   for (unsigned I = 0, N = Func->getNumWrittenParams(); I != N; ++I)
     new (argBlock(I)) Block(S.EvalID, Func->getParamDescriptor(I).Desc);
@@ -61,12 +67,6 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC,
   // If the fuction has a This pointer, that one is next.
   // Then follow the actual arguments (but those are handled
   // in getParamPointer()).
-  if (Func->hasRVO()) {
-    // RVO pointer offset is always 0.
-  }
-
-  if (Func->hasThisPointer())
-    ThisPointerOffset = Func->hasRVO() ? sizeof(Pointer) : 0;
 }
 
 InterpFrame::~InterpFrame() {
@@ -121,19 +121,19 @@ void InterpFrame::destroy(unsigned Idx) {
 }
 
 template <typename T>
-static void print(llvm::raw_ostream &OS, const T &V, ASTContext &ASTCtx,
+static void print(llvm::raw_ostream &OS, const T &V, const Context &Ctx,
                   QualType Ty) {
   if constexpr (std::is_same_v<Pointer, T>) {
     if (Ty->isPointerOrReferenceType())
-      V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+      V.toAPValue(Ctx.getASTContext()).printPretty(OS, Ctx.getASTContext(), Ty);
     else {
-      if (std::optional<APValue> RValue = V.toRValue(ASTCtx, Ty))
-        RValue->printPretty(OS, ASTCtx, Ty);
+      if (std::optional<APValue> RValue = V.toRValue(Ctx, Ty))
+        RValue->printPretty(OS, Ctx.getASTContext(), Ty);
       else
         OS << "...";
     }
   } else {
-    V.toAPValue(ASTCtx).printPretty(OS, ASTCtx, Ty);
+    V.toAPValue(Ctx.getASTContext()).printPretty(OS, Ctx.getASTContext(), Ty);
   }
 }
 
@@ -150,11 +150,6 @@ static bool shouldSkipInBacktrace(const Function *F) {
       MD && MD->getParent()->isAnonymousStructOrUnion())
     return true;
 
-  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FD);
-      Ctor && Ctor->isDefaulted() && Ctor->isTrivial() &&
-      Ctor->isCopyOrMoveConstructor() && Ctor->inits().empty())
-    return true;
-
   return false;
 }
 
@@ -164,8 +159,11 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
   if (shouldSkipInBacktrace(Func))
     return;
 
+  const ASTContext &ASTCtx = S.getASTContext();
   const Expr *CallExpr = Caller->getExpr(getRetPC());
   const FunctionDecl *F = getCallee();
+  auto PrintingPolicy = ASTCtx.getPrintingPolicy();
+  PrintingPolicy.SuppressLambdaBody = true;
 
   bool IsMemberCall = false;
   bool ExplicitInstanceParam = false;
@@ -178,44 +176,43 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
     if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(CallExpr)) {
       const Expr *Object = MCE->getImplicitObjectArgument();
       Object->printPretty(OS, /*Helper=*/nullptr,
-                          S.getASTContext().getPrintingPolicy(),
+                          PrintingPolicy,
                           /*Indentation=*/0);
       if (Object->getType()->isPointerType())
         OS << "->";
       else
-        OS << ".";
+        OS << '.';
     } else if (const auto *OCE =
                    dyn_cast_if_present<CXXOperatorCallExpr>(CallExpr)) {
       OCE->getArg(0)->printPretty(OS, /*Helper=*/nullptr,
-                                  S.getASTContext().getPrintingPolicy(),
+                                  PrintingPolicy,
                                   /*Indentation=*/0);
-      OS << ".";
+      OS << '.';
     } else if (const auto *M = dyn_cast<CXXMethodDecl>(F)) {
-      print(OS, getThis(), S.getASTContext(),
-            S.getASTContext().getLValueReferenceType(
-                S.getASTContext().getCanonicalTagType(M->getParent())));
-      OS << ".";
+      print(OS, getThis(), S.getContext(),
+            ASTCtx.getLValueReferenceType(
+                ASTCtx.getCanonicalTagType(M->getParent())));
+      OS << '.';
     }
   }
 
-  F->getNameForDiagnostic(OS, S.getASTContext().getPrintingPolicy(),
-                          /*Qualified=*/false);
+  F->getNameForDiagnostic(OS, PrintingPolicy, /*Qualified=*/false);
   OS << '(';
   unsigned Off = 0;
-
+  unsigned ParamIndex = ExplicitInstanceParam;
   Off += Func->hasRVO() ? primSize(PT_Ptr) : 0;
   Off += Func->hasThisPointer() ? primSize(PT_Ptr) : 0;
   llvm::ListSeparator Comma;
   for (const ParmVarDecl *Param :
        F->parameters().slice(ExplicitInstanceParam)) {
     OS << Comma;
-    QualType Ty = Param->getType();
-    PrimType PrimTy = S.Ctx.classify(Ty).value_or(PT_Ptr);
-
-    TYPE_SWITCH(PrimTy, print(OS, stackRef<T>(Off), S.getASTContext(), Ty));
-    Off += align(primSize(PrimTy));
+    PrimType PrimT = Func->getParamDescriptor(ParamIndex).T;
+    TYPE_SWITCH(PrimT,
+                print(OS, stackRef<T>(Off), S.getContext(), Param->getType()));
+    Off += align(primSize(PrimT));
+    ++ParamIndex;
   }
-  OS << ")";
+  OS << ')';
 }
 
 SourceRange InterpFrame::getCallRange() const {

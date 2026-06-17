@@ -14,6 +14,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
@@ -236,7 +237,7 @@ bool HostInfoMacOSX::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
 bool HostInfoMacOSX::ComputeUserPluginsDirectory(FileSpec &file_spec) {
   FileSpec home_dir_spec = GetUserHomeDir();
   home_dir_spec.AppendPathComponent("Library/Application Support/LLDB/PlugIns");
-  file_spec.SetDirectory(home_dir_spec.GetPathAsConstString());
+  file_spec.SetDirectory(home_dir_spec.GetPath());
   return true;
 }
 

@@ -132,9 +132,6 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   ctx.symAux.emplace_back();
   ctx.symtab = std::make_unique<SymbolTable>(ctx);
 
-  ctx.partitions.clear();
-  ctx.partitions.emplace_back(ctx);
-
   ctx.arg.progName = args[0];
 
   ctx.driver.linkerMain(args);
@@ -195,7 +192,8 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(Ctx &ctx,
 // Returns slices of MB by parsing MB as an archive file.
 // Each slice consists of a member file in the archive.
 std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
-    Ctx &ctx, MemoryBufferRef mb) {
+    Ctx &ctx, LoadJob &job) {
+  MemoryBufferRef mb = job.mbref;
   std::unique_ptr<Archive> file =
       CHECK(Archive::create(mb),
             mb.getBufferIdentifier() + ": failed to parse archive");
@@ -209,8 +207,8 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
               mb.getBufferIdentifier() +
                   ": could not get the buffer for a child of the archive");
     if (addToTar)
-      ctx.tar->append(relativeToRoot(check(c.getFullName())),
-                      mbref.getBuffer());
+      job.tarEntries.emplace_back(relativeToRoot(check(c.getFullName())),
+                                  mbref.getBuffer());
     v.push_back(std::make_pair(mbref, c.getChildOffset()));
   }
   if (err)
@@ -218,32 +216,16 @@ std::vector<std::pair<MemoryBufferRef, uint64_t>> static getArchiveMembers(
                << ": Archive::children failed: " << std::move(err);
 
   // Take ownership of memory buffers created for members of thin archives.
-  std::vector<std::unique_ptr<MemoryBuffer>> mbs = file->takeThinBuffers();
-  std::move(mbs.begin(), mbs.end(), std::back_inserter(ctx.memoryBuffers));
+  job.thinBufs = file->takeThinBuffers();
 
   return v;
 }
 
-static bool isBitcode(MemoryBufferRef mb) {
-  return identify_magic(mb.getBuffer()) == llvm::file_magic::bitcode;
-}
-
-bool LinkerDriver::tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
-                                    uint64_t offsetInArchive, bool lazy) {
-  if (!ctx.arg.fatLTOObjects)
-    return false;
-  Expected<MemoryBufferRef> fatLTOData =
-      IRObjectFile::findBitcodeInMemBuffer(mb);
-  if (errorToBool(fatLTOData.takeError()))
-    return false;
-  auto file = std::make_unique<BitcodeFile>(ctx, *fatLTOData, archiveName,
-                                            offsetInArchive, lazy);
-  file->obj->fatLTOObject(true);
-  files.push_back(std::move(file));
-  return true;
-}
-
 // Opens a file and create a file object. Path has to be resolved already.
+// Every regular input (not binary-format or linker scripts) is recorded as a
+// LoadJob. Inside createFiles() jobs batch up and are expanded in parallel at
+// the end. Outside createFiles() (e.g. addDependentLibrary during parseFiles)
+// the single job is expanded immediately.
 void LinkerDriver::addFile(StringRef path, bool withLOption) {
   using namespace sys::fs;
 
@@ -253,93 +235,61 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
   MemoryBufferRef mbref = *buffer;
 
   if (ctx.arg.formatBinary) {
-    files.push_back(std::make_unique<BinaryFile>(ctx, mbref));
-    if (!isInGroup)
-      ++nextGroupId;
-    return;
-  }
-
-  switch (identify_magic(mbref.getBuffer())) {
-  case file_magic::unknown:
-    readLinkerScript(ctx, mbref);
-    return;
-  case file_magic::archive: {
-    auto members = getArchiveMembers(ctx, mbref);
-    if (inWholeArchive) {
-      for (const std::pair<MemoryBufferRef, uint64_t> &p : members) {
-        if (isBitcode(p.first))
-          files.push_back(std::make_unique<BitcodeFile>(ctx, p.first, path,
-                                                        p.second, false));
-        else if (!tryAddFatLTOFile(p.first, path, p.second, false))
-          files.push_back(createObjFile(ctx, p.first, path));
+    loadJobs.push_back({mbref,
+                        path,
+                        LoadJob::Binary,
+                        /*inWholeArchive=*/false,
+                        /*lazy=*/false,
+                        /*asNeeded=*/false,
+                        /*withLOption=*/false,
+                        nextGroupId,
+                        {},
+                        {},
+                        {}});
+  } else {
+    auto magic = identify_magic(mbref.getBuffer());
+    if (magic == file_magic::unknown) {
+      readLinkerScript(ctx, mbref);
+      return;
+    }
+    LoadJob::Kind kind;
+    switch (magic) {
+    case file_magic::archive:
+      kind = LoadJob::Archive;
+      break;
+    case file_magic::elf_relocatable:
+      kind = LoadJob::Obj;
+      break;
+    case file_magic::bitcode:
+      kind = LoadJob::Bitcode;
+      break;
+    case file_magic::elf_shared_object:
+      if (ctx.arg.isStatic) {
+        Err(ctx) << "attempted static link of dynamic object " << path;
+        return;
       }
+      kind = LoadJob::Shared;
+      break;
+    default:
+      Err(ctx) << path << ": unknown file type";
       return;
     }
-
-    archiveFiles.emplace_back(path, members.size());
-
-    // Handle archives and --start-lib/--end-lib using the same code path. This
-    // scans all the ELF relocatable object files and bitcode files in the
-    // archive rather than just the index file, with the benefit that the
-    // symbols are only loaded once. For many projects archives see high
-    // utilization rates and it is a net performance win. --start-lib scans
-    // symbols in the same order that llvm-ar adds them to the index, so in the
-    // common case the semantics are identical. If the archive symbol table was
-    // created in a different order, or is incomplete, this strategy has
-    // different semantics. Such output differences are considered user error.
-    //
-    // All files within the archive get the same group ID to allow mutual
-    // references for --warn-backrefs.
-    SaveAndRestore saved(isInGroup, true);
-    for (const std::pair<MemoryBufferRef, uint64_t> &p : members) {
-      auto magic = identify_magic(p.first.getBuffer());
-      if (magic == file_magic::elf_relocatable) {
-        if (!tryAddFatLTOFile(p.first, path, p.second, true))
-          files.push_back(createObjFile(ctx, p.first, path, true));
-      } else if (magic == file_magic::bitcode)
-        files.push_back(
-            std::make_unique<BitcodeFile>(ctx, p.first, path, p.second, true));
-      else
-        Warn(ctx) << path << ": archive member '"
-                  << p.first.getBufferIdentifier()
-                  << "' is neither ET_REL nor LLVM bitcode";
-    }
-    if (!saved.get())
-      ++nextGroupId;
-    return;
+    loadJobs.push_back({mbref,
+                        path,
+                        kind,
+                        inWholeArchive,
+                        inLib,
+                        ctx.arg.asNeeded,
+                        withLOption,
+                        nextGroupId,
+                        {},
+                        {},
+                        {}});
   }
-  case file_magic::elf_shared_object: {
-    if (ctx.arg.isStatic) {
-      ErrAlways(ctx) << "attempted static link of dynamic object " << path;
-      return;
-    }
-
-    // Shared objects are identified by soname. soname is (if specified)
-    // DT_SONAME and falls back to filename. If a file was specified by -lfoo,
-    // the directory part is ignored. Note that path may be a temporary and
-    // cannot be stored into SharedFile::soName.
-    path = mbref.getBufferIdentifier();
-    auto f = std::make_unique<SharedFile>(
-        ctx, mbref, withLOption ? path::filename(path) : path);
-    f->init();
-    files.push_back(std::move(f));
-    break;
-  }
-  case file_magic::bitcode:
-    files.push_back(std::make_unique<BitcodeFile>(ctx, mbref, "", 0, inLib));
-    break;
-  case file_magic::elf_relocatable:
-    if (!tryAddFatLTOFile(mbref, "", 0, inLib))
-      files.push_back(createObjFile(ctx, mbref, "", inLib));
-    break;
-  default:
-    ErrAlways(ctx) << path << ": unknown file type";
-    return;
-  }
-  // All files within the same --{start,end}-group get the same group ID.
-  // Otherwise, a new file will get a new group ID.
   if (!isInGroup)
     ++nextGroupId;
+  if (!deferLoad)
+    loadFiles();
 }
 
 // Add a given library by searching it from input search paths.
@@ -2160,8 +2110,111 @@ static bool isFormatBinary(Ctx &ctx, StringRef s) {
   return false;
 }
 
+// Expand LoadJob entries recorded by addFile(). Called in batch from
+// createFiles() (parallel), or immediately from addFile() for late additions
+// like dependent libraries (single job, runs inline).
+void LinkerDriver::loadFiles() {
+  // BitcodeFile / fatLTO constructors call ctx.saver which is not thread-safe.
+  // SharedFile and ObjFile constructors are safe without the mutex.
+  std::mutex mu;
+  auto makeFile = [&](MemoryBufferRef mb, file_magic magic, StringRef arPath,
+                      uint64_t offset,
+                      bool lazy) -> std::unique_ptr<InputFile> {
+    if (magic == file_magic::bitcode) {
+      std::lock_guard<std::mutex> lk(mu);
+      return std::make_unique<BitcodeFile>(ctx, mb, arPath, offset, lazy);
+    }
+    if (ctx.arg.fatLTOObjects) {
+      Expected<MemoryBufferRef> fatLTOData =
+          IRObjectFile::findBitcodeInMemBuffer(mb);
+      if (!errorToBool(fatLTOData.takeError())) {
+        std::lock_guard<std::mutex> lk(mu);
+        auto f = std::make_unique<BitcodeFile>(ctx, *fatLTOData, arPath, offset,
+                                               lazy);
+        f->obj->fatLTOObject(true);
+        return f;
+      }
+    }
+    return createObjFile(ctx, mb, arPath, lazy);
+  };
+
+  {
+    llvm::TimeTraceScope timeScope("Parallel load");
+    parallelFor(0, loadJobs.size(), [&](size_t i) {
+      LoadJob &job = loadJobs[i];
+      switch (job.kind) {
+      case LoadJob::Obj:
+      case LoadJob::Bitcode:
+        job.out.push_back(makeFile(job.mbref,
+                                   job.kind == LoadJob::Bitcode
+                                       ? file_magic::bitcode
+                                       : file_magic::elf_relocatable,
+                                   "", 0, job.lazy));
+        break;
+      case LoadJob::Archive: {
+        // Scan all archive members rather than using the archive symbol
+        // index. We assume the archive symbol table order matches the order
+        // of symbols in the member symbol tables. All files within the
+        // archive share the same group ID to allow mutual references for
+        // --warn-backrefs.
+        auto members = getArchiveMembers(ctx, job);
+        job.out.reserve(members.size());
+        bool lazy = !job.inWholeArchive;
+        for (const auto &[mb, offset] : members) {
+          auto mm = identify_magic(mb.getBuffer());
+          if (mm == file_magic::elf_relocatable || mm == file_magic::bitcode ||
+              job.inWholeArchive)
+            job.out.push_back(makeFile(mb, mm, job.path, offset, lazy));
+          else
+            Warn(ctx) << job.path << ": archive member '"
+                      << mb.getBufferIdentifier()
+                      << "' is neither ET_REL nor LLVM bitcode";
+        }
+        break;
+      }
+      case LoadJob::Shared: {
+        // Shared objects are identified by soname. soname is (if specified)
+        // DT_SONAME and falls back to filename. If a file was specified by
+        // -lfoo, the directory part is ignored.
+        StringRef bufPath = job.mbref.getBufferIdentifier();
+        auto f = std::make_unique<SharedFile>(
+            ctx, job.mbref,
+            job.withLOption ? path::filename(bufPath) : bufPath);
+        f->init();
+        f->isNeeded = !job.asNeeded;
+        job.out.push_back(std::move(f));
+        break;
+      }
+      case LoadJob::Binary:
+        job.out.push_back(std::make_unique<BinaryFile>(ctx, job.mbref));
+        break;
+      }
+      for (auto &m : job.out)
+        m->groupId = job.groupId;
+    });
+  }
+
+  size_t numFiles = 0;
+  for (auto &job : loadJobs)
+    numFiles += job.out.size();
+  files.reserve(files.size() + numFiles);
+  for (auto &job : loadJobs) {
+    if (job.kind == LoadJob::Archive)
+      archiveFiles.emplace_back(job.path, (unsigned)job.out.size());
+    if (ctx.tar)
+      for (const auto &[path, data] : job.tarEntries)
+        ctx.tar->append(path, data);
+    files.append(std::make_move_iterator(job.out.begin()),
+                 std::make_move_iterator(job.out.end()));
+    ctx.memoryBuffers.append(std::make_move_iterator(job.thinBufs.begin()),
+                             std::make_move_iterator(job.thinBufs.end()));
+  }
+  loadJobs.clear();
+}
+
 void LinkerDriver::createFiles(opt::InputArgList &args) {
   llvm::TimeTraceScope timeScope("Load input files");
+  SaveAndRestore saveDefer(deferLoad, true);
   // For --{push,pop}-state.
   std::vector<std::tuple<bool, bool, bool>> stack;
 
@@ -2283,6 +2336,7 @@ void LinkerDriver::createFiles(opt::InputArgList &args) {
 
   if (defaultScript && !hasScript)
     readLinkerScript(ctx, *defaultScript);
+  loadFiles();
   if (files.empty() && !hasInput && errCount(ctx) == 0)
     ErrAlways(ctx) << "no input files";
 }
@@ -2691,64 +2745,6 @@ static void findKeepUniqueSections(Ctx &ctx, opt::InputArgList &args) {
   }
 }
 
-// This function reads a symbol partition specification section. These sections
-// are used to control which partition a symbol is allocated to. See
-// https://lld.llvm.org/Partitions.html for more details on partitions.
-template <typename ELFT>
-static void readSymbolPartitionSection(Ctx &ctx, InputSectionBase *s) {
-  // Read the relocation that refers to the partition's entry point symbol.
-  Symbol *sym;
-  const RelsOrRelas<ELFT> rels = s->template relsOrRelas<ELFT>();
-  auto readEntry = [](InputFile *file, const auto &rels) -> Symbol * {
-    for (const auto &rel : rels)
-      return &file->getRelocTargetSym(rel);
-    return nullptr;
-  };
-  if (rels.areRelocsCrel())
-    sym = readEntry(s->file, rels.crels);
-  else if (rels.areRelocsRel())
-    sym = readEntry(s->file, rels.rels);
-  else
-    sym = readEntry(s->file, rels.relas);
-  if (!isa_and_nonnull<Defined>(sym) || !sym->isExported)
-    return;
-
-  StringRef partName = reinterpret_cast<const char *>(s->content().data());
-  for (Partition &part : ctx.partitions) {
-    if (part.name == partName) {
-      sym->partition = part.getNumber(ctx);
-      return;
-    }
-  }
-
-  // Forbid partitions from being used on incompatible targets, and forbid them
-  // from being used together with various linker features that assume a single
-  // set of output sections.
-  if (ctx.script->hasSectionsCommand)
-    ErrAlways(ctx) << s->file
-                   << ": partitions cannot be used with the SECTIONS command";
-  if (ctx.script->hasPhdrsCommands())
-    ErrAlways(ctx) << s->file
-                   << ": partitions cannot be used with the PHDRS command";
-  if (!ctx.arg.sectionStartMap.empty())
-    ErrAlways(ctx) << s->file
-                   << ": partitions cannot be used with "
-                      "--section-start, -Ttext, -Tdata or -Tbss";
-  if (ctx.arg.emachine == EM_MIPS)
-    ErrAlways(ctx) << s->file << ": partitions cannot be used on this target";
-
-  // Impose a limit of no more than 254 partitions. This limit comes from the
-  // sizes of the Partition fields in InputSectionBase and Symbol, as well as
-  // the amount of space devoted to the partition number in RankFlags.
-  if (ctx.partitions.size() == 254)
-    Fatal(ctx) << "may not have more than 254 partitions";
-
-  ctx.partitions.emplace_back(ctx);
-  Partition &newPart = ctx.partitions.back();
-  newPart.name = partName;
-  sym->partition = newPart.getNumber(ctx);
-}
-
 static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
   // With --thinlto-index-only, all buffers are nearly unused from now on
   // (except symbol/section names used by infrequent passes). Mark input file
@@ -3136,18 +3132,21 @@ static void readSecurityNotes(Ctx &ctx) {
     }
 
     if (ctx.aarch64PauthAbiCoreInfo != f->aarch64PauthAbiCoreInfo)
-      Err(ctx)
-          << "incompatible values of AArch64 PAuth core info found\n"
-          << "platform:\n"
-          << ">>> " << referenceFileName << ": 0x"
-          << toHex(ctx.aarch64PauthAbiCoreInfo->platform, /*LowerCase=*/true)
-          << "\n>>> " << f << ": 0x"
-          << toHex(f->aarch64PauthAbiCoreInfo->platform, /*LowerCase=*/true)
-          << "\nversion:\n"
-          << ">>> " << referenceFileName << ": 0x"
-          << toHex(ctx.aarch64PauthAbiCoreInfo->version, /*LowerCase=*/true)
-          << "\n>>> " << f << ": 0x"
-          << toHex(f->aarch64PauthAbiCoreInfo->version, /*LowerCase=*/true);
+      Err(ctx) << "incompatible values of AArch64 PAuth core info found\n"
+               << "platform:\n"
+               << ">>> " << referenceFileName << ": 0x"
+               << utohexstr(ctx.aarch64PauthAbiCoreInfo->platform,
+                            /*LowerCase=*/true, /*Width=*/16)
+               << "\n>>> " << f << ": 0x"
+               << utohexstr(f->aarch64PauthAbiCoreInfo->platform,
+                            /*LowerCase=*/true, /*Width=*/16)
+               << "\nversion:\n"
+               << ">>> " << referenceFileName << ": 0x"
+               << utohexstr(ctx.aarch64PauthAbiCoreInfo->version,
+                            /*LowerCase=*/true, /*Width=*/16)
+               << "\n>>> " << f << ": 0x"
+               << utohexstr(f->aarch64PauthAbiCoreInfo->version,
+                            /*LowerCase=*/true, /*Width=*/16);
   }
 
   // Force enable Shadow Stack.
@@ -3467,14 +3466,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   {
     llvm::TimeTraceScope timeScope("Strip sections");
-    if (ctx.hasSympart.load(std::memory_order_relaxed)) {
-      llvm::erase_if(ctx.inputSections, [&ctx = ctx](InputSectionBase *s) {
-        if (s->type != SHT_LLVM_SYMPART)
-          return false;
-        readSymbolPartitionSection<ELFT>(ctx, s);
-        return true;
-      });
-    }
     // We do not want to emit debug sections if --strip-all
     // or --strip-debug are given.
     if (ctx.arg.strip != StripPolicy::None) {
@@ -3495,10 +3486,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // a .d file to record build dependencies.
   if (!ctx.arg.dependencyFile.empty())
     writeDependencyFile(ctx);
-
-  // Now that the number of partitions is fixed, save a pointer to the main
-  // partition.
-  ctx.mainPart = &ctx.partitions[0];
 
   // Read .note.gnu.property sections from input object files which
   // contain a hint to tweak linker's and loader's behaviors.
@@ -3533,10 +3520,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Garbage collection and removal of shared symbols from unused shared objects.
   markLive<ELFT>(ctx);
-
-  // Make copies of any input sections that need to be copied into each
-  // partition.
-  copySectionsIntoPartitions(ctx);
 
   if (canHaveMemtagGlobals(ctx)) {
     llvm::TimeTraceScope timeScope("Process memory tagged symbols");

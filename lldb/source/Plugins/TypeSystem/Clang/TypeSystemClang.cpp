@@ -1345,8 +1345,6 @@ QualType GetValueParamType(const clang::TemplateArgument &argument) {
     return argument.getIntegralType();
   case TemplateArgument::StructuralValue:
     return argument.getStructuralValueType();
-  case TemplateArgument::Declaration:
-    return argument.getParamTypeForDecl();
   default:
     return {};
   }
@@ -1634,6 +1632,8 @@ TypeSystemClang::CreateTemplateTemplateParmDecl(const char *template_name) {
   llvm::SmallVector<NamedDecl *, 8> template_param_decls;
 
   TypeSystemClang::TemplateParameterInfos template_param_infos;
+  template_param_infos.SetParameterPack(
+      std::make_unique<TemplateParameterInfos>());
   TemplateParameterList *template_param_list = CreateTemplateParameterList(
       ast, template_param_infos, template_param_decls);
 
@@ -5529,7 +5529,7 @@ void TypeSystemClang::ForEachEnumerator(
       for (enum_pos = enum_decl->enumerator_begin(),
           enum_end_pos = enum_decl->enumerator_end();
            enum_pos != enum_end_pos; ++enum_pos) {
-        ConstString name(enum_pos->getNameAsString().c_str());
+        ConstString name(enum_pos->getNameAsString());
         if (!callback(integer_type, name, enum_pos->getInitVal()))
           break;
       }
@@ -6357,8 +6357,8 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
       if (omit_empty_base_classes) {
         CompilerType base_class_clang_type = GetType(
             getASTContext().getObjCInterfaceType(superclass_interface_decl));
-        if (llvm::expectedToStdOptional(base_class_clang_type.GetNumChildren(
-                                            omit_empty_base_classes, exe_ctx))
+        if (llvm::expectedToOptional(base_class_clang_type.GetNumChildren(
+                                         omit_empty_base_classes, exe_ctx))
                 .value_or(0) > 0) {
           if (idx == 0) {
             clang::QualType ivar_qual_type(getASTContext().getObjCInterfaceType(
@@ -7343,9 +7343,8 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
   clang::Expr *bit_width = nullptr;
   if (bitfield_bit_size != 0) {
     if (clang_ast.IntTy.isNull()) {
-      LLDB_LOG(
-          GetLog(LLDBLog::Expressions),
-          "{0} failed: builtin ASTContext types have not been initialized");
+      LLDB_LOG(GetLog(LLDBLog::Expressions),
+               "builtin ASTContext types have not been initialized");
       return nullptr;
     }
 

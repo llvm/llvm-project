@@ -414,7 +414,7 @@ ELFFile<ELFT>::decode_relrs(Elf_Relr_Range relrs) const {
 template <class ELFT>
 Expected<uint64_t>
 ELFFile<ELFT>::getCrelHeader(ArrayRef<uint8_t> Content) const {
-  DataExtractor Data(Content, isLE(), sizeof(typename ELFT::Addr));
+  DataExtractor Data(Content, isLE());
   Error Err = Error::success();
   uint64_t Hdr = 0;
   Hdr = Data.getULEB128(&Hdr, &Err);
@@ -475,7 +475,7 @@ ELFFile<ELFT>::android_relas(const Elf_Shdr &Sec) const {
   if (Content.size() < 4 || Content[0] != 'A' || Content[1] != 'P' ||
       Content[2] != 'S' || Content[3] != '2')
     return createError("invalid packed relocation header");
-  DataExtractor Data(Content, isLE(), ELFT::Is64Bits ? 8 : 4);
+  DataExtractor Data(Content, isLE());
   DataExtractor::Cursor Cur(/*Offset=*/4);
 
   uint64_t NumRelocs = Data.getSLEB128(Cur);
@@ -732,9 +732,9 @@ class ELFBBAddrMapAddressExtractor : public AddressExtractor {
   DenseMap<uint64_t, uint64_t> FunctionOffsetTranslations;
 
   ELFBBAddrMapAddressExtractor(
-      const DataExtractor &Data, bool IsRelocatable,
+      const DataExtractor &Data, unsigned AddressSize, bool IsRelocatable,
       DenseMap<uint64_t, uint64_t> FunctionOffsetTranslations)
-      : AddressExtractor(Data), IsRelocatable(IsRelocatable),
+      : AddressExtractor(Data, AddressSize), IsRelocatable(IsRelocatable),
         FunctionOffsetTranslations(std::move(FunctionOffsetTranslations)) {}
 
 public:
@@ -772,7 +772,8 @@ public:
       }
     }
 
-    return ELFBBAddrMapAddressExtractor(Data, IsRelocatable,
+    unsigned AddressSize = sizeof(typename ELFFile<ELFT>::uintX_t);
+    return ELFBBAddrMapAddressExtractor(Data, AddressSize, IsRelocatable,
                                         std::move(FunctionOffsetTranslations));
   }
 
@@ -822,8 +823,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     Content = DecompressedContentRef;
   }
 
-  DataExtractor Data(Content, EF.isLE(),
-                     sizeof(typename ELFFile<ELFT>::uintX_t));
+  DataExtractor Data(Content, EF.isLE());
   auto ExtractorOrErr =
       ELFBBAddrMapAddressExtractor::create(Data, EF, Sec, RelaSec);
   if (!ExtractorOrErr)
