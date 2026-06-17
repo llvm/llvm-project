@@ -331,10 +331,8 @@ exit:
 ;;         A[i] = B[i] + 1;
 ;;     }
 ;;
-;;     B[0] = 0;            // outer.latch memory operation
-;;
-;;     // The latch now has multiple exit edges based on M
-;;     switch (M) {
+;;     // The latch now has multiple exit edges based on B[0]
+;;     switch (B[0]) {
 ;;       case 0:
 ;;         A[0] = 1;
 ;;         return;          // branches to %exit
@@ -634,17 +632,25 @@ exit:
 }
 
 
-
+;; A negative test in which we have two inner loops both guarded with different
+;; guard conditions. The first guard doesn't branch to loop latch so this cannot
+;; be unswitched. Unswitching either of the branches will be non-trivial
+;; and requires loop versioning
+;;
 ;; Source:
-;;   void f(int M, int N, int *A, int *B) {
+;;   void f(int M, int N, int N2, int *A, int *B) {
 ;;     for (int j = 0; j < M; j++) {
-;;       if (N <= 0) continue;          // invariant guard branches to latch
-;;       for (int i = 0; i < N; i++)
-;;         A[i] = B[i] + 1;
+;;       if (N > 0) {                   // invariant guard
+;;         for (int i = 0; i < N; i++)
+;;           A[i] = B[i] + 1;
+;;       }
+;;
+;;       if (N2 > 0) {                  // invariant guard branches to latch
+;;         for (int i = 0; i < N; i++)
+;;           A[i] = B[i] + 1;
+;;       }
 ;;     }
 ;;   }
-;; The key CFG edge is: outer.header --[N==0]--> outer.latch (the latch),
-;; outer.header --[N!=0]--> inner.preheader (inside the outer loop).
 
 define void @multiple_inner_loops(i32 %M, i32 %N, i32 %N2, ptr %A, ptr %B) {
 ; CHECK-LABEL: define void @multiple_inner_loops(
@@ -750,6 +756,268 @@ inner2.header:
 inner2.latch:
   %i.next2 = add nuw i32 %i2, 1
   %exitcond.inner2 = icmp eq i32 %i.next2, %N2
+  br i1 %exitcond.inner2, label %outer.latch, label %inner2.header
+
+outer.latch:
+  %j.next = add nuw i32 %j, 1
+  %exitcond.outer = icmp eq i32 %j.next, %M
+  br i1 %exitcond.outer, label %exit, label %outer.header
+
+exit:
+  ret void
+}
+
+;; A negative test in which we have two inner loops both guarded but the guards
+;; have the same conditions. The first guard doesn't branch to loop latch so
+;; this cannot be unswitched. If the control flow is optimized before the loop
+;; unswitching, and the second branch is eliminated then this will be a case of
+;; trivial unswitching.
+;;
+;; Source:
+;;   void f(int M, int N, int *A, int *B) {
+;;     for (int j = 0; j < M; j++) {
+;;       if (N > 0) {                   // invariant guard
+;;         for (int i = 0; i < N; i++)
+;;           A[i] = B[i] + 1;
+;;       }
+;;
+;;       if (N > 0) {                   // invariant guard branches to latch
+;;         for (int i = 0; i < N; i++)
+;;           A[i] = B[i] + 1;
+;;       }
+;;     }
+;;   }
+
+define void @multiple_inner_loops2(i32 %M, i32 %N, ptr %A, ptr %B) {
+; CHECK-LABEL: define void @multiple_inner_loops2(
+; CHECK-SAME: i32 [[M:%.*]], i32 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP_M:%.*]] = icmp sle i32 [[M]], 0
+; CHECK-NEXT:    br i1 [[CMP_M]], label %[[EXIT:.*]], label %[[OUTER_PREHEADER:.*]]
+; CHECK:       [[OUTER_PREHEADER]]:
+; CHECK-NEXT:    [[GUARD:%.*]] = icmp sle i32 [[N]], 0
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, %[[OUTER_PREHEADER]] ], [ [[J_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br i1 [[GUARD]], label %[[INNER2_GUARD:.*]], label %[[INNER_PREHEADER:.*]]
+; CHECK:       [[INNER_PREHEADER]]:
+; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
+; CHECK:       [[INNER_HEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[INNER_PREHEADER]] ], [ [[I_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[I]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP_B]], align 4
+; CHECK-NEXT:    [[INC:%.*]] = add i32 [[VAL]], 1
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[I]]
+; CHECK-NEXT:    store i32 [[INC]], ptr [[GEP_A]], align 4
+; CHECK-NEXT:    br label %[[INNER_LATCH]]
+; CHECK:       [[INNER_LATCH]]:
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[EXITCOND_INNER:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_INNER]], label %[[INNER2_GUARD_LOOPEXIT:.*]], label %[[INNER_HEADER]]
+; CHECK:       [[INNER2_GUARD_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[INNER2_GUARD]]
+; CHECK:       [[INNER2_GUARD]]:
+; CHECK-NEXT:    br i1 [[GUARD]], label %[[OUTER_LATCH]], label %[[INNER2_PREHEADER:.*]]
+; CHECK:       [[INNER2_PREHEADER]]:
+; CHECK-NEXT:    br label %[[INNER2_HEADER:.*]]
+; CHECK:       [[INNER2_HEADER]]:
+; CHECK-NEXT:    [[I2:%.*]] = phi i32 [ 0, %[[INNER2_PREHEADER]] ], [ [[I_NEXT2:%.*]], %[[INNER2_LATCH:.*]] ]
+; CHECK-NEXT:    [[GEP_B2:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[I2]]
+; CHECK-NEXT:    [[VAL2:%.*]] = load i32, ptr [[GEP_B2]], align 4
+; CHECK-NEXT:    [[INC2:%.*]] = add i32 [[VAL2]], 1
+; CHECK-NEXT:    [[GEP_A2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[I2]]
+; CHECK-NEXT:    store i32 [[INC2]], ptr [[GEP_A2]], align 4
+; CHECK-NEXT:    br label %[[INNER2_LATCH]]
+; CHECK:       [[INNER2_LATCH]]:
+; CHECK-NEXT:    [[I_NEXT2]] = add nuw i32 [[I2]], 1
+; CHECK-NEXT:    [[EXITCOND_INNER2:%.*]] = icmp eq i32 [[I_NEXT2]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_INNER2]], label %[[OUTER_LATCH_LOOPEXIT:.*]], label %[[INNER2_HEADER]]
+; CHECK:       [[OUTER_LATCH_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[OUTER_LATCH]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[J_NEXT]] = add nuw i32 [[J]], 1
+; CHECK-NEXT:    [[EXITCOND_OUTER:%.*]] = icmp eq i32 [[J_NEXT]], [[M]]
+; CHECK-NEXT:    br i1 [[EXITCOND_OUTER]], label %[[EXIT_LOOPEXIT:.*]], label %[[OUTER_HEADER]]
+; CHECK:       [[EXIT_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp.M = icmp sle i32 %M, 0
+  br i1 %cmp.M, label %exit, label %outer.preheader
+
+outer.preheader:
+  %guard = icmp sle i32 %N, 0
+  br label %outer.header
+
+outer.header:
+  %j = phi i32 [ 0, %outer.preheader ], [ %j.next, %outer.latch ]
+  br i1 %guard, label %inner2.guard, label %inner.preheader
+
+inner.preheader:
+  br label %inner.header
+
+inner.header:
+  %i = phi i32 [ 0, %inner.preheader ], [ %i.next, %inner.latch ]
+  %gep.B = getelementptr inbounds i32, ptr %B, i32 %i
+  %val = load i32, ptr %gep.B, align 4
+  %inc = add i32 %val, 1
+  %gep.A = getelementptr inbounds i32, ptr %A, i32 %i
+  store i32 %inc, ptr %gep.A, align 4
+  br label %inner.latch
+
+inner.latch:
+  %i.next = add nuw i32 %i, 1
+  %exitcond.inner = icmp eq i32 %i.next, %N
+  br i1 %exitcond.inner, label %inner2.guard, label %inner.header
+
+inner2.guard:
+  br i1 %guard, label %outer.latch, label %inner2.preheader
+
+inner2.preheader:
+  br label %inner2.header
+
+inner2.header:
+  %i2 = phi i32 [ 0, %inner2.preheader ], [ %i.next2, %inner2.latch ]
+  %gep.B2 = getelementptr inbounds i32, ptr %B, i32 %i2
+  %val2 = load i32, ptr %gep.B2, align 4
+  %inc2 = add i32 %val2, 1
+  %gep.A2 = getelementptr inbounds i32, ptr %A, i32 %i2
+  store i32 %inc2, ptr %gep.A2, align 4
+  br label %inner2.latch
+
+inner2.latch:
+  %i.next2 = add nuw i32 %i2, 1
+  %exitcond.inner2 = icmp eq i32 %i.next2, %N
+  br i1 %exitcond.inner2, label %outer.latch, label %inner2.header
+
+outer.latch:
+  %j.next = add nuw i32 %j, 1
+  %exitcond.outer = icmp eq i32 %j.next, %M
+  br i1 %exitcond.outer, label %exit, label %outer.header
+
+exit:
+  ret void
+}
+
+;; This is modified from the previous test, @multiple_inner_loops2. Here
+;; the second branch is optimzied away. The first branch is technically not a
+;; loop guard anymore, but still this is an invariant branch and both loops
+;; are control flow dependent on it. This is a case of trivial unswitching again.
+;;
+;; Source:
+;;   void f(int M, int N, int *A, int *B) {
+;;     for (int j = 0; j < M; j++) {
+;;       if (N > 0) {                   // invariant branch
+;;         for (int i = 0; i < N; i++)
+;;           A[i] = B[i] + 1;
+;;
+;;         for (int i = 0; i < N; i++)
+;;           A[i] = B[i] + 1;
+;;       }
+;;     }
+;;   }
+
+define void @multiple_inner_loops3(i32 %M, i32 %N, ptr %A, ptr %B) {
+; CHECK-LABEL: define void @multiple_inner_loops3(
+; CHECK-SAME: i32 [[M:%.*]], i32 [[N:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CMP_M:%.*]] = icmp sle i32 [[M]], 0
+; CHECK-NEXT:    br i1 [[CMP_M]], label %[[EXIT:.*]], label %[[OUTER_PREHEADER:.*]]
+; CHECK:       [[OUTER_PREHEADER]]:
+; CHECK-NEXT:    [[GUARD:%.*]] = icmp sle i32 [[N]], 0
+; CHECK-NEXT:    br i1 [[GUARD]], label %[[EXIT_LOOPEXIT_SPLIT:.*]], label %[[OUTER_PREHEADER_SPLIT:.*]]
+; CHECK:       [[OUTER_PREHEADER_SPLIT]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, %[[OUTER_PREHEADER_SPLIT]] ], [ [[J_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[INNER_PREHEADER:.*]]
+; CHECK:       [[INNER_PREHEADER]]:
+; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
+; CHECK:       [[INNER_HEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[INNER_PREHEADER]] ], [ [[I_NEXT:%.*]], %[[INNER_LATCH:.*]] ]
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[I]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP_B]], align 4
+; CHECK-NEXT:    [[INC:%.*]] = add i32 [[VAL]], 1
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[I]]
+; CHECK-NEXT:    store i32 [[INC]], ptr [[GEP_A]], align 4
+; CHECK-NEXT:    br label %[[INNER_LATCH]]
+; CHECK:       [[INNER_LATCH]]:
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[EXITCOND_INNER:%.*]] = icmp eq i32 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_INNER]], label %[[INNER2_PREHEADER:.*]], label %[[INNER_HEADER]]
+; CHECK:       [[INNER2_PREHEADER]]:
+; CHECK-NEXT:    br label %[[INNER2_HEADER:.*]]
+; CHECK:       [[INNER2_HEADER]]:
+; CHECK-NEXT:    [[I2:%.*]] = phi i32 [ 0, %[[INNER2_PREHEADER]] ], [ [[I_NEXT2:%.*]], %[[INNER2_LATCH:.*]] ]
+; CHECK-NEXT:    [[GEP_B2:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[I2]]
+; CHECK-NEXT:    [[VAL2:%.*]] = load i32, ptr [[GEP_B2]], align 4
+; CHECK-NEXT:    [[INC2:%.*]] = add i32 [[VAL2]], 1
+; CHECK-NEXT:    [[GEP_A2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[I2]]
+; CHECK-NEXT:    store i32 [[INC2]], ptr [[GEP_A2]], align 4
+; CHECK-NEXT:    br label %[[INNER2_LATCH]]
+; CHECK:       [[INNER2_LATCH]]:
+; CHECK-NEXT:    [[I_NEXT2]] = add nuw i32 [[I2]], 1
+; CHECK-NEXT:    [[EXITCOND_INNER2:%.*]] = icmp eq i32 [[I_NEXT2]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_INNER2]], label %[[OUTER_LATCH_LOOPEXIT:.*]], label %[[INNER2_HEADER]]
+; CHECK:       [[OUTER_LATCH_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[OUTER_LATCH]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[J_NEXT]] = add nuw i32 [[J]], 1
+; CHECK-NEXT:    [[EXITCOND_OUTER:%.*]] = icmp eq i32 [[J_NEXT]], [[M]]
+; CHECK-NEXT:    br i1 [[EXITCOND_OUTER]], label %[[EXIT_LOOPEXIT:.*]], label %[[OUTER_HEADER]]
+; CHECK:       [[EXIT_LOOPEXIT]]:
+; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT_SPLIT]]
+; CHECK:       [[EXIT_LOOPEXIT_SPLIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %cmp.M = icmp sle i32 %M, 0
+  br i1 %cmp.M, label %exit, label %outer.preheader
+
+outer.preheader:
+  %guard = icmp sle i32 %N, 0
+  br label %outer.header
+
+outer.header:
+  %j = phi i32 [ 0, %outer.preheader ], [ %j.next, %outer.latch ]
+  br i1 %guard, label %outer.latch, label %inner.preheader
+
+inner.preheader:
+  br label %inner.header
+
+inner.header:
+  %i = phi i32 [ 0, %inner.preheader ], [ %i.next, %inner.latch ]
+  %gep.B = getelementptr inbounds i32, ptr %B, i32 %i
+  %val = load i32, ptr %gep.B, align 4
+  %inc = add i32 %val, 1
+  %gep.A = getelementptr inbounds i32, ptr %A, i32 %i
+  store i32 %inc, ptr %gep.A, align 4
+  br label %inner.latch
+
+inner.latch:
+  %i.next = add nuw i32 %i, 1
+  %exitcond.inner = icmp eq i32 %i.next, %N
+  br i1 %exitcond.inner, label %inner2.preheader, label %inner.header
+
+inner2.preheader:
+  br label %inner2.header
+
+inner2.header:
+  %i2 = phi i32 [ 0, %inner2.preheader ], [ %i.next2, %inner2.latch ]
+  %gep.B2 = getelementptr inbounds i32, ptr %B, i32 %i2
+  %val2 = load i32, ptr %gep.B2, align 4
+  %inc2 = add i32 %val2, 1
+  %gep.A2 = getelementptr inbounds i32, ptr %A, i32 %i2
+  store i32 %inc2, ptr %gep.A2, align 4
+  br label %inner2.latch
+
+inner2.latch:
+  %i.next2 = add nuw i32 %i2, 1
+  %exitcond.inner2 = icmp eq i32 %i.next2, %N
   br i1 %exitcond.inner2, label %outer.latch, label %inner2.header
 
 outer.latch:
