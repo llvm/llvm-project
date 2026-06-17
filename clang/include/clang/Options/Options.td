@@ -2017,13 +2017,6 @@ defm debug_run_lifetime_safety : BoolFOption<
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
   BothFlags<[], [CC1Option], " lifetime safety analysis for C++. Warnings are still controlled by -Wlifetime-safety. Primarily used to surface crashes or compile-time regressions without showing analysis findings.">>;
 
-defm experimental_lifetime_safety_c : BoolFOption<
-    "experimental-lifetime-safety-c",
-    LangOpts<"EnableLifetimeSafetyInC">, DefaultFalse,
-    PosFlag<SetTrue, [], [CC1Option], "Enable">,
-    NegFlag<SetFalse, [], [CC1Option], "Disable">,
-    BothFlags<[], [CC1Option], " experimental lifetime safety analysis for C">>;
-
 def lifetime_safety_max_cfg_blocks
     : Joined<["-"], "lifetime-safety-max-cfg-blocks=">,
       Group<m_Group>,
