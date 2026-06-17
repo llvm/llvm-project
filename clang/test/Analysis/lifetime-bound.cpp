@@ -166,9 +166,9 @@ void no_return() {
 // Use-after-scope dangling pointer dereference
 void caller_ten() {
   int* p = nullptr;
-  {
+  { // expected-warning {{Used variable after its scope ended 'x' error}}
     int x = 1;
     p = test_func(&x);
-  } // expected-warning {{Used variable after its scope ended 'n' error}}
+  }
   *p = 2;
 }
