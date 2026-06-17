@@ -1038,9 +1038,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setTargetDAGCombine({ISD::ADD,
                        ISD::PTRADD,
-                       ISD::UADDO_CARRY,
                        ISD::SUB,
-                       ISD::USUBO_CARRY,
+//                       ISD::UADDO_CARRY,
+//                       ISD::USUBO_CARRY,
                        ISD::MUL,
                        ISD::FADD,
                        ISD::FSUB,
@@ -17683,31 +17683,6 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
   return SDValue();
 }
 
-SDValue
-SITargetLowering::performAddCarrySubCarryCombine(SDNode *N,
-                                                 DAGCombinerInfo &DCI) const {
-
-  if (N->getValueType(0) != MVT::i32)
-    return SDValue();
-
-  if (!isNullConstant(N->getOperand(1)))
-    return SDValue();
-
-  SelectionDAG &DAG = DCI.DAG;
-  SDValue LHS = N->getOperand(0);
-
-  // uaddo_carry (add x, y), 0, cc => uaddo_carry x, y, cc
-  // usubo_carry (sub x, y), 0, cc => usubo_carry x, y, cc
-  unsigned LHSOpc = LHS.getOpcode();
-  unsigned Opc = N->getOpcode();
-  if ((LHSOpc == ISD::ADD && Opc == ISD::UADDO_CARRY) ||
-      (LHSOpc == ISD::SUB && Opc == ISD::USUBO_CARRY)) {
-    SDValue Args[] = {LHS.getOperand(0), LHS.getOperand(1), N->getOperand(2)};
-    return DAG.getNode(Opc, SDLoc(N), N->getVTList(), Args);
-  }
-  return SDValue();
-}
-
 SDValue SITargetLowering::performFAddCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
@@ -18604,9 +18579,6 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performPtrAddCombine(N, DCI);
   case ISD::SUB:
     return performSubCombine(N, DCI);
-  case ISD::UADDO_CARRY:
-  case ISD::USUBO_CARRY:
-    return performAddCarrySubCarryCombine(N, DCI);
   case ISD::FADD:
     return performFAddCombine(N, DCI);
   case ISD::FSUB:
