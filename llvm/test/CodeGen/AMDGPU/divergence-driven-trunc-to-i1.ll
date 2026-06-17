@@ -29,7 +29,7 @@ define amdgpu_kernel void @uniform_trunc_i16_to_i1(ptr addrspace(1) %out, i16 %x
   ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sreg_64 = COPY $scc
   ; GCN-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64_xexec = S_OR_B64 killed [[COPY8]], killed [[COPY7]], implicit-def dead $scc
   ; GCN-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed [[S_OR_B64_]], implicit $exec
-  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET killed [[V_CNDMASK_B32_e64_]], killed [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.2, addrspace 1)
+  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET killed [[V_CNDMASK_B32_e64_]], killed [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.3, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   %setcc = icmp slt i16 %x, 0
   %select = select i1 %setcc, i1 true, i1 %z
@@ -85,7 +85,7 @@ define amdgpu_kernel void @uniform_trunc_i32_to_i1(ptr addrspace(1) %out, i32 %x
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:sreg_64 = COPY $scc
   ; GCN-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64_xexec = S_OR_B64 killed [[COPY9]], killed [[COPY8]], implicit-def dead $scc
   ; GCN-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed [[S_OR_B64_]], implicit $exec
-  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET killed [[V_CNDMASK_B32_e64_]], killed [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.2, addrspace 1)
+  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET killed [[V_CNDMASK_B32_e64_]], killed [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.3, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   %setcc = icmp slt i32 %x, 0
   %select = select i1 %setcc, i1 true, i1 %z
@@ -140,7 +140,7 @@ define amdgpu_kernel void @uniform_trunc_i64_to_i1(ptr addrspace(1) %out, i64 %x
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:sreg_64 = COPY $scc
   ; GCN-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64_xexec = S_OR_B64 killed [[COPY9]], killed [[COPY8]], implicit-def dead $scc
   ; GCN-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, killed [[S_OR_B64_]], implicit $exec
-  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET killed [[V_CNDMASK_B32_e64_]], killed [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.2, addrspace 1)
+  ; GCN-NEXT:   BUFFER_STORE_BYTE_OFFSET killed [[V_CNDMASK_B32_e64_]], killed [[REG_SEQUENCE1]], 0, 0, 0, 0, implicit $exec :: (store (s8) into %ir.3, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   %setcc = icmp slt i64 %x, 0
   %select = select i1 %setcc, i1 true, i1 %z

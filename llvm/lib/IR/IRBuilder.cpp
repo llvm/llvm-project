@@ -139,8 +139,18 @@ Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
     return CreateBitCast(In, Ty);
   };
 
+  // Byte (and byte-vector) types are not integers, but like integers they can
+  // be reinterpreted as a pointer-sized integer before/after an inttoptr or
+  // ptrtoint step.  Treat them the same as integers here so we never attempt a
+  // direct (and invalid) bitcast between a byte/integer aggregate and a
+  // pointer.
+  bool OldIsIntLike =
+      OldTy->isIntOrIntVectorTy() || OldTy->isByteOrByteVectorTy();
+  bool NewIsIntLike =
+      NewTy->isIntOrIntVectorTy() || NewTy->isByteOrByteVectorTy();
+
   // See if we need inttoptr for this type pair. May require additional bitcast.
-  if (OldTy->isIntOrIntVectorTy() && NewTy->isPtrOrPtrVectorTy()) {
+  if (OldIsIntLike && NewTy->isPtrOrPtrVectorTy()) {
     // Expand <2 x i32> to i8* --> <2 x i32> to i64 to i8*
     // Expand i128 to <2 x i8*> --> i128 to <2 x i64> to <2 x i8*>
     // Expand <4 x i32> to <2 x i8*> --> <4 x i32> to <2 x i64> to <2 x i8*>
@@ -149,7 +159,7 @@ Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
   }
 
   // See if we need ptrtoint for this type pair. May require additional bitcast.
-  if (OldTy->isPtrOrPtrVectorTy() && NewTy->isIntOrIntVectorTy()) {
+  if (OldTy->isPtrOrPtrVectorTy() && NewIsIntLike) {
     // Expand <2 x i8*> to i128 --> <2 x i8*> to <2 x i64> to i128
     // Expand i8* to <2 x i32> --> i8* to i64 to <2 x i32>
     // Expand <2 x i8*> to <4 x i32> --> <2 x i8*> to <2 x i64> to <4 x i32>

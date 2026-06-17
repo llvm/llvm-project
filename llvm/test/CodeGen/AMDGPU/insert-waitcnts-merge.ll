@@ -98,7 +98,7 @@ define amdgpu_kernel void @widget(ptr addrspace(1) %arg, i1 %arg1) #0 {
   ; CHECK-NEXT:   successors: %bb.7(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $sgpr2_sgpr3, $sgpr0_sgpr1_sgpr2_sgpr3:0x000000000000000F, $vgpr0_vgpr1:0x000000000000000C, $vgpr2_vgpr3, $sgpr20_sgpr21_sgpr22_sgpr23
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR renamable $vgpr1, renamable $vgpr1, renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s32) into %ir.1, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR renamable $vgpr1, renamable $vgpr1, renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s32) into %ir.2, addrspace 1)
   ; CHECK-NEXT:   renamable $vgpr4 = GLOBAL_LOAD_DWORD renamable $vgpr2_vgpr3, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   renamable $sgpr6_sgpr7 = S_MOV_B64 -1
   ; CHECK-NEXT:   S_BRANCH %bb.7
