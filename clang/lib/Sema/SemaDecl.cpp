@@ -16050,7 +16050,7 @@ Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Declarator &D,
   if (!Bases.empty())
     OpenMP().ActOnFinishedFunctionDefinitionInOpenMPDeclareVariantScope(Dcl,
                                                                         Bases);
-
+  DroppedVars.clear();
   return Dcl;
 }
 

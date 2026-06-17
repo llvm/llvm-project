@@ -4633,6 +4633,28 @@ It is only supported when using the Microsoft C++ ABI.
   }];
 }
 
+def DropDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``drop`` attribute, applied to a function parameter, causes any local
+variable passed by name as that argument to become unusable in the calling
+function from that point on. Any subsequent reference to the variable's
+name  is diagnosed as an error.
+The variable's destructor still runs normally at the end of its scope;
+this attribute only affects name lookup for further uses, not code generation.
+
+.. code-block:: c++
+
+  void drop([[clang::drop]] T value);
+
+  void foo() {
+    int x = 42;
+    drop(x);
+    bar(x); // error: use of 'x' after it was dropped
+  }
+  }];
+}
+
 def LifetimeBoundDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
