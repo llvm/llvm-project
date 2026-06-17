@@ -192,6 +192,9 @@ public:
   Attr *buildMatrixLayoutTypeAttr(QualType T, const ParsedAttr &AL);
   bool diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
                                          SourceLocation Loc);
+  // Re-type a layout-adapting matrix builtin call \p E with \p DestType's
+  // row_major/column_major sugar so CodeGen lowers it into that layout.
+  void propagateContextualMatrixLayout(Expr *E, QualType DestType);
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
 
   template <typename T>
