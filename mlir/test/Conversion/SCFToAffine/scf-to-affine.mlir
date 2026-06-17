@@ -1,4 +1,4 @@
-// RUN: mlir-opt -raise-scf-to-affine -split-input-file %s | FileCheck %s
+// RUN: mlir-opt --raise-scf-to-affine --split-input-file %s | FileCheck %s
 
 // CHECK-LABEL: @constant_step
 // CHECK-SAME:  %[[ARR:.*]]: memref<?xi32>, %[[LB:.*]]: index, %[[UB:.*]]: index

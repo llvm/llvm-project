@@ -22,14 +22,11 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/DebugLog.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_RAISESCFTOAFFINEPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
-
-#define DEBUG_TYPE "raise-scf-to-affine"
 
 using namespace mlir;
 
@@ -97,16 +94,17 @@ private:
   createAffineFor(scf::ForOp op, PatternRewriter &rewriter) const;
 
   std::pair<affine::AffineForOp, Value>
-  caseConstantStep(scf::ForOp op, int64_t step,
-                   PatternRewriter &rewriter) const;
+  createAffineForWithConstantStep(scf::ForOp op, int64_t step,
+                                  PatternRewriter &rewriter) const;
 
   std::pair<affine::AffineForOp, Value>
-  caseDynamicStep(scf::ForOp op, PatternRewriter &rewriter) const;
+  createAffineForWithDynamicStep(scf::ForOp op,
+                                 PatternRewriter &rewriter) const;
 };
 
 bool indexBoundsRaisable(scf::ForOp op) {
-  auto lb = op.getLowerBound();
-  auto ub = op.getUpperBound();
+  Value lb = op.getLowerBound();
+  Value ub = op.getUpperBound();
   IntegerAttr constAttr;
 
   // The asymmetry between lb and ub comes from the fact that the step
@@ -132,8 +130,8 @@ bool intBoundsRaisable(scf::ForOp op, IntegerType intType) {
                             .getFixedValue();
   // Lossless under signed index: sign-extend needs width <= indexWidth;
   // zero-extend (unsigned) needs a spare sign bit, i.e. width < indexWidth.
-  uint64_t need = intType.getWidth() + (op.getUnsignedCmp() ? 1 : 0);
-  if (need > indexWidth)
+  uint64_t requiredWidth = intType.getWidth() + (op.getUnsignedCmp() ? 1 : 0);
+  if (requiredWidth > indexWidth)
     return false;
 
   Region *scope = affine::getAffineScope(op);
@@ -158,8 +156,7 @@ bool ForOpRewrite::canRaiseToAffine(scf::ForOp op) const {
 LogicalResult ForOpRewrite::matchAndRewrite(scf::ForOp op,
                                             PatternRewriter &rewriter) const {
   if (!canRaiseToAffine(op)) {
-    LDBG() << "[affine] Cannot raise scf op: " << op << "\n";
-    return failure();
+    return rewriter.notifyMatchFailure(op, "cannot raise scf op to affine");
   }
 
   if (!isa<IndexType>(op.getInductionVar().getType()))
@@ -197,16 +194,16 @@ ForOpRewrite::createAffineFor(scf::ForOp op, PatternRewriter &rewriter) const {
   if (matchPattern(op.getStep(), m_Constant(&constAttr))) {
     int64_t step = constAttr.getInt();
     assert(step > 0 && "scf.for has positive step");
-    return caseConstantStep(op, step, rewriter);
+    return createAffineForWithConstantStep(op, step, rewriter);
   }
-  return caseDynamicStep(op, rewriter);
+  return createAffineForWithDynamicStep(op, rewriter);
 }
 
 std::pair<affine::AffineForOp, Value>
-ForOpRewrite::caseConstantStep(scf::ForOp op, int64_t step,
-                               PatternRewriter &rewriter) const {
-  auto lb = op.getLowerBound();
-  auto ub = op.getUpperBound();
+ForOpRewrite::createAffineForWithConstantStep(scf::ForOp op, int64_t step,
+                                              PatternRewriter &rewriter) const {
+  Value lb = op.getLowerBound();
+  Value ub = op.getUpperBound();
 
   auto lbOperands = ValueRange(lb);
   auto ubOperands = ValueRange(ub);
@@ -232,7 +229,8 @@ ForOpRewrite::caseConstantStep(scf::ForOp op, int64_t step,
 }
 
 std::pair<affine::AffineForOp, Value>
-ForOpRewrite::caseDynamicStep(scf::ForOp op, PatternRewriter &rewriter) const {
+ForOpRewrite::createAffineForWithDynamicStep(scf::ForOp op,
+                                             PatternRewriter &rewriter) const {
   Value lb = op.getLowerBound();
   Value ub = op.getUpperBound();
   Value step = op.getStep();
@@ -311,9 +309,8 @@ void ForOpRewrite::castBoundsToIndex(scf::ForOp loop,
 
   auto createIndexCast = [&](Type out, Value in) -> Value {
     Location loc = loop.getLoc();
-    if (loop.getUnsignedCmp()) {
+    if (loop.getUnsignedCmp())
       return arith::IndexCastUIOp::create(rewriter, loc, out, in);
-    }
     return arith::IndexCastOp::create(rewriter, loc, out, in);
   };
 
