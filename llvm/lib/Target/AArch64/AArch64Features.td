@@ -943,6 +943,10 @@ def FeatureMaxInterleaveFactor4 : SubtargetFeature<
     "max-interleave-factor-4", "MaxInterleaveFactor", "4",
     "Set the MaxInterleaveFactor to 4 (from the default 2)">;
 
+def FeatureFixedLoadLatency4 : SubtargetFeature<
+    "fixed-load-latency-4", "FixedLoadLatency", "4",
+    "Use a fixed latency of 4 for loads instead of querying the scheduling model">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
