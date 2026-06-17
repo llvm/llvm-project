@@ -20,7 +20,6 @@ import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
 import platform
-from lldbsuite.test.builders.darwin import get_triple
 
 import sys
 if sys.version_info.major == 2:
@@ -40,7 +39,7 @@ class TestSwiftPlaygrounds(TestBase):
            availability set in the source file."""
         if lldb.remote_platform:
             arch = self.getArchitecture()
-            vendor, os, version, _ = get_triple()
+            vendor, os, version, _ = self.getTriple()
             # This is made slightly more complex by watchOS having misaligned
             # version numbers.
             if os == 'watchos':
