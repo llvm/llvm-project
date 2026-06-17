@@ -2999,7 +2999,8 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     }
   }
 
-  if (lifetimes::IsLifetimeSafetyEnabled(S, TU))
+  if (S.getLangOpts().CPlusPlus &&
+      S.getLangOpts().EnableLifetimeSafetyTUAnalysis)
     LifetimeSafetyTUAnalysis(S, TU, LSStats);
 }
 
@@ -3048,7 +3049,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddCXXNewAllocator = false;
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
-  bool EnableLifetimeSafetyAnalysis = lifetimes::IsLifetimeSafetyEnabled(S, D);
+  bool EnableLifetimeSafetyAnalysis =
+      !S.getLangOpts().EnableLifetimeSafetyTUAnalysis &&
+      lifetimes::IsLifetimeSafetyEnabled(S, D);
 
   // Force that certain expressions appear as CFGElements in the CFG.  This
   // is used to speed up various analyses.
@@ -3161,7 +3164,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
 
   // TODO: Enable lifetime safety analysis for other languages once it is
   // stable.
-  if (EnableLifetimeSafetyAnalysis) {
+  if (EnableLifetimeSafetyAnalysis && S.getLangOpts().CPlusPlus) {
     if (AC.getCFG()) {
       lifetimes::LifetimeSafetySemaHelperImpl LifetimeSafetySemaHelper(S);
       lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetySemaHelper,

@@ -25,25 +25,6 @@
 namespace clang::lifetimes {
 
 inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
-  // TODO: Enable ObjectiveC later when we know it's stable enough.
-  if (S.getLangOpts().ObjC)
-    return false;
-
-  // TODO: Default this flag to on in the future.
-  if (!S.getLangOpts().CPlusPlus && !S.getLangOpts().EnableLifetimeSafetyInC)
-    return false;
-
-  // Translation-unit mode: whole-program analysis runs once on TU.
-  // Individual function analysis is disabled when TU mode is enabled.
-  if (S.getLangOpts().EnableLifetimeSafetyTUAnalysis)
-    return isa<TranslationUnitDecl>(D);
-
-  // Per-function mode: analysis runs on each function/method individually.
-  // Skip TU-level calls when per-function mode is enabled.
-  if (isa<TranslationUnitDecl>(D))
-    return false;
-
-  // Enable per-function mode via debug flag or specific diagnostics.
   if (S.getLangOpts().DebugRunLifetimeSafety)
     return true;
   DiagnosticsEngine &Diags = S.getDiagnostics();
