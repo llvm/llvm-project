@@ -3719,8 +3719,6 @@ REGISTER_TRAIT_WITH_PROGRAMSTATE(LastEagerlyAssumeExprIfSuccessful,
 void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
                                               ExplodedNodeSet &Src,
                                               const Expr *Ex) {
-  NodeBuilder Bldr(Src, Dst, *currBldrCtx);
-
   for (ExplodedNode *Pred : Src) {
     const StackFrame *SF = Pred->getStackFrame();
     // Test if the previous node was as the same expression.  This can happen
@@ -3728,6 +3726,7 @@ void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
     // (as an optimization) we don't generate a node.
     ProgramPoint P = Pred->getLocation();
     if (!P.getAs<PostStmt>() || P.castAs<PostStmt>().getStmt() != Ex) {
+      Dst.insert(Pred);
       continue;
     }
 
@@ -3749,15 +3748,19 @@ void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
       if (StateTrue) {
         SVal Val = svalBuilder.makeIntVal(1U, Ex->getType());
         StateTrue = StateTrue->BindExpr(Ex, SF, Val);
-        Bldr.generateNode(Ex, Pred, StateTrue, TrueTag);
+        PostStmt PostStmtTrue(Ex, SF, TrueTag);
+        Dst.insert(Engine.makeNode(PostStmtTrue, StateTrue, Pred));
       }
 
       // Next, assume that the condition is false.
       if (StateFalse) {
         SVal Val = svalBuilder.makeIntVal(0U, Ex->getType());
         StateFalse = StateFalse->BindExpr(Ex, SF, Val);
-        Bldr.generateNode(Ex, Pred, StateFalse, FalseTag);
+        PostStmt PostStmtFalse(Ex, SF, FalseTag);
+        Dst.insert(Engine.makeNode(PostStmtFalse, StateFalse, Pred));
       }
+    } else {
+      Dst.insert(Pred);
     }
   }
 }
