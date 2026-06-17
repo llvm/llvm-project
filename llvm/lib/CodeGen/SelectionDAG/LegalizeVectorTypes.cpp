@@ -1893,7 +1893,7 @@ void DAGTypeLegalizer::SplitVecRes_MASK_BEFOREFIRST(SDNode *N, SDValue &Lo,
   EVT VT = InLo.getValueType();
   Lo = DAG.getNode(ISD::MASK_BEFOREFIRST, DL, VT, InLo);
 
-  // hi = AnyLoActive ? all-ones : (mask_beforefirst hi)
+  // hi = AnyLoActive ? all-zeros : (mask_beforefirst hi)
   SDValue AnyLoActive = DAG.getNode(ISD::VECREDUCE_OR, DL, MVT::i1, Lo);
   SDValue Cond = DAG.getBoolExtOrTrunc(AnyLoActive, DL,
                                        getSetCCResultType(MVT::i1), MVT::i1);
