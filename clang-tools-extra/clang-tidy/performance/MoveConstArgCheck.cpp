@@ -14,7 +14,8 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
-static void replaceCallWithArg(const CallExpr *Call, DiagnosticBuilder &Diag,
+static void replaceCallWithArg(const CallExpr *Call,
+                               const DiagnosticBuilder &Diag,
                                const SourceManager &SM,
                                const LangOptions &LangOpts) {
   const Expr *Arg = Call->getArg(0);

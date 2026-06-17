@@ -56,6 +56,7 @@ class TemplateFunctionsTestCase(TestBase):
             self.expect_expr("d1 == d2", result_type="bool", result_value="true")
 
     @skipIfWindows
+    @skipIfWasm  # no expression evaluation
     def test_template_function_with_cast(self):
         self.do_test_template_function(True)
 

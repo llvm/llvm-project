@@ -1466,6 +1466,10 @@ void CheckHelper::CheckArraySpec(
 void CheckHelper::CheckProcEntity(
     const Symbol &symbol, const ProcEntityDetails &details) {
   CheckSymbolType(symbol);
+  // F2018 8.5.17: an entity with the TARGET attribute shall be a variable;
+  // a procedure (EXTERNAL or INTRINSIC) is not a variable.
+  CheckConflicting(symbol, Attr::EXTERNAL, Attr::TARGET);
+  CheckConflicting(symbol, Attr::INTRINSIC, Attr::TARGET);
   const Symbol *interface{details.procInterface()};
   if (details.isDummy()) {
     if (!symbol.attrs().test(Attr::POINTER) && // C843
@@ -3537,6 +3541,24 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
         defClass == ProcedureDefinitionClass::Dummy) {
       messages_.Say(symbol.name(),
           "An internal or dummy procedure may not have a BIND(C,NAME=) binding label"_err_en_US);
+      context_.SetError(symbol);
+    }
+  }
+  // F2023 C1807 - a procedure defined in a submodule shall not have a binding
+  // label unless its interface is declared in the ancestor module.
+  const std::string *bindName{symbol.GetBindName()};
+  if (symbol.has<SubprogramDetails>() &&
+      !symbol.get<SubprogramDetails>().isInterface() && bindName &&
+      !bindName->empty() && symbol.owner().IsSubmodule()) {
+    const Symbol *iface{FindSeparateModuleSubprogramInterface(&symbol)};
+    bool ok{false};
+    if (iface) {
+      const Scope *ifaceModule{FindModuleOrSubmoduleContaining(iface->owner())};
+      ok = ifaceModule && ifaceModule->IsModule();
+    }
+    if (!ok) {
+      messages_.Say(symbol.name(),
+          "A procedure defined in a submodule shall not have a binding label unless its interface is declared in the ancestor module"_err_en_US);
       context_.SetError(symbol);
     }
   }

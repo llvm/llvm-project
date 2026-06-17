@@ -307,6 +307,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::CLMUL:                      return "clmul";
   case ISD::CLMULR:                     return "clmulr";
   case ISD::CLMULH:                     return "clmulh";
+  case ISD::PEXT:                       return "pext";
+  case ISD::PDEP:                       return "pdep";
   case ISD::FADD:                       return "fadd";
   case ISD::STRICT_FADD:                return "strict_fadd";
   case ISD::FSUB:                       return "fsub";
@@ -517,6 +519,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
 
   // Bit manipulation
   case ISD::ABS:                        return "abs";
+  case ISD::ABS_MIN_POISON:             return "abs_min_poison";
   case ISD::BITREVERSE:                 return "bitreverse";
   case ISD::BSWAP:                      return "bswap";
   case ISD::CTPOP:                      return "ctpop";

@@ -43,10 +43,10 @@ struct C : A, B {
 // CHECK: %struct.I = type { ptr, i32 }
 // CHECK: %struct.J = type { %struct.I, i32 }
 
-// HOST: @0 = private unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr @"??_R4J@@6B@", ptr @"?f@J@@UEAAXXZ", ptr null, ptr @"?h@J@@UEAAXXZ"] }, comdat($"??_7J@@6B@")
-// HOST: @1 = private unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr @"??_R4I@@6B@", ptr @_purecall, ptr null, ptr @_purecall] }, comdat($"??_7I@@6B@")
-// HOST: @"??_7J@@6B@" = unnamed_addr alias ptr, getelementptr inbounds ({ [4 x ptr] }, ptr @0, i32 0, i32 0, i32 1)
-// HOST: @"??_7I@@6B@" = unnamed_addr alias ptr, getelementptr inbounds ({ [4 x ptr] }, ptr @1, i32 0, i32 0, i32 1)
+// HOST: @0 = private constant { [4 x ptr] } { [4 x ptr] [ptr @"??_R4J@@6B@", ptr @"?f@J@@UEAAXXZ", ptr null, ptr @"?h@J@@UEAAXXZ"] }, comdat($"??_7J@@6B@")
+// HOST: @1 = private constant { [4 x ptr] } { [4 x ptr] [ptr @"??_R4I@@6B@", ptr @_purecall, ptr null, ptr @_purecall] }, comdat($"??_7I@@6B@")
+// HOST: @"??_7J@@6B@" = alias ptr, getelementptr inbounds ({ [4 x ptr] }, ptr @0, i32 0, i32 0, i32 1)
+// HOST: @"??_7I@@6B@" = alias ptr, getelementptr inbounds ({ [4 x ptr] }, ptr @1, i32 0, i32 0, i32 1)
 
 // DEV: @_ZTV1J = linkonce_odr unnamed_addr addrspace(1) constant { [5 x ptr addrspace(1)] } { [5 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) addrspacecast (ptr @_ZN1J1gEv to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @_ZN1J1hEv to ptr addrspace(1))] }, comdat, align 8
 // DEV: @_ZTV1I = linkonce_odr unnamed_addr addrspace(1) constant { [5 x ptr addrspace(1)] } { [5 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) addrspacecast (ptr @__cxa_pure_virtual to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @__cxa_pure_virtual to ptr addrspace(1))] }, comdat, align 8
@@ -65,10 +65,9 @@ struct J : I {
 };
 
 // DEV: define dso_local amdgpu_kernel void @_Z8C_kernel1C(ptr addrspace(4) noundef byref(%struct.C) align 4 %0)
-// DEV:  %coerce = alloca %struct.C, align 4, addrspace(5)
-// DEV:  %c = addrspacecast ptr addrspace(5) %coerce to ptr
-// DEV:  call void @llvm.memcpy.p0.p4.i64(ptr align 4 %c, ptr addrspace(4) align 4 %0, i64 8, i1 false)
-// DEV:  %i = getelementptr inbounds nuw %struct.C, ptr %c, i32 0, i32 1
+// DEV:  %c = alloca %struct.C, align 4, addrspace(5)
+// DEV:  call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) align 4 %c, ptr addrspace(4) align 4 %0, i64 8, i1 false)
+// DEV:  %i = getelementptr inbounds nuw %struct.C, ptr %c.ascast, i32 0, i32 1
 // DEV:  store i32 1, ptr %i, align 4
 
 __global__ void C_kernel(C c)

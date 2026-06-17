@@ -26,9 +26,9 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeBasicBlockSectionsProfileReaderWrapperPassPass(Registry);
   initializeBranchFolderLegacyPass(Registry);
   initializeBranchRelaxationLegacyPass(Registry);
-  initializeBreakFalseDepsPass(Registry);
+  initializeBreakFalseDepsLegacyPass(Registry);
   initializeCFGuardLongjmpPass(Registry);
-  initializeCFIFixupPass(Registry);
+  initializeCFIFixupLegacyPass(Registry);
   initializeCFIInstrInserterPass(Registry);
   initializeCheckDebugMachineModulePass(Registry);
   initializeCodeGenPrepareLegacyPassPass(Registry);

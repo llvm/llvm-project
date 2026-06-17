@@ -527,11 +527,13 @@ TEST_P(ImportExpr, ImportInitListExpr) {
              "                        [0].x = 1.0 }; }",
              Lang_CXX03, "", Lang_CXX03, Verifier,
              functionDecl(hasDescendant(initListExpr(
+                 unless(isImplicit()),
                  has(cxxConstructExpr(requiresZeroInitialization())),
                  has(initListExpr(
-                     hasType(asString("point")), has(floatLiteral(equals(1.0))),
+                     isImplicit(), hasType(asString("point")),
+                     has(floatLiteral(equals(1.0))),
                      has(implicitValueInitExpr(hasType(asString("double")))))),
-                 has(initListExpr(hasType(asString("point")),
+                 has(initListExpr(isImplicit(), hasType(asString("point")),
                                   has(floatLiteral(equals(2.0))),
                                   has(floatLiteral(equals(1.0)))))))));
 }
@@ -1129,6 +1131,16 @@ TEST_P(ImportExpr, DependentSizedExtVectorType) {
              Lang_CXX03, "", Lang_CXX03, Verifier,
              classTemplateDecl(has(cxxRecordDecl(
                  has(typedefDecl(hasType(dependentSizedExtVectorType())))))));
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportFileScopeAsmDecl) {
+  Decl *FromTU = getTuDecl("__asm(\"nop\");", Lang_CXX03);
+  auto From =
+      FirstDeclMatcher<FileScopeAsmDecl>().match(FromTU, fileScopeAsmDecl());
+  ASSERT_TRUE(From);
+  FileScopeAsmDecl *To = Import(From, Lang_CXX03);
+  EXPECT_TRUE(To);
+  EXPECT_EQ(To->getAsmString(), "nop");
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, ImportUsingPackDecl) {

@@ -1663,6 +1663,7 @@ TYPE_PARSER( //
     "UNTIED" >> construct<OmpClause>(construct<OmpClause::Untied>()) ||
     "UPDATE" >> construct<OmpClause>(construct<OmpClause::Update>(
                     maybe(Parser<OmpUpdateClause>{}))) ||
+    "WEAK" >> construct<OmpClause>(construct<OmpClause::Weak>()) ||
     "WHEN" >> construct<OmpClause>(construct<OmpClause::When>(
                   parenthesized(Parser<OmpWhenClause>{}))) ||
     "WRITE" >> construct<OmpClause>(construct<OmpClause::Write>()) ||
@@ -2442,7 +2443,7 @@ TYPE_PARSER(sourced( //
         OmpDirectiveSpecificationParser{})))
 
 // Assumes Construct
-TYPE_PARSER(sourced(construct<OpenMPDeclarativeAssumes>(
+TYPE_PARSER(sourced(construct<OmpAssumesDirective>(
     predicated(OmpDirectiveNameParser{},
         IsDirective(llvm::omp::Directive::OMPD_assumes)) >=
     OmpDirectiveSpecificationParser{})))
@@ -2451,7 +2452,7 @@ TYPE_PARSER(sourced(construct<OpenMPDeclarativeAssumes>(
 TYPE_PARSER(
     startOmpLine >> withMessage("expected OpenMP construct"_err_en_US,
                         sourced(construct<OpenMPDeclarativeConstruct>(
-                                    Parser<OpenMPDeclarativeAssumes>{}) ||
+                                    Parser<OmpAssumesDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
                                 Parser<OmpDeclareReductionDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
@@ -2476,7 +2477,7 @@ TYPE_PARSER(
                                 Parser<OmpMetadirectiveDirective>{})) /
                             endOmpLine))
 
-TYPE_PARSER(sourced(construct<OpenMPAssumeConstruct>(
+TYPE_PARSER(sourced(construct<OmpAssumeDirective>(
     OmpBlockConstructParser{llvm::omp::Directive::OMPD_assume})))
 
 // Block Construct
@@ -2538,9 +2539,9 @@ TYPE_PARSER(sourced(construct<OpenMPSectionsConstruct>(
     Parser<OmpBeginSectionsDirective>{} / endOmpLine,
     cons( //
         construct<OpenMPConstruct>(sourced(
-            construct<OpenMPSectionConstruct>(maybe(sectionDir), validBlock))),
-        many(construct<OpenMPConstruct>(sourced(
-            construct<OpenMPSectionConstruct>(sectionDir, validBlock))))),
+            construct<OmpSectionDirective>(maybe(sectionDir), validBlock))),
+        many(construct<OpenMPConstruct>(
+            sourced(construct<OmpSectionDirective>(sectionDir, validBlock))))),
     maybe(Parser<OmpEndSectionsDirective>{} / endOmpLine))))
 
 static bool IsExecutionPart(const OmpDirectiveName &name) {
@@ -2569,7 +2570,7 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
                 construct<OpenMPConstruct>(Parser<OmpUtilityDirective>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPDispatchConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAllocatorsConstruct>{}),
-                construct<OpenMPConstruct>(Parser<OpenMPAssumeConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OmpAssumeDirective>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPCriticalConstruct>{}),
                 construct<OpenMPConstruct>(
                     Parser<OmpDelimitedMetadirectiveDirective>{}))))

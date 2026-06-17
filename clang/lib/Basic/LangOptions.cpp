@@ -12,6 +12,7 @@
 
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/LangStandard.h"
+#include "clang/Config/config.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang;
@@ -152,6 +153,8 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
     Opts.OpenCLVersion = 200;
   else if (LangStd == LangStandard::lang_opencl30)
     Opts.OpenCLVersion = 300;
+  else if (LangStd == LangStandard::lang_opencl31)
+    Opts.OpenCLVersion = 310;
   else if (LangStd == LangStandard::lang_openclcpp10)
     Opts.OpenCLCPlusPlusVersion = 100;
   else if (LangStd == LangStandard::lang_openclcpp2021)

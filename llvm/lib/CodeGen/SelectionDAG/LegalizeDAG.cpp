@@ -3241,6 +3241,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   bool NeedInvert;
   switch (Node->getOpcode()) {
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
     if ((Tmp1 = TLI.expandABS(Node, DAG)))
       Results.push_back(Tmp1);
     break;
@@ -4195,6 +4196,12 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (SDValue Expanded = TLI.expandCLMUL(Node, DAG))
       Results.push_back(Expanded);
     break;
+  case ISD::PEXT:
+    Results.push_back(TLI.expandPEXT(Node, DAG));
+    break;
+  case ISD::PDEP:
+    Results.push_back(TLI.expandPDEP(Node, DAG));
+    break;
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
@@ -4636,9 +4643,11 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SDValue Arg = Node->getOperand(0);
     EVT ArgVT = Arg.getValueType();
     EVT ResVT = Node->getValueType(0);
-    SDLoc dl(Node);
-    SDValue RoundNode = DAG.getNode(ISD::FRINT, dl, ArgVT, Arg);
-    Results.push_back(DAG.getNode(ISD::FP_TO_SINT, dl, ResVT, RoundNode));
+    SDLoc DL(Node);
+    SDValue RoundNode = DAG.getNode(ISD::FRINT, DL, ArgVT, Arg);
+    SDValue ConvertNode = DAG.getNode(ISD::FP_TO_SINT, DL, ResVT, RoundNode);
+    // Non-deterministic results are equivalent to freeze poison.
+    Results.push_back(DAG.getFreeze(ConvertNode));
     break;
   }
   case ISD::ADDRSPACECAST:
@@ -5563,6 +5572,20 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, CTLZResult));
     break;
   }
+  case ISD::PEXT: {
+    Tmp1 = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Node->getOperand(0));
+    Tmp2 = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Node->getOperand(1));
+    Tmp1 = DAG.getNode(ISD::PEXT, dl, NVT, Tmp1, Tmp2);
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
+    break;
+  }
+  case ISD::PDEP: {
+    Tmp1 = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Node->getOperand(0));
+    Tmp2 = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Node->getOperand(1));
+    Tmp1 = DAG.getNode(ISD::PDEP, dl, NVT, Tmp1, Tmp2);
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
+    break;
+  }
   case ISD::BITREVERSE:
   case ISD::BSWAP: {
     unsigned DiffBits = NVT.getSizeInBits() - OVT.getSizeInBits();
@@ -5619,6 +5642,21 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
       UpdatedNodes->insert(Chain.getNode());
     }
     ReplacedNode(Node);
+    break;
+  }
+  case ISD::SCMP:
+  case ISD::UCMP: {
+    unsigned ExtOp =
+        Node->getOpcode() == ISD::UCMP ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
+    MVT OpVT = Node->getOperand(0).getSimpleValueType();
+    // Compare at least at operand width; NVT is the legal type for the op
+    // result.
+    MVT ResVT = OpVT.bitsGT(NVT) ? OpVT : NVT;
+    Tmp1 = DAG.getNode(ExtOp, dl, ResVT, Node->getOperand(0));
+    Tmp2 = DAG.getNode(ExtOp, dl, ResVT, Node->getOperand(1));
+    Tmp1 = DAG.getNode(Node->getOpcode(), dl, ResVT, Tmp1, Tmp2);
+    // Result is -1/0/1; truncate to the original result type.
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
     break;
   }
   case ISD::MUL:

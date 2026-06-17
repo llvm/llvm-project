@@ -621,6 +621,7 @@ implementation.
 | OMPT: ompt_target_data_transfer(_async)                     | :part:`partial`           | :good:`N/A`               | Enum: https://github.com/llvm/llvm-project/pull/195829                   |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | OMPT: ompt_target_data_memset(_async)                       | :part:`partial`           | :good:`N/A`               | Enum: https://github.com/llvm/llvm-project/pull/195829                   |
+|                                                             |                           |                           | Callbacks: https://github.com/llvm/llvm-project/pull/194168              |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | OMPT: workdistribute work callback enum                     | :part:`partial`           | :good:`N/A`               | Enum: https://github.com/llvm/llvm-project/pull/195829                   |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+

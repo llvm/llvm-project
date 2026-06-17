@@ -131,9 +131,26 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
   }
   // Zbb
   case RISCV::BI__builtin_riscv_clz_32:
-  case RISCV::BI__builtin_riscv_clz_64:
+  case RISCV::BI__builtin_riscv_clz_64: {
+    mlir::Location loc = getLoc(e->getSourceRange());
+    auto op = cir::BitClzOp::create(builder, loc, ops[0],
+                                    /*poison_zero=*/false);
+    mlir::Value result = op.getResult();
+    if (result.getType() != returnType)
+      result = builder.createIntCast(result, returnType);
+    return result;
+  }
   case RISCV::BI__builtin_riscv_ctz_32:
-  case RISCV::BI__builtin_riscv_ctz_64:
+  case RISCV::BI__builtin_riscv_ctz_64: {
+    mlir::Location loc = getLoc(e->getSourceRange());
+    auto op = cir::BitCtzOp::create(builder, loc, ops[0],
+                                    /*poison_zero=*/false);
+    mlir::Value result = op.getResult();
+    if (result.getType() != returnType)
+      result = builder.createIntCast(result, returnType);
+    return result;
+  }
+
   // Zihintntl
   case RISCV::BI__builtin_riscv_ntl_load:
   case RISCV::BI__builtin_riscv_ntl_store: {
