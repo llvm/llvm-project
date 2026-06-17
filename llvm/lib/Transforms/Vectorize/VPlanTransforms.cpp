@@ -1102,46 +1102,59 @@ static VPValue *tryToComputeEndValueForInduction(VPWidenInductionRecipe *WideIV,
 
 /// Attempts to optimize the induction variable exit values for users in the
 /// exit block coming from the latch in the original scalar loop.
-static VPValue *optimizeLatchExitInductionUser(
-    VPlan &Plan, VPValue *Op, DenseMap<VPValue *, VPValue *> &EndValues,
-    PredicatedScalarEvolution &PSE, VPValue *ResumeTC, const Loop *L) {
+static VPValue *
+optimizeLatchExitInductionUser(VPlan &Plan, VPValue *Op,
+                               DenseMap<VPValue *, VPValue *> &EndValues,
+                               PredicatedScalarEvolution &PSE) {
   VPValue *Incoming;
   if (!match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))
     return nullptr;
 
+  VPWidenInductionRecipe *WideIV = getOptimizableIVOf(Incoming, PSE);
+  if (!WideIV)
+    return nullptr;
+
+  VPValue *EndValue = EndValues.lookup(WideIV);
+  assert(EndValue && "Must have computed the end value up front");
+
+  // `getOptimizableIVOf()` always returns the pre-incremented IV, so if it
+  // changed it means the exit is using the incremented value, so we don't
+  // need to subtract the step.
+  if (Incoming != WideIV)
+    return EndValue;
+
+  // Otherwise, subtract the step from the EndValue.
   auto *ExtractR = cast<VPInstruction>(Op);
-  if (VPWidenInductionRecipe *WideIV = getOptimizableIVOf(Incoming, PSE)) {
-    VPValue *EndValue = EndValues.lookup(WideIV);
-    assert(EndValue && "Must have computed the end value up front");
-
-    // `getOptimizableIVOf()` always returns the pre-incremented IV, so if it
-    // changed it means the exit is using the incremented value, so we don't
-    // need to subtract the step.
-    if (Incoming != WideIV)
-      return EndValue;
-
-    // Otherwise, subtract the step from the EndValue.
-    VPBuilder B(ExtractR);
-    VPValue *Step = WideIV->getStepValue();
-    Type *ScalarTy = WideIV->getScalarType();
-    if (ScalarTy->isIntegerTy())
-      return B.createSub(EndValue, Step, DebugLoc::getUnknown(), "ind.escape");
-    if (ScalarTy->isPointerTy()) {
-      Type *StepTy = Step->getScalarType();
-      auto *Zero = Plan.getZero(StepTy);
-      return B.createPtrAdd(EndValue, B.createSub(Zero, Step),
-                            DebugLoc::getUnknown(), "ind.escape");
-    }
-    if (ScalarTy->isFloatingPointTy()) {
-      const auto &ID = WideIV->getInductionDescriptor();
-      return B.createNaryOp(
-          ID.getInductionBinOp()->getOpcode() == Instruction::FAdd
-              ? Instruction::FSub
-              : Instruction::FAdd,
-          {EndValue, Step}, {ID.getInductionBinOp()->getFastMathFlags()});
-    }
-    llvm_unreachable("all possible induction types must be handled");
+  VPBuilder B(ExtractR);
+  VPValue *Step = WideIV->getStepValue();
+  Type *ScalarTy = WideIV->getScalarType();
+  if (ScalarTy->isIntegerTy())
+    return B.createSub(EndValue, Step, DebugLoc::getUnknown(), "ind.escape");
+  if (ScalarTy->isPointerTy()) {
+    Type *StepTy = Step->getScalarType();
+    auto *Zero = Plan.getZero(StepTy);
+    return B.createPtrAdd(EndValue, B.createSub(Zero, Step),
+                          DebugLoc::getUnknown(), "ind.escape");
   }
+  if (ScalarTy->isFloatingPointTy()) {
+    const auto &ID = WideIV->getInductionDescriptor();
+    return B.createNaryOp(
+        ID.getInductionBinOp()->getOpcode() == Instruction::FAdd
+            ? Instruction::FSub
+            : Instruction::FAdd,
+        {EndValue, Step}, {ID.getInductionBinOp()->getFastMathFlags()});
+  }
+  llvm_unreachable("all possible induction types must be handled");
+  return nullptr;
+}
+
+static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
+                                               PredicatedScalarEvolution &PSE,
+                                               VPValue *ResumeTC,
+                                               const Loop *L) {
+  VPValue *Incoming;
+  if (!match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))
+    return nullptr;
 
   const SCEV *IncomingSCEV = vputils::getSCEVExprForVPValue(Incoming, PSE, L);
   const SCEV *Start, *Step;
@@ -1161,7 +1174,7 @@ static VPValue *optimizeLatchExitInductionUser(
       StartTy->isPointerTy() ? InductionDescriptor::IK_PtrInduction
                              : InductionDescriptor::IK_IntInduction;
   VPValue *StepVPV = vputils::getOrCreateVPValueForSCEVExpr(Plan, Step);
-  VPBuilder Builder(ExtractR);
+  VPBuilder Builder(cast<VPInstruction>(Op));
   Type *TCTy = ResumeTC->getScalarType();
   VPValue *ExitCount = Builder.createSub(ResumeTC, Plan.getConstantInt(TCTy, 1),
                                          DebugLoc::getUnknown());
@@ -1206,12 +1219,16 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
 
       for (auto [Idx, PredVPBB] : enumerate(ExitVPBB->getPredecessors())) {
         VPValue *Escape = nullptr;
-        if (PredVPBB == MiddleVPBB)
+        if (PredVPBB == MiddleVPBB) {
           Escape = optimizeLatchExitInductionUser(
-              Plan, ExitIRI->getOperand(Idx), EndValues, PSE, ResumeTC, L);
-        else
+              Plan, ExitIRI->getOperand(Idx), EndValues, PSE);
+          if (!Escape)
+            Escape = optimizeLatchExitIVUserViaSCEV(
+                Plan, ExitIRI->getOperand(Idx), PSE, ResumeTC, L);
+        } else {
           Escape = optimizeEarlyExitInductionUser(
               Plan, ExitIRI->getOperand(Idx), PSE);
+        }
         if (Escape)
           ExitIRI->setOperand(Idx, Escape);
       }
