@@ -20123,7 +20123,16 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     APFloat Input(0.);
     if (!EvaluateFloat(E->getArg(0), Input, Info))
       return false;
-    Result = exp(Input);
+    llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
+    APFloat::opStatus Status;
+    std::optional<APFloat> r = exp(Input, RM, &Status);
+    // Check for unsupported rounding modes.
+    if (!r.has_value())
+      return false;
+    // Check for raised non-FE_INEXACT exceptions.
+    if (Status & (~APFloat::opStatus::opInexact))
+      return false;
+    Result = *r;
     return true;
   }
   case Builtin::BI__builtin_expl:
