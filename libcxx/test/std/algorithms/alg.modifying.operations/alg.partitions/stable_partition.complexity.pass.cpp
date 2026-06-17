@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: sanitizer-new-delete
 // XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 // <algorithm>
