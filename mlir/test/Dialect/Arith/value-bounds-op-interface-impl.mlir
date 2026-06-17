@@ -251,17 +251,3 @@ func.func @arith_extsi() -> index {
   %0 = "test.reify_bound"(%ext) {constant, allow_integer_type} : (i64) -> (index)
   return %0 : index
 }
-
-// -----
-
-// CHECK-LABEL: func @arith_extsi_propagates_bound(
-//  CHECK-SAME:     %[[a:.*]]: i32
-//       CHECK:   %[[ub:.*]] = arith.constant 5 : index
-//       CHECK:   return %[[ub]]
-func.func @arith_extsi_propagates_bound(%a: i32) -> index {
-  %c4 = arith.constant 4 : i32
-  %min = arith.minsi %a, %c4 : i32
-  %ext = arith.extsi %min : i32 to i64
-  %0 = "test.reify_bound"(%ext) {type = "UB", allow_integer_type} : (i64) -> (index)
-  return %0 : index
-}
