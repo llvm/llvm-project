@@ -461,6 +461,30 @@ void test_reduction_binding_operators() {
   use(b);
 }
 
+void test_reduction_binding_nontrivial() {
+  struct NonTrivial {
+    int value;
+    NonTrivial() : value(0) {}
+    NonTrivial(int v) : value(v) {}
+    ~NonTrivial() {}
+    NonTrivial& operator+=(int x) { value += x; return *this; }
+    NonTrivial& operator+=(const NonTrivial& other) { value += other.value; return *this; }
+  };
+  struct PairNonTrivial {
+    NonTrivial a;
+    NonTrivial b;
+  };
+
+  PairNonTrivial p{NonTrivial(0), NonTrivial(0)};
+  auto [a, b] = p;
+
+#pragma omp parallel for reduction(+:a)
+  for (int i = 0; i < 10; ++i) {
+    a += i;
+  }
+  use(a.value);
+}
+
 void test_lastprivate_binding() {
   Point p{1, 2};
   auto [a, b] = p;
@@ -2813,6 +2837,226 @@ void test_lambda_implicit_capture() {
 // CHECK:       [[COND_END]]:
 // CHECK:    [[COND:%.*]] = phi i32 [ [[TMP16]], %[[COND_TRUE]] ], [ [[TMP17]], %[[COND_FALSE]] ]
 // CHECK:    store i32 [[COND]], ptr [[TMP11]], align 4
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define dso_local void @_Z33test_reduction_binding_nontrivialv(
+// CHECK-SAME: ) #[[ATTR0]] {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIRNONTRIVIAL:%.*]], ptr [[P:%.*]], i32 0, i32 0
+// CHECK:    call void @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[A]], i32 noundef 0)
+// CHECK:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIRNONTRIVIAL]], ptr [[P]], i32 0, i32 1
+// CHECK:    call void @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialC1Ei(ptr noundef nonnull align 4 dereferenceable(4) [[B]], i32 noundef 0)
+// CHECK:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP0:%.*]], ptr align 4 [[P]], i64 8, i1 false)
+// CHECK:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z33test_reduction_binding_nontrivialv.omp_outlined, ptr [[TMP0]])
+// CHECK:    [[A1:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIRNONTRIVIAL]], ptr [[TMP0]], i32 0, i32 0
+// CHECK:    [[VALUE:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIAL:%.*]], ptr [[A1]], i32 0, i32 0
+// CHECK:    [[TMP1:%.*]] = load i32, ptr [[VALUE]], align 4
+// CHECK:    call void @_Z3usei(i32 noundef [[TMP1]])
+// CHECK:    call void @_ZZ33test_reduction_binding_nontrivialvEN14PairNonTrivialD1Ev(ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[TMP0]]) #[[ATTR3]]
+// CHECK:    call void @_ZZ33test_reduction_binding_nontrivialvEN14PairNonTrivialD1Ev(ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[P]]) #[[ATTR3]]
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define internal void @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialC1Ei(
+// CHECK-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[V:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    store ptr [[THIS]], ptr [[THIS_ADDR:%.*]], align 8
+// CHECK:    store i32 [[V]], ptr [[V_ADDR:%.*]], align 4
+// CHECK:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK:    [[TMP0:%.*]] = load i32, ptr [[V_ADDR]], align 4
+// CHECK:    call void @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialC2Ei(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]], i32 noundef [[TMP0]])
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define internal void @_Z33test_reduction_binding_nontrivialv.omp_outlined(
+// CHECK-SAME: ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR2]] {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR:%.*]], align 8
+// CHECK:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR:%.*]], align 8
+// CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
+// CHECK:    [[TMP1:%.*]] = load ptr, ptr [[DOTADDR]], align 8, !nonnull [[META4]], !align [[META5]]
+// CHECK:    store i32 0, ptr [[DOTOMP_LB:%.*]], align 4
+// CHECK:    store i32 9, ptr [[DOTOMP_UB:%.*]], align 4
+// CHECK:    store i32 1, ptr [[DOTOMP_STRIDE:%.*]], align 4
+// CHECK:    store i32 0, ptr [[DOTOMP_IS_LAST:%.*]], align 4
+// CHECK:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIRNONTRIVIAL:%.*]], ptr [[TMP1]], i32 0, i32 0
+// CHECK:    call void @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialC1Ev(ptr noundef nonnull align 4 dereferenceable(4) [[A1:%.*]])
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
+// CHECK:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP3]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// CHECK:    [[TMP4:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CHECK:    [[CMP:%.*]] = icmp sgt i32 [[TMP4]], 9
+// CHECK:    br i1 [[CMP]], label %[[COND_TRUE:.*]], label %[[COND_FALSE:.*]]
+// CHECK:       [[COND_TRUE]]:
+// CHECK:    br label %[[COND_END:.*]]
+// CHECK:       [[COND_FALSE]]:
+// CHECK:    [[TMP5:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CHECK:    br label %[[COND_END]]
+// CHECK:       [[COND_END]]:
+// CHECK:    [[COND:%.*]] = phi i32 [ 9, %[[COND_TRUE]] ], [ [[TMP5]], %[[COND_FALSE]] ]
+// CHECK:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4
+// CHECK:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
+// CHECK:    store i32 [[TMP6]], ptr [[DOTOMP_IV:%.*]], align 4
+// CHECK:    br label %[[OMP_INNER_FOR_COND:.*]]
+// CHECK:       [[OMP_INNER_FOR_COND]]:
+// CHECK:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CHECK:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+// CHECK:    [[CMP2:%.*]] = icmp sle i32 [[TMP7]], [[TMP8]]
+// CHECK:    br i1 [[CMP2]], label %[[OMP_INNER_FOR_BODY:.*]], label %[[OMP_INNER_FOR_COND_CLEANUP:.*]]
+// CHECK:       [[OMP_INNER_FOR_COND_CLEANUP]]:
+// CHECK:    br label %[[OMP_INNER_FOR_END:.*]]
+// CHECK:       [[OMP_INNER_FOR_BODY]]:
+// CHECK:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CHECK:    [[MUL:%.*]] = mul nsw i32 [[TMP9]], 1
+// CHECK:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
+// CHECK:    store i32 [[ADD]], ptr [[I:%.*]], align 4
+// CHECK:    [[TMP10:%.*]] = load i32, ptr [[I]], align 4
+// CHECK:    [[CALL:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialpLEi(ptr noundef nonnull align 4 dereferenceable(4) [[A1]], i32 noundef [[TMP10]])
+// CHECK:    br label %[[OMP_BODY_CONTINUE:.*]]
+// CHECK:       [[OMP_BODY_CONTINUE]]:
+// CHECK:    br label %[[OMP_INNER_FOR_INC:.*]]
+// CHECK:       [[OMP_INNER_FOR_INC]]:
+// CHECK:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IV]], align 4
+// CHECK:    [[ADD3:%.*]] = add nsw i32 [[TMP11]], 1
+// CHECK:    store i32 [[ADD3]], ptr [[DOTOMP_IV]], align 4
+// CHECK:    br label %[[OMP_INNER_FOR_COND]]
+// CHECK:       [[OMP_INNER_FOR_END]]:
+// CHECK:    br label %[[OMP_LOOP_EXIT:.*]]
+// CHECK:       [[OMP_LOOP_EXIT]]:
+// CHECK:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP3]])
+// CHECK:    [[TMP12:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST:%.*]], i64 0, i64 0
+// CHECK:    store ptr [[A1]], ptr [[TMP12]], align 8
+// CHECK:    [[TMP13:%.*]] = call i32 @__kmpc_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP3]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @_Z33test_reduction_binding_nontrivialv.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
+// CHECK:    switch i32 [[TMP13]], [[DOTOMP_REDUCTION_DEFAULT:label %.*]] [
+// CHECK:      i32 1, [[DOTOMP_REDUCTION_CASE1:label %.*]]
+// CHECK:      i32 2, [[DOTOMP_REDUCTION_CASE2:label %.*]]
+// CHECK:    ]
+// CHECK:       [[_OMP_REDUCTION_CASE1:.*:]]
+// CHECK:    [[CALL4:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialpLERKS_(ptr noundef nonnull align 4 dereferenceable(4) [[A]], ptr noundef nonnull align 4 dereferenceable(4) [[A1]])
+// CHECK:    call void @__kmpc_end_reduce_nowait(ptr @[[GLOB3]], i32 [[TMP3]], ptr @.gomp_critical_user_.reduction.var)
+// CHECK:    br [[DOTOMP_REDUCTION_DEFAULT]]
+// CHECK:       [[_OMP_REDUCTION_CASE2:.*:]]
+// CHECK:    call void @__kmpc_critical(ptr @[[GLOB1]], i32 [[TMP3]], ptr @.gomp_critical_user_.atomic_reduction.var)
+// CHECK:    [[CALL5:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialpLERKS_(ptr noundef nonnull align 4 dereferenceable(4) [[A]], ptr noundef nonnull align 4 dereferenceable(4) [[A1]])
+// CHECK:    call void @__kmpc_end_critical(ptr @[[GLOB1]], i32 [[TMP3]], ptr @.gomp_critical_user_.atomic_reduction.var)
+// CHECK:    br [[DOTOMP_REDUCTION_DEFAULT]]
+// CHECK:       [[_OMP_REDUCTION_DEFAULT:.*:]]
+// CHECK:    call void @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[A1]]) #[[ATTR3]]
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define internal void @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialC1Ev(
+// CHECK-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    store ptr [[THIS]], ptr [[THIS_ADDR:%.*]], align 8
+// CHECK:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK:    call void @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialC2Ev(ptr noundef nonnull align 4 dereferenceable(4) [[THIS1]])
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define internal noundef nonnull align 4 dereferenceable(4) ptr @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialpLEi(
+// CHECK-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[X:%.*]]) #[[ATTR0]] align 2 {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    store ptr [[THIS]], ptr [[THIS_ADDR:%.*]], align 8
+// CHECK:    store i32 [[X]], ptr [[X_ADDR:%.*]], align 4
+// CHECK:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK:    [[TMP0:%.*]] = load i32, ptr [[X_ADDR]], align 4
+// CHECK:    [[VALUE:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIAL:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK:    [[TMP1:%.*]] = load i32, ptr [[VALUE]], align 4
+// CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP0]]
+// CHECK:    store i32 [[ADD]], ptr [[VALUE]], align 4
+// CHECK:    ret ptr [[THIS1]]
+//
+//
+// CHECK-LABEL: define internal void @_Z33test_reduction_binding_nontrivialv.omp_outlined.omp.reduction.reduction_func(
+// CHECK-SAME: ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR4]] {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    store ptr [[TMP0]], ptr [[DOTADDR:%.*]], align 8
+// CHECK:    store ptr [[TMP1]], ptr [[DOTADDR1:%.*]], align 8
+// CHECK:    [[TMP2:%.*]] = load ptr, ptr [[DOTADDR]], align 8
+// CHECK:    [[TMP3:%.*]] = load ptr, ptr [[DOTADDR1]], align 8
+// CHECK:    [[TMP4:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP3]], i64 0, i64 0
+// CHECK:    [[TMP5:%.*]] = load ptr, ptr [[TMP4]], align 8
+// CHECK:    [[TMP6:%.*]] = getelementptr inbounds [1 x ptr], ptr [[TMP2]], i64 0, i64 0
+// CHECK:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
+// CHECK:    [[CALL:%.*]] = call noundef nonnull align 4 dereferenceable(4) ptr @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialpLERKS_(ptr noundef nonnull align 4 dereferenceable(4) [[TMP7]], ptr noundef nonnull align 4 dereferenceable(4) [[TMP5]])
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define internal noundef nonnull align 4 dereferenceable(4) ptr @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialpLERKS_(
+// CHECK-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[OTHER:%.*]]) #[[ATTR0]] align 2 {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    store ptr [[THIS]], ptr [[THIS_ADDR:%.*]], align 8
+// CHECK:    store ptr [[OTHER]], ptr [[OTHER_ADDR:%.*]], align 8
+// CHECK:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK:    [[TMP0:%.*]] = load ptr, ptr [[OTHER_ADDR]], align 8, !nonnull [[META4]], !align [[META5]]
+// CHECK:    [[VALUE:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIAL:%.*]], ptr [[TMP0]], i32 0, i32 0
+// CHECK:    [[TMP1:%.*]] = load i32, ptr [[VALUE]], align 4
+// CHECK:    [[VALUE2:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIAL]], ptr [[THIS1]], i32 0, i32 0
+// CHECK:    [[TMP2:%.*]] = load i32, ptr [[VALUE2]], align 4
+// CHECK:    [[ADD:%.*]] = add nsw i32 [[TMP2]], [[TMP1]]
+// CHECK:    store i32 [[ADD]], ptr [[VALUE2]], align 4
+// CHECK:    ret ptr [[THIS1]]
+//
+//
+// CHECK-LABEL: define internal void @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialD1Ev(
+// CHECK-SAME: ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    store ptr [[THIS]], ptr [[THIS_ADDR:%.*]], align 8
+// CHECK:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK:    call void @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialD2Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS1]]) #[[ATTR3]]
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define internal void @_ZZ33test_reduction_binding_nontrivialvEN14PairNonTrivialD1Ev(
+// CHECK-SAME: ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    store ptr [[THIS]], ptr [[THIS_ADDR:%.*]], align 8
+// CHECK:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK:    call void @_ZZ33test_reduction_binding_nontrivialvEN14PairNonTrivialD2Ev(ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[THIS1]]) #[[ATTR3]]
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define internal void @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialC2Ei(
+// CHECK-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[V:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    store ptr [[THIS]], ptr [[THIS_ADDR:%.*]], align 8
+// CHECK:    store i32 [[V]], ptr [[V_ADDR:%.*]], align 4
+// CHECK:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK:    [[VALUE:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIAL:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK:    [[TMP0:%.*]] = load i32, ptr [[V_ADDR]], align 4
+// CHECK:    store i32 [[TMP0]], ptr [[VALUE]], align 4
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define internal void @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialC2Ev(
+// CHECK-SAME: ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    store ptr [[THIS]], ptr [[THIS_ADDR:%.*]], align 8
+// CHECK:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK:    [[VALUE:%.*]] = getelementptr inbounds nuw [[STRUCT_NONTRIVIAL:%.*]], ptr [[THIS1]], i32 0, i32 0
+// CHECK:    store i32 0, ptr [[VALUE]], align 4
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define internal void @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialD2Ev(
+// CHECK-SAME: ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    store ptr [[THIS]], ptr [[THIS_ADDR:%.*]], align 8
+// CHECK:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK:    ret void
+//
+//
+// CHECK-LABEL: define internal void @_ZZ33test_reduction_binding_nontrivialvEN14PairNonTrivialD2Ev(
+// CHECK-SAME: ptr noundef nonnull align 4 dead_on_return(8) dereferenceable(8) [[THIS:%.*]]) unnamed_addr #[[ATTR0]] align 2 {
+// CHECK:  [[ENTRY:.*:]]
+// CHECK:    store ptr [[THIS]], ptr [[THIS_ADDR:%.*]], align 8
+// CHECK:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
+// CHECK:    [[B:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIRNONTRIVIAL:%.*]], ptr [[THIS1]], i32 0, i32 1
+// CHECK:    call void @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[B]]) #[[ATTR3]]
+// CHECK:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_PAIRNONTRIVIAL]], ptr [[THIS1]], i32 0, i32 0
+// CHECK:    call void @_ZZ33test_reduction_binding_nontrivialvEN10NonTrivialD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) [[A]]) #[[ATTR3]]
 // CHECK:    ret void
 //
 //
