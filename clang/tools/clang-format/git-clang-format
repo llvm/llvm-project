@@ -191,6 +191,11 @@ def main():
         help="format lines in the stage instead of the working dir",
     )
     p.add_argument(
+        "--whole-file",
+        action="store_true",
+        help="format whole file instead of only modified lines",
+    )
+    p.add_argument(
         "--style",
         default=config.get("clangformat.style", None),
         help="passed to clang-format",
@@ -256,7 +261,7 @@ def main():
         opts.binary = os.path.abspath(opts.binary)
 
     changed_lines = compute_diff_and_extract_lines(
-        commits, files, opts.staged, opts.diff_from_common_commit
+        commits, files, opts.staged, opts.whole_file, opts.diff_from_common_commit
     )
     if opts.verbose >= 1:
         ignored_files = set(changed_lines)
@@ -410,10 +415,10 @@ def get_object_type(value):
     return convert_string(stdout.strip())
 
 
-def compute_diff_and_extract_lines(commits, files, staged, diff_common_commit):
+def compute_diff_and_extract_lines(commits, files, staged, whole_file, diff_common_commit):
     """Calls compute_diff() followed by extract_lines()."""
     diff_process = compute_diff(commits, files, staged, diff_common_commit)
-    changed_lines = extract_lines(diff_process.stdout)
+    changed_lines = extract_lines(diff_process.stdout, whole_file)
     diff_process.stdout.close()
     diff_process.wait()
     if diff_process.returncode != 0:
@@ -446,7 +451,7 @@ def compute_diff(commits, files, staged, diff_common_commit):
     return p
 
 
-def extract_lines(patch_file):
+def extract_lines(patch_file, whole_file):
     """Extract the changed lines in `patch_file`.
 
     The return value is a dictionary mapping filename to a list of (start_line,
@@ -456,11 +461,23 @@ def extract_lines(patch_file):
     zero lines of context.  The return value is a dict mapping filename to a
     list of line `Range`s."""
     matches = {}
+
+    if whole_file:
+        # Find the repository root, in case this is run in a subdirectory
+        cmd = ['git', 'rev-parse', '--show-toplevel']
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        repo_root = convert_string(p.stdout.read()).strip()
+
     for line in patch_file:
         line = convert_string(line)
         match = re.search(r"^\+\+\+\ [^/]+/(.*)", line)
         if match:
             filename = match.group(1).rstrip("\r\n\t")
+            if whole_file and filename not in matches:
+                full_path = os.path.join(repo_root, filename)
+                num_lines = sum(1 for _ in open(full_path))
+                matches.setdefault(filename, []).append(Range(1, num_lines))
+                continue
         match = re.search(r"^@@ -[0-9,]+ \+(\d+)(,(\d+))?", line)
         if match:
             start_line = int(match.group(1))
