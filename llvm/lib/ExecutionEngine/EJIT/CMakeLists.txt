@@ -79,6 +79,7 @@ list(APPEND EJIT_SOURCES
 if(EJIT_SRE_TASKPOOL)
   list(APPEND EJIT_SOURCES
     EJitTaskPool.cpp
+    EJitIpcLock.cpp
     EJitSreQueue.cpp
   )
 endif()

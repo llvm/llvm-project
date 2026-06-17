@@ -30,6 +30,7 @@
 #define LLVM_EXECUTIONENGINE_EJIT_EJITTASKPOOL_H
 
 #include "llvm/ExecutionEngine/EJIT/EJitAtomic.h"
+#include "llvm/ExecutionEngine/EJIT/EJitIpcLock.h"
 #include "llvm/ExecutionEngine/EJIT/EJitSreQueue.h"
 #include <cstdint>
 
@@ -102,6 +103,19 @@ public:
 
   /// Increment and return the new version.
   uint32_t bumpVersion() { return version_.fetchAdd(1u) + 1u; }
+
+  /// Turn on scheduling and publish a new generation.
+  uint32_t activate(EJitCompileMode mode) {
+    mode_.storeRelease(static_cast<uint32_t>(mode));
+    enabled_.storeRelease(1u);
+    return bumpVersion();
+  }
+
+  /// Turn off scheduling and publish a new generation.
+  uint32_t deactivate() {
+    enabled_.storeRelease(0u);
+    return bumpVersion();
+  }
 
 private:
   EJitAtomicU32 enabled_;
@@ -251,7 +265,11 @@ private:
   uint32_t bucketBase(uint32_t funcIndex) const {
     return (funcIndex % kBuckets) * kSlots;
   }
+
+  uint32_t bucketIndex(uint32_t funcIndex) const { return funcIndex % kBuckets; }
+
   EJitDedupSlot slots_[kBuckets * kSlots];
+  EJitIpcBucketLock bucketLocks_{kBuckets};
 };
 
 //===----------------------------------------------------------------------===//
@@ -304,7 +322,11 @@ private:
   uint32_t bucketBase(uint32_t funcIndex) const {
     return (funcIndex % kBuckets) * kSlots;
   }
+
+  uint32_t bucketIndex(uint32_t funcIndex) const { return funcIndex % kBuckets; }
+
   EJitCacheEntry entries_[kBuckets * kSlots];
+  EJitIpcBucketLock bucketLocks_{kBuckets};
 };
 
 //===----------------------------------------------------------------------===//
@@ -407,6 +429,15 @@ public:
 
   /// Drain up to \p maxItems queued requests; returns the number processed.
   unsigned pollBudget(unsigned maxItems);
+
+  /// Worker-friendly alias of pollOne().
+  bool workerStep() { return pollOne(); }
+
+  /// Activate scheduling in \\p mode and bump generation.
+  uint32_t activate(EJitCompileMode mode) { return switch_.activate(mode); }
+
+  /// Deactivate scheduling and bump generation.
+  uint32_t deactivate() { return switch_.deactivate(); }
 
   /// Logical free for (funcIndex, cacheKey): drop the cache entry and cancel
   /// any in-flight request. Returns true if anything was freed/cancelled. Does

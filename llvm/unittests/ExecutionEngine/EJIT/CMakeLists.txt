@@ -43,6 +43,7 @@ set(LLVM_LINK_COMPONENTS Support)
 add_llvm_unittest(EJITTaskPoolTests
   EJitTaskPoolTest.cpp
   ${LLVM_MAIN_SRC_DIR}/lib/ExecutionEngine/EJIT/EJitTaskPool.cpp
+  ${LLVM_MAIN_SRC_DIR}/lib/ExecutionEngine/EJIT/EJitIpcLock.cpp
   ${LLVM_MAIN_SRC_DIR}/lib/ExecutionEngine/EJIT/EJitSreQueue.cpp
 
   PARTIAL_SOURCES_INTENDED
@@ -55,6 +56,8 @@ target_compile_definitions(EJITTaskPoolTests PRIVATE
   EJIT_SRE_TASKPOOL_BUCKETS=32
   EJIT_SRE_TASKPOOL_BUCKET_SLOTS=8
   EJIT_SRE_TASKPOOL_QUEUE_CAPACITY=1024
+  EJIT_TASKPOOL_SOURCE_DIR="${LLVM_MAIN_SRC_DIR}/lib/ExecutionEngine/EJIT"
+  EJIT_TASKPOOL_INCLUDE_DIR="${LLVM_MAIN_SRC_DIR}/include/llvm/ExecutionEngine/EJIT"
   )
 
 # Convenience target: build + run only the SRE taskpool unit tests.

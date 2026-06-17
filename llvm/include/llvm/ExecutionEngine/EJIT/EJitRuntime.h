@@ -139,12 +139,14 @@ void *ejit_compile_or_get(uint64_t cacheKey, void **out_pfn);
 //   code-pool physical memory) and cancels any in-flight request.
 // ejit_taskpool_poll_one / _poll_budget: consume queued async requests on the
 //   calling (worker) stack. No EJIT thread is ever created.
+// ejit_taskpool_worker_step: alias of poll_one for external scheduler loops.
 // ejit_taskpool_pending_count: best-effort in-flight request count.
 ejit_status_t ejit_taskpool_sync_compile(uint32_t funcIndex, uint64_t cacheKey,
                                          void **outFn);
 ejit_status_t ejit_taskpool_free_code(uint32_t funcIndex, uint64_t cacheKey);
 unsigned ejit_taskpool_poll_one(void);
 unsigned ejit_taskpool_poll_budget(unsigned maxItems);
+unsigned ejit_taskpool_worker_step(void);
 unsigned ejit_taskpool_pending_count(void);
 
 // SRE taskpool statistics. Separate from ejit_stats_t (which reports the legacy

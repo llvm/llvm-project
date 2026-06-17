@@ -328,6 +328,10 @@ unsigned ejit_taskpool_poll_budget(unsigned maxItems) {
   return tp->pollBudget(maxItems);
 }
 
+unsigned ejit_taskpool_worker_step(void) {
+  return ejit_taskpool_poll_one();
+}
+
 unsigned ejit_taskpool_pending_count(void) {
   if (!gEJIT)
     return 0;

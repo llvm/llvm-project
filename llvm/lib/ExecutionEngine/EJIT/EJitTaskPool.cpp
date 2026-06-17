@@ -37,6 +37,20 @@ constexpr uint32_t kCacheFailed =
     static_cast<uint32_t>(EJitCacheEntryState::Failed);
 constexpr uint32_t kCacheCancelled =
     static_cast<uint32_t>(EJitCacheEntryState::Cancelled);
+
+class ScopedBucketLock {
+public:
+  ScopedBucketLock(EJitIpcBucketLock &lock, uint32_t bucket)
+      : lock_(lock), bucket_(bucket) {
+    lock_.lock(bucket_);
+  }
+
+  ~ScopedBucketLock() { lock_.unlock(bucket_); }
+
+private:
+  EJitIpcBucketLock &lock_;
+  uint32_t bucket_;
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -69,6 +83,7 @@ EJitDedupResult EJitDedupTable::tryMarkPending(uint32_t funcIndex,
                                                uint64_t cacheKey,
                                                uint32_t version) {
   const uint32_t base = bucketBase(funcIndex);
+  ScopedBucketLock guard(bucketLocks_, bucketIndex(funcIndex));
 
   // Pass 1: duplicate detection. Only committed slots match — a slot still in
   // Claiming has no published identity yet and is deliberately skipped (it is
@@ -103,6 +118,7 @@ EJitDedupResult EJitDedupTable::tryMarkPending(uint32_t funcIndex,
 bool EJitDedupTable::markCompiling(uint32_t funcIndex, uint64_t cacheKey,
                                    uint32_t version) {
   const uint32_t base = bucketBase(funcIndex);
+  ScopedBucketLock guard(bucketLocks_, bucketIndex(funcIndex));
   for (uint32_t i = 0; i < kSlots; ++i) {
     EJitDedupSlot &s = slots_[base + i];
     if (isCommitted(s.state.loadAcquire()) &&
@@ -120,6 +136,7 @@ bool EJitDedupTable::markCompiling(uint32_t funcIndex, uint64_t cacheKey,
 bool EJitDedupTable::beginPublish(uint32_t funcIndex, uint64_t cacheKey,
                                   uint32_t version) {
   const uint32_t base = bucketBase(funcIndex);
+  ScopedBucketLock guard(bucketLocks_, bucketIndex(funcIndex));
   for (uint32_t i = 0; i < kSlots; ++i) {
     EJitDedupSlot &s = slots_[base + i];
     if (isCommitted(s.state.loadAcquire()) &&
@@ -137,6 +154,7 @@ bool EJitDedupTable::beginPublish(uint32_t funcIndex, uint64_t cacheKey,
 bool EJitDedupTable::finishPublish(uint32_t funcIndex, uint64_t cacheKey,
                                    uint32_t version) {
   const uint32_t base = bucketBase(funcIndex);
+  ScopedBucketLock guard(bucketLocks_, bucketIndex(funcIndex));
   for (uint32_t i = 0; i < kSlots; ++i) {
     EJitDedupSlot &s = slots_[base + i];
     if (isCommitted(s.state.loadAcquire()) &&
@@ -153,6 +171,7 @@ bool EJitDedupTable::finishPublish(uint32_t funcIndex, uint64_t cacheKey,
 
 bool EJitDedupTable::cancel(uint32_t funcIndex, uint64_t cacheKey) {
   const uint32_t base = bucketBase(funcIndex);
+  ScopedBucketLock guard(bucketLocks_, bucketIndex(funcIndex));
   bool cancelled = false;
   for (uint32_t i = 0; i < kSlots; ++i) {
     EJitDedupSlot &s = slots_[base + i];
@@ -173,6 +192,7 @@ bool EJitDedupTable::cancel(uint32_t funcIndex, uint64_t cacheKey) {
 void EJitDedupTable::clear(uint32_t funcIndex, uint64_t cacheKey,
                            uint32_t version) {
   const uint32_t base = bucketBase(funcIndex);
+  ScopedBucketLock guard(bucketLocks_, bucketIndex(funcIndex));
   for (uint32_t i = 0; i < kSlots; ++i) {
     EJitDedupSlot &s = slots_[base + i];
     if (isCommitted(s.state.loadAcquire()) &&
@@ -200,6 +220,7 @@ uint32_t EJitDedupTable::pendingCount() const {
 void *EJitTaskPoolCache::lookup(uint32_t funcIndex, uint64_t cacheKey,
                                 uint32_t version) {
   const uint32_t base = bucketBase(funcIndex);
+  ScopedBucketLock guard(bucketLocks_, bucketIndex(funcIndex));
   for (uint32_t i = 0; i < kSlots; ++i) {
     EJitCacheEntry &e = entries_[base + i];
     if (e.state.loadAcquire() == kCacheReady &&
@@ -214,6 +235,7 @@ void *EJitTaskPoolCache::lookup(uint32_t funcIndex, uint64_t cacheKey,
 bool EJitTaskPoolCache::publish(uint32_t funcIndex, uint64_t cacheKey,
                                 uint32_t version, void *ptr) {
   const uint32_t base = bucketBase(funcIndex);
+  ScopedBucketLock guard(bucketLocks_, bucketIndex(funcIndex));
 
   // Reuse an existing slot for the same (funcIndex, cacheKey) if present.
   for (uint32_t i = 0; i < kSlots; ++i) {
@@ -248,6 +270,7 @@ bool EJitTaskPoolCache::publish(uint32_t funcIndex, uint64_t cacheKey,
 
 bool EJitTaskPoolCache::freeCode(uint32_t funcIndex, uint64_t cacheKey) {
   const uint32_t base = bucketBase(funcIndex);
+  ScopedBucketLock guard(bucketLocks_, bucketIndex(funcIndex));
   bool freed = false;
   for (uint32_t i = 0; i < kSlots; ++i) {
     EJitCacheEntry &e = entries_[base + i];
@@ -280,7 +303,13 @@ void *EJitTaskPool::runCompile(const EJitCompileRequest &req,
                                bool fromWorker) {
   EJIT_TASKPOOL_TRACE("runCompile:begin", req.funcIndex,
                       (unsigned long long)req.cacheKey, (unsigned)fromWorker);
-  // Drop requests whose version no longer matches (logically invalidated).
+  // Drop requests when scheduling is deactivated or generation changed.
+  if (!switch_.isEnabled() || switch_.getMode() == EJitCompileMode::Off) {
+    dedup_.clear(req.funcIndex, req.cacheKey, req.version);
+    counters_.compileFailed.fetchAdd(1);
+    outStatus = EJitCompileOrGetStatus::DisabledFallback;
+    return nullptr;
+  }
   if (req.version != switch_.getVersion()) {
     dedup_.clear(req.funcIndex, req.cacheKey, req.version);
     counters_.compileFailed.fetchAdd(1);
@@ -297,12 +326,14 @@ void *EJitTaskPool::runCompile(const EJitCompileRequest &req,
   }
 
   void *fn = nullptr;
+  EJIT_TASKPOOL_TRACE("runCompile:compileBegin", req.funcIndex,
+                      (unsigned long long)req.cacheKey, (unsigned)fromWorker);
   bool ok = compileFn_ && compileFn_(compileCtx_, req, &fn);
-  EJIT_TASKPOOL_TRACE("runCompile:compiled", req.funcIndex, fn, (unsigned)ok);
+  EJIT_TASKPOOL_TRACE("runCompile:compileEnd", req.funcIndex, fn, (unsigned)ok);
 
-  // A version bump during compilation invalidates this result. Force the slot
-  // Empty (cancel) regardless of its current committed state.
-  if (req.version != switch_.getVersion()) {
+  // Deactivation or generation bump during compilation invalidates this result.
+  if (!switch_.isEnabled() || switch_.getMode() == EJitCompileMode::Off ||
+      req.version != switch_.getVersion()) {
     dedup_.cancel(req.funcIndex, req.cacheKey);
     counters_.compileFailed.fetchAdd(1);
     outStatus = EJitCompileOrGetStatus::CompileFailed;
@@ -319,8 +350,12 @@ void *EJitTaskPool::runCompile(const EJitCompileRequest &req,
 
   // Commit gate part 1 (Compiling -> Publishing). If freeCode cancelled the
   // slot during compilation this fails and we drop the result without writing.
+  EJIT_TASKPOOL_TRACE("runCompile:publishBegin", req.funcIndex,
+                      (unsigned long long)req.cacheKey, req.version);
   if (!dedup_.beginPublish(req.funcIndex, req.cacheKey, req.version)) {
     counters_.compileFailed.fetchAdd(1);
+    EJIT_TASKPOOL_TRACE("runCompile:publishFail", req.funcIndex,
+                        (unsigned)EJitCompileOrGetStatus::CompileFailed);
     outStatus = EJitCompileOrGetStatus::CompileFailed;
     return nullptr;
   }
@@ -330,6 +365,16 @@ void *EJitTaskPool::runCompile(const EJitCompileRequest &req,
   if (prePublishHook_)
     prePublishHook_(prePublishCtx_, req);
 #endif
+
+  // A deactivate/version-bump in the publish window invalidates this result.
+  // Keep the slot/caches clean and avoid exposing stale generation data.
+  if (!switch_.isEnabled() || switch_.getMode() == EJitCompileMode::Off ||
+      req.version != switch_.getVersion()) {
+    dedup_.cancel(req.funcIndex, req.cacheKey);
+    counters_.compileFailed.fetchAdd(1);
+    outStatus = EJitCompileOrGetStatus::CompileFailed;
+    return nullptr;
+  }
 
   // Write the result into the fixed cache. publish() returns false only when
   // the bucket is full of other keys — it never silently overwrites.
@@ -342,7 +387,20 @@ void *EJitTaskPool::runCompile(const EJitCompileRequest &req,
     // so a later lookup will not falsely hit.
     dedup_.clear(req.funcIndex, req.cacheKey, req.version);
     counters_.publishFailed.fetchAdd(1);
+    EJIT_TASKPOOL_TRACE("runCompile:publishFail", req.funcIndex,
+                        (unsigned)EJitCompileOrGetStatus::CacheFullFallback);
     outStatus = EJitCompileOrGetStatus::CacheFullFallback;
+    return nullptr;
+  }
+
+  if (!switch_.isEnabled() || switch_.getMode() == EJitCompileMode::Off ||
+      req.version != switch_.getVersion()) {
+    dedup_.cancel(req.funcIndex, req.cacheKey);
+    cache_.freeCode(req.funcIndex, req.cacheKey);
+    counters_.compileFailed.fetchAdd(1);
+    EJIT_TASKPOOL_TRACE("runCompile:publishRollback", req.funcIndex,
+                        (unsigned long long)req.cacheKey);
+    outStatus = EJitCompileOrGetStatus::CompileFailed;
     return nullptr;
   }
 
@@ -352,6 +410,8 @@ void *EJitTaskPool::runCompile(const EJitCompileRequest &req,
   if (!dedup_.finishPublish(req.funcIndex, req.cacheKey, req.version)) {
     cache_.freeCode(req.funcIndex, req.cacheKey);
     counters_.compileFailed.fetchAdd(1);
+    EJIT_TASKPOOL_TRACE("runCompile:publishRollback", req.funcIndex,
+                        (unsigned long long)req.cacheKey);
     outStatus = EJitCompileOrGetStatus::CompileFailed;
     return nullptr;
   }
@@ -360,6 +420,7 @@ void *EJitTaskPool::runCompile(const EJitCompileRequest &req,
     counters_.asyncCompiles.fetchAdd(1);
   else
     counters_.syncCompiles.fetchAdd(1);
+  EJIT_TASKPOOL_TRACE("runCompile:publishSuccess", req.funcIndex, fn);
   outStatus = EJitCompileOrGetStatus::SyncCompiled;
   return fn;
 }
@@ -377,10 +438,14 @@ EJitTaskPool::compileOrGet(uint32_t funcIndex, uint64_t cacheKey,
     EJIT_TASKPOOL_TRACE("compileOrGet:cacheHit", funcIndex, p);
     return {EJitCompileOrGetStatus::CacheHit, p};
   }
+  EJIT_TASKPOOL_TRACE("compileOrGet:cacheMiss", funcIndex,
+                      (unsigned long long)cacheKey, version);
 
   // 2. Disabled / Off → fallback, never enqueue or compile.
-  if (!switch_.isEnabled() || switch_.getMode() == EJitCompileMode::Off)
+  if (!switch_.isEnabled() || switch_.getMode() == EJitCompileMode::Off) {
+    EJIT_TASKPOOL_TRACE("compileOrGet:disabled", funcIndex, version);
     return {EJitCompileOrGetStatus::DisabledFallback, fallback};
+  }
 
   // 3. Dedup reservation (shared by sync and async).
   EJitDedupResult d = dedup_.tryMarkPending(funcIndex, cacheKey, version);
@@ -414,6 +479,8 @@ EJitTaskPool::compileOrGet(uint32_t funcIndex, uint64_t cacheKey,
     dedup_.clear(funcIndex, cacheKey, version);
     counters_.queueFull.fetchAdd(1);
     EJIT_TASKPOOL_TRACE("compileOrGet:queuePush", funcIndex, (unsigned)0);
+    EJIT_TASKPOOL_TRACE("compileOrGet:queueRollback", funcIndex,
+                        (unsigned long long)cacheKey);
     return {EJitCompileOrGetStatus::QueueFullFallback, fallback};
   }
   counters_.asyncEnqueues.fetchAdd(1);
@@ -455,7 +522,8 @@ bool EJitTaskPool::pollOne() {
     EJIT_TASKPOOL_TRACE("pollOne:empty");
     return false;
   }
-  EJIT_TASKPOOL_TRACE("pollOne:dequeued", req.funcIndex);
+  EJIT_TASKPOOL_TRACE("worker:pop", req.funcIndex,
+                      (unsigned long long)req.cacheKey, req.version);
   EJitCompileOrGetStatus st;
   runCompile(req, st, /*fromWorker=*/true);
   return true;

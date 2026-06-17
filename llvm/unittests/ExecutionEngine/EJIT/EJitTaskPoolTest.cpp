@@ -15,11 +15,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/EJIT/EJitAtomic.h"
+#include "llvm/ExecutionEngine/EJIT/EJitIpcLock.h"
 #include "llvm/ExecutionEngine/EJIT/EJitSreQueue.h"
 #include "llvm/ExecutionEngine/EJIT/EJitTaskPool.h"
 #include "gtest/gtest.h"
 
+#include <cstddef>
 #include <cstdint>
+#include <fstream>
+#include <sstream>
+#include <string>
 #include <type_traits>
 
 using namespace llvm;
@@ -76,6 +81,15 @@ EJitCompileRequest makeReq(uint32_t funcIdx, uint64_t cacheKey, void *fb) {
   return r;
 }
 
+std::string readTextFile(const std::string &path) {
+  std::ifstream in(path.c_str(), std::ios::in | std::ios::binary);
+  if (!in)
+    return std::string();
+  std::ostringstream ss;
+  ss << in.rdbuf();
+  return ss.str();
+}
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -118,6 +132,28 @@ TEST(EJitAtomic, U64AndPtrAndFetchAdd) {
   EXPECT_EQ(c.fetchAdd(1u), 0u);
   EXPECT_EQ(c.fetchAdd(1u), 1u);
   EXPECT_EQ(c.loadAcquire(), 2u);
+}
+
+//===----------------------------------------------------------------------===//
+// 1b. IPC lock/barrier wrapper
+//===----------------------------------------------------------------------===//
+
+TEST(EJitIpcLock, TryLockAndUnlock) {
+  EJitIpcBucketLock locks(32u);
+  EXPECT_TRUE(locks.tryLock(3));
+  EXPECT_FALSE(locks.tryLock(3));
+  locks.unlock(3);
+  EXPECT_TRUE(locks.tryLock(3));
+  locks.unlock(3);
+}
+
+TEST(EJitIpcLock, LockUnlockNormalizedBucket) {
+  EJitIpcBucketLock locks(32u);
+  locks.lock(35u); // 35 % 32 == 3
+  EXPECT_FALSE(locks.tryLock(3u));
+  locks.unlock(35u);
+  EXPECT_TRUE(locks.tryLock(3u));
+  locks.unlock(3u);
 }
 
 //===----------------------------------------------------------------------===//
@@ -164,6 +200,19 @@ TEST(EJitSwitchController, OldVersionRequestDroppedByPoll) {
   // Nothing was published.
   EXPECT_EQ(pool.cache().lookup(3, key(3), pool.switchController().getVersion()),
             nullptr);
+}
+
+TEST(EJitSwitchController, DeactivateAndActivateBumpVersion) {
+  EJitSwitchController sc;
+  uint32_t v1 = sc.getVersion();
+  uint32_t v2 = sc.deactivate();
+  EXPECT_FALSE(sc.isEnabled());
+  EXPECT_EQ(v2, v1 + 1u);
+
+  uint32_t v3 = sc.activate(EJitCompileMode::Async);
+  EXPECT_TRUE(sc.isEnabled());
+  EXPECT_EQ(sc.getMode(), EJitCompileMode::Async);
+  EXPECT_EQ(v3, v2 + 1u);
 }
 
 //===----------------------------------------------------------------------===//
@@ -648,6 +697,98 @@ TEST(EJitTaskPoolFreeCode, FreeWhileAsyncCompilingViaWorker) {
   EXPECT_EQ(pool.pendingCount(), 0u);
 }
 
+namespace {
+struct DeactivateInPublishWindow {
+  static EJitTaskPool *pool;
+  static void hook(void *ctx, const EJitCompileRequest &req) {
+    (void)ctx;
+    (void)req;
+    if (pool)
+      pool->deactivate();
+  }
+};
+EJitTaskPool *DeactivateInPublishWindow::pool = nullptr;
+
+struct DuplicateInPublishWindow {
+  static EJitTaskPool *pool;
+  static void *fallback;
+  static EJitCompileOrGetStatus observed;
+  static void hook(void *ctx, const EJitCompileRequest &req) {
+    (void)ctx;
+    if (!pool)
+      return;
+    auto r = pool->compileOrGet(req.funcIndex, req.cacheKey, fallback);
+    observed = r.status;
+  }
+};
+EJitTaskPool *DuplicateInPublishWindow::pool = nullptr;
+void *DuplicateInPublishWindow::fallback = nullptr;
+EJitCompileOrGetStatus DuplicateInPublishWindow::observed =
+    EJitCompileOrGetStatus::CompileFailed;
+} // namespace
+
+TEST(EJitTaskPoolController, OffBlocksQueueThenActivateAllowsQueue) {
+  MockCompiler::reset();
+  EJitTaskPool pool(16);
+  pool.setCompiler(&MockCompiler::compile, nullptr);
+  pool.switchController().setMode(EJitCompileMode::Async);
+  pool.deactivate();
+
+  void *fb = reinterpret_cast<void *>(uintptr_t(0xC001));
+  auto rOff = pool.compileOrGet(21, key(21), fb);
+  EXPECT_EQ(rOff.status, EJitCompileOrGetStatus::DisabledFallback);
+  EXPECT_EQ(pool.queue().approximateSize(), 0u);
+
+  pool.activate(EJitCompileMode::Async);
+  auto rOn = pool.compileOrGet(21, key(21), fb);
+  EXPECT_EQ(rOn.status, EJitCompileOrGetStatus::EnqueuedPending);
+  EXPECT_EQ(pool.queue().approximateSize(), 1u);
+}
+
+TEST(EJitTaskPoolController, DeactivateDuringPublishDropsOldGeneration) {
+  MockCompiler::reset();
+  EJitTaskPool pool(16);
+  pool.setCompiler(&MockCompiler::compile, nullptr);
+  pool.switchController().setMode(EJitCompileMode::Async);
+  DeactivateInPublishWindow::pool = &pool;
+  pool.setPrePublishHookForTest(&DeactivateInPublishWindow::hook, nullptr);
+
+  void *fb = reinterpret_cast<void *>(uintptr_t(0xCAFE));
+  auto r1 = pool.compileOrGet(22, key(22), fb);
+  EXPECT_EQ(r1.status, EJitCompileOrGetStatus::EnqueuedPending);
+
+  EXPECT_TRUE(pool.pollOne());
+  uint32_t v = pool.switchController().getVersion();
+  EXPECT_EQ(pool.cache().lookup(22, key(22), v), nullptr);
+
+  pool.setPrePublishHookForTest(nullptr, nullptr);
+  DeactivateInPublishWindow::pool = nullptr;
+  pool.activate(EJitCompileMode::Async);
+  auto r2 = pool.compileOrGet(22, key(22), fb);
+  EXPECT_EQ(r2.status, EJitCompileOrGetStatus::EnqueuedPending);
+  EXPECT_TRUE(pool.pollOne());
+  v = pool.switchController().getVersion();
+  EXPECT_EQ(pool.cache().lookup(22, key(22), v), expectedPtr(22));
+}
+
+TEST(EJitTaskPoolPublish, DuplicateRequestWhilePublishingCoalesces) {
+  MockCompiler::reset();
+  EJitTaskPool pool(16);
+  pool.setCompiler(&MockCompiler::compile, nullptr);
+  pool.switchController().setMode(EJitCompileMode::Sync);
+
+  void *fb = reinterpret_cast<void *>(uintptr_t(0xBEEF));
+  DuplicateInPublishWindow::pool = &pool;
+  DuplicateInPublishWindow::fallback = fb;
+  DuplicateInPublishWindow::observed = EJitCompileOrGetStatus::CompileFailed;
+  pool.setPrePublishHookForTest(&DuplicateInPublishWindow::hook, nullptr);
+
+  auto r = pool.compileOrGet(23, key(23), fb);
+  EXPECT_EQ(r.status, EJitCompileOrGetStatus::SyncCompiled);
+  EXPECT_EQ(DuplicateInPublishWindow::observed,
+            EJitCompileOrGetStatus::AlreadyPending);
+}
+
 //===----------------------------------------------------------------------===//
 // 12. Taskpool stats counters. (Task 4)
 //===----------------------------------------------------------------------===//
@@ -731,4 +872,64 @@ TEST(EJitTaskPoolStats, DedupFullCounter) {
   EJitTaskPoolStatsSnapshot s;
   pool.getStats(s);
   EXPECT_EQ(s.dedupFull, 1u);
+}
+
+//===----------------------------------------------------------------------===//
+// 13. Shared-memory layout/representation constraints.
+//===----------------------------------------------------------------------===//
+
+TEST(EJitTaskPoolLayout, SharedStructAlignmentAndSize) {
+  static_assert(alignof(EJitCompileRequest) <= 8,
+                "EJitCompileRequest align must stay <= 8");
+  static_assert(alignof(EJitDedupSlot) <= 8,
+                "EJitDedupSlot align must stay <= 8");
+  static_assert(alignof(EJitCacheEntry) <= 8,
+                "EJitCacheEntry align must stay <= 8");
+
+  static_assert(sizeof(EJitDedupSlot) == 24,
+                "EJitDedupSlot size changed; revisit cross-core layout");
+  static_assert(sizeof(EJitCacheEntry) == 32,
+                "EJitCacheEntry size changed; revisit cross-core layout");
+
+  static_assert(offsetof(EJitDedupSlot, state) == 0,
+                "EJitDedupSlot state offset changed");
+  static_assert(offsetof(EJitDedupSlot, funcIndex) == 4,
+                "EJitDedupSlot funcIndex offset changed");
+  static_assert(offsetof(EJitDedupSlot, version) == 8,
+                "EJitDedupSlot version offset changed");
+  static_assert(offsetof(EJitDedupSlot, cacheKey) == 16,
+                "EJitDedupSlot cacheKey offset changed");
+}
+
+//===----------------------------------------------------------------------===//
+// 14. Static scan for forbidden C++ thread library usage in taskpool core.
+//===----------------------------------------------------------------------===//
+
+TEST(EJitTaskPoolNoThreads, CoreFilesContainNoThreadLibraryUsage) {
+  const char *files[] = {
+      EJIT_TASKPOOL_SOURCE_DIR "/EJitTaskPool.cpp",
+      EJIT_TASKPOOL_SOURCE_DIR "/EJitSreQueue.cpp",
+      EJIT_TASKPOOL_SOURCE_DIR "/EJitIpcLock.cpp",
+      EJIT_TASKPOOL_INCLUDE_DIR "/EJitTaskPool.h",
+      EJIT_TASKPOOL_INCLUDE_DIR "/EJitSreQueue.h",
+      EJIT_TASKPOOL_INCLUDE_DIR "/EJitIpcLock.h",
+  };
+  const char *forbidden[] = {
+      "<thread>",
+      "<future>",
+      "<mutex>",
+      "<condition_variable>",
+      "std::thread(",
+      "std::mutex(",
+      "std::condition_variable(",
+      "std::async(",
+  };
+
+  for (const char *path : files) {
+    std::string text = readTextFile(path);
+    ASSERT_FALSE(text.empty()) << "failed to read: " << path;
+    for (const char *token : forbidden)
+      EXPECT_EQ(text.find(token), std::string::npos)
+          << "forbidden token found in " << path << ": " << token;
+  }
 }
