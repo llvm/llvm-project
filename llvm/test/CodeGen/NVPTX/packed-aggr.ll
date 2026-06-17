@@ -104,3 +104,12 @@ declare void @func()
 ; CHECK32: .global .align 8 .u32 s6[2] = {g, 305419896};
 ; CHECK64: .global .align 8 .u8 s6[8] = {
 ; CHECK64-SAME: 0xFF(g), 0xFF00(g), 0xFF0000(g), 0xFF000000(g), 120, 86, 52, 18};
+
+;; Test that a ptrtoint to an integer wider than a pointer emits only ptrSize
+;; mask() bytes for the symbol; the remaining high bytes are zero-extension and
+;; come out as plain zeros. On a 64-bit target an i64 is already pointer-sized.
+
+@s7 = addrspace(1) global <{ i8, i64 }> <{ i8 1, i64 ptrtoint (ptr addrspace(1) @p to i64) }>, align 1
+; CHECK32: .global .align 1 .u8 s7[9] = {1, 0xFF(p), 0xFF00(p), 0xFF0000(p), 0xFF000000(p), 0, 0, 0, 0};
+; CHECK64: .global .align 1 .u8 s7[9] = {1, 0xFF(p), 0xFF00(p), 0xFF0000(p), 0xFF000000(p),
+; CHECK64-SAME: 0xFF00000000(p), 0xFF0000000000(p), 0xFF000000000000(p), 0xFF00000000000000(p)};

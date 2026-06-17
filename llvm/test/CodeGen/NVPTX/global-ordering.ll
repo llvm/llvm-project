@@ -26,5 +26,6 @@
 ; global.
 @g = addrspace(1) global i8 0
 
+; PTX32: .visible .global .align 8 .u32 sadd[4] = {(g&4294967295)+4, 0, 7, 0};
 ; PTX64: .visible .global .align 8 .u64 sadd[2] = {g+4, 7};
 @sadd = addrspace(1) global { i64, i64 } { i64 add (i64 ptrtoint (ptr addrspace(1) @g to i64), i64 4), i64 7 }

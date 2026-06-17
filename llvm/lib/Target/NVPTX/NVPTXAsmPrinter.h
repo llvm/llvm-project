@@ -88,13 +88,15 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
                           [=](unsigned pos) { return pos % ptrSize == 0; });
     }
 
-    // True when every symbol occupies a full pointer-sized slot. A narrower
-    // slot (e.g. ptrtoint to an integer smaller than the pointer) must use the
-    // per-byte mask() path, since the word path emits a whole pointer per
-    // symbol and would overrun the following field.
-    bool allSymbolsFullPtrSize(unsigned ptrSize) const {
+    // True when every symbol occupies at least a full pointer-sized slot. A
+    // narrower slot (e.g. ptrtoint to an integer smaller than the pointer) must
+    // use the per-byte mask() path, since the word path emits a whole pointer
+    // per symbol and would overrun the following field. A wider slot (ptrtoint
+    // to a larger integer) is fine on the word path: the symbol fills one word
+    // and the remaining zero-extension bytes come from the buffer.
+    bool allSymbolsAtLeastPtrSize(unsigned ptrSize) const {
       return llvm::all_of(SymbolSizes,
-                          [=](unsigned size) { return size == ptrSize; });
+                          [=](unsigned size) { return size >= ptrSize; });
     }
 
   private:

@@ -1083,7 +1083,7 @@ void NVPTXAsmPrinter::printModuleLevelGV(const GlobalVariable *GVar,
             const unsigned int ptrSize = MAI.getCodePointerSize();
             if (ElementSize % ptrSize ||
                 !aggBuffer.allSymbolsAligned(ptrSize) ||
-                !aggBuffer.allSymbolsFullPtrSize(ptrSize)) {
+                !aggBuffer.allSymbolsAtLeastPtrSize(ptrSize)) {
               // Print in bytes and use the mask() operator for pointers.
               if (!STI.hasMaskOperator())
                 report_fatal_error(
@@ -1153,6 +1153,7 @@ void NVPTXAsmPrinter::AggBuffer::printSymbol(unsigned nSym, raw_ostream &os) {
 }
 
 void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
+  unsigned int ptrSize = AP.MAI.getCodePointerSize();
   // Do not emit trailing zero initializers. They will be zero-initialized by
   // ptxas. This saves on both space requirements for the generated PTX and on
   // memory use by ptxas. (See:
@@ -1184,8 +1185,10 @@ void NVPTXAsmPrinter::AggBuffer::printBytes(raw_ostream &os) {
     // A symbol occupies SymbolSizes[nSym] bytes, which is the pointer size for
     // a plain pointer but may be narrower for a ptrtoint to a smaller integer.
     // Emit only that many low bytes; the dropped high bytes are the part the
-    // truncation discards.
-    unsigned symSize = SymbolSizes[nSym];
+    // truncation discards. If the slot is wider than the pointer (a widening
+    // ptrtoint), emit ptrSize mask bytes; the remaining high bytes are
+    // zero-extension and are read from the buffer as ordinary zeros.
+    unsigned symSize = std::min(SymbolSizes[nSym], ptrSize);
     for (unsigned i = 0; i < symSize; ++i) {
       if (i)
         os << ", ";
