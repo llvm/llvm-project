@@ -38,9 +38,7 @@
 /// explicitly.  We also put them in a separate namespace so that the symbols
 /// do not clash with other libc math builds just in case.
 #define LIBC_NAMESPACE __llvm_libc_apfloat
-#define LIBC_MATH                                                              \
-  (LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT |                                  \
-   LIBC_MATH_ASSUME_ROUND_NEAREST_ONLY)
+#define LIBC_MATH (LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT)
 
 #include "shared/math.h"
 #include "shared/math_check_exceptions.h"
