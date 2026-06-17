@@ -2711,26 +2711,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return true;
   }
 
-  case TargetOpcode::G_CONSTANT: {
-    // Select non-zero narrow GPR constants as 32-bit MOV immediates.
-    Register DefReg = I.getOperand(0).getReg();
-    LLT Ty = MRI.getType(DefReg);
-    if (!Ty.isScalar() || Ty.getSizeInBits() >= 32 ||
-        RBI.getRegBank(DefReg, MRI, TRI) !=
-            &RBI.getRegBank(AArch64::GPRRegBankID))
-      return false;
-
-    MachineOperand &ImmOp = I.getOperand(1);
-    if (!ImmOp.isCImm() || ImmOp.getCImm()->isZero())
-      return false;
-    ImmOp.ChangeToImmediate(
-        ImmOp.getCImm()->getValue().zext(32).getZExtValue());
-
-    I.setDesc(TII.get(AArch64::MOVi32imm));
-    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-    return true;
-  }
-
   case TargetOpcode::G_FCONSTANT: {
     const Register DefReg = I.getOperand(0).getReg();
     const LLT DefTy = MRI.getType(DefReg);
