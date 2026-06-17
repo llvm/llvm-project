@@ -1,10 +1,9 @@
-import gc
 import logging
 import os
 from pathlib import Path
 from typing import Any, Final, Optional, TypeVar, Union, cast
 
-from lldbsuite.test.lldbtest import Base, is_exe
+from lldbsuite.test.lldbtest import Base, LLDBTestCaseFactory, is_exe
 
 from .dap_types import AnyResponse, ErrorResponse, Response
 from .session_helpers import DAPTestSession
@@ -23,7 +22,7 @@ def strtobool(val: str) -> bool:
 T = TypeVar("T")
 
 
-class DAPTestCaseBase(Base):
+class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
     """Base test case for DAP tests"""
 
     NO_DEBUG_INFO_TESTCASE = True
@@ -73,10 +72,6 @@ class DAPTestCaseBase(Base):
 
         self.addTearDownHook(close_log)
 
-    def tearDown(self):
-        gc.collect()
-        super().tearDown()
-
     def __create_default_debug_adapter(self):
         self.assertFalse(hasattr(self, "adapter"), "A default adapter already exists.")
 
@@ -94,18 +89,12 @@ class DAPTestCaseBase(Base):
     def create_session(
         self,
         adapter: Optional[DebugAdapter] = None,
-        disconnect_automatically: Optional[bool] = None,
+        disconnect_automatically: bool = True,
     ) -> DAPTestSession:
         if adapter is None:
             self.assertIsNotNone(self.adapter, "expected we already have an adapter.")
             adapter = self.adapter
         self.assertTrue(adapter.is_alive, "expected adapter process is alive.")
-
-        if adapter.is_server and disconnect_automatically is not None:
-            self.assertFalse(
-                disconnect_automatically,
-                "disconnect_automatically is not supported for lldb-dap running as a server",
-            )
 
         build_dir = Path(self.getBuildDir())
         session = DAPTestSession(
@@ -118,20 +107,19 @@ class DAPTestCaseBase(Base):
         )
 
         def cleanup_session():
-            # In server mode the adapter automatically shuts down after the last
-            # client disconnects.
-            if not adapter.is_server and disconnect_automatically is not False:
+            if disconnect_automatically:
+                self.logger.debug("Automatically disconnecting.")
                 session.disconnect(terminateDebuggee=True)
             session.stop()
 
-        self.addTearDownHook(cleanup_session)
         session.start()
+        self.addTearDownHook(cleanup_session)
         return session
 
     def build_and_create_session(
         self,
         adapter: Optional[DebugAdapter] = None,
-        disconnect_automatically: Optional[bool] = None,
+        disconnect_automatically: bool = True,
     ) -> DAPTestSession:
         self.build()
         return self.create_session(adapter, disconnect_automatically)

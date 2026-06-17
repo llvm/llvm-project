@@ -147,7 +147,7 @@ def _synchronized(method: Callable[..., R]) -> Callable[..., R]:
 class _DAPSessionState:
     def __init__(self):
         self._lock = threading.RLock()
-        self._initialized = False
+        self._initialized: bool = False
         self._capabilities = Capabilities()
         self.output_streams = {
             OutputCategory.STDOUT: io.StringIO(),
