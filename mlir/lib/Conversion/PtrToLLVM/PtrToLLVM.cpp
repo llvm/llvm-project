@@ -73,6 +73,16 @@ struct TypeOffsetOpConversion
   matchAndRewrite(ptr::TypeOffsetOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
+
+//===----------------------------------------------------------------------===//
+// ConstantOpConversion
+//===----------------------------------------------------------------------===//
+struct ConstantOpConversion : public ConvertOpToLLVMPattern<ptr::ConstantOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+  LogicalResult
+  matchAndRewrite(ptr::ConstantOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -371,6 +381,35 @@ LogicalResult TypeOffsetOpConversion::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
+// ConstantOpConversion
+//===----------------------------------------------------------------------===//
+
+LogicalResult ConstantOpConversion::matchAndRewrite(
+    ptr::ConstantOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  mlir::TypedAttr value = op.getValue();
+  Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType)
+    return rewriter.notifyMatchFailure(op, "Couldn't convert the result type");
+
+  if (llvm::dyn_cast<ptr::NullAttr>(value)) {
+    rewriter.replaceOpWithNewOp<LLVM::ZeroOp>(op, resultType);
+    return llvm::success();
+  }
+
+  auto llvmPtrType = cast<LLVM::LLVMPointerType>(resultType);
+  auto addrAttr = cast<ptr::AddressAttr>(value);
+  unsigned addressSpace = llvmPtrType.getAddressSpace();
+  unsigned bitwidth = getTypeConverter()->getPointerBitwidth(addressSpace);
+  Type intType = rewriter.getIntegerType(bitwidth);
+  APInt addr = addrAttr.getValue().zextOrTrunc(bitwidth);
+  Value intConst =
+      LLVM::ConstantOp::create(rewriter, op.getLoc(), intType, addr);
+  rewriter.replaceOpWithNewOp<LLVM::IntToPtrOp>(op, resultType, intConst);
+  return llvm::success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConvertToLLVMPatternInterface implementation
 //===----------------------------------------------------------------------===//
 
@@ -433,7 +472,8 @@ void mlir::ptr::populatePtrToLLVMConversionPatterns(
 
   // Add conversion patterns.
   patterns.add<FromPtrOpConversion, GetMetadataOpConversion, PtrAddOpConversion,
-               ToPtrOpConversion, TypeOffsetOpConversion>(converter);
+               ToPtrOpConversion, TypeOffsetOpConversion, ConstantOpConversion>(
+      converter);
 }
 
 void mlir::ptr::registerConvertPtrToLLVMInterface(DialectRegistry &registry) {
