@@ -130,6 +130,11 @@ struct Lattice {
   }
 };
 
+struct BuildOriginFlowChainResult {
+  const llvm::SmallVector<OriginID> OriginFlowChain;
+  const bool Complete;
+};
+
 class AnalysisImpl
     : public DataflowAnalysis<AnalysisImpl, Lattice, Direction::Forward> {
 public:
@@ -204,22 +209,72 @@ public:
 
   llvm::SmallVector<OriginID>
   buildOriginFlowChain(ProgramPoint StartPoint, const OriginID StartOID,
-                       const LoanID TargetLoan) const {
+                       const LoanID TargetLoan,
+                       const PostOrderCFGView *POV) const {
     assert(getLoans(StartOID, StartPoint).contains(TargetLoan) &&
            "TargetLoan must be present in the StartOID at the StartPoint");
 
+    std::optional<OriginID> FinalOID;
+    llvm::DenseMap<OriginID, OriginID> VistedOriginIDs;
+
+    const auto OriginFlowChainFilter = [&VistedOriginIDs](OriginID FinalOID) {
+      llvm::SmallVector<OriginID> OriginFlowChain;
+      while (true) {
+        OriginFlowChain.push_back(FinalOID);
+        const auto NextOriginID = VistedOriginIDs.find(FinalOID);
+        if (NextOriginID == VistedOriginIDs.end())
+          break;
+        FinalOID = NextOriginID->second;
+      }
+      return OriginFlowChain;
+    };
+
+    const auto InsertVistedOriginIDs =
+        [&VistedOriginIDs, &FinalOID](llvm::ArrayRef<OriginID> OriginFlowChain,
+                                      OriginID &StartOID) {
+          if (!VistedOriginIDs.empty())
+            VistedOriginIDs.insert({OriginFlowChain[0], StartOID});
+
+          for (size_t i = 0; i < OriginFlowChain.size() - 1; ++i)
+            VistedOriginIDs.insert(
+                {OriginFlowChain[i + 1], OriginFlowChain[i]});
+
+          StartOID = OriginFlowChain.back();
+          FinalOID = StartOID;
+        };
+
+    std::optional<size_t> BlockID = FactMgr.getBlockID(StartPoint);
+    assert(BlockID.has_value());
+    const auto StartIt = llvm::find_if(*POV, [&BlockID](const CFGBlock *Block) {
+      return Block->getBlockID() == BlockID;
+    });
+
+    OriginID CurrOID = StartOID;
+    for (const CFGBlock *B :
+         llvm::reverse(llvm::make_range(POV->begin(), StartIt + 1))) {
+      BuildOriginFlowChainResult BuildResult =
+          buildOriginFlowChain(B, CurrOID, TargetLoan);
+      if (!BuildResult.OriginFlowChain.empty())
+        InsertVistedOriginIDs(BuildResult.OriginFlowChain, CurrOID);
+      if (BuildResult.Complete)
+        return OriginFlowChainFilter(*FinalOID);
+    }
+
+    llvm_unreachable(
+        "buildOriginFlowChain should return at BuildResult.Complete");
+  }
+
+  BuildOriginFlowChainResult
+  buildOriginFlowChain(const CFGBlock *Block, const OriginID StartOID,
+                       const LoanID TargetLoan) const {
     OriginID CurrOID = StartOID;
     llvm::SmallVector<OriginID> OriginFlowChain;
-    llvm::ArrayRef<const Fact *> Facts = FactMgr.getBlockContaining(StartPoint);
-    const auto *StartIt = llvm::find(Facts, StartPoint);
-    assert(StartIt != Facts.end());
 
-    for (const Fact *F :
-         llvm::reverse(llvm::make_range(Facts.begin(), StartIt))) {
+    for (const Fact *F : llvm::reverse(FactMgr.getFacts(Block))) {
       if (const auto *IF = F->getAs<IssueFact>())
         if (IF->getLoanID() == TargetLoan) {
           assert(IF->getOriginID() == CurrOID);
-          return OriginFlowChain;
+          return {OriginFlowChain, true};
         }
 
       const auto *OFF = F->getAs<OriginFlowFact>();
@@ -235,20 +290,17 @@ public:
       CurrOID = SrcOriginID;
     }
 
-    // FIXME: Ideally, this return is unreachable and should be an assert
-    // because we expect to always finish at an IssueFact. But since current
-    // traversal is limited to a single CFG block, multi-block OriginFlowChain
-    // construction might miss the IssueFact. We should add llvm_unreachable
-    // here once multi-block support is implemented.
-    return {};
+    return {OriginFlowChain, false};
   }
 
   llvm::SmallVector<OriginID>
-  buildOriginFlowChain(const UseFact *UF, const LoanID TargetLoan) const {
+  buildOriginFlowChain(const UseFact *UF, const LoanID TargetLoan,
+                       const PostOrderCFGView *POV) const {
     for (const OriginList *Cur = UF->getUsedOrigins(); Cur;
          Cur = Cur->peelOuterOrigin())
       if (getLoans(Cur->getOuterOriginID(), UF).contains(TargetLoan))
-        return buildOriginFlowChain(UF, Cur->getOuterOriginID(), TargetLoan);
+        return buildOriginFlowChain(UF, Cur->getOuterOriginID(), TargetLoan,
+                                    POV);
 
     return {};
   }
@@ -303,16 +355,15 @@ LoanSet LoanPropagationAnalysis::getLoans(OriginID OID, ProgramPoint P) const {
   return PImpl->getLoans(OID, P);
 }
 
-llvm::SmallVector<OriginID>
-LoanPropagationAnalysis::buildOriginFlowChain(ProgramPoint StartPoint,
-                                              const OriginID StartOID,
-                                              const LoanID TargetLoan) const {
-  return PImpl->buildOriginFlowChain(StartPoint, StartOID, TargetLoan);
+llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
+    ProgramPoint StartPoint, const OriginID StartOID, const LoanID TargetLoan,
+    const PostOrderCFGView *POV) const {
+  return PImpl->buildOriginFlowChain(StartPoint, StartOID, TargetLoan, POV);
 }
 
-llvm::SmallVector<OriginID>
-LoanPropagationAnalysis::buildOriginFlowChain(const UseFact *UF,
-                                              const LoanID TargetLoan) const {
-  return PImpl->buildOriginFlowChain(UF, TargetLoan);
+llvm::SmallVector<OriginID> LoanPropagationAnalysis::buildOriginFlowChain(
+    const UseFact *UF, const LoanID TargetLoan,
+    const PostOrderCFGView *POV) const {
+  return PImpl->buildOriginFlowChain(UF, TargetLoan, POV);
 }
 } // namespace clang::lifetimes::internal

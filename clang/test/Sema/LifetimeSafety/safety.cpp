@@ -448,7 +448,7 @@ void loan_from_previous_iteration(MyObj safe, bool condition) {
     p = &x;     // expected-warning {{does not live long enough}}
 
     if (condition)
-      q = p;
+      q = p;    // expected-note {{local variable 'p' aliases the storage of local variable 'x'}}
     (void)*p;
     (void)*q;   // expected-note {{later used here}}
   }             // expected-note {{local variable 'x' is destroyed here}}
@@ -846,7 +846,8 @@ void lifetimebound_multiple_args_potential(bool cond) {
     MyObj obj1;
     if (cond) {
       MyObj obj2;
-      v = Choose(true,
+      v = Choose(true,             // expected-note {{result of call to 'Choose' aliases the storage of local variable 'obj1'}} \
+                                   // expected-note {{result of call to 'Choose' aliases the storage of local variable 'obj2'}}
                  obj1,             // expected-warning {{local variable 'obj1' does not live long enough}}
                  obj2);            // expected-warning {{local variable 'obj2' does not live long enough}}
     }                              // expected-note {{local variable 'obj2' is destroyed here}}
@@ -940,7 +941,7 @@ void lifetimebound_partial_safety(bool cond) {
   
   if (cond) {
     MyObj temp_obj;
-    v = Choose(true, 
+    v = Choose(true,      // expected-note {{result of call to 'Choose' aliases the storage of local variable 'temp_obj'}}
                safe_obj,
                temp_obj); // expected-warning {{local variable 'temp_obj' does not live long enough}}
   }                       // expected-note {{local variable 'temp_obj' is destroyed here}}
@@ -1223,7 +1224,9 @@ void conditional_operator_lifetimebound(bool cond) {
   MyObj* p;
   {
     MyObj a, b;
-    p = Identity(cond ? &a    // expected-warning {{local variable 'a' does not live long enough}}
+    p = Identity(cond ? &a    // expected-warning {{local variable 'a' does not live long enough}} \
+                              // expected-note {{result of call to 'Identity' aliases the storage of local variable 'a'}} \
+                              // expected-note {{result of call to 'Identity' aliases the storage of local variable 'b'}}
                       : &b);  // expected-warning {{local variable 'b' does not live long enough}}
   }  // expected-note {{local variable 'b' is destroyed here}} expected-note {{local variable 'a' is destroyed here}}
   (void)*p;  // expected-note 2 {{later used here}}
@@ -1243,9 +1246,15 @@ void conditional_operator_lifetimebound_nested_deep(bool cond) {
   MyObj* p;
   {
     MyObj a, b, c, d;
-    p = Identity(cond ? Identity(cond ? &a     // expected-warning {{local variable 'a' does not live long enough}}
+    p = Identity(cond ? Identity(cond ? &a     // expected-warning {{local variable 'a' does not live long enough}} \
+                                               // expected-note 2 {{result of call to 'Identity' aliases the storage of local variable 'a'}} \
+                                               // expected-note 2 {{result of call to 'Identity' aliases the storage of local variable 'b'}} \
+                                               // expected-note {{result of call to 'Identity' aliases the storage of local variable 'c'}} \
+                                               // expected-note {{result of call to 'Identity' aliases the storage of local variable 'd'}}
                                       : &b)    // expected-warning {{local variable 'b' does not live long enough}}
-                      : Identity(cond ? &c     // expected-warning {{local variable 'c' does not live long enough}}
+                      : Identity(cond ? &c     // expected-warning {{local variable 'c' does not live long enough}} \
+                                               // expected-note {{result of call to 'Identity' aliases the storage of local variable 'c'}} \
+                                               // expected-note {{result of call to 'Identity' aliases the storage of local variable 'd'}}
                                       : &d));  // expected-warning {{local variable 'd' does not live long enough}}
   }  // expected-note {{local variable 'a' is destroyed here}} expected-note {{local variable 'd' is destroyed here}} expected-note {{local variable 'b' is destroyed here}} expected-note {{local variable 'c' is destroyed here}}
   (void)*p;  // expected-note 4 {{later used here}}
@@ -1539,7 +1548,8 @@ void range_based_for_use_after_scope() {
   View v;
   {
     MyObjStorage s;
-    for (const MyObj &o : s) { // expected-warning {{local variable 's' does not live long enough}}
+    for (const MyObj &o : s) { // expected-warning {{local variable 's' does not live long enough}} \
+                               // expected-note {{local variable '__range2' aliases the storage of local variable 's'}}
       v = o;
     }
   } // expected-note {{local variable 's' is destroyed here}}

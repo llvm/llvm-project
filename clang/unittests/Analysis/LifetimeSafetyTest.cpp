@@ -215,7 +215,8 @@ public:
     for (LoanID LID : EndLoanIDs) {
       llvm::SmallVector<OriginID> OriginFlowChain =
           Runner.getAnalysis().getLoanPropagation().buildOriginFlowChain(
-              getProgramPoint(Annotation), *StartOriginID, LID);
+              getProgramPoint(Annotation), *StartOriginID, LID,
+              Runner.getAnalysisContext().getAnalysis<PostOrderCFGView>());
       if (!OriginFlowChain.empty())
         return OriginFlowChain;
     }
