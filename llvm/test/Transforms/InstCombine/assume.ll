@@ -83,10 +83,8 @@ entry:
 define void @align_with_offset_less_than_align(ptr %ptr) {
 ; CHECK-LABEL: @align_with_offset_less_than_align(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[INT]], 3
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 7
-; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8, i64 -3) ]
+; CHECK-NEXT:    call void @use_i64(i64 0)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -102,11 +100,8 @@ entry:
 define void @align_with_offset_greater_than_align(ptr %ptr) {
 ; CHECK-LABEL: @align_with_offset_greater_than_align(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[INT]], 6
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 6
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 2) ]
-; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8, i64 -6) ]
+; CHECK-NEXT:    call void @use_i64(i64 0)
 ; CHECK-NEXT:    ret void
 ;
 entry:

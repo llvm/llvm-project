@@ -3845,12 +3845,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         uint64_t Offset = 0;
         match(A, m_Add(m_Value(A), m_ConstantInt(Offset)));
         if (match(A, m_PtrToIntOrAddr(m_Value(A)))) {
-          /// Note: this doesn't preserve the offset information but merges
-          /// offset and alignment.
-          /// TODO: we can generate a GEP instead of merging the alignment with
-          /// the offset.
-          Builder.CreateAlignmentAssumption(getDataLayout(), A,
-                                            MinAlign(Offset, AlignMask + 1));
+          Builder.CreateAlignmentAssumption(
+              getDataLayout(), A, AlignMask + 1,
+              Offset == 0 ? nullptr : Builder.getInt64(-Offset));
           return eraseInstFromFunction(*II);
         }
       }
