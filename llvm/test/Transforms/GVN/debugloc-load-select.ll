@@ -14,8 +14,8 @@ define void @loadtree(ptr %topol, i1 %cmp168) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr null, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TOPOL]], align 4
 ; CHECK-NEXT:    [[CMP1681:%.*]] = icmp sgt i32 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[CMP168]], i32 [[TMP1]], i32 [[TMP0]], !dbg [[DBG3:![0-9]+]]
-; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[CMP168]], ptr [[TOPOL]], ptr null, !dbg [[DBG9:![0-9]+]]
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[CMP168]], ptr [[TOPOL]], ptr null, !dbg [[DBG3:![0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[CMP168]], i32 [[TMP1]], i32 [[TMP0]], !dbg [[DBG9:![0-9]+]]
 ; CHECK-NEXT:    [[CMP174_NOT473:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret void
 ;
@@ -44,12 +44,12 @@ entry:
 !9 = !DILocation(line: 9, column: 22, scope: !5)
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C11, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
-; CHECK: [[META1]] = !DIFile(filename: "/tmp/mltaln9.c", directory: {{.*}})
-; CHECK: [[DBG3]] = !DILocation(line: 4, column: 22, scope: [[META4:![0-9]+]])
+; CHECK: [[META1]] = !DIFile(filename: "{{.*}}mltaln9.c", directory: {{.*}})
+; CHECK: [[DBG3]] = !DILocation(line: 9, column: 22, scope: [[META4:![0-9]+]])
 ; CHECK: [[META4]] = distinct !DISubprogram(name: "loadtree", scope: [[META5:![0-9]+]], file: [[META5]], line: 869, type: [[META6:![0-9]+]], scopeLine: 870, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META8:![0-9]+]])
-; CHECK: [[META5]] = !DIFile(filename: "mltaln9.c", directory: {{.*}})
+; CHECK: [[META5]] = !DIFile(filename: "{{.*}}mltaln9.c", directory: {{.*}})
 ; CHECK: [[META6]] = distinct !DISubroutineType(types: [[META7:![0-9]+]])
 ; CHECK: [[META7]] = !{null}
 ; CHECK: [[META8]] = !{}
-; CHECK: [[DBG9]] = !DILocation(line: 9, column: 22, scope: [[META4]])
+; CHECK: [[DBG9]] = !DILocation(line: 4, column: 22, scope: [[META4]])
 ;.

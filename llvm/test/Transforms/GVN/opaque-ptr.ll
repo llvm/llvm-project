@@ -59,10 +59,10 @@ define void @gep_cse_offset_canonicalization(ptr %p, i64 %idx, i64 %idx2) {
 ; CHECK-NEXT:    call void @use(ptr [[GEP6]])
 ; CHECK-NEXT:    call void @use(ptr [[GEP6_SAME]])
 ; CHECK-NEXT:    call void @use(ptr [[GEP6_DIFFERENT]])
-; CHECK-NEXT:    %gep7 = getelementptr <16 x i32>, ptr %p, i64 1
-; CHECK-NEXT:    %gep7.different = getelementptr <16 x i32>, ptr %p, <16 x i64> splat (i64 1)
-; CHECK-NEXT:    call void @use(ptr %gep7)
-; CHECK-NEXT:    call void @use(<16 x ptr> %gep7.different)
+; CHECK-NEXT:    [[GEP7:%.*]] = getelementptr <16 x i32>, ptr [[P]], i64 1
+; CHECK-NEXT:    [[GEP7_DIFFERENT:%.*]] = getelementptr <16 x i32>, ptr [[P]], <16 x i64> splat (i64 1)
+; CHECK-NEXT:    call void @use(ptr [[GEP7]])
+; CHECK-NEXT:    call void @use(<16 x ptr> [[GEP7_DIFFERENT]])
 ; CHECK-NEXT:    ret void
 ;
   %gep1 = getelementptr i64, ptr %p, i64 1
@@ -200,8 +200,8 @@ define i32 @select_pre(ptr %px, ptr %py) {
 ; CHECK-NEXT:    [[T2:%.*]] = load i32, ptr [[PY:%.*]], align 4
 ; CHECK-NEXT:    [[T3:%.*]] = load i32, ptr [[PX:%.*]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[T2]], [[T3]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP]], i32 [[T3]], i32 [[T2]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], ptr [[PX]], ptr [[PY]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP]], i32 [[T3]], i32 [[T2]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %t2 = load i32, ptr %py, align 4

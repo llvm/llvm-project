@@ -11,8 +11,8 @@ define i32 @foo(ptr %a, ptr %b) {
 ; CHECK-NEXT:      #dbg_declare(ptr undef, [[META4:![0-9]+]], !DIExpression(), [[META10:![0-9]+]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i32 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND]], i32 [[TMP0]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND]], ptr [[A]], ptr [[B]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND]], i32 [[TMP0]], i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
 entry:
