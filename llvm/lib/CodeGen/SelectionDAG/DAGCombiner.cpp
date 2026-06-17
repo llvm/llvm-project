@@ -13076,7 +13076,7 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     // and we always transform to the left side if we know that we can further
     // optimize the combination of the conditions.
     bool normalizeToSequence =
-        TLI.shouldNormalizeToSelectSequence(*DAG.getContext(), VT);
+        TLI.shouldNormalizeToSelectSequence(*DAG.getContext(), VT, VT0);
     // select (and Cond0, Cond1), X, Y
     //   -> select Cond0, (select Cond1, X, Y), Y
     if (N0->getOpcode() == ISD::AND && N0->hasOneUse()) {
