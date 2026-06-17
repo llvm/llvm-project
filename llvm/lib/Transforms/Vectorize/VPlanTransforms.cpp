@@ -7118,7 +7118,8 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
 
           VPValue *V0 = Blend->getIncomingValue(0);
           VPValue *V1 = Blend->getIncomingValue(1);
-          return (V0 == Chain.ReductionBinOp && V1 == RedPhiR) || (V1 == Chain.ReductionBinOp && V0 == RedPhiR);
+          return (V0 == Chain.ReductionBinOp && V1 == RedPhiR) ||
+                 (V1 == Chain.ReductionBinOp && V0 == RedPhiR);
         }
 
         auto *R = cast<VPSingleDefRecipe>(U);
