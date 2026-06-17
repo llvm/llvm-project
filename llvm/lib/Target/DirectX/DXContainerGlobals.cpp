@@ -46,6 +46,7 @@ cl::opt<std::string> PdbDebugPath(
     cl::desc("Write debug information to the given file, or automatically "
              "named file in directory when ending in '/'"),
     cl::value_desc("filename"));
+extern cl::opt<bool> SourceInDebugModule;
 
 namespace {
 class DXContainerGlobals : public llvm::ModulePass {
@@ -397,7 +398,7 @@ void DXContainerGlobals::addSourceInfo(Module &M,
   dxil::ModuleMetadataInfo &MMI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-  if (!MMI.SourceInfo)
+  if (!MMI.SourceInfo || SourceInDebugModule)
     return;
 
   MMI.SourceInfo->computeEntries();

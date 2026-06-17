@@ -3873,6 +3873,10 @@ static void RenderHLSLOptions(const Driver &D, const ArgList &Args,
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back(Args.MakeArgString("--dx-Fd=" + Twine(Fd->getValue())));
   }
+  if (Args.hasArg(options::OPT_dxc_source_in_debug_module)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("--dx-source-in-debug-module");
+  }
 }
 
 static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,

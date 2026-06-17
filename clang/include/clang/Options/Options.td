@@ -9677,6 +9677,9 @@ def dxc_Zi : Option<["/", "-"], "Zi", KIND_FLAG>,
              Alias<g_Flag>,
              Visibility<[CLOption, DXCOption]>,
              HelpText<"Enable debug information">;
+def dxc_source_in_debug_module
+    : DXCFlag<"Qsource_in_debug_module">,
+      HelpText<"Embed source code into PDB debug module">;
 def dxil_validator_version : Option<["/", "-"], "validator-version", KIND_SEPARATE>,
   Group<dxc_Group>, Flags<[HelpHidden]>,
   Visibility<[DXCOption, ClangOption, CC1Option]>,

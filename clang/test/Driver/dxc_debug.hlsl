@@ -6,6 +6,7 @@
 // RUN: %clang_dxc -Tlib_6_7 -### -Zi /Fd %t.pdb %s 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-FD
 // RUN: %clang_dxc -Tlib_6_7 -### -Zi -Fd=%t.pdb %s 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-FD
 // RUN: %clang_dxc -Tlib_6_7 -### -Zi -Zss %s 2>&1 | FileCheck %s --check-prefix=CHECK,CHECK-ZSS
+// RUN: %clang_dxc -Tlib_6_7 -### /Zi -Qsource_in_debug_module %s 2>&1 | FileCheck %s --check-prefix=CHECK,CHECK-SIDM
 // RUN: %clang_dxc -Tlib_6_7 -### -Zi -gcodeview %s 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-CV
 // RUN: %clang_dxc -Tlib_6_7 -### -Zi -gdwarf %s 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-DWARF
 // RUN: %clang_dxc -Tlib_6_7 -### -gcodeview -Zi %s 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-CV
@@ -20,6 +21,7 @@
 // CHECK-EMBED-SAME: --dx-embed-debug
 // CHECK-FD-SAME: --dx-Fd=
 // CHECK-ZSS-SAME: -dx-Zss
+// CHECK-SIDM-SAME: --dx-source-in-debug-module
 // Make sure dxc command line arguments are passed to clang invocation.
 // CHECK-SAME: -fdx-record-command-line
 // CHECK-CMD-SAME: --driver-mode=dxc -T lib_6_7 -### -g {{.*}}dxc_debug.hlsl
