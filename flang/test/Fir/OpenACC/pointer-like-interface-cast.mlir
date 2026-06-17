@@ -80,3 +80,26 @@ func.func @test_fir_ref_box_array_to_strided_memref() {
   // CHECK: Generated: %{{.*}} = fir.convert %{{.*}} : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> memref<?xi32, strided<[?], offset: ?>>
   return
 }
+
+// -----
+
+// Same as above for a 2-D assumed-shape array.
+func.func @test_fir_ref_box_2d_array_to_strided_memref() {
+  %0 = fir.alloca !fir.box<!fir.array<?x?xf64>> {test.cast, cast_dest = memref<?x?xf64, strided<[?, ?], offset: ?>>}
+  // CHECK: Successfully generated cast for operation: %{{.*}} = fir.alloca !fir.box<!fir.array<?x?xf64>>{{.*}}
+  // CHECK: Cast result type: memref<?x?xf64, strided<[?, ?], offset: ?>>
+  // CHECK: Generated: %{{.*}} = fir.convert %{{.*}} : (!fir.ref<!fir.box<!fir.array<?x?xf64>>>) -> memref<?x?xf64, strided<[?, ?], offset: ?>>
+  return
+}
+
+// -----
+
+// !fir.heap<!fir.array<...>> (heap-allocated array, element is not a box)
+// exercises the non-box branch of convertIndirectType.
+func.func @test_fir_heap_array_to_memref() {
+  %0 = fir.zero_bits !fir.heap<!fir.array<?xi32>> {test.cast, cast_dest = memref<?xi32>}
+  // CHECK: Successfully generated cast for operation: %{{.*}} = fir.zero_bits !fir.heap<!fir.array<?xi32>>{{.*}}
+  // CHECK: Cast result type: memref<?xi32>
+  // CHECK: Generated: %{{.*}} = fir.convert %{{.*}} : (!fir.heap<!fir.array<?xi32>>) -> memref<?xi32>
+  return
+}
