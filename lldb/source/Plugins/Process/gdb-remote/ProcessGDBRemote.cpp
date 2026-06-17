@@ -843,8 +843,12 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
     if (stderr_file_spec)
       m_gdb_comm.SetSTDERR(stderr_file_spec);
 
-    auto [terminal_cols, terminal_rows] = GetClientTerminalSize();
-    m_gdb_comm.SetSTDIOWindowSize(terminal_cols, terminal_rows);
+    if (launch_flags & eLaunchFlagUsePipes) {
+      m_gdb_comm.SetSTDIOWindowSize(0, 0);
+    } else {
+      auto [terminal_cols, terminal_rows] = GetClientTerminalSize();
+      m_gdb_comm.SetSTDIOWindowSize(terminal_cols, terminal_rows);
+    }
 
     m_gdb_comm.SetDisableASLR(launch_flags & eLaunchFlagDisableASLR);
     m_gdb_comm.SetDetachOnError(launch_flags & eLaunchFlagDetachOnError);
