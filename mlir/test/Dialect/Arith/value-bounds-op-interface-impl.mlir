@@ -242,10 +242,10 @@ func.func @arith_index_castui_ub(%a: i32) -> index {
 
 // -----
 
-// CHECK-LABEL: func @arith_extsi(
+// CHECK-LABEL: func @arith_extsi_const(
 //       CHECK:   %[[c:.*]] = arith.constant -5 : index
 //       CHECK:   return %[[c]]
-func.func @arith_extsi() -> index {
+func.func @arith_extsi_const() -> index {
   %c_5 = arith.constant -5 : i32
   %ext = arith.extsi %c_5 : i32 to i64
   %0 = "test.reify_bound"(%ext) {constant, allow_integer_type} : (i64) -> (index)
