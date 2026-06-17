@@ -40,13 +40,13 @@ class TestAddrableBitsCorefile(TestBase):
         cmdinterp = self.dbg.GetCommandInterpreter()
         res = lldb.SBCommandReturnObject()
         cmdinterp.HandleCommand("process save-core %s" % self.corefile, res)
-        self.assertTrue(res.Succeeded(), True)
+        self.assertTrue(res.Succeeded())
         process.Kill()
         self.dbg.DeleteTarget(target)
 
         target = self.dbg.CreateTarget("")
         process = target.LoadCore(self.corefile)
-        self.assertTrue(process.IsValid(), True)
+        self.assertTrue(process.IsValid())
         thread = process.GetSelectedThread()
 
         found_main = False

@@ -29,7 +29,7 @@ class ProcessSaveCoreMinidumpTestCase(TestBase):
         self.assertTrue(process.GetProcessInfo().IsValid())
         self.assertEqual(process.GetProcessInfo().GetProcessID(), expected_pid)
         self.assertNotEqual(target.GetTriple().find("linux"), -1)
-        self.assertTrue(target.GetNumModules(), len(expected_modules))
+        self.assertEqual(target.GetNumModules(), len(expected_modules))
         self.assertEqual(process.GetNumThreads(), len(expected_threads))
 
         for module, expected in zip(target.modules, expected_modules):

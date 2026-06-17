@@ -127,13 +127,13 @@ class StackCoreScriptedProcesTestCase(TestBase):
         # that triggers the breakpoint in the LC_NOTES of the corefile, so they
         # can be reloaded with the corefile on the next debug session.
         if arch in "arm64e":
-            self.assertTrue(thread.GetStopReason(), lldb.eStopReasonException)
+            self.assertEqual(thread.GetStopReason(), lldb.eStopReasonException)
         # However, it's architecture specific, and corefiles made from intel
         # process don't save any metadata to retrieve to stop reason.
         # To mitigate this, the StackCoreScriptedProcess will report a
         # eStopReasonSignal with a SIGTRAP, mimicking what debugserver does.
         else:
-            self.assertTrue(thread.GetStopReason(), lldb.eStopReasonSignal)
+            self.assertEqual(thread.GetStopReason(), lldb.eStopReasonSignal)
 
         self.assertEqual(thread.GetNumFrames(), 5)
         frame = thread.GetSelectedFrame()

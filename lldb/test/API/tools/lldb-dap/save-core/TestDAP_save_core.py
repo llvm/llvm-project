@@ -69,5 +69,5 @@ class TestDAP_save_core(lldbdap_testcase.DAPTestCaseBase):
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertTrue(process.GetProcessInfo().IsValid())
         self.assertNotEqual(target.GetTriple().find("linux"), -1)
-        self.assertTrue(target.GetNumModules(), expected_module_count)
+        self.assertEqual(target.GetNumModules(), expected_module_count)
         self.assertEqual(process.GetNumThreads(), expected_thread_count)
