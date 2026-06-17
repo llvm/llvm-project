@@ -2160,17 +2160,14 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "lut" in {
                           [ImmCheck<3, ImmCheck0_1>]>;
   def VLUTI4_H_X2_Q : SInst<"vluti4_laneq_x2", ".2(<U)I", "QsQUsQPsQh",
                           [ImmCheck<3, ImmCheck0_3>]>;
-
-  let TargetGuard = "lut,bf16" in {
-    def VLUTI2_BF      : SInst<"vluti2_lane", "Q.(<qU)I", "bQb",
-                              [ImmCheck<2, ImmCheck0_3>]>;
-    def VLUTI2_BF_Q    : SInst<"vluti2_laneq", "Q.(<QU)I", "bQb",
-                              [ImmCheck<2, ImmCheck0_7>]>;
-    def VLUTI4_BF_X2   : SInst<"vluti4_lane_x2", ".2(<qU)I", "Qb",
-                              [ImmCheck<3, ImmCheck0_1>]>;
-    def VLUTI4_BF_X2_Q   : SInst<"vluti4_laneq_x2", ".2(<U)I", "Qb",
-                              [ImmCheck<3, ImmCheck0_3>]>;
-  }
+  def VLUTI2_BF      : SInst<"vluti2_lane", "Q.(<qU)I", "bQb",
+                            [ImmCheck<2, ImmCheck0_3>]>;
+  def VLUTI2_BF_Q    : SInst<"vluti2_laneq", "Q.(<QU)I", "bQb",
+                            [ImmCheck<2, ImmCheck0_7>]>;
+  def VLUTI4_BF_X2   : SInst<"vluti4_lane_x2", ".2(<qU)I", "Qb",
+                            [ImmCheck<3, ImmCheck0_1>]>;
+  def VLUTI4_BF_X2_Q   : SInst<"vluti4_laneq_x2", ".2(<U)I", "Qb",
+                            [ImmCheck<3, ImmCheck0_3>]>;
 }
 
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8,neon" in {
