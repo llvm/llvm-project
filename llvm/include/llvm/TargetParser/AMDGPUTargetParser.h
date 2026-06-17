@@ -287,7 +287,7 @@ public:
   /// \returns the canonical processor name followed by any explicit xnack and
   /// sramecc feature modifiers order (e.g.  "gfx908:sramecc-:xnack+"), without
   /// the triple prefix.
-  std::string getCanonicalFeatureString() const;
+  std::string getCanonicalTargetIDString() const;
 
   bool operator==(const TargetID &Other) const;
   bool operator!=(const TargetID &Other) const { return !(*this == Other); }

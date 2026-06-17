@@ -1181,7 +1181,7 @@ void TargetID::printCanonicalTargetIDString(raw_ostream &OS) const {
   printFeatureModifiers(OS, getSramEccSetting(), getXnackSetting());
 }
 
-std::string TargetID::getCanonicalFeatureString() const {
+std::string TargetID::getCanonicalTargetIDString() const {
   std::string Str;
   raw_string_ostream OS(Str);
   printCanonicalTargetIDString(OS);

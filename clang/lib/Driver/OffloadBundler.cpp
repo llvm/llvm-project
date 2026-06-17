@@ -16,7 +16,6 @@
 
 #include "clang/Driver/OffloadBundler.h"
 #include "clang/Basic/OffloadArch.h"
-#include "clang/Basic/TargetID.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -48,6 +47,7 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -1115,15 +1115,15 @@ bool isCodeObjectCompatible(const OffloadTargetInfo &CodeObjectInfo,
   }
 
   // Incompatible if Processors mismatch.
-  llvm::StringMap<bool> CodeObjectFeatureMap, TargetFeatureMap;
-  std::optional<StringRef> CodeObjectProc = clang::parseTargetID(
-      CodeObjectInfo.Triple, CodeObjectInfo.TargetID, &CodeObjectFeatureMap);
-  std::optional<StringRef> TargetProc = clang::parseTargetID(
-      TargetInfo.Triple, TargetInfo.TargetID, &TargetFeatureMap);
+  std::optional<llvm::AMDGPU::TargetID> CodeObjectID =
+      llvm::AMDGPU::TargetID::parse(CodeObjectInfo.Triple,
+                                    CodeObjectInfo.TargetID);
+  std::optional<llvm::AMDGPU::TargetID> TargetID =
+      llvm::AMDGPU::TargetID::parse(TargetInfo.Triple, TargetInfo.TargetID);
 
-  // Both TargetProc and CodeObjectProc can't be empty here.
-  if (!TargetProc || !CodeObjectProc ||
-      CodeObjectProc.value() != TargetProc.value()) {
+  // Both target IDs must be valid and name the same processor.
+  if (!CodeObjectID || !TargetID ||
+      CodeObjectID->getGPUKind() != TargetID->getGPUKind()) {
     DEBUG_WITH_TYPE("CodeObjectCompatibility",
                     dbgs() << "Incompatible: Processor mismatch \t[CodeObject: "
                            << CodeObjectInfo.str()
@@ -1131,42 +1131,28 @@ bool isCodeObjectCompatible(const OffloadTargetInfo &CodeObjectInfo,
     return false;
   }
 
-  // Incompatible if CodeObject has more features than Target, irrespective of
-  // type or sign of features.
-  if (CodeObjectFeatureMap.getNumItems() > TargetFeatureMap.getNumItems()) {
+  // A feature (xnack/sramecc) is compatible if the code object leaves it
+  // unspecified ("Any"), or specifies it with the same value the target does.
+  // A feature the code object specifies but the target leaves unspecified is
+  // incompatible, as is a differing explicit value.
+  auto FeatureCompatible = [&](llvm::AMDGPU::TargetIDSetting CodeObject,
+                               llvm::AMDGPU::TargetIDSetting Target) {
+    bool CodeObjectExplicit = CodeObject == llvm::AMDGPU::TargetIDSetting::On ||
+                              CodeObject == llvm::AMDGPU::TargetIDSetting::Off;
+    if (!CodeObjectExplicit)
+      return true;
+    return CodeObject == Target;
+  };
+
+  if (!FeatureCompatible(CodeObjectID->getXnackSetting(),
+                         TargetID->getXnackSetting()) ||
+      !FeatureCompatible(CodeObjectID->getSramEccSetting(),
+                         TargetID->getSramEccSetting())) {
     DEBUG_WITH_TYPE("CodeObjectCompatibility",
-                    dbgs() << "Incompatible: CodeObject has more features "
-                              "than target \t[CodeObject: "
+                    dbgs() << "Incompatible: Feature mismatch \t[CodeObject: "
                            << CodeObjectInfo.str()
                            << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
     return false;
-  }
-
-  // Compatible if each target feature specified by target is compatible with
-  // target feature of code object. The target feature is compatible if the
-  // code object does not specify it (meaning Any), or if it specifies it
-  // with the same value (meaning On or Off).
-  for (const auto &CodeObjectFeature : CodeObjectFeatureMap) {
-    auto TargetFeature = TargetFeatureMap.find(CodeObjectFeature.getKey());
-    if (TargetFeature == TargetFeatureMap.end()) {
-      DEBUG_WITH_TYPE(
-          "CodeObjectCompatibility",
-          dbgs()
-              << "Incompatible: Value of CodeObject's non-ANY feature is "
-                 "not matching with Target feature's ANY value \t[CodeObject: "
-              << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
-              << "]\n");
-      return false;
-    } else if (TargetFeature->getValue() != CodeObjectFeature.getValue()) {
-      DEBUG_WITH_TYPE(
-          "CodeObjectCompatibility",
-          dbgs() << "Incompatible: Value of CodeObject's non-ANY feature is "
-                    "not matching with Target feature's non-ANY value "
-                    "\t[CodeObject: "
-                 << CodeObjectInfo.str()
-                 << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
-      return false;
-    }
   }
 
   // CodeObject is compatible if all features of Target are:

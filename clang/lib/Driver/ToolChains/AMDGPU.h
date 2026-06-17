@@ -160,22 +160,19 @@ public:
                           Action::OffloadKind DeviceOffloadingKind) const;
 
 protected:
-  /// The struct type returned by getParsedTargetID.
-  struct ParsedTargetIDType {
-    std::optional<std::string> OptionalTargetID;
-    std::optional<std::string> OptionalGPUArch;
-    std::optional<llvm::StringMap<bool>> OptionalFeatureMap;
-  };
-
-  /// Check and diagnose invalid target ID specified by -mcpu.
-  /// Returns the parsed target ID.
-  virtual ParsedTargetIDType
+  /// Check and diagnose an invalid target ID specified by -mcpu. Returns the
+  /// parsed target ID, or std::nullopt if -mcpu is absent or invalid
+  virtual std::optional<llvm::AMDGPU::TargetID>
   checkTargetID(const llvm::opt::ArgList &DriverArgs) const;
 
-  /// Get target ID, GPU arch, and target ID features if the target ID is
-  /// specified and valid.
-  ParsedTargetIDType
+  /// Parse the target ID specified by -mcpu. Returns the parsed target ID, or
+  /// std::nullopt if -mcpu is absent or invalid.
+  std::optional<llvm::AMDGPU::TargetID>
   getParsedTargetID(const llvm::opt::ArgList &DriverArgs) const;
+
+  /// Get the raw target ID string from -mcpu, or an empty string if -mcpu is
+  /// absent or the target is not AMDGCN.
+  StringRef getTargetIDArg(const llvm::opt::ArgList &DriverArgs) const;
 
   /// Get GPU arch from -mcpu without checking.
   StringRef getGPUArch(const llvm::opt::ArgList &DriverArgs) const;
