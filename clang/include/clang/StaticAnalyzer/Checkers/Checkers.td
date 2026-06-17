@@ -1580,6 +1580,10 @@ def CheckerDocumentationChecker : Checker<"CheckerDocumentation">,
   HelpText<"Defines an empty checker callback for all possible handlers.">,
   Documentation<NotDocumented>;
 
+def DebugLifetimeAnnotations : Checker<"DebugLifetimeAnnotations">,
+  HelpText<"Prints the bindings recorded by the LifetimeAnnotations checker. Use with clang_analyzer_lifetime_bound().">,
+  Documentation<NotDocumented>;
+
 } // end "debug"
 
 

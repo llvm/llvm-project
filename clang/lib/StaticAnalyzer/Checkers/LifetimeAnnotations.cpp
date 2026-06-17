@@ -17,35 +17,27 @@ REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMapVal, const MemRegion *,
 
 namespace {
 class LifetimeAnnotations
-    : public Checker<check::PostCall, check::EndFunction, eval::Call> {
+    : public Checker<check::PostCall, check::EndFunction, check::LifetimeEnd> {
 public:
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
                   const char *Sep) const override;
-  bool evalCall(const CallEvent &Call, CheckerContext &C) const;
-  void analyzerLifetimeBound(const CallEvent &Call, CheckerContext &C) const;
   ProgramStateRef bindValues(ProgramStateRef State, SVal RetVal, const MemRegion *Source) const;
   bool hasDanglingSource(const MemRegion *Source, ProgramStateRef State,
-                      CheckerContext &C) const;
+                         CheckerContext &C) const;
   void reportDanglingSource(const MemRegion *Region, ExplodedNode *N,
                             CheckerContext &C) const;
+  void reportUseAfterScope(const VarDecl *Region, ExplodedNode *N, CheckerContext &C) const;
 
   template <typename MapTy, typename KeyTy>
   void checkReturnedBorrower(const MapTy &Map, const KeyTy RetKey,
                              ProgramStateRef State, ExplodedNode *N,
                              CheckerContext &C) const;
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
+  void checkLifetimeEnd(const VarDecl *VD, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
 
   const BugType BugMsg{this, "LifetimeAnnotations", "LifetimeBound"};
-
-  using FnCheck = void (LifetimeAnnotations::*)(const CallEvent &Call,
-                                                CheckerContext &C) const;
-
-  const CallDescriptionMap<FnCheck> Callbacks = {
-      {{CDM::SimpleFunc, {"clang_analyzer_lifetime_bound"}},
-       &LifetimeAnnotations::analyzerLifetimeBound},
-  };
 };
 
 } // namespace
@@ -105,8 +97,8 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
 }
 
 bool LifetimeAnnotations::hasDanglingSource(const MemRegion *Source,
-                                         ProgramStateRef State,
-                                         CheckerContext &C) const {
+                                            ProgramStateRef State,
+                                            CheckerContext &C) const {
   // FIXME: Currently the checker only focuses on stack MemRegions only since
   // that is the scope of week 3. Sources without a stack region are not
   // covered, but should be implemented as well next step.
@@ -171,15 +163,52 @@ void LifetimeAnnotations::checkEndFunction(const ReturnStmt *RS,
     checkReturnedBorrower(LBMapVal, RetValRegion, State, N, C);
 }
 
+void LifetimeAnnotations::checkLifetimeEnd(const VarDecl *VD, CheckerContext &C) const {
+  if (!VD)
+    return;
+
+  ProgramStateRef State = C.getState();
+
+  auto LBMap = State->get<LifetimeBoundMap>();
+  auto LBMapVal = State->get<LifetimeBoundMapVal>();
+
+  if (LBMap.isEmpty() && LBMapVal.isEmpty())
+    return;
+
+  for (auto &&[Origin, SourceSet] : LBMapVal) {
+    for (const MemRegion *Region : SourceSet) {
+      if (const VarDecl *VDRegion = dyn_cast_if_present<VarRegion>(Region)->getDecl()) {
+        if (VDRegion == VD) {
+          ExplodedNode *N = C.generateNonFatalErrorNode();
+          reportUseAfterScope(VDRegion, N, C);
+        }
+      }
+    }
+  }
+
+  for (auto &&[Origin, SourceSet] : LBMap) {
+    for (const MemRegion *Region : SourceSet) {
+      if (const VarDecl *Variable = dyn_cast_if_present<VarRegion>(Region)->getDecl()) {
+        if (Variable == VD) {
+          ExplodedNode *N = C.generateNonFatalErrorNode();
+          reportUseAfterScope(Variable, N, C);
+        }
+      }
+    }
+  }
+}
+
 void LifetimeAnnotations::reportDanglingSource(const MemRegion *Region,
                                                ExplodedNode *N,
                                                CheckerContext &C) const {
-  llvm::SmallString<128> Str;
-  llvm::raw_svector_ostream OS(Str);
+  std::string ErrorMessage = (llvm::Twine("Returning value bound to a local '") + Region->getString() + "' that will go out of scope").str();
+  auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, ErrorMessage, N);
+  C.emitReport(std::move(BR));
+}
 
-  OS << "Returning value bound to a local " << Region
-     << " that will go out of scope";
-  auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
+void LifetimeAnnotations::reportUseAfterScope(const VarDecl *Region, ExplodedNode *N, CheckerContext &C) const {
+  std::string ErrorMessage = (llvm::Twine("Used variable after its scope ended '") + Region->getNameAsString() + "' error.").str();
+  auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, ErrorMessage, N);
   C.emitReport(std::move(BR));
 }
 
@@ -190,26 +219,17 @@ void LifetimeAnnotations::checkDeadSymbols(SymbolReaper &SymReaper,
   // Get both maps since both of them needs to be cleaned up
   LifetimeBoundMapTy LBMap = State->get<LifetimeBoundMap>();
   LifetimeBoundMapValTy LBMapVal = State->get<LifetimeBoundMapVal>();
-  bool StateChanged = false;
 
-  for (auto &Entry : LBMap) {
-    const SymExpr *Sym = Entry.first;
-
-    if (!SymReaper.isLive(Sym)) {
+  for (const SymExpr *Sym : llvm::make_first_range(LBMap)) {
+    if (!SymReaper.isLive(Sym))
       State = State->remove<LifetimeBoundMap>(Sym);
-      StateChanged = true;
-    }
   }
 
-  for (auto &Entry : LBMapVal) {
-    const MemRegion *Region = Entry.first;
-
-    if (!SymReaper.isLiveRegion(Region)) {
+  for (const MemRegion *Region : llvm::make_first_range(LBMapVal)) {
+    if (!SymReaper.isLiveRegion(Region))
       State = State->remove<LifetimeBoundMapVal>(Region);
-      StateChanged = true;
-    }
   }
-  if (StateChanged)
+  if (State != C.getState())
     C.addTransition(State);
 }
 
@@ -232,7 +252,24 @@ void LifetimeAnnotations::printState(raw_ostream &Out, ProgramStateRef State,
   }
 }
 
-bool LifetimeAnnotations::evalCall(const CallEvent &Call,
+namespace {
+class DebugLifetimeAnnotations : public Checker<eval::Call> {
+public:
+  bool evalCall(const CallEvent &Call, CheckerContext &C) const;
+  void analyzerLifetimeBound(const CallEvent &Call, CheckerContext &C) const;
+
+  const BugType BugMsg{this, "DebugLifetimeAnnotations", "DebugLifetimeBound"};
+  using FnCheck = void (DebugLifetimeAnnotations::*)(const CallEvent &Call, CheckerContext &C) const;
+
+  const CallDescriptionMap<FnCheck> Callbacks = {
+      {{CDM::SimpleFunc, {"clang_analyzer_lifetime_bound"}},
+       &DebugLifetimeAnnotations::analyzerLifetimeBound},
+  };
+};
+
+} // namespace
+
+bool DebugLifetimeAnnotations::evalCall(const CallEvent &Call,
                                    CheckerContext &C) const {
 
   const auto *CE = dyn_cast_if_present<CallExpr>(Call.getOriginExpr());
@@ -247,7 +284,7 @@ bool LifetimeAnnotations::evalCall(const CallEvent &Call,
   return true;
 }
 
-void LifetimeAnnotations::analyzerLifetimeBound(const CallEvent &Call,
+void DebugLifetimeAnnotations::analyzerLifetimeBound(const CallEvent &Call,
                                                 CheckerContext &C) const {
 
   ProgramStateRef State = C.getState();
@@ -294,5 +331,13 @@ void ento::registerLifetimeAnnotations(CheckerManager &mgr) {
 }
 
 bool ento::shouldRegisterLifetimeAnnotations(const CheckerManager &mgr) {
+  return true;
+}
+
+void ento::registerDebugLifetimeAnnotations(CheckerManager &mgr) {
+  mgr.registerChecker<DebugLifetimeAnnotations>();
+}
+
+bool ento::shouldRegisterDebugLifetimeAnnotations(const CheckerManager &mgr) {
   return true;
 }
