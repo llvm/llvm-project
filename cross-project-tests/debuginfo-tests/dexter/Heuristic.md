@@ -1,5 +1,7 @@
 # Dexter Heuristic Testing
 
+Dexter's heuristic mode can be accessed by using the `--use-heuristic` flag.
+
 The old test model for Dexter is based on a debug experience "heuristic", combining a variety of different measures produced by "commands" into a single score, ranging from 0.0 (the lowest score) to 1.0 (a perfect score). The contribution from each command and each kind of failure towards this overall score is determine by a set of weights, which are assigned default values but can be given explicit overrides via command line. The set of commands and their behaviour are documented in [Commands.md](./Commands.md).
 
 ## Running a test case

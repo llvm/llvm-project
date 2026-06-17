@@ -10,8 +10,7 @@
 
 // RUN: %clang++ -std=gnu++11 -O1 -glldb -fsanitize=address -arch x86_64 %s \
 // RUN:   -o %t
-// RUN: %dexter -w --use-script \
-// RUN:     --binary %t %dexter_lldb_args -- %s | FileCheck %s
+// RUN: %dexter -w --binary %t %dexter_lldb_args -- %s | FileCheck %s
 #include <deque>
 
 struct A {

@@ -1,4 +1,4 @@
-RUN: not %dexter_regression_test_run --binary %s --use-script -- %s 2>&1 | FileCheck %s
+RUN: not %dexter_regression_test_run --binary %s -- %s 2>&1 | FileCheck %s
 
 This is a test that Dexter validates that nodes appear in the correct place in scripts.
 

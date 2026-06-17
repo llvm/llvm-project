@@ -1,15 +1,14 @@
 // Purpose:
 //      Check the `view` subtool works with typical inputs.
 //
+// RUN: rm -rf %t
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --binary %t --results %t.results -- %s
+// RUN: %dexter_regression_test_run --use-heuristic --binary %t \
+// RUN:   --results %t.results -- %s
 //
 // RUN: %dexter_base view %t.results/view.cpp.dextIR | FileCheck %s
 // CHECK: ## BEGIN
 // CHECK: ## END
-//
-// # [TODO] This doesn't run if FileCheck fails!
-// RUN: rm -rf %t
 
 int main() {
     int a = 0;

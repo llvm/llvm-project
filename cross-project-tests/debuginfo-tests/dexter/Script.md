@@ -1,7 +1,5 @@
 # Dexter Script Testing
 
-Dexter's script mode can be accessed by using the `--use-script` flag.
-
 Dexter scripts are represented by YAML documents, which contain various "nodes" instructing Dexter how to step through the debuggee program, what information to collect and store from the debugger, and how to evaluate the result. A simple Dexter script looks something like this:
 
 ```yaml

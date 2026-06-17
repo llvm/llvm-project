@@ -1,5 +1,5 @@
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --use-script --skip-evaluate --binary %t \
+// RUN: %dexter_regression_test_run --skip-evaluate --binary %t \
 // RUN:   -- %s 2>&1 | FileCheck %s
 
 /// Test that when all root !where nodes have expired, we exit without waiting
