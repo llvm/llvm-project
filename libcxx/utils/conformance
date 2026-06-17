@@ -537,9 +537,13 @@ def github_create(csvfiles, load_github_from, labels):
             continue
 
         # Create the actual Github issue
+        body = f'**Link:** https://wg21.link/{paper.paper_number}'
+        if paper.notes:
+            body += f'\n\n```\nBEGIN-RST-NOTES\n{paper.notes}\nEND-RST-NOTES\n```'
+
         cli = ['gh', 'issue', 'create', '--repo', 'llvm/llvm-project',
                     '--title', f'{paper.paper_number}: {rst_to_markdown(paper.paper_name)}',
-                    '--body', f'**Link:** https://wg21.link/{paper.paper_number}',
+                    '--body', body,
                     '--project', 'libc++ Standards Conformance',
                     '--label', 'libc++']
 
