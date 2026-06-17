@@ -37,7 +37,7 @@ int main(int, char**)
     static_assert(!std::is_member_pointer<decltype(&C::is_steady)>::value, "is_steady must be static");
     TEST_CONSTEXPR_CXX14 const bool is_steady = C::is_steady; // "is_steady must be constexpr"
     (void)is_steady;
-    LIBCPP_ASSERT(C::is_steady);
+    LIBCPP_ASSERT((C::is_steady == std::is_same<C, std::chrono::steady_clock>::value));
     odr_use(C::is_steady);
 
     return 0;
