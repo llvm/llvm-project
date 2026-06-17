@@ -13,6 +13,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/Hypot.h"
 #include "src/__support/FPUtil/double_double.h"
+#include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
