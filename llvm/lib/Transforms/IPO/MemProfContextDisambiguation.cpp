@@ -2479,9 +2479,8 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
 DenseSet<GlobalValue::GUID>
 IndexCallsiteContextGraph::findAliaseeGUIDsPrevailingInDifferentModule() {
   DenseSet<GlobalValue::GUID> AliaseeGUIDs;
-  // Sort by GUID for deterministic graph construction order.
-  for (const auto *I : Index.sortedGlobalValueSummaries()) {
-    auto VI = Index.getValueInfo(*I);
+  for (auto &I : Index) {
+    auto VI = Index.getValueInfo(I);
     for (auto &S : VI.getSummaryList()) {
       // We only care about aliases to functions.
       auto *AS = dyn_cast<AliasSummary>(S.get());
