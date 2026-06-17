@@ -40,7 +40,6 @@
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/DebugCounter.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
@@ -49,13 +48,6 @@ using HWEventSet = AMDGPU::HWEventSet;
 using HWEvent = AMDGPU::HWEvent;
 
 #define DEBUG_TYPE "si-insert-waitcnts"
-
-DEBUG_COUNTER(ForceExpCounter, DEBUG_TYPE "-forceexp",
-              "Force emit s_waitcnt expcnt(0) instrs");
-DEBUG_COUNTER(ForceLgkmCounter, DEBUG_TYPE "-forcelgkm",
-              "Force emit s_waitcnt lgkmcnt(0) instrs");
-DEBUG_COUNTER(ForceVMCounter, DEBUG_TYPE "-forcevm",
-              "Force emit s_waitcnt vmcnt(0) instrs");
 
 static cl::opt<bool>
     ForceEmitZeroFlag("amdgpu-waitcnt-forcezero",
@@ -74,34 +66,6 @@ static cl::opt<bool> ExpertSchedulingModeFlag(
     cl::init(false), cl::Hidden);
 
 namespace {
-// Get the maximum wait count value for a given counter type.
-static unsigned getWaitCountMax(const AMDGPU::HardwareLimits &Limits,
-                                AMDGPU::InstCounterType T) {
-  switch (T) {
-  case AMDGPU::LOAD_CNT:
-    return Limits.LoadcntMax;
-  case AMDGPU::DS_CNT:
-    return Limits.DscntMax;
-  case AMDGPU::EXP_CNT:
-    return Limits.ExpcntMax;
-  case AMDGPU::STORE_CNT:
-    return Limits.StorecntMax;
-  case AMDGPU::SAMPLE_CNT:
-    return Limits.SamplecntMax;
-  case AMDGPU::BVH_CNT:
-    return Limits.BvhcntMax;
-  case AMDGPU::KM_CNT:
-    return Limits.KmcntMax;
-  case AMDGPU::X_CNT:
-    return Limits.XcntMax;
-  case AMDGPU::VA_VDST:
-    return Limits.VaVdstMax;
-  case AMDGPU::VM_VSRC:
-    return Limits.VmVsrcMax;
-  default:
-    return 0;
-  }
-}
 
 template <typename EmitWaitcntFn>
 static void EmitExpandedWaitcnt(unsigned Outstanding, unsigned Target,
@@ -220,13 +184,6 @@ VmemType getVmemType(const MachineInstr &Inst) {
   return VMEM_NOSAMPLER;
 }
 
-void addWait(AMDGPU::Waitcnt &Wait, AMDGPU::InstCounterType T, unsigned Count) {
-  Wait.set(T, std::min(Wait.get(T), Count));
-}
-
-void setNoWait(AMDGPU::Waitcnt &Wait, AMDGPU::InstCounterType T) {
-  Wait.set(T, ~0u);
-}
 class WaitcntBrackets;
 
 // This abstracts the logic for generating and updating S_WAIT* instructions
@@ -263,7 +220,7 @@ public:
   // optimization.
   bool isOptNone() const { return OptNone; }
 
-  const AMDGPU::HardwareLimits &getLimits() const { return Limits; }
+  unsigned getLimit(AMDGPU::InstCounterType E) const { return Limits.get(E); }
 
   // Edits an existing sequence of wait count instructions according
   // to an incoming Waitcnt value, which is itself updated to reflect
@@ -456,11 +413,7 @@ public:
                    AliasAnalysis *AA, MachineFunction &MF)
       : MLI(MLI), PDT(PDT), AA(AA), MF(MF), ST(MF.getSubtarget<GCNSubtarget>()),
         TII(*ST.getInstrInfo()), TRI(TII.getRegisterInfo()),
-        MRI(MF.getRegInfo()) {
-    (void)ForceExpCounter;
-    (void)ForceLgkmCounter;
-    (void)ForceVMCounter;
-  }
+        MRI(MF.getRegInfo()) {}
 
   const AMDGPU::HardwareLimits &getLimits() const { return Limits; }
 
@@ -472,42 +425,6 @@ public:
   bool isDSRead(const MachineInstr &MI) const;
   bool mayStoreIncrementingDSCNT(const MachineInstr &MI) const;
   bool run();
-
-  void setForceEmitWaitcnt() {
-// For non-debug builds, ForceEmitWaitcnt has been initialized to false;
-// For debug builds, get the debug counter info and adjust if need be
-#ifndef NDEBUG
-    if (DebugCounter::isCounterSet(ForceExpCounter) &&
-        DebugCounter::shouldExecute(ForceExpCounter)) {
-      ForceEmitWaitcnt[AMDGPU::EXP_CNT] = true;
-    } else {
-      ForceEmitWaitcnt[AMDGPU::EXP_CNT] = false;
-    }
-
-    if (DebugCounter::isCounterSet(ForceLgkmCounter) &&
-        DebugCounter::shouldExecute(ForceLgkmCounter)) {
-      ForceEmitWaitcnt[AMDGPU::DS_CNT] = true;
-      ForceEmitWaitcnt[AMDGPU::KM_CNT] = true;
-    } else {
-      ForceEmitWaitcnt[AMDGPU::DS_CNT] = false;
-      ForceEmitWaitcnt[AMDGPU::KM_CNT] = false;
-    }
-
-    if (DebugCounter::isCounterSet(ForceVMCounter) &&
-        DebugCounter::shouldExecute(ForceVMCounter)) {
-      ForceEmitWaitcnt[AMDGPU::LOAD_CNT] = true;
-      ForceEmitWaitcnt[AMDGPU::SAMPLE_CNT] = true;
-      ForceEmitWaitcnt[AMDGPU::BVH_CNT] = true;
-    } else {
-      ForceEmitWaitcnt[AMDGPU::LOAD_CNT] = false;
-      ForceEmitWaitcnt[AMDGPU::SAMPLE_CNT] = false;
-      ForceEmitWaitcnt[AMDGPU::BVH_CNT] = false;
-    }
-
-    ForceEmitWaitcnt[AMDGPU::VA_VDST] = false;
-    ForceEmitWaitcnt[AMDGPU::VM_VSRC] = false;
-#endif // NDEBUG
-  }
 
   bool isAsync(const MachineInstr &MI) const {
     if (!SIInstrInfo::isLDSDMA(MI))
@@ -710,7 +627,7 @@ public:
 
   unsigned getPendingGDSWait() const {
     return std::min(getScoreUB(AMDGPU::DS_CNT) - LastGDS,
-                    getWaitCountMax(Context->getLimits(), AMDGPU::DS_CNT) - 1);
+                    getLimit(AMDGPU::DS_CNT) - 1);
   }
 
   void setPendingGDS() { LastGDS = ScoreUBs[AMDGPU::DS_CNT]; }
@@ -738,8 +655,7 @@ public:
 
   void setStateOnFunctionEntryOrReturn() {
     setScoreUB(AMDGPU::STORE_CNT,
-               getScoreUB(AMDGPU::STORE_CNT) +
-                   getWaitCountMax(Context->getLimits(), AMDGPU::STORE_CNT));
+               getScoreUB(AMDGPU::STORE_CNT) + getLimit(AMDGPU::STORE_CNT));
     PendingEvents |= Context->getWaitEvents(AMDGPU::STORE_CNT);
   }
 
@@ -759,6 +675,10 @@ public:
   void purgeEmptyTrackingData();
 
 private:
+  unsigned getLimit(AMDGPU::InstCounterType T) const {
+    return Context->getLimits().get(T);
+  }
+
   struct MergeInfo {
     unsigned OldLB;
     unsigned OtherLB;
@@ -795,11 +715,9 @@ private:
     if (T != AMDGPU::EXP_CNT)
       return;
 
-    if (getScoreRange(AMDGPU::EXP_CNT) >
-        getWaitCountMax(Context->getLimits(), AMDGPU::EXP_CNT))
+    if (getScoreRange(AMDGPU::EXP_CNT) > getLimit(AMDGPU::EXP_CNT))
       ScoreLBs[AMDGPU::EXP_CNT] =
-          ScoreUBs[AMDGPU::EXP_CNT] -
-          getWaitCountMax(Context->getLimits(), AMDGPU::EXP_CNT);
+          ScoreUBs[AMDGPU::EXP_CNT] - getLimit(AMDGPU::EXP_CNT);
   }
 
   void setRegScore(MCPhysReg Reg, AMDGPU::InstCounterType T, unsigned Val) {
@@ -1432,18 +1350,17 @@ void WaitcntBrackets::determineWaitForScore(AMDGPU::InstCounterType T,
       // If there is a pending FLAT operation, and this is a VMem or LGKM
       // waitcnt and the target can report early completion, then we need
       // to force a waitcnt 0.
-      addWait(Wait, T, 0);
+      Wait.add(T, 0);
     } else if (counterOutOfOrder(T)) {
       // Counter can get decremented out-of-order when there
       // are multiple types event in the bracket. Also emit an s_wait counter
       // with a conservative value of 0 for the counter.
-      addWait(Wait, T, 0);
+      Wait.add(T, 0);
     } else {
       // If a counter has been maxed out avoid overflow by waiting for
       // MAX(CounterType) - 1 instead.
-      unsigned NeededWait = std::min(
-          UB - ScoreToWait, getWaitCountMax(Context->getLimits(), T) - 1);
-      addWait(Wait, T, NeededWait);
+      unsigned NeededWait = std::min(UB - ScoreToWait, getLimit(T) - 1);
+      Wait.add(T, NeededWait);
     }
   }
 }
@@ -1671,36 +1588,6 @@ static bool updateOperandIfDifferent(MachineInstr &MI, AMDGPU::OpName OpName,
   return true;
 }
 
-/// Determine if \p MI is a gfx12+ single-counter S_WAIT_*CNT instruction,
-/// and if so, which counter it is waiting on.
-static std::optional<AMDGPU::InstCounterType>
-counterTypeForInstr(unsigned Opcode) {
-  switch (Opcode) {
-  case AMDGPU::S_WAIT_LOADCNT:
-    return AMDGPU::LOAD_CNT;
-  case AMDGPU::S_WAIT_EXPCNT:
-    return AMDGPU::EXP_CNT;
-  case AMDGPU::S_WAIT_STORECNT:
-    return AMDGPU::STORE_CNT;
-  case AMDGPU::S_WAIT_SAMPLECNT:
-    return AMDGPU::SAMPLE_CNT;
-  case AMDGPU::S_WAIT_BVHCNT:
-    return AMDGPU::BVH_CNT;
-  case AMDGPU::S_WAIT_DSCNT:
-    return AMDGPU::DS_CNT;
-  case AMDGPU::S_WAIT_KMCNT:
-    return AMDGPU::KM_CNT;
-  case AMDGPU::S_WAIT_XCNT:
-    return AMDGPU::X_CNT;
-  case AMDGPU::S_WAIT_ASYNCCNT:
-    return AMDGPU::ASYNC_CNT;
-  case AMDGPU::S_WAIT_TENSORCNT:
-    return AMDGPU::TENSOR_CNT;
-  default:
-    return {};
-  }
-}
-
 bool WaitcntGenerator::promoteSoftWaitCnt(MachineInstr *Waitcnt) const {
   unsigned Opcode = SIInstrInfo::getNonSoftWaitcntOpcode(Waitcnt->getOpcode());
   if (Opcode == Waitcnt->getOpcode())
@@ -1877,8 +1764,8 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
           if (WaitCnt == ~0u)
             continue;
 
-          unsigned Outstanding = std::min(ScoreBrackets.getOutstanding(CT),
-                                          getWaitCountMax(getLimits(), CT) - 1);
+          unsigned Outstanding =
+              std::min(ScoreBrackets.getOutstanding(CT), getLimit(CT) - 1);
           EmitExpandedWaitcnt(Outstanding, WaitCnt, [&](unsigned Count) {
             AMDGPU::Waitcnt W;
             W.set(CT, Count);
@@ -1909,7 +1796,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
       // Only expand if counter is not out-of-order
       unsigned Outstanding =
           std::min(ScoreBrackets.getOutstanding(AMDGPU::STORE_CNT),
-                   getWaitCountMax(getLimits(), AMDGPU::STORE_CNT) - 1);
+                   getLimit(AMDGPU::STORE_CNT) - 1);
       EmitExpandedWaitcnt(
           Outstanding, Wait.get(AMDGPU::STORE_CNT), [&](unsigned Count) {
             BuildMI(Block, It, DL, TII.get(AMDGPU::S_WAITCNT_VSCNT))
@@ -2064,14 +1951,15 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       AMDGPU::Waitcnt OldWait = ScoreBrackets.determineAsyncWait(N);
       Wait = Wait.combined(OldWait);
     } else {
-      std::optional<AMDGPU::InstCounterType> CT = counterTypeForInstr(Opcode);
+      std::optional<AMDGPU::InstCounterType> CT =
+          AMDGPU::counterTypeForInstr(Opcode);
       assert(CT.has_value());
       unsigned OldCnt =
           TII.getNamedOperand(II, AMDGPU::OpName::simm16)->getImm();
       if (TrySimplify)
-        addWait(Wait, CT.value(), OldCnt);
+        Wait.add(CT.value(), OldCnt);
       else
-        addWait(RequiredWait, CT.value(), OldCnt);
+        RequiredWait.add(CT.value(), OldCnt);
       // Keep the first wait of its kind, erase the rest.
       if (WaitInstrs[CT.value()] == nullptr) {
         WaitInstrs[CT.value()] = &II;
@@ -2188,7 +2076,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
       Modified |= promoteSoftWaitCnt(WaitInstrs[CT]);
 
       ScoreBrackets.applyWaitcnt(CT, NewCnt);
-      setNoWait(Wait, CT);
+      Wait.clear(CT);
 
       LLVM_DEBUG(It.isEnd()
                      ? dbgs() << "applied pre-existing waitcnt\n"
@@ -2263,8 +2151,8 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
         continue;
       }
 
-      unsigned Outstanding = std::min(ScoreBrackets.getOutstanding(CT),
-                                      getWaitCountMax(getLimits(), CT) - 1);
+      unsigned Outstanding =
+          std::min(ScoreBrackets.getOutstanding(CT), getLimit(CT) - 1);
       EmitExpandedWaitcnt(Outstanding, Count, [&](unsigned Val) {
         BuildMI(Block, It, DL, TII.get(instrsForExtendedCounterTypes[CT]))
             .addImm(Val);
@@ -2361,7 +2249,6 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     MachineInstr &MI, WaitcntBrackets &ScoreBrackets,
     MachineInstr *OldWaitcntInstr, PreheaderFlushFlags FlushFlags) {
   LLVM_DEBUG(dbgs() << "\n*** GenerateWaitcntInstBefore: "; MI.print(dbgs()););
-  setForceEmitWaitcnt();
 
   assert(!isNonWaitcntMetaInst(MI));
 
@@ -2447,7 +2334,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     // Wait for any pending GDS instruction to complete before any
     // "Always GDS" instruction.
     if (TII.isAlwaysGDS(Opc) && ScoreBrackets.hasPendingGDS())
-      addWait(Wait, AMDGPU::DS_CNT, ScoreBrackets.getPendingGDSWait());
+      Wait.add(AMDGPU::DS_CNT, ScoreBrackets.getPendingGDSWait());
 
     if (MI.isCall()) {
       // The function is going to insert a wait on everything in its prolog.
@@ -2488,7 +2375,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
         const Value *Ptr = Memop->getValue();
         if (Memop->isStore()) {
           if (auto It = SLoadAddresses.find(Ptr); It != SLoadAddresses.end()) {
-            addWait(Wait, SmemAccessCounter, 0);
+            Wait.add(SmemAccessCounter, 0);
             if (PDT.dominates(MI.getParent(), It->second))
               SLoadAddresses.erase(It);
           }
@@ -2985,7 +2872,7 @@ static bool isWaitInstr(MachineInstr &Inst) {
          Opcode == AMDGPU::S_WAIT_STORECNT_DSCNT ||
          Opcode == AMDGPU::S_WAITCNT_lds_direct ||
          Opcode == AMDGPU::WAIT_ASYNCMARK ||
-         counterTypeForInstr(Opcode).has_value();
+         AMDGPU::counterTypeForInstr(Opcode).has_value();
 }
 
 void SIInsertWaitcnts::setSchedulingMode(MachineBasicBlock &MBB,
