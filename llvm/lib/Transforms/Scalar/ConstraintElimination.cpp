@@ -464,8 +464,7 @@ static Decomposition decomposeGEP(GEPOperator &GEP,
 
   // For a nuw-only GEP (nuw without nusw/inbounds), the offset must be
   // interpreted as unsigned.
-  if (NW.hasNoUnsignedWrap() && !NW.hasNoUnsignedSignedWrap() &&
-      ConstantOffset.isNegative())
+  if (!NW.hasNoUnsignedSignedWrap() && ConstantOffset.isNegative())
     return &GEP;
 
   Decomposition Result(ConstantOffset.getSExtValue(), DecompEntry(1, BasePtr));
