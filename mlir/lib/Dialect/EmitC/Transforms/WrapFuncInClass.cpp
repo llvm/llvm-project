@@ -15,6 +15,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 
 using namespace mlir;
@@ -32,17 +33,17 @@ struct WrapFuncInClassPass
   void runOnOperation() override {
     mlir::ModuleOp moduleOp = getOperation();
 
-    std::map<FuncOp, llvm::DenseSet<GlobalOp>> globalsUsedByFuncs;
+    DenseMap<FuncOp, llvm::DenseSet<GlobalOp>> globalsUsedByFuncs;
 
     SymbolTableCollection symbolTable;
     moduleOp.walk([&globalsUsedByFuncs, &symbolTable](FuncOp funcOp) {
-      funcOp.walk(
-          [&globalsUsedByFuncs, &symbolTable, funcOp](GetGlobalOp getGlobalOp) {
-            if (auto globalOp = symbolTable.lookupNearestSymbolFrom<GlobalOp>(
-                    getGlobalOp, getGlobalOp.getNameAttr())) {
-              globalsUsedByFuncs[funcOp].insert(globalOp);
-            }
-          });
+      funcOp.walk([&globalsUsedByFuncs, &symbolTable,
+                   &funcOp](GetGlobalOp getGlobalOp) {
+        if (auto globalOp = symbolTable.lookupNearestSymbolFrom<GlobalOp>(
+                getGlobalOp, getGlobalOp.getNameAttr())) {
+          globalsUsedByFuncs[funcOp].insert(globalOp);
+        }
+      });
     });
 
     RewritePatternSet patterns(&getContext());
@@ -51,8 +52,8 @@ struct WrapFuncInClassPass
     walkAndApplyPatterns(moduleOp, std::move(patterns));
 
     DenseSet<GlobalOp> globalsToErase;
-    for (auto &pair : globalsUsedByFuncs)
-      globalsToErase.insert(pair.second.begin(), pair.second.end());
+    for (auto &[_, globals] : globalsUsedByFuncs)
+      globalsToErase.insert_range(globals);
 
     for (GlobalOp globalOp : globalsToErase)
       globalOp.erase();
@@ -67,7 +68,7 @@ class WrapFuncInClass : public OpRewritePattern<FuncOp> {
 public:
   WrapFuncInClass(
       MLIRContext *context, StringRef funcName,
-      const std::map<FuncOp, llvm::DenseSet<GlobalOp>> &globalsToMove)
+      const DenseMap<FuncOp, llvm::DenseSet<GlobalOp>> &globalsToMove)
       : OpRewritePattern<FuncOp>(context), funcName(funcName),
         globalsToMove(globalsToMove) {}
 
@@ -150,11 +151,11 @@ private:
 
   /// Map of FuncOp and the GlobalOps it uses which need to be moved into the
   /// ClassOp wrapper.
-  std::map<FuncOp, llvm::DenseSet<GlobalOp>> globalsToMove;
+  DenseMap<FuncOp, llvm::DenseSet<GlobalOp>> globalsToMove;
 };
 
 void mlir::emitc::populateWrapFuncInClass(
     RewritePatternSet &patterns, StringRef funcName,
-    std::map<FuncOp, llvm::DenseSet<GlobalOp>> &globalsToMove) {
+    DenseMap<FuncOp, DenseSet<GlobalOp>> &globalsToMove) {
   patterns.add<WrapFuncInClass>(patterns.getContext(), funcName, globalsToMove);
 }

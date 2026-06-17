@@ -11,6 +11,7 @@
 
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace mlir {
 namespace emitc {
@@ -34,7 +35,7 @@ void populateExpressionPatterns(RewritePatternSet &patterns);
 
 void populateWrapFuncInClass(
     RewritePatternSet &patterns, StringRef funcName,
-    std::map<FuncOp, llvm::DenseSet<GlobalOp>> &globalsToMove);
+    DenseMap<FuncOp, llvm::DenseSet<GlobalOp>> &globalsToMove);
 
 } // namespace emitc
 } // namespace mlir
