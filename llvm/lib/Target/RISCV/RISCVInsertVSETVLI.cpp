@@ -1184,8 +1184,10 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock *MBB : post_order(&MF))
     coalesceVSETVLIs(*MBB);
 
-  for (MachineBasicBlock &MBB : MF)
-    coalesceVSETVLIsForTWiden(MBB);
+  if (ST->hasVendorXSfmmbase()) {
+    for (MachineBasicBlock &MBB : MF)
+      coalesceVSETVLIsForTWiden(MBB);
+  }
 
   // Insert PseudoReadVL after VLEFF/VLSEGFF and replace it with the vl output
   // of VLEFF/VLSEGFF.
