@@ -3715,7 +3715,8 @@ SDValue SITargetLowering::LowerFormalArguments(
 
     if (Arg.Flags.isSRet()) {
       // The return object should be reasonably addressable.
-      unsigned NumBits = 32 - getSRetPointerKnownHighZeroBits();
+      unsigned NumBits =
+          32 - getSubtarget()->getKnownHighZeroBitsForFrameIndex();
       Val = DAG.getNode(
           ISD::AssertZext, DL, VT, Val,
           DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), NumBits)));
@@ -19667,10 +19668,6 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
   TargetLoweringBase::finalizeLowering(MF);
 }
 
-unsigned SITargetLowering::getSRetPointerKnownHighZeroBits() const {
-  return getSubtarget()->getKnownHighZeroBitsForFrameIndex();
-}
-
 void SITargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                                      KnownBits &Known,
                                                      const APInt &DemandedElts,
@@ -19714,7 +19711,7 @@ void SITargetLowering::computeKnownBitsForCopyFromReg(
 
   // Implicit sret lowering keeps the hidden return pointer in DemoteRegister.
   // Preserve the same high-zero address fact used by explicit sret lowering.
-  Known.Zero.setHighBits(getSRetPointerKnownHighZeroBits());
+  Known.Zero.setHighBits(getSubtarget()->getKnownHighZeroBitsForFrameIndex());
 }
 
 void SITargetLowering::computeKnownBitsForFrameIndex(

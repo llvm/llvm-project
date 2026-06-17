@@ -33,8 +33,6 @@ class SITargetLowering final : public AMDGPUTargetLowering {
 private:
   const GCNSubtarget *Subtarget;
 
-  unsigned getSRetPointerKnownHighZeroBits() const;
-
 public:
   MVT getRegisterTypeForCallingConv(LLVMContext &Context,
                                     CallingConv::ID CC,
