@@ -4391,15 +4391,6 @@ public:
                                              const SelectionDAG &DAG,
                                              unsigned Depth = 0) const;
 
-  /// Add target-specific known bits for a CopyFromReg node.
-  /// The default implementation preserves the known bits passed into it.
-  virtual void computeKnownBitsForCopyFromReg(const SDValue Op,
-                                              KnownBits &Known,
-                                              const APInt &DemandedElts,
-                                              const SelectionDAG &DAG,
-                                              const FunctionLoweringInfo *FLI,
-                                              unsigned Depth = 0) const;
-
   /// Determine which of the bits specified in Mask are known to be either zero
   /// or one and return them in the KnownZero/KnownOne bitsets. The DemandedElts
   /// argument allows us to only collect the known bits that are shared by the
@@ -5121,6 +5112,14 @@ public:
   {
     // Return true by default to get preexisting behavior.
     return true;
+  }
+
+  /// Target-specific annotation for the hidden return pointer used when
+  /// CanLowerReturn returns false and SelectionDAG performs sret-demotion.
+  virtual SDValue annotateDemotedReturnPointer(SDValue RetPtr,
+                                               SelectionDAG &DAG,
+                                               const SDLoc &DL) const {
+    return RetPtr;
   }
 
   /// This hook must be implemented to lower outgoing return values, described

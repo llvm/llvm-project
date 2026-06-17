@@ -19713,19 +19713,19 @@ void SITargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       Op, Known, DemandedElts, DAG, Depth);
 }
 
-void SITargetLowering::computeKnownBitsForCopyFromReg(
-    const SDValue Op, KnownBits &Known, const APInt &, const SelectionDAG &,
-    const FunctionLoweringInfo *FLI, unsigned) const {
-  if (!FLI || FLI->CanLowerReturn || !Op.getValueType().isInteger())
-    return;
+SDValue SITargetLowering::annotateDemotedReturnPointer(SDValue RetPtr,
+                                                       SelectionDAG &DAG,
+                                                       const SDLoc &DL) const {
+  EVT PtrVT = RetPtr.getValueType();
+  if (!PtrVT.isInteger())
+    return RetPtr;
 
-  Register Reg = cast<RegisterSDNode>(Op.getOperand(1))->getReg();
-  if (Reg != FLI->DemoteRegister)
-    return;
-
-  // Implicit sret lowering keeps the hidden return pointer in DemoteRegister.
-  // Preserve the same high-zero address fact used by explicit sret lowering.
-  Known.Zero.setHighBits(getSubtarget()->getKnownHighZeroBitsForFrameIndex());
+  // Implicit sret lowering keeps the hidden return pointer in a virtual
+  // register. Preserve the same high-zero address fact used by explicit sret.
+  unsigned NumBits = 32 - getSubtarget()->getKnownHighZeroBitsForFrameIndex();
+  return DAG.getNode(
+      ISD::AssertZext, DL, PtrVT, RetPtr,
+      DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), NumBits)));
 }
 
 void SITargetLowering::computeKnownBitsForFrameIndex(
