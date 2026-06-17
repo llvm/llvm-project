@@ -169,16 +169,31 @@ template <typename T, size_t INLINE_THRESHOLD = 8> class kmp_vector final {
   }
 
   /// Grow by ~1.5x / at least by +1 element.
-  void grow() {
-    size_t new_capacity = capacity + (capacity / 2) + 1;
-    resize(new_capacity);
+  /// If MinSize > 0, grow only if necessary to guarantee space
+  /// for at least MinSize elements.
+  void grow(size_t MinSize = 0) {
+    if (MinSize) {
+      if (MinSize <= capacity)
+        return;
+      capacity = MinSize;
+    } else {
+      capacity = capacity + (capacity / 2) + 1;
+    }
+    T *old_data = data != inline_data ? data : nullptr;
+    data =
+        static_cast<T *>(KMP_INTERNAL_REALLOC(old_data, capacity * sizeof(T)));
+    if (!data)
+      KMP_FATAL(MemoryAllocFailed);
+    // Copy the data to the new array if we didn't use a dynamic array before.
+    if (!old_data)
+      copy_data(data, inline_data, count);
   }
 
   void init(size_t new_capacity, const T *init_data, size_t new_count) {
     assert(new_capacity >= new_count &&
            "more elements requested than capacity");
-    if (new_capacity > INLINE_THRESHOLD)
-      resize(new_capacity);
+    if (new_capacity > capacity)
+      grow(new_capacity);
     if (init_data)
       copy_data(data, init_data, new_count);
     count = new_count;
@@ -207,23 +222,6 @@ template <typename T, size_t INLINE_THRESHOLD = 8> class kmp_vector final {
     data = inline_data;
     count = 0;
     capacity = INLINE_THRESHOLD;
-  }
-
-  /// resize only changes the capacity, not the size (i.e., the number of
-  /// actually used elements)
-  void resize(size_t new_capacity) {
-    // Currently only supports growing the capacity. (Consequently, doesn't need
-    // to worry about going from a dynamic array back to an inline array.)
-    assert(new_capacity > capacity && "resize() only supports growing");
-    capacity = new_capacity;
-    T *old_data = data != inline_data ? data : nullptr;
-    data =
-        static_cast<T *>(KMP_INTERNAL_REALLOC(old_data, capacity * sizeof(T)));
-    if (!data)
-      KMP_FATAL(MemoryAllocFailed);
-    // Copy the data to the new array if we didn't use a dynamic array before.
-    if (!old_data)
-      copy_data(data, inline_data, count);
   }
 
 public:
@@ -314,7 +312,7 @@ public:
   /// (Note: does not shrink the vector.)
   void reserve(size_t new_capacity) {
     if (new_capacity > capacity)
-      resize(new_capacity);
+      grow(new_capacity);
   }
 
   size_t size() const { return count; }
