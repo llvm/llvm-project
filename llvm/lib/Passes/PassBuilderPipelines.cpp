@@ -1752,8 +1752,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     }
   }
 
-  // Lower !comment_string.loadtime metadata to a concrete TU-local string
-  // global and attach !implicit.ref to all defined functions.
+  // Attach !implicit.ref metadata from all functions to copyright strings.
   MPM.addPass(LowerCommentStringPass());
 
   return MPM;
@@ -1925,8 +1924,7 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
-  // Lower !comment_string.loadtime metadata to a concrete TU-local string
-  // global and attach !implicit.ref to all defined functions.
+  // Attach !implicit.ref metadata from all functions to copyright strings.
   MPM.addPass(LowerCommentStringPass());
 
   addRequiredLTOPreLinkPasses(MPM);
@@ -2510,8 +2508,7 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   if (EnableInstrumentor)
     MPM.addPass(InstrumentorPass(FS));
 
-  // Lower !comment_string.loadtime metadata to a concrete TU-local string
-  // global and attach !implicit.ref to all defined functions.
+  // Attach !implicit.ref metadata from all functions to copyright strings.
   MPM.addPass(LowerCommentStringPass());
 
   if (isLTOPreLink(Phase))

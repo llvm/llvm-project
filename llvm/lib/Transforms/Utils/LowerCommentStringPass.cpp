@@ -6,37 +6,36 @@
 //
 //===---------------------------------------------------------------------===//
 //
-// This pass lowers the module-level comment string metadata emitted by Clang:
+// This pass processes copyright comment strings created by Clang for
+// #pragma comment(copyright, ...) implementation.
 //
-//     !comment_string.loadtime = !{!"Copyright ..."}
+// Clang CodeGen creates weak_odr hidden constant string globals marked with
+// !loadtime_comment metadata and adds them to llvm.compiler.used. These globals
+// are placed in the __loadtime_comment section for better memory layout.
 //
-// into concrete, translation-unit-weak-hidden globals.
-// This Pass is enabled only for AIX.
-// For each module (translation unit), the pass performs the following:
+// This pass attaches !implicit.ref metadata from every defined function to
+// each copyright string global. The PowerPC AIX backend recognizes this
+// metadata and emits a .ref directive, creating a relocation that prevents
+// the linker from discarding the string as long as the function is kept.
 //
-//   1. Creates a null-terminated, weak_odr hidden constant string global
-//      (`__loadtime_comment_str`) containing the copyright text. The backend
-//      places this in the .text section of the object file.
+// This pass is currently enabled for AIX targets only.
 //
-//   2. Marks the string in `llvm.compiler.used` so it cannot be dropped by
-//      optimization or LTO.
+// Input IR (created by Clang):
+//   @__loadtime_comment_str_HASH = weak_odr hidden unnamed_addr constant
+//     [N x i8] c"Copyright\00", section "__loadtime_comment", align 1,
+//     !loadtime_comment !0
+//   @llvm.compiler.used = appending global [1 x ptr]
+//     [ptr @__loadtime_comment_str_HASH], section "llvm.metadata"
 //
-//   3. Attaches `!implicit.ref` metadata referencing the string to every
-//      defined function in the module. The PowerPC AIX backend recognizes
-//      this metadata and emits a `.ref` directive from the function to the
-//      string, creating a concrete relocation that prevents the linker from
-//      discarding the string (as long as the referencing symbol is kept).
-//
-//  Input IR:
-//     !comment_string.loadtime = !{!"Copyright"}
 //  Output IR:
-//     @__loadtime_comment_str_HASH = weak_odr constant [N x i8]
-//     c"Copyright\00"
-//     @llvm.compiler.used = appending global [1 x ptr] [ptr
-//     @__loadtime_comment_str_HASH]
+//   @__loadtime_comment_str_HASH = weak_odr hidden unnamed_addr constant
+//     [N x i8] c"Copyright\00", section "__loadtime_comment", align 1,
+//     !loadtime_comment !0
+//   @llvm.compiler.used = appending global [1 x ptr]
+//     [ptr @__loadtime_comment_str_HASH], section "llvm.metadata"
 //
-//     define i32 @func() !implicit.ref !5 { ... }
-//     !5 = !{ptr @__loadtime_comment_str_HASH}
+//     define i32 @func() !implicit.ref !1 { ... }
+//     !1 = !{ptr @__loadtime_comment_str_HASH}
 //
 //===----------------------------------------------------------------------===//
 

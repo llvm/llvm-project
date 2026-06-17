@@ -8,7 +8,7 @@
 
 target triple = "powerpc-ibm-aix"
 
-@__loadtime_comment_str_f20696a95b638f0b = weak_odr hidden unnamed_addr constant [24 x i8] c"@(#) Copyright TU1 v1.0\00", align 1, !loadtime_comment !0
+@__loadtime_comment_str_f20696a95b638f0b = weak_odr hidden unnamed_addr constant [24 x i8] c"@(#) Copyright TU1 v1.0\00", section "__loadtime_comment", align 1, !loadtime_comment !0
 @llvm.compiler.used = appending global [1 x ptr] [ptr @__loadtime_comment_str_f20696a95b638f0b], section "llvm.metadata"
 
 define void @f0() {
@@ -22,7 +22,7 @@ entry:
 
 !0 = !{}
 ; ---- Globals --------------------------------------------
-; CHECK: @[[LOADTIME_COMMENT_STR:__loadtime_comment_str_[0-9a-f]+]] = weak_odr hidden unnamed_addr constant [24 x i8] c"@(#) Copyright TU1 v1.0\00", align 1, !loadtime_comment !0
+; CHECK: @[[LOADTIME_COMMENT_STR:__loadtime_comment_str_[0-9a-f]+]] = weak_odr hidden unnamed_addr constant [24 x i8] c"@(#) Copyright TU1 v1.0\00", section "__loadtime_comment", align 1, !loadtime_comment !0
 ; CHECK-NEXT: @llvm.compiler.used = appending global [1 x ptr] [ptr @[[LOADTIME_COMMENT_STR]]], section "llvm.metadata"
 
 

@@ -8,7 +8,7 @@
 
 // RUN: %clang_cc1 -std=c++20 -triple powerpc-ibm-aix -emit-llvm %t/copymod.cppm -o - \
 // RUN:   | FileCheck %s --check-prefix=CHECK-MOD
-// CHECK-MOD: @[[LOADTIME_COMMENT_STR:__loadtime_comment_str_[0-9a-f]+]] = weak_odr hidden unnamed_addr constant [10 x i8] c"module me\00", align 1
+// CHECK-MOD: @[[LOADTIME_COMMENT_STR:__loadtime_comment_str_[0-9a-f]+]] = weak_odr hidden unnamed_addr constant [10 x i8] c"module me\00", section "__loadtime_comment", align 1, !loadtime_comment !0
 // CHECK-MOD: @llvm.compiler.used = appending global {{.*}} @[[LOADTIME_COMMENT_STR]]
 
 // Compile an importing TU that uses the prebuilt module and verify that it

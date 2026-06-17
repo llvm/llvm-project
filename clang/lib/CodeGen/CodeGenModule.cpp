@@ -3702,8 +3702,8 @@ void CodeGenModule::AddDependentLib(StringRef Lib) {
   LinkerOptionsMetadata.push_back(llvm::MDNode::get(C, MDOpts));
 }
 
-/// Process copyright pragma and and create a global variable with metadata.
-///
+/// Process copyright pragma and create a weak_odr hidden string global variable
+/// in the __loadtime_comment section, marked with !loadtime_comment metadata.
 /// Only one copyright pragma is allowed per translation unit. Subsequent
 /// pragmas in the same TU are ignored with a warning at the parse level.
 void CodeGenModule::ProcessPragmaCommentCopyright(StringRef Comment,
@@ -3745,6 +3745,12 @@ void CodeGenModule::ProcessPragmaCommentCopyright(StringRef Comment,
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
   GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   GV->setAlignment(llvm::Align(1));
+  // Place the copyright string in a dedicated section for better memory layout.
+  // Tradeoff: In full LTO builds, multiple copyright strings may be grouped
+  // into a single csect, preventing individual GC by the linker. However, this
+  // groups copyright strings "out of the way" from other data, which is likely
+  // beneficial for memory layout. ThinLTO is not affected by this grouping.
+  GV->setSection("__loadtime_comment");
 
   // Mark with loadtime_comment metadata for LowerCommentStringPass
   GV->setMetadata("loadtime_comment", llvm::MDNode::get(C, {}));
