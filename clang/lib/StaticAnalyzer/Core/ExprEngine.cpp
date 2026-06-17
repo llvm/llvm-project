@@ -3969,18 +3969,17 @@ void ExprEngine::ConstructInitList(const Expr *E, ArrayRef<Expr *> Args,
   bool IsCompound = T->isArrayType() || T->isRecordType() ||
                     T->isAnyComplexType() || T->isVectorType();
 
+  SVal Val;
   if (Args.size() > 1 || (E->isPRValue() && IsCompound && !IsTransparent)) {
     llvm::ImmutableList<SVal> ArgList = getBasicVals().getEmptySValList();
     for (Expr *E : llvm::reverse(Args))
       ArgList = getBasicVals().prependSVal(S->getSVal(E, SF), ArgList);
 
-    B.generateNode(E, Pred,
-                   S->BindExpr(E, SF, svalBuilder.makeCompoundVal(T, ArgList)));
+    Val = getSValBuilder().makeCompoundVal(T, ArgList);
+  } else if (Args.size() == 0) {
+    Val = getSValBuilder().makeZeroVal(T);
   } else {
-    B.generateNode(E, Pred,
-                   S->BindExpr(E, SF,
-                               Args.size() == 0
-                                   ? getSValBuilder().makeZeroVal(T)
-                                   : S->getSVal(Args.front(), SF)));
+    Val = S->getSVal(Args.front(), SF);
   }
+  B.generateNode(E, Pred, S->BindExpr(E, SF, Val));
 }
