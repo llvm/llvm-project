@@ -3722,6 +3722,7 @@ void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
   NodeBuilder Bldr(Src, Dst, *currBldrCtx);
 
   for (ExplodedNode *Pred : Src) {
+    const StackFrame *SF = Pred->getStackFrame();
     // Test if the previous node was as the same expression.  This can happen
     // when the expression fails to evaluate to anything meaningful and
     // (as an optimization) we don't generate a node.
@@ -3732,7 +3733,7 @@ void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
 
     ProgramStateRef State = Pred->getState();
     State = State->set<LastEagerlyAssumeExprIfSuccessful>(nullptr);
-    SVal V = State->getSVal(Ex, Pred->getStackFrame());
+    SVal V = State->getSVal(Ex, SF);
     std::optional<nonloc::SymbolVal> SEV = V.getAs<nonloc::SymbolVal>();
     if (SEV && SEV->isExpression()) {
       const auto &[TrueTag, FalseTag] = getEagerlyAssumeBifurcationTags();
@@ -3747,14 +3748,14 @@ void ExprEngine::evalEagerlyAssumeBifurcation(ExplodedNodeSet &Dst,
       // First assume that the condition is true.
       if (StateTrue) {
         SVal Val = svalBuilder.makeIntVal(1U, Ex->getType());
-        StateTrue = StateTrue->BindExpr(Ex, Pred->getStackFrame(), Val);
+        StateTrue = StateTrue->BindExpr(Ex, SF, Val);
         Bldr.generateNode(Ex, Pred, StateTrue, TrueTag);
       }
 
       // Next, assume that the condition is false.
       if (StateFalse) {
         SVal Val = svalBuilder.makeIntVal(0U, Ex->getType());
-        StateFalse = StateFalse->BindExpr(Ex, Pred->getStackFrame(), Val);
+        StateFalse = StateFalse->BindExpr(Ex, SF, Val);
         Bldr.generateNode(Ex, Pred, StateFalse, FalseTag);
       }
     }
