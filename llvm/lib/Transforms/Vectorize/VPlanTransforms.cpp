@@ -1176,8 +1176,9 @@ static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
   VPValue *StepVPV = vputils::getOrCreateVPValueForSCEVExpr(Plan, Step);
   VPBuilder Builder(cast<VPInstruction>(Op));
   Type *TCTy = ResumeTC->getScalarType();
-  VPValue *ExitCount = Builder.createSub(ResumeTC, Plan.getConstantInt(TCTy, 1),
-                                         DebugLoc::getUnknown());
+  VPValue *ExitCount = Builder.createOverflowingOp(
+      Instruction::Sub, {ResumeTC, Plan.getConstantInt(TCTy, 1)},
+      {/*HasNUW=*/true, /*HasNSW=*/false}, DebugLoc::getUnknown());
   return Builder.createDerivedIV(Kind, /*FPBinOp=*/nullptr, StartIRV, ExitCount,
                                  StepVPV);
 }
