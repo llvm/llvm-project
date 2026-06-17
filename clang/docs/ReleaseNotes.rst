@@ -822,6 +822,10 @@ Miscellaneous Clang Crashes Fixed
 OpenACC Specific Changes
 ------------------------
 
+OpenCL Specific Changes
+-----------------------
+- Added support for OpenCL C 3.1 language version (``-cl-std=CL3.1``).
+
 Target Specific Changes
 -----------------------
 
