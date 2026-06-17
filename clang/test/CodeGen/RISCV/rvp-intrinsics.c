@@ -5240,17 +5240,17 @@ uint32x2_t test_pasubu_u32x2(uint32x2_t rs1, uint32x2_t rs2) {
 // RV32-SAME: i32 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <4 x i8>
-// RV32-NEXT:    [[TMP1:%.*]] = call <4 x i8> @llvm.riscv.pabs.v4i8(<4 x i8> [[TMP0]])
-// RV32-NEXT:    [[TMP2:%.*]] = bitcast <4 x i8> [[TMP1]] to i32
-// RV32-NEXT:    ret i32 [[TMP2]]
+// RV32-NEXT:    [[ELT_ABS_I:%.*]] = call <4 x i8> @llvm.abs.v4i8(<4 x i8> [[TMP0]], i1 false)
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[ELT_ABS_I]] to i32
+// RV32-NEXT:    ret i32 [[TMP1]]
 //
 // RV64-LABEL: define dso_local i32 @test_pabs_i8x4(
 // RV64-SAME: i32 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <4 x i8>
-// RV64-NEXT:    [[TMP1:%.*]] = call <4 x i8> @llvm.riscv.pabs.v4i8(<4 x i8> [[TMP0]])
-// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i8> [[TMP1]] to i32
-// RV64-NEXT:    ret i32 [[TMP2]]
+// RV64-NEXT:    [[ELT_ABS_I:%.*]] = call <4 x i8> @llvm.abs.v4i8(<4 x i8> [[TMP0]], i1 false)
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[ELT_ABS_I]] to i32
+// RV64-NEXT:    ret i32 [[TMP1]]
 //
 uint8x4_t test_pabs_i8x4(int8x4_t rs1) {
   return __riscv_pabs_i8x4(rs1);
@@ -5260,17 +5260,17 @@ uint8x4_t test_pabs_i8x4(int8x4_t rs1) {
 // RV32-SAME: i32 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
-// RV32-NEXT:    [[TMP1:%.*]] = call <2 x i16> @llvm.riscv.pabs.v2i16(<2 x i16> [[TMP0]])
-// RV32-NEXT:    [[TMP2:%.*]] = bitcast <2 x i16> [[TMP1]] to i32
-// RV32-NEXT:    ret i32 [[TMP2]]
+// RV32-NEXT:    [[ELT_ABS_I:%.*]] = call <2 x i16> @llvm.abs.v2i16(<2 x i16> [[TMP0]], i1 false)
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i16> [[ELT_ABS_I]] to i32
+// RV32-NEXT:    ret i32 [[TMP1]]
 //
 // RV64-LABEL: define dso_local i32 @test_pabs_i16x2(
 // RV64-SAME: i32 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[RS1_COERCE]] to <2 x i16>
-// RV64-NEXT:    [[TMP1:%.*]] = call <2 x i16> @llvm.riscv.pabs.v2i16(<2 x i16> [[TMP0]])
-// RV64-NEXT:    [[TMP2:%.*]] = bitcast <2 x i16> [[TMP1]] to i32
-// RV64-NEXT:    ret i32 [[TMP2]]
+// RV64-NEXT:    [[ELT_ABS_I:%.*]] = call <2 x i16> @llvm.abs.v2i16(<2 x i16> [[TMP0]], i1 false)
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast <2 x i16> [[ELT_ABS_I]] to i32
+// RV64-NEXT:    ret i32 [[TMP1]]
 //
 uint16x2_t test_pabs_i16x2(int16x2_t rs1) {
   return __riscv_pabs_i16x2(rs1);
@@ -5368,17 +5368,17 @@ uint16x2_t test_pabdu_u16x2(uint16x2_t rs1, uint16x2_t rs2) {
 // RV32-SAME: i64 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <8 x i8>
-// RV32-NEXT:    [[TMP1:%.*]] = call <8 x i8> @llvm.riscv.pabs.v8i8(<8 x i8> [[TMP0]])
-// RV32-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to i64
-// RV32-NEXT:    ret i64 [[TMP2]]
+// RV32-NEXT:    [[ELT_ABS_I:%.*]] = call <8 x i8> @llvm.abs.v8i8(<8 x i8> [[TMP0]], i1 false)
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[ELT_ABS_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP1]]
 //
 // RV64-LABEL: define dso_local i64 @test_pabs_i8x8(
 // RV64-SAME: i64 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <8 x i8>
-// RV64-NEXT:    [[TMP1:%.*]] = call <8 x i8> @llvm.riscv.pabs.v8i8(<8 x i8> [[TMP0]])
-// RV64-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to i64
-// RV64-NEXT:    ret i64 [[TMP2]]
+// RV64-NEXT:    [[ELT_ABS_I:%.*]] = call <8 x i8> @llvm.abs.v8i8(<8 x i8> [[TMP0]], i1 false)
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[ELT_ABS_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP1]]
 //
 uint8x8_t test_pabs_i8x8(int8x8_t rs1) {
   return __riscv_pabs_i8x8(rs1);
@@ -5388,17 +5388,17 @@ uint8x8_t test_pabs_i8x8(int8x8_t rs1) {
 // RV32-SAME: i64 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
 // RV32-NEXT:  [[ENTRY:.*:]]
 // RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <4 x i16>
-// RV32-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.riscv.pabs.v4i16(<4 x i16> [[TMP0]])
-// RV32-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to i64
-// RV32-NEXT:    ret i64 [[TMP2]]
+// RV32-NEXT:    [[ELT_ABS_I:%.*]] = call <4 x i16> @llvm.abs.v4i16(<4 x i16> [[TMP0]], i1 false)
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[ELT_ABS_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP1]]
 //
 // RV64-LABEL: define dso_local i64 @test_pabs_i16x4(
 // RV64-SAME: i64 noundef [[RS1_COERCE:%.*]]) #[[ATTR0]] {
 // RV64-NEXT:  [[ENTRY:.*:]]
 // RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[RS1_COERCE]] to <4 x i16>
-// RV64-NEXT:    [[TMP1:%.*]] = call <4 x i16> @llvm.riscv.pabs.v4i16(<4 x i16> [[TMP0]])
-// RV64-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to i64
-// RV64-NEXT:    ret i64 [[TMP2]]
+// RV64-NEXT:    [[ELT_ABS_I:%.*]] = call <4 x i16> @llvm.abs.v4i16(<4 x i16> [[TMP0]], i1 false)
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[ELT_ABS_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP1]]
 //
 uint16x4_t test_pabs_i16x4(int16x4_t rs1) {
   return __riscv_pabs_i16x4(rs1);

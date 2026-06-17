@@ -11758,8 +11758,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     unsigned Opc = IntNo == Intrinsic::riscv_clmulh ? ISD::CLMULH : ISD::CLMULR;
     return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1), Op.getOperand(2));
   }
-  case Intrinsic::riscv_pabs:
-    return DAG.getNode(ISD::ABS, DL, Op.getValueType(), Op.getOperand(1));
   case Intrinsic::riscv_paadd:
   case Intrinsic::riscv_paaddu:
   case Intrinsic::riscv_pasub:
@@ -15693,20 +15691,6 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     case Intrinsic::experimental_get_vector_length: {
       SDValue Res = lowerGetVectorLength(N, DAG, Subtarget);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
-      return;
-    }
-    case Intrinsic::riscv_pabs: {
-      EVT VT = N->getValueType(0);
-      if (!Subtarget.is64Bit() || (VT != MVT::v4i8 && VT != MVT::v2i16))
-        return;
-
-      EVT WideVT = VT == MVT::v4i8 ? MVT::v8i8 : MVT::v4i16;
-      SDValue Undef = DAG.getUNDEF(VT);
-      SDValue Op0 =
-          DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, N->getOperand(1), Undef);
-      SDValue Res = DAG.getNode(ISD::ABS, DL, WideVT, Op0);
-      Results.push_back(DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Res,
-                                    DAG.getVectorIdxConstant(0, DL)));
       return;
     }
     case Intrinsic::riscv_paadd:

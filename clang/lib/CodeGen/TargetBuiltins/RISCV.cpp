@@ -1221,10 +1221,6 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_pasubu_u16x4:
   case RISCV::BI__builtin_riscv_pasubu_u32x2:
   // Packed Absolute Value and Absolute Difference
-  case RISCV::BI__builtin_riscv_pabs_i8x4:
-  case RISCV::BI__builtin_riscv_pabs_i16x2:
-  case RISCV::BI__builtin_riscv_pabs_i8x8:
-  case RISCV::BI__builtin_riscv_pabs_i16x4:
   case RISCV::BI__builtin_riscv_pabd_i8x4:
   case RISCV::BI__builtin_riscv_pabd_i16x2:
   case RISCV::BI__builtin_riscv_pabd_i8x8:
@@ -1263,12 +1259,6 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     case RISCV::BI__builtin_riscv_pasubu_u16x4:
     case RISCV::BI__builtin_riscv_pasubu_u32x2:
       ID = Intrinsic::riscv_pasubu;
-      break;
-    case RISCV::BI__builtin_riscv_pabs_i8x4:
-    case RISCV::BI__builtin_riscv_pabs_i16x2:
-    case RISCV::BI__builtin_riscv_pabs_i8x8:
-    case RISCV::BI__builtin_riscv_pabs_i16x4:
-      ID = Intrinsic::riscv_pabs;
       break;
     case RISCV::BI__builtin_riscv_pabd_i8x4:
     case RISCV::BI__builtin_riscv_pabd_i16x2:

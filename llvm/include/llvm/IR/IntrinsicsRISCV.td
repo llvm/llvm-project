@@ -2046,11 +2046,6 @@ def int_riscv_pause : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffec
 // Packed SIMD extensions
 //===----------------------------------------------------------------------===//
 let TargetPrefix = "riscv" in {
-class RVPUnaryIntrinsic
-    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                            [LLVMMatchType<0>],
-                            [IntrNoMem, IntrSpeculatable]>;
-
 class RVPBinaryIntrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>, LLVMMatchType<0>],
@@ -2063,7 +2058,6 @@ class RVPBinaryIntrinsic
   def int_riscv_pasubu : RVPBinaryIntrinsic;
 
   // Packed Absolute Value and Absolute Difference
-  def int_riscv_pabs  : RVPUnaryIntrinsic;
   def int_riscv_pabd  : RVPBinaryIntrinsic;
   def int_riscv_pabdu : RVPBinaryIntrinsic;
 } // TargetPrefix = "riscv"

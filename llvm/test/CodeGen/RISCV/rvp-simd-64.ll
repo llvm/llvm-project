@@ -5095,35 +5095,6 @@ define <2 x i16> @test_pnsra_hs_mask(<2 x i32> %a, i32 %shamt) {
   ret <2 x i16> %trunc
 }
 
-define <8 x i8> @test_pabs_v8i8(<8 x i8> %a) {
-; RV32-LABEL: test_pabs_v8i8:
-; RV32:       # %bb.0:
-; RV32-NEXT:    pabs.db a0, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_pabs_v8i8:
-; RV64:       # %bb.0:
-; RV64-NEXT:    pabs.b a0, a0
-; RV64-NEXT:    ret
-  %res = call <8 x i8> @llvm.riscv.pabs.v8i8(<8 x i8> %a)
-  ret <8 x i8> %res
-}
-
-define <4 x i16> @test_pabs_v4i16(<4 x i16> %a) {
-; RV32-LABEL: test_pabs_v4i16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    pabs.dh a0, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: test_pabs_v4i16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    pabs.h a0, a0
-; RV64-NEXT:    ret
-  %res = call <4 x i16> @llvm.riscv.pabs.v4i16(<4 x i16> %a)
-  ret <4 x i16> %res
-}
-
-; Packed Absolute Difference intrinsics (64-bit)
 define <8 x i8> @test_pabd_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-LABEL: test_pabd_v8i8:
 ; RV32:       # %bb.0:
