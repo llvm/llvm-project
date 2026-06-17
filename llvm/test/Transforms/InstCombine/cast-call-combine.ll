@@ -20,4 +20,3 @@ else:
   call void @foo (ptr null)
   ret void
 }
-

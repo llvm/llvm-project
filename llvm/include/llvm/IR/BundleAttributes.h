@@ -9,6 +9,7 @@
 #ifndef LLVM_IR_BUNDLE_ATTRIBUTES_H
 #define LLVM_IR_BUNDLE_ATTRIBUTES_H
 
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/InstrTypes.h"
 
@@ -19,6 +20,26 @@ enum class BundleAttr {
 };
 
 namespace llvm {
+struct AssumeBuilder {
+  IRBuilderBase &Builder;
+  SmallVector<OperandBundleDef> Assumes;
+  unique_function<void(AssumeInst *)> CB;
+
+  AssumeBuilder(IRBuilderBase &Builder,
+                unique_function<void(AssumeInst *)> CB = {})
+      : Builder(Builder), CB(std::move(CB)) {}
+  AssumeBuilder(const AssumeBuilder &) = delete;
+  AssumeBuilder &operator=(const AssumeBuilder &) = delete;
+  ~AssumeBuilder() {
+    if (Assumes.empty())
+      return;
+    auto *AI = Builder.CreateAssumption(Assumes);
+    if (CB)
+      CB(cast<AssumeInst>(AI));
+  }
+
+  void addNoUndef(Value *Val) { Assumes.emplace_back("noundef", Val); }
+};
 
 LLVM_ABI StringRef getNameFromBundleAttr(BundleAttr);
 LLVM_ABI BundleAttr getBundleAttrFromID(uint32_t);
