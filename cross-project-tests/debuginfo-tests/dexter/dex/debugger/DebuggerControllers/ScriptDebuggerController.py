@@ -130,11 +130,24 @@ class ScriptDebuggerController(DebuggerControllerBase):
             ]
             self.debugger.collect_watches(step_info, watches)
 
+            active_thens = [
+                then
+                for where_match in active_where_matches.values()
+                for then in where_match.active_thens
+            ]
+            should_step_out = any(then.command == "step_out" for then in active_thens)
+            should_finish = any(then.command == "finish" for then in active_thens)
+
             # Our stepping behaviour is as follows:
-            # - If any !where matches the current stack frame, we step.
+            # - If any !then is active, we follow its command.
+            # - Otherwise, if any !where matches the current stack frame, we step.
             # - Otherwise, if any !where matches any non-current stack frame, we step out.
             # - Otherwise, we continue.
-            if any(
+            if should_finish:
+                next_action = DebuggerAction.EXIT
+            elif should_step_out:
+                next_action = DebuggerAction.STEP_OUT
+            elif any(
                 where_match.frame_idx == 0
                 for where_match in active_where_matches.values()
             ):
@@ -155,14 +168,15 @@ class ScriptDebuggerController(DebuggerControllerBase):
                 if (
                     bp_ids
                     and where not in script.root_wheres
-                    and where not in pending_wheres
+                    and (where not in pending_wheres or should_step_out)
                 ):
                     bp_to_delete.extend(bp_ids)
                     bp_ids.clear()
             self.debugger.delete_breakpoints(bp_to_delete)
-            for where in pending_wheres:
-                if not self._where_bps[where]:
-                    self.add_where_entry_bp(where)
+            if not should_step_out:
+                for where in pending_wheres:
+                    if not self._where_bps[where]:
+                        self.add_where_entry_bp(where)
 
             if step_info.current_frame:
                 self._step_index += 1
