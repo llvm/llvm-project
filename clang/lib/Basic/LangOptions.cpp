@@ -143,36 +143,55 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
 
   // Set OpenCL Version.
   Opts.OpenCL = Std.isOpenCL();
-  if (LangStd == LangStandard::lang_opencl10)
+  switch (LangStd) {
+  case LangStandard::lang_opencl10:
     Opts.OpenCLVersion = 100;
-  else if (LangStd == LangStandard::lang_opencl11)
+    break;
+  case LangStandard::lang_opencl11:
     Opts.OpenCLVersion = 110;
-  else if (LangStd == LangStandard::lang_opencl12)
+    break;
+  case LangStandard::lang_opencl12:
     Opts.OpenCLVersion = 120;
-  else if (LangStd == LangStandard::lang_opencl20)
+    break;
+  case LangStandard::lang_opencl20:
     Opts.OpenCLVersion = 200;
-  else if (LangStd == LangStandard::lang_opencl30)
+    break;
+  case LangStandard::lang_opencl30:
     Opts.OpenCLVersion = 300;
-  else if (LangStd == LangStandard::lang_opencl31)
+    break;
+  case LangStandard::lang_opencl31:
     Opts.OpenCLVersion = 310;
-  else if (LangStd == LangStandard::lang_openclcpp10)
+    break;
+  case LangStandard::lang_openclcpp10:
     Opts.OpenCLCPlusPlusVersion = 100;
-  else if (LangStd == LangStandard::lang_openclcpp2021)
+    break;
+  case LangStandard::lang_openclcpp2021:
     Opts.OpenCLCPlusPlusVersion = 202100;
-  else if (LangStd == LangStandard::lang_hlsl2015)
+    break;
+  case LangStandard::lang_hlsl2015:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_2015;
-  else if (LangStd == LangStandard::lang_hlsl2016)
+    break;
+  case LangStandard::lang_hlsl2016:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_2016;
-  else if (LangStd == LangStandard::lang_hlsl2017)
+    break;
+  case LangStandard::lang_hlsl2017:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_2017;
-  else if (LangStd == LangStandard::lang_hlsl2018)
+    break;
+  case LangStandard::lang_hlsl2018:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_2018;
-  else if (LangStd == LangStandard::lang_hlsl2021)
+    break;
+  case LangStandard::lang_hlsl2021:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_2021;
-  else if (LangStd == LangStandard::lang_hlsl202x)
+    break;
+  case LangStandard::lang_hlsl202x:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_202x;
-  else if (LangStd == LangStandard::lang_hlsl202y)
+    break;
+  case LangStandard::lang_hlsl202y:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_202y;
+    break;
+  default:
+    break;
+  }
 
   // OpenCL has some additional defaults.
   if (Opts.OpenCL) {
