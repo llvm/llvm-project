@@ -72,68 +72,65 @@ define amdgpu_cs void @issue130119(i1 %arg) {
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    v_and_b32_e32 v0, 1, v0
 ; CHECK-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v0
-; CHECK-NEXT:    s_mov_b32 s16, 0
+; CHECK-NEXT:    s_mov_b32 s12, 0
 ; CHECK-NEXT:    s_mov_b64 s[2:3], 0
 ; CHECK-NEXT:    s_branch .LBB1_2
-; CHECK-NEXT:  .LBB1_1: ; %Flow2
+; CHECK-NEXT:  .LBB1_1: ; %Flow3
 ; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]
-; CHECK-NEXT:    s_and_b64 s[4:5], exec, s[4:5]
+; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
+; CHECK-NEXT:    s_and_b64 s[4:5], exec, s[6:7]
 ; CHECK-NEXT:    s_or_b64 s[2:3], s[4:5], s[2:3]
 ; CHECK-NEXT:    s_andn2_b64 exec, exec, s[2:3]
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_10
 ; CHECK-NEXT:  .LBB1_2: ; %bb1
 ; CHECK-NEXT:    ; =>This Loop Header: Depth=1
 ; CHECK-NEXT:    ; Child Loop BB1_4 Depth 2
-; CHECK-NEXT:    s_and_b32 s6, s16, 1
-; CHECK-NEXT:    s_cmp_eq_u32 s6, 0
-; CHECK-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; CHECK-NEXT:    s_cmp_eq_u32 s6, 1
-; CHECK-NEXT:    s_cselect_b64 s[8:9], -1, 0
-; CHECK-NEXT:    s_mov_b64 s[10:11], 0
-; CHECK-NEXT:    ; implicit-def: $sgpr6_sgpr7
+; CHECK-NEXT:    s_and_b32 s13, s12, 1
+; CHECK-NEXT:    s_mov_b64 s[6:7], 0
+; CHECK-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; CHECK-NEXT:    s_branch .LBB1_4
 ; CHECK-NEXT:  .LBB1_3: ; %Flow1
 ; CHECK-NEXT:    ; in Loop: Header=BB1_4 Depth=2
-; CHECK-NEXT:    s_xor_b64 s[14:15], s[14:15], -1
-; CHECK-NEXT:    s_and_b64 s[12:13], exec, s[12:13]
-; CHECK-NEXT:    s_or_b64 s[10:11], s[12:13], s[10:11]
-; CHECK-NEXT:    s_andn2_b64 s[6:7], s[6:7], exec
-; CHECK-NEXT:    s_and_b64 s[12:13], s[14:15], exec
-; CHECK-NEXT:    s_or_b64 s[6:7], s[6:7], s[12:13]
-; CHECK-NEXT:    s_andn2_b64 exec, exec, s[10:11]
+; CHECK-NEXT:    s_xor_b64 s[10:11], s[10:11], -1
+; CHECK-NEXT:    s_and_b64 s[8:9], exec, s[8:9]
+; CHECK-NEXT:    s_or_b64 s[6:7], s[8:9], s[6:7]
+; CHECK-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
+; CHECK-NEXT:    s_and_b64 s[8:9], s[10:11], exec
+; CHECK-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
+; CHECK-NEXT:    s_andn2_b64 exec, exec, s[6:7]
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_8
 ; CHECK-NEXT:  .LBB1_4: ; %bb3
 ; CHECK-NEXT:    ; Parent Loop BB1_2 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
-; CHECK-NEXT:    s_mov_b64 s[14:15], s[4:5]
+; CHECK-NEXT:    s_cmp_eq_u32 s13, 0
+; CHECK-NEXT:    s_cselect_b64 s[10:11], -1, 0
+; CHECK-NEXT:    s_and_b64 vcc, exec, s[10:11]
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB1_6
 ; CHECK-NEXT:  ; %bb.5: ; %bb7
 ; CHECK-NEXT:    ; in Loop: Header=BB1_4 Depth=2
-; CHECK-NEXT:    s_mov_b64 s[14:15], -1
+; CHECK-NEXT:    s_mov_b64 s[10:11], -1
 ; CHECK-NEXT:  .LBB1_6: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB1_4 Depth=2
-; CHECK-NEXT:    s_mov_b64 s[12:13], -1
-; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[14:15]
-; CHECK-NEXT:    s_mov_b64 s[14:15], -1
+; CHECK-NEXT:    s_mov_b64 s[8:9], -1
+; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[10:11]
+; CHECK-NEXT:    s_mov_b64 s[10:11], -1
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB1_3
 ; CHECK-NEXT:  ; %bb.7: ; %bb8
 ; CHECK-NEXT:    ; in Loop: Header=BB1_4 Depth=2
-; CHECK-NEXT:    s_mov_b64 s[14:15], 0
-; CHECK-NEXT:    s_orn2_b64 s[12:13], s[0:1], exec
+; CHECK-NEXT:    s_mov_b64 s[10:11], 0
+; CHECK-NEXT:    s_orn2_b64 s[8:9], s[0:1], exec
 ; CHECK-NEXT:    s_branch .LBB1_3
 ; CHECK-NEXT:  .LBB1_8: ; %loop.exit.guard
 ; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    s_or_b64 exec, exec, s[10:11]
-; CHECK-NEXT:    s_mov_b64 s[4:5], -1
-; CHECK-NEXT:    s_and_saveexec_b64 s[8:9], s[6:7]
-; CHECK-NEXT:    s_xor_b64 s[6:7], exec, s[8:9]
+; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]
+; CHECK-NEXT:    s_mov_b64 s[6:7], -1
+; CHECK-NEXT:    s_and_saveexec_b64 s[8:9], s[4:5]
+; CHECK-NEXT:    s_xor_b64 s[4:5], exec, s[8:9]
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_1
 ; CHECK-NEXT:  ; %bb.9: ; %bb10
 ; CHECK-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; CHECK-NEXT:    s_or_b32 s16, s16, 1
-; CHECK-NEXT:    s_xor_b64 s[4:5], exec, -1
+; CHECK-NEXT:    s_or_b32 s12, s12, 1
+; CHECK-NEXT:    s_xor_b64 s[6:7], exec, -1
 ; CHECK-NEXT:    s_branch .LBB1_1
 ; CHECK-NEXT:  .LBB1_10: ; %DummyReturnBlock
 ; CHECK-NEXT:    s_endpgm

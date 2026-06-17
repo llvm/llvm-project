@@ -1581,11 +1581,11 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; SI-NEXT:  ; %bb.1: ; %.preheader1.preheader
 ; SI-NEXT:    s_mov_b64 s[2:3], exec
 ; SI-NEXT:    v_mov_b32_e32 v0, 0x3fc00000
-; SI-NEXT:    v_cmp_ngt_f32_e64 s[0:1], s6, 0
 ; SI-NEXT:  .LBB25_2: ; %bb
 ; SI-NEXT:    ; =>This Inner Loop Header: Depth=1
-; SI-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
+; SI-NEXT:    v_cmp_gt_f32_e64 s[0:1], s6, 0
 ; SI-NEXT:    v_add_f32_e32 v0, 0x3e800000, v0
+; SI-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; SI-NEXT:    s_cbranch_vccnz .LBB25_2
 ; SI-NEXT:  ; %bb.3: ; %bb33
 ; SI-NEXT:    s_andn2_b64 s[2:3], s[2:3], exec
@@ -1610,12 +1610,12 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; GFX10-NEXT:    s_cbranch_vccnz .LBB25_5
 ; GFX10-NEXT:  ; %bb.1: ; %.preheader1.preheader
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0x3fc00000
-; GFX10-NEXT:    v_cmp_ngt_f32_e64 s[0:1], s6, 0
 ; GFX10-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX10-NEXT:  .LBB25_2: ; %bb
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX10-NEXT:    v_cmp_gt_f32_e64 s[0:1], s6, 0
 ; GFX10-NEXT:    v_add_f32_e32 v0, 0x3e800000, v0
-; GFX10-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
+; GFX10-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; GFX10-NEXT:    s_cbranch_vccnz .LBB25_2
 ; GFX10-NEXT:  ; %bb.3: ; %bb33
 ; GFX10-NEXT:    s_andn2_b64 s[2:3], s[2:3], exec
@@ -1640,12 +1640,12 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; GFX11-NEXT:    s_cbranch_vccnz .LBB25_5
 ; GFX11-NEXT:  ; %bb.1: ; %.preheader1.preheader
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0x3fc00000
-; GFX11-NEXT:    v_cmp_ngt_f32_e64 s[0:1], s6, 0
 ; GFX11-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX11-NEXT:  .LBB25_2: ; %bb
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX11-NEXT:    v_cmp_gt_f32_e64 s[0:1], s6, 0
 ; GFX11-NEXT:    v_add_f32_e32 v0, 0x3e800000, v0
-; GFX11-NEXT:    s_and_not1_b64 vcc, exec, s[0:1]
+; GFX11-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; GFX11-NEXT:    s_cbranch_vccnz .LBB25_2
 ; GFX11-NEXT:  ; %bb.3: ; %bb33
 ; GFX11-NEXT:    s_and_not1_b64 s[2:3], s[2:3], exec
@@ -1667,26 +1667,24 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; GFX12-SDAG-NEXT:    s_cmp_lt_f32 s1, 0x43000000
 ; GFX12-SDAG-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX12-SDAG-NEXT:    s_and_b64 s[0:1], s[4:5], s[0:1]
-; GFX12-SDAG-NEXT:    s_mov_b32 s4, 1.0
 ; GFX12-SDAG-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; GFX12-SDAG-NEXT:    s_mov_b32 s0, 1.0
 ; GFX12-SDAG-NEXT:    s_cbranch_vccnz .LBB25_5
 ; GFX12-SDAG-NEXT:  ; %bb.1: ; %.preheader1.preheader
-; GFX12-SDAG-NEXT:    s_cmp_ngt_f32 s6, 0
 ; GFX12-SDAG-NEXT:    s_mov_b64 s[2:3], exec
-; GFX12-SDAG-NEXT:    s_mov_b32 s4, 0x3fc00000
-; GFX12-SDAG-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GFX12-SDAG-NEXT:    s_mov_b32 s0, 0x3fc00000
 ; GFX12-SDAG-NEXT:  .LBB25_2: ; %bb
 ; GFX12-SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-SDAG-NEXT:    s_add_f32 s4, s4, 0x3e800000
-; GFX12-SDAG-NEXT:    s_and_not1_b64 vcc, exec, s[0:1]
-; GFX12-SDAG-NEXT:    s_cbranch_vccnz .LBB25_2
+; GFX12-SDAG-NEXT:    s_cmp_gt_f32 s6, 0
+; GFX12-SDAG-NEXT:    s_add_f32 s0, s0, 0x3e800000
+; GFX12-SDAG-NEXT:    s_cbranch_scc1 .LBB25_2
 ; GFX12-SDAG-NEXT:  ; %bb.3: ; %bb33
 ; GFX12-SDAG-NEXT:    s_and_not1_b64 s[2:3], s[2:3], exec
 ; GFX12-SDAG-NEXT:    s_cbranch_scc0 .LBB25_6
 ; GFX12-SDAG-NEXT:  ; %bb.4: ; %bb33
 ; GFX12-SDAG-NEXT:    s_mov_b64 exec, 0
 ; GFX12-SDAG-NEXT:  .LBB25_5: ; %bb35
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s4
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-SDAG-NEXT:    export mrt0, v0, v0, v0, v0 done
 ; GFX12-SDAG-NEXT:    s_endpgm
 ; GFX12-SDAG-NEXT:  .LBB25_6:
@@ -1705,14 +1703,12 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; GFX12-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX12-GISEL-NEXT:    s_cbranch_scc1 .LBB25_5
 ; GFX12-GISEL-NEXT:  ; %bb.1: ; %.preheader1.preheader
-; GFX12-GISEL-NEXT:    s_cmp_gt_f32 s6, 0
 ; GFX12-GISEL-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX12-GISEL-NEXT:    s_mov_b32 s0, 0x3fc00000
-; GFX12-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX12-GISEL-NEXT:  .LBB25_2: ; %bb
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX12-GISEL-NEXT:    s_cmp_gt_f32 s6, 0
 ; GFX12-GISEL-NEXT:    s_add_f32 s0, s0, 0x3e800000
-; GFX12-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX12-GISEL-NEXT:    s_cbranch_scc1 .LBB25_2
 ; GFX12-GISEL-NEXT:  ; %bb.3: ; %bb33
 ; GFX12-GISEL-NEXT:    s_and_not1_b64 s[2:3], s[2:3], exec
