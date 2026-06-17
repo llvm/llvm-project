@@ -333,8 +333,8 @@ public:
     // Discard collectStackTrace() frame and allocator function frame.
     constexpr uptr DiscardFrames = 2;
     uptr Stack[ScudoTraceSize + DiscardFrames];
-    uptr Size =
-        android_unsafe_frame_pointer_chase(Stack, ScudoTraceSize + DiscardFrames);
+    uptr Size = android_unsafe_frame_pointer_chase(Stack, ScudoTraceSize +
+                                                              DiscardFrames);
     Size = Min<uptr>(Size, ScudoTraceSize + DiscardFrames);
     return Depot->insert(Stack + Min<uptr>(DiscardFrames, Size), Stack + Size);
 #else
