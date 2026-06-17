@@ -8913,13 +8913,11 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
     if (BW >= 32 && BW <= 64 &&
         isOperationLegalOrCustom(ISD::MUL, getTypeToTransformTo(Ctx, VT))) {
 
-      // Set every fourth bit of each nibble, equivalent to 0b100010001...0001.
-      APInt MaskVal(BW, 0);
-      for (unsigned i = 0; i < BW; i += 4)
-        MaskVal.setBit(i);
+      // Set every fourth bit of each nibble, equivalent to 0b00010001...0001.
+      APInt MaskVal = APInt::getSplat(BW, APInt(4, 0b0001));
 
-      // Create versions of X and Y that keep only the first, second, third, or
-      // fourth bit of every nibble.
+      // Create versions of X and Y that keep only the I-th bit of
+      // each nibble.
       SDValue M[4], Xp[4], Yp[4];
       for (unsigned I = 0; I < 4; ++I) {
         M[I] = DAG.getConstant(MaskVal.shl(I), DL, VT);
@@ -8945,7 +8943,8 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
         // Keep only the bits belonging to this iteration, and bitwise or it all
         // together.
         Zi = DAG.getNode(ISD::AND, DL, VT, Zi, M[I]);
-        Res = Res ? DAG.getNode(ISD::OR, DL, VT, Res, Zi) : Zi;
+        Res = Res ? DAG.getNode(ISD::OR, DL, VT, Res, Zi, SDNodeFlags::Disjoint)
+                  : Zi;
       }
       return Res;
     }
