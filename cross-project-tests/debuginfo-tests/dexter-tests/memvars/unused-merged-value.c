@@ -6,7 +6,7 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 // RUN: %clang -std=gnu11 -O3 -glldb %s -o %t
-// RUN: %dexter --fail-lt 0.1 -w %dexter_lldb_args --binary %t -- %s
+// RUN: %dexter -w --use-script %dexter_lldb_args --binary %t -- %s | FileCheck %s
 // See NOTE at end for more info about the RUN command.
 
 // 1. SROA/mem2reg fully promotes parama.
@@ -30,13 +30,22 @@ __attribute__((noinline))
 int fun(int parama, int paramb) {
   if (parama)
     parama = paramb;
-  fluff();            // DexLabel('s0')
+  fluff();            // !dex_label s0
   return paramb;
 }
 
 int main() {
   return fun(5, 20);
 }
+
+// CHECK-DAG: missing_var_steps: 0
+
+/*
+---
+!where {lines: !label s0}:
+  !value parama: 20
+...
+*/
 
 // DexExpectWatchValue('parama', 20, on_line=ref('s0'))
 //
