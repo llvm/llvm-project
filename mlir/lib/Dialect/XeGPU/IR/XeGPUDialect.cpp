@@ -123,14 +123,11 @@ static SmallVector<SmallVector<int64_t>> genStaticCoordinates(
   return coordinates;
 }
 
-/// Expands a list of per-distribution-unit block-start coordinates into the
-/// full list of element coordinates owned within each block. Each block start
-/// covers a `subShape`-sized region; this enumerates every element of that
-/// region (in row-major order) offset by the block start. Comparing these
-/// expanded coordinates - rather than the bare block starts - lets two layouts
-/// that differ only in how a lane's elements are blocked (i.e. `lane_data`),
-/// but that ultimately own the same elements in the same order, be recognized
-/// as equivalent.
+/// Expands per-distribution-unit block-start coordinates into the full list of
+/// element coordinates each block covers: every element of the `subShape`-sized
+/// region (row-major) offset by the block start. Comparing these instead of the
+/// bare block starts lets layouts that differ only in `lane_data` blocking, but
+/// own the same elements in the same order, be recognized as equivalent.
 static SmallVector<SmallVector<int64_t>>
 expandBlockCoords(ArrayRef<SmallVector<int64_t>> blockStarts,
                   ArrayRef<int64_t> subShape) {
@@ -145,6 +142,42 @@ expandBlockCoords(ArrayRef<SmallVector<int64_t>> blockStarts,
     }
   }
   return expanded;
+}
+
+/// Returns true if `self` and `other` distribute `shape` identically at
+/// `level`: every id in `[0, size)` owns the same coordinates under both.
+///
+/// At the Lane level, layouts that pack `lane_data` differently can still own
+/// the same per-lane elements in the same order; their block starts differ but
+/// the expanded per-element coordinates match. So block starts are expanded
+/// (via `expandBlockCoords`) before comparing, but only when it can change the
+/// result (Lane level with differing `lane_data`) - otherwise comparing the
+/// cheaper block starts is already exact.
+///
+/// TODO: Extend the same handling to the Subgroup level (sg_data repacks).
+static bool compareDistributedCoords(xegpu::DistributeLayoutAttr self,
+                                     const xegpu::DistributeLayoutAttr &other,
+                                     ArrayRef<int64_t> shape,
+                                     xegpu::LayoutKind level, int64_t size) {
+  bool expandCoords =
+      level == xegpu::LayoutKind::Lane &&
+      self.getEffectiveLaneDataAsInt() != other.getEffectiveLaneDataAsInt();
+  SmallVector<int64_t> selfSubShape, otherSubShape;
+  if (expandCoords) {
+    selfSubShape = self.getEffectiveLaneDataAsInt();
+    otherSubShape = other.getEffectiveLaneDataAsInt();
+  }
+  for (int64_t id : llvm::seq<int64_t>(0, size)) {
+    auto coords = self.computeStaticDistributedCoords(id, shape);
+    auto otherCoords = other.computeStaticDistributedCoords(id, shape);
+    if (expandCoords) {
+      coords = expandBlockCoords(coords, selfSubShape);
+      otherCoords = expandBlockCoords(otherCoords, otherSubShape);
+    }
+    if (coords != otherCoords)
+      return false;
+  }
+  return true;
 }
 
 // Checks if the given memref type represents shared local memory (SLM).
@@ -975,38 +1008,7 @@ bool LayoutAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
   }
 
   auto compareCoordsForAllIds = [&](int64_t size) {
-    // At the Lane level, `lane_data` only changes how a lane's elements are
-    // blocked across distribution units, not which elements it owns nor their
-    // order. When two layouts pack `lane_data` differently, expand the per-unit
-    // block starts into the full ordered element coordinates (using each
-    // layout's `lane_data`) before comparing, so layouts that merely repack
-    // `lane_data` are treated as compatible.
-    //
-    // The expansion is skipped whenever it cannot change the outcome: when the
-    // two `lane_data` match, comparing the (cheaper) block starts is already
-    // exact, since expanding both sides by the same sub-shape is injective. As
-    // a result the per-element work only happens for Lane-level checks with
-    // mismatched `lane_data`; all Subgroup/InstData checks and matching
-    // `lane_data` stay free of it.
-    bool expandCoords =
-        level == xegpu::LayoutKind::Lane &&
-        getEffectiveLaneDataAsInt() != other.getEffectiveLaneDataAsInt();
-    SmallVector<int64_t> selfSubShape, otherSubShape;
-    if (expandCoords) {
-      selfSubShape = getEffectiveLaneDataAsInt();
-      otherSubShape = other.getEffectiveLaneDataAsInt();
-    }
-    for (int64_t id : llvm::seq<int64_t>(0, size)) {
-      auto coords = computeStaticDistributedCoords(id, shape);
-      auto otherCoords = other.computeStaticDistributedCoords(id, shape);
-      if (expandCoords) {
-        coords = expandBlockCoords(coords, selfSubShape);
-        otherCoords = expandBlockCoords(otherCoords, otherSubShape);
-      }
-      if (coords != otherCoords)
-        return false;
-    }
-    return true;
+    return compareDistributedCoords(*this, other, shape, level, size);
   };
 
   if (level == xegpu::LayoutKind::Subgroup) {
@@ -1221,38 +1223,7 @@ bool SliceAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
   }
 
   auto compareCoordsForAllIds = [&](int64_t size) {
-    // At the Lane level, `lane_data` only changes how a lane's elements are
-    // blocked across distribution units, not which elements it owns nor their
-    // order. When two layouts pack `lane_data` differently, expand the per-unit
-    // block starts into the full ordered element coordinates (using each
-    // layout's `lane_data`) before comparing, so layouts that merely repack
-    // `lane_data` are treated as compatible.
-    //
-    // The expansion is skipped whenever it cannot change the outcome: when the
-    // two `lane_data` match, comparing the (cheaper) block starts is already
-    // exact, since expanding both sides by the same sub-shape is injective. As
-    // a result the per-element work only happens for Lane-level checks with
-    // mismatched `lane_data`; all Subgroup/InstData checks and matching
-    // `lane_data` stay free of it.
-    bool expandCoords =
-        level == xegpu::LayoutKind::Lane &&
-        getEffectiveLaneDataAsInt() != other.getEffectiveLaneDataAsInt();
-    SmallVector<int64_t> selfSubShape, otherSubShape;
-    if (expandCoords) {
-      selfSubShape = getEffectiveLaneDataAsInt();
-      otherSubShape = other.getEffectiveLaneDataAsInt();
-    }
-    for (int64_t id : llvm::seq<int64_t>(0, size)) {
-      auto coords = computeStaticDistributedCoords(id, shape);
-      auto otherCoords = other.computeStaticDistributedCoords(id, shape);
-      if (expandCoords) {
-        coords = expandBlockCoords(coords, selfSubShape);
-        otherCoords = expandBlockCoords(otherCoords, otherSubShape);
-      }
-      if (coords != otherCoords)
-        return false;
-    }
-    return true;
+    return compareDistributedCoords(*this, other, shape, level, size);
   };
 
   auto flattenedThis = flatten();
