@@ -127,6 +127,13 @@ Error DXContainer::parseDebugName(StringRef Part) {
   return Error::success();
 }
 
+Error DXContainer::parsePrivateData(StringRef Part) {
+  if (PrivateData)
+    return parseFailed("more than one PRIV part is present in the file");
+  PrivateData.emplace(Part);
+  return Error::success();
+}
+
 Error DXContainer::parseShaderFeatureFlags(StringRef Part) {
   if (ShaderFeatureFlags)
     return parseFailed("More than one SFI0 part is present in the file");
@@ -536,6 +543,9 @@ Error DXContainer::parsePartOffsets() {
       sizeof(dxbc::Header) + (Header.PartCount * sizeof(uint32_t));
   const char *Current = Data.getBuffer().data() + sizeof(dxbc::Header);
   for (uint32_t Part = 0; Part < Header.PartCount; ++Part) {
+    if (PrivateData)
+      return parseFailed("PRIV must be the last section in a DXContainer");
+
     uint32_t PartOffset;
     if (Error Err = readInteger(Data.getBuffer(), Current, PartOffset))
       return Err;
@@ -575,6 +585,10 @@ Error DXContainer::parsePartOffsets() {
       break;
     case dxbc::PartType::ILDN:
       if (Error Err = parseDebugName(PartData))
+        return Err;
+      break;
+    case dxbc::PartType::PRIV:
+      if (Error Err = parsePrivateData(PartData))
         return Err;
       break;
     case dxbc::PartType::SFI0:

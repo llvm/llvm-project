@@ -125,9 +125,15 @@ assignSectionHeader(dxbc::SourceInfo::SectionHeader &Dst,
 }
 
 Error DXContainerWriter::writeParts(raw_ostream &OS) {
+  bool HasPrivate = false;
   uint32_t RollingOffset =
       sizeof(dxbc::Header) + (ObjectFile.Header.PartCount * sizeof(uint32_t));
   for (auto I : llvm::zip(ObjectFile.Parts, *ObjectFile.Header.PartOffsets)) {
+    if (HasPrivate)
+      return createStringError(
+          errc::invalid_argument,
+          "PRIV must be the last section in a DXContainer");
+
     if (RollingOffset < std::get<1>(I)) {
       uint32_t PadBytes = std::get<1>(I) - RollingOffset;
       OS.write_zeros(PadBytes);
@@ -203,6 +209,15 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
       if (P.DebugName->NameLength)
         DebugName.Parameters.NameLength = *P.DebugName->NameLength;
       DebugName.write(OS);
+      break;
+    }
+    case dxbc::PartType::PRIV: {
+      if (!P.PrivateData)
+        continue;
+
+      HasPrivate = true;
+      OS.write(reinterpret_cast<char *>(P.PrivateData->data()),
+               P.PrivateData->size());
       break;
     }
     case dxbc::PartType::SFI0: {
