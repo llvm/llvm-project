@@ -3760,7 +3760,6 @@ bool ExprEngine::didEagerlyAssumeBifurcateAt(ProgramStateRef State,
 
 void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
                                  ExplodedNodeSet &Dst) {
-  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
   // We have processed both the inputs and the outputs.  All of the outputs
   // should evaluate to Locs.  Nuke all of their values.
 
@@ -3792,13 +3791,12 @@ void ExprEngine::VisitGCCAsmStmt(const GCCAsmStmt *A, ExplodedNode *Pred,
                                        /*CausedByPointerEscape=*/true);
   }
 
-  Bldr.generateNode(A, Pred, state);
+  Dst.insert(Engine.makePostStmtNode(A, state, Pred));
 }
 
 void ExprEngine::VisitMSAsmStmt(const MSAsmStmt *A, ExplodedNode *Pred,
                                 ExplodedNodeSet &Dst) {
-  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-  Bldr.generateNode(A, Pred, Pred->getState());
+  Dst.insert(Engine.makePostStmtNode(A, Pred->getState(), Pred));
 }
 
 //===----------------------------------------------------------------------===//
