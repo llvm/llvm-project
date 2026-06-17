@@ -69,9 +69,9 @@ Error RecordReplayTy::init(uint64_t MemSize, void *VAddr) {
 
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device.getDeviceId(),
        "%s initialized with starting address %p, "
-       "memory size %lu bytes, and output directory in %s\n",
+       "memory size %" PRIu64 " bytes, and output directory in %s\n",
        Status == StatusTy::Recording ? "Record" : "Replay", StartAddr,
-       TotalSize, OutputDirectory.c_str());
+       TotalSize, OutputDirectory.string().c_str());
 
   return Plugin::success();
 }
@@ -308,7 +308,7 @@ NativeRecordReplayTy::getFilenameImpl(const InstanceTy &Instance,
   Filepath /= std::to_string(Instance.KernelHash) + "_" +
               std::to_string(Instance.LaunchConfigHash);
   Filepath.replace_extension(getExtension(FileType).data());
-  SmallString<128> Filename(Filepath.c_str());
+  SmallString<128> Filename(Filepath.string());
   return Filename;
 }
 
