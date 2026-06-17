@@ -77,14 +77,27 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-NEXT:    srwi r3, r28, 7
 ; CHECK-NEXT:    andi. r3, r3, 1
 ; CHECK-NEXT:    crmove 4*cr2+un, gt
-; CHECK-NEXT:    bc 12, 4*cr2+eq, .LBB0_5
+; CHECK-NEXT:    bc 12, 4*cr2+eq, .LBB0_6
 ; CHECK-NEXT:  # %bb.3: # %bb37
 ; CHECK-NEXT:    lwz r28, 0(r3)
-; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB0_10
-; CHECK-NEXT:  # %bb.4: # %bb41
-; CHECK-NEXT:    # implicit-def: $r3
-; CHECK-NEXT:    b .LBB0_14
-; CHECK-NEXT:  .LBB0_5: # %bb19
+; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB0_11
+; CHECK-NEXT:  # %bb.4: # %bb42
+; CHECK-NEXT:    paddi r3, 0, global_1@PCREL, 1
+; CHECK-NEXT:    li r4, 0
+; CHECK-NEXT:    cmpwi r28, 0
+; CHECK-NEXT:    isel r3, r3, r4, 4*cr2+gt
+; CHECK-NEXT:    crnot 4*cr2+lt, eq
+; CHECK-NEXT:    bl call_5@notoc
+; CHECK-NEXT:    pld r3, global_2@got@pcrel(0), 1
+; CHECK-NEXT:    addi r3, r3, 8682
+; CHECK-NEXT:    lxsihzx v2, 0, r3
+; CHECK-NEXT:    vextsh2d v2, v2
+; CHECK-NEXT:    xscvsxdsp f0, v2
+; CHECK-NEXT:    bc 12, 4*cr2+lt, .LBB0_12
+; CHECK-NEXT:  # %bb.5: # %bb42
+; CHECK-NEXT:    xxspltidp vs1, 1069547520
+; CHECK-NEXT:    b .LBB0_13
+; CHECK-NEXT:  .LBB0_6: # %bb19
 ; CHECK-NEXT:    setnbc r3, 4*cr2+un
 ; CHECK-NEXT:    paddi r4, 0, global_4@PCREL, 1
 ; CHECK-NEXT:    stw r3, 176(r1)
@@ -99,19 +112,19 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-NEXT:    cmpwi cr2, r27, 0
 ; CHECK-NEXT:    mcrf cr3, cr0
 ; CHECK-NEXT:    .p2align 5
-; CHECK-NEXT:  .LBB0_6: # %bb27
+; CHECK-NEXT:  .LBB0_7: # %bb27
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    mr r3, r30
 ; CHECK-NEXT:    li r4, 0
 ; CHECK-NEXT:    bl call_6@notoc
 ; CHECK-NEXT:    bc 4, 4*cr4+eq, .LBB0_17
-; CHECK-NEXT:  # %bb.7: # %bb31
+; CHECK-NEXT:  # %bb.8: # %bb31
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    bc 4, 4*cr3+eq, .LBB0_17
-; CHECK-NEXT:  # %bb.8: # %bb33
+; CHECK-NEXT:  # %bb.9: # %bb33
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    bc 4, 4*cr2+eq, .LBB0_6
-; CHECK-NEXT:  # %bb.9: # %bb36
+; CHECK-NEXT:    bc 4, 4*cr2+eq, .LBB0_7
+; CHECK-NEXT:  # %bb.10: # %bb36
 ; CHECK-NEXT:    stb r3, 181(r1)
 ; CHECK-NEXT:    # implicit-def: $cr2un
 ; CHECK-NEXT:    mfocrf r3, 32
@@ -119,22 +132,9 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-NEXT:    rlwimi r3, r4, 21, 11, 11
 ; CHECK-NEXT:    mtocrf 32, r3
 ; CHECK-NEXT:    b .LBB0_15
-; CHECK-NEXT:  .LBB0_10: # %bb42
-; CHECK-NEXT:    paddi r3, 0, global_1@PCREL, 1
-; CHECK-NEXT:    li r4, 0
-; CHECK-NEXT:    cmpwi r28, 0
-; CHECK-NEXT:    isel r3, r3, r4, 4*cr2+gt
-; CHECK-NEXT:    crnot 4*cr2+lt, eq
-; CHECK-NEXT:    bl call_5@notoc
-; CHECK-NEXT:    pld r3, global_2@got@pcrel(0), 1
-; CHECK-NEXT:    addi r3, r3, 8682
-; CHECK-NEXT:    lxsihzx v2, 0, r3
-; CHECK-NEXT:    vextsh2d v2, v2
-; CHECK-NEXT:    xscvsxdsp f0, v2
-; CHECK-NEXT:    bc 12, 4*cr2+lt, .LBB0_12
-; CHECK-NEXT:  # %bb.11: # %bb42
-; CHECK-NEXT:    xxspltidp vs1, 1069547520
-; CHECK-NEXT:    b .LBB0_13
+; CHECK-NEXT:  .LBB0_11: # %bb41
+; CHECK-NEXT:    # implicit-def: $r3
+; CHECK-NEXT:    b .LBB0_14
 ; CHECK-NEXT:  .LBB0_12:
 ; CHECK-NEXT:    xxspltidp vs1, 1071644672
 ; CHECK-NEXT:  .LBB0_13: # %bb42
@@ -225,22 +225,37 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-BE-NEXT:    srwi r3, r28, 7
 ; CHECK-BE-NEXT:    andi. r3, r3, 1
 ; CHECK-BE-NEXT:    crmove 4*cr2+un, gt
-; CHECK-BE-NEXT:    bc 12, 4*cr2+eq, .LBB0_5
+; CHECK-BE-NEXT:    bc 12, 4*cr2+eq, .LBB0_6
 ; CHECK-BE-NEXT:  # %bb.3: # %bb37
 ; CHECK-BE-NEXT:    lwz r28, 0(r3)
 ; CHECK-BE-NEXT:    addis r3, r2, global_1@toc@ha
-; CHECK-BE-NEXT:    bc 12, 4*cr5+lt, .LBB0_10
-; CHECK-BE-NEXT:  # %bb.4: # %bb41
-; CHECK-BE-NEXT:    # implicit-def: $r3
-; CHECK-BE-NEXT:    b .LBB0_14
-; CHECK-BE-NEXT:  .LBB0_5: # %bb19
+; CHECK-BE-NEXT:    bc 4, 4*cr5+lt, .LBB0_11
+; CHECK-BE-NEXT:  # %bb.4: # %bb42
+; CHECK-BE-NEXT:    li r4, 0
+; CHECK-BE-NEXT:    addi r3, r3, global_1@toc@l
+; CHECK-BE-NEXT:    cmpwi r28, 0
+; CHECK-BE-NEXT:    isel r3, r3, r4, 4*cr2+gt
+; CHECK-BE-NEXT:    crnot 4*cr2+lt, eq
+; CHECK-BE-NEXT:    bl call_5
+; CHECK-BE-NEXT:    nop
+; CHECK-BE-NEXT:    addis r3, r2, .LC0@toc@ha
+; CHECK-BE-NEXT:    ld r3, .LC0@toc@l(r3)
+; CHECK-BE-NEXT:    addi r3, r3, 8682
+; CHECK-BE-NEXT:    lxsihzx v2, 0, r3
+; CHECK-BE-NEXT:    vextsh2d v2, v2
+; CHECK-BE-NEXT:    xscvsxdsp f0, v2
+; CHECK-BE-NEXT:    bc 12, 4*cr2+lt, .LBB0_12
+; CHECK-BE-NEXT:  # %bb.5: # %bb42
+; CHECK-BE-NEXT:    xxspltidp vs1, 1069547520
+; CHECK-BE-NEXT:    b .LBB0_13
+; CHECK-BE-NEXT:  .LBB0_6: # %bb19
 ; CHECK-BE-NEXT:    setnbc r3, 4*cr2+un
 ; CHECK-BE-NEXT:    addis r4, r2, global_4@toc@ha
 ; CHECK-BE-NEXT:    stw r3, 192(r1)
-; CHECK-BE-NEXT:    addis r3, r2, .LC0@toc@ha
+; CHECK-BE-NEXT:    addis r3, r2, .LC1@toc@ha
 ; CHECK-BE-NEXT:    std r2, 40(r1)
 ; CHECK-BE-NEXT:    addi r4, r4, global_4@toc@l
-; CHECK-BE-NEXT:    ld r3, .LC0@toc@l(r3)
+; CHECK-BE-NEXT:    ld r3, .LC1@toc@l(r3)
 ; CHECK-BE-NEXT:    ld r3, 0(r3)
 ; CHECK-BE-NEXT:    ld r2, 8(r3)
 ; CHECK-BE-NEXT:    ld r11, 16(r3)
@@ -253,20 +268,20 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-BE-NEXT:    cmpwi cr2, r27, 0
 ; CHECK-BE-NEXT:    mcrf cr3, cr0
 ; CHECK-BE-NEXT:    .p2align 5
-; CHECK-BE-NEXT:  .LBB0_6: # %bb27
+; CHECK-BE-NEXT:  .LBB0_7: # %bb27
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    mr r3, r30
 ; CHECK-BE-NEXT:    li r4, 0
 ; CHECK-BE-NEXT:    bl call_6
 ; CHECK-BE-NEXT:    nop
 ; CHECK-BE-NEXT:    bc 4, 4*cr4+eq, .LBB0_17
-; CHECK-BE-NEXT:  # %bb.7: # %bb31
+; CHECK-BE-NEXT:  # %bb.8: # %bb31
 ; CHECK-BE-NEXT:    #
 ; CHECK-BE-NEXT:    bc 4, 4*cr3+eq, .LBB0_17
-; CHECK-BE-NEXT:  # %bb.8: # %bb33
+; CHECK-BE-NEXT:  # %bb.9: # %bb33
 ; CHECK-BE-NEXT:    #
-; CHECK-BE-NEXT:    bc 4, 4*cr2+eq, .LBB0_6
-; CHECK-BE-NEXT:  # %bb.9: # %bb36
+; CHECK-BE-NEXT:    bc 4, 4*cr2+eq, .LBB0_7
+; CHECK-BE-NEXT:  # %bb.10: # %bb36
 ; CHECK-BE-NEXT:    stb r3, 197(r1)
 ; CHECK-BE-NEXT:    # implicit-def: $cr2un
 ; CHECK-BE-NEXT:    mfocrf r3, 32
@@ -274,24 +289,9 @@ define dso_local void @P10_Spill_CR_UN(ptr %arg, ptr %arg1, i32 %arg2) local_unn
 ; CHECK-BE-NEXT:    rlwimi r3, r4, 21, 11, 11
 ; CHECK-BE-NEXT:    mtocrf 32, r3
 ; CHECK-BE-NEXT:    b .LBB0_15
-; CHECK-BE-NEXT:  .LBB0_10: # %bb42
-; CHECK-BE-NEXT:    li r4, 0
-; CHECK-BE-NEXT:    addi r3, r3, global_1@toc@l
-; CHECK-BE-NEXT:    cmpwi r28, 0
-; CHECK-BE-NEXT:    isel r3, r3, r4, 4*cr2+gt
-; CHECK-BE-NEXT:    crnot 4*cr2+lt, eq
-; CHECK-BE-NEXT:    bl call_5
-; CHECK-BE-NEXT:    nop
-; CHECK-BE-NEXT:    addis r3, r2, .LC1@toc@ha
-; CHECK-BE-NEXT:    ld r3, .LC1@toc@l(r3)
-; CHECK-BE-NEXT:    addi r3, r3, 8682
-; CHECK-BE-NEXT:    lxsihzx v2, 0, r3
-; CHECK-BE-NEXT:    vextsh2d v2, v2
-; CHECK-BE-NEXT:    xscvsxdsp f0, v2
-; CHECK-BE-NEXT:    bc 12, 4*cr2+lt, .LBB0_12
-; CHECK-BE-NEXT:  # %bb.11: # %bb42
-; CHECK-BE-NEXT:    xxspltidp vs1, 1069547520
-; CHECK-BE-NEXT:    b .LBB0_13
+; CHECK-BE-NEXT:  .LBB0_11: # %bb41
+; CHECK-BE-NEXT:    # implicit-def: $r3
+; CHECK-BE-NEXT:    b .LBB0_14
 ; CHECK-BE-NEXT:  .LBB0_12:
 ; CHECK-BE-NEXT:    xxspltidp vs1, 1071644672
 ; CHECK-BE-NEXT:  .LBB0_13: # %bb42

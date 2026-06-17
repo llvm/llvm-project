@@ -25,16 +25,16 @@ define zeroext i8 @_ZN4llvm9InlineAsm14ConstraintInfo5ParseENS_9StringRefERSt6ve
 ; CHECK-NEXT:  ## %bb.1: ## %bb27.outer.preheader
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movb $1, %cl
-; CHECK-NEXT:    jmp LBB0_3
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  LBB0_2: ## %bb10
-; CHECK-NEXT:    ## in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    jne LBB0_6
 ; CHECK-NEXT:  LBB0_3: ## %bb27.outer108
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne LBB0_2
-; CHECK-NEXT:  ## %bb.4: ## %bb27.outer108
+; CHECK-NEXT:    je LBB0_4
+; CHECK-NEXT:  ## %bb.2: ## %bb10
+; CHECK-NEXT:    ## in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    je LBB0_3
+; CHECK-NEXT:    jmp LBB0_6
+; CHECK-NEXT:  LBB0_4: ## %bb27.outer108
 ; CHECK-NEXT:    ## in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    jne LBB0_6
 ; CHECK-NEXT:  ## %bb.5: ## %bb27.outer108
