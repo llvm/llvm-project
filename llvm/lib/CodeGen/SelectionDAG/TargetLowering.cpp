@@ -3533,14 +3533,12 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     KnownZero = SrcZero.extractBits(NumElts, Idx);
 
     // Attempt to avoid multi-use ops if we don't need anything from them.
-    if (!DemandedElts.isAllOnes()) {
-      SDValue NewSrc = SimplifyMultipleUseDemandedVectorElts(
-          Src, DemandedSrcElts, TLO.DAG, Depth + 1);
-      if (NewSrc) {
-        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewSrc,
-                                        Op.getOperand(1));
-        return TLO.CombineTo(Op, NewOp);
-      }
+    SDValue NewSrc = SimplifyMultipleUseDemandedVectorElts(Src, DemandedSrcElts,
+                                                           TLO.DAG, Depth + 1);
+    if (NewSrc) {
+      SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewSrc,
+                                      Op.getOperand(1));
+      return TLO.CombineTo(Op, NewOp);
     }
     break;
   }
