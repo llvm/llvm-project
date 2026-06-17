@@ -3936,6 +3936,10 @@ void TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   Known.resetAll();
 }
 
+void TargetLowering::computeKnownBitsForCopyFromReg(
+    const SDValue, KnownBits &, const APInt &, const SelectionDAG &,
+    const FunctionLoweringInfo *, unsigned) const {}
+
 void TargetLowering::computeKnownBitsForTargetInstr(
     GISelValueTracking &Analysis, Register R, KnownBits &Known,
     const APInt &DemandedElts, const MachineRegisterInfo &MRI,

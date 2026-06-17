@@ -3708,12 +3708,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
     if (Arg.Flags.isSRet()) {
       // The return object should be reasonably addressable.
-
-      // FIXME: This helps when the return is a real sret. If it is a
-      // automatically inserted sret (i.e. CanLowerReturn returns false), an
-      // extra copy is inserted in SelectionDAGBuilder which obscures this.
-      unsigned NumBits =
-          32 - getSubtarget()->getKnownHighZeroBitsForFrameIndex();
+      unsigned NumBits = 32 - getSRetPointerKnownHighZeroBits();
       Val = DAG.getNode(
           ISD::AssertZext, DL, VT, Val,
           DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), NumBits)));
@@ -19608,6 +19603,10 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
   TargetLoweringBase::finalizeLowering(MF);
 }
 
+unsigned SITargetLowering::getSRetPointerKnownHighZeroBits() const {
+  return getSubtarget()->getKnownHighZeroBitsForFrameIndex();
+}
+
 void SITargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
                                                      KnownBits &Known,
                                                      const APInt &DemandedElts,
@@ -19637,6 +19636,19 @@ void SITargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   }
   return AMDGPUTargetLowering::computeKnownBitsForTargetNode(
       Op, Known, DemandedElts, DAG, Depth);
+}
+
+void SITargetLowering::computeKnownBitsForCopyFromReg(
+    const SDValue Op, KnownBits &Known, const APInt &, const SelectionDAG &,
+    const FunctionLoweringInfo *FLI, unsigned) const {
+  if (!FLI || FLI->CanLowerReturn || !Op.getValueType().isInteger())
+    return;
+
+  Register Reg = cast<RegisterSDNode>(Op.getOperand(1))->getReg();
+  if (Reg != FLI->DemoteRegister)
+    return;
+
+  Known.Zero.setHighBits(getSRetPointerKnownHighZeroBits());
 }
 
 void SITargetLowering::computeKnownBitsForFrameIndex(

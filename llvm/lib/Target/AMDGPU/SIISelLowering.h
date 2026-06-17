@@ -33,6 +33,8 @@ class SITargetLowering final : public AMDGPUTargetLowering {
 private:
   const GCNSubtarget *Subtarget;
 
+  unsigned getSRetPointerKnownHighZeroBits() const;
+
 public:
   MVT getRegisterTypeForCallingConv(LLVMContext &Context,
                                     CallingConv::ID CC,
@@ -542,6 +544,10 @@ public:
                                      const APInt &DemandedElts,
                                      const SelectionDAG &DAG,
                                      unsigned Depth = 0) const override;
+  void computeKnownBitsForCopyFromReg(
+      const SDValue Op, KnownBits &Known, const APInt &DemandedElts,
+      const SelectionDAG &DAG, const FunctionLoweringInfo *FLI,
+      unsigned Depth = 0) const override;
   void computeKnownBitsForFrameIndex(int FrameIdx,
                                      KnownBits &Known,
                                      const MachineFunction &MF) const override;

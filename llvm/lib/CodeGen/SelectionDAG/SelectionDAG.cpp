@@ -4519,6 +4519,10 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     TLI->computeKnownBitsForFrameIndex(cast<FrameIndexSDNode>(Op)->getIndex(),
                                        Known, getMachineFunction());
     break;
+  case ISD::CopyFromReg:
+    TLI->computeKnownBitsForCopyFromReg(Op, Known, DemandedElts, *this, FLI,
+                                        Depth);
+    break;
 
   default:
     if (Opcode < ISD::BUILTIN_OP_END)
