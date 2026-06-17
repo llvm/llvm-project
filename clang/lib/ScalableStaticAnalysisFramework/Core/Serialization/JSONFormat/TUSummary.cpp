@@ -9,6 +9,7 @@
 #include "JSONFormatImpl.h"
 
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <set>
 
@@ -37,6 +38,25 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
 
   const Object &RootObject = *RootObjectPtr;
 
+  auto OptTargetTriple = RootObject.getString("target_triple");
+  if (!OptTargetTriple) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::FailedToReadObjectAtField,
+                                "TargetTriple", "target_triple", "string")
+        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+        .build();
+  }
+
+  if (auto Err = validateNormalizedTargetTriple(*OptTargetTriple)) {
+    return ErrorBuilder::wrap(std::move(Err))
+        .context(ErrorMessages::ReadingFromField, "TargetTriple",
+                 "target_triple")
+        .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+        .build();
+  }
+
+  llvm::Triple T(*OptTargetTriple);
+
   const Object *TUNamespaceObject = RootObject.getObject("tu_namespace");
   if (!TUNamespaceObject) {
     return ErrorBuilder::create(std::errc::invalid_argument,
@@ -55,7 +75,7 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
         .build();
   }
 
-  TUSummary Summary(std::move(*ExpectedTUNamespace));
+  TUSummary Summary(std::move(T), std::move(*ExpectedTUNamespace));
 
   {
     const Array *IdTableArray = RootObject.getArray("id_table");
@@ -137,6 +157,9 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
 llvm::Error JSONFormat::writeTUSummary(const TUSummary &S,
                                        llvm::StringRef Path) {
   Object RootObject;
+
+  RootObject["target_triple"] =
+      llvm::Triple::normalize(getTargetTriple(S).str());
 
   RootObject["tu_namespace"] = buildNamespaceToJSON(getTUNamespace(S));
 

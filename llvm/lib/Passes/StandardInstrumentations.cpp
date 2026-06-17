@@ -14,6 +14,7 @@
 
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/ADT/Any.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -41,7 +42,6 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -1675,7 +1675,7 @@ protected:
 
   std::vector<DisplayEdge *> EdgePtrs;
   SmallPtrSet<DisplayNode *, 0> Children;
-  std::unordered_map<const DisplayNode *, const DisplayEdge *> EdgeMap;
+  DenseMap<const DisplayNode *, const DisplayEdge *> EdgeMap;
 
   // Safeguard adding of edges.
   bool AllEdgesCreated = false;

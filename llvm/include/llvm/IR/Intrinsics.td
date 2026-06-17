@@ -547,15 +547,32 @@ class LLVMVectorOfAnyPointersToElt<int oidx>
 
 def llvm_void_ty       : LLVMType<isVoid>;
 
+// Unconstrained overloaded type.
 def llvm_any_ty        : LLVMAnyType<Any,
                                      AnyKindVectorConstraint.None,
                                      AnyKindElementConstraint.None>;
+// Integer overloaded types.
 def llvm_anyint_ty     : LLVMAnyType<iAny,
                                      AnyKindVectorConstraint.None,
                                      AnyKindElementConstraint.Integer>;
+def llvm_any_vector_int_ty : LLVMAnyType<iAny,
+                                     AnyKindVectorConstraint.Vector,
+                                     AnyKindElementConstraint.Integer>;
+def llvm_any_scalar_int_ty : LLVMAnyType<iAny,
+                                     AnyKindVectorConstraint.Scalar,
+                                     AnyKindElementConstraint.Integer>;
+
+// FP overloaded types.
 def llvm_anyfloat_ty   : LLVMAnyType<fAny,
                                      AnyKindVectorConstraint.None,
                                      AnyKindElementConstraint.Float>;
+def llvm_any_vector_float_ty : LLVMAnyType<iAny,
+                                     AnyKindVectorConstraint.Vector,
+                                     AnyKindElementConstraint.Float>;
+def llvm_any_scalar_float_ty : LLVMAnyType<iAny,
+                                     AnyKindVectorConstraint.Scalar,
+                                     AnyKindElementConstraint.Float>;
+// Other overloaded types.
 def llvm_anyvector_ty  : LLVMAnyType<vAny,
                                      AnyKindVectorConstraint.Vector,
                                      AnyKindElementConstraint.None>;
@@ -1471,12 +1488,12 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrStrictFP] in {
                                                          [ LLVMMatchType<0>,
                                                            llvm_metadata_ty,
                                                            llvm_metadata_ty ]>;
-  def int_experimental_constrained_lrint : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
-                                                     [ llvm_anyfloat_ty,
+  def int_experimental_constrained_lrint : DefaultAttrsIntrinsic<[ llvm_any_scalar_int_ty ],
+                                                     [ llvm_any_scalar_float_ty,
                                                        llvm_metadata_ty,
                                                        llvm_metadata_ty ]>;
-  def int_experimental_constrained_llrint : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
-                                                      [ llvm_anyfloat_ty,
+  def int_experimental_constrained_llrint : DefaultAttrsIntrinsic<[ llvm_any_scalar_int_ty ],
+                                                      [ llvm_any_scalar_float_ty,
                                                         llvm_metadata_ty,
                                                         llvm_metadata_ty ]>;
   def int_experimental_constrained_maxnum : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
@@ -1501,11 +1518,11 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrStrictFP] in {
   def int_experimental_constrained_floor : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                      [ LLVMMatchType<0>,
                                                        llvm_metadata_ty ]>;
-  def int_experimental_constrained_lround : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
-                                                      [ llvm_anyfloat_ty,
+  def int_experimental_constrained_lround : DefaultAttrsIntrinsic<[ llvm_any_scalar_int_ty ],
+                                                      [ llvm_any_scalar_float_ty,
                                                         llvm_metadata_ty ]>;
-  def int_experimental_constrained_llround : DefaultAttrsIntrinsic<[ llvm_anyint_ty ],
-                                                       [ llvm_anyfloat_ty,
+  def int_experimental_constrained_llround : DefaultAttrsIntrinsic<[ llvm_any_scalar_int_ty ],
+                                                       [ llvm_any_scalar_float_ty,
                                                          llvm_metadata_ty ]>;
   def int_experimental_constrained_round : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                      [ LLVMMatchType<0>,
@@ -2701,28 +2718,28 @@ def int_experimental_vector_compress:
               [IntrNoMem]>;
 
 def int_masked_udiv:
-  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+  DefaultAttrsIntrinsic<[llvm_any_vector_int_ty],
             [LLVMMatchType<0>,
              LLVMMatchType<0>,
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
             [IntrNoMem]>;
 
 def int_masked_sdiv:
-  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+  DefaultAttrsIntrinsic<[llvm_any_vector_int_ty],
             [LLVMMatchType<0>,
              LLVMMatchType<0>,
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
             [IntrNoMem]>;
 
 def int_masked_urem:
-  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+  DefaultAttrsIntrinsic<[llvm_any_vector_int_ty],
             [LLVMMatchType<0>,
              LLVMMatchType<0>,
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
             [IntrNoMem]>;
 
 def int_masked_srem:
-  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+  DefaultAttrsIntrinsic<[llvm_any_vector_int_ty],
             [LLVMMatchType<0>,
              LLVMMatchType<0>,
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
@@ -2847,38 +2864,38 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]
 
   def int_vector_reduce_fadd : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                                          [LLVMVectorElementType<0>,
-                                          llvm_anyvector_ty]>;
+                                          llvm_any_vector_float_ty]>;
   def int_vector_reduce_fmul : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
                                          [LLVMVectorElementType<0>,
-                                          llvm_anyvector_ty]>;
+                                          llvm_any_vector_float_ty]>;
   def int_vector_reduce_add : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                        [llvm_anyvector_ty]>;
+                                        [llvm_any_vector_int_ty]>;
   def int_vector_reduce_mul : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                        [llvm_anyvector_ty]>;
+                                        [llvm_any_vector_int_ty]>;
   def int_vector_reduce_and : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                        [llvm_anyvector_ty]>;
+                                        [llvm_any_vector_int_ty]>;
   def int_vector_reduce_or : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                       [llvm_anyvector_ty]>;
+                                       [llvm_any_vector_int_ty]>;
   def int_vector_reduce_xor : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                        [llvm_anyvector_ty]>;
+                                        [llvm_any_vector_int_ty]>;
   def int_vector_reduce_smax : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                         [llvm_anyvector_ty]>;
+                                         [llvm_any_vector_int_ty]>;
   def int_vector_reduce_smin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                         [llvm_anyvector_ty]>;
+                                         [llvm_any_vector_int_ty]>;
   def int_vector_reduce_umax : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                         [llvm_anyvector_ty]>;
+                                         [llvm_any_vector_int_ty]>;
   def int_vector_reduce_umin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                         [llvm_anyvector_ty]>;
+                                         [llvm_any_vector_int_ty]>;
   def int_vector_reduce_fmax : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                         [llvm_anyvector_ty]>;
+                                         [llvm_any_vector_float_ty]>;
   def int_vector_reduce_fmin : DefaultAttrsIntrinsic<[LLVMVectorElementType<0>],
-                                         [llvm_anyvector_ty]>;
+                                         [llvm_any_vector_float_ty]>;
   def int_vector_reduce_fminimum: DefaultAttrsIntrinsic<
                                          [LLVMVectorElementType<0>],
-                                         [llvm_anyvector_ty]>;
+                                         [llvm_any_vector_float_ty]>;
   def int_vector_reduce_fmaximum: DefaultAttrsIntrinsic<
                                          [LLVMVectorElementType<0>],
-                                         [llvm_anyvector_ty]>;
+                                         [llvm_any_vector_float_ty]>;
 }
 
 //===------ Matrix intrinsics ---------------------------------------------===//

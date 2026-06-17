@@ -2660,6 +2660,7 @@ cc_library(
         ":support",
         ":unified_symbol_resolution",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -2706,6 +2707,7 @@ cc_library(
         ":scalable_static_analysis_core",
         ":sema",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 

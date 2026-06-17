@@ -1262,8 +1262,11 @@ bool LoopInterchangeLegality::checkInductionsAndReductions(Loop *OuterLoop) {
 
       if (CurLoop == OuterLoop) {
         // PHIs in inner loops need to be part of a reduction in the outer loop,
-        assert(PHI.getNumIncomingValues() == 2 &&
-               "Phis in loop header should have exactly 2 incoming values");
+        if (PHI.getNumIncomingValues() != 2) {
+          LLVM_DEBUG(dbgs() << "Only PHI nodes in the outer loop header with 2 "
+                               "incoming values are supported.\n");
+          return false;
+        }
         // Check if we have a PHI node in the outer loop that has a reduction
         // result from the inner loop as an incoming value.
         Value *V = followLCSSA(

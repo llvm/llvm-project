@@ -2295,6 +2295,7 @@ class LSRInstance {
   void NarrowSearchSpaceByRefilteringUndesirableDedicatedRegisters();
   void NarrowSearchSpaceByFilterFormulaWithSameScaledReg();
   void NarrowSearchSpaceByFilterPostInc();
+  void NarrowSearchSpaceByMergingUsesOutsideLoop();
   void NarrowSearchSpaceByDeletingCostlyFormulas();
   void NarrowSearchSpaceByPickingWinnerRegs();
   void NarrowSearchSpaceUsingHeuristics();
@@ -5220,6 +5221,77 @@ void LSRInstance::NarrowSearchSpaceByFilterPostInc() {
   LLVM_DEBUG(dbgs() << "After pre-selection:\n"; print_uses(dbgs()));
 }
 
+void LSRInstance::NarrowSearchSpaceByMergingUsesOutsideLoop() {
+  if (EstimateSearchSpaceComplexity() < ComplexityLimit)
+    return;
+
+  LLVM_DEBUG(
+      dbgs() << "The search space is too complex.\n"
+                "Narrowing the search space by merging uses with fixups "
+                "entirely outside the loop with uses inside the loop.\n");
+
+  for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx) {
+    LSRUse &LU = Uses[LUIdx];
+    if (!LU.AllFixupsOutsideLoop || LU.Formulae.empty())
+      continue;
+
+    LLVM_DEBUG(dbgs() << "  Trying to eliminate use "; LU.print(dbgs());
+               dbgs() << '\n');
+
+    // Find a compatible LSRUse inside the loop that we could merge LU with
+    LSRUse *LUToMergeWith = nullptr;
+    const Formula &ThisF = LU.Formulae[0];
+    for (LSRUse &OtherLU : Uses) {
+      // Only merge with uses inside the loop
+      if (OtherLU.AllFixupsOutsideLoop)
+        continue;
+      // Can't merge with ICmpZero uses as they're handled specially when
+      // expanding
+      if (OtherLU.Kind == LSRUse::ICmpZero)
+        continue;
+      // Can't merge with uses without any formulae
+      if (OtherLU.Formulae.empty())
+        continue;
+      // Can't merge if LU's offsets aren't legal for all of OtherLU's formulae
+      if (any_of(OtherLU.Formulae, [&](const Formula &F) {
+            return !isLegalUse(TTI, LU.MinOffset, LU.MaxOffset, OtherLU.Kind,
+                               OtherLU.AccessTy, F);
+          }))
+        continue;
+      // We can merge with uses that have the same initial formula. We allow
+      // merging of uses with different Kind and AccessTy which means that the
+      // cost may end up being inaccurate, but it's also what we would have
+      // gotten if we'd ignored uses outside the loop entirely.
+      const Formula &OtherF = OtherLU.Formulae[0];
+      if (ThisF.BaseRegs == OtherF.BaseRegs &&
+          ThisF.ScaledReg == OtherF.ScaledReg &&
+          ThisF.BaseGV == OtherF.BaseGV && ThisF.Scale == OtherF.Scale &&
+          ThisF.UnfoldedOffset == OtherF.UnfoldedOffset &&
+          ThisF.BaseOffset == OtherF.BaseOffset) {
+        LUToMergeWith = &OtherLU;
+        break;
+      }
+    }
+    if (!LUToMergeWith)
+      continue;
+
+    LLVM_DEBUG(dbgs() << "   Merging with "; LUToMergeWith->print(dbgs());
+               dbgs() << '\n');
+
+    // Copy fixups
+    for (LSRFixup &Fixup : LU.Fixups) {
+      LUToMergeWith->pushFixup(Fixup);
+    }
+
+    // Delete the old use.
+    DeleteUse(LU, LUIdx);
+    --LUIdx;
+    --NumUses;
+  }
+
+  LLVM_DEBUG(dbgs() << "After pre-selection:\n"; print_uses(dbgs()));
+}
+
 /// The function delete formulas with high registers number expectation.
 /// Assuming we don't know the value of each formula (already delete
 /// all inefficient), generate probability of not selecting for each
@@ -5470,6 +5542,7 @@ void LSRInstance::NarrowSearchSpaceUsingHeuristics() {
   if (FilterSameScaledReg)
     NarrowSearchSpaceByFilterFormulaWithSameScaledReg();
   NarrowSearchSpaceByFilterPostInc();
+  NarrowSearchSpaceByMergingUsesOutsideLoop();
   if (LSRExpNarrow)
     NarrowSearchSpaceByDeletingCostlyFormulas();
   else

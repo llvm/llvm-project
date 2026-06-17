@@ -13,6 +13,7 @@ from lldbsuite.test import lldbutil
 exe_name = "ProcessAttach"  # Must match Makefile
 
 
+@skipIfWasm  # attaching requires launching the inferior as a host process
 class ProcessAttachTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
