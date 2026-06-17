@@ -25,9 +25,8 @@ $nt = comdat any
 ; MERGED-SAME: comdat(${{"?lwt[^ ]+}})
 @lwt_aliasee = private unnamed_addr global [1 x ptr] [ptr null], comdat($lwt), !type !0
 
-; MERGED: {{@"?lwt_nl[^ ]+}} = hidden unnamed_addr global
-; MERGED-SAME: comdat(${{"?lwt[^ ]+}})
-; THIN: {{@"?lwt_nl[^ ]+}} = external hidden
+; MERGED: @lwt_nl = internal unnamed_addr global i32 0, comdat(${{"?lwt[^ ]+}})
+; THIN: {{@"?lwt_nl\.[^ ]+}} = external hidden unnamed_addr global i32
 @lwt_nl = internal unnamed_addr global i32 0, comdat($lwt)
 
 ; MERGED: @nlwt_aliasee = private unnamed_addr global
@@ -47,12 +46,16 @@ $nt = comdat any
 ; THIN-SAME: comdat($nt)
 @nt_nl = internal unnamed_addr global i32 0, comdat($nt)
 
-; MERGED: {{@"?lwt[^ ]+}} = hidden unnamed_addr alias
-; THIN: {{@"?lwt[^ ]+}} = external hidden
+; MERGED: @lwt = internal unnamed_addr alias [1 x ptr], ptr @lwt_aliasee
+; MERGED: @nlwt_nl = internal unnamed_addr alias [1 x ptr], ptr @nlwt_aliasee
+; MERGED: {{@"?lwt_nl\.[^ ]+}} = hidden alias ptr, ptr @lwt_nl
+; MERGED: {{@"?lwt\.[^ ]+}} = hidden alias ptr, ptr @lwt
+; MERGED: {{@"?nlwt_nl\.[^ ]+}} = hidden alias ptr, ptr @nlwt_nl
+
+; THIN: {{@"?lwt\.[^ ]+}} = external hidden global [1 x ptr]
 @lwt = internal unnamed_addr alias [1 x ptr], ptr @lwt_aliasee
 
-; MERGED: {{@"?nlwt_nl[^ ]+}} = hidden unnamed_addr alias
-; THIN: {{@"?nlwt_nl[^ ]+}} = external hidden
+; THIN: {{@"?nlwt_nl\.[^ ]+}} = external hidden global [1 x ptr]
 @nlwt_nl = internal unnamed_addr alias [1 x ptr], ptr @nlwt_aliasee
 
 ; The functions below exist just to make sure the globals are used.
