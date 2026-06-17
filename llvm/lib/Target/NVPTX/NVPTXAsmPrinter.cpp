@@ -1690,7 +1690,7 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
       // ptrtoint, e.g. add(ptrtoint(@g), C). It can't fold to a ConstantInt
       // because it references a symbol; emit it through lowerConstantForGV, the
       // same path scalar symbol-relative integer globals use.
-      AggBuffer->addSymbol(Cexpr, Cexpr);
+      AggBuffer->addSymbol(Cexpr, Cexpr, AllocSize);
       AggBuffer->addZeros(AllocSize);
       break;
     }
