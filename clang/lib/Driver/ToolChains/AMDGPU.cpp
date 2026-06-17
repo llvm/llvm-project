@@ -11,6 +11,7 @@
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Options/Options.h"
@@ -249,7 +250,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
   // Deduce ROCm path by the real path of the invoked clang, resolving symbolic
   // link of clang itself.
   llvm::SmallString<256> RealClangPath;
-  llvm::sys::fs::real_path(D.getClangProgramPath(), RealClangPath);
+  llvm::sys::fs::real_path(D.getDriverProgramPath(), RealClangPath);
   auto ParentPath = llvm::sys::path::parent_path(RealClangPath);
   if (ParentPath != InstallDir)
     ROCmSearchDirs.emplace_back(DeduceROCmPath(ParentPath));
@@ -609,9 +610,9 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-shared");
   }
 
-  if (C.getDriver().isUsingLTO()) {
-    const bool ThinLTO = (C.getDriver().getLTOMode() == LTOK_Thin);
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs, ThinLTO);
+  if (auto LTO = getToolChain().getLTOMode(Args); LTO != LTOK_None) {
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs,
+                  LTO == LTOK_Thin);
   } else if (Args.hasArg(options::OPT_mcpu_EQ)) {
     CmdArgs.push_back(Args.MakeArgString(
         "-plugin-opt=mcpu=" +
@@ -657,28 +658,6 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
                                      const llvm::Triple &Triple,
                                      const llvm::opt::ArgList &Args,
                                      std::vector<StringRef> &Features) {
-  // Add target ID features to -target-feature options. No diagnostics should
-  // be emitted here since invalid target ID is diagnosed at other places.
-  StringRef TargetID = Args.getLastArgValue(options::OPT_mcpu_EQ);
-  if (!TargetID.empty()) {
-    llvm::StringMap<bool> FeatureMap;
-    auto OptionalGpuArch = parseTargetID(Triple, TargetID, &FeatureMap);
-    if (OptionalGpuArch) {
-      StringRef GpuArch = *OptionalGpuArch;
-      // Iterate through all possible target ID features for the given GPU.
-      // If it is mapped to true, add +feature.
-      // If it is mapped to false, add -feature.
-      // If it is not in the map (default), do not add it
-      for (auto &&Feature : getAllPossibleTargetIDFeatures(Triple, GpuArch)) {
-        auto Pos = FeatureMap.find(Feature);
-        if (Pos == FeatureMap.end())
-          continue;
-        Features.push_back(Args.MakeArgStringRef(
-            (Twine(Pos->second ? "+" : "-") + Feature).str()));
-      }
-    }
-  }
-
   if (Args.hasFlag(options::OPT_mwavefrontsize64,
                    options::OPT_mno_wavefrontsize64, false))
     Features.push_back("+wavefrontsize64");
@@ -713,23 +692,24 @@ Tool *AMDGPUToolChain::buildLinker() const {
 DerivedArgList *
 AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
                                Action::OffloadKind DeviceOffloadKind) const {
-
   DerivedArgList *DAL =
       Generic_ELF::TranslateArgs(Args, BoundArch, DeviceOffloadKind);
+  if (!DAL) {
+    DAL = new DerivedArgList(Args.getBaseArgs());
+    for (Arg *A : Args)
+      DAL->append(A);
+  }
 
   const OptTable &Opts = getDriver().getOpts();
 
-  if (!DAL)
-    DAL = new DerivedArgList(Args.getBaseArgs());
-
-  for (Arg *A : Args)
-    DAL->append(A);
-
-  // AMDGPU is intended to use `-mcpu` but we accept `-march` for legacy.
-  if (Arg *A = DAL->getLastArg(options::OPT_march_EQ)) {
-    DAL->eraseArg(options::OPT_march_EQ);
-    if (!DAL->hasArg(options::OPT_mcpu_EQ))
-      DAL->AddJoinedArg(A, Opts.getOption(options::OPT_mcpu_EQ), A->getValue());
+  if (DeviceOffloadKind == Action::OFK_None) {
+    // AMDGPU is intended to use `-mcpu` but we accept `-march` for legacy.
+    if (Arg *A = DAL->getLastArg(options::OPT_march_EQ)) {
+      DAL->eraseArg(options::OPT_march_EQ);
+      if (!DAL->hasArg(options::OPT_mcpu_EQ))
+        DAL->AddJoinedArg(A, Opts.getOption(options::OPT_mcpu_EQ),
+                          A->getValue());
+    }
   }
 
   // Replace -mcpu=native with detected GPU.
@@ -750,7 +730,31 @@ AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
     }
   }
 
-  checkTargetID(*DAL);
+  if (!BoundArch.empty()) {
+    DAL->eraseArg(options::OPT_mcpu_EQ);
+    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mcpu_EQ), BoundArch);
+  }
+
+  AMDGPUToolChain::ParsedTargetIDType PTID = checkTargetID(*DAL);
+
+  // Synthesize feature flags for target ID modifiers (xnack, sramecc).
+  if (PTID.OptionalFeatureMap) {
+    const llvm::StringMap<bool> &FeatureMap = *PTID.OptionalFeatureMap;
+
+    auto XnackIt = FeatureMap.find("xnack");
+    if (XnackIt != FeatureMap.end()) {
+      DAL->AddFlagArg(nullptr,
+                      Opts.getOption(XnackIt->second ? options::OPT_mxnack
+                                                     : options::OPT_mno_xnack));
+    }
+
+    auto SrameccIt = FeatureMap.find("sramecc");
+    if (SrameccIt != FeatureMap.end()) {
+      DAL->AddFlagArg(nullptr, Opts.getOption(SrameccIt->second
+                                                  ? options::OPT_msramecc
+                                                  : options::OPT_mno_sramecc));
+    }
+  }
 
   if (Args.getLastArgValue(options::OPT_x) != "cl")
     return DAL;
@@ -837,10 +841,32 @@ ROCMToolChain::ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
     RocmInstallation->detectDeviceLibrary();
 }
 
+DerivedArgList *
+ROCMToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
+                             Action::OffloadKind DeviceOffloadKind) const {
+  DerivedArgList *DAL =
+      AMDGPUToolChain::TranslateArgs(Args, BoundArch, DeviceOffloadKind);
+
+  // Filter out sanitizer coverage options that are not supported for AMDGPU.
+  for (Arg *A : Args) {
+    // Sanitizer coverage is currently not supported for AMDGPU.
+    if (A->getOption().matches(options::OPT_fsan_cov_Group)) {
+      // Upgrade to error if the option was explicitly specified for device
+      bool IsExplicitDevice =
+          A->getBaseArg().getOption().matches(options::OPT_Xarch_device);
+      getDriver().Diag(IsExplicitDevice
+                           ? diag::err_drv_unsupported_option_for_target
+                           : diag::warn_drv_unsupported_option_for_target)
+          << A->getAsString(Args) << getTriple().str();
+    }
+  }
+
+  return DAL;
+}
+
 void AMDGPUToolChain::addClangTargetOptions(
-    const llvm::opt::ArgList &DriverArgs,
-    llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
   // TODO: remove the SPIR-V bypass once it can encode (hidden) visibility.
@@ -917,13 +943,14 @@ AMDGPUToolChain::getParsedTargetID(const llvm::opt::ArgList &DriverArgs) const {
   return {TargetID.str(), OptionalGpuArch->str(), FeatureMap};
 }
 
-void AMDGPUToolChain::checkTargetID(
-    const llvm::opt::ArgList &DriverArgs) const {
+AMDGPUToolChain::ParsedTargetIDType
+AMDGPUToolChain::checkTargetID(const llvm::opt::ArgList &DriverArgs) const {
   auto PTID = getParsedTargetID(DriverArgs);
   if (PTID.OptionalTargetID && !PTID.OptionalGPUArch) {
     getDriver().Diag(clang::diag::err_drv_bad_target_id)
         << *PTID.OptionalTargetID;
   }
+  return PTID;
 }
 
 Expected<SmallVector<std::string>>
@@ -953,8 +980,8 @@ AMDGPUToolChain::getSystemGPUArchs(const ArgList &Args) const {
 
 void ROCMToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
-  AMDGPUToolChain::addClangTargetOptions(DriverArgs, CC1Args,
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
+  AMDGPUToolChain::addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
                                          DeviceOffloadingKind);
 
   // For the OpenCL case where there is no offload target, accept -nostdlib to
@@ -978,11 +1005,16 @@ void ROCMToolChain::addClangTargetOptions(
   if (TT.getEnvironment() == llvm::Triple::LLVM)
     return;
 
-  AMDGPUToolChain::ParsedTargetIDType TargetID = getParsedTargetID(DriverArgs);
-  StringRef GpuArch =
-      TargetID.OptionalGPUArch ? *TargetID.OptionalGPUArch : StringRef();
+  // Get the device name and canonicalize it. For offload compilation,
+  // BoundArch contains the full target ID. For non-offload (OpenCL),
+  // fall back to -mcpu.
+  StringRef TargetID = BoundArch.empty()
+                           ? DriverArgs.getLastArgValue(options::OPT_mcpu_EQ)
+                           : BoundArch;
+  StringRef GpuArch = getProcessorFromTargetID(getTriple(), TargetID);
 
   StringRef LibDeviceFile = RocmInstallation->getLibDeviceFile(GpuArch);
+
   auto ABIVer = DeviceLibABIVersion::fromCodeObjectVersion(
       getAMDGPUCodeObjectVersion(getDriver(), DriverArgs));
   if (!RocmInstallation->checkCommonBitcodeLibs(GpuArch, LibDeviceFile, ABIVer))
@@ -995,8 +1027,7 @@ void ROCMToolChain::addClangTargetOptions(
   // Add the generic set of libraries.
   BCLibs.append(RocmInstallation->getCommonBitcodeLibs(
       DriverArgs, LibDeviceFile, GpuArch, DeviceOffloadingKind,
-      getSanitizerArgs(DriverArgs, TargetID.OptionalTargetID.value_or(""),
-                       DeviceOffloadingKind)
+      getSanitizerArgs(DriverArgs, TargetID, DeviceOffloadingKind)
           .needsAsanRt()));
 
   for (auto [BCFile, Internalize] : BCLibs) {

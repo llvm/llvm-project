@@ -555,7 +555,7 @@ SDValue CSKYTargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
     SDValue SizeNode = DAG.getConstant(Size, DL, XLenVT);
 
-    Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
+    Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment, Alignment,
                           /*IsVolatile=*/false,
                           /*AlwaysInline=*/false, /*CI=*/nullptr, IsTailCall,
                           MachinePointerInfo(), MachinePointerInfo());

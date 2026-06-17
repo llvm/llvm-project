@@ -54,6 +54,7 @@ static_library("Target") {
     "PathMappingList.cpp",
     "Platform.cpp",
     "Process.cpp",
+    "ProcessIOHandler.cpp",
     "ProcessTrace.cpp",
     "Queue.cpp",
     "QueueItem.cpp",

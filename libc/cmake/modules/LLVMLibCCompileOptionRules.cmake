@@ -134,10 +134,6 @@ function(_get_compile_options_from_config output_var)
     libc_add_definition(config_options "LIBC_COPT_USE_MEM_BUILTINS")
   endif()
 
-  if(LIBC_TYPES_TIME_T_IS_32_BIT AND LLVM_LIBC_FULL_BUILD)
-    libc_add_definition(config_options "LIBC_TYPES_TIME_T_IS_32_BIT")
-  endif()
-
   if(LIBC_ADD_NULL_CHECKS)
     libc_add_definition(config_options "LIBC_ADD_NULL_CHECKS")
   endif()

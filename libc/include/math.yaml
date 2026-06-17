@@ -229,6 +229,12 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: cbrtf16
+    standards:
+      - stdc
+    return_type: _Float16
+    arguments:
+      - type: _Float16
   - name: ceil
     standards:
       - stdc
@@ -371,6 +377,23 @@ functions:
       - stdc
     return_type: double
     arguments:
+      - type: long double
+      - type: long double
+  - name: dfmaf128
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: float128
+      - type: float128
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
+  - name: dfmal
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: long double
       - type: long double
       - type: long double
   - name: dmulf128
@@ -1614,6 +1637,13 @@ functions:
     return_type: int
     arguments:
       - type: float
+  - name: isnanf128
+    standards:
+      - bsd
+    return_type: int
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: isnanl
     standards:
       - bsd
