@@ -6746,15 +6746,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::get_active_lane_mask: {
-    Check(Call.getType()->isVectorTy(),
-          "get_active_lane_mask: must return a "
-          "vector",
-          Call);
-    auto *ElemTy = Call.getType()->getScalarType();
+    Type *ElemTy = Call.getType()->getScalarType();
     Check(ElemTy->isIntegerTy(1),
-          "get_active_lane_mask: element type is not "
-          "i1",
-          Call);
+          "get_active_lane_mask: element type is not i1", Call);
     break;
   }
   case Intrinsic::experimental_get_vector_length: {
