@@ -107,8 +107,10 @@ bool GISelValueTracking::signBitIsZero(Register R) {
 
 bool GISelValueTracking::isKnownNeverZero(Register R, unsigned Depth) {
   LLT Ty = MRI.getType(R);
-  APInt DemandedElts =
-      Ty.isFixedVector() ? APInt::getAllOnes(Ty.getNumElements()) : APInt(1, 1);
+  const APInt ScalarDemandedElts(1, 1);
+  APInt DemandedElts = Ty.isFixedVector()
+                           ? APInt::getAllOnes(Ty.getNumElements())
+                           : ScalarDemandedElts;
   return isKnownNeverZero(R, DemandedElts, Depth);
 }
 
@@ -117,6 +119,7 @@ bool GISelValueTracking::isKnownNeverZero(Register R, const APInt &DemandedElts,
   if (Depth >= getMaxDepth())
     return false;
 
+  const APInt ScalarDemandedElts(1, 1);
   MachineInstr &MI = *MRI.getVRegDef(R);
 
   switch (MI.getOpcode()) {
@@ -130,7 +133,7 @@ bool GISelValueTracking::isKnownNeverZero(Register R, const APInt &DemandedElts,
     for (const auto &[I, MO] : enumerate(drop_begin(MI.operands()))) {
       if (!DemandedElts[I])
         continue;
-      if (!isKnownNeverZero(MO.getReg(), APInt(1, 1), Depth + 1))
+      if (!isKnownNeverZero(MO.getReg(), ScalarDemandedElts, Depth + 1))
         return false;
     }
     return true;
@@ -144,8 +147,10 @@ bool GISelValueTracking::isKnownNeverZero(Register R, const APInt &DemandedElts,
     Register Src = MI.getOperand(1).getReg();
     unsigned EltBW = MRI.getType(R).getScalarSizeInBits();
     if (MRI.getType(Src).getSizeInBits() == EltBW)
-      return isKnownNeverZero(Src, APInt(1, 1), Depth + 1);
-    return getKnownBits(Src, APInt(1, 1), Depth + 1).trunc(EltBW).isNonZero();
+      return isKnownNeverZero(Src, ScalarDemandedElts, Depth + 1);
+    return getKnownBits(Src, ScalarDemandedElts, Depth + 1)
+        .trunc(EltBW)
+        .isNonZero();
   }
 
   case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
@@ -207,106 +212,6 @@ bool GISelValueTracking::isKnownNeverZero(Register R, const APInt &DemandedElts,
       return true;
     break;
   }
-
-  case TargetOpcode::G_LSHR:
-  case TargetOpcode::G_ASHR: {
-    Register LHSReg = MI.getOperand(1).getReg();
-    if (MI.getFlag(MachineInstr::IsExact))
-      return isKnownNeverZero(LHSReg, DemandedElts, Depth + 1);
-    KnownBits ValKnown = getKnownBits(LHSReg, DemandedElts, Depth + 1);
-    if (MI.getOpcode() == TargetOpcode::G_ASHR && ValKnown.isNegative())
-      return true;
-    APInt MaxCnt =
-        getKnownBits(MI.getOperand(2).getReg(), DemandedElts, Depth + 1)
-            .getMaxValue();
-    if (MaxCnt.ult(ValKnown.getBitWidth()) &&
-        !ValKnown.One.lshr(MaxCnt).isZero())
-      return true;
-    break;
-  }
-
-  case TargetOpcode::G_UDIV:
-  case TargetOpcode::G_SDIV:
-    if (MI.getFlag(MachineInstr::IsExact))
-      return isKnownNeverZero(MI.getOperand(1).getReg(), DemandedElts,
-                              Depth + 1);
-    break;
-
-  case TargetOpcode::G_ADD:
-    if (MI.getFlag(MachineInstr::NoUWrap))
-      return isKnownNeverZero(MI.getOperand(1).getReg(), DemandedElts,
-                              Depth + 1) ||
-             isKnownNeverZero(MI.getOperand(2).getReg(), DemandedElts,
-                              Depth + 1);
-    break;
-
-  case TargetOpcode::G_SUB: {
-    Register LHSReg = MI.getOperand(1).getReg();
-    Register RHSReg = MI.getOperand(2).getReg();
-    if (auto LHSC = getIConstantVRegVal(LHSReg, MRI))
-      if (LHSC->isZero())
-        return isKnownNeverZero(RHSReg, DemandedElts, Depth + 1);
-    return KnownBits::ne(getKnownBits(LHSReg, DemandedElts, Depth + 1),
-                         getKnownBits(RHSReg, DemandedElts, Depth + 1))
-        .value_or(false);
-  }
-
-  case TargetOpcode::G_MUL:
-    if (MI.getFlag(MachineInstr::NoUWrap) || MI.getFlag(MachineInstr::NoSWrap))
-      return isKnownNeverZero(MI.getOperand(1).getReg(), DemandedElts,
-                              Depth + 1) &&
-             isKnownNeverZero(MI.getOperand(2).getReg(), DemandedElts,
-                              Depth + 1);
-    break;
-
-  case TargetOpcode::G_UADDSAT:
-  case TargetOpcode::G_UMAX:
-    return isKnownNeverZero(MI.getOperand(1).getReg(), DemandedElts,
-                            Depth + 1) ||
-           isKnownNeverZero(MI.getOperand(2).getReg(), DemandedElts, Depth + 1);
-
-  case TargetOpcode::G_UMIN:
-    return isKnownNeverZero(MI.getOperand(1).getReg(), DemandedElts,
-                            Depth + 1) &&
-           isKnownNeverZero(MI.getOperand(2).getReg(), DemandedElts, Depth + 1);
-
-  case TargetOpcode::G_SMAX: {
-    KnownBits L =
-        getKnownBits(MI.getOperand(1).getReg(), DemandedElts, Depth + 1);
-    KnownBits R2 =
-        getKnownBits(MI.getOperand(2).getReg(), DemandedElts, Depth + 1);
-    if (L.isStrictlyPositive() || R2.isStrictlyPositive())
-      return true;
-    if (L.isNonZero() && R2.isNonZero())
-      return true;
-    return isKnownNeverZero(MI.getOperand(1).getReg(), DemandedElts,
-                            Depth + 1) &&
-           isKnownNeverZero(MI.getOperand(2).getReg(), DemandedElts, Depth + 1);
-  }
-
-  case TargetOpcode::G_SMIN: {
-    KnownBits L =
-        getKnownBits(MI.getOperand(1).getReg(), DemandedElts, Depth + 1);
-    KnownBits R2 =
-        getKnownBits(MI.getOperand(2).getReg(), DemandedElts, Depth + 1);
-    if (L.isNegative() || R2.isNegative())
-      return true;
-    if (L.isNonZero() && R2.isNonZero())
-      return true;
-    return isKnownNeverZero(MI.getOperand(1).getReg(), DemandedElts,
-                            Depth + 1) &&
-           isKnownNeverZero(MI.getOperand(2).getReg(), DemandedElts, Depth + 1);
-  }
-
-  case TargetOpcode::G_ROTL:
-  case TargetOpcode::G_ROTR:
-  case TargetOpcode::G_BSWAP:
-  case TargetOpcode::G_BITREVERSE:
-  case TargetOpcode::G_CTPOP:
-  case TargetOpcode::G_ABS:
-  case TargetOpcode::G_ZEXT:
-  case TargetOpcode::G_SEXT:
-    return isKnownNeverZero(MI.getOperand(1).getReg(), DemandedElts, Depth + 1);
   }
 
   // Pass through this frame's Depth (not Depth+1) because we have not recursed

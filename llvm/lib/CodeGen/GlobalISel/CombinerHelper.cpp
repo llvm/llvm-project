@@ -8817,14 +8817,17 @@ bool CombinerHelper::matchAVG(MachineInstr &MI, MachineRegisterInfo &MRI,
   return XTy == MRI.getType(Y) && isLegal({TargetOpc, {XTy}});
 }
 
-static unsigned getCountZeroPoisonOpcode(unsigned Opc) {
-  switch (Opc) {
+static unsigned getCountZeroPoisonOpcode(const MachineInstr &MI) {
+  assert((MI.getOpcode() == TargetOpcode::G_CTLZ ||
+          MI.getOpcode() == TargetOpcode::G_CTTZ) &&
+         "Expected count-zero opcode");
+  switch (MI.getOpcode()) {
   case TargetOpcode::G_CTLZ:
     return TargetOpcode::G_CTLZ_ZERO_POISON;
   case TargetOpcode::G_CTTZ:
     return TargetOpcode::G_CTTZ_ZERO_POISON;
   default:
-    llvm_unreachable("Expected count-zero opcode");
+    llvm_unreachable("Unexpected count-zero opcode");
   }
 }
 
@@ -8832,7 +8835,7 @@ bool CombinerHelper::matchCountZeroToZeroPoison(MachineInstr &MI) const {
   if (!VT)
     return false;
 
-  unsigned ZPOpc = getCountZeroPoisonOpcode(MI.getOpcode());
+  unsigned ZPOpc = getCountZeroPoisonOpcode(MI);
   Register Src = MI.getOperand(1).getReg();
   if (!VT->isKnownNeverZero(Src))
     return false;
@@ -8843,5 +8846,5 @@ bool CombinerHelper::matchCountZeroToZeroPoison(MachineInstr &MI) const {
 }
 
 void CombinerHelper::applyCountZeroToZeroPoison(MachineInstr &MI) const {
-  replaceOpcodeWith(MI, getCountZeroPoisonOpcode(MI.getOpcode()));
+  replaceOpcodeWith(MI, getCountZeroPoisonOpcode(MI));
 }

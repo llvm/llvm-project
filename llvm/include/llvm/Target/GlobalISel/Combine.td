@@ -2338,8 +2338,8 @@ def ctls_combines : GICombineGroup<[
 ]>;
 
 // Switch G_CTLZ / G_CTTZ to *_ZERO_POISON when the input is provably nonzero
-// and the target supports the variant. Mirrors DAGCombiner.cpp:12394-12397 /
-// 12431-12433.
+// and the target supports the variant. The zero-poison variants compute the
+// same result for nonzero inputs and can let targets skip zero-input fixups.
 class count_zero_to_zero_poison<Instruction opc> : GICombineRule<
   (defs root:$root),
   (match (opc $dst, $src):$root,
