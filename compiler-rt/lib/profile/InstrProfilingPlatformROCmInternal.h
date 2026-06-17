@@ -46,6 +46,29 @@ struct UniqueFree {
   }
 };
 
+// Grow a heap array (doubling from InitCap) to hold at least MinCount elements
+// of ElemSize bytes each. On success *Arr and *Cap are updated and the new tail
+// slots [old cap, new cap) are zeroed; on allocation failure the existing array
+// is left intact and -1 is returned (callers degrade gracefully rather than
+// crash). *Arr is type-erased: pass the address of the typed array pointer,
+// e.g. growArray((void **)&MI->TUs, &MI->CapTUs, ...).
+inline int growArray(void **Arr, int *Cap, int MinCount, int InitCap,
+                     size_t ElemSize) {
+  if (*Cap >= MinCount)
+    return 0;
+  int NewCap = *Cap ? *Cap : InitCap;
+  while (NewCap < MinCount)
+    NewCap *= 2;
+  void *New = realloc(*Arr, (size_t)NewCap * ElemSize);
+  if (!New)
+    return -1;
+  __builtin_memset((char *)New + (size_t)*Cap * ElemSize, 0,
+                   (size_t)(NewCap - *Cap) * ElemSize);
+  *Arr = New;
+  *Cap = NewCap;
+  return 0;
+}
+
 // HIP/host-shadow helpers defined in InstrProfilingPlatformROCm.cpp and reused
 // by the HSA drain.
 int isVerboseMode();

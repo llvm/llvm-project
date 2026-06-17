@@ -240,17 +240,11 @@ void __prof_rocm::profRecordDrainedBounds(const void *D, const void *C,
                                           const void *N) {
   if (profBoundsAlreadyDrained(D, C, N))
     return;
-  if (NumSeenBounds == CapSeenBounds) {
-    int NewCap = CapSeenBounds ? CapSeenBounds * 2 : PROF_SEEN_BOUNDS_INIT_CAP;
-    ProfBoundsTuple *New =
-        (ProfBoundsTuple *)realloc(SeenBounds, NewCap * sizeof(*New));
-    /* On OOM, keep the old table and skip recording: worst case this section is
-     * drained again later (a duplicate record), never a crash. */
-    if (!New)
-      return;
-    SeenBounds = New;
-    CapSeenBounds = NewCap;
-  }
+  /* On OOM, keep the old table and skip recording: worst case this section is
+   * drained again later (a duplicate record), never a crash. */
+  if (growArray((void **)&SeenBounds, &CapSeenBounds, NumSeenBounds + 1,
+                PROF_SEEN_BOUNDS_INIT_CAP, sizeof(*SeenBounds)))
+    return;
   SeenBounds[NumSeenBounds].data = D;
   SeenBounds[NumSeenBounds].cnts = C;
   SeenBounds[NumSeenBounds].names = N;
