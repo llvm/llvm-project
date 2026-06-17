@@ -1412,7 +1412,8 @@ define i32 @added_step(i32 %n, i32 %step_base, ptr %p) {
 ; VEC-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; VEC:       [[MIDDLE_BLOCK]]:
-; VEC-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP2]], i64 1
+; VEC-NEXT:    [[TMP5:%.*]] = sub nuw i32 [[N_VEC]], 1
+; VEC-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP5]], [[STEP]]
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[UMAX1]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; VEC:       [[SCALAR_PH]]:
@@ -1427,7 +1428,7 @@ define i32 @added_step(i32 %n, i32 %step_base, ptr %p) {
 ; VEC-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV_NEXT]], [[N]]
 ; VEC-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], {{!llvm.loop ![0-9]+}}
 ; VEC:       [[EXIT]]:
-; VEC-NEXT:    [[DERIVED_LCSSA:%.*]] = phi i32 [ [[DERIVED]], %[[LOOP]] ], [ [[TMP5]], %[[MIDDLE_BLOCK]] ]
+; VEC-NEXT:    [[DERIVED_LCSSA:%.*]] = phi i32 [ [[DERIVED]], %[[LOOP]] ], [ [[TMP6]], %[[MIDDLE_BLOCK]] ]
 ; VEC-NEXT:    ret i32 [[DERIVED_LCSSA]]
 ;
 ; INTERLEAVE-LABEL: define i32 @added_step(
@@ -1454,6 +1455,8 @@ define i32 @added_step(i32 %n, i32 %step_base, ptr %p) {
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
+; INTERLEAVE-NEXT:    [[TMP6:%.*]] = sub nuw i32 [[N_VEC]], 1
+; INTERLEAVE-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP6]], [[STEP]]
 ; INTERLEAVE-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[UMAX]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
@@ -1468,7 +1471,7 @@ define i32 @added_step(i32 %n, i32 %step_base, ptr %p) {
 ; INTERLEAVE-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV_NEXT]], [[N]]
 ; INTERLEAVE-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT]], {{!llvm.loop ![0-9]+}}
 ; INTERLEAVE:       [[EXIT]]:
-; INTERLEAVE-NEXT:    [[DERIVED_LCSSA:%.*]] = phi i32 [ [[DERIVED]], %[[LOOP]] ], [ [[TMP2]], %[[MIDDLE_BLOCK]] ]
+; INTERLEAVE-NEXT:    [[DERIVED_LCSSA:%.*]] = phi i32 [ [[DERIVED]], %[[LOOP]] ], [ [[TMP7]], %[[MIDDLE_BLOCK]] ]
 ; INTERLEAVE-NEXT:    ret i32 [[DERIVED_LCSSA]]
 ;
 entry:
