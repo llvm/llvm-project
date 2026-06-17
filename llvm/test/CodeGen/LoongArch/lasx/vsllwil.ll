@@ -2,9 +2,10 @@
 ; RUN: llc --mtriple=loongarch32 --mattr=+32s,+lasx < %s | FileCheck %s
 ; RUN: llc --mtriple=loongarch64 --mattr=+lasx < %s | FileCheck %s
 
-define <16 x i16> @vsllwil_h_b(<32 x i8> %a) nounwind {
+define void @vsllwil_h_b(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: vsllwil_h_b:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
 ; CHECK-NEXT:    vinsgr2vr.b $vr1, $a0, 0
 ; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
@@ -40,19 +41,23 @@ define <16 x i16> @vsllwil_h_b(<32 x i8> %a) nounwind {
 ; CHECK-NEXT:    vinsgr2vr.b $vr1, $a0, 15
 ; CHECK-NEXT:    vext2xv.h.b $xr0, $xr1
 ; CHECK-NEXT:    xvslli.h $xr0, $xr0, 1
+; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = shufflevector <32 x i8> %a, <32 x i8> poison,
+  %0 = load <32 x i8>, ptr %a
+  %1 = shufflevector <32 x i8> %0, <32 x i8> poison,
                      <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                 i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-  %1 = sext <16 x i8> %0 to <16 x i16>
-  %2 = shl nsw <16 x i16> %1, splat (i16 1)
-  ret <16 x i16> %2
+  %2 = sext <16 x i8> %1 to <16 x i16>
+  %3 = shl nsw <16 x i16> %2, splat (i16 1)
+  store <16 x i16> %3, ptr %r
+  ret void
 }
 
-define <8 x i32> @vsllwil_w_h(<16 x i16> %a) nounwind {
+define void @vsllwil_w_h(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: vsllwil_w_h:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
 ; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 0
 ; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 1
@@ -72,18 +77,22 @@ define <8 x i32> @vsllwil_w_h(<16 x i16> %a) nounwind {
 ; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 7
 ; CHECK-NEXT:    vext2xv.w.h $xr0, $xr1
 ; CHECK-NEXT:    xvslli.w $xr0, $xr0, 15
+; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = shufflevector <16 x i16> %a, <16 x i16> poison,
+  %0 = load <16 x i16>, ptr %a
+  %1 = shufflevector <16 x i16> %0, <16 x i16> poison,
                      <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-  %1 = sext <8 x i16> %0 to <8 x i32>
-  %2 = shl nsw <8 x i32> %1, splat (i32 15)
-  ret <8 x i32> %2
+  %2 = sext <8 x i16> %1 to <8 x i32>
+  %3 = shl nsw <8 x i32> %2, splat (i32 15)
+  store <8 x i32> %3, ptr %r
+  ret void
 }
 
-define <4 x i64> @vsllwil_d_w(<8 x i32> %a) nounwind {
+define void @vsllwil_d_w(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: vsllwil_d_w:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 0
 ; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 0
 ; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 1
@@ -94,18 +103,22 @@ define <4 x i64> @vsllwil_d_w(<8 x i32> %a) nounwind {
 ; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 3
 ; CHECK-NEXT:    vext2xv.d.w $xr0, $xr1
 ; CHECK-NEXT:    xvslli.d $xr0, $xr0, 31
+; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = shufflevector <8 x i32> %a, <8 x i32> poison,
+  %0 = load <8 x i32>, ptr %a
+  %1 = shufflevector <8 x i32> %0, <8 x i32> poison,
                      <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-  %1 = sext <4 x i32> %0 to <4 x i64>
-  %2 = shl nsw <4 x i64> %1, splat (i64 31)
-  ret <4 x i64> %2
+  %2 = sext <4 x i32> %1 to <4 x i64>
+  %3 = shl nsw <4 x i64> %2, splat (i64 31)
+  store <4 x i64> %3, ptr %r
+  ret void
 }
 
-define <16 x i16> @vsllwil_hu_bu(<32 x i8> %a) nounwind {
+define void @vsllwil_hu_bu(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: vsllwil_hu_bu:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
 ; CHECK-NEXT:    vinsgr2vr.b $vr1, $a0, 0
 ; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
@@ -141,19 +154,23 @@ define <16 x i16> @vsllwil_hu_bu(<32 x i8> %a) nounwind {
 ; CHECK-NEXT:    vinsgr2vr.b $vr1, $a0, 15
 ; CHECK-NEXT:    vext2xv.hu.bu $xr0, $xr1
 ; CHECK-NEXT:    xvslli.h $xr0, $xr0, 1
+; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = shufflevector <32 x i8> %a, <32 x i8> poison,
+  %0 = load <32 x i8>, ptr %a
+  %1 = shufflevector <32 x i8> %0, <32 x i8> poison,
                      <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7,
                                 i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
-  %1 = zext <16 x i8> %0 to <16 x i16>
-  %2 = shl nsw <16 x i16> %1, splat (i16 1)
-  ret <16 x i16> %2
+  %2 = zext <16 x i8> %1 to <16 x i16>
+  %3 = shl nsw <16 x i16> %2, splat (i16 1)
+  store <16 x i16> %3, ptr %r
+  ret void
 }
 
-define <8 x i32> @vsllwil_wu_hu(<16 x i16> %a) nounwind {
+define void @vsllwil_wu_hu(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: vsllwil_wu_hu:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
 ; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 0
 ; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 1
@@ -173,18 +190,22 @@ define <8 x i32> @vsllwil_wu_hu(<16 x i16> %a) nounwind {
 ; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 7
 ; CHECK-NEXT:    vext2xv.wu.hu $xr0, $xr1
 ; CHECK-NEXT:    xvslli.w $xr0, $xr0, 15
+; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = shufflevector <16 x i16> %a, <16 x i16> poison,
+  %0 = load <16 x i16>, ptr %a
+  %1 = shufflevector <16 x i16> %0, <16 x i16> poison,
                      <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-  %1 = zext <8 x i16> %0 to <8 x i32>
-  %2 = shl nsw <8 x i32> %1, splat (i32 15)
-  ret <8 x i32> %2
+  %2 = zext <8 x i16> %1 to <8 x i32>
+  %3 = shl nsw <8 x i32> %2, splat (i32 15)
+  store <8 x i32> %3, ptr %r
+  ret void
 }
 
-define <4 x i64> @vsllwil_du_wu(<8 x i32> %a) nounwind {
+define void @vsllwil_du_wu(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: vsllwil_du_wu:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xvld $xr0, $a0, 0
 ; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 0
 ; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 0
 ; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 1
@@ -195,11 +216,14 @@ define <4 x i64> @vsllwil_du_wu(<8 x i32> %a) nounwind {
 ; CHECK-NEXT:    vinsgr2vr.w $vr1, $a0, 3
 ; CHECK-NEXT:    vext2xv.du.wu $xr0, $xr1
 ; CHECK-NEXT:    xvslli.d $xr0, $xr0, 31
+; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = shufflevector <8 x i32> %a, <8 x i32> poison,
+  %0 = load <8 x i32>, ptr %a
+  %1 = shufflevector <8 x i32> %0, <8 x i32> poison,
                      <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-  %1 = zext <4 x i32> %0 to <4 x i64>
-  %2 = shl nsw <4 x i64> %1, splat (i64 31)
-  ret <4 x i64> %2
+  %2 = zext <4 x i32> %1 to <4 x i64>
+  %3 = shl nsw <4 x i64> %2, splat (i64 31)
+  store <4 x i64> %3, ptr %r
+  ret void
 }
