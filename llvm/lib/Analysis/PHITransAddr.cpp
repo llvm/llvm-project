@@ -340,13 +340,14 @@ SelectAddr::SelectAddrs PHITransAddr::translateValue(BasicBlock *CurBB,
   assert(Cond && "expected a non-null select condition");
   assert(verify() && "Invalid PHITransAddr!");
 
+  if (!DT || !DT->isReachableFromEntry(PredBB))
+    return {nullptr, nullptr};
+
   auto TranslateSide = [&](bool CondVal) -> Value * {
     // Work on a copy so that the original address state is preserved and the
     // other side can be translated independently.
     PHITransAddr Tmp(*this);
-    if (DT && DT->isReachableFromEntry(PredBB))
-      return Tmp.translateSubExpr(Tmp.Addr, CurBB, PredBB, DT, Cond, CondVal);
-    return nullptr;
+    return Tmp.translateSubExpr(Tmp.Addr, CurBB, PredBB, DT, Cond, CondVal);
   };
 
   return {TranslateSide(/*CondVal=*/true), TranslateSide(/*CondVal=*/false)};
