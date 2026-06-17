@@ -15,7 +15,7 @@
 // CHECK-INIT-DATETIME-LITERALONE-NOT: time: 
 // CHECK-INIT-DATETIME-LITERALONE-NOT: timestamp: 
 
-// RUN: %clang_cc1 -E -DDATETIME_CUSTOM -init-datetime-macros=literalone -D__DATE__="\"d3\"" -D__TIME__="\"t4\"" -D__TIMESTAMP__="\"ts5\"" %s | FileCheck %s --check-prefix CHECK-INIT-DATETIME-CUSTOM
+// RUN: %clang_cc1 -E -DDATETIME_CUSTOM -init-datetime-macros=literalone -Wno-builtin-macro-redefined -D__DATE__="\"d3\"" -D__TIME__="\"t4\"" -D__TIMESTAMP__="\"ts5\"" %s | FileCheck %s --check-prefix CHECK-INIT-DATETIME-CUSTOM
 // RUN: %clang_cc1 -E -DDATETIME_CUSTOM -init-datetime-macros=undefined -D__DATE__="\"d3\"" -D__TIME__="\"t4\"" -D__TIMESTAMP__="\"ts5\"" %s | FileCheck %s --check-prefix CHECK-INIT-DATETIME-CUSTOM
 // CHECK-INIT-DATETIME-CUSTOM: date: "d3"
 // CHECK-INIT-DATETIME-CUSTOM: time: "t4"
@@ -29,7 +29,7 @@
 
 // RUN: %clang_cl -Xclang -verify /d1nodatetime /DDATETIME_UNDEFINED /c -- %s
 
-// RUN: %clang_cl -E /Brepro /DDATETIME_LITERALONE /c -- %s | FileCheck %s --check-prefix CHECK-INIT-DATETIME-LITERALONE
+// RUN: %clang_cl -E /Brepro /DDATETIME_LITERALONE -- %s | FileCheck %s --check-prefix CHECK-INIT-DATETIME-LITERALONE
 
 #if defined(DATETIME_LITERALONE) || defined(DATETIME_DEFAULT) || defined(DATETIME_CUSTOM)
 date: __DATE__
