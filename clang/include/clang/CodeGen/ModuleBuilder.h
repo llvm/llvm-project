@@ -110,7 +110,8 @@ public:
   ///
   /// \param base The base subobject that owns the vptr to be initialized.
   /// \param decl The derived type being initialized, that contains `base`.
-  llvm::Constant *GetAddrOfVTable(BaseSubobject base, const CXXRecordDecl *decl);
+  llvm::Constant *GetAddrOfVTable(BaseSubobject base,
+                                  const CXXRecordDecl *decl);
 
   /// Create a new \c llvm::Module after calling HandleTranslationUnit. This
   /// enable codegen in interactive processing environments.
