@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/GlobalValue.h"
@@ -195,6 +196,9 @@ public:
   using size_type = std::deque<value_type>::size_type;
 
 private:
+  /// Vector of pointers into Storage, used for key-sorted iteration.
+  using SortedEntriesVec = SmallVector<const value_type *, 0>;
+
   DenseMap<key_type, unsigned> Map;
   std::deque<value_type> Storage;
 
@@ -227,10 +231,33 @@ public:
   size_type size() const { return Storage.size(); }
   bool empty() const { return Storage.empty(); }
 
-  /// Return pointers to the entries sorted by key. Storage is in insertion
-  /// order; some serialization paths and tests rely on key-sorted iteration.
-  SmallVector<const value_type *, 0> sortedEntries() const {
-    SmallVector<const value_type *, 0> Sorted;
+  /// An owning range over the entries sorted by key, yielding each entry by
+  /// reference.
+  class SortedEntriesRange {
+    SortedEntriesVec Entries;
+
+  public:
+    using iterator = pointee_iterator<SortedEntriesVec::const_iterator>;
+
+    explicit SortedEntriesRange(SortedEntriesVec Entries)
+        : Entries(std::move(Entries)) {}
+
+    iterator begin() const { return iterator(Entries.begin()); }
+    iterator end() const { return iterator(Entries.end()); }
+    size_t size() const { return Entries.size(); }
+    bool empty() const { return Entries.empty(); }
+  };
+
+  /// Return an owning range over the entries sorted by key. Storage is in
+  /// insertion order; some serialization paths and tests rely on key-sorted
+  /// iteration.
+  SortedEntriesRange sortedRange() const {
+    return SortedEntriesRange(getSortedEntries());
+  }
+
+private:
+  SortedEntriesVec getSortedEntries() const {
+    SortedEntriesVec Sorted;
     Sorted.reserve(Storage.size());
     for (const auto &E : Storage)
       Sorted.push_back(&E);
@@ -1658,9 +1685,9 @@ public:
   const_gvsummary_iterator end() const { return GlobalValueMap.end(); }
   size_t size() const { return GlobalValueMap.size(); }
 
-  SmallVector<const GlobalValueSummaryMapTy::value_type *, 0>
-  sortedGlobalValueSummaries() const {
-    return GlobalValueMap.sortedEntries();
+  GlobalValueSummaryMapTy::SortedEntriesRange
+  sortedGlobalValueSummariesRange() const {
+    return GlobalValueMap.sortedRange();
   }
 
   const std::vector<uint64_t> &stackIds() const { return StackIds; }

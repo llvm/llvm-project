@@ -2529,8 +2529,8 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
   // TODO: This sort has a measurable cost on the thin link when memprof is
   // enabled. Investigate gating it behind an option that is only enabled for
   // tests that check internal state.
-  for (const auto *I : Index.sortedGlobalValueSummaries()) {
-    auto VI = Index.getValueInfo(*I);
+  for (const auto &I : Index.sortedGlobalValueSummariesRange()) {
+    auto VI = Index.getValueInfo(I);
     if (GUIDsToSkip.contains(VI.getGUID()))
       continue;
     for (auto &S : VI.getSummaryList()) {

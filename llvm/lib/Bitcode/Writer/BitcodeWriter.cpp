@@ -231,9 +231,10 @@ public:
     if (!Index)
       return;
     // Sort by GUID for deterministic value ID assignment.
-    for (const auto *GUIDSummaryLists : Index->sortedGlobalValueSummaries())
+    for (const auto &GUIDSummaryLists :
+         Index->sortedGlobalValueSummariesRange())
       // Examine all summaries for this GUID.
-      for (auto &Summary : GUIDSummaryLists->second.getSummaryList())
+      for (auto &Summary : GUIDSummaryLists.second.getSummaryList())
         if (auto *FS = dyn_cast<FunctionSummary>(Summary.get())) {
           // For each call in the function summary, see if the call
           // is to a GUID (which means it is for an indirect call,
@@ -586,9 +587,9 @@ public:
         }
     } else {
       // Sort by GUID for deterministic output.
-      for (const auto *Entry : Index.sortedGlobalValueSummaries())
-        for (auto &Summary : Entry->second.getSummaryList())
-          Callback({Entry->first, Summary.get()}, false);
+      for (const auto &Entry : Index.sortedGlobalValueSummariesRange())
+        for (auto &Summary : Entry.second.getSummaryList())
+          Callback({Entry.first, Summary.get()}, false);
     }
   }
 

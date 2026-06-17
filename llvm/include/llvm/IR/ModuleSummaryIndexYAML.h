@@ -262,8 +262,7 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
   }
   static void output(IO &io, GlobalValueSummaryMapTy &V) {
     // Sort by GUID for deterministic output.
-    for (const auto *PP : V.sortedEntries()) {
-      const auto &P = *PP;
+    for (const auto &P : V.sortedRange()) {
       std::vector<GlobalValueSummaryYaml> GVSums;
       for (auto &Sum : P.second.getSummaryList()) {
         if (auto *FSum = dyn_cast<FunctionSummary>(Sum.get())) {

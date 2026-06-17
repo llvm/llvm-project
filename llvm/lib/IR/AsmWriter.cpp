@@ -1203,8 +1203,8 @@ int SlotTracker::processIndex() {
   GUIDNext = ModulePathNext;
 
   // Sort by GUID for deterministic slot assignment.
-  for (const auto *Entry : TheIndex->sortedGlobalValueSummaries())
-    CreateGUIDSlot(Entry->first);
+  for (const auto &Entry : TheIndex->sortedGlobalValueSummariesRange())
+    CreateGUIDSlot(Entry.first);
 
   // Start numbering the TypeIdCompatibleVtables after the GUIDs.
   TypeIdCompatibleVtableNext = GUIDNext;
@@ -3231,18 +3231,18 @@ void AssemblyWriter::printModuleSummaryIndex() {
   // FIXME: Change AliasSummary to hold a ValueInfo instead of summary pointer
   // for aliasee (then update BitcodeWriter.cpp and remove get/setAliaseeGUID).
   // Sort by GUID for deterministic output matching slot assignment order.
-  auto SortedGVS = TheIndex->sortedGlobalValueSummaries();
+  auto SortedGVS = TheIndex->sortedGlobalValueSummariesRange();
 
-  for (const auto *Entry : SortedGVS) {
-    auto GUID = Entry->first;
-    for (auto &Summary : Entry->second.getSummaryList())
+  for (const auto &Entry : SortedGVS) {
+    auto GUID = Entry.first;
+    for (auto &Summary : Entry.second.getSummaryList())
       SummaryToGUIDMap[Summary.get()] = GUID;
   }
 
   // Print the global value summary entries.
-  for (const auto *Entry : SortedGVS) {
-    auto GUID = Entry->first;
-    auto VI = TheIndex->getValueInfo(*Entry);
+  for (const auto &Entry : SortedGVS) {
+    auto GUID = Entry.first;
+    auto VI = TheIndex->getValueInfo(Entry);
     printSummaryInfo(Machine.getGUIDSlot(GUID), VI);
   }
 
