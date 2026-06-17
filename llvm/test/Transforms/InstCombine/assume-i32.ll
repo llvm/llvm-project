@@ -30,6 +30,7 @@ define void @align_on_i128_offset_unaligned(ptr %p) {
 define void @align_greater_than_ptr_size() {
 ; CHECK-LABEL: define void @align_greater_than_ptr_size() {
 ; CHECK-NEXT:    [[P:%.*]] = call ptr @get_ptr()
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8589934592) ]
 ; CHECK-NEXT:    ret void
 ;
   %p = call ptr @get_ptr()
