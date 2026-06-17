@@ -2275,6 +2275,16 @@ TEST(CommandLineTest, RejectInvalidElementCount) {
   EXPECT_NE(ErrorOutput.find(
                 "'vscale x 8x' value invalid for ElementCount argument!"),
             std::string::npos);
+
+  const char *TrailingJunkFixedArgs[] = {"prog", "--count=4adsf"};
+  testing::internal::CaptureStderr();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(std::size(TrailingJunkFixedArgs),
+                                           TrailingJunkFixedArgs, StringRef(),
+                                           &OS));
+  ErrorOutput = testing::internal::GetCapturedStderr();
+  EXPECT_NE(
+      ErrorOutput.find("'4adsf' value invalid for ElementCount argument!"),
+      std::string::npos);
 }
 
 TEST(CommandLineTest, ResetAllOptionOccurrences) {
