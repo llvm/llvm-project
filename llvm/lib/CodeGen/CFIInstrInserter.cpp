@@ -323,6 +323,7 @@ void CFIInstrInserter::calculateOutgoingCFAInfo(MBBCFAInfo &MBBInfo) {
       case MCCFIInstruction::OpWindowSave:
       case MCCFIInstruction::OpNegateRAState:
       case MCCFIInstruction::OpNegateRAStateWithPC:
+      case MCCFIInstruction::OpLLVMSetRAState:
       case MCCFIInstruction::OpGnuArgsSize:
       case MCCFIInstruction::OpLLVMRegisterPair:
       case MCCFIInstruction::OpLLVMVectorRegisters:

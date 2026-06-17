@@ -150,6 +150,12 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
   case MCCFIInstruction::OpNegateRAStateWithPC:
     CFIP.addInstruction(dwarf::DW_CFA_AARCH64_negate_ra_state_with_pc);
     break;
+  case MCCFIInstruction::OpLLVMSetRAState: {
+    CFIP.addInstruction(dwarf::DW_CFA_AARCH64_set_ra_state,
+                        Directive.getRASignState(),
+                        (uint64_t)Directive.getRASignOffset());
+    break;
+  }
   case MCCFIInstruction::OpGnuArgsSize:
     CFIP.addInstruction(dwarf::DW_CFA_GNU_args_size);
     break;

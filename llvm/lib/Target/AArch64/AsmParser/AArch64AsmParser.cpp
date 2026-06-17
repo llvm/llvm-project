@@ -200,6 +200,7 @@ private:
   bool parseDirectiveUnreq(SMLoc L);
   bool parseDirectiveCFINegateRAState();
   bool parseDirectiveCFINegateRAStateWithPC();
+  bool parseDirectiveCFILLVMSetRAState();
   bool parseDirectiveCFIBKeyFrame();
   bool parseDirectiveCFIMTETaggedFrame();
 
@@ -7282,6 +7283,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
     parseDirectiveCFINegateRAState();
   else if (IDVal == ".cfi_negate_ra_state_with_pc")
     parseDirectiveCFINegateRAStateWithPC();
+  else if (IDVal == ".cfi_llvm_set_ra_state")
+    parseDirectiveCFILLVMSetRAState();
   else if (IDVal == ".cfi_b_key_frame")
     parseDirectiveCFIBKeyFrame();
   else if (IDVal == ".cfi_mte_tagged_frame")
@@ -7754,6 +7757,23 @@ bool AArch64AsmParser::parseDirectiveCFINegateRAStateWithPC() {
   if (parseEOL())
     return true;
   getStreamer().emitCFINegateRAStateWithPC();
+  return false;
+}
+
+/// parseDirectiveCFILLVMSetRAState
+/// ::= .cfi_llvm_set_ra_state ra_state, offset
+bool AArch64AsmParser::parseDirectiveCFILLVMSetRAState() {
+  int64_t State;
+  if (getParser().parseAbsoluteExpression(State))
+    return true;
+  if (parseToken(AsmToken::Comma, "expected ','"))
+    return true;
+  int64_t Offset;
+  if (getParser().parseAbsoluteExpression(Offset))
+    return true;
+  if (parseEOL())
+    return true;
+  getStreamer().emitCFILLVMSetRAState((unsigned)State, Offset);
   return false;
 }
 

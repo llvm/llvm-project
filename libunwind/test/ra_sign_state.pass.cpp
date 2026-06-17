@@ -101,6 +101,29 @@ __attribute__((naked, target("pauth"))) uint64_t check_negate() {
       "retab");
 }
 
+#if defined(HAVE_CFI_LLVM_SET_RA_STATE)
+__attribute__((naked))
+uint64_t check_set() {
+  asm(".cfi_llvm_set_ra_state 1, 0\n"
+      "pacibsp\n"
+
+      "stp x29, x30, [sp, #-16]!\n"
+      ".cfi_def_cfa_offset 16\n"
+      ".cfi_offset x29, -16\n"
+      ".cfi_offset x30, -8\n"
+
+      "bl _get_main_ra_sign_state\n"
+
+      "ldp x29, x30, [sp], #16\n"
+      ".cfi_def_cfa_offset 0\n"
+      ".cfi_restore x29\n"
+      ".cfi_restore x30\n"
+
+      ".cfi_llvm_set_ra_state 0, -20\n"
+      "retab");
+}
+#endif
+
 FUNC_ATTR(main_func) int main(int, char **) {
   uint64_t ret;
 
@@ -118,6 +141,11 @@ FUNC_ATTR(main_func) int main(int, char **) {
 
   ret = check_negate();
   assert(ret == 1);
+
+#if defined(HAVE_CFI_LLVM_SET_RA_STATE)
+  ret = check_set();
+  assert(ret == 1);
+#endif
 
   printf("success\n");
   return 0;

@@ -88,6 +88,11 @@ public:
     insertCFIInst(MCCFIInstruction::createNegateRAStateWithPC(nullptr));
   }
 
+  void buildSetRAState(unsigned State, MCSymbol *PACSym) const {
+    insertCFIInst(
+        MCCFIInstruction::createLLVMSetRAState(nullptr, State, PACSym));
+  }
+
   void buildRegister(MCRegister Reg1, MCRegister Reg2) const {
     insertCFIInst(MCCFIInstruction::createRegister(
         nullptr, TRI.getDwarfRegNum(Reg1, IsEH),

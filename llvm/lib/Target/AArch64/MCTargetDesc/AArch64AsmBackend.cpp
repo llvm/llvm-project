@@ -724,6 +724,9 @@ public:
 
         break;
       }
+      case MCCFIInstruction::OpLLVMSetRAState:
+        // .cfi_llvm_set_ra_state is not yet supported in Compact Unwind.
+        return CU::UNWIND_ARM64_MODE_DWARF;
       }
     }
 
