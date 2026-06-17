@@ -10,7 +10,7 @@ VoidTask silly_task() {
   co_await std::suspend_always();
 }
 
-// CIR-FLAT: cir.func flatten-coroutine {{.*}} @_Z10silly_taskv
+// CIR-FLAT: cir.func flattened_coroutine {{.*}} @_Z10silly_taskv
 
 // CIR-FLAT: %[[CLEANUP_DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot"
 // CIR-FLAT: %[[NullPtr:.*]] = cir.const #cir.ptr<null>
@@ -176,7 +176,7 @@ VoidTask silly_task_with_dtor() {
   co_await std::suspend_always();
 }
 
-// CIR-FLAT: cir.func flatten-coroutine {{.*}} @_Z20silly_task_with_dtorv
+// CIR-FLAT: cir.func flattened_coroutine {{.*}} @_Z20silly_task_with_dtorv
 // CIR-FLAT:   %[[CLEANUP_DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot"
 // CIR-FLAT:   %[[SuspendAlwaysAddr:.*]] = cir.alloca "ref.tmp0"
 
@@ -306,7 +306,7 @@ folly::coro::Task<int> co_returns(int flag) {
   co_return 3;
 }
 
-// CIR-FLAT: cir.func flatten-coroutine {{.*}} @_Z10co_returnsi
+// CIR-FLAT: cir.func flattened_coroutine {{.*}} @_Z10co_returnsi
 // CIR-FLAT:   %[[CLEANUP_DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot"
 // CIR-FLAT:   %[[SUSPEND_POINT:.*]] = cir.alloca "__coroutine_suspend_point"
 
@@ -348,7 +348,7 @@ folly::coro::Task<int> co_return_with_dtor(int flag) {
   co_return 2;
 }
 
-// CIR-FLAT:  cir.func flatten-coroutine {{.*}} @_Z19co_return_with_dtori
+// CIR-FLAT:  cir.func flattened_coroutine {{.*}} @_Z19co_return_with_dtori
 // CIR-FLAT:  %[[CLEANUP_DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot"
 // CIR-FLAT:  %[[SUSPEND_POINT:.*]] = cir.alloca "__coroutine_suspend_point"
 // CIR-FLAT:  %[[ShouldSuspend:.*]] = cir.call @_ZNSt14suspend_always11await_readyEv
