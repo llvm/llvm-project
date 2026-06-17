@@ -1108,6 +1108,11 @@ defm VALUTransUseHazard : AMDGPUSubtargetFeature<"valu-trans-use-hazard",
   /*GenPredicate=*/0
 >;
 
+defm TransCoexecutionHazard : AMDGPUSubtargetFeature<"trans-coexecution-hazard",
+  "Hazard when TRANS co-executes with other VALU instruction",
+  /*GenPredicate=*/0
+>;
+
 defm SALUFloatInsts : AMDGPUSubtargetFeature<"salu-float",
   "Has SALU floating point instructions"
 >;
@@ -2223,7 +2228,8 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
    FeatureSWMMACGfx1200Insts,
-   FeatureSWMMACGfx1250Insts])>;
+   FeatureSWMMACGfx1250Insts,
+   FeatureTransCoexecutionHazard])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
@@ -2247,7 +2253,8 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureCvtPkNormVOP3Insts,
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
-   FeatureUseAddPC64Inst])>;
+   FeatureUseAddPC64Inst,
+   FeatureTransCoexecutionHazard])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
