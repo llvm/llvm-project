@@ -3683,7 +3683,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             GEP->getMaxPreservedAlignment(getDataLayout()) >= *Alignment) {
           Builder.CreateAlignmentAssumption(
               getDataLayout(), GEP->getPointerOperand(), *Alignment,
-              Builder.getInt64(*Offset));
+              *Offset == 0 ? nullptr : Builder.getInt64(*Offset));
           return RemoveBundle();
         }
 
@@ -3698,8 +3698,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         // known alignment isn't increased by it.
         auto AlignMask = (*Alignment - 1);
         if (KnownBits KB = computeKnownBits(Ptr, II);
-            (KB.Zero.getLimitedValue() & AlignMask) == (~*Offset & AlignMask) &&
-            (KB.One.getLimitedValue() & AlignMask) == (*Offset & AlignMask))
+            (KB.Zero & AlignMask) == (~*Offset & AlignMask) &&
+            (KB.One & AlignMask) == (*Offset & AlignMask))
           return RemoveBundle();
         break;
       }

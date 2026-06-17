@@ -193,7 +193,7 @@ define void @align_with_variable_offset(ptr %ptr, i64 %offset) {
 
 define void @align_on_gep_keeping_alignment(ptr %ptr, i64 %offset) {
 ; CHECK-LABEL: @align_on_gep_keeping_alignment(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8, i64 0) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8) ]
 ; CHECK-NEXT:    ret void
 ;
   %ptr2 = getelementptr [8 x i8], ptr %ptr, i64 %offset
