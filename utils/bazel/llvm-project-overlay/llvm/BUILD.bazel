@@ -3945,7 +3945,8 @@ gentbl_cc_library(
                 "lib/Target/" + target["name"] + "/*.h",
             ],
             allow_empty = True,
-        ),
+            exclude = ["lib/Target/NVPTX/NVPTXAsmPrinter.cpp"] if target["name"] == "NVPTX" else [],
+        ) + (["lib/Target/NVPTX/NVPTXAsmPrinter_patched.cpp"] if target["name"] == "NVPTX" else []),
         hdrs = ["lib/Target/" + target["name"] + "/" + target["short_name"] + ".h"],
         # The TargetMachine files use this pattern:
         #
@@ -4097,6 +4098,13 @@ gentbl_cc_library(
         ],
     )],
 ] for target in llvm_target_lib_list]
+
+genrule(
+    name = "patch_nvptx_asm_printer",
+    srcs = ["lib/Target/NVPTX/NVPTXAsmPrinter.cpp"],
+    outs = ["lib/Target/NVPTX/NVPTXAsmPrinter_patched.cpp"],
+    cmd = "sed 's/AggBuffer->addSymbol(Cexpr, Cexpr);/AggBuffer->addSymbol(Cexpr, Cexpr, AllocSize);/g' $< > $@",
+)
 
 cc_library(
     name = "AllTargetsCodeGens",
