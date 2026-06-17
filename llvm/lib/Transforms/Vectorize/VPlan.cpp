@@ -1867,7 +1867,8 @@ VPCostContext::getOperandInfo(VPValue *V) const {
 
 InstructionCost VPCostContext::getScalarizationOverhead(
     Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,
-    TTI::VectorInstrContext VIC, bool AlwaysIncludeReplicatingR) {
+    const VPSingleDefRecipe *R, TTI::VectorInstrContext VIC,
+    bool AlwaysIncludeReplicatingR) {
   if (VF.isScalar())
     return 0;
 
@@ -1876,7 +1877,17 @@ InstructionCost VPCostContext::getScalarizationOverhead(
 
   InstructionCost ScalarizationCost = 0;
   // Compute the cost of scalarizing the result if needed.
-  if (!ResultTy->isVoidTy()) {
+  bool ScalarizeResult = !ResultTy->isVoidTy();
+  if (ScalarizeResult && R) {
+    // Is this recipe only used by other replicate recipes in the same block?
+    // If so, the result does not need scalarizing.
+    ScalarizeResult = llvm::any_of(R->users(), [R](VPUser *U) -> bool {
+      auto *URR = dyn_cast<VPReplicateRecipe>(U);
+      return !URR || URR->getParent() != R->getParent();
+    });
+  }
+
+  if (ScalarizeResult) {
     for (Type *VectorTy :
          to_vector(getContainedTypes(toVectorizedTy(ResultTy, VF)))) {
       ScalarizationCost += TTI.getScalarizationOverhead(
