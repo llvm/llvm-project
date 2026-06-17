@@ -692,3 +692,12 @@ attributes #3 = { noinline nounwind "no-realign-stack" }
 attributes #4 = { noinline nounwind "frame-pointer"="all"}
 attributes #5 = { noinline nounwind "amdgpu-waves-per-eu"="6,6" }
 attributes #6 = { nounwind }
+
+; GCN: ; needs_align16_default_stack_align:
+; GCN: ; ScratchSize: 144
+; GCN: ; needs_align16_stack_align4:
+; GCN: ; ScratchSize: 160
+; GCN: ; needs_align32:
+; GCN: ; ScratchSize: 192
+; GCN: ; force_realign4:
+; GCN: ; ScratchSize: 52

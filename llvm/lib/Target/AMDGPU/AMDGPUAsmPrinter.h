@@ -53,6 +53,13 @@ private:
 
   SIProgramInfo CurrentProgramInfo;
 
+  struct DeferredResourceCommentInfo {
+    const Function *F;
+    SIProgramInfo ProgInfo;
+    uint64_t CodeSize;
+  };
+  SmallVector<DeferredResourceCommentInfo, 8> DeferredComments;
+
   std::unique_ptr<AMDGPU::HSAMD::MetadataStreamer> HSAMetadataStream;
 
   MCCodeEmitter *DumpCodeInstEmitter = nullptr;
@@ -76,7 +83,7 @@ private:
                                   const MCExpr *TotalNumVGPR,
                                   const MCExpr *NumSGPR,
                                   const MCExpr *ScratchSize, uint64_t CodeSize,
-                                  const AMDGPUMachineFunctionInfo *MFI);
+                                  bool IsMemoryBound);
   void emitResourceUsageRemarks(const MachineFunction &MF,
                                 const SIProgramInfo &CurrentProgramInfo,
                                 bool isModuleEntryFunction, bool hasMAIInsts);
@@ -97,6 +104,8 @@ private:
   SmallVector<AMDGPU::FuncInfo, 8> FunctionInfos;
 
   SmallString<128> getMCExprStr(const MCExpr *Value);
+
+  void emitDeferredComments();
 
   /// Attempts to replace the validation that is missed in getSIProgramInfo due
   /// to MCExpr being unknown. Invoked during doFinalization such that the
