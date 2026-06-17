@@ -1940,6 +1940,24 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_prlimit",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/prlimit.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":hdr_stdint_proxy",
+        ":types_pid_t",
+        ":types_struct_rlimit",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_extras",
     hdrs = ["src/__support/math_extras.h"],
     deps = [
@@ -15683,6 +15701,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_prlimit",
         ":__support_osutil_syscall",
         ":errno",
         ":types_struct_rlimit",
@@ -15697,6 +15716,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_prlimit",
         ":__support_osutil_syscall",
         ":errno",
         ":types_struct_rlimit",
