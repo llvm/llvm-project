@@ -69,6 +69,52 @@ inline int growArray(void **Arr, int *Cap, int MinCount, int InitCap,
   return 0;
 }
 
+// Set of (data, counters, names) device section-bounds tuples that have already
+// been drained. Both ROCm drains record here so each unique device counter set
+// is written exactly once -- across the host-shadow and supplemental HSA paths,
+// and across the multiple GPU agents that may share one code object. Backed by
+// growArray (doubling), so dedup never silently caps out; on allocation failure
+// record() is a no-op, so the worst case is draining a section twice rather
+// than crashing. Process-lifetime state: deliberately trivially destructible
+// and not freed by the runtime (a transient owner such as a unit test can free
+// .Items). Pure host logic; covered by
+// test/profile/instrprof-rocm-bounds-dedup.cpp.
+struct ProfBoundsSet {
+  struct Tuple {
+    const void *Data;
+    const void *Counters;
+    const void *Names;
+  };
+  enum { kInitCap = 64 };
+
+  Tuple *Items = nullptr;
+  int Count = 0;
+  int Cap = 0;
+
+  // True iff this exact (Data, Counters, Names) tuple was already recorded. All
+  // three fields must match: two code objects can share, e.g., a names section.
+  bool contains(const void *D, const void *C, const void *N) const {
+    for (int I = 0; I < Count; ++I)
+      if (Items[I].Data == D && Items[I].Counters == C && Items[I].Names == N)
+        return true;
+    return false;
+  }
+
+  // Record a tuple unless already present. Returns true only when a new tuple
+  // was added (false for a duplicate or when the growth failed under OOM).
+  bool record(const void *D, const void *C, const void *N) {
+    if (contains(D, C, N))
+      return false;
+    if (growArray((void **)&Items, &Cap, Count + 1, kInitCap, sizeof(*Items)))
+      return false;
+    Items[Count].Data = D;
+    Items[Count].Counters = C;
+    Items[Count].Names = N;
+    ++Count;
+    return true;
+  }
+};
+
 // HIP/host-shadow helpers defined in InstrProfilingPlatformROCm.cpp and reused
 // by the HSA drain.
 int isVerboseMode();

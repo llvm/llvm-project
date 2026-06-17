@@ -219,47 +219,22 @@ static const char ProfileSectionsSymbol[] = "__llvm_profile_sections";
 
 /* Dedup of drained section-bounds tuples, shared with the host-shadow path
  * (processDeviceOffloadPrf records here on every successful drain) so each
- * unique counter set is drained exactly once across both paths. */
-namespace {
-struct ProfBoundsTuple {
-  const void *data;
-  const void *cnts;
-  const void *names;
-};
-} // namespace
-
-/* Grown on demand (doubling) rather than fixed-cap: a fixed cap could be
- * exceeded and silently lose dedup coverage, double-counting sections. */
-#define PROF_SEEN_BOUNDS_INIT_CAP 64
-static ProfBoundsTuple *SeenBounds = nullptr;
-static int NumSeenBounds = 0;
-static int CapSeenBounds = 0;
+ * unique counter set is drained exactly once across both paths. ProfBoundsSet
+ * (internal header) grows on demand so dedup never silently caps out, and is
+ * unit-tested by test/profile/instrprof-rocm-bounds-dedup.cpp. */
+static ProfBoundsSet SeenBounds;
 
 /* Has this bounds tuple already been drained? Pure check, no state mutation. */
 static int profBoundsAlreadyDrained(const void *D, const void *C,
                                     const void *N) {
-  for (int i = 0; i < NumSeenBounds; ++i)
-    if (SeenBounds[i].data == D && SeenBounds[i].cnts == C &&
-        SeenBounds[i].names == N)
-      return 1;
-  return 0;
+  return SeenBounds.contains(D, C, N);
 }
 
 /* Record a drained bounds tuple. Idempotent; call only after a successful drain
  * so a failed attempt stays retryable. */
 void __prof_rocm::profRecordDrainedBounds(const void *D, const void *C,
                                           const void *N) {
-  if (profBoundsAlreadyDrained(D, C, N))
-    return;
-  /* On OOM, keep the old table and skip recording: worst case this section is
-   * drained again later (a duplicate record), never a crash. */
-  if (growArray((void **)&SeenBounds, &CapSeenBounds, NumSeenBounds + 1,
-                PROF_SEEN_BOUNDS_INIT_CAP, sizeof(*SeenBounds)))
-    return;
-  SeenBounds[NumSeenBounds].data = D;
-  SeenBounds[NumSeenBounds].cnts = C;
-  SeenBounds[NumSeenBounds].names = N;
-  NumSeenBounds++;
+  SeenBounds.record(D, C, N);
 }
 
 #define PROF_MAX_GPU_AGENTS 64
