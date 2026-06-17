@@ -2526,6 +2526,9 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
   // must be sorted.
   std::map<uint64_t, uint32_t> TotalSizeToContextIdTopNCold;
   // Sort by GUID for deterministic graph construction order.
+  // TODO: This sort has a measurable cost on the thin link when memprof is
+  // enabled. Investigate gating it behind an option that is only enabled for
+  // tests that check internal state.
   for (const auto *I : Index.sortedGlobalValueSummaries()) {
     auto VI = Index.getValueInfo(*I);
     if (GUIDsToSkip.contains(VI.getGUID()))
