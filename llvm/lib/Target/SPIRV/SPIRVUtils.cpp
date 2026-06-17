@@ -116,17 +116,26 @@ FunctionType *getOriginalFunctionType(const Function &F) {
       F.getName());
 }
 
+// Keyed via instruction metadata, not a name.
+static StringRef getMutatedCallsiteKey(const CallBase &CB) {
+  if (MDNode *MD = CB.getMetadata("spv.mutated_callsite"))
+    if (MD->getNumOperands() > 0)
+      if (auto *MDS = dyn_cast<MDString>(MD->getOperand(0)))
+        return MDS->getString();
+  return CB.getName();
+}
+
 FunctionType *getOriginalFunctionType(const CallBase &CB) {
   return extractFunctionTypeFromMetadata(
       CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
-      CB.getFunctionType(), CB.getName());
+      CB.getFunctionType(), getMutatedCallsiteKey(CB));
 }
 
 StringRef getOriginalAsmConstraints(const CallBase &CB) {
   return extractAsmConstraintsFromMetadata(
       CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
       cast<InlineAsm>(CB.getCalledOperand())->getConstraintString(),
-      CB.getName());
+      getMutatedCallsiteKey(CB));
 }
 } // Namespace SPIRV
 
