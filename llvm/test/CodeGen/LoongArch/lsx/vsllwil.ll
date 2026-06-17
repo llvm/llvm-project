@@ -6,9 +6,7 @@ define void @vsllwil_h_b(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: vsllwil_h_b:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vslti.b $vr1, $vr0, 0
-; CHECK-NEXT:    vilvl.b $vr0, $vr1, $vr0
-; CHECK-NEXT:    vslli.h $vr0, $vr0, 1
+; CHECK-NEXT:    vsllwil.h.b $vr0, $vr0, 1
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -25,9 +23,7 @@ define void @vsllwil_w_h(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: vsllwil_w_h:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vslti.h $vr1, $vr0, 0
-; CHECK-NEXT:    vilvl.h $vr0, $vr1, $vr0
-; CHECK-NEXT:    vslli.w $vr0, $vr0, 15
+; CHECK-NEXT:    vsllwil.w.h $vr0, $vr0, 15
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -43,9 +39,7 @@ define void @vsllwil_d_w(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: vsllwil_d_w:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vslti.w $vr1, $vr0, 0
-; CHECK-NEXT:    vilvl.w $vr0, $vr1, $vr0
-; CHECK-NEXT:    vslli.d $vr0, $vr0, 31
+; CHECK-NEXT:    vsllwil.d.w $vr0, $vr0, 31
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -61,9 +55,7 @@ define void @vsllwil_hu_bu(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: vsllwil_hu_bu:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vrepli.b $vr1, 0
-; CHECK-NEXT:    vilvl.b $vr0, $vr1, $vr0
-; CHECK-NEXT:    vslli.h $vr0, $vr0, 1
+; CHECK-NEXT:    vsllwil.hu.bu $vr0, $vr0, 1
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -80,9 +72,7 @@ define void @vsllwil_wu_hu(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: vsllwil_wu_hu:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vrepli.b $vr1, 0
-; CHECK-NEXT:    vilvl.h $vr0, $vr1, $vr0
-; CHECK-NEXT:    vslli.w $vr0, $vr0, 15
+; CHECK-NEXT:    vsllwil.wu.hu $vr0, $vr0, 15
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -98,9 +88,7 @@ define void @vsllwil_du_wu(ptr %a, ptr %r) nounwind {
 ; CHECK-LABEL: vsllwil_du_wu:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a0, 0
-; CHECK-NEXT:    vrepli.b $vr1, 0
-; CHECK-NEXT:    vilvl.w $vr0, $vr1, $vr0
-; CHECK-NEXT:    vslli.d $vr0, $vr0, 31
+; CHECK-NEXT:    vsllwil.du.wu $vr0, $vr0, 31
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
 entry:

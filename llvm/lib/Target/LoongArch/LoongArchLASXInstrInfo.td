@@ -1234,6 +1234,24 @@ multiclass PatXrXrWU<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_QU_DU") LASX256:$vj, LASX256:$vk)>;
 }
 
+multiclass PatXrUimmW<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(v16i16 (OpNode(v32i8 LASX256:$vj), uimm3:$imm)),
+            (!cast<LAInst>(Inst#"_H_B") LASX256:$vj, uimm3:$imm)>;
+  def : Pat<(v8i32 (OpNode(v16i16 LASX256:$vj), uimm4:$imm)),
+            (!cast<LAInst>(Inst#"_W_H") LASX256:$vj, uimm4:$imm)>;
+  def : Pat<(v4i64 (OpNode(v8i32 LASX256:$vj), uimm5:$imm)),
+            (!cast<LAInst>(Inst#"_D_W") LASX256:$vj, uimm5:$imm)>;
+}
+
+multiclass PatXrUimmWU<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(v16i16 (OpNode(v32i8 LASX256:$vj), uimm3:$imm)),
+            (!cast<LAInst>(Inst#"_HU_BU") LASX256:$vj, uimm3:$imm)>;
+  def : Pat<(v8i32 (OpNode(v16i16 LASX256:$vj), uimm4:$imm)),
+            (!cast<LAInst>(Inst#"_WU_HU") LASX256:$vj, uimm4:$imm)>;
+  def : Pat<(v4i64 (OpNode(v8i32 LASX256:$vj), uimm5:$imm)),
+            (!cast<LAInst>(Inst#"_DU_WU") LASX256:$vj, uimm5:$imm)>;
+}
+
 multiclass PatShiftXrXr<SDPatternOperator OpNode, string Inst> {
   def : Pat<(OpNode (v32i8 LASX256:$xj), (and vsplati8_imm_eq_7,
                                               (v32i8 LASX256:$xk))),
@@ -1497,6 +1515,12 @@ defm : PatShiftXrSplatUimm<loongarch_vsrar, "XVSRARI">;
 defm : PatXrXr<rotr, "XVROTR">;
 defm : PatShiftXrXr<rotr, "XVROTR">;
 defm : PatShiftXrSplatUimm<rotr, "XVROTRI">;
+
+// XVSLLWIL_{H_B/W_H/D_W}
+defm : PatXrUimmW<loongarch_vsllwil, "XVSLLWIL">;
+
+// XVSLLWIL_{HU_BU/WU_HU/DU_WU}
+defm : PatXrUimmWU<loongarch_vsllwil_u, "XVSLLWIL">;
 
 // XVCLO_{B/H/W/D}
 def : Pat<(ctlz (vnot v32i8:$xj)), (XVCLO_B v32i8:$xj)>;
