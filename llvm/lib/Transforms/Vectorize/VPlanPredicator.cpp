@@ -88,7 +88,7 @@ class VPPredicator {
 
   /// Given a set of \p Edges that each can reach \p VPBB, return the OR of all
   /// edges, or an equivalent block in-mask.
-  VPValue *createMaskDisjunction(ArrayRef<EdgeTy> Edges, VPBasicBlock *VPBB);
+  VPValue *createBlendMaskForEdges(ArrayRef<EdgeTy> Edges, VPBasicBlock *VPBB);
 
 public:
   VPPredicator(VPlan &Plan) : VPDT(Plan), VPPDT(Plan), VPPDF(VPPDT) {}
@@ -304,8 +304,8 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
   return Edges;
 }
 
-VPValue *VPPredicator::createMaskDisjunction(ArrayRef<EdgeTy> Edges,
-                                             VPBasicBlock *VPBB) {
+VPValue *VPPredicator::createBlendMaskForEdges(ArrayRef<EdgeTy> Edges,
+                                               VPBasicBlock *VPBB) {
   // If the nearest common postdominator to all of Edges destinations isn't VPBB
   // then we can use its block in-mask. E.g:
   //
@@ -380,7 +380,7 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     SmallVector<VPValue *, 2> OperandsWithMask;
     for (const auto &[InVPV, Edges] : InValEdges) {
       OperandsWithMask.push_back(InVPV);
-      OperandsWithMask.push_back(createMaskDisjunction(Edges, VPBB));
+      OperandsWithMask.push_back(createBlendMaskForEdges(Edges, VPBB));
     }
     PHINode *IRPhi = cast_or_null<PHINode>(PhiR->getUnderlyingValue());
     auto *Blend =
