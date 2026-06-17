@@ -497,11 +497,21 @@ public:
     return SIInstrFlags::isSALU(get(Opcode));
   }
 
-  static bool isVALU(const MachineInstr &MI) {
+  static bool isVALU(const MachineInstr &MI, bool AllowLDSDMA) {
+    if (!AllowLDSDMA && isLDSDMA(MI))
+      return false;
+
     return SIInstrFlags::isVALU(MI);
   }
 
-  bool isVALU(uint32_t Opcode) const {
+  /// LDSDMA instructions act as both VALU and memory instructions, thus
+  /// we also tag them as VALU. However, in many places, we do not actually want
+  /// to include LDSDMA instructions in this query. By setting \p AllowLDSDMA to
+  /// false, this will return false for LDSDMA instructions.
+  bool isVALU(uint32_t Opcode, bool AllowLDSDMA) const {
+    if (!AllowLDSDMA && isLDSDMA(Opcode))
+      return false;
+
     return SIInstrFlags::isVALU(get(Opcode));
   }
 
@@ -647,13 +657,14 @@ public:
   bool isDS(uint32_t Opcode) const { return SIInstrFlags::isDS(get(Opcode)); }
 
   static bool isLDSDMA(const MachineInstr &MI) {
-    return (isVALU(MI) && (isMUBUF(MI) || isFLAT(MI))) ||
-           (SIInstrFlags::usesTENSOR_CNT(MI));
+    return (SIInstrFlags::isVALU(MI) && (isMUBUF(MI) || isFLAT(MI))) ||
+           SIInstrFlags::usesTENSOR_CNT(MI);
   }
 
-  bool isLDSDMA(uint32_t Opcode) {
-    return (isVALU(Opcode) && (isMUBUF(Opcode) || isFLAT(Opcode))) ||
-           (SIInstrFlags::usesTENSOR_CNT(get(Opcode)));
+  bool isLDSDMA(uint32_t Opcode) const {
+    return (SIInstrFlags::isVALU(get(Opcode)) &&
+            (isMUBUF(Opcode) || isFLAT(Opcode))) ||
+           SIInstrFlags::usesTENSOR_CNT(get(Opcode));
   }
 
   static bool isGWS(const MachineInstr &MI) { return SIInstrFlags::isGWS(MI); }
@@ -878,13 +889,13 @@ public:
   static bool isVGPRSpill(const MachineInstr &MI) {
     return MI.getOpcode() != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            MI.getOpcode() != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           (isSpill(MI) && isVALU(MI));
+           (isSpill(MI) && isVALU(MI, /*AllowLDSDMA=*/true));
   }
 
   bool isVGPRSpill(uint32_t Opcode) const {
     return Opcode != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            Opcode != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           (isSpill(Opcode) && isVALU(Opcode));
+           (isSpill(Opcode) && isVALU(Opcode, /*AllowLDSDMA=*/true));
   }
 
   static bool isSGPRSpill(const MachineInstr &MI) {
