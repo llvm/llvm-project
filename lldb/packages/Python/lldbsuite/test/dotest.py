@@ -276,6 +276,8 @@ def parseOptionsAndInitTestdirs():
         configuration.dsymutil = seven.get_command_output(
             "xcrun -find -toolchain default dsymutil"
         )
+    if args.resource_dir:
+        configuration.resource_dir = args.resource_dir
     if args.llvm_tools_dir:
         configuration.llvm_tools_dir = args.llvm_tools_dir
         configuration.filecheck = shutil.which("FileCheck", path=args.llvm_tools_dir)
@@ -472,6 +474,9 @@ def parseOptionsAndInitTestdirs():
     if args.arm64e_debugserver:
         configuration.arm64e_debugserver = True
 
+    if args.print_lldb_version:
+        configuration.print_lldb_version = True
+
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
         configuration.testdirs = [
@@ -568,7 +573,8 @@ def setupSysPath():
         )
         sys.exit(-1)
 
-    os.system("%s -v" % lldbtest_config.lldbExec)
+    if configuration.print_lldb_version:
+        os.system("%s -v" % lldbtest_config.lldbExec)
 
     lldbDir = os.path.dirname(lldbtest_config.lldbExec)
 
@@ -912,6 +918,8 @@ def canRunWatchpointTests():
     from lldbsuite.test import lldbplatformutil
 
     platform = lldbplatformutil.getPlatform()
+    if platform.startswith("wasi"):
+        return False, "watchpoints are not supported on WebAssembly"
     if platform == "netbsd":
         if os.geteuid() == 0:
             return True, "root can always write dbregs"
@@ -954,6 +962,18 @@ def checkObjcSupport():
         if configuration.verbose:
             print("objc tests will be skipped because of unsupported platform")
         configuration.skip_categories.append("objc")
+
+
+def checkExpressionSupport():
+    from lldbsuite.test import lldbplatformutil
+
+    # WebAssembly targets cannot JIT or interpret expressions yet.
+    if lldbplatformutil.getPlatform().startswith("wasi"):
+        if "expression" in configuration.categories_list:
+            return  # explicitly requested, let it run.
+        if configuration.verbose:
+            print("expression tests will be skipped because of unsupported platform")
+        configuration.skip_categories.append("expression")
 
 
 def checkDebugInfoSupport():
@@ -1126,6 +1146,7 @@ def run_suite():
     checkDebugInfoSupport()
     checkDebugServerSupport()
     checkObjcSupport()
+    checkExpressionSupport()
     checkForkVForkSupport()
     checkPexpectSupport()
     checkDAPSupport()

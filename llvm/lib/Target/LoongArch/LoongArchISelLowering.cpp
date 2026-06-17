@@ -509,6 +509,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasExtLSX()) {
     setTargetDAGCombine(ISD::ADD);
+    setTargetDAGCombine(ISD::SUB);
     setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
     setTargetDAGCombine(ISD::BITCAST);
     setTargetDAGCombine(ISD::VSELECT);
@@ -1045,7 +1046,9 @@ SDValue LoongArchTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
     LegalVecSize = 256;
   }
 
+  EleBits *= 2;
   for (unsigned i = 1; i < NumEles; i *= 2, EleBits *= 2) {
+    EleBits = std::min(EleBits, 64u);
     MVT IntTy = MVT::getIntegerVT(EleBits);
     MVT VecTy = MVT::getVectorVT(IntTy, LegalVecSize / EleBits);
     Val = DAG.getNode(LoongArchISD::VHADDW, DL, VecTy, Val, Val);
@@ -5860,6 +5863,11 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     Results.push_back(DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Blocks));
     break;
   }
+  case ISD::FP_EXTEND:
+    // FP_EXTEND may reach here due to the Custom action for v2f32 results, but
+    // no target-specific lowering is required. Leave it unchanged and rely on
+    // the default type legalization.
+    break;
   }
 }
 
@@ -5907,9 +5915,117 @@ static bool isConstantSplatVector(SDValue N, APInt &SplatValue,
                                /*IsBigEndian=*/false);
 }
 
+static SDValue matchDeinterleaveBuildVector(SDValue N, unsigned &StartIndex) {
+  auto *BV = dyn_cast<BuildVectorSDNode>(N);
+  if (!BV)
+    return SDValue();
+
+  SDValue Src;
+  int Start = -1;
+
+  for (unsigned i = 0, NumElts = BV->getNumOperands(); i < NumElts; ++i) {
+    SDValue Op = BV->getOperand(i);
+    if (Op.isUndef())
+      continue;
+    if (Op.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+      return SDValue();
+
+    auto *IdxC = dyn_cast<ConstantSDNode>(Op.getOperand(1));
+    if (!IdxC)
+      return SDValue();
+
+    unsigned EltIdx = IdxC->getZExtValue();
+    if (Start < 0)
+      Start = (int)EltIdx - (int)(i * 2);
+    if (Start < 0 || Start > 1 || EltIdx != (unsigned)(Start + (int)(i * 2)))
+      return SDValue();
+
+    SDValue CurSrc = Op.getOperand(0);
+    if (!Src)
+      Src = CurSrc;
+    else if (Src != CurSrc)
+      return SDValue();
+  }
+
+  if (!Src || Start < 0)
+    return SDValue();
+
+  StartIndex = (unsigned)Start;
+  return Src;
+}
+
+static SDValue
+performHorizWideningCombine(SDNode *N, SelectionDAG &DAG,
+                            const LoongArchSubtarget &Subtarget) {
+  if (!Subtarget.hasExtLSX())
+    return SDValue();
+
+  unsigned Opc = N->getOpcode();
+  assert((Opc == ISD::ADD || Opc == ISD::SUB) && "Unexpected opcode");
+
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  bool isSigned;
+  unsigned ExtOpc = LHS.getOpcode();
+  if (ExtOpc == ISD::SIGN_EXTEND)
+    isSigned = true;
+  else if (ExtOpc == ISD::ZERO_EXTEND)
+    isSigned = false;
+  else
+    return SDValue();
+
+  if (ExtOpc != RHS.getOpcode())
+    return SDValue();
+
+  if (!LHS.hasOneUse() || !RHS.hasOneUse())
+    return SDValue();
+
+  unsigned OddIdx, EvenIdx;
+  SDValue LHSVec = matchDeinterleaveBuildVector(LHS.getOperand(0), OddIdx);
+  SDValue RHSVec = matchDeinterleaveBuildVector(RHS.getOperand(0), EvenIdx);
+
+  if (!LHSVec || !RHSVec)
+    return SDValue();
+  if (OddIdx != 1 || EvenIdx != 0)
+    return SDValue();
+  if (LHSVec.getValueType() != RHSVec.getValueType())
+    return SDValue();
+
+  EVT SrcVT = LHSVec.getValueType();
+  EVT SrcEltVT = SrcVT.getVectorElementType();
+  EVT DstEltVT = VT.getVectorElementType();
+  auto &TLI = DAG.getTargetLoweringInfo();
+
+  if (!TLI.isTypeLegal(VT) || !TLI.isTypeLegal(SrcVT))
+    return SDValue();
+  if (!SrcVT.isVector() || !VT.isVector())
+    return SDValue();
+  if (SrcVT.getSizeInBits() != VT.getSizeInBits())
+    return SDValue();
+  if (DstEltVT.getSizeInBits() != SrcEltVT.getSizeInBits() * 2)
+    return SDValue();
+  if (!SrcEltVT.isInteger() || SrcEltVT.getSizeInBits() > 32)
+    return SDValue();
+
+  unsigned TargetOpc;
+  if (Opc == ISD::ADD)
+    TargetOpc = isSigned ? LoongArchISD::VHADDW : LoongArchISD::VHADDW_U;
+  else
+    TargetOpc = isSigned ? LoongArchISD::VHSUBW : LoongArchISD::VHSUBW_U;
+
+  return DAG.getNode(TargetOpc, DL, VT, LHSVec, RHSVec);
+}
+
 static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const LoongArchSubtarget &Subtarget) {
+  if (SDValue V = performHorizWideningCombine(N, DAG, Subtarget))
+    return V;
+
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
@@ -6155,6 +6271,15 @@ static SDValue performSRLCombine(SDNode *N, SelectionDAG &DAG,
                        FirstOperand->getOperand(0),
                        DAG.getConstant(MaskIdx + MaskLen - 1, DL, GRLenVT),
                        DAG.getConstant(Shamt, DL, GRLenVT));
+
+  return SDValue();
+}
+
+static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const LoongArchSubtarget &Subtarget) {
+  if (SDValue V = performHorizWideningCombine(N, DAG, Subtarget))
+    return V;
 
   return SDValue();
 }
@@ -7636,9 +7761,9 @@ static SDValue performMOVFR2GR_SCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue performVMSKLTZCombine(SDNode *N, SelectionDAG &DAG,
-                                     TargetLowering::DAGCombinerInfo &DCI,
-                                     const LoongArchSubtarget &Subtarget) {
+static SDValue
+performDemandedBitsCombine(SDNode *N, SelectionDAG &DAG,
+                           TargetLowering::DAGCombinerInfo &DCI) {
   MVT VT = N->getSimpleValueType(0);
   unsigned NumBits = VT.getScalarSizeInBits();
 
@@ -8061,6 +8186,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performSETCCCombine(N, DAG, DCI, Subtarget);
   case ISD::SRL:
     return performSRLCombine(N, DAG, DCI, Subtarget);
+  case ISD::SUB:
+    return performSUBCombine(N, DAG, DCI, Subtarget);
   case ISD::BITCAST:
     return performBITCASTCombine(N, DAG, DCI, Subtarget);
   case ISD::ANY_EXTEND:
@@ -8081,9 +8208,13 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performMOVGR2FR_WCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::MOVFR2GR_S_LA64:
     return performMOVFR2GR_SCombine(N, DAG, DCI, Subtarget);
+  case LoongArchISD::CRC_W_B_W:
+  case LoongArchISD::CRC_W_H_W:
+  case LoongArchISD::CRCC_W_B_W:
+  case LoongArchISD::CRCC_W_H_W:
   case LoongArchISD::VMSKLTZ:
   case LoongArchISD::XVMSKLTZ:
-    return performVMSKLTZCombine(N, DAG, DCI, Subtarget);
+    return performDemandedBitsCombine(N, DAG, DCI);
   case LoongArchISD::SPLIT_PAIR_F64:
     return performSPLIT_PAIR_F64Combine(N, DAG, DCI, Subtarget);
   case LoongArchISD::VANDN:
@@ -9627,7 +9758,7 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
     SDValue SizeNode = DAG.getConstant(Size, DL, GRLenVT);
 
-    Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
+    Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment, Alignment,
                           /*IsVolatile=*/false,
                           /*AlwaysInline=*/false, /*CI=*/nullptr, std::nullopt,
                           MachinePointerInfo(), MachinePointerInfo());
@@ -11077,6 +11208,19 @@ bool LoongArchTargetLowering::SimplifyDemandedBitsForTargetNode(
   switch (Opc) {
   default:
     break;
+  case LoongArchISD::CRC_W_B_W:
+  case LoongArchISD::CRC_W_H_W:
+  case LoongArchISD::CRCC_W_B_W:
+  case LoongArchISD::CRCC_W_H_W: {
+    KnownBits KnownSrc;
+    APInt DemandedSrcBits =
+        APInt::getLowBitsSet(BitWidth, (Opc == LoongArchISD::CRC_W_B_W ||
+                                        Opc == LoongArchISD::CRCC_W_B_W)
+                                           ? 8
+                                           : 16);
+    return SimplifyDemandedBits(Op.getOperand(1), DemandedSrcBits,
+                                OriginalDemandedElts, KnownSrc, TLO, Depth + 1);
+  }
   case LoongArchISD::VMSKLTZ:
   case LoongArchISD::XVMSKLTZ: {
     SDValue Src = Op.getOperand(0);

@@ -2462,6 +2462,7 @@ cc_binary(
         "//llvm:BitWriter",
         "//llvm:CodeGen",
         "//llvm:Core",
+        "//llvm:FrontendOffloading",
         "//llvm:LTO",
         "//llvm:Object",
         "//llvm:Option",
@@ -2659,6 +2660,7 @@ cc_library(
         ":support",
         ":unified_symbol_resolution",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -2705,6 +2707,7 @@ cc_library(
         ":scalable_static_analysis_core",
         ":sema",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 

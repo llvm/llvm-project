@@ -10,6 +10,7 @@
 
 #include "clang/ScalableStaticAnalysisFramework/Core/Serialization/SerializationFormatRegistry.h"
 #include "llvm/Support/Registry.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace clang;
 using namespace ssaf;
@@ -408,6 +409,21 @@ entityLinkageTypeFromJSON(llvm::StringRef EntityLinkageTypeStr) {
 // Provided for consistency with respect to rest of the codebase.
 llvm::StringRef entityLinkageTypeToJSON(EntityLinkageType LT) {
   return entityLinkageTypeToString(LT);
+}
+
+//----------------------------------------------------------------------------
+// TargetTriple
+//----------------------------------------------------------------------------
+
+llvm::Error validateNormalizedTargetTriple(llvm::StringRef Triple) {
+  std::string Normalized = llvm::Triple::normalize(Triple);
+  if (Normalized != Triple) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::TargetTripleNotNormalized,
+                                Triple, Normalized)
+        .build();
+  }
+  return llvm::Error::success();
 }
 
 //----------------------------------------------------------------------------

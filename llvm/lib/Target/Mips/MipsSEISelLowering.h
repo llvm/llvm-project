@@ -92,6 +92,8 @@ class TargetRegisterClass;
     /// depending on the indices in the shuffle.
     SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
 
     MachineBasicBlock *emitBPOSGE32(MachineInstr &MI,
                                     MachineBasicBlock *BB) const;
@@ -129,10 +131,10 @@ class TargetRegisterClass;
                                      MachineBasicBlock *BB) const;
     /// Emit the FILL_FW pseudo instruction
     MachineBasicBlock *emitLD_F16_PSEUDO(MachineInstr &MI,
-                                   MachineBasicBlock *BB) const;
+                                         MachineBasicBlock *BB) const;
     /// Emit the FILL_FD pseudo instruction
     MachineBasicBlock *emitST_F16_PSEUDO(MachineInstr &MI,
-                                   MachineBasicBlock *BB) const;
+                                         MachineBasicBlock *BB) const;
     /// Emit the FEXP2_W_1 pseudo instructions.
     MachineBasicBlock *emitFPEXTEND_PSEUDO(MachineInstr &MI,
                                            MachineBasicBlock *BB,

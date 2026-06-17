@@ -656,6 +656,13 @@ void AMDGPUSwLowerLDS::getLDSMemoryInstructions(
         if (ASC->getSrcAddressSpace() == AMDGPUAS::LOCAL_ADDRESS &&
             ASC->getDestAddressSpace() == AMDGPUAS::FLAT_ADDRESS)
           LDSInstructions.insert(&Inst);
+      } else if (AnyMemIntrinsic *MI = dyn_cast<AnyMemIntrinsic>(&Inst)) {
+        if (MI->getDestAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+          LDSInstructions.insert(&Inst);
+        } else if (auto *MTI = dyn_cast<AnyMemTransferInst>(MI)) {
+          if (MTI->getSourceAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
+            LDSInstructions.insert(&Inst);
+        }
       } else
         continue;
     }
@@ -729,6 +736,49 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
       AsanInfo.Instructions.insert(NewXCHG);
       XCHG->replaceAllUsesWith(NewXCHG);
       XCHG->eraseFromParent();
+    } else if (AnyMemIntrinsic *MI = dyn_cast<AnyMemIntrinsic>(Inst)) {
+      Value *NewDest = MI->getRawDest();
+      if (MI->getDestAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
+        NewDest = getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, NewDest);
+      CallInst *NewMI = nullptr;
+      if (AnyMemSetInst *MSI = dyn_cast<AnyMemSetInst>(MI)) {
+        if (MI->isAtomic()) {
+          NewMI = IRB.CreateElementUnorderedAtomicMemSet(
+              NewDest, MSI->getValue(), MSI->getLength(),
+              MSI->getDestAlign().valueOrOne(), MSI->getElementSizeInBytes());
+        } else {
+          NewMI = IRB.CreateMemSet(NewDest, MSI->getValue(), MSI->getLength(),
+                                   MSI->getDestAlign(),
+                                   cast<MemSetInst>(MI)->isVolatile());
+        }
+      } else if (AnyMemTransferInst *MTI = dyn_cast<AnyMemTransferInst>(MI)) {
+        Value *NewSrc = MTI->getRawSource();
+        if (MTI->getSourceAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
+          NewSrc = getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, NewSrc);
+        if (MI->isAtomic()) {
+          if (MI->getIntrinsicID() ==
+              Intrinsic::memmove_element_unordered_atomic) {
+            NewMI = IRB.CreateElementUnorderedAtomicMemMove(
+                NewDest, MTI->getDestAlign().valueOrOne(), NewSrc,
+                MTI->getSourceAlign().valueOrOne(), MTI->getLength(),
+                MTI->getElementSizeInBytes());
+          } else {
+            NewMI = IRB.CreateElementUnorderedAtomicMemCpy(
+                NewDest, MTI->getDestAlign().valueOrOne(), NewSrc,
+                MTI->getSourceAlign().valueOrOne(), MTI->getLength(),
+                MTI->getElementSizeInBytes());
+          }
+        } else {
+          NewMI = IRB.CreateMemTransferInst(
+              MI->getIntrinsicID(), NewDest, MTI->getDestAlign(), NewSrc,
+              MTI->getSourceAlign(), MTI->getLength(),
+              cast<MemTransferInst>(MI)->isVolatile());
+        }
+      } else
+        reportFatalUsageError("Unimplemented LDS lowering memory intrinsic");
+      AsanInfo.Instructions.insert(NewMI);
+      MI->replaceAllUsesWith(NewMI);
+      MI->eraseFromParent();
     } else if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(Inst)) {
       Value *AIOperand = ASC->getPointerOperand();
       Value *Replacement =
@@ -1158,15 +1208,16 @@ bool AMDGPUSwLowerLDS::run() {
 
   CallGraph CG = CallGraph(M);
 
-  Changed |= eliminateConstantExprUsesOfLDSFromAllInstructions(M);
+  Changed |=
+      eliminateGVConstantExprUsesFromAllInstructions(M, isLDSVariableToLower);
 
   // Get all the direct and indirect access of LDS for all the kernels.
-  LDSUsesInfoTy LDSUsesInfo = getTransitiveUsesOfLDS(CG, M);
+  GVUsesInfoTy LDSUsesInfo = getTransitiveUsesOfLDSForLowering(CG, M);
 
   // Flag to decide whether to lower all the LDS accesses
   // based on sanitize_address attribute.
-  bool LowerAllLDS = hasFnWithSanitizeAddressAttr(LDSUsesInfo.direct_access) ||
-                     hasFnWithSanitizeAddressAttr(LDSUsesInfo.indirect_access);
+  bool LowerAllLDS = hasFnWithSanitizeAddressAttr(LDSUsesInfo.DirectAccess) ||
+                     hasFnWithSanitizeAddressAttr(LDSUsesInfo.IndirectAccess);
 
   if (!LowerAllLDS)
     return Changed;
@@ -1205,8 +1256,8 @@ bool AMDGPUSwLowerLDS::run() {
     }
   };
 
-  PopulateKernelStaticDynamicLDS(LDSUsesInfo.direct_access, true);
-  PopulateKernelStaticDynamicLDS(LDSUsesInfo.indirect_access, false);
+  PopulateKernelStaticDynamicLDS(LDSUsesInfo.DirectAccess, true);
+  PopulateKernelStaticDynamicLDS(LDSUsesInfo.IndirectAccess, false);
 
   // Get address sanitizer scale.
   initAsanInfo();

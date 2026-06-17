@@ -26,11 +26,11 @@
 
 namespace llvm::vfs {
 
-class OutputFileImpl : public RTTIExtends<OutputFileImpl, RTTIRoot> {
-  LLVM_ABI void anchor() override;
+class LLVM_ABI OutputFileImpl : public RTTIExtends<OutputFileImpl, RTTIRoot> {
+  void anchor() override;
 
 public:
-  LLVM_ABI static char ID;
+  static char ID;
   ~OutputFileImpl() override = default;
 
   virtual Error keep() = 0;
@@ -38,12 +38,12 @@ public:
   virtual raw_pwrite_stream &getOS() = 0;
 };
 
-class NullOutputFileImpl final
+class LLVM_ABI NullOutputFileImpl final
     : public RTTIExtends<NullOutputFileImpl, OutputFileImpl> {
-  LLVM_ABI void anchor() override;
+  void anchor() override;
 
 public:
-  LLVM_ABI static char ID;
+  static char ID;
   Error keep() final { return Error::success(); }
   Error discard() final { return Error::success(); }
   raw_pwrite_stream &getOS() final { return OS; }
