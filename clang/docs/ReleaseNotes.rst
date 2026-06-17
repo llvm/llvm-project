@@ -784,7 +784,7 @@ Bug Fixes to AST Handling
 - Fixed the SourceLocation and SourceRange of reversed rewritten CXXOperatorCallExpr. (#GH192467)
 - Fixed a assertion when ``__block`` is used on global variables in C mode. (#GH183974)
 - Added missing AST nodes representing the ``decltype`` specifiers in destructor call to AST.
-- Fixed a missing ODR violation diagnostic when two inline definitions of the same function differ only in the inline assembly string or clobber list. (#GH198616)
+- Fixed a missing ODR violation diagnostic introduced by the inline assembly string or clobber list. (#GH198616)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
