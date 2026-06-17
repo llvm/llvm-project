@@ -1670,17 +1670,19 @@ void CacheCostManager::computeIfUnitinialized() {
 
   LLVM_DEBUG(dbgs() << "Compute CacheCost.\n");
   CC = CacheCost::getCacheCost(*OutermostLoop, *AR, *DI);
-  // Obtain the loop vector returned from loop cache analysis beforehand,
-  // and put each <Loop, index> pair into a map for constant time query
-  // later. Indices in loop vector reprsent the optimal order of the
-  // corresponding loop, e.g., given a loopnest with depth N, index 0
-  // indicates the loop should be placed as the outermost loop and index N
-  // indicates the loop should be placed as the innermost loop.
+  // Obtain the loop costs returned from loop cache analysis, which are grouped
+  // by linear chain (the nest may be partially perfect / forked). Within each
+  // chain the costs are ordered, and the index represents the optimal position
+  // of the corresponding loop in that chain, e.g. index 0 indicates the loop
+  // should be placed as the outermost loop of its chain and the last index
+  // indicates it should be the innermost. Put each <Loop, index> pair into a
+  // map for constant time query later.
   //
   // For the old pass manager CacheCost would be null.
   if (*CC != nullptr)
-    for (const auto &[Idx, Cost] : enumerate((*CC)->getLoopCosts()))
-      CostMap[Cost.first] = Idx;
+    for (const auto &Chain : (*CC)->getLoopCosts())
+      for (const auto &[Idx, Cost] : enumerate(Chain))
+        CostMap[Cost.first] = Idx;
 }
 
 CacheCost *CacheCostManager::getCacheCost() {

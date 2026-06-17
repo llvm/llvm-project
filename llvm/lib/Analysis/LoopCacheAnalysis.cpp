@@ -27,6 +27,7 @@
 
 #include "llvm/Analysis/LoopCacheAnalysis.h"
 #include "llvm/ADT/BreadthFirstIterator.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -37,6 +38,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include <algorithm>
 
 using namespace llvm;
 
@@ -55,27 +57,31 @@ static cl::opt<unsigned> TemporalReuseThreshold(
              "accessed in a loop so that the elements are classified to have "
              "temporal reuse"));
 
-/// Retrieve the innermost loop in the given loop nest \p Loops. It returns a
-/// nullptr if any loops in the loop vector supplied has more than one sibling.
-/// The loop vector is expected to contain loops collected in breadth-first
-/// order.
-static Loop *getInnerMostLoop(const LoopVectorTy &Loops) {
-  assert(!Loops.empty() && "Expecting a non-empy loop vector");
+/// Decompose the loop nest rooted at \p Root into disjoint linear chains of
+/// loops. A chain is built from a leaf by including a parent only while that
+/// parent has exactly one sub-loop. A loop that forks the nest or encloses a
+/// fork is not in any chain.
+static SmallVector<LoopVectorTy, 4> collectLinearChains(Loop &Root) {
+  SmallVector<LoopVectorTy, 4> Chains;
 
-  Loop *LastLoop = Loops.back();
-  Loop *ParentLoop = LastLoop->getParentLoop();
+  for (Loop *L : depth_first(&Root)) {
+    // Start a chain at each leaf (innermost) loop.
+    if (!L->isInnermost())
+      continue;
 
-  if (ParentLoop == nullptr) {
-    assert(Loops.size() == 1 && "Expecting a single loop");
-    return LastLoop;
+    LoopVectorTy Chain;
+    Chain.push_back(L);
+    for (Loop *P = L->getParentLoop();
+         P != nullptr && Root.contains(P) && P->getSubLoops().size() == 1;
+         P = P->getParentLoop())
+      Chain.push_back(P);
+
+    // The chain was built inner->outer; reverse to outer->inner.
+    std::reverse(Chain.begin(), Chain.end());
+    Chains.push_back(std::move(Chain));
   }
 
-  return (llvm::is_sorted(Loops,
-                          [](const Loop *L1, const Loop *L2) {
-                            return L1->getLoopDepth() < L2->getLoopDepth();
-                          }))
-             ? LastLoop
-             : nullptr;
+  return Chains;
 }
 
 static bool isOneDimensionalArray(const SCEV &AccessFn, const SCEV &ElemSize,
@@ -536,10 +542,11 @@ bool IndexedReference::isAliased(const IndexedReference &Other,
 // CacheCost implementation
 //
 raw_ostream &llvm::operator<<(raw_ostream &OS, const CacheCost &CC) {
-  for (const auto &LC : CC.LoopCosts) {
-    const Loop *L = LC.first;
-    OS << "Loop '" << L->getName() << "' has cost = " << LC.second << "\n";
-  }
+  for (const auto &Chain : CC.ChainCosts)
+    for (const auto &LC : Chain) {
+      const Loop *L = LC.first;
+      OS << "Loop '" << L->getName() << "' has cost = " << LC.second << "\n";
+    }
   return OS;
 }
 
@@ -557,6 +564,8 @@ CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
     TripCounts.push_back({L, TripCount});
   }
 
+  Chains = collectLinearChains(*Loops.front());
+
   calculateCacheFootprint();
 }
 
@@ -571,43 +580,49 @@ CacheCost::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
   LoopVectorTy Loops;
   append_range(Loops, breadth_first(&Root));
 
-  if (!getInnerMostLoop(Loops)) {
-    LLVM_DEBUG(dbgs() << "Cannot compute cache cost of loop nest with more "
-                         "than one innermost loop\n");
-    return nullptr;
-  }
-
   return std::make_unique<CacheCost>(Loops, AR.LI, AR.SE, AR.TTI, AR.AA, DI, TRT);
 }
 
 void CacheCost::calculateCacheFootprint() {
-  LLVM_DEBUG(dbgs() << "POPULATING REFERENCE GROUPS\n");
-  ReferenceGroupsTy RefGroups;
-  if (!populateReferenceGroups(RefGroups))
-    return;
+  // Cost each linear chain independently: reference groups are collected from
+  // the chain's own innermost loop, and each loop in the chain is costed
+  // against them.
+  for (const LoopVectorTy &Chain : Chains) {
+    assert(!Chain.empty() && "Expecting a non-empty chain");
+    const Loop &Leaf = *Chain.back();
 
-  LLVM_DEBUG(dbgs() << "COMPUTING LOOP CACHE COSTS\n");
-  for (const Loop *L : Loops) {
-    assert(llvm::none_of(
-               LoopCosts,
-               [L](const LoopCacheCostTy &LCC) { return LCC.first == L; }) &&
-           "Should not add duplicate element");
-    CacheCostTy LoopCost = computeLoopCacheCost(*L, RefGroups);
-    LoopCosts.push_back(std::make_pair(L, LoopCost));
+    LLVM_DEBUG(dbgs() << "POPULATING REFERENCE GROUPS for innermost loop '"
+                      << Leaf.getName() << "'\n");
+    ReferenceGroupsTy RefGroups;
+    // If a chain's innermost loop has no analyzable references, skip the whole
+    // chain: its loops will not appear in the results and getLoopCost()
+    // returns -1 for them.
+    if (!populateReferenceGroups(Leaf, RefGroups))
+      continue;
+
+    LLVM_DEBUG(dbgs() << "COMPUTING LOOP CACHE COSTS\n");
+    LoopCacheCostsTy Costs;
+    for (const Loop *L : Chain) {
+      assert(llvm::none_of(
+                 Costs,
+                 [L](const LoopCacheCostTy &LCC) { return LCC.first == L; }) &&
+             "Should not add duplicate element");
+      CacheCostTy LoopCost = computeLoopCacheCost(*L, Leaf, RefGroups);
+      Costs.push_back(std::make_pair(L, LoopCost));
+    }
+
+    sortLoopCosts(Costs);
+    ChainCosts.push_back(std::move(Costs));
   }
-
-  sortLoopCosts();
-  RefGroups.clear();
 }
 
-bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
+bool CacheCost::populateReferenceGroups(const Loop &Leaf,
+                                        ReferenceGroupsTy &RefGroups) const {
   assert(RefGroups.empty() && "Reference groups should be empty");
 
   unsigned CLS = TTI.getCacheLineSize();
-  Loop *InnerMostLoop = getInnerMostLoop(Loops);
-  assert(InnerMostLoop != nullptr && "Expecting a valid innermost loop");
 
-  for (BasicBlock *BB : InnerMostLoop->getBlocks()) {
+  for (BasicBlock *BB : Leaf.getBlocks()) {
     for (Instruction &I : *BB) {
       if (!isa<StoreInst>(I) && !isa<LoadInst>(I))
         continue;
@@ -638,7 +653,7 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
        // should have a cost closer to 2x the second due to the two cache
        // access per iteration from opposite ends of the array
         std::optional<bool> HasTemporalReuse =
-            R->hasTemporalReuse(Representative, *TRT, *InnerMostLoop, DI, AA);
+            R->hasTemporalReuse(Representative, *TRT, Leaf, DI, AA);
         std::optional<bool> HasSpacialReuse =
             R->hasSpacialReuse(Representative, CLS, AA);
 
@@ -677,7 +692,7 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
 }
 
 CacheCostTy
-CacheCost::computeLoopCacheCost(const Loop &L,
+CacheCost::computeLoopCacheCost(const Loop &L, const Loop &Leaf,
                                 const ReferenceGroupsTy &RefGroups) const {
   if (!L.isLoopSimplifyForm())
     return CacheCostTy::getInvalid();
@@ -685,10 +700,13 @@ CacheCost::computeLoopCacheCost(const Loop &L,
   LLVM_DEBUG(dbgs() << "Considering loop '" << L.getName()
                     << "' as innermost loop.\n");
 
-  // Compute the product of the trip counts of each other loop in the nest.
+  // Compute the product of the trip counts of each other loop that encloses the
+  // references being costed, i.e. the loops on the chain's leaf's root-to-leaf
+  // path, excluding L itself. Loops in disjoint sibling sub-nests do not
+  // enclose these references and must not contribute to the product.
   CacheCostTy TripCountsProduct = 1;
   for (const auto &TC : TripCounts) {
-    if (TC.first == &L)
+    if (TC.first == &L || !TC.first->contains(&Leaf))
       continue;
     TripCountsProduct *= TC.second;
   }
