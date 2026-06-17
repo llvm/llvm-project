@@ -1155,87 +1155,92 @@ static int isHipAvailable(void) {
 /*  Collect device-side profile data                                          */
 /* -------------------------------------------------------------------------- */
 
+/* Host-shadow drain: static-linked kernels (host __hipRegisterVar shadows) and
+ * intercepted dynamic modules. The caller gates this on
+ * (NumShadowVariables || NumDynamicModules) && isHipAvailable(); pure
+ * device-linked programs (RCCL) are handled by the supplemental HSA pass. */
+static int collectHostShadowData(void) {
+  int Ret = 0;
+
+  /* Shadow variables (static-linked kernels): drain from every device. */
+  if (NumShadowVariables > 0) {
+    int OrigDevice = -1;
+    hipGetDevice(&OrigDevice);
+
+    for (int Dev = 0; Dev < NumDevices; ++Dev) {
+      if (!shouldCollectDevice(Dev)) {
+        if (isVerboseMode())
+          PROF_NOTE("Skipping unused device %d\n", Dev);
+        continue;
+      }
+#if defined(__linux__) && !defined(_WIN32)
+      /* When no kernel launch was tracked at all, shouldCollectDevice() falls
+       * back to collect-all, which can fault/hang reading a non-resident
+       * device's sections on a multi-GPU host (e.g. a program that never
+       * launches, collects before its first launch, or launches only via an
+       * untracked API). On Linux the supplemental HSA drain covers those cases
+       * safely -- it walks only code objects actually resident on each agent --
+       * so skip the host-shadow pass rather than take the unsafe fallback. */
+      if (!__atomic_load_n(&AnyDeviceUsed, __ATOMIC_ACQUIRE)) {
+        if (isVerboseMode())
+          PROF_NOTE("No tracked launch; deferring device %d to HSA drain\n",
+                    Dev);
+        continue;
+      }
+#endif
+      if (hipSetDevice(Dev) != 0) {
+        if (isVerboseMode())
+          PROF_NOTE("Failed to set device %d, skipping\n", Dev);
+        continue;
+      }
+      const char *ArchName = getDeviceArchName(Dev);
+      if (isVerboseMode())
+        PROF_NOTE("Collecting static profile data from device %d (%s)\n", Dev,
+                  ArchName);
+      for (int i = 0; i < NumShadowVariables; ++i) {
+        /* Stable name per shadow so a repeated drain (explicit collect plus the
+         * atexit drain) overwrites its own profraw rather than emitting a
+         * second one: bare arch for a single TU, arch.<i> for RDC multi-TU. */
+        const char *Target = ArchName;
+        char TargetWithIdx[64];
+        if (NumShadowVariables > 1) {
+          snprintf(TargetWithIdx, sizeof(TargetWithIdx), "%s.%d", ArchName, i);
+          Target = TargetWithIdx;
+        }
+        if (processShadowVariable(i, Target) != 0)
+          Ret = -1;
+      }
+    }
+
+    if (OrigDevice >= 0)
+      hipSetDevice(OrigDevice);
+  }
+
+  /* Warn about unprocessed TUs; skip cleared slots (already drained). */
+  lockDynamicModules();
+  for (int i = 0; i < NumDynamicModules; ++i) {
+    OffloadDynamicModuleInfo *MI = &DynamicModules[i];
+    if (!MI->ModulePtr)
+      continue;
+    for (int t = 0; t < MI->NumTUs; ++t) {
+      if (!MI->TUs[t].Processed) {
+        PROF_WARN("dynamic module %p TU %d was not processed before exit\n",
+                  MI->ModulePtr, t);
+        Ret = -1;
+      }
+    }
+  }
+  unlockDynamicModules();
+
+  return Ret;
+}
+
 extern "C" int __llvm_profile_hip_collect_device_data(void) {
   int Ret = 0;
 
-  /* Host-shadow drain: static-linked kernels (host __hipRegisterVar shadows)
-   * and intercepted dynamic modules. Only meaningful when something registered
-   * host-side; skipped entirely for pure device-linked programs (RCCL), which
-   * the supplemental HSA pass below handles. */
-  if ((NumShadowVariables != 0 || NumDynamicModules != 0) && isHipAvailable()) {
-    /* Shadow variables (static-linked kernels): drain from every device. */
-    if (NumShadowVariables > 0) {
-      int OrigDevice = -1;
-      hipGetDevice(&OrigDevice);
-
-      for (int Dev = 0; Dev < NumDevices; ++Dev) {
-        if (!shouldCollectDevice(Dev)) {
-          if (isVerboseMode())
-            PROF_NOTE("Skipping unused device %d\n", Dev);
-          continue;
-        }
-#if defined(__linux__) && !defined(_WIN32)
-        /* When no kernel launch was tracked at all, shouldCollectDevice()
-         * falls back to collect-all, which can fault/hang reading a
-         * non-resident device's sections on a multi-GPU host (e.g. a program
-         * that never launches, collects before its first launch, or launches
-         * only via an untracked API). On Linux the supplemental HSA drain
-         * below covers those cases safely -- it walks only code objects
-         * actually resident on each agent -- so skip the host-shadow pass
-         * entirely rather than take the unsafe fallback. */
-        if (!__atomic_load_n(&AnyDeviceUsed, __ATOMIC_ACQUIRE)) {
-          if (isVerboseMode())
-            PROF_NOTE("No tracked launch; deferring device %d to HSA drain\n",
-                      Dev);
-          continue;
-        }
-#endif
-        if (hipSetDevice(Dev) != 0) {
-          if (isVerboseMode())
-            PROF_NOTE("Failed to set device %d, skipping\n", Dev);
-          continue;
-        }
-        const char *ArchName = getDeviceArchName(Dev);
-        if (isVerboseMode())
-          PROF_NOTE("Collecting static profile data from device %d (%s)\n", Dev,
-                    ArchName);
-        for (int i = 0; i < NumShadowVariables; ++i) {
-          /* Stable name per shadow so a repeated drain (explicit collect plus
-           * the atexit drain) overwrites its own profraw rather than emitting a
-           * second one: bare arch for a single TU, arch.<i> for RDC multi-TU.
-           */
-          const char *Target = ArchName;
-          char TargetWithIdx[64];
-          if (NumShadowVariables > 1) {
-            snprintf(TargetWithIdx, sizeof(TargetWithIdx), "%s.%d", ArchName,
-                     i);
-            Target = TargetWithIdx;
-          }
-          if (processShadowVariable(i, Target) != 0)
-            Ret = -1;
-        }
-      }
-
-      if (OrigDevice >= 0)
-        hipSetDevice(OrigDevice);
-    }
-
-    /* Warn about unprocessed TUs; skip cleared slots (already drained). */
-    lockDynamicModules();
-    for (int i = 0; i < NumDynamicModules; ++i) {
-      OffloadDynamicModuleInfo *MI = &DynamicModules[i];
-      if (!MI->ModulePtr)
-        continue;
-      for (int t = 0; t < MI->NumTUs; ++t) {
-        if (!MI->TUs[t].Processed) {
-          PROF_WARN("dynamic module %p TU %d was not processed before exit\n",
-                    MI->ModulePtr, t);
-          Ret = -1;
-        }
-      }
-    }
-    unlockDynamicModules();
-  }
+  if ((NumShadowVariables != 0 || NumDynamicModules != 0) && isHipAvailable() &&
+      collectHostShadowData() != 0)
+    Ret = -1;
 
 #if defined(__linux__) && !defined(_WIN32)
   /* Supplemental HSA-introspection drain: catches device code objects with no
