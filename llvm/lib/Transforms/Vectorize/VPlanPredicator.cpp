@@ -274,11 +274,6 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
   for (auto [InVal, InVPBB] : Phi->incoming_values_and_blocks())
     AddEdge(InVPBB, Phi->getParent(), InVal);
 
-  // Only handle phis that postdominate every incoming block.
-  for (const VPBlockBase *InVPBB : Phi->incoming_blocks())
-    if (!VPPDT.dominates(Phi->getParent(), InVPBB))
-      return Edges;
-
   SetVector<const VPBlockBase *> Worklist(from_range, Phi->incoming_blocks());
   while (!Worklist.empty()) {
     auto *VPBB = cast<VPBasicBlock>(Worklist.pop_back_val());
