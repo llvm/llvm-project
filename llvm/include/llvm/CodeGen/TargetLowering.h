@@ -5660,6 +5660,11 @@ public:
   /// \returns The expansion result
   SDValue expandFCANONICALIZE(SDNode *Node, SelectionDAG &DAG) const;
 
+  /// Expand CONVERT_TO_ARBITRARY_FP using bit manipulation.
+  /// \param Node Node to expand.
+  /// \returns The expansion result, or SDValue() if fails.
+  SDValue expandCONVERT_TO_ARBITRARY_FP(SDNode *Node, SelectionDAG &DAG) const;
+
   /// Expand CONVERT_FROM_ARBITRARY_FP using bit manipulation.
   /// \param Node Node to expand.
   /// \returns The expansion result, or SDValue() if fails.
