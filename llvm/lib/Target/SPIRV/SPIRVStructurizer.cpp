@@ -1209,9 +1209,9 @@ class SPIRVStructurizer : public FunctionPass {
       // Map from target block to its case index (first occurrence only, used
       // for fall-through detection).
       SmallDenseMap<BasicBlock *, unsigned, 8> BlockToCaseIdx;
-      for (unsigned i = 0; i < Cases.size(); i++) {
+      for (unsigned I = 0; I < Cases.size(); I++) {
         // Only record the first case targeting each block.
-        BlockToCaseIdx.try_emplace(Cases[i].second, i);
+        BlockToCaseIdx.try_emplace(Cases[I].second, I);
       }
 
       // Build fall-through edges among cases (excluding default).
@@ -1219,13 +1219,13 @@ class SPIRVStructurizer : public FunctionPass {
       // target block, so case i must immediately precede case j.
       SmallDenseMap<unsigned, unsigned, 8> FallThrough;
       SmallDenseMap<unsigned, unsigned, 8> IncomingCount;
-      for (unsigned i = 0; i < Cases.size(); i++) {
-        for (BasicBlock *Succ : successors(Cases[i].second)) {
+      for (unsigned I = 0; I < Cases.size(); I++) {
+        for (BasicBlock *Succ : successors(Cases[I].second)) {
           if (Succ == SI->getDefaultDest())
             continue; // Skip fall-throughs involving default.
           auto It = BlockToCaseIdx.find(Succ);
-          if (It != BlockToCaseIdx.end() && It->second != i) {
-            FallThrough[i] = It->second;
+          if (It != BlockToCaseIdx.end() && It->second != I) {
+            FallThrough[I] = It->second;
             IncomingCount[It->second]++;
             break;
           }
@@ -1246,11 +1246,11 @@ class SPIRVStructurizer : public FunctionPass {
       }
       if (!Unsatisfiable) {
         // Check for cycles by following chains.
-        for (unsigned i = 0; i < Cases.size() && !Unsatisfiable; i++) {
-          if (!FallThrough.count(i))
+        for (unsigned I = 0; I < Cases.size() && !Unsatisfiable; I++) {
+          if (!FallThrough.count(I))
             continue;
           SmallDenseSet<unsigned, 8> Visited;
-          unsigned Cur = i;
+          unsigned Cur = I;
           while (FallThrough.count(Cur)) {
             if (!Visited.insert(Cur).second) {
               Unsatisfiable = true;
@@ -1273,10 +1273,10 @@ class SPIRVStructurizer : public FunctionPass {
         HasIncoming.insert(To);
 
       // Start chains from cases that aren't landed on.
-      for (unsigned i = 0; i < Cases.size(); i++) {
-        if (HasIncoming.count(i))
+      for (unsigned I = 0; I < Cases.size(); I++) {
+        if (HasIncoming.count(I))
           continue;
-        unsigned Cur = i;
+        unsigned Cur = I;
         while (true) {
           if (Placed.contains(Cur))
             break;
@@ -1290,17 +1290,17 @@ class SPIRVStructurizer : public FunctionPass {
       }
 
       // Add any remaining cases not part of a chain.
-      for (unsigned i = 0; i < Cases.size(); i++) {
-        if (!Placed.contains(i)) {
-          Order.push_back(i);
-          Placed.insert(i);
+      for (unsigned I = 0; I < Cases.size(); I++) {
+        if (!Placed.contains(I)) {
+          Order.push_back(I);
+          Placed.insert(I);
         }
       }
 
       // Check if order actually changed.
       bool Changed = false;
-      for (unsigned i = 0; i < Order.size(); i++) {
-        if (Order[i] != i) {
+      for (unsigned I = 0; I < Order.size(); I++) {
+        if (Order[I] != I) {
           Changed = true;
           break;
         }
