@@ -393,6 +393,12 @@ New Compiler Flags
   a hostname when generates the hashes. Known issues -- does not remap the
   source file pathes within PCH/PCM files.
 
+- Added experimental ``-fmodules-driver`` option to enable explicit module
+  builds using C++20 and/or Clang named modules, managed by the Clang driver.
+  This also supports the C++ standard library modules.
+- Added ``-Rmodules-driver`` option to emit remarks for ``-fmodules-driver``,
+  such as the build graph with module dependencies as a DOT graph.
+
 Deprecated Compiler Flags
 -------------------------
 
