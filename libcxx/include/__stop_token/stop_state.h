@@ -11,11 +11,12 @@
 #define _LIBCPP___STOP_TOKEN_STOP_STATE_H
 
 #include <__assert>
+#include <__atomic/atomic.h>
+#include <__atomic/memory_order.h>
 #include <__config>
 #include <__stop_token/atomic_unique_lock.h>
 #include <__stop_token/intrusive_list_view.h>
 #include <__thread/id.h>
-#include <atomic>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

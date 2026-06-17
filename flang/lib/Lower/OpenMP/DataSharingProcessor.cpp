@@ -492,6 +492,17 @@ void DataSharingProcessor::collectPrivatizedSymbols(
   }
 
   auto shouldCollectSymbol = [&](const semantics::Symbol *sym) {
+    // Linear symbols are privatized by OpenMP IRBuilder, except when they are
+    // enclosed within TARGET.
+    mlir::Operation *currentOp =
+        firOpBuilder.getInsertionBlock()->getParentOp();
+    bool inTarget =
+        currentOp && (mlir::isa<mlir::omp::TargetOp>(currentOp) ||
+                      currentOp->getParentOfType<mlir::omp::TargetOp>());
+
+    if (sym->test(semantics::Symbol::Flag::OmpLinear) && !inTarget)
+      return false;
+
     if (collectImplicit) {
       // If we're a combined construct with a target region, implicit
       // firstprivate captures, should only belong to the target region
@@ -533,9 +544,6 @@ void DataSharingProcessor::collectPrivatizedSymbols(
 
   for (const auto *sym : allSymbols) {
     if (semantics::omp::IsPrivatizable(*sym) &&
-        // Linear symbols are privatized by OpenMP IRBuilder. See comments
-        // in collectSymbolsForPrivatization() for more details.
-        !sym->test(semantics::Symbol::Flag::OmpLinear) &&
         !symbolsInNestedRegions.contains(sym) &&
         !explicitlyPrivatizedSymbols.contains(sym) &&
         shouldCollectSymbol(sym) && clauseScopes.contains(&sym->owner())) {
@@ -702,7 +710,8 @@ void DataSharingProcessor::privatizeSymbol(
   Fortran::lower::privatizeSymbol<mlir::omp::PrivateClauseOp,
                                   mlir::omp::PrivateClauseOps>(
       converter, firOpBuilder, symTable, allPrivatizedSymbols,
-      mightHaveReadHostSym, symToPrivatize, clauseOps, dir);
+      mightHaveReadHostSym, symToPrivatize, clauseOps, dir,
+      forceHeapAllocationForPrivateDynamicArrays);
 }
 } // namespace omp
 } // namespace lower

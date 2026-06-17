@@ -515,7 +515,8 @@ static T mergeForwardValue(T KeyPath, U Value) {
   return static_cast<T>(Value);
 }
 
-template <typename T, typename U> static T mergeMaskValue(T KeyPath, U Value) {
+template <typename T, typename U>
+[[maybe_unused]] static T mergeMaskValue(T KeyPath, U Value) {
   return KeyPath | Value;
 }
 
@@ -524,7 +525,7 @@ template <typename T> static T extractForwardValue(T KeyPath) {
 }
 
 template <typename T, typename U, U Value>
-static T extractMaskValue(T KeyPath) {
+[[maybe_unused]] static T extractMaskValue(T KeyPath) {
   return ((KeyPath & Value) == Value) ? static_cast<T>(Value) : T();
 }
 
@@ -634,6 +635,11 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   if (LangOpts.SYCLIsDevice && LangOpts.SYCLIsHost)
     Diags.Report(diag::err_drv_argument_not_allowed_with) << "-fsycl-is-device"
                                                           << "-fsycl-is-host";
+
+  // SYCL requires C++; reject C inputs on both device and host.
+  if ((LangOpts.SYCLIsDevice || LangOpts.SYCLIsHost) && !LangOpts.CPlusPlus)
+    Diags.Report(diag::err_drv_argument_not_allowed_with)
+        << GetInputKindName(IK) << "-fsycl";
 
   if (Args.hasArg(OPT_fgnu89_inline) && LangOpts.CPlusPlus)
     Diags.Report(diag::err_drv_argument_not_allowed_with)
@@ -2320,6 +2326,16 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     Diags.Report(diag::err_drv_amdgpu_ieee_without_no_honor_nans);
 
   Opts.StaticClosure = Args.hasArg(options::OPT_static_libclosure);
+
+  if (!Opts.HLSLRecordCommandLine.empty()) {
+    auto ParsedArgs =
+        clang::parseEscapedCommandLine(Opts.HLSLRecordCommandLine.c_str());
+    if (!ParsedArgs)
+      Diags.Report(diag::err_drv_invalid_escaped_command_line)
+          << llvm::toString(ParsedArgs.takeError());
+    else
+      Opts.HLSLParsedCommandLine = std::move(*ParsedArgs);
+  }
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
@@ -4083,6 +4099,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
             .Cases({"cl1.2", "CL1.2"}, LangStandard::lang_opencl12)
             .Cases({"cl2.0", "CL2.0"}, LangStandard::lang_opencl20)
             .Cases({"cl3.0", "CL3.0"}, LangStandard::lang_opencl30)
+            .Cases({"cl3.1", "CL3.1"}, LangStandard::lang_opencl31)
             .Cases({"clc++", "CLC++"}, LangStandard::lang_openclcpp10)
             .Cases({"clc++1.0", "CLC++1.0"}, LangStandard::lang_openclcpp10)
             .Cases({"clc++2021", "CLC++2021"}, LangStandard::lang_openclcpp2021)

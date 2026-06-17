@@ -2068,12 +2068,14 @@ cc_library(
     deps = [
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:Symbol",
         "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:BinaryFormat",
         "//llvm:Support",
     ],
 )
@@ -2303,6 +2305,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginDynamicLoaderPosixDYLDHeaders",
+        ":PluginDynamicLoaderStatic",
         ":PluginObjectFileELF",
         ":PluginObjectFilePlaceholder",
         ":PluginProcessUtility",

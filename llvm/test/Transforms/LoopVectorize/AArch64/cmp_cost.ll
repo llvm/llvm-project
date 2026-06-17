@@ -38,7 +38,7 @@ define float @fmaxnum_reduction_f32(float %base, i32 %n) {
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP10]]> = select vp<[[VP5]]>, vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP11]]> = compute-reduction-result (fmaxnum) vp<[[VP9]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
-; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP12:%[0-9]+]]> = not vp<[[VP5]]>
+; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP12:%[0-9]+]]> = not vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP13:%[0-9]+]]> = and vp<%cmp.n>, vp<[[VP12]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<[[VP13]]>
 ; CHECK:  Cost of 0 for VF 2: IR %max.next.lcssa = phi float [ %max.next, %loop ] (extra operand: vp<[[VP11]]> from middle.block)
@@ -69,7 +69,7 @@ define float @fmaxnum_reduction_f32(float %base, i32 %n) {
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<[[VP10]]> = select vp<[[VP5]]>, vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP11]]> = compute-reduction-result (fmaxnum) vp<[[VP9]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
-; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP12]]> = not vp<[[VP5]]>
+; CHECK:  Cost of 1 for VF 4: EMIT vp<[[VP12]]> = not vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP13]]> = and vp<%cmp.n>, vp<[[VP12]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT branch-on-cond vp<[[VP13]]>
 ; CHECK:  Cost of 0 for VF 4: IR %max.next.lcssa = phi float [ %max.next, %loop ] (extra operand: vp<[[VP11]]> from middle.block)
@@ -121,7 +121,7 @@ define double @fmaxnum_reduction_f64(double %base, i64 %n) {
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP10]]> = select vp<[[VP5]]>, vp<[[VP3]]>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP11]]> = compute-reduction-result (fmaxnum) vp<[[VP9]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
-; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP12:%[0-9]+]]> = not vp<[[VP5]]>
+; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP12:%[0-9]+]]> = not vp<[[VP5]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP13:%[0-9]+]]> = and vp<%cmp.n>, vp<[[VP12]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<[[VP13]]>
 ; CHECK:  Cost of 0 for VF 2: IR %max.next.lcssa = phi double [ %max.next, %loop ] (extra operand: vp<[[VP11]]> from middle.block)

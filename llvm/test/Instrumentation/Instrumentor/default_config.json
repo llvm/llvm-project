@@ -238,6 +238,8 @@
       "left.description": "The operation's left operand.",
       "right": true,
       "right.description": "The operation's right operand. This value is poison for unary operations.",
+      "flags": true,
+      "flags.description": "A bitmask value signaling which instruction flags are present.",
       "id": true,
       "id.description": "A unique ID associated with the given instrumentor call"
     }
@@ -351,6 +353,8 @@
       "result": true,
       "result.replace": true,
       "result.description": "Result of the operation.",
+      "flags": true,
+      "flags.description": "A bitmask value signaling which instruction flags are present.",
       "id": true,
       "id.description": "A unique ID associated with the given instrumentor call"
     }

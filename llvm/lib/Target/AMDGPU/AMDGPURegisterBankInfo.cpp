@@ -1282,7 +1282,7 @@ unsigned AMDGPURegisterBankInfo::setBufferOffsets(
                                         /*CheckNUW=*/CheckNUW);
 
   uint32_t SOffset, ImmOffset;
-  if ((int)Offset > 0 &&
+  if (static_cast<int32_t>(Offset) > 0 &&
       TII->splitMUBUFOffset(Offset, SOffset, ImmOffset, Alignment)) {
     if (getRegBank(Base, *MRI, *TRI) == &AMDGPU::VGPRRegBank) {
       VOffsetReg = Base;
@@ -1304,7 +1304,7 @@ unsigned AMDGPURegisterBankInfo::setBufferOffsets(
 
   // Handle the variable sgpr + vgpr case.
   MachineInstr *Add = getOpcodeDef(AMDGPU::G_ADD, CombinedOffset, *MRI);
-  if (Add && (int)Offset >= 0 &&
+  if (Add && static_cast<int32_t>(Offset) >= 0 &&
       (!CheckNUW || Add->getFlag(MachineInstr::NoUWrap))) {
     Register Src0 = getSrcRegIgnoringCopies(Add->getOperand(1).getReg(), *MRI);
     Register Src1 = getSrcRegIgnoringCopies(Add->getOperand(2).getReg(), *MRI);
@@ -1845,7 +1845,7 @@ AMDGPURegisterBankInfo::splitBufferOffsets(MachineIRBuilder &B,
     // vgpr, even if adding the immediate offset makes it positive.
     unsigned Overflow = ImmOffset & ~MaxImm;
     ImmOffset -= Overflow;
-    if ((int32_t)Overflow < 0) {
+    if (static_cast<int32_t>(Overflow) < 0) {
       Overflow += ImmOffset;
       ImmOffset = 0;
     }
@@ -4063,8 +4063,14 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_UBFX:
   case AMDGPU::G_AMDGPU_S_MUL_I64_I32:
   case AMDGPU::G_AMDGPU_S_MUL_U64_U32:
-    if (isSALUMapping(MI))
+    if (isSALUMapping(MI)) {
+      LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+      unsigned Size = Ty.getSizeInBits();
+      // Packed add and sub are VALU only.
+      if (Subtarget.hasPackedU64Ops() && Ty.isVector() && Size == 128)
+        return getDefaultMappingVOP(MI);
       return getDefaultMappingSOP(MI);
+    }
     return getDefaultMappingVOP(MI);
   case AMDGPU::G_SMIN:
   case AMDGPU::G_SMAX:
@@ -4826,6 +4832,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_swmmac_f32_16x16x32_fp8_bf8:
     case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_fp8:
     case Intrinsic::amdgcn_swmmac_f32_16x16x32_bf8_bf8:
+    case Intrinsic::amdgcn_wmma_f64_16x16x4_f64:
     case Intrinsic::amdgcn_wmma_f32_16x16x4_f32:
     case Intrinsic::amdgcn_wmma_f32_16x16x32_bf16:
     case Intrinsic::amdgcn_wmma_f32_16x16x32_f16:
