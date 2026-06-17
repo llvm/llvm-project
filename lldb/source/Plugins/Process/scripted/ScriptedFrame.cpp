@@ -307,10 +307,11 @@ void ScriptedFrame::PopulateVariableListFromInterface(
 
     VariableSP var = v->GetVariable();
     if (!var && include_synthetic_vars) {
-      // Construct the value type as an synthetic verison of what the value type
+      // Construct the value type as an synthetic version of what the value type
       // is. That'll allow the user to tell the scope and the 'synthetic-ness'
       // of the variable.
-      lldb::ValueType vt = GetSyntheticValueType(v->GetValueType());
+      // Any variable we create here will be treated as a local variable.
+      lldb::ValueType vt = GetSyntheticValueType(eValueTypeVariableLocal);
 
       // Just make up a variable - the frame variable dumper just passes it
       // back in to GetValueObjectForFrameVariable, so we really just need to
