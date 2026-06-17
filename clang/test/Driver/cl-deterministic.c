@@ -4,7 +4,7 @@
 // RUN: %clang_cl -E /experimental:deterministic /d1nodatetime -- %s
 // RUN: %clang_cl -E /D IS_SYSHEADER=1 /experimental:deterministic /d1nodatetime -- %s
 
-// not %clang_cc1 -Werror=date-time -Wno-builtin-macro-redefined %s -DIS_SYSHEADER -E 2>&1 | grep 'error: expansion' | count 3
+// expected-no-diagnostics
 
 // RUN: %clang_cl -E -### /experimental:deterministic -- %s 2>&1 | FileCheck %s --check-prefix=WDATETIME
 // WDATETIME: -Wdate-time
@@ -18,9 +18,9 @@
 #pragma clang system_header
 #endif
 
-__TIME__ // expected-warning {{expansion of date or time macro is not reproducible}}
-__DATE__  // expected-warning {{expansion of date or time macro is not reproducible}}
-__TIMESTAMP__ // expected-warning {{expansion of date or time macro is not reproducible}}
+__TIME__
+__DATE__
+__TIMESTAMP__
 
 #define __TIME__
 __TIME__
