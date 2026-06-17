@@ -42,7 +42,7 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::views::all | std::views::transform(f);
 
-  //===---------------------------------===//
+  //===---------------------------------------------------------------------------------------===//
   //=== ADL-based begin() / end() ===//
 
   using std::begin, std::end, std::size;
@@ -65,7 +65,7 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   size(transformed_range);
 
-  //===---------------------------------===//
+  //===---------------------------------------------------------------------------------------===//
   //=== std::ranges CPO begin() / end() ===//
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
