@@ -900,3 +900,62 @@ latch:
 exit:
   ret void
 }
+
+
+;   loop
+;   /  \
+;  /\  /
+;  \ bb0
+;   \  |
+;    latch
+define void @phi_switch_same_edge(ptr %p) {
+; CHECK-LABEL: VPlan for loop in 'phi_switch_same_edge'
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK-NEXT:    Successor(s): bb0
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb0:
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = icmp eq ir<%iv>, ir<0>
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = icmp eq ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = or vp<[[VP4]]>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = not vp<[[VP6]]>
+; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
+; CHECK-NEXT:      EMIT store ir<0>, ir<%gep>, vp<[[VP6]]>
+; CHECK-NEXT:    Successor(s): latch
+; CHECK-EMPTY:
+; CHECK-NEXT:    latch:
+; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %latch]
+  switch i32 %iv, label %latch [
+    i32 0, label %bb0
+    i32 1, label %bb0
+  ]
+
+bb0:
+  %phi = phi i32 [ 0, %loop ], [ 0, %loop ]
+  %gep = getelementptr i32, ptr %p, i32 %iv
+  store i32 %phi, ptr %gep
+  br label %latch
+
+latch:
+  %iv.next = add i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, 128
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
