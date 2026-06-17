@@ -4718,6 +4718,7 @@ void UnwrappedLineParser::addUnwrappedLine(LineLevel AdjustLevel) {
   Line->FirstStartColumn = 0;
   Line->IsContinuation = false;
   Line->SeenDecltypeAuto = false;
+  Line->IsModuleOrImportDecl = false;
 
   if (ClosesWhitesmithsBlock && AdjustLevel == LineLevel::Remove)
     --Line->Level;
