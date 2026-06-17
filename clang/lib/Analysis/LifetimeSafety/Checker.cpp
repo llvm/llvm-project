@@ -108,7 +108,9 @@ public:
     //  Annotation inference is currently guarded by a frontend flag. In the
     //  future, this might be replaced by a design that differentiates between
     //  explicit and inferred findings with separate warning groups.
-    if (AST.getLangOpts().EnableLifetimeSafetyInference)
+    if (AST.getDiagnostics()
+            .getDiagnosticOptions()
+            .EnableLifetimeSafetyInference)
       inferAnnotations();
   }
 
