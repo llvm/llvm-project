@@ -198,8 +198,8 @@ body:             |
     ; RULE: liveins: $w0
     ; RULE-NEXT: {{  $}}
     ; RULE-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; RULE-NEXT: %amt:_(s32) = G_CONSTANT i32 8
-    ; RULE-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], %amt(s32)
+    ; RULE-NEXT: %amt:_(s64) = G_CONSTANT i64 8
+    ; RULE-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], %amt(s64)
     ; RULE-NEXT: %lowmask:_(s32) = G_CONSTANT i32 65535
     ; RULE-NEXT: %and:_(s32) = G_AND [[LSHR]], %lowmask
     ; RULE-NEXT: $w0 = COPY %and(s32)
@@ -209,13 +209,13 @@ body:             |
     ; FULL: liveins: $w0
     ; FULL-NEXT: {{  $}}
     ; FULL-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-    ; FULL-NEXT: %amt:_(s32) = G_CONSTANT i32 8
-    ; FULL-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; FULL-NEXT: %and:_(s32) = G_UBFX [[COPY]], %amt(s32), [[C]]
+    ; FULL-NEXT: [[WIDTH:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; FULL-NEXT: [[LSB:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+    ; FULL-NEXT: %and:_(s32) = G_UBFX [[COPY]], [[LSB]](s32), [[WIDTH]]
     ; FULL-NEXT: $w0 = COPY %and(s32)
     ; FULL-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
-    %amt:_(s32) = G_CONSTANT i32 8
+    %amt:_(s64) = G_CONSTANT i64 8
     %ashr:_(s32) = G_ASHR %0, %amt
     %lowmask:_(s32) = G_CONSTANT i32 65535
     %and:_(s32) = G_AND %ashr, %lowmask
