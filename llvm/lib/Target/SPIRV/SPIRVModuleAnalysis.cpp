@@ -754,6 +754,25 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
         }
       }
   }
+  // Selection order can place a scope/list ahead of a domain/scope it
+  // references. The dependency meanwhile is domain -> scope -> list, so sort
+  // the def before its uses.
+  auto AliasingTier = [](const MachineInstr *MI) {
+    switch (MI->getOpcode()) {
+    case SPIRV::OpAliasDomainDeclINTEL:
+      return 0;
+    case SPIRV::OpAliasScopeDeclINTEL:
+      return 1;
+    case SPIRV::OpAliasScopeListDeclINTEL:
+      return 2;
+    default:
+      llvm_unreachable("unexpected aliasing instruction");
+    }
+  };
+  stable_sort(MAI.MS[SPIRV::MB_AliasingInsts],
+              [&](const MachineInstr *LHS, const MachineInstr *RHS) {
+                return AliasingTier(LHS) < AliasingTier(RHS);
+              });
 }
 
 // Number registers in all functions globally from 0 onwards and store

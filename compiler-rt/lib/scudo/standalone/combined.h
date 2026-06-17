@@ -643,9 +643,10 @@ public:
       Chunk::storeHeader(Cookie, OldPtr, &Header);
       if (UNLIKELY(useMemoryTagging<AllocatorConfig>(Options))) {
         if (ClassId) {
-          resizeTaggedChunk(reinterpret_cast<uptr>(OldTaggedPtr) + OldSize,
-                            reinterpret_cast<uptr>(OldTaggedPtr) + NewSize,
-                            NewSize, untagPointer(BlockEnd));
+          resizeTaggedChunk</*ClearAllTags*/ true>(
+              reinterpret_cast<uptr>(OldTaggedPtr) + OldSize,
+              reinterpret_cast<uptr>(OldTaggedPtr) + NewSize, NewSize,
+              untagPointer(BlockEnd));
           storePrimaryAllocationStackMaybe(Options, OldPtr);
         } else {
           storeSecondaryAllocationStackMaybe(Options, OldPtr, NewSize);
@@ -1497,7 +1498,8 @@ private:
         if (NextPage < PrevEnd && loadTag(NextPage) != NextPage)
           PrevEnd = NextPage;
         TaggedPtr = reinterpret_cast<void *>(TaggedUserPtr);
-        resizeTaggedChunk(PrevEnd, TaggedUserPtr + Size, Size, BlockEnd);
+        resizeTaggedChunk</*ClearAllTags*/ false>(PrevEnd, TaggedUserPtr + Size,
+                                                  Size, BlockEnd);
         if (UNLIKELY(FillContents != NoFill && !Header.OriginOrWasZeroed)) {
           // If an allocation needs to be zeroed (i.e. calloc) we can normally
           // avoid zeroing the memory now since we can rely on memory having
@@ -1706,21 +1708,29 @@ private:
     return reinterpret_cast<void *>(TaggedBegin);
   }
 
+  template <bool ClearAllTags>
   void resizeTaggedChunk(uptr OldPtr, uptr NewPtr, uptr NewSize,
                          uptr BlockEnd) {
     uptr RoundOldPtr = roundUp(OldPtr, archMemoryTagGranuleSize());
     uptr RoundNewPtr;
     if (RoundOldPtr >= NewPtr) {
-      // If the allocation is shrinking we just need to set the tag past the end
-      // of the allocation to 0. See explanation in storeEndMarker() above.
       RoundNewPtr = roundUp(NewPtr, archMemoryTagGranuleSize());
+      if (ClearAllTags) {
+        // Shrinking resize, set the tag to zero for the rest of the allocation.
+        // This prevents use after realloc of the excess memory.
+        storeTags(untagPointer(RoundNewPtr), untagPointer(RoundOldPtr));
+      } else {
+        // Add a zero tag right after the pointer to prevent overflow.
+        storeEndMarker(RoundNewPtr, NewSize, BlockEnd);
+      }
     } else {
       // Set the memory tag of the region
       // [RoundOldPtr, roundUp(NewPtr, archMemoryTagGranuleSize()))
       // to the pointer tag stored in OldPtr.
       RoundNewPtr = storeTags(RoundOldPtr, NewPtr);
+      // Add a zero tag right after the pointer to prevent overflow.
+      storeEndMarker(RoundNewPtr, NewSize, BlockEnd);
     }
-    storeEndMarker(RoundNewPtr, NewSize, BlockEnd);
   }
 
   void storePrimaryAllocationStackMaybe(const Options &Options, void *Ptr) {

@@ -1441,8 +1441,7 @@ define <4 x i8> @test_pmulhsu_b(<4 x i8> %a, <4 x i8> %b) {
 ; RV32-NEXT:    pncvt.h a1, a4
 ; RV32-NEXT:    pwmul.h a2, a2, a0
 ; RV32-NEXT:    pncvt.h a0, a2
-; RV32-NEXT:    psrli.dh a0, a0, 8
-; RV32-NEXT:    pncvt.b a0, a0
+; RV32-NEXT:    pncvth.b a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pmulhsu_b:
@@ -1478,8 +1477,7 @@ define <4 x i8> @test_pmulhsu_b_commuted(<4 x i8> %a, <4 x i8> %b) {
 ; RV32-NEXT:    pncvt.h a1, a4
 ; RV32-NEXT:    pwmul.h a2, a2, a0
 ; RV32-NEXT:    pncvt.h a0, a2
-; RV32-NEXT:    psrli.dh a0, a0, 8
-; RV32-NEXT:    pncvt.b a0, a0
+; RV32-NEXT:    pncvth.b a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pmulhsu_b_commuted:

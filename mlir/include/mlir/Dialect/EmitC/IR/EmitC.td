@@ -302,7 +302,7 @@ def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", [CExpressionInterface]> {
     Arg<StrAttr, "the C++ function to call">:$callee,
     Arg<OptionalAttr<ArrayAttr>, "the order of operands and further attributes">:$args,
     Arg<OptionalAttr<ArrayAttr>, "template arguments">:$template_args,
-    Variadic<EmitCType>:$arg_operands
+    Variadic<AnyTypeOf<[EmitCType, EmitC_LValueType]>>:$arg_operands
   );
   let results = (outs Variadic<EmitCType>);
   let builders = [
@@ -347,7 +347,7 @@ def EmitC_MemberCallOpaqueOp : EmitC_Op<"member_call_opaque", [CExpressionInterf
     StrAttr:$callee,
     OptionalAttr<ArrayAttr>:$args,
     OptionalAttr<ArrayAttr>:$template_args,
-    Variadic<EmitCType>:$arg_operands
+    Variadic<AnyTypeOf<[EmitCType, EmitC_LValueType]>>:$arg_operands
   );
   let results = (outs Variadic<EmitCType>);
 
@@ -1842,7 +1842,7 @@ def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
 }
 
 def EmitC_GetFieldOp
-    : EmitC_Op<"get_field", [Pure,
+    : EmitC_Op<"get_field", [Pure, HasAncestor<"ClassOp">,
                              DeclareOpInterfaceMethods<SymbolUserOpInterface>,
                              CExpressionInterface]> {
   let summary = "Obtain access to a field within a class instance";
@@ -1860,7 +1860,6 @@ def EmitC_GetFieldOp
   let arguments = (ins FlatSymbolRefAttr:$field_name);
   let results = (outs EmitCType:$result);
   let assemblyFormat = "$field_name `:` type($result) attr-dict";
-  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
