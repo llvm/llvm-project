@@ -124,10 +124,12 @@
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <queue>
@@ -555,7 +557,6 @@ private:
   void visitInlineHistoryMetadata(Instruction &I, MDNode *MD);
   void visitMemCacheHintMetadata(Instruction &I, MDNode *MD);
 
-  template <class Ty> bool isValidMetadataArray(const MDTuple &N);
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS) void visit##CLASS(const CLASS &N);
 #include "llvm/IR/Metadata.def"
   void visitDIType(const DIType &N);
@@ -646,6 +647,7 @@ private:
   void verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                            const Value *V, bool IsIntrinsic, bool IsInlineAsm);
   void verifyFunctionMetadata(ArrayRef<std::pair<unsigned, MDNode *>> MDs);
+  void verifyAMDGPUReqdWorkGroupSize(const Function &F);
   void verifyUnknownProfileMetadata(MDNode *MD);
   void visitConstantExprsRecursively(const Constant *EntryC);
   void visitConstantExpr(const ConstantExpr *CE);
@@ -2730,12 +2732,26 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     S.split(Args, ',');
     Check(Args.size() >= 5,
           "modular-format attribute requires at least 5 arguments", V);
+    unsigned UpperBound = FT->getNumParams() + (FT->isVarArg() ? 1 : 0);
+    unsigned FormatIdx;
+    Check(!Args[1].getAsInteger(10, FormatIdx),
+          "modular-format attribute format string index is not an integer", V);
+    Check(FormatIdx > 0,
+          "modular-format attribute format string index must be greater than 0",
+          V);
+    Check(FormatIdx <= UpperBound,
+          "modular-format attribute format string index is out of bounds", V);
     unsigned FirstArgIdx;
     Check(!Args[2].getAsInteger(10, FirstArgIdx),
           "modular-format attribute first arg index is not an integer", V);
-    unsigned UpperBound = FT->getNumParams() + (FT->isVarArg() ? 1 : 0);
     Check(FirstArgIdx <= UpperBound,
           "modular-format attribute first arg index is out of bounds", V);
+    Check(!Args[3].empty(),
+          "modular-format attribute modular implementation function name "
+          "cannot be empty",
+          V);
+    Check(!Args[4].empty(),
+          "modular-format attribute implementation name cannot be empty", V);
   }
 
   if (auto A = Attrs.getFnAttr("target-features"); A.isValid()) {
@@ -2811,8 +2827,86 @@ void Verifier::verifyFunctionMetadata(
             "expected a constant integer operand for !kcfi_type", MD);
       Check(cast<ConstantInt>(C)->getBitWidth() == 32,
             "expected a 32-bit integer constant operand for !kcfi_type", MD);
+    } else if (Pair.first == Context.getMDKindID("reqd_work_group_size")) {
+      MDNode *MD = Pair.second;
+      Check(MD->getNumOperands() == 3,
+            "reqd_work_group_size must have exactly three operands", MD);
+      if (MD->getNumOperands() != 3)
+        continue;
+
+      uint64_t Product = 1;
+      for (unsigned I = 0; I != 3; ++I) {
+        ConstantInt *C = mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
+        Check(C, "reqd_work_group_size operands must be integer constants", MD);
+        if (!C)
+          break;
+
+        const APInt &Value = C->getValue();
+        Check(Value.getActiveBits() <= 64,
+              "reqd_work_group_size operands must fit in 64 bits", MD);
+        if (Value.getActiveBits() > 64)
+          break;
+
+        uint64_t Dim = Value.getZExtValue();
+        Check(Dim == 0 || Product <= std::numeric_limits<uint64_t>::max() / Dim,
+              "reqd_work_group_size product must fit in 64 bits", MD);
+        if (Dim != 0 && Product > std::numeric_limits<uint64_t>::max() / Dim)
+          break;
+        Product *= Dim;
+      }
     }
   }
+}
+
+void Verifier::verifyAMDGPUReqdWorkGroupSize(const Function &F) {
+  if (!TT.isAMDGPU())
+    return;
+
+  MDNode *ReqdWorkGroupSize = F.getMetadata("reqd_work_group_size");
+  if (!ReqdWorkGroupSize || ReqdWorkGroupSize->getNumOperands() != 3)
+    return;
+
+  uint64_t Product = 1;
+  for (const MDOperand &Op : ReqdWorkGroupSize->operands()) {
+    ConstantInt *C = mdconst::dyn_extract<ConstantInt>(Op);
+    if (!C || C->getValue().getActiveBits() > 64)
+      return;
+    uint64_t Dim = C->getZExtValue();
+    if (Dim != 0 && Product > std::numeric_limits<uint64_t>::max() / Dim)
+      return;
+    Product *= Dim;
+  }
+
+  Attribute FlatWorkGroupSize = F.getFnAttribute("amdgpu-flat-work-group-size");
+  if (!FlatWorkGroupSize.isValid()) {
+    CheckFailed("reqd_work_group_size requires amdgpu-flat-work-group-size", &F,
+                ReqdWorkGroupSize);
+    return;
+  }
+
+  if (!FlatWorkGroupSize.isStringAttribute()) {
+    CheckFailed("amdgpu-flat-work-group-size must be a string attribute", &F);
+    return;
+  }
+
+  StringRef AttrValue = FlatWorkGroupSize.getValueAsString();
+  std::pair<StringRef, StringRef> Values = AttrValue.split(',');
+  uint64_t Min = 0;
+  uint64_t Max = 0;
+  bool Parsed = !Values.second.contains(',') &&
+                llvm::to_integer(Values.first.trim(), Min) &&
+                llvm::to_integer(Values.second.trim(), Max);
+  if (!Parsed) {
+    CheckFailed("amdgpu-flat-work-group-size must be a pair of unsigned "
+                "integers",
+                &F);
+    return;
+  }
+
+  Check(Min == Product && Max == Product,
+        "amdgpu-flat-work-group-size must equal the product of "
+        "reqd_work_group_size operands",
+        &F, ReqdWorkGroupSize);
 }
 
 void Verifier::visitConstantExprsRecursively(const Constant *EntryC) {
@@ -3285,6 +3379,7 @@ void Verifier::visitFunction(const Function &F) {
   F.getAllMetadata(MDs);
   assert(F.hasMetadata() != MDs.empty() && "Bit out-of-sync");
   verifyFunctionMetadata(MDs);
+  verifyAMDGPUReqdWorkGroupSize(F);
 
   // Check validity of the personality function
   if (F.hasPersonalityFn()) {
@@ -7151,6 +7246,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "SGPR arguments must have the `inreg` attribute", &Call);
     Check(!Call.paramHasAttr(3, Attribute::InReg),
           "VGPR arguments must not have the `inreg` attribute", &Call);
+
+    auto *FlagsArg = cast<ConstantInt>(Call.getArgOperand(4));
+    Check(FlagsArg->getValue().ult(2),
+          "flags must be 0 or 1 for llvm.amdgcn.cs.chain", &Call);
 
     auto *Next = Call.getNextNode();
     bool IsAMDUnreachable = Next && isa<IntrinsicInst>(Next) &&

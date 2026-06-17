@@ -349,6 +349,11 @@ Changes in existing checks
   positives when ordinary variable or field assignments are used in loop
   conditions and note locations for inferred ID-dependent fields.
 
+- Improved :doc:`altera-unroll-loops
+  <clang-tidy/checks/altera/unroll-loops>` check by fixing a crash when
+  analyzing a ``for`` loop whose initialization statement declares multiple
+  variables.
+
 - Improved :doc:`bugprone-argument-comment
   <clang-tidy/checks/bugprone/argument-comment>`:
 
@@ -590,6 +595,12 @@ Changes in existing checks
   positives on project headers that use the same name as a standard library
   header.
 
+- Improve :doc:`modernize-loop-convert
+  <clang-tidy/checks/modernize/loop-convert>` checks to insert a space when
+  replacing ``*it`` with the loop variable in expressions like ``delete*it``,
+  where the missing space would cause the keyword and the new variable to
+  merge into a single identifier.
+
 - Improved :doc:`modernize-macro-to-enum
   <clang-tidy/checks/modernize/macro-to-enum>` check by preserving source file
   line endings in fix-it replacements.
@@ -793,6 +804,10 @@ Changes in existing checks
   - Fixed a false positive where ``bool`` conditions in C conditional
     operators were diagnosed as implicit conversions to ``int``.
 
+- Improved :doc:`readability-inconsistent-ifelse-braces
+  <clang-tidy/checks/readability/inconsistent-ifelse-braces>` check to
+  correctly handle labeled statements of ``if``/``else`` bodies.
+
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check:
 
@@ -801,6 +816,9 @@ Changes in existing checks
 
   - Fixed a false positive in array subscript expressions where the types are
     not yet resolved.
+
+  - Fixed a false positive when adding ``const`` to a pointer parameter would
+    conflict with an existing overload.
 
   - Fixed a crash when analyzing a redeclaration whose initializer is attached
     to another declaration.
