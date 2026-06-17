@@ -98,8 +98,7 @@ define i64 @ctlz_or1_i64(i64 %x) {
 ; GCN-NOCOMBINE-NEXT:    v_ffbh_u32_e32 v0, v0
 ; GCN-NOCOMBINE-NEXT:    v_ffbh_u32_e32 v1, v1
 ; GCN-NOCOMBINE-NEXT:    v_add_u32_e64 v0, v0, 32 clamp
-; GCN-NOCOMBINE-NEXT:    v_min_u32_e32 v0, v1, v0
-; GCN-NOCOMBINE-NEXT:    v_min_u32_e32 v0, 64, v0
+; GCN-NOCOMBINE-NEXT:    v_min3_u32 v0, v1, v0, 64
 ; GCN-NOCOMBINE-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NOCOMBINE-NEXT:    s_setpc_b64 s[30:31]
   %or = or i64 %x, 1
@@ -126,8 +125,7 @@ define i64 @cttz_or1_i64(i64 %x) {
 ; GCN-NOCOMBINE-NEXT:    v_ffbl_b32_e32 v1, v1
 ; GCN-NOCOMBINE-NEXT:    v_ffbl_b32_e32 v0, v0
 ; GCN-NOCOMBINE-NEXT:    v_add_u32_e64 v1, v1, 32 clamp
-; GCN-NOCOMBINE-NEXT:    v_min_u32_e32 v0, v0, v1
-; GCN-NOCOMBINE-NEXT:    v_min_u32_e32 v0, 64, v0
+; GCN-NOCOMBINE-NEXT:    v_min3_u32 v0, v0, v1, 64
 ; GCN-NOCOMBINE-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NOCOMBINE-NEXT:    s_setpc_b64 s[30:31]
   %or = or i64 %x, 1

@@ -126,9 +126,6 @@ bool GISelValueTracking::isKnownNeverZero(Register R, const APInt &DemandedElts,
   default:
     break;
 
-  case TargetOpcode::G_CONSTANT:
-    return !MI.getOperand(1).getCImm()->isZero();
-
   case TargetOpcode::G_BUILD_VECTOR: {
     for (const auto &[I, MO] : enumerate(drop_begin(MI.operands()))) {
       if (!DemandedElts[I])
