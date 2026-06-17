@@ -877,7 +877,7 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
   } else {
     // Pattern match DINS.
     //  $dst = or (and $src, mask0), mask1
-    //  where mask0 = ((1 << SMSize0) -1) << SMPos0
+    //  where mask0 = maskTrailingOnes<uint64_t>(SMSize0) << SMPos0
     //  => dins $dst, $src, pos, size
     uint64_t Mask = maskTrailingOnes<uint64_t>(SMSize0) << SMPos0;
     if (~CN->getSExtValue() == (int64_t)Mask &&
