@@ -715,10 +715,6 @@ namespace llvm {
 // AffineExpr hash just like pointers
 template <>
 struct DenseMapInfo<mlir::AffineMap> {
-  static mlir::AffineMap getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::AffineMap(static_cast<mlir::AffineMap::ImplType *>(pointer));
-  }
   static unsigned getHashValue(mlir::AffineMap val) {
     return mlir::hash_value(val);
   }

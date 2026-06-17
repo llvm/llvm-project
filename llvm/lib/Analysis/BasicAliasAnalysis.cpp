@@ -166,9 +166,9 @@ static TypeSize getMinimalExtentFrom(const Value &V,
   // extent as accesses for a lower offset would be valid. We need to exclude
   // the "or null" part if null is a valid pointer. We can ignore frees, as an
   // access after free would be undefined behavior.
-  bool CanBeNull, CanBeFreed;
+  bool CanBeNull;
   uint64_t DerefBytes =
-    V.getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
+      V.getPointerDereferenceableBytes(DL, CanBeNull, /*CanBeFreed=*/nullptr);
   DerefBytes = (CanBeNull && NullIsValidLoc) ? 0 : DerefBytes;
   // If queried with a precise location size, we assume that location size to be
   // accessed, thus valid.

@@ -417,9 +417,8 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
           Value *SelectVal = Builder.CreateSelect(Cond, LdexpVal0, LdexpVal1);
           Value *SelectExp = Builder.CreateSelect(Cond, LdexpExp0, LdexpExp1);
 
-          CallInst *NewLdexp = Builder.CreateIntrinsic(
-              TII->getType(), Intrinsic::ldexp, {SelectVal, SelectExp});
-          NewLdexp->setFastMathFlags(FMF);
+          Value *NewLdexp = Builder.CreateIntrinsic(
+              TII->getType(), Intrinsic::ldexp, {SelectVal, SelectExp}, FMF);
           return replaceInstUsesWith(SI, NewLdexp);
         }
       }
@@ -1496,8 +1495,6 @@ static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
 /// Fold the following code sequence:
 /// \code
 ///   int a = ctlz(x & -x);
-//    x ? 31 - a : a;
-//    // or
 //    x ? 31 - a : 32;
 /// \code
 ///
@@ -1522,7 +1519,7 @@ static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
   if (!match(Ctlz, m_Ctlz(m_Value(), m_Value())))
     return nullptr;
 
-  if (TrueVal != Ctlz && !match(TrueVal, m_SpecificInt(BitWidth)))
+  if (!match(TrueVal, m_SpecificInt(BitWidth)))
     return nullptr;
 
   Value *X = ICI->getOperand(0);
@@ -1530,9 +1527,11 @@ static Instruction *foldSelectCtlzToCttz(ICmpInst *ICI, Value *TrueVal,
   if (!match(II->getOperand(0), m_c_And(m_Specific(X), m_Neg(m_Specific(X)))))
     return nullptr;
 
+  // The original select returns the constant bitwidth when x == 0, so the
+  // result is defined there; the cttz must use is_zero_poison = false.
   Function *F = Intrinsic::getOrInsertDeclaration(
       II->getModule(), Intrinsic::cttz, II->getType());
-  return CallInst::Create(F, {X, II->getArgOperand(1)});
+  return CallInst::Create(F, {X, Builder.getFalse()});
 }
 
 /// Attempt to fold a cttz/ctlz followed by a icmp plus select into a single

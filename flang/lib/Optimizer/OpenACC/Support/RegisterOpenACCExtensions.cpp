@@ -113,7 +113,9 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
     mlir::acc::SerialOp::attachInterface<
         OperationMoveModel<mlir::acc::SerialOp>>(*ctx);
     mlir::acc::ReductionInitOp::attachInterface<
-        fir::acc::ReductionInitOpFortranObjectViewModel>(*ctx);
+        fir::acc::AccFortranObjectViewModel<mlir::acc::ReductionInitOp>>(*ctx);
+    mlir::acc::UnwrapPrivateOp::attachInterface<
+        fir::acc::AccFortranObjectViewModel<mlir::acc::UnwrapPrivateOp>>(*ctx);
   });
 
   registerAttrsExtensions(registry);

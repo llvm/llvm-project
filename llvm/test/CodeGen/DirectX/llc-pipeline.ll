@@ -52,11 +52,11 @@
 ; CHECK-NEXT:   DXIL Op Lowering
 ; CHECK-NEXT:   DXIL Prepare Module
 
-; CHECK-ASM-NEXT: DXIL Metadata Pretty Printer
-; CHECK-ASM-NEXT: Print Module IR
+; CHECK-ASM-NEXT: DXIL Pretty Printer
 
 ; CHECK-OBJ-NEXT: DXIL Embedder
 ; CHECK-OBJ-NEXT: DXContainer Global Emitter
+; CHECK-OBJ-NEXT: DirectX PDB Emitter
 ; CHECK-OBJ-NEXT: FunctionPass Manager
 ; CHECK-OBJ-NEXT:   Lazy Machine Block Frequency Analysis
 ; CHECK-OBJ-NEXT:   Machine Optimization Remark Emitter

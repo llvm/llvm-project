@@ -16,9 +16,9 @@ void usage(int i, int j) {
   // CIR: cir.func{{.*}}@_Z5usageii
   // BOTH: define{{.*}}@_Z5usageii
 
-  // CIR: %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
-  // CIR: %[[J:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["j", init]
-  // CIR: %[[LOCAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["local", init, const]
+  // CIR: %[[I:.*]] = cir.alloca "i" {{.*}} init : !cir.ptr<!s32i>
+  // CIR: %[[J:.*]] = cir.alloca "j" {{.*}} init : !cir.ptr<!s32i>
+  // CIR: %[[LOCAL:.*]] = cir.alloca "local" {{.*}} init const : !cir.ptr<!s32i>
   //
   // BOTH: %[[I:.*]] = alloca i32
   // BOTH: %[[J:.*]] = alloca i32

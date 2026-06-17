@@ -1858,7 +1858,7 @@ define amdgpu_ps void @complex_loop(i32 inreg %cmpa, i32 %cmpb, i32 %cmpc) {
 ; GFX11-NEXT:  .LBB15_3: ; %hdr
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_mov_b64 s[4:5], exec
-; GFX11-NEXT:    v_cmpx_gt_u32_e64 s6, v0
+; GFX11-NEXT:    v_cmpx_gt_u32_e32 s6, v0
 ; GFX11-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX11-NEXT:    s_cbranch_execz .LBB15_2
 ; GFX11-NEXT:  ; %bb.4: ; %kill
