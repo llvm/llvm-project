@@ -28,9 +28,10 @@ define linkonce_odr i32 @linkonce_odr_callee(i32 %x, i32 %y) {
 
 define i32 @test() {
 ; CHECK-LABEL: define i32 @test() {
-; CHECK-NEXT:    [[R1:%.*]] = call i32 @weak_callee.specialized.1(i32 1, i32 2)
-; CHECK-NEXT:    [[R2:%.*]] = call i32 @linkonce_odr_callee.specialized.2(i32 1, i32 2)
-; CHECK-NEXT:    ret i32 6
+; CHECK-NEXT:    [[R1:%.*]] = call i32 @weak_callee(i32 1, i32 2)
+; CHECK-NEXT:    [[R2:%.*]] = call i32 @linkonce_odr_callee.specialized.1(i32 1, i32 2)
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[R1]], 3
+; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %r1 = call i32 @weak_callee(i32 1, i32 2)
   %r2 = call i32 @linkonce_odr_callee(i32 1, i32 2)
