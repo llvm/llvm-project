@@ -977,21 +977,32 @@ bool LayoutAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
   auto compareCoordsForAllIds = [&](int64_t size) {
     // At the Lane level, `lane_data` only changes how a lane's elements are
     // blocked across distribution units, not which elements it owns nor their
-    // order. Expand the per-unit block starts into the full element coordinate
-    // sequence (using each layout's `lane_data`) before comparing, so layouts
-    // that merely repack `lane_data` are treated as compatible.
+    // order. When two layouts pack `lane_data` differently, expand the per-unit
+    // block starts into the full ordered element coordinates (using each
+    // layout's `lane_data`) before comparing, so layouts that merely repack
+    // `lane_data` are treated as compatible.
+    //
+    // The expansion is skipped whenever it cannot change the outcome: when the
+    // two `lane_data` match, comparing the (cheaper) block starts is already
+    // exact, since expanding both sides by the same sub-shape is injective. As
+    // a result the per-element work only happens for Lane-level checks with
+    // mismatched `lane_data`; all Subgroup/InstData checks and matching
+    // `lane_data` stay free of it.
+    bool expandCoords =
+        level == xegpu::LayoutKind::Lane &&
+        getEffectiveLaneDataAsInt() != other.getEffectiveLaneDataAsInt();
     SmallVector<int64_t> selfSubShape, otherSubShape;
-    if (level == xegpu::LayoutKind::Lane) {
+    if (expandCoords) {
       selfSubShape = getEffectiveLaneDataAsInt();
       otherSubShape = other.getEffectiveLaneDataAsInt();
     }
     for (int64_t id : llvm::seq<int64_t>(0, size)) {
       auto coords = computeStaticDistributedCoords(id, shape);
       auto otherCoords = other.computeStaticDistributedCoords(id, shape);
-      if (!selfSubShape.empty())
+      if (expandCoords) {
         coords = expandBlockCoords(coords, selfSubShape);
-      if (!otherSubShape.empty())
         otherCoords = expandBlockCoords(otherCoords, otherSubShape);
+      }
       if (coords != otherCoords)
         return false;
     }
@@ -1212,21 +1223,32 @@ bool SliceAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
   auto compareCoordsForAllIds = [&](int64_t size) {
     // At the Lane level, `lane_data` only changes how a lane's elements are
     // blocked across distribution units, not which elements it owns nor their
-    // order. Expand the per-unit block starts into the full element coordinate
-    // sequence (using each layout's `lane_data`) before comparing, so layouts
-    // that merely repack `lane_data` are treated as compatible.
+    // order. When two layouts pack `lane_data` differently, expand the per-unit
+    // block starts into the full ordered element coordinates (using each
+    // layout's `lane_data`) before comparing, so layouts that merely repack
+    // `lane_data` are treated as compatible.
+    //
+    // The expansion is skipped whenever it cannot change the outcome: when the
+    // two `lane_data` match, comparing the (cheaper) block starts is already
+    // exact, since expanding both sides by the same sub-shape is injective. As
+    // a result the per-element work only happens for Lane-level checks with
+    // mismatched `lane_data`; all Subgroup/InstData checks and matching
+    // `lane_data` stay free of it.
+    bool expandCoords =
+        level == xegpu::LayoutKind::Lane &&
+        getEffectiveLaneDataAsInt() != other.getEffectiveLaneDataAsInt();
     SmallVector<int64_t> selfSubShape, otherSubShape;
-    if (level == xegpu::LayoutKind::Lane) {
+    if (expandCoords) {
       selfSubShape = getEffectiveLaneDataAsInt();
       otherSubShape = other.getEffectiveLaneDataAsInt();
     }
     for (int64_t id : llvm::seq<int64_t>(0, size)) {
       auto coords = computeStaticDistributedCoords(id, shape);
       auto otherCoords = other.computeStaticDistributedCoords(id, shape);
-      if (!selfSubShape.empty())
+      if (expandCoords) {
         coords = expandBlockCoords(coords, selfSubShape);
-      if (!otherSubShape.empty())
         otherCoords = expandBlockCoords(otherCoords, otherSubShape);
+      }
       if (coords != otherCoords)
         return false;
     }
