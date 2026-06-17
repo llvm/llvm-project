@@ -269,16 +269,25 @@ _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __to_chars_integral_widt
 template <class _Tp, __enable_if_t<!is_signed<_Tp>::value, int> >
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI __to_chars_result
 __to_chars_integral(char* __first, char* __last, _Tp __value, int __base) {
-  if (__base == 10) [[likely]]
+  if (__base == 10) [[likely]] {
+    // A wide _BitInt has no base-10 fast path; fall through to the generic loop.
+    // This helper is not guarded by _LIBCPP_STD_VER, so it must still parse in
+    // C++03, where `if constexpr` is unavailable; charconv is unused there.
+#if _LIBCPP_STD_VER >= 17
+    if constexpr (!__is_wide_bitint_v<_Tp>)
+      return std::__to_chars_itoa(__first, __last, __value, false_type());
+#else
     return std::__to_chars_itoa(__first, __last, __value, false_type());
-
-  switch (__base) {
-  case 2:
-    return std::__to_chars_integral<2>(__first, __last, __value);
-  case 8:
-    return std::__to_chars_integral<8>(__first, __last, __value);
-  case 16:
-    return std::__to_chars_integral<16>(__first, __last, __value);
+#endif
+  } else {
+    switch (__base) {
+    case 2:
+      return std::__to_chars_integral<2>(__first, __last, __value);
+    case 8:
+      return std::__to_chars_integral<8>(__first, __last, __value);
+    case 16:
+      return std::__to_chars_integral<16>(__first, __last, __value);
+    }
   }
 
   ptrdiff_t __cap = __last - __first;
@@ -321,9 +330,13 @@ to_chars_result to_chars(char*, char*, bool, int = 10) = delete;
 template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
 to_chars(char* __first, char* __last, _Tp __value) {
-  using _Type = __make_32_64_or_128_bit_t<_Tp>;
-  static_assert(!is_same<_Type, void>::value, "unsupported integral type used in to_chars");
-  return std::__to_chars_itoa(__first, __last, static_cast<_Type>(__value), is_signed<_Tp>());
+  if constexpr (__is_wide_bitint_v<_Tp>)
+    // A _BitInt wider than 128 bits has no native promotion target; the
+    // base-aware path converts it using the type's own arithmetic.
+    return std::__to_chars_integral(__first, __last, __value, 10);
+  else
+    return std::__to_chars_itoa(
+        __first, __last, static_cast<__make_32_64_or_128_bit_t<_Tp>>(__value), is_signed<_Tp>());
 }
 
 template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
@@ -331,8 +344,10 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
 to_chars(char* __first, char* __last, _Tp __value, int __base) {
   _LIBCPP_ASSERT_UNCATEGORIZED(2 <= __base && __base <= 36, "base not in [2, 36]");
 
-  using _Type = __make_32_64_or_128_bit_t<_Tp>;
-  return std::__to_chars_integral(__first, __last, static_cast<_Type>(__value), __base);
+  if constexpr (__is_wide_bitint_v<_Tp>)
+    return std::__to_chars_integral(__first, __last, __value, __base);
+  else
+    return std::__to_chars_integral(__first, __last, static_cast<__make_32_64_or_128_bit_t<_Tp>>(__value), __base);
 }
 
 #endif // _LIBCPP_STD_VER >= 17

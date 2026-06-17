@@ -44,6 +44,19 @@ using __make_32_64_or_128_bit_t _LIBCPP_NODEBUG =
     > > >;
 // clang-format on
 
+// True for a _BitInt wider than 128 bits, i.e. an integer with no 32/64/128-bit
+// promotion target. charconv converts these with a bignum path built on the
+// type's own arithmetic. __make_32_64_or_128_bit_t is not usable to detect this:
+// for such a type it is not void but ill-formed (it feeds void to __make_unsigned),
+// so the test is on sizeof, matching the trait's own logic.
+template <class _Tp>
+inline const bool __is_wide_bitint_v =
+#if _LIBCPP_HAS_INT128
+    sizeof(_Tp) > sizeof(__int128_t);
+#else
+    sizeof(_Tp) > sizeof(long long);
+#endif
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___TYPE_TRAITS_MAKE_32_64_OR_128_BIT_H
