@@ -181,7 +181,7 @@ public:
     if (!MemCall)
       return false;
 
-    const CXXMethodDecl *Method = MemCall->getDecl();
+    const CXXMethodDecl *Method = cast<CXXMethodDecl>(MemCall->getDecl());
     const CXXRecordDecl *ClassDecl = Method->getParent();
     const IdentifierInfo *ClassName = ClassDecl->getIdentifier();
 
