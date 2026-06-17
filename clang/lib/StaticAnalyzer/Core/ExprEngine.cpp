@@ -3962,7 +3962,6 @@ void ExprEngine::ConstructInitList(const Expr *E, ArrayRef<Expr *> Args,
 
   const StackFrame *SF = Pred->getStackFrame();
 
-  NodeBuilder B(Pred, Dst, *currBldrCtx);
   ProgramStateRef S = Pred->getState();
   QualType T = E->getType().getCanonicalType();
 
@@ -3981,5 +3980,5 @@ void ExprEngine::ConstructInitList(const Expr *E, ArrayRef<Expr *> Args,
   } else {
     Val = S->getSVal(Args.front(), SF);
   }
-  B.generateNode(E, Pred, S->BindExpr(E, SF, Val));
+  Dst.insert(Engine.makeNodeWithBinding(Pred, E, Val));
 }
