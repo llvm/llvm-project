@@ -228,7 +228,7 @@ public:
   // optimization.
   bool isOptNone() const { return OptNone; }
 
-  const AMDGPU::HardwareLimits &getLimits() const { return Limits; }
+  unsigned getLimit(AMDGPU::InstCounterType E) const { return Limits.get(E); }
 
   // Edits an existing sequence of wait count instructions according
   // to an incoming Waitcnt value, which is itself updated to reflect
@@ -1812,8 +1812,8 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
           if (WaitCnt == ~0u)
             continue;
 
-          unsigned Outstanding = std::min(ScoreBrackets.getOutstanding(CT),
-                                          getLimits().get(CT) - 1);
+          unsigned Outstanding =
+              std::min(ScoreBrackets.getOutstanding(CT), getLimit(CT) - 1);
           EmitExpandedWaitcnt(Outstanding, WaitCnt, [&](unsigned Count) {
             AMDGPU::Waitcnt W;
             W.set(CT, Count);
@@ -1844,7 +1844,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
       // Only expand if counter is not out-of-order
       unsigned Outstanding =
           std::min(ScoreBrackets.getOutstanding(AMDGPU::STORE_CNT),
-                   getLimits().get(AMDGPU::STORE_CNT) - 1);
+                   getLimit(AMDGPU::STORE_CNT) - 1);
       EmitExpandedWaitcnt(
           Outstanding, Wait.get(AMDGPU::STORE_CNT), [&](unsigned Count) {
             BuildMI(Block, It, DL, TII.get(AMDGPU::S_WAITCNT_VSCNT))
@@ -2200,7 +2200,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
       }
 
       unsigned Outstanding =
-          std::min(ScoreBrackets.getOutstanding(CT), getLimits().get(CT) - 1);
+          std::min(ScoreBrackets.getOutstanding(CT), getLimit(CT) - 1);
       EmitExpandedWaitcnt(Outstanding, Count, [&](unsigned Val) {
         BuildMI(Block, It, DL, TII.get(instrsForExtendedCounterTypes[CT]))
             .addImm(Val);
