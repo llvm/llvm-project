@@ -1271,7 +1271,7 @@ public:
         if (Change.second.has_value()) {
           auto It = CGF.OMPPrivatizedBindings.find(Change.first);
           assert(It != CGF.OMPPrivatizedBindings.end() &&
-              "Entry should exist when restoring previous value");
+                 "Entry should exist when restoring previous value");
           It->second = *Change.second;
         } else {
           CGF.OMPPrivatizedBindings.erase(Change.first);

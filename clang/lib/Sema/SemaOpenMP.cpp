@@ -20689,6 +20689,19 @@ static bool actOnOMPReductionKindClause(
       Type = Context.getBaseElementType(D->getType().getNonReferenceType());
     }
     auto *VD = dyn_cast<VarDecl>(D);
+    auto *BD = dyn_cast<BindingDecl>(D);
+
+    // Check for unsupported reduction forms on structured bindings.
+    if (BD && (D->getType().getNonReferenceType()->isArrayType() ||
+               BOK == BO_Comma)) {
+      // Array-type reductions are not supported.
+      if (D->getType().getNonReferenceType()->isArrayType())
+        S.Diag(ELoc, diag::err_omp_array_reduction_on_binding);
+      else
+        // User-defined reductions (declare reduction) are not supported.
+        S.Diag(ELoc, diag::err_omp_udr_reduction_on_binding);
+      continue;
+    }
 
     // OpenMP [2.9.3.3, Restrictions, C/C++, p.3]
     //  A variable that appears in a private clause must not have an incomplete
