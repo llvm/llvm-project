@@ -1,7 +1,7 @@
-.. _cxx2c-status:
+.. _cxx26-status:
 
 ================================
-libc++ C++2c Status
+libc++ C++26 Status
 ================================
 
 .. include:: ../Helpers/Styles.rst
@@ -13,9 +13,9 @@ libc++ C++2c Status
 Overview
 ================================
 
-In June 2023, the C++ standard committee adopted the first changes to the next version of the C++ standard, known here as "C++2c" (probably to be C++26).
+In June 2023, the C++ standard committee adopted the first changes to the next version of the C++ standard, known here as "C++26".
 
-This page shows the status of libc++; the status of clang's support of the language features is `here <https://clang.llvm.org/cxx_status.html#cxx2c>`__.
+This page shows the status of libc++; the status of clang's support of the language features is `here <https://clang.llvm.org/cxx_status.html#cxx26>`__.
 
 .. attention:: Features in unreleased drafts of the standard are subject to change.
 
@@ -31,7 +31,7 @@ Paper Status
 ====================================
 
 .. csv-table::
-   :file: Cxx2cPapers.csv
+   :file: Cxx26Papers.csv
    :header-rows: 1
    :widths: auto
 
@@ -39,6 +39,6 @@ Library Working Group Issues Status
 ====================================
 
 .. csv-table::
-   :file: Cxx2cIssues.csv
+   :file: Cxx26Issues.csv
    :header-rows: 1
    :widths: auto
