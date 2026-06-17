@@ -28,6 +28,7 @@ def SDT_LoongArchV2RUimm
                     [SDTCisVec<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>,
                      SDTCisVT<3, GRLenVT>]>;
 def SDT_LoongArchVHW : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisSameAs<1, 2>]>;
+def SDT_LoongArchVSW : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>, SDTCisVT<2, GRLenVT>]>;
 def SDT_LoongArchVreplgr2vr : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<0>, SDTCisInt<1>]>;
 def SDT_LoongArchVFRECIPE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
 def SDT_LoongArchVFRSQRTE : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
@@ -85,6 +86,10 @@ def loongarch_vsrli : SDNode<"LoongArchISD::VSRLI", SDT_LoongArchV1RUimm>;
 // Vector byte logicial left / right shift
 def loongarch_vbsll : SDNode<"LoongArchISD::VBSLL", SDT_LoongArchV1RUimm>;
 def loongarch_vbsrl : SDNode<"LoongArchISD::VBSRL", SDT_LoongArchV1RUimm>;
+
+// Vector Logicial Left Shift with Widening
+def loongarch_vsllwil : SDNode<"LoongArchISD::VSLLWIL", SDT_LoongArchVSW>;
+def loongarch_vsllwil_u : SDNode<"LoongArchISD::VSLLWIL_U", SDT_LoongArchVSW>;
 
 // Vector Horizontal Addition with Widening
 def loongarch_vhaddw : SDNode<"LoongArchISD::VHADDW", SDT_LoongArchVHW>;
@@ -1466,6 +1471,24 @@ multiclass PatVrVrWU<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_QU_DU") LSX128:$vj, LSX128:$vk)>;
 }
 
+multiclass PatVrUimmW<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(v8i16 (OpNode(v16i8 LSX128:$vj), uimm3:$imm)),
+            (!cast<LAInst>(Inst#"_H_B") LSX128:$vj, uimm3:$imm)>;
+  def : Pat<(v4i32 (OpNode(v8i16 LSX128:$vj), uimm4:$imm)),
+            (!cast<LAInst>(Inst#"_W_H") LSX128:$vj, uimm4:$imm)>;
+  def : Pat<(v2i64 (OpNode(v4i32 LSX128:$vj), uimm5:$imm)),
+            (!cast<LAInst>(Inst#"_D_W") LSX128:$vj, uimm5:$imm)>;
+}
+
+multiclass PatVrUimmWU<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(v8i16 (OpNode(v16i8 LSX128:$vj), uimm3:$imm)),
+            (!cast<LAInst>(Inst#"_HU_BU") LSX128:$vj, uimm3:$imm)>;
+  def : Pat<(v4i32 (OpNode(v8i16 LSX128:$vj), uimm4:$imm)),
+            (!cast<LAInst>(Inst#"_WU_HU") LSX128:$vj, uimm4:$imm)>;
+  def : Pat<(v2i64 (OpNode(v4i32 LSX128:$vj), uimm5:$imm)),
+            (!cast<LAInst>(Inst#"_DU_WU") LSX128:$vj, uimm5:$imm)>;
+}
+
 multiclass PatShiftVrVr<SDPatternOperator OpNode, string Inst> {
   def : Pat<(OpNode (v16i8 LSX128:$vj), (and vsplati8_imm_eq_7,
                                              (v16i8 LSX128:$vk))),
@@ -1747,6 +1770,12 @@ defm : PatShiftVrSplatUimm<loongarch_vsrar, "VSRARI">;
 defm : PatVrVr<rotr, "VROTR">;
 defm : PatShiftVrVr<rotr, "VROTR">;
 defm : PatShiftVrSplatUimm<rotr, "VROTRI">;
+
+// VSLLWIL_{H_B/W_H/D_W}
+defm : PatVrUimmW<loongarch_vsllwil, "VSLLWIL">;
+
+// VSLLWIL_{HU_BU/WU_HU/DU_WU}
+defm : PatVrUimmWU<loongarch_vsllwil_u, "VSLLWIL">;
 
 // VCLO_{B/H/W/D}
 def : Pat<(ctlz (vnot v16i8:$vj)), (VCLO_B v16i8:$vj)>;
