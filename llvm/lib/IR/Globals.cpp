@@ -336,7 +336,7 @@ bool GlobalValue::isNobuiltinFnDef() const {
 
 bool GlobalValue::isNoipaFnDef() const {
   const Function *F = dyn_cast<Function>(this);
-  if (!F || F->empty())
+  if (!F || F->isDeclaration())
     return false;
   return F->hasFnAttribute(Attribute::NoIPA);
 }

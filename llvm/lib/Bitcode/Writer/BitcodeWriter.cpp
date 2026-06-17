@@ -1009,7 +1009,7 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
   case Attribute::NoOutline:
     return bitc::ATTR_KIND_NOOUTLINE;
   case Attribute::NoIPA:
-    return bitc::ATTR_KIND_NO_INTERPROCEDURAL_ANALYSIS;
+    return bitc::ATTR_KIND_NOIPA;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:

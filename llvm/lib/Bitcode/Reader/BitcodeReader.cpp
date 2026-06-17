@@ -2302,7 +2302,7 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::DenormalFPEnv;
   case bitc::ATTR_KIND_NOOUTLINE:
     return Attribute::NoOutline;
-  case bitc::ATTR_KIND_NO_INTERPROCEDURAL_ANALYSIS:
+  case bitc::ATTR_KIND_NOIPA:
     return Attribute::NoIPA;
   }
 }
