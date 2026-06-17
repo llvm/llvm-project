@@ -413,9 +413,6 @@ struct VPlanTransforms {
   /// Perform common-subexpression-elimination on \p Plan.
   static void cse(VPlan &Plan);
 
-  /// Move loop-invariant recipes out of the vector loop region in \p Plan.
-  static void licm(VPlan &Plan, PredicatedScalarEvolution &PSE, const Loop *L);
-
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken
   /// one step backwards.

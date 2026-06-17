@@ -155,8 +155,8 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
 class SinkStoreInfo {
   SmallPtrSet<VPReplicateRecipe *, 4> ExcludeRecipes;
   VPReplicateRecipe &GroupLeader;
-  PredicatedScalarEvolution &PSE;
-  const Loop &L;
+  PredicatedScalarEvolution *PSE = nullptr;
+  const Loop *L = nullptr;
 
   // Return true if \p A and \p B are known to not alias for all VFs in the
   // plan, checked via the distance between the accesses
@@ -165,15 +165,18 @@ class SinkStoreInfo {
         B->getOpcode() != Instruction::Store)
       return false;
 
+    if (!PSE || !L)
+      return A == B;
+
     VPValue *AddrA = A->getOperand(1);
-    const SCEV *SCEVA = vputils::getSCEVExprForVPValue(AddrA, PSE, &L);
+    const SCEV *SCEVA = vputils::getSCEVExprForVPValue(AddrA, *PSE, L);
     VPValue *AddrB = B->getOperand(1);
-    const SCEV *SCEVB = vputils::getSCEVExprForVPValue(AddrB, PSE, &L);
+    const SCEV *SCEVB = vputils::getSCEVExprForVPValue(AddrB, *PSE, L);
     if (isa<SCEVCouldNotCompute>(SCEVA) || isa<SCEVCouldNotCompute>(SCEVB))
       return false;
 
     const APInt *Distance;
-    ScalarEvolution &SE = *PSE.getSE();
+    ScalarEvolution &SE = *PSE->getSE();
     if (!match(SE.getMinusSCEV(SCEVA, SCEVB), m_scev_APInt(Distance)))
       return false;
 
@@ -201,7 +204,9 @@ public:
                 VPReplicateRecipe &GroupLeader, PredicatedScalarEvolution &PSE,
                 const Loop &L)
       : ExcludeRecipes(ExcludeRecipes.begin(), ExcludeRecipes.end()),
-        GroupLeader(GroupLeader), PSE(PSE), L(L) {}
+        GroupLeader(GroupLeader), PSE(&PSE), L(&L) {}
+
+  SinkStoreInfo(VPReplicateRecipe &GroupLeader) : GroupLeader(GroupLeader) {}
 
   /// Return true if \p R should be skipped during alias checking, either
   /// because it's in the exclude set or because no-alias can be proven via
@@ -263,9 +268,7 @@ template <unsigned Opcode>
 static SmallVector<SmallVector<VPReplicateRecipe *, 4>>
 collectGroupedReplicateMemOps(
     VPlan &Plan, PredicatedScalarEvolution &PSE, const Loop *L,
-    function_ref<bool(VPReplicateRecipe *)> FilterFn = [](VPReplicateRecipe *) {
-      return true;
-    }) {
+    function_ref<bool(VPReplicateRecipe *)> FilterFn) {
   static_assert(Opcode == Instruction::Load || Opcode == Instruction::Store,
                 "Only Load and Store opcodes supported");
   constexpr bool IsLoad = (Opcode == Instruction::Load);
@@ -2551,27 +2554,28 @@ void VPlanTransforms::cse(VPlan &Plan) {
 /// Return true if we do not know how to (mechanically) hoist or sink a
 /// non-memory or memory recipe \p R out of a loop region. When sinking, passing
 /// \p Sinking = true ensures that assumes aren't sunk.
-static bool
-cannotHoistOrSinkRecipe(VPRecipeBase &R, VPBasicBlock *FirstBB,
-                        VPBasicBlock *LastBB, bool Sinking = false,
-                        std::optional<SinkStoreInfo> SinkInfo = {}) {
+static bool cannotHoistOrSinkRecipe(VPRecipeBase &R, VPBasicBlock *FirstBB,
+                                    VPBasicBlock *LastBB,
+                                    bool Sinking = false) {
   if (!isa<VPReplicateRecipe>(R) || !R.mayReadOrWriteMemory() ||
       match(&R, m_Intrinsic<Intrinsic::assume>()))
     return vputils::cannotHoistOrSinkRecipe(R, Sinking);
 
-  // If the pointer-operand of a store is not invariant, it cannot be sunk.
-  if (cast<VPReplicateRecipe>(R).getOpcode() == Instruction::Store &&
-      !R.getOperand(1)->isDefinedOutsideLoopRegions())
-    return true;
-
   // Check that the memory operation doesn't alias between FirstBB and LastBB.
   auto MemLoc = vputils::getMemoryLocation(R);
+
+  // TODO: Could make use of SinkStoreInfo::isNoAliasViaDistance by collecting
+  // stores upfront, and constructing a full SinkStoreInfo.
+  auto SinkInfo =
+      Sinking ? std::make_optional(SinkStoreInfo(cast<VPReplicateRecipe>(R)))
+              : std::nullopt;
+
   return !MemLoc ||
          !canHoistOrSinkWithNoAliasCheck(*MemLoc, FirstBB, LastBB, SinkInfo);
 }
 
-void VPlanTransforms::licm(VPlan &Plan, PredicatedScalarEvolution &PSE,
-                           const Loop *L) {
+/// Move loop-invariant recipes out of the vector loop region in \p Plan.
+static void licm(VPlan &Plan) {
   VPBasicBlock *Preheader = Plan.getVectorPreheader();
 
   // Hoist any loop invariant recipes from the vector loop region to the
@@ -2599,9 +2603,6 @@ void VPlanTransforms::licm(VPlan &Plan, PredicatedScalarEvolution &PSE,
 #ifndef NDEBUG
   VPDominatorTree VPDT(Plan);
 #endif
-  auto StoreGroups =
-      collectGroupedReplicateMemOps<Instruction::Store>(Plan, PSE, L);
-
   // Sink recipes with no users inside the vector loop region if all users are
   // in the same exit block of the region.
   // TODO: Extend to sink recipes from inner loops.
@@ -2609,18 +2610,9 @@ void VPlanTransforms::licm(VPlan &Plan, PredicatedScalarEvolution &PSE,
       LoopRegion->getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(POT)) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      auto *GroupIt =
-          find_if(StoreGroups, [&R](ArrayRef<VPReplicateRecipe *> Group) {
-            return is_contained(Group, &R);
-          });
-      std::optional<SinkStoreInfo> SinkInfo =
-          GroupIt == StoreGroups.end()
-              ? std::nullopt
-              : std::make_optional<SinkStoreInfo>(*GroupIt, *GroupIt->front(),
-                                                  PSE, *L);
       if (cannotHoistOrSinkRecipe(R, LoopRegion->getEntryBasicBlock(),
                                   LoopRegion->getExitingBasicBlock(),
-                                  /*Sinking=*/true, SinkInfo))
+                                  /*Sinking=*/true))
         continue;
 
       if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
@@ -2632,6 +2624,11 @@ void VPlanTransforms::licm(VPlan &Plan, PredicatedScalarEvolution &PSE,
         // TODO: When unrolling, replicateByVF doesn't handle sunk
         // non-single-scalar replicates correctly.
         if (!RepR->isSingleScalar())
+          continue;
+
+        // The pointer operand of stores must be loop-invariant.
+        if (RepR->getOpcode() == Instruction::Store &&
+            !RepR->getOperand(1)->isDefinedOutsideLoopRegions())
           continue;
       }
 
@@ -2862,6 +2859,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
 
   RUN_VPLAN_PASS(createAndOptimizeReplicateRegions, Plan);
   RUN_VPLAN_PASS(mergeBlocksIntoPredecessors, Plan);
+  RUN_VPLAN_PASS(licm, Plan);
 }
 
 // Add a VPActiveLaneMaskPHIRecipe and related recipes to \p Plan and replace
