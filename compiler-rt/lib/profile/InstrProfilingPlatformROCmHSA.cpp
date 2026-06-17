@@ -114,6 +114,17 @@ static hsa_executable_iterate_agent_symbols_ty pHsaExecIterAgentSyms = nullptr;
 static hsa_executable_symbol_get_info_ty pHsaSymGetInfo = nullptr;
 static hsa_loader_query_segment_descriptors_ty pQuerySegDescs = nullptr;
 
+/* Status-check shorthands, in the spirit of the thin HIP wrappers in
+ * InstrProfilingPlatformROCm.cpp: every HSA entry point returns
+ * prof_hsa_status_t. hsaOkOrBreak() also accepts INFO_BREAK, which the
+ * iterate_* callbacks use to stop early and is not an error. */
+static inline bool hsaOk(prof_hsa_status_t St) {
+  return St == PROF_HSA_STATUS_SUCCESS;
+}
+static inline bool hsaOkOrBreak(prof_hsa_status_t St) {
+  return St == PROF_HSA_STATUS_SUCCESS || St == PROF_HSA_STATUS_INFO_BREAK;
+}
+
 /* 0 = not attempted, 1 = ready, -1 = unavailable. Acquire/release atomics: a
  * thread observing HsaRuntimeState==1 also sees the published p* pointers. */
 static int HsaRuntimeState = 0;
@@ -173,7 +184,7 @@ static int loadHsaRuntimePointers(void) {
   /* Bring HSA up lazily on the first drain (idempotent, refcounted), never from
    * a library constructor -- see the fork-safety note at end of file. */
   prof_hsa_status_t St = pHsaInit();
-  if (St != PROF_HSA_STATUS_SUCCESS && St != PROF_HSA_STATUS_INFO_BREAK) {
+  if (!hsaOkOrBreak(St)) {
     if (isVerboseMode())
       PROF_NOTE("hsa_init failed (0x%x) - HSA device profiling disabled\n", St);
     return setHsaRuntimeState(-1);
@@ -183,7 +194,7 @@ static int loadHsaRuntimePointers(void) {
   __builtin_memset(&LoaderApi, 0, sizeof(LoaderApi));
   St = pGetExtTable(PROF_HSA_EXTENSION_AMD_LOADER, 1, sizeof(LoaderApi),
                     &LoaderApi);
-  if (St != PROF_HSA_STATUS_SUCCESS || !LoaderApi.query_segment_descriptors) {
+  if (!hsaOk(St) || !LoaderApi.query_segment_descriptors) {
     PROF_WARN("AMD loader extension unavailable (0x%x) - "
               "HSA device profiling disabled\n",
               St);
@@ -253,10 +264,14 @@ void __prof_rocm::profRecordDrainedBounds(const void *D, const void *C,
 
 #define PROF_MAX_GPU_AGENTS 64
 
+/* Buffer size for HSA agent names and symbol names we read back; both the
+ * device arch string and the __llvm_profile_sections symbol are far shorter. */
+#define PROF_HSA_NAME_MAX 64
+
 namespace {
 struct GpuAgent {
   prof_hsa_agent_t agent;
-  char arch[64];
+  char arch[PROF_HSA_NAME_MAX];
 };
 
 struct WalkState {
@@ -283,22 +298,22 @@ static prof_hsa_status_t onSymbol(prof_hsa_executable_t, prof_hsa_agent_t,
   SymbolState *S = (SymbolState *)Data;
 
   prof_hsa_symbol_kind_t Kind;
-  if (pHsaSymGetInfo(Sym, PROF_HSA_EXECUTABLE_SYMBOL_INFO_TYPE, &Kind) !=
-          PROF_HSA_STATUS_SUCCESS ||
+  if (!hsaOk(
+          pHsaSymGetInfo(Sym, PROF_HSA_EXECUTABLE_SYMBOL_INFO_TYPE, &Kind)) ||
       Kind != PROF_HSA_SYMBOL_KIND_VARIABLE)
     return PROF_HSA_STATUS_SUCCESS;
 
   uint32_t NameLen = 0;
-  if (pHsaSymGetInfo(Sym, PROF_HSA_EXECUTABLE_SYMBOL_INFO_NAME_LENGTH,
-                     &NameLen) != PROF_HSA_STATUS_SUCCESS ||
+  if (!hsaOk(pHsaSymGetInfo(Sym, PROF_HSA_EXECUTABLE_SYMBOL_INFO_NAME_LENGTH,
+                            &NameLen)) ||
       NameLen != sizeof(ProfileSectionsSymbol) - 1)
     return PROF_HSA_STATUS_SUCCESS;
 
-  char NameBuf[64];
+  char NameBuf[PROF_HSA_NAME_MAX];
   if (NameLen + 1 > sizeof(NameBuf))
     return PROF_HSA_STATUS_SUCCESS;
-  if (pHsaSymGetInfo(Sym, PROF_HSA_EXECUTABLE_SYMBOL_INFO_NAME, NameBuf) !=
-      PROF_HSA_STATUS_SUCCESS)
+  if (!hsaOk(
+          pHsaSymGetInfo(Sym, PROF_HSA_EXECUTABLE_SYMBOL_INFO_NAME, NameBuf)))
     return PROF_HSA_STATUS_SUCCESS;
   NameBuf[NameLen] = '\0';
 
@@ -306,8 +321,8 @@ static prof_hsa_status_t onSymbol(prof_hsa_executable_t, prof_hsa_agent_t,
     return PROF_HSA_STATUS_SUCCESS;
 
   uint64_t Addr = 0;
-  if (pHsaSymGetInfo(Sym, PROF_HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS,
-                     &Addr) != PROF_HSA_STATUS_SUCCESS ||
+  if (!hsaOk(pHsaSymGetInfo(
+          Sym, PROF_HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS, &Addr)) ||
       Addr == 0) {
     if (isVerboseMode())
       PROF_NOTE("%s", "failed to read __llvm_profile_sections address\n");
@@ -360,8 +375,7 @@ static prof_hsa_status_t onSymbol(prof_hsa_executable_t, prof_hsa_agent_t,
 
 static prof_hsa_status_t collectAgent(prof_hsa_agent_t Agent, void *Data) {
   prof_hsa_device_type_t DevType;
-  if (pHsaAgentGetInfo(Agent, PROF_HSA_AGENT_INFO_DEVICE, &DevType) !=
-          PROF_HSA_STATUS_SUCCESS ||
+  if (!hsaOk(pHsaAgentGetInfo(Agent, PROF_HSA_AGENT_INFO_DEVICE, &DevType)) ||
       DevType != PROF_HSA_DEVICE_TYPE_GPU)
     return PROF_HSA_STATUS_SUCCESS;
 
@@ -371,7 +385,7 @@ static prof_hsa_status_t collectAgent(prof_hsa_agent_t Agent, void *Data) {
 
   GpuAgent &GA = W->agents[W->num_agents++];
   GA.agent = Agent;
-  char Name[64];
+  char Name[PROF_HSA_NAME_MAX];
   __builtin_memset(Name, 0, sizeof(Name));
   pHsaAgentGetInfo(Agent, PROF_HSA_AGENT_INFO_NAME, Name);
   size_t N = strnlen(Name, sizeof(GA.arch) - 1);
@@ -385,14 +399,7 @@ static prof_hsa_status_t collectAgent(prof_hsa_agent_t Agent, void *Data) {
   return PROF_HSA_STATUS_SUCCESS;
 }
 
-/* Reentrancy guard and "drained at least once" latch (both acquire/release).
- * The collect hook may run more than once (an early __llvm_profile_write_file
- * plus the exit write): a successful walk latches HsaDrainCompleted so we never
- * re-emit duplicate .profraw files, while no-op outcomes stay retryable for a
- * later call. HsaDrainInProgress serializes reentrant HSA walks (e.g. from a
- * library destructor); note it does not guard against a host-shadow
- * processDeviceOffloadPrf() on another thread mutating SeenBounds concurrently
- * -- the dedup table relies on device collection being single-threaded. */
+/* Reentrancy guard and "drained at least once" latch (both acquire/release). */
 static int HsaDrainInProgress = 0;
 static int HsaDrainCompleted = 0;
 
@@ -418,7 +425,7 @@ int __prof_rocm::drainDevicesViaHsa(void) {
   WalkState W;
   __builtin_memset(&W, 0, sizeof(W));
   prof_hsa_status_t St = pHsaIterateAgents(collectAgent, &W);
-  if (St != PROF_HSA_STATUS_SUCCESS && St != PROF_HSA_STATUS_INFO_BREAK) {
+  if (!hsaOkOrBreak(St)) {
     PROF_WARN("hsa_iterate_agents failed (0x%x)\n", St);
     return -1;
   }
@@ -433,7 +440,7 @@ int __prof_rocm::drainDevicesViaHsa(void) {
    * (agent, executable) pairs directly. */
   size_t NumSegs = 0;
   St = pQuerySegDescs(nullptr, &NumSegs);
-  if (St != PROF_HSA_STATUS_SUCCESS) {
+  if (!hsaOk(St)) {
     PROF_WARN("query_segment_descriptors(count) failed (0x%x)\n", St);
     return -1;
   }
@@ -452,7 +459,7 @@ int __prof_rocm::drainDevicesViaHsa(void) {
   UniqueFree SegsOwner(Segs);
 
   St = pQuerySegDescs(Segs, &NumSegs);
-  if (St != PROF_HSA_STATUS_SUCCESS) {
+  if (!hsaOk(St)) {
     PROF_WARN("query_segment_descriptors(fetch) failed (0x%x)\n", St);
     return -1;
   }
@@ -460,29 +467,36 @@ int __prof_rocm::drainDevicesViaHsa(void) {
   if (isVerboseMode())
     PROF_NOTE("query_segment_descriptors: %zu segments\n", NumSegs);
 
-  /* Walk unique (agent, executable) pairs. */
-  enum { kMaxPairs = 512 };
-  uint64_t SeenAgents[kMaxPairs];
-  uint64_t SeenExecs[kMaxPairs];
+  /* Walk each unique (agent, executable) pair once. The seen-list grows on
+   * demand so dedup never silently caps out; if a grow ever fails under OOM the
+   * downstream SeenBounds dedup is the backstop against double-draining. */
+  struct SeenPair {
+    uint64_t agent;
+    uint64_t exec;
+  };
+  enum { kSeenPairsInitCap = 64 };
+  SeenPair *Seen = nullptr;
   int NumPairs = 0;
+  int CapPairs = 0;
   int IterFailures = 0;
 
   for (size_t i = 0; i < NumSegs; ++i) {
     if (Segs[i].executable.handle == 0 || Segs[i].agent.handle == 0)
       continue;
 
-    int Seen = 0;
+    bool AlreadySeen = false;
     for (int j = 0; j < NumPairs; ++j)
-      if (SeenAgents[j] == Segs[i].agent.handle &&
-          SeenExecs[j] == Segs[i].executable.handle) {
-        Seen = 1;
+      if (Seen[j].agent == Segs[i].agent.handle &&
+          Seen[j].exec == Segs[i].executable.handle) {
+        AlreadySeen = true;
         break;
       }
-    if (Seen)
+    if (AlreadySeen)
       continue;
-    if (NumPairs < kMaxPairs) {
-      SeenAgents[NumPairs] = Segs[i].agent.handle;
-      SeenExecs[NumPairs] = Segs[i].executable.handle;
+    if (growArray((void **)&Seen, &CapPairs, NumPairs + 1, kSeenPairsInitCap,
+                  sizeof(*Seen)) == 0) {
+      Seen[NumPairs].agent = Segs[i].agent.handle;
+      Seen[NumPairs].exec = Segs[i].executable.handle;
       NumPairs++;
     }
 
@@ -503,8 +517,7 @@ int __prof_rocm::drainDevicesViaHsa(void) {
                 (unsigned long long)Segs[i].executable.handle, Arch);
     prof_hsa_status_t IterSt =
         pHsaExecIterAgentSyms(Segs[i].executable, Segs[i].agent, onSymbol, &S);
-    if (IterSt != PROF_HSA_STATUS_SUCCESS &&
-        IterSt != PROF_HSA_STATUS_INFO_BREAK) {
+    if (!hsaOkOrBreak(IterSt)) {
       PROF_WARN("hsa_executable_iterate_agent_symbols on executable 0x%llx "
                 "failed (0x%x)\n",
                 (unsigned long long)Segs[i].executable.handle, IterSt);
@@ -520,6 +533,8 @@ int __prof_rocm::drainDevicesViaHsa(void) {
               W.num_agents, NumPairs, W.total_found, W.total_drained,
               IterFailures);
 
+  free(Seen);
+
   /* Latch only when we actually drained data. A "found nothing new" walk is
    * deliberately not latched: an early collect can precede any kernel launch,
    * and latching it would suppress the real exit-time drain. No-op walks are
@@ -529,10 +544,6 @@ int __prof_rocm::drainDevicesViaHsa(void) {
   return (IterFailures > 0) ? -1 : 0;
 }
 
-/* Fork-safety: deliberately no library constructor calling hsa_init(). HSA
- * state is invalid across fork(), so initializing it just because the
- * instrumented library loaded would crash fork-based callers (e.g. RCCL's unit
- * tests) that keep HIP/HSA uninitialized in the parent and only touch HIP in
- * forked children. HSA is instead brought up lazily during the drain. */
+/* Fork-safety: deliberately no library constructor calling hsa_init(). */
 
 #endif /* defined(__linux__) && !defined(_WIN32) -- HSA drain */
