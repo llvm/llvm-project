@@ -765,6 +765,8 @@ add_header_library(
   HDRS
     prlimit.h
   DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.struct_rlimit
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or
