@@ -458,6 +458,9 @@ def warn_hlsl_langstd_minimal :
   Warning<"support for HLSL language version %0 is incomplete, "
           "recommend using %1 instead">,
   InGroup<HLSLDXCCompat>;
+def warn_hlsl_failed_to_embed_source
+    : Warning<"failed to embed source for '%0' into dx.source.contents">,
+      InGroup<HLSLDXCCompat>;
 
 def err_data_layout_mismatch : Error<"backend data layout '%0' does not match "
                                      "expected target description '%1'">;

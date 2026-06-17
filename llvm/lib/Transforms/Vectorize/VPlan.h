@@ -5082,6 +5082,11 @@ public:
     return getOrAddLiveIn(ConstantInt::get(getContext(), Val));
   }
 
+  /// Return a VPIRValue wrapping a poison value of type \p Ty.
+  VPIRValue *getPoison(Type *Ty) {
+    return getOrAddLiveIn(PoisonValue::get(Ty));
+  }
+
   /// Return the live-in VPIRValue for \p V, if there is one or nullptr
   /// otherwise.
   VPIRValue *getLiveIn(Value *V) const { return LiveIns.lookup(V); }
