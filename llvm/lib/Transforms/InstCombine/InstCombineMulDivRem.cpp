@@ -636,7 +636,7 @@ Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
                            Value *Y, Value *Z) {
     InstCombiner::BuilderTy &Builder = IC.Builder;
     Value *YZ = Builder.CreateNSWAdd(Y, Z);
-    Instruction *NewPow = Builder.CreateIntrinsic(
+    Value *NewPow = Builder.CreateIntrinsic(
         Intrinsic::powi, {X->getType(), YZ->getType()}, {X, YZ}, &I);
 
     return NewPow;
@@ -654,7 +654,7 @@ Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
                          m_Deferred(X)))) {
     Constant *One = ConstantInt::get(Y->getType(), 1);
     if (willNotOverflowSignedAdd(Y, One, I)) {
-      Instruction *NewPow = createPowiExpr(I, *this, X, Y, One);
+      Value *NewPow = createPowiExpr(I, *this, X, Y, One);
       return replaceInstUsesWith(I, NewPow);
     }
   }
@@ -668,7 +668,7 @@ Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
       match(Op1, m_AllowReassoc(m_Intrinsic<Intrinsic::powi>(m_Specific(X),
                                                              m_Value(Z)))) &&
       Y->getType() == Z->getType() && willNotOverflowSignedAdd(Y, Z, I)) {
-    Instruction *NewPow = createPowiExpr(I, *this, X, Y, Z);
+    Value *NewPow = createPowiExpr(I, *this, X, Y, Z);
     return replaceInstUsesWith(I, NewPow);
   }
 
@@ -681,7 +681,7 @@ Instruction *InstCombinerImpl::foldPowiReassoc(BinaryOperator &I) {
                        m_Specific(Op1), m_Value(Y))))) &&
         willNotOverflowSignedSub(Y, ConstantInt::get(Y->getType(), 1), I)) {
       Constant *NegOne = ConstantInt::getAllOnesValue(Y->getType());
-      Instruction *NewPow = createPowiExpr(I, *this, Op1, Y, NegOne);
+      Value *NewPow = createPowiExpr(I, *this, Op1, Y, NegOne);
       return replaceInstUsesWith(I, NewPow);
     }
 
@@ -1927,7 +1927,7 @@ Instruction *InstCombinerImpl::foldFDivConstantDivisor(BinaryOperator &I) {
       (match(I.getOperand(1), m_PosZeroFP()) ||
        (I.hasNoSignedZeros() && match(I.getOperand(1), m_AnyZeroFP())))) {
     IRBuilder<> B(&I);
-    CallInst *CopySign = B.CreateIntrinsic(
+    Value *CopySign = B.CreateIntrinsic(
         Intrinsic::copysign, {C->getType()},
         {ConstantFP::getInfinity(I.getType()), I.getOperand(0)}, &I);
     CopySign->takeName(&I);
