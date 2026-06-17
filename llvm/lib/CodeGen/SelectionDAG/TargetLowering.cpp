@@ -8931,20 +8931,19 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
       // z1 = (x0 * y1) ^ (x1 * y0) ^ (x2 * y3) ^ (x3 * y2);
       // z2 = (x0 * y2) ^ (x1 * y1) ^ (x2 * y0) ^ (x3 * y3);
       // z3 = (x0 * y3) ^ (x1 * y2) ^ (x2 * y1) ^ (x3 * y0);
-      SDValue Res;
+      SDValue Res = DAG.getConstant(0, DL, VT);
       for (unsigned I = 0; I < 4; ++I) {
-        SDValue Zi;
+        SDValue Zi = DAG.getConstant(0, DL, VT);
         for (unsigned J = 0; J < 4; ++J) {
           unsigned K = (I + 4 - J) % 4;
           SDValue P = DAG.getNode(ISD::MUL, DL, VT, Xp[J], Yp[K]);
-          Zi = Zi ? DAG.getNode(ISD::XOR, DL, VT, Zi, P) : P;
+          Zi = DAG.getNode(ISD::XOR, DL, VT, Zi, P);
         }
 
         // Keep only the bits belonging to this iteration, and bitwise or it all
         // together.
         Zi = DAG.getNode(ISD::AND, DL, VT, Zi, M[I]);
-        Res = Res ? DAG.getNode(ISD::OR, DL, VT, Res, Zi, SDNodeFlags::Disjoint)
-                  : Zi;
+        Res = DAG.getNode(ISD::OR, DL, VT, Res, Zi, SDNodeFlags::Disjoint);
       }
       return Res;
     }
