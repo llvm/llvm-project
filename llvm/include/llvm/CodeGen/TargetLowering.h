@@ -5572,6 +5572,16 @@ public:
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandCLMUL(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand parallel bit extract (compress).
+  /// \param N Node to expand
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandPEXT(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand parallel bit deposit (expand).
+  /// \param N Node to expand
+  /// \returns The expansion if successful, SDValue() otherwise
+  SDValue expandPDEP(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand rotations.
   /// \param N Node to expand
   /// \param AllowVectorOps expand vector rotate, this should only be performed
@@ -5649,6 +5659,11 @@ public:
   /// \param NodeNode to expand
   /// \returns The expansion result
   SDValue expandFCANONICALIZE(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expand CONVERT_TO_ARBITRARY_FP using bit manipulation.
+  /// \param Node Node to expand.
+  /// \returns The expansion result, or SDValue() if fails.
+  SDValue expandCONVERT_TO_ARBITRARY_FP(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Expand CONVERT_FROM_ARBITRARY_FP using bit manipulation.
   /// \param Node Node to expand.
