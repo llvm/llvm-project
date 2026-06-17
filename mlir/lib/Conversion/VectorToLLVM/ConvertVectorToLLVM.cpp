@@ -275,6 +275,12 @@ public:
     LLVM::GEPNoWrapFlags noWrapFlags = LLVM::GEPNoWrapFlags::none;
     if constexpr (std::is_same_v<LoadOrStoreOp, vector::LoadOp> ||
                   std::is_same_v<LoadOrStoreOp, vector::StoreOp>) {
+      // The verifier (verifyLoadStoreMemRefLayout) guarantees that the
+      // trailing (most minor) stride of the memref is 1. Assert to make
+      // the invariant explicit in the lowering code.
+      auto [strides, offset] = memRefTy.getStridesAndOffset();
+      assert((strides.empty() || strides.back() == 1) &&
+             "vector.load/store requires unit trailing memref stride");
       if (enableGEPInboundsNuw) {
         noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::inbounds;
         // `nuw` additionally requires non-negative strides; skip it when the
