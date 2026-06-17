@@ -2211,6 +2211,26 @@ let append Predicates = [IsRV32] in {
   def : Pat<(v4i8 (trunc (v4i16 GPRPair:$rs))), (PNSRLI_B GPRPair:$rs, 0)>;
   def : Pat<(v2i16 (trunc (v2i32 GPRPair:$rs))), (PNSRLI_H GPRPair:$rs, 0)>;
 
+  def : Pat<(v4i8 (trunc (v4i16 (riscv_psrl GPRPair:$rs1, uimm4:$imm)))),
+            (PNSRLI_B GPRPair:$rs1, uimm4:$imm)>;
+  def : Pat<(v2i16 (trunc (v2i32 (riscv_psrl GPRPair:$rs1, uimm5:$imm)))),
+            (PNSRLI_H GPRPair:$rs1, uimm5:$imm)>;
+
+  def : Pat<(v4i8 (trunc (v4i16 (riscv_psra GPRPair:$rs1, uimm4:$imm)))),
+            (PNSRAI_B GPRPair:$rs1, uimm4:$imm)>;
+  def : Pat<(v2i16 (trunc (v2i32 (riscv_psra GPRPair:$rs1, uimm5:$imm)))),
+            (PNSRAI_H GPRPair:$rs1, uimm5:$imm)>;
+
+  def : Pat<(v4i8 (trunc (v4i16 (riscv_psrl GPRPair:$rs1, shiftMask16:$rs2)))),
+            (PNSRL_BS GPRPair:$rs1, shiftMask16:$rs2)>;
+  def : Pat<(v2i16 (trunc (v2i32 (riscv_psrl GPRPair:$rs1, shiftMask32:$rs2)))),
+            (PNSRL_HS GPRPair:$rs1, shiftMask32:$rs2)>;
+
+  def : Pat<(v4i8 (trunc (v4i16 (riscv_psra GPRPair:$rs1, shiftMask16:$rs2)))),
+            (PNSRA_BS GPRPair:$rs1, shiftMask16:$rs2)>;
+  def : Pat<(v2i16 (trunc (v2i32 (riscv_psra GPRPair:$rs1, shiftMask32:$rs2)))),
+            (PNSRA_HS GPRPair:$rs1, shiftMask32:$rs2)>;
+
   // Basic 8-bit arithmetic patterns
   def : PatGprPairGprPair<add, PADD_DB, v8i8>;
   def : PatGprPairGprPair<sub, PSUB_DB, v8i8>;
