@@ -870,7 +870,7 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   auto CreateWideIV = [&](WideIVInfo WideIV, bool &Deleted) -> bool {
     PHINode *WidePhi =
         createWideIV(WideIV, LI, SE, Rewriter, DT, DeadInsts, ElimExt, Widened,
-                     true /* HasGuards */, true /* UsePostIncrementRanges */);
+                     true /* UsePostIncrementRanges */);
     if (!WidePhi)
       return false;
     LLVM_DEBUG(dbgs() << "Created wide phi: "; WidePhi->dump());

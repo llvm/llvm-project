@@ -705,10 +705,6 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
                                        LoopInfo *LI) {
   SmallVector<WideIVInfo, 8> WideIVs;
 
-  auto *GuardDecl = Intrinsic::getDeclarationIfExists(
-      L->getBlocks()[0]->getModule(), Intrinsic::experimental_guard);
-  bool HasGuards = GuardDecl && !GuardDecl->use_empty();
-
   SmallVector<PHINode *, 8> LoopPhis(
       llvm::make_pointer_range(L->getHeader()->phis()));
 
@@ -747,9 +743,9 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
     for (; !WideIVs.empty(); WideIVs.pop_back()) {
       unsigned ElimExt;
       unsigned Widened;
-      if (PHINode *WidePhi = createWideIV(WideIVs.back(), LI, SE, Rewriter,
-                                          DT, DeadInsts, ElimExt, Widened,
-                                          HasGuards, UsePostIncrementRanges)) {
+      if (PHINode *WidePhi =
+              createWideIV(WideIVs.back(), LI, SE, Rewriter, DT, DeadInsts,
+                           ElimExt, Widened, UsePostIncrementRanges)) {
         NumElimExt += ElimExt;
         NumWidened += Widened;
         Changed = true;

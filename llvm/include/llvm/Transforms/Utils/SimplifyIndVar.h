@@ -85,7 +85,7 @@ LLVM_ABI PHINode *createWideIV(const WideIVInfo &WI, LoopInfo *LI,
                                DominatorTree *DT,
                                SmallVectorImpl<WeakTrackingVH> &DeadInsts,
                                unsigned &NumElimExt, unsigned &NumWidened,
-                               bool HasGuards, bool UsePostIncrementRanges);
+                               bool UsePostIncrementRanges);
 
 } // end namespace llvm
 
