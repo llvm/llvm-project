@@ -14,7 +14,6 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/CFG.h"
@@ -1028,15 +1027,13 @@ class SPIRVStructurizer : public FunctionPass {
           if (!Convergence || Convergence == &BB)
             continue;
 
-          if (DT.dominates(&BB, Convergence)) {
-            // Simple case: convergence is dominated. Use it as target.
-            Target = Convergence;
-          } else {
-            // Convergence not dominated by header (sibling paths also reach
-            // it). Insert a new merge before the convergence, redirecting
-            // only the edges from BB-dominated predecessors.
-            Target = Convergence;
-          }
+          // Target is not used directly as the merge. The downstream code
+          // creates a new intermediate block (NewMerge) intercepting only the
+          // header-dominated predecessors of Target. This works regardless of
+          // whether Header dominates Convergence: if it does, all predecessors
+          // get redirected; if not, only the dominated subset does, while
+          // sibling paths continue directly to Convergence.
+          Target = Convergence;
         }
 
         // Check 2 is intentionally omitted. Branching to a merge block of
@@ -1066,16 +1063,16 @@ class SPIRVStructurizer : public FunctionPass {
         // For each phi in Target, create a phi in NewMerge collecting the
         // values from redirected predecessors, then replace those incoming
         // entries in Target's phi with a single entry from NewMerge.
-        for (PHINode &Phi : make_early_inc_range(Target->phis())) {
+        for (PHINode &Phi : Target->phis()) {
           PHINode *NewPhi =
               PHINode::Create(Phi.getType(), RedirectedPreds.size(),
                               Phi.getName() + ".inner", NewMerge);
           for (BasicBlock *Pred : RedirectedPreds) {
             int Idx = Phi.getBasicBlockIndex(Pred);
-            if (Idx >= 0) {
-              NewPhi->addIncoming(Phi.getIncomingValue(Idx), Pred);
-              Phi.removeIncomingValue(Idx, /*DeletePHIIfEmpty=*/false);
-            }
+            assert(Idx >= 0 &&
+                   "redirected predecessor missing PHI incoming value");
+            NewPhi->addIncoming(Phi.getIncomingValue(Idx), Pred);
+            Phi.removeIncomingValue(Idx, /*DeletePHIIfEmpty=*/false);
           }
           Phi.addIncoming(NewPhi, NewMerge);
         }
@@ -1088,6 +1085,11 @@ class SPIRVStructurizer : public FunctionPass {
         for (BasicBlock *Pred : RedirectedPreds) {
           Pred->getTerminator()->replaceSuccessorWith(Target, NewMerge);
         }
+
+        // Verify the new merge is dominated by the header.
+        DT.recalculate(F);
+        assert(DT.dominates(&BB, NewMerge) &&
+               "new merge must be dominated by header");
 
         // Reassign merge.
         auto *NewMergeAddr = BlockAddress::get(NewMerge->getParent(), NewMerge);
@@ -1187,7 +1189,9 @@ class SPIRVStructurizer : public FunctionPass {
 
   // Fix switch case ordering for SPIR-V: if a case construct branches to
   // another case's target block, the branching case must immediately precede
-  // the target case in the OpSwitch target list.
+  // the target case in the OpSwitch target list. Only non-default cases
+  // participate in reordering (the default target is not part of the OpSwitch
+  // target list in SPIR-V).
   bool fixSwitchCaseOrder(Function &F) {
     bool Modified = false;
 
@@ -1196,24 +1200,33 @@ class SPIRVStructurizer : public FunctionPass {
       if (!SI || SI->getNumCases() < 2)
         continue;
 
-      // Collect all case targets (including default).
-      SmallVector<BasicBlock *, 8> Targets;
-      SmallDenseMap<BasicBlock *, unsigned, 8> TargetIndex;
-      Targets.push_back(SI->getDefaultDest());
-      TargetIndex[SI->getDefaultDest()] = 0;
-      for (auto &Case : SI->cases()) {
-        TargetIndex[Case.getCaseSuccessor()] = Targets.size();
-        Targets.push_back(Case.getCaseSuccessor());
+      // Collect non-default case targets. Use indices (not block pointers)
+      // to correctly handle multiple case values sharing the same target.
+      SmallVector<std::pair<ConstantInt *, BasicBlock *>, 8> Cases;
+      for (auto &Case : SI->cases())
+        Cases.push_back({Case.getCaseValue(), Case.getCaseSuccessor()});
+
+      // Map from target block to its case index (first occurrence only, used
+      // for fall-through detection).
+      SmallDenseMap<BasicBlock *, unsigned, 8> BlockToCaseIdx;
+      for (unsigned i = 0; i < Cases.size(); i++) {
+        // Only record the first case targeting each block.
+        BlockToCaseIdx.try_emplace(Cases[i].second, i);
       }
 
-      // Build fall-through edges: case A falls through to case B if A's
-      // block branches to B's block.
-      SmallDenseMap<unsigned, unsigned, 8> FallThrough; // from -> to
-      for (unsigned i = 0; i < Targets.size(); i++) {
-        for (BasicBlock *Succ : successors(Targets[i])) {
-          auto It = TargetIndex.find(Succ);
-          if (It != TargetIndex.end() && It->second != i) {
+      // Build fall-through edges among cases (excluding default).
+      // FallThrough[i] = j means case i's target block branches to case j's
+      // target block, so case i must immediately precede case j.
+      SmallDenseMap<unsigned, unsigned, 8> FallThrough;
+      SmallDenseMap<unsigned, unsigned, 8> IncomingCount;
+      for (unsigned i = 0; i < Cases.size(); i++) {
+        for (BasicBlock *Succ : successors(Cases[i].second)) {
+          if (Succ == SI->getDefaultDest())
+            continue; // Skip fall-throughs involving default.
+          auto It = BlockToCaseIdx.find(Succ);
+          if (It != BlockToCaseIdx.end() && It->second != i) {
             FallThrough[i] = It->second;
+            IncomingCount[It->second]++;
             break;
           }
         }
@@ -1222,27 +1235,53 @@ class SPIRVStructurizer : public FunctionPass {
       if (FallThrough.empty())
         continue;
 
-      // Topological sort: build a chain of cases respecting fall-through.
-      // A case with a fall-through edge must immediately precede its target.
-      SmallVector<unsigned, 8> Order;
-      SmallPtrSet<BasicBlock *, 8> Placed;
+      // Detect unsatisfiable constraints: cycles or multiple predecessors
+      // targeting the same case. Skip reordering if found.
+      bool Unsatisfiable = false;
+      for (auto &[Target, Count] : IncomingCount) {
+        if (Count > 1) {
+          Unsatisfiable = true;
+          break;
+        }
+      }
+      if (!Unsatisfiable) {
+        // Check for cycles by following chains.
+        for (unsigned i = 0; i < Cases.size() && !Unsatisfiable; i++) {
+          if (!FallThrough.count(i))
+            continue;
+          SmallDenseSet<unsigned, 8> Visited;
+          unsigned Cur = i;
+          while (FallThrough.count(Cur)) {
+            if (!Visited.insert(Cur).second) {
+              Unsatisfiable = true;
+              break;
+            }
+            Cur = FallThrough[Cur];
+          }
+        }
+      }
+      if (Unsatisfiable)
+        continue;
 
-      // Find which targets are "landed on" (have an incoming fall-through).
+      // Topological sort: build chains respecting fall-through adjacency.
+      SmallVector<unsigned, 8> Order;
+      SmallDenseSet<unsigned, 8> Placed;
+
+      // Find chain heads (cases with no incoming fall-through).
       SmallDenseSet<unsigned, 8> HasIncoming;
       for (auto &[From, To] : FallThrough)
         HasIncoming.insert(To);
 
       // Start chains from cases that aren't landed on.
-      for (unsigned i = 0; i < Targets.size(); i++) {
+      for (unsigned i = 0; i < Cases.size(); i++) {
         if (HasIncoming.count(i))
           continue;
-        // Follow the chain.
         unsigned Cur = i;
         while (true) {
-          if (Placed.contains(Targets[Cur]))
+          if (Placed.contains(Cur))
             break;
           Order.push_back(Cur);
-          Placed.insert(Targets[Cur]);
+          Placed.insert(Cur);
           auto It = FallThrough.find(Cur);
           if (It == FallThrough.end())
             break;
@@ -1250,15 +1289,15 @@ class SPIRVStructurizer : public FunctionPass {
         }
       }
 
-      // Add any remaining (shouldn't happen in well-formed input, but safe).
-      for (unsigned i = 0; i < Targets.size(); i++) {
-        if (!Placed.contains(Targets[i])) {
+      // Add any remaining cases not part of a chain.
+      for (unsigned i = 0; i < Cases.size(); i++) {
+        if (!Placed.contains(i)) {
           Order.push_back(i);
-          Placed.insert(Targets[i]);
+          Placed.insert(i);
         }
       }
 
-      // Check if order changed.
+      // Check if order actually changed.
       bool Changed = false;
       for (unsigned i = 0; i < Order.size(); i++) {
         if (Order[i] != i) {
@@ -1269,31 +1308,19 @@ class SPIRVStructurizer : public FunctionPass {
       if (!Changed)
         continue;
 
-      // Rebuild the switch with new case order. The default stays as-is in
-      // LLVM IR (it's separate from cases), but we reorder the cases.
-      // First, collect case values and targets in current order.
-      SmallVector<std::pair<ConstantInt *, BasicBlock *>, 8> Cases;
-      for (auto &Case : SI->cases())
-        Cases.push_back({Case.getCaseValue(), Case.getCaseSuccessor()});
-
-      // Map from old target index (1-based for cases) to new position.
-      // Order[j] gives the original index at new position j.
-      // We need cases in the order specified by Order, skipping index 0
-      // (default).
+      // Rebuild switch with reordered cases.
       SmallVector<std::pair<ConstantInt *, BasicBlock *>, 8> NewCases;
-      for (unsigned Idx : Order) {
-        if (Idx == 0)
-          continue; // default, handled separately
-        NewCases.push_back(Cases[Idx - 1]);
-      }
+      for (unsigned Idx : Order)
+        NewCases.push_back(Cases[Idx]);
 
-      // Rebuild switch.
       IRBuilder<> Builder(&BB);
       Builder.SetInsertPoint(SI);
       SwitchInst *NewSI = Builder.CreateSwitch(
           SI->getCondition(), SI->getDefaultDest(), NewCases.size());
       for (auto &[Val, Dest] : NewCases)
         NewSI->addCase(Val, Dest);
+      NewSI->copyMetadata(*SI);
+      NewSI->setDebugLoc(SI->getDebugLoc());
       SI->eraseFromParent();
       Modified = true;
     }
