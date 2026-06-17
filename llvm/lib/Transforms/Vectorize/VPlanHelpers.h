@@ -40,6 +40,7 @@ class Type;
 class VPBasicBlock;
 class VPRegionBlock;
 class VPlan;
+class VPSlotTracker;
 class Value;
 
 namespace Intrinsic {
@@ -337,7 +338,13 @@ struct VPCostContext {
                 TargetTransformInfo::TargetCostKind CostKind,
                 PredicatedScalarEvolution &PSE, const Loop *L)
       : TTI(TTI), TLI(TLI), LLVMCtx(Plan.getContext()), CM(CM),
-        CostKind(CostKind), PSE(PSE), L(L) {}
+        CostKind(CostKind), PSE(PSE), L(L)
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+        ,
+        Plan(Plan)
+#endif
+  {
+  }
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -382,6 +389,21 @@ struct VPCostContext {
   /// Returns true if \p ID is a pseudo intrinsic that is dropped via
   /// scalarization rather than widened.
   static bool isFreeScalarIntrinsic(Intrinsic::ID ID);
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Return a VPSlotTracker for \p Plan, shared across all recipe cost
+  /// printing, so names are assigned once instead of per-recipe.
+  VPSlotTracker &getSlotTracker();
+
+private:
+  /// The VPlan whose cost is being computed. Used to lazily construct the
+  /// shared VPSlotTracker for recipe cost printing; only read in dump-enabled
+  /// builds.
+  const VPlan &Plan;
+
+  /// Lazily created slot tracker, reused while printing recipe costs.
+  std::unique_ptr<VPSlotTracker> SlotTracker;
+#endif
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without
@@ -400,8 +422,8 @@ class VPSlotTracker {
   /// Number to assign to the next VPValue without underlying value.
   unsigned NextSlot = 0;
 
-  /// Lazily created ModuleSlotTracker, used only when unnamed IR instructions
-  /// require slot tracking.
+  /// Lazily created ModuleSlotTracker, used to print unnamed IR instructions
+  /// and metadata nodes referenced by recipes.
   std::unique_ptr<ModuleSlotTracker> MST;
 
   /// Cached metadata kind names from the Module's LLVMContext.
@@ -410,10 +432,17 @@ class VPSlotTracker {
   /// Cached Module pointer for printing metadata.
   const Module *M = nullptr;
 
+  /// Temporary ids for metadata nodes referenced by recipes that have no module
+  /// slot (e.g. alias.scope/noalias added by loop versioning).
+  DenseMap<const MDNode *, unsigned> MetadataTmpIds;
+
   void assignName(const VPValue *V);
   LLVM_ABI_FOR_TEST void assignNames(const VPlan &Plan);
   void assignNames(const VPBasicBlock *VPBB);
   std::string getName(const Value *V);
+
+  /// Lazily create the ModuleSlotTracker for module \p Mod.
+  ModuleSlotTracker &getOrCreateMST(const Module *Mod, const Function *F);
 
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {
@@ -435,6 +464,9 @@ public:
       M->getContext().getMDKindNames(MDNames);
     return MDNames;
   }
+
+  /// Print a reference to metadata node \p N to \p O.
+  void printMetadataAsOperand(raw_ostream &O, const MDNode *N);
 
   /// Returns the cached Module pointer.
   const Module *getModule() const { return M; }
