@@ -184,6 +184,9 @@ public:
   }
 
   unsigned getCSRFirstUseCost(const MachineFunction &MF) const override;
+  unsigned getCSRCostScale(const MachineFunction &MF) const override {
+    return 30;
+  };
 };
 
 } // End llvm namespace

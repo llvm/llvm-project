@@ -1047,6 +1047,13 @@ public:
   /// FIXME: We should deprecate this usage.
   virtual unsigned getCSRCost() const { return 0; }
 
+  /// Scale the CSRFirstUseCost with this number.
+  /// The scale is a percentage (e.g., 30 means 30% of the base cost).
+  /// Target can tune and override this default value.
+  virtual unsigned getCSRCostScale(const MachineFunction &MF) const {
+    return 30;
+  }
+
   /// Returns true if the target requires (and can make use of) the register
   /// scavenger.
   virtual bool requiresRegisterScavenging(const MachineFunction &MF) const {
