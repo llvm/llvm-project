@@ -70,6 +70,7 @@ LLVMInitializeDirectXTarget() {
   initializeEmbedDXILPassPass(*PR);
   initializeWriteDXILPassPass(*PR);
   initializeDXContainerGlobalsPass(*PR);
+  initializeDXContainerPDBPass(*PR);
   initializeGlobalDCELegacyPassPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
   initializeDXILRemoveUnusedResourcesLegacyPass(*PR);
@@ -181,6 +182,7 @@ bool DirectXTargetMachine::addPassesToEmitFile(
       // We embed the other DXContainer globals after embedding DXIL so that the
       // globals don't pollute the DXIL.
       PM.add(createDXContainerGlobalsPass());
+      PM.add(createDXContainerPDBPass());
 
       if (!MMIWP)
         MMIWP = new MachineModuleInfoWrapperPass(this);

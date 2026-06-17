@@ -364,6 +364,7 @@ add_header_macro(
     .llvm-libc-types.struct_timeval
     .llvm-libc-types.clockid_t
     .llvm-libc-types.rsize_t
+    .llvm-libc-types.tm_gmtoff_t
 )
 
 add_header_macro(
@@ -662,6 +663,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sys_ioctl_macros
+    .llvm-libc-types.struct_winsize
 )
 
 add_header_macro(

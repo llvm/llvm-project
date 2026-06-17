@@ -349,6 +349,11 @@ Changes in existing checks
   positives when ordinary variable or field assignments are used in loop
   conditions and note locations for inferred ID-dependent fields.
 
+- Improved :doc:`altera-unroll-loops
+  <clang-tidy/checks/altera/unroll-loops>` check by fixing a crash when
+  analyzing a ``for`` loop whose initialization statement declares multiple
+  variables.
+
 - Improved :doc:`bugprone-argument-comment
   <clang-tidy/checks/bugprone/argument-comment>`:
 
@@ -811,6 +816,9 @@ Changes in existing checks
 
   - Fixed a false positive in array subscript expressions where the types are
     not yet resolved.
+
+  - Fixed a false positive when adding ``const`` to a pointer parameter would
+    conflict with an existing overload.
 
   - Fixed a crash when analyzing a redeclaration whose initializer is attached
     to another declaration.
