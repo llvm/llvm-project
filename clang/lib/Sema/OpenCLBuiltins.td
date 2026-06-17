@@ -27,6 +27,8 @@ def CL10  : Version<100>;
 def CL11  : Version<110>;
 def CL12  : Version<120>;
 def CL20  : Version<200>;
+def CL30  : Version<300>;
+def CL31  : Version<310>;
 
 // Address spaces
 // Pointer types need to be assigned an address space.
@@ -337,6 +339,11 @@ class Builtin<string _Name, list<Type> _Signature, list<bit> _Attributes = Attr.
   // MaxVersion is exclusive.
   // CLAll makes the function available for all versions.
   Version MaxVersion = CLAll;
+  // If the function belongs to an extension that was promoted to core in a later
+  // OpenCL version, set CoreMinVersion to that version so the function is also
+  // available without the extension macro from that version on.
+  // CLAll (the default) means no such promotion applies.
+  Version CoreMinVersion = CLAll;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1759,7 +1766,7 @@ let Extension = FuncExtKhrSubgroups in {
 // OpenCL Extension v3.0 s38 - Extended Subgroup Functions
 
 // Section 38.4.1 - cl_khr_subgroup_extended_types
-let Extension = FuncExtKhrSubgroupExtendedTypes in {
+let Extension = FuncExtKhrSubgroupExtendedTypes, CoreMinVersion = CL31 in {
   // For sub_group_broadcast, add scalar char, uchar, short, and ushort support,
   def : Builtin<"sub_group_broadcast", [CharShortGenType1, CharShortGenType1, UInt], Attr.Convergent>;
   // gentype may additionally be one of the supported built-in vector data types.
@@ -1815,13 +1822,13 @@ let Extension = FuncExtKhrSubgroupNonUniformArithmetic in {
 }
 
 // Section 38.8.1 - cl_khr_subgroup_shuffle
-let Extension = FuncExtKhrSubgroupShuffle in {
+let Extension = FuncExtKhrSubgroupShuffle, CoreMinVersion = CL31 in {
   def : Builtin<"sub_group_shuffle", [AGenType1, AGenType1, UInt]>;
   def : Builtin<"sub_group_shuffle_xor", [AGenType1, AGenType1, UInt]>;
 }
 
 // Section 38.9.1 - cl_khr_subgroup_shuffle_relative
-let Extension = FuncExtKhrSubgroupShuffleRelative in {
+let Extension = FuncExtKhrSubgroupShuffleRelative, CoreMinVersion = CL31 in {
   def : Builtin<"sub_group_shuffle_up", [AGenType1, AGenType1, UInt]>;
   def : Builtin<"sub_group_shuffle_down", [AGenType1, AGenType1, UInt]>;
 }
@@ -1840,7 +1847,7 @@ let Extension = FuncExtKhrSubgroupClusteredReduce in {
 }
 
 // Section 40.3.1 - cl_khr_extended_bit_ops
-let Extension = FuncExtKhrExtendedBitOps in {
+let Extension = FuncExtKhrExtendedBitOps, CoreMinVersion = CL31 in {
   def : Builtin<"bitfield_insert", [AIGenTypeN, AIGenTypeN, AIGenTypeN, UInt, UInt], Attr.Const>;
   def : Builtin<"bitfield_extract_signed", [SGenTypeN, SGenTypeN, UInt, UInt], Attr.Const>;
   def : Builtin<"bitfield_extract_signed", [SGenTypeN, UGenTypeN, UInt, UInt], Attr.Const>;
@@ -1850,7 +1857,7 @@ let Extension = FuncExtKhrExtendedBitOps in {
 }
 
 // Section 42.3 - cl_khr_integer_dot_product
-let Extension = FunctionExtension<"__opencl_c_integer_dot_product_input_4x8bit"> in {
+let Extension = FunctionExtension<"__opencl_c_integer_dot_product_input_4x8bit">, CoreMinVersion = CL31 in {
   def : Builtin<"dot", [UInt, VectorType<UChar, 4>, VectorType<UChar, 4>], Attr.Const>;
   def : Builtin<"dot", [Int, VectorType<Char, 4>, VectorType<Char, 4>], Attr.Const>;
   def : Builtin<"dot", [Int, VectorType<UChar, 4>, VectorType<Char, 4>], Attr.Const>;
@@ -1862,7 +1869,7 @@ let Extension = FunctionExtension<"__opencl_c_integer_dot_product_input_4x8bit">
   def : Builtin<"dot_acc_sat", [Int, VectorType<Char, 4>, VectorType<UChar, 4>, Int], Attr.Const>;
 }
 
-let Extension = FunctionExtension<"__opencl_c_integer_dot_product_input_4x8bit_packed"> in {
+let Extension = FunctionExtension<"__opencl_c_integer_dot_product_input_4x8bit_packed">, CoreMinVersion = CL31 in {
   def : Builtin<"dot_4x8packed_uu_uint", [UInt, UInt, UInt], Attr.Const>;
   def : Builtin<"dot_4x8packed_ss_int", [Int, UInt, UInt], Attr.Const>;
   def : Builtin<"dot_4x8packed_us_int", [Int, UInt, UInt], Attr.Const>;
@@ -1875,7 +1882,7 @@ let Extension = FunctionExtension<"__opencl_c_integer_dot_product_input_4x8bit_p
 }
 
 // Section 48.3 - cl_khr_subgroup_rotate
-let Extension = FunctionExtension<"cl_khr_subgroup_rotate"> in {
+let Extension = FunctionExtension<"cl_khr_subgroup_rotate">, CoreMinVersion = CL31 in {
   def : Builtin<"sub_group_rotate", [AGenType1, AGenType1, Int], Attr.Convergent>;
   def : Builtin<"sub_group_clustered_rotate", [AGenType1, AGenType1, Int, UInt], Attr.Convergent>;
 }

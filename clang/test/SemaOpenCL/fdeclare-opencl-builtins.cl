@@ -5,11 +5,15 @@
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -DNO_HEADER
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL3.0 -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL3.1 -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL3.1 -fdeclare-opencl-builtins -DNO_HEADER
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -DNO_HEADER
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++ -fdeclare-opencl-builtins -finclude-default-header
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CLC++2021 -fdeclare-opencl-builtins -finclude-default-header
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header -cl-ext=-cl_khr_fp64 -DNO_FP64
 // RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL3.0 -fdeclare-opencl-builtins -finclude-default-header -DNO_ATOMSCOPE
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL3.0 -fdeclare-opencl-builtins -finclude-default-header -DTEST_3_1_CORE_EXT -DNO_3_1_BUILTIN
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -Wconversion -Werror -fsyntax-only -cl-std=CL3.1 -fdeclare-opencl-builtins -finclude-default-header -DTEST_3_1_CORE_EXT
 
 // Test the -fdeclare-opencl-builtins option.  This is not a completeness
 // test, so it should not test for all builtins defined by OpenCL.  Instead
@@ -551,3 +555,38 @@ void test_extension_types(char2 c2) {
   // expected-note@-3 6 {{candidate function not viable: no known conversion from '__private char2' (vector of 2 'char' values) to 'half}}
 }
 #endif
+
+// Test builtins from extensions promoted to OpenCL 3.1 core.
+#ifdef TEST_3_1_CORE_EXT
+#undef cl_khr_extended_bit_ops
+#undef cl_khr_subgroup_rotate
+#undef cl_khr_subgroup_shuffle
+#undef cl_khr_subgroup_shuffle_relative
+#undef cl_khr_subgroup_extended_types
+#undef __opencl_c_integer_dot_product_input_4x8bit
+#undef __opencl_c_integer_dot_product_input_4x8bit_packed
+
+kernel void test_core_builtins(int i, char c, uchar4 uc4, char4 c4, uint u1) {
+  int x = bitfield_insert(i, i, 0u, 8u);      // cl_khr_extended_bit_ops
+  uint u2 = dot_acc_sat(uc4, uc4, u1);              // cl_khr_integer_dot_product (4x8bit)
+  u2 = dot_4x8packed_uu_uint(u1, u1);          // cl_khr_integer_dot_product (4x8bit_packed)
+  x = sub_group_broadcast((char2)c, 0u).x;    // cl_khr_subgroup_extended_types
+  x = sub_group_rotate(i, 1);                 // cl_khr_subgroup_rotate
+  x = sub_group_shuffle(i, 0u);               // cl_khr_subgroup_shuffle
+  x = sub_group_shuffle_xor(i, 1u);           // cl_khr_subgroup_shuffle
+  x = sub_group_shuffle_up(i, 1u);            // cl_khr_subgroup_shuffle_relative
+  x = sub_group_shuffle_down(i, 1u);          // cl_khr_subgroup_shuffle_relative
+#ifdef NO_3_1_BUILTIN
+// expected-error@-10{{use of undeclared identifier 'bitfield_insert'}}
+// expected-error@-10{{use of undeclared identifier 'dot_acc_sat'}}
+// expected-error@-10{{use of undeclared identifier 'dot_4x8packed_uu_uint'}}
+// expected-error@-10{{no matching function for call to 'sub_group_broadcast'}}
+// expected-note@-11 0+{{candidate function not viable}}
+// expected-error@-11{{use of undeclared identifier 'sub_group_rotate'}}
+// expected-error@-11{{use of undeclared identifier 'sub_group_shuffle'}}
+// expected-error@-11{{use of undeclared identifier 'sub_group_shuffle_xor'}}
+// expected-error@-11{{use of undeclared identifier 'sub_group_shuffle_up'}}
+// expected-error@-11{{use of undeclared identifier 'sub_group_shuffle_down'}}
+#endif
+}
+#endif // TEST_3_1_CORE_EXT

@@ -446,6 +446,9 @@ struct OpenCLBuiltinStruct {
   const unsigned short Extension;
   // OpenCL versions in which this overload is available.
   const unsigned short Versions;
+  // OpenCL versions in which this overload is available as core
+  // (i.e. without requiring the extension macro). Zero means not promoted.
+  const unsigned short CoreVersions;
 };
 
 )";
@@ -632,6 +635,8 @@ void BuiltinNameEmitter::EmitBuiltinTable() {
           Overload.first->getValueAsDef("MinVersion")->getValueAsInt("ID");
       unsigned int MaxVersion =
           Overload.first->getValueAsDef("MaxVersion")->getValueAsInt("ID");
+      unsigned int CoreMinVersion =
+          Overload.first->getValueAsDef("CoreMinVersion")->getValueAsInt("ID");
 
       OS << "  { " << Overload.second << ", "
          << Overload.first->getValueAsListOfDefs("Signature").size() << ", "
@@ -639,7 +644,8 @@ void BuiltinNameEmitter::EmitBuiltinTable() {
          << (Overload.first->getValueAsBit("IsConst")) << ", "
          << (Overload.first->getValueAsBit("IsConv")) << ", "
          << FunctionExtensionIndex[ExtName] << ", "
-         << EncodeVersions(MinVersion, MaxVersion) << " },\n";
+         << EncodeVersions(MinVersion, MaxVersion) << ", "
+         << (CoreMinVersion ? EncodeVersions(CoreMinVersion, 0) : 0) << " },\n";
       Index++;
     }
   }
@@ -664,6 +670,8 @@ bool BuiltinNameEmitter::CanReuseSignature(
             Rec2->getValueAsDef("MinVersion")->getValueAsInt("ID") &&
         Rec->getValueAsDef("MaxVersion")->getValueAsInt("ID") ==
             Rec2->getValueAsDef("MaxVersion")->getValueAsInt("ID") &&
+        Rec->getValueAsDef("CoreMinVersion")->getValueAsInt("ID") ==
+            Rec2->getValueAsDef("CoreMinVersion")->getValueAsInt("ID") &&
         Rec->getValueAsDef("Extension")->getName() ==
             Rec2->getValueAsDef("Extension")->getName()) {
       return true;
@@ -1123,19 +1131,39 @@ OpenCLBuiltinFileEmitterBase::emitExtensionGuard(const Record *Builtin) {
   if (Extensions.empty())
     return "";
 
-  OS << "#if";
+  int CoreMinVersion =
+      Builtin->getValueAsDef("CoreMinVersion")->getValueAsInt("ID");
 
-  SmallVector<StringRef, 2> ExtVec;
-  Extensions.split(ExtVec, " ");
-  bool isFirst = true;
-  for (StringRef Ext : ExtVec) {
-    if (!isFirst) {
-      OS << " &&";
+  // If this extension was promoted to core, guard as:
+  //   #if defined(EXT) || __OPENCL_C_VERSION__ >= CORE_VERSION
+  // Otherwise guard as:
+  //   #if defined(EXT0) && defined(EXT1) && ...
+  if (CoreMinVersion) {
+    SmallVector<StringRef, 2> ExtVec;
+    Extensions.split(ExtVec, " ");
+    OS << "#if (";
+    bool isFirst = true;
+    for (StringRef Ext : ExtVec) {
+      if (!isFirst)
+        OS << " && ";
+      OS << "defined(" << Ext << ")";
+      isFirst = false;
     }
-    OS << " defined(" << Ext << ")";
-    isFirst = false;
+    OS << ") || (__OPENCL_C_VERSION__ >= CL_VERSION_" << (CoreMinVersion / 100)
+       << "_" << ((CoreMinVersion % 100) / 10) << ")\n";
+  } else {
+    OS << "#if";
+    SmallVector<StringRef, 2> ExtVec;
+    Extensions.split(ExtVec, " ");
+    bool isFirst = true;
+    for (StringRef Ext : ExtVec) {
+      if (!isFirst)
+        OS << " &&";
+      OS << " defined(" << Ext << ")";
+      isFirst = false;
+    }
+    OS << "\n";
   }
-  OS << "\n";
 
   return "#endif // Extension\n";
 }

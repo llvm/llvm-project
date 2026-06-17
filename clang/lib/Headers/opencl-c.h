@@ -16439,7 +16439,8 @@ double  __ovld __conv sub_group_scan_inclusive_max(double);
 
 #endif // __opencl_subgroup_builtins
 
-#if defined(cl_khr_subgroup_extended_types)
+#if defined(cl_khr_subgroup_extended_types) ||                                 \
+    (__OPENCL_C_VERSION__ >= CL_VERSION_3_1)
 char __ovld __conv sub_group_broadcast( char value, uint index );
 char2 __ovld __conv sub_group_broadcast( char2 value, uint index );
 char3 __ovld __conv sub_group_broadcast( char3 value, uint index );
@@ -16566,7 +16567,7 @@ double8 __ovld __conv sub_group_broadcast( double8 value, uint index );
 double16 __ovld __conv sub_group_broadcast( double16 value, uint index );
 #endif  // cl_khr_fp64
 
-#endif  // cl_khr_subgroup_extended_types
+#endif // cl_khr_subgroup_extended_types || CL_VERSION_3_1
 
 #if defined(cl_khr_subgroup_non_uniform_vote)
 int     __ovld sub_group_elect(void);
@@ -16953,7 +16954,7 @@ double  __ovld sub_group_non_uniform_scan_exclusive_max( double value );
 
 #endif // cl_khr_subgroup_non_uniform_arithmetic
 
-#if defined(cl_khr_subgroup_shuffle)
+#if defined(cl_khr_subgroup_shuffle) || (__OPENCL_C_VERSION__ >= CL_VERSION_3_1)
 char    __ovld sub_group_shuffle( char value, uint index );
 uchar   __ovld sub_group_shuffle( uchar value, uint index );
 short   __ovld sub_group_shuffle( short value, uint index );
@@ -16984,9 +16985,10 @@ double  __ovld sub_group_shuffle( double value, uint index );
 double  __ovld sub_group_shuffle_xor( double value, uint mask );
 #endif // cl_khr_fp64
 
-#endif // cl_khr_subgroup_shuffle
+#endif // cl_khr_subgroup_shuffle || CL_VERSION_3_1
 
-#if defined(cl_khr_subgroup_shuffle_relative)
+#if defined(cl_khr_subgroup_shuffle_relative) ||                               \
+    (__OPENCL_C_VERSION__ >= CL_VERSION_3_1)
 char    __ovld sub_group_shuffle_up( char value, uint delta );
 uchar   __ovld sub_group_shuffle_up( uchar value, uint delta );
 short   __ovld sub_group_shuffle_up( short value, uint delta );
@@ -17017,7 +17019,7 @@ double  __ovld sub_group_shuffle_up( double value, uint delta );
 double  __ovld sub_group_shuffle_down( double value, uint delta );
 #endif // cl_khr_fp64
 
-#endif // cl_khr_subgroup_shuffle_relative
+#endif // cl_khr_subgroup_shuffle_relative || CL_VERSION_3_1
 
 #if defined(cl_khr_subgroup_clustered_reduce)
 char    __ovld sub_group_clustered_reduce_add( char value, uint clustersize );
@@ -17107,7 +17109,7 @@ double  __ovld sub_group_clustered_reduce_max( double value, uint clustersize );
 
 #endif // cl_khr_subgroup_clustered_reduce
 
-#if defined(cl_khr_extended_bit_ops)
+#if defined(cl_khr_extended_bit_ops) || (__OPENCL_C_VERSION__ >= CL_VERSION_3_1)
 char __ovld __cnfn bitfield_insert(char, char, uint, uint);
 uchar __ovld __cnfn bitfield_insert(uchar, uchar, uint, uint);
 short __ovld __cnfn bitfield_insert(short, short, uint, uint);
@@ -17305,9 +17307,10 @@ int16 __ovld __cnfn bit_reverse(int16);
 uint16 __ovld __cnfn bit_reverse(uint16);
 long16 __ovld __cnfn bit_reverse(long16);
 ulong16 __ovld __cnfn bit_reverse(ulong16);
-#endif // cl_khr_extended_bit_ops
+#endif // cl_khr_extended_bit_ops || CL_VERSION_3_1
 
-#if defined(__opencl_c_integer_dot_product_input_4x8bit)
+#if defined(__opencl_c_integer_dot_product_input_4x8bit) ||                    \
+    (__OPENCL_C_VERSION__ >= CL_VERSION_3_1)
 uint __ovld __cnfn dot(uchar4, uchar4);
 int __ovld __cnfn dot(char4, char4);
 int __ovld __cnfn dot(uchar4, char4);
@@ -17317,9 +17320,10 @@ uint __ovld __cnfn dot_acc_sat(uchar4, uchar4, uint);
 int __ovld __cnfn dot_acc_sat(char4, char4, int);
 int __ovld __cnfn dot_acc_sat(uchar4, char4, int);
 int __ovld __cnfn dot_acc_sat(char4, uchar4, int);
-#endif // __opencl_c_integer_dot_product_input_4x8bit
+#endif // __opencl_c_integer_dot_product_input_4x8bit || CL_VERSION_3_1
 
-#if defined(__opencl_c_integer_dot_product_input_4x8bit_packed)
+#if defined(__opencl_c_integer_dot_product_input_4x8bit_packed) ||             \
+    (__OPENCL_C_VERSION__ >= CL_VERSION_3_1)
 uint __ovld __cnfn dot_4x8packed_uu_uint(uint, uint);
 int __ovld __cnfn dot_4x8packed_ss_int(uint, uint);
 int __ovld __cnfn dot_4x8packed_us_int(uint, uint);
@@ -17329,9 +17333,9 @@ uint __ovld __cnfn dot_acc_sat_4x8packed_uu_uint(uint, uint, uint);
 int __ovld __cnfn dot_acc_sat_4x8packed_ss_int(uint, uint, int);
 int __ovld __cnfn dot_acc_sat_4x8packed_us_int(uint, uint, int);
 int __ovld __cnfn dot_acc_sat_4x8packed_su_int(uint, uint, int);
-#endif // __opencl_c_integer_dot_product_input_4x8bit_packed
+#endif // __opencl_c_integer_dot_product_input_4x8bit_packed || CL_VERSION_3_1
 
-#if defined(cl_khr_subgroup_rotate)
+#if defined(cl_khr_subgroup_rotate) || (__OPENCL_C_VERSION__ >= CL_VERSION_3_1)
 char __ovld __conv sub_group_rotate(char, int);
 uchar __ovld __conv sub_group_rotate(uchar, int);
 short __ovld __conv sub_group_rotate(short, int);
@@ -17363,7 +17367,7 @@ double __ovld __conv sub_group_clustered_rotate(double, int, uint);
 #if defined(cl_khr_fp16)
 half __ovld __conv sub_group_clustered_rotate(half, int, uint);
 #endif // cl_khr_fp16
-#endif // cl_khr_subgroup_rotate
+#endif // cl_khr_subgroup_rotate || CL_VERSION_3_1
 
 #if defined(cl_khr_kernel_clock)
 #if defined(__opencl_c_kernel_clock_scope_device)

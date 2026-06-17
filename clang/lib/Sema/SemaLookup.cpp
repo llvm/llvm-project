@@ -844,19 +844,28 @@ static void InsertOCLBuiltinDeclarationsFromTable(Sema &S, LookupResult &LR,
     // Ignore this builtin function if it carries an extension macro that is
     // not defined. This indicates that the extension is not supported by the
     // target, so the builtin function should not be available.
+    // Exception: if CoreVersions is set and the current OpenCL version is
+    // greater than or equal to the value, the builtin is available as core
+    // regardless of whether the extension macro is defined.
     StringRef Extensions = FunctionExtensionTable[OpenCLBuiltin.Extension];
     if (!Extensions.empty()) {
-      SmallVector<StringRef, 2> ExtVec;
-      Extensions.split(ExtVec, " ");
-      bool AllExtensionsDefined = true;
-      for (StringRef Ext : ExtVec) {
-        if (!S.getPreprocessor().isMacroDefined(Ext)) {
-          AllExtensionsDefined = false;
-          break;
+      bool AvailableAsCore =
+          OpenCLBuiltin.CoreVersions &&
+          isOpenCLVersionContainedInMask(Context.getLangOpts(),
+                                         OpenCLBuiltin.CoreVersions);
+      if (!AvailableAsCore) {
+        SmallVector<StringRef, 2> ExtVec;
+        Extensions.split(ExtVec, " ");
+        bool AllExtensionsDefined = true;
+        for (StringRef Ext : ExtVec) {
+          if (!S.getPreprocessor().isMacroDefined(Ext)) {
+            AllExtensionsDefined = false;
+            break;
+          }
         }
+        if (!AllExtensionsDefined)
+          continue;
       }
-      if (!AllExtensionsDefined)
-        continue;
     }
 
     SmallVector<QualType, 1> RetTypes;
