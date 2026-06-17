@@ -841,7 +841,7 @@ def canRunLibcxxTests():
         )
         try:
             libcxx_arch_list = subprocess.check_output(
-                ["lipo", "-archs", libcxx_dylib_path], encoding="utf-8"
+                ["lipo", "-archs", libcxx_dylib_path], text=True
             ).split()
             if test_architecture not in libcxx_arch_list:
                 return False, f"libc++ dylib missing {test_architecture} slice"
