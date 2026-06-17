@@ -40,7 +40,6 @@
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/DebugCounter.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
@@ -49,13 +48,6 @@ using HWEventSet = AMDGPU::HWEventSet;
 using HWEvent = AMDGPU::HWEvent;
 
 #define DEBUG_TYPE "si-insert-waitcnts"
-
-DEBUG_COUNTER(ForceExpCounter, DEBUG_TYPE "-forceexp",
-              "Force emit s_waitcnt expcnt(0) instrs");
-DEBUG_COUNTER(ForceLgkmCounter, DEBUG_TYPE "-forcelgkm",
-              "Force emit s_waitcnt lgkmcnt(0) instrs");
-DEBUG_COUNTER(ForceVMCounter, DEBUG_TYPE "-forcevm",
-              "Force emit s_waitcnt vmcnt(0) instrs");
 
 static cl::opt<bool>
     ForceEmitZeroFlag("amdgpu-waitcnt-forcezero",
@@ -421,11 +413,7 @@ public:
                    AliasAnalysis *AA, MachineFunction &MF)
       : MLI(MLI), PDT(PDT), AA(AA), MF(MF), ST(MF.getSubtarget<GCNSubtarget>()),
         TII(*ST.getInstrInfo()), TRI(TII.getRegisterInfo()),
-        MRI(MF.getRegInfo()) {
-    (void)ForceExpCounter;
-    (void)ForceLgkmCounter;
-    (void)ForceVMCounter;
-  }
+        MRI(MF.getRegInfo()) {}
 
   const AMDGPU::HardwareLimits &getLimits() const { return Limits; }
 
@@ -437,42 +425,6 @@ public:
   bool isDSRead(const MachineInstr &MI) const;
   bool mayStoreIncrementingDSCNT(const MachineInstr &MI) const;
   bool run();
-
-  void setForceEmitWaitcnt() {
-// For non-debug builds, ForceEmitWaitcnt has been initialized to false;
-// For debug builds, get the debug counter info and adjust if need be
-#ifndef NDEBUG
-    if (DebugCounter::isCounterSet(ForceExpCounter) &&
-        DebugCounter::shouldExecute(ForceExpCounter)) {
-      ForceEmitWaitcnt[AMDGPU::EXP_CNT] = true;
-    } else {
-      ForceEmitWaitcnt[AMDGPU::EXP_CNT] = false;
-    }
-
-    if (DebugCounter::isCounterSet(ForceLgkmCounter) &&
-        DebugCounter::shouldExecute(ForceLgkmCounter)) {
-      ForceEmitWaitcnt[AMDGPU::DS_CNT] = true;
-      ForceEmitWaitcnt[AMDGPU::KM_CNT] = true;
-    } else {
-      ForceEmitWaitcnt[AMDGPU::DS_CNT] = false;
-      ForceEmitWaitcnt[AMDGPU::KM_CNT] = false;
-    }
-
-    if (DebugCounter::isCounterSet(ForceVMCounter) &&
-        DebugCounter::shouldExecute(ForceVMCounter)) {
-      ForceEmitWaitcnt[AMDGPU::LOAD_CNT] = true;
-      ForceEmitWaitcnt[AMDGPU::SAMPLE_CNT] = true;
-      ForceEmitWaitcnt[AMDGPU::BVH_CNT] = true;
-    } else {
-      ForceEmitWaitcnt[AMDGPU::LOAD_CNT] = false;
-      ForceEmitWaitcnt[AMDGPU::SAMPLE_CNT] = false;
-      ForceEmitWaitcnt[AMDGPU::BVH_CNT] = false;
-    }
-
-    ForceEmitWaitcnt[AMDGPU::VA_VDST] = false;
-    ForceEmitWaitcnt[AMDGPU::VM_VSRC] = false;
-#endif // NDEBUG
-  }
 
   bool isAsync(const MachineInstr &MI) const {
     if (!SIInstrInfo::isLDSDMA(MI))
@@ -2297,7 +2249,6 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     MachineInstr &MI, WaitcntBrackets &ScoreBrackets,
     MachineInstr *OldWaitcntInstr, PreheaderFlushFlags FlushFlags) {
   LLVM_DEBUG(dbgs() << "\n*** GenerateWaitcntInstBefore: "; MI.print(dbgs()););
-  setForceEmitWaitcnt();
 
   assert(!isNonWaitcntMetaInst(MI));
 
