@@ -60,7 +60,7 @@ static cl::opt<unsigned> EpilogDistanceThreshold(
     cl::desc("Maximum approximate instruction distance between an epilog and "
              "its fragment tail before splitting into a new chained unwind "
              "info for Unwind v3."),
-    cl::init(4000));
+    cl::init(3000));
 
 /// After reporting a recoverable error for `MF`, erase all SEH pseudo-
 /// instructions and clear the WinCFI flag so the AsmPrinter doesn't try to
