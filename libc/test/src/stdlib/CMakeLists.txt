@@ -377,6 +377,21 @@ add_libc_test(
 )
 
 add_libc_test(
+  realpath_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    realpath_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.limits_macros
+    libc.src.__support.CPP.string
+    libc.src.__support.macros.config
+    libc.src.stdlib.realpath
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
   memalignment_test
   SUITE
     libc-stdlib-tests
