@@ -177,7 +177,9 @@ class C1UStreamingSchedWrite<SchedWrite StreamingWrite, SchedWrite BaseWrite>
 
 
 // Instructions added by SME and only available in streaming SVE mode
-class C1UStreamingOnlySchedWrite<SchedWrite StreamingWrite> : C1UStreamingSchedWrite<StreamingWrite, C1UWrite_1c>;
+// For these, we return the CME write as a default even if not in streaming.
+class C1UStreamingOnlySchedWrite<SchedWrite StreamingWrite> :
+    C1UStreamingSchedWrite<StreamingWrite, StreamingWrite>;
 
 // Instructions added by SME, available in non-streaming SVE mode or sent to CME
 // when in streaming SVE mode.
