@@ -3101,8 +3101,7 @@ public:
           thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind);
 
       // When the multiplication with holes approach is used, that emits 16
-      // MULs, 8
-      // + 4 ANDs, 12 XORs and 3 ORs.
+      // MULs, 8 + 4 ANDs, 12 XORs and 3 ORs.
       if (BW >= 32 && BW <= 64 &&
           TLI->isOperationLegalOrCustom(ISD::MUL,
                                         TLI->getValueType(DL, RetTy))) {
