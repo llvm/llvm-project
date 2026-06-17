@@ -305,6 +305,10 @@ Non-comprehensive list of changes in this release
   integers including ``_BitInt`` types. This includes constexpr evaluation
   support.
 
+- Added ``__builtin_elementwise_pext`` and ``__builtin_elementwise_pdep`` for
+  parallel bit extract and parallel bit deposit operations on integers including
+  ``_BitInt`` types. This includes constexpr evaluation support.
+
 - Deprecated float types support from ``__builtin_elementwise_max`` and
   ``__builtin_elementwise_min``.
 
