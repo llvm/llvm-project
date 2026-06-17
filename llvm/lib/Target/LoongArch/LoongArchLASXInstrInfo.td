@@ -1213,14 +1213,25 @@ multiclass PatXrXrXr<SDPatternOperator OpNode, string Inst> {
 }
 
 multiclass PatXrXrW<SDPatternOperator OpNode, string Inst> {
-  def : Pat<(OpNode(v32i8 LASX256:$vj), (v32i8 LASX256:$vk)),
+  def : Pat<(v16i16 (OpNode(v32i8 LASX256:$vj), (v32i8 LASX256:$vk))),
             (!cast<LAInst>(Inst#"_H_B") LASX256:$vj, LASX256:$vk)>;
-  def : Pat<(OpNode(v16i16 LASX256:$vj), (v16i16 LASX256:$vk)),
+  def : Pat<(v8i32 (OpNode(v16i16 LASX256:$vj), (v16i16 LASX256:$vk))),
             (!cast<LAInst>(Inst#"_W_H") LASX256:$vj, LASX256:$vk)>;
-  def : Pat<(OpNode(v8i32 LASX256:$vj), (v8i32 LASX256:$vk)),
+  def : Pat<(v4i64 (OpNode(v8i32 LASX256:$vj), (v8i32 LASX256:$vk))),
             (!cast<LAInst>(Inst#"_D_W") LASX256:$vj, LASX256:$vk)>;
-  def : Pat<(OpNode(v4i64 LASX256:$vj), (v4i64 LASX256:$vk)),
+  def : Pat<(v4i64 (OpNode(v4i64 LASX256:$vj), (v4i64 LASX256:$vk))),
             (!cast<LAInst>(Inst#"_Q_D") LASX256:$vj, LASX256:$vk)>;
+}
+
+multiclass PatXrXrWU<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(v16i16 (OpNode(v32i8 LASX256:$vj), (v32i8 LASX256:$vk))),
+            (!cast<LAInst>(Inst#"_HU_BU") LASX256:$vj, LASX256:$vk)>;
+  def : Pat<(v8i32 (OpNode(v16i16 LASX256:$vj), (v16i16 LASX256:$vk))),
+            (!cast<LAInst>(Inst#"_WU_HU") LASX256:$vj, LASX256:$vk)>;
+  def : Pat<(v4i64 (OpNode(v8i32 LASX256:$vj), (v8i32 LASX256:$vk))),
+            (!cast<LAInst>(Inst#"_DU_WU") LASX256:$vj, LASX256:$vk)>;
+  def : Pat<(v4i64 (OpNode(v4i64 LASX256:$vj), (v4i64 LASX256:$vk))),
+            (!cast<LAInst>(Inst#"_QU_DU") LASX256:$vj, LASX256:$vk)>;
 }
 
 multiclass PatShiftXrXr<SDPatternOperator OpNode, string Inst> {
@@ -1633,6 +1644,15 @@ def : Pat<(bswap (v4i64 LASX256:$xj)),
 
 // XVHADDW_{H_B/W_H/D_W/Q_D}
 defm : PatXrXrW<loongarch_vhaddw, "XVHADDW">;
+
+// XVHADDW_{HU_BU/WU_HU/DU_WU/QU_DU}
+defm : PatXrXrWU<loongarch_vhaddw_u, "XVHADDW">;
+
+// XVHSUBW_{H_B/W_H/D_W/Q_D}
+defm : PatXrXrW<loongarch_vhsubw, "XVHSUBW">;
+
+// XVHSUBW_{HU_BU/WU_HU/DU_WU/QU_DU}
+defm : PatXrXrWU<loongarch_vhsubw_u, "XVHSUBW">;
 
 // XVFADD_{S/D}
 defm : PatXrXrF<fadd, "XVFADD">;
