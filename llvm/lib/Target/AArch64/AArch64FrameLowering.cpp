@@ -384,7 +384,11 @@ static bool isLikelyToHaveSVEStack(const AArch64FrameLowering &AFL,
 }
 
 static bool isTargetWindows(const MachineFunction &MF) {
-  return MF.getTarget().getMCAsmInfo().usesWindowsCFI();
+  // TODO: Should this include targets like UEFI (which use Windows CFI).
+  // Note: Currently, there is not AArch64 support for UEFI. The value returned
+  // here must align with UsesWinAAPCS (as determined by getCalleeSavedRegs())
+  // so we use invalidateWindowsRegisterPairing() where appropriate.
+  return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
 }
 
 bool AArch64FrameLowering::hasSVECalleeSavesAboveFrameRecord(
