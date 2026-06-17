@@ -15,12 +15,12 @@ class TestArchetypeInConditionalBreakpoint(TestBase):
     def test_doesnt_stop_free_function(self):
         self.doesnt_stop("break here for free function")
 
-    @skipEmbeddedSwift
+    @skipEmbeddedSwiftOnWindows
     @swiftTest
     def test_stops_class(self):
         self.stops("break here for class")
 
-    @skipEmbeddedSwift
+    @skipEmbeddedSwiftOnWindows
     @swiftTest
     def test_doesnt_stop_class(self):
         self.doesnt_stop("break here for class")
