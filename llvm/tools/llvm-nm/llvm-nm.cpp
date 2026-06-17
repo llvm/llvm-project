@@ -2487,7 +2487,8 @@ int llvm_nm_main(int argc, char **argv, const llvm::ToolContext &) {
                   .Case("32_64", BitModeTy::Bit32_64)
                   .Case("any", BitModeTy::Any)
                   .Default(BitModeTy::Any);
-  }
+  } else
+    BitMode = BitModeTy::Any;
 
   if (Arg *A = Args.getLastArg(OPT_X)) {
     StringRef Mode = A->getValue();
