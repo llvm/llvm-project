@@ -8,7 +8,6 @@
 
 extern "C" {
 #include "InstrProfiling.h"
-#include "InstrProfilingInternal.h"
 #include "InstrProfilingPort.h"
 }
 
@@ -1201,8 +1200,10 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
           PROF_NOTE("Collecting static profile data from device %d (%s)\n", Dev,
                     ArchName);
         for (int i = 0; i < NumShadowVariables; ++i) {
-          /* RDC-mode multi-shadow drains need a distinct profraw per TU;
-           * single-TU programs keep the bare arch target. */
+          /* Stable name per shadow so a repeated drain (explicit collect plus
+           * the atexit drain) overwrites its own profraw rather than emitting a
+           * second one: bare arch for a single TU, arch.<i> for RDC multi-TU.
+           */
           const char *Target = ArchName;
           char TargetWithIdx[64];
           if (NumShadowVariables > 1) {
@@ -1298,6 +1299,10 @@ static int recordHipMultiDeviceLaunchResult(int Rc,
   return Rc;
 }
 
+// The INTERCEPTOR macro defines a `real_<func>` trampoline pointer that the
+// interception runtime must see with external linkage, so it cannot be made
+// static or anonymous as misc-use-internal-linkage would otherwise suggest.
+// NOLINTBEGIN(misc-use-internal-linkage)
 INTERCEPTOR(int, hipLaunchKernel, const void *Function, HipDim3 GridDim,
             HipDim3 BlockDim, void **Args, size_t SharedMemBytes,
             HipStream Stream) {
@@ -1428,6 +1433,7 @@ INTERCEPTOR(int, hipModuleUnload, void *module) {
   __llvm_profile_offload_unregister_dynamic_module(module);
   return REAL(hipModuleUnload)(module);
 }
+// NOLINTEND(misc-use-internal-linkage)
 
 __attribute__((constructor)) static void installHipInterceptors() {
   /* Avoid interception unless the HIP runtime is already loaded. */

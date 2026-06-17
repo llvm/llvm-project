@@ -8,20 +8,15 @@
 //
 // Supplemental HSA-introspection drain (Linux only).
 //
-// The host-shadow drain in InstrProfilingPlatformROCm.cpp only sees device
-// code objects registered host-side (__hipRegisterVar shadows) or loaded
-// through an intercepted hipModuleLoad* call. Device code linked by the offload
-// device linker with no host-side shadow -- e.g. RCCL, whose many device
-// functions are glued into a single kernel with no source module -- is
+// The host-shadow drain in InstrProfilingPlatformROCm.cpp only sees device code
+// objects with a host-side shadow (__hipRegisterVar) or an intercepted
+// hipModuleLoad*. Device-linked code with no host shadow (e.g. RCCL) is
 // invisible to it. This pass walks every GPU agent's loaded executables via
-// HSA, finds each __llvm_profile_sections table directly on the device, and
-// drains the ones the host-shadow pass did not already handle (deduped by the
-// device section-bounds tuple). It reuses processDeviceOffloadPrf() for the
-// copy/relocate/write so the on-disk profraw layout is identical.
+// HSA, finds each __llvm_profile_sections table on the device, and drains the
+// ones the host-shadow pass missed (deduped by the section-bounds tuple). It
+// reuses processDeviceOffloadPrf() so the profraw layout is identical.
 //
-// There is deliberately no Windows counterpart: HSA introspection is Linux-only
-// and Windows relies entirely on the host-shadow HIP drain. On any non-Linux
-// target this file compiles to an empty translation unit.
+// HSA introspection is Linux-only; on any other target this is an empty TU.
 //
 //===----------------------------------------------------------------------===//
 
@@ -29,14 +24,12 @@
 
 extern "C" {
 #include "InstrProfiling.h"
-#include "InstrProfilingInternal.h"
 #include "InstrProfilingPort.h"
 }
 
 #include "InstrProfilingPlatformROCmInternal.h"
 #include "interception/interception.h"
-// C library headers (not <cstdio> etc.): clang_rt.profile is built with
-// -nostdinc++ and avoids the C++ standard library (see profile/CMakeLists.txt).
+// C (not C++) headers: clang_rt.profile is built -nostdinc++.
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -45,9 +38,9 @@ extern "C" {
 
 using namespace __prof_rocm;
 
-/* Minimal HSA type/enum stubs. compiler-rt cannot depend on ROCm headers at
- * build time, so mirror just the handful of HSA declarations the drain needs.
- * Values match hsa/hsa.h and hsa/hsa_ven_amd_loader.h. */
+/* Minimal HSA type/enum stubs: compiler-rt cannot depend on ROCm headers, so
+ * mirror the few declarations the drain needs. Values match hsa/hsa.h and
+ * hsa/hsa_ven_amd_loader.h. */
 typedef uint32_t prof_hsa_status_t;
 #define PROF_HSA_STATUS_SUCCESS ((prof_hsa_status_t)0x0)
 #define PROF_HSA_STATUS_INFO_BREAK ((prof_hsa_status_t)0x1)
@@ -117,8 +110,8 @@ typedef prof_hsa_status_t (*hsa_system_get_major_extension_table_ty)(uint16_t,
 typedef prof_hsa_status_t (*hsa_loader_query_segment_descriptors_ty)(
     prof_hsa_loader_segment_descriptor_t *, size_t *);
 
-/* First two members of hsa_ven_amd_loader_1_00_pfn_t. Only
- * query_segment_descriptors is used; query_host_address keeps the offset. */
+/* First two members of hsa_ven_amd_loader_1_00_pfn_t; query_host_address only
+ * pads the offset to query_segment_descriptors. */
 typedef struct {
   void *query_host_address;
   hsa_loader_query_segment_descriptors_ty query_segment_descriptors;
@@ -130,10 +123,8 @@ static hsa_executable_iterate_agent_symbols_ty pHsaExecIterAgentSyms = nullptr;
 static hsa_executable_symbol_get_info_ty pHsaSymGetInfo = nullptr;
 static hsa_loader_query_segment_descriptors_ty pQuerySegDescs = nullptr;
 
-/* 0 = not yet attempted, 1 = ready, -1 = unavailable. Accessed with acquire/
- * release atomics: a thread observing HsaRuntimeState==1 (acquire) also sees
- * the fully-written p* function pointers (published before the release store
- * of HsaRuntimeState=1 below). */
+/* 0 = not attempted, 1 = ready, -1 = unavailable. Acquire/release atomics: a
+ * thread observing HsaRuntimeState==1 also sees the published p* pointers. */
 static int HsaRuntimeState = 0;
 
 static int setHsaRuntimeState(int S) {
@@ -141,9 +132,8 @@ static int setHsaRuntimeState(int S) {
   return S > 0 ? 0 : -1;
 }
 
-/* Resolve HSA entry points (and the AMD loader extension) once, and confirm
- * HIP's hipMemcpy is reachable for the device-to-host copies. HIP itself is
- * resolved by the shared ensureHipLoaded() above. */
+/* Resolve HSA entry points and the AMD loader extension once, and confirm HIP's
+ * hipMemcpy is reachable for the device-to-host copies. */
 static int loadHsaRuntimePointers(void) {
   int State = __atomic_load_n(&HsaRuntimeState, __ATOMIC_ACQUIRE);
   if (State)
@@ -189,14 +179,8 @@ static int loadHsaRuntimePointers(void) {
     return setHsaRuntimeState(-1);
   }
 
-  /* Bring HSA up (idempotent, refcounted). This runs lazily on the first drain
-   * rather than from the library constructor, so merely loading the
-   * instrumented library does not initialize HSA in the process -- which would
-   * break fork-based callers that deliberately keep HIP/HSA uninitialized in
-   * the parent (see the constructor note at the end of the HSA block). In the
-   * common case the drain runs from the profile write path while HSA is still
-   * alive; if it only runs after HSA's own atexit(hsa_shut_down) has executed,
-   * this simply re-initializes HSA (the process is exiting anyway). */
+  /* Bring HSA up lazily on the first drain (idempotent, refcounted), never from
+   * a library constructor -- see the fork-safety note at end of file. */
   prof_hsa_status_t St = pHsaInit();
   if (St != PROF_HSA_STATUS_SUCCESS && St != PROF_HSA_STATUS_INFO_BREAK) {
     if (isVerboseMode())
@@ -232,10 +216,8 @@ static int loadHsaRuntimePointers(void) {
 static const char ProfileSectionsSymbol[] = "__llvm_profile_sections";
 
 /* Dedup of drained section-bounds tuples, shared with the host-shadow path
- * (processDeviceOffloadPrf records here on every successful drain). A single
- * linked device code object exposes one __llvm_profile_sections, but the same
- * bounds may be seen via multiple agents, so each unique counter set is
- * drained exactly once across both paths. */
+ * (processDeviceOffloadPrf records here on every successful drain) so each
+ * unique counter set is drained exactly once across both paths. */
 namespace {
 struct ProfBoundsTuple {
   const void *data;
@@ -244,17 +226,14 @@ struct ProfBoundsTuple {
 };
 } // namespace
 
-/* Grown on demand (doubling) rather than fixed-cap: in non-RDC mode the entry
- * count scales like num_code_objects * num_agents, so any fixed cap could be
- * exceeded and silently lose dedup coverage (double-counting drained sections).
- * Starts at PROF_SEEN_BOUNDS_INIT_CAP. */
+/* Grown on demand (doubling) rather than fixed-cap: a fixed cap could be
+ * exceeded and silently lose dedup coverage, double-counting sections. */
 #define PROF_SEEN_BOUNDS_INIT_CAP 64
 static ProfBoundsTuple *SeenBounds = nullptr;
 static int NumSeenBounds = 0;
 static int CapSeenBounds = 0;
 
-/* Pure check: has this bounds tuple already been drained? Does not mutate
- * state, so a transient failure does not permanently suppress retries. */
+/* Has this bounds tuple already been drained? Pure check, no state mutation. */
 static int profBoundsAlreadyDrained(const void *D, const void *C,
                                     const void *N) {
   for (int i = 0; i < NumSeenBounds; ++i)
@@ -264,8 +243,8 @@ static int profBoundsAlreadyDrained(const void *D, const void *C,
   return 0;
 }
 
-/* Record a drained bounds tuple. Idempotent. Called after a successful drain
- * (either path) so a failed attempt stays retryable. */
+/* Record a drained bounds tuple. Idempotent; call only after a successful drain
+ * so a failed attempt stays retryable. */
 void __prof_rocm::profRecordDrainedBounds(const void *D, const void *C,
                                           const void *N) {
   if (profBoundsAlreadyDrained(D, C, N))
@@ -274,9 +253,8 @@ void __prof_rocm::profRecordDrainedBounds(const void *D, const void *C,
     int NewCap = CapSeenBounds ? CapSeenBounds * 2 : PROF_SEEN_BOUNDS_INIT_CAP;
     ProfBoundsTuple *New =
         (ProfBoundsTuple *)realloc(SeenBounds, NewCap * sizeof(*New));
-    /* Best-effort: on OOM keep the existing table and skip recording. The
-     * worst case is that this one section is drained again later (a duplicate
-     * profraw record), never a crash. */
+    /* On OOM, keep the old table and skip recording: worst case this section is
+     * drained again later (a duplicate record), never a crash. */
     if (!New)
       return;
     SeenBounds = New;
@@ -376,20 +354,17 @@ static prof_hsa_status_t onSymbol(prof_hsa_executable_t, prof_hsa_agent_t,
     return PROF_HSA_STATUS_SUCCESS;
   }
 
-  // Generate a collision-free target. Multiple distinct device code objects on
-  // the same arch (e.g. non-RDC multi-TU) must not clobber each other's file.
+  // Name HSA-drained objects in their own ".hsaN" suffix space so they never
+  // collide with the host-shadow path's "arch"/"arch.<i>" filenames. The drain
+  // latch (HsaDrainCompleted) already prevents re-draining an object, so a
+  // plain per-drain counter is enough for uniqueness.
   static int DrainIndex = 0;
   char Target[96];
-  if (DrainIndex == 0)
-    snprintf(Target, sizeof(Target), "%s", S->arch);
-  else
-    snprintf(Target, sizeof(Target), "%s.%d", S->arch, DrainIndex);
+  snprintf(Target, sizeof(Target), "%s.hsa%d", S->arch, DrainIndex);
 
-  // processDeviceOffloadPrf returns 0 on a successful write, -1 on error.
-  // Record the bounds (and advance the target index) only on success so a
+  // Record the bounds (and advance the index) only on a successful write so a
   // transient error stays retryable on a later agent or collect call.
-  int Rc = processDeviceOffloadPrf((void *)(uintptr_t)Addr, Target, nullptr);
-  if (Rc == 0) {
+  if (processDeviceOffloadPrf((void *)(uintptr_t)Addr, Target, nullptr) == 0) {
     S->drained++;
     DrainIndex++;
     profRecordDrainedBounds(Sec.DataStart, Sec.CountersStart, Sec.NamesStart);
@@ -425,15 +400,14 @@ static prof_hsa_status_t collectAgent(prof_hsa_agent_t Agent, void *Data) {
   return PROF_HSA_STATUS_SUCCESS;
 }
 
-/* Reentrancy guard and "drained data at least once" latch. The collect hook
- * may run more than once (an explicit early __llvm_profile_write_file plus the
- * exit write); a successful walk latches HsaDrainCompleted so we never re-emit
- * duplicate .profraw files, while transient no-op outcomes ("runtime not yet
- * loadable", "no GPU agents", "no loaded segments", "nothing instrumented")
- * stay retryable so a later call can still pick up code objects loaded later.
- * HsaDrainInProgress prevents a concurrent or reentrant call (e.g. a library
- * destructor) from corrupting the global SeenBounds table. Both flags use
- * acquire/release atomics. */
+/* Reentrancy guard and "drained at least once" latch (both acquire/release).
+ * The collect hook may run more than once (an early __llvm_profile_write_file
+ * plus the exit write): a successful walk latches HsaDrainCompleted so we never
+ * re-emit duplicate .profraw files, while no-op outcomes stay retryable for a
+ * later call. HsaDrainInProgress serializes reentrant HSA walks (e.g. from a
+ * library destructor); note it does not guard against a host-shadow
+ * processDeviceOffloadPrf() on another thread mutating SeenBounds concurrently
+ * -- the dedup table relies on device collection being single-threaded. */
 static int HsaDrainInProgress = 0;
 static int HsaDrainCompleted = 0;
 
@@ -469,8 +443,8 @@ int __prof_rocm::drainDevicesViaHsa(void) {
     return 0;
   }
 
-  /* query_segment_descriptors ships in every loader-extension version and is
-   * more permissive than iterate_executables on ROCm. It yields the loaded
+  /* query_segment_descriptors ships in every loader-extension version, is more
+   * permissive than iterate_executables on ROCm, and yields the loaded
    * (agent, executable) pairs directly. */
   size_t NumSegs = 0;
   St = pQuerySegDescs(nullptr, &NumSegs);
@@ -561,22 +535,19 @@ int __prof_rocm::drainDevicesViaHsa(void) {
               W.num_agents, NumPairs, W.total_found, W.total_drained,
               IterFailures);
 
-  /* Latch only when we actually drained data. Deliberately do NOT latch the
-   * "walked everything but found nothing new" case: an early collect call can
-   * run before any kernel launch, and latching it would suppress the real
-   * exit-time drain once kernels do run. Repeating a no-op walk is cheap. */
+  /* Latch only when we actually drained data. A "found nothing new" walk is
+   * deliberately not latched: an early collect can precede any kernel launch,
+   * and latching it would suppress the real exit-time drain. No-op walks are
+   * cheap to repeat. */
   if (W.total_drained > 0)
     __atomic_store_n(&HsaDrainCompleted, 1, __ATOMIC_RELEASE);
   return (IterFailures > 0) ? -1 : 0;
 }
 
-/* NOTE: deliberately no library constructor that calls hsa_init() here.
- * Bringing HSA up merely because the instrumented library was loaded poisons
- * fork-based callers: frameworks and tests (e.g. RCCL's unit tests) keep
- * HIP/HSA uninitialized in the parent and only touch HIP inside forked
- * children. A parent that has already hsa_init()'d makes those children crash
- * inside HSA (HSA state is not valid across fork()). HSA is instead brought up
- * lazily from drainDevicesViaHsa() -> loadHsaRuntimePointers(); see the init
- * rationale there. */
+/* Fork-safety: deliberately no library constructor calling hsa_init(). HSA
+ * state is invalid across fork(), so initializing it just because the
+ * instrumented library loaded would crash fork-based callers (e.g. RCCL's unit
+ * tests) that keep HIP/HSA uninitialized in the parent and only touch HIP in
+ * forked children. HSA is instead brought up lazily during the drain. */
 
 #endif /* defined(__linux__) && !defined(_WIN32) -- HSA drain */
