@@ -109,6 +109,7 @@
 ; CHECK-NEXT:       RISC-V VL Optimizer
 ; CHECK-NEXT:       RISC-V Vector Peephole Optimization
 ; CHECK-NEXT:       RISC-V Fold Memory Offset
+; CHECK-NEXT:       RISC-V Conditional Branch Combine
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Early Tail Duplication
 ; CHECK-NEXT:       Optimize machine instruction PHIs

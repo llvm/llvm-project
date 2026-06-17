@@ -34,6 +34,7 @@ add_llvm_target(RISCVCodeGen
   RISCVAsmPrinter.cpp
   RISCVCallingConv.cpp
   RISCVCodeGenPrepare.cpp
+  RISCVConditionalBranchCombine.cpp
   RISCVConstantPoolValue.cpp
   RISCVDeadRegisterDefinitions.cpp
   RISCVExpandAtomicPseudoInsts.cpp
