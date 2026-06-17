@@ -412,7 +412,6 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-
 // -----
 
 // Same as test_transfer_read_op but with tensors.
