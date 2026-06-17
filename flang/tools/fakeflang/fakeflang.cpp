@@ -76,6 +76,10 @@ int main(int argc, const char **argv) {
   // `-E`: Invoke the preprocessor
   // `-P`: No #line directives
   // `-D..`: Preprocessor definitions that CMake probes
+  // `-fgnuc-version=0`: Prevent clang from implicitly defining __GNUC__;
+  //                     CMake's CMakeFortranCompilerId.F.in checks
+  //                     __GNUC__before __flang__, so without this flag the
+  //                     compiler is misidentified as GNU.
   // `-x c`: Usually Clang would forward Fortran files to gfortran; Interpret as
   //         C for clang to preprocess the files itself
   // `-o`: -E by default emits to stdout, but CMake expects a new file to appear
@@ -84,9 +88,17 @@ int main(int argc, const char **argv) {
   Args.append({ClangExe, "-E", "-P", "-D__flang__=1",
       "-D__flang_major__=" FLANG_VERSION_MAJOR_STRING,
       "-D__flang_minor__=" FLANG_VERSION_MINOR_STRING,
-      "-D__flang_patchlevel__=" FLANG_VERSION_PATCHLEVEL_STRING, "-x", "c"});
-  for (int I = 1; I < argc; ++I)
-    Args.push_back(argv[I]);
+      "-D__flang_patchlevel__=" FLANG_VERSION_PATCHLEVEL_STRING,
+      "-fgnuc-version=0", "-x", "c"});
+  for (int I = 1; I < argc; ++I) {
+    llvm::StringRef arg = argv[I];
+
+    // Sometime CMake tries to invoke the preprocessor
+    if (arg == "-cpp" || arg == "-E")
+      continue;
+
+    Args.push_back(arg);
+  }
   if (!hasDashO)
     Args.append({"-o", "a.out"});
 
