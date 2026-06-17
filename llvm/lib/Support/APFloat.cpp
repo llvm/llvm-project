@@ -38,7 +38,9 @@
 /// explicitly.  We also put them in a separate namespace so that the symbols
 /// do not clash with other libc math builds just in case.
 #define LIBC_NAMESPACE __llvm_libc_apfloat
-#define LIBC_MATH (LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT)
+#define LIBC_MATH                                                              \
+  (LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT |                                  \
+   LIBC_MATH_ASSUME_ROUND_NEAREST_ONLY)
 
 #include "shared/math.h"
 #include "shared/math_check_exceptions.h"
@@ -6121,7 +6123,7 @@ std::optional<APFloat> exp(const APFloat &x, RoundingMode rounding_mode,
   if (rounding_mode == APFloatBase::rmNearestTiesToEven) {
     if (APFloat::SemanticsToEnum(x.getSemantics()) ==
         APFloatBase::S_IEEEsingle) {
-      float x_val = x.convertToFloat();
+      float x_val = x.bitcastToAPInt().bitsToFloat();
       int exc =
           LIBC_NAMESPACE::shared::check::exp_exceptions(x_val, FE_TONEAREST);
       if (status)
@@ -6131,7 +6133,7 @@ std::optional<APFloat> exp(const APFloat &x, RoundingMode rounding_mode,
     }
     if (APFloat::SemanticsToEnum(x.getSemantics()) ==
         APFloatBase::S_IEEEdouble) {
-      double x_val = x.convertToDouble();
+      double x_val = x.bitcastToAPInt().bitsToDouble();
       int exc =
           LIBC_NAMESPACE::shared::check::exp_exceptions(x_val, FE_TONEAREST);
       if (status)
