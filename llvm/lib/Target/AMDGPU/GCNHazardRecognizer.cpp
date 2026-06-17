@@ -954,11 +954,11 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) const {
     if (VDataIdx == -1)
       return -1;
     if (AMDGPU::getRegBitWidth(VDataRCID) > 64) {
-      // On gfx940-family the BUFFER_STORE source-vgpr WAR hazard exists for
-      // every SOFFSET shape; the wait-state count differs by SOFFSET, and is
-      // computed in checkVALUHazardsHelper. Pre-gfx940 the hazard only exists
-      // if soffset is not an SGPR.
-      if (ST.hasGFX940Insts())
+      // When SOFFSET-dependent wide-store windows apply, the BUFFER_STORE
+      // source-vgpr WAR hazard exists for every SOFFSET shape; the wait-state
+      // count differs by SOFFSET and is computed in checkVALUHazardsHelper.
+      // Otherwise the hazard only exists if soffset is not an SGPR.
+      if (ST.hasVDecCoExecHazard())
         return VDataIdx;
       const MachineOperand *SOffset =
           TII->getNamedOperand(MI, AMDGPU::OpName::soffset);
@@ -990,63 +990,73 @@ int GCNHazardRecognizer::createsVALUHazard(const MachineInstr &MI) const {
   return -1;
 }
 
-int GCNHazardRecognizer::checkVALUHazardsHelper(
-    const MachineOperand &Def, const MachineRegisterInfo &MRI) const {
-  // Helper to check for the hazard where VMEM instructions that store more
-  // than 8 bytes can have their store data overwritten by the next
-  // instruction. On gfx940-family the window depends on the producer's
-  // SOFFSET shape:
+int GCNHazardRecognizer::checkUniformWindowVALUHazardsHelper(
+    Register Reg) const {
+  // Wide stores need a single wait-state bubble before a VALU that overwrites
+  // store data. createsVALUHazard already excludes MUBUF/MTBUF stores with an
+  // SGPR SOFFSET.
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+
+  auto IsHazard = [&](const MachineInstr &MI) {
+    int DataIdx = createsVALUHazard(MI);
+    return DataIdx >= 0 &&
+           TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg);
+  };
+
+  return std::max(0, 1 - getWaitStatesSince(IsHazard, /*Limit=*/1));
+}
+
+int GCNHazardRecognizer::checkSOFFSETWindowVALUHazardsHelper(
+    Register Reg) const {
+  // The required wait-state window depends on the producer's SOFFSET shape:
   //   - MUBUF/MTBUF wide store with sgpr SOFFSET: 1 wait state.
   //   - MUBUF/MTBUF wide store with literal/absent SOFFSET, and FLAT wide
   //     store: 2 wait states.
-  // Pre-gfx940 keeps a single 1-wait-state window. The 1-cycle sgpr-SOFFSET
-  // window was measured on gfx950 (MI350X); the same gate is applied to the
-  // rest of the gfx940 family to match the existing rule's granularity.
+  // The 1-cycle sgpr-SOFFSET window was measured on gfx950.
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const SIInstrInfo *TII = ST.getInstrInfo();
 
   int WaitStatesNeeded = 0;
-  if (!TRI->isVectorRegister(MRI, Def.getReg()))
-    return WaitStatesNeeded;
-  const Register Reg = Def.getReg();
 
-  const int MaxWaitStates = ST.hasGFX940Insts() ? 2 : 1;
+  // Scan each wait-state window separately and take the max padding needed.
+  // getWaitStatesSince supplies the minimum distance to a producer over paths.
+  for (int Window = 1; Window <= 2; ++Window) {
+    auto IsHazard = [&](const MachineInstr &MI) {
+      int DataIdx = createsVALUHazard(MI);
+      if (DataIdx < 0 ||
+          !TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg))
+        return false;
 
-  // Per-producer required wait-state window. On pre-gfx940 every producer
-  // uses 1; on gfx940-family MUBUF/MTBUF stores with an SGPR SOFFSET use 1
-  // and everything else (literal/absent SOFFSET, FLAT) uses 2.
-  auto WindowFor = [this, TII](const MachineInstr &MI) -> int {
-    if (!ST.hasGFX940Insts())
-      return 1;
-    if (TII->isBUF(MI)) {
+      // Window 1 matches every hazard producer. Window 2 excludes BUF stores
+      // with an SGPR SOFFSET, which only require a single wait state.
+      if (Window == 1 || !TII->isBUF(MI))
+        return true;
+
       const MachineOperand *SOffset =
           TII->getNamedOperand(MI, AMDGPU::OpName::soffset);
-      if (SOffset && SOffset->isReg())
-        return 1;
-    }
-    return 2;
-  };
-
-  // For each hazard producer reached, accumulate the wait states still
-  // needed using that producer's own window. The predicate always returns
-  // false so the walk runs to MaxWaitStates.
-  int Distance = 0;
-  auto Counter = [&](const MachineInstr &MI) {
-    int DataIdx = createsVALUHazard(MI);
-    if (DataIdx >= 0 &&
-        TRI->regsOverlap(MI.getOperand(DataIdx).getReg(), Reg)) {
-      int Need = WindowFor(MI) - Distance;
-      WaitStatesNeeded = std::max(WaitStatesNeeded, Need);
-    }
-    // Mirror getWaitStatesSince's accounting, which does not count inline asm
-    // towards the wait-state distance.
-    if (!MI.isInlineAsm())
-      Distance += SIInstrInfo::getNumWaitStates(MI);
-    return false;
-  };
-  getWaitStatesSince(Counter, MaxWaitStates);
+      return !SOffset || !SOffset->isReg();
+    };
+    WaitStatesNeeded = std::max(WaitStatesNeeded,
+                                Window - getWaitStatesSince(IsHazard, Window));
+  }
 
   return WaitStatesNeeded;
+}
+
+int GCNHazardRecognizer::checkVALUHazardsHelper(
+    const MachineOperand &Def, const MachineRegisterInfo &MRI) const {
+  // Helper to check for the hazard where VMEM instructions that store more
+  // than 8 bytes can have their store data overwritten by the next
+  // instruction.
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+
+  if (!TRI->isVectorRegister(MRI, Def.getReg()))
+    return 0;
+
+  if (ST.hasVDecCoExecHazard())
+    return checkSOFFSETWindowVALUHazardsHelper(Def.getReg());
+
+  return checkUniformWindowVALUHazardsHelper(Def.getReg());
 }
 
 /// Dest sel forwarding issue occurs if additional logic is needed to swizzle /
