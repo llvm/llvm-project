@@ -521,6 +521,9 @@ CODEGENOPT(ResMayAlias, 1, 0, Benign)
 /// Assume that all resources are bound if enabled
 CODEGENOPT(AllResourcesBound, 1, 0, Benign)
 
+/// Do not embed dx.source.* metadata in HLSL modules.
+CODEGENOPT(DisableDXSourceMetadata, 1, 0, Benign)
+
 /// Controls the x64 Windows unwind info version.
 ENUM_CODEGENOPT(WinX64EHUnwind, WinX64EHUnwindMode, 3,
                 WinX64EHUnwindMode::Default, Benign)

@@ -409,13 +409,14 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
   return BCLibs;
 }
 
-void HIPAMDToolChain::checkTargetID(
-    const llvm::opt::ArgList &DriverArgs) const {
+HIPAMDToolChain::ParsedTargetIDType
+HIPAMDToolChain::checkTargetID(const llvm::opt::ArgList &DriverArgs) const {
   auto PTID = getParsedTargetID(DriverArgs);
   if (PTID.OptionalTargetID && !PTID.OptionalGPUArch &&
       PTID.OptionalTargetID != "amdgcnspirv")
     getDriver().Diag(clang::diag::err_drv_bad_target_id)
         << *PTID.OptionalTargetID;
+  return PTID;
 }
 
 SPIRVAMDToolChain::SPIRVAMDToolChain(const Driver &D,
