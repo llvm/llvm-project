@@ -38,7 +38,7 @@ define amdgpu_kernel void @f_copy_sign (ptr addrspace(1) %a, ptr addrspace(1) %b
   ; GFX11-REAL16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 32767
   ; GFX11-REAL16-NEXT:   [[V_BFI_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFI_B32_e64 killed [[S_MOV_B32_2]], killed [[REG_SEQUENCE4]], killed [[REG_SEQUENCE3]], implicit $exec
   ; GFX11-REAL16-NEXT:   [[COPY8:%[0-9]+]]:vgpr_16 = COPY [[V_BFI_B32_e64_]].lo16
-  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_SHORT_SADDR_t16 killed [[V_MOV_B32_e32_]], killed [[COPY8]], killed [[REG_SEQUENCE2]], 0, 0, implicit $exec :: (store (s16) into %ir.3, addrspace 1)
+  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_SHORT_SADDR_t16 killed [[V_MOV_B32_e32_]], killed [[COPY8]], killed [[REG_SEQUENCE2]], 0, 0, implicit $exec :: (store (s16) into %ir.6, addrspace 1)
   ; GFX11-REAL16-NEXT:   S_ENDPGM 0
   ;
   ; GFX11-FAKE16-LABEL: name: f_copy_sign
@@ -67,7 +67,7 @@ define amdgpu_kernel void @f_copy_sign (ptr addrspace(1) %a, ptr addrspace(1) %b
   ; GFX11-FAKE16-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR killed [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s16) from %ir.in.gep2, addrspace 1)
   ; GFX11-FAKE16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 32767
   ; GFX11-FAKE16-NEXT:   [[V_BFI_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFI_B32_e64 killed [[S_MOV_B32_2]], killed [[GLOBAL_LOAD_USHORT_SADDR]], killed [[GLOBAL_LOAD_USHORT_SADDR1]], implicit $exec
-  ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_SHORT_SADDR killed [[V_MOV_B32_e32_]], killed [[V_BFI_B32_e64_]], killed [[REG_SEQUENCE2]], 0, 0, implicit $exec :: (store (s16) into %ir.3, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_SHORT_SADDR killed [[V_MOV_B32_e32_]], killed [[V_BFI_B32_e64_]], killed [[REG_SEQUENCE2]], 0, 0, implicit $exec :: (store (s16) into %ir.6, addrspace 1)
   ; GFX11-FAKE16-NEXT:   S_ENDPGM 0
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

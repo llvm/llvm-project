@@ -38,7 +38,7 @@ define amdgpu_kernel void @fma_mix_f16 (ptr addrspace(1) %a, ptr addrspace(1) %b
   ; GFX11-REAL16-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[V_ADD_F16_t16_e64_]], %subreg.lo16, killed [[DEF]], %subreg.hi16
   ; GFX11-REAL16-NEXT:   [[V_FMA_MIX_F16_t16_:%[0-9]+]]:vgpr_16 = nofpexcept V_FMA_MIX_F16_t16 0, killed [[GLOBAL_LOAD_DWORD_SADDR]], 0, killed [[GLOBAL_LOAD_DWORD_SADDR1]], 8, killed [[REG_SEQUENCE4]], 0, 0, 0, implicit $mode, implicit $exec
-  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_SHORT_SADDR_t16 killed [[V_MOV_B32_e32_]], killed [[V_FMA_MIX_F16_t16_]], killed [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s16) into %ir.4, addrspace 1)
+  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_SHORT_SADDR_t16 killed [[V_MOV_B32_e32_]], killed [[V_FMA_MIX_F16_t16_]], killed [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s16) into %ir.8, addrspace 1)
   ; GFX11-REAL16-NEXT:   S_ENDPGM 0
   ;
   ; GFX11-FAKE16-LABEL: name: fma_mix_f16
@@ -73,7 +73,7 @@ define amdgpu_kernel void @fma_mix_f16 (ptr addrspace(1) %a, ptr addrspace(1) %b
   ; GFX11-FAKE16-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX11-FAKE16-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
   ; GFX11-FAKE16-NEXT:   [[V_FMA_MIXLO_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_MIXLO_F16 0, killed [[GLOBAL_LOAD_DWORD_SADDR]], 0, killed [[GLOBAL_LOAD_DWORD_SADDR1]], 8, killed [[V_ADD_F16_fake16_e64_]], 0, [[COPY10]], 0, 0, implicit $mode, implicit $exec
-  ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_SHORT_SADDR killed [[V_MOV_B32_e32_]], killed [[V_FMA_MIXLO_F16_]], killed [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s16) into %ir.4, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_SHORT_SADDR killed [[V_MOV_B32_e32_]], killed [[V_FMA_MIXLO_F16_]], killed [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s16) into %ir.8, addrspace 1)
   ; GFX11-FAKE16-NEXT:   S_ENDPGM 0
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

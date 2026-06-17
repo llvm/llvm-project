@@ -35,7 +35,7 @@ define amdgpu_kernel void @build_vector_bfi (ptr addrspace(1) %a, ptr addrspace(
   ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[COPY9]], %subreg.lo16, killed [[V_MOV_B16_t16_e64_]], %subreg.hi16
   ; GFX11-REAL16-NEXT:   [[COPY10:%[0-9]+]]:vgpr_16 = COPY [[REG_SEQUENCE3]].lo16
   ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[COPY8]], %subreg.lo16, killed [[COPY10]], %subreg.hi16
-  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE4]], killed [[REG_SEQUENCE2]], 0, 0, implicit $exec :: (store (s32) into %ir.3, addrspace 1)
+  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], killed [[REG_SEQUENCE4]], killed [[REG_SEQUENCE2]], 0, 0, implicit $exec :: (store (s32) into %ir.6, addrspace 1)
   ; GFX11-REAL16-NEXT:   S_ENDPGM 0
   ;
   ; GFX11-FAKE16-LABEL: name: build_vector_bfi
@@ -65,7 +65,7 @@ define amdgpu_kernel void @build_vector_bfi (ptr addrspace(1) %a, ptr addrspace(
   ; GFX11-FAKE16-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY killed [[GLOBAL_LOAD_DWORD_SADDR]]
   ; GFX11-FAKE16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
   ; GFX11-FAKE16-NEXT:   [[V_BFI_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFI_B32_e64 killed [[S_MOV_B32_2]], killed [[COPY8]], killed [[GLOBAL_LOAD_DWORD_SADDR1]], implicit $exec
-  ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], killed [[V_BFI_B32_e64_]], killed [[REG_SEQUENCE2]], 0, 0, implicit $exec :: (store (s32) into %ir.3, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], killed [[V_BFI_B32_e64_]], killed [[REG_SEQUENCE2]], 0, 0, implicit $exec :: (store (s32) into %ir.6, addrspace 1)
   ; GFX11-FAKE16-NEXT:   S_ENDPGM 0
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -105,7 +105,7 @@ define amdgpu_kernel void @build_vector_and (ptr addrspace(1) %a, ptr addrspace(
   ; GFX11-REAL16-NEXT:   [[V_MOV_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_MOV_B16_t16_e64 0, 1, 0, implicit $exec
   ; GFX11-REAL16-NEXT:   [[V_ADD_NC_U16_t16_e64_:%[0-9]+]]:vgpr_16 = V_ADD_NC_U16_t16_e64 0, killed [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], 0, killed [[V_MOV_B16_t16_e64_]], 0, 0, implicit $exec
   ; GFX11-REAL16-NEXT:   [[V_CVT_U32_U16_t16_e64_:%[0-9]+]]:vgpr_32 = V_CVT_U32_U16_t16_e64 0, killed [[V_ADD_NC_U16_t16_e64_]], 0, implicit $exec
-  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], killed [[V_CVT_U32_U16_t16_e64_]], killed [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (store (s32) into %ir.2, addrspace 1)
+  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], killed [[V_CVT_U32_U16_t16_e64_]], killed [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (store (s32) into %ir.4, addrspace 1)
   ; GFX11-REAL16-NEXT:   S_ENDPGM 0
   ;
   ; GFX11-FAKE16-LABEL: name: build_vector_and
@@ -131,7 +131,7 @@ define amdgpu_kernel void @build_vector_and (ptr addrspace(1) %a, ptr addrspace(
   ; GFX11-FAKE16-NEXT:   [[V_ADD_NC_U16_fake16_e64_:%[0-9]+]]:vgpr_32 = V_ADD_NC_U16_fake16_e64 0, killed [[GLOBAL_LOAD_USHORT_SADDR]], 0, killed [[S_MOV_B32_2]], 0, 0, implicit $exec
   ; GFX11-FAKE16-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 65535, implicit $exec
   ; GFX11-FAKE16-NEXT:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 killed [[V_MOV_B32_e32_1]], killed [[V_ADD_NC_U16_fake16_e64_]], implicit $exec
-  ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], killed [[V_AND_B32_e64_1]], killed [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (store (s32) into %ir.2, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_DWORD_SADDR killed [[V_MOV_B32_e32_]], killed [[V_AND_B32_e64_1]], killed [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (store (s32) into %ir.4, addrspace 1)
   ; GFX11-FAKE16-NEXT:   S_ENDPGM 0
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

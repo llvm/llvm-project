@@ -21,7 +21,8 @@ define void @preserve_order_64(ptr noalias %buff) #0 {
 ; CHECK-NEXT:    [[BUFF_INT1:%.*]] = extractelement <2 x b64> [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b64 [[BUFF_INT1]] to i64
 ; CHECK-NEXT:    [[BUFF_P2:%.*]] = extractelement <2 x b64> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b64 [[BUFF_P2]] to ptr
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b64 [[BUFF_P2]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP3]] to ptr
 ; CHECK-NEXT:    [[BUFF_VAL:%.*]] = load i8, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    store i8 0, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    ret void
@@ -45,7 +46,8 @@ define void @transitive_reorder(ptr noalias %buff, ptr noalias %nest) #0 {
 ; CHECK-NEXT:    [[BUFF_INT1:%.*]] = extractelement <2 x b64> [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b64 [[BUFF_INT1]] to i64
 ; CHECK-NEXT:    [[BUFF_P2:%.*]] = extractelement <2 x b64> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b64 [[BUFF_P2]] to ptr
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b64 [[BUFF_P2]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP3]] to ptr
 ; CHECK-NEXT:    [[BUFF_VAL:%.*]] = load i8, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    store i8 0, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    ret void

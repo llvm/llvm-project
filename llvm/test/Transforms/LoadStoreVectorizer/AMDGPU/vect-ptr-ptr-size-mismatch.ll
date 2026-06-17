@@ -36,8 +36,10 @@ define void @cast_to_cast() {
 ; CHECK-NEXT:    [[A_ASCAST:%.*]] = addrspacecast ptr addrspace(5) poison to ptr
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 false, ptr [[A_ASCAST]], ptr poison
 ; CHECK-NEXT:    [[TMP0:%.*]] = load b64, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b64 [[TMP0]] to ptr
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b64 [[TMP0]] to ptr
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b64 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b64 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
 ; CHECK-NEXT:    unreachable
 ;
 entry:
