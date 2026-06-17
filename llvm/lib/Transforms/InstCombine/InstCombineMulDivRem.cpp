@@ -1521,21 +1521,19 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
       return isKnownNonZero(V, SQ.getWithInstruction(&I)) &&
              isGuaranteedNotToBePoison(V, SQ.AC, &I, SQ.DT);
     };
-    if (match(Op1, m_OneUse(m_Select(m_Value(Cond), m_One(), m_Value(DivY))))) {
-      if (IsSafeDivisor(DivY)) {
-        Value *NewDiv =
-            Builder.CreateExactBinOp(I.getOpcode(), Op0, DivY, I.isExact());
-        return SelectInst::Create(Cond, Op0, NewDiv, "", nullptr,
-                                  cast<SelectInst>(Op1));
-      }
+    if (match(Op1, m_OneUse(m_Select(m_Value(Cond), m_One(), m_Value(DivY)))) &&
+        IsSafeDivisor(DivY)) {
+      Value *NewDiv =
+          Builder.CreateExactBinOp(I.getOpcode(), Op0, DivY, I.isExact());
+      return SelectInst::Create(Cond, Op0, NewDiv, "", nullptr,
+                                cast<SelectInst>(Op1));
     }
-    if (match(Op1, m_OneUse(m_Select(m_Value(Cond), m_Value(DivY), m_One())))) {
-      if (IsSafeDivisor(DivY)) {
-        Value *NewDiv =
-            Builder.CreateExactBinOp(I.getOpcode(), Op0, DivY, I.isExact());
-        return SelectInst::Create(Cond, NewDiv, Op0, "", nullptr,
-                                  cast<SelectInst>(Op1));
-      }
+    if (match(Op1, m_OneUse(m_Select(m_Value(Cond), m_Value(DivY), m_One()))) &&
+        IsSafeDivisor(DivY)) {
+      Value *NewDiv =
+          Builder.CreateExactBinOp(I.getOpcode(), Op0, DivY, I.isExact());
+      return SelectInst::Create(Cond, NewDiv, Op0, "", nullptr,
+                                cast<SelectInst>(Op1));
     }
   }
 

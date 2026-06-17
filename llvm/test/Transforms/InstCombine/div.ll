@@ -1912,13 +1912,28 @@ define i32 @udiv_select_one_false(i32 %a, i1 %b) {
 
 define i32 @udiv_select_one_false_nonnull_var(i32 %a, i1 %b, i32 noundef %y) {
 ; CHECK-LABEL: @udiv_select_one_false_nonnull_var(
-; CHECK-NEXT:    [[YOR1:%.*]] = or i32 [[Y:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[A:%.*]], [[YOR1]]
+; CHECK-NEXT:    [[YNZ:%.*]] = or i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[A:%.*]], [[YNZ]]
 ; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[B:%.*]], i32 [[A]], i32 [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
   %yor1 = or i32 %y, 1
   %sub = select i1 %b, i32 1, i32 %yor1
+  %div = udiv i32 %a, %sub
+  ret i32 %div
+}
+
+; negative test - divisor is known-non-zero but maybe poison
+
+define i32 @udiv_select_one_false_nonnull_poison_var(i32 %a, i1 %b, i32 %y) {
+; CHECK-LABEL: @udiv_select_one_false_nonnull_poison_var(
+; CHECK-NEXT:    [[YNZ:%.*]] = add nuw i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[B:%.*]], i32 1, i32 [[YNZ]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[A:%.*]], [[SUB]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %ynz = add nuw i32 %y, 1
+  %sub = select i1 %b, i32 1, i32 %ynz
   %div = udiv i32 %a, %sub
   ret i32 %div
 }
@@ -2002,6 +2017,19 @@ define <2 x i32> @udiv_select_one_false_nonnull_var_vec(<2 x i32> %a, i1 %b, <2 
   %yor1 = or <2 x i32> %y, <i32 1, i32 1>
   %sub = select i1 %b, <2 x i32> <i32 1, i32 1>, <2 x i32> %yor1
   %div = udiv <2 x i32> %a, %sub
+  ret <2 x i32> %div
+}
+
+; negative test - divisor has poison
+
+define <2 x i32> @sdiv_select_one_false_poison_vec(<2 x i32> %a, i1 %b) {
+; CHECK-LABEL: @sdiv_select_one_false_poison_vec(
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[B:%.*]], <2 x i32> splat (i32 1), <2 x i32> <i32 2, i32 poison>
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv <2 x i32> [[A:%.*]], [[SUB]]
+; CHECK-NEXT:    ret <2 x i32> [[DIV]]
+;
+  %sub = select i1 %b, <2 x i32> <i32 1, i32 1>, <2 x i32> <i32 2, i32 poison>
+  %div = sdiv <2 x i32> %a, %sub
   ret <2 x i32> %div
 }
 
