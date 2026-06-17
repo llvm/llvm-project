@@ -414,10 +414,6 @@ public:
 
   StringRef mapLTOSectionName(StringRef inputSection, InputFile *file);
 
-  bool matchesFile(const InputSectionDescription *desc,
-                   InputSectionBase *sec) const;
-  bool excludesFile(const SectionPattern *pat, InputSectionBase *sec) const;
-
   // SECTIONS command list.
   SmallVector<SectionCommand *, 0> sectionCommands;
 
