@@ -336,7 +336,7 @@ void HIPAMDToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
                            options::OPT_no_offload_inc, true) &&
         !DriverArgs.hasArg(options::OPT_nohipwrapperinc) &&
         !DriverArgs.hasArg(options::OPT_nobuiltininc))
-      CC1Args.append({"-include", "__clang_hip_device_functions.h"});
+      CC1Args.append({"-include", "__clang_gpu_device_functions.h"});
     return;
   }
 

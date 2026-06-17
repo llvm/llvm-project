@@ -1,15 +1,28 @@
-// REQUIRES: amdgpu-registered-target
+// HIP on AMDGPU.
+// RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
+// RUN:   -internal-isystem %S/../../lib/Headers \
+// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN:   -x hip -fcuda-is-device -target-cpu gfx90a -fsyntax-only -verify %s \
+// RUN:   -include __clang_gpu_device_functions.h
+// RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
+// RUN:   -internal-isystem %S/../../lib/Headers \
+// RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN:   -x hip -fcuda-is-device -target-cpu gfx1100 -fsyntax-only -verify %s \
+// RUN:   -include __clang_gpu_device_functions.h
 
+// HIP on SPIR-V.
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers \
-// RUN:   -triple amdgcn-amd-amdhsa-llvm -aux-triple x86_64-unknown-unknown \
-// RUN:   -fcuda-is-device -target-cpu gfx90a -fsyntax-only -verify %s \
-// RUN:   -include __clang_hip_device_functions.h
+// RUN:   -triple spirv64-amd-amdhsa -aux-triple x86_64-unknown-unknown \
+// RUN:   -x hip -fcuda-is-device -fsyntax-only -verify %s \
+// RUN:   -include __clang_gpu_device_functions.h
+
+// CUDA on NVPTX.
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include \
 // RUN:   -internal-isystem %S/../../lib/Headers \
-// RUN:   -triple amdgcn-amd-amdhsa-llvm -aux-triple x86_64-unknown-unknown \
-// RUN:   -fcuda-is-device -target-cpu gfx1100 -fsyntax-only -verify %s \
-// RUN:   -include __clang_hip_device_functions.h
+// RUN:   -triple nvptx64-nvidia-cuda -aux-triple x86_64-unknown-unknown \
+// RUN:   -x cuda -fcuda-is-device -target-cpu sm_70 -fsyntax-only -verify %s \
+// RUN:   -include __clang_gpu_device_functions.h
 
 // expected-no-diagnostics
 

@@ -86,9 +86,6 @@ set(hip_files
   __clang_hip_math.h
   __clang_hip_stdlib.h
   __clang_hip_runtime_wrapper.h
-  __clang_hip_builtin_vars.h
-  __clang_hip_device_functions.h
-  __clang_hip_intrinsics.h
   )
 
 set(hlsl_h
@@ -309,6 +306,9 @@ set(gpu_files
   nvptxintrin.h
   amdgpuintrin.h
   spirvintrin.h
+  __clang_gpu_builtin_vars.h
+  __clang_gpu_device_functions.h
+  __clang_gpu_intrinsics.h
   )
 
 set(windows_only_files
