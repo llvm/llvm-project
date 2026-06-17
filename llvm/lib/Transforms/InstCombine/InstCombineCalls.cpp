@@ -3682,7 +3682,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             GEP &&
             GEP->getMaxPreservedAlignment(getDataLayout()) >= *Alignment) {
           Builder.CreateAlignmentAssumption(
-              getDataLayout(), GEP->getPointerOperand(), *Alignment);
+              getDataLayout(), GEP->getPointerOperand(), *Alignment,
+              Builder.getInt64(*Offset));
           return RemoveBundle();
         }
 

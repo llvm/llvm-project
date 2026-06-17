@@ -119,6 +119,19 @@ entry:
   ret void
 }
 
+define i1 @align_with_offset_on_gep(ptr %base) {
+; CHECK-LABEL: @align_with_offset_on_gep(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[BASE:%.*]], i64 8, i64 2) ]
+; CHECK-NEXT:    ret i1 true
+;
+  %gep = getelementptr i8, ptr %base, i64 16
+  call void @llvm.assume(i1 true) ["align"(ptr %gep, i64 8, i64 2)]
+  %i = ptrtoint ptr %base to i16
+  %and = and i16 %i, 7
+  %cmp = icmp eq i16 %and, 2
+  ret i1 %cmp
+}
+
 define void @align_with_constant_offset_0(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_0(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
@@ -180,7 +193,7 @@ define void @align_with_variable_offset(ptr %ptr, i64 %offset) {
 
 define void @align_on_gep_keeping_alignment(ptr %ptr, i64 %offset) {
 ; CHECK-LABEL: @align_on_gep_keeping_alignment(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8, i64 0) ]
 ; CHECK-NEXT:    ret void
 ;
   %ptr2 = getelementptr [8 x i8], ptr %ptr, i64 %offset
