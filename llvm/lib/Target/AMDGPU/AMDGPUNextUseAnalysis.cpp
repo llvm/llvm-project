@@ -567,7 +567,8 @@ private:
       const auto &ToInit = R ? ReachablePaths : UnreachablePaths;
       for (const Path &P : ToInit) {
         PathInfo &Slot = getOrInitPathInfo(P.src(), P.dst());
-        assert(Slot.isForwardReachableUnset() || Slot.ForwardReachable == R);
+        assert(Slot.isForwardReachableUnset() ||
+               Slot.ForwardReachable == static_cast<int>(R));
         Slot.ForwardReachable = R;
       }
     }

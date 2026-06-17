@@ -5318,7 +5318,8 @@ static bool isAlternating(const std::array<std::pair<int, int>, 2> &SrcInfo,
     bool C = Src == SrcInfo[1].first && Diff == SrcInfo[1].second;
     assert(C != (Src == SrcInfo[0].first && Diff == SrcInfo[0].second) &&
            "Must match exactly one of the two slides");
-    if (RequiredPolarity != (C == (Idx / Factor) % 2))
+    bool OddGroup = ((Idx / Factor) % 2) != 0;
+    if (RequiredPolarity != (C == OddGroup))
       return false;
   }
   return true;

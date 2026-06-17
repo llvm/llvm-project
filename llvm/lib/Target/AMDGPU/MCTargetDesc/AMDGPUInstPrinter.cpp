@@ -1318,7 +1318,7 @@ void AMDGPUInstPrinter::printExpTgt(const MCInst *MI, unsigned OpNo,
 
 static bool allOpsDefaultValue(const int* Ops, int NumOps, int Mod,
                                bool IsPacked, bool HasDstSel) {
-  int DefaultValue = IsPacked && (Mod == SISrcMods::OP_SEL_1);
+  bool DefaultValue = IsPacked && (Mod == SISrcMods::OP_SEL_1);
 
   for (int I = 0; I < NumOps; ++I) {
     if (!!(Ops[I] & Mod) != DefaultValue)

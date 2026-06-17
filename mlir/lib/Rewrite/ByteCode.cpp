@@ -1441,7 +1441,7 @@ void ByteCodeExecutor::executeApplyConstraint(PatternRewriter &rewriter) {
   processNativeFunResults(results, numResults, rewriteResult);
 
   // Depending on the constraint jump to the proper destination.
-  selectJump(isNegated != succeeded(rewriteResult));
+  selectJump((isNegated != 0) != succeeded(rewriteResult));
 }
 
 LogicalResult ByteCodeExecutor::executeApplyRewrite(PatternRewriter &rewriter) {

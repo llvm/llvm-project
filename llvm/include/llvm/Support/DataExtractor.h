@@ -99,7 +99,7 @@ public:
   /// Get the data pointed to by this extractor.
   StringRef getData() const { return Data; }
   /// Get the endianness for this extractor.
-  bool isLittleEndian() const { return IsLittleEndian; }
+  bool isLittleEndian() const { return IsLittleEndian != 0; }
 
   /// Extract a C string from \a *offset_ptr.
   ///
