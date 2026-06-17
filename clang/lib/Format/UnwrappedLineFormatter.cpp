@@ -975,28 +975,54 @@ private:
           return 0;
         }
 
-        // Check that we still have three lines and they fit into the limit.
+        // We need at least three lines to merge: { / body / }.
         if (I + 2 == E || I[2]->Type == LT_Invalid)
           return 0;
-        Limit = limitConsideringMacros(I + 2, E, Limit);
 
-        if (!nextTwoLinesFitInto(I, Limit))
-          return 0;
-
-        // Second, check that the next line does not contain any braces - if it
-        // does, readability declines when putting it into a single line.
-        if (I[1]->Last->is(TT_LineComment))
-          return 0;
-        do {
-          if (Tok->isOneOf(tok::l_brace, tok::r_brace) &&
-              Tok->isNot(BK_BracedInit)) {
-            return 0;
+        // When macro expansion produces additional unwrapped lines, scan
+        // forward past the expanded lines to find the closing `}`.
+        // For example, RETURN_IF_ERROR(x) expands to `if (x) return expr`;
+        // the parser creates separate unwrapped lines for the `if` and the
+        // `return`, so the function body has two lines instead of one.
+        unsigned NumBodyLines = 1;
+        if (I[1]->First->MacroCtx) {
+          while (I + NumBodyLines + 1 != E &&
+                 I[NumBodyLines + 1]->First->MacroCtx &&
+                 I[NumBodyLines + 1]->First->isNot(tok::r_brace)) {
+            ++NumBodyLines;
           }
-          Tok = Tok->Next;
-        } while (Tok);
+          // Ran off the end without finding a closing `}`.
+          if (I + NumBodyLines + 1 == E)
+            return 0;
+        }
 
-        // Last, check that the third line starts with a closing brace.
-        Tok = I[2]->First;
+        if (I[NumBodyLines + 1]->Type == LT_Invalid)
+          return 0;
+
+        // Check that all body lines plus the closing `}` fit.
+        Limit = limitConsideringMacros(I + NumBodyLines + 1, E, Limit);
+        // Range: opening line, NumBodyLines body lines, closing `}`.
+        if (!nextNLinesFitInto(I, I + NumBodyLines + 2, Limit))
+          return 0;
+
+        // Check that none of the body lines end with a line comment or
+        // contain braces; nesting braces on a single line hurts readability.
+        // (For macro-expanded lines this is unlikely since brace-delimited
+        // blocks become child unwrapped lines, but check anyway.)
+        for (unsigned J = 0; J < NumBodyLines; ++J) {
+          const AnnotatedLine *BodyLine = I[J + 1];
+          if (BodyLine->Last->is(TT_LineComment))
+            return 0;
+          for (const FormatToken *T = BodyLine->First; T; T = T->Next) {
+            if (T->isOneOf(tok::l_brace, tok::r_brace) &&
+                T->isNot(BK_BracedInit)) {
+              return 0;
+            }
+          }
+        }
+
+        // Check that the line after the body starts with a closing brace.
+        Tok = I[NumBodyLines + 1]->First;
         if (Tok->isNot(tok::r_brace))
           return 0;
 
@@ -1017,7 +1043,7 @@ private:
           return 0;
         }
 
-        return 2;
+        return NumBodyLines + 1;
       }
     } else if (I[1]->First->is(tok::l_brace)) {
       if (I[1]->Last->is(TT_LineComment))
