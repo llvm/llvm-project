@@ -588,3 +588,8 @@ def : Pat<(v2i64 (AArch64dup (i64 (load GPR64sp:$Rn)))),
           (LD1Rv2d GPR64sp:$Rn)>;
 def : Pat<(v1i64 (AArch64dup (i64 (load GPR64sp:$Rn)))),
           (LD1Rv1d GPR64sp:$Rn)>;
+
+def : Pat<(i8 imm:$src),
+          (COPY_TO_REGCLASS (MOVi32imm (trunc_imm imm:$src)), GPR32all)>;
+def : Pat<(i16 imm:$src),
+          (COPY_TO_REGCLASS (MOVi32imm (trunc_imm imm:$src)), GPR32all)>;
