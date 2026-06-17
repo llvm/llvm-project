@@ -102,18 +102,16 @@ public:
   }
 
   void registerDeviceSurf(const VarDecl *vd, cir::GlobalOp &var,
-                        bool isExtern) {
-  auto &builder = cgm.getBuilder();
+                          bool isExtern) {
+    auto &builder = cgm.getBuilder();
 
-    var->setAttr(
-        cir::CUDAVarRegistrationInfoAttr::getMnemonic(),
-        cir::CUDAVarRegistrationInfoAttr::get(
-            builder.getContext(),
-            getDeviceSideName(cast<NamedDecl>(vd)),
-            cir::CUDADeviceVarKind::Surface,
-            isExtern,
-            /*isConstant=*/false,
-            /*isManaged=*/false));
+    var->setAttr(cir::CUDAVarRegistrationInfoAttr::getMnemonic(),
+                 cir::CUDAVarRegistrationInfoAttr::get(
+                     builder.getContext(),
+                     getDeviceSideName(cast<NamedDecl>(vd)),
+                     cir::CUDADeviceVarKind::Surface, isExtern,
+                     /*isConstant=*/false,
+                     /*isManaged=*/false));
 
     deviceVars.push_back({
         var,
@@ -487,7 +485,7 @@ void CIRGenNVCUDARuntime::handleVarRegistration(const VarDecl *vd,
 
   } else if (vd->getType()->isCUDADeviceBuiltinTextureType()) {
     cgm.errorNYI(vd->getSourceRange(),
-                "handleVarRegistration: Texture registration");
+                 "handleVarRegistration: Texture registration");
   }
 }
 
