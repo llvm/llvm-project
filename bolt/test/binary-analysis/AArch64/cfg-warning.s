@@ -9,6 +9,15 @@
 
         .text
 
+## A function with a regular CFG must not be reported.
+        .globl  f_good
+        .type   f_good,@function
+f_good:
+        ret
+        .size f_good, .-f_good
+// SUMMARY-NOT: BOLT-WARNING:{{.*}}f_good
+// VERBOSE-NOT: BOLT-WARNING:{{.*}}f_good
+
 ## An unanalyzable indirect branch prevents BOLT from building the CFG.
         .globl  f_nocfg
         .type   f_nocfg,@function

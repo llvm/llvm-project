@@ -3890,11 +3890,12 @@ void RewriteInstance::runBinaryAnalyses() {
   BinaryFunctionPassManager Manager(*BC);
 
   // Warn about functions for which BOLT could not reconstruct the CFG: binary
-  // analyses are les
+  // analyses are less precise on them and may report both false negatives and
+  // false positives.
   unsigned NoCFGCount = 0;
   for (const auto &BFI : BC->getBinaryFunctions()) {
     const BinaryFunction &BF = BFI.second;
-    if (BF.isIgnored() || BF.hasCFG())
+    if (BF.hasCFG())
       continue;
     ++NoCFGCount;
     if (opts::Verbosity >= 1)
