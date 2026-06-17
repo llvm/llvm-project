@@ -71,6 +71,9 @@ Improvements and New Features
   unspecified non-null string, so user code that does not match on the exact message remains correct.
 - ``ifstream::read`` has been optimized to pass through large reads to system calls directly instead of copying them in
   chunks.
+- ``std::scoped_lock`` now carries Clang thread safety annotations when locking multiple mutexes, so
+  ``-Wthread-safety`` no longer incorrectly reports the guarded data accessed inside the block as
+  unprotected. This requires Clang 21 or later.
 
 Deprecations and Removals
 -------------------------
