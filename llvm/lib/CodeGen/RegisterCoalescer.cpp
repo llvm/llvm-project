@@ -1816,10 +1816,35 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
 
   // Mark uses as undef.
   for (MachineOperand &MO : MRI->reg_nodbg_operands(DstReg)) {
-    if (MO.isDef() /*|| MO.isUndef()*/)
+    if (MO.isUndef())
       continue;
-    const MachineInstr &MI = *MO.getParent();
-    SlotIndex UseIdx = LIS->getInstructionIndex(MI);
+
+    MachineInstr *MI = MO.getParent();
+
+    // A partial subreg def also reads the lanes it does not write. Once the
+    // undef value it read has been removed, that read has no incoming value,
+    // so turn it into a read-undef def.
+    if (MO.isDef()) {
+      if (MI == CopyMI)
+        continue;
+
+      unsigned SubReg = MO.getSubReg();
+      if (SubReg == 0 || !MO.readsReg())
+        continue;
+
+      SlotIndex DefIdx =
+          LIS->getInstructionIndex(*MI).getRegSlot(MO.isEarlyClobber());
+      if (DstLI.hasSubRanges()) {
+        addUndefFlag(DstLI, DefIdx, MO, SubReg);
+      } else if (!DstLI.Query(DefIdx).valueIn()) {
+        MO.setIsUndef(true);
+        LLVM_DEBUG(dbgs() << "\tnew read-undef: " << DefIdx << '\t' << *MI);
+      }
+      continue;
+    }
+
+    // Regular uses read at the instruction's use slot.
+    SlotIndex UseIdx = LIS->getInstructionIndex(*MI);
     LaneBitmask UseMask = TRI->getSubRegIndexLaneMask(MO.getSubReg());
     bool isLive;
     if (!UseMask.all() && DstLI.hasSubRanges()) {
@@ -1837,7 +1862,7 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
     if (isLive)
       continue;
     MO.setIsUndef(true);
-    LLVM_DEBUG(dbgs() << "\tnew undef: " << UseIdx << '\t' << MI);
+    LLVM_DEBUG(dbgs() << "\tnew undef: " << UseIdx << '\t' << *MI);
   }
 
   // A def of a subregister may be a use of the other subregisters, so
