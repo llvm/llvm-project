@@ -119,70 +119,11 @@ bool GISelValueTracking::isKnownNeverZero(Register R, const APInt &DemandedElts,
   if (Depth >= getMaxDepth())
     return false;
 
-  const APInt ScalarDemandedElts(1, 1);
   MachineInstr &MI = *MRI.getVRegDef(R);
 
   switch (MI.getOpcode()) {
   default:
     break;
-
-  case TargetOpcode::G_BUILD_VECTOR: {
-    for (const auto &[I, MO] : enumerate(drop_begin(MI.operands()))) {
-      if (!DemandedElts[I])
-        continue;
-      if (!isKnownNeverZero(MO.getReg(), ScalarDemandedElts, Depth + 1))
-        return false;
-    }
-    return true;
-  }
-
-  case TargetOpcode::G_SPLAT_VECTOR: {
-    // G_SPLAT_VECTOR allows its source scalar to be wider than the destination
-    // element type, with the high bits implicitly truncated. Structural
-    // recursion ignores width, so only recurse when the widths already match;
-    // otherwise drop to KnownBits and truncate explicitly.
-    Register Src = MI.getOperand(1).getReg();
-    unsigned EltBW = MRI.getType(R).getScalarSizeInBits();
-    if (MRI.getType(Src).getSizeInBits() == EltBW)
-      return isKnownNeverZero(Src, ScalarDemandedElts, Depth + 1);
-    return getKnownBits(Src, ScalarDemandedElts, Depth + 1)
-        .trunc(EltBW)
-        .isNonZero();
-  }
-
-  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
-    GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
-    Register InVec = Extract.getVectorReg();
-    LLT VecTy = MRI.getType(InVec);
-    if (VecTy.isScalableVector())
-      break;
-    if (MRI.getType(R).getScalarSizeInBits() != VecTy.getScalarSizeInBits())
-      return false;
-    unsigned NumSrcElts = VecTy.getNumElements();
-    APInt DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
-    if (auto Idx = getIConstantVRegVal(Extract.getIndexReg(), MRI))
-      if (Idx->ult(NumSrcElts))
-        DemandedSrcElts = APInt::getOneBitSet(NumSrcElts, Idx->getZExtValue());
-    return isKnownNeverZero(InVec, DemandedSrcElts, Depth + 1);
-  }
-
-  case TargetOpcode::G_SHUFFLE_VECTOR: {
-    GShuffleVector &Shuf = cast<GShuffleVector>(MI);
-    LLT SrcTy = MRI.getType(Shuf.getSrc1Reg());
-    if (SrcTy.isScalableVector())
-      break;
-    APInt DemandedLHS, DemandedRHS;
-    if (!getShuffleDemandedElts(SrcTy.getNumElements(), Shuf.getMask(),
-                                DemandedElts, DemandedLHS, DemandedRHS))
-      break;
-    if (!!DemandedLHS &&
-        !isKnownNeverZero(Shuf.getSrc1Reg(), DemandedLHS, Depth + 1))
-      return false;
-    if (!!DemandedRHS &&
-        !isKnownNeverZero(Shuf.getSrc2Reg(), DemandedRHS, Depth + 1))
-      return false;
-    return true;
-  }
 
   case TargetOpcode::G_OR:
     return isKnownNeverZero(MI.getOperand(1).getReg(), DemandedElts,
