@@ -1038,17 +1038,17 @@ public:
   /// Create a call to non-overloaded intrinsic \p ID with \p Args. If
   /// \p FMFSource is provided, copy fast-math-flags from that instruction to
   /// the intrinsic. It is guranteed not to fold.
-  LLVM_ABI CallInst *CreateIntrinsicWithoutFolding(Intrinsic::ID ID,
-                                                   ArrayRef<Value *> Args,
-                                                   FMFSource FMFSource = {},
-                                                   const Twine &Name = "") {
+  CallInst *CreateIntrinsicWithoutFolding(Intrinsic::ID ID,
+                                          ArrayRef<Value *> Args,
+                                          FMFSource FMFSource = {},
+                                          const Twine &Name = "") {
     return CreateIntrinsicWithoutFolding(ID, /*Types=*/{}, Args, FMFSource,
                                          Name);
   }
 
   /// Variant to create a possibly constant-folded intrinsic. An optional \p
   /// SetFn is called if the intrinsic doesn't fold, and can be used to set
-  /// things like attributes and debug-loc.
+  /// things like attributes.
   LLVM_ABI Value *CreateIntrinsic(
       Intrinsic::ID ID, ArrayRef<Type *> OverloadTypes, ArrayRef<Value *> Args,
       FMFSource FMFSource = {}, const Twine &Name = "",
@@ -1057,7 +1057,7 @@ public:
 
   /// Variant to create a possibly constant-folded intrinsic. An optional \p
   /// SetFn is called if the intrinsic doesn't fold, and can be used to set
-  /// things like attributes and debug-loc.
+  /// things like attributes.
   LLVM_ABI Value *CreateIntrinsic(
       Type *RetTy, Intrinsic::ID ID, ArrayRef<Value *> Args,
       FMFSource FMFSource = {}, const Twine &Name = "",
@@ -1065,8 +1065,8 @@ public:
 
   /// Variant to create a possibly constant-folded intrinsic. An optional \p
   /// SetFn is called if the intrinsic doesn't fold, and can be used to set
-  /// things like attributes and debug-loc.
-  LLVM_ABI Value *CreateIntrinsic(
+  /// things like attributes.
+  Value *CreateIntrinsic(
       Intrinsic::ID ID, ArrayRef<Value *> Args, FMFSource FMFSource = {},
       const Twine &Name = "",
       function_ref<void(CallInst *)> SetFn = [](CallInst *) {}) {
