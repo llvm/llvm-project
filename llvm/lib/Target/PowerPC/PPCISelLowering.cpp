@@ -13062,8 +13062,8 @@ void PPCTargetLowering::ReplaceNodeResults(SDNode *N,
 //  Other Lowering Code
 //===----------------------------------------------------------------------===//
 
-static Instruction *callIntrinsic(IRBuilderBase &Builder, Intrinsic::ID Id) {
-  return Builder.CreateIntrinsic(Id, {});
+static CallInst *callIntrinsic(IRBuilderBase &Builder, Intrinsic::ID Id) {
+  return Builder.CreateIntrinsicWithoutFolding(Id, {});
 }
 
 Value *PPCTargetLowering::emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy,
@@ -13156,8 +13156,8 @@ Instruction *PPCTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
     // http://www.rdrop.com/users/paulmck/scalability/paper/N2745r.2011.03.04a.html
     // and http://www.cl.cam.ac.uk/~pes20/cppppc/ for justification.
     if (isa<LoadInst>(Inst))
-      return Builder.CreateIntrinsic(Intrinsic::ppc_cfence, {Inst->getType()},
-                                     {Inst});
+      return Builder.CreateIntrinsicWithoutFolding(Intrinsic::ppc_cfence,
+                                                   {Inst->getType()}, {Inst});
     // FIXME: Can use isync for rmw operation.
     return callIntrinsic(Builder, Intrinsic::ppc_lwsync);
   }

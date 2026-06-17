@@ -117,6 +117,9 @@ inline constexpr const char *FailedToReadEntityIdObject =
 inline constexpr const char *FailedToPatchEntityIdNotInTable =
     "failed to patch EntityId: '{0}' not found in entity resolution table";
 
+inline constexpr const char *TargetTripleNotNormalized =
+    "target triple '{0}' is not in normalized form (expected '{1}')";
+
 } // namespace ErrorMessages
 
 //----------------------------------------------------------------------------
@@ -166,6 +169,16 @@ entityLinkageTypeFromJSON(llvm::StringRef EntityLinkageTypeStr);
 
 // Provided for consistency with respect to rest of the codebase.
 llvm::StringRef entityLinkageTypeToJSON(EntityLinkageType LT);
+
+//----------------------------------------------------------------------------
+// TargetTriple helpers
+//----------------------------------------------------------------------------
+
+/// Validates that \p Triple is a target triple string in normalized form.
+/// Returns success if \p Triple equals \c llvm::Triple::normalize(Triple),
+/// otherwise returns an \c invalid_argument error describing the expected
+/// normalized form.
+llvm::Error validateNormalizedTargetTriple(llvm::StringRef Triple);
 
 } // namespace clang::ssaf
 

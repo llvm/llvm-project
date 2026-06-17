@@ -14,6 +14,7 @@
 #ifndef LLVM_PROFILEDATA_SAMPLEPROF_H
 #define LLVM_PROFILEDATA_SAMPLEPROF_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -315,13 +316,22 @@ struct LineLocation {
   uint32_t Discriminator;
 };
 
-struct LineLocationHash {
-  uint64_t operator()(const LineLocation &Loc) const {
-    return Loc.getHashCode();
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
+
+} // end namespace sampleprof
+
+template <> struct DenseMapInfo<sampleprof::LineLocation> {
+  static unsigned getHashValue(const sampleprof::LineLocation &Val) {
+    return DenseMapInfo<uint64_t>::getHashValue(Val.getHashCode());
+  }
+
+  static bool isEqual(const sampleprof::LineLocation &LHS,
+                      const sampleprof::LineLocation &RHS) {
+    return LHS == RHS;
   }
 };
 
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
+namespace sampleprof {
 
 /// Key represents type of a C++ polymorphic class type by its vtable and value
 /// represents its counter.
@@ -360,7 +370,7 @@ public:
   };
 
   using SortedCallTargetSet = std::set<CallTarget, CallTargetComparator>;
-  using CallTargetMap = std::unordered_map<FunctionId, uint64_t>;
+  using CallTargetMap = DenseMap<FunctionId, uint64_t>;
   SampleRecord() = default;
 
   /// Increment the number of samples for this record by \p S.
@@ -772,8 +782,7 @@ using BodySampleMap = std::map<LineLocation, SampleRecord>;
 using FunctionSamplesMap = std::map<FunctionId, FunctionSamples>;
 using CallsiteSampleMap = std::map<LineLocation, FunctionSamplesMap>;
 using CallsiteTypeMap = std::map<LineLocation, TypeCountMap>;
-using LocToLocMap =
-    std::unordered_map<LineLocation, LineLocation, LineLocationHash>;
+using LocToLocMap = DenseMap<LineLocation, LineLocation>;
 
 /// Representation of the samples collected for a function.
 ///
@@ -979,11 +988,11 @@ public:
   /// \p Loc with the maximum total sample count. If \p Remapper or \p
   /// FuncNameToProfNameMap is not nullptr, use them to find FunctionSamples
   /// with equivalent name as \p CalleeName.
-  LLVM_ABI const FunctionSamples *findFunctionSamplesAt(
-      const LineLocation &Loc, StringRef CalleeName,
-      SampleProfileReaderItaniumRemapper *Remapper,
-      const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-          *FuncNameToProfNameMap = nullptr) const;
+  LLVM_ABI const FunctionSamples *
+  findFunctionSamplesAt(const LineLocation &Loc, StringRef CalleeName,
+                        SampleProfileReaderItaniumRemapper *Remapper,
+                        const HashKeyMap<DenseMap, FunctionId, FunctionId>
+                            *FuncNameToProfNameMap = nullptr) const;
 
   bool empty() const { return TotalSamples == 0; }
 
@@ -1154,10 +1163,10 @@ public:
   /// corresponding function is no less than \p Threshold, add its corresponding
   /// GUID to \p S. Also traverse the BodySamples to add hot CallTarget's GUID
   /// to \p S.
-  void findInlinedFunctions(DenseSet<GlobalValue::GUID> &S,
-                            const HashKeyMap<std::unordered_map, FunctionId,
-                                             Function *>  &SymbolMap,
-                            uint64_t Threshold) const {
+  void findInlinedFunctions(
+      DenseSet<GlobalValue::GUID> &S,
+      const HashKeyMap<DenseMap, FunctionId, Function *> &SymbolMap,
+      uint64_t Threshold) const {
     if (TotalSamples <= Threshold)
       return;
     auto IsDeclaration = [](const Function *F) {
@@ -1310,11 +1319,11 @@ public:
   /// If \p Remapper or \p FuncNameToProfNameMap is not nullptr, it will be used
   /// to find matching FunctionSamples with not exactly the same but equivalent
   /// name.
-  LLVM_ABI const FunctionSamples *findFunctionSamples(
-      const DILocation *DIL,
-      SampleProfileReaderItaniumRemapper *Remapper = nullptr,
-      const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-          *FuncNameToProfNameMap = nullptr) const;
+  LLVM_ABI const FunctionSamples *
+  findFunctionSamples(const DILocation *DIL,
+                      SampleProfileReaderItaniumRemapper *Remapper = nullptr,
+                      const HashKeyMap<DenseMap, FunctionId, FunctionId>
+                          *FuncNameToProfNameMap = nullptr) const;
 
   LLVM_ABI static bool ProfileIsProbeBased;
 

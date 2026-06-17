@@ -1191,6 +1191,92 @@ define void @store_atomic_vec4_bfloat(ptr %x, <4 x bfloat> %v) nounwind {
   ret void
 }
 
+define void @store_atomic_vec4_float_align(ptr %x, <4 x float> %v) nounwind {
+; CHECK-SSE2-O3-LABEL: store_atomic_vec4_float_align:
+; CHECK-SSE2-O3:       # %bb.0:
+; CHECK-SSE2-O3-NEXT:    pushq %rax
+; CHECK-SSE2-O3-NEXT:    movq %xmm0, %rsi
+; CHECK-SSE2-O3-NEXT:    punpckhqdq {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-SSE2-O3-NEXT:    movq %xmm0, %rdx
+; CHECK-SSE2-O3-NEXT:    movl $3, %ecx
+; CHECK-SSE2-O3-NEXT:    callq __atomic_store_16@PLT
+; CHECK-SSE2-O3-NEXT:    popq %rax
+; CHECK-SSE2-O3-NEXT:    retq
+;
+; CHECK-SSE4-O3-LABEL: store_atomic_vec4_float_align:
+; CHECK-SSE4-O3:       # %bb.0:
+; CHECK-SSE4-O3-NEXT:    pushq %rbx
+; CHECK-SSE4-O3-NEXT:    movdqa (%rdi), %xmm1
+; CHECK-SSE4-O3-NEXT:    pextrq $1, %xmm0, %rcx
+; CHECK-SSE4-O3-NEXT:    movq %xmm0, %rbx
+; CHECK-SSE4-O3-NEXT:    .p2align 4
+; CHECK-SSE4-O3-NEXT:  .LBB39_1: # %atomicrmw.start
+; CHECK-SSE4-O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-SSE4-O3-NEXT:    movq %xmm1, %rax
+; CHECK-SSE4-O3-NEXT:    pextrq $1, %xmm1, %rdx
+; CHECK-SSE4-O3-NEXT:    lock cmpxchg16b (%rdi)
+; CHECK-SSE4-O3-NEXT:    movq %rdx, %xmm0
+; CHECK-SSE4-O3-NEXT:    movq %rax, %xmm1
+; CHECK-SSE4-O3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; CHECK-SSE4-O3-NEXT:    jne .LBB39_1
+; CHECK-SSE4-O3-NEXT:  # %bb.2: # %atomicrmw.end
+; CHECK-SSE4-O3-NEXT:    popq %rbx
+; CHECK-SSE4-O3-NEXT:    retq
+;
+; CHECK-AVX-O3-LABEL: store_atomic_vec4_float_align:
+; CHECK-AVX-O3:       # %bb.0:
+; CHECK-AVX-O3-NEXT:    vmovaps %xmm0, (%rdi)
+; CHECK-AVX-O3-NEXT:    retq
+;
+; CHECK-SSE2-O0-LABEL: store_atomic_vec4_float_align:
+; CHECK-SSE2-O0:       # %bb.0:
+; CHECK-SSE2-O0-NEXT:    pushq %rax
+; CHECK-SSE2-O0-NEXT:    movq %xmm0, %rsi
+; CHECK-SSE2-O0-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
+; CHECK-SSE2-O0-NEXT:    movq %xmm0, %rdx
+; CHECK-SSE2-O0-NEXT:    movl $3, %ecx
+; CHECK-SSE2-O0-NEXT:    callq __atomic_store_16@PLT
+; CHECK-SSE2-O0-NEXT:    popq %rax
+; CHECK-SSE2-O0-NEXT:    retq
+;
+; CHECK-SSE4-O0-LABEL: store_atomic_vec4_float_align:
+; CHECK-SSE4-O0:       # %bb.0:
+; CHECK-SSE4-O0-NEXT:    pushq %rbx
+; CHECK-SSE4-O0-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-SSE4-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-SSE4-O0-NEXT:    movaps (%rdi), %xmm0
+; CHECK-SSE4-O0-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-SSE4-O0-NEXT:  .LBB39_1: # %atomicrmw.start
+; CHECK-SSE4-O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-SSE4-O0-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-SSE4-O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; CHECK-SSE4-O0-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; CHECK-SSE4-O0-NEXT:    pextrq $1, %xmm1, %rcx
+; CHECK-SSE4-O0-NEXT:    movq %xmm1, %rbx
+; CHECK-SSE4-O0-NEXT:    movq %xmm0, %rax
+; CHECK-SSE4-O0-NEXT:    pextrq $1, %xmm0, %rdx
+; CHECK-SSE4-O0-NEXT:    lock cmpxchg16b (%rsi)
+; CHECK-SSE4-O0-NEXT:    movq %rax, %rcx
+; CHECK-SSE4-O0-NEXT:    sete %al
+; CHECK-SSE4-O0-NEXT:    movq %rdx, %xmm1
+; CHECK-SSE4-O0-NEXT:    movq %rcx, %xmm0
+; CHECK-SSE4-O0-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-SSE4-O0-NEXT:    testb $1, %al
+; CHECK-SSE4-O0-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-SSE4-O0-NEXT:    jne .LBB39_2
+; CHECK-SSE4-O0-NEXT:    jmp .LBB39_1
+; CHECK-SSE4-O0-NEXT:  .LBB39_2: # %atomicrmw.end
+; CHECK-SSE4-O0-NEXT:    popq %rbx
+; CHECK-SSE4-O0-NEXT:    retq
+;
+; CHECK-AVX-O0-LABEL: store_atomic_vec4_float_align:
+; CHECK-AVX-O0:       # %bb.0:
+; CHECK-AVX-O0-NEXT:    vmovaps %xmm0, (%rdi)
+; CHECK-AVX-O0-NEXT:    retq
+  store atomic <4 x float> %v, ptr %x release, align 16
+  ret void
+}
+
 define <2 x half> @atomic_vec2_half(ptr %x) {
 ; CHECK-SSE-O3-LABEL: atomic_vec2_half:
 ; CHECK-SSE-O3:       # %bb.0:

@@ -881,6 +881,8 @@ def err_drv_dxc_missing_target_profile : Error<
   "target profile option (-T) is missing">;
 def err_drv_dxc_Fre_requires_Fo_metal
     : Error<"-Fre option requires -Fo option when targeting Metal">;
+def err_drv_dxc_invalid_shader_hash
+    : Error<"cannot specify both /Zss and /Zsb">;
 def err_drv_hlsl_unsupported_target : Error<
   "HLSL code generation is unsupported for target '%0'">;
 def err_drv_hlsl_bad_shader_required_in_target : Error<

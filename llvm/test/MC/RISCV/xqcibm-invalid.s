@@ -541,7 +541,7 @@ qc.extdprh x6, x24, x0
 qc.extdprh x6, x24, x25
 
 
-# CHECK-PLUS: :[[@LINE+2]]:12: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR from x8 to x15
 # CHECK-MINUS: :[[@LINE+1]]:12: error: invalid operand for instruction
 qc.c.bexti x1, 8
 
@@ -556,7 +556,7 @@ qc.c.bexti x15, 43
 qc.c.bexti x9, 8
 
 
-# CHECK-PLUS: :[[@LINE+2]]:12: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:12: error: register must be a GPR from x8 to x15
 # CHECK-MINUS: :[[@LINE+1]]:12: error: invalid operand for instruction
 qc.c.bseti x2, 10
 

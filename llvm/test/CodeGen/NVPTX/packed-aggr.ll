@@ -93,3 +93,14 @@ declare void @func()
 ; CHECK64-SAME: 0xFF(func), 0xFF00(func), 0xFF0000(func), 0xFF000000(func),
 ; CHECK64-SAME: 0xFF00000000(func), 0xFF0000000000(func), 0xFF000000000000(func), 0xFF00000000000000(func),
 ; CHECK64-SAME: 9, 0};
+
+;; Test that a ptrtoint to an integer narrower than a pointer emits only the
+;; symbol's low bytes via mask(), rather than a full pointer that would overrun
+;; and drop the following field. On a 32-bit target an i32 is already pointer-
+;; sized, so the aligned word path is used instead.
+
+@g = addrspace(1) global i32 0
+@s6 = addrspace(1) global { i32, i32 } { i32 ptrtoint (ptr addrspace(1) @g to i32), i32 305419896 }
+; CHECK32: .global .align 8 .u32 s6[2] = {g, 305419896};
+; CHECK64: .global .align 8 .u8 s6[8] = {
+; CHECK64-SAME: 0xFF(g), 0xFF00(g), 0xFF0000(g), 0xFF000000(g), 120, 86, 52, 18};

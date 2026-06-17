@@ -1016,12 +1016,7 @@ void DataFlowGraph::releaseBlock(NodeId B, DefStackMap &DefM) {
     P.second.clear_block(B);
 
   // Finally, remove empty stacks from the map.
-  for (auto I = DefM.begin(), E = DefM.end(), NextI = I; I != E; I = NextI) {
-    NextI = std::next(I);
-    // This preserves the validity of iterators other than I.
-    if (I->second.empty())
-      DefM.erase(I);
-  }
+  DefM.remove_if([](const auto &P) { return P.second.empty(); });
 }
 
 // Push all definitions from the instruction node IA to an appropriate

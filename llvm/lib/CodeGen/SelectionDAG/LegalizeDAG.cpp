@@ -3562,6 +3562,21 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Results.push_back(DAG.getPOISON(DstVT));
     break;
   }
+  case ISD::CONVERT_TO_ARBITRARY_FP: {
+    // Expand conversion from a native IEEE float type to an arbitrary FP
+    // format, returning the result as an integer using bit manipulation.
+    //
+    // TODO: currently only conversions to FP4, FP6 and FP8 formats from OCP
+    // specification are expanded. Remaining arbitrary FP types: Float8E4M3,
+    // Float8E3M4, Float8E5M2FNUZ, Float8E4M3FNUZ, Float8E4M3B11FNUZ,
+    // Float8E8M0FNU.
+    EVT ResVT = Node->getValueType(0);
+    if (SDValue Expanded = TLI.expandCONVERT_TO_ARBITRARY_FP(Node, DAG))
+      Results.push_back(Expanded);
+    else
+      Results.push_back(DAG.getPOISON(ResVT));
+    break;
+  }
   case ISD::FCANONICALIZE: {
     SDValue Mul = TLI.expandFCANONICALIZE(Node, DAG);
     Results.push_back(Mul);

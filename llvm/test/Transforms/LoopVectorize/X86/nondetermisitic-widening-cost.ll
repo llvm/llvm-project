@@ -14,7 +14,7 @@ define float @fun(i64 %0, float %1, ptr noalias  %a, ptr noalias %b, i64 %len) #
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP0]], 2
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], 32
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], 16
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [4 x i8], ptr [[VLA]], i64 [[TMP0]]
@@ -26,50 +26,22 @@ define float @fun(i64 %0, float %1, ptr noalias  %a, ptr noalias %b, i64 %len) #
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 5
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 6
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 7
-; CHECK-NEXT:    [[TMP48:%.*]] = getelementptr [8 x i8], ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP49:%.*]] = getelementptr [8 x i8], ptr [[A]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP50:%.*]] = getelementptr [8 x i8], ptr [[A]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP51:%.*]] = getelementptr [8 x i8], ptr [[A]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr [8 x i8], ptr [[A]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr [8 x i8], ptr [[A]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr [8 x i8], ptr [[A]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr [8 x i8], ptr [[A]], i64 [[TMP10]]
-; CHECK-NEXT:    [[TMP60:%.*]] = load ptr, ptr [[TMP48]], align 8
-; CHECK-NEXT:    [[TMP62:%.*]] = load ptr, ptr [[TMP49]], align 8
-; CHECK-NEXT:    [[TMP64:%.*]] = load ptr, ptr [[TMP50]], align 8
-; CHECK-NEXT:    [[TMP65:%.*]] = load ptr, ptr [[TMP51]], align 8
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr [8 x i8], ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr [8 x i8], ptr [[A]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr [8 x i8], ptr [[A]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr [8 x i8], ptr [[A]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[TMP15]], align 8
 ; CHECK-NEXT:    [[TMP24:%.*]] = load ptr, ptr [[TMP16]], align 8
 ; CHECK-NEXT:    [[TMP25:%.*]] = load ptr, ptr [[TMP17]], align 8
 ; CHECK-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[TMP18]], align 8
-; CHECK-NEXT:    [[TMP66:%.*]] = load i64, ptr [[TMP60]], align 8
-; CHECK-NEXT:    [[TMP33:%.*]] = load i64, ptr [[TMP62]], align 8
-; CHECK-NEXT:    [[TMP67:%.*]] = load i64, ptr [[TMP64]], align 8
-; CHECK-NEXT:    [[TMP35:%.*]] = load i64, ptr [[TMP65]], align 8
 ; CHECK-NEXT:    [[TMP31:%.*]] = load i64, ptr [[TMP23]], align 8
 ; CHECK-NEXT:    [[TMP32:%.*]] = load i64, ptr [[TMP24]], align 8
 ; CHECK-NEXT:    [[TMP36:%.*]] = load i64, ptr [[TMP25]], align 8
 ; CHECK-NEXT:    [[TMP34:%.*]] = load i64, ptr [[TMP26]], align 8
-; CHECK-NEXT:    [[TMP68:%.*]] = getelementptr [4 x i8], ptr [[A]], i64 [[TMP66]]
-; CHECK-NEXT:    [[TMP69:%.*]] = getelementptr [4 x i8], ptr [[A]], i64 [[TMP33]]
-; CHECK-NEXT:    [[TMP70:%.*]] = getelementptr [4 x i8], ptr [[A]], i64 [[TMP67]]
-; CHECK-NEXT:    [[TMP43:%.*]] = getelementptr [4 x i8], ptr [[A]], i64 [[TMP35]]
 ; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr [4 x i8], ptr [[A]], i64 [[TMP31]]
 ; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr [4 x i8], ptr [[A]], i64 [[TMP32]]
 ; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr [4 x i8], ptr [[A]], i64 [[TMP36]]
 ; CHECK-NEXT:    [[TMP47:%.*]] = getelementptr [4 x i8], ptr [[A]], i64 [[TMP34]]
-; CHECK-NEXT:    [[TMP52:%.*]] = load float, ptr [[TMP68]], align 4
-; CHECK-NEXT:    [[TMP53:%.*]] = load float, ptr [[TMP69]], align 4
-; CHECK-NEXT:    [[TMP54:%.*]] = load float, ptr [[TMP70]], align 4
-; CHECK-NEXT:    [[TMP55:%.*]] = load float, ptr [[TMP43]], align 4
-; CHECK-NEXT:    [[TMP56:%.*]] = insertelement <4 x float> poison, float [[TMP52]], i32 0
-; CHECK-NEXT:    [[TMP57:%.*]] = insertelement <4 x float> [[TMP56]], float [[TMP53]], i32 1
-; CHECK-NEXT:    [[TMP58:%.*]] = insertelement <4 x float> [[TMP57]], float [[TMP54]], i32 2
-; CHECK-NEXT:    [[TMP59:%.*]] = insertelement <4 x float> [[TMP58]], float [[TMP55]], i32 3
 ; CHECK-NEXT:    [[TMP71:%.*]] = load float, ptr [[TMP44]], align 4
 ; CHECK-NEXT:    [[TMP72:%.*]] = load float, ptr [[TMP45]], align 4
 ; CHECK-NEXT:    [[TMP73:%.*]] = load float, ptr [[TMP46]], align 4
@@ -79,14 +51,10 @@ define float @fun(i64 %0, float %1, ptr noalias  %a, ptr noalias %b, i64 %len) #
 ; CHECK-NEXT:    [[TMP77:%.*]] = insertelement <4 x float> [[TMP76]], float [[TMP73]], i32 2
 ; CHECK-NEXT:    [[TMP78:%.*]] = insertelement <4 x float> [[TMP77]], float [[TMP74]], i32 3
 ; CHECK-NEXT:    [[TMP61:%.*]] = getelementptr [4 x i8], ptr [[VLA]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP79:%.*]] = getelementptr float, ptr [[TMP61]], i64 4
-; CHECK-NEXT:    store <4 x float> [[TMP59]], ptr [[TMP61]], align 4
-; CHECK-NEXT:    store <4 x float> [[TMP78]], ptr [[TMP79]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP78]], ptr [[TMP61]], align 4
 ; CHECK-NEXT:    [[TMP63:%.*]] = getelementptr [4 x i8], ptr [[TMP4]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP80:%.*]] = getelementptr float, ptr [[TMP63]], i64 4
 ; CHECK-NEXT:    store <4 x float> [[BROADCAST_SPLAT]], ptr [[TMP63]], align 4
-; CHECK-NEXT:    store <4 x float> [[BROADCAST_SPLAT]], ptr [[TMP80]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP37:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
 ; CHECK-NEXT:    br i1 [[TMP37]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

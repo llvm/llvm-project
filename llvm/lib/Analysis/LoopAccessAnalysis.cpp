@@ -240,22 +240,20 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     if (isa<UncondBrInst, CondBrInst>(LoopPred->getTerminator()))
       CtxI = LoopPred->getTerminator();
   }
-  RetainedKnowledge DerefRK;
-  getKnowledgeForValue(StartPtrV, {Attribute::Dereferenceable}, *AC,
-                       [&](RetainedKnowledge RK, Instruction *Assume, auto) {
-                         if (!isValidAssumeForContext(Assume, CtxI, DT))
-                           return false;
-                         DerefRK = std::max(DerefRK, RK);
-                         return true;
-                       });
-  if (DerefRK) {
-    const SCEV *DerefRKSCEV = SE.getSCEV(DerefRK.IRArgValue);
-    Type *CommonTy =
-        SE.getWiderType(DerefBytesSCEV->getType(), DerefRKSCEV->getType());
-    DerefBytesSCEV = SE.getNoopOrZeroExtend(DerefBytesSCEV, CommonTy);
-    DerefRKSCEV = SE.getNoopOrZeroExtend(DerefRKSCEV, CommonTy);
-    DerefBytesSCEV = SE.getUMaxExpr(DerefBytesSCEV, DerefRKSCEV);
-  }
+  getKnowledgeForValue(
+      StartPtrV, Attribute::Dereferenceable, *AC,
+      [&](RetainedKnowledge RK, Instruction *Assume, auto) {
+        if (!isValidAssumeForContext(Assume, CtxI, DT))
+          return false;
+        const SCEV *DerefRKSCEV = SE.getSCEV(RK.IRArgValue);
+        Type *CommonTy =
+            SE.getWiderType(DerefBytesSCEV->getType(), DerefRKSCEV->getType());
+        DerefBytesSCEV = SE.getNoopOrZeroExtend(DerefBytesSCEV, CommonTy);
+        DerefRKSCEV = SE.getNoopOrZeroExtend(DerefRKSCEV, CommonTy);
+        DerefBytesSCEV = SE.getUMaxExpr(DerefBytesSCEV, DerefRKSCEV);
+        // Continue with other assumptions.
+        return false;
+      });
 
   if (DerefBytesSCEV->isZero())
     return false;

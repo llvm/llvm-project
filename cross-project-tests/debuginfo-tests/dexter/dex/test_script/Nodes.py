@@ -23,6 +23,7 @@ def setup_yaml_parser(loader):
         Value,
         DexRange,
         Label,
+        Then,
     ]
     for c in reg_classes:
         c.register_yaml(loader)
@@ -190,6 +191,45 @@ class Value(Expect):
     def register_yaml(loader):
         yaml.add_constructor("!value", Value.constructor, loader)
         yaml.add_representer(Value, Value.representer)
+
+
+##############
+## Execution Nodes: Can appear as leaf nodes directly under a state node to perform debugger actions when they become
+## active, to advance the debugger state.
+
+
+class Then:
+    """Used to perform actions, such as finishing the test or continuing. Will trigger as soon as it becomes active, and
+    intends to advance debugger state, so this must be used directly under a state node, e.g.:
+    `!where {line: 4}: !then finish`
+    """
+
+    def __init__(self, command: str):
+        self.command = command
+        if not self.is_valid():
+            raise DexterNodeError(self, f'Invalid !then command "{self.command}"')
+
+    def is_valid(self) -> bool:
+        valid_commands = ["finish", "step_out"]
+        if self.command not in valid_commands:
+            return False
+        return True
+
+    def __repr__(self):
+        return f"Then({self.command})"
+
+    @staticmethod
+    def constructor(loader, node):
+        return Then(loader.construct_scalar(node))
+
+    @staticmethod
+    def representer(dumper, data):
+        return dumper.represent_scalar("!then", data.command)
+
+    @staticmethod
+    def register_yaml(loader):
+        yaml.add_constructor("!then", Then.constructor, loader)
+        yaml.add_representer(Then, Then.representer)
 
 
 ##############

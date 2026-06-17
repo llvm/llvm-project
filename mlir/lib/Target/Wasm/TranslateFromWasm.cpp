@@ -1361,6 +1361,7 @@ BUILD_NUMERIC_BINOP_INTFP(SubOp, sub)
 BUILD_NUMERIC_UNARY_OP_FP(AbsOp, abs)
 BUILD_NUMERIC_UNARY_OP_FP(CeilOp, ceil)
 BUILD_NUMERIC_UNARY_OP_FP(FloorOp, floor)
+BUILD_NUMERIC_UNARY_OP_FP(NearestOp, nearest)
 BUILD_NUMERIC_UNARY_OP_FP(NegOp, neg)
 BUILD_NUMERIC_UNARY_OP_FP(SqrtOp, sqrt)
 BUILD_NUMERIC_UNARY_OP_FP(TruncOp, trunc)
@@ -1427,6 +1428,17 @@ BUILD_CONVERT_OP_FOR(float, 32)
 BUILD_CONVERT_OP_FOR(double, 64)
 
 #undef BUILD_CONVERT_OP_FOR
+
+#define BUILD_TRUNC_OP_FOR(SRC_T, WIDTH)                                       \
+  BUILD_CONVERSION_OP(SRC_T, int32_t, truncSI32F##WIDTH, TruncSIOp)            \
+  BUILD_CONVERSION_OP(SRC_T, uint32_t, truncUI32F##WIDTH, TruncUIOp)           \
+  BUILD_CONVERSION_OP(SRC_T, int64_t, truncSI64F##WIDTH, TruncSIOp)            \
+  BUILD_CONVERSION_OP(SRC_T, uint64_t, truncUI64F##WIDTH, TruncUIOp)
+
+BUILD_TRUNC_OP_FOR(float, 32)
+BUILD_TRUNC_OP_FOR(double, 64)
+
+#undef BUILD_TRUNC_OP_FOR
 
 BUILD_CONVERSION_OP(int32_t, int64_t, extendS, ExtendSI32Op)
 BUILD_CONVERSION_OP(int32_t, int64_t, extendU, ExtendUI32Op)

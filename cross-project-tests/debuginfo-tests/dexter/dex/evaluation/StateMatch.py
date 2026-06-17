@@ -13,7 +13,7 @@ from typing import Dict, List, Tuple
 
 from dex.dextIR import FrameIR, StepIR
 from dex.test_script import DexterScript, Scope
-from dex.test_script.Nodes import Expect, FileLabels, Value, Where
+from dex.test_script.Nodes import Expect, FileLabels, Value, Where, Then
 
 
 def is_subpath(subpath: str, superpath: str) -> bool:
@@ -61,6 +61,7 @@ class WhereMatchResult:
 
     frame_idx: int
     active_expects: List[Value] = field(default_factory=list)
+    active_thens: List[Then] = field(default_factory=list)
     pending_wheres: List[Where] = field(default_factory=list)
 
 
@@ -118,6 +119,17 @@ def get_active_where_matches(
         ):
             active_where_expects[scope.where].active_expects.append(expect)
 
-    script.visit_script(visit_where=get_active_wheres, visit_expect=get_active_expects)
+    def get_active_thens(then: Then, scope: Scope):
+        if (
+            scope.where in active_where_expects
+            and active_where_expects[scope.where].frame_idx == 0
+        ):
+            active_where_expects[scope.where].active_thens.append(then)
+
+    script.visit_script(
+        visit_where=get_active_wheres,
+        visit_expect=get_active_expects,
+        visit_then=get_active_thens,
+    )
 
     return active_where_expects

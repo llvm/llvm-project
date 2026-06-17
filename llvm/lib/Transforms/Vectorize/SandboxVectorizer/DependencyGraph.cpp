@@ -142,7 +142,8 @@ DGNode::~DGNode() {
 
 #ifndef NDEBUG
 void DGNode::print(raw_ostream &OS, bool PrintDeps) const {
-  OS << *I << " USuccs:" << UnscheduledSuccs << " Sched:" << Scheduled << "\n";
+  OS << *I << " USuccs:" << UnscheduledSuccs << " UPreds:" << UnscheduledPreds
+     << " Sched:" << Scheduled << "\n";
 }
 void DGNode::dump() const { print(dbgs()); }
 void MemDGNode::print(raw_ostream &OS, bool PrintDeps) const {
@@ -305,6 +306,7 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
   // +---+
   // Set the intra-interval counters in NewInterval.
   for (Instruction &I : NewInterval) {
+    unsigned CntUnschedPreds = 0;
     for (Value *Op : I.operands()) {
       auto *OpI = dyn_cast<Instruction>(Op);
       if (OpI == nullptr)
@@ -318,7 +320,10 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
       if (OpN == nullptr)
         continue;
       OpN->incrUnscheduledSuccs();
+      if (!OpN->scheduled())
+        ++CntUnschedPreds;
     }
+    getNode(&I)->UnscheduledPreds = CntUnschedPreds;
   }
 
   // Now handle the cross-interval edges.
@@ -340,6 +345,7 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
     // Skip scheduled nodes.
     if (BotN->scheduled())
       continue;
+    unsigned CntUnscheduledPreds = 0;
     for (Value *Op : BotI.operands()) {
       auto *OpI = dyn_cast<Instruction>(Op);
       if (OpI == nullptr)
@@ -350,7 +356,10 @@ void DependencyGraph::setDefUseUnscheduledSuccs(
       if (!TopInterval.contains(OpI))
         continue;
       OpN->incrUnscheduledSuccs();
+      if (!OpN->scheduled())
+        ++CntUnscheduledPreds;
     }
+    *BotN->UnscheduledPreds += CntUnscheduledPreds;
   }
 }
 
@@ -571,9 +580,12 @@ void DependencyGraph::notifyEraseInstr(Instruction *I) {
     // NOTE: The unscheduled succs for MemNodes get updated be setMemPred().
   } else {
     // If this is a non-mem node we only need to update UnscheduledSuccs.
-    if (!N->scheduled())
+    if (!N->scheduled()) {
       for (auto *PredN : N->preds(*this))
         PredN->decrUnscheduledSuccs();
+      for (auto *SuccN : N->succs(*this))
+        SuccN->decrUnscheduledPreds();
+    }
   }
   // Finally erase the Node.
   InstrToNodeMap.erase(I);
@@ -602,15 +614,19 @@ void DependencyGraph::notifySetUse(const Use &U, Value *NewSrc) {
   if (auto *CurrSrcI = dyn_cast<Instruction>(U.get())) {
     if (auto *CurrSrcN = getNode(CurrSrcI)) {
       // If CurrSrcN is scheduled there is no point in updating UnscheduleSuccs.
-      if (!CurrSrcN->scheduled())
+      if (!CurrSrcN->scheduled()) {
         CurrSrcN->decrUnscheduledSuccs();
+        UserN->decrUnscheduledPreds();
+      }
     }
   }
   if (auto *NewSrcI = dyn_cast<Instruction>(NewSrc)) {
     if (auto *NewSrcN = getNode(NewSrcI)) {
       // If CurrSrcN is scheduled there is no point in updating UnscheduleSuccs.
-      if (!NewSrcN->scheduled())
+      if (!NewSrcN->scheduled()) {
         NewSrcN->incrUnscheduledSuccs();
+        UserN->incrUnscheduledPreds();
+      }
     }
   }
 }

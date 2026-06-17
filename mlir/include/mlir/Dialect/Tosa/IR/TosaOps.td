@@ -2532,6 +2532,42 @@ def Tosa_GatherOp : Tosa_InferShapedTypeOp<"gather", [NoMemoryEffect]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Operator: row_gather
+//===----------------------------------------------------------------------===//
+def Tosa_RowGatherOp : Tosa_InferShapedTypeOp<"row_gather", [NoMemoryEffect]> {
+  let summary = "Row gather operation.";
+
+  let description = [{
+    Generate a tensor based on the input indices and row_count. The number of
+    consecutive rows gathered for each index is specified in row_count. N is 
+    the number of batches, W is the number of indices in each batch, K is
+    the range of each index, and C is the number of data channels for each
+    index. The values tensor has shape [N, K, C] and the output tensor has shape
+    [N, W * row_count, C].
+
+    This operation is not pure. Undefined behaviour may occur if the specified
+    indices are out of range.
+  }];
+
+  let arguments = (ins Tosa_Tensor3D:$values, Tosa_IndexTensor2D:$indices,
+      Tosa_ScalarInt32Tensor:$row_count);
+
+  let results = (outs Tosa_Tensor3D:$output);
+
+  list<Availability> availability = [Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+                                     Extension<[Tosa_EXT_FP8E4M3,
+                                                Tosa_EXT_FP8E5M2, Tosa_EXT_BF16,
+                                                Tosa_EXT_INT64]>,
+  ];
+
+  let hasCanonicalizer = 1;
+  let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
+}
+
+//===----------------------------------------------------------------------===//
 // Operator: row_gather_block_scaled
 //===----------------------------------------------------------------------===//
 def Tosa_RowGatherBlockScaledOp

@@ -76,7 +76,7 @@ define float @PR27826(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[T0]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 5
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[TMP2]], 32
@@ -335,54 +335,82 @@ define float @PR27826(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], [[LOOPEXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
-; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 4
+; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], 8
 ; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP237]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0.000000e+00, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[N_MOD_VF7:%.*]] = urem i64 [[TMP2]], 4
+; CHECK-NEXT:    [[N_MOD_VF7:%.*]] = urem i64 [[TMP2]], 8
 ; CHECK-NEXT:    [[N_VEC8:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF7]]
 ; CHECK-NEXT:    [[TMP238:%.*]] = shl i64 [[N_VEC8]], 5
-; CHECK-NEXT:    [[TMP239:%.*]] = insertelement <4 x float> zeroinitializer, float [[BC_MERGE_RDX]], i32 0
+; CHECK-NEXT:    [[TMP239:%.*]] = insertelement <8 x float> zeroinitializer, float [[BC_MERGE_RDX]], i32 0
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX9:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI10:%.*]] = phi <4 x float> [ [[TMP239]], %[[VEC_EPILOG_PH]] ], [ [[TMP269:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI10:%.*]] = phi <8 x float> [ [[TMP239]], %[[VEC_EPILOG_PH]] ], [ [[TMP297:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP240:%.*]] = shl i64 [[INDEX9]], 5
 ; CHECK-NEXT:    [[TMP241:%.*]] = add i64 [[TMP240]], 32
 ; CHECK-NEXT:    [[TMP242:%.*]] = add i64 [[TMP240]], 64
 ; CHECK-NEXT:    [[TMP243:%.*]] = add i64 [[TMP240]], 96
+; CHECK-NEXT:    [[TMP272:%.*]] = add i64 [[TMP240]], 128
+; CHECK-NEXT:    [[TMP273:%.*]] = add i64 [[TMP240]], 160
+; CHECK-NEXT:    [[TMP274:%.*]] = add i64 [[TMP240]], 192
+; CHECK-NEXT:    [[TMP275:%.*]] = add i64 [[TMP240]], 224
 ; CHECK-NEXT:    [[TMP244:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP240]]
 ; CHECK-NEXT:    [[TMP245:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP241]]
 ; CHECK-NEXT:    [[TMP246:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP242]]
 ; CHECK-NEXT:    [[TMP247:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP243]]
+; CHECK-NEXT:    [[TMP252:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP272]]
+; CHECK-NEXT:    [[TMP253:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP273]]
+; CHECK-NEXT:    [[TMP254:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP274]]
+; CHECK-NEXT:    [[TMP255:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP275]]
 ; CHECK-NEXT:    [[TMP248:%.*]] = load float, ptr [[TMP244]], align 4
 ; CHECK-NEXT:    [[TMP249:%.*]] = load float, ptr [[TMP245]], align 4
 ; CHECK-NEXT:    [[TMP250:%.*]] = load float, ptr [[TMP246]], align 4
 ; CHECK-NEXT:    [[TMP251:%.*]] = load float, ptr [[TMP247]], align 4
-; CHECK-NEXT:    [[TMP252:%.*]] = insertelement <4 x float> poison, float [[TMP248]], i32 0
-; CHECK-NEXT:    [[TMP253:%.*]] = insertelement <4 x float> [[TMP252]], float [[TMP249]], i32 1
-; CHECK-NEXT:    [[TMP254:%.*]] = insertelement <4 x float> [[TMP253]], float [[TMP250]], i32 2
-; CHECK-NEXT:    [[TMP255:%.*]] = insertelement <4 x float> [[TMP254]], float [[TMP251]], i32 3
+; CHECK-NEXT:    [[TMP280:%.*]] = load float, ptr [[TMP252]], align 4
+; CHECK-NEXT:    [[TMP281:%.*]] = load float, ptr [[TMP253]], align 4
+; CHECK-NEXT:    [[TMP282:%.*]] = load float, ptr [[TMP254]], align 4
+; CHECK-NEXT:    [[TMP283:%.*]] = load float, ptr [[TMP255]], align 4
+; CHECK-NEXT:    [[TMP264:%.*]] = insertelement <8 x float> poison, float [[TMP248]], i32 0
+; CHECK-NEXT:    [[TMP265:%.*]] = insertelement <8 x float> [[TMP264]], float [[TMP249]], i32 1
+; CHECK-NEXT:    [[TMP266:%.*]] = insertelement <8 x float> [[TMP265]], float [[TMP250]], i32 2
+; CHECK-NEXT:    [[TMP267:%.*]] = insertelement <8 x float> [[TMP266]], float [[TMP251]], i32 3
+; CHECK-NEXT:    [[TMP268:%.*]] = insertelement <8 x float> [[TMP267]], float [[TMP280]], i32 4
+; CHECK-NEXT:    [[TMP269:%.*]] = insertelement <8 x float> [[TMP268]], float [[TMP281]], i32 5
+; CHECK-NEXT:    [[TMP298:%.*]] = insertelement <8 x float> [[TMP269]], float [[TMP282]], i32 6
+; CHECK-NEXT:    [[TMP271:%.*]] = insertelement <8 x float> [[TMP298]], float [[TMP283]], i32 7
 ; CHECK-NEXT:    [[TMP256:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP240]]
 ; CHECK-NEXT:    [[TMP257:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP241]]
 ; CHECK-NEXT:    [[TMP258:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP242]]
 ; CHECK-NEXT:    [[TMP259:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP243]]
+; CHECK-NEXT:    [[TMP276:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP272]]
+; CHECK-NEXT:    [[TMP277:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP273]]
+; CHECK-NEXT:    [[TMP278:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP274]]
+; CHECK-NEXT:    [[TMP279:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[TMP275]]
 ; CHECK-NEXT:    [[TMP260:%.*]] = load float, ptr [[TMP256]], align 4
 ; CHECK-NEXT:    [[TMP261:%.*]] = load float, ptr [[TMP257]], align 4
 ; CHECK-NEXT:    [[TMP262:%.*]] = load float, ptr [[TMP258]], align 4
 ; CHECK-NEXT:    [[TMP263:%.*]] = load float, ptr [[TMP259]], align 4
-; CHECK-NEXT:    [[TMP264:%.*]] = insertelement <4 x float> poison, float [[TMP260]], i32 0
-; CHECK-NEXT:    [[TMP265:%.*]] = insertelement <4 x float> [[TMP264]], float [[TMP261]], i32 1
-; CHECK-NEXT:    [[TMP266:%.*]] = insertelement <4 x float> [[TMP265]], float [[TMP262]], i32 2
-; CHECK-NEXT:    [[TMP267:%.*]] = insertelement <4 x float> [[TMP266]], float [[TMP263]], i32 3
-; CHECK-NEXT:    [[TMP268:%.*]] = fadd fast <4 x float> [[TMP255]], [[VEC_PHI10]]
-; CHECK-NEXT:    [[TMP269]] = fadd fast <4 x float> [[TMP268]], [[TMP267]]
-; CHECK-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[INDEX9]], 4
+; CHECK-NEXT:    [[TMP284:%.*]] = load float, ptr [[TMP276]], align 4
+; CHECK-NEXT:    [[TMP285:%.*]] = load float, ptr [[TMP277]], align 4
+; CHECK-NEXT:    [[TMP286:%.*]] = load float, ptr [[TMP278]], align 4
+; CHECK-NEXT:    [[TMP287:%.*]] = load float, ptr [[TMP279]], align 4
+; CHECK-NEXT:    [[TMP288:%.*]] = insertelement <8 x float> poison, float [[TMP260]], i32 0
+; CHECK-NEXT:    [[TMP289:%.*]] = insertelement <8 x float> [[TMP288]], float [[TMP261]], i32 1
+; CHECK-NEXT:    [[TMP290:%.*]] = insertelement <8 x float> [[TMP289]], float [[TMP262]], i32 2
+; CHECK-NEXT:    [[TMP291:%.*]] = insertelement <8 x float> [[TMP290]], float [[TMP263]], i32 3
+; CHECK-NEXT:    [[TMP292:%.*]] = insertelement <8 x float> [[TMP291]], float [[TMP284]], i32 4
+; CHECK-NEXT:    [[TMP293:%.*]] = insertelement <8 x float> [[TMP292]], float [[TMP285]], i32 5
+; CHECK-NEXT:    [[TMP294:%.*]] = insertelement <8 x float> [[TMP293]], float [[TMP286]], i32 6
+; CHECK-NEXT:    [[TMP295:%.*]] = insertelement <8 x float> [[TMP294]], float [[TMP287]], i32 7
+; CHECK-NEXT:    [[TMP296:%.*]] = fadd fast <8 x float> [[TMP271]], [[VEC_PHI10]]
+; CHECK-NEXT:    [[TMP297]] = fadd fast <8 x float> [[TMP296]], [[TMP295]]
+; CHECK-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[INDEX9]], 8
 ; CHECK-NEXT:    [[TMP270:%.*]] = icmp eq i64 [[INDEX_NEXT11]], [[N_VEC8]]
 ; CHECK-NEXT:    br i1 [[TMP270]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP271:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP269]])
+; CHECK-NEXT:    [[TMP299:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.000000e+00, <8 x float> [[TMP297]])
 ; CHECK-NEXT:    [[CMP_N12:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC8]]
 ; CHECK-NEXT:    br i1 [[CMP_N12]], [[LOOPEXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
@@ -907,6 +935,7 @@ define i32 @g(i64 %n) {
 ; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i32 [[N_MOD_VF]], 4
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF25:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP20]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]

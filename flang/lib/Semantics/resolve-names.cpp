@@ -3416,9 +3416,16 @@ void ScopeHandler::ApplyImplicitRules(
 // or variables in COMMON to appear in specification expressions under
 // IMPLICIT NONE(TYPE) when what would otherwise have been their implicit
 // type is default INTEGER.
+// Also allow a named constant defined by a PARAMETER statement to be
+// explicitly typed by a later type declaration statement in the same
+// specification part under IMPLICIT NONE(TYPE); the constant acquires the
+// type it would have had under implicit typing rules (F2023 8.7), which a
+// subsequent declaration must match (F2023 8.6.11 p2).
 bool ScopeHandler::ImplicitlyTypeForwardRef(Symbol &symbol) {
+  const bool isNamedConstant{IsNamedConstant(symbol)};
   if (!inSpecificationPart_ || context().HasError(symbol) ||
-      !(IsDummy(symbol) || FindCommonBlockContaining(symbol)) ||
+      !(isNamedConstant || IsDummy(symbol) ||
+          FindCommonBlockContaining(symbol)) ||
       symbol.Rank() != 0 ||
       !context().languageFeatures().IsEnabled(
           common::LanguageFeature::ForwardRefImplicitNone)) {
@@ -3426,12 +3433,20 @@ bool ScopeHandler::ImplicitlyTypeForwardRef(Symbol &symbol) {
   }
   const DeclTypeSpec *type{
       GetImplicitType(symbol, false /*ignore IMPLICIT NONE*/)};
-  if (!type || !type->IsNumeric(TypeCategory::Integer)) {
+  if (!type) {
     return false;
   }
-  auto kind{evaluate::ToInt64(type->numericTypeSpec().kind())};
-  if (!kind || *kind != context().GetDefaultKind(TypeCategory::Integer)) {
-    return false;
+  if (!isNamedConstant) {
+    // For a forward-referenced dummy argument or COMMON variable, only a
+    // default-kind INTEGER implicit type is meaningful (e.g. as an array
+    // bound in a specification expression).
+    if (!type->IsNumeric(TypeCategory::Integer)) {
+      return false;
+    }
+    auto kind{evaluate::ToInt64(type->numericTypeSpec().kind())};
+    if (!kind || *kind != context().GetDefaultKind(TypeCategory::Integer)) {
+      return false;
+    }
   }
   if (!ConvertToObjectEntity(symbol)) {
     return false;
@@ -3621,12 +3636,17 @@ bool ScopeHandler::CheckPossibleBadForwardRef(const Symbol &symbol) {
       return true;
     }
     if ((IsDummy(symbol) ||
-            (!symbol.has<UseDetails>() && FindCommonBlockContaining(symbol))) &&
+            (!symbol.has<UseDetails>() &&
+                (IsNamedConstant(symbol) ||
+                    FindCommonBlockContaining(symbol)))) &&
         isImplicitNoneType() && symbol.test(Symbol::Flag::Implicit) &&
         !context().HasError(symbol)) {
-      // Dummy or COMMON was implicitly typed despite IMPLICIT NONE(TYPE) in
-      // ApplyImplicitRules() due to use in a specification expression,
-      // and no explicit type declaration appeared later.
+      // Dummy, COMMON, or PARAMETER named constant was implicitly typed despite
+      // IMPLICIT NONE(TYPE) in ApplyImplicitRules() due to a forward reference,
+      // and no explicit type declaration appeared later.  A use-associated
+      // named constant is excluded: its Symbol::Flag::Implicit may have been
+      // set legitimately by an IMPLICIT statement in the module that defined
+      // it, where IMPLICIT NONE(TYPE) was not in effect.
       Say(symbol.name(), "No explicit type declared for '%s'"_err_en_US);
       context().SetError(symbol);
       return true;
@@ -5979,7 +5999,7 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
     }
   } else {
     // standard-conforming PARAMETER statement (with parentheses)
-    ApplyImplicitRules(symbol);
+    ApplyImplicitRules(symbol, /*allowForwardReference=*/true);
     Walk(expr);
     if (auto converted{EvaluateNonPointerInitializer(symbol, expr, at)}) {
       details->set_init(std::move(*converted));

@@ -122,8 +122,11 @@ LinkerInput validate(llvm::TimerGroup &TG) {
 void link(const LinkerInput &LI, llvm::TimerGroup &TG) {
   info(2, "Constructing linker.");
 
-  EntityLinker EL(NestedBuildNamespace(
-      BuildNamespace(BuildNamespaceKind::LinkUnit, LI.LinkUnitName)));
+  // TODO: The linker currently uses a hardcoded target triple. Architecture
+  // tracking in the linker will be handled properly in a separate PR.
+  EntityLinker EL(llvm::Triple("arm64-apple-macosx"),
+                  NestedBuildNamespace(BuildNamespace(
+                      BuildNamespaceKind::LinkUnit, LI.LinkUnitName)));
 
   llvm::Timer TRead("read", "Read Summaries", TG);
   llvm::Timer TLink("link", "Link Summaries", TG);

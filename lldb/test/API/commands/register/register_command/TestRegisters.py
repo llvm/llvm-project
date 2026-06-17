@@ -702,6 +702,7 @@ class RegisterCommandsTestCase(TestBase):
             "fs_base does not equal to pthread_self() value.",
         )
 
+    @skipIfWasm  # attaching requires launching the inferior as a host process
     def test_process_must_be_stopped(self):
         """Check that all register commands error when the process is not stopped."""
         self.build()

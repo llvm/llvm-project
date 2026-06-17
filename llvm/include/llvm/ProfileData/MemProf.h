@@ -853,5 +853,17 @@ struct LineLocation {
 // A pair of a call site location and its corresponding callee GUID.
 using CallEdgeTy = std::pair<LineLocation, uint64_t>;
 } // namespace memprof
+
+template <> struct DenseMapInfo<memprof::LineLocation> {
+  static unsigned getHashValue(const memprof::LineLocation &Val) {
+    return DenseMapInfo<uint64_t>::getHashValue(Val.getHashCode());
+  }
+
+  static bool isEqual(const memprof::LineLocation &LHS,
+                      const memprof::LineLocation &RHS) {
+    return LHS == RHS;
+  }
+};
+
 } // namespace llvm
 #endif // LLVM_PROFILEDATA_MEMPROF_H

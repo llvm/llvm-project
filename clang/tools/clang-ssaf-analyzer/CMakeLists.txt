@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   Option
   Support
+  TargetParser
   )
 
 if(CLANG_PLUGIN_SUPPORT)

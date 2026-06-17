@@ -234,7 +234,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     EnableDFAJumpThreading("enable-dfa-jump-thread",
                            cl::desc("Enable DFA jump threading"),
-                           cl::init(false), cl::Hidden);
+                           cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableHotColdSplit("hot-cold-split",

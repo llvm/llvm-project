@@ -9,5 +9,6 @@
       "id": 0
     }
   ],
-  "data": []
+  "data": [],
+  "target_triple": "arm64-apple-macosx"
 }

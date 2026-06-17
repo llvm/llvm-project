@@ -63,6 +63,8 @@ public:
 
   void setABIVersion(unsigned Version) override;
 
+  void emitTargetIDIfSupported(raw_ostream &OS, unsigned EFlags) const override;
+
   DecodeStatus getInstruction(MCInst &MI, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
                               raw_ostream &CS) const override;

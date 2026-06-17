@@ -43,6 +43,7 @@
       }
     }
   ],
+  "target_triple": "arm64-apple-macosx",
   "tu_namespace": {
     "kind": "CompilationUnit",
     "name": "test.cpp"

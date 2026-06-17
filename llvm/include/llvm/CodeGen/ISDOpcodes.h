@@ -1028,6 +1028,15 @@ enum NodeType {
   /// The second operand is a constant indicating the source FP semantics.
   CONVERT_FROM_ARBITRARY_FP,
 
+  /// CONVERT_TO_ARBITRARY_FP - Converts a native FP value to an arbitrary
+  /// floating-point format, returning the result as an integer.
+  /// The first operand is the source value.
+  /// The second operand is a constant indicating the destination FP semantics.
+  /// The third operand is a constant indication the rounding mode.
+  /// The last operand is a boolean constant indicating whether the result has
+  /// to be saturated.
+  CONVERT_TO_ARBITRARY_FP,
+
   /// Perform various unary floating-point operations inspired by libm. For
   /// FPOWI, the result is undefined if the integer operand doesn't fit into
   /// sizeof(int).

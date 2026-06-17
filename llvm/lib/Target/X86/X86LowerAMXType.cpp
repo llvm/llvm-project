@@ -505,8 +505,8 @@ static Instruction *createTileStore(Instruction *TileDef, Value *Ptr) {
   Value *Stride = Builder.getInt64(64);
   std::array<Value *, 5> Args = {Row, Col, Ptr, Stride, TileDef};
 
-  Instruction *TileStore =
-      Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, Args);
+  Instruction *TileStore = Builder.CreateIntrinsicWithoutFolding(
+      Intrinsic::x86_tilestored64_internal, Args);
   return TileStore;
 }
 
@@ -824,11 +824,12 @@ bool X86LowerAMXCast::optimizeAMXCastFromPhi(
         // Create tilezero at the end of incoming block.
         auto *Block = OldPN->getIncomingBlock(I);
         BasicBlock::iterator Iter = Block->getTerminator()->getIterator();
-        Instruction *NewInst = Builder.CreateIntrinsic(
+        Instruction *NewInst = Builder.CreateIntrinsicWithoutFolding(
             Intrinsic::x86_tilezero_internal, {}, {Row, Col});
         NewInst->moveBefore(Iter);
-        NewInst = Builder.CreateIntrinsic(Intrinsic::x86_cast_tile_to_vector,
-                                          {IncValue->getType()}, {NewInst});
+        NewInst = Builder.CreateIntrinsicWithoutFolding(
+            Intrinsic::x86_cast_tile_to_vector, {IncValue->getType()},
+            {NewInst});
         NewInst->moveBefore(Iter);
         // Replace InValue with new Value.
         OldPN->setIncomingValue(I, NewInst);

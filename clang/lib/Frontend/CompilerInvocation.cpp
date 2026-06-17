@@ -4099,6 +4099,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
             .Cases({"cl1.2", "CL1.2"}, LangStandard::lang_opencl12)
             .Cases({"cl2.0", "CL2.0"}, LangStandard::lang_opencl20)
             .Cases({"cl3.0", "CL3.0"}, LangStandard::lang_opencl30)
+            .Cases({"cl3.1", "CL3.1"}, LangStandard::lang_opencl31)
             .Cases({"clc++", "CLC++"}, LangStandard::lang_openclcpp10)
             .Cases({"clc++1.0", "CLC++1.0"}, LangStandard::lang_openclcpp10)
             .Cases({"clc++2021", "CLC++2021"}, LangStandard::lang_openclcpp2021)

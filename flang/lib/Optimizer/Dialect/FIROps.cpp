@@ -2012,89 +2012,6 @@ void fir::ConvertOp::getCanonicalizationPatterns(
       context);
 }
 
-// Returns the pointee element type of a FIR reference-like type or a memref;
-// returns null if `ty` is not pointer-like or has no extractable element
-// type (e.g. unranked memref, box).
-static mlir::Type slotPointeeElemType(mlir::Type ty) {
-  if (mlir::Type fEle = fir::dyn_cast_ptrEleTy(ty))
-    return fEle;
-  if (auto memrefTy = mlir::dyn_cast<mlir::MemRefType>(ty))
-    return memrefTy.getElementType();
-  return {};
-}
-
-// Returns true if a `fir.convert` between pointers with element types
-// `srcElem` and `dstElem` is a no-op at the value level or can be replaced by
-// a bicast.
-static bool isAcceptableSlotElemTypePair(mlir::Type srcElem,
-                                         mlir::Type dstElem) {
-  if (srcElem == dstElem)
-    return true;
-  if (!isBitcastCompatibleType(srcElem) || !isBitcastCompatibleType(dstElem))
-    return false;
-  auto srcBits = getBitcastBitSize(srcElem);
-  auto dstBits = getBitcastBitSize(dstElem);
-  return srcBits && dstBits && *srcBits == *dstBits;
-}
-
-static bool isPromotableSlotAliasConvert(fir::ConvertOp op) {
-  mlir::Type srcElem = slotPointeeElemType(op.getValue().getType());
-  mlir::Type dstElem = slotPointeeElemType(op.getResult().getType());
-  return srcElem && dstElem && isAcceptableSlotElemTypePair(srcElem, dstElem);
-}
-
-void fir::ConvertOp::getPromotableSlotAliases(
-    mlir::OpOperand &aliasedSlotPointerOperand,
-    const mlir::MemorySlot & /*parentSlot*/,
-    llvm::SmallVectorImpl<mlir::MemorySlot> &newMemorySlots) {
-  if (aliasedSlotPointerOperand.get() != getValue())
-    return;
-  if (!isPromotableSlotAliasConvert(*this))
-    return;
-  mlir::Type dstElem = slotPointeeElemType(getResult().getType());
-  newMemorySlots.push_back(mlir::MemorySlot{getResult(), dstElem});
-}
-
-mlir::Value fir::ConvertOp::projectSlotValueToAliasValue(
-    mlir::OpOperand & /*aliasedSlotPointerOperand*/,
-    const mlir::MemorySlot & /*parentSlot*/, const mlir::MemorySlot &aliasSlot,
-    mlir::Value slotValue, mlir::OpBuilder &builder) {
-  if (slotValue.getType() == aliasSlot.elemType)
-    return slotValue;
-  return fir::BitcastOp::create(builder, getLoc(), aliasSlot.elemType,
-                                slotValue);
-}
-
-mlir::Value fir::ConvertOp::projectAliasValueToSlotValue(
-    mlir::OpOperand & /*aliasedSlotPointerOperand*/,
-    const mlir::MemorySlot &parentSlot, const mlir::MemorySlot & /*aliasSlot*/,
-    mlir::Value aliasValue, mlir::Value /*reachingDef*/,
-    mlir::OpBuilder &builder) {
-  if (aliasValue.getType() == parentSlot.elemType)
-    return aliasValue;
-  return fir::BitcastOp::create(builder, getLoc(), parentSlot.elemType,
-                                aliasValue);
-}
-
-bool fir::ConvertOp::canUsesBeRemoved(
-    const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
-    mlir::SmallVectorImpl<mlir::OpOperand *> &newBlockingUses,
-    const mlir::DataLayout &dataLayout) {
-  // Only participate in promotion when this convert is a slot alias (if the
-  // address cast is not used, DCE should have removed it).
-  if (!isPromotableSlotAliasConvert(*this))
-    return false;
-  for (mlir::OpOperand &use : getResult().getUses())
-    newBlockingUses.push_back(&use);
-  return true;
-}
-
-mlir::DeletionKind fir::ConvertOp::removeBlockingUses(
-    const mlir::SmallPtrSetImpl<mlir::OpOperand *> &blockingUses,
-    mlir::OpBuilder &builder) {
-  return mlir::DeletionKind::Delete;
-}
-
 static bool isI1(mlir::Type ty) {
   if (auto intTy = mlir::dyn_cast<mlir::IntegerType>(ty))
     return intTy.getWidth() == 1;
@@ -3671,8 +3588,17 @@ llvm::SmallVector<mlir::Attribute> fir::LenParamIndexOp::getAttributes() {
 // LoadOp
 //===----------------------------------------------------------------------===//
 
+static bool isSlotOrDeclaredSlot(mlir::Value val,
+                                 const mlir::MemorySlot &slot) {
+  if (val == slot.ptr)
+    return true;
+  if (auto declareOp = val.getDefiningOp<fir::DeclareOp>())
+    return declareOp.getMemref() == slot.ptr;
+  return false;
+}
+
 bool fir::LoadOp::loadsFrom(const mlir::MemorySlot &slot) {
-  return getMemref() == slot.ptr;
+  return isSlotOrDeclaredSlot(getMemref(), slot);
 }
 
 bool fir::LoadOp::storesTo(const mlir::MemorySlot &slot) { return false; }
@@ -3692,8 +3618,7 @@ bool fir::LoadOp::canUsesBeRemoved(
   if (blockingUses.size() != 1)
     return false;
   mlir::Value blockingUse = (*blockingUses.begin())->get();
-  return blockingUse == slot.ptr && getMemref() == slot.ptr &&
-         getResult().getType() == slot.elemType;
+  return isSlotOrDeclaredSlot(blockingUse, slot) && getMemref() == blockingUse;
 }
 
 mlir::DeletionKind fir::LoadOp::removeBlockingUses(
@@ -5243,7 +5168,7 @@ llvm::LogicalResult fir::SliceOp::verify() {
 bool fir::StoreOp::loadsFrom(const mlir::MemorySlot &slot) { return false; }
 
 bool fir::StoreOp::storesTo(const mlir::MemorySlot &slot) {
-  return getMemref() == slot.ptr;
+  return isSlotOrDeclaredSlot(getMemref(), slot);
 }
 
 mlir::Value fir::StoreOp::getStored(const mlir::MemorySlot &slot,
@@ -5261,8 +5186,8 @@ bool fir::StoreOp::canUsesBeRemoved(
   if (blockingUses.size() != 1)
     return false;
   mlir::Value blockingUse = (*blockingUses.begin())->get();
-  return blockingUse == slot.ptr && getMemref() == slot.ptr &&
-         getValue() != slot.ptr && getValue().getType() == slot.elemType;
+  return isSlotOrDeclaredSlot(blockingUse, slot) &&
+         getMemref() == blockingUse && getValue() != blockingUse;
 }
 
 mlir::DeletionKind fir::StoreOp::removeBlockingUses(
@@ -6125,8 +6050,17 @@ bool fir::DeclareOp::canUsesBeRemoved(
     const mlir::DataLayout &dataLayout) {
   if (!isLegalTypeForValueDeclare(fir::unwrapRefType(getType())))
     return false;
-  for (mlir::OpOperand &use : getResult().getUses())
+  // MLIR's mem2reg computes defining blocks only from direct users of
+  // the slot pointer. Stores through fir.declare are not direct users,
+  // so they are not registered as defining blocks. This causes missing
+  // phi nodes at join points (e.g., loop headers). Restrict promotion
+  // to the single-block case where no phi nodes are needed.
+  mlir::Block *declBlock = getOperation()->getBlock();
+  for (mlir::OpOperand &use : getResult().getUses()) {
+    if (use.getOwner()->getBlock() != declBlock)
+      return false;
     newBlockingUses.push_back(&use);
+  }
   return true;
 }
 
@@ -6136,37 +6070,16 @@ mlir::DeletionKind fir::DeclareOp::removeBlockingUses(
   return mlir::DeletionKind::Delete;
 }
 
-void fir::DeclareOp::getPromotableSlotAliases(
-    mlir::OpOperand &aliasedSlotPointerOperand,
-    const mlir::MemorySlot & /*parentSlot*/,
-    llvm::SmallVectorImpl<mlir::MemorySlot> &newMemorySlots) {
-  if (aliasedSlotPointerOperand.get() != getMemref())
-    return;
-  // fir.declare is a transparent alias of its memref operand at the same
-  // element type.
-  mlir::Type aliasElemType = fir::dyn_cast_ptrEleTy(getResult().getType());
-  if (!aliasElemType)
-    return;
-  newMemorySlots.push_back(mlir::MemorySlot{getResult(), aliasElemType});
-}
-
 bool fir::DeclareOp::requiresReplacedValues() { return true; }
 
 void fir::DeclareOp::visitReplacedValues(
     llvm::ArrayRef<std::pair<mlir::Operation *, mlir::Value>> definitions,
     mlir::OpBuilder &builder) {
-  // TODO: extend `fir.declare_value` to carry the variable's declared type
-  // independently of the value's type. Once that is in place the type
-  // mismatch check below can be dropped (a bit-cast equivalent will be
-  // recorded on the op instead of skipping emission).
-  mlir::Type declaredElemType = fir::dyn_cast_ptrEleTy(getResult().getType());
   for (auto [op, value] : definitions) {
     // Do not emit DeclareValue when we have a dummy scope as this can
     // potentially result in us generating it where the DummyScope does not
     // dominate it. This can happen after inlining.
     if (getDummyScope())
-      continue;
-    if (value.getType() != declaredElemType)
       continue;
     builder.setInsertionPointAfter(op);
     fir::DeclareValueOp::create(builder, getLoc(), value, nullptr,

@@ -15,5 +15,6 @@
       "kind": "LinkUnit",
       "name": "libtest.so"
     }
-  ]
+  ],
+  "target_triple": "arm64-apple-macosx"
 }

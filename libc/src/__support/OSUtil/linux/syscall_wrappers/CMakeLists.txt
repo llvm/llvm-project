@@ -759,3 +759,18 @@ add_header_library(
     libc.hdr.types.off_t
     libc.include.sys_syscall
 )
+
+add_header_library(
+  prlimit
+  HDRS
+    prlimit.h
+  DEPENDS
+    libc.hdr.types.pid_t
+    libc.hdr.types.struct_rlimit
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+

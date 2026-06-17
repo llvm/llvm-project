@@ -1254,9 +1254,11 @@ def extloadv4f16 : PatFrag<(ops node:$ptr), (extloadvf16 node:$ptr)>;
 def extloadv8f16 : PatFrag<(ops node:$ptr), (extloadvf16 node:$ptr)>;
 def extloadv16f16 : PatFrag<(ops node:$ptr), (extloadvf16 node:$ptr)>;
 
-// Like 'store', but always requires vector size alignment.
+// Like 'store' or 'atomic_store', but always requires vector size alignment.
 class alignedstore_frag<int Alignment>
-    : PatFrag<(ops node:$val, node:$ptr), (store node:$val, node:$ptr)> {
+    : PatFrags<(ops node:$val, node:$ptr),
+               [(store node:$val, node:$ptr),
+                (atomic_store node:$val, node:$ptr)]> {
   let IsStore = true;
   let MinAlignment = Alignment;
 }
