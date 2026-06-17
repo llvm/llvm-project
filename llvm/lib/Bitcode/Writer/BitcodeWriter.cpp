@@ -586,9 +586,9 @@ public:
         }
     } else {
       // Sort by GUID for deterministic output.
-      for (const auto &Entry : Index.sortedGlobalValueSummariesRange())
-        for (auto &Summary : Entry.second.getSummaryList())
-          Callback({Entry.first, Summary.get()}, false);
+      for (const auto &Summaries : Index.sortedGlobalValueSummariesRange())
+        for (auto &Summary : Summaries.second.getSummaryList())
+          Callback({Summaries.first, Summary.get()}, false);
     }
   }
 

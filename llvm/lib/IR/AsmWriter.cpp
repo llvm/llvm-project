@@ -1203,8 +1203,8 @@ int SlotTracker::processIndex() {
   GUIDNext = ModulePathNext;
 
   // Sort by GUID for deterministic slot assignment.
-  for (const auto &Entry : TheIndex->sortedGlobalValueSummariesRange())
-    CreateGUIDSlot(Entry.first);
+  for (const auto &GlobalList : TheIndex->sortedGlobalValueSummariesRange())
+    CreateGUIDSlot(GlobalList.first);
 
   // Start numbering the TypeIdCompatibleVtables after the GUIDs.
   TypeIdCompatibleVtableNext = GUIDNext;
@@ -3233,16 +3233,16 @@ void AssemblyWriter::printModuleSummaryIndex() {
   // Sort by GUID for deterministic output matching slot assignment order.
   auto SortedGVS = TheIndex->sortedGlobalValueSummariesRange();
 
-  for (const auto &Entry : SortedGVS) {
-    auto GUID = Entry.first;
-    for (auto &Summary : Entry.second.getSummaryList())
+  for (const auto &GlobalList : SortedGVS) {
+    auto GUID = GlobalList.first;
+    for (auto &Summary : GlobalList.second.getSummaryList())
       SummaryToGUIDMap[Summary.get()] = GUID;
   }
 
   // Print the global value summary entries.
-  for (const auto &Entry : SortedGVS) {
-    auto GUID = Entry.first;
-    auto VI = TheIndex->getValueInfo(Entry);
+  for (const auto &GlobalList : SortedGVS) {
+    auto GUID = GlobalList.first;
+    auto VI = TheIndex->getValueInfo(GlobalList);
     printSummaryInfo(Machine.getGUIDSlot(GUID), VI);
   }
 
