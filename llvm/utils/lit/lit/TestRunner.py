@@ -1802,10 +1802,10 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
         scriptCopy = script[:]
         # Set unique LLVM_PROFILE_FILE for each run command
         if litConfig.per_test_coverage:
-            # Extract the test case name from the test object, and remove the
-            # file extension.
-            test_case_name = test.path_in_suite[-1]
-            test_case_name = test_case_name.rsplit(".", 1)[0]
+            # Use the test's full path in the suite, plus the %p (pid) and %m
+            # (binary signature) runtime placeholders, so that distinct tests,
+            # processes, and instrumented binaries don't share a profraw file.
+            test_case_name = "_".join(test.path_in_suite)
             coverage_index = 0  # Counter for coverage file index
             for i, ln in enumerate(scriptCopy):
                 match = re.fullmatch(kPdbgRegex, ln)
@@ -1814,7 +1814,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
                     command = match.group(2)
                 else:
                     command = ln
-                profile = f"{test_case_name}{coverage_index}.profraw"
+                profile = f"{test_case_name}-%p-%m{coverage_index}.profraw"
                 coverage_index += 1
                 command = f"export LLVM_PROFILE_FILE={profile}; {command}"
                 if match:
