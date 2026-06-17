@@ -1842,10 +1842,37 @@ class CIRAwaitOpFlattening : public mlir::OpRewritePattern<cir::AwaitOp> {
 public:
   using OpRewritePattern<cir::AwaitOp>::OpRewritePattern;
 
+  // Flatten `cir.await` into the following control flow:
+  //
+  //                    awaitBlock
+  //                        |
+  //                        v
+  //                      ready
+  //                     /     \
+  //                    /       \
+  //                   v         v
+  //                resume    suspend
+  //                   |          |
+  //                   |   llvm.coro.suspend
+  //                   |          |
+  //                   |     +----+----+
+  //                   |     |    |    |
+  //                   |     |    |    v
+  //                   |     |    | suspend point
+  //                   |     |    |
+  //                   |     |    v
+  //                   |     | destroy
+  //                   |     |
+  //                   +--> resume
+  //                          |
+  //                          v
+  //                    continuation
   mlir::LogicalResult
   matchAndRewrite(cir::AwaitOp awaitOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Block *awaitBlock = rewriter.getInsertionBlock();
+    // Split the current block before the AwaitOp to create the inlining
+    // point.
     mlir::Block *remainingOpsBlock =
         rewriter.splitBlock(awaitBlock, rewriter.getInsertionPoint());
 
@@ -1860,6 +1887,9 @@ public:
     {
       mlir::OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPoint(conditionOp);
+      // The condition is the result of `await_ready()`. If true, execution
+      // continues in the resume region otherwise, control transfers to the
+      // suspend region.
       rewriter.replaceOpWithNewOp<cir::BrCondOp>(
           conditionOp, conditionOp.getCondition(), &resumeRegion.front(),
           &suspendRegion.front());
@@ -1869,6 +1899,8 @@ public:
     {
       mlir::OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPointToEnd(awaitBlock);
+      // After inlining the ready region, branch from the original await block
+      // to the beginning of the inlined ready-region
       cir::BrOp::create(rewriter, loc, mlir::ValueRange(), &beforeReady);
     }
 
@@ -1885,12 +1917,16 @@ public:
       auto nullPtr = cir::ConstantOp::create(
           rewriter, loc,
           cir::ConstPtrAttr::get(voidPtrTy, rewriter.getI64IntegerAttr(0)));
+      auto int32Ty = cir::IntType::get(getContext(), 32, false);
       auto coroSaveIntri = cir::LLVMIntrinsicCallOp::create(
-          rewriter, loc, mlir::StringAttr::get(getContext(), "llvm.coro.save"),
-          cir::IntType::get(getContext(), 32, false),
+          rewriter, loc, rewriter.getStringAttr("llvm.coro.save"), int32Ty,
           mlir::ValueRange{nullPtr});
       rewriter.setInsertionPoint(suspendYield);
 
+      // The second argument to `llvm.coro.suspend` indicates whether this is
+      // the final suspend point. Coroutines suspended at a final suspend point
+      // are considered done (`llvm.coro.done` returns true) and may only be
+      // destroyed resuming them is undefined behavior.
       bool isFinalSuspend = awaitOp.getKind() == cir::AwaitKind::Final;
       auto isFinalCoroSuspend = cir::ConstantOp::create(
           rewriter, loc, cir::BoolAttr::get(getContext(), isFinalSuspend));
@@ -1901,8 +1937,7 @@ public:
       //   1 : coroutine destroyed
       coroSuspendIntri = cir::LLVMIntrinsicCallOp::create(
           rewriter, loc,
-          mlir::StringAttr::get(getContext(), "llvm.coro.suspend"),
-          cir::IntType::get(getContext(), 32, false),
+          mlir::StringAttr::get(getContext(), "llvm.coro.suspend"), int32Ty,
           mlir::ValueRange{coroSaveIntri.getResult(), isFinalCoroSuspend});
     }
     rewriter.inlineRegionBefore(suspendRegion, remainingOpsBlock);
@@ -1912,13 +1947,10 @@ public:
     {
       mlir::OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPoint(suspendYield);
-      llvm::SmallVector<mlir::APInt, 2> caseValues{mlir::APInt(32, 0),
-                                                   mlir::APInt(32, 1)};
+      llvm::SmallVector<mlir::APInt> caseValues{mlir::APInt(32, 0),
+                                                mlir::APInt(32, 1)};
 
-      llvm::SmallVector<mlir::ValueRange, 8> caseOperands{
-          mlir::ValueRange(), mlir::ValueRange(), mlir::ValueRange()};
-
-      llvm::SmallVector<mlir::Block *, 8> caseDestinations;
+      llvm::SmallVector<mlir::ValueRange> caseOperands{3};
 
       // In Classic CodeGen, the destroy path reaches the coroutine cleanup by
       // emitting an EmitBranchThroughCleanup(), ensuring that all nested
@@ -1935,13 +1967,17 @@ public:
         cleanupBlock = rewriter.createBlock(remainingOpsBlock);
         cir::YieldOp::create(rewriter, loc);
       }
+      // The destroy case dispatches to cleanupBlock, which propagates through
+      // enclosing cleanup scopes before reaching the coroutine-frame cleanup.
+      llvm::SmallVector<mlir::Block *> caseDestinations{&resumeRegion.front(),
+                                                        cleanupBlock};
       caseDestinations.push_back(&resumeRegion.front());
       caseDestinations.push_back(cleanupBlock);
 
       assert(!cir::MissingFeatures::coroutineGroManager());
 
-      // Default destination must be de suspend BB (the return block or the pre
-      // gro conv)
+      // Dispatch to the appropriate coroutine path based on the result of
+      // `llvm.coro.suspend`: resume, destroy, or suspend.
       auto coroSuspendSwitch = cir::SwitchFlatOp::create(
           rewriter, loc, coroSuspendIntri.getResult(),
           getOrCreateBlockForSuspendPoint(func, rewriter, loc),
@@ -1954,14 +1990,19 @@ public:
     {
       mlir::OpBuilder::InsertionGuard guard(rewriter);
       rewriter.setInsertionPoint(resumeYield);
+      // Once the coroutine resumes, continue with the operations that
+      // originally followed the await.
       rewriter.replaceOpWithNewOp<cir::BrOp>(resumeYield, remainingOpsBlock);
     }
     rewriter.inlineRegionBefore(resumeRegion, remainingOpsBlock);
 
     rewriter.eraseOp(awaitOp);
 
+    // The coroutine regions have been flattened, so the original coroutine
+    // attribute no longer verifies. Preserve the information that this function
+    // originated from a coroutine for LLVM lowering.
     func.setCoroutine(false);
-    func.setFlattenCoroutine(true);
+    func.setFlattenedCoroutine(true);
 
     return mlir::success();
   }

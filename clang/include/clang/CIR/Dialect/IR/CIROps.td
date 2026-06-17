@@ -3915,7 +3915,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     TypeAttrOf<CIR_FuncType>:$function_type,
     UnitAttr:$builtin,
     UnitAttr:$coroutine,
-    UnitAttr:$flatten_coroutine,
+    UnitAttr:$flattened_coroutine,
     OptionalAttr<CIR_InlineKind>:$inline_kind,
     UnitAttr:$lambda,
     UnitAttr:$no_proto,

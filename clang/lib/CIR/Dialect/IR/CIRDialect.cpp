@@ -2335,8 +2335,8 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   mlir::StringAttr builtinNameAttr = getBuiltinAttrName(state.name);
   mlir::StringAttr coroutineNameAttr = getCoroutineAttrName(state.name);
-  mlir::StringAttr flattenCoroutineNameAttr =
-      getFlattenCoroutineAttrName(state.name);
+  mlir::StringAttr flattenedCoroutineNameAttr =
+      getFlattenedCoroutineAttrName(state.name);
   mlir::StringAttr inlineKindNameAttr = getInlineKindAttrName(state.name);
   mlir::StringAttr lambdaNameAttr = getLambdaAttrName(state.name);
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
@@ -2351,8 +2351,8 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
           parser.parseOptionalKeyword(coroutineNameAttr.strref())))
     state.addAttribute(coroutineNameAttr, parser.getBuilder().getUnitAttr());
   if (::mlir::succeeded(
-          parser.parseOptionalKeyword(flattenCoroutineNameAttr.strref())))
-    state.addAttribute(flattenCoroutineNameAttr,
+          parser.parseOptionalKeyword(flattenedCoroutineNameAttr.strref())))
+    state.addAttribute(flattenedCoroutineNameAttr,
                        parser.getBuilder().getUnitAttr());
   // Parse optional inline kind attribute
   cir::InlineKindAttr inlineKindAttr;
@@ -2662,8 +2662,8 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   if (getCoroutine())
     p << " coroutine";
 
-  if (getFlattenCoroutine())
-    p << " flatten-coroutine";
+  if (getFlattenedCoroutine())
+    p << " flattened_coroutine";
 
   printInlineKindAttr(p, getInlineKindAttr());
 
@@ -3202,7 +3202,7 @@ cir::CoroBodyOp::getSuccessorInputs(RegionSuccessor successor) {
 
 LogicalResult cir::CoroBodyOp::verify() {
   auto funcOp = getOperation()->getParentOfType<FuncOp>();
-  if (!funcOp.getCoroutine() && !funcOp.getFlattenCoroutine())
+  if (!funcOp.getCoroutine() && !funcOp.getFlattenedCoroutine())
     return emitOpError("enclosing function must be a coroutine");
   return success();
 }

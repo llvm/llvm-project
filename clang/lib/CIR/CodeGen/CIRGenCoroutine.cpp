@@ -529,7 +529,7 @@ CIRGenFunction::emitCoroutineBody(const CoroutineBodyStmt &s) {
   assert(!cir::MissingFeatures::coroutineGroManager());
 
   cir::StoreOp::create(builder, openCurlyLoc,
-                       builder.getSignedInt(openCurlyLoc, 1, 32),
+                       builder.getSInt32(1, openCurlyLoc),
                        curCoro.data->suspendPoint, false, {} /*alignment*/,
                        {} /*sync_scope*/, {} /*mem_order*/);
 
