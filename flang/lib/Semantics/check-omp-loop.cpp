@@ -885,7 +885,7 @@ void OmpStructureChecker::Enter(const parser::OmpLoopModifier &x) {
   unsigned version{context_.langOptions().OpenMPVersion};
   auto &m{std::get<llvm::omp::LoopModifier>(x.t)};
   if (!llvm::omp::isAllowedLoopModifier(dir, m)) {
-    llvm::StringRef name = llvm::omp::getOpenMPLoopModifierName(m);
+    llvm::StringRef name = llvm::omp::getLoopModifierName(m);
     context_.Say(x.source,
         "%s modifier is not allowed on %s directive"_err_en_US,
         parser::ToUpperCaseLetters(name),

@@ -2214,8 +2214,8 @@ public:
   void Unparse(const OmpAppendArgsClause &x) { Walk(x.v, ","); }
   void Unparse(const OmpArgumentList &x) { Walk(x.v, ", "); }
   void Unparse(const OmpLoopModifier &x) {
-    Word(llvm::omp::getOpenMPLoopModifierName(
-        std::get<llvm::omp::LoopModifier>(x.t)));
+    Word(
+        llvm::omp::getLoopModifierName(std::get<llvm::omp::LoopModifier>(x.t)));
     Walk("(", std::get<std::optional<std::list<ScalarIntConstantExpr>>>(x.t),
         ")");
   }
