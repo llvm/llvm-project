@@ -1368,6 +1368,7 @@ bool SIPeepholeSDWA::strengthReduceCSelect64(MachineFunction &MF) {
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
       if (MI.getOpcode() != AMDGPU::S_CSELECT_B64 ||
           !MI.getOperand(1).isImm() || !MI.getOperand(2).isImm() ||
+          (MI.getOperand(1).getImm() != 0 && MI.getOperand(1).getImm() != -1) ||
           (MI.getOperand(1).getImm() != 0 && MI.getOperand(2).getImm() != 0))
         continue;
 
