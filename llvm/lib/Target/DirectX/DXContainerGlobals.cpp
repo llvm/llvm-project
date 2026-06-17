@@ -415,9 +415,7 @@ void DXContainerGlobals::addSourceInfo(Module &M,
   SmallString<256> Data;
   raw_svector_ostream OS(Data);
   MMI.SourceInfo->write(OS);
-  Constant *Constant =
-      ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
-  Globals.emplace_back(buildContainerGlobal(M, Constant, "dx.srci", "SRCI"));
+  addSection(M, Globals, Data, "dx.srci", "SRCI");
 }
 
 char DXContainerGlobals::ID = 0;
