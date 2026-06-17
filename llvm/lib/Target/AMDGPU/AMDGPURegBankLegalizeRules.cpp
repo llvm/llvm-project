@@ -1682,7 +1682,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS16, S32}, {{UniInVgprS16}, {Vgpr32}}}, !hasSALUFloat);
 
   addRulesForGOpcs({G_INTRINSIC_FPTRUNC_ROUND})
-      .Any({{UniS16, S32}, {{UniInVgprS16}, {Vgpr32}}})
+      .Any({{UniS16, S32}, {{Sgpr16}, {Sgpr32}}}, hasSALUFloat)
+      .Any({{UniS16, S32}, {{UniInVgprS16}, {Vgpr32}}}, !hasSALUFloat)
       .Any({{DivS16, S32}, {{Vgpr16}, {Vgpr32}}})
       .Any({{UniS16, S64}, {{UniInVgprS16}, {Vgpr64}}})
       .Any({{DivS16, S64}, {{Vgpr16}, {Vgpr64}}})

@@ -528,23 +528,13 @@ define amdgpu_gs i32 @s_fptrunc_round_f32_to_f16_upward(float inreg %a, ptr addr
 ; GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
-; GFX12-SDAG-LABEL: s_fptrunc_round_f32_to_f16_upward:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 1), 1
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s0, s0
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-SDAG-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: s_fptrunc_round_f32_to_f16_upward:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 1), 1
-; GFX12-GISEL-NEXT:    v_cvt_f16_f32_e64 v0.l, s0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: s_fptrunc_round_f32_to_f16_upward:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 1), 1
+; GFX12-NEXT:    s_cvt_f16_f32 s0, s0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX12-NEXT:    ; return to shader part epilog
   %res = call half @llvm.fptrunc.round.f16.f32(float %a, metadata !"round.upward")
   %bitcast = bitcast half %res to i16
   %ret = zext i16 %bitcast to i32
@@ -588,23 +578,13 @@ define amdgpu_gs i32 @s_fptrunc_round_f32_to_f16_downward(float inreg %a, ptr ad
 ; GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
-; GFX12-SDAG-LABEL: s_fptrunc_round_f32_to_f16_downward:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 1
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s0, s0
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-SDAG-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: s_fptrunc_round_f32_to_f16_downward:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 1
-; GFX12-GISEL-NEXT:    v_cvt_f16_f32_e64 v0.l, s0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: s_fptrunc_round_f32_to_f16_downward:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 1
+; GFX12-NEXT:    s_cvt_f16_f32 s0, s0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX12-NEXT:    ; return to shader part epilog
   %res = call half @llvm.fptrunc.round.f16.f32(float %a, metadata !"round.downward")
   %bitcast = bitcast half %res to i16
   %ret = zext i16 %bitcast to i32
@@ -642,21 +622,12 @@ define amdgpu_gs i32 @s_fptrunc_round_f32_to_f16_towardzero(float inreg %a, ptr 
 ; GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
-; GFX12-SDAG-LABEL: s_fptrunc_round_f32_to_f16_towardzero:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_cvt_pk_rtz_f16_f32 s0, s0, s0
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX12-SDAG-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: s_fptrunc_round_f32_to_f16_towardzero:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_cvt_pk_rtz_f16_f32_e32 v0, s0, v0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: s_fptrunc_round_f32_to_f16_towardzero:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_cvt_pk_rtz_f16_f32 s0, s0, s0
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GFX12-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX12-NEXT:    ; return to shader part epilog
   %res = call half @llvm.fptrunc.round.f16.f32(float %a, metadata !"round.towardzero")
   %bitcast = bitcast half %res to i16
   %ret = zext i16 %bitcast to i32
@@ -722,42 +693,20 @@ define amdgpu_gs void @s_fptrunc_round_f32_to_f16_upward_multiple_calls(float in
 ; GISEL-NEXT:    global_store_short v[0:1], v2, off
 ; GISEL-NEXT:    s_endpgm
 ;
-; GFX12-SDAG-LABEL: s_fptrunc_round_f32_to_f16_upward_multiple_calls:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 1), 1
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s0, s0
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s2, s1
-; GFX12-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 2
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s1, s1
-; GFX12-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 0
-; GFX12-SDAG-NEXT:    s_add_f16 s0, s0, s2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
-; GFX12-SDAG-NEXT:    s_add_f16 s0, s1, s0
-; GFX12-SDAG-NEXT:    v_mov_b16_e32 v2.l, s0
-; GFX12-SDAG-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX12-SDAG-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: s_fptrunc_round_f32_to_f16_upward_multiple_calls:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 1), 1
-; GFX12-GISEL-NEXT:    v_cvt_f16_f32_e64 v2.l, s0
-; GFX12-GISEL-NEXT:    v_cvt_f16_f32_e64 v3.l, s1
-; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 2
-; GFX12-GISEL-NEXT:    v_cvt_f16_f32_e64 v4.l, s1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_3) | instid1(SALU_CYCLE_2)
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v4
-; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 0
-; GFX12-GISEL-NEXT:    s_add_f16 s0, s0, s1
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    s_add_f16 s0, s2, s0
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
-; GFX12-GISEL-NEXT:    v_mov_b16_e32 v2.l, s0
-; GFX12-GISEL-NEXT:    global_store_b16 v[0:1], v2, off
-; GFX12-GISEL-NEXT:    s_endpgm
+; GFX12-LABEL: s_fptrunc_round_f32_to_f16_upward_multiple_calls:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 1), 1
+; GFX12-NEXT:    s_cvt_f16_f32 s0, s0
+; GFX12-NEXT:    s_cvt_f16_f32 s2, s1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 2
+; GFX12-NEXT:    s_cvt_f16_f32 s1, s1
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 0
+; GFX12-NEXT:    s_add_f16 s0, s0, s2
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GFX12-NEXT:    s_add_f16 s0, s1, s0
+; GFX12-NEXT:    v_mov_b16_e32 v2.l, s0
+; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX12-NEXT:    s_endpgm
   %res1 = call half @llvm.fptrunc.round.f16.f32(float %a, metadata !"round.upward")
   %res2 = call half @llvm.fptrunc.round.f16.f32(float %b, metadata !"round.upward")
   %res3 = call half @llvm.fptrunc.round.f16.f32(float %b, metadata !"round.downward")
@@ -1038,28 +987,15 @@ define amdgpu_gs <2 x i32> @s_fptrunc_round_v2f32_to_v2f16_upward(<2 x float> in
 ; GISEL-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
-; GFX12-SDAG-LABEL: s_fptrunc_round_v2f32_to_v2f16_upward:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 1), 1
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s0, s0
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s1, s1
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_2)
-; GFX12-SDAG-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX12-SDAG-NEXT:    s_and_b32 s1, 0xffff, s1
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: s_fptrunc_round_v2f32_to_v2f16_upward:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 1), 1
-; GFX12-GISEL-NEXT:    v_cvt_f16_f32_e64 v0.l, s0
-; GFX12-GISEL-NEXT:    v_cvt_f16_f32_e64 v1.l, s1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX12-GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX12-GISEL-NEXT:    s_and_b32 s1, 0xffff, s1
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: s_fptrunc_round_v2f32_to_v2f16_upward:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 1), 1
+; GFX12-NEXT:    s_cvt_f16_f32 s0, s0
+; GFX12-NEXT:    s_cvt_f16_f32 s1, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_2)
+; GFX12-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX12-NEXT:    s_and_b32 s1, 0xffff, s1
+; GFX12-NEXT:    ; return to shader part epilog
   %res = call <2 x half> @llvm.fptrunc.round.v2f16.v2f32(<2 x float> %a, metadata !"round.upward")
   %bitcast = bitcast <2 x half> %res to <2 x i16>
   %ret = zext <2 x i16> %bitcast to <2 x i32>
@@ -1118,28 +1054,15 @@ define amdgpu_gs <2 x i32> @s_fptrunc_round_v2f32_to_v2f16_downward(<2 x float> 
 ; GISEL-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
-; GFX12-SDAG-LABEL: s_fptrunc_round_v2f32_to_v2f16_downward:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 1
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s0, s0
-; GFX12-SDAG-NEXT:    s_cvt_f16_f32 s1, s1
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_2)
-; GFX12-SDAG-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX12-SDAG-NEXT:    s_and_b32 s1, 0xffff, s1
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: s_fptrunc_round_v2f32_to_v2f16_downward:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 1
-; GFX12-GISEL-NEXT:    v_cvt_f16_f32_e64 v0.l, s0
-; GFX12-GISEL-NEXT:    v_cvt_f16_f32_e64 v1.l, s1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX12-GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX12-GISEL-NEXT:    s_and_b32 s1, 0xffff, s1
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: s_fptrunc_round_v2f32_to_v2f16_downward:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 1
+; GFX12-NEXT:    s_cvt_f16_f32 s0, s0
+; GFX12-NEXT:    s_cvt_f16_f32 s1, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_2)
+; GFX12-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX12-NEXT:    s_and_b32 s1, 0xffff, s1
+; GFX12-NEXT:    ; return to shader part epilog
   %res = call <2 x half> @llvm.fptrunc.round.v2f16.v2f32(<2 x float> %a, metadata !"round.downward")
   %bitcast = bitcast <2 x half> %res to <2 x i16>
   %ret = zext <2 x i16> %bitcast to <2 x i32>
@@ -1190,26 +1113,14 @@ define amdgpu_gs <2 x i32> @s_fptrunc_round_v2f32_to_v2f16_towardzero(<2 x float
 ; GISEL-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GISEL-NEXT:    ; return to shader part epilog
 ;
-; GFX12-SDAG-LABEL: s_fptrunc_round_v2f32_to_v2f16_towardzero:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_cvt_pk_rtz_f16_f32 s0, s0, s0
-; GFX12-SDAG-NEXT:    s_cvt_pk_rtz_f16_f32 s1, s1, s1
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_2)
-; GFX12-SDAG-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX12-SDAG-NEXT:    s_and_b32 s1, 0xffff, s1
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: s_fptrunc_round_v2f32_to_v2f16_towardzero:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_cvt_pk_rtz_f16_f32_e32 v0, s0, v0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX12-GISEL-NEXT:    v_cvt_pk_rtz_f16_f32_e32 v1, s1, v0
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX12-GISEL-NEXT:    s_and_b32 s0, 0xffff, s0
-; GFX12-GISEL-NEXT:    s_and_b32 s1, 0xffff, s1
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GFX12-LABEL: s_fptrunc_round_v2f32_to_v2f16_towardzero:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_cvt_pk_rtz_f16_f32 s0, s0, s0
+; GFX12-NEXT:    s_cvt_pk_rtz_f16_f32 s1, s1, s1
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_2)
+; GFX12-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX12-NEXT:    s_and_b32 s1, 0xffff, s1
+; GFX12-NEXT:    ; return to shader part epilog
   %res = call <2 x half> @llvm.fptrunc.round.v2f16.v2f32(<2 x float> %a, metadata !"round.towardzero")
   %bitcast = bitcast <2 x half> %res to <2 x i16>
   %ret = zext <2 x i16> %bitcast to <2 x i32>
@@ -1342,32 +1253,21 @@ define amdgpu_gs void @s_fptrunc_round_v2f32_to_v2f16_upward_multiple_calls(<2 x
 ; GFX12-GISEL-LABEL: s_fptrunc_round_v2f32_to_v2f16_upward_multiple_calls:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 1), 1
-; GFX12-GISEL-NEXT:    v_cvt_f16_f32_e64 v2.l, s0
-; GFX12-GISEL-NEXT:    v_cvt_f16_f32_e64 v3.l, s1
-; GFX12-GISEL-NEXT:    v_cvt_f16_f32_e64 v4.l, s3
+; GFX12-GISEL-NEXT:    s_cvt_f16_f32 s0, s0
+; GFX12-GISEL-NEXT:    s_cvt_f16_f32 s1, s1
+; GFX12-GISEL-NEXT:    s_cvt_f16_f32 s4, s2
+; GFX12-GISEL-NEXT:    s_cvt_f16_f32 s5, s3
 ; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 2
-; GFX12-GISEL-NEXT:    v_cvt_f16_f32_e64 v5.l, s3
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
-; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 1
-; GFX12-GISEL-NEXT:    v_cvt_f16_f32_e64 v2.l, s2
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 2
-; GFX12-GISEL-NEXT:    v_cvt_f16_f32_e64 v3.l, s2
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v4
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s5, v5
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
-; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s4, v3
+; GFX12-GISEL-NEXT:    s_cvt_f16_f32 s2, s2
+; GFX12-GISEL-NEXT:    s_cvt_f16_f32 s3, s3
 ; GFX12-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 3, 1), 0
-; GFX12-GISEL-NEXT:    s_add_f16 s1, s1, s3
-; GFX12-GISEL-NEXT:    s_add_f16 s0, s0, s2
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GISEL-NEXT:    s_add_f16 s1, s5, s1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
-; GFX12-GISEL-NEXT:    s_add_f16 s0, s4, s0
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    s_add_f16 s0, s0, s4
+; GFX12-GISEL-NEXT:    s_add_f16 s1, s1, s5
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_2)
+; GFX12-GISEL-NEXT:    s_add_f16 s0, s2, s0
+; GFX12-GISEL-NEXT:    s_add_f16 s1, s3, s1
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
-; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-GISEL-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX12-GISEL-NEXT:    s_endpgm
