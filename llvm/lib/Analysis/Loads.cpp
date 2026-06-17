@@ -37,7 +37,7 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
     function_ref<bool(const RetainedKnowledge &RK)> CheckSize) {
   if (!SQ.CxtI)
     return false;
-  // Look through assumes to see if both dereferencability and alignment can
+  // Look through assumes to see if both dereferenceability and alignment can
   // be proven by an assume if needed.
   bool PtrCanBeFreed = Ptr->canBeFreed() && !IgnoreFree;
   bool IsAligned = Ptr->getPointerAlignment(SQ.DL) >= Alignment;
