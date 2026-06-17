@@ -36,7 +36,7 @@ class Type;
 
 namespace AMDGPU {
 
-class AMDGPUTargetID;
+class TargetID;
 
 namespace HSAMD {
 
@@ -46,7 +46,7 @@ public:
 
   virtual bool emitTo(AMDGPUTargetStreamer &TargetStreamer) = 0;
 
-  virtual void begin(const Module &Mod, const AMDGPUTargetID &TargetID) = 0;
+  virtual void begin(const Module &Mod, const TargetID &TargetID) = 0;
 
   virtual void end() = 0;
 
@@ -93,7 +93,7 @@ protected:
 
   void emitVersion() override;
 
-  void emitTargetID(const AMDGPUTargetID &TargetID);
+  void emitTargetID(const TargetID &TargetID);
 
   void emitPrintf(const Module &Mod);
 
@@ -132,7 +132,7 @@ public:
 
   bool emitTo(AMDGPUTargetStreamer &TargetStreamer) override;
 
-  void begin(const Module &Mod, const AMDGPUTargetID &TargetID) override;
+  void begin(const Module &Mod, const TargetID &TargetID) override;
 
   void end() override;
 

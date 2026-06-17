@@ -215,7 +215,7 @@ void MetadataStreamerMsgPackV4::emitVersion() {
   getRootMetadata("amdhsa.version") = Version;
 }
 
-void MetadataStreamerMsgPackV4::emitTargetID(const AMDGPUTargetID &TargetID) {
+void MetadataStreamerMsgPackV4::emitTargetID(const TargetID &TargetID) {
   getRootMetadata("amdhsa.target") =
       HSAMetadataDoc->getNode(TargetID.toString(), /*Copy=*/true);
 }
@@ -558,7 +558,7 @@ bool MetadataStreamerMsgPackV4::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
 }
 
 void MetadataStreamerMsgPackV4::begin(const Module &Mod,
-                                      const AMDGPUTargetID &TargetID) {
+                                      const TargetID &TargetID) {
   emitVersion();
   emitTargetID(TargetID);
   emitPrintf(Mod);
