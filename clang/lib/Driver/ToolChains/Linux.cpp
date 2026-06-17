@@ -909,8 +909,13 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
   // self-contained superset of clang_rt.profile, emitted first so the base
   // archive stays inert.
   if ((ActiveKinds & Action::OFK_HIP) && needsProfileRT(Args) &&
-      getVFS().exists(getCompilerRT(Args, "profile_rocm", FT_Static)))
+      getVFS().exists(getCompilerRT(Args, "profile_rocm", FT_Static))) {
     CmdArgs.push_back(getCompilerRTArgString(Args, "profile_rocm"));
+    // Force-retain the constructor-only hipModuleLoad* interceptor object; its
+    // constructor self-skips when the program does not use hipModuleLoad.
+    CmdArgs.push_back("-u");
+    CmdArgs.push_back("__llvm_profile_offload_register_dynamic_module");
+  }
 }
 
 void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,

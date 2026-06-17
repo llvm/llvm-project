@@ -178,6 +178,27 @@ define void @align_with_variable_offset(ptr %ptr, i64 %offset) {
   ret void
 }
 
+define void @align_on_gep_keeping_alignment(ptr %ptr, i64 %offset) {
+; CHECK-LABEL: @align_on_gep_keeping_alignment(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8) ]
+; CHECK-NEXT:    ret void
+;
+  %ptr2 = getelementptr [8 x i8], ptr %ptr, i64 %offset
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr2, i64 8) ]
+  ret void
+}
+
+define void @align_on_gep_not_keeping_alignment(ptr %ptr, i64 %offset) {
+; CHECK-LABEL: @align_on_gep_not_keeping_alignment(
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr [4 x i8], ptr [[PTR:%.*]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR2]], i64 8) ]
+; CHECK-NEXT:    ret void
+;
+  %ptr2 = getelementptr [4 x i8], ptr %ptr, i64 %offset
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr2, i64 8) ]
+  ret void
+}
+
 define void @redundant_align() {
 ; CHECK-LABEL: @redundant_align(
 ; CHECK-NEXT:    [[PTR:%.*]] = call ptr @get_ptr()
@@ -1300,7 +1321,31 @@ define void @redundant_assume_noundef(i32 noundef %val) {
   ret void
 }
 
+define i32 @assume_noundef_on_load(ptr %ptr) {
+; CHECK-LABEL: @assume_noundef_on_load(
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR:%.*]], align 4, !noundef [[META6]]
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+  %val = load i32, ptr %ptr
+  call void @llvm.assume(i1 true) [ "noundef"(i32 %val) ]
+  ret i32 %val
+}
+
+define i32 @assume_noundef_on_load_after_call(ptr %ptr) {
+; CHECK-LABEL: @assume_noundef_on_load_after_call(
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    call void @block()
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32 [[VAL]]) ]
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+  %val = load i32, ptr %ptr
+  call void @block()
+  call void @llvm.assume(i1 true) [ "noundef"(i32 %val) ]
+  ret i32 %val
+}
+
 declare void @use(i1)
+declare void @block()
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}

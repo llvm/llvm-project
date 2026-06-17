@@ -446,6 +446,12 @@ public:
     return 0;
   }
 
+  // Return the known bit length of SVE predicate registers. A value of 0 means
+  // the length is unknown beyond what's implied by the architecture.
+  unsigned getSVEPredicateSizeInBits() const {
+    return getSVEVectorSizeInBits() / 8;
+  }
+
   bool useSVEForFixedLengthVectors() const {
     if (!isSVEorStreamingSVEAvailable())
       return false;
