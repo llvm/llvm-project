@@ -2882,13 +2882,22 @@ SplitOp::apply(transform::TransformRewriter &rewriter,
     if (isa<TransformHandleTypeInterface>(getDynamicChunkSizes().getType())) {
       chunkSizes = llvm::map_to_vector(
           state.getPayloadOps(getDynamicChunkSizes()), [&](Operation *op) {
-            if (op->getNumResults() != 1 ||
-                !op->getResult(0).getType().isIndex()) {
+            if (op -> getNumResults() != 1){
               diag = emitSilenceableError()
-                     << "expected dynamic split point handle to point to a "
+                    << "expected dynamic split point handle to point to a "
                         "single-result index-typed op";
               diag.attachNote(op->getLoc()) << "dynamic split point";
+              return OpFoldResult();  
             }
+
+            if (!op->getResult(0).getType().isIndex()){
+              diag = emitSilenceableError()
+                    << "expected dynamic split point handle to point to a "
+                        "single-result index-typed op";
+              diag.attachNote(op->getLoc()) << "dynamic split point";
+              return OpFoldResult(); 
+            }
+
             return OpFoldResult(op->getResult(0));
           });
     } else {
