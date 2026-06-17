@@ -26,3 +26,44 @@ TEST_P(olCreateProgramTest, Success) {
 
   ASSERT_SUCCESS(olDestroyProgram(Program));
 }
+
+TEST_P(olCreateProgramTest, NullDeviceHandle) {
+  
+  std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
+  ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
+  ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
+
+  ol_program_handle_t Program;
+  ASSERT_ERROR(
+    OL_ERRC_INVALID_NULL_HANDLE, 
+    olCreateProgram(nullptr, DeviceBin->getBufferStart(), DeviceBin->getBufferSize(), &Program)
+  );
+
+}
+
+TEST_P(olCreateProgramTest, NullProgData) {
+  
+  std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
+  ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
+  ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
+
+  ol_program_handle_t Program;
+  ASSERT_ERROR(
+    OL_ERRC_INVALID_NULL_POINTER, 
+    olCreateProgram(Device, nullptr, DeviceBin->getBufferSize(), &Program)
+  );
+
+}
+
+TEST_P(olCreateProgramTest, NullOutputProgram) {
+  
+  std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
+  ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
+  ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
+
+  ASSERT_ERROR(
+    OL_ERRC_INVALID_NULL_POINTER, 
+    olCreateProgram(Device, DeviceBin->getBufferStart(), DeviceBin->getBufferSize(), nullptr)
+  );
+
+}
