@@ -462,3 +462,39 @@ for.end:
 exit:
   ret void
 }
+
+define void @test_zext_nneg_range(i32 %v, ptr %p0, ptr %p1, ptr %pN) {
+; CHECK-LABEL: @test_zext_nneg_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N:%.*]] = load i32, ptr [[PN:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[V:%.*]] to i64
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P0:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX13]], align 4
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[P1:%.*]], align 4
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp slt i32 [[TMP2]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP9]], label [[FOR_BODY]], label [[FOR_END:%.*]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %N = load i32, ptr %pN, align 4
+  br label %for.body
+
+for.body:
+  %iv = phi i32 [ %v, %entry ], [ %iv.next, %for.body ]
+  %idxprom12 = zext nneg i32 %iv to i64
+  %arrayidx13 = getelementptr inbounds nuw [4 x i8], ptr %p0, i64 %idxprom12
+  %1 = load i32, ptr %arrayidx13, align 4
+  store i32 %1, ptr %p1, align 4
+  %iv.next = add nuw nsw i32 %iv, 1
+  %cmp9 = icmp slt i32 %iv.next, %N
+  br i1 %cmp9, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
