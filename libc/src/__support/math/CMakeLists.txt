@@ -4308,9 +4308,15 @@ add_header_library(
   HDRS
     hypot.h
   DEPENDS
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.hypot
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.sqrt
     libc.src.__support.common
     libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(
