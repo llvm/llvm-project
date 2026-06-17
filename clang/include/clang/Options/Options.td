@@ -2012,7 +2012,7 @@ defm bounds_safety : BoolFOption<
 
 defm debug_run_lifetime_safety : BoolFOption<
   "debug-run-lifetime-safety",
-  LangOpts<"DebugRunLifetimeSafety">, DefaultFalse,
+  DiagnosticOpts<"DebugRunLifetimeSafety">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
   BothFlags<[], [CC1Option], " lifetime safety analysis for C++. Warnings are still controlled by -Wlifetime-safety. Primarily used to surface crashes or compile-time regressions without showing analysis findings.">>;
@@ -2023,11 +2023,11 @@ def lifetime_safety_max_cfg_blocks
       Visibility<[ClangOption, CC1Option]>,
       HelpText<"Skip LifetimeSafety analysis for functions with CFG block "
                "count exceeding this threshold. Specify 0 for no limit.">,
-      MarshallingInfoInt<LangOpts<"LifetimeSafetyMaxCFGBlocks">>;
+      MarshallingInfoInt<DiagnosticOpts<"LifetimeSafetyMaxCFGBlocks">>;
 
 defm lifetime_safety_inference
     : BoolFOption<"lifetime-safety-inference",
-                  LangOpts<"EnableLifetimeSafetyInference">, DefaultFalse,
+                  DiagnosticOpts<"EnableLifetimeSafetyInference">, DefaultFalse,
                   PosFlag<SetTrue, [], [CC1Option], "Enable">,
                   NegFlag<SetFalse, [], [CC1Option], "Disable">,
                   BothFlags<[], [CC1Option],
@@ -2035,7 +2035,7 @@ defm lifetime_safety_inference
 
 defm lifetime_safety_tu_analysis
     : BoolFOption<"experimental-lifetime-safety-tu-analysis",
-                  LangOpts<"EnableLifetimeSafetyTUAnalysis">, DefaultFalse,
+                  DiagnosticOpts<"EnableLifetimeSafetyTUAnalysis">, DefaultFalse,
                   PosFlag<SetTrue, [], [CC1Option], "Enable">,
                   NegFlag<SetFalse, [], [CC1Option], "Disable">,
                   BothFlags<[], [CC1Option],

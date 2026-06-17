@@ -125,7 +125,10 @@ void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                LifetimeSafetyStats &Stats, bool CollectStats) {
   LifetimeSafetyOpts LSOpts;
   LSOpts.MaxCFGBlocks =
-      AC.getASTContext().getLangOpts().LifetimeSafetyMaxCFGBlocks;
+      AC.getASTContext()
+          .getDiagnostics()
+          .getDiagnosticOptions()
+          .LifetimeSafetyMaxCFGBlocks;
 
   internal::LifetimeSafetyAnalysis Analysis(AC, SemaHelper, LSOpts);
   Analysis.run();

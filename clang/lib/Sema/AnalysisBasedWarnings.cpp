@@ -3000,7 +3000,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   }
 
   if (S.getLangOpts().CPlusPlus &&
-      S.getLangOpts().EnableLifetimeSafetyTUAnalysis)
+      Diags.getDiagnosticOptions().EnableLifetimeSafetyTUAnalysis)
     LifetimeSafetyTUAnalysis(S, TU, LSStats);
 }
 
@@ -3050,7 +3050,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
   bool EnableLifetimeSafetyAnalysis =
-      !S.getLangOpts().EnableLifetimeSafetyTUAnalysis &&
+      !Diags.getDiagnosticOptions().EnableLifetimeSafetyTUAnalysis &&
       lifetimes::IsLifetimeSafetyEnabled(S, D);
 
   // Force that certain expressions appear as CFGElements in the CFG.  This

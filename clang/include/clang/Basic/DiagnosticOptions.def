@@ -101,6 +101,12 @@ VALUE_DIAGOPT(MessageLength, 32, 0)
 
 DIAGOPT(ShowSafeBufferUsageSuggestions, 1, 0)
 
+DIAGOPT(DebugRunLifetimeSafety, 1, 0)
+DIAGOPT(EnableLifetimeSafetyTUAnalysis, 1, 0)
+
+SEMANTIC_VALUE_DIAGOPT(LifetimeSafetyMaxCFGBlocks, 32, 0)
+SEMANTIC_DIAGOPT(EnableLifetimeSafetyInference, 1, 0)
+
 #undef DIAGOPT
 #undef ENUM_DIAGOPT
 #undef VALUE_DIAGOPT
