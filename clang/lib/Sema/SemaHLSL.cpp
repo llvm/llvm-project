@@ -2804,6 +2804,39 @@ bool SemaHLSL::diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
   return true;
 }
 
+// Transpose and matrix mul need to read the destination layout.
+// Elementwise builtins reuse the operand layout instead.
+static bool isLayoutAdaptingMatrixBuiltin(unsigned BuiltinID) {
+  switch (BuiltinID) {
+  case Builtin::BI__builtin_hlsl_mul:
+  case Builtin::BI__builtin_hlsl_transpose:
+    return true;
+  default:
+    return false;
+  }
+}
+
+void SemaHLSL::propagateContextualMatrixLayout(Expr *E, QualType DestType) {
+  if (!E || DestType.isNull())
+    return;
+  const auto *DestMat = DestType->getAs<ConstantMatrixType>();
+  if (!DestMat)
+    return;
+  auto *Call = dyn_cast<CallExpr>(E->IgnoreParenImpCasts());
+  if (!Call)
+    return;
+  const FunctionDecl *Callee = Call->getDirectCallee();
+  if (!Callee || !isLayoutAdaptingMatrixBuiltin(Callee->getBuiltinID()))
+    return;
+  const auto *CallMat = Call->getType()->getAs<ConstantMatrixType>();
+  if (!CallMat || CallMat->getNumRows() != DestMat->getNumRows() ||
+      CallMat->getNumColumns() != DestMat->getNumColumns())
+    return;
+  // Re-type the call with the destination sugar so CodeGen lowers into that
+  // layout, not the TU default.
+  Call->setType(DestType.getUnqualifiedType());
+}
+
 namespace {
 
 /// This class implements HLSL availability diagnostics for default
