@@ -23,7 +23,7 @@ body: |
 ...
 
 # In this test the function attribute is 16 but MFI is set to 32.
-# MFI takes precedence over MFI, so check for 32.
+# MFI takes precedence over the attribute, so check for 32.
 
 # CHECK-LABEL: name: dynvgpr_roundtrip_with_fn_attr
 # CHECK: dynamicVGPRBlockSize: 32
