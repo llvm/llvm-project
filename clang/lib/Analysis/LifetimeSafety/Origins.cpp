@@ -81,9 +81,9 @@ private:
     if (!FD)
       return;
     FD = getDeclWithMergedLifetimeBoundAttrs(FD);
+    const auto *MD = dyn_cast<CXXMethodDecl>(FD);
 
-    if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-        MD && MD->isInstance() && !isa<CXXConstructorDecl>(MD) &&
+    if (MD && MD->isInstance() && !isa<CXXConstructorDecl>(MD) &&
         implicitObjectParamIsLifetimeBound(MD)) {
       CollectedTypes.push_back(RetType);
       return;
@@ -93,6 +93,25 @@ private:
       if (Param->hasAttr<LifetimeBoundAttr>()) {
         CollectedTypes.push_back(RetType);
         return;
+      }
+      if (auto *Attr = Param->getAttr<LifetimeCaptureByAttr>()) {
+        for (int Idx : Attr->params()) {
+          if (Idx == LifetimeCaptureByAttr::Global ||
+              Idx == LifetimeCaptureByAttr::Unknown ||
+              Idx == LifetimeCaptureByAttr::Invalid)
+            continue;
+          if (Idx == LifetimeCaptureByAttr::This) {
+            if (MD && MD->isInstance())
+              CollectedTypes.push_back(MD->getFunctionObjectParameterType());
+          } else if (int LogicalIdx =
+                         Idx -
+                         (MD && MD->isImplicitObjectMemberFunction() ? 1 : 0);
+                     LogicalIdx >= 0 &&
+                     (unsigned)LogicalIdx < FD->getNumParams()) {
+            CollectedTypes.push_back(
+                FD->getParamDecl(LogicalIdx)->getType().getNonReferenceType());
+          }
+        }
       }
     }
   }
