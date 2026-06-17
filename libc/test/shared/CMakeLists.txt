@@ -75,6 +75,7 @@ add_fp_unittest(
     libc.src.__support.math.cbrt
     libc.src.__support.math.cbrtbf16
     libc.src.__support.math.cbrtf
+    libc.src.__support.math.cbrtf16
     libc.src.__support.math.ceil
     libc.src.__support.math.ceilbf16
     libc.src.__support.math.ceilf
@@ -297,6 +298,7 @@ add_fp_unittest(
     libc.src.__support.math.iscanonicall
     libc.src.__support.math.isnan
     libc.src.__support.math.isnanf
+    libc.src.__support.math.isnanf128
     libc.src.__support.math.isnanf16
     libc.src.__support.math.isnanl
     libc.src.__support.math.issignaling
@@ -670,6 +672,7 @@ add_fp_unittest(
     libc.src.__support.math.iscanonicall
     libc.src.__support.math.isnan
     libc.src.__support.math.isnanf
+    libc.src.__support.math.isnanf128
     libc.src.__support.math.isnanf16
     libc.src.__support.math.isnanl
     libc.src.__support.math.issignaling

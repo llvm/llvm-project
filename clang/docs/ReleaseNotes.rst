@@ -393,6 +393,17 @@ New Compiler Flags
   a hostname when generates the hashes. Known issues -- does not remap the
   source file pathes within PCH/PCM files.
 
+- New ``-cl`` option ``/experimental:deterministic`` added to match CL's option.
+  This enables warning emission on usage of non-deterministic macros __DATE__,
+  __TIME__ and __TIMESTAMP__ and provides reproducable COFF's timestamp for
+  the output object files.
+
+- New ``-cl`` option ``/d1nodatetime`` added to match CL's option. This option
+  undefines the standard macros __DATE__, __TIME__ and __TIMESTAMP__ to allow
+  reproducable builds. These macros can be redefined from the command line if
+  necessary. ``/d1nodatetime-`` can be used to turn this feature off if
+  necessary to override the common build settings.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -401,11 +412,18 @@ Modified Compiler Flags
 - The `-mno-outline` and `-moutline` compiler flags are now allowed on RISC-V and X86, which both support the machine outliner.
 - The `-mno-outline` flag will now add the `nooutline` IR attribute, so that
   `-mno-outline` and `-moutline` objects can be mixed correctly during LTO.
+- The `-fzero-call-used-regs` compiler flag is now allowed on RISC-V, only the
+  "skip", "used-gpr", "used-gpr-arg", "all-gpr" and "all-gpr-arg" options are
+  supported for the moment.
 
 - Slightly changed hash id generation to get the unique linkage symbols names 
   by ``-unique-internal-linkage-names`` option. Now it uses a path that
   normalized in favor of the target system (same as the preprocessor does
   for the file macros) and allows the reproducable IDs on any build system.
+
+- The ``-cl`` ``/Brepro`` option was modified to match the original CL's option
+  and now defines the standard macros __DATE__, __TIME__ and __TIMESTAMP__ to
+  "1". The previous functionality remains unchanged.
 
 Removed Compiler Flags
 ----------------------
@@ -492,6 +510,9 @@ Attribute Changes in Clang
   instead be used by warnings and static analyses to provide more information
   about pointer lifetimes. It may be used to power optimizations in the future,
   however there are no concrete plans to do so at the moment.
+
+* The ``modular_format`` attribute now supports the ``fixed`` aspect for C
+  ISO 18037 fixed-point ``printf`` specifiers.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -695,10 +716,12 @@ Bug Fixes in This Version
   an array via an element-at-a-time copy loop (#GH192026)
 - Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
 - Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
+- Fixed a bug where ``-x cuda`` caused clang to immediately resolve templates that should not be. (#GH200545)
 - Fixed an issue where ``__typeof_unqual`` and ``__typeof_unqual__`` were rejected as a declaration specifier in block scope in C++.
 - Fixed crash when checking for overflow for unary operator that can't overflow (#GH170072)
 - Clang no longer handles a `" q-char-sequence "` header name as a string literal (#GH132643).
 - Fixed an assertion when ``__attribute__((alloc_size))`` is used with an argument type wider than the target's pointer width. (#GH190445)
+- Fixed an assertion where we improperly handled implicit conversions to integral types from an atomic-type with a conversion function. (#GH201770)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -716,6 +739,11 @@ Bug Fixes to Attribute Support
 - Fixed a crash when a ``section`` attribute or ``#pragma clang section`` caused a
   section type conflict with a declaration whose name is not a simple identifier,
   such as a lambda's call operator. (#GH192264)
+- Fixed a regression where attributed types (such as those carrying ``_Nonnull``/``_Nullable`` attributes)
+  were not deduplicated, because the attributes' arguments were not taken into
+  account when uniquing them. The duplications could substantially increase the
+  size of precompiled headers and modules (PCH/PCM), and the time spent loading
+  them. (#GH200961)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -734,7 +762,6 @@ Bug Fixes to C++ Support
 - Fixed an alias template CTAD crash.
 - Correctly diagnose uses of ``co_await`` / ``co_yield`` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
-- Fixed clang incorrectly rejecting several cases of out-of-line definitions. (#GH101330)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fixed crash instantiating class member specializations.
@@ -815,6 +842,10 @@ Miscellaneous Clang Crashes Fixed
 
 OpenACC Specific Changes
 ------------------------
+
+OpenCL Specific Changes
+-----------------------
+- Added support for OpenCL C 3.1 language version (``-cl-std=CL3.1``).
 
 Target Specific Changes
 -----------------------
@@ -996,6 +1027,12 @@ Crash and bug fixes
 - Fixed ``security.VAList`` checker producing false positives when analyzing
   C23 code where ``va_start`` expands to ``__builtin_c23_va_start``.
 
+Improvements
+^^^^^^^^^^^^
+
+- ``alpha.unix.PthreadLock`` now emits path notes on lock, unlock, destroy,
+  and init operations.
+
 .. comment:
   This is for the Static Analyzer.
   Using the caret `^^^` underlining for subsections:
@@ -1009,6 +1046,19 @@ Crash and bug fixes
 Sanitizers
 ----------
 - UndefinedBehaviorSanitizer now supports ``__ubsan_default_suppressions``.
+
+- Sanitizer Special Case Lists (``-fsanitize-ignorelist``) now support
+  Version 4 of the Special Case List format, which introduces a transition
+  period for leading dot-slash (``./``) canonicalization in path matching.
+  Version 4 matches both canonicalized and non-canonicalized paths but emits a
+  warning for deprecated matches. Version 5 drops backward compatibility and
+  requires rules to match canonicalized paths (without leading ``./``).
+
+- Sanitizer Special Case Lists (``-fsanitize-ignorelist``) and warning
+  suppression mappings (``--warning-suppression-mappings``) now recognize version
+  4 of the Special Case List format (indicated by ``#!special-case-list-v4``).
+  On Windows hosts, path matching is slash-agnostic (both forward slashes (``/``)
+  and backslashes (``\``) match either path separator in both patterns and paths).
 
 Python Binding Changes
 ----------------------
@@ -1035,6 +1085,10 @@ OpenMP Support
   ``fallback`` modifier (``fb_nullify`` or ``fb_preserve``) with OpenMP >= 61.
 - Added support for ``local`` clause with declare_target directive when
   OpenMP >= 60.
+- Fixed the identity element used for ``reduction(* : x)`` over C++ class types
+  (e.g. ``std::complex``). The private copy is now initialized to the
+  multiplicative identity instead of being value-initialized, which previously
+  produced a wrong result (the product collapsed to the additive identity).
 
 SYCL Support
 ------------

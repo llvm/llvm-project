@@ -640,7 +640,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
          "step must be loop invariant");
   assert((Plan.getLiveIn(IndDesc.getStartValue()) == Start ||
           (SE.isSCEVable(IndDesc.getStartValue()->getType()) &&
-           SE.getSCEV(IndDesc.getStartValue()) ==
+           PSE.getSCEV(IndDesc.getStartValue()) ==
                vputils::getSCEVExprForVPValue(Start, PSE))) &&
          "Start VPValue must match IndDesc's start value");
 
@@ -706,7 +706,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
 static bool
 sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
                                  VPRecipeBase *Previous,
-                                 VPDominatorTree &VPDT) {
+                                 const VPDominatorTree &VPDT) {
   // Collect recipes that need sinking.
   SmallVector<VPRecipeBase *> WorkList;
   SmallPtrSet<VPRecipeBase *, 8> Seen;
@@ -763,7 +763,7 @@ sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
 /// otherwise.
 static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
                                         VPRecipeBase *Previous,
-                                        VPDominatorTree &VPDT) {
+                                        const VPDominatorTree &VPDT) {
   if (vputils::cannotHoistOrSinkRecipe(*Previous))
     return false;
 
@@ -852,7 +852,7 @@ static bool hoistPreviousBeforeFORUsers(VPFirstOrderRecurrencePHIRecipe *FOR,
 /// VPInstructions, and replace FOR uses. Returns false if hoisting or sinking
 /// fails.
 static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
-                                            VPDominatorTree &VPDT) {
+                                            const VPDominatorTree &VPDT) {
   auto FORs =
       map_to_vector(make_filter_range(HeaderVPBB->phis(),
                                       IsaPred<VPFirstOrderRecurrencePHIRecipe>),
@@ -874,17 +874,20 @@ static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
       Previous = PrevPhi->getBackedgeValue()->getDefiningRecipe();
     }
 
-    assert(Previous && "Previous must be a recipe");
-    // Sink FOR users after Previous or hoist Previous before FOR users.
-    if (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT) &&
-        !hoistPreviousBeforeFORUsers(FOR, Previous, VPDT))
-      return false;
+    VPBasicBlock *InsertBlock = FOR->getParent();
+    VPBasicBlock::iterator InsertPt = InsertBlock->getFirstNonPhi();
+    if (Previous) {
+      // Sink FOR users after Previous or hoist Previous before FOR users.
+      if (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT) &&
+          !hoistPreviousBeforeFORUsers(FOR, Previous, VPDT))
+        return false;
+      InsertBlock = Previous->getParent();
+      InsertPt = isa<VPHeaderPHIRecipe>(Previous)
+                     ? InsertBlock->getFirstNonPhi()
+                     : std::next(Previous->getIterator());
+    }
 
     // Create FirstOrderRecurrenceSplice and replace FOR uses.
-    VPBasicBlock *InsertBlock = Previous->getParent();
-    auto InsertPt = isa<VPHeaderPHIRecipe>(Previous)
-                        ? InsertBlock->getFirstNonPhi()
-                        : std::next(Previous->getIterator());
     VPBuilder LoopBuilder(InsertBlock, InsertPt);
     auto *RecurSplice =
         LoopBuilder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
@@ -899,13 +902,13 @@ static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
 
 bool VPlanTransforms::createHeaderPhiRecipes(
     VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &OrigLoop,
+    const VPDominatorTree &VPDT,
     const MapVector<PHINode *, InductionDescriptor> &Inductions,
     const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
     const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
     const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering) {
   // Retrieve the header manually from the intial plain-CFG VPlan.
   auto [HeaderVPBB, LatchVPBB] = VPBlockUtils::getPlainCFGHeaderAndLatch(Plan);
-  VPDominatorTree VPDT(Plan);
   assert(VPDT.dominates(HeaderVPBB, LatchVPBB) &&
          "header must dominate its latch");
 
@@ -962,6 +965,10 @@ bool VPlanTransforms::createHeaderPhiRecipes(
   if (!tryToSinkOrHoistRecurrenceUsers(HeaderVPBB, VPDT))
     return false;
 
+  // Skip renaming resume phi recipes, if any header phi has been removed.
+  if (range_size(HeaderVPBB->phis()) !=
+      range_size(Plan.getScalarPreheader()->phis()))
+    return true;
   for (const auto &[HeaderPhiR, ScalarPhiR] :
        zip_equal(HeaderVPBB->phis(), Plan.getScalarPreheader()->phis())) {
     auto *ResumePhiR = cast<VPPhi>(&ScalarPhiR);
@@ -1294,7 +1301,7 @@ bool VPlanTransforms::handleEarlyExits(VPlan &Plan, UncountableExitStyle Style,
   return true;
 }
 
-void VPlanTransforms::addMiddleCheck(VPlan &Plan, bool TailFolded) {
+void VPlanTransforms::addMiddleCheck(VPlan &Plan) {
   auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
   // If MiddleVPBB has a single successor then the original loop does not exit
   // via the latch and the single successor must be the scalar preheader.
@@ -1325,12 +1332,9 @@ void VPlanTransforms::addMiddleCheck(VPlan &Plan, bool TailFolded) {
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
   DebugLoc LatchDL = LatchVPBB->getTerminator()->getDebugLoc();
   VPBuilder Builder(MiddleVPBB);
-  VPValue *Cmp;
-  if (TailFolded)
-    Cmp = Plan.getTrue();
-  else
-    Cmp = Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
-                             &Plan.getVectorTripCount(), LatchDL, "cmp.n");
+  VPValue *Cmp =
+      Builder.createICmp(CmpInst::ICMP_EQ, Plan.getTripCount(),
+                         &Plan.getVectorTripCount(), LatchDL, "cmp.n");
   Builder.createNaryOp(VPInstruction::BranchOnCond, {Cmp}, LatchDL);
 }
 
@@ -1409,8 +1413,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   for (const auto &[V, Users] : NeedsPhi) {
     if (isa<VPIRValue>(V))
       continue;
-    VPValue *TailVal =
-        Plan.getOrAddLiveIn(PoisonValue::get(V->getScalarType()));
+    VPValue *TailVal = Plan.getPoison(V->getScalarType());
     VPIRFlags Flags;
     assert(llvm::count_if(Users, IsaPred<VPReductionPHIRecipe>) <= 1 &&
            "Value used by more than two reduction phis?");
@@ -1442,6 +1445,14 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
         Builder.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});
     R.getVPSingleValue()->replaceAllUsesWith(Ext);
   }
+
+  // VectorTripCount now equals TripCount so simplify the MiddleVPBB branch.
+  assert(match(Plan.getMiddleBlock()->getTerminator(),
+               m_BranchOnCond(m_SpecificICmp(
+                   CmpInst::ICMP_EQ, m_Specific(Plan.getTripCount()),
+                   m_Specific(&Plan.getVectorTripCount())))) &&
+         "Unexpected MiddleVPBB branch");
+  Plan.getMiddleBlock()->getTerminator()->setOperand(0, Plan.getTrue());
 }
 
 /// Insert \p CheckBlockVPBB on the edge leading to the vector preheader,
@@ -1830,9 +1841,10 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
 
     // If there's a header mask, the backedge select will not be the find-last
     // select.
-    if (HeaderMask && !match(BackedgeSelect,
-                             m_Select(m_Specific(HeaderMask),
-                                      m_VPValue(CondSelect), m_Specific(PhiR))))
+    if (HeaderMask &&
+        !match(BackedgeSelect,
+               m_SelectLike(m_Specific(HeaderMask), m_VPValue(CondSelect),
+                            m_Specific(PhiR))))
       return false;
 
     VPValue *Cond = nullptr, *Op1 = nullptr, *Op2 = nullptr;
@@ -1969,7 +1981,7 @@ static bool handleFirstArgMinOrMax(
     FindIVSelectR->setOperand(FindIVSelectR->getOperand(1) == WideIV ? 1 : 2,
                               WidenCanIV);
   }
-  FindLastIVPhiR->setOperand(0, Plan.getOrAddLiveIn(PoisonValue::get(Ty)));
+  FindLastIVPhiR->setOperand(0, Plan.getPoison(Ty));
 
   // The reduction using MinOrMaxPhiR needs adjusting to compute the correct
   // result:
