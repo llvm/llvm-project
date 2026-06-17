@@ -12,10 +12,10 @@ define void @clmul() {
 ; NOAES-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AES-LABEL: 'clmul'
-; AES-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %call_i128 = call i128 @llvm.clmul.i128(i128 poison, i128 poison)
-; AES-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %call_i64 = call i64 @llvm.clmul.i64(i64 poison, i64 poison)
-; AES-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %call_i32 = call i32 @llvm.clmul.i32(i32 poison, i32 poison)
-; AES-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %call_i16 = call i16 @llvm.clmul.i16(i16 poison, i16 poison)
+; AES-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %call_i128 = call i128 @llvm.clmul.i128(i128 poison, i128 poison)
+; AES-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %call_i64 = call i64 @llvm.clmul.i64(i64 poison, i64 poison)
+; AES-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %call_i32 = call i32 @llvm.clmul.i32(i32 poison, i32 poison)
+; AES-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %call_i16 = call i16 @llvm.clmul.i16(i16 poison, i16 poison)
 ; AES-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %call_i8 = call i8 @llvm.clmul.i8(i8 poison, i8 poison)
 ; AES-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;

@@ -684,8 +684,17 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       case MVT::i16:
       case MVT::i32:
       case MVT::i64:
-      case MVT::i128:
-        return LT.first * 4;
+      case MVT::i128: {
+        auto *VecTy =
+            FixedVectorType::get(Type::getInt64Ty(RetTy->getContext()), 1);
+        return LT.first *
+               (1 +
+                getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind,
+                                   -1, nullptr, nullptr) *
+                    2 +
+                getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind,
+                                   -1, nullptr, nullptr));
+      }
       case MVT::v1i64:
         return LT.first;
       case MVT::v2i64:
