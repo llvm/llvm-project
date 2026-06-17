@@ -1241,7 +1241,7 @@ std::error_code SampleProfileReaderBinary::readNameTable() {
   // because optimization passes can only handle either type.
   bool UseMD5 = useMD5();
 
-  auto &TableVec = NameTable.resetToEager();
+  auto &TableVec = NameTable.setToEager();
   TableVec.reserve(*Size);
   if (!ProfileIsCS) {
     MD5SampleContextTable.clear();
@@ -1299,7 +1299,7 @@ SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
     if (std::error_code EC = Size.getError())
       return EC;
 
-    auto &TableVec = NameTable.resetToEager();
+    auto &TableVec = NameTable.setToEager();
     TableVec.reserve(*Size);
     if (!ProfileIsCS)
       MD5SampleContextTable.resize(*Size);

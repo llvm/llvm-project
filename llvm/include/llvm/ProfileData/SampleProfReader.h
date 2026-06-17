@@ -419,7 +419,7 @@ public:
 
   /// Transitions the table to eager-loading mode by clearing previous state and
   /// returning a mutable reference to the underlying vector for population.
-  std::vector<FunctionId> &resetToEager() {
+  std::vector<FunctionId> &setToEager() {
     clear();
     return Vec;
   }
