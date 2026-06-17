@@ -84,13 +84,14 @@ int main(int argc, const char **argv) {
   Args.append({ClangExe, "-E", "-P", "-D__flang__=1",
       "-D__flang_major__=" FLANG_VERSION_MAJOR_STRING,
       "-D__flang_minor__=" FLANG_VERSION_MINOR_STRING,
-      "-D__flang_patchlevel__=" FLANG_VERSION_PATCHLEVEL_STRING,
-      "-U__GNUC__", "-x", "c"});
+      "-D__flang_patchlevel__=" FLANG_VERSION_PATCHLEVEL_STRING, "-U__GNUC__",
+      "-x", "c"});
   for (int I = 1; I < argc; ++I) {
     llvm::StringRef arg = argv[I];
 
     // Sometime CMake tries to invoke the preprocessor
-    if (arg == "-cpp" || arg == "-E") continue ;
+    if (arg == "-cpp" || arg == "-E")
+      continue;
 
     Args.push_back(arg);
   }
