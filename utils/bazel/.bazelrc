@@ -238,9 +238,15 @@ build:ci --sandbox_base=/dev/shm
 build:ci --@llvm-project//libc:mpfr=system
 build:ci --@llvm-project//llvm:pfm=system
 
-# Don't build/test targets tagged with "nobuildkite".
-build:ci --build_tag_filters=-nobuildkite
-build:ci --test_tag_filters=-nobuildkite
+# Tags to skip when building/testing:
+# * "nobuildkite" - something incompatible with buildkite CI
+# * "manual" - normally skipped when running `bazel test //...`, but buildkite
+#   runs `bazel query //... | xargs bazel test` which will include those.
+build:ci --build_tag_filters=-nobuildkite,-manual
+build:ci --test_tag_filters=-nobuildkite,-manual
+
+# Don't run tests that take too long.
+test:ci --test_size_filters=-enormous
 
 # Show as many errors as possible.
 build:ci --keep_going
