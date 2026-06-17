@@ -1,5 +1,5 @@
-# Device-profile drain tests: require an AMD GPU (and, implicitly, the amdgcn
-# device profile runtime in the resource directory and a ROCm/HIP install).
+# HIP device-PGO tests for host-shadowed (statically linked) kernels: require an
+# AMD GPU plus a ROCm/HIP install (features set in ../lit.cfg.py).
 if not {"hip", "amdgpu"}.issubset(config.available_features):
     config.unsupported = True
 else:
