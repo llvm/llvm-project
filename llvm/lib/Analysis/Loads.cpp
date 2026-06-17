@@ -127,7 +127,7 @@ static bool isDereferenceableAndAlignedPointer(
   auto IsKnownDeref = [&]() {
     bool CheckForNonNull, CheckForFreed;
     if (!Size.ule(V->getPointerDereferenceableBytes(SQ.DL, CheckForNonNull,
-                                                    CheckForFreed)))
+                                                    &CheckForFreed)))
       return false;
     if (CheckForNonNull && !isKnownNonZero(V, SQ))
       return false;
@@ -265,6 +265,11 @@ bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
 bool llvm::isDereferenceablePointer(const Value *V, Type *Ty,
                                     const SimplifyQuery &SQ, bool IgnoreFree) {
   return isDereferenceableAndAlignedPointer(V, Ty, Align(1), SQ, IgnoreFree);
+}
+
+bool llvm::isDereferenceablePointer(const Value *V, const APInt &Size,
+                                    const SimplifyQuery &Q, bool IgnoreFree) {
+  return isDereferenceableAndAlignedPointer(V, Align(1), Size, Q, IgnoreFree);
 }
 
 /// Test if A and B will obviously have the same value.

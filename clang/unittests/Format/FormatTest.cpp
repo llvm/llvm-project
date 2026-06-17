@@ -15425,6 +15425,15 @@ TEST_F(FormatTest, PullInlineOnlyFunctionDefinitionsIntoSingleLine) {
                "}",
                MergeInlineOnly);
 
+  MergeInlineOnly.NamespaceIndentation = FormatStyle::NI_All;
+  verifyFormat("namespace {\n"
+               "  class Class {\n"
+               "#define MACRO 1\n"
+               "    int f() { return 1; }\n"
+               "  };\n"
+               "} // namespace",
+               MergeInlineOnly);
+
   MergeInlineOnly.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
   verifyFormat("class Foo\n"
                "  {\n"

@@ -152,8 +152,12 @@ struct Derived : BFields {
 
 // Derived Struct truncate to scalar
 // CHECK-LABEL: call9
-// CHECK: [[D2:%.*]] = alloca double, align 8
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:  [[D_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT: [[D2:%.*]] = alloca double, align 8
 // CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.Derived, align 1
+// CHECK-NEXT: store ptr %D, ptr [[D_INDIRECT_ADDR]], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 %D, i32 19, i1 false)
 // CHECK-NEXT: [[Gep:%.*]] = getelementptr inbounds %struct.Derived, ptr [[Tmp]], i32 0, i32 0
 // CHECK-NEXT: [[E:%.*]] = getelementptr inbounds nuw %struct.BFields, ptr [[Gep]], i32 0, i32 1
@@ -200,8 +204,12 @@ export void call10(int4 I) {
 
 // truncate derived struct
 // CHECK-LABEL: call11
-// CHECK: [[B:%.*]] = alloca %struct.BFields, align 1
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
+// CHECK-NEXT:  [[D_INDIRECT_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT: [[B:%.*]] = alloca %struct.BFields, align 1
 // CHECK-NEXT: [[Tmp:%.*]] = alloca %struct.Derived, align 1
+// CHECK-NEXT: store ptr %D, ptr [[D_INDIRECT_ADDR]], align 4
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[Tmp]], ptr align 1 [[D]], i32 19, i1 false)
 // CHECK-NEXT: [[Gep:%.*]] = getelementptr inbounds %struct.BFields, ptr [[B]], i32 0
 // CHECK-NEXT: [[E:%.*]] = getelementptr inbounds nuw %struct.BFields, ptr [[Gep]], i32 0, i32 1
