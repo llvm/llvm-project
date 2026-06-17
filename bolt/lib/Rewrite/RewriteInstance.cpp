@@ -38,6 +38,7 @@
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -444,7 +445,7 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
       DWARFContext::create(*File, DWARFContext::ProcessDebugRelocations::Ignore,
                            nullptr, opts::DWPPathName,
                            WithColor::defaultErrorHandler,
-                           WithColor::defaultWarningHandler),
+                           WithColor::defaultWarningHandler, true),
       JournalingStreams{Stdout, Stderr});
   if (Error E = BCOrErr.takeError()) {
     Err = std::move(E);
@@ -2415,7 +2416,7 @@ void RewriteInstance::adjustCommandLineOptions() {
   }
 
   if (opts::Instrument && opts::RuntimeLibInitHook == opts::RLIH_ENTRY_POINT &&
-      !BC->HasInterpHeader) {
+      !BC->HasInterpHeader && !BC->IsStaticExecutable) {
     BC->errs()
         << "BOLT-WARNING: adjusted runtime-lib-init-hook to 'init' due to "
            "absence of INTERP header\n";
@@ -6070,7 +6071,6 @@ Error RewriteInstance::readELFDynamic(ELFObjectFile<ELFT> *File) {
 
   if (!DynamicPhdr) {
     BC->outs() << "BOLT-INFO: static input executable detected\n";
-    // TODO: static PIE executable might have dynamic header
     BC->IsStaticExecutable = true;
     return Error::success();
   }
@@ -6087,6 +6087,14 @@ Error RewriteInstance::readELFDynamic(ELFObjectFile<ELFT> *File) {
 
   for (const Elf_Dyn &Dyn : DynamicEntries) {
     switch (Dyn.d_tag) {
+    case ELF::DT_FLAGS_1: {
+      auto Flags = Dyn.getVal();
+      if (Flags & ELF::DF_1_PIE && !BC->HasInterpHeader) {
+        BC->outs() << "BOLT-INFO: static pie executable detected\n";
+        BC->IsStaticExecutable = true;
+      }
+      break;
+    }
     case ELF::DT_INIT:
       BC->InitAddress = Dyn.getPtr();
       break;
@@ -6286,6 +6294,47 @@ void RewriteInstance::rewriteFunctionsInPlace(raw_fd_ostream &OS) {
   }
 }
 
+void RewriteInstance::zeroPaddingForReusedSections(raw_fd_ostream &OS) {
+  // The output starts as a byte-for-byte copy of the input, so alignment
+  // padding after BOLT-written sections could retain stale data from the
+  // original binary. Zero the padding as if we were writing sections onto
+  // new file offset (i.e., not reusing old existing sections).
+
+  // Collect file offsets of all sections (allocatable and non-allocatable)
+  // that occupy file bytes.
+  SmallVector<uint64_t, 16> SectionStarts;
+  for (BinarySection &Section : BC->sections()) {
+    if (Section.isVirtual())
+      continue;
+    uint64_t Offset = Section.getOutputFileOffset();
+    if (!Offset)
+      Offset = Section.getInputFileOffset();
+    if (Offset)
+      SectionStarts.push_back(Offset);
+  }
+  llvm::sort(SectionStarts);
+
+  uint64_t SavedPos = OS.tell();
+  for (BinarySection &Section : BC->allocatableSections()) {
+    if (!Section.isFinalized() || !Section.getOutputData())
+      continue;
+    if (Section.isLinkOnly() || !Section.getOutputSize())
+      continue;
+    if (!(Section.getELFFlags() & ELF::SHF_EXECINSTR))
+      continue;
+    uint64_t SecEnd = Section.getOutputFileOffset() + Section.getOutputSize();
+    auto It = llvm::upper_bound(SectionStarts, SecEnd - 1);
+    if (It != SectionStarts.end()) {
+      uint64_t NextStart = *It;
+      if (NextStart > SecEnd) {
+        OS.seek(SecEnd);
+        OS.write_zeros(NextStart - SecEnd);
+      }
+    }
+  }
+  OS.seek(SavedPos);
+}
+
 void RewriteInstance::rewriteFile() {
   std::error_code EC;
   Out = std::make_unique<ToolOutputFile>(opts::OutputFilename, EC,
@@ -6374,6 +6423,9 @@ void RewriteInstance::rewriteFile() {
 
   // Copy non-allocatable sections once allocatable part is finished.
   rewriteNoteSections();
+
+  if (opts::UseOldText)
+    zeroPaddingForReusedSections(OS);
 
   if (BC->HasRelocations) {
     patchELFAllocatableRelaSections();

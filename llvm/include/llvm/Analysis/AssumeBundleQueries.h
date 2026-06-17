@@ -49,10 +49,7 @@ inline bool hasAttributeInAssume(AssumeInst &Assume, Value *IsOn,
                               Attribute::getNameFromAttrKind(Kind), ArgVal);
 }
 
-template<> struct DenseMapInfo<Attribute::AttrKind> {
-  static Attribute::AttrKind getEmptyKey() {
-    return Attribute::EmptyKey;
-  }
+template <> struct DenseMapInfo<Attribute::AttrKind> {
   static unsigned getHashValue(Attribute::AttrKind AK) {
     return hash_combine(AK);
   }
@@ -121,18 +118,6 @@ struct RetainedKnowledge {
   operator bool() const { return AttrKind != Attribute::None; }
   static RetainedKnowledge none() { return RetainedKnowledge{}; }
 };
-
-/// Retreive the information help by Assume on the operand at index Idx.
-/// Assume should be an llvm.assume and Idx should be in the operand bundle.
-LLVM_ABI RetainedKnowledge getKnowledgeFromOperandInAssume(AssumeInst &Assume,
-                                                           unsigned Idx);
-
-/// Retreive the information help by the Use U of an llvm.assume. the use should
-/// be in the operand bundle.
-inline RetainedKnowledge getKnowledgeFromUseInAssume(const Use *U) {
-  return getKnowledgeFromOperandInAssume(*cast<AssumeInst>(U->getUser()),
-                                         U->getOperandNo());
-}
 
 /// Tag in operand bundle indicating that this bundle should be ignored.
 constexpr StringRef IgnoreBundleTag = "ignore";
