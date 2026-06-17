@@ -19648,6 +19648,8 @@ void SITargetLowering::computeKnownBitsForCopyFromReg(
   if (Reg != FLI->DemoteRegister)
     return;
 
+  // Implicit sret lowering keeps the hidden return pointer in DemoteRegister.
+  // Preserve the same high-zero address fact used by explicit sret lowering.
   Known.Zero.setHighBits(getSRetPointerKnownHighZeroBits());
 }
 
