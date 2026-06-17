@@ -545,6 +545,9 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
       case 300:
         Builder.defineMacro("__OPENCL_C_VERSION__", "300");
         break;
+      case 310:
+        Builder.defineMacro("__OPENCL_C_VERSION__", "310");
+        break;
       default:
         llvm_unreachable("Unsupported OpenCL version");
       }
@@ -554,6 +557,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("CL_VERSION_1_2", "120");
     Builder.defineMacro("CL_VERSION_2_0", "200");
     Builder.defineMacro("CL_VERSION_3_0", "300");
+    Builder.defineMacro("CL_VERSION_3_1", "310");
 
     if (TI.isLittleEndian())
       Builder.defineMacro("__ENDIAN_LITTLE__");
