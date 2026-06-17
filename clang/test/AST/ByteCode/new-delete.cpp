@@ -1226,7 +1226,7 @@ namespace ArrayDestSize {
   static_assert(dynarray<char>(3, 2) == 'x'); // both-error {{constant expression}} both-note {{in call}}
 }
 
-namespace OpertorArrayDelete {
+namespace OperatorArrayDelete {
   struct S {};
   using State = S[2];
   constexpr unsigned run(const State *s) {
@@ -1239,6 +1239,19 @@ namespace OpertorArrayDelete {
   constexpr State s[] = {};
   static_assert(run(s) == 42, ""); // both-error {{not an integral constant expression}} \
                                    // both-note {{in call to}}
+}
+
+namespace AllocInBase {
+  struct A {
+    int *p;
+    constexpr A() : p(new int) {} // both-note {{heap allocation performed here}}
+  };
+  struct B : A {
+    int *m;
+    constexpr B() : m(new int) {}
+  };
+  constexpr B b{}; // both-error {{must be initialized by a constant expression}} \
+                   // both-note {{pointer to heap-allocated object is not a constant expression}}
 }
 
 #else

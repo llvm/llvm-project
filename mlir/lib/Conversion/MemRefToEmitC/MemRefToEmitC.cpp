@@ -45,7 +45,6 @@ struct MemRefToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
   void populateConvertToEmitCConversionPatterns(
       ConversionTarget &target, TypeConverter &typeConverter,
       RewritePatternSet &patterns, std::optional<bool> lowerToCpp) const final {
-    populateMemRefToEmitCTypeConversion(typeConverter);
     populateMemRefToEmitCConversionPatterns(patterns, typeConverter);
   }
 };
@@ -472,34 +471,6 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
 };
 
 } // namespace
-
-void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
-  typeConverter.addConversion(
-      [&](MemRefType memRefType) -> std::optional<Type> {
-        if (!isMemRefTypeLegalForEmitC(memRefType)) {
-          return {};
-        }
-        Type convertedElementType =
-            typeConverter.convertType(memRefType.getElementType());
-        if (!convertedElementType)
-          return {};
-        return emitc::ArrayType::get(memRefType.getShape(),
-                                     convertedElementType);
-      });
-
-  auto materializeAsUnrealizedCast = [](OpBuilder &builder, Type resultType,
-                                        ValueRange inputs,
-                                        Location loc) -> Value {
-    if (inputs.size() != 1)
-      return Value();
-
-    return UnrealizedConversionCastOp::create(builder, loc, resultType, inputs)
-        .getResult(0);
-  };
-
-  typeConverter.addSourceMaterialization(materializeAsUnrealizedCast);
-  typeConverter.addTargetMaterialization(materializeAsUnrealizedCast);
-}
 
 void mlir::populateMemRefToEmitCConversionPatterns(
     RewritePatternSet &patterns, const TypeConverter &converter) {

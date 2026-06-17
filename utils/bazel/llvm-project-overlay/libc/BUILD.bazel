@@ -3092,12 +3092,15 @@ cc_library(
     name = "shared_math_headers_for_apfloat",
     srcs = glob([
         "src/__support/math/*.h",
+        "src/__support/math/check/*.h",
     ]),
     hdrs = [
         "shared/libc_common.h",
         "shared/math.h",
+        "shared/math_check_exceptions.h",
     ] + glob([
         "shared/math/*.h",
+        "shared/math/check/*.h",
     ]),
     copts = libc_common_copts(),
     includes = ["."],
@@ -4636,6 +4639,21 @@ libc_support_library(
     deps = [
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_cbrtf16",
+    hdrs = ["src/__support/math/cbrtf16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 
@@ -10197,6 +10215,11 @@ libc_math_function(
 libc_math_function(
     name = "cbrtf",
     additional_deps = [":__support_math_cbrtf"],
+)
+
+libc_math_function(
+    name = "cbrtf16",
+    additional_deps = [":__support_math_cbrtf16"],
 )
 
 libc_math_function(
