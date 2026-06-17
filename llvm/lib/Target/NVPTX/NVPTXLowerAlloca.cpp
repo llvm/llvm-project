@@ -30,9 +30,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
 
@@ -83,9 +83,8 @@ static void updateMemIntrinsicDeclaration(MemIntrinsic *MI) {
     Tys.push_back(MSI->getLength()->getType());
   }
 
-  Function *Decl =
-      Intrinsic::getOrInsertDeclaration(MI->getModule(), MI->getIntrinsicID(),
-                                        Tys);
+  Function *Decl = Intrinsic::getOrInsertDeclaration(MI->getModule(),
+                                                     MI->getIntrinsicID(), Tys);
   MI->setCalledFunction(Decl);
 }
 
@@ -122,9 +121,9 @@ static void convertPointerUsersToLocal(Value *OldPtr, Value *LocalPtr,
     if (auto *GEP = dyn_cast<GetElementPtrInst>(UserInst);
         GEP && GEP->getPointerOperand() == OldPtr) {
       SmallVector<Value *, 4> Indices(GEP->idx_begin(), GEP->idx_end());
-      auto *NewGEP = GetElementPtrInst::Create(
-          GEP->getSourceElementType(), LocalPtr, Indices, "",
-          GEP->getIterator());
+      auto *NewGEP =
+          GetElementPtrInst::Create(GEP->getSourceElementType(), LocalPtr,
+                                    Indices, "", GEP->getIterator());
       NewGEP->setNoWrapFlags(GEP->getNoWrapFlags());
       NewGEP->copyMetadata(*GEP);
       NewGEP->setDebugLoc(GEP->getDebugLoc());
@@ -144,15 +143,16 @@ static void convertPointerUsersToLocal(Value *OldPtr, Value *LocalPtr,
 
     if (auto *ASC = dyn_cast<AddrSpaceCastInst>(UserInst);
         ASC && ASC->getOperand(0) == OldPtr &&
-            ASC->getDestAddressSpace() == ADDRESS_SPACE_LOCAL) {
+        ASC->getDestAddressSpace() == ADDRESS_SPACE_LOCAL) {
       ASC->replaceAllUsesWith(LocalPtr);
       ASC->eraseFromParent();
       continue;
     }
 
     if (auto *II = dyn_cast<IntrinsicInst>(UserInst);
-        II && (II->getIntrinsicID() == Intrinsic::lifetime_start ||
-               II->getIntrinsicID() == Intrinsic::lifetime_end) &&
+        II &&
+        (II->getIntrinsicID() == Intrinsic::lifetime_start ||
+         II->getIntrinsicID() == Intrinsic::lifetime_end) &&
         isa<AllocaInst>(LocalPtr)) {
       // Lifetime markers must reference an alloca directly, so retarget them
       // to the local alloca and update the overloaded declaration.
@@ -226,10 +226,10 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
     // For allocas already in ADDRESS_SPACE_LOCAL, we just need
     // addrspacecast to ADDRESS_SPACE_GENERIC.
     if (AllocAddrSpace == ADDRESS_SPACE_GENERIC) {
-      auto *AllocaInLocalAS = new AllocaInst(
-          allocaInst->getAllocatedType(), ADDRESS_SPACE_LOCAL,
-          allocaInst->getArraySize(), allocaInst->getAlign(), "",
-          allocaInst->getIterator());
+      auto *AllocaInLocalAS =
+          new AllocaInst(allocaInst->getAllocatedType(), ADDRESS_SPACE_LOCAL,
+                         allocaInst->getArraySize(), allocaInst->getAlign(), "",
+                         allocaInst->getIterator());
       AllocaInLocalAS->takeName(allocaInst);
       AllocaInLocalAS->setDebugLoc(allocaInst->getDebugLoc());
       AllocaInLocalAS->copyMetadata(*allocaInst);
