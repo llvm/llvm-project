@@ -185,10 +185,20 @@ using ReferenceGroupsTy = SmallVector<ReferenceGroupTy, 8>;
 ///    other subscripts is zero (e.g. RefCost = TripCount/(CLS/RefStride))
 ///  - equal to the innermost loop trip count if the reference stride is greater
 ///    or equal to the cache line size CLS.
+///
+/// A nest need not be perfectly nested. \c CacheCost decomposes the nest into
+/// disjoint linear chains of loops and costs each chain independently down to
+/// its unique innermost loop. The result is a list of per-chain rankings, with
+/// the costs only meaningful for comparison within the same chain. A loop that
+/// forks the nest, or that encloses a fork, is not a reorder candidate and does
+/// not appear in any chain. A perfectly nested loop is a specific case of this.
 class CacheCost {
   friend LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const CacheCost &CC);
   using LoopTripCountTy = std::pair<const Loop *, unsigned>;
   using LoopCacheCostTy = std::pair<const Loop *, CacheCostTy>;
+  /// The cache-cost ranking of a single linear chain of loops, sorted by
+  /// decreasing cost. Costs are only comparable within a chain.
+  using LoopCacheCostsTy = SmallVector<LoopCacheCostTy, 3>;
 
 public:
   /// Construct a CacheCost object for the loop nest described by \p Loops.
@@ -208,31 +218,41 @@ public:
   getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR, DependenceInfo &DI,
                std::optional<unsigned> TRT = std::nullopt);
 
-  /// Return the estimated cost of loop \p L if the given loop is part of the
-  /// loop nest associated with this object. Return -1 otherwise.
+  /// Return the estimated cost of loop \p L if the given loop is a rankable
+  /// candidate in the loop nest associated with this object. Return -1
+  /// otherwise.
   CacheCostTy getLoopCost(const Loop &L) const {
-    auto IT = llvm::find_if(LoopCosts, [&L](const LoopCacheCostTy &LCC) {
-      return LCC.first == &L;
-    });
-    return (IT != LoopCosts.end()) ? (*IT).second : -1;
+    for (const LoopCacheCostsTy &Chain : ChainCosts) {
+      auto IT = llvm::find_if(
+          Chain, [&L](const LoopCacheCostTy &LCC) { return LCC.first == &L; });
+      if (IT != Chain.end())
+        return IT->second;
+    }
+    return -1;
   }
 
-  /// Return the estimated ordered loop costs.
-  ArrayRef<LoopCacheCostTy> getLoopCosts() const { return LoopCosts; }
+  /// Return the estimated ordered loop costs, grouped by linear chain. Each
+  /// inner range is one chain's ranking, sorted by decreasing cost. Costs are
+  /// only meaningful for comparison within a single chain. Fork loops (and
+  /// loops above a fork) are not rankable candidates and do not appear.
+  ArrayRef<LoopCacheCostsTy> getLoopCosts() const { return ChainCosts; }
 
 private:
   /// Calculate the cache footprint of each loop in the nest (when it is
-  /// considered to be in the innermost position).
+  /// considered to be in the innermost position). The nest is decomposed into
+  /// disjoint linear chains and each chain is costed independently.
   void calculateCacheFootprint();
 
-  /// Partition store/load instructions in the loop nest into reference groups.
-  /// Two or more memory accesses belong in the same reference group if they
-  /// share the same cache line.
-  bool populateReferenceGroups(ReferenceGroupsTy &RefGroups) const;
+  /// Partition the store/load instructions in the innermost loop \p Leaf of a
+  /// chain into reference groups. Two or more memory accesses belong in the
+  /// same reference group if they share the same cache line.
+  bool populateReferenceGroups(const Loop &Leaf,
+                               ReferenceGroupsTy &RefGroups) const;
 
   /// Calculate the cost of the given loop \p L assuming it is the innermost
-  /// loop in nest.
-  CacheCostTy computeLoopCacheCost(const Loop &L,
+  /// loop of the chain whose innermost loop is \p Leaf, using \p RefGroups
+  /// collected from \p Leaf.
+  CacheCostTy computeLoopCacheCost(const Loop &L, const Loop &Leaf,
                                    const ReferenceGroupsTy &RefGroups) const;
 
   /// Compute the cost of a representative reference in reference group \p RG
@@ -248,23 +268,26 @@ private:
   CacheCostTy computeRefGroupCacheCost(const ReferenceGroupTy &RG,
                                        const Loop &L) const;
 
-  /// Sort the LoopCosts vector by decreasing cache cost.
-  void sortLoopCosts() {
-    stable_sort(LoopCosts,
-                [](const LoopCacheCostTy &A, const LoopCacheCostTy &B) {
-                  return A.second > B.second;
-                });
+  /// Sort the given chain's costs by decreasing cache cost.
+  static void sortLoopCosts(LoopCacheCostsTy &Costs) {
+    stable_sort(Costs, [](const LoopCacheCostTy &A, const LoopCacheCostTy &B) {
+      return A.second > B.second;
+    });
   }
 
 private:
   /// Loops in the loop nest associated with this object.
   LoopVectorTy Loops;
 
+  /// The disjoint linear chains the nest decomposes into.
+  SmallVector<LoopVectorTy, 4> Chains;
+
   /// Trip counts for the loops in the loop nest associated with this object.
   SmallVector<LoopTripCountTy, 3> TripCounts;
 
-  /// Cache costs for the loops in the loop nest associated with this object.
-  SmallVector<LoopCacheCostTy, 3> LoopCosts;
+  /// Cache costs grouped by linear chain. Each chain is sorted by decreasing
+  /// cost and is only meaningful for comparison within itself.
+  SmallVector<LoopCacheCostsTy, 4> ChainCosts;
 
   /// The max. distance between array elements accessed in a loop so that the
   /// elements are classified to have temporal reuse.
