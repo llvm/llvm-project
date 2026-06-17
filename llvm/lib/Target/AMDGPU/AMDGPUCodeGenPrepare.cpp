@@ -1361,6 +1361,9 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
   if (NumDivBits <= (IsSigned ? 23 : 22)) {
     Narrowed = expandDivRemToFloatImpl(Builder, I, Num, Den, NumDivBits, IsDiv,
                                        IsSigned);
+    if (Narrowed)
+      Narrowed = IsSigned ? Builder.CreateSExt(Narrowed, Num->getType())
+                          : Builder.CreateZExt(Narrowed, Num->getType());
   } else if (NumDivBits <= (IsSigned ? 31 : 32)) {
     // Do not use 32-bit division if dividend may be -2147483648.
     // Otherwise 32-bit division cannot be used safely.
@@ -1369,12 +1372,7 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
     Narrowed = expandDivRem32(Builder, I, Num, Den);
   }
 
-  if (Narrowed) {
-    return IsSigned ? Builder.CreateSExt(Narrowed, Num->getType()) :
-                      Builder.CreateZExt(Narrowed, Num->getType());
-  }
-
-  return nullptr;
+  return Narrowed;
 }
 
 void AMDGPUCodeGenPrepareImpl::expandDivRem64(BinaryOperator &I) const {
