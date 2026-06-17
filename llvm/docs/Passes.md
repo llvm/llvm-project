@@ -111,6 +111,18 @@ This pass, only available in `opt`, prints the dominator tree into a `.dot`
 graph, omitting the function bodies.  This graph can then be processed with the
 {program}`dot` tool to convert it to postscript or some other suitable format.
 
+### `dot-function-ddg`: Print function-scoped DDG to "dot" file
+
+This pass, only available in `opt`, prints a function-scoped Data Dependence
+Graph into a `.dot` graph (one file per function, named
+`<prefix>.<function>.dot` via `-dot-function-ddg-filename-prefix`).  It is the
+function-scope counterpart to the loop-scoped `dot-ddg` printer: it builds a
+Data Dependence Graph for the whole function and renders it with the same DDG
+graph traits, so it covers straight-line and cross-loop code that `dot-ddg`
+(which only handles loop nests) does not.  The `-dot-function-ddg-only` option
+selects the simplified rendering.  This graph can then be processed with the
+{program}`dot` tool to convert it to postscript or some other suitable format.
+
 ### `dot-post-dom`: Print postdominance tree of function to "dot" file
 
 This pass, only available in `opt`, prints the post dominator tree into a

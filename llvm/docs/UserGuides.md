@@ -25,6 +25,7 @@ AdvancedBuilds
 WritingAnLLVMNewPMPass
 WritingAnLLVMPass
 Passes
+FunctionDDG
 StackSafetyAnalysis
 MergeFunctions
 AliasAnalysis
@@ -156,6 +157,11 @@ yaml2obj
 - {doc}`Passes`
 
   A list of optimizations and analyses implemented in LLVM.
+
+- {doc}`FunctionDDG`
+
+  Describes the function-scoped Data Dependence Graph DOT printer
+  (`dot-function-ddg`).
 
 - {doc}`StackSafetyAnalysis`
 
