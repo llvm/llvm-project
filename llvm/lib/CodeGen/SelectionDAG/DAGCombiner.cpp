@@ -27680,9 +27680,6 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
         return DAG.getSplatVector(NVT, DL, V.getOperand(0));
 
   // extract_subvector(insert_subvector(x,y,c1),c2)
-  //  --> extract_subvector(x,c2)
-  // iff we're extracting wholly outside the inserted subvector.
-  //
   //  --> extract_subvector(y,c2-c1)
   // iff we're extracting wholly from the inserted subvector.
   //
