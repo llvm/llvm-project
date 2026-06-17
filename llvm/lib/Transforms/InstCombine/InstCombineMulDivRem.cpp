@@ -1515,28 +1515,26 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
   {
     Value *Cond, *DivY;
     const APInt *C;
+    auto IsSafeDivisor = [&](Value *V) {
+      if (IsSigned)
+        return match(V, m_APInt(C)) && !C->isZero() && !C->isAllOnes();
+      return isKnownNonZero(V, SQ.getWithInstruction(&I)) &&
+             isGuaranteedNotToBePoison(V, SQ.AC, &I, SQ.DT);
+    };
     if (match(Op1, m_OneUse(m_Select(m_Value(Cond), m_One(), m_Value(DivY))))) {
-      bool Ok = IsSigned ? (match(DivY, m_APInt(C)) && !C->isZero() &&
-                            !C->isAllOnes())
-                         : isKnownNonZero(DivY, SQ.getWithInstruction(&I));
-      if (Ok) {
+      if (IsSafeDivisor(DivY)) {
         Value *NewDiv =
             Builder.CreateExactBinOp(I.getOpcode(), Op0, DivY, I.isExact());
-        SelectInst *SI =
-            ProfcheckDisableMetadataFixes ? nullptr : cast<SelectInst>(Op1);
-        return SelectInst::Create(Cond, Op0, NewDiv, "", nullptr, SI);
+        return SelectInst::Create(Cond, Op0, NewDiv, "", nullptr,
+                                  cast<SelectInst>(Op1));
       }
     }
     if (match(Op1, m_OneUse(m_Select(m_Value(Cond), m_Value(DivY), m_One())))) {
-      bool Ok = IsSigned ? (match(DivY, m_APInt(C)) && !C->isZero() &&
-                            !C->isAllOnes())
-                         : isKnownNonZero(DivY, SQ.getWithInstruction(&I));
-      if (Ok) {
+      if (IsSafeDivisor(DivY)) {
         Value *NewDiv =
             Builder.CreateExactBinOp(I.getOpcode(), Op0, DivY, I.isExact());
-        SelectInst *SI =
-            ProfcheckDisableMetadataFixes ? nullptr : cast<SelectInst>(Op1);
-        return SelectInst::Create(Cond, NewDiv, Op0, "", nullptr, SI);
+        return SelectInst::Create(Cond, NewDiv, Op0, "", nullptr,
+                                  cast<SelectInst>(Op1));
       }
     }
   }
