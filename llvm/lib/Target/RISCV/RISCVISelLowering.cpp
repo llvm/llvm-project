@@ -21565,6 +21565,35 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     }
     break;
   }
+  case RISCVISD::PSRL:
+  case RISCVISD::PSRA: {
+    // Fold (PSRL/PSRA (trunc (PSRL X, C1)), C2) -> (trunc (PSRL/PSRA X, C1+C2))
+    // when C1 equals the number of bits discarded by the truncate.
+    SDValue Src = N->getOperand(0);
+    if (Src.getOpcode() != ISD::TRUNCATE || !Src.hasOneUse())
+      break;
+    SDValue PSRLVal = Src.getOperand(0);
+    if (PSRLVal.getOpcode() != RISCVISD::PSRL || !PSRLVal.hasOneUse())
+      break;
+    auto *C1 = dyn_cast<ConstantSDNode>(PSRLVal.getOperand(1));
+    auto *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1));
+    if (!C1 || !C2)
+      break;
+    MVT NarrowVT = N->getSimpleValueType(0);
+    MVT WideVT = PSRLVal.getSimpleValueType();
+    unsigned NarrowEltBits = NarrowVT.getVectorElementType().getSizeInBits();
+    unsigned WideEltBits = WideVT.getVectorElementType().getSizeInBits();
+    unsigned TruncatedBits = WideEltBits - NarrowEltBits;
+    if (C1->getZExtValue() != TruncatedBits)
+      break;
+    uint64_t NewShAmt = C1->getZExtValue() + C2->getZExtValue();
+    if (NewShAmt >= WideEltBits)
+      break;
+    SDValue NewShift =
+        DAG.getNode(N->getOpcode(), DL, WideVT, PSRLVal.getOperand(0),
+                    DAG.getConstant(NewShAmt, DL, XLenVT));
+    return DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, NewShift);
+  }
   case RISCVISD::ADDD: {
     assert(!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
            "ADDD is only for RV32 with P extension");
