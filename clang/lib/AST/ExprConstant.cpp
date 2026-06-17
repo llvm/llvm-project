@@ -8459,8 +8459,33 @@ protected:
 
   unsigned getConstantEvaluatedBuiltinID(const CallExpr *E) {
     unsigned BuiltinOp = E->getBuiltinCallee();
-    if (Info.Ctx.BuiltinInfo.isAuxBuiltinID(BuiltinOp))
+
+    // Target-independent builtins have the same ID regardless of the target, so
+    // they can be dispatched as-is.
+    if (BuiltinOp < Builtin::FirstTSBuiltin)
+      return BuiltinOp;
+
+    // Target-specific builtin IDs of different targets overlap (each target
+    // numbers its builtins from Builtin::FirstTSBuiltin), and the
+    // target-specific constant-evaluation cases dispatched on this ID are
+    // X86-only. A target builtin ID may therefore only be treated as an X86
+    // builtin when the target that owns it is actually x86; otherwise the
+    // overlapping ID could be misinterpreted as an unrelated X86 builtin.
+    // Determine the owning target (translating an auxiliary ID back to its
+    // canonical value) and only keep the ID when that target is x86; for any
+    // other target return 0 so dispatch falls through to the default case
+    // ("cannot constant-fold") instead of matching an X86 case by accident.
+    const TargetInfo *OwningTarget;
+    if (Info.Ctx.BuiltinInfo.isAuxBuiltinID(BuiltinOp)) {
+      OwningTarget = Info.Ctx.getAuxTargetInfo();
       BuiltinOp = Info.Ctx.BuiltinInfo.getAuxBuiltinID(BuiltinOp);
+    } else {
+      OwningTarget = &Info.Ctx.getTargetInfo();
+    }
+
+    if (!OwningTarget || !OwningTarget->getTriple().isX86())
+      return 0;
+
     return BuiltinOp;
   }
 
