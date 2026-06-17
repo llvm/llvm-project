@@ -34,9 +34,7 @@ extern "C" {
 
 #include "InstrProfilingPlatformROCmInternal.h"
 
-// Shared helpers below are defined as members of __prof_rocm (so the Linux HSA
-// drain in InstrProfilingPlatformROCmHSA.cpp can call them); this directive
-// lets the rest of this file keep calling them unqualified.
+// shortcut to shared helper names
 using namespace __prof_rocm;
 
 /* Serialize one-time HIP loader resolution and DynamicModules mutations.
@@ -67,10 +65,6 @@ static void unlockDynamicModules(void) {
   pthread_mutex_unlock(&DynamicModulesLock);
 }
 #endif
-
-// processDeviceOffloadPrf(), the dedup-recording profRecordDrainedBounds(), and
-// the OffloadSectionShadowGroup forward declaration all come from
-// InstrProfilingPlatformROCmInternal.h.
 
 int __prof_rocm::isVerboseMode() {
   static int IsVerbose = -1;
@@ -370,6 +364,29 @@ static const char *getDeviceArchName(int DeviceId) {
   return DeviceArchNames[DeviceId];
 }
 
+/* Grow a heap array (doubling from InitCap) to hold at least MinCount elements
+ * of ElemSize bytes each. On success *Arr and *Cap are updated and the new tail
+ * slots [old cap, new cap) are zeroed; on allocation failure the existing array
+ * is left intact and -1 is returned (callers degrade gracefully rather than
+ * crash). *Arr is type-erased: pass the address of the typed array pointer,
+ * e.g. growArray((void **)&MI->TUs, &MI->CapTUs, ...). */
+static int growArray(void **Arr, int *Cap, int MinCount, int InitCap,
+                     size_t ElemSize) {
+  if (*Cap >= MinCount)
+    return 0;
+  int NewCap = *Cap ? *Cap : InitCap;
+  while (NewCap < MinCount)
+    NewCap *= 2;
+  void *New = realloc(*Arr, (size_t)NewCap * ElemSize);
+  if (!New)
+    return -1;
+  __builtin_memset((char *)New + (size_t)*Cap * ElemSize, 0,
+                   (size_t)(NewCap - *Cap) * ElemSize);
+  *Arr = New;
+  *Cap = NewCap;
+  return 0;
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Dynamic module tracking                                                   */
 /* -------------------------------------------------------------------------- */
@@ -508,16 +525,10 @@ static int registerPrfSymbol(const char *Name, void *UserData) {
     return 0; /* continue */
   }
 
-  if (MI->NumTUs >= MI->CapTUs) {
-    int NewCap = MI->CapTUs ? MI->CapTUs * 2 : 4;
-    OffloadDynamicTUInfo *New = (OffloadDynamicTUInfo *)realloc(
-        MI->TUs, NewCap * sizeof(OffloadDynamicTUInfo));
-    if (!New) {
-      PROF_ERR("%s\n", "failed to grow TU array");
-      return 0;
-    }
-    MI->TUs = New;
-    MI->CapTUs = NewCap;
+  if (growArray((void **)&MI->TUs, &MI->CapTUs, MI->NumTUs + 1, 4,
+                sizeof(*MI->TUs))) {
+    PROF_ERR("%s\n", "failed to grow TU array");
+    return 0;
   }
   OffloadDynamicTUInfo *TU = &MI->TUs[MI->NumTUs++];
   TU->DeviceVar = DeviceVar;
@@ -545,16 +556,10 @@ __llvm_profile_offload_register_dynamic_module(int ModuleLoadRc, void **Ptr,
     PROF_NOTE("Registering loaded module %d: rc=%d, module=%p, image=%p\n",
               NumDynamicModules, ModuleLoadRc, *Ptr, Image);
 
-  if (NumDynamicModules >= CapDynamicModules) {
-    int NewCap = CapDynamicModules ? CapDynamicModules * 2 : 64;
-    OffloadDynamicModuleInfo *New = (OffloadDynamicModuleInfo *)realloc(
-        DynamicModules, NewCap * sizeof(OffloadDynamicModuleInfo));
-    if (!New) {
-      unlockDynamicModules();
-      return;
-    }
-    DynamicModules = New;
-    CapDynamicModules = NewCap;
+  if (growArray((void **)&DynamicModules, &CapDynamicModules,
+                NumDynamicModules + 1, 64, sizeof(*DynamicModules))) {
+    unlockDynamicModules();
+    return;
   }
 
   OffloadDynamicModuleInfo *MI = &DynamicModules[NumDynamicModules++];
@@ -634,19 +639,6 @@ extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
   unlockDynamicModules();
 }
 
-/* Grow a void* array, doubling capacity (or starting at InitCap). */
-static int growPtrArray(void ***Arr, int *Num, int *Cap, int InitCap) {
-  if (*Num < *Cap)
-    return 0;
-  int NewCap = *Cap ? *Cap * 2 : InitCap;
-  void **New = (void **)realloc(*Arr, NewCap * sizeof(void *));
-  if (!New)
-    return -1;
-  *Arr = New;
-  *Cap = NewCap;
-  return 0;
-}
-
 static void **OffloadShadowVariables = nullptr;
 static int NumShadowVariables = 0;
 static int CapShadowVariables = 0;
@@ -668,41 +660,20 @@ static OffloadSectionShadowGroup *OffloadSectionShadowGroups = nullptr;
 static int CapSectionShadowGroups = 0;
 
 static int ensureSectionShadowGroupCapacity(void) {
-  if (CapSectionShadowGroups >= CapShadowVariables)
-    return 0;
-  OffloadSectionShadowGroup *New = (OffloadSectionShadowGroup *)realloc(
-      OffloadSectionShadowGroups, CapShadowVariables * sizeof(*New));
-  if (!New)
-    return -1;
-  __builtin_memset(New + CapSectionShadowGroups, 0,
-                   (CapShadowVariables - CapSectionShadowGroups) *
-                       sizeof(*New));
-  OffloadSectionShadowGroups = New;
-  CapSectionShadowGroups = CapShadowVariables;
-  return 0;
+  return growArray((void **)&OffloadSectionShadowGroups,
+                   &CapSectionShadowGroups, CapShadowVariables,
+                   CapShadowVariables, sizeof(*OffloadSectionShadowGroups));
 }
 
 static int ensureSectionShadowCapacity(OffloadSectionShadowGroup *Group,
                                        int MinCapacity) {
-  if (Group->CapShadows >= MinCapacity)
-    return 0;
-  int NewCap = Group->CapShadows ? Group->CapShadows * 2 : 4;
-  while (NewCap < MinCapacity)
-    NewCap *= 2;
-  OffloadSectionShadow *New =
-      (OffloadSectionShadow *)realloc(Group->Shadows, NewCap * sizeof(*New));
-  if (!New)
-    return -1;
-  __builtin_memset(New + Group->CapShadows, 0,
-                   (NewCap - Group->CapShadows) * sizeof(*New));
-  Group->Shadows = New;
-  Group->CapShadows = NewCap;
-  return 0;
+  return growArray((void **)&Group->Shadows, &Group->CapShadows, MinCapacity, 4,
+                   sizeof(*Group->Shadows));
 }
 
 extern "C" void __llvm_profile_offload_register_shadow_variable(void *ptr) {
-  if (growPtrArray(&OffloadShadowVariables, &NumShadowVariables,
-                   &CapShadowVariables, 64))
+  if (growArray((void **)&OffloadShadowVariables, &CapShadowVariables,
+                NumShadowVariables + 1, 64, sizeof(*OffloadShadowVariables)))
     return;
   if (ensureSectionShadowGroupCapacity())
     return;
@@ -1145,12 +1116,6 @@ static int isHipAvailable(void) {
   return pHipMemcpy != nullptr && pHipGetSymbolAddress != nullptr;
 }
 
-/* The supplemental HSA-introspection drain (Linux only) lives in
- * InstrProfilingPlatformROCmHSA.cpp. It reuses processDeviceOffloadPrf() and
- * shares the drained-bounds dedup with the host-shadow path above via
- * profRecordDrainedBounds(); both are declared in
- * InstrProfilingPlatformROCmInternal.h. There is no Windows counterpart. */
-
 /* -------------------------------------------------------------------------- */
 /*  Collect device-side profile data                                          */
 /* -------------------------------------------------------------------------- */
@@ -1176,11 +1141,8 @@ static int collectHostShadowData(void) {
 #if defined(__linux__) && !defined(_WIN32)
       /* When no kernel launch was tracked at all, shouldCollectDevice() falls
        * back to collect-all, which can fault/hang reading a non-resident
-       * device's sections on a multi-GPU host (e.g. a program that never
-       * launches, collects before its first launch, or launches only via an
-       * untracked API). On Linux the supplemental HSA drain covers those cases
-       * safely -- it walks only code objects actually resident on each agent --
-       * so skip the host-shadow pass rather than take the unsafe fallback. */
+       * device's sections on a multi-GPU host. On Linux the supplemental HSA
+       * drain covers those cases safely. */
       if (!__atomic_load_n(&AnyDeviceUsed, __ATOMIC_ACQUIRE)) {
         if (isVerboseMode())
           PROF_NOTE("No tracked launch; deferring device %d to HSA drain\n",
@@ -1243,10 +1205,7 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
     Ret = -1;
 
 #if defined(__linux__) && !defined(_WIN32)
-  /* Supplemental HSA-introspection drain: catches device code objects with no
-   * host-side shadow (e.g. RCCL device-linked kernels). Runs after the
-   * host-shadow drain so already-drained sections are deduped out, and runs
-   * even when there are no host shadows at all (the common RCCL case). */
+  /* Supplemental HSA-introspection drain */
   if (drainDevicesViaHsa() != 0)
     Ret = -1;
 #endif
@@ -1304,9 +1263,7 @@ static int recordHipMultiDeviceLaunchResult(int Rc,
   return Rc;
 }
 
-// The INTERCEPTOR macro defines a `real_<func>` trampoline pointer that the
-// interception runtime must see with external linkage, so it cannot be made
-// static or anonymous as misc-use-internal-linkage would otherwise suggest.
+// interceptors must have external linkage
 // NOLINTBEGIN(misc-use-internal-linkage)
 INTERCEPTOR(int, hipLaunchKernel, const void *Function, HipDim3 GridDim,
             HipDim3 BlockDim, void **Args, size_t SharedMemBytes,
