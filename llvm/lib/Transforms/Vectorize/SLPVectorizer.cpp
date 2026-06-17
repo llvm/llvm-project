@@ -7424,6 +7424,14 @@ static bool isMaskedLoadCompress(
       }
     }
   }
+  // Estimating the compression shuffle cost below can be extremely expensive
+  // for a very wide LoadVecTy, which is split into a large number of vector
+  // registers (see processShuffleMasks). The shuffle cost is always
+  // non-negative, so if the load cost alone already reaches the gather cost the
+  // masked-load-compress cannot be profitable. Bail out before the costly
+  // shuffle cost estimation in that case.
+  if (VectorGEPCost + LoadCost >= GatherCost)
+    return false;
   InstructionCost CompressCost = ::getShuffleCost(
       TTI, TTI::SK_PermuteSingleSrc, LoadVecTy, CompressMask, CostKind);
   if (!Order.empty()) {
@@ -21657,7 +21665,8 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
         (all_of(E->Scalars,
                 [&](Value *V) {
                   return isa<PoisonValue>(V) ||
-                         (E->Idx == 0 && isa<InsertElementInst>(V)) ||
+                         (E->Idx == 0 &&
+                          isa<InsertElementInst, InsertValueInst>(V)) ||
                          E->isCopyableElement(V) ||
                          (!isVectorLikeInstWithConstOps(V) &&
                           isUsedOutsideBlock(V));

@@ -5896,7 +5896,7 @@ getDPPOpcForWaveReduction(unsigned Opc, const GCNSubtarget &ST) {
     llvm_unreachable("unhandled lane op");
   }
   unsigned ClampOpc = Opc;
-  if (!ST.getInstrInfo()->isVALU(Opc)) {
+  if (!ST.getInstrInfo()->isVALU(Opc, /*AllowLDSDMA=*/true)) {
     if (Opc == AMDGPU::S_SUB_I32)
       ClampOpc = AMDGPU::S_ADD_I32;
     if (Opc == AMDGPU::S_ADD_U64_PSEUDO || Opc == AMDGPU::S_SUB_U64_PSEUDO)
@@ -6269,7 +6269,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                 LaneValueReg)
             .addReg(SrcReg)
             .addReg(FF1Reg);
-        if (ST.getInstrInfo()->isVALU(Opc)) {
+        if (ST.getInstrInfo()->isVALU(Opc, /*AllowLDSDMA=*/true)) {
           // Get the Lane Value in VGPR to avoid the Constant Bus Restriction
           Register LaneValVgpr = MRI.createVirtualRegister(SrcRegClass);
           Register VgprResultReg = MRI.createVirtualRegister(SrcRegClass);
@@ -6291,7 +6291,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
           OpInstr.addImm(0); // opsel
         if (hasOMod)
           OpInstr.addImm(0); // omod
-        if (ST.getInstrInfo()->isVALU(Opc)) {
+        if (ST.getInstrInfo()->isVALU(Opc, /*AllowLDSDMA=*/true)) {
           BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
                   DstReg)
               .addReg(OpDstReg);
@@ -8960,11 +8960,15 @@ SDValue SITargetLowering::lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const {
     return Op;
 
   // fcopysign v2f16:mag, v2f32:sign ->
-  //   fcopysign v2f16:mag, bitcast (trunc (bitcast sign to v2i32) to v2i16)
+  //   fcopysign v2f16:mag,
+  //     bitcast (trunc (srl (bitcast sign to v2i32), 16) to v2i16)
 
   SDLoc SL(Op);
   SDValue SignAsInt32 = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Sign);
-  SDValue SignAsInt16 = DAG.getNode(ISD::TRUNCATE, SL, MVT::v2i16, SignAsInt32);
+  SDValue ShiftAmt = DAG.getShiftAmountConstant(16, MVT::v2i32, SL);
+  SDValue SignShifted =
+      DAG.getNode(ISD::SRL, SL, MVT::v2i32, SignAsInt32, ShiftAmt);
+  SDValue SignAsInt16 = DAG.getNode(ISD::TRUNCATE, SL, MVT::v2i16, SignShifted);
 
   SDValue SignAsHalf16 = DAG.getNode(ISD::BITCAST, SL, MagVT, SignAsInt16);
 
