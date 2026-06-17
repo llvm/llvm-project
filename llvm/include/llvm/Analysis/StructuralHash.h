@@ -30,7 +30,7 @@ public:
                                      StructuralHashOptions Options)
       : OS(OS), Options(Options) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 } // namespace llvm

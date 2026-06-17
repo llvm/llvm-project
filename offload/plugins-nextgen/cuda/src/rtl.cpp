@@ -260,7 +260,7 @@ struct CUDAEventRef final : public GenericDeviceResourceRef {
       return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                            "creating an existing event");
 
-    CUresult Res = cuEventCreate(&Event, CU_EVENT_DEFAULT);
+    CUresult Res = cuEventCreate(&Event, CU_EVENT_DISABLE_TIMING);
     if (auto Err = Plugin::check(Res, "error in cuEventCreate: %s"))
       return Err;
 
@@ -968,21 +968,31 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuStreamLaunchHostFunc: %s");
   };
 
-  /// Create an event.
-  Error createEventImpl(void **EventPtrStorage) override {
+  /// Non-profiling events use CU_EVENT_DISABLE_TIMING from the pool.
+  /// Profiling events are created directly with timing and not pooled.
+  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override {
     CUevent *Event = reinterpret_cast<CUevent *>(EventPtrStorage);
+    if (EnableProfiling) {
+      CUresult Res = cuEventCreate(Event, CU_EVENT_DEFAULT);
+      return Plugin::check(Res, "error in cuEventCreate: %s");
+    }
     return CUDAEventManager.getResource(*Event);
   }
 
-  /// Destroy a previously created event.
-  Error destroyEventImpl(void *EventPtr) override {
+  /// Profiling events are destroyed directly; non-profiling events return to
+  /// the pool.
+  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override {
     CUevent Event = reinterpret_cast<CUevent>(EventPtr);
+    if (EnableProfiling) {
+      CUresult Res = cuEventDestroy(Event);
+      return Plugin::check(Res, "error in cuEventDestroy: %s");
+    }
     return CUDAEventManager.returnResource(Event);
   }
 
   /// Record the event.
-  Error recordEventImpl(void *EventPtr,
-                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+  Error recordEventImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper,
+                        bool EnableProfiling) override {
     CUevent Event = reinterpret_cast<CUevent>(EventPtr);
 
     CUstream Stream;
@@ -1462,17 +1472,23 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   CUDADeviceTy &CUDADevice = static_cast<CUDADeviceTy &>(GenericDevice);
 
-  // The args size passed in LaunchParams may have tail padding, which is not
-  // accepted by the CUDA driver.
-  if (ArgsSize > LaunchParams.Size)
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "mismatch in kernel arguments");
+  void **KernelParams = nullptr;
+  if (KernelArgs.Flags.IsPtrArgs) {
+    KernelParams = KernelArgs.ArgPtrs;
+  } else {
+    // The args size passed in LaunchParams may have tail padding,
+    // which is not accepted by the CUDA driver.
+    if (ArgsSize > LaunchParams.Size)
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "mismatch in kernel arguments");
+  }
 
   CUstream Stream;
   if (auto Err = CUDADevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
 
   size_t ConfigArgsSize = ArgsSize;
+  // Valid only for a contiguous buffer passed through LaunchParams.
   void *Config[] = {CU_LAUNCH_PARAM_BUFFER_POINTER, LaunchParams.Data,
                     CU_LAUNCH_PARAM_BUFFER_SIZE,
                     reinterpret_cast<void *>(&ConfigArgsSize),
@@ -1504,7 +1520,8 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  DynBlockMemSize, Stream,
                                  &CoopAttr,       1};
 
-  CUresult Res = cuLaunchKernelEx(&LaunchConfig, Func, nullptr, Config);
+  CUresult Res = cuLaunchKernelEx(&LaunchConfig, Func, KernelParams,
+                                  KernelParams ? nullptr : Config);
 
   // Register a callback to indicate when the kernel is complete.
   if (GenericDevice.getRPCServer())

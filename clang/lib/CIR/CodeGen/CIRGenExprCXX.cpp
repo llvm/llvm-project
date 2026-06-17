@@ -19,6 +19,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -967,7 +968,13 @@ static void enterNewDeleteCleanup(CIRGenFunction &cgf, const CXXNewExpr *e,
     typedef mlir::Value ValueTy;
     typedef mlir::Value RValueTy;
     static RValue get(CIRGenFunction &cgf, ValueTy v) {
-      auto alloca = v.getDefiningOp<cir::AllocaOp>();
+      while (cir::CastOp castOp = v.getDefiningOp<cir::CastOp>()) {
+        if (castOp.getKind() != cir::CastKind::address_space &&
+            castOp.getKind() != cir::CastKind::bitcast)
+          break;
+        v = castOp.getSrc();
+      }
+      cir::AllocaOp alloca = v.getDefiningOp<cir::AllocaOp>();
       return RValue::get(cgf.getBuilder().createAlignedLoad(
           alloca.getLoc(), alloca.getAllocaType(), alloca,
           llvm::MaybeAlign(alloca.getAlignment())));

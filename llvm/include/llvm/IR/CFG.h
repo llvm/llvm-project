@@ -51,23 +51,9 @@ protected:
   using Self = PredIterator<Ptr, USE_iterator>;
   USE_iterator It;
 
-  inline void advancePastNonTerminators() {
-    // Loop to ignore non-terminator uses (for example BlockAddresses).
-    while (!It.atEnd()) {
-      if (auto *Inst = dyn_cast<Instruction>(*It)) {
-        assert(Inst->isTerminator() && "BasicBlock used in non-terminator");
-        break;
-      }
-
-      ++It;
-    }
-  }
-
 public:
   PredIterator() = default;
-  explicit inline PredIterator(Ptr *bb) : It(bb->user_begin()) {
-    advancePastNonTerminators();
-  }
+  explicit inline PredIterator(Ptr *bb) : It(bb->user_begin()) {}
   inline PredIterator(Ptr *bb, bool) : It(bb->user_end()) {}
 
   inline bool operator==(const Self& x) const { return It == x.It; }
@@ -75,13 +61,15 @@ public:
 
   inline reference operator*() const {
     assert(!It.atEnd() && "pred_iterator out of range!");
-    return cast<Instruction>(*It)->getParent();
+    auto *I = cast<Instruction>(*It);
+    assert(I->isTerminator() && "BasicBlock used in non-terminator");
+    return I->getParent();
   }
   inline pointer *operator->() const { return &operator*(); }
 
   inline Self& operator++() {   // Preincrement
     assert(!It.atEnd() && "pred_iterator out of range!");
-    ++It; advancePastNonTerminators();
+    ++It;
     return *this;
   }
 

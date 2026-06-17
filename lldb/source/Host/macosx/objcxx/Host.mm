@@ -614,9 +614,14 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
               break;
             ++offset;
           }
-          // Now extract all arguments
+
+          // Skip argv[0] as we already have the file name from the executable path.
+          if (argc > 0)
+            process_info.SetArg0(data.GetCStr(&offset));
+
+          // Now extract the rest of the arguments.
           Args &proc_args = process_info.GetArguments();
-          for (int i = 0; i < static_cast<int>(argc); ++i) {
+          for (int i = 1; i < static_cast<int>(argc); ++i) {
             cstr = data.GetCStr(&offset);
             if (cstr)
               proc_args.AppendArgument(llvm::StringRef(cstr));

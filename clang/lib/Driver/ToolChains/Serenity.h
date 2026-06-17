@@ -64,7 +64,9 @@ public:
   bool isPICDefault() const override { return true; }
   bool isPIEDefault(const llvm::opt::ArgList &) const override { return true; }
 
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 
   bool IsMathErrnoDefault() const override { return false; }
 

@@ -1,4 +1,18 @@
 add_entrypoint_object(
+  alarm
+  SRCS
+    alarm.cpp
+  HDRS
+    ../alarm.h
+  DEPENDS
+    libc.hdr.types.struct_itimerval
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   access
   SRCS
     access.cpp
@@ -193,11 +207,7 @@ add_entrypoint_object(
     ../ftruncate.h
   DEPENDS
     libc.hdr.types.off_t
-    libc.hdr.fcntl_macros
-    libc.hdr.stdint_proxy
-    libc.include.unistd
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ftruncate
     libc.src.errno.errno
 )
 
@@ -209,11 +219,13 @@ add_entrypoint_object(
     ../getcwd.h
   DEPENDS
     libc.hdr.types.size_t
-    libc.hdr.fcntl_macros
-    libc.include.unistd
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.ssize_t
+    libc.src.__support.common
+    libc.src.__support.CPP.optional
+    libc.src.__support.macros.config
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getcwd
     libc.src.errno.errno
+    libc.src.string.allocating_string_utils
 )
 
 add_entrypoint_object(
@@ -345,10 +357,7 @@ add_entrypoint_object(
   HDRS
     ../link.h
   DEPENDS
-    libc.hdr.fcntl_macros
-    libc.include.unistd
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.link
     libc.src.errno.errno
 )
 
@@ -652,7 +661,6 @@ add_entrypoint_object(
     libc.hdr.types.size_t
     libc.hdr.types.ssize_t
     libc.hdr.errno_macros
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
     libc.src.errno.errno
 )

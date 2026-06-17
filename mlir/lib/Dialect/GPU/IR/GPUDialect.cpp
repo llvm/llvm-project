@@ -844,9 +844,13 @@ LogicalResult LaunchOp::verifyRegions() {
   if (getBody().empty()) {
     return emitOpError("body region is empty");
   }
-  if (getBody().getNumArguments() <
-      kNumConfigRegionAttributes + getNumWorkgroupAttributions()) {
-    return emitOpError("unexpected number of region arguments");
+  unsigned actualNumRegionArgs = getBody().getNumArguments();
+  unsigned expectedNumRegionArgs =
+      getNumConfigRegionAttributes() + getNumWorkgroupAttributions();
+  if (actualNumRegionArgs < expectedNumRegionArgs) {
+    return emitOpError("expected at least ")
+           << expectedNumRegionArgs << " region arguments, but got "
+           << actualNumRegionArgs;
   }
 
   // Verify Attributions Address Spaces.
@@ -2517,7 +2521,7 @@ ParseResult WarpExecuteOnLane0Op::parse(OpAsmParser &parser,
 void WarpExecuteOnLane0Op::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
     return;
   }
 
@@ -2526,7 +2530,7 @@ void WarpExecuteOnLane0Op::getSuccessorRegions(
 }
 
 ValueRange WarpExecuteOnLane0Op::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
+  return successor.isOperation() ? ValueRange(getResults()) : ValueRange();
 }
 void WarpExecuteOnLane0Op::build(OpBuilder &builder, OperationState &result,
                                  TypeRange resultTypes, Value laneId,
