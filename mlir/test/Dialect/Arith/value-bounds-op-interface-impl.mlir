@@ -217,3 +217,51 @@ func.func @arith_maxsi_ub(%a: index) -> index {
   %1 = "test.reify_bound"(%0) {type = "UB"} : (index) -> (index)
   return %1 : index
 }
+
+// -----
+
+// CHECK-LABEL: func @arith_index_castui(
+//  CHECK-SAME:     %[[a:.*]]: i32
+//       CHECK:   %[[lb:.*]] = arith.constant 0 : index
+//       CHECK:   return %[[lb]]
+func.func @arith_index_castui(%a: i32) -> index {
+  %0 = arith.index_castui %a : i32 to index
+  %1 = "test.reify_bound"(%0) {type = "LB"} : (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+func.func @arith_index_castui_ub(%a: i32) -> index {
+  %0 = arith.index_castui %a : i32 to index
+  // Unsigned cast is non-negative but has no upper bound.
+  // expected-error @below{{could not reify bound}}
+  %1 = "test.reify_bound"(%0) {type = "UB"} : (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @arith_extsi(
+//       CHECK:   %[[c:.*]] = arith.constant -5 : index
+//       CHECK:   return %[[c]]
+func.func @arith_extsi() -> index {
+  %c_5 = arith.constant -5 : i32
+  %ext = arith.extsi %c_5 : i32 to i64
+  %0 = "test.reify_bound"(%ext) {constant, allow_integer_type} : (i64) -> (index)
+  return %0 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @arith_extsi_propagates_bound(
+//  CHECK-SAME:     %[[a:.*]]: i32
+//       CHECK:   %[[ub:.*]] = arith.constant 5 : index
+//       CHECK:   return %[[ub]]
+func.func @arith_extsi_propagates_bound(%a: i32) -> index {
+  %c4 = arith.constant 4 : i32
+  %min = arith.minsi %a, %c4 : i32
+  %ext = arith.extsi %min : i32 to i64
+  %0 = "test.reify_bound"(%ext) {type = "UB", allow_integer_type} : (i64) -> (index)
+  return %0 : index
+}
