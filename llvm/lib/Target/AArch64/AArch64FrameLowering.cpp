@@ -384,7 +384,7 @@ static bool isLikelyToHaveSVEStack(const AArch64FrameLowering &AFL,
 }
 
 static bool isTargetWindows(const MachineFunction &MF) {
-  // TODO: Should this include targets like UEFI (which use Windows CFI).
+  // TODO: Should this include targets like UEFI (which use Windows CFI)?
   // Note: Currently, there is not AArch64 support for UEFI. The value returned
   // here must align with UsesWinAAPCS (as determined by getCalleeSavedRegs())
   // so we use invalidateWindowsRegisterPairing() where appropriate.
