@@ -1,0 +1,13 @@
+# This test verifies that the daemon driver behaves as expected when the tool
+# itself causes the process to exit. (In this case, the daemon driver exits)
+RUN: split-file %s %t
+RUN: ExampleDaemon --daemon --daemon-status-pipe=path:%t/status < %t/daemon-commands
+RUN: FileCheck < %t/status %s
+CHECK: ready
+
+;--- daemon-commands
+arg 13
+ExampleDaemon
+arg 14
+--exit-process
+run 

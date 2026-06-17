@@ -1,0 +1,57 @@
+RUN: split-file %s %t
+RUN: mkdir %t/A
+RUN: echo "ABC" > %t/A/b
+RUN: cd %t
+RUN: not ExampleDaemon < %t/daemon-commands --daemon --daemon-status-pipe=path:%t/status > %t/stdout 2> %t/stderr
+RUN: FileCheck < %t/status %s --check-prefix=CHECK-STATUS --strict-whitespace
+RUN: FileCheck < %t/stdout %s --check-prefix=CHECK-STDOUT --strict-whitespace -DTEST_DIR=%S -DTEMP_DIR=%t
+END.
+
+CHECK-STATUS: ready
+
+CHECK-STATUS-NEXT: returned 0
+CHECK-STDOUT: [[TEMP_DIR]]
+
+CHECK-STATUS-NEXT: returned 0
+CHECK-STDOUT-NEXT: [[TEMP_DIR]]{{[\/\\]}}A
+
+CHECK-STATUS-NEXT: returned 0
+CHECK-STDOUT-NEXT: [[TEMP_DIR]]
+
+CHECK-STATUS-NEXT: returned 3
+
+CHECK-STATUS-NEXT: error cd: './DoesNotExist' is not a directory.
+
+;--- daemon-commands
+arg 13
+ExampleDaemon
+arg 25
+--print-current-directory
+run
+
+; Checking that we can change directory.
+cd ./A
+arg 13
+ExampleDaemon
+arg 25
+--print-current-directory
+run
+
+; Checking that the directory is properly reset.
+arg 13
+ExampleDaemon
+arg 25
+--print-current-directory
+run
+
+; Checking that input_file is properly scoped to the current directory.
+cd ./A
+arg 13
+ExampleDaemon
+input_file ./b
+run
+
+cd ./DoesNotExist
+arg 13
+ExampleDaemon
+run
