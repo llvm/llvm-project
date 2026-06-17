@@ -108,6 +108,7 @@ def get_variable_metrics(
     seen_expected_values = set()
     num_correct_steps = 0
     num_optimized_out_steps = 0
+    num_irretrievable_steps = 0
     num_missing_var_steps = 0
     num_unexpected_value_steps = 0
     partial_step_correctness = 0.0
@@ -121,6 +122,8 @@ def get_variable_metrics(
         elif match.actual_result is None:
             if match.actual and match.actual.is_optimized_away:
                 num_optimized_out_steps += 1
+            elif match.actual and match.actual.is_irretrievable:
+                num_irretrievable_steps += 1
             else:
                 num_missing_var_steps += 1
         else:
@@ -149,6 +152,8 @@ def get_variable_metrics(
         "partial_step_correctness": ScalarMetric(partial_step_correctness),
         # The number of steps where the watched variable/expression was marked "optimized out" in the debugger.
         "optimized_out_steps": ScalarMetric(num_optimized_out_steps, improves_asc=False),
+        # The number of steps where the watched variable/expression had an inaccessible address in the debugger.
+        "irretrievable_steps": ScalarMetric(num_irretrievable_steps, improves_asc=False),
         # The number of steps where the watched variable/expression was not available in the debugger.
         "missing_var_steps": ScalarMetric(num_missing_var_steps, improves_asc=False),
         # The number of steps where the watched variable/expression had a value not in the set of expected values.
