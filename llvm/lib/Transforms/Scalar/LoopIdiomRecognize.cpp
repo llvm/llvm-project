@@ -1174,7 +1174,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
              isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16)) {
     assert(isa<SCEVConstant>(StoreSizeSCEV) && "Expected constant store size");
 
-    NewCall = Builder.CreateIntrinsic(
+    NewCall = Builder.CreateIntrinsicWithoutFolding(
         Intrinsic::experimental_memset_pattern,
         {DestInt8PtrTy, PatternValue->getType(), IntIdxTy},
         {BasePtr, PatternValue, MemsetArg,
@@ -2600,27 +2600,23 @@ bool LoopIdiomRecognize::recognizePopcount() {
   return true;
 }
 
-static CallInst *createPopcntIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
-                                       const DebugLoc &DL) {
+static Value *createPopcntIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
+                                    const DebugLoc &DL) {
   Value *Ops[] = {Val};
   Type *Tys[] = {Val->getType()};
 
-  CallInst *CI = IRBuilder.CreateIntrinsic(Intrinsic::ctpop, Tys, Ops);
-  CI->setDebugLoc(DL);
-
-  return CI;
+  IRBuilder.SetCurrentDebugLocation(DL);
+  return IRBuilder.CreateIntrinsic(Intrinsic::ctpop, Tys, Ops);
 }
 
-static CallInst *createFFSIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
-                                    const DebugLoc &DL, bool ZeroCheck,
-                                    Intrinsic::ID IID) {
+static Value *createFFSIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
+                                 const DebugLoc &DL, bool ZeroCheck,
+                                 Intrinsic::ID IID) {
   Value *Ops[] = {Val, IRBuilder.getInt1(ZeroCheck)};
   Type *Tys[] = {Val->getType()};
 
-  CallInst *CI = IRBuilder.CreateIntrinsic(IID, Tys, Ops);
-  CI->setDebugLoc(DL);
-
-  return CI;
+  IRBuilder.SetCurrentDebugLocation(DL);
+  return IRBuilder.CreateIntrinsic(IID, Tys, Ops);
 }
 
 /// Transform the following loop (Using CTLZ, CTTZ is similar):
@@ -3126,7 +3122,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   Value *Mask =
       Builder.CreateOr(LowBitMask, BitMask, BitPos->getName() + ".mask");
   Value *XMasked = Builder.CreateAnd(X, Mask, X->getName() + ".masked");
-  CallInst *XMaskedNumLeadingZeros = Builder.CreateIntrinsic(
+  Value *XMaskedNumLeadingZeros = Builder.CreateIntrinsic(
       IntrID, Ty, {XMasked, /*is_zero_poison=*/Builder.getTrue()},
       /*FMFSource=*/nullptr, XMasked->getName() + ".numleadingzeros");
   Value *XMaskedNumActiveBits = Builder.CreateSub(
@@ -3486,7 +3482,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
 
   // Step 1: Compute the loop's final IV value / trip count.
 
-  CallInst *ValNumLeadingZeros = Builder.CreateIntrinsic(
+  Value *ValNumLeadingZeros = Builder.CreateIntrinsic(
       IntrID, Ty, {Val, /*is_zero_poison=*/Builder.getFalse()},
       /*FMFSource=*/nullptr, Val->getName() + ".numleadingzeros");
   Value *ValNumActiveBits = Builder.CreateSub(

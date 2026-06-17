@@ -543,7 +543,7 @@ public:
   void setModule(const Module *Mod) { M = Mod; }
 
   void setFuncNameToProfNameMap(
-      const HashKeyMap<std::unordered_map, FunctionId, FunctionId> &FPMap) {
+      const HashKeyMap<DenseMap, FunctionId, FunctionId> &FPMap) {
     FuncNameToProfNameMap = &FPMap;
   }
 
@@ -586,12 +586,12 @@ protected:
   // A map pointer to the FuncNameToProfNameMap in SampleProfileLoader,
   // which maps the function name to the matched profile name. This is used
   // for sample loader to look up profile using the new name.
-  const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-      *FuncNameToProfNameMap = nullptr;
+  const HashKeyMap<DenseMap, FunctionId, FunctionId> *FuncNameToProfNameMap =
+      nullptr;
 
   // A map from a function's context hash to its meta data section range, used
   // for on-demand read function profile metadata.
-  std::unordered_map<uint64_t, std::pair<const uint8_t *, const uint8_t *>>
+  DenseMap<uint64_t, std::pair<const uint8_t *, const uint8_t *>>
       FuncMetadataIndex;
 
   std::pair<const uint8_t *, const uint8_t *> ProfileSecRange;
