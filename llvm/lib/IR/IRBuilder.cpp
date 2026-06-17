@@ -1374,9 +1374,7 @@ CallInst *IRBuilderBase::CreateAlignmentAssumption(const DataLayout &DL,
   assert(isa<PointerType>(PtrValue->getType()) &&
          "trying to create an alignment assumption on a non-pointer?");
   assert(Alignment != 0 && "Invalid Alignment");
-  auto *PtrTy = cast<PointerType>(PtrValue->getType());
-  Type *IntPtrTy = getIntPtrTy(DL, PtrTy->getAddressSpace());
-  Value *AlignValue = ConstantInt::get(IntPtrTy, Alignment);
+  Value *AlignValue = ConstantInt::get(getInt64Ty(), Alignment);
   return CreateAlignmentAssumptionHelper(DL, PtrValue, AlignValue, OffsetValue);
 }
 

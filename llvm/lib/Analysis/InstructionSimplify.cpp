@@ -2634,6 +2634,16 @@ static Value *extractEquivalentCondition(Value *V, CmpPredicate Pred,
   return nullptr;
 }
 
+static bool isByValArg(const Value *V) {
+  const Argument *A = dyn_cast<Argument>(V);
+  return A && A->hasByValAttr();
+}
+
+static bool isDereferenceableArg(const Value *V) {
+  const Argument *A = dyn_cast<Argument>(V);
+  return A && A->getType()->isPointerTy() && A->getDereferenceableBytes() > 0;
+}
+
 /// Return true if the underlying object (storage) must be disjoint from
 /// storage returned by any noalias return call.
 static bool isAllocDisjoint(const Value *V) {
@@ -2648,9 +2658,12 @@ static bool isAllocDisjoint(const Value *V) {
     return (GV->hasLocalLinkage() || GV->hasHiddenVisibility() ||
             GV->hasProtectedVisibility() || GV->hasGlobalUnnamedAddr()) &&
            !GV->isThreadLocal();
-  if (const Argument *A = dyn_cast<Argument>(V))
-    return A->hasByValAttr();
-  return false;
+  // Byval arguments point to storage accessible to the caller, which is
+  // disjoint from the allocated storage returned by a noalias pointer.
+  // TODO: possibly extend this to `dereferenceable(N)` arguments once the LLVM
+  // allocator model and its interaction with `noalias` on return values is
+  // clarified.
+  return isByValArg(V);
 }
 
 /// Return true if V1 and V2 are each the base of some distict storage region
@@ -2682,17 +2695,25 @@ static bool haveNonOverlappingStorage(const Value *V1, const Value *V2) {
   //
   // So, we'll assume that two non-empty allocas have different addresses
   // for now.
-  auto isByValArg = [](const Value *V) {
-    const Argument *A = dyn_cast<Argument>(V);
-    return A && A->hasByValAttr();
-  };
+  //
+  // Furthermore, an argument marked with the `dereferenceable(N)` attribute is
+  // guaranteed to point to N loadable bytes. Such a pointer cannot be a
+  // one-past-the-end pointer whose address happens to coincide with the start
+  // of another object (e.g., an alloca), as loading from a one-past-the-end
+  // address would be UB (thus, in contrast with the premise).
 
-  // Byval args are backed by store which does not overlap with each other,
-  // allocas, or globals.
+  // Byval args are backed by storage that does not overlap with allocas,
+  // globals, other byval args, or any dereferenceable argument.
   if (isByValArg(V1))
-    return isa<AllocaInst>(V2) || isa<GlobalVariable>(V2) || isByValArg(V2);
+    return isa<AllocaInst>(V2) || isa<GlobalVariable>(V2) || isByValArg(V2) ||
+           isDereferenceableArg(V2);
   if (isByValArg(V2))
-    return isa<AllocaInst>(V1) || isa<GlobalVariable>(V1) || isByValArg(V1);
+    return isa<AllocaInst>(V1) || isa<GlobalVariable>(V1) || isByValArg(V1) ||
+           isDereferenceableArg(V1);
+
+  if ((isDereferenceableArg(V1) && isa<AllocaInst>(V2)) ||
+      (isDereferenceableArg(V2) && isa<AllocaInst>(V1)))
+    return true;
 
   return isa<AllocaInst>(V1) &&
          (isa<AllocaInst>(V2) || isa<GlobalVariable>(V2));
@@ -2766,23 +2787,21 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
   if (ICmpInst::isEquality(Pred)) {
     // Different non-empty allocations that exist at the same time have
     // different addresses (if the program can tell). If the offsets are
-    // within the bounds of their allocations (and not one-past-the-end!
-    // so we can't use inbounds!), and their allocations aren't the same,
+    // within the bounds of their allocations (and not one-past-the-end,
+    // so inbounds is not sufficient), and their allocations aren't the same,
     // the pointers are not equal.
     if (haveNonOverlappingStorage(LHS, RHS)) {
+      // Size of object V, falling back to `dereferenceable(N)` attribute on an
+      // argument when getObjectSize cannot determine a concrete size.
+      auto GetKnownSize = [&](Value *V, uint64_t &Size) {
+        bool CanBeNull;
+        Size = V->getPointerDereferenceableBytes(DL, CanBeNull,
+                                                 /*CanBeFreed=*/nullptr);
+        return Size != 0 && !CanBeNull;
+      };
+
       uint64_t LHSSize, RHSSize;
-      ObjectSizeOpts Opts;
-      Opts.EvalMode = ObjectSizeOpts::Mode::Min;
-      auto *F = [](Value *V) -> Function * {
-        if (auto *I = dyn_cast<Instruction>(V))
-          return I->getFunction();
-        if (auto *A = dyn_cast<Argument>(V))
-          return A->getParent();
-        return nullptr;
-      }(LHS);
-      Opts.NullIsUnknownSize = F ? NullPointerIsDefined(F) : true;
-      if (getObjectSize(LHS, LHSSize, DL, TLI, Opts) && LHSSize != 0 &&
-          getObjectSize(RHS, RHSSize, DL, TLI, Opts) && RHSSize != 0) {
+      if (GetKnownSize(LHS, LHSSize) && GetKnownSize(RHS, RHSSize)) {
         APInt Dist = LHSOffset - RHSOffset;
         if (Dist.isNonNegative() ? Dist.ult(LHSSize) : (-Dist).ult(RHSSize))
           return ConstantInt::get(getCompareTy(LHS),
@@ -2800,7 +2819,7 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
     getUnderlyingObjects(RHS, RHSUObjs);
 
     // Is the set of underlying objects all noalias calls?
-    auto IsNAC = [](ArrayRef<const Value *> Objects) {
+    auto IsNoAliasCall = [](ArrayRef<const Value *> Objects) {
       return all_of(Objects, isNoAliasCall);
     };
 
@@ -2811,8 +2830,8 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
       return all_of(Objects, ::isAllocDisjoint);
     };
 
-    if ((IsNAC(LHSUObjs) && IsAllocDisjoint(RHSUObjs)) ||
-        (IsNAC(RHSUObjs) && IsAllocDisjoint(LHSUObjs)))
+    if ((IsNoAliasCall(LHSUObjs) && IsAllocDisjoint(RHSUObjs)) ||
+        (IsNoAliasCall(RHSUObjs) && IsAllocDisjoint(LHSUObjs)))
       return ConstantInt::get(getCompareTy(LHS),
                               !CmpInst::isTrueWhenEqual(Pred));
 

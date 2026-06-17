@@ -1171,13 +1171,7 @@ void Liveness::traverse(MachineBasicBlock *B, RefMap &LiveIn) {
 }
 
 void Liveness::emptify(RefMap &M) {
-  // DenseMap's erase relocates other elements, so collect the keys first.
-  SmallVector<RegisterId, 8> Empty;
-  for (auto &P : M)
-    if (P.second.empty())
-      Empty.push_back(P.first);
-  for (RegisterId R : Empty)
-    M.erase(R);
+  M.remove_if([](const auto &P) { return P.second.empty(); });
 }
 
 } // namespace llvm::rdf
