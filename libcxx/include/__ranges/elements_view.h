@@ -165,6 +165,8 @@ template <input_range _View, size_t _Np>
 template <bool _Const>
 class elements_view<_View, _Np>::__iterator
     : public __elements_view_iterator_category_base<__maybe_const<_Const, _View>, _Np> {
+  friend class elements_view<_View, _Np>;
+
   template <bool>
   friend class __iterator;
 
@@ -174,6 +176,8 @@ class elements_view<_View, _Np>::__iterator
   using _Base _LIBCPP_NODEBUG = __maybe_const<_Const, _View>;
 
   iterator_t<_Base> __current_ = iterator_t<_Base>();
+
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(iterator_t<_Base> __current) : __current_(std::move(__current)) {}
 
   _LIBCPP_HIDE_FROM_ABI static constexpr decltype(auto) __get_element(const iterator_t<_Base>& __i) {
     if constexpr (is_reference_v<range_reference_t<_Base>>) {
@@ -204,8 +208,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI __iterator()
     requires default_initializable<iterator_t<_Base>>
   = default;
-
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(iterator_t<_Base> __current) : __current_(std::move(__current)) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator(__iterator<!_Const> __i)
     requires _Const && convertible_to<iterator_t<_View>, iterator_t<_Base>>
@@ -338,6 +340,10 @@ private:
   using _Base _LIBCPP_NODEBUG                        = __maybe_const<_Const, _View>;
   _LIBCPP_NO_UNIQUE_ADDRESS sentinel_t<_Base> __end_ = sentinel_t<_Base>();
 
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(sentinel_t<_Base> __end) : __end_(std::move(__end)) {}
+
+  friend class elements_view<_View, _Np>;
+
   template <bool>
   friend class __sentinel;
 
@@ -348,8 +354,6 @@ private:
 
 public:
   _LIBCPP_HIDE_FROM_ABI __sentinel() = default;
-
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(sentinel_t<_Base> __end) : __end_(std::move(__end)) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr __sentinel(__sentinel<!_Const> __other)
     requires _Const && convertible_to<sentinel_t<_View>, sentinel_t<_Base>>

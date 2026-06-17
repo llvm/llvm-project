@@ -22,10 +22,9 @@
 
 // Test Noexcept
 template <class T>
-concept IsBaseNoexcept =
-    requires {
-      { std::declval<T>().base() } noexcept;
-    };
+concept IsBaseNoexcept = requires {
+  { std::declval<T>().base() } noexcept;
+};
 
 using BaseView     = std::ranges::subrange<std::tuple<int>*>;
 using ElementsIter = std::ranges::iterator_t<std::ranges::elements_view<BaseView, 0>>;
@@ -40,15 +39,15 @@ constexpr bool test() {
 
   // const &
   {
-    const ElementsIter it{&t};
-    decltype(auto) base = it.base();
+    const ElementsIter it = std::ranges::elements_view<BaseView, 0>{BaseView{&t, &t + 1}}.begin();
+    decltype(auto) base   = it.base();
     static_assert(std::is_same_v<decltype(base), std::tuple<int>* const&>);
     assert(base == &t);
   }
 
   // &
   {
-    ElementsIter it{&t};
+    ElementsIter it     = std::ranges::elements_view<BaseView, 0>{BaseView{&t, &t + 1}}.begin();
     decltype(auto) base = it.base();
     static_assert(std::is_same_v<decltype(base), std::tuple<int>* const&>);
     assert(base == &t);
@@ -56,7 +55,7 @@ constexpr bool test() {
 
   // &&
   {
-    ElementsIter it{&t};
+    ElementsIter it     = std::ranges::elements_view<BaseView, 0>{BaseView{&t, &t + 1}}.begin();
     decltype(auto) base = std::move(it).base();
     static_assert(std::is_same_v<decltype(base), std::tuple<int>*>);
     assert(base == &t);
@@ -64,8 +63,8 @@ constexpr bool test() {
 
   // const &&
   {
-    const ElementsIter it{&t};
-    decltype(auto) base = std::move(it).base();
+    const ElementsIter it = std::ranges::elements_view<BaseView, 0>{BaseView{&t, &t + 1}}.begin();
+    decltype(auto) base   = std::move(it).base();
     static_assert(std::is_same_v<decltype(base), std::tuple<int>* const&>);
     assert(base == &t);
   }
@@ -82,7 +81,10 @@ constexpr bool test() {
     using MoveOnlyElemIter =
         std::ranges::iterator_t<std::ranges::elements_view<std::ranges::subrange<MoveOnlyIter, Sent>, 0>>;
 
-    MoveOnlyElemIter it{MoveOnlyIter{{}, MoveOnly{5}}};
+    auto it =
+        std::ranges::elements_view<std::ranges::subrange<MoveOnlyIter, Sent>, 0>{
+            std::ranges::subrange{MoveOnlyIter{{}, MoveOnly{5}}, Sent{}}}
+            .begin();
     decltype(auto) base = std::move(it).base();
     static_assert(std::is_same_v<decltype(base), MoveOnlyIter>);
     assert(base.mo.get() == 5);

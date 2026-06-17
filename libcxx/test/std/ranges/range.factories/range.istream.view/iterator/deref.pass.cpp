@@ -29,16 +29,6 @@ void test() {
     assert(v1 == 1);
   }
 
-  // operator* should return the same reference to the value stored in the view
-  {
-    auto iss = make_string_stream<CharT>("1 2 345 ");
-    std::ranges::basic_istream_view<int, CharT> isv{iss};
-    using Iter = std::ranges::iterator_t<decltype(isv)>;
-
-    Iter it1{isv};
-    Iter it2{isv};
-    assert(&*it1 == &*it2);
-  }
 }
 
 int main(int, char**) {

@@ -128,6 +128,12 @@ private:
   _LIBCPP_NO_UNIQUE_ADDRESS subrange<iterator_t<_View>> __next_ = subrange<iterator_t<_View>>();
   bool __trailing_empty_                                        = false;
 
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(
+      split_view<_View, _Pattern>& __parent, iterator_t<_View> __current, subrange<iterator_t<_View>> __next)
+      : __parent_(std::addressof(__parent)), __cur_(std::move(__current)), __next_(std::move(__next)) {}
+
+  friend class split_view<_View, _Pattern>;
+
   friend struct __sentinel;
 
 public:
@@ -137,10 +143,6 @@ public:
   using difference_type   = range_difference_t<_View>;
 
   _LIBCPP_HIDE_FROM_ABI __iterator() = default;
-
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(
-      split_view<_View, _Pattern>& __parent, iterator_t<_View> __current, subrange<iterator_t<_View>> __next)
-      : __parent_(std::addressof(__parent)), __cur_(std::move(__current)), __next_(std::move(__next)) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> base() const { return __cur_; }
 
@@ -180,15 +182,17 @@ struct split_view<_View, _Pattern>::__sentinel {
 private:
   _LIBCPP_NO_UNIQUE_ADDRESS sentinel_t<_View> __end_ = sentinel_t<_View>();
 
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(split_view<_View, _Pattern>& __parent)
+      : __end_(ranges::end(__parent.__base_)) {}
+
   _LIBCPP_HIDE_FROM_ABI static constexpr bool __equals(const __iterator& __x, const __sentinel& __y) {
     return __x.__cur_ == __y.__end_ && !__x.__trailing_empty_;
   }
 
+  friend class split_view<_View, _Pattern>;
+
 public:
   _LIBCPP_HIDE_FROM_ABI __sentinel() = default;
-
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(split_view<_View, _Pattern>& __parent)
-      : __end_(ranges::end(__parent.__base_)) {}
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __sentinel& __y) {
     return __equals(__x, __y);
