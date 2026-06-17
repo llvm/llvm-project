@@ -1250,6 +1250,18 @@ void conditional_operator_lifetimebound_nested_deep(bool cond) {
   (void)*p;  // expected-note 4 {{later used here}}
 }
 
+// FIXME: Diagnostic output does not handle ParenExpr correctly, causing alias
+// information to be missed (local variable 'p' aliases the storage of local variable 'b').
+void simpleparen() {
+  MyObj* p;
+  {
+    MyObj a;
+    MyObj* b = &a;  // expected-warning {{local variable 'a' does not live long enough}}
+    p = (((b)));
+  }                 // expected-note {{destroyed here}}
+  (void)*p;         // expected-note {{later used here}}
+}
+
 void parentheses(bool cond) {
   MyObj* p;
   {

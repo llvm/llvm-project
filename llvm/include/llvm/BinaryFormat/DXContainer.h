@@ -897,11 +897,6 @@ struct SectionHeader {
     sys::swapByteOrder(Flags);
     sys::swapByteOrder(Type);
   }
-
-  void updateSize(uint32_t ContentSize) {
-    AlignedSizeInBytes =
-        alignTo(sizeof(*this) + ContentSize, DXCONTAINER_STRUCT_ALIGNMENT);
-  }
 };
 
 static_assert(sizeof(SectionHeader) == 8,

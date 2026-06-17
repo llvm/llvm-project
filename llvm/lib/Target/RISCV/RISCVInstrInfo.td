@@ -238,7 +238,7 @@ def BasePtr : MemOperand<GPR>;
 
 def SPMem : MemOperand<SP>;
 
-def GPRCMem : MemOperand<GPRC>;
+def BasePtrC : MemOperand<GPRC>;
 
 class SImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"S", width, suffix> {

@@ -6124,8 +6124,15 @@ std::optional<APFloat> exp(const APFloat &x, RoundingMode rounding_mode,
       float x_val = x.convertToFloat();
       int exc =
           LIBC_NAMESPACE::shared::check::exp_exceptions(x_val, FE_TONEAREST);
-      if (status)
+      if (status) {
         *status = getOpStatusFromLibc(exc);
+        if (x.isSignaling()) {
+          // 32-bit x86 will silence sNaN when loading floats, so we explicitly
+          // add the INVALID exception here.
+          *status =
+              static_cast<APFloat::opStatus>(*status | APFloat::opInvalidOp);
+        }
+      }
       float result = LIBC_NAMESPACE::shared::expf(x_val);
       return APFloat(result);
     }
@@ -6134,8 +6141,15 @@ std::optional<APFloat> exp(const APFloat &x, RoundingMode rounding_mode,
       double x_val = x.convertToDouble();
       int exc =
           LIBC_NAMESPACE::shared::check::exp_exceptions(x_val, FE_TONEAREST);
-      if (status)
+      if (status) {
         *status = getOpStatusFromLibc(exc);
+        if (x.isSignaling()) {
+          // 32-bit x86 will silence sNaN when loading floats, so we explicitly
+          // add the INVALID exception here.
+          *status =
+              static_cast<APFloat::opStatus>(*status | APFloat::opInvalidOp);
+        }
+      }
       double result = LIBC_NAMESPACE::shared::exp(x_val);
       return APFloat(result);
     }

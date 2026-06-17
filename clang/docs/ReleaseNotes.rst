@@ -701,6 +701,7 @@ Bug Fixes in This Version
   an array via an element-at-a-time copy loop (#GH192026)
 - Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
 - Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
+- Fixed a bug where ``-x cuda`` caused clang to immediately resolve templates that should not be. (#GH200545)
 - Fixed an issue where ``__typeof_unqual`` and ``__typeof_unqual__`` were rejected as a declaration specifier in block scope in C++.
 - Fixed crash when checking for overflow for unary operator that can't overflow (#GH170072)
 - Clang no longer handles a `" q-char-sequence "` header name as a string literal (#GH132643).
@@ -723,6 +724,11 @@ Bug Fixes to Attribute Support
 - Fixed a crash when a ``section`` attribute or ``#pragma clang section`` caused a
   section type conflict with a declaration whose name is not a simple identifier,
   such as a lambda's call operator. (#GH192264)
+- Fixed a regression where attributed types (such as those carrying ``_Nonnull``/``_Nullable`` attributes)
+  were not deduplicated, because the attributes' arguments were not taken into
+  account when uniquing them. The duplications could substantially increase the
+  size of precompiled headers and modules (PCH/PCM), and the time spent loading
+  them. (#GH200961)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -821,6 +827,10 @@ Miscellaneous Clang Crashes Fixed
 
 OpenACC Specific Changes
 ------------------------
+
+OpenCL Specific Changes
+-----------------------
+- Added support for OpenCL C 3.1 language version (``-cl-std=CL3.1``).
 
 Target Specific Changes
 -----------------------

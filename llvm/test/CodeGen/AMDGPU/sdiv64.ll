@@ -504,7 +504,6 @@ define amdgpu_kernel void @s_test_sdiv22_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GCN-NEXT:    s_cselect_b32 s0, s2, 0
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, s0, v2
-; GCN-NEXT:    v_bfe_i32 v0, v0, 0, 22
 ; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
@@ -535,7 +534,6 @@ define amdgpu_kernel void @s_test_sdiv22_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-IR-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GCN-IR-NEXT:    s_cselect_b32 s0, s2, 0
 ; GCN-IR-NEXT:    v_add_i32_e32 v0, vcc, s0, v2
-; GCN-IR-NEXT:    v_bfe_i32 v0, v0, 0, 22
 ; GCN-IR-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GCN-IR-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GCN-IR-NEXT:    s_endpgm
@@ -912,7 +910,6 @@ define amdgpu_kernel void @s_test_sdiv23_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GCN-NEXT:    s_cselect_b32 s0, s2, 0
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, s0, v2
-; GCN-NEXT:    v_bfe_i32 v0, v0, 0, 23
 ; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
@@ -943,7 +940,6 @@ define amdgpu_kernel void @s_test_sdiv23_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-IR-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GCN-IR-NEXT:    s_cselect_b32 s0, s2, 0
 ; GCN-IR-NEXT:    v_add_i32_e32 v0, vcc, s0, v2
-; GCN-IR-NEXT:    v_bfe_i32 v0, v0, 0, 23
 ; GCN-IR-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GCN-IR-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GCN-IR-NEXT:    s_endpgm
