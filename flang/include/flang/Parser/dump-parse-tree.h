@@ -560,7 +560,7 @@ public:
 
   static std::string GetNodeName(const llvm::omp::LoopModifier &x) {
     return llvm::Twine(
-        "llvm::omp::LoopModifier = ", llvm::omp::getOpenMPLoopModifierName(x))
+        "llvm::omp::LoopModifier = ", llvm::omp::getLoopModifierName(x))
         .str();
   }
   NODE(parser, OmpApplyClause)

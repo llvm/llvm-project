@@ -361,8 +361,8 @@ static void emitDirectivesDecl(const RecordKeeper &Records, raw_ostream &OS) {
        << getMaxLeafCount(DirLang) << "; }\n";
     OS << "LLVM_ABI bool isAllowedLoopModifier(Directive D, LoopModifier "
           "LM);\n";
-    OS << "LLVM_ABI StringRef get" << Lang
-       << "LoopModifierName(LoopModifier LM, unsigned Ver = 0);\n";
+    OS << "LLVM_ABI StringRef getLoopModifierName(LoopModifier LM, unsigned "
+          "Ver = 0);\n";
     OS << EnumHelperFuncs;
   } // close DirLangNS
 
@@ -394,12 +394,11 @@ orderSpellings(ArrayRef<Spelling::Value> Spellings) {
 // Generate function implementation for get<Enum>Name(StringRef Str)
 static void generateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
                             StringRef Enum, const DirectiveLanguage &DirLang,
-                            StringRef Prefix) {
-  StringRef Lang = DirLang.getName();
+                            StringRef LangName, StringRef Prefix) {
   std::string Qual = getQualifier(DirLang);
   OS << "\n";
-  OS << "llvm::StringRef " << Qual << "get" << Lang << Enum << "Name(" << Qual
-     << Enum << " Kind, unsigned Version) {\n";
+  OS << "llvm::StringRef " << Qual << "get" << LangName << Enum << "Name("
+     << Qual << Enum << " Kind, unsigned Version) {\n";
   OS << "  switch (Kind) {\n";
   for (const Record *R : Records) {
     BaseRecord Rec(R);
@@ -426,7 +425,8 @@ static void generateGetName(ArrayRef<const Record *> Records, raw_ostream &OS,
     }
   }
   OS << "  }\n"; // switch
-  OS << "  llvm_unreachable(\"Invalid " << Lang << " " << Enum << " kind\");\n";
+  OS << "  llvm_unreachable(\"Invalid " << LangName << " " << Enum
+     << " kind\");\n";
   OS << "}\n";
 }
 
@@ -1395,14 +1395,16 @@ void emitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
                   /*ImplicitAsUnknown=*/false);
 
   // getDirectiveName(Directive Kind)
-  generateGetName(DirLang.getDirectives(), OS, "Directive", DirLang, DPrefix);
+  generateGetName(DirLang.getDirectives(), OS, "Directive", DirLang,
+                  DirLang.getName(), DPrefix);
 
   // getClauseKind(StringRef Str)
   generateGetKind(DirLang.getClauses(), OS, "Clause", DirLang, CPrefix,
                   /*ImplicitAsUnknown=*/true);
 
   // getClauseName(Clause Kind)
-  generateGetName(DirLang.getClauses(), OS, "Clause", DirLang, CPrefix);
+  generateGetName(DirLang.getClauses(), OS, "Clause", DirLang,
+                  DirLang.getName(), CPrefix);
 
   // <enumClauseValue> get<enumClauseValue>(StringRef Str) ; string -> value
   // StringRef get<enumClauseValue>Name(<enumClauseValue>) ; value -> string
@@ -1415,7 +1417,7 @@ void emitDirectivesBasicImpl(const DirectiveLanguage &DirLang,
   generateIsAllowedLoopModifier(DirLang, OS);
 
   // getLoopModifierName(LoopModifier Kind)
-  generateGetName(DirLang.getLoopModifiers(), OS, "LoopModifier", DirLang,
+  generateGetName(DirLang.getLoopModifiers(), OS, "LoopModifier", DirLang, "",
                   DirLang.getLoopModifierPrefix());
 
   // Leaf table for getLeafConstructs, etc.
