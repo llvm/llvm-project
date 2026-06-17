@@ -45,12 +45,11 @@ static mlir::Value genVscaleTimesFactor(mlir::Location loc,
 }
 
 #define SVEMAP1(NameBase, LLVMIntrinsic, TypeModifier)                         \
-  {#NameBase, SVE::BI__builtin_sve_##NameBase, Intrinsic::LLVMIntrinsic, 0,    \
-   TypeModifier}
+  {SVE::BI__builtin_sve_##NameBase, Intrinsic::LLVMIntrinsic, TypeModifier}
 
 #define SVEMAP2(NameBase, TypeModifier)                                        \
-  {#NameBase, SVE::BI__builtin_sve_##NameBase, 0, 0, TypeModifier}
-static const ARMVectorIntrinsicInfo aarch64SVEIntrinsicMap[] = {
+  {SVE::BI__builtin_sve_##NameBase, 0, TypeModifier}
+static const AArch64SVEAndSMEVectorIntrinsicInfo aarch64SVEIntrinsicMap[] = {
 #define GET_SVE_LLVM_INTRINSIC_MAP
 #include "clang/Basic/arm_sve_builtin_cg.inc"
 #undef GET_SVE_LLVM_INTRINSIC_MAP
@@ -62,8 +61,9 @@ static bool aarch64SVEIntrinsicsProvenSorted = false;
 
 // Check if Builtin `builtinId` is present in `intrinsicMap`. If yes, returns
 // the corresponding info struct.
-static const ARMVectorIntrinsicInfo *
-findARMVectorIntrinsicInMap(ArrayRef<ARMVectorIntrinsicInfo> intrinsicMap,
+template <typename IntrinsicInfo>
+static const IntrinsicInfo *
+findARMVectorIntrinsicInMap(ArrayRef<IntrinsicInfo> intrinsicMap,
                             unsigned builtinID, bool &mapProvenSorted) {
 
 #ifndef NDEBUG
@@ -73,8 +73,7 @@ findARMVectorIntrinsicInMap(ArrayRef<ARMVectorIntrinsicInfo> intrinsicMap,
   }
 #endif
 
-  const ARMVectorIntrinsicInfo *info =
-      llvm::lower_bound(intrinsicMap, builtinID);
+  const IntrinsicInfo *info = llvm::lower_bound(intrinsicMap, builtinID);
 
   if (info != intrinsicMap.end() && info->BuiltinID == builtinID)
     return info;
@@ -260,7 +259,7 @@ static cir::VectorType getNeonPairwiseWidenInputType(cir::VectorType resType,
 // Derive the LLVM intrinsic's per-operand argument types and its result
 // type for use when emitting the intrinsic call.
 //
-// `modifier` is the TypeModifier bitmask from `ARMVectorIntrinsicInfo`
+// `modifier` is the TypeModifier bitmask from `ARMNeonVectorIntrinsicInfo`
 // (callers pass `info.TypeModifier`; see AArch64CodeGenUtils.h). It encodes
 // how the intrinsic's argument and return types relate to the builtin's
 // scalar types. For SISD builtins the key flags are:
@@ -320,7 +319,7 @@ deriveNeonSISDIntrinsicOperandTypes(CIRGenFunction &cgf, unsigned modifier,
 }
 
 static mlir::Value emitCommonNeonSISDBuiltinExpr(
-    CIRGenFunction &cgf, const ARMVectorIntrinsicInfo &info,
+    CIRGenFunction &cgf, const ARMNeonVectorIntrinsicInfo &info,
     llvm::SmallVectorImpl<mlir::Value> &ops, const CallExpr *expr) {
   assert(info.LLVMIntrinsic && "Generic code assumes a valid intrinsic");
 
@@ -1201,8 +1200,9 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
 
   assert(!cir::MissingFeatures::aarch64SVEIntrinsics());
 
-  auto *builtinIntrInfo = findARMVectorIntrinsicInMap(
-      aarch64SVEIntrinsicMap, builtinID, aarch64SVEIntrinsicsProvenSorted);
+  auto *builtinIntrInfo =
+      findARMVectorIntrinsicInMap(ArrayRef(aarch64SVEIntrinsicMap), builtinID,
+                                  aarch64SVEIntrinsicsProvenSorted);
 
   // The operands of the builtin call
   llvm::SmallVector<mlir::Value> ops;
@@ -2348,8 +2348,9 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
         emitScalarOrConstFoldImmArg(iceArguments, i, expr->getArg(i)));
   }
 
-  const ARMVectorIntrinsicInfo *builtin = findARMVectorIntrinsicInMap(
-      AArch64SISDIntrinsicMap, builtinID, aarch64SISDIntrinsicsProvenSorted);
+  const ARMNeonVectorIntrinsicInfo *builtin =
+      findARMVectorIntrinsicInMap(ArrayRef(AArch64SISDIntrinsicMap), builtinID,
+                                  aarch64SISDIntrinsicsProvenSorted);
   if (builtin)
     return emitCommonNeonSISDBuiltinExpr(*this, *builtin, ops, expr);
 
@@ -2373,8 +2374,9 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
 
   // Not all intrinsics handled by the common case work for AArch64 yet, so only
   // defer to common code if it's been added to our special map.
-  builtin = findARMVectorIntrinsicInMap(AArch64SIMDIntrinsicMap, builtinID,
-                                        aarch64SIMDIntrinsicsProvenSorted);
+  builtin =
+      findARMVectorIntrinsicInMap(ArrayRef(AArch64SIMDIntrinsicMap), builtinID,
+                                  aarch64SIMDIntrinsicsProvenSorted);
   if (builtin)
     return emitCommonNeonBuiltinExpr(
         *this, builtin->BuiltinID, builtin->LLVMIntrinsic,
