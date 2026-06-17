@@ -641,16 +641,47 @@ bool LLParser::parseTopLevelEntities() {
 
 /// toplevelentity
 ///   ::= 'module' 'asm' STRINGCONSTANT
+///   ::= 'module' 'asm' '(' 'target_features' '=' STRINGCONSTANT ','
+///                          'target_cpu' '=' STRINGCONSTANT ')'
+///                      STRINGCONSTANT
 bool LLParser::parseModuleAsm() {
   assert(Lex.getKind() == lltok::kw_module);
   Lex.Lex();
 
   std::string AsmStr;
-  if (parseToken(lltok::kw_asm, "expected 'module asm'") ||
-      parseStringConstant(AsmStr))
+  if (parseToken(lltok::kw_asm, "expected 'module asm'"))
     return true;
 
-  M->appendModuleInlineAsm(AsmStr);
+  std::string TargetFeatures, TargetCPU;
+  if (EatIfPresent(lltok::lparen)) {
+    while (true) {
+      if (EatIfPresent(lltok::kw_target_features)) {
+        if (parseToken(lltok::equal, "expected '='") ||
+            parseStringConstant(TargetFeatures))
+          return true;
+      } else if (EatIfPresent(lltok::kw_target_cpu)) {
+        if (parseToken(lltok::equal, "expected '='") ||
+            parseStringConstant(TargetCPU))
+          return true;
+      } else {
+        return error(Lex.getLoc(),
+                     "expected one of 'target_features' or 'target_cpu'");
+      }
+      if (EatIfPresent(lltok::rparen))
+        break;
+      if (parseToken(lltok::comma, "expected ',' or ')'"))
+        return true;
+    }
+  }
+
+  do {
+    std::string AsmStrPart;
+    if (parseStringConstant(AsmStrPart))
+      return true;
+    AsmStr += AsmStrPart + "\n";
+  } while (Lex.getKind() == lltok::StringConstant);
+
+  M->appendModuleInlineAsm({AsmStr, TargetFeatures, TargetCPU});
   return false;
 }
 
