@@ -107,6 +107,14 @@ bool AMDGPUMCInstLower::lowerOperand(const MachineOperand &MO,
     MCOp = MCOperand::createExpr(Expr);
     return true;
   }
+  case MachineOperand::MO_BlockAddress: {
+    MCSymbol *Sym = AP.GetBlockAddressSymbol(MO.getBlockAddress());
+    const MCSymbolRefExpr *Expr =
+        MCSymbolRefExpr::create(Sym, getSpecifier(MO.getTargetFlags()), Ctx);
+    assert(MO.getOffset() == 0);
+    MCOp = MCOperand::createExpr(Expr);
+    return true;
+  }
   case MachineOperand::MO_RegisterMask:
     // Regmasks are like implicit defs.
     return false;
@@ -320,6 +328,9 @@ static void emitVGPRBlockComment(const MachineInstr *MI, const SIInstrInfo *TII,
 }
 
 void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  if (MI->isCall())
+    collectCallEdge(*MI);
+
   // FIXME: Enable feature predicate checks once all the test pass.
   // AMDGPU_MC::verifyInstructionPredicates(MI->getOpcode(),
   //                                        getSubtargetInfo().getFeatureBits());

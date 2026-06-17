@@ -15,6 +15,7 @@ add_orc_rt_unittest(CoreTests
   AllocActionTest.cpp
   BitmaskEnumTest.cpp
   BootstrapInfoTest.cpp
+  CallSPSCITest.cpp
   CallableTraitsHelperTest.cpp
   SimpleSymbolTableTest.cpp
   EndianTest.cpp
@@ -27,6 +28,7 @@ add_orc_rt_unittest(CoreTests
   IntervalSetTest.cpp
   LockedAccessTest.cpp
   MathTest.cpp
+  MemoryAccessSPSCITest.cpp
   MemoryFlagsTest.cpp
   NativeDylibManagerTest.cpp
   NativeDylibManagerSPSCITest.cpp

@@ -379,7 +379,7 @@ nub_process_t DNBProcessLaunch(
         // point and get reparented to someone else and never go away.
         DNBLog("Could not get task port for process, sending SIGKILL and "
                "exiting.");
-        kill(SIGKILL, pid);
+        kill(pid, SIGKILL);
 
         if (err_str && err_len > 0) {
           if (launch_err.AsString()) {
@@ -1880,6 +1880,21 @@ nub_bool_t DNBSetArchitecture(const char *arch) {
     else if (strstr(arch, "arm64") == arch || strstr(arch, "aarch64") == arch)
       return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64,
                                               CPU_SUBTYPE_ARM64_ALL);
+#if defined(CPU_SUBTYPE_ARM_V8M_MAIN)
+    else if (strstr(arch, "armv8m.main") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V8M_MAIN);
+#endif
+#if defined(CPU_SUBTYPE_ARM_V8M_BASE)
+    else if (strstr(arch, "armv8m.base") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V8M_BASE);
+#endif
+#if defined(CPU_SUBTYPE_ARM_V8_1M_MAIN)
+    else if (strstr(arch, "armv8.1m.main") == arch)
+      return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM,
+                                              CPU_SUBTYPE_ARM_V8_1M_MAIN);
+#endif
     else if (strstr(arch, "armv8") == arch)
       return DNBArchProtocol::SetArchitecture(CPU_TYPE_ARM64,
                                               CPU_SUBTYPE_ARM64_V8);

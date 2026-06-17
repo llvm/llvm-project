@@ -176,7 +176,7 @@ INSTR_PROF_GPU_SECT(uint64_t *, llvm::PointerType::getUnqual(Ctx),             \
 
 /* INSTR_PROF_RAW_HEADER  start */
 /* Definition of member fields of the raw profile header data structure. */
-/* Please update llvm/docs/InstrProfileFormat.rst as appropriate when updating
+/* Please update llvm/docs/InstrProfileFormat.md as appropriate when updating
    raw profile format. */
 #ifndef INSTR_PROF_RAW_HEADER
 #define INSTR_PROF_RAW_HEADER(Type, Name, Initializer)
@@ -893,6 +893,9 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_VALUE_PROF_MEMOP_FUNC __llvm_profile_instrument_memop
 #define INSTR_PROF_VALUE_PROF_MEMOP_FUNC_STR                                   \
   INSTR_PROF_QUOTE(INSTR_PROF_VALUE_PROF_MEMOP_FUNC)
+#define INSTR_PROF_INSTRUMENT_GPU_FUNC __llvm_profile_instrument_gpu
+#define INSTR_PROF_INSTRUMENT_GPU_FUNC_STR                                     \
+  INSTR_PROF_QUOTE(INSTR_PROF_INSTRUMENT_GPU_FUNC)
 
 /* InstrProfile per-function control data alignment.  */
 #define INSTR_PROF_DATA_ALIGNMENT 8

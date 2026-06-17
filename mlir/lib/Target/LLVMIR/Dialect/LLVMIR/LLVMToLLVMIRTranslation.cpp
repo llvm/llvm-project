@@ -91,11 +91,13 @@ getOverloadedDeclaration(CallIntrinsicOp op, llvm::Intrinsic::ID id,
   // ATM we do not support variadic intrinsics.
   llvm::FunctionType *ft = llvm::FunctionType::get(resTy, allArgTys, false);
 
+  std::string errorMsg;
+  llvm::raw_string_ostream errorOS(errorMsg);
   SmallVector<llvm::Type *, 8> overloadedTys;
-  if (!llvm::Intrinsic::getIntrinsicSignature(id, ft, overloadedTys)) {
+  if (!llvm::Intrinsic::isSignatureValid(id, ft, overloadedTys, errorOS)) {
     return mlir::emitError(op.getLoc(), "call intrinsic signature ")
            << diagStr(ft) << " to overloaded intrinsic " << op.getIntrinAttr()
-           << " does not match any of the overloads";
+           << " does not match any of the overloads: " << errorMsg;
   }
 
   return llvm::Intrinsic::getOrInsertDeclaration(module, id, overloadedTys);
@@ -380,34 +382,40 @@ static llvm::Metadata *convertModuleFlagProfileSummaryAttr(
 static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
                                  LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
-  for (auto flagAttr : flags.getAsRange<ModuleFlagAttr>()) {
+  auto convertIntegerAttr = [&](IntegerAttr intAttr) -> llvm::Metadata * {
+    return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+        llvm::Type::getInt32Ty(builder.getContext()), intAttr.getInt()));
+  };
+  for (auto flagAttr : flags.getAsRange<ModuleFlagAttrInterface>()) {
     llvm::Metadata *valueMetadata =
-        llvm::TypeSwitch<Attribute, llvm::Metadata *>(flagAttr.getValue())
+        llvm::TypeSwitch<Attribute, llvm::Metadata *>(
+            flagAttr.getModuleFlagValue())
             .Case([&](StringAttr strAttr) {
               return llvm::MDString::get(builder.getContext(),
                                          strAttr.getValue());
             })
             .Case([&](IntegerAttr intAttr) {
-              return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-                  llvm::Type::getInt32Ty(builder.getContext()),
-                  intAttr.getInt()));
+              return convertIntegerAttr(intAttr);
+            })
+            .Case([&](IntrinsicIntegerAttrInterface intAttr) {
+              return convertIntegerAttr(intAttr.getIntegerAttr());
             })
             .Case([&](ArrayAttr arrayAttr) {
-              return convertModuleFlagValue(flagAttr.getKey().getValue(),
-                                            arrayAttr, builder,
-                                            moduleTranslation);
+              return convertModuleFlagValue(
+                  flagAttr.getModuleFlagKey().getValue(), arrayAttr, builder,
+                  moduleTranslation);
             })
             .Case([&](ModuleFlagProfileSummaryAttr summaryAttr) {
               return convertModuleFlagProfileSummaryAttr(
-                  flagAttr.getKey().getValue(), summaryAttr, builder,
+                  flagAttr.getModuleFlagKey().getValue(), summaryAttr, builder,
                   moduleTranslation);
             })
             .Default([](auto) { return nullptr; });
 
     assert(valueMetadata && "expected valid metadata");
     llvmModule->addModuleFlag(
-        convertModFlagBehaviorToLLVM(flagAttr.getBehavior()),
-        flagAttr.getKey().getValue(), valueMetadata);
+        convertModFlagBehaviorToLLVM(flagAttr.getModuleFlagBehavior()),
+        flagAttr.getModuleFlagKey().getValue(), valueMetadata);
   }
 }
 

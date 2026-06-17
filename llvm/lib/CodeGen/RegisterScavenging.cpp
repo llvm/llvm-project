@@ -80,7 +80,8 @@ void RegScavenger::enterBasicBlockEnd(MachineBasicBlock &MBB) {
 
 void RegScavenger::backward() {
   const MachineInstr &MI = *--MBBI;
-  LiveUnits.stepBackward(MI);
+  if (!MI.isDebugInstr())
+    LiveUnits.stepBackward(MI);
 
   // Expire scavenge spill frameindex uses.
   for (ScavengedInfo &I : Scavenged) {
@@ -140,6 +141,16 @@ findSurvivorBackwards(const MachineRegisterInfo &MRI,
   assert(From->getParent() == To->getParent() &&
          "Target instruction is in other than current basic block, use "
          "enterBasicBlockEnd first");
+
+  // If RestoreAfter is set, the scavenged register is needed at
+  // std::next(From), so we need to take into account any possible early-clobber
+  // def regs defined there.
+  if (RestoreAfter) {
+    for (const MachineOperand &MOP : std::next(From)->all_defs()) {
+      if (MOP.getReg().isPhysical() && MOP.isEarlyClobber())
+        Used.addReg(MOP.getReg());
+    }
+  }
 
   for (MachineBasicBlock::iterator I = From;; --I) {
     const MachineInstr &MI = *I;

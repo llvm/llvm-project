@@ -1292,6 +1292,20 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
         BaseExpr.get()->getValueKind(), FPOptionsOverride());
   }
 
+  // In HLSL, the member access on a ConstantBuffer<T> access the members of
+  // through the handle in the ConstantBuffer<T>. If BaseType is a
+  // ConstantBuffer, the conversion function to type T is called before trying
+  // to access the member.
+  if (S.getLangOpts().HLSL && BaseType->isHLSLResourceRecord()) {
+    if (std::optional<ExprResult> ConvBase =
+            S.HLSL().tryPerformConstantBufferConversion(BaseExpr)) {
+      assert(!ConvBase->isInvalid());
+      BaseExpr = *ConvBase;
+      BaseType = BaseExpr.get()->getType();
+      IsArrow = false;
+    }
+  }
+
   // Handle field access to simple records.
   if (BaseType->getAsRecordDecl()) {
     if (LookupMemberExprInRecord(S, R, BaseExpr.get(), BaseType, OpLoc, IsArrow,

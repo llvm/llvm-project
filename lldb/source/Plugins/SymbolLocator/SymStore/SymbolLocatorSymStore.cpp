@@ -427,7 +427,7 @@ LocateSymStoreEntry(const SymbolLocatorSymStore::LookupEntry &entry,
   if (file.starts_with("file://"))
     file = file.drop_front(7);
   if (auto spec = FindFileInLocalSymStore(file, key, pdb_name)) {
-    LLDB_LOG_VERBOSE(log, "Found {0} in local SymStore {1}", pdb_name, file);
+    LLDB_LOG(log, "Found {0} in local SymStore {1}", pdb_name, file);
     return *spec;
   }
 
@@ -447,15 +447,14 @@ std::optional<FileSpec> SymbolLocatorSymStore::LocateExecutableSymbolFile(
   std::string pdb_name =
       module_spec.GetSymbolFileSpec().GetFilename().GetStringRef().str();
   if (pdb_name.empty()) {
-    LLDB_LOG_VERBOSE(log,
-                     "Failed to resolve symbol PDB module: PDB name empty");
+    LLDB_LOG(log, "Failed to resolve symbol PDB module: PDB name empty");
     return {};
   }
 
-  LLDB_LOG_VERBOSE(log, "LocateExecutableSymbolFile {0} with UUID {1}",
-                   pdb_name, uuid.GetAsString());
+  LLDB_LOG(log, "LocateExecutableSymbolFile {0} with UUID {1}", pdb_name,
+           uuid.GetAsString());
   if (uuid.GetBytes().size() != 20) {
-    LLDB_LOG_VERBOSE(log, "Failed to resolve symbol PDB module: UUID invalid");
+    LLDB_LOG(log, "Failed to resolve symbol PDB module: UUID invalid");
     return {};
   }
 

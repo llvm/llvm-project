@@ -247,7 +247,6 @@ def MIPS64 : HwMode<[IsPTR64bit]>;
 //===----------------------------------------------------------------------===//
 
 include "MipsRegisterInfo.td"
-include "MipsSchedule.td"
 include "MipsInstrInfo.td"
 include "MipsCallingConv.td"
 include "MipsRegisterBanks.td"

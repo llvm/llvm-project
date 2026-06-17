@@ -183,7 +183,6 @@ define float @caller(ptr %error_ref) {
 ; CHECK-O0-ARM64_32-NEXT:    ldr x9, [sp, #8] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    ldr x8, [sp, #16] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    ldrb w8, [x8, #8]
-; CHECK-O0-ARM64_32-NEXT:    ; kill: def $w0 killed $w8
 ; CHECK-O0-ARM64_32-NEXT:    strb w8, [x9]
 ; CHECK-O0-ARM64_32-NEXT:  LBB1_2: ; %handler
 ; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #16] ; 8-byte Reload
@@ -368,7 +367,6 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-O0-ARM64_32-NEXT:    ldr x9, [sp, #16] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    ldr x8, [sp, #8] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    ldrb w8, [x8, #8]
-; CHECK-O0-ARM64_32-NEXT:    ; kill: def $w0 killed $w8
 ; CHECK-O0-ARM64_32-NEXT:    strb w8, [x9]
 ; CHECK-O0-ARM64_32-NEXT:  LBB2_4: ; %handler
 ; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
@@ -606,7 +604,6 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-O0-ARM64_32-NEXT:    mov w0, w8
 ; CHECK-O0-ARM64_32-NEXT:    bl _malloc
 ; CHECK-O0-ARM64_32-NEXT:    mov x9, x0
-; CHECK-O0-ARM64_32-NEXT:    ; kill: def $x0 killed $x9
 ; CHECK-O0-ARM64_32-NEXT:    mov x0, x9
 ; CHECK-O0-ARM64_32-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-O0-ARM64_32-NEXT:    strb w8, [x9, #8]
@@ -863,7 +860,6 @@ define float @caller3(ptr %error_ref) {
 ; CHECK-O0-ARM64_32-NEXT:    ldr x9, [sp] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    ldr x8, [sp, #8] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    ldrb w8, [x8, #8]
-; CHECK-O0-ARM64_32-NEXT:    ; kill: def $w0 killed $w8
 ; CHECK-O0-ARM64_32-NEXT:    strb w8, [x9]
 ; CHECK-O0-ARM64_32-NEXT:  LBB6_2: ; %handler
 ; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #8] ; 8-byte Reload
@@ -1223,7 +1219,6 @@ define float @caller4(ptr %error_ref) {
 ; CHECK-O0-ARM64_32-NEXT:    ldr x9, [sp, #16] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    ldr x8, [sp, #24] ; 8-byte Reload
 ; CHECK-O0-ARM64_32-NEXT:    ldrb w8, [x8, #8]
-; CHECK-O0-ARM64_32-NEXT:    ; kill: def $w0 killed $w8
 ; CHECK-O0-ARM64_32-NEXT:    strb w8, [x9]
 ; CHECK-O0-ARM64_32-NEXT:  LBB8_2: ; %handler
 ; CHECK-O0-ARM64_32-NEXT:    ldr x0, [sp, #24] ; 8-byte Reload

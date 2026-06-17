@@ -774,6 +774,13 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case SystemZ::EH_SjLj_Setup:
     return;
 
+  case SystemZ::LOAD_TLS_BLOCK_ADDR:
+    lowerLOAD_TLS_BLOCK_ADDR(*MI, Lower);
+    return;
+  case SystemZ::LOAD_GLOBAL_STACKGUARD_ADDR:
+    lowerLOAD_GLOBAL_STACKGUARD_ADDR(*MI, Lower);
+    return;
+
   default:
     Lower.lower(MI, LoweredMI);
     break;
@@ -959,8 +966,8 @@ void SystemZAsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(
   // Update compiler-rt/lib/xray/xray_s390x.cpp accordingly when number
   // of instructions change.
   bool HasVectorFeature =
-      TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector) &&
-      !TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureSoftFloat);
+      TM.getMCSubtargetInfo().hasFeature(SystemZ::FeatureVector) &&
+      !TM.getMCSubtargetInfo().hasFeature(SystemZ::FeatureSoftFloat);
   MCSymbol *FuncEntry = OutContext.getOrCreateSymbol(
       HasVectorFeature ? "__xray_FunctionEntryVec" : "__xray_FunctionEntry");
   MCSymbol *BeginOfSled = OutContext.createTempSymbol("xray_sled_", true);
@@ -1004,8 +1011,8 @@ void SystemZAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   // Update compiler-rt/lib/xray/xray_s390x.cpp accordingly when number
   // of instructions change.
   bool HasVectorFeature =
-      TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector) &&
-      !TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureSoftFloat);
+      TM.getMCSubtargetInfo().hasFeature(SystemZ::FeatureVector) &&
+      !TM.getMCSubtargetInfo().hasFeature(SystemZ::FeatureSoftFloat);
   MCSymbol *FuncExit = OutContext.getOrCreateSymbol(
       HasVectorFeature ? "__xray_FunctionExitVec" : "__xray_FunctionExit");
   MCSymbol *BeginOfSled = OutContext.createTempSymbol("xray_sled_", true);
@@ -1023,13 +1030,75 @@ void SystemZAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   recordSled(BeginOfSled, MI, SledKind::FUNCTION_EXIT, 2);
 }
 
+void SystemZAsmPrinter::lowerLOAD_TLS_BLOCK_ADDR(const MachineInstr &MI,
+                                                 SystemZMCInstLower &Lower) {
+  Register AddrReg = MI.getOperand(0).getReg();
+  const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+
+  // EAR can only load the low subregister so use a shift for %a0 to produce
+  // the GR containing %a0 and %a1.
+  const Register Reg32 =
+      MRI.getTargetRegisterInfo()->getSubReg(AddrReg, SystemZ::subreg_l32);
+
+  // ear <reg>, %a0
+  EmitToStreamer(*OutStreamer,
+                 MCInstBuilder(SystemZ::EAR).addReg(Reg32).addReg(SystemZ::A0));
+
+  // sllg <reg>, <reg>, 32
+  EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::SLLG)
+                                   .addReg(AddrReg)
+                                   .addReg(AddrReg)
+                                   .addReg(0)
+                                   .addImm(32));
+
+  // ear <reg>, %a1
+  EmitToStreamer(*OutStreamer,
+                 MCInstBuilder(SystemZ::EAR).addReg(Reg32).addReg(SystemZ::A1));
+}
+
+void SystemZAsmPrinter::lowerLOAD_GLOBAL_STACKGUARD_ADDR(
+    const MachineInstr &MI, SystemZMCInstLower &Lower) {
+  Register AddrReg = MI.getOperand(0).getReg();
+  const MachineFunction &MF = *(MI.getParent()->getParent());
+  const Module *M = MF.getFunction().getParent();
+  const TargetLowering *TLI = MF.getSubtarget().getTargetLowering();
+
+  // Obtain the global value (assert if stack guard variable can't be found).
+  const GlobalVariable *GV = cast<GlobalVariable>(
+      TLI->getSDagStackGuard(*M, TLI->getLibcallLoweringInfo()));
+
+  // If configured, emit the `__stack_protector_loc` entry
+  if (M->hasStackProtectorGuardRecord()) {
+    MCSymbol *Sym = OutContext.createTempSymbol();
+    OutStreamer->pushSection();
+    OutStreamer->switchSection(OutContext.getELFSection(
+        "__stack_protector_loc", ELF::SHT_PROGBITS, ELF::SHF_ALLOC));
+    OutStreamer->emitSymbolValue(Sym, getDataLayout().getPointerSize());
+    OutStreamer->popSection();
+    OutStreamer->emitLabel(Sym);
+  }
+  // Emit the address load.
+  if (M->getPICLevel() == PICLevel::NotPIC) {
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::LARL)
+                                     .addReg(AddrReg)
+                                     .addExpr(MCSymbolRefExpr::create(
+                                         getSymbol(GV), OutContext)));
+  } else {
+    EmitToStreamer(*OutStreamer,
+                   MCInstBuilder(SystemZ::LGRL)
+                       .addReg(AddrReg)
+                       .addExpr(MCSymbolRefExpr::create(
+                           getSymbol(GV), SystemZ::S_GOTENT, OutContext)));
+  }
+}
+
 // The *alignment* of 128-bit vector types is different between the software
 // and hardware vector ABIs. If the there is an externally visible use of a
 // vector type in the module it should be annotated with an attribute.
 void SystemZAsmPrinter::emitAttributes(Module &M) {
   if (M.getModuleFlag("s390x-visible-vector-ABI")) {
     bool HasVectorFeature =
-      TM.getMCSubtargetInfo()->hasFeature(SystemZ::FeatureVector);
+        TM.getMCSubtargetInfo().hasFeature(SystemZ::FeatureVector);
     OutStreamer->emitGNUAttribute(8, HasVectorFeature ? 2 : 1);
   }
 }
@@ -1177,7 +1246,7 @@ static void printAddress(const MCAsmInfo *MAI, unsigned Base,
 bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                         const char *ExtraCode,
                                         raw_ostream &OS) {
-  const MCRegisterInfo &MRI = *TM.getMCRegisterInfo();
+  const MCRegisterInfo &MRI = TM.getMCRegisterInfo();
   const MachineOperand &MO = MI->getOperand(OpNo);
   MCOperand MCOp;
   if (ExtraCode) {
@@ -1445,10 +1514,7 @@ static void emitPPA1Flags(std::unique_ptr<MCStreamer> &OutStreamer, bool VarArg,
     Flags4 |= PPA1Flag4::ProcedureNamePresent; // Add optional name block.
 
   OutStreamer->AddComment("PPA1 Flags 1");
-  if ((Flags1 & PPA1Flag1::DSA64Bit) == PPA1Flag1::DSA64Bit)
-    OutStreamer->AddComment("  Bit 0: 1 = 64-bit DSA");
-  else
-    OutStreamer->AddComment("  Bit 0: 0 = 32-bit DSA");
+  OutStreamer->AddComment("  Bit 0: 1 = 64-bit DSA");
   if ((Flags1 & PPA1Flag1::VarArg) == PPA1Flag1::VarArg)
     OutStreamer->AddComment("  Bit 7: 1 = Vararg function");
   OutStreamer->emitInt8(static_cast<uint8_t>(Flags1)); // Flags 1.

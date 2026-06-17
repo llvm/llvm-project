@@ -62,6 +62,11 @@ public:
     return &Bogus[0];
   }
 
+  const TargetRegisterClass *
+  getMinimalPhysRegClass(MCRegister Reg) const override {
+    return nullptr;
+  }
+
   Register getFrameRegister(const MachineFunction &MF) const override {
     return 0;
   }
@@ -116,9 +121,15 @@ public:
             Target(), "", Triple(""), "", "", getTargetOptionsForBogusMachine(),
             Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
         ST(*this) {
-    // With an empty Triple, `initAsmInfo` cannot be called. Provide a
-    // default MCAsmInfo so that MCContext can be created.
+    // With an empty Triple, `initAsmInfo` cannot be called. Provide
+    // default MC{AsmInfo,RegisterInfo,SubtargetInfo} so MCContext can be
+    // created.
     AsmInfo = std::make_unique<MCAsmInfo>(Options.MCOptions);
+    MRI = std::make_unique<MCRegisterInfo>();
+    STI = std::make_unique<MCSubtargetInfo>(
+        Triple(""), "", "", "", ArrayRef<StringRef>{},
+        ArrayRef<SubtargetFeatureKV>{}, ArrayRef<SubtargetSubTypeKV>{}, nullptr,
+        nullptr, nullptr, nullptr, nullptr, nullptr);
   }
 
   ~BogusTargetMachine() override = default;

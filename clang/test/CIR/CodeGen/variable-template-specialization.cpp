@@ -16,7 +16,7 @@ template<> int var_template<0>;
 template<> int var_template<1> = 1;
 template<> some_struct var_template<2>;
 
-// CIR: !rec_some_struct = !cir.record<struct "some_struct" {!s32i}>
+// CIR: !rec_some_struct = !cir.struct<"some_struct" {!s32i}>
 // CIR: cir.global external @_Z12var_templateILi0EE = #cir.int<0> : !s32i
 // CIR: cir.global external @_Z12var_templateILi1EE = #cir.int<1> : !s32i
 // CIR: cir.global external @_Z12var_templateILi2EE = #cir.zero : !rec_some_struct

@@ -148,6 +148,7 @@ protected:
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
 private:
@@ -403,6 +404,7 @@ public:
   ~Darwin() override;
 
   std::string ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
+                                          llvm::StringRef BoundArch,
                                           types::ID InputType) const override;
 
   /// @name Darwin Specific Toolchain Implementation
@@ -592,9 +594,11 @@ protected:
   /// the c++ standard library of the deployment target we are targeting.
   bool isSizedDeallocationUnavailable() const;
 
-  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args,
-                             Action::OffloadKind DeviceOffloadKind) const override;
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
+                        Action::OffloadKind DeviceOffloadKind) const override;
 
   void addClangCC1ASTargetOptions(
       const llvm::opt::ArgList &Args,
@@ -651,7 +655,9 @@ public:
 
   bool SupportsEmbeddedBitcode() const override;
 
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 };
 
 /// DarwinClang - The Darwin toolchain used by Clang.
@@ -681,6 +687,7 @@ public:
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
   void AddLinkARCArgs(const llvm::opt::ArgList &Args,
