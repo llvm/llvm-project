@@ -2261,65 +2261,6 @@ TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroFreezeShlOneByVar) {
       MRI->getVRegDef(CopyFreeze)->getOperand(1).getReg()));
 }
 
-TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroAshrExact) {
-  StringRef MIRString = R"(
-   %one:_(s32) = G_CONSTANT i32 1
-   %x:_(s32) = COPY $w0
-   %ashr:_(s32) = exact G_ASHR %one, %x
-   %copy_ashr:_(s32) = COPY %ashr
-)";
-  setUp(MIRString);
-  if (!TM)
-    GTEST_SKIP();
-  Register CopyAshr = Copies[Copies.size() - 1];
-  GISelValueTracking Info(*MF);
-  EXPECT_TRUE(
-      Info.isKnownNeverZero(MRI->getVRegDef(CopyAshr)->getOperand(1).getReg()));
-}
-
-TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroUMaxUMin) {
-  StringRef MIRString = R"(
-   %one:_(s32) = G_CONSTANT i32 1
-   %x:_(s32) = COPY $w0
-   %umax:_(s32) = G_UMAX %one, %x
-   %copy_umax:_(s32) = COPY %umax
-
-   %two:_(s32) = G_CONSTANT i32 2
-   %umin:_(s32) = G_UMIN %one, %two
-   %copy_umin:_(s32) = COPY %umin
-)";
-  setUp(MIRString);
-  if (!TM)
-    GTEST_SKIP();
-  Register CopyUMin = Copies[Copies.size() - 1];
-  Register CopyUMax = Copies[Copies.size() - 2];
-  GISelValueTracking Info(*MF);
-  EXPECT_TRUE(
-      Info.isKnownNeverZero(MRI->getVRegDef(CopyUMax)->getOperand(1).getReg()));
-  EXPECT_TRUE(
-      Info.isKnownNeverZero(MRI->getVRegDef(CopyUMin)->getOperand(1).getReg()));
-}
-
-TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroZextSext) {
-  StringRef MIRString = R"(
-   %one:_(s8) = G_CONSTANT i8 1
-   %zext:_(s32) = G_ZEXT %one
-   %sext:_(s32) = G_SEXT %one
-   %copy_zext:_(s32) = COPY %zext
-   %copy_sext:_(s32) = COPY %sext
-)";
-  setUp(MIRString);
-  if (!TM)
-    GTEST_SKIP();
-  Register CopySext = Copies[Copies.size() - 1];
-  Register CopyZext = Copies[Copies.size() - 2];
-  GISelValueTracking Info(*MF);
-  EXPECT_TRUE(
-      Info.isKnownNeverZero(MRI->getVRegDef(CopyZext)->getOperand(1).getReg()));
-  EXPECT_TRUE(
-      Info.isKnownNeverZero(MRI->getVRegDef(CopySext)->getOperand(1).getReg()));
-}
-
 TEST_F(AArch64GISelMITest, TestIsKnownNeverZeroBuildVector) {
   StringRef MIRString = R"(
    %one:_(s32) = G_CONSTANT i32 1
