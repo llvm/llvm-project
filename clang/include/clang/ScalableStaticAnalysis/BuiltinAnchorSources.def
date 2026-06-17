@@ -19,6 +19,7 @@
 ANCHOR(AnalysisRegistryAnchorSource)
 ANCHOR(CallGraphExtractorAnchorSource)
 ANCHOR(CallGraphJSONFormatAnchorSource)
+ANCHOR(EntitySourceLocationExtractorAnchorSource)
 ANCHOR(JSONFormatAnchorSource)
 ANCHOR(TypeConstrainedPointersAnchorSource)
 ANCHOR(PointerFlowAnalysisAnchorSource)
