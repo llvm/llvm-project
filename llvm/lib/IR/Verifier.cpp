@@ -124,10 +124,12 @@
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <queue>
@@ -645,6 +647,7 @@ private:
   void verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
                            const Value *V, bool IsIntrinsic, bool IsInlineAsm);
   void verifyFunctionMetadata(ArrayRef<std::pair<unsigned, MDNode *>> MDs);
+  void verifyAMDGPUReqdWorkGroupSize(const Function &F);
   void verifyUnknownProfileMetadata(MDNode *MD);
   void visitConstantExprsRecursively(const Constant *EntryC);
   void visitConstantExpr(const ConstantExpr *CE);
@@ -2824,8 +2827,86 @@ void Verifier::verifyFunctionMetadata(
             "expected a constant integer operand for !kcfi_type", MD);
       Check(cast<ConstantInt>(C)->getBitWidth() == 32,
             "expected a 32-bit integer constant operand for !kcfi_type", MD);
+    } else if (Pair.first == Context.getMDKindID("reqd_work_group_size")) {
+      MDNode *MD = Pair.second;
+      Check(MD->getNumOperands() == 3,
+            "reqd_work_group_size must have exactly three operands", MD);
+      if (MD->getNumOperands() != 3)
+        continue;
+
+      uint64_t Product = 1;
+      for (unsigned I = 0; I != 3; ++I) {
+        ConstantInt *C = mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
+        Check(C, "reqd_work_group_size operands must be integer constants", MD);
+        if (!C)
+          break;
+
+        const APInt &Value = C->getValue();
+        Check(Value.getActiveBits() <= 64,
+              "reqd_work_group_size operands must fit in 64 bits", MD);
+        if (Value.getActiveBits() > 64)
+          break;
+
+        uint64_t Dim = Value.getZExtValue();
+        Check(Dim == 0 || Product <= std::numeric_limits<uint64_t>::max() / Dim,
+              "reqd_work_group_size product must fit in 64 bits", MD);
+        if (Dim != 0 && Product > std::numeric_limits<uint64_t>::max() / Dim)
+          break;
+        Product *= Dim;
+      }
     }
   }
+}
+
+void Verifier::verifyAMDGPUReqdWorkGroupSize(const Function &F) {
+  if (!TT.isAMDGPU())
+    return;
+
+  MDNode *ReqdWorkGroupSize = F.getMetadata("reqd_work_group_size");
+  if (!ReqdWorkGroupSize || ReqdWorkGroupSize->getNumOperands() != 3)
+    return;
+
+  uint64_t Product = 1;
+  for (const MDOperand &Op : ReqdWorkGroupSize->operands()) {
+    ConstantInt *C = mdconst::dyn_extract<ConstantInt>(Op);
+    if (!C || C->getValue().getActiveBits() > 64)
+      return;
+    uint64_t Dim = C->getZExtValue();
+    if (Dim != 0 && Product > std::numeric_limits<uint64_t>::max() / Dim)
+      return;
+    Product *= Dim;
+  }
+
+  Attribute FlatWorkGroupSize = F.getFnAttribute("amdgpu-flat-work-group-size");
+  if (!FlatWorkGroupSize.isValid()) {
+    CheckFailed("reqd_work_group_size requires amdgpu-flat-work-group-size", &F,
+                ReqdWorkGroupSize);
+    return;
+  }
+
+  if (!FlatWorkGroupSize.isStringAttribute()) {
+    CheckFailed("amdgpu-flat-work-group-size must be a string attribute", &F);
+    return;
+  }
+
+  StringRef AttrValue = FlatWorkGroupSize.getValueAsString();
+  std::pair<StringRef, StringRef> Values = AttrValue.split(',');
+  uint64_t Min = 0;
+  uint64_t Max = 0;
+  bool Parsed = !Values.second.contains(',') &&
+                llvm::to_integer(Values.first.trim(), Min) &&
+                llvm::to_integer(Values.second.trim(), Max);
+  if (!Parsed) {
+    CheckFailed("amdgpu-flat-work-group-size must be a pair of unsigned "
+                "integers",
+                &F);
+    return;
+  }
+
+  Check(Min == Product && Max == Product,
+        "amdgpu-flat-work-group-size must equal the product of "
+        "reqd_work_group_size operands",
+        &F, ReqdWorkGroupSize);
 }
 
 void Verifier::visitConstantExprsRecursively(const Constant *EntryC) {
@@ -3298,6 +3379,7 @@ void Verifier::visitFunction(const Function &F) {
   F.getAllMetadata(MDs);
   assert(F.hasMetadata() != MDs.empty() && "Bit out-of-sync");
   verifyFunctionMetadata(MDs);
+  verifyAMDGPUReqdWorkGroupSize(F);
 
   // Check validity of the personality function
   if (F.hasPersonalityFn()) {
@@ -6750,40 +6832,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           Call);
     break;
   }
-  case Intrinsic::masked_udiv:
-  case Intrinsic::masked_sdiv:
-  case Intrinsic::masked_urem:
-  case Intrinsic::masked_srem:
-  case Intrinsic::vector_reduce_and:
-  case Intrinsic::vector_reduce_or:
-  case Intrinsic::vector_reduce_xor:
-  case Intrinsic::vector_reduce_add:
-  case Intrinsic::vector_reduce_mul:
-  case Intrinsic::vector_reduce_smax:
-  case Intrinsic::vector_reduce_smin:
-  case Intrinsic::vector_reduce_umax:
-  case Intrinsic::vector_reduce_umin: {
-    Type *ArgTy = Call.getArgOperand(0)->getType();
-    Check(ArgTy->isIntOrIntVectorTy() && ArgTy->isVectorTy(),
-          "intrinsic has incorrect argument type!");
-    break;
-  }
-  case Intrinsic::vector_reduce_fmax:
-  case Intrinsic::vector_reduce_fmin: {
-    Type *ArgTy = Call.getArgOperand(0)->getType();
-    Check(ArgTy->isFPOrFPVectorTy() && ArgTy->isVectorTy(),
-          "intrinsic has incorrect argument type!");
-    break;
-  }
-  case Intrinsic::vector_reduce_fadd:
-  case Intrinsic::vector_reduce_fmul: {
-    // Unlike the other reductions, the first argument is a start value. The
-    // second argument is the vector to be reduced.
-    Type *ArgTy = Call.getArgOperand(1)->getType();
-    Check(ArgTy->isFPOrFPVectorTy() && ArgTy->isVectorTy(),
-          "intrinsic has incorrect argument type!");
-    break;
-  }
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
   case Intrinsic::umul_fix:
@@ -7791,24 +7839,6 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
         "invalid arguments for constrained FP intrinsic", &FPI);
 
   switch (FPI.getIntrinsicID()) {
-  case Intrinsic::experimental_constrained_lrint:
-  case Intrinsic::experimental_constrained_llrint: {
-    Type *ValTy = FPI.getArgOperand(0)->getType();
-    Type *ResultTy = FPI.getType();
-    Check(!ValTy->isVectorTy() && !ResultTy->isVectorTy(),
-          "Intrinsic does not support vectors", &FPI);
-    break;
-  }
-
-  case Intrinsic::experimental_constrained_lround:
-  case Intrinsic::experimental_constrained_llround: {
-    Type *ValTy = FPI.getArgOperand(0)->getType();
-    Type *ResultTy = FPI.getType();
-    Check(!ValTy->isVectorTy() && !ResultTy->isVectorTy(),
-          "Intrinsic does not support vectors", &FPI);
-    break;
-  }
-
   case Intrinsic::experimental_constrained_fcmp:
   case Intrinsic::experimental_constrained_fcmps: {
     auto Pred = cast<ConstrainedFPCmpIntrinsic>(&FPI)->getPredicate();

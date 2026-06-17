@@ -2324,7 +2324,8 @@ INITIALIZE_PASS_END(AMDGPUCodeGenPrepare, DEBUG_TYPE, "AMDGPU IR optimizations",
 
 /// Create a workitem.id.x intrinsic call with range metadata.
 CallInst *AMDGPUCodeGenPrepareImpl::createWorkitemIdX(IRBuilder<> &B) const {
-  CallInst *Tid = B.CreateIntrinsic(Intrinsic::amdgcn_workitem_id_x, {});
+  CallInst *Tid =
+      B.CreateIntrinsicWithoutFolding(Intrinsic::amdgcn_workitem_id_x, {});
   ST.makeLIDRangeMetadata(Tid);
   return Tid;
 }

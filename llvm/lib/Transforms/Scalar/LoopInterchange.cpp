@@ -1262,8 +1262,11 @@ bool LoopInterchangeLegality::checkInductionsAndReductions(Loop *OuterLoop) {
 
       if (CurLoop == OuterLoop) {
         // PHIs in inner loops need to be part of a reduction in the outer loop,
-        assert(PHI.getNumIncomingValues() == 2 &&
-               "Phis in loop header should have exactly 2 incoming values");
+        if (PHI.getNumIncomingValues() != 2) {
+          LLVM_DEBUG(dbgs() << "Only PHI nodes in the outer loop header with 2 "
+                               "incoming values are supported.\n");
+          return false;
+        }
         // Check if we have a PHI node in the outer loop that has a reduction
         // result from the inner loop as an incoming value.
         Value *V = followLCSSA(
@@ -1375,6 +1378,26 @@ bool LoopInterchangeLegality::currentLimitations() {
              << "Inner loop structure not understood currently.";
     });
     return true;
+  }
+
+  // Currently, we do not support loops that have a predecessor entering the
+  // loop via an indirectbr.
+  for (Loop *L : {OuterLoop, InnerLoop}) {
+    BasicBlock *Header = L->getHeader();
+    for (BasicBlock *Pred : predecessors(Header)) {
+      if (L->contains(Pred))
+        continue;
+      if (isa<IndirectBrInst>(Pred->getTerminator())) {
+        LLVM_DEBUG(
+            dbgs() << "Indirect branch found in the loop predecessor.\n");
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "IndirectBranchPreheader",
+                                          L->getStartLoc(), L->getHeader())
+                 << "Indirect branch found in the loop predecessor.";
+        });
+        return true;
+      }
+    }
   }
 
   return false;
@@ -2173,8 +2196,8 @@ bool LoopInterchangeTransform::transform(
   if (InnerLoopPreHeader != OuterLoopHeader) {
     // Eliminate PHIs in the inner-loop preheader.
     for (PHINode &P : make_early_inc_range(InnerLoopPreHeader->phis())) {
-      assert(P.getNumIncomingValues() == 1 &&
-             "Expected single-incoming PHIs in inner loop preheader");
+      assert(all_equal(P.incoming_values()) &&
+             "Expected equivalent incoming values in inner loop preheader");
       P.replaceAllUsesWith(P.getIncomingValue(0));
       P.eraseFromParent();
     }
