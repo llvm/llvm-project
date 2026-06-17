@@ -1200,11 +1200,11 @@ void Writer::createSyntheticInitFunctions() {
         "__wasm_init_memory", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(nullSignature, "__wasm_init_memory"));
     ctx.sym.initMemory->markLive();
-    if (ctx.arg.sharedMemory) {
-      // This global is assigned during  __wasm_init_memory in the shared memory
-      // case.
+    // __wasm_init_memory uses __tls_base/__wasm_set_tls_base
+    if (ctx.sym.setTLSBase)
+      ctx.sym.setTLSBase->markLive();
+    else if (ctx.arg.sharedMemory)
       ctx.sym.tlsBase->markLive();
-    }
   }
 
   if (ctx.arg.isMultithreaded()) {
@@ -1214,8 +1214,11 @@ void Writer::createSyntheticInitFunctions() {
           make<SyntheticFunction>(nullSignature,
                                   "__wasm_apply_global_tls_relocs"));
       ctx.sym.applyGlobalTLSRelocs->markLive();
-      // TLS relocations depend on  the __tls_base symbols
-      ctx.sym.tlsBase->markLive();
+      // TLS relocations depend on the __tls_base/__wasm_get_tls_base symbols
+      if (ctx.sym.getTLSBase)
+        ctx.sym.getTLSBase->markLive();
+      else if (ctx.arg.sharedMemory)
+        ctx.sym.tlsBase->markLive();
     }
 
     auto hasTLSRelocs = [](const OutputSegment *segment) {
