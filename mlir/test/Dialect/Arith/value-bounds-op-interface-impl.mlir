@@ -458,10 +458,6 @@ func.func @arith_maxui_addi() -> index {
 
 // -----
 
-// `minui` with a symbolic operand whose non-negativity is established through
-// the constraint set (`%nn = maxsi(%a, 0)` proves `%nn >= 0`). The guard then
-// passes and the (exclusive) upper bound reifies to `5`, exactly like `minsi`.
-
 // CHECK-LABEL: func @arith_minui_nonneg_symbolic(
 //  CHECK-SAME:     %[[a:.*]]: index
 //       CHECK:   %[[ub:.*]] = arith.constant 5 : index
@@ -476,11 +472,6 @@ func.func @arith_minui_nonneg_symbolic(%a: index) -> index {
 }
 
 // -----
-
-// `minui` with a symbolic operand that is provably *negative*
-// (`%neg = minsi(%a, -1)` proves `%neg <= -1`). That operand contributes no
-// bound, but the other operand `4` is non-negative and still bounds the
-// unsigned min, so the (exclusive) upper bound reifies to `5`.
 
 // CHECK-LABEL: func @arith_minui_negative_symbolic(
 //  CHECK-SAME:     %[[a:.*]]: index
@@ -497,10 +488,6 @@ func.func @arith_minui_negative_symbolic(%a: index) -> index {
 
 // -----
 
-// `maxui` with a symbolic operand whose non-negativity is established through
-// the constraint set. The guard passes and the lower bound reifies to `4`,
-// exactly like `maxsi`.
-
 // CHECK-LABEL: func @arith_maxui_nonneg_symbolic(
 //  CHECK-SAME:     %[[a:.*]]: index
 //       CHECK:   %[[lb:.*]] = arith.constant 4 : index
@@ -515,9 +502,6 @@ func.func @arith_maxui_nonneg_symbolic(%a: index) -> index {
 }
 
 // -----
-
-// `maxui` with a symbolic operand that is provably *negative*. As above, the
-// guard suppresses all bounds and reification fails.
 
 func.func @arith_maxui_negative_symbolic(%a: index) -> index {
   %cm1 = arith.constant -1 : index
