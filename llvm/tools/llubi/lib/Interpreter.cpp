@@ -830,25 +830,21 @@ public:
           switch (Kind) {
           case Attribute::Alignment: {
             // Alignment assumptions should have 2 or 3 arguments.
-            // If there are two integer arguments, use the largest power of 2
-            // that divides them as the alignment.
             APInt Alignment = getIntNonPoison(getValue(GetBundleArg(1)));
+            APInt CheckedAddr = WasOnPtr.address();
             if (OBU.Inputs.size() == 3) {
               APInt Offset = getIntNonPoison(getValue(GetBundleArg(2)));
-              if (!Alignment.isZero() || !Offset.isZero())
-                Alignment = APInt::getOneBitSet(
-                    std::max(Alignment.getBitWidth(), Offset.getBitWidth()),
-                    std::min(Alignment.countr_zero(), Offset.countr_zero()));
+              CheckedAddr -= Offset.sextOrTrunc(CheckedAddr.getBitWidth());
             }
             if (!Alignment.isPowerOf2()) {
-              if (!WasOnPtr.address().isZero())
-                reportImmediateUB() << "Assume on nonzero pointer " << WasOn
-                                    << " with a "
+              if (!CheckedAddr.isZero())
+                reportImmediateUB() << "Assume on pointer " << WasOn
+                                    << " with a nonzero adjusted address and a "
                                        "non-power-of-two alignment "
                                     << Alignment << '.';
               break;
             }
-            if (WasOnPtr.address().countr_zero() < Alignment.logBase2())
+            if (CheckedAddr.countr_zero() < Alignment.logBase2())
               reportImmediateUB()
                   << "The pointer " << WasOn << " violates align(" << Alignment
                   << ") assumption.";

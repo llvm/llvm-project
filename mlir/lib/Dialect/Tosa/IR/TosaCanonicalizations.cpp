@@ -1238,6 +1238,27 @@ void CastToBlockScaledOp::getCanonicalizationPatterns(
   results.add<CancellingBlockScaledCastsOptimization>(context);
 }
 
+struct RowGatherToGather : public OpRewritePattern<tosa::RowGatherOp> {
+  using OpRewritePattern<tosa::RowGatherOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::RowGatherOp op,
+                                PatternRewriter &rewriter) const override {
+    const FailureOr<int32_t> rowCount =
+        mlir::tosa::getConstantScalarIntValue<int32_t>(op.getRowCount());
+    if (failed(rowCount) || rowCount.value() != 1)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<tosa::GatherOp>(
+        op, op.getOutput().getType(), op.getValues(), op.getIndices());
+    return success();
+  }
+};
+
+void RowGatherOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                              MLIRContext *context) {
+  results.add<RowGatherToGather>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // Operator Folders.
 //===----------------------------------------------------------------------===//
