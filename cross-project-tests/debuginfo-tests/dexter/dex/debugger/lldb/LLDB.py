@@ -438,7 +438,7 @@ class LLDBDAP(DAP):
 
     def _sanitize_function_name(self, name: str):  # pylint: disable=no-self-use
         if name.endswith(" [opt]"):
-            name = name[:-len(" [opt]")]
+            name = name[: -len(" [opt]")]
         return name
 
     def _post_step_hook(self):

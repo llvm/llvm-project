@@ -151,9 +151,13 @@ def get_variable_metrics(
         # The sum of the 0.0-1.0 "correctness value" of matches across each step.
         "partial_step_correctness": ScalarMetric(partial_step_correctness),
         # The number of steps where the watched variable/expression was marked "optimized out" in the debugger.
-        "optimized_out_steps": ScalarMetric(num_optimized_out_steps, improves_asc=False),
+        "optimized_out_steps": ScalarMetric(
+            num_optimized_out_steps, improves_asc=False
+        ),
         # The number of steps where the watched variable/expression had an inaccessible address in the debugger.
-        "irretrievable_steps": ScalarMetric(num_irretrievable_steps, improves_asc=False),
+        "irretrievable_steps": ScalarMetric(
+            num_irretrievable_steps, improves_asc=False
+        ),
         # The number of steps where the watched variable/expression was not available in the debugger.
         "missing_var_steps": ScalarMetric(num_missing_var_steps, improves_asc=False),
         # The number of steps where the watched variable/expression had a value not in the set of expected values.
