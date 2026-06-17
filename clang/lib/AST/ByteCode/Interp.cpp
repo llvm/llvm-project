@@ -1691,6 +1691,9 @@ static bool checkConstructor(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!D->ElemRecord)
     return true;
 
+  if (S.getLangOpts().CPlusPlus26)
+    return true;
+
   if (D->ElemRecord->getNumVirtualBases() == 0)
     return true;
 

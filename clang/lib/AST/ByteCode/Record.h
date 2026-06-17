@@ -142,7 +142,7 @@ private:
   BaseList Bases;
   /// List of all the fields in the record.
   FieldList Fields;
-  /// List o fall virtual bases.
+  /// List of all virtual bases.
   VirtualBaseList VirtualBases;
 
   /// Mapping from declarations to bases.

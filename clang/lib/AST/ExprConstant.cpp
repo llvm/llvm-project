@@ -1447,6 +1447,13 @@ namespace {
     unsigned getLValueCallIndex() const { return Base.getCallIndex(); }
     unsigned getLValueVersion() const { return Base.getVersion(); }
 
+    bool pointsToCompleteClass() const {
+      if (Designator.Entries.empty())
+        return true;
+
+      return !getAsBaseClass(Designator.Entries.back());
+    }
+
     void moveInto(APValue &V) const {
       if (Designator.Invalid)
         V = APValue(Base, Offset, APValue::NoLValuePath(), IsNullPtr);
@@ -2183,7 +2190,8 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
                                   QualType Type, const APValue &Value,
                                   ConstantExprKind Kind,
                                   const FieldDecl *SubobjectDecl,
-                                  CheckedTemporaries &CheckedTemps);
+                                  CheckedTemporaries &CheckedTemps,
+                                  bool IsCompleteClass = true);
 
 /// Check that this reference or pointer core constant expression is a valid
 /// value for an address or reference constant expression. Return true if we
@@ -2428,7 +2436,8 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
                                   QualType Type, const APValue &Value,
                                   ConstantExprKind Kind,
                                   const FieldDecl *SubobjectDecl,
-                                  CheckedTemporaries &CheckedTemps) {
+                                  CheckedTemporaries &CheckedTemps,
+                                  bool IsCompleteClass) {
   if (!Value.hasValue()) {
     if (SubobjectDecl) {
       Info.FFDiag(DiagLoc, diag::note_constexpr_uninitialized)
@@ -2474,6 +2483,8 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
     if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
       unsigned BaseIndex = 0;
       for (const CXXBaseSpecifier &BS : CD->bases()) {
+        if (BS.isVirtual())
+          continue;
         const APValue &BaseValue = Value.getStructBase(BaseIndex);
         if (!BaseValue.hasValue()) {
           SourceLocation TypeBeginLoc = BS.getBaseTypeLoc();
@@ -2483,7 +2494,7 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
         }
         if (!CheckEvaluationResult(CERK, Info, DiagLoc, BS.getType(), BaseValue,
                                    Kind, /*SubobjectDecl=*/nullptr,
-                                   CheckedTemps))
+                                   CheckedTemps, /*IsCompleteClass=*/false))
           return false;
         ++BaseIndex;
       }
@@ -2496,6 +2507,27 @@ static bool CheckEvaluationResult(CheckEvaluationResultKind CERK,
                                  Value.getStructField(I->getFieldIndex()), Kind,
                                  I, CheckedTemps))
         return false;
+    }
+
+    if (IsCompleteClass) {
+      if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
+        unsigned BaseIndex = 0;
+        for (const CXXBaseSpecifier &BS : CD->vbases()) {
+          assert(BS.isVirtual());
+          const APValue &BaseValue = Value.getStructVirtualBase(BaseIndex);
+          if (!BaseValue.hasValue()) {
+            SourceLocation TypeBeginLoc = BS.getBaseTypeLoc();
+            Info.FFDiag(TypeBeginLoc, diag::note_constexpr_uninitialized_base)
+                << BS.getType() << SourceRange(TypeBeginLoc, BS.getEndLoc());
+            return false;
+          }
+          if (!CheckEvaluationResult(CERK, Info, DiagLoc, BS.getType(),
+                                     BaseValue, Kind, /*SubobjectDecl=*/nullptr,
+                                     CheckedTemps, /*IsCompleteClass=*/false))
+            return false;
+          ++BaseIndex;
+        }
+      }
     }
   }
 
@@ -3144,8 +3176,24 @@ static bool HandleLValueDirectBase(EvalInfo &Info, const Expr *E, LValue &Obj,
     RL = &Info.Ctx.getASTRecordLayout(Derived);
   }
 
-  Obj.addDecl(Info, E, Base, /*Virtual*/ false);
+  Obj.addDecl(Info, E, Base, /*Virtual=*/false);
   Obj.getLValueOffset() += RL->getBaseClassOffset(Base);
+  return true;
+}
+
+static bool HandleLValueDirectVirtualBase(EvalInfo &Info, const Expr *E,
+                                          LValue &Obj,
+                                          const CXXRecordDecl *Derived,
+                                          const CXXRecordDecl *Base,
+                                          const ASTRecordLayout *RL = nullptr) {
+  if (!RL) {
+    if (Derived->isInvalidDecl())
+      return false;
+    RL = &Info.Ctx.getASTRecordLayout(Derived);
+  }
+
+  Obj.addDecl(Info, E, Base, /*Virtual=*/true);
+  Obj.getLValueOffset() += RL->getVBaseClassOffset(Base);
   return true;
 }
 
@@ -3517,9 +3565,21 @@ static unsigned getBaseIndex(const CXXRecordDecl *Derived,
   Base = Base->getCanonicalDecl();
   unsigned Index = 0;
   for (CXXRecordDecl::base_class_const_iterator I = Derived->bases_begin(),
-         E = Derived->bases_end(); I != E; ++I, ++Index) {
+                                                E = Derived->bases_end();
+       I != E; ++I) {
+    if (I->isVirtual())
+      continue;
     if (I->getType()->getAsCXXRecordDecl()->getCanonicalDecl() == Base)
       return Index;
+    ++Index;
+  }
+
+  for (CXXRecordDecl::base_class_const_iterator I = Derived->vbases_begin(),
+                                                E = Derived->vbases_end();
+       I != E; ++I) {
+    if (I->getType()->getAsCXXRecordDecl()->getCanonicalDecl() == Base)
+      return Index;
+    ++Index;
   }
 
   llvm_unreachable("base class missing from derived class's bases list");
@@ -4382,7 +4442,14 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       // Next subobject is a base class.
       const CXXRecordDecl *Derived = ObjType->getAsCXXRecordDecl();
       const CXXRecordDecl *Base = getAsBaseClass(Sub.Entries[I]);
-      O = &O->getStructBase(getBaseIndex(Derived, Base));
+
+      unsigned BaseIndex = getBaseIndex(Derived, Base);
+      unsigned NumNonVirtualBases = O->getStructNumBases();
+      if (BaseIndex >= NumNonVirtualBases) {
+        O = &O->getStructVirtualBase(
+            BaseIndex - NumNonVirtualBases); // getBaseIndex(Derived, Base));
+      } else
+        O = &O->getStructBase(BaseIndex);
 
       ObjType = getSubobjectType(ObjType, Info.Ctx.getCanonicalTagType(Base));
     }
@@ -5445,7 +5512,8 @@ static bool HandleBaseToDerivedCast(EvalInfo &Info, const CastExpr *E,
 
 /// Get the value to use for a default-initialized object of type T.
 /// Return false if it encounters something invalid.
-static bool handleDefaultInitValue(QualType T, APValue &Result) {
+static bool handleDefaultInitValue(QualType T, APValue &Result,
+                                   bool IsCompleteClass = true) {
   bool Success = true;
 
   // If there is already a value present don't overwrite it.
@@ -5461,15 +5529,24 @@ static bool handleDefaultInitValue(QualType T, APValue &Result) {
       Result = APValue((const FieldDecl *)nullptr);
       return true;
     }
+
+    // bases() includes directly specified virtual bases as well.
+    unsigned NonVirtualBases =
+        llvm::count_if(RD->bases(), [](auto &B) { return !B.isVirtual(); });
     Result =
-        APValue(APValue::UninitStruct(), RD->getNumBases(), RD->getNumFields());
+        APValue(APValue::UninitStruct(), NonVirtualBases, RD->getNumFields(),
+                IsCompleteClass ? RD->getNumVBases() : 0);
 
     unsigned Index = 0;
-    for (CXXRecordDecl::base_class_const_iterator I = RD->bases_begin(),
+    for (CXXRecordDecl::base_class_const_iterator B = RD->bases_begin(),
                                                   End = RD->bases_end();
-         I != End; ++I, ++Index)
-      Success &=
-          handleDefaultInitValue(I->getType(), Result.getStructBase(Index));
+         B != End; ++B) {
+      if (B->isVirtual())
+        continue;
+      Success &= handleDefaultInitValue(B->getType(),
+                                        Result.getStructBase(Index), false);
+      ++Index;
+    }
 
     for (const auto *I : RD->fields()) {
       if (I->isUnnamedBitField())
@@ -5477,6 +5554,20 @@ static bool handleDefaultInitValue(QualType T, APValue &Result) {
       Success &= handleDefaultInitValue(
           I->getType(), Result.getStructField(I->getFieldIndex()));
     }
+
+    if (IsCompleteClass) {
+      Index = 0;
+
+      for (const auto &B : RD->vbases()) {
+        Success &= handleDefaultInitValue(
+            B.getType(), Result.getStructVirtualBase(Index), false);
+        ++Index;
+      }
+    } else {
+      // Virtual bases should only exist at the top level of an APValue.
+      assert(Result.getStructNumVirtualBases() == 0);
+    }
+
     return Success;
   }
 
@@ -5486,7 +5577,6 @@ static bool handleDefaultInitValue(QualType T, APValue &Result) {
     if (Result.hasArrayFiller())
       Success &=
           handleDefaultInitValue(AT->getElementType(), Result.getArrayFiller());
-
     return Success;
   }
 
@@ -6503,15 +6593,12 @@ static std::optional<DynamicType> ComputeDynamicType(EvalInfo &Info,
   if (This.Designator.Invalid)
     return std::nullopt;
 
-  // Refuse to compute a dynamic type in the presence of virtual bases. This
-  // shouldn't happen other than in constant-folding situations, since literal
-  // types can't have virtual bases.
-  //
-  // Note that consumers of DynamicType assume that the type has no virtual
-  // bases, and will need modifications if this restriction is relaxed.
+  // Refuse to compute a dynamic type in the presence of virtual bases
+  // before C++26. This shouldn't happen other than in constant-folding
+  // situations, since literal types can't have virtual bases.
   const CXXRecordDecl *Class =
       This.Designator.MostDerivedType->getAsCXXRecordDecl();
-  if (!Class || Class->getNumVBases()) {
+  if (!Class || (!Info.getLangOpts().CPlusPlus26 && Class->getNumVBases())) {
     Info.FFDiag(E);
     return std::nullopt;
   }
@@ -6645,10 +6732,18 @@ static bool HandleCovariantReturnAdjustment(EvalInfo &Info, const Expr *E,
 static bool isBaseClassPublic(const CXXRecordDecl *Derived,
                               const CXXRecordDecl *Base) {
   for (const CXXBaseSpecifier &BaseSpec : Derived->bases()) {
+    if (BaseSpec.isVirtual())
+      continue;
     auto *BaseClass = BaseSpec.getType()->getAsCXXRecordDecl();
     if (BaseClass && declaresSameEntity(BaseClass, Base))
       return BaseSpec.getAccessSpecifier() == AS_public;
   }
+  for (const CXXBaseSpecifier &BaseSpec : Derived->vbases()) {
+    auto *BaseClass = BaseSpec.getType()->getAsCXXRecordDecl();
+    if (BaseClass && declaresSameEntity(BaseClass, Base))
+      return BaseSpec.getAccessSpecifier() == AS_public;
+  }
+
   llvm_unreachable("Base is not a direct base of Derived");
 }
 
@@ -7064,17 +7159,40 @@ static bool HandleFunctionCall(SourceLocation CallLoc,
   return ESR == ESR_Returned;
 }
 
+static bool HandleConstructorCall(const Expr *E, const LValue &This,
+                                  CallRef Call,
+                                  const CXXConstructorDecl *Definition,
+                                  EvalInfo &Info, APValue &Result,
+                                  bool IsCompleteClass = true);
+
+static bool HandleConstructorCall(const Expr *E, const LValue &This,
+                                  ArrayRef<const Expr *> Args,
+                                  const CXXConstructorDecl *Definition,
+                                  EvalInfo &Info, APValue &Result,
+                                  bool IsCompleteClass = true) {
+  CallScopeRAII CallScope(Info);
+  CallRef Call = Info.CurrentCall->createCall(Definition);
+  if (!EvaluateArgs(Args, Call, Info, Definition))
+    return false;
+
+  return HandleConstructorCall(E, This, Call, Definition, Info, Result,
+                               IsCompleteClass) &&
+         CallScope.destroy();
+}
+
 /// Evaluate a constructor call.
 static bool HandleConstructorCall(const Expr *E, const LValue &This,
                                   CallRef Call,
                                   const CXXConstructorDecl *Definition,
-                                  EvalInfo &Info, APValue &Result) {
+                                  EvalInfo &Info, APValue &Result,
+                                  bool IsCompleteClass) {
+
   SourceLocation CallLoc = E->getExprLoc();
   if (!Info.CheckCallLimit(CallLoc))
     return false;
 
   const CXXRecordDecl *RD = Definition->getParent();
-  if (RD->getNumVBases()) {
+  if (!Info.getLangOpts().CPlusPlus26 && RD->getNumVBases()) {
     Info.FFDiag(CallLoc, diag::note_constexpr_virtual_base) << RD;
     return false;
   }
@@ -7123,10 +7241,13 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
 
   // Reserve space for the struct members.
   if (!Result.hasValue()) {
-    if (!RD->isUnion())
-      Result = APValue(APValue::UninitStruct(), RD->getNumBases(),
-                       RD->getNumFields());
-    else
+    if (!RD->isUnion()) {
+      unsigned NonVirtualBases =
+          llvm::count_if(RD->bases(), [](auto &B) { return !B.isVirtual(); });
+
+      Result = APValue(APValue::UninitStruct(), NonVirtualBases,
+                       RD->getNumFields(), RD->getNumVBases());
+    } else
       // A union starts with no active member.
       Result = APValue((const FieldDecl*)nullptr);
   }
@@ -7139,9 +7260,10 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
 
   bool Success = true;
   unsigned BasesSeen = 0;
-#ifndef NDEBUG
-  CXXRecordDecl::base_class_const_iterator BaseIt = RD->bases_begin();
-#endif
+  unsigned VirtualBasesSeen = 0;
+  unsigned NonVirtualBases =
+      llvm::count_if(RD->bases(), [](auto &B) { return !B.isVirtual(); });
+
   CXXRecordDecl::field_iterator FieldIt = RD->field_begin();
   auto SkipToField = [&](FieldDecl *FD, bool Indirect) {
     // We might be initializing the same field again if this is an indirect
@@ -7152,7 +7274,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
       return;
     }
 
-    // Default-initialize any fields with no explicit initializer.
+    // Default-initialize any fields with no explicit initializer.<
     for (; !declaresSameEntity(*FieldIt, FD); ++FieldIt) {
       assert(FieldIt != RD->field_end() && "missing field?");
       if (!FieldIt->isUnnamedBitField())
@@ -7171,18 +7293,23 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
     FieldDecl *FD = nullptr;
     if (I->isBaseInitializer()) {
       QualType BaseType(I->getBaseClass(), 0);
-#ifndef NDEBUG
-      // Non-virtual base classes are initialized in the order in the class
-      // definition. We have already checked for virtual base classes.
-      assert(!BaseIt->isVirtual() && "virtual base for literal type");
-      assert(Info.Ctx.hasSameUnqualifiedType(BaseIt->getType(), BaseType) &&
-             "base class initializers not in expected order");
-      ++BaseIt;
-#endif
-      if (!HandleLValueDirectBase(Info, I->getInit(), Subobject, RD,
-                                  BaseType->getAsCXXRecordDecl(), &Layout))
-        return false;
-      Value = &Result.getStructBase(BasesSeen++);
+      if (I->isBaseVirtual()) {
+        if (This.pointsToCompleteClass()) {
+          if (!HandleLValueDirectVirtualBase(Info, I->getInit(), Subobject, RD,
+                                             BaseType->getAsCXXRecordDecl(),
+                                             &Layout))
+            return false;
+          Value = &Result.getStructVirtualBase(VirtualBasesSeen++);
+        } else {
+          continue;
+        }
+
+      } else {
+        if (!HandleLValueDirectBase(Info, I->getInit(), Subobject, RD,
+                                    BaseType->getAsCXXRecordDecl(), &Layout))
+          return false;
+        Value = &Result.getStructBase(BasesSeen++);
+      }
     } else if ((FD = I->getMember())) {
       if (!HandleLValueMember(Info, I->getInit(), Subobject, FD, &Layout))
         return false;
@@ -7268,9 +7395,10 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
 
     // This is the point at which the dynamic type of the object becomes this
     // class type.
-    if (I->isBaseInitializer() && BasesSeen == RD->getNumBases())
+    if (I->isBaseInitializer() && BasesSeen == NonVirtualBases)
       EvalObj.finishedConstructingBases();
-  }
+
+  } // END OF FOR LOOP
 
   // Default-initialize any remaining fields.
   if (!RD->isUnion()) {
@@ -7289,22 +7417,9 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
          LifetimeExtendedScope.destroy();
 }
 
-static bool HandleConstructorCall(const Expr *E, const LValue &This,
-                                  ArrayRef<const Expr*> Args,
-                                  const CXXConstructorDecl *Definition,
-                                  EvalInfo &Info, APValue &Result) {
-  CallScopeRAII CallScope(Info);
-  CallRef Call = Info.CurrentCall->createCall(Definition);
-  if (!EvaluateArgs(Args, Call, Info, Definition))
-    return false;
-
-  return HandleConstructorCall(E, This, Call, Definition, Info, Result) &&
-         CallScope.destroy();
-}
-
 static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
                                   const LValue &This, APValue &Value,
-                                  QualType T) {
+                                  QualType T, bool IsCompleteClass = true) {
   // Objects can only be destroyed while they're within their lifetimes.
   // FIXME: We have no representation for whether an object of type nullptr_t
   // is in its lifetime; it usually doesn't matter. Perhaps we should model it
@@ -7368,7 +7483,7 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
     return true;
   }
 
-  if (RD->getNumVBases()) {
+  if (!Info.getLangOpts().CPlusPlus26 && RD->getNumVBases()) {
     Info.FFDiag(CallRange.getBegin(), diag::note_constexpr_virtual_base) << RD;
     return false;
   }
@@ -7407,10 +7522,13 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
                        CallRef());
 
   // We're now in the period of destruction of this object.
-  unsigned BasesLeft = RD->getNumBases();
   EvalInfo::EvaluatingDestructorRAII EvalObj(
       Info,
       ObjectUnderConstruction{This.getLValueBase(), This.Designator.Entries});
+  unsigned NonVirtualBases =
+      llvm::count_if(RD->bases(), [](auto &B) { return !B.isVirtual(); });
+  unsigned NumVirtualBases = RD->getNumVBases();
+  unsigned BasesLeft = NonVirtualBases;
   if (!EvalObj.DidInsert) {
     // C++2a [class.dtor]p19:
     //   the behavior is undefined if the destructor is invoked for an object
@@ -7452,11 +7570,13 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
       return false;
   }
 
-  if (BasesLeft != 0)
+  if (BasesLeft != 0 || NumVirtualBases != 0)
     EvalObj.startedDestroyingBases();
 
   // Destroy base classes in reverse order.
   for (const CXXBaseSpecifier &Base : llvm::reverse(RD->bases())) {
+    if (Base.isVirtual())
+      continue;
     --BasesLeft;
 
     QualType BaseType = Base.getType();
@@ -7467,10 +7587,31 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
 
     APValue *SubobjectValue = &Value.getStructBase(BasesLeft);
     if (!HandleDestructionImpl(Info, CallRange, Subobject, *SubobjectValue,
-                               BaseType))
+                               BaseType, /*IsCompleteClass=*/false))
       return false;
   }
   assert(BasesLeft == 0 && "NumBases was wrong?");
+
+  // Virtual bases.
+  if (IsCompleteClass) {
+    unsigned VirtualBasesLeft = NumVirtualBases;
+    for (const CXXBaseSpecifier &Base : llvm::reverse(RD->vbases())) {
+      --VirtualBasesLeft;
+
+      QualType BaseType = Base.getType();
+      LValue Subobject = This;
+      if (!HandleLValueDirectVirtualBase(Info, &LocE, Subobject, RD,
+                                         BaseType->getAsCXXRecordDecl(),
+                                         &Layout))
+        return false;
+
+      APValue *SubobjectValue = &Value.getStructVirtualBase(VirtualBasesLeft);
+      if (!HandleDestructionImpl(Info, CallRange, Subobject, *SubobjectValue,
+                                 BaseType, /*IsCompleteClass=*/false))
+        return false;
+    }
+    assert(VirtualBasesLeft == 0 && "NumVirtualBases was wrong?");
+  }
 
   // The period of destruction ends now. The object is gone.
   Value = APValue();
@@ -11108,8 +11249,15 @@ static bool HandleClassZeroInitialization(EvalInfo &Info, const Expr *E,
                                           const LValue &This, APValue &Result) {
   assert(!RD->isUnion() && "Expected non-union class type");
   const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD);
-  Result = APValue(APValue::UninitStruct(), CD ? CD->getNumBases() : 0,
-                   RD->getNumFields());
+
+  if (CD) {
+    unsigned NonVirtualBases =
+        llvm::count_if(CD->bases(), [](auto &B) { return !B.isVirtual(); });
+    Result = APValue(APValue::UninitStruct(), NonVirtualBases,
+                     RD->getNumFields(), CD->getNumVBases());
+  } else {
+    Result = APValue(APValue::UninitStruct(), 0, RD->getNumFields());
+  }
 
   if (RD->isInvalidDecl()) return false;
   const ASTRecordLayout &Layout = Info.Ctx.getASTRecordLayout(RD);
@@ -11117,7 +11265,10 @@ static bool HandleClassZeroInitialization(EvalInfo &Info, const Expr *E,
   if (CD) {
     unsigned Index = 0;
     for (CXXRecordDecl::base_class_const_iterator I = CD->bases_begin(),
-           End = CD->bases_end(); I != End; ++I, ++Index) {
+                                                  End = CD->bases_end();
+         I != End; ++I) {
+      if (I->isVirtual())
+        continue;
       const CXXRecordDecl *Base = I->getType()->getAsCXXRecordDecl();
       LValue Subobject = This;
       if (!HandleLValueDirectBase(Info, E, Subobject, CD, Base, &Layout))
@@ -11125,6 +11276,7 @@ static bool HandleClassZeroInitialization(EvalInfo &Info, const Expr *E,
       if (!HandleClassZeroInitialization(Info, E, Base, Subobject,
                                          Result.getStructBase(Index)))
         return false;
+      ++Index;
     }
   }
 
@@ -11141,6 +11293,22 @@ static bool HandleClassZeroInitialization(EvalInfo &Info, const Expr *E,
     if (!EvaluateInPlace(
           Result.getStructField(I->getFieldIndex()), Info, Subobject, &VIE))
       return false;
+  }
+
+  if (CD && This.Designator.Entries.empty()) {
+    unsigned Index = 0;
+    for (CXXRecordDecl::base_class_const_iterator I = CD->vbases_begin(),
+                                                  End = CD->vbases_end();
+         I != End; ++I) {
+      const CXXRecordDecl *Base = I->getType()->getAsCXXRecordDecl();
+      LValue Subobject = This;
+      if (!HandleLValueDirectVirtualBase(Info, E, Subobject, CD, Base, &Layout))
+        return false;
+      if (!HandleClassZeroInitialization(Info, E, Base, Subobject,
+                                         Result.getStructVirtualBase(Index)))
+        return false;
+      ++Index;
+    }
   }
 
   return true;
@@ -11168,9 +11336,12 @@ bool RecordExprEvaluator::ZeroInitialization(const Expr *E, QualType T) {
     return EvaluateInPlace(Result.getUnionValue(), Info, Subobject, &VIE);
   }
 
-  if (isa<CXXRecordDecl>(RD) && cast<CXXRecordDecl>(RD)->getNumVBases()) {
-    Info.FFDiag(E, diag::note_constexpr_virtual_base) << RD;
-    return false;
+  if (!Info.getLangOpts().CPlusPlus26) {
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
+        CXXRD && CXXRD->getNumVBases()) {
+      Info.FFDiag(E, diag::note_constexpr_virtual_base) << RD;
+      return false;
+    }
   }
 
   return HandleClassZeroInitialization(Info, E, RD, This, Result);

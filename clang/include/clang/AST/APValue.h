@@ -297,7 +297,8 @@ private:
     APValue *Elts;
     unsigned NumBases;
     unsigned NumFields;
-    StructData(unsigned NumBases, unsigned NumFields);
+    unsigned NumVirtualBases;
+    StructData(unsigned NumBases, unsigned NumFields, unsigned NumVirtualBases);
     StructData(const StructData &) = delete;
     StructData &operator=(const StructData &) = delete;
     ~StructData();
@@ -418,10 +419,13 @@ public:
   /// \param UninitStruct Marker. Pass an empty UninitStruct.
   /// \param NumBases Number of bases.
   /// \param NumMembers Number of members.
-  APValue(UninitStruct, unsigned NumBases, unsigned NumMembers)
+  /// \param NumVirtualBases Number of virtual bases.
+  APValue(UninitStruct, unsigned NumBases, unsigned NumMembers,
+          unsigned NumVirtualBases = 0)
       : Kind(None), AllowConstexprUnknown(false) {
-    MakeStruct(NumBases, NumMembers);
+    MakeStruct(NumBases, NumMembers, NumVirtualBases);
   }
+
   /// Creates a new union APValue.
   /// \param ActiveDecl The FieldDecl of the active union member.
   /// \param ActiveValue The value of the active union member.
@@ -659,6 +663,10 @@ public:
     assert(isStruct() && "Invalid accessor");
     return ((const StructData *)(const char *)&Data)->NumFields;
   }
+  unsigned getStructNumVirtualBases() const {
+    assert(isStruct() && "Invalid accessor");
+    return ((const StructData *)(const char *)&Data)->NumVirtualBases;
+  }
   APValue &getStructBase(unsigned i) {
     assert(isStruct() && "Invalid accessor");
     assert(i < getStructNumBases() && "base class index OOB");
@@ -669,11 +677,20 @@ public:
     assert(i < getStructNumFields() && "field index OOB");
     return ((StructData *)(char *)&Data)->Elts[getStructNumBases() + i];
   }
+  APValue &getStructVirtualBase(unsigned i) {
+    assert(isStruct() && "Invalid accessor");
+    assert(i < getStructNumVirtualBases() && "base class index OOB");
+    return ((StructData *)(char *)&Data)
+        ->Elts[getStructNumBases() + getStructNumFields() + i];
+  }
   const APValue &getStructBase(unsigned i) const {
     return const_cast<APValue*>(this)->getStructBase(i);
   }
   const APValue &getStructField(unsigned i) const {
     return const_cast<APValue*>(this)->getStructField(i);
+  }
+  const APValue &getStructVirtualBase(unsigned i) const {
+    return const_cast<APValue *>(this)->getStructVirtualBase(i);
   }
 
   const FieldDecl *getUnionField() const {
@@ -788,11 +805,12 @@ private:
   }
   void MakeLValue();
   void MakeArray(unsigned InitElts, unsigned Size);
-  void MakeStruct(unsigned B, unsigned M) {
+  void MakeStruct(unsigned B, unsigned M, unsigned V) {
     assert(isAbsent() && "Bad state change");
-    new ((void *)(char *)&Data) StructData(B, M);
+    new ((void *)(char *)&Data) StructData(B, M, V);
     Kind = Struct;
   }
+
   void MakeUnion() {
     assert(isAbsent() && "Bad state change");
     new ((void *)(char *)&Data) UnionData();
