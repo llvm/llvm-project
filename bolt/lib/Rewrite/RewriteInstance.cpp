@@ -3895,7 +3895,10 @@ void RewriteInstance::runBinaryAnalyses() {
   unsigned NoCFGCount = 0;
   for (const auto &BFI : BC->getBinaryFunctions()) {
     const BinaryFunction &BF = BFI.second;
-    if (BF.hasCFG())
+    // Skip ignored functions: BOLT does not attempt to build a CFG for them
+    // (e.g. pseudo functions such as PLT stubs), so a missing CFG there is
+    // expected rather than a sign of degraded analysis.
+    if (BF.isIgnored() || BF.hasCFG())
       continue;
     ++NoCFGCount;
     if (opts::Verbosity >= 1)
