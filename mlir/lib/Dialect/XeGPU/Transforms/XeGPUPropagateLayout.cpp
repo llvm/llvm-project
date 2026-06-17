@@ -552,15 +552,32 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
     ArrayRef<const LayoutInfoLattice *> results) {
 
   LayoutInfo prefetchLayout;
+  const uArch *uArch = getUArch(getChipStr(prefetch).value_or(""));
+  if (!uArch)
+    return;
   xegpu::DistributeLayoutAttr anchorLayout = prefetch.getLayoutAttr();
   if (hasParamsOfLayoutKind(anchorLayout)) {
     prefetchLayout = LayoutInfo(anchorLayout);
+    if (layoutKind == xegpu::LayoutKind::InstData) {
+      const auto *uArchInstruction =
+          dyn_cast<xegpu::uArch::Subgroup2DBlockPrefetchInstruction>(
+              uArch->getInstruction(
+                  xegpu::uArch::InstructionKind::Subgroup2DBlockPrefetch));
+      if (!uArchInstruction)
+        return;
+      auto completed = xegpu::completeBlockStoreLaneLayoutFromInstData(
+          anchorLayout, prefetch.getTensorDescType().getElementType(),
+          uArchInstruction, uArch->getSubgroupSize());
+      if (!completed) {
+        prefetch.emitWarning(
+            "Failed to identify lane layouts for the specified inst_data.");
+        return;
+      }
+      prefetch.setLayoutAttr(*completed);
+      prefetchLayout = LayoutInfo(*completed);
+    }
   } else {
     auto tdescTy = prefetch.getTensorDescType();
-    const uArch *uArch = getUArch(getChipStr(prefetch).value_or(""));
-    if (!uArch)
-      return;
-
     auto numSgOrErr = getNumSg(prefetch, uArch->getSubgroupSize());
     if (layoutKind == xegpu::LayoutKind::Subgroup && failed(numSgOrErr)) {
       prefetch.emitWarning(
@@ -707,6 +724,13 @@ void LayoutInfoPropagation::visitDpasOp(
   LayoutInfo dpasBLayout;
   LayoutInfo dpasCDLayout;
 
+  const uArch *uArch = getUArch(getChipStr(dpas).value_or(""));
+  if (!uArch)
+    return;
+  VectorType aTy = dpas.getLhsType();
+  VectorType bTy = dpas.getRhsType();
+  VectorType cdTy = dpas.getResultType();
+
   xegpu::DistributeLayoutAttr anchorLayoutCD = dpas.getLayoutCdAttr();
   if (hasParamsOfLayoutKind(anchorLayoutCD)) {
     xegpu::DistributeLayoutAttr anchorLayoutA = dpas.getLayoutAAttr();
@@ -718,13 +742,23 @@ void LayoutInfoPropagation::visitDpasOp(
     dpasALayout = LayoutInfo(anchorLayoutA);
     dpasBLayout = LayoutInfo(anchorLayoutB);
     dpasCDLayout = LayoutInfo(anchorLayoutCD);
+    if (layoutKind == xegpu::LayoutKind::InstData) {
+      auto completed = xegpu::completeDpasLaneLayoutFromInstData(
+          anchorLayoutA, anchorLayoutB, anchorLayoutCD, aTy, bTy, cdTy, uArch);
+      if (!completed) {
+        dpas.emitWarning(
+            "Failed to identify lane layouts for the specified inst_data.");
+        return;
+      }
+      auto [completedA, completedB, completedCD] = *completed;
+      dpas.setLayoutAAttr(completedA);
+      dpas.setLayoutBAttr(completedB);
+      dpas.setLayoutCdAttr(completedCD);
+      dpasALayout = LayoutInfo(completedA);
+      dpasBLayout = LayoutInfo(completedB);
+      dpasCDLayout = LayoutInfo(completedCD);
+    }
   } else {
-    const uArch *uArch = getUArch(getChipStr(dpas).value_or(""));
-    if (!uArch)
-      return;
-    VectorType aTy = dpas.getLhsType();
-    VectorType bTy = dpas.getRhsType();
-    VectorType cdTy = dpas.getResultType();
 
     xegpu::DistributeLayoutAttr consumerLayoutAttr = nullptr;
     xegpu::DistributeLayoutAttr requiredCDLayoutAttr, requiredALayout,
@@ -784,6 +818,24 @@ void LayoutInfoPropagation::visitDpasMxOp(
   xegpu::DistributeLayoutAttr anchorLayoutB = dpasMx.getLayoutBAttr();
   xegpu::DistributeLayoutAttr anchorLayoutCD = dpasMx.getLayoutCdAttr();
 
+  const uArch *uArch = getUArch(getChipStr(dpasMx).value_or(""));
+  if (!uArch)
+    return;
+
+  VectorType aTy = dpasMx.getAType();
+  VectorType bTy = dpasMx.getBType();
+  VectorType cdTy = dpasMx.getResultType();
+
+  // Get scale types if present
+  VectorType aScaleTy;
+  VectorType bScaleTy;
+  Value scaleA = dpasMx.getScaleA();
+  Value scaleB = dpasMx.getScaleB();
+  if (scaleA)
+    aScaleTy = dyn_cast<VectorType>(scaleA.getType());
+  if (scaleB)
+    bScaleTy = dyn_cast<VectorType>(scaleB.getType());
+
   // Check if all layouts are already set
   if (anchorLayoutA && anchorLayoutB && anchorLayoutCD &&
       hasParamsOfLayoutKind(anchorLayoutA) &&
@@ -802,26 +854,34 @@ void LayoutInfoPropagation::visitDpasMxOp(
       dpasMxAScaleLayout = LayoutInfo(anchorLayoutAScale);
     if (anchorLayoutBScale)
       dpasMxBScaleLayout = LayoutInfo(anchorLayoutBScale);
+
+    if (layoutKind == xegpu::LayoutKind::InstData) {
+      auto completed = xegpu::completeDpasMxLaneLayoutFromInstData(
+          anchorLayoutA, anchorLayoutB, anchorLayoutCD, aTy, bTy, cdTy,
+          aScaleTy, bScaleTy, uArch);
+      if (!completed) {
+        dpasMx.emitWarning(
+            "Failed to identify lane layouts for the specified inst_data.");
+        return;
+      }
+      auto [completedA, completedB, completedCD, completedAScale,
+            completedBScale] = *completed;
+      dpasMx.setLayoutAAttr(completedA);
+      dpasMx.setLayoutBAttr(completedB);
+      dpasMx.setLayoutCdAttr(completedCD);
+      dpasMxALayout = LayoutInfo(completedA);
+      dpasMxBLayout = LayoutInfo(completedB);
+      dpasMxCDLayout = LayoutInfo(completedCD);
+      if (completedAScale) {
+        dpasMx.setLayoutAScaleAttr(completedAScale);
+        dpasMxAScaleLayout = LayoutInfo(completedAScale);
+      }
+      if (completedBScale) {
+        dpasMx.setLayoutBScaleAttr(completedBScale);
+        dpasMxBScaleLayout = LayoutInfo(completedBScale);
+      }
+    }
   } else {
-    // Need to compute layouts
-    const uArch *uArch = getUArch(getChipStr(dpasMx).value_or(""));
-    if (!uArch)
-      return;
-
-    VectorType aTy = dpasMx.getAType();
-    VectorType bTy = dpasMx.getBType();
-    VectorType cdTy = dpasMx.getResultType();
-
-    // Get scale types if present
-    VectorType aScaleTy;
-    VectorType bScaleTy;
-    Value scaleA = dpasMx.getScaleA();
-    Value scaleB = dpasMx.getScaleB();
-    if (scaleA)
-      aScaleTy = dyn_cast<VectorType>(scaleA.getType());
-    if (scaleB)
-      bScaleTy = dyn_cast<VectorType>(scaleB.getType());
-
     xegpu::DistributeLayoutAttr consumerLayoutAttr = nullptr;
     xegpu::DistributeLayoutAttr requiredCDLayoutAttr, requiredALayout,
         requiredBLayout, requiredAScaleLayout, requiredBScaleLayout;
@@ -899,14 +959,32 @@ void LayoutInfoPropagation::visitStoreNdOp(
     xegpu::StoreNdOp store, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
   LayoutInfo storeLayout;
+  const uArch *uArch = getUArch(getChipStr(store).value_or(""));
+  if (!uArch)
+    return;
   xegpu::DistributeLayoutAttr anchorLayout = store.getLayoutAttr();
   if (hasParamsOfLayoutKind(anchorLayout)) {
     storeLayout = LayoutInfo(anchorLayout);
-  } else {
-    const uArch *uArch = getUArch(getChipStr(store).value_or(""));
-    if (!uArch)
-      return;
+    if (layoutKind == xegpu::LayoutKind::InstData) {
 
+      const auto *uArchInstruction =
+          dyn_cast<xegpu::uArch::Subgroup2DBlockStoreInstruction>(
+              uArch->getInstruction(
+                  xegpu::uArch::InstructionKind::Subgroup2DBlockStore));
+      if (!uArchInstruction)
+        return;
+      auto completed = xegpu::completeBlockStoreLaneLayoutFromInstData(
+          anchorLayout, store.getValueType().getElementType(), uArchInstruction,
+          uArch->getSubgroupSize());
+      if (!completed) {
+        store.emitWarning(
+            "Failed to identify lane layouts for the specified inst_data.");
+        return;
+      }
+      store.setLayoutAttr(*completed);
+      storeLayout = LayoutInfo(*completed);
+    }
+  } else {
     auto numSgOrErr = getNumSg(store, uArch->getSubgroupSize());
     if (layoutKind == xegpu::LayoutKind::Subgroup && failed(numSgOrErr)) {
       store.emitWarning(
@@ -935,31 +1013,37 @@ void LayoutInfoPropagation::visitLoadNdOp(
     xegpu::LoadNdOp load, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
   LayoutInfo loadLayout;
+
+  const uArch *uArch = getUArch(getChipStr(load).value_or(""));
+  if (!uArch)
+    return;
+  LayoutInfo valueLayout = results[0]->getValue();
+  if (!valueLayout.isAssigned())
+    return;
+  auto consumerLayoutAttr =
+      dyn_cast<xegpu::DistributeLayoutAttr>(valueLayout.get());
   xegpu::DistributeLayoutAttr anchorLayout = load.getLayoutAttr();
   if (hasParamsOfLayoutKind(anchorLayout)) {
     loadLayout = LayoutInfo(anchorLayout);
-  } else {
-    LayoutInfo valueLayout = results[0]->getValue();
-    if (!valueLayout.isAssigned())
-      return;
-
-    // LoadNdOp has a transpose effect. At this stage of analysis it is not
-    // expected and should be abstracted away; emit a warning and pre-transpose
-    // the consumer hint so it lines up with the load's source.
-    auto consumerLayoutAttr =
-        dyn_cast<xegpu::DistributeLayoutAttr>(valueLayout.get());
-    if (auto transpose = load.getTranspose()) {
-      load.emitWarning("Transpose effect is not expected for LoadNdOp at "
-                       "LayoutInfoPropagation stage.");
-      LayoutInfo transposed = valueLayout.transpose(transpose.value());
-      consumerLayoutAttr =
-          dyn_cast<xegpu::DistributeLayoutAttr>(transposed.get());
+    if (layoutKind == xegpu::LayoutKind::InstData) {
+      const auto *uArchInstruction =
+          dyn_cast<xegpu::uArch::Subgroup2DBlockLoadInstruction>(
+              uArch->getInstruction(
+                  xegpu::uArch::InstructionKind::Subgroup2DBlockLoad));
+      if (!uArchInstruction)
+        return;
+      auto completed = xegpu::completeBlockLoadLaneLayoutFromInstData(
+          anchorLayout, consumerLayoutAttr, load.getType().getElementType(),
+          uArchInstruction, uArch->getSubgroupSize());
+      if (!completed) {
+        load.emitWarning(
+            "Failed to identify lane layouts for the specified inst_data.");
+        return;
+      }
+      load.setLayoutAttr(*completed);
+      loadLayout = LayoutInfo(*completed);
     }
-
-    const uArch *uArch = getUArch(getChipStr(load).value_or(""));
-    if (!uArch)
-      return;
-
+  } else {
     auto numSgOrErr =
         getNumSg(load, uArch->getSubgroupSize(), consumerLayoutAttr);
     if (layoutKind == xegpu::LayoutKind::Subgroup && failed(numSgOrErr)) {
@@ -967,7 +1051,6 @@ void LayoutInfoPropagation::visitLoadNdOp(
           "Unable to determine the number of subgroups for the operation.");
       return;
     }
-
     auto layoutAttr = xegpu::setupLoadNdAnchorLayout(
         layoutKind, load.getType(), consumerLayoutAttr, numSgOrErr.value_or(0),
         uArch);
@@ -1155,9 +1238,20 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
     requiredAnchorLayoutAttr = anchorLayoutAttr;
     if (layoutKind == xegpu::LayoutKind::InstData) {
-      requiredAnchorLayoutAttr = xegpu::completeScatterIOLaneLayoutFromInstData(
+      const auto uArchInstruction =
+          dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
+              uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
+      if (!uArchInstruction)
+        return;
+      auto completed = xegpu::completeScatterLoadLaneLayoutFromInstData(
           anchorLayoutAttr, consumerLayoutAttr, resVecTy.getElementType(),
-          uArch);
+          uArchInstruction, uArch->getSubgroupSize());
+      if (!completed) {
+        load.emitWarning(
+            "Failed to identify lane layouts for the specified inst_data.");
+        return;
+      }
+      requiredAnchorLayoutAttr = *completed;
       load.setLayoutAttr(requiredAnchorLayoutAttr);
     }
   } else {
@@ -1201,8 +1295,21 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
     requiredAnchorLayoutAttr = anchorLayoutAttr;
     if (layoutKind == xegpu::LayoutKind::InstData) {
-      requiredAnchorLayoutAttr = xegpu::completeScatterIOLaneLayoutFromInstData(
-          anchorLayoutAttr, nullptr, srcVecTy.getElementType(), uArch);
+      const auto uArchInstruction =
+          dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
+              uArch->getInstruction(
+                  xegpu::uArch::InstructionKind::StoreScatter));
+      if (!uArchInstruction)
+        return;
+      auto completed = xegpu::completeScatterStoreLaneLayoutFromInstData(
+          anchorLayoutAttr, srcVecTy.getElementType(), uArchInstruction,
+          uArch->getSubgroupSize());
+      if (!completed) {
+        storeScatter.emitWarning(
+            "Failed to identify lane layouts for the specified inst_data.");
+        return;
+      }
+      requiredAnchorLayoutAttr = *completed;
       storeScatter.setLayoutAttr(requiredAnchorLayoutAttr);
     }
   } else {
@@ -1273,8 +1380,21 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
     requiredAnchorLayoutAttr = anchorLayoutAttr;
     if (layoutKind == xegpu::LayoutKind::InstData) {
-      requiredAnchorLayoutAttr = xegpu::completeScatterIOLaneLayoutFromInstData(
-          anchorLayoutAttr, nullptr, srcVecTy.getElementType(), uArch);
+      const auto uArchInstruction =
+          dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
+              uArch->getInstruction(
+                  xegpu::uArch::InstructionKind::StoreScatter));
+      if (!uArchInstruction)
+        return;
+      auto completed = xegpu::completeScatterStoreLaneLayoutFromInstData(
+          anchorLayoutAttr, srcVecTy.getElementType(), uArchInstruction,
+          uArch->getSubgroupSize());
+      if (!completed) {
+        storeMatrix.emitWarning(
+            "Failed to identify lane layouts for the specified inst_data.");
+        return;
+      }
+      requiredAnchorLayoutAttr = *completed;
       storeMatrix.setLayoutAttr(requiredAnchorLayoutAttr);
     }
   } else {

@@ -199,9 +199,9 @@ func.func @insert_strided_slice_inst_data_no_packing(%arg0: memref<8x32xf32>) {
 gpu.module @test {
 // CHECK-LABEL: func.func @insert_strided_slice_inst_data_with_packing(
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<8x64xi8>) {
-// CHECK: %[[CST_SMALL:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 64]>} dense<1> : vector<4x64xi8>
-// CHECK: %[[CST_LARGE:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 64]>} dense<0> : vector<8x64xi8>
-// CHECK: %[[INSERT:.*]] = vector.insert_strided_slice %[[CST_SMALL]], %[[CST_LARGE]] {layout_result_0 = #xegpu.layout<inst_data = [8, 64]>, offsets = [0, 0], strides = [1, 1]} : vector<4x64xi8> into vector<8x64xi8>
+// CHECK: %[[CST_SMALL:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 64], lane_layout = [1, 16], lane_data = [1, 2]>} dense<1> : vector<4x64xi8>
+// CHECK: %[[CST_LARGE:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [8, 64], lane_layout = [1, 16], lane_data = [1, 2]>} dense<0> : vector<8x64xi8>
+// CHECK: %[[INSERT:.*]] = vector.insert_strided_slice %[[CST_SMALL]], %[[CST_LARGE]] {layout_result_0 = #xegpu.layout<inst_data = [8, 64], lane_layout = [1, 16], lane_data = [1, 2]>, offsets = [0, 0], strides = [1, 1]} : vector<4x64xi8> into vector<8x64xi8>
 func.func @insert_strided_slice_inst_data_with_packing(%arg0: memref<8x64xi8>) {
   %c0 = arith.constant 0 : index
   %cst_small = arith.constant dense<1> : vector<4x64xi8>
@@ -565,4 +565,129 @@ func.func @vector_shape_cast_collapse_multi_groups(%arg0: memref<8x128xf16>) {
     xegpu.store_nd %0, %tdesc[0, 0] <{layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<8x128xf16>, !xegpu.tensor_desc<8x128xf16>
     return
   }
+}
+
+// -----
+// completeBlockStoreLaneLayoutFromInstData: user supplies only inst_data on a
+// store_nd; lane_layout / lane_data are completed from it (data sink, no
+// consumer). inst_data=[8,16] -> lane_layout=[1,16], lane_data=[1,1].
+gpu.module @test {
+// CHECK-LABEL: func.func @complete_store_nd_inst_data(
+// CHECK: xegpu.store_nd %{{.*}} <{layout = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<8x32xf32>, !xegpu.tensor_desc<8x32xf32, #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
+func.func @complete_store_nd_inst_data(%arg0: memref<8x32xf32>) {
+  %cst = arith.constant dense<0.000000e+00> : vector<8x32xf32>
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<8x32xf32> -> !xegpu.tensor_desc<8x32xf32>
+  xegpu.store_nd %cst, %0[0, 0] <{layout = #xegpu.layout<inst_data = [8, 16]>}> : vector<8x32xf32>, !xegpu.tensor_desc<8x32xf32>
+  return
+}
+}
+
+// -----
+// completeBlockStoreLaneLayoutFromInstData (prefetch path): prefetch_nd is also
+// a data sink served by the same helper. inst_data=[8,16] -> [1,16]/[1,1].
+gpu.module @test {
+// CHECK-LABEL: func.func @complete_prefetch_nd_inst_data(
+// CHECK: xegpu.prefetch_nd %{{.*}} <{{{.*}}layout = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>}> : !xegpu.tensor_desc<8x32xf32, #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
+func.func @complete_prefetch_nd_inst_data(%arg0: memref<8x32xf32>) {
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<8x32xf32> -> !xegpu.tensor_desc<8x32xf32>
+  xegpu.prefetch_nd %0[0, 0] <{l1_hint = #xegpu.cache_hint<cached>, layout = #xegpu.layout<inst_data = [8, 16]>}> : !xegpu.tensor_desc<8x32xf32>
+  return
+}
+}
+
+// -----
+// completeBlockLoadLaneLayoutFromInstData: load_nd feeds a DPAS, so the consumer
+// supplies the transform / transpose / packing properties while lane_layout /
+// lane_data are recomputed from inst_data. A (inst=[8,16]) -> [1,16]/[1,1];
+// B (inst=[16,16], VNNI packing from the DPAS B consumer) -> [1,16]/[2,1].
+gpu.module @test {
+// CHECK-LABEL: func.func @complete_load_nd_inst_data(
+// CHECK: xegpu.load_nd %{{.*}} <{layout = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>}> : !xegpu.tensor_desc<8x16xf16, #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<8x16xf16>
+// CHECK: xegpu.load_nd %{{.*}} <{layout = #xegpu.layout<inst_data = [16, 16], lane_layout = [1, 16], lane_data = [2, 1]>}> : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<inst_data = [16, 16], lane_layout = [1, 16], lane_data = [2, 1]>> -> vector<16x16xf16>
+func.func @complete_load_nd_inst_data(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<8x16xf32>) {
+  %cst = arith.constant dense<0.000000e+00> : vector<8x16xf32>
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
+  %1 = xegpu.create_nd_tdesc %arg1 : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16>
+  %2 = xegpu.load_nd %0[0, 0] <{layout = #xegpu.layout<inst_data = [8, 16]>}> : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
+  %3 = xegpu.load_nd %1[0, 0] <{layout = #xegpu.layout<inst_data = [16, 16]>}> : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
+  %4 = xegpu.dpas %2, %3, %cst : vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf32> -> vector<8x16xf32>
+  %5 = xegpu.create_nd_tdesc %arg2 : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
+  xegpu.store_nd %4, %5[0, 0]  : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
+  return
+}
+}
+
+// -----
+// completeScatterStoreLaneLayoutFromInstData: user supplies only inst_data on a
+// scatter store; lane info derived purely from inst_data (data sink).
+// inst_data=[1,16] -> lane_layout=[1,16], lane_data=[1,1].
+gpu.module @test {
+// CHECK-LABEL: func.func @complete_scatter_store_inst_data(
+// CHECK: xegpu.store %{{.*}} <{layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<16x32xf32>, memref<512xf32>, vector<16x32xindex>, vector<16x32xi1>
+func.func @complete_scatter_store_inst_data(%src: memref<512xf32>) {
+  %mask = arith.constant dense<1> : vector<16x32xi1>
+  %offset = arith.constant dense<12> : vector<16x32xindex>
+  %data = arith.constant dense<0.000000e+00> : vector<16x32xf32>
+  xegpu.store %data, %src[%offset], %mask <{layout = #xegpu.layout<inst_data = [1, 16]>}>
+      : vector<16x32xf32>, memref<512xf32>, vector<16x32xindex>, vector<16x32xi1>
+  return
+}
+}
+
+// -----
+// completeScatterLoadLaneLayoutFromInstData: user supplies only inst_data on a
+// scatter load; with no usable consumer lane info, the scatter default is used.
+// inst_data=[1,16] -> lane_layout=[1,16], lane_data=[1,1].
+gpu.module @test {
+// CHECK-LABEL: func.func @complete_scatter_load_inst_data(
+// CHECK: xegpu.load %{{.*}} <{layout = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>}> : memref<512xf32>, vector<16x32xindex>, vector<16x32xi1> -> vector<16x32xf32>
+func.func @complete_scatter_load_inst_data(%src: memref<512xf32>) {
+  %mask = arith.constant dense<1> : vector<16x32xi1>
+  %offset = arith.constant dense<12> : vector<16x32xindex>
+  %0 = xegpu.load %src[%offset], %mask <{layout = #xegpu.layout<inst_data = [1, 16]>}>
+      : memref<512xf32>, vector<16x32xindex>, vector<16x32xi1> -> vector<16x32xf32>
+  xegpu.store %0, %src[%offset], %mask <{layout = #xegpu.layout<inst_data = [1, 16]>}>
+      : vector<16x32xf32>, memref<512xf32>, vector<16x32xindex>, vector<16x32xi1>
+  return
+}
+}
+
+// -----
+// completeDpasLaneLayoutFromInstData: user supplies only inst_data on all three
+// DPAS operands; lane info is completed from each operand's shape / matmul role.
+// A=[8,16]->[1,16]/[1,1]; B=[16,16]->[1,16]/[2,1] (VNNI); CD=[8,16]->[1,16]/[1,1].
+gpu.module @test {
+// CHECK-LABEL: func.func @complete_dpas_inst_data(
+// CHECK: xegpu.dpas %{{.*}}, %{{.*}}, %{{.*}} {layout_a = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>, layout_b = #xegpu.layout<inst_data = [16, 16], lane_layout = [1, 16], lane_data = [2, 1]>, layout_cd = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} : vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf32> -> vector<8x16xf32>
+func.func @complete_dpas_inst_data(%arg0: vector<8x16xf16>, %arg1: vector<16x16xf16>) {
+  %cst = arith.constant dense<0.000000e+00> : vector<8x16xf32>
+  %0 = xegpu.dpas %arg0, %arg1, %cst {
+      layout_a = #xegpu.layout<inst_data = [8, 16]>,
+      layout_b = #xegpu.layout<inst_data = [16, 16]>,
+      layout_cd = #xegpu.layout<inst_data = [8, 16]>}
+      : vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf32> -> vector<8x16xf32>
+  return
+}
+}
+
+// -----
+// completeDpasMxLaneLayoutFromInstData: user supplies only inst_data on A/B/C-D;
+// lane info completed from shapes and scale layouts re-derived via
+// createScaleLayout. Matches the dpas_mx_f8e5m2 default-path result.
+gpu.module @test {
+// CHECK-LABEL: func.func @complete_dpas_mx_inst_data(
+// CHECK: xegpu.dpas_mx %{{.*}}, %{{.*}}, %{{.*}} scale_a = %{{[0-9a-zA-Z]+}} scale_b = %{{[0-9a-zA-Z]+}}
+// CHECK-SAME: {layout_a = #xegpu.layout<inst_data = [8, 32], lane_layout = [1, 16], lane_data = [1, 2]>, layout_a_scale = #xegpu.layout<inst_data = [8, 1], lane_layout = [8, 1], lane_data = [1, 1]>, layout_b = #xegpu.layout<inst_data = [32, 16], lane_layout = [1, 16], lane_data = [4, 1]>, layout_b_scale = #xegpu.layout<inst_data = [1, 16], lane_layout = [1, 16], lane_data = [1, 1]>, layout_cd = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [1, 1]>} :
+func.func @complete_dpas_mx_inst_data(%arg0: vector<16x1024xf8E5M2>, %arg1: vector<1024x32xf8E5M2>,
+    %arg2: vector<16x32xf8E8M0FNU>, %arg3: vector<32x32xf8E8M0FNU>) {
+  %cst = arith.constant dense<0.000000e+00> : vector<16x32xbf16>
+  %0 = xegpu.dpas_mx %arg0, %arg1, %cst scale_a = %arg2 scale_b = %arg3 {
+      layout_a = #xegpu.layout<inst_data = [8, 32]>,
+      layout_a_scale = #xegpu.layout<inst_data = [8, 1]>,
+      layout_b = #xegpu.layout<inst_data = [32, 16]>,
+      layout_b_scale = #xegpu.layout<inst_data = [1, 16]>,
+      layout_cd = #xegpu.layout<inst_data = [8, 16]>}
+      : (vector<16x1024xf8E5M2>, vector<1024x32xf8E5M2>, vector<16x32xbf16>, vector<16x32xf8E8M0FNU>, vector<32x32xf8E8M0FNU>) -> vector<16x32xbf16>
+  return
+}
 }

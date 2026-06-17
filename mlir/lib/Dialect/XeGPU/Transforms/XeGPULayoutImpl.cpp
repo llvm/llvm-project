@@ -1103,7 +1103,7 @@ computeReductionLaneLayoutAndData(ArrayRef<int64_t> srcShape,
 //     pick their own layout from uArch.
 //
 //   * Derivation direction between inst_data and lane_layout/lane_data. Both
-//     obey the Category-A invariant inst_data = k * lane_layout * lane_data
+//     obey the invariant inst_data = k * lane_layout * lane_data
 //     (k >= 1, per dim), but ops solve it from opposite ends:
 //       - Rigid-lane ops (Nd block IO, DPAS): hardware fixes lane_layout /
 //         lane_data first, then inst_data is built as a multiple of their
@@ -1822,10 +1822,12 @@ xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
 ///     per-lane load width reported by the uArch's LoadGather instruction
 ///     (`getMaxLaneLoadSize`).
 ///
-xegpu::DistributeLayoutAttr xegpu::completeScatterIOLaneLayoutFromInstData(
+std::optional<xegpu::DistributeLayoutAttr>
+xegpu::completeScatterLoadLaneLayoutFromInstData(
     xegpu::DistributeLayoutAttr specifiedLayout,
     xegpu::DistributeLayoutAttr consumerLayout, Type elemTy,
-    const xegpu::uArch::uArch *uArch) {
+    const xegpu::uArch::LoadGatherInstructionInterface *uArchInstruction,
+    const int subgroupSize) {
   if (!specifiedLayout)
     return specifiedLayout;
   SmallVector<int64_t> specifiedInstData =
@@ -1837,14 +1839,8 @@ xegpu::DistributeLayoutAttr xegpu::completeScatterIOLaneLayoutFromInstData(
     return specifiedLayout;
 
   // Reuse the load-side setup with inst_data as the destination shape.
-  const int subgroupSize = uArch->getSubgroupSize();
   auto *context = specifiedLayout.getContext();
   auto elemBitWidth = elemTy.getIntOrFloatBitWidth();
-  const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
-          uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
-  if (!uArchInstruction)
-    return specifiedLayout;
   int maxChunkSize = uArchInstruction->getMaxLaneLoadSize(elemBitWidth);
   if (consumerLayout) {
     auto consumerLaneLayout = consumerLayout.getEffectiveLaneLayoutAsInt();
@@ -1857,8 +1853,196 @@ xegpu::DistributeLayoutAttr xegpu::completeScatterIOLaneLayoutFromInstData(
   }
   auto [defLaneLayout, defLaneData] = computeScatterIOLaneLayoutAndData(
       specifiedInstData, subgroupSize, maxChunkSize);
+  if (!isValidLaneLayout(specifiedInstData, defLaneLayout, defLaneData))
+    return std::nullopt;
   return buildInstDataLayoutWithLane(context, specifiedInstData, defLaneLayout,
                                      defLaneData);
+}
+
+/// Like completeScatterLoadLaneLayoutFromInstData, but for scatter stores. A
+/// store is a data sink, so lane info is derived purely from inst_data (bounded
+/// by the uArch's per-lane store width); there is no consumer layout to reuse.
+std::optional<xegpu::DistributeLayoutAttr>
+xegpu::completeScatterStoreLaneLayoutFromInstData(
+    xegpu::DistributeLayoutAttr specifiedLayout, Type elemTy,
+    const xegpu::uArch::StoreScatterInstructionInterface *uArchInstruction,
+    const int subgroupSize) {
+  if (!specifiedLayout)
+    return specifiedLayout;
+  SmallVector<int64_t> specifiedInstData =
+      specifiedLayout.getEffectiveInstDataAsInt();
+  if (specifiedInstData.empty())
+    return specifiedLayout;
+  if (!specifiedLayout.getEffectiveLaneLayoutAsInt().empty() &&
+      !specifiedLayout.getEffectiveLaneDataAsInt().empty())
+    return specifiedLayout;
+
+  // Reuse the store-side setup with inst_data as the source shape.
+  auto *context = specifiedLayout.getContext();
+  auto elemBitWidth = elemTy.getIntOrFloatBitWidth();
+  int maxChunkSize = uArchInstruction->getMaxLaneStoreSize(elemBitWidth);
+  auto [defLaneLayout, defLaneData] = computeScatterIOLaneLayoutAndData(
+      specifiedInstData, subgroupSize, maxChunkSize);
+  if (!isValidLaneLayout(specifiedInstData, defLaneLayout, defLaneData))
+    return std::nullopt;
+  return buildInstDataLayoutWithLane(context, specifiedInstData, defLaneLayout,
+                                     defLaneData);
+}
+
+/// Completes a 2D-block store/prefetch layout from its inst_data. store_nd and
+/// prefetch_nd are data sinks, so lane info is derived purely from inst_data
+/// (no consumer to reuse). One helper serves both via
+/// BlockIOInstructionInterface.
+std::optional<xegpu::DistributeLayoutAttr>
+xegpu::completeBlockStoreLaneLayoutFromInstData(
+    xegpu::DistributeLayoutAttr specifiedLayout, Type elemTy,
+    const xegpu::uArch::BlockIOInstructionInterface *uArchInstruction,
+    const int subgroupSize) {
+  if (!specifiedLayout)
+    return specifiedLayout;
+  SmallVector<int64_t> specifiedInstData =
+      specifiedLayout.getEffectiveInstDataAsInt();
+  if (specifiedInstData.empty())
+    return specifiedLayout;
+  if (!specifiedLayout.getEffectiveLaneLayoutAsInt().empty() &&
+      !specifiedLayout.getEffectiveLaneDataAsInt().empty())
+    return specifiedLayout;
+
+  auto *context = specifiedLayout.getContext();
+  auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
+      specifiedInstData, subgroupSize, elemTy.getIntOrFloatBitWidth(),
+      uArchInstruction->getPackedFormatBitSize());
+  if (!isValidLaneLayout(specifiedInstData, laneLayout, laneData))
+    return std::nullopt;
+  return buildInstDataLayoutWithLane(context, specifiedInstData, laneLayout,
+                                     laneData);
+}
+
+/// Like completeBlockStoreLaneLayoutFromInstData, but for load_nd. The consumer
+/// determines transform / transpose / packing, but the lane factorization is
+/// recomputed from inst_data (load-side lane counts differ from the consumer's)
+/// — mirroring the InstData branch of setupLoadNdAnchorLayout.
+std::optional<xegpu::DistributeLayoutAttr>
+xegpu::completeBlockLoadLaneLayoutFromInstData(
+    xegpu::DistributeLayoutAttr specifiedLayout,
+    xegpu::DistributeLayoutAttr consumerLayout, Type elemTy,
+    const xegpu::uArch::BlockIOInstructionInterface *uArchInstruction,
+    const int subgroupSize) {
+  if (!specifiedLayout)
+    return specifiedLayout;
+  SmallVector<int64_t> specifiedInstData =
+      specifiedLayout.getEffectiveInstDataAsInt();
+  if (specifiedInstData.empty())
+    return specifiedLayout;
+  if (!specifiedLayout.getEffectiveLaneLayoutAsInt().empty() &&
+      !specifiedLayout.getEffectiveLaneDataAsInt().empty())
+    return specifiedLayout;
+
+  auto *context = specifiedLayout.getContext();
+  int rank = specifiedInstData.size();
+  unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
+
+  // Derive the transform / transpose / packing properties from the consumer's
+  // lane info, but recompute the lane factorization itself from inst_data.
+  bool hasTransform = false;
+  bool hasTranspose = false;
+  unsigned packingSize = uArchInstruction->getPackedFormatBitSize();
+  if (consumerLayout) {
+    SmallVector<int64_t> consumerLaneLayout =
+        consumerLayout.getEffectiveLaneLayoutAsInt();
+    SmallVector<int64_t> consumerLaneData =
+        consumerLayout.getEffectiveLaneDataAsInt();
+    if (!consumerLaneLayout.empty() && !consumerLaneData.empty()) {
+      hasTransform = consumerLaneData[rank - 2] != 1;
+      hasTranspose = consumerLaneLayout[rank - 2] != 1;
+      unsigned packingFactor = hasTransform ? consumerLaneData[rank - 2]
+                                            : consumerLaneData[rank - 1];
+      packingSize = packingFactor * bitwidth;
+    }
+  }
+
+  auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
+      specifiedInstData, subgroupSize, bitwidth, packingSize, hasTransform,
+      hasTranspose);
+  if (!isValidLaneLayout(specifiedInstData, laneLayout, laneData))
+    return std::nullopt;
+  return buildInstDataLayoutWithLane(context, specifiedInstData, laneLayout,
+                                     laneData);
+}
+
+/// Completes user-provided DPAS A/B/C-D anchors that carry only inst_data by
+/// filling in lane_layout / lane_data. The lane factorization mirrors the
+/// InstData branch of `setupDpasLayout` (derived from each operand's shape and
+/// matmul role, B using VNNI packing); the user's inst_data is preserved.
+std::optional<
+    std::tuple<xegpu::DistributeLayoutAttr, xegpu::DistributeLayoutAttr,
+               xegpu::DistributeLayoutAttr>>
+xegpu::completeDpasLaneLayoutFromInstData(xegpu::DistributeLayoutAttr aLayout,
+                                          xegpu::DistributeLayoutAttr bLayout,
+                                          xegpu::DistributeLayoutAttr cdLayout,
+                                          VectorType aTy, VectorType bTy,
+                                          VectorType cdTy,
+                                          const xegpu::uArch::uArch *uArch) {
+  auto context = aTy.getContext();
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(uArch->getInstruction(
+          xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
+  if (!uArchInstruction)
+    return std::nullopt;
+  auto subgroupSize = uArch->getSubgroupSize();
+
+  auto [laneLayoutA, laneDataA] = compute2DBlockIOLaneLayoutAndData(
+      aTy.getShape(), subgroupSize,
+      aTy.getElementType().getIntOrFloatBitWidth(),
+      uArchInstruction->getPackedFormatBitSizeA());
+  auto [laneLayoutB, laneDataB] = compute2DBlockIOLaneLayoutAndData(
+      bTy.getShape(), subgroupSize,
+      bTy.getElementType().getIntOrFloatBitWidth(),
+      uArchInstruction->getPackedFormatBitSizeB(), /*vnni=*/true);
+  auto [laneLayoutCD, laneDataCD] = compute2DBlockIOLaneLayoutAndData(
+      cdTy.getShape(), subgroupSize,
+      cdTy.getElementType().getIntOrFloatBitWidth(),
+      cdTy.getElementType().getIntOrFloatBitWidth());
+  SmallVector<int64_t> instDataA = aLayout.getEffectiveInstDataAsInt();
+  SmallVector<int64_t> instDataB = bLayout.getEffectiveInstDataAsInt();
+  SmallVector<int64_t> instDataCD = cdLayout.getEffectiveInstDataAsInt();
+  if (!isValidLaneLayout(instDataA, laneLayoutA, laneDataA) ||
+      !isValidLaneLayout(instDataB, laneLayoutB, laneDataB) ||
+      !isValidLaneLayout(instDataCD, laneLayoutCD, laneDataCD))
+    return std::nullopt;
+  return std::make_tuple(
+      buildInstDataLayoutWithLane(context, instDataA, laneLayoutA, laneDataA),
+      buildInstDataLayoutWithLane(context, instDataB, laneLayoutB, laneDataB),
+      buildInstDataLayoutWithLane(context, instDataCD, laneLayoutCD,
+                                  laneDataCD));
+}
+
+/// Like completeDpasLaneLayoutFromInstData, but for dpas_mx: also re-derives
+/// the A_scale / B_scale layouts from the completed A / B layouts via
+/// `createScaleLayout`, matching the default path of `setupDpasMxLayout`.
+std::optional<
+    std::tuple<xegpu::DistributeLayoutAttr, xegpu::DistributeLayoutAttr,
+               xegpu::DistributeLayoutAttr, xegpu::DistributeLayoutAttr,
+               xegpu::DistributeLayoutAttr>>
+xegpu::completeDpasMxLaneLayoutFromInstData(
+    xegpu::DistributeLayoutAttr aLayout, xegpu::DistributeLayoutAttr bLayout,
+    xegpu::DistributeLayoutAttr cdLayout, VectorType aTy, VectorType bTy,
+    VectorType cdTy, VectorType aScaleTy, VectorType bScaleTy,
+    const xegpu::uArch::uArch *uArch) {
+  auto completed = completeDpasLaneLayoutFromInstData(
+      aLayout, bLayout, cdLayout, aTy, bTy, cdTy, uArch);
+  if (!completed)
+    return std::nullopt;
+  auto context = aTy.getContext();
+  auto [completedA, completedB, completedCD] = *completed;
+
+  auto aScaleLayout =
+      createScaleLayout(context, aTy, aScaleTy, completedA, false, uArch);
+  auto bScaleLayout =
+      createScaleLayout(context, bTy, bScaleTy, completedB, true, uArch);
+
+  return std::make_tuple(completedA, completedB, completedCD, aScaleLayout,
+                         bScaleLayout);
 }
 
 /// Sets up layout for reduction operations by creating a SliceAttr for the
