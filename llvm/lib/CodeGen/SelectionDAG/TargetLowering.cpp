@@ -3533,14 +3533,12 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     KnownZero = SrcZero.extractBits(NumElts, Idx);
 
     // Attempt to avoid multi-use ops if we don't need anything from them.
-    if (!DemandedElts.isAllOnes()) {
-      SDValue NewSrc = SimplifyMultipleUseDemandedVectorElts(
-          Src, DemandedSrcElts, TLO.DAG, Depth + 1);
-      if (NewSrc) {
-        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewSrc,
-                                        Op.getOperand(1));
-        return TLO.CombineTo(Op, NewOp);
-      }
+    SDValue NewSrc = SimplifyMultipleUseDemandedVectorElts(Src, DemandedSrcElts,
+                                                           TLO.DAG, Depth + 1);
+    if (NewSrc) {
+      SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewSrc,
+                                      Op.getOperand(1));
+      return TLO.CombineTo(Op, NewOp);
     }
     break;
   }
@@ -9132,6 +9130,420 @@ SDValue TargetLowering::expandFCANONICALIZE(SDNode *Node,
       DAG.getNode(ISD::STRICT_FMUL, DL, {VT, MVT::Other},
                   {DAG.getEntryNode(), Node->getOperand(0), One}, Flags);
   return Mul;
+}
+
+SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
+                                                      SelectionDAG &DAG) const {
+  // Expand conversion from a native IEEE float type to an arbitrary FP format
+  // returning the result as an integer using bit manipulation.
+  EVT ResVT = Node->getValueType(0);
+  SDLoc dl(Node);
+
+  SDValue FloatVal = Node->getOperand(0);
+  const uint64_t SemEnum = Node->getConstantOperandVal(1);
+  const auto Sem = static_cast<APFloatBase::Semantics>(SemEnum);
+  const auto RoundMode =
+      static_cast<RoundingMode>(Node->getConstantOperandVal(2));
+  const bool Saturate = Node->getConstantOperandVal(3) != 0;
+
+  // Supported destination formats.
+  switch (Sem) {
+  case APFloatBase::S_Float8E5M2:
+  case APFloatBase::S_Float8E4M3FN:
+  case APFloatBase::S_Float6E3M2FN:
+  case APFloatBase::S_Float6E2M3FN:
+  case APFloatBase::S_Float4E2M1FN:
+    break;
+  default:
+    DAG.getContext()->emitError("CONVERT_TO_ARBITRARY_FP: not implemented "
+                                "destination format (semantics enum " +
+                                Twine(SemEnum) + ")");
+    return SDValue();
+  }
+
+  // Supported rounding modes.
+  switch (RoundMode) {
+  case RoundingMode::NearestTiesToEven:
+  case RoundingMode::TowardZero:
+  case RoundingMode::TowardPositive:
+  case RoundingMode::TowardNegative:
+  case RoundingMode::NearestTiesToAway:
+    break;
+  default:
+    DAG.getContext()->emitError(
+        "CONVERT_TO_ARBITRARY_FP: unsupported rounding mode (enum " +
+        Twine(static_cast<int>(RoundMode)) + ")");
+    return SDValue();
+  }
+
+  // Destination format parameters.
+  const fltSemantics &DstSem = APFloatBase::EnumToSemantics(Sem);
+  const unsigned DstBits = APFloat::getSizeInBits(DstSem);
+  const unsigned DstPrecision = APFloat::semanticsPrecision(DstSem);
+  const unsigned DstMant = DstPrecision - 1;
+  const unsigned DstExpBits = DstBits - DstMant - 1;
+  const int DstBias = 1 - APFloat::semanticsMinExponent(DstSem);
+  const unsigned DstExpMax = (1U << DstExpBits) - 1;
+  const uint64_t DstMantMask = (DstMant > 0) ? ((1ULL << DstMant) - 1) : 0;
+  const fltNonfiniteBehavior DstNFBehavior = DstSem.nonFiniteBehavior;
+  const fltNanEncoding DstNanEnc = DstSem.nanEncoding;
+
+  // Compute the maximum normal exponent for the destination format.
+  const unsigned DstExpMaxNormal =
+      DstNFBehavior == fltNonfiniteBehavior::IEEE754 ? DstExpMax - 1
+                                                     : DstExpMax;
+
+  // For NanOnly formats the max exponent field for finite values
+  // is DstExpMax, but the encoding with exp = DstExpMax and
+  // mant = all-ones is NaN. So DstExpMaxNormal = DstExpMax, but max
+  // mantissa at that exponent is DstMantMask - 1 (if NanEnc == AllOnes) to
+  // avoid the NaN encoding.
+  uint64_t DstMaxMantAtMaxExp = DstMantMask;
+  if (DstNFBehavior == fltNonfiniteBehavior::NanOnly &&
+      DstNanEnc == fltNanEncoding::AllOnes)
+    DstMaxMantAtMaxExp = DstMantMask - 1;
+
+  // Source format parameters.
+  EVT SrcVT = FloatVal.getValueType();
+  const fltSemantics &SrcSem = SrcVT.getScalarType().getFltSemantics();
+  const unsigned SrcBits = APFloat::getSizeInBits(SrcSem);
+  const unsigned SrcPrecision = APFloat::semanticsPrecision(SrcSem);
+  const unsigned SrcMant = SrcPrecision - 1;
+  const uint64_t SrcMantMask = (1ULL << SrcMant) - 1;
+
+  // Work in the source integer type. Match the destination shape so the
+  // expansion stays vector when ResVT is a vector.
+  EVT IntScalarVT = EVT::getIntegerVT(*DAG.getContext(), SrcBits);
+  EVT IntVT = ResVT.changeElementType(*DAG.getContext(), IntScalarVT);
+  EVT SetCCVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), IntVT);
+  EVT FPSetCCVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
+
+  SDValue Zero = DAG.getConstant(0, dl, IntVT);
+  SDValue One = DAG.getConstant(1, dl, IntVT);
+
+  // Bitcast source float to integer to extract the sign bit.
+  SDValue Src = DAG.getNode(ISD::BITCAST, dl, IntVT, FloatVal);
+  SDValue SignBit =
+      DAG.getNode(ISD::SRL, dl, IntVT, Src,
+                  DAG.getShiftAmountConstant(SrcBits - 1, IntVT, dl));
+
+  // Classify the input.
+  SDValue FPZero = DAG.getConstantFP(0.0, dl, SrcVT);
+  SDValue FPInf = DAG.getConstantFP(APFloat::getInf(SrcSem), dl, SrcVT);
+  SDValue AbsVal = DAG.getNode(ISD::FABS, dl, SrcVT, FloatVal);
+  SDValue IsNaN = DAG.getSetCC(dl, FPSetCCVT, FloatVal, FPZero, ISD::SETUO);
+  SDValue IsInf = DAG.getSetCC(dl, FPSetCCVT, AbsVal, FPInf, ISD::SETOEQ);
+  SDValue IsZero = DAG.getSetCC(dl, FPSetCCVT, FloatVal, FPZero, ISD::SETOEQ);
+
+  // Split into a normalized fraction and unbiased exponent. FFREXP normalizes
+  // source denormals automatically. The result is unspecified for Inf/NaN, but
+  // those inputs are detected above and override the final result.
+  EVT FrexpExpScalarVT =
+      getValueType(DAG.getDataLayout(), Type::getInt32Ty(*DAG.getContext()));
+  EVT FrexpExpVT = SrcVT.changeElementType(*DAG.getContext(), FrexpExpScalarVT);
+  SDValue Frexp =
+      DAG.getNode(ISD::FFREXP, dl, DAG.getVTList(SrcVT, FrexpExpVT), FloatVal);
+  SDValue FrexpFrac = Frexp.getValue(0);
+  SDValue FrexpExp = Frexp.getValue(1);
+
+  SDValue FrexpFracInt = DAG.getNode(ISD::BITCAST, dl, IntVT, FrexpFrac);
+  SDValue EffSrcMant = DAG.getNode(ISD::AND, dl, IntVT, FrexpFracInt,
+                                   DAG.getConstant(SrcMantMask, dl, IntVT));
+
+  SDValue FrexpExpExt = DAG.getSExtOrTrunc(FrexpExp, dl, IntVT);
+  SDValue NewExp = DAG.getNode(ISD::ADD, dl, IntVT, FrexpExpExt,
+                               DAG.getConstant(DstBias - 1, dl, IntVT));
+
+  // Compute rounding increment given the round bit, sticky bits, and LSB
+  // of the truncated mantissa.
+  auto ComputeRoundUp = [&](SDValue RoundBit, SDValue StickyBits,
+                            SDValue LSB) -> SDValue {
+    switch (RoundMode) {
+    case RoundingMode::NearestTiesToEven: {
+      // Round up if round_bit && (sticky || lsb)
+      SDValue StickyOrLSB = DAG.getNode(ISD::OR, dl, IntVT, StickyBits, LSB);
+      return DAG.getNode(ISD::AND, dl, IntVT, RoundBit, StickyOrLSB);
+    }
+    case RoundingMode::TowardZero:
+      return Zero;
+    case RoundingMode::TowardPositive: {
+      // Round up if positive and any truncated bits are set.
+      SDValue AnyTruncBits =
+          DAG.getNode(ISD::OR, dl, IntVT, RoundBit, StickyBits);
+      SDValue HasTruncBits =
+          DAG.getSetCC(dl, SetCCVT, AnyTruncBits, Zero, ISD::SETNE);
+      SDValue IsPositive = DAG.getSetCC(dl, SetCCVT, SignBit, Zero, ISD::SETEQ);
+      SDValue DoRound =
+          DAG.getNode(ISD::AND, dl, SetCCVT, HasTruncBits, IsPositive);
+      return DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, DoRound);
+    }
+    case RoundingMode::TowardNegative: {
+      // Round up if negative and any truncated bits are set (to -Inf).
+      SDValue AnyTruncBits =
+          DAG.getNode(ISD::OR, dl, IntVT, RoundBit, StickyBits);
+      SDValue HasTruncBits =
+          DAG.getSetCC(dl, SetCCVT, AnyTruncBits, Zero, ISD::SETNE);
+      SDValue IsNegative = DAG.getSetCC(dl, SetCCVT, SignBit, Zero, ISD::SETNE);
+      SDValue DoRound =
+          DAG.getNode(ISD::AND, dl, SetCCVT, HasTruncBits, IsNegative);
+      return DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, DoRound);
+    }
+    case RoundingMode::NearestTiesToAway:
+      return RoundBit;
+    default:
+      llvm_unreachable("unsupported rounding mode");
+    }
+  };
+
+  // Round mantissa from SrcMant bits to DstMant bits.
+  SDValue TruncMant;
+  SDValue RoundUp;
+  if (SrcMant > DstMant) {
+    const unsigned Shift = SrcMant - DstMant;
+    SDValue ShiftConst = DAG.getShiftAmountConstant(Shift, IntVT, dl);
+    TruncMant = DAG.getNode(ISD::SRL, dl, IntVT, EffSrcMant, ShiftConst);
+
+    // Check bit at position Shift - 1 aka the round bit.
+    SDValue RoundBit;
+    if (Shift >= 1) {
+      SDValue RoundBitShift = DAG.getShiftAmountConstant(Shift - 1, IntVT, dl);
+      SDValue ShiftedMant =
+          DAG.getNode(ISD::SRL, dl, IntVT, EffSrcMant, RoundBitShift);
+      RoundBit = DAG.getNode(ISD::AND, dl, IntVT, ShiftedMant, One);
+    } else {
+      RoundBit = Zero;
+    }
+
+    // OR of all bits below the round bit to get sticky bits.
+    SDValue StickyBits;
+    if (Shift >= 2) {
+      uint64_t StickyMask = maskTrailingOnes<uint64_t>(Shift - 1);
+      StickyBits = DAG.getNode(ISD::AND, dl, IntVT, EffSrcMant,
+                               DAG.getConstant(StickyMask, dl, IntVT));
+      StickyBits = DAG.getSetCC(dl, SetCCVT, StickyBits, Zero, ISD::SETNE);
+      StickyBits = DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, StickyBits);
+    } else {
+      StickyBits = Zero;
+    }
+
+    // LSB of truncated mantissa.
+    SDValue LSB = DAG.getNode(ISD::AND, dl, IntVT, TruncMant, One);
+
+    RoundUp = ComputeRoundUp(RoundBit, StickyBits, LSB);
+  } else {
+    // If DstMant >= SrcMant, then no rounding needed, just shift left.
+    SDValue MantShift =
+        DAG.getShiftAmountConstant(DstMant - SrcMant, IntVT, dl);
+    TruncMant = DAG.getNode(ISD::SHL, dl, IntVT, EffSrcMant, MantShift);
+    RoundUp = Zero;
+  }
+
+  // Apply rounding.
+  SDValue RoundedMant = DAG.getNode(ISD::ADD, dl, IntVT, TruncMant, RoundUp);
+
+  // Handle mantissa overflow from rounding.
+  // If rounded_mant > DstMantMask, carry into exponent.
+  SDValue MantOverflow =
+      DAG.getSetCC(dl, SetCCVT, RoundedMant,
+                   DAG.getConstant(DstMantMask, dl, IntVT), ISD::SETGT);
+  // On overflow: mant = 0, exp += 1.
+  SDValue AdjMant = DAG.getSelect(dl, IntVT, MantOverflow, Zero, RoundedMant);
+  SDValue AdjExp =
+      DAG.getNode(ISD::ADD, dl, IntVT, NewExp,
+                  DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, MantOverflow));
+
+  // Precompute sign shifted to MSB of destination.
+  SDValue SignShifted =
+      DAG.getNode(ISD::SHL, dl, IntVT, SignBit,
+                  DAG.getShiftAmountConstant(DstBits - 1, IntVT, dl));
+
+  // Destination denormal conversion (when new_exp <= 0).
+  // Shift the mantissa right by 1 - new_exp additional bits and set the
+  // exponent field to 0.
+  SDValue ExpIsNeg = DAG.getSetCC(dl, SetCCVT, AdjExp,
+                                  DAG.getConstant(1, dl, IntVT), ISD::SETLT);
+
+  SDValue DenormResult;
+  {
+    // denorm_shift = 1 - NewExp.
+    SDValue DenormShift = DAG.getNode(ISD::SUB, dl, IntVT, One, NewExp);
+
+    // full_src_mant = (1 << SrcMant) | EffSrcMant.
+    SDValue ImplicitOne =
+        DAG.getNode(ISD::SHL, dl, IntVT, One,
+                    DAG.getShiftAmountConstant(SrcMant, IntVT, dl));
+    SDValue FullSrcMant =
+        DAG.getNode(ISD::OR, dl, IntVT, EffSrcMant, ImplicitOne);
+
+    // Total right shift = DenormShift + (SrcMant - DstMant).
+    int64_t MantDelta = static_cast<int64_t>(SrcMant) - DstMant;
+    SDValue TotalShift =
+        DAG.getNode(ISD::ADD, dl, IntVT, DenormShift,
+                    DAG.getSignedConstant(MantDelta, dl, IntVT));
+
+    // Clamp total shift to avoid UB, then truncate denorm mantissa.
+    EVT ShiftVT = getShiftAmountTy(IntVT, DAG.getDataLayout());
+    SDValue MaxShift = DAG.getConstant(SrcBits - 1, dl, IntVT);
+    SDValue ClampedShift =
+        DAG.getNode(ISD::UMIN, dl, IntVT, TotalShift, MaxShift);
+    SDValue DenormTruncMant =
+        DAG.getNode(ISD::SRL, dl, IntVT, FullSrcMant,
+                    DAG.getZExtOrTrunc(ClampedShift, dl, ShiftVT));
+
+    // Rounding for denorm path.
+    SDValue DenormRoundUp;
+    {
+      // Round bit is at position TotalShift - 1 of FullSrcMant.
+      // Clamp to at least 1 so the subtraction doesn't underflow and create
+      // shift nodes with invalid shift amounts.
+      SDValue SafeShift = DAG.getNode(ISD::UMAX, dl, IntVT, ClampedShift, One);
+      SDValue RoundBitPos = DAG.getNode(ISD::SUB, dl, IntVT, SafeShift, One);
+      SDValue RoundBitPosAmt = DAG.getZExtOrTrunc(RoundBitPos, dl, ShiftVT);
+      SDValue DenormRoundBit = DAG.getNode(
+          ISD::AND, dl, IntVT,
+          DAG.getNode(ISD::SRL, dl, IntVT, FullSrcMant, RoundBitPosAmt), One);
+
+      // Sticky: all bits below round bit.
+      // sticky_mask = (1 << RoundBitPos) - 1
+      SDValue StickyMask = DAG.getNode(
+          ISD::SUB, dl, IntVT,
+          DAG.getNode(ISD::SHL, dl, IntVT, One, RoundBitPosAmt), One);
+      SDValue DenormStickyBits =
+          DAG.getNode(ISD::AND, dl, IntVT, FullSrcMant, StickyMask);
+      SDValue HasSticky = DAG.getNode(
+          ISD::ZERO_EXTEND, dl, IntVT,
+          DAG.getSetCC(dl, SetCCVT, DenormStickyBits, Zero, ISD::SETNE));
+
+      SDValue DenormLSB =
+          DAG.getNode(ISD::AND, dl, IntVT, DenormTruncMant, One);
+
+      DenormRoundUp = ComputeRoundUp(DenormRoundBit, HasSticky, DenormLSB);
+
+      // Only apply rounding if TotalShift >= 1 (i.e., there are bits to round).
+      SDValue ShiftGEOne =
+          DAG.getSetCC(dl, SetCCVT, ClampedShift, One, ISD::SETUGE);
+      DenormRoundUp = DAG.getSelect(dl, IntVT, ShiftGEOne, DenormRoundUp, Zero);
+    }
+
+    SDValue DenormRoundedMant =
+        DAG.getNode(ISD::ADD, dl, IntVT, DenormTruncMant, DenormRoundUp);
+
+    // If rounding caused overflow into the normal range, then we get the
+    // smallest normal number.
+    SDValue DenormMantOF =
+        DAG.getSetCC(dl, SetCCVT, DenormRoundedMant,
+                     DAG.getConstant(DstMantMask, dl, IntVT), ISD::SETGT);
+    SDValue DenormFinalMant =
+        DAG.getSelect(dl, IntVT, DenormMantOF, Zero, DenormRoundedMant);
+    SDValue DenormFinalExp = DAG.getSelect(dl, IntVT, DenormMantOF, One, Zero);
+
+    // Assemble: sign | (exp << DstMant) | mant
+    SDValue DenormExpShifted =
+        DAG.getNode(ISD::SHL, dl, IntVT, DenormFinalExp,
+                    DAG.getShiftAmountConstant(DstMant, IntVT, dl));
+    DenormResult = DAG.getNode(
+        ISD::OR, dl, IntVT,
+        DAG.getNode(ISD::OR, dl, IntVT, SignShifted, DenormExpShifted),
+        DenormFinalMant);
+  }
+
+  // Exponent overflow detection.
+  SDValue ExpOF =
+      DAG.getSetCC(dl, SetCCVT, AdjExp,
+                   DAG.getConstant(DstExpMaxNormal, dl, IntVT), ISD::SETGT);
+
+  // Also check if AdjExp == DstExpMaxNormal and mantissa overflow into
+  // a value that exceeds the max allowed mantissa at that exponent.
+  SDValue ExpAtMax =
+      DAG.getSetCC(dl, SetCCVT, AdjExp,
+                   DAG.getConstant(DstExpMaxNormal, dl, IntVT), ISD::SETEQ);
+  SDValue MantExceedsMax =
+      DAG.getSetCC(dl, SetCCVT, AdjMant,
+                   DAG.getConstant(DstMaxMantAtMaxExp, dl, IntVT), ISD::SETGT);
+  SDValue ExpMantOF =
+      DAG.getNode(ISD::AND, dl, SetCCVT, ExpAtMax, MantExceedsMax);
+  SDValue IsOverflow = DAG.getNode(ISD::OR, dl, SetCCVT, ExpOF, ExpMantOF);
+
+  // Build overflow result.
+  SDValue OverflowResult;
+
+  if (Saturate) {
+    // Clamp to max finite value:
+    // sign | (DstExpMaxNormal << DstMant) | DstMaxMantAtMaxExp
+    uint64_t MaxFinite =
+        ((uint64_t)DstExpMaxNormal << DstMant) | DstMaxMantAtMaxExp;
+    OverflowResult = DAG.getNode(ISD::OR, dl, IntVT, SignShifted,
+                                 DAG.getConstant(MaxFinite, dl, IntVT));
+  } else if (DstNFBehavior == fltNonfiniteBehavior::IEEE754) {
+    // Produce infinity.
+    uint64_t InfBits = (uint64_t)DstExpMax << DstMant;
+    OverflowResult = DAG.getNode(ISD::OR, dl, IntVT, SignShifted,
+                                 DAG.getConstant(InfBits, dl, IntVT));
+  } else {
+    // Emit poison if no Inf in format and not saturating.
+    OverflowResult = DAG.getPOISON(IntVT);
+  }
+
+  // Assemble normal result: sign | (AdjExp << DstMant) | AdjMant
+  SDValue NormExpShifted =
+      DAG.getNode(ISD::SHL, dl, IntVT, AdjExp,
+                  DAG.getShiftAmountConstant(DstMant, IntVT, dl));
+  SDValue NormResult = DAG.getNode(
+      ISD::OR, dl, IntVT,
+      DAG.getNode(ISD::OR, dl, IntVT, SignShifted, NormExpShifted), AdjMant);
+
+  // Build special-value results.
+  SDValue NaNResult;
+  if (DstNFBehavior == fltNonfiniteBehavior::IEEE754) {
+    // Produce canonical NaN.
+    const uint64_t QNaNBit = (DstMant > 0) ? (1ULL << (DstMant - 1)) : 0;
+    NaNResult =
+        DAG.getConstant(((uint64_t)DstExpMax << DstMant) | QNaNBit, dl, IntVT);
+  } else if (DstNFBehavior == fltNonfiniteBehavior::NanOnly &&
+             DstNanEnc == fltNanEncoding::AllOnes) {
+    // E4M3FN-style: NaN is exp=all-ones, mant=all-ones.
+    NaNResult = DAG.getConstant(((uint64_t)DstExpMax << DstMant) | DstMantMask,
+                                dl, IntVT);
+  } else {
+    // NaN -> poison for finite only values.
+    NaNResult = DAG.getPOISON(IntVT);
+  }
+
+  // Inf handling.
+  SDValue InfResult;
+  if (DstNFBehavior == fltNonfiniteBehavior::IEEE754) {
+    // Produce signed infinity.
+    uint64_t InfBits = (uint64_t)DstExpMax << DstMant;
+    InfResult = DAG.getNode(ISD::OR, dl, IntVT, SignShifted,
+                            DAG.getConstant(InfBits, dl, IntVT));
+  } else if (Saturate) {
+    // Inf saturates to max finite.
+    uint64_t MaxFinite =
+        ((uint64_t)DstExpMaxNormal << DstMant) | DstMaxMantAtMaxExp;
+    InfResult = DAG.getNode(ISD::OR, dl, IntVT, SignShifted,
+                            DAG.getConstant(MaxFinite, dl, IntVT));
+  } else {
+    // No Inf and not saturating -> poison.
+    InfResult = DAG.getPOISON(IntVT);
+  }
+
+  SDValue ZeroResult = SignShifted;
+
+  // Final selection in an order: NaN takes priority, then Inf, then Zero.
+  SDValue FiniteResult =
+      DAG.getSelect(dl, IntVT, ExpIsNeg, DenormResult, NormResult);
+  FiniteResult =
+      DAG.getSelect(dl, IntVT, IsOverflow, OverflowResult, FiniteResult);
+
+  SDValue Result = FiniteResult;
+  Result = DAG.getSelect(dl, IntVT, IsZero, ZeroResult, Result);
+  Result = DAG.getSelect(dl, IntVT, IsInf, InfResult, Result);
+  Result = DAG.getSelect(dl, IntVT, IsNaN, NaNResult, Result);
+
+  // Truncate to destination integer type.
+  return DAG.getZExtOrTrunc(Result, dl, ResVT);
 }
 
 SDValue

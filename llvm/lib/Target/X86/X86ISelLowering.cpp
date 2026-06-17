@@ -43648,11 +43648,25 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     // If we're permuting the upper 256-bits subvectors of a concatenation, then
     // see if we can peek through and access the subvector directly.
     if (VT.is512BitVector()) {
-      // 512-bit mask uses 4 x i2 indices - if the msb is always set then only
-      // the upper subvector is used.
       SDValue LHS = peekThroughBitcasts(N->getOperand(0));
       SDValue RHS = peekThroughBitcasts(N->getOperand(1));
       uint64_t Mask = N->getConstantOperandVal(2);
+      // Attempt to concat directly instead of shuffling source together.
+      // TODO: combineX86ShufflesRecursively should do this generically.
+      if (Mask == 0x44 && LHS.getValueType() == RHS.getValueType() &&
+          LHS.getValueType().isSimple()) {
+        SmallVector<SDValue> LHSOps, RHSOps;
+        if (collectConcatOps(LHS.getNode(), LHSOps, DAG) &&
+            collectConcatOps(RHS.getNode(), RHSOps, DAG) &&
+            LHSOps.size() == 2 && RHSOps.size() == 2) {
+          if (SDValue Concat = combineConcatVectorOps(
+                  DL, LHS.getSimpleValueType(), {LHSOps[0], RHSOps[0]}, DAG,
+                  Subtarget))
+            return DAG.getBitcast(VT, Concat);
+        }
+      }
+      // 512-bit mask uses 4 x i2 indices - if the msb is always set then only
+      // the upper subvector is used.
       SmallVector<SDValue> LHSOps, RHSOps;
       SDValue NewLHS, NewRHS;
       if ((Mask & 0x0A) == 0x0A &&
