@@ -1106,26 +1106,6 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
 /// Checks if \p Val is inside \p MD, a !range-like metadata.
 bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
 
-/// Represents the hardware counter limits for different wait count types.
-struct HardwareLimits {
-  unsigned LoadcntMax; // Corresponds to Vmcnt prior to gfx12.
-  unsigned ExpcntMax;
-  unsigned DscntMax;     // Corresponds to LGKMcnt prior to gfx12.
-  unsigned StorecntMax;  // Corresponds to VScnt in gfx10/gfx11.
-  unsigned SamplecntMax; // gfx12+ only.
-  unsigned BvhcntMax;    // gfx12+ only.
-  unsigned KmcntMax;     // gfx12+ only.
-  unsigned XcntMax;      // gfx1250.
-  unsigned AsyncMax;     // gfx1250.
-  unsigned VaVdstMax;    // gfx12+ expert mode only.
-  unsigned VmVsrcMax;    // gfx12+ expert mode only.
-
-  HardwareLimits() = default;
-
-  /// Initializes hardware limits from ISA version.
-  HardwareLimits(const IsaVersion &IV);
-};
-
 // The following methods are only meaningful on targets that support
 // S_WAITCNT.
 

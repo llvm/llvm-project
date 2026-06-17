@@ -1141,6 +1141,7 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     case IITDescriptor::VC_Scalar:
       return PrintMsg(false, formatv("any {} type", EK), OIdx);
     }
+    llvm_unreachable("invalid vector constraint");
   }
 
   case IITDescriptor::Match: {

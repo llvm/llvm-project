@@ -537,7 +537,7 @@ Value *CodeGenFunction::EmitNeonRShiftImm(Value *Vec, Value *Shift,
 }
 
 // clang-format off
-static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
+static const ARMNeonVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP1(__a32_vcvt_bf16_f32, arm_neon_vcvtfp2bf, 0),
   NEONMAP0(splat_lane_v),
   NEONMAP0(splat_laneq_v),
@@ -595,10 +595,8 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP1(vclzq_v, ctlz, Add1ArgType),
   NEONMAP1(vcnt_v, ctpop, Add1ArgType),
   NEONMAP1(vcntq_v, ctpop, Add1ArgType),
-  NEONMAP1(vcvt_f16_f32, arm_neon_vcvtfp2hf, 0),
   NEONMAP0(vcvt_f16_s16),
   NEONMAP0(vcvt_f16_u16),
-  NEONMAP1(vcvt_f32_f16, arm_neon_vcvthf2fp, 0),
   NEONMAP0(vcvt_f32_v),
   NEONMAP1(vcvt_n_f16_s16, arm_neon_vcvtfxs2fp, 0),
   NEONMAP1(vcvt_n_f16_u16, arm_neon_vcvtfxu2fp, 0),
@@ -1010,14 +1008,11 @@ static const std::pair<unsigned, unsigned> NEONEquivalentIntrinsicMap[] = {
 #undef NEONMAP2
 
 #define SVEMAP1(NameBase, LLVMIntrinsic, TypeModifier)                         \
-  {                                                                            \
-    #NameBase, SVE::BI__builtin_sve_##NameBase, Intrinsic::LLVMIntrinsic, 0,   \
-        TypeModifier                                                           \
-  }
+  {SVE::BI__builtin_sve_##NameBase, Intrinsic::LLVMIntrinsic, TypeModifier}
 
 #define SVEMAP2(NameBase, TypeModifier)                                        \
-  { #NameBase, SVE::BI__builtin_sve_##NameBase, 0, 0, TypeModifier }
-static const ARMVectorIntrinsicInfo AArch64SVEIntrinsicMap[] = {
+  {SVE::BI__builtin_sve_##NameBase, 0, TypeModifier}
+static const AArch64SVEAndSMEVectorIntrinsicInfo AArch64SVEIntrinsicMap[] = {
 #define GET_SVE_LLVM_INTRINSIC_MAP
 #include "clang/Basic/arm_sve_builtin_cg.inc"
 #include "clang/Basic/BuiltinsAArch64NeonSVEBridge_cg.def"
@@ -1028,14 +1023,11 @@ static const ARMVectorIntrinsicInfo AArch64SVEIntrinsicMap[] = {
 #undef SVEMAP2
 
 #define SMEMAP1(NameBase, LLVMIntrinsic, TypeModifier)                         \
-  {                                                                            \
-    #NameBase, SME::BI__builtin_sme_##NameBase, Intrinsic::LLVMIntrinsic, 0,   \
-        TypeModifier                                                           \
-  }
+  {SME::BI__builtin_sme_##NameBase, Intrinsic::LLVMIntrinsic, TypeModifier}
 
 #define SMEMAP2(NameBase, TypeModifier)                                        \
-  { #NameBase, SME::BI__builtin_sme_##NameBase, 0, 0, TypeModifier }
-static const ARMVectorIntrinsicInfo AArch64SMEIntrinsicMap[] = {
+  {SME::BI__builtin_sme_##NameBase, 0, TypeModifier}
+static const AArch64SVEAndSMEVectorIntrinsicInfo AArch64SMEIntrinsicMap[] = {
 #define GET_SME_LLVM_INTRINSIC_MAP
 #include "clang/Basic/arm_sme_builtin_cg.inc"
 #undef GET_SME_LLVM_INTRINSIC_MAP
@@ -1053,8 +1045,9 @@ static bool AArch64SMEIntrinsicsProvenSorted = false;
 
 // Check if Builtin `BuiltinId` is present in `IntrinsicMap`. If yes, returns
 // the corresponding info struct.
-static const ARMVectorIntrinsicInfo *
-findARMVectorIntrinsicInMap(ArrayRef<ARMVectorIntrinsicInfo> IntrinsicMap,
+template <typename IntrinsicInfo>
+static const IntrinsicInfo *
+findARMVectorIntrinsicInMap(ArrayRef<IntrinsicInfo> IntrinsicMap,
                             unsigned BuiltinID, bool &MapProvenSorted) {
 
 #ifndef NDEBUG
@@ -1064,8 +1057,7 @@ findARMVectorIntrinsicInMap(ArrayRef<ARMVectorIntrinsicInfo> IntrinsicMap,
   }
 #endif
 
-  const ARMVectorIntrinsicInfo *Builtin =
-      llvm::lower_bound(IntrinsicMap, BuiltinID);
+  const IntrinsicInfo *Builtin = llvm::lower_bound(IntrinsicMap, BuiltinID);
 
   if (Builtin != IntrinsicMap.end() && Builtin->BuiltinID == BuiltinID)
     return Builtin;
@@ -1116,7 +1108,7 @@ Function *CodeGenFunction::LookupNeonLLVMIntrinsic(unsigned IntrinsicID,
 //  Emit-helpers
 //===----------------------------------------------------------------------===//
 static Value *EmitCommonNeonSISDBuiltinExpr(
-    CodeGenFunction &CGF, const ARMVectorIntrinsicInfo &SISDInfo,
+    CodeGenFunction &CGF, const ARMNeonVectorIntrinsicInfo &SISDInfo,
     SmallVectorImpl<Value *> &Ops, const CallExpr *E) {
   assert(SISDInfo.LLVMIntrinsic && "Generic code assumes a valid intrinsic");
 
@@ -2662,10 +2654,15 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
     return EmitNeonCall(CGM.getIntrinsic(Intrinsic::arm_neon_sha1m), Ops,
                         "vsha1h");
 
-  case NEON::BI__builtin_neon_vcvth_bf16_f32: {
+  case NEON::BI__builtin_neon_vcvth_bf16_f32:
     return EmitNeonCall(CGM.getIntrinsic(Intrinsic::arm_neon_vcvtbfp2bf), Ops,
                         "vcvtbfp2bf");
-  }
+  case NEON::BI__builtin_neon_vcvt_f16_f32:
+    return EmitNeonCall(CGM.getIntrinsic(Intrinsic::arm_neon_vcvtfp2hf), Ops,
+                        "vcvtfp2hf");
+  case NEON::BI__builtin_neon_vcvt_f32_f16:
+    return EmitNeonCall(CGM.getIntrinsic(Intrinsic::arm_neon_vcvthf2fp), Ops,
+                        "vcvthf2fp");
 
   // The ARM _MoveToCoprocessor builtins put the input register value as
   // the first argument, but the LLVM intrinsic expects it as the third one.
@@ -2720,7 +2717,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   // Many NEON builtins have identical semantics and uses in ARM and
   // AArch64. Emit these in a single function.
   auto IntrinsicMap = ArrayRef(ARMSIMDIntrinsicMap);
-  const ARMVectorIntrinsicInfo *Builtin = findARMVectorIntrinsicInMap(
+  const ARMNeonVectorIntrinsicInfo *Builtin = findARMVectorIntrinsicInMap(
       IntrinsicMap, BuiltinID, NEONSIMDIntrinsicsProvenSorted);
   if (Builtin)
     return EmitCommonNeonBuiltinExpr(
@@ -4020,8 +4017,9 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     return EmitSVEReinterpret(Val, Ty);
   }
 
-  auto *Builtin = findARMVectorIntrinsicInMap(AArch64SVEIntrinsicMap, BuiltinID,
-                                              AArch64SVEIntrinsicsProvenSorted);
+  auto *Builtin =
+      findARMVectorIntrinsicInMap(ArrayRef(AArch64SVEIntrinsicMap), BuiltinID,
+                                  AArch64SVEIntrinsicsProvenSorted);
 
   llvm::SmallVector<Value *, 4> Ops;
   SVETypeFlags TypeFlags(Builtin->TypeModifier);
@@ -4403,8 +4401,9 @@ static void swapCommutativeSMEOperands(unsigned BuiltinID,
 
 Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
                                                   const CallExpr *E) {
-  auto *Builtin = findARMVectorIntrinsicInMap(AArch64SMEIntrinsicMap, BuiltinID,
-                                              AArch64SMEIntrinsicsProvenSorted);
+  auto *Builtin =
+      findARMVectorIntrinsicInMap(ArrayRef(AArch64SMEIntrinsicMap), BuiltinID,
+                                  AArch64SMEIntrinsicsProvenSorted);
 
   llvm::SmallVector<Value *, 4> Ops;
   SVETypeFlags TypeFlags(Builtin->TypeModifier);
@@ -5341,7 +5340,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
 
   // Check whether this is an SISD builtin.
   auto SISDMap = ArrayRef(AArch64SISDIntrinsicMap);
-  const ARMVectorIntrinsicInfo *Builtin = findARMVectorIntrinsicInMap(
+  const ARMNeonVectorIntrinsicInfo *Builtin = findARMVectorIntrinsicInMap(
       SISDMap, BuiltinID, AArch64SISDIntrinsicsProvenSorted);
   bool IsSISD = (Builtin != nullptr);
 
@@ -5405,8 +5404,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
 
   // Not all intrinsics handled by the common case work for AArch64 yet, so only
   // defer to common code if it's been added to our special map.
-  Builtin = findARMVectorIntrinsicInMap(AArch64SIMDIntrinsicMap, BuiltinID,
-                                        AArch64SIMDIntrinsicsProvenSorted);
+  Builtin =
+      findARMVectorIntrinsicInMap(ArrayRef(AArch64SIMDIntrinsicMap), BuiltinID,
+                                  AArch64SIMDIntrinsicsProvenSorted);
 
   if (Builtin)
     return EmitCommonNeonBuiltinExpr(
@@ -6049,6 +6049,16 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     llvm::Value *Trunc =
         Builder.CreateFPTrunc(Builder.CreateBitCast(Ops[1], V4F32), V4BF16);
     return Builder.CreateShuffleVector(Inactive, Trunc, ConcatMask);
+  }
+  case NEON::BI__builtin_neon_vcvt_f16_f32: {
+    llvm::Type *V4F32 = FixedVectorType::get(Builder.getFloatTy(), 4);
+    llvm::Type *V4F16 = FixedVectorType::get(Builder.getHalfTy(), 4);
+    return Builder.CreateFPTrunc(Builder.CreateBitCast(Ops[0], V4F32), V4F16);
+  }
+  case NEON::BI__builtin_neon_vcvt_f32_f16: {
+    llvm::Type *V4F32 = FixedVectorType::get(Builder.getFloatTy(), 4);
+    llvm::Type *V4F16 = FixedVectorType::get(Builder.getHalfTy(), 4);
+    return Builder.CreateFPExt(Builder.CreateBitCast(Ops[0], V4F16), V4F32);
   }
 
   case clang::AArch64::BI_InterlockedAdd:

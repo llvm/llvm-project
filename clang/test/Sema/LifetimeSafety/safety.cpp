@@ -1250,6 +1250,55 @@ void conditional_operator_lifetimebound_nested_deep(bool cond) {
   (void)*p;  // expected-note 4 {{later used here}}
 }
 
+// Comma operator.
+int side();
+void comma_use_after_scope() {
+  MyObj* p;
+  {
+    MyObj temp;
+    p = (side(), &temp);  // expected-warning {{local variable 'temp' does not live long enough}}
+  }                       // expected-note {{destroyed here}}
+  (void)*p;               // expected-note {{later used here}}
+}
+
+void comma_nested() {
+  MyObj* p;
+  {
+    MyObj temp;
+    p = (side(), (side(), &temp));  // expected-warning {{local variable 'temp' does not live long enough}}
+  }                                 // expected-note {{destroyed here}}
+  (void)*p;                         // expected-note {{later used here}}
+}
+
+void comma_masked_by_conditional(bool cond) {
+  MyObj safe;
+  MyObj* keep = &safe;
+  MyObj* p;
+  {
+    MyObj temp;
+    p = cond ? keep : (side(), &temp);  // expected-warning {{local variable 'temp' does not live long enough}}
+  }                                     // expected-note {{destroyed here}}
+  (void)*p;                             // expected-note {{later used here}}
+}
+
+void comma_safe() {
+  MyObj safe;
+  MyObj* p = (side(), &safe);
+  (void)*p;  // no-warning
+}
+
+// FIXME: Diagnostic output does not handle ParenExpr correctly, causing alias
+// information to be missed (local variable 'p' aliases the storage of local variable 'b').
+void simpleparen() {
+  MyObj* p;
+  {
+    MyObj a;
+    MyObj* b = &a;  // expected-warning {{local variable 'a' does not live long enough}}
+    p = (((b)));
+  }                 // expected-note {{destroyed here}}
+  (void)*p;         // expected-note {{later used here}}
+}
+
 void parentheses(bool cond) {
   MyObj* p;
   {
@@ -3713,4 +3762,9 @@ void capturing_multiple_locals() {
         setCaptureBy(v, local2);    // expected-warning{{local variable 'local2' does not live long enough}}
     }                               // expected-note 2 {{destroyed here}} 
     (void)v;                        // expected-note 2 {{later used here}}
+}
+
+struct [[gsl::Pointer()]] PtrWithInt { int x; };
+PtrWithInt f() {
+  return PtrWithInt{10};
 }
