@@ -107,6 +107,7 @@ def get_variable_metrics(
     all_expected_values = get_expected_value_set(expected_values)
     seen_expected_values = set()
     num_correct_steps = 0
+    num_optimized_out_steps = 0
     num_missing_var_steps = 0
     num_unexpected_value_steps = 0
     partial_step_correctness = 0.0
@@ -118,7 +119,10 @@ def get_variable_metrics(
         if match.match_result == MatchResult.TRUE:
             num_correct_steps += 1
         elif match.actual_result is None:
-            num_missing_var_steps += 1
+            if match.actual and match.actual.is_optimized_away:
+                num_optimized_out_steps += 1
+            else:
+                num_missing_var_steps += 1
         else:
             num_unexpected_value_steps += 1
     assert all(
@@ -143,6 +147,8 @@ def get_variable_metrics(
         ),
         # The sum of the 0.0-1.0 "correctness value" of matches across each step.
         "partial_step_correctness": ScalarMetric(partial_step_correctness),
+        # The number of steps where the watched variable/expression was marked "optimized out" in the debugger.
+        "optimized_out_steps": ScalarMetric(num_optimized_out_steps, improves_asc=False),
         # The number of steps where the watched variable/expression was not available in the debugger.
         "missing_var_steps": ScalarMetric(num_missing_var_steps, improves_asc=False),
         # The number of steps where the watched variable/expression had a value not in the set of expected values.
