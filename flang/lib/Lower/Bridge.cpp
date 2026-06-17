@@ -4102,7 +4102,13 @@ private:
         ompDeferredDeclareTarget);
     genOpenMPDeclarativeConstruct(
         *this, localSymbols, bridge.getSemanticsContext(), getEval(), ompDecl);
-    builder->restoreInsertionPoint(insertPt);
+    // In case of declare variant related lowering with runtime user
+    // conditions (if/else) the original block is split. This is done
+    // by creating conditional branches that terminate the current block,
+    // making the saved insertion point invalid for subsequent insertions.
+    // Otherwise restore the insertion point.
+    if (builder->getInsertionBlock() == insertPt.getBlock())
+      builder->restoreInsertionPoint(insertPt);
   }
 
   /// Generate FIR for a SELECT CASE statement.

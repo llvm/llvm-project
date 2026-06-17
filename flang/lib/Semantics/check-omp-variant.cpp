@@ -21,6 +21,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/openmp-utils.h"
+#include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 
@@ -649,10 +650,7 @@ void OmpStructureChecker::CheckDeclareVariantUserConditions(
         continue;
       }
       if (const auto *expr{GetExpr(scalarExpr)}) {
-        if (!IsConstantExpr(*expr, &context_.foldingContext())) {
-          context_.Say(property.source,
-              "Run-time USER condition in the MATCH clause is not yet implemented"_err_en_US);
-        }
+        (void)IsConstantExpr(*expr, &context_.foldingContext());
       }
     }
   }
@@ -733,6 +731,12 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
     context_.Say(x.source,
         "DECLARE_VARIANT directive requires a MATCH clause"_err_en_US);
     return;
+  }
+
+  // Store variant info in SemanticsContext for use during lowering.
+  if (base && variant) {
+    context_.AddOmpDeclareVariant(
+        *base, OmpDeclareVariantInfo{*variant, &spec});
   }
 
   EnterDirectiveNest(ContextSelectorNest);

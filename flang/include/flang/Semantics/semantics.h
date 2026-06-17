@@ -49,6 +49,7 @@ struct SelectRankConstruct;
 struct SelectTypeConstruct;
 struct Variable;
 struct WhereConstruct;
+struct OmpDirectiveSpecification;
 } // namespace Fortran::parser
 
 namespace Fortran::semantics {
@@ -56,6 +57,13 @@ namespace Fortran::semantics {
 class Symbol;
 class CommonBlockMap;
 using CommonBlockList = std::vector<std::pair<SymbolRef, std::size_t>>;
+
+// Information about a single declare variant directive associated with a
+// base procedure.
+struct OmpDeclareVariantInfo {
+  SymbolRef variantProcedure;
+  const parser::OmpDirectiveSpecification *spec;
+};
 
 using ConstructNode = std::variant<const parser::AssociateConstruct *,
     const parser::BlockConstruct *, const parser::CaseConstruct *,
@@ -350,6 +358,19 @@ public:
 
   void DumpSymbols(llvm::raw_ostream &);
 
+  // OpenMP declare variant support: register variant info for a base
+  // procedure, and query it during lowering.
+  void AddOmpDeclareVariant(const Symbol &base, OmpDeclareVariantInfo info) {
+    ompDeclareVariants_[&base].push_back(std::move(info));
+  }
+  const std::vector<OmpDeclareVariantInfo> *GetOmpDeclareVariants(
+      const Symbol &base) const {
+    auto it = ompDeclareVariants_.find(&base);
+    if (it != ompDeclareVariants_.end())
+      return &it->second;
+    return nullptr;
+  }
+
   // Top-level ProgramTrees are owned by the SemanticsContext for persistence.
   ProgramTree &SaveProgramTree(ProgramTree &&);
 
@@ -409,6 +430,9 @@ private:
   UnorderedSymbolSet isUsed_;
   std::set<const parser::AccObject *> accObjectDuplicates_;
   std::list<ProgramTree> programTrees_;
+  // OpenMP declare variant: base symbol -> list of variant info
+  std::map<const Symbol *, std::vector<OmpDeclareVariantInfo>>
+      ompDeclareVariants_;
 };
 
 class Semantics {

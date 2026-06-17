@@ -76,7 +76,6 @@ end subroutine
 
 subroutine f06(x)
   integer :: x
-!ERROR: Run-time USER condition in the MATCH clause is not yet implemented
   !$omp declare variant (sub:vsub) match (user={condition(x > 0)})
 contains
   subroutine vsub
