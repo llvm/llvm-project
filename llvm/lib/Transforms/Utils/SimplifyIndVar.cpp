@@ -2186,6 +2186,19 @@ void WidenIV::calculatePostIncRange(Instruction *NarrowDef,
       !NarrowDefRHS->isNonNegative())
     return;
 
+  for (User *U : NarrowDefLHS->users()) {
+    // We can use some simple heuristics to infer NarrowDef's range. For
+    // instance, if the LHS of the ADD is used by `zext nneg`, then the LHS
+    // value can be considered non-negative.
+    if (match(U, m_NNegZExt(m_Value()))) {
+      auto NewRange = ConstantRange::makeExactICmpRegion(
+          CmpInst::ICMP_SGE, APInt::getZero(NarrowDefRHS->getBitWidth()));
+      NewRange = NewRange.addWithNoWrap(
+          *NarrowDefRHS, OverflowingBinaryOperator::NoSignedWrap);
+      updatePostIncRangeInfo(NarrowDef, NarrowUser, NewRange);
+    }
+  }
+
   auto UpdateRangeFromCondition = [&](Value *Condition, bool TrueDest) {
     CmpPredicate Pred;
     Value *CmpRHS;

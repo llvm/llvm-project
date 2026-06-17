@@ -463,11 +463,13 @@ exit:
   ret void
 }
 
+; We expect the icmp to be widened.
 define void @test_zext_nneg_range(i32 %v, ptr %p0, ptr %p1, ptr %pN) {
 ; CHECK-LABEL: @test_zext_nneg_range(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N:%.*]] = load i32, ptr [[PN:%.*]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[V:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
@@ -475,8 +477,7 @@ define void @test_zext_nneg_range(i32 %v, ptr %p0, ptr %p1, ptr %pN) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX13]], align 4
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr [[P1:%.*]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[CMP9:%.*]] = icmp slt i32 [[TMP2]], [[N]]
+; CHECK-NEXT:    [[CMP9:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[CMP9]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret void
