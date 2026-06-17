@@ -3670,7 +3670,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         // Try to remove redundant alignment assumptions.
         auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
 
-        if (!Alignment || !Offset || *Offset != 0)
+        if (!Alignment || !Offset)
           break;
 
         // Remove align 1 and non-power-of-two bundles; they don't add any
@@ -3687,10 +3687,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
         // Compute known bits for the pointer and drop the assume if the
         // known alignment isn't increased by it.
-        if (computeKnownBits(Ptr, II).countMinTrailingZeros() <
-            Log2_64(*Alignment))
-          continue;
-        return RemoveBundle();
+        auto AlignBitCount = Log2_64(*Alignment);
+        if (KnownBits KB = computeKnownBits(Ptr, II);
+            KB.Zero.getLoBits(AlignBitCount) == ((*Alignment - 1) & ~*Offset) &&
+            KB.One.getLoBits(AlignBitCount) == ((*Alignment - 1) & *Offset))
+          return RemoveBundle();
+        break;
       }
 
       case BundleAttr::Dereferenceable: {

@@ -190,6 +190,18 @@ define void @redundant_align() {
   ret void
 }
 
+define void @redundant_align_with_offset() {
+; CHECK-LABEL: @redundant_align_with_offset(
+; CHECK-NEXT:    [[PTR:%.*]] = call ptr @get_ptr()
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 4) ]
+; CHECK-NEXT:    ret void
+;
+  %ptr = call ptr @get_ptr()
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8, i64 4) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8, i64 4) ]
+  ret void
+}
+
 define void @non_power_of_two_align(ptr %ptr) {
 ; CHECK-LABEL: @non_power_of_two_align(
 ; CHECK-NEXT:    ret void
