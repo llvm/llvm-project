@@ -1589,8 +1589,9 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
 
   bool hasTransform = consumerLaneData[rank - 2] != 1;
   bool hasTranspose = consumerLaneLayout[rank - 2] != 1;
-  unsigned packingFactor =
-      hasTransform ? consumerLaneData[rank - 2] : consumerLaneData[rank - 1];
+  unsigned packingFactor = (hasTranspose || hasTransform)
+                               ? consumerLaneData[rank - 2]
+                               : consumerLaneData[rank - 1];
   unsigned packingSize = packingFactor * elemTy.getIntOrFloatBitWidth();
 
   if (layoutKind == xegpu::LayoutKind::InstData) {
@@ -1955,8 +1956,9 @@ xegpu::completeBlockLoadLaneLayoutFromInstData(
     if (!consumerLaneLayout.empty() && !consumerLaneData.empty()) {
       hasTransform = consumerLaneData[rank - 2] != 1;
       hasTranspose = consumerLaneLayout[rank - 2] != 1;
-      unsigned packingFactor = hasTransform ? consumerLaneData[rank - 2]
-                                            : consumerLaneData[rank - 1];
+      unsigned packingFactor = (hasTranspose || hasTransform)
+                                   ? consumerLaneData[rank - 2]
+                                   : consumerLaneData[rank - 1];
       packingSize = packingFactor * bitwidth;
     }
   }

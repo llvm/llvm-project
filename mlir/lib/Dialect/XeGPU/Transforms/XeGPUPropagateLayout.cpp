@@ -191,64 +191,6 @@ LayoutInfo LayoutInfo::join(const LayoutInfo &lhs, const LayoutInfo &rhs) {
   llvm_unreachable("Join should not be triggered by layout propagation.");
 }
 
-/// Construct a new layout with the transposed inst_data or lane_layout,
-/// lane_data.
-LayoutInfo LayoutInfo::transpose(ArrayRef<int64_t> permutation) const {
-  if (!isAssigned())
-    return {};
-  // Check if the permutation is valid.
-  llvm::SmallSet<int64_t, 4> seen(permutation.begin(), permutation.end());
-  bool hasDuplicates = seen.size() != permutation.size();
-  bool withinRange = llvm::all_of(permutation, [&](int64_t idx) {
-    return idx >= 0 && idx < static_cast<int64_t>(permutation.size());
-  });
-
-  if (!withinRange || hasDuplicates) {
-    assert(false && "Invalid permutation for transpose.");
-    return {};
-  }
-
-  SmallVector<int32_t> laneLayout;
-  SmallVector<int32_t> laneData;
-  SmallVector<int32_t> instData;
-  SmallVector<int32_t> sgLayout;
-  SmallVector<int32_t> sgData;
-  SmallVector<int32_t> order;
-
-  for (int64_t idx : permutation) {
-    if (getLaneLayout().size()) {
-      laneLayout.push_back(static_cast<int32_t>(getLaneLayout()[idx]));
-      laneData.push_back(static_cast<int32_t>(getLaneData()[idx]));
-    }
-    if (getInstData().size())
-      instData.push_back(static_cast<int32_t>(getInstData()[idx]));
-    if (getSgData().size()) {
-      sgLayout.push_back(static_cast<int32_t>(getSgLayout()[idx]));
-      sgData.push_back(static_cast<int32_t>(getSgData()[idx]));
-    }
-    if (getOrder().size()) {
-      order.push_back(static_cast<int32_t>(getOrder()[idx]));
-    }
-  }
-  auto orderAttr = order.size()
-                       ? DenseI32ArrayAttr::get(storage.getContext(), order)
-                       : nullptr;
-  xegpu::LayoutAttr layoutAttr;
-  if (getLaneLayout().size())
-    layoutAttr =
-        xegpu::LayoutAttr::get(storage.getContext(), laneLayout, laneData);
-  if (getInstData().size())
-    layoutAttr = xegpu::LayoutAttr::get(storage.getContext(), instData);
-  if (getSgData().size())
-    layoutAttr = xegpu::LayoutAttr::get(
-        storage.getContext(),
-        DenseI32ArrayAttr::get(storage.getContext(), sgLayout),
-        DenseI32ArrayAttr::get(storage.getContext(), sgData),
-        /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
-        /*lane_data =*/nullptr, orderAttr);
-  return LayoutInfo(layoutAttr);
-}
-
 //===----------------------------------------------------------------------===//
 // LayoutInfoLattice
 //===----------------------------------------------------------------------===//
@@ -1070,6 +1012,48 @@ void LayoutInfoPropagation::visitLoadNdOp(
 void LayoutInfoPropagation::visitConvertLayoutOp(
     xegpu::ConvertLayoutOp convert, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
+
+  LayoutInfo resultLayout = results[0]->getValue();
+  if (!resultLayout.isAssigned())
+    return;
+
+  // TODO: fix if one of the layouts is a slice layout
+  auto targetLayout =
+      dyn_cast<xegpu::LayoutAttr>(convert.getTargetLayoutAttr());
+
+  // The result's propagated layout is authoritative for the converted value.
+  // Fill the lane_layout / lane_data / order parameters the target_layout is
+  // missing from it (sg_layout / sg_data / inst_data are left as-is), so the
+  // target stays consistent with what is actually propagated downstream.
+  auto resultLayoutAttr = dyn_cast<xegpu::LayoutAttr>(resultLayout.get());
+  if (resultLayoutAttr && targetLayout) {
+    if (layoutKind == xegpu::LayoutKind::InstData &&
+        !targetLayout.getLaneLayout()) {
+      targetLayout = xegpu::LayoutAttr::get(
+          convert.getContext(), targetLayout.getSgLayout(),
+          targetLayout.getSgData(), targetLayout.getInstData(),
+          resultLayoutAttr.getLaneLayout(), resultLayoutAttr.getLaneData(),
+          resultLayoutAttr.getOrder());
+      convert.setTargetLayoutAttr(targetLayout);
+    }
+  }
+
+  // Fill only the lane_layout / lane_data / order parameters the input_layout
+  // is missing from the target_layout (sg_layout / sg_data / inst_data are left
+  // as-is), so the producer side receives a fully-populated lane layout.
+  auto inputLayout = dyn_cast<xegpu::LayoutAttr>(convert.getInputLayoutAttr());
+  if (inputLayout && targetLayout) {
+    if (layoutKind == xegpu::LayoutKind::InstData &&
+        !inputLayout.getLaneLayout()) {
+      auto merged = xegpu::LayoutAttr::get(
+          convert.getContext(), inputLayout.getSgLayout(),
+          inputLayout.getSgData(), inputLayout.getInstData(),
+          targetLayout.getLaneLayout(), targetLayout.getLaneData(),
+          targetLayout.getOrder());
+      convert.setInputLayoutAttr(merged);
+    }
+  }
+
   xegpu::DistributeLayoutAttr anchorLayout = convert.getInputLayoutAttr();
   LayoutInfo convertLayout(anchorLayout);
   // Propagate the new layout to the tensor descriptor operand.
@@ -1128,9 +1112,9 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
 }
 
-/// For vector::InterleaveOp, the result has double the innermost dimension size
-/// compared to each source operand. The layout is propagated from result to
-/// sources, adjusting for the 2x size increase.
+/// For vector::InterleaveOp, the result has double the innermost dimension
+/// size compared to each source operand. The layout is propagated from result
+/// to sources, adjusting for the 2x size increase.
 void LayoutInfoPropagation::visitVectorInterleaveOp(
     vector::InterleaveOp interleave, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
@@ -1178,8 +1162,8 @@ void LayoutInfoPropagation::visitVectorDeinterleaveOp(
   auto consumerLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
 
-  // Derive the source layout from the result layout (double the innermost dim)
-  // No setup function needed - just infer directly
+  // Derive the source layout from the result layout (double the innermost
+  // dim) No setup function needed - just infer directly
   auto srcLayoutAttr = xegpu::inferDeinterleaveSourceLayout(consumerLayoutAttr);
 
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
@@ -1216,8 +1200,8 @@ void LayoutInfoPropagation::visitInsertStridedSliceOp(
                      operands[1]->meet(LayoutInfo(requiredResLayoutAttr)));
 }
 
-/// Propagate the layout of the result to the tensor descriptor, mask and offset
-/// operands in LoadGatherOp.
+/// Propagate the layout of the result to the tensor descriptor, mask and
+/// offset operands in LoadGatherOp.
 void LayoutInfoPropagation::visitLoadGatherOp(
     xegpu::LoadGatherOp load, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
@@ -1278,8 +1262,8 @@ void LayoutInfoPropagation::visitLoadGatherOp(
   propagateIfChanged(operands[2], operands[2]->meet(maskLayoutInfo));
 }
 
-/// Set the layout for the value, tensor descriptor, offset and mask operands in
-/// the StoreScatterOp.
+/// Set the layout for the value, tensor descriptor, offset and mask operands
+/// in the StoreScatterOp.
 void LayoutInfoPropagation::visitStoreScatterOp(
     xegpu::StoreScatterOp storeScatter, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
@@ -1500,9 +1484,9 @@ namespace {
 // ResolveLayoutConflicts
 //===----------------------------------------------------------------------===//
 
-/// Helper to get the defining CreateNdDescOp of a tensor descriptor value. This
-/// function tries to find the defining CreateNdDescOp recursively accross
-/// control-flow boundaries.
+/// Helper to get the defining CreateNdDescOp of a tensor descriptor value.
+/// This function tries to find the defining CreateNdDescOp recursively
+/// accross control-flow boundaries.
 static xegpu::CreateNdDescOp getDefiningCreateNdDescOp(Value tdescValue) {
   // Try to get the defining CreateNdDescOp of the tensor descriptor.
   auto definingOp = tdescValue.getDefiningOp<xegpu::CreateNdDescOp>();
@@ -1541,9 +1525,9 @@ LogicalResult ResolveLayoutConflicts::run() {
   // Scan all operations in the parent op and resolve layout conflicts at
   // tensor descriptor and vector use points.
   auto r = parentOp->walk([&](Operation *op) -> WalkResult {
-    // if the operation inputs vector and output scalar, like multi-reduction we
-    // need to check if the result has layout and add a convert_layout to serve
-    // as anchor op for the reduction op's layout.
+    // if the operation inputs vector and output scalar, like multi-reduction
+    // we need to check if the result has layout and add a convert_layout to
+    // serve as anchor op for the reduction op's layout.
     if (isa<vector::MultiDimReductionOp>(op) || isa<vector::ReductionOp>(op)) {
       for (OpResult result : op->getResults()) {
         if (result.getType().isIntOrFloat()) {
@@ -1610,7 +1594,8 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
     if (auto vectorTy = dyn_cast<VectorType>(vectorValue.getType());
         vectorTy && vectorTy.getRank() > 1)
       consumerOp->emitWarning("Expected layout for non-1D vectors.");
-    return success(); // uniform non-tensor-data vector does not require layout
+    return success(); // uniform non-tensor-data vector does not require
+                      // layout
   }
   // Region branch ops (e.g. scf.for) and their terminators (e.g. scf.yield)
   // forward their operands to successor region inputs / parent op results;
@@ -1628,6 +1613,23 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
   // If layouts are same, no conflict exists, return success.
   if (consumerLayout.isEqualTo(producerLayout))
     return success();
+
+  // Consumer is a convert_layout: retarget its input_layout to the producer
+  // instead of chaining a second convert. Always safe (single source
+  // operand).
+  if (auto consumerConvert = dyn_cast<xegpu::ConvertLayoutOp>(consumerOp)) {
+    consumerConvert.setInputLayoutAttr(producerLayout);
+    return success();
+  }
+
+  // Producer is a convert_layout feeding only this use: retarget its
+  // target_layout to the consumer instead of appending another convert.
+  if (auto producerConvert =
+          vectorValue.getDefiningOp<xegpu::ConvertLayoutOp>();
+      producerConvert && vectorValue.hasOneUse()) {
+    producerConvert.setTargetLayoutAttr(consumerLayout);
+    return success();
+  }
 
   // If the producer is trivially rematerializable (e.g. `vector.step`, splat
   // `arith.constant`), clone it and stamp the consumer's expected layout on
