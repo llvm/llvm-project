@@ -7076,7 +7076,6 @@ static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
   using DistOrdPair = std::pair<int64_t, int>;
   auto Compare = llvm::less_first();
   std::set<DistOrdPair, decltype(Compare)> Offsets(Compare);
-  int Cnt = 0;
   bool IsConsecutive = true;
   for (const auto [Idx, PtrSCEV] : enumerate(SCEVs)) {
     unsigned Dist = 0;
@@ -7097,24 +7096,18 @@ static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
     // If the strides are not the same or repeated, we can't vectorize.
     if ((Dist / Size) * Size != Dist || (Dist / Size) >= SCEVs.size())
       return nullptr;
-    auto Res = Offsets.emplace(Dist, Cnt);
+    auto Res = Offsets.emplace(Dist, Idx);
     if (!Res.second)
       return nullptr;
     // Consecutive order if the inserted element is the last one.
     IsConsecutive = IsConsecutive && std::next(Res.first) == Offsets.end();
-    ++Cnt;
   }
-  if (Offsets.size() != SCEVs.size())
-    return nullptr;
   SortedIndices.clear();
   if (!IsConsecutive) {
     // Fill SortedIndices array only if it is non-consecutive.
     SortedIndices.resize(PointerOps.size());
-    Cnt = 0;
-    for (const std::pair<int64_t, int> &Pair : Offsets) {
-      SortedIndices[Cnt] = Pair.second;
-      ++Cnt;
-    }
+    for (const auto [Idx, Pair] : enumerate(Offsets))
+      SortedIndices[Idx] = Pair.second;
   }
   return Stride;
 }
