@@ -3443,10 +3443,10 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "           const OperandVector &Operands) override;\n";
   OS << "  unsigned MatchInstructionImpl(const OperandVector &Operands,\n"
      << "                                MCInst &Inst,\n";
-  if (ReportMultipleNearMisses)
+  if (ReportMultipleNearMisses) {
     OS << "                                SmallVectorImpl<NearMissInfo> "
           "*NearMisses,\n";
-  else {
+  } else {
     OS << "                                uint64_t &ErrorInfo,\n"
        << "                                FeatureBitset &MissingFeatures,\n";
     if (ReportMissingFeatureAlternatives)
@@ -3712,9 +3712,9 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "unsigned " << Target.getName() << ClassName << "::\n"
      << "MatchInstructionImpl(const OperandVector &Operands,\n";
   OS << "                     MCInst &Inst,\n";
-  if (ReportMultipleNearMisses)
+  if (ReportMultipleNearMisses) {
     OS << "                     SmallVectorImpl<NearMissInfo> *NearMisses,\n";
-  else {
+  } else {
     OS << "                     uint64_t &ErrorInfo,\n"
        << "                     FeatureBitset &MissingFeatures,\n";
     if (ReportMissingFeatureAlternatives)
