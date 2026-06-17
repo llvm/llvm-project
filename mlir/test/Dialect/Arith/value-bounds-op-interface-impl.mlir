@@ -211,7 +211,6 @@ func.func @arith_remsi_positive_lhs_symbolic_positive_rhs(%a: index) -> index {
 
 // -----
 
-// not sure this is correct
 // CHECK-LABEL: func @arith_remsi_negative_lhs_symbolic_positive_rhs(
 //  CHECK-SAME:     %[[a:.*]]: index
 //       CHECK:   %[[ub:.*]] = arith.constant 1 : index
