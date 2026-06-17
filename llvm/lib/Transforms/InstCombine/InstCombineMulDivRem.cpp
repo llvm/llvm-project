@@ -340,10 +340,10 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     Constant *C1, *C2, *C3;
 
     if (match(&I, m_c_Mul(m_OneUse(m_Value(OtherValue)),
-                          m_OneUse(m_Select(m_Value(Cond), m_Constant(C2),
-                                            m_Constant(C3))))) &&
-        (match(OtherValue, m_c_Mul(m_Value(NewOp), m_Constant(C1))) ||
-         match(OtherValue, m_Shl(m_Value(NewOp), m_Constant(C1))))) {
+                          m_OneUse(m_Select(m_Value(Cond), m_ImmConstant(C2),
+                                            m_ImmConstant(C3))))) &&
+        (match(OtherValue, m_Mul(m_Value(NewOp), m_ImmConstant(C1))) ||
+         match(OtherValue, m_Shl(m_Value(NewOp), m_ImmConstant(C1))))) {
 
       auto *OtherInst = cast<OverflowingBinaryOperator>(OtherValue);
       auto Opc = OtherInst->getOpcode();
