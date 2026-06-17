@@ -3232,8 +3232,26 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
   // smaller version of the symtab that only contains global symbols. The
   // information found in the dynsym is therefore also found in the symtab,
   // while the reverse is not necessarily true.
-  Section *symtab =
-      section_list->FindSectionByType(eSectionTypeELFSymbolTable, true).get();
+  //
+  // Prefer the symbol table from this (the main) object file. When a separate
+  // debug file is attached to the module -- for example via the platform
+  // locate-module callback supplying both a binary and a DWARF-only
+  // ".debuginfo" whose ".symtab" has been stripped to SHT_NOBITS (zero file
+  // size) -- the module's unified section list can surface that empty ".symtab"
+  // ahead of the populated ".symtab" in this object file. Parsing the empty one
+  // yields no symbols and forces a fallback to eh_frame-synthesized
+  // "___lldb_unnamed_symbol" names. If our own object file carries a populated
+  // symbol table, use it; otherwise fall back to the module's unified list,
+  // which legitimately provides the symbol table from a separate debug file for
+  // a stripped binary.
+  Section *symtab = nullptr;
+  if (SectionList *obj_section_list = GetSectionList())
+    symtab =
+        obj_section_list->FindSectionByType(eSectionTypeELFSymbolTable, true)
+            .get();
+  if (!symtab || symtab->GetFileSize() == 0)
+    symtab =
+        section_list->FindSectionByType(eSectionTypeELFSymbolTable, true).get();
   if (symtab) {
     auto [num_symbols, address_class_map] =
         ParseSymbolTable(&lldb_symtab, symbol_id, symtab);
