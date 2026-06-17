@@ -24,6 +24,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/TargetParser/Triple.h"
 
+#include <cassert>
 #include <limits>
 
 namespace llvm::ubi {
@@ -1144,8 +1145,8 @@ public:
       return Res ? *Res : AnyValue::poison();
     }
     case Intrinsic::vector_insert: {
-      if (Args[2].isPoison())
-        return AnyValue::getPoisonValue(Ctx, RetTy);
+      assert(!Args[2].isPoison() &&
+             "Verifier should reject poison vector_insert immarg.");
       const auto &Vec = Args[0].asAggregate();
       const auto &SubVec = Args[1].asAggregate();
       const auto &Idx = Args[2].asInteger();
@@ -1153,14 +1154,19 @@ public:
           cast<VectorType>(CB.getArgOperand(1)->getType())->getElementCount();
       const uint64_t RawOffset = Idx.getZExtValue();
       const uint32_t MinSize = EC.getKnownMinValue();
-      if (RawOffset % MinSize != 0)
-        return AnyValue::getPoisonValue(Ctx, RetTy);
+      assert(RawOffset % MinSize == 0 &&
+             "Verifier should reject misaligned vector_insert index.");
       const uint64_t Chunk = RawOffset / MinSize;
       const uint64_t EVL = Ctx.getEVL(EC);
       if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)
         return AnyValue::getPoisonValue(Ctx, RetTy);
       const uint64_t Offset = Chunk * EVL;
-      if (Offset > Vec.size() || SubVec.size() > Vec.size() - Offset)
+      auto VecEC =
+          cast<VectorType>(CB.getArgOperand(0)->getType())->getElementCount();
+      if (VecEC.isScalable() == EC.isScalable())
+        assert(Offset <= Vec.size() && SubVec.size() <= Vec.size() - Offset &&
+               "Verifier should reject out-of-range vector_insert index.");
+      else if (Offset > Vec.size() || SubVec.size() > Vec.size() - Offset)
         return AnyValue::getPoisonValue(Ctx, RetTy);
       std::vector<AnyValue> Res;
       Res.reserve(Vec.size());
@@ -1173,21 +1179,26 @@ public:
       return std::move(Res);
     }
     case Intrinsic::vector_extract: {
-      if (Args[1].isPoison())
-        return AnyValue::getPoisonValue(Ctx, RetTy);
+      assert(!Args[1].isPoison() &&
+             "Verifier should reject poison vector_extract immarg.");
       const auto &Vec = Args[0].asAggregate();
       const auto &Idx = Args[1].asInteger();
       auto EC = cast<VectorType>(RetTy)->getElementCount();
       const uint64_t RawOffset = Idx.getZExtValue();
       const uint32_t MinSize = EC.getKnownMinValue();
-      if (RawOffset % MinSize != 0)
-        return AnyValue::getPoisonValue(Ctx, RetTy);
+      assert(RawOffset % MinSize == 0 &&
+             "Verifier should reject misaligned vector_extract index.");
       const uint64_t Chunk = RawOffset / MinSize;
       const uint64_t EVL = Ctx.getEVL(EC);
       if (Chunk > std::numeric_limits<uint64_t>::max() / EVL)
         return AnyValue::getPoisonValue(Ctx, RetTy);
       const uint64_t Offset = Chunk * EVL;
-      if (Offset > Vec.size() || EVL > Vec.size() - Offset)
+      auto VecEC =
+          cast<VectorType>(CB.getArgOperand(0)->getType())->getElementCount();
+      if (VecEC.isScalable() == EC.isScalable())
+        assert(Offset <= Vec.size() && EVL <= Vec.size() - Offset &&
+               "Verifier should reject out-of-range vector_extract index.");
+      else if (Offset > Vec.size() || EVL > Vec.size() - Offset)
         return AnyValue::getPoisonValue(Ctx, RetTy);
       return std::vector<AnyValue>(Vec.begin() + Offset,
                                    Vec.begin() + Offset + EVL);
@@ -1592,12 +1603,25 @@ public:
 
   /// Handle both poison-generating and UB-implying metadata on instructions.
   void handleMetadata(Type *Ty, AnyValue &V, Instruction &I) {
-    auto ExtractFirstIntOperand = [](const MDNode *Node) {
-      return mdconst::extract<ConstantInt>(Node->getOperand(0))->getZExtValue();
+    auto ExtractFirstIntOperand =
+        [](const MDNode *Node) -> const ConstantInt * {
+      assert(Node->getNumOperands() == 1 &&
+             "Verifier should reject malformed metadata.");
+      auto *CI = mdconst::extract<ConstantInt>(Node->getOperand(0));
+      assert(CI && "Verifier should reject non-integer metadata operand.");
+      return CI;
+    };
+    auto ExtractI64Operand = [&](const MDNode *Node) {
+      const ConstantInt *CI = ExtractFirstIntOperand(Node);
+      assert(CI->getType()->isIntegerTy(64) &&
+             "Verifier should reject non-i64 metadata operand.");
+      return CI->getZExtValue();
     };
 
     if (Ty->isIntOrIntVectorTy()) {
       if (MDNode *Ranges = I.getMetadata(LLVMContext::MD_range)) {
+        assert((isa<LoadInst>(I) || isa<CallInst>(I) || isa<InvokeInst>(I)) &&
+               "Verifier should reject !range on this instruction.");
         SmallVector<ConstantRange> RangeList;
         for (uint32_t I = 0; I < Ranges->getNumOperands(); I += 2) {
           RangeList.emplace_back(
@@ -1617,16 +1641,25 @@ public:
     }
     if (AttributeFuncs::isNoFPClassCompatibleType(Ty)) {
       if (const MDNode *NoFPClass = I.getMetadata(LLVMContext::MD_nofpclass)) {
+        assert(isa<LoadInst>(I) &&
+               "Verifier should reject !nofpclass on non-load instructions.");
         applyNoFPClassAttr(
-            V, static_cast<FPClassTest>(ExtractFirstIntOperand(NoFPClass)));
+            V, static_cast<FPClassTest>(
+                   ExtractFirstIntOperand(NoFPClass)->getZExtValue()));
       }
     }
     if (Ty->isPointerTy()) {
-      if (I.hasMetadata(LLVMContext::MD_nonnull))
+      if (I.hasMetadata(LLVMContext::MD_nonnull)) {
+        assert(isa<LoadInst>(I) &&
+               "Verifier should reject !nonnull on non-load instructions.");
         applyNonNullAttr(V, Ty->getPointerAddressSpace(), DL);
+      }
       // Unlike align attributes, !align is only defined for pointer types.
-      if (const MDNode *Alignment = I.getMetadata(LLVMContext::MD_align))
-        applyAlignAttr(V, Align(ExtractFirstIntOperand(Alignment)));
+      if (const MDNode *Alignment = I.getMetadata(LLVMContext::MD_align)) {
+        assert(isa<LoadInst>(I) &&
+               "Verifier should reject !align on non-load instructions.");
+        applyAlignAttr(V, Align(ExtractI64Operand(Alignment)));
+      }
     }
     if (I.hasMetadata(LLVMContext::MD_noundef) && violatesNoUndefAttr(V)) {
       reportImmediateUB() << "The value " << V
@@ -1637,7 +1670,9 @@ public:
       unsigned AS = Ty->getPointerAddressSpace();
       if (const MDNode *DereferenceableBytes =
               I.getMetadata(LLVMContext::MD_dereferenceable)) {
-        uint64_t Bytes = ExtractFirstIntOperand(DereferenceableBytes);
+        assert((isa<LoadInst>(I) || isa<IntToPtrInst>(I)) &&
+               "Verifier should reject !dereferenceable on this instruction.");
+        uint64_t Bytes = ExtractI64Operand(DereferenceableBytes);
         if (violatesDereferenceableBytesAttr(V, Bytes,
                                              /*OrNull=*/false, AS, Ctx))
           reportImmediateUB()
@@ -1645,7 +1680,10 @@ public:
               << Bytes << "} metadata.";
       } else if (const MDNode *DereferenceableOrNullBytes =
                      I.getMetadata(LLVMContext::MD_dereferenceable_or_null)) {
-        uint64_t Bytes = ExtractFirstIntOperand(DereferenceableOrNullBytes);
+        assert((isa<LoadInst>(I) || isa<IntToPtrInst>(I)) &&
+               "Verifier should reject !dereferenceable_or_null on this "
+               "instruction.");
+        uint64_t Bytes = ExtractI64Operand(DereferenceableOrNullBytes);
         if (violatesDereferenceableBytesAttr(V, Bytes,
                                              /*OrNull=*/true, AS, Ctx))
           reportImmediateUB()
