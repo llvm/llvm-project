@@ -11173,6 +11173,14 @@ def warn_lifetime_safety_field_origin_escape
     : Warning<"return value depends on the object referenced by %0, not on '*this'">,
       InGroup<LifetimeSafetyFieldOriginEscape>,
       DefaultIgnore;
+def warn_lifetime_safety_destructor_use_after_scope
+    : Warning<"%0 does not live long enough">,
+      InGroup<LifetimeSafetyDestructorUse>,
+      DefaultIgnore;
+def warn_lifetime_safety_destructor_use_after_invalidation
+    : Warning<"%0 is later invalidated">,
+      InGroup<LifetimeSafetyDestructorUse>,
+      DefaultIgnore;
 
 def note_lifetime_safety_owned_field_suggestion
     : Note<"if %0 is owned by the class, mark the method [[clang::lifetimebound]]">;
