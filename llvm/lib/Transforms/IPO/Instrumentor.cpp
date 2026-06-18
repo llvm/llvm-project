@@ -1792,15 +1792,6 @@ void NumericIO::init(InstrumentationConfig &IConf,
   IConf.addChoice(*this, IIRB.Ctx);
 }
 
-// CompareIO flag bitmask values.
-enum CompareFlags : uint64_t {
-  COMPARE_FLAG_NONE = 0,
-  COMPARE_SAMESIGN = 1 << 0,
-  COMPARE_FLAG_HAS_NO_NANS = 1 << 1,
-  COMPARE_FLAG_HAS_NO_INFS = 1 << 2,
-  COMPARE_FLAG_HAS_NO_SIGNED_ZEROS = 1 << 3,
-};
-
 Value *CompareIO::getOperandTypeId(Value &V, Type &Ty,
                                    InstrumentationConfig &IConf,
                                    InstrumentorIRBuilderTy &IIRB) {
