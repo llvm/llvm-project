@@ -1,7 +1,7 @@
 set(ORC_RT_HEADERS
     orc-rt-c/CoreTyspe.h
     orc-rt-c/Error.h
-    orc-rt-c/ExternC.h
+    orc-rt-c/Compiler.h
     orc-rt-c/WrapperFunction.h
     orc-rt-c/orc-rt.h
     orc-rt/AllocAction.h
@@ -16,6 +16,7 @@ set(ORC_RT_HEADERS
     orc-rt/LockedAccess.h
     orc-rt/Math.h
     orc-rt/MemoryFlags.h
+    orc-rt/NativeDylibManager.h
     orc-rt/QueueingTaskDispatcher.h
     orc-rt/RTTI.h
     orc-rt/ScopeExit.h
@@ -25,6 +26,9 @@ set(ORC_RT_HEADERS
     orc-rt/SimplePackedSerialization.h
     orc-rt/SPSAllocAction.h
     orc-rt/sps-ci/AllSPSCI.h
+    orc-rt/sps-ci/CallSPSCI.h
+    orc-rt/sps-ci/MemoryAccessSPSCI.h
+    orc-rt/sps-ci/NativeDylibManagerSPSCI.h
     orc-rt/sps-ci/SimpleNativeMemoryMapSPSCI.h
     orc-rt/SPSMemoryFlags.h
     orc-rt/SPSWrapperFunction.h

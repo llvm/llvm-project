@@ -868,6 +868,7 @@ protected:
 
       if (error.Success()) {
         AddRegexCommandToInterpreter();
+        result.SetStatus(eReturnStatusSuccessFinishNoResult);
       }
     }
     if (error.Fail()) {
@@ -1915,9 +1916,8 @@ public:
           auto report_error = [this, elem_counter,
                                counter](const char *err_txt) -> bool {
             m_args_error = Status::FromErrorStringWithFormatv(
-                "Element {0} of arguments "
-                "list element {1}: %s.",
-                elem_counter, counter, err_txt);
+                "element {} of arguments list element {}: {}", elem_counter,
+                counter, err_txt);
             return false;
           };
 
@@ -2499,6 +2499,8 @@ protected:
     if (m_options.m_class_name.empty() && m_options.m_funct_name.empty()) {
       m_interpreter.GetPythonCommandsFromIOHandler("     ", // Prompt
                                                    *this);  // IOHandlerDelegate
+      // Still gathering input; the IOHandler will set the final status.
+      result.SetStatus(eReturnStatusStarted);
       return;
     }
 

@@ -1,0 +1,15 @@
+static_library("ABI") {
+  output_name = "LLVMABI"
+  deps = [
+    "//llvm/include/llvm/Config:config",
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "FunctionInfo.cpp",
+    "IRTypeMapper.cpp",
+    "TargetInfo.cpp",
+    "Targets/BPF.cpp",
+    "Types.cpp",
+  ]
+}

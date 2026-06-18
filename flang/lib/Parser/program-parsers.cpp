@@ -183,12 +183,14 @@ constexpr auto limitedSpecificationPart{inContext("specification part"_en_US,
         implicitPart, many(limitedDeclarationConstruct)))};
 
 // R508 specification-construct ->
-//        derived-type-def | enum-def | generic-stmt | interface-block |
-//        parameter-stmt | procedure-declaration-stmt |
+//        derived-type-def | enum-def |  enumeration-type-def | generic-stmt |
+//        interface-block | parameter-stmt | procedure-declaration-stmt |
 //        other-specification-stmt | type-declaration-stmt
 TYPE_CONTEXT_PARSER("specification construct"_en_US,
     first(construct<SpecificationConstruct>(indirect(Parser<DerivedTypeDef>{})),
         construct<SpecificationConstruct>(indirect(Parser<EnumDef>{})),
+        construct<SpecificationConstruct>(
+            indirect(Parser<EnumerationTypeDef>{})),
         construct<SpecificationConstruct>(
             statement(indirect(Parser<GenericStmt>{}))),
         construct<SpecificationConstruct>(indirect(interfaceBlock)),
@@ -371,9 +373,11 @@ TYPE_PARSER(construct<InterfaceBlock>(statement(Parser<InterfaceStmt>{}),
     many(Parser<InterfaceSpecification>{}),
     statement(Parser<EndInterfaceStmt>{})))
 
-// R1502 interface-specification -> interface-body | procedure-stmt
+// R1502 interface-specification ->
+//         interface-body | procedure-stmt | compiler-directive
 TYPE_PARSER(construct<InterfaceSpecification>(Parser<InterfaceBody>{}) ||
-    construct<InterfaceSpecification>(statement(Parser<ProcedureStmt>{})))
+    construct<InterfaceSpecification>(statement(Parser<ProcedureStmt>{})) ||
+    construct<InterfaceSpecification>(indirect(compilerDirective)))
 
 // R1503 interface-stmt -> INTERFACE [generic-spec] | ABSTRACT INTERFACE
 TYPE_PARSER(construct<InterfaceStmt>("INTERFACE" >> maybe(genericSpec)) ||
@@ -553,7 +557,7 @@ TYPE_PARSER(construct<AltReturnSpec>(star >> label))
 
 // R1527 prefix-spec ->
 //         declaration-type-spec | ELEMENTAL | IMPURE | MODULE |
-//         NON_RECURSIVE | PURE | RECURSIVE |
+//         NON_RECURSIVE | PURE | RECURSIVE | SIMPLE |
 // (CUDA)  ATTRIBUTES ( (DEVICE | GLOBAL | GRID_GLOBAL | HOST)... ) |
 //         LAUNCH_BOUNDS(expr-list) | CLUSTER_DIMS(expr-list)
 TYPE_PARSER(withMessage(
@@ -570,6 +574,7 @@ TYPE_PARSER(first(construct<PrefixSpec>(declarationTypeSpec),
         construct<PrefixSpec::Non_Recursive>("NON_RECURSIVE"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Pure>("PURE"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Recursive>("RECURSIVE"_tok)),
+    construct<PrefixSpec>(construct<PrefixSpec::Simple>("SIMPLE"_tok)),
     extension<LanguageFeature::CUDA>(
         construct<PrefixSpec>(construct<PrefixSpec::Attributes>(
             localRecovery("expected valid ATTRIBUTES specification"_err_en_US,

@@ -433,6 +433,18 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_Unknown); // Not TT_CastRParen
   EXPECT_TOKEN(Tokens[10], tok::amp, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[11], tok::identifier, TT_StartOfName);
+
+  Tokens = annotate("template <typename T>\n"
+                    "concept C = requires(T t) { [](auto &c) {}(t); };");
+  ASSERT_EQ(Tokens.size(), 30u) << Tokens;
+  EXPECT_TOKEN(Tokens[18], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[19], tok::identifier, TT_StartOfName);
+
+  Tokens = annotate("template <typename T>\n"
+                    "concept C = requires(T t) { [](auto *c) {}(t); };");
+  ASSERT_EQ(Tokens.size(), 30u) << Tokens;
+  EXPECT_TOKEN(Tokens[18], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[19], tok::identifier, TT_StartOfName);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -3688,6 +3700,10 @@ TEST_F(TokenAnnotatorTest, StartOfName) {
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_StartOfName);
 
+  Tokens = annotate("export import foo;");
+  ASSERT_EQ(Tokens.size(), 5u);
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_Unknown); // Not StartOfName
+
   auto Style = getLLVMStyle();
   Style.StatementAttributeLikeMacros.push_back("emit");
   Tokens = annotate("emit foo = 0;", Style);
@@ -4035,6 +4051,12 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   Tokens = annotate("&(type){v}");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_BRACE_KIND(Tokens[4], BK_BracedInit);
+
+  Tokens = annotate("a = {x * x, x * x};");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[2], BK_BracedInit);
+  EXPECT_TOKEN(Tokens[4], tok::star, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[8], tok::star, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {

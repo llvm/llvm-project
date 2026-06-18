@@ -52,6 +52,38 @@ body:             |
 ...
 
 ---
+name:            fptosi_sat_f32_to_i32
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $sgpr0
+
+    ; GFX1150-LABEL: name: fptosi_sat_f32_to_i32
+    ; GFX1150: liveins: $sgpr0
+    ; GFX1150-NEXT: {{  $}}
+    ; GFX1150-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; GFX1150-NEXT: [[FPTOSI_SAT:%[0-9]+]]:sgpr(s32) = G_FPTOSI_SAT [[COPY]](s32)
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = G_FPTOSI_SAT %0(s32)
+...
+
+---
+name:            fptoui_sat_f32_to_u32
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $sgpr0
+
+    ; GFX1150-LABEL: name: fptoui_sat_f32_to_u32
+    ; GFX1150: liveins: $sgpr0
+    ; GFX1150-NEXT: {{  $}}
+    ; GFX1150-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; GFX1150-NEXT: [[FPTOUI_SAT:%[0-9]+]]:sgpr(s32) = G_FPTOUI_SAT [[COPY]](s32)
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = G_FPTOUI_SAT %0(s32)
+...
+
+---
 name:            sitofp_i32_to_f32
 legalized:       true
 body:             |
@@ -179,6 +211,46 @@ body:             |
     %1:_(s32) = COPY $sgpr0
     %0:_(s16) = G_TRUNC %1(s32)
     %2:_(s16) = G_FPTOUI %0(s16)
+...
+
+---
+name:            fptosi_sat_f64_to_i32
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+
+    ; GFX1150-LABEL: name: fptosi_sat_f64_to_i32
+    ; GFX1150: liveins: $sgpr0, $sgpr1
+    ; GFX1150-NEXT: {{  $}}
+    ; GFX1150-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
+    ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; GFX1150-NEXT: [[FPTOSI_SAT:%[0-9]+]]:vgpr(s32) = G_FPTOSI_SAT [[COPY1]](s64)
+    ; GFX1150-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[FPTOSI_SAT]]
+    %0:_(s64) = COPY $sgpr0_sgpr1
+    %1:_(s32) = G_FPTOSI_SAT %0(s64)
+...
+
+---
+name:            fptoui_sat_f16_to_u16
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $sgpr0
+
+    ; GFX1150-LABEL: name: fptoui_sat_f16_to_u16
+    ; GFX1150: liveins: $sgpr0
+    ; GFX1150-NEXT: {{  $}}
+    ; GFX1150-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; GFX1150-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX1150-NEXT: [[COPY1:%[0-9]+]]:vgpr(s16) = COPY [[TRUNC]](s16)
+    ; GFX1150-NEXT: [[FPTOUI_SAT:%[0-9]+]]:vgpr(s16) = G_FPTOUI_SAT [[COPY1]](s16)
+    ; GFX1150-NEXT: [[ANYEXT:%[0-9]+]]:vgpr(s32) = G_ANYEXT [[FPTOUI_SAT]](s16)
+    ; GFX1150-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[ANYEXT]]
+    ; GFX1150-NEXT: [[TRUNC1:%[0-9]+]]:sgpr(s16) = G_TRUNC [[AMDGPU_READANYLANE]](s32)
+    %1:_(s32) = COPY $sgpr0
+    %0:_(s16) = G_TRUNC %1(s32)
+    %2:_(s16) = G_FPTOUI_SAT %0(s16)
 ...
 
 ---

@@ -58,19 +58,28 @@ class ProfileSummaryInfo;
 class TargetLibraryInfo;
 class User;
 
+/// Enum to specify how shift operations should be evaluated in
+/// canEvaluateShifted.
+/// Lossy: Allows lossy transformations
+/// Signed: Requires lossless transformation, using ashr to restore for shl,
+///         or represents ashr handling for right shifts
+/// Unsigned: Requires lossless transformation, using lshr to restore for shl,
+///           or represents lshr handling for right shifts
+enum class ShiftSemantics { Lossy, Signed, Unsigned };
+
 class LLVM_LIBRARY_VISIBILITY InstCombinerImpl final
     : public InstCombiner,
       public InstVisitor<InstCombinerImpl, Instruction *> {
 public:
-  InstCombinerImpl(InstructionWorklist &Worklist, BuilderTy &Builder,
-                   Function &F, AAResults *AA, AssumptionCache &AC,
-                   TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
-                   DominatorTree &DT, OptimizationRemarkEmitter &ORE,
-                   BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
-                   ProfileSummaryInfo *PSI, const DataLayout &DL,
+  InstCombinerImpl(InstructionWorklist &Worklist, Function &F, AAResults *AA,
+                   AssumptionCache &AC, TargetLibraryInfo &TLI,
+                   TargetTransformInfo &TTI, DominatorTree &DT,
+                   OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
+                   BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
+                   const DataLayout &DL,
                    ReversePostOrderTraversal<BasicBlock *> &RPOT)
-      : InstCombiner(Worklist, Builder, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI,
-                     PSI, DL, RPOT) {}
+      : InstCombiner(Worklist, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI, PSI, DL,
+                     RPOT) {}
 
   ~InstCombinerImpl() override = default;
 
@@ -431,6 +440,11 @@ private:
   Value *matchSelectFromAndOr(Value *A, Value *B, Value *C, Value *D,
                               bool InvertFalseVal = false);
   Value *getSelectCondition(Value *A, Value *B, bool ABIsTheSame);
+
+  bool canEvaluateShifted(Value *V, unsigned NumBits, bool IsLeftShift,
+                          ShiftSemantics Semantics, Instruction *CxtI);
+  Value *getShiftedValue(Value *V, unsigned NumBits, bool IsLeftShift,
+                         ShiftSemantics Semantics);
 
   Instruction *foldLShrOverflowBit(BinaryOperator &I);
   Instruction *foldExtractOfOverflowIntrinsic(ExtractValueInst &EV);
@@ -808,6 +822,9 @@ public:
   Value *foldSelectWithConstOpToBinOp(ICmpInst *Cmp, Value *TrueVal,
                                       Value *FalseVal);
   Instruction *foldSelectValueEquivalence(SelectInst &SI, CmpInst &CI);
+
+  Instruction *foldExtractionOfVectorDeinterleave(ZExtInst &RootZExt);
+
   bool replaceInInstruction(Value *V, Value *Old, Value *New,
                             unsigned Depth = 0);
 

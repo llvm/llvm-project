@@ -46,8 +46,7 @@ struct __copy_if {
     requires indirectly_copyable<_Iter, _OutIter>
   _LIBCPP_HIDE_FROM_ABI constexpr copy_if_result<_Iter, _OutIter>
   operator()(_Iter __first, _Sent __last, _OutIter __result, _Pred __pred, _Proj __proj = {}) const {
-    auto __res = std::__copy_if(std::move(__first), std::move(__last), std::move(__result), __pred, __proj);
-    return {std::move(__res.first), std::move(__res.second)};
+    return std::__copy_if(std::move(__first), std::move(__last), std::move(__result), __pred, __proj);
   }
 
   template <input_range _Range,
@@ -57,8 +56,7 @@ struct __copy_if {
     requires indirectly_copyable<iterator_t<_Range>, _OutIter>
   _LIBCPP_HIDE_FROM_ABI constexpr copy_if_result<borrowed_iterator_t<_Range>, _OutIter>
   operator()(_Range&& __r, _OutIter __result, _Pred __pred, _Proj __proj = {}) const {
-    auto __res = std::__copy_if(ranges::begin(__r), ranges::end(__r), std::move(__result), __pred, __proj);
-    return {std::move(__res.first), std::move(__res.second)};
+    return std::__copy_if(ranges::begin(__r), ranges::end(__r), std::move(__result), __pred, __proj);
   }
 };
 

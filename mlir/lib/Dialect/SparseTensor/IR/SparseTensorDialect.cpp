@@ -513,6 +513,15 @@ SparseTensorEncodingAttr::translateShape(ArrayRef<int64_t> srcShape,
   AffineMap transMap =
       dir == CrdTransDirectionKind::dim2lvl ? getDimToLvl() : getLvlToDim();
 
+  // Check if transMap is valid. There are cases where the lvlToDim map is
+  // uninitialized due to the format used, e.g. ELL. This is visible as
+  // inferring lvlToDim (see inferLvlToDim function below) may return an
+  // uninitialized affine map. Fallback to dynamic shapes.
+  if (!transMap) {
+    ret.resize(rank, ShapedType::kDynamic);
+    return ret;
+  }
+
   SmallVector<AffineExpr> dimRep;
   dimRep.reserve(srcShape.size());
   for (int64_t sz : srcShape) {
@@ -2624,12 +2633,12 @@ void IterateOp::getSuccessorRegions(RegionBranchPoint point,
   // or back into the operation itself.
   regions.push_back(RegionSuccessor(&getRegion()));
   // It is possible for loop not to enter the body.
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange IterateOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getResults())
-                              : ValueRange(getRegionIterArgs());
+  return successor.isOperation() ? ValueRange(getResults())
+                                 : ValueRange(getRegionIterArgs());
 }
 
 void CoIterateOp::build(OpBuilder &builder, OperationState &odsState,

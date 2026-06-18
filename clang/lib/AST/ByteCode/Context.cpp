@@ -161,6 +161,22 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   return true;
 }
 
+bool Context::evaluateDestruction(State &Parent, const VarDecl *VD,
+                                  APValue Value) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  auto Res = C.interpretDestructor(VD, Value);
+
+  if (Res.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return false;
+  }
+
+  return true;
+}
+
 template <typename ResultT>
 bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
                                  const Expr *PtrExpr, ResultT &Result) {
@@ -345,7 +361,7 @@ Context::tryEvaluateObjectSize(State &Parent, const Expr *E, unsigned Kind) {
 
   std::optional<uint64_t> Result;
 
-  auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+  auto PtrRes = C.interpretAsLValuePointer(E, [&](const Pointer &Ptr) {
     const Descriptor *DeclDesc = Ptr.getDeclDesc();
     if (!DeclDesc)
       return false;

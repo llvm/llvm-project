@@ -13,13 +13,10 @@
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace clang;
@@ -31,13 +28,14 @@ public:
   UnsafeBufferUsageTUSummaryExtractor(TUSummaryBuilder &Builder)
       : TUSummaryExtractor(Builder) {}
 
-  Expected<std::unique_ptr<UnsafeBufferUsageEntitySummary>>
+  /// \return a non-null unique pointer to a UnsafeBufferUsageEntitySummary
+  std::unique_ptr<UnsafeBufferUsageEntitySummary>
   extractEntitySummary(const NamedDecl *Contributor, ASTContext &Ctx);
   void HandleTranslationUnit(ASTContext &Ctx) override;
 };
 } // namespace clang::ssaf
 
-Expected<std::unique_ptr<UnsafeBufferUsageEntitySummary>>
+std::unique_ptr<UnsafeBufferUsageEntitySummary>
 clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
     const NamedDecl *Contributor, ASTContext &Ctx) {
   std::set<const Expr *> UnsafePointers;
@@ -51,9 +49,7 @@ clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
 
   for (const Expr *Ptr : UnsafePointers) {
     Expected<EntityPointerLevelSet> Translation =
-        translateEntityPointerLevel(Ptr, Ctx, [this](const EntityName &EN) {
-          return SummaryBuilder.addEntity(EN);
-        });
+        translateEntityPointerLevel(Ptr, Ctx, *this);
 
     if (Translation) {
       // Filter out those temporary invalid EntityPointerLevels associated
@@ -65,7 +61,7 @@ clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
       Results.insert(FilteredTranslation.begin(), FilteredTranslation.end());
       continue;
     }
-    return Translation.takeError();
+    logWarningFromError(Translation.takeError());
   }
 
   return std::make_unique<UnsafeBufferUsageEntitySummary>(
@@ -80,29 +76,29 @@ void clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
   for (auto *CD : Contributors) {
     auto EntitySummary = extractEntitySummary(CD, Ctx);
 
-    if (!EntitySummary)
-      llvm::reportFatalInternalError(EntitySummary.takeError());
-    assert(*EntitySummary);
-    if ((*EntitySummary)->empty())
+    assert(EntitySummary);
+    if (EntitySummary->empty())
       continue;
 
-    auto ContributorName = getEntityName(CD);
+    auto ContributorId = addEntity(CD);
 
-    if (!ContributorName)
-      llvm::reportFatalInternalError(makeEntityNameErr(Ctx, CD));
+    if (!ContributorId) {
+      logWarningFromError(makeEntityNameErr(Ctx, CD));
+      continue;
+    }
 
     [[maybe_unused]] auto [Ignored, InsertionSucceeded] =
-        SummaryBuilder.addSummary(SummaryBuilder.addEntity(*ContributorName),
-                                  std::move(*EntitySummary));
+        SummaryBuilder.addSummary(*ContributorId, std::move(EntitySummary));
 
     assert(InsertionSucceeded && "duplicated contributor extraction");
   }
 }
-
+namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int UnsafeBufferUsageTUSummaryExtractorAnchorSource = 0;
+volatile int UnsafeBufferUsageExtractorAnchorSource = 0;
+} // namespace clang::ssaf
 
 static clang::ssaf::TUSummaryExtractorRegistry::Add<
-    ssaf::UnsafeBufferUsageTUSummaryExtractor>
+    UnsafeBufferUsageTUSummaryExtractor>
     RegisterExtractor(UnsafeBufferUsageEntitySummary::Name,
-                      "The TUSummaryExtractor for unsafe buffer pointers");
+                      "Extract unsafe buffer pointers");

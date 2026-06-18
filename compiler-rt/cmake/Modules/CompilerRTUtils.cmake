@@ -392,7 +392,7 @@ macro(construct_compiler_rt_default_triple)
 
   if(CMAKE_C_COMPILER_ID MATCHES "Clang")
     set(option_prefix "")
-    if (CMAKE_C_SIMULATE_ID MATCHES "MSVC")
+    if (CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "MSVC")
       set(option_prefix "/clang:")
     endif()
     set(print_target_triple ${CMAKE_C_COMPILER} ${option_prefix}--target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE} ${option_prefix}-print-target-triple)
@@ -419,12 +419,18 @@ macro(construct_compiler_rt_default_triple)
     set(COMPILER_RT_DEFAULT_TARGET_ARCH "i386")
   endif()
 
+  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgpu|amdgcn")
+    set(COMPILER_RT_TARGET_AMDGPU TRUE)
+  else()
+    set(COMPILER_RT_TARGET_AMDGPU FALSE)
+  endif()
+
   # If we are directly targeting a GPU we need to check that the compiler is
   # compatible and pass some default arguments.
   if(COMPILER_RT_DEFAULT_TARGET_ONLY)
 
     # Pass the necessary flags to make flag detection work.
-    if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+    if(COMPILER_RT_TARGET_AMDGPU)
       set(COMPILER_RT_GPU_BUILD ON)
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "nvptx|spirv64")
       set(COMPILER_RT_GPU_BUILD ON)
