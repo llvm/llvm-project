@@ -1822,6 +1822,7 @@ cc_library(
         ":lex",
         ":options",
         ":parse",
+        ":scalable_static_analysis_frontend_options",
         ":sema",
         ":serialization",
         ":static_analyzer_core_options",
@@ -2135,6 +2136,7 @@ cc_library(
         ":options",
         ":scalable_static_analysis_core",
         ":scalable_static_analysis_frontend",
+        ":scalable_static_analysis_frontend_options",
         ":scalable_static_analysis_source_transformation",
         ":static_analyzer_frontend",
         "//llvm:Option",
@@ -2713,16 +2715,30 @@ cc_library(
 )
 
 cc_library(
+    name = "scalable_static_analysis_frontend_options",
+    hdrs = [
+        "include/clang/ScalableStaticAnalysisFramework/Frontend/SSAFOptions.h",
+    ],
+    deps = [
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "scalable_static_analysis_frontend",
     srcs = glob([
         "lib/ScalableStaticAnalysisFramework/Frontend/**/*.cpp",
     ]),
-    hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Frontend/**/*.h"]),
+    hdrs = glob(
+        ["include/clang/ScalableStaticAnalysisFramework/Frontend/**/*.h"],
+        exclude = ["include/clang/ScalableStaticAnalysisFramework/Frontend/SSAFOptions.h"],
+    ),
     deps = [
         ":ast",
         ":basic",
         ":frontend",
         ":scalable_static_analysis_core",
+        ":scalable_static_analysis_frontend_options",
         ":sema",
         "//llvm:Support",
         "//llvm:TargetParser",
