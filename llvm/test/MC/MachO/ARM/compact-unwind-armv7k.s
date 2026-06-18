@@ -7,6 +7,9 @@
         .align        2
         .code        16
 
+@ On armv7k, a compact unwind entry of 0x04000000 indicates
+@ "fall back on DWARF unwind"
+
 @ CHECK-LABEL: start: {{.*}} _test_r4_r5_r6
 @ COMPACT: compact encoding: 0x01000007
 @ DWARF:   compact encoding: 0x04000000
