@@ -30,7 +30,7 @@
 # CHECK-NEXT:  1      4     1.00                  U     autib	x0, x1
 # CHECK-NEXT:  1      4     1.00                  U     pacdb	x0, x1
 # CHECK-NEXT:  1      4     1.00                  U     autdb	x0, x1
-# CHECK-NEXT:  1      4     1.00                        pacga	x0, x1, x2
+# CHECK-NEXT:  1      5     1.00                        pacga	x0, x1, x2
 # CHECK-NEXT:  1      4     1.00                  U     paciza	x0
 # CHECK-NEXT:  1      4     1.00                  U     autiza	x0
 # CHECK-NEXT:  1      4     1.00                  U     pacdza	x0

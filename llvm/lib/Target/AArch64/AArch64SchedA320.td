@@ -275,6 +275,8 @@ def : InstRW<[WriteIS], (instrs RBITWr, RBITXr)>;
 
 // Pointer Authentication Instructions (v8.3 PAC)
 // -----------------------------------------------------------------------------
+// Compute pointer authentication code, using generic key.
+def : InstRW<[CortexA320Write<5, CortexA320UnitPAC>], (instrs PACGA)>;
 
 // Authenticate data address
 // Authenticate instruction address
@@ -300,12 +302,20 @@ def : InstRW<[CortexA320Write<4, CortexA320UnitPAC>], (instrs XPACD, XPACI, XPAC
 //---
 def : InstRW<[CortexA320WriteVLD1SI,CortexA320WriteLDP1], (instregex "LDPS?Wi")>;
 def : InstRW<[CortexA320WriteVLD1,CortexA320WriteLDP1], (instregex "LDPSi")>;
-def : InstRW<[CortexA320WriteVLD1,CortexA320WriteLDP2], (instregex "LDP(X|D)i")>;
-def : InstRW<[CortexA320WriteVLD1,CortexA320WriteLDP4], (instregex "LDPQi")>;
+def : InstRW<[CortexA320WriteVLD1], (instregex "LDPDi")>;
+def : InstRW<[CortexA320WriteVLD1,CortexA320WriteVLD1], (instregex "LDPQi")>;
 def : InstRW<[WriteAdr, CortexA320WriteVLD1SI,CortexA320WriteLDP1], (instregex "LDPS?W(pre|post)")>;
 def : InstRW<[WriteAdr, CortexA320WriteVLD1,CortexA320WriteLDP1], (instregex "LDPS(pre|post)")>;
-def : InstRW<[WriteAdr, CortexA320WriteVLD1,CortexA320WriteLDP2], (instregex "LDP(X|D)(pre|post)")>;
-def : InstRW<[WriteAdr, CortexA320WriteVLD1,CortexA320WriteLDP4], (instregex "LDPQ(pre|post)")>;
+def : InstRW<[WriteAdr, CortexA320WriteVLD1], (instregex "LDPD(pre|post)")>;
+def : InstRW<[WriteAdr, CortexA320WriteVLD1,CortexA320WriteVLD1], (instregex "LDPQ(pre|post)")>;
+// Scalar FP loads
+//---
+def : InstRW<[CortexA320WriteVLD1], (instrs LDRSl, LDRDl, LDRSui, LDRDui,
+                                     LDURSi, LDURDi, LDRSroW, LDRSroX,
+                                     LDRDroW, LDRDroX)>;
+def : InstRW<[WriteAdr, CortexA320WriteVLD1], (instrs LDRSpost, LDRDpost,
+                                               LDRSpre, LDRDpre)>;
+
 def : InstRW<[WriteI], (instrs COPY)>;
 //---
 // Vector Loads - 128-bit per cycle
@@ -448,6 +458,7 @@ def : InstRW<[CortexA320WriteScalarFSqrtDP], (instrs FSQRTDr)>;
 def : InstRW<[CortexA320WriteFSqrtHP], (instregex "^.*SQRT.*16$")>;
 def : InstRW<[CortexA320WriteFSqrtSP], (instregex "^.*SQRT.*32$")>;
 def : InstRW<[CortexA320WriteFSqrtDP], (instregex "^.*SQRT.*64$")>;
+def : InstRW<[WriteFCopy], (instrs FMOVHr, FMOVSr, FMOVDr)>;
 
 def : InstRW<[CortexA320WriteFPALU_F3], (instrs FCSELHrrr, FCSELSrrr, FCSELDrrr)>;
 
