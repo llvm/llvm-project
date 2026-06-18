@@ -361,13 +361,6 @@ public:
   static kmp_trait_context *parse_from_spec(kmp_str_ref spec,
                                             const char *dbg_name = nullptr);
 
-  // Parse only a single device number from the spec.
-  // This is useful for backward compatibility with legacy code.
-  // If dbg_name is provided, it will be used in error messages to identify the
-  // source of the device number.
-  static int parse_single_device(kmp_str_ref spec, int device_num_limit,
-                                 const char *dbg_name = nullptr);
-
   void add_clause(kmp_trait_clause *clause) {
     assert(clause);
     clauses.push_back(clause);
