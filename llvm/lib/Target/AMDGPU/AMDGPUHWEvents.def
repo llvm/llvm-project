@@ -19,9 +19,7 @@
 #define AMDGPU_LAST_HW_EVENT(X)
 #endif
 
-// TODO: VMEM_ACCESS should be broken up and be target-independent, not interpreted differently
-// depending on the target.
-AMDGPU_HW_EVENT(VMEM_ACCESS,                0)  /* vmem read & write (pre-gfx10), vmem read (gfx10+) */
+AMDGPU_HW_EVENT(VMEM_READ_ACCESS,           0)  /* vmem read */
 AMDGPU_HW_EVENT(VMEM_SAMPLER_READ_ACCESS,   1)  /* vmem SAMPLER read (gfx12+ only) */
 AMDGPU_HW_EVENT(VMEM_BVH_READ_ACCESS,       2)  /* vmem BVH read (gfx12+ only) */
 AMDGPU_HW_EVENT(GLOBAL_INV_ACCESS,          3)  /* GLOBAL_INV (gfx12+ only) */

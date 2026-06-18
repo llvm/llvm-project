@@ -249,7 +249,7 @@ public:
                                 const WaitcntBrackets &ScoreBrackets) = 0;
 
   // Returns the set of HWEvents that corresponds to counter \p T.
-  virtual const HWEvents &getWaitEvents(AMDGPU::InstCounterType T) const = 0;
+  virtual HWEvents getWaitEvents(AMDGPU::InstCounterType T) const = 0;
 
   /// \returns the counter that corresponds to event \p E.
   AMDGPU::InstCounterType getCounterFromEvent(HWEvents E) const {
@@ -274,7 +274,7 @@ public:
 class WaitcntGeneratorPreGFX12 final : public WaitcntGenerator {
   static constexpr const HWEvents
       WaitEventMaskForInstPreGFX12[AMDGPU::NUM_INST_CNTS] = {
-          HWEvents::VMEM_ACCESS | HWEvents::VMEM_SAMPLER_READ_ACCESS |
+          HWEvents::VMEM_READ_ACCESS | HWEvents::VMEM_SAMPLER_READ_ACCESS |
               HWEvents::VMEM_BVH_READ_ACCESS,
           HWEvents::SMEM_ACCESS | HWEvents::LDS_ACCESS | HWEvents::GDS_ACCESS |
               HWEvents::SQ_MESSAGE,
@@ -303,8 +303,11 @@ public:
                         AMDGPU::Waitcnt Wait,
                         const WaitcntBrackets &ScoreBrackets) override;
 
-  const HWEvents &getWaitEvents(AMDGPU::InstCounterType T) const override {
-    return WaitEventMaskForInstPreGFX12[T];
+  HWEvents getWaitEvents(AMDGPU::InstCounterType T) const override {
+    HWEvents EVs = WaitEventMaskForInstPreGFX12[T];
+    if (T == AMDGPU::LOAD_CNT && !ST.hasVscnt())
+      EVs |= WaitEventMaskForInstPreGFX12[AMDGPU::STORE_CNT];
+    return EVs;
   }
 
   AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
@@ -315,7 +318,7 @@ protected:
   bool IsExpertMode;
   static constexpr const HWEvents
       WaitEventMaskForInstGFX12Plus[AMDGPU::NUM_INST_CNTS] = {
-          HWEvents::VMEM_ACCESS | HWEvents::GLOBAL_INV_ACCESS,
+          HWEvents::VMEM_READ_ACCESS | HWEvents::GLOBAL_INV_ACCESS,
           HWEvents::LDS_ACCESS | HWEvents::GDS_ACCESS,
           HWEvents::EXP_GPR_LOCK | HWEvents::GDS_GPR_LOCK |
               HWEvents::VMW_GPR_LOCK | HWEvents::EXP_PARAM_ACCESS |
@@ -352,7 +355,7 @@ public:
                         AMDGPU::Waitcnt Wait,
                         const WaitcntBrackets &ScoreBrackets) override;
 
-  const HWEvents &getWaitEvents(AMDGPU::InstCounterType T) const override {
+  HWEvents getWaitEvents(AMDGPU::InstCounterType T) const override {
     return WaitEventMaskForInstGFX12Plus[T];
   }
 
@@ -476,7 +479,7 @@ public:
   bool removeRedundantSoftXcnts(MachineBasicBlock &Block);
   void setSchedulingMode(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                          bool ExpertMode) const;
-  const HWEvents &getWaitEvents(AMDGPU::InstCounterType T) const {
+  HWEvents getWaitEvents(AMDGPU::InstCounterType T) const {
     return WCG->getWaitEvents(T);
   }
   AMDGPU::InstCounterType getCounterFromEvent(HWEvents E) const {
@@ -1539,10 +1542,14 @@ bool WaitcntBrackets::counterOutOfOrder(AMDGPU::InstCounterType T) const {
       (T == AMDGPU::X_CNT && hasPendingEvent(HWEvents::SMEM_GROUP)))
     return true;
 
-  // GLOBAL_INV completes in-order with other LOAD_CNT events (VMEM_ACCESS),
-  // so having GLOBAL_INV_ACCESS mixed with other LOAD_CNT events doesn't cause
-  // out-of-order completion.
   if (T == AMDGPU::LOAD_CNT) {
+
+    // On targets without VScnt, LOAD_CNT includes all of STORE_CNT as well.
+    // All these events use one counter and do not go out of order with respect
+    // to each other.
+    if (!Context->ST.hasVscnt())
+      return false;
+
     HWEvents Events = PendingEvents & Context->getWaitEvents(T);
     // Remove GLOBAL_INV_ACCESS from the event mask before checking for mixed
     // events
@@ -2279,7 +2286,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     // GLOBAL_INV increments loadcnt but doesn't write to VGPRs, so there's
     // no need to wait for it at function boundaries.
     if (ST.hasExtendedWaitCounts() &&
-        !ScoreBrackets.hasPendingEvent(HWEvents::VMEM_ACCESS))
+        !ScoreBrackets.hasPendingEvent(HWEvents::VMEM_READ_ACCESS))
       AllZeroWait.set(AMDGPU::LOAD_CNT, ~0u);
     Wait = AllZeroWait;
     break;
