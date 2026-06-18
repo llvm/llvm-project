@@ -2775,3 +2775,39 @@ define <2 x i16> @test_pasubu_v2i16(<2 x i16> %a, <2 x i16> %b) {
   %res = call <2 x i16> @llvm.riscv.pasubu.v2i16(<2 x i16> %a, <2 x i16> %b)
   ret <2 x i16> %res
 }
+
+define <4 x i8> @test_pabd_v4i8(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: test_pabd_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pabd.b a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <4 x i8> @llvm.riscv.pabd.v4i8(<4 x i8> %a, <4 x i8> %b)
+  ret <4 x i8> %res
+}
+
+define <2 x i16> @test_pabd_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_pabd_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pabd.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pabd.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
+}
+
+define <4 x i8> @test_pabdu_v4i8(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: test_pabdu_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pabdu.b a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <4 x i8> @llvm.riscv.pabdu.v4i8(<4 x i8> %a, <4 x i8> %b)
+  ret <4 x i8> %res
+}
+
+define <2 x i16> @test_pabdu_v2i16(<2 x i16> %a, <2 x i16> %b) {
+; CHECK-LABEL: test_pabdu_v2i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pabdu.h a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.riscv.pabdu.v2i16(<2 x i16> %a, <2 x i16> %b)
+  ret <2 x i16> %res
+}
