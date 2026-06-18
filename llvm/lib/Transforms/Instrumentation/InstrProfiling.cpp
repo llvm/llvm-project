@@ -586,7 +586,7 @@ private:
     if (MaxProm == 0)
       return false;
 
-    [[maybe_unused]] auto Ptr = LoopToCandidates.getPointerIntoBucketsArray();
+    [[maybe_unused]] auto *Ptr = LoopToCandidates.getPointerIntoBucketsArray();
     unsigned Promoted = 0;
     for (auto &Cand : LoopToCandidates[&L]) {
       SmallVector<PHINode *, 4> NewPHIs;
