@@ -639,6 +639,12 @@ bool SourceLanguage::IsCPlusPlus() const {
   return name == llvm::dwarf::DW_LNAME_C_plus_plus;
 }
 
+void llvm::format_provider<lldb::LanguageType>::format(
+    const lldb::LanguageType &language, llvm::raw_ostream &OS,
+    llvm::StringRef Options) {
+  OS << Language::GetNameForLanguageType(language);
+}
+
 // BEGIN SWIFT
 // Implement LanguageCPlusPlus::GetParentNameIfClosure and upstream this.
 // rdar://152321823
