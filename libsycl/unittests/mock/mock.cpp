@@ -95,6 +95,10 @@ ol_result_t olLaunchKernel(ol_queue_handle_t Queue, ol_device_handle_t Device,
                                                   NumArgs, ArgPtrs, ArgSizes);
 }
 
+ol_result_t olSyncEvent(ol_event_handle_t Event) {
+  return mock::getMockLiboffload().olSyncEvent(Event);
+}
+
 ol_result_t olCreateEvent(ol_queue_handle_t Queue, ol_event_flags_t Flags,
                           ol_event_handle_t *Event) {
   return mock::getMockLiboffload().olCreateEvent(Queue, Flags, Event);

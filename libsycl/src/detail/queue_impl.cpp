@@ -10,6 +10,7 @@
 
 #include <detail/device_impl.hpp>
 #include <detail/event_impl.hpp>
+#include <detail/global_objects.hpp>
 #include <detail/program_manager.hpp>
 
 #include <algorithm>
@@ -66,6 +67,13 @@ backend QueueImpl::getBackend() const noexcept { return MDevice.getBackend(); }
 
 void QueueImpl::wait() { callAndThrow(olSyncQueue, MOffloadQueue); }
 
+void QueueImpl::waitAndThrow() {
+  wait();
+  throwAsynchronous();
+}
+
+void QueueImpl::throwAsynchronous() { flushAsyncExceptions(); }
+
 static bool checkEventsPlatformMatch(std::vector<EventImplPtr> &Events,
                                      const PlatformImpl &QueuePlatform) {
   // liboffload limitation to olWaitEvents. We can't do any extra handling for
@@ -86,18 +94,14 @@ void QueueImpl::setKernelParameters(std::vector<EventImplPtr> &&Events,
         "libsycl doesn't support cross-context/platform event dependencies "
         "now.");
 
-  // TODO: this conversion and storing of only offload events is possible only
-  // while we don't have host tasks (or features based on host tasks, like
-  // streams). With them - it is very likely we should copy EventImplPtr
-  // (shared_ptr) and keep it here. Although it may differ if host tasks will be
-  // implemented on offload level (no data now).
-  assert(MCurrentSubmitInfo.DepEvents.empty() &&
-         "Kernel submission must clean up dependencies.");
-  MCurrentSubmitInfo.DepEvents.reserve(Events.size());
-  for (auto &Event : Events) {
-    assert(Event && "Event impl object can't be nullptr");
-    MCurrentSubmitInfo.DepEvents.push_back(Event->getHandle());
-  }
+  // Clean up previous kernel submit data to prepare structures for submission.
+  // It is done in the beginning of new submission to ensure that if previous
+  // submit throws we still can submit new kernel properly.
+  MCurrentSubmitInfo.DepEvents.clear();
+  MCurrentSubmitInfo.Range = {};
+
+  MCurrentSubmitInfo.DepEvents =
+      std::forward<std::vector<EventImplPtr>>(Events);
   setKernelLaunchArgs(Range, MCurrentSubmitInfo.Range);
 }
 
@@ -115,9 +119,20 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
   // must be disabled for in-order queues. Once host tasks are added - cross
   // context dependencies should be enabled and checked as well.
   if (!MCurrentSubmitInfo.DepEvents.empty()) {
-    callAndThrow(olWaitEvents, MOffloadQueue,
-                 MCurrentSubmitInfo.DepEvents.data(),
-                 MCurrentSubmitInfo.DepEvents.size());
+    std::vector<ol_event_handle_t> DepHandles;
+    DepHandles.reserve(MCurrentSubmitInfo.DepEvents.size());
+    for (const auto &Event : MCurrentSubmitInfo.DepEvents) {
+      // NULL handle stands for only 1 case now - default constructed event that
+      // is immediately ready. Ignore it.
+      // TODO: host_task implementation will require to handle NULL handles
+      // differently.
+      if (Event->getHandle())
+        DepHandles.push_back(Event->getHandle());
+    }
+    if (!DepHandles.empty()) {
+      callAndThrow(olWaitEvents, MOffloadQueue, DepHandles.data(),
+                   DepHandles.size());
+    }
   }
 
   assert(ArgData && "At least one argument must exist");
@@ -128,10 +143,6 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
   auto Result =
       olLaunchKernel(MOffloadQueue, MDevice.getOLHandle(), Kernel,
                      &MCurrentSubmitInfo.Range, NULL, 1, ArgPtrs, ArgSizes);
-  // Clean up current kernel submit data to prepare structures for next
-  // submission.
-  MCurrentSubmitInfo.DepEvents.clear();
-  MCurrentSubmitInfo.Range = {};
   if (isFailed(Result))
     throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
                           std::string("Kernel submission (") +
@@ -143,7 +154,8 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
   callAndThrow(olCreateEvent, MOffloadQueue, Flags, &NewEvent);
 
   MCurrentSubmitInfo.LastEvent =
-      EventImpl::createEventWithHandle(NewEvent, MDevice.getPlatformImpl());
+      EventImpl::createEventWithHandle(NewEvent, MDevice.getPlatformImpl(),
+                                       std::move(MCurrentSubmitInfo.DepEvents));
 }
 
 } // namespace detail
