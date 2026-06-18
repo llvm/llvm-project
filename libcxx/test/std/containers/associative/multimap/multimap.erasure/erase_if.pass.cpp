@@ -75,7 +75,7 @@ TEST_CONSTEXPR_CXX26 void test() {
 }
 
 TEST_CONSTEXPR_CXX26
-bool test_erase() {
+bool test_all() {
   test<std::multimap<int, int>>();
   test<std::multimap<int, int, std::less<int>, min_allocator<std::pair<const int, int>>>>();
   test<std::multimap<int, int, std::less<int>, test_allocator<std::pair<const int, int>>>>();
@@ -85,8 +85,9 @@ bool test_erase() {
 
   return true;
 }
+
 int main(int, char**) {
-  assert(test_erase());
+  test_all();
 
 #if TEST_STD_VER >= 26
 #  ifndef TEST_COMPILER_GCC
@@ -94,7 +95,7 @@ int main(int, char**) {
   // clang-format off
   // __tree:116:23: error: ''result_decl' not supported by dump_expr<expression error>' is not a constant expression
   // clang-format on
-  static_assert(test_erase());
+  static_assert(test_all());
 #  endif
 #endif
 
