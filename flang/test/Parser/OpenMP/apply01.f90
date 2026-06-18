@@ -52,7 +52,7 @@ end
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Sizes -> Scalar -> Integer -> Expr = '2_4'
 !PARSE-TREE: | | LiteralConstant -> IntLiteralConstant = '2'
 !PARSE-TREE: | OmpClause -> Apply -> OmpApplyClause
-!PARSE-TREE: | | OmpLoopModifier
+!PARSE-TREE: | | Modifier -> OmpLoopModifier
 !PARSE-TREE: | | | llvm::omp::LoopModifier = grid
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = reverse
@@ -79,14 +79,14 @@ end
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Sizes -> Scalar -> Integer -> Expr = '2_4'
 !PARSE-TREE: | | LiteralConstant -> IntLiteralConstant = '2'
 !PARSE-TREE: | OmpClause -> Apply -> OmpApplyClause
-!PARSE-TREE: | | OmpLoopModifier
+!PARSE-TREE: | | Modifier -> OmpLoopModifier
 !PARSE-TREE: | | | llvm::omp::LoopModifier = intratile
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = unroll
 !PARSE-TREE: | | | OmpClauseList ->
 !PARSE-TREE: | | | Flags = {}
 !PARSE-TREE: | OmpClause -> Apply -> OmpApplyClause
-!PARSE-TREE: | | OmpLoopModifier
+!PARSE-TREE: | | Modifier -> OmpLoopModifier
 !PARSE-TREE: | | | llvm::omp::LoopModifier = grid
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = reverse
@@ -120,14 +120,14 @@ end
 !PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = fuse
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Apply -> OmpApplyClause
-!PARSE-TREE: | | OmpLoopModifier
+!PARSE-TREE: | | Modifier -> OmpLoopModifier
 !PARSE-TREE: | | | llvm::omp::LoopModifier = fused
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = tile
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> Sizes -> Scalar -> Integer -> Expr = '2_4'
 !PARSE-TREE: | | | | LiteralConstant -> IntLiteralConstant = '2'
 !PARSE-TREE: | | | OmpClause -> Apply -> OmpApplyClause
-!PARSE-TREE: | | | | OmpLoopModifier
+!PARSE-TREE: | | | | Modifier -> OmpLoopModifier
 !PARSE-TREE: | | | | | llvm::omp::LoopModifier = grid
 !PARSE-TREE: | | | | OmpDirectiveSpecification
 !PARSE-TREE: | | | | | OmpDirectiveName -> llvm::omp::Directive = reverse

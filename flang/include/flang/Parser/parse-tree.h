@@ -4156,6 +4156,24 @@ struct OmpLinearModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpLinearModifier, Value);
 };
 
+// Ref: [6.0:372-373]
+//
+// loop-modifier ->
+//    FLATTENED |
+//    FUSED | GRID | IDENTITY |
+//    INTERCHANGED |
+//    INTRATILE | OFFSETS |
+//    REVERSED | SPLIT |
+//    UNROLLED
+//    [( ScalarIntConstantExpr-list )]
+struct OmpLoopModifier {
+  TUPLE_CLASS_BOILERPLATE(OmpLoopModifier);
+  std::tuple<llvm::omp::LoopModifier,
+      std::optional<std::list<ScalarIntConstantExpr>>>
+      t;
+  CharBlock source;
+};
+
 // Ref: [5.1:100-104], [5.2:277], [6.0:452-453]
 //
 // lower-bound ->
@@ -4359,24 +4377,6 @@ struct OmpxHoldModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpxHoldModifier, Value);
 };
 
-// Ref: [6.0:372-373]
-//
-// loop-modifier ->
-//    FLATTENED |
-//    FUSED | GRID | IDENTITY |
-//    INTERCHANGED |
-//    INTRATILE | OFFSETS |
-//    REVERSED | SPLIT |
-//    UNROLLED
-//    [( ScalarIntConstantExpr-list )]
-struct OmpLoopModifier {
-  TUPLE_CLASS_BOILERPLATE(OmpLoopModifier);
-  std::tuple<llvm::omp::LoopModifier,
-      std::optional<std::list<ScalarIntConstantExpr>>>
-      t;
-  CharBlock source;
-};
-
 // context-selector
 using OmpContextSelector = traits::OmpContextSelectorSpecification;
 } // namespace modifier
@@ -4510,7 +4510,8 @@ struct OmpContainsClause {
 //    APPLY( [loop-modifier :] directive-specification-list )
 struct OmpApplyClause {
   TUPLE_CLASS_BOILERPLATE(OmpApplyClause);
-  std::tuple<std::optional<OmpLoopModifier>,
+  MODIFIER_BOILERPLATE(OmpLoopModifier);
+  std::tuple<MODIFIERS(),
       std::list<OmpDirectiveSpecification>>
       t;
 };

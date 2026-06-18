@@ -2220,7 +2220,8 @@ public:
         ")");
   }
   void Unparse(const OmpApplyClause &x) {
-    Walk(std::get<std::optional<OmpLoopModifier>>(x.t), ": ");
+    using Modifier = OmpApplyClause::Modifier;
+    Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<std::list<OmpDirectiveSpecification>>(x.t));
   }
   void Unparse(const OmpAttachModifier &x) {
