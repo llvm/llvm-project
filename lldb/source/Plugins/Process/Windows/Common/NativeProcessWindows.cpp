@@ -760,7 +760,7 @@ void NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr,
   }
   m_pending_library_events = true;
 
-  if (!m_initial_stop_seen || m_client_supports_libraries_read)
+  if (!m_initial_stop_seen || !m_client_supports_libraries_read)
     return;
 
   NativeThreadWindows *unloader_thread = GetThreadByID(thread_id);
