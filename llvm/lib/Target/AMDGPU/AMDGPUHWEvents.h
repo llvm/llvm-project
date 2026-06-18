@@ -28,6 +28,14 @@ namespace AMDGPU {
 /// This class implements all the usual operators one would need to manipulate a
 /// bit mask, and also supports printing to a \ref raw_ostream and iterating
 /// over all the set bits of the event mask.
+///
+/// For clarity/consistency, this class should behave as much as possible like
+/// a classic integer bitmask. Methods should be constexpr whenever possible.
+/// Also avoid adding mutating methods, e.g.:
+/// \verbatim
+///   A = A.without(B); // good
+//    A.remove(B);      // bad
+/// \endverbatim
 class HWEvents {
 public:
   using value_type = uint32_t;
@@ -85,6 +93,11 @@ public:
 
   constexpr bool contains(HWEvents Other) const {
     return (~Data & Other.Data) == 0;
+  }
+
+  /// \returns this, but all bits set in \p Other set to zero.
+  [[nodiscard]] constexpr HWEvents without(HWEvents Other) const {
+    return Data & ~Other.Data;
   }
 
   const_iterator begin() const { return *this; }

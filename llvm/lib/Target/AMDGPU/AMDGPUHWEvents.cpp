@@ -195,7 +195,7 @@ HWEvents getEventsFor(const MachineInstr &Inst, const GCNSubtarget &ST,
 raw_ostream &operator<<(raw_ostream &OS, AMDGPU::HWEvents Events) {
   ListSeparator LS(" | ");
 #define AMDGPU_HW_EVENT(E, V)                                                  \
-  if (Events & AMDGPU::HWEvent::E)                                             \
+  if (Events & AMDGPU::HWEvents::E)                                            \
     OS << LS << #E << " ";
 #include "AMDGPUHWEvents.def"
   return OS;

@@ -44,7 +44,7 @@
 
 using namespace llvm;
 
-using HWEvents = AMDGPU::HWEvent;
+using HWEvents = AMDGPU::HWEvents;
 
 #define DEBUG_TYPE "si-insert-waitcnts"
 
@@ -984,13 +984,13 @@ void WaitcntBrackets::updateByEvent(HWEvents E, MachineInstr &Inst) {
   } else if (T == AMDGPU::X_CNT) {
     HWEvents OtherEvent =
         E == HWEvents::SMEM_GROUP ? HWEvents::VMEM_GROUP : HWEvents::SMEM_GROUP;
-    if (PendingEvents & OtherEvent) {
+    if (PendingEvents.contains(OtherEvent)) {
       // Hardware inserts an implicit xcnt between interleaved
       // SMEM and VMEM operations. So there will never be
       // outstanding address translations for both SMEM and
       // VMEM at the same time.
       setScoreLB(T, getScoreUB(T) - 1);
-      PendingEvents &= ~OtherEvent;
+      PendingEvents = PendingEvents.without(OtherEvent);
     }
     for (const MachineOperand &Op : Inst.all_uses())
       setScoreByOperand(Op, T, CurrScore);
@@ -1485,7 +1485,7 @@ void WaitcntBrackets::tryClearSCCWriteEvent(MachineInstr *Inst) {
       setScoreLB(AMDGPU::KM_CNT, getScoreUB(AMDGPU::KM_CNT));
     }
 
-    PendingEvents &= ~SCC_WRITE_PendingEvent;
+    PendingEvents = PendingEvents.without(SCC_WRITE_PendingEvent);
     PendingSCCWrite = nullptr;
   }
 }
@@ -1505,7 +1505,7 @@ void WaitcntBrackets::applyWaitcnt(AMDGPU::InstCounterType T, unsigned Count) {
     setScoreLB(T, std::max(getScoreLB(T), UB - Count));
   } else {
     setScoreLB(T, UB);
-    PendingEvents &= ~Context->getWaitEvents(T);
+    PendingEvents = PendingEvents.without(Context->getWaitEvents(T));
   }
 
   if (T == AMDGPU::KM_CNT && Count == 0 &&
@@ -1513,14 +1513,14 @@ void WaitcntBrackets::applyWaitcnt(AMDGPU::InstCounterType T, unsigned Count) {
     if (!hasMixedPendingEvents(AMDGPU::X_CNT))
       applyWaitcnt(AMDGPU::X_CNT, 0);
     else
-      PendingEvents &= ~HWEvents::SMEM_GROUP;
+      PendingEvents = PendingEvents.without(HWEvents::SMEM_GROUP);
   }
   if (T == AMDGPU::LOAD_CNT && hasPendingEvent(HWEvents::VMEM_GROUP) &&
       !hasPendingEvent(AMDGPU::STORE_CNT)) {
     if (!hasMixedPendingEvents(AMDGPU::X_CNT))
       applyWaitcnt(AMDGPU::X_CNT, Count);
     else if (Count == 0)
-      PendingEvents &= ~HWEvents::VMEM_GROUP;
+      PendingEvents = PendingEvents.without(HWEvents::VMEM_GROUP);
   }
 }
 
@@ -1546,7 +1546,7 @@ bool WaitcntBrackets::counterOutOfOrder(AMDGPU::InstCounterType T) const {
     HWEvents Events = PendingEvents & Context->getWaitEvents(T);
     // Remove GLOBAL_INV_ACCESS from the event mask before checking for mixed
     // events
-    Events &= ~HWEvents::GLOBAL_INV_ACCESS;
+    Events = Events.without(HWEvents::GLOBAL_INV_ACCESS);
     // Return true only if there are still multiple event types after removing
     // GLOBAL_INV
     return Events.size() > 1;
