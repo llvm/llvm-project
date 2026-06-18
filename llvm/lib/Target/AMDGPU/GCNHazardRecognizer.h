@@ -318,6 +318,16 @@ public:
   // Co-execution Window Queries
   //===--------------------------------------------------------------------===//
 
+  /// Returns the current stage within the co-execution window, or nullopt.
+  std::optional<unsigned> getCurrentCoExecStage() const {
+    return CurrentCoExecStage;
+  }
+
+  /// Returns the active co-execution info (slot masks, preferences).
+  const AMDGPU::CoExecInfo &getActiveCoExecInfo() const {
+    return ActiveCoExecInfo;
+  }
+
   /// Get the CoExecMask for a given instruction.
   static AMDGPU::CoExecMaskT getCoExecMaskForMI(const MachineInstr &MI,
                                                 const SIInstrInfo &TII);
