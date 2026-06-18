@@ -30,6 +30,10 @@ namespace acc {
 mlir::Operation *getEnclosingComputeOp(mlir::Region &region);
 
 /// If `v` is not a block argument of an `acc.compute_region` body, returns
+/// nullptr. Otherwise maps the block argument to its operand and returns it.
+mlir::Value getACCOperandForBlockArg(mlir::Value v);
+
+/// If `v` is not a block argument of an `acc.compute_region` body, returns
 /// nullptr. Otherwise maps the block argument to its operand and returns the
 /// defining operation if it is one of `ACC_DATA_ENTRY_OPS`.
 mlir::Operation *getACCDataClauseOpForBlockArg(mlir::Value v);

@@ -1283,7 +1283,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::CTTZ_ELTS:
   case ISD::CTTZ_ELTS_ZERO_POISON:
   case ISD::VP_CTTZ_ELTS:
-  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ELTS_ZERO_POISON:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
@@ -3241,6 +3241,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   bool NeedInvert;
   switch (Node->getOpcode()) {
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
     if ((Tmp1 = TLI.expandABS(Node, DAG)))
       Results.push_back(Tmp1);
     break;
@@ -3261,7 +3262,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Results.push_back(Tmp1);
     break;
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
     if ((Tmp1 = TLI.expandCTLZ(Node, DAG)))
       Results.push_back(Tmp1);
     break;
@@ -3270,7 +3271,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Results.push_back(Tmp1);
     break;
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
     if ((Tmp1 = TLI.expandCTTZ(Node, DAG)))
       Results.push_back(Tmp1);
     break;
@@ -3559,6 +3560,21 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       Results.push_back(Expanded);
     else
       Results.push_back(DAG.getPOISON(DstVT));
+    break;
+  }
+  case ISD::CONVERT_TO_ARBITRARY_FP: {
+    // Expand conversion from a native IEEE float type to an arbitrary FP
+    // format, returning the result as an integer using bit manipulation.
+    //
+    // TODO: currently only conversions to FP4, FP6 and FP8 formats from OCP
+    // specification are expanded. Remaining arbitrary FP types: Float8E4M3,
+    // Float8E3M4, Float8E5M2FNUZ, Float8E4M3FNUZ, Float8E4M3B11FNUZ,
+    // Float8E8M0FNU.
+    EVT ResVT = Node->getValueType(0);
+    if (SDValue Expanded = TLI.expandCONVERT_TO_ARBITRARY_FP(Node, DAG))
+      Results.push_back(Expanded);
+    else
+      Results.push_back(DAG.getPOISON(ResVT));
     break;
   }
   case ISD::FCANONICALIZE: {
@@ -4195,6 +4211,12 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (SDValue Expanded = TLI.expandCLMUL(Node, DAG))
       Results.push_back(Expanded);
     break;
+  case ISD::PEXT:
+    Results.push_back(TLI.expandPEXT(Node, DAG));
+    break;
+  case ISD::PDEP:
+    Results.push_back(TLI.expandPDEP(Node, DAG));
+    break;
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
@@ -4623,7 +4645,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(TLI.expandVecReduce(Node, DAG));
     break;
   case ISD::VP_CTTZ_ELTS:
-  case ISD::VP_CTTZ_ELTS_ZERO_UNDEF:
+  case ISD::VP_CTTZ_ELTS_ZERO_POISON:
     Results.push_back(TLI.expandVPCTTZElements(Node, DAG));
     break;
   case ISD::CLEAR_CACHE:
@@ -4636,9 +4658,11 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SDValue Arg = Node->getOperand(0);
     EVT ArgVT = Arg.getValueType();
     EVT ResVT = Node->getValueType(0);
-    SDLoc dl(Node);
-    SDValue RoundNode = DAG.getNode(ISD::FRINT, dl, ArgVT, Arg);
-    Results.push_back(DAG.getNode(ISD::FP_TO_SINT, dl, ResVT, RoundNode));
+    SDLoc DL(Node);
+    SDValue RoundNode = DAG.getNode(ISD::FRINT, DL, ArgVT, Arg);
+    SDValue ConvertNode = DAG.getNode(ISD::FP_TO_SINT, DL, ResVT, RoundNode);
+    // Non-deterministic results are equivalent to freeze poison.
+    Results.push_back(DAG.getFreeze(ConvertNode));
     break;
   }
   case ISD::ADDRSPACECAST:
@@ -5373,7 +5397,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                                        RTLIB::MUL_I16, RTLIB::MUL_I32,
                                        RTLIB::MUL_I64, RTLIB::MUL_I128));
     break;
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
     Results.push_back(ExpandBitCountingLibCall(
         Node, RTLIB::CTLZ_I32, RTLIB::CTLZ_I64, RTLIB::CTLZ_I128));
     break;
@@ -5510,12 +5534,12 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   SDValue Tmp1, Tmp2, Tmp3, Tmp4;
   switch (Node->getOpcode()) {
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
   case ISD::CTLZ:
   case ISD::CTPOP: {
     // Zero extend the argument unless its cttz, then use any_extend.
     if (Node->getOpcode() == ISD::CTTZ ||
-        Node->getOpcode() == ISD::CTTZ_ZERO_UNDEF)
+        Node->getOpcode() == ISD::CTTZ_ZERO_POISON)
       Tmp1 = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Node->getOperand(0));
     else
       Tmp1 = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Node->getOperand(0));
@@ -5529,9 +5553,9 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
                                         OVT.getSizeInBits());
       Tmp1 = DAG.getNode(ISD::OR, dl, NVT, Tmp1,
                          DAG.getConstant(TopBit, dl, NVT));
-      NewOpc = ISD::CTTZ_ZERO_UNDEF;
+      NewOpc = ISD::CTTZ_ZERO_POISON;
     }
-    // Perform the larger operation. For CTPOP and CTTZ_ZERO_UNDEF, this is
+    // Perform the larger operation. For CTPOP and CTTZ_ZERO_POISON, this is
     // already the correct result.
     Tmp1 = DAG.getNode(NewOpc, dl, NVT, Tmp1);
     if (NewOpc == ISD::CTLZ) {
@@ -5544,7 +5568,7 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
         DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1, SDNodeFlags::NoWrap));
     break;
   }
-  case ISD::CTLZ_ZERO_UNDEF: {
+  case ISD::CTLZ_ZERO_POISON: {
     // We know that the argument is unlikely to be zero, hence we can take a
     // different approach as compared to ISD::CTLZ
 
@@ -5561,6 +5585,20 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     // Perform the larger operation
     auto CTLZResult = DAG.getNode(Node->getOpcode(), dl, NVT, LeftShiftResult);
     Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, CTLZResult));
+    break;
+  }
+  case ISD::PEXT: {
+    Tmp1 = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Node->getOperand(0));
+    Tmp2 = DAG.getNode(ISD::ZERO_EXTEND, dl, NVT, Node->getOperand(1));
+    Tmp1 = DAG.getNode(ISD::PEXT, dl, NVT, Tmp1, Tmp2);
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
+    break;
+  }
+  case ISD::PDEP: {
+    Tmp1 = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Node->getOperand(0));
+    Tmp2 = DAG.getNode(ISD::ANY_EXTEND, dl, NVT, Node->getOperand(1));
+    Tmp1 = DAG.getNode(ISD::PDEP, dl, NVT, Tmp1, Tmp2);
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
     break;
   }
   case ISD::BITREVERSE:
@@ -5619,6 +5657,21 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
       UpdatedNodes->insert(Chain.getNode());
     }
     ReplacedNode(Node);
+    break;
+  }
+  case ISD::SCMP:
+  case ISD::UCMP: {
+    unsigned ExtOp =
+        Node->getOpcode() == ISD::UCMP ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
+    MVT OpVT = Node->getOperand(0).getSimpleValueType();
+    // Compare at least at operand width; NVT is the legal type for the op
+    // result.
+    MVT ResVT = OpVT.bitsGT(NVT) ? OpVT : NVT;
+    Tmp1 = DAG.getNode(ExtOp, dl, ResVT, Node->getOperand(0));
+    Tmp2 = DAG.getNode(ExtOp, dl, ResVT, Node->getOperand(1));
+    Tmp1 = DAG.getNode(Node->getOpcode(), dl, ResVT, Tmp1, Tmp2);
+    // Result is -1/0/1; truncate to the original result type.
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp1));
     break;
   }
   case ISD::MUL:

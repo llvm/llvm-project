@@ -59,7 +59,7 @@ protected:
   unsigned EpilogueVectorizationMinVF = 16;
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 2;
-  uint16_t CacheLineSize = 0;
+  uint16_t CacheLineSize = 64;
   // Default scatter/gather overhead.
   unsigned ScatterOverhead = 10;
   unsigned GatherOverhead = 10;
@@ -444,6 +444,12 @@ public:
     if (MinSVEVectorSizeInBits == MaxSVEVectorSizeInBits)
       return MaxSVEVectorSizeInBits;
     return 0;
+  }
+
+  // Return the known bit length of SVE predicate registers. A value of 0 means
+  // the length is unknown beyond what's implied by the architecture.
+  unsigned getSVEPredicateSizeInBits() const {
+    return getSVEVectorSizeInBits() / 8;
   }
 
   bool useSVEForFixedLengthVectors() const {

@@ -996,6 +996,11 @@ def CIR_LangAddressSpaceAttr : CIR_EnumAttr<CIR_LangAddressSpace,
   }];
 }
 
+// Used by OpenCL kernel argument metadata for the addr_space field.
+def CIR_LangAddressSpaceArrayAttr
+    : CIR_TypedArrayAttrBase<CIR_LangAddressSpaceAttr,
+                             "language address space array attribute">;
+
 //===----------------------------------------------------------------------===//
 // TargetAddressSpaceAttr
 //===----------------------------------------------------------------------===//
@@ -1531,6 +1536,65 @@ def CIR_StaticLocalGuardAttr : CIR_Attr<"StaticLocalGuard",
 }
 
 //===----------------------------------------------------------------------===//
+// ThreadLocalGlobalWrapperInitAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_ThreadLocalGlobalWrapperInitAttr : CIR_Attr<
+    "ThreadLocalGlobalWrapperInit", "tls_wrapper_init"> {
+    let summary = "Wrapper and Init function names for thread local variables";
+    let description = [{
+      Contains the mangled name of the wrapper function, init function, and
+      guard variable for a namespace/global scope thread local variable. The
+      guard variable is optional, as it is only required for unordered thread
+      local variables, as ordered thread local variables share a guard.
+
+      Unordered global thread local variables (such as variable template
+      instantiations) are individually initialized when first used on a thread.
+      Ordered global thread local variables are ALL initialized together when
+      any that require initialization are referenced.
+
+      This is accomplished by rewriting all calls to these variables as calls to
+      the wrapper.  If the variable requires initialization, the wrapper calls
+      the init function, then returns the global variable reference.
+
+      Throughout CIR though, these are just represented as normal `get_global`
+      calls to `global`s with `ctor`/`dtor` regions (if necessary).  The
+      lowering-prepare pass manages the generation of the wrapper,x
+      initialization, and call rewrites.
+
+      Example:
+      ```
+      cir.global tls_dyn dyn_tls_refs = <"_ZTW7tls_var", "_ZTH7tls_var"> @_ZZZ7tls_var = ...
+      ...
+      cir.get_global thread_local @ZZZ7tls_var : !cir.ptr<!s32i>
+      ```
+    }];
+    let parameters = (ins
+        "mlir::StringAttr" : $wrapper_name,
+        "mlir::StringAttr" : $init_name,
+        OptionalParameter<"mlir::StringAttr">: $guard_name
+        );
+
+    let builders = [
+      AttrBuilder<(ins "llvm::StringRef"
+                   : $wrapper, "llvm::StringRef"
+                   : $init, "llvm::StringRef"
+                   : $guard),
+                  [{
+                    mlir::StringAttr guardAttr;
+                    if (!guard.empty())
+                      guardAttr = mlir::StringAttr::get($_ctxt, guard);
+                    return $_get($_ctxt, mlir::StringAttr::get($_ctxt, wrapper),
+                                 mlir::StringAttr::get($_ctxt, init),
+                                 guardAttr);
+                  }]>,
+    ];
+    let assemblyFormat =
+        "`<` $wrapper_name `,` $init_name (`,` $guard_name^)? `>`";
+    let canHaveIllegalCXXABIType = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // UsualDeleteParamsAttr
 //===----------------------------------------------------------------------===//
 
@@ -1625,9 +1689,10 @@ def CIR_AnnotationAttr : CIR_Attr<"Annotation", "annotation"> {
 }
 
 def CIR_AnnotationArrayAttr
-    : TypedArrayAttrBase<CIR_AnnotationAttr,
-                         "array of cir.annotation attributes">;
+    : CIR_TypedArrayAttrBase<CIR_AnnotationAttr,
+                             "array of cir.annotation attributes">;
 
+include "clang/CIR/Dialect/IR/CIROpenCLAttrs.td"
 include "clang/CIR/Dialect/IR/CIRCUDAAttrs.td"
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD

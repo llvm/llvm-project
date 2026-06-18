@@ -24,6 +24,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ModRef.h"
 #include <cstdint>
 #include <utility>
 
@@ -706,6 +707,10 @@ public:
   /// these flags.
   LLVM_ABI FastMathFlags getFastMathFlags() const LLVM_READONLY;
 
+  /// Convenience function for getting fast-math flags, or default-constructed
+  /// FastMathFlags when not a FPMathOperator.
+  LLVM_ABI FastMathFlags getFastMathFlagsOrNone() const LLVM_READONLY;
+
   /// Copy I's fast-math flags
   LLVM_ABI void copyFastMathFlags(const Instruction *I);
 
@@ -834,6 +839,10 @@ public:
   static bool isNilpotent(unsigned Opcode) {
     return Opcode == Xor;
   }
+
+  /// Return memory effects of the instruction. argmem here refers to the
+  /// operands of the instruction.
+  LLVM_ABI MemoryEffects getMemoryEffects() const LLVM_READONLY;
 
   /// Return true if this instruction may modify memory.
   LLVM_ABI bool mayWriteToMemory() const LLVM_READONLY;
@@ -1011,7 +1020,7 @@ public:
   LLVM_ABI void setSuccessor(unsigned Idx, BasicBlock *BB);
 
   LLVM_ABI iterator_range<const_succ_iterator> successors() const LLVM_READONLY;
-  LLVM_ABI iterator_range<succ_iterator> successors() {
+  iterator_range<succ_iterator> successors() {
     auto Ops = static_cast<const Instruction *>(this)->successors();
     Use *Begin = const_cast<Use *>(Ops.begin().getUse());
     Use *End = const_cast<Use *>(Ops.end().getUse());

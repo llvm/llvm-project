@@ -63,7 +63,7 @@ ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
       m_compiler_type() {
   // Do not attempt to construct one of these objects with no variable!
   assert(m_type_sp.get() != nullptr);
-  SetName(ConstString(name));
+  SetName(name);
   m_value.SetContext(Value::ContextType::LLDBType, m_type_sp.get());
   TargetSP target_sp(GetTargetSP());
   lldb::addr_t load_address = m_address.GetLoadAddress(target_sp.get());
@@ -94,7 +94,7 @@ ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
 
   TargetSP target_sp(GetTargetSP());
 
-  SetName(ConstString(name));
+  SetName(name);
   m_value.SetCompilerType(m_compiler_type);
   lldb::addr_t load_address = m_address.GetLoadAddress(target_sp.get());
   if (load_address != LLDB_INVALID_ADDRESS) {

@@ -3123,12 +3123,23 @@ void CodeViewDebug::endFunctionImpl(const MachineFunction *MF) {
   CurFn = nullptr;
 }
 
-// Usable locations are valid with non-zero line numbers. A line number of zero
-// corresponds to optimized code that doesn't have a distinct source location.
+// Usable locations are valid with non-zero line numbers, or artificial
+// subprograms because they are associated to the corresponding line within the
+// inlined callee.
+//
+// A line number of zero corresponds to optimized code that doesn't have a
+// distinct source location.
+//
 // In this case, we try to use the previous or next source location depending on
 // the context.
 static bool isUsableDebugLoc(DebugLoc DL) {
-  return DL && DL.getLine() != 0;
+  if (!DL)
+    return false;
+  if (DL.getLine() != 0)
+    return true;
+  if (const DILocalScope *Scope = DL->getScope())
+    return Scope->getSubprogram()->isArtificial();
+  return false;
 }
 
 void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
