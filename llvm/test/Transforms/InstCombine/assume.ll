@@ -114,6 +114,23 @@ entry:
   ret void
 }
 
+define void @align_with_negative_offset(ptr %ptr) {
+; CHECK-LABEL: @align_with_negative_offset(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8, i64 -5) ]
+; CHECK-NEXT:    call void @use_i64(i64 0)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %int = ptrtoint ptr %ptr to i64
+  %add = add i64 %int, -3
+  %and = and i64 %add, 7
+  %cmp = icmp eq i64 0, %and
+  call void @llvm.assume(i1 %cmp)
+  call void @use_i64(i64 %and)
+  ret void
+}
+
 define i1 @align_with_offset_on_gep(ptr %base) {
 ; CHECK-LABEL: @align_with_offset_on_gep(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[BASE:%.*]], i64 8, i64 2) ]

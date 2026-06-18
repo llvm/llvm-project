@@ -4,6 +4,7 @@
 target datalayout = "p:16:16"
 
 declare ptr @get_ptr()
+declare void @use_i32(i32)
 
 define void @align_on_i128_offset(ptr %p) {
 ; CHECK-LABEL: define void @align_on_i128_offset(
@@ -35,5 +36,23 @@ define void @align_greater_than_ptr_size() {
 ;
   %p = call ptr @get_ptr()
   call void @llvm.assume(i1 true) [ "align"(ptr %p, i64 8589934592) ]
+  ret void
+}
+
+define void @align_with_negative_offset(ptr %ptr) {
+; CHECK-LABEL: define void @align_with_negative_offset(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 -5) ]
+; CHECK-NEXT:    call void @use_i32(i32 0)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %int = ptrtoint ptr %ptr to i32
+  %add = add i32 %int, -3
+  %and = and i32 %add, 7
+  %cmp = icmp eq i32 0, %and
+  call void @llvm.assume(i1 %cmp)
+  call void @use_i32(i32 %and)
   ret void
 }
