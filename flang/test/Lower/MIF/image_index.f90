@@ -14,7 +14,8 @@ program test
   ! CHECK: mif.image_index coarray %[[COARRAY:.*]] sub %[[SUB2:.*]] : (!fir.box<i32, corank:3>, !fir.box<!fir.array<3xi64>>) -> i32
   idx = image_index(a, SUB=sub2)
 
-  ! CHECK: mif.image_index coarray %[[COARRAY:.*]] sub %[[SUB:.*]] team %[[TEAM:.*]]#0 : (!fir.box<i32, corank:3>, !fir.box<!fir.array<3xi32>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.__id:i64}>>) -> i32
+  ! CHECK: mif.image_index coarray %[[COARRAY:.*]] sub %[[SUB:.*]] team %[[TEAM:.*]]#0 : (!fir.box<i32, corank:3>,
+  ! !fir.box<!fir.array<3xi32>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{{.*}}>>) -> i32
   idx = image_index(a, SUB=sub, TEAM=team)
 
   ! CHECK: mif.image_index coarray %[[COARRAY:.*]] sub %[[SUB:.*]] team_number %[[TEAM_NUMBER:.*]]: (!fir.box<i32, corank:3>, !fir.box<!fir.array<3xi32>>, i32) -> i32

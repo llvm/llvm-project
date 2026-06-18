@@ -811,6 +811,9 @@ mlir::Type fir::BoxType::parse(mlir::AsmParser &parser) {
   if (parser.parseLess() || parser.parseType(eleTy))
     return {};
   if (mlir::succeeded(parser.parseOptionalComma())) {
+    // Fortran 2023 C871
+    // VOLATILE attribute shall not be specified for a coarray, so the
+    // "volatile" keyword cannot coexist with the "corank".
     if (mlir::succeeded(parser.parseOptionalKeyword(getVolatileKeyword())))
       isVolatile = true;
     else if (mlir::succeeded(parser.parseKeyword(getCorankKeyword())))
@@ -912,6 +915,9 @@ mlir::Type fir::ClassType::parse(mlir::AsmParser &parser) {
   if (parser.parseLess() || parser.parseType(eleTy))
     return {};
   if (mlir::succeeded(parser.parseOptionalComma())) {
+    // Fortran 2023 C871
+    // VOLATILE attribute shall not be specified for a coarray, so the
+    // "volatile" keyword cannot coexist with the "corank".
     if (mlir::succeeded(parser.parseOptionalKeyword(getVolatileKeyword())))
       isVolatile = true;
     else if (mlir::succeeded(parser.parseKeyword(getCorankKeyword())))

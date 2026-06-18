@@ -3604,7 +3604,7 @@ mlir::Value IntrinsicLibrary::genCospi(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genCoshape(mlir::Type,
                              llvm::ArrayRef<fir::ExtendedValue> args) {
-  converter->checkCoarrayEnabled();
+  checkCoarrayEnabled(loc, options);
   assert(args.size() == 2);
 
   return mif::CoshapeOp::create(builder, loc,
@@ -6317,7 +6317,7 @@ mlir::Value IntrinsicLibrary::genIeor(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genImageIndex(mlir::Type resultType,
                                 llvm::ArrayRef<fir::ExtendedValue> args) {
-  converter->checkCoarrayEnabled();
+  checkCoarrayEnabled(loc, options);
   assert(args.size() == 2 || args.size() == 3);
 
   mlir::Value team;
@@ -8475,7 +8475,7 @@ IntrinsicLibrary::genLbound(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genLcobound(mlir::Type resultType,
                               llvm::ArrayRef<fir::ExtendedValue> args) {
-  converter->checkCoarrayEnabled();
+  checkCoarrayEnabled(loc, options);
   assert(args.size() == 2 || args.size() == 3);
 
   mlir::Value coarray = fir::getBase(args[0]);
@@ -8530,7 +8530,7 @@ IntrinsicLibrary::genUbound(mlir::Type resultType,
 fir::ExtendedValue
 IntrinsicLibrary::genUcobound(mlir::Type resultType,
                               llvm::ArrayRef<fir::ExtendedValue> args) {
-  converter->checkCoarrayEnabled();
+  checkCoarrayEnabled(loc, options);
   assert(args.size() == 2 || args.size() == 3);
 
   mlir::Value coarray = fir::getBase(args[0]);
