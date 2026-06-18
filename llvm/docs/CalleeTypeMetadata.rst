@@ -32,3 +32,5 @@ To avoid mismatched pointer types, generalizations are applied.
 Pointers in return and argument types are treated as equivalent as long as the qualifiers for the 
 type they point to match. For example, ``char*``, ``char**``, and ``int*`` are considered equivalent
 types. However, ``char*`` and ``const char*`` are considered distinct types.
+
+.. _Control Flow Integrity (CFI): https://clang.llvm.org/docs/ControlFlowIntegrity.html
