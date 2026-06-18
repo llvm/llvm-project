@@ -38,7 +38,7 @@ end module m1
 subroutine declare_simd_2
   use m1
   procedure (sub) sub1
-  !ERROR: NOTINBRANCH and INBRANCH clauses are mutually exclusive and may not appear on the same DECLARE SIMD directive
+  !ERROR: INBRANCH and NOTINBRANCH clauses are mutually exclusive and may not appear on the same DECLARE SIMD directive
   !$omp declare simd(sub1) inbranch notinbranch
   procedure (sub), pointer::p
   p=>sub1

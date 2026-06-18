@@ -41,7 +41,7 @@ program single
 
     !$omp single
         print *, x
-    !ERROR: At most one NOWAIT clause can appear on the END SINGLE directive
+    !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
     !$omp end single nowait nowait
 
     !ERROR: NOWAIT clause must not be used with COPYPRIVATE clause on SINGLE directive
