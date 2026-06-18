@@ -944,6 +944,195 @@ void test_wave_reduce_max_u64_dpp(global int* out, long in)
   *out = __builtin_amdgcn_wave_reduce_max_u64(in, 2);
 }
 
+// CHECK-LABEL: @test_wave_reduce_add_u16_default
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.add.i16(
+void test_wave_reduce_add_u16_default(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_add_u16(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_add_u16_iterative
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.add.i16(
+void test_wave_reduce_add_u16_iterative(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_add_u16(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_add_u16_dpp
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.add.i16(
+void test_wave_reduce_add_u16_dpp(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_add_u16(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_sub_u16_default
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.sub.i16(
+void test_wave_reduce_sub_u16_default(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_sub_u16(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_sub_u16_iterative
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.sub.i16(
+void test_wave_reduce_sub_u16_iterative(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_sub_u16(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_sub_u16_dpp
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.sub.i16(
+void test_wave_reduce_sub_u16_dpp(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_sub_u16(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_i16_default
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.min.i16(
+void test_wave_reduce_min_i16_default(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_i16(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_i16_iterative
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.min.i16(
+void test_wave_reduce_min_i16_iterative(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_i16(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_i16_dpp
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.min.i16(
+void test_wave_reduce_min_i16_dpp(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_i16(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_u16_default
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.umin.i16(
+void test_wave_reduce_min_u16_default(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_u16(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_u16_iterative
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.umin.i16(
+void test_wave_reduce_min_u16_iterative(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_u16(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_min_u16_dpp
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.umin.i16(
+void test_wave_reduce_min_u16_dpp(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_min_u16(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_i16_default
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.max.i16(
+void test_wave_reduce_max_i16_default(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_i16(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_i16_iterative
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.max.i16(
+void test_wave_reduce_max_i16_iterative(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_i16(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_i16_dpp
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.max.i16(
+void test_wave_reduce_max_i16_dpp(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_i16(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_u16_default
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.umax.i16(
+void test_wave_reduce_max_u16_default(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_u16(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_u16_iterative
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.umax.i16(
+void test_wave_reduce_max_u16_iterative(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_u16(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_max_u16_dpp
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.umax.i16(
+void test_wave_reduce_max_u16_dpp(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_max_u16(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_and_b16_default
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.and.i16(
+void test_wave_reduce_and_b16_default(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_and_b16(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_and_b16_iterative
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.and.i16(
+void test_wave_reduce_and_b16_iterative(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_and_b16(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_and_b16_dpp
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.and.i16(
+void test_wave_reduce_and_b16_dpp(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_and_b16(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_or_b16_default
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.or.i16(
+void test_wave_reduce_or_b16_default(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_or_b16(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_or_b16_iterative
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.or.i16(
+void test_wave_reduce_or_b16_iterative(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_or_b16(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_or_b16_dpp
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.or.i16(
+void test_wave_reduce_or_b16_dpp(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_or_b16(in, 2);
+}
+
+// CHECK-LABEL: @test_wave_reduce_xor_b16_default
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.xor.i16(
+void test_wave_reduce_xor_b16_default(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_xor_b16(in, 0);
+}
+
+// CHECK-LABEL: @test_wave_reduce_xor_b16_iterative
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.xor.i16(
+void test_wave_reduce_xor_b16_iterative(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_xor_b16(in, 1);
+}
+
+// CHECK-LABEL: @test_wave_reduce_xor_b16_dpp
+// CHECK: {{.*}}call{{.*}} i16 @llvm.amdgcn.wave.reduce.xor.i16(
+void test_wave_reduce_xor_b16_dpp(global short* out, short in)
+{
+  *out = __builtin_amdgcn_wave_reduce_xor_b16(in, 2);
+}
+
 // CHECK-LABEL: @test_s_barrier
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.s.barrier(
 void test_s_barrier()

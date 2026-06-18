@@ -553,6 +553,15 @@ def __builtin_amdgcn_is_invocable : AMDGPUBuiltin<"__amdgpu_feature_predicate_t(
 
 //===----------------------------------------------------------------------===//
 
+def __builtin_amdgcn_wave_reduce_add_u16 : AMDGPUBuiltin<"unsigned short(unsigned short, _Constant int32_t)", [Const]>;
+def __builtin_amdgcn_wave_reduce_sub_u16 : AMDGPUBuiltin<"unsigned short(unsigned short, _Constant int32_t)", [Const]>;
+def __builtin_amdgcn_wave_reduce_min_i16 : AMDGPUBuiltin<"short(short, _Constant int32_t)", [Const]>;
+def __builtin_amdgcn_wave_reduce_min_u16 : AMDGPUBuiltin<"unsigned short(unsigned short, _Constant int32_t)", [Const]>;
+def __builtin_amdgcn_wave_reduce_max_i16 : AMDGPUBuiltin<"short(short, _Constant int32_t)", [Const]>;
+def __builtin_amdgcn_wave_reduce_max_u16 : AMDGPUBuiltin<"unsigned short(unsigned short, _Constant int32_t)", [Const]>;
+def __builtin_amdgcn_wave_reduce_and_b16 : AMDGPUBuiltin<"short(short, _Constant int32_t)", [Const]>;
+def __builtin_amdgcn_wave_reduce_or_b16 : AMDGPUBuiltin<"short(short, _Constant int32_t)", [Const]>;
+def __builtin_amdgcn_wave_reduce_xor_b16 : AMDGPUBuiltin<"short(short, _Constant int32_t)", [Const]>;
 def __builtin_amdgcn_wave_reduce_add_u32 : AMDGPUBuiltin<"uint32_t(uint32_t, _Constant int32_t)", [Const]>;
 def __builtin_amdgcn_wave_reduce_sub_u32 : AMDGPUBuiltin<"uint32_t(uint32_t, _Constant int32_t)", [Const]>;
 def __builtin_amdgcn_wave_reduce_min_i32 : AMDGPUBuiltin<"int32_t(int32_t, _Constant int32_t)", [Const]>;

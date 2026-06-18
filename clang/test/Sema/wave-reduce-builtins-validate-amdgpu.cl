@@ -3,6 +3,32 @@
 
 // Test that the second argument (strategy) must be a constant integer
 
+void test_wave_reduce_u16(unsigned short val, int strategy) {
+  (void)__builtin_amdgcn_wave_reduce_add_u16(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_sub_u16(val, 1);
+  (void)__builtin_amdgcn_wave_reduce_min_u16(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_max_u16(val, 0);
+
+  (void)__builtin_amdgcn_wave_reduce_add_u16(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_add_u16' must be a constant integer}}
+  (void)__builtin_amdgcn_wave_reduce_sub_u16(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_sub_u16' must be a constant integer}}
+  (void)__builtin_amdgcn_wave_reduce_min_u16(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_min_u16' must be a constant integer}}
+  (void)__builtin_amdgcn_wave_reduce_max_u16(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_max_u16' must be a constant integer}}
+}
+
+void test_wave_reduce_i16(short val, int strategy) {
+  (void)__builtin_amdgcn_wave_reduce_min_i16(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_max_i16(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_and_b16(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_or_b16(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_xor_b16(val, 0);
+
+  (void)__builtin_amdgcn_wave_reduce_min_i16(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_min_i16' must be a constant integer}}
+  (void)__builtin_amdgcn_wave_reduce_max_i16(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_max_i16' must be a constant integer}}
+  (void)__builtin_amdgcn_wave_reduce_and_b16(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_and_b16' must be a constant integer}}
+  (void)__builtin_amdgcn_wave_reduce_or_b16(val, strategy);  // expected-error {{argument to '__builtin_amdgcn_wave_reduce_or_b16' must be a constant integer}}
+  (void)__builtin_amdgcn_wave_reduce_xor_b16(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_xor_b16' must be a constant integer}}
+}
+
 void test_wave_reduce_u32(unsigned int val, int strategy) {
   (void)__builtin_amdgcn_wave_reduce_add_u32(val, 0);
   (void)__builtin_amdgcn_wave_reduce_sub_u32(val, 1);
