@@ -45,7 +45,7 @@ clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
   auto MatchAction = [&UnsafePointers, &Ctx](const DynTypedNode &Node) {
     matchUnsafePointers(Node, Ctx, UnsafePointers);
   };
-  
+
   for (const auto *Contrib : ContributorDecls)
     findMatchesIn(Contrib, MatchAction);
 
