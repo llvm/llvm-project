@@ -64,7 +64,8 @@ class CallDescriptionConsumer : public ExprEngineConsumer {
     if (!D->hasBody())
       return;
 
-    const StackFrame *SF = Eng.getAnalysisDeclContextManager().getStackFrame(D);
+    const StackFrame *SF =
+        Eng.getAnalysisDeclContextManager().getTopStackFrame(D);
     const ProgramStateRef State = Eng.getInitialState(SF);
 
     // FIXME: Maybe use std::variant and std::visit for these.

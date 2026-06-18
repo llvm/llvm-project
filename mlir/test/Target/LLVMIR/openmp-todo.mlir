@@ -301,10 +301,62 @@ atomic {
   llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
   omp.yield
 }
-llvm.func @taskgroup_task_reduction(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause task_reduction in omp.taskgroup operation}}
+llvm.func @taskgroup_task_reduction_byref(%x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause task_reduction with byref modifier in omp.taskgroup operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
-  omp.taskgroup task_reduction(@add_f32 %x -> %prv : !llvm.ptr) {
+  omp.taskgroup task_reduction(byref @add_f32 %x -> %prv : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+// -----
+
+omp.declare_reduction @add_i32_cleanup : i32
+init {
+^bb0(%arg: i32):
+  %c0 = llvm.mlir.constant(0 : i32) : i32
+  omp.yield(%c0 : i32)
+}
+combiner {
+^bb0(%a: i32, %b: i32):
+  %s = llvm.add %a, %b : i32
+  omp.yield(%s : i32)
+}
+cleanup {
+^bb0(%a: i32):
+  omp.yield
+}
+llvm.func @taskgroup_task_reduction_cleanup(%x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: task_reduction with cleanup region in omp.taskgroup}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
+  omp.taskgroup task_reduction(@add_i32_cleanup %x -> %prv : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+// -----
+
+omp.declare_reduction @add_i32_2arg_init : !llvm.ptr
+alloc {
+^bb0(%mold: !llvm.ptr):
+  %c1 = llvm.mlir.constant(1 : i32) : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  omp.yield(%0 : !llvm.ptr)
+}
+init {
+^bb0(%mold: !llvm.ptr, %alloc: !llvm.ptr):
+  %c0 = llvm.mlir.constant(0 : i32) : i32
+  llvm.store %c0, %alloc : i32, !llvm.ptr
+  omp.yield(%alloc : !llvm.ptr)
+}
+combiner {
+^bb0(%a: !llvm.ptr, %b: !llvm.ptr):
+  omp.yield(%a : !llvm.ptr)
+}
+llvm.func @taskgroup_task_reduction_two_arg_init(%x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: task_reduction with two-argument initializer in omp.taskgroup}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
+  omp.taskgroup task_reduction(@add_i32_2arg_init %x -> %prv : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
@@ -492,4 +544,111 @@ llvm.func @wsloop_order(%lb : i32, %ub : i32, %step : i32) {
     }
   }
   llvm.return
+}
+
+// -----
+
+llvm.func @target_enter_data_map_iterator(%addr : !llvm.ptr) {
+  %c0 = llvm.mlir.constant(0 : i64) : i64
+  %c10 = llvm.mlir.constant(10 : i64) : i64
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_enter_data operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.target_enter_data}}
+  omp.target_enter_data map_iterated(%it : !omp.iterated<!llvm.ptr>) {}
+  llvm.return
+}
+
+// -----
+
+llvm.func @target_exit_data_map_iterator(%addr : !llvm.ptr) {
+  %c0 = llvm.mlir.constant(0 : i64) : i64
+  %c10 = llvm.mlir.constant(10 : i64) : i64
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_exit_data operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.target_exit_data}}
+  omp.target_exit_data map_iterated(%it : !omp.iterated<!llvm.ptr>) {}
+  llvm.return
+}
+
+// -----
+
+llvm.func @target_update_map_iterator(%addr : !llvm.ptr) {
+  %c0 = llvm.mlir.constant(0 : i64) : i64
+  %c10 = llvm.mlir.constant(10 : i64) : i64
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_update operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.target_update}}
+  omp.target_update map_iterated(%it : !omp.iterated<!llvm.ptr>)
+  llvm.return
+}
+
+// -----
+
+llvm.func @target_map_iterated_unsupported(%addr : !llvm.ptr) {
+  %c0 = llvm.mlir.constant(0 : i64) : i64
+  %c10 = llvm.mlir.constant(10 : i64) : i64
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %map = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
+  omp.target map_iterated(%it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @target_data_map_iterator(%addr : !llvm.ptr) {
+  %c0 = llvm.mlir.constant(0 : i64) : i64
+  %c10 = llvm.mlir.constant(10 : i64) : i64
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
+    %m = omp.map.info var_ptr(%addr : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.yield(%m : !llvm.ptr)
+  } -> !omp.iterated<!llvm.ptr>
+  // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target_data operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.target_data}}
+  omp.target_data map_iterated(%it : !omp.iterated<!llvm.ptr>) {}
+  llvm.return
+}
+
+// -----
+
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  omp.declare_mapper @mapper_with_iterator : !llvm.struct<"mapper_type", (i32)> {
+  ^bb0(%arg: !llvm.ptr):
+    %c0 = llvm.mlir.constant(0 : i64) : i64
+    %c10 = llvm.mlir.constant(10 : i64) : i64
+    %c1 = llvm.mlir.constant(1 : i64) : i64
+    %it = omp.iterator(%iv: i64) = (%c0 to %c10 step %c1) {
+      %m = omp.map.info var_ptr(%arg : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+      omp.yield(%m : !llvm.ptr)
+    } -> !omp.iterated<!llvm.ptr>
+    // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.declare_mapper.info operation}}
+    omp.declare_mapper.info map_iterated(%it : !omp.iterated<!llvm.ptr>)
+  }
+
+  llvm.func @target_data_mapper_iterator(%addr : !llvm.ptr) {
+    %map = omp.map.info var_ptr(%addr : !llvm.ptr, !llvm.struct<"mapper_type", (i32)>) map_clauses(tofrom) capture(ByRef) mapper(@mapper_with_iterator) -> !llvm.ptr {name = ""}
+    // expected-error@below {{LLVM Translation failed for operation: omp.target_data}}
+    omp.target_data map_entries(%map : !llvm.ptr) {}
+    llvm.return
+  }
 }

@@ -23,6 +23,73 @@ func.func @select_cmp_ne_select(%arg0: i64, %arg1: i64) -> i64 {
   return %1 : i64
 }
 
+// CHECK-LABEL: @select_cmp_signed_min_max
+//  CHECK-SAME:   (%[[ARG0:.+]]: i64, %[[ARG1:.+]]: i64)
+//  CHECK-DAG:    %[[MIN0:.+]] = arith.minsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MIN1:.+]] = arith.minsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MIN2:.+]] = arith.minsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MIN3:.+]] = arith.minsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX0:.+]] = arith.maxsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX1:.+]] = arith.maxsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX2:.+]] = arith.maxsi %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX3:.+]] = arith.maxsi %[[ARG0]], %[[ARG1]] : i64
+//      CHECK:    return %[[MIN0]], %[[MIN1]], %[[MIN2]], %[[MIN3]], %[[MAX0]], %[[MAX1]], %[[MAX2]], %[[MAX3]]
+func.func @select_cmp_signed_min_max(%arg0: i64, %arg1: i64) -> (i64, i64, i64, i64, i64, i64, i64, i64) {
+  %slt = arith.cmpi slt, %arg0, %arg1 : i64
+  %sle = arith.cmpi sle, %arg0, %arg1 : i64
+  %sgt = arith.cmpi sgt, %arg0, %arg1 : i64
+  %sge = arith.cmpi sge, %arg0, %arg1 : i64
+  %min0 = arith.select %slt, %arg0, %arg1 : i64
+  %min1 = arith.select %sle, %arg0, %arg1 : i64
+  %min2 = arith.select %sgt, %arg1, %arg0 : i64
+  %min3 = arith.select %sge, %arg1, %arg0 : i64
+  %max0 = arith.select %slt, %arg1, %arg0 : i64
+  %max1 = arith.select %sle, %arg1, %arg0 : i64
+  %max2 = arith.select %sgt, %arg0, %arg1 : i64
+  %max3 = arith.select %sge, %arg0, %arg1 : i64
+  return %min0, %min1, %min2, %min3, %max0, %max1, %max2, %max3 : i64, i64, i64, i64, i64, i64, i64, i64
+}
+
+// CHECK-LABEL: @select_cmp_unsigned_min_max
+//  CHECK-SAME:   (%[[ARG0:.+]]: i64, %[[ARG1:.+]]: i64)
+//  CHECK-DAG:    %[[MIN0:.+]] = arith.minui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MIN1:.+]] = arith.minui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MIN2:.+]] = arith.minui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MIN3:.+]] = arith.minui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX0:.+]] = arith.maxui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX1:.+]] = arith.maxui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX2:.+]] = arith.maxui %[[ARG0]], %[[ARG1]] : i64
+//  CHECK-DAG:    %[[MAX3:.+]] = arith.maxui %[[ARG0]], %[[ARG1]] : i64
+//      CHECK:    return %[[MIN0]], %[[MIN1]], %[[MIN2]], %[[MIN3]], %[[MAX0]], %[[MAX1]], %[[MAX2]], %[[MAX3]]
+func.func @select_cmp_unsigned_min_max(%arg0: i64, %arg1: i64) -> (i64, i64, i64, i64, i64, i64, i64, i64) {
+  %ult = arith.cmpi ult, %arg0, %arg1 : i64
+  %ule = arith.cmpi ule, %arg0, %arg1 : i64
+  %ugt = arith.cmpi ugt, %arg0, %arg1 : i64
+  %uge = arith.cmpi uge, %arg0, %arg1 : i64
+  %min0 = arith.select %ult, %arg0, %arg1 : i64
+  %min1 = arith.select %ule, %arg0, %arg1 : i64
+  %min2 = arith.select %ugt, %arg1, %arg0 : i64
+  %min3 = arith.select %uge, %arg1, %arg0 : i64
+  %max0 = arith.select %ult, %arg1, %arg0 : i64
+  %max1 = arith.select %ule, %arg1, %arg0 : i64
+  %max2 = arith.select %ugt, %arg0, %arg1 : i64
+  %max3 = arith.select %uge, %arg0, %arg1 : i64
+  return %min0, %min1, %min2, %min3, %max0, %max1, %max2, %max3 : i64, i64, i64, i64, i64, i64, i64, i64
+}
+
+// CHECK-LABEL: @select_cmp_min_max_index_vector
+//  CHECK-SAME:   (%[[IDX0:.+]]: index, %[[IDX1:.+]]: index, %[[VEC0:.+]]: vector<4xi32>, %[[VEC1:.+]]: vector<4xi32>)
+//  CHECK-DAG:    %[[IDX:.+]] = arith.minsi %[[IDX0]], %[[IDX1]] : index
+//  CHECK-DAG:    %[[VEC:.+]] = arith.maxui %[[VEC0]], %[[VEC1]] : vector<4xi32>
+//      CHECK:    return %[[IDX]], %[[VEC]]
+func.func @select_cmp_min_max_index_vector(%arg0: index, %arg1: index, %arg2: vector<4xi32>, %arg3: vector<4xi32>) -> (index, vector<4xi32>) {
+  %cmp0 = arith.cmpi sle, %arg0, %arg1 : index
+  %res0 = arith.select %cmp0, %arg0, %arg1 : index
+  %cmp1 = arith.cmpi ult, %arg2, %arg3 : vector<4xi32>
+  %res1 = arith.select %cmp1, %arg3, %arg2 : vector<4xi1>, vector<4xi32>
+  return %res0, %res1 : index, vector<4xi32>
+}
+
 // CHECK-LABEL: @select_extui
 //       CHECK:   %[[res:.+]] = arith.extui %arg0 : i1 to i64
 //       CHECK:   return %[[res]]
@@ -575,6 +642,154 @@ func.func @orOfExtUI_nneg_mixed(%arg0: i8, %arg1: i8) -> i64 {
   %ext1 = arith.extui %arg1 : i8 to i64
   %res = arith.ori %ext0, %ext1 : i64
   return %res : i64
+}
+
+// -----
+
+// CHECK-LABEL: @andOfAndConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 8 : i32
+//       CHECK:   %[[and:.+]] = arith.andi %arg0, %[[cres]] : i32
+//       CHECK:   return %[[and]]
+func.func @andOfAndConstant(%arg0: i32) -> i32 {
+  %c12 = arith.constant 12 : i32
+  %c10 = arith.constant 10 : i32
+  %a1 = arith.andi %arg0, %c12 : i32
+  %a2 = arith.andi %a1, %c10 : i32
+  return %a2 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @andOfAndConstantIndex
+//       CHECK:   %[[cres:.+]] = arith.constant 8 : index
+//       CHECK:   %[[and:.+]] = arith.andi %arg0, %[[cres]] : index
+//       CHECK:   return %[[and]]
+func.func @andOfAndConstantIndex(%arg0: index) -> index {
+  %c12 = arith.constant 12 : index
+  %c10 = arith.constant 10 : index
+  %a1 = arith.andi %arg0, %c12 : index
+  %a2 = arith.andi %a1, %c10 : index
+  return %a2 : index
+}
+
+// -----
+
+// CHECK-LABEL: @andOfAndConstantMultiUse
+//       CHECK:   %[[C8:.+]] = arith.constant 8 : i32
+//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
+//       CHECK:   %[[A1:.+]] = arith.andi %arg0, %[[C12]] : i32
+//       CHECK:   %[[A2:.+]] = arith.andi %arg0, %[[C8]] : i32
+//       CHECK:   return %[[A1]], %[[A2]]
+func.func @andOfAndConstantMultiUse(%arg0: i32) -> (i32, i32) {
+  %c12 = arith.constant 12 : i32
+  %c10 = arith.constant 10 : i32
+  %a1 = arith.andi %arg0, %c12 : i32
+  %a2 = arith.andi %a1, %c10 : i32
+  return %a1, %a2 : i32, i32
+}
+
+// -----
+
+// CHECK-LABEL: @andOfAndConstantChain
+//       CHECK:   %[[C8:.+]] = arith.constant 8 : i32
+//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
+//       CHECK:   %[[C14:.+]] = arith.constant 14 : i32
+//       CHECK:   %[[A1:.+]] = arith.andi %arg0, %[[C14]] : i32
+//       CHECK:   %[[A2:.+]] = arith.andi %arg0, %[[C12]] : i32
+//       CHECK:   %[[A3:.+]] = arith.andi %arg0, %[[C8]] : i32
+//       CHECK:   return %[[A1]], %[[A2]], %[[A3]]
+func.func @andOfAndConstantChain(%arg0: i32) -> (i32, i32, i32) {
+  %c14 = arith.constant 14 : i32
+  %c13 = arith.constant 13 : i32
+  %c11 = arith.constant 11 : i32
+  %a1 = arith.andi %arg0, %c14 : i32
+  %a2 = arith.andi %a1, %c13 : i32
+  %a3 = arith.andi %a2, %c11 : i32
+  return %a1, %a2, %a3 : i32, i32, i32
+}
+
+// -----
+
+// CHECK-LABEL: @orOfOrConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 14 : i32
+//       CHECK:   %[[or:.+]] = arith.ori %arg0, %[[cres]] : i32
+//       CHECK:   return %[[or]]
+func.func @orOfOrConstant(%arg0: i32) -> i32 {
+  %c12 = arith.constant 12 : i32
+  %c10 = arith.constant 10 : i32
+  %o1 = arith.ori %arg0, %c12 : i32
+  %o2 = arith.ori %o1, %c10 : i32
+  return %o2 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @orOfOrConstantIndex
+//       CHECK:   %[[cres:.+]] = arith.constant 14 : index
+//       CHECK:   %[[or:.+]] = arith.ori %arg0, %[[cres]] : index
+//       CHECK:   return %[[or]]
+func.func @orOfOrConstantIndex(%arg0: index) -> index {
+  %c12 = arith.constant 12 : index
+  %c10 = arith.constant 10 : index
+  %o1 = arith.ori %arg0, %c12 : index
+  %o2 = arith.ori %o1, %c10 : index
+  return %o2 : index
+}
+
+// -----
+
+// CHECK-LABEL: @orOfOrConstantMultiUse
+//       CHECK:   %[[C14:.+]] = arith.constant 14 : i32
+//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
+//       CHECK:   %[[O1:.+]] = arith.ori %arg0, %[[C12]] : i32
+//       CHECK:   %[[O2:.+]] = arith.ori %arg0, %[[C14]] : i32
+//       CHECK:   return %[[O1]], %[[O2]]
+func.func @orOfOrConstantMultiUse(%arg0: i32) -> (i32, i32) {
+  %c12 = arith.constant 12 : i32
+  %c10 = arith.constant 10 : i32
+  %o1 = arith.ori %arg0, %c12 : i32
+  %o2 = arith.ori %o1, %c10 : i32
+  return %o1, %o2 : i32, i32
+}
+
+// -----
+
+// Negative test case to ensure no further folding is performed when there's a type mismatch between the values and the result.
+// CHECK-LABEL:   func.func @nested_andi() -> i32 {
+// CHECK:           %[[VAL_0:.*]] = "test.constant"() <{value = 2147483647 : i64}> : () -> i32
+// CHECK:           %[[VAL_1:.*]] = "test.constant"() <{value = -2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_2:.*]] = "test.constant"() <{value = 2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_3:.*]] = arith.andi %[[VAL_0]], %[[VAL_1]] : i32
+// CHECK:           %[[VAL_4:.*]] = arith.andi %[[VAL_3]], %[[VAL_2]] : i32
+// CHECK:           return %[[VAL_4]] : i32
+// CHECK:         }
+func.func @nested_andi() -> (i32) {
+  %0 = "test.constant"() {value = 0x7fffffff} : () -> i32
+  %1 = "test.constant"() {value = -2147483648} : () -> i32
+  %2 = "test.constant"() {value = 0x80000000} : () -> i32
+  %4 = arith.andi %0, %1 : i32
+  %5 = arith.andi %4, %2 : i32
+  return %5 : i32
+}
+
+// -----
+
+// Negative test case to ensure no further folding is performed when there's a type mismatch between the values and the result.
+// CHECK-LABEL:   func.func @nested_ori() -> i32 {
+// CHECK:           %[[VAL_0:.*]] = "test.constant"() <{value = 2147483647 : i64}> : () -> i32
+// CHECK:           %[[VAL_1:.*]] = "test.constant"() <{value = -2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_2:.*]] = "test.constant"() <{value = 2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_3:.*]] = arith.ori %[[VAL_0]], %[[VAL_1]] : i32
+// CHECK:           %[[VAL_4:.*]] = arith.ori %[[VAL_3]], %[[VAL_2]] : i32
+// CHECK:           return %[[VAL_4]] : i32
+// CHECK:         }
+func.func @nested_ori() -> (i32) {
+  %0 = "test.constant"() {value = 0x7fffffff} : () -> i32
+  %1 = "test.constant"() {value = -2147483648} : () -> i32
+  %2 = "test.constant"() {value = 0x80000000} : () -> i32
+  %4 = arith.ori %0, %1 : i32
+  %5 = arith.ori %4, %2 : i32
+  return %5 : i32
 }
 
 // -----
@@ -1759,6 +1974,115 @@ func.func @adduiExtendedPoisonRhs() -> (i32, i1) {
   return %sum, %overflow : i32, i1
 }
 
+// CHECK-LABEL: @subuiExtendedZeroRhs
+//  CHECK-NEXT:   %[[false:.+]] = arith.constant false
+//  CHECK-NEXT:   return %arg0, %[[false]]
+func.func @subuiExtendedZeroRhs(%arg0: i32) -> (i32, i1) {
+  %zero = arith.constant 0 : i32
+  %diff, %borrow = arith.subui_extended %arg0, %zero: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedZeroRhsSplat
+//  CHECK-NEXT:   %[[false:.+]] = arith.constant dense<false> : vector<4xi1>
+//  CHECK-NEXT:   return %arg0, %[[false]]
+func.func @subuiExtendedZeroRhsSplat(%arg0: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
+  %zero = arith.constant dense<0> : vector<4xi32>
+  %diff, %borrow = arith.subui_extended %arg0, %zero: vector<4xi32>, vector<4xi1>
+  return %diff, %borrow : vector<4xi32>, vector<4xi1>
+}
+
+// CHECK-LABEL: @subuiExtendedSameOperand
+//  CHECK-DAG:    %[[zero:.+]] = arith.constant 0 : i32
+//  CHECK-DAG:    %[[false:.+]] = arith.constant false
+//  CHECK-NEXT:   return %[[zero]], %[[false]]
+func.func @subuiExtendedSameOperand(%arg0: i32) -> (i32, i1) {
+  %diff, %borrow = arith.subui_extended %arg0, %arg0: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedSameOperandVector
+//  CHECK-DAG:    %[[zero:.+]] = arith.constant dense<0> : vector<4xi32>
+//  CHECK-DAG:    %[[false:.+]] = arith.constant dense<false> : vector<4xi1>
+//  CHECK-NEXT:   return %[[zero]], %[[false]]
+func.func @subuiExtendedSameOperandVector(%arg0: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
+  %diff, %borrow = arith.subui_extended %arg0, %arg0: vector<4xi32>, vector<4xi1>
+  return %diff, %borrow : vector<4xi32>, vector<4xi1>
+}
+
+// CHECK-LABEL: @subuiExtendedUnusedBorrowScalar
+//  CHECK-SAME:   (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32) -> i32
+//  CHECK-NEXT:   %[[RES:.+]] = arith.subi %[[LHS]], %[[RHS]] : i32
+//  CHECK-NEXT:   return %[[RES]] : i32
+func.func @subuiExtendedUnusedBorrowScalar(%arg0: i32, %arg1: i32) -> i32 {
+  %diff, %borrow = arith.subui_extended %arg0, %arg1: i32, i1
+  return %diff : i32
+}
+
+// CHECK-LABEL: @subuiExtendedUnusedBorrowVector
+//  CHECK-SAME:   (%[[LHS:.+]]: vector<3xi32>, %[[RHS:.+]]: vector<3xi32>) -> vector<3xi32>
+//  CHECK-NEXT:   %[[RES:.+]] = arith.subi %[[LHS]], %[[RHS]] : vector<3xi32>
+//  CHECK-NEXT:   return %[[RES]] : vector<3xi32>
+func.func @subuiExtendedUnusedBorrowVector(%arg0: vector<3xi32>, %arg1: vector<3xi32>) -> vector<3xi32> {
+  %diff, %borrow = arith.subui_extended %arg0, %arg1: vector<3xi32>, vector<3xi1>
+  return %diff : vector<3xi32>
+}
+
+// CHECK-LABEL: @subuiExtendedConstants
+//  CHECK-DAG:    %[[false:.+]] = arith.constant false
+//  CHECK-DAG:    %[[c2:.+]] = arith.constant 2 : i32
+//  CHECK-NEXT:   return %[[c2]], %[[false]]
+func.func @subuiExtendedConstants() -> (i32, i1) {
+  %c5 = arith.constant 5 : i32
+  %c3 = arith.constant 3 : i32
+  %diff, %borrow = arith.subui_extended %c5, %c3: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedConstantsBorrow
+//  CHECK-DAG:    %[[true:.+]] = arith.constant true
+//  CHECK-DAG:    %[[c_2:.+]] = arith.constant -2 : i32
+//  CHECK-NEXT:   return %[[c_2]], %[[true]]
+func.func @subuiExtendedConstantsBorrow() -> (i32, i1) {
+  %c3 = arith.constant 3 : i32
+  %c5 = arith.constant 5 : i32
+  %diff, %borrow = arith.subui_extended %c3, %c5: i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedConstantsBorrowVector
+//  CHECK-DAG:    %[[diff:.+]] = arith.constant dense<[1, 0, -1, 0]> : vector<4xi32>
+//  CHECK-DAG:    %[[borrow:.+]] = arith.constant dense<[false, false, true, false]> : vector<4xi1>
+//  CHECK-NEXT:   return %[[diff]], %[[borrow]]
+func.func @subuiExtendedConstantsBorrowVector() -> (vector<4xi32>, vector<4xi1>) {
+  %v1 = arith.constant dense<[1, 3, 3, 7]> : vector<4xi32>
+  %v2 = arith.constant dense<[0, 3, 4, 7]> : vector<4xi32>
+  %diff, %borrow = arith.subui_extended %v1, %v2 : vector<4xi32>, vector<4xi1>
+  return %diff, %borrow : vector<4xi32>, vector<4xi1>
+}
+
+// CHECK-LABEL: @subuiExtendedPoisonLhs
+//  CHECK-NEXT:   %[[P0:.+]] = ub.poison : i32
+//  CHECK-NEXT:   %[[P1:.+]] = ub.poison : i1
+//  CHECK-NEXT:   return %[[P0]], %[[P1]]
+func.func @subuiExtendedPoisonLhs() -> (i32, i1) {
+  %poison = ub.poison : i32
+  %c5 = arith.constant 5 : i32
+  %diff, %borrow = arith.subui_extended %poison, %c5 : i32, i1
+  return %diff, %borrow : i32, i1
+}
+
+// CHECK-LABEL: @subuiExtendedPoisonRhs
+//  CHECK-NEXT:   %[[P0:.+]] = ub.poison : i32
+//  CHECK-NEXT:   %[[P1:.+]] = ub.poison : i1
+//  CHECK-NEXT:   return %[[P0]], %[[P1]]
+func.func @subuiExtendedPoisonRhs() -> (i32, i1) {
+  %c5 = arith.constant 5 : i32
+  %poison = ub.poison : i32
+  %diff, %borrow = arith.subui_extended %c5, %poison : i32, i1
+  return %diff, %borrow : i32, i1
+}
+
 // CHECK-LABEL: @mulsiExtendedZeroRhs
 //  CHECK-NEXT:   %[[zero:.+]] = arith.constant 0 : i32
 //  CHECK-NEXT:   return %[[zero]], %[[zero]]
@@ -2126,6 +2450,70 @@ func.func @xorOfExtUI_nneg_mixed(%arg0: i8, %arg1: i8) -> i64 {
   %ext1 = arith.extui %arg1 : i8 to i64
   %res = arith.xori %ext0, %ext1 : i64
   return %res : i64
+}
+
+// -----
+
+// CHECK-LABEL: @xorOfXorConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 6 : i32
+//       CHECK:   %[[xor:.+]] = arith.xori %arg0, %[[cres]] : i32
+//       CHECK:   return %[[xor]]
+func.func @xorOfXorConstant(%arg0: i32) -> i32 {
+  %c12 = arith.constant 12 : i32
+  %c10 = arith.constant 10 : i32
+  %x1 = arith.xori %arg0, %c12 : i32
+  %x2 = arith.xori %x1, %c10 : i32
+  return %x2 : i32
+}
+
+// -----
+
+// CHECK-LABEL: @xorOfXorConstantIndex
+//       CHECK:   %[[cres:.+]] = arith.constant 6 : index
+//       CHECK:   %[[xor:.+]] = arith.xori %arg0, %[[cres]] : index
+//       CHECK:   return %[[xor]]
+func.func @xorOfXorConstantIndex(%arg0: index) -> index {
+  %c12 = arith.constant 12 : index
+  %c10 = arith.constant 10 : index
+  %x1 = arith.xori %arg0, %c12 : index
+  %x2 = arith.xori %x1, %c10 : index
+  return %x2 : index
+}
+
+// -----
+
+// CHECK-LABEL: @xorOfXorConstantMultiUse
+//       CHECK:   %[[C6:.+]] = arith.constant 6 : i32
+//       CHECK:   %[[C12:.+]] = arith.constant 12 : i32
+//       CHECK:   %[[X1:.+]] = arith.xori %arg0, %[[C12]] : i32
+//       CHECK:   %[[X2:.+]] = arith.xori %arg0, %[[C6]] : i32
+//       CHECK:   return %[[X1]], %[[X2]]
+func.func @xorOfXorConstantMultiUse(%arg0: i32) -> (i32, i32) {
+  %c12 = arith.constant 12 : i32
+  %c10 = arith.constant 10 : i32
+  %x1 = arith.xori %arg0, %c12 : i32
+  %x2 = arith.xori %x1, %c10 : i32
+  return %x1, %x2 : i32, i32
+}
+
+// -----
+
+// Negative test case to ensure no further folding is performed when there's a type mismatch between the values and the result.
+// CHECK-LABEL:   func.func @nested_xori() -> i32 {
+// CHECK:           %[[VAL_0:.*]] = "test.constant"() <{value = 2147483647 : i64}> : () -> i32
+// CHECK:           %[[VAL_1:.*]] = "test.constant"() <{value = -2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_2:.*]] = "test.constant"() <{value = 2147483648 : i64}> : () -> i32
+// CHECK:           %[[VAL_3:.*]] = arith.xori %[[VAL_0]], %[[VAL_1]] : i32
+// CHECK:           %[[VAL_4:.*]] = arith.xori %[[VAL_3]], %[[VAL_2]] : i32
+// CHECK:           return %[[VAL_4]] : i32
+// CHECK:         }
+func.func @nested_xori() -> (i32) {
+  %0 = "test.constant"() {value = 0x7fffffff} : () -> i32
+  %1 = "test.constant"() {value = -2147483648} : () -> i32
+  %2 = "test.constant"() {value = 0x80000000} : () -> i32
+  %4 = arith.xori %0, %1 : i32
+  %5 = arith.xori %4, %2 : i32
+  return %5 : i32
 }
 
 // -----

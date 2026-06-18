@@ -790,9 +790,9 @@ body:             |
 # GFX12-LABEL: waitcnt_vm_loop_flat_mem
 # GFX12-LABEL: bb.0:
 # GFX12: FLAT_LOAD_DWORD
-# GFX12-NOT: S_WAIT_LOADCNT_DSCNT 0
+# GFX12-NOT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
 # GFX12-LABEL: bb.1:
-# GFX12: S_WAIT_LOADCNT_DSCNT 0
+# GFX12: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
 # GFX12-LABEL: bb.2:
 name:            waitcnt_vm_loop_flat_mem
 body:             |

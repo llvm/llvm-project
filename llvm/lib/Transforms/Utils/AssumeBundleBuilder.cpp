@@ -20,18 +20,12 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
 namespace llvm {
-LLVM_ABI cl::opt<bool> ShouldPreserveAllAttributes(
-    "assume-preserve-all", cl::init(false), cl::Hidden,
-    cl::desc("enable preservation of all attributes. even those that are "
-             "unlikely to be useful"));
-
 cl::opt<bool> EnableKnowledgeRetention(
     "enable-knowledge-retention", cl::init(false), cl::Hidden,
     cl::desc(
@@ -193,8 +187,7 @@ struct AssumeBuilderState {
 
   void addAttribute(Attribute Attr, Value *WasOn) {
     if (Attr.isTypeAttribute() || Attr.isStringAttribute() ||
-        (!ShouldPreserveAllAttributes &&
-         !isUsefullToPreserve(Attr.getKindAsEnum())))
+        !isUsefullToPreserve(Attr.getKindAsEnum()))
       return;
     uint64_t AttrArg = 0;
     if (Attr.isIntAttribute())
@@ -309,31 +302,6 @@ bool llvm::salvageKnowledge(Instruction *I, AssumptionCache *AC,
       AC->registerAssumption(Intr);
   }
   return Changed;
-}
-
-AssumeInst *
-llvm::buildAssumeFromKnowledge(ArrayRef<RetainedKnowledge> Knowledge,
-                               Instruction *CtxI, AssumptionCache *AC,
-                               DominatorTree *DT) {
-  AssumeBuilderState Builder(CtxI->getModule(), CtxI, AC, DT);
-  for (const RetainedKnowledge &RK : Knowledge)
-    Builder.addKnowledge(RK);
-  return Builder.build();
-}
-
-RetainedKnowledge llvm::simplifyRetainedKnowledge(AssumeInst *Assume,
-                                                  RetainedKnowledge RK,
-                                                  AssumptionCache *AC,
-                                                  DominatorTree *DT) {
-  AssumeBuilderState Builder(Assume->getModule(), Assume, AC, DT);
-  RK = canonicalizedKnowledge(RK, Assume->getDataLayout());
-
-  if (!Builder.isKnowledgeWorthPreserving(RK))
-    return RetainedKnowledge::none();
-
-  if (Builder.tryToPreserveWithoutAddingAssume(RK))
-    return RetainedKnowledge::none();
-  return RK;
 }
 
 namespace {

@@ -50,8 +50,6 @@ def PreferLegacySetCC  : Predicate<"!Subtarget->hasZU() || "
                                    "Subtarget->preferLegacySetCC()">;
 def PreferNoLegacySetCC : Predicate<"Subtarget->hasZU() && "
                                     "!Subtarget->preferLegacySetCC()">;
-def HasNDDI      : Predicate<"Subtarget->hasNDD() && Subtarget->hasNDDI()">;
-def NoNDDI       : Predicate<"!Subtarget->hasNDD() || !Subtarget->hasNDDI()">;
 def HasCF        : Predicate<"Subtarget->hasCF()">;
 def HasJMPABS    : Predicate<"Subtarget->hasJMPABS()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
@@ -252,7 +250,8 @@ let RecomputePerFunction = 1 in {
 }
 
 def CallImmAddr  : Predicate<"Subtarget->isLegalToCallImmediateAddr()">;
-def FavorMemIndirectCall  : Predicate<"!Subtarget->slowTwoMemOps()">;
+def FavorMemIndirectCall  : Predicate<"!Subtarget->slowTwoMemOps() && "
+                                      "!Subtarget->slowIndirectCall()">;
 def HasFastMem32 : Predicate<"!Subtarget->isUnalignedMem32Slow()">;
 def HasFastLZCNT : Predicate<"Subtarget->hasFastLZCNT()">;
 def HasFastSHLDRotate : Predicate<"Subtarget->hasFastSHLDRotate()">;

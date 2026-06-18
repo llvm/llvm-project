@@ -19,7 +19,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -30,8 +30,7 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
   static const char *const GCCRegNames[];
 
-  static const LangASMap AMDGPUDefIsGenMap;
-  static const LangASMap AMDGPUDefIsPrivMap;
+  static const LangASMap AMDGPUAddrSpaceMap;
 
   llvm::AMDGPU::GPUKind GPUKind;
   unsigned GPUFeatures;
@@ -96,8 +95,6 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
 public:
   AMDGPUTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts);
-
-  void setAddressSpaceMap(bool DefaultIsPrivate);
 
   void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
               const TargetInfo *Aux) override;

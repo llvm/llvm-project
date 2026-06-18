@@ -12,9 +12,13 @@
 #include "EventHelper.h"
 #include "Handler/RequestHandler.h"
 #include "Handler/ResponseHandler.h"
+#include "LLDBUtils.h"
 #include "RunInTerminal.h"
 #include "Transport.h"
 #include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBPlatform.h"
+#include "lldb/API/SBProcessInfo.h"
+#include "lldb/API/SBProcessInfoList.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
@@ -41,6 +45,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
@@ -70,8 +75,8 @@
 #undef GetObject
 #include <io.h>
 typedef int socklen_t;
+#include "lldb/Host/ScriptInterpreterRuntimeLoader.h"
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
-#include "lldb/Host/windows/PythonPathSetup/PythonPathSetup.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Program.h"
 #else
@@ -180,6 +185,97 @@ static llvm::Error LaunchClient(const llvm::opt::InputArgList &args) {
     return llvm::createStringError("no launch arguments provided");
 
   return ClientLauncher::GetLauncher(*client)->Launch(launch_args);
+}
+
+/// Handles `--list-processes`: print the processes visible to the selected
+/// platform as a JSON array on stdout, then exit.
+///
+/// The JSON shape is intentionally minimal and stable:
+///
+///   [ { "pid": number, "name": string, "triple": string,
+///       "user": number, "executable": string }, ... ]
+///
+/// Fields other than `pid` are omitted if not available.
+static llvm::Expected<llvm::json::Array>
+GetProcessArray(const llvm::opt::InputArgList &args) {
+  llvm::StringRef platform_name = args.getLastArgValue(OPT_platform_name);
+  llvm::StringRef platform_url = args.getLastArgValue(OPT_platform_url);
+
+  if (!platform_url.empty() && platform_name.empty())
+    return llvm::createStringError("--platform-url requires --platform");
+
+  if (lldb::SBError init_error =
+          lldb::SBDebugger::InitializeWithErrorHandling();
+      init_error.Fail())
+    return llvm::createStringError(llvm::formatv(
+        "failed to initialize lldb: {0}", init_error.GetCString()));
+  llvm::scope_exit cleanup{[]() { lldb::SBDebugger::Terminate(); }};
+
+  lldb::SBDebugger debugger =
+      lldb::SBDebugger::Create(/*source_init_files=*/false);
+  if (!debugger.IsValid())
+    return llvm::createStringError("failed to create debugger");
+
+  lldb::SBPlatform platform =
+      platform_name.empty() ? lldb::SBPlatform::GetHostPlatform()
+                            : lldb::SBPlatform(platform_name.str().c_str());
+  if (!platform.IsValid())
+    return llvm::createStringError(
+        llvm::formatv("unknown platform: {0}", platform_name));
+
+  bool connected = false;
+  if (!platform_url.empty()) {
+    lldb::SBPlatformConnectOptions opts(platform_url.str().c_str());
+    lldb::SBError error = platform.ConnectRemote(opts);
+    if (error.Fail())
+      return llvm::createStringError(
+          llvm::formatv("failed to connect to platform {0} at {1}: {2}",
+                        platform.GetName(), platform_url, error.GetCString()));
+    connected = true;
+  }
+  llvm::scope_exit disconnect{[&]() {
+    if (connected)
+      platform.DisconnectRemote();
+  }};
+
+  lldb::SBError error;
+  lldb::SBProcessInfoList processes = platform.GetAllProcesses(error);
+  if (error.Fail()) {
+    if (!platform.IsConnected() && platform_url.empty())
+      return llvm::createStringError(
+          llvm::formatv("platform {0} is not connected; pass --platform-url "
+                        "to connect to a remote platform",
+                        platform.GetName()));
+    return llvm::createStringError(
+        llvm::formatv("failed to list processes: {0}", error.GetCString()));
+  }
+
+  llvm::json::Array array;
+  for (uint32_t i = 0, n = processes.GetSize(); i < n; ++i) {
+    lldb::SBProcessInfo info;
+    if (!processes.GetProcessInfoAtIndex(i, info))
+      continue;
+
+    llvm::json::Object entry;
+    entry["pid"] = info.GetProcessID();
+    if (const char *name = info.GetName())
+      entry["name"] = name;
+    if (const char *triple = info.GetTriple())
+      entry["triple"] = triple;
+    if (info.UserIDIsValid())
+      entry["user"] = info.GetUserID();
+
+    lldb::SBFileSpec exe = info.GetExecutableFile();
+    if (exe.IsValid()) {
+      std::string path = lldb_dap::GetSBFileSpecPath(exe);
+      if (!path.empty())
+        entry["executable"] = path;
+    }
+
+    array.push_back(std::move(entry));
+  }
+
+  return array;
 }
 
 llvm::Error
@@ -664,6 +760,22 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
   }
 
+#if defined(_WIN32) && LLDB_ENABLE_PYTHON
+  // liblldb.dll has direct imports from python3xx.dll, so pre-load the Python
+  // runtime before any SB call (PrintVersion below, SBDebugger::Initialize
+  // later) triggers lldb-dap.exe's delay-load thunk for liblldb.dll. The
+  // runtime loader is statically linked into lldb-dap.exe via lldbHost (no
+  // LLDB_API export), so this call does not itself trigger the load.
+  llvm::Expected<lldb_private::ScriptInterpreterRuntimeLoader &> python_loader =
+      lldb_private::ScriptInterpreterRuntimeLoader::Get(
+          lldb::eScriptLanguagePython);
+  if (!python_loader)
+    llvm::WithColor::warning()
+        << llvm::toString(python_loader.takeError()) << '\n';
+  else if (llvm::Error err = python_loader->Load())
+    llvm::WithColor::warning() << llvm::toString(std::move(err)) << '\n';
+#endif
+
   if (input_args.hasArg(OPT_version)) {
     PrintVersion();
     return EXIT_SUCCESS;
@@ -671,26 +783,35 @@ int main(int argc, char *argv[]) {
 
 #ifdef _WIN32
   if (input_args.hasArg(OPT_check_python)) {
-    auto python_path_or_err = SetupPythonRuntimeLibrary();
-    if (!python_path_or_err) {
-      llvm::WithColor::error()
-          << llvm::toString(python_path_or_err.takeError()) << '\n';
+#ifndef LLDB_ENABLE_PYTHON
+    llvm::errs() << "lldb-dap was not built with Python support" << '\n';
+    return EXIT_SUCCESS;
+#endif
+    llvm::Expected<lldb_private::ScriptInterpreterRuntimeLoader &> loader =
+        lldb_private::ScriptInterpreterRuntimeLoader::Get(
+            lldb::eScriptLanguagePython);
+    if (!loader) {
+      llvm::WithColor::error() << llvm::toString(loader.takeError()) << '\n';
       return EXIT_FAILURE;
     }
-    std::string python_path = *python_path_or_err;
-    if (python_path.empty()) {
+    if (llvm::Error err = loader->Load()) {
+      llvm::WithColor::error() << llvm::toString(std::move(err)) << '\n';
+      return EXIT_FAILURE;
+    }
+    llvm::Expected<llvm::StringRef> python_path = loader->GetLoadedPath();
+    if (!python_path) {
+      llvm::WithColor::error()
+          << llvm::toString(python_path.takeError()) << '\n';
+      return EXIT_FAILURE;
+    }
+    if (python_path->empty()) {
       llvm::WithColor::error()
           << "unable to look for the Python shared library" << '\n';
       return EXIT_FAILURE;
     }
-    llvm::outs() << python_path << '\n';
+    llvm::outs() << *python_path << '\n';
     return EXIT_SUCCESS;
   }
-
-  auto python_path_or_err = SetupPythonRuntimeLibrary();
-  if (!python_path_or_err)
-    llvm::WithColor::error()
-        << llvm::toString(python_path_or_err.takeError()) << '\n';
 #endif
 
   if (input_args.hasArg(OPT_client)) {
@@ -698,6 +819,18 @@ int main(int argc, char *argv[]) {
       llvm::WithColor::error() << llvm::toString(std::move(error)) << '\n';
       return EXIT_FAILURE;
     }
+    return EXIT_SUCCESS;
+  }
+
+  if (input_args.hasArg(OPT_list_processes)) {
+    llvm::Expected<llvm::json::Array> arr_or_err = GetProcessArray(input_args);
+    if (!arr_or_err) {
+      llvm::WithColor::error()
+          << llvm::toString(arr_or_err.takeError()) << '\n';
+      return EXIT_FAILURE;
+    }
+    llvm::outs() << llvm::formatv("{0}\n",
+                                  llvm::json::Value(std::move(*arr_or_err)));
     return EXIT_SUCCESS;
   }
 

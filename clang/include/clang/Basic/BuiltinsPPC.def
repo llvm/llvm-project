@@ -1131,35 +1131,35 @@ UNALIASED_CUSTOM_BUILTIN(disassemble_dmr, "vv*W1024*", false,
 UNALIASED_CUSTOM_BUILTIN(build_dmr, "vW1024*VVVVVVVV", false,
                          "mma,isa-future-instructions")
 
-UNALIASED_CUSTOM_BUILTIN(mma_dmsha2hash, "vW1024*W1024*Ii", true,
+UNALIASED_CUSTOM_BUILTIN(dmsha2hash, "vW1024*W1024*i1", true,
                          "mma,isa-future-instructions")
-UNALIASED_CUSTOM_BUILTIN(mma_dmsha3hash, "vW2048*Ii", true,
+UNALIASED_CUSTOM_BUILTIN(dmsha3hash, "vW2048*i31", true,
                          "mma,isa-future-instructions")
-UNALIASED_CUSTOM_BUILTIN(mma_dmxxshapad, "vW1024*VIiIiIi", true,
+UNALIASED_CUSTOM_BUILTIN(dmxxshapad, "vW1024*Vi3i1i3", true,
                          "mma,isa-future-instructions")
-CUSTOM_BUILTIN(dmsha256hash, mma_dmsha2hash, "vW1024*W1024*", true,
+CUSTOM_BUILTIN(dmsha256hash, dmsha2hash, "vW1024*W1024*", true,
                          "mma,isa-future-instructions")
-CUSTOM_BUILTIN(dmsha512hash, mma_dmsha2hash, "vW1024*W1024*", true,
+CUSTOM_BUILTIN(dmsha512hash, dmsha2hash, "vW1024*W1024*", true,
                          "mma,isa-future-instructions")
-CUSTOM_BUILTIN(dmsha3dw, mma_dmsha3hash, "vW2048*", true,
+CUSTOM_BUILTIN(dmsha3dw, dmsha3hash, "vW2048*", true,
                          "mma,isa-future-instructions")
-CUSTOM_BUILTIN(dmcryshash, mma_dmsha3hash, "vW2048*", true,
+CUSTOM_BUILTIN(dmcryshash, dmsha3hash, "vW2048*", true,
                          "mma,isa-future-instructions")
-CUSTOM_BUILTIN(dmxxsha3512pad, mma_dmxxshapad, "vW1024*Vi1", true,
+CUSTOM_BUILTIN(dmxxsha3512pad, dmxxshapad, "vW1024*Vi1", true,
                          "mma,isa-future-instructions")
-CUSTOM_BUILTIN(dmxxsha3384pad, mma_dmxxshapad, "vW1024*Vi1", true,
+CUSTOM_BUILTIN(dmxxsha3384pad, dmxxshapad, "vW1024*Vi1", true,
                          "mma,isa-future-instructions")
-CUSTOM_BUILTIN(dmxxsha3256pad, mma_dmxxshapad, "vW1024*Vi1", true,
+CUSTOM_BUILTIN(dmxxsha3256pad, dmxxshapad, "vW1024*Vi1", true,
                          "mma,isa-future-instructions")
-CUSTOM_BUILTIN(dmxxsha3224pad, mma_dmxxshapad, "vW1024*Vi1", true,
+CUSTOM_BUILTIN(dmxxsha3224pad, dmxxshapad, "vW1024*Vi1", true,
                          "mma,isa-future-instructions")
-CUSTOM_BUILTIN(dmxxshake256pad, mma_dmxxshapad, "vW1024*Vi1", true,
+CUSTOM_BUILTIN(dmxxshake256pad, dmxxshapad, "vW1024*Vi1", true,
                          "mma,isa-future-instructions")
-CUSTOM_BUILTIN(dmxxshake128pad, mma_dmxxshapad, "vW1024*Vi1", true,
+CUSTOM_BUILTIN(dmxxshake128pad, dmxxshapad, "vW1024*Vi1", true,
                          "mma,isa-future-instructions")
-CUSTOM_BUILTIN(dmxxsha384512pad, mma_dmxxshapad, "vW1024*V", true,
+CUSTOM_BUILTIN(dmxxsha384512pad, dmxxshapad, "vW1024*V", true,
                          "mma,isa-future-instructions")
-CUSTOM_BUILTIN(dmxxsha224256pad, mma_dmxxshapad, "vW1024*V", true,
+CUSTOM_BUILTIN(dmxxsha224256pad, dmxxshapad, "vW1024*V", true,
                          "mma,isa-future-instructions")
 
 // MMA builtins with positive/negative multiply/accumulate.

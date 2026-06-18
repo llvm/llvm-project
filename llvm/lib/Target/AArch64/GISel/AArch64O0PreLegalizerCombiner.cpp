@@ -94,10 +94,9 @@ bool AArch64O0PreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
 
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
-  case TargetOpcode::G_SHUFFLE_VECTOR:
-    return Helper.tryCombineShuffleVector(MI);
   case TargetOpcode::G_MEMCPY_INLINE:
-    return Helper.tryEmitMemcpyInline(MI);
+  case TargetOpcode::G_MEMSET_INLINE:
+    return Helper.tryEmitMemcpyInlineFamily(MI);
   case TargetOpcode::G_MEMCPY:
   case TargetOpcode::G_MEMMOVE:
   case TargetOpcode::G_MEMSET: {

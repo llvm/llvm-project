@@ -77,6 +77,59 @@ void AMDGPUDisassembler::setABIVersion(unsigned Version) {
   CodeObjectVersion = AMDGPU::getAMDHSACodeObjectVersion(Version);
 }
 
+void AMDGPUDisassembler::emitTargetIDIfSupported(raw_ostream &OS,
+                                                 unsigned EFlags) const {
+  OS << "\t.amdgcn_target \""
+     << STI.getTargetTriple().normalize(Triple::CanonicalForm::FOUR_IDENT)
+     << '-';
+
+  // Get CPU name from ELF e_flags MACH field
+  unsigned MACH = EFlags & ELF::EF_AMDGPU_MACH;
+
+#define X(NUM, ENUM, NAME)                                                     \
+  case ELF::ENUM:                                                              \
+    OS << NAME;                                                                \
+    break;
+  switch (MACH) {
+    AMDGPU_MACH_LIST(X)
+  default:
+    OS << "unknown";
+    break;
+  }
+#undef X
+
+  // Add xnack and sramecc from ELF flags (v4 format)
+  if (CodeObjectVersion >= AMDGPU::AMDHSA_COV4) {
+    unsigned SrameccSetting = EFlags & ELF::EF_AMDGPU_FEATURE_SRAMECC_V4;
+    switch (SrameccSetting) {
+    case ELF::EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4:
+    case ELF::EF_AMDGPU_FEATURE_SRAMECC_ANY_V4:
+      break;
+    case ELF::EF_AMDGPU_FEATURE_SRAMECC_OFF_V4:
+      OS << ":sramecc-";
+      break;
+    case ELF::EF_AMDGPU_FEATURE_SRAMECC_ON_V4:
+      OS << ":sramecc+";
+      break;
+    }
+
+    unsigned XnackSetting = EFlags & ELF::EF_AMDGPU_FEATURE_XNACK_V4;
+    switch (XnackSetting) {
+    case ELF::EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4:
+    case ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4:
+      break;
+    case ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4:
+      OS << ":xnack-";
+      break;
+    case ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4:
+      OS << ":xnack+";
+      break;
+    }
+  }
+
+  OS << "\"\n";
+}
+
 inline static MCDisassembler::DecodeStatus
 addOperand(MCInst &Inst, const MCOperand& Opnd) {
   Inst.addOperand(Opnd);
@@ -527,9 +580,7 @@ void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
         Imm = getInlineImmValBF16(Imm);
         break;
       case AMDGPU::OPERAND_REG_IMM_FP16:
-      case AMDGPU::OPERAND_REG_IMM_INT16:
       case AMDGPU::OPERAND_REG_INLINE_C_FP16:
-      case AMDGPU::OPERAND_REG_INLINE_C_INT16:
         Imm = getInlineImmValF16(Imm);
         break;
       case AMDGPU::OPERAND_REG_IMM_V2FP16:
@@ -553,6 +604,8 @@ void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
       case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
       case AMDGPU::OPERAND_REG_INLINE_C_FP64:
       case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+      case AMDGPU::OPERAND_REG_IMM_V2FP64:
+      case AMDGPU::OPERAND_REG_IMM_V2INT64:
         Imm = getInlineImmVal64(Imm);
         break;
       default:
@@ -1332,7 +1385,8 @@ void AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     // VIMAGE insts other than BVH never use vaddr4.
     IsNSA = Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA ||
             Info->MIMGEncoding == AMDGPU::MIMGEncGfx11NSA ||
-            Info->MIMGEncoding == AMDGPU::MIMGEncGfx12;
+            Info->MIMGEncoding == AMDGPU::MIMGEncGfx12 ||
+            Info->MIMGEncoding == AMDGPU::MIMGEncGfx13;
     if (!IsNSA) {
       if (!IsVSample && AddrSize > 12)
         AddrSize = 16;
@@ -1680,10 +1734,14 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
-    Val <<= 32;
+  case AMDGPU::OPERAND_REG_IMM_V2FP64:
+    UseLit = AMDGPU::isInlinableLiteral64(Val << 32, HasInv2Pi);
+    if (!UseLit)
+      Val <<= 32;
     break;
   case AMDGPU::OPERAND_REG_IMM_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
+  case AMDGPU::OPERAND_REG_IMM_V2INT64:
     UseLit = AMDGPU::isInlinableLiteral64(Val, HasInv2Pi);
     break;
   case MCOI::OPERAND_REGISTER:
@@ -1712,6 +1770,10 @@ MCOperand AMDGPUDisassembler::decodeLiteral64Constant() const {
   }
 
   bool UseLit64 = Hi_32(Literal) == 0;
+
+  UseLit64 |= AMDGPU::isInlinableLiteral64(
+      Literal, STI.hasFeature(AMDGPU::FeatureInv2PiInlineImm));
+
   return UseLit64 ? MCOperand::createExpr(AMDGPUMCExpr::createLit(
                         LitModifier::Lit64, Literal, getContext()))
                   : MCOperand::createImm(Literal);
@@ -2377,7 +2439,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
 
   uint32_t NextFreeVGPR =
       (GranulatedWorkitemVGPRCount + 1) *
-      AMDGPU::IsaInfo::getVGPREncodingGranule(&STI, EnableWavefrontSize32);
+      AMDGPU::IsaInfo::getVGPREncodingGranule(STI, EnableWavefrontSize32);
 
   KdStream << Indent << ".amdhsa_next_free_vgpr " << NextFreeVGPR << '\n';
 
@@ -2408,7 +2470,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
                             "must be zero on gfx10+");
 
   uint32_t NextFreeSGPR = (GranulatedWavefrontSGPRCount + 1) *
-                          AMDGPU::IsaInfo::getSGPREncodingGranule(&STI);
+                          AMDGPU::IsaInfo::getSGPREncodingGranule(STI);
 
   KdStream << Indent << ".amdhsa_reserve_vcc " << 0 << '\n';
   if (!hasArchitectedFlatScratch())
@@ -2681,7 +2743,7 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
   StringRef Indent = "\t";
 
   assert(Bytes.size() == 64);
-  DataExtractor DE(Bytes, /*IsLittleEndian=*/true, /*AddressSize=*/8);
+  DataExtractor DE(Bytes, /*IsLittleEndian=*/true);
 
   switch (Cursor.tell()) {
   case amdhsa::GROUP_SEGMENT_FIXED_SIZE_OFFSET:

@@ -13,6 +13,7 @@
 #include <__config_site>
 #include <__configuration/attributes.h>
 #include <__configuration/diagnostic_suppression.h>
+#include <__configuration/utility.h>
 
 #ifndef _LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER
 #  pragma GCC system_header
@@ -34,10 +35,26 @@
     _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                                                               \
     _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++23-extensions")
 #  define _LIBCPP_POP_EXTENSION_DIAGNOSTICS _LIBCPP_DIAGNOSTIC_POP
+#  define _LIBCPP_PUSH_ABI_PRAGMA_DIAGNOSTICS                                                                          \
+    _LIBCPP_DIAGNOSTIC_PUSH _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wpragma-clang-attribute")                               \
+        _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wignored-attributes")
+#  define _LIBCPP_POP_ABI_PRAGMA_DIAGNOSTICS _LIBCPP_DIAGNOSTIC_POP
 #else
 #  define _LIBCPP_PUSH_EXTENSION_DIAGNOSTICS
 #  define _LIBCPP_POP_EXTENSION_DIAGNOSTICS
+#  define _LIBCPP_PUSH_ABI_PRAGMA_DIAGNOSTICS
+#  define _LIBCPP_POP_ABI_PRAGMA_DIAGNOSTICS
 #endif
+
+#define _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS                                                                           \
+  _LIBCPP_PUSH_ABI_PRAGMA_DIAGNOSTICS                                                                                  \
+  _Pragma(_LIBCPP_TOSTRING(clang attribute _LibcxxExplicitABIAnnotations.push(                                         \
+      __attribute__((__exclude_from_explicit_instantiation__,                                                          \
+                     __visibility__("hidden"),                                                                         \
+                     __abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_ODR_SIGNATURE)))),                                           \
+      apply_to = function))) _LIBCPP_POP_ABI_PRAGMA_DIAGNOSTICS
+
+#define _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS _Pragma("clang attribute _LibcxxExplicitABIAnnotations.pop")
 
 // clang-format off
 
@@ -50,9 +67,9 @@
 // If it's not clear whether using the unversioned namespace is the correct thing to do, it's not. The versioned
 // namespace (_LIBCPP_BEGIN_NAMESPACE_STD) should almost always be used.
 #  define _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD                                                                      \
-    _LIBCPP_PUSH_EXTENSION_DIAGNOSTICS namespace _LIBCPP_NAMESPACE_VISIBILITY std {
+    _LIBCPP_PUSH_EXTENSION_DIAGNOSTICS _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS namespace _LIBCPP_NAMESPACE_VISIBILITY std {
 
-#  define _LIBCPP_END_UNVERSIONED_NAMESPACE_STD } _LIBCPP_POP_EXTENSION_DIAGNOSTICS
+#  define _LIBCPP_END_UNVERSIONED_NAMESPACE_STD } _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS _LIBCPP_POP_EXTENSION_DIAGNOSTICS
 
 #  define _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD inline namespace _LIBCPP_ABI_NAMESPACE {
 #  define _LIBCPP_END_NAMESPACE_STD } _LIBCPP_END_UNVERSIONED_NAMESPACE_STD

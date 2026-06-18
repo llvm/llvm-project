@@ -296,6 +296,97 @@ struct Signature {
   llvm::SmallVector<SignatureParameter> Parameters;
 };
 
+struct DebugName {
+  std::optional<uint16_t> Flags;
+  std::optional<uint16_t> NameLength;
+  std::string Filename;
+};
+
+struct CompilerVersion {
+  std::optional<uint16_t> Major;
+  std::optional<uint16_t> Minor;
+  std::optional<bool> IsDebugBuild;
+  std::optional<bool> IsValidated;
+  std::optional<uint32_t> CommitCount;
+  std::optional<uint32_t> ContentSizeInBytes;
+  std::optional<std::string> CommitSha;
+  std::optional<std::string> CustomVersionString;
+};
+
+struct SourceInfo {
+  struct Header {
+    std::optional<uint32_t> AlignedSizeInBytes;
+    std::optional<uint16_t> Flags;
+    std::optional<uint16_t> SectionCount;
+  };
+
+  struct SectionHeader {
+    std::optional<uint32_t> AlignedSizeInBytes;
+    std::optional<uint16_t> Flags;
+    std::optional<dxbc::SourceInfo::SectionType> Type;
+  };
+
+  struct Section {
+    SectionHeader GenericHeader;
+  };
+
+  struct SourceContents : public Section {
+    struct Header {
+      std::optional<uint32_t> AlignedSizeInBytes;
+      std::optional<uint16_t> Flags;
+      dxbc::SourceInfo::Contents::CompressionType Type;
+      std::optional<uint32_t> EntriesSizeInBytes;
+      std::optional<uint32_t> UncompressedEntriesSizeInBytes;
+      std::optional<uint32_t> Count;
+    };
+
+    struct Entry {
+      std::optional<uint32_t> AlignedSizeInBytes;
+      std::optional<uint32_t> Flags;
+      std::optional<uint32_t> ContentSizeInBytes;
+      std::string FileContent;
+    };
+
+    Header Parameters;
+    SmallVector<Entry> Entries;
+  };
+
+  struct SourceNames : public Section {
+    struct Header {
+      std::optional<uint32_t> Flags;
+      std::optional<uint32_t> Count;
+      std::optional<uint16_t> EntriesSizeInBytes;
+    };
+
+    struct Entry {
+      std::optional<uint32_t> AlignedSizeInBytes;
+      std::optional<uint32_t> Flags;
+      std::optional<uint32_t> NameSizeInBytes;
+      std::optional<uint32_t> ContentSizeInBytes;
+      StringRef FileName;
+    };
+
+    Header Parameters;
+    SmallVector<Entry> Entries;
+  };
+
+  struct ProgramArgs : public Section {
+    struct Header {
+      std::optional<uint32_t> Flags;
+      std::optional<uint32_t> SizeInBytes;
+      std::optional<uint32_t> Count;
+    };
+
+    Header Parameters;
+    SmallVector<mcdxbc::SourceInfo::ProgramArgs::Entry> Args;
+  };
+
+  Header Parameters;
+  SourceNames Names;
+  SourceContents Contents;
+  ProgramArgs Args;
+};
+
 struct Part {
   Part() = default;
   Part(std::string N, uint32_t S) : Name(N), Size(S) {}
@@ -307,12 +398,18 @@ struct Part {
   std::optional<PSVInfo> Info;
   std::optional<DXContainerYAML::Signature> Signature;
   std::optional<DXContainerYAML::RootSignatureYamlDesc> RootSignature;
+  std::optional<DXContainerYAML::DebugName> DebugName;
+  std::optional<DXContainerYAML::CompilerVersion> CompilerVersion;
+  std::optional<DXContainerYAML::SourceInfo> SourceInfo;
 };
 
 struct Object {
   FileHeader Header;
   std::vector<Part> Parts;
 };
+
+LLVM_ABI Expected<std::unique_ptr<DXContainerYAML::Object>>
+fromDXContainer(object::DXContainer &DXC);
 
 } // namespace DXContainerYAML
 } // namespace llvm
@@ -326,6 +423,11 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::RootParameterLocationYaml)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::DescriptorRangeYaml)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::StaticSamplerYamlDesc)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DXContainerYAML::StringTableEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(
+    llvm::DXContainerYAML::SourceInfo::SourceNames::Entry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(
+    llvm::DXContainerYAML::SourceInfo::SourceContents::Entry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(mcdxbc::SourceInfo::ProgramArgs::Entry)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::SemanticKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::InterpolationMode)
@@ -341,6 +443,8 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::StaticBorderColor)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::TextureAddressMode)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::ShaderVisibility)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::ComparisonFunc)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SourceInfo::SectionType)
+LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SourceInfo::Contents::CompressionType)
 
 namespace llvm {
 
@@ -373,6 +477,15 @@ template <> struct MappingTraits<DXContainerYAML::PSVInfo> {
   LLVM_ABI static void mapping(IO &IO, DXContainerYAML::PSVInfo &PSV);
 };
 
+template <> struct MappingTraits<DXContainerYAML::DebugName> {
+  LLVM_ABI static void mapping(IO &IO, DXContainerYAML::DebugName &DebugName);
+};
+
+template <> struct MappingTraits<DXContainerYAML::CompilerVersion> {
+  LLVM_ABI static void
+  mapping(IO &IO, DXContainerYAML::CompilerVersion &CompilerVersion);
+};
+
 template <> struct MappingTraits<DXContainerYAML::Part> {
   LLVM_ABI static void mapping(IO &IO, DXContainerYAML::Part &Version);
 };
@@ -395,7 +508,7 @@ template <> struct MappingTraits<DXContainerYAML::SignatureElement> {
 };
 
 template <> struct MappingTraits<DXContainerYAML::StringTableEntry> {
-  static void mapping(IO &IO, DXContainerYAML::StringTableEntry &E);
+  LLVM_ABI static void mapping(IO &IO, DXContainerYAML::StringTableEntry &E);
 };
 
 template <> struct MappingTraits<DXContainerYAML::SignatureParameter> {
@@ -443,6 +556,75 @@ template <> struct MappingTraits<llvm::DXContainerYAML::DescriptorRangeYaml> {
 template <> struct MappingTraits<llvm::DXContainerYAML::StaticSamplerYamlDesc> {
   LLVM_ABI static void mapping(IO &IO,
                                llvm::DXContainerYAML::StaticSamplerYamlDesc &S);
+};
+
+template <> struct MappingTraits<llvm::DXContainerYAML::SourceInfo::Header> {
+  LLVM_ABI static void mapping(IO &IO,
+                               llvm::DXContainerYAML::SourceInfo::Header &H);
+};
+
+template <>
+struct MappingTraits<llvm::DXContainerYAML::SourceInfo::SectionHeader> {
+  LLVM_ABI static void
+  mapping(IO &IO, llvm::DXContainerYAML::SourceInfo::SectionHeader &H);
+};
+
+template <>
+struct MappingTraits<llvm::DXContainerYAML::SourceInfo::SourceNames::Header> {
+  LLVM_ABI static void
+  mapping(IO &IO, llvm::DXContainerYAML::SourceInfo::SourceNames::Header &H);
+};
+
+template <>
+struct MappingTraits<llvm::DXContainerYAML::SourceInfo::SourceNames::Entry> {
+  LLVM_ABI static void
+  mapping(IO &IO, llvm::DXContainerYAML::SourceInfo::SourceNames::Entry &E);
+};
+
+template <>
+struct MappingTraits<llvm::DXContainerYAML::SourceInfo::SourceNames> {
+  LLVM_ABI static void
+  mapping(IO &IO, llvm::DXContainerYAML::SourceInfo::SourceNames &S);
+};
+
+template <>
+struct MappingTraits<
+    llvm::DXContainerYAML::SourceInfo::SourceContents::Header> {
+  LLVM_ABI static void
+  mapping(IO &IO, llvm::DXContainerYAML::SourceInfo::SourceContents::Header &H);
+};
+
+template <>
+struct MappingTraits<llvm::DXContainerYAML::SourceInfo::SourceContents::Entry> {
+  LLVM_ABI static void
+  mapping(IO &IO, llvm::DXContainerYAML::SourceInfo::SourceContents::Entry &E);
+};
+
+template <>
+struct MappingTraits<llvm::DXContainerYAML::SourceInfo::SourceContents> {
+  LLVM_ABI static void
+  mapping(IO &IO, llvm::DXContainerYAML::SourceInfo::SourceContents &S);
+};
+
+template <>
+struct MappingTraits<llvm::DXContainerYAML::SourceInfo::ProgramArgs::Header> {
+  LLVM_ABI static void
+  mapping(IO &IO, llvm::DXContainerYAML::SourceInfo::ProgramArgs::Header &H);
+};
+
+template <> struct MappingTraits<mcdxbc::SourceInfo::ProgramArgs::Entry> {
+  LLVM_ABI static void mapping(IO &IO,
+                               mcdxbc::SourceInfo::ProgramArgs::Entry &E);
+};
+
+template <>
+struct MappingTraits<llvm::DXContainerYAML::SourceInfo::ProgramArgs> {
+  LLVM_ABI static void
+  mapping(IO &IO, llvm::DXContainerYAML::SourceInfo::ProgramArgs &S);
+};
+
+template <> struct MappingTraits<llvm::DXContainerYAML::SourceInfo> {
+  LLVM_ABI static void mapping(IO &IO, llvm::DXContainerYAML::SourceInfo &S);
 };
 
 } // namespace yaml
