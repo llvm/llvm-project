@@ -5376,14 +5376,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     EmitBlock(Acc);
     Builder.CreateStore(Builder.getInt8(1), AnyAddr);
     Value *AccV = Builder.CreateLoad(AccAddr);
-    Value *Mul = Builder.CreateBinaryIntrinsic(
-        llvm::Intrinsic::umul_with_overflow, AccV, BaseA);
-    Value *O1 = Builder.CreateExtractValue(Mul, 1);
-    Value *Sum =
-        Builder.CreateBinaryIntrinsic(llvm::Intrinsic::uadd_with_overflow,
-                                      Builder.CreateExtractValue(Mul, 0), DW);
-    Value *O2 = Builder.CreateExtractValue(Sum, 1);
-    Builder.CreateStore(Builder.CreateExtractValue(Sum, 0), AccAddr);
+    Value *O1, *O2;
+    Value *Mul = EmitOverflowIntrinsic(
+        *this, llvm::Intrinsic::umul_with_overflow, AccV, BaseA, O1);
+    Value *Sum = EmitOverflowIntrinsic(
+        *this, llvm::Intrinsic::uadd_with_overflow, Mul, DW, O2);
+    Builder.CreateStore(Sum, AccAddr);
     Value *OvfNow = Builder.CreateOr(O1, O2);
     Value *OldOvf =
         Builder.CreateICmpNE(Builder.CreateLoad(OvfAddr), Builder.getInt8(0));

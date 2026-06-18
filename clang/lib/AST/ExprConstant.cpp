@@ -10725,8 +10725,9 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
     }
 
-    // Sign and magnitude. Widen by one bit so negating the most-negative
-    // value cannot overflow.
+    // Sign and magnitude. Widen by one bit so negating the most-negative value
+    // cannot overflow. APInt::toString is not usable here: it only supports
+    // radix 2/8/10/16/36, whereas charconv covers every base in [2, 36].
     bool Neg = Value.isSigned() && Value.isNegative();
     APInt Mag = Value.isSigned() ? Value.sext(Value.getBitWidth() + 1)
                                  : Value.zext(Value.getBitWidth() + 1);
@@ -10749,7 +10750,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     uint64_t Len = Rev.size() + (Neg ? 1 : 0);
 
     // Capacity check against [first, last). char is one byte.
-    if (!HasSameBase(First, Last)) {
+    if (!HasSameBase(First, Last) || First.Designator.Invalid) {
       Info.FFDiag(E);
       return false;
     }
@@ -10797,7 +10798,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
     }
 
-    if (!HasSameBase(First, Last)) {
+    if (!HasSameBase(First, Last) || First.Designator.Invalid) {
       Info.FFDiag(E);
       return false;
     }
