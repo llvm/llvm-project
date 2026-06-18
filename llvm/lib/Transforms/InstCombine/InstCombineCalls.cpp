@@ -2660,11 +2660,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return &CI;
     break;
   }
-  case Intrinsic::pdep:
-    if (auto *MaskC = dyn_cast<ConstantInt>(II->getArgOperand(1))) {
+  case Intrinsic::pdep: {
+    const APInt *MaskC;
+    if (match(II->getArgOperand(1), m_APInt(MaskC))) {
       unsigned MaskIdx, MaskLen;
-      if (MaskC->getValue().isShiftedMask(MaskIdx, MaskLen)) {
-        // any single contingous sequence of 1s anywhere in the mask simply
+      if (MaskC->isShiftedMask(MaskIdx, MaskLen)) {
+        // any single contiguous sequence of 1s anywhere in the mask simply
         // describes a subset of the input bits shifted to the appropriate
         // position.  Replace with the straight forward IR.
         Value *Input = II->getArgOperand(0);
@@ -2675,11 +2676,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
     break;
-  case Intrinsic::pext:
-    if (auto *MaskC = dyn_cast<ConstantInt>(II->getArgOperand(1))) {
+  }
+  case Intrinsic::pext: {
+    const APInt *MaskC;
+    if (match(II->getArgOperand(1), m_APInt(MaskC))) {
       unsigned MaskIdx, MaskLen;
-      if (MaskC->getValue().isShiftedMask(MaskIdx, MaskLen)) {
-        // any single contingous sequence of 1s anywhere in the mask simply
+      if (MaskC->isShiftedMask(MaskIdx, MaskLen)) {
+        // any single contiguous sequence of 1s anywhere in the mask simply
         // describes a subset of the input bits shifted to the appropriate
         // position.  Replace with the straight forward IR.
         Value *Input = II->getArgOperand(0);
@@ -2690,6 +2693,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
     break;
+  }
   case Intrinsic::ptrmask: {
     unsigned BitWidth = DL.getPointerTypeSizeInBits(II->getType());
     KnownBits Known(BitWidth);
