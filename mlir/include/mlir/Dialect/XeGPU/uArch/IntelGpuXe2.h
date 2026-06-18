@@ -31,12 +31,16 @@ namespace xegpu {
 namespace uArch {
 
 struct Xe2Plus : public uArch {
-  Xe2Plus(StringRef archName, StringRef archDescription,
-          llvm::ArrayRef<const Instruction *> instructionRegistry,
+  Xe2Plus(Kind kind, llvm::ArrayRef<const Instruction *> instructionRegistry,
           const XeCoreInfo &xeCore)
-      : uArch(archName, archDescription, instructionRegistry), xeCore(xeCore) {}
+      : uArch(kind, instructionRegistry), xeCore(xeCore) {}
   int getSubgroupSize() const override { return 16; }
   unsigned getGeneralPackedFormatBitSize() const override { return 32; }
+
+  static bool classof(const uArch *u) {
+    return u->getKind() >= Kind::Xe2Plus_First &&
+           u->getKind() <= Kind::Xe2Plus_Last;
+  }
 
 protected:
   XeCoreInfo xeCore;
@@ -315,11 +319,10 @@ struct PVCuArch final : public Xe2Plus {
   }
 
   PVCuArch()
-      : Xe2Plus("pvc",                        // archName
-                "Ponte Vecchio Architecture", // archDescription
-                getInstructionRegistryArr(),
+      : Xe2Plus(Kind::PVC, getInstructionRegistryArr(),
                 XeCoreInfo(8, SharedMemory(512 * 1024, 4), 8, 8) // xeCore
         ) {}
+  static bool classof(const uArch *u) { return u->getKind() == Kind::PVC; }
   static const uArch *getInstance() {
     static const PVCuArch instance;
     return reinterpret_cast<const uArch *>(&instance);
@@ -341,11 +344,10 @@ struct BMGuArch : public Xe2Plus {
   }
 
   BMGuArch()
-      : Xe2Plus("bmg",                     // archName
-                "Battlemage Architecture", // archDescription
-                getInstructionRegistryArr(),
+      : Xe2Plus(Kind::BMG, getInstructionRegistryArr(),
                 XeCoreInfo(8, SharedMemory(256 * 1024, 4), 8, 8) // xeCore
         ) {}
+  static bool classof(const uArch *u) { return u->getKind() == Kind::BMG; }
   static const uArch *getInstance() {
     static const BMGuArch instance;
     return reinterpret_cast<const uArch *>(&instance);
@@ -368,13 +370,12 @@ struct CRIuArch : public Xe2Plus {
   }
 
   CRIuArch()
-      : Xe2Plus("cri",                          // archName
-                "Crescent Island Architecture", // archDescription
-                getInstructionRegistryArr(),
+      : Xe2Plus(Kind::CRI, getInstructionRegistryArr(),
                 // Using bmg config as placeholder
                 // TODO: Update to actual XeCore and SharedMemory config
                 XeCoreInfo(8, SharedMemory(256 * 1024, 4), 8, 8) // xeCore
         ) {}
+  static bool classof(const uArch *u) { return u->getKind() == Kind::CRI; }
   static const uArch *getInstance() {
     static const CRIuArch instance;
     return reinterpret_cast<const uArch *>(&instance);
@@ -390,7 +391,6 @@ inline const uArch *getUArch(llvm::StringRef archName) {
     return CRIuArch::getInstance();
   return nullptr;
 }
-
 } // namespace uArch
 } // namespace xegpu
 } // namespace mlir

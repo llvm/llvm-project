@@ -25,6 +25,7 @@
 
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Casting.h"
 
 namespace mlir {
 namespace xegpu {
@@ -153,16 +154,49 @@ protected:
 };
 
 struct uArch {
+  enum class Kind {
+    // Xe2 family
+    Xe2Plus_First,
+    PVC = Xe2Plus_First,
+    BMG,
+    CRI,
+    Xe2Plus_Last = CRI,
+  };
+
   // Constructor
-  uArch(StringRef name, StringRef description,
-        llvm::ArrayRef<const Instruction *> instructionRegistry)
-      : name(name), description(description) {
+  uArch(Kind kind, llvm::ArrayRef<const Instruction *> instructionRegistry)
+      : kind(kind) {
     for (const Instruction *instr : instructionRegistry)
       this->instructionRegistry[instr->getInstructionKind()] = instr;
   }
   virtual ~uArch() = default;
-  StringRef getName() const { return name; }
-  StringRef getDescription() const { return description; }
+  Kind getKind() const { return kind; }
+  StringRef getName() const { return getUArchName(kind); }
+  StringRef getDescription() const { return getUArchDescription(kind); }
+
+  static StringRef getUArchName(Kind k) {
+    switch (k) {
+    case Kind::PVC:
+      return "pvc";
+    case Kind::BMG:
+      return "bmg";
+    case Kind::CRI:
+      return "cri";
+    }
+    llvm_unreachable("Unknown uArch::Kind");
+  }
+
+  static StringRef getUArchDescription(Kind k) {
+    switch (k) {
+    case Kind::PVC:
+      return "Ponte Vecchio Architecture";
+    case Kind::BMG:
+      return "Battlemage Architecture";
+    case Kind::CRI:
+      return "Crescent Island Architecture";
+    }
+    llvm_unreachable("Unknown uArch::Kind");
+  }
   virtual int getSubgroupSize() const = 0;
   virtual unsigned getGeneralPackedFormatBitSize() const = 0;
 
@@ -178,8 +212,7 @@ struct uArch {
   }
 
 protected:
-  StringRef name;
-  StringRef description;
+  Kind kind;
   llvm::SmallDenseMap<InstructionKind, const Instruction *, 32>
       instructionRegistry;
 };
