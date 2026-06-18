@@ -16,8 +16,8 @@ define amdgpu_ps void @_amdgpu_ps_main() #0 {
   ret void
 }
 
-declare void @llvm.amdgcn.wqm.demote(i1) #1
+declare void @llvm.amdgcn.wqm.demote(i1)
 
-declare i64 @llvm.amdgcn.ballot.i64(i1) #2
+declare i64 @llvm.amdgcn.ballot.i64(i1)
 
 attributes #0 = { "amdgpu-conditional-discard-transformations" "amdgpu-transform-discard-to-demote" }
