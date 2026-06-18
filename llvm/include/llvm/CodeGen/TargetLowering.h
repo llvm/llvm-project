@@ -4424,6 +4424,11 @@ public:
                                              KnownBits &Known,
                                              const MachineFunction &MF) const;
 
+  /// Determine which bits of an sret pointer are known to be 0.
+  /// The default implementation preserves the known bits passed into it.
+  virtual void computeKnownBitsForSRetPointer(KnownBits &Known,
+                                              const MachineFunction &MF) const;
+
   /// This method can be implemented by targets that want to expose additional
   /// information about sign bits to the DAG Combiner. The DemandedElts
   /// argument allows us to only collect the minimum sign bits that are shared
@@ -5114,13 +5119,9 @@ public:
     return true;
   }
 
-  /// Target-specific annotation for the hidden return pointer used when
-  /// CanLowerReturn returns false and SelectionDAG performs sret-demotion.
-  virtual SDValue annotateDemotedReturnPointer(SDValue RetPtr,
-                                               SelectionDAG &DAG,
-                                               const SDLoc &DL) const {
-    return RetPtr;
-  }
+  /// Annotate an sret pointer with known-bits assertions.
+  SDValue annotateSRetPointer(SDValue Ptr, SelectionDAG &DAG,
+                              const SDLoc &DL) const;
 
   /// This hook must be implemented to lower outgoing return values, described
   /// by the Outs array, into the specified DAG. The implementation should

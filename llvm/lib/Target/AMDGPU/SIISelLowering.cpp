@@ -3729,11 +3729,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
     if (Arg.Flags.isSRet()) {
       // The return object should be reasonably addressable.
-      unsigned NumBits =
-          32 - getSubtarget()->getKnownHighZeroBitsForFrameIndex();
-      Val = DAG.getNode(
-          ISD::AssertZext, DL, VT, Val,
-          DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), NumBits)));
+      Val = annotateSRetPointer(Val, DAG, DL);
     }
 
     Val = convertABITypeToValueType(DAG, Val, VA, DL);
@@ -19713,19 +19709,9 @@ void SITargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       Op, Known, DemandedElts, DAG, Depth);
 }
 
-SDValue SITargetLowering::annotateDemotedReturnPointer(SDValue RetPtr,
-                                                       SelectionDAG &DAG,
-                                                       const SDLoc &DL) const {
-  EVT PtrVT = RetPtr.getValueType();
-  if (!PtrVT.isInteger())
-    return RetPtr;
-
-  // Implicit sret lowering keeps the hidden return pointer in a virtual
-  // register. Preserve the same high-zero address fact used by explicit sret.
-  unsigned NumBits = 32 - getSubtarget()->getKnownHighZeroBitsForFrameIndex();
-  return DAG.getNode(
-      ISD::AssertZext, DL, PtrVT, RetPtr,
-      DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), NumBits)));
+void SITargetLowering::computeKnownBitsForSRetPointer(
+    KnownBits &Known, const MachineFunction &) const {
+  Known.Zero.setHighBits(getSubtarget()->getKnownHighZeroBitsForFrameIndex());
 }
 
 void SITargetLowering::computeKnownBitsForFrameIndex(
@@ -19735,7 +19721,7 @@ void SITargetLowering::computeKnownBitsForFrameIndex(
   // Set the high bits to zero based on the maximum allowed scratch size per
   // wave. We can't use vaddr in MUBUF instructions if we don't know the address
   // calculation won't overflow, so assume the sign bit is never set.
-  Known.Zero.setHighBits(getSubtarget()->getKnownHighZeroBitsForFrameIndex());
+  computeKnownBitsForSRetPointer(Known, MF);
 }
 
 static void knownBitsForWorkitemID(const GCNSubtarget &ST,

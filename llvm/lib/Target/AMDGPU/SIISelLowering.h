@@ -538,13 +538,12 @@ public:
 
   void finalizeLowering(MachineFunction &MF) const override;
 
-  SDValue annotateDemotedReturnPointer(SDValue RetPtr, SelectionDAG &DAG,
-                                       const SDLoc &DL) const override;
-
   void computeKnownBitsForTargetNode(const SDValue Op, KnownBits &Known,
                                      const APInt &DemandedElts,
                                      const SelectionDAG &DAG,
                                      unsigned Depth = 0) const override;
+  void computeKnownBitsForSRetPointer(KnownBits &Known,
+                                      const MachineFunction &MF) const override;
   void computeKnownBitsForFrameIndex(int FrameIdx,
                                      KnownBits &Known,
                                      const MachineFunction &MF) const override;
