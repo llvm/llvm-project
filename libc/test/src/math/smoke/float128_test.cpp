@@ -18,7 +18,7 @@ TEST(LlvmLibcFloat128Test, DefaultConstructor) {
 }
 
 TEST(LlvmLibcFloat128Test, UnaryOperators) {
-  Float128 a(1.0f), b(1.0f), c(2.0f);
+  Float128 a(1.0), b(1.0f), c(2.0f);
 
   // comparison operators
   ASSERT_TRUE(a == b);
