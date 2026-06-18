@@ -8,6 +8,7 @@ llvm.mlir.global external @x() {addr_space = 0 : i32} : i32 {
 llvm.func @variant1() -> ()
 llvm.func @variant2() -> ()
 
+// TODO: Add support for declare_variant, when support to it is merged.
 // CHECK-LABEL: define void @foo_dispatch()
 llvm.func @foo_dispatch() {
   // CHECK: %[[ADDR:.*]] = load i32, ptr @x

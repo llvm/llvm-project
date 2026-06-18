@@ -41,6 +41,7 @@ func.func @omp_dispatch_generic_to_pretty(%x : memref<i32>) -> () {
 }
 
 // Test multiple dispatch regions with stores selecting different variants.
+// TODO: Use declare_variant when the support is merged.
 // CHECK-LABEL: func @omp_dispatch_multiple
 // CHECK-SAME: (%[[X:.*]]: memref<i32>)
 func.func @omp_dispatch_multiple(%x : memref<i32>) -> () {

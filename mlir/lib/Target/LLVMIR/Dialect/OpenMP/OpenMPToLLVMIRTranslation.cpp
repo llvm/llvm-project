@@ -766,6 +766,10 @@ static LogicalResult
 convertOmpDispatch(Operation &opInst, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) {
   auto dispatchOp = cast<omp::DispatchOp>(opInst);
+
+  if (failed(checkImplementationStatus(opInst)))
+    return failure();
+
   auto &region = dispatchOp.getRegion();
   auto result = convertOmpOpRegions(region, "omp.dispatch.region", builder,
                                     moduleTranslation);
