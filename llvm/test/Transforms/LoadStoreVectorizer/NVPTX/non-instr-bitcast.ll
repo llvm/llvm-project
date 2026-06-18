@@ -7,15 +7,11 @@
 
 define void @foo() {
 ; CHECK-LABEL: define void @foo() {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x b32>, ptr addrspace(1) @global, align 16
-; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x b32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[A1]] to float
-; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x b32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[B2]] to float
-; CHECK-NEXT:    [[C3:%.*]] = extractelement <4 x b32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[C3]] to float
-; CHECK-NEXT:    [[D4:%.*]] = extractelement <4 x b32> [[TMP1]], i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast b32 [[D4]] to float
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr addrspace(1) @global, align 16
+; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[TMP1]], i32 0
+; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
+; CHECK-NEXT:    [[C3:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
+; CHECK-NEXT:    [[D4:%.*]] = extractelement <4 x float> [[TMP1]], i32 3
 ; CHECK-NEXT:    ret void
 ;
   %a = load float, ptr addrspace(1) @global, align 16

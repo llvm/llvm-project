@@ -159,22 +159,31 @@ using Chain = SmallVector<ChainElem, 1>;
 
 /// Gets the element type of the vector that the chain will load or store.
 ///
-/// The lane width is the GCD of scalar sizes in the chain. Scalars are
-/// normalized to \p b<GCD> (LLVM byte types) so loads/stores use untyped byte
-/// lanes and \p Builder.CreateBitPreservingCastChain restores int/float/pointer
-/// types without ptrtoint/inttoptr for pointers. For sub-byte GCD widths (\p
-/// GCD < 8), uses \p i<GCD> instead of \p b<GCD> because narrow byte vectors
-/// are less common in codegen than \p i1/\p i4 chains.
+/// Homogeneous chains keep their original scalar element type. When the chain
+/// mixes scalar types, the lane width is the GCD of scalar sizes in the chain.
+/// Mixed chains are normalized to \p b<GCD> (LLVM byte types) so loads/stores
+/// use untyped byte lanes and \p Builder.CreateBitPreservingCastChain restores
+/// int/float/pointer types without ptrtoint/inttoptr for pointers. For sub-byte
+/// GCD widths (\p GCD < 8), uses \p i<GCD> instead of \p b<GCD> because narrow
+/// byte vectors are less common in codegen than \p i1/\p i4 chains.
 ///
 /// \returns The chosen element type for the vectorized load or store.
 Type *getChainElemTy(ArrayRef<ChainElem> C, LLVMContext &Ctx,
                      const DataLayout &DL) {
   assert(!C.empty());
   unsigned GCDSize = 0;
+  Type *HomogeneousScalarTy = getLoadStoreType(C.front().Inst)->getScalarType();
+  bool IsHomogeneousScalarTy = true;
   for (const ChainElem &E : C) {
     Type *Ty = getLoadStoreType(E.Inst)->getScalarType();
+    IsHomogeneousScalarTy &= Ty == HomogeneousScalarTy;
     unsigned Sz = DL.getTypeSizeInBits(Ty);
     GCDSize = GCDSize == 0 ? Sz : std::gcd(GCDSize, Sz);
+  }
+  if (IsHomogeneousScalarTy) {
+    LLVM_DEBUG(dbgs() << "LSV: using homogeneous scalar element type "
+                      << *HomogeneousScalarTy << "\n");
+    return HomogeneousScalarTy;
   }
   if (GCDSize < 8) {
     LLVM_DEBUG(dbgs() << "LSV: using normalized element type i" << GCDSize
@@ -1094,9 +1103,10 @@ bool Vectorizer::vectorizeChain(Chain &C) {
     dumpChain(C);
   });
 
-  // VecElemTy is the normalized GCD lane type: b<GCD> for GCD >= 8, else i<GCD>
-  // for sub-byte chains. Original scalar types are recovered via
-  // Builder.CreateBitPreservingCastChain after extract/shuffle.
+  // VecElemTy is the natural scalar lane type for homogeneous chains, otherwise
+  // the normalized GCD lane type: b<GCD> for GCD >= 8, else i<GCD> for sub-byte
+  // chains. Original scalar types are recovered via
+  // Builder.CreateBitPreservingCastChain after extract/shuffle when needed.
   Type *VecElemTy = getChainElemTy(C, F.getContext(), DL);
   unsigned VecElemSize = DL.getTypeSizeInBits(VecElemTy);
   bool IsLoadChain = isa<LoadInst>(C[0].Inst);

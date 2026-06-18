@@ -70,11 +70,9 @@ define void @load_fn_nounwind_writeonly(ptr %p) #0 {
 define void @load_fn_nounwind_readonly(ptr %p) #0 {
 ; CHECK-LABEL: define void @load_fn_nounwind_readonly(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x b32>, ptr [[P]], align 8
-; CHECK-NEXT:    [[V01:%.*]] = extractelement <2 x b32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[V01]] to i32
-; CHECK-NEXT:    [[V12:%.*]] = extractelement <2 x b32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[V12]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P]], align 8
+; CHECK-NEXT:    [[V01:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[V12:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    call void @fn_nounwind_readonly() #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
@@ -123,11 +121,9 @@ define void @load_fn_writeonly(ptr %p) #0 {
 define void @load_fn_readnone(ptr %p) #0 {
 ; CHECK-LABEL: define void @load_fn_readnone(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x b32>, ptr [[P]], align 8
-; CHECK-NEXT:    [[V01:%.*]] = extractelement <2 x b32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[V01]] to i32
-; CHECK-NEXT:    [[V12:%.*]] = extractelement <2 x b32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[V12]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P]], align 8
+; CHECK-NEXT:    [[V01:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[V12:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    call void @fn_readnone() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
@@ -250,7 +246,7 @@ define void @store_fn_readnone(ptr %p) #0 {
 ; CHECK-LABEL: define void @store_fn_readnone(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    call void @fn_readnone() #[[ATTR5]]
-; CHECK-NEXT:    store <2 x b32> zeroinitializer, ptr [[P]], align 8
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %p.1 = getelementptr i32, ptr %p, i32 1

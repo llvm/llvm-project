@@ -22,9 +22,9 @@ define amdgpu_kernel void @br_cc_f16(
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_mov_b32 s2, s6
 ; SI-NEXT:    s_mov_b32 s3, s7
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v1
-; SI-NEXT:    v_cmp_nlt_f32_e32 vcc, v2, v3
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, v1
+; SI-NEXT:    v_cmp_nlt_f32_e32 vcc, v3, v2
 ; SI-NEXT:    s_cbranch_vccnz .LBB0_2
 ; SI-NEXT:  ; %bb.1: ; %one
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0

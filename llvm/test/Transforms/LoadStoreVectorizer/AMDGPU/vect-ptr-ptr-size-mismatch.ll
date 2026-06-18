@@ -35,11 +35,7 @@ define void @cast_to_cast() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A_ASCAST:%.*]] = addrspacecast ptr addrspace(5) poison to ptr
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 false, ptr [[A_ASCAST]], ptr poison
-; CHECK-NEXT:    [[TMP0:%.*]] = load b64, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b64 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b64 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -57,15 +53,11 @@ define void @all_to_cast(ptr nocapture readonly align 16 dereferenceable(16) %al
 ; CHECK-SAME: ptr readonly align 16 captures(none) dereferenceable(16) [[ALLOC1:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[ALLOC16:%.*]] = addrspacecast ptr [[ALLOC1]] to ptr addrspace(1)
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x b32>, ptr addrspace(1) [[ALLOC16]], align 16, !invariant.load [[META0:![0-9]+]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[TMP11]] to float
-; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <4 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[TMP82]] to float
-; CHECK-NEXT:    [[TMP173:%.*]] = extractelement <4 x b32> [[TMP0]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast b32 [[TMP173]] to float
-; CHECK-NEXT:    [[TMP264:%.*]] = extractelement <4 x b32> [[TMP0]], i32 3
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast b32 [[TMP264]] to float
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr addrspace(1) [[ALLOC16]], align 16, !invariant.load [[META0:![0-9]+]]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP82:%.*]] = extractelement <4 x float> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP173:%.*]] = extractelement <4 x float> [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP264:%.*]] = extractelement <4 x float> [[TMP0]], i32 3
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -85,11 +77,9 @@ define void @ext_ptr(ptr addrspace(5) %p) {
 ; CHECK-SAME: ptr addrspace(5) [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[P]] to ptr
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr [[A_ASCAST]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[TMP11]] to i32
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[TMP22]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[A_ASCAST]], align 8
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -108,11 +98,9 @@ define void @select_different_as(ptr addrspace(1) %p0, ptr addrspace(5) %q0, i1 
 ; CHECK-NEXT:    [[P0_ASCAST:%.*]] = addrspacecast ptr addrspace(1) [[P0]] to ptr
 ; CHECK-NEXT:    [[Q0_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[Q0]] to ptr
 ; CHECK-NEXT:    [[SEL0:%.*]] = select i1 [[COND]], ptr [[P0_ASCAST]], ptr [[Q0_ASCAST]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr [[SEL0]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[TMP11]] to i32
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[TMP22]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[SEL0]], align 8
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -134,11 +122,9 @@ define void @shrink_ptr(ptr %p) {
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A_ASCAST:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(5)
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b32>, ptr addrspace(5) [[A_ASCAST]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x b32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b32 [[TMP11]] to i32
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x b32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b32 [[TMP22]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr addrspace(5) [[A_ASCAST]], align 8
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -156,11 +142,9 @@ define void @ext_ptr_wrap(ptr addrspace(5) %p) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[P]], i64 4294967295
 ; CHECK-NEXT:    [[B_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[GEP2]] to ptr
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x b8>, ptr [[B_ASCAST]], align 2
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <2 x b8> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast b8 [[TMP21]] to i8
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x b8> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast b8 [[TMP12]] to i8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i8>, ptr [[B_ASCAST]], align 2
+; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <2 x i8> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i8> [[TMP0]], i32 1
 ; CHECK-NEXT:    unreachable
 ;
 entry:
