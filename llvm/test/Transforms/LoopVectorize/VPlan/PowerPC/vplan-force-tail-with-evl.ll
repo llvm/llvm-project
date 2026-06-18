@@ -1,6 +1,6 @@
 ; RUN: opt -passes=loop-vectorize -vplan-print-after=printOptimizedVPlan \
 ; RUN: -force-tail-folding-style=data-with-evl \
-; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
+; RUN: -tail-folding-policy=must-fold-tail \
 ; RUN: -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN: -mcpu=pwr10 -disable-output < %s 2>&1 | FileCheck %s
 
@@ -10,7 +10,6 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in vp<[[BTC:%.+]]> = backedge-taken count
-; CHECK-NEXT: Live-in ir<%N> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
 ; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
@@ -19,10 +18,11 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_INC:%.*]]>
-; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
-; CHECK-NEXT:     EMIT vp<[[CMP:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
+; CHECK-NEXT:     EMIT vp<[[WIDEN_CAN_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT vp<[[CMP:%.+]]> = icmp ule vp<[[WIDEN_CAN_IV]]>, vp<[[BTC]]>
 ; CHECK-NEXT:   Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <xVFxUF> pred.store: {
@@ -31,7 +31,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; CHECK-NEXT:    Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.store.if:
-; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:      vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:      REPLICATE ir<%arrayidx> = getelementptr inbounds ir<%b>, vp<[[STEPS]]>
 ; CHECK-NEXT:      REPLICATE ir<%0> = load ir<%arrayidx>
 ; CHECK-NEXT:      REPLICATE ir<%arrayidx2> = getelementptr inbounds ir<%c>, vp<[[STEPS]]>
@@ -86,8 +86,9 @@ define void @safe_dep(ptr %p) {
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vp<[[CAN_IV:%.+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_INC:%.+]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     CLONE ir<%a1> = getelementptr ir<%p>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[VPTR1:%.+]]> = vector-pointer ir<%a1>
@@ -96,7 +97,7 @@ define void @safe_dep(ptr %p) {
 ; CHECK-NEXT:     CLONE ir<%a2> = getelementptr ir<%p>, ir<%offset>
 ; CHECK-NEXT:     vp<[[VPTR2:%.+]]> = vector-pointer ir<%a2>
 ; CHECK-NEXT:     WIDEN store vp<[[VPTR2]]>, ir<%v>
-; CHECK-NEXT:     EMIT vp<[[CAN_INC]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:     EMIT vp<[[CAN_INC:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_INC]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }

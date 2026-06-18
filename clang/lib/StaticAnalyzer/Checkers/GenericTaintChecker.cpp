@@ -149,12 +149,12 @@ bool isTaintedOrPointsToTainted(ProgramStateRef State, SVal ExprSVal) {
 const NoteTag *taintOriginTrackerTag(CheckerContext &C,
                                      std::vector<SymbolRef> TaintedSymbols,
                                      std::vector<ArgIdxTy> TaintedArgs,
-                                     const LocationContext *CallLocation) {
+                                     const StackFrame *CallSF) {
   return C.getNoteTag([TaintedSymbols = std::move(TaintedSymbols),
-                       TaintedArgs = std::move(TaintedArgs), CallLocation](
-                          PathSensitiveBugReport &BR) -> std::string {
+                       TaintedArgs = std::move(TaintedArgs),
+                       CallSF](PathSensitiveBugReport &BR) -> std::string {
     // We give diagnostics only for taint related reports
-    if (!BR.isInteresting(CallLocation) ||
+    if (!BR.isInteresting(CallSF) ||
         BR.getBugType().getCategory() != categories::TaintedData) {
       return "";
     }
@@ -177,11 +177,11 @@ const NoteTag *taintOriginTrackerTag(CheckerContext &C,
 /// when the return value, or the outgoing parameters are tainted.
 const NoteTag *taintPropagationExplainerTag(
     CheckerContext &C, std::vector<SymbolRef> TaintedSymbols,
-    std::vector<ArgIdxTy> TaintedArgs, const LocationContext *CallLocation) {
+    std::vector<ArgIdxTy> TaintedArgs, const StackFrame *CallSF) {
   assert(TaintedSymbols.size() == TaintedArgs.size());
   return C.getNoteTag([TaintedSymbols = std::move(TaintedSymbols),
-                       TaintedArgs = std::move(TaintedArgs), CallLocation](
-                          PathSensitiveBugReport &BR) -> std::string {
+                       TaintedArgs = std::move(TaintedArgs),
+                       CallSF](PathSensitiveBugReport &BR) -> std::string {
     SmallString<256> Msg;
     llvm::raw_svector_ostream Out(Msg);
     // We give diagnostics only for taint related reports
@@ -192,7 +192,7 @@ const NoteTag *taintPropagationExplainerTag(
     int nofTaintedArgs = 0;
     for (auto [Idx, Sym] : llvm::enumerate(TaintedSymbols)) {
       if (BR.isInteresting(Sym)) {
-        BR.markInteresting(CallLocation);
+        BR.markInteresting(CallSF);
         if (TaintedArgs[Idx] != ReturnValueIndex) {
           LLVM_DEBUG(llvm::dbgs() << "Taint Propagated to argument "
                                   << TaintedArgs[Idx] + 1 << "\n");
@@ -471,7 +471,7 @@ template <> struct ScalarEnumerationTraits<TaintConfiguration::VariadicType> {
 /// to the call post-visit. The values are signed integers, which are either
 /// ReturnValueIndex, or indexes of the pointer/reference argument, which
 /// points to data, which should be tainted on return.
-REGISTER_MAP_WITH_PROGRAMSTATE(TaintArgsOnPostVisit, const LocationContext *,
+REGISTER_MAP_WITH_PROGRAMSTATE(TaintArgsOnPostVisit, const StackFrame *,
                                ImmutableSet<ArgIdxTy>)
 REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(ArgIdxFactory, ArgIdxTy)
 
@@ -847,7 +847,7 @@ void GenericTaintChecker::checkBeginFunction(CheckerContext &C) const {
                              .ShouldAssumeControlledEnvironment)
     return;
 
-  const auto *FD = dyn_cast<FunctionDecl>(C.getLocationContext()->getDecl());
+  const auto *FD = dyn_cast<FunctionDecl>(C.getStackFrame()->getDecl());
   if (!FD || !FD->isMain() || FD->param_size() < 2)
     return;
 
@@ -859,7 +859,7 @@ void GenericTaintChecker::checkBeginFunction(CheckerContext &C) const {
   ProgramStateRef State = C.getState();
 
   const MemRegion *ArgcReg =
-      State->getRegion(FD->parameters()[0], C.getLocationContext());
+      State->getRegion(FD->parameters()[0], C.getStackFrame());
   SVal ArgcSVal = State->getSVal(ArgcReg);
   State = addTaint(State, ArgcSVal);
   StringRef ArgcName = FD->parameters()[0]->getName();
@@ -872,7 +872,7 @@ void GenericTaintChecker::checkBeginFunction(CheckerContext &C) const {
   }
 
   const MemRegion *ArgvReg =
-      State->getRegion(FD->parameters()[1], C.getLocationContext());
+      State->getRegion(FD->parameters()[1], C.getStackFrame());
   SVal ArgvSVal = State->getSVal(ArgvReg);
   State = addTaint(State, ArgvSVal);
   StringRef ArgvName = FD->parameters()[1]->getName();
@@ -884,7 +884,7 @@ void GenericTaintChecker::checkBeginFunction(CheckerContext &C) const {
     return;
   if (HaveEnvp) {
     const MemRegion *EnvPReg =
-        State->getRegion(FD->parameters()[2], C.getLocationContext());
+        State->getRegion(FD->parameters()[2], C.getStackFrame());
     EnvpSVal = State->getSVal(EnvPReg);
     EnvpName = FD->parameters()[2]->getName();
     State = addTaint(State, EnvpSVal);
@@ -945,7 +945,7 @@ void GenericTaintChecker::checkPostCall(const CallEvent &Call,
   // Set the marked values as tainted. The return value only accessible from
   // checkPostStmt.
   ProgramStateRef State = C.getState();
-  const StackFrameContext *CurrentFrame = C.getStackFrame();
+  const StackFrame *CurrentFrame = C.getStackFrame();
 
   // Depending on what was tainted at pre-visit, we determined a set of
   // arguments which should be tainted after the function returns. These are
@@ -1215,7 +1215,7 @@ void GenericTaintChecker::taintUnsafeSocketProtocol(const CallEvent &Call,
     return;
 
   SourceLocation DomLoc = Call.getArgExpr(0)->getExprLoc();
-  StringRef DomName = C.getMacroNameOrSpelling(DomLoc);
+  std::string DomName = C.getMacroNameOrSpelling(DomLoc);
   // Allow internal communication protocols.
   bool SafeProtocol = DomName == "AF_SYSTEM" || DomName == "AF_LOCAL" ||
                       DomName == "AF_UNIX" || DomName == "AF_RESERVED_36";

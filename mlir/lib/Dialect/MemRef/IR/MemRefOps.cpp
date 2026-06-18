@@ -405,7 +405,7 @@ ParseResult AllocaScopeOp::parse(OpAsmParser &parser, OperationState &result) {
 void AllocaScopeOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
     return;
   }
 
@@ -413,7 +413,7 @@ void AllocaScopeOp::getSuccessorRegions(
 }
 
 ValueRange AllocaScopeOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
+  return successor.isOperation() ? ValueRange(getResults()) : ValueRange();
 }
 
 /// Given an operation, return whether this op is guaranteed to
@@ -737,6 +737,8 @@ bool CastOp::canFoldIntoConsumerOp(CastOp castOp) {
 bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
   if (inputs.size() != 1 || outputs.size() != 1)
     return false;
+  if (inputs == outputs)
+    return true;
   Type a = inputs.front(), b = outputs.front();
   auto aT = llvm::dyn_cast<MemRefType>(a);
   auto bT = llvm::dyn_cast<MemRefType>(b);

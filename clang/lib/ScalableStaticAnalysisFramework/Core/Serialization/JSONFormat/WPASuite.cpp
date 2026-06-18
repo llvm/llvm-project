@@ -136,8 +136,24 @@ llvm::Expected<WPASuite> JSONFormat::readWPASuite(llvm::StringRef Path) {
         .build();
   }
 
-  const Object &RootObject = *RootObjectPtr;
+  if (auto Err = checkSummaryType(*RootObjectPtr, JSONTypeValueWPASuite)) {
+    return ErrorBuilder::wrap(std::move(Err))
+        .context(ErrorMessages::ReadingFromFile, "WPASuite", Path)
+        .build();
+  }
 
+  auto ExpectedSuite = readWPASuiteFromObject(*RootObjectPtr);
+  if (!ExpectedSuite) {
+    return ErrorBuilder::wrap(ExpectedSuite.takeError())
+        .context(ErrorMessages::ReadingFromFile, "WPASuite", Path)
+        .build();
+  }
+
+  return std::move(*ExpectedSuite);
+}
+
+llvm::Expected<WPASuite>
+JSONFormat::readWPASuiteFromObject(const Object &RootObject) {
   WPASuite Suite = makeWPASuite();
 
   {
@@ -146,15 +162,13 @@ llvm::Expected<WPASuite> JSONFormat::readWPASuite(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "IdTable", "id_table", "array")
-          .context(ErrorMessages::ReadingFromFile, "WPASuite", Path)
           .build();
     }
 
-    auto ExpectedIdTable = entityIdTableFromJSON(*IdTableArray);
+    auto ExpectedIdTable = luEntityIdTableFromJSON(*IdTableArray);
     if (!ExpectedIdTable) {
       return ErrorBuilder::wrap(ExpectedIdTable.takeError())
           .context(ErrorMessages::ReadingFromField, "IdTable", "id_table")
-          .context(ErrorMessages::ReadingFromFile, "WPASuite", Path)
           .build();
     }
 
@@ -167,7 +181,6 @@ llvm::Expected<WPASuite> JSONFormat::readWPASuite(llvm::StringRef Path) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedToReadObjectAtField,
                                   "WPA results", "results", "array")
-          .context(ErrorMessages::ReadingFromFile, "WPASuite", Path)
           .build();
     }
 
@@ -175,7 +188,6 @@ llvm::Expected<WPASuite> JSONFormat::readWPASuite(llvm::StringRef Path) {
     if (!ExpectedResultsMap) {
       return ErrorBuilder::wrap(ExpectedResultsMap.takeError())
           .context(ErrorMessages::ReadingFromField, "WPA results", "results")
-          .context(ErrorMessages::ReadingFromFile, "WPASuite", Path)
           .build();
     }
 
@@ -189,7 +201,9 @@ llvm::Error JSONFormat::writeWPASuite(const WPASuite &Suite,
                                       llvm::StringRef Path) {
   Object RootObject;
 
-  RootObject["id_table"] = entityIdTableToJSON(getIdTable(Suite));
+  RootObject[JSONTypeKey] = JSONTypeValueWPASuite;
+
+  RootObject["id_table"] = luEntityIdTableToJSON(getIdTable(Suite));
 
   auto ExpectedResults = analysisResultMapToJSON(getData(Suite));
   if (!ExpectedResults) {

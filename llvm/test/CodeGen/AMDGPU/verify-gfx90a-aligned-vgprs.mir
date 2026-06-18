@@ -146,6 +146,6 @@ body:            |
 # ; XCHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
 # ; XCHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
 # ; XCHECK: *** Bad machine code: Subtarget requires even aligned vector registers ***
-# INLINEASM &"; use $0 ", 1 /* sideeffect attdialect */, 9 /* reguse */, $vgpr1_vgpr2
-# INLINEASM &"; use $0 ", 1 /* sideeffect attdialect */, 9 /* reguse */, %4
-# INLINEASM &"; use $0 ", 1 /* sideeffect attdialect */, 9 /* reguse */, %5.sub1_sub2
+# INLINEASM &"; use $0 ", sideeffect attdialect, reguse, $vgpr1_vgpr2
+# INLINEASM &"; use $0 ", sideeffect attdialect, reguse, %4
+# INLINEASM &"; use $0 ", sideeffect attdialect, reguse, %5.sub1_sub2

@@ -1313,14 +1313,6 @@ Status NativeProcessLinux::PopulateMemoryRegionCache() {
   return Status();
 }
 
-void NativeProcessLinux::DoStopIDBumped(uint32_t newBumpId) {
-  Log *log = GetLog(POSIXLog::Process);
-  LLDB_LOG(log, "newBumpId={0}", newBumpId);
-  LLDB_LOG(log, "clearing {0} entries from memory region cache",
-           m_mem_region_cache.size());
-  m_mem_region_cache.clear();
-}
-
 llvm::Expected<uint64_t>
 NativeProcessLinux::Syscall(llvm::ArrayRef<uint64_t> args) {
   PopulateMemoryRegionCache();
@@ -1939,14 +1931,13 @@ void NativeProcessLinux::SignalIfAllThreadsStopped() {
 
   // Clear any temporary breakpoints we used to implement software single
   // stepping.
-  for (const auto &thread_info : m_threads_stepping_with_breakpoint) {
-    for (auto &&bp_addr : thread_info.second) {
-      Status error = RemoveBreakpoint(bp_addr);
-      if (error.Fail())
-        LLDB_LOG(log, "pid = {0} remove stepping breakpoint: {1}",
-                 thread_info.first, error);
-    }
+  for (addr_t bp_addr : m_step_breakpoints) {
+    Status error = RemoveBreakpoint(bp_addr);
+    if (error.Fail())
+      LLDB_LOG(log, "pid = {0} remove stepping breakpoint: {1}", bp_addr,
+               error);
   }
+  m_step_breakpoints.clear();
   m_threads_stepping_with_breakpoint.clear();
 
   // Notify the delegate about the stop
