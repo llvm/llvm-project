@@ -78,7 +78,7 @@ add_executable(HotswapElfTests
   ../src/comgr-env.cpp)
 
 llvm_map_components_to_libnames(COMGR_TEST_UNIT_ELF_LIBS
-  Object Support TargetParser)
+  BinaryFormat Object Support TargetParser)
 
 target_link_libraries(HotswapElfTests PRIVATE
   ${COMGR_GTEST_LIBS}
@@ -115,6 +115,7 @@ add_executable(HotswapMCTests
   ../src/comgr-env.cpp)
 
 llvm_map_components_to_libnames(COMGR_TEST_UNIT_MC_LIBS
+  BinaryFormat
   MC
   MCDisassembler
   MCParser
